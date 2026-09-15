@@ -64,7 +64,7 @@ Start FL26 once, get to the main menu, quit, and open `SiderAddons\sider.log`. Y
 six lines like these:
 
 ```
-[fl26caps.lua] fl26caps: applied all 2690 patches -- block 0x1877068 -> 0x2d5a068, 2688 patches
+[fl26caps.lua] fl26caps: applied all 2690 patches -- block 0x1877068 -> 0x2d5a068, 2690 patches
 [fl26nullguard.lua] fl26caps: applied all 2 patches -- nullguard: null-check at 0x141fea5b0
 [fl26nullguard3.lua] fl26caps: applied all 2 patches -- nullguard3: schedule null-check at 0x140cd6a1c
 [fl26nullguard2.lua] fl26caps: applied all 2 patches -- nullguard2: null-check at 0x140fc9238
