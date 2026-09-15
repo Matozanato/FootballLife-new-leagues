@@ -117,3 +117,6 @@ paragraph of impressions without them.
   for this beta.
 - The one-in-two generation crash on its own, unless your rate is very different.
 - Anything with other mods active. Please test with only these modules and your world.
+
+If this project is useful to you, you can support it at
+[ko-fi.com/mata28](https://ko-fi.com/mata28).

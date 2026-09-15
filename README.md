@@ -1,4 +1,9 @@
-# FL26 More Leagues — public beta
+# FootballLife — new leagues (public beta)
+
+[![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-support%20this%20work-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/mata28)
+
+> This is unpaid reverse-engineering work done in spare time. If it is useful to you,
+> **[buy me a coffee on Ko-fi](https://ko-fi.com/mata28)** — it keeps the seasons running.
 
 Raise Football Life 2026's hard limits so that **hundreds of new clubs and dozens of new
 leagues** fit into a Master League season, using only Sider modules and data files. No
@@ -115,6 +120,14 @@ patches/   the patch set as JSON plus the layout tables the generator reads
 docs/      install, build-your-world, testing-guide, known-issues, limits, how-it-works,
            for-developers
 ```
+
+## Support
+
+Everything here is free and MIT-licensed. Weeks of disassembly, unattended test seasons
+and crash dumps went into it, and there is more to do (the day-238 crash, cups, continental
+slots, more menu regions). If you want to help it along:
+**[ko-fi.com/mata28](https://ko-fi.com/mata28)**. Testing and good bug reports help just as
+much — see the [testing guide](docs/testing-guide.md).
 
 ## Licence and credits
 
