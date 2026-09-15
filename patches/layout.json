@@ -1,0 +1,855 @@
+{
+ "_comment": [
+  "The single source of truth for where every array lives, before and after.",
+  "All numbers are hex strings so they can be compared against a disassembler",
+  "without arithmetic. Offsets are relative to the edit block unless the name",
+  "says otherwise; 'va' fields are absolute virtual addresses (this exe has no",
+  "ASLR: DllCharacteristics 0x8120, so a VA is also the runtime address).",
+  "Everything here is verified in docs/findings.md, 'Raising the caps'.",
+  "'base_new' is filled in by tools/patchset.py, packed after the old block end."
+ ],
+ "block": {
+  "size_old": "0x1877068",
+  "size_sites": [
+   {
+    "va": "0x1414b6f72",
+    "reg": "edx",
+    "role": "alloc of the edit block, result to [owner+0x48]"
+   },
+   {
+    "va": "0x1414b5d0d",
+    "reg": "edx",
+    "role": "free of the edit block"
+   },
+   {
+    "va": "0x1414b707e",
+    "reg": "edx",
+    "role": "alloc of the backup copy, result to [owner+0x80]"
+   },
+   {
+    "va": "0x1414b714a",
+    "reg": "r8d",
+    "role": "memset of the backup when there is nothing to copy"
+   }
+  ],
+  "memcpy_chunk_sites": [
+   {
+    "va": "0x1414b70b1",
+    "reg": "edx",
+    "chunk": "0x80",
+    "tail": "0x68",
+    "role": "backup copy loop in 0x1414b7060"
+   },
+   {
+    "va": "0x1414b6d29",
+    "reg": "ecx",
+    "chunk": "0x80",
+    "tail": "0x68",
+    "role": "restore loop in 0x1414b6bf0"
+   }
+  ],
+  "upper_belt": {
+   "_comment": "Everything between the coach array's end and the 596-byte match table: the dummy triple, the four counts, upper1, the fixture table, upper2. The -upper sets move all of it by one delta to the grown block end so the player array can run up to the season calendar at 0x16038a8 (the old match-table region below it is dead once rec596 is relocated). The offsets here stay as the fingerprint the attribution walk keys on.",
+   "start": "0xd0b0ec",
+   "end": "0xe9ff08",
+   "members": [
+    "teams:dummy",
+    "regulations:dummy",
+    "coaches:dummy",
+    "count:players",
+    "count:teams",
+    "count:coaches",
+    "count:regulations",
+    "upper1",
+    "fixtures",
+    "upper2"
+   ],
+   "players_ceiling": "0x16038a8",
+   "_ceiling_note": "the season calendar (stride 0x2c4) begins here; the shipped match table's last record runs into it, which is why rec596 has an extra end-pointer site"
+  }
+ },
+ "arrays": {
+  "players": {
+   "base_old": "0x0",
+   "stride": "0x17c",
+   "cap_old": 30001,
+   "cap_new": 33314,
+   "cap_note": "65000 was the aspiration; 33314 is what is actually reachable. The player array begins at offset 0 and cannot be relocated, so it can only grow into whatever sits above it, and what sits above it is the team array at 0xadf4bc and then the regulation array at 0xc12e9c. With the teams relocated out of the way the player array may run up to the regulation base and no further: 0xc12e9c / 0x17c is 33314 records, 36 bytes to spare. Passing that needs the regulations relocated too, and 306 of their sites are still unattributed.",
+   "dummy": "0x184c3bc",
+   "relocatable": false,
+   "note": "starts at +0, so accesses carry no displacement; must grow in place, shifting everything above it",
+   "extra_cap_sites": [
+    {
+     "va": "0x1414b878c",
+     "mnemonic": "mov",
+     "why": "block constructor 0x1414b8700: __ehvec_ctor(block, 0x17c, 30001, ctor 0x140a9fd00) -- the player array starts at offset 0, so the constructor takes the block pointer straight from rcx and the call names no array; the attribution walk had nothing to file it against. The matching destructor count at 0x1414ba61f was found by the copy scan and has been raised all along, so with the cap raised and this site left at 30001 the block constructed 30001 players and the destructor ran the player destructor over all 46193: 16192 records that were never constructed were destroyed as if they were, freeing whatever the allocator had left in their pointer fields."
+    },
+    {
+     "va": "0x1414ba61f",
+     "mnemonic": "mov",
+     "why": "block destructor: __ehvec_dtor of the same records. The copy scan already supplies this one for the sets that carry the mode-copy player patches, but a set that raises the player cap without them left it at 30001 while the constructor built cap_new -- the same asymmetry the other way round. Listed here so every set that raises the cap moves both ends."
+    }
+   ]
+  },
+  "teams": {
+   "base_old": "0xadf4bc",
+   "stride": "0x690",
+   "cap_old": 750,
+   "cap_new": 1600,
+   "dummy": "0xd0b0ec",
+   "relocatable": true,
+   "copy_off": "0x50",
+   "extra_cap_sites": [
+    {
+     "va": "0x1414b87b7",
+     "mnemonic": "mov",
+     "why": "block constructor 0x1414b8700: __ehvec_ctor(base, 0x690, 750, ctor 0x140b15630) -- rows past 750 were never constructed, so their kit list and everything from +0x2d0 stayed zero"
+    },
+    {
+     "va": "0x1414ba607",
+     "mnemonic": "mov",
+     "why": "block destructor: __ehvec_dtor of the same 750 records"
+    },
+    {
+     "va": "0x1414bba21",
+     "mnemonic": "mov",
+     "why": "initialiser 0x1414bb970: constructs 750 team records in place (0x1414c59f0)"
+    },
+    {
+     "va": "0x1414bbea3",
+     "mnemonic": "mov",
+     "why": "reset 0x1414bbe60, run before every mode copy writes the block back: constructs 750 team records in place"
+    },
+    {
+     "va": "0x1414bc12e",
+     "mnemonic": "mov",
+     "why": "0x1414bc0xx: finds the user's club row by scanning 750 records against 0x14351ae44"
+    },
+    {
+     "va": "0x1414f370a",
+     "mnemonic": "mov",
+     "why": "clamps a team count to 750 (cmova)"
+    }
+   ],
+   "hold_sites": [
+    {
+     "va": "0x140b10a96",
+     "why": "not a team bound at all, despite the 750. The loop in 0x140b10944 walks a table at block+0x16705a8 of 0x10-byte entries whose live count is the dword at block+0x1673488 -- and 0x16705a8 + 750*0x10 is exactly 0x1673488, so the table ends where its own counter begins. `cmp edi, 0x2ee` is the table's own size, and over it the code falls back to entry 0 rather than reading past the end. Raising it would write entries over the count. The table is count-driven, not indexed by team row, so the earlier reading of it as a per-team side table that cannot grow was wrong on both halves: it is not per-team, and the 750 is the structure, not a check."
+    },
+    {
+     "va": "0x1413fea8f",
+     "why": "B -> block (League mode, 0x1413fea10): the loop bound over the copy's own 750-record team array; raised, the loop reads coach memory as teams and writes it into block rows 750..1599"
+    },
+    {
+     "va": "0x1413feacc",
+     "why": "B -> block: the loop bound over the copy's coach array, which holds 750 (0x1a1800 - 0x133a30 = 750 x 0x258), not 1300"
+    },
+    {
+     "va": "0x14140172f",
+     "why": "A -> block (0x1414016b0): the loop bound over the copy's 750-record team array",
+     "released_by": "mlcopy"
+    }
+   ],
+   "hold_note": "loop bounds inside the copy code that measure the copy's arrays, not the block's; the copy keeps its shipped layout (0x140afd660: 750 teams at +0x50, 750 coaches at +0x133a30, 180 regulations, 1750 fixtures, 12360 matches, 0x135bd10 bytes from 0x1413fea00), so these stay. The dummy-select sites next to them (cmp then a forward jb to the dummy record) may be raised: they only decide whether a block row past the old cap is real."
+  },
+  "regulations": {
+   "base_old": "0xc12e9c",
+   "stride": "0x314",
+   "cap_old": 300,
+   "cap_new": 600,
+   "dummy": "0xd0b77c",
+   "relocatable": true,
+   "copy_off": "0x1f2110",
+   "extra_cap_sites": [
+    {
+     "va": "0x1414b87dd",
+     "mnemonic": "mov",
+     "why": "block constructor: __ehvec_ctor(block + 0xc12e9c, 0x314, 300, ...) -- rows past 300 were never constructed"
+    },
+    {
+     "va": "0x1414ba5e8",
+     "mnemonic": "mov",
+     "why": "block destructor: __ehvec_dtor of the same 300 records"
+    }
+   ]
+  },
+  "coaches": {
+   "base_old": "0xc4ca0c",
+   "stride": "0x258",
+   "cap_old": 1300,
+   "cap_new": 2600,
+   "dummy": "0xd0ba90",
+   "relocatable": true,
+   "copy_off": "0x133a30",
+   "extra_cap_sites": [
+    {
+     "va": "0x1414b8810",
+     "mnemonic": "mov",
+     "why": "block constructor: __ehvec_ctor(base, 0x258, 1300, ctor 0x141302970)"
+    },
+    {
+     "va": "0x1414ba5c9",
+     "mnemonic": "mov",
+     "why": "block destructor: __ehvec_dtor of the same 1300 records"
+    },
+    {
+     "va": "0x1414bba42",
+     "mnemonic": "mov",
+     "why": "initialiser 0x1414bb970: constructs 1300 coach records in place (0x1414c5ff0)"
+    },
+    {
+     "va": "0x1414bbec4",
+     "mnemonic": "mov",
+     "why": "reset 0x1414bbe60: constructs 1300 coach records in place"
+    },
+    {
+     "va": "0x1414bc18a",
+     "mnemonic": "mov",
+     "why": "finds the user's coach row by scanning 1300 records against 0x14351ae4c"
+    },
+    {
+     "va": "0x1414bafa7",
+     "mnemonic": "mov",
+     "why": "scan of 1300 coach records (0x1414baf90)"
+    },
+    {
+     "va": "0x1414bade9",
+     "mnemonic": "cmp",
+     "why": "scan of 1300 coach records (0x1414badc0)"
+    },
+    {
+     "va": "0x1414baee2",
+     "mnemonic": "mov",
+     "why": "coach index bound (cmp r8w, ax)"
+    }
+   ],
+   "hold_sites": [
+    {
+     "va": "0x1414e2532",
+     "why": "cmp ax, [rcx + 0x1e912] then jbe: give up once the list is full. a 1300-entry list of coach ids that is not in the edit block. The object reached through rcx/r13 here keeps the ids at +0x1d4c0, four bytes each, and its u16 count at +0x1e912 -- and 0x1d4c0 + 1300*4 is 0x1e910, so the table ends two bytes before its own counter. Raising 1300 here would write coach ids over the count and over whatever follows it. The cap is structural, not a bounds check, and it stays."
+    },
+    {
+     "va": "0x1414e294f",
+     "why": "cmp ax, [rcx + 0x1e912] then jbe: the same guard at the head of 0x1414e2930. a 1300-entry list of coach ids that is not in the edit block. The object reached through rcx/r13 here keeps the ids at +0x1d4c0, four bytes each, and its u16 count at +0x1e912 -- and 0x1d4c0 + 1300*4 is 0x1e910, so the table ends two bytes before its own counter. Raising 1300 here would write coach ids over the count and over whatever follows it. The cap is structural, not a bounds check, and it stays."
+    },
+    {
+     "va": "0x1414e29ac",
+     "why": "cmp edi, r12d then jb: over the cap the index takes the dummy coach at 0xd0ba90 instead of a record. a 1300-entry list of coach ids that is not in the edit block. The object reached through rcx/r13 here keeps the ids at +0x1d4c0, four bytes each, and its u16 count at +0x1e912 -- and 0x1d4c0 + 1300*4 is 0x1e910, so the table ends two bytes before its own counter. Raising 1300 here would write coach ids over the count and over whatever follows it. The cap is structural, not a bounds check, and it stays."
+    },
+    {
+     "va": "0x1414e2ca0",
+     "why": "cmp r10w, r8w then jbe: stop adding once the list is full. a 1300-entry list of coach ids that is not in the edit block. The object reached through rcx/r13 here keeps the ids at +0x1d4c0, four bytes each, and its u16 count at +0x1e912 -- and 0x1d4c0 + 1300*4 is 0x1e910, so the table ends two bytes before its own counter. Raising 1300 here would write coach ids over the count and over whatever follows it. The cap is structural, not a bounds check, and it stays."
+    }
+   ]
+  },
+  "fixtures": {
+   "base_old": "0xd65f64",
+   "stride": "0x208",
+   "cap_old": 2000,
+   "cap_new": 2000,
+   "dummy": null,
+   "relocatable": true,
+   "copy_off": "0x22bc80",
+   "note": "not raised until we know whether 2000 is per season or per competition",
+   "extra_cap_sites": [
+    {
+     "va": "0x1414b88bf",
+     "mnemonic": "mov",
+     "why": "block constructor: __ehvec_ctor(block + 0xd65f64, 0x208, 2000, ...). Recorded, not raised: the fixture cap is still 2000, so this site is already correct. It is here so that raising the cap raises it too."
+    },
+    {
+     "va": "0x1414ba563",
+     "mnemonic": "mov",
+     "why": "block destructor: __ehvec_dtor of the same 2000 records. Recorded, not raised, as above."
+    }
+   ]
+  },
+  "rec596": {
+   "base_old": "0xe9ff08",
+   "stride": "0x254",
+   "cap_old": 13000,
+   "cap_new": 26000,
+   "dummy": null,
+   "relocatable": true,
+   "copy_off": "0x329b00",
+   "note": "the match table: one record per match of the season, own index at +0 (0xffff = free), regulation key at +4, date at +8 (u16 year, month, day), clubs at +0x14/+0x18; 13000 is already full at 42 new leagues and the allocator (0x1414bc710) drops what does not fit",
+   "extra_cap_sites": [
+    {
+     "va": "0x140b0c674",
+     "func": "0x140b0be00",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x140b4f23a",
+     "func": "0x140b4edd0",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x140f43e07",
+     "func": "0x140f43b00",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x140f65214",
+     "func": "0x140f64d90",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x140faa4cc",
+     "func": "0x140faa350",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x140fbd7a8",
+     "func": "0x140fbd080",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x140fc1c10",
+     "func": "0x140fc15f0",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x140fd3ec1",
+     "func": "0x140fd3b40",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x1413013dc",
+     "func": "0x1413007d0",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x14131471b",
+     "func": "0x141314350",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x14131ae18",
+     "func": "0x14131a330",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x14131dd7c",
+     "func": "0x14131d8c0",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x14132f25e",
+     "func": "0x14132ef40",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x14134b9e2",
+     "func": "0x14134b630",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x14134f243",
+     "func": "0x14134ee90",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x141401856",
+     "func": "0x1414016b0",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x141401e07",
+     "func": "0x141401c10",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x1414b893c",
+     "func": "0x1414b8750",
+     "mnemonic": "mov"
+    },
+    {
+     "va": "0x1414ba503",
+     "func": "0x1414ba310",
+     "mnemonic": "mov"
+    },
+    {
+     "va": "0x1414bbaac",
+     "func": "0x1414bb970",
+     "mnemonic": "mov"
+    },
+    {
+     "va": "0x1414bbb48",
+     "func": "0x1414bb970",
+     "mnemonic": "mov"
+    },
+    {
+     "va": "0x1414bbf2e",
+     "func": "0x1414bbe60",
+     "mnemonic": "mov"
+    },
+    {
+     "va": "0x1414bc566",
+     "func": "0x1414bc560",
+     "mnemonic": "mov"
+    },
+    {
+     "va": "0x14151aadd",
+     "func": "0x14151a5f0",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x14152257d",
+     "func": "0x141522010",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x14153c641",
+     "func": "0x14153bff0",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x1415444a2",
+     "func": "0x1415443f0",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x14154eadc",
+     "func": "0x14154e940",
+     "mnemonic": "cmp"
+    },
+    {
+     "va": "0x14158a69d",
+     "func": "0x14158a380",
+     "mnemonic": "cmp"
+    }
+   ],
+   "extra_cap_note": "the 0x32c8 sites the attribution walk does not reach: `mov reg, 0x32c8` loop counters of the two initialisers (0x1414bb970, 0x1414bbe60), the for-each helpers, the accessor bound `cmp dx, si`, and the second `cmp eax, 0x32c8` in the fifteen functions that walk the table twice; 0x14140115f in the mode-copy constructor is deliberately left out",
+   "extra_sites": [
+    {
+     "va": "0x1414bc5a8",
+     "operand": "0x16038a8",
+     "why": "end pointer of the id lookup's binary search in 0x1414bc560; the calendar base, 0x80 bytes short of 13000 records"
+    }
+   ],
+   "hold_sites": [
+    {
+     "va": "0x141401856",
+     "why": "A -> block (0x1414016b0): the loop bound over the copy's 13000-record match table",
+     "released_by": "mlcopy"
+    },
+    {
+     "va": "0x141401e07",
+     "why": "block -> A (0x141401c10): the loop bound; raised, 26000 records are written into a 13000-record array and run over the copy's calendar and the sub-objects after it",
+     "released_by": "mlcopy"
+    }
+   ]
+  },
+  "matchflags": {
+   "base_old": "0x18378a0",
+   "stride": "0x1",
+   "cap_old": 13000,
+   "cap_new": 26000,
+   "dummy": null,
+   "relocatable": true,
+   "copy_off": null,
+   "note": "one byte per match-table record, cleared by the same initialiser that clears the table (0x1414bb970: memset of 0x32c8 bytes) and indexed by match id in 0x1414bb3c0/0x1414bb3f0; a dword count follows it at +0x183ab68 and a 0x41-word list at +0x183ab6c, so it cannot grow in place"
+  },
+  "upper1": {
+   "base_old": "0xd0bcf8",
+   "stride": "0x5a26c",
+   "cap_old": 1,
+   "cap_new": 1,
+   "dummy": null,
+   "relocatable": true,
+   "region": true,
+   "copy_off": null,
+   "note": "unnamed block fields between the count block and the fixture table; attributed by range only, moved as a unit by the upper shift"
+  },
+  "upper2": {
+   "base_old": "0xe63de4",
+   "stride": "0x3c124",
+   "cap_old": 1,
+   "cap_new": 1,
+   "dummy": null,
+   "relocatable": true,
+   "region": true,
+   "copy_off": null,
+   "note": "unnamed block fields between the fixture table and the 596-byte records; same treatment",
+   "extra_sites": [
+    {
+     "va": "0x140c4f242",
+     "operand": "0xe63de4",
+     "why": "lea rax, [rax*8 + 0xe63de4] in 0x140c4f0f0, whose rbx is the edit block ([owner+0x48], loaded through 0x1414b6a60 two instructions in). The block base arrives in a separate `add rax, rbx` after the lea, so the lea on its own shows no block reference and the attribution walk never filed it. It is the base of a 30000-entry 8-byte table inside upper2, searched linearly (cmp ecx, 0x7530) and then dereferenced (mov rax, [rax]); left behind by the belt move it would search the middle of the player array and dereference a player field as a pointer. The 0x7530 bound is deliberately not raised: the table cannot grow without room after it, so players past 30000 simply are not in it."
+    }
+   ]
+  }
+ },
+ "counts": {
+  "_comment": "the four u32 counters the load-time scan writes",
+  "players": "0xd0bce8",
+  "teams": "0xd0bcec",
+  "coaches": "0xd0bcf0",
+  "regulations": "0xd0bcf4"
+ },
+ "copy": {
+  "_comment": "the mode copy: arrays laid out in a different order, then one serialisation buffer. Built by 0x141401060 (variant A) / 0x140afd660 (variant B), filled by 0x1414016b0. Every offset after the team array is encoded as a 32-bit field, so the copy can be re-laid-out in place; the team array is at +0x50 in a disp8 and therefore stays where it is, and everything after it moves instead.",
+  "ctor_a": "0x141401060",
+  "ctor_b": "0x140afd660",
+  "fill": "0x1414016b0",
+  "size": "0x15b6d94",
+  "size_sites": [
+   "0x141400b6e",
+   "0x141400b7c",
+   "0x141400ba0"
+  ],
+  "_size_note": "0x141400b10 clamps the codec's serialised length against this constant and 0x141400ba0 returns it outright; both feed an allocator (0x140afbe06, 0x140af1baa).",
+  "teams": "0x50",
+  "coaches": "0x133a30",
+  "regulations": "0x1f2110",
+  "fixtures": "0x22bc80",
+  "rec596": "0x329b00",
+  "competitions80": "0x1049b3c",
+  "three": "0x10b7a58",
+  "x250": "0x10b9588",
+  "buffer_len": "0x11403a8",
+  "buffer_ptr": "0x11403b0",
+  "buffer": "0x11403b8",
+  "buffer_cap": "0x4769dc",
+  "_buffer_note": "buffer + buffer_cap == size exactly: 0x11403b8 + 0x4769dc == 0x15b6d94.",
+  "caps_from_ctor": {
+   "teams": 750,
+   "coaches": 1300,
+   "regulations": 300,
+   "fixtures": 2000,
+   "rec596": 13000,
+   "competitions80": 80,
+   "three": 3,
+   "x250": 250
+  },
+  "mlcopy": {
+   "_comment": [
+    "Master League saves are written from mode copy A, which keeps its own copies of the",
+    "block's arrays at the caps its constructor hard-codes (copy.caps_from_ctor). Raising a",
+    "block cap without raising the copy's drops every record past the copy's cap from the",
+    "save, and the load fills the block back only up to it: the match table did that to the",
+    "schedule, the team, coach and regulation tables to the managed club, its manager and",
+    "its league. This part grows the copy's tables to the block's caps.",
+    "The copy is one flat object, so a table can only grow by moving everything above it.",
+    "Each region below is [base, base + cap_old * stride), verified to end exactly where the",
+    "next field begins; a field's shift is the sum of the growths of every region that starts",
+    "below it (prefix sum), and one patch per site carries the final value. The team array is",
+    "at +0x50 in a disp8 that cannot be widened, so it stays and everything above it moves.",
+    "teams drives two regions from one count (the records at +0x50 and a 0x10-byte per-team",
+    "side array at +0xc016b4, both counted by `mov ebp, 0x2ee` at 0x1414010b1), so both grow.",
+    "fixtures keeps its shipped 2000 in both block and copy: only its base moves.",
+    "fields is every copy A field tools/copyfields.py finds by following the copy pointer",
+    "through the six A functions (bounded to each function's own extent), plus the four only",
+    "reached from outside the copy code (attrib.json copy-manual). The generator re-runs that",
+    "walk and refuses if it finds a field this list does not have.",
+    "Not carried by the copy: matchflags. There is no 0x32c8 immediate in the A code outside",
+    "the three rec596 count sites, and no region of 13000 bytes anywhere in the field gaps.",
+    "Not grown here: competitions80 at +0x1049b3c, 80 records of 0x15fc. The block caps it at",
+    "80 as well (0x1414bc960: cmp edx, 0x50; records at block+0x1719b84), so it is a block",
+    "wall first and a copy wall second, and growing it is a relocation like rec596's."
+   ],
+   "code_a": [
+    [
+     "0x1414007c0",
+     "0x141402300"
+    ]
+   ],
+   "field_funcs": [
+    "0x1414007c0",
+    "0x141400940",
+    "0x141400bb0",
+    "0x141401060",
+    "0x1414016b0",
+    "0x141401c10"
+   ],
+   "regions": [
+    {
+     "name": "teams",
+     "array": "teams",
+     "base": "0x50",
+     "stride": "0x690",
+     "ends_at": "0x133a30",
+     "count_sites": [
+      {
+       "va": "0x1414010b1",
+       "why": "ctor_a: team records and the +0xc016b4 side array (one ebp)"
+      },
+      {
+       "va": "0x14140172f",
+       "why": "A -> block (0x1414016b0): loop bound over the copy's team array"
+      },
+      {
+       "va": "0x140af37d8",
+       "why": "accessor 0x140af3680, A branch ([r15 + 0x270] + 0x50): index bound"
+      }
+     ],
+     "released_hold_sites": [
+      "0x14140172f"
+     ]
+    },
+    {
+     "name": "teams_side",
+     "array": "teams",
+     "base": "0xc016b4",
+     "stride": "0x10",
+     "ends_at": "0xc04594",
+     "count_sites": [],
+     "released_hold_sites": []
+    },
+    {
+     "name": "coaches",
+     "array": "coaches",
+     "base": "0x133a30",
+     "stride": "0x258",
+     "ends_at": "0x1f2110",
+     "count_sites": [
+      {
+       "va": "0x1414010fc",
+       "why": "ctor_a: coach records constructed"
+      },
+      {
+       "va": "0x141401798",
+       "why": "A -> block: loop bound over the copy's coach array"
+      },
+      {
+       "va": "0x140af3cb8",
+       "why": "accessor 0x140af3680, A branch ([r15 + 0x270] + 0x133a30): index bound"
+      },
+      {
+       "va": "0x140af36bb",
+       "why": "accessor 0x140af3680: coach bound of the default (A) mode, kept at [rsp + 0x80]"
+      }
+     ],
+     "released_hold_sites": []
+    },
+    {
+     "name": "regulations",
+     "array": "regulations",
+     "base": "0x1f2110",
+     "stride": "0x314",
+     "ends_at": "0x22bc80",
+     "count_sites": [
+      {
+       "va": "0x14140111d",
+       "why": "ctor_a: regulation records constructed"
+      },
+      {
+       "va": "0x1414017d5",
+       "why": "A -> block: loop bound over the copy's regulation array"
+      },
+      {
+       "va": "0x140af3e7a",
+       "why": "accessor 0x140af3680, A branch ([rdi + 0x270] + 0x1f2110): index bound"
+      },
+      {
+       "va": "0x140af36c6",
+       "why": "accessor 0x140af3680: regulation bound of the default (A) mode, kept at [rsp + 0x20]"
+      }
+     ],
+     "released_hold_sites": []
+    },
+    {
+     "name": "rec596",
+     "array": "rec596",
+     "base": "0x329b00",
+     "stride": "0x254",
+     "ends_at": "0xa8d4a0",
+     "count_sites": [
+      {
+       "va": "0x14140115f",
+       "why": "ctor_a: match records constructed"
+      },
+      {
+       "va": "0x141401856",
+       "why": "A -> block: loop bound over the copy's match table"
+      },
+      {
+       "va": "0x141401e07",
+       "why": "block -> A: loop bound over the copy's match table"
+      }
+     ],
+     "released_hold_sites": [
+      "0x141401856",
+      "0x141401e07"
+     ]
+    }
+   ],
+   "_rejected_count_sites": [
+    {
+     "va": "0x140af36b0",
+     "const": "0x2ee",
+     "why": "mov r13d, 0x2ee is the default-mode team bound, but mode 8 ([r15 + 0x260]) falls through to 0x140af36e8 and copies it into [rsp + 0x80] as its own bound; raising it would raise a bound on an object we have not measured. Left at 750: a low bound yields dummy records, never a write past an array."
+    },
+    {
+     "va": "0x140af37f5",
+     "const": "0x2ee",
+     "why": "same function, variant B branch ([r15 + 0x268] + 0x50)"
+    },
+    {
+     "va": "0x140af3cd7",
+     "const": "0x2ee",
+     "why": "variant B's coach array ([r15 + 0x268] + 0x133a30) is 750, not 1300"
+    },
+    {
+     "va": "0x140af3815",
+     "const": "0x3c",
+     "why": "mode 7 bound (60), not a copy A cap"
+    },
+    {
+     "va": "0x140af3cf6",
+     "const": "0x3c",
+     "why": "mode 7 bound (60), not a copy A cap"
+    },
+    {
+     "va": "0x140af3e99",
+     "const": "0xb4",
+     "why": "mode 8 bound (180), not a copy A cap"
+    },
+    {
+     "va": "0x1413fea8f",
+     "const": "0x2ee",
+     "why": "variant B -> block team loop bound (layout hold site); B is not grown"
+    },
+    {
+     "va": "0x1413feacc",
+     "const": "0x2ee",
+     "why": "variant B -> block coach loop bound (layout hold site); B is not grown"
+    },
+    {
+     "va": "0x140b10a96",
+     "const": "0x2ee",
+     "why": "layout hold site: not a team bound at all"
+    },
+    {
+     "va": "0x14140113e",
+     "const": "0x7d0",
+     "why": "ctor_a fixtures count; fixtures keeps its shipped 2000"
+    },
+    {
+     "va": "0x1414017f0",
+     "const": "0x7d0",
+     "why": "fixtures loop bound; fixtures keeps 2000"
+    },
+    {
+     "va": "0x14140181c",
+     "const": "0x7d0",
+     "why": "fixtures loop bound; fixtures keeps 2000"
+    },
+    {
+     "va": "0x141401da3",
+     "const": "0x7d0",
+     "why": "fixtures loop bound; fixtures keeps 2000"
+    },
+    {
+     "va": "0x141401dcc",
+     "const": "0x7d0",
+     "why": "fixtures loop bound; fixtures keeps 2000"
+    },
+    {
+     "va": "0x1414012bd",
+     "const": "0x190",
+     "why": "400-entry 0x10-byte array at +0xc04598; not one of our caps"
+    }
+   ],
+   "fields": [
+    "0x50",
+    "0x133a30",
+    "0x1f2110",
+    "0x22bc80",
+    "0x329b00",
+    "0xa8d4a0",
+    "0xafa1a0",
+    "0xb08668",
+    "0xb628c8",
+    "0xbee290",
+    "0xc008d0",
+    "0xc016b4",
+    "0xc016bc",
+    "0xc04594",
+    "0xc04598",
+    "0xc045a0",
+    "0xc05e98",
+    "0xc05e9c",
+    "0xc07430",
+    "0xc7dd00",
+    "0xc81c48",
+    "0xcaac90",
+    "0xcac26c",
+    "0xcad848",
+    "0xcaee24",
+    "0xcaf24c",
+    "0x1049b3c",
+    "0x10b7a00",
+    "0x10b7a58",
+    "0x10b9488",
+    "0x10b9588",
+    "0x10c1a58",
+    "0x10c1a5c",
+    "0x1100ee0",
+    "0x1100ee4",
+    "0x1140374",
+    "0x1140384",
+    "0x1140394",
+    "0x114039c",
+    "0x11403a0",
+    "0x11403a4",
+    "0x11403a8",
+    "0x11403ac",
+    "0x11403b0",
+    "0x11403b8"
+   ],
+   "outside_sites": [
+    {
+     "va": "0x140af2446",
+     "func": "0x140af21c0",
+     "operand": "0x11403b0",
+     "why": "load side: rcx = [obj + 0x270] is copy A; buffer_ptr handed to the unpacker"
+    },
+    {
+     "va": "0x140af331f",
+     "func": "0x140af30f0",
+     "operand": "0x11403ac",
+     "why": "rax = [rbx + 0x270] is copy A; the codec's compressed length"
+    },
+    {
+     "va": "0x140af375f",
+     "func": "0x140af3680",
+     "operand": "0xafa1a0",
+     "why": "rbx = [r15 + 0x270] is copy A (the 0x268 branch is B, with B's own offset)"
+    },
+    {
+     "va": "0x140eba9fd",
+     "func": "0x140eba990",
+     "operand": "0x10c1a5c",
+     "why": "called at 0x140af2489 with rdx = [obj + 0x270]; walks the two 0x3f48c sub-objects"
+    },
+    {
+     "va": "0x140ebab45",
+     "func": "0x140ebaab0",
+     "operand": "0x10c1a5c",
+     "why": "called at 0x140afbe7c / 0x140b0eff1 with rdx = copy A after the codec"
+    },
+    {
+     "va": "0x140ebab55",
+     "func": "0x140ebaab0",
+     "operand": "0x1100ee0",
+     "why": "same function, second sub-object field"
+    },
+    {
+     "va": "0x140ebab60",
+     "func": "0x140ebaab0",
+     "operand": "0x1100ee4",
+     "why": "same function, second sub-object field"
+    }
+   ]
+  }
+ },
+ "getters": {
+  "_comment": "how a register comes to hold the edit block; attrib.py keys off these",
+  "owner": "0x1414b6a60",
+  "owner_global": "0x143705e10",
+  "owner_field": "0x48",
+  "handle_deref": "0x140edf9c0"
+ }
+}

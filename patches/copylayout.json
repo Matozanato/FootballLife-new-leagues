@@ -1,0 +1,481 @@
+[
+ {
+  "va": "0x140af36b0",
+  "kind": "team-cap",
+  "name": "teams",
+  "value": "0x2ee",
+  "text": "mov r13d, 0x2ee"
+ },
+ {
+  "va": "0x140af37d8",
+  "kind": "team-cap",
+  "name": "teams",
+  "value": "0x2ee",
+  "text": "cmp r12d, 0x2ee"
+ },
+ {
+  "va": "0x140af37f1",
+  "kind": "team-base",
+  "name": "teams",
+  "value": "0x50",
+  "text": "lea rdi, [rdx + 0x50]",
+  "evidence": "0x690 stride within ten instructions",
+  "reg": "rdi"
+ },
+ {
+  "va": "0x140af37f5",
+  "kind": "team-cap",
+  "name": "teams",
+  "value": "0x2ee",
+  "text": "cmp r12d, 0x2ee"
+ },
+ {
+  "va": "0x140af3cb1",
+  "kind": "field-disp",
+  "name": "coaches",
+  "value": "0x133a30",
+  "text": "lea rdi, [rdx + 0x133a30]"
+ },
+ {
+  "va": "0x140af3cd0",
+  "kind": "field-disp",
+  "name": "coaches",
+  "value": "0x133a30",
+  "text": "lea rdi, [rdx + 0x133a30]"
+ },
+ {
+  "va": "0x140af3cd7",
+  "kind": "team-cap",
+  "name": "teams",
+  "value": "0x2ee",
+  "text": "cmp esi, 0x2ee"
+ },
+ {
+  "va": "0x140af3e73",
+  "kind": "field-disp",
+  "name": "regulations",
+  "value": "0x1f2110",
+  "text": "lea rdi, [rdx + 0x1f2110]"
+ },
+ {
+  "va": "0x140afd684",
+  "kind": "team-base",
+  "name": "teams",
+  "value": "0x50",
+  "text": "lea rbx, [rcx + 0x50]",
+  "evidence": "0x690 stride within ten instructions",
+  "reg": "rbx"
+ },
+ {
+  "va": "0x140afd688",
+  "kind": "team-cap",
+  "name": "teams",
+  "value": "0x2ee",
+  "text": "mov ebp, 0x2ee"
+ },
+ {
+  "va": "0x140afd6a5",
+  "kind": "field-disp",
+  "name": "coaches",
+  "value": "0x133a30",
+  "text": "lea rbx, [rsi + 0x133a30]"
+ },
+ {
+  "va": "0x1413fea63",
+  "kind": "team-cap",
+  "name": "teams",
+  "value": "0x2ee",
+  "text": "cmp ebp, 0x2ee"
+ },
+ {
+  "va": "0x1413fea8f",
+  "kind": "team-cap",
+  "name": "teams",
+  "value": "0x2ee",
+  "text": "cmp edi, 0x2ee"
+ },
+ {
+  "va": "0x1413fea99",
+  "kind": "field-disp",
+  "name": "coaches",
+  "value": "0x133a30",
+  "text": "lea rsi, [r14 + 0x133a30]"
+ },
+ {
+  "va": "0x1413feacc",
+  "kind": "team-cap",
+  "name": "teams",
+  "value": "0x2ee",
+  "text": "cmp edi, 0x2ee"
+ },
+ {
+  "va": "0x1413fede4",
+  "kind": "team-cap",
+  "name": "teams",
+  "value": "0x2ee",
+  "text": "cmp edi, 0x2ee"
+ },
+ {
+  "va": "0x1413fee11",
+  "kind": "team-base",
+  "name": "teams",
+  "value": "0x50",
+  "text": "add rcx, 0x50",
+  "evidence": "0x690 stride within ten instructions",
+  "reg": "rcx"
+ },
+ {
+  "va": "0x1413fee5e",
+  "kind": "field-imm",
+  "name": "coaches",
+  "value": "0x133a30",
+  "text": "add rcx, 0x133a30"
+ },
+ {
+  "va": "0x1414007dc",
+  "kind": "field-disp",
+  "name": "buffer_len",
+  "value": "0x11403a8",
+  "text": "mov eax, dword ptr [rcx + 0x11403a8]"
+ },
+ {
+  "va": "0x1414007e5",
+  "kind": "field-imm",
+  "name": "buffer",
+  "value": "0x11403b8",
+  "text": "add rcx, 0x11403b8"
+ },
+ {
+  "va": "0x14140085b",
+  "kind": "field-imm",
+  "name": "buffer_cap",
+  "value": "0x4769dc",
+  "text": "mov edx, 0x4769dc"
+ },
+ {
+  "va": "0x141400966",
+  "kind": "field-disp",
+  "name": "buffer_len",
+  "value": "0x11403a8",
+  "text": "cmp dword ptr [rcx + 0x11403a8], 0x4769dc"
+ },
+ {
+  "va": "0x141400966",
+  "kind": "field-imm",
+  "name": "buffer_cap",
+  "value": "0x4769dc",
+  "text": "cmp dword ptr [rcx + 0x11403a8], 0x4769dc"
+ },
+ {
+  "va": "0x141400970",
+  "kind": "field-disp",
+  "name": "buffer",
+  "value": "0x11403b8",
+  "text": "lea rdi, [rcx + 0x11403b8]"
+ },
+ {
+  "va": "0x141400979",
+  "kind": "field-disp",
+  "name": "buffer_ptr",
+  "value": "0x11403b0",
+  "text": "mov qword ptr [rcx + 0x11403b0], rdi"
+ },
+ {
+  "va": "0x1414009a2",
+  "kind": "field-disp",
+  "name": "buffer_len",
+  "value": "0x11403a8",
+  "text": "mov edx, dword ptr [rbx + 0x11403a8]"
+ },
+ {
+  "va": "0x141400a2c",
+  "kind": "field-disp",
+  "name": "buffer",
+  "value": "0x11403b8",
+  "text": "lea rdi, [rbx + 0x11403b8]"
+ },
+ {
+  "va": "0x141400acb",
+  "kind": "field-disp",
+  "name": "buffer_ptr",
+  "value": "0x11403b0",
+  "text": "mov qword ptr [rbx + 0x11403b0], rdi"
+ },
+ {
+  "va": "0x141400ad8",
+  "kind": "field-disp",
+  "name": "buffer",
+  "value": "0x11403b8",
+  "text": "lea rax, [rcx + 0x11403b8]"
+ },
+ {
+  "va": "0x141400adf",
+  "kind": "field-disp",
+  "name": "buffer_ptr",
+  "value": "0x11403b0",
+  "text": "mov qword ptr [rcx + 0x11403b0], rax"
+ },
+ {
+  "va": "0x141400b69",
+  "kind": "field-imm",
+  "name": "buffer",
+  "value": "0x11403b8",
+  "text": "add eax, 0x11403b8"
+ },
+ {
+  "va": "0x141400b6e",
+  "kind": "field-imm",
+  "name": "copy_size",
+  "value": "0x15b6d94",
+  "text": "cmp eax, 0x15b6d94"
+ },
+ {
+  "va": "0x141400b7c",
+  "kind": "field-imm",
+  "name": "copy_size",
+  "value": "0x15b6d94",
+  "text": "mov eax, 0x15b6d94"
+ },
+ {
+  "va": "0x141400ba0",
+  "kind": "field-imm",
+  "name": "copy_size",
+  "value": "0x15b6d94",
+  "text": "mov eax, 0x15b6d94"
+ },
+ {
+  "va": "0x141400bb0",
+  "kind": "field-disp",
+  "name": "buffer_len",
+  "value": "0x11403a8",
+  "text": "mov eax, dword ptr [rcx + 0x11403a8]"
+ },
+ {
+  "va": "0x141400bb6",
+  "kind": "field-imm",
+  "name": "buffer",
+  "value": "0x11403b8",
+  "text": "add rax, 0x11403b8"
+ },
+ {
+  "va": "0x1414010ad",
+  "kind": "team-base",
+  "name": "teams",
+  "value": "0x50",
+  "text": "lea rdi, [rcx + 0x50]",
+  "evidence": "0x690 stride within ten instructions",
+  "reg": "rdi"
+ },
+ {
+  "va": "0x1414010b1",
+  "kind": "team-cap",
+  "name": "teams",
+  "value": "0x2ee",
+  "text": "mov ebp, 0x2ee"
+ },
+ {
+  "va": "0x1414010cd",
+  "kind": "field-disp",
+  "name": "competitions",
+  "value": "0x1049b3c",
+  "text": "lea rdi, [rsi + 0x1049b3c]"
+ },
+ {
+  "va": "0x1414010f5",
+  "kind": "field-disp",
+  "name": "coaches",
+  "value": "0x133a30",
+  "text": "lea rdi, [rsi + 0x133a30]"
+ },
+ {
+  "va": "0x141401116",
+  "kind": "field-disp",
+  "name": "regulations",
+  "value": "0x1f2110",
+  "text": "lea rdi, [rsi + 0x1f2110]"
+ },
+ {
+  "va": "0x141401137",
+  "kind": "field-disp",
+  "name": "fixtures",
+  "value": "0x22bc80",
+  "text": "lea rdi, [rsi + 0x22bc80]"
+ },
+ {
+  "va": "0x141401158",
+  "kind": "field-disp",
+  "name": "rec596",
+  "value": "0x329b00",
+  "text": "lea rdi, [rsi + 0x329b00]"
+ },
+ {
+  "va": "0x141401179",
+  "kind": "field-disp",
+  "name": "three",
+  "value": "0x10b7a58",
+  "text": "lea rdi, [rsi + 0x10b7a58]"
+ },
+ {
+  "va": "0x1414011e3",
+  "kind": "field-disp",
+  "name": "x250",
+  "value": "0x10b9588",
+  "text": "lea rdi, [rsi + 0x10b9588]"
+ },
+ {
+  "va": "0x1414013c8",
+  "kind": "field-disp",
+  "name": "buffer",
+  "value": "0x11403b8",
+  "text": "lea rdi, [rsi + 0x11403b8]"
+ },
+ {
+  "va": "0x141401404",
+  "kind": "field-disp",
+  "name": "buffer_len",
+  "value": "0x11403a8",
+  "text": "mov dword ptr [rsi + 0x11403a8], eax"
+ },
+ {
+  "va": "0x141401417",
+  "kind": "field-disp",
+  "name": "buffer_len",
+  "value": "0x11403a8",
+  "text": "mov r8d, dword ptr [rsi + 0x11403a8]"
+ },
+ {
+  "va": "0x14140142e",
+  "kind": "field-disp",
+  "name": "buffer_len",
+  "value": "0x11403a8",
+  "text": "mov dword ptr [rsi + 0x11403a8], 0x4769dc"
+ },
+ {
+  "va": "0x14140142e",
+  "kind": "field-imm",
+  "name": "buffer_cap",
+  "value": "0x4769dc",
+  "text": "mov dword ptr [rsi + 0x11403a8], 0x4769dc"
+ },
+ {
+  "va": "0x1414014fb",
+  "kind": "field-disp",
+  "name": "buffer_len",
+  "value": "0x11403a8",
+  "text": "mov dword ptr [rsi + 0x11403a8], 0xadf4bc"
+ },
+ {
+  "va": "0x141401703",
+  "kind": "team-cap",
+  "name": "teams",
+  "value": "0x2ee",
+  "text": "cmp ebx, 0x2ee"
+ },
+ {
+  "va": "0x14140172f",
+  "kind": "team-cap",
+  "name": "teams",
+  "value": "0x2ee",
+  "text": "cmp ebx, 0x2ee"
+ },
+ {
+  "va": "0x141401739",
+  "kind": "field-disp",
+  "name": "competitions",
+  "value": "0x1049b3c",
+  "text": "lea rdi, [r14 + 0x1049b3c]"
+ },
+ {
+  "va": "0x141401765",
+  "kind": "field-disp",
+  "name": "coaches",
+  "value": "0x133a30",
+  "text": "lea rdi, [r14 + 0x133a30]"
+ },
+ {
+  "va": "0x1414017a2",
+  "kind": "field-disp",
+  "name": "regulations",
+  "value": "0x1f2110",
+  "text": "lea rdi, [r14 + 0x1f2110]"
+ },
+ {
+  "va": "0x1414017f6",
+  "kind": "field-disp",
+  "name": "fixtures",
+  "value": "0x22bc80",
+  "text": "lea rdx, [r15 + 0x22bc80]"
+ },
+ {
+  "va": "0x141401829",
+  "kind": "field-imm",
+  "name": "rec596",
+  "value": "0x329b00",
+  "text": "add r15, 0x329b00"
+ },
+ {
+  "va": "0x141401b64",
+  "kind": "field-imm",
+  "name": "x250",
+  "value": "0x10b9588",
+  "text": "add r15, 0x10b9588"
+ },
+ {
+  "va": "0x141401c70",
+  "kind": "team-cap",
+  "name": "teams",
+  "value": "0x2ee",
+  "text": "cmp edi, 0x2ee"
+ },
+ {
+  "va": "0x141401c9d",
+  "kind": "team-base",
+  "name": "teams",
+  "value": "0x50",
+  "text": "add rcx, 0x50",
+  "evidence": "0x690 stride within ten instructions",
+  "reg": "rcx"
+ },
+ {
+  "va": "0x141401cb6",
+  "kind": "field-disp",
+  "name": "competitions",
+  "value": "0x1049b3c",
+  "text": "lea rsi, [rbp + 0x1049b3c]"
+ },
+ {
+  "va": "0x141401d1d",
+  "kind": "field-imm",
+  "name": "coaches",
+  "value": "0x133a30",
+  "text": "add rcx, 0x133a30"
+ },
+ {
+  "va": "0x141401d6f",
+  "kind": "field-imm",
+  "name": "regulations",
+  "value": "0x1f2110",
+  "text": "add rcx, 0x1f2110"
+ },
+ {
+  "va": "0x141401db4",
+  "kind": "field-disp",
+  "name": "fixtures",
+  "value": "0x22bc80",
+  "text": "lea rcx, [r15 + 0x22bc80]"
+ },
+ {
+  "va": "0x141401dda",
+  "kind": "field-imm",
+  "name": "rec596",
+  "value": "0x329b00",
+  "text": "add r15, 0x329b00"
+ },
+ {
+  "va": "0x141402160",
+  "kind": "field-disp",
+  "name": "x250",
+  "value": "0x10b9588",
+  "text": "lea rdi, [rbp + 0x10b9588]"
+ }
+]
