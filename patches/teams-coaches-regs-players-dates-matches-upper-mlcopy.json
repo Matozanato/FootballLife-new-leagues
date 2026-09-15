@@ -4063,6 +4063,20 @@
    "asm": "mov edi, dword ptr [rax + 0x11403ac]"
   },
   {
+   "va": "0x140af3cb1",
+   "old": "488dba303a1300",
+   "new": "488dba50042900",
+   "why": "mlcopy A field from 0x140af3680 (coach base of the A branch ([r15 + 0x270] + 0x133a30), the lea that feeds the index bound patched at 0x140af3cb8; the accessor sits outside code_a so the field walk never saw it): 0x133a30 -> 0x290450",
+   "asm": "lea rdi, [rdx + 0x133a30]"
+  },
+  {
+   "va": "0x140af3e73",
+   "old": "488dba10211f00",
+   "new": "488dba10d24000",
+   "why": "mlcopy A field from 0x140af3680 (regulation base of the A branch ([r15 + 0x270] + 0x1f2110), companion of the index bound at 0x140af3e7a; left on the old copy layout it initialised 293 regulation records 0x21b100 low, on top of team rows 1214+): 0x1f2110 -> 0x40d210",
+   "asm": "lea rdi, [rdx + 0x1f2110]"
+  },
+  {
    "va": "0x140af375f",
    "old": "4881c3a0a1af00",
    "new": "4881c3b0274b01",
@@ -18971,12 +18985,14 @@
    "0x133a30": [
     "0x1414010f5",
     "0x141401765",
-    "0x141401d1d"
+    "0x141401d1d",
+    "0x140af3cb1"
    ],
    "0x1f2110": [
     "0x141401116",
     "0x1414017a2",
-    "0x141401d6f"
+    "0x141401d6f",
+    "0x140af3e73"
    ],
    "0x22bc80": [
     "0x141401137",

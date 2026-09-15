@@ -28,9 +28,16 @@ python tools\patchset.py teams-coaches-regs-players-dates-matches-upper-mlcopy ^
   memcpy'd; the generator refuses anything else and tells you the nearest valid value.
 
 The generator writes `patches/<set>.json` and `sider/fl26caps.lua`. It refuses to emit a set
-while any table reference is unattributed, and it now fails if the pre-biased displacements
-inside the save/load copy code disagree with each other (the bug behind the "manager's name
-disappears after a load" symptom).
+while any table reference is unattributed, and it runs two checks that each exist because of
+a real load-path bug:
+
+- `check_biased()` — the pre-biased displacements inside the save/load copy code must agree
+  with one another (the bug behind "the manager's name disappears after a load").
+- `check_copy_fields()` — every occurrence, anywhere in the code section, of an offset the
+  copy moves must be either patched or named in `copy.mlcopy.field_scan_allow` with a reason.
+  This is what the accessor `0x140af3680` slipped through: its index bounds were raised while
+  the base displacements beside them kept the shipped layout, and a loaded season then wrote
+  regulation records over the team array.
 
 ## What the set name means
 

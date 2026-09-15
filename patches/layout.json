@@ -799,6 +799,63 @@
     "0x11403b0",
     "0x11403b8"
    ],
+   "field_scan_allow": [
+    {
+     "va": "0x140af3cd0",
+     "operand": "0x133a30",
+     "why": "accessor 0x140af3680, variant B branch ([r15 + 0x268]); B keeps its shipped layout and is not grown"
+    },
+    {
+     "va": "0x1413fea99",
+     "operand": "0x133a30",
+     "why": "variant B -> block fill 0x1413fea10; B is not grown"
+    },
+    {
+     "va": "0x1413fee5e",
+     "operand": "0x133a30",
+     "why": "variant B, same function family; B is not grown"
+    },
+    {
+     "va": "0x140afd6a5",
+     "operand": "0x133a30",
+     "why": "variant B ctor 0x140afd660; B is not grown"
+    },
+    {
+     "va": "0x14128e1ca",
+     "operand": "0x11403a4",
+     "why": "numeric coincidence, not a copy field: rdx/the store is a plain value handed to the formatter 0x141496ca0 (which spills edx into the varargs home area) with rcx a local buffer -- no copy pointer is involved anywhere in 0x14128xxx / 0x1412exxx"
+    },
+    {
+     "va": "0x14128ef83",
+     "operand": "0x11403a4",
+     "why": "numeric coincidence, not a copy field: rdx/the store is a plain value handed to the formatter 0x141496ca0 (which spills edx into the varargs home area) with rcx a local buffer -- no copy pointer is involved anywhere in 0x14128xxx / 0x1412exxx"
+    },
+    {
+     "va": "0x14128f7c8",
+     "operand": "0x11403a8",
+     "why": "numeric coincidence, not a copy field: rdx/the store is a plain value handed to the formatter 0x141496ca0 (which spills edx into the varargs home area) with rcx a local buffer -- no copy pointer is involved anywhere in 0x14128xxx / 0x1412exxx"
+    },
+    {
+     "va": "0x14128e0b7",
+     "operand": "0x11403ac",
+     "why": "numeric coincidence, not a copy field: rdx/the store is a plain value handed to the formatter 0x141496ca0 (which spills edx into the varargs home area) with rcx a local buffer -- no copy pointer is involved anywhere in 0x14128xxx / 0x1412exxx"
+    },
+    {
+     "va": "0x14128fb38",
+     "operand": "0x11403b0",
+     "why": "numeric coincidence, not a copy field: rdx/the store is a plain value handed to the formatter 0x141496ca0 (which spills edx into the varargs home area) with rcx a local buffer -- no copy pointer is involved anywhere in 0x14128xxx / 0x1412exxx"
+    },
+    {
+     "va": "0x14128fc6e",
+     "operand": "0x11403b8",
+     "why": "numeric coincidence, not a copy field: rdx/the store is a plain value handed to the formatter 0x141496ca0 (which spills edx into the varargs home area) with rcx a local buffer -- no copy pointer is involved anywhere in 0x14128xxx / 0x1412exxx"
+    },
+    {
+     "va": "0x1412e6a0f",
+     "operand": "0x11403b8",
+     "why": "numeric coincidence, not a copy field: rdx/the store is a plain value handed to the formatter 0x141496ca0 (which spills edx into the varargs home area) with rcx a local buffer -- no copy pointer is involved anywhere in 0x14128xxx / 0x1412exxx"
+    }
+   ],
    "outside_sites": [
     {
      "va": "0x140af2446",
@@ -811,6 +868,18 @@
      "func": "0x140af30f0",
      "operand": "0x11403ac",
      "why": "rax = [rbx + 0x270] is copy A; the codec's compressed length"
+    },
+    {
+     "va": "0x140af3cb1",
+     "func": "0x140af3680",
+     "operand": "0x133a30",
+     "why": "coach base of the A branch ([r15 + 0x270] + 0x133a30), the lea that feeds the index bound patched at 0x140af3cb8; the accessor sits outside code_a so the field walk never saw it"
+    },
+    {
+     "va": "0x140af3e73",
+     "func": "0x140af3680",
+     "operand": "0x1f2110",
+     "why": "regulation base of the A branch ([r15 + 0x270] + 0x1f2110), companion of the index bound at 0x140af3e7a; left on the old copy layout it initialised 293 regulation records 0x21b100 low, on top of team rows 1214+"
     },
     {
      "va": "0x140af375f",

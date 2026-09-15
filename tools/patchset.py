@@ -22,6 +22,7 @@ Output: patches/<set>.json and sider/fl26caps.lua (self-contained, ready to inst
 import json, os, sys
 from capstone import *
 from capstone.x86 import *
+import bisect
 import callindex, datecave
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -375,6 +376,7 @@ MLCOPY_SETS = {"teams-coaches-regs-players-dates-matches-upper-mlcopy"}
 # set in main(): whether this set moves copy A's own table bases, which is what makes a
 # pre-biased displacement need the two-base form rather than the block delta
 MLCOPY_ON = False
+MLCOPY_MOVED = {}
 
 # The first block field above the player array once teams, regulations and coaches have
 # moved out: the team dummy record at 0xd0b0ec (see docs/findings.md, dummy triple).
@@ -657,6 +659,58 @@ def mlcopy_patches(patches):
     return out, composed, moved, regions, total
 
 
+def check_copy_fields(patches):
+    """every occurrence of a remapped copy A field offset must be patched or explained
+
+    mlcopy moves the copy's tables, so an offset such as the regulations' 0x1f2110 becomes
+    0x40d210 everywhere it is used.  The field walk only covers copy A's own functions, and
+    the few sites that reach a field from outside are listed by hand -- which is how
+    0x140af3e73 was missed: the accessor 0x140af3680 had its regulation index bound raised
+    to 600 while the `lea rdi, [rdx + 0x1f2110]` right above it kept the old layout, so a
+    loaded season initialised 293 regulation records 0x21b100 bytes low, straight over the
+    team array, and 69 clubs came back with broken squad handles.
+
+    So scan the whole code section for each remapped value, and refuse to emit unless every
+    occurrence is either patched or named in copy.mlcopy.field_scan_allow (variant B, which
+    keeps its shipped layout and is not grown).
+    """
+    if not MLCOPY_MOVED:
+        return
+    allow = {H(a["va"]): a for a in LAYOUT["copy"]["mlcopy"].get("field_scan_allow", [])}
+    patched = {H(p["va"]) for p in patches}
+    starts = sorted(callindex.starts())
+    bad = []
+    for value in sorted(MLCOPY_MOVED):
+        want = (value & 0xffffffff).to_bytes(4, "little")
+        i = d.find(want)
+        while i >= 0:
+            va = sva + (i - ro)
+            k = bisect.bisect_right(starts, va) - 1
+            if k >= 0:
+                f = starts[k]
+                end = starts[k + 1] if k + 1 < len(starts) else va + 0x10
+                for ins in md.disasm(d[off_of(f):off_of(end)], f):
+                    if not (ins.address <= va < ins.address + ins.size):
+                        continue
+                    ops = [o for o in ins.operands
+                           if (o.type == X86_OP_MEM and o.mem.base != X86_REG_RIP
+                               and o.mem.disp == value)
+                           or (o.type == X86_OP_IMM and o.imm == value)]
+                    if ops and ins.address not in patched and ins.address not in allow:
+                        bad.append((value, ins.address, "%s %s" % (ins.mnemonic, ins.op_str)))
+                    break
+            i = d.find(want, i + 1)
+    if bad:
+        raise SystemExit(
+            "%d site(s) still carry a copy A field offset mlcopy moved:\n%s\n"
+            "Patch them (patches/layout.json copy.mlcopy.outside_sites) or, if they belong "
+            "to variant B, name them in copy.mlcopy.field_scan_allow with the reason."
+            % (len(bad), "\n".join("  0x%x  %-34s (0x%x)" % (va, t, v)
+                                     for v, va, t in bad)))
+    print("   copy A field offsets: every occurrence of %d moved fields is patched or allowed"
+          % len(MLCOPY_MOVED))
+
+
 def check_biased(patches):
     """every pre-biased site in one copy function must end up with the same constant
 
@@ -859,6 +913,8 @@ def main():
     mlcopy = None
     if which in MLCOPY_SETS:
         extra, composed, moved, regions, total = mlcopy_patches(patches)
+        global MLCOPY_MOVED
+        MLCOPY_MOVED = moved
         patches += extra
         size_new = H(LAYOUT["copy"]["size"]) + total
         for p in patches:
@@ -949,6 +1005,7 @@ def main():
             raise SystemExit("two patches target %s" % p["va"])
         seen[p["va"]] = p
     check_biased(patches)
+    check_copy_fields(patches)
 
     meta = {"set": which, "block_size_old": "0x%x" % SIZE_OLD,
             "date_keys": keys if "-dates" in which else None,

@@ -1,6 +1,6 @@
 # Known issues
 
-Honest list, as of 2026-09-15. Addresses are given so that a fault offset in your Event
+Honest list, as of 2026-09-16. Addresses are given so that a fault offset in your Event
 Viewer can be matched against them: the offset is the address minus `0x140000000`
 (so `0x1414c674d` shows up as exception offset `0x14c674d`).
 
@@ -13,8 +13,8 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
 | Loading a season (schedule read) | `0x140cd6a1c` | **Fixed** by `fl26nullguard3.lua`. |
 | Mid-season, calendar advance | `0x140fc9238` | **Fixed** by `fl26nullguard2.lua`. |
 | Calendar advance, coach record walker | `0x141572125` | **Fixed** by `fl26nullguard4.lua`. The root cause (a mis-placed coach table after a load) was a bug in this patch set and is also fixed at the source. |
-| Calendar advance, AI lineup pass, field getter | `0x1414c674d` | **Guarded** by `fl26nullguard5.lua`, but the same pass then dies at the next line: |
-| Calendar advance, AI lineup pass, day ~238 (late August) | `0x1415032f0` | **OPEN.** Deterministic from a save in our 39-league world. The game's candidate list for one lineup slot is empty (the "no candidate" value 0xff is used as an index). Being analysed: a proper guard in the caller, and the data-side question of *why* a club has no eligible player. **This is the main thing to test** — see the testing guide, T1. |
+| Calendar advance, AI lineup pass, field getter | `0x1414c674d` | **Guarded** by `fl26nullguard5.lua`. |
+| Calendar advance, AI lineup pass, a day after matchday 1 | `0x1415032f0` | **Fixed 2026-09-16** in `fl26caps.lua` — see below. Update the module if you downloaded earlier. |
 | Startup, 9–11 seconds in, occasionally | — | Shipped game bug, reproduces on a clean install. Start again. |
 
 ## Missing or unverified features
@@ -50,6 +50,19 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-09-16: a season loaded from a save died a day after matchday 1 in the AI lineup pass,
+  with the game asking for a player that does not exist. The cause was in this patch set: the
+  regulation accessor's index bound was raised from 300 to 600 while the base displacement
+  next to it kept the shipped layout, so on load 293 regulation records were written 0x21b100
+  bytes low — straight over the team array. 69 of 1483 clubs came back with 233 broken squad
+  entries; 147 pointed at an empty record and 86 silently at the wrong player. The game counts
+  a broken entry as an available player and then cannot place it. The coach branch of the same
+  function had the identical gap. Both fixed (2,688 → 2,690 patches), and the generator now
+  refuses to emit a set while any moved offset is left unpatched and unexplained. Verified by
+  loading the same save and checking every squad entry against the live player table: 0 broken
+  in all 1473 clubs, and the season then played past the day it used to die on.
+  **Save files were never damaged** — only the memory the load filled — so an old save loads
+  clean with the new module.
 - 2026-09-15: after a load, the manager's name was blank, the standings panel empty, and the
   season crashed within minutes. Cause: the load path wrote the coach table and the rulebook
   table into the wrong place (the club table's growth was added twice). Fixed in the

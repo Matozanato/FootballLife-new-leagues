@@ -6,7 +6,7 @@ and sider/fl26caps.template.lua. Editing it by hand loses the guarantee that eve
 below came from disassembling the instruction at that address.
 
 Set:     teams-coaches-regs-players-dates-matches-upper-mlcopy
-Summary: block 0x1877068 -> 0x2d5a068, 2688 patches
+Summary: block 0x1877068 -> 0x2d5a068, 2690 patches
 
 What it does, and the one rule it follows: read every target address first and compare it
 against the bytes the generator saw in the exe; only if all of them match does it write
@@ -597,6 +597,8 @@ local patches = {
   {va=0x1414021f4, old="8985a4031401", new="8985d4beaf01", why="mlcopy A field (disp): 0x11403a4 -> 0x1afbed4"},
   {va=0x140af2446, old="488b89b0031401", new="488b89e0beaf01", why="mlcopy A field from 0x140af21c0 (load side: rcx = [obj + 0x270] is copy A; buffer_ptr handed to the unpacker): 0x11403b0 -> 0x1afbee0"},
   {va=0x140af331f, old="8bb8ac031401", new="8bb8dcbeaf01", why="mlcopy A field from 0x140af30f0 (rax = [rbx + 0x270] is copy A; the codec's compressed length): 0x11403ac -> 0x1afbedc"},
+  {va=0x140af3cb1, old="488dba303a1300", new="488dba50042900", why="mlcopy A field from 0x140af3680 (coach base of the A branch ([r15 + 0x270] + 0x133a30), the lea that feeds the index bound patched at 0x140af3cb8; the accessor sits outside code_a so the field walk never saw it): 0x133a30 -> 0x290450"},
+  {va=0x140af3e73, old="488dba10211f00", new="488dba10d24000", why="mlcopy A field from 0x140af3680 (regulation base of the A branch ([r15 + 0x270] + 0x1f2110), companion of the index bound at 0x140af3e7a; left on the old copy layout it initialised 293 regulation records 0x21b100 low, on top of team rows 1214+): 0x1f2110 -> 0x40d210"},
   {va=0x140af375f, old="4881c3a0a1af00", new="4881c3b0274b01", why="mlcopy A field from 0x140af3680 (rbx = [r15 + 0x270] is copy A (the 0x268 branch is B, with B's own offset)): 0xafa1a0 -> 0x14b27b0"},
   {va=0x140eba9fd, old="488db95c1a0c01", new="488db98cd5a701", why="mlcopy A field from 0x140eba990 (called at 0x140af2489 with rdx = [obj + 0x270]; walks the two 0x3f48c sub-objects): 0x10c1a5c -> 0x1a7d58c"},
   {va=0x140ebab45, old="498d8c245c1a0c01", new="498d8c248cd5a701", why="mlcopy A field from 0x140ebaab0 (called at 0x140afbe7c / 0x140b0eff1 with rdx = copy A after the codec): 0x10c1a5c -> 0x1a7d58c"},
@@ -2792,7 +2794,7 @@ function m.init(ctx)
   -- in doubt; the check was.
 
   if failed == 0 then
-    log(string.format("fl26caps: applied all %d patches -- %s", written, "block 0x1877068 -> 0x2d5a068, 2688 patches"))
+    log(string.format("fl26caps: applied all %d patches -- %s", written, "block 0x1877068 -> 0x2d5a068, 2690 patches"))
   else
     log(string.format("fl26caps: PARTIAL: %d written, %d failed. The game is now in an "
                       .. "inconsistent state -- quit and report the addresses above.",

@@ -35,23 +35,22 @@ Dumps then appear in `C:\fl26-dumps\` (mini dumps, tens of MB). Zip one and atta
 
 ## The tests, in order of usefulness
 
-### T1 — Play past late August
+### T1 — Play as deep into the season as you can
 
-*The* open problem. In our 39-league world the game dies deterministically around
-**day 238** (the game's day-of-year counter; about four weeks into the season, roughly the
-last week of August) in
-the AI lineup pass, on a club that has no eligible player for a slot. Two guards catch the
-first two faults; a third is still being worked on. We do not know yet whether smaller
-worlds, bigger squads, or different sizes avoid it.
+Until 2026-09-16 the game died a day after matchday 1 here, every time; that was our bug and
+it is fixed (see [known-issues](known-issues.md)). Our world has since played past it, but
+**nobody has taken a season through to May yet**. How far you get is the most useful number
+you can send us.
 
 Do: start a Master League with a new club. Save after the first match. Use *Forward Time →
 Skip Match* to move through the calendar, saving every few weeks into the same slot. Note
 the date on the hub when it crashes.
 
 Report: the date, your world (`mkworld.py` line + its output), the fault offset, the save
-file from just before the crash, whether it crashes again from that save (load it and skip
-one match). Both outcomes are useful — "crashed again at the same date" and "played through
-to Christmas" alike.
+file from just before the crash, and whether it crashes again from that save (load it and
+skip one match). Both outcomes are useful — "crashed again at the same date" and "played
+through to Christmas" alike. The shipped game also has a random crash of its own (fault
+offset `0x84ed4c0`); if you see that one, load your checkpoint and carry on.
 
 Variations that would answer real questions: `--per 25` or `--per 28` (bigger squads);
 fewer leagues (6, 12, 20); different sizes; a shipped club as your team instead of a new one.

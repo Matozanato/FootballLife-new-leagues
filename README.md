@@ -23,7 +23,7 @@ game loses everything past the shipped count, and a coach lookup lands on the wr
 
 This project does two things:
 
-1. **`sider/fl26caps.lua`** — a runtime patch set of 2,688 byte changes, applied by Sider at
+1. **`sider/fl26caps.lua`** — a runtime patch set of 2,690 byte changes, applied by Sider at
    startup, that grows those tables and every piece of code that indexes them:
 
    | table | shipped | with fl26caps |
@@ -57,19 +57,21 @@ in total), played with a new club as the manager's team.
 - Saving the season and loading it back: the club, the squad, the manager's name, the
   standings and the fixtures all survive. The same save was loaded three times in a row with
   no drift, and the coach and player tables were compared byte for byte before and after.
-- Advancing the calendar with matches simulated ("Skip Match"), from the start of the season (1 August)
-  to at least late August (the game's day 238) in the 39-league world.
+- Advancing the calendar with matches simulated ("Skip Match") past matchday 1 and on
+  through the game's day 242, in the 39-league world.
 - League sizes from 14 to 33 clubs. Different sizes in the same world.
 - Cups can be defined by the same tools (`mkcup.py`), but a cup in a Master League season
   is **not yet verified**.
 
 **Does not work yet / under investigation**
 
-- **A crash at around day 238** (late August, about four weeks in) in the 39-league world, in the game's AI
-  lineup pass. It is deterministic from the same save. Two guards (`fl26nullguard4`,
-  `fl26nullguard5`) stop the first two faults on that path; the third is being analysed.
-  It is not known yet whether smaller worlds hit it. **This is the most useful thing to
-  test right now** — see the [testing guide](docs/testing-guide.md).
+- **(Fixed 2026-09-16.)** The crash a day after matchday 1 was ours: on load, regulation
+  records were written over the top of the team array, so 69 clubs came back from a save
+  with broken squad entries and the AI could not field a side. If you downloaded before
+  2026-09-16, replace `sider/fl26caps.lua`. **Your save files are fine** — the damage was
+  only ever in memory, and an old save loads clean with the new module.
+- **Nobody has played a full season to May yet** with that fix in place. How far you get is
+  the most useful thing you can report — see the [testing guide](docs/testing-guide.md).
 - **Season generation crashes about one time in two**, in the shipped game's own code,
   regardless of these mods. Just start the season again; it is not data damage.
 - Continental competitions for new clubs (Champions League slots) — not attempted.
