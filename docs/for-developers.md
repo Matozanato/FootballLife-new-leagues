@@ -19,7 +19,12 @@ python tools\patchset.py teams-coaches-regs-players-dates-matches-upper-mlcopy ^
 ```
 
 - `--date-keys` are the rulebook ids of your new leagues (the `regulation ids` line of
-  `mkworld.py`). They must be within 1–255.
+  `mkworld.py`). They must be within 1–255. **Passing them is not optional in practice.**
+  Leave the flag off and the generator falls back to a single test league: every other
+  league's matches are then allocated with no date, nothing ever puts them on a calendar
+  day, and those leagues quietly play nothing from the second season onward. That is
+  exactly how the set published on 2026-09-16 shipped broken; see
+  [known-issues.md](known-issues.md). The generator now says out loud when it falls back.
 - `--date-offsets` assigns each key a weekday shift 0–6. A bare list (`--date-offsets 2,6,5,1`)
   deals shifts round-robin; the `key:shift` form above assigns them one by one. Spreading
   leagues over the emptier weekdays is what keeps the 280-ids-per-day calendar from

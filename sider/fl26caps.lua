@@ -6,7 +6,7 @@ and sider/fl26caps.template.lua. Editing it by hand loses the guarantee that eve
 below came from disassembling the instruction at that address.
 
 Set:     teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures
-Summary: block 0x1877068 -> 0x3171a68, 2750 patches
+Summary: block 0x1877068 -> 0x3171a68, 2760 patches
 
 What it does, and the one rule it follows: read every target address first and compare it
 against the bytes the generator saw in the exe; only if all of them match does it write
@@ -2756,7 +2756,17 @@ local patches = {
   {va=0x14249514f, old="4881c1645fd600", new="4881c1e051bc02", why="unwind funclet fixtures: 0xd65f64 -> 0x2bc51e0 (destroys the member where it now lives)"},
   {va=0x14249515d, old="41b8d0070000", new="41b8401f0000", why="unwind funclet fixtures: 2000 -> 8000 records destroyed"},
   {va=0x14249517a, old="4881c1e0fee900", new="4881c1d4191503", why="unwind funclet upper2: 0xe9fee0 -> 0x31519d4 (destroys the member where it now lives)"},
-  {va=0x1415802f2, old="3e", new="05", why="fixture dates: regulation 11 takes the big-league calendar"},
+  {va=0x141580331, old="19", new="3e", why="fixture dates: regulation 74 reuses a shipped id (case 25); send it to the stub"},
+  {va=0x141580333, old="03", new="3e", why="fixture dates: regulation 76 reuses a shipped id (case 3); send it to the stub"},
+  {va=0x141580371, old="2c", new="3e", why="fixture dates: regulation 138 reuses a shipped id (case 44); send it to the stub"},
+  {va=0x141580372, old="2d", new="3e", why="fixture dates: regulation 139 reuses a shipped id (case 45); send it to the stub"},
+  {va=0x141580373, old="2e", new="3e", why="fixture dates: regulation 140 reuses a shipped id (case 46); send it to the stub"},
+  {va=0x141580377, old="30", new="3e", why="fixture dates: regulation 144 reuses a shipped id (case 48); send it to the stub"},
+  {va=0x141580378, old="31", new="3e", why="fixture dates: regulation 145 reuses a shipped id (case 49); send it to the stub"},
+  {va=0x141580379, old="32", new="3e", why="fixture dates: regulation 146 reuses a shipped id (case 50); send it to the stub"},
+  {va=0x14252e690, old="000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", new="0fb7c73d000100007344488d0d450000000fb604013cff74350fb7cf8bf8488bd34c8d4520e8963e05ff488b0b488b5308483bca73188b0103c73d6d01000072052d6d01000089014883c10cebe34883c4205f5b5dc3ffffffffffffffffffffff06ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff01ffffffffffffffffffff020205ffffffffffffffffffffff02ff05ffffffffffffffffffffffffffffffff0202ff02ff01ff02ffffffffffffffff010005010205ffffffffffff01ffffffffffffffffffffffffffffffff010203ffff06050606ffffffffffffffffffffffffffffffffffffffffffffff0505ff0201ff05ff0401050205000306ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", why="fixture dates: the date-spread stub and its table (11:+6, 49:+1, 60:+2, 61:+2, 62:+5, 74:+2, 76:+5, 93:+2, 94:+2, 96:+2, 98:+1, 100:+2, 109:+1, 110:+0, 111:+5, 112:+1, 113:+2, 114:+5, 121:+1, 138:+1, 139:+2, 140:+3, 143:+6, 144:+5, 145:+6, 146:+6, 170:+5, 171:+5, 173:+2, 174:+1, 176:+5, 178:+4, 179:+1, 180:+5, 181:+2, 182:+5, 183:+0, 184:+3, 185:+6)"},
+  {va=0x1415802e4, old="3b015801", new="90e65202", why="fixture dates: case 62 (free ids 1..175) goes to the stub"},
+  {va=0x14157f84b, old="0f87ea080000", new="0f873feefa00", why="fixture dates: ids 176..1025 go to the stub instead of the empty return"},
   {va=0x14407f017, old="bcf4ad00", new="70708701", why="impdata teams edit: 0xadf4bc -> 0x1877070 (lea rax, [rdx + 0xadf4bc])"},
   {va=0x1447e90e0, old="9c2ec100", new="3042c801", why="impdata regulations edit-manual: 0xc12e9c -> 0x1c84230 (cmp word ptr [rcx + rdi + 0xc12e9c], r9w)"},
   {va=0x144a52969, old="9c2ec100", new="3042c801", why="impdata regulations edit-manual: 0xc12e9c -> 0x1c84230 (lea rax, [rcx + 0xc12e9c])"},
@@ -2854,7 +2864,7 @@ function m.init(ctx)
   -- in doubt; the check was.
 
   if failed == 0 then
-    log(string.format("fl26caps: applied all %d patches -- %s", written, "block 0x1877068 -> 0x3171a68, 2750 patches"))
+    log(string.format("fl26caps: applied all %d patches -- %s", written, "block 0x1877068 -> 0x3171a68, 2760 patches"))
   else
     log(string.format("fl26caps: PARTIAL: %d written, %d failed. The game is now in an "
                       .. "inconsistent state -- quit and report the addresses above.",

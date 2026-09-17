@@ -57,34 +57,59 @@ yet known, and if it reaches 127 the same silent turning-away returns at the hig
 127 is also the ceiling of this patch's approach, so going further is a different and larger
 job. If you are playing many seasons on one world, this is the thing to watch.
 
-## Later seasons lose their fixtures — open, not understood
+## Later seasons lost their fixtures — cause found 2026-09-17, fix not yet fully verified
 
-Found 2026-09-17, and the most serious thing currently known about this beta.
+Found and explained on 2026-09-17. If you downloaded before that date, **replace
+`sider/fl26caps.lua`** — the one published earlier has this fault.
 
-Five seasons were played back to back on one world. The number of fixture records in use
-fell steadily across them:
+What it looked like: five seasons played back to back on one world, the number of fixture
+records in use falling steadily across them —
 
     2194  2314  2616  2329  1593  1461  1201  1133  1087  997  883
 
-By the fifth season, **4 of the 39 new leagues had fixtures; the other 35 had none**, and
-the in-game calendar showed empty days because nothing was scheduled.
+— until by the fifth season **4 of the 39 new leagues had fixtures and the other 35 had
+none**, and the in-game calendar showed empty days because nothing was scheduled.
 
-Checked and ruled out as the cause:
+### The cause
 
-- all 39 rulebooks still have the start flag set (bit 8 of `+0x304`);
-- all 39 still hold an entry in the season's competition table;
-- the fixture list is not full: 883 of 8,000 used, highest record 996;
-- the per-phase standings pool is not full: 385 of 599;
-- no crash was reported during the generation that produced it.
+A match record holds its competition at `+0x04` and the year it is played at `+0x08`. The
+records were all there — every league had its 380, a 20-club double round robin — but the
+year read `0xffff`. A match with no date is never put on a calendar day, and a match that
+is not on a calendar day is never played. Counted per competition, the four leagues that
+still worked were exactly the four that carried real years.
 
-So the fault is inside season generation, and it is open. A first season still builds all
-39 leagues correctly, which is why this was not visible until a world was played for
-several seasons in one sitting.
+That came from the patch set, not from the game. The generator takes the list of leagues
+that are to be given the big-league calendar, and when the list is not passed it falls back
+to a single test league. The set published on 2026-09-16 was regenerated to raise the
+fixture list to 8,000 and that regeneration did not pass the list, so it shipped dating one
+league where the set before it dated thirty-nine. The one league that kept its date is the
+one league that played all six seasons.
 
-An honest note on how it was missed: the falling record count was watched all afternoon and
-read as the game reclaiming finished rounds, which it does do. A falling count looks the
-same whether old rounds are being freed or new ones are never created, and the more
-comfortable reading was taken without checking whether matches were actually on the
+Two things that were **not** the cause, though both are real and worth knowing:
+
+- the match table does fill up (26,000 records), because the leagues that kept dates kept
+  six seasons of history while the shipped competitions keep two;
+- calendar days hold 280 match ids and the surplus is dropped without a word. In the broken
+  world nine days sat at exactly 280, all of them the same weekday.
+
+### The fix, and what is verified
+
+The set is regenerated with all 39 leagues and the measured day-spread: **2,760 patches**,
+and the edit block, the copy size and every array base are unchanged, so **saves made with
+the previous version still load**.
+
+Verified on a fresh season: all 39 leagues are in the calendar, no match record is undated,
+and the busiest calendar day is 243 of 280 with no day at the ceiling.
+
+**Not yet verified: a season rollover.** The whole point of this fault is that it only
+showed itself in the second season and later, so the fix is not proven until a world has
+been played across rollovers. That run is going. Until it reports, treat this as a cause
+found and a fix applied, not as a closed issue.
+
+An honest note on how it was missed in the first place: the falling record count was watched
+all afternoon and read as the game reclaiming finished rounds, which it does do. A falling
+count looks the same whether old rounds are being freed or new ones are never created, and
+the more comfortable reading was taken without checking whether matches were actually on the
 calendar.
 
 ## Things that are by design and will bite you

@@ -19,11 +19,11 @@ Two invariants the generator enforces, both discovered from the code rather than
 
 Output: patches/<set>.json and sider/fl26caps.lua (self-contained, ready to install).
 """
-import json, os, sys
+import json, os, struct, sys
 from capstone import *
 from capstone.x86 import *
 import bisect
-import callindex, datecave
+import callindex, datecave, flpaths, impscan
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -71,30 +71,69 @@ def align(n, a):
     return (n + a - 1) // a * a
 
 
+SLOTS32 = False           # --slots32 on the command line; see stride_of()
+
+
+def stride_of(name):
+    """the stride an array is being built with in this set
+
+    G2b widens the fixture record from sixteen match slots to thirty-two, which doubles its
+    stride.  Every place that sizes or walks the array reads the stride from here, so the
+    new one flows into the arithmetic for free; the instructions that carry it as an
+    immediate are a separate list (arrays.fixtures.g2b_sites, from tools/g2b.py).
+    """
+    a = LAYOUT["arrays"][name]
+    if SLOTS32 and "stride_new" in a:
+        return H(a["stride_new"])
+    return H(a["stride"])
+
+
+def field_growth(name, field):
+    """how far a field inside a record moves when the record is widened
+
+    A field at or past the end of the old slot array moves by the growth; anything before
+    it stays.  For the fixture record exactly one field qualifies, the count at +0x204.
+    """
+    a = LAYOUT["arrays"].get(name)          # names like "teams:dummy" are not arrays
+    if not a or not (SLOTS32 and "stride_new" in a):
+        return 0
+    return H(a["stride_new"]) - H(a["stride"]) if field and field >= H(a["count_off"]) else 0
+
+
 def plan_layout(relocate, belt=False):
     """place the relocated arrays after the old block end; return (new_size, bases)
 
     With `belt`, the upper belt (layout.json block.upper_belt) goes after them as one
     piece, and bases["belt"] is where its first byte lands.
+
+    `block.tail_pad` is spare room after everything, holding no array.  It exists because
+    not every reference to a relocated array is ours to move: the protector virtualises
+    some of them into `.impdata`, where the attribution -- which reads `.trace` -- cannot
+    see them, so they still compute from the array's old base.  One such read was measured
+    on 2026-09-17 at `block + 0x3060284`, 0xc69c past an unpadded block, and killed the
+    season twice.  The pad does not correct the address; it makes the stale read land in
+    our own zeroed memory instead of off the end of the allocation.  A read only -- if a
+    stale *write* is ever found, the pad hides it and must be reconsidered.
     """
     cursor = align(SIZE_OLD, 16)
     bases = {}
     for name in relocate:
         a = LAYOUT["arrays"][name]
         bases[name] = cursor
-        cursor = align(cursor + a["cap_new"] * H(a["stride"]), 16)
+        cursor = align(cursor + a["cap_new"] * stride_of(name), 16)
     if belt:
         b = LAYOUT["block"]["upper_belt"]
         bases["belt"] = cursor
         cursor = align(cursor + H(b["end"]) - H(b["start"]), 16)
-    growth = align(cursor - SIZE_OLD, CHUNK)      # keep (size - tail) % chunk == 0
+    pad = H(LAYOUT["block"].get("tail_pad", "0x0"))
+    growth = align(cursor - SIZE_OLD + pad, CHUNK)   # keep (size - tail) % chunk == 0
     new_size = SIZE_OLD + growth
     assert (new_size - TAIL) % CHUNK == 0, "block size broke the memcpy invariant"
     for name, b in bases.items():
         if name == "belt":
             continue                      # sized from the layout's belt, placed last
         a = LAYOUT["arrays"][name]
-        end = b + a["cap_new"] * H(a["stride"])
+        end = b + a["cap_new"] * stride_of(name)
         assert end <= new_size, ("%s runs 0x%x bytes past the end of the grown block"
                                  % (name, end - new_size))
     return new_size, bases
@@ -170,7 +209,10 @@ def shift_patches(name, delta, attrib, extra=(), base_new=None):
             # operand == offset (+ field); regulations has 169 derived ones, each in a
             # function that also holds the base-carrying site.
             continue
-        new_value, note = old_value + delta, ""
+        grow = field_growth(name, field) if old_value == (off or 0) + field else 0
+        new_value, note = old_value + delta + grow, ""
+        if grow:
+            note = " [field +0x%x -> +0x%x]" % (field, field + grow)
         if s["kind"] == "biased" and base_new is not None and in_copy_a(va):
             cb = copy_base_new(name)
             if cb is not None:
@@ -270,6 +312,80 @@ def block_funcs(reloc):
     return {enclosing(H(p["va"])) for p in reloc if in_copy_code(H(p["va"]))} - {None}
 
 
+CAP_CHECKS = []
+
+
+def check_cap_completeness(patches):
+    """no function that has a cap raised may still carry an unexamined copy of the old cap
+
+    The attribution walk finds a bounds check by walking out from an array access, so it
+    reaches the test that sits next to the access and not always the one on the far side of
+    the loop body.  A `for` loop written with both an entry test and a back edge therefore
+    comes back half-attributed, and half a loop raised is worse than none: the entry test
+    lets the index start past the old cap while the back edge still stops the walk there.
+
+    That is exactly what held G2a up.  0x141579db0 searches the fixture array for a free
+    record; its entry test at 0x141579e2e was raised to 6000 and its back edge at
+    0x141579e64 was never seen, so the search still only ever examined records 0..1999.
+    Every other bound in all thirteen fixture functions was verified live at 6000 and the
+    season still stopped at exactly 2000 records.
+
+    So after collecting the sites, sweep each function that has one and refuse to emit if it
+    still holds an unrecorded immediate equal to the old cap.  Sites that are recorded --
+    raised, held, or held with their own `from` count -- are fine; the check is only against
+    sites nobody has ever looked at.
+    """
+    # a site the mlcopy region machinery owns is recorded too, just not by cap_patches:
+    # the copy's own counts are raised with the region that grows them.  So is one a
+    # different mechanism emitted (the mode-copy player walk at 0x140fc18f4), which is why
+    # this runs over the finished patch list rather than inside cap_patches.
+    emitted = {H(p["va"]) for p in patches}
+    region_sites = set()
+    for c in LAYOUT.get("copy", {}).values():
+        for r in (c.get("regions", []) if isinstance(c, dict) else []):
+            region_sites |= {H(x["va"]) for x in r.get("count_sites", [])}
+    starts = sorted(callindex.starts())
+    bad, loops = [], 0
+    for name, vas, out in CAP_CHECKS:
+        known = {H(v) for v in vas} | emitted | region_sites
+        a = LAYOUT["arrays"][name]
+        caps = {a["cap_old"], a["cap_old"] - 1}
+        for pt in out:
+            raised = H(pt["va"])
+            k = bisect.bisect_right(starts, raised) - 1
+            if k < 0:
+                continue
+            f = starts[k]
+            end = starts[k + 1] if k + 1 < len(starts) else raised + 0x10
+            prev = None
+            for ins in md.disasm(d[off_of(f):off_of(end)], f):
+                # the back edge is a conditional jump home; the test that feeds it is the
+                # instruction before it, and the jump lands between the raised site and here
+                if (prev is not None and ins.group(X86_GRP_JUMP)
+                        and ins.operands and ins.operands[0].type == X86_OP_IMM
+                        and raised <= ins.operands[0].imm <= prev.address
+                        and prev.address not in known
+                        and any(o.type == X86_OP_IMM and o.imm in caps
+                                for o in prev.operands)):
+                    bad.append((prev.address, f, name, a["cap_old"],
+                                "%s %s" % (prev.mnemonic, prev.op_str)))
+                prev = ins
+            loops += 1
+    bad = sorted(set(bad))
+    if bad:
+        raise SystemExit(
+            "%d loop(s) were raised on the entry test only; the back edge still stops at the "
+            "old cap:\n%s\n"
+            "Half a raised loop is worse than none -- the index may start past the old cap "
+            "while the walk still ends there.  Add each to patches/layout.json "
+            "arrays.<array>.extra_cap_sites, or record it there with \"hold\": true and why "
+            "it must keep the old count."
+            % (len(bad), "\n".join("  0x%x  in 0x%x  %-12s %-6d %s" % (va, f, n, c, t)
+                                    for va, f, n, c, t in bad)))
+    print("   cap back edges: %d raised site(s) swept across %d array(s), none left behind"
+          % (loops, len(CAP_CHECKS)))
+
+
 def cap_patches(name, skip_copy=False, on_block=(), release=()):
     """raise every bounds check that guards one array
 
@@ -279,6 +395,10 @@ def cap_patches(name, skip_copy=False, on_block=(), release=()):
     Six sites are in both lists, which is a small check that the two agree.
 
     `release` names hold sites that may be raised after all, because the part that grows
+    them has since been built.  It applies to both kinds of hold: the array-level
+    `hold_sites` list and the per-site `hold` flag inside `extra_cap_sites`.  It did not
+    apply to the second kind until 2026-09-16, which would have left copy A's fixture
+    counts at 2000 while its array grew to 6000 -- the exact shape of an overrun.
     the copy's own array (mlcopy) is in the set.
     """
     a = LAYOUT["arrays"][name]
@@ -292,9 +412,21 @@ def cap_patches(name, skip_copy=False, on_block=(), release=()):
                 both += 1
             else:
                 vas[s["va"]] = s
+    # An extra site may guard a *different* array of the same kind, and then its shipped
+    # count is not this array's.  "from" gives that count (copy B holds 1750 fixture
+    # records, not 2000); "hold" says the site is recorded but must never be raised, which
+    # is how the third, hundred-record fixture array stays out of it.
     for s in a.get("extra_cap_sites", []):
+        co = H(s["from"]) if "from" in s else cap_old
         if s["va"] not in vas:
-            vas[s["va"]] = dict(s, text="%s 0x%x (extra)" % (s["mnemonic"], cap_old))
+            vas[s["va"]] = dict(s, text="%s 0x%x (extra)" % (s["mnemonic"], co), _from=co)
+        else:
+            # a site the walk already found, but layout.json knows something the walk does
+            # not: that it counts a different array, or that it must never be raised
+            vas[s["va"]].update({k: v for k, v in s.items()
+                                 if k in ("hold", "hold_why")})
+            if "from" in s:
+                vas[s["va"]]["_from"] = co
     # Sites named in layout.json's hold_sites are never raised: loop bounds inside the copy
     # code that measure the copy's own arrays (750 teams, 750 coaches, 13000 matches), which
     # keep their shipped layout.  Raising 0x1413fea8f made the League-mode copy write coach
@@ -306,12 +438,28 @@ def cap_patches(name, skip_copy=False, on_block=(), release=()):
         if va in hold:
             print("            %s left at %d: %s" % (va, cap_old, hold[va][:80]))
             continue
+        if vas[va].get("hold") and va not in release:
+            print("            %s left alone: %s"
+                  % (va, (vas[va].get("hold_why") or vas[va].get("why", ""))[:100]))
+            continue
         if skip_copy and in_copy_code(H(va)) and enclosing(H(va)) not in on_block:
             held += 1
             continue
-        out.append(patch_dword(H(va), cap_old, cap_new,
-                               "%s cap: %d -> %d (%s)"
-                               % (name, cap_old, cap_new, vas[va]["text"])))
+        co = vas[va].get("_from", cap_old)
+        # A bound may be written as `< cap` or as `<= cap - 1`; both are the same check and
+        # both have to move.  Look for the count the site actually encodes rather than
+        # assuming the first form, and carry the same off-by-one into the new value.
+        bias = 0
+        want = (co & 0xffffffff).to_bytes(4, "little")
+        if bytes(insn_at(H(va)).bytes).count(want) != 1:
+            alt = (co - 1) & 0xffffffff
+            if bytes(insn_at(H(va)).bytes).count(alt.to_bytes(4, "little")) == 1:
+                bias = -1
+        out.append(patch_dword(H(va), co + bias, cap_new + bias,
+                               "%s cap: %d -> %d (%s)%s"
+                               % (name, co, cap_new, vas[va]["text"],
+                                  ", written as <= cap - 1" if bias else "")))
+    CAP_CHECKS.append((name, set(vas), list(out)))
     return out, both, held
 
 
@@ -369,10 +517,20 @@ SETS = {
     # table to the block's cap: the fields above it move, the object grows, the three
     # counts follow.
     "teams-coaches-regs-players-dates-matches-upper-mlcopy": ["teams", "coaches", "regulations", "rec596", "matchflags"],
+    # ... and the fixture table is full.  Measured 2026-09-16 on a running 39-league season:
+    # all 2000 of its records are in use by 56 competitions and it has already overflowed --
+    # our own regulation 143 starts at record 1997 and gets three rounds of a 38-round
+    # season.  A record is one ROUND of one competition, so every competition costs as many
+    # records as it has match days.  This takes the table out of the upper belt, relocates it
+    # on its own and raises it to 6000.  See findings.md, "The fixture table is full".
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures":
+        ["teams", "coaches", "regulations", "rec596", "matchflags", "fixtures"],
 }
 UPPER_SETS = {"teams-coaches-regs-players-dates-matches-upper",
-              "teams-coaches-regs-players-dates-matches-upper-mlcopy"}
-MLCOPY_SETS = {"teams-coaches-regs-players-dates-matches-upper-mlcopy"}
+              "teams-coaches-regs-players-dates-matches-upper-mlcopy",
+              "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures"}
+MLCOPY_SETS = {"teams-coaches-regs-players-dates-matches-upper-mlcopy",
+               "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures"}
 # set in main(): whether this set moves copy A's own table bases, which is what makes a
 # pre-biased displacement need the two-base form rather than the block delta
 MLCOPY_ON = False
@@ -463,7 +621,8 @@ COPY_PLAYER_SITES = [
 ]
 COPY_PLAYER_SETS = ["teams-coaches-regs-players-dates-matches",
                     "teams-coaches-regs-players-dates-matches-upper",
-                    "teams-coaches-regs-players-dates-matches-upper-mlcopy"]
+                    "teams-coaches-regs-players-dates-matches-upper-mlcopy",
+                    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures"]
 # what the fixed memcpy tails need of the cap (see above)
 COPY_PLAYER_CAP_MOD = (32, 17)
 
@@ -644,18 +803,31 @@ def mlcopy_patches(patches):
                                    "mlcopy A: object size 0x%x -> 0x%x"
                                    % (size_old, size_old + total)))
 
-    # the record counts the copy code keeps for each of its own tables
+    # the record counts the copy code keeps for each of its own tables.
+    #
+    # A site does not always count records.  The standings copier 0x1413fb0b0 was compiled
+    # with its entry loop unrolled two records to a pass, so it carries 50 with a stride of
+    # 0x168 = 2 * 0xb4 -- and writing the cap there would copy twice the table.  `per` says
+    # how many records one pass handles; the site then counts passes, and the cap has to
+    # divide by it.
     for r in regions:
         for s in r["count_sites"]:
+            per = s.get("per", 1)
+            if r["cap_old"] % per or r["cap_new"] % per:
+                raise SystemExit("mlcopy %s: count site %s handles %d records a pass, which "
+                                 "divides neither %d nor %d"
+                                 % (r["name"], s["va"], per, r["cap_old"], r["cap_new"]))
+            co, cn = r["cap_old"] // per, r["cap_new"] // per
             if s["va"] in by_va:
                 have = int.from_bytes(bytes.fromhex(by_va[s["va"]]["new"])[-4:], "little")
-                if have != r["cap_new"]:
+                if have != cn:
                     raise SystemExit("mlcopy count site %s is already patched, but to %d, "
-                                     "not %d" % (s["va"], have, r["cap_new"]))
+                                     "not %d" % (s["va"], have, cn))
                 continue
-            out.append(patch_dword(H(s["va"]), r["cap_old"], r["cap_new"],
-                                   "mlcopy %s: %s: %d -> %d"
-                                   % (r["name"], s["why"], r["cap_old"], r["cap_new"])))
+            out.append(patch_dword(H(s["va"]), co, cn,
+                                   "mlcopy %s: %s: %d -> %d%s"
+                                   % (r["name"], s["why"], co, cn,
+                                      " (passes, %d records each)" % per if per != 1 else "")))
     return out, composed, moved, regions, total
 
 
@@ -785,6 +957,8 @@ CAPPED = {
     "teams-coaches-regs-players-dates-matches": ["teams", "coaches", "regulations", "rec596", "matchflags", "players"],
     "teams-coaches-regs-players-dates-matches-upper": ["teams", "coaches", "regulations", "rec596", "matchflags", "players"],
     "teams-coaches-regs-players-dates-matches-upper-mlcopy": ["teams", "coaches", "regulations", "rec596", "matchflags", "players"],
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures":
+        ["teams", "coaches", "regulations", "rec596", "matchflags", "players", "fixtures"],
 }
 
 
@@ -847,10 +1021,71 @@ def dtor_funclet_patches(bases, belt_shift, capped):
     return out
 
 
+def g2b_patches():
+    """the immediates that carry the fixture record's shape, from arrays.fixtures.g2b_sites
+
+    tools/g2b.py reads them out of docs/g2b-fixture-record.md and verifies every one
+    against the exe, so there is nothing to work out here: each is an in-place immediate
+    of the same width, and the list is emitted as it stands.
+    """
+    fx = LAYOUT["arrays"]["fixtures"]
+    out = []
+    for s in fx.get("g2b_sites", []):
+        out.append({"va": s["va"], "old": s["old"], "new": s["new"], "why": s["why"]})
+    return out
+
+
+def copyb_patches():
+    """shift variant B's offsets when the fixture record grows
+
+    The mode copy is one allocation laid out two ways, and only variant A has ever had
+    a shift table.  B's is small: thirty-one sites in four runs, recorded in
+    `copy.variant_b.sites` by `copyscan.py --variant b`.  B is packed end to end --
+    rec596 runs straight into the first singleton, `0x9a8c60 - 0x2a24c0 == 12360 *
+    0x254` -- so a bigger fixture record moves rec596 and the ten singletons by the
+    whole growth, and moves nothing before them.
+
+    The allocation itself does not need separate sizing.  B sits below A at every
+    corresponding field and grows less than A does (1750 records against 2000), so the
+    size A's machinery already asks for covers B.
+    """
+    vb = LAYOUT["copy"]["variant_b"]
+    fx = LAYOUT["arrays"]["fixtures"]
+    grow = (H(fx["stride_new"]) - H(fx["stride"])) * vb["caps_from_ctor"]["fixtures"]
+    after = H(vb["fixtures"])
+    d = open(flpaths.need_exe(), "rb").read()
+    md = Cs(CS_ARCH_X86, CS_MODE_64)
+    md.detail = True
+    out = []
+    for site in vb["sites"]:
+        val = H(site["value"])
+        if val <= after:
+            continue                       # at or before the fixture array: it stays
+        va = H(site["va"])
+        off = va - 0x140001000 + 0x600
+        ins = next(iter(md.disasm(d[off:off + 16], va)), None)
+        if ins is None or bytes(ins.bytes).hex() != bytes(ins.bytes).hex():
+            raise SystemExit("copy B: cannot decode %s" % site["va"])
+        raw = bytes(ins.bytes)
+        want = struct.pack("<I", val)
+        k = raw.find(want)
+        if k < 0 or raw.find(want, k + 1) >= 0:
+            raise SystemExit("copy B: %s does not carry %s exactly once"
+                             % (site["va"], site["value"]))
+        out.append({"va": "0x%x" % (va + k),
+                    "old": want.hex(),
+                    "new": struct.pack("<I", val + grow).hex(),
+                    "why": "copy B %s: 0x%x -> 0x%x, the fixture array grew by 0x%x (%s)"
+                           % (site["field"], val, val + grow, grow, site["text"]),
+                    "asm": site["text"]})
+    return out
+
+
 def main():
-    global MLCOPY_ON
+    global MLCOPY_ON, SLOTS32
     which = sys.argv[1] if len(sys.argv) > 1 else "block"
     MLCOPY_ON = which in MLCOPY_SETS
+    SLOTS32 = "--slots32" in sys.argv
     if which not in SETS:
         raise SystemExit("unknown set %r; known: %s" % (which, ", ".join(SETS)))
     relocate = SETS[which]
@@ -939,7 +1174,12 @@ def main():
                                    for k, vs in sorted(moved.items())}}
     if relocate:
         att = json.load(open(os.path.join(ROOT, "patches", "attrib.json")))
-        members = LAYOUT["block"]["upper_belt"]["members"] if which in UPPER_SETS else []
+        # An array that this set relocates on its own must NOT also be carried by the belt
+        # shift, or every one of its references would be moved twice.  The match is on the
+        # whole name: `teams:dummy` is its own array and stays in the belt even when
+        # `teams` is relocated.
+        members = ([m for m in LAYOUT["block"]["upper_belt"]["members"] if m not in relocate]
+                   if which in UPPER_SETS else [])
         unresolved = [s for s in att
                       if (s["array"].split(":")[0] in relocate or s["array"] in members)
                       and s["kind"].startswith("review")]
@@ -969,8 +1209,20 @@ def main():
     spread = None
     if "-dates" in which:
         a = sys.argv[1:]
-        keys = ([int(k) for k in a[a.index("--date-keys") + 1].split(",")]
-                if "--date-keys" in a else DATE_KEYS)
+        # DATE_KEYS is one test league, and a set generated without --date-keys
+        # therefore dates one league and leaves every other one's matches stamped
+        # 0xffff, which no calendar day ever refers to.  That is how the
+        # ...-fixtures set shipped on 17 September with 1 key where the set it
+        # replaced had 39, and it cost five seasons of testing before anyone
+        # looked at the calendar.  So the fallback is announced rather than taken
+        # quietly, and a world of more than one league has to say so.
+        if "--date-keys" in a:
+            keys = [int(k) for k in a[a.index("--date-keys") + 1].split(",")]
+        else:
+            keys = DATE_KEYS
+            print("WARNING: no --date-keys given, so only %s will be dated. Every "
+                  "other league's matches will carry no date and never be "
+                  "scheduled." % ", ".join(str(k) for k in keys))
         if "--date-offsets" in a:
             # spread mode: the stub in datecave.py.  Two forms.  A bare list of shifts
             # deals the keys round-robin over it, e.g. --date-offsets 2,6,5,1 for four
@@ -999,14 +1251,38 @@ def main():
         else:
             patches += date_patches(keys)
 
+    if SLOTS32:
+        g2b = g2b_patches()
+        patches += g2b
+        print("slots32: %d fixture-record immediates (stride, count field, slot clamp)"
+              % len(g2b))
+        cb = copyb_patches()
+        patches += cb
+        print("slots32: %d mode-copy variant B offsets shifted" % len(cb))
+
+    # The seventeen-megabyte `.impdata` section holds whole functions the protector
+    # moved out of `.trace`, and nothing in this generator's attribution can see them,
+    # so every block offset they carry stayed at its shipped value while the same
+    # offset was moved everywhere else.  One of them is a linear search of the
+    # regulation array that reads its count from the shipped place, gets whatever our
+    # layout put there, and walks tens of thousands of records off the end -- the wall
+    # the season kept hitting in the spring.  impscan finds them from the notes the
+    # patches above already carry, so this needs no list of its own.
+    imp = impscan.scan(patches)
+    patches += imp
+    print("impdata: %d offsets the .trace attribution cannot see" % len(imp))
+
     seen = {}
     for p in patches:
         if p["va"] in seen:
             raise SystemExit("two patches target %s" % p["va"])
         seen[p["va"]] = p
     check_biased(patches)
+    check_cap_completeness(patches)
     check_copy_fields(patches)
 
+    if SLOTS32:
+        which = which + "-slots32"
     meta = {"set": which, "block_size_old": "0x%x" % SIZE_OLD,
             "date_keys": keys if "-dates" in which else None,
             "date_offsets": spread,
@@ -1044,10 +1320,18 @@ def main():
     # it -- diff them before a run rather than trusting that it does.
     keep = os.path.join(ROOT, "sider", "fl26caps.%s.lua" % which)
     open(keep, "w").write(lua)
-    lp = os.path.join(ROOT, "sider", "fl26caps.lua")
-    open(lp, "w").write(lua)
     print("wrote", keep)
-    print("wrote", lp, "(this is the copy to install)")
+    lp = os.path.join(ROOT, "sider", "fl26caps.lua")
+    if SLOTS32 and "--install-copy" not in sys.argv:
+        # An experimental set must not take the install copy's place.  It has done so
+        # three times: generate a -slots32 set to look at it, and the file the game is
+        # told to load now holds a block of a different size than the season running
+        # against it.  Pass --install-copy to mean it.
+        print("kept  ", lp, "(unchanged: %s is experimental, pass --install-copy to overwrite)"
+              % which)
+    else:
+        open(lp, "w").write(lua)
+        print("wrote", lp, "(this is the copy to install)")
     return 0
 
 

@@ -23,7 +23,7 @@ game loses everything past the shipped count, and a coach lookup lands on the wr
 
 This project does two things:
 
-1. **`sider/fl26caps.lua`** — a runtime patch set of 2,690 byte changes, applied by Sider at
+1. **`sider/fl26caps.lua`** — a runtime patch set of 2,760 byte changes, applied by Sider at
    startup, that grows those tables and every piece of code that indexes them:
 
    | table | shipped | with fl26caps |
@@ -65,9 +65,9 @@ world, across season rollovers.
 - Advancing the calendar with matches simulated ("Skip Match") through complete seasons and
   across New Year: 655 game days in one unattended run with no crash, and four season
   rollovers in total.
-- All 39 new leagues playing their full 38 rounds **in the first season**. Before the
-  fixture list was raised, some of them played none at all. Later seasons are a different
-  story — see the warning below.
+- All 39 new leagues playing their full 38 rounds in the first season. Before the fixture
+  list was raised, some of them played none at all. Later seasons went wrong for a different
+  reason, found and fixed on 2026-09-17 — see the first item below.
 - League tables that show the current season only. See `fl26hdr127.lua` above and the
   caveat in [known-issues.md](docs/known-issues.md).
 - League sizes from 14 to 33 clubs. Different sizes in the same world.
@@ -81,16 +81,16 @@ world, across season rollovers.
   with broken squad entries and the AI could not field a side. If you downloaded before
   2026-09-16, replace `sider/fl26caps.lua`. **Your save files are fine** — the damage was
   only ever in memory, and an old save loads clean with the new module.
-- **Later seasons schedule fewer and fewer leagues. This is the big one.** Measured on
-  2026-09-17 across five seasons played back to back on one world, the number of fixture
-  records in use fell steadily — 2194, 2314, 2616, 2329, 1593, 1461, 1201, 1133, 1087, 997,
-  883 — and by the fifth season only **4 of the 39 new leagues had any fixtures at all**.
-  The calendar shows empty days because there is genuinely nothing scheduled. What is *not*
-  the cause, checked directly: all 39 rulebooks are still flagged to start, all 39 still
-  hold a competition entry, the fixture list is nowhere near full (883 of 8,000), and the
-  competition table has free slots. So this is in season generation itself and it is not
-  yet understood. **If you are starting a long Master League, expect this.** It is being
-  worked on; reports of what you see are useful.
+- **(Cause found 2026-09-17, fix not yet proven across a rollover.)** Later seasons
+  scheduled fewer and fewer leagues, until by the fifth season only 4 of the 39 new leagues
+  had any fixtures and the calendar showed empty days. The match records were all there;
+  they carried no date, so nothing ever put them on a calendar day. That came from the patch
+  set: the set published on 2026-09-16 was regenerated without its list of leagues to date
+  and fell back to a single test league. **If you downloaded before 2026-09-17, replace
+  `sider/fl26caps.lua`.** A fresh season on the fixed set has all 39 leagues in the calendar
+  and no undated match. A run across season rollovers is still going, so this is a cause
+  found and a fix applied, not yet a closed issue —
+  [details](docs/known-issues.md).
 - **The competition table can still fill up.** `fl26hdr127.lua` raises it from 100 to 127,
   but an entry is never given back, so across four seasons the count rose 88, 115, 119, 124.
   Whether it stops below 127 is not yet known. Long-running worlds are the most useful thing
