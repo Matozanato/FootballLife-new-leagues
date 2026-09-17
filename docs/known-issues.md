@@ -57,6 +57,36 @@ yet known, and if it reaches 127 the same silent turning-away returns at the hig
 127 is also the ceiling of this patch's approach, so going further is a different and larger
 job. If you are playing many seasons on one world, this is the thing to watch.
 
+## Later seasons lose their fixtures — open, not understood
+
+Found 2026-09-17, and the most serious thing currently known about this beta.
+
+Five seasons were played back to back on one world. The number of fixture records in use
+fell steadily across them:
+
+    2194  2314  2616  2329  1593  1461  1201  1133  1087  997  883
+
+By the fifth season, **4 of the 39 new leagues had fixtures; the other 35 had none**, and
+the in-game calendar showed empty days because nothing was scheduled.
+
+Checked and ruled out as the cause:
+
+- all 39 rulebooks still have the start flag set (bit 8 of `+0x304`);
+- all 39 still hold an entry in the season's competition table;
+- the fixture list is not full: 883 of 8,000 used, highest record 996;
+- the per-phase standings pool is not full: 385 of 599;
+- no crash was reported during the generation that produced it.
+
+So the fault is inside season generation, and it is open. A first season still builds all
+39 leagues correctly, which is why this was not visible until a world was played for
+several seasons in one sitting.
+
+An honest note on how it was missed: the falling record count was watched all afternoon and
+read as the game reclaiming finished rounds, which it does do. A falling count looks the
+same whether old rounds are being freed or new ones are never created, and the more
+comfortable reading was taken without checking whether matches were actually on the
+calendar.
+
 ## Things that are by design and will bite you
 
 - **Saves are tied to the world.** A save made with world A does not load with world B or
