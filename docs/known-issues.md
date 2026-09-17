@@ -1,6 +1,6 @@
 # Known issues
 
-Honest list, as of 2026-09-16. Addresses are given so that a fault offset in your Event
+Honest list, as of 2026-09-17. Addresses are given so that a fault offset in your Event
 Viewer can be matched against them: the offset is the address minus `0x140000000`
 (so `0x1414c674d` shows up as exception offset `0x14c674d`).
 
@@ -8,13 +8,15 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
 
 | where | address | status |
 |---|---|---|
-| Season generation, about one time in two | `0x1484ed4c0` | Shipped game bug (occurs without any mod). Not guarded. Just start the season again. |
+| Scene setup: season generation, and season rollovers | `0x1484ed4c0` | Shipped game bug (occurs without any mod). Not guarded and not guardable: the pointer it writes through is already corrupt when it arrives, so skipping the write would trade a crash for silent damage. Start the season again, or reload your last save. |
 | Exhibition kick-off with new clubs | `0x141fea5ba` | **Fixed** by `fl26nullguard.lua`. |
 | Loading a season (schedule read) | `0x140cd6a1c` | **Fixed** by `fl26nullguard3.lua`. |
 | Mid-season, calendar advance | `0x140fc9238` | **Fixed** by `fl26nullguard2.lua`. |
 | Calendar advance, coach record walker | `0x141572125` | **Fixed** by `fl26nullguard4.lua`. The root cause (a mis-placed coach table after a load) was a bug in this patch set and is also fixed at the source. |
 | Calendar advance, AI lineup pass, field getter | `0x1414c674d` | **Guarded** by `fl26nullguard5.lua`. |
 | Calendar advance, AI lineup pass, a day after matchday 1 | `0x1415032f0` | **Fixed 2026-09-16** in `fl26caps.lua` — see below. Update the module if you downloaded earlier. |
+| Squad table, first-element read | `0x14128a3a3` | **Fixed** by `fl26nullguard7.lua`. |
+| Calendar advance, standings position used as an index | `0x1413236e4` | **Fixed 2026-09-17** by `fl26nullguard8.lua`. A club with no position yet holds −1, and the game indexed a table with it. This was a wall rather than a rarity: before the guard every long run died here, twice at the same point; after it, 313 game days across New Year with no crash. |
 | Startup, 9–11 seconds in, occasionally | — | Shipped game bug, reproduces on a clean install. Start again. |
 
 ## Missing or unverified features
@@ -29,8 +31,31 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
   separate patch that has not been verified in play.
 - **Kits, names, players.** All placeholders / clones. Not a bug, but a limitation of this
   beta: the tools prove capacity, they do not author content.
-- **Second season, promotion/relegation between new leagues, transfers, finances**: not
-  observed yet. Report what you see.
+- **Promotion/relegation between new leagues, transfers, finances**: not observed yet.
+  Report what you see.
+- **Second season and beyond**: now played. Four seasons have been run end to end on one
+  world, with season rollovers, and the tables no longer carry the previous season's
+  results (see below).
+
+## The 100-competition wall — fixed 2026-09-17, with a caveat
+
+If you ever saw a league table showing **76 matches played and around 130 points**, this
+was why. The season keeps one entry per competition in a table of exactly **100**, and a
+39-league world wants more than that. Competitions that did not fit were turned away with
+no error at all and went on writing their results into the previous season's table.
+
+`fl26hdr127.lua` widens that table to **127**. Measured on a world built with it, the
+season holds 115 and then 124 competitions, and entries 100 upwards carry real
+competitions with their own standings — including the multi-group ones, which were exactly
+what was being lost. The cost is one of the 600 per-phase standings tables, of which a
+running season uses about 375.
+
+**The caveat, because it is not finished.** An entry is never given back: a competition
+that has ever run keeps its slot for good, so the count only rises. Watched across four
+seasons it went 88, 115, 119, **124 of 127**. Whether it stops there or reaches 127 is not
+yet known, and if it reaches 127 the same silent turning-away returns at the higher number.
+127 is also the ceiling of this patch's approach, so going further is a different and larger
+job. If you are playing many seasons on one world, this is the thing to watch.
 
 ## Things that are by design and will bite you
 

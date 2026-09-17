@@ -6,7 +6,7 @@ writing down what you did before something went wrong.
 
 ## Before you start
 
-- Modules installed and `sider.log` shows six `applied all` lines ([install.md](install.md)).
+- Modules installed and `sider.log` shows nine `applied all` lines ([install.md](install.md)).
 - A world built and active ([build-your-world.md](build-your-world.md)), and you kept the
   `mkworld.py` output.
 - Saves backed up. Use an empty save slot for testing.

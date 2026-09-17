@@ -31,8 +31,10 @@ This project does two things:
    | clubs | 750 | 1,600 |
    | coaches | 1,300 | 2,600 |
    | competition rulebooks (regulations) | 300 | 600 |
-   | players | 30,001 | 46,193 |
+   | players | 30,001 | 51,729 |
    | match records per season | 13,000 | 26,000 |
+   | fixtures list | 2,000 | 8,000 |
+   | competitions a season can hold | 100 | 127 |
 
    Every module verifies the bytes it is about to change and refuses to touch a different
    game build. If anything does not match, the game runs unmodified and `sider.log` says why.
@@ -41,13 +43,16 @@ This project does two things:
    (with squads) from **your own** game data, as a Sider `livecpk` root. No game data is
    shipped in this repository; everything is generated on your machine from your install.
 
-Plus five small **null-guard modules** that stop known crashes in the game's own code which
-the larger world exposes.
+Plus seven small **null-guard modules** that stop known crashes in the game's own code which
+the larger world exposes, and **`fl26hdr127.lua`**, which widens the table a season uses to
+hold its competitions from 100 to 127 — the fix for league tables showing 76 matches played
+and ~130 points.
 
 ## Status
 
-Measured on 2026-09-15 with a test world of **39 new leagues and 793 new clubs** (1,536 clubs
-in total), played with a new club as the manager's team.
+Measured on 2026-09-17 with a test world of **39 new leagues and 780 new clubs**, played
+with a new club as the manager's team. Four seasons have now been played end to end on one
+world, across season rollovers.
 
 **Works**
 
@@ -57,8 +62,13 @@ in total), played with a new club as the manager's team.
 - Saving the season and loading it back: the club, the squad, the manager's name, the
   standings and the fixtures all survive. The same save was loaded three times in a row with
   no drift, and the coach and player tables were compared byte for byte before and after.
-- Advancing the calendar with matches simulated ("Skip Match") past matchday 1 and on
-  through the game's day 242, in the 39-league world.
+- Advancing the calendar with matches simulated ("Skip Match") through complete seasons and
+  across New Year: 655 game days in one unattended run with no crash, and four season
+  rollovers in total.
+- All 39 new leagues playing their full 38 rounds. Before the fixture list was raised, some
+  of them played none at all.
+- League tables that show the current season only. See `fl26hdr127.lua` above and the
+  caveat in [known-issues.md](docs/known-issues.md).
 - League sizes from 14 to 33 clubs. Different sizes in the same world.
 - Cups can be defined by the same tools (`mkcup.py`), but a cup in a Master League season
   is **not yet verified**.
@@ -70,10 +80,14 @@ in total), played with a new club as the manager's team.
   with broken squad entries and the AI could not field a side. If you downloaded before
   2026-09-16, replace `sider/fl26caps.lua`. **Your save files are fine** — the damage was
   only ever in memory, and an old save loads clean with the new module.
-- **Nobody has played a full season to May yet** with that fix in place. How far you get is
-  the most useful thing you can report — see the [testing guide](docs/testing-guide.md).
-- **Season generation crashes about one time in two**, in the shipped game's own code,
-  regardless of these mods. Just start the season again; it is not data damage.
+- **The competition table can still fill up.** `fl26hdr127.lua` raises it from 100 to 127,
+  but an entry is never given back, so across four seasons the count rose 88, 115, 119, 124.
+  Whether it stops below 127 is not yet known. Long-running worlds are the most useful thing
+  you can report — see the [testing guide](docs/testing-guide.md).
+- **The game crashes in its own code when a scene is set up**, most visibly when generating
+  a season and at season rollovers, regardless of these mods. Start again or reload; it is
+  not data damage.
+- **Promotion and relegation between the new leagues** has not been observed.
 - Continental competitions for new clubs (Champions League slots) — not attempted.
 - New clubs use **placeholder names, cloned kits and cloned squads**. This project proves the
   capacity; dressing the clubs is ordinary Team.bin / kit editing on top of it.

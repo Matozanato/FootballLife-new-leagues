@@ -29,7 +29,7 @@ Please open an issue with your version so we know which builds are out there.
 
 ## 2. Copy the modules
 
-Copy all six files from this repository's `sider/` folder into `SiderAddons\modules\`:
+Copy all nine files from this repository's `sider/` folder into `SiderAddons\modules\`:
 
 ```
 fl26caps.lua
@@ -38,7 +38,17 @@ fl26nullguard2.lua
 fl26nullguard3.lua
 fl26nullguard4.lua
 fl26nullguard5.lua
+fl26nullguard7.lua
+fl26nullguard8.lua
+fl26hdr127.lua
 ```
+
+> **Updating from an earlier download?** `fl26caps.lua` now also raises the fixture list,
+> which makes the edit block bigger. A save is only loadable by the patch set that wrote
+> it, so **saves made with the previous version will not load.** Finish the season you are
+> in, or keep the old `fl26caps.lua` for that world. The guards and `fl26hdr127.lua` do not
+> have this problem: they only write small trampolines into spare code, and saves survive
+> them.
 
 ## 3. Register them in sider.ini
 
@@ -52,6 +62,9 @@ lua.module = "fl26nullguard3.lua"
 lua.module = "fl26nullguard2.lua"
 lua.module = "fl26nullguard4.lua"
 lua.module = "fl26nullguard5.lua"
+lua.module = "fl26nullguard7.lua"
+lua.module = "fl26nullguard8.lua"
+lua.module = "fl26hdr127.lua"
 ```
 
 The order matters: `fl26caps.lua` must come first, and the guards write small trampolines
@@ -61,15 +74,18 @@ is deliberate; it is the order they were verified in.)
 ## 4. Start the game and read sider.log
 
 Start FL26 once, get to the main menu, quit, and open `SiderAddons\sider.log`. You must see
-six lines like these:
+nine lines like these:
 
 ```
-[fl26caps.lua] fl26caps: applied all 2690 patches -- block 0x1877068 -> 0x2d5a068, 2690 patches
+[fl26caps.lua] fl26caps: applied all 2750 patches -- block 0x1877068 -> 0x3171a68, 2750 patches
 [fl26nullguard.lua] fl26caps: applied all 2 patches -- nullguard: null-check at 0x141fea5b0
 [fl26nullguard3.lua] fl26caps: applied all 2 patches -- nullguard3: schedule null-check at 0x140cd6a1c
 [fl26nullguard2.lua] fl26caps: applied all 2 patches -- nullguard2: null-check at 0x140fc9238
 [fl26nullguard4.lua] fl26caps: applied all 2 patches -- nullguard4: null-check at 0x1415720d0
 [fl26nullguard5.lua] fl26caps: applied all 2 patches -- nullguard5: null-check at 0x1414c66c0
+[fl26nullguard7.lua] fl26caps: applied all 2 patches -- nullguard7: squad-table null-check at 0x14128a3a3
+[fl26nullguard8.lua] fl26caps: applied all 2 patches -- nullguard8: standings-position guard at 0x1413236e1
+[fl26hdr127.lua] fl26caps: applied all 29 patches -- hdr127: season header widened to 127 competitions, 599 phase tables
 ```
 
 Anything else — `MISMATCH`, `ABORTED`, `WRITE FAILED`, `PARTIAL` — means that module did
@@ -87,5 +103,5 @@ from your own game data: [build-your-world.md](build-your-world.md).
 
 ## Removing
 
-Delete the six `lua.module` lines (or the files) and comment out the `cpk.root` line of your
+Delete the nine `lua.module` lines (or the files) and comment out the `cpk.root` line of your
 world. Saves made with the world will not load afterwards; restore your backup.

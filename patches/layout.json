@@ -66,7 +66,9 @@
    ],
    "players_ceiling": "0x16038a8",
    "_ceiling_note": "the season calendar (stride 0x2c4) begins here; the shipped match table's last record runs into it, which is why rec596 has an extra end-pointer site"
-  }
+  },
+  "tail_pad": "0x20000",
+  "tail_pad_why": "spare room after the relocated arrays, holding nothing. Some references to a relocated array are virtualised into .impdata, where the attribution cannot see them, and still compute from the old base; one such read was measured on 2026-09-17 at block + 0x3060284 and killed the season twice. The pad makes such a read land inside our own allocation. Reads only."
  },
  "arrays": {
   "players": {
@@ -129,6 +131,11 @@
      "va": "0x1414f370a",
      "mnemonic": "mov",
      "why": "clamps a team count to 750 (cmova)"
+    },
+    {
+     "va": "0x1412fb530",
+     "mnemonic": "cmp",
+     "why": "The BACK EDGE of the team walk in 0x1412fb360, which indexes the array with `imul rcx, rax, 0x690` / `add rcx, 0xadf4bc` and builds an index keyed by the id in each record. The compiler peeled the first iteration: the guard at 0x1412fb41a tests r12d, which is zeroed before the loop and never changes, and every later pass enters at 0x1412fb42c and skips that guard entirely -- so this back edge is the only real bound the walk has. Raising the guard alone left the walk covering clubs 0..749 of 1600. Found 2026-09-16 by the back-edge sweep that check_cap_completeness now runs, after the same shape in the fixture array (0x141579e64) turned out to be the whole of G2a's remaining defect."
     }
    ],
    "hold_sites": [
@@ -246,11 +253,11 @@
    "base_old": "0xd65f64",
    "stride": "0x208",
    "cap_old": 2000,
-   "cap_new": 2000,
+   "cap_new": 8000,
    "dummy": null,
    "relocatable": true,
    "copy_off": "0x22bc80",
-   "note": "not raised until we know whether 2000 is per season or per competition",
+   "note": "Measured 2026-09-16: the 2000 records are GLOBAL -- one table for the whole world, not per season and not per competition. A record holds 16 match slots of 32 bytes at +4 with the count at +0x204, and one competition round takes one record per group. Two separate jobs now: G2a raises this cap, G2b widens the record to 32 slots (stride 0x408) so a single 36-club league phase fits. See docs/g2b-fixture-record.md. MEASURED AGAIN 2026-09-16 on a running 39-league season: all 2000 records are IN USE, shared by 56 competitions, and the table has already OVERFLOWED -- competition 143 starts at record 1997 and gets three rounds of sixteen before the array ends. A record is one ROUND of one competition: u32 competition at +0, 16 slots of 32 (home +0, away +4, match index +8, 0xffff +0xa, competition +0xc, round key +0xe, four 0x07f7ffff fillers at +0x10), and the number of slots the round uses in the low byte of +0x204. Suggested cap 6000. Note that copy B holds only 1750, so records 1750-1999 are already being dropped.",
    "extra_cap_sites": [
     {
      "va": "0x1414b88bf",
@@ -261,6 +268,725 @@
      "va": "0x1414ba563",
      "mnemonic": "mov",
      "why": "block destructor: __ehvec_dtor of the same 2000 records. Recorded, not raised, as above."
+    },
+    {
+     "va": "0x14140113e",
+     "hold": true,
+     "hold_why": "copy A's own fixture array at +0x22bc80 is sized for 2000 records and the mlcopy machinery does not grow it yet; raising the count here would write 4000 records past its end, into rec596's region. Held until copy A gains a fixtures region.  RELEASED by copy.mlcopy.regions.fixtures: copy A's own array is grown to 6000 records, so this count must move with it.",
+     "mnemonic": "mov",
+     "why": "copy variant A constructor (0x141401060): `mov ebx, 0x7d0` counts the records it builds one at a time at copy + 0x22bc80. Found 2026-09-16; the attribution never collected it because it only matched `cmp`."
+    },
+    {
+     "va": "0x1414bba84",
+     "mnemonic": "mov",
+     "why": "`mov esi, 0x7d0` in 0x1414bb970, which builds the BLOCK array (`lea rdi, [rbx + 0xd65f64]` at 0x1414bba7d). Raised with the block cap. Found 2026-09-16; the attribution never collected it because it only matched `cmp`."
+    },
+    {
+     "va": "0x1414bbf0d",
+     "mnemonic": "mov",
+     "why": "`mov esi, 0x7d0` in 0x1414bbe60, which builds the BLOCK array (`lea rdi, [rbx + 0xd65f64]` at 0x1414bbf06). Raised with the block cap. Same reason it was missed."
+    },
+    {
+     "va": "0x140afd6ed",
+     "from": "0x6d6",
+     "hold": true,
+     "hold_why": "copy B at +0x1c4210 holds 1750 records where the block holds 2000, and that stays held: its capacity is what the array really is, and raising the bound without moving what follows would overflow into rec596, which begins at the next byte. Since 2026-09-17 B does have a shift table (copy.variant_b.sites), but it moves the fields after the fixture array when the RECORD grows -- it says nothing about holding more records. Copy B being 250 short of the block is therefore still a data-loss path, and still the shipped one.",
+     "mnemonic": "mov",
+     "why": "copy variant B constructor (0x140afd660): `mov edi, 0x6d6` -- that copy holds 1750 records, NOT 2000. G2a has to decide what 1750 becomes, because the block's array was measured full at 2000."
+    },
+    {
+     "va": "0x1413feb4c",
+     "from": "0x6d6",
+     "hold": true,
+     "hold_why": "the loop bound over the same copy B array; it must match whatever copy B really holds.",
+     "mnemonic": "cmp",
+     "why": "`cmp edi, 0x6d6` bounding a walk of copy variant B (the neighbouring `add rsi, 0x208` is an attributed fixture site)."
+    },
+    {
+     "va": "0x1413fef0c",
+     "from": "0x6d6",
+     "hold": true,
+     "hold_why": "the second loop bound over copy B, same reason.",
+     "mnemonic": "cmp",
+     "why": "`cmp edi, 0x6d6` bounding the same copy variant B array."
+    },
+    {
+     "va": "0x14140181c",
+     "mnemonic": "cmp",
+     "hold": true,
+     "hold_why": "copy A -> block fixture loop (0x1414016b0), back-edge bound over copy A's own 2000 records. The `cmp ebx, 0x7d0` just above it at 0x1414017f0 is a different thing -- a guard on the BLOCK's count, with `cmovae` picking a dummy source when the block has no record at that index -- and that one is raised.  RELEASED by copy.mlcopy.regions.fixtures: copy A's own array is grown to 6000 records, so this count must move with it.",
+     "why": "NOT in attrib.json: the walk collects the guard and not the bound. See 0x141401dcc."
+    },
+    {
+     "va": "0x140af227e",
+     "hold": true,
+     "mnemonic": "mov",
+     "why": "the third, small fixture array: 0x140af21c0 builds 100 records (`mov edi, 0x64`) at +0x107c50."
+    },
+    {
+     "va": "0x141401dcc",
+     "mnemonic": "cmp",
+     "hold": true,
+     "hold_why": "block -> copy A fixture loop (0x141401c10), back-edge bound over copy A's own 2000 records. Held while copy A keeps 2000.  RELEASED by copy.mlcopy.regions.fixtures: copy A's own array is grown to 6000 records, so this count must move with it.",
+     "why": "NOT in attrib.json. The walk collects the three loop GUARDS (0x1413feb20, 0x1413feee0, 0x141401da3), which carry the BLOCK's count and are raised, and not the four loop BOUNDS, which carry each copy's own count and must not be."
+    },
+    {
+     "va": "0x141579e64",
+     "mnemonic": "cmp",
+     "why": "The BACK EDGE of the free-record search in 0x141579db0: `lea rdi, [rsi + 0xd65f64]` / `imul rcx, rax, 0x208`, walking the block's fixture array for a record whose head is 0xffff. Its ENTRY test at 0x141579e2e is the site the attribution walk found, because that one sits next to the array access; this one sits after the loop body and the walk never reached it. Found 2026-09-16 and it is the whole of G2a's remaining defect: with the entry test at 6000 and the back edge at 2000 the search still only ever examined records 0..1999, so once those were full the allocator reported no free record and the season stopped at exactly 2000 -- with every other bound in all 13 fixture functions verified live at 6000. Raised with the block cap."
+    }
+   ],
+   "copies": [
+    {
+     "built_by": "0x1414b8750",
+     "base": "edit + 0xd65f64",
+     "records": 2000,
+     "note": "the array layout.json describes"
+    },
+    {
+     "built_by": "0x141401060",
+     "base": "copy + 0x22bc80",
+     "records": 2000,
+     "note": "copy variant A; record count at 0x14140113e, stride at 0x14140114b"
+    },
+    {
+     "built_by": "0x140afd660",
+     "base": "copy + 0x1c4210",
+     "records": 1750,
+     "note": "copy variant B; record count at 0x140afd6ed, stride at 0x140afd6fa"
+    },
+    {
+     "built_by": "0x140af21c0",
+     "base": "+ 0x107c50",
+     "records": 100,
+     "note": "a third, small copy; record count at 0x140af227e, stride at 0x140af228b"
+    }
+   ],
+   "record_ctor": {
+    "va": "0x140af1db0",
+    "why": "the per-record constructor the three copy-side builders call once per record. Carries three of G2b's constants: `mov r8d, 0x208` (the memset size) at 0x140af1dca, `mov dword ptr [rbx + 0x204], 0xdc000000` (the packed count field) at 0x140af1dde, and `mov ebp, 0x10` (sixteen slots) at 0x140af1df0 over a loop that steps `add rsi, 0x20`."
+   },
+   "stride_sites_doc": "docs/g2b-fixture-record.md lists all 39 stride sites inside fixture functions plus 0x14140114b on the copy side.",
+   "stride_new": "0x408",
+   "count_off": "0x204",
+   "count_off_new": "0x404",
+   "slot_clamp": {
+    "old": "0x10",
+    "new": "0x20"
+   },
+   "g2b_sites": [
+    {
+     "va": "0x140caf66c",
+     "kind": "stride",
+     "old": "4869d008020000",
+     "new": "4869d008040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rdx, rax, 0x208, in 0x140caee00)"
+    },
+    {
+     "va": "0x140cb01b9",
+     "kind": "stride",
+     "old": "4869c808020000",
+     "new": "4869c808040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rcx, rax, 0x208, in 0x140cb0130)"
+    },
+    {
+     "va": "0x140fc7e88",
+     "kind": "stride",
+     "old": "4869c008020000",
+     "new": "4869c008040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rax, rax, 0x208, in 0x140fc7df0)"
+    },
+    {
+     "va": "0x140fc90b1",
+     "kind": "stride",
+     "old": "4869c008020000",
+     "new": "4869c008040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rax, rax, 0x208, in 0x140fc8e20)"
+    },
+    {
+     "va": "0x1412ad99d",
+     "kind": "stride",
+     "old": "4869c008020000",
+     "new": "4869c008040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rax, rax, 0x208, in 0x1412ad730)"
+    },
+    {
+     "va": "0x141341018",
+     "kind": "stride",
+     "old": "4869c008020000",
+     "new": "4869c008040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rax, rax, 0x208, in 0x141340f60)"
+    },
+    {
+     "va": "0x1413493d8",
+     "kind": "stride",
+     "old": "4869e808020000",
+     "new": "4869e808040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rbp, rax, 0x208, in 0x141348470)"
+    },
+    {
+     "va": "0x14134dc81",
+     "kind": "stride",
+     "old": "4869c008020000",
+     "new": "4869c008040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rax, rax, 0x208, in 0x14134d9c0)"
+    },
+    {
+     "va": "0x14134e91d",
+     "kind": "stride",
+     "old": "4869c808020000",
+     "new": "4869c808040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rcx, rax, 0x208, in 0x14134e6c0)"
+    },
+    {
+     "va": "0x1413509dd",
+     "kind": "stride",
+     "old": "4869c808020000",
+     "new": "4869c808040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rcx, rax, 0x208, in 0x141350650)"
+    },
+    {
+     "va": "0x141350bd8",
+     "kind": "stride",
+     "old": "4869c008020000",
+     "new": "4869c008040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rax, rax, 0x208, in 0x141350b40)"
+    },
+    {
+     "va": "0x1413630a8",
+     "kind": "stride",
+     "old": "4869c808020000",
+     "new": "4869c808040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rcx, rax, 0x208, in 0x141363040)"
+    },
+    {
+     "va": "0x1413f5327",
+     "kind": "stride",
+     "old": "4869c808020000",
+     "new": "4869c808040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rcx, rax, 0x208, in 0x1413f4f90)"
+    },
+    {
+     "va": "0x1413f5c05",
+     "kind": "stride",
+     "old": "4869c808020000",
+     "new": "4869c808040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rcx, rax, 0x208, in 0x1413f5b70)"
+    },
+    {
+     "va": "0x1413f5cd0",
+     "kind": "stride",
+     "old": "4869c808020000",
+     "new": "4869c808040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rcx, rax, 0x208, in 0x1413f5b70)"
+    },
+    {
+     "va": "0x1413fc5f5",
+     "kind": "stride",
+     "old": "4881c608020000",
+     "new": "4881c608040000",
+     "why": "fixture stride 0x208 -> 0x408 (add rsi, 0x208, in 0x1413fc480)"
+    },
+    {
+     "va": "0x1413fc9b5",
+     "kind": "stride",
+     "old": "4881c508020000",
+     "new": "4881c508040000",
+     "why": "fixture stride 0x208 -> 0x408 (add rbp, 0x208, in 0x1413fc800)"
+    },
+    {
+     "va": "0x1413feb45",
+     "kind": "stride",
+     "old": "4881c608020000",
+     "new": "4881c608040000",
+     "why": "fixture stride 0x208 -> 0x408 (add rsi, 0x208, in 0x1413fea10)"
+    },
+    {
+     "va": "0x1413fef05",
+     "kind": "stride",
+     "old": "4981c608020000",
+     "new": "4981c608040000",
+     "why": "fixture stride 0x208 -> 0x408 (add r14, 0x208, in 0x1413feda0)"
+    },
+    {
+     "va": "0x141401815",
+     "kind": "stride",
+     "old": "4881c708020000",
+     "new": "4881c708040000",
+     "why": "fixture stride 0x208 -> 0x408 (add rdi, 0x208, in 0x1414016b0)"
+    },
+    {
+     "va": "0x141401dc5",
+     "kind": "stride",
+     "old": "4881c608020000",
+     "new": "4881c608040000",
+     "why": "fixture stride 0x208 -> 0x408 (add rsi, 0x208, in 0x141401c10)"
+    },
+    {
+     "va": "0x1414b88ba",
+     "kind": "stride",
+     "old": "ba08020000",
+     "new": "ba08040000",
+     "why": "fixture stride 0x208 -> 0x408 (mov edx, 0x208, in 0x1414b8750)"
+    },
+    {
+     "va": "0x1414ba55e",
+     "kind": "stride",
+     "old": "ba08020000",
+     "new": "ba08040000",
+     "why": "fixture stride 0x208 -> 0x408 (mov edx, 0x208, in 0x1414ba310)"
+    },
+    {
+     "va": "0x1414bba98",
+     "kind": "stride",
+     "old": "4881c708020000",
+     "new": "4881c708040000",
+     "why": "fixture stride 0x208 -> 0x408 (add rdi, 0x208, in 0x1414bb970)"
+    },
+    {
+     "va": "0x1414bbf1a",
+     "kind": "stride",
+     "old": "4881c708020000",
+     "new": "4881c708040000",
+     "why": "fixture stride 0x208 -> 0x408 (add rdi, 0x208, in 0x1414bbe60)"
+    },
+    {
+     "va": "0x141510fc9",
+     "kind": "stride",
+     "old": "4869c008020000",
+     "new": "4869c008040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rax, rax, 0x208, in 0x141510f00)"
+    },
+    {
+     "va": "0x14151de6e",
+     "kind": "stride",
+     "old": "4869f008020000",
+     "new": "4869f008040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rsi, rax, 0x208, in 0x14151dd70)"
+    },
+    {
+     "va": "0x141543c4d",
+     "kind": "stride",
+     "old": "4869c008020000",
+     "new": "4869c008040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rax, rax, 0x208, in 0x141543b90)"
+    },
+    {
+     "va": "0x1415458a8",
+     "kind": "stride",
+     "old": "4869c008020000",
+     "new": "4869c008040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rax, rax, 0x208, in 0x1415457e0)"
+    },
+    {
+     "va": "0x141545afd",
+     "kind": "stride",
+     "old": "4869c008020000",
+     "new": "4869c008040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rax, rax, 0x208, in 0x141545a30)"
+    },
+    {
+     "va": "0x141546e08",
+     "kind": "stride",
+     "old": "4869c008020000",
+     "new": "4869c008040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rax, rax, 0x208, in 0x141546c70)"
+    },
+    {
+     "va": "0x141579c7c",
+     "kind": "stride",
+     "old": "4869c008020000",
+     "new": "4869c008040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rax, rax, 0x208, in 0x141579bd0)"
+    },
+    {
+     "va": "0x141579e3f",
+     "kind": "stride",
+     "old": "4869c808020000",
+     "new": "4869c808040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rcx, rax, 0x208, in 0x141579db0)"
+    },
+    {
+     "va": "0x141579f8a",
+     "kind": "stride",
+     "old": "4869c808020000",
+     "new": "4869c808040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rcx, rax, 0x208, in 0x141579ee0)"
+    },
+    {
+     "va": "0x14157bdf1",
+     "kind": "stride",
+     "old": "4869c008020000",
+     "new": "4869c008040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rax, rax, 0x208, in 0x14157b590)"
+    },
+    {
+     "va": "0x14158c307",
+     "kind": "stride",
+     "old": "4869c808020000",
+     "new": "4869c808040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rcx, rax, 0x208, in 0x14158bfa0)"
+    },
+    {
+     "va": "0x14158cac7",
+     "kind": "stride",
+     "old": "4869c808020000",
+     "new": "4869c808040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rcx, rax, 0x208, in 0x14158c820)"
+    },
+    {
+     "va": "0x14158f552",
+     "kind": "stride",
+     "old": "4869c008020000",
+     "new": "4869c008040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rax, rax, 0x208, in 0x14158f420)"
+    },
+    {
+     "va": "0x141fc5d08",
+     "kind": "stride",
+     "old": "4869c008020000",
+     "new": "4869c008040000",
+     "why": "fixture stride 0x208 -> 0x408 (imul rax, rax, 0x208, in 0x141fc5c90)"
+    },
+    {
+     "va": "0x140fc90d3",
+     "kind": "count",
+     "old": "41f7842404020000",
+     "new": "41f7842404040000",
+     "why": "fixture count field +0x204 -> +0x404 (dword ptr [r12 + 0x204], 0x3ffffff, in 0x140fc8e20)"
+    },
+    {
+     "va": "0x140fc90e5",
+     "kind": "clamp",
+     "old": "4183fe10",
+     "new": "4183fe20",
+     "why": "fixture slot clamp 0x10 -> 0x20 (paired with 0x140fc90d3, in 0x140fc8e20)"
+    },
+    {
+     "va": "0x140fc9148",
+     "kind": "count",
+     "old": "418b842404020000",
+     "new": "418b842404040000",
+     "why": "fixture count field +0x204 -> +0x404 (eax, dword ptr [r12 + 0x204], in 0x140fc8e20)"
+    },
+    {
+     "va": "0x14134dca5",
+     "kind": "count",
+     "old": "f78104020000",
+     "new": "f78104040000",
+     "why": "fixture count field +0x204 -> +0x404 (dword ptr [rcx + 0x204], 0x3ffffff, in 0x14134d9c0)"
+    },
+    {
+     "va": "0x14134dcc0",
+     "kind": "clamp",
+     "old": "4183fc10",
+     "new": "4183fc20",
+     "why": "fixture slot clamp 0x10 -> 0x20 (paired with 0x14134dca5, in 0x14134d9c0)"
+    },
+    {
+     "va": "0x1413509f1",
+     "kind": "count",
+     "old": "41f78504020000",
+     "new": "41f78504040000",
+     "why": "fixture count field +0x204 -> +0x404 (dword ptr [r13 + 0x204], 0x3ffffff, in 0x141350650)"
+    },
+    {
+     "va": "0x141350a02",
+     "kind": "clamp",
+     "old": "4183fe10",
+     "new": "4183fe20",
+     "why": "fixture slot clamp 0x10 -> 0x20 (paired with 0x1413509f1, in 0x141350650)"
+    },
+    {
+     "va": "0x141350ace",
+     "kind": "count",
+     "old": "418b8504020000",
+     "new": "418b8504040000",
+     "why": "fixture count field +0x204 -> +0x404 (eax, dword ptr [r13 + 0x204], in 0x141350650)"
+    },
+    {
+     "va": "0x141350bf0",
+     "kind": "count",
+     "old": "41f78704020000",
+     "new": "41f78704040000",
+     "why": "fixture count field +0x204 -> +0x404 (dword ptr [r15 + 0x204], 0x3ffffff, in 0x141350b40)"
+    },
+    {
+     "va": "0x141350c01",
+     "kind": "clamp",
+     "old": "83fd10",
+     "new": "83fd20",
+     "why": "fixture slot clamp 0x10 -> 0x20 (paired with 0x141350bf0, in 0x141350b40)"
+    },
+    {
+     "va": "0x1413f5c1d",
+     "kind": "count",
+     "old": "41f78004020000",
+     "new": "41f78004040000",
+     "why": "fixture count field +0x204 -> +0x404 (dword ptr [r8 + 0x204], 0x3ffffff, in 0x1413f5b70)"
+    },
+    {
+     "va": "0x1413f5c50",
+     "kind": "clamp",
+     "old": "83fa10",
+     "new": "83fa20",
+     "why": "fixture slot clamp 0x10 -> 0x20 (paired with 0x1413f5c1d, in 0x1413f5b70)"
+    },
+    {
+     "va": "0x1413f5ce0",
+     "kind": "count",
+     "old": "8b9604020000",
+     "new": "8b9604040000",
+     "why": "fixture count field +0x204 -> +0x404 (edx, dword ptr [rsi + 0x204], in 0x1413f5b70)"
+    },
+    {
+     "va": "0x1413f5cf6",
+     "kind": "clamp",
+     "old": "83ff10",
+     "new": "83ff20",
+     "why": "fixture slot clamp 0x10 -> 0x20 (paired with 0x1413f5ce0, in 0x1413f5b70)"
+    },
+    {
+     "va": "0x1413f5ea1",
+     "kind": "count",
+     "old": "8b8604020000",
+     "new": "8b8604040000",
+     "why": "fixture count field +0x204 -> +0x404 (eax, dword ptr [rsi + 0x204], in 0x1413f5b70)"
+    },
+    {
+     "va": "0x141510fdc",
+     "kind": "count",
+     "old": "f78504020000",
+     "new": "f78504040000",
+     "why": "fixture count field +0x204 -> +0x404 (dword ptr [rbp + 0x204], 0x3ffffff, in 0x141510f00)"
+    },
+    {
+     "va": "0x141510fe8",
+     "kind": "clamp",
+     "old": "83ff10",
+     "new": "83ff20",
+     "why": "fixture slot clamp 0x10 -> 0x20 (paired with 0x141510fdc, in 0x141510f00)"
+    },
+    {
+     "va": "0x141511021",
+     "kind": "count",
+     "old": "8b8504020000",
+     "new": "8b8504040000",
+     "why": "fixture count field +0x204 -> +0x404 (eax, dword ptr [rbp + 0x204], in 0x141510f00)"
+    },
+    {
+     "va": "0x14151de81",
+     "kind": "count",
+     "old": "f78604020000",
+     "new": "f78604040000",
+     "why": "fixture count field +0x204 -> +0x404 (dword ptr [rsi + 0x204], 0x3ffffff, in 0x14151dd70)"
+    },
+    {
+     "va": "0x14151de95",
+     "kind": "clamp",
+     "old": "83ff10",
+     "new": "83ff20",
+     "why": "fixture slot clamp 0x10 -> 0x20 (paired with 0x14151de81, in 0x14151dd70)"
+    },
+    {
+     "va": "0x14151df1f",
+     "kind": "count",
+     "old": "8b8604020000",
+     "new": "8b8604040000",
+     "why": "fixture count field +0x204 -> +0x404 (eax, dword ptr [rsi + 0x204], in 0x14151dd70)"
+    },
+    {
+     "va": "0x141543c60",
+     "kind": "count",
+     "old": "418b8604020000",
+     "new": "418b8604040000",
+     "why": "fixture count field +0x204 -> +0x404 (eax, dword ptr [r14 + 0x204], in 0x141543b90)"
+    },
+    {
+     "va": "0x141543c90",
+     "kind": "clamp",
+     "old": "83fe10",
+     "new": "83fe20",
+     "why": "fixture slot clamp 0x10 -> 0x20 (paired with 0x141543c60, in 0x141543b90)"
+    },
+    {
+     "va": "0x1415458bc",
+     "kind": "count",
+     "old": "41f78504020000",
+     "new": "41f78504040000",
+     "why": "fixture count field +0x204 -> +0x404 (dword ptr [r13 + 0x204], 0x3ffffff, in 0x1415457e0)"
+    },
+    {
+     "va": "0x1415458d2",
+     "kind": "clamp",
+     "old": "4183ff10",
+     "new": "4183ff20",
+     "why": "fixture slot clamp 0x10 -> 0x20 (paired with 0x1415458bc, in 0x1415457e0)"
+    },
+    {
+     "va": "0x141545b11",
+     "kind": "count",
+     "old": "f78104020000",
+     "new": "f78104040000",
+     "why": "fixture count field +0x204 -> +0x404 (dword ptr [rcx + 0x204], 0x3ffffff, in 0x141545a30)"
+    },
+    {
+     "va": "0x141545b30",
+     "kind": "clamp",
+     "old": "4183fc10",
+     "new": "4183fc20",
+     "why": "fixture slot clamp 0x10 -> 0x20 (paired with 0x141545b11, in 0x141545a30)"
+    },
+    {
+     "va": "0x141546e20",
+     "kind": "count",
+     "old": "f78104020000",
+     "new": "f78104040000",
+     "why": "fixture count field +0x204 -> +0x404 (dword ptr [rcx + 0x204], 0x3ffffff, in 0x141546c70)"
+    },
+    {
+     "va": "0x141546e30",
+     "kind": "clamp",
+     "old": "83fd10",
+     "new": "83fd20",
+     "why": "fixture slot clamp 0x10 -> 0x20 (paired with 0x141546e20, in 0x141546c70)"
+    },
+    {
+     "va": "0x141579e50",
+     "kind": "count",
+     "old": "8b8704020000",
+     "new": "8b8704040000",
+     "why": "fixture count field +0x204 -> +0x404 (eax, dword ptr [rdi + 0x204], in 0x141579db0)"
+    },
+    {
+     "va": "0x141579eb2",
+     "kind": "count",
+     "old": "8b9704020000",
+     "new": "8b9704040000",
+     "why": "fixture count field +0x204 -> +0x404 (edx, dword ptr [rdi + 0x204], in 0x141579db0)"
+    },
+    {
+     "va": "0x141579ec9",
+     "kind": "count",
+     "old": "899704020000",
+     "new": "899704040000",
+     "why": "fixture count field +0x204 -> +0x404 (dword ptr [rdi + 0x204], edx, in 0x141579db0)"
+    },
+    {
+     "va": "0x141579f96",
+     "kind": "count",
+     "old": "8b8204020000",
+     "new": "8b8204040000",
+     "why": "fixture count field +0x204 -> +0x404 (eax, dword ptr [rdx + 0x204], in 0x141579ee0)"
+    },
+    {
+     "va": "0x14157be05",
+     "kind": "count",
+     "old": "41f78504020000",
+     "new": "41f78504040000",
+     "why": "fixture count field +0x204 -> +0x404 (dword ptr [r13 + 0x204], 0x3ffffff, in 0x14157b590)"
+    },
+    {
+     "va": "0x14157be20",
+     "kind": "clamp",
+     "old": "4183ff10",
+     "new": "4183ff20",
+     "why": "fixture slot clamp 0x10 -> 0x20 (paired with 0x14157be05, in 0x14157b590)"
+    },
+    {
+     "va": "0x14157beed",
+     "kind": "count",
+     "old": "418b8504020000",
+     "new": "418b8504040000",
+     "why": "fixture count field +0x204 -> +0x404 (eax, dword ptr [r13 + 0x204], in 0x14157b590)"
+    },
+    {
+     "va": "0x141fc5d1c",
+     "kind": "count",
+     "old": "f78104020000",
+     "new": "f78104040000",
+     "why": "fixture count field +0x204 -> +0x404 (dword ptr [rcx + 0x204], 0x3ffffff, in 0x141fc5c90)"
+    },
+    {
+     "va": "0x141fc5d31",
+     "kind": "clamp",
+     "old": "4183fd10",
+     "new": "4183fd20",
+     "why": "fixture slot clamp 0x10 -> 0x20 (paired with 0x141fc5d1c, in 0x141fc5c90)"
+    },
+    {
+     "va": "0x14140114b",
+     "kind": "stride",
+     "old": "4881c708020000",
+     "new": "4881c708040000",
+     "why": "fixture stride (copy A builder steps its own array)"
+    },
+    {
+     "va": "0x140afd6fa",
+     "kind": "stride",
+     "old": "4881c308020000",
+     "new": "4881c308040000",
+     "why": "fixture stride (copy B builder steps its own array)"
+    },
+    {
+     "va": "0x140af228b",
+     "kind": "stride",
+     "old": "4881c308020000",
+     "new": "4881c308040000",
+     "why": "fixture stride (the small copy steps its own array)"
+    },
+    {
+     "va": "0x140af1dca",
+     "kind": "stride",
+     "old": "41b808020000",
+     "new": "41b808040000",
+     "why": "fixture stride (record constructor: the memset size)"
+    },
+    {
+     "va": "0x140af1dde",
+     "kind": "count",
+     "old": "c78304020000",
+     "new": "c78304040000",
+     "why": "fixture count (record constructor: the count field)"
+    },
+    {
+     "va": "0x140af1df0",
+     "kind": "clamp",
+     "old": "bd10",
+     "new": "bd20",
+     "why": "fixture clamp (record constructor: sixteen slots)"
+    }
+   ],
+   "g2b_deferred": [
+    {
+     "va": "0x140fc7e92",
+     "instr": "ecx, dword ptr [rax + 0xd66168]",
+     "func": "0x140fc7df0",
+     "why": "block-relative count read: shift_patches() must carry the field growth, not a separate patch"
+    },
+    {
+     "va": "0x1412ad9a7",
+     "instr": "eax, dword ptr [rax + 0xd66168]",
+     "func": "0x1412ad730",
+     "why": "block-relative count read: shift_patches() must carry the field growth, not a separate patch"
+    },
+    {
+     "va": "0x141341022",
+     "instr": "ecx, dword ptr [rax + 0xd66168]",
+     "func": "0x141340f60",
+     "why": "block-relative count read: shift_patches() must carry the field growth, not a separate patch"
+    },
+    {
+     "va": "0x141579c8d",
+     "instr": "eax, dword ptr [rax + 0xd66168]",
+     "func": "0x141579bd0",
+     "why": "block-relative count read: shift_patches() must carry the field growth, not a separate patch"
+    },
+    {
+     "va": "0x14158f55c",
+     "instr": "ecx, dword ptr [rax + 0xd66168]",
+     "func": "0x14158f420",
+     "why": "block-relative count read: shift_patches() must carry the field growth, not a separate patch"
     }
    ]
   },
@@ -589,15 +1315,6 @@
      ]
     },
     {
-     "name": "teams_side",
-     "array": "teams",
-     "base": "0xc016b4",
-     "stride": "0x10",
-     "ends_at": "0xc04594",
-     "count_sites": [],
-     "released_hold_sites": []
-    },
-    {
      "name": "coaches",
      "array": "coaches",
      "base": "0x133a30",
@@ -650,6 +1367,32 @@
      "released_hold_sites": []
     },
     {
+     "name": "fixtures",
+     "array": "fixtures",
+     "base": "0x22bc80",
+     "stride": "0x208",
+     "ends_at": "0x329b00",
+     "count_sites": [
+      {
+       "va": "0x14140113e",
+       "why": "ctor_a: fixture records constructed"
+      },
+      {
+       "va": "0x14140181c",
+       "why": "A -> block: loop bound over the copy's fixture array"
+      },
+      {
+       "va": "0x141401dcc",
+       "why": "block -> A: loop bound over the copy's fixture array"
+      }
+     ],
+     "released_hold_sites": [
+      "0x14140113e",
+      "0x14140181c",
+      "0x141401dcc"
+     ]
+    },
+    {
      "name": "rec596",
      "array": "rec596",
      "base": "0x329b00",
@@ -673,6 +1416,15 @@
       "0x141401856",
       "0x141401e07"
      ]
+    },
+    {
+     "name": "teams_side",
+     "array": "teams",
+     "base": "0xc016b4",
+     "stride": "0x10",
+     "ends_at": "0xc04594",
+     "count_sites": [],
+     "released_hold_sites": []
     }
    ],
    "_rejected_count_sites": [
@@ -912,6 +1664,230 @@
      "why": "same function, second sub-object field"
     }
    ]
+  },
+  "variant_b": {
+   "_comment": "The same allocation laid out a second way, built by 0x140afd660.  Every array is smaller than in variant A, so every offset after the coach array differs, and none of them is in the shift table that mlcopy uses for A.  Measured from the constructor on 2026-09-17: each `lea rbx, [rsi + off]` is followed by the record count in edi, the per-record constructor, and the stride the builder adds.",
+   "teams": "0x50",
+   "coaches": "0x133a30",
+   "regulations": "0x1a1800",
+   "fixtures": "0x1c4210",
+   "rec596": "0x2a24c0",
+   "caps_from_ctor": {
+    "teams": 750,
+    "coaches": 1300,
+    "regulations": 180,
+    "fixtures": 1750,
+    "rec596": 12360
+   },
+   "singletons": [
+    "0x9a8c60",
+    "0x9e42e8",
+    "0x9e50cc",
+    "0xa51dd0",
+    "0xa60298",
+    "0xaba4f8",
+    "0xb45ec8",
+    "0xb48dac",
+    "0xb4a6a8",
+    "0xee53d0"
+   ],
+   "bound_sites": [
+    "0x140afd6ed",
+    "0x1413feb4c",
+    "0x1413fef0c"
+   ],
+   "stride_site": "0x140afd6fa",
+   "_packing_note": "The fixture array is packed hard against rec596: 0x2a24c0 - 0x1c4210 == 0xde2b0 == 1750 * 0x208, to the byte.  Variant A is packed the same way, 0x329b00 - 0x22bc80 == 0xfde80 == 2000 * 0x208.  So doubling the fixture record leaves no slack anywhere: rec596 and everything after it has to move, in both variants, and copy.size with it.",
+   "sites": [
+    {
+     "va": "0x140af3775",
+     "field": "s4",
+     "value": "0xa51dd0",
+     "text": "add ebx, 0xa51dd0"
+    },
+    {
+     "va": "0x140af3e94",
+     "field": "regulations",
+     "value": "0x1a1800",
+     "text": "mov edx, 0x1a1800"
+    },
+    {
+     "va": "0x140afd6c6",
+     "field": "regulations",
+     "value": "0x1a1800",
+     "text": "lea ebx, [rsi + 0x1a1800]"
+    },
+    {
+     "va": "0x140afd6e7",
+     "field": "fixtures",
+     "value": "0x1c4210",
+     "text": "lea ebx, [rsi + 0x1c4210]"
+    },
+    {
+     "va": "0x140afd708",
+     "field": "rec596",
+     "value": "0x2a24c0",
+     "text": "lea ebx, [rsi + 0x2a24c0]"
+    },
+    {
+     "va": "0x140afd729",
+     "field": "s3",
+     "value": "0x9e50cc",
+     "text": "lea ecx, [rsi + 0x9e50cc]"
+    },
+    {
+     "va": "0x140afd735",
+     "field": "s4",
+     "value": "0xa51dd0",
+     "text": "lea ecx, [rsi + 0xa51dd0]"
+    },
+    {
+     "va": "0x140afd741",
+     "field": "s1",
+     "value": "0x9a8c60",
+     "text": "lea ecx, [rsi + 0x9a8c60]"
+    },
+    {
+     "va": "0x140afd74d",
+     "field": "s2",
+     "value": "0x9e42e8",
+     "text": "lea ecx, [rsi + 0x9e42e8]"
+    },
+    {
+     "va": "0x140afd765",
+     "field": "s6",
+     "value": "0xaba4f8",
+     "text": "lea ecx, [rsi + 0xaba4f8]"
+    },
+    {
+     "va": "0x140afd771",
+     "field": "s7",
+     "value": "0xb45ec8",
+     "text": "lea edx, [rsi + 0xb45ec8]"
+    },
+    {
+     "va": "0x140afd7d4",
+     "field": "s8",
+     "value": "0xb48dac",
+     "text": "lea edx, [rsi + 0xb48dac]"
+    },
+    {
+     "va": "0x140afd847",
+     "field": "s10",
+     "value": "0xee53d0",
+     "text": "lea ebx, [rsi + 0xee53d0]"
+    },
+    {
+     "va": "0x1412e67f9",
+     "field": "s10",
+     "value": "0xee53d0",
+     "text": "mov dword ptr [rdi + 0x180], 0xee53d0"
+    },
+    {
+     "va": "0x1413fead7",
+     "field": "regulations",
+     "value": "0x1a1800",
+     "text": "lea esi, [rsi + 0x1a1800]"
+    },
+    {
+     "va": "0x1413feb27",
+     "field": "fixtures",
+     "value": "0x1c4210",
+     "text": "lea edx, [rdi + 0x1c4210]"
+    },
+    {
+     "va": "0x1413feb67",
+     "field": "rec596",
+     "value": "0x2a24c0",
+     "text": "lea edx, [rdi + 0x2a24c0]"
+    },
+    {
+     "va": "0x1413feb95",
+     "field": "s1",
+     "value": "0x9a8c60",
+     "text": "lea edx, [rsi + 0x9a8c60]"
+    },
+    {
+     "va": "0x1413feba8",
+     "field": "s2",
+     "value": "0x9e42e8",
+     "text": "lea edx, [rsi + 0x9e42e8]"
+    },
+    {
+     "va": "0x1413febbb",
+     "field": "s3",
+     "value": "0x9e50cc",
+     "text": "lea edx, [rsi + 0x9e50cc]"
+    },
+    {
+     "va": "0x1413febce",
+     "field": "s4",
+     "value": "0xa51dd0",
+     "text": "lea edx, [rsi + 0xa51dd0]"
+    },
+    {
+     "va": "0x1413fec7c",
+     "field": "s6",
+     "value": "0xaba4f8",
+     "text": "lea edx, [rsi + 0xaba4f8]"
+    },
+    {
+     "va": "0x1413fecae",
+     "field": "s9",
+     "value": "0xb4a6a8",
+     "text": "lea edx, [rsi + 0xb4a6a8]"
+    },
+    {
+     "va": "0x1413feeaf",
+     "field": "regulations",
+     "value": "0x1a1800",
+     "text": "add ecx, 0x1a1800"
+    },
+    {
+     "va": "0x1413feee7",
+     "field": "fixtures",
+     "value": "0x1c4210",
+     "text": "lea ecx, [rdi + 0x1c4210]"
+    },
+    {
+     "va": "0x1413fef27",
+     "field": "rec596",
+     "value": "0x2a24c0",
+     "text": "lea ecx, [rdi + 0x2a24c0]"
+    },
+    {
+     "va": "0x1413fef5c",
+     "field": "s3",
+     "value": "0x9e50cc",
+     "text": "lea ecx, [rsi + 0x9e50cc]"
+    },
+    {
+     "va": "0x1413fef6f",
+     "field": "s4",
+     "value": "0xa51dd0",
+     "text": "lea ecx, [rsi + 0xa51dd0]"
+    },
+    {
+     "va": "0x1413fef82",
+     "field": "s1",
+     "value": "0x9a8c60",
+     "text": "lea ecx, [rsi + 0x9a8c60]"
+    },
+    {
+     "va": "0x1413fef95",
+     "field": "s2",
+     "value": "0x9e42e8",
+     "text": "lea ecx, [rsi + 0x9e42e8]"
+    },
+    {
+     "va": "0x1413ff03c",
+     "field": "s6",
+     "value": "0xaba4f8",
+     "text": "lea ecx, [rsi + 0xaba4f8]"
+    }
+   ],
+   "_sites_note": "Every site in the image that names one of variant B's offsets, from `copyscan.py --variant b`.  Thirty-one of them, in four runs: the constructor 0x140afd660 (11), two near-identical walkers around 0x1413fead7 and 0x1413feeaf (17), and three strays.  Coaches is not searched for, because 0x133a30 is shared with variant A and a hit on it says nothing about which layout the site belongs to.",
+   "_packed_note": "B is packed end to end, not only at the fixture array: rec596 runs straight into the first singleton too, 0x9a8c60 - 0x2a24c0 == 0x7067a0 == 12360 * 0x254, to the byte.  So growing the fixture record moves rec596 and all ten singletons, and nothing else."
   }
  },
  "getters": {
