@@ -50,7 +50,7 @@ What the options mean:
 |---|---|---|
 | `--leagues N` | 6 | how many new leagues |
 | `--clubs M` | 20 | clubs per league |
-| `--sizes A,B,C` | | different sizes, cycled over the run, e.g. `--sizes 24,22,20,18` (14–33 all work) |
+| `--sizes A,B,C` | | different sizes, cycled over the run, e.g. `--sizes 24,22,20,18` (10–30 all work; above 30 the round list runs out) |
 | `--region N` | 16 | which existing menu region the leagues appear under (16 = England's slot) |
 | `--cid-from N` | 130 | first competition id; leave it |
 | `--reg-from N` | 1 | first rulebook id, handed out from the free list; **leave it** (see below) |
@@ -92,6 +92,32 @@ ids. **Compare the `regulation` column of the per-league lines with the list abo
 the list, you are fine. If not — more than 39 leagues, a different `--reg-from`, or a data
 pack that already uses some of these ids — that league will not be scheduled, and you need a
 regenerated patch set: see [for-developers.md](for-developers.md).
+
+Why an id decides this at all is explained in [how-it-works.md](how-it-works.md): the dates
+come from a switch compiled into the executable, keyed by the id, and most free ids land on
+an entry that writes nothing.
+
+### If you build many leagues: spread them over the week
+
+A calendar day holds **280 matches** and the scheduler drops the rest without a word. No
+error, no log line, nothing in the world files — a league just plays one round fewer than it
+should. Each new league is given a shift of 0 to 6 days so that they do not all want the
+same weekday, and the shipped set already carries a spread measured on a 39-league world.
+
+Past about 39 leagues you need your own. `tools/dayplan.py` reads a running season out of
+the game, separates the shipped competitions' load from each of your leagues', and prints
+the `--date-offsets` argument for `patchset.py` that makes the busiest day as quiet as it
+can be:
+
+```
+python tools/dayplan.py --set <your set name>
+python tools/dayplan.py --set <your set name> --demand   # after the first rollover
+```
+
+Then regenerate the set with what it printed and create the season again. Use `--demand`
+once a world has rolled over: walking the calendar only counts the matches that were
+accepted, so a day that turned matches away still reads as a tidy 280, while the match
+records show what was really wanted.
 
 ### Sizes worth knowing
 

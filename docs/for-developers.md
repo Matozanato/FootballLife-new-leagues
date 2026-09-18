@@ -77,10 +77,14 @@ players 0x17c, clubs 0x690, coaches 0x258, regulations 0x314, match records 0x25
 | `siderroot.py` | switch which `_FL26*` cpk.root is active |
 | `patchset.py` + `callindex.py`, `datecave.py`, `copyfields.py` | the patch set generator and its helpers |
 | `flpaths.py` | where your game is; environment variables |
+| `livedump.py` | locate the running game and read its edit block; the reader the next tool needs |
+| `dayplan.py` | measure a running season and print the `--date-offsets` day-spread that clears the 280-per-day ceiling |
 
 Tools we use in development but did not include: the automation harness that plays seasons
-unattended with a virtual pad and screen reading, the live memory readers, and the
-disassembly indices. They are tied to one machine and would mislead more than help.
+unattended with a virtual pad and screen reading, and the disassembly indices. They are tied
+to one machine and would mislead more than help. `livedump.py` is the one reader that is
+here, because `dayplan.py` cannot work without it and the day-spread problem is one every
+large world runs into. It reads the running game only; it writes nothing.
 
 ## Contributing
 

@@ -32,6 +32,34 @@ The Lua module reads every target address first and compares it to the bytes the
 saw. If one byte differs, nothing is written. That is what makes it safe to hand out: on any
 other build it simply does nothing.
 
+## The rulebook id decides whether a league ever plays
+
+This is the single thing that costs newcomers the most time, so it is worth stating plainly.
+
+When a season is generated, the game does not work out a league's fixture dates from the
+league you created. It takes the rulebook's **id**, looks that id up in a switch compiled
+into the executable, and copies out a fixed list of dates — one record per round, held as a
+static array in the code. A league competition gets 38 of them; the shipped domestic cup
+gets ten.
+
+Most of the free ids do not appear in that switch. They fall through to an entry that
+returns without writing anything. The competition still exists, still shows up in the menus,
+still has its clubs and its rounds — and never plays, because no round was ever put on a
+calendar day. Nothing reports this. It looks exactly like a league that is being ignored.
+
+That is what the "date spread" stub in `fl26caps.lua` exists for: it gives the ids we use
+their own entry, pointing at the same list of league dates the game already carries, plus a
+shift of 0 to 6 days so that not every new league wants the same weekday (see
+[limits.md](limits.md)).
+
+Two practical consequences:
+
+- **Pick your rulebook ids from the list that is known to be dated**, or regenerate the
+  patch set with `--date-keys` for the ids you actually used. A league outside both is
+  silently never scheduled.
+- A cup is a different case and is not solved here. Cups cannot live in the low id range we
+  use, and the shipped switch does not reach the high range at all.
+
 ## The null guards
 
 A world of 1,536 clubs walks code paths the shipped data never reaches. Several of them

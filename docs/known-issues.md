@@ -1,6 +1,6 @@
 # Known issues
 
-Honest list, as of 2026-09-17. Addresses are given so that a fault offset in your Event
+Honest list, as of 2026-09-18. Addresses are given so that a fault offset in your Event
 Viewer can be matched against them: the offset is the address minus `0x140000000`
 (so `0x1414c674d` shows up as exception offset `0x14c674d`).
 
@@ -57,7 +57,7 @@ yet known, and if it reaches 127 the same silent turning-away returns at the hig
 127 is also the ceiling of this patch's approach, so going further is a different and larger
 job. If you are playing many seasons on one world, this is the thing to watch.
 
-## Later seasons lost their fixtures — cause found 2026-09-17, fix not yet fully verified
+## Later seasons lost their fixtures — fixed 2026-09-17, verified across a rollover
 
 Found and explained on 2026-09-17. If you downloaded before that date, **replace
 `sider/fl26caps.lua`** — the one published earlier has this fault.
@@ -101,10 +101,19 @@ the previous version still load**.
 Verified on a fresh season: all 39 leagues are in the calendar, no match record is undated,
 and the busiest calendar day is 243 of 280 with no day at the ceiling.
 
-**Not yet verified: a season rollover.** The whole point of this fault is that it only
-showed itself in the second season and later, so the fix is not proven until a world has
-been played across rollovers. That run is going. Until it reports, treat this as a cause
-found and a fix applied, not as a closed issue.
+**Now verified across a rollover**, which is what this fault needed, since it only ever
+showed itself in the second season and later. A world was played on into its second season:
+every one of the 39 leagues was dealt a fresh 380-match season on schedule, every record
+carried a real date, and none was dropped.
+
+**One thing is still imperfect, and it is not the same fault.** Five of the 39 leagues do
+not keep the *previous* season's matches across the turn of the year. At the point in the
+second season where the other 34 hold 760 records — two seasons at once, which is what the
+shipped competitions do — those five hold only their new 380. They are scheduled, they play,
+their new season is complete; what they lose is history. The cause is not known and is not
+the dating fault above, which is fixed and holding. It is written here rather than left out
+because "leagues with no fixtures" was the wrong description of it and stood in this file
+for a day.
 
 An honest note on how it was missed in the first place: the falling record count was watched
 all afternoon and read as the game reclaiming finished rounds, which it does do. A falling
@@ -117,12 +126,20 @@ calendar.
 - **Saves are tied to the world.** A save made with world A does not load with world B or
   with the shipped game. Move your saves aside when you switch roots.
 - **Rulebook ids must be in the date table** (39 ids shipped in `fl26caps.lua`). A league
-  outside it is silently never scheduled. See build-your-world.md.
+  outside it is silently never scheduled — this is the single most common way a new league
+  ends up existing but never playing. See build-your-world.md and
+  [how-it-works.md](how-it-works.md).
+- **Rulebook ids above 175 do work**, but a league on one is invisible in the **Select Team**
+  list. It generates, schedules and plays a full Master League season; only that one menu
+  cannot show it. Easy to mistake for a data error.
 - **1,536 clubs in total is a wall** in the season generator, independent of the 1,600 table
   size. 793 new clubs is the most we have run.
 - **A calendar day holds 280 match ids**; overflow is dropped silently by the scheduler.
-  Our 39-league world peaks at 251 on the busiest day. More leagues on the same weekdays will
-  lose fixtures without an error.
+  More leagues on the same weekday lose fixtures with no error at all. Do not trust the
+  calendar to tell you: it counts what was accepted, so a day that turned matches away reads
+  as a tidy 280. Count the match records instead — measured once at 280 accepted against 351
+  that wanted the day. `tools/dayplan.py --demand` does this and prints the day-spread that
+  fixes it; see [limits.md](limits.md).
 - **The calendar is 365 days** and cannot be extended in place.
 - Squads are exactly `--per` players (default 23). We do not yet know whether a squad that
   thin is what starves the AI lineup pass at day 238 (see above). Bigger squads cost player

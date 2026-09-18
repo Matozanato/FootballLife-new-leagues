@@ -70,7 +70,10 @@ world, across season rollovers.
   reason, found and fixed on 2026-09-17 — see the first item below.
 - League tables that show the current season only. See `fl26hdr127.lua` above and the
   caveat in [known-issues.md](docs/known-issues.md).
-- League sizes from 14 to 33 clubs. Different sizes in the same world.
+- League sizes from 10 to 30 clubs. Different sizes in the same world. Ten is not a
+  floor we imposed — the shipped game runs a 10-club league of its own, and 10-club
+  leagues have been played here. Above 30 the round list runs out: see
+  [limits.md](docs/limits.md).
 - Cups can be defined by the same tools (`mkcup.py`), but a cup in a Master League season
   is **not yet verified**.
 
@@ -81,16 +84,16 @@ world, across season rollovers.
   with broken squad entries and the AI could not field a side. If you downloaded before
   2026-09-16, replace `sider/fl26caps.lua`. **Your save files are fine** — the damage was
   only ever in memory, and an old save loads clean with the new module.
-- **(Cause found 2026-09-17, fix not yet proven across a rollover.)** Later seasons
-  scheduled fewer and fewer leagues, until by the fifth season only 4 of the 39 new leagues
-  had any fixtures and the calendar showed empty days. The match records were all there;
-  they carried no date, so nothing ever put them on a calendar day. That came from the patch
-  set: the set published on 2026-09-16 was regenerated without its list of leagues to date
-  and fell back to a single test league. **If you downloaded before 2026-09-17, replace
-  `sider/fl26caps.lua`.** A fresh season on the fixed set has all 39 leagues in the calendar
-  and no undated match. A run across season rollovers is still going, so this is a cause
-  found and a fix applied, not yet a closed issue —
-  [details](docs/known-issues.md).
+- **(Fixed 2026-09-17, now verified across a rollover.)** Later seasons scheduled fewer and
+  fewer leagues, until by the fifth season only 4 of the 39 new leagues had any fixtures and
+  the calendar showed empty days. The match records were all there; they carried no date, so
+  nothing ever put them on a calendar day. That came from the patch set, not from the game.
+  **If you downloaded before 2026-09-17, replace `sider/fl26caps.lua`.** Verified since: a
+  world played into its second season has all 39 leagues dealt a full 380-match season, every
+  record on the calendar and none dropped. One thing is still imperfect and is written down
+  rather than hidden: five of the 39 leagues do not keep the PREVIOUS season's matches across
+  the turn of the year. The other 34 carry two seasons at once at that point; those five carry
+  only the new one. They all play. [Details](docs/known-issues.md).
 - **The competition table can still fill up.** `fl26hdr127.lua` raises it from 100 to 127,
   but an entry is never given back, so across four seasons the count rose 88, 115, 119, 124.
   Whether it stops below 127 is not yet known. Long-running worlds are the most useful thing
@@ -98,6 +101,19 @@ world, across season rollovers.
 - **The game crashes in its own code when a scene is set up**, most visibly when generating
   a season and at season rollovers, regardless of these mods. Start again or reload; it is
   not data damage.
+- **A calendar day holds only 280 matches**, and everything past that is dropped in silence
+  — no error, no sign in the world files, just a round that never happens. The remedy is not
+  to raise the ceiling but to spread the leagues over different weekdays, which is what
+  `--date-offsets` is for; `tools/dayplan.py` measures a running season and prints the
+  spread that flattens it. Anyone building much past 39 leagues will meet this.
+- **A league's rulebook id decides whether it ever plays.** Fixture dates are not built from
+  the competition you create; they are looked up in a table compiled into the executable,
+  keyed by that id. Most free ids map to an empty entry, so a league can be created, appear
+  in the menus, hold its rounds and never play a single match. See
+  [how-it-works.md](docs/how-it-works.md).
+- **Rulebook ids above 175 work in Master League but are invisible in the Select Team list.**
+  The season plays; the league simply does not appear in that one menu. It reads like a data
+  error and is not one.
 - **Promotion and relegation between the new leagues** has not been observed.
 - Continental competitions for new clubs (Champions League slots) — not attempted.
 - New clubs use **placeholder names, cloned kits and cloned squads**. This project proves the
