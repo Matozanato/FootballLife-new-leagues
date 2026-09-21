@@ -21,10 +21,17 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
 
 ## Missing or unverified features
 
-- **Continental competitions.** New clubs do not qualify for the Champions League or the
-  Europa League. Two halves of that are now understood and neither is finished. Who
-  qualifies is a static table in the exe, read **by region** rather than by competition id,
-  and it is mapped but not patched. Cloning a continental competition itself works: the
+- **Continental competitions: unexplained, not absent.** New clubs have been seen taking
+  part in the Champions League in a test world. That is not something this project built,
+  and it does not follow from what has been mapped: qualification is a static table in the
+  exe whose rows name a *shipped* league and a place in it, filtered by region, so it should
+  hand out places to shipped clubs only. Either something else fills the entry list when a
+  season is created, or the grown tables have shifted an index and the clubs in that
+  competition are not the ones the game meant to put there. Until that is settled, do not
+  treat continental entry for new clubs as a feature, and **if you see it, say what you saw**
+  — which competition, which clubs, and whether the shipped clubs that should have been
+  there are missing. Deliberate qualification (patching that table so a new league is granted
+  places of its own) is mapped and not done. Cloning a continental competition itself works: the
   tooling copies every phase of a multi-phase competition and renumbers the replicas
   correctly, and cloning the Europa League into a scratch world and reading it back checks
   out — but a clone keeps its source's dates and would collide with it, so nothing playable

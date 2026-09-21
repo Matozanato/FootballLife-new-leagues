@@ -125,7 +125,9 @@ world, across season rollovers.
   The season plays; the league simply does not appear in that one menu. It reads like a data
   error and is not one.
 - **Promotion and relegation between the new leagues** has not been observed.
-- Continental competitions for new clubs (Champions League slots) — not attempted.
+- Continental competitions for new clubs: granting them places deliberately is not
+  attempted. New clubs have nonetheless been seen playing in the Champions League, which is
+  not understood yet — see [known-issues.md](docs/known-issues.md).
 - New clubs use **placeholder names, cloned kits and cloned squads**. This project proves the
   capacity; dressing the clubs is ordinary Team.bin / kit editing on top of it.
 - New leagues appear under an **existing menu region** (England by default) because the menu
