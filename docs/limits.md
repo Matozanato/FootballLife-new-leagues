@@ -19,6 +19,30 @@ What the shipped game holds, what `fl26caps.lua` raises it to, and which walls r
 | competitions a season can hold at once | 100 | **127**, or **192** with the experimental module | raised by `fl26hdr127.lua`; entries are never released, so the count only rises — see known-issues.md |
 | per-phase standings tables | 600 | 599 (597 at 192) | they pay for the wider header; a running season uses about 375 |
 
+## Divisions: three, and it is a hard three
+
+A competition's regulation record carries the division at `F+0x10` bits 15-17, and the game
+reads it at runtime as `+0x304` bits 30-31. The setter is three instructions:
+
+    0x1414c9cc0   and dword [rcx+0x304], 0x3fffffff
+                  movzx eax, dl ; shl eax, 30 ; or [rcx+0x304], eax
+
+Two bits survive whatever the file says, so the only divisions that exist are **1, 2 and 3**.
+Every reader compares against 0x40000000 / 0x80000000 / 0xc0000000 and nothing else, and the
+promotion pairing code only ever pairs a 2 with the 1 above it and a 3 with the 2 above it --
+nothing pairs a 3 with a 3. A fourth division would have to be moved by a module rather than
+by the engine.
+
+Two things follow that are easy to trip over:
+
+* **European places go to the tier-1 leagues of a region.** Every league built by these tools
+  is a copy of a first-division prototype, so unless you pass `--tiers`, every league you add
+  is a first division -- and a first division in England's region is offered European places
+  by construction. That is the engine behaving normally with the data it was given.
+* **Promotion needs the lower league to be tier 2 or 3.** The resolver only looks for the
+  league above when the tier is at least 2, so a "pyramid" of three first divisions never
+  promotes anybody. `mkworld.py --tiers 1,2,3 --group-regions 3` builds them properly.
+
 ## The day counter
 
 The game counts days of the calendar year, not of the season. A Master League season

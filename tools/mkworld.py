@@ -1,5 +1,7 @@
 """python mkworld.py --base <pesdb dir> --out <livecpk root> [--leagues N] [--clubs M]
-                    [--cid-from N] [--reg-from N] [--sizes A,B,C]
+                    [--cid-from N] [--reg-from N] [--sizes A,B,C] [--regions A,B,C]
+                    [--tiers 1,2,3] [--group-regions N]
+                    [--reg-ids A,B,C]
 
 Build a whole set of new leagues, and the placeholder clubs to fill them, in one pass.
 
@@ -32,6 +34,21 @@ T_ABBR, T_ABBR_LEN = 0x372, 3
 
 CID_MAX, REG_MAX = 255, 600
 
+# Regulation ids that are free in the tables but not free in the game: a league built on one
+# of these shows Libertadores and Asian clubs in its table, so the exe knows them.  14, 32 and
+# 33 were found that way one at a time; the other sixteen were measured together, by building
+# two worlds of twenty-three leagues that differ in nothing but the ids they were given and
+# taking both through a whole season creation.  Every good id produced a correct league and
+# not one of these did.  See docs/findings.md, "It is the regulation id, and the league count
+# has nothing to do with it".
+BAD_REG = {14, 32, 33,
+           12, 13, 63, 64, 65, 66, 69, 70, 71, 72, 73, 75, 77, 78, 101, 102,
+           # found on 2026-09-17 by the same method, in a world of thirty-nine
+           152, 153, 154,
+           # 177 is a different failure: it is dropped from the live regulation
+           # array at Master League setup, so its clubs never arrive at all
+           177}
+
 
 def free_ids(used, hi, want, prefer_from=0):
     """ids no shipped row claims, taken from prefer_from upward"""
@@ -56,7 +73,30 @@ def main():
     # welded together -- how big a league is, and how many leagues there are -- because a
     # short run of big leagues can now be built without a long list to hide behind.
     sizes = [int(x) for x in get("--sizes", "").split(",") if x.strip()] or [nclub]
-    region = int(get("--region", "16"))
+    # Which division each league is. Every league this project built before 2026-09-21 was a
+    # copy of ENGLAND_D1_LEAGUE and therefore a FIRST division, all thirty-nine of them, which
+    # is not a cosmetic detail: the engine hands European places to the tier-1 leagues of a
+    # region, and its promotion resolver only looks for the league above when the lower one is
+    # tier 2 or more. --tiers 1,2,3 cycles over the run, so leagues 1,4,7... are top flights
+    # and the ones between them are the tiers below. Left empty, nothing is written and the
+    # prototype's own division (D1) stands, which is what every earlier world has.
+    tiers = [int(x) for x in get("--tiers", "").split(",") if x.strip()]
+    # Spreading the leagues over regions was tried as a fix for the leagues that come up
+    # holding another league's clubs, and it is not one: thirty-nine leagues dealt over
+    # twenty-two regions fail exactly as thirty-nine leagues all filed under England do.
+    # --regions is kept anyway, because forty-four competitions in one region is still more
+    # than any shipped region holds and the menus group countries by it.  See
+    # docs/findings.md, "The region is not it either".
+    regions = ([int(r) for r in get("--regions").split(",")] if "--regions" in a
+               else [int(get("--region", "16"))])
+    # How many consecutive leagues share a region. One (the default) deals the regions out
+    # league by league, which is what every earlier world did. Three, together with
+    # --tiers 1,2,3, builds PYRAMIDS: leagues 1-3 are the three divisions of the first
+    # region, 4-6 of the second, and so on. That pairing is the one the engine understands --
+    # it promotes between a tier-2 and the tier-1 above it, and between a tier-3 and the
+    # tier-2 above that -- and it also keeps our leagues from being extra FIRST divisions of
+    # a shipped country, which is how they come to be offered European places.
+    group = max(1, int(get("--group-regions", "1")))
     # Football Life's own added leagues live at 111-141, and the free ids inside that range
     # are the ones a new league has been carried into a playable season on.
     cid_from = int(get("--cid-from", "130"))
@@ -110,9 +150,21 @@ def main():
     used_reg = {int.from_bytes(regs[i * M.REG + M.R_ID:i * M.REG + M.R_ID + 2], "little")
                 for i in range(len(regs) // M.REG)}
     cids = free_ids(used_cid, CID_MAX, nleague, cid_from)
-    # 14, 32 and 33 are free in the file but not in the game: a league built on one of
-    # them shows Libertadores and Asian clubs in its table, so the exe knows them.
-    rids = free_ids(used_reg | {14, 32, 33}, REG_MAX, nleague, reg_from)
+    # Which regulation ids a world uses is the one variable that has ever changed whether a
+    # league comes up holding its own clubs, so it has to be nameable rather than derived.
+    # --reg-ids takes the list verbatim, in league order, and checks it against the file
+    # instead of the free list, because the point of naming it is usually to try ids the
+    # default allocator would have refused.
+    if "--reg-ids" in a:
+        rids = [int(r) for r in get("--reg-ids").split(",")]
+        if len(rids) != nleague:
+            raise SystemExit("--reg-ids has %d ids, %d leagues" % (len(rids), nleague))
+        clash = sorted(set(rids) & used_reg)
+        if clash:
+            raise SystemExit("--reg-ids %s are already claimed by shipped regulations"
+                             % ", ".join(str(c) for c in clash))
+    else:
+        rids = free_ids(used_reg | BAD_REG, REG_MAX, nleague, reg_from)
     print("competition ids %s" % (", ".join(str(c) for c in cids[:8])
                                   + (" ..." if nleague > 8 else "")))
     print("regulation  ids %s" % (", ".join(str(r) for r in rids[:8])
@@ -135,10 +187,12 @@ def main():
             raw += r
             teams.append(cid_team)
             made += 1
-        M.add_league(comp, regs, ents, cids[L], rids[L], region,
-                     lname % (L + 1), "FL_LEAGUE_%02d" % (L + 1), teams, quiet=True)
-        print("  %-16s competition %-4d regulation %-4d %2d clubs %d-%d"
-              % (lname % (L + 1), cids[L], rids[L], len(teams), teams[0], teams[-1]))
+        M.add_league(comp, regs, ents, cids[L], rids[L], regions[(L // group) % len(regions)],
+                     lname % (L + 1), "FL_LEAGUE_%02d" % (L + 1), teams, quiet=True,
+                     tier=(tiers[L % len(tiers)] if tiers else None))
+        print("  %-16s competition %-4d regulation %-4d %2d clubs %d-%d  region %3d  division %d"
+              % (lname % (L + 1), cids[L], rids[L], len(teams), teams[0], teams[-1],
+                 regions[(L // group) % len(regions)], tiers[L % len(tiers)] if tiers else 1))
 
     for k in range(orphans):
         r = bytearray(proto)

@@ -1,4 +1,4 @@
-"""python mkleague.py --base <dir> --out <root> [--cid N] [--reg N] [--region N] ...
+"""python mkleague.py --base <dir> --out <root> [--cid N] [--reg N] [--region N] [--tier N] ...
 
 Add one competition to the game's data, the way the game itself stores competitions.
 
@@ -43,8 +43,33 @@ def put(b, off, s, n):
     b[off:off + n] = v + b"\0" * (n - len(v))
 
 
+R_TIER = 0x10                    # dword; bits 15-17 hold the division (1 = D1, 2 = D2, 3 = D3)
+TIER_SHIFT, TIER_MASK = 15, 7
+
+
+def set_tier(g, tier):
+    """write the division into a regulation record in place
+
+    The field is read at runtime as +0x304 bits 30-31 and is what the game means by "first
+    division". It decides more than a label: European places are handed to tier-1 leagues of
+    a region (0x141358bd0, 0x141359a60, 0x1413b7910), and the promotion resolver only looks
+    for the league above when the lower one is tier 2 or more (0x141510430, 0x14131f430).
+    Every league this project has built so far was copied from ENGLAND_D1_LEAGUE and was
+    therefore a first division, all thirty-nine of them -- see docs/findings.md.
+    """
+    if tier not in (1, 2, 3):
+        raise SystemExit("tier %r is not 1, 2 or 3" % (tier,))
+    v = int.from_bytes(g[R_TIER:R_TIER + 4], "little")
+    v = (v & ~(TIER_MASK << TIER_SHIFT)) | (tier << TIER_SHIFT)
+    g[R_TIER:R_TIER + 4] = v.to_bytes(4, "little")
+
+
+def get_tier(g):
+    return (int.from_bytes(g[R_TIER:R_TIER + 4], "little") >> TIER_SHIFT) & TIER_MASK
+
+
 def add_league(comp, regs, ents, cid, reg, region, name, code, teams,
-               proto_code="ENGLAND_D1_LEAGUE", quiet=False):
+               proto_code="ENGLAND_D1_LEAGUE", quiet=False, tier=None):
     """append one league to the three tables in place
 
     Split out of main() so a whole confederation can be built in one pass, without the
@@ -86,6 +111,8 @@ def add_league(comp, regs, ents, cid, reg, region, name, code, teams,
     g[R_ID:R_ID + 2] = reg.to_bytes(2, "little")
     g[R_CID] = cid
     g[R_TEAMS] = (g[R_TEAMS] & 0xc0) | (len(teams) & 0x3f)
+    if tier is not None:
+        set_tier(g, tier)
     for k in range(NAME_SLOTS):
         put(g, R_NAME + k * NAME_SLOT, name, NAME_SLOT)
     regs += g
@@ -99,8 +126,8 @@ def add_league(comp, regs, ents, cid, reg, region, name, code, teams,
         e[E_CID], e[E_ORDER] = cid, k + 1
         ents += e
     if not quiet:
-        print("%s: competition %d, regulation %d, region %d, %d clubs"
-              % (name, cid, reg, region, len(teams)))
+        print("%s: competition %d, regulation %d, region %d, %d clubs, division %d"
+              % (name, cid, reg, region, len(teams), get_tier(g)))
     return cid, reg
 
 
@@ -132,7 +159,8 @@ def main():
                int(get("--region", "16")), get("--name", "FL Test League"),
                get("--code", "FL_TEST_LEAGUE"),
                [int(x) for x in get("--teams", "").split(",") if x],
-               get("--like", "ENGLAND_D1_LEAGUE"))
+               get("--like", "ENGLAND_D1_LEAGUE"),
+               tier=(int(get("--tier")) if get("--tier") else None))
     write_tables(out, comp, regs, ents)
     return 0
 

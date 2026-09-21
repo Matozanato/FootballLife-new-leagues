@@ -21,25 +21,26 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
 
 ## Missing or unverified features
 
-- **Continental competitions: unexplained, not absent.** New clubs have been seen taking
-  part in the Champions League in a test world. That is not something this project built,
-  and it does not follow from what has been mapped: qualification is a static table in the
-  exe whose rows name a *shipped* league and a place in it, filtered by region, so it should
-  hand out places to shipped clubs only. Either something else fills the entry list when a
-  season is created, or the grown tables have shifted an index and the clubs in that
-  competition are not the ones the game meant to put there. Until that is settled, do not
-  treat continental entry for new clubs as a feature, and **if you see it, say what you saw**
-  — which competition, which clubs, and whether the shipped clubs that should have been
-  there are missing. Deliberate qualification (patching that table so a new league is granted
-  places of its own) is mapped and not done. Cloning a continental competition itself works: the
+- **Continental competitions: explained, and it is the division flag.** New clubs have been
+  seen taking part in the Champions League. The reason is not an overflow and nothing was
+  taken from anyone: every league these tools build is a copy of a first-division prototype,
+  and the engine offers European places to the **tier-1 leagues of a region**
+  (`0x141358bd0`, `0x141359a60`, `0x1413b7910` all gate on tier == 1 before resolving the
+  right). Thirty-nine first divisions in England's region are thirty-nine leagues the engine
+  considers eligible. Build them with `--tiers 1,2,3` and only the top flight of each
+  pyramid is offered places, which is what you would want anyway. Still not done: granting a
+  new league places of its OWN deliberately, by extending the rights table in the exe. Cloning a continental competition itself works: the
   tooling copies every phase of a multi-phase competition and renumbers the replicas
   correctly, and cloning the Europa League into a scratch world and reading it back checks
   out — but a clone keeps its source's dates and would collide with it, so nothing playable
   is published. A 36-club single-table Champions League in the modern format exists in the
   research repository and has not been run in a game yet either.
-- **Promotion and relegation between new leagues.** The engine does the top joint of a
-  three-league chain by itself and skips the middle one. A module that finishes the chain is
-  written and not yet tested in a season; it is not published here.
+- **Promotion and relegation between new leagues.** A chain of three of our leagues moved no
+  club, and the likely reason is now known and is data, not code: all three were first
+  divisions, and the resolver only looks for the league above when the lower league is
+  division 2 or 3. Build the pyramid with `--tiers 1,2,3` (see build-your-world.md). Whether
+  clubs then actually cross at the rollover has not been played yet. A module that moves them
+  itself exists in the research repository as a fallback and is not published here.
 - **Cups: working, with one rule.** A cup built by `mkcup.py` has been carried through a
   Master League season with every round dated — 16 ties, then 8, 4, 2, 1. The rule is that the
   game fills a cup from the **first league in its region** (lowest competition id) and ignores

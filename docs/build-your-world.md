@@ -154,6 +154,33 @@ between worlds**: a save carries the club table of the world it was made in.
   (retry once or twice if it crashes during generation — see known-issues), and the hub
   should show the standings of your league on the right and four fixtures at the bottom.
 
+### Divisions, and why they matter more than they look
+
+Every league these tools build is a copy of a first-division prototype, which means that by
+default **all of your leagues are first divisions**. Two consequences, both measured:
+
+* a first division in a region is offered European places by the engine, so your new clubs
+  can turn up in the Champions League;
+* the promotion resolver only looks for the league above when the lower league is division 2
+  or 3, so three leagues linked as a pyramid but all left as division 1 will never promote
+  or relegate anybody.
+
+```
+python tools\mkworld.py --base %FL26_PESDB% --out <root> --leagues 9 --tiers 1,2,3 --group-regions 3
+```
+
+`--tiers` cycles over the run, `--group-regions` says how many consecutive leagues share a
+region -- so the line above builds three three-division pyramids, each one inside its own
+region, which is the shape the engine understands. Divisions stop at three; see
+[limits.md](limits.md) for why that is a hard limit rather than a convention.
+
+`tools\deepen.py` does the other version of this: it takes one of your leagues and puts it
+**underneath a shipped pyramid** as its third division -- France and Italy each ship two --
+copying the parent's region and calendar shape and writing the promotion link both ways. Be
+aware that it is the one tool here that writes into a shipped competition's own record (the
+parent's relegation pointer), in your livecpk copy of the table. Nothing is replaced, but
+Ligue 2's bottom clubs now have somewhere to fall.
+
 ### Crests and kits, if you want them to look like sides
 
 Every new club is a clone, so in the game it wears the crest and the kit of the club it was
