@@ -19,7 +19,7 @@ What the shipped game holds, what `fl26caps.lua` raises it to, and which walls r
 | competitions a season can hold at once | 100 | **127**, or **192** with the experimental module | raised by `fl26hdr127.lua`; entries are never released, so the count only rises — see known-issues.md |
 | per-phase standings tables | 600 | 599 (597 at 192) | they pay for the wider header; a running season uses about 375 |
 
-## Divisions: three, and it is a hard three
+## Divisions: three values, but a pyramid can be deeper than three
 
 A competition's regulation record carries the division at `F+0x10` bits 15-17, and the game
 reads it at runtime as `+0x304` bits 30-31. The setter is three instructions:
@@ -27,11 +27,22 @@ reads it at runtime as `+0x304` bits 30-31. The setter is three instructions:
     0x1414c9cc0   and dword [rcx+0x304], 0x3fffffff
                   movzx eax, dl ; shl eax, 30 ; or [rcx+0x304], eax
 
-Two bits survive whatever the file says, so the only divisions that exist are **1, 2 and 3**.
-Every reader compares against 0x40000000 / 0x80000000 / 0xc0000000 and nothing else, and the
-promotion pairing code only ever pairs a 2 with the 1 above it and a 3 with the 2 above it --
-nothing pairs a 3 with a 3. A fourth division would have to be moved by a module rather than
-by the engine.
+Two bits survive whatever the file says, so the only division *values* are **1, 2 and 3**.
+That is not the same as a three-deep ceiling, which is what an earlier version of this page
+said. Who goes up and who comes down is decided by one function, and it takes the identity of
+the partner league from the link fields, not from the division number:
+
+    tier >= 2                        -> promoted into the league named by +0x7c
+    tier == 1, bottom three          -> relegated into the league named by +0x7e
+    below == 3 and this == 2, b. 3   -> relegated into the league named by +0x7e
+
+The promotion gate is a "2 or more", so a **fourth** division marked 3 and pointed at the
+third promotes its champion with no patch at all. Only the way down is missing: a tier-3
+league matches neither relegation gate, so clubs climb out of the fourth division and never
+fall back into it. That half is one byte -- `jne` to `jb` at 0x141510617 turns the second
+relegation gate from "exactly 2" into "2 or 3" -- and `sider/experimental/fl26deep4.lua` writes it. With
+it, four and five divisions behave like two and three. How many go down is not adjustable
+from the data: both relegation tails are hard-coded to the bottom three.
 
 Two things follow that are easy to trip over:
 

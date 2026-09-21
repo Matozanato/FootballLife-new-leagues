@@ -14,6 +14,7 @@ it did before.
 |---|---|---|
 | `fl26hdr192.lua` | the season's competition header from 100 to **192** entries, instead of the 127 that `fl26hdr127.lua` gives | 192 needs a redirect at each of thirteen bounds rather than a single byte; the stubs go into the spare tail of the code section, where the null guards also live |
 | `fl26comptab.lua` | the **Select Team** list, so leagues that had no slot in it become selectable | it hands out free slots in a table the menu reads; if your install's table differs it aborts and says which slot disagreed |
+| `fl26deep4.lua` | one byte, so that a **third** division relegates into a fourth (and a fourth into a fifth); without it a fourth division promotes upwards but is never relegated into | it widens one comparison in the end-of-season mover from "exactly division 2" to "2 or 3"; if you have no pyramid deeper than three it changes nothing |
 
 A third module, which gives the added leagues a **heading of their own** in the competition
 list instead of putting them under an existing country, is not here yet. It works by copying

@@ -1,8 +1,9 @@
-r"""deepen.py -- put one of OUR leagues underneath a shipped pyramid as its third division
+r"""deepen.py -- put one of OUR leagues underneath an existing pyramid, one division lower
 
 France and Italy ship two divisions each (Ligue 1 / Ligue 2, Serie A / Serie BKT). This takes
 a league we built and makes it the tier below: same region, the parent's calendar shape, tier
-3, and the promotion link written both ways.
+3, and the promotion link written both ways. Run it again on the league it just created and
+you get a fourth division, and again for a fifth.
 
 What it changes, exactly:
 
@@ -16,17 +17,25 @@ it is worth being plain about: it does not replace or remove anything, but it do
 Ligue 2 behaves -- its bottom clubs now have somewhere to fall. It is written into your own
 livecpk copy of the table, never into the game's files, so removing the root undoes it.
 
-Why three and not five: the tier is two bits at runtime. The setter at 0x1414c9cc0 is
+How deep it can go, and what the fourth division costs. The tier is two bits at runtime --
+the setter at 0x1414c9cc0 is
 
     and dword [rcx+0x304], 0x3fffffff ; movzx eax, dl ; shl eax, 30 ; or [rcx+0x304], eax
 
-so whatever the file holds, only two bits survive: 1, 2, 3. A fourth division cannot be
-expressed as a tier of its own, and every reader (0x141510430, 0x1415141c0, 0x14131f430 ...)
-compares against 0x40000000 / 0x80000000 / 0xc0000000 and nothing else. So a shipped
-two-division country can be given exactly one more division, and a country of ours can be
-three deep. Anything beyond that needs a different mechanism, not a bigger number.
+so whatever the file holds, only 1, 2 and 3 exist. That turns out not to be the thing that
+stops a fourth division: what matters is which gates 0x141510430 uses to answer "where does
+this club move to". Promotion is gated on tier >= 2 and then simply returns the +0x7c link,
+so a fourth-level league marked tier 3 promotes into the third level with no patch at all.
+Relegation is gated twice -- tier == 1, or (this == 2 and the one below == 3) -- and a
+tier-3 league matches neither, so the third level never sends anybody down.
+
+So: a fourth (and fifth) division works one-way out of the box, clubs climbing but never
+falling, and becomes symmetric with one byte at 0x141510617 (jne -> jb), which is what
+sider/experimental/fl26deep4.lua writes. This tool lets you build the chain either way and says which
+of the two you are getting.
 
     python deepen.py --root <livecpk root> --league 49 --below 81     # FL 02 -> Ligue 3
+    python deepen.py --root <livecpk root> --league 60 --below 49     # and FL 03 -> Ligue 4
     python deepen.py --root <livecpk root> --show                     # every pyramid, as it stands
     python deepen.py --root <livecpk root> --league 49 --below 81 --dry
 
@@ -139,9 +148,9 @@ def main(argv):
     parent = row(regs, ri[below])
     child = row(regs, ri[league])
     ptier = M.get_tier(parent)
-    if ptier != 2:
-        raise SystemExit("regulation %d is tier %d; a third division goes under a SECOND one"
-                         % (below, ptier))
+    if ptier not in (2, 3):
+        raise SystemExit("regulation %d is tier %d; a new division goes under a second or a "
+                         "third one" % (below, ptier))
     if u16(parent, R_BELOW):
         raise SystemExit("regulation %d already relegates into %d" % (below, u16(parent, R_BELOW)))
 
@@ -165,7 +174,11 @@ def main(argv):
     print("  child  region %d -> %d, F+0x10 %08x -> %08x, tier 3, promotes into %d"
           % (cregion, pregion, struct.unpack_from("<I", row(regs, ri[league]), 0x10)[0],
              struct.unpack_from("<I", child, 0x10)[0], below))
-    print("  parent %s (SHIPPED) now relegates into %d" % (pcode, league))
+    print("  parent %s now relegates into %d" % (pcode, league))
+    if ptier == 3:
+        print("  NOTE: the parent is already a third division, so this is a fourth (or deeper).")
+        print("        Promotion up works as it stands. Relegation down from the parent does")
+        print("        NOT, until sider/experimental/fl26deep4.lua is installed -- see its header.")
 
     if "--dry" in argv:
         print("--dry: nothing written")
