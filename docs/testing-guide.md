@@ -4,6 +4,10 @@ The point of this beta is to find where a big world breaks. You do not need to u
 anything about the patches to help; you need patience, a fresh save slot, and the habit of
 writing down what you did before something went wrong.
 
+If you have not installed it yet, do that first with
+[step-by-step.md](step-by-step.md), which walks a stock install through to a playing season.
+This file picks up where that one ends: what to try once it runs, and in what order.
+
 ## Before you start
 
 - Modules installed and `sider.log` shows nine `applied all` lines ([install.md](install.md)).

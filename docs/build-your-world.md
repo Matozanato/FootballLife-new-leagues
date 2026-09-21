@@ -41,7 +41,7 @@ sorts to the top, for example `_FL26World`.
 
 ```
 python tools\mkworld.py   --base %FL26_PESDB% --out "C:\Football Life 2026\SiderAddons\livecpk\_FL26World" --leagues 6 --clubs 20
-python tools\mkplayers.py --base %FL26_PESDB% --out "C:\Football Life 2026\SiderAddons\livecpk\_FL26World" --cap 46193
+python tools\mkplayers.py --base %FL26_PESDB% --out "C:\Football Life 2026\SiderAddons\livecpk\_FL26World" --per 30 --cap 51729
 ```
 
 What the options mean:
@@ -54,8 +54,8 @@ What the options mean:
 | `--region N` | 16 | which existing menu region the leagues appear under (16 = England's slot) |
 | `--cid-from N` | 130 | first competition id; leave it |
 | `--reg-from N` | 1 | first rulebook id, handed out from the free list; **leave it** (see below) |
-| `--cap` (mkplayers) | 30001 | must be **46193** with this patch set; it is the player table size |
-| `--per` (mkplayers) | 23 | players per club; the budget is 46193 − 27927 shipped = 18,266 players ≈ 794 squads of 23 |
+| `--cap` (mkplayers) | 30001 | must be **51729** with this patch set; it is the player table size |
+| `--per` (mkplayers) | 23 | players per club; the budget is 51,729 − 27,927 shipped = 23,802 players ≈ 793 squads of 30, so `--per 30` fits a 39-league world |
 
 `mkworld.py` prints what it did. **Keep that output** — it lists the competition ids and
 rulebook ids it used, and you will need it for the check below and for any bug report:
@@ -153,4 +153,20 @@ between worlds**: a save carries the club table of the world it was made in.
   (retry once or twice if it crashes during generation — see known-issues), and the hub
   should show the standings of your league on the right and four fixtures at the bottom.
 
-Then go to the [testing guide](testing-guide.md).
+### Crests and kits, if you want them to look like sides
+
+Every new club is a clone, so in the game it wears the crest and the kit of the club it was
+cloned from. Two tools fix that, and neither touches a shipped file: both only write files
+for ids no shipped file uses.
+
+```
+python tools\mkcrests.py --team-bin <your root>\common\etc\pesdb\Team.bin --flags <your root>
+python tools\mkkits.py   --team-bin <your root>\common\etc\pesdb\Team.bin --unipar <UniformParameter.bin> --root <your root>
+```
+
+`mkcrests.py` draws a distinct two-tone crest per club and needs `pip install pillow`.
+`mkkits.py` lends each club a shipped club's kit definition; run it with no arguments to see
+where `UniformParameter.bin` comes out of.
+
+Then go to the [testing guide](testing-guide.md), or, if you are starting from a clean
+install, to the [step-by-step walkthrough](step-by-step.md).

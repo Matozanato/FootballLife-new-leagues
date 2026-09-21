@@ -14,11 +14,18 @@ where it is, and the extra header entries are paid for out of phase tables:
        100        0x4650              600
        127        0x594c              599
 
-That is the whole trade at 127: twenty-seven more competitions for one phase table.  127 is
-the ceiling of the cheap version, because every bound is `cmp r32, 0x64` with an 8-bit
-immediate and 0x7f is the largest value that still fits in a signed byte.  Above 127 each
-of the thirteen bounds has to grow to `81 /7 id`, which is longer than the instruction it
-replaces and therefore needs a trampoline per site.
+That is the whole trade at 127: twenty-seven more competitions for one phase table.  Each
+further entry costs 0xb4 and each phase table 0x187c, so the price stays small: 192 entries
+cost three tables, 256 cost five.
+
+127 was the ceiling of the cheap version, because every bound is `cmp r32, 0x64` with an
+8-bit immediate and 0x7f is the largest value that still fits in a signed byte.  Above 127
+the compare has to grow to `81 /7 id`, which is three bytes longer than the instruction it
+replaces, so the site cannot hold it.  Each of the thirteen is redirected instead: every one
+of them is `cmp r32, 0x64` followed by `jb rel8`, which is five bytes together (six with a
+REX prefix) -- exactly what a `jmp rel32` needs.  The widened compare, the same branch as a
+`rel32`, and a jump back to the instruction after the pair go into the free tail of the code
+section's last page, the same place the nullguard modules put their trampolines.
 
 This generator disassembles every site hdrscan.py found, locates the immediate inside each
 instruction, and writes a nullguard-style applier with exact old/new bytes.  It writes only
@@ -67,6 +74,15 @@ OBJ_COUNT = [0x1413fb202, 0x1414fd477, 0x14158df84, 0x14158f383, 0x14158f3b2,
 # one of them.  Verified afterwards by reading the live header: real keys at 0-99, zero at
 # 100-126, in both a fresh season and the one after it.
 MOV_BOUNDS = [0x1414fd4e3]      # mov r9d, 0x64 -- the immediate is at +2
+
+# Where the trampolines go, for N above 127.  .trace ends at 0x14252e800, but sections are
+# mapped a page at a time, so 0x14252e800..0x14252f000 is executable memory that exists at
+# runtime and has no bytes in the file: it reads as zero, and the applier verifies that
+# before writing, so if another module got there first nothing is touched.  This is the same
+# tail the nullguard modules use; they hold everything up to 0x14252e8d0, and fl26chain and
+# fl26cuphook keep an observation ring at 0x14252e900..0x14252ea08.  Start clear of both.
+CAVE_VA = 0x14252ea20
+CAVE_END = 0x14252f000
 
 
 def sections(d):
@@ -167,6 +183,53 @@ def word_site(d, secs, va, want):
     return None
 
 
+def bound_trampoline(d, secs, va, n, cave):
+    """Move one `cmp r32, 0x64` / `jb rel8` pair into a stub that compares against `n`.
+
+    Returns (stub patch, site patch, bytes used).  Nothing is guessed: the pair is decoded,
+    the compare must be the `83 /7 ib` form with 0x64 as its immediate and nothing but a REX
+    prefix in front of it, and the branch must be a two-byte `jb`.  The widened compare is
+    the same instruction with the opcode changed to `81 /7 id` -- same REX, same ModRM, same
+    register, four-byte immediate.
+    """
+    off = offset_of(secs, va)
+    if off is None:
+        raise SystemExit("0x%x has no bytes in the file" % va)
+    md = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
+    ins = list(md.disasm(d[off:off + 24], va))[:2]
+    if len(ins) < 2:
+        raise SystemExit("0x%x does not decode" % va)
+    cmp_i, jcc_i = ins
+    cb = bytes(cmp_i.bytes)
+    if cmp_i.mnemonic != "cmp" or cb[-1] != BOUND_OLD or 0x83 not in cb:
+        raise SystemExit("0x%x: %s %s (%s) is not `cmp r32, 0x64`"
+                         % (va, cmp_i.mnemonic, cmp_i.op_str, cb.hex()))
+    i = cb.index(0x83)
+    if cb[:i] not in (b"", b"\x41") or len(cb) != i + 3:
+        raise SystemExit("0x%x: %s is not the plain three-byte form" % (va, cb.hex()))
+    wide = cb[:i] + b"\x81" + cb[i + 1:i + 2] + struct.pack("<I", n)
+    if jcc_i.mnemonic != "jb" or jcc_i.size != 2:
+        raise SystemExit("0x%x: the compare is followed by %s %s, not a short jb"
+                         % (va, jcc_i.mnemonic, jcc_i.op_str))
+    target = int(jcc_i.op_str, 16)
+    total = cmp_i.size + jcc_i.size
+    fall = va + total
+
+    after_jb = cave + len(wide) + 6
+    stub = (wide
+            + b"\x0f\x82" + struct.pack("<i", target - after_jb)
+            + b"\xe9" + struct.pack("<i", fall - (after_jb + 5)))
+    site = b"\xe9" + struct.pack("<i", cave - (va + 5)) + b"\x90" * (total - 5)
+    assert len(site) == total
+    return ((cave, "00" * len(stub), stub.hex(),
+             "header bound trampoline for 0x%x: cmp %s, %d; jb 0x%x; jmp back to 0x%x"
+             % (va, cmp_i.op_str.split(",")[0], n, target, fall)),
+            (va, (cb + bytes(jcc_i.bytes)).hex(), site.hex(),
+             "header bound: %s %s / jb -> the trampoline at 0x%x (jmp rel32%s)"
+             % (cmp_i.mnemonic, cmp_i.op_str, cave, " + nop" if total > 5 else "")),
+            len(stub))
+
+
 DOC = """--[[
 fl26caps -- runtime patch applier (hdr%(n)d set).
 
@@ -186,10 +249,9 @@ seasons of 38 -- and about 130 points.
        100        0x4650              600
        %(n)3d        0x%(base_new)x              %(count_new)d
 
-%(lost)d phase table is the entire price.  127 is the ceiling of this cheap version: every
-bound is `cmp r32, 0x64` with an 8-bit immediate, and 0x7f is the largest value that still
-fits in a signed byte.  Above that each of the thirteen bounds needs `81 /7 id`, which is
-longer than the instruction it replaces and so needs a trampoline per site.
+%(price)s
+
+%(how)s
 
 Generated by tools/hdr127.py, which disassembles every site and locates each immediate by
 structure rather than by searching for bytes that might belong to a displacement.
@@ -213,9 +275,8 @@ def main():
     n = int(a[0]) if a else 127
     out = (sys.argv[sys.argv.index("--out") + 1] if "--out" in sys.argv
            else os.path.join("sider", "fl26hdr%d.lua" % n))
-    if not 100 < n <= 127:
-        raise SystemExit("N must be between 101 and 127; above 127 the bounds no longer "
-                         "fit in a signed byte and each of the 13 sites needs a trampoline")
+    if n <= 100:
+        raise SystemExit("N must be above 100; 100 is what the game ships with")
 
     base_new = n * HDR_STRIDE
     count_new = (TOTAL - base_new) // OBJ_STRIDE
@@ -226,10 +287,28 @@ def main():
     secs = sections(d)
     patches = []
 
-    for va in BOUNDS:
-        at, ins = bound_site(d, secs, va, BOUND_OLD)
-        patches.append((va + at, "%02x" % BOUND_OLD, "%02x" % n,
-                        "header bound: %s %s -> %d entries" % (ins.mnemonic, ins.op_str, n)))
+    if n <= 127:
+        # The immediate still fits where it is.
+        for va in BOUNDS:
+            at, ins = bound_site(d, secs, va, BOUND_OLD)
+            patches.append((va + at, "%02x" % BOUND_OLD, "%02x" % n,
+                            "header bound: %s %s -> %d entries"
+                            % (ins.mnemonic, ins.op_str, n)))
+    else:
+        # It does not, so each pair is redirected.  Every stub is listed before every jump to
+        # it, because the applier writes in order and a jump must never exist before the code
+        # it jumps to.
+        stubs, jumps, cave = [], [], CAVE_VA
+        for va in BOUNDS:
+            stub, jump, used = bound_trampoline(d, secs, va, n, cave)
+            stubs.append(stub)
+            jumps.append(jump)
+            cave += (used + 3) & ~3          # keep the next stub 4-byte aligned
+        if cave > CAVE_END:
+            raise SystemExit("the trampolines need 0x%x bytes and the page tail ends at 0x%x"
+                             % (cave - CAVE_VA, CAVE_END))
+        patches.extend(stubs)
+        patches.extend(jumps)
     skipped = []
     for va in MOV_BOUNDS:
         at, ins = movbound_site(d, secs, va, BOUND_OLD)
@@ -266,8 +345,22 @@ def main():
     tail = tail.replace("negative standings position guarded at 0x1413236e1",
                         "season header widened to %d competitions, %d phase tables"
                         % (n, count_new))
-    doc = DOC % dict(n=n, base_new=base_new, count_new=count_new,
-                     lost=600 - count_new, sites=len(patches))
+    if n <= 127:
+        how = ("Each of the thirteen bounds is `cmp r32, 0x64` with an 8-bit immediate, and\n"
+               "%d still fits in one, so each is a single byte rewritten in place." % n)
+    else:
+        how = ("%d does not fit in the 8-bit immediate the thirteen bounds use, so each\n"
+               "`cmp r32, 0x64` / `jb rel8` pair -- five bytes, six with a REX prefix, which is\n"
+               "exactly what a `jmp rel32` needs -- is redirected to a stub holding the widened\n"
+               "compare, the same branch as a `rel32`, and a jump back.  The stubs live at\n"
+               "0x%x, in the tail of the code section's last page: executable at runtime,\n"
+               "absent from the file, and read as zero before anything is written, so if\n"
+               "another module has taken it the whole set aborts untouched." % (n, CAVE_VA))
+    lost = 600 - count_new
+    price = ("%d phase table%s %s the entire price."
+              % (lost, "" if lost == 1 else "s", "is" if lost == 1 else "are"))
+    doc = DOC % dict(n=n, base_new=base_new, count_new=count_new, how=how,
+                     price=price, lost=lost, sites=len(patches))
     with open(out, "w", encoding="utf-8", newline="\n") as f:
         f.write(doc + "\nlocal m = {}\n\nlocal patches = {\n" + body + "\n}\n\n" + tail)
     print("wrote %s: %d patches, %d entries, %d phase tables (%d given up)"

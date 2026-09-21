@@ -3,6 +3,10 @@
 Everything here goes into the `SiderAddons` folder that Football Life 2026 ships with, next to
 `FL_2026.exe`. Nothing is written to the game's own files.
 
+This is the reference version, with the reasons. For one continuous walkthrough from a stock
+install to a playing season — including building the world and what to look at in the game —
+use [step-by-step.md](step-by-step.md) instead.
+
 ## 0. Back up first
 
 - `Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\2026\save` — your Master League saves.
@@ -95,6 +99,15 @@ an issue with the log.
 With the modules applied and **no new world yet**, the game should play exactly as before.
 That is a useful first test in itself: if the shipped game misbehaves with only the modules
 installed, please report it.
+
+## 4b. The experimental modules, later
+
+`sider/experimental/` holds two modules that go further than the nine above and have not
+been through a full season yet: 192 competitions instead of 127, and every league selectable
+in the Select Team list. Add them **one at a time**, after the nine have been confirmed, and
+read
+[sider/experimental/README.md](../sider/experimental/README.md) first. `fl26hdr192.lua`
+replaces `fl26hdr127.lua`; never run both, since they patch the same thirteen places.
 
 ## 5. Add a world
 

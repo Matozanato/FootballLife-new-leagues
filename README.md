@@ -11,7 +11,12 @@ patched executable, no repacked CPKs.
 
 This is a **research beta**. It is published so that people who mod this game can test it,
 break it, and tell us where. Read [what works and what does not](#status) before you
-install anything, and read the [testing guide](docs/testing-guide.md) if you want to help.
+install anything.
+
+> **Testing it for the first time? Start here:
+> [docs/step-by-step.md](docs/step-by-step.md)** — the whole thing from a stock install, in
+> order, with what you should see at each step and what is worth reporting. About twenty
+> minutes.
 
 ## What it is
 
@@ -47,6 +52,11 @@ Plus seven small **null-guard modules** that stop known crashes in the game's ow
 the larger world exposes, and **`fl26hdr127.lua`**, which widens the table a season uses to
 hold its competitions from 100 to 127 — the fix for league tables showing 76 matches played
 and ~130 points.
+
+`sider/experimental/` holds two more that go further and **have not been through a full
+season yet**: 192 competitions instead of 127, and every league selectable in the Select Team
+list. They abort cleanly if anything does not match, and they are the part where another pair
+of hands helps most — [what they are](sider/experimental/README.md).
 
 ## Status
 
@@ -141,7 +151,8 @@ numbers in [docs/limits.md](docs/limits.md).
 1. **Back up** your save folder
    (`Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\2026\save`) and your `sider.ini`.
 2. Follow [docs/install.md](docs/install.md) to install the Sider modules and confirm in
-   `sider.log` that every module reports `applied all`.
+   `sider.log` that every module reports `applied all`. (Or take the whole route in one
+   pass: [docs/step-by-step.md](docs/step-by-step.md).)
 3. Follow [docs/build-your-world.md](docs/build-your-world.md) to extract your game's tables,
    generate a world, and point `cpk.root` at it.
 4. Start an exhibition match between two new clubs, then a Master League season with one of
@@ -157,11 +168,13 @@ file if the problem is reproducible from a save.
 ## Layout
 
 ```
-sider/     fl26caps.lua (generated patch set) and the five fl26nullguard modules
-tools/     world builders (mkworld, mkplayers, mkcup ...), pesdb/CPK readers, patchset generator
-patches/   the patch set as JSON plus the layout tables the generator reads
-docs/      install, build-your-world, testing-guide, known-issues, limits, how-it-works,
-           for-developers
+sider/              fl26caps.lua (generated patch set), the null guards, fl26hdr127.lua
+sider/experimental/ modules that go further and are not verified in a season yet
+tools/              world builders (mkworld, mkplayers, mkcrests, mkkits, mkcup ...),
+                    pesdb/CPK readers, the patch-set generator and its checkers
+patches/            the patch set as JSON plus the layout tables the generator reads
+docs/               step-by-step, install, build-your-world, testing-guide, known-issues,
+                    limits, how-it-works, for-developers
 ```
 
 ## Support

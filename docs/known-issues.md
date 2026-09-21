@@ -1,6 +1,6 @@
 # Known issues
 
-Honest list, as of 2026-09-18. Addresses are given so that a fault offset in your Event
+Honest list, as of 2026-09-21. Addresses are given so that a fault offset in your Event
 Viewer can be matched against them: the offset is the address minus `0x140000000`
 (so `0x1414c674d` shows up as exception offset `0x14c674d`).
 
@@ -21,9 +21,18 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
 
 ## Missing or unverified features
 
-- **Continental competitions.** New clubs do not qualify for Champions League / Europa
-  League. The qualification table is a static table in the exe; extending it is mapped but
-  not done.
+- **Continental competitions.** New clubs do not qualify for the Champions League or the
+  Europa League. Two halves of that are now understood and neither is finished. Who
+  qualifies is a static table in the exe, read **by region** rather than by competition id,
+  and it is mapped but not patched. Cloning a continental competition itself works: the
+  tooling copies every phase of a multi-phase competition and renumbers the replicas
+  correctly, and cloning the Europa League into a scratch world and reading it back checks
+  out — but a clone keeps its source's dates and would collide with it, so nothing playable
+  is published. A 36-club single-table Champions League in the modern format exists in the
+  research repository and has not been run in a game yet either.
+- **Promotion and relegation between new leagues.** The engine does the top joint of a
+  three-league chain by itself and skips the middle one. A module that finishes the chain is
+  written and not yet tested in a season; it is not published here.
 - **Cups.** `mkcup.py` produces a valid knockout competition, but no cup has been carried
   through a Master League season yet.
 - **Menu regions.** New leagues can only be placed in a menu region the game already

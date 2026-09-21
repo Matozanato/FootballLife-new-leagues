@@ -16,8 +16,8 @@ What the shipped game holds, what `fl26caps.lua` raises it to, and which walls r
 | league size | 10–30 clubs | — | 10 is the shipped game's own smallest league, not a floor of ours. The round list holds 58 entries, which is a double round robin of 30 exactly; above that the extra rounds are dropped without an error |
 | edit block (all tables together) | 0x1877068 bytes | 0x3171a68 bytes | |
 | second copy of the tables (used for save/load) | 0x15b6d94 bytes | 0x25a7cc4 bytes | grown by the `mlcopy` part of the set |
-| competitions a season can hold at once | 100 | **127** | raised by `fl26hdr127.lua`; entries are never released, so the count only rises — see known-issues.md |
-| per-phase standings tables | 600 | 599 | one is spent paying for the wider header; a running season uses about 375 |
+| competitions a season can hold at once | 100 | **127**, or **192** with the experimental module | raised by `fl26hdr127.lua`; entries are never released, so the count only rises — see known-issues.md |
+| per-phase standings tables | 600 | 599 (597 at 192) | they pay for the wider header; a running season uses about 375 |
 
 ## The day counter
 
@@ -64,6 +64,40 @@ regenerate the set, create the season again.
 
 Use `--demand` after the first rollover. Walking the calendar shows only what was accepted;
 reading the match records shows what was wanted, including everything that was turned away.
+
+## The three walls we are working on now
+
+Written down because they are the next things to move, and because knowing where a ceiling
+*is not* saves the next person the same search.
+
+**The competition header, 100 → 127 → 192.** 127 was not the engine's limit but a byte's:
+all thirteen bounds are `cmp r32, 0x64`, and 0x7f is the largest value that fits in the
+one-byte immediate. Each of those thirteen is a compare plus a short branch — five bytes,
+six with a prefix — which is exactly the room a long jump needs, so each can be redirected
+to a stub holding a wider compare. `sider/experimental/fl26hdr192.lua` does that, at a price
+of three of the 600 per-phase tables. Not played yet; that is what the experimental folder
+is for.
+
+**Players, 51,729.** Not an engine number either: the player table starts at the very
+beginning of the block and cannot be moved, so it grows into whatever sits above it, and
+what sits above it is the season calendar. Move the calendar and the ceiling becomes 61,905
+— another 10,000 players, about 339 squads of thirty. The work that moves the calendar is
+done but not yet played, so it is not published here.
+
+**1,536 clubs.** Still the wall, and still not explained. What is now certain is that the
+number is not written in the executable at all: no array is bounded at 1536 with any stride,
+the constant appears in exactly two comparisons and both are message-code switches, and no
+`mov` of it counts clubs. So it is either a capacity computed while the game runs or a
+structure that simply ends, with nothing comparing anything. Both leave a trace in memory
+rather than in the file, which is what `tools/vecscan.py` looks for: it reads the running
+game and reports every vector whose capacity — `(end - first) / element size`, a number
+written nowhere — is exactly 1,536. **If you get anywhere near this wall, running it with a
+season loaded and posting the output would genuinely help.**
+
+    python tools/vecscan.py 1536
+    python tools/vecscan.py --used <however many clubs your world has>
+
+It attaches no debugger (this exe kills itself under one), reads only, and writes nothing.
 
 ## Rulebook ids above 175
 
