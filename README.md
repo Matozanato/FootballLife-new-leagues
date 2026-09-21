@@ -18,6 +18,34 @@ install anything.
 > order, with what you should see at each step and what is worth reporting. About twenty
 > minutes.
 
+## Free to use — please credit
+
+Everything in this repository is **free**, and it stays free. MIT licence: use it, change
+it, ship it inside your own mod, charge for your mod if you want to. No permission needed
+and nothing to pay.
+
+There is one thing I do ask, and it is not a legal condition, just the normal courtesy
+between modders:
+
+> **If you use these findings, addresses, patch sets or tools in your own mod, credit this
+> work and link back to this repository.**
+
+A line in your readme or your release post is enough — something like:
+
+```
+Limit-raising and league research: Matozanato — https://github.com/Matozanato/FootballLife-new-leagues
+```
+
+Why it matters: none of this came from a leaked tool or somebody else's notes. Every
+address here was found by disassembling the game and by running test seasons until they
+crashed, and it is published openly so that nobody has to do it twice. Credit is what keeps
+that worth doing — and it also means the next person who hits the same wall can find where
+the answer came from instead of starting over.
+
+If you are building something on top of this, I would rather hear about it than not.
+Open an issue and say what you are making; if a limit is in your way, it may already be
+mapped.
+
 ## What it is
 
 Football Life 2026 (PES 2021 engine) keeps every club, coach, competition and fixture in
@@ -210,5 +238,9 @@ MIT — see [LICENSE](LICENSE). Football Life 2026, PES 2021 and Sider belong to
 respective authors; nothing of theirs is redistributed here.
 
 The reverse engineering was done from scratch against the game's executable and data
-files. If you use the addresses or the layout tables in your own work, a link back is
-appreciated.
+files. Nothing here is derived from anyone else's tool or notes.
+
+The licence asks nothing of you. I do: **if you use these findings, addresses, patch sets
+or tools in a mod, credit this work and link back** — see
+[Free to use — please credit](#free-to-use--please-credit) at the top. It costs you one
+line and it is the only thing asked in return.
