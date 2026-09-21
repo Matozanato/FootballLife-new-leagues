@@ -62,13 +62,15 @@ of hands helps most — [what they are](sider/experimental/README.md).
 
 Measured on 2026-09-17 with a test world of **39 new leagues and 780 new clubs**, played
 with a new club as the manager's team. Four seasons have now been played end to end on one
-world, across season rollovers.
+world, across season rollovers. This page was last checked against the shipped modules on
+**2026-09-21**.
 
 **Works**
 
 - Exhibition matches between new clubs.
 - Starting a Master League season with a new club in a new league: season generates,
-  fixtures appear, the Team Sheet shows a real 23-man squad, the hub shows the standings.
+  fixtures appear, the Team Sheet shows a real squad (the walkthrough builds 30 per club),
+  the hub shows the standings.
 - Saving the season and loading it back: the club, the squad, the manager's name, the
   standings and the fixtures all survive. The same save was loaded three times in a row with
   no drift, and the coach and player tables were compared byte for byte before and after.
@@ -84,8 +86,11 @@ world, across season rollovers.
   floor we imposed — the shipped game runs a 10-club league of its own, and 10-club
   leagues have been played here. Above 30 the round list runs out: see
   [limits.md](docs/limits.md).
-- Cups can be defined by the same tools (`mkcup.py`), but a cup in a Master League season
-  is **not yet verified**.
+- **Cups.** A cup built with `mkcup.py` plays a full Master League knockout, every round
+  dated: round of 16, quarter-finals, semi-finals, final. One rule decides it — the cup is
+  filled from the **first league in its region**, and that league must have **sixteen clubs**,
+  because the shipped cup calendar only covers a sixteen-club bracket. With twenty, one round
+  is left with no date and the cup stalls. No executable change is involved.
 
 **Does not work yet / under investigation**
 
@@ -112,26 +117,38 @@ world, across season rollovers.
   a season and at season rollovers, regardless of these mods. Start again or reload; it is
   not data damage.
 - **A calendar day holds only 280 matches**, and everything past that is dropped in silence
-  — no error, no sign in the world files, just a round that never happens. The remedy is not
-  to raise the ceiling but to spread the leagues over different weekdays, which is what
-  `--date-offsets` is for; `tools/dayplan.py` measures a running season and prints the
-  spread that flattens it. Anyone building much past 39 leagues will meet this.
+  — no error, no sign in the world files, just a round that never happens. The published
+  remedy is to spread the leagues over different weekdays, which is what `--date-offsets` is
+  for; `tools/dayplan.py` measures a running season and prints the spread that flattens it.
+  (The ceiling itself can be moved — that work is done and measured, and it is not published
+  because it has not been played yet.) Anyone building much past 39 leagues will meet this.
 - **A league's rulebook id decides whether it ever plays.** Fixture dates are not built from
   the competition you create; they are looked up in a table compiled into the executable,
   keyed by that id. Most free ids map to an empty entry, so a league can be created, appear
   in the menus, hold its rounds and never play a single match. See
   [how-it-works.md](docs/how-it-works.md).
-- **Rulebook ids above 175 work in Master League but are invisible in the Select Team list.**
-  The season plays; the league simply does not appear in that one menu. It reads like a data
-  error and is not one.
-- **Promotion and relegation between the new leagues** has not been observed.
+- **Rulebook ids above 175 work in Master League but are invisible in the Select Team list**
+  unless `sider/experimental/fl26comptab.lua` is installed. That list is a static table in the
+  exe rather than anything built from your data; the module copies it, gives our leagues free
+  slots, and is meant to make all 39 selectable. It has not been through a season yet, which
+  is why it is experimental. Without it the season still plays — the league simply does not
+  appear in that one menu.
+- **Promotion and relegation between the new leagues.** Of the 214 shipped rulebooks only
+  eleven carry a promotion or relegation link at all, and none of them chains three tiers, so
+  there was no shipped example to copy. What the engine does on its own is the top joint of a
+  chain and not the middle one. A module that finishes the chain exists in the research
+  repository, has not been run in a season, and is therefore not published here.
 - Continental competitions for new clubs: granting them places deliberately is not
   attempted. New clubs have nonetheless been seen playing in the Champions League, which is
   not understood yet — see [known-issues.md](docs/known-issues.md).
 - New clubs use **placeholder names, cloned kits and cloned squads**. This project proves the
   capacity; dressing the clubs is ordinary Team.bin / kit editing on top of it.
-- New leagues appear under an **existing menu region** (England by default) because the menu
-  only knows the shipped region slots. More region slots is a separate, unverified patch.
+- New leagues appear under an **existing menu region** (England by default). Measured since:
+  the menu knows 24 regions, each one a row pointing at a *drawn* label rather than a
+  translated string, and four ids (11, 13, 14, 20) have no row at all — a league placed on one
+  of those renders with whatever label the previous lookup left behind. Spreading our leagues
+  over several shipped countries needs no executable change and is the next thing to try; a
+  region of our own name needs a new label in the menu's texture atlas as well.
 - More than 39 leagues, or leagues built with non-default ids, need a regenerated patch set
   ([why](docs/for-developers.md)).
 

@@ -40,15 +40,21 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
 - **Promotion and relegation between new leagues.** The engine does the top joint of a
   three-league chain by itself and skips the middle one. A module that finishes the chain is
   written and not yet tested in a season; it is not published here.
-- **Cups.** `mkcup.py` produces a valid knockout competition, but no cup has been carried
-  through a Master League season yet.
-- **Menu regions.** New leagues can only be placed in a menu region the game already
-  knows (default: England's slot). The region name table is understood; adding regions is a
-  separate patch that has not been verified in play.
+- **Cups: working, with one rule.** A cup built by `mkcup.py` has been carried through a
+  Master League season with every round dated — 16 ties, then 8, 4, 2, 1. The rule is that the
+  game fills a cup from the **first league in its region** (lowest competition id) and ignores
+  the cup's own entry list, and the shipped cup calendar only has dates for a sixteen-club
+  bracket. So the feeder league must have sixteen clubs; with twenty, the extra round lands on
+  a date row that does not exist and that round never plays. No executable patch is involved.
+- **Menu regions.** New leagues can only be placed in a menu region the game already knows
+  (default: England's slot). The table was read in full since: 24 rows, each naming a *drawn*
+  label in the menu's texture atlas rather than a translated string, and ids 11, 13, 14 and 20
+  have no row — a league placed on one of them shows whatever the previous lookup left behind.
+  Spreading leagues across the shipped countries needs no executable change; a region carrying
+  our own name needs a new label in that atlas, and the field itself runs out at 31.
 - **Kits, names, players.** All placeholders / clones. Not a bug, but a limitation of this
   beta: the tools prove capacity, they do not author content.
-- **Promotion/relegation between new leagues, transfers, finances**: not observed yet.
-  Report what you see.
+- **Transfers and finances**: not observed yet. Report what you see.
 - **Second season and beyond**: now played. Four seasons have been run end to end on one
   world, with season rollovers, and the tables no longer carry the previous season's
   results (see below).

@@ -57,8 +57,12 @@ Two practical consequences:
 - **Pick your rulebook ids from the list that is known to be dated**, or regenerate the
   patch set with `--date-keys` for the ids you actually used. A league outside both is
   silently never scheduled.
-- A cup is a different case and is not solved here. Cups cannot live in the low id range we
-  use, and the shipped switch does not reach the high range at all.
+- **A cup takes a different route, and it works.** A cup cannot live in the low id range we
+  use for leagues, and the shipped switch stops consulting its table above id 175 — so the
+  module also hooks the one branch that handles those ids, which is the only place a high id
+  can be caught. In practice a cup does not even need that: the game fills a cup from the
+  first league in its region and dates it with the shipped sixteen-club bracket, so a cup
+  whose feeder league has sixteen clubs plays out fully dated with no patch of its own.
 
 ## The null guards
 

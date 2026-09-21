@@ -42,9 +42,11 @@ Dumps then appear in `C:\fl26-dumps\` (mini dumps, tens of MB). Zip one and atta
 ### T1 — Play as deep into the season as you can
 
 Until 2026-09-16 the game died a day after matchday 1 here, every time; that was our bug and
-it is fixed (see [known-issues](known-issues.md)). Our world has since played past it, but
-**nobody has taken a season through to May yet**. How far you get is the most useful number
-you can send us.
+it is fixed (see [known-issues](known-issues.md)). Since then one world here has played
+**four seasons end to end**, across rollovers and New Year, with saves and loads in between.
+What nobody has done is run one on a different machine, on a different install, past a few
+matchdays. How far you get is the most useful number you can send us — and a long career is
+still genuinely open territory, because the season's competition table only ever fills up.
 
 Do: start a Master League with a new club. Save after the first match. Use *Forward Time →
 Skip Match* to move through the calendar, saving every few weeks into the same slot. Note
@@ -86,17 +88,26 @@ Build a world with `--sizes 24,22,20,18,16,14`. Check that Competition Info for 
 league states the right club count and fixture count ("Contested by 24 teams, 46 Home & Away
 Fixtures"). Check the end-of-season promotion/relegation if you get that far.
 
-### T6 — Cups (unverified territory)
+### T6 — Cups
 
 `tools\mkcup.py` adds a knockout cup among your new clubs the same way `mkleague.py` adds a
-league. Nobody has taken a cup through a Master League season yet. If you try, report
-whether it draws, whether the rounds are dated, and whether your club is entered.
+league, and a cup has now been played through a Master League season with every round dated.
+It has one rule that is easy to get wrong: the game fills a cup from the **first league in its
+region** — the lowest competition id — and ignores the cup's own entry list, and the shipped
+cup calendar only has dates for a sixteen-club bracket. So make that feeder league a
+**sixteen-club** league. With twenty, one round lands on a date that does not exist and never
+plays.
+
+Worth reporting: whether it draws, whether every round is dated, whether your club is
+entered, and what happens if the feeder league is not sixteen clubs on your install.
 
 ### T7 — Things we have not looked at
 
 Transfers involving new clubs, youth teams, the Manager's Office finances of a placeholder
-club, the League mode (not Master League) with a new league, and a second season. Any of
-these reaching an obvious problem is a finding.
+club, and the League mode (not Master League) with a new league. Any of these reaching an
+obvious problem is a finding. (Second and later seasons are no longer on this list — four
+have been played end to end — but long careers still are: the competition table only fills
+up, and nothing has been run far enough to say where it stops.)
 
 ## What to send
 
