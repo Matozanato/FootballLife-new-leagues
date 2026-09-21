@@ -45,11 +45,19 @@ The applier checks that anyway by verifying the bytes.
 
 local m = {}
 
+-- The trampoline lives at 0x14252e880, on the 0x20 grid the other guards use above
+-- 0x14252e800.  It used to sit at 0x14252e7e8, below that line, where fl26caps' fixture-date
+-- table ends -- and that table grows with every league added.  Two spare bytes were all that
+-- stood between them.  caps runs first, so once the table reached this address, this module's
+-- verify pass would find data where it expected padding and abort itself: the guard silently
+-- not installed, with nothing in the log to say the crash it prevents was back.  Anything
+-- placed here must stay above 0x14252e800, where .trace's file-backed bytes end and the
+-- loader's zero-fill begins.
 local patches = {
-  {va=0x14252e7e8, old="0000000000000000000000000000000000000000",
-   new="4885c00f84d5aba9fe39a8c0030000e942aaa9fe",
+  {va=0x14252e880, old="0000000000000000000000000000000000000000",
+   new="4885c00f843daba9fe39a8c0030000e9aaa9a9fe",
    why="null-guard trampoline: test rax,rax; jz 0x140fc93c6; cmp [rax+0x3c0],ebp; jmp 0x140fc923e"},
-  {va=0x140fc9238, old="39a8c0030000", new="e9ab55560190",
+  {va=0x140fc9238, old="39a8c0030000", new="e94356560190",
    why="redirect the unchecked deref at 0x140fc9238 to the trampoline (jmp rel32 + nop)"},
 }
 

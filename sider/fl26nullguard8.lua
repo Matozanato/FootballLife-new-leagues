@@ -43,7 +43,7 @@ ends at 0x14252e800; everything from there to where .rdata begins at 0x14252f000
 zero-filled tail of the last page.  Reading those addresses out of the exe *file* shows
 non-zero bytes, because the file offset runs on into .rdata's raw data -- the running
 process is the authority there, and the applier verifies the zeros before writing.
-nullguard5, 6 and 7 hold 0x14252e860, 0x14252e880 and 0x14252e8a0; this is the next slot.
+nullguard5, 2 and 7 hold 0x14252e860, 0x14252e880 and 0x14252e8a0; this is the next slot.
 
 Install:
   1. copy this file to <game>\SiderAddons\modules\fl26nullguard8.lua

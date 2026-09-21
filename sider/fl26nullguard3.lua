@@ -46,7 +46,7 @@ The trampoline sits at 0x14252e820, in the tail of the last page of .trace: past
 data the file ends at (0x14252e800), before .rdata begins (0x14252f000), and after the 23
 bytes fl26nullguard.lua already writes at 0x14252e800.  The page is zero-filled there by
 the loader.  It does not collide with the caps set's date stub and table, which occupy
-0x14252e690 to 0x14252e7e6, or with nullguard2's 20 bytes at 0x14252e7e8.
+0x14252e690 to 0x14252e7e6, or with nullguard2's 20 bytes at 0x14252e880.
 
 Install:
   1. copy this file to <game>\SiderAddons\modules\fl26nullguard3.lua

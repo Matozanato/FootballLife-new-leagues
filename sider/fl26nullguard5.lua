@@ -104,7 +104,7 @@ The function is a leaf with no prologue, so no unwind data is disturbed.
 The trampoline sits at 0x14252e860, in the tail of the last page of .trace: past the raw data
 the file ends at (0x14252e800), before .rdata begins (0x14252f000), and after every cave range
 this project already uses -- the caps date-spread stub and table at 0x14252e690..0x14252e7e6,
-nullguard2's 20 bytes at 0x14252e7e8, fl26nullguard.lua's 23 bytes at 0x14252e800, nullguard3's
+nullguard2's 20 bytes at 0x14252e880, fl26nullguard.lua's 23 bytes at 0x14252e800, nullguard3's
 23 bytes at 0x14252e820, and nullguard4's 18 bytes at 0x14252e840..0x14252e851.  The page is
 zero-filled there by the loader; because it is beyond the file's raw data it cannot be confirmed
 from the exe on disk, so pass 1 confirms it in the live process instead and refuses to write if

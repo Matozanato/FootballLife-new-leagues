@@ -34,7 +34,7 @@ original loop at 0x14128a3ae or jumps to the not-found branch.  Six nops pad the
 bytes left behind are unreachable and deliberately untouched.
 
 The trampoline sits at 0x14252e8a0, in the zero-filled tail of the last page of .trace,
-after nullguard6's 31 bytes at 0x14252e880 and well before .rdata begins at 0x14252f000.
+after nullguard2's 20 bytes at 0x14252e880 and well before .rdata begins at 0x14252f000.
 
 Install:
   1. copy this file to <game>\SiderAddons\modules\fl26nullguard7.lua
