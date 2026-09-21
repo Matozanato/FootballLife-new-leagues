@@ -159,8 +159,8 @@ is not in that table is never scheduled: it shows up in the menus, you can pick 
 it, and then the season simply gives it no matches. The shipped set covers these 39 ids:
 
 ```
-11 12 13 49 60 61 62 63 64 65 66 69 70 71 72 73 74 75 76 77 78
-93 94 96 98 100 101 102 109 110 111 112 113 114 121 138 139 140 143
+11 49 60 61 62 74 76 93 94 96 98 100 109 110 111 112 113 114 121
+138 139 140 143 144 145 146 170 171 173 174 176 178 179 180 181 182 183 184 185
 ```
 
 Compare them with the `regulation` column `mkworld.py` printed. On a stock install with the

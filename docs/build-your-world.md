@@ -82,8 +82,8 @@ scheduled: it appears in the menus, you can pick a club from it, and the season 
 simply gives it no matches. The shipped `fl26caps.lua` covers these 39 ids:
 
 ```
-11 12 13 49 60 61 62 63 64 65 66 69 70 71 72 73 74 75 76 77 78
-93 94 96 98 100 101 102 109 110 111 112 113 114 121 138 139 140 143
+11 49 60 61 62 74 76 93 94 96 98 100 109 110 111 112 113 114 121
+138 139 140 143 144 145 146 170 171 173 174 176 178 179 180 181 182 183 184 185
 ```
 
 `mkworld.py` hands rulebook ids out from the bottom of the free list, so with an unmodified
@@ -121,8 +121,9 @@ records show what was really wanted.
 
 ### Sizes worth knowing
 
-Our largest tested world: **39 leagues, 793 clubs**, built with `--leagues 39` and sizes
-around 20. Bigger is possible on paper (1,600 club slots) but **1,536 clubs in total is a
+Our largest built world: **39 leagues, 793 clubs**, built with `--leagues 39` and sizes
+around 20; the world that has been played across four seasons is 39 leagues of exactly 20,
+780 clubs. Bigger is possible on paper (1,600 club slots) but **1,536 clubs in total is a
 hard wall** in the season generator, and a calendar day holds 280 match ids at most, so the
 scheduler runs out of room somewhere past 39 leagues on the same weekdays. Start smaller.
 A world of 6 leagues × 20 clubs is a fine first test; 12 leagues with `--sizes 24,22,20,18,16,14`

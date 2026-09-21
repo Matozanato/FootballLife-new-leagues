@@ -39,7 +39,7 @@ This project does two things:
    | players | 30,001 | 51,729 |
    | match records per season | 13,000 | 26,000 |
    | fixtures list | 2,000 | 8,000 |
-   | competitions a season can hold | 100 | 127 |
+   | competitions a season can hold | 100 | 127 (192 with the experimental module) |
 
    Every module verifies the bytes it is about to change and refuses to touch a different
    game build. If anything does not match, the game runs unmodified and `sider.log` says why.

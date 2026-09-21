@@ -138,11 +138,15 @@ calendar.
   outside it is silently never scheduled — this is the single most common way a new league
   ends up existing but never playing. See build-your-world.md and
   [how-it-works.md](how-it-works.md).
-- **Rulebook ids above 175 do work**, but a league on one is invisible in the **Select Team**
-  list. It generates, schedules and plays a full Master League season; only that one menu
-  cannot show it. Easy to mistake for a data error.
+- **Rulebook ids above 175 do work**, but by default a league on one is invisible in the
+  **Select Team** list. It generates, schedules and plays a full Master League season; only
+  that one menu cannot show it. Easy to mistake for a data error. That list comes from a
+  static table in the exe, and `sider/experimental/fl26comptab.lua` copies and extends it so
+  those leagues become selectable — not yet verified across a season, which is why it sits in
+  the experimental folder.
 - **1,536 clubs in total is a wall** in the season generator, independent of the 1,600 table
-  size. 793 new clubs is the most we have run.
+  size. 793 new clubs is the most we have built and loaded; the world played across four
+  seasons had 39 leagues and 780.
 - **A calendar day holds 280 match ids**; overflow is dropped silently by the scheduler.
   More leagues on the same weekday lose fixtures with no error at all. Do not trust the
   calendar to tell you: it counts what was accepted, so a day that turned matches away reads
