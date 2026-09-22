@@ -56,9 +56,18 @@ def set_tier(g, tier):
     for the league above when the lower one is tier 2 or more (0x141510430, 0x14131f430).
     Every league this project has built so far was copied from ENGLAND_D1_LEAGUE and was
     therefore a first division, all thirty-nine of them -- see docs/findings.md.
+
+    The file field is three bits wide and the loader passes all three (0x1414f82a8), but the
+    shipped setter shifts them into bits 30-31, so only 1, 2 and 3 survive -- a 4 written here
+    arrives at runtime as 0. Ranks above 3 therefore mean nothing unless
+    sider/experimental/fl26rank.lua is installed, which moves the runtime field down to bits
+    29-31.
     """
-    if tier not in (1, 2, 3):
-        raise SystemExit("tier %r is not 1, 2 or 3" % (tier,))
+    if tier not in (1, 2, 3, 4, 5, 6, 7):
+        raise SystemExit("tier %r is not 1..7" % (tier,))
+    if tier > 3:
+        print("  note: tier %d needs sider/experimental/fl26rank.lua; "
+              "without it the game reads it as %d" % (tier, tier & 3))
     v = int.from_bytes(g[R_TIER:R_TIER + 4], "little")
     v = (v & ~(TIER_MASK << TIER_SHIFT)) | (tier << TIER_SHIFT)
     g[R_TIER:R_TIER + 4] = v.to_bytes(4, "little")
