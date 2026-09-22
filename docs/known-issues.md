@@ -41,18 +41,38 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
   division 2 or 3. Build the pyramid with `--tiers 1,2,3` (see build-your-world.md). Whether
   clubs then actually cross at the rollover has not been played yet. A module that moves them
   itself exists in the research repository as a fallback and is not published here.
+- **The league rank only counts to three, which breaks pyramids deeper than that.** Measured
+  2026-09-22: the rank lives in the top two bits of the rulebook's flags word, so a third,
+  fourth and fifth division all store the value 3. The League Info panel then shows a league
+  as its own lower league, and the relegation gate — which asks "is the league below me a
+  third division, and am I a second" — cannot separate them.
+  `sider/experimental/fl26rank.lua` moves the field down one bit (147 in-place rewrites, into
+  a bit the shipped loader never sets) so it counts to seven, and `fl26deeprank.lua` rewrites
+  both copies of that gate to "second division or deeper, and the one below is third or
+  deeper". `tools\deepen.py --retier <top ids>` renumbers a pyramid built before the change,
+  since the old value 3 is what is stored in your world's files. Verified against the exe and
+  seen live in the menus; not yet played through a season rollover, which is the only test
+  that matters for promotion.
 - **Cups: working, with one rule.** A cup built by `mkcup.py` has been carried through a
   Master League season with every round dated — 16 ties, then 8, 4, 2, 1. The rule is that the
   game fills a cup from the **first league in its region** (lowest competition id) and ignores
   the cup's own entry list, and the shipped cup calendar only has dates for a sixteen-club
   bracket. So the feeder league must have sixteen clubs; with twenty, the extra round lands on
   a date row that does not exist and that round never plays. No executable patch is involved.
-- **Menu regions.** New leagues can only be placed in a menu region the game already knows
-  (default: England's slot). The table was read in full since: 24 rows, each naming a *drawn*
-  label in the menu's texture atlas rather than a translated string, and ids 11, 13, 14 and 20
-  have no row — a league placed on one of them shows whatever the previous lookup left behind.
-  Spreading leagues across the shipped countries needs no executable change; a region carrying
-  our own name needs a new label in that atlas, and the field itself runs out at 31.
+- **Menu regions: the ceiling is 64, not 29, and headings are a separate table.** Spreading
+  leagues across the shipped countries needs no executable change (`mkworld.py --regions`).
+  Above that, two separate things were measured on 2026-09-21. First, the parser that reads a
+  competition's region masks it to five bits and throws away anything from 29 up, while the
+  runtime field it feeds is six bits and holds 64 — that is one instruction, and
+  `sider/experimental/fl26reg64.lua` rewrites it. Second, the menu heading for a region comes
+  from a table of 24 rows, each naming a *drawn* label in the menu's texture atlas rather than
+  a translated string, and ids 11, 13, 14 and 20 have no row — a league placed on one of them
+  shows whatever the previous lookup left behind, because the loop that reads the table falls
+  out without touching the register. So a region above the shipped 24 groups correctly and
+  borrows a name. The module that gives our regions headings of their own copies the game's
+  own rows into spare space; the version that exists carries those rows inside itself as
+  shipped bytes, and this repository does not redistribute game data, so it is published only
+  once it copies them out of memory at startup.
 - **Kits, names, players.** All placeholders / clones. Not a bug, but a limitation of this
   beta: the tools prove capacity, they do not author content.
 - **Transfers and finances**: not observed yet. Report what you see.

@@ -180,7 +180,15 @@ python tools\mkworld.py --base %FL26_PESDB% --out <root> --leagues 9 --tiers 1,2
 `--tiers` cycles over the run, `--group-regions` says how many consecutive leagues share a
 region -- so the line above builds three three-division pyramids, each one inside its own
 region, which is the shape the engine understands. The division *number* stops at three, but
-a pyramid does not have to: see [limits.md](limits.md).
+a pyramid does not have to: see [limits.md](limits.md), and
+`sider/experimental/fl26rank.lua` below, which raises the number itself to seven.
+
+Regions are given with `--region N` (one for all) or `--regions A,B,C` (dealt out). The
+shipped game reads a region number below 29 and ignores anything higher, so that is the
+ceiling unless `sider/experimental/fl26reg64.lua` is installed, which raises it to 64. Above
+the shipped 24 a region has no heading of its own and borrows the previous country's name in
+the menus; it still groups the leagues correctly. Four ids -- 11, 13, 14 and 20 -- have no
+heading row at all and are otherwise free.
 
 `tools\deepen.py` does the other version of this: it takes one of your leagues and puts it
 **underneath an existing pyramid**, one division lower -- France and Italy each ship two --
@@ -195,7 +203,22 @@ python tools\deepen.py --root <root> --league 61 --below 60   # and this one Lig
 Anything below the third division promotes upwards out of the box but is never relegated
 into, until you install `sider/experimental/fl26deep4.lua` -- one verified byte that makes the engine's
 second relegation gate accept a third division as well as a second. `deepen.py` says so when
-it builds one. Be aware that this is the one tool here that writes into a shipped
+it builds one.
+
+There is a better version of that now, also experimental. The rank a league carries is a
+**two-bit** field, so D3, D4 and D5 all store the value 3 and nothing can tell them apart --
+which is why the League Info panel shows a fourth division as its own lower league.
+`sider/experimental/fl26rank.lua` widens the field to three bits and `fl26deeprank.lua`
+replaces the one-byte gate with the real rule (read
+[sider/experimental/README.md](../sider/experimental/README.md) for the order; `fl26deep4.lua`
+must be off). With `fl26rank.lua` installed, build the chain with `--deep-rank` so each child
+gets its parent's rank plus one, and renumber a pyramid you built earlier with:
+
+```
+python tools\deepen.py --root <root> --retier 20,18,11        # name the TOP league of each chain
+```
+
+Be aware that `deepen.py` is the one tool here that writes into a shipped
 competition's own record (the parent's relegation pointer), in your livecpk copy of the
 table. Nothing is replaced, but Ligue 2's bottom clubs now have somewhere to fall.
 

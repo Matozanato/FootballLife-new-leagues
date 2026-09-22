@@ -292,11 +292,19 @@ a failure is usually noise.
 
 ## 10. Optional: the experimental modules
 
-Only after steps 1-9 have gone through once. `sider\experimental\` holds modules that
-do more and have not been through a full season yet; each is described in
-[sider/experimental/README.md](../sider/experimental/README.md). Add **one at a time**, start
-the game, read the log, and give it one season before adding the next. `fl26hdr192.lua`
-replaces `fl26hdr127.lua` — never run both, and keep `fl26joindll.lua` before it.
+Only after steps 1-9 have gone through once. `sider\experimental\` holds eight modules that
+do more and have not been through a full season yet — the Select Team list (three separate
+faults in it), 64 menu regions, a league rank deep enough for five divisions, and 192
+competitions instead of 127. Each is described, with the order they need and the two slot
+lists you must fill in from your own world, in
+[sider/experimental/README.md](../sider/experimental/README.md).
+
+Add **one at a time**, start the game, read the log, and give it one season before adding
+the next. `fl26hdr192.lua` replaces `fl26hdr127.lua` — never run both, and keep
+`fl26joindll.lua` before it. These are the modules where a second tester is worth most:
+everything in that folder has been verified against the executable and watched in the
+menus, and none of it has survived a season yet. [T8 in the testing guide](testing-guide.md)
+says what to look at.
 
 ---
 

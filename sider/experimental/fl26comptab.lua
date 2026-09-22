@@ -35,6 +35,14 @@ The 123 is a sentinel, not a field width -- the slot field is a dword, and 123 i
 0x1414cb2e0 returns for a competition with no row. Raising it is possible and costed in
 docs/competition-slot-ceiling.md, and is not needed for 39 leagues.
 
+Where the displayed name comes from, measured in a running game on 2026-09-21: the row's own
+label (+0x38) if it has one, otherwise the slot's hard-coded name if that slot is one of the
+twelve that have one, otherwise the competition's name out of the regulation data. Both of the
+first two were stealing our names -- twelve rows we inherited still held a shipped label, and
+seven of our slots are hard-named. Step 2c below clears the labels; fl26slotnames frees the
+seven slots. Neither is needed for a row we built on a slot nobody named, which is why Sweden
+D1 on slot 84 read correctly from the first run.
+
 One correction to the description above, measured 2026-09-21: the table is in .data but it is
 not in the file. Read straight out of FL_2026.exe, all 165 rows are zero except row 0, and the
 only three code references to the whole 69 KB are the three lookups listed here. So the table
@@ -49,6 +57,20 @@ local m = {}
 
 local BASE, STRIDE, NROWS = 0x1434fdf00, 0x108, 165
 local OFF_ID, OFF_SLOT, OFF_PROMOTE, OFF_DEMOTE = 0x00, 0x04, 0x30, 0x34
+local OFF_NAME, OFF_SHORT = 0x38, 0x3c
+local NO_LABEL = "\255\255\255\255"
+
+-- Every regulation id our world uses (not 186, the FL Champions League, which has no row).
+-- Rows we build ourselves are copies of the template and already carry no label; rows we
+-- inherited from a shipped competition carry that competition's, and that is what the list
+-- then displays -- Slovenia D1 read "PDII League", Croatia/Czechia/Greece all read the same
+-- borrowed name. Clearing the field sends the UI to its fallback, which is the competition's
+-- own name out of our regulation data (see fl26slotnames for the other half of this).
+local OUR_IDS = {
+  11, 49, 60, 61, 62, 74, 76, 93, 94, 96, 98, 100, 109, 110, 111, 112, 113, 114, 121,
+  138, 139, 140, 143, 144, 145, 146, 170, 171, 173, 174, 176, 178, 179, 180, 181, 182,
+  183, 184, 185,
+}
 
 -- our ids that already own a row: new slot
 local RESLOT = { [49] = 49, [74] = 74, [100] = 81 }
@@ -195,6 +217,22 @@ function m.init(ctx)
       end
     end
     if clash then return end
+  end
+
+  -- 2c. clear the name label on every row of ours. Measured 2026-09-21: twelve of our rows
+  -- were inherited from a shipped competition and still held its label in +0x38, so the list
+  -- showed that competition's name instead of ours. 0xffffffff is what the rows we build
+  -- ourselves carry, and it is the value the UI treats as "no label of my own".
+  do
+    local cleared = 0
+    for _, id in ipairs(OUR_IDS) do
+      local i = byid[id]
+      if i then
+        if row_u32(rows[i], OFF_NAME) ~= 0xffffffff then cleared = cleared + 1 end
+        rows[i] = row_set(row_set(rows[i], OFF_NAME, NO_LABEL), OFF_SHORT, NO_LABEL)
+      end
+    end
+    log(string.format("fl26comptab: name labels cleared on %d rows that had borrowed one", cleared))
   end
 
   -- 3. promotion/relegation counts

@@ -166,6 +166,65 @@ obvious problem is a finding. (Second and later seasons are no longer on this li
 have been played end to end — but long careers still are: the competition table only fills
 up, and nothing has been run far enough to say where it stops.)
 
+### T8 — The experimental modules (the menus, the regions, the rank)
+
+Eight modules in `sider\experimental\` were built and verified against the executable on
+21-22 September and watched working in the menus of a running game. **None of them has been
+through a season.** That gap is the whole reason they are published, and this is the test
+that closes it. Read
+[sider/experimental/README.md](../sider/experimental/README.md) first — several depend on
+each other, and two carry a slot list you must fill in from your own world.
+
+Add them **one at a time**, in the order that file gives, starting the game and reading
+`sider.log` after each. A module that finds bytes it does not recognise writes nothing and
+says so; that log line is a useful report on its own, because it means your install differs
+from ours and names where.
+
+**T8a — Select Team (`fl26comptab`, then `fl26slotnames`, then `fl26clubs`).** Open the team
+selection list for Master League and for Kick Off.
+
+1. Are all of your leagues in the list, or only some? Name the ones missing, with their
+   rulebook ids.
+2. Does each of your leagues sit under a **heading that makes sense**, or under a shipped
+   one ("Classic Teams", "Other European Leagues", "Asia-Oceania") over a league of yours?
+3. Does each show **its own twenty clubs**, or national teams, foreign clubs, or an empty
+   list?
+4. Pick a club from one of them and start a season. It has to be selectable *and* playable;
+   the list is built separately from the season.
+5. Send the `fl26comptab: id N -> row R slot S` lines from `sider.log` with your answers.
+   They are the map from your leagues to the slots the other two modules act on.
+
+**T8b — Regions (`fl26reg64`).** Build a world spread over several regions, including at
+least one above 28, e.g.
+`python tools\mkworld.py --base %FL26_PESDB% --out <root> --leagues 9 --regions 16,20,30`.
+
+1. Do the leagues appear grouped by region in the competition lists?
+2. A region above 24 has no heading of its own and borrows the previous country's name —
+   expected, and worth confirming rather than reporting as a surprise. Which name did it
+   borrow?
+3. Without the module, a league on a region of 29 or more falls back to the default region
+   instead. Confirming that difference in your install is a useful result.
+
+**T8c — Deep pyramids (`fl26rank` + `fl26deeprank`, with `fl26deep4` off).** Build a pyramid
+four or five divisions deep, either with `--tiers` or with `tools\deepen.py --deep-rank`;
+if you built it before installing `fl26rank.lua`, run `python tools\deepen.py --root <root>
+--retier <top league ids>` first.
+
+1. **League Info for each division.** It should name the league above and the league below
+   correctly. The symptom this fixes is a fourth division showing *itself* as its own lower
+   league.
+2. **Play to the end of a season and let it roll over.** Then: did anybody actually go up or
+   down, in which divisions, and how many clubs? This is the unanswered question — the gate
+   is fixed, the movement has never been watched.
+3. If nothing moves, say so with the divisions and their ranks. That is as useful as
+   movement, and it is what we expect to need next.
+
+**T8d — 192 competitions (`fl26hdr192`).** Only worth testing on a long career: the count of
+competitions a season holds only ever rises, and 127 was reached at 124 after four seasons
+here. Report the season number and whether league tables still start from zero after each
+rollover. Remember it replaces `fl26hdr127.lua` and that switching between them means
+starting a new season.
+
 ## What to send
 
 Open a GitHub issue with:
@@ -191,6 +250,9 @@ paragraph of impressions without them.
   for this beta.
 - The one-in-two generation crash on its own, unless your rate is very different.
 - Anything with other mods active. Please test with only these modules and your world.
+- Cosmetic gaps in the experimental modules that their README already states: a region above
+  24 borrowing a country's heading, a league above the slot ceiling still missing from Select
+  Team. Report what the README does *not* already say.
 
 If this project is useful to you, you can support it at
 [ko-fi.com/mata28](https://ko-fi.com/mata28).

@@ -79,7 +79,9 @@ players 0x17c, clubs 0x690, coaches 0x258, regulations 0x314, match records 0x25
 | `flpaths.py` | where your game is; environment variables |
 | `livedump.py` | locate the running game and read its edit block; the reader the next tool needs |
 | `dayplan.py` | measure a running season and print the `--date-offsets` day-spread that clears the 280-per-day ceiling |
-| `native/fl26join.c`, `native/build-join.sh` | the source of `sider/fl26join.dll` and the one-line `zig cc` build; see [native/README.md](../tools/native/README.md) |
+| `deepen.py` | put one of your leagues below another as the next division down; `--deep-rank` for real ranks, `--retier` to renumber a chain built before the rank was widened |
+| `mkrankpatch.py` | regenerate `sider/experimental/fl26rank.lua` (it finds every site that reads or writes the league rank and emits the same-length rewrite); needs `capstone` |
+| `native/fl26join.c`, `native/fl26clubs.c` and their build scripts | the sources of the two DLLs and the one-line `zig cc` build; see [native/README.md](../tools/native/README.md) |
 
 Tools we use in development but did not include: the automation harness that plays seasons
 unattended with a virtual pad and screen reading, and the disassembly indices. They are tied

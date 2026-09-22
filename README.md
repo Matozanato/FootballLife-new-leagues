@@ -85,10 +85,12 @@ into the executable, so a new league standing in a country of its own was never 
 to the season at all and played nothing; the module presents it. It is the one compiled
 piece here; its source and how to build it are in [tools/native/](tools/native/README.md).
 
-`sider/experimental/` holds two more that go further and **have not been through a full
-season yet**: 192 competitions instead of 127, and every league selectable in the Select Team
-list. They abort cleanly if anything does not match, and they are the part where another pair
-of hands helps most — [what they are](sider/experimental/README.md).
+`sider/experimental/` holds eight more that go further and **have not been through a full
+season yet**: 192 competitions instead of 127; every league selectable in the Select Team
+list, under its own name, showing its own clubs; 64 menu regions instead of 29; and a league
+rank wide enough for a pyramid five divisions deep, with the relegation gate to match. They
+abort cleanly if anything does not match, and they are the part where another pair of hands
+helps most — [what they are, and in what order](sider/experimental/README.md).
 
 ## Status
 
@@ -175,25 +177,39 @@ world, across season rollovers. This page was last checked against the shipped m
 - **Rulebook ids above 175 work in Master League but are invisible in the Select Team list**
   unless `sider/experimental/fl26comptab.lua` is installed. That list is a static table in the
   exe rather than anything built from your data; the module copies it, gives our leagues free
-  slots, and is meant to make all 39 selectable. It has not been through a season yet, which
-  is why it is experimental. Without it the season still plays — the league simply does not
-  appear in that one menu.
+  slots, and is meant to make all 39 selectable. Two things that list gets wrong on its own
+  were measured on 2026-09-21 and have experimental modules of their own: a slot can carry a
+  **hard-coded section heading** ("Classic Teams" over a league of yours — `fl26slotnames.lua`),
+  and for nine slots the game builds the **wrong club list** entirely, showing national teams
+  or foreign clubs or nothing (`fl26clubs.lua` + its DLL). None of the three has been through
+  a season, which is why they are experimental. Without them the season still plays — the
+  league is simply mislabelled, or missing, in that one menu.
 - **Promotion and relegation between the new leagues.** Of the 214 shipped rulebooks only
   eleven carry a promotion or relegation link at all, and none of them chains three tiers, so
   there was no shipped example to copy. What the engine does on its own is the top joint of a
-  chain and not the middle one. A module that finishes the chain exists in the research
-  repository, has not been run in a season, and is therefore not published here.
+  chain and not the middle one. Part of the reason is now measured and fixed experimentally:
+  the rank field is **two bits**, so a third, fourth and fifth division all carry the value 3
+  and neither the panel nor the end-of-season mover can tell them apart.
+  `sider/experimental/fl26rank.lua` widens it to three bits and `fl26deeprank.lua` opens the
+  relegation gate for every division below the second; `tools\deepen.py --retier` renumbers a
+  pyramid you already built. Whether clubs then actually cross at the rollover has not been
+  played. A module that moves them itself, as a fallback, exists in the research repository
+  and is not published.
 - Continental competitions for new clubs: granting them places deliberately is not
   attempted. New clubs have nonetheless been seen playing in the Champions League, which is
   not understood yet — see [known-issues.md](docs/known-issues.md).
 - New clubs use **placeholder names, cloned kits and cloned squads**. This project proves the
   capacity; dressing the clubs is ordinary Team.bin / kit editing on top of it.
-- New leagues appear under an **existing menu region** (England by default). Measured since:
-  the menu knows 24 regions, each one a row pointing at a *drawn* label rather than a
-  translated string, and four ids (11, 13, 14, 20) have no row at all — a league placed on one
-  of those renders with whatever label the previous lookup left behind. Spreading our leagues
-  over several shipped countries needs no executable change and is the next thing to try; a
-  region of our own name needs a new label in the menu's texture atlas as well.
+- New leagues appear under an **existing menu region** (England by default), and spreading
+  them over several shipped countries needs no executable change — `mkworld.py --regions`
+  does it. Two limits sit above that, both mapped since. The shipped parser throws away any
+  region numbered 29 or more although the field holds 64:
+  `sider/experimental/fl26reg64.lua` is the one instruction that fixes it. And the menu's
+  *heading* per region comes from a table of 24 rows; a region with no row does not draw a
+  blank, it draws the heading of the country looked up before it, so regions above 24 work
+  as groupings and borrow a name. The module that gives them headings of their own copies
+  the game's own rows and is not published, because the version that exists carries those
+  rows as a blob of shipped bytes and this repository does not redistribute game data.
 - More than 39 leagues, or leagues built with non-default ids, need a regenerated patch set
   ([why](docs/for-developers.md)).
 
@@ -236,7 +252,9 @@ file if the problem is reproducible from a save.
 ```
 sider/              fl26caps.lua (generated patch set), the null guards, fl26hdr127.lua,
                     fl26joindll.lua and the compiled fl26join.dll it loads
-sider/experimental/ modules that go further and are not verified in a season yet
+sider/experimental/ eight modules that go further and are not verified in a season yet:
+                    192 competitions, the Select Team list (names, slots, club lists),
+                    64 regions, a 3-bit league rank and its relegation gate
 tools/              world builders (mkworld, mkplayers, mkcrests, mkkits, mkcup ...),
                     pesdb/CPK readers, the patch-set generator and its checkers
 tools/native/       the C source of fl26join.dll, its build script and checksum

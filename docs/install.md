@@ -147,13 +147,16 @@ installed, please report it.
 
 ## 4b. The experimental modules, later
 
-`sider/experimental/` holds modules that go further than the eleven above and have not
-been through a full season yet: 192 competitions instead of 127, every league selectable
-in the Select Team list, and relegation into a fourth division. Add them **one at a time**,
-after the eleven have been confirmed, and read
-[sider/experimental/README.md](../sider/experimental/README.md) first. `fl26hdr192.lua`
-replaces `fl26hdr127.lua`; never run both, since they patch the same thirteen places. If you
-use it, keep `fl26joindll.lua` before it, where `fl26hdr127.lua` was.
+`sider/experimental/` holds eight modules that go further than the eleven above and have not
+been through a full season yet: 192 competitions instead of 127; the Select Team list fixed
+three ways (leagues that had no slot, slots that draw a hard-coded heading, slots that show
+the wrong clubs); 64 menu regions instead of 29; and a league rank wide enough for five
+divisions with the relegation gate to match. Add them **one at a time**, after the eleven
+have been confirmed, and read
+[sider/experimental/README.md](../sider/experimental/README.md) first — several of them
+depend on each other and two carry a slot list you must fill in from your own world.
+`fl26hdr192.lua` replaces `fl26hdr127.lua`; never run both, since they patch the same
+thirteen places. If you use it, keep `fl26joindll.lua` before it, where `fl26hdr127.lua` was.
 
 ## 5. Add a world
 
