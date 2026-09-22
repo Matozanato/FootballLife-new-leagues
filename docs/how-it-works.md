@@ -64,6 +64,40 @@ Two practical consequences:
   first league in its region and dates it with the shipped sixteen-club bracket, so a cup
   whose feeder league has sixteen clubs plays out fully dated with no patch of its own.
 
+## How a league gets into a season, and what fl26join.dll does
+
+Being dated is necessary and not sufficient. A competition also has to be *registered* into
+the season, and that happens on two occasions, both driven by lists compiled into the
+executable rather than by the data files:
+
+1. **At creation**, the season builder walks a fixed include list of calendar-year
+   competitions (the leagues that run January to December) and registers those.
+2. **In play**, each time the calendar reaches a registration date, the game calls its
+   registration routine with the ids due that day. That list comes from a case table over
+   ids 2..175, and most of its entries are empty. A league hanging under a listed one
+   through the promotion link is picked up with it; a league standing on its own is not.
+
+The routine every competition passes on its way in was measured live, and it admits any id
+that has a record with its season flag set — which every one of ours has. So a new league
+in a country of its own is not refused; it is never asked about. It exists, it is dated, and
+nothing presents it.
+
+`fl26join.dll` is the piece that presents it. `fl26joindll.lua` loads it at startup and
+hands it the rulebook ids of the added leagues; the DLL hooks the registration routine and
+appends those ids to the vector it receives, after the game's own, skipping any whose record
+already carries a season year. It also answers the builder's creation-time question about
+our ids with "no" (a skip, to the builder), because the three of our ids that reuse shipped
+calendar-year ids were otherwise registered twice and got a doubled schedule. It writes no
+table; the game does the rest as it would for its own leagues. It is a DLL rather than a
+Lua patch because the change is a few instructions of glue on a live call, with a vector to
+grow, and that is easier to get right in C than in bytes. The source is in `tools/native/`.
+
+Two things follow. The id list in `fl26joindll.lua` has to name your leagues, the same way
+the date table in `fl26caps.lua` has to. And a season started with a club from a
+stand-alone league still opens in January, because the game picks the opening date before
+the registration day on which the league joins; the league's own season is then dated from
+August.
+
 ## The null guards
 
 A world of 1,536 clubs walks code paths the shipped data never reaches. Several of them

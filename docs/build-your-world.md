@@ -93,6 +93,14 @@ the list, you are fine. If not — more than 39 leagues, a different `--reg-from
 pack that already uses some of these ids — that league will not be scheduled, and you need a
 regenerated patch set: see [for-developers.md](for-developers.md).
 
+The same 39 ids are listed a second time, in `sider/fl26joindll.lua` (`local IDS = { ... }`
+near the top). That list says which leagues the module presents to the season on the first
+registration day; a league that is dated but not in it is entered only if the game lists it
+by itself, which a league standing in a country of its own is not (see
+[how-it-works.md](how-it-works.md)). If you changed the ids, edit that list too — it is a
+plain text edit, no regeneration needed. Ids in the list that your world does not use are
+harmless; the log notes them as `no-record` and moves on.
+
 Why an id decides this at all is explained in [how-it-works.md](how-it-works.md): the dates
 come from a switch compiled into the executable, keyed by the id, and most free ids land on
 an entry that writes nothing.

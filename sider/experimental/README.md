@@ -25,6 +25,8 @@ out of memory at startup instead of shipping them.
 
 **Use `fl26hdr192.lua` *instead of* `fl26hdr127.lua`, never both.** They patch the same
 thirteen places, so whichever runs second will find bytes it does not recognise and abort.
+Put its `lua.module` line where `fl26hdr127.lua`'s was: after `fl26joindll.lua`, which is
+the order the two have been run together in.
 
 A season already on disk was built against whatever header width was installed when it was
 created. Switching between 127 and 192 means starting a new season.

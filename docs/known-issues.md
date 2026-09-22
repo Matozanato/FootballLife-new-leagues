@@ -1,6 +1,6 @@
 # Known issues
 
-Honest list, as of 2026-09-21. Addresses are given so that a fault offset in your Event
+Honest list, as of 2026-09-22. Addresses are given so that a fault offset in your Event
 Viewer can be matched against them: the offset is the address minus `0x140000000`
 (so `0x1414c674d` shows up as exception offset `0x14c674d`).
 
@@ -8,9 +8,9 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
 
 | where | address | status |
 |---|---|---|
-| Scene setup: season generation, and season rollovers | `0x1484ed4c0` | Shipped game bug (occurs without any mod). Not guarded and not guardable: the pointer it writes through is already corrupt when it arrives, so skipping the write would trade a crash for silent damage. Start the season again, or reload your last save. |
+| Scene setup: season generation (the manager-settings step), and season rollovers | `0x1484ed4c0`, sometimes reported as `0x1531cc313` in a module outside the exe | Shipped game bug (occurs without any mod). Not guarded and not guardable: the pointer it writes through is already corrupt when it arrives, so skipping the write would trade a crash for silent damage. Intermittent: on 2026-09-22 it took three of five season creations here, with and without the hooks of `fl26join.dll`, and passed on the next attempt each time. Start the season again, or reload your last save. |
 | Exhibition kick-off with new clubs | `0x141fea5ba` | **Fixed** by `fl26nullguard.lua`. |
-| Loading a season (schedule read) | `0x140cd6a1c` | **Fixed** by `fl26nullguard3.lua`. |
+| Loading a season, and the board meeting when a season is created (schedule list read) | `0x140cd6a21` (guard site `0x140cd6a18`) | **Fixed** by `fl26nullguard9.lua`, which on 2026-09-22 replaced `fl26nullguard3.lua`. Same unchecked read: a lookup that finds no schedule list is indexed anyway. The old guard covered the load path; the new one covers both, and the two overlap, so only one may be installed. |
 | Mid-season, calendar advance | `0x140fc9238` | **Fixed** by `fl26nullguard2.lua`. |
 | Calendar advance, coach record walker | `0x141572125` | **Fixed** by `fl26nullguard4.lua`. The root cause (a mis-placed coach table after a load) was a bug in this patch set and is also fixed at the source. |
 | Calendar advance, AI lineup pass, field getter | `0x1414c674d` | **Guarded** by `fl26nullguard5.lua`. |
@@ -59,6 +59,66 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
 - **Second season and beyond**: now played. Four seasons have been run end to end on one
   world, with season rollovers, and the tables no longer carry the previous season's
   results (see below).
+
+## Added leagues that never entered the season — fixed 2026-09-22, one season measured
+
+What it looked like: a league exists, has its twenty clubs, shows in every menu, can be
+picked as your own club — and never plays a match. Picking a club from it made it worse:
+the season opened in **January** instead of August, only 24 countries had a season instead
+of 55, less than half the usual matches existed, the hub showed no table and no fixtures,
+and a mid-season review cutscene turned up in June on a world whose season the game already
+considered over.
+
+Measured on 2026-09-22 on a world of 41 added leagues, each a first division standing in a
+country of its own: **8 entered the season and 33 never did**, in any run. The eight were
+the ones the game reaches by its own routes — a league hanging under a shipped second
+division through the promotion link, and a league whose id the game's own list happens to
+carry.
+
+### The cause
+
+Competitions enter a season on two occasions, and both are driven by lists compiled into
+the executable. At creation, the season builder admits a fixed list of calendar-year
+competitions. Everything else enters in play, when the calendar reaches a registration date
+and the game calls its registration routine with the ids due that day — and that vector
+comes from a case table over ids 2..175, of which 142 entries are empty. No data file can
+add an id to either list. The function every competition goes through on its way in was
+measured live and said **yes to every one of our ids it was ever shown**; the only refusals
+it has are "no record" and "season flag off". Nothing ever showed it our ids.
+
+Two earlier attempts had widened the builder's include list. Both changed nothing, because
+the builder's list is the wrong list: it is for calendar-year competitions, and a league
+admitted there gets a January-to-December season the game does not expect for a league.
+
+### The fix, and what is verified
+
+`fl26join.dll`, loaded by `fl26joindll.lua`, appends the listed ids to the vector the
+registration routine receives on the first registration day (the game's ids first, then
+ours), skipping any id whose record already carries a season year so nothing is registered
+twice. When the builder asks about one of our ids at creation, the module answers no, so the
+three of our ids that reuse shipped calendar-year ids no longer get a second, doubled
+schedule. Nothing is written to any table; the game's own registration then runs exactly
+as it does for its own leagues.
+
+Verified in one run: 40 of the 41 listed leagues were present in the world (one id had no
+record, harmless), all 40 entered on day 41 of the calendar, **39 were dealt a full 38-round
+season** with 10 matches a round, 17,551 match records in all, and the busiest calendar day
+held 172 of its 280 places. At the second registration date the module found all 40 already
+in a season and appended nothing.
+
+What is **not** verified, stated plainly:
+
+- **The second season.** Whether the game re-registers the added leagues at the next
+  registration day, and whether the first season's records survive the turn of the year,
+  has not been played yet. It is the first thing to report if you get there.
+- **A season created with a shipped club as your team** on such a world. The measured run
+  picked one of the added clubs.
+- **The January opening is unchanged.** With a club from a stand-alone league, the season
+  still opens in January; the league is registered about two weeks later and dated from
+  August, and the hub is empty until then. That the league now plays at all is the fix; the
+  odd start is not addressed.
+- **A split-season format league** (a rulebook of the "two halves" kind, 12 clubs) enters
+  the season but is given no fixtures. Different mechanism, not looked at yet.
 
 ## The 100-competition wall — fixed 2026-09-17, with a caveat
 
@@ -148,8 +208,10 @@ calendar.
 
 - **Saves are tied to the world.** A save made with world A does not load with world B or
   with the shipped game. Move your saves aside when you switch roots.
-- **Rulebook ids must be in the date table** (39 ids shipped in `fl26caps.lua`). A league
-  outside it is silently never scheduled — this is the single most common way a new league
+- **Rulebook ids must be in the date table** (39 ids shipped in `fl26caps.lua`) **and in
+  the id list of `fl26joindll.lua`** (the same 39). A league outside the first is silently
+  never scheduled; a league outside the second is only entered into the season if the game
+  happens to list it itself. Together these are the single most common way a new league
   ends up existing but never playing. See build-your-world.md and
   [how-it-works.md](how-it-works.md).
 - **Rulebook ids above 175 do work**, but by default a league on one is invisible in the

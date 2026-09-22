@@ -77,9 +77,13 @@ This project does two things:
    shipped in this repository; everything is generated on your machine from your install.
 
 Plus seven small **null-guard modules** that stop known crashes in the game's own code which
-the larger world exposes, and **`fl26hdr127.lua`**, which widens the table a season uses to
+the larger world exposes, **`fl26hdr127.lua`**, which widens the table a season uses to
 hold its competitions from 100 to 127 — the fix for league tables showing 76 matches played
-and ~130 points.
+and ~130 points — and, new on 2026-09-22, **`fl26joindll.lua` + `fl26join.dll`**, which get
+every added league *into* the season. The game registers competitions from a list compiled
+into the executable, so a new league standing in a country of its own was never presented
+to the season at all and played nothing; the module presents it. It is the one compiled
+piece here; its source and how to build it are in [tools/native/](tools/native/README.md).
 
 `sider/experimental/` holds two more that go further and **have not been through a full
 season yet**: 192 competitions instead of 127, and every league selectable in the Select Team
@@ -91,11 +95,17 @@ of hands helps most — [what they are](sider/experimental/README.md).
 Measured on 2026-09-17 with a test world of **39 new leagues and 780 new clubs**, played
 with a new club as the manager's team. Four seasons have now been played end to end on one
 world, across season rollovers. This page was last checked against the shipped modules on
-**2026-09-21**.
+**2026-09-22**.
 
 **Works**
 
 - Exhibition matches between new clubs.
+- **Every added league entering the season, including leagues in countries of their own
+  (new 2026-09-22).** On a 41-league world where each league stood alone in its own
+  country, only 8 were ever given a season; with `fl26join.dll`, 39 of the 40 present were
+  dealt a full 38-round schedule in one measured run (the 40th is a split-season format, a
+  separate problem). Measured for one season, not yet across a rollover — see
+  [known-issues.md](docs/known-issues.md) and the [testing guide](docs/testing-guide.md).
 - Starting a Master League season with a new club in a new league: season generates,
   fixtures appear, the Team Sheet shows a real squad (the walkthrough builds 30 per club),
   the hub shows the standings.
@@ -150,11 +160,18 @@ world, across season rollovers. This page was last checked against the shipped m
   for; `tools/dayplan.py` measures a running season and prints the spread that flattens it.
   (The ceiling itself can be moved — that work is done and measured, and it is not published
   because it has not been played yet.) Anyone building much past 39 leagues will meet this.
-- **A league's rulebook id decides whether it ever plays.** Fixture dates are not built from
-  the competition you create; they are looked up in a table compiled into the executable,
-  keyed by that id. Most free ids map to an empty entry, so a league can be created, appear
-  in the menus, hold its rounds and never play a single match. See
+- **A league's rulebook id decides whether it ever plays — twice over.** Fixture dates are
+  not built from the competition you create; they are looked up in a table compiled into
+  the executable, keyed by that id. Most free ids map to an empty entry, so a league can be
+  created, appear in the menus, hold its rounds and never play a single match. And the list
+  of competitions the game registers into a season is a second compiled table keyed by the
+  same id, which is what `fl26join.dll` now works around **(fixed 2026-09-22)**. The dates
+  still come from the first table, so the id list in `fl26caps.lua` still matters. See
   [how-it-works.md](docs/how-it-works.md).
+- **A season started with a club from such a league opens in January**, not August, and
+  the league's first round is dated in August; the months between pass with Forward Time.
+  With the fix the league does get its season; making it open in August as well is not done.
+  Not measured yet: the same world with a shipped club as your team, and the second season.
 - **Rulebook ids above 175 work in Master League but are invisible in the Select Team list**
   unless `sider/experimental/fl26comptab.lua` is installed. That list is a static table in the
   exe rather than anything built from your data; the module copies it, gives our leagues free
@@ -197,9 +214,11 @@ numbers in [docs/limits.md](docs/limits.md).
 
 1. **Back up** your save folder
    (`Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\2026\save`) and your `sider.ini`.
-2. Follow [docs/install.md](docs/install.md) to install the Sider modules and confirm in
-   `sider.log` that every module reports `applied all`. (Or take the whole route in one
-   pass: [docs/step-by-step.md](docs/step-by-step.md).)
+2. Follow [docs/install.md](docs/install.md) to install the Sider modules — eleven files,
+   ten `lua.module` lines and one setting, `luajit.ext.enabled = 1` — and confirm in
+   `sider.log` that every patch module reports `applied all` and `fl26joindll` reports
+   `installed`. (Or take the whole route in one pass:
+   [docs/step-by-step.md](docs/step-by-step.md).)
 3. Follow [docs/build-your-world.md](docs/build-your-world.md) to extract your game's tables,
    generate a world, and point `cpk.root` at it.
 4. Start an exhibition match between two new clubs, then a Master League season with one of
@@ -215,10 +234,12 @@ file if the problem is reproducible from a save.
 ## Layout
 
 ```
-sider/              fl26caps.lua (generated patch set), the null guards, fl26hdr127.lua
+sider/              fl26caps.lua (generated patch set), the null guards, fl26hdr127.lua,
+                    fl26joindll.lua and the compiled fl26join.dll it loads
 sider/experimental/ modules that go further and are not verified in a season yet
 tools/              world builders (mkworld, mkplayers, mkcrests, mkkits, mkcup ...),
                     pesdb/CPK readers, the patch-set generator and its checkers
+tools/native/       the C source of fl26join.dll, its build script and checksum
 patches/            the patch set as JSON plus the layout tables the generator reads
 docs/               step-by-step, install, build-your-world, testing-guide, known-issues,
                     limits, how-it-works, for-developers
