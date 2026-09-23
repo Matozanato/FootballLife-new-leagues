@@ -1,26 +1,31 @@
-# Native modules: fl26join.dll and fl26clubs.dll
+# Native modules: fl26join.dll, fl26clubs.dll and fl26chain.dll
 
-Two modules here are compiled rather than written in Lua, because each of them has to run a
+Three modules here are compiled rather than written in Lua, because each of them has to run a
 few instructions of its own inside a live call, which is easier to get right in C than in
-hand-assembled bytes. In both cases a Lua loader (`sider/fl26joindll.lua`,
-`sider/experimental/fl26clubs.lua`) loads the DLL from `SiderAddons\modules\` at startup and
+hand-assembled bytes. In each case a Lua loader (`sider/fl26joindll.lua`,
+`sider/experimental/fl26clubs.lua`, `sider/experimental/fl26chain.lua`) loads the DLL from `SiderAddons\modules\` at startup and
 hands it the configuration; the DLL does the rest.
 
-- **`fl26join.dll`** hooks four functions so that added leagues are registered into a Master
-  League season. Under 500 lines of C and a few lines of inline assembly. Writes no table;
-  the only file it touches is `SiderAddons\fl26join.log`.
+- **`fl26join.dll`** hooks eight functions so that added leagues are registered into a
+  Master League season and closed again at the end of it, the way the shipped leagues are.
+  About 1,000 lines of C, with a few lines of inline assembly per hook. The only file it
+  writes is `SiderAddonsl26join.log`.
 - **`fl26clubs.dll`** (experimental) replaces the two functions that read the Select Team
   club list, answering from the league's own rulebook for named slots only. Around 220 lines.
   Writes nothing at all.
+- **`fl26chain.dll`** (experimental) hooks the end-of-season step that applies promotion
+  and relegation, and completes a chain of three or more divisions, which the game on its
+  own only exchanges one joint of. Around 400 lines.
 
-Neither has third-party code or any network access.
+None has third-party code or any network access.
 
 ## The shipped binaries
 
 | file | SHA-256 |
 |---|---|
-| `sider/fl26join.dll` | `4b2dcdec0dd9798055e1ad2ef9bde3dc1e77e0ff39ec89b8f6c0b103b4aab624` |
+| `sider/fl26join.dll` | `c107bd8387ba38073d4c4747e2f94f0604a50b535a6d644a0767d879aa4e7919` |
 | `sider/experimental/fl26clubs.dll` | `1db2a4f9af91a5c76f903d5443eb08df417006b2bd1a3674aa87a8957a43aae5` |
+| `sider/experimental/fl26chain.dll` | `f312049c19eaa06011416dd311a52795e7f6078efe90fd8fcf5e5b11720cf2dc` |
 
 ```powershell
 (Get-FileHash "C:\fl26\sider\fl26join.dll" -Algorithm SHA256).Hash
@@ -45,13 +50,15 @@ or the same command by hand, from any shell:
 zig cc -shared -target x86_64-windows-gnu -O2 -s -o sider/fl26join.dll tools/native/fl26join.c -lkernel32
 ```
 
-`fl26clubs.dll` is built the same way, with `build-clubs.sh` or:
+`fl26clubs.dll` and `fl26chain.dll` are built the same way, with `build-clubs.sh` /
+`build-chain.sh`, or:
 
 ```
 zig cc -shared -target x86_64-windows-gnu -O2 -s -o sider/experimental/fl26clubs.dll tools/native/fl26clubs.c -lkernel32
+zig cc -shared -target x86_64-windows-gnu -O2 -s -o sider/experimental/fl26chain.dll tools/native/fl26chain.c -lkernel32
 ```
 
-Both scripts write the DLL next to the source (`tools/native/fl26join.dll`) unless you
+The scripts write the DLL next to the source (`tools/native/fl26join.dll`) unless you
 pass an output path as the first argument; copy the result to `SiderAddons\modules\`.
 Any C compiler that targets x86-64 Windows and understands GCC-style inline assembly
 (`__attribute__((naked))`, AT&T syntax) should work as well -- clang does; MSVC does not,
@@ -60,17 +67,27 @@ because it has no inline assembly on x86-64.
 ## What is in the source, for reviewers
 
 - `fl26_join_install(base, cave, ids, n, logpath)` -- verifies the first bytes of each of
-  the four functions against the bytes this build has (a mismatch installs nothing and
+  the eight functions against the bytes this build has (a mismatch installs nothing and
   returns a status the loader prints), allocates a trampoline within reach of each hook,
   and redirects the function entry to a handler.
-- `join_pre` -- the fix: appends our ids to the vector `register_all` received, skipping
-  any id whose regulation record already carries a season year.
+- `join_pre` -- appends our ids to the vector `register_all` received, skipping any id whose
+  regulation record already carries a season year.
 - `door_pre` / `door_post` -- refuses the season builder's creation-time ask for our ids
   (they enter through `register_all` instead) and logs every answer the door gives for them.
-- `enter_pre`, `bld_pre` -- observers only. No hook calls any game code; the regulation
-  record is found by walking the array.
+- the teardown hook -- adds our ids to the July list of competitions whose season is closed
+  (the list is compiled into the exe and never had them), and keeps them off the New Year
+  one, since their season runs August to May.
+- `close_handler` -- keeps our ids out of the New Year close of calendar-year competitions.
+- `mover_handler` -- at the season end, sends a league that has no final table down the
+  game's own no-movement path instead of letting it stop the whole group's promotions.
+- `reg_fix_pre` / `reg_post` -- at registration, resets a season that is already over and
+  rebuilds a stale season record, so a league is not refused a new season.
+- `set_pre`, `enter_pre`, `bld_pre` -- observers only.
 - `fl26_join_log`, `fl26_join_stats` -- the text log and eight counters the loader drains
   into `sider.log`.
+
+Where a hook needs the game to do something (close a season, rebuild a record, keep a group
+still) it calls the game's own function for it rather than writing the tables itself.
 
 `fl26clubs.c` is the same shape, smaller: `fl26_clubs_install(base, cfg, ncfg)` takes the
 `{slot, regulation id}` pairs from the loader and replaces two reader functions, and a slot

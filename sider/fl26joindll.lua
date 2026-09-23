@@ -28,9 +28,16 @@ problem. Nothing is written to any table; the game's own registration then runs 
 it does for its own leagues.
 
 What it does not do. It does not invent dates: the fixture dates still come from the
-rulebook id, see docs/how-it-works.md. It has been measured for one season, on a season
-created with one of the added clubs, up to day 123 of the calendar. Not yet measured: a
-season created with a shipped club, and what happens at the season rollover.
+rulebook id, see docs/how-it-works.md.
+
+The season rollover (added 2026-09-23). The game closes last season's competitions in July
+and the calendar-year ones at New Year, from a list compiled into the exe, and the added
+leagues were never on it: they kept last season's year, their points and matches added up
+season on season, and the next registration refused them. The DLL now adds the listed ids to
+the July list (and keeps them off the New Year one, since their season runs August to May),
+so they close and re-open with the shipped leagues: new year, empty tables, a fresh
+schedule. Measured through a July rollover and on past New Year of the next season. Still
+not measured: a season created with a shipped club as your team.
 
 The other three hooks only watch: enter_season 0x14158f420 (every id that enters, with the
 return address that asked), the builder (the include list it was handed) and the door (for
@@ -39,11 +46,13 @@ runs any game code -- the record is found by walking the regulation array. Every
 also appended to fl26join.log in the SiderAddons folder the moment it is written, so a crash
 during season creation cannot lose the answer. That file is worth attaching to a report.
 
-The observation ring lives at 0x14252ebe0 -- above 0x14252e800, and after every module that
-already claimed padding there: the nullguards (..0x14252e900) and fl26hdr192's trampolines
-(..0x14252eb24). 0x208 bytes: a counter, a write index, and 256 slots. Do not take cave
-space without checking all of sider/*.lua first -- a module that finds its padding occupied
-refuses its patches and says so in one line that is easy to miss.
+The observation ring lives at 0x14252ebe0, 0x208 bytes: a counter, a write index, and 256
+slots. It sits above 0x14252e800 and clear of every module that claims padding there: the
+nullguards (..0x14252e900), fl26chain's ring (..0x14252ea08), fl26hdr192's trampolines
+(..0x14252eb24), and, above this ring, the experimental fl26augseason, fl26superguard and
+fl26seasonend (0x14252ee00..0x14252eef0). Do not take cave space without checking all of
+sider/*.lua first -- a module that finds its padding occupied refuses its patches and says
+so in one line that is easy to miss.
 
 Requires sider.ini: luajit.ext.enabled = 1 (global ffi). Sider's sandbox has no pcall.
 Load it after the null guards and before fl26hdr127.lua / fl26hdr192.lua.

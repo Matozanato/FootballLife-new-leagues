@@ -100,7 +100,19 @@ local APPEND = {
 -- Not here on purpose: 186, the FL Champions League. It is not a competition anyone manages a
 -- club through, so it does not belong in the Select Team list.
 -- promotion/relegation counts (OUR chain FL01 <-> FL02 <-> FL03): {promote, demote}
-local COUNTS = { [11] = {0, 3}, [49] = {3, 3}, [60] = {3, 0} }
+-- These are OUR test world's leagues; put your own ids here.
+local COUNTS = {
+  -- 11, 49 and 60 are three separate top leagues (Croatia, Slovenia, Serbia), not a chain
+  [11] = {0, 0}, [49] = {0, 0}, [60] = {0, 0},
+  -- the leagues below Ligue 2 and Serie B: every row this module appends is a copy of a
+  -- template and carries 0/0, so without these the mover processed 180..185 and moved nobody
+  [180] = {3, 3}, [181] = {3, 3}, [182] = {3, 0},
+  [183] = {3, 3}, [184] = {3, 3}, [185] = {3, 0},
+}
+-- Shipped rows whose relegation count is raised so that a league of ours below them can fill:
+-- Ligue 2 (81) and Serie B (82) are bottom tiers in the shipped game and relegate nobody.
+-- Only the demote count is written; their promote count stays what it was.
+local SHIPPED_DEMOTE = { [81] = 3, [82] = 3 }
 
 -- code sites: {va, expected bytes (hex)}
 local LEAS = {
@@ -239,6 +251,10 @@ function m.init(ctx)
   for id, pd in pairs(COUNTS) do
     local i = byid[id]
     if i then rows[i] = row_set(row_set(rows[i], OFF_PROMOTE, string.char(pd[1])), OFF_DEMOTE, string.char(pd[2])) end
+  end
+  for id, d in pairs(SHIPPED_DEMOTE) do
+    local i = byid[id]
+    if i then rows[i] = row_set(rows[i], OFF_DEMOTE, string.char(d)) end
   end
   local n = #rows
   if n > 255 then log("fl26comptab: too many rows -- aborting"); return end

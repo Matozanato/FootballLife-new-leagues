@@ -126,7 +126,7 @@ ten lines like these, one per module line in `sider.ini`:
 [fl26nullguard8.lua] fl26caps: applied all 2 patches -- nullguard8: negative standings position guarded at 0x1413236e1
 [fl26nullguard9.lua] fl26caps: applied all 2 patches -- nullguard9: empty schedule list guarded at 0x140cd6a18
 [fl26joindll.lua] fl26joindll: installed -- 39 added leagues will be registered on the first registration day of the season; the DLL's own log is ...\SiderAddons\fl26join.log (F10 = counters)
-[fl26hdr127.lua] fl26caps: applied all 29 patches -- hdr127: season header widened to 127 competitions, 599 phase tables
+[fl26hdr127.lua] fl26caps: applied all 32 patches -- hdr127: season header widened to 127 competitions, 599 phase tables
 ```
 
 The `fl26joindll` line is followed by one more from the DLL itself,
@@ -147,11 +147,13 @@ installed, please report it.
 
 ## 4b. The experimental modules, later
 
-`sider/experimental/` holds eight modules that go further than the eleven above and have not
-been through a full season yet: 192 competitions instead of 127; the Select Team list fixed
+`sider/experimental/` holds twelve modules that go further than the eleven above and have
+only been run on our test world: 192 competitions instead of 127; the Select Team list fixed
 three ways (leagues that had no slot, slots that draw a hard-coded heading, slots that show
 the wrong clubs); 64 menu regions instead of 29; and a league rank wide enough for five
-divisions with the relegation gate to match. Add them **one at a time**, after the eleven
+divisions with the relegation gate to match; a career that starts in August; promotion and
+relegation through deeper pyramids, with the season-end fixes that go with it; and a guard
+for the Super Cup. Add them **one at a time**, after the eleven
 have been confirmed, and read
 [sider/experimental/README.md](../sider/experimental/README.md) first — several of them
 depend on each other and two carry a slot list you must fill in from your own world.

@@ -43,7 +43,7 @@ try:
 except ImportError:
     raise SystemExit("hdr127 needs capstone: python -m pip install capstone")
 
-EXE = os.path.join(os.environ.get("FL26_DIR", r"E:\instalacija"), "FL_2026.exe")
+EXE = os.path.join(os.environ.get("FL26_DIR", r"C:\Football Life 2026"), "FL_2026.exe")
 IMAGE_BASE = 0x140000000
 
 HDR_STRIDE = 0xb4
@@ -74,6 +74,28 @@ OBJ_COUNT = [0x1413fb202, 0x1414fd477, 0x14158df84, 0x14158f383, 0x14158f3b2,
 # one of them.  Verified afterwards by reading the live header: real keys at 0-99, zero at
 # 100-126, in both a fresh season and the one after it.
 MOV_BOUNDS = [0x1414fd4e3]      # mov r9d, 0x64 -- the immediate is at +2
+
+# Two more the scan missed, found on 2026-09-23 by reading the live code after hdr192 had been
+# running for two seasons.  Both carry the table base folded together with a field offset,
+# so the u32 is not 0x4650 and a search for the base alone walks past them.
+#
+#   0x14159edca  cmp byte ptr [rcx + 0x4964], sil   base + 0x314, a per-table state byte.
+#       0x14159ecd0 picks which of an entry's two sub-records is the live one by reading this
+#       byte in each of its tables.  Unpatched it reads 0x4650 into the object, which under a
+#       wider header is the middle of some other table, so the choice follows garbage: a
+#       league whose table is plainly there is reported as having none.  That is what kept
+#       Ligue 2, Slovenia, Serbia and a handful of others out of every season-end move.
+#   0x1413fb1fa  lea rbx, [rcx + 0x5ec6]            base + 0x1876, the copy assignment's
+#       walk over the tables (its count at 0x1413fb202 was already in OBJ_COUNT).
+#
+# Each is (address of the u32, field offset).
+OBJ_FIELD = [(0x14159edcd, 0x314), (0x1413fb1fd, 0x1876)]
+
+# The same copy assignment moves the header two entries per turn: `mov r9d, 0x32` -- fifty
+# pairs, a hundred entries -- with nothing but a `lea rdx, [rcx + 0xb4]` beside it, so no
+# 0x64 anywhere near.  An odd N copies one entry more than it has; that extra 0xb4 lands on
+# the first table, which the table walk that follows overwrites anyway.
+PAIR_BOUNDS = [0x1413fb0d4]     # mov r9d, 0x32 -- the immediate is at +2
 
 # Where the trampolines go, for N above 127.  .trace ends at 0x14252e800, but sections are
 # mapped a page at a time, so 0x14252e800..0x14252f000 is executable memory that exists at
@@ -327,6 +349,22 @@ def main():
                         struct.pack("<I", base_new).hex(),
                         "phase tables start 0x%x -> 0x%x  (%s)"
                         % (OBJ_BASE_OLD, base_new, ctx)))
+    for va, field in OBJ_FIELD:
+        ctx = word_site(d, secs, va, OBJ_BASE_OLD + field)
+        if ctx is None:
+            raise SystemExit("0x%x: base + 0x%x is not an instruction tail" % (va, field))
+        patches.append((va,
+                        struct.pack("<I", OBJ_BASE_OLD + field).hex(),
+                        struct.pack("<I", base_new + field).hex(),
+                        "phase table field +0x%x: 0x%x -> 0x%x  (%s)"
+                        % (field, OBJ_BASE_OLD + field, base_new + field, ctx)))
+    for va in PAIR_BOUNDS:
+        at, ins = movbound_site(d, secs, va, BOUND_OLD // 2)
+        patches.append((va + at,
+                        struct.pack("<I", BOUND_OLD // 2).hex(),
+                        struct.pack("<I", (n + 1) // 2).hex(),
+                        "header copy, two entries a turn: %s %s -> %d pairs"
+                        % (ins.mnemonic, ins.op_str, (n + 1) // 2)))
     for va in OBJ_COUNT:
         ctx = word_site(d, secs, va, OBJ_COUNT_OLD)
         if ctx is None:

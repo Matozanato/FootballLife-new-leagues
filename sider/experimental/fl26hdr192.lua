@@ -6,7 +6,7 @@ offset into the object, with another member at +0x39a9f0, so the boundary is hel
 the extra header entries are paid for out of phase tables.
 
 Set:     hdr192
-Summary: season header 100 -> 192 competitions, phase tables 600 -> 597, 42 patches
+Summary: season header 100 -> 192 competitions, phase tables 600 -> 597, 45 patches
 
 A season holds exactly 100 competition instances.  Past that the surplus is dropped without
 a word: the leagues that miss out never get a row for the new season and keep accumulating
@@ -111,6 +111,12 @@ local patches = {
    why="phase tables start 0x4650 -> 0x8700  (lea ebx, [rcx + 0x4650])"},
   {va=0x14159026e, old="50460000", new="00870000",
    why="phase tables start 0x4650 -> 0x8700  (add edi, 0x4650)"},
+  {va=0x14159edcd, old="64490000", new="148a0000",
+   why="phase table field +0x314: 0x4964 -> 0x8a14  (cmp byte ptr [rcx + 0x4964], dh)"},
+  {va=0x1413fb1fd, old="c65e0000", new="769f0000",
+   why="phase table field +0x1876: 0x5ec6 -> 0x9f76  (lea ebx, [rcx + 0x5ec6])"},
+  {va=0x1413fb0d6, old="32000000", new="60000000",
+   why="header copy, two entries a turn: mov r9d, 0x32 -> 96 pairs"},
   {va=0x1413fb202, old="58020000", new="55020000",
    why="phase table count 600 -> 597  (mov ebp, 0x258)"},
   {va=0x1414fd477, old="58020000", new="55020000",

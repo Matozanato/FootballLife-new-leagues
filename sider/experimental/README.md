@@ -1,11 +1,12 @@
 # Experimental modules
 
 Everything in this folder does something the modules one level up do not, and **none of it
-has been through a full season yet**. They are here because the fastest way to find out
-whether they work is for more than one person to run them. They were built and verified
-against the exe between 2026-09-21 and 2026-09-22, and several of them were watched working
-in a running game — a menu showing the right thing is not the same as a season played with
-it, and that difference is the whole reason this folder exists.
+has been checked by anyone but us, on anything but our test world**. They are here because
+the fastest way to find out whether they work is for more than one person to run them. They
+were built and verified against the exe between 2026-09-21 and 2026-09-23. Most were watched
+working in a running game, and the season-end group (`fl26augseason`, `fl26seasonend`,
+`fl26chain`, with `fl26hdr192`) has now been played through a July rollover and on past the
+New Year after it. The menu modules have not been through a season.
 
 Install them exactly like the others (copy into `SiderAddons\modules\`, add a
 `lua.module = "..."` line), **one at a time**, and read `sider.log` afterwards. Every one of
@@ -25,6 +26,10 @@ runs exactly as it did before.
 | `fl26deeprank.lua` | the **relegation gate**, so a club goes down from any division, not only the second | replaces `fl26deep4.lua`; load it AFTER `fl26rank.lua` and turn `fl26deep4.lua` off, or the bytes will not match |
 | `fl26deep4.lua` | one byte, so that a **third** division relegates into a fourth | superseded by `fl26rank` + `fl26deeprank`, which do it properly; kept for anyone who wants the one-byte version without the rank change |
 | `fl26reg64.lua` | the number of **regions** (countries the menus group by) from 29 to **64** | one instruction: the shipped code masks the region to five bits and throws away anything from 29 up, while the runtime field it feeds is six bits wide. Every shipped row keeps the region it had |
+| `fl26augseason.lua` | a Master League career in one of the added leagues **starts in August** (day 212) instead of 1 January | one jump: the lookup that picks the season type knows only the shipped regions 2..28, and a region of 29 or more fell through to "calendar year". Needs `fl26reg64.lua` (a league only reaches region 29+ with it). **Known side effect, being worked on:** in an August-start career the Champions League play-off is registered after its own two dates, so it gets no matches and the European competitions never start |
+| `fl26superguard.lua` | the **UEFA Super Cup setup** no longer crashes when the Champions League or Europa League entry it looks for is missing | one bounds check. When an entry is missing, that season has no Super Cup instead of a crash. Seen in an August-start career; the play-off problem above is the likely cause |
+| `fl26seasonend.lua` | the **end-of-season filter**: the French and Italian leagues take part in the European season end (so a league below Ligue 2 or Serie B can go up and down), and one league without a final table no longer stops promotion for its whole group | two redirects. Works with the updated `fl26join.dll`, which it leaves the final say to; without the DLL it drops only the league that cannot be moved |
+| `fl26chain.lua` + `fl26chain.dll` | **promotion and relegation through three or more divisions**. The game exchanges clubs only across every other joint of a chain; the DLL completes the joints it skips, using the game's own standings and its own list writer | its `CHAINS` and `PROTECT` lists are **our** world's league ids and must be replaced with yours; the promote/demote counts must match the `COUNTS` table in `fl26comptab.lua`. Measured: the French and Italian chains moved 3 up and 3 down at every joint at the 2026-09-23 rollover |
 
 ## Order, and which of these need each other
 
@@ -37,6 +42,10 @@ lua.module = "fl26clubs.lua"       ; same
 lua.module = "fl26rank.lua"
 lua.module = "fl26deeprank.lua"    ; after rank, and with fl26deep4 off
 lua.module = "fl26reg64.lua"
+lua.module = "fl26augseason.lua"   ; needs reg64
+lua.module = "fl26superguard.lua"
+lua.module = "fl26seasonend.lua"
+lua.module = "fl26chain.lua"       ; after comptab (the counts must agree)
 ```
 
 `fl26hdr192.lua` goes where `fl26hdr127.lua` was, after `fl26joindll.lua`.
@@ -46,7 +55,11 @@ thirteen places, so whichever runs second will find bytes it does not recognise 
 A season already on disk was built against whatever header width was installed when it was
 created. Switching between 127 and 192 means starting a new season.
 
-## Two lists you must edit for your own world
+## Lists you must edit for your own world
+
+Besides the two `SLOTS` tables described below: `COUNTS` in `fl26comptab.lua` (how many clubs each of your leagues
+promotes and relegates) and `CHAINS` / `PROTECT` in `fl26chain.lua`. All of them ship with
+our test world's ids.
 
 `fl26slotnames.lua` and `fl26clubs.lua` both carry a `SLOTS` table near the top, and the
 numbers in them are the slots **our** test world happened to land on. A competition slot is
@@ -91,5 +104,5 @@ out how your build differs. For the four that change menus (`comptab`, `slotname
 `clubs`, `reg64`), a screenshot of the screen that is wrong is worth more than a
 description of it.
 
-The compiled `fl26clubs.dll` is built from `tools/native/fl26clubs.c`; its checksum and the
-build line are in [tools/native/README.md](../../tools/native/README.md).
+The compiled `fl26clubs.dll` and `fl26chain.dll` are built from `tools/native/fl26clubs.c`
+and `tools/native/fl26chain.c`; their checksums and the build lines are in [tools/native/README.md](../../tools/native/README.md).

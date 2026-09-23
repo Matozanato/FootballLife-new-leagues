@@ -1,6 +1,6 @@
 # Known issues
 
-Honest list, as of 2026-09-22. Addresses are given so that a fault offset in your Event
+Honest list, as of 2026-09-23. Addresses are given so that a fault offset in your Event
 Viewer can be matched against them: the offset is the address minus `0x140000000`
 (so `0x1414c674d` shows up as exception offset `0x14c674d`).
 
@@ -17,6 +17,7 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
 | Calendar advance, AI lineup pass, a day after matchday 1 | `0x1415032f0` | **Fixed 2026-09-16** in `fl26caps.lua` — see below. Update the module if you downloaded earlier. |
 | Squad table, first-element read | `0x14128a3a3` | **Fixed** by `fl26nullguard7.lua`. |
 | Calendar advance, standings position used as an index | `0x1413236e4` | **Fixed 2026-09-17** by `fl26nullguard8.lua`. A club with no position yet holds −1, and the game indexed a table with it. This was a wall rather than a rarity: before the guard every long run died here, twice at the same point; after it, 313 game days across New Year with no crash. |
+| UEFA Super Cup setup | `0x1413605a9` | **Guarded** by `sider/experimental/fl26superguard.lua` (2026-09-23). The setup indexes the Champions League and Europa League entries without checking that they were found; when one is missing it read entry −1. With the guard that season simply has no Super Cup. Seen in an August-start career, where the European competitions do not start (see below). |
 | Startup, 9–11 seconds in, occasionally | — | Shipped game bug, reproduces on a clean install. Start again. |
 
 ## Missing or unverified features
@@ -33,14 +34,23 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
   tooling copies every phase of a multi-phase competition and renumbers the replicas
   correctly, and cloning the Europa League into a scratch world and reading it back checks
   out — but a clone keeps its source's dates and would collide with it, so nothing playable
-  is published. A 36-club single-table Champions League in the modern format exists in the
-  research repository and has not been run in a game yet either.
+  is published. A 36-club single-table Champions League in the modern format is being
+  worked on in the research repository and is not published.
+- **In a career that starts in August, the European competitions do not start.** Measured
+  2026-09-23 with `sider/experimental/fl26augseason.lua`: the Champions League play-off is
+  dated on days 230 and 237 of the year, and the game registers the European competitions
+  on day 238, after both. The play-off is drawn but given no matches, so it never finishes,
+  the group stage is never filled and the Europa League never begins. The domestic season is
+  not affected. Being worked on.
 - **Promotion and relegation between new leagues.** A chain of three of our leagues moved no
   club, and the likely reason is now known and is data, not code: all three were first
   divisions, and the resolver only looks for the league above when the lower league is
-  division 2 or 3. Build the pyramid with `--tiers 1,2,3` (see build-your-world.md). Whether
-  clubs then actually cross at the rollover has not been played yet. A module that moves them
-  itself exists in the research repository as a fallback and is not published here.
+  division 2 or 3. Build the pyramid with `--tiers 1,2,3` (see build-your-world.md).
+  **Played through a rollover on 2026-09-23**, on our world with a third, fourth and fifth
+  division under Ligue 2 and under Serie B: with the experimental `fl26chain` (which
+  completes the joints of a chain the game skips) and `fl26seasonend` (which lets France and
+  Italy into the European season end), three clubs went up and three down at every joint of
+  both chains. One thing still wrong there: Ligue 2 came out of that rollover with 21 clubs.
 - **The league rank only counts to three, which breaks pyramids deeper than that.** Measured
   2026-09-22: the rank lives in the top two bits of the rulebook's flags word, so a third,
   fourth and fifth division all store the value 3. The League Info panel then shows a league
@@ -50,9 +60,8 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
   a bit the shipped loader never sets) so it counts to seven, and `fl26deeprank.lua` rewrites
   both copies of that gate to "second division or deeper, and the one below is third or
   deeper". `tools\deepen.py --retier <top ids>` renumbers a pyramid built before the change,
-  since the old value 3 is what is stored in your world's files. Verified against the exe and
-  seen live in the menus; not yet played through a season rollover, which is the only test
-  that matters for promotion.
+  since the old value 3 is what is stored in your world's files. Verified against the exe,
+  seen live in the menus, and in the stack the chains above were played on.
 - **Cups: working, with one rule.** A cup built by `mkcup.py` has been carried through a
   Master League season with every round dated — 16 ties, then 8, 4, 2, 1. The rule is that the
   game fills a cup from the **first league in its region** (lowest competition id) and ignores
@@ -126,17 +135,26 @@ season** with 10 matches a round, 17,551 match records in all, and the busiest c
 held 172 of its 280 places. At the second registration date the module found all 40 already
 in a season and appended nothing.
 
+**The second season (updated 2026-09-23).** It did not work, and now it does. The game
+closes last season's competitions in July from a list compiled into the exe, and the added
+leagues were never on it: they kept last season's year, the next registration refused them,
+their points and matches added up season on season (a league at 76 matches after two
+seasons), and old matches stayed on the calendar. The updated `fl26join.dll` puts them on
+the July list and keeps them off the New Year one (their season runs August to May). Measured
+since: at the July rollover the added leagues close and re-open with the shipped ones, the
+new season starts with empty tables and the right year, and they carry on past the New Year
+after it with points still rising. **If you downloaded `fl26join.dll` before 2026-09-23,
+replace it.**
+
 What is **not** verified, stated plainly:
 
-- **The second season.** Whether the game re-registers the added leagues at the next
-  registration day, and whether the first season's records survive the turn of the year,
-  has not been played yet. It is the first thing to report if you get there.
 - **A season created with a shipped club as your team** on such a world. The measured run
   picked one of the added clubs.
-- **The January opening is unchanged.** With a club from a stand-alone league, the season
-  still opens in January; the league is registered about two weeks later and dated from
-  August, and the hub is empty until then. That the league now plays at all is the fix; the
-  odd start is not addressed.
+- **The January opening: fixed experimentally.** With a club from a stand-alone league the
+  season used to open in January. `sider/experimental/fl26augseason.lua` makes it open on
+  1 August (day 212), measured on two new careers on 2026-09-23. The cost, for now: the
+  European competitions do not start in such a career (see "Missing or unverified
+  features" above).
 - **A split-season format league** (a rulebook of the "two halves" kind, 12 clubs) enters
   the season but is given no fixtures. Different mechanism, not looked at yet.
 
@@ -158,7 +176,18 @@ that has ever run keeps its slot for good, so the count only rises. Watched acro
 seasons it went 88, 115, 119, **124 of 127**. Whether it stops there or reaches 127 is not
 yet known, and if it reaches 127 the same silent turning-away returns at the higher number.
 127 is also the ceiling of this patch's approach, so going further is a different and larger
-job. If you are playing many seasons on one world, this is the thing to watch.
+job (the experimental `fl26hdr192.lua` is that job). If you are playing many seasons on one
+world, this is the thing to watch.
+
+**Three sites added on 2026-09-23 (29 -> 32 patches).** Reading the live code after two
+seasons on the 192 version found three places that use the moved tables and that the scan
+had missed, because each carries the table start folded together with a field offset: the
+byte that says whether a table holds a final standing (+0x314), a copy that walks the tables
+(+0x1876), and a header copy that moves entries two at a time and still stopped at 100. The
+first one made the season end report "no table" for leagues that plainly had one, so they
+were left out of promotion and relegation. The fix was verified in play on the 192 version;
+the 127 version is generated by the same tool from the same list and has not been played
+yet. **If you downloaded `fl26hdr127.lua` before 2026-09-23, replace it.**
 
 ## Later seasons lost their fixtures — fixed 2026-09-17, verified across a rollover
 

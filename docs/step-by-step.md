@@ -127,7 +127,7 @@ lines like these, one per module:
 [fl26nullguard9.lua] fl26caps: applied all 2 patches -- nullguard9: empty schedule list guarded at 0x140cd6a18
 [fl26joindll.lua] fl26joindll: installed -- 39 added leagues will be registered on the first registration day of the season; the DLL's own log is ...\SiderAddons\fl26join.log (F10 = counters)
 [fl26joindll.lua] fl26joindll: fl26join: hooks live (register_all 141343bf0, enter_season 14158f420, builder 1413156e0, door 1413ac170), 39 competition ids
-[fl26hdr127.lua] fl26caps: applied all 29 patches -- hdr127: season header widened to 127 competitions, 599 phase tables
+[fl26hdr127.lua] fl26caps: applied all 32 patches -- hdr127: season header widened to 127 competitions, 599 phase tables
 ```
 
 | what the log says | what it means |
@@ -137,7 +137,7 @@ lines like these, one per module:
 | `WRITE FAILED` or `PARTIAL` | quit the game and report it; `PARTIAL` means a module got half-applied |
 | `fl26joindll: global ffi is nil` | step 4b was skipped; fix `luajit.ext.enabled` and start again |
 | `fl26joindll: LoadLibraryA failed` | `fl26join.dll` is not in `modules\` next to the Lua file |
-| `fl26joindll: install FAILED (status N)` | the DLL found different bytes at one of its four hooks and installed nothing; **report it with the number** |
+| `fl26joindll: install FAILED (status N)` | the DLL found different bytes at one of its eight hooks and installed nothing; **report it with the number** |
 
 A new file, `SiderAddons\fl26join.log`, appears after this run. It is short at this point
 (the `hooks live` line); it fills when a season is created.
@@ -292,8 +292,9 @@ a failure is usually noise.
 
 ## 10. Optional: the experimental modules
 
-Only after steps 1-9 have gone through once. `sider\experimental\` holds eight modules that
-do more and have not been through a full season yet — the Select Team list (three separate
+Only after steps 1-9 have gone through once. `sider\experimental\` holds twelve modules that
+do more and have only been run on our test world — a career that starts in August,
+promotion and relegation through deeper pyramids, the Select Team list (three separate
 faults in it), 64 menu regions, a league rank deep enough for five divisions, and 192
 competitions instead of 127. Each is described, with the order they need and the two slot
 lists you must fill in from your own world, in
