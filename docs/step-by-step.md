@@ -47,6 +47,11 @@ as disposable.
 Expected: `458910720` and
 `7C27ECB303B71331E36F9CCD8AC879F0F0D8C56C754BD4D0D2E9C8353464F847`.
 
+Also known to work (reported by a tester, all patches applied): FL26 v2.2, file version
+`26.2.0.3`, same size, SHA-256
+`9EE0C30651E5E3C37E3D308FB8224F5FEA135CD8E929DEE2CDDCA6E041836281`. A different hash does not
+by itself mean the modules will refuse; `sider.log` tells you (next step).
+
 **Different numbers? Stop and report them.** Everything here is byte-exact against that one
 build. The modules will refuse to touch a different one — they log `MISMATCH` and the game
 runs unmodified — but knowing which other builds exist is itself one of the things this beta

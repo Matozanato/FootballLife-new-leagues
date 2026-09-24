@@ -28,6 +28,11 @@ saves you a confusing startup. In PowerShell:
 Expected: `458910720` and
 `7C27ECB303B71331E36F9CCD8AC879F0F0D8C56C754BD4D0D2E9C8353464F847`.
 
+Also known to work (reported by a tester, all patches applied): FL26 v2.2, file version
+`26.2.0.3`, same size, SHA-256
+`9EE0C30651E5E3C37E3D308FB8224F5FEA135CD8E929DEE2CDDCA6E041836281`. A different hash does not
+by itself mean the modules will refuse; `sider.log` tells you (next step).
+
 If yours differ, the modules will log `MISMATCH` and `ABORTED` and the game runs unmodified.
 Please open an issue with your version so we know which builds are out there.
 

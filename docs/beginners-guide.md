@@ -73,7 +73,7 @@ Do **not** put this folder inside the game folder.
 
 ## Step 4. Check that your game is the right version
 
-The modules only work with one exact version of `FL_2026.exe`. In PowerShell type (with your
+The modules check the exact build of `FL_2026.exe`. In PowerShell type (with your
 own game path):
 
 ```powershell
@@ -85,6 +85,10 @@ own game path):
 If you see a different number, stop here. Your game is a different version and the modules
 will switch themselves off (nothing breaks, they just do nothing). Please open an issue on
 GitHub with that number.
+
+Both FL26 v2.0 (`26.0.0.0`) and v2.2 (`26.2.0.3`) have this size and are known to work. If
+the size matches but you are unsure about your build, carry on: Step 7 shows in `sider.log`
+whether the modules accepted it.
 
 ## Step 5. Copy the modules into the game
 
