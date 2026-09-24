@@ -13,10 +13,13 @@ This is a **research beta**. It is published so that people who mod this game ca
 break it, and tell us where. Read [what works and what does not](#status) before you
 install anything.
 
-> **Testing it for the first time? Start here:
-> [docs/step-by-step.md](docs/step-by-step.md)** — the whole thing from a stock install, in
-> order, with what you should see at each step and what is worth reporting. About twenty
-> minutes.
+> **New to all this? Start here: [docs/beginners-guide.md](docs/beginners-guide.md)** —
+> every step from installing Python to playing the new leagues, written for someone who has
+> never used Python or Sider modules. It says what you should see after each step and what
+> to do if you see something else. About thirty minutes.
+>
+> Testing it in detail? [docs/step-by-step.md](docs/step-by-step.md) has the same path with
+> everything worth checking and reporting along the way.
 
 ## Free to use — please credit
 
@@ -285,6 +288,9 @@ numbers in [docs/limits.md](docs/limits.md).
 
 ## Quick start
 
+Never done this before? Follow [docs/beginners-guide.md](docs/beginners-guide.md) instead;
+it is the same route, one small step at a time.
+
 1. **Back up** your save folder
    (`Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\2026\save`) and your `sider.ini`.
 2. Follow [docs/install.md](docs/install.md) to install the Sider modules — eleven files,
@@ -323,7 +329,7 @@ tools/              world builders (mkworld, mkplayers, mkcrests, mkkits, mkcup,
 tools/native/       the C source of the four DLLs, their build scripts and checksums
 patches/            the patch set as JSON plus the layout tables the generator reads
 docs/               step-by-step, install, build-your-world, testing-guide, known-issues,
-                    limits, how-it-works, for-developers, faq
+                    limits, how-it-works, for-developers, faq, beginners-guide
 ```
 
 ## Support
