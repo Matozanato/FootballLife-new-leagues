@@ -1343,6 +1343,8 @@ typedef uint64_t (*phkind_fn)(uint32_t* comp, uint64_t kind);
 unsigned char* g_tramp_phkind = 0;
 #define MENU_KO_RA  0x151f7c0   /* the menu's Knockout Phase item, kind 3 */
 #define MENU_KO4_RA 0x151f7da   /* ... and its kind 4 fallback */
+#define MENU_GRP_RA  0x151f78c  /* the menu's grouped-phase item, kind 0 */
+#define MENU_GRP2_RA 0x151fc11  /* ... and its enable check */
 static uint32_t g_kogrey_n = 0;
 uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
 {
@@ -1359,7 +1361,46 @@ uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
     }
     return r;
   }
+  /* Page type 0 is the grouped phase -- for our Europa and Conference League, the play-off
+     for places 9-24.  The menu asks for it twice (0x14151f78c: the item, 0x14151fc11: whether
+     it is live); until the play-off is drawn (+0x304 bit 8) the item is left out, as the
+     Knockout Phase item is, rather than offered under the game's fallback name "W-L Table"
+     with a page behind it that has nothing to show. */
+  if (comp && kind == 0 && (ra == g_base + MENU_GRP_RA || ra == g_base + MENU_GRP2_RA)) {
+    for (int ci = 1; ci < 3; ci++) {
+      const cup_t* c = &CUPS[ci];
+      if ((uint16_t)r != c->po) continue;
+      unsigned char* po = find_rec(c->po);
+      if (!po || !((*(uint32_t*)(po + 0x304) >> 8) & 1)) return r | 0xffff;
+    }
+  }
   return r;
+}
+
+/* ---- Competition Info -> a name for our play-offs ----
+ *
+ * 0x1414cb830(reg) gives a phase's display name (a text id; 0x3a20010 is "Play-offs") from a
+ * per-regulation record read through 0x1414fdbc0, or -1.  Ours were never in the game's text
+ * data, so once drawn the menu would still call them "W-L Table".  Asked by the menu
+ * (0x14151f7a2), the Europa and Conference League play-offs borrow the Champions League
+ * play-off's name.  The function is too small to hook and call through (a rel32 call sits in
+ * its first 17 bytes), so this is a full replacement of the same two lines of logic. */
+#define PHNAME_RVA 0x14cb830
+#define PHREC_RVA  0x14fdbc0
+#define MENU_NAME_RA 0x151f7a2
+static const unsigned char SIG_PHNAME[17] = {
+  0x48, 0x81, 0xec, 0x38, 0x01, 0x00, 0x00, 0x48, 0x8d, 0x54, 0x24, 0x20, 0xe8, 0x7f, 0x23, 0x03, 0x00 };
+typedef char (*phrec_fn)(uint64_t reg, unsigned char* out);
+unsigned char* g_tramp_phname = 0;
+uint64_t phname_handler(uint64_t reg)
+{
+  unsigned char rec[0x200];
+  phrec_fn get = (phrec_fn)(uintptr_t)(g_base + PHREC_RVA);
+  if (get(reg & 0xffff, rec)) return *(uint32_t*)(rec + 0x40);
+  if ((uintptr_t)__builtin_return_address(0) == g_base + MENU_NAME_RA &&
+      ((uint16_t)reg == CUPS[1].po || (uint16_t)reg == CUPS[2].po) && get(CUPS[0].po, rec))
+    return *(uint32_t*)(rec + 0x40);
+  return 0xffffffffull;
 }
 
 /* ---- Competition Info -> Group stage for the Europa and Conference League ----
@@ -1791,6 +1832,10 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
     logf("fl26swiss: knockout item guard live (phase by kind@%llx)", (unsigned long long)(exe_base + PHKIND_RVA));
   else
     logf("fl26swiss: knockout item guard NOT installed (signature)");
+  if (!hook((unsigned char*)(uintptr_t)(exe_base + PHNAME_RVA), SIG_PHNAME, 17, (void*)phname_handler, &g_tramp_phname))
+    logf("fl26swiss: play-off names live (@%llx)", (unsigned long long)(exe_base + PHNAME_RVA));
+  else
+    logf("fl26swiss: play-off names NOT installed (signature)");
   if (!hook((unsigned char*)(uintptr_t)(exe_base + GSTAGE_RVA), SIG_GSTAGE, 19, (void*)gstage_handler, &g_tramp_gstage))
     logf("fl26swiss: group stage item live (@%llx)", (unsigned long long)(exe_base + GSTAGE_RVA));
   else

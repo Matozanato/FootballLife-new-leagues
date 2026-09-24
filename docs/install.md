@@ -64,7 +64,9 @@ yourself from the source in `tools/native/` are in
 > patch** (2,760 -> 2,759): it handed one game function the end of the moved match table where
 > that function wants the start of the calendar. Replace the file. The edit block keeps its
 > size, so your saves still load. If you use the experimental `fl26swiss`, replace
-> `fl26swiss.dll` too (Competition Info fixes, see the experimental README).
+> `fl26swiss.dll` too (Competition Info fixes, see the experimental README). It was updated
+> once more later that day (the Europa/Conference League *Play-offs* item), so take the
+> current file even if you already replaced it this morning.
 >
 > Two things changed on 2026-09-22.
 >

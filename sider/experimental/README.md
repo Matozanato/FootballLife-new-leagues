@@ -161,6 +161,11 @@ undoes it.
   *Knockout Phase* before the knockout draw crashed the game, for all three competitions.
   That item is now left out of the menu until the knockout phase is under way. The sider.log
   lines are `knockout item guard live` and `group stage item live`.
+  Update 2026-09-25: the play-off for places 9-24 used to appear as *W-L Table*. It is now
+  called *Play-offs*, stays grey until the play-off is drawn (the Conference League draw comes
+  in December, the Europa League one in February), and then shows the ties. The page heading
+  still reads *Group stage - Matchday ...*; that is the game's own heading and harmless. The
+  extra sider.log line is `play-off names live`.
 
 **What is not right yet, plainly:**
 

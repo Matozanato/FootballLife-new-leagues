@@ -211,7 +211,9 @@ published modules on **2026-09-24**.
 - **(Fixed with the experimental `fl26swiss`, 2026-09-24.) Competition Info for the
   European competitions.** The Europa League and Conference League tables were greyed out
   under *Group stage*, and opening *Knockout Phase* before the knockout draw crashed the game.
-  Both tables now show, and the knockout item appears once that phase starts.
+  Both tables now show, and the knockout item appears once that phase starts. The play-off
+  item (places 9-24) is called *Play-offs* instead of *W-L Table*, stays grey until the
+  play-off is drawn, and then lists its ties (updated 2026-09-25).
   [Details](sider/experimental/README.md#the-european-format-and-league-sizes-fl26swiss).
 
 **Does not work yet / under investigation**
