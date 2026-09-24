@@ -245,8 +245,26 @@ That is it. You are playing the new leagues.
 ## Optional: give clubs and players real names
 
 - **Rename clubs:** `tools\rename.py`. See [How do I rename the new clubs?](faq.md#how-do-i-rename-the-new-clubs)
-- **Edit players** (name, shirt number, copy a real player's abilities onto a new one):
-  `tools\players.py`. See [How do I edit the players of the new clubs?](faq.md#how-do-i-edit-the-players-of-the-new-clubs-if-not-in-edit-mode)
+- **Edit players and create new ones:** `tools\playeredit.py`. It exports a club to a CSV
+  file you open in Excel (every player on one line, every field in its own column: name,
+  position, height, abilities, skills, shirt number...), and imports it back. For example,
+  for the first club of the world from step 9:
+
+  ```
+  python tools\playeredit.py --root "C:\Football Life 2026\SiderAddons\livecpk\_FL26World" --export C:\fl26\club.csv --club "FL 0001"
+  ```
+
+  Change what you want in Excel, save it as **CSV UTF-8**, then:
+
+  ```
+  python tools\playeredit.py --root "C:\Football Life 2026\SiderAddons\livecpk\_FL26World" --import C:\fl26\club.csv
+  ```
+
+  **You should see** `... players changed`. If you see `nothing written:` instead, the list
+  under it says which line and which value is wrong; fix it and import again. Nothing was
+  changed in the meantime. The first 11 players by the `order` column are the starting
+  eleven, in this order: GK, CB, CB, RB, LB, DMF, DMF, RMF, LMF, AMF, CF.
+  More, including how to create a new player: [How do I edit the players of the new clubs?](faq.md#how-do-i-edit-the-players-of-the-new-clubs-if-not-in-edit-mode)
 - **Crests and kits:** step 7 of [step-by-step.md](step-by-step.md).
 
 After any of these, start a **new** Master League career to see the change. A career that
