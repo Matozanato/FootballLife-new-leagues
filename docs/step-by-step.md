@@ -121,7 +121,7 @@ Start the game, get to the main menu, quit. Open `SiderAddons\sider.log` and loo
 lines like these, one per module:
 
 ```
-[fl26caps.lua] fl26caps: applied all 2760 patches -- block 0x1877068 -> 0x3cd4ae8, 2760 patches
+[fl26caps.lua] fl26caps: applied all 2759 patches -- block 0x1877068 -> 0x3cd4ae8, 2759 patches
 [fl26nullguard.lua] fl26caps: applied all 2 patches -- nullguard: null-check at 0x141fea5b0
 ...
 [fl26nullguard9.lua] fl26caps: applied all 2 patches -- nullguard9: empty schedule list guarded at 0x140cd6a18

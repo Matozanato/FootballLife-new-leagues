@@ -700,7 +700,9 @@ static int uecl_ko(void* started)
  * Which of the two uses of reg 2 is meant is read from the game's own day counter, not kept in
  * the DLL, so a save loaded in the middle of the play-off still goes the right way: August
  * starts on day 212, the play-off is in February. */
+#ifndef TODAY_OFF   /* -DTODAY_OFF=... builds for a set that moves the block (the -calendar set) */
 #define TODAY_OFF  0x1642a1c
+#endif
 #define WINNER_RVA 0x151b2e0
 #define FREETAB_RVA 0x1363040   /* (this, u16 id): free a regulation's tie tables -- the July teardown's own step */
 #define PO_MONTHS_BEFORE 180                 /* any day below this is the second half of a season */
@@ -1273,6 +1275,140 @@ uint64_t stand_handler(void* self)
   return r;
 }
 
+/* ---- the current phase of a new-format competition ----
+ *
+ * 0x14150c3c0(comp, flag, flag) answers "which phase of this competition is being played now":
+ * it sorts the competition's phases by the format field (+0x308 bits 23-28) against a fixed
+ * table of formats in 0x1414ce390 and returns the first one 0x141546c70 does not call finished.
+ * That table puts the play-off format (18, the Champions League's August qualifier) before
+ * every group or league format, which was right when the play-off came first.  In the new
+ * format the play-off comes after the league phase, and the Europa and Conference League
+ * play-offs (188, 189) carry format 18 -- so for the whole autumn both competitions answered
+ * "the play-off", which is not drawn until February:
+ *
+ *   - Competition Info greyed out their Group stage and every ranking (24.09, day 345), and
+ *   - 0x141510280 (295 callers, "which phase is this club playing in now") found no Europa or
+ *     Conference League club in its competition at all.
+ *
+ * The Champions League only escaped because its play-off, reg 2, is also its August round
+ * and so reads as finished until February.  So for our three competitions the phases are put
+ * in the order they are played -- league, play-off, knockout -- and the first unfinished one
+ * wins, judged by the game's own 0x141546c70.  Everything else, and a competition whose phases
+ * are all finished, gets the original answer. */
+#define CURPH_RVA 0x150c3c0
+#define PHFIN_RVA 0x1546c70
+static const unsigned char SIG_CURPH[15] = {
+  0x88, 0x54, 0x24, 0x10, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57 };
+typedef uint64_t (*curph_fn)(uint64_t comp, uint64_t flag, uint64_t flag2);
+typedef char (*phfin_fn)(uint64_t id);
+unsigned char* g_tramp_curph = 0;
+static uint32_t g_curph_n = 0;
+static unsigned char* find_rec(uint16_t id)
+{
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  void* blk = o ? *(void**)(o + 0x48) : 0;
+  return blk ? (unsigned char*)((findrec_fn)(uintptr_t)(g_base + FINDREC_RVA))(blk, id) : 0;
+}
+uint64_t curph_handler(uint64_t comp, uint64_t flag, uint64_t flag2)
+{
+  uint64_t r = ((curph_fn)(uintptr_t)g_tramp_curph)(comp, flag, flag2);
+  for (int ci = 0; ci < 3; ci++) {
+    const cup_t* c = &CUPS[ci];
+    unsigned char* lg = find_rec(c->league);
+    if (!lg || *(uint32_t*)(lg + 0x80) != (uint32_t)comp) continue;
+    const uint16_t order[3] = { c->league, c->po, c->ko };
+    for (int k = 0; k < 3; k++) {
+      if (!find_rec(order[k])) continue;
+      if (((phfin_fn)(uintptr_t)(g_base + PHFIN_RVA))(order[k])) continue;
+      if (order[k] != (uint16_t)r && g_curph_n++ < 8)
+        logf("fl26swiss: %s is in phase %u, not %u (the format table's order)",
+             c->name, (unsigned)order[k], (unsigned)(uint16_t)r);
+      return (r & ~0xffffull) | order[k];
+    }
+    return r;
+  }
+  return r;
+}
+
+/* ---- Competition Info -> Knockout Phase, the menu side ----
+ *
+ * 0x14150af30(u32* comp, kind) finds a phase of a competition by what it is (kind 3 = the
+ * knockout phase, 4 its fallback).  When the Competition Info menu asks it for its Knockout
+ * Phase item, the answer is withheld until that phase is the current one -- see the page
+ * builder note below for why.  Every other caller gets the game's answer untouched. */
+#define PHKIND_RVA 0x150af30
+static const unsigned char SIG_PHKIND[15] = {
+  0x89, 0x54, 0x24, 0x10, 0x48, 0x89, 0x4c, 0x24, 0x08, 0x53, 0x55, 0x56, 0x57, 0x41, 0x54 };
+typedef uint64_t (*phkind_fn)(uint32_t* comp, uint64_t kind);
+unsigned char* g_tramp_phkind = 0;
+#define MENU_KO_RA  0x151f7c0   /* the menu's Knockout Phase item, kind 3 */
+#define MENU_KO4_RA 0x151f7da   /* ... and its kind 4 fallback */
+static uint32_t g_kogrey_n = 0;
+uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
+{
+  uint64_t r = ((phkind_fn)(uintptr_t)g_tramp_phkind)(comp, kind);
+  uintptr_t ra = (uintptr_t)__builtin_return_address(0);
+  if (comp && (uint16_t)r != 0xffff &&
+      ((kind == 3 && ra == g_base + MENU_KO_RA) || (kind == 4 && ra == g_base + MENU_KO4_RA))) {
+    uint64_t cur = ((curph_fn)(uintptr_t)(g_base + CURPH_RVA))(*comp, 1, 0);
+    if ((uint16_t)cur != (uint16_t)r) {
+      if (g_kogrey_n++ < 8)
+        logf("fl26swiss: Knockout Phase greyed for comp %u (knockout %u, current phase %u)",
+             *comp, (unsigned)(uint16_t)r, (unsigned)(uint16_t)cur);
+      return r | 0xffff;
+    }
+    return r;
+  }
+  return r;
+}
+
+/* ---- Competition Info -> Group stage for the Europa and Conference League ----
+ *
+ * The menu enables its Group stage item (page type 2, the league-phase table) when
+ * 0x14151be10 says so, and that answer is read off the first group phase in the format
+ * table's order -- for the Champions League its play-off, which the game marks as drawn, so
+ * the item is live and shows the 36-club table.  Our Europa and Conference League play-offs
+ * come after the league phase and are not drawn until February, so the item stayed grey all
+ * autumn.  For those two the answer is the league phase's own "drawn" bit (+0x304 bit 8).
+ * An earlier attempt pointed the play-off lookup (kind 0) at the league phase instead; that
+ * lit the W-L item, whose page wants a grouped phase and aborted on an empty group list
+ * (24.09, 23:32). */
+#define GSTAGE_RVA 0x151be10
+static const unsigned char SIG_GSTAGE[19] = {
+  0x40, 0x57, 0x41, 0x56, 0x41, 0x57, 0x48, 0x83, 0xec, 0x40,
+  0x48, 0xc7, 0x44, 0x24, 0x20, 0xfe, 0xff, 0xff, 0xff };
+typedef uint64_t (*gstage_fn)(uint32_t* comp);
+unsigned char* g_tramp_gstage = 0;
+static uint32_t g_gstage_n = 0;
+uint64_t gstage_handler(uint32_t* comp)
+{
+  uint64_t r = ((gstage_fn)(uintptr_t)g_tramp_gstage)(comp);
+  if (!comp) return r;
+  for (int ci = 1; ci < 3; ci++) {
+    const cup_t* c = &CUPS[ci];
+    unsigned char* lg = find_rec(c->league);
+    if (!lg || *(uint32_t*)(lg + 0x80) != *comp) continue;
+    uint64_t on = (*(uint32_t*)(lg + 0x304) >> 8) & 1;
+    if ((r & 0xff) != on && g_gstage_n++ < 8)
+      logf("fl26swiss: %s Group stage item %s (league phase %u)", c->name, on ? "enabled" : "disabled",
+           (unsigned)c->league);
+    return (r & ~0xffull) | on;
+  }
+  return r;
+}
+
+/* ---- Competition Info -> Knockout Phase before the knockout phase exists ----
+ *
+ * The page builder 0x140caaa70 takes the knockout phase (0x14150af30 kind 3, else kind 4) and
+ * fetches its record only when it is also the current phase (the cmp at 0x140caae5a); otherwise
+ * the record pointer stays NULL and the page loop reads through it at 0x140cab3a4.  The menu
+ * (0x14151f5f0) offers the item all season, so opening it in the autumn killed the game --
+ * Europa League at 22:35 and the Champions League on the retry, 24.09.  Letting the builder
+ * fetch the record anyway only moved the crash (a fast-fail at 23:21), so phkind_handler greys
+ * the item instead: when the menu asks for the knockout phase and that is not the current
+ * phase, it hears "no such phase" -- the same answer that greys the item for a cup without one.
+ * The rule is the builder's own condition, so it holds for every competition. */
+
 /* The replacement for 0x14157f810.  cx = regulation id, rdx = the vector the caller wants
    filled with {day of year, round, kind} records.
  *
@@ -1646,6 +1782,19 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
     else
       logf("fl26swiss: Conference League July teardown NOT installed (signature)");
   }
+  if (!hook((unsigned char*)(uintptr_t)(exe_base + CURPH_RVA), SIG_CURPH, 15, (void*)curph_handler, &g_tramp_curph))
+    logf("fl26swiss: phase order live (current phase@%llx: league, play-off, knockout)",
+         (unsigned long long)(exe_base + CURPH_RVA));
+  else
+    logf("fl26swiss: phase order NOT installed (signature)");
+  if (!hook((unsigned char*)(uintptr_t)(exe_base + PHKIND_RVA), SIG_PHKIND, 15, (void*)phkind_handler, &g_tramp_phkind))
+    logf("fl26swiss: knockout item guard live (phase by kind@%llx)", (unsigned long long)(exe_base + PHKIND_RVA));
+  else
+    logf("fl26swiss: knockout item guard NOT installed (signature)");
+  if (!hook((unsigned char*)(uintptr_t)(exe_base + GSTAGE_RVA), SIG_GSTAGE, 19, (void*)gstage_handler, &g_tramp_gstage))
+    logf("fl26swiss: group stage item live (@%llx)", (unsigned long long)(exe_base + GSTAGE_RVA));
+  else
+    logf("fl26swiss: group stage item NOT installed (signature)");
   if (!memcmp((void*)(uintptr_t)(exe_base + STAND_RVA), SIG_STAND, 15) &&
       !hook((unsigned char*)(uintptr_t)(exe_base + STAND_RVA), SIG_STAND, 15, (void*)stand_handler, &g_tramp_stand))
     logf("fl26swiss: standings row guard live (@%llx)", (unsigned long long)(exe_base + STAND_RVA));

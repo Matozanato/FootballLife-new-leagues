@@ -59,7 +59,7 @@ game loses everything past the shipped count, and a coach lookup lands on the wr
 
 This project does two things:
 
-1. **`sider/fl26caps.lua`** — a runtime patch set of 2,760 byte changes, applied by Sider at
+1. **`sider/fl26caps.lua`** — a runtime patch set of 2,759 byte changes, applied by Sider at
    startup, that grows those tables and every piece of code that indexes them:
 
    | table | shipped | with fl26caps |
@@ -183,7 +183,7 @@ published modules on **2026-09-24**.
   because the shipped cup calendar only covers a sixteen-club bracket. With twenty, one round
   is left with no date and the cup stalls. No executable change is involved.
 
-**Does not work yet / under investigation**
+**Fixed** (these used to be listed below as open problems)
 
 - **(Fixed 2026-09-16.)** The crash a day after matchday 1 was ours: on load, regulation
   records were written over the top of the team array, so 69 clubs came back from a save
@@ -200,6 +200,22 @@ published modules on **2026-09-24**.
   rather than hidden: five of the 39 leagues do not keep the PREVIOUS season's matches across
   the turn of the year. The other 34 carry two seasons at once at that point; those five carry
   only the new one. They all play. [Details](docs/known-issues.md).
+- **(Fixed with the experimental `fl26swiss`, 2026-09-24.) The European competitions in a
+  career that starts in August.** The game registers the European competitions on day 238,
+  after the Champions League play-off dates (days 230 and 237), so on its own the play-off
+  never gets its matches and nothing after it begins. `fl26swiss` runs its own play-off and
+  starts all three competitions; measured on 2026-09-24 through the knockout rounds. Without
+  `fl26swiss` this still happens (the domestic season is not affected), and without
+  `fl26augseason.lua` the career opens in January instead.
+
+- **(Fixed with the experimental `fl26swiss`, 2026-09-24.) Competition Info for the
+  European competitions.** The Europa League and Conference League tables were greyed out
+  under *Group stage*, and opening *Knockout Phase* before the knockout draw crashed the game.
+  Both tables now show, and the knockout item appears once that phase starts.
+  [Details](sider/experimental/README.md#the-european-format-and-league-sizes-fl26swiss).
+
+**Does not work yet / under investigation**
+
 - **The competition table can still fill up.** `fl26hdr127.lua` raises it from 100 to 127,
   but an entry is never given back, so across four seasons the count rose 88, 115, 119, 124.
   Whether it stops below 127 is not yet known. The experimental `fl26hdr192.lua`, which our
@@ -208,9 +224,12 @@ published modules on **2026-09-24**.
 - **The game crashes now and then inside its own protected code** (fault offsets
   `0x84ed4c0`, `0x131cc313`, `0x18ecc042`), while a scene is being set up: generating a
   season, loading a match, a season rollover. On 2026-09-24 that was five times in about four
-  hours of simulated play. It is not yet explained, and it has not been tested whether it also
-  happens on a stock game, so do not take it for a game bug. The saved season is not damaged:
-  reload and carry on, and save often. This is being worked on now.
+  hours of simulated play. **Two of them are the game's own:** on 2026-09-24 a stock game,
+  with none of our modules and no added world, crashed at `0x131cc313` on the first match
+  day and, in a second run, at `0x1fea5ba` while loading a live match (the crash
+  `fl26nullguard.lua` catches); `0x18ecc042` at start-up also happens on a stock game.
+  `0x84ed4c0` has not been seen on a stock game yet (about an hour and a half tried), so it
+  is still open. The saved season is not damaged: reload and carry on, and save often.
 - **A calendar day holds only 280 matches**, and everything past that is dropped in silence
   — no error, no sign in the world files, just a round that never happens. The published
   remedy is to spread the leagues over different weekdays, which is what `--date-offsets` is
@@ -225,13 +244,6 @@ published modules on **2026-09-24**.
   same id, which is what `fl26join.dll` now works around **(fixed 2026-09-22)**. The dates
   still come from the first table, so the id list in `fl26caps.lua` still matters. See
   [how-it-works.md](docs/how-it-works.md).
-- **In a career that starts in August, the shipped European competitions do not start.**
-  The Champions League play-off is dated on days 230 and 237 of the year, and the game
-  registers the European competitions on day 238, after both, so the play-off never gets its
-  matches and nothing after it begins. The domestic season is not affected. The experimental
-  European format (`fl26swiss`) runs its own play-off and starts all three competitions;
-  without it, this still happens. Without `fl26augseason.lua` the career opens in January
-  instead, with the league's first round in August.
 - Not measured yet: a world like this with a **shipped club** as your team.
 - **Rulebook ids above 175 work in Master League but are invisible in the Select Team list**
   unless `sider/experimental/fl26comptab.lua` is installed. That list is a static table in the

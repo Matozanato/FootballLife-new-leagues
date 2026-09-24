@@ -6,7 +6,7 @@ and sider/fl26caps.template.lua. Editing it by hand loses the guarantee that eve
 below came from disassembling the instruction at that address.
 
 Set:     teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures
-Summary: block 0x1877068 -> 0x3cd4ae8, 2760 patches
+Summary: block 0x1877068 -> 0x3cd4ae8, 2759 patches
 
 What it does, and the one rule it follows: read every target address first and compare it
 against the bytes the generator saw in the exe; only if all of them match does it write
@@ -2790,7 +2790,6 @@ local patches = {
   {va=0x144758576, old="04bdd000", new="9808b203", why="impdata upper1 edit: 0xd0bd04 -> 0x3b20898 (lea rcx, [rsi + 0xd0bd04])"},
   {va=0x1447585cc, old="04bdd000", new="9808b203", why="impdata upper1 edit: 0xd0bd04 -> 0x3b20898 (lea rcx, [rsi + 0xd0bd04])"},
   {va=0x144b24ab4, old="6861d600", new="84847203", why="impdata fixtures edit: 0xd66168 -> 0x3728484 (mov eax, dword ptr [rax + 0xd66168])"},
-  {va=0x14438ccf0, old="a8386001", new="b0b24502", why="impdata rec596 extra: 0x16038a8 -> 0x245b2b0 (lea rcx, [r14 + 0x16038a8])"},
 }
 
 local function unhex(s)

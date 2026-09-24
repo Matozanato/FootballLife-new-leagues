@@ -55,7 +55,13 @@ fl26hdr127.lua        room for 127 competitions in a season
 yourself from the source in `tools/native/` are in
 [tools/native/README.md](../tools/native/README.md).
 
-> **Updating from an earlier download?** Two things changed on 2026-09-22.
+> **Updating from an earlier download?** On 2026-09-25 **`sider/fl26caps.lua` lost one
+> patch** (2,760 -> 2,759): it handed one game function the end of the moved match table where
+> that function wants the start of the calendar. Replace the file. The edit block keeps its
+> size, so your saves still load. If you use the experimental `fl26swiss`, replace
+> `fl26swiss.dll` too (Competition Info fixes, see the experimental README).
+>
+> Two things changed on 2026-09-22.
 >
 > - **`fl26nullguard3.lua` is replaced by `fl26nullguard9.lua`.** Both guard the same
 >   unchecked read of the schedule list; the new one covers it on both paths that reach it
@@ -117,7 +123,7 @@ Start FL26 once, get to the main menu, quit, and open `SiderAddons\sider.log`. Y
 ten lines like these, one per module line in `sider.ini`:
 
 ```
-[fl26caps.lua] fl26caps: applied all 2760 patches -- block 0x1877068 -> 0x3cd4ae8, 2760 patches
+[fl26caps.lua] fl26caps: applied all 2759 patches -- block 0x1877068 -> 0x3cd4ae8, 2759 patches
 [fl26nullguard.lua] fl26caps: applied all 2 patches -- nullguard: null-check at 0x141fea5b0
 [fl26nullguard2.lua] fl26caps: applied all 2 patches -- nullguard2: null-check at 0x140fc9238
 [fl26nullguard4.lua] fl26caps: applied all 2 patches -- nullguard4: null-check at 0x1415720d0

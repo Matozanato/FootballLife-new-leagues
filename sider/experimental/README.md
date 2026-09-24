@@ -154,7 +154,13 @@ undoes it.
 - the second season: every league size given the right number of rounds (10 clubs x 4 = 36,
   12 x 3 = 33, 12 x 4 = 44, 22 x 2 = 42, 24 x 2 = 46), and the August draw filling all three
   competitions from the final tables of the season before:
-  `access -- 36/36/36 (108 positions from last season's tables, 0 from list order, 0 missing)`.
+  `access -- 36/36/36 (108 positions from last season's tables, 0 from list order, 0 missing)`;
+- **Database -> Competition Info** (fixed late on 2026-09-24): the Europa League and the
+  Conference League now show their 36-club league-phase table under *Group stage*, as the
+  Champions League does. Before, the item was greyed out for both all autumn, and opening
+  *Knockout Phase* before the knockout draw crashed the game, for all three competitions.
+  That item is now left out of the menu until the knockout phase is under way. The sider.log
+  lines are `knockout item guard live` and `group stage item live`.
 
 **What is not right yet, plainly:**
 
