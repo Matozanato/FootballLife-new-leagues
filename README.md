@@ -297,6 +297,8 @@ numbers in [docs/limits.md](docs/limits.md).
 4. Start an exhibition match between two new clubs, then a Master League season with one of
    them. Then read the [testing guide](docs/testing-guide.md) and report what you see.
 
+Renaming the new clubs, and whether they show up in Edit mode: see [docs/faq.md](docs/faq.md).
+
 ## Reporting
 
 Open a GitHub issue. The [testing guide](docs/testing-guide.md#what-to-send) says exactly
@@ -316,12 +318,12 @@ sider/experimental/ fourteen modules that go further, run on our test world only
                     a Super Cup guard, the 2024 European format and league sizes
                     (fl26swiss.dll), country names in Competition Info
 tools/              world builders (mkworld, mkplayers, mkcrests, mkkits, mkcup,
-                    spreadregions, mkreshape, mkuecl, mkeuropo, mksizes ...),
+                    spreadregions, mkreshape, mkuecl, mkeuropo, mksizes, rename ...),
                     pesdb/CPK readers, the patch-set generator and its checkers
 tools/native/       the C source of the four DLLs, their build scripts and checksums
 patches/            the patch set as JSON plus the layout tables the generator reads
 docs/               step-by-step, install, build-your-world, testing-guide, known-issues,
-                    limits, how-it-works, for-developers
+                    limits, how-it-works, for-developers, faq
 ```
 
 ## Support

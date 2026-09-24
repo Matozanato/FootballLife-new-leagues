@@ -77,6 +77,7 @@ players 0x17c, clubs 0x690, coaches 0x258, regulations 0x314, match records 0x25
 | `mkleague.py`, `mkteams.py` | the single-league and clubs-only builders mkworld wraps |
 | `mkplayers.py` | placeholder squads for the new clubs |
 | `mkcup.py` | a knockout cup among chosen clubs |
+| `rename.py` | list the clubs of a world, or rename them from a CSV file (name and abbreviation only) |
 | `siderroot.py` | switch which `_FL26*` cpk.root is active |
 | `patchset.py` + `callindex.py`, `datecave.py`, `copyfields.py`, `impscan.py`, `calwiden.py`, `boundscan.py` | the patch set generator and its helpers (`calwiden.py` is only used by the unpublished calendar-widening set, but the generator imports it) |
 | `flpaths.py` | where your game is; environment variables |
