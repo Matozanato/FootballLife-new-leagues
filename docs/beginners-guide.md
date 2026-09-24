@@ -245,7 +245,21 @@ That is it. You are playing the new leagues.
 ## Optional: give clubs and players real names
 
 - **Rename clubs:** `tools\rename.py`. See [How do I rename the new clubs?](faq.md#how-do-i-rename-the-new-clubs)
-- **Edit players and create new ones:** `tools\playeredit.py`. It exports a club to a CSV
+- **Edit players in a window:** `tools\playereditor.py`. For the world from step 9:
+
+  ```
+  python tools\playereditor.py --root "C:\Football Life 2026\SiderAddons\livecpk\_FL26World"
+  ```
+
+  (Without `--root` it asks for the world folder: pick `_FL26World`, the folder that holds
+  `common`.) **You should see** a window with the clubs on the left. Click a club, then a
+  player; his fields are on the right in four tabs (Profile, Positions, Abilities, Skills).
+  Change what you want and press **Apply**, then **Save**. The green rows are the starting
+  eleven; **Up** and **Down** move the selected player, **New player** adds one to the club
+  as a copy of the selected player. A value the game cannot store (Speed 150, say) is refused
+  with a message and nothing is changed. The first Save keeps the originals as
+  `Player.bin.bak` and `PlayerAssignment.bin.bak`.
+- **Edit players in Excel instead:** `tools\playeredit.py`. It exports a club to a CSV
   file you open in Excel (every player on one line, every field in its own column: name,
   position, height, abilities, skills, shirt number...), and imports it back. For example,
   for the first club of the world from step 9:

@@ -74,7 +74,17 @@ Edit mode reaches a club through its league, so players of a club in a new leagu
 reached there (see the question above). Players of clubs you added to a league the game
 already has can be edited in Edit mode as usual.
 
-For the rest, edit the world's data files with `tools/playeredit.py`, the same way
+The easiest way is the editor with a window:
+
+```
+python tools\playereditor.py --root <your livecpk world>
+```
+
+Pick a club, pick a player, change any field, **Apply**, **Save**. **New player** creates one,
+**Up** / **Down** change the squad order (the green rows are the starting eleven). It uses the
+same checks as the spreadsheet route below.
+
+For many players at once, edit the world's data files with `tools/playeredit.py`, the same way
 `rename.py` does clubs. The players live in the world's `common\etc\pesdb\Player.bin`, and
 which club each one plays for, with his shirt number and his place in the squad, in
 `PlayerAssignment.bin`. Every field of a player is known (see

@@ -41,7 +41,8 @@ problems.  The original files are kept as .bak the first time.
 Fields and their ranges (see docs/player-record.md for where each one sits in the record):
 
   Registered Position   GK CB LB RB DMF CMF LMF RMF AMF LWF RWF SS CF
-  GK .. CF              position rating for each position: 0 none, 1 can play, 2 natural
+  GK .. CF              position rating for each position: 0 none, 1 can play, 2 natural;
+                        a new registered position is set to 2 there
   Height (cm)           100-227     Weight (kg)     30-157     Age          15-78
   Nationality           0-511, a country code: copy it from a player of that country
   Stronger Foot         Right / Left
@@ -139,6 +140,15 @@ def setf(rec, name, val):
     v = int.from_bytes(rec, "little")
     v = v & ~(((1 << w) - 1) << b) | ((val - add) << b)
     rec[:] = v.to_bytes(len(rec), "little")
+
+
+def natural(rec, before):
+    """a player moved to a new registered position is rated 2 (natural) there, as all but
+    106 of the 51,327 players of the test world are at theirs; a player whose registered
+    position did not change is left alone"""
+    reg = getf(rec, "Registered Position")
+    if reg != getf(before, "Registered Position") and reg < len(POSITIONS):
+        setf(rec, POSITIONS[reg], 2)
 
 
 def show(name, v):
@@ -331,8 +341,10 @@ def main():
             print("new player %d at club %d, shirt %d, squad order %d" % (pid, club, shirt, order))
         o = index[pid]
         rec = bytearray(players[o:o + P_REC])
+        old = bytes(rec)
         for n, v in vals.items():
             setf(rec, n, v)
+        natural(rec, old)
         if name and name != cstr(rec[P_NAME:P_NAME + P_NAME_LEN]).strip():
             nm = name.encode("utf-8")
             for k in range(P_NAME_SLOTS):
