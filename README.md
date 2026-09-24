@@ -324,7 +324,8 @@ sider/experimental/ fourteen modules that go further, run on our test world only
                     a Super Cup guard, the 2024 European format and league sizes
                     (fl26swiss.dll), country names in Competition Info
 tools/              world builders (mkworld, mkplayers, mkcrests, mkkits, mkcup,
-                    spreadregions, mkreshape, mkuecl, mkeuropo, mksizes, rename, players ...),
+                    spreadregions, mkreshape, mkuecl, mkeuropo, mksizes, rename, players,
+                    playeredit ...),
                     pesdb/CPK readers, the patch-set generator and its checkers
 tools/native/       the C source of the four DLLs, their build scripts and checksums
 patches/            the patch set as JSON plus the layout tables the generator reads

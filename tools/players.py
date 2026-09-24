@@ -17,11 +17,8 @@ player, all of which the file format is known for:
                player in the same Player.bin, including the shipped ones
   shirt        the shirt number, 1..99, in PlayerAssignment.bin (bits 0-9 of +0x0c)
 
-Setting single ability values is deliberately not offered.  The ability block
-(+0x1c..+0x36) is only partly decoded: the fields have no known names yet, a few of them do
-not decode cleanly, and the bits just above them hold the player's registered position,
-so a careless write can turn a whole squad into goalkeepers.  Copying a whole record from a
-player who already plays the way you want is safe; guessing numbers is not.
+To set single fields -- any ability, position, height, foot, skill -- or to create new
+players, use playeredit.py, which knows every field of the record (docs/player-record.md).
 
 --list prints player id, club id, shirt number and name, one player per line.  --club
 limits it to one club (its team id, or its name exactly as rename.py --list prints it).
