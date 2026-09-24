@@ -121,7 +121,7 @@ Start the game, get to the main menu, quit. Open `SiderAddons\sider.log` and loo
 lines like these, one per module:
 
 ```
-[fl26caps.lua] fl26caps: applied all 2760 patches -- block 0x1877068 -> 0x3171a68, 2760 patches
+[fl26caps.lua] fl26caps: applied all 2760 patches -- block 0x1877068 -> 0x3cd4ae8, 2760 patches
 [fl26nullguard.lua] fl26caps: applied all 2 patches -- nullguard: null-check at 0x141fea5b0
 ...
 [fl26nullguard9.lua] fl26caps: applied all 2 patches -- nullguard9: empty schedule list guarded at 0x140cd6a18
@@ -292,7 +292,7 @@ a failure is usually noise.
 
 ## 10. Optional: the experimental modules
 
-Only after steps 1-9 have gone through once. `sider\experimental\` holds twelve modules that
+Only after steps 1-9 have gone through once. `sider\experimental\` holds fourteen modules that
 do more and have only been run on our test world — a career that starts in August,
 promotion and relegation through deeper pyramids, the Select Team list (three separate
 faults in it), 64 menu regions, a league rank deep enough for five divisions, and 192

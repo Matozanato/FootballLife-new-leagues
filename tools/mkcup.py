@@ -109,8 +109,24 @@ def main():
         print("note: bracket %d is bigger than the %d clubs entered, so there will be byes"
               % (bracket, len(teams)))
 
+    # The old defaults were cid 150 and reg 200, and cid 150 is wrong in the only world this
+    # is going to be used in: mkworld allocates competition ids from 130 upward, so a
+    # 39-league world already owns 130-168 and the shipped rows carry on to 173.  Picking a
+    # fixed number here means silently landing on top of one of our own leagues.  So do what
+    # mkworld does and take the first id nothing claims -- measured on _FL26G39, that is cid
+    # 174 and regulation 186.
+    import mkworld as W
+    used_cid = {comp[i * M.COMP + M.CID_OFF] for i in range(len(comp) // M.COMP)}
+    used_reg = {int.from_bytes(regs[i * M.REG + M.R_ID:i * M.REG + M.R_ID + 2], "little")
+                for i in range(len(regs) // M.REG)}
+    # Regulation ids above 175 work for Master League -- measured 17 September, and the
+    # earlier belief that they did not came from the Select Team list, which is a different
+    # question.  BAD_REG is still avoided: those are the ids the game reassigns as phases of
+    # somebody else's competition.
+    autocid = W.free_ids(used_cid, W.CID_MAX, 1, 130)[0]
+    autoreg = W.free_ids(used_reg | W.BAD_REG, W.REG_MAX, 1, 186)[0]
     cid, reg = M.add_league(comp, regs, ents,
-                            int(get("--cid", "150")), int(get("--reg", "200")),
+                            int(get("--cid", str(autocid))), int(get("--reg", str(autoreg))),
                             int(get("--region", "16")), get("--name", "FL Test Cup"),
                             get("--code", "FL_TEST_CUP"), teams, like)
     # add_league sized the count from the entry list, which is right for a league; a cup's
@@ -120,6 +136,7 @@ def main():
     regs[last + M.R_TEAMS] = (regs[last + M.R_TEAMS] & 0xc0) | (bracket & 0x3f)
     print("copied %s: type %d (knockout), bracket %d, %d clubs entered"
           % (like, regs[last + R_TYPE], bracket, len(teams)))
+    print("competition id %d, regulation %d" % (cid, reg))
 
     if "--dry" in a:
         print("dry run: nothing written")

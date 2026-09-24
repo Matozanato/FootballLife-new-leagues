@@ -12,10 +12,11 @@ Requirements: Python 3.10+, `pip install capstone`, the game exe reachable throu
 The shipped set was generated with:
 
 ```
-python tools\patchset.py teams-coaches-regs-players-dates-matches-upper-mlcopy ^
+python tools\patchset.py teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures ^
     --player-cap 51729 ^
-    --date-keys 11,12,13,49,60,61,62,63,64,65,66,69,70,71,72,73,74,75,76,77,78,93,94,96,98,100,101,102,109,110,111,112,113,114,121,138,139,140,143 ^
-    --date-offsets 11:6,12:5,13:6,49:1,60:2,61:2,62:5,63:6,64:5,65:5,66:2,69:1,70:5,71:4,72:1,73:5,74:2,75:2,76:5,77:5,78:0,93:2,94:2,96:2,98:1,100:2,101:3,102:6,109:1,110:0,111:5,112:1,113:2,114:5,121:1,138:1,139:2,140:3,143:6
+    --date-keys 11,49,60,61,62,74,76,93,94,96,98,100,109,110,111,112,113,114,121,138,139,140,143,144,145,146,170,171,173,174,176,178,179,180,181,182,183,184,185 ^
+    --date-offsets 11:1,49:2,60:1,61:2,62:5,74:5,76:2,93:6,94:2,96:2,98:4,100:1,109:1,110:1,111:1,112:4,113:5,114:2,121:2,138:2,139:2,140:2,143:5,144:2,145:2,146:6,170:4,171:6,173:1,174:0,176:1,178:6,179:4,180:0,181:1,182:5,183:1,184:6,185:1 ^
+    --cup-keys 186
 ```
 
 - `--date-keys` are the rulebook ids of your new leagues (the `regulation ids` line of
@@ -29,6 +30,8 @@ python tools\patchset.py teams-coaches-regs-players-dates-matches-upper-mlcopy ^
   deals shifts round-robin; the `key:shift` form above assigns them one by one. Spreading
   leagues over the emptier weekdays is what keeps the 280-ids-per-day calendar from
   overflowing; an even deal is not always the flattest.
+- `--cup-keys` gives a regulation a cup's calendar instead of a league's (186 is the
+  Conference League's regulation in a world built with `mkuecl.py`).
 - `--player-cap` must satisfy `cap ≡ 17 (mod 32)` because of how the second copy is
   memcpy'd; the generator refuses anything else and tells you the nearest valid value.
 
@@ -75,13 +78,18 @@ players 0x17c, clubs 0x690, coaches 0x258, regulations 0x314, match records 0x25
 | `mkplayers.py` | placeholder squads for the new clubs |
 | `mkcup.py` | a knockout cup among chosen clubs |
 | `siderroot.py` | switch which `_FL26*` cpk.root is active |
-| `patchset.py` + `callindex.py`, `datecave.py`, `copyfields.py` | the patch set generator and its helpers |
+| `patchset.py` + `callindex.py`, `datecave.py`, `copyfields.py`, `impscan.py`, `calwiden.py`, `boundscan.py` | the patch set generator and its helpers (`calwiden.py` is only used by the unpublished calendar-widening set, but the generator imports it) |
 | `flpaths.py` | where your game is; environment variables |
 | `livedump.py` | locate the running game and read its edit block; the reader the next tool needs |
 | `dayplan.py` | measure a running season and print the `--date-offsets` day-spread that clears the 280-per-day ceiling |
 | `deepen.py` | put one of your leagues below another as the next division down; `--deep-rank` for real ranks, `--retier` to renumber a chain built before the rank was widened |
 | `mkrankpatch.py` | regenerate `sider/experimental/fl26rank.lua` (it finds every site that reads or writes the league rank and emits the same-length rewrite); needs `capstone` |
-| `native/fl26join.c`, `native/fl26clubs.c` and their build scripts | the sources of the two DLLs and the one-line `zig cc` build; see [native/README.md](../tools/native/README.md) |
+| `spreadregions.py` | give every added league a region (country) of its own, `--plan own`; needs `sider/experimental/fl26reg64.lua` in the game |
+| `mkphases.py`, `mkreshape.py` | clone a multi-phase competition; change the shape of a phase of a shipped one in place (the 36-club league phase) |
+| `mkuecl.py`, `mkeuropo.py` | add the Conference League; give the Europa and Conference League the 9-24 play-off |
+| `mkswiss.py` | generate and check the league-phase draw tables compiled into `fl26swiss.dll` |
+| `mksizes.py` + `sizes-2025-26.json` | set each added league's club count and how many times the clubs meet |
+| `native/fl26join.c`, `native/fl26clubs.c`, `native/fl26chain.c`, `native/fl26swiss.c` and their build scripts | the sources of the four DLLs and the one-line `zig cc` build; see [native/README.md](../tools/native/README.md) |
 
 Tools we use in development but did not include: the automation harness that plays seasons
 unattended with a virtual pad and screen reading, and the disassembly indices. They are tied

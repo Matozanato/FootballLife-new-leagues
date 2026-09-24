@@ -137,6 +137,13 @@ scheduler runs out of room somewhere past 39 leagues on the same weekdays. Start
 A world of 6 leagues × 20 clubs is a fine first test; 12 leagues with `--sizes 24,22,20,18,16,14`
 is a good second.
 
+The world played most recently (2026-09-24) goes further: 39 leagues of 10 to 24 clubs
+(some playing each other three or four times), 780 new clubs of which 602 are in a league,
+30 players each, and the Champions League, Europa League and a Conference League in the 2024
+format. That needs experimental modules and five more tools on top of this page; the route,
+command by command, is in
+[sider/experimental](../sider/experimental/README.md#the-european-format-and-league-sizes-fl26swiss).
+
 ## 3. Activate the root in sider.ini
 
 Only one such world may be active at a time. Near the top of `sider.ini`, with the other

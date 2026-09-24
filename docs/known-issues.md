@@ -8,7 +8,7 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
 
 | where | address | status |
 |---|---|---|
-| Scene setup: season generation (the manager-settings step), and season rollovers | `0x1484ed4c0`, sometimes reported as `0x1531cc313` in a module outside the exe | Shipped game bug (occurs without any mod). Not guarded and not guardable: the pointer it writes through is already corrupt when it arrives, so skipping the write would trade a crash for silent damage. Intermittent: on 2026-09-22 it took three of five season creations here, with and without the hooks of `fl26join.dll`, and passed on the next attempt each time. Start the season again, or reload your last save. |
+| Scene setup: season generation (the manager-settings step), match loading, and season rollovers | `0x1484ed4c0`, also reported as `0x1531cc313` or `0x158ecc042` (all three inside the game's protected, encrypted code) | **Open, and not explained yet.** Earlier versions of this page called it a shipped game bug; that was never tested on a stock game, so it is withdrawn. It first appears in our logs on 2026-09-14 and has been seen only with the patch set installed. On 2026-09-24 it happened five times in about four hours of simulated play. Not guarded and not guardable where it faults: the pointer it writes through is already corrupt when it arrives, so skipping the write would trade a crash for silent damage. The save is not damaged. Intermittent: on 2026-09-22 it took three of five season creations here, with and without the hooks of `fl26join.dll`, and passed on the next attempt each time. Start the season again, or reload your last save. |
 | Exhibition kick-off with new clubs | `0x141fea5ba` | **Fixed** by `fl26nullguard.lua`. |
 | Loading a season, and the board meeting when a season is created (schedule list read) | `0x140cd6a21` (guard site `0x140cd6a18`) | **Fixed** by `fl26nullguard9.lua`, which on 2026-09-22 replaced `fl26nullguard3.lua`. Same unchecked read: a lookup that finds no schedule list is indexed anyway. The old guard covered the load path; the new one covers both, and the two overlap, so only one may be installed. |
 | Mid-season, calendar advance | `0x140fc9238` | **Fixed** by `fl26nullguard2.lua`. |
@@ -34,14 +34,18 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
   tooling copies every phase of a multi-phase competition and renumbers the replicas
   correctly, and cloning the Europa League into a scratch world and reading it back checks
   out — but a clone keeps its source's dates and would collide with it, so nothing playable
-  is published. A 36-club single-table Champions League in the modern format is being
-  worked on in the research repository and is not published.
+  is published. **Since 2026-09-24** the experimental `fl26swiss` stack (see
+  [sider/experimental](../sider/experimental/README.md#the-european-format-and-league-sizes-fl26swiss))
+  reshapes the Champions League and Europa League to the 2024 format, adds a Conference
+  League, and fills all three from a UEFA access list that names our world's leagues.
 - **In a career that starts in August, the European competitions do not start.** Measured
   2026-09-23 with `sider/experimental/fl26augseason.lua`: the Champions League play-off is
   dated on days 230 and 237 of the year, and the game registers the European competitions
   on day 238, after both. The play-off is drawn but given no matches, so it never finishes,
   the group stage is never filled and the Europa League never begins. The domestic season is
-  not affected. Being worked on.
+  not affected. With the experimental European format (`fl26swiss`, 2026-09-24) the play-off
+  is run by the DLL and all three competitions start and play; without it, this still
+  happens.
 - **Promotion and relegation between new leagues.** A chain of three of our leagues moved no
   club, and the likely reason is now known and is data, not code: all three were first
   divisions, and the resolver only looks for the league above when the lower league is

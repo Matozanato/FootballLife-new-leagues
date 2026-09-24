@@ -1,21 +1,27 @@
-# Native modules: fl26join.dll, fl26clubs.dll and fl26chain.dll
+# Native modules: fl26join.dll, fl26clubs.dll, fl26chain.dll and fl26swiss.dll
 
-Three modules here are compiled rather than written in Lua, because each of them has to run a
+Four modules here are compiled rather than written in Lua, because each of them has to run a
 few instructions of its own inside a live call, which is easier to get right in C than in
 hand-assembled bytes. In each case a Lua loader (`sider/fl26joindll.lua`,
-`sider/experimental/fl26clubs.lua`, `sider/experimental/fl26chain.lua`) loads the DLL from `SiderAddons\modules\` at startup and
+`sider/experimental/fl26clubs.lua`, `sider/experimental/fl26chain.lua`, `sider/experimental/fl26swiss.lua`) loads the DLL from `SiderAddons\modules\` at startup and
 hands it the configuration; the DLL does the rest.
 
 - **`fl26join.dll`** hooks eight functions so that added leagues are registered into a
   Master League season and closed again at the end of it, the way the shipped leagues are.
   About 1,000 lines of C, with a few lines of inline assembly per hook. The only file it
-  writes is `SiderAddonsl26join.log`.
+  writes is `SiderAddons\fl26join.log`.
 - **`fl26clubs.dll`** (experimental) replaces the two functions that read the Select Team
   club list, answering from the league's own rulebook for named slots only. Around 220 lines.
   Writes nothing at all.
 - **`fl26chain.dll`** (experimental) hooks the end-of-season step that applies promotion
   and relegation, and completes a chain of three or more divisions, which the game on its
-  own only exchanges one joint of. Around 400 lines.
+  own only exchanges one joint of. Around 400 lines. Up to 8 chains.
+- **`fl26swiss.dll`** (experimental) replaces the league schedule builder for the listed
+  regulations only: the 36-club league phase of the Champions League, Europa League and
+  Conference League (the draw tables are generated and checked by `tools/mkswiss.py` into
+  `fl26swiss_table.h`), their 9-24 play-off and fixed knockout bracket, the UEFA access
+  list, and the calendar of leagues that are not 20 clubs playing twice. About 1,700 lines.
+  It writes no file; its log goes to `sider.log` through the loader.
 
 None has third-party code or any network access.
 
@@ -25,7 +31,8 @@ None has third-party code or any network access.
 |---|---|
 | `sider/fl26join.dll` | `c107bd8387ba38073d4c4747e2f94f0604a50b535a6d644a0767d879aa4e7919` |
 | `sider/experimental/fl26clubs.dll` | `1db2a4f9af91a5c76f903d5443eb08df417006b2bd1a3674aa87a8957a43aae5` |
-| `sider/experimental/fl26chain.dll` | `f312049c19eaa06011416dd311a52795e7f6078efe90fd8fcf5e5b11720cf2dc` |
+| `sider/experimental/fl26chain.dll` | `d6e28376d7c4e2fa220c9fd8deaf4d64394a45cb4bb09eba356cf58df0251eae` |
+| `sider/experimental/fl26swiss.dll` | `fd2f8d4eb1d01a4f97b4e511d5208db7a03abf29b96e12918a2c816367d867ed` |
 
 ```powershell
 (Get-FileHash "C:\fl26\sider\fl26join.dll" -Algorithm SHA256).Hash
@@ -50,12 +57,14 @@ or the same command by hand, from any shell:
 zig cc -shared -target x86_64-windows-gnu -O2 -s -o sider/fl26join.dll tools/native/fl26join.c -lkernel32
 ```
 
-`fl26clubs.dll` and `fl26chain.dll` are built the same way, with `build-clubs.sh` /
-`build-chain.sh`, or:
+`fl26clubs.dll`, `fl26chain.dll` and `fl26swiss.dll` are built the same way, with
+`build-clubs.sh` / `build-chain.sh` / `build-swiss.sh` (which regenerates the draw table with
+Python first), or:
 
 ```
 zig cc -shared -target x86_64-windows-gnu -O2 -s -o sider/experimental/fl26clubs.dll tools/native/fl26clubs.c -lkernel32
 zig cc -shared -target x86_64-windows-gnu -O2 -s -o sider/experimental/fl26chain.dll tools/native/fl26chain.c -lkernel32
+zig cc -shared -target x86_64-windows-gnu -O2 -s -o sider/experimental/fl26swiss.dll tools/native/fl26swiss.c -lkernel32
 ```
 
 The scripts write the DLL next to the source (`tools/native/fl26join.dll`) unless you

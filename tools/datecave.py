@@ -7,24 +7,39 @@ then every new league lands on the same weekday as the ten shipped ones, and a c
 day holds 280 match ids at most (0x141350290): fourteen leagues already put 271 on the
 busiest day.  The other weekdays are nearly empty.
 
-This stub takes case 62's place.  It looks the id up in a byte table -- 0xff means "no
-calendar", as before; 0..6 means "the big-league calendar, shifted by that many days" --
-calls case 5 for the vector and then adds the shift to every entry's day, wrapping at 365.
+This stub takes case 62's place.  It looks the id up in a byte table:
+
+    0xff          no calendar -- the old empty return, unchanged
+    0x00 .. 0x06  the big-league calendar, shifted by that many days
+    0x10 .. 0x16  the 16-team domestic cup calendar, shifted by the low three bits
+
+It calls the shipped helper for whichever calendar the byte names, then adds the shift to
+every entry's day, wrapping at 365.  The two helpers have the same signature -- id in cx,
+&vector in rdx -- and each simply copies a static array of 12-byte date records into the
+vector: 38 of them for the league (0x141582550, case 5), 10 for the cup (0x1415810d0,
+case 38, the one the Belgian Croky Cup uses).  The shift loop therefore does not care
+which of the two was called.
+
 The switch's `ja` for ids above 175 is pointed at the same stub, so the table covers ids
-1..255 whichever way the switch would have gone.  Everything else about the season is
-untouched: the same rounds, the same gaps, only on a different day of the week.
+1..255 whichever way the switch would have gone.  That is also the only way a cup can be
+dated at all: a cup cannot live below regulation 175 (findings.md, "A cup cannot live
+below regulation 175"), and above 175 the switch never consults the case table, so the
+`ja` is the single point where a cup id can be caught.  Everything else about the season
+is untouched: the same rounds, the same gaps, only on a different day of the week.
 
 The stub lives in the padding at the end of the code section (0x14252e68c..0x14252e800,
 372 bytes of zero); the code is 0x56 bytes and the table 256, hand-assembled below and
 checked with capstone so that the bytes and the listing cannot disagree.
 
-    python datecave.py                 print the listing for a table with id 11 -> +2
+    python datecave.py                 print the listing for id 11 -> league +2 and
+                                       id 186 -> cup
 """
 import struct, sys
 
 CAVE = 0x14252e690                   # 16-aligned, inside the section's tail padding
 CAVE_END = 0x14252e800
 CASE5 = 0x141582550                  # the big-league calendar, called as a function
+CASE38 = 0x1415810d0                 # the 16-team domestic cup, same signature, 10 rounds
 SWITCH_TABLE = 0x1415801ec           # dword per case, RVA of the case's entry
 CASE_EMPTY = 62
 JA_SITE = 0x14157f84b                # 0f 87 rel32: ids above 175 -> the empty return
@@ -32,6 +47,8 @@ EMPTY_RET = 0x14158013b
 CASE_BYTES = 0x1415802e8             # byte per regulation id 1..175: which case it takes
 TABLE_SIZE = 256
 NO_CALENDAR = 0xff
+CUP_BIT = 0x10                       # set in a table byte: take the cup calendar
+SHIFT_MASK = 0x07                    # the rest of the byte is the day shift, 0..6
 DAYS = 365
 
 
@@ -46,62 +63,95 @@ def rel32(target, next_ip):
 
 
 def build(offsets):
-    """code + table bytes for {regulation id: day shift}; ids not listed get no calendar"""
-    L = {"empty": 0x4e, "loop": 0x31, "store": 0x46, "table": 0x56}   # fixed layout
-    b = bytearray()
-    b += b"\x0f\xb7\xc7"                                   # movzx eax, di
-    b += b"\x3d" + struct.pack("<I", TABLE_SIZE)          # cmp eax, 256
-    b += b"\x73" + rel8(L["empty"], len(b) + 2)           # jae empty
-    b += b"\x48\x8d\x0d" + rel32(L["table"], len(b) + 7)  # lea rcx, [rip + table]
-    b += b"\x0f\xb6\x04\x01"                              # movzx eax, byte [rcx + rax]
-    b += b"\x3c\xff"                                      # cmp al, 0xff
-    b += b"\x74" + rel8(L["empty"], len(b) + 2)           # je empty
-    b += b"\x0f\xb7\xcf"                                  # movzx ecx, di      (id)
-    b += b"\x8b\xf8"                                      # mov edi, eax       (shift, rdi is callee-saved)
-    b += b"\x48\x8b\xd3"                                  # mov rdx, rbx       (&vector)
-    b += b"\x4c\x8d\x45\x20"                              # lea r8, [rbp + 0x20]
-    b += b"\xe8" + rel32(CASE5, CAVE + len(b) + 5)        # call case 5
-    b += b"\x48\x8b\x0b"                                  # mov rcx, [rbx]     (begin)
-    b += b"\x48\x8b\x53\x08"                              # mov rdx, [rbx + 8] (end)
-    assert len(b) == L["loop"]
-    b += b"\x48\x3b\xca"                                  # loop: cmp rcx, rdx
-    b += b"\x73" + rel8(L["empty"], len(b) + 2)           # jae done
-    b += b"\x8b\x01"                                      # mov eax, [rcx]     (day)
-    b += b"\x03\xc7"                                      # add eax, edi
-    b += b"\x3d" + struct.pack("<I", DAYS)                # cmp eax, 365
-    b += b"\x72" + rel8(L["store"], len(b) + 2)           # jb store
-    b += b"\x2d" + struct.pack("<I", DAYS)                # sub eax, 365
-    assert len(b) == L["store"]
-    b += b"\x89\x01"                                      # store: mov [rcx], eax
-    b += b"\x48\x83\xc1\x0c"                              # add rcx, 12
-    b += b"\xeb" + rel8(L["loop"], len(b) + 2)            # jmp loop
-    assert len(b) == L["empty"]
-    b += b"\x48\x83\xc4\x20\x5f\x5b\x5d\xc3"              # done/empty: add rsp,0x20; pop rdi; pop rbx; pop rbp; ret
-    assert len(b) == L["table"]
+    """code + table bytes for {regulation id: calendar byte}; ids not listed get no calendar
+
+    Assembled in two passes so a branch can be written before its target is known: pass
+    one places every instruction with a zero displacement in order to fix the labels,
+    pass two writes the real ones.  Nothing is hand-counted any more, so inserting an
+    instruction cannot silently move a jump.
+    """
+    def emit(lab):
+        at = lambda name: lab.get(name, 0)
+        b = bytearray()
+        b += bytes.fromhex("0fb7c7")                            # movzx eax, di      (id)
+        b += b"=" + struct.pack("<I", TABLE_SIZE)               # cmp eax, 256
+        b += b"s" + rel8(at("empty"), len(b) + 2)               # jae empty
+        b += bytes.fromhex("488d0d") + rel32(at("table") + CAVE, CAVE + len(b) + 7)
+        b += bytes.fromhex("0fb60401")                          # movzx eax, byte [rcx + rax]
+        b += b"<" + bytes([NO_CALENDAR])                        # cmp al, 0xff
+        b += b"t" + rel8(at("empty"), len(b) + 2)               # je empty
+        b += bytes.fromhex("0fb7cf")                            # movzx ecx, di      (id)
+        b += bytes.fromhex("8bf8")                              # mov edi, eax       (rdi is callee-saved)
+        b += bytes.fromhex("83e7") + bytes([SHIFT_MASK])        # and edi, 7         (the day shift)
+        b += bytes.fromhex("488bd3")                            # mov rdx, rbx       (&vector)
+        b += bytes.fromhex("4c8d4520")                          # lea r8, [rbp + 0x20]
+        b += bytes.fromhex("a8") + bytes([CUP_BIT])             # test al, 0x10
+        b += b"u" + rel8(at("cup"), len(b) + 2)                 # jnz cup
+        b += b"\xe8" + rel32(CASE5, CAVE + len(b) + 5)          # call the league calendar
+        b += b"\xeb" + rel8(at("after"), len(b) + 2)            # jmp after
+        lab["cup"] = len(b)
+        b += b"\xe8" + rel32(CASE38, CAVE + len(b) + 5)         # cup: call the cup calendar
+        lab["after"] = len(b)
+        b += bytes.fromhex("488b0b")                            # after: mov rcx, [rbx]      (begin)
+        b += bytes.fromhex("488b5308")                          # mov rdx, [rbx + 8]         (end)
+        lab["loop"] = len(b)
+        b += bytes.fromhex("483bca")                            # loop: cmp rcx, rdx
+        b += b"s" + rel8(at("empty"), len(b) + 2)               # jae done
+        b += bytes.fromhex("8b01")                              # mov eax, [rcx]     (day)
+        b += bytes.fromhex("03c7")                              # add eax, edi
+        b += b"=" + struct.pack("<I", DAYS)                     # cmp eax, 365
+        b += b"r" + rel8(at("store"), len(b) + 2)               # jb store
+        b += b"-" + struct.pack("<I", DAYS)                     # sub eax, 365
+        lab["store"] = len(b)
+        b += bytes.fromhex("8901")                              # store: mov [rcx], eax
+        b += bytes.fromhex("4883c10c")                          # add rcx, 12
+        b += b"\xeb" + rel8(at("loop"), len(b) + 2)             # jmp loop
+        lab["empty"] = len(b)
+        b += bytes.fromhex("4883c4205f5b5dc3")                  # done: add rsp,0x20; pop rdi,rbx,rbp; ret
+        lab["table"] = len(b)
+        return b
+
+    lab = {}
+    emit(lab)                                  # pass one: fix the labels
+    b = bytearray(emit(dict(lab)))             # pass two: write the displacements
+    code_len = lab["table"]
     table = bytearray([NO_CALENDAR] * TABLE_SIZE)
-    for k, off in offsets.items():
+    for k, v in offsets.items():
         if not 1 <= k < TABLE_SIZE:
             raise SystemExit("regulation id %d is outside the stub's table (1..255)" % k)
-        if not 0 <= off < 7:
-            raise SystemExit("day shift %d for id %d is not 0..6" % (off, k))
-        table[k] = off
+        if v & ~(CUP_BIT | SHIFT_MASK) or (v & SHIFT_MASK) > 6:
+            raise SystemExit("calendar byte 0x%02x for id %d is neither a day shift 0..6 "
+                             "nor one with the cup bit 0x10 set" % (v, k))
+        table[k] = v
     b += table
-    assert CAVE + len(b) <= CAVE_END
-    return bytes(b)
+    if CAVE + len(b) > CAVE_END:
+        raise SystemExit("the stub and its table want %d bytes, the cave holds %d"
+                         % (len(b), CAVE_END - CAVE))
+    return bytes(b), code_len
 
 
-def listing(code):
+def league(shift=0):
+    """table byte: the big-league calendar, shifted by `shift` days"""
+    return shift
+
+
+def cup(shift=0):
+    """table byte: the 16-team domestic cup calendar, shifted by `shift` days"""
+    return CUP_BIT | shift
+
+
+def listing(code, code_len):
     from capstone import Cs, CS_ARCH_X86, CS_MODE_64
     md = Cs(CS_ARCH_X86, CS_MODE_64)
     out = []
-    for i in md.disasm(code[:0x56], CAVE):
+    for i in md.disasm(code[:code_len], CAVE):
         out.append("%x  %-6s %s" % (i.address, i.mnemonic, i.op_str))
     return out
 
 
 def patches(offsets, exe_bytes, off_of):
     """the three patches: the stub, the switch dword for case 62, the `ja` for ids > 175"""
-    code = build(offsets)
+    code, _ = build(offsets)
     old = exe_bytes[off_of(CAVE):off_of(CAVE) + len(code)]
     if any(old):
         raise SystemExit("the code cave at 0x%x is not empty in this exe" % CAVE)
@@ -110,7 +160,8 @@ def patches(offsets, exe_bytes, off_of):
     assert struct.unpack("<I", old_dw)[0] + 0x140000000 == EMPTY_RET, old_dw.hex()
     old_ja = exe_bytes[off_of(JA_SITE):off_of(JA_SITE) + 6]
     assert old_ja == b"\x0f\x87" + rel32(EMPTY_RET, JA_SITE + 6), old_ja.hex()
-    shown = ", ".join("%d:+%d" % (k, v) for k, v in sorted(offsets.items()))
+    shown = ", ".join("%d:%s+%d" % (k, "cup" if v & CUP_BIT else "league", v & SHIFT_MASK)
+                      for k, v in sorted(offsets.items()))
     # An id the shipped game already used keeps its shipped case byte -- 76..78 are
     # Copa Libertadores and friends on case 3, 74 case 25, 138..140 cases 44..46 -- so
     # the switch never sends it to case 62 and the stub never sees it: the league gets a
@@ -143,7 +194,7 @@ def patches(offsets, exe_bytes, off_of):
 
 
 if __name__ == "__main__":
-    code = build({11: 2})
-    print("\n".join(listing(code)))
+    code, code_len = build({11: league(2), 186: cup()})
+    print("\n".join(listing(code, code_len)))
     print("%d bytes of code, %d of table, cave 0x%x..0x%x, %d spare"
-          % (0x56, TABLE_SIZE, CAVE, CAVE + len(code), CAVE_END - CAVE - len(code)))
+          % (code_len, TABLE_SIZE, CAVE, CAVE + len(code), CAVE_END - CAVE - len(code)))

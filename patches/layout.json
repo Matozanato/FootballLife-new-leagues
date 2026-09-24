@@ -994,7 +994,7 @@
    "base_old": "0xe9ff08",
    "stride": "0x254",
    "cap_old": 13000,
-   "cap_new": 26000,
+   "cap_new": 46000,
    "dummy": null,
    "relocatable": true,
    "copy_off": "0x329b00",
@@ -1171,7 +1171,7 @@
    "base_old": "0x18378a0",
    "stride": "0x1",
    "cap_old": 13000,
-   "cap_new": 26000,
+   "cap_new": 46000,
    "dummy": null,
    "relocatable": true,
    "copy_off": null,
@@ -1186,7 +1186,7 @@
    "relocatable": true,
    "region": true,
    "copy_off": null,
-   "note": "unnamed block fields between the count block and the fixture table; attributed by range only, moved as a unit by the upper shift"
+   "note": "IDENTIFIED 2026-09-21 (docs/competition-slot-ceiling.md): the club list of every competition slot -- a 12-byte header at 0xd0bcf8, then 123 slots x 750 dwords at 0xd0bd04, then 123 one-word counts at 0xd65e6c, ending where the fixture table begins. Reached only through five accessors (0x1414d6290 get, 0x1414d62c0 count, 0x1414d62e0 clear, 0x1414d6330 set, 0x1414d6360 setcount). Still moved as a unit by the upper shift."
   },
   "upper2": {
    "base_old": "0xe63de4",

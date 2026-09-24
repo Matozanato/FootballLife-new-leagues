@@ -23,7 +23,7 @@ import json, os, struct, sys
 from capstone import *
 from capstone.x86 import *
 import bisect
-import callindex, datecave, flpaths, impscan
+import calwiden, callindex, datecave, flpaths, impscan
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -100,11 +100,19 @@ def field_growth(name, field):
     return H(a["stride_new"]) - H(a["stride"]) if field and field >= H(a["count_off"]) else 0
 
 
-def plan_layout(relocate, belt=False):
+def plan_layout(relocate, belt=False, calendar=None):
     """place the relocated arrays after the old block end; return (new_size, bases)
 
     With `belt`, the upper belt (layout.json block.upper_belt) goes after them as one
     piece, and bases["belt"] is where its first byte lands.
+
+    With `calendar` (how many match ids a day is to hold), the calendar's whole unit goes
+    FIRST, before the arrays, and bases["calendar"] is where it lands.  The unit, not the
+    calendar: 0x1413fbf60 copies 365 days, then four fields, then 32 records of 0x16dc as
+    one piece with a single src - dst difference, so the days cannot move without the rest.
+    How far it moves is free -- the copy's own unit is grown in place by mlcopy -- but it
+    goes first anyway, so the biggest single thing in the block is placed while the space
+    above the old end is still unbroken.
 
     `block.tail_pad` is spare room after everything, holding no array.  It exists because
     not every reference to a relocated array is ours to move: the protector virtualises
@@ -117,6 +125,11 @@ def plan_layout(relocate, belt=False):
     """
     cursor = align(SIZE_OLD, 16)
     bases = {}
+    if calendar:
+        _, stride, _, _, _ = calwiden.shape(calendar)
+        unit = calwiden.OLD_UNIT + calwiden.DAYS * (stride - calwiden.OLD_STRIDE)
+        bases["calendar"] = cursor
+        cursor = align(cursor + unit, 16)
     for name in relocate:
         a = LAYOUT["arrays"][name]
         bases[name] = cursor
@@ -130,8 +143,8 @@ def plan_layout(relocate, belt=False):
     new_size = SIZE_OLD + growth
     assert (new_size - TAIL) % CHUNK == 0, "block size broke the memcpy invariant"
     for name, b in bases.items():
-        if name == "belt":
-            continue                      # sized from the layout's belt, placed last
+        if name in ("belt", "calendar"):
+            continue                      # sized from their own shape, not from an array
         a = LAYOUT["arrays"][name]
         end = b + a["cap_new"] * stride_of(name)
         assert end <= new_size, ("%s runs 0x%x bytes past the end of the grown block"
@@ -525,12 +538,26 @@ SETS = {
     # on its own and raises it to 6000.  See findings.md, "The fixture table is full".
     "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures":
         ["teams", "coaches", "regulations", "rec596", "matchflags", "fixtures"],
+    # ... and a calendar day is full.  A day holds 280 match ids and the scheduler at
+    # 0x141350290 drops the rest without a word; caltab.py puts the 39-league world at 277
+    # on its busiest day, so the next league costs matches nobody is told about.  This
+    # widens the day to 792 ids and moves the calendar -- both the block's and the mode
+    # copy's, by the same distance, which is what keeps their shared copier honest.
+    # See docs/calendar-widening.md and tools/calwiden.py.
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar":
+        ["teams", "coaches", "regulations", "rec596", "matchflags", "fixtures"],
 }
 UPPER_SETS = {"teams-coaches-regs-players-dates-matches-upper",
               "teams-coaches-regs-players-dates-matches-upper-mlcopy",
-              "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures"}
+              "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures",
+              "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar"}
 MLCOPY_SETS = {"teams-coaches-regs-players-dates-matches-upper-mlcopy",
-               "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures"}
+               "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures",
+               "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar"}
+# Sets that widen the calendar day.  CALENDAR_IDS is how many match ids a day then holds;
+# calwiden.shape() rounds it up to the next stride the mode copy's copier can step by.
+CALENDAR_SETS = {"teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar"}
+CALENDAR_IDS = 792
 # set in main(): whether this set moves copy A's own table bases, which is what makes a
 # pre-biased displacement need the two-base form rather than the block delta
 MLCOPY_ON = False
@@ -622,7 +649,8 @@ COPY_PLAYER_SITES = [
 COPY_PLAYER_SETS = ["teams-coaches-regs-players-dates-matches",
                     "teams-coaches-regs-players-dates-matches-upper",
                     "teams-coaches-regs-players-dates-matches-upper-mlcopy",
-                    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures"]
+                    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures",
+                    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar"]
 # what the fixed memcpy tails need of the cap (see above)
 COPY_PLAYER_CAP_MOD = (32, 17)
 
@@ -671,11 +699,27 @@ def grow_field(p, old_value, growth):
     p["why"] += "; mlcopy: 0x%x -> 0x%x" % (cur, cur + growth)
 
 
+# Set by main() when the set widens the calendar day: how many bytes longer the copy's
+# calendar unit becomes.  The copy carries the same unit as the block at +0xa8d4a0, and
+# mlcopy already relocates it; growing it there is what keeps the two sides alike.
+CALENDAR_GROWTH = 0
+
+
 def mlcopy_regions():
     """the grown regions, each checked against the copy's own layout, in offset order"""
     m = LAYOUT["copy"]["mlcopy"]
     fields = sorted(H(v) for v in m["fields"])
     out = []
+    if CALENDAR_GROWTH:
+        base, end = calwiden.COPY_BASE, calwiden.COPY_BASE + calwiden.OLD_UNIT
+        if end not in fields:
+            raise SystemExit("the copy's calendar unit ends at 0x%x, which is not a copy A "
+                             "field -- the unit is not 0x%x bytes here"
+                             % (end, calwiden.OLD_UNIT))
+        out.append({"name": "calendar", "array": None, "base": base,
+                    "stride": calwiden.OLD_STRIDE, "cap_old": calwiden.DAYS,
+                    "cap_new": calwiden.DAYS, "ends_at": "0x%x" % end,
+                    "growth": CALENDAR_GROWTH, "count_sites": []})
     for r in m["regions"]:
         a = LAYOUT["arrays"][r["array"]]
         cap_old, cap_new = a["cap_old"], a["cap_new"]
@@ -938,10 +982,50 @@ DATE_KEYS = [11]
 
 
 def date_patches(keys):
-    return [{"va": "0x%x" % (DATE_CASES + k - 1), "old": "%02x" % DATE_CASE_EMPTY,
-             "new": "%02x" % DATE_CASE_LEAGUE,
-             "why": "fixture dates: regulation %d takes the big-league calendar" % k,
-             "asm": "jump-table byte"} for k in keys]
+    # The same 1..175 bound cup_patches enforces, and for the same reason: the table ends at
+    # 0x141580396 and a table of 16-bit values begins at 0x141580397, so a case byte written
+    # for id 176 or above lands in that one. It is also wrong to assume the byte found there
+    # is DATE_CASE_EMPTY: ids that reuse a shipped calendar carry that calendar's case, so the
+    # expected byte is read out of the exe rather than guessed. Both were live in the stored
+    # ...-fixtures-calendar set (2026-09-21): seventeen of its thirty-eight date patches could
+    # never verify, which aborted the whole set every run.
+    out = []
+    for k in keys:
+        if not 1 <= k <= 175:
+            raise SystemExit("--date-keys: regulation %d is outside the date table "
+                             "(1..175), so no case byte exists to patch. Spread mode "
+                             "(--date-offsets) is the only route to an id above 175." % k)
+        va = DATE_CASES + k - 1
+        cur = d[off_of(va)]
+        out.append({"va": "0x%x" % va, "old": "%02x" % cur,
+                    "new": "%02x" % DATE_CASE_LEAGUE,
+                    "why": "fixture dates: regulation %d takes the big-league calendar" % k,
+                    "asm": "jump-table byte"})
+    return out
+
+
+# A cup needs a cup's calendar, not a league's.  Case 38 is the Belgian Croky Cup
+# (regulation 122): a sixteen-team domestic knockout, which is the shape mkcup.py copies.
+# Sharing a case is ordinary -- nine ids share case 6 between the FA Cup, Coppa Italia,
+# Copa del Rey and Coupe de France, and all of them run at once -- so this borrows a
+# calendar rather than taking one away.  The id must be 175 or below: the table only
+# covers 1..175, which is why a cup built on 186 came out with 37 ties and no dates.
+DATE_CASE_CUP16 = 38
+
+
+def cup_patches(keys):
+    out = []
+    for k in keys:
+        if not 1 <= k <= 175:
+            raise SystemExit("--cup-keys: regulation %d is outside the date table "
+                             "(1..175), so no case byte exists to patch" % k)
+        out.append({"va": "0x%x" % (DATE_CASES + k - 1),
+                    "old": "%02x" % DATE_CASE_EMPTY,
+                    "new": "%02x" % DATE_CASE_CUP16,
+                    "why": "fixture dates: regulation %d takes the 16-team domestic cup "
+                           "calendar (the one the Belgian Croky Cup uses)" % k,
+                    "asm": "jump-table byte"})
+    return out
 
 # the sets that raise caps as well as relocating, and which arrays they raise
 CAPPED = {
@@ -958,6 +1042,8 @@ CAPPED = {
     "teams-coaches-regs-players-dates-matches-upper": ["teams", "coaches", "regulations", "rec596", "matchflags", "players"],
     "teams-coaches-regs-players-dates-matches-upper-mlcopy": ["teams", "coaches", "regulations", "rec596", "matchflags", "players"],
     "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures":
+        ["teams", "coaches", "regulations", "rec596", "matchflags", "players", "fixtures"],
+    "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar":
         ["teams", "coaches", "regulations", "rec596", "matchflags", "players", "fixtures"],
 }
 
@@ -1082,9 +1168,14 @@ def copyb_patches():
 
 
 def main():
-    global MLCOPY_ON, SLOTS32
+    global MLCOPY_ON, SLOTS32, CALENDAR_GROWTH
     which = sys.argv[1] if len(sys.argv) > 1 else "block"
     MLCOPY_ON = which in MLCOPY_SETS
+    if which in CALENDAR_SETS:
+        # mlcopy has to know before it plans the copy: the copy's calendar unit grows by
+        # exactly what the block's does, and every copy field above it moves by that much.
+        _, st, _, _, _ = calwiden.shape(CALENDAR_IDS)
+        CALENDAR_GROWTH = calwiden.DAYS * (st - calwiden.OLD_STRIDE)
     SLOTS32 = "--slots32" in sys.argv
     if which not in SETS:
         raise SystemExit("unknown set %r; known: %s" % (which, ", ".join(SETS)))
@@ -1097,6 +1188,15 @@ def main():
         ceiling = PLAYERS_HARD_END if "regulations" in relocate else H(LAYOUT["arrays"]["regulations"]["base_old"])
         if which in UPPER_SETS:
             ceiling = H(LAYOUT["block"]["upper_belt"]["players_ceiling"])
+        if which in CALENDAR_SETS:
+            # That ceiling is the season calendar, sitting at 0x16038a8 -- and this set
+            # moves the calendar unit out of the block's middle, so the player array may
+            # run up to where the unit used to end instead.  Nothing is guessed about what
+            # is above it: `blockrefs.py 16705a8 1877068` finds 3846 sites in that region
+            # and the lowest offset any of them names is 0x16705a8 itself, which is exactly
+            # where the unit ends.  So the whole 0x6cd00 the calendar vacates is free and
+            # nothing beyond it is.
+            ceiling = calwiden.OLD_BASE + calwiden.OLD_UNIT
         if cap * H(pl["stride"]) > ceiling:
             raise SystemExit("--player-cap %d: %d x 0x%x = 0x%x reaches 0x%x; the most "
                              "that fits is %d" % (cap, cap, H(pl["stride"]),
@@ -1107,7 +1207,8 @@ def main():
     # every set reserves room for everything the plan will relocate, so that the block
     # size is identical across phases and a crash can only come from the relocation itself
     plan = ["teams"] + [n for n in relocate if n != "teams"]
-    new_size, bases = plan_layout(plan, belt=which in UPPER_SETS)
+    new_size, bases = plan_layout(plan, belt=which in UPPER_SETS,
+                                  calendar=CALENDAR_IDS if which in CALENDAR_SETS else None)
     patches = block_patches(new_size)
     delta = 0
     if which in ("copy-move", "teams-1600"):
@@ -1172,6 +1273,18 @@ def main():
                               for r in regions],
                   "fields_moved": {"0x%x" % k: ["0x%x" % v for v in vs]
                                    for k, vs in sorted(moved.items())}}
+    calendar = None
+    if which in CALENDAR_SETS:
+        info, cal = calwiden.build(CALENDAR_IDS, bases["calendar"])
+        patches += cal
+        print("calendar: a day holds %d ids (stride %s), %d patches; the unit goes to "
+              "+0x%x, 0x%x bytes of it, grown by %d"
+              % (info["ids_per_day"], info["stride"], info["patches"], bases["calendar"],
+                 info["unit_bytes"], info["unit_growth"]))
+        print("   %d of those sites reach the unit's trailing part by its own block offset "
+              "(tailscan.py); the copy's unit grew by the same %d through mlcopy"
+              % (info["tail_sites"], info["unit_growth"]))
+        calendar = info
     if relocate:
         att = json.load(open(os.path.join(ROOT, "patches", "attrib.json")))
         # An array that this set relocates on its own must NOT also be carried by the belt
@@ -1207,6 +1320,7 @@ def main():
             return 1
 
     spread = None
+    cupkeys = []
     if "-dates" in which:
         a = sys.argv[1:]
         # DATE_KEYS is one test league, and a set generated without --date-keys
@@ -1223,6 +1337,14 @@ def main():
             print("WARNING: no --date-keys given, so only %s will be dated. Every "
                   "other league's matches will carry no date and never be "
                   "scheduled." % ", ".join(str(k) for k in keys))
+        if "--cup-keys" in a:
+            cupkeys[:] = [int(k) for k in a[a.index("--cup-keys") + 1].split(",")]
+            clash = sorted(set(cupkeys) & set(keys))
+            if clash:
+                raise SystemExit("--cup-keys: %s are already league date keys; one id "
+                                 "cannot take two calendars"
+                                 % ", ".join(str(k) for k in clash))
+
         if "--date-offsets" in a:
             # spread mode: the stub in datecave.py.  Two forms.  A bare list of shifts
             # deals the keys round-robin over it, e.g. --date-offsets 2,6,5,1 for four
@@ -1247,9 +1369,29 @@ def main():
             else:
                 offs = [int(o) for o in arg.split(",")]
                 spread = {k: offs[i % len(offs)] for i, k in enumerate(keys)}
+            # A cup rides in the same table, with the cup bit set instead of a case byte
+            # of its own.  This is the only route that reaches a cup at all: Stage C
+            # established that a cup below regulation 175 will not let a season generate,
+            # and above 175 the switch never looks at the case table, so the stub's `ja`
+            # is the one place the id can be caught.  Cups take shift 0 -- the cup
+            # calendar is ten rounds, not thirty-eight, so it is not what crowds a day.
+            for k in cupkeys:
+                spread[k] = datecave.cup()
             patches += datecave.patches(spread, d, off_of)
+            if cupkeys:
+                print("cups: %d regulation(s) given the 16-team knockout calendar "
+                      "through the date stub: %s"
+                      % (len(cupkeys), ", ".join(str(k) for k in cupkeys)))
         else:
             patches += date_patches(keys)
+            if cupkeys:
+                # Without the stub the only lever is the case byte, which exists for ids
+                # 1..175 only -- and a cup down there will not generate.  Kept because it
+                # is what proved that, but it is not a route to a working cup.
+                patches += cup_patches(cupkeys)
+                print("cups: %d regulation(s) given the 16-team knockout calendar by "
+                      "case byte (ids 1..175 only, and no cup there has ever played): %s"
+                      % (len(cupkeys), ", ".join(str(k) for k in cupkeys)))
 
     if SLOTS32:
         g2b = g2b_patches()
@@ -1285,6 +1427,7 @@ def main():
         which = which + "-slots32"
     meta = {"set": which, "block_size_old": "0x%x" % SIZE_OLD,
             "date_keys": keys if "-dates" in which else None,
+            "cup_keys": cupkeys or None,
             "date_offsets": spread,
             "block_size_new": "0x%x" % new_size,
             "bases_new": {k: "0x%x" % v for k, v in bases.items()},
@@ -1294,6 +1437,8 @@ def main():
         meta["copy_size_new"] = "0x%x" % (H(LAYOUT["copy"]["size"]) + delta)
     if mlcopy:
         meta["mlcopy"] = mlcopy
+    if calendar:
+        meta["calendar"] = calendar
     out = os.path.join(ROOT, "patches", which + ".json")
     json.dump(meta, open(out, "w"), indent=1)
     print("%s: %d patches, block 0x%x -> 0x%x (+%d bytes)"

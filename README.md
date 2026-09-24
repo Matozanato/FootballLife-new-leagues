@@ -65,7 +65,7 @@ This project does two things:
    | coaches | 1,300 | 2,600 |
    | competition rulebooks (regulations) | 300 | 600 |
    | players | 30,001 | 51,729 |
-   | match records per season | 13,000 | 26,000 |
+   | match records per season | 13,000 | 46,000 |
    | fixtures list | 2,000 | 8,000 |
    | competitions a season can hold | 100 | 127 (192 with the experimental module) |
 
@@ -87,21 +87,35 @@ closed and carried its table on into the next season. The module handles both. I
 compiled piece in the main folder; its source and how to build it are in
 [tools/native/](tools/native/README.md).
 
-`sider/experimental/` holds twelve more that go further and **have only been run on our own
+`sider/experimental/` holds fourteen more that go further and **have only been run on our own
 test world**: 192 competitions instead of 127; every league selectable in the Select Team
 list, under its own name, showing its own clubs; 64 menu regions instead of 29; a league rank
 wide enough for a pyramid five divisions deep, with the relegation gate to match; a career
 that starts in August instead of January; promotion and relegation through a whole pyramid,
-not just its top joint; and a guard for the Super Cup. They abort cleanly if anything does
+not just its top joint; a guard for the Super Cup; **the 2024 European format** for the
+Champions League, the Europa League and a new Conference League, filled from a UEFA access
+list, with leagues of 10 to 24 clubs; and the added countries listed by name under
+Database -> Competition Info. They abort cleanly if anything does
 not match, and they are the part where another pair of hands helps most —
 [what they are, and in what order](sider/experimental/README.md).
 
 ## Status
 
-Measured on a test world of **39 new leagues and 780 new clubs**, played with a new club as
-the manager's team. Four seasons have been played end to end on one world, and since
-2026-09-23 the added leagues also close and re-open properly at every rollover. This page was
-last checked against the shipped modules on **2026-09-23**.
+Measured on our test worlds, always with a new club as the manager's team. The one played
+most recently (2026-09-24) has **39 new leagues, 780 new clubs and 23,400 new players** (30 per
+club): 602 of the clubs are placed in the leagues, which now have 10 to 24 clubs each, and 178
+have no league, as the game's own unattached clubs do. One of the 39 (regulation 62, 12 clubs)
+is in the data but is not loaded by the game, so 38 leagues and 590 clubs actually play; why
+is not known yet. It also has the Champions League and Europa
+League in the 2024 format and a new Conference League. Four seasons have been played end to
+end on an earlier world of 39 leagues of 20 clubs, and since 2026-09-23 the added leagues also
+close and re-open properly at every rollover. This page was last checked against the
+published modules on **2026-09-24**.
+
+> **New patch set on 2026-09-24: start a new career.** `sider/fl26caps.lua` now holds 46,000
+> match records instead of 26,000 (everything since 2026-09-22 was played on it), and a save
+> made under one patch set does not load under another. Keep your old `fl26caps.lua` if you
+> want to go on with an old career.
 
 **Works**
 
@@ -128,13 +142,26 @@ last checked against the shipped modules on **2026-09-23**.
   rollovers in total.
 - **A career that starts on 1 August** (experimental, `fl26augseason.lua`). A career in a
   league standing in a country of its own used to open in January. Measured on two new
-  careers on 2026-09-23: both open on 1 August. The cost, for now, is further down: the
-  European competitions do not start in such a career.
+  careers on 2026-09-23: both open on 1 August. On its own it leaves the European
+  competitions unstarted (see below); with `fl26swiss` they start and play.
+- **The Champions League, Europa League and Conference League in the 2024 format**
+  (experimental, `fl26swiss.lua` + `fl26swiss.dll` and the European world tools, new
+  2026-09-24). One league phase of 36 clubs each, a play-off for places 9-24, then a fixed
+  bracket from the round of 16. In the second season all three were filled from the previous
+  season's final tables through a UEFA access list, 108 of 108 places. The Champions League
+  and Europa League are shipped competitions and are modified in your own world copy; the
+  Conference League is added. [Details and caveats](sider/experimental/README.md#the-european-format-and-league-sizes-fl26swiss).
+- **Leagues of 10, 12, 14, 16, 18, 22 and 24 clubs** with the real number of rounds: 10 clubs
+  play four times (36 rounds), 12 three times (33) or four (44), 24 clubs twice (46). Checked
+  in two seasons running. Built with `tools/mksizes.py`; dated with `fl26swiss.dll`.
+- **Database -> Competition Info** lists the countries of the added leagues under their own
+  names (experimental, `fl26catlist.lua`). The flags there are still borrowed.
 - **Promotion and relegation through a whole pyramid** (experimental, `fl26chain` +
   `fl26seasonend` + the rank modules). On our world, with a third, fourth and fifth division
   under Ligue 2 and under Serie B, three clubs went up and three down at every joint of both
-  chains at the 2026-09-23 rollover.
-- All 39 new leagues playing their full 38 rounds in the first season. Before the fixture
+  chains at the 2026-09-23 rollover, and on 2026-09-24 all five chains of the newer world,
+  one of them under the Championship, did the same.
+- All 39 new leagues of 20 clubs playing their full 38 rounds in the first season. Before the fixture
   list was raised, some of them played none at all. Later seasons went wrong for a different
   reason, found and fixed on 2026-09-17 — see the first item below.
 - League tables that show the current season only. See `fl26hdr127.lua` above and the
@@ -145,7 +172,8 @@ last checked against the shipped modules on **2026-09-23**.
 - League sizes from 10 to 30 clubs. Different sizes in the same world. Ten is not a
   floor we imposed — the shipped game runs a 10-club league of its own, and 10-club
   leagues have been played here. Above 30 the round list runs out: see
-  [limits.md](docs/limits.md).
+  [limits.md](docs/limits.md). A league that is not 20 clubs playing twice needs
+  `fl26swiss.dll` for its dates, or it ends early or runs out of dates.
 - **Cups.** A cup built with `mkcup.py` plays a full Master League knockout, every round
   dated: round of 16, quarter-finals, semi-finals, final. One rule decides it — the cup is
   filled from the **first league in its region**, and that league must have **sixteen clubs**,
@@ -173,9 +201,12 @@ last checked against the shipped modules on **2026-09-23**.
   but an entry is never given back, so across four seasons the count rose 88, 115, 119, 124.
   Whether it stops below 127 is not yet known. Long-running worlds are the most useful thing
   you can report — see the [testing guide](docs/testing-guide.md).
-- **The game crashes in its own code when a scene is set up**, most visibly when generating
-  a season and at season rollovers, regardless of these mods. Start again or reload; it is
-  not data damage.
+- **The game crashes now and then inside its own protected code** (fault offsets
+  `0x84ed4c0`, `0x131cc313`, `0x18ecc042`), while a scene is being set up: generating a
+  season, loading a match, a season rollover. On 2026-09-24 that was five times in about four
+  hours of simulated play. It is not yet explained, and it has not been tested whether it also
+  happens on a stock game, so do not take it for a game bug. The saved season is not damaged:
+  reload and carry on, and save often. This is being worked on now.
 - **A calendar day holds only 280 matches**, and everything past that is dropped in silence
   — no error, no sign in the world files, just a round that never happens. The published
   remedy is to spread the leagues over different weekdays, which is what `--date-offsets` is
@@ -190,12 +221,13 @@ last checked against the shipped modules on **2026-09-23**.
   same id, which is what `fl26join.dll` now works around **(fixed 2026-09-22)**. The dates
   still come from the first table, so the id list in `fl26caps.lua` still matters. See
   [how-it-works.md](docs/how-it-works.md).
-- **In a career that starts in August, the European competitions do not start.** The
-  Champions League play-off is dated on days 230 and 237 of the year, and the game registers
-  the European competitions on day 238, after both, so the play-off never gets its matches
-  and nothing after it begins. The domestic season is not affected. Being worked on now,
-  together with a 36-club Champions League and Europa League. Without `fl26augseason.lua`
-  the career opens in January instead, with the league's first round in August.
+- **In a career that starts in August, the shipped European competitions do not start.**
+  The Champions League play-off is dated on days 230 and 237 of the year, and the game
+  registers the European competitions on day 238, after both, so the play-off never gets its
+  matches and nothing after it begins. The domestic season is not affected. The experimental
+  European format (`fl26swiss`) runs its own play-off and starts all three competitions;
+  without it, this still happens. Without `fl26augseason.lua` the career opens in January
+  instead, with the league's first round in August.
 - Not measured yet: a world like this with a **shipped club** as your team.
 - **Rulebook ids above 175 work in Master League but are invisible in the Select Team list**
   unless `sider/experimental/fl26comptab.lua` is installed. That list is a static table in the
@@ -216,9 +248,10 @@ last checked against the shipped modules on **2026-09-23**.
   together they worked at the 2026-09-23 rollover (see Works). Their lists carry our world's
   league ids and must be edited for yours. Still wrong: Ligue 2 came out of that rollover
   with 21 clubs.
-- Continental competitions for new clubs: granting them places deliberately is not done yet.
-  New clubs can end up in the Champions League anyway when their league is built as a first
-  division in a shipped country — see [known-issues.md](docs/known-issues.md).
+- Continental places for new leagues: done only through the experimental `fl26swiss.dll`,
+  whose UEFA access list names our world's leagues. Without it, new clubs can end up in the
+  Champions League anyway when their league is built as a first division in a shipped
+  country — see [known-issues.md](docs/known-issues.md).
 - New clubs use **placeholder names, cloned kits and cloned squads**. This project proves the
   capacity; dressing the clubs is ordinary Team.bin / kit editing on top of it.
 - New leagues appear under an **existing menu region** (England by default), and spreading
@@ -231,6 +264,8 @@ last checked against the shipped modules on **2026-09-23**.
   as groupings and borrow a name. The module that gives them headings of their own copies
   the game's own rows and is not published, because the version that exists carries those
   rows as a blob of shipped bytes and this repository does not redistribute game data.
+  Database -> Competition Info is a different screen: there the added countries show under
+  their own names with `sider/experimental/fl26catlist.lua`, though still with borrowed flags.
 - More than 39 leagues, or leagues built with non-default ids, need a regenerated patch set
   ([why](docs/for-developers.md)).
 
@@ -273,14 +308,16 @@ file if the problem is reproducible from a save.
 ```
 sider/              fl26caps.lua (generated patch set), the null guards, fl26hdr127.lua,
                     fl26joindll.lua and the compiled fl26join.dll it loads
-sider/experimental/ twelve modules that go further, run on our test world only:
+sider/experimental/ fourteen modules that go further, run on our test world only:
                     192 competitions, the Select Team list (names, slots, club lists),
                     64 regions, a 3-bit league rank and its relegation gate, an August
                     start, season-end promotion through a pyramid (fl26chain.dll),
-                    a Super Cup guard
-tools/              world builders (mkworld, mkplayers, mkcrests, mkkits, mkcup ...),
+                    a Super Cup guard, the 2024 European format and league sizes
+                    (fl26swiss.dll), country names in Competition Info
+tools/              world builders (mkworld, mkplayers, mkcrests, mkkits, mkcup,
+                    spreadregions, mkreshape, mkuecl, mkeuropo, mksizes ...),
                     pesdb/CPK readers, the patch-set generator and its checkers
-tools/native/       the C source of the three DLLs, their build scripts and checksums
+tools/native/       the C source of the four DLLs, their build scripts and checksums
 patches/            the patch set as JSON plus the layout tables the generator reads
 docs/               step-by-step, install, build-your-world, testing-guide, known-issues,
                     limits, how-it-works, for-developers
@@ -289,8 +326,8 @@ docs/               step-by-step, install, build-your-world, testing-guide, know
 ## Support
 
 Everything here is free and MIT-licensed. Weeks of disassembly, unattended test seasons
-and crash dumps went into it, and there is more to do (the European competitions in an August-start career, continental
-places for new leagues, loading long saves, menu region names). If you want to help it along:
+and crash dumps went into it, and there is more to do (the crashes in the game's protected code, loading long saves,
+menu region names and flags, continental places for any world rather than ours). If you want to help it along:
 **[ko-fi.com/mata28](https://ko-fi.com/mata28)**. Testing and good bug reports help just as
 much — see the [testing guide](docs/testing-guide.md).
 

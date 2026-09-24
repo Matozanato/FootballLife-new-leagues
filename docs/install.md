@@ -117,7 +117,7 @@ Start FL26 once, get to the main menu, quit, and open `SiderAddons\sider.log`. Y
 ten lines like these, one per module line in `sider.ini`:
 
 ```
-[fl26caps.lua] fl26caps: applied all 2760 patches -- block 0x1877068 -> 0x3171a68, 2760 patches
+[fl26caps.lua] fl26caps: applied all 2760 patches -- block 0x1877068 -> 0x3cd4ae8, 2760 patches
 [fl26nullguard.lua] fl26caps: applied all 2 patches -- nullguard: null-check at 0x141fea5b0
 [fl26nullguard2.lua] fl26caps: applied all 2 patches -- nullguard2: null-check at 0x140fc9238
 [fl26nullguard4.lua] fl26caps: applied all 2 patches -- nullguard4: null-check at 0x1415720d0
@@ -147,7 +147,7 @@ installed, please report it.
 
 ## 4b. The experimental modules, later
 
-`sider/experimental/` holds twelve modules that go further than the eleven above and have
+`sider/experimental/` holds fourteen modules that go further than the eleven above and have
 only been run on our test world: 192 competitions instead of 127; the Select Team list fixed
 three ways (leagues that had no slot, slots that draw a hard-coded heading, slots that show
 the wrong clubs); 64 menu regions instead of 29; and a league rank wide enough for five

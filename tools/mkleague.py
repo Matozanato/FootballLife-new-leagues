@@ -29,7 +29,12 @@ import pesdb
 
 COMP, REG, ENT = 36, 2352, 12
 REGION_OFF, CID_OFF, FLAG_OFF, CODE_OFF = 3, 5, 6, 8
-R_NAMEID, R_ID, R_CID, R_TYPE, R_TEAMS, R_NAME = 0x00, 0x02, 0x08, 0x09, 0x0b, 0x14
+# +0x00 was called R_NAMEID here until 2026-09-21. It is not a name: it is the id of the
+# division this one RELEGATES into (deepen.py writes it, and all eleven shipped links read
+# right that way -- England 17 -> 79, Italy 18 -> 82, France 20 -> 81 ...). Zeroing it, which
+# is what add_league does below, means "nothing below me", which is correct for a new league.
+R_BELOW, R_ID, R_CID, R_TYPE, R_TEAMS, R_NAME = 0x00, 0x02, 0x08, 0x09, 0x0b, 0x14
+R_NAMEID = R_BELOW               # old name, kept so mkphases.py and any local script still run
 NAME_SLOTS, NAME_SLOT = 20, 0x73
 E_TEAM, E_EID, E_CID, E_ORDER = 0x00, 0x04, 0x08, 0x09
 
@@ -41,6 +46,24 @@ def load(d, n):
 def put(b, off, s, n):
     v = s.encode("utf-8")[:n - 1]
     b[off:off + n] = v + b"\0" * (n - len(v))
+
+
+def enc_region(rid):
+    """Competition.bin +3 from a region id.
+
+    Bits 3..7 hold the region and bits 0..2 are zero in every shipped row, so ids 0..31 are
+    just rid * 8, exactly as they have always been. Bit 0 carries the sixth bit, which the
+    game only reads once sider/fl26reg64.lua is installed -- without it a region above 31
+    silently decodes as rid - 32, so the module and the data go together.
+    """
+    if not 0 <= rid < 64:
+        raise ValueError("region %d is outside 0..63" % rid)
+    return ((rid & 0x1f) << 3) | ((rid >> 5) & 1)
+
+
+def dec_region(byte):
+    """The region id in a Competition.bin +3 byte, read the way fl26reg64 makes the game read it."""
+    return ((byte >> 3) & 0x1f) | ((byte & 1) << 5)
 
 
 R_TIER = 0x10                    # dword; bits 15-17 hold the division (1 = D1, 2 = D2, 3 = D3)
@@ -59,15 +82,14 @@ def set_tier(g, tier):
 
     The file field is three bits wide and the loader passes all three (0x1414f82a8), but the
     shipped setter shifts them into bits 30-31, so only 1, 2 and 3 survive -- a 4 written here
-    arrives at runtime as 0. Ranks above 3 therefore mean nothing unless
-    sider/experimental/fl26rank.lua is installed, which moves the runtime field down to bits
-    29-31.
+    arrives at runtime as 0. Ranks above 3 therefore mean nothing unless sider/experimental/fl26rank.lua is
+    installed, which moves the runtime field down to bits 29-31.
     """
     if tier not in (1, 2, 3, 4, 5, 6, 7):
         raise SystemExit("tier %r is not 1..7" % (tier,))
     if tier > 3:
-        print("  note: tier %d needs sider/experimental/fl26rank.lua; "
-              "without it the game reads it as %d" % (tier, tier & 3))
+        print("  note: tier %d needs sider/experimental/fl26rank.lua; without it the game reads it as %d"
+              % (tier, tier & 3))
     v = int.from_bytes(g[R_TIER:R_TIER + 4], "little")
     v = (v & ~(TIER_MASK << TIER_SHIFT)) | (tier << TIER_SHIFT)
     g[R_TIER:R_TIER + 4] = v.to_bytes(4, "little")
@@ -106,7 +128,7 @@ def add_league(comp, regs, ents, cid, reg, region, name, code, teams,
         print("competition row copied from %s (region %d, flag %d)"
               % (proto_code, c[REGION_OFF], c[FLAG_OFF]))
     scid = c[CID_OFF]
-    c[REGION_OFF], c[CID_OFF] = region, cid
+    c[REGION_OFF], c[CID_OFF] = region, cid       # a byte, not an id: see enc_region
     put(c, CODE_OFF, code, COMP - CODE_OFF)
     comp += c
 

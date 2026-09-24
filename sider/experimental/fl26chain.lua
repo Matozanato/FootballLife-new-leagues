@@ -29,6 +29,10 @@ local m = {}
 -- because Serie A's visit already wrote Serie B, and Ligue 2 (81) -> 180 for the same reason
 -- with Ligue 1. (Ligue 2 used to lack a season table here; that was fl26hdr192 missing the
 -- table-state byte at 0x14159edca, fixed there.)
+-- In the league-size world (sider/experimental/README.md, the European format) regulation 174
+-- is a third division below the Championship; there, add { 79, 174, 3, 3 } as a fifth chain.
+-- Do not add it anywhere else: in a world where 174 is a first division it would move clubs
+-- between the Championship and that league. Up to 8 chains.
 local CHAINS = { { 81, 180, 3, 3 }, { 82, 183, 3, 3 }, { 181, 182, 3, 3 }, { 184, 185, 3, 3 } }
 
 -- Our regulations (the fl26joindll list). None of them may be rewritten with an EMPTY club

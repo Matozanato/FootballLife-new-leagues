@@ -199,9 +199,13 @@ def main(argv):
     parent = row(regs, ri[below])
     child = row(regs, ri[league])
     ptier = M.get_tier(parent)
-    if ptier < 2 or ptier > 6:
+    # A first division is a parent too (--top): that is the shipped England 17 -> 79 link, the
+    # one relegation path the engine has always had. It needs --top only so that pointing a
+    # league at the wrong id cannot quietly re-parent a whole country's top flight.
+    lo = 1 if "--top" in argv else 2
+    if ptier < lo or ptier > 6:
         raise SystemExit("regulation %d is tier %d; a new division goes under a second one or "
-                         "lower, and the rank field stops at 7" % (below, ptier))
+                         "lower (or a first with --top), and the rank field stops at 7" % (below, ptier))
     ctier = ptier + 1 if deep_rank else 3
     if u16(parent, R_BELOW):
         raise SystemExit("regulation %d already relegates into %d" % (below, u16(parent, R_BELOW)))

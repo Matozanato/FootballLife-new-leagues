@@ -50,7 +50,7 @@
 #define OFF_PARENT 0x628
 #define NOPARENT_RVA 0x351ae44  /* global "no parent club" sentinel the mover compares to */
 #define MAX_CLUBS  48
-#define MAX_CHAINS 4
+#define MAX_CHAINS 8
 
 /* prologues we steal (whole, position-independent instructions) */
 static const unsigned char SIG_SET[15] = {                 /* mov [rsp+8],rbx; mov [rsp+10],rbp; mov [rsp+18],rsi */
