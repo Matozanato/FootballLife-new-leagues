@@ -67,7 +67,7 @@ This project does two things:
    | players | 30,001 | 51,729 |
    | match records per season | 13,000 | 46,000 |
    | fixtures list | 2,000 | 8,000 |
-   | competitions a season can hold | 100 | 127 (192 with the experimental module) |
+   | competitions a season can hold | 100 | 192 with `fl26hdr192.lua` (experimental, used on our test world); 127 with the stable `fl26hdr127.lua` |
 
    Every module verifies the bytes it is about to change and refuses to touch a different
    game build. If anything does not match, the game runs unmodified and `sider.log` says why.
@@ -199,7 +199,8 @@ published modules on **2026-09-24**.
   only the new one. They all play. [Details](docs/known-issues.md).
 - **The competition table can still fill up.** `fl26hdr127.lua` raises it from 100 to 127,
   but an entry is never given back, so across four seasons the count rose 88, 115, 119, 124.
-  Whether it stops below 127 is not yet known. Long-running worlds are the most useful thing
+  Whether it stops below 127 is not yet known. The experimental `fl26hdr192.lua`, which our
+  current test world runs, raises the ceiling to 192 and leaves far more room. Long-running worlds are the most useful thing
   you can report — see the [testing guide](docs/testing-guide.md).
 - **The game crashes now and then inside its own protected code** (fault offsets
   `0x84ed4c0`, `0x131cc313`, `0x18ecc042`), while a scene is being set up: generating a
