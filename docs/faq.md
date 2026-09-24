@@ -67,3 +67,68 @@ Master League's Select Team list (with `sider/experimental/fl26comptab.lua` and
 The same rule about the Edit save applies here too. After you rebuild a world, move the old
 `EDIT00000000` aside before deciding that a change did not work. An Edit save written before a
 data change hides that change.
+
+## How do I edit the players of the new clubs, if not in Edit mode?
+
+Edit mode reaches a club through its league, so players of a club in a new league cannot be
+reached there (see the question above). Players of clubs you added to a league the game
+already has can be edited in Edit mode as usual.
+
+For the rest, edit the world's data files with `tools/players.py`, the same way
+`rename.py` does clubs. The players live in the world's `common\etc\pesdb\Player.bin`, and
+which club each one plays for, with his shirt number, in `PlayerAssignment.bin`.
+
+**1. Find the players.**
+
+```
+python tools\players.py --root <your livecpk world> --list --club 72318
+```
+
+prints every player of that club: player id, team id, shirt number, name. `--club` also takes
+the club's name as `rename.py --list` prints it. Without `--club` you get every player in the
+file, including the game's own, which is how you find a player to copy from (step 2).
+
+**2. Write what should change.** A CSV file with a header line:
+
+```
+player,name,like,shirt
+180573,Ivan Example,,9
+180574,,1624,
+180575,Marko Example,1624,10
+```
+
+- `player`: the player id from the list (or the player's current name if no one else has it).
+- `name`: the new name. It is used for all four name fields the game has (full name, shirt,
+  on-screen, printed). Up to 60 bytes.
+- `like`: the id of another player to copy the playing side from: position, abilities,
+  skills, playing style. The player keeps his own id and his name. Leave it empty to keep
+  the player as he is.
+- `shirt`: the shirt number, 1 to 99.
+
+Leave any column empty to keep that part as it is.
+
+**3. Apply it.**
+
+```
+python tools\players.py --root <your livecpk world> --edit edits.csv
+```
+
+If any line is wrong (a player or source that does not exist, a name too long, a shirt number
+out of range), nothing is written. The original files are kept as `Player.bin.bak` and
+`PlayerAssignment.bin.bak`.
+
+**Why copy instead of typing numbers?** Every new squad is already a copy: `mkplayers.py`
+clones one of the game's own squads and renames it, so all new clubs start with the same
+players. Changing a player by copying another whole player gives the game a record of the
+kind it already reads. Setting single ratings is not offered, because the ability data is
+only partly understood. The ratings are not labelled yet, some of them do not decode cleanly,
+and the player's position is stored right next to them, so a wrong write can turn a whole
+squad into goalkeepers. That happened to us once. Copying a whole player cannot cause it.
+
+**Then start a new game.** A Master League career takes its own copy of the squads when it
+starts, so a career you are already in keeps the old players. Start a new career, or a Kick
+Off match, to see the changes. If an old `EDIT00000000` is in your save folder, move it aside
+first, for the reason given in the first question.
+
+Changes to the files are not tested in every screen of the game. If something looks wrong,
+put the `.bak` files back and open an issue.
