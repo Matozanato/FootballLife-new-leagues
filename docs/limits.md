@@ -65,14 +65,15 @@ week of August. The hub shows the real date bottom right; quote that in reports.
 
 ```
 11 49 60 61 62 74 76 93 94 96 98 100 109 110 111 112 113 114 121
-138 139 140 143 144 145 146 170 171 173 174 176 178 179 180 181 182 183 184 185
+138 139 140 143 144 145 146 170 171 173 174 176 178 179 180 181 182 183 184 185 190
 ```
 
 Read straight out of the shipped `sider/fl26caps.lua` (the 256-byte table at
-`0x14252e690`, where `0xff` means "no calendar"). Each of the 39 is mapped to a weekday
-shift of 0–6 days so that 39 leagues do not all land on the same weekday. Anything outside
-this list gets no calendar at all — including ids above 185, even though the stub itself is
-reached for every id from 1 to 1025.
+`0x14252e690`, where `0xff` means "no calendar"). Each of the 40 is mapped to a weekday
+shift of 0–6 days so that the leagues do not all land on the same weekday. 190 is the 25th
+league in worlds built from 25 September 2026 on, 145 the same league in older worlds (see
+[build-your-world.md](build-your-world.md)). Anything outside this list gets no calendar at
+all, even though the stub itself is reached for every id from 1 to 1025.
 
 ## Game build
 

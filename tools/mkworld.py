@@ -49,6 +49,17 @@ BAD_REG = {14, 32, 33,
            # array at Master League setup, so its clubs never arrive at all
            177}
 
+# Regulation ids that work but belong to someone else.  145 has no row in the regulation
+# file, yet the shipped J1 League relegates into it (the exe's competition table still has a
+# row for 145, the old J2), so a league of ours on 145 is where J1's relegated clubs would be
+# sent.  In our runs J1 never actually moved a club there, but the link is real, so the id
+# is not used.  Such an id is swapped for its replacement in place, so every other league
+# keeps the id it always had -- the modules, the fixture-date table and existing worlds all
+# key on those ids.  190 sits above the European phases 186-189, and it is in the
+# fixture-date table with 145's shift (2026-09-25).  Worlds built before then keep 145 and
+# still run; they just keep the link from J1 too.
+MOVED_REG = {145: 190}
+
 
 def free_ids(used, hi, want, prefer_from=0):
     """ids no shipped row claims, taken from prefer_from upward"""
@@ -165,6 +176,13 @@ def main():
                              % ", ".join(str(c) for c in clash))
     else:
         rids = free_ids(used_reg | BAD_REG, REG_MAX, nleague, reg_from)
+        for i, r in enumerate(rids):
+            to = MOVED_REG.get(r)
+            if to is not None:
+                if to in used_reg or to in rids:
+                    raise SystemExit("regulation %d should move to %d, but %d is taken"
+                                     % (r, to, to))
+                rids[i] = to
     print("competition ids %s" % (", ".join(str(c) for c in cids[:8])
                                   + (" ..." if nleague > 8 else "")))
     print("regulation  ids %s" % (", ".join(str(r) for r in rids[:8])

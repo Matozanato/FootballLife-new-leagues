@@ -187,6 +187,8 @@ selection list for Master League and for Kick Off.
    rulebook ids.
 2. Does each of your leagues sit under a **heading that makes sense**, or under a shipped
    one ("Classic Teams", "Other European Leagues", "Asia-Oceania") over a league of yours?
+   And the other way round: is any **heading blank**? A slot with no league of yours on it
+   should keep the heading it always had.
 3. Does each show **its own twenty clubs**, or national teams, foreign clubs, or an empty
    list?
 4. Pick a club from one of them and start a season. It has to be selectable *and* playable;

@@ -1485,7 +1485,7 @@ static const uint32_t KO_DAYS[3][7] = {
  * Twenty clubs twice is 38 and is left exactly as it was. */
 static const uint16_t OUR_LEAGUES[] = {
   11, 49, 60, 61, 62, 74, 76, 93, 94, 96, 98, 100, 109, 110, 111, 112, 113, 114, 121, 138, 139,
-  140, 143, 144, 145, 146, 170, 171, 173, 174, 176, 178, 179, 180, 181, 182, 183, 184, 185 };
+  140, 143, 144, 145, 146, 170, 171, 173, 174, 176, 178, 179, 180, 181, 182, 183, 184, 185, 190 };
 #define LONG_CAL_REG 79
 #define MID_CAL_REG 17
 static int our_league(uint16_t id)

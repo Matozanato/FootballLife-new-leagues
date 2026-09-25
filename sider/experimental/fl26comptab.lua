@@ -69,8 +69,11 @@ local NO_LABEL = "\255\255\255\255"
 local OUR_IDS = {
   11, 49, 60, 61, 62, 74, 76, 93, 94, 96, 98, 100, 109, 110, 111, 112, 113, 114, 121,
   138, 139, 140, 143, 144, 145, 146, 170, 171, 173, 174, 176, 178, 179, 180, 181, 182,
-  183, 184, 185,
+  183, 184, 185, 190,
 }
+-- 145 stays in the list for worlds built before 2026-09-25. It is the shipped J2's id: the
+-- exe's table has a row for it (slot 112) and the shipped J1 relegates into it, so a league on
+-- 145 takes J1's relegated clubs. mkworld now puts that league on 190 instead.
 
 -- our ids that already own a row: new slot
 local RESLOT = { [49] = 49, [74] = 74, [100] = 81 }
@@ -78,7 +81,7 @@ local RESLOT = { [49] = 49, [74] = 74, [100] = 81 }
 -- Sharing is normal in the shipped table (24 of its slots carry more than one competition, one
 -- carries ten), and this one has been in every build so far, so it stays rather than being moved
 -- for tidiness. Anything NOT listed here that lands on an occupied slot is a mistake and aborts.
-local SHARED_OK = { [49] = 177 }
+local SHARED_OK = { [49] = 177, [112] = 145 }
 -- row 76 is cup-shaped (inherited from the Libertadores slot): rebuild it from a league row
 local RESHAPE = { [76] = { from = 100, slot = 80 } }
 -- our ids with no row: appended as copies of the row of TEMPLATE_ID, on these slots
@@ -96,6 +99,9 @@ local APPEND = {
   {170, 22}, {171, 29}, {173, 43}, {174, 69}, {176, 71},
   {178, 72}, {179, 73}, {180, 75}, {181, 76}, {182, 77},
   {183,  6}, {184,  5}, {185,  4},
+  -- the 25th league: on 190 in worlds built from 2026-09-25 on, on 145 before. It takes 145's
+  -- slot, which no live competition holds once the league has left 145.
+  {190, 112},
 }
 -- Not here on purpose: 186, the FL Champions League. It is not a competition anyone manages a
 -- club through, so it does not belong in the Select Team list.

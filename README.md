@@ -113,7 +113,7 @@ is not known yet. It also has the Champions League and Europa
 League in the 2024 format and a new Conference League. Four seasons have been played end to
 end on an earlier world of 39 leagues of 20 clubs, and since 2026-09-23 the added leagues also
 close and re-open properly at every rollover. This page was last checked against the
-published modules on **2026-09-24**.
+published modules on **2026-09-25**.
 
 > **New patch set on 2026-09-24: start a new career.** `sider/fl26caps.lua` now holds 46,000
 > match records instead of 26,000 (everything since 2026-09-22 was played on it), and a save
@@ -215,6 +215,16 @@ published modules on **2026-09-24**.
   item (places 9-24) is called *Play-offs* instead of *W-L Table*, stays grey until the
   play-off is drawn, and then lists its ties (updated 2026-09-25).
   [Details](sider/experimental/README.md#the-european-format-and-league-sizes-fl26swiss).
+- **(Fixed 2026-09-25.) The 25th league moved off rulebook id 145.** 145 is the shipped J2
+  League's id, and the shipped J1 League relegates into it. `mkworld.py` now puts that league
+  on **190**. Worlds built before still work: the modules know both ids. If you rebuild your
+  world with the new `mkworld.py`, also take the new `fl26caps.lua`, `fl26joindll.lua` and,
+  if you use them, `fl26comptab.lua`, `fl26chain.lua` and `fl26swiss.dll`, or league 190 gets
+  no dates. The patch set's sizes did not change, so saves are not affected.
+- **(Fixed 2026-09-25, issue #2.) Blank headings in the team list.** `fl26slotnames.lua`
+  blanked the heading of a slot even when your world had no league on it. Such a slot now
+  keeps its original heading, so the default list is safe in any world. Replace the file if
+  you downloaded it earlier.
 
 **Does not work yet / under investigation**
 
@@ -256,7 +266,10 @@ published modules on **2026-09-24**.
   and for nine slots the game builds the **wrong club list** entirely, showing national teams
   or foreign clubs or nothing (`fl26clubs.lua` + its DLL). None of the three has been through
   a season, which is why they are experimental. Without them the season still plays — the
-  league is simply mislabelled, or missing, in that one menu.
+  league is simply mislabelled, or missing, in that one menu. One side effect of
+  `fl26comptab.lua`: three of our leagues take the slots of the **Asia-Oceania** and two
+  **Classic Teams** entries, so those do not appear in **Kick Off** while it is installed
+  ([details](docs/known-issues.md)).
 - **Promotion and relegation between the new leagues works, with experimental modules
   only.** Of the 214 shipped rulebooks only eleven carry a promotion or relegation link at
   all, and none of them chains three tiers. On its own the engine moves clubs across every

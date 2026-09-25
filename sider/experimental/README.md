@@ -20,14 +20,14 @@ runs exactly as it did before.
 |---|---|---|
 | `fl26hdr192.lua` | the season's competition header from 100 to **192** entries, instead of the 127 that `fl26hdr127.lua` gives | 192 needs a redirect at each of thirteen bounds rather than a single byte; the stubs go into the spare tail of the code section, where the null guards also live |
 | `fl26comptab.lua` | the **Select Team** list, so leagues that had no slot in it become selectable, and rows that inherited a shipped competition's name stop displaying it | it hands out free slots in a table the menu reads; if your install's table differs it aborts and says which slot disagreed |
-| `fl26slotnames.lua` | the **section heading** seven of those slots draw, which is hard-coded in the exe ("Classic Teams" over a league of yours) | it points seven slots at the switch's empty case, so the menu falls back to the competition's own name; the slot list must match YOUR world (see below) |
+| `fl26slotnames.lua` | the **section heading** seven of those slots draw, which is hard-coded in the exe ("Classic Teams" over a league of yours) | it points seven slots at the switch's empty case, so the menu falls back to the competition's own name, and to the original heading when your world has no competition on that slot. The default list is safe in any world |
 | `fl26clubs.lua` + `fl26clubs.dll` | the **club list** the Select Team screen shows for nine slots where the game builds the wrong one (national teams, classic teams, foreign clubs, or nothing at all) | it replaces two functions that read those lists and answers from the league's own rulebook instead; nothing is written, and a slot it cannot answer for falls back to the game's own answer |
 | `fl26rank.lua` | the **league rank** (first division, second, third) from a 2-bit field to a 3-bit one, so a pyramid can be more than three deep and the game can tell D3, D4 and D5 apart | 147 sites, every one an in-place rewrite of the same length; it moves the field into a bit the shipped loader never sets, and the group count keeps five bits (31 groups) |
 | `fl26deeprank.lua` | the **relegation gate**, so a club goes down from any division, not only the second | replaces `fl26deep4.lua`; load it AFTER `fl26rank.lua` and turn `fl26deep4.lua` off, or the bytes will not match |
 | `fl26deep4.lua` | one byte, so that a **third** division relegates into a fourth | superseded by `fl26rank` + `fl26deeprank`, which do it properly; kept for anyone who wants the one-byte version without the rank change |
 | `fl26reg64.lua` | the number of **regions** (countries the menus group by) from 29 to **64** | one instruction: the shipped code masks the region to five bits and throws away anything from 29 up, while the runtime field it feeds is six bits wide. Every shipped row keeps the region it had |
-| `fl26augseason.lua` | a Master League career in one of the added leagues **starts in August** (day 212) instead of 1 January | one jump: the lookup that picks the season type knows only the shipped regions 2..28, and a region of 29 or more fell through to "calendar year". Needs `fl26reg64.lua` (a league only reaches region 29+ with it). **Known side effect, being worked on:** in an August-start career the Champions League play-off is registered after its own two dates, so it gets no matches and the European competitions never start |
-| `fl26superguard.lua` | the **UEFA Super Cup setup** no longer crashes when the Champions League or Europa League entry it looks for is missing | one bounds check. When an entry is missing, that season has no Super Cup instead of a crash. Seen in an August-start career; the play-off problem above is the likely cause |
+| `fl26augseason.lua` | a Master League career in one of the added leagues **starts in August** (day 212) instead of 1 January | one jump: the lookup that picks the season type knows only the shipped regions 2..28, and a region of 29 or more fell through to "calendar year". Needs `fl26reg64.lua` (a league only reaches region 29+ with it). **Known side effect:** in an August-start career the Champions League play-off is registered after its own two dates, so on its own it gets no matches and the European competitions never start. With `fl26swiss` installed the DLL runs the play-off itself and all three competitions start (measured 2026-09-24) |
+| `fl26superguard.lua` | the **UEFA Super Cup setup** no longer crashes when the Champions League or Europa League entry it looks for is missing | one bounds check. When an entry is missing, that season has no Super Cup instead of a crash. Seen in an August-start career without `fl26swiss`; the play-off problem above is the likely cause. With `fl26swiss` the Super Cup was set up normally in the first and the third season of a run on 2026-09-25. Keep the guard installed anyway |
 | `fl26seasonend.lua` | the **end-of-season filter**: the French and Italian leagues take part in the European season end (so a league below Ligue 2 or Serie B can go up and down), and one league without a final table no longer stops promotion for its whole group | two redirects. Works with the updated `fl26join.dll`, which it leaves the final say to; without the DLL it drops only the league that cannot be moved |
 | `fl26chain.lua` + `fl26chain.dll` | **promotion and relegation through three or more divisions**. The game exchanges clubs only across every other joint of a chain; the DLL completes the joints it skips, using the game's own standings and its own list writer | its `CHAINS` and `PROTECT` lists are **our** world's league ids and must be replaced with yours; the promote/demote counts must match the `COUNTS` table in `fl26comptab.lua`. Measured: the French and Italian chains moved 3 up and 3 down at every joint at the 2026-09-23 rollover, and on 2026-09-24 all five chains of the league-size world (the fifth is Championship -> an added England D3) did the same. Up to 8 chains |
 | `fl26swiss.lua` + `fl26swiss.dll` | the **2024 European format**: the Champions League, Europa League and a new Conference League each play one league phase of 36 clubs (8 opponents each in the first two, 6 in the Conference League), then a knockout play-off for places 9-24, then a fixed bracket from the round of 16 to the final. It also fills all three from a **UEFA access list** (which league position goes where, 36 clubs per competition) and dates leagues of 10 to 24 clubs over the whole season | it replaces the game's schedule builder for the listed regulations only and runs the game's own code for everything else. Needs a world built with the European tools (see *The European format and league sizes* below). Its regulation ids and its access list are our world's and are written in the source |
@@ -39,7 +39,7 @@ They are not independent. This is the order they were run in here:
 
 ```ini
 lua.module = "fl26comptab.lua"     ; first: it prints "id N -> row R slot S" for every league
-lua.module = "fl26slotnames.lua"   ; needs the slot numbers comptab printed
+lua.module = "fl26slotnames.lua"   ; the default slot list works in any world
 lua.module = "fl26clubs.lua"       ; same
 lua.module = "fl26rank.lua"
 lua.module = "fl26deeprank.lua"    ; after rank, and with fl26deep4 off
@@ -66,8 +66,10 @@ promotes and relegates), `CHAINS` / `PROTECT` in `fl26chain.lua`, `REGS` and `UE
 `fl26swiss.lua`, the `ACCESS` list in `tools/native/fl26swiss.c` and `COUNTRY` in
 `fl26catlist.lua`. All of them ship with our test world's ids.
 
-`fl26slotnames.lua` and `fl26clubs.lua` both carry a `SLOTS` table near the top, and the
-numbers in them are the slots **our** test world happened to land on. A competition slot is
+`fl26clubs.lua` carries a `SLOTS` table near the top, and the numbers in it are the slots
+**our** test world happened to land on. (`fl26slotnames.lua` has one too, but since
+2026-09-25 you can leave it as it is: a slot with no league of yours on it keeps its
+original heading.) A competition slot is
 not a property of your league; it is handed out by `fl26comptab.lua` at boot, and it says so
 in `sider.log`:
 
@@ -76,9 +78,9 @@ in `sider.log`:
 ```
 
 Read the slot of each of your leagues from those lines and put those numbers in. **Never
-guess a slot.** `fl26slotnames.lua` also names, for each slot, the case byte it expects to
-find and the heading that case draws today — if your install disagrees it changes nothing
-and logs what it saw, which is the report we want.
+guess a slot.** `fl26slotnames.lua` names, for each slot, the case byte it expects to find
+and the heading that case draws today — if your install disagrees it changes nothing and
+logs what it saw, which is the report we want.
 
 ## What `fl26rank.lua` and `fl26reg64.lua` are for, in one paragraph each
 

@@ -261,8 +261,9 @@ calendar.
 
 - **Saves are tied to the world.** A save made with world A does not load with world B or
   with the shipped game. Move your saves aside when you switch roots.
-- **Rulebook ids must be in the date table** (39 ids shipped in `fl26caps.lua`) **and in
-  the id list of `fl26joindll.lua`** (the same 39). A league outside the first is silently
+- **Rulebook ids must be in the date table** (the 39 ids a default `mkworld.py` run uses,
+  shipped in `fl26caps.lua`) **and in the id list of `fl26joindll.lua`** (the same ids; both
+  also keep 145 for worlds built before 2026-09-25). A league outside the first is silently
   never scheduled; a league outside the second is only entered into the season if the game
   happens to list it itself. Together these are the single most common way a new league
   ends up existing but never playing. See build-your-world.md and
@@ -273,6 +274,13 @@ calendar.
   static table in the exe, and `sider/experimental/fl26comptab.lua` copies and extends it so
   those leagues become selectable — not yet verified across a season, which is why it sits in
   the experimental folder.
+- **With `fl26comptab.lua` installed, Kick Off loses three shipped entries.** Select Team
+  and Kick Off use the same list of slots. Three of our leagues sit on slots 4, 5 and 6,
+  which the shipped game uses for the **Asia-Oceania** national teams and the two
+  **Classic Teams** entries, so in Kick Off those three entries show our leagues and their
+  clubs instead (measured 2026-09-25). Nothing is deleted: remove the module, or give those
+  three leagues other slots in its `APPEND` list, and the entries come back. Every other free
+  slot is already in use, which is why they were taken.
 - **1,536 clubs in total is a wall** in the season generator, independent of the 1,600 table
   size. 793 new clubs is the most we have built and loaded; the world played across four
   seasons had 39 leagues and 780.
@@ -288,6 +296,20 @@ calendar.
   slots: the budget is 18,266 new players in total.
 
 ## Fixed along the way (so you can confirm)
+
+- 2026-09-25: the 25th league of a default world sat on rulebook id **145**, which is the
+  shipped J2 League's id, and the shipped **J1 League relegates into 145**. `mkworld.py` now
+  puts that league on **190**; `fl26caps.lua`, `fl26joindll.lua`, `fl26comptab.lua`,
+  `fl26chain.lua` and `fl26swiss.dll` know 190 and still know 145, so a world built before
+  keeps working. In our own runs J1 never actually sent a club into 145, at New Year or at
+  the July rollover, but the link is there, so the league was moved rather than trusted.
+  Verified on a new world: league 190 enters the season with all its clubs and every round
+  dated.
+- 2026-09-25 (GitHub issue #2): `fl26slotnames.lua` left a **blank heading** on any slot of
+  its list that has no league of yours on it. It now falls back to the heading the slot
+  always had ("Asia-Oceania", "Classic Teams", ...), so the default list is safe in any
+  world. Checked in game both ways: our leagues keep their own names, and with a slot
+  emptied on purpose its heading reads "Asia-Oceania" again.
 
 - 2026-09-16: a season loaded from a save died a day after matchday 1 in the AI lineup pass,
   with the game asking for a player that does not exist. The cause was in this patch set: the

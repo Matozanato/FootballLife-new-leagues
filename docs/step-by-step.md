@@ -205,13 +205,17 @@ ever plays a match, and both are keyed by the league's **rulebook (regulation) i
    the game happens to list it itself — and for a league standing in a country of its own,
    it does not.
 
-Both ship with the same 39 ids, which are exactly the ids a default `mkworld.py` run hands
+Both ship with the same 39 ids (and 145, see below), which are exactly the ids a default `mkworld.py` run hands
 out, in order:
 
 ```
 11 49 60 61 62 74 76 93 94 96 98 100 109 110 111 112 113 114 121
-138 139 140 143 144 145 146 170 171 173 174 176 178 179 180 181 182 183 184 185
+138 139 140 143 144 190 146 170 171 173 174 176 178 179 180 181 182 183 184 185
 ```
+
+The 25th league is on **190**. Worlds built before 25 September 2026 have it on **145**
+instead; 145 stays covered everywhere, so those worlds keep working. It was moved because
+the game's own J1 League relegates into 145, which sent Japanese clubs into that league.
 
 Compare them with the `regulation` column `mkworld.py` printed. On a stock install with the
 defaults, the first 39 leagues you build land exactly on these and there is nothing to do.

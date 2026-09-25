@@ -79,12 +79,16 @@ every league's ids.)
 A new league gets its fixture dates from a small table inside `fl26caps.lua`, keyed by the
 league's **rulebook (regulation) id**. A league whose id is not in that table is never
 scheduled: it appears in the menus, you can pick a club from it, and the season generator
-simply gives it no matches. The shipped `fl26caps.lua` covers these 39 ids:
+simply gives it no matches. The shipped `fl26caps.lua` covers these 39 ids (and 145, see below):
 
 ```
 11 49 60 61 62 74 76 93 94 96 98 100 109 110 111 112 113 114 121
-138 139 140 143 144 145 146 170 171 173 174 176 178 179 180 181 182 183 184 185
+138 139 140 143 144 190 146 170 171 173 174 176 178 179 180 181 182 183 184 185
 ```
+
+The 25th league is on **190**. Worlds built before 25 September 2026 have it on **145**
+instead; 145 stays covered everywhere, so those worlds keep working. It was moved because
+the game's own J1 League relegates into 145, which sent Japanese clubs into that league.
 
 `mkworld.py` hands rulebook ids out from the bottom of the free list, so with an unmodified
 FL26 install and the default `--reg-from`, the first 39 leagues you build get exactly these

@@ -66,7 +66,7 @@ local m = {}
 -- of yours that is missing here is a league that may never get a season.
 local IDS = { 11, 49, 60, 61, 62, 74, 76, 93, 94, 96, 98, 100, 109, 110, 111, 112, 113, 114,
               121, 138, 139, 140, 143, 144, 145, 146, 170, 171, 173, 174, 176,
-              178, 179, 180, 181, 182, 183, 184, 185 }
+              178, 179, 180, 181, 182, 183, 184, 185, 190 }
 
 local CAVE_VA, CAVE_PAGE, CAVE_LEN = 0x14252ebe0, 0x14252e000, 0x208
 local PAGE_EXECUTE_READWRITE = 0x40
