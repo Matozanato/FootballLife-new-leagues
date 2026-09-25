@@ -6,7 +6,7 @@ thirty-nine copies of twenty clubs playing twice.
 
 The plan is a JSON object keyed by regulation id:
 
-    { "11":  { "clubs": 10, "legs": 4, "name": "Croatia D1" },
+    { "11":  { "clubs": 10, "legs": 4, "name": "My League" },
       "62":  { "clubs": 12, "legs": 3 },
       ... }
 

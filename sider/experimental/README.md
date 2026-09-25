@@ -125,7 +125,7 @@ python tools\mkreshape.py --base <root>\common\etc\pesdb --out <root2> ^
        --reshape UEFA_CHAMPIONS_LEAGUE:2:groups:36:1:- --reshape UEFA_EUROPE_LEAGUE:1:groups:36:1:-
 python tools\mkuecl.py   --src <root2> --out <root3>
 python tools\mkeuropo.py --src <root3> --out <root4>
-python tools\mksizes.py  --src <root4> --out <root5> --plan tools\sizes-2025-26.json
+python tools\mksizes.py  --src <root4> --out <root5> --plan sizes.json
 python tools\deepen.py --root <root5> --league 174 --below 79  --deep-rank --top
 python tools\deepen.py --root <root5> --league 176 --below 174 --deep-rank
 python tools\deepen.py --root <root5> --league 179 --below 96  --deep-rank --top
@@ -138,8 +138,8 @@ comment above that table says why only then).
 `<root2>` first. `mkuecl.py` prints a `local UECL = { ... }` line; put it into
 `fl26swiss.lua`. The last three lines are our world's choices (two 24-club divisions under the
 Championship, a 22-club second division under reg 96); leave them out if you do not want them,
-and edit `sizes-2025-26.json` for your own leagues. On our machine these seven commands, run
-from our region-spread world, rebuild the world we play byte for byte.
+and write `sizes.json` for your own leagues (one line per league: club count and how many
+times the clubs meet; the format is at the top of `tools/mksizes.py`).
 
 **This modifies two shipped competitions.** The Champions League and Europa League rows in
 your own livecpk copy are changed, and the 18 shipped group rows that a 36-club single group

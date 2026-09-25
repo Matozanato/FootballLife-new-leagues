@@ -92,7 +92,7 @@ players 0x17c, clubs 0x690, coaches 0x258, regulations 0x314, match records 0x25
 | `mkphases.py`, `mkreshape.py` | clone a multi-phase competition; change the shape of a phase of a shipped one in place (the 36-club league phase) |
 | `mkuecl.py`, `mkeuropo.py` | add the Conference League; give the Europa and Conference League the 9-24 play-off |
 | `mkswiss.py` | generate and check the league-phase draw tables compiled into `fl26swiss.dll` |
-| `mksizes.py` + `sizes-2025-26.json` | set each added league's club count and how many times the clubs meet |
+| `mksizes.py` | set each added league's club count and how many times the clubs meet (you write the plan; format at the top of the script) |
 | `native/fl26join.c`, `native/fl26clubs.c`, `native/fl26chain.c`, `native/fl26swiss.c` and their build scripts | the sources of the four DLLs and the one-line `zig cc` build; see [native/README.md](../tools/native/README.md) |
 
 Tools we use in development but did not include: the automation harness that plays seasons
