@@ -280,8 +280,8 @@ static void fix_chain(chain_t* ch)
 
   uint32_t nb[MAX_CLUBS], nc[MAX_CLUBS]; int nnb = ch->n_list_mid, nnc = ch->n_list_low;
   memcpy(nb, ch->list_mid, nnb*4); memcpy(nc, ch->list_low, nnc*4);
-  for (int i = 0; i < nd; i++) { int r = remove_handle(nb, nnb, down[i]); if (r < 0) { logf("fix: relegated club %08x not in %u's list -- aborting", down[i], ch->cfg.mid); g_stat[3]++; return; } nnb = r; }
-  for (int i = 0; i < nu; i++) { int r = remove_handle(nc, nnc, up[i]);   if (r < 0) { logf("fix: promoted club %08x not in %u's list -- aborting", up[i], ch->cfg.low); g_stat[3]++; return; } nnc = r; }
+  for (int i = 0; i < nd; i++) { int r = remove_handle(nb, nnb, down[i]); if (r < 0) { logf("fix %u->%u: relegated club %08x is no longer in %u's list -- the game already moved this pair, leaving it as it is", ch->cfg.mid, ch->cfg.low, down[i], ch->cfg.mid); g_stat[3]++; return; } nnb = r; }
+  for (int i = 0; i < nu; i++) { int r = remove_handle(nc, nnc, up[i]);   if (r < 0) { logf("fix %u->%u: promoted club %08x is no longer in %u's list -- the game already moved this pair, leaving it as it is", ch->cfg.mid, ch->cfg.low, up[i], ch->cfg.low); g_stat[3]++; return; } nnc = r; }
   if (nnb + nu > MAX_CLUBS || nnc + nd > MAX_CLUBS) { logf("fix: list overflow"); g_stat[3]++; return; }
   for (int i = 0; i < nu; i++) nb[nnb++] = up[i];
   for (int i = 0; i < nd; i++) nc[nnc++] = down[i];
