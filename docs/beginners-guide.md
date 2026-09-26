@@ -184,7 +184,7 @@ downloaded from here. First, those tables have to be unpacked.
    If you have a `data_s2526d.cpk` or later, do that one last, the same way. Each command
    prints a long list of file names. That is normal.
 
-4. Open `C:\fl26\pesdb\common\etc\pesdb`. **You should see** `Team.bin`, `Player.bin`,
+4. Open `C:\fl26\pesdb\common\etc\pesdb`. **You should see** `Team.bin`, `Coach.bin`, `Player.bin`,
    `Competition.bin`, `CompetitionEntry.bin`, `CompetitionRegulation.bin` and
    `PlayerAssignment.bin` (and a few more).
 

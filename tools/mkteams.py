@@ -8,8 +8,10 @@ dropping a file of the same path under one of Sider's livecpk roots.
 
 The club id is the dword at +0x08.  It is unique, ascending, and matches the ids in the
 live block exactly, which is what identifies the field: the last three are 71574, 71576 and
-71577, and 71577 is Selangor FC, the block's record 742.  The dword at +0x00 is a second id
-of some other kind, also unique, so new records take fresh values there too.
+71577, and 71577 is Selangor FC, the block's record 742.  The dword at +0x00 is the club's
+manager -- a Coach.bin id (Arsenal's 102109 is Mikel Arteta).  New records take fresh values
+there, which no coach has, so the game shows a copy of its first coach at every one of them;
+run mkcoaches.py afterwards to give each club a placeholder manager.
 
 The name is in the record after all, at +0x170, with the three-letter abbreviation at
 +0x372 -- the same two strings the live block carries at +0x04 and +0x4a.  So a placeholder

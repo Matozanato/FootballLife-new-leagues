@@ -10,7 +10,8 @@ per league is how a set of thirty ends up with a duplicated id in the middle of 
 does the arithmetic instead: it reads the shipped tables once, hands out club ids from
 above the highest in use, competition ids and regulation ids from the free lists it works
 out from those same tables, and writes Team.bin next to the three competition tables so a
-single livecpk root carries the lot.
+single livecpk root carries the lot -- and Coach.bin, with a placeholder manager for every new
+club (see mkcoaches.py), when the base folder has the shipped one.
 
 Everything it writes is a placeholder -- "FL League 03", "FL 0042" -- because that is the
 whole point of the exercise: proving the shape of the data holds at scale, without
@@ -26,6 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import pesdb
 import mkleague as M
+import mkcoaches
 
 T_REC = 1532
 T_ID, T_ALT = 0x08, 0x00
@@ -229,6 +231,20 @@ def main():
     os.makedirs(d, exist_ok=True)
     open(os.path.join(d, "Team.bin"), "wb").write(pesdb.wesys_pack(bytes(raw)))
     print("  wrote Team.bin (%d records)" % (len(raw) // T_REC))
+    # Each new club names a manager id at +0x00 that no Coach record has, and the game fills
+    # every such gap with a copy of the first coach -- one "Jorge Jesus" at every added club.
+    # So the world also carries Coach.bin: the shipped one plus a placeholder manager per club.
+    cpath = os.path.join(base, "Coach.bin")
+    if os.path.exists(cpath):
+        craw = open(cpath, "rb").read()
+        coaches = pesdb.wesys_unpack(craw)
+        add, st = mkcoaches.add_coaches(coaches, bytes(raw), top_id + 1)
+        open(os.path.join(d, "Coach.bin"), "wb").write(pesdb.wesys_pack(coaches + add, craw[:3]))
+        print("  wrote Coach.bin (%d records, %d new managers)"
+              % ((len(coaches) + len(add)) // mkcoaches.C_REC, st["added"]))
+    else:
+        print("  no Coach.bin in --base: every new club will show the same made-up manager"
+              " (run mkcoaches.py later)")
     M.write_tables(out, comp, regs, ents)
     print("\n%d leagues, %d clubs added; %d clubs in all"
           % (nleague, made, len(raw) // T_REC))

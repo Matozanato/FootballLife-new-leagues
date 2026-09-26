@@ -67,6 +67,7 @@ regulation  ids 11, 12, 13, 49, 60, 61
   FL League 02     competition 131  regulation 12   20 clubs 1021-1040
   ...
   wrote Team.bin (863 records)
+  wrote Coach.bin (1081 records, 120 new managers)
 
 6 leagues, 120 clubs added; 863 clubs in all
 ```

@@ -300,6 +300,13 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-09-26: **every club of every new league had the same manager, "Jorge Jesus".** A club
+  names its manager in the first four bytes of its `Team.bin` record (Arsenal's is Mikel
+  Arteta's coach id). `mkworld.py` gave each new club a fresh id there but wrote no coach for
+  it, and the game fills a missing coach with a copy of its first one. `mkworld.py` now writes
+  `Coach.bin` too, one placeholder manager per new club; `tools/mkcoaches.py` does the same for
+  a world built before. Checked in Edit > Managers and on an exhibition's pre-match screen.
+  Not yet followed through a Master League season.
 - 2026-09-26 (GitHub issue #8): **clubs of new leagues turned up in the Copa Libertadores.**
   When a Master League is created the game gives every club a "slot" by a hard-coded remap
   (`0x141263b40`): slots 26, 27, 28, 67 and 74 become 73, 71 becomes 69, and 69, 73 and 75

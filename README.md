@@ -163,6 +163,9 @@ published modules on **2026-09-25**.
 - **Edit mode reaches the added leagues** (experimental, `fl26editlist.lua`): Edit > Teams,
   Edit > Players > Edit Player, Transfer and Managers list every added league with its clubs,
   so their clubs and players can be edited in the game itself.
+- **Every new club has a manager of its own** (`FL M0001`, ...): `mkworld.py` writes
+  `Coach.bin` with them, and `tools/mkcoaches.py` adds them to an older world. Before, every
+  new club showed the same made-up manager, "Jorge Jesus".
 - **Promotion and relegation through a whole pyramid** (experimental, `fl26chain` +
   `fl26seasonend` + the rank modules). On our world, with a third, fourth and fifth division
   under Ligue 2 and under Serie B, three clubs went up and three down at every joint of both

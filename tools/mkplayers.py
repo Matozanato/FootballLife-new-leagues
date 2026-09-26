@@ -2,8 +2,8 @@
 
 Give the new placeholder clubs placeholder squads, so their matches can be played.
 
-mkworld.py builds clubs and leagues, and the game invents a manager for every club that
-lacks one -- but nothing invents players.  A season in a new league therefore runs its
+mkworld.py builds clubs and leagues, and a placeholder manager for every club -- but not
+players, and nothing invents them.  A season in a new league therefore runs its
 calendar and forfeits every match:
 
     You have lost the match through default as you do not have the minimum number of

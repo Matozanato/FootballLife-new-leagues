@@ -1,5 +1,23 @@
 # Questions people ask
 
+## Every new club has the same manager, "Jorge Jesus"
+
+That was a world built before 2026-09-26. A club names its manager by an id in `Team.bin`,
+and `mkworld.py` gave each new club a new id without a manager to go with it, so the game
+filled every gap with a copy of its first coach. `mkworld.py` now also writes `Coach.bin`,
+with a placeholder manager for each new club (`FL M0001`, `FL M0002`, ... with the club's
+own country). To fix a world you already have without rebuilding it:
+
+```
+python tools\mkcoaches.py <your livecpk world>\common\etc\pesdb --coach C:\fl26\pesdb\common\etc\pesdb\Coach.bin --out Coach.bin
+```
+
+then move the new `Coach.bin` into `<your livecpk world>\common\etc\pesdb`. (`--coach` is the
+shipped file you unpacked when you built the world.) Delete it again to undo. Checked on
+2026-09-26 in Edit > Managers and on the pre-match screen of an exhibition: every club shows
+its own manager. Not checked yet: a Master League season with them (sackings, job offers), and
+whether a career saved before the change picks them up -- start a new one to be sure.
+
 ## How do I rename the new clubs?
 
 The new clubs are called `FL 0001`, `FL 0002` and so on because that is the pattern
