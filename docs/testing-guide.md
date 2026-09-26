@@ -235,6 +235,8 @@ first (see the FAQ). Open Edit > Teams, Edit > Players > Edit Player, Transfer a
    send the `fl26editlist: N more league headings ..., slots ...` line from `sider.log`.
 2. Does each open with its own clubs, and each club with its own squad?
 3. Is the "Other" heading still there (it should be, just before the block of your leagues)?
+   In Managers: does each of your clubs have its own manager (`FL M0001`, `FL M0002`, ...)?
+   If they all say "Jorge Jesus", your world has no `Coach.bin` yet: see the FAQ.
 4. Change something small on one of your clubs, save the Edit data, restart: is it kept?
    (Move that Edit save aside again before you rebuild your world, or it hides the rebuild.)
 
