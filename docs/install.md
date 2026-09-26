@@ -3,7 +3,8 @@
 Everything here goes into the `SiderAddons` folder that Football Life 2026 ships with, next to
 `FL_2026.exe`. Nothing is written to the game's own files.
 
-This is the reference version, with the reasons. For one continuous walkthrough from a stock
+For the whole route on one page, including leagues in other countries and the new European
+format, see [how-to.md](how-to.md). This is the reference version, with the reasons. For one continuous walkthrough from a stock
 install to a playing season — including building the world and what to look at in the game —
 use [step-by-step.md](step-by-step.md) instead.
 
@@ -92,7 +93,7 @@ yourself from the source in `tools/native/` are in
 Open `SiderAddons\sider.ini` in a text editor. Two edits.
 
 **3a. The module lines.** Find the block of `lua.module = ...` lines and add these **in this
-order**, before any other FL26 modules you may have and after Sider's own:
+order**, above the first `lua.module` line already in the file:
 
 ```ini
 lua.module = "fl26caps.lua"

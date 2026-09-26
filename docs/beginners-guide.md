@@ -1,5 +1,9 @@
 # Beginner's guide: from nothing to playing the new leagues
 
+> The same route, plus leagues in other countries (Japan, China, Saudi Arabia ...) and the
+> new Champions League format, is in [how-to.md](how-to.md), the one page that answers the
+> questions people ask most.
+
 This guide assumes you have never used Python, PowerShell or Sider modules. Do every step in
 order and do not skip any. After each step it says **what you should see**. If you see
 something else, stop there, read the table at the end ("If something goes wrong"), and ask

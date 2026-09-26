@@ -13,7 +13,13 @@ This is a **research beta**. It is published so that people who mod this game ca
 break it, and tell us where. Read [what works and what does not](#status) before you
 install anything.
 
-> **New to all this? Start here: [docs/beginners-guide.md](docs/beginners-guide.md)** —
+> **Read this first: [docs/how-to.md](docs/how-to.md)** — the complete how-to on one page:
+> installing, adding new leagues, putting a league in a particular country (Japan, China,
+> Saudi Arabia ...), the new Champions League format with UEFA's calendar, what to watch out
+> for, and what to do when a step does not give what it should. Every step says what you
+> should see. **Please go through it before asking**: most questions are answered there.
+>
+> **Never used Python? [docs/beginners-guide.md](docs/beginners-guide.md)** —
 > every step from installing Python to playing the new leagues, written for someone who has
 > never used Python or Sider modules. It says what you should see after each step and what
 > to do if you see something else. About thirty minutes.
@@ -322,8 +328,8 @@ numbers in [docs/limits.md](docs/limits.md).
 
 ## Quick start
 
-Never done this before? Follow [docs/beginners-guide.md](docs/beginners-guide.md) instead;
-it is the same route, one small step at a time.
+Never done this before? Follow [docs/how-to.md](docs/how-to.md) instead; it is the same
+route, one small step at a time, plus leagues in other countries and the new European format.
 
 1. **Back up** your save folder
    (`Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\2026\save`) and your `sider.ini`.
@@ -364,7 +370,7 @@ tools/              world builders (mkworld, mkplayers, mkcrests, mkkits, mkcup,
                     pesdb/CPK readers, the patch-set generator and its checkers
 tools/native/       the C source of the four DLLs, their build scripts and checksums
 patches/            the patch set as JSON plus the layout tables the generator reads
-docs/               step-by-step, install, build-your-world, testing-guide, known-issues,
+docs/               how-to (start here), step-by-step, install, build-your-world, testing-guide, known-issues,
                     limits, how-it-works, for-developers, faq, beginners-guide
 ```
 

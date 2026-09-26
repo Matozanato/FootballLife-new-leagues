@@ -6,7 +6,9 @@ ones worth reporting say so. **Reporting a step that worked is as useful as repo
 that did not** — most of what we still do not know is which of these steps behave the same
 way on somebody else's machine.
 
-Roughly twenty minutes, most of it the game starting up.
+Roughly twenty minutes, most of it the game starting up. If you only want to install and play,
+[how-to.md](how-to.md) is the shorter route, with leagues in other countries and the new
+European format.
 
 Where a path is written as `C:\Football Life 2026`, use your own.
 
@@ -88,8 +90,8 @@ Leave `sider\experimental\` alone for now; that is step 10.
 
 Open `SiderAddons\sider.ini` in a text editor (Notepad is fine).
 
-**4a.** Find the `lua.module = ...` lines and add these **in exactly this order**, after
-Sider's own and before anything else of yours:
+**4a.** Find the `lua.module = ...` lines and add these **in exactly this order**, above
+the first `lua.module` line already in the file:
 
 ```ini
 lua.module = "fl26caps.lua"
