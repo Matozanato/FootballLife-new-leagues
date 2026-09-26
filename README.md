@@ -242,13 +242,12 @@ published modules on **2026-09-25**.
   you can report — see the [testing guide](docs/testing-guide.md).
 - **The game crashes now and then inside its own protected code** (fault offsets
   `0x84ed4c0`, `0x131cc313`, `0x18ecc042`), while a scene is being set up: generating a
-  season, loading a match, a season rollover. On 2026-09-24 that was five times in about four
-  hours of simulated play. **Two of them are the game's own:** on 2026-09-24 a stock game,
-  with none of our modules and no added world, crashed at `0x131cc313` on the first match
-  day and, in a second run, at `0x1fea5ba` while loading a live match (the crash
-  `fl26nullguard.lua` catches); `0x18ecc042` at start-up also happens on a stock game.
-  `0x84ed4c0` has not been seen on a stock game yet (about an hour and a half tried), so it
-  is still open. The saved season is not damaged: reload and carry on, and save often.
+  season, loading a match, a season rollover. **They are the game's own:** on 2026-09-25/26,
+  with none of our modules and no patch set, 10 of 12 season creations crashed at the
+  manager-settings step (at `0x84ed4c0`, `0x131cc313` and `0x1fea5ba`), and the untouched
+  game started without Sider crashed at the same step in 4 of 8. With our full set it was 13
+  of 30, fewer because `fl26nullguard.lua` catches `0x1fea5ba`. The saved season is not
+  damaged: start again or reload, and save often.
 - **A calendar day holds only 280 matches**, and everything past that is dropped in silence
   — no error, no sign in the world files, just a round that never happens. The published
   remedy is to spread the leagues over different weekdays, which is what `--date-offsets` is

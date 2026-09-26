@@ -59,7 +59,8 @@ relocate the "upper belt" of small tables after it; grow the Master League save/
 
 A fault offset from Event Viewer plus `0x140000000` is the absolute address. Sections:
 `.trace` (game code) is where every crash we could reason about lives; `0x1484ed4c0` is
-outside it and is the shipped generation crash. The five guards' headers describe the
+outside it and is the shipped generation crash (it also happens with none of our modules and
+no patch set; see known-issues.md). The five guards' headers describe the
 disassembly around each guarded site, and the crash table in known-issues.md lists what is
 open.
 
