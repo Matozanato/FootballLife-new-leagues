@@ -58,6 +58,21 @@ typo never leaves a half-renamed world. The original file is kept as `Team.bin.b
 These are the same two fields `mkworld.py` fills in when it names the clubs. The tool changes
 nothing the builder does not already write.
 
+**The managers, the same way.** A file with the club and the manager's new name, one per line:
+
+```
+FL 0001,Ivan Example
+FL 0002,Marko Example
+```
+
+```
+python tools\rename.py --root <your livecpk world> --managers managers.csv
+```
+
+It renames whoever the club employs, in the world's `Coach.bin` (up to 45 bytes). `--list`
+shows each club's current manager. A world built before 2026-09-26 has no `Coach.bin` yet:
+run `mkcoaches.py` first (see the question above).
+
 **After renaming, check your Edit save.** If you have
 `Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\2026\save\EDIT00000000` from before the
 change, the game reads it instead of the data files and keeps showing the old names. Move it

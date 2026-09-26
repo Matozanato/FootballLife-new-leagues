@@ -74,11 +74,12 @@ players 0x17c, clubs 0x690, coaches 0x258, regulations 0x314, match records 0x25
 |---|---|
 | `pesdb.py` | read/write the WESYS-wrapped pesdb tables, record access |
 | `cpk.py`, `cpkx.py`, `wesys.py` | list and extract CPK archives; unpack one WESYS file |
-| `mkworld.py` | build N leagues of placeholder clubs into a livecpk root |
+| `mkworld.py` | build N leagues of placeholder clubs (and their managers) into a livecpk root |
 | `mkleague.py`, `mkteams.py` | the single-league and clubs-only builders mkworld wraps |
 | `mkplayers.py` | placeholder squads for the new clubs |
+| `mkcoaches.py` | a manager of its own for every new club, for a world built before `mkworld.py` wrote `Coach.bin` |
 | `mkcup.py` | a knockout cup among chosen clubs |
-| `rename.py` | list the clubs of a world, or rename them from a CSV file (name and abbreviation only) |
+| `rename.py` | list the clubs of a world, or rename them (name and abbreviation) or their managers from a CSV file |
 | `players.py` | list the players of a world or one club, and change a player's name, shirt number, or copy the playing side (position, abilities, skills) from another player |
 | `playeredit.py` | the player editor: export a club (or everything) to CSV with every field by name, import it back with range checks, create new players; field map in [player-record.md](player-record.md) |
 | `playereditor.py` | the same editor with a window (tkinter): club list, squad in lineup order, every field in tabs, new players, save |

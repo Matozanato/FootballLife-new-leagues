@@ -248,7 +248,7 @@ That is it. You are playing the new leagues.
 
 ## Optional: give clubs and players real names
 
-- **Rename clubs:** `tools\rename.py`. See [How do I rename the new clubs?](faq.md#how-do-i-rename-the-new-clubs)
+- **Rename clubs and their managers:** `tools\rename.py`. See [How do I rename the new clubs?](faq.md#how-do-i-rename-the-new-clubs)
 - **Edit players in a window:** `tools\playereditor.py`. For the world from step 9:
 
   ```
