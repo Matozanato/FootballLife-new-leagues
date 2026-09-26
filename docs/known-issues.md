@@ -1,6 +1,6 @@
 # Known issues
 
-Honest list, as of 2026-09-23. Addresses are given so that a fault offset in your Event
+Honest list, as of 2026-09-26. Addresses are given so that a fault offset in your Event
 Viewer can be matched against them: the offset is the address minus `0x140000000`
 (so `0x1414c674d` shows up as exception offset `0x14c674d`).
 
@@ -18,6 +18,7 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
 | Squad table, first-element read | `0x14128a3a3` | **Fixed** by `fl26nullguard7.lua`. |
 | Calendar advance, standings position used as an index | `0x1413236e4` | **Fixed 2026-09-17** by `fl26nullguard8.lua`. A club with no position yet holds −1, and the game indexed a table with it. This was a wall rather than a rarity: before the guard every long run died here, twice at the same point; after it, 313 game days across New Year with no crash. |
 | UEFA Super Cup setup | `0x1413605a9` | **Guarded** by `sider/experimental/fl26superguard.lua` (2026-09-23). The setup indexes the Champions League and Europa League entries without checking that they were found; when one is missing it read entry −1. With the guard that season simply has no Super Cup. Seen in an August-start career, where the European competitions do not start (see below). |
+| Matchday-results screen after *Skip Match*, on the day of the Europa / Conference League play-off first leg | `ucrtbase.dll` offset `0xa527e` (exception `0xc0000409`); the game's side is `0x140ca2203` / `0x140ca21db` | **Guarded** by `sider/experimental/fl26resultsguard.lua` (2026-09-25). The screen takes a page out of a list without checking that the list has any; on that day, with `fl26swiss`, it has none, and the game's own check ends the program. With the guard the page stays empty and the career goes on; both play-offs were played to the end. Reported in issue #9 at the Europa League knockout. Why the list is empty is not known yet. |
 | Startup, 9–11 seconds in, occasionally | — | Shipped game bug, reproduces on a clean install. Start again. |
 
 ## Missing or unverified features
