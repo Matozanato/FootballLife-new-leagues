@@ -36,21 +36,31 @@ runs exactly as it did before.
 
 ## Order, and which of these need each other
 
-They are not independent. This is the order they were run in here:
+They are not independent. This is the order they were run in here. Keep each note on a line
+of its own, as below: Sider does not take a comment after a `lua.module` value on the same
+line.
 
 ```ini
-lua.module = "fl26comptab.lua"     ; first: it prints "id N -> row R slot S" for every league
-lua.module = "fl26slotnames.lua"   ; the default slot list works in any world
-lua.module = "fl26clubs.lua"       ; same
+; first: it prints "id N -> row R slot S" for every league
+lua.module = "fl26comptab.lua"
+; the default slot list works in any world
+lua.module = "fl26slotnames.lua"
+; its defaults work in any world too
+lua.module = "fl26clubs.lua"
 lua.module = "fl26rank.lua"
-lua.module = "fl26deeprank.lua"    ; after rank, and with fl26deep4 off
+; after rank, and with fl26deep4 off
+lua.module = "fl26deeprank.lua"
 lua.module = "fl26reg64.lua"
-lua.module = "fl26augseason.lua"   ; needs reg64
+; needs reg64
+lua.module = "fl26augseason.lua"
 lua.module = "fl26superguard.lua"
 lua.module = "fl26seasonend.lua"
-lua.module = "fl26chain.lua"       ; after comptab (the counts must agree)
-lua.module = "fl26catlist.lua"     ; after reg64
-lua.module = "fl26editlist.lua"    ; after comptab
+; after comptab (the counts must agree)
+lua.module = "fl26chain.lua"
+; after reg64
+lua.module = "fl26catlist.lua"
+; after comptab
+lua.module = "fl26editlist.lua"
 lua.module = "fl26swiss.lua"
 ```
 
