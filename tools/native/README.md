@@ -11,8 +11,10 @@ hands it the configuration; the DLL does the rest.
   About 1,000 lines of C, with a few lines of inline assembly per hook. The only file it
   writes is `SiderAddons\fl26join.log`.
 - **`fl26clubs.dll`** (experimental) replaces the two functions that read the Select Team
-  club list, answering from the league's own rulebook for named slots only. Around 220 lines.
-  Writes nothing at all.
+  club list, answering from the league's own rulebook for named slots only. When a Master
+  League is created it also keeps our clubs out of the Club World Cup "other clubs" pools
+  (slots 69/73/75). Around 270 lines. Writes nothing at all (its loader changes three bytes
+  of the game's slot switch, see `fl26clubs.lua`).
 - **`fl26chain.dll`** (experimental) hooks the end-of-season step that applies promotion
   and relegation, and completes a chain of three or more divisions, which the game on its
   own only exchanges one joint of. Around 400 lines. Up to 8 chains.
@@ -30,9 +32,9 @@ None has third-party code or any network access.
 | file | SHA-256 |
 |---|---|
 | `sider/fl26join.dll` | `c107bd8387ba38073d4c4747e2f94f0604a50b535a6d644a0767d879aa4e7919` |
-| `sider/experimental/fl26clubs.dll` | `1db2a4f9af91a5c76f903d5443eb08df417006b2bd1a3674aa87a8957a43aae5` |
+| `sider/experimental/fl26clubs.dll` | `2b79cb83eb24877553596d5fe9b18e7c1c453ff2e43d21915a788e2c977bb469` |
 | `sider/experimental/fl26chain.dll` | `d6e28376d7c4e2fa220c9fd8deaf4d64394a45cb4bb09eba356cf58df0251eae` |
-| `sider/experimental/fl26swiss.dll` | `b45a9c331434cae343e402948c78903574a45b47927efeb2787c29cc8f1b64a7` |
+| `sider/experimental/fl26swiss.dll` | `b760a2670831539511c3fbc1fc4dabca30754b7bf3da5cde1e242f07c577135d` |
 
 ```powershell
 (Get-FileHash "C:\fl26\sider\fl26join.dll" -Algorithm SHA256).Hash

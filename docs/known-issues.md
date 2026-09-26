@@ -300,6 +300,16 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-09-26 (GitHub issue #8): **clubs of new leagues turned up in the Copa Libertadores.**
+  When a Master League is created the game gives every club a "slot" by a hard-coded remap
+  (`0x141263b40`): slots 26, 27, 28, 67 and 74 become 73, 71 becomes 69, and 69, 73 and 75
+  are the "other clubs" pools the Libertadores and the Club World Cup are filled from. A
+  league on rulebook id 11 keeps the exe's row on slot 28, so all its clubs went into the
+  Latin American pool. `fl26clubs.lua` now sets the switch for slots 28, 71 and 74 to "keep
+  your own slot", and `fl26clubs.dll` leaves new leagues' clubs out of pool slots 69/73/75 for
+  that step. Checked on a new career: none of our clubs on 69/70/73/75 (before: 118). The slot
+  is stored in the save when the career is created, so **only careers started after the
+  update** get it.
 - 2026-09-25: the 25th league of a default world sat on rulebook id **145**, which is the
   shipped J2 League's id, and the shipped **J1 League relegates into 145**. `mkworld.py` now
   puts that league on **190**; `fl26caps.lua`, `fl26joindll.lua`, `fl26comptab.lua`,

@@ -43,6 +43,16 @@
  * answer for that call -- a league we cannot serve looks exactly like it does today, never
  * empty-by-our-doing.
  *
+ * 2026-09-26: the Master League club slot. When a Master League is created, 0x141263b40 gives
+ * every club a slot (team +0x41c) by looking the club up in these same lists through these same
+ * readers, and a club found on 69, 70 or 73 gets that slot even over its own league's. 69, 70,
+ * 73 and 75 are the "other clubs" pools the season code fills the Club World Cup from. So a
+ * league of ours on one of those slots, served from its regulation here, put all its clubs in
+ * a Club World Cup pool. For calls from that one function, a served pool slot now gets the
+ * game's own stored list with our league's clubs taken out: our clubs are not found there, they
+ * end up with no slot (123, as France D4/D5 and Czechia always had), and the shipped pool clubs
+ * keep theirs. Every other caller -- the menus -- is answered exactly as before.
+ *
  * Built with `zig cc` (tools/native/build-clubs.sh). Our own code, no third-party binaries.
  */
 #define WIN32_LEAN_AND_MEAN
@@ -66,6 +76,13 @@
 
 #define MAX_CFG     16
 
+/* The three reader calls inside 0x141263b40 (the Master League club slot), as return addresses:
+   count at 0x141263bd6 and 0x1412640ca, get at 0x141263bf9. */
+#define SLOTFN_COUNT1_RET 0x1263bdb
+#define SLOTFN_GET_RET    0x1263bfe
+#define SLOTFN_COUNT2_RET 0x12640cf
+static int is_pool(unsigned slot) { return slot == 69 || slot == 70 || slot == 73 || slot == 75; }
+
 typedef struct { uint16_t slot; uint16_t reg; } fl26_clubs_cfg_t;
 
 typedef void* (*reg_fn)(void*, unsigned);
@@ -76,6 +93,10 @@ static int      g_ncfg;
 static uint32_t g_list[MAX_CFG][MAX_CLUBS];
 static int      g_n[MAX_CFG];              /* -1 = no answer of ours for this slot */
 static uint32_t g_stat[4];                 /* counts served, gets served, rebuilds, misses */
+static uint32_t g_pool[STRIDE];            /* a pool slot's stored list minus our clubs      */
+static int      g_npool = -1;
+static unsigned g_pool_slot = SLOTS;
+static uint32_t g_pool_calls;
 
 /* ---- log the loader drains into sider.log ---- */
 static char g_log[4096];
@@ -132,11 +153,35 @@ static int rebuild(int i)
   return n;
 }
 
+/* The game's stored list of a pool slot with our league's clubs taken out, for 0x141263b40.
+   Built at the first count of each slot it asks about and reused for the gets and the
+   second count that follow. */
+static unsigned pool_build(void* self, unsigned slot, int i)
+{
+  g_npool = 0; g_pool_slot = slot; g_pool_calls++;
+  unsigned n = *(uint16_t*)((unsigned char*)self + COUNT_OFF + slot * 2);
+  if (n > STRIDE) n = STRIDE;
+  int ours = rebuild(i);
+  const uint32_t* stored = (const uint32_t*)((unsigned char*)self + slot * STRIDE * 4);
+  for (unsigned k = 0; k < n; k++) {
+    uint32_t v = stored[k];
+    int mine = 0;
+    for (int j = 0; j < ours; j++) if (g_list[i][j] == v) { mine = 1; break; }
+    if (!mine) g_pool[g_npool++] = v;
+  }
+  return (unsigned)g_npool;
+}
+
 /* ---- the two replacements ---- */
 
 __declspec(dllexport) unsigned count_hook(void* self, unsigned slot)
 {
   int i = cfg_index(slot);
+  if (i >= 0 && self && is_pool(slot)) {
+    uintptr_t ra = (uintptr_t)__builtin_return_address(0) - (uintptr_t)g_base;
+    if (ra == SLOTFN_COUNT1_RET) return pool_build(self, slot, i);
+    if (ra == SLOTFN_COUNT2_RET && g_pool_slot == slot && g_npool >= 0) return (unsigned)g_npool;
+  }
   if (i >= 0) {
     int n = rebuild(i);
     if (n) { g_stat[0]++; return (unsigned)n; }
@@ -149,6 +194,9 @@ __declspec(dllexport) unsigned count_hook(void* self, unsigned slot)
 __declspec(dllexport) unsigned get_hook(void* self, unsigned slot, unsigned idx)
 {
   int i = cfg_index(slot);
+  if (i >= 0 && is_pool(slot) && g_pool_slot == slot && g_npool >= 0 &&
+      (uintptr_t)__builtin_return_address(0) - (uintptr_t)g_base == SLOTFN_GET_RET)
+    return idx < (unsigned)g_npool ? g_pool[idx] : 0xffffffffu;
   if (i >= 0 && g_n[i] > 0) {
     if (idx >= (unsigned)g_n[i]) return 0xffffffffu;
     g_stat[1]++;
@@ -215,5 +263,8 @@ __declspec(dllexport) void fl26_clubs_stats(uint32_t* out4)
 {
   for (int i = 0; i < 4; i++) out4[i] = g_stat[i];
 }
+
+/* how many pool lists were handed to the Master League club-slot function */
+__declspec(dllexport) uint32_t fl26_clubs_pool_calls(void) { return g_pool_calls; }
 
 BOOL WINAPI DllMain(HINSTANCE h, DWORD reason, LPVOID r) { (void)h;(void)reason;(void)r; return TRUE; }
