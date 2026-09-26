@@ -53,12 +53,16 @@ It depends on which league a club is in.
 - **Clubs added to a league the game already has: yes.** Measured on 2026-09-11 with ten clubs
   added to the Premier League. In Edit > Teams > Premier League the list scrolls past
   Wolverhampton to the new clubs, and each one can be opened and edited like any shipped club.
-- **Clubs in a new league of our own: not through the league lists.** Edit mode's list of
-  leagues is fixed inside the game, not read from the data files. A new league never appears in
-  it, whatever id it has, and neither do Edit > Competition Structure or Edit > Competitions. So
-  the clubs of a new league cannot be reached from their league there. We have not checked
-  whether some other Edit screen, such as a search or an "other clubs" list, reaches them in the
-  current version. If you find one, please open an issue.
+- **Clubs in a new league of our own: yes, with `sider/experimental/fl26editlist.lua`.** Without
+  it, no. Edit mode's list of leagues is not read from the data files: one function in the game
+  hands every Edit screen the same thirty competition slots, written into its code, so a new
+  league whose slot is not among them never appears. The module adds the slots of your leagues
+  to that list (it needs `fl26comptab.lua`, loaded before it). Checked on 2026-09-26: with it,
+  Edit > Teams, Edit > Players > Edit Player, Transfer and Managers list every added league of
+  our test world (32 were missing before), and each opens with its clubs and squads. The "Other" heading (free agents,
+  created players) is still there, but it no longer comes last: it sits just before the block
+  of added leagues. Edit > Competition Structure and Edit > Competitions have not been checked
+  with it.
 
 The new leagues and their clubs do show up where it matters for playing: Kick Off > League,
 Master League's Select Team list (with `sider/experimental/fl26comptab.lua` and
@@ -70,11 +74,11 @@ data change hides that change.
 
 ## How do I edit the players of the new clubs, if not in Edit mode?
 
-Edit mode reaches a club through its league, so players of a club in a new league cannot be
-reached there (see the question above). Players of clubs you added to a league the game
-already has can be edited in Edit mode as usual.
+Edit mode reaches a club through its league, so players of a club in a new league can be
+reached there only with `fl26editlist.lua` installed (see the question above). Players of clubs
+you added to a league the game already has can be edited in Edit mode as usual.
 
-The easiest way is the editor with a window:
+Outside Edit mode, the easiest way is the editor with a window:
 
 ```
 python tools\playereditor.py --root <your livecpk world>

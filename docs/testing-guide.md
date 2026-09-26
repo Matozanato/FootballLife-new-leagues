@@ -169,7 +169,8 @@ up, and nothing has been run far enough to say where it stops.)
 ### T8 — The experimental modules (the menus, the regions, the rank)
 
 Eight modules in `sider\experimental\` were built and verified against the executable on
-21-22 September and watched working in the menus of a running game. **None of them has been
+21-22 September, and `fl26editlist` on 26 September, and watched working in the menus of a
+running game. **None of them has been
 through a season.** That gap is the whole reason they are published, and this is the test
 that closes it. Read
 [sider/experimental/README.md](../sider/experimental/README.md) first — several depend on
@@ -226,6 +227,16 @@ competitions a season holds only ever rises, and 127 was reached at 124 after fo
 here. Report the season number and whether league tables still start from zero after each
 rollover. Remember it replaces `fl26hdr127.lua` and that switching between them means
 starting a new season.
+
+**T8e — Edit mode (`fl26editlist`, after `fl26comptab`).** Move your old `EDIT00000000` aside
+first (see the FAQ). Open Edit > Teams, Edit > Players > Edit Player, Transfer and Managers.
+
+1. Is every league of yours in the list? Name the ones missing, with their rulebook ids, and
+   send the `fl26editlist: N more league headings ..., slots ...` line from `sider.log`.
+2. Does each open with its own clubs, and each club with its own squad?
+3. Is the "Other" heading still there (it should be, just before the block of your leagues)?
+4. Change something small on one of your clubs, save the Edit data, restart: is it kept?
+   (Move that Edit save aside again before you rebuild your world, or it hides the rebuild.)
 
 ## What to send
 

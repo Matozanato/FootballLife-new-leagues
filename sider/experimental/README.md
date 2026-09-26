@@ -3,7 +3,7 @@
 Everything in this folder does something the modules one level up do not, and **none of it
 has been checked by anyone but us, on anything but our test world**. They are here because
 the fastest way to find out whether they work is for more than one person to run them. They
-were built and verified against the exe between 2026-09-21 and 2026-09-24. Most were watched
+were built and verified against the exe between 2026-09-21 and 2026-09-26. Most were watched
 working in a running game, and the season-end group (`fl26augseason`, `fl26seasonend`,
 `fl26chain`, with `fl26hdr192`) has now been played through a July rollover and on past the
 New Year after it. The menu modules have not been through a season.
@@ -32,6 +32,7 @@ runs exactly as it did before.
 | `fl26chain.lua` + `fl26chain.dll` | **promotion and relegation through three or more divisions**. The game exchanges clubs only across every other joint of a chain; the DLL completes the joints it skips, using the game's own standings and its own list writer | its `CHAINS` and `PROTECT` lists are **our** world's league ids and must be replaced with yours; the promote/demote counts must match the `COUNTS` table in `fl26comptab.lua`. Measured: the French and Italian chains moved 3 up and 3 down at every joint at the 2026-09-23 rollover, and on 2026-09-24 all five chains of the league-size world (the fifth is Championship -> an added England D3) did the same. Up to 8 chains |
 | `fl26swiss.lua` + `fl26swiss.dll` | the **2024 European format**: the Champions League, Europa League and a new Conference League each play one league phase of 36 clubs (8 opponents each in the first two, 6 in the Conference League), then a knockout play-off for places 9-24, then a fixed bracket from the round of 16 to the final. It also fills all three from a **UEFA access list** (which league position goes where, 36 clubs per competition) and dates leagues of 10 to 24 clubs over the whole season | it replaces the game's schedule builder for the listed regulations only and runs the game's own code for everything else. Needs a world built with the European tools (see *The European format and league sizes* below). Its regulation ids are our world's and are written in the source; its access list names only the shipped leagues |
 | `fl26catlist.lua` | **Database -> Competition Info** lists the countries of the added leagues, each under its own country's name (Croatia, Serbia, Norway ...), instead of leaving them out | it copies the game's list of 28 regions and appends 29..63, and answers "which country is this region" for the regions in its `COUNTRY` table. That same answer is also asked by the end-of-season code that hands out European places, so the added leagues are now treated there as the shipped leagues are. The flags on that screen are still borrowed from other countries |
+| `fl26editlist.lua` | **Edit mode's team lists** (Edit > Teams, Edit > Players > Edit Player, Transfer, Managers) show every added league with its clubs, so their clubs and players can be edited there like shipped ones | those lists do not come from the data at all: one function in the exe hands every Edit screen the same thirty competition slots, written into its code. The module adds the slots of your leagues to what it returns (read from the table `fl26comptab.lua` sets up, so load it after that) and changes nothing else. Checked in game 2026-09-26: every added league of our world listed and openable (32 were missing without it). Side effect: the "Other" heading (free agents, created players) is no longer the last one; it now sits just before the block of added leagues |
 
 ## Order, and which of these need each other
 
@@ -49,6 +50,7 @@ lua.module = "fl26superguard.lua"
 lua.module = "fl26seasonend.lua"
 lua.module = "fl26chain.lua"       ; after comptab (the counts must agree)
 lua.module = "fl26catlist.lua"     ; after reg64
+lua.module = "fl26editlist.lua"    ; after comptab
 lua.module = "fl26swiss.lua"
 ```
 
@@ -63,7 +65,8 @@ created. Switching between 127 and 192 means starting a new season.
 
 Besides the two `SLOTS` tables described below: `COUNTS` in `fl26comptab.lua` (how many clubs each of your leagues
 promotes and relegates), `CHAINS` / `PROTECT` in `fl26chain.lua`, `REGS` and `UECL` in
-`fl26swiss.lua` and `COUNTRY` in `fl26catlist.lua`. All of them ship with our test world's ids.
+`fl26swiss.lua`, `COUNTRY` in `fl26catlist.lua` and `OUR_IDS` in `fl26editlist.lua` (the same
+list as `OUR_IDS` in `fl26comptab.lua`). All of them ship with our test world's ids.
 The `ACCESS` list in `tools/native/fl26swiss.c` names only the shipped leagues, so it fits
 any world; add your own leagues to it (and rebuild the DLL) if they should play in Europe.
 

@@ -90,15 +90,15 @@ closed and carried its table on into the next season. The module handles both. I
 compiled piece in the main folder; its source and how to build it are in
 [tools/native/](tools/native/README.md).
 
-`sider/experimental/` holds fourteen more that go further and **have only been run on our own
+`sider/experimental/` holds fifteen more that go further and **have only been run on our own
 test world**: 192 competitions instead of 127; every league selectable in the Select Team
 list, under its own name, showing its own clubs; 64 menu regions instead of 29; a league rank
 wide enough for a pyramid five divisions deep, with the relegation gate to match; a career
 that starts in August instead of January; promotion and relegation through a whole pyramid,
 not just its top joint; a guard for the Super Cup; **the 2024 European format** for the
 Champions League, the Europa League and a new Conference League, filled from a UEFA access
-list, with leagues of 10 to 24 clubs; and the added countries listed by name under
-Database -> Competition Info. They abort cleanly if anything does
+list, with leagues of 10 to 24 clubs; the added countries listed by name under
+Database -> Competition Info; and every added league in Edit mode's team lists. They abort cleanly if anything does
 not match, and they are the part where another pair of hands helps most —
 [what they are, and in what order](sider/experimental/README.md).
 
@@ -160,6 +160,9 @@ published modules on **2026-09-25**.
   in two seasons running. Built with `tools/mksizes.py`; dated with `fl26swiss.dll`.
 - **Database -> Competition Info** lists the countries of the added leagues under their own
   names (experimental, `fl26catlist.lua`). The flags there are still borrowed.
+- **Edit mode reaches the added leagues** (experimental, `fl26editlist.lua`): Edit > Teams,
+  Edit > Players > Edit Player, Transfer and Managers list every added league with its clubs,
+  so their clubs and players can be edited in the game itself.
 - **Promotion and relegation through a whole pyramid** (experimental, `fl26chain` +
   `fl26seasonend` + the rank modules). On our world, with a third, fourth and fifth division
   under Ligue 2 and under Serie B, three clubs went up and three down at every joint of both
@@ -346,12 +349,13 @@ file if the problem is reproducible from a save.
 ```
 sider/              fl26caps.lua (generated patch set), the null guards, fl26hdr127.lua,
                     fl26joindll.lua and the compiled fl26join.dll it loads
-sider/experimental/ fourteen modules that go further, run on our test world only:
+sider/experimental/ fifteen modules that go further, run on our test world only:
                     192 competitions, the Select Team list (names, slots, club lists),
                     64 regions, a 3-bit league rank and its relegation gate, an August
                     start, season-end promotion through a pyramid (fl26chain.dll),
                     a Super Cup guard, the 2024 European format and league sizes
-                    (fl26swiss.dll), country names in Competition Info
+                    (fl26swiss.dll), country names in Competition Info, the added
+                    leagues in Edit mode's team lists
 tools/              world builders (mkworld, mkplayers, mkcrests, mkkits, mkcup,
                     spreadregions, mkreshape, mkuecl, mkeuropo, mksizes, rename, players,
                     playeredit, playereditor ...),
