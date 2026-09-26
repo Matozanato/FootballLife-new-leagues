@@ -191,8 +191,15 @@ undoes it.
   summer rollover (around day 176). If the game is restarted between then and the August draw
   (around day 244), they are gone and the draw falls back to league order. In the first
   season there are no final tables yet, so it uses league order anyway.
-- The Conference League play-off is played in December, straight after its league phase,
-  not in February as in the real competition.
+- The Conference League play-off is drawn in December, straight after its league phase
+  (the real draw is at the end of January), and played in February with the Europa League's.
+- The Conference League's league phase is **six** matches a club (six opponents, one from each
+  pot), as in the real competition, spread over twelve dates. A table where every club has
+  played 6 is finished, not stalled.
+- The European dates are UEFA's and the DLL does not check them against the domestic
+  calendars. A tester saw Manchester United with a Champions League match and a Premier League
+  match both on 21 January (issue #9). When that day is simulated both are played, but the
+  next-match screen shows only one of them.
 - The access list names only the shipped leagues (since 2026-09-26). Until then it also
   named our world's new leagues by regulation id, and a world whose leagues landed on the
   same ids sent them to Europe as those countries (issue #8). New leagues get no European

@@ -73,7 +73,13 @@ def main():
     if os.path.exists(out):
         raise SystemExit("%s exists -- pick a new name, worlds are not overwritten" % out)
     shutil.copytree(src, out, ignore=shutil.ignore_patterns("*.pre*", "*.retiered", "*.bak*"))
-    return subprocess.call(cmd)
+    rc = subprocess.call(cmd)
+    if rc == 0:
+        print("(the calendar line above is for a clone run on its own: with fl26swiss.dll installed"
+              " the Conference League's dates are written by the DLL -- six rounds from October to"
+              " December, the play-off in February, the knockout on UEFA's dates -- so nothing"
+              " needs to be done about it)")
+    return rc
 
 
 if __name__ == "__main__":
