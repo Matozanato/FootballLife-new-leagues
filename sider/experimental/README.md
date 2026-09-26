@@ -151,7 +151,13 @@ With those three lines in, add `{ 79, 174, 3, 3 }` to `CHAINS` in `fl26chain.lua
 comment above that table says why only then).
 
 `mkreshape.py` copies only the three competition tables, so copy the rest of the world into
-`<root2>` first. `mkuecl.py` prints a `local UECL = { ... }` line; put it into
+`<root2>` first. **Do not skip `mkeuropo.py`**: it adds the Europa League and Conference League
+play-offs for places 9-24 (regulations 188 and 189). Without them the DLL now logs
+`this world has no regulation 188` and leaves the step after the league phase to the game.
+Until 2026-09-26 it did not notice they were missing, ran the Europa League play-off into
+nothing (`into reg 188 (0 clubs)`) and the results screen crashed on the play-off day
+(issue #9). `mkeuropo.py` also used to insist that the Conference League was competition 174,
+which it only is in a world with added leagues; it now finds it through regulation 186. `mkuecl.py` prints a `local UECL = { ... }` line; put it into
 `fl26swiss.lua`. The last three lines are our world's choices (two 24-club divisions under the
 Championship, a 22-club second division under reg 96); leave them out if you do not want them,
 and write `sizes.json` for your own leagues (one line per league: club count and how many

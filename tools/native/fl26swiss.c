@@ -401,12 +401,19 @@ static uint16_t phase_row(uint16_t id) { return id == 3 ? 1027 : id == 5 ? 1029 
 #define FIELD 36
 typedef void* (*owner_fn)(void);
 typedef void* (*getrec_fn)(void* blk, uint64_t id);
+/* 0x1414bb000 never answers "not found": for an id the world does not have it returns a blank
+   record that belongs to no regulation (blk + 0xd0b77c on the stock layout).  Every caller here
+   takes 0 to mean "this world has no such regulation", so a record is only returned when it is
+   the one asked for.  Until 2026-09-26 the blank came back as if it were real, and a world built
+   without tools/mkeuropo.py had its Europa League play-off run into regulation 188, which did
+   not exist (issue #9: "(0 clubs)", then the results screen crashed). */
 static unsigned char* get_rec(uint16_t id)
 {
   unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
   if (!o) return 0;
   void* blk = *(void**)(o + 0x48);
-  return blk ? (unsigned char*)((getrec_fn)(uintptr_t)(g_base + GETREC_RVA))(blk, id) : 0;
+  unsigned char* r = blk ? (unsigned char*)((getrec_fn)(uintptr_t)(g_base + GETREC_RVA))(blk, id) : 0;
+  return r && *(uint16_t*)r == id ? r : 0;
 }
 static uint32_t* rec_clubs(unsigned char* rec) { return (uint32_t*)(rec + 0x170); }
 static int has_club(const uint32_t* a, size_t n, uint32_t c)
@@ -990,9 +997,10 @@ static int g_access_ready = 0;
 static u32vec g_acc_vec;
 static u32vec* access_list(uint16_t r, uint64_t flag)
 {
-  if (!g_access_on || (r != 3 && r != 5) || po_season_half() || !get_rec(11)) return 0;
-  /* (only a world with added leagues -- id 11 is the first free id the world builder hands out --
-     has its Europe rebuilt; an untouched game keeps its own lists) */
+  if (!g_access_on || (r != 3 && r != 5) || po_season_half()) return 0;
+  /* (This used to go on only when regulation 11 -- the first id the world builder hands out --
+     existed.  The test never worked, see get_rec, so every world has had its Europe rebuilt;
+     since the list names only shipped leagues, that is kept, and the test is gone.) */
   if (r == 3) {
     g_access_ready = access_build();
     if (!g_access_ready) logf("fl26swiss: access -- Champions League list short; the game's lists stand");
@@ -1031,7 +1039,13 @@ char prog_handler(void* ctx, uint64_t id, void* started)
       int begin = r == c->league || (ci && r == c->row), finish = r == c->po;
       if (!begin && !finish) continue;
       if (!po_season_half() && !(ci == 2 && begin)) break;
-      if (!po_available(c)) break;
+      if (!po_available(c)) {
+        static int said_po[3];
+        if (!said_po[ci]++)
+          logf("fl26swiss: %s play-off -- this world has no regulation %u (tools/mkeuropo.py adds it); "
+               "the game's own progression runs instead", c->name, (unsigned)c->po);
+        break;
+      }
       int done = begin ? po_start(ci, started) : po_finish(ci, started);
       logf("fl26swiss: progression for reg %u on day %d -- %s", (unsigned)r, today(),
            done ? "handled by the play-off" : "the play-off could not, left to the game");

@@ -33,8 +33,8 @@ None has third-party code or any network access.
 |---|---|
 | `sider/fl26join.dll` | `c107bd8387ba38073d4c4747e2f94f0604a50b535a6d644a0767d879aa4e7919` |
 | `sider/experimental/fl26clubs.dll` | `2b79cb83eb24877553596d5fe9b18e7c1c453ff2e43d21915a788e2c977bb469` |
-| `sider/experimental/fl26chain.dll` | `d6e28376d7c4e2fa220c9fd8deaf4d64394a45cb4bb09eba356cf58df0251eae` |
-| `sider/experimental/fl26swiss.dll` | `b760a2670831539511c3fbc1fc4dabca30754b7bf3da5cde1e242f07c577135d` |
+| `sider/experimental/fl26chain.dll` | `2a093ebd89478516609428c87252969521914f350670af2aa22b8ae2ea17f1d5` |
+| `sider/experimental/fl26swiss.dll` | `1403737001c5c5a31cdda2c833a630be47ccff4b2564bf798d969d0202cbcfba` |
 
 ```powershell
 (Get-FileHash "C:\fl26\sider\fl26join.dll" -Algorithm SHA256).Hash

@@ -9,10 +9,12 @@ fl26swiss.dll uses a second time in February). The other two have nothing, so ea
 of reg 2 and its eight replicas -- one replica per tie -- under a free id:
 
     Europa League       competition 3    play-off 188, ties 1212, 2236 ... 8380
-    Conference League   competition 174  play-off 189, ties 1213, 2237 ... 8381
+    Conference League   (see below)      play-off 189, ties 1213, 2237 ... 8381
 
 Those are the ids fl26swiss.dll expects (UEL_PO / UECL_PO); the script refuses to run if they
-are taken. The rows are appended at the end of the table, as mkphases.py appends a clone, so no
+are taken. The Conference League is found through its league phase, regulation 186, the id
+mkuecl.py gives it: its competition id is whatever mkphases.py found free (174 in a world with
+39 added leagues, 130 in one without any), so it is read, not assumed. The rows are appended at the end of the table, as mkphases.py appends a clone, so no
 existing row moves. Nothing drives them but the DLL: the stage progression and the calendar are
 switches on the regulation id that stop well short of 188, so the game never starts, dates or
 fills them on its own. Europa League is a shipped competition and gains rows -- modifying it is
@@ -30,7 +32,9 @@ PESDB = os.path.join("common", "etc", "pesdb")
 R_BACK, R_GROUP = 0x06, 0x0a
 STEP, TIES = 1024, 8
 TEMPLATE = 2                              # the Champions League play-off
-TARGETS = ((3, 188), (174, 189))          # (competition, new play-off id)
+UEL_CID = 3                               # the Europa League, a shipped competition
+UECL_REG = 186                            # the Conference League's league phase (mkuecl.py)
+PLAYOFFS = (188, 189)                     # (Europa League, Conference League) play-off ids
 
 
 def rid(row):
@@ -54,8 +58,14 @@ def main():
     if len(tpl) != 1 + TIES:
         raise SystemExit("reg 2 should have one master and %d replicas, found %d rows" % (TIES, len(tpl)))
 
+    uecl = [r for r in rows if rid(r) == UECL_REG]
+    if not uecl:
+        raise SystemExit("no regulation %d (the Conference League's league phase) in %s -- run "
+                         "mkuecl.py first" % (UECL_REG, src))
+    targets = ((UEL_CID, PLAYOFFS[0]), (uecl[0][M.R_CID], PLAYOFFS[1]))
+
     added = bytearray()
-    for cid, new in TARGETS:
+    for cid, new in targets:
         own = [r for r in rows if r[M.R_CID] == cid]
         if not own:
             raise SystemExit("no competition %d in %s" % (cid, src))
