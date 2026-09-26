@@ -30,7 +30,7 @@ runs exactly as it did before.
 | `fl26superguard.lua` | the **UEFA Super Cup setup** no longer crashes when the Champions League or Europa League entry it looks for is missing | one bounds check. When an entry is missing, that season has no Super Cup instead of a crash. Seen in an August-start career without `fl26swiss`; the play-off problem above is the likely cause. With `fl26swiss` the Super Cup was set up normally in the first and the third season of a run on 2026-09-25. Keep the guard installed anyway |
 | `fl26seasonend.lua` | the **end-of-season filter**: the French and Italian leagues take part in the European season end (so a league below Ligue 2 or Serie B can go up and down), and one league without a final table no longer stops promotion for its whole group | two redirects. Works with the updated `fl26join.dll`, which it leaves the final say to; without the DLL it drops only the league that cannot be moved |
 | `fl26chain.lua` + `fl26chain.dll` | **promotion and relegation through three or more divisions**. The game exchanges clubs only across every other joint of a chain; the DLL completes the joints it skips, using the game's own standings and its own list writer | its `CHAINS` and `PROTECT` lists are **our** world's league ids and must be replaced with yours; the promote/demote counts must match the `COUNTS` table in `fl26comptab.lua`. Measured: the French and Italian chains moved 3 up and 3 down at every joint at the 2026-09-23 rollover, and on 2026-09-24 all five chains of the league-size world (the fifth is Championship -> an added England D3) did the same. Up to 8 chains |
-| `fl26swiss.lua` + `fl26swiss.dll` | the **2024 European format**: the Champions League, Europa League and a new Conference League each play one league phase of 36 clubs (8 opponents each in the first two, 6 in the Conference League), then a knockout play-off for places 9-24, then a fixed bracket from the round of 16 to the final. It also fills all three from a **UEFA access list** (which league position goes where, 36 clubs per competition) and dates leagues of 10 to 24 clubs over the whole season | it replaces the game's schedule builder for the listed regulations only and runs the game's own code for everything else. Needs a world built with the European tools (see *The European format and league sizes* below). Its regulation ids and its access list are our world's and are written in the source |
+| `fl26swiss.lua` + `fl26swiss.dll` | the **2024 European format**: the Champions League, Europa League and a new Conference League each play one league phase of 36 clubs (8 opponents each in the first two, 6 in the Conference League), then a knockout play-off for places 9-24, then a fixed bracket from the round of 16 to the final. It also fills all three from a **UEFA access list** (which league position goes where, 36 clubs per competition) and dates leagues of 10 to 24 clubs over the whole season | it replaces the game's schedule builder for the listed regulations only and runs the game's own code for everything else. Needs a world built with the European tools (see *The European format and league sizes* below). Its regulation ids are our world's and are written in the source; its access list names only the shipped leagues |
 | `fl26catlist.lua` | **Database -> Competition Info** lists the countries of the added leagues, each under its own country's name (Croatia, Serbia, Norway ...), instead of leaving them out | it copies the game's list of 28 regions and appends 29..63, and answers "which country is this region" for the regions in its `COUNTRY` table. That same answer is also asked by the end-of-season code that hands out European places, so the added leagues are now treated there as the shipped leagues are. The flags on that screen are still borrowed from other countries |
 
 ## Order, and which of these need each other
@@ -63,8 +63,9 @@ created. Switching between 127 and 192 means starting a new season.
 
 Besides the two `SLOTS` tables described below: `COUNTS` in `fl26comptab.lua` (how many clubs each of your leagues
 promotes and relegates), `CHAINS` / `PROTECT` in `fl26chain.lua`, `REGS` and `UECL` in
-`fl26swiss.lua`, the `ACCESS` list in `tools/native/fl26swiss.c` and `COUNTRY` in
-`fl26catlist.lua`. All of them ship with our test world's ids.
+`fl26swiss.lua` and `COUNTRY` in `fl26catlist.lua`. All of them ship with our test world's ids.
+The `ACCESS` list in `tools/native/fl26swiss.c` names only the shipped leagues, so it fits
+any world; add your own leagues to it (and rebuild the DLL) if they should play in Europe.
 
 `fl26clubs.lua` carries a `SLOTS` table near the top, and the numbers in it are the slots
 **our** test world happened to land on. (`fl26slotnames.lua` has one too, but since
@@ -177,10 +178,13 @@ undoes it.
   season there are no final tables yet, so it uses league order anyway.
 - The Conference League play-off is played in December, straight after its league phase,
   not in February as in the real competition.
-- One league in our plan (regulation 62) is not loaded by the game at all; the access list
-  leaves it out.
-- The `ACCESS` list, the regulation ids and the size plan are our world's. A world built
-  with the same tools and defaults gets the same ids; anything else needs them edited.
+- The access list names only the shipped leagues (since 2026-09-26). Until then it also
+  named our world's new leagues by regulation id, and a world whose leagues landed on the
+  same ids sent them to Europe as those countries (issue #8). New leagues get no European
+  places unless you add them to `ACCESS` in `tools/native/fl26swiss.c`; the places left open
+  are topped up from the big five.
+- The regulation ids and the size plan are our world's. A world built with the same tools
+  and defaults gets the same ids; anything else needs them edited.
 - The game crashes now and then in its own protected code (see
   [known-issues](../../docs/known-issues.md)); on 2026-09-24 that was five times in about
   four hours of simulated play. Save often.

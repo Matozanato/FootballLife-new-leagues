@@ -37,7 +37,10 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
   is published. **Since 2026-09-24** the experimental `fl26swiss` stack (see
   [sider/experimental](../sider/experimental/README.md#the-european-format-and-league-sizes-fl26swiss))
   reshapes the Champions League and Europa League to the 2024 format, adds a Conference
-  League, and fills all three from a UEFA access list that names our world's leagues.
+  League, and fills all three from a UEFA access list. Since 2026-09-26 that list names only
+  the shipped leagues and tops the rest up from the big five; before, it named our world's
+  leagues by id, and another world's leagues on the same ids got those countries' places
+  (issue #8).
 - **In a career that starts in August, the European competitions do not start.** Measured
   2026-09-23 with `sider/experimental/fl26augseason.lua`: the Champions League play-off is
   dated on days 230 and 237 of the year, and the game registers the European competitions

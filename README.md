@@ -151,7 +151,8 @@ published modules on **2026-09-25**.
   (experimental, `fl26swiss.lua` + `fl26swiss.dll` and the European world tools, new
   2026-09-24). One league phase of 36 clubs each, a play-off for places 9-24, then a fixed
   bracket from the round of 16. In the second season all three were filled from the previous
-  season's final tables through a UEFA access list, 108 of 108 places. The Champions League
+  season's final tables through a UEFA access list, 108 of 108 places (in our world, whose
+  list then named its own leagues). The Champions League
   and Europa League are shipped competitions and are modified in your own world copy; the
   Conference League is added. [Details and caveats](sider/experimental/README.md#the-european-format-and-league-sizes-fl26swiss).
 - **Leagues of 10, 12, 14, 16, 18, 22 and 24 clubs** with the real number of rounds: 10 clubs
@@ -279,8 +280,9 @@ published modules on **2026-09-25**.
   together they worked at the 2026-09-23 rollover (see Works). Their lists carry our world's
   league ids and must be edited for yours. Still wrong: Ligue 2 came out of that rollover
   with 21 clubs.
-- Continental places for new leagues: done only through the experimental `fl26swiss.dll`,
-  whose UEFA access list names our world's leagues. Without it, new clubs can end up in the
+- Continental places for new leagues: not given out. The experimental `fl26swiss.dll` fills
+  Europe from a UEFA access list of the shipped leagues only (since 2026-09-26, issue #8);
+  to give your leagues places, add them to `ACCESS` in `tools/native/fl26swiss.c` and rebuild. Without it, new clubs can end up in the
   Champions League anyway when their league is built as a first division in a shipped
   country — see [known-issues.md](docs/known-issues.md).
 - New clubs use **placeholder names, cloned kits and cloned squads**. This project proves the

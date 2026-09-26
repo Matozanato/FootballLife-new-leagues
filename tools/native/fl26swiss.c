@@ -843,6 +843,13 @@ static int po_finish(int ci, void* started)
  *   of the same league; a list still short at the end is topped up from the next places of the
  *   big five, so each competition always gets its 36.
  *
+ * Only the shipped leagues are listed (their regulation ids are the game's own, the same in
+ * every world). New leagues get their ids from the world builder, and the same id is a
+ * different league in each world -- with our world's leagues listed here, another world's
+ * leagues on ids 11, 49 and 60 went to Europe as if they were Croatia, Slovenia and Serbia
+ * (GitHub issue #8). To give your own leagues European places, add them to this list and
+ * rebuild; places a list leaves open are topped up from the big five.
+ *
  * A position is read from last season's final table, captured at the July teardown before the
  * tables go; in a first season there is none, and the league's own list order (its entry order,
  * which the world builders write as last season's finish) stands in. */
@@ -860,56 +867,28 @@ typedef struct { uint16_t reg; uint8_t rank; uint8_t comp; } access_t;
 #define R_SCO 134
 #define R_DEN 147
 #define R_BEL 155
-#define R_CRO 11
-#define R_SVN 49
-#define R_SRB 60
-#define R_BIH 61
-#define R_HUN 62
-#define R_POL 74
-#define R_CZE 76
-#define R_SVK 93
-#define R_AUT 94
-#define R_ROU 96
-#define R_BUL 98
-#define R_SUI 100
-#define R_UKR 109
-#define R_NOR 110
-#define R_SWE 111
-#define R_IRL 112
-#define R_MKD 113
-#define R_MNE 114
-#define R_ALB 121
-#define R_FIN 138
 static const access_t ACCESS[] = {
-  /* Champions League: 28 direct */
+  /* Champions League */
   {R_ENG,1,UCL},{R_ITA,1,UCL},{R_ESP,1,UCL},{R_GER,1,UCL},{R_FRA,1,UCL},{R_NED,1,UCL},{R_POR,1,UCL},
-  {R_BEL,1,UCL},{R_TUR,1,UCL},{R_CZE,1,UCL},
+  {R_BEL,1,UCL},{R_TUR,1,UCL},
   {R_ENG,2,UCL},{R_ITA,2,UCL},{R_ESP,2,UCL},{R_GER,2,UCL},{R_FRA,2,UCL},{R_NED,2,UCL},
   {R_ENG,3,UCL},{R_ITA,3,UCL},{R_ESP,3,UCL},{R_GER,3,UCL},{R_FRA,3,UCL},
   {R_ENG,4,UCL},{R_ITA,4,UCL},{R_ESP,4,UCL},{R_GER,4,UCL},
   {R_ENG,5,UCL},{R_ESP,5,UCL},{R_POR,2,UCL},
-  /* ... and 8 through qualifying */
-  {R_SCO,1,UCL},{R_SUI,1,UCL},{R_AUT,1,UCL},{R_NOR,1,UCL},{R_GRE,1,UCL},
+  {R_SCO,1,UCL},{R_GRE,1,UCL},
   {R_FRA,4,UCL},{R_NED,3,UCL},{R_BEL,2,UCL},
   /* Europa League */
   {R_ENG,6,UEL},{R_ITA,5,UEL},{R_ESP,6,UEL},{R_GER,5,UEL},{R_FRA,5,UEL},
   {R_ENG,7,UEL},{R_ITA,6,UEL},{R_ESP,7,UEL},{R_GER,6,UEL},{R_FRA,6,UEL},
   {R_NED,4,UEL},{R_NED,5,UEL},{R_POR,3,UEL},{R_POR,4,UEL},{R_BEL,3,UEL},{R_BEL,4,UEL},
   {R_TUR,2,UEL},{R_TUR,3,UEL},
-  {R_CZE,2,UEL},{R_CZE,3,UEL},{R_SCO,2,UEL},{R_SCO,3,UEL},{R_SUI,2,UEL},{R_AUT,2,UEL},
-  {R_NOR,2,UEL},{R_GRE,2,UEL},{R_DEN,1,UEL},{R_DEN,2,UEL},
-  {R_UKR,1,UEL},{R_SRB,1,UEL},{R_CRO,1,UEL},{R_POL,1,UEL},{R_SWE,1,UEL},
-  {R_ROU,1,UEL},{R_BUL,1,UEL},{R_SVK,1,UEL},
+  {R_SCO,2,UEL},{R_SCO,3,UEL},
+  {R_GRE,2,UEL},{R_DEN,1,UEL},{R_DEN,2,UEL},
   /* Conference League */
   {R_ENG,8,UECL},{R_ITA,7,UECL},{R_ESP,8,UECL},{R_GER,7,UECL},{R_FRA,7,UECL},
   {R_NED,6,UECL},{R_POR,5,UECL},{R_BEL,5,UECL},{R_TUR,4,UECL},
-  {R_CZE,4,UECL},{R_SCO,4,UECL},{R_SUI,3,UECL},{R_AUT,3,UECL},{R_NOR,3,UECL},{R_GRE,3,UECL},
+  {R_SCO,4,UECL},{R_GRE,3,UECL},
   {R_DEN,3,UECL},
-  {R_UKR,2,UECL},{R_SRB,2,UECL},{R_CRO,2,UECL},{R_POL,2,UECL},{R_SWE,2,UECL},
-  {R_ROU,2,UECL},{R_BUL,2,UECL},
-  {R_SVN,1,UECL},{R_FIN,1,UECL},{R_IRL,1,UECL},{R_BIH,1,UECL},{R_ALB,1,UECL},
-  {R_MKD,1,UECL},{R_MNE,1,UECL},
-  {R_SVK,2,UECL},{R_SVN,2,UECL},{R_FIN,2,UECL},{R_IRL,2,UECL},{R_BIH,2,UECL},{R_ALB,2,UECL},
 };
 #define NACCESS (sizeof ACCESS / sizeof ACCESS[0])
 #define FINAL_MAX 40
@@ -1011,7 +990,9 @@ static int g_access_ready = 0;
 static u32vec g_acc_vec;
 static u32vec* access_list(uint16_t r, uint64_t flag)
 {
-  if (!g_access_on || (r != 3 && r != 5) || po_season_half() || !get_rec(R_CRO)) return 0;
+  if (!g_access_on || (r != 3 && r != 5) || po_season_half() || !get_rec(11)) return 0;
+  /* (only a world with added leagues -- id 11 is the first free id the world builder hands out --
+     has its Europe rebuilt; an untouched game keeps its own lists) */
   if (r == 3) {
     g_access_ready = access_build();
     if (!g_access_ready) logf("fl26swiss: access -- Champions League list short; the game's lists stand");
