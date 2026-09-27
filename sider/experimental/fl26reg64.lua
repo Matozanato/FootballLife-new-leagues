@@ -55,7 +55,33 @@ in the table at 0x1426770c0 does not draw a blank, it draws the heading of the c
 it. tools/mkregnames.py generates fl26regnames.lua, which relocates that table and can hold
 up to 127 rows.
 
-Not run in a game yet. Built 2026-09-21.
+Region 29 had one more job (found 2026-09-26). When a Master League career is created, the
+game builds the list of competitions the career keeps (0x141264880) and throws some regions
+out. In the branch a normal new career takes, the test is 0x1412645b0:
+
+    14126464c  8b870c030000  mov   eax, [rdi+0x30c]
+    141264652  25801f0000    and   eax, 0x1f80        ; the region field, bits 7..12
+    141264657  743b          je    skip               ; region 0
+    141264659  3d800e0000    cmp   eax, 0xe80         ; 0xe80 >> 7 = 29
+    14126465e  7434          je    skip               ; region 29
+
+and another branch has the same rule as a bit mask:
+
+    141264b51  41bc01000026  mov   r12d, 0x26000001   ; regions 0, 25, 26 and 29
+    141264b89  83f81d        cmp   eax, 0x1d
+    141264b8c  7706          ja    keep
+    141264b8e  440fa3e0      bt    r12d, eax
+    141264b92  7224          jb    skip
+
+Neither can fire in the stock game, whose parser never lets a region reach 29, but with this
+module it can: a league in region 29 (Hungary in our world) was in the table at boot and in
+the main menu and gone once the career existed, Competition Info included. So two more
+patches: the compare becomes `cmp eax, 1`, which a value masked with 0x1f80 never equals, and
+the mask loses bit 29 (0x26000001 -> 0x06000001). Regions 0, 25 and 26 keep their meaning, and
+a world with nothing in region 29 sees no difference. Each is the only copy of its constant in
+the code section. Only careers created after the module is installed are affected.
+
+Built 2026-09-21; the bit-29 patch added 2026-09-26.
 
 Install:
   1. copy to <game>\SiderAddons\modules\fl26reg64.lua
@@ -64,9 +90,15 @@ Install:
 
 local m = {}
 
-local VA = 0x1414f8390
-local OLD = "8b08c1e91b0fb6c1241f3c1d7304440fb6f1"
-local NEW = "8b088bc1c1e91bc1e81383e0200bc8448bf1"
+local PATCHES = {
+  {va = 0x1414f8390, old = "8b08c1e91b0fb6c1241f3c1d7304440fb6f1",
+   new = "8b088bc1c1e91bc1e81383e0200bc8448bf1",
+   why = "regions now run 0..63 instead of 0..28, and every shipped row keeps the region it had"},
+  {va = 0x141264659, old = "3d800e0000", new = "3d01000000",
+   why = "a new career keeps its region-29 league (0x1412645b0 no longer skips region 29)"},
+  {va = 0x141264b51, old = "41bc01000026", new = "41bc01000006",
+   why = "the other career list branch keeps region 29 too (the skip mask loses bit 29)"},
+}
 
 local function unhex(s)
   local out = {}
@@ -81,19 +113,22 @@ local function tohex(s)
 end
 
 function m.init(ctx)
-  local want, new = unhex(OLD), unhex(NEW)
-  local cur = memory.read(VA, #want)
-  if cur ~= want then
-    log(string.format("fl26reg64: bytes at 0x%x are %s, expected %s -- nothing written, "
-                      .. "the game is unmodified", VA, tohex(cur), OLD))
-    return
-  end
-  memory.write(VA, new)
-  if memory.read(VA, #new) == new then
-    log(string.format("fl26reg64: 0x%x rewritten -- regions now run 0..63 instead of 0..28, "
-                      .. "and every shipped row keeps the region it had", VA))
-  else
-    log(string.format("fl26reg64: WRITE FAILED at 0x%x", VA))
+  for _, p in ipairs(PATCHES) do
+    local want, new = unhex(p.old), unhex(p.new)
+    local cur = memory.read(p.va, #want)
+    if cur == new then
+      log(string.format("fl26reg64: 0x%x already rewritten", p.va))
+    elseif cur ~= want then
+      log(string.format("fl26reg64: bytes at 0x%x are %s, expected %s -- nothing written there",
+                        p.va, tohex(cur), p.old))
+    else
+      memory.write(p.va, new)
+      if memory.read(p.va, #new) == new then
+        log(string.format("fl26reg64: 0x%x rewritten -- %s", p.va, p.why))
+      else
+        log(string.format("fl26reg64: WRITE FAILED at 0x%x", p.va))
+      end
+    end
   end
 end
 

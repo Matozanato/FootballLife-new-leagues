@@ -210,6 +210,9 @@ least one above 28, e.g.
    borrow?
 3. Without the module, a league on a region of 29 or more falls back to the default region
    instead. Confirming that difference in your install is a useful result.
+4. Start a new Master League career in a league on region 29 exactly. It should start with
+   its table and calendar (in August with `fl26augseason`). An older `fl26reg64` dropped that
+   league from every new career.
 
 **T8c — Deep pyramids (`fl26rank` + `fl26deeprank`, with `fl26deep4` off).** Build a pyramid
 four or five divisions deep, either with `--tiers` or with `tools\deepen.py --deep-rank`;

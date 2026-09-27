@@ -301,6 +301,13 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-09-27 (GitHub issue #12): **a Master League career in a league on region 29 started on
+  1 January with no table and no calendar,** with or without `fl26augseason`. Region 29 was
+  never reachable in the stock game, so two tests in the career builder that throw region 29
+  out never fired. With `fl26reg64` they do, and the league is removed from the new career
+  (it is still there at boot and in the main menu). `fl26reg64.lua` now also patches both
+  tests (`0x141264659`, `0x141264b51`). Only careers created after the update keep the
+  league. Regions 30 to 63 were never affected.
 - 2026-09-27 (GitHub issue #11): **an added league could show another country's flag.** The
   game's own region-to-country table still answers for four regions no shipped league uses:
   11 Poland, 13 Sweden, 14 Norway, 20 Mexico. `spreadregions.py --plan own` hands those
