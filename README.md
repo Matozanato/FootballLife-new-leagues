@@ -27,6 +27,68 @@ install anything.
 > Testing it in detail? [docs/step-by-step.md](docs/step-by-step.md) has the same path with
 > everything worth checking and reporting along the way.
 
+## The people who made this better
+
+This project is tested in the open, and every fix in it since the first beta traces back to
+someone who played a season, wrote down what happened and sent it. Thank you, all of you.
+
+### vmardonesdev: the tester this project owes the most
+
+**vmardonesdev** has done more for this project than anyone besides its author. Eleven of
+the twelve GitHub issues so far come from vmardonesdev, and every one is a proper test
+report: the exact commit, the exact world, what was installed, what was expected, what
+happened, with logs and saves attached. vmardonesdev runs full seasons and season rollovers
+that take hours, repeats a test on a fresh install before calling it a bug, says so when
+something does **not** reproduce, and even published a complete testing plan. Several of the
+worst bugs here were found only because vmardonesdev played further than anyone else:
+
+- [#1](https://github.com/Matozanato/FootballLife-new-leagues/issues/1): the v2.2 report,
+  a missing first round and a second season that only half rolled over.
+- [#2](https://github.com/Matozanato/FootballLife-new-leagues/issues/2): the first matchday,
+  Select Team and club lists; it led to the 25th league moving off regulation 145.
+- [#4](https://github.com/Matozanato/FootballLife-new-leagues/issues/4) and
+  [#5](https://github.com/Matozanato/FootballLife-new-leagues/issues/5): a six-league
+  regression suite and a five-tier English pyramid played through a full season and a rollover.
+- [#6](https://github.com/Matozanato/FootballLife-new-leagues/issues/6): showed that the
+  "Team Spirit 99" squads did not come back on a clean build, which closed a false trail.
+- [#7](https://github.com/Matozanato/FootballLife-new-leagues/issues/7): a written testing
+  pipeline for the whole project.
+- [#8](https://github.com/Matozanato/FootballLife-new-leagues/issues/8): two full seasons of
+  an English D1-D5 world; it exposed new clubs in the Libertadores pools and led to the UEFA
+  access list.
+- [#9](https://github.com/Matozanato/FootballLife-new-leagues/issues/9): the 36-club
+  continental test; it found the results-screen crash, the Conference League stall and the
+  missing play-off regulation.
+- [#10](https://github.com/Matozanato/FootballLife-new-leagues/issues/10): European
+  knockouts that sometimes never started in the second or third season; the cause was a day
+  counter that forgot New Year.
+- [#12](https://github.com/Matozanato/FootballLife-new-leagues/issues/12): a Master League
+  career on region 29 that started in January with no table; fixed in `fl26reg64`.
+
+If you use anything from this repository, vmardonesdev's name belongs next to it.
+
+### Everyone else who helped
+
+- **Stagnant09**: the flags in the Select Team list. The idea, the hook on the
+  slot-to-country lookup and the first working version
+  ([#11](https://github.com/Matozanato/FootballLife-new-leagues/issues/11));
+  `fl26comptab.lua` and `tools/mkflags.py` are built on it.
+- **pioup38**: the first report from a different game build and a clean configuration
+  ([#3](https://github.com/Matozanato/FootballLife-new-leagues/issues/3)).
+- **vector360** (Evo-Web): tested the new European format and reported that in a first
+  season big clubs such as PSG, Real Madrid and Inter ended up in the Conference League.
+  That report is why the first season is now ordered by squad strength.
+- **jibibi** (Evo-Web): tested the modules alongside a full French patch and the kit server
+  and sent the logs, which show how the patch's own roots and the new clubs' kit names have to
+  sit next to ours.
+- **bobzera** (Evo-Web): brought the "ACL71" kit problem into the open, new clubs past id
+  65536 showing only the default kit, and worked on a fix of their own. That problem is the
+  one `tools/mkkits.py` now solves by naming the kit files the way the engine looks them up.
+
+Reports are welcome from anyone: open an
+[issue](https://github.com/Matozanato/FootballLife-new-leagues/issues) with what you
+installed, what you did and what you saw, and you will be on this list too.
+
 ## Free to use — please credit
 
 Everything in this repository is **free**, and it stays free. MIT licence: use it, change
@@ -396,13 +458,11 @@ respective authors; nothing of theirs is redistributed here.
 
 The reverse engineering was done from scratch against the game's executable and data
 files. Nothing here is derived from anyone else's tool or notes, except where a contributor
-is named below.
+is named.
 
-Contributors:
-
-- **Stagnant09**: flags in the Select Team list. The idea, the hook on the slot-to-country
-  lookup and the first working version ([issue #11](https://github.com/Matozanato/FootballLife-new-leagues/issues/11));
-  `fl26comptab.lua` and `tools/mkflags.py` are built on it.
+Contributors, and what each of them did, are listed in
+[The people who made this better](#the-people-who-made-this-better) near the top: above all
+**vmardonesdev**, and **Stagnant09**, **pioup38**, **vector360**, **jibibi** and **bobzera**.
 
 The licence asks nothing of you. I do: **if you use these findings, addresses, patch sets
 or tools in a mod, credit this work and link back** — see

@@ -6,6 +6,9 @@ One page, every step, in order. It answers the three questions people ask most:
 2. **How do I get new leagues, for example a league in Asia?** → [Part B](#part-b-add-new-leagues) and [Part C](#part-c-put-a-league-in-a-particular-country-for-example-in-asia)
 3. **How do I get the new Champions League format with a real schedule?** → [Part D](#part-d-the-new-champions-league-format-2024-with-a-real-schedule)
 
+Much of what this page says works was found broken first by testers, above all
+**vmardonesdev**. Who did what: [The people who made this better](../README.md#the-people-who-made-this-better).
+
 Then there is a list of [things to watch out for](#part-e-things-to-watch-out-for),
 a [table of problems and fixes](#part-f-if-something-goes-wrong), and
 [how to ask for help](#part-h-asking-for-help) so that someone can actually help.

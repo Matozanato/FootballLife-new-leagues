@@ -1,7 +1,9 @@
 # Experimental modules
 
-Everything in this folder does something the modules one level up do not, and **none of it
-has been checked by anyone but us, on anything but our test world**. They are here because
+Everything in this folder does something the modules one level up do not, and **most of it
+has been checked only by us and a handful of testers** (above all **vmardonesdev**, whose
+reports on the continental and region modules are behind several fixes here; see
+[the credits](../../README.md#the-people-who-made-this-better)). They are here because
 the fastest way to find out whether they work is for more than one person to run them. They
 were built and verified against the exe between 2026-09-21 and 2026-09-26. Most were watched
 working in a running game, and the season-end group (`fl26augseason`, `fl26seasonend`,
