@@ -1,6 +1,6 @@
 # Known issues
 
-Honest list, as of 2026-09-26. Addresses are given so that a fault offset in your Event
+Honest list, as of 2026-09-27. Addresses are given so that a fault offset in your Event
 Viewer can be matched against them: the offset is the address minus `0x140000000`
 (so `0x1414c674d` shows up as exception offset `0x14c674d`).
 
@@ -301,6 +301,21 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-09-27 (GitHub issue #10): **the UEFA play-offs were skipped in later seasons played
+  in one session.** With `fl26swiss`, in seasons 2 and 3 the league phases ended and no
+  play-off followed: the Champions League screen showed `%s` and eight empty rows, the Europa
+  and Conference League stayed on the league phase. A restart of the game made the next try
+  work, which is why it looked intermittent. The DLL guards against drawing a play-off twice by
+  keeping the day it was drawn, and the game's day counter is the day of the calendar year: a
+  season later the same February day (December for the Conference League) looked "already
+  drawn", so nothing was drawn and the game was told it had been handled. The tester's log
+  shows exactly that (the progression answered for all three, with no tie lines). The final
+  league tables kept for next season's UEFA places had the same flaw from the third season on.
+  `fl26swiss.dll` now counts days across New Year for every such check. Not yet followed here
+  through two play-offs in one session (the protection crashes above force restarts in our long
+  runs); the first play-off of a session is unchanged. A save made after a missed play-off does
+  not get it back: replay from a save before the league phase ended (for the Conference
+  League, before its last matchday in December).
 - 2026-09-26: **every club of every new league had the same manager, "Jorge Jesus".** A club
   names its manager in the first four bytes of its `Team.bin` record (Arsenal's is Mikel
   Arteta's coach id). `mkworld.py` gave each new club a fresh id there but wrote no coach for

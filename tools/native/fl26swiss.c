@@ -723,6 +723,23 @@ static int today(void)
   return blk ? *(uint16_t*)(blk + TODAY_OFF) : -1;
 }
 static int po_season_half(void) { int d = today(); return d >= 0 && d < PO_MONTHS_BEFORE; }
+/* The game's day counter is the day of the calendar year, so a guard that keeps "the day it last
+ * happened" and asks "was that less than N days ago" gives the wrong answer a year later, in the
+ * same game session: it is the same day again. Issue #10: in seasons 2 and 3 played on without a
+ * restart the play-offs were taken as already drawn and nothing was drawn at all; a restart
+ * cleared the memory, which is why a replay "worked". abs_day() counts on across New Year (a drop
+ * of more than half a year is a new year; a jump forward of as much is a save of the year before
+ * loaded) and every such guard compares it instead of the raw day. */
+static int g_year_off = 0, g_last_day = -1;
+static int abs_day(void)
+{
+  int d = today();
+  if (d < 0) return d;
+  if (g_last_day >= 0 && d + 182 < g_last_day) g_year_off += 365;
+  else if (g_last_day >= 0 && d > g_last_day + 182 && g_year_off >= 365) g_year_off -= 365;
+  g_last_day = d;
+  return d + g_year_off;
+}
 static uint32_t g_rng;
 static int coin(void)
 {
@@ -737,7 +754,7 @@ static const cup_t CUPS[3] = {
   { 5,        1029,     UEL_PO,  6,       { 49, 56 }, "Europa League" },       /* 19/26 Feb */
   { UECL_REG, UECL_ROW, UECL_PO, UECL_KO, { 49, 56 }, "Conference League" },
 };
-static int g_po_day[3] = { -1000, -1000, -1000 };   /* day each play-off was last started */
+static int g_po_day[3] = { -100000, -100000, -100000 };   /* abs_day() each play-off was last started */
 static uint16_t tie_id(const cup_t* c, int k) { return (uint16_t)(c->po + 1024 * (k + 1)); }
 static int po_available(const cup_t* c) { return get_rec(c->po) && get_rec(tie_id(c, 7)); }
 
@@ -745,7 +762,11 @@ static int po_start(int ci, void* started)
 {
   const cup_t* c = &CUPS[ci];
   int d = today();
-  if (d >= g_po_day[ci] && d - g_po_day[ci] < 60) return 1;    /* already started this February */
+  int ad = abs_day();
+  if (ad >= g_po_day[ci] && ad - g_po_day[ci] < 60) {
+    logf("fl26swiss: %s play-off already drawn on day %d; not drawn again", c->name, d);
+    return 1;
+  }
   unsigned char* ph = get_rec(c->row);
   unsigned char* t = ph && rec_count(ph) >= 24 ? ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(c->row) : 0;
   uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
@@ -779,7 +800,7 @@ static int po_start(int ci, void* started)
   unsigned char* r2 = get_rec(c->po);
   logf("fl26swiss: %s play-off -- ranks 9-24 of reg %u into reg %u (%u clubs), UEFA bracket drawn; day %d",
        c->name, (unsigned)c->row, (unsigned)c->po, r2 ? rec_count(r2) : 0, d);
-  g_po_day[ci] = d;
+  g_po_day[ci] = ad;
   start_stage(started, c->po);
   return 1;
 }
@@ -911,21 +932,21 @@ static final_t* final_of(uint16_t reg)
 /* at the July teardown: every access league's final table, while it still exists */
 static void access_capture(void)
 {
-  int got = 0, d = today();
+  int got = 0, d = today(), ad = abs_day();
   if (d < 140 || d > 230) return;                 /* the summer rollover only, not New Year's */
   for (size_t i = 0; i < NACCESS; i++) {
     uint16_t reg = ACCESS[i].reg;
     final_t* f = final_of(reg);
     /* the first rollover of the summer has the final tables; a later one (day 216, when the new
        season is built) already has next season's clubs in list order and must not replace it */
-    if (f && d >= f->day && d - f->day < 60) continue;
+    if (f && ad >= f->day && ad - f->day < 60) continue;
     unsigned char* rec = get_rec(reg);
     if (!rec) continue;
     unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(reg);
     uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
     if (rows < 4 || rows > FINAL_MAX) continue;
     if (!f) { if (g_nfinal >= 48) continue; f = &g_final[g_nfinal++]; f->reg = reg; }
-    f->n = (uint16_t)rows; f->day = d;
+    f->n = (uint16_t)rows; f->day = ad;
     for (uint32_t k = 0; k < rows; k++) f->club[k] = *(uint32_t*)(t + k * 20);
     got++;
   }
@@ -935,7 +956,7 @@ static void access_capture(void)
 static uint32_t access_club(uint16_t reg, int rank, int* from_table)
 {
   final_t* f = final_of(reg);
-  int d = today();
+  int d = abs_day();
   if (f && rank <= f->n && d >= f->day && d - f->day < 120) { *from_table = 1; return f->club[rank - 1]; }
   unsigned char* rec = get_rec(reg);
   *from_table = 0;
@@ -1161,6 +1182,7 @@ __declspec(dllexport) void fl26_swiss_ko_tick(void)
 {
   if (!g_base) return;
   int d = today();
+  abs_day();                      /* the loader calls this all year: it keeps abs_day() across New Year */
   if (d < 60 || d > 150) return;
   static const uint16_t KO_REGS[3] = { 4, 6, UECL_KO };
   static const char* KO_NAME[3] = { "Champions League", "Europa League", "Conference League" };
