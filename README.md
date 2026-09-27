@@ -296,7 +296,8 @@ published modules on **2026-09-25**.
   league ids and must be edited for yours. Still wrong: Ligue 2 came out of that rollover
   with 21 clubs.
 - Continental places for new leagues: not given out. The experimental `fl26swiss.dll` fills
-  Europe from a UEFA access list of the shipped leagues only (since 2026-09-26, issue #8);
+  Europe from a UEFA access list of the shipped leagues only (since 2026-09-26, issue #8;
+  in a first season each league is ordered by squad strength, since 2026-09-27);
   to give your leagues places, add them to `ACCESS` in `tools/native/fl26swiss.c` and rebuild. Without it, new clubs can end up in the
   Champions League anyway when their league is built as a first division in a shipped
   country — see [known-issues.md](docs/known-issues.md).

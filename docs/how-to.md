@@ -614,7 +614,11 @@ Start a **new** Master League career.
 - **Second season:** the three competitions are filled from the previous season's **final
   league tables**, 36 + 36 + 36 clubs, by a UEFA-style access list (champions of the big
   leagues first, and so on). In `sider.log`:
-  `access -- 36/36/36 (108 positions from last season's tables, 0 from list order, 0 missing)`.
+  `access -- 36/36/36 (108 positions from last season's tables, 0 from first-season order, 0 missing)`.
+- **First season:** there are no final tables yet, so each league is ordered by **squad
+  strength** (the eleven best players by their ratings) and the access list reads that
+  order. In `sider.log`: `first season -- reg ... by squad strength` per league and
+  `access -- 36/36/36 (0 positions from last season's tables, 108 from first-season order, 0 missing)`.
 
 Press **F8** in the game any time to write a short report of what the module did into
 `sider.log`.
@@ -624,9 +628,10 @@ Press **F8** in the game any time to write a short report of what the module did
 - **Do not quit the game between the end of June and the end of August** (in-game dates) of
   a season. The final tables the next draw needs are kept in memory from the season's end
   until the August draw. If the game is restarted in between (also: loading a save), they are
-  gone and the draw falls back to league order. Save in June, play on to September in one go.
-- In the **first** season there are no final tables yet, so the field is the game's own
-  entry list.
+  gone and the draw falls back to squad strength, as in a first season. Save in June, play on
+  to September in one go.
+- The **first-season** order is a guess from the squads, not a result: a strong club in a
+  weak season still starts in the Champions League.
 - **New leagues get no European places.** The access list names only the game's own
   leagues; the places of countries that are missing are topped up from the big five. Giving
   your leagues places means editing `ACCESS` in `tools\native\fl26swiss.c` and building the

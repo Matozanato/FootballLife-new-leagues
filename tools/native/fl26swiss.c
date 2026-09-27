@@ -879,8 +879,8 @@ static int po_finish(int ci, void* started)
  * rebuild; places a list leaves open are topped up from the big five.
  *
  * A position is read from last season's final table, captured at the July teardown before the
- * tables go; in a first season there is none, and the league's own list order (its entry order,
- * which the world builders write as last season's finish) stands in. */
+ * tables go; in a first season there is none, and the league ordered by squad strength stands in
+ * (see seed_of below). */
 enum { UCL = 0, UEL = 1, UECL = 2 };
 typedef struct { uint16_t reg; uint8_t rank; uint8_t comp; } access_t;
 #define R_ENG 17
@@ -929,10 +929,11 @@ static final_t* final_of(uint16_t reg)
   for (int i = 0; i < g_nfinal; i++) if (g_final[i].reg == reg) return &g_final[i];
   return 0;
 }
+#define BUILD_DAY 210   /* the day-216 rollover builds the new season; nothing after this is final */
 /* at the July teardown: every access league's final table, while it still exists */
 static void access_capture(void)
 {
-  int got = 0, d = today(), ad = abs_day();
+  int got = 0, skipped = 0, d = today(), ad = abs_day();
   if (d < 140 || d > 230) return;                 /* the summer rollover only, not New Year's */
   for (size_t i = 0; i < NACCESS; i++) {
     uint16_t reg = ACCESS[i].reg;
@@ -945,21 +946,132 @@ static void access_capture(void)
     unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(reg);
     uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
     if (rows < 4 || rows > FINAL_MAX) continue;
+    /* A new career is built on day 216 and its tables exist then, with nobody having played:
+       the clubs in list order. Kept, they stood in for last season's finish and the
+       first-season order below never ran (2026-09-27: "final tables of 31 league(s) kept on
+       day 216" in a career created that minute). A season's own build is the same rollover
+       and, as said above, never holds a final table; and a table in exactly the league's list
+       order is one nobody has played. */
+    int listed = rec_count(rec) == rows;
+    for (uint32_t k = 0; k < rows && listed; k++) listed = *(uint32_t*)(t + k * 20) == rec_clubs(rec)[k];
+    if (d >= BUILD_DAY || listed) { skipped++; continue; }
     if (!f) { if (g_nfinal >= 48) continue; f = &g_final[g_nfinal++]; f->reg = reg; }
     f->n = (uint16_t)rows; f->day = ad;
     for (uint32_t k = 0; k < rows; k++) f->club[k] = *(uint32_t*)(t + k * 20);
     got++;
   }
   if (got) logf("fl26swiss: access -- final tables of %d league(s) kept on day %d", got, d);
+  if (skipped) logf("fl26swiss: access -- %d table(s) with no match played yet not kept (day %d)", skipped, d);
 }
-/* the club at a league position: last season's table if it was kept, else the list order */
+/* ---- a first season: the league ordered by squad strength ----
+ *
+ * With no final table kept, a league's list order stood in for last season's finish. The shipped
+ * leagues list their clubs alphabetically, so the first season sent Angers and Auxerre to the
+ * Champions League and Paris Saint-Germain, Real Madrid and Inter, whichever places were left,
+ * to the Conference League (reported on Evo-Web, 2026-09-27). Now the clubs are ranked by squad
+ * strength instead: a player is worth the mean of his ten best outfield abilities, or of the five
+ * goalkeeping ones if he is registered in goal; a club is its best keeper plus its ten best
+ * outfield players, averaged. Ties (cloned squads) and clubs whose squad cannot be read keep the
+ * list order, so a world that wrote its leagues in last season's finish and gave them equal
+ * squads keeps that order. Measured on the live game 2026-09-27: PSG 84.6, Monaco 82.3,
+ * Marseille 82.0; Real Madrid 86.3, Barcelona 85.2, Atletico 84.5; Man City 85.9, Liverpool 85.1.
+ *
+ * Squads come from the game's own lookups, which the runtime patch set already points at the
+ * relocated arrays: 0x1414bb580(blk, club handle) -> team record, 0x1414bb2a0(blk, player
+ * handle) -> player record. Both answer a blank record for an unknown handle, so the id is
+ * checked. The roster is u64 handles {u32 key, u32 player id} at team + 0x14c, count at
+ * team + 0x426 & 0x7f. Abilities in the live player record are 7-bit raw values (not the file's
+ * 6-bit value + 40); the registered position is 4 bits at +0x07 bit 4, 0 = goalkeeper. */
+#define TEAMGET_RVA   0x14bb580
+#define PLAYERGET_RVA 0x14bb2a0
+typedef unsigned char* (*teamget_fn)(void* blk, uint64_t handle);
+typedef unsigned char* (*playerget_fn)(void* blk, uint64_t handle);
+static const uint8_t AB_OUT[20][2] = {   /* {byte, bit} */
+  {0x03,0},{0x06,5},{0x05,6},{0x08,0},{0x09,6},{0x0a,5},{0x08,7},{0x0c,0},{0x0e,5},{0x10,0},
+  {0x14,7},{0x18,7},{0x18,0},{0x19,6},{0x15,6},{0x16,5},{0x1a,5},{0x04,0},{0x0c,7},{0x0d,6} };
+static const uint8_t AB_GK[5][2] = { {0x04,7},{0x10,7},{0x11,6},{0x12,5},{0x14,0} };
+static int ab7(const unsigned char* p, const uint8_t* bs) { return ((p[bs[0]] | p[bs[0] + 1] << 8) >> bs[1]) & 0x7f; }
+static void sort_desc(int* v, int n)
+{
+  for (int i = 1; i < n; i++) { int x = v[i], j = i; while (j > 0 && v[j - 1] < x) { v[j] = v[j - 1]; j--; } v[j] = x; }
+}
+/* tenths of an ability point; *gk set when he is registered in goal */
+static int player_value(const unsigned char* p, int* gk)
+{
+  int s = 0;
+  *gk = ((p[7] >> 4) & 0xf) == 0;
+  if (*gk) { for (int i = 0; i < 5; i++) s += ab7(p, AB_GK[i]); return s * 2; }
+  int v[20];
+  for (int i = 0; i < 20; i++) v[i] = ab7(p, AB_OUT[i]);
+  sort_desc(v, 20);
+  for (int i = 0; i < 10; i++) s += v[i];
+  return s;
+}
+/* tenths; 0 when the squad cannot be read or has no keeper and ten outfield players */
+static int club_strength(void* blk, uint32_t club)
+{
+  unsigned char* t = ((teamget_fn)(uintptr_t)(g_base + TEAMGET_RVA))(blk, club);
+  if (!t || *(uint32_t*)t >> 14 != club >> 14) return 0;
+  int n = t[0x426] & 0x7f, gk = 0, of[128], nof = 0;
+  for (int k = 0; k < n; k++) {
+    uint64_t h = *(uint64_t*)(t + 0x14c + 8 * k);
+    unsigned char* p = ((playerget_fn)(uintptr_t)(g_base + PLAYERGET_RVA))(blk, h);
+    if (!p || *(uint32_t*)(p + 0x30) != (uint32_t)(h >> 32)) continue;
+    int g, v = player_value(p, &g);
+    if (g) { if (v > gk) gk = v; } else of[nof++] = v;
+  }
+  if (!gk || nof < 10) return 0;
+  sort_desc(of, nof);
+  int s = gk;
+  for (int i = 0; i < 10; i++) s += of[i];
+  return s / 11;
+}
+static final_t g_seed[48]; static int g_nseed = 0;
+/* the league's clubs, strongest first; worked out once per summer */
+static final_t* seed_of(uint16_t reg)
+{
+  int d = abs_day();
+  final_t* f = 0;
+  for (int i = 0; i < g_nseed; i++) if (g_seed[i].reg == reg) f = &g_seed[i];
+  if (f && d >= f->day && d - f->day < 120) return f->n ? f : 0;
+  unsigned char* rec = get_rec(reg);
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  void* blk = o ? *(void**)(o + 0x48) : 0;
+  if (!rec || !blk) return 0;
+  if (!f) { if (g_nseed >= 48) return 0; f = &g_seed[g_nseed++]; f->reg = reg; }
+  f->day = d;
+  unsigned n = rec_count(rec);
+  if (n > FINAL_MAX) n = FINAL_MAX;
+  int str[FINAL_MAX], known = 0;
+  for (unsigned k = 0; k < n; k++) {
+    f->club[k] = rec_clubs(rec)[k];
+    str[k] = club_strength(blk, f->club[k]);
+    known += str[k] > 0;
+    /* stable: a club only passes the ones strictly weaker */
+    for (unsigned j = k; j > 0 && str[j - 1] < str[j]; j--) {
+      int s = str[j]; str[j] = str[j - 1]; str[j - 1] = s;
+      uint32_t c = f->club[j]; f->club[j] = f->club[j - 1]; f->club[j - 1] = c;
+    }
+  }
+  f->n = known ? (uint16_t)n : 0;
+  if (!known) { logf("fl26swiss: first season -- reg %u: no squad could be read; list order stands", (unsigned)reg); return 0; }
+  if (n < 3) return f;
+  logf("fl26swiss: first season -- reg %u by squad strength (%d of %u read): %08x %d.%d, %08x %d.%d, %08x %d.%d ... last %08x %d.%d",
+       (unsigned)reg, known, n, f->club[0], str[0] / 10, str[0] % 10, f->club[1], str[1] / 10, str[1] % 10,
+       f->club[2], str[2] / 10, str[2] % 10, f->club[n - 1], str[n - 1] / 10, str[n - 1] % 10);
+  return f;
+}
+/* the club at a league position: last season's table if it was kept, else the league ordered by
+   squad strength, else the list order */
 static uint32_t access_club(uint16_t reg, int rank, int* from_table)
 {
   final_t* f = final_of(reg);
   int d = abs_day();
   if (f && rank <= f->n && d >= f->day && d - f->day < 120) { *from_table = 1; return f->club[rank - 1]; }
-  unsigned char* rec = get_rec(reg);
   *from_table = 0;
+  final_t* s = seed_of(reg);
+  if (s) return rank <= s->n ? s->club[rank - 1] : 0;
+  unsigned char* rec = get_rec(reg);
   if (!rec || (unsigned)rank > rec_count(rec)) return 0;
   return rec_clubs(rec)[rank - 1];
 }
@@ -1006,7 +1118,7 @@ static int access_build(void)
     }
   }
   if (topped) logf("fl26swiss: access -- %d place(s) topped up from the big five", topped);
-  logf("fl26swiss: access -- %u / %u / %u clubs (%d positions from last season's tables, %d from list order, %d missing)",
+  logf("fl26swiss: access -- %u / %u / %u clubs (%d positions from last season's tables, %d from first-season order, %d missing)",
        g_nacc[0], g_nacc[1], g_nacc[2], tables, orders, gaps);
   return g_nacc[0] == FIELD;
 }

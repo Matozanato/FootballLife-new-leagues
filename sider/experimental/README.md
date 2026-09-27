@@ -182,7 +182,7 @@ undoes it.
 - the second season: every league size given the right number of rounds (10 clubs x 4 = 36,
   12 x 3 = 33, 12 x 4 = 44, 22 x 2 = 42, 24 x 2 = 46), and the August draw filling all three
   competitions from the final tables of the season before:
-  `access -- 36/36/36 (108 positions from last season's tables, 0 from list order, 0 missing)`;
+  `access -- 36/36/36 (108 positions from last season's tables, 0 from first-season order, 0 missing)`;
 - **Database -> Competition Info** (fixed late on 2026-09-24): the Europa League and the
   Conference League now show their 36-club league-phase table under *Group stage*, as the
   Champions League does. Before, the item was greyed out for both all autumn, and opening
@@ -199,8 +199,10 @@ undoes it.
 
 - The final tables the access list reads are kept **in the DLL's memory**, captured at the
   summer rollover (around day 176). If the game is restarted between then and the August draw
-  (around day 244), they are gone and the draw falls back to league order. In the first
-  season there are no final tables yet, so it uses league order anyway.
+  (around day 244), they are gone and the draw falls back to squad strength. In the first
+  season there are no final tables yet, so each league is ordered by squad strength (the
+  eleven best players by their ratings); `sider.log` shows `first season -- reg ... by squad
+  strength`.
 - The Conference League play-off is drawn in December, straight after its league phase
   (the real draw is at the end of January), and played in February with the Europa League's.
 - The Conference League's league phase is **six** matches a club (six opponents, one from each

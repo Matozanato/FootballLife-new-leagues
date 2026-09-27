@@ -301,6 +301,14 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-09-27 (Evo-Web report): **in the first season `fl26swiss` put big clubs such as PSG,
+  Real Madrid or Inter in the Conference League.** With no final tables yet, the access list
+  read the league's own club list, which is in no useful order. Worse, a new career is built
+  on day 216, after the summer capture, so its empty tables were captured as if they were
+  final. Now tables with no match played are not kept, and a first season orders each league
+  by squad strength (the eleven best players by their ratings). Confirm: start a new career,
+  play to the end of August; `sider.log` shows `first season -- reg ... by squad strength`
+  and `108 from first-season order`, and the Champions League holds the strongest clubs.
 - 2026-09-27: **new clubs played in the plain default kit even after `mkkits.py`.** The tool
   named the files after the team id (`72163_DEF_1st_realUni.bin`), but the engine looks a kit
   up under a shortened number and a range tag: ids 65536..81919 are `<id-65536>_ACL_...`, the
