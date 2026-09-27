@@ -714,8 +714,8 @@ inside both. Details and the ways around: [limits.md](limits.md).
 
 ### E9. Other experimental modules
 
-`sider\experimental\` holds more: every league in the Select Team list, 64 regions, a career
-that starts in August, promotion and relegation through a whole pyramid, Edit mode lists.
+`sider\experimental\` holds more: every league in the Select Team list (with its country's flag,
+filled in by `tools\mkflags.py`), 64 regions, a career that starts in August, promotion and relegation through a whole pyramid, Edit mode lists.
 Several of them carry lists of **our** world's ids that you must change for yours. Read
 [sider/experimental/README.md](../sider/experimental/README.md) before adding any, and add them
 **one at a time**.

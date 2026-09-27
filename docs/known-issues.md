@@ -301,6 +301,14 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-09-27 (GitHub issue #11): **an added league could show another country's flag.** The
+  game's own region-to-country table still answers for four regions no shipped league uses:
+  11 Poland, 13 Sweden, 14 Norway, 20 Mexico. `spreadregions.py --plan own` hands those
+  regions out, so a league placed there wore that country's flag (the tester saw a Swedish one
+  on a Lithuanian league). `tools/mkflags.py` now writes each league's own country for those
+  regions, or "no country" when it cannot tell, and warns when it overrides the game. It also
+  fills the new Select Team flags in `fl26comptab.lua`. Checked against `Country.bin`: every
+  flag id in the tables is the country it claims.
 - 2026-09-27 (GitHub issue #10): **the UEFA play-offs were skipped in later seasons played
   in one session.** With `fl26swiss`, in seasons 2 and 3 the league phases ended and no
   play-off followed: the Champions League screen showed `%s` and eight empty rows, the Europa

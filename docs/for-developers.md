@@ -91,6 +91,7 @@ players 0x17c, clubs 0x690, coaches 0x258, regulations 0x314, match records 0x25
 | `deepen.py` | put one of your leagues below another as the next division down; `--deep-rank` for real ranks, `--retier` to renumber a chain built before the rank was widened |
 | `mkrankpatch.py` | regenerate `sider/experimental/fl26rank.lua` (it finds every site that reads or writes the league rank and emits the same-length rewrite); needs `capstone` |
 | `spreadregions.py` | give every added league a region (country) of its own, `--plan own`; needs `sider/experimental/fl26reg64.lua` in the game |
+| `mkflags.py` | give every added league its country's flag: works the country out from the league's name (or a `--countries` list) and `Country.bin`, and writes `ID_COUNTRY` in `fl26comptab.lua` and `COUNTRY` in `fl26catlist.lua`. Based on Stagnant09's version (issue #11) |
 | `mkphases.py`, `mkreshape.py` | clone a multi-phase competition; change the shape of a phase of a shipped one in place (the 36-club league phase) |
 | `mkuecl.py`, `mkeuropo.py` | add the Conference League; give the Europa and Conference League the 9-24 play-off |
 | `mkswiss.py` | generate and check the league-phase draw tables compiled into `fl26swiss.dll` |

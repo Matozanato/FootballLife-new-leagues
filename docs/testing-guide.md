@@ -196,6 +196,9 @@ selection list for Master League and for Kick Off.
    the list is built separately from the season.
 5. Send the `fl26comptab: id N -> row R slot S` lines from `sider.log` with your answers.
    They are the map from your leagues to the slots the other two modules act on.
+6. Does each of your leagues show **its own country's flag** on the right of its entry? Run
+   `tools/mkflags.py --root <your root> --write` first (it fills the tables with your world's
+   countries) and send the `fl26comptab: flags --` line. Name any league with a wrong flag, or none.
 
 **T8b — Regions (`fl26reg64`).** Build a world spread over several regions, including at
 least one above 28, e.g.

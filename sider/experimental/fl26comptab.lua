@@ -120,6 +120,52 @@ local COUNTS = {
 -- Only the demote count is written; their promote count stays what it was.
 local SHIPPED_DEMOTE = { [81] = 3, [82] = 3 }
 
+-- Flags in the Select Team list: {regulation id = flag id}. tools/mkflags.py writes this from
+-- the world's own data (the league's name, or a --countries file) and Country.bin, where the
+-- flag id is the country id; an id left out keeps the list's old answer, which is no flag.
+-- These are OUR test world's leagues; run mkflags.py --write for your own.
+local ID_COUNTRY = {
+  [11] = 200,   -- Croatia (Croatia D1)
+  [49] = 235,   -- Slovenia (Slovenia D1)
+  [60] = 303,   -- Serbia (Serbia D1)
+  [61] = 198,   -- Bosnia and Herzegovina (Bosnia and Herzegovina D1)
+  [62] = 212,   -- Hungary (Hungary D1)
+  [74] = 227,   -- Poland (Poland D1)
+  [76] = 202,   -- Czech Republic (Czechia D1)
+  [93] = 234,   -- Slovakia (Slovakia D1)
+  [94] = 194,   -- Austria (Austria D1)
+  [96] = 229,   -- Romania (Romania D1)
+  [98] = 199,   -- Bulgaria (Bulgaria D1)
+  [100] = 238,   -- Switzerland (Switzerland D1)
+  [109] = 239,   -- Ukraine (Ukraine D1)
+  [110] = 226,   -- Norway (Norway D1)
+  [111] = 237,   -- Sweden (Sweden D1)
+  [112] = 214,   -- Ireland (Ireland D1)
+  [113] = 221,   -- North Macedonia (North Macedonia D1)
+  [114] = 304,   -- Montenegro (Montenegro D1)
+  [121] = 191,   -- Albania (Albania D1)
+  [138] = 207,   -- Finland (Finland D1)
+  [139] = 152,   -- Uruguay (Uruguay D1)
+  [140] = 150,   -- Paraguay (Paraguay D1)
+  [143] = 151,   -- Peru (Peru D1)
+  [144] = 149,   -- Ecuador (Ecuador D1)
+  [145] = 145,   -- Bolivia (Bolivia D1)
+  [146] = 153,   -- Venezuela (Venezuela D1)
+  [170] = 124,   -- Mexico (Mexico D1)
+  [171] = 16,    -- Republic of Korea (South Korea D1)
+  [173] = 162,   -- Australia (Australia D1)
+  [174] = 204,   -- England (England D3)
+  [176] = 204,   -- England (England D4)
+  [178] = 11,    -- Iran (Iran D1)
+  [179] = 229,   -- Romania (Romania D2)
+  [180] = 208,   -- France (France D3)
+  [181] = 208,   -- France (France D4)
+  [182] = 208,   -- France (France D5)
+  [183] = 215,   -- Italy (Italy D3)
+  [184] = 215,   -- Italy (Italy D4)
+  [185] = 215,   -- Italy (Italy D5)
+}
+
 -- code sites: {va, expected bytes (hex)}
 local LEAS = {
   { 0x1414fdbda, "4c8d251f030002" },   -- lea r12,[table]  (lookup by id)
@@ -138,8 +184,66 @@ local function u32le(v)
   return string.char(v % 256, math.floor(v / 256) % 256, math.floor(v / 65536) % 256, math.floor(v / 16777216) % 256)
 end
 local function bin2hex(s) return (s:gsub(".", function(c) return string.format("%02x", c:byte()) end)) end
+local function hex2bin(h)
+  return (h:gsub("%x%x", function(b) return string.char(tonumber(b, 16)) end))
+end
+local function rel32(from_next, to)
+  local d = to - from_next
+  if d >= 0x80000000 or d < -0x80000000 then return nil end
+  if d < 0 then d = d + 0x100000000 end
+  return u32le(d)
+end
 local function row_u32(row, off) return memory.unpack("u32", row:sub(off + 1, off + 4)) end
 local function row_set(row, off, bytes) return row:sub(1, off) .. bytes .. row:sub(off + #bytes + 1) end
+
+-- The flag next to a league in the Select Team list comes from 0x140c950d0(slot), which
+-- builds 23 {slot, country} pairs on the stack and answers 0xffff for any other slot -- so
+-- for every slot of ours, and the caller (0x140c97429) then draws no flag. There is no table
+-- to extend, so the function is hooked with one of our own, keyed on the slots this module
+-- has just handed out. A slot the table leaves at 0xffff falls through to the original code,
+-- so the 23 shipped answers do not change. The stub (Stagnant09's, issue #11):
+--   0x00 cmp ecx,0x7b ; ja 0x21        slots are 0..123; anything above is not ours
+--   0x09 mov eax,ecx ; lea rdx,[tbl]
+--   0x12 movzx eax,word [rdx+rax*2]    our country for that slot
+--   0x16 cmp ax,-1 ; je 0x21 ; ret     0xffff: not ours, let the engine answer
+--   0x21 the engine's own 18 prologue bytes, replayed, then jmp SLOT_FN+0x12
+--   0x38 124 u16, one per slot
+-- The stub writes nothing to the stack, so the replayed prologue is all the frame the
+-- original needs; the rip-relative load at +0x12 still runs where it was compiled.
+local SLOT_FN = 0x140c950d0
+local SLOT_FN_PROLOGUE = "48895c240855488d6c24a94881ecd0000000"   -- 18 bytes
+local SLOT_FN_RESUME = 0x12
+local NSLOTS = 124
+
+local function install_flags(slot_country, named)
+  local got = bin2hex(memory.read(SLOT_FN, #SLOT_FN_PROLOGUE / 2))
+  if got ~= SLOT_FN_PROLOGUE then
+    log(string.format("fl26comptab: bytes at 0x%x are %s, expected %s -- no flags",
+                      SLOT_FN, got, SLOT_FN_PROLOGUE))
+    return
+  end
+  local stub
+  for _, pref in ipairs({ 0x15e200000, 0x15f200000, 0x161200000, 0x171200000 }) do
+    local p = ffi.C.VirtualAlloc(ffi.cast("void*", pref), 0x1000, 0x3000, 0x40)  -- PAGE_EXECUTE_READWRITE
+    if p ~= nil then stub = tonumber(ffi.cast("uint64_t", p)); break end
+  end
+  if not stub then log("fl26comptab: VirtualAlloc for the flag stub failed -- no flags"); return end
+  local back = rel32(stub + 0x38, SLOT_FN + SLOT_FN_RESUME)
+  local into = rel32(SLOT_FN + 5, stub)
+  if not (back and into) then log("fl26comptab: flag stub out of jump range -- no flags"); return end
+  local code = "\131\249\123" .. "\15\135\24\0\0\0" .. "\137\200" .. "\72\141\21\38\0\0\0"
+            .. "\15\183\4\66" .. "\102\61\255\255" .. "\15\132\1\0\0\0" .. "\195"
+            .. hex2bin(SLOT_FN_PROLOGUE) .. "\233" .. back
+  assert(#code == 0x38, #code)
+  local tbl = {}
+  for sl = 0, NSLOTS - 1 do
+    local c = slot_country[sl] or 0xffff
+    tbl[#tbl + 1] = string.char(c % 256, math.floor(c / 256) % 256)
+  end
+  ffi.copy(ffi.cast("void*", stub), code .. table.concat(tbl))
+  memory.write(SLOT_FN, "\233" .. into)
+  log(string.format("fl26comptab: flags -- stub at 0x%x, %d slots carry a country", stub, named))
+end
 
 local function check_sites(list)
   for _, s in ipairs(list) do
@@ -283,6 +387,26 @@ function m.init(ctx)
     memory.write(s[1] + 3, u32le(disp))
   end
   for _, s in ipairs(COUNT_SITES) do memory.write(s[1] + s[3], u32le(n)) end
+
+  -- 6. flags: the slot each id of ID_COUNTRY ended up on, read back from the rows just
+  -- installed, so the stub follows whatever slots steps 2 and 2b settled on
+  do
+    local slot_country, named = {}, 0
+    for id, c in pairs(ID_COUNTRY) do
+      local i = byid[id]
+      local sl = i and row_u32(rows[i], OFF_SLOT)
+      if not sl or sl >= NSLOTS or sl == 123 then
+        log(string.format("fl26comptab: id %d has no slot in the list -- no flag for it", id))
+      elseif slot_country[sl] and slot_country[sl] ~= c then
+        log(string.format("fl26comptab: slot %d carries two countries (%d, %d) -- keeping %d",
+                          sl, slot_country[sl], c, slot_country[sl]))
+      elseif not slot_country[sl] then
+        slot_country[sl] = c
+        named = named + 1
+      end
+    end
+    if named > 0 then install_flags(slot_country, named) end
+  end
 
   log(string.format("fl26comptab: table copied to 0x%x, %d rows (%d shipped + %d ours)", newbase, n, NROWS, n - NROWS))
   for id in pairs(ours) do

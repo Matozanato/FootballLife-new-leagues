@@ -166,6 +166,10 @@ published modules on **2026-09-25**.
   in two seasons running. Built with `tools/mksizes.py`; dated with `fl26swiss.dll`.
 - **Database -> Competition Info** lists the countries of the added leagues under their own
   names (experimental, `fl26catlist.lua`). The flags there are still borrowed.
+- **Each added league shows its country's flag in the Select Team list** (experimental,
+  `fl26comptab.lua`), using the flags the game already has. `tools/mkflags.py` works the
+  country out from the league's name, or from a short list you write, and fills in the tables.
+  The idea, the hook and the first working version are Stagnant09's (issue #11).
 - **Edit mode reaches the added leagues** (experimental, `fl26editlist.lua`): Edit > Teams,
   Edit > Players > Edit Player, Transfer and Managers list every added league with its clubs,
   so their clubs and players can be edited in the game itself.
@@ -365,7 +369,7 @@ sider/experimental/ sixteen modules that go further, run on our test world only:
                     (fl26swiss.dll), country names in Competition Info, the added
                     leagues in Edit mode's team lists
 tools/              world builders (mkworld, mkplayers, mkcrests, mkkits, mkcup,
-                    spreadregions, mkreshape, mkuecl, mkeuropo, mksizes, rename, players,
+                    spreadregions, mkflags, mkreshape, mkuecl, mkeuropo, mksizes, rename, players,
                     playeredit, playereditor ...),
                     pesdb/CPK readers, the patch-set generator and its checkers
 tools/native/       the C source of the four DLLs, their build scripts and checksums
@@ -388,7 +392,14 @@ MIT — see [LICENSE](LICENSE). Football Life 2026, PES 2021 and Sider belong to
 respective authors; nothing of theirs is redistributed here.
 
 The reverse engineering was done from scratch against the game's executable and data
-files. Nothing here is derived from anyone else's tool or notes.
+files. Nothing here is derived from anyone else's tool or notes, except where a contributor
+is named below.
+
+Contributors:
+
+- **Stagnant09**: flags in the Select Team list. The idea, the hook on the slot-to-country
+  lookup and the first working version ([issue #11](https://github.com/Matozanato/FootballLife-new-leagues/issues/11));
+  `fl26comptab.lua` and `tools/mkflags.py` are built on it.
 
 The licence asks nothing of you. I do: **if you use these findings, addresses, patch sets
 or tools in a mod, credit this work and link back** — see
