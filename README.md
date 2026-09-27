@@ -77,7 +77,9 @@ If you use anything from this repository, vmardonesdev's name belongs next to it
   ([#3](https://github.com/Matozanato/FootballLife-new-leagues/issues/3)).
 - **vector360** (Evo-Web): tested the new European format and reported that in a first
   season big clubs such as PSG, Real Madrid and Inter ended up in the Conference League.
-  That report is why the first season is now ordered by squad strength.
+  That report is why the first season is now ordered by squad strength. vector360's own
+  36/36/36 list of 2026/27 clubs is why `fl26swiss` can take a first-season list
+  (`fl26swiss-first.txt`).
 - **jibibi** (Evo-Web): tested the modules alongside a full French patch and the kit server
   and sent the logs, which show how the patch's own roots and the new clubs' kit names have to
   sit next to ours.
@@ -366,7 +368,8 @@ published modules on **2026-09-25**.
   with 21 clubs.
 - Continental places for new leagues: not given out. The experimental `fl26swiss.dll` fills
   Europe from a UEFA access list of the shipped leagues only (since 2026-09-26, issue #8;
-  in a first season each league is ordered by squad strength, since 2026-09-27);
+  in a first season each league is ordered by squad strength, or taken from your own
+  `fl26swiss-first.txt`, since 2026-09-27);
   to give your leagues places, add them to `ACCESS` in `tools/native/fl26swiss.c` and rebuild. Without it, new clubs can end up in the
   Champions League anyway when their league is built as a first division in a shipped
   country — see [known-issues.md](docs/known-issues.md).

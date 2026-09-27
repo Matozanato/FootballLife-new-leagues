@@ -602,9 +602,14 @@ static void start_stage(void* started, uint16_t id)
  * answers NULL for an id that does not exist. */
 #define FINDREC_RVA 0x14bc860
 typedef void* (*findrec_fn)(void* blk, uint64_t id);
+static uint32_t club_of_id(uint32_t c);
 static uint32_t full_club(uint32_t c)
 {
-  if (c >> 14) return c;
+  return c >> 14 ? c : club_of_id(c);
+}
+/* a team id (any size: added clubs run past 65536) as the leagues hold it, or 0 */
+static uint32_t club_of_id(uint32_t c)
+{
   unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
   void* blk = o ? *(void**)(o + 0x48) : 0;
   if (!blk) return 0;
@@ -1076,12 +1081,40 @@ static uint32_t access_club(uint16_t reg, int rank, int* from_table)
   return rec_clubs(rec)[rank - 1];
 }
 static int g_access_on = 1;
+/* A first-season list from the loader (fl26swiss-first.txt, read by fl26swiss.lua): team ids per
+   competition, taken as they are while no final table has been kept -- the first season, or a
+   restart between the end of the season and the draw. Ids the game does not have, or that are
+   already placed, are left out and the access list below fills the places that remain. */
+static uint32_t g_first[3][48]; static unsigned g_nfirst[3];
+/* where each placed club came from, for the log: reg 0 = the first-season list */
+typedef struct { uint16_t reg; uint8_t rank; } how_t;
+static how_t g_how[3][FIELD];
+static int any_final_kept(void)
+{
+  int d = abs_day();
+  for (int i = 0; i < g_nfinal; i++) if (d >= g_final[i].day && d - g_final[i].day < 120) return 1;
+  return 0;
+}
 /* build the three lists; a slot whose club is missing or already placed takes the next position
    of the same league */
 static int access_build(void)
 {
-  uint32_t used[3 * FIELD + 8]; unsigned nused = 0; int tables = 0, orders = 0, gaps = 0;
+  uint32_t used[3 * FIELD + 8]; unsigned nused = 0; int tables = 0, orders = 0, gaps = 0, listed = 0;
   g_nacc[0] = g_nacc[1] = g_nacc[2] = 0;
+  if (g_nfirst[0] + g_nfirst[1] + g_nfirst[2] && !any_final_kept()) {
+    int missing = 0, twice = 0, over = 0;
+    for (int k = 0; k < 3; k++)
+      for (unsigned i = 0; i < g_nfirst[k]; i++) {
+        uint32_t c = club_of_id(g_first[k][i]);
+        if (!c) { missing++; logf("fl26swiss: first-season list -- team %u is not in any league of this game", g_first[k][i]); continue; }
+        if (has_club(used, nused, c)) { twice++; continue; }
+        if (g_nacc[k] >= FIELD) { over++; continue; }
+        g_how[k][g_nacc[k]].reg = 0; g_how[k][g_nacc[k]].rank = 0;
+        g_acc[k][g_nacc[k]++] = c; used[nused++] = c; listed++;
+      }
+    logf("fl26swiss: first-season list -- %u / %u / %u clubs taken (%d not in this game, %d listed twice, %d over %d)",
+         g_nacc[0], g_nacc[1], g_nacc[2], missing, twice, over, FIELD);
+  }
   for (size_t i = 0; i < NACCESS; i++) {
     const access_t* a = &ACCESS[i];
     uint32_t c = 0; int ft = 0;
@@ -1093,6 +1126,7 @@ static int access_build(void)
     }
     if (!c) { gaps++; logf("fl26swiss: access -- reg %u position %u: no club", (unsigned)a->reg, (unsigned)a->rank); continue; }
     if (g_nacc[a->comp] >= FIELD || nused >= sizeof used / sizeof used[0]) continue;
+    g_how[a->comp][g_nacc[a->comp]].reg = a->reg; g_how[a->comp][g_nacc[a->comp]].rank = a->rank;
     g_acc[a->comp][g_nacc[a->comp]++] = c;
     used[nused++] = c;
     if (ft) tables++; else orders++;
@@ -1113,13 +1147,14 @@ static int access_build(void)
           c = 0;
         }
         if (!c) { stuck++; continue; }
+        g_how[k][g_nacc[k]].reg = RESERVE[j]; g_how[k][g_nacc[k]].rank = (uint8_t)(rank[j] - 1);
         g_acc[k][g_nacc[k]++] = c; used[nused++] = c; topped++;
       }
     }
   }
   if (topped) logf("fl26swiss: access -- %d place(s) topped up from the big five", topped);
-  logf("fl26swiss: access -- %u / %u / %u clubs (%d positions from last season's tables, %d from first-season order, %d missing)",
-       g_nacc[0], g_nacc[1], g_nacc[2], tables, orders, gaps);
+  logf("fl26swiss: access -- %u / %u / %u clubs (%d from the first-season list, %d positions from last season's tables, %d from first-season order, %d missing)",
+       g_nacc[0], g_nacc[1], g_nacc[2], listed, tables, orders, gaps);
   return g_nacc[0] == FIELD;
 }
 /* August, inside the game's own hand-over after qualifying (case 2 of the progression): the group
@@ -1137,17 +1172,14 @@ static u32vec* access_list(uint16_t r, uint64_t flag)
   if (r == 3) {
     g_access_ready = access_build();
     if (!g_access_ready) logf("fl26swiss: access -- Champions League list short; the game's lists stand");
-    else {
-      unsigned n[3] = { 0, 0, 0 };
-      for (size_t i = 0; i < NACCESS; i++) {
-        const access_t* a = &ACCESS[i];
-        if (n[a->comp] < g_nacc[a->comp]) {
-          n[a->comp]++;
-          logf("fl26swiss:   %s %2u: reg %u position %u -> %08x", COMP_NAME[a->comp], n[a->comp],
-               (unsigned)a->reg, (unsigned)a->rank, g_acc[a->comp][n[a->comp] - 1]);
+    else
+      for (int k = 0; k < 3; k++)
+        for (unsigned i = 0; i < g_nacc[k]; i++) {
+          const how_t* h = &g_how[k][i];
+          if (!h->reg) logf("fl26swiss:   %s %2u: first-season list -> %08x", COMP_NAME[k], i + 1, g_acc[k][i]);
+          else logf("fl26swiss:   %s %2u: reg %u position %u -> %08x", COMP_NAME[k], i + 1, (unsigned)h->reg,
+                    (unsigned)h->rank, g_acc[k][i]);
         }
-      }
-    }
   }
   int k = r == 3 ? UCL : UEL;
   if (!g_access_ready || g_nacc[k] < FIELD) return 0;
@@ -1303,6 +1335,21 @@ __declspec(dllexport) void fl26_swiss_ko_tick(void)
     ko_bracket(KO_REGS[i], 0x33, KO_NAME[i]);
     ko_bracket(KO_REGS[i], 0x34, KO_NAME[i]);
   }
+}
+
+/* The first-season list from the loader: n pairs of u32 -- competition (0 Champions League,
+   1 Europa League, 2 Conference League) and team id, in the order they are to be placed.
+   Answers how many were taken. */
+__declspec(dllexport) int fl26_swiss_first(const uint32_t* v, int n)
+{
+  g_nfirst[0] = g_nfirst[1] = g_nfirst[2] = 0;
+  int k = 0;
+  for (int i = 0; v && i < n; i++) {
+    uint32_t comp = v[2 * i], id = v[2 * i + 1];
+    if (comp > 2 || !id || id >> 18 || g_nfirst[comp] >= 48) continue;
+    g_first[comp][g_nfirst[comp]++] = id; k++;
+  }
+  return k;
 }
 
 __declspec(dllexport) void fl26_swiss_uecl(const uint32_t* clubs, int n)

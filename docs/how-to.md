@@ -622,6 +622,27 @@ Start a **new** Master League career.
   strength** (the eleven best players by their ratings) and the access list reads that
   order. In `sider.log`: `first season -- reg ... by squad strength` per league and
   `access -- 36/36/36 (0 positions from last season's tables, 108 from first-season order, 0 missing)`.
+- **Your own first-season field (optional):** put a text file called `fl26swiss-first.txt`
+  next to `fl26swiss.lua` in `modules`. A line naming a competition (`Champions League`,
+  `Europa League`, `Conference League`) starts its section; after it, every number in brackets
+  is a team id, in the order the clubs should go in. The rest of each line is ignored, so a
+  list like this works as it is:
+
+  ```
+  Champions League
+  Paris Saint-Germain (114)     Manchester City (173)     Real Madrid CF (109)
+  Europa League
+  AS Roma (125)                 SL Benfica (191)
+  Conference League
+  Ajax Amsterdam (116)
+  ```
+
+  While there is no last-season table (the first season, or after a restart between June
+  and the August draw) these clubs go in first; ids the game does not have, and clubs listed
+  twice, are left out, and the access list fills the places that remain. In `sider.log`:
+  `first-season list from fl26swiss-first.txt: 36 / 36 / 36 team ids` at start-up and
+  `first-season list -- 36 / 36 / 36 clubs taken` at the draw. The idea and the first list
+  came from vector360 on Evo-Web.
 
 Press **F8** in the game any time to write a short report of what the module did into
 `sider.log`.

@@ -204,7 +204,8 @@ undoes it.
   (around day 244), they are gone and the draw falls back to squad strength. In the first
   season there are no final tables yet, so each league is ordered by squad strength (the
   eleven best players by their ratings); `sider.log` shows `first season -- reg ... by squad
-  strength`.
+  strength`. To choose the first-season field yourself, put `fl26swiss-first.txt` in
+  `modules` (format in [how-to D6](../../docs/how-to.md#d6-play-and-check)).
 - The Conference League play-off is drawn in December, straight after its league phase
   (the real draw is at the end of January), and played in February with the Europa League's.
 - The Conference League's league phase is **six** matches a club (six opponents, one from each

@@ -81,6 +81,39 @@ function m.key_down(ctx, vkey)
   if vkey == 0x77 then drain("F8 report") end      -- F8
 end
 
+-- First-season list (optional): modules\fl26swiss-first.txt. While no final table has been kept
+-- (the first season of a career, or after a restart between the end of a season and the August
+-- draw), the three competitions take these clubs first, in this order; the access list fills
+-- whatever is left. A line naming a competition starts its section; after that, every number in
+-- brackets is a team id, and the rest of the line is ignored:
+--   Champions League
+--   Paris Saint-Germain (114)    Manchester City (173)
+--   Europa League
+--   AS Roma (125)
+--   Conference League
+--   ...
+-- A number in brackets followed by a colon is a count in a heading ("IN DATABASE (34):") and is
+-- skipped. Ids the game does not have are left out, and sider.log names them.
+local FIRST_FILE = "fl26swiss-first.txt"
+local function read_first(path)
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local list, comp = {}, nil
+  for line in f:lines() do
+    local up = line:upper()
+    if up:find("CHAMPIONS") then comp = 0
+    elseif up:find("EUROPA") then comp = 1
+    elseif up:find("CONFERENCE") then comp = 2
+    elseif comp then
+      for id, after in line:gmatch("%((%d+)%)(%s*:?)") do
+        if not after:find(":") then list[#list + 1] = { comp, tonumber(id) } end
+      end
+    end
+  end
+  f:close()
+  return #list > 0 and list or nil
+end
+
 function m.init(ctx)
   if ffi == nil then log("fl26swiss: global ffi is nil -- set luajit.ext.enabled = 1"); return end
   ffi.cdef([[
@@ -93,6 +126,7 @@ function m.init(ctx)
     typedef void (*fl26_swiss_stats_t)(uint32_t*);
     typedef void (*fl26_swiss_uecl_t)(const uint32_t*, int);
     typedef void (*fl26_swiss_ko_tick_t)(void);
+    typedef int  (*fl26_swiss_first_t)(const uint32_t*, int);
   ]])
 
   local sep = string.char(92)
@@ -121,6 +155,22 @@ function m.init(ctx)
       local ubuf = ffi.new("uint32_t[?]", #UECL)
       for i, c in ipairs(UECL) do ubuf[i - 1] = c end
       ffi.cast("fl26_swiss_uecl_t", pu)(ubuf, #UECL)
+    end
+    local first = read_first(ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. FIRST_FILE)
+    if first then
+      local pf = ffi.C.GetProcAddress(h, "fl26_swiss_first")
+      if pf == nil then
+        log("fl26swiss: this fl26swiss.dll takes no first-season list; " .. FIRST_FILE .. " is not used")
+      else
+        local fbuf = ffi.new("uint32_t[?]", 2 * #first)
+        local per = { 0, 0, 0 }
+        for i, e in ipairs(first) do
+          fbuf[2 * i - 2] = e[1]; fbuf[2 * i - 1] = e[2]; per[e[1] + 1] = per[e[1] + 1] + 1
+        end
+        local k = tonumber(ffi.cast("fl26_swiss_first_t", pf)(fbuf, #first))
+        log(string.format("fl26swiss: first-season list from %s: %d / %d / %d team ids (%d taken)",
+                          FIRST_FILE, per[1], per[2], per[3], k))
+      end
     end
     local pk = ffi.C.GetProcAddress(h, "fl26_swiss_ko_tick")
     if pk ~= nil then dll_ko_tick = ffi.cast("fl26_swiss_ko_tick_t", pk) end
