@@ -84,6 +84,8 @@ If you use anything from this repository, vmardonesdev's name belongs next to it
 - **bobzera** (Evo-Web): brought the "ACL71" kit problem into the open, new clubs past id
   65536 showing only the default kit, and worked on a fix of their own. That problem is the
   one `tools/mkkits.py` now solves by naming the kit files the way the engine looks them up.
+- **n1ne** (Discord): follows the work closely and asks the questions that show where the
+  docs are not clear yet, such as how the European competitions get their clubs.
 
 Reports are welcome from anyone: open an
 [issue](https://github.com/Matozanato/FootballLife-new-leagues/issues) with what you
@@ -462,7 +464,7 @@ is named.
 
 Contributors, and what each of them did, are listed in
 [The people who made this better](#the-people-who-made-this-better) near the top: above all
-**vmardonesdev**, and **Stagnant09**, **pioup38**, **vector360**, **jibibi** and **bobzera**.
+**vmardonesdev**, and **Stagnant09**, **pioup38**, **vector360**, **jibibi**, **bobzera** and **n1ne**.
 
 The licence asks nothing of you. I do: **if you use these findings, addresses, patch sets
 or tools in a mod, credit this work and link back** — see
