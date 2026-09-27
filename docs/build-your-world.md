@@ -249,5 +249,10 @@ python tools\mkkits.py   --team-bin <your root>\common\etc\pesdb\Team.bin --unip
 `mkkits.py` lends each club a shipped club's kit definition; run it with no arguments to see
 where `UniformParameter.bin` comes out of.
 
+**Kits are not solved yet.** Measured 2026-09-27: the game reads these definitions (the kit
+server logs the donor's texture and colours for the new club), but in the Strip screen and
+on the pitch the new club still wears the engine's plain default kit. The render path treats
+new team ids differently, and that is still open. Crests are not affected.
+
 Then go to the [testing guide](testing-guide.md), or, if you are starting from a clean
 install, to the [step-by-step walkthrough](step-by-step.md).

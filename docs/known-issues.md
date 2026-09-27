@@ -90,6 +90,10 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
   own rows into spare space; the version that exists carries those rows inside itself as
   shipped bytes, and this repository does not redistribute game data, so it is published only
   once it copies them out of memory at startup.
+- **Kits for new clubs do not show yet.** `mkkits.py` writes kit definitions and the game reads
+  them (the kit server logs the donor's texture and colours for the new club), but the Strip
+  screen and the pitch still show the plain default kit. Something in the render path treats
+  new team ids differently. Open, measured 2026-09-27.
 - **Kits, names, players.** All placeholders / clones. Not a bug, but a limitation of this
   beta: the tools prove capacity, they do not author content.
 - **Transfers and finances**: not observed yet. Report what you see.

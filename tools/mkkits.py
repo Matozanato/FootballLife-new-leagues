@@ -25,9 +25,26 @@ read back out or modified.
   # write the kit tree into a cpk root
   python mkkits.py --team-bin <Team.bin> --unipar <UniformParameter.bin> --root <livecpk-root>
 
-`--unipar` is the shipped archive, extracted from dt34_g4.cpk with
+`--unipar` is the shipped archive. Take the newest copy: the game reads the download cpks after
+Data, and data_s2526c.cpk carries the last one (dt34_g4.cpk has an older one):
 
-    python cpkx.py <cpk> <dir> uniform/team/UniformParameter.bin
+    python cpkx.py <game>\download\data_s2526c.cpk <dir> uniform/team/UniformParameter.bin
+
+`--textures` is the list of kit textures the game ships, from the cpk listings:
+
+    for %f in (<game>\Data\*.cpk <game>\download\*.cpk) do python cpk.py %f >> cpklist.txt
+
+Pass it. A definition is only a pointer to a texture (`u0001p1.ftex` ...), and many shipped
+definitions point at textures the game does not have: about 900 clubs have a full set of
+definitions, about 700 have the textures. A club lent a definition without its texture wears
+the engine's plain fallback kit (seen in game 2026-09-27: donor 2655, no u2655p1.ftex).
+
+**Not solved yet (2026-09-27).** With textured donors the game does read these definitions --
+the kit server logs the donor's KitFile and colours for our club (team 72163 with donor 174's
+definition: KitFile=u0174p1, ShirtColor1=#512889) -- but the pre-match model and the Strip
+screen still show the engine's plain default kit, with neither the donor's texture nor its
+colours. Same with the per-club files alone and with the repacked archive. The render path
+treats our team ids differently; that is the open question, not the definition.
 
 Whether the engine reads these per-club files or only the archive is not established (the exe
 builds the paths at runtime). This writes the files; --archive additionally writes a repacked
@@ -70,15 +87,30 @@ def archive(path):
     return raw, es, hdr
 
 
-def donors(raw, es):
-    """Shipped clubs with a complete set of the three kinds we hand out."""
+def texture_names(blob):
+    """The main texture a kit definition points at, e.g. 'u0001p1' (the other four are variants)."""
+    m = re.search(rb"u\d{4,5}[a-z]\d", blob[0x13:])
+    return m.group(0).decode() if m else None
+
+
+def donors(raw, es, textures=None):
+    """Shipped clubs with a complete set of the three kinds we hand out -- and, when the list of
+    shipped textures is given, whose three kits actually have their texture in the game."""
     blobs = {}
     for name, off, size in es:
         m = re.match(r"(\d+)_DEF_(.+)\.bin$", name)
         if m and size == 120:
             blobs.setdefault(int(m.group(1)), {})[m.group(2)] = raw[off:off + size]
     full = [(tid, b) for tid, b in sorted(blobs.items()) if all(k in b for k in KINDS)]
+    if textures is not None:
+        full = [(tid, b) for tid, b in full
+                if all(texture_names(b[k]) in textures for k in KINDS)]
     return full
+
+
+def read_textures(path):
+    """Texture names out of any text that mentions them -- e.g. `python cpk.py <cpk>` listings."""
+    return set(re.findall(r"(u\d{4,5}[a-z]\d)\.ftex", open(path, encoding="utf-8", errors="replace").read()))
 
 
 def build(argv):
@@ -93,7 +125,13 @@ def build(argv):
 
     clubs = roster(team_bin)
     raw, es, hdr = archive(unipar)
-    pool = donors(raw, es)
+    tex = opt("--textures")
+    textures = read_textures(tex) if tex else None
+    if textures is not None:
+        print("%d kit textures listed in %s" % (len(textures), tex))
+    else:
+        print("warning: no --textures list; a donor whose textures are missing lends a blank kit")
+    pool = donors(raw, es, textures)
     if not pool:
         print("no shipped club has all of %s -- is that the right archive?" % (KINDS,))
         return 1
