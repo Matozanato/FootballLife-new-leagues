@@ -235,9 +235,9 @@ python -m pip install pillow
 python tools\mkcrests.py --team-bin "C:\Football Life 2026\SiderAddons\livecpk\_FL26World\common\etc\pesdb\Team.bin" --flags "C:\Football Life 2026\SiderAddons\livecpk\_FL26World"
 ```
 
-Kits need one more archive out of the game (`uniform/team/UniformParameter.bin`);
-`tools\mkkits.py` with no arguments prints how. Kits for new clubs do not show in the game
-yet (see [known issues](known-issues.md)); crests do.
+Kits need one more archive out of the game (`uniform/team/UniformParameter.bin`) and a list of
+the kit textures the game ships; `tools\mkkits.py` with no arguments prints how to get both.
+Run it with `--root` pointing at your world and `--archive`.
 
 ## 8. Activate the world
 

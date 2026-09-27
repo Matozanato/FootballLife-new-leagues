@@ -90,10 +90,6 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
   own rows into spare space; the version that exists carries those rows inside itself as
   shipped bytes, and this repository does not redistribute game data, so it is published only
   once it copies them out of memory at startup.
-- **Kits for new clubs do not show yet.** `mkkits.py` writes kit definitions and the game reads
-  them (the kit server logs the donor's texture and colours for the new club), but the Strip
-  screen and the pitch still show the plain default kit. Something in the render path treats
-  new team ids differently. Open, measured 2026-09-27.
 - **Kits, names, players.** All placeholders / clones. Not a bug, but a limitation of this
   beta: the tools prove capacity, they do not author content.
 - **Transfers and finances**: not observed yet. Report what you see.
@@ -305,6 +301,12 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-09-27: **new clubs played in the plain default kit even after `mkkits.py`.** The tool
+  named the files after the team id (`72163_DEF_1st_realUni.bin`), but the engine looks a kit
+  up under a shortened number and a range tag: ids 65536..81919 are `<id-65536>_ACL_...`, the
+  form the game uses for its own AFC clubs. `mkkits.py` now writes those names. Confirm: rerun
+  `mkkits.py ... --archive` into your world, pick one of your clubs in Kick Off; the pre-match
+  screen and the Strip screen show its donor's kits.
 - 2026-09-27 (GitHub issue #12): **a Master League career in a league on region 29 started on
   1 January with no table and no calendar,** with or without `fl26augseason`. Region 29 was
   never reachable in the stock game, so two tests in the career builder that throw region 29

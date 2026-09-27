@@ -304,7 +304,7 @@ Start the game.
 
 1. **Kick Off** → pick a league → England. **You should see** `FL League 01` ... `FL League 06`
    with clubs `FL 0001`, `FL 0002` .... Play a match between two of them: 22 players on the
-   pitch. New clubs wear a plain default kit ([known issues](known-issues.md)).
+   pitch. New clubs wear a plain default kit until you give them kits ([B8](#b8-optional-names-crests-kits-players)).
 2. **Master League** → **new** career → pick one of the `FL` clubs.
    - The season may open in **August** (table and fixtures are there at once) or in
      **January** (the hub is empty). In the January case use *Forward Time*: after about two

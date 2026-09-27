@@ -3,11 +3,16 @@ r"""mkkits.py -- give OUR added clubs a kit, by lending them a shipped one.
 Our clubs (team id >= 71578) have crests but no kit definition at all, so on the pitch they
 wear whatever the engine falls back to. A kit definition is a named 120-byte blob:
 
-    common/character0/model/character/uniform/team/<id>/<id>_DEF_1st_realUni.bin
+    common/character0/model/character/uniform/team/<number>/<number><TAG><kind>_realUni.bin
 
-five colour triples, a parameter block, and five 16-byte texture names (`u<id>p<kit>` and
-four variants) -- see docs/kits-by-team-id.md. Nothing here is indexed by team id, so ids in
-the 71,xxx range are as addressable as any other.
+where <number> and <TAG> come from the team id, not the id itself (see kit_key below): ids up
+to 16383 are `<id>/<id>_DEF_...`, and ids 65536..81919 -- ours -- are `<id-65536>/
+<id-65536>_ACL_...`, the same form the shipped archive uses for its own AFC clubs. Club 72163
+is looked up as `6627/6627_ACL_1st_realUni.bin`. A file named `72163_DEF_...` is never asked
+for, which is what "the kit does not show" was until 2026-09-27.
+
+The blob holds five colour triples, a parameter block, and five 16-byte texture names
+(`u<id>p<kit>` and four variants) -- see docs/kits-by-team-id.md.
 
 Making new textures is a separate job. This tool does the cheap half: it copies a shipped
 club's blob verbatim, under our club's name. The texture names inside still point at the
@@ -39,16 +44,12 @@ definitions point at textures the game does not have: about 900 clubs have a ful
 definitions, about 700 have the textures. A club lent a definition without its texture wears
 the engine's plain fallback kit (seen in game 2026-09-27: donor 2655, no u2655p1.ftex).
 
-**Not solved yet (2026-09-27).** With textured donors the game does read these definitions --
-the kit server logs the donor's KitFile and colours for our club (team 72163 with donor 174's
-definition: KitFile=u0174p1, ShirtColor1=#512889) -- but the pre-match model and the Strip
-screen still show the engine's plain default kit, with neither the donor's texture nor its
-colours. Same with the per-club files alone and with the repacked archive. The render path
-treats our team ids differently; that is the open question, not the definition.
+Seen in game 2026-09-27: club 72163 with the files named 6627_ACL_* wears its donor's first
+and second kit in the pre-match screen and the Strip screen.
 
-Whether the engine reads these per-club files or only the archive is not established (the exe
-builds the paths at runtime). This writes the files; --archive additionally writes a repacked
-UniformParameter.bin with our entries appended, for the other case.
+This writes the per-club files and, with --archive, a repacked UniformParameter.bin with our
+entries appended under the same names. Sider looks the entry up by that name
+(`find_kit_info:: name: {6627_ACL_1st_realUni.bin}` in sider.log); pass --archive.
 """
 import os, re, struct, sys
 
@@ -59,6 +60,22 @@ REC, ID_OFF, NAME_OFF, NAME_LEN = 1532, 0x08, 0x170, 0x46
 FIRST_OURS = 71578
 KINDS = ("1st_realUni", "2nd_realUni", "GK1st_realUni")
 TEAM_DIR = "common/character0/model/character/uniform/team"
+
+
+# The engine does not use a team id as it stands in a kit name.  Bits 14-16 of the id are a
+# range tag and only the rest is the number: 0x1414bdb20 keeps id & 0x23fff, 0x1414bda30
+# returns (id >> 14) & 7, and the path builder 0x141ea2400 writes
+#     team/<number>/<number><TAG[tag]><kind>_realUni.bin
+# with TAG read from the exe's table at 0x14351e460.  Ids 65536..81919 carry tag 4, "_ACL_"
+# -- the same names the shipped archive uses for its own 46 AFC clubs -- so club 72163 is
+# looked up as team/6627/6627_ACL_1st_realUni.bin.  A tag of 7 or more falls back to _DEF_.
+TAGS = ("_DEF_", "_LB_", "_LBN_", "_JL_", "_ACL_", "_SDA_", "_SDN_", "_DEF_")
+
+
+def kit_key(tid):
+    """(folder number, name prefix) the engine asks for, for team id tid"""
+    num = tid & 0x23fff
+    return num, "%d%s" % (num, TAGS[(tid >> 14) & 7])
 
 
 def roster(team_bin):
@@ -148,10 +165,11 @@ def build(argv):
 
     written = 0
     for (tid, _), (_, dblobs) in pairs:
-        d = os.path.join(root, TEAM_DIR.replace("/", os.sep), str(tid))
+        num, stem = kit_key(tid)
+        d = os.path.join(root, TEAM_DIR.replace("/", os.sep), str(num))
         os.makedirs(d, exist_ok=True)
         for kind in KINDS:
-            open(os.path.join(d, "%d_DEF_%s.bin" % (tid, kind)), "wb").write(dblobs[kind])
+            open(os.path.join(d, "%s%s.bin" % (stem, kind)), "wb").write(dblobs[kind])
             written += 1
     print("wrote %d kit definitions under %s" % (written, os.path.join(root, TEAM_DIR)))
 
@@ -170,7 +188,7 @@ def repack(raw, es, pairs):
     items = [(name, raw[off:off + size]) for name, off, size in es]
     for (tid, _), (_, dblobs) in pairs:
         for kind in KINDS:
-            items.append(("%d_DEF_%s.bin" % (tid, kind), dblobs[kind]))
+            items.append(("%s%s.bin" % (kit_key(tid)[1], kind), dblobs[kind]))
     index_end = 8 + len(items) * 12
     names, name_at = bytearray(), {}
     for name, _ in items:

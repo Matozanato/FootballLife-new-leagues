@@ -168,8 +168,8 @@ between worlds**: a save carries the club table of the world it was made in.
 ## 4. Look at it
 
 - Exhibition: both new clubs should be selectable under the region you chose (England by
-  default), with placeholder names, and the match should kick off with 22 players in the
-  cloned kits.
+  default), with placeholder names, and the match should kick off with 22 players (in the
+  default kit until you run `mkkits.py`).
 - Master League: pick a club from a new league, pick a manager; the season should generate
   (retry once or twice if it crashes during generation — see known-issues), and the hub
   should show the standings of your league on the right and four fixtures at the bottom.
@@ -236,23 +236,26 @@ table. Nothing is replaced, but Ligue 2's bottom clubs now have somewhere to fal
 
 ### Crests and kits, if you want them to look like sides
 
-Every new club is a clone, so in the game it wears the crest and the kit of the club it was
-cloned from. Two tools fix that, and neither touches a shipped file: both only write files
+A new club has no crest and no kit of its own: in the game it shows no crest and wears the
+engine's plain default kit. Two tools fix that, and neither touches a shipped file: both only write files
 for ids no shipped file uses.
 
 ```
 python tools\mkcrests.py --team-bin <your root>\common\etc\pesdb\Team.bin --flags <your root>
-python tools\mkkits.py   --team-bin <your root>\common\etc\pesdb\Team.bin --unipar <UniformParameter.bin> --root <your root>
+python tools\mkkits.py   --team-bin <your root>\common\etc\pesdb\Team.bin --unipar <UniformParameter.bin> --textures <cpklist.txt> --root <your root> --archive
 ```
 
 `mkcrests.py` draws a distinct two-tone crest per club and needs `pip install pillow`.
-`mkkits.py` lends each club a shipped club's kit definition; run it with no arguments to see
-where `UniformParameter.bin` comes out of.
+`mkkits.py` lends each club a shipped club's first, second and goalkeeper kit; run it with no
+arguments to see where `UniformParameter.bin` and the texture list come from.
 
-**Kits are not solved yet.** Measured 2026-09-27: the game reads these definitions (the kit
-server logs the donor's texture and colours for the new club), but in the Strip screen and
-on the pitch the new club still wears the engine's plain default kit. The render path treats
-new team ids differently, and that is still open. Crests are not affected.
+The files are named the way the engine looks them up, which is not the team id as it
+stands. The engine splits the id: the low bits are the number in the path and bits 14-16 pick
+a tag. Ids 65536..81919 get the tag `_ACL_` and lose 65536, so club 72163's first kit is
+`uniform/team/6627/6627_ACL_1st_realUni.bin`, the same form the game uses for its own AFC
+clubs. A file named `72163_DEF_...` is never asked for, and the club plays in the default kit.
+`mkkits.py` handles this for any id (`kit_key()` in the tool); if you write kit files by hand
+for a new club, use the same rule.
 
 Then go to the [testing guide](testing-guide.md), or, if you are starting from a clean
 install, to the [step-by-step walkthrough](step-by-step.md).

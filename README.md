@@ -300,8 +300,10 @@ published modules on **2026-09-25**.
   to give your leagues places, add them to `ACCESS` in `tools/native/fl26swiss.c` and rebuild. Without it, new clubs can end up in the
   Champions League anyway when their league is built as a first division in a shipped
   country — see [known-issues.md](docs/known-issues.md).
-- New clubs use **placeholder names, cloned kits and cloned squads**. This project proves the
-  capacity; dressing the clubs is ordinary Team.bin / kit editing on top of it.
+- New clubs use **placeholder names and cloned squads**, and the default kit until
+  `tools/mkkits.py` lends them shipped kits. This project proves the capacity; dressing the
+  clubs is ordinary Team.bin / kit editing on top of it (kit files for ids 65536..81919 are
+  named `<id-65536>_ACL_...`, see [build-your-world](docs/build-your-world.md)).
 - New leagues appear under an **existing menu region** (England by default), and spreading
   them over several shipped countries needs no executable change — `mkworld.py --regions`
   does it. Two limits sit above that, both mapped since. The shipped parser throws away any

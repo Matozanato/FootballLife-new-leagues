@@ -137,7 +137,8 @@ with your world.
 
 Play (not skip) an exhibition between two new clubs and, in Master League, play your own
 club's match. Anything odd on the pitch, in the pre-match menus, or in the post-match
-tables is worth a note. Kits will be clones of the source clubs; that is expected.
+tables is worth a note. New clubs wear the default kit unless you ran `mkkits.py`; with it,
+each wears a shipped club's kit.
 
 ### T5 — League sizes and shapes
 
@@ -267,7 +268,7 @@ paragraph of impressions without them.
 
 ## What not to report (yet)
 
-- Placeholder names, cloned kits, cloned squads, all clubs "from England": known, by design
+- Placeholder names, borrowed or default kits, cloned squads, all clubs "from England": known, by design
   for this beta.
 - The one-in-two generation crash on its own, unless your rate is very different.
 - Anything with other mods active. Please test with only these modules and your world.
