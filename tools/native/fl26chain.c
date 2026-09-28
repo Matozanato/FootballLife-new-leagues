@@ -110,8 +110,10 @@ static int vcount32(vec32_t* v) { return (v && v->b && v->e >= v->b) ? (int)((v-
  * 76, 93, 94, 96, 98 and 162 -- ours, on ids the shipped data treats as calendar-year
  * leagues -- with EMPTY club lists, in the middle of their August-May season. The ids come
  * from the loader (fl26_chain_protect). */
-#define MAX_PROTECT 64
+#define MAX_PROTECT 128
+#ifndef REG_ARRAY_OFF   /* -DREG_ARRAY_OFF=... builds for a set that moves the block (the -calendar set) */
 #define REG_ARRAY_OFF 0x1c84230   /* edit block + this = regulation records (caps sets), as fl26join.c */
+#endif
 #define REG_STRIDE    0x314
 #define REG_CAP       600
 static uint16_t g_protect[MAX_PROTECT]; static int g_nprotect = 0;
@@ -360,7 +362,9 @@ static int hook(unsigned char* target, const unsigned char* sig, int n, void* ha
 /* 0 ok; 2/3/4 = set-hook signature/alloc/protect; 12/13/14 = apply-hook signature/alloc/protect; 9 bad config */
 __declspec(dllexport) int fl26_chain_install(uint64_t exe_base, uint64_t cave_addr, const fl26_chain_cfg_t* cfg, int ncfg)
 {
-  if (!cfg || ncfg < 1 || ncfg > MAX_CHAINS) return 9;
+  /* No chain at all is a valid world (every added league a top flight, or a two-division pyramid
+     the game's own mover handles): the hooks still go in, for the empty-list guard. */
+  if (ncfg < 0 || ncfg > MAX_CHAINS || (ncfg && !cfg)) return 9;
   g_base = exe_base; g_cave = (volatile uint32_t*)(uintptr_t)cave_addr;
   g_nchain = ncfg;
   for (int i = 0; i < ncfg; i++) { memset(&g_chain[i], 0, sizeof g_chain[i]); g_chain[i].cfg = cfg[i]; }

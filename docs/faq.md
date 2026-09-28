@@ -1,5 +1,13 @@
 # Questions people ask
 
+## Is there a program instead of all the scripts?
+
+Yes: FL26 Mod Studio, a Windows program (beta). It installs the modules, builds leagues and
+clubs, edits the players of any club, adds faces, installs other mods and content servers,
+and keeps restore points. Download it from the
+[latest release](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest);
+the guide is [mod-studio-guide.md](mod-studio-guide.md) ([hrvatski](mod-studio-guide.hr.md)).
+
 ## Every new club has the same manager, "Jorge Jesus"
 
 That was a world built before 2026-09-26. A club names its manager by an id in `Team.bin`,

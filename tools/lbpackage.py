@@ -1,0 +1,331 @@
+r"""league packages (.fl26pack): a modder makes leagues once, anybody adds them to their own game.
+
+    python lbpackage.py export <recipe.json> <out.fl26pack> --name "..." [--author ..] [--version ..]
+                            [--league "League A" --league "League B"] [--edits]
+    python lbpackage.py show   <pack.fl26pack>
+    python lbpackage.py add    <pack.fl26pack> <recipe.json> [--store <dir>]
+    python lbpackage.py remove <tag> <recipe.json>
+
+A package carries a piece of a recipe, never a built world: the ids a league gets depend on
+what else a person's game already has, so they are given out when that person builds.  That is
+also why faces travel as they were made and are moved to their players' ids at build
+(lbfaces.py).  Inside the zip:
+
+    manifest.json    format, name, author, version, description, the leagues
+    recipe.json      the leagues (as a recipe has them), their clubs' player changes, and with
+                     --edits the changes to the game's own leagues, clubs and players
+    assets\...       logos and crests the leagues and clubs use
+    faces\<n>\...    the faces players were given (#Win, sourceimages, portrait.dds)
+
+Paths in recipe.json are relative to the package.  add() unpacks a package into a store
+folder, makes its paths full again and puts its leagues into a recipe, remembering under
+"packs" what came from which package so remove() can take exactly that out again.
+"""
+import argparse, json, os, re, shutil, sys, zipfile
+
+import lbfaces
+
+FORMAT = "fl26pack"
+FORMAT_VERSION = 1
+EXT = ".fl26pack"
+
+
+class Error(Exception):
+    pass
+
+
+def tag_of(manifest):
+    t = re.sub(r"[^A-Za-z0-9._-]+", "-", "%s-%s" % (manifest.get("name", "pack"), manifest.get("author", ""))).strip("-.")
+    return t[:60] or "pack"
+
+
+# ---- export ----
+
+def export(recipe, out, meta, leagues=None, edits=False, log=print):
+    """write the package out from recipe; leagues are names (all when None), meta has name,
+    author, version, description.  Returns the manifest."""
+    if not str(meta.get("name", "")).strip():
+        raise Error("the package needs a name")
+    have = {L["name"]: L for L in recipe.get("leagues", [])}
+    names = list(have) if leagues is None else list(leagues)
+    missing = [n for n in names if n not in have]
+    if missing:
+        raise Error("no league called %s in the recipe" % ", ".join(missing))
+    if not names and not edits:
+        raise Error("the package would be empty: pick at least one league")
+    for n in names:
+        up = have[n].get("above")
+        if isinstance(up, str) and up and not up.isdigit() and up not in names:
+            raise Error("%s sits below %s, which is not in the package" % (n, up))
+
+    tmp = out + ".making"
+    if os.path.exists(tmp):
+        shutil.rmtree(tmp)
+    os.makedirs(tmp)
+    used = {}
+
+    def asset(path):
+        if not path:
+            return path
+        if not os.path.isfile(path):
+            raise Error("picture %s is missing" % path)
+        base = re.sub(r"[^A-Za-z0-9._-]+", "_", os.path.basename(path))
+        stem, ext = os.path.splitext(base)
+        name, k = base, 1
+        while name.lower() in used and used[name.lower()] != os.path.abspath(path):
+            k += 1
+            name = "%s_%d%s" % (stem, k, ext)
+        if name.lower() not in used:
+            used[name.lower()] = os.path.abspath(path)
+            os.makedirs(os.path.join(tmp, "assets"), exist_ok=True)
+            shutil.copyfile(path, os.path.join(tmp, "assets", name))
+        return "assets/" + name
+
+    nface = [0]
+
+    def face(path):
+        d = os.path.join(tmp, "faces", str(nface[0]))
+        lbfaces.pack(path, d)
+        nface[0] += 1
+        return "faces/%d" % (nface[0] - 1)
+
+    def players_of(c):
+        c = json.loads(json.dumps(c))
+        for ch in list((c.get("edits") or {}).values()) + list(c.get("add") or []):
+            if str(ch.get("face", "")).strip():
+                ch["face"] = face(ch["face"])
+        return c
+
+    out_r = {"leagues": [], "players": {}, "edits": {}}
+    for n in names:
+        L = json.loads(json.dumps(have[n]))
+        L.pop("pack", None)
+        if L.get("logo"):
+            L["logo"] = asset(L["logo"])
+        if L.get("club_crests"):
+            L["club_crests"] = [asset(p) if p else p for p in L["club_crests"]]
+        out_r["leagues"].append(L)
+    for key, c in (recipe.get("players") or {}).items():
+        lg = key.rpartition("/")[0]
+        if (lg in names) or (edits and key.isdigit()):
+            if c.get("edits") or c.get("add") or c.get("remove"):
+                out_r["players"][key] = players_of(c)
+    if edits:
+        e = json.loads(json.dumps(recipe.get("edits") or {}))
+        for v in (e.get("leagues") or {}).values():
+            if v.get("logo"):
+                v["logo"] = asset(v["logo"])
+        for v in (e.get("clubs") or {}).values():
+            if v.get("crest"):
+                v["crest"] = asset(v["crest"])
+        out_r["edits"] = {k: v for k, v in e.items() if v}
+
+    man = {"format": FORMAT, "format_version": FORMAT_VERSION,
+           "name": meta["name"].strip(), "author": str(meta.get("author", "")).strip(),
+           "version": str(meta.get("version", "1.0")).strip() or "1.0",
+           "description": str(meta.get("description", "")).strip(),
+           "made_with": str(meta.get("made_with", "")),
+           "leagues": [{"name": L["name"], "country": L.get("country", ""), "clubs": L.get("clubs", 0),
+                        "above": L.get("above")} for L in out_r["leagues"]],
+           "clubs": sum(int(L.get("clubs", 0) or 0) for L in out_r["leagues"]),
+           "faces": nface[0],
+           "edits": {k: len(v) for k, v in out_r["edits"].items()},
+           "player_changes": sum(len(c.get("edits") or {}) + len(c.get("add") or []) for c in out_r["players"].values())}
+    json.dump(man, open(os.path.join(tmp, "manifest.json"), "w", encoding="utf-8"), indent=1, ensure_ascii=False)
+    json.dump(out_r, open(os.path.join(tmp, "recipe.json"), "w", encoding="utf-8"), indent=1, ensure_ascii=False)
+    part = out + ".part"
+    with zipfile.ZipFile(part, "w", zipfile.ZIP_DEFLATED) as z:
+        for d, _subs, files in os.walk(tmp):
+            for f in files:
+                p = os.path.join(d, f)
+                z.write(p, os.path.relpath(p, tmp).replace(os.sep, "/"))
+    shutil.rmtree(tmp)
+    os.replace(part, out)
+    log("wrote %s: %d leagues, %d clubs, %d faces" % (out, len(man["leagues"]), man["clubs"], man["faces"]))
+    return man
+
+
+# ---- reading ----
+
+def manifest(path):
+    try:
+        with zipfile.ZipFile(path) as z:
+            man = json.loads(z.read("manifest.json").decode("utf-8"))
+    except (zipfile.BadZipFile, KeyError, ValueError) as e:
+        raise Error("%s is not a league package (%s)" % (path, e))
+    if man.get("format") != FORMAT:
+        raise Error("%s is not a league package" % path)
+    if int(man.get("format_version", 0)) > FORMAT_VERSION:
+        raise Error("%s was made by a newer program (package format %s); update FL26 Mod Studio"
+                    % (os.path.basename(path), man.get("format_version")))
+    return man
+
+
+def unpack(path, store):
+    r"""unpack into store\<tag>; returns (manifest, recipe piece with full paths, folder)"""
+    man = manifest(path)
+    dst = os.path.join(store, tag_of(man))
+    if os.path.exists(dst):
+        shutil.rmtree(dst)
+    os.makedirs(dst)
+    root = os.path.realpath(dst)
+    with zipfile.ZipFile(path) as z:
+        for n in z.namelist():
+            t = os.path.realpath(os.path.join(dst, n))
+            if not (t == root or t.startswith(root + os.sep)):
+                raise Error("%s: a file points outside the package (%s)" % (path, n))
+        z.extractall(dst)
+    r = json.load(open(os.path.join(dst, "recipe.json"), encoding="utf-8"))
+
+    def full(p):
+        if not p:
+            return p
+        q = os.path.realpath(os.path.join(dst, p))
+        if not q.startswith(root + os.sep):
+            raise Error("%s: a path points outside the package (%s)" % (path, p))
+        return q
+
+    for L in r.get("leagues", []):
+        if L.get("logo"):
+            L["logo"] = full(L["logo"])
+        if L.get("club_crests"):
+            L["club_crests"] = [full(p) if p else p for p in L["club_crests"]]
+    for c in (r.get("players") or {}).values():
+        for ch in list((c.get("edits") or {}).values()) + list(c.get("add") or []):
+            if ch.get("face"):
+                ch["face"] = full(ch["face"])
+    e = r.get("edits") or {}
+    for v in (e.get("leagues") or {}).values():
+        if v.get("logo"):
+            v["logo"] = full(v["logo"])
+    for v in (e.get("clubs") or {}).values():
+        if v.get("crest"):
+            v["crest"] = full(v["crest"])
+    return man, r, dst
+
+
+# ---- into a recipe and out again ----
+
+def clashes(recipe, piece, tag):
+    """league names of piece that the recipe already has from elsewhere"""
+    mine = {L["name"] for L in recipe.get("leagues", []) if L.get("pack") != tag}
+    return [L["name"] for L in piece.get("leagues", []) if L["name"] in mine]
+
+
+def add(recipe, man, piece, folder, rename=None):
+    """put a package's piece into recipe (changed in place).  rename maps a clashing league
+    name to the one it gets here.  A package added again (same tag) replaces itself."""
+    tag = tag_of(man)
+    if tag in (recipe.get("packs") or {}):
+        remove(recipe, tag)
+    rename = dict(rename or {})
+    bad = [n for n in clashes(recipe, piece, tag) if n not in rename]
+    if bad:
+        raise Error("the recipe already has a league called %s" % ", ".join(bad))
+    nm = lambda n: rename.get(n, n)
+    got = {"name": man.get("name"), "author": man.get("author"), "version": man.get("version"),
+           "folder": folder, "leagues": [], "players": [], "edits": {}}
+    for L in piece.get("leagues", []):
+        L = dict(L)
+        L["name"] = nm(L["name"])
+        if isinstance(L.get("above"), str) and not L["above"].isdigit():
+            L["above"] = nm(L["above"])
+        L["pack"] = tag
+        recipe.setdefault("leagues", []).append(L)
+        got["leagues"].append(L["name"])
+    pl = recipe.setdefault("players", {})
+    for key, c in (piece.get("players") or {}).items():
+        lg, s, k = key.rpartition("/")
+        if s:
+            key = "%s/%s" % (nm(lg), k)
+        elif key in pl:
+            # a club of the game the recipe already changes: the package's changes go on top
+            old = pl[key]
+            got.setdefault("before", {})[key] = json.loads(json.dumps(old))
+            old.setdefault("edits", {}).update(c.get("edits") or {})
+            old["add"] = (old.get("add") or []) + list(c.get("add") or [])
+            old["remove"] = sorted(set(old.get("remove") or []) | set(c.get("remove") or []))
+            got["players"].append(key)
+            continue
+        pl[key] = c
+        got["players"].append(key)
+    for kind, vals in (piece.get("edits") or {}).items():
+        dst = recipe.setdefault("edits", {}).setdefault(kind, {})
+        for k, v in vals.items():
+            dst.setdefault(k, {}).update(v)
+        got["edits"][kind] = list(vals)
+    recipe.setdefault("packs", {})[tag] = got
+    return tag
+
+
+def remove(recipe, tag):
+    """take out what a package brought: its leagues, their clubs' players, its edits"""
+    got = (recipe.get("packs") or {}).pop(tag, None)
+    if got is None:
+        raise Error("no package %s in the recipe" % tag)
+    names = set(got.get("leagues") or [])
+    recipe["leagues"] = [L for L in recipe.get("leagues", []) if L.get("pack") != tag]
+    pl = recipe.get("players") or {}
+    # a club of the game that the recipe changed before the package came gets those back
+    before = got.get("before") or {}
+    for key in got.get("players") or []:
+        if key in before:
+            pl[key] = before[key]
+        else:
+            pl.pop(key, None)
+    for kind, keys in (got.get("edits") or {}).items():
+        for k in keys:
+            (recipe.get("edits") or {}).get(kind, {}).pop(k, None)
+    return names
+
+
+def packs(recipe):
+    return dict(recipe.get("packs") or {})
+
+
+def main():
+    ap = argparse.ArgumentParser(prog="lbpackage.py")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    e = sub.add_parser("export")
+    e.add_argument("recipe")
+    e.add_argument("out")
+    e.add_argument("--name", required=True)
+    e.add_argument("--author", default="")
+    e.add_argument("--version", default="1.0")
+    e.add_argument("--description", default="")
+    e.add_argument("--league", action="append")
+    e.add_argument("--edits", action="store_true")
+    s = sub.add_parser("show")
+    s.add_argument("pack")
+    a = sub.add_parser("add")
+    a.add_argument("pack")
+    a.add_argument("recipe")
+    a.add_argument("--store", default=None)
+    r = sub.add_parser("remove")
+    r.add_argument("tag")
+    r.add_argument("recipe")
+    o = ap.parse_args()
+    try:
+        if o.cmd == "export":
+            rec = json.load(open(o.recipe, encoding="utf-8"))
+            export(rec, o.out, {"name": o.name, "author": o.author, "version": o.version,
+                                "description": o.description}, o.league, o.edits)
+        elif o.cmd == "show":
+            print(json.dumps(manifest(o.pack), indent=1, ensure_ascii=False))
+        elif o.cmd == "add":
+            rec = json.load(open(o.recipe, encoding="utf-8"))
+            store = o.store or os.path.join(os.path.dirname(os.path.abspath(o.recipe)), "packs")
+            man, piece, folder = unpack(o.pack, store)
+            tag = add(rec, man, piece, folder)
+            json.dump(rec, open(o.recipe, "w", encoding="utf-8"), indent=1, ensure_ascii=False)
+            print("added %s: %s" % (tag, ", ".join(L["name"] for L in piece.get("leagues", []))))
+        elif o.cmd == "remove":
+            rec = json.load(open(o.recipe, encoding="utf-8"))
+            print("removed:", ", ".join(sorted(remove(rec, o.tag))))
+            json.dump(rec, open(o.recipe, "w", encoding="utf-8"), indent=1, ensure_ascii=False)
+    except (Error, lbfaces.Error) as err:
+        sys.exit("lbpackage: %s" % err)
+
+
+if __name__ == "__main__":
+    main()

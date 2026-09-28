@@ -50,6 +50,15 @@ is filled at startup, which is why this module copies it from memory at boot rat
 deriving it from the executable -- and why nothing about it can be checked without running the
 game.
 
+The world file. When SiderAddons\modules\fl26world.txt exists (written by FL26 Mod Studio's
+League Builder), the world's half of the tables below comes from the file instead of the
+built-in lists: OUR_IDS, APPEND (every league with slot= goes on that slot -- appended when
+the exe has no row for it, moved when it has, left alone when it is already there), COUNTS
+(promote=/demote=), SHIPPED_DEMOTE (a league whose above= is a shipped league raises that
+league's demote count to its own promote count) and ID_COUNTRY (country=). RESLOT is emptied.
+The executable's half stays: RESHAPE (only for ids the world uses), SHARED_OK and the template
+row. Without the file the built-in lists are used, as before.
+
 Requires sider.ini: luajit.ext.enabled = 1 (global ffi).
 --]]
 
@@ -166,6 +175,58 @@ local ID_COUNTRY = {
   [185] = 215,   -- Italy (Italy D5)
 }
 
+-- The world file: modules\fl26world.txt, written by FL26 Mod Studio's League Builder.
+-- One table per league -- id, then whatever the line gives: cid, region, country, slot, tier,
+-- above, promote, demote, clubs, legs (numbers), name (text) -- in file order. nil when
+-- there is no file: the module then keeps the built-in lists above.
+local function read_world(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local leagues = {}
+  for line in f:lines() do
+    local id, rest = line:match("^%s*league%s+(%d+)(.*)$")
+    if id then
+      local L = { id = tonumber(id) }
+      local name = rest:match("%sname=(.-)%s*$")
+      if name then L.name = name; rest = rest:gsub("%sname=.*$", "") end
+      for k, v in rest:gmatch("(%a+)=(%-?%d+)") do L[k] = tonumber(v) end
+      leagues[#leagues + 1] = L
+    end
+  end
+  f:close()
+  return leagues
+end
+
+-- The world file replaces the world's half of the tables above; the executable's half stays:
+-- which shipped row is cup-shaped (RESHAPE, used only when that id is in the world), which slot
+-- sharing is known to be fine (SHARED_OK), the template row. A league with slot= is put on that
+-- slot -- appended when the exe has no row for it, moved when it has -- and one without keeps
+-- whatever row and slot the exe gives it. promote=/demote= become its counts; a league whose
+-- above= is not in the world raises that shipped league's demote count to its own promote
+-- count, as SHIPPED_DEMOTE does for Ligue 2 and Serie B.
+local function apply_world(world)
+  local inworld = {}
+  for _, L in ipairs(world) do inworld[L.id] = L end
+  OUR_IDS, RESLOT, APPEND, COUNTS, SHIPPED_DEMOTE, ID_COUNTRY = {}, {}, {}, {}, {}, {}
+  local reshape = {}
+  for id, spec in pairs(RESHAPE) do
+    local L = inworld[id]
+    if L then reshape[id] = { from = spec.from, slot = (L.slot and L.slot ~= 123) and L.slot or spec.slot } end
+  end
+  RESHAPE = reshape
+  for _, L in ipairs(world) do
+    OUR_IDS[#OUR_IDS + 1] = L.id
+    if L.slot and L.slot ~= 123 and not RESHAPE[L.id] then APPEND[#APPEND + 1] = { L.id, L.slot } end
+    if L.promote or L.demote then COUNTS[L.id] = { L.promote or 0, L.demote or 0 } end
+    if L.above and not inworld[L.above] then
+      SHIPPED_DEMOTE[L.above] = math.max(SHIPPED_DEMOTE[L.above] or 0, L.promote or 3)
+    end
+    if L.country then ID_COUNTRY[L.id] = L.country end
+  end
+end
+
 -- code sites: {va, expected bytes (hex)}
 local LEAS = {
   { 0x1414fdbda, "4c8d251f030002" },   -- lea r12,[table]  (lookup by id)
@@ -264,6 +325,12 @@ function m.init(ctx)
   -- 0. verify every code site before touching anything
   if not (check_sites(LEAS) and check_sites(COUNT_SITES)) then return end
 
+  local world = read_world(ctx)
+  if world then
+    apply_world(world)
+    log(string.format("fl26comptab: world file -- %d leagues, %d with a slot of their own", #OUR_IDS, #APPEND))
+  end
+
   -- 1. read the shipped table, index rows by id
   local rows, byid = {}, {}
   for i = 0, NROWS - 1 do
@@ -292,7 +359,11 @@ function m.init(ctx)
   for id in pairs(RESHAPE) do ours[id] = true end
   for _, a in ipairs(APPEND) do
     local id, slot = a[1], a[2]
-    if byid[id] then
+    if byid[id] and row_u32(rows[byid[id]], OFF_SLOT) == slot then
+      -- the world file names every league's slot, also the ones the exe already puts there
+      -- (a league on a shipped row that already has the slot): nothing to do, and the row
+      -- stays the exe's
+    elseif byid[id] then
       -- the table is built at startup, so one of our ids may already have a row (usually on the
       -- hidden slot 123). It is ours either way: move it to the slot we picked rather than
       -- leaving it where it cannot be seen.
@@ -300,11 +371,12 @@ function m.init(ctx)
       log(string.format("fl26comptab: id %d already has a row (slot %d) -- moving it to slot %d",
                         id, row_u32(rows[i], OFF_SLOT), slot))
       rows[i] = row_set(rows[i], OFF_SLOT, u32le(slot))
+      ours[id] = true
     else
       rows[#rows + 1] = row_set(row_set(tmpl, OFF_ID, u32le(id)), OFF_SLOT, u32le(slot))
       byid[id] = #rows
+      ours[id] = true
     end
-    ours[id] = true
   end
   -- 2b. a slot of ours must not land on a shipped competition. The free-slot list was read
   -- from a table dumped out of a run (Appendix A), and the table is built at startup, so it

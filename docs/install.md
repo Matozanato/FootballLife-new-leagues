@@ -1,5 +1,9 @@
 # Install
 
+> **Easier way:** [FL26 Mod Studio](mod-studio-guide.md) ([hrvatski](mod-studio-guide.hr.md)) does
+> all of this from one window -- install, build leagues, edit players, switch mods on and
+> off. This page is the manual route, and what the program does underneath.
+
 Everything here goes into the `SiderAddons` folder that Football Life 2026 ships with, next to
 `FL_2026.exe`. Nothing is written to the game's own files.
 

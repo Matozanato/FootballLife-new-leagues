@@ -27,6 +27,13 @@ What this module does NOT do, and what still has to be set up separately:
 Configure REGS below with the regulation ids of the league-phase rows. Anything not listed is
 untouched. It is safe to list an id that does not exist yet.
 
+The world file. When SiderAddons\modules\fl26world.txt exists (written by FL26 Mod Studio's
+League Builder), the module hands the DLL three things from it: the world's league list
+(whose calendars then follow each league's own size), its split seasons (`split` lines:
+regular phase and group phases) and its UEFA places (`uefa` lines, the access list; a world
+file without any leaves the DLL's compiled list in place). A DLL too old to take one of these
+keeps its built-in one and the log says so. Without the file it behaves as before.
+
 Log: the DLL keeps a small text log; this loader drains it into sider.log every 32 file opens
 and on F8. Requires sider.ini: luajit.ext.enabled = 1 (global ffi). Sider's sandbox has no
 pcall and no require.
@@ -49,6 +56,19 @@ local REGS = { 1027, 1029, 1210 }
 local UECL = { 4071, 4145, 320, 4124, 403, 242, 5845, 174, 5196, 270, 5202, 2067, 1219, 4180,
                361, 4219, 227, 180, 246, 2380, 5191, 9016, 1948, 1989, 1832, 2621, 377, 259,
                4220, 129, 1329, 344, 5954, 2009, 5295, 2020 }
+
+-- The UEFA access list comes from the world file's uefa lines; without one,
+-- fl26swiss.dll's compiled list is used (it knows only the shipped leagues, whose ids are the
+-- same in every world, and tops the rest up from the big five). One entry per place:
+-- { regulation, position, competition, alt }. competition: 0 = Champions League, 1 = Europa
+-- League, 2 = Conference League, 3 = Libertadores, 4 = Libertadores qualifying, 5 = AFC
+-- Champions League (an older DLL skips 3-5). Position 0 means the winner of that regulation (a
+-- domestic cup); when the winner already has a place, or there is none, the place goes to the
+-- next free position of league alt (0 = the place is lost). Places are handed out in list
+-- order, so list the Champions League first. Example: { 17, 1, 0, 0 } = Premier League
+-- champion to the Champions League; { 23, 0, 1, 17 } = cup 23's winner to the Europa League,
+-- else the next Premier League club. A table set here is used when there is no world file.
+local ACCESS = nil
 
 local dll_log, dll_stats, dll_ko_tick, logbuf, statbuf, regbuf
 local ticks = 0
@@ -94,6 +114,44 @@ end
 --   ...
 -- A number in brackets followed by a colon is a count in a heading ("IN DATABASE (34):") and is
 -- skipped. Ids the game does not have are left out, and sider.log names them.
+-- The world file: modules\fl26world.txt, written by FL26 Mod Studio's League Builder.
+-- One table per league -- id, then whatever the line gives: cid, region, country, slot, tier,
+-- above, promote, demote, clubs, legs (numbers), name (text) -- in file order. nil when there
+-- is no file: the module then keeps the DLL's own lists, as it always has. Second result: the
+-- split seasons, { total, regular, g1, g2, g3 } from `split <total> regular=<id> groups=<id>,<id>`.
+-- Third: the UEFA access list, { regulation, position, competition, alt } from
+-- `uefa <regulation> <position> <competition> <alt>`, in file order (see ACCESS).
+local function read_world(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local leagues, splits, uefa = {}, {}, {}
+  for line in f:lines() do
+    local ur, up, uc, ua = line:match("^%s*uefa%s+(%d+)%s+(%d+)%s+(%d+)%s+(%d+)")
+    if ur then uefa[#uefa + 1] = { tonumber(ur), tonumber(up), tonumber(uc), tonumber(ua) } end
+    local sid, srest = line:match("^%s*split%s+(%d+)(.*)$")
+    if sid then
+      local s = { tonumber(sid), tonumber(srest:match("regular=(%d+)") or 0), 0, 0, 0 }
+      local g = 3
+      for v in (srest:match("groups=([%d,]+)") or ""):gmatch("%d+") do
+        if g <= 5 then s[g] = tonumber(v); g = g + 1 end
+      end
+      if s[2] > 0 and s[3] > 0 then splits[#splits + 1] = s end
+    end
+    local id, rest = line:match("^%s*league%s+(%d+)(.*)$")
+    if id then
+      local L = { id = tonumber(id) }
+      local name = rest:match("%sname=(.-)%s*$")
+      if name then L.name = name; rest = rest:gsub("%sname=.*$", "") end
+      for k, v in rest:gmatch("(%a+)=(%-?%d+)") do L[k] = tonumber(v) end
+      leagues[#leagues + 1] = L
+    end
+  end
+  f:close()
+  return leagues, splits, uefa
+end
+
 local FIRST_FILE = "fl26swiss-first.txt"
 local function read_first(path)
   local f = io.open(path, "r")
@@ -126,6 +184,7 @@ function m.init(ctx)
     typedef void (*fl26_swiss_stats_t)(uint32_t*);
     typedef void (*fl26_swiss_uecl_t)(const uint32_t*, int);
     typedef void (*fl26_swiss_ko_tick_t)(void);
+    typedef int  (*fl26_swiss_access_t)(const uint16_t*, int);
     typedef int  (*fl26_swiss_first_t)(const uint32_t*, int);
   ]])
 
@@ -155,6 +214,44 @@ function m.init(ctx)
       local ubuf = ffi.new("uint32_t[?]", #UECL)
       for i, c in ipairs(UECL) do ubuf[i - 1] = c end
       ffi.cast("fl26_swiss_uecl_t", pu)(ubuf, #UECL)
+    end
+    -- the leagues whose calendar follows their own size: the world file's, when there is one
+    local world, splits, uefa = read_world(ctx)
+    if world then
+      -- a world brings its own access list, or gets the DLL's
+      if #uefa > 0 then ACCESS = uefa else ACCESS = nil end
+      log(string.format("fl26swiss: world file -- %d leagues, %d split(s), %d UEFA place(s)%s", #world,
+                        #splits, #uefa, #uefa == 0 and " (none: the DLL's own list)" or ""))
+      local ps = ffi.C.GetProcAddress(h, "fl26_swiss_splits")
+      if ps == nil then
+        log("fl26swiss: this fl26swiss.dll takes no split list (fl26_swiss_splits); its built-in one stands")
+      else
+        local sbuf = ffi.new("uint16_t[?]", math.max(#splits * 5, 1))
+        for i, s in ipairs(splits) do for j = 1, 5 do sbuf[(i - 1) * 5 + j - 1] = s[j] end end
+        ffi.cast("fl26_swiss_access_t", ps)(sbuf, #splits)
+      end
+      local pw = ffi.C.GetProcAddress(h, "fl26_swiss_leagues")
+      if pw == nil then
+        log("fl26swiss: this fl26swiss.dll takes no world file (fl26_swiss_leagues); its built-in league list stands")
+      else
+        local wbuf = ffi.new("uint16_t[?]", math.max(#world, 1))
+        for i, L in ipairs(world) do wbuf[i - 1] = L.id end
+        ffi.cast("fl26_swiss_access_t", pw)(wbuf, #world)
+      end
+    end
+    if ACCESS then
+      local pa = ffi.C.GetProcAddress(h, "fl26_swiss_access")
+      if pa == nil then
+        log("fl26swiss: this fl26swiss.dll has no access list entry; the compiled list stands")
+      else
+        local abuf = ffi.new("uint16_t[?]", 4 * #ACCESS)
+        for i, e in ipairs(ACCESS) do
+          for j = 1, 4 do abuf[4 * (i - 1) + j - 1] = e[j] or 0 end
+        end
+        local k = tonumber(ffi.cast("fl26_swiss_access_t", pa)(abuf, #ACCESS))
+        if k < 0 then log("fl26swiss: ACCESS has no valid entry; the compiled list stands")
+        else log(string.format("fl26swiss: access list from this file, %d of %d places", k, #ACCESS)) end
+      end
     end
     local first = read_first(ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. FIRST_FILE)
     if first then

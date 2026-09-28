@@ -32,6 +32,11 @@ every shipped league already gets.
 COUNTRY is keyed by the regions tools/spreadregions.py --plan own hands out; the values are
 country ids (Country.bin, +0x48 & 0x1ff). A world with a different region plan needs this
 table changed with it.
+
+The world file. When SiderAddons\modules\fl26world.txt exists (written by FL26 Mod Studio's
+League Builder), COUNTRY is built from it instead: the region= and country= of every league
+on a region no shipped league uses (29 and up, and the headless 11, 13, 14 and 20). A shipped
+region is never overridden. Without the file the built-in table below is used, as before.
 ]]
 local m = {}
 
@@ -83,6 +88,42 @@ local COUNTRY = {
   [59] = 303,   -- Serbia
   [60] = 198,   -- Bosnia and Herzegovina
 }
+-- The world file: modules\fl26world.txt, written by FL26 Mod Studio's League Builder.
+-- One table per league -- id, then whatever the line gives: cid, region, country, slot, tier,
+-- above, promote, demote, clubs, legs (numbers), name (text) -- in file order. nil when
+-- there is no file: the module then keeps the built-in table above.
+local function read_world(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local leagues = {}
+  for line in f:lines() do
+    local id, rest = line:match("^%s*league%s+(%d+)(.*)$")
+    if id then
+      local L = { id = tonumber(id) }
+      local name = rest:match("%sname=(.-)%s*$")
+      if name then L.name = name; rest = rest:gsub("%sname=.*$", "") end
+      for k, v in rest:gmatch("(%a+)=(%-?%d+)") do L[k] = tonumber(v) end
+      leagues[#leagues + 1] = L
+    end
+  end
+  f:close()
+  return leagues
+end
+
+-- From the world file: region -> country for the regions no shipped league uses -- 29 and up,
+-- and the four headless ids 11, 13, 14, 20. A shipped region is never overridden: its country
+-- is also what the season code compares club and player nationality with.
+local OWN_REGION = { [11] = true, [13] = true, [14] = true, [20] = true }
+local function world_countries(world)
+  local c = {}
+  for _, L in ipairs(world) do
+    if L.region and L.country and (L.region >= 29 or OWN_REGION[L.region]) then c[L.region] = L.country end
+  end
+  return c
+end
+
 local COUNTRY_FN = 0x1414cdbe0
 local COUNTRY_ENTRY = "4055488d6c24a9"   -- push rbp ; lea rbp,[rsp-0x57]
 
@@ -145,6 +186,13 @@ local function install_country()
 end
 
 function m.init(ctx)
+  local world = read_world(ctx)
+  if world then
+    COUNTRY = world_countries(world)
+    local n = 0
+    for _ in pairs(COUNTRY) do n = n + 1 end
+    log(string.format("fl26catlist: world file -- %d leagues, %d countries of their own", #world, n))
+  end
   if ffi == nil then log("fl26catlist: global ffi is nil -- set luajit.ext.enabled = 1"); return end
   ffi.cdef([[ void* VirtualAlloc(void*, size_t, uint32_t, uint32_t); ]])
   if not (check_sites(LEAS) and check_sites(COUNT_SITES)) then return end

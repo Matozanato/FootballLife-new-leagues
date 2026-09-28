@@ -27,6 +27,27 @@ install anything.
 > Testing it in detail? [docs/step-by-step.md](docs/step-by-step.md) has the same path with
 > everything worth checking and reporting along the way.
 
+> ## New: FL26 Mod Studio (beta)
+>
+> **One program for everything you add to the game** — no Python needed. Download
+> `FL26ModStudio-<version>.zip` from [Releases](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest), unzip, run `FL26ModStudio.exe`.
+>
+> - **Install mods** by dropping them on the window (zip, 7z, folder, .lua, .cpk): it says what
+>   each part is and where it goes, merges content-server map files into yours, and every mod
+>   it installs can be removed again.
+> - **Content servers** — stadiums, kits, balls, commentary, music and goal songs, scoreboards,
+>   menus, referee kits, sleeve badges, weather — with their map files edited as tables.
+> - **Sider setup**: content folders and Lua modules switched on and off and put in order,
+>   profiles, restore points for every file it changes, and a diagnostics report.
+> - **League Builder**: new leagues and clubs, the game's own leagues and clubs renamed,
+>   **every club's players edited** (names, numbers, positions, abilities, skills, faces), and
+>   **league packages** (`.fl26pack`): a modder makes a league once, anybody adds it to their game.
+> - English and Croatian.
+>
+> Guide: [docs/mod-studio-guide.md](docs/mod-studio-guide.md) ·
+> [hrvatski](docs/mod-studio-guide.hr.md) · how it works and the package format:
+> [docs/mod-studio.md](docs/mod-studio.md)
+
 ## The people who made this better
 
 This project is tested in the open, and every fix in it since the first beta traces back to
@@ -403,6 +424,9 @@ numbers in [docs/limits.md](docs/limits.md).
   is refused, safely, at startup.
 - Python 3.10 or newer for the world-building tools. No third-party packages are needed to
   build a world. Regenerating the patch set (developers only) needs `capstone`.
+- FL26 Mod Studio: nothing, the release `.exe` carries what it needs. Run from source
+  (`python tools/modstudio_main.py`) it needs `PySide6`, `Pillow` and `py7zr`; making the
+  release zip (`tools/mszip.py`) also needs `pyinstaller`, `markdown` and zig for the DLLs.
 - Windows. The tools were only ever run on Windows.
 
 ## Quick start
@@ -447,9 +471,13 @@ tools/              world builders (mkworld, mkplayers, mkcrests, mkkits, mkcup,
                     spreadregions, mkflags, mkreshape, mkuecl, mkeuropo, mksizes, rename, players,
                     playeredit, playereditor ...),
                     pesdb/CPK readers, the patch-set generator and its checkers
+tools/modstudio/    FL26 Mod Studio (the window; tools/modstudio_main.py starts it from source,
+                    tools/mszip.py makes the release zip) and the League Builder behind it
+                    (leaguebuilder, lbplayers, lbfaces, lbpackage, lbpack ...)
 tools/native/       the C source of the four DLLs, their build scripts and checksums
 patches/            the patch set as JSON plus the layout tables the generator reads
-docs/               how-to (start here), step-by-step, install, build-your-world, testing-guide, known-issues,
+docs/               mod-studio-guide (en/hr) and mod-studio (how it works, package format),
+                    how-to (start here), step-by-step, install, build-your-world, testing-guide, known-issues,
                     limits, how-it-works, for-developers, faq, beginners-guide
 ```
 

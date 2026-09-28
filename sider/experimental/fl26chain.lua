@@ -2,7 +2,7 @@
 fl26chain -- loader for fl26chain.dll: completes a promotion/relegation chain deeper than two
 tiers at season end. The CHAINS and PROTECT lists below are OUR test world's (third, fourth
 and fifth divisions under Ligue 2 and Serie B, ids 180..185) -- replace them with your own
-league ids before you load this.
+league ids before you load this, or let a world file supply them (see below).
 
 Why: the game's season-end pass exchanges clubs between a league and the league below it
 only once per pass, and the middle tier of a chain is skipped because the tier above already
@@ -18,6 +18,13 @@ from bottom}. The counts must match the promotion/relegation counts in fl26compt
 Log: the DLL keeps a small text log; this loader drains it into sider.log on every tick
 and on F10. It keeps a small observation ring in the code section's spare tail at
 0x14252e900..0x14252ea08.
+
+The world file. When SiderAddons\modules\fl26world.txt exists (written by FL26 Mod Studio's
+League Builder), CHAINS and PROTECT below are ignored and both are built from the file:
+every league in it is protected, and a chain pair is made for every league on division 3, 5
+or 7 that names the league above it -- exactly the pairs the game's mover skips -- with the
+league's promote count (3 if it gives none) both ways. Without the file the built-in lists
+below are used, as before.
 
 Requires sider.ini: luajit.ext.enabled = 1 (global ffi). Sider's sandbox has no pcall/require.
 --]]
@@ -41,6 +48,48 @@ local CHAINS = { { 81, 180, 3, 3 }, { 82, 183, 3, 3 }, { 181, 182, 3, 3 }, { 184
 local PROTECT = { 11, 49, 60, 61, 62, 74, 76, 93, 94, 96, 98, 100, 109, 110, 111, 112, 113, 114,
                   121, 138, 139, 140, 143, 144, 145, 146, 170, 171, 173, 174, 176,
                   178, 179, 180, 181, 182, 183, 184, 185, 190 }
+
+-- The world file: modules\fl26world.txt, written by FL26 Mod Studio's League Builder.
+-- One table per league -- id, then whatever the line gives: cid, region, country, slot, tier,
+-- above, promote, demote, clubs, legs (numbers), name (text) -- in file order. nil when
+-- there is no file: the module then keeps the built-in lists above.
+local function read_world(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local leagues = {}
+  for line in f:lines() do
+    local id, rest = line:match("^%s*league%s+(%d+)(.*)$")
+    if id then
+      local L = { id = tonumber(id) }
+      local name = rest:match("%sname=(.-)%s*$")
+      if name then L.name = name; rest = rest:gsub("%sname=.*$", "") end
+      for k, v in rest:gmatch("(%a+)=(%-?%d+)") do L[k] = tonumber(v) end
+      leagues[#leagues + 1] = L
+    end
+  end
+  f:close()
+  return leagues
+end
+
+-- From the world file: every league is protected, and a chain entry is made for each pair the
+-- game's mover skips. The mover exchanges a league with the one below it every other pair,
+-- starting at the top (1<->2, 3<->4, ...), so the pairs it skips are the ones whose lower
+-- league is division 3, 5 or 7: {league above, league, its promote count both ways}. The league
+-- above may be a shipped one (Ligue 2 above a French third division) -- it is named by id, not
+-- looked up.
+local function from_world(world)
+  local chains, protect = {}, {}
+  for _, L in ipairs(world) do
+    protect[#protect + 1] = L.id
+    if L.above and L.tier and L.tier >= 3 and L.tier % 2 == 1 then
+      local n = L.promote or 3
+      chains[#chains + 1] = { L.above, L.id, n, n }
+    end
+  end
+  return chains, protect
+end
 
 local CAVE_VA, CAVE_PAGE, CAVE_LEN = 0x14252e900, 0x14252e000, 0x108
 local PAGE_EXECUTE_READWRITE = 0x40
@@ -105,7 +154,12 @@ function m.init(ctx)
   dll_stats = ffi.cast("fl26_chain_stats_t", ps)
   logbuf, statbuf = ffi.new("char[4096]"), ffi.new("uint32_t[4]")
 
-  cfg = ffi.new("fl26_chain_cfg_t[?]", #CHAINS)
+  local world = read_world(ctx)
+  if world then
+    CHAINS, PROTECT = from_world(world)
+    log(string.format("fl26chain: world file -- %d leagues, %d chain pair(s) the game skips", #PROTECT, #CHAINS))
+  end
+  cfg = ffi.new("fl26_chain_cfg_t[?]", math.max(#CHAINS, 1))
   for i, c in ipairs(CHAINS) do
     cfg[i - 1].mid, cfg[i - 1].low, cfg[i - 1].demote_mid, cfg[i - 1].promote_low = c[1], c[2], c[3], c[4]
   end

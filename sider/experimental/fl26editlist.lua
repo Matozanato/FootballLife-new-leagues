@@ -32,6 +32,10 @@ put in place (through the lookup-by-id lea it re-points, 0x1414fdbda, and the ro
 works from. Slots the list has already and the no-slot sentinel 123 are left out. If fl26comptab
 did not run, the shipped table is read and whatever of ours has a slot there is still added.
 
+The world file. When SiderAddons\modules\fl26world.txt exists (written by FL26 Mod Studio's
+League Builder), OUR_IDS is taken from the file's `league` lines instead of the built-in list
+below -- the same list fl26comptab then works from. Without the file it behaves as before.
+
 Requires sider.ini: luajit.ext.enabled = 1 (global ffi). Load after fl26comptab.lua.
 --]]
 
@@ -108,6 +112,30 @@ local function build(C, slots)
   return body
 end
 
+-- The world file: modules\fl26world.txt, written by FL26 Mod Studio's League Builder.
+-- One table per league -- id, then whatever the line gives: cid, region, country, slot, tier,
+-- above, promote, demote, clubs, legs (numbers), name (text) -- in file order. nil when
+-- there is no file: the module then keeps the built-in list above.
+local function read_world(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local leagues = {}
+  for line in f:lines() do
+    local id, rest = line:match("^%s*league%s+(%d+)(.*)$")
+    if id then
+      local L = { id = tonumber(id) }
+      local name = rest:match("%sname=(.-)%s*$")
+      if name then L.name = name; rest = rest:gsub("%sname=.*$", "") end
+      for k, v in rest:gmatch("(%a+)=(%-?%d+)") do L[k] = tonumber(v) end
+      leagues[#leagues + 1] = L
+    end
+  end
+  f:close()
+  return leagues
+end
+
 -- the slots of our leagues that the list does not show, in OUR_IDS order, or nil on a table
 -- that does not look like the competition table
 function m.slots()
@@ -149,6 +177,12 @@ function m.slots()
 end
 
 function m.init(ctx)
+  local world = read_world(ctx)
+  if world then
+    OUR_IDS = {}
+    for _, L in ipairs(world) do OUR_IDS[#OUR_IDS + 1] = L.id end
+    log(string.format("fl26editlist: world file -- %d leagues", #OUR_IDS))
+  end
   local call = memory.read(PUSH_CALL, 5)
   if call:byte(1) ~= 0xe8 or PUSH_CALL + 5 + memory.unpack("i32", call:sub(2, 5)) ~= PUSH then
     log(string.format("fl26editlist: 0x%x does not call push_back at 0x%x -- nothing written", PUSH_CALL, PUSH))

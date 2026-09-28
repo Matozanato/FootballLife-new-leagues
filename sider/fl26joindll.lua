@@ -39,6 +39,13 @@ so they close and re-open with the shipped leagues: new year, empty tables, a fr
 schedule. Measured through a July rollover and on past New Year of the next season. Still
 not measured: a season created with a shipped club as your team.
 
+The world file. When SiderAddons\modules\fl26world.txt exists (written by FL26 Mod Studio's
+League Builder), the module takes its list of league ids from the file's `league` lines
+instead of the built-in IDS list below; a world file with no leagues registers nothing.
+Without the file it behaves as before. Split-season group phases listed in TD_EXTRA (empty by
+default) are only put on the July close list, never registered; this needs an fl26join.dll
+that exports fl26_join_teardown_extra, and the log says so when it does not.
+
 The other three hooks only watch: enter_season 0x14158f420 (every id that enters, with the
 return address that asked), the builder (the include list it was handed) and the door (for
 our ids: its answer, the record's flag, kind and club count, and the caller). None of them
@@ -67,6 +74,35 @@ local m = {}
 local IDS = { 11, 49, 60, 61, 62, 74, 76, 93, 94, 96, 98, 100, 109, 110, 111, 112, 113, 114,
               121, 138, 139, 140, 143, 144, 145, 146, 170, 171, 173, 174, 176,
               178, 179, 180, 181, 182, 183, 184, 185, 190 }
+
+-- Split-season group phases: closed on the July teardown with the added leagues, never
+-- registered (fl26swiss fills them when the regular phase ends). Empty unless a split is
+-- configured.
+local TD_EXTRA = {}
+
+-- The world file: modules\fl26world.txt, written by FL26 Mod Studio's League Builder.
+-- One table per league -- id, then whatever the line gives: cid, region, country, slot, tier,
+-- above, promote, demote, clubs, legs (numbers), name (text) -- in file order. nil when
+-- there is no file: the module then keeps the built-in list above.
+local function read_world(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local leagues = {}
+  for line in f:lines() do
+    local id, rest = line:match("^%s*league%s+(%d+)(.*)$")
+    if id then
+      local L = { id = tonumber(id) }
+      local name = rest:match("%sname=(.-)%s*$")
+      if name then L.name = name; rest = rest:gsub("%sname=.*$", "") end
+      for k, v in rest:gmatch("(%a+)=(%-?%d+)") do L[k] = tonumber(v) end
+      leagues[#leagues + 1] = L
+    end
+  end
+  f:close()
+  return leagues
+end
 
 local CAVE_VA, CAVE_PAGE, CAVE_LEN = 0x14252ebe0, 0x14252e000, 0x208
 local PAGE_EXECUTE_READWRITE = 0x40
@@ -115,6 +151,7 @@ function m.init(ctx)
     typedef int  (*fl26_join_install_t)(uint64_t, uint64_t, const uint16_t*, int, const char*);
     typedef int  (*fl26_join_log_t)(char*, int);
     typedef void (*fl26_join_stats_t)(uint32_t*);
+    typedef int  (*fl26_join_teardown_extra_t)(const uint16_t*, int);
   ]])
 
   local old = ffi.new("uint32_t[1]")
@@ -141,6 +178,13 @@ function m.init(ctx)
   dll_stats = ffi.cast("fl26_join_stats_t", ps)
   logbuf, statbuf = ffi.new("char[4096]"), ffi.new("uint32_t[8]")
 
+  local world = read_world(ctx)
+  if world then
+    IDS = {}
+    for _, L in ipairs(world) do IDS[#IDS + 1] = L.id end
+    log(string.format("fl26joindll: world file -- %d leagues", #IDS))
+    if #IDS == 0 then log("fl26joindll: the world has no leagues -- nothing to register"); return end
+  end
   idbuf = ffi.new("uint16_t[?]", #IDS)
   for i, v in ipairs(IDS) do idbuf[i - 1] = v end
 
@@ -148,6 +192,16 @@ function m.init(ctx)
   local status = tonumber(install(base, CAVE_VA, idbuf, #IDS, logpath))
   if status == 0 then
     log(string.format("fl26joindll: installed -- %d added leagues will be registered on the first registration day of the season; the DLL's own log is %s (F10 = counters)", #IDS, logpath))
+    if #TD_EXTRA > 0 then
+      local pt = ffi.C.GetProcAddress(h, "fl26_join_teardown_extra")
+      if pt == nil then log("fl26joindll: this fl26join.dll has no fl26_join_teardown_extra -- split groups will not be closed")
+      else
+        local tdbuf = ffi.new("uint16_t[?]", #TD_EXTRA)
+        for i, v in ipairs(TD_EXTRA) do tdbuf[i - 1] = v end
+        local kept = tonumber(ffi.cast("fl26_join_teardown_extra_t", pt)(tdbuf, #TD_EXTRA))
+        log(string.format("fl26joindll: %d split group ids go on the July teardown only", kept))
+      end
+    end
     ctx.register("livecpk_make_key", m.make_key)
     ctx.register("key_down", m.key_down)
     drain(nil)

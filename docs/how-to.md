@@ -1,5 +1,9 @@
 # The complete how-to
 
+> **Easier way:** [FL26 Mod Studio](mod-studio-guide.md) ([hrvatski](mod-studio-guide.hr.md)) does
+> all of this from one window -- install, build leagues, edit players, switch mods on and
+> off. This page is the manual route, and what the program does underneath.
+
 One page, every step, in order. It answers the three questions people ask most:
 
 1. **How do I install this?** → [Part A](#part-a-install-the-mod)

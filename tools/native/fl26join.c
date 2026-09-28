@@ -50,7 +50,9 @@
 #define CLOSE_RVA 0x1363210  /* close_listed(ctx, vec_u16*): New Year close of calendar-year comps */
 #define BLD_RET_RVA 0x1315c0b /* return address of the builder's call to the door (0x141315c06)  */
 #define OWNER_RVA 0x3705e10  /* *(void**)  -> owner; [owner+0x48] = edit block              */
+#ifndef REG_ARRAY_OFF   /* -DREG_ARRAY_OFF=... builds for a set that moves the block (the -calendar set) */
 #define REG_ARRAY_OFF 0x1c84230 /* edit block + this = regulation records, stride 0x314 (caps sets) */
+#endif
 #define REG_STRIDE    0x314
 #define REG_CAP       600       /* the caps sets raise the array to 600 rows; unused rows carry id 0 */
 
@@ -117,6 +119,12 @@ static void logf(const char* fmt, ...)
 }
 
 static int ours(uint16_t id) { for (int i = 0; i < g_nids; i++) if (g_ids[i] == id) return 1; return 0; }
+/* Split-season group phases: never registered by us (the split fills them), but they have a
+   season like any league and must be closed on the July list with the rest -- see teardown_pre. */
+#define MAX_TD_EXTRA 32
+static uint16_t g_td_extra[MAX_TD_EXTRA];
+static int      g_ntd_extra = 0;
+static int td_extra(uint16_t id) { for (int i = 0; i < g_ntd_extra; i++) if (g_td_extra[i] == id) return 1; return 0; }
 /* shipped leagues that do enter, as a yardstick beside ours in the door log */
 static int control(uint16_t id) { return id == 17 || id == 21 || id == 50 || id == 81 || id == 82; }
 
@@ -742,7 +750,9 @@ static void ensure_tables(void)
 #define DOOR_RET_RVA 0x13ac37e   /* enter_season's return address inside the door          */
 #define SUBRESET_RVA 0x158f870   /* (u8* subrecord): clear its tables                        */
 #define SUBFILL_RVA  0x158f9b0   /* (u8* entry, u16 year, u8 flag): build the year's tables  */
+#ifndef TODAY_OFF   /* -DTODAY_OFF=... builds for a set that moves the block (the -calendar set) */
 #define TODAY_OFF    0x1642a24   /* u32 date in the edit block: low word = year              */
+#endif
 typedef void (*subreset_fn)(unsigned char* sub);
 typedef void (*subfill_fn)(unsigned char* entry, uint64_t year, uint64_t flag);
 
@@ -880,12 +890,12 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   (void)ctx;
   if (!in || !in->b || in->e < in->b) return in;
   int n = (int)(in->e - in->b), k = 0, euro = 0, changed = 0;
-  if (n + g_nids > MAX_LIST) return in;
+  if (n + g_nids + g_ntd_extra > MAX_LIST) return in;
   for (int j = 0; j < n; j++) if (in->b[j] == 2) { euro = 1; break; }
   char buf[320]; int p = 0; buf[0] = 0;
   for (int j = 0; j < n; j++) {
     uint16_t id = in->b[j];
-    if (!euro && ours(id)) {
+    if (!euro && (ours(id) || td_extra(id))) {
       changed++;
       if (p < (int)sizeof buf - 8) p += snprintf(buf + p, sizeof buf - (size_t)p, "%u ", id);
       continue;
@@ -895,6 +905,13 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   if (euro) {
     for (int i = 0; i < g_nids; i++) {
       uint16_t id = g_ids[i]; int dup = 0;
+      for (int j = 0; j < k; j++) if (g_td_list[j] == id) { dup = 1; break; }
+      if (dup || !find_record(id)) continue;
+      g_td_list[k++] = id; changed++;
+      if (p < (int)sizeof buf - 8) p += snprintf(buf + p, sizeof buf - (size_t)p, "%u ", id);
+    }
+    for (int i = 0; i < g_ntd_extra; i++) {
+      uint16_t id = g_td_extra[i]; int dup = 0;
       for (int j = 0; j < k; j++) if (g_td_list[j] == id) { dup = 1; break; }
       if (dup || !find_record(id)) continue;
       g_td_list[k++] = id; changed++;
@@ -1001,6 +1018,18 @@ __declspec(dllexport) int fl26_join_install(uint64_t exe_base, uint64_t cave_add
 }
 
 /* copy and clear the pending log text; returns bytes copied */
+/* Ids that go on the July teardown list only (split-season group phases): they are closed
+   with our leagues but never appended to register_all. Call after fl26_join_install.
+   Returns the number kept, or -1 on a bad list. */
+__declspec(dllexport) int fl26_join_teardown_extra(const uint16_t* ids, int n)
+{
+  if (!ids || n < 0 || n > MAX_TD_EXTRA) return -1;
+  for (int i = 0; i < n; i++) g_td_extra[i] = ids[i];
+  g_ntd_extra = n;
+  logf("teardown extras (July list only): %d ids", n);
+  return n;
+}
+
 __declspec(dllexport) int fl26_join_log(char* out, int cap)
 {
   int n = g_log_len; if (n > cap - 1) n = cap - 1; if (n < 0) n = 0;

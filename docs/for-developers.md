@@ -1,5 +1,12 @@
 # For developers
 
+## FL26 Mod Studio and the world file
+
+The modules read which leagues a world has from `SiderAddons\modules\fl26world.txt`, written
+by the League Builder (FL26 Mod Studio, `tools/leaguebuilder.py`). A module that finds no file
+keeps its built-in list. The format, what the program touches in the game folder, and the
+league package format (`.fl26pack`) are in [mod-studio.md](mod-studio.md).
+
 ## Regenerating the patch set
 
 You need to regenerate `fl26caps.lua` when your world's rulebook ids are not all in the

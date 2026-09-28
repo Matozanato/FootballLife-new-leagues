@@ -31,6 +31,14 @@ clubs, so England D3, Romania D2 and France D3 no longer land in the pools eithe
 get no slot, 123, like France D4/D5 and Czechia have always had). See docs/known-issues.md,
 "Fixed along the way" (2026-09-26, issue #8).
 
+The world file. When SiderAddons\modules\fl26world.txt exists (written by FL26 Mod Studio's
+League Builder), SLOTS and REMAP_OWN below are ignored and built from the file: every league
+whose slot= is one the game fills with a list of its own (0..5, 69, 72, 73, 75, 76, 77, 80) is
+served from its regulation, and every league on a slot the switch sends into a pool (26, 27,
+28, 67, 71, 74) gets that switch entry pointed at the default case. If no league of the world
+sits on a served slot, the DLL is not installed. Without the file the built-in lists below
+are used, as before.
+
 Requires sider.ini: luajit.ext.enabled = 1 (global ffi). Load after fl26comptab.lua.
 --]]
 
@@ -58,6 +66,47 @@ local REMAP_OWN = {
   { 71, 5 },   -- England D4: was -> 69
   { 74, 3 },   -- Poland D1: was -> 73
 }
+
+-- The world file: modules\fl26world.txt, written by FL26 Mod Studio's League Builder.
+-- One table per league -- id, then whatever the line gives: cid, region, country, slot, tier,
+-- above, promote, demote, clubs, legs (numbers), name (text) -- in file order. nil when
+-- there is no file: the module then keeps the built-in lists above.
+local function read_world(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local leagues = {}
+  for line in f:lines() do
+    local id, rest = line:match("^%s*league%s+(%d+)(.*)$")
+    if id then
+      local L = { id = tonumber(id) }
+      local name = rest:match("%sname=(.-)%s*$")
+      if name then L.name = name; rest = rest:gsub("%sname=.*$", "") end
+      for k, v in rest:gmatch("(%a+)=(%-?%d+)") do L[k] = tonumber(v) end
+      leagues[#leagues + 1] = L
+    end
+  end
+  f:close()
+  return leagues
+end
+
+-- From the world file. SERVED: the slots the game fills with lists of its own (national teams,
+-- classic teams, "other clubs" fillers, empty) -- a league on one of them needs its club list
+-- answered from its regulation. POOL_CASE: the slots the club-slot switch sends into an
+-- "other clubs" pool, with the switch byte each holds; a league there is pointed at the
+-- default case. Both are facts about the executable; which slots the world uses is not.
+local SERVED = { [0] = true, [1] = true, [2] = true, [3] = true, [4] = true, [5] = true,
+                 [69] = true, [72] = true, [73] = true, [75] = true, [76] = true, [77] = true, [80] = true }
+local POOL_CASE = { [26] = 3, [27] = 3, [28] = 3, [67] = 3, [74] = 3, [71] = 5 }
+local function from_world(world)
+  local slots, remap = {}, {}
+  for _, L in ipairs(world) do
+    if L.slot and SERVED[L.slot] then slots[#slots + 1] = { L.slot, L.id } end
+    if L.slot and POOL_CASE[L.slot] then remap[#remap + 1] = { L.slot, POOL_CASE[L.slot] } end
+  end
+  return slots, remap
+end
 
 local function remap_own()
   local default = memory.read(SWITCH_BYTES + 18 - SWITCH_FIRST, 1):byte()
@@ -121,6 +170,12 @@ function m.init(ctx)
     typedef void (*fl26_clubs_stats_t)(uint32_t*);
     typedef uint32_t (*fl26_clubs_pool_t)(void);
   ]])
+  local world = read_world(ctx)
+  if world then
+    SLOTS, REMAP_OWN = from_world(world)
+    log(string.format("fl26clubs: world file -- %d leagues, %d on slots the game fills itself, %d on pool slots",
+                      #world, #SLOTS, #REMAP_OWN))
+  end
   remap_own()
 
   local sep = string.char(92)
@@ -140,6 +195,7 @@ function m.init(ctx)
   local pp = ffi.C.GetProcAddress(h, "fl26_clubs_pool_calls")
   if pp ~= nil then dll_pool = ffi.cast("fl26_clubs_pool_t", pp) end
 
+  if #SLOTS == 0 then log("fl26clubs: no league of this world sits on a slot the game fills itself -- nothing to serve"); return end
   cfg = ffi.new("fl26_clubs_cfg_t[?]", #SLOTS)
   for i, s in ipairs(SLOTS) do
     cfg[i - 1].slot, cfg[i - 1].reg = s[1], s[2]

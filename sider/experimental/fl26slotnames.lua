@@ -49,6 +49,11 @@ What this does NOT fix: rows of ours that were inherited from a shipped competit
 still hold that competition's label in +0x38. Those are a row, not a slot, and fl26comptab
 clears them.
 
+The world file. When SiderAddons\modules\fl26world.txt exists (written by FL26 Mod Studio's
+League Builder), only the slots of the seven that a league of the world actually sits on
+(its slot=) are freed; the others keep their shipped heading, and when none is used the
+module writes nothing at all. Without the file all seven are freed, as before.
+
 Load order does not matter; this module touches no address any other module touches.
 Needs luajit.ext.enabled = 1 in sider.ini (the global ffi), like fl26comptab.
 
@@ -72,6 +77,39 @@ local SLOTS = {
   { 73, 9,  "Other Latin American Teams", 0x6600d3 },
   { 75, 10, "Other Clubs (Africa)",       0x66010f },
 }
+
+-- The world file: modules\fl26world.txt, written by FL26 Mod Studio's League Builder.
+-- One table per league -- id, then whatever the line gives: cid, region, country, slot, tier,
+-- above, promote, demote, clubs, legs (numbers), name (text) -- in file order. nil when
+-- there is no file: the module then keeps the built-in list above.
+local function read_world(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local leagues = {}
+  for line in f:lines() do
+    local id, rest = line:match("^%s*league%s+(%d+)(.*)$")
+    if id then
+      local L = { id = tonumber(id) }
+      local name = rest:match("%sname=(.-)%s*$")
+      if name then L.name = name; rest = rest:gsub("%sname=.*$", "") end
+      for k, v in rest:gmatch("(%a+)=(%-?%d+)") do L[k] = tonumber(v) end
+      leagues[#leagues + 1] = L
+    end
+  end
+  f:close()
+  return leagues
+end
+
+-- With a world file only the slots a league of the world sits on lose their borrowed heading;
+-- the rest keep it, so a small world does not blank "Classic Teams" for nothing.
+local function world_slots(world)
+  local used, kept = {}, {}
+  for _, L in ipairs(world) do if L.slot then used[L.slot] = true end end
+  for _, s in ipairs(SLOTS) do if used[s[1]] then kept[#kept + 1] = s end end
+  return kept
+end
 
 local HOOK_SLOT     = 0x140ea0a37        -- mov ecx, ebp; call 0x1414ce170 (slot -> its competitions)
 local HOOK_SLOT_OLD = "8bcde832d76200"
@@ -137,6 +175,12 @@ local function build(C)
 end
 
 function m.init(ctx)
+  local world = read_world(ctx)
+  if world then
+    SLOTS = world_slots(world)
+    log(string.format("fl26slotnames: world file -- %d leagues, %d of them on a slot with a borrowed heading", #world, #SLOTS))
+    if #SLOTS == 0 then return end
+  end
   -- verify every byte before writing any of them: a build whose switch is laid out
   -- differently must be left completely alone, not half-patched.
   for _, s in ipairs(SLOTS) do
