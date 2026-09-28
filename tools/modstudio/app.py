@@ -176,6 +176,7 @@ class Main(QMainWindow):
                                                    for code, name in i18n.LANGUAGES]))
         h.addWidget(self._menu_button("Help", [
             ("User guide", self.guide),
+            ("Check for updates...", self.check_updates),
             ("About FL26 Mod Studio", self.about)]))
         h.addStretch(1)
         self.run_label = QLabel("")
@@ -353,6 +354,79 @@ class Main(QMainWindow):
                               _("It changes sider.ini and the content folders only, and keeps a "
                                 "restore point before every change.")))
 
+    def check_updates(self, quiet=False):
+        """ask GitHub for a newer release; quiet (the check at start) says nothing unless there is one"""
+        from modstudio import updater
+        from modstudio.ui import run_job
+
+        def done(info):
+            if info:
+                self.offer_update(info)
+            elif not quiet:
+                QMessageBox.information(self, _("Updates"), _("FL26 Mod Studio is up to date (v%s).") % VERSION)
+
+        def failed(tb):
+            if not quiet:
+                QMessageBox.warning(self, _("Updates"), _("Could not reach GitHub to check for updates.")
+                                    + "\n\n" + tb.strip().splitlines()[-1])
+        run_job(lambda progress: updater.latest(), done, failed)
+
+    def offer_update(self, info):
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+        from modstudio import updater
+        from modstudio.ui import run_job
+        page = lambda: QDesktopServices.openUrl(QUrl(info["page"]))
+        box = QMessageBox(self)
+        box.setWindowTitle(_("Update available"))
+        box.setText(_("FL26 Mod Studio %s is out (you have %s).") % (info["version"], VERSION))
+        box.setInformativeText(_("Download it and restart? Your settings, projects and restore points "
+                                 "stay as they are, and the game is not touched."))
+        if info["notes"].strip():
+            box.setDetailedText(info["notes"].strip())
+        yes = box.addButton(_("Download and install"), QMessageBox.AcceptRole)
+        rel = box.addButton(_("Open the release page"), QMessageBox.ActionRole)
+        box.addButton(_("Later"), QMessageBox.RejectRole)
+        box.exec()
+        if box.clickedButton() is rel:
+            page()
+            return
+        if box.clickedButton() is not yes:
+            return
+        if not updater.frozen():
+            QMessageBox.information(self, _("Update available"),
+                                    _("This copy runs from source; the release page opens instead."))
+            page()
+            return
+        if not updater.can_write(updater.program_dir()):
+            QMessageBox.warning(self, _("Update available"),
+                                _("The program's folder (%s) cannot be written to. Unpack the new zip "
+                                  "yourself, or move FL26 Mod Studio to a folder of your own.")
+                                % updater.program_dir())
+            page()
+            return
+
+        def progress(p):
+            self.status_left.setText(_("Downloading the update... %d%%") % p)
+
+        def done(path):
+            try:
+                updater.install(path)
+            except Exception as e:
+                QMessageBox.warning(self, _("Update available"), _("The update could not be installed: %s") % e)
+                self.status_left.setText(_("Ready"))
+                return
+            self.status_left.setText(_("Installing the update; FL26 Mod Studio restarts by itself..."))
+            QApplication.instance().processEvents()
+            QApplication.instance().quit()
+
+        def failed(tb):
+            QMessageBox.warning(self, _("Update available"),
+                                _("The download failed: %s") % tb.strip().splitlines()[-1])
+            self.status_left.setText(_("Ready"))
+        progress(0)
+        run_job(lambda pr: updater.download(info, pr), done, failed, progress)
+
     def closeEvent(self, e):
         self.settings["size"] = [self.width(), self.height()]
         save_settings(self.settings)
@@ -382,6 +456,8 @@ def main():
                 w.grab().save(os.path.join(out, name + ".png"))
             app.quit()
         QTimer.singleShot(1500, shoot)
+    elif w.settings.get("check_updates", True):
+        QTimer.singleShot(3000, lambda: w.check_updates(quiet=True))
     sys.exit(app.exec())
 
 

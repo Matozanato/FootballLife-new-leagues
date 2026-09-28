@@ -32,6 +32,14 @@ Prozor je na engleskom. **Settings → Language → Hrvatski** ga prebaci na hrv
 3. Otvori **Pregled**. Pokazuje cijelu postavu na jednom mjestu i popis problema. Dvoklik na
    problem otvara stranicu koja ga rješava.
 
+**Ažuriranja.** Par sekundi nakon pokretanja program pita GitHub je li izašao noviji FL26 Mod
+Studio i javi se samo ako jest. **Skini i instaliraj** skine novi zip, provjeri ga prema
+kontrolnom zbroju izdanja, zatvori program, stavi nove datoteke preko starih i ponovno ga
+pokrene. Postavke, projekti, točke vraćanja i igra ostaju netaknuti. **Pomoć → Provjeri
+ažuriranja** pita u bilo kojem trenutku. Ako je program u mapi u koju Windows ne da pisati
+(npr. Program Files), otvori se stranica izdanja: raspakiraj zip sam ili premjesti program u
+svoju mapu.
+
 ## 3. Stranice
 
 Popis s lijeve strane ima četiri skupine.
@@ -122,6 +130,7 @@ sadržaja s imenom `_FL26...` koju igra čita dok je uključena.
 | **Format** | *Svi sa svima*, 1 do 4 puta, ili *dijeli se na pola (kao Škotska)*. |
 | **Rang** | *(prvi rang)* ili liga iznad nje: druga nova liga ili liga iz igre. |
 | **Gore / dolje** | Koliko klubova na kraju sezone zamijeni mjesta s ligom iznad. |
+| **Europa** | Samo za prvi rang: koje mjesto u ligi ide u koje europsko natjecanje. **Prva liga: 1. LP, 2. EL, 3. KL** upiše uobičajena tri; **Dodaj mjesto**, **Makni mjesto** i **Makni** za sve ostalo. Svako mjesto samo jednom, i samo mjesta koja liga ima. Za niži rang ostavi prazno. |
 | **Logo** | Bilo koja slika (najbolje izgleda PNG s prozirnom pozadinom). Prazno: nacrta se sam. |
 
 **Ime svijeta** (na istoj stranici) mora počinjati s `_FL26`.
@@ -129,6 +138,9 @@ sadržaja s imenom `_FL26...` koju igra čita dok je uključena.
 **Novi klubovi**: odaberi ligu, pa **Uredi klub** (ime, kratko ime, grb), **Zalijepi imena...**
 ili **Učitaj imena iz datoteke...**. Prazno ime postaje `<liga> 01`, `<liga> 02` ...; klub bez
 grba dobije grb s brojem. Dresovi se posude od klubova iz igre.
+Imena zadržavaju kvačice (FK Željezničar); kratko ime od tri slova ih nema, kao ni u igri,
+pa tamo Č, Ž, Đ postaju C, Z, D. Nakon **Izgradnje** stupac **ID kluba** pokazuje ID svakog
+kluba u igri.
 
 **Postojeće lige i klubovi**: nova imena, logotipi i grbovi za ono što igra već ima.
 
@@ -182,6 +194,14 @@ svejedno vidi. Mapa s više faca unutra se odbija: odaberi točno onu jednu koju
 3. **Uključi ga** — postane aktivni svijet u `sider.ini`.
 4. Pokreni igru, vrati se i stisni **Nakon pokretanja: provjeri**. Pročita `sider.log` i kaže,
    modul po modul, je li svijet preuzet.
+
+**Uključi Konferencijsku ligu** (na stranici Izgradnja, zadano uključeno) izgradi i
+Konferencijsku ligu, a Ligi prvaka i Europskoj ligi da ligašku fazu od 36 klubova, uz veljačko
+doigravanje sva tri natjecanja. Isključeno: europski kupovi kakvi su u igri.
+
+> **Europska mjesta.** Mjesta koja daš svojim ligama dolaze iza mjesta liga iz igre. Svako
+> natjecanje prima 36 klubova; mjesta iza 36. ne dobiju ništa, i **Provjeri plan** to kaže.
+> Nove lige bez mjesta nikoga ne šalju u Europu, i Pregled na to upozori.
 
 Onda **započni novu Master League** (ili Become a Legend) karijeru. Nove lige su pod svojom
 državom u Select Team i Kick Off.
@@ -248,5 +268,7 @@ kopiju** je vrati. Kopije su u `SiderAddons\ModStudio\backups`. **Počisti...** 
 | Igra se ne pokrene nakon promjene | Točke vraćanja → vrati `sider.ini`, ili se prebaci na profil koji je radio. |
 | Nove lige nema u Select Team | Započni *novu* karijeru; stare karijere zadrže stare lige. |
 | Imena klubova su iz igre | Edit datoteka ima prednost (poglavlje 8). |
+| *tvoje lige nikoga ne šalju u Europu* | Nove lige → Uredi prvi rang → Europa (gumb **Prva liga** upiše uobičajena tri), pa ponovno izgradi. |
+| *Konferencijska liga je uključena, ali njezinih tablica nema* | Ponovno izgradi svijet: izgrađen je prije te opcije, ili s njom isključenom. |
 | Faca se ne vidi | Mapa mora imati `#Win\face.fpk`; nakon odabira ponovno izgradi. |
 | Bilo što drugo | Dijagnostika → **Kopiraj izvještaj**, i pošalji ga sa `SiderAddons\sider.log`. |

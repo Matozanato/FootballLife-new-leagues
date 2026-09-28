@@ -11,9 +11,19 @@ so that every country is represented. The same list is printed as a Lua table fo
 sider/fl26swiss.lua, because the exe gives a competition it does not know no entrants of its own
 and the DLL fills it from that list after the Champions League play-off.
 
+The competition id is 174 (--cid to change it). mkphases.py alone would take the first free one
+from 130, which is 174 only in a world with 39 added leagues; nothing in fl26swiss keys on the
+competition id (it finds the Conference League by regulation 186), but one id everywhere keeps
+worlds comparable. The regulation ids are not negotiable: fl26swiss.dll and the fixture-date
+stub of the runtime patch set both know 186, 187 and 1210, and build() refuses other ones.
+
     python mkuecl.py --src E:\...\livecpk\_FL26G39UCL36 --out E:\...\livecpk\_FL26G39UECL
+
+build(pesdb, out) does the same inside a world that is being built (the league builder's
+"Conference League" option): it reads the tables in <pesdb>, adds the competition and writes the
+three competition tables to <out>, with no copy and no second process.
 """
-import os, shutil, subprocess, sys
+import contextlib, io, os, shutil, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -26,6 +36,9 @@ LEAGUES = ("ENGLAND_D1_LEAGUE", "SPAIN_D1_LEAGUE", "ITALY_D1_LEAGUE", "GERMANY_D
            "RUSSIA_D1_LEAGUE", "GREECE_D1_LEAGUE", "TURKEY_D1_LEAGUE", "DENMARK_D1_LEAGUE",
            "SCOTLAND_D1_LEAGUE")
 FIELD = 36
+NAME, CODE = "FL Conference League", "FL_UECL"
+CID = 174                    # the competition id (see above)
+REG, KO, ROW = 186, 187, 1210  # league phase, knockout, the league phase's one group
 
 
 def cid_of(comp, code):
@@ -55,6 +68,42 @@ def pick(base):
     return out
 
 
+def phases_args(base, out, clubs, cid=CID):
+    return ["--base", base, "--out", out, "--like", "UEFA_EUROPE_LEAGUE", "--name", NAME,
+            "--code", CODE, "--cid", str(cid), "--teams", ",".join(map(str, clubs))]
+
+
+def build(base, out, cid=CID, log=print):
+    """add the Conference League to the tables in <base> and write them to the world <out>
+    (in place when <base> is <out>'s own pesdb). The Europa League must already have its one
+    league-phase group of 36 (mkreshape.py). Returns the entrants; SystemExit on anything off."""
+    import mkphases
+    clubs = pick(base)
+    if len(clubs) < FIELD:
+        raise SystemExit("only %d Conference League entrants found, %d wanted" % (len(clubs), FIELD))
+    old, buf = sys.argv, io.StringIO()
+    sys.argv = ["mkphases.py"] + phases_args(base, out, clubs, cid)
+    try:
+        with contextlib.redirect_stdout(buf):
+            rc = mkphases.main()
+    except SystemExit as e:
+        raise SystemExit("mkphases: %s\n%s" % (e, buf.getvalue()))
+    finally:
+        sys.argv = old
+    if rc:
+        raise SystemExit("mkphases returned %s\n%s" % (rc, buf.getvalue()))
+    regs = M.load(os.path.join(out, PESDB), "CompetitionRegulation.bin")
+    have = {int.from_bytes(regs[i * M.REG + M.R_ID:i * M.REG + M.R_ID + 2], "little")
+            for i in range(len(regs) // M.REG) if regs[i * M.REG + M.R_CID] == cid}
+    if not {REG, KO, ROW} <= have:
+        raise SystemExit("the Conference League got regulations %s, not %d/%d/%d -- fl26swiss and "
+                         "the fixture dates know only those; is the Europa League reshaped "
+                         "(one group of 36)?" % (sorted(have), REG, KO, ROW))
+    log("  Conference League: competition %d, regulations %d/%d (group %d), %d entrants"
+        % (cid, REG, KO, ROW, len(clubs)))
+    return clubs
+
+
 def main():
     a = sys.argv[1:]
     get = lambda k: a[a.index(k) + 1] if k in a else None
@@ -62,12 +111,12 @@ def main():
     if not src or not out:
         print(__doc__)
         return 1
+    cid = int(get("--cid") or CID)
     clubs = pick(os.path.join(src, PESDB))
     print("%d entrants" % len(clubs))
     print("local UECL = { %s }" % ", ".join(map(str, clubs)))
-    cmd = [sys.executable, os.path.join(HERE, "mkphases.py"), "--base", os.path.join(src, PESDB),
-           "--out", out, "--like", "UEFA_EUROPE_LEAGUE", "--name", "FL Conference League",
-           "--code", "FL_UECL", "--teams", ",".join(map(str, clubs))]
+    cmd = [sys.executable, os.path.join(HERE, "mkphases.py")] + phases_args(
+        os.path.join(src, PESDB), out, clubs, cid)
     if "--dry" in a:
         return subprocess.call(cmd + ["--dry"])
     if os.path.exists(out):

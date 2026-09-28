@@ -4,9 +4,10 @@
     page   the section that fixes it (a page class name), or None
 
 quick() is cheap enough for the overview; full() also reads every content-server map and the
-end of sider.log.
+end of sider.log. Both check the League Builder world that is switched on (world_problems), with
+the recipe being edited when it is that world's.
 """
-import os, re
+import json, os, re
 
 from . import modules as MOD, servers as S
 from .i18n import _
@@ -17,7 +18,7 @@ PAGE_OF = {"stadiums": "Stadiums", "balls": "Balls", "kits": "Kits", "commentary
 ERR_WORDS = re.compile(r"(error|failed|attempt to|not found|cannot|can't|unable|stack traceback)", re.I)
 
 
-def quick(game, ini):
+def quick(game, ini, recipe=None):
     out = []
     for p in game.problems():
         out.append(("err", "Game", p, "Settings"))
@@ -43,6 +44,60 @@ def quick(game, ini):
         on = mods.get(s.module.lower())
         if on and not s.installed(game.content_dir):
             out.append(("err", s.title, _("%s is on but there is no content\\%s folder") % (s.module, s.folder), None))
+    out += world_problems(game, ini, recipe)
+    return out
+
+
+UECL_REGS = (186, 187, 1210)      # the Conference League's league phase, knockout and its group
+
+
+def world_problems(game, ini, recipe=None):
+    """the League Builder worlds switched on: leagues that send nobody to Europe (no uefa line of
+    the world file names one of them), and a Conference League that is on -- in the recipe being
+    edited when it is this world's, else in the plan the world was built from -- but missing
+    from the world's tables"""
+    out = []
+    try:
+        import fl26world
+        import mkleague as M
+    except ImportError:
+        return out
+    for e in ini.entries("cpk.root"):
+        d = root_path(game.sider_dir, e.value)
+        name = os.path.basename(os.path.normpath(d))
+        wf = os.path.join(d, "fl26world.txt")
+        if not e.enabled or not name.startswith("_FL26") or not os.path.exists(wf):
+            continue
+        try:
+            ids = {L["id"] for L in fl26world.read_world(wf)[1]}
+            uefa = fl26world.read_uefa(wf)
+        except (OSError, ValueError):
+            continue
+        if ids and not any(u[0] in ids for u in uefa):
+            out.append(("warn", "League Builder",
+                        _("%s: your leagues send nobody to Europe (no European places in the world file)") % name,
+                        "NewLeagues"))
+        if recipe is not None and recipe.get("world") == name:
+            on = bool(recipe.get("uecl", True))
+        else:
+            try:
+                with open(os.path.join(d, "leaguebuilder-plan.json"), encoding="utf-8") as f:
+                    on = bool(json.load(f).get("uecl"))
+            except (OSError, ValueError):
+                on = False
+        if not on:
+            continue
+        try:
+            regs = M.load(os.path.join(d, "common", "etc", "pesdb"), "CompetitionRegulation.bin")
+            have = {int.from_bytes(regs[i * M.REG + M.R_ID:i * M.REG + M.R_ID + 2], "little")
+                    for i in range(len(regs) // M.REG)}
+        except (OSError, ValueError):
+            have = set()
+        missing = [r for r in UECL_REGS if r not in have]
+        if missing:
+            out.append(("err", "League Builder",
+                        _("%s: the Conference League is on, but its tables are missing (regulation %s): "
+                          "build the world again") % (name, ", ".join(map(str, missing))), "Build"))
     return out
 
 
@@ -82,7 +137,7 @@ def log_problems(game, tail=4000):
     return [(i + 1, l) for i, l in enumerate(lines[start:], start) if ERR_WORDS.search(l)]
 
 
-def full(game, ini):
-    out = quick(game, ini)
+def full(game, ini, recipe=None):
+    out = quick(game, ini, recipe)
     out += map_problems(game)
     return out

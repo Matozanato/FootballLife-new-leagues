@@ -35,6 +35,9 @@ What comes from where:
                                          --uefa copies the ACCESS table of a module file; with
                                          no uefa line fl26swiss uses the DLL's own list, which
                                          knows the shipped leagues only
+  uecl                                   the Conference League's first-season entrants (team ids,
+                                         mkuecl.py's pick from this world); written when the
+                                         world has the Conference League
 
 "Ours" are the league regulations (type 4) the shipped tables do not have. --base is the folder
 with the shipped tables (Competition*.bin, Country.bin); default FL26_PESDB, else out/base-pesdb.
@@ -63,13 +66,85 @@ DEFAULT_SLOT = {
 }
 
 
+# The competitions of a uefa line (fl26swiss's ACCESS comment): the number is what the line
+# carries, the name what a person picks.
+COMPETITIONS = [(0, "Champions League"), (1, "Europa League"), (2, "Conference League"),
+                (3, "Libertadores"), (4, "Libertadores qualifying"), (5, "AFC Champions League")]
+FIELD = 36                        # clubs in each UEFA league phase; places past it get nothing
+
+# The DLL's own access list (tools/native/fl26swiss.c, ACCESS): the shipped leagues' European
+# places, which every world has under the same regulation ids. A world file with uefa lines
+# replaces the DLL's list outright, so a world that adds places for its own leagues writes these
+# first and its own after them (uefa_places) -- otherwise the Netherlands, Portugal, Belgium ...
+# would lose their places and the big five would fill the gaps. Keep it in step with the C file.
+_ENG, _ITA, _ESP, _FRA, _NED, _POR, _GER = 17, 18, 19, 20, 21, 22, 50
+_GRE, _TUR, _SCO, _DEN, _BEL = 117, 118, 134, 147, 155
+SHIPPED_ACCESS = [(r, n, c, 0) for r, n, c in (
+    # Champions League
+    (_ENG, 1, 0), (_ITA, 1, 0), (_ESP, 1, 0), (_GER, 1, 0), (_FRA, 1, 0), (_NED, 1, 0), (_POR, 1, 0),
+    (_BEL, 1, 0), (_TUR, 1, 0),
+    (_ENG, 2, 0), (_ITA, 2, 0), (_ESP, 2, 0), (_GER, 2, 0), (_FRA, 2, 0), (_NED, 2, 0),
+    (_ENG, 3, 0), (_ITA, 3, 0), (_ESP, 3, 0), (_GER, 3, 0), (_FRA, 3, 0),
+    (_ENG, 4, 0), (_ITA, 4, 0), (_ESP, 4, 0), (_GER, 4, 0),
+    (_ENG, 5, 0), (_ESP, 5, 0), (_POR, 2, 0),
+    (_SCO, 1, 0), (_GRE, 1, 0),
+    (_FRA, 4, 0), (_NED, 3, 0), (_BEL, 2, 0),
+    # Europa League
+    (_ENG, 6, 1), (_ITA, 5, 1), (_ESP, 6, 1), (_GER, 5, 1), (_FRA, 5, 1),
+    (_ENG, 7, 1), (_ITA, 6, 1), (_ESP, 7, 1), (_GER, 6, 1), (_FRA, 6, 1),
+    (_NED, 4, 1), (_NED, 5, 1), (_POR, 3, 1), (_POR, 4, 1), (_BEL, 3, 1), (_BEL, 4, 1),
+    (_TUR, 2, 1), (_TUR, 3, 1),
+    (_SCO, 2, 1), (_SCO, 3, 1),
+    (_GRE, 2, 1), (_DEN, 1, 1), (_DEN, 2, 1),
+    # Conference League
+    (_ENG, 8, 2), (_ITA, 7, 2), (_ESP, 8, 2), (_GER, 7, 2), (_FRA, 7, 2),
+    (_NED, 6, 2), (_POR, 5, 2), (_BEL, 5, 2), (_TUR, 4, 2),
+    (_SCO, 4, 2), (_GRE, 3, 2),
+    (_DEN, 3, 2),
+)]
+
+
+def uefa_places(own):
+    """the uefa lines of a world whose own leagues have places: the shipped list and the world's
+    places, competition by competition (Champions League first, as fl26swiss hands them out in
+    list order), each competition's shipped places before the world's. own: (regulation,
+    position, competition, alt) tuples. Empty when own is: no lines, and the DLL's list stands.
+    Second result: {competition: places listed} for those past FIELD (the last get nothing)."""
+    own = [tuple(int(x) for x in e) for e in own]
+    if not own:
+        return [], {}
+    out = []
+    for c, _n in COMPETITIONS:
+        out += [e for e in SHIPPED_ACCESS if e[2] == c] + [e for e in own if e[2] == c]
+    over = {}
+    for c in (0, 1, 2):
+        n = sum(1 for e in out if e[2] == c)
+        if n > FIELD:
+            over[c] = n
+    return out, over
+
+
+def read_uefa(path):
+    """the uefa lines of a world file, read as fl26swiss.lua reads them:
+    ^%s*uefa%s+(%d+)%s+(%d+)%s+(%d+)%s+(%d+)"""
+    import re
+    pat = re.compile(r"^\s*uefa\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)")
+    out = []
+    for line in open(path, encoding="utf-8"):
+        m = pat.match(line)
+        if m:
+            out.append(tuple(int(x) for x in m.groups()))
+    return out
+
+
 # names a league is called by that Country.bin spells differently
 ALIASES = {"SOUTH KOREA": "Republic of Korea", "KOREA REPUBLIC": "Republic of Korea"}
 
 
-def write_world(path, name, leagues, splits=(), uefa=()):
+def write_world(path, name, leagues, splits=(), uefa=(), uecl=()):
     """leagues: list of dicts with 'id', any of KEYS, and 'name'; splits: (total, regular,
-    [groups]) for the split seasons among them"""
+    [groups]) for the split seasons among them; uefa: (regulation, position, competition, alt)
+    places; uecl: the Conference League's first-season team ids"""
     lines = [FORMAT, "world %s" % name]
     for L in leagues:
         parts = ["league %d" % L["id"]]
@@ -81,6 +156,8 @@ def write_world(path, name, leagues, splits=(), uefa=()):
         lines.append("split %d regular=%d groups=%s" % (total, regular, ",".join(map(str, groups))))
     for e in uefa:
         lines.append("uefa %d %d %d %d" % tuple(e))
+    if uecl:
+        lines.append("uecl " + " ".join(map(str, uecl)))
     with open(path, "w", encoding="utf-8", newline="\r\n") as f:
         f.write("\n".join(lines) + "\n")
 

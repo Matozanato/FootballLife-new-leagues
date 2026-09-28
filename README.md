@@ -42,6 +42,10 @@ install anything.
 > - **League Builder**: new leagues and clubs, the game's own leagues and clubs renamed,
 >   **every club's players edited** (names, numbers, positions, abilities, skills, faces), and
 >   **league packages** (`.fl26pack`): a modder makes a league once, anybody adds it to their game.
+> - **Europe** (0.1.1): a new league's own Champions League, Europa League and Conference League
+>   places, and the Conference League itself (the 2024 format) as one tick in Build.
+> - **Updates itself** (from 0.1.1): it says when a new version is out and installs it —
+>   *Help → Check for updates*. Settings and projects stay.
 > - English and Croatian.
 >
 > Guide: [docs/mod-studio-guide.md](docs/mod-studio-guide.md) ·

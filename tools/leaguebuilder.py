@@ -18,7 +18,8 @@ which league sits above -- and nothing about ids:
           "clubs": 16, "legs": 2, "above": "Premijer Liga BiH", "exchange": 2 },
         { "name": "Split League", "country": "Bosnia and Herzegovina", "clubs": 12,
           "split": { "legs": 2, "groups": [6, 6], "group_legs": 2 } }
-      ] }
+      ],
+      "uecl": true }
 
   country     a Country.bin name (flag, Competition Info name, the region's country)
   clubs       10..24, the range seasons have been played with
@@ -29,20 +30,33 @@ which league sits above -- and nothing about ids:
   split       Scottish style: a regular phase, then top/bottom groups that keep their points
               (tools/mksplit.py); "groups" are club counts adding up to "clubs"
   club_names  optional; missing names become "<league> 01", "<league> 02", ...
+  europe      optional European places: [[position, competition], ...], competition 0 Champions
+              League, 1 Europa League, 2 Conference League, 3 Libertadores, 4 its qualifying
+              round, 5 AFC Champions League (fl26world.COMPETITIONS); each position once, and
+              only the league's own (1..clubs). Written as uefa lines of the world file, after
+              the shipped leagues' places (fl26world.uefa_places)
+  uecl        (the recipe, not a league) true, the default: the world gets the Conference
+              League -- the Champions League and Europa League league phase reshaped to one
+              group of 36 (mkreshape.py), the Conference League cloned from it (mkuecl.py:
+              competition 174, regulations 186/187, group 1210) and the Europa / Conference
+              League play-offs (mkeuropo.py: 188, 189), the ids fl26swiss.dll and the fixture
+              dates know. false: the European cups stay as the game ships them
 
 What plan() decides, so that nothing is left to a person to get wrong:
 
   regulation ids   mkworld's free list, taking only ids that have a Select Team slot
                    (fl26world.DEFAULT_SLOT) -- 11, 49, 60, 61, ... -- never one of BAD_REG
-  competition ids  from 130 up, the range FL's own added leagues use
+  competition ids  from 130 up, the range FL's own added leagues use, never 174 (the
+                   Conference League's)
   regions          a league with "above" takes its parent's; a new country gets the next
                    region from 29 up that nothing uses (sider/fl26reg64.lua reads 29..63)
   tier             1, or the parent's plus one
   split phases     mksplit's ids from 191 up (the range split seasons were tested on)
 
 build() writes the world folder: Team/Coach/Competition* tables (mkleague.add_league, as
-mkworld does), squads (mkplayers.py), splits (mksplit.py), and fl26world.txt in the folder --
-the world file every module reads. on() makes it the live world: the one active _FL26
+mkworld does), squads (mkplayers.py), splits (mksplit.py), the Conference League (above), and
+fl26world.txt in the folder -- the world file every module reads, with the uefa lines of the
+leagues' European places. on() makes it the live world: the one active _FL26
 cpk.root in sider.ini (siderroot.py) and the world file copied to modules\. check() reads
 sider.log after a start and says, module by module, whether the world file was taken.
 """
@@ -54,6 +68,7 @@ import pesdb
 import mkleague as M
 import mkworld as W
 import mkcoaches
+import mkuecl
 import fl26world
 
 GAME = os.environ.get("FL26_DIR", r"C:\Football Life 2026")
@@ -65,6 +80,10 @@ CID_FROM = 130
 SQUAD, PLAYER_CAP = 30, 51729            # tools/mkplayers.py --per / --cap, as the guide uses
 TEAM_CAP = 1536                          # clubs in all, shipped ones included
 MAX_SPLITS = 2                           # split seasons tested so far: two at a time (191..196)
+UECL_CID = mkuecl.CID                    # the Conference League's competition id: no league takes it
+# the league phase of the Champions League (phase 2) and Europa League (phase 1) as one group of
+# 36, the shape fl26swiss.dll draws and the Conference League is cloned from (mkreshape.py)
+RESHAPE = ["UEFA_CHAMPIONS_LEAGUE:2:groups:36:1:-", "UEFA_EUROPE_LEAGUE:1:groups:36:1:-"]
 UNIPAR = "common/character0/model/character/uniform/team/UniformParameter.bin"
 KIT_TEXTURES = "kit-textures.txt"
 MARK = "fl26world.txt"                   # a folder holding one was built by this; nothing else is replaced
@@ -195,8 +214,23 @@ def game_clubs(base):
     return out
 
 
+# letters a decomposition does not take apart (Đ is not D + a mark)
+FOLD = {"Đ": "D", "đ": "D", "Ł": "L", "ł": "L", "Ø": "O", "ø": "O", "ß": "SS", "Æ": "AE", "æ": "AE",
+        "Œ": "OE", "œ": "OE", "Þ": "TH", "þ": "TH", "ı": "I"}
+
+
+def ascii_letters(txt):
+    """the letters and digits of a name in capitals, marks taken off: Željezničar -> ZELJEZNICAR.
+    A short name is three bytes and the game's own are all A-Z and 0-9; the full name keeps
+    its letters (UTF-8, as the game's Bayern München)."""
+    import unicodedata
+    txt = "".join(FOLD.get(c, c) for c in txt)
+    txt = unicodedata.normalize("NFKD", txt)
+    return "".join(c for c in txt.upper() if c.isalnum() and c.isascii())
+
+
 def short_name(txt):
-    return "".join(c for c in txt.upper() if c.isalnum() and c.isascii())[:W.T_ABBR_LEN]
+    return ascii_letters(txt)[:W.T_ABBR_LEN]
 
 
 def apply_edits(edits, raw, regs, log=print):
@@ -301,7 +335,7 @@ def plan(recipe, base):
     if leagues and len(leagues) > len(free):
         raise BuildError("%d leagues, but only %d have a Select Team place (see docs/mod-studio.md)"
                          % (len(leagues), len(free)))
-    cids = [c for c in range(CID_FROM, W.CID_MAX + 1) if c not in used_cid][:len(leagues)]
+    cids = [c for c in range(CID_FROM, W.CID_MAX + 1) if c not in used_cid and c != UECL_CID][:len(leagues)]
     if len(cids) < len(leagues):
         raise BuildError("no free competition ids left")
     room = clubs_room(base)
@@ -327,7 +361,11 @@ def plan(recipe, base):
              "slot": fl26world.DEFAULT_SLOT[free[k]], "club_names": list(L.get("club_names") or []),
              "logo": L.get("logo") or None, "club_crests": list(L.get("club_crests") or []),
              "club_abbrs": list(L.get("club_abbrs") or []),
-             "exchange": int(L.get("exchange", 3)), "above": None, "tier": 1}
+             "exchange": int(L.get("exchange", 3)), "above": None, "tier": 1,
+             "europe": [[int(a), int(b)] for a, b in (L.get("europe") or [])]}
+        bad = europe_problems(n, L.get("europe") or [])
+        if bad:
+            raise BuildError("%s: European places: %s" % (name, "; ".join(bad)))
         if len(p["club_names"]) > n:
             raise BuildError("%s: %d club names for %d clubs" % (name, len(p["club_names"]), n))
         up = L.get("above")
@@ -378,7 +416,33 @@ def plan(recipe, base):
     if bad:
         raise BuildError("player changes:\n  " + "\n  ".join(bad[:20]))
     return {"world": recipe["world"], "leagues": out, "edits": recipe.get("edits") or {},
-            "players": recipe.get("players") or {}}
+            "players": recipe.get("players") or {}, "uecl": bool(recipe.get("uecl", True))}
+
+
+def europe_problems(clubs, europe):
+    """what is wrong with a league's European places ([[position, competition], ...]): each a
+    position of the league's own, 1..clubs, none twice, and a competition fl26swiss knows"""
+    out, seen = [], set()
+    comps = {c for c, _n in fl26world.COMPETITIONS}
+    for e in europe:
+        try:
+            pos, comp = int(e[0]), int(e[1])
+        except (TypeError, ValueError, IndexError):
+            out.append("%r is not a position and a competition" % (e,))
+            continue
+        if not 1 <= pos <= clubs:
+            out.append("position %d -- the league has %d clubs" % (pos, clubs))
+        if pos in seen:
+            out.append("position %d is listed twice" % pos)
+        seen.add(pos)
+        if comp not in comps:
+            out.append("competition %d is not one of %s" % (comp, ", ".join(str(c) for c in sorted(comps))))
+    return out
+
+
+def own_places(pl):
+    """(regulation, position, competition, alt) for the new leagues' European places"""
+    return [(p["rid"], pos, comp, 0) for p in pl["leagues"] for pos, comp in p.get("europe") or []]
 
 
 def order_by_parents(leagues):
@@ -406,6 +470,8 @@ def describe(pl):
     e = pl.get("edits") or {}
     lines = ["world %s: %d new leagues, changes to %d of the game's leagues and %d of its clubs"
              % (pl["world"], len(pl["leagues"]), len(e.get("leagues") or {}), len(e.get("clubs") or {}))]
+    lines.append("  Conference League: %s" % ("yes (competition %d, regulations %d/%d)"
+                                              % (UECL_CID, mkuecl.REG, mkuecl.KO) if pl.get("uecl") else "no"))
     squads = pl.get("players") or {}
     if squads:
         lines.append("  player changes in %d clubs" % len(squads))
@@ -418,6 +484,18 @@ def describe(pl):
                      % (p["name"], p["rid"], p["cid"], p["region"], p["slot"], p["tier"],
                         "  below %d (%d up/down)" % (p["above"], p["exchange"]) if p["above"] else "",
                         shape))
+        if p.get("europe"):
+            names = dict(fl26world.COMPETITIONS)
+            lines.append("      European places: %s" % ", ".join(
+                "%d. %s" % (pos, names.get(comp, comp)) for pos, comp in sorted(p["europe"])))
+    if pl["leagues"] and not own_places(pl):
+        lines.append("  no European places: the new leagues send nobody to Europe")
+    if not pl.get("uecl") and any(e[2] == 2 for e in own_places(pl)):
+        lines.append("  NOTE: Conference League places, but the world gets no Conference League")
+    names = dict(fl26world.COMPETITIONS)
+    for c, n in sorted(fl26world.uefa_places(own_places(pl))[1].items()):
+        lines.append("  NOTE: %s has %d places listed for %d clubs; the last %d get none"
+                     % (names[c], n, fl26world.FIELD, n - fl26world.FIELD))
     return "\n".join(lines)
 
 
@@ -431,7 +509,7 @@ def club_name(p, k):
 
 
 def abbr(name, used):
-    letters = "".join(c for c in name.upper() if c.isalnum())
+    letters = ascii_letters(name)
     for cand in (letters[:3], letters[:2] + letters[-1:], letters[:1] + letters[-2:]):
         if len(cand) == 3 and cand not in used:
             used.add(cand)
@@ -476,7 +554,7 @@ def build(pl, base, game, replace=False, log=print):
             M.put(r, W.T_NAME, club_name(p, k), W.T_NAME_LEN)
             mine = (p.get("club_abbrs") or [])[k:k + 1]
             if mine and mine[0].strip():
-                short = "".join(c for c in mine[0].upper() if c.isalnum() and c.isascii())[:W.T_ABBR_LEN]
+                short = short_name(mine[0])
                 used_abbr.add(short)
             else:
                 short = abbr(club_name(p, k), used_abbr)
@@ -540,6 +618,8 @@ def build(pl, base, game, replace=False, log=print):
         call(mksplit, args)
         log("  %d split season(s)" % len(splits))
 
+    uecl = europe(tmp, db, log) if pl.get("uecl") else []
+
     # the world file: the tables' own reading (fl26world.from_tables), with what the recipe
     # knows better -- the country chosen, and how many clubs go up and down
     with contextlib.redirect_stdout(io.StringIO()):
@@ -558,7 +638,14 @@ def build(pl, base, game, replace=False, log=print):
             L["promote"] = 0
         below = next((q for q in pl["leagues"] if q["above"] == p["rid"]), None)
         L["demote"] = below["exchange"] if below else 0
-    fl26world.write_world(os.path.join(tmp, MARK), pl["world"], leagues, split_lines)
+    uefa, over = fl26world.uefa_places(own_places(pl))
+    names = dict(fl26world.COMPETITIONS)
+    for c, n in sorted(over.items()):
+        log("  NOTE: %s has %d places listed for %d clubs; the last %d get none"
+            % (names[c], n, fl26world.FIELD, n - fl26world.FIELD))
+    if uefa:
+        log("  European places: %d of the new leagues, %d in all" % (len(own_places(pl)), len(uefa)))
+    fl26world.write_world(os.path.join(tmp, MARK), pl["world"], leagues, split_lines, uefa, uecl)
     json.dump(pl, open(os.path.join(tmp, "leaguebuilder-plan.json"), "w", encoding="utf-8"), indent=1)
 
     pictures(pl, tmp, base, log)
@@ -569,6 +656,27 @@ def build(pl, base, game, replace=False, log=print):
     os.rename(tmp, out)
     log("built %s: %d leagues, %d clubs" % (out, len(pl["leagues"]), made))
     return out
+
+
+def europe(root, db, log=print):
+    """the Conference League in the world being built (tables in <db>, the world folder <root>):
+    the Champions League and Europa League league phase as one group of 36, then mkuecl's clone
+    of the Europa League and mkeuropo's play-offs, each in place. Returns the entrants."""
+    import mkreshape, mkeuropo
+    args = ["--base", db, "--out", root]
+    for r in RESHAPE:
+        args += ["--reshape", r]
+    said = call(mkreshape, args)
+    for row in (1027, 1029):
+        if "replica %d kept: 36 clubs" % row not in said:
+            raise BuildError("the league phase reshape did not give group %d 36 clubs:\n%s" % (row, said))
+    log("  Champions League and Europa League: league phase of 36 (groups 1027, 1029)")
+    try:
+        clubs = mkuecl.build(db, root, log=log)
+        mkeuropo.build(db, root, log=log)
+    except SystemExit as e:
+        raise BuildError("Conference League: %s" % e)
+    return clubs
 
 
 def pictures(pl, root, base, log=print):

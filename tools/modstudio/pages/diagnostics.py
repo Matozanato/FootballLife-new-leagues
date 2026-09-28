@@ -65,10 +65,11 @@ class Diagnostics(Page):
     def run(self):
         g = self.app.game
         ini = self.app.ini() if g.ok() else None
+        recipe = dict(self.app.project.recipe)
         self.app.busy(True, _("Checking"))
 
         def job(progress):
-            rows = checks.full(g, ini)
+            rows = checks.full(g, ini, recipe)
             world = io.StringIO()
             try:
                 import leaguebuilder as B

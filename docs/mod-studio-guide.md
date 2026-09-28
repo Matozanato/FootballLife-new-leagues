@@ -33,6 +33,14 @@ The window is in English. **Settings → Language → Hrvatski** switches it to 
 3. Open **Overview**. It shows your setup at a glance and lists problems. Double-click a
    problem to open the page that fixes it.
 
+**Updates.** A few seconds after it starts, the program asks GitHub whether a newer FL26 Mod
+Studio is out, and says so only when there is one. **Download and install** fetches the new zip,
+checks it against the release's checksum, closes the program, puts the new files over the old
+ones and starts it again. Your settings, projects, restore points and the game are not touched.
+**Help → Check for updates** asks at any time. If the program sits in a folder Windows will not
+let it write to (such as Program Files), it opens the release page instead: unpack the zip
+yourself, or move the program to a folder of your own.
+
 ## 3. The pages
 
 The list on the left has four groups.
@@ -122,6 +130,7 @@ The League Builder adds new leagues to the game and changes the game's own. What
 | **Format** | *Everyone plays everyone*, 1 to 4 times, or *splits in two (Scottish style)*. |
 | **Division** | *(top division)*, or the league above it: another new league, or one of the game's. |
 | **Up / down** | How many clubs change places with the league above at the end of the season. |
+| **Europe** | Top division only: which league position goes to which European competition. **Top flight: 1st UCL, 2nd UEL, 3rd UECL** fills the usual three; **Add place**, **Remove place** and **Clear** for anything else. Each position once, and only positions the league has. Leave it empty for a lower tier. |
 | **Logo** | Any picture (PNG with a transparent background looks best). Empty: one is drawn for you. |
 
 **World name** (on the same page) must start with `_FL26`.
@@ -129,6 +138,9 @@ The League Builder adds new leagues to the game and changes the game's own. What
 **New clubs**: pick the league, then **Edit club** (name, short name, crest), **Paste names...**
 or **Load names from file...**. An empty name becomes `<league> 01`, `<league> 02` ...; a club
 with no crest gets a numbered badge. Kits are lent from the game's own clubs.
+Names keep their letters (FK Željezničar); the three-letter short name has none, as in the game,
+so Č, Ž, Đ become C, Z, D there. After **Build** the **Team ID** column shows each club's id in
+the game.
 
 **Game's leagues and clubs**: new names, logos and crests for what the game already has.
 
@@ -183,6 +195,15 @@ one face you mean.
 3. **Switch it on** — makes it the active world in `sider.ini`.
 4. Start the game, come back and press **After a start: check**. It reads `sider.log` and says,
    module by module, whether the world was taken.
+
+**Include the Conference League** (on the Build page, on by default) also builds the
+Conference League, and gives the Champions League and the Europa League their league phase of
+36 clubs, with the February play-off of all three. Off: the European cups as the game ships them.
+
+> **European places.** The places you give your leagues come after the ones the game's own
+> leagues have. Each competition takes 36 clubs; places past the 36th get nothing, and
+> **Check the plan** says so. New leagues with no places send nobody to Europe, and Overview
+> warns about it.
 
 Then **start a new Master League** (or Become a Legend) career. The new leagues are under their
 country in Select Team and Kick Off.
@@ -249,5 +270,7 @@ ones.
 | The game does not start after a change | Restore points → put `sider.ini` back, or switch to a profile that worked. |
 | The new league is not in Select Team | Start a *new* career; old careers keep their old leagues. |
 | Club names are the game's | An Edit file overrides them (section 8). |
+| *your leagues send nobody to Europe* | New leagues → Edit the top division → Europe (the **Top flight** button fills the usual three), then Build again. |
+| *the Conference League is on, but its tables are missing* | Build the world again: it was built before the option, or with it off. |
 | A face does not show | The folder must hold `#Win\face.fpk`; Build again after choosing it. |
 | Anything else | Diagnostics → **Copy a report**, and post it with `SiderAddons\sider.log`. |

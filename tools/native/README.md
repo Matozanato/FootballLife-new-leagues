@@ -22,7 +22,9 @@ hands it the configuration; the DLL does the rest.
   regulations only: the 36-club league phase of the Champions League, Europa League and
   Conference League (the draw tables are generated and checked by `tools/mkswiss.py` into
   `fl26swiss_table.h`), their 9-24 play-off and fixed knockout bracket, the UEFA access
-  list, and the calendar of leagues that are not 20 clubs playing twice. About 1,700 lines.
+  list, and the calendar of leagues that are not 20 clubs playing twice. It also runs new
+  continental cups named by `ccup` lines of a world file (groups then a knockout, or a
+  straight knockout); nothing uses that yet in the public modules. About 3,000 lines.
   It writes no file; its log goes to `sider.log` through the loader.
 
 None has third-party code or any network access.
@@ -34,7 +36,7 @@ None has third-party code or any network access.
 | `sider/fl26join.dll` | `b76b79c83ff490af8e7dd97878ec9bf76df519a3db979b1c4c9a9b25e041b1af` |
 | `sider/experimental/fl26clubs.dll` | `2b79cb83eb24877553596d5fe9b18e7c1c453ff2e43d21915a788e2c977bb469` |
 | `sider/experimental/fl26chain.dll` | `cfadf4cf8a8c4cf0b943a5b42dff3d51d56dd50a96981b37dc3e8eca24d01197` |
-| `sider/experimental/fl26swiss.dll` | `f6ca794290a8f1f00eee588d76dc623fa8b35561e3603aa22ec7d1736e9e4de4` |
+| `sider/experimental/fl26swiss.dll` | `f6b8f5871d664a1d9b76f01954633746ac613c5fa0d317e4bd65ca3db0b87ce4` |
 
 ```powershell
 (Get-FileHash "C:\fl26\sider\fl26join.dll" -Algorithm SHA256).Hash

@@ -1650,6 +1650,236 @@ static uint64_t cwc_dates(uint16_t id, uint64_t reg, void* vec)
   return rv;
 }
 
+/* ---- continental cups of the world file: groups of four, then a knockout ----
+ *
+ * For a continent the game has no club competition of its own (Africa first: the CAF Champions
+ * League and the Confederation Cup). tools/mkccup.py builds each as a new competition -- a group
+ * stage cloned from the Copa Libertadores' (master + one replica per group, home and away) and a
+ * knockout cloned from the Europa League's -- and the world file names it:
+ *
+ *   ccup <groups master> ko=<knockout> groups=<n> entry=<reg>:<position>,... name=<text>
+ *
+ * The exe knows nothing of these ids, so everything the game would do for its own cups happens
+ * here, the Club World Cup way: the field is taken from league tables when the Champions League
+ * play-off progresses (the day the Conference League is filled, late August), drawn with the
+ * game's group draw (entry order = pots of `groups`), and the group rows are handed to
+ * register_all; when every group is over, winners and runners-up go into the knockout (A1-B2,
+ * C1-D2 ... then B1-A2, D1-C2 ...), which is started. Dates are borrowed -- the Libertadores
+ * group stage (reg 9) and the Champions League knockout (reg 4) -- and moved to the days below.
+ * A cup whose rows are not all in the world is left alone.
+ *
+ * `groups=0` is a straight knockout (the CONCACAF Champions Cup): the master is the knockout
+ * itself (`ccup <ko> ko=<ko> groups=0`), filled on the same day with the entries in the order
+ * given -- first v second, third v fourth ... -- and started at once. */
+#define MAX_CCUP 4
+#define CCUP_MAX_GROUPS 8
+#define CCUP_MAX_ENTRY 32
+#define R_LIBGROUP 9
+#define R_UCLKO    4
+typedef struct { uint16_t reg, ko, groups, n; uint16_t ereg[CCUP_MAX_ENTRY]; uint8_t erank[CCUP_MAX_ENTRY]; } ccup_t;
+static ccup_t g_ccup[MAX_CCUP]; static int g_nccup = 0;
+static uint32_t g_ccup_field[MAX_CCUP][CCUP_MAX_ENTRY]; static unsigned g_ccup_nf[MAX_CCUP];
+static unsigned g_ccup_done[MAX_CCUP];
+/* African weekends away from UEFA's evenings: 22/29 November, 26 January, 2/9/16 February;
+   the knockout 15/22 March, 5/12 April (the first pair is spare), 26 April/3 May, final 17 May */
+static const uint32_t CCUP_GROUP_DAYS[6] = { 326, 333, 25, 32, 39, 46 };
+static const uint32_t CCUP_KO_DAYS[7] = { 73, 80, 94, 101, 115, 122, 136 };
+
+static uint16_t ccup_rep(const ccup_t* c, int g) { return (uint16_t)(c->reg + 1024 * (g + 1)); }
+static int ccup_world(const ccup_t* c)
+{
+  if (!c->groups) return get_rec(c->ko) != 0;
+  return get_rec(c->reg) && get_rec(c->ko) && get_rec(ccup_rep(c, 0)) && get_rec(ccup_rep(c, c->groups - 1));
+}
+/* which cup a regulation belongs to (0-based), and whether it is the knockout: -1 = none */
+static int ccup_of(uint16_t id, int* ko)
+{
+  for (int k = 0; k < g_nccup; k++) {
+    const ccup_t* c = &g_ccup[k];
+    *ko = id == c->ko;
+    if (id == c->reg || id == c->ko) return k;
+    if (c->groups && id > 1024 && (id & 0x3ff) == c->reg && id <= ccup_rep(c, c->groups - 1)) return k;
+  }
+  return -1;
+}
+static int ccup_taken(uint32_t c)
+{
+  for (int k = 0; k < g_nccup; k++) if (has_club(g_ccup_field[k], g_ccup_nf[k], c)) return 1;
+  return 0;
+}
+
+__declspec(dllexport) int fl26_swiss_ccup(const uint16_t* v, int n)
+{
+  /* per cup: reg, ko, groups, entries, then (reg, position) per entry */
+  if ((!v && n) || n < 0) return -1;
+  g_nccup = 0;
+  size_t p = 0;
+  for (int i = 0; i < n && g_nccup < MAX_CCUP; i++) {
+    ccup_t* c = &g_ccup[g_nccup];
+    c->reg = v[p]; c->ko = v[p + 1]; c->groups = v[p + 2]; unsigned ne = v[p + 3]; p += 4;
+    c->n = 0;
+    for (unsigned e = 0; e < ne; e++, p += 2)
+      if (c->n < CCUP_MAX_ENTRY) { c->ereg[c->n] = v[p]; c->erank[c->n] = (uint8_t)v[p + 1]; c->n++; }
+    if (!c->groups) {
+      c->reg = c->ko;
+      if (c->n != 4 && c->n != 8 && c->n != 16 && c->n != 32) {
+        logf("fl26swiss: cup %u -- a knockout of %u clubs is not 4, 8, 16 or 32; left out", (unsigned)c->ko,
+             (unsigned)c->n);
+        continue;
+      }
+      logf("fl26swiss: cup %u from the world file: a knockout of %u", (unsigned)c->ko, (unsigned)c->n);
+      g_nccup++;
+      continue;
+    }
+    if (c->groups > CCUP_MAX_GROUPS || c->n != 4u * c->groups) {
+      logf("fl26swiss: cup %u -- %u group(s) and %u entries do not make groups of four; left out",
+           (unsigned)c->reg, (unsigned)c->groups, (unsigned)c->n);
+      continue;
+    }
+    logf("fl26swiss: cup %u (knockout %u) from the world file: %u groups, %u entries", (unsigned)c->reg,
+         (unsigned)c->ko, (unsigned)c->groups, (unsigned)c->n);
+    g_nccup++;
+  }
+  return g_nccup;
+}
+
+static int ccup_fill_one(int k, void* started)
+{
+  const ccup_t* c = &g_ccup[k];
+  unsigned char* rec = get_rec(c->reg);
+  if (!ccup_world(c)) { logf("fl26swiss: cup %u -- its rows are not all in this world; left alone", (unsigned)c->reg); return 0; }
+  if (rec_count(rec) || (c->groups && rec_count(get_rec(ccup_rep(c, 0))))) {
+    logf("fl26swiss: cup %u already holds %u clubs; not filled again", (unsigned)c->reg, rec_count(rec));
+    return 0;
+  }
+  unsigned n = 0, gaps = 0;
+  g_ccup_nf[k] = 0;
+  for (unsigned i = 0; i < c->n; i++) {
+    const char* how = ""; uint32_t club = 0;
+    for (int rank = c->erank[i]; rank <= FINAL_MAX; rank++) {
+      club = cwc_club(c->ereg[i], rank, &how);
+      if (!club) break;
+      if ((club >> 14) && !has_club(g_ccup_field[k], n, club) && !ccup_taken(club)) break;
+      club = 0;
+    }
+    if (club) {
+      g_ccup_field[k][n++] = club; g_ccup_nf[k] = n;
+      logf("fl26swiss:   cup %u entry %2u: reg %u position %u -> %08x (%s)", (unsigned)c->reg, n,
+           (unsigned)c->ereg[i], (unsigned)c->erank[i], club, how);
+    } else gaps++;
+  }
+  if (n != c->n) {
+    logf("fl26swiss: cup %u -- only %u of %u clubs found; not started", (unsigned)c->reg, n, (unsigned)c->n);
+    g_ccup_nf[k] = 0;
+    return 0;
+  }
+  if (!c->groups) {
+    u32vec v = { g_ccup_field[k], g_ccup_field[k] + n, g_ccup_field[k] + n };
+    ((setcl_fn)(uintptr_t)(g_base + SETCL_RVA))(c->ko, &v, 1);
+    run_flush();
+    logf("fl26swiss: cup %u -- day %d: knockout of %u clubs (%08x v %08x ...)", (unsigned)c->ko, today(),
+         rec_count(rec), g_ccup_field[k][0], g_ccup_field[k][1]);
+    if (rec_count(rec) != n) return 0;
+    start_stage(started, c->ko);
+    return 1;
+  }
+  u32vec v = { g_ccup_field[k], g_ccup_field[k] + n, g_ccup_field[k] + n };
+  ((setcl_fn)(uintptr_t)(g_base + SETCL_RVA))(c->reg, &v, 1);
+  run_flush();
+  u32vec w = { g_ccup_field[k], g_ccup_field[k] + n, g_ccup_field[k] + n };
+  ((gdraw_fn)(uintptr_t)(g_base + GDRAW_RVA))(c->reg, &w, 1);
+  run_flush();
+  char line[96]; int p = 0;
+  uint16_t reps[CCUP_MAX_GROUPS];
+  for (int g = 0; g < c->groups; g++) {
+    reps[g] = ccup_rep(c, g);
+    unsigned char* rg = get_rec(reps[g]);
+    p += snprintf(line + p, sizeof line - p, " %c:%u", 'A' + g, rg ? rec_count(rg) : 0);
+  }
+  logf("fl26swiss: cup %u -- day %d: %u clubs drawn, groups%s", (unsigned)c->reg, today(), rec_count(rec), line);
+  struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { reps, reps + c->groups, reps + c->groups };
+  ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
+  run_flush();
+  logf("fl26swiss: cup %u -- groups %u..%u handed to register_all", (unsigned)c->reg, (unsigned)reps[0],
+       (unsigned)reps[c->groups - 1]);
+  g_ccup_done[k] = 0;
+  return 0;
+}
+static int ccup_fill(void* started)
+{
+  int any = 0;
+  for (int k = 0; k < g_nccup; k++) any |= ccup_fill_one(k, started);
+  return any;
+}
+
+static int ccup_progress(int k, uint16_t r, void* started)
+{
+  const ccup_t* c = &g_ccup[k];
+  unsigned all = (1u << c->groups) - 1;
+  if (r == c->reg) g_ccup_done[k] = all;
+  else g_ccup_done[k] |= 1u << (((r >> 10) - 1) & 31);
+  logf("fl26swiss: cup %u -- progression for reg %u on day %d (groups reported %02x)", (unsigned)c->reg,
+       (unsigned)r, today(), g_ccup_done[k]);
+  if (g_ccup_done[k] != all) return 0;
+  unsigned char* ko = get_rec(c->ko);
+  if (!ko || rec_count(ko)) return 0;
+  static uint32_t buf[2 * CCUP_MAX_GROUPS];
+  int nk = 2 * c->groups;
+  for (int i = 0; i < nk; i++) {
+    /* first half: group 2j's winner v group 2j+1's runner-up; second half the other way round */
+    int half = i >= c->groups, j = (i % c->groups) / 2, away = i & 1;
+    int g = 2 * j + (half ? !away : away), place = away;
+    unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(ccup_rep(c, g));
+    uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
+    if (rows < 2 || rows > 8) {
+      logf("fl26swiss: cup %u -- group %c has a table of %u rows; knockout not filled", (unsigned)c->reg,
+           'A' + g, (unsigned)rows);
+      return 0;
+    }
+    buf[i] = *(uint32_t*)(t + place * 20);
+  }
+  u32vec v = { buf, buf + nk, buf + nk };
+  ((setcl_fn)(uintptr_t)(g_base + SETCL_RVA))(c->ko, &v, 1);
+  run_flush();
+  logf("fl26swiss: cup %u -- knockout reg %u now %u clubs (A1 %08x v B2 %08x ...)", (unsigned)c->reg,
+       (unsigned)c->ko, rec_count(ko), buf[0], buf[1]);
+  g_ccup_done[k] = 0;
+  if ((int)rec_count(ko) != nk) return 0;
+  start_stage(started, c->ko);
+  return 1;
+}
+
+static uint64_t ccup_dates(int k, int ko, uint16_t id, uint64_t reg, void* vec)
+{
+  uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | (ko ? R_UCLKO : R_LIBGROUP), vec);
+  vec_t* v = (vec_t*)vec;
+  size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+  date_t* r = (date_t*)v->b;
+  size_t want = ko ? 7 : 6;
+  static unsigned said[MAX_CCUP];
+  unsigned bit = ko ? 1 : 2;
+  if (have == 0 || have > want) {
+    if (!(said[k] & bit)) logf("fl26swiss: cup reg %u: the borrowed calendar has %u records (up to %u expected); left as it is",
+                               (unsigned)id, (unsigned)have, (unsigned)want);
+    said[k] |= bit;
+    return rv;
+  }
+  if (!(said[k] & bit))
+    for (size_t i = 0; i < have; i++)
+      logf("fl26swiss: cup reg %u borrowed record %u: day %u round %u kind %u", (unsigned)id, (unsigned)i,
+           r[i].day, r[i].round, r[i].kind);
+  /* a knockout of eight is handed the round-of-16 pair first; the last record is the final */
+  for (size_t i = 0; i < have; i++) {
+    size_t j = ko ? (i + 1 == have ? want - 1 : i + (want - have)) : i * want / have;
+    r[i].day = ko ? CCUP_KO_DAYS[j] : CCUP_GROUP_DAYS[j];
+  }
+  if (!(said[k] & bit))
+    logf("fl26swiss: cup reg %u dated: %s days %u..%u (%u records)", (unsigned)id, ko ? "knockout" : "groups",
+         r[0].day, r[have - 1].day, (unsigned)have);
+  said[k] |= bit;
+  return rv;
+}
+
 /* A split's regular phase ending: the game hands the clubs to the groups in 0x141343d70, which
  * finds the format 13/14 rows by the competition key and gives each the next N clubs of the
  * regular phase's table. It is generic, but only case 8 of the progression switch calls it, and
@@ -1685,6 +1915,14 @@ char prog_handler(void* ctx, uint64_t id, void* started)
     if (cwc_progress(r, started)) ok = 1;
     return ok;
   }
+  {
+    int ko, k = ccup_of(r, &ko);
+    if (k >= 0 && ccup_world(&g_ccup[k])) {
+      char ok = ((prog_fn)(uintptr_t)g_tramp_prog)(ctx, id, started);
+      if (!ko && ccup_progress(k, r, started)) ok = 1;
+      return ok;
+    }
+  }
   /* the two play-off hand-overs replace the game's own case, they do not follow it */
   /* The Conference League's six matchdays end in December, not January: its play-off is drawn
      then (and dated in February like the others) -- otherwise the game sends the top 16 straight
@@ -1715,7 +1953,7 @@ char prog_handler(void* ctx, uint64_t id, void* started)
     g_prog_seen[r] = 1;
     logf("fl26swiss: progression asked for reg %u -> %d", (unsigned)r, (int)ok);
   }
-  if (r == 2) { if (uecl_fill(started)) ok = 1; }
+  if (r == 2) { if (uecl_fill(started)) ok = 1; if (ccup_fill(started)) ok = 1; }
   else if (r == UECL_REG || r == UECL_ROW) { if (uecl_ko(started)) ok = 1; }
   return ok;
 }
@@ -2431,6 +2669,10 @@ uint64_t date_handler(uint64_t reg, void* vec)
     if (vec && (part = split_part(id, &s)) != 0) { uint64_t rv = split_dates(id, reg, vec, part, s); split_keys(); return rv; }
   }
   if (vec && (cwc_id(id) || id == CWC_KO) && cwc_world()) return cwc_dates(id, reg, vec);
+  if (vec) {
+    int ko, k = ccup_of(id, &ko);
+    if (k >= 0 && ccup_world(&g_ccup[k])) return ccup_dates(k, ko, id, reg, vec);
+  }
   if (european(id)) seen_once(1, id, 0);
   if (vec && is_playoff(id)) {
     uint64_t prv = ((date_fn)(uintptr_t)g_tramp_date)(reg, vec);
@@ -2598,8 +2840,9 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   if (!euro) return in;
   logf("fl26swiss: July teardown on day %d (%d ids)", today(), n);
   int uecl = get_rec(UECL_REG) && !(has186 && has187 && has1210);
-  int cwc = cwc_world();
-  if (!uecl && !cwc) return in;
+  int cwc = cwc_world(), nccw = 0;
+  for (int c = 0; c < g_nccup; c++) if (ccup_world(&g_ccup[c])) nccw++;
+  if (!uecl && !cwc && !nccw) return in;
   /* The list names every regulation it closes -- group rows are not reached through their
    * parent -- so the league phase's row goes in as well, or its 36 clubs, its tables and its
    * 144 matches outlive the season. */
@@ -2620,6 +2863,19 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
       if (!there && get_rec(id) && k < 512) { g_td_list[k++] = id; ncwc++; }
     }
     logf("fl26swiss: July teardown -- %d Club World Cup regulation(s) added", ncwc);
+  }
+  /* the world file's continental cups: master, knockout and group rows */
+  for (int c = 0; c < g_nccup; c++) {
+    const ccup_t* cc = &g_ccup[c];
+    if (!ccup_world(cc)) continue;
+    int nc = 0;
+    for (int g = -2; g < cc->groups; g++) {
+      uint16_t id = g == -2 ? cc->ko : g == -1 ? cc->reg : ccup_rep(cc, g);
+      int there = 0;
+      for (int j = 0; j < k; j++) if (g_td_list[j] == id) there = 1;
+      if (!there && get_rec(id) && k < 512) { g_td_list[k++] = id; nc++; }
+    }
+    logf("fl26swiss: July teardown -- cup %u: %d regulation(s) added", (unsigned)cc->reg, nc);
   }
   /* the added play-offs and their ties, when the world has them */
   int npo = 0;

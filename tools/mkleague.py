@@ -44,7 +44,7 @@ def load(d, n):
 
 
 def put(b, off, s, n):
-    v = s.encode("utf-8")[:n - 1]
+    v = s.encode("utf-8")[:n - 1].decode("utf-8", "ignore").encode("utf-8")   # never half a letter
     b[off:off + n] = v + b"\0" * (n - len(v))
 
 

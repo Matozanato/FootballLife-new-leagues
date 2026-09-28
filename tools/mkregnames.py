@@ -140,6 +140,8 @@ def main(argv):
         if need and max(need) > 28:
             print("  ids above 28 also need sider/fl26reg64.lua to be read at all")
     for part in get("--map", DEFAULT_MAP).split(","):
+        if not part:                # an empty map: every league sits in a region that has a heading
+            continue
         rid, nm = part.split("=")
         rid = int(rid)
         if nm not in known:

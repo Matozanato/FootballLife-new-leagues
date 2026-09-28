@@ -2,17 +2,19 @@
 
 Every page edits app.project.recipe (modstudio/project.py); leaguebuilder.py does the work.
 """
-import csv, io, os
+import csv, io, json, os
 
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QPixmap, QImage, QColor, QBrush
-from PySide6.QtWidgets import (QComboBox, QDialog, QDialogButtonBox, QFormLayout, QHBoxLayout,
-                               QLabel, QLineEdit, QListWidget, QListWidgetItem, QPlainTextEdit,
-                               QPushButton, QRadioButton, QSpinBox, QSplitter, QTreeWidget,
-                               QTreeWidgetItem, QVBoxLayout, QWidget, QFileDialog, QButtonGroup,
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout,
+                               QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
+                               QPlainTextEdit, QPushButton, QRadioButton, QSpinBox, QSplitter,
+                               QTableWidget, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
+                               QFileDialog, QButtonGroup, QHeaderView, QAbstractItemView,
                                QMessageBox)
 
 import leaguebuilder as B
+import fl26world
 from .. import theme
 from ..i18n import _, tr
 from ..backups import snapshot
@@ -20,6 +22,10 @@ from ..ui import Page, section, hint, row, ask, error, run_job
 
 PICTURES = "Pictures (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;All files (*.*)"
 ALL_CLUBS = -1
+# the European competitions a league place can lead to (fl26world.COMPETITIONS), short names for
+# the league list
+SHORT = {0: "UCL", 1: "UEL", 2: "UECL", 3: "LIB", 4: "LIB-Q", 5: "AFC"}
+TOP_FLIGHT = [[1, 0], [2, 1], [3, 2]]      # the preset: 1st UCL, 2nd UEL, 3rd UECL
 
 
 def pixmap(path, size):
@@ -35,6 +41,10 @@ def pixmap(path, size):
         return pm
     except Exception:
         return None
+
+
+def europe_text(L):
+    return ", ".join("%d %s" % (pos, SHORT.get(comp, comp)) for pos, comp in sorted(L.get("europe") or []))
 
 
 def fmt_text(L):
@@ -87,6 +97,79 @@ class PictureField(QWidget):
             self.view.setPixmap(QPixmap())
             self.view.setText(_(self.empty) if not self.path else _("(not readable)"))
             self.view.setWordWrap(True)
+
+
+class EuropeTable(QWidget):
+    """a league's European places: league position -> competition, one row each"""
+
+    def __init__(self, places, clubs):
+        super().__init__()
+        self.clubs = clubs
+        v = QVBoxLayout(self)
+        v.setContentsMargins(0, 0, 0, 0)
+        self.table = QTableWidget(0, 2)
+        self.table.setHorizontalHeaderLabels([_("League position"), _("Competition")])
+        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.table.verticalHeader().setVisible(False)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.setMinimumHeight(120)
+        self.table.setMaximumHeight(170)
+        v.addWidget(self.table)
+        self.preset = QPushButton(_("Top flight: 1st UCL, 2nd UEL, 3rd UECL"))
+        self.preset.setToolTip(_("1st to the Champions League, 2nd to the Europa League, 3rd to the Conference League"))
+        self.preset.clicked.connect(lambda: self.set_places(TOP_FLIGHT))
+        add = QPushButton(_("Add place"))
+        add.clicked.connect(self.add)
+        rem = QPushButton(_("Remove place"))
+        rem.clicked.connect(self.remove)
+        clr = QPushButton(_("Clear"))
+        clr.clicked.connect(lambda: self.set_places([]))
+        v.addWidget(row(self.preset, add, rem, clr))
+        self.set_places(places or [])
+
+    def _row(self, pos, comp):
+        r = self.table.rowCount()
+        self.table.insertRow(r)
+        sp = QSpinBox()
+        sp.setRange(1, max(self.clubs, 1))
+        sp.setValue(min(max(int(pos), 1), max(self.clubs, 1)))
+        cb = QComboBox()
+        for c, name in fl26world.COMPETITIONS:
+            cb.addItem(_(name), c)
+        cb.setCurrentIndex(max(0, cb.findData(int(comp))))
+        self.table.setCellWidget(r, 0, sp)
+        self.table.setCellWidget(r, 1, cb)
+
+    def set_places(self, places):
+        self.table.setRowCount(0)
+        for pos, comp in places:
+            self._row(pos, comp)
+
+    def add(self):
+        taken = {p for p, _c in self.places()}
+        pos = next((k for k in range(1, self.clubs + 1) if k not in taken), 1)
+        self._row(pos, 1 if pos > 1 else 0)
+
+    def remove(self):
+        rows = sorted({i.row() for i in self.table.selectionModel().selectedRows()}, reverse=True)
+        if not rows and self.table.rowCount():
+            rows = [self.table.currentRow() if self.table.currentRow() >= 0 else self.table.rowCount() - 1]
+        for r in rows:
+            self.table.removeRow(r)
+
+    def set_clubs(self, n):
+        """the league's club count changed: positions go up to it"""
+        self.clubs = n
+        for r in range(self.table.rowCount()):
+            self.table.cellWidget(r, 0).setMaximum(max(n, 1))
+
+    def set_top(self, top):
+        self.preset.setEnabled(top)
+
+    def places(self):
+        return [[self.table.cellWidget(r, 0).value(), self.table.cellWidget(r, 1).currentData()]
+                for r in range(self.table.rowCount())]
 
 
 class Dialog(QDialog):
@@ -176,6 +259,13 @@ class LeagueDialog(Dialog):
         self.form.addRow(_("Up / down"), row(self.exchange, QLabel(_("clubs, with the league above"))))
         self.logo = PictureField(L.get("logo"))
         self.form.addRow(_("Logo"), self.logo)
+        self.europe = EuropeTable(L.get("europe"), self.clubs.value())
+        self.form.addRow(_("Europe"), self.europe)
+        self.form.addRow("", hint(_("league position -> European competition, for a top division; "
+                                    "leave it empty for lower tiers")))
+        self.clubs.valueChanged.connect(self.europe.set_clubs)
+        self.above.currentIndexChanged.connect(lambda _i: self.europe.set_top(self.above.currentData() is None))
+        self.europe.set_top(self.above.currentData() is None)
 
     def ok(self):
         L = self.league
@@ -203,6 +293,15 @@ class LeagueDialog(Dialog):
             L["logo"] = self.logo.path
         else:
             L.pop("logo", None)
+        places = self.europe.places()
+        bad = B.europe_problems(L["clubs"], places)
+        if bad:
+            error(self, "League", _("European places: %s") % "; ".join(tr(b) for b in bad))
+            return
+        if places:
+            L["europe"] = sorted(places)
+        else:
+            L.pop("europe", None)
         if not L["name"] or not L["country"]:
             error(self, "League", _("A league needs a name and a country."))
             return
@@ -228,7 +327,8 @@ class ClubDialog(Dialog):
         self.short.setMaxLength(3)
         self.short.setFixedWidth(60)
         self.form.addRow(_("Short name"), self.short)
-        self.form.addRow("", hint(_("three letters, A-Z and 0-9; empty = made from the name")))
+        self.form.addRow("", hint(_("three letters or digits; Č, Ž, Đ ... become C, Z, D (the game's short "
+                                    "names have no marks); empty = made from the name")))
         self.crest = PictureField(crest)
         self.form.addRow(_("Crest"), self.crest)
         if was:
@@ -237,8 +337,8 @@ class ClubDialog(Dialog):
 
     def ok(self):
         short = self.short.text().strip()
-        if short and B.short_name(short) != short.upper():
-            error(self, "Club", _("The short name takes letters A-Z and digits only."))
+        if short and (not all(c.isalnum() for c in short) or not B.short_name(short)):
+            error(self, "Club", _("The short name takes letters and digits only."))
             return
         self.result = (self.name.text().strip(), B.short_name(short), self.crest.path)
         self.accept()
@@ -310,8 +410,8 @@ class NewLeagues(BuilderPage):
         self.tree.setAlternatingRowColors(True)
         self.tree.setIconSize(QSize(28, 28))
         self.tree.setHeaderLabels([_("League"), _("Country"), _("Clubs"), _("Format"), _("Division"),
-                                   _("Up / down"), _("Players changed")])
-        for c, w in enumerate((240, 150, 60, 170, 230, 80)):
+                                   _("Up / down"), _("Europe"), _("Players changed")])
+        for c, w in enumerate((240, 150, 60, 170, 230, 80, 150)):
             self.tree.setColumnWidth(c, w)
         self.tree.itemDoubleClicked.connect(lambda *a: self.edit())
         self.outer.addWidget(self.tree, 1)
@@ -345,7 +445,8 @@ class NewLeagues(BuilderPage):
             div = _("top") if up in (None, "") else _("below %s") % (names.get(up, up) if isinstance(up, int) else up)
             n = sum(len((pl.get("%s/%d" % (L["name"], k)) or {}).get("edits") or {}) for k in range(L.get("clubs", 0)))
             it = QTreeWidgetItem([L["name"], L.get("country", ""), str(L.get("clubs", "")), fmt_text(L), div,
-                                  str(L.get("exchange", 3)) if up not in (None, "") else "", str(n) if n else ""])
+                                  str(L.get("exchange", 3)) if up not in (None, "") else "", europe_text(L),
+                                  str(n) if n else ""])
             pm = pixmap(L.get("logo"), 28)
             if pm:
                 it.setIcon(0, pm)
@@ -464,8 +565,9 @@ class NewClubs(BuilderPage):
         self.tree.setRootIsDecorated(False)
         self.tree.setAlternatingRowColors(True)
         self.tree.setIconSize(QSize(28, 28))
-        self.tree.setHeaderLabels(["#", _("Name"), _("Short name"), _("Crest"), _("Players changed")])
-        for c, w in enumerate((40, 320, 90, 260)):
+        self.tree.setHeaderLabels(["#", _("Name"), _("Short name"), _("Team ID"), _("Crest"), _("Players changed")])
+        self.tree.headerItem().setToolTip(3, _("The club's id in the game, from the last Build"))
+        for c, w in enumerate((40, 320, 90, 80, 260)):
             self.tree.setColumnWidth(c, w)
         self.tree.itemDoubleClicked.connect(lambda *a: self.edit())
         self.outer.addWidget(self.tree, 1)
@@ -501,6 +603,23 @@ class NewClubs(BuilderPage):
             L[k] = v + [None if k == "club_crests" else ""] * (n - len(v))
         return L["club_names"], L["club_abbrs"], L["club_crests"]
 
+    def built_ids(self, L):
+        """the team ids a build gave this league's clubs (the world folder's leaguebuilder-plan.json),
+        or []: ids are handed out at Build, after the game's own clubs"""
+        g = self.app.game
+        w = self.project.recipe.get("world")
+        if not w or not g.ok():
+            return []
+        try:
+            with open(os.path.join(g.livecpk_dir, w, "leaguebuilder-plan.json"), encoding="utf-8") as f:
+                built = json.load(f)
+        except (OSError, ValueError):
+            return []
+        for p in built.get("leagues") or []:
+            if p.get("name") == L["name"]:
+                return list(p.get("teams") or [])
+        return []
+
     def show_clubs(self):
         cur = self.tree.currentItem()
         cur = cur.data(0, Qt.UserRole) if cur else None
@@ -510,9 +629,11 @@ class NewClubs(BuilderPage):
             return
         names, abbrs, crests = self.lists(L)
         pl = self.project.players()
+        ids = self.built_ids(L)
         for k in range(L["clubs"]):
             n = len((pl.get("%s/%d" % (L["name"], k)) or {}).get("edits") or {})
             it = QTreeWidgetItem([str(k + 1), names[k] or "%s %02d" % (L["name"], k + 1), abbrs[k] or "",
+                                  str(ids[k]) if k < len(ids) else "",
                                   os.path.basename(crests[k]) if crests[k] else "", str(n) if n else ""])
             if not names[k]:
                 it.setForeground(1, QBrush(QColor(theme.SUBTLE)))
@@ -797,6 +918,12 @@ class Build(BuilderPage):
             self.steps.append(b)
         bar.addStretch(1)
         self.outer.addLayout(bar)
+        self.uecl = QCheckBox(_("Include the Conference League"))
+        self.uecl.setToolTip(_("Also gives the Champions League and the Europa League their 36-club league phase, "
+                               "and all three the February play-off"))
+        self.uecl.toggled.connect(self.set_uecl)
+        self.outer.addWidget(row(self.uecl, hint(_("the Champions League and Europa League get the 36-club league "
+                                                   "phase too; off = the European cups as the game ships them"))))
         self.state = hint("")
         self.outer.addWidget(self.state)
         self.out = QPlainTextEdit()
@@ -808,9 +935,17 @@ class Build(BuilderPage):
         self.need_tables()
         self.refresh()
 
+    def set_uecl(self, on):
+        if bool(self.project.recipe.get("uecl", True)) != on:
+            self.project.recipe["uecl"] = on
+            self.project.touch()
+
     def refresh(self):
         g = self.app.game
         w = self.project.recipe.get("world", "")
+        self.uecl.blockSignals(True)
+        self.uecl.setChecked(bool(self.project.recipe.get("uecl", True)))
+        self.uecl.blockSignals(False)
         built = os.path.exists(os.path.join(g.livecpk_dir, w)) if g.ok() else False
         missing = B.modules_missing(g.folder) if g.ok() else []
         bits = [_("World %s: %s") % (w, _("built") if built else _("not built yet"))]

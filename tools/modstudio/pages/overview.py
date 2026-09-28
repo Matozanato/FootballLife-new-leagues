@@ -67,7 +67,7 @@ class Overview(Page):
         g = self.app.game
         ini = self.app.ini() if g.ok() else None
         self.problems.clear()
-        rows = checks.quick(g, ini)
+        rows = checks.quick(g, ini, self.app.project.recipe)
         if ini is not None:
             roots = ini.entries("cpk.root")
             mods = ini.entries("lua.module")

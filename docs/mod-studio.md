@@ -17,6 +17,13 @@ league package format.
 
 The game's own files (`download\*.cpk`, the exe) are only read.
 
+Updates (`updater.py`): the check reads the public repository's releases
+(`api.github.com/repos/Matozanato/FootballLife-new-leagues/releases`, tags `modstudio-<version>`)
+and nothing else is sent. The zip is checked against the sha256 GitHub lists for the asset and
+against its size, unpacked to `%TEMP%`, and a batch file copies it over the program's folder once
+the program has exited (both processes of the one-file .exe), then starts it again. It writes
+`%TEMP%\FL26ModStudio-update.log`.
+
 ## Source
 
 `tools/modstudio/`; the window is `app.py`, one file per page in `pages/`.
@@ -29,6 +36,7 @@ The game's own files (`download\*.cpk`, the exe) are only read.
 | `installer.py` | Looks inside a mod, says what each part is, installs it, merges map files, records what it did so it can be removed. |
 | `backups.py`, `profiles.py` | Restore points and profiles. |
 | `checks.py` | The checks behind Overview and Diagnostics. |
+| `updater.py` | Help → Check for updates: the newest `modstudio-<version>` release, download, checksum, the swap after the program exits. |
 | `project.py` | The League Builder recipe. The build itself is `tools/leaguebuilder.py`. |
 | `lbplayers.py`, `lbfaces.py`, `lbpackage.py` | Player changes, faces, league packages (`tools/`). |
 
@@ -56,6 +64,21 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
   `split <total> regular=<id> groups=<id>,<id>`.
 - `uefa <regulation> <position> <competition> <alt>`: one European place per line, in
   hand-out order. Without any, fl26swiss uses the DLL's own list (shipped leagues only).
+  Competitions: 0 Champions League, 1 Europa League, 2 Conference League, 3 Libertadores,
+  4 Libertadores qualifying, 5 AFC Champions League. A list replaces the DLL's, so Build writes
+  the shipped leagues' places first (`fl26world.SHIPPED_ACCESS`, a copy of fl26swiss.c's
+  ACCESS) and then the places of the recipe's leagues (their `europe` key, set in the League
+  dialog). Each competition takes 36 clubs; places past the 36th get nothing.
+- `uecl <id> <id> ...`: the Conference League's 36 entrants at the start, written when the
+  recipe's `uecl` is on (the default). Build then reshapes the Champions League and the Europa
+  League to a league phase of 36 (mkreshape), clones FL_UECL as competition 174 with
+  regulations 186 (league phase, group 1210) and 187 (knockout) (`mkuecl.build`), and adds the
+  play-offs 188/189 (`mkeuropo.build`). fl26swiss.lua does not read this line yet; it uses
+  its own UECL list, the same clubs on the game's own tables.
+
+Overview and Diagnostics warn when the world that is on has new leagues but no `uefa` line
+names one of them, and when its Conference League is on but regulations 186/187/1210 are
+missing from its tables.
 
 The builder also keeps a copy in the world folder (`livecpk\<world>\fl26world.txt`).
 
