@@ -156,6 +156,11 @@ static void list_ids(const uint16_t* b, int n, char* buf, int cap)
  */
 static const unsigned char* find_record(uint16_t cid);
 static void log_tables(void);
+static int has_table(uint16_t id);
+/* Ids of ours the door said YES to since the last July teardown: the builder lets 49 and 60
+   in at creation, and their table is only made later, so "flagged but no table" alone would
+   admit them a second time (2026-09-28: 264 matches for a 12-club double round). */
+static uint8_t g_door_yes[256];
 vec16_t* join_pre(vec16_t* in)
 {
   g_stat[0]++;
@@ -182,7 +187,15 @@ vec16_t* join_pre(vec16_t* in)
     /* In a season now = the runs-this-season flag (+0x304 bit 8). The season year at +0x2fc
        outlives the season: a league closed at New Year keeps it, and was then never let
        back in (2026-09-23: 49 and 60 played no second season, no table at the rollover). */
-    if (rec && ((*(const uint32_t*)(rec + 0x304) >> 8) & 1)) { already++; continue; }
+    /* ... but only when it has the table to show for it. A league of ours below one of the
+       game's own (a Chilean second division below 67) is flagged when the game starts its
+       parent's season and is never given a table or a match: skipping it left it empty all
+       season (GitHub issue #19). Such a league goes in like any other -- unless the door has
+       already let it in this season and only its table is still to come. */
+    if (rec && ((*(const uint32_t*)(rec + 0x304) >> 8) & 1)
+        && (has_table(g_ids[i]) || (g_ids[i] < 256 && g_door_yes[g_ids[i]]))) { already++; continue; }
+    if (rec && ((*(const uint32_t*)(rec + 0x304) >> 8) & 1))
+      logf("register_all: %u is flagged in a season but has no table -- appended", g_ids[i]);
     g_list[n++] = g_ids[i]; added++;
   }
   g_vec.b = g_list; g_vec.e = g_list + n; g_vec.c = g_list + MAX_LIST;
@@ -296,6 +309,7 @@ void door_post(uint64_t id, uint64_t result, uint64_t ret)
   if (!(result & 0xff)) g_stat[6]++;
   if (!ours(cid) && !control(cid)) return;
   if (ours(cid)) g_stat[7]++;
+  if (ours(cid) && (result & 0xff) && cid < 256) g_door_yes[cid] = 1;
   uint32_t flags = 0, kind = 0, clubs = 0; int found = 0;
   const unsigned char* rec = find_record(cid);
   if (rec) {
@@ -612,6 +626,11 @@ vec16_t* mover_pre(void* ctx, vec16_t* in)
  * 2026-09-23: at the July rollover 49, 60, 81, 98, 100, 109, 110 and 144 had none although the
  * door had admitted them a season earlier. Logged on every registration day so the log shows
  * whether the table never appears or goes away mid-season. */
+static int has_table(uint16_t id)
+{
+  return g_base && (((hastab_fn)(uintptr_t)(g_base + HASTAB_RVA))(id) & 1);
+}
+
 static void log_tables(void)
 {
   if (!g_base) return;
@@ -892,6 +911,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   int n = (int)(in->e - in->b), k = 0, euro = 0, changed = 0;
   if (n + g_nids + g_ntd_extra > MAX_LIST) return in;
   for (int j = 0; j < n; j++) if (in->b[j] == 2) { euro = 1; break; }
+  if (euro) memset(g_door_yes, 0, sizeof g_door_yes);   /* a new season: nobody let in yet */
   char buf[320]; int p = 0; buf[0] = 0;
   for (int j = 0; j < n; j++) {
     uint16_t id = in->b[j];

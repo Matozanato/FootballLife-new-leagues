@@ -21,7 +21,8 @@ mod it installs can be removed again.
   `pack` folder and the `README` files stay next to `FL26ModStudio.exe`.
 - **Close the game** while you change things. Sider reads its setup when the game starts.
 
-The window is in English. **Settings → Language → Hrvatski** switches it to Croatian.
+The window is in English. **Settings → Language** switches it to Croatian (Hrvatski), Spanish
+(Español) or French (Français).
 
 ## 2. First run
 
@@ -37,7 +38,8 @@ The window is in English. **Settings → Language → Hrvatski** switches it to 
 Studio is out, and says so only when there is one. **Download and install** fetches the new zip,
 checks it against the release's checksum, closes the program, puts the new files over the old
 ones and starts it again. Your settings, projects, restore points and the game are not touched.
-**Help → Check for updates** asks at any time. If the program sits in a folder Windows will not
+**Help → Check for updates** asks at any time; untick **Help → Check for updates at start** and
+the program asks only then. If the program sits in a folder Windows will not
 let it write to (such as Program Files), it opens the release page instead: unpack the zip
 yourself, or move the program to a folder of your own.
 
@@ -133,7 +135,8 @@ The League Builder adds new leagues to the game and changes the game's own. What
 | **Europe** | Top division only: which league position goes to which European competition. **Top flight: 1st UCL, 2nd UEL, 3rd UECL** fills the usual three; **Add place**, **Remove place** and **Clear** for anything else. Each position once, and only positions the league has. Leave it empty for a lower tier. |
 | **Logo** | Any picture (PNG with a transparent background looks best). Empty: one is drawn for you. |
 
-**World name** (on the same page) must start with `_FL26`.
+**World name** (on the same page) must start with `_FL26`. After **Build** the **League ID** column
+shows each league's competition id in the game, the one its logo file carries.
 
 **New clubs**: pick the league, then **Edit club** (name, short name, crest), **Paste names...**
 or **Load names from file...**. An empty name becomes `<league> 01`, `<league> 02` ...; a club
@@ -157,11 +160,20 @@ Pick a club (or press **Players** on New clubs), then a player:
 - all **abilities** and **skills** (the names are the game's own);
 - **Face**: **Choose...** a face folder (section 8.1). **Clear** gives the game's face back;
 - **Order up / Order down**: the squad order. The first eleven start the match;
-- **Add player** (a copy of the player you pick, with a new id), **Remove from club**;
+- **Add player** (a copy of the player you pick, with a new id; clubs of the game only),
+  **Remove from club** (a new club keeps at least 18 players);
 - **Best eleven** puts the strongest player at every place; **Squad level...** raises or
   lowers every ability of the whole squad;
 - **Export CSV... / Import CSV...**: edit a squad in a spreadsheet. Export first, change the
   cells, import the same columns back.
+- **Import a squad from a table...**: any table of players becomes the club's squad -- one
+  typed by hand, a squad list copied off a website, a Football Manager or EA FC export. The
+  columns are recognised by their names (name, position, age or birth date, nationality,
+  height, foot, shirt number, overall, and any ratings) and shown so you can fix one that is
+  wrong. What the table does not have comes from the game's own players of the same position
+  and rating; Football Manager's 1-20 ratings are stretched to the game's 40-99. The table's
+  players take the club's places in squad order: a new club keeps its 30 places (fewer
+  players = the rest leave, down to 18), a club of the game gains or loses players to match.
 
 Every change is written into the world when you **Build**; the game's files stay as they are.
 **Undo changes to this player** and **Undo all changes of this club** go back to the game's.
@@ -222,7 +234,7 @@ country in Select Team and Kick Off.
 | Times clubs meet | 1 – 4 |
 | Split leagues | 2 per world |
 | Divisions in one country | down to the 7th |
-| Players per new club | 30 at the start; add and remove as you like |
+| Players per new club | 30 at the start; remove down to 18, no extra players |
 
 ## 9. League packages: share a whole league
 

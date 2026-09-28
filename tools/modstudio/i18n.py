@@ -11,7 +11,7 @@ import json, os, re, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 TEXT, RULES = {}, []
 CODE = "en"
-LANGUAGES = [("en", "English"), ("hr", "Hrvatski")]
+LANGUAGES = [("en", "English"), ("hr", "Hrvatski"), ("es", "Español"), ("fr", "Français")]
 
 
 def _(s):

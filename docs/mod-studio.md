@@ -1,6 +1,7 @@
 # FL26 Mod Studio — how it works
 
-The user guide is [mod-studio-guide.md](mod-studio-guide.md) ([hrvatski](mod-studio-guide.hr.md)).
+The user guide is [mod-studio-guide.md](mod-studio-guide.md) ([hrvatski](mod-studio-guide.hr.md),
+[español](mod-studio-guide.es.md), [français](mod-studio-guide.fr.md)).
 This page is for modders and developers: what the program does to the game folder, and the
 league package format.
 
@@ -59,6 +60,10 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
 - `slot` = Select Team slot (absent or 123 = none). `country` = Country.bin id (flag,
   Competition Info name). `above` = the league one division up (shipped or new).
   `promote` / `demote` = how many clubs go up from / down out of this league.
+- `cup` = the country's domestic cup, written on a second division added under a shipped top
+  flight that had none (Germany, Russia, ...). The game fills a country's cup from its first
+  league and the league below it, so without this the new second division would take the cup
+  over or join it. fl26chain keeps the cup to the top flight's clubs (issue #21).
 - Unknown keys are ignored, so later versions can add fields without breaking older modules.
 - A split league is one `league` line for the regular phase plus
   `split <total> regular=<id> groups=<id>,<id>`.

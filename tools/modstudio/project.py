@@ -27,6 +27,7 @@ class Project(QObject):
         self.dirty = False
         self.base = None
         self.countries, self.parents, self.game_lgs, self.game_cl = [], [], [], {}
+        self.parent_tiers = {}
         self._squads = None
         self._names = None
 
@@ -41,11 +42,13 @@ class Project(QObject):
             self.base = B.base_dir(where) if where else B.base_dir(self._default_tables())
             self.countries = B.country_names(self.base)
             self.parents = B.shipped_parents(self.base)
+            self.parent_tiers = B.shipped_tiers(self.base)
             self.game_lgs = B.game_leagues(self.base)
             self.game_cl = B.game_clubs(self.base)
         except (B.BuildError, OSError, ValueError, SystemExit):
             self.base = None
             self.countries, self.parents, self.game_lgs, self.game_cl = [], [], [], {}
+            self.parent_tiers = {}
         self._squads = None
         self._names = None
         self.tables_changed.emit()

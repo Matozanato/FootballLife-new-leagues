@@ -50,7 +50,7 @@ import pesdb
 import mkleague as M
 
 FORMAT = "# fl26world 1"
-KEYS = ("cid", "region", "country", "slot", "tier", "above", "promote", "demote", "clubs", "legs")
+KEYS = ("cid", "region", "country", "slot", "tier", "above", "promote", "demote", "clubs", "legs", "cup")
 NO_SLOT = 123
 
 # The Select Team slot each regulation id mkworld hands out ends up on, in the exe's competition

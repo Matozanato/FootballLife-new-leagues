@@ -51,7 +51,7 @@ local PROTECT = { 11, 49, 60, 61, 62, 74, 76, 93, 94, 96, 98, 100, 109, 110, 111
 
 -- The world file: modules\fl26world.txt, written by FL26 Mod Studio's League Builder.
 -- One table per league -- id, then whatever the line gives: cid, region, country, slot, tier,
--- above, promote, demote, clubs, legs (numbers), name (text) -- in file order. nil when
+-- above, promote, demote, clubs, legs, cup (numbers), name (text) -- in file order. nil when
 -- there is no file: the module then keeps the built-in lists above.
 local function read_world(ctx)
   local sep = string.char(92)
@@ -79,16 +79,20 @@ end
 -- league is division 3, 5 or 7: {league above, league, its promote count both ways}. The league
 -- above may be a shipped one (Ligue 2 above a French third division) -- it is named by id, not
 -- looked up.
+-- A league line with cup= is a second division under a shipped top flight that had none:
+-- {that country's cup, the league above, this league}. The DLL keeps the cup to the top
+-- league's clubs (GitHub #21: the game would put this league into it, or only this league).
 local function from_world(world)
-  local chains, protect = {}, {}
+  local chains, protect, cups = {}, {}, {}
   for _, L in ipairs(world) do
     protect[#protect + 1] = L.id
     if L.above and L.tier and L.tier >= 3 and L.tier % 2 == 1 then
       local n = L.promote or 3
       chains[#chains + 1] = { L.above, L.id, n, n }
     end
+    if L.cup and L.above then cups[#cups + 1] = { L.cup, L.above, L.id } end
   end
-  return chains, protect
+  return chains, protect, cups
 end
 
 local CAVE_VA, CAVE_PAGE, CAVE_LEN = 0x14252e900, 0x14252e000, 0x108
@@ -133,6 +137,7 @@ function m.init(ctx)
     typedef int  (*fl26_chain_log_t)(char*, int);
     typedef void (*fl26_chain_stats_t)(uint32_t*);
     typedef int  (*fl26_chain_protect_t)(const uint16_t*, int);
+    typedef int  (*fl26_chain_cups_t)(const uint16_t*, int);
   ]])
 
   local old = ffi.new("uint32_t[1]")
@@ -154,9 +159,9 @@ function m.init(ctx)
   dll_stats = ffi.cast("fl26_chain_stats_t", ps)
   logbuf, statbuf = ffi.new("char[4096]"), ffi.new("uint32_t[4]")
 
-  local world = read_world(ctx)
+  local world, CUPS = read_world(ctx), {}
   if world then
-    CHAINS, PROTECT = from_world(world)
+    CHAINS, PROTECT, CUPS = from_world(world)
     log(string.format("fl26chain: world file -- %d leagues, %d chain pair(s) the game skips", #PROTECT, #CHAINS))
   end
   cfg = ffi.new("fl26_chain_cfg_t[?]", math.max(#CHAINS, 1))
@@ -174,6 +179,19 @@ function m.init(ctx)
       ffi.cast("fl26_chain_protect_t", pp)(ids, #PROTECT)
     else
       log("fl26chain: this fl26chain.dll has no empty-list guard (fl26_chain_protect)")
+    end
+    if #CUPS > 0 then
+      local pc = ffi.C.GetProcAddress(h, "fl26_chain_cups")
+      if pc ~= nil then
+        local t = ffi.new("uint16_t[?]", 3 * #CUPS)
+        for i, c in ipairs(CUPS) do
+          t[3 * i - 3], t[3 * i - 2], t[3 * i - 1] = c[1], c[2], c[3]
+          log(string.format("fl26chain: live -- cup %d keeps the clubs of %d, not of %d below it", c[1], c[2], c[3]))
+        end
+        ffi.cast("fl26_chain_cups_t", pc)(t, #CUPS)
+      else
+        log("fl26chain: this fl26chain.dll cannot keep a cup to its league (no fl26_chain_cups) -- rebuild it")
+      end
     end
     for _, c in ipairs(CHAINS) do
       log(string.format("fl26chain: live -- chain %d -> %d: %d down, %d up at season end (F10 = report)", c[1], c[2], c[3], c[4]))

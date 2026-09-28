@@ -7,7 +7,7 @@ FL26 Mod Studio in one folder:
   pack\                 the modules the League Builder's "Install the modules" puts in place
                         (tools/lbpack.py)
   README.html           the guide (docs/mod-studio-guide.md)
-  README.hr.html        the same in Croatian (docs/mod-studio-guide.hr.md)
+  README.<hr|es|fr>.html  the same in Croatian, Spanish, French (docs/mod-studio-guide.<code>.md)
 
 Frozen from a staged copy of tools/ without the lines that point at
 this machine's folders, and every staged source inside the .exe, the pack and the guides is
@@ -137,8 +137,11 @@ def main():
     shutil.copy2(os.path.join(WORK, "dist", NAME + ".exe"), OUT)
     lbpack.build(os.path.join(OUT, "pack"))
     guide(os.path.join(REPO, "docs", "mod-studio-guide.md"), os.path.join(OUT, "README.html"), "en")
-    guide(os.path.join(REPO, "docs", "mod-studio-guide.hr.md"), os.path.join(OUT, "README.hr.html"), "hr")
-    for f in ("README.html", "README.hr.html", os.path.join("pack", "modules.txt")):
+    langs = ("hr", "es", "fr")
+    for code in langs:
+        guide(os.path.join(REPO, "docs", "mod-studio-guide.%s.md" % code),
+              os.path.join(OUT, "README.%s.html" % code), code)
+    for f in ["README.html"] + ["README.%s.html" % c for c in langs] + [os.path.join("pack", "modules.txt")]:
         for i, l in enumerate(open(os.path.join(OUT, f), encoding="utf-8"), 1):
             if PRIVATE.search(l):
                 bad.append("%s:%d: %s" % (f, i, l.strip()[:110]))

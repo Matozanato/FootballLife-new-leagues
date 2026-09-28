@@ -3,4 +3,4 @@
 core modules (no GUI): siderini, backups, game, roots, modules, content, install, profiles
 the window: app.py (PySide6)
 """
-VERSION = "0.1.1"
+VERSION = "0.1.2"

@@ -274,6 +274,23 @@ def country_names(base):
                    if en and mkflags.by_name(cty, en) == fid})
 
 
+def country_ids(base):
+    """[(name, Country.bin id)] sorted by name: a player's Nationality is this id (measured: 146
+    Brazil, 144 Argentina, 236 Spain on the game's own players). A name the table has twice
+    carries its id, so each entry says which one it is."""
+    import mkflags
+    cty = mkflags.countries(mkflags.table("Country", [base]))
+    seen = {}
+    for fid, (en, names) in cty.items():
+        if en:
+            seen.setdefault(mkflags.title(en), []).append(fid)
+    out = []
+    for nm, ids in seen.items():
+        for fid in ids:
+            out.append((nm if len(ids) == 1 else "%s (%d)" % (nm, fid), fid))
+    return sorted(out, key=lambda x: x[0].lower())
+
+
 def shipped_parents(base):
     """[(regulation id, name)] of the shipped divisions (Competition code *_D<n>_LEAGUE) that
     have no league below them yet -- the ones a new division can go under"""
@@ -296,6 +313,29 @@ def shipped_parents(base):
             nm = raw.decode("latin-1")
         out.append((u16(g, M.R_ID), nm))
     return sorted(out, key=lambda x: x[1].lower())
+
+
+def shipped_tiers(base):
+    """{regulation id: division} of the game's leagues (1 = top), for saying which division a
+    new league below one of them becomes"""
+    regs = M.load(base, "CompetitionRegulation.bin")
+    return {u16(regs[i * M.REG:(i + 1) * M.REG], M.R_ID): M.get_tier(regs[i * M.REG:(i + 1) * M.REG])
+            for i in range(len(regs) // M.REG)}
+
+
+def home_cup(regrow, region_of_cid, region):
+    """the domestic cup of a region (a knockout, not a two-club super cup), or None.
+
+    GitHub #21. The game fills a domestic cup from the region's first league and the league
+    linked below it. A shipped cup built for one division (the DFB-Pokal's 18, the Russian
+    Cup's 16) does not survive that: with a new second division under its league it gets 38
+    or 36 clubs, or only the new league's clubs when that league has the lower regulation id,
+    and its bracket loses rounds. fl26chain puts the top league's clubs back; this names the
+    cup it has to watch."""
+    cups = sorted(rid for rid, g in regrow.items()
+                  if rid < 1024 and g[M.R_TYPE] == 3 and g[M.R_TEAMS] & 0x3f > 2
+                  and region_of_cid.get(g[M.R_CID]) == region)
+    return cups[0] if cups else None
 
 
 # ---- plan: every id, region and link decided, nothing written ----
@@ -384,6 +424,8 @@ def plan(recipe, base):
                                      % (name, up, u16(pr, M.R_BELOW)))
                 p["above"], p["tier"] = int(up), M.get_tier(pr) + 1
                 p["region"] = region_of_cid[pr[M.R_CID]]
+                if p["tier"] == 2:
+                    p["cup"] = home_cup(regrow, region_of_cid, p["region"])
             if p["tier"] > 7:
                 raise BuildError("%s: division %d -- the rank field stops at 7" % (name, p["tier"]))
         else:
@@ -638,6 +680,8 @@ def build(pl, base, game, replace=False, log=print):
             L["promote"] = 0
         below = next((q for q in pl["leagues"] if q["above"] == p["rid"]), None)
         L["demote"] = below["exchange"] if below else 0
+        if p.get("cup"):
+            L["cup"] = p["cup"]
     uefa, over = fl26world.uefa_places(own_places(pl))
     names = dict(fl26world.COMPETITIONS)
     for c, n in sorted(over.items()):

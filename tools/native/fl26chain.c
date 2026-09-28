@@ -133,10 +133,64 @@ static int reg_count(uint16_t id)
   return -1;
 }
 
+/* the regulation's live +0x170 list into out (MAX_CLUBS), -1 if the regulation is not found */
+static int reg_list(uint16_t id, uint32_t* out)
+{
+  unsigned char* blk = block(); if (!blk) return -1;
+  unsigned char* rec = blk + REG_ARRAY_OFF;
+  for (int i = 0; i < REG_CAP; i++, rec += REG_STRIDE) {
+    if (*(uint16_t*)rec != id) continue;
+    int n = 0;
+    while (n < MAX_CLUBS && *(uint32_t*)(rec + 0x170 + n*4) != 0xffffffffu) { out[n] = *(uint32_t*)(rec + 0x170 + n*4); n++; }
+    return n;
+  }
+  return -1;
+}
+
+/* ---- GitHub #21: a domestic cup keeps its own league ----
+ * The game fills a domestic cup from the region's first league (lowest regulation id) and the
+ * league linked below it. With one of our leagues put under a shipped top flight that has no
+ * second division (Bundesliga 50, Russian league 116), the DFB-Pokal (53) got 38 clubs, or only
+ * our 20 when our league had the lower id; the Russian Cup (123) the same. Their brackets are
+ * built for 18 and 16: a 38-club DFB-Pokal was left with three undated first-round matches and
+ * no round of 16. So when a cup's new list holds clubs of our league, the cup gets the top
+ * league's clubs instead -- the field the shipped game gives it. The triples come from the world
+ * file (`cup=` on the league line, written by the League Builder). */
+#define MAX_CUPS 16
+typedef struct { uint16_t cup, top, low; } cup_t;
+static cup_t    g_cup[MAX_CUPS]; static int g_ncup = 0;
+static uint64_t g_cup_flag[MAX_CUPS]; static int g_cup_seen[MAX_CUPS];
+
+static int holds_any(const uint32_t* list, int n, const uint32_t* of, int m)
+{
+  for (int i = 0; i < n; i++) for (int j = 0; j < m; j++) if (list[i] == of[j]) return 1;
+  return 0;
+}
+
+/* 1 = the cup was written with the top league's clubs (through the original setter) */
+static int cup_fix(cup_t* c, const uint32_t* list, int n, uint64_t flag, const char* when)
+{
+  uint32_t top[MAX_CLUBS], low[MAX_CLUBS];
+  int nt = reg_list(c->top, top), nl = reg_list(c->low, low);
+  if (nt <= 0 || nl <= 0 || !holds_any(list, n, low, nl)) return 0;
+  vec32_t v = { top, top + nt, top + MAX_CLUBS };
+  int was = g_reentrant; g_reentrant = 1;
+  ((set_fn)(uintptr_t)g_tramp_set)(c->cup, &v, flag);
+  g_reentrant = was;
+  logf("cup %u: %d clubs with %u's in them (%s) -- given %u's %d clubs instead", c->cup, n, c->low, when, c->top, nt);
+  return 1;
+}
+
 /* ---- observer + capture (BEFORE-hook on 0x141522b50); nonzero = refuse the write ---- */
 int observe(uint64_t id, vec32_t* v, uint64_t flag)
 {
   int n = vcount32(v);
+  if (!g_reentrant) for (int i = 0; i < g_ncup; i++) {
+    if ((uint16_t)id != g_cup[i].cup) continue;
+    if (g_in_apply) { g_cup_flag[i] = flag & 0xff; g_cup_seen[i] = 1; break; }   /* settled in apply_post */
+    if (n > 0 && cup_fix(&g_cup[i], v->b, n > MAX_CLUBS ? MAX_CLUBS : n, flag & 0xff, "outside the season pass")) return 1;
+    break;
+  }
   if (n == 0 && !g_reentrant && is_protected((uint16_t)id)) {
     int have = reg_count((uint16_t)id);
     if (have > 0) {
@@ -236,6 +290,7 @@ void apply_pre(void* ctx)
     ch->n_stand_low = standings(ctx, ch->cfg.low, ch->stand_low);
     logf("apply: chain %u->%u standings %d/%d", ch->cfg.mid, ch->cfg.low, ch->n_stand_mid, ch->n_stand_low);
   }
+  for (int i = 0; i < g_ncup; i++) g_cup_seen[i] = 0;
 }
 
 static int remove_handle(uint32_t* list, int n, uint32_t h)
@@ -315,6 +370,12 @@ void apply_post(void* ctx)
     if (ch->seen == 3) fix_chain(ch);
     else if (ch->seen) { logf("apply: chain %u->%u incomplete (seen %d) -- untouched", ch->cfg.mid, ch->cfg.low, ch->seen); g_stat[2]++; }
   }
+  /* after the chains: the leagues' lists are the new season's now, whichever order the pass wrote them in */
+  for (int i = 0; i < g_ncup; i++) {
+    if (!g_cup_seen[i]) continue;
+    uint32_t cur[MAX_CLUBS]; int n = reg_list(g_cup[i].cup, cur);
+    if (n > 0 && cup_fix(&g_cup[i], cur, n, g_cup_flag[i], "season pass")) g_stat[1]++;
+  }
   g_in_apply = 0; g_ctx = 0;
 }
 
@@ -388,6 +449,17 @@ __declspec(dllexport) int fl26_chain_protect(const uint16_t* ids, int n)
   for (int i = 0; i < n; i++) g_protect[i] = ids[i];
   g_nprotect = n;
   logf("fl26chain: empty-list guard on %d of our regulations", n);
+  return n;
+}
+
+/* the domestic cups to keep to their own league: n triples {cup, top league, our league below it} */
+__declspec(dllexport) int fl26_chain_cups(const uint16_t* triples, int n)
+{
+  if (!triples || n < 0) return 0;
+  if (n > MAX_CUPS) n = MAX_CUPS;
+  for (int i = 0; i < n; i++) { g_cup[i].cup = triples[3*i]; g_cup[i].top = triples[3*i+1]; g_cup[i].low = triples[3*i+2]; }
+  g_ncup = n;
+  logf("fl26chain: %d domestic cup(s) kept to their own league", n);
   return n;
 }
 

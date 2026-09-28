@@ -549,6 +549,10 @@ char setcl_handler(uint64_t id, u32vec* list, uint64_t flag)
     cont_swap(r, list, "set_clubs");
   }
   size_t n = list && list->b ? (size_t)(list->e - list->b) : 0;
+  if (r == 53 || r == 123)            /* GitHub #21: who fills the DFB-Pokal / Russian Cup, and with what */
+    logf("fl26swiss: set_clubs cup reg %u -- %u club(s) on day %d, from %llx, first %08x last %08x", (unsigned)r,
+         (unsigned)n, today(), (unsigned long long)((uintptr_t)__builtin_return_address(0) - g_base + 0x140000000ull),
+         n ? list->b[0] : 0, n ? list->b[n - 1] : 0);
   if (row != 0xffff && n) {
     unsigned char* ph = get_rec(row);
     unsigned char* t = ph && rec_count(ph) >= FL26_SWISS_MIN_CLUBS ? ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(row) : 0;
@@ -1346,16 +1350,22 @@ static int club_slot(void* blk, uint32_t c)
 static uint32_t g_mfrom[3][CONT_MAX], g_mto[3][CONT_MAX]; static unsigned g_nmap[3]; static int g_mday[3] = { -100000, -100000, -100000 };
 /* The club of ours that pool club c gives way to in competition k, or 0 to leave it. A club
  * already mapped keeps its partner; otherwise the next place of ours that is neither given
- * nor already in the list `have` takes it. */
-static uint32_t cont_map_one(int k, uint32_t c, const uint32_t* have, size_t nh, const how_t** how)
+ * nor already in the list `have` takes it. For a group (id + 1024 * n) a place of ours that the
+ * whole field already holds is not given again: the Libertadores field is set on day 0 and its
+ * groups on day 41, after the map above has been cleared, and each group then took one of ours
+ * a second time (GitHub #22: two clubs in two groups each, playing both). */
+static uint32_t cont_map_one(int k, uint32_t c, const uint32_t* have, size_t nh, const how_t** how, uint16_t id)
 {
   unsigned j;
   for (j = 0; j < g_nmap[k]; j++)
     if ((g_mfrom[k][j] & 0x3fff) == (c & 0x3fff)) return has_club(have, nh, g_mto[k][j]) ? 0 : g_mto[k][j];
+  unsigned char* whole = id > 1024 ? get_rec(id & 0x3ff) : 0;
+  size_t nw = whole ? rec_count(whole) : 0;
   for (j = 0; j < g_ncont[k] && g_nmap[k] < CONT_MAX; j++) {
     uint32_t cand = g_cont[k][j]; int given = 0;
     for (unsigned q = 0; q < g_nmap[k] && !given; q++) given = (g_mto[k][q] & 0x3fff) == (cand & 0x3fff);
     if (given || has_club(have, nh, cand)) continue;
+    if (whole && has_club(rec_clubs(whole), nw, cand)) continue;
     g_mfrom[k][g_nmap[k]] = c; g_mto[k][g_nmap[k]++] = cand;
     if (how) *how = &g_chow[k][j];
     return cand;
@@ -1403,7 +1413,7 @@ static void cont_swap(uint16_t id, u32vec* list, const char* where)
     uint32_t c = list->b[i];
     npool++;
     const how_t* h = 0;
-    uint32_t to = cont_map_one(k, c, list->b, n, &h);
+    uint32_t to = cont_map_one(k, c, list->b, n, &h, id);
     if (!to) { left++; continue; }
     list->b[i] = to; put++;
     if (h) logf("fl26swiss:   %s: reg %u %s %u -> %08x, in place of pool club %08x", CONT_NAME[k],
@@ -1427,7 +1437,7 @@ static uint32_t cont_add(void* rec, uint32_t club)
   uint32_t have[48]; size_t nh = rec_count(rec);
   if (nh > 48) nh = 48;
   memcpy(have, (unsigned char*)rec + 0x170, nh * 4);
-  uint32_t to = cont_map_one(k, club, have, nh, 0);
+  uint32_t to = cont_map_one(k, club, have, nh, 0, id);
   if (to) logf("fl26swiss: %s group reg %u -- pool club %08x added straight, %08x in its place", CONT_NAME[k], (unsigned)id, club, to);
   return to;
 }

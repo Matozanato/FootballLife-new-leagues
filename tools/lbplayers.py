@@ -28,6 +28,7 @@ import playeredit as E
 P_REC, P_ID = E.P_REC, E.P_ID
 A_REC = E.A_REC
 SQUAD = 30
+MIN_SQUAD = 18        # a new club may lose players down to this: eleven and seven on the bench
 FIELDS = list(E.FIELDS)
 BASIC = ["Registered Position", "Age", "Height (cm)", "Weight (kg)", "Stronger Foot", "Nationality"]
 KEYS = ["name", "shirt", "order"] + FIELDS
@@ -184,8 +185,10 @@ def check(recipe):
             if lg not in names or not k.isdigit() or int(k) >= names[lg].get("clubs", 0):
                 err.append("players of %s: no such new club in the recipe" % club)
                 continue
-            if c.get("add") or c.get("remove"):
-                err.append("players of %s: a new club keeps its %d players (change them instead)" % (club, SQUAD))
+            if c.get("add"):
+                err.append("players of %s: a new club cannot take extra players (change them instead)" % club)
+            if len(set(c.get("remove") or [])) > SQUAD - MIN_SQUAD:
+                err.append("players of %s: a new club keeps at least %d players" % (club, MIN_SQUAD))
         for key, ch in (c.get("edits") or {}).items():
             err += ["players of %s, player %s: %s" % (club, key, e) for e in check_edit(ch)]
         for ch in c.get("add") or []:
@@ -281,6 +284,8 @@ def apply(pl, base, db, cap, log=print, faces=None):
             continue
         rows = []
         for order, pid, ao in squad_of(tid):
+            if ao in drop:                             # leaving the club: no place in the order
+                continue
             rec = players[index[pid]:index[pid] + P_REC]
             r = {"player": str(ao), "order": str(order)}
             for n in FIELDS:

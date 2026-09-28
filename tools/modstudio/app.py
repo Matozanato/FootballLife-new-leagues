@@ -16,8 +16,8 @@ if os.path.dirname(HERE) not in sys.path:
 
 from PySide6.QtCore import Qt, QTimer, Signal, QObject
 from PySide6.QtGui import QAction, QIcon, QKeySequence
-from PySide6.QtWidgets import (QApplication, QButtonGroup, QHBoxLayout, QLabel, QMainWindow,
-                               QMenu, QPushButton, QScrollArea, QStackedWidget, QStatusBar,
+from PySide6.QtWidgets import (QApplication, QButtonGroup, QDialog, QHBoxLayout, QLabel, QMainWindow,
+                               QMenu, QPushButton, QScrollArea, QStackedWidget, QStatusBar, QTextBrowser,
                                QToolButton, QVBoxLayout, QWidget, QMessageBox)
 
 from modstudio import VERSION, theme, i18n
@@ -174,10 +174,16 @@ class Main(QMainWindow):
             ("Save the current setup as a profile...", lambda: self.page("Profiles").save_new())]))
         h.addWidget(self._menu_button("Language", [(name, (lambda c=code: self.set_language(c)), True)
                                                    for code, name in i18n.LANGUAGES]))
-        h.addWidget(self._menu_button("Help", [
+        hb = self._menu_button("Help", [
             ("User guide", self.guide),
             ("Check for updates...", self.check_updates),
-            ("About FL26 Mod Studio", self.about)]))
+            ("About FL26 Mod Studio", self.about)])
+        auto = QAction(_("Check for updates at start"), hb.menu())
+        auto.setCheckable(True)
+        auto.setChecked(self.settings.get("check_updates", True))
+        auto.toggled.connect(self.set_auto_updates)
+        hb.menu().insertAction(hb.menu().actions()[2], auto)
+        h.addWidget(hb)
         h.addStretch(1)
         self.run_label = QLabel("")
         self.run_label.setObjectName("subtle")
@@ -331,7 +337,9 @@ class Main(QMainWindow):
         save_settings(self.settings)
         QMessageBox.information(self, "FL26 Mod Studio",
                                 "The language changes when the program is started again.\n"
-                                "Jezik se mijenja kad se program ponovno pokrene.")
+                                "Jezik se mijenja kad se program ponovno pokrene.\n"
+                                "El idioma cambia al volver a abrir el programa.\n"
+                                "La langue change au prochain démarrage du programme.")
 
     def guide(self):
         code = i18n.CODE
@@ -353,6 +361,11 @@ class Main(QMainWindow):
                               _("A mod manager and league builder for Football Life 2026."),
                               _("It changes sider.ini and the content folders only, and keeps a "
                                 "restore point before every change.")))
+
+    def set_auto_updates(self, on):
+        """Help > Check for updates at start: off = only when asked (the menu item above it)"""
+        self.settings["check_updates"] = bool(on)
+        save_settings(self.settings)
 
     def check_updates(self, quiet=False):
         """ask GitHub for a newer release; quiet (the check at start) says nothing unless there is one"""
@@ -377,21 +390,43 @@ class Main(QMainWindow):
         from modstudio import updater
         from modstudio.ui import run_job
         page = lambda: QDesktopServices.openUrl(QUrl(info["page"]))
-        box = QMessageBox(self)
+        # What is new and what was fixed is the first thing the dialog shows, not a detail to
+        # click open: nobody should install a version without seeing what it changes.
+        box = QDialog(self)
         box.setWindowTitle(_("Update available"))
-        box.setText(_("FL26 Mod Studio %s is out (you have %s).") % (info["version"], VERSION))
-        box.setInformativeText(_("Download it and restart? Your settings, projects and restore points "
-                                 "stay as they are, and the game is not touched."))
-        if info["notes"].strip():
-            box.setDetailedText(info["notes"].strip())
-        yes = box.addButton(_("Download and install"), QMessageBox.AcceptRole)
-        rel = box.addButton(_("Open the release page"), QMessageBox.ActionRole)
-        box.addButton(_("Later"), QMessageBox.RejectRole)
+        box.resize(640, 480)
+        v = QVBoxLayout(box)
+        head = QLabel("<b>%s</b>" % (_("FL26 Mod Studio %s is out (you have %s).") % (info["version"], VERSION)))
+        v.addWidget(head)
+        v.addWidget(QLabel(_("What is new and what was fixed:")))
+        notes = QTextBrowser()
+        notes.setOpenExternalLinks(True)
+        text = updater.what_changed(info["notes"])
+        if text:
+            notes.setMarkdown(text)
+        else:
+            notes.setPlainText(_("This release has no list of changes; the release page may say more."))
+        v.addWidget(notes, 1)
+        keep = QLabel(_("Download it and restart? Your settings, projects and restore points "
+                        "stay as they are, and the game is not touched."))
+        keep.setWordWrap(True)
+        v.addWidget(keep)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        choice = {}
+        for label, key in ((_("Download and install"), "yes"), (_("Open the release page"), "page"),
+                           (_("Later"), "later")):
+            b = QPushButton(label)
+            b.clicked.connect(lambda _c=False, k=key: (choice.update(k=k), box.accept()))
+            row.addWidget(b)
+            if key == "yes":
+                b.setDefault(True)
+        v.addLayout(row)
         box.exec()
-        if box.clickedButton() is rel:
+        if choice.get("k") == "page":
             page()
             return
-        if box.clickedButton() is not yes:
+        if choice.get("k") != "yes":
             return
         if not updater.frozen():
             QMessageBox.information(self, _("Update available"),

@@ -21,7 +21,8 @@ svaki mod koji instalira može se opet maknuti.
   mapa `pack` i datoteke `README` stoje pokraj `FL26ModStudio.exe`.
 - **Ugasi igru** dok mijenjaš stvari. Sider čita postavke kad se igra pokrene.
 
-Prozor je na engleskom. **Settings → Language → Hrvatski** ga prebaci na hrvatski.
+Prozor je na engleskom. **Settings → Language → Hrvatski** ga prebaci na hrvatski (ima i
+španjolski i francuski).
 
 ## 2. Prvo pokretanje
 
@@ -36,7 +37,8 @@ Prozor je na engleskom. **Settings → Language → Hrvatski** ga prebaci na hrv
 Studio i javi se samo ako jest. **Skini i instaliraj** skine novi zip, provjeri ga prema
 kontrolnom zbroju izdanja, zatvori program, stavi nove datoteke preko starih i ponovno ga
 pokrene. Postavke, projekti, točke vraćanja i igra ostaju netaknuti. **Pomoć → Provjeri
-ažuriranja** pita u bilo kojem trenutku. Ako je program u mapi u koju Windows ne da pisati
+ažuriranja** pita u bilo kojem trenutku; makni kvačicu s **Pomoć → Provjeri ažuriranja pri
+pokretanju** i program pita samo tada. Ako je program u mapi u koju Windows ne da pisati
 (npr. Program Files), otvori se stranica izdanja: raspakiraj zip sam ili premjesti program u
 svoju mapu.
 
@@ -133,7 +135,8 @@ sadržaja s imenom `_FL26...` koju igra čita dok je uključena.
 | **Europa** | Samo za prvi rang: koje mjesto u ligi ide u koje europsko natjecanje. **Prva liga: 1. LP, 2. EL, 3. KL** upiše uobičajena tri; **Dodaj mjesto**, **Makni mjesto** i **Makni** za sve ostalo. Svako mjesto samo jednom, i samo mjesta koja liga ima. Za niži rang ostavi prazno. |
 | **Logo** | Bilo koja slika (najbolje izgleda PNG s prozirnom pozadinom). Prazno: nacrta se sam. |
 
-**Ime svijeta** (na istoj stranici) mora počinjati s `_FL26`.
+**Ime svijeta** (na istoj stranici) mora počinjati s `_FL26`. Nakon **Izgradnje** stupac **ID lige**
+pokazuje ID natjecanja svake lige u igri, isti koji nosi datoteka njezina loga.
 
 **Novi klubovi**: odaberi ligu, pa **Uredi klub** (ime, kratko ime, grb), **Zalijepi imena...**
 ili **Učitaj imena iz datoteke...**. Prazno ime postaje `<liga> 01`, `<liga> 02` ...; klub bez
@@ -157,11 +160,20 @@ klub (ili stisni **Igrači** na Novim klubovima), pa igrača:
 - sve **sposobnosti** i **vještine** (imena su ista kao u igri, na engleskom);
 - **Lice**: **Odaberi...** mapu s facom (poglavlje 8.1). **Makni** vraća facu iz igre;
 - **Gore / Dolje u redoslijedu**: redoslijed u momčadi. Prvih jedanaest počinje utakmicu;
-- **Dodaj igrača** (kopija igrača kojeg odabereš, s novim ID-om), **Makni iz kluba**;
+- **Dodaj igrača** (kopija igrača kojeg odabereš, s novim ID-om; samo klubovi iz igre),
+  **Makni iz kluba** (novi klub zadržava barem 18 igrača);
 - **Najboljih jedanaest** stavi najjačeg igrača na svako mjesto; **Razina momčadi...** podigne
   ili spusti sve sposobnosti cijele momčadi;
 - **Izvezi CSV... / Uvezi CSV...**: uredi momčad u tabličnom programu. Prvo izvezi, promijeni
   ćelije, pa uvezi iste stupce natrag.
+- **Uvezi momčad iz tablice...**: bilo koja tablica igrača postaje momčad kluba -- ručno
+  upisana, popis momčadi kopiran sa stranice, izvoz iz Football Managera ili EA FC-a. Stupci
+  se prepoznaju po imenu (ime, pozicija, dob ili datum rođenja, državljanstvo, visina, noga,
+  broj dresa, ukupna ocjena i bilo koje ocjene) i prikažu se da ispraviš krivo prepoznat.
+  Ono čega u tablici nema dolazi od igrača iz igre iste pozicije i ocjene; ocjene 1-20 iz
+  Football Managera rastežu se na 40-99 kao u igri. Igrači iz tablice zauzimaju mjesta u
+  klubu redom momčadi: novi klub zadržava svojih 30 mjesta (manje igrača = ostali odlaze,
+  najviše do 18), klub iz igre dobije ili izgubi igrače da se poklopi.
 
 Svaka promjena zapiše se u svijet kad stisneš **Izgradnja**; datoteke igre ostaju kakve jesu.
 **Poništi promjene ovog igrača** i **Poništi sve promjene ovog kluba** vraćaju ono iz igre.
@@ -221,7 +233,7 @@ državom u Select Team i Kick Off.
 | Koliko puta se klubovi sretnu | 1 – 4 |
 | Liga koje se dijele na pola | 2 po svijetu |
 | Rangova u jednoj državi | do 7. |
-| Igrača po novom klubu | 30 na početku; dodaj i makni koliko želiš |
+| Igrača po novom klubu | 30 na početku; makni do 18, novih igrača nema |
 
 ## 9. Paketi liga: podijeli cijelu ligu
 

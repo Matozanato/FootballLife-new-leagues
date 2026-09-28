@@ -46,10 +46,14 @@ install anything.
 >   places, and the Conference League itself (the 2024 format) as one tick in Build.
 > - **Updates itself** (from 0.1.1): it says when a new version is out and installs it —
 >   *Help → Check for updates*. Settings and projects stay.
-> - English and Croatian.
+> - **Squads from a table** (0.1.2): any table of players — typed by hand, copied off a
+>   website, a Football Manager or EA FC export — becomes a club's squad; what the table does
+>   not have comes from the game's own players of the same position and rating.
+> - English, Croatian, Spanish and French.
 >
 > Guide: [docs/mod-studio-guide.md](docs/mod-studio-guide.md) ·
-> [hrvatski](docs/mod-studio-guide.hr.md) · how it works and the package format:
+> [hrvatski](docs/mod-studio-guide.hr.md) · [español](docs/mod-studio-guide.es.md) ·
+> [français](docs/mod-studio-guide.fr.md) · how it works and the package format:
 > [docs/mod-studio.md](docs/mod-studio.md)
 
 ## The people who made this better
@@ -59,8 +63,8 @@ someone who played a season, wrote down what happened and sent it. Thank you, al
 
 ### vmardonesdev: the tester this project owes the most
 
-**vmardonesdev** has done more for this project than anyone besides its author. Eleven of
-the twelve GitHub issues so far come from vmardonesdev, and every one is a proper test
+**vmardonesdev** has done more for this project than anyone besides its author. Nineteen of
+the twenty-three GitHub issues so far come from vmardonesdev, and every one is a proper test
 report: the exact commit, the exact world, what was installed, what was expected, what
 happened, with logs and saves attached. vmardonesdev runs full seasons and season rollovers
 that take hours, repeats a test on a fresh install before calling it a bug, says so when
@@ -89,6 +93,19 @@ worst bugs here were found only because vmardonesdev played further than anyone 
   counter that forgot New Year.
 - [#12](https://github.com/Matozanato/FootballLife-new-leagues/issues/12): a Master League
   career on region 29 that started in January with no table; fixed in `fl26reg64`.
+  [#14](https://github.com/Matozanato/FootballLife-new-leagues/issues/14) and
+  [#16](https://github.com/Matozanato/FootballLife-new-leagues/issues/16) followed it through.
+- [#17](https://github.com/Matozanato/FootballLife-new-leagues/issues/17) and
+  [#20](https://github.com/Matozanato/FootballLife-new-leagues/issues/20): the first full
+  walk-throughs of Mod Studio, the League Builder and every part of the Players page.
+- [#18](https://github.com/Matozanato/FootballLife-new-leagues/issues/18): the League
+  Builder crash on an empty region map.
+- [#19](https://github.com/Matozanato/FootballLife-new-leagues/issues/19): a new second
+  division linked under a league with no table had no fixtures; fixed in `fl26join`.
+- [#21](https://github.com/Matozanato/FootballLife-new-leagues/issues/21): a new second
+  division took over the country's domestic cup; `fl26chain` now keeps the cup to the top flight.
+- [#22](https://github.com/Matozanato/FootballLife-new-leagues/issues/22): the same club
+  drawn into two Libertadores groups in a first season; fixed in `fl26swiss`.
 
 If you use anything from this repository, vmardonesdev's name belongs next to it.
 
@@ -116,6 +133,11 @@ If you use anything from this repository, vmardonesdev's name belongs next to it
   with blank names, and fixture dates that turned out to come from the regulation id
   itself. Those questions mapped a good part of what this project is built on, and
   spursfan07 is now testing the modules.
+- **Amir** ([AmirPjanic](https://github.com/AmirPjanic)): tests Mod Studio release by
+  release and asks for what a modder actually needs. The Team ID and League ID columns, the
+  division shown next to each league, nationality typed by name, removing players from new
+  clubs and club names with č, ć, š, ž, đ all came from those questions
+  ([#23](https://github.com/Matozanato/FootballLife-new-leagues/issues/23)).
 - **n1ne** (Discord): follows the work closely and asks the questions that show where the
   docs are not clear yet, such as how the European competitions get their clubs.
 
@@ -504,7 +526,7 @@ is named.
 
 Contributors, and what each of them did, are listed in
 [The people who made this better](#the-people-who-made-this-better) near the top: above all
-**vmardonesdev**, and **Stagnant09**, **pioup38**, **vector360**, **jibibi**, **bobzera**, **spursfan07** and **n1ne**.
+**vmardonesdev**, and **Stagnant09**, **pioup38**, **vector360**, **jibibi**, **bobzera**, **spursfan07**, **Amir** and **n1ne**.
 
 The licence asks nothing of you. I do: **if you use these findings, addresses, patch sets
 or tools in a mod, credit this work and link back** — see

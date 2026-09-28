@@ -46,7 +46,7 @@ def latest(progress=None):
     or None when GitHub has nothing newer than this program"""
     with _get(API) as r:
         rels = json.load(r)
-    best = None
+    best, newer = None, []
     for rel in rels:
         m = TAG.match(rel.get("tag_name") or "")
         if not m or rel.get("draft") or rel.get("prerelease"):
@@ -59,11 +59,25 @@ def latest(progress=None):
         info = {"version": m.group(1), "url": a["browser_download_url"], "size": a.get("size", 0),
                 "sha256": digest[7:] if digest.startswith("sha256:") else "",
                 "page": rel.get("html_url", ""), "notes": rel.get("body") or ""}
+        if vtuple(info["version"]) > vtuple(VERSION):
+            newer.append((vtuple(info["version"]), info["version"], info["notes"]))
         if best is None or vtuple(info["version"]) > vtuple(best["version"]):
             best = info
     if best and vtuple(best["version"]) > vtuple(VERSION):
+        # someone who skipped a version gets that one's changes too, newest first
+        newer.sort(reverse=True)
+        if len(newer) > 1:
+            best["notes"] = "\n\n".join("## %s\n\n%s" % (v, what_changed(n)) for _t, v, n in newer)
         return best
     return None
+
+
+def what_changed(notes):
+    """a release's notes as the update dialog shows them: the New / Fixed / Known lists, without
+    the download-and-unzip line, which is for someone reading the release page"""
+    keep = [l for l in (notes or "").replace("\r\n", "\n").split("\n")
+            if not l.startswith("Download `")]
+    return "\n".join(keep).strip()
 
 
 def download(info, progress=None):

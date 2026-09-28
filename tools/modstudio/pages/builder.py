@@ -47,6 +47,22 @@ def europe_text(L):
     return ", ".join("%d %s" % (pos, SHORT.get(comp, comp)) for pos, comp in sorted(L.get("europe") or []))
 
 
+def built_league(g, world, name):
+    """what the last Build gave a league (the world folder's leaguebuilder-plan.json): its ids
+    (cid, rid) and its clubs' team ids (teams); {} before the first Build"""
+    if not world or not g.ok():
+        return {}
+    try:
+        with open(os.path.join(g.livecpk_dir, world, "leaguebuilder-plan.json"), encoding="utf-8") as f:
+            built = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    for p in built.get("leagues") or []:
+        if p.get("name") == name:
+            return p
+    return {}
+
+
 def fmt_text(L):
     if L.get("split"):
         s = L["split"]
@@ -252,7 +268,12 @@ class LeagueDialog(Dialog):
         cur = L.get("above")
         i = self.above.findData(int(cur) if isinstance(cur, str) and cur.isdigit() else cur)
         self.above.setCurrentIndex(max(0, i))
-        self.form.addRow(_("Division"), self.above)
+        self.tier_lab = QLabel("")
+        self.form.addRow(_("Division"), row(self.above, self.tier_lab))
+        self.form.addRow("", hint(_("the league one division up: one of the game's, or one of your new leagues "
+                                    "(they are at the top of the list -- add the higher one first)")))
+        self.above.currentIndexChanged.connect(lambda _i: self.show_tier())
+        self.show_tier()
         self.exchange = QSpinBox()
         self.exchange.setRange(1, 6)
         self.exchange.setValue(L.get("exchange", 3))
@@ -313,6 +334,27 @@ class LeagueDialog(Dialog):
             error(self, "League", _("There is already a league called %s.") % L["name"])
             return
         self.accept()
+
+
+    def tier_of(self, up, seen=()):
+        """the division a league below `up` becomes: 1 at the top, the game's own leagues by
+        their rank field, new ones by following their chain up"""
+        if up in (None, ""):
+            return 1
+        if isinstance(up, int):
+            t = self.project.parent_tiers.get(up)
+            return t + 1 if t else None
+        if up in seen:
+            return None
+        for x in self.project.recipe["leagues"]:
+            if x["name"] == up:
+                t = self.tier_of(x.get("above"), seen + (up,))
+                return t + 1 if t else None
+        return None
+
+    def show_tier(self):
+        t = self.tier_of(self.above.currentData())
+        self.tier_lab.setText(_("= division %d") % t if t else "")
 
 
 class ClubDialog(Dialog):
@@ -409,9 +451,11 @@ class NewLeagues(BuilderPage):
         self.tree.setRootIsDecorated(False)
         self.tree.setAlternatingRowColors(True)
         self.tree.setIconSize(QSize(28, 28))
-        self.tree.setHeaderLabels([_("League"), _("Country"), _("Clubs"), _("Format"), _("Division"),
-                                   _("Up / down"), _("Europe"), _("Players changed")])
-        for c, w in enumerate((240, 150, 60, 170, 230, 80, 150)):
+        self.tree.setHeaderLabels([_("League"), _("League ID"), _("Country"), _("Clubs"), _("Format"),
+                                   _("Division"), _("Up / down"), _("Europe"), _("Players changed")])
+        self.tree.headerItem().setToolTip(1, _("The league's competition id in the game (the one its logo "
+                                               "file uses), given at Build"))
+        for c, w in enumerate((240, 80, 150, 60, 170, 230, 80, 150)):
             self.tree.setColumnWidth(c, w)
         self.tree.itemDoubleClicked.connect(lambda *a: self.edit())
         self.outer.addWidget(self.tree, 1)
@@ -444,9 +488,13 @@ class NewLeagues(BuilderPage):
             up = L.get("above")
             div = _("top") if up in (None, "") else _("below %s") % (names.get(up, up) if isinstance(up, int) else up)
             n = sum(len((pl.get("%s/%d" % (L["name"], k)) or {}).get("edits") or {}) for k in range(L.get("clubs", 0)))
-            it = QTreeWidgetItem([L["name"], L.get("country", ""), str(L.get("clubs", "")), fmt_text(L), div,
+            b = built_league(self.app.game, r.get("world"), L["name"])
+            it = QTreeWidgetItem([L["name"], str(b["cid"]) if b.get("cid") is not None else "",
+                                  L.get("country", ""), str(L.get("clubs", "")), fmt_text(L), div,
                                   str(L.get("exchange", 3)) if up not in (None, "") else "", europe_text(L),
                                   str(n) if n else ""])
+            if b.get("rid") is not None:
+                it.setToolTip(1, _("competition %s, regulation %s") % (b.get("cid"), b["rid"]))
             pm = pixmap(L.get("logo"), 28)
             if pm:
                 it.setIcon(0, pm)
@@ -604,21 +652,9 @@ class NewClubs(BuilderPage):
         return L["club_names"], L["club_abbrs"], L["club_crests"]
 
     def built_ids(self, L):
-        """the team ids a build gave this league's clubs (the world folder's leaguebuilder-plan.json),
-        or []: ids are handed out at Build, after the game's own clubs"""
-        g = self.app.game
-        w = self.project.recipe.get("world")
-        if not w or not g.ok():
-            return []
-        try:
-            with open(os.path.join(g.livecpk_dir, w, "leaguebuilder-plan.json"), encoding="utf-8") as f:
-                built = json.load(f)
-        except (OSError, ValueError):
-            return []
-        for p in built.get("leagues") or []:
-            if p.get("name") == L["name"]:
-                return list(p.get("teams") or [])
-        return []
+        """the team ids a build gave this league's clubs, or []: ids are handed out at Build,
+        after the game's own clubs"""
+        return list(built_league(self.app.game, self.project.recipe.get("world"), L["name"]).get("teams") or [])
 
     def show_clubs(self):
         cur = self.tree.currentItem()

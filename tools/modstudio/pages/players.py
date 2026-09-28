@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QCompleter, QFileDialog, QF
                                QVBoxLayout, QWidget)
 
 import lbplayers as P
+import leaguebuilder as B
 import playeredit as E
 from .. import theme
 from ..i18n import _
@@ -35,6 +36,9 @@ class Players(BuilderPage):
         self.action("Best eleven", self.best_eleven, tip="Put the strongest player for each place of the "
                     "4-2-3-1 at the top of the squad order")
         self.action("Squad level...", self.squad_level, tip="Raise or lower every ability of the whole squad")
+        self.action("Import a squad from a table...", self.import_table,
+                    tip="Any CSV of players -- typed by hand, off a website, from Football Manager or an EA FC "
+                        "database -- becomes this club's squad")
         self.action("Import CSV...", self.import_csv)
         self.action("Export CSV...", self.export_csv)
 
@@ -137,11 +141,15 @@ class Players(BuilderPage):
         foot = QComboBox()
         foot.addItems(["Right", "Left"])
         self._add(f, "Stronger Foot", foot, "Stronger foot")
-        for n in ("Weak Foot Usage", "Weak Foot Accuracy", "Form", "Injury Resistance", "Playing Style", "Nationality"):
+        for n in ("Weak Foot Usage", "Weak Foot Accuracy", "Form", "Injury Resistance", "Playing Style"):
             lo, hi = E.LIMITS[n]
             self._add(f, n, self._spin(lo, hi), n)
-        f.addRow("", hint(_("Nationality and playing style are the game's numbers: copy them from a player "
-                            "of that country or with that style (Export CSV shows them).")))
+        nat = QComboBox()             # filled from the game's Country table (fill_countries)
+        nat.setEditable(True)
+        nat.setInsertPolicy(QComboBox.NoInsert)
+        self._add(f, "Nationality", nat, "Nationality")
+        f.addRow("", hint(_("Playing style is the game's number: copy it from a player with that style "
+                            "(Export CSV shows it). The CSV keeps the country's number for nationality.")))
         tabs.addTab(self._scroll(basic), _("Basics"))
 
         pw = QWidget()
@@ -218,6 +226,9 @@ class Players(BuilderPage):
             return "1" if w.isChecked() else "0"
         if key in E.POSITIONS:
             return str(w.currentIndex())
+        if key == "Nationality":
+            i = w.findText(w.currentText())     # typed text counts only when it names a country
+            return str(w.itemData(i if i >= 0 else w.currentIndex()))
         return w.currentText()
 
     def _set(self, key, val):
@@ -231,9 +242,25 @@ class Players(BuilderPage):
             w.setChecked(val == "1")
         elif key in E.POSITIONS:
             w.setCurrentIndex(int(val) if val.isdigit() else 0)
+        elif key == "Nationality":
+            self.fill_countries()
+            i = w.findData(int(val)) if val.isdigit() else -1
+            if i < 0 and val.isdigit():           # a number the table does not name: keep it
+                w.addItem("%s (%s)" % (_("unknown country"), val), int(val))
+                i = w.count() - 1
+            w.setCurrentIndex(max(0, i))
         else:
             i = w.findText(val)
             w.setCurrentIndex(max(0, i))
+
+    def fill_countries(self):
+        w = self.ed["Nationality"]
+        if w.count() or not self.project.base:
+            return
+        w.blockSignals(True)
+        for name, fid in B.country_ids(self.project.base):
+            w.addItem(name, fid)
+        w.blockSignals(False)
 
     # ---- which club ----
     def shown(self):
@@ -260,7 +287,7 @@ class Players(BuilderPage):
         for rid, cid, name, teams in P_.game_lgs:
             e = P_.edits("leagues").get(str(rid), {})
             self.lg.addItem(e.get("name", name), ("game", rid))
-        i = self.lg.findData(keep) if keep else -1
+        i = next((n for n in range(self.lg.count()) if self.lg.itemData(n) == keep), -1) if keep else -1
         self.lg.setCurrentIndex(max(0, i))
         self.lg.blockSignals(False)
         names = []
@@ -326,7 +353,8 @@ class Players(BuilderPage):
             data = ("game", rid)
         if self.lg.count() == 0:
             self.fill_leagues()
-        i = self.lg.findData(data)
+        # findData does not match a Python tuple (measured: -1 for ("new", name) that is there)
+        i = next((n for n in range(self.lg.count()) if self.lg.itemData(n) == data), -1)
         self.club = key
         if i >= 0:
             self.lg.setCurrentIndex(i)
@@ -377,7 +405,7 @@ class Players(BuilderPage):
             m.update({k: v for k, v in a.items() if k != "like"})
             out.append((NEW + str(i), m, a, False))
         if self.club and not self.club.isdigit() and not any("order" in ch for ch in ed.values()):
-            auto = P.best_eleven([dict(m, player=k) for k, m, ch, g in out])   # what Build will do
+            auto = P.best_eleven([dict(m, player=k) for k, m, ch, g in out if not g])   # what Build will do
             for k, m, ch, g in out:
                 m["order"] = auto.get(k, m.get("order", ""))
         out.sort(key=lambda x: (x[3], int(x[1].get("order") or 0) if str(x[1].get("order", "")).isdigit() else 99))
@@ -415,7 +443,7 @@ class Players(BuilderPage):
         self._filling = False
         game = bool(self.club) and self.club.isdigit()
         self.b_add.setEnabled(game)
-        self.b_remove.setEnabled(game)
+        self.b_remove.setEnabled(bool(self.club))     # a new club can lose players, not gain them
         c = self.changes()
         n = len(c.get("edits") or {}) + len(c.get("add") or []) + len(c.get("remove") or [])
         self.foot.setText((_("%d players; the first eleven by squad order (bold) start.") % len(self.rows))
@@ -642,8 +670,13 @@ class Players(BuilderPage):
         self.ed["name"].setFocus()
 
     def remove_player(self):
-        if not self.club or not self.club.isdigit() or not self.cur:
+        if not self.club or not self.cur:
             return
+        if not self.club.isdigit():
+            gone = self.changes().get("remove") or []
+            if self.cur not in gone and len(self.rows) - len(gone) <= P.MIN_SQUAD:
+                self.say(_("A new club keeps at least %d players.") % P.MIN_SQUAD, "err")
+                return
         c = self.changes(True)
         if self.cur.startswith(NEW):
             del c["add"][int(self.cur[1:])]
@@ -696,3 +729,87 @@ class Players(BuilderPage):
         self.project.dirty = True
         self.fill_squad()
         info(self, "Import CSV...", _("%d players changed.") % len(got))
+
+    def import_table(self):
+        """a squad from any table of players (squadimport.py): the table's players take the club's
+        places in squad order; a game club gains or loses players to match, a new club keeps its
+        30 places and can lose players down to 18"""
+        import squadimport as Q
+        from .tableimport import ImportDialog
+        if not self.rows or not self.club:
+            return
+        title = "Import a squad from a table..."
+        p, _f = QFileDialog.getOpenFileName(self, _(title), "", "CSV (*.csv *.txt);;" + _("All files") + " (*.*)")
+        if not p:
+            return
+        try:
+            head, rows = Q.read_table(p)
+        except (OSError, UnicodeError, ValueError) as e:
+            error(self, title, str(e))
+            return
+        if not head or not rows:
+            error(self, title, _("The table has no players in it."))
+            return
+        new = not self.club.isdigit()
+        keys = [r["player"] for r in self.rows]
+        room = (_("A new club has %d places: the table's first %d players take them, and places left over "
+                  "leave the club (it keeps at least %d).") % (P.SQUAD, P.SQUAD, P.MIN_SQUAD) if new else
+                _("The table's players take the places of the club's %d players in squad order; more are "
+                  "added, fewer leave the club (it keeps at least %d).") % (len(keys), P.MIN_SQUAD))
+        dlg = ImportDialog(self, os.path.basename(p), head, rows, room)
+        if not dlg.exec():
+            return
+        mapping = dlg.mapping()
+        if not any(t in ("name", "first", "last") for t in mapping.values()):
+            error(self, title, _("Pick the column with the players' names."))
+            return
+        if self.changes() and not ask(self, "Players", _("This club already has changes to its players. "
+                                                         "Replace them with the table?")):
+            return
+        base = self.project.base
+        if getattr(self, "_model_for", None) is not base:
+            self._model = Q.Model(self.project.squads().players)
+            self._model_for = base
+        countries = Q.Countries(B.country_ids(base))
+        nation = None
+        if new:
+            L = self.project.league(self.club.rpartition("/")[0])
+            nation = countries.find((L or {}).get("country", ""))
+        players, warn = Q.convert(head, rows, mapping, self._model, countries, nation, level=dlg.level())
+        if not players:
+            error(self, title, _("No player could be read:") + "\n\n" + "\n".join(warn[:15]))
+            return
+        if new and len(players) > P.SQUAD:
+            warn.append(_("The table has %d players; a new club takes the first %d.") % (len(players), P.SQUAD))
+            players = players[:P.SQUAD]
+        if len(players) < P.MIN_SQUAD:
+            warn.append(_("The table has %d players; the club keeps %d, so %d stay as they were.")
+                        % (len(players), P.MIN_SQUAD, P.MIN_SQUAD - len(players)))
+
+        self.project.players().pop(self.club, None)
+        c = self.changes(True)
+        ed = c.setdefault("edits", {})
+        for k, pl in zip(keys, players):
+            orig = self.original(k)
+            ch = {f: v for f, v in pl.items() if v != str(orig.get(f, ""))}
+            if ch:
+                ed[k] = ch
+        for pl in players[len(keys):]:              # a game club only: the rest join it
+            like = next((r["player"] for r in self.rows
+                         if r.get("Registered Position") == pl["Registered Position"]), keys[0])
+            c.setdefault("add", []).append(dict(pl, like=like))
+        gone = keys[max(len(players), P.MIN_SQUAD):]
+        if gone:
+            c["remove"] = gone
+        if not ed:
+            c.pop("edits", None)
+        self.project.dirty = True
+        self.cur = None
+        if new:
+            self.fill_squad()                        # Build picks the best eleven of a new club
+        else:
+            self.set_orders(P.best_eleven([dict(m, player=k) for k, m, ch, g in self.view() if not g]))
+        text = _("%d players imported.") % len(players)
+        if warn:
+            text += "\n\n" + "\n".join(warn[:12]) + ("\n..." if len(warn) > 12 else "")
+        info(self, title, text)
