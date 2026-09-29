@@ -320,7 +320,10 @@ calendar.
   like a European league, and lost its second half. `fl26join.dll` now leaves such a league
   alone in July and its region closes it at New Year, and `fl26swiss` dates it between days
   45 and 333. Confirm: `sider.log` at boot says `calendar-year leagues of ours (closed at New
-  Year): <n>`, and the league still has fixtures after July.
+  Year): <n>`, and the league still has fixtures after July. Measured 2026-09-29 with a Saudi
+  second division: all rounds February to December, New Year without a crash. **Still open:**
+  promotion and relegation with the division above at New Year does not happen yet
+  (`fl26join.log`: `season end: ... 11(no table) 162(below has none)`), so the clubs stay.
 - 2026-09-28 (Evo-Web report): **two clubs of one country could meet in the league phase**
   (Manchester United v Manchester City). The draw was a fixed table by list position; each pot
   is now reordered so one league's clubs are spread. Confirm: `sider.log` has `draw spread by

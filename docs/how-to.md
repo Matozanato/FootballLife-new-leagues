@@ -422,15 +422,14 @@ python tools\siderroot.py _FL26Asia
 
 - **Kick Off:** the new league is listed under the country you picked, next to that country's
   own league.
-- **Its fixture dates** come from the league's regulation id, not from the country, so it
-  plays an **August-to-May** season like a European league, even under Japan whose own
-  league has a calendar-year season.
-- **Not measured yet**, stated plainly: a Master League career *inside* a league placed
-  under Japan, China or Saudi Arabia. Our test careers all used leagues under England or in
-  regions of their own. What we expect, from how the game decides it: the career opens in
-  **January**, the league is registered about two weeks later and plays from August (the
-  January case of [B5](#b5-look-at-it)). If you try it, a short report of what happened is
-  very welcome ([Part H](#part-h-asking-for-help)).
+- **Its fixture dates** follow the country: under Japan, China, Saudi Arabia and the other
+  calendar-year countries it plays **February to December** like their own leagues
+  (`fl26join.dll` and `fl26swiss`, GitHub issue #27); elsewhere **August to May**.
+- **Measured 2026-09-29** with a second division under the Saudi Pro League: the league joins
+  its season in February, plays all its rounds by December, the July season change leaves it
+  alone and the New Year closes it without a crash. **Not working yet:** promotion and
+  relegation with the division above at New Year; the clubs stay where they are. If you try
+  it elsewhere, a short report is very welcome ([Part H](#part-h-asking-for-help)).
 - **Continental places:** a new league gets **none** in the AFC Champions League or any other
   continental cup. The game fills those from its own entry lists.
 
