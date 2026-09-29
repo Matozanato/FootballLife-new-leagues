@@ -73,8 +73,8 @@ someone who played a season, wrote down what happened and sent it. Thank you, al
 
 ### vmardonesdev: the tester this project owes the most
 
-**vmardonesdev** has done more for this project than anyone besides its author. Nineteen of
-the twenty-three GitHub issues so far come from vmardonesdev, and every one is a proper test
+**vmardonesdev** has done more for this project than anyone besides its author. Twenty-one of
+the first thirty-seven GitHub issues come from vmardonesdev, and every one is a proper test
 report: the exact commit, the exact world, what was installed, what was expected, what
 happened, with logs and saves attached. vmardonesdev runs full seasons and season rollovers
 that take hours, repeats a test on a fresh install before calling it a bug, says so when
@@ -116,8 +116,36 @@ worst bugs here were found only because vmardonesdev played further than anyone 
   division took over the country's domestic cup; `fl26chain` now keeps the cup to the top flight.
 - [#22](https://github.com/Matozanato/FootballLife-new-leagues/issues/22): the same club
   drawn into two Libertadores groups in a first season; fixed in `fl26swiss`.
+- [#29](https://github.com/Matozanato/FootballLife-new-leagues/issues/29): confirmed the
+  domestic cup fix and caught a new second division's club playing the Supercup; the
+  Supercups now stay with the top flight.
+- [#31](https://github.com/Matozanato/FootballLife-new-leagues/issues/31): asked what to
+  test next and turned the answer into the test runs for Apertura, the new countries' cups
+  and the Kick Off order.
 
 If you use anything from this repository, vmardonesdev's name belongs next to it.
+
+### Alikhaled_727: the reports from outside Europe
+
+**Alikhaled_727** (Evo-Web) builds the leagues nobody else tests (Saudi Arabia, Egypt,
+Morocco, the rest of Asia and Africa) and writes up every result in long, careful messages
+with screenshots: what the recipe was, which settings the career had, what the table, the
+calendar and the board said, and what happened on the next day. A good part of 0.1.3.1 and
+of the coming 0.1.4 comes straight from those messages:
+
+- a Saudi second division that moved its clubs in the table but not in the fixtures, and
+  broke in the third season: the calendar-year promotion fixed in 0.1.3.1
+  ([#27](https://github.com/Matozanato/FootballLife-new-leagues/issues/27));
+- the League window taller than a 1080p screen, fixed in 0.1.3.1;
+- the table of the AFC countries' seasons, which is why West Asia will play August to May;
+- an Egyptian league with a Scottish-style split whose table filled with one club;
+- CAF cups refused with fewer than four places, the board asking for the Copa Libertadores
+  in Africa, and an African league listed among the Asian ones;
+- the ideas for moving the game's own clubs into new leagues, the CAF Super Cup, the CAF
+  cups in Cup mode and the Club World Cup places for Africa.
+
+Asian leagues with their own continental places, and with them the AFC Champions League Two
+in the League Builder, were Alikhaled_727's idea too.
 
 ### Everyone else who helped
 
@@ -133,7 +161,9 @@ If you use anything from this repository, vmardonesdev's name belongs next to it
   36/36/36 list of 2026/27 clubs is why `fl26swiss` can take a first-season list
   (`fl26swiss-first.txt`). vector360 also saw Manchester United drawn against Manchester City
   in the league phase, which is why each pot is now spread so two clubs of one country do not
-  meet there.
+  meet there, and asked for the rest of the real draw rules, coming in 0.1.4: no club meets a
+  club of its own country and at most two of any other
+  ([#15](https://github.com/Matozanato/FootballLife-new-leagues/issues/15)).
 - **jibibi** (Evo-Web): tested the modules alongside a full French patch and the kit server
   and sent the logs, which show how the patch's own roots and the new clubs' kit names have to
   sit next to ours. jibibi's Sider folder with another name
@@ -152,7 +182,9 @@ If you use anything from this repository, vmardonesdev's name belongs next to it
   division shown next to each league, nationality typed by name, removing players from new
   clubs and club names with č, ć, š, ž, đ all came from those questions
   ([#23](https://github.com/Matozanato/FootballLife-new-leagues/issues/23)), and so did the
-  managers' names of new clubs.
+  managers' names of new clubs. Amir's own world, with leagues of 26 clubs, is why 0.1.4 lets a
+  national cup have any number of clubs, and Amir asked for the national team editor, transfers
+  between clubs and the formations of new clubs.
 - **victormican** ([victormican](https://github.com/victormican)): tested Mod Studio on a
   South American world and reported what broke there: the Asia-Oceania national teams and the
   Classic Teams disappearing from Kick Off
@@ -160,11 +192,38 @@ If you use anything from this repository, vmardonesdev's name belongs next to it
   division that plays January to December
   ([#27](https://github.com/Matozanato/FootballLife-new-leagues/issues/27)), the teams in no
   league that could not be found ([#25](https://github.com/Matozanato/FootballLife-new-leagues/issues/25))
-  and the language switch ([#24](https://github.com/Matozanato/FootballLife-new-leagues/issues/24)).
+  and the language switch ([#24](https://github.com/Matozanato/FootballLife-new-leagues/issues/24)),
+  the Kick Off order that did not follow Mod Studio's
+  ([#30](https://github.com/Matozanato/FootballLife-new-leagues/issues/30)) and the League
+  window that did not fit the screen, with the idea of a separate editor for competitions
+  ([#34](https://github.com/Matozanato/FootballLife-new-leagues/issues/34)).
+- **jyanj083-dotcom** ([jyanj083-dotcom](https://github.com/jyanj083-dotcom)): a Peruvian
+  world tested to the end: the empty Libertadores qualifying places, the wrong continent in
+  League Info, player names and ratings that could not be changed and the Conference League
+  switch that broke the other two
+  ([#33](https://github.com/Matozanato/FootballLife-new-leagues/issues/33)); the DFB Pokal that
+  ignored a new 2. Bundesliga ([#32](https://github.com/Matozanato/FootballLife-new-leagues/issues/32));
+  the League window on a 1080p screen ([#35](https://github.com/Matozanato/FootballLife-new-leagues/issues/35)).
+- **Gabyyy2008** ([Gabyyy2008](https://github.com/Gabyyy2008)): Apertura and Clausura in
+  Argentina and Venezuela, and the same clubs playing the Libertadores and the Sudamericana
+  ([#37](https://github.com/Matozanato/FootballLife-new-leagues/issues/37)).
+- **alexfe87** ([alexfe87](https://github.com/alexfe87)): asked for the new UEFA formats on
+  their own, without any new league, which is why 0.1.4 has a Europe-only build
+  ([#36](https://github.com/Matozanato/FootballLife-new-leagues/issues/36)).
+- **ThanosMJ** (Evo-Web): Greek leagues three divisions deep, the league order in Select Team,
+  and the request to edit team and player ids in Mod Studio.
+- **NudnyNick999** (Evo-Web): asked for a league to appear higher in the selection menu, which
+  started the Kick Off order work, and saw an exhibition-only league land below Classic Teams.
+- **bnaanana** (Evo-Web): sent a full `sider.log` of a crash, which showed how another
+  module's errors look next to ours.
+- **dannydecai** (Evo-Web): found that the commentary call names probably stop working for
+  ids above 9999.
+- **astyleUZ** (Evo-Web): asked the first-time questions that show where the guides have to
+  be clearer.
+- **Zega_1991** (Reddit): asked for regens that do not come back with a retired player's name
+  and ratings.
 - **Alby17** (Evo-Web): found that a shirt number typed as 10 came out as 11 in the game; the
   game stores the number minus one, and every editor here now goes through that.
-- **Alikhaled**: asked for Asian leagues with their own continental places, which
-  is where the AFC Champions League Two in the League Builder comes from.
 - **n1ne** (Discord): follows the work closely and asks the questions that show where the
   docs are not clear yet, such as how the European competitions get their clubs.
 
@@ -553,7 +612,9 @@ is named.
 
 Contributors, and what each of them did, are listed in
 [The people who made this better](#the-people-who-made-this-better) near the top: above all
-**vmardonesdev**, and **Stagnant09**, **pioup38**, **vector360**, **jibibi**, **bobzera**, **spursfan07**, **Amir** and **n1ne**.
+**vmardonesdev** and **Alikhaled_727**, and **Stagnant09**, **pioup38**, **vector360**, **jibibi**, **bobzera**,
+**spursfan07**, **Amir**, **victormican**, **Alby17**, **jyanj083-dotcom**, **Gabyyy2008**, **alexfe87**,
+**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991** and **n1ne**.
 
 The licence asks nothing of you. I do: **if you use these findings, addresses, patch sets
 or tools in a mod, credit this work and link back** — see
