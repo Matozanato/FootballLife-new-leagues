@@ -412,6 +412,9 @@ Mod Studio 0.1.4. The full list, with dates and details, is in
   list for Kick Off and Master League). Do not start a career with one of its clubs.
 - **February-December seasons** cannot yet be combined with a split, Apertura/Clausura, a
   national cup or a league cup.
+- **Only one league per country can be split or Apertura/Clausura.** With two (Iceland, both
+  divisions Apertura/Clausura, issue #45) the game mixes up their phases and neither league
+  plays a match. Mod Studio refuses such a world since 0.1.4.
 - **A calendar day holds 280 matches**; everything past that is dropped in silence. A world of
   39 leagues stays under it; `tools/dayplan.py` measures a running season.
 - **The competition table can fill up** over many seasons: `fl26hdr127.lua` raises it from 100

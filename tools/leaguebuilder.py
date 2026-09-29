@@ -876,6 +876,16 @@ def plan(recipe, base):
             raise BuildError("%s and %s: a country has Apertura/Clausura or a split that keeps its"
                              " points, not both" % (p["name"], q["name"]))
     for p in out:
+        # the game finds a split's phases by the country's competition key too (0x1414ce270
+        # under 0x14134a540): Iceland with Apertura/Clausura in both divisions (GitHub #45, 0.1.3.1)
+        # showed all 20 clubs under the first division and played no match in either
+        q = next((q for q in out if q is not p and p.get("split") and q.get("split")
+                  and q["region"] == p["region"]), None)
+        if q:
+            raise BuildError("%s and %s: only one league of a country can be split or Apertura/Clausura"
+                             " for now -- with two, the game mixes up their phases and neither plays"
+                             % (p["name"], q["name"]))
+    for p in out:
         if not p.get("calendar"):
             continue
         # the whole country plays February to December: its cups and phases have European dates

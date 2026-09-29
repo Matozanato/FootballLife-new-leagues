@@ -108,6 +108,17 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
   world, with season rollovers, and the tables no longer carry the previous season's
   results (see below).
 
+- **One split or Apertura/Clausura league per country** (2026-09-30, GitHub #45). A world of
+  Mod Studio 0.1.3.1 with Apertura/Clausura in both Icelandic divisions entered both leagues
+  and both Apertura phases (`door(191) -> YES`, `door(193) -> YES`), wrote the dates of both
+  (`split regular phase of 11/49: 9 rounds on days 254..2`), and still had no table and no
+  match in either by 30 October; League Info listed all 20 clubs under the first division.
+  Both phases sit under the same competition key (the country, `under key 29` in
+  `sider.log`), and the game looks a split's phase up by that key (`0x1414ce270` under
+  `0x14134a540`); the shipped data never has two splits in one country. Since 0.1.4 the
+  builder refuses a second split or Apertura/Clausura league in a country. Giving the second
+  one a key of its own is not tried yet.
+
 ## Added leagues that never entered the season — fixed 2026-09-22, one season measured
 
 What it looked like: a league exists, has its twenty clubs, shows in every menu, can be

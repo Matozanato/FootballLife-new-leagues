@@ -136,7 +136,7 @@ The League Builder adds new leagues to the game and changes the game's own. What
 | **Name** | The league's name in the game. No two the same. |
 | **Country** | Gives the flag and where the league is listed. A country the game has no league for gets a heading of its own. |
 | **Clubs** | 10 to 24. |
-| **Format** | *Everyone plays everyone*, 1 to 4 times, *splits in two (Scottish style)*, or *Apertura and Clausura*: two tournaments a season (September to early January, January to May), each from zero points, then playoffs of 8 or 4 clubs (or none). The whole season's table decides promotion and relegation. 18 clubs at most. |
+| **Format** | *Everyone plays everyone*, 1 to 4 times, *splits in two (Scottish style)*, or *Apertura and Clausura*: two tournaments a season (September to early January, January to May), each from zero points, then playoffs of 8 or 4 clubs (or none). The whole season's table decides promotion and relegation. 18 clubs at most. One league per country can be split or Apertura/Clausura for now. |
 | **Division** | *(top division)*, or the league above it: another new league, or one of the game's. To put a new league under another new league in one step: select it and press **Add lower tier** (it takes the country, club count, format and up/down of the league above; only the name is left). |
 | **Up / down** | How many clubs change places with the league above at the end of the season. |
 | **Season** | Top division of a new country only: *August to May* (the default) or *February to December*, like Brazil, Japan or Saudi Arabia: clubs go up and down at New Year, and the divisions below it follow it. Not with a split, Apertura/Clausura, a national cup or a league cup yet. |

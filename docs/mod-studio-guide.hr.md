@@ -135,7 +135,7 @@ sadržaja s imenom `_FL26...` koju igra čita dok je uključena.
 | **Ime** | Ime lige u igri. Dvije lige ne smiju imati isto ime. |
 | **Država** | Daje zastavu i mjesto gdje je liga na popisu. Država za koju igra nema ligu dobije svoj naslov. |
 | **Klubovi** | Od 10 do 24. |
-| **Format** | *Svi sa svima*, 1 do 4 puta, *dijeli se na pola (kao Škotska)* ili *Apertura i Clausura*: dva turnira u sezoni (rujan–početak siječnja, siječanj–svibanj), svaki od nula bodova, zatim doigravanje 8 ili 4 kluba (ili bez njega). O ulasku i ispadanju odlučuje ukupna tablica sezone. Najviše 18 klubova. |
+| **Format** | *Svi sa svima*, 1 do 4 puta, *dijeli se na pola (kao Škotska)* ili *Apertura i Clausura*: dva turnira u sezoni (rujan–početak siječnja, siječanj–svibanj), svaki od nula bodova, zatim doigravanje 8 ili 4 kluba (ili bez njega). O ulasku i ispadanju odlučuje ukupna tablica sezone. Najviše 18 klubova. Zasad se u jednoj državi samo jedna liga smije dijeliti ili igrati Aperturu/Clausuru. |
 | **Rang** | *(prvi rang)* ili liga iznad nje: druga nova liga ili liga iz igre. Za novu ligu ispod druge nove lige u jednom koraku: odaberi je i stisni **Dodaj nižu ligu** (preuzme državu, broj klubova, format i gore/dolje od lige iznad; ostaje samo ime). |
 | **Gore / dolje** | Koliko klubova na kraju sezone zamijeni mjesta s ligom iznad. |
 | **Sezona** | Samo za prvi rang nove države: *kolovoz do svibanj* (zadano) ili *veljača do prosinac*, kao Brazil, Japan ili Saudijska Arabija: klubovi idu gore i dolje za Novu godinu, a lige ispod nje je slijede. Još ne uz podjelu, Aperturu/Clausuru, nacionalni kup ni liga kup. |
