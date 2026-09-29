@@ -73,13 +73,15 @@ the career's **second** season. That is expected.
 
 Two known problems in 0.1.3, both fixed for the next version (0.1.3.1):
 
-- **A new country outside Europe** (South America, Asia, Africa, North America, Oceania) with
-  a top division and a division below it: at the end of the season no clubs move between them.
+- **A new country outside Europe** (South America, Asia, Africa, North America, Oceania): the
+  first season plays normally, but at its end (July) the game drops the country's leagues. From
+  the second season on they have no clubs and are not played, and nobody moves up or down.
 - **A new league that plays January to December** (under Saudi Arabia, Japan, Korea, China,
   Brazil, Chile, Colombia ...): the season is played in full, but at New Year nobody moves up or down.
 
 New leagues in Europe, and new leagues under the game's own European leagues, promote and
-relegate normally.
+relegate normally. There is no workaround in 0.1.3. After updating to 0.1.3.1: **Install the
+modules**, **Build the world** again and start a new career.
 
 ### Which months does my new league play?
 
