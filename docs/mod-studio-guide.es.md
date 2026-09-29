@@ -152,6 +152,7 @@ League Builder añade ligas nuevas al juego y cambia las del propio juego. Lo qu
 | **Copa** | Solo primera división. **Copa nacional**: el país tiene su propia copa, con el nombre que le des (vacío: `<liga> Cup`). El juego llena la copa de un país con su primera división y la división de debajo; con las dos juega las rondas de la copa francesa, italiana o inglesa, con la primera sola las de la escocesa, belga, neerlandesa o inglesa, según el número de clubes. **Supercopa**: además, una supercopa a partido único antes de la temporada, el campeón contra el ganador de la copa. |
 | **Copa de la liga** | Solo primera división. Una eliminatoria de 16, 8 o 4 clubes de esta liga y la de abajo, por posición, el más fuerte contra el más débil: ida y vuelta en cada ronda, la final a un partido, de septiembre a diciembre. Ponle un nombre o déjalo vacío (`<liga> League Cup`). |
 | **Solo exhibición -- no está en la Liga Máster** | Para Kick Off y partidos amistosos: una liga histórica, leyendas y cosas así. Sus clubes nunca juegan una temporada de Liga Máster, así que la liga va sola: sin división arriba ni abajo, sin plazas europeas, sin copas. Aun así aparece en la lista de equipos de la Liga Máster; elige tu club en otra liga. |
+| **Formación** | Cómo forman los clubes de la liga. Elige una de las formaciones que usan los clubes del juego (4-2-3-1, 4-1-2-3, 4-3-3, 5-3-2 ...; la lista dice cuántos clubes del juego la usan): cada club nuevo recibe una copia de la táctica de un club del juego con esa formación, y al construir se le coloca su mejor once. Vacío: la del juego, un 4-2-3-1 fijo. Un club puede tener la suya (**Editar club**). |
 
 **Nombre del mundo** (en la misma página) debe empezar por `_FL26`. Después de **Construir**, la
 columna **ID de la liga** muestra el id de competición de cada liga en el juego, el mismo que lleva
@@ -168,6 +169,8 @@ ni marcas, como en el juego, así que ahí Č, Ž, Đ pasan a C, Z, D. Después 
 columna **ID del club** muestra el id de cada club en el juego.
 
 **Entrenador**: en **Editar club** de un club nuevo puedes poner el nombre de su entrenador. Vacío: uno numerado (`FL M0001` ...).
+
+**Formación**: en **Editar club** de un club nuevo puedes darle una formación propia; *Como la liga* mantiene la de la liga. El campo bajo la lista muestra dónde juega cada uno.
 
 **Ligas y clubes del juego**: nombres, logos y escudos nuevos para lo que el juego ya tiene.
 
@@ -193,6 +196,8 @@ propio juego. Elige un club (o pulsa **Jugadores** en Clubes nuevos) y luego un 
   **Quitar del club** (un club nuevo conserva al menos 18 jugadores);
 - **Mejor once** pone al jugador más fuerte en cada puesto; **Nivel de la plantilla...** sube o
   baja cada capacidad de toda la plantilla;
+- **Campo** (clubes nuevos): los once primeros en la formación del club. Elige un jugador en la
+  lista y haz clic en un puesto para ponerlo ahí; quien estaba ahí toma su lugar en el orden de la plantilla;
 - **Exportar CSV... / Importar CSV...**: edita una plantilla en una hoja de cálculo. Primero
   exporta, cambia las celdas y vuelve a importar las mismas columnas.
 - **Importar una plantilla desde una tabla...**: cualquier tabla de jugadores se convierte en

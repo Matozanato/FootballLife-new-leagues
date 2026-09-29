@@ -56,6 +56,8 @@ install anything.
 > - **Fixes** (0.1.3.1): promotion and relegation for new countries outside Europe and for
 >   leagues that play January to December, a **Rating** field on the Players page, the
 >   Conference League switch, and a League window that fits a 1080p screen.
+> - **Formations** (0.1.4): a new league's clubs, or a single club, line up in any formation
+>   the game's clubs use, with the first eleven shown on a pitch on the Players page.
 > - English, Croatian, Spanish and French.
 >
 > Guide: [docs/mod-studio-guide.md](docs/mod-studio-guide.md) ·

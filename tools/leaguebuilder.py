@@ -72,6 +72,11 @@ which league sits above -- and nothing about ids:
               league of the recipe, from 0) or a club id of the game; at least one from a
               league of the recipe (the cup is hosted by its country). A club of the game must
               play in a league that season, or the cup is not filled.
+  formation   optional, the league's clubs' formation: a label of formations(base) ("4-2-3-1",
+              "4-1-2-3 (<club name>)" ...) or the id of a club of the game; the clubs get a copy
+              of that club's tactics (mktactics.py) and their best eleven follows its places.
+              "club_formations" gives single clubs another one ("" = the league's). Without
+              either the engine lines a club up in its fixed 4-2-3-1 (lbplayers.LINEUP)
   uecl        (the recipe, not a league) true, the default: the world gets the Conference
               League, cloned from the reshaped Europa League (mkuecl.py: competition 174,
               regulations 186/187, group 1210), and its play-off (mkeuropo.py: 189), the ids
@@ -210,6 +215,56 @@ def base_dir(opt=None):
         return fl26world.base_dir(opt)
     except SystemExit as e:
         raise BuildError(str(e))
+
+
+_FORMATIONS = {}
+
+
+def formations(base):
+    """[{label, name, club, places, clubs}] -- the formations the game's clubs use, most used
+    first (mktactics.catalogue, labels naming a club where two shapes share a name); [] when the
+    tables have no Tactics.bin"""
+    key = os.path.normcase(os.path.abspath(base))
+    if key not in _FORMATIONS:
+        import mktactics
+        try:
+            rows, forms, _h = mktactics.read(base)
+        except (OSError, ValueError, AssertionError):
+            _FORMATIONS[key] = []
+        else:
+            names = {t: n for t, (n, _a) in game_clubs(base).items()}
+            raw = pesdb.wesys_unpack(open(os.path.join(base, "Team.bin"), "rb").read())
+            national = {int.from_bytes(raw[o + W.T_ID:o + W.T_ID + 4], "little")
+                        for o in range(0, len(raw), W.T_REC) if raw[o + T_NATIONAL] & 0x80}
+            _FORMATIONS[key] = mktactics.catalogue(rows, forms, names, skip=national)
+    return _FORMATIONS[key]
+
+
+def formation_club(base, want):
+    """the club of the game whose tactics give formation `want` (a label or a club id), or None"""
+    w = str(want or "").strip()
+    for e in formations(base):
+        if w == e["label"]:
+            return e["club"]
+    if w.isdigit() and any(e["club"] == int(w) for e in formations(base)):
+        return int(w)
+    if w.isdigit():
+        import mktactics
+        rows, _f, _h = mktactics.read(base)
+        return int(w) if any(c == int(w) for _k, c, _s in rows) else None
+    return None
+
+
+def club_formations(pl):
+    """{new club id: formation} of the clubs that have one"""
+    out = {}
+    for p in pl["leagues"]:
+        own = p.get("club_formations") or []
+        for k, t in enumerate(p.get("teams") or []):
+            f = (own[k] if k < len(own) else "") or p.get("formation") or ""
+            if f:
+                out[t] = f
+    return out
 
 
 def unpack_tables(game, out, log=print):
@@ -537,8 +592,13 @@ def plan(recipe, base):
              "club_crests": list(L.get("club_crests") or []),
              "club_abbrs": list(L.get("club_abbrs") or []),
              "club_coaches": list(L.get("club_coaches") or []),     # managers' names, "" = FL Mnnnn
+             "formation": str(L.get("formation") or "").strip(),
+             "club_formations": [str(x or "").strip() for x in (L.get("club_formations") or [])],
              "exchange": int(L.get("exchange", 3)), "above": None, "tier": 1,
              "europe": [[int(a), int(b)] for a, b in (L.get("europe") or [])]}
+        for f in [p["formation"]] + p["club_formations"]:
+            if f and formation_club(base, f) is None:
+                raise BuildError("%s: no formation %r (the Formation list has them)" % (name, f))
         bad = europe_problems(n, L.get("europe") or [])
         if bad:
             raise BuildError("%s: European places: %s" % (name, "; ".join(bad)))
@@ -1068,6 +1128,14 @@ def build(pl, base, game, replace=False, log=print):
         add, st = mkcoaches.add_coaches(coaches, bytes(raw), top_id + 1, names=named)
         open(os.path.join(db, "Coach.bin"), "wb").write(pesdb.wesys_pack(coaches + add, craw[:3]))
         log("  %d managers" % st["added"])
+    lineups = {}
+    wanted = club_formations(pl)
+    if wanted:
+        import mktactics
+        donors = {t: formation_club(base, f) for t, f in wanted.items()}
+        shown = mktactics.write(base, db, donors)
+        lineups = {t: mktactics.roles(places) for t, places in shown.items()}
+        log("  formations for %d clubs" % len(shown))
     with contextlib.redirect_stdout(io.StringIO()):
         M.write_tables(tmp, comp, regs, ents)
 
@@ -1077,7 +1145,7 @@ def build(pl, base, game, replace=False, log=print):
         log("  squads of %d for %d clubs" % (SQUAD, made))
     import lbplayers
     faces = []
-    lbplayers.apply(pl, base, db, PLAYER_CAP, log, faces)
+    lbplayers.apply(pl, base, db, PLAYER_CAP, log, faces, lineups=lineups)
     if faces:
         import lbfaces
         for n, (pid, folder) in enumerate(faces):

@@ -420,7 +420,6 @@
   "Profiles": "Profils",
   "Program": "Programme",
   "Put back %s as it was on %s? The file as it is now is kept as a restore point too.": "Remettre %s dans son état du %s ? Le fichier actuel est lui aussi gardé comme point de restauration.",
-  "Put the strongest player for each place of the 4-2-3-1 at the top of the squad order": "Placer le joueur le plus fort pour chaque poste du 4-2-3-1 en tête de l'ordre de l'effectif",
   "Put this copy back": "Restaurer cette copie",
   "Raise or lower every ability of the whole squad": "Monter ou baisser chaque capacité de tout l'effectif",
   "Rating": "Note",
@@ -548,7 +547,6 @@
   "The rating of the list, made of the abilities the position leans on. Changing it moves every ability by the same amount.": "La note de la liste, faite des capacités sur lesquelles le poste s'appuie. La changer déplace chaque capacité d'autant.",
   "The squad of a club: names, shirt numbers, the starting eleven (the first eleven by squad order), positions, abilities and skills. Works for the new clubs of the recipe and for the game's clubs; the changes are written into your world when you Build.": "L'effectif d'un club : noms, numéros de maillot, onze de départ (les onze premiers dans l'ordre de l'effectif), postes, capacités et compétences. Fonctionne pour les nouveaux clubs de la recette et pour les clubs du jeu ; les modifications sont écrites dans votre monde quand vous construisez.",
   "The squad's average rating is %d. Make it:": "La note moyenne de l'effectif est %d. La mettre à :",
-  "The strongest eleven for a 4-2-3-1 now head the squad order.": "Le onze le plus fort pour un 4-2-3-1 est maintenant en tête de l'ordre de l'effectif.",
   "The table has %d players; a new club takes the first %d.": "Le tableau a %d joueurs ; un nouveau club prend les %d premiers.",
   "The table has %d players; the club keeps %d, so %d stay as they were.": "Le tableau a %d joueurs ; le club en garde %d, donc %d restent tels quels.",
   "The table has no players in it.": "Le tableau ne contient aucun joueur.",
@@ -780,7 +778,17 @@
   "8 clubs": "8 clubs",
   "4 clubs": "4 clubs",
   "no playoffs": "pas de play-offs",
-  "two tournaments a season, September to early January and January to May, everyone meeting once in each and starting from zero points; the whole season's table decides promotion and relegation. 18 clubs at most": "deux tournois par saison, de septembre à début janvier et de janvier à mai ; dans chacun tous se rencontrent une fois et partent de zéro point ; le classement de toute la saison décide des montées et descentes. 18 clubs au maximum"
+  "two tournaments a season, September to early January and January to May, everyone meeting once in each and starting from zero points; the whole season's table decides promotion and relegation. 18 clubs at most": "deux tournois par saison, de septembre à début janvier et de janvier à mai ; dans chacun tous se rencontrent une fois et partent de zéro point ; le classement de toute la saison décide des montées et descentes. 18 clubs au maximum",
+  "Put the strongest player for each place of the club's formation at the top of the squad order": "Placer le joueur le plus fort pour chaque poste de la formation du club en tête de l'ordre de l'effectif",
+  "The strongest eleven for the club's formation now head the squad order.": "Le onze le plus fort pour la formation du club est maintenant en tête de l'ordre de l'effectif.",
+  "Formation": "Formation",
+  "how the league's clubs line up: a copy of the tactics of a club of the game with that formation; a club can have its own (Edit club)": "comment les clubs de la ligue se placent : une copie de la tactique d'un club du jeu avec cette formation ; un club peut avoir la sienne (Modifier le club)",
+  "The game's default (4-2-3-1)": "Celle du jeu (4-2-3-1)",
+  "%d clubs": "%d clubs",
+  "As the league (%s)": "Comme la ligue (%s)",
+  "As the league (the game's default 4-2-3-1)": "Comme la ligue (le 4-2-3-1 du jeu)",
+  "The first eleven in the club's formation. Select a player in the list, then click a place to put that player there.": "Le onze de départ dans la formation du club. Choisissez un joueur dans la liste, puis cliquez sur un poste pour l'y placer.",
+  "%s: %s was built by Mod Studio 0.1.3, so from the second season on the divisions of that country have no clubs and no matches: build the world again and start a new career": "%s : %s a été construite avec Mod Studio 0.1.3, donc à partir de la deuxième saison les divisions de ce pays n'ont plus de clubs ni de matchs : reconstruisez le monde et commencez une nouvelle carrière"
  },
  "log": [
   [

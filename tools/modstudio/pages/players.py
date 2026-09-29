@@ -34,7 +34,7 @@ class Players(BuilderPage):
         self.cur = None                # key of the player in the inspector
         self._filling = False
         self.action("Best eleven", self.best_eleven, tip="Put the strongest player for each place of the "
-                    "4-2-3-1 at the top of the squad order")
+                    "club's formation at the top of the squad order")
         self.action("Squad level...", self.squad_level, tip="Raise or lower every ability of the whole squad")
         self.action("Import a squad from a table...", self.import_table,
                     tip="Any CSV of players -- typed by hand, off a website, from Football Manager or an EA FC "
@@ -93,6 +93,13 @@ class Players(BuilderPage):
         lv.addWidget(row(self.b_up, self.b_down, self.b_add, self.b_remove, "stretch", self.b_undo_all, stretch=False))
         self.foot = hint("")
         lv.addWidget(self.foot)
+        from ..pitch import Pitch
+        self.pitch = Pitch()
+        self.pitch.setFixedHeight(340)
+        self.pitch.setToolTip(_("The first eleven in the club's formation. Select a player in the list, "
+                                "then click a place to put that player there."))
+        self.pitch.picked.connect(self.put_at)
+        lv.addWidget(self.pitch)
         split.addWidget(left)
         split.addWidget(self._inspector())
         split.setSizes([640, 520])
@@ -416,7 +423,8 @@ class Players(BuilderPage):
             m.update({k: v for k, v in a.items() if k != "like"})
             out.append((NEW + str(i), m, a, False))
         if self.club and not self.club.isdigit() and not any("order" in ch for ch in ed.values()):
-            auto = P.best_eleven([dict(m, player=k) for k, m, ch, g in out if not g])   # what Build will do
+            auto = P.best_eleven([dict(m, player=k) for k, m, ch, g in out if not g],    # what Build will do
+                                 self.lineup())
             for k, m, ch, g in out:
                 m["order"] = auto.get(k, m.get("order", ""))
         out.sort(key=lambda x: (x[3], int(x[1].get("order") or 0) if str(x[1].get("order", "")).isdigit() else 99))
@@ -465,6 +473,44 @@ class Players(BuilderPage):
             self.tree.setCurrentItem(self.tree.topLevelItem(0))
         else:
             self.inspect()
+        self.draw_pitch()
+
+    # ---- the formation (new clubs) ----
+    def places(self):
+        """a new club's formation places (None: the engine's 4-2-3-1)"""
+        return self.project.club_places(self.club) if self.club and not self.club.isdigit() else None
+
+    def lineup(self):
+        import mktactics
+        p = self.places()
+        return mktactics.roles(p) if p else None
+
+    def draw_pitch(self):
+        new_club = bool(self.club) and not self.club.isdigit()
+        self.pitch.setVisible(new_club)
+        if not new_club:
+            return
+        names, mark = {}, None
+        for k, m, ch, gone in self.view():
+            o = str(m.get("order", ""))
+            if gone or not o.isdigit() or int(o) > 10:
+                continue
+            nm = m.get("name") or (m.get("Registered Position", "") + " " + str(P.overall(m)))
+            names[int(o)] = nm if len(nm) <= 18 else nm[:17] + "."
+            if k == self.cur:
+                mark = int(o)
+        self.pitch.show_places(self.places(), names, mark)
+
+    def put_at(self, place):
+        """the selected player takes the place (order) clicked; whoever was there takes his"""
+        if not self.cur or not self.club or self.club.isdigit():
+            return
+        live = [x for x in self.view() if not x[3]]
+        i = next((n for n, x in enumerate(live) if x[0] == self.cur), None)
+        if i is None or place >= len(live) or i == place:
+            return
+        live[i], live[place] = live[place], live[i]
+        self.set_orders({x[0]: str(n) for n, x in enumerate(live)})
 
     def current_view(self):
         it = self.tree.currentItem()
@@ -486,6 +532,10 @@ class Players(BuilderPage):
             return
         key, m, ch, gone = v
         orig = self.original(key)
+        if hasattr(self, "pitch") and self.pitch.isVisible():
+            o = str(m.get("order", ""))
+            self.pitch.mark = int(o) if o.isdigit() and int(o) <= 10 else None
+            self.pitch.update()
         self.i_title.setText(m.get("name") or _("(numbered name)"))
         self.i_sub.setText(_("player %s") % key if key.isdigit() and self.club.isdigit() else
                            (_("new player (a copy of %s)") % (orig.get("name") or "?") if key.startswith(NEW)
@@ -666,8 +716,8 @@ class Players(BuilderPage):
         if not self.rows:
             return
         live = [dict(m, player=k) for k, m, ch, gone in self.view() if not gone]
-        self.set_orders(P.best_eleven(live))
-        self.say(_("The strongest eleven for a 4-2-3-1 now head the squad order."), "ok")
+        self.set_orders(P.best_eleven(live, self.lineup()))
+        self.say(_("The strongest eleven for the club's formation now head the squad order."), "ok")
 
     def squad_level(self):
         if not self.rows:

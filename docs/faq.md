@@ -107,6 +107,21 @@ by the same amount), and **Name** takes a name of your own for the players Build
 club (FL P00001 ...). You can also bring in a whole squad from a table: *Players > Import a squad
 from a table*.
 
+### Can my new clubs play another formation than 4-2-3-1?
+
+Yes, since 0.1.4 (#23). A new league has a **Formation** list in its window: pick one of the
+formations the game's clubs use, and each new club gets a copy of the tactics of a club of the
+game with that formation, its best eleven lined up for it. **Edit club** gives a single club
+its own. On the *Players* page a new club's first eleven is drawn on a pitch: select a player,
+click a place, and he goes there. Build again and start a new career to see it.
+
+### My new country outside Europe has no clubs and no matches from the second season
+
+A world built with Mod Studio 0.1.3 keeps its top division under its continent's code when a
+division below it exists, and in July the game leaves that country out of the next season.
+Builds since 0.1.3.1 do not. **Checks** names such a league: build the world again and start a
+new career (a career already running keeps what it lost).
+
 ### I switched the Conference League off and the Champions League / Europa League broke
 
 A 0.1.3 problem, fixed in 0.1.3.1: with the Conference League off, the Champions League and the
@@ -302,7 +317,8 @@ player id, the shirt number you gave (or the first free one), and the last place
 
 **The starting eleven is the first eleven of the squad order.** The formation gives them
 their places in a fixed order. For the new clubs' default 4-2-3-1 that is order 0 to 10 =
-GK, CB, CB, RB, LB, DMF, DMF, RMF, LMF, AMF, CF. To change who starts, change the `order`
+GK, CB, CB, RB, LB, DMF, DMF, RMF, LMF, AMF, CF (a club given another formation in Mod Studio
+has that formation's order; `python tools/mktactics.py --base <tables> --list` prints them). To change who starts, change the `order`
 column (every player of a club needs a different number). If a goalkeeper sits at order 1
 he will start at centre back, which is what a squad written in any other order looks like.
 

@@ -144,6 +144,7 @@ sadržaja s imenom `_FL26...` koju igra čita dok je uključena.
 | **Kup** | Samo za prvi rang. **Nacionalni kup**: država dobije svoj kup, s imenom koje zadaš (prazno: `<liga> Cup`). Igra puni kup države iz prvog ranga i ranga ispod njega; s oba igra kola francuskog, talijanskog ili engleskog kupa, samo s prvim rangom škotskog, belgijskog, nizozemskog ili engleskog, ovisno o broju klubova. **Superkup**: uz to i superkup od jedne utakmice prije sezone, prvak protiv osvajača kupa. |
 | **Ligaški kup** | Samo za prvi rang. Kup na ispadanje sa 16, 8 ili 4 kluba ove lige i lige ispod nje, po poretku, najjači protiv najslabijeg: dvije utakmice po kolu, finale jedna, od rujna do prosinca. Daj mu ime ili ostavi prazno (`<liga> League Cup`). |
 | **Samo za egzibiciju -- nije u Master ligi** | Za Kick Off i prijateljske utakmice: povijesna liga, legende i slično. Njeni klubovi nikad ne igraju sezonu Master lige, pa liga stoji sama: bez lige iznad ili ispod, bez europskih mjesta, bez kupova. I dalje se vidi na popisu momčadi u Master ligi; svoj klub izaberi iz druge lige. |
+| **Formacija** | Kako se klubovi lige postavljaju na terenu. Odaberi jednu od formacija koje igraju klubovi igre (4-2-3-1, 4-1-2-3, 4-3-3, 5-3-2 ...; popis kaže koliko ih klubova igre igra): svaki novi klub dobije kopiju taktike kluba iz igre s tom formacijom, a pri izgradnji mu se po njoj složi najboljih jedanaest. Prazno: zadano u igri, fiksni 4-2-3-1. Pojedini klub može imati svoju (**Uredi klub**). |
 
 **Ime svijeta** (na istoj stranici) mora počinjati s `_FL26`. Nakon **Izgradnje** stupac **ID lige**
 pokazuje ID natjecanja svake lige u igri, isti koji nosi datoteka njezina loga.
@@ -158,6 +159,8 @@ pa tamo Č, Ž, Đ postaju C, Z, D. Nakon **Izgradnje** stupac **ID kluba** poka
 kluba u igri.
 
 **Trener**: u **Uredi klub** novog kluba možeš upisati ime trenera. Prazno: numerirano ime (`FL M0001` ...).
+
+**Formacija**: u **Uredi klub** novog kluba možeš mu dati vlastitu formaciju; *Kao liga* zadržava formaciju lige. Teren ispod popisa pokazuje gdje tko stoji.
 
 **Postojeće lige i klubovi**: nova imena, logotipi i grbovi za ono što igra već ima.
 
@@ -181,6 +184,8 @@ klub (ili stisni **Igrači** na Novim klubovima), pa igrača:
   **Makni iz kluba** (novi klub zadržava barem 18 igrača);
 - **Najboljih jedanaest** stavi najjačeg igrača na svako mjesto; **Razina momčadi...** podigne
   ili spusti sve sposobnosti cijele momčadi;
+- **Teren** (novi klubovi): prvih jedanaest u formaciji kluba. Odaberi igrača na popisu, pa
+  klikni mjesto da ga staviš tamo; tko je ondje stajao, uzima njegovo mjesto u redoslijedu momčadi;
 - **Izvezi CSV... / Uvezi CSV...**: uredi momčad u tabličnom programu. Prvo izvezi, promijeni
   ćelije, pa uvezi iste stupce natrag.
 - **Uvezi momčad iz tablice...**: bilo koja tablica igrača postaje momčad kluba -- ručno

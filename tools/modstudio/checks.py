@@ -51,6 +51,27 @@ def quick(game, ini, recipe=None):
 UECL_REGS = (186, 187, 1210)      # the Conference League's league phase, knockout and its group
 OLD_GROUPS = (2051, 2053)         # group B of the Champions League / Europa League: only in the
                                   # game's own format, which fl26swiss.dll cannot run (issue #33)
+FIRST_OWN_REGION = 29             # regions 0-28 are the game's own, 29 and up the new countries'
+UEFA_CODE = 2                     # Competition.bin +6, low three bits: the confederation
+
+
+def old_confed_tops(d, leagues):
+    """names of the top divisions of a new country outside Europe (a region 29 and up) with a
+    division below them, whose competition row carries their continent's code: a world built by
+    Mod Studio 0.1.3. In July the game keeps such a league out of the next season (its season-end
+    filter wants UEFA for our regions), so from the second season on the country's divisions have
+    no clubs and no matches. Builds since 0.1.3.1 keep that row UEFA (leaguebuilder, #33)"""
+    import mkleague as M
+    try:
+        comp = M.load(os.path.join(d, "common", "etc", "pesdb"), "Competition.bin")
+    except (OSError, ValueError):
+        return []
+    code = {comp[i * M.COMP + M.CID_OFF]: comp[i * M.COMP + M.FLAG_OFF] & 7
+            for i in range(len(comp) // M.COMP)}
+    above = {L.get("above") for L in leagues}
+    return [L.get("name") or str(L["id"]) for L in leagues
+            if (L.get("region") or 0) >= FIRST_OWN_REGION and L["id"] in above
+            and code.get(L.get("cid"), UEFA_CODE) != UEFA_CODE]
 
 
 def world_problems(game, ini, recipe=None):
@@ -72,10 +93,17 @@ def world_problems(game, ini, recipe=None):
         if not e.enabled or not name.startswith("_FL26") or not os.path.exists(wf):
             continue
         try:
-            ids = {L["id"] for L in fl26world.read_world(wf)[1]}
+            leagues = fl26world.read_world(wf)[1]
+            ids = {L["id"] for L in leagues}
             uefa = fl26world.read_uefa(wf)
         except (OSError, ValueError):
             continue
+        stuck = old_confed_tops(d, leagues)
+        if stuck:
+            out.append(("err", "League Builder",
+                        _("%s: %s was built by Mod Studio 0.1.3, so from the second season on the "
+                          "divisions of that country have no clubs and no matches: build the world "
+                          "again and start a new career") % (name, ", ".join(stuck)), "Build"))
         if ids and not any(u[0] in ids for u in uefa):
             out.append(("warn", "League Builder",
                         _("%s: your leagues send nobody to Europe (no European places in the world file)") % name,

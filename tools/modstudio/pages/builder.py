@@ -404,6 +404,12 @@ class LeagueDialog(Dialog):
         self.form.addRow("", row(self.lcup, self.lcup_name))
         self.form.addRow("", hint(_("a knockout of 16, 8 or 4 clubs of this division and the one below, "
                                     "September to December")))
+        from ..pitch import FormationPick
+        self.formation = FormationPick(project.formations(), L.get("formation", ""))
+        self.formation.pitch.setFixedHeight(190)
+        self.form.addRow(_("Formation"), self.formation)
+        self.form.addRow("", hint(_("how the league's clubs line up: a copy of the tactics of a club of the "
+                                    "game with that formation; a club can have its own (Edit club)")))
         self.europe = EuropeTable(L.get("europe"), self.clubs.value())
         self.form.addRow(_("Europe"), self.europe)
         self.form.addRow("", hint(_("league position -> European competition, for a top division; "
@@ -482,6 +488,10 @@ class LeagueDialog(Dialog):
             L["league_cup_name"] = self.lcup_name.text().strip()
         else:
             L.pop("league_cup_name", None)
+        if self.formation.value():
+            L["formation"] = self.formation.value()
+        else:
+            L.pop("formation", None)
         a = self.above.currentData()
         if a is None:
             L.pop("above", None)
@@ -536,7 +546,8 @@ class LeagueDialog(Dialog):
 class ClubDialog(Dialog):
     """one club: name, short name, crest -- a new club, or one of the game's"""
 
-    def __init__(self, parent, name, short, crest, was=None, coach=None):
+    def __init__(self, parent, name, short, crest, was=None, coach=None, formation=None, formations=(),
+                 league_formation=""):
         super().__init__(parent, "Club")
         self.name = QLineEdit(name or "")
         self.name.setMinimumWidth(280)
@@ -557,6 +568,13 @@ class ClubDialog(Dialog):
             self.form.addRow(_("Manager"), self.coach)
             self.form.addRow("", hint(_("the manager's name in the game; empty = a numbered one")))
         self.coach_name = coach
+        self.formation, self.formation_value = None, formation
+        if formation is not None:          # a new club: its formation, or the league's
+            from ..pitch import FormationPick, places_of
+            first = (_("As the league (%s)") % league_formation if league_formation
+                     else _("As the league (the game's default 4-2-3-1)"))
+            self.formation = FormationPick(formations, formation, first, places_of(formations, league_formation))
+            self.form.addRow(_("Formation"), self.formation)
         if was:
             self.form.addRow("", hint(_("In the game: %s (%s)") % was))
         self.result = None
@@ -569,6 +587,8 @@ class ClubDialog(Dialog):
         self.result = (self.name.text().strip(), B.short_name(short), self.crest.path)
         if self.coach is not None:
             self.coach_name = self.coach.text().strip()
+        if self.formation is not None:
+            self.formation_value = self.formation.value()
         self.accept()
 
 
@@ -1063,7 +1083,10 @@ class NewClubs(BuilderPage):
         names, abbrs, crests = self.lists(L)
         coaches = list(L.get("club_coaches") or [])[:L["clubs"]]
         coaches += [""] * (L["clubs"] - len(coaches))
-        d = ClubDialog(self, names[k], abbrs[k], crests[k], coach=coaches[k])
+        forms = list(L.get("club_formations") or [])[:L["clubs"]]
+        forms += [""] * (L["clubs"] - len(forms))
+        d = ClubDialog(self, names[k], abbrs[k], crests[k], coach=coaches[k], formation=forms[k],
+                       formations=self.project.formations(), league_formation=L.get("formation", ""))
         if d.finish() and d.result:
             names[k], abbrs[k], crests[k] = d.result
             coaches[k] = d.coach_name or ""
@@ -1071,6 +1094,11 @@ class NewClubs(BuilderPage):
                 L["club_coaches"] = coaches
             else:
                 L.pop("club_coaches", None)
+            forms[k] = d.formation_value or ""
+            if any(forms):
+                L["club_formations"] = forms
+            else:
+                L.pop("club_formations", None)
             self.project.touch()
 
     def players(self):

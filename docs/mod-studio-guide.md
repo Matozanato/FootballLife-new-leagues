@@ -145,6 +145,7 @@ The League Builder adds new leagues to the game and changes the game's own. What
 | **Cup** | Top division only. **National cup**: the country gets its own cup, with the name you give (empty: `<league> Cup`). The game fills a country's cup from its top division and the division below it; with both it plays the French, Italian or English cup's rounds, alone the Scottish, Belgian, Dutch or English one's, picked by the number of clubs. **Super cup**: also a one-match super cup before the season, the champion against the cup winner. |
 | **League cup** | Top division only. A knockout of 16, 8 or 4 clubs of this league and the one below it, by league position, the strongest against the weakest: two legs a round, the final one match, September to December. Give it a name or leave it empty (`<league> League Cup`). |
 | **Exhibition only -- not in Master League** | For Kick Off and exhibition matches: a historical league, legends and the like. Its clubs never play a Master League season, so the league stands alone: no division above or below, no European places, no cups. It still shows in Master League's team list; pick your own club from another league. |
+| **Formation** | How the league's clubs line up. Pick one of the formations the game's clubs use (4-2-3-1, 4-1-2-3, 4-3-3, 5-3-2 ...; the list says how many clubs of the game play it): each new club gets a copy of the tactics of a club of the game with that formation, and its best eleven is lined up for it at Build. Empty: the game's default, a fixed 4-2-3-1. A single club can have its own (**Edit club**). |
 
 **World name** (on the same page) must start with `_FL26`. After **Build** the **League ID** column
 shows each league's competition id in the game, the one its logo file carries.
@@ -159,6 +160,8 @@ so Č, Ž, Đ become C, Z, D there. After **Build** the **Team ID** column shows
 the game.
 
 **Manager**: in **Edit club** of a new club you can name its manager. Empty: a numbered one (`FL M0001` ...).
+
+**Formation**: in **Edit club** of a new club you can give it a formation of its own; *As the league* keeps the league's. The pitch under the list shows where everyone stands.
 
 **Game's leagues and clubs**: new names, logos and crests for what the game already has.
 
@@ -182,6 +185,8 @@ Pick a club (or press **Players** on New clubs), then a player:
   **Remove from club** (a new club keeps at least 18 players);
 - **Best eleven** puts the strongest player at every place; **Squad level...** raises or
   lowers every ability of the whole squad;
+- **Pitch** (new clubs): the first eleven in the club's formation. Select a player in the list,
+  then click a place to put him there; whoever stood there takes his place in the squad order;
 - **Export CSV... / Import CSV...**: edit a squad in a spreadsheet. Export first, change the
   cells, import the same columns back.
 - **Import a squad from a table...**: any table of players becomes the club's squad -- one

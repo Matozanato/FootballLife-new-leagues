@@ -420,7 +420,6 @@
   "Profiles": "Profili",
   "Program": "Program",
   "Put back %s as it was on %s? The file as it is now is kept as a restore point too.": "Vratiti %s na stanje od %s? Datoteka kakva je sada također se čuva kao točka vraćanja.",
-  "Put the strongest player for each place of the 4-2-3-1 at the top of the squad order": "Stavi najjačeg igrača za svako mjesto u 4-2-3-1 na vrh redoslijeda momčadi",
   "Put this copy back": "Vrati ovu kopiju",
   "Raise or lower every ability of the whole squad": "Podigni ili spusti svaku sposobnost cijele momčadi",
   "Rating": "Ocjena",
@@ -548,7 +547,6 @@
   "The rating of the list, made of the abilities the position leans on. Changing it moves every ability by the same amount.": "Ocjena s popisa, od sposobnosti na koje se pozicija oslanja. Promjena pomiče svaku sposobnost za isti iznos.",
   "The squad of a club: names, shirt numbers, the starting eleven (the first eleven by squad order), positions, abilities and skills. Works for the new clubs of the recipe and for the game's clubs; the changes are written into your world when you Build.": "Momčad kluba: imena, brojevi na dresu, početnih jedanaest (prvih jedanaest po redoslijedu u momčadi), pozicije, sposobnosti i vještine. Radi za nove klubove iz recepta i za postojeće klubove; promjene se zapisuju u tvoj svijet kad izgradiš.",
   "The squad's average rating is %d. Make it:": "Prosječna ocjena momčadi je %d. Neka bude:",
-  "The strongest eleven for a 4-2-3-1 now head the squad order.": "Najjačih jedanaest za 4-2-3-1 sada je na vrhu redoslijeda momčadi.",
   "The table has %d players; a new club takes the first %d.": "Tablica ima %d igrača; novi klub uzima prvih %d.",
   "The table has %d players; the club keeps %d, so %d stay as they were.": "Tablica ima %d igrača; klub zadržava %d, pa %d ostaje kakvi su bili.",
   "The table has no players in it.": "U tablici nema igrača.",
@@ -780,7 +778,17 @@
   "8 clubs": "8 klubova",
   "4 clubs": "4 kluba",
   "no playoffs": "bez doigravanja",
-  "two tournaments a season, September to early January and January to May, everyone meeting once in each and starting from zero points; the whole season's table decides promotion and relegation. 18 clubs at most": "dva turnira u sezoni, od rujna do početka siječnja i od siječnja do svibnja; u svakom se svi sastaju jednom i kreću od nula bodova; ukupna tablica sezone odlučuje o ulasku i ispadanju. Najviše 18 klubova"
+  "two tournaments a season, September to early January and January to May, everyone meeting once in each and starting from zero points; the whole season's table decides promotion and relegation. 18 clubs at most": "dva turnira u sezoni, od rujna do početka siječnja i od siječnja do svibnja; u svakom se svi sastaju jednom i kreću od nula bodova; ukupna tablica sezone odlučuje o ulasku i ispadanju. Najviše 18 klubova",
+  "Put the strongest player for each place of the club's formation at the top of the squad order": "Stavi najjačeg igrača za svako mjesto u formaciji kluba na vrh redoslijeda momčadi",
+  "The strongest eleven for the club's formation now head the squad order.": "Najjačih jedanaest za formaciju kluba sada je na vrhu redoslijeda momčadi.",
+  "Formation": "Formacija",
+  "how the league's clubs line up: a copy of the tactics of a club of the game with that formation; a club can have its own (Edit club)": "kako se klubovi lige postavljaju: kopija taktike kluba iz igre s tom formacijom; klub može imati svoju (Uredi klub)",
+  "The game's default (4-2-3-1)": "Zadana u igri (4-2-3-1)",
+  "%d clubs": "klubova: %d",
+  "As the league (%s)": "Kao liga (%s)",
+  "As the league (the game's default 4-2-3-1)": "Kao liga (zadana 4-2-3-1 iz igre)",
+  "The first eleven in the club's formation. Select a player in the list, then click a place to put that player there.": "Prvih jedanaest u formaciji kluba. Odaberi igrača na popisu, pa klikni mjesto da ga staviš tamo.",
+  "%s: %s was built by Mod Studio 0.1.3, so from the second season on the divisions of that country have no clubs and no matches: build the world again and start a new career": "%s: %s je izgrađena u Mod Studiju 0.1.3, pa od druge sezone lige te države nemaju ni klubova ni utakmica: izgradi svijet ponovno i započni novu karijeru"
  },
  "log": [
   [

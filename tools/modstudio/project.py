@@ -62,6 +62,21 @@ class Project(QObject):
         self.tables_changed.emit()
         return self.base
 
+    def formations(self):
+        """the formations a new club can take (leaguebuilder.formations), [] with no tables"""
+        return B.formations(self.base) if self.base else []
+
+    def club_places(self, key):
+        """the formation's places of a new club ("<league>/<k>"): its own, the league's, or
+        None for the engine's fixed 4-2-3-1"""
+        lg, _s, k = key.rpartition("/")
+        L = self.league(lg)
+        if not L or not k.isdigit():
+            return None
+        own = list(L.get("club_formations") or [])
+        want = (own[int(k)] if int(k) < len(own) else "") or L.get("formation") or ""
+        return next((e["places"] for e in self.formations() if want and e["label"] == want), None)
+
     def game_groups(self):
         """[(group id, name, [team ids])] of the teams in no league (the game's "Others"
         sections); group ids are negative so they never meet a regulation id"""

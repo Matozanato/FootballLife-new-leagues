@@ -118,13 +118,14 @@ class Squads:
 LINEUP = ["GK", "CB", "CB", "RB", "LB", "DMF", "DMF", "RMF", "LMF", "AMF", "CF"]   # 4-2-3-1
 
 
-def best_eleven(rows):
-    """{player: new order} that puts the strongest player for each place of the new clubs'
-    4-2-3-1 at orders 0-10 (the formation hands out places in that order), and everyone
-    else after them in the order they had"""
+def best_eleven(rows, lineup=None):
+    """{player: new order} that puts the strongest player for each place of the formation at
+    orders 0-10 (the formation hands out places in that order) -- lineup, the role of each
+    place, or the new clubs' default 4-2-3-1 -- and everyone else after them in the order
+    they had"""
     left = list(rows)
     pick = []
-    for pos in LINEUP:
+    for pos in lineup or LINEUP:
         def score(r):
             rating = int(r.get(pos, "0") or 0) if str(r.get(pos, "")).isdigit() else 0
             own = r.get("Registered Position") == pos
@@ -200,11 +201,12 @@ def has_players(recipe):
     return any(c.get("edits") or c.get("add") or c.get("remove") for c in (recipe.get("players") or {}).values())
 
 
-def apply(pl, base, db, cap, log=print, faces=None):
+def apply(pl, base, db, cap, log=print, faces=None, lineups=None):
     r"""write the recipe's player changes into the world's tables in db (the world's
     common\etc\pesdb; Player.bin and PlayerAssignment.bin come from base when the world has
     none of its own yet).  pl is the plan: its leagues carry the team ids they were given.
-    faces, a list, gets (player id, face folder) for every change with a "face"."""
+    faces, a list, gets (player id, face folder) for every change with a "face". lineups:
+    {new club id: the role of each place 0-10} for the clubs with a formation of their own."""
     changes = pl.get("players") or {}
     tids = {}
     for p in pl["leagues"]:
@@ -290,7 +292,7 @@ def apply(pl, base, db, cap, log=print, faces=None):
             for n in FIELDS:
                 r[n] = E.show(n, E.getf(rec, n))
             rows.append(r)
-        for ao, o in best_eleven(rows).items():
+        for ao, o in best_eleven(rows, (lineups or {}).get(tid)).items():
             ao = int(ao)
             pack = u32(assigns, ao + E.A_PACK) & ~E.ORDER_MASK | int(o) << E.ORDER_SHIFT
             assigns[ao + E.A_PACK:ao + E.A_PACK + 4] = pack.to_bytes(4, "little")

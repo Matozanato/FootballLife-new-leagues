@@ -158,6 +158,7 @@ Le League Builder ajoute de nouvelles ligues au jeu et modifie celles du jeu. Ce
 | **Coupe** | Première division uniquement. **Coupe nationale** : le pays a sa propre coupe, avec le nom que vous donnez (vide : `<ligue> Cup`). Le jeu remplit la coupe d'un pays avec sa première division et la division en dessous ; avec les deux, elle joue les tours de la coupe française, italienne ou anglaise, avec la première seule ceux de l'écossaise, la belge, la néerlandaise ou l'anglaise, selon le nombre de clubs. **Supercoupe** : en plus, une supercoupe en un match avant la saison, le champion contre le vainqueur de la coupe. |
 | **Coupe de la ligue** | Première division uniquement. Une coupe à élimination directe de 16, 8 ou 4 clubs de cette ligue et de celle du dessous, selon le classement, le plus fort contre le plus faible : aller-retour à chaque tour, finale sur un match, de septembre à décembre. Donnez-lui un nom ou laissez vide (`<ligue> League Cup`). |
 | **Exhibition uniquement -- pas en Ligue des Masters** | Pour le Kick Off et les matchs amicaux : une ligue historique, des légendes, etc. Ses clubs ne jouent jamais de saison de Ligue des Masters, donc la ligue reste seule : pas de division au-dessus ni au-dessous, pas de places européennes, pas de coupes. Elle apparaît quand même dans la liste des équipes de la Ligue des Masters ; choisissez votre club dans une autre ligue. |
+| **Formation** | Comment les clubs de la ligue se placent. Choisissez une des formations des clubs du jeu (4-2-3-1, 4-1-2-3, 4-3-3, 5-3-2 ... ; la liste indique combien de clubs du jeu la jouent) : chaque nouveau club reçoit une copie de la tactique d'un club du jeu avec cette formation, et son meilleur onze est aligné en conséquence à la construction. Vide : celle du jeu, un 4-2-3-1 fixe. Un club peut avoir la sienne (**Modifier le club**). |
 
 Le **Nom du monde** (sur la même page) doit commencer par `_FL26`. Après la **Construction**, la
 colonne **ID de la ligue** montre l'id de compétition de chaque ligue dans le jeu, celui que porte
@@ -174,6 +175,8 @@ dans le jeu, donc Č, Ž, Đ y deviennent C, Z, D. Après la **Construction**, l
 club** montre l'id de chaque club dans le jeu.
 
 **Entraîneur** : dans **Modifier le club** d'un nouveau club, vous pouvez nommer son entraîneur. Vide : un nom numéroté (`FL M0001` ...).
+
+**Formation** : dans **Modifier le club** d'un nouveau club, vous pouvez lui donner sa propre formation ; *Comme la ligue* garde celle de la ligue. Le terrain sous la liste montre la place de chacun.
 
 **Ligues et clubs du jeu** : nouveaux noms, logos et écussons pour ce que le jeu a déjà.
 
@@ -200,6 +203,8 @@ jeu. Choisissez un club (ou appuyez sur **Joueurs** dans Nouveaux clubs), puis u
   **Retirer du club** (un nouveau club garde au moins 18 joueurs) ;
 - **Meilleur onze** place le joueur le plus fort à chaque poste ; **Niveau de l'effectif...**
   monte ou baisse chaque capacité de tout l'effectif ;
+- **Terrain** (nouveaux clubs) : le onze de départ dans la formation du club. Choisissez un joueur
+  dans la liste, puis cliquez sur un poste pour l'y placer ; celui qui s'y trouvait prend sa place dans l'ordre de l'effectif ;
 - **Exporter en CSV... / Importer un CSV...** : modifiez un effectif dans un tableur. Exportez
   d'abord, changez les cellules, puis réimportez les mêmes colonnes.
 - **Importer un effectif depuis un tableau...** : n'importe quel tableau de joueurs devient
