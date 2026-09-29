@@ -1411,6 +1411,16 @@ def country_confederations(base):
             if en and fid in conf and mkflags.by_name(cty, en) == fid}
 
 
+def id_spans(ids):
+    """"71578-71587", or "75001-75002, 71580-71587" when a league has ids of its own"""
+    out = []
+    for t in ids:
+        if out and t == out[-1][1] + 1:
+            out[-1][1] = t
+        else:
+            out.append([t, t])
+    return ", ".join("%d" % a if a == b else "%d-%d" % (a, b) for a, b in out)
+
 def build(pl, base, game, replace=False, log=print):
     out = os.path.join(siderdir.find(game), "livecpk", pl["world"])
     if os.path.exists(out):
@@ -1553,8 +1563,8 @@ def build(pl, base, game, replace=False, log=print):
         rules = (rules & ~(LEGS_MASK << LEGS_SHIFT)) | (p["legs"] << LEGS_SHIFT)
         g[0x10:0x14] = rules.to_bytes(4, "little")
         regs[o:o + M.REG] = g
-        log("  %-26s reg %d, %d clubs %d-%d%s" % (p["name"], p["rid"], len(teams), teams[0], teams[-1],
-                                                ", %d of them the game's" % len(gp) if gp else ""))
+        log("  %-26s reg %d, %d clubs %s%s" % (p["name"], p["rid"], len(teams), id_spans(teams),
+                                             ", %d of them the game's" % len(gp) if gp else ""))
 
     # the new clubs go in in id order, as the shipped ones are
     for r in sorted(added, key=lambda r: int.from_bytes(r[W.T_ID:W.T_ID + 4], "little")):
