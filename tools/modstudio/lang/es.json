@@ -948,6 +948,10 @@
    "  OJO: \\1 tiene \\2 plazas para \\3 clubes; los últimos \\4 no reciben ninguna"
   ],
   [
+   "^  NOTE: no place in Select Team for (.+): they play, but no career can start in them$",
+   "  OJO: sin sitio en Select Team para \\1: juegan, pero no se puede empezar una carrera en ellas"
+  ],
+  [
    "^      European places: ",
    "      plazas europeas: "
   ],

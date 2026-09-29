@@ -1307,6 +1307,11 @@ def describe(pl):
         lines.append("  no European places: the new leagues send nobody to Europe")
     if not pl.get("uecl") and any(e[2] == 2 for e in own_places(pl)):
         lines.append("  NOTE: Conference League places, but the world gets no Conference League")
+    unlisted = [p["name"] for p in pl["leagues"] if p["slot"] == fl26world.NO_SLOT and not p.get("exhibition")]
+    if unlisted:
+        # the Select Team list has room for 36 new leagues; the ids past it play but have no place (#39)
+        lines.append("  NOTE: no place in Select Team for %s: they play, but no career can start in them"
+                     % ", ".join(unlisted))
     names = dict(fl26world.COMPETITIONS)
     for c, n in sorted(fl26world.uefa_places(own_places(pl))[1].items()):
         lines.append("  NOTE: %s has %d places listed for %d clubs; the last %d get none"

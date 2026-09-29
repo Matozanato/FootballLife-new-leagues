@@ -948,6 +948,10 @@
    "  ATTENTION : \\1 a \\2 places indiquées pour \\3 clubs ; les \\4 derniers n'en ont pas"
   ],
   [
+   "^  NOTE: no place in Select Team for (.+): they play, but no career can start in them$",
+   "  ATTENTION : pas de place dans Select Team pour \\1 : elles jouent, mais aucune carrière ne peut y commencer"
+  ],
+  [
    "^      European places: ",
    "      places européennes : "
   ],

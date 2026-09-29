@@ -948,6 +948,10 @@
    "  PAZI: \\1 ima \\2 mjesta za \\3 klubova; zadnjih \\4 ne dobiva ništa"
   ],
   [
+   "^  NOTE: no place in Select Team for (.+): they play, but no career can start in them$",
+   "  PAZI: nema mjesta u Select Team za \\1: igraju, ali se u njima ne može započeti karijera"
+  ],
+  [
    "^      European places: ",
    "      europska mjesta: "
   ],
