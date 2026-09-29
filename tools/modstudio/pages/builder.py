@@ -26,6 +26,7 @@ ALL_CLUBS = -1
 # the league list
 SHORT = {0: "UCL", 1: "UEL", 2: "UECL", 3: "LIB", 4: "LIB-Q", 5: "AFC", 6: "CAF CL", 7: "CAF CC",
          8: "AFC CL2", 9: "SUD"}
+LIB_QUALIFYING = 4
 TOP_FLIGHT = [[1, 0], [2, 1], [3, 2]]      # the preset: 1st UCL, 2nd UEL, 3rd UECL
 # the preset by the country's confederation (Country.bin): Asia to the AFC Champions League and
 # Champions League Two, South America to the Libertadores and the Sudamericana, Africa to the CAF
@@ -34,9 +35,11 @@ PRESETS = {
     3: ("Top flight: 1st and 2nd AFC Champions League, 3rd AFC CL Two",
         "1st and 2nd to the AFC Champions League, 3rd to the AFC Champions League Two",
         [[1, 5], [2, 5], [3, 8]]),
-    4: ("Top flight: 1st-3rd Libertadores, 4th qualifying, 5th-6th Sudamericana",
-        "1st to 3rd to the Copa Libertadores, 4th to its qualifying rounds, 5th and 6th to the Copa Sudamericana",
-        [[1, 3], [2, 3], [3, 3], [4, 4], [5, 9], [6, 9]]),
+    # no Libertadores qualifying place: that round has no stand-in club for ours to replace, so a
+    # club sent there stays at home (issue #33) -- the Sudamericana takes the 4th instead
+    4: ("Top flight: 1st-3rd Libertadores, 4th-6th Sudamericana",
+        "1st to 3rd to the Copa Libertadores, 4th to 6th to the Copa Sudamericana",
+        [[1, 3], [2, 3], [3, 3], [4, 9], [5, 9], [6, 9]]),
     5: ("Top flight: 1st and 2nd CAF Champions League, 3rd Confederation Cup",
         "1st and 2nd to the CAF Champions League, 3rd to the CAF Confederation Cup",
         [[1, 6], [2, 6], [3, 7]]),
@@ -177,7 +180,8 @@ class EuropeTable(QWidget):
         sp.setValue(min(max(int(pos), 1), max(self.clubs, 1)))
         cb = QComboBox()
         for c, name in fl26world.COMPETITIONS:
-            cb.addItem(_(name), c)
+            # the Libertadores qualifying round is not filled yet (issue #33): say so in the list
+            cb.addItem(_(name) + ("  " + _("(not filled yet)") if c == LIB_QUALIFYING else ""), c)
         cb.setCurrentIndex(max(0, cb.findData(int(comp))))
         self.table.setCellWidget(r, 0, sp)
         self.table.setCellWidget(r, 1, cb)

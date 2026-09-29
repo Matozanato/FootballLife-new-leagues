@@ -77,6 +77,13 @@ def world_problems(game, ini, recipe=None):
             out.append(("warn", "League Builder",
                         _("%s: your leagues send nobody to Europe (no European places in the world file)") % name,
                         "NewLeagues"))
+        # the Libertadores qualifying round has no stand-in club for ours to replace (issue #33)
+        if any(u[0] in ids and u[2] == 4 for u in uefa):
+            out.append(("warn", "League Builder",
+                        _("%s: Libertadores qualifying places are not filled yet (the round has no free "
+                          "place for a new club), so those clubs stay at home. Use Libertadores or "
+                          "Sudamericana instead") % name,
+                        "NewLeagues"))
         if recipe is not None and recipe.get("world") == name:
             on = bool(recipe.get("uecl", True))
         else:

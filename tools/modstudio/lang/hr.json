@@ -731,8 +731,10 @@
   "▶  Play": "▶  Igraj",
   "Top flight: 1st and 2nd AFC Champions League, 3rd AFC CL Two": "Prva liga: 1. i 2. AFC Liga prvaka, 3. AFC LP Two",
   "1st and 2nd to the AFC Champions League, 3rd to the AFC Champions League Two": "1. i 2. u AFC Ligu prvaka, 3. u AFC Ligu prvaka Two",
-  "Top flight: 1st-3rd Libertadores, 4th qualifying, 5th-6th Sudamericana": "Prva liga: 1.-3. Libertadores, 4. kvalifikacije, 5.-6. Sudamericana",
-  "1st to 3rd to the Copa Libertadores, 4th to its qualifying rounds, 5th and 6th to the Copa Sudamericana": "1. do 3. u Copa Libertadores, 4. u njezine kvalifikacije, 5. i 6. u Copa Sudamericana",
+  "Top flight: 1st-3rd Libertadores, 4th-6th Sudamericana": "Prva liga: 1.-3. Libertadores, 4.-6. Sudamericana",
+  "1st to 3rd to the Copa Libertadores, 4th to 6th to the Copa Sudamericana": "1. do 3. u Copa Libertadores, 4. do 6. u Copa Sudamericana",
+  "(not filled yet)": "(još se ne popunjava)",
+  "%s: Libertadores qualifying places are not filled yet (the round has no free place for a new club), so those clubs stay at home. Use Libertadores or Sudamericana instead": "%s: mjesta u kvalifikacijama Libertadoresa još se ne popunjavaju (u tom kolu nema slobodnog mjesta za novi klub), pa ti klubovi ostaju kod kuće. Umjesto toga koristi Libertadores ili Sudamericanu",
   "Top flight: 1st and 2nd CAF Champions League, 3rd Confederation Cup": "Prva liga: 1. i 2. CAF Liga prvaka, 3. Konfederacijski kup",
   "1st and 2nd to the CAF Champions League, 3rd to the CAF Confederation Cup": "1. i 2. u CAF Ligu prvaka, 3. u CAF Konfederacijski kup",
   "CAF Champions League": "CAF Liga prvaka",
@@ -804,6 +806,10 @@
   [
    "^  no European places: the new leagues send nobody to Europe$",
    "  nema europskih mjesta: nove lige nikoga ne šalju u Europu"
+  ],
+  [
+   "^  NOTE: Libertadores qualifying places are not filled yet; those clubs stay at home$",
+   "  PAZI: mjesta u kvalifikacijama Libertadoresa još se ne popunjavaju; ti klubovi ostaju kod kuće"
   ],
   [
    "^  NOTE: Conference League places, but the world gets no Conference League$",

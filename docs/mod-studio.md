@@ -72,7 +72,7 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
 - `uefa <regulation> <position> <competition> <alt>`: one European place per line, in
   hand-out order. Without any, fl26swiss uses the DLL's own list (shipped leagues only).
   Competitions: 0 Champions League, 1 Europa League, 2 Conference League, 3 Libertadores,
-  4 Libertadores qualifying, 5 AFC Champions League, and the four cups the game does not have:
+  4 Libertadores qualifying (not filled yet: the round has no stand-in club for ours to replace), 5 AFC Champions League, and the four cups the game does not have:
   6 CAF Champions League, 7 CAF Confederation Cup, 8 AFC Champions League Two, 9 Copa
   Sudamericana (only places of the recipe's leagues go to 6-9). A list replaces the DLL's, so Build writes
   the shipped leagues' places first (`fl26world.SHIPPED_ACCESS`, a copy of fl26swiss.c's

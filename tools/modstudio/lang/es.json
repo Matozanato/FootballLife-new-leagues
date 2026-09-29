@@ -731,8 +731,10 @@
   "▶  Play": "▶  Jugar",
   "Top flight: 1st and 2nd AFC Champions League, 3rd AFC CL Two": "Primera: 1.º y 2.º Champions de la AFC, 3.º AFC CL Two",
   "1st and 2nd to the AFC Champions League, 3rd to the AFC Champions League Two": "1.º y 2.º a la Liga de Campeones de la AFC, 3.º a la Liga de Campeones Two de la AFC",
-  "Top flight: 1st-3rd Libertadores, 4th qualifying, 5th-6th Sudamericana": "Primera: 1.º-3.º Libertadores, 4.º fase previa, 5.º-6.º Sudamericana",
-  "1st to 3rd to the Copa Libertadores, 4th to its qualifying rounds, 5th and 6th to the Copa Sudamericana": "1.º a 3.º a la Copa Libertadores, 4.º a su fase previa, 5.º y 6.º a la Copa Sudamericana",
+  "Top flight: 1st-3rd Libertadores, 4th-6th Sudamericana": "Primera: 1.º-3.º Libertadores, 4.º-6.º Sudamericana",
+  "1st to 3rd to the Copa Libertadores, 4th to 6th to the Copa Sudamericana": "1.º a 3.º a la Copa Libertadores, 4.º a 6.º a la Copa Sudamericana",
+  "(not filled yet)": "(aún no se llena)",
+  "%s: Libertadores qualifying places are not filled yet (the round has no free place for a new club), so those clubs stay at home. Use Libertadores or Sudamericana instead": "%s: las plazas de la fase previa de Libertadores aún no se llenan (esa ronda no tiene plaza libre para un club nuevo), así que esos clubes se quedan en casa. Usa Libertadores o Sudamericana",
   "Top flight: 1st and 2nd CAF Champions League, 3rd Confederation Cup": "Primera: 1.º y 2.º Champions de la CAF, 3.º Copa Confederación",
   "1st and 2nd to the CAF Champions League, 3rd to the CAF Confederation Cup": "1.º y 2.º a la Liga de Campeones de la CAF, 3.º a la Copa Confederación de la CAF",
   "CAF Champions League": "Liga de Campeones de la CAF",
@@ -804,6 +806,10 @@
   [
    "^  no European places: the new leagues send nobody to Europe$",
    "  sin plazas europeas: las ligas nuevas no mandan a nadie a Europa"
+  ],
+  [
+   "^  NOTE: Libertadores qualifying places are not filled yet; those clubs stay at home$",
+   "  OJO: las plazas de la fase previa de Libertadores aún no se llenan; esos clubes se quedan en casa"
   ],
   [
    "^  NOTE: Conference League places, but the world gets no Conference League$",

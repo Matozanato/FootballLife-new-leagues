@@ -880,6 +880,9 @@ def describe(pl):
                 "%d. %s" % (pos, names.get(comp, comp)) for pos, comp in sorted(p["europe"])))
     if pl["leagues"] and not own_places(pl):
         lines.append("  no European places: the new leagues send nobody to Europe")
+    if any(e[2] == 4 for e in own_places(pl)):
+        # issue #33: the qualifying round has no stand-in club for ours to replace
+        lines.append("  NOTE: Libertadores qualifying places are not filled yet; those clubs stay at home")
     if not pl.get("uecl") and any(e[2] == 2 for e in own_places(pl)):
         lines.append("  NOTE: Conference League places, but the world gets no Conference League")
     names = dict(fl26world.COMPETITIONS)
