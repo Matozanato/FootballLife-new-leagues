@@ -5,76 +5,108 @@
 > This is unpaid reverse-engineering work done in spare time. If it is useful to you,
 > **[buy me a coffee on Ko-fi](https://ko-fi.com/mata28)** — it keeps the seasons running.
 
-Raise Football Life 2026's hard limits so that **hundreds of new clubs and dozens of new
-leagues** fit into a Master League season, using only Sider modules and data files. No
-patched executable, no repacked CPKs.
+**New leagues, new clubs and whole new countries in Football Life 2026's Master League**, plus
+one program to manage everything else you add to the game. No patched executable, no repacked
+CPKs: it all goes in through Sider modules and data files, and comes out again.
 
-This is a **research beta**. It is published so that people who mod this game can test it,
-break it, and tell us where. Read [what works and what does not](#status) before you
-install anything.
-
-> **Read this first: [docs/how-to.md](docs/how-to.md)** — the complete how-to on one page:
-> installing, adding new leagues, putting a league in a particular country (Japan, China,
-> Saudi Arabia ...), the new Champions League format with UEFA's calendar, what to watch out
-> for, and what to do when a step does not give what it should. Every step says what you
-> should see. **Please go through it before asking**: most questions are answered there.
+> ## FL26 Mod Studio (beta)
 >
-> **Never used Python? [docs/beginners-guide.md](docs/beginners-guide.md)** —
-> every step from installing Python to playing the new leagues, written for someone who has
-> never used Python or Sider modules. It says what you should see after each step and what
-> to do if you see something else. About thirty minutes.
+> **[Download the latest version](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest)**
+> (`FL26ModStudio-<version>.zip`), unzip, run `FL26ModStudio.exe`. No Python needed. It
+> tells you when a new version is out and installs it (*Help → Check for updates*); your
+> settings and recipes stay.
 >
-> Testing it in detail? [docs/step-by-step.md](docs/step-by-step.md) has the same path with
-> everything worth checking and reporting along the way.
-
-> ## New: FL26 Mod Studio (beta)
->
-> **One program for everything you add to the game** — no Python needed. Download
-> `FL26ModStudio-<version>.zip` from [Releases](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest), unzip, run `FL26ModStudio.exe`.
->
-> - **Install mods** by dropping them on the window (zip, 7z, folder, .lua, .cpk): it says what
->   each part is and where it goes, merges content-server map files into yours, and every mod
->   it installs can be removed again.
-> - **Content servers** — stadiums, kits, balls, commentary, music and goal songs, scoreboards,
->   menus, referee kits, sleeve badges, weather — with their map files edited as tables.
-> - **Sider setup**: content folders and Lua modules switched on and off and put in order,
->   profiles, restore points for every file it changes, and a diagnostics report.
-> - **League Builder**: new leagues and clubs, the game's own leagues and clubs renamed,
->   **every club's players edited** (names, numbers, positions, abilities, skills, faces), and
->   **league packages** (`.fl26pack`): a modder makes a league once, anybody adds it to their game.
-> - **Europe** (0.1.1): a new league's own Champions League, Europa League and Conference League
->   places, and the Conference League itself (the 2024 format) as one tick in Build.
-> - **Updates itself** (from 0.1.1): it says when a new version is out and installs it —
->   *Help → Check for updates*. Settings and projects stay.
-> - **Squads from a table** (0.1.2): any table of players — typed by hand, copied off a
->   website, a Football Manager or EA FC export — becomes a club's squad; what the table does
->   not have comes from the game's own players of the same position and rating.
-> - **Cups** (0.1.3): a new country's own national cup and super cup, and the continental cups
->   the game does not have (CAF Champions League, CAF Confederation Cup, AFC Champions League
->   Two, Copa Sudamericana) built from the places your leagues give. New leagues take their
->   own continent, managers get names, and a lower tier is one button.
-> - **Fixes** (0.1.3.1): promotion and relegation for new countries outside Europe and for
->   leagues that play January to December, a **Rating** field on the Players page, the
->   Conference League switch, and a League window that fits a 1080p screen.
-> - **Formations** (0.1.4): a new league's clubs, or a single club, line up in any formation
->   the game's clubs use, with the first eleven shown on a pitch on the Players page.
-> - **Clubs and squads** (0.1.4): clubs the game already has in your new leagues, a national
->   team editor, transfers between clubs, your own team and player ids for new clubs and
->   players, and a portrait for a club's manager.
-> - **Seasons and cups** (0.1.4): a national cup of any size up to 44 clubs, February to
->   December for a new country, Libertadores qualifying places, a shipped country's cup that
->   takes your new second division, a "Europe only" build, and a league-phase draw that keeps
->   clubs of one country apart as UEFA does. Split and Apertura/Clausura leagues in new
->   countries play properly again.
-> - English, Croatian, Spanish and French.
->
-> Guide: [docs/mod-studio-guide.md](docs/mod-studio-guide.md) ·
-> [hrvatski](docs/mod-studio-guide.hr.md) · [español](docs/mod-studio-guide.es.md) ·
-> [français](docs/mod-studio-guide.fr.md) · how it works and the package format:
+> Guide: [English](docs/mod-studio-guide.md) · [hrvatski](docs/mod-studio-guide.hr.md) ·
+> [español](docs/mod-studio-guide.es.md) · [français](docs/mod-studio-guide.fr.md) ·
+> **questions** (updating, crashes at start, cups, promotion, what to send when something is
+> wrong): [docs/faq.md](docs/faq.md) · how it works and the package format:
 > [docs/mod-studio.md](docs/mod-studio.md)
->
-> **Questions** (updating, crashes at start, cups, promotion, what to send when something is
-> wrong): [docs/faq.md](docs/faq.md)
+
+This is a **beta**. It is published so that people who mod this game can use it, break it and
+tell us where. Read [what works and what does not](#status) before you start a long career.
+
+## What you can do
+
+**Leagues and countries**
+
+- Up to **39 new leagues** in one world, **10 to 24 clubs** each, playing each other 1 to 4
+  times with the real number of rounds (10 clubs four times = 36 rounds).
+- **Any country.** A league is listed under its country in Select Team and Kick Off, with the
+  country's flag; a country the game has no league for gets a heading of its own and plays on
+  its own continent's calendar and cups (Europe, South America, Asia, Africa ...).
+- **Pyramids.** Put a new league under another new league or under one of the game's
+  (Championship, Serie B, 2. Bundesliga ...), down to the 7th division, with promotion and
+  relegation at every joint. **Add lower tier** makes the next division in one click.
+- **Formats:** everyone plays everyone; a Scottish-style **split**; **Apertura and Clausura**
+  with play-offs of 8 or 4.
+- **Season months** for a new country: August to May, or February to December like Brazil,
+  Japan or Saudi Arabia (0.1.4).
+- **Exhibition-only leagues** for Kick Off: legends, historical sides.
+- Your own **league logo** and **country flag** (it replaces the game's flag of that country
+  everywhere while the world is on). After Build, the **League ID** and **Team ID** columns
+  show the ids the game uses.
+
+**Clubs and players**
+
+- New clubs with your **names, short names and crests** (or a numbered badge), **managers**
+  with names and portraits (0.1.4), kits lent from the game's clubs, and a **formation** per
+  league or per club with the first eleven on a pitch (0.1.4).
+- **Clubs the game already has** in your new leagues. When such a club plays somewhere in the
+  game, you pick who takes its place there, so no competition of the game changes size (0.1.4).
+- **Rename** the game's own leagues and clubs, with new logos and crests.
+- **Edit every player of every club**: name, number, positions, abilities, skills, rating,
+  face, squad order, best eleven, squad level; CSV export and import.
+- **Squads from a table**: any table of players — typed by hand, copied off a website, a
+  Football Manager or EA FC export — becomes a club's squad.
+- **Transfers** between any two clubs and **national team call-ups** (0.1.4); your own
+  **club and player ids** for kit, crest and face packs made for a certain id (0.1.4).
+
+**Cups and continents**
+
+- The **2024 European format**: Champions League and Europa League with a league phase of 36,
+  the February play-off and a fixed knockout bracket, and a new **Conference League**. Filled
+  from a UEFA access list from the second season; in the first, by squad strength. The draw
+  keeps clubs of one country apart as UEFA does (0.1.4).
+- **Continental places** for your leagues: Champions League, Europa League, Conference League;
+  AFC Champions League and Champions League Two; Copa Libertadores (also its qualifying round,
+  0.1.4) and Copa Sudamericana; CAF Champions League and CAF Confederation Cup. The four the
+  game does not have are built with your world.
+- A country's own **national cup** (any size up to 44 clubs, with byes like the FA Cup, 0.1.4)
+  and **super cup**, a **league cup**, and **pre-season cups** of 4 or 8 invited clubs in July.
+  A new second division under a country the game has goes into that country's cup (0.1.4).
+- **Europe only** (0.1.4): just the new European format, no new leagues.
+
+**Everything else in your game folder**
+
+- **Install mods** by dropping them on the window (zip, 7z, folder, .lua, .cpk): it says what
+  each part is and where it goes, merges content-server map files into yours, and every mod it
+  installs can be removed again.
+- **Content servers** (stadiums, kits, balls, commentary, music, scoreboards, menus ...) with
+  their map files edited as tables.
+- **Sider setup**: content folders and Lua modules on, off and in order; profiles; a restore
+  point for every file it changes; a diagnostics report to paste into a bug report.
+- **League packages** (`.fl26pack`): a modder makes a league once — clubs, names, crests,
+  logos, squads, faces — and anybody adds it to their own game.
+- English, Croatian, Spanish and French.
+
+**Versions**
+
+| Version | Date | What it brought |
+|---|---|---|
+| 0.1.0 | 2026-09-28 | the mod manager and the League Builder |
+| 0.1.1 | 2026-09-28 | the Conference League, European places for new leagues, updates itself |
+| 0.1.2 | 2026-09-28 | squads from a table, the League ID column, Spanish and French |
+| 0.1.3 | 2026-09-29 | cups of other continents, national and super cups, new countries on their own continent, manager names, **Add lower tier** |
+| 0.1.3.1 | 2026-09-29 | promotion and relegation outside Europe and for January-December leagues, the Rating field, a League window that fits 1080p |
+| 0.1.4 | 2026-09-30 | formations, clubs of the game in new leagues, transfers, national teams, club and player ids, manager portraits, national cups up to 44, February-December seasons, Libertadores qualifying, a shipped country's cup taking your second division, Europe only, the UEFA draw rules, split and Apertura/Clausura leagues fixed, the Kick Off order under Colombia and MLS |
+
+The release notes of each version are on the
+[Releases](https://github.com/Matozanato/FootballLife-new-leagues/releases) page.
+
+> **Rather do it by hand, with Python?** [docs/how-to.md](docs/how-to.md) is the complete
+> how-to on one page, [docs/beginners-guide.md](docs/beginners-guide.md) takes someone who has
+> never used Python through every step, and [docs/step-by-step.md](docs/step-by-step.md) has
+> the same path with everything worth checking along the way.
 
 ## The people who made this better
 
@@ -280,7 +312,8 @@ coaches, 300 competition rulebooks and 13,000 match records. Add a few more leag
 data simply falls off the end: the season generator drops fixtures without a word, a saved
 game loses everything past the shipped count, and a coach lookup lands on the wrong record.
 
-This project does two things:
+Mod Studio installs and sets up everything below for you; this part is for anyone who wants
+to know how it works, or to build by hand. The project does two things:
 
 1. **`sider/fl26caps.lua`** — a runtime patch set of 2,759 byte changes, applied by Sider at
    startup, that grows those tables and every piece of code that indexes them:
@@ -313,8 +346,8 @@ closed and carried its table on into the next season. The module handles both. I
 compiled piece in the main folder; its source and how to build it are in
 [tools/native/](tools/native/README.md).
 
-`sider/experimental/` holds sixteen more that go further and **have only been run on our own
-test world**: 192 competitions instead of 127; every league selectable in the Select Team
+`sider/experimental/` holds seventeen more that go further and **were first run on our own
+test worlds**: 192 competitions instead of 127; every league selectable in the Select Team
 list, under its own name, showing its own clubs; 64 menu regions instead of 29; a league rank
 wide enough for a pyramid five divisions deep, with the relegation gate to match; a career
 that starts in August instead of January; promotion and relegation through a whole pyramid,
@@ -327,219 +360,63 @@ not match, and they are the part where another pair of hands helps most —
 
 ## Status
 
-Measured on our test worlds, always with a new club as the manager's team. The one played
-most recently (2026-09-24) has **39 new leagues, 780 new clubs and 23,400 new players** (30 per
-club): 602 of the clubs are placed in the leagues, which now have 10 to 24 clubs each, and 178
-have no league, as the game's own unattached clubs do. One of the 39 (regulation 62, 12 clubs)
-is in the data but is not loaded by the game, so 38 leagues and 590 clubs actually play; why
-is not known yet. It also has the Champions League and Europa
-League in the 2024 format and a new Conference League. Four seasons have been played end to
-end on an earlier world of 39 leagues of 20 clubs, and since 2026-09-23 the added leagues also
-close and re-open properly at every rollover. This page was last checked against the
-published modules on **2026-09-25**.
+Everything below was measured on our own test worlds, by playing Master League seasons
+unattended with matches simulated. This section was last checked on **2026-09-29**, against
+Mod Studio 0.1.4. The full list, with dates and details, is in
+[docs/known-issues.md](docs/known-issues.md); the hard numbers are in
+[docs/limits.md](docs/limits.md).
 
-> **New patch set on 2026-09-24: start a new career.** `sider/fl26caps.lua` now holds 46,000
-> match records instead of 26,000 (everything since 2026-09-22 was played on it), and a save
-> made under one patch set does not load under another. Keep your old `fl26caps.lua` if you
-> want to go on with an old career.
+**Measured and working**
 
-**Works**
+- **A Master League career in a new league, or with a club of the game**: the season
+  generates, every league gets its fixtures, the Team Sheet shows a real squad (30 players a
+  new club) and the hub shows the standings. On 2026-09-29 a career with a club of the game, in
+  a world with two new South American leagues, played 338 days in one unattended run.
+- **Saving and loading**: the club, the squad, the manager, the standings and the fixtures all
+  come back, also from a save made after a full season.
+- **Season after season.** The added leagues close in July with the game's own and open again
+  with empty tables and the right year; leagues that play January to December go on into their
+  next season too. Four rollovers in a row on one world, and 655 game days in one run without a crash.
+- **Promotion and relegation through whole pyramids**: three up and three down at every joint
+  of five chains, one of them under the Championship (2026-09-28). New countries outside Europe
+  and January-December leagues go on into their second season (0.1.3.1).
+- **The 2024 European format**: the league phase of 36, the play-off and the knockout of all
+  three competitions, and in the second season 108 of 108 places filled from the previous
+  season's tables.
+- **Cups of other continents**: the CAF Champions League and CAF Confederation Cup play their
+  groups and knockout; the Copa Sudamericana was drawn with 32 clubs on 2026-09-29, with the
+  clubs already in the Copa Libertadores left out.
+- **Leagues of 10 to 24 clubs** with the right number of rounds, different sizes in one world.
+- **The menus**: every new league in Select Team, Kick Off, Edit mode and Database →
+  Competition Info, under its own country's name and flag.
 
-- Exhibition matches between new clubs.
-- **Every added league entering the season, including leagues in countries of their own.**
-  On a 41-league world where each league stood alone in its own country, only 8 were ever
-  given a season; with `fl26join.dll`, 39 of the 40 present were dealt a full 38-round
-  schedule (the 40th is a split-season format, a separate problem).
-- **The next season, too (new 2026-09-23).** Before, the added leagues were never closed at
-  the end of a season: they kept the old year, their points and matches added up season on
-  season (76 matches after two), and old matches stayed on the calendar. The updated
-  `fl26join.dll` closes them in July with the shipped leagues and keeps them open through
-  New Year, since their season runs August to May. Measured: empty tables and the right year
-  after the rollover, and points still rising past the New Year after it. **If you
-  downloaded `fl26join.dll` before 2026-09-23, replace it.**
-- Starting a Master League season with a new club in a new league: season generates,
-  fixtures appear, the Team Sheet shows a real squad (the walkthrough builds 30 per club),
-  the hub shows the standings.
-- Saving the season and loading it back: the club, the squad, the manager's name, the
-  standings and the fixtures all survive. The same save was loaded three times in a row with
-  no drift, and the coach and player tables were compared byte for byte before and after.
-- Advancing the calendar with matches simulated ("Skip Match") through complete seasons and
-  across New Year: 655 game days in one unattended run with no crash, and four season
-  rollovers in total.
-- **A career that starts on 1 August** (experimental, `fl26augseason.lua`). A career in a
-  league standing in a country of its own used to open in January. Measured on two new
-  careers on 2026-09-23: both open on 1 August. On its own it leaves the European
-  competitions unstarted (see below); with `fl26swiss` they start and play.
-- **The Champions League, Europa League and Conference League in the 2024 format**
-  (experimental, `fl26swiss.lua` + `fl26swiss.dll` and the European world tools, new
-  2026-09-24). One league phase of 36 clubs each, a play-off for places 9-24, then a fixed
-  bracket from the round of 16. In the second season all three were filled from the previous
-  season's final tables through a UEFA access list, 108 of 108 places (in our world, whose
-  list then named its own leagues). The Champions League
-  and Europa League are shipped competitions and are modified in your own world copy; the
-  Conference League is added. [Details and caveats](sider/experimental/README.md#the-european-format-and-league-sizes-fl26swiss).
-- **Leagues of 10, 12, 14, 16, 18, 22 and 24 clubs** with the real number of rounds: 10 clubs
-  play four times (36 rounds), 12 three times (33) or four (44), 24 clubs twice (46). Checked
-  in two seasons running. Built with `tools/mksizes.py`; dated with `fl26swiss.dll`.
-- **Database -> Competition Info** lists the countries of the added leagues under their own
-  names (experimental, `fl26catlist.lua`). The flags there are still borrowed.
-- **Each added league shows its country's flag in the Select Team list** (experimental,
-  `fl26comptab.lua`), using the flags the game already has. `tools/mkflags.py` works the
-  country out from the league's name, or from a short list you write, and fills in the tables.
-  The idea, the hook and the first working version are Stagnant09's (issue #11).
-- **Edit mode reaches the added leagues** (experimental, `fl26editlist.lua`): Edit > Teams,
-  Edit > Players > Edit Player, Transfer and Managers list every added league with its clubs,
-  so their clubs and players can be edited in the game itself.
-- **Every new club has a manager of its own** (`FL M0001`, ...): `mkworld.py` writes
-  `Coach.bin` with them, and `tools/mkcoaches.py` adds them to an older world. Before, every
-  new club showed the same made-up manager, "Jorge Jesus".
-- **Promotion and relegation through a whole pyramid** (experimental, `fl26chain` +
-  `fl26seasonend` + the rank modules). On our world, with a third, fourth and fifth division
-  under Ligue 2 and under Serie B, three clubs went up and three down at every joint of both
-  chains at the 2026-09-23 rollover, and on 2026-09-24 all five chains of the newer world,
-  one of them under the Championship, did the same.
-- All 39 new leagues of 20 clubs playing their full 38 rounds in the first season. Before the fixture
-  list was raised, some of them played none at all. Later seasons went wrong for a different
-  reason, found and fixed on 2026-09-17 — see the first item below.
-- League tables that show the current season only. See `fl26hdr127.lua` above and the
-  caveat in [known-issues.md](docs/known-issues.md). `fl26hdr127.lua` was updated on
-  2026-09-23 (29 -> 32 patches): three places that read the moved tables had been missed,
-  and one of them hid leagues from promotion and relegation. Replace it if you downloaded it
-  earlier.
-- League sizes from 10 to 30 clubs. Different sizes in the same world. Ten is not a
-  floor we imposed — the shipped game runs a 10-club league of its own, and 10-club
-  leagues have been played here. Above 30 the round list runs out: see
-  [limits.md](docs/limits.md). A league that is not 20 clubs playing twice needs
-  `fl26swiss.dll` for its dates, or it ends early or runs out of dates.
-- **Cups.** A cup built with `mkcup.py` plays a full Master League knockout, every round
-  dated: round of 16, quarter-finals, semi-finals, final. One rule decides it — the cup is
-  filled from the **first league in its region**, and that league must have **sixteen clubs**,
-  because the shipped cup calendar only covers a sixteen-club bracket. With twenty, one round
-  is left with no date and the cup stalls. No executable change is involved.
+**Known problems**
 
-**Fixed** (these used to be listed below as open problems)
-
-- **(Fixed 2026-09-16.)** The crash a day after matchday 1 was ours: on load, regulation
-  records were written over the top of the team array, so 69 clubs came back from a save
-  with broken squad entries and the AI could not field a side. If you downloaded before
-  2026-09-16, replace `sider/fl26caps.lua`. **Your save files are fine** — the damage was
-  only ever in memory, and an old save loads clean with the new module.
-- **(Fixed 2026-09-17, now verified across a rollover.)** Later seasons scheduled fewer and
-  fewer leagues, until by the fifth season only 4 of the 39 new leagues had any fixtures and
-  the calendar showed empty days. The match records were all there; they carried no date, so
-  nothing ever put them on a calendar day. That came from the patch set, not from the game.
-  **If you downloaded before 2026-09-17, replace `sider/fl26caps.lua`.** Verified since: a
-  world played into its second season has all 39 leagues dealt a full 380-match season, every
-  record on the calendar and none dropped. One thing is still imperfect and is written down
-  rather than hidden: five of the 39 leagues do not keep the PREVIOUS season's matches across
-  the turn of the year. The other 34 carry two seasons at once at that point; those five carry
-  only the new one. They all play. [Details](docs/known-issues.md).
-- **(Fixed with the experimental `fl26swiss`, 2026-09-24.) The European competitions in a
-  career that starts in August.** The game registers the European competitions on day 238,
-  after the Champions League play-off dates (days 230 and 237), so on its own the play-off
-  never gets its matches and nothing after it begins. `fl26swiss` runs its own play-off and
-  starts all three competitions; measured on 2026-09-24 through the knockout rounds. Without
-  `fl26swiss` this still happens (the domestic season is not affected), and without
-  `fl26augseason.lua` the career opens in January instead.
-
-- **(Fixed with the experimental `fl26swiss`, 2026-09-24.) Competition Info for the
-  European competitions.** The Europa League and Conference League tables were greyed out
-  under *Group stage*, and opening *Knockout Phase* before the knockout draw crashed the game.
-  Both tables now show, and the knockout item appears once that phase starts. The play-off
-  item (places 9-24) is called *Play-offs* instead of *W-L Table*, stays grey until the
-  play-off is drawn, and then lists its ties (updated 2026-09-25).
-  [Details](sider/experimental/README.md#the-european-format-and-league-sizes-fl26swiss).
-- **(Fixed 2026-09-25.) The 25th league moved off rulebook id 145.** 145 is the shipped J2
-  League's id, and the shipped J1 League relegates into it. `mkworld.py` now puts that league
-  on **190**. Worlds built before still work: the modules know both ids. If you rebuild your
-  world with the new `mkworld.py`, also take the new `fl26caps.lua`, `fl26joindll.lua` and,
-  if you use them, `fl26comptab.lua`, `fl26chain.lua` and `fl26swiss.dll`, or league 190 gets
-  no dates. The patch set's sizes did not change, so saves are not affected.
-- **(Fixed 2026-09-25, issue #2.) Blank headings in the team list.** `fl26slotnames.lua`
-  blanked the heading of a slot even when your world had no league on it. Such a slot now
-  keeps its original heading, so the default list is safe in any world. Replace the file if
-  you downloaded it earlier.
-
-**Does not work yet / under investigation**
-
-- **The competition table can still fill up.** `fl26hdr127.lua` raises it from 100 to 127,
-  but an entry is never given back, so across four seasons the count rose 88, 115, 119, 124.
-  Whether it stops below 127 is not yet known. The experimental `fl26hdr192.lua`, which our
-  current test world runs, raises the ceiling to 192 and leaves far more room. Long-running worlds are the most useful thing
-  you can report — see the [testing guide](docs/testing-guide.md).
-- **The game crashes now and then inside its own protected code** (fault offsets
-  `0x84ed4c0`, `0x131cc313`, `0x18ecc042`), while a scene is being set up: generating a
-  season, loading a match, a season rollover. **They are the game's own:** on 2026-09-25/26,
-  with none of our modules and no patch set, 10 of 12 season creations crashed at the
-  manager-settings step (at `0x84ed4c0`, `0x131cc313` and `0x1fea5ba`), and the untouched
-  game started without Sider crashed at the same step in 4 of 8. With our full set it was 13
-  of 30, fewer because `fl26nullguard.lua` catches `0x1fea5ba`. The saved season is not
-  damaged: start again or reload, and save often.
-- **A calendar day holds only 280 matches**, and everything past that is dropped in silence
-  — no error, no sign in the world files, just a round that never happens. The published
-  remedy is to spread the leagues over different weekdays, which is what `--date-offsets` is
-  for; `tools/dayplan.py` measures a running season and prints the spread that flattens it.
-  (The ceiling itself can be moved — that work is done and measured, and it is not published
-  because it has not been played yet.) Anyone building much past 39 leagues will meet this.
-- **A league's rulebook id decides whether it ever plays — twice over.** Fixture dates are
-  not built from the competition you create; they are looked up in a table compiled into
-  the executable, keyed by that id. Most free ids map to an empty entry, so a league can be
-  created, appear in the menus, hold its rounds and never play a single match. And the list
-  of competitions the game registers into a season is a second compiled table keyed by the
-  same id, which is what `fl26join.dll` now works around **(fixed 2026-09-22)**. The dates
-  still come from the first table, so the id list in `fl26caps.lua` still matters. See
-  [how-it-works.md](docs/how-it-works.md).
-- Not measured yet: a world like this with a **shipped club** as your team.
-- **Rulebook ids above 175 work in Master League but are invisible in the Select Team list**
-  unless `sider/experimental/fl26comptab.lua` is installed. That list is a static table in the
-  exe rather than anything built from your data; the module copies it, gives our leagues free
-  slots, and is meant to make all 39 selectable. Two things that list gets wrong on its own
-  were measured on 2026-09-21 and have experimental modules of their own: a slot can carry a
-  **hard-coded section heading** ("Classic Teams" over a league of yours — `fl26slotnames.lua`),
-  and for nine slots the game builds the **wrong club list** entirely, showing national teams
-  or foreign clubs or nothing (`fl26clubs.lua` + its DLL). None of the three has been through
-  a season, which is why they are experimental. Without them the season still plays — the
-  league is simply mislabelled, or missing, in that one menu. One side effect of
-  `fl26comptab.lua`: three of our leagues take the slots of the **Asia-Oceania** and two
-  **Classic Teams** entries, so those do not appear in **Kick Off** while it is installed
-  ([details](docs/known-issues.md)).
-- **Promotion and relegation between the new leagues works, with experimental modules
-  only.** Of the 214 shipped rulebooks only eleven carry a promotion or relegation link at
-  all, and none of them chains three tiers. On its own the engine moves clubs across every
-  other joint of a chain; the rank field is **two bits**, so a third, fourth and fifth
-  division look the same; and France and Italy are left out of the European season end. Each
-  has an experimental module (`fl26rank` + `fl26deeprank`, `fl26chain`, `fl26seasonend`), and
-  together they worked at the 2026-09-23 rollover (see Works). Their lists carry our world's
-  league ids and must be edited for yours. Still wrong: Ligue 2 came out of that rollover
-  with 21 clubs.
-- Continental places for new leagues: not given out. The experimental `fl26swiss.dll` fills
-  Europe from a UEFA access list of the shipped leagues only (since 2026-09-26, issue #8;
-  in a first season each league is ordered by squad strength, or taken from your own
-  `fl26swiss-first.txt`, since 2026-09-27);
-  to give your leagues places, add them to `ACCESS` in `tools/native/fl26swiss.c` and rebuild. Without it, new clubs can end up in the
-  Champions League anyway when their league is built as a first division in a shipped
-  country — see [known-issues.md](docs/known-issues.md).
-- New clubs use **placeholder names and cloned squads**, and the default kit until
-  `tools/mkkits.py` lends them shipped kits. This project proves the capacity; dressing the
-  clubs is ordinary Team.bin / kit editing on top of it (kit files for ids 65536..81919 are
-  named `<id-65536>_ACL_...`, see [build-your-world](docs/build-your-world.md)).
-- New leagues appear under an **existing menu region** (England by default), and spreading
-  them over several shipped countries needs no executable change — `mkworld.py --regions`
-  does it. Two limits sit above that, both mapped since. The shipped parser throws away any
-  region numbered 29 or more although the field holds 64:
-  `sider/experimental/fl26reg64.lua` is the one instruction that fixes it. And the menu's
-  *heading* per region comes from a table of 24 rows; a region with no row does not draw a
-  blank, it draws the heading of the country looked up before it, so regions above 24 work
-  as groupings and borrow a name. The module that gives them headings of their own copies
-  the game's own rows and is not published, because the version that exists carries those
-  rows as a blob of shipped bytes and this repository does not redistribute game data.
-  Database -> Competition Info is a different screen: there the added countries show under
-  their own names with `sider/experimental/fl26catlist.lua`, though still with borrowed flags.
-- More than 39 leagues, or leagues built with non-default ids, need a regenerated patch set
-  ([why](docs/for-developers.md)).
-
-The full list with details is in [docs/known-issues.md](docs/known-issues.md) and the hard
-numbers in [docs/limits.md](docs/limits.md).
+- **The game crashes now and then inside its own protected code** (fault offsets `0x84ed4c0`,
+  `0x131cc313`, `0x18ecc042`) while a scene is being set up: generating a season, loading a
+  match, a season rollover. **They are the game's own:** on 2026-09-25/26, with none of our
+  modules and no patch set, 10 of 12 season creations crashed at the manager-settings step, and
+  the untouched game started without Sider crashed at the same step in 4 of 8. Start the game
+  from its launcher, start again or reload, and **save often**: the saved season is not
+  damaged.
+- **A saved career belongs to its world.** It loads only with the same world switched on, and
+  any change to a league's clubs needs a new career.
+- **A new African league shows the South American text** in Select Team's League Info panel.
+  Its places go to the African cups; the panel's text is the part known to be wrong. Not
+  fixed yet.
+- **An Exhibition only league still shows** in Master League's team list (the game has one
+  list for Kick Off and Master League). Do not start a career with one of its clubs.
+- **February-December seasons** cannot yet be combined with a split, Apertura/Clausura, a
+  national cup or a league cup.
+- **A calendar day holds 280 matches**; everything past that is dropped in silence. A world of
+  39 leagues stays under it; `tools/dayplan.py` measures a running season.
+- **The competition table can fill up** over many seasons: `fl26hdr127.lua` raises it from 100
+  to 127 and the experimental `fl26hdr192.lua` to 192. Long-running worlds are the most useful
+  thing you can report — see the [testing guide](docs/testing-guide.md).
+- **39 new leagues in one world** and **1,536 clubs in all** are walls; more leagues need a
+  regenerated patch set ([why](docs/for-developers.md)).
+- **A new patch set means a new career**: a save made under one `fl26caps.lua` does not load
+  under another.
 
 ## Requirements
 
@@ -556,63 +433,65 @@ numbers in [docs/limits.md](docs/limits.md).
 
 ## Quick start
 
-Never done this before? Follow [docs/how-to.md](docs/how-to.md) instead; it is the same
-route, one small step at a time, plus leagues in other countries and the new European format.
-
 1. **Back up** your save folder
    (`Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\2026\save`) and your `sider.ini`.
-2. Follow [docs/install.md](docs/install.md) to install the Sider modules — eleven files,
-   ten `lua.module` lines and one setting, `luajit.ext.enabled = 1` — and confirm in
-   `sider.log` that every patch module reports `applied all` and `fl26joindll` reports
-   `installed`. (Or take the whole route in one pass:
-   [docs/step-by-step.md](docs/step-by-step.md).)
-3. Follow [docs/build-your-world.md](docs/build-your-world.md) to extract your game's tables,
-   generate a world, and point `cpk.root` at it.
-4. Start an exhibition match between two new clubs, then a Master League season with one of
-   them. Then read the [testing guide](docs/testing-guide.md) and report what you see.
+2. Download **FL26 Mod Studio** from
+   [Releases](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest), unzip it
+   and run `FL26ModStudio.exe`. In **Settings**, pick the game folder (the one with
+   `FL_2026.exe`) and press **Unpack the game's tables**.
+3. **League Builder → New leagues → Add league**: a name, a country, the number of clubs.
+   Then **Build**: install the modules, check the plan, build the world, switch it on.
+4. Start the game through its launcher, come back and press **After a start: check**. Then
+   start a **new** Master League career: the new leagues are under their country in Select
+   Team.
 
-Common questions about Mod Studio, and renaming the new clubs, editing their players, and whether they show up in Edit mode with the scripts: see [docs/faq.md](docs/faq.md).
+The [guide](docs/mod-studio-guide.md) goes through every page, and the
+[FAQ](docs/faq.md) answers what people ask most. Building by hand with Python instead:
+[docs/how-to.md](docs/how-to.md), then [docs/install.md](docs/install.md) and
+[docs/build-your-world.md](docs/build-your-world.md).
 
 ## Reporting
 
-Open a GitHub issue. The [testing guide](docs/testing-guide.md#what-to-send) says exactly
-what to attach — in short: your `sider.log`, the crash's *fault offset* from Windows Event
-Viewer, how you built your world (the `mkworld.py` line and what it printed), and the save
-file if the problem is reproducible from a save.
+Open a GitHub issue. From Mod Studio, **Diagnostics → Run the checks → Copy a report** puts
+everything useful in the clipboard; paste it into the issue. The
+[testing guide](docs/testing-guide.md#what-to-send) says what else helps: your `sider.log`, the
+crash's *fault offset* from Windows Event Viewer, your recipe (or how you built your world),
+and the save file if the problem can be repeated from a save.
 
 ## Layout
 
 ```
 sider/              fl26caps.lua (generated patch set), the null guards, fl26hdr127.lua,
                     fl26joindll.lua and the compiled fl26join.dll it loads
-sider/experimental/ sixteen modules that go further, run on our test world only:
-                    192 competitions, the Select Team list (names, slots, club lists),
-                    64 regions, a 3-bit league rank and its relegation gate, an August
-                    start, season-end promotion through a pyramid (fl26chain.dll),
-                    Super Cup and results-screen guards, the 2024 European format and league sizes
-                    (fl26swiss.dll), country names in Competition Info, the added
-                    leagues in Edit mode's team lists
-tools/              world builders (mkworld, mkplayers, mkcrests, mkkits, mkcup,
-                    spreadregions, mkflags, mkreshape, mkuecl, mkeuropo, mksizes, rename, players,
-                    playeredit, playereditor ...),
-                    pesdb/CPK readers, the patch-set generator and its checkers
-tools/modstudio/    FL26 Mod Studio (the window; tools/modstudio_main.py starts it from source,
+sider/experimental/ seventeen modules that go further: 192 competitions, the Select Team
+                    list (names, slots, club lists, flags, Kick Off order), 64 regions, a
+                    3-bit league rank and its relegation gate, an August start, season-end
+                    promotion through a pyramid (fl26chain.dll), Super Cup, results-screen and
+                    club-change guards, the 2024 European format, league sizes, split
+                    seasons and other continents' cups (fl26swiss.dll), country names in
+                    Competition Info, the added leagues in Edit mode's team lists
+tools/              world builders (mkworld, mkplayers, mkcrests, mkkits, mkcup, mkflags,
+                    mkreshape, mkuecl, mkeuropo, mksizes, mktactics, rename, players,
+                    playeredit, playereditor ...), pesdb/CPK readers, the patch-set generator
+                    and its checkers
+tools/modstudio/    FL26 Mod Studio (tools/modstudio_main.py starts it from source,
                     tools/mszip.py makes the release zip) and the League Builder behind it
                     (leaguebuilder, lbplayers, lbfaces, lbpackage, lbpack ...)
 tools/native/       the C source of the four DLLs, their build scripts and checksums
 patches/            the patch set as JSON plus the layout tables the generator reads
-docs/               mod-studio-guide (en/hr) and mod-studio (how it works, package format),
-                    how-to (start here), step-by-step, install, build-your-world, testing-guide, known-issues,
-                    limits, how-it-works, for-developers, faq, beginners-guide
+docs/               mod-studio-guide (en/hr/es/fr), mod-studio (how it works, package format),
+                    faq, how-to, beginners-guide, step-by-step, install, build-your-world,
+                    testing-guide, known-issues, limits, how-it-works, for-developers,
+                    league-phase-swiss-decode, player-record
 ```
 
 ## Support
 
-Everything here is free and MIT-licensed. Weeks of disassembly, unattended test seasons
-and crash dumps went into it, and there is more to do (the crashes in the game's protected code, loading long saves,
-menu region names and flags, continental places for any world rather than ours). If you want to help it along:
-**[ko-fi.com/mata28](https://ko-fi.com/mata28)**. Testing and good bug reports help just as
-much — see the [testing guide](docs/testing-guide.md).
+Everything here is free and MIT-licensed. Weeks of disassembly, unattended test seasons and
+crash dumps went into it, and there is more to do (the crashes in the game's protected code,
+the African leagues' League Info panel, more competitions and formats). If you want to help it
+along: **[ko-fi.com/mata28](https://ko-fi.com/mata28)**. Testing and good bug reports help just
+as much — see the [testing guide](docs/testing-guide.md).
 
 ## Licence and credits
 
