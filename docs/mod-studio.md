@@ -63,14 +63,18 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
 - `cup` = the country's domestic cup, written on a second division added under a shipped top
   flight that had none (Germany, Russia, ...). The game fills a country's cup from its first
   league and the league below it, so without this the new second division would take the cup
-  over or join it. fl26chain keeps the cup to the top flight's clubs (issue #21).
+  over or join it. fl26chain keeps the cup to the top flight's clubs (issue #21). Build also
+  writes it on the second division under a new country's top flight when that top flight has
+  its own cup (`"cup": true` in the recipe) that the copied cup's round dates only fit alone.
 - Unknown keys are ignored, so later versions can add fields without breaking older modules.
 - A split league is one `league` line for the regular phase plus
   `split <total> regular=<id> groups=<id>,<id>`.
 - `uefa <regulation> <position> <competition> <alt>`: one European place per line, in
   hand-out order. Without any, fl26swiss uses the DLL's own list (shipped leagues only).
   Competitions: 0 Champions League, 1 Europa League, 2 Conference League, 3 Libertadores,
-  4 Libertadores qualifying, 5 AFC Champions League. A list replaces the DLL's, so Build writes
+  4 Libertadores qualifying, 5 AFC Champions League, and the four cups the game does not have:
+  6 CAF Champions League, 7 CAF Confederation Cup, 8 AFC Champions League Two, 9 Copa
+  Sudamericana (only places of the recipe's leagues go to 6-9). A list replaces the DLL's, so Build writes
   the shipped leagues' places first (`fl26world.SHIPPED_ACCESS`, a copy of fl26swiss.c's
   ACCESS) and then the places of the recipe's leagues (their `europe` key, set in the League
   dialog). Each competition takes 36 clubs; places past the 36th get nothing.
@@ -80,6 +84,20 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
   regulations 186 (league phase, group 1210) and 187 (knockout) (`mkuecl.build`), and adds the
   play-offs 188/189 (`mkeuropo.build`). fl26swiss.lua does not read this line yet; it uses
   its own UECL list, the same clubs on the game's own tables.
+
+- `ccup <groups regulation> ko=<knockout regulation> groups=<n> entry=<reg>:<position>,... name=<text>`:
+  a continental cup of the four above, built by `tools/mkccup.py` into the world's tables and
+  run by fl26swiss.dll: filled at the end of August from the leagues' tables (a club already in
+  another of these cups is skipped), drawn into groups of four, then a knockout of 2 x groups
+  clubs. `groups=0` is a straight knockout (then both regulations are the same). Build sizes
+  each cup to 32, 16, 8 or 4 clubs: the recipe's places first, and for AFC Champions League Two
+  and the Copa Sudamericana the shipped leagues of that continent fill the rest.
+
+A new country's own cup is not a line: with `"cup": true` on a top division (and optionally
+`"supercup": true`) Build copies a shipped cup (`tools/mkcup.py --like`, picked by how many
+clubs the top division and the one below it have, so the round dates fit) into the country's
+region, and a super cup from the Belgian one. The game fills them itself. `"club_coaches"` in a
+league gives its new clubs' managers names (empty = `FL Mnnnn`).
 
 Overview and Diagnostics warn when the world that is on has new leagues but no `uefa` line
 names one of them, and when its Conference League is on but regulations 186/187/1210 are
@@ -97,7 +115,7 @@ manifest.json    {"format": "fl26pack", "format_version": 1, "name", "author", "
                   "clubs", "faces", "edits": {"leagues", "clubs"}, "player_changes"}
 recipe.json      the leagues as a recipe has them, the player changes of their clubs, and
                  optionally changes to the game's own leagues, clubs and players
-assets/...       the logos and crests used
+assets/...       the logos, crests and country flags used
 faces/<n>/...    faces given to players (#Win, sourceimages, portrait.dds)
 ```
 

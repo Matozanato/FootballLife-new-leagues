@@ -130,7 +130,7 @@ class Players(BuilderPage):
         self.ed["face"], self.lab["face"] = face, lab
         self.face_note = hint("")
         f.addRow("", self.face_note)
-        self._add(f, "shirt", self._spin(0, 99), "Shirt number")
+        self._add(f, "shirt", self._spin(1, 99), "Shirt number")
         self._add(f, "order", self._spin(0, 63), "Squad order")
         pos = QComboBox()
         pos.addItems(E.POSITIONS)
@@ -287,6 +287,8 @@ class Players(BuilderPage):
         for rid, cid, name, teams in P_.game_lgs:
             e = P_.edits("leagues").get(str(rid), {})
             self.lg.addItem(e.get("name", name), ("game", rid))
+        for gid, name, teams in P_.game_groups():   # the game's "Others" sections
+            self.lg.addItem("%s  (%d)" % (name, len(teams)), ("game", gid))
         i = next((n for n in range(self.lg.count()) if self.lg.itemData(n) == keep), -1) if keep else -1
         self.lg.setCurrentIndex(max(0, i))
         self.lg.blockSignals(False)
@@ -319,7 +321,9 @@ class Players(BuilderPage):
                 for k, n in enumerate(self.new_names(L)):
                     self.cl.addItem(n, P.new_key(L["name"], k))
         elif d:
-            teams = next((t for r, c, n, t in self.project.game_lgs if r == d[1]), [])
+            teams = next((t for r, c, n, t in self.project.game_lgs if r == d[1]), None)
+            if teams is None:
+                teams = next((t for g, n, t in self.project.game_groups() if g == d[1]), [])
             for tid in teams:
                 if tid in self.project.game_cl:
                     self.cl.addItem(self.game_name(tid), str(tid))
@@ -350,6 +354,8 @@ class Players(BuilderPage):
         else:
             tid = int(key)
             rid = next((r for r, c, n, t in self.project.game_lgs if tid in t), None)
+            if rid is None:
+                rid = next((g for g, n, t in self.project.game_groups() if tid in t), None)
             data = ("game", rid)
         if self.lg.count() == 0:
             self.fill_leagues()

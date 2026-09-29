@@ -24,6 +24,7 @@ from modstudio import VERSION, theme, i18n
 from modstudio.i18n import _
 from modstudio.game import Game, guess_folders
 from modstudio.siderini import SiderIni
+import siderdir
 
 APPDIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "FL26ModStudio")
 SETTINGS = os.path.join(APPDIR, "settings.json")
@@ -37,8 +38,19 @@ def load_settings():
         return {}
 
 
-def save_settings(d):
+def save_settings(d, seen=None):
+    """write the settings. With seen (the settings as this window last read or wrote them) only
+    the keys the window changed since go over what the file holds now: a second window, or one
+    left open, must not put back an old choice -- a language picked in the other one was lost
+    when this one closed and wrote everything it had read at its start."""
     try:
+        if seen is not None:
+            now = load_settings()
+            now.update({k: v for k, v in d.items() if k not in seen or seen[k] != v})
+            d.clear()
+            d.update(now)
+            seen.clear()
+            seen.update(json.loads(json.dumps(now)))
         os.makedirs(APPDIR, exist_ok=True)
         with open(SETTINGS + ".tmp", "w", encoding="utf-8") as f:
             json.dump(d, f, indent=1, ensure_ascii=False)
@@ -73,8 +85,10 @@ class Main(QMainWindow):
     def __init__(self):
         super().__init__()
         self.settings = load_settings()
+        self._seen = json.loads(json.dumps(self.settings))
         i18n.set_language(self.settings.get("lang", "en"))
         self.bus = Bus()
+        siderdir.PREFERRED = self.settings.get("sider") or None
         folder = self.settings.get("game") or next(iter(guess_folders()), "")
         self.game = Game(folder)
         from modstudio.project import Project
@@ -125,7 +139,7 @@ class Main(QMainWindow):
         self.update_header()
         self._run_timer = QTimer(self, interval=4000, timeout=self.update_running)
         self._run_timer.start()
-        self.update_running()
+        QTimer.singleShot(0, self.update_running)       # after the window is up: tasklist takes ~0.3 s
         self.open_page(self.settings.get("page") if self.settings.get("page") in self.pages else first)
 
     # ---- chrome ----
@@ -163,7 +177,7 @@ class Main(QMainWindow):
         h.addWidget(self._menu_button("Game", [
             ("Choose the game folder...", lambda: self.page("Settings").pick_game()),
             ("Open the game folder", lambda: self._open(self.game.folder)),
-            ("Open SiderAddons", lambda: self._open(self.game.sider_dir)),
+            ("Open the Sider folder", lambda: self._open(self.game.sider_dir)),
             ("Open sider.ini", lambda: self._open(self.game.ini_path)),
             ("Open sider.log", lambda: self._open(self.game.log_path)),
             None,
@@ -274,7 +288,14 @@ class Main(QMainWindow):
     def set_game(self, folder):
         self.game = Game(folder)
         self.settings["game"] = self.game.folder
-        save_settings(self.settings)
+        self.save_settings()
+        self.bus.game_changed.emit()
+
+    def set_sider(self, name):
+        """use the Sider folder `name` of the game folder (one of siderdir.candidates)"""
+        siderdir.PREFERRED = name or None
+        self.settings["sider"] = name or ""
+        self.save_settings()
         self.bus.game_changed.emit()
 
     def status(self, text):
@@ -334,7 +355,7 @@ class Main(QMainWindow):
 
     def set_language(self, code):
         self.settings["lang"] = code
-        save_settings(self.settings)
+        self.save_settings()
         QMessageBox.information(self, "FL26 Mod Studio",
                                 "The language changes when the program is started again.\n"
                                 "Jezik se mijenja kad se program ponovno pokrene.\n"
@@ -365,7 +386,7 @@ class Main(QMainWindow):
     def set_auto_updates(self, on):
         """Help > Check for updates at start: off = only when asked (the menu item above it)"""
         self.settings["check_updates"] = bool(on)
-        save_settings(self.settings)
+        self.save_settings()
 
     def check_updates(self, quiet=False):
         """ask GitHub for a newer release; quiet (the check at start) says nothing unless there is one"""
@@ -464,8 +485,11 @@ class Main(QMainWindow):
 
     def closeEvent(self, e):
         self.settings["size"] = [self.width(), self.height()]
-        save_settings(self.settings)
+        self.save_settings()
         super().closeEvent(e)
+
+    def save_settings(self):
+        save_settings(self.settings, self._seen)
 
 
 def main():
@@ -477,6 +501,18 @@ def main():
             pass
     app = QApplication(sys.argv)
     theme.apply(app)
+    # one Mod Studio at a time: the program takes a few seconds to unpack itself, a second
+    # click in that time started a second one, and the two wrote over each other's settings
+    lock = None
+    if "--shot" not in sys.argv:
+        from PySide6.QtCore import QLockFile
+        os.makedirs(APPDIR, exist_ok=True)
+        lock = QLockFile(os.path.join(APPDIR, "running.lock"))
+        if not lock.tryLock(200):
+            i18n.set_language(load_settings().get("lang", "en"))
+            QMessageBox.information(None, "FL26 Mod Studio",
+                                    _("FL26 Mod Studio is already open. Look for its window on the taskbar."))
+            return
     w = Main()
     theme.dark_title_bar(w)
     w.show()

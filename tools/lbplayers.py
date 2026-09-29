@@ -82,7 +82,7 @@ class Squads:
             o = i * A_REC
             pack = u32(self.assigns, o + E.A_PACK)
             self.by_club[u32(self.assigns, o + E.A_TID)].append(
-                ((pack & E.ORDER_MASK) >> E.ORDER_SHIFT, u32(self.assigns, o + E.A_PID), pack & E.SHIRT_MASK, o))
+                ((pack & E.ORDER_MASK) >> E.ORDER_SHIFT, u32(self.assigns, o + E.A_PID), E.shirt_of(pack), o))
             self.file_order[u32(self.assigns, o + E.A_TID)].append(u32(self.assigns, o + E.A_PID))
         for v in self.by_club.values():
             v.sort()
@@ -164,9 +164,9 @@ def check_edit(ch):
             if len(v.encode("utf-8")) > E.P_NAME_LEN - 1:
                 err.append("name %r is longer than %d bytes" % (v, E.P_NAME_LEN - 1))
         elif k in ("shirt", "order"):
-            hi = 99 if k == "shirt" else 63
-            if not (v.isdigit() and int(v) <= hi):
-                err.append("%s %r is not 0-%d" % (k, v, hi))
+            lo, hi = (1, 99) if k == "shirt" else (0, 63)
+            if not (v.isdigit() and lo <= int(v) <= hi):
+                err.append("%s %r is not %d-%d" % (k, v, lo, hi))
         elif k == "face":
             import lbfaces
             err += lbfaces.check(v)
@@ -251,12 +251,11 @@ def apply(pl, base, db, cap, log=print, faces=None):
             rec[P_ID:P_ID + 4] = pid.to_bytes(4, "little")
             index[pid] = len(players)
             players += rec
-            taken = {u32(assigns, ao + E.A_PACK) & E.SHIRT_MASK for _o, _p, ao in sq}
-            shirt = next(n for n in range(1, 100) if n not in taken)
+            shirt = E.free_shirt(u32(assigns, ao + E.A_PACK) for _o, _p, ao in sq)
             order = max((o for o, _p, _a in sq), default=-1) + 1
             e = bytearray(A_REC)
             for off, v in ((E.A_EID, eid), (E.A_PID, pid), (E.A_TID, tid),
-                           (E.A_PACK, order << E.ORDER_SHIFT | shirt)):
+                           (E.A_PACK, E.with_shirt(order << E.ORDER_SHIFT, shirt))):
                 e[off:off + 4] = v.to_bytes(4, "little")
             eid += 1
             ao = len(assigns)
@@ -329,7 +328,7 @@ def _write(players, assigns, po, ao, ch):
     players[po:po + P_REC] = rec
     pack = u32(assigns, ao + E.A_PACK)
     if str(ch.get("shirt", "")).strip().isdigit():
-        pack = pack & ~E.SHIRT_MASK | int(ch["shirt"])
+        pack = E.with_shirt(pack, int(ch["shirt"]))
     if str(ch.get("order", "")).strip().isdigit():
         pack = pack & ~E.ORDER_MASK | int(ch["order"]) << E.ORDER_SHIFT
     assigns[ao + E.A_PACK:ao + E.A_PACK + 4] = pack.to_bytes(4, "little")

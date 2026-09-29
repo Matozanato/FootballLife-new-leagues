@@ -82,8 +82,10 @@ end
 -- A league line with cup= is a second division under a shipped top flight that had none:
 -- {that country's cup, the league above, this league}. The DLL keeps the cup to the top
 -- league's clubs (GitHub #21: the game would put this league into it, or only this league).
+-- scup= on the same line is that country's super cup (GitHub #29): {super cup, the league
+-- above, this league}; the DLL swaps a club of this league out of it.
 local function from_world(world)
-  local chains, protect, cups = {}, {}, {}
+  local chains, protect, cups, scups = {}, {}, {}, {}
   for _, L in ipairs(world) do
     protect[#protect + 1] = L.id
     if L.above and L.tier and L.tier >= 3 and L.tier % 2 == 1 then
@@ -91,8 +93,9 @@ local function from_world(world)
       chains[#chains + 1] = { L.above, L.id, n, n }
     end
     if L.cup and L.above then cups[#cups + 1] = { L.cup, L.above, L.id } end
+    if L.scup and L.above then scups[#scups + 1] = { L.scup, L.above, L.id } end
   end
-  return chains, protect, cups
+  return chains, protect, cups, scups
 end
 
 local CAVE_VA, CAVE_PAGE, CAVE_LEN = 0x14252e900, 0x14252e000, 0x108
@@ -159,9 +162,9 @@ function m.init(ctx)
   dll_stats = ffi.cast("fl26_chain_stats_t", ps)
   logbuf, statbuf = ffi.new("char[4096]"), ffi.new("uint32_t[4]")
 
-  local world, CUPS = read_world(ctx), {}
+  local world, CUPS, SCUPS = read_world(ctx), {}, {}
   if world then
-    CHAINS, PROTECT, CUPS = from_world(world)
+    CHAINS, PROTECT, CUPS, SCUPS = from_world(world)
     log(string.format("fl26chain: world file -- %d leagues, %d chain pair(s) the game skips", #PROTECT, #CHAINS))
   end
   cfg = ffi.new("fl26_chain_cfg_t[?]", math.max(#CHAINS, 1))
@@ -191,6 +194,19 @@ function m.init(ctx)
         ffi.cast("fl26_chain_cups_t", pc)(t, #CUPS)
       else
         log("fl26chain: this fl26chain.dll cannot keep a cup to its league (no fl26_chain_cups) -- rebuild it")
+      end
+    end
+    if #SCUPS > 0 then
+      local ps2 = ffi.C.GetProcAddress(h, "fl26_chain_supercups")
+      if ps2 ~= nil then
+        local t = ffi.new("uint16_t[?]", 3 * #SCUPS)
+        for i, c in ipairs(SCUPS) do
+          t[3 * i - 3], t[3 * i - 2], t[3 * i - 1] = c[1], c[2], c[3]
+          log(string.format("fl26chain: live -- super cup %d takes no club of %d (only of %d)", c[1], c[3], c[2]))
+        end
+        ffi.cast("fl26_chain_cups_t", ps2)(t, #SCUPS)
+      else
+        log("fl26chain: this fl26chain.dll cannot keep a super cup free of a new league (no fl26_chain_supercups) -- rebuild it")
       end
     end
     for _, c in ipairs(CHAINS) do

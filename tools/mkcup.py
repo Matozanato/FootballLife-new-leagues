@@ -47,7 +47,11 @@ that dword too, but "should" is doing real work in that sentence.  So build one,
 start a season, and look at the fixture list.
 
     python mkcup.py --base ...\pesdb --out ...\livecpk\_FL26E39x793 ^
-                    --name "FL Cup 01" --code FL_CUP_01 --region 16 --teams 72318,72319,...
+                    --name "FL Cup 01" --code FL_CUP_01 --region 2 --teams 72318,72319,...
+
+--region is a region id (2 England, 29..63 the ones new countries get), encoded the way
+mkleague.enc_region writes it. Until 28 September it was the raw Competition.bin byte, so
+"--region 29" put the cup in region 35.
 
 --dry prints what it would write and touches nothing.
 """
@@ -127,7 +131,7 @@ def main():
     autoreg = W.free_ids(used_reg | W.BAD_REG, W.REG_MAX, 1, 186)[0]
     cid, reg = M.add_league(comp, regs, ents,
                             int(get("--cid", str(autocid))), int(get("--reg", str(autoreg))),
-                            int(get("--region", "16")), get("--name", "FL Test Cup"),
+                            M.enc_region(int(get("--region", "2"))), get("--name", "FL Test Cup"),
                             get("--code", "FL_TEST_CUP"), teams, like)
     # add_league sized the count from the entry list, which is right for a league; a cup's
     # bracket is its own number, so set it back afterwards rather than teaching add_league

@@ -49,6 +49,10 @@ install anything.
 > - **Squads from a table** (0.1.2): any table of players — typed by hand, copied off a
 >   website, a Football Manager or EA FC export — becomes a club's squad; what the table does
 >   not have comes from the game's own players of the same position and rating.
+> - **Cups** (0.1.3): a new country's own national cup and super cup, and the continental cups
+>   the game does not have (CAF Champions League, CAF Confederation Cup, AFC Champions League
+>   Two, Copa Sudamericana) built from the places your leagues give. New leagues take their
+>   own continent, managers get names, and a lower tier is one button.
 > - English, Croatian, Spanish and French.
 >
 > Guide: [docs/mod-studio-guide.md](docs/mod-studio-guide.md) ·
@@ -121,10 +125,14 @@ If you use anything from this repository, vmardonesdev's name belongs next to it
   season big clubs such as PSG, Real Madrid and Inter ended up in the Conference League.
   That report is why the first season is now ordered by squad strength. vector360's own
   36/36/36 list of 2026/27 clubs is why `fl26swiss` can take a first-season list
-  (`fl26swiss-first.txt`).
+  (`fl26swiss-first.txt`). vector360 also saw Manchester United drawn against Manchester City
+  in the league phase, which is why each pot is now spread so two clubs of one country do not
+  meet there.
 - **jibibi** (Evo-Web): tested the modules alongside a full French patch and the kit server
   and sent the logs, which show how the patch's own roots and the new clubs' kit names have to
-  sit next to ours.
+  sit next to ours. jibibi's Sider folder with another name
+  ([#28](https://github.com/Matozanato/FootballLife-new-leagues/issues/28)) is why Mod Studio
+  now finds Sider by its `sider.ini`, whatever the folder is called.
 - **bobzera** (Evo-Web): brought the "ACL71" kit problem into the open, new clubs past id
   65536 showing only the default kit, and worked on a fix of their own. That problem is the
   one `tools/mkkits.py` now solves by naming the kit files the way the engine looks them up.
@@ -137,7 +145,20 @@ If you use anything from this repository, vmardonesdev's name belongs next to it
   release and asks for what a modder actually needs. The Team ID and League ID columns, the
   division shown next to each league, nationality typed by name, removing players from new
   clubs and club names with č, ć, š, ž, đ all came from those questions
-  ([#23](https://github.com/Matozanato/FootballLife-new-leagues/issues/23)).
+  ([#23](https://github.com/Matozanato/FootballLife-new-leagues/issues/23)), and so did the
+  managers' names of new clubs.
+- **victormican** ([victormican](https://github.com/victormican)): tested Mod Studio on a
+  South American world and reported what broke there: the Asia-Oceania national teams and the
+  Classic Teams disappearing from Kick Off
+  ([#26](https://github.com/Matozanato/FootballLife-new-leagues/issues/26)), a Colombian second
+  division that plays January to December
+  ([#27](https://github.com/Matozanato/FootballLife-new-leagues/issues/27)), the teams in no
+  league that could not be found ([#25](https://github.com/Matozanato/FootballLife-new-leagues/issues/25))
+  and the language switch ([#24](https://github.com/Matozanato/FootballLife-new-leagues/issues/24)).
+- **Alby17** (Evo-Web): found that a shirt number typed as 10 came out as 11 in the game; the
+  game stores the number minus one, and every editor here now goes through that.
+- **Alikhaled**: asked for Asian leagues with their own continental places, which
+  is where the AFC Champions League Two in the League Builder comes from.
 - **n1ne** (Discord): follows the work closely and asks the questions that show where the
   docs are not clear yet, such as how the European competitions get their clubs.
 

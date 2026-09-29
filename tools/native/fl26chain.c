@@ -181,6 +181,45 @@ static int cup_fix(cup_t* c, const uint32_t* list, int n, uint64_t flag, const c
   return 1;
 }
 
+/* ---- GitHub #29: the super cup of that country ----
+ * The same new second division put a club of its own into the country's super cup (DFL
+ * Supercup 95: Bayern v Germany D2 01; Russian Super Cup 129: Krasnodar v Rusia D2 20), and the
+ * match was played. A club that spent the season in our league cannot have qualified: it was
+ * not the top league's champion and, with the cup kept to the top league above, not in the cup.
+ * So such a club is swapped for a club of the top league that is not in the super cup yet. In
+ * the season pass the test is the list our league had before the pass (a club relegated in
+ * the same pass may have won the cup); outside it, the live list. Triples {super cup, top
+ * league, our league} from the world file (`scup=`). */
+typedef struct { uint16_t scup, top, low; } scup_t;
+static scup_t   g_scup[MAX_CUPS]; static int g_nscup = 0;
+static uint64_t g_scup_flag[MAX_CUPS]; static int g_scup_seen[MAX_CUPS];
+static uint32_t g_scup_pre[MAX_CUPS][MAX_CLUBS]; static int g_scup_npre[MAX_CUPS];
+
+/* 1 = the super cup was written again without the clubs of `low` (through the original setter) */
+static int scup_fix(scup_t* s, const uint32_t* list, int n, const uint32_t* low, int nl, uint64_t flag, const char* when)
+{
+  uint32_t top[MAX_CLUBS], out[MAX_CLUBS];
+  int nt = reg_list(s->top, top), k = 0, swapped = 0;
+  if (nt <= 0 || nl <= 0 || n <= 0 || !holds_any(list, n, low, nl)) return 0;
+  for (int i = 0; i < n; i++) {
+    uint32_t h = list[i];
+    if (holds_any(&h, 1, low, nl)) {
+      h = 0xffffffffu;
+      for (int j = 0; j < nt; j++)
+        if (!holds_any(&top[j], 1, list, n) && !holds_any(&top[j], 1, out, k) && !holds_any(&top[j], 1, low, nl)) { h = top[j]; break; }
+      if (h == 0xffffffffu) { logf("super cup %u: no club of %u left to put in (%s) -- untouched", s->scup, s->top, when); return 0; }
+      swapped++;
+    }
+    out[k++] = h;
+  }
+  vec32_t v = { out, out + k, out + MAX_CLUBS };
+  int was = g_reentrant; g_reentrant = 1;
+  ((set_fn)(uintptr_t)g_tramp_set)(s->scup, &v, flag);
+  g_reentrant = was;
+  logf("super cup %u: %d club(s) of %u in it (%s) -- swapped for clubs of %u", s->scup, swapped, s->low, when, s->top);
+  return 1;
+}
+
 /* ---- observer + capture (BEFORE-hook on 0x141522b50); nonzero = refuse the write ---- */
 int observe(uint64_t id, vec32_t* v, uint64_t flag)
 {
@@ -189,6 +228,13 @@ int observe(uint64_t id, vec32_t* v, uint64_t flag)
     if ((uint16_t)id != g_cup[i].cup) continue;
     if (g_in_apply) { g_cup_flag[i] = flag & 0xff; g_cup_seen[i] = 1; break; }   /* settled in apply_post */
     if (n > 0 && cup_fix(&g_cup[i], v->b, n > MAX_CLUBS ? MAX_CLUBS : n, flag & 0xff, "outside the season pass")) return 1;
+    break;
+  }
+  if (!g_reentrant) for (int i = 0; i < g_nscup; i++) {
+    if ((uint16_t)id != g_scup[i].scup) continue;
+    if (g_in_apply) { g_scup_flag[i] = flag & 0xff; g_scup_seen[i] = 1; break; }   /* settled in apply_post */
+    uint32_t low[MAX_CLUBS]; int nl = reg_list(g_scup[i].low, low);
+    if (n > 0 && scup_fix(&g_scup[i], v->b, n > MAX_CLUBS ? MAX_CLUBS : n, low, nl, flag & 0xff, "outside the season pass")) return 1;
     break;
   }
   if (n == 0 && !g_reentrant && is_protected((uint16_t)id)) {
@@ -291,6 +337,7 @@ void apply_pre(void* ctx)
     logf("apply: chain %u->%u standings %d/%d", ch->cfg.mid, ch->cfg.low, ch->n_stand_mid, ch->n_stand_low);
   }
   for (int i = 0; i < g_ncup; i++) g_cup_seen[i] = 0;
+  for (int i = 0; i < g_nscup; i++) { g_scup_seen[i] = 0; g_scup_npre[i] = reg_list(g_scup[i].low, g_scup_pre[i]); }
 }
 
 static int remove_handle(uint32_t* list, int n, uint32_t h)
@@ -376,6 +423,14 @@ void apply_post(void* ctx)
     uint32_t cur[MAX_CLUBS]; int n = reg_list(g_cup[i].cup, cur);
     if (n > 0 && cup_fix(&g_cup[i], cur, n, g_cup_flag[i], "season pass")) g_stat[1]++;
   }
+  for (int i = 0; i < g_nscup; i++) {
+    if (!g_scup_seen[i]) continue;
+    uint32_t cur[MAX_CLUBS], low[MAX_CLUBS]; int n = reg_list(g_scup[i].scup, cur);
+    /* our league's clubs before the pass; at a new career its list may not be there yet */
+    int nl = g_scup_npre[i];
+    if (nl > 0) memcpy(low, g_scup_pre[i], nl * 4); else nl = reg_list(g_scup[i].low, low);
+    if (n > 0 && scup_fix(&g_scup[i], cur, n, low, nl, g_scup_flag[i], "season pass")) g_stat[1]++;
+  }
   g_in_apply = 0; g_ctx = 0;
 }
 
@@ -420,6 +475,34 @@ static int hook(unsigned char* target, const unsigned char* sig, int n, void* ha
   return 0;
 }
 
+/* Same, but if another of our modules already sits on the function -- its hook is the same
+   14-byte `jmp [rip+0]; dq handler` -- go in front of it: the trampoline jumps to that handler,
+   which still ends in the original. fl26swiss holds set_clubs too and is meant to load after
+   this; in a sider.ini where it (or the old fl26cuphook) comes first, the plain check refused
+   and the whole module stayed out ("set-hook signature mismatch", 2026-09-28). */
+static int g_chained = 0;
+static const unsigned char JMP_ABS[6] = { 0xFF, 0x25, 0, 0, 0, 0 };
+static int usable(const unsigned char* target, const unsigned char* sig, int n)
+{
+  return !memcmp(target, sig, n) || !memcmp(target, JMP_ABS, 6);
+}
+static int hook_or_chain(unsigned char* target, const unsigned char* sig, int n, void* handler, unsigned char** tramp_out)
+{
+  if (!memcmp(target, sig, n)) return hook(target, sig, n, handler, tramp_out);
+  if (memcmp(target, JMP_ABS, 6)) return 2;
+  unsigned char* t = (unsigned char*)VirtualAlloc(0, 0x100, MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+  if (!t) return 3;
+  memcpy(t, target, 14);                     /* jmp to the handler that was there */
+  DWORD old;
+  if (!VirtualProtect(target, 14, PAGE_EXECUTE_READWRITE, &old)) return 4;
+  *(uint64_t*)(target + 6) = (uint64_t)(uintptr_t)handler;
+  VirtualProtect(target, 14, old, &old);
+  FlushInstructionCache(GetCurrentProcess(), target, 14);
+  *tramp_out = t;
+  g_chained++;
+  return 0;
+}
+
 /* 0 ok; 2/3/4 = set-hook signature/alloc/protect; 12/13/14 = apply-hook signature/alloc/protect; 9 bad config */
 __declspec(dllexport) int fl26_chain_install(uint64_t exe_base, uint64_t cave_addr, const fl26_chain_cfg_t* cfg, int ncfg)
 {
@@ -431,13 +514,14 @@ __declspec(dllexport) int fl26_chain_install(uint64_t exe_base, uint64_t cave_ad
   for (int i = 0; i < ncfg; i++) { memset(&g_chain[i], 0, sizeof g_chain[i]); g_chain[i].cfg = cfg[i]; }
   /* Check both prologues before touching either, so a mismatch really does leave the game
      unmodified rather than half hooked. */
-  if (memcmp((void*)(uintptr_t)(exe_base + SET_RVA),   SIG_SET,   15)) return 2;
-  if (memcmp((void*)(uintptr_t)(exe_base + APPLY_RVA), SIG_APPLY, 15)) return 12;
-  int r = hook((unsigned char*)(uintptr_t)(exe_base + SET_RVA), SIG_SET, 15, (void*)set_handler, &g_tramp_set);
+  if (!usable((const unsigned char*)(uintptr_t)(exe_base + SET_RVA),   SIG_SET,   15)) return 2;
+  if (!usable((const unsigned char*)(uintptr_t)(exe_base + APPLY_RVA), SIG_APPLY, 15)) return 12;
+  int r = hook_or_chain((unsigned char*)(uintptr_t)(exe_base + SET_RVA), SIG_SET, 15, (void*)set_handler, &g_tramp_set);
   if (r) return r;
-  r = hook((unsigned char*)(uintptr_t)(exe_base + APPLY_RVA), SIG_APPLY, 15, (void*)apply_handler, &g_tramp_apply);
+  r = hook_or_chain((unsigned char*)(uintptr_t)(exe_base + APPLY_RVA), SIG_APPLY, 15, (void*)apply_handler, &g_tramp_apply);
   if (r) return r + 10;
-  logf("fl26chain: hooks live (set@%llx apply@%llx), %d chain(s)", (unsigned long long)(exe_base + SET_RVA), (unsigned long long)(exe_base + APPLY_RVA), ncfg);
+  logf("fl26chain: hooks live (set@%llx apply@%llx), %d chain(s)%s", (unsigned long long)(exe_base + SET_RVA), (unsigned long long)(exe_base + APPLY_RVA), ncfg,
+       g_chained ? ", in front of another module's hook" : "");
   return 0;
 }
 
@@ -460,6 +544,17 @@ __declspec(dllexport) int fl26_chain_cups(const uint16_t* triples, int n)
   for (int i = 0; i < n; i++) { g_cup[i].cup = triples[3*i]; g_cup[i].top = triples[3*i+1]; g_cup[i].low = triples[3*i+2]; }
   g_ncup = n;
   logf("fl26chain: %d domestic cup(s) kept to their own league", n);
+  return n;
+}
+
+/* the super cups to keep free of our league: n triples {super cup, top league, our league below it} */
+__declspec(dllexport) int fl26_chain_supercups(const uint16_t* triples, int n)
+{
+  if (!triples || n < 0) return 0;
+  if (n > MAX_CUPS) n = MAX_CUPS;
+  for (int i = 0; i < n; i++) { g_scup[i].scup = triples[3*i]; g_scup[i].top = triples[3*i+1]; g_scup[i].low = triples[3*i+2]; }
+  g_nscup = n;
+  logf("fl26chain: %d super cup(s) kept free of a new second division", n);
   return n;
 }
 

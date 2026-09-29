@@ -1,5 +1,6 @@
 r"""python mksplit.py --base <pesdb dir> --out <overlay root>
                     --split 60:16x2:8x1:8x1 [--split ...] [--ids 191,192,...] [--dry]
+                    --split 60:18x1:18x1@Apertura,Clausura     (the phases' own names)
 
 Turn one of our plain leagues into a split season, the way the Scottish Premiership ships.
 
@@ -78,6 +79,7 @@ def set_shape(row, kind, fmt, clubs, rounds):
 
 
 def parse_split(s):
+    s, _at, names = s.partition("@")
     bits = s.split(":")
     if len(bits) < 3:
         raise SystemExit("--split wants TOTAL:REGULAR:TOP[:SECOND...], got %r" % s)
@@ -85,7 +87,10 @@ def parse_split(s):
     for b in bits[1:]:
         c, _x, r = b.partition("x")
         parts.append((int(c), int(r)))
-    return int(bits[0]), parts
+    names = [x.strip() for x in names.split(",")] if names else []
+    if names and len(names) != len(parts):
+        raise SystemExit("--split %s: %d names for %d phases" % (s, len(names), len(parts)))
+    return int(bits[0]), parts, names
 
 
 def main():
@@ -101,7 +106,7 @@ def main():
     rows = [bytearray(regs[i * M.REG:(i + 1) * M.REG]) for i in range(len(regs) // M.REG)]
     used = {rid(r) & 0x3ff for r in rows}
 
-    need = sum(len(p) for _t, p in splits)
+    need = sum(len(p) for _t, p, _n in splits)
     if get("--ids"):
         ids = [int(x) for x in get("--ids").split(",")]
     else:
@@ -113,7 +118,7 @@ def main():
             raise SystemExit("regulation id %d is taken or known bad" % i)
 
     k = 0
-    for total, parts in splits:
+    for total, parts, names in splits:
         at = [n for n, r in enumerate(rows) if rid(r) == total]
         if len(at) != 1:
             raise SystemExit("regulation %d: %d rows, expected one" % (total, len(at)))
@@ -128,7 +133,8 @@ def main():
                   % (total, sum(c for c, _r in mini), rc))
         fmts = [F_REGULAR, F_TOP] + [F_SECOND] + [F_LOWER] * max(0, len(mini) - 2)
         new = []
-        for (clubs, rounds), fmt in zip(parts, fmts):
+        for pi, ((clubs, rounds), fmt) in enumerate(zip(parts, fmts)):
+            phase = names[pi] if names else PHASE_NAME[fmt]
             g = bytearray(src)
             g[M.R_ID:M.R_ID + 2] = ids[k].to_bytes(2, "little")
             g[0:2] = bytes(2)                          # relegates into nothing
@@ -136,10 +142,10 @@ def main():
             g[R_PARENT:R_PARENT + 2] = bytes(2)
             set_shape(g, LEAGUE_TYPE, fmt, clubs, rounds)
             for s in range(M.NAME_SLOTS):
-                M.put(g, M.R_NAME + s * M.NAME_SLOT, "%s %s" % (name, PHASE_NAME[fmt]), M.NAME_SLOT)
+                M.put(g, M.R_NAME + s * M.NAME_SLOT, "%s %s" % (name, phase), M.NAME_SLOT)
             new.append(g)
             print("  reg %3d  %-20s %2d clubs x %d = %2d rounds" % (
-                ids[k], PHASE_NAME[fmt], clubs, rounds, (clubs - 1 if clubs % 2 == 0 else clubs) * rounds))
+                ids[k], phase, clubs, rounds, (clubs - 1 if clubs % 2 == 0 else clubs) * rounds))
             k += 1
         set_shape(src, TOTAL_TYPE, F_TOTAL, rc, 0)
         print("reg %d %s -> split total over %d clubs, phases %s"

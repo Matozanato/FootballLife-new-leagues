@@ -26,9 +26,12 @@ What comes from where:
                                          own row); an id not listed gets none
   country                                --countries, else guessed from the league's name against
                                          Country.bin (mkflags.py's rules)
+  kickoff                                the slot the league follows in the Kick Off / Edit team
+                                         lists (fl26comptab; leaguebuilder kickoff_after)
   split                                  a split season (tools/mksplit.py): the total's row is the
                                          league line, its phases (format 12 regular, 13..15
-                                         groups, same competition) the split line
+                                         groups, same competition) the split line; carry=0 =
+                                         the groups start from zero points (Apertura/Clausura)
   uefa                                   the UEFA access list: one place per line, regulation,
                                          position, competition (0 UCL, 1 UEL, 2 UECL, 3..5 the
                                          other continents), alt -- fl26swiss's ACCESS format.
@@ -50,7 +53,8 @@ import pesdb
 import mkleague as M
 
 FORMAT = "# fl26world 1"
-KEYS = ("cid", "region", "country", "slot", "tier", "above", "promote", "demote", "clubs", "legs", "cup")
+KEYS = ("cid", "region", "country", "slot", "tier", "above", "promote", "demote", "clubs", "legs", "cup",
+        "exhibition", "scup", "kickoff")
 NO_SLOT = 123
 
 # The Select Team slot each regulation id mkworld hands out ends up on, in the exe's competition
@@ -62,14 +66,40 @@ DEFAULT_SLOT = {
     11: 28, 49: 49, 60: 40, 61: 41, 62: 42, 74: 74, 76: 80, 93: 61, 94: 62, 96: 64, 98: 66,
     100: 81, 109: 82, 110: 83, 111: 84, 112: 85, 113: 86, 114: 87, 121: 68, 138: 107, 139: 108,
     140: 109, 143: 110, 144: 111, 145: 112, 146: 113, 170: 22, 171: 29, 173: 43, 174: 69,
-    176: 71, 178: 72, 179: 73, 180: 75, 181: 76, 182: 77, 183: 6, 184: 5, 185: 4, 190: 112,
+    176: 71, 178: 72, 179: 73, 180: 75, 181: 76, 182: 77, 190: 112,
 }
+# Regulation ids a world may still use, but with no Select Team slot: the league plays its season
+# and is not in the Select Team / Kick Off list. Until 28 September these took slots 6, 5 and 4 --
+# free in the parameter table, but the list keeps the Asia-Oceania national teams and the two
+# Classic Teams entries there, so a 37th-39th league hid them (GitHub #26). fl26comptab refuses
+# PROTECTED_SLOTS for the same reason, also in world files written before this.
+NO_SLOT_IDS = (183, 184, 185)
+PROTECTED_SLOTS = (4, 5, 6)
 
 
 # The competitions of a uefa line (fl26swiss's ACCESS comment): the number is what the line
 # carries, the name what a person picks.
 COMPETITIONS = [(0, "Champions League"), (1, "Europa League"), (2, "Conference League"),
                 (3, "Libertadores"), (4, "Libertadores qualifying"), (5, "AFC Champions League")]
+UEFA_LINE = {c for c, _n in COMPETITIONS}        # the ones a uefa line carries
+
+# Continental cups the game does not have, built by tools/mkccup.py and run by fl26swiss.dll from
+# the world file's ccup lines: groups of four, then a knockout of the winners and runners-up (or a
+# straight knockout of four). A league place can lead to them like to the ones above. Each: number,
+# name, competition code, confederation (Competition.bin +6), and the shipped leagues' places --
+# (regulation, position), strongest first -- that fill the field when the world's own leagues do
+# not. A cup is built only in a world where some league names it.
+_J1, _CSL, _SPL = 52, 120, 162
+_BRA, _ARG, _CHI, _COL = 29, 30, 67, 168
+CCUPS = [
+    (6, "CAF Champions League", "FL_CAFCL", 5, []),
+    (7, "CAF Confederation Cup", "FL_CAFCC", 5, []),
+    (8, "AFC Champions League Two", "FL_AFCCL2", 3,
+     [(r, p) for k in range(6) for r, p in ((_J1, 5 + k), (_CSL, 4 + k), (_SPL, 5 + k))]),
+    (9, "Copa Sudamericana", "FL_SUDAM", 4,
+     [(r, p) for k in range(8) for r, p in ((_BRA, 7 + k), (_ARG, 7 + k), (_CHI, 3 + k), (_COL, 3 + k))]),
+]
+COMPETITIONS += [(c, n) for c, n, _code, _conf, _fill in CCUPS]
 FIELD = 36                        # clubs in each UEFA league phase; places past it get nothing
 
 # The DLL's own access list (tools/native/fl26swiss.c, ACCESS): the shipped leagues' European
@@ -79,7 +109,11 @@ FIELD = 36                        # clubs in each UEFA league phase; places past
 # would lose their places and the big five would fill the gaps. Keep it in step with the C file.
 _ENG, _ITA, _ESP, _FRA, _NED, _POR, _GER = 17, 18, 19, 20, 21, 22, 50
 _GRE, _TUR, _SCO, _DEN, _BEL = 117, 118, 134, 147, 155
-SHIPPED_ACCESS = [(r, n, c, 0) for r, n, c in (
+# The title holders first, as in the C list: the Champions League and Europa League winners
+# (knockout regs 4 and 6) to the Champions League, the Conference League winner (187) to the
+# Europa League; alt = the big-five league whose next club takes a place no holder is known for.
+HOLDERS = [(4, 0, 0, _ENG), (6, 0, 0, _ESP), (187, 0, 1, _ITA)]
+SHIPPED_ACCESS = sorted(HOLDERS + [(r, n, c, 0) for r, n, c in (
     # Champions League
     (_ENG, 1, 0), (_ITA, 1, 0), (_ESP, 1, 0), (_GER, 1, 0), (_FRA, 1, 0), (_NED, 1, 0), (_POR, 1, 0),
     (_BEL, 1, 0), (_TUR, 1, 0),
@@ -101,7 +135,7 @@ SHIPPED_ACCESS = [(r, n, c, 0) for r, n, c in (
     (_NED, 6, 2), (_POR, 5, 2), (_BEL, 5, 2), (_TUR, 4, 2),
     (_SCO, 4, 2), (_GRE, 3, 2),
     (_DEN, 3, 2),
-)]
+)], key=lambda e: e[2])   # stable: each section's holders stay first
 
 
 def uefa_places(own):
@@ -115,7 +149,8 @@ def uefa_places(own):
         return [], {}
     out = []
     for c, _n in COMPETITIONS:
-        out += [e for e in SHIPPED_ACCESS if e[2] == c] + [e for e in own if e[2] == c]
+        if c in UEFA_LINE:
+            out += [e for e in SHIPPED_ACCESS if e[2] == c] + [e for e in own if e[2] == c]
     over = {}
     for c in (0, 1, 2):
         n = sum(1 for e in out if e[2] == c)
@@ -141,10 +176,11 @@ def read_uefa(path):
 ALIASES = {"SOUTH KOREA": "Republic of Korea", "KOREA REPUBLIC": "Republic of Korea"}
 
 
-def write_world(path, name, leagues, splits=(), uefa=(), uecl=()):
+def write_world(path, name, leagues, splits=(), uefa=(), uecl=(), ccups=()):
     """leagues: list of dicts with 'id', any of KEYS, and 'name'; splits: (total, regular,
     [groups]) for the split seasons among them; uefa: (regulation, position, competition, alt)
-    places; uecl: the Conference League's first-season team ids"""
+    places; uecl: the Conference League's first-season team ids; ccups: the ccup lines as
+    tools/mkccup.py prints them"""
     lines = [FORMAT, "world %s" % name]
     for L in leagues:
         parts = ["league %d" % L["id"]]
@@ -152,12 +188,15 @@ def write_world(path, name, leagues, splits=(), uefa=(), uecl=()):
         if L.get("name"):
             parts.append("name=%s" % L["name"].replace("\n", " ").strip())
         lines.append(" ".join(parts))
-    for total, regular, groups in splits:
-        lines.append("split %d regular=%d groups=%s" % (total, regular, ",".join(map(str, groups))))
+    for s in splits:                     # (total, regular, [groups], extra words ...)
+        total, regular, groups = s[:3]
+        lines.append("split %d regular=%d groups=%s%s" % (total, regular, ",".join(map(str, groups)),
+                                                          "".join(" " + w for w in s[3:])))
     for e in uefa:
         lines.append("uefa %d %d %d %d" % tuple(e))
     if uecl:
         lines.append("uecl " + " ".join(map(str, uecl)))
+    lines += list(ccups)
     with open(path, "w", encoding="utf-8", newline="\r\n") as f:
         f.write("\n".join(lines) + "\n")
 

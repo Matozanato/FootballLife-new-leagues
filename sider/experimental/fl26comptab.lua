@@ -107,7 +107,7 @@ local APPEND = {
   {109, 82}, {110, 83}, {111, 84}, {112, 85}, {113, 86}, {114, 87}, {121, 68},
   {170, 22}, {171, 29}, {173, 43}, {174, 69}, {176, 71},
   {178, 72}, {179, 73}, {180, 75}, {181, 76}, {182, 77},
-  {183,  6}, {184,  5}, {185,  4},
+  -- 183, 184 and 185 sat on slots 6, 5 and 4 until 28 September; see PROTECTED below
   -- the 25th league: on 190 in worlds built from 2026-09-25 on, on 145 before. It takes 145's
   -- slot, which no live competition holds once the league has left 145.
   {190, 112},
@@ -206,6 +206,15 @@ end
 -- whatever row and slot the exe gives it. promote=/demote= become its counts; a league whose
 -- above= is not in the world raises that shipped league's demote count to its own promote
 -- count, as SHIPPED_DEMOTE does for Ligue 2 and Serie B.
+-- Slots that look free in the parameter table but are not: the Select Team / Kick Off list keeps
+-- the Asia-Oceania national teams and the two Classic Teams entries on 4, 5 and 6, and a league
+-- put there takes their place (GitHub #26). A world file written before 28 September may still
+-- name them; such a league keeps playing its season, it is only left out of the list.
+-- A league on slot=123 (or moved off a protected slot) still gets a row of its own, on the
+-- hidden slot: the row carries its promotion/relegation counts (COUNTS), which it needs whether
+-- or not it can be picked.
+local PROTECTED = { [4] = true, [5] = true, [6] = true }
+
 local function apply_world(world)
   local inworld = {}
   for _, L in ipairs(world) do inworld[L.id] = L end
@@ -218,7 +227,11 @@ local function apply_world(world)
   RESHAPE = reshape
   for _, L in ipairs(world) do
     OUR_IDS[#OUR_IDS + 1] = L.id
-    if L.slot and L.slot ~= 123 and not RESHAPE[L.id] then APPEND[#APPEND + 1] = { L.id, L.slot } end
+    if L.slot and PROTECTED[L.slot] then
+      log(string.format("fl26comptab: league %d asks for slot %d, which the national teams / Classic "
+                        .. "Teams use -- it plays, but is not in the Select Team list", L.id, L.slot))
+      APPEND[#APPEND + 1] = { L.id, 123 }
+    elseif L.slot and not RESHAPE[L.id] then APPEND[#APPEND + 1] = { L.id, L.slot } end
     if L.promote or L.demote then COUNTS[L.id] = { L.promote or 0, L.demote or 0 } end
     if L.above and not inworld[L.above] then
       SHIPPED_DEMOTE[L.above] = math.max(SHIPPED_DEMOTE[L.above] or 0, L.promote or 3)
@@ -306,6 +319,83 @@ local function install_flags(slot_country, named)
   log(string.format("fl26comptab: flags -- stub at 0x%x, %d slots carry a country", stub, named))
 end
 
+-- The Kick Off and Edit team lists sort their headings by 0x140ead990(slot): the slot's place in
+-- a fixed list of 89 slots (0x1427d5920), and 89 for a slot not on it, which the list builder
+-- (0x140c9359e, its only reader of the constant 0x1427d5754) then appends at the very end --
+-- after Classic Teams. Peru on slot 49 sat there (2026-09-28). The world file's kickoff=<slot>
+-- says which slot a league of ours follows; the function is rewritten in place to search a
+-- list of ours instead: the shipped 89 without our slots, each of ours put back after its
+-- slot (and after the leagues already put after that one), and the "not listed" answer and
+-- its constant raised to the new length together.
+--   mov rdx,<list> ; xor eax,eax ; L: cmp [rdx],ecx ; je R ; inc eax ; add rdx,4
+--   cmp eax,<n> ; jb L ; mov eax,<n> ; R: ret                        (35 of its 48 bytes)
+local ORDER_FN, ORDER_TBL, ORDER_N, ORDER_UNLISTED = 0x140ead990, 0x1427d5920, 89, 0x1427d5754
+local ORDER_FN_BYTES = "33c0488d15877f92010f1f8000000000390a7410ffc04883c20483f85972f1b859000000c3"
+local ORDER_SITES = { { ORDER_FN, ORDER_FN_BYTES }, { ORDER_UNLISTED, "59000000" },
+                      { 0x140c9359e, "3b05b021b401" } }   -- cmp eax,[0x1427d5754]
+
+local function install_order(slot_after, order)
+  local any = false                      -- sider's sandbox has no next()
+  for _ in pairs(slot_after) do any = true; break end
+  if not any then return end
+  for _, s in ipairs(ORDER_SITES) do
+    local got = bin2hex(memory.read(s[1], #s[2] / 2))
+    if got ~= s[2] then
+      log(string.format("fl26comptab: bytes at 0x%x are %s, expected %s -- Kick Off order left as it is", s[1], got, s[2]))
+      return
+    end
+  end
+  local list = {}
+  for i = 0, ORDER_N - 1 do
+    local sl = memory.unpack("u32", memory.read(ORDER_TBL + 4 * i, 4))
+    if not slot_after[sl] then list[#list + 1] = sl end
+  end
+  local function follows(s, a)          -- s was put after a, directly or through leagues of ours
+    for _ = 1, 64 do
+      s = slot_after[s]
+      if s == nil then return false end
+      if s == a then return true end
+    end
+    return false
+  end
+  -- in the world file's order (the order the Mod Studio shows), so leagues after the same
+  -- slot keep it: each goes after the ones already put there
+  local pending = {}
+  for _, sl in ipairs(order) do pending[#pending + 1] = sl end
+  local placed, late = 0, {}
+  repeat
+    local progress, rest = false, {}
+    for _, sl in ipairs(pending) do
+      local a, at = slot_after[sl], nil
+      for i, v in ipairs(list) do if v == a then at = i; break end end
+      if at then
+        while list[at + 1] and follows(list[at + 1], a) do at = at + 1 end
+        for j = #list, at + 1, -1 do list[j + 1] = list[j] end
+        list[at + 1] = sl
+        placed, progress = placed + 1, true
+      else
+        rest[#rest + 1] = sl
+      end
+    end
+    pending = rest
+  until not progress or #pending == 0
+  for _, sl in ipairs(pending) do list[#list + 1] = sl; late[#late + 1] = tostring(sl) end
+  local n = #list
+  local buf = ffi.C.VirtualAlloc(nil, 4 * n, 0x3000, 0x04)
+  if buf == nil then log("fl26comptab: VirtualAlloc for the Kick Off order failed -- left as it is"); return end
+  local t = ffi.cast("uint32_t*", buf)
+  for i, v in ipairs(list) do t[i - 1] = v end
+  local addr = tonumber(ffi.cast("uint64_t", buf))
+  local lo, hi = addr % 0x100000000, math.floor(addr / 0x100000000)
+  local code = "\72\186" .. u32le(lo) .. u32le(hi) .. "\49\192" .. "\57\10" .. "\116\18" .. "\255\192"
+            .. "\72\131\194\4" .. "\61" .. u32le(n) .. "\114\239" .. "\184" .. u32le(n) .. "\195"
+  assert(#code == 35, #code)
+  memory.write(ORDER_UNLISTED, u32le(n))
+  memory.write(ORDER_FN, code)
+  log(string.format("fl26comptab: Kick Off order -- %d slots, %d of ours placed after their league or continent%s",
+                    n, placed, #late > 0 and (", " .. table.concat(late, ",") .. " at the end (no such slot)") or ""))
+end
+
 local function check_sites(list)
   for _, s in ipairs(list) do
     local n = #s[2] / 2
@@ -328,7 +418,9 @@ function m.init(ctx)
   local world = read_world(ctx)
   if world then
     apply_world(world)
-    log(string.format("fl26comptab: world file -- %d leagues, %d with a slot of their own", #OUR_IDS, #APPEND))
+    local own = 0
+    for _, a in ipairs(APPEND) do if a[2] ~= 123 then own = own + 1 end end
+    log(string.format("fl26comptab: world file -- %d leagues, %d with a slot of their own", #OUR_IDS, own))
   end
 
   -- 1. read the shipped table, index rows by id
@@ -478,6 +570,19 @@ function m.init(ctx)
       end
     end
     if named > 0 then install_flags(slot_country, named) end
+  end
+
+  -- 7. the Kick Off / Edit list order: each league of ours after the slot its kickoff= names
+  if world then
+    local slot_after, order = {}, {}
+    for _, L in ipairs(world) do
+      local i = byid[L.id]
+      local sl = i and row_u32(rows[i], OFF_SLOT)
+      if L.kickoff and sl and sl < 123 and sl ~= L.kickoff and not slot_after[sl] then
+        slot_after[sl] = L.kickoff; order[#order + 1] = sl
+      end
+    end
+    install_order(slot_after, order)
   end
 
   log(string.format("fl26comptab: table copied to 0x%x, %d rows (%d shipped + %d ours)", newbase, n, NROWS, n - NROWS))

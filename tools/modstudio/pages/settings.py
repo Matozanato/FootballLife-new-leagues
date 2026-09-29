@@ -6,6 +6,8 @@ from PySide6.QtWidgets import (QComboBox, QFileDialog, QFormLayout, QLabel, QLin
                                QPushButton, QWidget)
 
 from .. import i18n
+import siderdir
+
 from ..game import Game, guess_folders
 from ..i18n import _
 from ..ui import Page, section, hint, row, ask, error, info, run_job
@@ -32,6 +34,13 @@ class Settings(Page):
         self.game_state = QLabel("")
         self.game_state.setWordWrap(True)
         form.addRow("", self.game_state)
+        self.sider = QComboBox()
+        self.sider.setMinimumWidth(260)
+        self.sider.activated.connect(self.set_sider)
+        self.sider_note = hint(_("More than one folder here holds a sider.ini. Mod Studio installs mods, "
+                                 "builds worlds and reads sider.log in the one chosen here."))
+        form.addRow(_("Sider folder"), row(self.sider))
+        form.addRow("", self.sider_note)
         self.lang = QComboBox()
         for code, name in i18n.LANGUAGES:
             self.lang.addItem(name, code)
@@ -74,12 +83,24 @@ class Settings(Page):
                 self.folder.addItem(f)
         self.folder.setCurrentText(g.folder)
         self.folder.blockSignals(False)
+        names = siderdir.candidates(g.folder) if g.folder else []
+        self.sider.blockSignals(True)
+        self.sider.clear()
+        for n in names:
+            self.sider.addItem(n, n)
+        if not names:
+            self.sider.addItem(_("(none found)"), "")
+        self.sider.setCurrentIndex(max(0, self.sider.findData(os.path.basename(g.sider_dir))))
+        self.sider.setEnabled(len(names) > 1)
+        self.sider.blockSignals(False)
+        self.sider_note.setVisible(len(names) > 1)
         probs = g.problems()
         if probs:
             self.game_state.setText("• " + "\n• ".join(_(p) for p in probs))
             self.game_state.setObjectName("banner_warn")
         else:
-            self.game_state.setText(_("Found: %s, Sider, sider.ini.") % os.path.basename(g.exe))
+            self.game_state.setText(_("Found: %s, Sider in %s, sider.ini.")
+                                    % (os.path.basename(g.exe), os.path.basename(g.sider_dir)))
             self.game_state.setObjectName("banner_ok")
         self.game_state.style().unpolish(self.game_state)
         self.game_state.style().polish(self.game_state)
@@ -104,6 +125,12 @@ class Settings(Page):
         if not Game(d).ok() and not ask(self, "Game folder", _("There is no FL_2026.exe in %s. Use it anyway?") % d):
             return
         self.app.set_game(d)
+        self.refresh()
+
+    def set_sider(self):
+        name = self.sider.currentData()
+        if name and name != os.path.basename(self.app.game.sider_dir):
+            self.app.set_sider(name)
         self.refresh()
 
     def set_lang(self):

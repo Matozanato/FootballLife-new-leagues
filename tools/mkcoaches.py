@@ -44,8 +44,9 @@ def club_country(rec):
     return (int.from_bytes(rec[lo:hi], "little") >> (T_NAT_BIT % 8)) & ((1 << NAT_BITS) - 1)
 
 
-def add_coaches(coaches, teams, min_id=FIRST_NEW_ID, fmt="FL M%04d"):
-    """coaches, teams: unpacked Coach.bin and Team.bin. Returns (records to append, stats)."""
+def add_coaches(coaches, teams, min_id=FIRST_NEW_ID, fmt="FL M%04d", names=None):
+    """coaches, teams: unpacked Coach.bin and Team.bin. names: club id -> the manager's name, for
+    the clubs that have one given (the rest are fmt). Returns (records to append, stats)."""
     assert len(coaches) % C_REC == 0 and len(teams) % T_REC == 0
     have = {u32(coaches, i) for i in range(0, len(coaches), C_REC)}
     # template: the last shipped coach no club employs, so a clone copies nobody's record
@@ -70,7 +71,7 @@ def add_coaches(coaches, teams, min_id=FIRST_NEW_ID, fmt="FL M%04d"):
         new_ids.add(cid)
         r = bytearray(tpl)
         r[C_ID:C_ID + 4] = cid.to_bytes(4, "little")
-        nm = (fmt % clubs if "%" in fmt else fmt).encode("utf-8")[:C_NAME_LEN - 1]
+        nm = ((names or {}).get(u32(rec, T_ID)) or (fmt % clubs if "%" in fmt else fmt)).encode("utf-8")[:C_NAME_LEN - 1]
         nm += bytes(C_NAME_LEN - len(nm))
         r[C_NAME1:C_NAME1 + C_NAME_LEN] = nm
         r[C_NAME2:C_NAME2 + C_NAME_LEN] = nm

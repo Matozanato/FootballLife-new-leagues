@@ -44,11 +44,20 @@ The picture names
   Two regions then carry the same heading, which is untidy; drawing the previous country's
   heading over our leagues is worse, and that is what happens today.
 
+  With --root, a region whose country has a picture of its own in the world's copy of the
+  package (tools/mkcatflags.py draws 'compeCategory-f<flag id>' from the country's flag) gets
+  that picture; the others get compeCategory-interNational, the plain flag the game draws for
+  national-team competitions. A name that is not one of the shipped ones is written into the
+  same read-only space, after the rows.
+
     python mkregnames.py                 -> sider/fl26regnames.lua with the defaults
     python mkregnames.py --map 11=PEU,13=PLA,14=PAS,20=event
     python mkregnames.py --root <livecpk root>   -> a row for every region that world uses
+                                                    and has no row: its country's own picture,
+                                                    else interNational
     python mkregnames.py --root <root> --out <file>   (the league builder: write there)
-                                                    and has no row, generic headings cycled
+    python mkregnames.py --root <root> --world <file> (the world file, when it is not
+                                                    <root>/fl26world.txt)
     python mkregnames.py --show          -> the shipped table, decoded
 
 With --root, ids above 28 also need sider/fl26reg64.lua: without it the game never sees a
@@ -69,6 +78,8 @@ LEA_NM = (0x140acd47f, "4c8d1d3a9cba01", 3)    # lea r11, [table]
 COUNT = (0x140acd49a, "83f918", 2)             # cmp ecx, 0x18
 DEFAULT_MAP = "11=PEU,13=PLA,14=PAS,20=event"
 GENERIC = ["PEU", "PLA", "PAS", "event"]       # the four headings that name no country
+NEUTRAL = "interNational"                      # the plain flag: a country with no picture of its own
+PACKAGE = os.path.join("common", "menu", "general", "compeCategorySelect.bin")
 
 
 def cstr(img, va):
@@ -88,6 +99,22 @@ def rows(img):
 def names(img):
     """picture name -> the address of that string, from the shipped rows"""
     return dict((r[3].split("compeCategory-")[-1], r[0]) for r in rows(img))
+
+
+OWN = __import__("re").compile(r"f\d+$")
+
+
+def own_pictures(root, world=None):
+    """{region: 'f<flag id>'} for the regions whose country has its own picture in the world's
+    copy of the category package (tools/mkcatflags.py)"""
+    pkg = os.path.join(root, PACKAGE)
+    world = world or os.path.join(root, "fl26world.txt")
+    if not (os.path.exists(pkg) and os.path.exists(world)):
+        return {}
+    import afp, mkcatflags
+    have = {nm for nm, _, _ in afp.Package(open(pkg, "rb").read()).pictures()}
+    return dict((rid, "f%d" % fid) for rid, fid in mkcatflags.world_countries(world).items()
+                if mkcatflags.KEY % fid in have)
 
 
 def check(img, site):
@@ -118,6 +145,7 @@ def main(argv):
         check(img, s)
 
     known = names(img)
+    extra = {}                      # our own picture names -> their offset after the rows
     added = []
     root = get("--root")
     if root:
@@ -133,10 +161,11 @@ def main(argv):
         need = [rid for rid in used if rid not in have]
         if "--map" in argv:
             raise SystemExit("--root computes the map; do not also pass --map")
-        argv = argv + ["--map", ",".join("%d=%s" % (rid, GENERIC[i % len(GENERIC)])
-                                         for i, rid in enumerate(need))]
-        print("%s uses %d regions; %d of them have no heading: %s"
-              % (os.path.basename(root.rstrip("/\\")), len(used), len(need), need))
+        own = own_pictures(root, get("--world"))
+        argv = argv + ["--map", ",".join("%d=%s" % (rid, own.get(rid, NEUTRAL)) for rid in need)]
+        print("%s uses %d regions; %d of them have no heading: %s (%d with their own flag)"
+              % (os.path.basename(root.rstrip("/\\")), len(used), len(need), need,
+                 sum(rid in own for rid in need)))
         if need and max(need) > 28:
             print("  ids above 28 also need sider/fl26reg64.lua to be read at all")
     for part in get("--map", DEFAULT_MAP).split(","):
@@ -144,15 +173,23 @@ def main(argv):
             continue
         rid, nm = part.split("=")
         rid = int(rid)
-        if nm not in known:
+        if nm not in known and not (root and OWN.match(nm)):
             raise SystemExit("no shipped heading called compeCategory-%s; have %s"
                              % (nm, ", ".join(sorted(known))))
         if any(r[1] == rid for r in shipped):
             raise SystemExit("region %d already has a heading -- refusing to change a shipped one" % rid)
-        added.append((known[nm], rid, 0, "compeCategory-" + nm))
+        added.append((known.get(nm), rid, 0, "compeCategory-" + nm))
 
-    table = b"".join(struct.pack("<QII", p, rid, pad) for p, rid, pad, _ in shipped + added)
     total = NROWS + len(added)
+    strings = b""
+    for i, (ptr, rid, pad, nm) in enumerate(added):
+        if ptr is None:             # a name of ours: its string goes after the rows
+            if nm not in extra:
+                extra[nm] = len(strings)
+                strings += nm.encode("latin1") + b"\0"
+            added[i] = (CAVE + total * STRIDE + extra[nm], rid, pad, nm)
+    table = b"".join(struct.pack("<QII", p, rid, pad) for p, rid, pad, _ in shipped + added)
+    table += strings
     if total > 0x7f:
         raise SystemExit("%d rows does not fit the 8-bit compare at 0x%x" % (total, COUNT[0]))
 

@@ -49,7 +49,10 @@ RULES = [
     ("flags", "stadiumserver", "Flags has to come before StadiumServer"),
 ] + [("customexhibitionmatch", m, "CustomExhibitionMatch has to come before the content servers")
      for m in ("stadiumserver", "ballserver", "kserv", "kitserver", "commentaryserver", "commentary-server",
-               "goalsongserver", "scoreboardserver", "refkitserver", "weatherconditions")]
+               "goalsongserver", "scoreboardserver", "refkitserver", "weatherconditions")] + [
+    ("fl26joindll", "fl26swiss", "fl26joindll has to come before fl26swiss"),
+    ("fl26chain", "fl26swiss", "fl26chain has to come before fl26swiss"),
+]
 
 # (module, sider.ini setting, value it needs, why)
 NEEDS = [
@@ -168,6 +171,8 @@ def check_order(ini, modules_dir):
     for a, b, why in RULES:
         if a in pos and b in pos and pos[a] > pos[b]:
             out.append(why)
+    if "fl26cuphook" in pos and "fl26chain" in pos:
+        out.append("fl26cuphook is the old version of fl26chain: switch fl26cuphook off")
     told = set()
     st = ini.settings()
     for m, key, val, why in NEEDS:

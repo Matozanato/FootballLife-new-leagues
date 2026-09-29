@@ -10,6 +10,8 @@ from PySide6.QtCore import QObject, Signal
 
 import leaguebuilder as B
 
+NATIONAL, OTHERS = -2, -3          # the two groups of teams in no league (game_groups)
+
 
 def blank():
     return {"world": "_FL26MyWorld", "leagues": [], "edits": {}, "players": {}}
@@ -27,6 +29,8 @@ class Project(QObject):
         self.dirty = False
         self.base = None
         self.countries, self.parents, self.game_lgs, self.game_cl = [], [], [], {}
+        self.confeds = {}
+        self.game_nat, self.game_other = [], []
         self.parent_tiers = {}
         self._squads = None
         self._names = None
@@ -41,18 +45,29 @@ class Project(QObject):
         try:
             self.base = B.base_dir(where) if where else B.base_dir(self._default_tables())
             self.countries = B.country_names(self.base)
+            self.confeds = B.country_confederations(self.base)
             self.parents = B.shipped_parents(self.base)
             self.parent_tiers = B.shipped_tiers(self.base)
             self.game_lgs = B.game_leagues(self.base)
             self.game_cl = B.game_clubs(self.base)
+            self.game_nat, self.game_other = B.game_others(self.base, self.game_lgs)
         except (B.BuildError, OSError, ValueError, SystemExit):
             self.base = None
             self.countries, self.parents, self.game_lgs, self.game_cl = [], [], [], {}
+            self.confeds = {}
+            self.game_nat, self.game_other = [], []
             self.parent_tiers = {}
         self._squads = None
         self._names = None
         self.tables_changed.emit()
         return self.base
+
+    def game_groups(self):
+        """[(group id, name, [team ids])] of the teams in no league (the game's "Others"
+        sections); group ids are negative so they never meet a regulation id"""
+        from modstudio.i18n import _
+        return [(g, name, t) for g, name, t in ((NATIONAL, _("National teams"), self.game_nat),
+                                                  (OTHERS, _("Other clubs (no league)"), self.game_other)) if t]
 
     def _default_tables(self):
         d = os.path.join(self.tables_dir(), "common", "etc", "pesdb")
@@ -139,6 +154,9 @@ class Project(QObject):
             lg, _s, n = k.rpartition("/")
             if lg == old:
                 pl["%s/%s" % (new, n)] = pl.pop(k)
+        for c in self.recipe.get("preseason_cups") or []:
+            c["clubs"] = ["%s/%s" % (new, x.rpartition("/")[2]) if isinstance(x, str) and x.rpartition("/")[0] == old
+                          else x for x in c.get("clubs") or []]
         for p in (self.recipe.get("packs") or {}).values():
             p["leagues"] = [new if n == old else n for n in p.get("leagues") or []]
             p["players"] = ["%s/%s" % (new, k.rpartition("/")[2]) if k.rpartition("/")[0] == old else k
@@ -151,6 +169,10 @@ class Project(QObject):
             lg, _s, n = k.rpartition("/")
             if lg == name and n.isdigit() and int(n) >= keep:
                 pl.pop(k)
+        for c in self.recipe.get("preseason_cups") or []:      # its clubs leave the pre-season cups
+            c["clubs"] = [x for x in c.get("clubs") or [] if not (
+                isinstance(x, str) and x.rpartition("/")[0] == name
+                and x.rpartition("/")[2].isdigit() and int(x.rpartition("/")[2]) >= keep)]
 
     def new(self):
         self.recipe, self.path, self.dirty = blank(), None, False

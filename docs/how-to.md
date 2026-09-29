@@ -664,6 +664,11 @@ Press **F8** in the game any time to write a short report of what the module did
   leagues; the places of countries that are missing are topped up from the big five. Giving
   your leagues places means editing `ACCESS` in `tools\native\fl26swiss.c` and building the
   DLL again ([tools/native/README.md](../tools/native/README.md)).
+- **Title holders.** The Champions League and Europa League winners play the next Champions
+  League, the Conference League winner the next Europa League. They come first on the list, so
+  a holder that also finished high at home takes the holder's place and the next club of its
+  league moves up. While no holder is known (a first season), those places go to the next club
+  of England, Spain and Italy.
 - The Conference League play-off is drawn in December (the real draw is in late January) and
   played in February together with the Europa League's.
 - The European dates do not check the league calendars. A club can have a league match and

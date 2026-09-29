@@ -125,6 +125,13 @@ static int ours(uint16_t id) { for (int i = 0; i < g_nids; i++) if (g_ids[i] == 
 static uint16_t g_td_extra[MAX_TD_EXTRA];
 static int      g_ntd_extra = 0;
 static int td_extra(uint16_t id) { for (int i = 0; i < g_ntd_extra; i++) if (g_td_extra[i] == id) return 1; return 0; }
+/* Ours in a January-December country (the regions whose season type is the calendar year:
+   a second division below Colombia's or Japan's). They join on day 41 like the rest, but their
+   season ends at New Year with the league above them, not in July: the July teardown closed
+   them half way through and they ended every season with no final table (GitHub #27). */
+static uint16_t g_cal[MAX_IDS]; static int g_ncal = 0;
+static int calyr(uint16_t id) { for (int i = 0; i < g_ncal; i++) if (g_cal[i] == id) return 1; return 0; }
+static int rec_region(const unsigned char* rec) { return rec ? (int)((*(const uint32_t*)(rec + 0x30c) >> 7) & 63) : -1; }
 /* shipped leagues that do enter, as a yardstick beside ours in the door log */
 static int control(uint16_t id) { return id == 17 || id == 21 || id == 50 || id == 81 || id == 82; }
 
@@ -288,10 +295,38 @@ static const unsigned char* find_record(uint16_t cid)
  * empty standings. So when the builder is the caller, the door says no to ours -- the
  * builder treats a refusal as an ordinary skip -- and they enter on day 41 with the rest.
  * Returns nonzero to refuse without running the door. */
+/* A split's regular phase entering through register_all has its clubs listed (+0x170, the
+ * same handles as its total) but a club count of 0 (+0x308 bits 16-22), and is scheduled with
+ * nothing (measured 2026-09-29 on an Apertura phase: 0 matches). Scotland's regular phase,
+ * which the builder admits at creation, reads count 12 over its 12 handles. So an added league
+ * that comes to the door with a full list, as long as its configured size (+0x30c), and a
+ * count of 0 gets the count set to the list's length first -- the one field the game's own
+ * setter 0x1414ca080 writes. A league whose count is already set is not touched. */
+static void count_listed(uint16_t cid)
+{
+  unsigned char* rec = (unsigned char*)find_record(cid);
+  if (!rec || *(uint32_t*)(rec + 0x84) != 1 || !((*(uint32_t*)(rec + 0x304) >> 8) & 1)) return;
+  uint32_t w = *(uint32_t*)(rec + 0x308);
+  if ((w >> 16) & 0x7f) return;
+  uint32_t n = 0;
+  while (n < 48 && *(uint32_t*)(rec + 0x170 + 4 * n) != 0xffffffffu) n++;
+  if (n < 2 || n != (*(uint32_t*)(rec + 0x30c) & 0x7f)) return;
+  *(uint32_t*)(rec + 0x308) = (w & 0xff80ffffu) | (n << 16);
+  logf("door(%u): %u clubs listed but a count of 0 (a split's regular phase) -- count set to %u", cid, n, n);
+}
+
 int door_pre(uint64_t id, uint64_t ret)
 {
   uint16_t cid = (uint16_t)id;
+  if (ours(cid)) count_listed(cid);
   if (!ours(cid) || ret != g_base + BLD_RET_RVA) return 0;
+  /* A calendar-year league of ours never enters with the July builder: its rounds start in
+   * February, and New Year would close it before the first one. It joins on day 41. */
+  if (calyr(cid)) {
+    g_stat[6]++;
+    logf("door(%u) refused by us: a January-December league, it joins on day 41", cid);
+    return 1;
+  }
   /* All of the above holds for a calendar-year world only. Since fl26augseason a career in
    * one of our leagues builds an August world: the builder admits every European league at
    * creation, ours included, and the first fixtures are the next day -- there is no later
@@ -592,10 +627,10 @@ static vec16_t  g_mv_vec, g_dg_vec;
 typedef char (*hastab_fn)(uint64_t id);
 typedef void (*degen_fn)(void* ctx, vec16_t* ids);
 
-static void ensure_tables(void);
+static void ensure_tables(const vec16_t* in);
 vec16_t* mover_pre(void* ctx, vec16_t* in)
 {
-  ensure_tables();
+  ensure_tables(in);
   if (!in || !in->b || in->e < in->b) return in;
   int n = (int)(in->e - in->b), k = 0, d = 0;
   if (n > MAX_LIST) return in;
@@ -670,7 +705,7 @@ static void log_tables(void)
 typedef uint64_t (*getctx_fn)(void);
 typedef void (*keyof_fn)(uint32_t* out, uint64_t id);
 typedef void (*activate_fn)(uint64_t ctx, uint64_t id);
-static void ensure_tables(void)
+static void ensure_tables(const vec16_t* in)
 {
   if (!g_base) return;
   hastab_fn has = (hastab_fn)(uintptr_t)(g_base + HASTAB_RVA);
@@ -685,6 +720,15 @@ static void ensure_tables(void)
     uint16_t id = g_ids[i];
     unsigned char* rec = (unsigned char*)find_record(id);
     if (!rec) continue;
+    /* A calendar-year league of ours is half way through its season at the July split: only the
+       split of its own region group (New Year) may finalise it. */
+    if (calyr(id)) {
+      int reg = rec_region(rec), mate = 0;
+      if (in && in->b && in->e > in->b)
+        for (const uint16_t* q = in->b; q < in->e; q++)
+          if (*q == id || rec_region(find_record(*q)) == reg) { mate = 1; break; }
+      if (!mate) continue;
+    }
     uint16_t cur = *(const uint16_t*)(rec + 0x2fc);
     uint32_t key = 0xffffffff;
     ((keyof_fn)(uintptr_t)(g_base + KEYOF_RVA))(&key, id);
@@ -842,6 +886,18 @@ uint64_t reg_post(uint64_t compid, uint64_t ret, uint64_t result)
   unsigned char* std; uint32_t tabbase; int h = -1;
   unsigned char* e = season_entry(id, &std, &tabbase);
   int fin = e ? sub_final(e, std, tabbase, year, &h) : -1;
+  /* A final season of this very year, from July on, is a season that has ended, not the one
+   * entering: the two phases of an Apertura/Clausura split share the competition's header
+   * entry, and the Clausura played January-May 2026 made season 2026 final -- the one the
+   * Apertura asks for when it enters in September 2026. Refused, 191 and 74 were left at
+   * +0x2fc 0xffff and kept no table all season (2026-09-29; two of the nine matches of
+   * every round were never dated either). A league whose season runs August-May has no final
+   * season of the year it is entering, and a January-December one enters at New Year. */
+  if (fin == 1 && blk[TODAY_OFF + 2] >= 7) {
+    logf("enter %u: season %u sub-record is final but over (month %u) -- rebuilt for the new season",
+         id, year, (unsigned)blk[TODAY_OFF + 2]);
+    fin = 0;
+  }
   if (fin != 0) {
     logf("enter %u: refused, season %u sub-record %s -- left alone", id, year,
          fin < 0 ? "missing" : "is final");
@@ -915,7 +971,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   char buf[320]; int p = 0; buf[0] = 0;
   for (int j = 0; j < n; j++) {
     uint16_t id = in->b[j];
-    if (!euro && (ours(id) || td_extra(id))) {
+    if (euro ? calyr(id) : ((ours(id) && !calyr(id)) || td_extra(id))) {
       changed++;
       if (p < (int)sizeof buf - 8) p += snprintf(buf + p, sizeof buf - (size_t)p, "%u ", id);
       continue;
@@ -926,7 +982,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
     for (int i = 0; i < g_nids; i++) {
       uint16_t id = g_ids[i]; int dup = 0;
       for (int j = 0; j < k; j++) if (g_td_list[j] == id) { dup = 1; break; }
-      if (dup || !find_record(id)) continue;
+      if (dup || !find_record(id) || calyr(id)) continue;
       g_td_list[k++] = id; changed++;
       if (p < (int)sizeof buf - 8) p += snprintf(buf + p, sizeof buf - (size_t)p, "%u ", id);
     }
@@ -938,7 +994,27 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
       if (p < (int)sizeof buf - 8) p += snprintf(buf + p, sizeof buf - (size_t)p, "%u ", id);
     }
   }
+  /* Any other list: a calendar-year league of ours closes with the shipped leagues of its own
+     region -- the season group the list is. */
+  int cadd = 0; char cbuf[160]; int cp = 0; cbuf[0] = 0;
+  if (!euro) {
+    for (int i = 0; i < g_ncal; i++) {
+      uint16_t id = g_cal[i]; int dup = 0, mate = 0;
+      const unsigned char* rec = find_record(id);
+      if (!rec) continue;
+      int reg = rec_region(rec);
+      for (int j = 0; j < k; j++) {
+        if (g_td_list[j] == id) dup = 1;
+        else if (!ours(g_td_list[j]) && rec_region(find_record(g_td_list[j])) == reg) mate = 1;
+      }
+      if (dup || !mate || k >= MAX_LIST) continue;
+      g_td_list[k++] = id; changed++; cadd++;
+      if (id < 256) g_door_yes[id] = 0;
+      if (cp < (int)sizeof cbuf - 8) cp += snprintf(cbuf + cp, sizeof cbuf - (size_t)cp, "%u ", id);
+    }
+  }
   if (!changed) return in;
+  if (cadd) logf("teardown: calendar-year leagues of ours closed with their region: [%s]", cbuf);
   g_td_vec.b = g_td_list; g_td_vec.e = g_td_list + k; g_td_vec.c = g_td_list + MAX_LIST;
   logf("teardown: %d ids, ours %s: [%s]", n, euro ? "added" : "kept out", buf);
   return &g_td_vec;
@@ -1038,6 +1114,16 @@ __declspec(dllexport) int fl26_join_install(uint64_t exe_base, uint64_t cave_add
 }
 
 /* copy and clear the pending log text; returns bytes copied */
+__declspec(dllexport) int fl26_join_calendar(const uint16_t* ids, int n)
+{
+  if ((!ids && n) || n < 0) return -1;
+  if (n > MAX_IDS) n = MAX_IDS;
+  for (int i = 0; i < n; i++) g_cal[i] = ids[i];
+  g_ncal = n;
+  logf("calendar-year leagues of ours (closed at New Year): %d", n);
+  return n;
+}
+
 /* Ids that go on the July teardown list only (split-season group phases): they are closed
    with our leagues but never appended to register_all. Call after fl26_join_install.
    Returns the number kept, or -1 on a bad list. */

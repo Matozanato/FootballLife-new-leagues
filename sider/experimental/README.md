@@ -231,6 +231,10 @@ undoes it.
   same ids sent them to Europe as those countries (issue #8). New leagues get no European
   places unless you add them to `ACCESS` in `tools/native/fl26swiss.c`; the places left open
   are topped up from the big five.
+- The title holders come first in the list: the Champions League and Europa League winners
+  (knockout regulations 4 and 6, the two the UEFA Super Cup takes) to the next Champions
+  League, the Conference League winner (187) to the next Europa League. Their winners are kept
+  at the July teardown, like a domestic cup's.
 - The regulation ids and the size plan are our world's. A world built with the same tools
   and defaults gets the same ids; anything else needs them edited.
 - The game crashes now and then in its own protected code (see

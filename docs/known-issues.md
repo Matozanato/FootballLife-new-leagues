@@ -1,6 +1,6 @@
 # Known issues
 
-Honest list, as of 2026-09-27. Addresses are given so that a fault offset in your Event
+Honest list, as of 2026-09-28. Addresses are given so that a fault offset in your Event
 Viewer can be matched against them: the offset is the address minus `0x140000000`
 (so `0x1414c674d` shows up as exception offset `0x14c674d`).
 
@@ -90,6 +90,14 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
   own rows into spare space; the version that exists carries those rows inside itself as
   shipped bytes, and this repository does not redistribute game data, so it is published only
   once it copies them out of memory at startup.
+- **Not possible yet (2026-09-28):**
+  - **Two tournaments a year (Apertura / Clausura) with a play-off.** The game has the shape
+    (Colombia, the USA), but in our regions the phases would have to be driven by `fl26swiss`,
+    which does not do it yet. A new league plays one season.
+  - **A second domestic cup (a League Cup).** Two cups filled from the same leagues can clash
+    on dates; not measured yet. A new country gets one national cup and a super cup.
+  - **Leagues for exhibition only (historic squads).** The game's own "Classics" teams are in
+    no competition; how the game offers them in Kick Off is not found yet.
 - **Kits, names, players.** All placeholders / clones. Not a bug, but a limitation of this
   beta: the tools prove capacity, they do not author content.
 - **Transfers and finances**: not observed yet. Report what you see.
@@ -300,6 +308,35 @@ calendar.
   slots: the budget is 18,266 new players in total.
 
 ## Fixed along the way (so you can confirm)
+
+- 2026-09-28 (GitHub issue #26): **the Asia-Oceania national teams and the Classic Teams
+  vanished from Kick Off** in a world with 37 or more new leagues. The 37th to 39th league
+  took Select Team slots 4, 5 and 6, which the Kick Off list keeps for those entries. The
+  builder now gives those leagues a hidden slot (they play, they are not in the Select Team
+  list), and `fl26comptab.lua` refuses slots 4-6 also in world files built before. Confirm:
+  Kick Off shows both entries again.
+- 2026-09-28 (GitHub issue #27): **a new league that plays January to December** (Colombia,
+  Japan and the other calendar-year countries) was closed by the game's July season teardown
+  like a European league, and lost its second half. `fl26join.dll` now leaves such a league
+  alone in July and its region closes it at New Year, and `fl26swiss` dates it between days
+  45 and 333. Confirm: `sider.log` at boot says `calendar-year leagues of ours (closed at New
+  Year): <n>`, and the league still has fixtures after July.
+- 2026-09-28 (Evo-Web report): **two clubs of one country could meet in the league phase**
+  (Manchester United v Manchester City). The draw was a fixed table by list position; each pot
+  is now reordered so one league's clubs are spread. Confirm: `sider.log` has `draw spread by
+  league: ... before, 0 and 0 after` for the Champions League and the Europa League. The
+  Conference League, with more clubs from a few countries, can keep one such pair.
+- 2026-09-28 (Evo-Web report): **a shirt number typed as 10 came out as 11.** The game stores
+  the number minus one; the player editor, the builder and Mod Studio now read and write it
+  that way. Numbers set with an older version are one too high: set them again.
+- 2026-09-28: **a new league outside Europe sat among the European categories** (an Emirati
+  or Peruvian league listed as UEFA). Every new league was a copy of England's row; the builder
+  now writes the country's own confederation.
+- 2026-09-28: **`mkcup.py --region` took the raw byte**, so `--region 29` put the cup in
+  region 35. It is now a region id.
+- 2026-09-28 (GitHub issue #28): **Sider in a folder not called `SiderAddons`** was not found.
+  Mod Studio and the League Builder now look for the folder that holds `sider.ini`, and
+  Settings chooses between several.
 
 - 2026-09-27 (Evo-Web report): **in the first season `fl26swiss` put big clubs such as PSG,
   Real Madrid or Inter in the Conference League.** With no final tables yet, the access list

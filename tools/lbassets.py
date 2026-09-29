@@ -64,6 +64,29 @@ def club_crest(root, tid, label, picture=None):
         im.save(os.path.join(d, "e_%06d%s.png" % (tid, suf)))
 
 
+FLAG_SIZES = (("", 128), ("_l", 256), ("_ll", 512))
+FLAG_BORDER = (222, 222, 222, 255)
+
+
+def country_flag(root, fid, picture):
+    """write the three sizes of flag `fid` (Country.bin's flag id) from a picture, drawn the way the
+    shipped flags are: a square transparent canvas, the flag across the middle (126 x 88 of 128)
+    inside a grey frame 1/32 of the canvas thick.  The picture is stretched to the flag's shape,
+    as a flag is a rectangle whatever its proportions; it replaces the country's flag everywhere
+    the game shows it (Select Team, nationality) while the world is on."""
+    d = os.path.join(root, *CREST_DIR)
+    os.makedirs(d, exist_ok=True)
+    src = Image.open(picture).convert("RGBA")
+    for suf, px in FLAG_SIZES:
+        u, b = px // 128, px // 32
+        box = (u, 20 * u, px - u, 108 * u)
+        out = Image.new("RGBA", (px, px), (0, 0, 0, 0))
+        out.paste(Image.new("RGBA", (box[2] - box[0], box[3] - box[1]), FLAG_BORDER), box[:2])
+        inner = (box[0] + b, box[1] + b, box[2] - b, box[3] - b)
+        out.paste(src.resize((inner[2] - inner[0], inner[3] - inner[1]), Image.LANCZOS), inner[:2])
+        out.save(os.path.join(d, "flag_%d%s.png" % (fid, suf)))
+
+
 def preview(picture, size=96):
     """a small square of a picture, for the window"""
     return square(picture, size)

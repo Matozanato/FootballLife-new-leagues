@@ -62,7 +62,7 @@ P_REC, P_ID = 312, 0x08
 P_NAME, P_NAME_LEN, P_NAME_SLOTS = 0x44, 0x3d, 4
 A_REC = 16
 A_EID, A_PID, A_TID, A_PACK = 0x00, 0x04, 0x08, 0x0c
-SHIRT_MASK = 0x3ff
+SHIRT_MASK = 0x3ff           # the shirt number minus one: Haaland's 9 is stored as 8 (Evo-Web, 2026-09-28)
 ORDER_SHIFT, ORDER_MASK = 10, 0xfc00    # bits 16 and up are role flags, kept as they are
 T_REC, T_ID, T_NAME, T_NAME_LEN = 1532, 0x08, 0x170, 0x46
 DEFAULT_CAP = 51729
@@ -119,6 +119,22 @@ for p in POSITIONS:
 LIMITS["Injury Resistance"] = (0, 2)
 
 META = ["player", "club", "shirt", "order", "name", "like"]
+
+
+def shirt_of(pack):
+    """the shirt number a packed assignment dword shows in the game"""
+    return (pack & SHIRT_MASK) + 1
+
+
+def with_shirt(pack, n):
+    """pack with shirt number n (1..99, as the game shows it)"""
+    return pack & ~SHIRT_MASK | (n - 1)
+
+
+def free_shirt(packs):
+    """the lowest shirt number no pack in `packs` has"""
+    taken = {shirt_of(p) for p in packs}
+    return next(n for n in range(1, 100) if n not in taken)
 COLUMNS = META[:5] + list(FIELDS)
 
 
@@ -232,7 +248,7 @@ def main():
             pack = u32(assigns, s + A_PACK) if s is not None else None
             rec = players[o:o + P_REC]
             rows.append([pid, "" if tid is None else tid,
-                         "" if pack is None else pack & SHIRT_MASK,
+                         "" if pack is None else shirt_of(pack),
                          "" if pack is None else (pack & ORDER_MASK) >> ORDER_SHIFT,
                          cstr(rec[P_NAME:P_NAME + P_NAME_LEN])] +
                         [show(n, getf(rec, n)) for n in FIELDS])
@@ -298,10 +314,10 @@ def main():
         if name and len(name.encode("utf-8")) > P_NAME_LEN - 1:
             err.append("name %r is longer than %d bytes" % (name, P_NAME_LEN - 1))
         nums = {}
-        for k, hi in (("shirt", 99), ("order", 63)):
+        for k, lo, hi in (("shirt", 1, 99), ("order", 0, 63)):
             if cell.get(k):
-                if not (cell[k].isdigit() and int(cell[k]) <= hi):
-                    err.append("%s %r is not 0-%d" % (k, cell[k], hi))
+                if not (cell[k].isdigit() and lo <= int(cell[k]) <= hi):
+                    err.append("%s %r is not %d-%d" % (k, cell[k], lo, hi))
                 else:
                     nums[k] = int(cell[k])
                 if src is None and pid not in slot:
@@ -327,14 +343,13 @@ def main():
             players += rec
             squad = [u32(assigns, i * A_REC + A_PACK) for i in range(len(assigns) // A_REC)
                      if u32(assigns, i * A_REC + A_TID) == club]
-            taken = {p & SHIRT_MASK for p in squad}
-            shirt = nums.get("shirt") or next(n for n in range(1, 100) if n not in taken)
+            shirt = nums.get("shirt") or free_shirt(squad)
             order = max(((p & ORDER_MASK) >> ORDER_SHIFT for p in squad), default=-1) + 1
             e = bytearray(A_REC)
             e[A_EID:A_EID + 4] = eid.to_bytes(4, "little")
             e[A_PID:A_PID + 4] = pid.to_bytes(4, "little")
             e[A_TID:A_TID + 4] = club.to_bytes(4, "little")
-            e[A_PACK:A_PACK + 4] = (order << ORDER_SHIFT | shirt).to_bytes(4, "little")
+            e[A_PACK:A_PACK + 4] = with_shirt(order << ORDER_SHIFT, shirt).to_bytes(4, "little")
             slot[pid] = len(assigns)
             assigns += e
             eid += 1
@@ -355,7 +370,7 @@ def main():
             at = slot[pid] + A_PACK
             pack = u32(assigns, at)
             if "shirt" in nums:
-                pack = pack & ~SHIRT_MASK | nums["shirt"]
+                pack = with_shirt(pack, nums["shirt"])
             if "order" in nums:
                 pack = pack & ~ORDER_MASK | nums["order"] << ORDER_SHIFT
             assigns[at:at + 4] = pack.to_bytes(4, "little")

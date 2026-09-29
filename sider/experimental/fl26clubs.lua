@@ -46,8 +46,8 @@ local m = {}
 
 -- {slot, regulation id} -- the nine slots the game fills wrongly
 local SLOTS = {
-  {  4, 185 },   -- Italy D5   (was: national teams)
-  {  5, 184 },   -- Italy D4   (was: classic teams)
+  -- 2026-09-28: slots 4 and 5 (Italy D5/D4 until now) are left to the national teams and the
+  -- classic teams again (GitHub #26); fl26comptab no longer puts a league there
   { 69, 174 },   -- Qatar      (was: "Other European Leagues" filler)
   { 72, 178 },   -- Iran       (was: 3 foreign clubs)
   { 73, 179 },   -- Indonesia  (was: "Other Latin American Teams" filler)
@@ -96,7 +96,7 @@ end
 -- answered from its regulation. POOL_CASE: the slots the club-slot switch sends into an
 -- "other clubs" pool, with the switch byte each holds; a league there is pointed at the
 -- default case. Both are facts about the executable; which slots the world uses is not.
-local SERVED = { [0] = true, [1] = true, [2] = true, [3] = true, [4] = true, [5] = true,
+local SERVED = { [0] = true, [1] = true, [2] = true, [3] = true,
                  [69] = true, [72] = true, [73] = true, [75] = true, [76] = true, [77] = true, [80] = true }
 local POOL_CASE = { [26] = 3, [27] = 3, [28] = 3, [67] = 3, [74] = 3, [71] = 5 }
 local function from_world(world)

@@ -1,9 +1,12 @@
 """the game install: where things are, is it running, start it.
 
 A Game is the folder that holds FL_2026.exe.  Everything else is found from there:
-SiderAddons (sider.exe, sider.ini, modules, content, livecpk) and the save folder.
+the Sider folder (sider.exe, sider.ini, modules, content, livecpk; SiderAddons or any folder
+that holds a sider.ini, see siderdir) and the save folder.
 """
 import os, subprocess
+
+import siderdir
 
 EXE_NAMES = ("FL_2026.exe", "PES2021.exe")
 LAUNCHERS = ("FL 2026 start.exe",)
@@ -26,7 +29,7 @@ class Game:
 
     @property
     def sider_dir(self):
-        return os.path.join(self.folder, "SiderAddons")
+        return siderdir.find(self.folder)
 
     @property
     def ini_path(self):
@@ -66,12 +69,14 @@ class Game:
     def problems(self):
         """what is missing, as short sentences (empty = fine)"""
         out = []
-        if not self.folder or not os.path.isdir(self.folder):
+        if not self.folder:
             return ["the game folder is not set"]
+        if not os.path.isdir(self.folder):
+            return ["the game folder is not there any more"]
         if not self.exe:
             out.append("no FL_2026.exe in the game folder")
         if not os.path.isdir(self.sider_dir):
-            out.append("no SiderAddons folder (Sider is not installed)")
+            out.append("no Sider folder with a sider.ini (Sider is not installed)")
         elif not os.path.exists(self.ini_path):
             out.append("no sider.ini in SiderAddons")
         return out

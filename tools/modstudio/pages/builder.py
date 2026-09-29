@@ -24,8 +24,25 @@ PICTURES = "Pictures (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;All files (*.*)"
 ALL_CLUBS = -1
 # the European competitions a league place can lead to (fl26world.COMPETITIONS), short names for
 # the league list
-SHORT = {0: "UCL", 1: "UEL", 2: "UECL", 3: "LIB", 4: "LIB-Q", 5: "AFC"}
+SHORT = {0: "UCL", 1: "UEL", 2: "UECL", 3: "LIB", 4: "LIB-Q", 5: "AFC", 6: "CAF CL", 7: "CAF CC",
+         8: "AFC CL2", 9: "SUD"}
 TOP_FLIGHT = [[1, 0], [2, 1], [3, 2]]      # the preset: 1st UCL, 2nd UEL, 3rd UECL
+# the preset by the country's confederation (Country.bin): Asia to the AFC Champions League and
+# Champions League Two, South America to the Libertadores and the Sudamericana, Africa to the CAF
+# Champions League and Confederation Cup; everyone else keeps the European one
+PRESETS = {
+    3: ("Top flight: 1st and 2nd AFC Champions League, 3rd AFC CL Two",
+        "1st and 2nd to the AFC Champions League, 3rd to the AFC Champions League Two",
+        [[1, 5], [2, 5], [3, 8]]),
+    4: ("Top flight: 1st-3rd Libertadores, 4th qualifying, 5th-6th Sudamericana",
+        "1st to 3rd to the Copa Libertadores, 4th to its qualifying rounds, 5th and 6th to the Copa Sudamericana",
+        [[1, 3], [2, 3], [3, 3], [4, 4], [5, 9], [6, 9]]),
+    5: ("Top flight: 1st and 2nd CAF Champions League, 3rd Confederation Cup",
+        "1st and 2nd to the CAF Champions League, 3rd to the CAF Confederation Cup",
+        [[1, 6], [2, 6], [3, 7]]),
+}
+UEFA_PRESET = ("Top flight: 1st UCL, 2nd UEL, 3rd UECL",
+               "1st to the Champions League, 2nd to the Europa League, 3rd to the Conference League", TOP_FLIGHT)
 
 
 def pixmap(path, size):
@@ -47,23 +64,30 @@ def europe_text(L):
     return ", ".join("%d %s" % (pos, SHORT.get(comp, comp)) for pos, comp in sorted(L.get("europe") or []))
 
 
-def built_league(g, world, name):
-    """what the last Build gave a league (the world folder's leaguebuilder-plan.json): its ids
-    (cid, rid) and its clubs' team ids (teams); {} before the first Build"""
+def built_plan(g, world):
+    """the world folder's leaguebuilder-plan.json, what the last Build made; None before the first"""
     if not world or not g.ok():
-        return {}
+        return None
     try:
         with open(os.path.join(g.livecpk_dir, world, "leaguebuilder-plan.json"), encoding="utf-8") as f:
-            built = json.load(f)
+            return json.load(f)
     except (OSError, ValueError):
-        return {}
-    for p in built.get("leagues") or []:
+        return None
+
+
+def built_league(g, world, name, built=None):
+    """what the last Build gave a league: its ids (cid, rid) and its clubs' team ids (teams);
+    {} before the first Build, and for a league added or renamed since"""
+    built = built if built is not None else built_plan(g, world)
+    for p in (built or {}).get("leagues") or []:
         if p.get("name") == name:
             return p
     return {}
 
 
 def fmt_text(L):
+    if L.get("apertura"):
+        return _("Apertura + Clausura")
     if L.get("split"):
         s = L["split"]
         return _("%dx, then %s %dx") % (s.get("legs", 2), "/".join(map(str, s["groups"])), s.get("group_legs", 1))
@@ -132,9 +156,10 @@ class EuropeTable(QWidget):
         self.table.setMinimumHeight(120)
         self.table.setMaximumHeight(170)
         v.addWidget(self.table)
-        self.preset = QPushButton(_("Top flight: 1st UCL, 2nd UEL, 3rd UECL"))
-        self.preset.setToolTip(_("1st to the Champions League, 2nd to the Europa League, 3rd to the Conference League"))
-        self.preset.clicked.connect(lambda: self.set_places(TOP_FLIGHT))
+        self.preset = QPushButton()
+        self.preset_places = TOP_FLIGHT
+        self.set_confed(None)
+        self.preset.clicked.connect(lambda: self.set_places(self.preset_places))
         add = QPushButton(_("Add place"))
         add.clicked.connect(self.add)
         rem = QPushButton(_("Remove place"))
@@ -180,6 +205,12 @@ class EuropeTable(QWidget):
         for r in range(self.table.rowCount()):
             self.table.cellWidget(r, 0).setMaximum(max(n, 1))
 
+    def set_confed(self, conf):
+        """the country changed: the preset follows its confederation"""
+        label, tip, self.preset_places = PRESETS.get(conf, UEFA_PRESET)
+        self.preset.setText(_(label))
+        self.preset.setToolTip(_(tip))
+
     def set_top(self, top):
         self.preset.setEnabled(top)
 
@@ -214,13 +245,30 @@ class Dialog(QDialog):
         self.accept()
 
 
+def tier_of(project, up, seen=()):
+    """the division a league below `up` becomes: 1 at the top, the game's own leagues by
+    their rank field, new ones by following their chain up"""
+    if up in (None, ""):
+        return 1
+    if isinstance(up, int):
+        t = project.parent_tiers.get(up)
+        return t + 1 if t else None
+    if up in seen:
+        return None
+    for x in project.recipe["leagues"]:
+        if x["name"] == up:
+            t = tier_of(project, x.get("above"), seen + (up,))
+            return t + 1 if t else None
+    return None
+
+
 class LeagueDialog(Dialog):
     """one new league: name, country, clubs, format, division, logo"""
 
-    def __init__(self, parent, project, league=None):
-        super().__init__(parent, "League")
+    def __init__(self, parent, project, league=None, title="League", new=None):
+        super().__init__(parent, title)
         self.project = project
-        L = dict(league or {"clubs": 12, "legs": 2})
+        L = dict(league or new or {"clubs": 12, "legs": 2})
         self.league, self.orig = L, league
         self.name = QLineEdit(L.get("name", ""))
         self.form.addRow(_("Name"), self.name)
@@ -241,7 +289,9 @@ class LeagueDialog(Dialog):
         g = QButtonGroup(self)
         g.addButton(self.rr)
         g.addButton(self.split)
-        (self.split if sp else self.rr).setChecked(True)
+        self.ap = QRadioButton(_("Apertura and Clausura, then playoffs of:"))
+        g.addButton(self.ap)
+        (self.ap if L.get("apertura") else self.split if sp else self.rr).setChecked(True)
         self.legs = QSpinBox()
         self.legs.setRange(1, B.LEGS_MAX)
         self.legs.setValue(L.get("legs", 2))
@@ -257,6 +307,15 @@ class LeagueDialog(Dialog):
         self.form.addRow("", self.split)
         self.form.addRow("", row(QLabel(_("first")), self.slegs, QLabel(_("x, then groups")), self.groups,
                                  self.glegs, QLabel("x")))
+        self.po = QComboBox()
+        for n, t in ((8, _("8 clubs")), (4, _("4 clubs")), (0, _("no playoffs"))):
+            self.po.addItem(t, n)
+        ap = L.get("apertura")
+        self.po.setCurrentIndex(max(0, self.po.findData(int(ap.get("playoff", 8)) if isinstance(ap, dict) else 8)))
+        self.form.addRow("", row(self.ap, self.po))
+        self.form.addRow("", hint(_("two tournaments a season, September to early January and January to May, "
+                                    "everyone meeting once in each and starting from zero points; the whole "
+                                    "season's table decides promotion and relegation. 18 clubs at most")))
 
         self.above = QComboBox()
         self.above.addItem(_("(top division)"), None)
@@ -274,12 +333,42 @@ class LeagueDialog(Dialog):
                                     "(they are at the top of the list -- add the higher one first)")))
         self.above.currentIndexChanged.connect(lambda _i: self.show_tier())
         self.show_tier()
+        self.exhibition = QCheckBox(_("Exhibition only -- not in Master League"))
+        self.exhibition.setChecked(bool(L.get("exhibition")))
+        self.form.addRow("", self.exhibition)
+        self.form.addRow("", hint(_("for Kick Off and exhibition matches: a historical league, legends ... Its "
+                                    "clubs never play a Master League season. It stands alone: no division "
+                                    "above or below, no European places, no cups")))
         self.exchange = QSpinBox()
         self.exchange.setRange(1, 6)
         self.exchange.setValue(L.get("exchange", 3))
         self.form.addRow(_("Up / down"), row(self.exchange, QLabel(_("clubs, with the league above"))))
         self.logo = PictureField(L.get("logo"))
         self.form.addRow(_("Logo"), self.logo)
+        self.flag = PictureField(L.get("flag"), 72, "(the game's own)")
+        self.flag.setToolTip(_("Your own picture of the country's flag. It replaces the game's flag of that "
+                               "country everywhere (Select Team, players' nationality) while the world is on; "
+                               "leave it empty to keep the game's own."))
+        self.form.addRow(_("Country flag"), self.flag)
+        self.cup = QCheckBox(_("National cup"))
+        self.cup.setChecked(bool(L.get("cup")))
+        self.cup_name = QLineEdit(L.get("cup_name", ""))
+        self.cup_name.setPlaceholderText(_("(the league's name + Cup)"))
+        self.form.addRow(_("Cup"), row(self.cup, self.cup_name))
+        self.supercup = QCheckBox(_("Super cup (champion v cup winner)"))
+        self.supercup.setChecked(bool(L.get("supercup")))
+        self.form.addRow("", self.supercup)
+        self.cup.toggled.connect(lambda on: self.supercup.setEnabled(on and self.cup.isEnabled()))
+        self.form.addRow("", hint(_("a top division of a new country: a national cup for it (and the division "
+                                    "below, when the two make 36, 40 or 44 clubs). Top divisions of 12, 16, 18 "
+                                    "or 20 clubs")))
+        self.lcup = QCheckBox(_("League cup"))
+        self.lcup.setChecked(bool(L.get("league_cup")))
+        self.lcup_name = QLineEdit(L.get("league_cup_name", ""))
+        self.lcup_name.setPlaceholderText(_("(the league's name + League Cup)"))
+        self.form.addRow("", row(self.lcup, self.lcup_name))
+        self.form.addRow("", hint(_("a knockout of 16, 8 or 4 clubs of this division and the one below, "
+                                    "September to December")))
         self.europe = EuropeTable(L.get("europe"), self.clubs.value())
         self.form.addRow(_("Europe"), self.europe)
         self.form.addRow("", hint(_("league position -> European competition, for a top division; "
@@ -287,13 +376,46 @@ class LeagueDialog(Dialog):
         self.clubs.valueChanged.connect(self.europe.set_clubs)
         self.above.currentIndexChanged.connect(lambda _i: self.europe.set_top(self.above.currentData() is None))
         self.europe.set_top(self.above.currentData() is None)
+        self.above.currentIndexChanged.connect(lambda _i: self.cup.setEnabled(self.above.currentData() is None))
+        self.cup.setEnabled(self.above.currentData() is None)
+        self.above.currentIndexChanged.connect(lambda _i: self.lcup.setEnabled(self.above.currentData() is None))
+        self.lcup.setEnabled(self.above.currentData() is None)
+        self.above.currentIndexChanged.connect(
+            lambda _i: self.supercup.setEnabled(self.cup.isEnabled() and self.cup.isChecked()))
+        self.supercup.setEnabled(self.cup.isEnabled() and self.cup.isChecked())
+        self.europe.set_confed(project.confeds.get(self.country.currentText().strip()))
+        self.country.currentTextChanged.connect(
+            lambda t: self.europe.set_confed(project.confeds.get(t.strip())))
+        self.exhibition.toggled.connect(lambda _on: self.exhibition_state())
+        self.exhibition_state()
+
+    def exhibition_state(self):
+        """an exhibition league stands alone: the division, the cups, Europe and a split go grey"""
+        on = self.exhibition.isChecked()
+        if on:
+            self.above.setCurrentIndex(0)
+            self.rr.setChecked(True)
+        top = self.above.currentData() is None
+        self.above.setEnabled(not on)
+        self.split.setEnabled(not on)
+        self.ap.setEnabled(not on)
+        self.po.setEnabled(not on)
+        self.europe.setEnabled(not on)
+        self.cup.setEnabled(top and not on)
+        self.lcup.setEnabled(top and not on)
+        self.supercup.setEnabled(top and not on and self.cup.isChecked())
 
     def ok(self):
         L = self.league
         L["name"] = self.name.text().strip()
         L["country"] = self.country.currentText().strip()
         L["clubs"] = self.clubs.value()
-        if self.split.isChecked():
+        L.pop("apertura", None)
+        if self.ap.isChecked():
+            L.pop("split", None)
+            L["apertura"] = {"playoff": self.po.currentData()}
+            L["legs"] = self.legs.value()
+        elif self.split.isChecked():
             try:
                 groups = [int(x) for x in self.groups.text().replace(",", "/").split("/") if x.strip()]
             except ValueError:
@@ -305,6 +427,26 @@ class LeagueDialog(Dialog):
             L.pop("split", None)
             L["legs"] = self.legs.value()
         L["exchange"] = self.exchange.value()
+        if self.cup.isChecked() and self.above.currentData() is None:
+            L["cup"] = True
+        else:
+            L.pop("cup", None)
+        if L.get("cup") and self.supercup.isChecked():
+            L["supercup"] = True
+        else:
+            L.pop("supercup", None)
+        if self.cup_name.text().strip():
+            L["cup_name"] = self.cup_name.text().strip()
+        else:
+            L.pop("cup_name", None)
+        if self.lcup.isChecked() and self.above.currentData() is None:
+            L["league_cup"] = True
+        else:
+            L.pop("league_cup", None)
+        if self.lcup_name.text().strip():
+            L["league_cup_name"] = self.lcup_name.text().strip()
+        else:
+            L.pop("league_cup_name", None)
         a = self.above.currentData()
         if a is None:
             L.pop("above", None)
@@ -314,6 +456,10 @@ class LeagueDialog(Dialog):
             L["logo"] = self.logo.path
         else:
             L.pop("logo", None)
+        if self.flag.path:
+            L["flag"] = self.flag.path
+        else:
+            L.pop("flag", None)
         places = self.europe.places()
         bad = B.europe_problems(L["clubs"], places)
         if bad:
@@ -333,34 +479,29 @@ class LeagueDialog(Dialog):
         if clash:
             error(self, "League", _("There is already a league called %s.") % L["name"])
             return
+        if self.exhibition.isChecked():
+            below = [x["name"] for x in self.project.recipe["leagues"]
+                     if x is not self.orig and self.orig is not None and x.get("above") == self.orig.get("name")]
+            if below:
+                error(self, "League", _("%s is below this league; an exhibition league has none.") % below[0])
+                return
+            for k in ("above", "cup", "supercup", "league_cup", "split", "apertura", "europe"):
+                L.pop(k, None)
+            L["exhibition"] = True
+        else:
+            L.pop("exhibition", None)
         self.accept()
 
 
-    def tier_of(self, up, seen=()):
-        """the division a league below `up` becomes: 1 at the top, the game's own leagues by
-        their rank field, new ones by following their chain up"""
-        if up in (None, ""):
-            return 1
-        if isinstance(up, int):
-            t = self.project.parent_tiers.get(up)
-            return t + 1 if t else None
-        if up in seen:
-            return None
-        for x in self.project.recipe["leagues"]:
-            if x["name"] == up:
-                t = self.tier_of(x.get("above"), seen + (up,))
-                return t + 1 if t else None
-        return None
-
     def show_tier(self):
-        t = self.tier_of(self.above.currentData())
+        t = tier_of(self.project, self.above.currentData())
         self.tier_lab.setText(_("= division %d") % t if t else "")
 
 
 class ClubDialog(Dialog):
     """one club: name, short name, crest -- a new club, or one of the game's"""
 
-    def __init__(self, parent, name, short, crest, was=None):
+    def __init__(self, parent, name, short, crest, was=None, coach=None):
         super().__init__(parent, "Club")
         self.name = QLineEdit(name or "")
         self.name.setMinimumWidth(280)
@@ -373,6 +514,14 @@ class ClubDialog(Dialog):
                                     "names have no marks); empty = made from the name")))
         self.crest = PictureField(crest)
         self.form.addRow(_("Crest"), self.crest)
+        self.coach = None
+        if coach is not None:              # a new club: its manager's name
+            self.coach = QLineEdit(coach)
+            self.coach.setMaxLength(45)
+            self.coach.setPlaceholderText("FL M0001")
+            self.form.addRow(_("Manager"), self.coach)
+            self.form.addRow("", hint(_("the manager's name in the game; empty = a numbered one")))
+        self.coach_name = coach
         if was:
             self.form.addRow("", hint(_("In the game: %s (%s)") % was))
         self.result = None
@@ -383,6 +532,133 @@ class ClubDialog(Dialog):
             error(self, "Club", _("The short name takes letters and digits only."))
             return
         self.result = (self.name.text().strip(), B.short_name(short), self.crest.path)
+        if self.coach is not None:
+            self.coach_name = self.coach.text().strip()
+        self.accept()
+
+
+class PreseasonDialog(Dialog):
+    """the recipe's pre-season cups (preseason_cups): a name and 4 or 8 invited clubs each, a club
+    of a new league ("<league>/<k>") or a club id of the game typed in"""
+    SLOTS = 8
+
+    def __init__(self, parent, project):
+        super().__init__(parent, "Pre-season cups")
+        self.project = project
+        self.cups = [{"name": c.get("name", ""), "clubs": list(c.get("clubs") or [])}
+                     for c in project.recipe.get("preseason_cups") or []]
+        self.new_clubs = [("%s/%d" % (L["name"], k), B.club_name(
+            {"name": L["name"], "club_names": list(L.get("club_names") or [])}, k))
+            for L in project.recipe["leagues"] for k in range(int(L.get("clubs", 0)))]
+        self.v.addWidget(hint(_("A knockout of 4 or 8 clubs in July, before the season: first v second, "
+                                "third v fourth ... At least one club of a new league, whose country hosts "
+                                "it. A club of the game (type its id) must play in a league that season.")))
+        body = QHBoxLayout()
+        left = QVBoxLayout()
+        self.list = QListWidget()
+        self.list.setFixedWidth(220)
+        left.addWidget(self.list, 1)
+        add, rem = QPushButton(_("Add cup")), QPushButton(_("Remove"))
+        add.clicked.connect(self.add)
+        rem.clicked.connect(self.remove)
+        left.addWidget(row(add, rem, stretch=False))
+        body.addLayout(left)
+        right = QFormLayout()
+        self.name = QLineEdit()
+        self.name.textEdited.connect(self.store)
+        right.addRow(_("Name"), self.name)
+        self.slots = []
+        for i in range(self.SLOTS):
+            c = QComboBox()
+            c.setEditable(True)
+            c.setMinimumWidth(280)
+            c.addItem("", None)
+            for ref, label in self.new_clubs:
+                c.addItem(label, ref)
+            c.currentTextChanged.connect(lambda _t: self.store())
+            self.slots.append(c)
+            right.addRow(_("Club %d") % (i + 1), c)
+        body.addLayout(right, 1)
+        self.v.insertLayout(0, body)
+        self.list.currentRowChanged.connect(self.show_cup)
+        self._loading = False
+        self.fill_list()
+
+    def fill_list(self, at=0):
+        self.list.clear()
+        for c in self.cups:
+            self.list.addItem(c["name"] or _("(no name)"))
+        on = bool(self.cups)
+        self.name.setEnabled(on)
+        for s in self.slots:
+            s.setEnabled(on)
+        if on:
+            self.list.setCurrentRow(min(at, len(self.cups) - 1))
+        else:
+            self.show_cup(-1)
+
+    def show_cup(self, i):
+        self._loading = True
+        c = self.cups[i] if 0 <= i < len(self.cups) else {"name": "", "clubs": []}
+        self.name.setText(c["name"])
+        for k, s in enumerate(self.slots):
+            ref = c["clubs"][k] if k < len(c["clubs"]) else None
+            j = s.findData(ref) if isinstance(ref, str) else -1
+            if j >= 0:
+                s.setCurrentIndex(j)
+            else:
+                s.setCurrentIndex(0)
+                s.setEditText("" if ref is None else str(ref))
+        self._loading = False
+
+    def slot_value(self, s):
+        t = s.currentText().strip()
+        if not t:
+            return None
+        j = s.findText(t)
+        if j > 0:
+            return s.itemData(j)
+        return int(t) if t.isdigit() else t
+
+    def store(self):
+        i = self.list.currentRow()
+        if self._loading or not 0 <= i < len(self.cups):
+            return
+        self.cups[i] = {"name": self.name.text().strip(),
+                        "clubs": [v for v in (self.slot_value(s) for s in self.slots) if v is not None]}
+        self.list.item(i).setText(self.cups[i]["name"] or _("(no name)"))
+
+    def add(self):
+        self.cups.append({"name": _("Pre-season Cup %d") % (len(self.cups) + 1), "clubs": []})
+        self.fill_list(len(self.cups) - 1)
+
+    def remove(self):
+        i = self.list.currentRow()
+        if 0 <= i < len(self.cups):
+            del self.cups[i]
+            self.fill_list(i)
+
+    def ok(self):
+        self.store()
+        refs = {ref for ref, _l in self.new_clubs}
+        for c in self.cups:
+            name = c["name"] or _("(no name)")
+            bad = [x for x in c["clubs"] if not isinstance(x, int) and x not in refs]
+            if bad:
+                error(self, "Pre-season cups", _("%s: %s is neither a club of a new league nor a club id "
+                                                  "of the game.") % (name, bad[0]))
+                return
+            if len(c["clubs"]) not in (4, 8):
+                error(self, "Pre-season cups", _("%s: %d clubs -- a pre-season cup has 4 or 8.")
+                      % (name, len(c["clubs"])))
+                return
+            if len(set(map(str, c["clubs"]))) != len(c["clubs"]):
+                error(self, "Pre-season cups", _("%s: a club is invited twice.") % name)
+                return
+            if not any(isinstance(x, str) for x in c["clubs"]):
+                error(self, "Pre-season cups", _("%s: at least one club of a new league (its country "
+                                                  "hosts the cup).") % name)
+                return
         self.accept()
 
 
@@ -432,8 +708,12 @@ class NewLeagues(BuilderPage):
     def __init__(self, app):
         super().__init__(app)
         self.action("Add league", self.add, "primary")
+        self.action("Add lower tier", self.add_lower, tip="A new league one division below the selected one: "
+                    "same country, clubs and format, with promotion and relegation between the two")
         self.action("Edit", self.edit)
         self.action("Remove", self.remove, "danger")
+        self.action("Pre-season cups", self.preseason, tip="Friendly knockouts of 4 or 8 invited clubs in "
+                    "July, before the season")
         top = QHBoxLayout()
         top.addWidget(QLabel(_("World name")))
         self.world = QLineEdit()
@@ -484,17 +764,27 @@ class NewLeagues(BuilderPage):
         self.tree.clear()
         names = dict(self.project.parents)
         pl = self.project.players()
+        plan = built_plan(self.app.game, r.get("world"))
         for i, L in enumerate(r["leagues"]):
             up = L.get("above")
             div = _("top") if up in (None, "") else _("below %s") % (names.get(up, up) if isinstance(up, int) else up)
+            t = tier_of(self.project, up)
+            if t:
+                div = "%d  (%s)" % (t, div)
             n = sum(len((pl.get("%s/%d" % (L["name"], k)) or {}).get("edits") or {}) for k in range(L.get("clubs", 0)))
-            b = built_league(self.app.game, r.get("world"), L["name"])
-            it = QTreeWidgetItem([L["name"], str(b["cid"]) if b.get("cid") is not None else "",
+            b = built_league(self.app.game, r.get("world"), L["name"], plan or {})
+            # A league the last Build did not make has no id yet, and is not in the game either
+            # (Amir, 2026-09-28: a second division added after the build, blank id, "the game
+            # reads only the first league"). Say so rather than leave the cell empty.
+            cid = str(b["cid"]) if b.get("cid") is not None else (_("not built yet") if plan else "")
+            it = QTreeWidgetItem([L["name"], cid,
                                   L.get("country", ""), str(L.get("clubs", "")), fmt_text(L), div,
                                   str(L.get("exchange", 3)) if up not in (None, "") else "", europe_text(L),
                                   str(n) if n else ""])
             if b.get("rid") is not None:
                 it.setToolTip(1, _("competition %s, regulation %s") % (b.get("cid"), b["rid"]))
+            elif plan:
+                it.setToolTip(1, _("Added or renamed since the last Build: press Build to put it in the game."))
             pm = pixmap(L.get("logo"), 28)
             if pm:
                 it.setIcon(0, pm)
@@ -517,6 +807,40 @@ class NewLeagues(BuilderPage):
         if d.finish():
             self.project.recipe["leagues"].append(d.league)
             self.project.touch()
+
+    def add_lower(self):
+        """a league under the selected one, filled in from it: only the name is left to give"""
+        if self.need_tables():
+            return
+        i = self.selected()
+        if i is None:
+            self.say(_("Select the league the new one goes under, then Add lower tier. To go under one of "
+                       "the game's own leagues, use Add league and pick it at Division."), "warn")
+            return
+        up = self.project.recipe["leagues"][i]
+        new = {"country": up.get("country", ""), "clubs": up.get("clubs", 12), "legs": up.get("legs", 2),
+               "above": up["name"], "exchange": up.get("exchange", 3)}
+        if up.get("split"):
+            new["split"] = dict(up["split"])
+        d = LeagueDialog(self, self.project, new=new, title=_("League below %s") % up["name"])
+        d.name.setFocus()
+        if d.finish():
+            leagues = self.project.recipe["leagues"]
+            at = i + 1                       # after the league above and the ones already under it
+            while at < len(leagues) and self._under(leagues[at], up["name"]):
+                at += 1
+            leagues.insert(at, d.league)
+            self.project.touch()
+            self.tree.setCurrentItem(self.tree.topLevelItem(at))
+
+    def _under(self, L, name, seen=()):
+        up = L.get("above")
+        if up == name:
+            return True
+        for x in self.project.recipe["leagues"]:
+            if x["name"] == up and up not in seen:
+                return self._under(x, name, seen + (up,))
+        return False
 
     def edit(self):
         i = self.selected()
@@ -543,6 +867,18 @@ class NewLeagues(BuilderPage):
                 if L.get("above") == name:
                     L.pop("above")
             self.project.drop_league(name)
+            self.project.touch()
+
+    def preseason(self):
+        if not self.project.recipe["leagues"]:
+            self.say(_("Add a league first: a pre-season cup is hosted by a new league's country."), "warn")
+            return
+        d = PreseasonDialog(self, self.project)
+        if d.finish():
+            if d.cups:
+                self.project.recipe["preseason_cups"] = d.cups
+            else:
+                self.project.recipe.pop("preseason_cups", None)
             self.project.touch()
 
     def move(self, d):
@@ -690,9 +1026,16 @@ class NewClubs(BuilderPage):
         if not L or k is None:
             return
         names, abbrs, crests = self.lists(L)
-        d = ClubDialog(self, names[k], abbrs[k], crests[k])
+        coaches = list(L.get("club_coaches") or [])[:L["clubs"]]
+        coaches += [""] * (L["clubs"] - len(coaches))
+        d = ClubDialog(self, names[k], abbrs[k], crests[k], coach=coaches[k])
         if d.finish() and d.result:
             names[k], abbrs[k], crests[k] = d.result
+            coaches[k] = d.coach_name or ""
+            if any(coaches):
+                L["club_coaches"] = coaches
+            else:
+                L.pop("club_coaches", None)
             self.project.touch()
 
     def players(self):
@@ -806,13 +1149,16 @@ class GameLeagues(BuilderPage):
         self.list.blockSignals(True)
         self.list.clear()
         P = self.project
-        self.shown_rows = [(ALL_CLUBS, None, _("(all clubs)"), sorted(P.game_cl))] + list(P.game_lgs)
-        if q:
-            self.shown_rows = [x for x in self.shown_rows if x[0] == ALL_CLUBS or q in x[2].lower()]
+        self.shown_rows = [(ALL_CLUBS, None, _("(all clubs)"), sorted(P.game_cl))] + list(P.game_lgs) \
+            + [(g, None, name, teams) for g, name, teams in P.game_groups()]
+        if q:                        # (all clubs) and the groups stay: the search picks their clubs
+            self.shown_rows = [x for x in self.shown_rows if x[0] < 0 or q in x[2].lower()]
         changed = P.edits("leagues")
         for rid, cid, name, teams in self.shown_rows:
             e = changed.get(str(rid), {})
             label = name if rid == ALL_CLUBS else "%s  (%d)" % (e.get("name", name), len(teams))
+            if 0 > rid != ALL_CLUBS:
+                label = "%s  (%d)" % (name, sum(1 for t in teams if not q or q in P.game_cl.get(t, ("",))[0].lower()))
             it = QListWidgetItem(label + ("  *" if e else ""))
             self.list.addItem(it)
         self.list.blockSignals(False)
@@ -832,7 +1178,7 @@ class GameLeagues(BuilderPage):
         if not g:
             return
         rid, cid, name, teams = g
-        league = rid != ALL_CLUBS
+        league = rid >= 0                    # (all clubs) and the "Others" groups are no league
         e = self.project.edits("leagues").get(str(rid), {})
         self.lname.setText(e.get("name", name) if league else "")
         self.lname.setEnabled(league)
@@ -847,7 +1193,7 @@ class GameLeagues(BuilderPage):
         for tid in teams:
             if tid not in cl:
                 continue
-            if rid == ALL_CLUBS and q and q not in cl[tid][0].lower():
+            if not league and q and q not in cl[tid][0].lower():
                 continue
             it = QTreeWidgetItem()
             it.setData(0, Qt.UserRole, tid)
@@ -869,7 +1215,7 @@ class GameLeagues(BuilderPage):
 
     def keep_league(self):
         g = self.current_league()
-        if not g or g[0] == ALL_CLUBS:
+        if not g or g[0] < 0:
             return
         rid, cid, name, teams = g
         e = {}
@@ -885,7 +1231,7 @@ class GameLeagues(BuilderPage):
 
     def undo_league(self):
         g = self.current_league()
-        if g and g[0] != ALL_CLUBS:
+        if g and g[0] >= 0:
             self.project.edits("leagues").pop(str(g[0]), None)
             self.project.touch()
 

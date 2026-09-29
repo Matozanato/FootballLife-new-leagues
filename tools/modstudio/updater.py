@@ -125,8 +125,12 @@ def install(zip_path, dst=None, restart=True):
     if not os.path.isfile(os.path.join(src, EXE)):
         raise RuntimeError("the zip has no %s\\%s" % (FOLDER, EXE))
     dst = dst or program_dir()
-    # a one-file .exe runs as two processes (the loader holds the file); wait for both
-    pids = sorted({os.getpid(), os.getppid()})
+    # a one-file .exe (0.1.2 and older) runs as two processes, the loader holding the file:
+    # wait for both. The folder build (0.1.3 on) is one process; its parent is whatever
+    # started it -- Explorer -- and must not be waited for
+    pids = [os.getpid()]
+    if os.path.normcase(os.path.dirname(getattr(sys, "_MEIPASS", ""))) != os.path.normcase(program_dir()):
+        pids.append(os.getppid())
     bat = os.path.join(os.path.dirname(zip_path), "update.cmd")
     log = os.path.join(tempfile.gettempdir(), "FL26ModStudio-update.log")
     sys32 = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "System32")
@@ -136,7 +140,13 @@ def install(zip_path, dst=None, restart=True):
         lines.append('%s /fi "PID eq %d" /nh | %s " %d " >nul && (%s -n 2 127.0.0.1 >nul & goto wait)'
                      % (tool("tasklist.exe"), p, tool("find.exe"), p, tool("ping.exe")))
     lines += ['%s "%s" "%s" /E /R:5 /W:1 /NP /NJH > "%s" 2>&1' % (tool("robocopy.exe"), src, dst, log),
-              'if errorlevel 8 (echo The update could not be copied into "%s". >> "%s" & exit /b 1)' % (dst, log),
+              'if errorlevel 8 (echo The update could not be copied into "%s". >> "%s" & exit /b 1)' % (dst, log)]
+    if os.path.isdir(os.path.join(src, "_internal")):
+        # the program's own libraries: exactly the new ones, nothing left over from the old
+        lines += ['%s "%s" "%s" /MIR /R:5 /W:1 /NP /NJH >> "%s" 2>&1'
+                  % (tool("robocopy.exe"), os.path.join(src, "_internal"), os.path.join(dst, "_internal"), log),
+                  'if errorlevel 8 (echo The update could not be copied into "%s". >> "%s" & exit /b 1)' % (dst, log)]
+    lines += [
               'start "" "%s"' % os.path.join(dst, EXE) if restart else 'rem no restart',
               'rmdir /s /q "%s"' % os.path.dirname(zip_path)]
     open(bat, "w", encoding="mbcs", newline="\r\n").write("\n".join(lines) + "\n")

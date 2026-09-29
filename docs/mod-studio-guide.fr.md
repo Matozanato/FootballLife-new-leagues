@@ -22,7 +22,7 @@ mod qu'il installe peut être retiré ensuite.
 
 - **Football Life 2026** installé, avec son dossier `SiderAddons` (FL26 est livré avec Sider).
 - Décompressez le programme où vous voulez, p. ex. `Documents\FL26 Mod Studio`. Gardez le dossier
-  entier : le dossier `pack` et les fichiers `README` restent à côté de `FL26ModStudio.exe`.
+  entier : les dossiers `_internal` et `pack` et les fichiers `README` restent à côté de `FL26ModStudio.exe`.
 - **Fermez le jeu** pendant vos changements. Sider lit sa configuration au lancement du jeu.
 
 La fenêtre est en anglais. **Settings → Language → Français** la passe en français.
@@ -46,6 +46,10 @@ mises à jour** vérifie à tout moment ; décochez **Aide → Rechercher des mi
 démarrage** et le programme ne vérifie plus que sur demande. Si le programme se trouve dans un
 dossier où Windows ne le laisse pas écrire (comme Program Files), il ouvre la page de la version à
 la place : décompressez le zip vous-même, ou déplacez le programme dans un dossier à vous.
+
+**Plusieurs dossiers Sider ?** Sider ne s'appelle pas forcément `SiderAddons`. Le programme
+cherche le dossier à côté de `FL_2026.exe` qui contient un `sider.ini` ; s'il y en a plusieurs,
+**Réglages → Dossier de Sider** choisit celui avec lequel il travaille.
 
 ## 3. Les pages
 
@@ -142,15 +146,21 @@ Le League Builder ajoute de nouvelles ligues au jeu et modifie celles du jeu. Ce
 | **Nom** | Le nom de la ligue dans le jeu. Deux ligues ne peuvent pas avoir le même. |
 | **Pays** | Donne le drapeau et l'endroit où la ligue apparaît dans la liste. Un pays pour lequel le jeu n'a pas de ligue reçoit son propre titre. |
 | **Clubs** | De 10 à 24. |
-| **Format** | *Tous contre tous*, 1 à 4 fois, ou *se divise en deux (à l'écossaise)*. |
-| **Division** | *(première division)*, ou la ligue au-dessus : une autre nouvelle ligue, ou une ligue du jeu. |
+| **Format** | *Tous contre tous*, 1 à 4 fois, *se divise en deux (à l'écossaise)* ou *Apertura et Clausura* : deux tournois par saison (septembre à début janvier, janvier à mai), chacun à partir de zéro point, puis des play-offs de 8 ou 4 clubs (ou aucun). Le classement de toute la saison décide des montées et descentes. 18 clubs au maximum. |
+| **Division** | *(première division)*, ou la ligue au-dessus : une autre nouvelle ligue, ou une ligue du jeu. Pour placer une nouvelle ligue sous une autre nouvelle ligue en une étape : sélectionnez-la et appuyez sur **Ajouter une division inférieure** (elle reprend le pays, le nombre de clubs, le format et les montées/descentes de la ligue au-dessus ; il ne reste que le nom). |
 | **Montée / descente** | Combien de clubs échangent leur place avec la ligue au-dessus en fin de saison. |
-| **Europe** | Première division uniquement : quelle position en ligue va dans quelle compétition européenne. **1re division : 1er LdC, 2e LE, 3e LEC** remplit les trois places habituelles ; **Ajouter une place**, **Retirer une place** et **Effacer** pour tout le reste. Chaque position une seule fois, et seulement les positions que la ligue a. Laissez vide pour une division inférieure. |
+| **Europe** | Première division uniquement : quelle position en ligue va dans quelle compétition européenne. **1re division : 1er LdC, 2e LE, 3e LEC** remplit les trois places habituelles ; **Ajouter une place**, **Retirer une place** et **Effacer** pour tout le reste. Chaque position une seule fois, et seulement les positions que la ligue a. Laissez vide pour une division inférieure. Le modèle suit le pays : l'Asie reçoit l'AFC Champions League et l'AFC Champions League Two, l'Amérique du Sud la Libertadores et la Copa Sudamericana, l'Afrique la Ligue des champions CAF et la Coupe de la Confédération CAF. Ces quatre coupes que le jeu n'a pas sont construites avec le monde (section 8.2). |
 | **Logo** | N'importe quelle image (un PNG à fond transparent rend le mieux). Vide : un logo est dessiné pour vous. |
+| **Drapeau du pays** | Votre propre image du drapeau du pays, étirée dans le cadre des drapeaux du jeu. Elle remplace le drapeau de ce pays partout dans le jeu (Select Team, nationalité des joueurs, l'en-tête du pays dans Database > Competition Info) tant que le monde est activé. Vide : le drapeau du jeu. |
+| **Coupe** | Première division uniquement. **Coupe nationale** : le pays a sa propre coupe, avec le nom que vous donnez (vide : `<ligue> Cup`). Le jeu remplit la coupe d'un pays avec sa première division et la division en dessous ; avec les deux, elle joue les tours de la coupe française, italienne ou anglaise, avec la première seule ceux de l'écossaise, la belge, la néerlandaise ou l'anglaise, selon le nombre de clubs. **Supercoupe** : en plus, une supercoupe en un match avant la saison, le champion contre le vainqueur de la coupe. |
+| **Coupe de la ligue** | Première division uniquement. Une coupe à élimination directe de 16, 8 ou 4 clubs de cette ligue et de celle du dessous, selon le classement, le plus fort contre le plus faible : aller-retour à chaque tour, finale sur un match, de septembre à décembre. Donnez-lui un nom ou laissez vide (`<ligue> League Cup`). |
+| **Exhibition uniquement -- pas en Ligue des Masters** | Pour le Kick Off et les matchs amicaux : une ligue historique, des légendes, etc. Ses clubs ne jouent jamais de saison de Ligue des Masters, donc la ligue reste seule : pas de division au-dessus ni au-dessous, pas de places européennes, pas de coupes. Elle apparaît quand même dans la liste des équipes de la Ligue des Masters ; choisissez votre club dans une autre ligue. |
 
 Le **Nom du monde** (sur la même page) doit commencer par `_FL26`. Après la **Construction**, la
 colonne **ID de la ligue** montre l'id de compétition de chaque ligue dans le jeu, celui que porte
 son fichier de logo.
+
+**Tournois de pré-saison** (bouton sur la même page) : des tournois amicaux à élimination directe de 4 ou 8 clubs invités en juillet, avant la saison, appariés dans l'ordre donné (le premier contre le deuxième ...). Un club est celui d'une nouvelle ligue ou un club du jeu (son id) ; au moins un doit venir d'une nouvelle ligue, dont le pays accueille le tournoi. Une carrière commence en août, donc le premier se joue la deuxième saison.
 
 **Nouveaux clubs** : choisissez la ligue, puis **Modifier le club** (nom, nom court, écusson),
 **Coller des noms...** ou **Charger des noms depuis un fichier...**. Un nom vide devient
@@ -159,6 +169,8 @@ empruntés aux clubs du jeu.
 Les noms gardent leurs accents (FK Željezničar) ; le nom court de trois lettres n'en a pas, comme
 dans le jeu, donc Č, Ž, Đ y deviennent C, Z, D. Après la **Construction**, la colonne **ID du
 club** montre l'id de chaque club dans le jeu.
+
+**Entraîneur** : dans **Modifier le club** d'un nouveau club, vous pouvez nommer son entraîneur. Vide : un nom numéroté (`FL M0001` ...).
 
 **Ligues et clubs du jeu** : nouveaux noms, logos et écussons pour ce que le jeu a déjà.
 
@@ -196,6 +208,8 @@ jeu. Choisissez un club (ou appuyez sur **Joueurs** dans Nouveaux clubs), puis u
 Chaque modification est écrite dans le monde lors de la **Construction** ; les fichiers du jeu
 restent tels quels. **Annuler les modifications de ce joueur** et **Annuler toutes les
 modifications de ce club** reviennent à ce qu'il y a dans le jeu.
+
+La liste des clubs a aussi **Équipes nationales** et **Autres clubs (sans ligue)** : les équipes que le jeu garde hors de toute ligue (sélections, clubs qui ne jouent qu'une coupe ou une compétition continentale). Leurs joueurs se modifient de la même façon.
 
 ### 8.1 Visages
 
@@ -236,10 +250,19 @@ coupes d'Europe telles que livrées avec le jeu.
 > **Places européennes.** Les places que vous donnez à vos ligues viennent après celles des ligues
 > du jeu. Chaque compétition prend 36 clubs ; les places au-delà de la 36e ne donnent rien, et
 > **Vérifier le plan** le signale. Les nouvelles ligues sans places n'envoient personne en
-> Europe, et Vue d'ensemble vous en avertit.
+> Europe, et Vue d'ensemble vous en avertit. Les tenants du titre passent en premier : les
+> vainqueurs de la Ligue des champions et de la Ligue Europa prennent deux des 36 places de la
+> Ligue des champions, celui de la Ligue Conférence une place en Ligue Europa.
 
 Ensuite, **commencez une nouvelle carrière Master League** (ou Become a Legend). Les nouvelles
 ligues se trouvent sous leur pays dans Select Team et Kick Off.
+
+> **Coupes des autres continents.** Quand vos ligues envoient des clubs en Ligue des champions
+> CAF, en Coupe de la Confédération CAF, en AFC Champions League Two ou en Copa Sudamericana,
+> la **Construction** crée aussi ces coupes. Chacune a 32, 16, 8 ou 4 clubs : d'abord les places
+> de vos ligues, puis les ligues du jeu de ce continent (Asie et Amérique du Sud) la complètent.
+> À 8 ou plus, des groupes de quatre puis une phase à élimination directe ; en dessous de 8,
+> l'élimination directe seule. Elles sont remplies fin août, avec les classements des ligues.
 
 > **Les sauvegardes appartiennent à un monde.** Une carrière sauvegardée avec un monde activé a
 > besoin de ce même monde pour se charger.

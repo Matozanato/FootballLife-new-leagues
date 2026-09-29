@@ -2,8 +2,11 @@ r"""python mszip.py [--no-exe]   -> out\mszip\ and out\FL26ModStudio-<version>.z
 
 FL26 Mod Studio in one folder:
 
-  FL26ModStudio.exe     the window (tools/modstudio_main.py), frozen with PyInstaller;
-                        modstudio/lang and lang inside it
+  FL26ModStudio.exe     the window (tools/modstudio_main.py), frozen with PyInstaller as a
+  _internal\            folder, not one file: a one-file .exe unpacks some 150 MB to a temporary
+                        folder on every start, and an antivirus reads all of it each time --
+                        that was the slow start people reported. modstudio/lang and lang are
+                        in _internal
   pack\                 the modules the League Builder's "Install the modules" puts in place
                         (tools/lbpack.py)
   README.html           the guide (docs/mod-studio-guide.md)
@@ -25,7 +28,8 @@ PRIVATE = re.compile(r"[A-Za-z]:\\\\?(de[v]|User[s]|instalacij[a])|stuc[e]|fl26-
 LOCAL_PATH_LINE = re.compile(r'^\s*sys\.path\.insert\(0, r"[A-Za-z]:\\[^"]*"\)\s*$')
 HIDDEN = ["leaguebuilder", "lbplayers", "playeredit", "lbfaces", "lbpackage", "lbassets", "lbpack",
           "mkplayers", "mksplit", "mkreshape", "mkphases", "mkuecl", "mkeuropo", "mkkits", "mkemblems",
-          "mkcrests", "mkregioncats", "mkregnames",
+          "mkcrests", "mkregioncats", "mkregnames", "mkcup", "mkccup", "mkcoaches", "mkcatflags", "afp",
+          "siderdir",
           "siderroot", "cpkread", "countries", "flpaths", "caltab", "boundscan", "capstone", "py7zr",
           "PIL.Image"]
 
@@ -104,7 +108,8 @@ def modstudio_modules():
 def freeze():
     stage()
     sep = ";"
-    cmd = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--onefile", "--windowed",
+    cmd = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--onedir", "--windowed",
+           "--contents-directory", "_internal",
            "--name", NAME, "--distpath", os.path.join(WORK, "dist"),
            "--workpath", os.path.join(WORK, "build"), "--specpath", WORK, "--paths", STAGE,
            "--add-data", os.path.join(STAGE, "lang") + sep + "lang",
@@ -134,7 +139,7 @@ def main():
     bad = []
     if "--no-exe" not in sys.argv:
         bad += freeze()
-    shutil.copy2(os.path.join(WORK, "dist", NAME + ".exe"), OUT)
+    shutil.copytree(os.path.join(WORK, "dist", NAME), OUT, dirs_exist_ok=True)
     lbpack.build(os.path.join(OUT, "pack"))
     guide(os.path.join(REPO, "docs", "mod-studio-guide.md"), os.path.join(OUT, "README.html"), "en")
     langs = ("hr", "es", "fr")

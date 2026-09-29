@@ -42,9 +42,10 @@ not measured: a season created with a shipped club as your team.
 The world file. When SiderAddons\modules\fl26world.txt exists (written by FL26 Mod Studio's
 League Builder), the module takes its list of league ids from the file's `league` lines
 instead of the built-in IDS list below; a world file with no leagues registers nothing.
-Without the file it behaves as before. Split-season group phases listed in TD_EXTRA (empty by
-default) are only put on the July close list, never registered; this needs an fl26join.dll
-that exports fl26_join_teardown_extra, and the log says so when it does not.
+Without the file it behaves as before. Split-season group phases (the world file's
+`split ... groups=` ids, collected in TD_EXTRA) are only put on the July close list, never
+registered; this needs an fl26join.dll that exports fl26_join_teardown_extra, and the log says
+so when it does not.
 
 The other three hooks only watch: enter_season 0x14158f420 (every id that enters, with the
 return address that asked), the builder (the include list it was handed) and the door (for
@@ -76,8 +77,8 @@ local IDS = { 11, 49, 60, 61, 62, 74, 76, 93, 94, 96, 98, 100, 109, 110, 111, 11
               178, 179, 180, 181, 182, 183, 184, 185, 190 }
 
 -- Split-season group phases: closed on the July teardown with the added leagues, never
--- registered (fl26swiss fills them when the regular phase ends). Empty unless a split is
--- configured.
+-- registered (fl26swiss fills them when the regular phase ends). Filled from the world file's
+-- split lines (groups=); empty when the world has no split.
 local TD_EXTRA = {}
 
 -- The world file: modules\fl26world.txt, written by FL26 Mod Studio's League Builder.
@@ -89,8 +90,15 @@ local function read_world(ctx)
   local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
   local f = io.open(path, "r")
   if not f then return nil end
-  local leagues = {}
+  local leagues, regular, groups = {}, {}, {}
   for line in f:lines() do
+    local tot, reg = line:match("^%s*split%s+(%d+)%s+regular=(%d+)")
+    if tot then
+      regular[tonumber(tot)] = tonumber(reg)
+      local g = {}
+      for v in (line:match("groups=([%d,]+)") or ""):gmatch("%d+") do g[#g + 1] = tonumber(v) end
+      groups[tonumber(tot)] = g
+    end
     local id, rest = line:match("^%s*league%s+(%d+)(.*)$")
     if id then
       local L = { id = tonumber(id) }
@@ -101,8 +109,14 @@ local function read_world(ctx)
     end
   end
   f:close()
-  return leagues
+  return leagues, regular, groups
 end
+
+-- Shipped regions whose season is the calendar year (season type 1 in the exe's region table
+-- read by 0x141576140: Brazil, Argentina, Colombia, China, Chile, Saudi Arabia, Japan). A league
+-- of ours there closes at New Year with its region, not in July (GitHub #27). Regions 29 and up
+-- are ours and European (fl26augseason).
+local CAL_REGIONS = { [16] = true, [18] = true, [19] = true, [21] = true, [23] = true, [24] = true, [28] = true }
 
 local CAVE_VA, CAVE_PAGE, CAVE_LEN = 0x14252ebe0, 0x14252e000, 0x208
 local PAGE_EXECUTE_READWRITE = 0x40
@@ -152,6 +166,7 @@ function m.init(ctx)
     typedef int  (*fl26_join_log_t)(char*, int);
     typedef void (*fl26_join_stats_t)(uint32_t*);
     typedef int  (*fl26_join_teardown_extra_t)(const uint16_t*, int);
+    typedef int  (*fl26_join_calendar_t)(const uint16_t*, int);
   ]])
 
   local old = ffi.new("uint32_t[1]")
@@ -178,11 +193,28 @@ function m.init(ctx)
   dll_stats = ffi.cast("fl26_join_stats_t", ps)
   logbuf, statbuf = ffi.new("char[4096]"), ffi.new("uint32_t[8]")
 
-  local world = read_world(ctx)
+  local world, regular, groups = read_world(ctx)
   if world then
     IDS = {}
-    for _, L in ipairs(world) do IDS[#IDS + 1] = L.id end
-    log(string.format("fl26joindll: world file -- %d leagues", #IDS))
+    local shown = 0
+    for _, L in ipairs(world) do
+      -- an exhibition league (exhibition=1) is for Kick Off only: never registered in a season
+      if (L.exhibition or 0) == 0 then IDS[#IDS + 1] = L.id else shown = shown + 1 end
+      -- A split league's regular phase goes in with it. At creation the season builder admits
+      -- the phase along with its total, but register_all enters only the ids it is handed: a
+      -- split registered there (a league outside the creation list) entered its total and
+      -- never its regular phase, and played nothing. The groups stay out: fl26swiss fills them
+      -- when the regular phase ends.
+      if (L.exhibition or 0) == 0 and regular[L.id] then IDS[#IDS + 1] = regular[L.id] end
+      -- ... but they are closed in July with the rest: left open, the Clausura kept its played
+      -- matches and its season into the second season, and that finished season is the one the
+      -- Apertura asks for in September (fl26join reg_post).
+      if (L.exhibition or 0) == 0 and groups[L.id] then
+        for _, g in ipairs(groups[L.id]) do TD_EXTRA[#TD_EXTRA + 1] = g end
+      end
+    end
+    log(string.format("fl26joindll: world file -- %d leagues%s", #IDS,
+                      shown > 0 and string.format(", %d exhibition only (not registered)", shown) or ""))
     if #IDS == 0 then log("fl26joindll: the world has no leagues -- nothing to register"); return end
   end
   idbuf = ffi.new("uint16_t[?]", #IDS)
@@ -200,6 +232,20 @@ function m.init(ctx)
         for i, v in ipairs(TD_EXTRA) do tdbuf[i - 1] = v end
         local kept = tonumber(ffi.cast("fl26_join_teardown_extra_t", pt)(tdbuf, #TD_EXTRA))
         log(string.format("fl26joindll: %d split group ids go on the July teardown only", kept))
+      end
+    end
+    local CAL = {}
+    for _, L in ipairs(world or {}) do
+      if L.region and CAL_REGIONS[L.region] and (L.exhibition or 0) == 0 then CAL[#CAL + 1] = L.id end
+    end
+    if #CAL > 0 then
+      local pc = ffi.C.GetProcAddress(h, "fl26_join_calendar")
+      if pc == nil then log("fl26joindll: this fl26join.dll has no fl26_join_calendar -- January-December leagues close in July")
+      else
+        local cbuf = ffi.new("uint16_t[?]", #CAL)
+        for i, v in ipairs(CAL) do cbuf[i - 1] = v end
+        local n = tonumber(ffi.cast("fl26_join_calendar_t", pc)(cbuf, #CAL))
+        log(string.format("fl26joindll: %d January-December league(s) close at New Year with their region", n))
       end
     end
     ctx.register("livecpk_make_key", m.make_key)

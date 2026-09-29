@@ -102,6 +102,8 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print):
         L.pop("pack", None)
         if L.get("logo"):
             L["logo"] = asset(L["logo"])
+        if L.get("flag"):
+            L["flag"] = asset(L["flag"])
         if L.get("club_crests"):
             L["club_crests"] = [asset(p) if p else p for p in L["club_crests"]]
         out_r["leagues"].append(L)
@@ -188,6 +190,8 @@ def unpack(path, store):
     for L in r.get("leagues", []):
         if L.get("logo"):
             L["logo"] = full(L["logo"])
+        if L.get("flag"):
+            L["flag"] = full(L["flag"])
         if L.get("club_crests"):
             L["club_crests"] = [full(p) if p else p for p in L["club_crests"]]
     for c in (r.get("players") or {}).values():

@@ -99,6 +99,11 @@ local function read_world(ctx)
   if not f then return nil end
   local leagues = {}
   for line in f:lines() do
+    local order = line:match("^%s*order%s+([%d,]+)")
+    if order then
+      leagues.order = {}
+      for v in order:gmatch("%d+") do leagues.order[#leagues.order + 1] = tonumber(v) end
+    end
     local id, rest = line:match("^%s*league%s+(%d+)(.*)$")
     if id then
       local L = { id = tonumber(id) }
@@ -185,8 +190,11 @@ local function install_country()
   log(string.format("fl26catlist: country names -- stub at 0x%x, %d regions named", stub, named))
 end
 
+local ORDER = nil   -- the world file's `order` line: region ids in the order the lists show them
+
 function m.init(ctx)
   local world = read_world(ctx)
+  ORDER = world and world.order
   if world then
     COUNTRY = world_countries(world)
     local n = 0
@@ -198,9 +206,15 @@ function m.init(ctx)
   if not (check_sites(LEAS) and check_sites(COUNT_SITES)) then return end
 
   local ids, have = {}, {}
+  -- The Select Team list is sorted by the position of a league's region in this list before
+  -- anything else (0x140eadae0), so the order line is what puts a new country among the
+  -- others of its continent instead of after all of them. Every shipped region still goes in.
+  for _, id in ipairs(ORDER or {}) do
+    if id >= 1 and id <= LAST_REGION and not have[id] then ids[#ids + 1] = id; have[id] = true end
+  end
   for i = 0, NSHIPPED - 1 do
     local id = memory.unpack("u32", memory.read(SHIPPED + i * 4, 4))
-    ids[#ids + 1] = id; have[id] = true
+    if not have[id] then ids[#ids + 1] = id; have[id] = true end
   end
   for id = 1, LAST_REGION do
     if not have[id] then ids[#ids + 1] = id; have[id] = true end
@@ -230,8 +244,8 @@ function m.init(ctx)
   end
   for _, s in ipairs(COUNT_SITES) do memory.write(s[1] + s[3], string.char(n)) end
 
-  log(string.format("fl26catlist: category list copied to 0x%x, %d regions (%d shipped + %d ours)",
-                    newbase, n, NSHIPPED, n - NSHIPPED))
+  log(string.format("fl26catlist: category list copied to 0x%x, %d regions (%d shipped + %d ours)%s",
+                    newbase, n, NSHIPPED, n - NSHIPPED, ORDER and ", in the world file's order" or ""))
   install_country()
 end
 
