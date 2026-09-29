@@ -90,17 +90,20 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
   own rows into spare space; the version that exists carries those rows inside itself as
   shipped bytes, and this repository does not redistribute game data, so it is published only
   once it copies them out of memory at startup.
-- **Not possible yet (2026-09-28):**
-  - **Two tournaments a year (Apertura / Clausura) with a play-off.** The game has the shape
-    (Colombia, the USA), but in our regions the phases would have to be driven by `fl26swiss`,
-    which does not do it yet. A new league plays one season.
-  - **A second domestic cup (a League Cup).** Two cups filled from the same leagues can clash
-    on dates; not measured yet. A new country gets one national cup and a super cup.
-  - **Leagues for exhibition only (historic squads).** The game's own "Classics" teams are in
-    no competition; how the game offers them in Kick Off is not found yet.
+- **Listed here as "not possible yet" on 2026-09-28, done since:**
+  - **Two tournaments a year (Apertura / Clausura) with a play-off**: Mod Studio 0.1.3, driven
+    by `fl26swiss`; the phase tables and playoffs of a new country were put right in 0.1.4
+    (see below).
+  - **A second domestic cup (a League Cup)**: Mod Studio 0.1.3, a knockout of 16, 8 or 4 clubs
+    from September to December.
+  - **Leagues for exhibition only (historic squads)**: Mod Studio 0.1.3. Their clubs still show
+    in the team list of a new Master League career (the game has one list for Kick Off and
+    Master League); do not pick one, their league never plays a season.
 - **Kits, names, players.** All placeholders / clones. Not a bug, but a limitation of this
   beta: the tools prove capacity, they do not author content.
-- **Transfers and finances**: not observed yet. Report what you see.
+- **Transfers and finances**: the game's own transfer market in a career is not observed yet.
+  Report what you see. Moving players between clubs before a career starts is a Mod Studio
+  feature since 0.1.4 (*Players > Sign players... / Transfer to...*).
 - **Second season and beyond**: now played. Four seasons have been run end to end on one
   world, with season rollovers, and the tables no longer carry the previous season's
   results (see below).
@@ -309,6 +312,34 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-09-30 (Mod Studio 0.1.4): **a split or Apertura/Clausura league in a new country showed
+  one club on every row** (issue #37, and an Egyptian split). The badge of a row goes by the
+  team id, the name and the match by the team record, and the values our new clubs carried in
+  split phases pointed at record 0: every row read as one club, a match between two of them
+  asked for *"2 Controllers"*, and the phases were never played. `fl26swiss` and `fl26join` now
+  give such a value the row of its own record where the values are used to make matches, a
+  playoff filled at the end of its phase is started as the game's own group fills are, and a
+  playoff whose phase played no match is not filled. Confirm: every club under its own name,
+  the Apertura playoff before the Clausura, `fl26swiss` report lines for each phase in
+  `sider.log`.
+- 2026-09-30 (Mod Studio 0.1.4): **the same clubs played the Copa Libertadores and the Copa
+  Sudamericana** (issue #37). The continental cups Mod Studio builds skipped clubs already in
+  another of them, but not the game's own Libertadores (regulation 9), its qualifying round (8)
+  and the AFC Champions League (15), whose fields are set on day 0. They are now skipped too.
+- 2026-09-30 (Mod Studio 0.1.4): **a club sent to the Libertadores qualifying round stayed at
+  home** (issue #33). The round holds only shipped clubs, none from the pool the other places
+  replace. `fl26swiss` now gives each of our places the place of a shipped club (the last one
+  listed of the country with the most clubs in the round, at most half the round), and the
+  round's ties follow. `sider.log`: `... in place of <team> (slot ...)`.
+- 2026-09-30 (Mod Studio 0.1.4): **the cup of a country the game already has kept a new second
+  division out** (issue #32). It now takes both divisions, the top one's clubs first, when its
+  calendar dates every round of that field and the field is at most 44 clubs (Build raises the
+  cup's bracket in the world's tables); `fl26chain` gives the cup both leagues' clubs.
+- 2026-09-30 (Mod Studio 0.1.4): **a CAF cup with fewer than 4 places was not built** ("a cup
+  needs 4 clubs"). It now takes the next CAF cup's places, then the next league positions.
+- 2026-09-30 (Mod Studio 0.1.4): **a national cup needed 12, 16, 18 or 20 clubs** (or 36, 40,
+  44 with the division below). Any field up to 44 now plays on the English cup's calendar,
+  which dates every round of a field of 9 to 64, with the game's own byes.
 - 2026-09-29 (Mod Studio 0.1.3.1): **a new country outside Europe lost its leagues after the
   first season.** Since 0.1.3 a new league carries its country's confederation, but the game
   moves clubs between two divisions only when the upper one passes a July season-end filter
@@ -354,7 +385,11 @@ calendar.
   (Manchester United v Manchester City). The draw was a fixed table by list position; each pot
   is now reordered so one league's clubs are spread. Confirm: `sider.log` has `draw spread by
   league: ... before, 0 and 0 after` for the Champions League and the Europa League. The
-  Conference League, with more clubs from a few countries, can keep one such pair.
+  Conference League, with more clubs from a few countries, can keep one such pair. Since Mod
+  Studio 0.1.4 the draw follows UEFA's rules instead: no club meets a club from its own
+  country, and at most two of its opponents come from any one other country (`sider.log`:
+  `draw by association: ...`, then one line per club with its opponents' countries). A field
+  that no draw can satisfy keeps the closest draw and says so.
 - 2026-09-28 (Evo-Web report): **a shirt number typed as 10 came out as 11.** The game stores
   the number minus one; the player editor, the builder and Mod Studio now read and write it
   that way. Numbers set with an older version are one too high: set them again.

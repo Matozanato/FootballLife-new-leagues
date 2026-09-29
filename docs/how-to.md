@@ -424,14 +424,21 @@ python tools\siderroot.py _FL26Asia
   own league.
 - **Its fixture dates** follow the country: under Japan, China, Saudi Arabia and the other
   calendar-year countries it plays **February to December** like their own leagues
-  (`fl26join.dll` and `fl26swiss`, GitHub issue #27); elsewhere **August to May**.
+  (`fl26join.dll` and `fl26swiss`, GitHub issue #27); elsewhere **August to May**. A new
+  country of its own plays August to May here; Mod Studio 0.1.4 can give a new country
+  February to December instead (the *Season* field, a `season <region> 1` line in the world
+  file).
 - **Measured 2026-09-29** with a second division under the Saudi Pro League: the league joins
   its season in February, plays all its rounds by December, the July season change leaves it
-  alone and the New Year closes it without a crash. **Not working yet:** promotion and
-  relegation with the division above at New Year; the clubs stay where they are. If you try
-  it elsewhere, a short report is very welcome ([Part H](#part-h-asking-for-help)).
-- **Continental places:** a new league gets **none** in the AFC Champions League or any other
-  continental cup. The game fills those from its own entry lists.
+  alone and the New Year closes it without a crash. Promotion and relegation with the division
+  above at New Year work since the modules of Mod Studio 0.1.3.1 (`fl26join.dll`): measured
+  with the same Saudi second division, which went up and down at New Year and started its next
+  year. If you try it elsewhere, a short report is very welcome
+  ([Part H](#part-h-asking-for-help)).
+- **Continental places:** a league built with the scripts in this part gets **none** in the
+  AFC Champions League or any other continental cup; the game fills those from its own entry
+  lists. Mod Studio gives a new league places (the League window's *Europe* field, written as
+  `uefa` lines of the world file) and builds the continental cups the game does not have.
 
 ### C4. Give the league its own name
 
@@ -533,6 +540,9 @@ Each tool writes a **new** folder and refuses to overwrite one, so the in-betwee
 Pick **one** of the two routes.
 
 #### Route 1: the new format with the game's own leagues only (no new leagues)
+
+Mod Studio 0.1.4 does this in one step: **Only the new European cups...** on the Build page.
+The commands below are the same thing by hand.
 
 ```powershell
 cd C:\fl26
@@ -659,10 +669,12 @@ Press **F8** in the game any time to write a short report of what the module did
   to September in one go.
 - The **first-season** order is a guess from the squads, not a result: a strong club in a
   weak season still starts in the Champions League.
-- **New leagues get no European places.** The access list names only the game's own
-  leagues; the places of countries that are missing are topped up from the big five. Giving
-  your leagues places means editing `ACCESS` in `tools\native\fl26swiss.c` and building the
-  DLL again ([tools/native/README.md](../tools/native/README.md)).
+- **New leagues get no European places on this route.** The access list names only the game's
+  own leagues; the places of countries that are missing are topped up from the big five.
+  Giving your leagues places here means editing `ACCESS` in `tools\native\fl26swiss.c` and
+  building the DLL again ([tools/native/README.md](../tools/native/README.md)). Mod Studio
+  writes them for you: the League window's *Europe* field becomes `uefa` lines of the world
+  file, which replace the DLL's list.
 - **Title holders.** The Champions League and Europa League winners play the next Champions
   League, the Conference League winner the next Europa League. They come first on the list, so
   a holder that also finished high at home takes the holder's place and the next club of its

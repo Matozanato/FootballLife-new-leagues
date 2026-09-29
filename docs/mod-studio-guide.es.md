@@ -146,10 +146,11 @@ League Builder añade ligas nuevas al juego y cambia las del propio juego. Lo qu
 | **Formato** | *Todos contra todos*, de 1 a 4 veces, *se divide en dos (estilo escocés)* o *Apertura y Clausura*: dos torneos por temporada (septiembre a principios de enero, enero a mayo), cada uno desde cero puntos, luego una liguilla de 8 o 4 clubes (o ninguna). La tabla de toda la temporada decide ascensos y descensos. 18 clubes como máximo. |
 | **División** | *(primera división)*, o la liga que tiene encima: otra liga nueva o una del juego. Para poner una liga nueva bajo otra liga nueva en un paso: selecciónala y pulsa **Añadir división inferior** (toma el país, el número de clubes, el formato y los ascensos/descensos de la liga de arriba; solo falta el nombre). |
 | **Asc. / desc.** | Cuántos clubes cambian de sitio con la liga de arriba al final de la temporada. |
-| **Europa** | Solo para primera división: qué puesto de la liga va a qué competición europea. **Primera: 1.º UCL, 2.º UEL, 3.º UECL** rellena las tres habituales; **Añadir plaza**, **Quitar plaza** y **Borrar** para todo lo demás. Cada puesto una sola vez, y solo puestos que la liga tiene. Déjalo vacío para una categoría inferior. La plantilla sigue al país: Asia recibe la AFC Champions League y la AFC Champions League Two, Sudamérica la Libertadores y la Copa Sudamericana, África la CAF Champions League y la Copa Confederación CAF. Esas cuatro copas que el juego no tiene se construyen con el mundo (sección 8.2). Las plazas de la fase previa de Libertadores aún no se llenan: esa ronda no tiene plaza libre para un club nuevo, así que el club se queda en casa (Mod Studio marca la opción). |
+| **Temporada** | Solo para la primera división de un país nuevo: *agosto a mayo* (por defecto) o *febrero a diciembre*, como Brasil, Japón o Arabia Saudí: los clubes suben y bajan en Año Nuevo, y las divisiones de abajo la siguen. Todavía no con división en grupos, Apertura/Clausura, copa nacional ni copa de la liga. |
+| **Europa** | Solo para primera división: qué puesto de la liga va a qué competición europea. **Primera: 1.º UCL, 2.º UEL, 3.º UECL** rellena las tres habituales; **Añadir plaza**, **Quitar plaza** y **Borrar** para todo lo demás. Cada puesto una sola vez, y solo puestos que la liga tiene. Déjalo vacío para una categoría inferior. La plantilla sigue al país: Asia recibe la AFC Champions League y la AFC Champions League Two, Sudamérica la Libertadores y la Copa Sudamericana, África la CAF Champions League y la Copa Confederación CAF. Esas cuatro copas que el juego no tiene se construyen con el mundo (sección 8.2). Una plaza de *clasificación a la Libertadores* ocupa el sitio de un club del juego en la ronda previa (el último del país con más clubes en ella), como mucho la mitad de la ronda. |
 | **Logo** | Cualquier imagen (un PNG con fondo transparente queda mejor). Vacío: se dibuja uno por ti. |
 | **Bandera del país** | Tu propia imagen de la bandera del país, estirada al marco de las banderas del juego. Sustituye la bandera de ese país en todo el juego (Select Team, nacionalidad de los jugadores, el encabezado del país en Database > Competition Info) mientras el mundo esté activo. Vacío: la bandera del juego. |
-| **Copa** | Solo primera división. **Copa nacional**: el país tiene su propia copa, con el nombre que le des (vacío: `<liga> Cup`). El juego llena la copa de un país con su primera división y la división de debajo; con las dos juega las rondas de la copa francesa, italiana o inglesa, con la primera sola las de la escocesa, belga, neerlandesa o inglesa, según el número de clubes. **Supercopa**: además, una supercopa a partido único antes de la temporada, el campeón contra el ganador de la copa. |
+| **Copa** | Solo primera división. **Copa nacional**: el país tiene su propia copa, con el nombre que le des (vacío: `<liga> Cup`). El juego llena la copa de un país con su primera división y la división de debajo, y la copa los admite a todos, sean cuantos sean hasta 44: las rondas son las de una copa del juego del mismo tamaño o, si no la hay, las de la copa inglesa, y cuando el número no es 8, 16, 32 o 64, algunos clubes pasan la primera ronda sin jugar, como en la FA Cup real. Con más de 44 clubes la copa se queda solo con la primera división. Una segunda división nueva bajo un país que el juego ya tiene (Alemania, Rusia ...) también entra en la copa de ese país, detrás de los clubes de primera, cuando las rondas de la copa encajan con el número de clubes. **Supercopa**: además, una supercopa a partido único antes de la temporada, el campeón contra el ganador de la copa. |
 | **Copa de la liga** | Solo primera división. Una eliminatoria de 16, 8 o 4 clubes de esta liga y la de abajo, por posición, el más fuerte contra el más débil: ida y vuelta en cada ronda, la final a un partido, de septiembre a diciembre. Ponle un nombre o déjalo vacío (`<liga> League Cup`). |
 | **Solo exhibición -- no está en la Liga Máster** | Para Kick Off y partidos amistosos: una liga histórica, leyendas y cosas así. Sus clubes nunca juegan una temporada de Liga Máster, así que la liga va sola: sin división arriba ni abajo, sin plazas europeas, sin copas. Aun así aparece en la lista de equipos de la Liga Máster; elige tu club en otra liga. |
 | **Formación** | Cómo forman los clubes de la liga. Elige una de las formaciones que usan los clubes del juego (4-2-3-1, 4-1-2-3, 4-3-3, 5-3-2 ...; la lista dice cuántos clubes del juego la usan): cada club nuevo recibe una copia de la táctica de un club del juego con esa formación, y al construir se le coloca su mejor once. Vacío: la del juego, un 4-2-3-1 fijo. Un club puede tener la suya (**Editar club**). |
@@ -171,6 +172,22 @@ columna **ID del club** muestra el id de cada club en el juego.
 **Entrenador**: en **Editar club** de un club nuevo puedes poner el nombre de su entrenador. Vacío: uno numerado (`FL M0001` ...).
 
 **Formación**: en **Editar club** de un club nuevo puedes darle una formación propia; *Como la liga* mantiene la de la liga. El campo bajo la lista muestra dónde juega cada uno.
+
+**Clubes que el juego ya tiene.** Un puesto de una liga nueva puede tener uno de los clubes del
+juego en lugar de uno nuevo: selecciona el puesto, luego **Club del juego...**, y busca por nombre
+o ID del equipo (**Solo clubes sin liga** acorta la lista). El club conserva su nombre, escudo,
+equipaciones, entrenador y jugadores, y juega solo en tu liga. Si juega algo en el juego (una
+liga, una copa, la Europa League ...), eliges quién ocupa allí su lugar: un club del juego que no
+juega nada, o un club nuevo con el nombre que le des. Así ninguna competición del juego cambia su
+número de clubes; las ligas del juego solo mantienen sus fechas con el número para el que se
+hicieron. Las selecciones, los equipos clásicos y por defecto y los clubes con menos de 18
+jugadores no se pueden elegir. **Club nuevo aquí** devuelve el puesto a un club nuevo. El club ya
+no aparece en los grupos *Other ... clubs* de la Master League.
+
+**Insertar club** y **Quitar club** añaden un puesto antes del club seleccionado o lo quitan (de 10
+a 24 clubes); nombres, escudos, entrenadores y cambios de jugadores van con sus clubes. Revisa las
+plazas europeas de la liga y vuelve a **Construir**. Cualquier cambio en los clubes de una liga
+necesita una **carrera nueva**.
 
 **Ligas y clubes del juego**: nombres, logos y escudos nuevos para lo que el juego ya tiene.
 
@@ -216,6 +233,33 @@ vuelven a lo del juego.
 
 La lista de clubes también tiene **Selecciones nacionales** y **Otros clubes (sin liga)**: los equipos que el juego tiene fuera de toda liga (selecciones, clubes que solo juegan una copa o una competición continental). Sus jugadores se editan igual.
 
+#### Traspasos, selecciones, ID, el retrato del entrenador
+
+- **Fichar jugadores...** (un club): una lista de todos los jugadores del juego y de tus clubes
+  nuevos, con filtro de nacionalidad y búsqueda por nombre; elige varios con Ctrl o Mayús. Pasan
+  a este club y su antiguo club los pierde (un traspaso). **Traspasar a...** hace lo mismo desde
+  el otro lado: el jugador seleccionado pasa al club que elijas. La lista muestra *de: ...* en el
+  club que lo recibe y *a: ...* en el club que deja; **Quitar del club** en cualquiera de las dos
+  filas anula el traspaso. Un club tiene como mucho 40 jugadores.
+- **Convocar jugadores...** (una selección: elige *Selecciones nacionales* en la lista de ligas): la lista
+  se abre en el país de la selección. Los jugadores entran en la selección **y siguen en sus
+  clubes**, como en el juego. **Quitar del club** saca al jugador de la selección (no de su
+  club). Una selección tiene como mucho 26 jugadores; un jugador está en una sola selección a la
+  vez.
+- Un jugador que llega va al final del orden de la plantilla con un dorsal libre; la plantilla
+  que deja cierra su orden.
+- **ID del club** (junto al club) e **ID del jugador** (pestaña Lo básico): solo para tus clubes y
+  jugadores **nuevos**. Vacío = el siguiente ID libre en el Build. Escribe uno cuando un pack de
+  equipaciones, escudo o caras se hizo para un ID concreto. ID de club: desde el primero tras los
+  clubes del juego (71578) hasta 81919; ID de jugador: por encima del más alto del juego hasta
+  399999; nunca uno que ya tenga el juego u otro club o jugador nuevo. El ID se usa en todo lo
+  que el mundo escribe del club o del jugador (plantillas, competiciones, equipaciones, escudos,
+  entrenador, caras). Los clubes y jugadores del juego conservan sus ID: sus equipaciones, caras
+  y tus partidas guardadas dependen de ellos.
+- **Retrato del entrenador...**: un PNG o JPG para el entrenador del club. El Build lo deja en
+  256 x 256 y lo pone en `common/render/symbol/coach/coach_<ID del entrenador>.png`, donde el
+  juego guarda los retratos de entrenadores. Púlsalo otra vez para quitar la imagen.
+
 ### 8.1 Caras
 
 Un mod de caras es una carpeta así (tal como las comparten quienes hacen caras):
@@ -258,7 +302,9 @@ llevarlos -- se rompían; Comprobaciones marca ese mundo: vuelve a construirlo.)
 > y **Comprobar el plan** lo avisa. Las ligas nuevas sin plazas no mandan a nadie a Europa, y
 > Resumen avisa de ello. Los campeones van primero: los ganadores de la Champions League y de la
 > Europa League ocupan dos de las 36 plazas de la Champions League, y el de la Conference League
-> una de la Europa League.
+> una de la Europa League. El sorteo de la fase de liga sigue las reglas de la UEFA: ningún club
+> se enfrenta a un club de su propio país, y como mucho dos de sus rivales son de un mismo
+> país distinto.
 
 Después **empieza una nueva carrera de Master League** (o Become a Legend). Las ligas nuevas están
 bajo su país en Select Team y Kick Off.
@@ -268,12 +314,26 @@ bajo su país en Select Team y Kick Off.
 > crea también esas copas. Cada una tiene 32, 16, 8 o 4 clubes: primero las plazas de tus ligas,
 > luego la completan las ligas del juego de ese continente (Asia y Sudamérica). Con 8 o más se
 > juegan grupos de cuatro y luego eliminatorias; con menos de 8, solo eliminatorias. Se llenan a
-> finales de agosto, con las tablas de las ligas.
+> finales de agosto, con las tablas de las ligas. Un club que ya juega la Copa Libertadores, su
+> fase previa o la AFC Champions League no entra en su sorteo. Una copa de la CAF con menos de 4
+> plazas toma primero las plazas de la siguiente copa de la CAF (con dos y dos, la CAF Champions
+> League se queda las cuatro), y luego los siguientes puestos de tus ligas.
 
 > **Las partidas guardadas pertenecen a un mundo.** Una carrera guardada con un mundo activado
 > necesita ese mismo mundo para cargarse.
 
 **Archivo → Guardar receta** guarda todo en un archivo `.json`; **Abrir receta** lo recupera.
+
+**Solo las nuevas copas europeas...** (página Construir) construye un mundo solo con la nueva
+Champions League y Europa League -- fase liga de 36 y el play-off de febrero -- y la Liga Conferencia cuando **Incluir la Liga Conferencia** está marcado. Sin ligas nuevas; los clubes y ligas
+del juego quedan como están y tu receta no cambia. Pide un nombre de mundo (`_FL26Euro` por
+defecto), lo construye y ofrece activarlo. Solo puede estar activado un mundo, así que sustituye a
+un mundo con ligas nuevas: un mundo con ligas nuevas ya tiene el formato nuevo.
+
+> **Ligas de exhibición y Master League.** Una liga marcada *Solo exhibición* nunca juega una
+> temporada de Master League, pero el juego tiene una sola lista de equipos para Kick Off y Liga
+> Master, así que sus clubes siguen apareciendo al elegir club para una carrera nueva. No empieces
+> una carrera con uno de ellos. **Comprobar el plan** y **Construir** lo avisan.
 
 ### 8.3 Límites
 
@@ -285,7 +345,9 @@ bajo su país en Select Team y Kick Off.
 | Veces que se enfrentan los clubes | 1 – 4 |
 | Ligas que se dividen | 2 por mundo |
 | Divisiones en un país | hasta la 7.ª |
-| Jugadores por club nuevo | 30 al principio; quita hasta dejar 18, sin jugadores extra |
+| Jugadores por club nuevo | 30 al principio; quita hasta dejar 18; con fichajes, hasta 40 |
+| Jugadores por selección | 26 |
+| Copa nacional | la primera división y la de debajo, hasta 44 clubes; más: solo la primera |
 
 ## 9. Paquetes de ligas: comparte una liga entera
 

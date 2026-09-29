@@ -58,6 +58,14 @@ install anything.
 >   Conference League switch, and a League window that fits a 1080p screen.
 > - **Formations** (0.1.4): a new league's clubs, or a single club, line up in any formation
 >   the game's clubs use, with the first eleven shown on a pitch on the Players page.
+> - **Clubs and squads** (0.1.4): clubs the game already has in your new leagues, a national
+>   team editor, transfers between clubs, your own team and player ids for new clubs and
+>   players, and a portrait for a club's manager.
+> - **Seasons and cups** (0.1.4): a national cup of any size up to 44 clubs, February to
+>   December for a new country, Libertadores qualifying places, a shipped country's cup that
+>   takes your new second division, a "Europe only" build, and a league-phase draw that keeps
+>   clubs of one country apart as UEFA does. Split and Apertura/Clausura leagues in new
+>   countries play properly again.
 > - English, Croatian, Spanish and French.
 >
 > Guide: [docs/mod-studio-guide.md](docs/mod-studio-guide.md) ·
@@ -133,16 +141,19 @@ If you use anything from this repository, vmardonesdev's name belongs next to it
 Morocco, the rest of Asia and Africa) and writes up every result in long, careful messages
 with screenshots: what the recipe was, which settings the career had, what the table, the
 calendar and the board said, and what happened on the next day. A good part of 0.1.3.1 and
-of the coming 0.1.4 comes straight from those messages:
+of 0.1.4 comes straight from those messages:
 
 - a Saudi second division that moved its clubs in the table but not in the fixtures, and
   broke in the third season: the calendar-year promotion fixed in 0.1.3.1
   ([#27](https://github.com/Matozanato/FootballLife-new-leagues/issues/27));
 - the League window taller than a 1080p screen, fixed in 0.1.3.1;
-- the table of the AFC countries' seasons, which is why West Asia will play August to May;
-- an Egyptian league with a Scottish-style split whose table filled with one club;
-- CAF cups refused with fewer than four places, the board asking for the Copa Libertadores
-  in Africa, and an African league listed among the Asian ones;
+- the table of the AFC countries' seasons, behind 0.1.4's choice of season months for a new
+  country;
+- an Egyptian league with a Scottish-style split whose table filled with one club, fixed in
+  0.1.4;
+- CAF cups refused with fewer than four places, fixed in 0.1.4;
+- the board asking for the Copa Libertadores in Africa, and an African league listed among
+  the Asian ones;
 - the ideas for moving the game's own clubs into new leagues, the CAF Super Cup, the CAF
   cups in Cup mode and the Club World Cup places for Africa.
 
@@ -163,8 +174,8 @@ in the League Builder, were Alikhaled_727's idea too.
   36/36/36 list of 2026/27 clubs is why `fl26swiss` can take a first-season list
   (`fl26swiss-first.txt`). vector360 also saw Manchester United drawn against Manchester City
   in the league phase, which is why each pot is now spread so two clubs of one country do not
-  meet there, and asked for the rest of the real draw rules, coming in 0.1.4: no club meets a
-  club of its own country and at most two of any other
+  meet there, and asked for the rest of the real draw rules, which the draw follows since
+  0.1.4: no club meets a club of its own country and at most two of any other
   ([#15](https://github.com/Matozanato/FootballLife-new-leagues/issues/15)).
 - **jibibi** (Evo-Web): tested the modules alongside a full French patch and the kit server
   and sent the logs, which show how the patch's own roots and the new clubs' kit names have to

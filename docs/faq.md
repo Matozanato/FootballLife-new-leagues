@@ -40,6 +40,11 @@ old world: press **0. Install the modules** and **2. Build the world** again.
 In 0.1.3 a league ticked **Exhibition only** was left out of that order and still went to the
 bottom. Fixed in 0.1.3.1: update, then **Build the world** again.
 
+An *Exhibition only* league's clubs still show in the team list when you start a Master League
+career, because the game has one list for Kick Off and Master League. Do not pick one of them:
+their league never plays a season. Since 0.1.4 the League window, **Check the plan** and
+**Build** remind you of this.
+
 ### The League window is taller than my screen and I cannot reach Name and Country
 
 A 0.1.3 bug on 1080p screens (and smaller ones, or with Windows scaling above 100%): the window
@@ -50,13 +55,15 @@ On 0.1.3: when the window opens, the cursor is already in the **Name** field eve
 see it. Type the name, press **Tab**, type the country, and use the mouse for the rest. Setting
 Windows' display scaling to 100% also helps.
 
-### The National cup tick says my league needs 12, 16, 18 or 20 clubs
+### How big can a national cup be?
 
-A national cup is copied from a cup the game already has, and those exist only for certain
-sizes. So it works when the top division alone has **12, 16, 18 or 20** clubs, or when the top
-division and the one below it together have **36, 40 or 44**. A third division does not
-change anything: the cup only ever looks at the first two. National cups for any size are on
-the list.
+Since 0.1.4, any size up to 44 clubs. (0.1.3 took only 12, 16, 18 or 20 clubs in the top
+division, or 36, 40 or 44 with the division below.) The game fills a country's cup with its top
+division and the one below it. When the two together have a size a cup of the game has, that
+cup is copied; any other number up to 44 plays on the English cup's rounds, and when the number
+is not 8, 16, 32 or 64 some clubs get a bye in the first round. With more than 44 clubs the cup
+keeps the top division alone. A third division does not change anything: the cup only ever
+looks at the first two.
 
 Two other cups have no such limit:
 - **League cup** (the tick under the national cup): a knockout of 16, 8 or 4 clubs of the top
@@ -92,13 +99,64 @@ the leagues it already lost).
   plays **February to December**.
 - **Apertura and Clausura** (a league format): September to early January and January to May.
 
-A choice between August-May and February-December for a new country is planned.
+Since 0.1.4 a new country can play **February to December** instead: the **Season** field in
+the League window of its top division. Clubs then go up and down at New Year, and every
+division below follows it. It cannot be combined with a split, Apertura/Clausura, a national
+cup or a league cup yet.
 
 ### Clubs I send to the Libertadores qualifying round stay at home
 
-That round has no free place for a new club yet, so a club sent there does not play it. Mod
-Studio marks the option *(not filled yet)* and warns about it. Use **Copa Libertadores** or
-**Copa Sudamericana** places for now.
+Fixed in 0.1.4 (#33). A club of yours sent to the qualifying round now takes the place of one of
+the game's own entries in that round (the last one of the country with the most clubs in it, at
+most half the round), so it plays the round. Update, **Install the modules**, **Build the
+world** again and start a new career.
+
+### The same clubs play the Libertadores and the Copa Sudamericana
+
+Fixed in 0.1.4 (#37). A club that is already in the game's Copa Libertadores, its qualifying
+round or the AFC Champions League is no longer drawn into the continental cups Mod Studio builds
+(Copa Sudamericana, AFC Champions League Two, the CAF cups).
+
+### My league table shows the same club on every row
+
+In 0.1.3 and 0.1.3.1, a split league or an Apertura/Clausura league in a new country (Egypt,
+Venezuela ...) could show one club's name on every row of a phase table, over the right badges.
+The first match between two of them then stopped on *"For games between users, 2 Controllers
+are required"*, the phases were not played, and a playoff could come at the wrong time. Fixed in
+0.1.4 (#37): each phase gets its own clubs, and a playoff starts at the end of its phase. Update,
+**Install the modules**, **Build the world** again and start a new career.
+
+### Can I put a club the game already has into my new league?
+
+Yes, since 0.1.4. In *New clubs*, select a place of the new league and press **Club of the
+game...**. The club keeps its name, crest, kits, manager and players. If it plays somewhere in
+the game (a league, a cup, a continental cup), you choose who takes its place there: a club of
+the game that plays in nothing, or a new club you name. That way no competition of the game
+changes its number of clubs. **Insert club** and **Remove club** change a league's clubs after it
+was built; then **Build** again and start a new career.
+
+### Can I build only the new European format, with no new leagues?
+
+Yes, since 0.1.4 (#36). On the *Build* page press **Only the new European cups...**: it builds a
+world with the new Champions League and Europa League (and the Conference League when it is
+ticked), with the game's own leagues and clubs. The scripts way is in
+[how-to.md](how-to.md), Part D, Route 1.
+
+### Can I change a club's or a player's id?
+
+For your **new** clubs and players, yes, since 0.1.4: **Club ID** next to the club and **Player
+ID** on the player's Basics tab. Use it when a kit, crest or face pack was made for a certain id.
+A new club's id is from the first one after the game's clubs (71578) up to 81919; a new player's
+is above the game's highest, up to 399999. The game's own clubs and players keep their ids: its
+kits, faces and your saves are tied to them.
+
+### Can I edit a national team, or move a player to another club?
+
+Yes, since 0.1.4, on the *Players* page. Pick *National teams* in the league list and a country:
+**Call up players...** lists the players (it opens on that country) and puts the ones you pick in
+the squad, at most 26. They stay at their clubs. For a club, **Sign players...** brings players
+from any club (a transfer: their old club loses them), and **Transfer to...** sends the selected
+player to another club; a club has at most 40 players.
 
 ### Can I change the names and ratings of the players of my new clubs?
 
