@@ -231,8 +231,8 @@ The club list also has **National teams** and **Other clubs (no league)**: the t
   opens on the team's country. The players join the national squad **and stay at their clubs**,
   as in the game. **Remove from club** drops a player from the national squad (not from his
   club). A national team has at most 26 players; a player is in one national team at a time.
-  Kick Off plays with your squad. In a Master League career the game picks its own national
-  squads, so there your call-ups do not stay.
+  Your squad is written into the game's data, but in a Master League career the game picks its
+  own national squads, so there your call-ups do not stay.
 - A player who joins goes to the end of the squad order with a free shirt number; the squad he
   left closes its order up.
 - **Club ID** (next to the club) and **Player ID** (Basics tab): for your **new** clubs and

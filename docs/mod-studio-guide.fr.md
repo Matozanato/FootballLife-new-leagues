@@ -254,8 +254,8 @@ La liste des clubs a aussi **Équipes nationales** et **Autres clubs (sans ligue
   ligues) : la liste s'ouvre sur le pays de la sélection. Les joueurs rejoignent la sélection **et
   restent dans leurs clubs**, comme dans le jeu. **Retirer du club** retire le joueur de la
   sélection (pas de son club). Une sélection a au plus 26 joueurs ; un joueur est dans une seule
-  sélection à la fois. Kick Off joue avec ta liste. Dans une carrière Master League, le jeu choisit
-  lui-même ses sélections, donc tes convocations n'y restent pas.
+  sélection à la fois. Ta liste est écrite dans les données du jeu, mais dans une carrière Master
+  League le jeu choisit lui-même ses sélections, donc tes convocations n'y restent pas.
 - Un joueur qui arrive va à la fin de l'ordre de l'effectif avec un numéro libre ; l'effectif
   qu'il quitte resserre son ordre.
 - **ID du club** (à côté du club) et **ID du joueur** (onglet Bases) : seulement pour tes **nouveaux**

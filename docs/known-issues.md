@@ -123,7 +123,7 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
   both changes, and 279 days into a career the live South Korea squad did not have the called-up
   player and had 11 players the file does not list -- the game picks its own national squads in
   a career.
-  Kick Off uses the file. Transfers (`Sign players...`, `Transfer to...`) and the club and
+  Whether Kick Off shows the squad of the file is not checked yet. Transfers (`Sign players...`, `Transfer to...`) and the club and
   player ids did stay in the same career.
 - **Team of the Season of a new league is empty** (2026-09-30, GitHub #46). At the end of
   season 1 and again of season 2 the screen for a new Icelandic league came up with all 11
