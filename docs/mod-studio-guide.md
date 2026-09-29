@@ -305,6 +305,9 @@ country in Select Team and Kick Off.
 > **Saves belong to a world.** A career saved with one world on needs that same world to load.
 
 **File → Save recipe** stores everything in a `.json` file; **Open recipe** brings it back.
+**Build** also keeps a copy of the recipe in `%APPDATA%\FL26ModStudio\recipes\<world>.json`,
+and Mod Studio opens the last recipe again when it starts, so closing it without saving loses
+nothing that was built.
 
 **Only the new European cups...** (Build page) builds a world with nothing but the new
 Champions League and Europa League -- league phase of 36 and the February play-off -- and the

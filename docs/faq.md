@@ -186,6 +186,13 @@ A 0.1.3 problem, fixed in 0.1.3.1: with the Conference League off, the Champions
 Europa League still get their league phase of 36. A world built with it off on 0.1.3 or earlier
 has to be built again; **Checks** points it out.
 
+### I closed Mod Studio and my leagues were gone
+
+Before 0.1.4 the leagues lived only in the open recipe until **File → Save recipe**. Since 0.1.4
+every **Build** also keeps a copy in `%APPDATA%\FL26ModStudio\recipes\<world>.json`, and Mod
+Studio opens the last recipe again when it starts. The world an older version built stays in the
+game and keeps working; only its recipe has to be entered again to change it.
+
 ### What should I send when something is wrong?
 
 1. In Mod Studio: **Tools > Diagnostics > Copy a report**, and paste it into the issue.

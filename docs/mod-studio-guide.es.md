@@ -323,6 +323,9 @@ bajo su país en Select Team y Kick Off.
 > necesita ese mismo mundo para cargarse.
 
 **Archivo → Guardar receta** guarda todo en un archivo `.json`; **Abrir receta** lo recupera.
+**Construir** también guarda una copia de la receta en
+`%APPDATA%\FL26ModStudio\recipes\<mundo>.json`, y Mod Studio abre la última receta al
+iniciarse, así que cerrarlo sin guardar no pierde nada de lo construido.
 
 **Solo las nuevas copas europeas...** (página Construir) construye un mundo solo con la nueva
 Champions League y Europa League -- fase liga de 36 y el play-off de febrero -- y la Liga Conferencia cuando **Incluir la Liga Conferencia** está marcado. Sin ligas nuevas; los clubes y ligas

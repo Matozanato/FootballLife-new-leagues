@@ -334,7 +334,9 @@ ligues se trouvent sous leur pays dans Select Team et Kick Off.
 > besoin de ce même monde pour se charger.
 
 **Fichier → Enregistrer la recette** enregistre tout dans un fichier `.json` ; **Ouvrir une
-recette** le recharge.
+recette** le recharge. **Construction** garde aussi une copie de la recette dans
+`%APPDATA%\FL26ModStudio\recipes\<monde>.json`, et Mod Studio rouvre la dernière recette au
+démarrage : le fermer sans enregistrer ne perd rien de ce qui a été construit.
 
 **Seulement les nouvelles coupes européennes...** (page Construire) construit un monde avec
 seulement la nouvelle Ligue des champions et la Ligue Europa -- phase de ligue à 36 et barrages de

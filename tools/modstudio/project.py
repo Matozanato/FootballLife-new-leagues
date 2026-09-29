@@ -267,18 +267,39 @@ class Project(QObject):
         self.recipe, self.path, self.dirty = blank(), None, False
         self.changed.emit()
 
-    def open(self, path):
+    def open(self, path, copy=False):
+        """load a recipe; copy=True for the copy Build keeps (keep_copy): Save then asks for a name"""
         r = json.load(open(path, encoding="utf-8"))
         if not str(r.get("world", "")).startswith("_FL26"):
             raise B.BuildError("the world name must start with _FL26")
         r.setdefault("leagues", [])
         r.setdefault("edits", {})
         r.setdefault("players", {})
-        self.recipe, self.path, self.dirty = r, path, False
+        self.recipe, self.path, self.dirty = r, None if copy else path, False
         self.changed.emit()
 
     def save(self, path=None):
         path = path or self.path
+        self._write(path)
+        self.path, self.dirty = path, False
+        self.changed.emit()
+
+    def copies_dir(self):
+        from modstudio.app import APPDIR
+        return os.path.join(APPDIR, "recipes")
+
+    def keep_copy(self):
+        """write the recipe to %APPDATA%\\FL26ModStudio\\recipes\\<world>.json and return that path.
+        Build keeps one there each time, and the next start opens the latest recipe again, so the
+        leagues are not lost when Mod Studio is closed without Save recipe (GitHub #40). The
+        recipe's own file, its name and the unsaved mark are not touched."""
+        d = self.copies_dir()
+        os.makedirs(d, exist_ok=True)
+        p = os.path.join(d, self.recipe["world"] + ".json")
+        self._write(p)
+        return p
+
+    def _write(self, path):
         clean = dict(self.recipe)
         clean["players"] = {k: v for k, v in (clean.get("players") or {}).items()
                             if v.get("edits") or v.get("add") or v.get("remove") or v.get("join")
@@ -286,5 +307,3 @@ class Project(QObject):
         with open(path + ".tmp", "w", encoding="utf-8") as f:
             json.dump(clean, f, indent=1, ensure_ascii=False)
         os.replace(path + ".tmp", path)
-        self.path, self.dirty = path, False
-        self.changed.emit()

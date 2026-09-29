@@ -301,6 +301,9 @@ državom u Select Team i Kick Off.
 > da se učita.
 
 **Datoteka → Spremi recept** spremi sve u `.json` datoteku; otvaranje recepta to vraća.
+**Izgradnja** usput sprema kopiju recepta u `%APPDATA%\FL26ModStudio\recipes\<svijet>.json`,
+a Mod Studio pri pokretanju otvara zadnji recept, pa zatvaranje bez spremanja ne gubi ništa što
+je izgrađeno.
 
 **Samo nova europska natjecanja...** (stranica Izgradnja) gradi svijet samo s novom Ligom
 prvaka i Europskom ligom -- ligaška faza od 36 i veljačko doigravanje -- te Konferencijskom ligom

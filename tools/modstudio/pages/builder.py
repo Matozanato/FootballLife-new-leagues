@@ -1121,6 +1121,7 @@ class NewLeagues(BuilderPage):
             error(self, "Open recipe...", str(e))
             return
         self.app.settings["recipes"] = os.path.dirname(p)
+        self.app.settings["last_recipe"] = p
         self.app.open_page("NewLeagues")
 
     def save_recipe(self, ask_name=False):
@@ -1135,6 +1136,7 @@ class NewLeagues(BuilderPage):
                 return
         self.project.save(p)
         self.app.settings["recipes"] = os.path.dirname(p)
+        self.app.settings["last_recipe"] = p
         self.app.status(_("Recipe saved: %s") % p)
 
     def new_recipe(self):
@@ -1803,6 +1805,13 @@ class Build(BuilderPage):
                 return
             replace = True
         base = self.project.base
+        try:
+            # a copy of what is built, opened again at the next start (Project.keep_copy)
+            kept = self.project.keep_copy()
+            self.app.settings["last_recipe"] = kept
+            self.app.status(_("Recipe saved: %s") % kept)
+        except OSError:
+            pass
 
         def go(log):
             log(B.describe(pl))

@@ -94,6 +94,14 @@ class Main(QMainWindow):
         from modstudio.project import Project
         self.project = Project(self)
         self.project.load_tables()
+        # the recipe of the last session: the one last opened or saved, or the copy the last Build kept
+        last = self.settings.get("last_recipe")
+        if last and os.path.exists(last):
+            try:
+                self.project.open(last, copy=os.path.dirname(os.path.abspath(last))
+                                  == os.path.abspath(self.project.copies_dir()))
+            except Exception:           # a recipe that no longer reads: start with an empty one
+                self.project.new()
         self.bus.game_changed.connect(self.project.load_tables)
         self.setWindowTitle("FL26 Mod Studio")
         self.resize(*self.settings.get("size", [1360, 820]))
