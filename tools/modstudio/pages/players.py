@@ -293,11 +293,13 @@ class Players(BuilderPage):
         w.blockSignals(False)
 
     # ---- which club ----
+    stale = False       # the recipe changed while the page was hidden (#44)
+
     def shown(self):
         if self.need_tables():
             return
         self.say("")
-        if self.lg.count() == 0:
+        if self.lg.count() == 0 or self.stale:
             self.fill_leagues()
 
     def refresh(self):
@@ -306,9 +308,13 @@ class Players(BuilderPage):
     def recipe_changed(self):
         if self.isVisible():
             self.fill_leagues()
+        else:
+            # a recipe opened or a league added elsewhere: fill the lists again on the next visit
+            self.stale = True
 
     def fill_leagues(self):
         P_ = self.project
+        self.stale = False
         keep = self.lg.currentData()
         self.lg.blockSignals(True)
         self.lg.clear()
@@ -503,7 +509,7 @@ class Players(BuilderPage):
             if rid is None:
                 rid = next((g for g, n, t in self.project.game_groups() if tid in t), None)
             data = ("game", rid)
-        if self.lg.count() == 0:
+        if self.lg.count() == 0 or self.stale:
             self.fill_leagues()
         # findData does not match a Python tuple (measured: -1 for ("new", name) that is there)
         i = next((n for n in range(self.lg.count()) if self.lg.itemData(n) == data), -1)
