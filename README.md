@@ -408,8 +408,9 @@ Mod Studio 0.1.4. The full list, with dates and details, is in
 - **A new league outside Europe shows the wrong continent** in Select Team's League Info
   panel (the European cups for one that plays August to May, the South American text for some
   others) and in the board's objectives, and a new Asian league sits below *Other Clubs (Asia)*
-  (issue #43). Its places go to its own continent's cups; only the text is wrong. Not fixed
-  yet.
+  (issue #43). Its places go to its own continent's cups; only the text is wrong. A new African
+  or CONCACAF country (South Africa, Mexico) comes after Asia in the Kick Off and Edit lists,
+  since the game has no section for it (issue #47). Not fixed yet.
 - **An Exhibition only league still shows** in Master League's team list (the game has one
   list for Kick Off and Master League). Do not start a career with one of its clubs.
 - **February-December seasons** cannot yet be combined with a split, Apertura/Clausura, a
