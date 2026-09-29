@@ -55,12 +55,13 @@ FIRST_OWN_REGION = 29             # regions 0-28 are the game's own, 29 and up t
 UEFA_CODE = 2                     # Competition.bin +6, low three bits: the confederation
 
 
-def old_confed_tops(d, leagues):
-    """names of the top divisions of a new country outside Europe (a region 29 and up) with a
-    division below them, whose competition row carries their continent's code: a world built by
-    Mod Studio 0.1.3. In July the game keeps such a league out of the next season (its season-end
-    filter wants UEFA for our regions), so from the second season on the country's divisions have
-    no clubs and no matches. Builds since 0.1.3.1 keep that row UEFA (leaguebuilder, #33)"""
+def old_confed_tops(d, leagues, calendar=()):
+    """names of the leagues of a new country outside Europe (a region 29 and up) that plays August
+    to May, whose competition row carries their continent's code: a world built by Mod Studio
+    0.1.3, or by 0.1.3.1 for a league with no division below it. In July the game keeps such a
+    league out of the next season (its season-end filter wants UEFA for our regions), so from the
+    second season on it has no clubs and no matches. Builds since 0.1.4 keep that row UEFA
+    (leaguebuilder); `calendar` holds the February-December regions, which keep their code"""
     import mkleague as M
     try:
         comp = M.load(os.path.join(d, "common", "etc", "pesdb"), "Competition.bin")
@@ -68,9 +69,8 @@ def old_confed_tops(d, leagues):
         return []
     code = {comp[i * M.COMP + M.CID_OFF]: comp[i * M.COMP + M.FLAG_OFF] & 7
             for i in range(len(comp) // M.COMP)}
-    above = {L.get("above") for L in leagues}
     return [L.get("name") or str(L["id"]) for L in leagues
-            if (L.get("region") or 0) >= FIRST_OWN_REGION and L["id"] in above
+            if (L.get("region") or 0) >= FIRST_OWN_REGION and L.get("region") not in calendar
             and code.get(L.get("cid"), UEFA_CODE) != UEFA_CODE]
 
 
@@ -98,10 +98,15 @@ def world_problems(game, ini, recipe=None):
             uefa = fl26world.read_uefa(wf)
         except (OSError, ValueError):
             continue
-        stuck = old_confed_tops(d, leagues)
+        try:
+            calendar = {int(ln.split()[1]) for ln in open(wf, encoding="utf-8")
+                        if ln.startswith("season ") and len(ln.split()) > 2 and ln.split()[2] == "1"}
+        except (OSError, ValueError):
+            calendar = set()
+        stuck = old_confed_tops(d, leagues, calendar)
         if stuck:
             out.append(("err", "League Builder",
-                        _("%s: %s was built by Mod Studio 0.1.3, so from the second season on the "
+                        _("%s: %s was built before Mod Studio 0.1.4, so from the second season on the "
                           "divisions of that country have no clubs and no matches: build the world "
                           "again and start a new career") % (name, ", ".join(stuck)), "Build"))
         if ids and not any(u[0] in ids for u in uefa):

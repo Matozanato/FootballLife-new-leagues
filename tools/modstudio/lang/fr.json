@@ -783,7 +783,7 @@
   "As the league (%s)": "Comme la ligue (%s)",
   "As the league (the game's default 4-2-3-1)": "Comme la ligue (le 4-2-3-1 du jeu)",
   "The first eleven in the club's formation. Select a player in the list, then click a place to put that player there.": "Le onze de départ dans la formation du club. Choisissez un joueur dans la liste, puis cliquez sur un poste pour l'y placer.",
-  "%s: %s was built by Mod Studio 0.1.3, so from the second season on the divisions of that country have no clubs and no matches: build the world again and start a new career": "%s : %s a été construite avec Mod Studio 0.1.3, donc à partir de la deuxième saison les divisions de ce pays n'ont plus de clubs ni de matchs : reconstruisez le monde et commencez une nouvelle carrière",
+  "%s: %s was built before Mod Studio 0.1.4, so from the second season on the divisions of that country have no clubs and no matches: build the world again and start a new career": "%s : %s a été construite avant Mod Studio 0.1.4, donc à partir de la deuxième saison les divisions de ce pays n'ont plus de clubs ni de matchs : reconstruisez le monde et commencez une nouvelle carrière",
   "Club of the game": "Club du jeu",
   "Club of the game...": "Club du jeu...",
   "Put a club the game already has in this place, instead of a new club": "Mettre à cette place un club que le jeu a déjà, au lieu d'un nouveau club",

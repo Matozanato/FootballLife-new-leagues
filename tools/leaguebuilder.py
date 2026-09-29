@@ -1434,6 +1434,7 @@ def build(pl, base, game, replace=False, log=print):
     proto = raw[(nteam - 1) * W.T_REC:nteam * W.T_REC]
     made, own, used_abbr, added = 0, 0, set(), []
     confed = confederations(base)
+    calendar_regions = {p["region"] for p in pl["leagues"] if p.get("calendar")}
     mine = {t for p in pl["leagues"] for t in p.get("club_ids") or [] if t}
     have |= mine                               # a club id of the recipe's own is nobody else's
 
@@ -1521,13 +1522,14 @@ def build(pl, base, game, replace=False, log=print):
         M.add_league(comp, regs, ents, p["cid"], p["rid"], M.enc_region(p["region"]), p["name"],
                      "FL_%03d_LEAGUE" % p["rid"], teams, quiet=True, tier=p["tier"])
         conf = confed.get(p["country"])
-        # ... except a league of our own regions (29 and up) with a league below it. The game
-        # moves clubs between a pair only when the upper league passes the season-end filter
-        # 0x141365c50, which wants UEFA in July for the region group fl26augseason gives ours:
-        # a Peruvian first division coded CONMEBOL would promote nobody (CAF, CONCACAF and OFC
-        # never pass at all). The lower league's code is not read, so it keeps its own.
-        if conf and p["region"] >= FIRST_OWN_REGION and any(q.get("above") == p["rid"]
-                                                             for q in pl["leagues"]):
+        # ... except a league of our own regions (29 and up) that plays August to May. The
+        # season-end filter 0x141365c50 wants UEFA in July for the region group fl26augseason
+        # gives ours, and a league it passes over is neither closed nor let into the next
+        # season: a Peruvian first division coded CONMEBOL promoted nobody, and an Egyptian,
+        # Moroccan or Venezuelan league on its own played no second season at all (door "no",
+        # 2026-09-29). The League Info icons come from the world file's conf= instead. A
+        # February-December country is closed at New Year and keeps its own code.
+        if conf and p["region"] >= FIRST_OWN_REGION and p["region"] not in calendar_regions:
             conf = None
         if conf:
             co = len(comp) - M.COMP + M.FLAG_OFF          # the row add_league just appended

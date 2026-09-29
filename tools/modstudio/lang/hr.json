@@ -783,7 +783,7 @@
   "As the league (%s)": "Kao liga (%s)",
   "As the league (the game's default 4-2-3-1)": "Kao liga (zadana 4-2-3-1 iz igre)",
   "The first eleven in the club's formation. Select a player in the list, then click a place to put that player there.": "Prvih jedanaest u formaciji kluba. Odaberi igrača na popisu, pa klikni mjesto da ga staviš tamo.",
-  "%s: %s was built by Mod Studio 0.1.3, so from the second season on the divisions of that country have no clubs and no matches: build the world again and start a new career": "%s: %s je izgrađena u Mod Studiju 0.1.3, pa od druge sezone lige te države nemaju ni klubova ni utakmica: izgradi svijet ponovno i započni novu karijeru",
+  "%s: %s was built before Mod Studio 0.1.4, so from the second season on the divisions of that country have no clubs and no matches: build the world again and start a new career": "%s: %s je izgrađena prije Mod Studija 0.1.4, pa od druge sezone lige te države nemaju ni klubova ni utakmica: izgradi svijet ponovno i započni novu karijeru",
   "Club of the game": "Klub iz igre",
   "Club of the game...": "Klub iz igre...",
   "Put a club the game already has in this place, instead of a new club": "Na ovo mjesto stavi klub koji igra već ima, umjesto novog kluba",
