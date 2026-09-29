@@ -340,6 +340,20 @@ calendar.
 - 2026-09-30 (Mod Studio 0.1.4): **a national cup needed 12, 16, 18 or 20 clubs** (or 36, 40,
   44 with the division below). Any field up to 44 now plays on the English cup's calendar,
   which dates every round of a field of 9 to 64, with the game's own byes.
+- 2026-09-30 (Mod Studio 0.1.4): **a league of a new country outside Europe with no division
+  below it played no second season** (an Egyptian, Moroccan or Venezuelan league on its own;
+  GitHub issues #40, #41). 0.1.3.1 kept UEFA only on an upper division, and the July
+  season-end filter passed over the others: `fl26join.log` said `door(<id>) -> no ... flag OFF`
+  from the second season on. With its continent's code such a league also entered its first
+  season late, on a registration day after the career started, so rounds dated before that day
+  were lost (a K League starting from round 3). The builder now keeps UEFA on every league of a
+  new country that plays August to May; February-December countries keep their own code.
+  Checked in game on 2026-09-29: Egypt (split), Morocco and Venezuela (Apertura/Clausura) enter
+  the season when the career is created and again in July (`door(<id>) -> YES` from
+  `141315c0b`), with every match of the second season on a calendar day (Egypt 190, Morocco 240,
+  the Apertura 66). Side effect: Select Team's *League Info* panel shows the European cups for
+  these leagues; their places still go to their own continent's cups. **Checks** names a world
+  built before 0.1.4. **Build the world again** and start a new career.
 - 2026-09-29 (Mod Studio 0.1.3.1): **a new country outside Europe lost its leagues after the
   first season.** Since 0.1.3 a new league carries its country's confederation, but the game
   moves clubs between two divisions only when the upper one passes a July season-end filter

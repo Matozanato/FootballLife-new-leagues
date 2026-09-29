@@ -175,10 +175,11 @@ click a place, and he goes there. Build again and start a new career to see it.
 
 ### My new country outside Europe has no clubs and no matches from the second season
 
-A world built with Mod Studio 0.1.3 keeps its top division under its continent's code when a
-division below it exists, and in July the game leaves that country out of the next season.
-Builds since 0.1.3.1 do not. **Checks** names such a league: build the world again and start a
-new career (a career already running keeps what it lost).
+A world built before Mod Studio 0.1.4 keeps some leagues of a new country outside Europe under
+their continent's code (0.1.3: a top division with a division below it; 0.1.3.1: a league with
+no division below it), and in July the game leaves such a league out of the next season. Builds
+since 0.1.4 do not. **Checks** names such a league: build the world again and start a new career
+(a career already running keeps what it lost).
 
 ### I switched the Conference League off and the Champions League / Europa League broke
 

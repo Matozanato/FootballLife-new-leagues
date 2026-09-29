@@ -380,7 +380,8 @@ Mod Studio 0.1.4. The full list, with dates and details, is in
   next season too. Four rollovers in a row on one world, and 655 game days in one run without a crash.
 - **Promotion and relegation through whole pyramids**: three up and three down at every joint
   of five chains, one of them under the Championship (2026-09-28). New countries outside Europe
-  and January-December leagues go on into their second season (0.1.3.1).
+  and January-December leagues go on into their second season (0.1.3.1), and so does a league
+  outside Europe with no division below it (0.1.4: Egypt, Morocco and Venezuela, 2026-09-29).
 - **The 2024 European format**: the league phase of 36, the play-off and the knockout of all
   three competitions, and in the second season 108 of 108 places filled from the previous
   season's tables.
@@ -402,9 +403,11 @@ Mod Studio 0.1.4. The full list, with dates and details, is in
   damaged.
 - **A saved career belongs to its world.** It loads only with the same world switched on, and
   any change to a league's clubs needs a new career.
-- **A new African league shows the South American text** in Select Team's League Info panel.
-  Its places go to the African cups; the panel's text is the part known to be wrong. Not
-  fixed yet.
+- **A new league outside Europe shows the wrong continent** in Select Team's League Info
+  panel (the European cups for one that plays August to May, the South American text for some
+  others) and in the board's objectives, and a new Asian league sits below *Other Clubs (Asia)*
+  (issue #43). Its places go to its own continent's cups; only the text is wrong. Not fixed
+  yet.
 - **An Exhibition only league still shows** in Master League's team list (the game has one
   list for Kick Off and Master League). Do not start a career with one of its clubs.
 - **February-December seasons** cannot yet be combined with a split, Apertura/Clausura, a
