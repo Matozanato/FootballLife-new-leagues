@@ -226,7 +226,15 @@ function m.init(ctx)
         for _, g in ipairs(groups[L.id]) do TD_EXTRA[#TD_EXTRA + 1] = g end
       end
     end
-    log(string.format("fl26joindll: world file -- %d leagues%s", #IDS,
+    -- the count is the world file's leagues, as Checks compares it; the split phases that go
+    -- in with them are named apart (Iceland, two Apertura/Clausura leagues, GitHub #45: "4
+    -- leagues <- the file has 2" when nothing was wrong with the count)
+    local phases = 0
+    for _, L in ipairs(world) do
+      if (L.exhibition or 0) == 0 and regular[L.id] then phases = phases + 1 end
+    end
+    log(string.format("fl26joindll: world file -- %d leagues%s%s", #IDS - phases + shown,
+                      phases > 0 and string.format(" (+%d split phase(s) registered with them)", phases) or "",
                       shown > 0 and string.format(", %d exhibition only (not registered)", shown) or ""))
     if #IDS == 0 then log("fl26joindll: the world has no leagues -- nothing to register"); return end
   end
