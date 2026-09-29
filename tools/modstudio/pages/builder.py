@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, 
                                QPlainTextEdit, QPushButton, QRadioButton, QSpinBox, QSplitter,
                                QTableWidget, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
                                QFileDialog, QButtonGroup, QHeaderView, QAbstractItemView,
-                               QMessageBox)
+                               QMessageBox, QScrollArea, QApplication)
 
 import leaguebuilder as B
 import fl26world
@@ -227,10 +227,40 @@ class Dialog(QDialog):
     def __init__(self, parent, title):
         super().__init__(parent)
         self.setWindowTitle(_(title))
-        self.form = QFormLayout()
+        # The form scrolls: the League dialog is taller than a 768-line screen, or a 1080 one at
+        # 125 % scaling, and a dialog Qt cannot fit is placed with its top above the screen --
+        # Name and Country out of reach, no scroll wheel (Alikhaled_727, 0.1.3).
+        self.body = QWidget()
+        self.form = QFormLayout(self.body)
         self.form.setLabelAlignment(Qt.AlignRight)
+        self.form.setContentsMargins(0, 0, 0, 0)
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setFrameShape(QScrollArea.NoFrame)
+        self.scroll.setWidget(self.body)
         self.v = QVBoxLayout(self)
-        self.v.addLayout(self.form)
+        self.v.addWidget(self.scroll, 1)
+
+    def fit(self):
+        """size the dialog to its form, but never taller or wider than the screen it opens on"""
+        if self.form.rowCount() == 0:
+            self.scroll.hide()
+            return
+        screen = self.screen() or QApplication.primaryScreen()
+        room = screen.availableGeometry()
+        want = self.body.sizeHint()
+        bar = self.scroll.verticalScrollBar().sizeHint().width()
+        other = self.sizeHint().height() - self.scroll.sizeHint().height()
+        h = min(want.height() + other + 4, int(room.height() * 0.9))
+        w = min(max(self.sizeHint().width(), want.width() + bar + 24), int(room.width() * 0.95))
+        self.resize(w, h)
+        if self.parentWidget():
+            c = self.parentWidget().window().frameGeometry().center()
+        else:
+            c = room.center()
+        x = max(room.left(), min(c.x() - w // 2, room.right() - w))
+        y = max(room.top() + 30, min(c.y() - h // 2, room.bottom() - h))
+        self.move(x, y)
 
     def finish(self):
         bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -239,6 +269,7 @@ class Dialog(QDialog):
         bb.accepted.connect(self.ok)
         bb.rejected.connect(self.reject)
         self.v.addWidget(bb)
+        self.fit()
         try:
             theme.dark_title_bar(self)
         except Exception:
@@ -1305,11 +1336,11 @@ class Build(BuilderPage):
         bar.addStretch(1)
         self.outer.addLayout(bar)
         self.uecl = QCheckBox(_("Include the Conference League"))
-        self.uecl.setToolTip(_("Also gives the Champions League and the Europa League their 36-club league phase, "
-                               "and all three the February play-off"))
+        self.uecl.setToolTip(_("A league phase of 36 clubs and a February play-off, like the Champions League "
+                               "and the Europa League"))
         self.uecl.toggled.connect(self.set_uecl)
-        self.outer.addWidget(row(self.uecl, hint(_("the Champions League and Europa League get the 36-club league "
-                                                   "phase too; off = the European cups as the game ships them"))))
+        self.outer.addWidget(row(self.uecl, hint(_("off = no Conference League; the Champions League and Europa "
+                                                   "League keep their 36-club league phase and play-off either way"))))
         self.state = hint("")
         self.outer.addWidget(self.state)
         self.out = QPlainTextEdit()

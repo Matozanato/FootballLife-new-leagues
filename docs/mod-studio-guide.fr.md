@@ -188,6 +188,10 @@ jeu. Choisissez un club (ou appuyez sur **Joueurs** dans Nouveaux clubs), puis u
 - **nom**, **numéro de maillot**, **poste** et les postes où il peut jouer (A = naturel,
   B = peut y jouer), pied fort, taille, poids, âge, nationalité, style de jeu ;
 - toutes les **capacités** et **compétences** (les noms sont ceux du jeu) ;
+- **Note** : la note de la liste, faite des capacités sur lesquelles le poste s'appuie. La
+  changer déplace chaque capacité du joueur d'autant. Un joueur d'un nouveau club n'a pas de
+  nom tant que la construction ne le numérote pas (FL P00001 ...) ; tapez-en un dans **Nom**
+  pour lui donner le vôtre ;
 - **Visage** : **Choisir...** un dossier de visage (section 8.1). **Effacer** redonne le visage du
   jeu ;
 - **Monter dans l'ordre / Descendre dans l'ordre** : l'ordre de l'effectif. Les onze premiers
@@ -246,9 +250,12 @@ dossier contenant plus d'un visage est refusé : choisissez le visage que vous v
    `sider.log` et dit, module par module, si le monde a été pris en compte.
 
 **Inclure la Ligue Europa Conférence** (sur la page Construction, activé par défaut) construit
-aussi la Ligue Europa Conférence, et donne à la Ligue des champions et à la Ligue Europa leur
-phase de ligue à 36 clubs, avec le barrage de février des trois compétitions. Désactivé : les
-coupes d'Europe telles que livrées avec le jeu.
+aussi la Ligue Europa Conférence : une phase de ligue à 36 clubs et un barrage en février, comme
+les deux autres. La Ligue des champions et la Ligue Europa reçoivent leur phase de ligue à 36 et
+leur barrage de février dans tous les cas. Désactivé : pas de Ligue Europa Conférence. (Mod Studio
+0.1.3 et les versions précédentes laissaient la Ligue des champions et la Ligue Europa dans les groupes de quatre du jeu quand
+c'était désactivé, ce que le mod ne sait pas gérer -- elles cassaient ; les Vérifications signalent
+un tel monde : reconstruisez-le.)
 
 > **Places européennes.** Les places que vous donnez à vos ligues viennent après celles des ligues
 > du jeu. Chaque compétition prend 36 clubs ; les places au-delà de la 36e ne donnent rien, et

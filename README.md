@@ -53,6 +53,9 @@ install anything.
 >   the game does not have (CAF Champions League, CAF Confederation Cup, AFC Champions League
 >   Two, Copa Sudamericana) built from the places your leagues give. New leagues take their
 >   own continent, managers get names, and a lower tier is one button.
+> - **Fixes** (0.1.3.1): promotion and relegation for new countries outside Europe and for
+>   leagues that play January to December, a **Rating** field on the Players page, the
+>   Conference League switch, and a League window that fits a 1080p screen.
 > - English, Croatian, Spanish and French.
 >
 > Guide: [docs/mod-studio-guide.md](docs/mod-studio-guide.md) ·

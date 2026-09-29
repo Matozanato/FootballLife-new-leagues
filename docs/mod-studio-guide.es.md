@@ -182,6 +182,10 @@ propio juego. Elige un club (o pulsa **Jugadores** en Clubes nuevos) y luego un 
 - **nombre**, **dorsal**, **posición** y las posiciones en las que puede jugar (A = natural,
   B = puede jugar ahí), pie hábil, altura, peso, edad, nacionalidad, estilo de juego;
 - todas las **capacidades** y **habilidades** (los nombres son los del propio juego, en inglés);
+- **Valoración**: la valoración de la lista, hecha de las capacidades en las que se apoya la
+  posición. Al cambiarla, cada capacidad del jugador se mueve lo mismo. Un jugador de un club
+  nuevo no tiene nombre hasta que la construcción le da uno con número (FL P00001 ...);
+  escribe uno en **Nombre** para darle el tuyo;
 - **Cara**: **Elegir...** una carpeta de cara (sección 8.1). **Borrar** devuelve la cara del juego;
 - **Subir en el orden / Bajar en el orden**: el orden de la plantilla. Los primeros once son
   titulares;
@@ -238,9 +242,11 @@ rechaza: elige la cara concreta que quieres.
    módulo, si el mundo se ha cargado.
 
 **Incluir la Liga Conferencia** (en la página Construir, activado por defecto) construye también
-la Liga Conferencia, y da a la Liga de Campeones y a la Liga Europa su fase de liga de 36 clubes,
-con el play-off de febrero de las tres. Desactivado: las copas europeas tal como vienen en el
-juego.
+la Liga Conferencia: una fase de liga de 36 clubes y un play-off en febrero, como las otras dos.
+La Liga de Campeones y la Liga Europa reciben su fase de liga de 36 y su play-off de febrero en
+cualquier caso. Desactivado: sin Liga Conferencia. (Mod Studio 0.1.3 y anteriores dejaban la Liga de Campeones
+y la Liga Europa en los grupos de cuatro del juego cuando estaba desactivado, y el mod no puede
+llevarlos -- se rompían; Comprobaciones marca ese mundo: vuelve a construirlo.)
 
 > **Plazas europeas.** Las plazas que das a tus ligas van después de las que tienen las ligas del
 > propio juego. Cada competición admite 36 clubes; las plazas más allá de la 36.ª no reciben nada,

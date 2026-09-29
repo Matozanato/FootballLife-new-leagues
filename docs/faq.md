@@ -37,18 +37,18 @@ Since 0.1.3 a new country is listed among the countries of its continent, by nam
 between France and Italy). If yours is still at the bottom, you are running an old module or an
 old world: press **0. Install the modules** and **2. Build the world** again.
 
-One known exception in 0.1.3: a league ticked **Exhibition only** is left out of that order and
-still goes to the bottom. It is fixed for the next version.
+In 0.1.3 a league ticked **Exhibition only** was left out of that order and still went to the
+bottom. Fixed in 0.1.3.1: update, then **Build the world** again.
 
 ### The League window is taller than my screen and I cannot reach Name and Country
 
 A 0.1.3 bug on 1080p screens (and smaller ones, or with Windows scaling above 100%): the window
-opens with its top above the screen and does not scroll. It is fixed for the next version: the
-window then fits the screen and scrolls.
+opens with its top above the screen and does not scroll. Fixed in 0.1.3.1: the window fits the
+screen and scrolls. Update Mod Studio (**Help > Check for updates**).
 
-Until then: when the window opens, the cursor is already in the **Name** field even if you
-cannot see it. Type the name, press **Tab**, type the country, and use the mouse for the rest.
-Setting Windows' display scaling to 100% also helps.
+On 0.1.3: when the window opens, the cursor is already in the **Name** field even if you cannot
+see it. Type the name, press **Tab**, type the country, and use the mouse for the rest. Setting
+Windows' display scaling to 100% also helps.
 
 ### The National cup tick says my league needs 12, 16, 18 or 20 clubs
 
@@ -71,7 +71,7 @@ the career's **second** season. That is expected.
 
 ### Clubs do not move up or down between my new divisions
 
-Two known problems in 0.1.3, both fixed for the next version (0.1.3.1):
+Two problems in 0.1.3, both fixed in 0.1.3.1:
 
 - **A new country outside Europe** (South America, Asia, Africa, North America, Oceania): the
   first season plays normally, but at its end (July) the game drops the country's leagues. From
@@ -81,7 +81,8 @@ Two known problems in 0.1.3, both fixed for the next version (0.1.3.1):
 
 New leagues in Europe, and new leagues under the game's own European leagues, promote and
 relegate normally. There is no workaround in 0.1.3. After updating to 0.1.3.1: **Install the
-modules**, **Build the world** again and start a new career.
+modules**, **Build the world** again and start a new career (a career started on 0.1.3 keeps
+the leagues it already lost).
 
 ### Which months does my new league play?
 
@@ -101,13 +102,16 @@ Studio marks the option *(not filled yet)* and warns about it. Use **Copa Libert
 
 ### Can I change the names and ratings of the players of my new clubs?
 
-In 0.1.3 the *Players* page does not let you change the name and overall rating of the players
-Build makes for a new club. That comes in the next version. You can already bring in a whole
-squad from a table: *Players > Import a squad from a table*.
+Yes, since 0.1.3.1: the *Players* page has a **Rating** field (changing it moves every ability
+by the same amount), and **Name** takes a name of your own for the players Build makes for a new
+club (FL P00001 ...). You can also bring in a whole squad from a table: *Players > Import a squad
+from a table*.
 
 ### I switched the Conference League off and the Champions League / Europa League broke
 
-A known 0.1.3 problem, fixed for the next version. Until then, leave the Conference League on.
+A 0.1.3 problem, fixed in 0.1.3.1: with the Conference League off, the Champions League and the
+Europa League still get their league phase of 36. A world built with it off on 0.1.3 or earlier
+has to be built again; **Checks** points it out.
 
 ### What should I send when something is wrong?
 

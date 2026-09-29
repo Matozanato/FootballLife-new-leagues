@@ -173,6 +173,9 @@ Pick a club (or press **Players** on New clubs), then a player:
 - **Name**, **shirt number**, **position** and the positions they can play (A = natural,
   B = can play there), stronger foot, height, weight, age, nationality, playing style;
 - all **abilities** and **skills** (the names are the game's own);
+- **Rating**: the rating of the list, made of the abilities the position leans on. Changing
+  it moves every ability of the player by the same amount. A player of a new club has no
+  name until the Build numbers him (FL P00001 ...); type one in **Name** to give him yours;
 - **Face**: **Choose...** a face folder (section 8.1). **Clear** gives the game's face back;
 - **Order up / Order down**: the squad order. The first eleven start the match;
 - **Add player** (a copy of the player you pick, with a new id; clubs of the game only),
@@ -226,8 +229,11 @@ one face you mean.
    module by module, whether the world was taken.
 
 **Include the Conference League** (on the Build page, on by default) also builds the
-Conference League, and gives the Champions League and the Europa League their league phase of
-36 clubs, with the February play-off of all three. Off: the European cups as the game ships them.
+Conference League: a league phase of 36 clubs and a February play-off, like the other two. The
+Champions League and the Europa League get their league phase of 36 and their February play-off
+either way. Off: no Conference League. (Mod Studio 0.1.3 and earlier left the Champions League and Europa
+League in the game's groups of four when this was off, which the mod cannot run -- they broke;
+Checks flags such a world: build it again.)
 
 > **European places.** The places you give your leagues come after the ones the game's own
 > leagues have. Each competition takes 36 clubs; places past the 36th get nothing, and

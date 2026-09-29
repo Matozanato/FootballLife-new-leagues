@@ -135,6 +135,11 @@ class Players(BuilderPage):
         pos = QComboBox()
         pos.addItems(E.POSITIONS)
         self._add(f, "Registered Position", pos, "Position")
+        self.rating = self._spin(40, 99)          # not a field of its own: it moves the abilities
+        self.rating.setToolTip(_("The rating of the list, made of the abilities the position leans on. "
+                                 "Changing it moves every ability by the same amount."))
+        self.rating.valueChanged.connect(self.set_rating)
+        f.addRow(QLabel(_("Rating")), self.rating)
         for n in ("Age", "Height (cm)", "Weight (kg)"):
             lo, hi = E.LIMITS[n]
             self._add(f, n, self._spin(lo, hi), n)
@@ -488,6 +493,10 @@ class Players(BuilderPage):
         for k in self.ed:
             self._set(k, m.get(k, ""))
             self._mark(k, k in ch and str(ch[k]) != str(orig.get(k, "")))
+        # a new club's player has no name until Build numbers him (FL P00001 ...): say so in the box
+        self.ed["name"].setPlaceholderText(_("numbered at Build (FL P00001 ...) until you type a name")
+                                           if not self.club.isdigit() else "")
+        self.rating.setValue(P.overall(m))
         self.b_undo.setEnabled(bool(ch) and not key.startswith(NEW))
         self.show_face_note(m.get("face", ""))
         self._filling = False
@@ -588,6 +597,29 @@ class Players(BuilderPage):
         for c, t in enumerate(vals):
             it.setText(c, t)
         self.i_title.setText(m.get("name") or _("(numbered name)"))
+        self.rating.blockSignals(True)
+        self.rating.setValue(P.overall(m))
+        self.rating.blockSignals(False)
+
+    def set_rating(self, want):
+        """the player's rating: every ability moves by the same amount, as Squad level does for a
+        whole squad; abilities stuck at 40 or 99 hold it back, so it goes again until it lands"""
+        v = self.current_view()
+        if self._filling or not v or not self.club:
+            return
+        m = dict(v[1])
+        for _t in range(5):
+            d = want - P.overall(m)
+            if not d:
+                break
+            for n, _b in E.ABILITIES:
+                m[n] = str(max(40, min(99, int(m.get(n) or 40) + d)))
+        self._filling = True
+        for n, _b in E.ABILITIES:
+            self._set(n, m[n])
+        self._filling = False
+        for n, _b in E.ABILITIES:
+            self.edited(n)
 
     # ---- actions ----
     def undo_player(self):

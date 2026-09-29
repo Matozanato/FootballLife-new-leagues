@@ -168,6 +168,27 @@ static int has_table(uint16_t id);
    in at creation, and their table is only made later, so "flagged but no table" alone would
    admit them a second time (2026-09-28: 264 matches for a 12-club double round). */
 static uint8_t g_door_yes[256];
+/* Set by the July list, cleared when a calendar-year league of ours closes with its region at
+   New Year: in between, such a league is half-way through its season. The July register_all saw
+   it flagged with no table (a table is only final at the end) and let it in a second time --
+   door YES on day 41 and again after July, a doubled schedule whose extra matches are never
+   played, so at New Year it could not be finalised and nobody went up or down (Saudi second
+   division under 162, 2026-09-29: "season end: ... 11(no table) 162(below has none)"). The
+   door's own memory does not survive a load, this does not need to. */
+static int g_cal_midseason = 0;
+/* A season in progress has its rounds: the phase count at +0x300 bits 19-24 and the first
+   fixture index at +0x88. A calendar-year league of ours closed at New Year has neither, but it
+   does have what the other test goes by: apply (0x141522b50) flags it again the moment it
+   resolves the promotion pair, and the table it just finalised stays. So on day 41 it read as
+   "already in a season" and was never let back in -- the Saudi second division under 162
+   played no second season, and the next New Year promoted last year's top three over again,
+   into 162 a second time (2026-09-29: 162 with 286312/286324/286332 twice, 15 distinct clubs;
+   live at y3 day 23: 11 flagged, count 16, 0 phases). */
+static int has_rounds(const unsigned char* rec)
+{
+  return rec && ((*(const uint32_t*)(rec + 0x300) >> 19) & 0x3f)
+         && *(const uint32_t*)(rec + 0x88) != 0xffffffffu;
+}
 vec16_t* join_pre(vec16_t* in)
 {
   g_stat[0]++;
@@ -199,8 +220,11 @@ vec16_t* join_pre(vec16_t* in)
        parent's season and is never given a table or a match: skipping it left it empty all
        season (GitHub issue #19). Such a league goes in like any other -- unless the door has
        already let it in this season and only its table is still to come. */
+    /* A calendar-year league of ours goes by its rounds, not its table: see has_rounds. */
     if (rec && ((*(const uint32_t*)(rec + 0x304) >> 8) & 1)
-        && (has_table(g_ids[i]) || (g_ids[i] < 256 && g_door_yes[g_ids[i]]))) { already++; continue; }
+        && ((calyr(g_ids[i]) ? has_rounds(rec) : has_table(g_ids[i]))
+            || (g_ids[i] < 256 && g_door_yes[g_ids[i]])
+            || (g_cal_midseason && calyr(g_ids[i])))) { already++; continue; }
     if (rec && ((*(const uint32_t*)(rec + 0x304) >> 8) & 1))
       logf("register_all: %u is flagged in a season but has no table -- appended", g_ids[i]);
     g_list[n++] = g_ids[i]; added++;
@@ -968,6 +992,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   if (n + g_nids + g_ntd_extra > MAX_LIST) return in;
   for (int j = 0; j < n; j++) if (in->b[j] == 2) { euro = 1; break; }
   if (euro) memset(g_door_yes, 0, sizeof g_door_yes);   /* a new season: nobody let in yet */
+  if (euro) g_cal_midseason = 1;
   char buf[320]; int p = 0; buf[0] = 0;
   for (int j = 0; j < n; j++) {
     uint16_t id = in->b[j];
@@ -1014,6 +1039,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
     }
   }
   if (!changed) return in;
+  if (cadd) g_cal_midseason = 0;
   if (cadd) logf("teardown: calendar-year leagues of ours closed with their region: [%s]", cbuf);
   g_td_vec.b = g_td_list; g_td_vec.e = g_td_list + k; g_td_vec.c = g_td_list + MAX_LIST;
   logf("teardown: %d ids, ours %s: [%s]", n, euro ? "added" : "kept out", buf);

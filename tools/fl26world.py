@@ -26,6 +26,11 @@ What comes from where:
                                          own row); an id not listed gets none
   country                                --countries, else guessed from the league's name against
                                          Country.bin (mkflags.py's rules)
+  conf                                   the country's confederation (Country.bin +5: 2 UEFA, 3 AFC,
+                                         4 CONMEBOL, 5 CAF, 6 CONCACAF, 7 OFC); the league builder
+                                         writes it, this does not (a row built before Mod Studio 0.1.3 says
+                                         UEFA whatever the country). fl26catlist gives a region
+                                         29..63 that continent's icons on the League Info page
   kickoff                                the slot the league follows in the Kick Off / Edit team
                                          lists (fl26comptab; leaguebuilder kickoff_after)
   split                                  a split season (tools/mksplit.py): the total's row is the
@@ -53,8 +58,8 @@ import pesdb
 import mkleague as M
 
 FORMAT = "# fl26world 1"
-KEYS = ("cid", "region", "country", "slot", "tier", "above", "promote", "demote", "clubs", "legs", "cup",
-        "exhibition", "scup", "kickoff")
+KEYS = ("cid", "region", "country", "conf", "slot", "tier", "above", "promote", "demote", "clubs", "legs",
+        "cup", "exhibition", "scup", "kickoff")
 NO_SLOT = 123
 
 # The Select Team slot each regulation id mkworld hands out ends up on, in the exe's competition

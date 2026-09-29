@@ -73,11 +73,13 @@ which league sits above -- and nothing about ids:
               league of the recipe (the cup is hosted by its country). A club of the game must
               play in a league that season, or the cup is not filled.
   uecl        (the recipe, not a league) true, the default: the world gets the Conference
-              League -- the Champions League and Europa League league phase reshaped to one
-              group of 36 (mkreshape.py), the Conference League cloned from it (mkuecl.py:
-              competition 174, regulations 186/187, group 1210) and the Europa / Conference
-              League play-offs (mkeuropo.py: 188, 189), the ids fl26swiss.dll and the fixture
-              dates know. false: the European cups stay as the game ships them
+              League, cloned from the reshaped Europa League (mkuecl.py: competition 174,
+              regulations 186/187, group 1210), and its play-off (mkeuropo.py: 189), the ids
+              fl26swiss.dll and the fixture dates know. false: no Conference League. Either
+              way the Champions League and Europa League league phase is reshaped to one group
+              of 36 (mkreshape.py) and the Europa League gets its play-off (188): fl26swiss.dll
+              runs regulations 1027/1029 as that league phase in every world, and on the game's
+              own groups of four it would put 36 clubs into group A (issue #33)
 
 What plan() decides, so that nothing is left to a person to get wrong:
 
@@ -940,6 +942,7 @@ def abbr(name, used):
 # League's row and so came out UEFA wherever it was: a UAE league sat in the Champions League's
 # Select Team list and a Peruvian one showed UEFA competitions (Evo-Web, 2026-09-28).
 CONFED_OFF, CONFED_MASK = 5, 7
+FIRST_OWN_REGION = 29            # regions 0-28 are the game's own, with their own season groups
 
 
 def kickoff_after(p, mine, confed):
@@ -1025,6 +1028,14 @@ def build(pl, base, game, replace=False, log=print):
         M.add_league(comp, regs, ents, p["cid"], p["rid"], M.enc_region(p["region"]), p["name"],
                      "FL_%03d_LEAGUE" % p["rid"], teams, quiet=True, tier=p["tier"])
         conf = confed.get(p["country"])
+        # ... except a league of our own regions (29 and up) with a league below it. The game
+        # moves clubs between a pair only when the upper league passes the season-end filter
+        # 0x141365c50, which wants UEFA in July for the region group fl26augseason gives ours:
+        # a Peruvian first division coded CONMEBOL would promote nobody (CAF, CONCACAF and OFC
+        # never pass at all). The lower league's code is not read, so it keeps its own.
+        if conf and p["region"] >= FIRST_OWN_REGION and any(q.get("above") == p["rid"]
+                                                             for q in pl["leagues"]):
+            conf = None
         if conf:
             co = len(comp) - M.COMP + M.FLAG_OFF          # the row add_league just appended
             comp[co] = (comp[co] & ~CONFED_MASK) | conf
@@ -1093,7 +1104,7 @@ def build(pl, base, game, replace=False, log=print):
                     raise BuildError("mksplit gave %d no Apertura and Clausura:\n%s" % (cup["league"], said))
                 cup["entry"] = [(ph[cup["phase"]], pos) for _r, pos in cup["entry"]]
 
-    uecl = europe(tmp, db, log) if pl.get("uecl") else []
+    uecl = europe(tmp, db, log, bool(pl.get("uecl")))
     national_cups(pl, tmp, db, log)
     ccups = continental((pl.get("ccups") or []) + home_cups(pl, confed), tmp, db, log)
 
@@ -1110,6 +1121,8 @@ def build(pl, base, game, replace=False, log=print):
         if not p:
             continue
         L["country"] = p["country"]
+        if confed.get(p["country"]):
+            L["conf"] = confed[p["country"]]           # fl26catlist: the League Info icons (#33)
         L["slot"] = p["slot"]
         if p["slot"] != fl26world.NO_SLOT:
             L["kickoff"] = kickoff_after(p, mine, confed)
@@ -1151,10 +1164,17 @@ def build(pl, base, game, replace=False, log=print):
     return out
 
 
-def europe(root, db, log=print):
-    """the Conference League in the world being built (tables in <db>, the world folder <root>):
-    the Champions League and Europa League league phase as one group of 36, then mkuecl's clone
-    of the Europa League and mkeuropo's play-offs, each in place. Returns the entrants."""
+def europe(root, db, log=print, uecl=True):
+    """the European cups of the world being built (tables in <db>, the world folder <root>): the
+    Champions League and Europa League league phase as one group of 36, then (uecl) mkuecl's
+    clone of the Europa League, and mkeuropo's play-offs, each in place. Returns the Conference
+    League's entrants, [] without it.
+
+    The league phase is built with the Conference League off too: fl26swiss.dll always runs
+    1027/1029 as a league phase of 36 (the access list, the draw, the top 16 into the knockout),
+    and in the game's own format those are group A of the Champions League and of the Europa
+    League -- it tops group A up to 36 clubs and hands its top 16 to the round of 16 (issue #33:
+    "if the Conference League is off, the Champions League and Europa League break")."""
     import mkreshape, mkeuropo
     args = ["--base", db, "--out", root]
     for r in RESHAPE:
@@ -1165,10 +1185,10 @@ def europe(root, db, log=print):
             raise BuildError("the league phase reshape did not give group %d 36 clubs:\n%s" % (row, said))
     log("  Champions League and Europa League: league phase of 36 (groups 1027, 1029)")
     try:
-        clubs = mkuecl.build(db, root, log=log)
-        mkeuropo.build(db, root, log=log)
+        clubs = mkuecl.build(db, root, log=log) if uecl else []
+        mkeuropo.build(db, root, log=log, uecl=uecl)
     except SystemExit as e:
-        raise BuildError("Conference League: %s" % e)
+        raise BuildError("%s: %s" % ("Conference League" if uecl else "Europa League play-off", e))
     return clubs
 
 
@@ -1217,9 +1237,12 @@ def order_lines(pl, base, confed):
     names = dict((fid, nm) for nm, fid in country_ids(base))
     shipped = {r for r, _, _ in SHIPPED_REGIONS}
     ours = {}
+    # Exhibition leagues too: they have no Select Team entry, but Competition Info lists every
+    # region with a live regulation, and a region the line leaves out goes after all the others
+    # -- a Polish exhibition league sat below Classic Teams (evoweb, NadnyNick999, 0.1.3).
     for p in pl["leagues"]:
         r = p["region"]
-        if r in shipped or r in ours or p.get("exhibition"):
+        if r in shipped or r in ours:
             continue
         ours[r] = (names.get(p["country"], "~"), CONTINENT.get(confed.get(p["country"]), 5))
     if not ours:

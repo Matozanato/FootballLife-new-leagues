@@ -3292,7 +3292,11 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   int uecl = get_rec(UECL_REG) && !(has186 && has187 && has1210);
   int cwc = cwc_world(), nccw = 0;
   for (int c = 0; c < g_nccup; c++) if (ccup_world(&g_ccup[c])) nccw++;
-  if (!uecl && !cwc && !nccw) return in;
+  /* A world built without the Conference League still has the Europa League play-off (188,
+     tools/leaguebuilder.py since issue #33); with nothing else to add this returned here and
+     left 188 and its ties out of the teardown, to outlive the season. */
+  int pos = get_rec(CUPS[1].po) || get_rec(CUPS[2].po);
+  if (!uecl && !cwc && !nccw && !pos) return in;
   /* The list names every regulation it closes -- group rows are not reached through their
    * parent -- so the league phase's row goes in as well, or its 36 clubs, its tables and its
    * 144 matches outlive the season. */

@@ -49,6 +49,7 @@
   "%s: %d line(s) point at items that are not in the library (e.g. %s)": "%s: %d redak/redaka pokazuje na stvari kojih nema u knjižnici (npr. %s)",
   "%s: %d players. Each column is taken for what its name says; change any that is wrong, or set it to (skip). What the table does not give -- abilities it has no column for, height, playing style -- comes from the game's own players of the same position and rating.": "%s: %d igrača. Svaki stupac uzima se za ono što kaže njegovo ime; promijeni koji je krivo prepoznat ili ga postavi na (preskoči). Ono čega u tablici nema -- sposobnosti bez stupca, visina, stil igre -- dolazi od igrača iz igre iste pozicije i ocjene.",
   "%s: pick one from the list or type its id": "%s: odaberi s popisa ili upiši id",
+  "%s: the Champions League and Europa League are still in groups of four, which fl26swiss.dll cannot run (a world built with the Conference League off in Mod Studio 0.1.3 or earlier): build the world again": "%s: Liga prvaka i Europska liga još su u skupinama po četiri, a to fl26swiss.dll ne zna voditi (svijet izgrađen s isključenom Konferencijskom ligom u Mod Studiju 0.1.3 ili starijem): izgradi svijet ponovno",
   "%s: the Conference League is on, but its tables are missing (regulation %s): build the world again": "%s: Konferencijska liga je uključena, ali njezinih tablica nema (pravilnik %s): izgradi svijet ponovno",
   "%s: your leagues send nobody to Europe (no European places in the world file)": "%s: tvoje lige nikoga ne šalju u Europu (u datoteci svijeta nema europskih mjesta)",
   "(none found)": "(nije nađena)",
@@ -99,7 +100,7 @@
   "Added %s. Save the recipe, then Build to put the leagues in the game.": "Dodan %s. Spremi recept, pa izgradi da lige uđu u igru.",
   "Added or renamed since the last Build: press Build to put it in the game.": "Dodana ili preimenovana nakon zadnjeg Builda: pritisni Build da uđe u igru.",
   "Age": "Dob",
-  "Also gives the Champions League and the Europa League their 36-club league phase, and all three the February play-off": "Liga prvaka i Europska liga isto dobivaju ligašku fazu od 36 klubova, a sva tri natjecanja veljačko doigravanje",
+  "A league phase of 36 clubs and a February play-off, like the Champions League and the Europa League": "Ligaška faza od 36 klubova i veljačko doigravanje, kao u Ligi prvaka i Europskoj ligi",
   "Also my changes to the game's own leagues, clubs and players (%d)": "I moje promjene postojećih liga, klubova i igrača (%d)",
   "Always": "Uvijek",
   "Anthem and tunnel": "Himna i tunel",
@@ -347,6 +348,7 @@
   "Move to bottom": "Pomakni na dno",
   "Move to top": "Pomakni na vrh",
   "Music": "Glazba",
+  "Name": "Ime",
   "Name of the profile:": "Ime profila:",
   "National teams": "Reprezentacije",
   "Nationality": "Državljanstvo",
@@ -543,6 +545,7 @@
   "The scripts Sider loads, in the order sider.ini lists them. Content servers (stadiums, kits, balls ...) are modules too. Tick to switch one on, drag to reorder, then Apply. Rules that the modules' authors give for the order are checked below.": "Skripte koje Sider učitava, redom kojim ih sider.ini navodi. Poslužitelji sadržaja (stadioni, dresovi, lopte ...) su također moduli. Označi kvačicom da uključiš modul, povuci da promijeniš redoslijed, pa stisni Primijeni. Ispod se provjeravaju pravila redoslijeda koja daju autori modula.",
   "The short name takes letters and digits only.": "Kratica smije imati samo slova i znamenke.",
   "The song played after a goal: per home club, or per competition (exclusive = only that song in that competition).": "Pjesma koja svira nakon gola: po domaćem klubu ili po natjecanju (exclusive = samo ta pjesma u tom natjecanju).",
+  "The rating of the list, made of the abilities the position leans on. Changing it moves every ability by the same amount.": "Ocjena s popisa, od sposobnosti na koje se pozicija oslanja. Promjena pomiče svaku sposobnost za isti iznos.",
   "The squad of a club: names, shirt numbers, the starting eleven (the first eleven by squad order), positions, abilities and skills. Works for the new clubs of the recipe and for the game's clubs; the changes are written into your world when you Build.": "Momčad kluba: imena, brojevi na dresu, početnih jedanaest (prvih jedanaest po redoslijedu u momčadi), pozicije, sposobnosti i vještine. Radi za nove klubove iz recepta i za postojeće klubove; promjene se zapisuju u tvoj svijet kad izgradiš.",
   "The squad's average rating is %d. Make it:": "Prosječna ocjena momčadi je %d. Neka bude:",
   "The strongest eleven for a 4-2-3-1 now head the squad order.": "Najjačih jedanaest za 4-2-3-1 sada je na vrhu redoslijeda momčadi.",
@@ -683,6 +686,7 @@
   "none": "nema",
   "not built yet": "nije izgrađena",
   "nothing changes": "ništa se ne mijenja",
+  "numbered at Build (FL P00001 ...) until you type a name": "ime s brojem pri izgradnji (FL P00001 ...) dok ne upišeš ime",
   "optional; written after # at the end of the line": "nije obavezno; piše se iza # na kraju retka",
   "pitch turf and light by season (lists in turf-loader)": "travnjak i svjetlo po godišnjem dobu (popisi u turf-loader)",
   "pitch turf per stadium": "travnjak po stadionu",
@@ -707,7 +711,7 @@
   "stadium server: picks the stadium per team or competition": "server stadiona: bira stadion po momčadi ili natjecanju",
   "stadium tunnel": "tunel stadiona",
   "substitutes' bibs": "prsluci rezervi",
-  "the Champions League and Europa League get the 36-club league phase too; off = the European cups as the game ships them": "Liga prvaka i Europska liga isto dobivaju ligašku fazu od 36 klubova; isključeno = europski kupovi kakvi su u igri",
+  "off = no Conference League; the Champions League and Europa League keep their 36-club league phase and play-off either way": "isključeno = bez Konferencijske lige; Liga prvaka i Europska liga svejedno zadržavaju ligašku fazu od 36 klubova i doigravanje",
   "the file is missing from the modules folder": "datoteka nedostaje u mapi modules",
   "the folder your leagues are built into; it must start with _FL26": "mapa u koju se grade tvoje lige; mora počinjati s _FL26",
   "the game is running": "igra je pokrenuta",
@@ -798,6 +802,10 @@
   [
    "^  Europa / Conference League play-offs: regulations (\\d+) and (\\d+)$",
    "  doigravanje Europske i Konferencijske lige: pravilnici \\1 i \\2"
+  ],
+  [
+   "^  Europa League play-off: regulation (\\d+)$",
+   "  doigravanje Europske lige: pravilnik \\1"
   ],
   [
    "^  European places: (\\d+) of the new leagues, (\\d+) in all$",

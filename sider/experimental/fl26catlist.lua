@@ -33,6 +33,35 @@ COUNTRY is keyed by the regions tools/spreadregions.py --plan own hands out; the
 country ids (Country.bin, +0x48 & 0x1ff). A world with a different region plan needs this
 table changed with it.
 
+The competition icons on a league's page (GitHub #33, 1b). The League Info panel (menu code
+0x140b3bb50, also 0x140ac3230 and 0x140c98bc2) shows up to six competition emblems
+(emblemCompe_0..5) and the leagues above and below. All three get them from one builder,
+0x140c6ccb0, which walks every live regulation and keeps a competition id (+0x80) when
+  * the regulation is in the league's own region (+0x30c bits 7..12) and 0x1414cf180 or
+    0x1414cfeb0 accepts it -- the country's cups; or
+  * it is in region 1 (the club-continental region) and its confederation code (+0x300 bits
+    25..28) is 7 (world: the Club World Cup) or equals the league's own code.
+So the list keys on the league's CONFEDERATION, not on its region, and nothing in it stops at
+region 28. The code is parsed from Competition.bin +6 (low three bits) through the table at
+0x14297d270 (parser 0x1414f81ca): file 2 UEFA -> 1, 3 AFC -> 2, 4 CONMEBOL -> 5, 5 CAF -> 6,
+6 CONCACAF -> 3, 7 OFC -> 0. Up to Mod Studio 0.1.2 every new league copied England D1's
+competition row and so carried UEFA (1): a Peruvian league in region 29 got the Club World
+Cup, Champions League, Europa League and Super Cup -- exactly the four in the report. The
+league builder writes the country's confederation into the row since Mod Studio 0.1.3; a world
+built before that keeps the European icons until it is rebuilt.
+
+This fixes the page itself, for old worlds and new: a 12-byte run at 0x140c6cd97 (the read of
+the league's code) becomes a call to a stub that reads the code as before and then, for a
+region 29..63 that has an entry in a 64-byte table, returns that region's code instead. The
+entry comes from the world file: the league's `conf=` (the builder writes the country's
+confederation, 2..7), else the continent its `uefa` places go to (0-2 UEFA, 3/4/9 CONMEBOL,
+5/8 AFC, 6/7 CAF), else the league above it. Regions 0..28 have no entry, so every shipped
+league reads its own code exactly as before; the season code, which filters on the same
+field, is not touched -- only this builder calls the stub. With the right code the game's own
+rule gives a South American league the Club World Cup and the Libertadores (and our Copa
+Sudamericana when the world has it), an Asian one the AFC Champions League, an African one
+the CAF cups -- the same icons a shipped league of that continent shows, next to its own cups.
+
 The world file. When SiderAddons\modules\fl26world.txt exists (written by FL26 Mod Studio's
 League Builder), COUNTRY is built from it instead: the region= and country= of every league
 on a region no shipped league uses (29 and up, and the headless 11, 13, 14 and 20). A shipped
@@ -90,8 +119,9 @@ local COUNTRY = {
 }
 -- The world file: modules\fl26world.txt, written by FL26 Mod Studio's League Builder.
 -- One table per league -- id, then whatever the line gives: cid, region, country, slot, tier,
--- above, promote, demote, clubs, legs (numbers), name (text) -- in file order. nil when
--- there is no file: the module then keeps the built-in table above.
+-- above, promote, demote, clubs, legs, conf (numbers), name (text) -- in file order; the `uefa`
+-- places as leagues.uefa = { {regulation, position, competition}, ... }. nil when there is no
+-- file: the module then keeps the built-in table above.
 local function read_world(ctx)
   local sep = string.char(92)
   local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
@@ -103,6 +133,11 @@ local function read_world(ctx)
     if order then
       leagues.order = {}
       for v in order:gmatch("%d+") do leagues.order[#leagues.order + 1] = tonumber(v) end
+    end
+    local u = { line:match("^%s*uefa%s+(%d+)%s+(%d+)%s+(%d+)") }
+    if #u == 3 then
+      leagues.uefa = leagues.uefa or {}
+      leagues.uefa[#leagues.uefa + 1] = { tonumber(u[1]), tonumber(u[2]), tonumber(u[3]) }
     end
     local id, rest = line:match("^%s*league%s+(%d+)(.*)$")
     if id then
@@ -190,6 +225,95 @@ local function install_country()
   log(string.format("fl26catlist: country names -- stub at 0x%x, %d regions named", stub, named))
 end
 
+-- The League Info icons (see the header): the builder's read of the league's confederation code.
+local ICONS_SITE = 0x140c6cd97
+local ICONS_OLD  = "8b8800030000c1e91983e10f" .. "894dbf"
+--                  mov ecx,[rax+0x300] ; shr ecx,0x19 ; and ecx,0xf  | mov [rbp-0x41],ecx (stays)
+local CONF_TABLE = 0x14297d270      -- Competition.bin +6 & 7 -> runtime code, u32 x 8 (parser 0x1414f81ca)
+local CONF_TABLE_BYTES = "0800000007000000010000000200000005000000060000000300000000000000"
+-- the continent a `uefa` place goes to (fl26world.COMPETITIONS / CCUPS), as a file code
+local PLACE_CONF = { [0] = 2, [1] = 2, [2] = 2, [3] = 4, [4] = 4, [5] = 3, [6] = 5, [7] = 5, [8] = 3, [9] = 4 }
+
+-- region 29..63 -> confederation as Competition.bin / Country.bin write it (2..7), from the world
+-- file: a league's conf=, else where its places go, else the league above it
+local function world_confeds(world)
+  local conf_of, by_id = {}, {}
+  for _, L in ipairs(world) do
+    by_id[L.id] = L
+    if L.conf and L.conf >= 2 and L.conf <= 7 then conf_of[L.id] = L.conf end
+  end
+  for _, u in ipairs(world.uefa or {}) do
+    if by_id[u[1]] and not conf_of[u[1]] and PLACE_CONF[u[3]] then conf_of[u[1]] = PLACE_CONF[u[3]] end
+  end
+  local out = {}
+  for _, L in ipairs(world) do
+    local c, cur, hops = conf_of[L.id], L, 0
+    while not c and cur and cur.above and hops < 8 do
+      cur, hops = by_id[cur.above], hops + 1
+      c = cur and conf_of[cur.id]
+    end
+    if c and L.region and L.region >= 29 and L.region <= LAST_REGION and not out[L.region] then
+      out[L.region] = c
+    end
+  end
+  return out
+end
+
+-- the stub: 35 bytes of code, then the 64-entry u8 region -> runtime code table (0xff = keep)
+--   0  mov ecx,[rax+0x300] ; shr ecx,0x19 ; and ecx,0xf     (the original read)
+--  12  cmp edx,0x3f ; ja done                               (edx = the league's region)
+--  17  lea rax,[tbl] ; movzx eax,byte [rax+rdx]
+--  28  cmp al,0xff ; je done ; mov ecx,eax
+--  34  done: ret
+-- rax is dead at the site (the next use of it loads it again) and edx is only read.
+local function install_icons(confeds)
+  local n = 0
+  for _ in pairs(confeds) do n = n + 1 end
+  if n == 0 then
+    log("fl26catlist: League Info icons -- no region of ours has a known confederation, left alone")
+    return
+  end
+  local got = bin2hex(memory.read(ICONS_SITE, #ICONS_OLD / 2))
+  if got ~= ICONS_OLD then
+    log(string.format("fl26catlist: bytes at 0x%x are %s, expected %s -- League Info icons left alone",
+                      ICONS_SITE, got, ICONS_OLD))
+    return
+  end
+  got = bin2hex(memory.read(CONF_TABLE, 32))
+  if got ~= CONF_TABLE_BYTES then
+    log(string.format("fl26catlist: confederation table at 0x%x is %s -- League Info icons left alone", CONF_TABLE, got))
+    return
+  end
+  local runtime = {}
+  for f = 0, 7 do runtime[f] = memory.unpack("u32", memory.read(CONF_TABLE + f * 4, 4)) end
+  local stub
+  for _, pref in ipairs({ 0x15ea00000, 0x15fa00000, 0x161a00000, 0x162a00000, 0x171a00000 }) do
+    local p = ffi.C.VirtualAlloc(ffi.cast("void*", pref), 0x1000, 0x3000, 0x40)  -- PAGE_EXECUTE_READWRITE
+    if p ~= nil then stub = tonumber(ffi.cast("uint64_t", p)); break end
+  end
+  if not stub then log("fl26catlist: VirtualAlloc for the icons stub failed -- League Info icons left alone"); return end
+  local into = rel32(ICONS_SITE + 5, stub)
+  if not into then log("fl26catlist: icons stub out of call range -- League Info icons left alone"); return end
+  local code = "\139\136\0\3\0\0" .. "\193\233\25" .. "\131\225\15"
+            .. "\131\250\63" .. "\119\17"
+            .. "\72\141\5" .. u32le(40) .. "\15\182\4\16"
+            .. "\60\255" .. "\116\2" .. "\137\193"
+            .. "\195"
+  assert(#code == 35)
+  code = code .. string.rep("\204", 64 - #code)
+  local tbl, set = {}, {}
+  for r = 0, 63 do
+    local c = r >= 29 and confeds[r]
+    if c then set[#set + 1] = string.format("%d=%d", r, runtime[c]) end
+    tbl[#tbl + 1] = string.char(c and runtime[c] or 255)
+  end
+  local body = code .. table.concat(tbl)
+  ffi.copy(ffi.cast("void*", stub), body, #body)
+  memory.write(ICONS_SITE, "\232" .. into .. "\15\31\128\0\0\0\0")   -- call stub ; nop dword [rax+0]
+  log(string.format("fl26catlist: League Info icons -- stub at 0x%x, %d regions by confederation (%s)",
+                    stub, #set, table.concat(set, " ")))
+end
+
 local ORDER = nil   -- the world file's `order` line: region ids in the order the lists show them
 
 function m.init(ctx)
@@ -203,6 +327,7 @@ function m.init(ctx)
   end
   if ffi == nil then log("fl26catlist: global ffi is nil -- set luajit.ext.enabled = 1"); return end
   ffi.cdef([[ void* VirtualAlloc(void*, size_t, uint32_t, uint32_t); ]])
+  install_icons(world and world_confeds(world) or {})
   if not (check_sites(LEAS) and check_sites(COUNT_SITES)) then return end
 
   local ids, have = {}, {}

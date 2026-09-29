@@ -22,8 +22,10 @@ allowed, and nothing it had is changed or removed.
 
     python mkeuropo.py --src E:\...\livecpk\_FL26G39UECL --out E:\...\livecpk\_FL26G39EPO
 
-build(pesdb, out) does the same inside a world that is being built (the league builder's
-"Conference League" option), with no copy.
+build(pesdb, out) does the same inside a world that is being built (the league builder), with
+no copy; build(..., uecl=False) gives the Europa League its play-off alone, for a world built
+without the Conference League (its league phase of 36 is still reshaped, see leaguebuilder
+europe()).
 """
 import contextlib, io, os, shutil, sys
 
@@ -44,9 +46,10 @@ def rid(row):
     return int.from_bytes(row[M.R_ID:M.R_ID + 2], "little")
 
 
-def playoffs(regs, where="the world"):
+def playoffs(regs, where="the world", uecl=True):
     """the play-off rows to append to CompetitionRegulation.bin <regs>, and one line per
-    competition saying what they are. SystemExit when the world is not ready for them."""
+    competition saying what they are; uecl=False: the Europa League's only. SystemExit when the
+    world is not ready for them."""
     rows = [bytearray(regs[i * M.REG:(i + 1) * M.REG]) for i in range(len(regs) // M.REG)]
     used = {rid(r) for r in rows}
     tpl = [r for r in rows if rid(r) & 0x3ff == TEMPLATE and rid(r) <= TEMPLATE + TIES * STEP
@@ -54,11 +57,13 @@ def playoffs(regs, where="the world"):
     if len(tpl) != 1 + TIES:
         raise SystemExit("reg 2 should have one master and %d replicas, found %d rows" % (TIES, len(tpl)))
 
-    uecl = [r for r in rows if rid(r) == UECL_REG]
-    if not uecl:
-        raise SystemExit("no regulation %d (the Conference League's league phase) in %s -- run "
-                         "mkuecl.py first" % (UECL_REG, where))
-    targets = ((UEL_CID, PLAYOFFS[0]), (uecl[0][M.R_CID], PLAYOFFS[1]))
+    targets = [(UEL_CID, PLAYOFFS[0])]
+    if uecl:
+        phase = [r for r in rows if rid(r) == UECL_REG]
+        if not phase:
+            raise SystemExit("no regulation %d (the Conference League's league phase) in %s -- run "
+                             "mkuecl.py first" % (UECL_REG, where))
+        targets.append((phase[0][M.R_CID], PLAYOFFS[1]))
 
     added, said = bytearray(), []
     for cid, new in targets:
@@ -84,15 +89,19 @@ def playoffs(regs, where="the world"):
     return added, said
 
 
-def build(base, out, log=print):
-    """add both play-offs to the tables in <base> and write the three competition tables to the
-    world <out> (in place when <base> is <out>'s own pesdb): the league builder's way in"""
+def build(base, out, log=print, uecl=True):
+    """add both play-offs (uecl=False: the Europa League's alone) to the tables in <base> and
+    write the three competition tables to the world <out> (in place when <base> is <out>'s own
+    pesdb): the league builder's way in"""
     comp, regs, ents = (M.load(base, n) for n in
                         ("Competition.bin", "CompetitionRegulation.bin", "CompetitionEntry.bin"))
-    added, said = playoffs(regs, base)
+    added, said = playoffs(regs, base, uecl)
     with contextlib.redirect_stdout(io.StringIO()):
         M.write_tables(out, comp, regs + added, ents)
-    log("  Europa / Conference League play-offs: regulations %d and %d" % PLAYOFFS)
+    if uecl:
+        log("  Europa / Conference League play-offs: regulations %d and %d" % PLAYOFFS)
+    else:
+        log("  Europa League play-off: regulation %d" % PLAYOFFS[0])
     return said
 
 

@@ -172,6 +172,9 @@ klub (ili stisni **Igrači** na Novim klubovima), pa igrača:
 - **ime**, **broj na dresu**, **pozicija** i pozicije na kojima može igrati (A = prirodna,
   B = može igrati), jača noga, visina, težina, dob, državljanstvo, stil igre;
 - sve **sposobnosti** i **vještine** (imena su ista kao u igri, na engleskom);
+- **Ocjena**: ocjena s popisa, od sposobnosti na koje se pozicija oslanja. Promjena pomiče
+  svaku sposobnost igrača za isti iznos. Igrač novog kluba nema ime dok mu ga izgradnja ne
+  da s brojem (FL P00001 ...); upiši ga u **Ime** i dobit će tvoje;
 - **Lice**: **Odaberi...** mapu s facom (poglavlje 8.1). **Makni** vraća facu iz igre;
 - **Gore / Dolje u redoslijedu**: redoslijed u momčadi. Prvih jedanaest počinje utakmicu;
 - **Dodaj igrača** (kopija igrača kojeg odabereš, s novim ID-om; samo klubovi iz igre),
@@ -224,8 +227,11 @@ svejedno vidi. Mapa s više faca unutra se odbija: odaberi točno onu jednu koju
    modul po modul, je li svijet preuzet.
 
 **Uključi Konferencijsku ligu** (na stranici Izgradnja, zadano uključeno) izgradi i
-Konferencijsku ligu, a Ligi prvaka i Europskoj ligi da ligašku fazu od 36 klubova, uz veljačko
-doigravanje sva tri natjecanja. Isključeno: europski kupovi kakvi su u igri.
+Konferencijsku ligu: ligašku fazu od 36 klubova i veljačko doigravanje, kao kod druga dva
+natjecanja. Liga prvaka i Europska liga dobivaju ligašku fazu od 36 i veljačko doigravanje u
+svakom slučaju. Isključeno: bez Konferencijske lige. (Mod Studio 0.1.3 i starije verzije su uz isključenu opciju
+ostavljale Ligu prvaka i Europsku ligu u skupinama po četiri, koje mod ne zna voditi -- pa su se
+kvarile; Provjere označe takav svijet: izgradi ga ponovno.)
 
 > **Europska mjesta.** Mjesta koja daš svojim ligama dolaze iza mjesta liga iz igre. Svako
 > natjecanje prima 36 klubova; mjesta iza 36. ne dobiju ništa, i **Provjeri plan** to kaže.

@@ -49,6 +49,7 @@
   "%s: %d line(s) point at items that are not in the library (e.g. %s)": "%s : %d ligne(s) pointent vers des éléments absents de la bibliothèque (p. ex. %s)",
   "%s: %d players. Each column is taken for what its name says; change any that is wrong, or set it to (skip). What the table does not give -- abilities it has no column for, height, playing style -- comes from the game's own players of the same position and rating.": "%s : %d joueurs. Chaque colonne est prise pour ce que dit son nom ; changez celle qui est fausse ou mettez-la sur (ignorer). Ce que le tableau ne donne pas -- capacités sans colonne, taille, style de jeu -- vient des joueurs du jeu de même poste et même note.",
   "%s: pick one from the list or type its id": "%s : choisissez dans la liste ou tapez son id",
+  "%s: the Champions League and Europa League are still in groups of four, which fl26swiss.dll cannot run (a world built with the Conference League off in Mod Studio 0.1.3 or earlier): build the world again": "%s : la Ligue des champions et la Ligue Europa sont encore en groupes de quatre, que fl26swiss.dll ne sait pas gérer (un monde construit avec la Ligue Europa Conférence désactivée dans Mod Studio 0.1.3 ou antérieur) : reconstruisez le monde",
   "%s: the Conference League is on, but its tables are missing (regulation %s): build the world again": "%s : la Ligue Europa Conférence est activée, mais ses tables sont manquantes (règlement %s) : construisez à nouveau le monde",
   "%s: your leagues send nobody to Europe (no European places in the world file)": "%s : vos ligues n'envoient personne en Europe (aucune place européenne dans le fichier du monde)",
   "(none found)": "(introuvable)",
@@ -99,7 +100,7 @@
   "Added %s. Save the recipe, then Build to put the leagues in the game.": "%s ajouté. Enregistrez la recette, puis construisez pour mettre les ligues dans le jeu.",
   "Added or renamed since the last Build: press Build to put it in the game.": "Ajoutée ou renommée depuis le dernier Build : appuie sur Build pour la mettre dans le jeu.",
   "Age": "Âge",
-  "Also gives the Champions League and the Europa League their 36-club league phase, and all three the February play-off": "Donne aussi à la Ligue des champions et à la Ligue Europa leur phase de ligue à 36 clubs, et aux trois compétitions le barrage de février",
+  "A league phase of 36 clubs and a February play-off, like the Champions League and the Europa League": "Une phase de ligue à 36 clubs et un barrage en février, comme la Ligue des champions et la Ligue Europa",
   "Also my changes to the game's own leagues, clubs and players (%d)": "Aussi mes modifications des ligues, clubs et joueurs du jeu (%d)",
   "Always": "Toujours",
   "Anthem and tunnel": "Hymne et tunnel",
@@ -347,6 +348,7 @@
   "Move to bottom": "Placer en bas",
   "Move to top": "Placer en haut",
   "Music": "Musique",
+  "Name": "Nom",
   "Name of the profile:": "Nom du profil :",
   "National teams": "Équipes nationales",
   "Nationality": "Nationalité",
@@ -543,6 +545,7 @@
   "The scripts Sider loads, in the order sider.ini lists them. Content servers (stadiums, kits, balls ...) are modules too. Tick to switch one on, drag to reorder, then Apply. Rules that the modules' authors give for the order are checked below.": "Les scripts que Sider charge, dans l'ordre de sider.ini. Les serveurs de contenu (stades, maillots, ballons ...) sont aussi des modules. Cochez pour en activer un, faites glisser pour changer l'ordre, puis Appliquer. Les règles d'ordre données par les auteurs des modules sont vérifiées ci-dessous.",
   "The short name takes letters and digits only.": "Le nom court n'accepte que des lettres et des chiffres.",
   "The song played after a goal: per home club, or per competition (exclusive = only that song in that competition).": "La chanson jouée après un but : par club à domicile ou par compétition (exclusif = seulement cette chanson dans cette compétition).",
+  "The rating of the list, made of the abilities the position leans on. Changing it moves every ability by the same amount.": "La note de la liste, faite des capacités sur lesquelles le poste s'appuie. La changer déplace chaque capacité d'autant.",
   "The squad of a club: names, shirt numbers, the starting eleven (the first eleven by squad order), positions, abilities and skills. Works for the new clubs of the recipe and for the game's clubs; the changes are written into your world when you Build.": "L'effectif d'un club : noms, numéros de maillot, onze de départ (les onze premiers dans l'ordre de l'effectif), postes, capacités et compétences. Fonctionne pour les nouveaux clubs de la recette et pour les clubs du jeu ; les modifications sont écrites dans votre monde quand vous construisez.",
   "The squad's average rating is %d. Make it:": "La note moyenne de l'effectif est %d. La mettre à :",
   "The strongest eleven for a 4-2-3-1 now head the squad order.": "Le onze le plus fort pour un 4-2-3-1 est maintenant en tête de l'ordre de l'effectif.",
@@ -683,6 +686,7 @@
   "none": "aucun",
   "not built yet": "pas encore construite",
   "nothing changes": "rien ne change",
+  "numbered at Build (FL P00001 ...) until you type a name": "numéroté à la construction (FL P00001 ...) tant que vous ne tapez pas de nom",
   "optional; written after # at the end of the line": "facultatif ; écrit après # en fin de ligne",
   "pitch turf and light by season (lists in turf-loader)": "pelouse et lumière selon la saison (listes dans turf-loader)",
   "pitch turf per stadium": "pelouse par stade",
@@ -707,7 +711,7 @@
   "stadium server: picks the stadium per team or competition": "serveur de stades : choisit le stade par équipe ou compétition",
   "stadium tunnel": "tunnel du stade",
   "substitutes' bibs": "chasubles des remplaçants",
-  "the Champions League and Europa League get the 36-club league phase too; off = the European cups as the game ships them": "la Ligue des champions et la Ligue Europa reçoivent aussi la phase de ligue à 36 clubs ; désactivé = les coupes d'Europe telles que livrées avec le jeu",
+  "off = no Conference League; the Champions League and Europa League keep their 36-club league phase and play-off either way": "désactivé = pas de Ligue Europa Conférence ; la Ligue des champions et la Ligue Europa gardent de toute façon leur phase de ligue à 36 clubs et leur barrage",
   "the file is missing from the modules folder": "le fichier est absent du dossier modules",
   "the folder your leagues are built into; it must start with _FL26": "le dossier dans lequel vos ligues sont construites ; il doit commencer par _FL26",
   "the game is running": "le jeu est lancé",
@@ -798,6 +802,10 @@
   [
    "^  Europa / Conference League play-offs: regulations (\\d+) and (\\d+)$",
    "  barrages de la Ligue Europa et de la Ligue Europa Conférence : règlements \\1 et \\2"
+  ],
+  [
+   "^  Europa League play-off: regulation (\\d+)$",
+   "  barrage de la Ligue Europa : règlement \\1"
   ],
   [
    "^  European places: (\\d+) of the new leagues, (\\d+) in all$",

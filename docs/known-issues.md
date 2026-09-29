@@ -309,6 +309,32 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-09-29 (Mod Studio 0.1.3.1): **a new country outside Europe lost its leagues after the
+  first season.** Since 0.1.3 a new league carries its country's confederation, but the game
+  moves clubs between two divisions only when the upper one passes a July season-end filter
+  that wants UEFA for the regions of new countries: a Peruvian or African first division
+  promoted nobody, and the July season list then left both divisions out, so they had no clubs
+  from the second season on. The builder now keeps UEFA on an upper division of a new country
+  (the division below keeps its own), and the League Info icons come from the world file's
+  `conf` instead. Checked in game: Peru first and second division swapped 3 and 3 clubs in
+  July. **Build the world again** and start a new career.
+- 2026-09-29 (Mod Studio 0.1.3.1): **a new league that plays January to December played no
+  second season**, and the next New Year promoted the same clubs again (duplicates in the
+  division above). Two causes in `fl26join.dll`: the July season list let such a league in a
+  second time (a doubled schedule that could not be finished), and on day 41 the league,
+  flagged again by the promotion at New Year, read as "already in a season" and was left
+  out. Now it is judged by whether it has rounds, not by its table. Checked in game: a Saudi
+  second division promoted and relegated at New Year and started its next year (30 rounds for
+  16 clubs). `fl26join.log`: `door(<id>) YES` once on day 41.
+- 2026-09-29 (Mod Studio 0.1.3.1): **with the Conference League off, the Champions League and
+  Europa League broke** (issue #33). `fl26swiss.dll` runs their league phase of 36 in every
+  world, but with the option off the builder left the game's groups of four. The league phase
+  and the Europa League play-off are now built either way; **Checks** flags a world built the
+  old way.
+- 2026-09-29 (Mod Studio 0.1.3.1): **an Exhibition only league went to the bottom of
+  Competition Info** (below Classic Teams). Its region is now in the world file's order line.
+- 2026-09-29 (Mod Studio 0.1.3.1): **the League window was taller than a 1080p screen**
+  (issues #34, #35); it now fits the screen and scrolls.
 - 2026-09-28 (GitHub issue #26): **the Asia-Oceania national teams and the Classic Teams
   vanished from Kick Off** in a world with 37 or more new leagues. The 37th to 39th league
   took Select Team slots 4, 5 and 6, which the Kick Off list keeps for those entries. The
@@ -321,9 +347,9 @@ calendar.
   alone in July and its region closes it at New Year, and `fl26swiss` dates it between days
   45 and 333. Confirm: `sider.log` at boot says `calendar-year leagues of ours (closed at New
   Year): <n>`, and the league still has fixtures after July. Measured 2026-09-29 with a Saudi
-  second division: all rounds February to December, New Year without a crash. **Still open:**
-  promotion and relegation with the division above at New Year does not happen yet
-  (`fl26join.log`: `season end: ... 11(no table) 162(below has none)`), so the clubs stay.
+  second division: all rounds February to December, New Year without a crash. Promotion and
+  relegation with the division above at New Year did not happen yet (`fl26join.log`:
+  `season end: ... 11(no table) 162(below has none)`); fixed in 0.1.3.1, see above.
 - 2026-09-28 (Evo-Web report): **two clubs of one country could meet in the league phase**
   (Manchester United v Manchester City). The draw was a fixed table by list position; each pot
   is now reordered so one league's clubs are spread. Confirm: `sider.log` has `draw spread by

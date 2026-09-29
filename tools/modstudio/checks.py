@@ -49,13 +49,16 @@ def quick(game, ini, recipe=None):
 
 
 UECL_REGS = (186, 187, 1210)      # the Conference League's league phase, knockout and its group
+OLD_GROUPS = (2051, 2053)         # group B of the Champions League / Europa League: only in the
+                                  # game's own format, which fl26swiss.dll cannot run (issue #33)
 
 
 def world_problems(game, ini, recipe=None):
     """the League Builder worlds switched on: leagues that send nobody to Europe (no uefa line of
-    the world file names one of them), and a Conference League that is on -- in the recipe being
-    edited when it is this world's, else in the plan the world was built from -- but missing
-    from the world's tables"""
+    the world file names one of them), a Champions League / Europa League still in the game's
+    groups of four (a world built with the Conference League off before issue #33), and a
+    Conference League that is on -- in the recipe being edited when it is this world's, else in
+    the plan the world was built from -- but missing from the world's tables"""
     out = []
     try:
         import fl26world
@@ -84,6 +87,17 @@ def world_problems(game, ini, recipe=None):
                           "place for a new club), so those clubs stay at home. Use Libertadores or "
                           "Sudamericana instead") % name,
                         "NewLeagues"))
+        try:
+            regs = M.load(os.path.join(d, "common", "etc", "pesdb"), "CompetitionRegulation.bin")
+            have = {int.from_bytes(regs[i * M.REG + M.R_ID:i * M.REG + M.R_ID + 2], "little")
+                    for i in range(len(regs) // M.REG)}
+        except (OSError, ValueError):
+            have = set()
+        if any(r in have for r in OLD_GROUPS):
+            out.append(("err", "League Builder",
+                        _("%s: the Champions League and Europa League are still in groups of four, "
+                          "which fl26swiss.dll cannot run (a world built with the Conference League "
+                          "off in Mod Studio 0.1.3 or earlier): build the world again") % name, "Build"))
         if recipe is not None and recipe.get("world") == name:
             on = bool(recipe.get("uecl", True))
         else:
@@ -94,12 +108,6 @@ def world_problems(game, ini, recipe=None):
                 on = False
         if not on:
             continue
-        try:
-            regs = M.load(os.path.join(d, "common", "etc", "pesdb"), "CompetitionRegulation.bin")
-            have = {int.from_bytes(regs[i * M.REG + M.R_ID:i * M.REG + M.R_ID + 2], "little")
-                    for i in range(len(regs) // M.REG)}
-        except (OSError, ValueError):
-            have = set()
         missing = [r for r in UECL_REGS if r not in have]
         if missing:
             out.append(("err", "League Builder",
