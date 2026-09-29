@@ -118,6 +118,13 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
   `0x14134a540`); the shipped data never has two splits in one country. Since 0.1.4 the
   builder refuses a second split or Apertura/Clausura league in a country. Giving the second
   one a key of its own is not tried yet.
+- **National team call-ups do not stay in a Master League career** (2026-09-30). A world with
+  one player called up to South Korea and one dropped: `PlayerAssignment.bin` of the build had
+  both changes, and 279 days into a career the live South Korea squad did not have the called-up
+  player and had 11 players the file does not list -- the game picks its own national squads in
+  a career.
+  Kick Off uses the file. Transfers (`Sign players...`, `Transfer to...`) and the club and
+  player ids did stay in the same career.
 - **Team of the Season of a new league is empty** (2026-09-30, GitHub #46). At the end of
   season 1 and again of season 2 the screen for a new Icelandic league came up with all 11
   places empty. Fixtures, tables, promotion and relegation and the national cup were fine in

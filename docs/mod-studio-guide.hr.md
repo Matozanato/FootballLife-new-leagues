@@ -227,7 +227,8 @@ Popis klubova ima i **Reprezentacije** i **Ostali klubovi (bez lige)**: momčadi
 - **Pozovi igrače...** (reprezentacija: u popisu liga odaberi *Reprezentacije*): popis se otvara
   na državi te reprezentacije. Igrači ulaze u reprezentaciju **i ostaju u svojim klubovima**,
   kao u igri. **Makni iz kluba** miče igrača iz reprezentacije (ne iz kluba). Reprezentacija ima
-  najviše 26 igrača; igrač je u jednoj reprezentaciji u isto vrijeme.
+  najviše 26 igrača; igrač je u jednoj reprezentaciji u isto vrijeme. Kick Off igra s tvojim
+  popisom. U karijeri Master League igra sama bira reprezentacije, pa tamo tvoji pozivi ne ostaju.
 - Igrač koji dođe ide na kraj redoslijeda momčadi sa slobodnim brojem dresa; momčad iz koje je
   otišao zatvara redoslijed iza njega.
 - **ID kluba** (pokraj kluba) i **ID igrača** (kartica Osnovno): samo za tvoje **nove** klubove i

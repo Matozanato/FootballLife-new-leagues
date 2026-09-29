@@ -245,7 +245,8 @@ La lista de clubes también tiene **Selecciones nacionales** y **Otros clubes (s
   se abre en el país de la selección. Los jugadores entran en la selección **y siguen en sus
   clubes**, como en el juego. **Quitar del club** saca al jugador de la selección (no de su
   club). Una selección tiene como mucho 26 jugadores; un jugador está en una sola selección a la
-  vez.
+  vez. Kick Off juega con tu convocatoria. En una carrera de la Master League el juego elige sus
+  propias selecciones, así que allí tus convocatorias no se mantienen.
 - Un jugador que llega va al final del orden de la plantilla con un dorsal libre; la plantilla
   que deja cierra su orden.
 - **ID del club** (junto al club) e **ID del jugador** (pestaña Lo básico): solo para tus clubes y

@@ -154,7 +154,8 @@ kits, faces and your saves are tied to them.
 
 Yes, since 0.1.4, on the *Players* page. Pick *National teams* in the league list and a country:
 **Call up players...** lists the players (it opens on that country) and puts the ones you pick in
-the squad, at most 26. They stay at their clubs. For a club, **Sign players...** brings players
+the squad, at most 26. They stay at their clubs. Kick Off plays with that squad; in a Master
+League career the game picks its own national squads. For a club, **Sign players...** brings players
 from any club (a transfer: their old club loses them), and **Transfer to...** sends the selected
 player to another club; a club has at most 40 players.
 
