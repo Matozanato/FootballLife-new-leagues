@@ -832,4 +832,4 @@ Other pages, for when you want to know more:
 - [build-your-world.md](build-your-world.md) — every world-building option
 - [sider/experimental/README.md](../sider/experimental/README.md) — the experimental modules
 - [known-issues.md](known-issues.md) and [limits.md](limits.md) — what is still wrong, and the hard numbers
-- [faq.md](faq.md) — renaming, managers, Edit mode, editing players
+- [faq.md](faq.md) — Mod Studio questions (updating, crashes, cups, promotion, what to send); renaming, managers, Edit mode, editing players

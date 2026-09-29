@@ -1,5 +1,8 @@
 # FL26 Mod Studio — user guide
 
+> Common questions (updating, crashes at start, cups, promotion, what to send when something is
+> wrong): [faq.md](faq.md)
+
 FL26 Mod Studio is one program for everything you add to Football Life 2026:
 
 - **mods** you download: stadiums, kits, balls, scoreboards, commentary, music, faces, Lua modules;

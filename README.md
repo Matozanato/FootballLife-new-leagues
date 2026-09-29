@@ -59,6 +59,9 @@ install anything.
 > [hrvatski](docs/mod-studio-guide.hr.md) · [español](docs/mod-studio-guide.es.md) ·
 > [français](docs/mod-studio-guide.fr.md) · how it works and the package format:
 > [docs/mod-studio.md](docs/mod-studio.md)
+>
+> **Questions** (updating, crashes at start, cups, promotion, what to send when something is
+> wrong): [docs/faq.md](docs/faq.md)
 
 ## The people who made this better
 
@@ -493,7 +496,7 @@ route, one small step at a time, plus leagues in other countries and the new Eur
 4. Start an exhibition match between two new clubs, then a Master League season with one of
    them. Then read the [testing guide](docs/testing-guide.md) and report what you see.
 
-Renaming the new clubs, editing their players, and whether they show up in Edit mode: see [docs/faq.md](docs/faq.md).
+Common questions about Mod Studio, and renaming the new clubs, editing their players, and whether they show up in Edit mode with the scripts: see [docs/faq.md](docs/faq.md).
 
 ## Reporting
 

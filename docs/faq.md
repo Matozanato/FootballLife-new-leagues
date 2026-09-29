@@ -1,6 +1,127 @@
 # Questions people ask
 
-## Is there a program instead of all the scripts?
+The first part is about **FL26 Mod Studio**, the program most people use. The second part is
+about the command-line scripts it grew out of. Your question is not here? Open an
+[issue](https://github.com/Matozanato/FootballLife-new-leagues/issues) with the report
+described in [What should I send when something is wrong?](#what-should-i-send-when-something-is-wrong)
+
+## FL26 Mod Studio
+
+### I updated Mod Studio. What do I do now?
+
+Every update can change the modules and the world's tables. After updating, go to
+**League Builder > Build** and press **0. Install the modules**, then **2. Build the world**
+again. Then start a **new Master League career**: a career started before the build was made
+with the old world and does not pick up everything that changed.
+
+Download the whole zip from the
+[latest release](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest) and
+unzip the whole folder. Since 0.1.3 the program is a folder, not one file: running
+`FL26ModStudio.exe` from inside the zip, or copying only the `.exe`, does not work. From 0.1.1
+on, *Help > Check for updates* does all of this for you; your settings and projects stay.
+
+### The game crashes a few seconds after I start it
+
+A crash in the first ten seconds or so happens on a clean game too, with none of our modules
+installed. It depends on how the game is started. Start it **through the launcher** (the
+shortcut the game installed), not by running `FL_2026.exe` directly: measured on our side, the
+launcher started it 12 times out of 12, the `.exe` directly only 4 out of 9.
+
+If it still crashes, or it crashes later (in the menus, when a match or a career loads), send
+the report described [below](#what-should-i-send-when-something-is-wrong) and say exactly when
+it happens.
+
+### My new country is at the bottom of the list, not with the others of its continent
+
+Since 0.1.3 a new country is listed among the countries of its continent, by name (Iceland
+between France and Italy). If yours is still at the bottom, you are running an old module or an
+old world: press **0. Install the modules** and **2. Build the world** again.
+
+One known exception in 0.1.3: a league ticked **Exhibition only** is left out of that order and
+still goes to the bottom. It is fixed for the next version.
+
+### The League window is taller than my screen and I cannot reach Name and Country
+
+A 0.1.3 bug on 1080p screens (and smaller ones, or with Windows scaling above 100%): the window
+opens with its top above the screen and does not scroll. It is fixed for the next version: the
+window then fits the screen and scrolls.
+
+Until then: when the window opens, the cursor is already in the **Name** field even if you
+cannot see it. Type the name, press **Tab**, type the country, and use the mouse for the rest.
+Setting Windows' display scaling to 100% also helps.
+
+### The National cup tick says my league needs 12, 16, 18 or 20 clubs
+
+A national cup is copied from a cup the game already has, and those exist only for certain
+sizes. So it works when the top division alone has **12, 16, 18 or 20** clubs, or when the top
+division and the one below it together have **36, 40 or 44**. A third division does not
+change anything: the cup only ever looks at the first two. National cups for any size are on
+the list.
+
+Two other cups have no such limit:
+- **League cup** (the tick under the national cup): a knockout of 16, 8 or 4 clubs of the top
+  division and the one below, September to December.
+- **Pre-season cups** (the button on the New leagues page): a friendly knockout of 4 or 8 clubs
+  you invite, from any league, in July.
+
+### My pre-season cup was not played
+
+A Master League career starts in August, after July, so the first pre-season cup is played in
+the career's **second** season. That is expected.
+
+### Clubs do not move up or down between my new divisions
+
+Two known problems in 0.1.3, both fixed for the next version (0.1.3.1):
+
+- **A new country outside Europe** (South America, Asia, Africa, North America, Oceania) with
+  a top division and a division below it: at the end of the season no clubs move between them.
+- **A new league that plays January to December** (under Saudi Arabia, Japan, Korea, China,
+  Brazil, Chile, Colombia ...): the season is played in full, but at New Year nobody moves up or down.
+
+New leagues in Europe, and new leagues under the game's own European leagues, promote and
+relegate normally.
+
+### Which months does my new league play?
+
+- **A new country** (one the game has no league for): August to May, like Europe.
+- **A league under one of the game's own leagues** plays that league's calendar. Under a
+  January-to-December league (Saudi Arabia, Japan, Korea, China, Brazil, Chile, Colombia ...) it
+  plays **February to December**.
+- **Apertura and Clausura** (a league format): September to early January and January to May.
+
+A choice between August-May and February-December for a new country is planned.
+
+### Clubs I send to the Libertadores qualifying round stay at home
+
+That round has no free place for a new club yet, so a club sent there does not play it. Mod
+Studio marks the option *(not filled yet)* and warns about it. Use **Copa Libertadores** or
+**Copa Sudamericana** places for now.
+
+### Can I change the names and ratings of the players of my new clubs?
+
+In 0.1.3 the *Players* page does not let you change the name and overall rating of the players
+Build makes for a new club. That comes in the next version. You can already bring in a whole
+squad from a table: *Players > Import a squad from a table*.
+
+### I switched the Conference League off and the Champions League / Europa League broke
+
+A known 0.1.3 problem, fixed for the next version. Until then, leave the Conference League on.
+
+### What should I send when something is wrong?
+
+1. In Mod Studio: **Tools > Diagnostics > Copy a report**, and paste it into the issue.
+2. The files, from your Sider folder:
+   - `SiderAddons\sider.log` (written again every time the game starts, so copy it right after
+     the problem)
+   - `SiderAddons\fl26join.log`, if the problem is about a Master League season
+   - `SiderAddons\livecpk\<your world>\fl26world.txt`
+3. What you did, what you expected, and what happened instead. A screenshot helps.
+4. If the game crashed: the *fault offset* from Windows Event Viewer (*Windows Logs >
+   Application*, the error for `FL_2026.exe`).
+
+## The scripts (the older way)
+
+### Is there a program instead of all the scripts?
 
 Yes: FL26 Mod Studio, a Windows program (beta). It installs the modules, builds leagues and
 clubs, edits the players of any club, adds faces, installs other mods and content servers,
@@ -8,7 +129,7 @@ and keeps restore points. Download it from the
 [latest release](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest);
 the guide is [mod-studio-guide.md](mod-studio-guide.md) ([hrvatski](mod-studio-guide.hr.md)).
 
-## Every new club has the same manager, "Jorge Jesus"
+### Every new club has the same manager, "Jorge Jesus"
 
 That was a world built before 2026-09-26. A club names its manager by an id in `Team.bin`,
 and `mkworld.py` gave each new club a new id without a manager to go with it, so the game
@@ -26,7 +147,7 @@ shipped file you unpacked when you built the world.) Delete it again to undo. Ch
 its own manager. Not checked yet: a Master League season with them (sackings, job offers), and
 whether a career saved before the change picks them up -- start a new one to be sure.
 
-## How do I rename the new clubs?
+### How do I rename the new clubs?
 
 The new clubs are called `FL 0001`, `FL 0002` and so on because that is the pattern
 `mkworld.py` gives them. There are two ways to change that.
@@ -87,7 +208,7 @@ change, the game reads it instead of the data files and keeps showing the old na
 somewhere safe (do not just delete it if it holds edits you care about), start the game, and
 let Edit mode write a new one. From then on the new save carries the new names.
 
-## Do the new clubs show up in the game's Edit mode?
+### Do the new clubs show up in the game's Edit mode?
 
 It depends on which league a club is in.
 
@@ -113,7 +234,7 @@ The same rule about the Edit save applies here too. After you rebuild a world, m
 `EDIT00000000` aside before deciding that a change did not work. An Edit save written before a
 data change hides that change.
 
-## How do I edit the players of the new clubs, if not in Edit mode?
+### How do I edit the players of the new clubs, if not in Edit mode?
 
 Edit mode reaches a club through its league, so players of a club in a new league can be
 reached there only with `fl26editlist.lua` installed (see the question above). Players of clubs

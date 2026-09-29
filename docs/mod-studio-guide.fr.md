@@ -1,5 +1,8 @@
 # FL26 Mod Studio — guide d'utilisation
 
+> Questions fréquentes (mise à jour, plantage au démarrage, coupes, montées, quoi envoyer quand
+> quelque chose ne va pas), en anglais : [faq.md](faq.md)
+
 FL26 Mod Studio est un seul programme pour tout ce que vous ajoutez à Football Life 2026 :
 
 - les **mods** que vous téléchargez : stades, maillots, ballons, tableaux de score, commentaires,

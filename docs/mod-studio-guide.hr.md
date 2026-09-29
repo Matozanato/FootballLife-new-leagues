@@ -1,5 +1,8 @@
 # FL26 Mod Studio — upute
 
+> Česta pitanja (ažuriranje, rušenje pri pokretanju, kupovi, promocija, što poslati kad nešto ne
+> radi), na engleskom: [faq.md](faq.md)
+
 FL26 Mod Studio je jedan program za sve što dodaješ u Football Life 2026:
 
 - **modove** koje skineš: stadione, dresove, lopte, semafore, komentar, glazbu, face, Lua module;
