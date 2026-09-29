@@ -364,6 +364,11 @@ calendar.
   old way.
 - 2026-09-29 (Mod Studio 0.1.3.1): **an Exhibition only league went to the bottom of
   Competition Info** (below Classic Teams). Its region is now in the world file's order line.
+- 2026-09-29 (GitHub issue #39): **with 37 to 39 new leagues, the last ones are missing from
+  Select Team.** That is the fix for #26 below: Select Team has room for 36 new leagues, and the
+  37th to 39th get a hidden slot. They play their season, but no career can start in them. Mod
+  Studio 0.1.4 names them in the plan (*NOTE: no place in Select Team for ...*); put the leagues
+  you want to play with first in the list.
 - 2026-09-29 (Mod Studio 0.1.3.1): **the League window was taller than a 1080p screen**
   (issues #34, #35); it now fits the screen and scrolls.
 - 2026-09-28 (GitHub issue #26): **the Asia-Oceania national teams and the Classic Teams

@@ -30,7 +30,8 @@ tell us where. Read [what works and what does not](#status) before you start a l
 **Leagues and countries**
 
 - Up to **39 new leagues** in one world, **10 to 24 clubs** each, playing each other 1 to 4
-  times with the real number of rounds (10 clubs four times = 36 rounds).
+  times with the real number of rounds (10 clubs four times = 36 rounds). Select Team has room
+  for 36 of them: the 37th to 39th play their season, but no career can start in them.
 - **Any country.** A league is listed under its country in Select Team and Kick Off, with the
   country's flag; a country the game has no league for gets a heading of its own and plays on
   its own continent's calendar and cups (Europe, South America, Asia, Africa ...).
@@ -387,7 +388,7 @@ Mod Studio 0.1.4. The full list, with dates and details, is in
   groups and knockout; the Copa Sudamericana was drawn with 32 clubs on 2026-09-29, with the
   clubs already in the Copa Libertadores left out.
 - **Leagues of 10 to 24 clubs** with the right number of rounds, different sizes in one world.
-- **The menus**: every new league in Select Team, Kick Off, Edit mode and Database →
+- **The menus**: the first 36 new leagues in Select Team, every one in Kick Off, Edit mode and Database →
   Competition Info, under its own country's name and flag.
 
 **Known problems**
