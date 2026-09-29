@@ -118,6 +118,11 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
   `0x14134a540`); the shipped data never has two splits in one country. Since 0.1.4 the
   builder refuses a second split or Apertura/Clausura league in a country. Giving the second
   one a key of its own is not tried yet.
+- **Team of the Season of a new league is empty** (2026-09-30, GitHub #46). At the end of
+  season 1 and again of season 2 the screen for a new Icelandic league came up with all 11
+  places empty. Fixtures, tables, promotion and relegation and the national cup were fine in
+  the same career. Not investigated; whether a league the game already has shows its team in
+  the same career is asked on the issue.
 
 ## Added leagues that never entered the season — fixed 2026-09-22, one season measured
 

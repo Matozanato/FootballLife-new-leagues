@@ -75,6 +75,8 @@ tell us where. Read [what works and what does not](#status) before you start a l
 - A country's own **national cup** (any size up to 44 clubs, with byes like the FA Cup, 0.1.4)
   and **super cup**, a **league cup**, and **pre-season cups** of 4 or 8 invited clubs in July.
   A new second division under a country the game has goes into that country's cup (0.1.4).
+  The national cup of a new country is tested over two full seasons: it rebuilds from the
+  current first division after every promotion and relegation (issue #46).
 - **Europe only** (0.1.4): just the new European format, no new leagues.
 
 **Everything else in your game folder**
@@ -415,6 +417,8 @@ Mod Studio 0.1.4. The full list, with dates and details, is in
 - **Only one league per country can be split or Apertura/Clausura.** With two (Iceland, both
   divisions Apertura/Clausura, issue #45) the game mixes up their phases and neither league
   plays a match. Mod Studio refuses such a world since 0.1.4.
+- **The Team of the Season of a new league is empty** at the end of a season (11 empty
+  places, issue #46). Nothing else in the season is affected. Not looked into yet.
 - **A calendar day holds 280 matches**; everything past that is dropped in silence. A world of
   39 leagues stays under it; `tools/dayplan.py` measures a running season.
 - **The competition table can fill up** over many seasons: `fl26hdr127.lua` raises it from 100
