@@ -339,10 +339,61 @@ static void count_listed(uint16_t cid)
   logf("door(%u): %u clubs listed but a count of 0 (a split's regular phase) -- count set to %u", cid, n, n);
 }
 
+/* A club in a regulation's list is the team id in bits 14 and up and the club's place in the
+ * team array (its row) in bits 0-13, and the game's team lookup 0x1414bb580 can take the record
+ * by the row alone. A split phase of ours that one GitHub report (#37, Venezuela) and one
+ * Evo-Web report (Egypt) showed with the user's club's name on every row over the right
+ * badges -- a match of two of them "between users", never played -- is what a list with the
+ * right ids and the wrong rows looks like (fl26swiss canon_club has the whole case). So before
+ * the door schedules one of ours, each value whose row does not hold its own record is given
+ * the row of the one team record that has the same id and sits at its own row. A value that
+ * already names its record, or an id no single record answers for, is left as it is, so a list
+ * the game reads right is never changed; the log says which. The array's place, count and
+ * stride are read off 0x1414bb580 (at 0x1414bb5fa), where the runtime patch set moves them. */
+#define TEAMLOOK_SITE 0x14bb5fa
+#define TEAM_STRIDE   0x690
+static void canon_listed(uint16_t cid)
+{
+  unsigned char* rec = (unsigned char*)find_record(cid);
+  const unsigned char* c = (const unsigned char*)(uintptr_t)(g_base + TEAMLOOK_SITE);
+  void** owner = *(void***)(uintptr_t)(g_base + OWNER_RVA);
+  unsigned char* blk = owner ? (unsigned char*)owner[0x48 / 8] : 0;
+  static int said;
+  if (!rec || !blk) return;
+  if (c[0] != 0x8b || c[1] != 0x83 || c[6] != 0x48 || c[7] != 0x8d || c[8] != 0x93
+      || c[13] != 0x48 || c[14] != 0x69 || c[15] != 0xc8 || *(const uint32_t*)(c + 16) != TEAM_STRIDE) {
+    if (!said++) logf("door: the team lookup is not where it was (0x1414bb5fa); club values are not checked");
+    return;
+  }
+  uint32_t nt = *(const uint32_t*)(blk + *(const int32_t*)(c + 2));
+  const unsigned char* arr = blk + *(const int32_t*)(c + 9);
+  if (!nt || nt > 0x3fff) return;
+  uint32_t* l = (uint32_t*)(rec + 0x170);
+  int bad = 0, fixed = 0;
+  uint32_t was = 0, now = 0, held = 0, n = 0;
+  while (n < 48 && l[n] != 0xffffffffu) n++;
+  for (uint32_t i = 0; i < n; i++) {
+    uint32_t h = l[i], row = h & 0x3fff;
+    if (!(h >> 14) || (row < nt && *(const uint32_t*)(arr + (size_t)row * TEAM_STRIDE) == h)) continue;
+    uint32_t got = 0; int hits = 0;
+    for (uint32_t j = 0; j < nt; j++) {
+      uint32_t v = *(const uint32_t*)(arr + (size_t)j * TEAM_STRIDE);
+      if ((v >> 14) == (h >> 14) && (v & 0x3fff) == j) { got = v; hits++; }
+    }
+    if (!bad++) { was = h; held = row < nt ? *(const uint32_t*)(arr + (size_t)row * TEAM_STRIDE) : 0; now = hits == 1 ? got : h; }
+    if (hits == 1) { l[i] = got; fixed++; }
+  }
+  if (bad)
+    logf("door(%u): %d of %u listed club(s) do not name their team record (%08x, whose row holds %08x -> %08x); "
+         "%d rewritten", cid, bad, n, was, held, now, fixed);
+  else if (n)
+    logf("door(%u): %u listed club(s), all name their team record (%08x ...)", cid, n, l[0]);
+}
+
 int door_pre(uint64_t id, uint64_t ret)
 {
   uint16_t cid = (uint16_t)id;
-  if (ours(cid)) count_listed(cid);
+  if (ours(cid)) { canon_listed(cid); count_listed(cid); }
   if (!ours(cid) || ret != g_base + BLD_RET_RVA) return 0;
   /* A calendar-year league of ours never enters with the July builder: its rounds start in
    * February, and New Year would close it before the first one. It joins on day 41. */
@@ -1160,6 +1211,87 @@ __declspec(dllexport) int fl26_join_teardown_extra(const uint16_t* ids, int n)
   g_ntd_extra = n;
   logf("teardown extras (July list only): %d ids", n);
   return n;
+}
+
+/* ---- a region's season type, chosen by the world ----
+ *
+ * 0x141576140(int* region) answers a region's season type from a table of 25 (region, type)
+ * pairs the function builds on its stack from .rdata: 0 the European season (August-May), 1
+ * the calendar year (Brazil 16, Chile 18, Colombia 19, China 21, United States 23, Japan 24,
+ * Saudi Arabia 28), 2 and 3 two more that only unused regions and Argentina (17) carry. A region
+ * not in the table gets 5, which fl26augseason turns into 0 for our regions 29..63. The answer
+ * drives the whole season: the career's start date (0x1412695b0), and the filter 0x141365c50
+ * that picks, at every turn of the season (July, New Year), the competitions whose season
+ * ends then -- the same filter fl26seasonend hooks, which calls this function for every region
+ * but France's and Italy's.
+ *
+ * A world file's `season <region> <type>` lines override it: a new country that plays
+ * February to December (type 1) closes at New Year with the calendar-year regions, and its
+ * leagues are January-December leagues for fl26join (calyr) and fl26swiss (their dates) --
+ * the loader passes both lists from the same lines. Without a season line nothing is hooked
+ * and every region answers exactly what it did.
+ *
+ * The function is pure (it reads the region and nothing else, and writes nothing but its own
+ * stack), so it is replaced whole: the first fourteen bytes become a jump to stype_handler,
+ * which never returns into the original. The table is read back from .rdata at install and
+ * checked against the 25 pairs below first; a different build is refused, not guessed at. */
+#define STYPE_RVA 0x1576140
+static const unsigned char SIG_STYPE[14] = {    /* mov r11,rsp; sub rsp,0xe8; mov rax,[rip+...] */
+  0x4c,0x8b,0xdc, 0x48,0x81,0xec,0xe8,0x00,0x00,0x00, 0x48,0x8b,0x05,0xef };
+/* the .rdata halves in the order the function stores them, then the one pair it writes itself */
+static const uint32_t STYPE_RDATA[12] = {
+  0x298b9c0, 0x298b9b0, 0x298b9d0, 0x298b9e0, 0x298ba10, 0x298b9f0,
+  0x298ba00, 0x298ba50, 0x298ba20, 0x298ba30, 0x298ba60, 0x298ba40 };
+static const uint32_t STYPE_EXPECT[25][2] = {
+  {2,0},{4,0},{5,0},{3,0},{7,0},{6,0},{22,0},{8,0},{9,0},{27,0},{15,0},{10,0},{11,0},{12,0},
+  {14,2},{13,2},{16,1},{18,1},{23,1},{19,1},{17,3},{20,3},{21,1},{28,1},{24,1} };
+static uint8_t g_stype[64];
+static int g_stype_live = 0;
+unsigned char* g_tramp_stype = 0;       /* made by hook(), never called: the handler answers alone */
+uint32_t stype_handler(const int32_t* region)
+{
+  int32_t r = *region;
+  if (r >= 0 && r < 64 && g_stype[r] != 0xff) return g_stype[r];
+  if (!r) return 5;
+  for (int i = 0; i < 25; i++) if ((int32_t)STYPE_EXPECT[i][0] == r) return STYPE_EXPECT[i][1];
+  return (r >= 29 && r < 64) ? 0 : 5;   /* fl26augseason's answer for ours, the game's for the rest */
+}
+
+/* v: n pairs (region, type), type 0..3. Call after fl26_join_install. Returns the number of
+   regions set, -1 on a bad list, -2 when the exe's table is not the one above (nothing hooked),
+   -3 when the hook could not be written. */
+__declspec(dllexport) int fl26_join_season_types(const uint8_t* v, int n)
+{
+  if ((!v && n) || n < 0 || n > 64 || !g_base) return -1;
+  memset(g_stype, 0xff, sizeof g_stype);
+  int k = 0;
+  for (int i = 0; i < n; i++) {
+    uint8_t r = v[2 * i], t = v[2 * i + 1];
+    if (r >= 64 || t > 3) continue;
+    g_stype[r] = t; k++;
+  }
+  if (!k) return 0;
+  if (!g_stype_live) {
+    for (int i = 0; i < 12; i++) {
+      const uint32_t* q = (const uint32_t*)(uintptr_t)(g_base + STYPE_RDATA[i]);
+      for (int j = 0; j < 2; j++)
+        if (q[2 * j] != STYPE_EXPECT[2 * i + j][0] || q[2 * j + 1] != STYPE_EXPECT[2 * i + j][1]) {
+          logf("season types: the exe's region table differs at pair %d -- nothing hooked", 2 * i + j);
+          return -2;
+        }
+    }
+    if (hook((unsigned char*)(uintptr_t)(g_base + STYPE_RVA), SIG_STYPE, 14, (void*)stype_handler, &g_tramp_stype)) {
+      logf("season types: 0x141576140 does not match or could not be written -- nothing hooked");
+      return -3;
+    }
+    g_stype_live = 1;
+  }
+  char buf[200]; int p = 0;
+  for (int r = 0; r < 64 && p < (int)sizeof buf - 12; r++)
+    if (g_stype[r] != 0xff) p += snprintf(buf + p, sizeof buf - (size_t)p, "%d:%u ", r, g_stype[r]);
+  buf[p] = 0;
+  logf("season types from the world file (region:type, 0 August-May, 1 January-December): %s", buf);
+  return k;
 }
 
 __declspec(dllexport) int fl26_join_log(char* out, int cap)

@@ -70,14 +70,20 @@ local REMAP_OWN = {
 -- The world file: modules\fl26world.txt, written by FL26 Mod Studio's League Builder.
 -- One table per league -- id, then whatever the line gives: cid, region, country, slot, tier,
 -- above, promote, demote, clubs, legs (numbers), name (text) -- in file order. nil when
--- there is no file: the module then keeps the built-in lists above.
+-- there is no file: the module then keeps the built-in lists above. Second result: the team
+-- ids of the "nopool" lines -- clubs the game already had that now play in a league of ours
+-- (Mod Studio 0.1.4); the DLL leaves them out of the other-clubs pools 69/70/73/75.
 local function read_world(ctx)
   local sep = string.char(92)
   local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
   local f = io.open(path, "r")
   if not f then return nil end
-  local leagues = {}
+  local leagues, nopool = {}, {}
   for line in f:lines() do
+    local np = line:match("^%s*nopool%s+([%d%s]+)$")
+    if np then
+      for t in np:gmatch("%d+") do nopool[#nopool + 1] = tonumber(t) end
+    end
     local id, rest = line:match("^%s*league%s+(%d+)(.*)$")
     if id then
       local L = { id = tonumber(id) }
@@ -88,7 +94,7 @@ local function read_world(ctx)
     end
   end
   f:close()
-  return leagues
+  return leagues, nopool
 end
 
 -- From the world file. SERVED: the slots the game fills with lists of its own (national teams,
@@ -169,8 +175,10 @@ function m.init(ctx)
     typedef int  (*fl26_clubs_log_t)(char*, int);
     typedef void (*fl26_clubs_stats_t)(uint32_t*);
     typedef uint32_t (*fl26_clubs_pool_t)(void);
+    typedef int  (*fl26_clubs_keep_out_t)(const uint32_t*, int);
   ]])
-  local world = read_world(ctx)
+  local world, nopool = read_world(ctx)
+  nopool = nopool or {}
   if world then
     SLOTS, REMAP_OWN = from_world(world)
     log(string.format("fl26clubs: world file -- %d leagues, %d on slots the game fills itself, %d on pool slots",
@@ -195,8 +203,20 @@ function m.init(ctx)
   local pp = ffi.C.GetProcAddress(h, "fl26_clubs_pool_calls")
   if pp ~= nil then dll_pool = ffi.cast("fl26_clubs_pool_t", pp) end
 
-  if #SLOTS == 0 then log("fl26clubs: no league of this world sits on a slot the game fills itself -- nothing to serve"); return end
-  cfg = ffi.new("fl26_clubs_cfg_t[?]", #SLOTS)
+  local kept = 0
+  if #nopool > 0 then
+    local pk = ffi.C.GetProcAddress(h, "fl26_clubs_keep_out")
+    if pk == nil then
+      log("fl26clubs: this fl26clubs.dll is older than the world (no fl26_clubs_keep_out): " .. #nopool ..
+          " club(s) of the game in our leagues may still show under the other clubs -- install the modules again")
+    else
+      local arr = ffi.new("uint32_t[?]", #nopool)
+      for i, t in ipairs(nopool) do arr[i - 1] = t end
+      kept = tonumber(ffi.cast("fl26_clubs_keep_out_t", pk)(arr, #nopool))
+    end
+  end
+  if #SLOTS == 0 and kept == 0 then log("fl26clubs: no league of this world sits on a slot the game fills itself -- nothing to serve"); return end
+  cfg = ffi.new("fl26_clubs_cfg_t[?]", math.max(#SLOTS, 1))
   for i, s in ipairs(SLOTS) do
     cfg[i - 1].slot, cfg[i - 1].reg = s[1], s[2]
   end
@@ -207,7 +227,8 @@ function m.init(ctx)
     local parts = {}
     for _, s in ipairs(SLOTS) do parts[#parts + 1] = string.format("%d<-%d", s[1], s[2]) end
     log("fl26clubs: live -- " .. #SLOTS .. " slots served from our own regulations: " ..
-        table.concat(parts, " ") .. " (F10 = report)")
+        table.concat(parts, " ") .. (kept > 0 and (", " .. kept .. " club(s) of the game kept out of the pools") or "") ..
+        " (F10 = report)")
     ctx.register("livecpk_make_key", m.make_key)
     ctx.register("key_down", m.key_down)
     drain(nil)

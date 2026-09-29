@@ -178,6 +178,27 @@ local function read_world(ctx)
   return leagues, splits, uefa, ccups, dlike
 end
 
+-- `season <region> <type>` lines of the world file: { [region] = type }, 0 August-May, 1
+-- January-December (fl26joindll hands the same lines to fl26join.dll, which answers the game)
+local function world_seasons(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  local out = {}
+  if not f then return out end
+  for line in f:lines() do
+    local r, t = line:match("^%s*season%s+(%d+)%s+(%d+)")
+    if r then out[tonumber(r)] = tonumber(t) end
+  end
+  f:close()
+  return out
+end
+
+-- The game's own leagues of a calendar-year region a `season <region> 0` line moves to
+-- August-May: they are dated on the European league calendar (fl26_swiss_european). Only the
+-- leagues: the region's cups take `dates <cup> like=<European cup>` lines. Experimental.
+local SHIPPED_REGION_LEAGUES = { [28] = { 162 } }
+
 local FIRST_FILE = "fl26swiss-first.txt"
 local function read_first(path)
   local f = io.open(path, "r")
@@ -327,11 +348,29 @@ function m.init(ctx)
         for i, L in ipairs(world) do wbuf[i - 1] = L.id end
         ffi.cast("fl26_swiss_access_t", pw)(wbuf, #world)
       end
+      -- the league-phase draw keeps clubs of one country apart: which country each league slot is
+      local pn = ffi.C.GetProcAddress(h, "fl26_swiss_nations")
+      if pn ~= nil then
+        local nat = {}
+        for _, L in ipairs(world) do
+          if L.slot and L.country and L.slot >= 0 and L.slot < 123 and L.country > 0 then nat[#nat + 1] = L end
+        end
+        local nbuf = ffi.new("uint16_t[?]", math.max(2 * #nat, 2))
+        for i, L in ipairs(nat) do nbuf[2 * i - 2] = L.slot; nbuf[2 * i - 1] = L.country end
+        ffi.cast("fl26_swiss_access_t", pn)(nbuf, #nat)
+      end
       -- leagues of ours in a January-December region (Brazil, Argentina, Colombia, China, Chile,
       -- Saudi Arabia, Japan): rounds from mid February to early December (GitHub #27)
+      -- ... or the regions a world file's `season <region> 1` line makes January-December (and
+      -- not those a `season <region> 0` line makes August-May), as fl26joindll reads them
       local CAL_REGIONS = { [16] = true, [18] = true, [19] = true, [21] = true, [23] = true, [24] = true, [28] = true }
+      local seasons = world_seasons(ctx)
       local cal = {}
-      for _, L in ipairs(world) do if L.region and CAL_REGIONS[L.region] then cal[#cal + 1] = L.id end end
+      for _, L in ipairs(world) do
+        local r = L.region
+        local c = r ~= nil and (seasons[r] ~= nil and seasons[r] == 1 or seasons[r] == nil and CAL_REGIONS[r] == true)
+        if c then cal[#cal + 1] = L.id end
+      end
       local pc = ffi.C.GetProcAddress(h, "fl26_swiss_calendar_year")
       if #cal > 0 and pc ~= nil then
         local cbuf = ffi.new("uint16_t[?]", #cal)
@@ -339,6 +378,20 @@ function m.init(ctx)
         ffi.cast("fl26_swiss_access_t", pc)(cbuf, #cal)
       elseif #cal > 0 then
         log("fl26swiss: this fl26swiss.dll has no fl26_swiss_calendar_year -- January-December leagues keep the European dates")
+      end
+      local eu = {}
+      for r, t in pairs(seasons) do
+        if t == 0 and CAL_REGIONS[r] and SHIPPED_REGION_LEAGUES[r] then
+          for _, id in ipairs(SHIPPED_REGION_LEAGUES[r]) do eu[#eu + 1] = id end
+        end
+      end
+      local pe = ffi.C.GetProcAddress(h, "fl26_swiss_european")
+      if #eu > 0 and pe ~= nil then
+        local ebuf = ffi.new("uint16_t[?]", #eu)
+        for i, v in ipairs(eu) do ebuf[i - 1] = v end
+        ffi.cast("fl26_swiss_access_t", pe)(ebuf, #eu)
+      elseif #eu > 0 then
+        log("fl26swiss: this fl26swiss.dll has no fl26_swiss_european -- the moved league keeps its calendar-year dates")
       end
     end
     if ACCESS then

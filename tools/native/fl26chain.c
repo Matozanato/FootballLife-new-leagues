@@ -157,7 +157,13 @@ static int reg_list(uint16_t id, uint32_t* out)
  * league's clubs instead -- the field the shipped game gives it. The triples come from the world
  * file (`cup=` on the league line, written by the League Builder). */
 #define MAX_CUPS 16
-typedef struct { uint16_t cup, top, low; } cup_t;
+/* GitHub #32: `cupall=1` on the league line (bit 15 of the cup id here) is the other way round --
+ * the cup takes both leagues, the top one's clubs first, as the real DFB-Pokal does. The League
+ * Builder writes it only when the cup's calendar dates every round of that field and it raised
+ * the cup's bracket to 44 in the world's tables; the game, left alone, gives it both leagues
+ * when ours has the higher id and ours alone when it has the lower. */
+#define CUP_ALL 0x8000
+typedef struct { uint16_t cup, top, low, all; } cup_t;
 static cup_t    g_cup[MAX_CUPS]; static int g_ncup = 0;
 static uint64_t g_cup_flag[MAX_CUPS]; static int g_cup_seen[MAX_CUPS];
 
@@ -167,12 +173,33 @@ static int holds_any(const uint32_t* list, int n, const uint32_t* of, int m)
   return 0;
 }
 
-/* 1 = the cup was written with the top league's clubs (through the original setter) */
+/* 1 = the cup is exactly the clubs of both lists, in any order */
+static int same_field(const uint32_t* list, int n, const uint32_t* a, int na, const uint32_t* b, int nb)
+{
+  if (n != na + nb) return 0;
+  for (int i = 0; i < n; i++)
+    if (!holds_any(list + i, 1, a, na) && !holds_any(list + i, 1, b, nb)) return 0;
+  return 1;
+}
+
+/* 1 = the cup was written with the top league's clubs (through the original setter), or with
+   both leagues' for a cupall cup */
 static int cup_fix(cup_t* c, const uint32_t* list, int n, uint64_t flag, const char* when)
 {
-  uint32_t top[MAX_CLUBS], low[MAX_CLUBS];
+  uint32_t top[2 * MAX_CLUBS], low[MAX_CLUBS];
   int nt = reg_list(c->top, top), nl = reg_list(c->low, low);
-  if (nt <= 0 || nl <= 0 || !holds_any(list, n, low, nl)) return 0;
+  if (nt <= 0 || nl <= 0) return 0;
+  if (c->all) {
+    if (nt + nl > 2 * MAX_CLUBS || same_field(list, n, top, nt, low, nl)) return 0;
+    memcpy(top + nt, low, nl * sizeof low[0]);
+    vec32_t v = { top, top + nt + nl, top + nt + nl };
+    int was = g_reentrant; g_reentrant = 1;
+    ((set_fn)(uintptr_t)g_tramp_set)(c->cup, &v, flag);
+    g_reentrant = was;
+    logf("cup %u: %d clubs (%s) -- given %u's %d and %u's %d clubs", c->cup, n, when, c->top, nt, c->low, nl);
+    return 1;
+  }
+  if (!holds_any(list, n, low, nl)) return 0;
   vec32_t v = { top, top + nt, top + MAX_CLUBS };
   int was = g_reentrant; g_reentrant = 1;
   ((set_fn)(uintptr_t)g_tramp_set)(c->cup, &v, flag);
@@ -541,9 +568,13 @@ __declspec(dllexport) int fl26_chain_cups(const uint16_t* triples, int n)
 {
   if (!triples || n < 0) return 0;
   if (n > MAX_CUPS) n = MAX_CUPS;
-  for (int i = 0; i < n; i++) { g_cup[i].cup = triples[3*i]; g_cup[i].top = triples[3*i+1]; g_cup[i].low = triples[3*i+2]; }
+  for (int i = 0; i < n; i++) {
+    g_cup[i].cup = triples[3*i] & ~CUP_ALL; g_cup[i].all = (triples[3*i] & CUP_ALL) != 0;
+    g_cup[i].top = triples[3*i+1]; g_cup[i].low = triples[3*i+2];
+    logf("fl26chain: cup %u -- %s", g_cup[i].cup, g_cup[i].all ? "both leagues (cupall)" : "the top league only");
+  }
   g_ncup = n;
-  logf("fl26chain: %d domestic cup(s) kept to their own league", n);
+  logf("fl26chain: %d domestic cup(s) with a league of ours below the top one", n);
   return n;
 }
 

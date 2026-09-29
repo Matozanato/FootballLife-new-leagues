@@ -90,8 +90,11 @@ local function read_world(ctx)
   local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
   local f = io.open(path, "r")
   if not f then return nil end
-  local leagues, regular, groups = {}, {}, {}
+  local leagues, regular, groups, seasons = {}, {}, {}, {}
   for line in f:lines() do
+    -- `season <region> <type>`: the region's season type, 0 August-May, 1 January-December
+    local sr, st = line:match("^%s*season%s+(%d+)%s+(%d+)")
+    if sr then seasons[tonumber(sr)] = tonumber(st) end
     local tot, reg = line:match("^%s*split%s+(%d+)%s+regular=(%d+)")
     if tot then
       regular[tonumber(tot)] = tonumber(reg)
@@ -109,7 +112,7 @@ local function read_world(ctx)
     end
   end
   f:close()
-  return leagues, regular, groups
+  return leagues, regular, groups, seasons
 end
 
 -- Shipped regions whose season is the calendar year (season type 1 in the exe's region table
@@ -117,6 +120,14 @@ end
 -- of ours there closes at New Year with its region, not in July (GitHub #27). Regions 29 and up
 -- are ours and European (fl26augseason).
 local CAL_REGIONS = { [16] = true, [18] = true, [19] = true, [21] = true, [23] = true, [24] = true, [28] = true }
+-- ... unless the world file's `season` lines say otherwise (a new country that plays February
+-- to December: `season 45 1`); fl26join.dll then answers the game the same way.
+local SEASONS = {}
+local function cal_region(r)
+  if r == nil then return false end
+  if SEASONS[r] ~= nil then return SEASONS[r] == 1 end
+  return CAL_REGIONS[r] == true
+end
 
 local CAVE_VA, CAVE_PAGE, CAVE_LEN = 0x14252ebe0, 0x14252e000, 0x208
 local PAGE_EXECUTE_READWRITE = 0x40
@@ -167,6 +178,7 @@ function m.init(ctx)
     typedef void (*fl26_join_stats_t)(uint32_t*);
     typedef int  (*fl26_join_teardown_extra_t)(const uint16_t*, int);
     typedef int  (*fl26_join_calendar_t)(const uint16_t*, int);
+    typedef int  (*fl26_join_season_types_t)(const uint8_t*, int);
   ]])
 
   local old = ffi.new("uint32_t[1]")
@@ -193,7 +205,8 @@ function m.init(ctx)
   dll_stats = ffi.cast("fl26_join_stats_t", ps)
   logbuf, statbuf = ffi.new("char[4096]"), ffi.new("uint32_t[8]")
 
-  local world, regular, groups = read_world(ctx)
+  local world, regular, groups, seasons = read_world(ctx)
+  SEASONS = seasons or {}
   if world then
     IDS = {}
     local shown = 0
@@ -236,7 +249,20 @@ function m.init(ctx)
     end
     local CAL = {}
     for _, L in ipairs(world or {}) do
-      if L.region and CAL_REGIONS[L.region] and (L.exhibition or 0) == 0 then CAL[#CAL + 1] = L.id end
+      if cal_region(L.region) and (L.exhibition or 0) == 0 then CAL[#CAL + 1] = L.id end
+    end
+    local SP = {}
+    for r, t in pairs(SEASONS) do if r >= 0 and r < 64 and t >= 0 and t <= 3 then SP[#SP + 1] = { r, t } end end
+    if #SP > 0 then
+      local pst = ffi.C.GetProcAddress(h, "fl26_join_season_types")
+      if pst == nil then log("fl26joindll: this fl26join.dll has no fl26_join_season_types -- the world's season lines are ignored")
+      else
+        local sbuf = ffi.new("uint8_t[?]", 2 * #SP)
+        for i, e in ipairs(SP) do sbuf[2 * i - 2] = e[1]; sbuf[2 * i - 1] = e[2] end
+        local k = tonumber(ffi.cast("fl26_join_season_types_t", pst)(sbuf, #SP))
+        if k < 0 then log(string.format("fl26joindll: season types NOT set (status %d) -- see fl26join.log", k))
+        else log(string.format("fl26joindll: %d region(s) given their season type by the world file", k)) end
+      end
     end
     if #CAL > 0 then
       local pc = ffi.C.GetProcAddress(h, "fl26_join_calendar")

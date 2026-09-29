@@ -41,6 +41,7 @@
 #include <stdarg.h>
 
 #include "fl26swiss_table.h"
+#include "fl26swiss_draw.h"
 
 #define GEN_RVA   0x13f3e00    /* bool build_generic_schedule(ctx, u16 reg id, u8 flag) */
 #define GRID_RVA  0x13f30f0    /* void alloc_grid(ctx) -- legs x N x N cells, cleared     */
@@ -556,10 +557,34 @@ static const int KO_ORDER[KO_N] = { 0, 15, 7, 8, 3, 12, 4, 11, 1, 14, 6, 9, 2, 1
 
 static int cwc_world(void);
 static char cwc_setcl(uint64_t id, u32vec* list, uint64_t flag);
+static uint32_t canon_club(uint32_t h);
+static const char* club_note(uint32_t h, char* buf, size_t cap);
+typedef struct split_s split_t;
+static int split_part(uint16_t id, const split_t** out);
 char setcl_handler(uint64_t id, u32vec* list, uint64_t flag)
 {
   uint16_t r = (uint16_t)id, row = ko_row(r);
   if (r == 1 && cwc_world()) return cwc_setcl(id, list, flag);
+  /* A group of one of our splits is handed the regular phase's table rows by 0x141343d70, which
+     starts it straight after (0x141343af0: set_clubs, then 0x141590420): the values are put
+     right here, before its matches are made from them (see canon_club). */
+  const split_t* sp;
+  if (r > 175 && list && list->b && list->e > list->b && split_part(r, &sp) >= 2) {
+    int bad = 0; uint32_t was = 0, now = 0;
+    for (uint32_t* p = list->b; p < list->e; p++) {
+      uint32_t c = canon_club(*p);
+      if (c == *p) continue;
+      if (!bad++) { was = *p; now = c; }
+      *p = c;
+    }
+    char note[48];
+    if (bad)
+      logf("fl26swiss: set_clubs reg %u -- %d of %u club(s) did not name their team record (%08x: %s -> %08x); rewritten",
+           (unsigned)r, bad, (unsigned)(list->e - list->b), was, club_note(was, note, sizeof note), now);
+    else
+      logf("fl26swiss: set_clubs reg %u -- %u club(s) on day %d, all name their team record (%08x ...)",
+           (unsigned)r, (unsigned)(list->e - list->b), today(), list->b[0]);
+  }
   if (r == 10 || r == 16 || cont_comp(r) >= 0) {
     logf("fl26swiss: set_clubs reg %u -- %u club(s) on day %d, from %llx", (unsigned)r,
          (unsigned)(list && list->b ? list->e - list->b : 0), today(),
@@ -667,6 +692,109 @@ static uint32_t club_of_id(uint32_t c)
     }
   }
   return 0;
+}
+
+/* ---- a club's value as its own team record holds it ----
+ *
+ * GitHub #37 (Venezuela, Apertura/Clausura) and Alikhaled's Egyptian split, both 0.1.3: every
+ * row of a phase table and every club of its playoff carried its own badge but ONE name
+ * (Almirante Brown, a club of the other split in #37; Zamalek, the user's club, in Egypt); a
+ * match of two of them asked for two controllers, and the phases were never played. The badge goes by the team id (the value's upper 18 bits);
+ * the name, the squad and who controls the side come from the team record, and the game's
+ * lookup 0x1414bb580 takes that record by the lower 14 bits alone when blk+0x183789c is 2
+ * (team array[row], no check of the id; otherwise it searches for the whole value). A value
+ * whose row is not its club's place in the array then reads another club's record -- the one
+ * explanation found for one name over many badges, not yet confirmed by a live read (the
+ * check_reg lines below are that read). The game's own clubs carry their
+ * place (0x194014: team 101 at row 20); the phases' values of our new clubs read row 0
+ * (45f8c000 ..., measured 2026-09-29 on a playoff fill).
+ *
+ * canon_club gives such a value the row of the one team record that holds the same id AND
+ * sits at its own row; a value that already names its record, or an id no single record
+ * answers for, is returned as it is -- so a list the game reads right is never changed. The
+ * array's place, count and stride are read off 0x1414bb580 itself (mov eax, [rbx+count];
+ * lea rdx, [rbx+base]; imul rcx, rax, 0x690), which the runtime patch set moves with the
+ * array. */
+#define TEAMLOOK_SITE 0x14bb5fa
+#define TEAM_STRIDE   0x690
+static unsigned char* team_array(uint32_t* n)
+{
+  const unsigned char* c = (const unsigned char*)(g_base + TEAMLOOK_SITE);
+  static int said;
+  if (c[0] != 0x8b || c[1] != 0x83 || c[6] != 0x48 || c[7] != 0x8d || c[8] != 0x93
+      || c[13] != 0x48 || c[14] != 0x69 || c[15] != 0xc8 || *(const uint32_t*)(c + 16) != TEAM_STRIDE) {
+    if (!said++) logf("fl26swiss: the team lookup is not where it was (0x1414bb5fa); club values are not checked");
+    return 0;
+  }
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!blk) return 0;
+  *n = *(const uint32_t*)(blk + *(const int32_t*)(c + 2));
+  if (!*n || *n > 0x3fff) return 0;
+  return blk + *(const int32_t*)(c + 9);
+}
+static uint32_t team_at(const unsigned char* a, uint32_t i) { return *(const uint32_t*)(a + (size_t)i * TEAM_STRIDE); }
+static uint32_t canon_club(uint32_t h)
+{
+  uint32_t n, row = h & 0x3fff, got = 0;
+  unsigned char* a;
+  if (!(h >> 14) || !(a = team_array(&n))) return h;
+  if (row < n && team_at(a, row) == h) return h;
+  int hits = 0;
+  for (uint32_t i = 0; i < n; i++) {
+    uint32_t v = team_at(a, i);
+    if ((v >> 14) == (h >> 14) && (v & 0x3fff) == i) { got = v; hits++; }
+  }
+  return hits == 1 ? got : h;
+}
+/* what the value's row holds, for the log: "ok" when it is the value itself */
+static const char* club_note(uint32_t h, char* buf, size_t cap)
+{
+  uint32_t n, row = h & 0x3fff;
+  unsigned char* a = team_array(&n);
+  if (!a) snprintf(buf, cap, "?");
+  else if (row >= n) snprintf(buf, cap, "row %u past %u", row, n);
+  else if (team_at(a, row) == h) snprintf(buf, cap, "ok");
+  else snprintf(buf, cap, "row %u holds %08x", row, team_at(a, row));
+  return buf;
+}
+/* For the log: whether a regulation's clubs (its list, and its table's rows when it has one)
+ * name their team records. Nothing is changed: a phase already scheduled keeps the values its
+ * matches were made with, or its table would no longer find their results. */
+static int check_reg(uint16_t reg, const char* when)
+{
+  unsigned char* rec = get_rec(reg);
+  if (!rec) return 0;
+  uint32_t* l = rec_clubs(rec);
+  unsigned n = rec_count(rec);
+  if (!n) while (n < 48 && l[n] != 0xffffffffu) n++;
+  if (n > 48) n = 48;
+  int bad = 0, tbad = 0;
+  uint32_t was = 0, now = 0;
+  for (unsigned i = 0; i < n; i++) {
+    uint32_t c = canon_club(l[i]);
+    if (c == l[i]) continue;
+    if (!bad++) { was = l[i]; now = c; }
+  }
+  unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(reg);
+  uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
+  if (rows > 48) rows = 0;
+  for (uint32_t i = 0; i < rows; i++) {
+    uint32_t* p = (uint32_t*)(t + (size_t)i * 20);
+    uint32_t c = canon_club(*p);
+    if (c == *p) continue;
+    if (!bad && !tbad) { was = *p; now = c; }
+    tbad++;
+  }
+  char note[48];
+  if (bad || tbad)
+    logf("fl26swiss: reg %u -- %s: %d of %u listed club(s) and %d of %u table row(s) do not name their team record "
+         "(%08x: %s, would be %08x)", (unsigned)reg, when, bad, n, tbad, (unsigned)rows, was,
+         club_note(was, note, sizeof note), now);
+  else if (n)
+    logf("fl26swiss: reg %u -- %s: %u listed club(s), %u table row(s), all name their team record (%08x ...)",
+         (unsigned)reg, when, n, (unsigned)rows, l[0]);
+  return bad + tbad;
 }
 
 static int in_rec(uint16_t id, uint32_t c)
@@ -1374,38 +1502,48 @@ static int club_slot(void* blk, uint32_t c)
   if (!t || *(uint32_t*)t >> 14 != c >> 14) return -1;
   return t[0x41c] & 0x7f;
 }
-/* ---- no two clubs of one league in a league-phase match ----
+/* ---- the league-phase draw: no club meets its own association, none meets three of one ----
  *
- * The draw table pairs list positions, and the pots are position / 9 (position / 6 for the
- * Conference League). A club's league is its Master League slot (+0x41c), the Select Team entry
- * it is listed under, which for a European field is its country's top flight. The places are
- * reshuffled inside each pot -- pots, home and away counts and the matchdays stay exactly as the
- * table has them -- until no pair shares a league and no club meets more than two of one league,
- * the UEFA rules. A plain descent with sideways moves: swap two places of one pot, keep the swap
- * unless it makes things worse. The seed is the clubs themselves, so the same field always gets
- * the same draw, whenever and however often the builder asks. perm[place] = list position. */
-static int spread_cost(const int* key, const uint8_t* perm, int n, const fl26_pair_t* table, int npairs)
+ * The UEFA rules, per club: no opponent from its own association, at most two from any one
+ * other. The draw table stays as it is (pots, home and away counts, matchdays); only which club
+ * takes which place inside its pot is searched -- fl26swiss_draw.h, which swissdraw_test.c runs
+ * offline over a thousand random fields. A club's association is its league's country: the
+ * world file's `country=` for the Master League slot (+0x41c) of a league of ours
+ * (fl26_swiss_nations), else the game's own slot -> country list (0x1414cdda0), else the club's
+ * own country (+0x418; a club of ours that nobody gave a country reads 21, and that is no
+ * answer), else the slot itself, else the club alone. Evo-Web / GitHub #15, 2026-09-28:
+ * Manchester United - Manchester City on the fourth round. */
+#define NATION_RVA 0x14cdda0
+static const unsigned char NATION_SIG[] = { 0x40, 0x55, 0x48, 0x8d, 0x6c, 0x24, 0xa9, 0x48, 0x81, 0xec, 0x00, 0x01, 0x00, 0x00 };
+typedef uint32_t (*nation_fn)(uint32_t slot);
+static uint16_t g_nat[128];                              /* slot -> country, 0 = not given */
+
+/* pairs (slot, country) from the world file's league lines; returns how many were taken */
+__declspec(dllexport) int fl26_swiss_nations(const uint16_t* v, int n)
 {
-  int cost = 0;
-  static int seen[FL26_SWISS36_CLUBS][8]; static int nseen[FL26_SWISS36_CLUBS];
-  memset(nseen, 0, sizeof nseen);
-  for (int k = 0; k < npairs; k++) {
-    int h = table[k].home, a = table[k].away;
-    if (h >= n || a >= n) continue;
-    int kh = key[perm[h]], ka = key[perm[a]];
-    if (kh == ka) cost += 100;
-    /* a third opponent from one league */
-    int same = 0;
-    for (int j = 0; j < nseen[h]; j++) if (seen[h][j] == ka) same++;
-    if (same >= 2) cost++;
-    same = 0;
-    for (int j = 0; j < nseen[a]; j++) if (seen[a][j] == kh) same++;
-    if (same >= 2) cost++;
-    if (nseen[h] < 8) seen[h][nseen[h]++] = ka;
-    if (nseen[a] < 8) seen[a][nseen[a]++] = kh;
-  }
-  return cost;
+  if (!v || n < 0) return -1;
+  int k = 0;
+  for (int i = 0; i < n; i++)
+    if (v[2 * i] < 123 && v[2 * i + 1]) { g_nat[v[2 * i]] = v[2 * i + 1]; k++; }
+  logf("fl26swiss: league-phase draw -- countries of %d league slot(s) from the world file", k);
+  return k;
 }
+
+static int club_key(void* blk, uint32_t c, int i)
+{
+  unsigned char* t = ((teamget_fn)(uintptr_t)(g_base + TEAMGET_RVA))(blk, c);
+  if (!t || *(uint32_t*)t >> 14 != c >> 14) return 2000 + i;
+  int s = t[0x41c] & 0x7f;
+  if (s < 123 && g_nat[s]) return g_nat[s];
+  if (s < 123 && !memcmp((const void*)(g_base + NATION_RVA), NATION_SIG, sizeof NATION_SIG)) {
+    uint32_t k = ((nation_fn)(uintptr_t)(g_base + NATION_RVA))((uint32_t)s) & 0xffff;
+    if (k && k < 0xfffc) return (int)k;
+  }
+  int own = *(uint16_t*)(t + 0x418) & 0x1ff;
+  if (own && own != 21) return own;
+  return s < 123 ? 1000 + s : 2000 + i;
+}
+
 static int spread_leagues(const uint32_t* clubs, int n, const fl26_pair_t* table, int npairs, int pot,
                           uint8_t* perm, uint16_t id)
 {
@@ -1414,33 +1552,25 @@ static int spread_leagues(const uint32_t* clubs, int n, const fl26_pair_t* table
   unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
   void* blk = o ? *(void**)(o + 0x48) : 0;
   if (!blk || !clubs || n < 2) return -1;
-  uint32_t seed = 2166136261u;
-  for (int i = 0; i < n; i++) {
-    int s = club_slot(blk, clubs[i]);
-    /* a club whose slot cannot be read, or that sits on no list (123), is a league of its own */
-    key[i] = (s < 0 || s >= 123) ? 1000 + i : s;
-    seed = (seed ^ (clubs[i] >> 14)) * 16777619u;
+  for (int i = 0; i < n; i++) key[i] = club_key(blk, clubs[i], i);
+  int before = 0, steps = 0;
+  int left = draw_spread(key, clubs, n, table, npairs, pot, perm, &before, &steps);
+  logf("fl26swiss: reg %u -- draw by association: %d same-association pair(s) and %d third opponent(s) "
+       "before, %d and %d after (%d repairs)%s", (unsigned)id, before / 100, before % 100, left / 100,
+       left % 100, steps, left ? " -- no draw keeps both rules for this field; the closest one stands" : "");
+  /* per club: its country, then its opponents' */
+  for (int x = 0; x < n; x++) {
+    char buf[160]; int m = 0;
+    for (int k = 0; k < npairs && m < (int)sizeof buf - 8; k++) {
+      int h = table[k].home, a = table[k].away;
+      if (h >= n || a >= n || (h != x && a != x)) continue;
+      m += snprintf(buf + m, sizeof buf - m, "%s%d", m ? "," : "", key[perm[h == x ? a : h]]);
+    }
+    buf[m] = 0;
+    logf("fl26swiss: reg %u draw: pot %d team %u [%d] v %s", (unsigned)id, x / pot + 1,
+         (unsigned)(clubs[perm[x]] >> 14), key[perm[x]], buf);
   }
-  int cost = spread_cost(key, perm, n, table, npairs), before = cost, tries = 0;
-  for (; cost > 0 && tries < 40000; tries++) {
-    seed = seed * 1103515245u + 12345u;
-    int p = (int)((seed >> 8) % (uint32_t)((n + pot - 1) / pot));
-    int lo = p * pot, hi = lo + pot; if (hi > n) hi = n;
-    if (hi - lo < 2) continue;
-    seed = seed * 1103515245u + 12345u;
-    int i = lo + (int)((seed >> 8) % (uint32_t)(hi - lo));
-    seed = seed * 1103515245u + 12345u;
-    int j = lo + (int)((seed >> 8) % (uint32_t)(hi - lo));
-    if (i == j) continue;
-    uint8_t t = perm[i]; perm[i] = perm[j]; perm[j] = t;
-    int c = spread_cost(key, perm, n, table, npairs);
-    if (c <= cost) cost = c;
-    else { t = perm[i]; perm[i] = perm[j]; perm[j] = t; }
-  }
-  logf("fl26swiss: reg %u -- draw spread by league: %d same-league pair(s) and %d third opponent(s) "
-       "from one league before, %d and %d after (%d tries)", (unsigned)id, before / 100, before % 100,
-       cost / 100, cost % 100, tries);
-  return cost;
+  return left;
 }
 
 /* Which pool club gave way to which of ours, per competition, for this season's lists. The AFC
@@ -1472,6 +1602,62 @@ static uint32_t cont_map_one(int k, uint32_t c, const uint32_t* have, size_t nh,
     return cand;
   }
   return 0;
+}
+/* a club that already gave way to one of ours in competition k this season */
+static int cont_mapped(int k, uint32_t c)
+{
+  for (unsigned j = 0; j < g_nmap[k]; j++) if (same_club(g_mfrom[k][j], c)) return 1;
+  return 0;
+}
+/* The Libertadores qualifying round (reg 8) holds no pool club: the game fills its eight places
+ * from the shipped leagues' rights, so our places there found nobody to replace and stayed at
+ * home (GitHub #33: "8 clubs, 0 from pool 73; our places 2, paired 0"). There a place of ours
+ * takes a shipped club's instead: the last one listed of the league with the most clubs in the
+ * round, so every league keeps one while another still has two, and a league's lower place gives
+ * way before its higher. At most half the round is given away. The ties (1032, 2056 ...) come
+ * right after the whole field, on the same day, with the same clubs: the map above makes the
+ * same club give way there too (cont_mapped). Returns how many were put in. */
+static unsigned cont_standins(int k, u32vec* list, size_t n, void* blk, int pool, unsigned put, uint16_t id)
+{
+  unsigned need = 0, done = 0;
+  for (unsigned j = 0; j < g_ncont[k]; j++) {
+    uint32_t cand = g_cont[k][j]; int given = 0;
+    for (unsigned q = 0; q < g_nmap[k] && !given; q++) given = same_club(g_mto[k][q], cand);
+    if (!given && !has_club(list->b, n, cand)) need++;
+  }
+  if (!need || n < 2 || n > 64) return 0;
+  int key[64]; uint8_t out[64];
+  for (size_t i = 0; i < n; i++) {
+    uint32_t c = list->b[i];
+    int s = club_slot(blk, c);
+    key[i] = s < 0 ? 1000 + (int)i : s;
+    /* not a shipped club of a league: a pool club, one of ours, or one already given way */
+    out[i] = !(c >> 14) || s == pool || has_club(g_cont[k], g_ncont[k], c) || cont_mapped(k, c);
+    for (unsigned q = 0; q < g_nmap[k] && !out[i]; q++) out[i] = same_club(g_mto[k][q], c);
+  }
+  unsigned cap = (unsigned)n / 2 > put ? (unsigned)n / 2 - put : 0;
+  while (need && cap) {
+    int best = -1, most = 0;
+    for (int i = (int)n - 1; i >= 0; i--) {         /* backwards: a league's last listed first */
+      if (out[i]) continue;
+      int cnt = 0;
+      for (size_t j = 0; j < n; j++) cnt += !out[j] && key[j] == key[i];
+      if (cnt > most) { most = cnt; best = i; }
+    }
+    if (best < 0) break;
+    out[best] = 1;
+    uint32_t c = list->b[best];
+    const how_t* h = 0;
+    uint32_t to = cont_map_one(k, c, list->b, n, &h, id);
+    if (!to) break;
+    list->b[best] = to; need--; cap--; done++;
+    logf("fl26swiss:   %s: reg %u %s %u -> %08x, in place of %08x (slot %d, %d of its league in the round)",
+         CONT_NAME[k], h ? (unsigned)h->reg : 0u, h && !h->rank ? "winner" : "position", h ? (unsigned)h->rank : 0u,
+         to, c, key[best], most);
+  }
+  if (need) logf("fl26swiss: %s (reg %u) -- %u place(s) of ours left out: half the round is given away already",
+                 CONT_NAME[k], (unsigned)id, need);
+  return done;
 }
 /* the block and a fresh season check, shared by both ways in */
 static void* cont_begin(int k)
@@ -1506,7 +1692,10 @@ static void cont_swap(uint16_t id, u32vec* list, const char* where)
         for (size_t i = g * 4, seen = 0; i < g * 4 + 4; i++)
           if (club_slot(blk, list->b[i]) == pool && seen++ == r) { order[no++] = i; break; }
   } else {
-    for (size_t i = 0; i < n && no < 64; i++) if (club_slot(blk, list->b[i]) == pool) order[no++] = i;
+    /* a club that already gave way (a stand-in of the qualifying round, below) gives way again
+       in the lists handed over after the whole field */
+    for (size_t i = 0; i < n && no < 64; i++)
+      if (club_slot(blk, list->b[i]) == pool || cont_mapped(k, list->b[i])) order[no++] = i;
   }
   unsigned npool = 0, put = 0, left = 0, before = g_nmap[k];
   for (size_t q = 0; q < no; q++) {
@@ -1520,6 +1709,7 @@ static void cont_swap(uint16_t id, u32vec* list, const char* where)
     if (h) logf("fl26swiss:   %s: reg %u %s %u -> %08x, in place of pool club %08x", CONT_NAME[k],
                 (unsigned)h->reg, h->rank ? "position" : "winner", (unsigned)h->rank, to, c);
   }
+  if (comp == LIBQ && id < 1024) put += cont_standins(k, list, n, blk, pool, put, id);
   logf("fl26swiss: %s (reg %u, %s) -- day %d: %u clubs, %u from pool %d; %u put in (%u newly paired), %u pool clubs left; our places %u, paired %u",
        CONT_NAME[k], (unsigned)id, where, today(), (unsigned)n, npool, pool, put, g_nmap[k] - before, left, g_ncont[k], g_nmap[k]);
 }
@@ -1905,10 +2095,19 @@ static int ccup_of(uint16_t id, int* ko)
   }
   return -1;
 }
+/* A club already in a continental cup: one of ours, or the game's own Libertadores (group stage
+   reg 9, qualifying round reg 8) or AFC Champions League (reg 15), whose fields are set on day 0,
+   long before a cup of ours is filled at the end of August. Without the game's three, Boca Juniors
+   played the Libertadores and the Copa Sudamericana in the same season (GitHub #37). */
 static int ccup_taken(uint32_t c)
 {
+  static const uint16_t SHIPPED[] = { 9, 8, 15 };
   for (int k = 0; k < g_nccup; k++)
     if (!g_ccup[k].national && has_club(g_ccup_field[k], g_ccup_nf[k], c)) return 1;
+  for (unsigned i = 0; i < sizeof SHIPPED / sizeof SHIPPED[0]; i++) {
+    unsigned char* rec = get_rec(SHIPPED[i]);
+    if (rec && has_club(rec_clubs(rec), rec_count(rec), c)) return 1;
+  }
   return 0;
 }
 
@@ -1992,11 +2191,12 @@ static int ccup_fill_one(int k, void* started)
     return 0;
   }
   unsigned n = 0, gaps = 0;
+  uint16_t unplayed_phase = 0;
   g_ccup_nf[k] = 0;
   for (unsigned i = 0; i < c->n; i++) {
     const char* how = ""; uint32_t club = 0;
     if (c->nc) {                                   /* invited by name */
-      club = full_club(c->clubs[i]);
+      club = canon_club(full_club(c->clubs[i]));
       if (club && !has_club(g_ccup_field[k], n, club)) {
         g_ccup_field[k][n++] = club; g_ccup_nf[k] = n;
         logf("fl26swiss:   cup %u entry %2u: team %u -> %08x (invited)", (unsigned)c->reg, n, (unsigned)c->clubs[i], club);
@@ -2013,10 +2213,28 @@ static int ccup_fill_one(int k, void* started)
       club = 0;
     }
     if (club) {
+      const split_t* sp;
+      if (split_part(c->ereg[i], &sp) >= 2 && strcmp(how, "played matches") && strcmp(how, "live table")
+          && strcmp(how, "kept table"))
+        unplayed_phase = c->ereg[i];
+      uint32_t v = canon_club(club);
+      char note[48];
+      if (v != club) logf("fl26swiss:   cup %u: %08x does not name its team record (%s) -- %08x taken",
+                          (unsigned)c->reg, club, club_note(club, note, sizeof note), v);
+      club = v;
       g_ccup_field[k][n++] = club; g_ccup_nf[k] = n;
       logf("fl26swiss:   cup %u entry %2u: reg %u position %u -> %08x (%s)", (unsigned)c->reg, n,
            (unsigned)c->ereg[i], (unsigned)c->erank[i], club, how);
     } else gaps++;
+  }
+  /* A playoff of an Apertura or a Clausura that was never played has no order to go by: the
+     squad-strength or list order put four clubs of a Venezuelan Apertura nobody had played into
+     its playoff, which then never started either (#37). Left empty instead. */
+  if (unplayed_phase) {
+    logf("fl26swiss: cup %u -- reg %u has no played match to rank its clubs by; the playoff is not filled",
+         (unsigned)c->reg, (unsigned)unplayed_phase);
+    g_ccup_nf[k] = 0;
+    return 0;
   }
   if (n != c->n) {
     logf("fl26swiss: cup %u -- only %u of %u clubs found; not started", (unsigned)c->reg, n, (unsigned)c->n);
@@ -2029,6 +2247,7 @@ static int ccup_fill_one(int k, void* started)
     run_flush();
     logf("fl26swiss: cup %u -- day %d: knockout of %u clubs (%08x v %08x ...)", (unsigned)c->ko, today(),
          rec_count(rec), g_ccup_field[k][0], g_ccup_field[k][1]);
+    check_reg(c->ko, "filled");
     if (rec_count(rec) != n) return 0;
     start_stage(started, c->ko);
     return 1;
@@ -2094,7 +2313,7 @@ static void ccup_fill_days(void)
  * progression, called when the phase's last match is played), or the July teardown (every
  * cup of the new season's first week). Only a fill day at most seven days ahead is taken, and
  * the fill counts for that day's season, so ccup_fill_days does not fill it again. */
-static void ccup_fill_ahead(uint16_t src, const char* why)
+static void ccup_fill_ahead(uint16_t src, const char* why, void* started)
 {
   int d = today();
   if (d < 1) return;
@@ -2112,7 +2331,7 @@ static void ccup_fill_ahead(uint16_t src, const char* why)
     c->filled_year = year;
     logf("fl26swiss: cup %u -- filled on day %d at %s, %d day(s) before its fill day %u",
          (unsigned)c->ko, d, why, ahead, (unsigned)c->fill);
-    ccup_fill_one(k, 0);
+    ccup_fill_one(k, started);
   }
 }
 
@@ -2195,6 +2414,7 @@ typedef char (*splitfn_t)(void* ctx, uint64_t id, void* started);
 typedef struct split_s split_t;
 static int split_part(uint16_t id, const split_t** out);
 static void split_keys(void);
+static void canon_groups(const split_t* s);
 
 char prog_handler(void* ctx, uint64_t id, void* started)
 {
@@ -2205,14 +2425,16 @@ char prog_handler(void* ctx, uint64_t id, void* started)
     if (part) {
       char ok = ((prog_fn)(uintptr_t)g_tramp_prog)(ctx, id, started);
       if (part == 2 && r > 175) {
+        check_reg(r, "its phase over");
         char sp = ((splitfn_t)(uintptr_t)(g_base + SPLIT_FN_RVA))(ctx, id, started);
         logf("fl26swiss: reg %u -- split regular phase over on day %d, groups filled by 0x141343d70 -> %d",
              (unsigned)r, today(), (int)sp);
+        canon_groups(s);
         ok |= sp;
       } else {
         logf("fl26swiss: reg %u -- split progression on day %d -> %d", (unsigned)r, today(), (int)ok);
       }
-      if (part > 1 && r > 175) ccup_fill_ahead(r, "the end of its phase");
+      if (part > 1 && r > 175) ccup_fill_ahead(r, "the end of its phase", started);
       return ok;
     }
   }
@@ -2764,6 +2986,25 @@ static int calyear(uint16_t id)
   for (int i = 0; i < g_ncalyear; i++) if (g_calyear[i] == id) return 1;
   return 0;
 }
+/* The game's own leagues of a calendar-year region that the world file moves to August-May
+   (`season 28 0`: the Saudi Pro League, 162): their case in the date switch is a February-
+   December calendar, so they take the Premier League's (reg 17, 38 rounds) resampled to their
+   own round count, like ours. Experimental: the season builder's own lists are by id. */
+static uint16_t g_eudate[16]; static int g_neudate = 0;
+__declspec(dllexport) int fl26_swiss_european(const uint16_t* ids, int n)
+{
+  if ((!ids && n) || n < 0) return -1;
+  if (n > 16) n = 16;
+  for (int i = 0; i < n; i++) g_eudate[i] = ids[i];
+  g_neudate = n;
+  logf("fl26swiss: %d league(s) of the game moved to the European calendar", n);
+  return n;
+}
+static int eudate(uint16_t id)
+{
+  for (int i = 0; i < g_neudate; i++) if (g_eudate[i] == id) return 1;
+  return 0;
+}
 static void league_dates(uint16_t id, uint64_t reg, void* vec)
 {
   unsigned char* rec = get_rec(id);
@@ -2772,14 +3013,19 @@ static void league_dates(uint16_t id, uint64_t reg, void* vec)
   if (!rec || have < 2) return;
   uint32_t clubs = *(uint32_t*)(rec + 0x30c) & 0x7f, legs = *(uint32_t*)(rec + 0x308) >> 29;
   uint32_t n = (clubs & 1 ? clubs : clubs - 1) * legs;
-  int cy = calyear(id);
-  if (clubs < 4 || !legs || (n == have && !cy)) return;
+  int cy = calyear(id), eu = eudate(id);
+  if (clubs < 4 || !legs || (n == have && !cy && !eu)) return;
   static uint16_t said[64]; static int nsaid = 0; int seen = 0;
   for (int k = 0; k < nsaid; k++) if (said[k] == id) seen = 1;
   if (!seen && nsaid < 64) said[nsaid++] = id;
   date_t* r = (date_t*)v->b;
   int32_t shift = 0;
-  if (n > have) {
+  if (eu) {                                         /* the European calendar, from scratch */
+    ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | (n <= 38 ? MID_CAL_REG : LONG_CAL_REG), vec);
+    have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+    r = (date_t*)v->b;
+    if (n > have || have < 2) return;
+  } else if (n > have) {
     uint32_t first = r[0].day;
     ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | (n <= 38 ? MID_CAL_REG : LONG_CAL_REG), vec);
     have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
@@ -2869,6 +3115,11 @@ static const uint16_t SCOT_DAYS[38] = {
   226, 233, 240, 254, 261, 268, 275, 296, 300, 303, 310, 321, 324, 331, 338, 345, 356, 359, 363,
   2, 13, 16, 20, 23, 31, 34, 37, 51, 58, 65, 72, 79, 100,
   107, 114, 121, 128, 142 };
+
+static void canon_groups(const split_t* s)
+{
+  for (int g = 0; g < 3; g++) if (s->group[g]) check_reg(s->group[g], "its group filled");
+}
 
 /* 0 not a split row, 1 total, 2 regular phase, 3 a group */
 static int split_part(uint16_t id, const split_t** out)
@@ -3030,6 +3281,7 @@ static uint64_t split_dates(uint16_t id, uint64_t reg, void* vec, int part, cons
     logf("fl26swiss: reg %u -- split %s of %u: %u rounds on days %u..%u (season %u+%u on a %u-date line)",
          (unsigned)id, part == 2 ? "regular phase" : "group", (unsigned)s->total, n,
          r[0].day, r[n - 1].day, n1, n2, (unsigned)L);
+  if (!seen && part == 2 && id > 175) check_reg(id, "dated");
   return rv;
 }
 
@@ -3048,7 +3300,8 @@ __declspec(dllexport) int fl26_swiss_datelike(const uint16_t* v, int n)
   if (n > MAX_DATELIKE) n = MAX_DATELIKE;
   int k = 0;
   for (int i = 0; i < n; i++)
-    if (v[2 * i] > 175 && v[2 * i + 1] >= 2 && v[2 * i + 1] <= 175) { g_dlike[k][0] = v[2 * i]; g_dlike[k][1] = v[2 * i + 1]; k++; }
+    /* ours (176 and up), or a shipped cup a `season` line moved to August-May (164 like 122) */
+    if (v[2 * i] >= 2 && v[2 * i] != v[2 * i + 1] && v[2 * i + 1] >= 2 && v[2 * i + 1] <= 175) { g_dlike[k][0] = v[2 * i]; g_dlike[k][1] = v[2 * i + 1]; k++; }
   g_ndlike = k;
   logf("fl26swiss: %d cup(s) dated as the shipped cup they were copied from", k);
   return k;
@@ -3079,7 +3332,7 @@ static uint64_t datelike_dates(uint16_t id, uint64_t reg, void* vec)
 uint64_t date_handler(uint64_t reg, void* vec)
 {
   uint16_t id = (uint16_t)reg;
-  if (vec && g_ndlike && id > 175) {
+  if (vec && g_ndlike) {
     for (int i = 0; i < g_ndlike; i++) if (g_dlike[i][0] == id) return datelike_dates(id, reg, vec);
   }
   {
@@ -3160,7 +3413,7 @@ uint64_t date_handler(uint64_t reg, void* vec)
     }
     return rv;
   }
-  if (vec && our_league(id)) {
+  if (vec && (our_league(id) || eudate(id))) {
     uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)(reg, vec);
     league_dates(id, reg, vec);
     return rv;
@@ -3241,7 +3494,7 @@ static int g_td_fresh = 0;                /* a July teardown ran in this call of
 char daychk_handler(void* ctx)
 {
   char r = ((daychk_fn)(uintptr_t)g_tramp_daychk)(ctx);
-  if (g_td_fresh) { g_td_fresh = 0; ccup_fill_ahead(0, "the July teardown"); }
+  if (g_td_fresh) { g_td_fresh = 0; ccup_fill_ahead(0, "the July teardown", 0); }
   static int last = -1, seen;
   int d = abs_day();
   if (d != last) {

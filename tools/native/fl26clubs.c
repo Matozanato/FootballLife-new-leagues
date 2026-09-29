@@ -53,6 +53,17 @@
  * end up with no slot (123, as France D4/D5 and Czechia always had), and the shipped pool clubs
  * keep theirs. Every other caller -- the menus -- is answered exactly as before.
  *
+ * 2026-09-29: clubs of the game in our leagues (Mod Studio 0.1.4, GitHub #25/#33). A league of
+ * ours may now take a club the game already has, either one in no league (the "other clubs"
+ * the game shows under Other European / Latin American / Asian clubs) or one swapped out of a
+ * shipped league. The tables make it a member of our league only, but the game's pool lists
+ * (69, 70, 73, 75) are filled at boot by their own rule, so such a club could still be found
+ * there -- and a club found on a pool slot takes that slot over its league's (above). The world
+ * file names those clubs (a "nopool" line); fl26_clubs_keep_out() takes the list, and every
+ * pool slot is then answered as the game stored it minus those clubs, for every caller: the
+ * club shows under its new league only, and the Master League gives it that league's slot.
+ * With no such line nothing of this runs.
+ *
  * Built with `zig cc` (tools/native/build-clubs.sh). Our own code, no third-party binaries.
  */
 #define WIN32_LEAN_AND_MEAN
@@ -82,6 +93,12 @@
 #define SLOTFN_GET_RET    0x1263bfe
 #define SLOTFN_COUNT2_RET 0x12640cf
 static int is_pool(unsigned slot) { return slot == 69 || slot == 70 || slot == 73 || slot == 75; }
+static int pool_index(unsigned slot)
+{
+  return slot == 69 ? 0 : slot == 70 ? 1 : slot == 73 ? 2 : slot == 75 ? 3 : -1;
+}
+
+#define MAX_KEEP 512
 
 typedef struct { uint16_t slot; uint16_t reg; } fl26_clubs_cfg_t;
 
@@ -97,6 +114,10 @@ static uint32_t g_pool[STRIDE];            /* a pool slot's stored list minus ou
 static int      g_npool = -1;
 static unsigned g_pool_slot = SLOTS;
 static uint32_t g_pool_calls;
+static uint32_t g_keep[MAX_KEEP];          /* clubs of the game now in a league of ours      */
+static int      g_nkeep;
+static uint32_t g_kp[4][STRIDE];           /* each pool slot's stored list minus those clubs */
+static int      g_kn[4] = { -1, -1, -1, -1 };
 
 /* ---- log the loader drains into sider.log ---- */
 static char g_log[4096];
@@ -153,6 +174,12 @@ static int rebuild(int i)
   return n;
 }
 
+static int kept_out(uint32_t v)
+{
+  for (int j = 0; j < g_nkeep; j++) if (g_keep[j] == v) return 1;
+  return 0;
+}
+
 /* The game's stored list of a pool slot with our league's clubs taken out, for 0x141263b40.
    Built at the first count of each slot it asks about and reused for the gets and the
    second count that follow. */
@@ -165,11 +192,27 @@ static unsigned pool_build(void* self, unsigned slot, int i)
   const uint32_t* stored = (const uint32_t*)((unsigned char*)self + slot * STRIDE * 4);
   for (unsigned k = 0; k < n; k++) {
     uint32_t v = stored[k];
-    int mine = 0;
-    for (int j = 0; j < ours; j++) if (g_list[i][j] == v) { mine = 1; break; }
+    int mine = kept_out(v);
+    for (int j = 0; j < ours && !mine; j++) if (g_list[i][j] == v) mine = 1;
     if (!mine) g_pool[g_npool++] = v;
   }
   return (unsigned)g_npool;
+}
+
+/* A pool slot no league of ours sits on, as the game stored it minus the clubs of the game that
+   now play in a league of ours. Rebuilt at each count (the stored lists are filled once, at
+   boot, and a count before that must not be cached as empty); a get with no count before it
+   builds it too. */
+static unsigned keep_build(void* self, unsigned slot, int p)
+{
+  unsigned n = *(uint16_t*)((unsigned char*)self + COUNT_OFF + slot * 2);
+  if (n > STRIDE) n = STRIDE;
+  const uint32_t* stored = (const uint32_t*)((unsigned char*)self + slot * STRIDE * 4);
+  int m = 0;
+  for (unsigned k = 0; k < n; k++)
+    if (!kept_out(stored[k])) g_kp[p][m++] = stored[k];
+  g_kn[p] = m;
+  return (unsigned)m;
 }
 
 /* ---- the two replacements ---- */
@@ -188,6 +231,10 @@ __declspec(dllexport) unsigned count_hook(void* self, unsigned slot)
     g_stat[3]++;
   }
   if (slot >= SLOTS || !self) return 0;
+  if (g_nkeep && i < 0) {
+    int p = pool_index(slot);
+    if (p >= 0) return keep_build(self, slot, p);
+  }
   return *(uint16_t*)((unsigned char*)self + COUNT_OFF + slot * 2);
 }
 
@@ -203,6 +250,13 @@ __declspec(dllexport) unsigned get_hook(void* self, unsigned slot, unsigned idx)
     return g_list[i][idx];
   }
   if (slot >= SLOTS || !self) return 0xffffffffu;
+  if (g_nkeep && i < 0) {
+    int p = pool_index(slot);
+    if (p >= 0) {
+      if (g_kn[p] < 0) keep_build(self, slot, p);
+      return idx < (unsigned)g_kn[p] ? g_kp[p][idx] : 0xffffffffu;
+    }
+  }
   unsigned n = *(uint16_t*)((unsigned char*)self + COUNT_OFF + slot * 2);
   if (idx >= n) return 0xffffffffu;
   return *(uint32_t*)((unsigned char*)self + (slot * STRIDE + idx) * 4);
@@ -229,10 +283,23 @@ static int replace(unsigned char* target, void* handler)
   return 0;
 }
 
-/* 0 ok; 2 count signature; 3 get signature; 4/5 protect failed; 9 bad config */
+/* The clubs of the game that play in a league of ours (the world file's nopool line), before
+   fl26_clubs_install. Returns how many were taken. */
+__declspec(dllexport) int fl26_clubs_keep_out(const uint32_t* tids, int n)
+{
+  g_nkeep = 0;
+  for (int k = 0; tids && k < n && g_nkeep < MAX_KEEP; k++)
+    if (tids[k] && !kept_out(tids[k])) g_keep[g_nkeep++] = tids[k];
+  for (int p = 0; p < 4; p++) g_kn[p] = -1;
+  logf("fl26clubs: %d club(s) of the game play in our leagues -- left out of the other-clubs pools", g_nkeep);
+  return g_nkeep;
+}
+
+/* 0 ok; 2 count signature; 3 get signature; 4/5 protect failed; 9 bad config. ncfg may be 0
+   when fl26_clubs_keep_out gave clubs: the pools are then all there is to answer. */
 __declspec(dllexport) int fl26_clubs_install(uint64_t exe_base, const fl26_clubs_cfg_t* cfg, int ncfg)
 {
-  if (!cfg || ncfg < 1 || ncfg > MAX_CFG) return 9;
+  if (ncfg < 0 || ncfg > MAX_CFG || (ncfg && !cfg) || (!ncfg && !g_nkeep)) return 9;
   g_base = exe_base;
   g_ncfg = ncfg;
   for (int i = 0; i < ncfg; i++) {
@@ -245,8 +312,9 @@ __declspec(dllexport) int fl26_clubs_install(uint64_t exe_base, const fl26_clubs
   if (memcmp((void*)(uintptr_t)(exe_base + GET_RVA),   SIG_GET,   14)) return 3;
   if (replace((unsigned char*)(uintptr_t)(exe_base + COUNT_RVA), (void*)count_hook)) return 4;
   if (replace((unsigned char*)(uintptr_t)(exe_base + GET_RVA),   (void*)get_hook))   return 5;
-  logf("fl26clubs: readers replaced (count@%llx get@%llx), %d slot(s) served from our regulations",
-       (unsigned long long)(exe_base + COUNT_RVA), (unsigned long long)(exe_base + GET_RVA), ncfg);
+  logf("fl26clubs: readers replaced (count@%llx get@%llx), %d slot(s) served from our regulations, "
+       "%d club(s) kept out of the pools",
+       (unsigned long long)(exe_base + COUNT_RVA), (unsigned long long)(exe_base + GET_RVA), ncfg, g_nkeep);
   return 0;
 }
 

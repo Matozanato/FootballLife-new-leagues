@@ -82,6 +82,8 @@ end
 -- A league line with cup= is a second division under a shipped top flight that had none:
 -- {that country's cup, the league above, this league}. The DLL keeps the cup to the top
 -- league's clubs (GitHub #21: the game would put this league into it, or only this league).
+-- With cupall=1 the cup takes both leagues instead (GitHub #32), the builder having checked
+-- that the cup's calendar dates every round of that field.
 -- scup= on the same line is that country's super cup (GitHub #29): {super cup, the league
 -- above, this league}; the DLL swaps a club of this league out of it.
 local function from_world(world)
@@ -92,7 +94,7 @@ local function from_world(world)
       local n = L.promote or 3
       chains[#chains + 1] = { L.above, L.id, n, n }
     end
-    if L.cup and L.above then cups[#cups + 1] = { L.cup, L.above, L.id } end
+    if L.cup and L.above then cups[#cups + 1] = { L.cup, L.above, L.id, L.cupall == 1 } end
     if L.scup and L.above then scups[#scups + 1] = { L.scup, L.above, L.id } end
   end
   return chains, protect, cups, scups
@@ -188,8 +190,12 @@ function m.init(ctx)
       if pc ~= nil then
         local t = ffi.new("uint16_t[?]", 3 * #CUPS)
         for i, c in ipairs(CUPS) do
-          t[3 * i - 3], t[3 * i - 2], t[3 * i - 1] = c[1], c[2], c[3]
-          log(string.format("fl26chain: live -- cup %d keeps the clubs of %d, not of %d below it", c[1], c[2], c[3]))
+          t[3 * i - 3], t[3 * i - 2], t[3 * i - 1] = c[4] and c[1] + 0x8000 or c[1], c[2], c[3]
+          if c[4] then
+            log(string.format("fl26chain: live -- cup %d takes the clubs of %d and of %d below it", c[1], c[2], c[3]))
+          else
+            log(string.format("fl26chain: live -- cup %d keeps the clubs of %d, not of %d below it", c[1], c[2], c[3]))
+          end
         end
         ffi.cast("fl26_chain_cups_t", pc)(t, #CUPS)
       else

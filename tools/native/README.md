@@ -13,18 +13,26 @@ hands it the configuration; the DLL does the rest.
 - **`fl26clubs.dll`** (experimental) replaces the two functions that read the Select Team
   club list, answering from the league's own rulebook for named slots only. When a Master
   League is created it also keeps our clubs out of the Club World Cup "other clubs" pools
-  (slots 69/73/75). Around 270 lines. Writes nothing at all (its loader changes three bytes
-  of the game's slot switch, see `fl26clubs.lua`).
+  (slots 69/73/75), and the clubs of the game that a world moved into one of its leagues (the
+  world file's `nopool` line, `fl26_clubs_keep_out`) out of every "other clubs" pool. Around
+  350 lines. Writes nothing at all (its loader changes three bytes of the game's slot switch,
+  see `fl26clubs.lua`).
 - **`fl26chain.dll`** (experimental) hooks the end-of-season step that applies promotion
   and relegation, and completes a chain of three or more divisions, which the game on its
-  own only exchanges one joint of. Around 400 lines. Up to 8 chains.
+  own only exchanges one joint of. Around 400 lines. Up to 8 chains. It also decides which
+  clubs a country's cup takes when a world adds a second division under a shipped top flight:
+  the top flight's alone, or both divisions with `cupall=1` (issue #32).
 - **`fl26swiss.dll`** (experimental) replaces the league schedule builder for the listed
   regulations only: the 36-club league phase of the Champions League, Europa League and
   Conference League (the draw tables are generated and checked by `tools/mkswiss.py` into
   `fl26swiss_table.h`), their 9-24 play-off and fixed knockout bracket, the UEFA access
   list, and the calendar of leagues that are not 20 clubs playing twice. It also runs new
   continental cups named by `ccup` lines of a world file (groups then a knockout, or a
-  straight knockout); nothing uses that yet in the public modules. About 3,000 lines.
+  straight knockout), as Mod Studio's League Builder writes them. The league-phase draw keeps
+  associations apart as UEFA does (no opponent from a club's own country, at most two from any
+  one other): `fl26swiss_draw.h` reshuffles each pot, with the countries the loader passes in
+  `fl26_swiss_nations`, and `swissdraw_test.c` checks that search offline on random fields
+  (`zig cc -O2 -o swissdraw_test.exe swissdraw_test.c`). About 3,700 lines.
   It writes no file; its log goes to `sider.log` through the loader.
 
 None has third-party code or any network access.
@@ -33,10 +41,10 @@ None has third-party code or any network access.
 
 | file | SHA-256 |
 |---|---|
-| `sider/fl26join.dll` | `b76b79c83ff490af8e7dd97878ec9bf76df519a3db979b1c4c9a9b25e041b1af` |
-| `sider/experimental/fl26clubs.dll` | `2b79cb83eb24877553596d5fe9b18e7c1c453ff2e43d21915a788e2c977bb469` |
-| `sider/experimental/fl26chain.dll` | `cfadf4cf8a8c4cf0b943a5b42dff3d51d56dd50a96981b37dc3e8eca24d01197` |
-| `sider/experimental/fl26swiss.dll` | `f6b8f5871d664a1d9b76f01954633746ac613c5fa0d317e4bd65ca3db0b87ce4` |
+| `sider/fl26join.dll` | `f1235180fa83b3d5a166a257468cf1085c336efbcf02fc94cba86bc147c5d311` |
+| `sider/experimental/fl26clubs.dll` | `ddd572832ec68eec36bbaf18eba4cdc1e1c8341c6da40114bb61a3a8637cd943` |
+| `sider/experimental/fl26chain.dll` | `4425f3fceee9a7a4fc8cb03234745280644dd6240aa9b072f87a474b99d7bb67` |
+| `sider/experimental/fl26swiss.dll` | `074494fd2ec5be271ec49c7e13106fcf10ce44d45025c1f32e01193cba9c80a3` |
 
 ```powershell
 (Get-FileHash "C:\fl26\sider\fl26join.dll" -Algorithm SHA256).Hash
@@ -95,6 +103,12 @@ because it has no inline assembly on x86-64.
   game's own no-movement path instead of letting it stop the whole group's promotions.
 - `reg_fix_pre` / `reg_post` -- at registration, resets a season that is already over and
   rebuilds a stale season record, so a league is not refused a new season.
+- `fl26_join_season_types` -- the world file's `season <region> <type>` lines, answered in
+  front of the game's own region -> season type table (0x141576140), so a new country can play
+  February to December.
+- `canon_listed` -- at the door of our leagues, a club value that does not point at its own
+  team record gets the row of the one record with its id (the "same club on every row" of a
+  split phase, issue #37).
 - `set_pre`, `enter_pre`, `bld_pre` -- observers only.
 - `fl26_join_log`, `fl26_join_stats` -- the text log and eight counters the loader drains
   into `sider.log`.
@@ -106,6 +120,7 @@ still) it calls the game's own function for it rather than writing the tables it
 `{slot, regulation id}` pairs from the loader and replaces two reader functions, and a slot
 that is not in that list — or whose rulebook cannot be read yet — falls through to the
 game's own answer, so no slot can come out emptier than it is today.
+`fl26_clubs_keep_out(tids, n)` takes the team ids of the world's `nopool` line.
 `fl26_clubs_log` / `fl26_clubs_stats` are the log and counters.
 
 The addresses are for `FL_2026.exe` 26.0.0.0 (458,910,720 bytes), which has no ASLR. On any

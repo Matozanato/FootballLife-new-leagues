@@ -303,7 +303,8 @@ ranks 9-24, played 4 and 11 February, eight real winners, round of 16 with sixte
   sixth is inside each pot. Each round of 18 is split over two dates, like the eight-round
   table. The module uses it for row 1210 and dates it on the real Thursdays 2/23 Oct,
   6/27 Nov, 11/18 Dec (days 273/274 ... 350/351). The ban on same-country opponents cannot be
-  expressed in a static table and is not applied.
+  expressed in a static table; since section 13 the DLL applies it by choosing which club
+  takes which place inside its pot.
 * **UEFA bracket.** The play-off follows the fixed tree: 9/10 v 23/24 (bracket I), 11/12 v
   21/22 (II), 13/14 v 19/20 (III), 15/16 v 17/18 (IV), who meets whom inside a bracket drawn.
   Round of 16: 1/2 draw the two winners of IV, 3/4 of III, 5/6 of II, 7/8 of I. The sixteen
@@ -316,3 +317,32 @@ ranks 9-24, played 4 and 11 February, eight real winners, round of 16 with sixte
   exactly seven dates; anything else is logged and left alone.
 * The Conference League teardown list also gets row 1210, whose 144 matches survived the
   first attempt.
+
+## 13. The draw keeps associations apart (2026-09-29)
+
+GitHub #15 / Evo-Web: the fixed table pairs list positions, so two clubs of one country could
+meet (Manchester United - Manchester City). The first remedy (0.1.3) reordered each pot by
+Master League slot with a plain descent. It now follows the UEFA rules per club -- no opponent
+from its own association, at most two from any one other -- for all three league phases.
+
+* **Association.** The league's country: the world file's `country=` for a league slot of ours
+  (Lua passes `slot, country` pairs to `fl26_swiss_nations`), else the game's slot -> country
+  leaf 0x1414cdda0 (called only while its first bytes match), else the club's own country
+  (Team +0x418, unless 0 or 21 -- clubs of ours nobody gave a country read 21), else the slot,
+  else the club alone.
+* **Search** (`fl26swiss_draw.h`). The table stays as it is; only which club takes which place
+  inside its pot changes. Min-conflicts repairs (up to 30,000), then, if a conflict is left, an
+  exhaustive search over the places, most-constrained first, within 3 million nodes. Seeded
+  from the clubs, so a field always gets the same draw. A field no draw can satisfy keeps the
+  closest one found and says so in the log.
+* **Offline check.** `tools/native/swissdraw_test.c` runs 1,000 random fields shaped like real
+  ones (up to six clubs of one association, mostly in the top pots) through the same code and
+  checks the result independently. Seed 2026: 36 clubs, 847/1000 without a conflict, 151 of
+  the rest cannot be drawn at all (the counting bound: per x |A| <= 2 x (pot - |A in P|));
+  Conference League 867/1000, 80 impossible; about 50 more keep one third opponent, and a
+  search seven times longer (20 million nodes) solved only one of them, so most are likely
+  fields the simple bound does not catch as impossible. 1 opponent per pot is tight.
+  About 0.07 s per draw.
+* **Log.** `fl26swiss: reg N -- draw by association: A same-association pair(s) and B third
+  opponent(s) before, C and D after (R repairs)`, then one line per club:
+  `fl26swiss: reg N draw: pot P team T [country] v c1,c2,...`.
