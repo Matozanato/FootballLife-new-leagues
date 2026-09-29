@@ -94,6 +94,12 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print):
         for ch in list((c.get("edits") or {}).values()) + list(c.get("add") or []):
             if str(ch.get("face", "")).strip():
                 ch["face"] = face(ch["face"])
+        if c.get("coach_portrait"):
+            c["coach_portrait"] = asset(c["coach_portrait"])
+        if c.get("join"):                              # a game player, or one of the package's clubs
+            c["join"] = [r for r in c["join"] if str(r).isdigit() or str(r).rsplit("/", 2)[0] in names]
+            if not c["join"]:
+                c.pop("join")
         return c
 
     out_r = {"leagues": [], "players": {}, "edits": {}}
@@ -110,7 +116,7 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print):
     for key, c in (recipe.get("players") or {}).items():
         lg = key.rpartition("/")[0]
         if (lg in names) or (edits and key.isdigit()):
-            if c.get("edits") or c.get("add") or c.get("remove"):
+            if c.get("edits") or c.get("add") or c.get("remove") or c.get("join") or c.get("coach_portrait"):
                 out_r["players"][key] = players_of(c)
     if edits:
         e = json.loads(json.dumps(recipe.get("edits") or {}))
@@ -198,6 +204,8 @@ def unpack(path, store):
         for ch in list((c.get("edits") or {}).values()) + list(c.get("add") or []):
             if ch.get("face"):
                 ch["face"] = full(ch["face"])
+        if c.get("coach_portrait"):
+            c["coach_portrait"] = full(c["coach_portrait"])
     e = r.get("edits") or {}
     for v in (e.get("leagues") or {}).values():
         if v.get("logo"):

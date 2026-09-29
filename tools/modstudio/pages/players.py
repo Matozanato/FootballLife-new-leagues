@@ -25,7 +25,8 @@ class Players(BuilderPage):
     title = "Players"
     hint = ("The squad of a club: names, shirt numbers, the starting eleven (the first eleven by squad "
             "order), positions, abilities and skills. Works for the new clubs of the recipe and for the "
-            "game's clubs; the changes are written into your world when you Build.")
+            "game's clubs; the changes are written into your world when you Build. Players can move to "
+            "another club (Transfer to), and a national team calls up whom you pick.")
 
     def __init__(self, app):
         super().__init__(app)
@@ -53,6 +54,11 @@ class Players(BuilderPage):
         self.cl.setMinimumWidth(240)
         self.cl.currentIndexChanged.connect(self.club_picked)
         pick.addWidget(self.cl)
+        pick.addWidget(QLabel(_("Club ID")))
+        self.club_id = QLineEdit()
+        self.club_id.setFixedWidth(90)
+        self.club_id.editingFinished.connect(self.set_club_id)
+        pick.addWidget(self.club_id)
         self.find = QLineEdit()
         self.find.setPlaceholderText(_("Find a club..."))
         self.find.setFixedWidth(220)
@@ -91,6 +97,17 @@ class Players(BuilderPage):
         self.b_undo_all.setObjectName("danger")
         self.b_undo_all.clicked.connect(self.undo_club)
         lv.addWidget(row(self.b_up, self.b_down, self.b_add, self.b_remove, "stretch", self.b_undo_all, stretch=False))
+        self.b_sign = QPushButton(_("Sign players..."))
+        self.b_sign.clicked.connect(self.sign_players)
+        self.b_transfer = QPushButton(_("Transfer to..."))
+        self.b_transfer.setToolTip(_("The selected player moves to another club and keeps everything else; "
+                                     "a national team keeps him"))
+        self.b_transfer.clicked.connect(self.transfer)
+        self.b_portrait = QPushButton(_("Manager portrait..."))
+        self.b_portrait.setToolTip(_("A picture of the club's manager (PNG or JPG, made 256 x 256 at Build); "
+                                     "the game shows it in Edit mode and the Master League"))
+        self.b_portrait.clicked.connect(self.coach_portrait)
+        lv.addWidget(row(self.b_sign, self.b_transfer, self.b_portrait, stretch=True))
         self.foot = hint("")
         lv.addWidget(self.foot)
         from ..pitch import Pitch
@@ -124,6 +141,7 @@ class Players(BuilderPage):
         f = QFormLayout(basic)
         f.setLabelAlignment(Qt.AlignRight)
         self._add(f, "name", QLineEdit(), "Name")
+        self._add(f, "id", QLineEdit(), "Player ID")
         face = QLineEdit()
         face.setReadOnly(True)
         face.setPlaceholderText(_("the game's face"))
@@ -344,6 +362,122 @@ class Players(BuilderPage):
         self.cl.blockSignals(False)
         self.club_picked()
 
+    # ---- ids of the recipe's own ----
+    def show_club_id(self):
+        key = self.club
+        self.club_id.blockSignals(True)
+        if not key:
+            self.club_id.setText("")
+            self.club_id.setReadOnly(True)
+        elif key.isdigit():
+            self.club_id.setText(key)
+            self.club_id.setReadOnly(True)
+            self.club_id.setToolTip(_("The game's own clubs keep their ids: its kits, crests, faces and "
+                                      "saves are keyed on them."))
+        else:
+            lg, _s, k = key.rpartition("/")
+            L = self.project.league(lg) or {}
+            ids = list(L.get("club_ids") or [])
+            self.club_id.setText(str(ids[int(k)]) if int(k) < len(ids) and ids[int(k)] else "")
+            self.club_id.setReadOnly(False)
+            self.club_id.setPlaceholderText(_("at Build"))
+            self.club_id.setToolTip(_("Empty: Build gives the next free id. Or type the id a kit, crest or "
+                                      "face pack was made for: %d to %d, one no other club has.")
+                                    % (self.first_club_id(), B.CLUB_ID_MAX))
+        self.club_id.blockSignals(False)
+
+    def first_club_id(self):
+        return max(t for t in self.project.game_cl if t < B.CLUB_ID_MAX) + 1 if self.project.game_cl else 71578
+
+    def set_club_id(self):
+        key = self.club
+        if not key or key.isdigit() or self.club_id.isReadOnly():
+            return
+        lg, _s, k = key.rpartition("/")
+        L = self.project.league(lg)
+        if L is None:
+            return
+        text = self.club_id.text().strip()
+        ids = list(L.get("club_ids") or [])
+        ids += [""] * (int(k) + 1 - len(ids))
+        if text == str(ids[int(k)] or ""):
+            return
+        if text:
+            lo = self.first_club_id()
+            used = {str(i) for M in self.project.recipe["leagues"] for n, i in enumerate(M.get("club_ids") or [])
+                    if i and not (M is L and n == int(k))}
+            bad = (_("a club id is a number") if not text.isdigit() else
+                   _("%s is a club of the game") % text if int(text) in self.project.game_cl
+                   or int(text) in self.project.game_nat or int(text) in self.project.game_other else
+                   _("a new club's id is %d to %d") % (lo, B.CLUB_ID_MAX) if not lo <= int(text) <= B.CLUB_ID_MAX else
+                   _("another new club has id %s") % text if text in used else None)
+            if bad:
+                self.say(bad, "err")
+                self.show_club_id()
+                return
+        ids[int(k)] = int(text) if text else ""
+        while ids and ids[-1] == "":
+            ids.pop()
+        if ids:
+            L["club_ids"] = ids
+        else:
+            L.pop("club_ids", None)
+        self.say(_("Club id %s: kits, crests and the squad of this club are made for it at Build.") % text
+                 if text else "", "ok" if text else None)
+        self.project.dirty = True
+
+    def is_national(self, key=None):
+        key = self.club if key is None else key
+        return bool(key) and key.isdigit() and int(key) in set(self.project.game_nat)
+
+    def ref_of(self, key):
+        """the player of this squad's row `key` as a "join" list names him"""
+        if key in (self.changes().get("join") or []):
+            return key
+        return key if self.club.isdigit() else "%s/%s" % (self.club, key)
+
+    def moves(self):
+        """{player ref: the club key he joins} for every club (not national team) that signs someone"""
+        out = {}
+        for club, c in self.project.players().items():
+            if not self.is_national(club):
+                for ref in c.get("join") or []:
+                    out[str(ref)] = club
+        return out
+
+    def club_label(self, key):
+        if key.isdigit():
+            return self.game_name(int(key))
+        lg, _s, k = key.rpartition("/")
+        L = self.project.league(lg)
+        names = self.new_names(L) if L else []
+        return names[int(k)] if L and k.isdigit() and int(k) < len(names) else key
+
+    def home_of(self, ref):
+        """the club key a player belongs to before any transfer (None: no club)"""
+        src, n = P.split_ref(ref)
+        if src is not None:
+            return src
+        return next((str(t) for t in self.project.squads().clubs_of.get(n, []) if not self.is_national(str(t))), None)
+
+    def joiner_row(self, ref):
+        """a player who joins this club, as the rows show him (before this club's changes)"""
+        src, n = P.split_ref(ref)
+        sq = self.project.squads()
+        if src is None:
+            try:
+                r = sq.row(n)
+            except KeyError:
+                return {"player": ref, "name": "?"}
+            r["from"] = ", ".join(self.game_name(t) for t in sq.clubs_of.get(n, [])) or _("no club")
+            return r
+        proto = sq.proto()
+        r = dict(proto[n]) if n is not None and n < len(proto) else {}
+        r.update(((self.project.players().get(src) or {}).get("edits") or {}).get(str(n), {}))
+        r["player"] = ref
+        r["from"] = self.club_label(src)
+        return r
+
     def found(self, text):
         label, _s, where = text.rpartition("  —  ")
         if where.startswith("#") and where[1:].isdigit():
@@ -387,6 +521,7 @@ class Players(BuilderPage):
     def club_picked(self):
         key = self.cl.currentData()
         self.club = key
+        self.show_club_id()
         sq = self.project.squads()
         if not key or sq is None:
             self.rows = []
@@ -415,6 +550,14 @@ class Players(BuilderPage):
             m = dict(r)
             m.update(ch)
             out.append((r["player"], m, ch, r["player"] in gone))
+        self.state = {}                # key -> text of the Changed column for a player who moves
+        moves = {} if self.is_national() else self.moves()
+        if moves:
+            for i, (key, m, ch, g) in enumerate(out):
+                dest = moves.get(self.ref_of(key))
+                if dest and dest != self.club:
+                    out[i] = (key, m, ch, True)
+                    self.state[key] = _("to %s") % self.club_label(dest)
         base = len(self.rows)
         for i, a in enumerate(c.get("add") or []):
             like = next((r for r in self.rows if r["player"] == str(a.get("like"))), self.rows[0] if self.rows else {})
@@ -422,6 +565,14 @@ class Players(BuilderPage):
             m.update({"player": NEW + str(i), "order": str(base + i), "shirt": ""})
             m.update({k: v for k, v in a.items() if k != "like"})
             out.append((NEW + str(i), m, a, False))
+        base += len(c.get("add") or [])
+        for ref in c.get("join") or []:
+            m = self.original(ref)
+            self.state[ref] = (_("called up") if self.is_national() else _("from %s") % m.get("from", "?"))
+            m = dict(m)
+            ch = ed.get(ref, {})
+            m.update(ch)
+            out.append((ref, m, ch, False))
         if self.club and not self.club.isdigit() and not any("order" in ch for ch in ed.values()):
             auto = P.best_eleven([dict(m, player=k) for k, m, ch, g in out if not g],    # what Build will do
                                  self.lineup())
@@ -439,8 +590,9 @@ class Players(BuilderPage):
             name = m.get("name") or (_("(numbered name)") if new_club else "")
             it = QTreeWidgetItem([m.get("order", ""), m.get("shirt", ""), name, m.get("Registered Position", ""),
                                   m.get("Age", ""), str(P.overall(m)), m.get("Stronger Foot", "")[:1],
-                                  _("leaves") if gone else (_("new") if key.startswith(NEW) else
-                                                            (_("%d fields") % len(ch) if ch else ""))])
+                                  self.state.get(key) or
+                                  (_("leaves") if gone else (_("new") if key.startswith(NEW) else
+                                                             (_("%d fields") % len(ch) if ch else "")))])
             it.setData(0, Qt.UserRole, key)
             if str(m.get("order", "")).isdigit() and int(m["order"]) < 11 and not gone:
                 f = it.font(2)
@@ -461,10 +613,20 @@ class Players(BuilderPage):
                 self.tree.setCurrentItem(it)
         self._filling = False
         game = bool(self.club) and self.club.isdigit()
-        self.b_add.setEnabled(game)
+        national = self.is_national()
+        self.b_add.setEnabled(game and not national)  # a national team calls players up instead
         self.b_remove.setEnabled(bool(self.club))     # a new club can lose players, not gain them
+        self.b_sign.setEnabled(bool(self.club))
+        self.b_sign.setText(_("Call up players...") if national else _("Sign players..."))
+        self.b_sign.setToolTip(_("Players of any club join the national team and stay at their clubs")
+                               if national else _("Players of other clubs move to this one (a transfer)"))
+        self.b_transfer.setEnabled(bool(self.club) and not national)
+        self.b_portrait.setEnabled(bool(self.club))
+        pic = self.changes().get("coach_portrait") or ""
+        self.b_portrait.setText(_("Manager portrait: %s") % os.path.basename(pic) if pic else _("Manager portrait..."))
         c = self.changes()
-        n = len(c.get("edits") or {}) + len(c.get("add") or []) + len(c.get("remove") or [])
+        n = len(c.get("edits") or {}) + len(c.get("add") or []) + len(c.get("remove") or []) \
+            + len(c.get("join") or [])
         self.foot.setText((_("%d players; the first eleven by squad order (bold) start.") % len(self.rows))
                           + ("   " + _("%d changes in this club.") % n if n else "")
                           + ("   " + _("New clubs start with the same squad, and Build picks its best "
@@ -537,12 +699,30 @@ class Players(BuilderPage):
             self.pitch.mark = int(o) if o.isdigit() and int(o) <= 10 else None
             self.pitch.update()
         self.i_title.setText(m.get("name") or _("(numbered name)"))
-        self.i_sub.setText(_("player %s") % key if key.isdigit() and self.club.isdigit() else
+        joining = key in (self.changes().get("join") or [])
+        self.i_sub.setText((_("called up from %s") if self.is_national() else _("joins from %s"))
+                           % orig.get("from", "?") if joining else
+                           self.state.get(key, "") + "   " + _("player %s") % key if key in self.state else
+                           _("player %s") % key if key.isdigit() and self.club.isdigit() else
                            (_("new player (a copy of %s)") % (orig.get("name") or "?") if key.startswith(NEW)
                             else _("place %d in the squad") % (int(key) + 1)))
         for k in self.ed:
             self._set(k, m.get(k, ""))
             self._mark(k, k in ch and str(ch[k]) != str(orig.get(k, "")))
+        own = self.own_id(key)
+        idw = self.ed["id"]
+        idw.setReadOnly(not own)
+        if own:
+            idw.setPlaceholderText(_("at Build"))
+            idw.setToolTip(_("Empty: Build gives the next free id. Or type the id a face, portrait or option "
+                             "file was made for: above %d (the game's own), up to %d, one nobody else has.")
+                           % (self.top_pid(), P.PID_MAX))
+        else:
+            src, pid = P.split_ref(key if (key.isdigit() or "/" in key) else "")
+            idw.setText(str(pid) if src is None and pid is not None else "")
+            idw.setPlaceholderText("")
+            idw.setToolTip(_("The game's own players keep their ids: faces, portraits and saves are keyed on "
+                             "them. A new club's player can take an id of your own on his own club's page."))
         # a new club's player has no name until Build numbers him (FL P00001 ...): say so in the box
         self.ed["name"].setPlaceholderText(_("numbered at Build (FL P00001 ...) until you type a name")
                                            if not self.club.isdigit() else "")
@@ -595,7 +775,21 @@ class Players(BuilderPage):
         if key.startswith(NEW):
             a = (self.changes().get("add") or [])[int(key[1:])]
             return next((r for r in self.rows if r["player"] == str(a.get("like"))), {})
+        c = self.changes()
+        if key in (c.get("join") or []):              # he takes the next order, and a free shirt at Build
+            r = dict(self.joiner_row(key))
+            r.update(order=str(len(self.rows) + len(c.get("add") or []) + c["join"].index(key)), shirt="")
+            return r
         return next((r for r in self.rows if r["player"] == key), {})
+
+    def own_id(self, key):
+        """can this row's player take an id of the recipe's own? a new club's, or one added here"""
+        return bool(key) and (key.startswith(NEW) or (bool(self.club) and not self.club.isdigit() and key.isdigit()
+                                                      and key not in (self.changes().get("join") or [])))
+
+    def top_pid(self):
+        sq = self.project.squads()
+        return max(sq.index) if sq and sq.index else 0
 
     def _mark(self, key, on):
         lab = self.lab[key]
@@ -604,7 +798,17 @@ class Players(BuilderPage):
     def edited(self, key):
         if self._filling or self.cur is None or not self.club:
             return
+        if key == "id" and not self.own_id(self.cur):
+            return
         val = self._get(key)
+        if key == "id" and val:
+            bad = self.id_problem(val)
+            if bad:
+                self.say(bad, "err")
+                self._filling = True
+                self._set("id", (self.current_view() or (0, {}))[1].get("id", ""))
+                self._filling = False
+                return
         orig = self.original(self.cur)
         if key == "name" and not val and not self.club.isdigit():
             val = ""
@@ -634,6 +838,19 @@ class Players(BuilderPage):
         if key in ("name", "shirt", "order", "Registered Position", "Age", "Stronger Foot") or key in E.FIELDS:
             self.update_row()
 
+    def id_problem(self, val):
+        """why a player id cannot be taken, or None"""
+        if not val.isdigit():
+            return _("a player id is a number")
+        top = self.top_pid()
+        if not top < int(val) <= P.PID_MAX:
+            return _("a new player's id is %d to %d (above the game's own)") % (top + 1, P.PID_MAX)
+        for club, c in self.project.players().items():
+            for k, ch in list((c.get("edits") or {}).items()) + [(NEW + str(i), a) for i, a in enumerate(c.get("add") or [])]:
+                if str(ch.get("id", "")) == val and not (club == self.club and k == self.cur):
+                    return _("another new player has id %s") % val
+        return None
+
     def update_row(self):
         it = self.tree.currentItem()
         v = self.current_view()
@@ -643,7 +860,8 @@ class Players(BuilderPage):
         vals = [m.get("order", ""), m.get("shirt", ""), m.get("name") or _("(numbered name)"),
                 m.get("Registered Position", ""), m.get("Age", ""), str(P.overall(m)),
                 m.get("Stronger Foot", "")[:1],
-                _("new") if key.startswith(NEW) else (_("%d fields") % len(ch) if ch else "")]
+                self.state.get(key) or
+                (_("new") if key.startswith(NEW) else (_("%d fields") % len(ch) if ch else ""))]
         for c, t in enumerate(vals):
             it.setText(c, t)
         self.i_title.setText(m.get("name") or _("(numbered name)"))
@@ -760,6 +978,26 @@ class Players(BuilderPage):
     def remove_player(self):
         if not self.club or not self.cur:
             return
+        c = self.changes()
+        if self.cur in (c.get("join") or []):        # he does not join after all
+            c["join"].remove(self.cur)
+            (c.get("edits") or {}).pop(self.cur, None)
+            if not c["join"]:
+                c.pop("join")
+            self.cur = None
+            self.project.dirty = True
+            self.fill_squad()
+            return
+        dest = self.moves().get(self.ref_of(self.cur)) if not self.is_national() else None
+        if dest and dest != self.club:                # his transfer is called off
+            j = self.project.players()[dest]["join"]
+            j.remove(self.ref_of(self.cur))
+            if not j:
+                self.project.players()[dest].pop("join")
+            self.project.dirty = True
+            self.fill_squad()
+            self.say(_("The transfer to %s is called off.") % self.club_label(dest), "ok")
+            return
         if not self.club.isdigit():
             gone = self.changes().get("remove") or []
             if self.cur not in gone and len(self.rows) - len(gone) <= P.MIN_SQUAD:
@@ -777,6 +1015,131 @@ class Players(BuilderPage):
                 gone.append(self.cur)
         self.project.dirty = True
         self.fill_squad()
+
+    def sign_players(self):
+        """players of other clubs join this one: a national team calls them up, a club signs them"""
+        from .playerpick import PickPlayers
+        if not self.club or self.project.squads() is None:
+            return
+        national = self.is_national()
+        here = {self.ref_of(k) for k, m, ch, g in self.view() if not g}
+        country = None
+        if national:
+            if getattr(self, "_teams_for", None) is not self.project.base:
+                self._teams = P.teams(self.project.base)
+                self._teams_for = self.project.base
+            country = self._teams.get(int(self.club), (True, None))[1]
+        title = _("Call up players...") if national else _("Sign players...")
+        dlg = PickPlayers(self, self.project, title, country, skip=here)
+        dlg.show_free(national)
+        if not dlg.exec():
+            return
+        refs = [r for r in dlg.picked() if r not in here]
+        moves = self.moves()
+        back = [r for r in refs if not national and self.home_of(r) == self.club]
+        for r in back:                                # one leaving here: his transfer is called off
+            if r in moves:
+                j = self.project.players()[moves[r]]["join"]
+                j.remove(r)
+                if not j:
+                    self.project.players()[moves[r]].pop("join")
+        refs = [r for r in refs if r not in back]
+        if back:
+            self.project.dirty = True
+        if not refs:
+            self.fill_squad()
+            return
+        live = sum(1 for k, m, ch, g in self.view() if not g)
+        most = P.NATIONAL_MAX if national else P.CLUB_MAX
+        if live + len(refs) > most:
+            error(self, title, _("%d players and %d more is over %d, the most a %s has in the game. Remove "
+                                 "someone first.") % (live, len(refs), most,
+                                                      _("national team") if national else _("club")))
+            return
+        if not national:
+            elsewhere = [r for r in refs if moves.get(r) and moves[r] != self.club]
+            for r in elsewhere:                       # a player signs for one club at a time
+                j = self.project.players()[moves[r]]["join"]
+                j.remove(r)
+                if not j:
+                    self.project.players()[moves[r]].pop("join")
+        j = self.changes(True).setdefault("join", [])
+        j += [r for r in refs if r not in j]
+        self.project.dirty = True
+        self.fill_squad()
+        self.say((_("%d players called up; they stay at their clubs.") if national else
+                  _("%d players join this club; their old clubs lose them.")) % len(refs), "ok")
+
+    def transfer(self):
+        """the selected player moves to another club"""
+        from .playerpick import PickClub
+        if not self.club or not self.cur or self.is_national() or self.cur.startswith(NEW):
+            if self.cur and self.cur.startswith(NEW):
+                self.say(_("A player added here has no club to leave: remove him instead."), "err")
+            return
+        ref = self.ref_of(self.cur)
+        clubs = []
+        for L in self.project.recipe["leagues"]:
+            for k, n in enumerate(self.new_names(L)):
+                clubs.append(("%s  —  %s" % (n, L["name"]), P.new_key(L["name"], k)))
+        teams = {t for r, c, n, ts in self.project.game_lgs for t in ts} | set(self.project.game_other)
+        for tid in sorted(teams, key=lambda t: self.game_name(t)):
+            if tid in self.project.game_cl:
+                clubs.append(("%s  —  #%d" % (self.game_name(tid), tid), str(tid)))
+        name = (self.current_view() or (0, {}))[1].get("name") or _("(numbered name)")
+        dlg = PickClub(self, _("Transfer to..."), _("%s moves to:") % name,
+                       [x for x in clubs if x[1] != self.club])
+        if not dlg.exec():
+            return
+        dest = dlg.club()
+        if not dest:
+            return
+        c = self.changes()
+        if self.cur in (c.get("join") or []):          # he was coming here: he goes there instead
+            c["join"].remove(self.cur)
+            if not c["join"]:
+                c.pop("join")
+        for club, cc in self.project.players().items():  # one club at a time
+            if not self.is_national(club) and ref in (cc.get("join") or []):
+                cc["join"].remove(ref)
+        home = self.home_of(ref)
+        if dest != home:
+            j = self.project.players().setdefault(dest, {}).setdefault("join", [])
+            if ref not in j:
+                j.append(ref)
+        for cc in self.project.players().values():
+            if "join" in cc and not cc["join"]:
+                cc.pop("join")
+        self.project.dirty = True
+        self.fill_squad()
+        self.say(_("%s moves to %s at Build.") % (name, self.club_label(dest)) if dest != home else
+                 _("%s stays at %s.") % (name, self.club_label(dest)), "ok")
+
+    def coach_portrait(self):
+        """a picture for the club's manager: Build writes it as the portrait of the club's manager
+        (common/render/symbol/coach/coach_<manager id>.png, lbplayers.coach_portraits)"""
+        if not self.club:
+            return
+        c = self.changes()
+        if c.get("coach_portrait") and ask(self, "Players", _("The manager has the portrait %s. Take it away?")
+                                           % os.path.basename(c["coach_portrait"])):
+            c.pop("coach_portrait")
+            self.project.dirty = True
+            self.fill_squad()
+            return
+        p, _f = QFileDialog.getOpenFileName(self, _("Manager portrait..."), self.app.settings.get("portrait_dir", ""),
+                                            _("Pictures") + " (*.png *.jpg *.jpeg *.bmp *.webp *.dds)")
+        if not p:
+            return
+        bad = P.portrait_problem(p)
+        if bad:
+            error(self, "Players", bad)
+            return
+        self.app.settings["portrait_dir"] = os.path.dirname(p)
+        self.changes(True)["coach_portrait"] = os.path.normpath(p)
+        self.project.dirty = True
+        self.fill_squad()
+        self.say(_("Build makes %s the portrait of this club's manager.") % os.path.basename(p), "ok")
 
     def export_csv(self):
         if not self.rows:

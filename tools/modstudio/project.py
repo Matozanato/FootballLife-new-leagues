@@ -188,6 +188,80 @@ class Project(QObject):
             c["clubs"] = [x for x in c.get("clubs") or [] if not (
                 isinstance(x, str) and x.rpartition("/")[0] == name
                 and x.rpartition("/")[2].isdigit() and int(x.rpartition("/")[2]) >= keep)]
+        L = self.league(name)
+        if L and keep and L.get("game_clubs"):                 # and so do its clubs of the game
+            L["game_clubs"] = [e for e in L["game_clubs"] if int(e.get("at", 0)) < keep]
+            if not L["game_clubs"]:
+                L.pop("game_clubs")
+
+    # the lists that hold one value per club of a new league, and what an empty place holds
+    PLACE_LISTS = (("club_names", ""), ("club_abbrs", ""), ("club_crests", None), ("club_coaches", ""),
+                   ("club_formations", ""), ("club_ids", ""))
+
+    def shift_places(self, name, at, delta):
+        """insert (delta 1) a new club before place `at` of league `name`, or remove (delta -1)
+        the club at place `at`: every list kept per place, the clubs of the game, the player
+        changes and the pre-season cups that name its clubs by place move with it. A split
+        league's last group takes the difference. Returns False when the league would leave
+        leaguebuilder's 10..24 clubs."""
+        L = self.league(name)
+        if not L or delta not in (1, -1):
+            return False
+        n = int(L.get("clubs", 0))
+        if not B.CLUBS_MIN <= n + delta <= B.CLUBS_MAX or not 0 <= at <= n - (delta < 0):
+            return False
+
+        def moved(k):                  # a place's new number, None for the one removed
+            if k < at:
+                return k
+            if delta < 0 and k == at:
+                return None
+            return k + delta
+
+        for key, empty in self.PLACE_LISTS:
+            lst = L.get(key)
+            if not lst:
+                continue
+            lst = list(lst)[:n] + [empty] * max(0, n - len(lst))
+            if delta > 0:
+                lst.insert(at, empty)
+            else:
+                lst.pop(at)
+            L[key] = lst
+        gc = []
+        for e in L.get("game_clubs") or []:
+            k = moved(int(e.get("at", 0)))
+            if k is not None:
+                gc.append(dict(e, at=k))
+        if gc:
+            L["game_clubs"] = gc
+        else:
+            L.pop("game_clubs", None)
+        pl = self.players()
+        old = {k: pl.pop(k) for k in list(pl) if k.rpartition("/")[0] == name and k.rpartition("/")[2].isdigit()}
+        for k, v in old.items():
+            m = moved(int(k.rpartition("/")[2]))
+            if m is not None:
+                pl["%s/%d" % (name, m)] = v
+
+        def ref(x):
+            if isinstance(x, str) and x.rpartition("/")[0] == name and x.rpartition("/")[2].isdigit():
+                m = moved(int(x.rpartition("/")[2]))
+                return "" if m is None else "%s/%d" % (name, m)
+            return x
+        for c in self.recipe.get("preseason_cups") or []:
+            c["clubs"] = [ref(x) for x in c.get("clubs") or []]
+        for p in (self.recipe.get("packs") or {}).values():
+            p["players"] = [r for r in (ref(k) for k in p.get("players") or []) if r]
+        L["clubs"] = n + delta
+        sp = L.get("split")
+        if sp and not L.get("apertura") and sp.get("groups"):
+            sp["groups"] = list(sp["groups"])
+            sp["groups"][-1] = int(sp["groups"][-1]) + delta
+        elif sp and L.get("apertura"):
+            sp["groups"] = [n + delta]
+        self.touch()
+        return True
 
     def new(self):
         self.recipe, self.path, self.dirty = blank(), None, False
@@ -207,7 +281,8 @@ class Project(QObject):
         path = path or self.path
         clean = dict(self.recipe)
         clean["players"] = {k: v for k, v in (clean.get("players") or {}).items()
-                            if v.get("edits") or v.get("add") or v.get("remove")}
+                            if v.get("edits") or v.get("add") or v.get("remove") or v.get("join")
+                            or v.get("coach_portrait")}
         with open(path + ".tmp", "w", encoding="utf-8") as f:
             json.dump(clean, f, indent=1, ensure_ascii=False)
         os.replace(path + ".tmp", path)

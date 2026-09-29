@@ -59,7 +59,7 @@ import mkleague as M
 
 FORMAT = "# fl26world 1"
 KEYS = ("cid", "region", "country", "conf", "slot", "tier", "above", "promote", "demote", "clubs", "legs",
-        "cup", "exhibition", "scup", "kickoff")
+        "cup", "exhibition", "scup", "kickoff", "cupall")
 NO_SLOT = 123
 
 # The Select Team slot each regulation id mkworld hands out ends up on, in the exe's competition

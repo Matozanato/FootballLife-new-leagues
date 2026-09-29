@@ -20,13 +20,24 @@ from ..i18n import _, tr
 from ..backups import snapshot
 from ..ui import Page, section, hint, row, ask, error, run_job
 
+EURO_WORLD = "_FL26Euro"
+
+
+def exhibition_note(pl):
+    """a warning for the build log when the world has exhibition leagues: the game's team list
+    for a new Master League career is the one Kick Off uses, so their clubs are in it"""
+    ex = [p["name"] for p in pl["leagues"] if p.get("exhibition")]
+    if not ex:
+        return ""
+    return _("CAREFUL: %s is for exhibition matches only, but its clubs still show in the team list when you "
+             "start a Master League career (the game has one list for both). Do not pick one of them: their "
+             "league never plays a season.") % ", ".join(ex)           # the world "Only the new European cups" builds (#36)
 PICTURES = "Pictures (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;All files (*.*)"
 ALL_CLUBS = -1
 # the European competitions a league place can lead to (fl26world.COMPETITIONS), short names for
 # the league list
 SHORT = {0: "UCL", 1: "UEL", 2: "UECL", 3: "LIB", 4: "LIB-Q", 5: "AFC", 6: "CAF CL", 7: "CAF CC",
          8: "AFC CL2", 9: "SUD"}
-LIB_QUALIFYING = 4
 TOP_FLIGHT = [[1, 0], [2, 1], [3, 2]]      # the preset: 1st UCL, 2nd UEL, 3rd UECL
 # the preset by the country's confederation (Country.bin): Asia to the AFC Champions League and
 # Champions League Two, South America to the Libertadores and the Sudamericana, Africa to the CAF
@@ -35,11 +46,11 @@ PRESETS = {
     3: ("Top flight: 1st and 2nd AFC Champions League, 3rd AFC CL Two",
         "1st and 2nd to the AFC Champions League, 3rd to the AFC Champions League Two",
         [[1, 5], [2, 5], [3, 8]]),
-    # no Libertadores qualifying place: that round has no stand-in club for ours to replace, so a
-    # club sent there stays at home (issue #33) -- the Sudamericana takes the 4th instead
-    4: ("Top flight: 1st-3rd Libertadores, 4th-6th Sudamericana",
-        "1st to 3rd to the Copa Libertadores, 4th to 6th to the Copa Sudamericana",
-        [[1, 3], [2, 3], [3, 3], [4, 9], [5, 9], [6, 9]]),
+    # the qualifying round has no pool club: a place of ours there takes a shipped club's
+    # (fl26swiss cont_standins, issue #33)
+    4: ("Top flight: 1st-3rd Libertadores, 4th qualifying, 5th-6th Sudamericana",
+        "1st to 3rd to the Copa Libertadores, 4th to its qualifying rounds, 5th and 6th to the Copa Sudamericana",
+        [[1, 3], [2, 3], [3, 3], [4, 4], [5, 9], [6, 9]]),
     5: ("Top flight: 1st and 2nd CAF Champions League, 3rd Confederation Cup",
         "1st and 2nd to the CAF Champions League, 3rd to the CAF Confederation Cup",
         [[1, 6], [2, 6], [3, 7]]),
@@ -180,8 +191,7 @@ class EuropeTable(QWidget):
         sp.setValue(min(max(int(pos), 1), max(self.clubs, 1)))
         cb = QComboBox()
         for c, name in fl26world.COMPETITIONS:
-            # the Libertadores qualifying round is not filled yet (issue #33): say so in the list
-            cb.addItem(_(name) + ("  " + _("(not filled yet)") if c == LIB_QUALIFYING else ""), c)
+            cb.addItem(_(name), c)
         cb.setCurrentIndex(max(0, cb.findData(int(comp))))
         self.table.setCellWidget(r, 0, sp)
         self.table.setCellWidget(r, 1, cb)
@@ -374,6 +384,18 @@ class LeagueDialog(Dialog):
         self.form.addRow("", hint(_("for Kick Off and exhibition matches: a historical league, legends ... Its "
                                     "clubs never play a Master League season. It stands alone: no division "
                                     "above or below, no European places, no cups")))
+        self.season = QComboBox()
+        for k, t in (("august", _("August to May")), ("calendar", _("February to December"))):
+            self.season.addItem(t, k)
+        self.season.setCurrentIndex(max(0, self.season.findData(str(L.get("season") or "august"))))
+        self.form.addRow(_("Season"), self.season)
+        self.form.addRow("", hint(_("a top division of a new country: February to December plays like Brazil, Japan or "
+                                    "Saudi Arabia, clubs going up and down at New Year; the divisions "
+                                    "below it follow it. Not with a split, Apertura/Clausura or the "
+                                    "country's cups yet")))
+        self.form.addRow("", hint(_("Careful: the game has one team list for Kick Off and Master League, so its "
+                                    "clubs still show when you pick your club for a new career. Do not start a "
+                                    "career with one: its league never plays.")))
         self.exchange = QSpinBox()
         self.exchange.setRange(1, 6)
         self.exchange.setValue(L.get("exchange", 3))
@@ -394,9 +416,8 @@ class LeagueDialog(Dialog):
         self.supercup.setChecked(bool(L.get("supercup")))
         self.form.addRow("", self.supercup)
         self.cup.toggled.connect(lambda on: self.supercup.setEnabled(on and self.cup.isEnabled()))
-        self.form.addRow("", hint(_("a top division of a new country: a national cup for it (and the division "
-                                    "below, when the two make 36, 40 or 44 clubs). Top divisions of 12, 16, 18 "
-                                    "or 20 clubs")))
+        self.form.addRow("", hint(_("a top division of a new country: a national cup for it and the division "
+                                    "below, any number of clubs (byes when the field is not 16, 32 ...)")))
         self.lcup = QCheckBox(_("League cup"))
         self.lcup.setChecked(bool(L.get("league_cup")))
         self.lcup_name = QLineEdit(L.get("league_cup_name", ""))
@@ -424,6 +445,8 @@ class LeagueDialog(Dialog):
         self.above.currentIndexChanged.connect(
             lambda _i: self.supercup.setEnabled(self.cup.isEnabled() and self.cup.isChecked()))
         self.supercup.setEnabled(self.cup.isEnabled() and self.cup.isChecked())
+        self.above.currentIndexChanged.connect(
+            lambda _i: self.season.setEnabled(self.above.currentData() is None and not self.exhibition.isChecked()))
         self.europe.set_confed(project.confeds.get(self.country.currentText().strip()))
         self.country.currentTextChanged.connect(
             lambda t: self.europe.set_confed(project.confeds.get(t.strip())))
@@ -445,6 +468,7 @@ class LeagueDialog(Dialog):
         self.cup.setEnabled(top and not on)
         self.lcup.setEnabled(top and not on)
         self.supercup.setEnabled(top and not on and self.cup.isChecked())
+        self.season.setEnabled(top and not on)
 
     def ok(self):
         L = self.league
@@ -488,6 +512,15 @@ class LeagueDialog(Dialog):
             L["league_cup_name"] = self.lcup_name.text().strip()
         else:
             L.pop("league_cup_name", None)
+        if self.season.currentData() == "calendar" and self.above.currentData() is None \
+                and not self.exhibition.isChecked():
+            if L.get("split") or L.get("apertura") or L.get("cup") or L.get("league_cup"):
+                error(self, "League", _("A league playing February to December has no split, Apertura/Clausura, "
+                                                "national cup or league cup yet."))
+                return
+            L["season"] = "calendar"
+        else:
+            L.pop("season", None)
         if self.formation.value():
             L["formation"] = self.formation.value()
         else:
@@ -505,6 +538,10 @@ class LeagueDialog(Dialog):
             L["flag"] = self.flag.path
         else:
             L.pop("flag", None)
+        if L.get("game_clubs"):
+            L["game_clubs"] = [e for e in L["game_clubs"] if int(e.get("at", 0)) < L["clubs"]]
+            if not L["game_clubs"]:
+                L.pop("game_clubs")
         places = self.europe.places()
         bad = B.europe_problems(L["clubs"], places)
         if bad:
@@ -530,7 +567,7 @@ class LeagueDialog(Dialog):
             if below:
                 error(self, "League", _("%s is below this league; an exhibition league has none.") % below[0])
                 return
-            for k in ("above", "cup", "supercup", "league_cup", "split", "apertura", "europe"):
+            for k in ("above", "cup", "supercup", "league_cup", "split", "apertura", "europe", "season"):
                 L.pop(k, None)
             L["exhibition"] = True
         else:
@@ -589,6 +626,131 @@ class ClubDialog(Dialog):
             self.coach_name = self.coach.text().strip()
         if self.formation is not None:
             self.formation_value = self.formation.value()
+        self.accept()
+
+
+class GameClubDialog(Dialog):
+    """a club the game already has for one place of a new league (the league's "game_clubs",
+    leaguebuilder.game_club_checks): the club and, when it plays somewhere in the game, the club
+    that takes its place there -- one of the game's that plays in nothing, or a new one"""
+
+    def __init__(self, parent, project, taken, cur=None):
+        super().__init__(parent, "Club of the game")
+        self.info = B.game_info(project.base)
+        cur = cur or {}
+        self.clubs = sorted(((t, n, s) for t, (n, s) in self.info["clubs"].items()
+                             if t not in taken and B.game_club_problem(self.info, t) is None),
+                            key=lambda c: (c[1] or "").lower())
+        self.form.addRow(hint(_("The club keeps its name, crest, kits, manager and players. It leaves every "
+                                "competition it plays in the game and plays in this league instead.")))
+        self.search = QLineEdit()
+        self.search.setPlaceholderText(_("Name, short name or team ID"))
+        self.search.textChanged.connect(lambda *_a: self.fill())
+        self.form.addRow(_("Search"), self.search)
+        self.no_league = QCheckBox(_("Only clubs in no league"))
+        self.no_league.toggled.connect(lambda *_a: self.fill())
+        self.form.addRow("", self.no_league)
+        self.tree = QTreeWidget()
+        self.tree.setRootIsDecorated(False)
+        self.tree.setAlternatingRowColors(True)
+        self.tree.setHeaderLabels([_("Name"), _("Short name"), _("Team ID"), _("Plays in")])
+        for c, w in enumerate((260, 80, 70)):
+            self.tree.setColumnWidth(c, w)
+        self.tree.setMinimumSize(680, 300)
+        self.tree.currentItemChanged.connect(lambda *_a: self.show_swap())
+        self.form.addRow(self.tree)
+        self.where = hint("")
+        self.form.addRow(self.where)
+        self.rb_game = QRadioButton(_("Its place goes to a club of the game that plays in nothing:"))
+        self.swap_club = QComboBox()
+        self.swap_club.setMinimumWidth(320)
+        for t, n, s in self.clubs:
+            if not self.info["entries"].get(t):
+                self.swap_club.addItem("%s (%s, %d)" % (n, s, t), t)
+        self.rb_new = QRadioButton(_("Its place goes to a new club, named:"))
+        self.swap_name = QLineEdit()
+        self.swap_name.setMaxLength(45)
+        grp = QButtonGroup(self)
+        grp.addButton(self.rb_game)
+        grp.addButton(self.rb_new)
+        self.form.addRow(self.rb_game)
+        self.form.addRow("", self.swap_club)
+        self.form.addRow(self.rb_new)
+        self.form.addRow("", self.swap_name)
+        sw = cur.get("swap")
+        if isinstance(sw, dict):
+            self.rb_new.setChecked(True)
+            self.swap_name.setText(sw.get("name") or "")
+        else:
+            self.rb_game.setChecked(True)
+            i = self.swap_club.findData(sw) if sw is not None else -1
+            if i >= 0:
+                self.swap_club.setCurrentIndex(i)
+        self.cur_id = cur.get("id")
+        self.result = None
+        self.fill()
+
+    def fill(self):
+        want = self.search.text().strip().lower()
+        free = self.no_league.isChecked()
+        keep = self.chosen() if self.tree.topLevelItemCount() else self.cur_id
+        self.tree.blockSignals(True)
+        self.tree.clear()
+        pick = None
+        for t, n, s in self.clubs:
+            if free and t in self.info["league_of"]:
+                continue
+            if want and want not in (n or "").lower() and want not in (s or "").lower() and want != str(t):
+                continue
+            where = B.game_club_where(self.info, t)
+            it = QTreeWidgetItem([n, s, str(t), ", ".join(where) or _("nothing")])
+            it.setData(0, Qt.UserRole, t)
+            self.tree.addTopLevelItem(it)
+            if t == keep:
+                pick = it
+        if pick:
+            self.tree.setCurrentItem(pick)
+        self.tree.blockSignals(False)
+        self.show_swap()
+
+    def chosen(self):
+        it = self.tree.currentItem()
+        return it.data(0, Qt.UserRole) if it else None
+
+    def show_swap(self):
+        t = self.chosen()
+        where = B.game_club_where(self.info, t) if t is not None else []
+        if t is None:
+            self.where.setText(_("Pick a club above."))
+        elif where:
+            self.where.setText(_("%s plays in %s. Every one of those competitions keeps its number of clubs: "
+                                 "pick who takes its place there.") % (self.info["clubs"][t][0], ", ".join(where)))
+        else:
+            self.where.setText(_("%s plays in nothing: it just moves.") % self.info["clubs"][t][0])
+        for w in (self.rb_game, self.swap_club, self.rb_new, self.swap_name):
+            w.setEnabled(bool(where))
+
+    def ok(self):
+        t = self.chosen()
+        if t is None:
+            error(self, "Club of the game", _("Pick a club."))
+            return
+        swap = None
+        if B.game_club_where(self.info, t):
+            if self.rb_new.isChecked():
+                if not self.swap_name.text().strip():
+                    error(self, "Club of the game", _("Give the new club a name."))
+                    return
+                swap = {"name": self.swap_name.text().strip()}
+            else:
+                swap = self.swap_club.currentData()
+                if swap is None:
+                    error(self, "Club of the game", _("Pick the club that takes its place."))
+                    return
+                if swap == t:
+                    error(self, "Club of the game", _("A club cannot take its own place."))
+                    return
+        self.result = {"id": t, "swap": swap}
         self.accept()
 
 
@@ -847,7 +1009,7 @@ class NewLeagues(BuilderPage):
             self.tree.addTopLevelItem(it)
         if cur is not None and cur < self.tree.topLevelItemCount():
             self.tree.setCurrentItem(self.tree.topLevelItem(cur))
-        clubs = sum(L.get("clubs", 0) for L in r["leagues"])
+        clubs = sum(B.new_club_count(L) for L in r["leagues"])
         self.foot.setText(_("%d new leagues, %d new clubs.") % (len(r["leagues"]), clubs)
                           + ("   " + _("Recipe: %s") % self.project.path if self.project.path else ""))
 
@@ -984,12 +1146,18 @@ class NewLeagues(BuilderPage):
 class NewClubs(BuilderPage):
     title = "New clubs"
     hint = ("The clubs of one new league. An empty name becomes \"<league> 01\", \"<league> 02\" ...; an "
-            "empty short name is made from the name; a club with no crest gets a numbered badge.")
+            "empty short name is made from the name; a club with no crest gets a numbered badge. A place can "
+            "also hold a club the game already has: Club of the game.")
 
     def __init__(self, app):
         super().__init__(app)
         self.action("Edit club", self.edit, "primary")
         self.action("Players", self.players, tip="Change this club's squad")
+        self.action("Club of the game...", self.game_club,
+                    tip="Put a club the game already has in this place, instead of a new club")
+        self.action("New club here", self.new_here, tip="Give this place back to a new club")
+        self.action("Insert club", lambda: self.shift(1), tip="A new club before the selected one")
+        self.action("Remove club", lambda: self.shift(-1), "danger", tip="Take the selected club out of the league")
         self.action("Paste names...", self.paste)
         self.action("Load names from file...", self.load_file)
         top = QHBoxLayout()
@@ -1057,7 +1225,14 @@ class NewClubs(BuilderPage):
         names, abbrs, crests = self.lists(L)
         pl = self.project.players()
         ids = self.built_ids(L)
+        game = self.game_places(L)
         for k in range(L["clubs"]):
+            if k in game:
+                it = self.game_row(k, game[k], pl)
+                self.tree.addTopLevelItem(it)
+                if k == cur:
+                    self.tree.setCurrentItem(it)
+                continue
             n = len((pl.get("%s/%d" % (L["name"], k)) or {}).get("edits") or {})
             it = QTreeWidgetItem([str(k + 1), names[k] or "%s %02d" % (L["name"], k + 1), abbrs[k] or "",
                                   str(ids[k]) if k < len(ids) else "",
@@ -1072,13 +1247,98 @@ class NewClubs(BuilderPage):
             if k == cur:
                 self.tree.setCurrentItem(it)
 
+    @staticmethod
+    def game_places(L):
+        """{place: {"at", "id", "swap"}} of the league's clubs of the game"""
+        return {int(e.get("at", -1)): e for e in L.get("game_clubs") or []}
+
+    def game_row(self, k, e, pl):
+        tid = int(e["id"])
+        name, short = self.project.game_cl.get(tid, (str(tid), ""))
+        n = len((pl.get(str(tid)) or {}).get("edits") or {})
+        it = QTreeWidgetItem([str(k + 1), name, short, str(tid), _("(the game's)"), str(n) if n else ""])
+        sw = e.get("swap")
+        if isinstance(sw, dict):
+            tip = _("A club of the game. A new club, %s, takes its place in the game.") % sw.get("name", "")
+        elif sw is not None:
+            tip = _("A club of the game. %s takes its place in the game.") \
+                % self.project.game_cl.get(int(sw), (str(sw), ""))[0]
+        else:
+            tip = _("A club of the game that played in no competition.")
+        for c in range(6):
+            it.setToolTip(c, tip)
+        it.setForeground(4, QBrush(QColor(theme.SUBTLE)))
+        it.setData(0, Qt.UserRole, k)
+        return it
+
     def current(self):
         it = self.tree.currentItem()
         return it.data(0, Qt.UserRole) if it else None
 
+    def taken(self, skip):
+        """the clubs of the game the recipe already uses, in a place or taking one, but the one
+        at place `skip` of the league shown"""
+        out = set()
+        cur = self.league()
+        for L in self.project.recipe["leagues"]:
+            for e in L.get("game_clubs") or []:
+                if L is cur and int(e.get("at", -1)) == skip:
+                    continue
+                out.add(int(e["id"]))
+                if e.get("swap") is not None and not isinstance(e["swap"], dict):
+                    out.add(int(e["swap"]))
+        return out
+
+    def game_club(self):
+        L, k = self.league(), self.current()
+        if not L or k is None:
+            return
+        if self.project.base is None:
+            self.need_tables()
+            return
+        d = GameClubDialog(self, self.project, self.taken(k), self.game_places(L).get(k))
+        if d.finish() and d.result:
+            e = {"at": k, "id": d.result["id"]}
+            if d.result["swap"] is not None:
+                e["swap"] = d.result["swap"]
+            gc = [x for x in L.get("game_clubs") or [] if int(x.get("at", -1)) != k]
+            L["game_clubs"] = sorted(gc + [e], key=lambda x: int(x["at"]))
+            self.project.touch()
+
+    def new_here(self):
+        L, k = self.league(), self.current()
+        if not L or k is None or k not in self.game_places(L):
+            return
+        L["game_clubs"] = [e for e in L["game_clubs"] if int(e.get("at", -1)) != k]
+        if not L["game_clubs"]:
+            L.pop("game_clubs")
+        self.project.touch()
+
+    def shift(self, delta):
+        L, k = self.league(), self.current()
+        if not L:
+            return
+        if k is None:
+            if delta < 0:
+                return
+            k = L["clubs"]                  # nothing selected: the new club goes last
+        if delta < 0 and not ask(self, "Remove club", _("Take club %d out of %s? Its name, crest, manager and "
+                                                           "player changes go with it.") % (k + 1, L["name"])):
+            return
+        if not self.project.shift_places(L["name"], k, delta):
+            QMessageBox.warning(self, _("New clubs"), _("A league has %d to %d clubs.") % (B.CLUBS_MIN, B.CLUBS_MAX))
+            return
+        self.say(_("%s now has %d clubs: check its European places on the New leagues page, then Build again "
+                   "and start a new career.") % (L["name"], L["clubs"]), "ok")
+
     def edit(self):
         L, k = self.league(), self.current()
         if not L or k is None:
+            return
+        if k in self.game_places(L):
+            QMessageBox.information(self, _("New clubs"), _("This is a club of the game: rename it or change its "
+                                                             "crest on Game's leagues and clubs, or pick another one "
+                                                             "with Club of the game."))
             return
         names, abbrs, crests = self.lists(L)
         coaches = list(L.get("club_coaches") or [])[:L["clubs"]]
@@ -1104,7 +1364,8 @@ class NewClubs(BuilderPage):
     def players(self):
         L, k = self.league(), self.current()
         if L and k is not None:
-            self.app.page("Players").show_club("%s/%d" % (L["name"], k))
+            g = self.game_places(L).get(k)
+            self.app.page("Players").show_club(str(int(g["id"])) if g else "%s/%d" % (L["name"], k))
             self.app.open_page("Players")
 
     def set_names(self, rows):
@@ -1369,6 +1630,14 @@ class Build(BuilderPage):
         self.uecl.toggled.connect(self.set_uecl)
         self.outer.addWidget(row(self.uecl, hint(_("off = no Conference League; the Champions League and Europa "
                                                    "League keep their 36-club league phase and play-off either way"))))
+        self.b_euro = QPushButton(_("Only the new European cups..."))
+        self.b_euro.setToolTip(_("A world with nothing but the new Champions League and Europa League (league "
+                                 "phase of 36 and play-off) and, when ticked above, the Conference League: "
+                                 "no new leagues, the game's clubs and leagues as they are. Your recipe is "
+                                 "not changed."))
+        self.b_euro.clicked.connect(self.do_europe_only)
+        self.outer.addWidget(row(self.b_euro, hint(_("for the new European format alone, without building "
+                                                     "any league"))))
         self.state = hint("")
         self.outer.addWidget(self.state)
         self.out = QPlainTextEdit()
@@ -1414,8 +1683,65 @@ class Build(BuilderPage):
         if not r["world"].startswith("_FL26"):
             raise B.BuildError(_("the world name must start with _FL26"))
         if not r["leagues"] and not B.has_edits(r):
-            raise B.BuildError(_("nothing to build: add a league or change one of the game's"))
+            raise B.BuildError(_("nothing to build: add a league or change one of the game's -- or, for "
+                                 "the new European cups alone, press \"Only the new European cups...\""))
         return B.plan(r, self.project.base)
+
+    def do_europe_only(self):
+        """#36: the new European format with the game's own leagues and clubs, and nothing else.
+        An empty recipe builds just that (leaguebuilder.build always reshapes the European cups),
+        so this builds one into a world of its own and leaves the recipe being edited alone."""
+        from PySide6.QtWidgets import QInputDialog
+        title = _("Only the new European cups...")
+        if self.project.base is None:
+            error(self, title, _("no game tables -- Settings > Unpack the game's tables"))
+            return
+        if not self.app.game.ok():
+            error(self, title, _("no game folder -- Game > Choose the game folder"))
+            return
+        uecl = self.uecl.isChecked()
+        name, ok = QInputDialog.getText(
+            self, title, _("A world with the new Champions League and Europa League%s and the game's own "
+                           "leagues and clubs. Only one world can be switched on, so this is instead of "
+                           "a world with new leagues.\n\nName of the world:")
+            % (_(" and the Conference League") if uecl else ""), text=EURO_WORLD)
+        name = (name or "").strip()
+        if not ok or not name:
+            return
+        if not name.startswith("_FL26"):
+            error(self, title, _("the world name must start with _FL26"))
+            return
+        if name == self.project.recipe.get("world"):
+            error(self, title, _("%s is the world of the recipe you are editing: pick another name.") % name)
+            return
+        out = os.path.join(self.app.game.livecpk_dir, name)
+        replace = os.path.exists(out)
+        if replace and not ask(self, title, _("%s exists. Build it again?") % name):
+            return
+        try:
+            pl = B.plan({"world": name, "leagues": [], "edits": {}, "players": {}, "uecl": uecl}, self.project.base)
+        except B.BuildError as e:
+            self.out.clear()
+            self.say(_("error: %s") % tr(str(e)))
+            return
+        game, base = self.app.game.folder, self.project.base
+
+        def go(log):
+            log(B.describe(pl))
+            log(_("building ..."))
+            B.build(pl, base, game, replace, log=log)
+            log("\n" + _("Next: switch %s on (it takes the place of any other world), then start the game "
+                          "and start a new Master League career.") % name)
+
+        def switch():
+            if ask(self, title, _("Make %s the live world in sider.ini?") % name):
+                def on(log):
+                    snapshot(self.app.game.ini_path, "League Builder: switch on " + name, self.app.game.sider_dir)
+                    B.switch_on(name, self.app.game.folder, log=log)
+                    log("\n" + _("Start the game, then 4. check."))
+                self.run(on)
+                self.app.bus.ini_changed.emit()
+        self.run(go, background=True, done=switch)
 
     def run(self, what, background=False, done=None):
         self.out.clear()
@@ -1454,7 +1780,13 @@ class Build(BuilderPage):
                 progress=self.say)
 
     def do_plan(self):
-        self.run(lambda log: log(B.describe(self.plan())))
+        def go(log):
+            pl = self.plan()
+            log(B.describe(pl))
+            note = exhibition_note(pl)
+            if note:
+                log("\n" + note)
+        self.run(go)
 
     def do_build(self):
         try:
@@ -1477,6 +1809,9 @@ class Build(BuilderPage):
             log(_("building ..."))
             B.build(pl, base, game, replace, log=log)
             log("\n" + _("Next: 3. Switch it on, then start the game."))
+            note = exhibition_note(pl)
+            if note:
+                log("\n" + note)
         self.run(go, background=True)
 
     def do_on(self):
