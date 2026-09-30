@@ -101,18 +101,18 @@ whether the modules accepted it.
 ## Step 5. Copy the modules into the game
 
 1. Open `C:\fl26\sider`.
-2. Select these **11 files** (not the `experimental` folder):
+2. Select these **12 files** (not the `experimental` folder):
 
    ```
    fl26caps.lua          fl26nullguard.lua     fl26nullguard2.lua    fl26nullguard4.lua
    fl26nullguard5.lua    fl26nullguard7.lua    fl26nullguard8.lua    fl26nullguard9.lua
-   fl26joindll.lua       fl26join.dll          fl26hdr127.lua
+   fl26nullguard10.lua   fl26joindll.lua       fl26join.dll          fl26hdr127.lua
    ```
 
    (`fl26caps.template.lua` is not one of them. Leave it.)
 3. Copy them into `C:\Football Life 2026\SiderAddons\modules\`.
 
-**You should see** all 11 files in that `modules` folder, among the files that were already
+**You should see** all 12 files in that `modules` folder, among the files that were already
 there.
 
 ## Step 6. Tell Sider to load them
@@ -121,7 +121,7 @@ there.
    Open with → Notepad).
 2. Press `Ctrl+F` and search for `lua.module`. The cursor jumps to the **first** line that
    starts with `lua.module =`.
-3. Click at the very beginning of that line and paste these 10 lines **above it**, exactly
+3. Click at the very beginning of that line and paste these 11 lines **above it**, exactly
    like this, in this order:
 
    ```ini
@@ -133,6 +133,7 @@ there.
    lua.module = "fl26nullguard7.lua"
    lua.module = "fl26nullguard8.lua"
    lua.module = "fl26nullguard9.lua"
+   lua.module = "fl26nullguard10.lua"
    lua.module = "fl26joindll.lua"
    lua.module = "fl26hdr127.lua"
    ```

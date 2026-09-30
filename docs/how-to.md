@@ -116,14 +116,14 @@ In PowerShell (your own game path):
 If the number is different, stop. The modules will switch themselves off on that version
 (nothing breaks, they just do nothing). Open an issue with the number.
 
-### A7. Copy the eleven files
+### A7. Copy the twelve files
 
-From `C:\fl26\sider` copy these **11 files** into `C:\Football Life 2026\SiderAddons\modules\`:
+From `C:\fl26\sider` copy these **12 files** into `C:\Football Life 2026\SiderAddons\modules\`:
 
 ```
 fl26caps.lua          fl26nullguard.lua     fl26nullguard2.lua    fl26nullguard4.lua
 fl26nullguard5.lua    fl26nullguard7.lua    fl26nullguard8.lua    fl26nullguard9.lua
-fl26joindll.lua       fl26join.dll          fl26hdr127.lua
+fl26nullguard10.lua   fl26joindll.lua       fl26join.dll          fl26hdr127.lua
 ```
 
 - **Not** `fl26caps.template.lua`. **Not** the `experimental` folder (that is for Part D and
@@ -135,7 +135,7 @@ fl26joindll.lua       fl26join.dll          fl26hdr127.lua
   and how to build it yourself. If the antivirus removes it, the log in step A9 says
   `LoadLibraryA failed`.
 
-**You should see** all 11 in the `modules` folder, among the files that were already there.
+**You should see** all 12 in the `modules` folder, among the files that were already there.
 
 ### A8. Switch them on in sider.ini
 
@@ -143,7 +143,7 @@ fl26joindll.lua       fl26join.dll          fl26hdr127.lua
    with → Notepad).
 2. `Ctrl+F`, search for `lua.module`. The cursor jumps to the **first** line that starts
    with `lua.module =`.
-3. Click at the very start of that line and paste these **10 lines above it**, exactly like
+3. Click at the very start of that line and paste these **11 lines above it**, exactly like
    this, in this order:
 
    ```ini
@@ -155,11 +155,12 @@ fl26joindll.lua       fl26join.dll          fl26hdr127.lua
    lua.module = "fl26nullguard7.lua"
    lua.module = "fl26nullguard8.lua"
    lua.module = "fl26nullguard9.lua"
+   lua.module = "fl26nullguard10.lua"
    lua.module = "fl26joindll.lua"
    lua.module = "fl26hdr127.lua"
    ```
 
-   Ten lines for eleven files: `fl26join.dll` has no line of its own, `fl26joindll.lua`
+   Eleven lines for twelve files: `fl26join.dll` has no line of its own, `fl26joindll.lua`
    loads it. **The order matters**: `fl26caps.lua` first, `fl26hdr127.lua` last.
 4. `Ctrl+F`, search for `luajit.ext.enabled`.
    - Found: make sure the line reads exactly `luajit.ext.enabled = 1`.
@@ -179,7 +180,7 @@ Rules for this file that catch people out:
 1. Start the game the way you always do. Wait for the main menu. Quit the game.
 2. Open `C:\Football Life 2026\SiderAddons\sider.log` with Notepad. `Ctrl+F` → `fl26`.
 
-**You should see** ten lines like these (the numbers after `applied all` can differ):
+**You should see** eleven lines like these (the numbers after `applied all` can differ):
 
 ```
 [fl26caps.lua] fl26caps: applied all 2759 patches -- ...
@@ -190,6 +191,7 @@ Rules for this file that catch people out:
 [fl26nullguard7.lua] fl26caps: applied all 2 patches -- ...
 [fl26nullguard8.lua] fl26caps: applied all 2 patches -- ...
 [fl26nullguard9.lua] fl26caps: applied all 2 patches -- ...
+[fl26nullguard10.lua] fl26caps: applied all 2 patches -- ...
 [fl26joindll.lua] fl26joindll: installed -- 39 added leagues will be registered ...
 [fl26hdr127.lua] fl26caps: applied all 32 patches -- ...
 ```
@@ -517,6 +519,7 @@ lua.module = "fl26nullguard5.lua"
 lua.module = "fl26nullguard7.lua"
 lua.module = "fl26nullguard8.lua"
 lua.module = "fl26nullguard9.lua"
+lua.module = "fl26nullguard10.lua"
 lua.module = "fl26joindll.lua"
 lua.module = "fl26hdr192.lua"
 lua.module = "fl26superguard.lua"

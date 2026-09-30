@@ -64,18 +64,18 @@ is trying to find out.
 Download this repository (green **Code** button → *Download ZIP*) and unpack it somewhere of
 your own, e.g. `C:\fl26`. Do not unpack it into the game folder.
 
-## 3. Install the eleven modules
+## 3. Install the twelve modules
 
-Copy all eleven files from `sider\` (not the `experimental` subfolder) into
+Copy all twelve files from `sider\` (not the `experimental` subfolder) into
 `C:\Football Life 2026\SiderAddons\modules\`:
 
 ```
 fl26caps.lua          fl26nullguard.lua    fl26nullguard2.lua   fl26nullguard4.lua
 fl26nullguard5.lua    fl26nullguard7.lua   fl26nullguard8.lua   fl26nullguard9.lua
-fl26joindll.lua       fl26join.dll         fl26hdr127.lua
+fl26nullguard10.lua   fl26joindll.lua      fl26join.dll         fl26hdr127.lua
 ```
 
-Ten Lua modules and one DLL. `fl26join.dll` is loaded by `fl26joindll.lua` from that same
+Eleven Lua modules and one DLL. `fl26join.dll` is loaded by `fl26joindll.lua` from that same
 folder, so the two must be next to each other. What the DLL is and how to build it yourself
 from the source in `tools\native\` is in [tools/native/README.md](../tools/native/README.md);
 its checksum is there too, if you want to check what you copied.
@@ -102,11 +102,12 @@ lua.module = "fl26nullguard5.lua"
 lua.module = "fl26nullguard7.lua"
 lua.module = "fl26nullguard8.lua"
 lua.module = "fl26nullguard9.lua"
+lua.module = "fl26nullguard10.lua"
 lua.module = "fl26joindll.lua"
 lua.module = "fl26hdr127.lua"
 ```
 
-Ten lines: the DLL has none of its own. `fl26caps.lua` must come first. The guards write
+Eleven lines: the DLL has none of its own. `fl26caps.lua` must come first. The guards write
 small stubs into fixed spare bytes of the code section, and they claim them in this order.
 `fl26joindll.lua` goes after the guards and before `fl26hdr127.lua`.
 
@@ -124,7 +125,7 @@ Save the file.
 
 ## 5. First run: the modules alone, with no new world
 
-Start the game, get to the main menu, quit. Open `SiderAddons\sider.log` and look for ten
+Start the game, get to the main menu, quit. Open `SiderAddons\sider.log` and look for eleven
 lines like these, one per module:
 
 ```
@@ -132,6 +133,7 @@ lines like these, one per module:
 [fl26nullguard.lua] fl26caps: applied all 2 patches -- nullguard: null-check at 0x141fea5b0
 ...
 [fl26nullguard9.lua] fl26caps: applied all 2 patches -- nullguard9: empty schedule list guarded at 0x140cd6a18
+[fl26nullguard10.lua] fl26caps: applied all 2 patches -- nullguard10: league-link walk ends at the last league (0x140cafc35, 0x140cafdac)
 [fl26joindll.lua] fl26joindll: installed -- 39 added leagues will be registered on the first registration day of the season; the DLL's own log is ...\SiderAddons\fl26join.log (F10 = counters)
 [fl26joindll.lua] fl26joindll: fl26join: hooks live (register_all 141343bf0, enter_season 14158f420, builder 1413156e0, door 1413ac170), 39 competition ids
 [fl26hdr127.lua] fl26caps: applied all 32 patches -- hdr127: season header widened to 127 competitions, 599 phase tables
@@ -139,7 +141,7 @@ lines like these, one per module:
 
 | what the log says | what it means |
 |---|---|
-| `applied all N patches` on the nine patch modules, and `installed` + `hooks live` for fl26joindll | good, carry on |
+| `applied all N patches` on the ten patch modules, and `installed` + `hooks live` for fl26joindll | good, carry on |
 | `MISMATCH` then `ABORTED` | that module wrote nothing and the game is unmodified; **report the mismatch lines**, they name the addresses |
 | `WRITE FAILED` or `PARTIAL` | quit the game and report it; `PARTIAL` means a module got half-applied |
 | `fl26joindll: global ffi is nil` | step 4b was skipped; fix `luajit.ext.enabled` and start again |

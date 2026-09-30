@@ -30,8 +30,8 @@ ZIG = os.environ.get("ZIG") or next(
 # the lua.module lines, in load order (the order of the working install)
 ORDER = [
     "fl26caps", "fl26nullguard", "fl26nullguard2", "fl26nullguard4", "fl26nullguard5",
-    "fl26nullguard7", "fl26nullguard8", "fl26nullguard9", "fl26joindll", "fl26hdr192",
-    "fl26chain", "fl26comptab", "fl26slotnames", "fl26clubs", "fl26editlist",
+    "fl26nullguard7", "fl26nullguard8", "fl26nullguard9", "fl26nullguard10", "fl26joindll",
+    "fl26hdr192", "fl26chain", "fl26comptab", "fl26slotnames", "fl26clubs", "fl26editlist",
     "fl26rank", "fl26deeprank", "fl26regions", "fl26reg64", "fl26regnames", "fl26catlist",
     "fl26swiss", "fl26augseason", "fl26superguard", "fl26resultsguard", "fl26ctlguard",
     "fl26seasonend",

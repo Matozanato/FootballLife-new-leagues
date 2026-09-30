@@ -43,18 +43,19 @@ Please open an issue with your version so we know which builds are out there.
 
 ## 2. Copy the modules
 
-Copy all eleven files from this repository's `sider/` folder (not the `experimental`
+Copy all twelve files from this repository's `sider/` folder (not the `experimental`
 subfolder) into `SiderAddons\modules\`:
 
 ```
 fl26caps.lua          the patch set: bigger tables
-fl26nullguard.lua     seven crash guards
+fl26nullguard.lua     eight crash guards
 fl26nullguard2.lua
 fl26nullguard4.lua
 fl26nullguard5.lua
 fl26nullguard7.lua
 fl26nullguard8.lua
 fl26nullguard9.lua
+fl26nullguard10.lua
 fl26joindll.lua       gets every added league into the season ...
 fl26join.dll          ... and the compiled module it loads
 fl26hdr127.lua        room for 127 competitions in a season
@@ -65,7 +66,12 @@ fl26hdr127.lua        room for 127 competitions in a season
 yourself from the source in `tools/native/` are in
 [tools/native/README.md](../tools/native/README.md).
 
-> **Updating from an earlier download?** On 2026-09-25 **`sider/fl26caps.lua` lost one
+> **Updating from an earlier download?** On 2026-09-30 **`sider/fl26nullguard10.lua` is
+> new**: add the file and its line after `fl26nullguard9.lua` (step 3). It stops an endless
+> loop that could fill the memory in a February-December career. It changes no table, so
+> saves still load.
+>
+> On 2026-09-25 **`sider/fl26caps.lua` lost one
 > patch** (2,760 -> 2,759): it handed one game function the end of the moved match table where
 > that function wants the start of the calendar. Replace the file. The edit block keeps its
 > size, so your saves still load. If you use the experimental `fl26swiss`, replace
@@ -108,11 +114,12 @@ lua.module = "fl26nullguard5.lua"
 lua.module = "fl26nullguard7.lua"
 lua.module = "fl26nullguard8.lua"
 lua.module = "fl26nullguard9.lua"
+lua.module = "fl26nullguard10.lua"
 lua.module = "fl26joindll.lua"
 lua.module = "fl26hdr127.lua"
 ```
 
-Ten lines for eleven files: `fl26join.dll` has no line of its own, `fl26joindll.lua` loads
+Eleven lines for twelve files: `fl26join.dll` has no line of its own, `fl26joindll.lua` loads
 it. The order matters: `fl26caps.lua` must come first, the guards write small trampolines
 into fixed spare bytes of the code section in a fixed order, and `fl26joindll.lua` goes
 after the guards and before `fl26hdr127.lua` -- that is the order the set was verified in.
@@ -132,7 +139,7 @@ game runs with everything else applied and this one module doing nothing.
 ## 4. Start the game and read sider.log
 
 Start FL26 once, get to the main menu, quit, and open `SiderAddons\sider.log`. You must see
-ten lines like these, one per module line in `sider.ini`:
+eleven lines like these, one per module line in `sider.ini`:
 
 ```
 [fl26caps.lua] fl26caps: applied all 2759 patches -- block 0x1877068 -> 0x3cd4ae8, 2759 patches
@@ -143,6 +150,7 @@ ten lines like these, one per module line in `sider.ini`:
 [fl26nullguard7.lua] fl26caps: applied all 2 patches -- nullguard7: empty squad table guarded at 0x14128a3a3
 [fl26nullguard8.lua] fl26caps: applied all 2 patches -- nullguard8: negative standings position guarded at 0x1413236e1
 [fl26nullguard9.lua] fl26caps: applied all 2 patches -- nullguard9: empty schedule list guarded at 0x140cd6a18
+[fl26nullguard10.lua] fl26caps: applied all 2 patches -- nullguard10: league-link walk ends at the last league (0x140cafc35, 0x140cafdac)
 [fl26joindll.lua] fl26joindll: installed -- 39 added leagues will be registered on the first registration day of the season; the DLL's own log is ...\SiderAddons\fl26join.log (F10 = counters)
 [fl26hdr127.lua] fl26caps: applied all 32 patches -- hdr127: season header widened to 127 competitions, 599 phase tables
 ```
@@ -165,13 +173,13 @@ installed, please report it.
 
 ## 4b. The experimental modules, later
 
-`sider/experimental/` holds fourteen modules that go further than the eleven above and have
+`sider/experimental/` holds fourteen modules that go further than the twelve above and have
 only been run on our test world: 192 competitions instead of 127; the Select Team list fixed
 three ways (leagues that had no slot, slots that draw a hard-coded heading, slots that show
 the wrong clubs); 64 menu regions instead of 29; and a league rank wide enough for five
 divisions with the relegation gate to match; a career that starts in August; promotion and
 relegation through deeper pyramids, with the season-end fixes that go with it; and a guard
-for the Super Cup. Add them **one at a time**, after the eleven
+for the Super Cup. Add them **one at a time**, after the twelve
 have been confirmed, and read
 [sider/experimental/README.md](../sider/experimental/README.md) first — several of them
 depend on each other and two carry a slot list you must fill in from your own world.
