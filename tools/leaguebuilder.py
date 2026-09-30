@@ -215,6 +215,7 @@ SPLIT_LINE = [226, 233, 240, 254, 261, 268, 275, 296, 300, 303, 310, 321, 324, 3
 # fl26swiss starts our splits on the fourth date (SPLIT_SKIP there): the first three are behind
 # a league that joins its season through register_all, and a round dated there went a year on.
 SPLIT_SKIP = 3
+SPLIT_MAX_ROUNDS = 46                    # a split's rounds, both phases: the Championship's calendar
 CCUP_DAYS = [326, 333, 25, 32, 39, 46, 73, 80, 94, 101, 115, 122, 136]
 PLAYOFF_SIZES = (8, 4)
 SEASON_TURN = 182                        # the season's July turn: day-of-year order starts here
@@ -890,6 +891,18 @@ def plan(recipe, base):
                 raise BuildError("%s: split groups %s must be 2 or 3 counts adding up to %d" % (name, groups, n))
             p["split"] = {"legs": int(sp.get("legs", legs)), "groups": groups,
                           "group_legs": int(sp.get("group_legs", 1))}
+            # fl26swiss dates the whole split on one line: the regular phase and the longest
+            # group back to back, up to 38 rounds on the Premier League's calendar and up to 46
+            # on the Championship's (split_dates, LONG_CAL_REG). Past that it dates nothing and
+            # the league never plays (#54: 16 clubs twice, then 6 / 10 twice = 30 + 18 = 48).
+            t = (p["split"]["legs"] * rounds_of(n)
+                 + p["split"]["group_legs"] * max(rounds_of(g) for g in groups))
+            if t > SPLIT_MAX_ROUNDS:
+                raise BuildError("%s: the split is %d rounds (%d before the split, %d after), a season has "
+                                 "%d dates at most -- fewer clubs in the biggest group, or its groups "
+                                 "once instead of twice" % (name, t, p["split"]["legs"] * rounds_of(n),
+                                                            t - p["split"]["legs"] * rounds_of(n),
+                                                            SPLIT_MAX_ROUNDS))
         ap = L.get("apertura")
         if ap:
             if sp:
