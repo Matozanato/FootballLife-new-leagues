@@ -319,9 +319,11 @@ class LeagueDialog(Dialog):
         self.form.addRow(_("Name"), self.name)
         self.country = QComboBox()
         self.country.setEditable(True)
-        self.country.addItems(project.countries)
+        for label, _n in B.country_choices(project.countries):
+            self.country.addItem(label)
         self.country.setCurrentText(L.get("country", ""))
         self.country.setInsertPolicy(QComboBox.NoInsert)
+        self.country.completer().setFilterMode(Qt.MatchContains)      # "korea" finds both
         self.form.addRow(_("Country"), self.country)
         self.clubs = QSpinBox()
         self.clubs.setRange(B.CLUBS_MIN, B.CLUBS_MAX)
@@ -447,11 +449,15 @@ class LeagueDialog(Dialog):
         self.supercup.setEnabled(self.cup.isEnabled() and self.cup.isChecked())
         self.above.currentIndexChanged.connect(
             lambda _i: self.season.setEnabled(self.above.currentData() is None and not self.exhibition.isChecked()))
-        self.europe.set_confed(project.confeds.get(self.country.currentText().strip()))
+        self.europe.set_confed(project.confeds.get(self.country_name()))
         self.country.currentTextChanged.connect(
-            lambda t: self.europe.set_confed(project.confeds.get(t.strip())))
+            lambda t: self.europe.set_confed(project.confeds.get(B.country_of(t, project.countries))))
         self.exhibition.toggled.connect(lambda _on: self.exhibition_state())
         self.exhibition_state()
+
+    def country_name(self):
+        """the game's name of the country picked or typed ("South Korea" -> "Republic of Korea")"""
+        return B.country_of(self.country.currentText(), self.project.countries)
 
     def exhibition_state(self):
         """an exhibition league stands alone: the division, the cups, Europe and a split go grey"""
@@ -473,7 +479,7 @@ class LeagueDialog(Dialog):
     def ok(self):
         L = self.league
         L["name"] = self.name.text().strip()
-        L["country"] = self.country.currentText().strip()
+        L["country"] = self.country_name()
         L["clubs"] = self.clubs.value()
         L.pop("apertura", None)
         if self.ap.isChecked():

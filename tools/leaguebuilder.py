@@ -592,6 +592,37 @@ def country_names(base):
                    if en and mkflags.by_name(cty, en) == fid})
 
 
+# the everyday name of a country the game's table names otherwise. The League window lists these
+# too, as "South Korea (Republic of Korea)", so a country is found under the name people look for
+COUNTRY_ALIASES = {
+    "South Korea": "Republic of Korea", "Korea Republic": "Republic of Korea", "North Korea": "Korea Dpr",
+    "DR Congo": "Congo Dr", "Ivory Coast": "Côte D'ivoire", "Taiwan": "Chinese Taipei",
+    "United States": "Usa", "Czechia": "Czech Republic", "Cape Verde": "Cabo Verde",
+    "Brunei": "Brunei Darussalam", "East Timor": "Timor-leste", "Swaziland": "Eswatini",
+}
+
+
+def country_choices(names):
+    """[(label, country)] for a country list: every name of `names`, plus an entry per alias whose
+    country is there, sorted by label"""
+    out = [(n, n) for n in names]
+    out += [("%s (%s)" % (a, n), n) for a, n in COUNTRY_ALIASES.items() if n in names]
+    return sorted(out, key=lambda x: x[0].lower())
+
+
+def country_of(text, names):
+    """the country `text` means: a name of `names`, a label of country_choices, or an alias;
+    anything else comes back as it is"""
+    t = (text or "").strip()
+    low = {n.lower(): n for n in names}
+    for label, n in country_choices(names):
+        low.setdefault(label.lower(), n)
+    for a, n in COUNTRY_ALIASES.items():
+        if n in names:
+            low.setdefault(a.lower(), n)
+    return low.get(t.lower(), t)
+
+
 def country_ids(base):
     """[(name, Country.bin id)] sorted by name: a player's Nationality is this id (measured: 146
     Brazil, 144 Argentina, 236 Spain on the game's own players). A name the table has twice
