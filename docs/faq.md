@@ -4,6 +4,7 @@ The first part is about **FL26 Mod Studio**, the program most people use. The se
 about the command-line scripts it grew out of. Your question is not here? Open an
 [issue](https://github.com/Matozanato/FootballLife-new-leagues/issues) with the report
 described in [What should I send when something is wrong?](#what-should-i-send-when-something-is-wrong)
+Just a question, not a bug? Ask on [Discord](https://discord.gg/StQqtk3G3M).
 
 ## FL26 Mod Studio
 

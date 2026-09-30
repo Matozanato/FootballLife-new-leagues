@@ -21,6 +21,9 @@ CPKs: it all goes in through Sider modules and data files, and comes out again.
 > **questions** (updating, crashes at start, cups, promotion, what to send when something is
 > wrong): [docs/faq.md](docs/faq.md) · how it works and the package format:
 > [docs/mod-studio.md](docs/mod-studio.md)
+>
+> **Discord:** [Football Life - NewLife](https://discord.gg/StQqtk3G3M): questions, help, new versions, and new
+> GitHub issues posted there as they come in. Bugs still go to a GitHub issue.
 
 This is a **beta**. It is published so that people who mod this game can use it, break it and
 tell us where. Read [what works and what does not](#status) before you start a long career.
@@ -469,6 +472,9 @@ everything useful in the clipboard; paste it into the issue. The
 [testing guide](docs/testing-guide.md#what-to-send) says what else helps: your `sider.log`, the
 crash's *fault offset* from Windows Event Viewer, your recipe (or how you built your world),
 and the save file if the problem can be repeated from a save.
+
+For questions that are not bugs (how do I ..., does this work with ...), ask on
+[Discord](https://discord.gg/StQqtk3G3M).
 
 ## Layout
 

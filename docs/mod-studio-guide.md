@@ -1,7 +1,7 @@
 # FL26 Mod Studio — user guide
 
 > Common questions (updating, crashes at start, cups, promotion, what to send when something is
-> wrong): [faq.md](faq.md)
+> wrong): [faq.md](faq.md) · questions and help on [Discord](https://discord.gg/StQqtk3G3M)
 
 FL26 Mod Studio is one program for everything you add to Football Life 2026:
 

@@ -1,7 +1,7 @@
 # FL26 Mod Studio — guide d'utilisation
 
 > Questions fréquentes (mise à jour, plantage au démarrage, coupes, montées, quoi envoyer quand
-> quelque chose ne va pas), en anglais : [faq.md](faq.md)
+> quelque chose ne va pas), en anglais : [faq.md](faq.md) · questions et aide sur [Discord](https://discord.gg/StQqtk3G3M)
 
 FL26 Mod Studio est un seul programme pour tout ce que vous ajoutez à Football Life 2026 :
 

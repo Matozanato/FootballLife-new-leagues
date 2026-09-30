@@ -1,7 +1,7 @@
 # FL26 Mod Studio — upute
 
 > Česta pitanja (ažuriranje, rušenje pri pokretanju, kupovi, promocija, što poslati kad nešto ne
-> radi), na engleskom: [faq.md](faq.md)
+> radi), na engleskom: [faq.md](faq.md) · pitanja i pomoć na [Discordu](https://discord.gg/StQqtk3G3M)
 
 FL26 Mod Studio je jedan program za sve što dodaješ u Football Life 2026:
 
