@@ -63,7 +63,7 @@ La liste à gauche a quatre groupes.
 |---|---|
 | **Gérer** | Vue d'ensemble, Installer des mods, Dossiers de contenu, Modules Lua, Profils, Points de restauration |
 | **Contenu du jeu** | Stades, Maillots, Ballons, Commentaires, Musique, Autre contenu |
-| **League Builder** | Nouvelles ligues, Nouveaux clubs, Ligues et clubs du jeu, Joueurs, Paquets de ligues, Construction |
+| **League Builder** | NewLife Database, Nouvelles ligues, Nouveaux clubs, Ligues et clubs du jeu, Joueurs, Paquets de ligues, Construction |
 | **Outils** | Diagnostic, Réglages |
 
 ## 4. Installer des mods
@@ -378,6 +378,35 @@ nouvelles ligues a déjà le nouveau format.
 | Joueurs par nouveau club | 30 au départ ; retirez-en jusqu'à 18 ; avec des recrues, jusqu'à 40 |
 | Joueurs par sélection | 26 |
 | Coupe nationale | la première division et celle du dessous, jusqu'à 44 clubs ; au-delà : la première seule |
+
+### 8.4 NewLife Database : vrais clubs et vrais joueurs
+
+La NewLife Database est un téléchargement à part, avec de vrais clubs et joueurs pour les
+nouvelles ligues : noms, dates de naissance, postes et notes à l'échelle du jeu, et les couleurs
+des clubs. Chaque club et chaque joueur y a son propre ID, le même dans toutes les versions de la
+base. Elle n'est pas sur GitHub : téléchargez-la depuis le canal NewLife de notre
+[Discord](https://discord.gg/StQqtk3G3M). Elle vient en parties, une par continent (un grand en
+plusieurs), plus *Free agents*, chacune de moins de 10 Mo. Ne téléchargez que celles qu'il vous faut.
+
+1. Mettez les parties téléchargées dans un même dossier. Ne les décompressez pas : Mod Studio
+   lit les zip tels quels. (Ce sont des zip LZMA : 7-Zip les ouvre, le lecteur de zip de Windows non.)
+2. **League Builder > NewLife Database > Ouvrir la NewLife Database...** et choisissez ce dossier.
+   La liste montre toutes les ligues de ces parties : pays, clubs, clubs que le jeu a déjà
+   (*Dans le jeu*), joueurs et niveau. Cliquez sur une ligue pour voir ses clubs.
+3. Sélectionnez une ou plusieurs ligues (Ctrl ou Maj pour plusieurs) et appuyez sur **Ajouter à
+   la recette**. Chacune devient une nouvelle ligue avec ses clubs et leurs effectifs, première
+   division de son pays. Changez sa division, son format, ses places européennes et le reste dans
+   *Nouvelles ligues*, comme pour toute autre ligue.
+4. **Build**, activez le monde et commencez une nouvelle carrière (section 8.2).
+
+- Une ligue prend de 10 à 24 clubs ; les autres sont en gris. La ligne du bas compte les nouveaux
+  clubs de la recette par rapport aux 793 qu'un monde accepte.
+- Les clubs que le jeu a déjà restent où ils sont pour l'instant ; la nouvelle ligue est faite
+  des autres.
+- Les clubs NewLife gardent leur ID NewLife dans le jeu (98304 et plus), donc tous les paquets de
+  ligues faits avec la base donnent à un club le même ID.
+- Un club NewLife reçoit un écusson en forme de blason à ses couleurs et le maillot du jeu aux
+  couleurs les plus proches, jusqu'à ce que vous lui donniez les vôtres (**Modifier le club**).
 
 ## 9. Paquets de ligues : partager une ligue entière
 

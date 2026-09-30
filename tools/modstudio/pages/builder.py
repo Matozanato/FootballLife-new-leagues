@@ -60,12 +60,20 @@ UEFA_PRESET = ("Top flight: 1st UCL, 2nd UEL, 3rd UECL",
                "1st to the Champions League, 2nd to the Europa League, 3rd to the Conference League", TOP_FLIGHT)
 
 
-def pixmap(path, size):
-    if not path:
+def pixmap(path, size, kit=None):
+    """a small picture of `path`; with no path, the shield a NewLife club's shirt (`kit`) gives"""
+    if not path and not kit:
         return None
     try:
-        import lbassets
-        im = lbassets.preview(path, size)
+        if path:
+            import lbassets
+            im = lbassets.preview(path, size)
+        else:
+            import shieldcrest
+            im = shieldcrest.shield(kit, "", size * 2)
+            if im is None:
+                return None
+            im = im.resize((size, size))
         buf = io.BytesIO()
         im.save(buf, "PNG")
         pm = QPixmap()
@@ -1295,7 +1303,8 @@ class NewClubs(BuilderPage):
                                   os.path.basename(crests[k]) if crests[k] else "", str(n) if n else ""])
             if not names[k]:
                 it.setForeground(1, QBrush(QColor(theme.SUBTLE)))
-            pm = pixmap(crests[k], 28)
+            kits = L.get("club_kits") or []
+            pm = pixmap(crests[k], 28, kits[k] if k < len(kits) else None)
             if pm:
                 it.setIcon(1, pm)
             it.setData(0, Qt.UserRole, k)

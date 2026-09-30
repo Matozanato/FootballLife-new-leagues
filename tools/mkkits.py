@@ -30,6 +30,10 @@ read back out or modified.
   # write the kit tree into a cpk root
   python mkkits.py --team-bin <Team.bin> --unipar <UniformParameter.bin> --root <livecpk-root>
 
+  # --colours <json> {team id: [home shirt, away shirt]} in NewLife's words ("stripes #ffffff
+  # #0052d5 #ffffff"): such a club gets the shipped kit nearest its own colours instead of the
+  # one its place in the roster gives
+
 `--unipar` is the shipped archive. Take the newest copy: the game reads the download cpks after
 Data, and data_s2526c.cpk carries the last one (dt34_g4.cpk has an older one):
 
@@ -51,7 +55,7 @@ This writes the per-club files and, with --archive, a repacked UniformParameter.
 entries appended under the same names. Sider looks the entry up by that name
 (`find_kit_info:: name: {6627_ACL_1st_realUni.bin}` in sider.log); pass --archive.
 """
-import os, re, struct, sys
+import json, os, re, struct, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pesdb
@@ -125,6 +129,62 @@ def donors(raw, es, textures=None):
     return full
 
 
+def colours_of(blob):
+    """the five RGB triples of a kit definition; [0] is the shirt, [1] its second colour
+    (Arsenal a71a2f/d7d7d7, Celtic d7d7d7/189163, Hajduk d7d7d7/103e7f)"""
+    return [tuple(blob[4 + 3 * k:7 + 3 * k]) for k in range(5)]
+
+
+def shirt(words):
+    """(body, second) RGB of a shirt described the NewLife way: pattern #body #second #trim"""
+    try:
+        cols = words.split()[1:3]
+        return tuple(tuple(int(c[k:k + 2], 16) for k in (1, 3, 5)) for c in cols) if len(cols) == 2 else None
+    except (AttributeError, ValueError):
+        return None
+
+
+def cdist(a, b):
+    """colour distance weighted the way the eye sees it ("redmean")"""
+    r = (a[0] + b[0]) / 2.0
+    dr, dg, db = a[0] - b[0], a[1] - b[1], a[2] - b[2]
+    return ((2 + r / 256) * dr * dr + 4 * dg * dg + (2 + (255 - r) / 256) * db * db) ** 0.5
+
+
+def closest(cands, want, used):
+    """the (donor id, blob) of cands whose shirt is nearest `want` (body, second); a donor lent
+    often costs a little more, so clubs of one colour still get different kits"""
+    def cost(c):
+        col = colours_of(c[1])
+        return 2 * cdist(want[0], col[0]) + cdist(want[1], col[1]) + 25 * used.get(c[0], 0)
+    return min(cands, key=cost)
+
+
+def matched(clubs, pool, colours):
+    """[(club, (home donor id, {kind: blob}))]: the home kit and goalkeeper kit of the donor whose
+    first kit is nearest the club's home shirt, the second kit from whichever shipped first or
+    second kit is nearest its away shirt; a club with no colours keeps the donor its place gives"""
+    firsts = [(tid, b["1st_realUni"]) for tid, b in pool]
+    both = firsts + [(tid, b["2nd_realUni"]) for tid, b in pool]
+    by_id = dict(pool)
+    used, out = {}, []
+    for i, c in enumerate(clubs):
+        home, away = [shirt(w) for w in (list(colours.get(c[0]) or []) + [None, None])[:2]]
+        if not home:
+            dtid, blobs = pool[i % len(pool)]
+            out.append((c, (dtid, blobs)))
+            continue
+        dtid = closest(firsts, home, used)[0]
+        used[dtid] = used.get(dtid, 0) + 1
+        blobs = dict(by_id[dtid])
+        if away:
+            atid, ablob = closest([x for x in both if x[0] != dtid], away, used)
+            used[atid] = used.get(atid, 0) + 1
+            blobs["2nd_realUni"] = ablob
+        out.append((c, (dtid, blobs)))
+    return out
+
+
 def read_textures(path):
     """Texture names out of any text that mentions them -- e.g. `python cpk.py <cpk>` listings."""
     return set(re.findall(r"(u\d{4,5}[a-z]\d)\.ftex", open(path, encoding="utf-8", errors="replace").read()))
@@ -154,7 +214,11 @@ def build(argv):
         return 1
     print("%d clubs of ours, %d shipped clubs able to lend a kit" % (len(clubs), len(pool)))
 
-    pairs = [(c, pool[i % len(pool)]) for i, c in enumerate(clubs)]
+    col = opt("--colours")
+    colours = {int(k): v for k, v in json.load(open(col, encoding="utf-8")).items()} if col else {}
+    pairs = matched(clubs, pool, colours)
+    if colours:
+        print("%d clubs dressed by their own colours" % sum(1 for (tid, _), _p in pairs if shirt((colours.get(tid) or [""])[0])))
     if do_list:
         for (tid, name), (dtid, _) in pairs:
             print("  %6d  %-30s <- shipped club %d" % (tid, name, dtid))

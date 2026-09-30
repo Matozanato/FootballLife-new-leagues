@@ -69,13 +69,13 @@ def page_groups():
     """(caption, [page classes]) in the order of the left bar"""
     from modstudio.pages import overview, roots, modules, install, profiles, restore
     from modstudio.pages import content, stadiums, balls, kits, commentary, music
-    from modstudio.pages import builder, players, packages, diagnostics, settings
+    from modstudio.pages import builder, players, packages, diagnostics, settings, newlife
     return [
         ("MANAGE", [overview.Overview, install.Install, roots.Roots, modules.Modules,
                     profiles.Profiles, restore.Restore]),
         ("GAME CONTENT", [stadiums.Stadiums, kits.Kits, balls.Balls, commentary.Commentary,
                           music.Music, content.Servers]),
-        ("LEAGUE BUILDER", [builder.NewLeagues, builder.NewClubs, builder.GameLeagues,
+        ("LEAGUE BUILDER", [newlife.NewLife, builder.NewLeagues, builder.NewClubs, builder.GameLeagues,
                             players.Players, packages.Packages, builder.Build]),
         ("TOOLS", [diagnostics.Diagnostics, settings.Settings]),
     ]

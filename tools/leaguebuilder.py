@@ -252,6 +252,10 @@ KIT_TEXTURES = "kit-textures.txt"
 # whose kits the engine names <id-65536>_ACL_ (mkkits.kit_key) -- the block the builder's own
 # clubs count up in, and new clubs are added at the end of Team.bin in id order
 CLUB_ID_MAX = 81919
+# a club from the NewLife Database (the league's "newlife": {"clubs": [id, ...]}, which Mod
+# Studio's NewLife page writes) keeps its NewLife id, one id in every mod that uses the database;
+# kits for them are named <id & 0x23fff>_SDN_ (mkkits.kit_key)
+NEWLIFE_TEAMS = (98304, 114687)
 MARK = "fl26world.txt"                   # a folder holding one was built by this; nothing else is replaced
 
 # the modules that read the world file, and the line each logs when it does (sider.log)
@@ -808,6 +812,9 @@ def plan(recipe, base):
              "club_formations": [str(x or "").strip() for x in (L.get("club_formations") or [])],
              "club_ids": [int(x) if str(x or "").strip().isdigit() else None
                           for x in (L.get("club_ids") or [])][:n],     # ids of the recipe's own
+             "club_kits": list(L.get("club_kits") or []),     # shirt words (shieldcrest) for crests
+             "club_away_kits": list(L.get("club_away_kits") or []),   # and for picking kits (mkkits)
+             "newlife": {"clubs": [int(i) for i in (L.get("newlife") or {}).get("clubs") or []]},
              "exchange": int(L.get("exchange", 3)), "above": None, "tier": 1,
              "europe": [[int(a), int(b)] for a, b in (L.get("europe") or [])]}
         for f in [p["formation"]] + p["club_formations"]:
@@ -1581,8 +1588,11 @@ def build(pl, base, game, replace=False, log=print):
                 continue
             r = bytearray(proto)
             ids = p.get("club_ids") or []
+            nl = (p.get("newlife") or {}).get("clubs") or []
             if k < len(ids) and ids[k]:
                 tid = ids[k]                   # checked by plan(): free, in the block
+            elif k < len(nl) and NEWLIFE_TEAMS[0] <= nl[k] <= NEWLIFE_TEAMS[1] and nl[k] not in have:
+                tid = nl[k]                    # a NewLife Database club keeps its NewLife id
             else:
                 tid = top_id + 1 + own
                 own += 1
@@ -2009,13 +2019,13 @@ def pictures(pl, root, base, log=print):
         if p.get("flag") and p["country"] not in flags:
             flags[p["country"]] = p["flag"]
             lbassets.country_flag(root, p["country"], p["flag"])
-        crests = p.get("club_crests") or []
+        crests, kits = p.get("club_crests") or [], p.get("club_kits") or []
         gp = game_places(p)
         for k, tid in enumerate(p["teams"]):
             if k in gp:                      # a club of the game keeps its crest
                 continue
             pic = crests[k] if k < len(crests) else None
-            lbassets.club_crest(root, tid, p["abbrs"][k], pic)
+            lbassets.club_crest(root, tid, p["abbrs"][k], pic, kits[k] if k < len(kits) else None)
         for g in gp.values():                # a new club taking a game club's place: a badge
             if isinstance(g.get("swap"), dict) and g.get("swap_id"):
                 lbassets.club_crest(root, g["swap_id"], g.get("swap_abbr") or "", None)
@@ -2036,6 +2046,36 @@ def pictures(pl, root, base, log=print):
     log("  %d league logos, %d cup logos, %d club crests%s" % (
         len(pl["leagues"]), len(cups), sum(len(p["teams"]) - len(game_places(p)) for p in pl["leagues"]),
         ", %d country flags" % len(flags) if flags else ""))
+    if not any(p["teams"] for p in pl["leagues"]):
+        return
+    t = tables_root(base)
+    unipar = os.path.join(t, UNIPAR.replace("/", os.sep)) if t else None
+    if not unipar or not os.path.exists(unipar):
+        log("  no kits: the game's UniformParameter.bin was not unpacked (Unpack from game)")
+        return
+    import mkkits
+    args = ["mkkits.py", "--team-bin", os.path.join(root, "common", "etc", "pesdb", "Team.bin"),
+            "--unipar", unipar, "--root", root, "--archive"]
+    colours = {}                    # NewLife clubs: the shipped kit nearest their own colours
+    for p in pl["leagues"]:
+        home, away = p.get("club_kits") or [], p.get("club_away_kits") or []
+        for k, tid in enumerate(p["teams"]):
+            if k < len(home) and home[k]:
+                colours[tid] = [home[k], away[k] if k < len(away) else ""]
+    if colours:
+        cj = os.path.join(root, "kit-colours.json.tmp")
+        json.dump(colours, open(cj, "w", encoding="utf-8"))
+        args += ["--colours", cj]
+    if os.path.exists(os.path.join(t, KIT_TEXTURES)):
+        args += ["--textures", os.path.join(t, KIT_TEXTURES)]
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc = mkkits.build(args)
+    if colours:
+        os.remove(cj)
+    if rc:
+        raise BuildError("kits: %s" % buf.getvalue())
+    log("  kits: " + next((l.strip() for l in buf.getvalue().splitlines() if l.startswith("wrote") and "kit" in l), "written"))
 
 
 def cup_emblems(pl):
@@ -2056,24 +2096,6 @@ def cup_emblems(pl):
     if pl.get("uecl"):
         out.append((UECL_CID, "UECL", pl.get("uecl_logo")))
     return out
-    if not any(p["teams"] for p in pl["leagues"]):
-        return
-    t = tables_root(base)
-    unipar = os.path.join(t, UNIPAR.replace("/", os.sep)) if t else None
-    if not unipar or not os.path.exists(unipar):
-        log("  no kits: the game's UniformParameter.bin was not unpacked (Unpack from game)")
-        return
-    import mkkits
-    args = ["mkkits.py", "--team-bin", os.path.join(root, "common", "etc", "pesdb", "Team.bin"),
-            "--unipar", unipar, "--root", root, "--archive"]
-    if os.path.exists(os.path.join(t, KIT_TEXTURES)):
-        args += ["--textures", os.path.join(t, KIT_TEXTURES)]
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
-        rc = mkkits.build(args)
-    if rc:
-        raise BuildError("kits: %s" % buf.getvalue())
-    log("  kits: " + next((l.strip() for l in buf.getvalue().splitlines() if l.startswith("wrote") and "kit" in l), "written"))
 
 
 def region_modules(pl, root, game, log=print):

@@ -60,7 +60,7 @@ The list on the left has four groups.
 |---|---|
 | **Manage** | Overview, Install mods, Content folders, Lua modules, Profiles, Restore points |
 | **Game content** | Stadiums, Kits, Balls, Commentary, Music, Other content |
-| **League Builder** | New leagues, New clubs, Game's leagues and clubs, Players, League packages, Build |
+| **League Builder** | NewLife Database, New leagues, New clubs, Game's leagues and clubs, Players, League packages, Build |
 | **Tools** | Diagnostics, Settings |
 
 ## 4. Install mods
@@ -348,6 +348,33 @@ is instead of a world with new leagues: a world with new leagues already has the
 | Players per new club | 30 at the start; remove down to 18; signed players bring it up to 40 |
 | Players per national team | 26 |
 | National cup | the top division and the one below, up to 44 clubs; more: the top division alone |
+
+### 8.4 NewLife Database: real clubs and players
+
+The NewLife Database is a separate download with real clubs and players for new leagues: names,
+birth dates, positions and ratings on the game's scale, and the clubs' colours. Every club and
+player in it has an id of its own that stays the same in every version of the database. It is
+not on GitHub: get it from the NewLife channel of our [Discord](https://discord.gg/StQqtk3G3M).
+It comes in parts, one per continent (a big one in more than one), plus *Free agents*, each
+under 10 MB. Download only the parts you want.
+
+1. Put the parts you downloaded in one folder. Do not unpack them: Mod Studio reads the zips as
+   they are. (They are LZMA zips: 7-Zip opens them, Windows' own zip viewer does not.)
+2. **League Builder > NewLife Database > Open NewLife Database...** and pick that folder. The list
+   shows every league of those parts: country, clubs, clubs the game already has (*In game*),
+   players and level. Click a league to see its clubs.
+3. Select one or more leagues (Ctrl or Shift for more) and press **Add to the recipe**. Each
+   becomes a new league with its clubs and their squads, the top division of its country. Change
+   its division, format, European places and the rest on *New leagues*, like any other league.
+4. **Build**, switch the world on and start a new career (section 8.2).
+
+- A league takes 10 to 24 clubs; the others are grey. The line at the bottom counts the new clubs
+  of the recipe against the 793 a world takes.
+- Clubs the game already has stay where they are for now; the new league is made of the others.
+- NewLife clubs keep their NewLife ids in the game (98304 and up), so every league package made
+  with the database gives a club the same id.
+- A NewLife club gets a shield crest in its colours and the kit of the game closest to its
+  colours, until you give it your own (**Edit club**).
 
 ## 9. League packages: share a whole league
 

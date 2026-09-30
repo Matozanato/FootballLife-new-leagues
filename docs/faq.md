@@ -127,6 +127,14 @@ are required"*, the phases were not played, and a playoff could come at the wron
 0.1.4 (#37): each phase gets its own clubs, and a playoff starts at the end of its phase. Update,
 **Install the modules**, **Build the world** again and start a new career.
 
+### Where do I get real clubs and players for my new leagues?
+
+From the NewLife Database (since 0.1.5.5): a separate download on the NewLife channel of our
+[Discord](https://discord.gg/StQqtk3G3M), in parts per continent. Put the parts in one folder,
+open it on **League Builder > NewLife Database**, pick leagues and press **Add to the recipe**:
+each becomes a new league with its real clubs and squads. See section 8.4 of the
+[Mod Studio guide](mod-studio-guide.md).
+
 ### Can I put a club the game already has into my new league?
 
 Yes, since 0.1.4. In *New clubs*, select a place of the new league and press **Club of the

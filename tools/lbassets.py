@@ -11,14 +11,16 @@ touched, and a picture for a shipped id replaces the game's own one only while t
                 plus the repacked UniformParameter.bin (tools/mkkits.py): a shipped club's kit
                 lent to each new club
 
-A picture the user gives is fitted into a transparent square (never stretched); with none,
-the placeholder the tools draw from the id is used.
+A picture the user gives is fitted into a transparent square (never stretched); with none, a
+club whose shirt is known (NewLife) gets a shield in its colours (tools/shieldcrest.py), any
+other the placeholder the tools draw from the id.
 """
 import os
 from PIL import Image
 
 import mkemblems
 import mkcrests
+import shieldcrest
 
 EMBLEM_DIR = ("common", "render", "symbol", "emblemLc")
 CREST_DIR = ("common", "render", "symbol", "flag")
@@ -54,11 +56,16 @@ def league_logo(root, cid, name, picture=None):
         im.save(os.path.join(d, "emb_%04d%s.png" % (cid, suf)))
 
 
-def club_crest(root, tid, label, picture=None):
-    """write the three crest sizes of team `tid`"""
+def club_crest(root, tid, label, picture=None, kit=None):
+    """write the three crest sizes of team `tid`: the picture given, else a shield in the colours
+    of the club's shirt (`kit`, shieldcrest's words), else the numbered placeholder"""
     d = os.path.join(root, *CREST_DIR)
     os.makedirs(d, exist_ok=True)
-    master = square(picture, 512) if picture else mkcrests.crest(tid, label or str(tid), 512)
+    master = square(picture, 512) if picture else None
+    if master is None and kit:
+        master = shieldcrest.shield(kit, label or str(tid), 512)
+    if master is None:
+        master = mkcrests.crest(tid, label or str(tid), 512)
     for suf, px in mkcrests.FLAG_SIZES:
         im = master if px == 512 else master.resize((px, px), Image.LANCZOS)
         im.save(os.path.join(d, "e_%06d%s.png" % (tid, suf)))

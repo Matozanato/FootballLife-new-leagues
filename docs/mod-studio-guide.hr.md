@@ -57,7 +57,7 @@ Popis s lijeve strane ima četiri skupine.
 |---|---|
 | **Upravljanje** | Pregled, Instaliraj modove, Mape sadržaja, Lua moduli, Profili, Točke vraćanja |
 | **Sadržaj igre** | Stadioni, Dresovi, Lopte, Komentar, Glazba, Ostali sadržaj |
-| **League Builder** | Nove lige, Novi klubovi, Postojeće lige i klubovi, Igrači, Paketi liga, Izgradnja |
+| **League Builder** | NewLife Database, Nove lige, Novi klubovi, Postojeće lige i klubovi, Igrači, Paketi liga, Izgradnja |
 | **Alati** | Dijagnostika, Postavke |
 
 ## 4. Instaliranje modova
@@ -343,6 +343,32 @@ svijet s novim ligama već ima novi format.
 | Igrača po novom klubu | 30 na početku; makni do 18; dovedeni igrači do 40 |
 | Igrača po reprezentaciji | 26 |
 | Nacionalni kup | prvi rang i rang ispod, do 44 kluba; više: samo prvi rang |
+
+### 8.4 NewLife Database: pravi klubovi i igrači
+
+NewLife Database je zasebno preuzimanje s pravim klubovima i igračima za nove lige: imena, datumi
+rođenja, pozicije i ocjene na ljestvici igre te boje klubova. Svaki klub i igrač u njoj ima svoj
+ID, isti u svakoj verziji baze. Nije na GitHubu: preuzmi je s NewLife kanala našeg
+[Discorda](https://discord.gg/StQqtk3G3M). Dolazi u dijelovima, jedan po kontinentu (veliki u
+više njih), plus *Free agents*, svaki manji od 10 MB. Preuzmi samo dijelove koje trebaš.
+
+1. Stavi preuzete dijelove u jednu mapu. Ne raspakiravaj ih: Mod Studio čita zipove takve kakvi
+   jesu. (To su LZMA zipovi: 7-Zip ih otvara, Windowsov preglednik zipova ne.)
+2. **League Builder > NewLife Database > Otvori NewLife Database...** i odaberi tu mapu. Popis
+   pokazuje sve lige iz tih dijelova: državu, klubove, klubove koje igra već ima (*U igri*),
+   igrače i razinu. Klikni ligu da vidiš njene klubove.
+3. Odaberi jednu ili više liga (Ctrl ili Shift za više) i pritisni **Dodaj u recept**. Svaka
+   postaje nova liga sa svojim klubovima i njihovim kadrovima, prva liga svoje države. Rang,
+   format, europska mjesta i ostalo mijenjaš na *Nove lige*, kao za svaku drugu ligu.
+4. **Izgradi**, uključi svijet i pokreni novu karijeru (poglavlje 8.2).
+
+- Liga prima 10 do 24 kluba; ostale su sive. Redak na dnu broji nove klubove recepta prema 793
+  koliko svijet prima.
+- Klubovi koje igra već ima zasad ostaju gdje jesu; nova liga se slaže od ostalih.
+- NewLife klubovi u igri zadržavaju svoj NewLife ID (98304 i više), pa svaki paket liga napravljen
+  s bazom daje klubu isti ID.
+- NewLife klub dobiva grb u obliku štita u svojim bojama i dres igre najbližih boja, dok mu ne
+  daš svoje (**Uredi klub**).
 
 ## 9. Paketi liga: podijeli cijelu ligu
 
