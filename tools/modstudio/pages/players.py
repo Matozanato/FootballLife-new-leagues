@@ -155,6 +155,18 @@ class Players(BuilderPage):
         self.ed["face"], self.lab["face"] = face, lab
         self.face_note = hint("")
         f.addRow("", self.face_note)
+        portrait = QLineEdit()
+        portrait.setReadOnly(True)
+        portrait.setPlaceholderText(_("the face's own, or the game's"))
+        pick_portrait = QPushButton(_("Choose..."))
+        pick_portrait.setToolTip(_("A picture of the player (PNG or JPG): his small portrait in the squad lists, "
+                                   "made 180 x 180 at Build. It wins over a face folder's own portrait."))
+        pick_portrait.clicked.connect(self.choose_portrait)
+        no_portrait = QPushButton(_("Clear"))
+        no_portrait.clicked.connect(lambda: self.set_portrait(""))
+        lab = QLabel(_("Portrait"))
+        f.addRow(lab, row(portrait, pick_portrait, no_portrait, stretch=False))
+        self.ed["portrait"], self.lab["portrait"] = portrait, lab
         self._add(f, "shirt", self._spin(1, 99), "Shirt number")
         self._add(f, "order", self._spin(0, 63), "Squad order")
         pos = QComboBox()
@@ -778,6 +790,25 @@ class Players(BuilderPage):
         self.ed["face"].setText(folder)
         self.edited("face")
         self.show_face_note(folder)
+
+    def choose_portrait(self):
+        if self.cur is None:
+            return
+        p, _f = QFileDialog.getOpenFileName(self, _("Portrait"), self.app.settings.get("portrait_dir", ""),
+                                            _("Pictures") + " (*.png *.jpg *.jpeg *.bmp *.webp *.dds)")
+        if p:
+            self.app.settings["portrait_dir"] = os.path.dirname(p)
+            self.set_portrait(os.path.normpath(p))
+
+    def set_portrait(self, path):
+        if self.cur is None:
+            return
+        bad = P.portrait_problem(path) if path else None
+        if bad:
+            error(self, "Players", bad)
+            return
+        self.ed["portrait"].setText(path)
+        self.edited("portrait")
 
     def original(self, key):
         if key.startswith(NEW):

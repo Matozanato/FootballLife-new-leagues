@@ -161,7 +161,7 @@ Imena zadržavaju kvačice (FK Željezničar); kratko ime od tri slova ih nema, 
 pa tamo Č, Ž, Đ postaju C, Z, D. Nakon **Izgradnje** stupac **ID kluba** pokazuje ID svakog
 kluba u igri.
 
-**Trener**: u **Uredi klub** novog kluba možeš upisati ime trenera. Prazno: numerirano ime (`FL M0001` ...).
+**Trener**: u **Uredi klub** novog kluba možeš upisati ime trenera. Prazno: numerirano ime (`FL M0001` ...). **Slika trenera** ispod daje treneru sliku (isto kao **Slika trenera...** na stranici Igrači); *Postojeće lige i klubovi* > **Uredi klub** ima je i za klubove igre.
 
 **Formacija**: u **Uredi klub** novog kluba možeš mu dati vlastitu formaciju; *Kao liga* zadržava formaciju lige. Teren ispod popisa pokazuje gdje tko stoji.
 
@@ -195,6 +195,8 @@ klub (ili stisni **Igrači** na Novim klubovima), pa igrača:
   svaku sposobnost igrača za isti iznos. Igrač novog kluba nema ime dok mu ga izgradnja ne
   da s brojem (FL P00001 ...); upiši ga u **Ime** i dobit će tvoje;
 - **Lice**: **Odaberi...** mapu s facom (poglavlje 8.1). **Makni** vraća facu iz igre;
+- **Mala slika**: **Odaberi...** sliku (PNG ili JPG) za malu sliku igrača na popisima momčadi, bez
+  vlastite face. Build je svodi na 180 x 180; ima prednost pred slikom iz mape lica;
 - **Gore / Dolje u redoslijedu**: redoslijed u momčadi. Prvih jedanaest počinje utakmicu;
 - **Dodaj igrača** (kopija igrača kojeg odabereš, s novim ID-om; samo klubovi iz igre),
   **Makni iz kluba** (novi klub zadržava barem 18 igrača);

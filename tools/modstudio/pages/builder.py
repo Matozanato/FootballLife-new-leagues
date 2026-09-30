@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, 
                                QMessageBox, QScrollArea, QApplication)
 
 import leaguebuilder as B
+import lbplayers
 import fl26world
 from .. import theme
 from ..i18n import _, tr
@@ -598,11 +599,26 @@ class LeagueDialog(Dialog):
         self.tier_lab.setText(_("= division %d") % t if t else "")
 
 
+def coach_portrait(project, key):
+    """the picture of a club's manager (the recipe's players[key]["coach_portrait"]), '' for none"""
+    return (project.players().get(key) or {}).get("coach_portrait") or ""
+
+
+def set_coach_portrait(project, key, path):
+    pl = project.players()
+    if path:
+        pl.setdefault(key, {})["coach_portrait"] = path
+    elif key in pl:
+        pl[key].pop("coach_portrait", None)
+        if not pl[key]:
+            pl.pop(key)
+
+
 class ClubDialog(Dialog):
     """one club: name, short name, crest -- a new club, or one of the game's"""
 
     def __init__(self, parent, name, short, crest, was=None, coach=None, formation=None, formations=(),
-                 league_formation=""):
+                 league_formation="", portrait=None):
         super().__init__(parent, "Club")
         self.name = QLineEdit(name or "")
         self.name.setMinimumWidth(280)
@@ -623,6 +639,13 @@ class ClubDialog(Dialog):
             self.form.addRow(_("Manager"), self.coach)
             self.form.addRow("", hint(_("the manager's name in the game; empty = a numbered one")))
         self.coach_name = coach
+        self.portrait = None
+        if portrait is not None:           # the manager's portrait (the recipe's "coach_portrait")
+            self.portrait = PictureField(portrait, 64, "(the game's own)" if coach is None else "(none)")
+            self.form.addRow(_("Manager picture"), self.portrait)
+            self.form.addRow("", hint(_("PNG or JPG, made 256 x 256 at Build; the game shows it in Edit mode "
+                                        "and the Master League")))
+        self.portrait_path = portrait
         self.formation, self.formation_value = None, formation
         if formation is not None:          # a new club: its formation, or the league's
             from ..pitch import FormationPick, places_of
@@ -642,6 +665,11 @@ class ClubDialog(Dialog):
         self.result = (self.name.text().strip(), B.short_name(short), self.crest.path)
         if self.coach is not None:
             self.coach_name = self.coach.text().strip()
+        if self.portrait is not None:
+            if self.portrait.path and lbplayers.portrait_problem(self.portrait.path):
+                error(self, "Club", lbplayers.portrait_problem(self.portrait.path))
+                return
+            self.portrait_path = self.portrait.path or ""
         if self.formation is not None:
             self.formation_value = self.formation.value()
         self.accept()
@@ -1373,10 +1401,13 @@ class NewClubs(BuilderPage):
         coaches += [""] * (L["clubs"] - len(coaches))
         forms = list(L.get("club_formations") or [])[:L["clubs"]]
         forms += [""] * (L["clubs"] - len(forms))
+        key = "%s/%d" % (L["name"], k)
         d = ClubDialog(self, names[k], abbrs[k], crests[k], coach=coaches[k], formation=forms[k],
-                       formations=self.project.formations(), league_formation=L.get("formation", ""))
+                       formations=self.project.formations(), league_formation=L.get("formation", ""),
+                       portrait=coach_portrait(self.project, key))
         if d.finish() and d.result:
             names[k], abbrs[k], crests[k] = d.result
+            set_coach_portrait(self.project, key, d.portrait_path)
             coaches[k] = d.coach_name or ""
             if any(coaches):
                 L["club_coaches"] = coaches
@@ -1597,9 +1628,11 @@ class GameLeagues(BuilderPage):
             return
         n, a = self.project.game_cl[tid]
         e = self.project.edits("clubs").get(str(tid), {})
-        d = ClubDialog(self, e.get("name") or n, e.get("abbr") or a, e.get("crest"), was=(n, a))
+        d = ClubDialog(self, e.get("name") or n, e.get("abbr") or a, e.get("crest"), was=(n, a),
+                       portrait=coach_portrait(self.project, str(tid)))
         if not (d.finish() and d.result):
             return
+        set_coach_portrait(self.project, str(tid), d.portrait_path)
         name, short, crest = d.result
         e = {}
         if name and name != n:

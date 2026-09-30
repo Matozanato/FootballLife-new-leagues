@@ -893,7 +893,13 @@
   "Cup logos": "Logotipi kupova",
   "Super cup": "Superkup",
   "Conference League logo": "Logo Konferencijske lige",
-  "empty = a UECL emblem drawn for you": "prazno = nacrtan UECL amblem"
+  "empty = a UECL emblem drawn for you": "prazno = nacrtan UECL amblem",
+  "(none)": "(nema)",
+  "A picture of the player (PNG or JPG): his small portrait in the squad lists, made 180 x 180 at Build. It wins over a face folder's own portrait.": "Slika igrača (PNG ili JPG): njegova mala slika na popisima momčadi, pri izgradnji 180 x 180. Ima prednost pred slikom iz mape lica.",
+  "Manager picture": "Slika trenera",
+  "PNG or JPG, made 256 x 256 at Build; the game shows it in Edit mode and the Master League": "PNG ili JPG, pri izgradnji 256 x 256; igra je prikazuje u Edit modu i Master ligi",
+  "Portrait": "Mala slika",
+  "the face's own, or the game's": "ona iz lica ili igrina"
  },
  "log": [
   [

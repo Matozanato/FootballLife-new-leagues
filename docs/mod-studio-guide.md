@@ -163,7 +163,7 @@ Names keep their letters (FK Željezničar); the three-letter short name has non
 so Č, Ž, Đ become C, Z, D there. After **Build** the **Team ID** column shows each club's id in
 the game.
 
-**Manager**: in **Edit club** of a new club you can name its manager. Empty: a numbered one (`FL M0001` ...).
+**Manager**: in **Edit club** of a new club you can name its manager. Empty: a numbered one (`FL M0001` ...). **Manager picture** under it gives the manager a portrait (the same as **Manager portrait...** on the Players page); *Game's leagues and clubs* > **Edit club** has it for the game's clubs too.
 
 **Formation**: in **Edit club** of a new club you can give it a formation of its own; *As the league* keeps the league's. The pitch under the list shows where everyone stands.
 
@@ -199,6 +199,8 @@ Pick a club (or press **Players** on New clubs), then a player:
   it moves every ability of the player by the same amount. A player of a new club has no
   name until the Build numbers him (FL P00001 ...); type one in **Name** to give him yours;
 - **Face**: **Choose...** a face folder (section 8.1). **Clear** gives the game's face back;
+- **Portrait**: **Choose...** a picture (PNG or JPG) for the player's small portrait in the squad
+  lists, without a face of his own. Build makes it 180 x 180; it wins over a face folder's portrait;
 - **Order up / Order down**: the squad order. The first eleven start the match;
 - **Add player** (a copy of the player you pick, with a new id; clubs of the game only),
   **Remove from club** (a new club keeps at least 18 players);

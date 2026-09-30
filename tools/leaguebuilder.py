@@ -1680,9 +1680,9 @@ def build(pl, base, game, replace=False, log=print):
         call(mkplayers, ["--base", base, "--out", tmp, "--per", SQUAD, "--cap", PLAYER_CAP])
         log("  squads of %d for %d clubs" % (SQUAD, made))
     import lbplayers
-    faces, ids = [], {}
+    faces, ids, portraits = [], {}, []
     try:
-        lbplayers.apply(pl, base, db, PLAYER_CAP, log, faces, lineups=lineups, ids=ids)
+        lbplayers.apply(pl, base, db, PLAYER_CAP, log, faces, lineups=lineups, ids=ids, portraits=portraits)
     except lbplayers.Error as e:
         raise BuildError(str(e))
     if ids:                                            # for Mod Studio's Players page and its CSV
@@ -1692,6 +1692,7 @@ def build(pl, base, game, replace=False, log=print):
         import lbfaces
         for n, (pid, folder) in enumerate(faces):
             lbfaces.install(tmp, pid, folder, n, log)
+    lbplayers.player_portraits(portraits, tmp, log)
     lbplayers.coach_portraits(pl, tmp, log)
 
     splits = [p for p in pl["leagues"] if p.get("split")]

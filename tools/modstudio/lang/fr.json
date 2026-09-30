@@ -893,7 +893,13 @@
   "Cup logos": "Logos des coupes",
   "Super cup": "Supercoupe",
   "Conference League logo": "Logo de la Ligue Europa Conférence",
-  "empty = a UECL emblem drawn for you": "vide = un emblème UECL dessiné pour vous"
+  "empty = a UECL emblem drawn for you": "vide = un emblème UECL dessiné pour vous",
+  "(none)": "(aucune)",
+  "A picture of the player (PNG or JPG): his small portrait in the squad lists, made 180 x 180 at Build. It wins over a face folder's own portrait.": "Une image du joueur (PNG ou JPG) : son petit portrait dans les listes de l'effectif, en 180 x 180 à la construction. Elle passe avant le portrait d'un dossier de visage.",
+  "Manager picture": "Photo de l'entraîneur",
+  "PNG or JPG, made 256 x 256 at Build; the game shows it in Edit mode and the Master League": "PNG ou JPG, en 256 x 256 à la construction ; le jeu l'affiche dans le mode Édition et la Ligue des Masters",
+  "Portrait": "Portrait",
+  "the face's own, or the game's": "celui du visage, ou celui du jeu"
  },
  "log": [
   [

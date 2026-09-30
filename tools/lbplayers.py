@@ -18,7 +18,8 @@ new club starts with the same squad, a copy of the first shipped club with SQUAD
 Every value is the text a cell of playeredit.py's CSV takes ("CF", "Right", "85"), checked with
 playeredit.parse when the world is built; "name", "shirt" and "order" are the name (all four
 name slots), the shirt number and the squad order (the first eleven by order start); "face" is
-a face folder, moved to the player's id when the world is built (lbfaces.py).
+a face folder, moved to the player's id when the world is built (lbfaces.py); "portrait" is a
+picture, the player's portrait ("mini face") without a face of his own (player_portraits).
 
 A club's "join" lists players who come to it and keep their record:
 
@@ -60,6 +61,7 @@ T_NATIONAL = 0x53     # Team.bin: top bit set on the 144 national teams (leagueb
 T_COUNTRY = 0x46      # Team.bin: the country, 9 bits from bit 2 (144 of 144 national teams)
 T_COACH = 0x00        # Team.bin: the id of the club's manager in Coach.bin (mkcoaches.T_COACH)
 PORTRAIT = 256        # a manager's portrait is a PNG this many pixels square
+PLAYER_PORTRAIT = 180  # a player's portrait (mini face) is a DDS this many pixels square
 PICTURES = (".png", ".jpg", ".jpeg", ".bmp", ".webp", ".dds")
 BASIC = ["Registered Position", "Age", "Height (cm)", "Weight (kg)", "Stronger Foot", "Nationality"]
 KEYS = ["name", "shirt", "order"] + FIELDS
@@ -257,6 +259,10 @@ def check_edit(ch):
         elif k == "face":
             import lbfaces
             err += lbfaces.check(v)
+        elif k == "portrait":
+            bad = portrait_problem(v)
+            if bad:
+                err.append(bad)
         elif k == "id":
             if not (v.isdigit() and 1 <= int(v) <= PID_MAX):
                 err.append("player id %r is not 1-%d" % (v, PID_MAX))
@@ -366,11 +372,49 @@ def coach_portraits(pl, root, log=print):
     return done
 
 
-def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None):
+def _media(faces, portraits, pid, ch):
+    """a changed player's face folder and portrait picture, into the lists build() installs"""
+    if faces is not None and str(ch.get("face", "")).strip():
+        faces.append((pid, ch["face"]))
+    if portraits is not None and str(ch.get("portrait", "")).strip():
+        portraits.append((pid, ch["portrait"]))
+
+
+def player_portraits(portraits, root, log=print):
+    r"""each (player id, picture) as the player's portrait, common\render\symbol\player\<id>.dds:
+    PLAYER_PORTRAIT pixels square, DXT5, the picture centred on a clear background -- the form of
+    the regen faces' portraits, which the game showed in the Team Sheet (30.09.). It goes after
+    the faces, so it wins over a face folder's own portrait.dds."""
+    from PIL import Image
+    if not portraits:
+        return 0
+    out = os.path.join(root, "common", "render", "symbol", "player")
+    os.makedirs(out, exist_ok=True)
+    done = 0
+    for pid, path in portraits:
+        bad = portrait_problem(path)
+        try:
+            if bad:
+                raise ValueError(bad)
+            im = Image.open(path).convert("RGBA")
+        except (OSError, ValueError) as e:
+            log("  portrait of player %d: %s, skipped" % (pid, e))
+            continue
+        im.thumbnail((PLAYER_PORTRAIT, PLAYER_PORTRAIT), Image.LANCZOS)
+        sq = Image.new("RGBA", (PLAYER_PORTRAIT, PLAYER_PORTRAIT), (0, 0, 0, 0))
+        sq.paste(im, ((PLAYER_PORTRAIT - im.width) // 2, (PLAYER_PORTRAIT - im.height) // 2))
+        sq.save(os.path.join(out, "%d.dds" % pid), pixel_format="DXT5")
+        done += 1
+    log("  %d player portraits" % done)
+    return done
+
+
+def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, portraits=None):
     r"""write the recipe's player changes into the world's tables in db (the world's
     common\etc\pesdb; Player.bin and PlayerAssignment.bin come from base when the world has
     none of its own yet).  pl is the plan: its leagues carry the team ids they were given.
-    faces, a list, gets (player id, face folder) for every change with a "face". lineups:
+    faces, a list, gets (player id, face folder) for every change with a "face", portraits
+    (player id, picture) for every one with a "portrait". lineups:
     {new club id: the role of each place 0-10} for the clubs with a formation of their own.
     ids, a dict, gets {club: {player key: player id}} the way Mod Studio's Players page keys them:
     a new club's players by their place in its squad ("0", "1" ...), and a player added to any
@@ -491,8 +535,7 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None):
             assigns += e
             sq.append((order, pid, ao))
             _write(players, assigns, index[pid], ao, ch)
-            if faces is not None and str(ch.get("face", "")).strip():
-                faces.append((pid, ch["face"]))
+            _media(faces, portraits, pid, ch)
             added += 1
         for key, ch in (c.get("edits") or {}).items():
             if key not in where:
@@ -506,8 +549,7 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None):
                 renumber(pid, new_id(ch["id"], pid))
                 pid = int(ch["id"])
             _write(players, assigns, index[pid], ao, ch)
-            if faces is not None and str(ch.get("face", "")).strip():
-                faces.append((pid, ch["face"]))
+            _media(faces, portraits, pid, ch)
             changed += 1
 
     # the players who join a club or a national team
@@ -558,8 +600,7 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None):
             ch = (later.get(club) or {}).get(str(ref))
             if ch:
                 _write(players, assigns, index[pid], ao, ch)
-                if faces is not None and str(ch.get("face", "")).strip():
-                    faces.append((pid, ch["face"]))
+                _media(faces, portraits, pid, ch)
                 changed += 1
             joined += 1
 

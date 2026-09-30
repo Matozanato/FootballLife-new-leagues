@@ -171,7 +171,7 @@ Los nombres conservan sus letras (FK Željezničar); la abreviatura de tres letr
 ni marcas, como en el juego, así que ahí Č, Ž, Đ pasan a C, Z, D. Después de **Construir**, la
 columna **ID del club** muestra el id de cada club en el juego.
 
-**Entrenador**: en **Editar club** de un club nuevo puedes poner el nombre de su entrenador. Vacío: uno numerado (`FL M0001` ...).
+**Entrenador**: en **Editar club** de un club nuevo puedes poner el nombre de su entrenador. Vacío: uno numerado (`FL M0001` ...). **Foto del entrenador** debajo le da un retrato (lo mismo que **Retrato del entrenador...** en la página Jugadores); *Ligas y clubes del juego* > **Editar club** la tiene también para los clubes del juego.
 
 **Formación**: en **Editar club** de un club nuevo puedes darle una formación propia; *Como la liga* mantiene la de la liga. El campo bajo la lista muestra dónde juega cada uno.
 
@@ -209,6 +209,9 @@ propio juego. Elige un club (o pulsa **Jugadores** en Clubes nuevos) y luego un 
   nuevo no tiene nombre hasta que la construcción le da uno con número (FL P00001 ...);
   escribe uno en **Nombre** para darle el tuyo;
 - **Cara**: **Elegir...** una carpeta de cara (sección 8.1). **Borrar** devuelve la cara del juego;
+- **Retrato**: **Elegir...** una imagen (PNG o JPG) para el retrato pequeño del jugador en las listas
+  de la plantilla, sin cara propia. El Build la deja en 180 x 180; tiene prioridad sobre el retrato de
+  una carpeta de cara;
 - **Subir en el orden / Bajar en el orden**: el orden de la plantilla. Los primeros once son
   titulares;
 - **Añadir jugador** (una copia del jugador que elijas, con un id nuevo; solo clubes del juego),

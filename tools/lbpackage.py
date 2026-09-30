@@ -98,6 +98,8 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print):
         for ch in list((c.get("edits") or {}).values()) + list(c.get("add") or []):
             if str(ch.get("face", "")).strip():
                 ch["face"] = face(ch["face"])
+            if str(ch.get("portrait", "")).strip():
+                ch["portrait"] = asset(ch["portrait"])
         if c.get("coach_portrait"):
             c["coach_portrait"] = asset(c["coach_portrait"])
         if c.get("join"):                              # a game player, or one of the package's clubs
@@ -206,6 +208,8 @@ def unpack(path, store):
         for ch in list((c.get("edits") or {}).values()) + list(c.get("add") or []):
             if ch.get("face"):
                 ch["face"] = full(ch["face"])
+            if ch.get("portrait"):
+                ch["portrait"] = full(ch["portrait"])
         if c.get("coach_portrait"):
             c["coach_portrait"] = full(c["coach_portrait"])
     e = r.get("edits") or {}

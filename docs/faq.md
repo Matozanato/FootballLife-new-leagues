@@ -175,6 +175,14 @@ by the same amount), and **Name** takes a name of your own for the players Build
 club (FL P00001 ...). You can also bring in a whole squad from a table: *Players > Import a squad
 from a table*.
 
+### Can a player or a manager get a picture without a 3D face?
+
+Since 0.1.5.5, yes. A player: *Players* > select him > **Portrait** > **Choose...** a PNG or JPG;
+Build makes it his small portrait in the squad lists (180 x 180). A manager: **Manager picture** in
+**Edit club** (new clubs on *New leagues*, the game's clubs on *Game's leagues and clubs*), or
+**Manager portrait...** on the *Players* page -- both set the same picture. Build the world again
+after you change one.
+
 ### Can my new clubs play another formation than 4-2-3-1?
 
 Yes, since 0.1.4 (#23). A new league has a **Formation** list in its window: pick one of the
