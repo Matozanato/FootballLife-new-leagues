@@ -22,7 +22,7 @@ CPKs: it all goes in through Sider modules and data files, and comes out again.
 > wrong): [docs/faq.md](docs/faq.md) · how it works and the package format:
 > [docs/mod-studio.md](docs/mod-studio.md)
 >
-> **Discord:** [Football Life - NewLife](https://discord.gg/StQqtk3G3M): questions, help, new versions, and new
+> **Discord:** [FL26 Mod Studio](https://discord.gg/StQqtk3G3M): questions, help, new versions, and new
 > GitHub issues posted there as they come in. Bugs still go to a GitHub issue.
 
 This is a **beta**. It is published so that people who mod this game can use it, break it and

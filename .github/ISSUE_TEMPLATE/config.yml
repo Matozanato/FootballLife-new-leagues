@@ -2,7 +2,7 @@ blank_issues_enabled: true
 contact_links:
   - name: Question or help (Discord)
     url: https://discord.gg/StQqtk3G3M
-    about: How do I ..., does this work with ... Ask on the Football Life - NewLife Discord. Bugs go here as an issue.
+    about: How do I ..., does this work with ... Ask on the FL26 Mod Studio Discord. Bugs go here as an issue.
   - name: FAQ
     url: https://github.com/Matozanato/FootballLife-new-leagues/blob/main/docs/faq.md
     about: Updating, crashes at start, cups, promotion, what to send when something is wrong.
