@@ -66,14 +66,8 @@ R_TYPE, KNOCKOUT = 0x09, 3
 
 def prototype(comp, regs, code):
     """the competition id and regulation type byte of the competition with this code"""
-    cid = None
-    for i in range(len(comp) // M.COMP):
-        r = comp[i * M.COMP:(i + 1) * M.COMP]
-        if r[M.CODE_OFF:].split(b"\0")[0].decode("latin1") == code:
-            cid = r[M.CID_OFF]
-            break
-    if cid is None:
-        raise SystemExit("no competition coded %s" % code)
+    import mkphases
+    _i, cid = mkphases.find_cid(comp, code)      # by code, or the shipped id (GitHub #54)
     for i in range(len(regs) // M.REG):
         if regs[i * M.REG + M.R_CID] == cid:
             return cid, regs[i * M.REG + R_TYPE]

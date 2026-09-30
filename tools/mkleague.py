@@ -43,6 +43,56 @@ def load(d, n):
     return bytearray(pesdb.wesys_unpack(open(os.path.join(d, n), "rb").read()))
 
 
+# the competition id every shipped code has. A database mod can rename a competition's code
+# (GitHub #54: UEFA_EUROPE_LEAGUE came out under another code and the build stopped), the id
+# stays, so the tools look a code up by name first and by this id second
+SHIPPED_CID = {
+    "FIFA_CLUB_WORLD_CUP": 1, "UEFA_CHAMPIONS_LEAGUE": 2, "UEFA_EUROPE_LEAGUE": 3,
+    "UEFA_SUPER_CUP": 4, "COPA_LIBERTADORES": 5, "AFC_CHAMPIONS_LEAGUE": 8,
+    "ENGLAND_D1_LEAGUE": 9, "ITALY_D1_LEAGUE": 10, "SPAIN_D1_LEAGUE": 11, "FRANCE_D1_LEAGUE": 12,
+    "NETHERLANDS_D1_LEAGUE": 13, "PORTUGAL_D1_LEAGUE": 14, "ENGLAND_D1_CUP": 15,
+    "ITALY_D1_CUP": 16, "SPAIN_D1_CUP": 17, "FRANCE_D1_CUP": 18, "NETHERLANDS_D1_CUP": 19,
+    "PORTUGAL_D1_CUP": 20, "BRAZIL_D1_LEAGUE": 21, "ARGENTINA_D1_LEAGUE": 22,
+    "CHILE_D1_LEAGUE": 23, "BRAZIL_D1_CUP": 24, "FIFA_WORLD_CUP": 27, "FIFA_WORLD_CUP_EUROPE": 28,
+    "FIFA_WORLD_CUP_NCAMERICA": 29, "FIFA_WORLD_CUP_SAMERICA": 30, "FIFA_WORLD_CUP_ASIA": 31,
+    "FIFA_WORLD_CUP_AFRICA": 32, "EURO": 33, "COPA_AMERICA": 34, "AFC_ASIA_CUP": 35,
+    "AFRICA_NATIONS_CUP": 36, "CUSTOM_CUP": 37, "GERMANY_D1_LEAGUE": 39, "US_D1_LEAGUE": 40,
+    "JAPAN_D1_LEAGUE": 41, "GERMANY_D1_CUP": 42, "US_D1_CUP": 43, "JAPAN_D1_CUP": 44,
+    "SPE_FRIENDLY_MATCH": 45, "SPE_PRACTICE_MATCH": 46, "SPE_RETIREMENT_MATCH": 47,
+    "ARGENTINA_D1_CUP": 49, "CHILE_D1_CUP": 56, "ENGLAND_D2_LEAGUE": 66, "SPAIN_D2_LEAGUE": 67,
+    "FRANCE_D2_LEAGUE": 68, "ITALY_D2_LEAGUE": 69, "ENGLAND_D2_PLAYOFF": 70,
+    "SPAIN_D2_PLAYOFF": 71, "ITALY_D2_PLAYOFF": 72, "ENGLAND_SUPER_CUP": 73,
+    "SPAIN_SUPER_CUP": 74, "FRANCE_SUPER_CUP": 75, "ITALY_SUPER_CUP": 76,
+    "NETHERLANDS_SUPER_CUP": 77, "PORTUGAL_SUPER_CUP": 78, "ARGENTINA_SUPER_CUP": 79,
+    "GERMANY_SUPER_CUP": 82, "JAPAN_SUPER_CUP": 84, "CUSTOM_LEAGUE": 86, "BRAZIL_D2_LEAGUE": 90,
+    "SPE_ML_RETIREMENT_MATCH": 97, "CHAMPIONS_CUP_NA": 100, "CHAMPIONS_CUP_SA": 101,
+    "CHAMPIONS_CUP_ASIA": 102, "WORLD_SELECTION": 103, "BELGIUM_D1_LEAGUE": 111,
+    "BELGIUM_CUP": 112, "BELGIUM_SUPER_CUP": 113, "RUSSIA_D1_LEAGUE": 114, "RUSSIA_CUP": 115,
+    "RUSSIA_SUPER_CUP": 116, "GREECE_D1_LEAGUE": 117, "GREECE_CUP": 118, "TURKEY_D1_LEAGUE": 119,
+    "TURKEY_CUP": 120, "TURKEY_SUPER_CUP": 121, "COLOMBIA_D1_LEAGUE": 122, "COLOMBIA_CUP": 123,
+    "COLOMBIA_SUPER_CUP": 124, "CHINA_D1_LEAGUE": 125, "CHINA_CUP": 126, "CHINA_SUPER_CUP": 127,
+    "DENMARK_D1_LEAGUE": 128, "DENMARK_CUP": 129, "SCOTLAND_D1_LEAGUE": 137, "SCOTLAND_CUP": 138,
+    "KSA_D1_LEAGUE": 139, "KSA_CUP": 140, "KSA_SUPER_CUP": 141}
+
+
+def code_of(row):
+    return row[CODE_OFF:].split(b"\0")[0].decode("latin1")
+
+
+def find_code(comp, code):
+    """the row index of the competition coded `code` -- or, when a database mod renamed it, of
+    the row with that code's shipped id; None when neither is there"""
+    n = len(comp) // COMP
+    for i in range(n):
+        if code_of(comp[i * COMP:(i + 1) * COMP]) == code:
+            return i
+    cid = SHIPPED_CID.get(code)
+    for i in range(n if cid is not None else 0):
+        if comp[i * COMP + CID_OFF] == cid:
+            return i
+    return None
+
+
 def put(b, off, s, n):
     v = s.encode("utf-8")[:n - 1].decode("utf-8", "ignore").encode("utf-8")   # never half a letter
     b[off:off + n] = v + b"\0" * (n - len(v))
@@ -115,12 +165,7 @@ def add_league(comp, regs, ents, cid, reg, region, name, code, teams,
     if reg in regids:
         raise SystemExit("regulation id %d is taken" % reg)
 
-    src = None
-    for i in range(ncomp):
-        r = comp[i * COMP:(i + 1) * COMP]
-        if r[CODE_OFF:].split(b"\0")[0].decode("latin1") == proto_code:
-            src = i
-            break
+    src = find_code(comp, proto_code)
     if src is None:
         raise SystemExit("no competition row coded %s to copy" % proto_code)
     c = bytearray(comp[src * COMP:(src + 1) * COMP])

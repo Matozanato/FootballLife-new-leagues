@@ -1826,8 +1826,8 @@ def free_comp_ids(db, reserved=()):
 def like_reg(db, code):
     """the regulation id of the shipped competition coded `code` (its first row)"""
     comp, regs = M.load(db, "Competition.bin"), M.load(db, "CompetitionRegulation.bin")
-    cid = next((comp[i * M.COMP + M.CID_OFF] for i in range(len(comp) // M.COMP)
-                if comp[i * M.COMP + M.CODE_OFF:].split(b"\0")[0].decode("latin1") == code), None)
+    row = M.find_code(comp, code)        # by code, or by its shipped id (GitHub #54)
+    cid = None if row is None else comp[row * M.COMP + M.CID_OFF]
     return next((u16(regs[i * M.REG:], M.R_ID) for i in range(len(regs) // M.REG)
                  if cid is not None and regs[i * M.REG + M.R_CID] == cid), None)
 

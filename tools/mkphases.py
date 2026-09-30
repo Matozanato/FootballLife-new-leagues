@@ -132,11 +132,10 @@ def rid_of(row):
 
 
 def find_cid(comp, code):
-    for i in range(len(comp) // M.COMP):
-        r = comp[i * M.COMP:(i + 1) * M.COMP]
-        if r[M.CODE_OFF:].split(b"\0")[0].decode("latin1") == code:
-            return i, r[M.CID_OFF]
-    raise SystemExit("no competition coded %s" % code)
+    i = M.find_code(comp, code)          # by code, or by its shipped id (GitHub #54)
+    if i is None:
+        raise SystemExit("no competition coded %s (nor with its usual id)" % code)
+    return i, comp[i * M.COMP + M.CID_OFF]
 
 
 def phases(regs, cid):

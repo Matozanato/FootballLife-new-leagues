@@ -42,11 +42,8 @@ REG, KO, ROW = 186, 187, 1210  # league phase, knockout, the league phase's one 
 
 
 def cid_of(comp, code):
-    for i in range(len(comp) // M.COMP):
-        r = comp[i * M.COMP:(i + 1) * M.COMP]
-        if r[M.CODE_OFF:].split(b"\0")[0].decode("latin1") == code:
-            return r[M.CID_OFF]
-    return None
+    i = M.find_code(comp, code)          # by code, or by its shipped id (GitHub #54)
+    return None if i is None else comp[i * M.COMP + M.CID_OFF]
 
 
 def pick(base):
