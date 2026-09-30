@@ -143,6 +143,14 @@ world with the new Champions League and Europa League (and the Conference League
 ticked), with the game's own leagues and clubs. The scripts way is in
 [how-to.md](how-to.md), Part D, Route 1.
 
+### My cups and the Conference League have no logo
+
+Since 0.1.5.5 every cup the builder makes gets one: the national cup, super cup, league cup,
+pre-season cups, the new continental cups and the Conference League (#36; the game has no logo
+for competition 174). Without a picture of yours an emblem with the cup's initials is drawn.
+Your own: **Cup logos** in the league's window, **Logo** in *Pre-season cups*, and **Conference
+League logo** on the *Build* page. Build the world again after you change one.
+
 ### Can I change a club's or a player's id?
 
 For your **new** clubs and players, yes, since 0.1.4: **Club ID** next to the club and **Player

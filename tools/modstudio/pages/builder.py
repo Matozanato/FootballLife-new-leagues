@@ -114,6 +114,7 @@ class PictureField(QWidget):
     def __init__(self, value=None, size=72, empty="(made for you)"):
         super().__init__()
         self.path, self.size, self.empty = value or None, size, empty
+        self.changed = None                   # called after Pick or Clear
         h = QHBoxLayout(self)
         h.setContentsMargins(0, 0, 0, 0)
         self.view = QLabel()
@@ -138,10 +139,14 @@ class PictureField(QWidget):
         if p:
             self.path = os.path.normpath(p)
             self.show_it()
+            if self.changed:
+                self.changed()
 
     def clear(self):
         self.path = None
         self.show_it()
+        if self.changed:
+            self.changed()
 
     def show_it(self):
         pm = pixmap(self.path, self.size)
@@ -427,6 +432,11 @@ class LeagueDialog(Dialog):
         self.form.addRow("", row(self.lcup, self.lcup_name))
         self.form.addRow("", hint(_("a knockout of 16, 8 or 4 clubs of this division and the one below, "
                                     "September to December")))
+        self.cup_logo = PictureField(L.get("cup_logo"), 48)
+        self.supercup_logo = PictureField(L.get("supercup_logo"), 48)
+        self.lcup_logo = PictureField(L.get("league_cup_logo"), 48)
+        self.form.addRow(_("Cup logos"), row(QLabel(_("Cup")), self.cup_logo, QLabel(_("Super cup")),
+                                             self.supercup_logo, QLabel(_("League cup")), self.lcup_logo))
         from ..pitch import FormationPick
         self.formation = FormationPick(project.formations(), L.get("formation", ""))
         self.formation.pitch.setFixedHeight(190)
@@ -536,10 +546,12 @@ class LeagueDialog(Dialog):
             L.pop("above", None)
         else:
             L["above"] = a
-        if self.logo.path:
-            L["logo"] = self.logo.path
-        else:
-            L.pop("logo", None)
+        for key, f in (("logo", self.logo), ("cup_logo", self.cup_logo), ("supercup_logo", self.supercup_logo),
+                       ("league_cup_logo", self.lcup_logo)):
+            if f.path:
+                L[key] = f.path
+            else:
+                L.pop(key, None)
         if self.flag.path:
             L["flag"] = self.flag.path
         else:
@@ -768,7 +780,7 @@ class PreseasonDialog(Dialog):
     def __init__(self, parent, project):
         super().__init__(parent, "Pre-season cups")
         self.project = project
-        self.cups = [{"name": c.get("name", ""), "clubs": list(c.get("clubs") or [])}
+        self.cups = [{"name": c.get("name", ""), "clubs": list(c.get("clubs") or []), "logo": c.get("logo")}
                      for c in project.recipe.get("preseason_cups") or []]
         self.new_clubs = [("%s/%d" % (L["name"], k), B.club_name(
             {"name": L["name"], "club_names": list(L.get("club_names") or [])}, k))
@@ -790,6 +802,9 @@ class PreseasonDialog(Dialog):
         self.name = QLineEdit()
         self.name.textEdited.connect(self.store)
         right.addRow(_("Name"), self.name)
+        self.logo = PictureField(None, 48)
+        self.logo.changed = self.store
+        right.addRow(_("Logo"), self.logo)
         self.slots = []
         for i in range(self.SLOTS):
             c = QComboBox()
@@ -813,6 +828,7 @@ class PreseasonDialog(Dialog):
             self.list.addItem(c["name"] or _("(no name)"))
         on = bool(self.cups)
         self.name.setEnabled(on)
+        self.logo.setEnabled(on)
         for s in self.slots:
             s.setEnabled(on)
         if on:
@@ -824,6 +840,8 @@ class PreseasonDialog(Dialog):
         self._loading = True
         c = self.cups[i] if 0 <= i < len(self.cups) else {"name": "", "clubs": []}
         self.name.setText(c["name"])
+        self.logo.path = c.get("logo") or None
+        self.logo.show_it()
         for k, s in enumerate(self.slots):
             ref = c["clubs"][k] if k < len(c["clubs"]) else None
             j = s.findData(ref) if isinstance(ref, str) else -1
@@ -849,6 +867,8 @@ class PreseasonDialog(Dialog):
             return
         self.cups[i] = {"name": self.name.text().strip(),
                         "clubs": [v for v in (self.slot_value(s) for s in self.slots) if v is not None]}
+        if self.logo.path:
+            self.cups[i]["logo"] = self.logo.path
         self.list.item(i).setText(self.cups[i]["name"] or _("(no name)"))
 
     def add(self):
@@ -1638,6 +1658,10 @@ class Build(BuilderPage):
         self.uecl.toggled.connect(self.set_uecl)
         self.outer.addWidget(row(self.uecl, hint(_("off = no Conference League; the Champions League and Europa "
                                                    "League keep their 36-club league phase and play-off either way"))))
+        self.uecl_logo = PictureField(None, 48)
+        self.uecl_logo.changed = self.set_uecl_logo
+        self.outer.addWidget(row(QLabel(_("Conference League logo")), self.uecl_logo,
+                                 hint(_("empty = a UECL emblem drawn for you"))))
         self.b_euro = QPushButton(_("Only the new European cups..."))
         self.b_euro.setToolTip(_("A world with nothing but the new Champions League and Europa League (league "
                                  "phase of 36 and play-off) and, when ticked above, the Conference League: "
@@ -1662,12 +1686,22 @@ class Build(BuilderPage):
             self.project.recipe["uecl"] = on
             self.project.touch()
 
+    def set_uecl_logo(self):
+        if self.uecl_logo.path != self.project.recipe.get("uecl_logo"):
+            if self.uecl_logo.path:
+                self.project.recipe["uecl_logo"] = self.uecl_logo.path
+            else:
+                self.project.recipe.pop("uecl_logo", None)
+            self.project.touch()
+
     def refresh(self):
         g = self.app.game
         w = self.project.recipe.get("world", "")
         self.uecl.blockSignals(True)
         self.uecl.setChecked(bool(self.project.recipe.get("uecl", True)))
         self.uecl.blockSignals(False)
+        self.uecl_logo.path = self.project.recipe.get("uecl_logo")
+        self.uecl_logo.show_it()
         built = os.path.exists(os.path.join(g.livecpk_dir, w)) if g.ok() else False
         missing = B.modules_missing(g.folder) if g.ok() else []
         bits = [_("World %s: %s") % (w, _("built") if built else _("not built yet"))]
@@ -1727,7 +1761,8 @@ class Build(BuilderPage):
         if replace and not ask(self, title, _("%s exists. Build it again?") % name):
             return
         try:
-            pl = B.plan({"world": name, "leagues": [], "edits": {}, "players": {}, "uecl": uecl}, self.project.base)
+            pl = B.plan({"world": name, "leagues": [], "edits": {}, "players": {}, "uecl": uecl,
+                         "uecl_logo": self.project.recipe.get("uecl_logo")}, self.project.base)
         except B.BuildError as e:
             self.out.clear()
             self.say(_("error: %s") % tr(str(e)))

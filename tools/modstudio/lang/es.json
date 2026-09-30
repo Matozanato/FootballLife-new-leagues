@@ -889,7 +889,11 @@
   "Make %s the live world in sider.ini?": "¿Hacer de %s el mundo activo en sider.ini?",
   "building ...": "construyendo ...",
   "error: %s": "error: %s",
-  "Start the game, then 4. check.": "Inicia el juego y luego 4. comprueba."
+  "Start the game, then 4. check.": "Inicia el juego y luego 4. comprueba.",
+  "Cup logos": "Logos de las copas",
+  "Super cup": "Supercopa",
+  "Conference League logo": "Logo de la Conference League",
+  "empty = a UECL emblem drawn for you": "vacío = un emblema UECL dibujado para ti"
  },
  "log": [
   [

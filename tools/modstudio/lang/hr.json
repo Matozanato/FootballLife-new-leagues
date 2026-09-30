@@ -889,7 +889,11 @@
   "Make %s the live world in sider.ini?": "Postaviti %s kao živi svijet u sider.ini?",
   "building ...": "gradim ...",
   "error: %s": "greška: %s",
-  "Start the game, then 4. check.": "Pokreni igru, pa 4. provjeri."
+  "Start the game, then 4. check.": "Pokreni igru, pa 4. provjeri.",
+  "Cup logos": "Logotipi kupova",
+  "Super cup": "Superkup",
+  "Conference League logo": "Logo Konferencijske lige",
+  "empty = a UECL emblem drawn for you": "prazno = nacrtan UECL amblem"
  },
  "log": [
   [

@@ -132,10 +132,17 @@ def emblem(cid, label, sub, size, mode):
     d.polygon(inner, fill=light + (255,))
 
     def fit(text, px, y):
-        try:
-            font = ImageFont.truetype(FONT, int(px))
-        except OSError:
-            font = ImageFont.load_default()
+        # as big as asked, smaller when it is wider than the shield (four letters ran over its edges)
+        while True:
+            try:
+                font = ImageFont.truetype(FONT, int(px))
+            except OSError:
+                font = ImageFont.load_default()
+                break
+            tb = d.textbbox((0, 0), text, font=font)
+            if tb[2] - tb[0] <= (w - 2 * k) * 0.86 or px < S * 0.08:
+                break
+            px *= 0.93
         tb = d.textbbox((0, 0), text, font=font)
         d.text(((S - (tb[2] - tb[0])) / 2 - tb[0], y - tb[1]), text, font=font, fill=ink + (255,))
 

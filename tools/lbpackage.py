@@ -34,6 +34,10 @@ class Error(Exception):
     pass
 
 
+# a league's own pictures, one path each: its logo, the country's flag, its cups' logos
+LEAGUE_PICTURES = ("logo", "flag", "cup_logo", "supercup_logo", "league_cup_logo")
+
+
 def tag_of(manifest):
     t = re.sub(r"[^A-Za-z0-9._-]+", "-", "%s-%s" % (manifest.get("name", "pack"), manifest.get("author", ""))).strip("-.")
     return t[:60] or "pack"
@@ -106,10 +110,9 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print):
     for n in names:
         L = json.loads(json.dumps(have[n]))
         L.pop("pack", None)
-        if L.get("logo"):
-            L["logo"] = asset(L["logo"])
-        if L.get("flag"):
-            L["flag"] = asset(L["flag"])
+        for k in LEAGUE_PICTURES:
+            if L.get(k):
+                L[k] = asset(L[k])
         if L.get("club_crests"):
             L["club_crests"] = [asset(p) if p else p for p in L["club_crests"]]
         out_r["leagues"].append(L)
@@ -194,10 +197,9 @@ def unpack(path, store):
         return q
 
     for L in r.get("leagues", []):
-        if L.get("logo"):
-            L["logo"] = full(L["logo"])
-        if L.get("flag"):
-            L["flag"] = full(L["flag"])
+        for k in LEAGUE_PICTURES:
+            if L.get(k):
+                L[k] = full(L[k])
         if L.get("club_crests"):
             L["club_crests"] = [full(p) if p else p for p in L["club_crests"]]
     for c in (r.get("players") or {}).values():

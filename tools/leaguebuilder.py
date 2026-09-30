@@ -75,9 +75,10 @@ which league sits above -- and nothing about ids:
               count: a shipped cup of exactly that size, else the English one, which dates any
               field up to NATIONAL_CUP_MAX (national_cup); past that the cup keeps the top
               division's clubs only (fl26chain, cup= on the second division's line).
-              "cup_name" names it (default "<league> Cup")
+              "cup_name" names it (default "<league> Cup"), "cup_logo" is its picture
   supercup    optional, with cup: true also a super cup, the league's champion v the cup's winner
-              in one match before the season (copied from SUPER_CUP_LIKE); "supercup_name"
+              in one match before the season (copied from SUPER_CUP_LIKE); "supercup_name",
+              "supercup_logo"
   exhibition  optional, true: the league is for Kick Off and exhibition matches only -- its clubs
               are in the Select Team list under it, but it never enters a Master League season
               (a historical league, a league of legends ...). It stands alone: no division above
@@ -87,13 +88,15 @@ which league sits above -- and nothing about ids:
               cup, a straight knockout (two legs a round, the final one match) of 16, 8 or 4
               clubs -- the top division's by league position, then the division below's --
               the strongest v the weakest, played September to December (LEAGUE_CUP_DAYS).
-              fl26swiss.dll fills and dates it (the ccup line's options); "league_cup_name"
+              fl26swiss.dll fills and dates it (the ccup line's options); "league_cup_name",
+              "league_cup_logo"
   preseason_cups  (the recipe, not a league) [{"name": ..., "clubs": [...]}]: a knockout of
               4 or 8 invited clubs in July, before the season (PRESEASON_DAYS), paired in the
               order given (first v second ...). A club is "<league>/<k>" (the k-th club of a
               league of the recipe, from 0) or a club id of the game; at least one from a
               league of the recipe (the cup is hosted by its country). A club of the game must
-              play in a league that season, or the cup is not filled.
+              play in a league that season, or the cup is not filled. "logo": its picture.
+              A cup without a picture gets an emblem drawn from its name (mkemblems.py)
   formation   optional, the league's clubs' formation: a label of formations(base) ("4-2-3-1",
               "4-1-2-3 (<club name>)" ...) or the id of a club of the game; the clubs get a copy
               of that club's tactics (mktactics.py) and their best eleven follows its places.
@@ -110,7 +113,9 @@ which league sits above -- and nothing about ids:
               way the Champions League and Europa League league phase is reshaped to one group
               of 36 (mkreshape.py) and the Europa League gets its play-off (188): fl26swiss.dll
               runs regulations 1027/1029 as that league phase in every world, and on the game's
-              own groups of four it would put 36 clubs into group A (issue #33)
+              own groups of four it would put 36 clubs into group A (issue #33).
+              "uecl_logo" is the Conference League's picture; without one it gets a drawn
+              UECL emblem (the game has none for 174, issue #36)
 
 What plan() decides, so that nothing is left to a person to get wrong:
 
@@ -860,13 +865,16 @@ def plan(recipe, base):
                 country_region[key] = reg
             p["region"] = country_region[key]
             if L.get("cup"):
-                p["own_cup"] = {"name": (L.get("cup_name") or "").strip() or name + " Cup"}
+                p["own_cup"] = {"name": (L.get("cup_name") or "").strip() or name + " Cup",
+                                "logo": L.get("cup_logo") or None}
                 if L.get("supercup"):
                     p["own_cup"]["super"] = (L.get("supercup_name") or "").strip() or name + " Super Cup"
+                    p["own_cup"]["super_logo"] = L.get("supercup_logo") or None
             elif L.get("supercup"):
                 raise BuildError("%s: a super cup comes with the national cup (cup: true)" % name)
             if L.get("league_cup"):
-                p["league_cup"] = {"name": (L.get("league_cup_name") or "").strip() or name + " League Cup"}
+                p["league_cup"] = {"name": (L.get("league_cup_name") or "").strip() or name + " League Cup",
+                                   "logo": L.get("league_cup_logo") or None}
             season = str(L.get("season") or SEASONS[0]).strip().lower()
             if season not in SEASONS:
                 raise BuildError("%s: the season is %s, not %r" % (name, " or ".join(SEASONS), L.get("season")))
@@ -982,6 +990,7 @@ def plan(recipe, base):
                          % (len(cups) + len(home), MAX_CCUP))
     return {"world": recipe["world"], "leagues": out, "edits": recipe.get("edits") or {},
             "players": recipe.get("players") or {}, "uecl": bool(recipe.get("uecl", True)),
+            "uecl_logo": recipe.get("uecl_logo") or None,
             "ccups": cups, "ccup_notes": notes, "home_cups": home,
             "saudi_august": bool(recipe.get("saudi_august"))}
 
@@ -1073,6 +1082,7 @@ def league_cup(p, out):
     field = field[:size]
     field = [field[j] for i in range(size // 2) for j in (i, size - 1 - i)]
     return {"name": p["league_cup"]["name"], "code": "FL_%03d_LCUP" % p["rid"], "kind": "league",
+            "logo": p["league_cup"].get("logo"),
             "country": p["country"], "region": p["region"], "groups": 0, "entry": field,
             "opts": {"fill": 0, "national": 1, "days": LEAGUE_CUP_DAYS}}
 
@@ -1160,7 +1170,7 @@ def preseason_cup(c, k, by_name):
         raise BuildError("%s: a club is invited twice" % name)
     if host is None:
         raise BuildError("%s: at least one club from a league of the recipe (the host)" % name)
-    return {"name": name, "code": "FL_PRE%d" % (k + 1), "kind": "preseason",
+    return {"name": name, "code": "FL_PRE%d" % (k + 1), "kind": "preseason", "logo": c.get("logo") or None,
             "country": host["country"], "region": host["region"], "groups": 0,
             "entry": [(host["rid"], pos) for pos in range(1, len(refs) + 1)], "refs": refs,
             "opts": {"fill": PRESEASON_FILL, "national": 1, "days": PRESEASON_DAYS}}
@@ -1707,7 +1717,10 @@ def build(pl, base, game, replace=False, log=print):
 
     uecl = europe(tmp, db, log, bool(pl.get("uecl")))
     national_cups(pl, tmp, db, log)
-    ccups = continental((pl.get("ccups") or []) + home_cups(pl, confed), tmp, db, log)
+    hc = home_cups(pl, confed)
+    ccups = continental((pl.get("ccups") or []) + hc, tmp, db, log)
+    for c, h in zip(hc, pl.get("home_cups") or []):
+        h["cid"] = c["cid"]                            # for its emblem (pictures)
 
     # the world file: the tables' own reading (fl26world.from_tables), with what the recipe
     # knows better -- the country chosen, and how many clubs go up and down
@@ -2015,9 +2028,32 @@ def pictures(pl, root, base, log=print):
     for tid, v in (e.get("clubs") or {}).items():
         if v.get("crest"):
             lbassets.club_crest(root, int(tid), "", v["crest"])
-    log("  %d league logos, %d club crests%s" % (len(pl["leagues"]), sum(len(p["teams"]) - len(game_places(p))
-                                                                        for p in pl["leagues"]),
-                                               ", %d country flags" % len(flags) if flags else ""))
+    cups = cup_emblems(pl)
+    for cid, name, logo in cups:
+        lbassets.league_logo(root, cid, name, logo)
+    log("  %d league logos, %d cup logos, %d club crests%s" % (
+        len(pl["leagues"]), len(cups), sum(len(p["teams"]) - len(game_places(p)) for p in pl["leagues"]),
+        ", %d country flags" % len(flags) if flags else ""))
+
+
+def cup_emblems(pl):
+    """[(competition id, name, picture or None)] of the cups the world gets: national and super
+    cups, league, play-off and pre-season cups, the continental ones, and the Conference League
+    (the game has no emblem for 174 -- a cup without one shows a blank in Select Team and the
+    fixtures, issue #36). The label of a drawn one is the initials of its name."""
+    out = []
+    for p in pl["leagues"]:
+        c = p.get("own_cup") or {}
+        if c.get("cid"):
+            out.append((c["cid"], c["name"], c.get("logo")))
+        if c.get("super_cid"):
+            out.append((c["super_cid"], c["super"], c.get("super_logo")))
+    for c in (pl.get("ccups") or []) + (pl.get("home_cups") or []):
+        if c.get("cid"):
+            out.append((c["cid"], c["name"], c.get("logo")))
+    if pl.get("uecl"):
+        out.append((UECL_CID, "UECL", pl.get("uecl_logo")))
+    return out
     if not any(p["teams"] for p in pl["leagues"]):
         return
     t = tables_root(base)

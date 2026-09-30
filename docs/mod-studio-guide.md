@@ -147,13 +147,14 @@ The League Builder adds new leagues to the game and changes the game's own. What
 | **Country flag** | Your own picture of the country's flag, stretched into the game's flag frame. It replaces the game's flag of that country everywhere (Select Team, players' nationality, the country's heading in Database > Competition Info) while the world is on. Empty: the game's own flag. |
 | **Cup** | Top division only. **National cup**: the country gets its own cup, with the name you give (empty: `<league> Cup`). The game fills a country's cup from its top division and the division below it, and the cup takes them all, of any number up to 44: the rounds are those of a shipped cup of the same size, or else of the English cup, and when the number is not 8, 16, 32 or 64, some clubs get a bye in the first round, as in the real FA Cup. Past 44 clubs the cup keeps the top division alone. A new second division under a country the game already has (Germany, Russia ...) goes into that country's cup too, after the top division's clubs, when the cup's rounds fit the field. **Super cup**: also a one-match super cup before the season, the champion against the cup winner. |
 | **League cup** | Top division only. A knockout of 16, 8 or 4 clubs of this league and the one below it, by league position, the strongest against the weakest: two legs a round, the final one match, September to December. Give it a name or leave it empty (`<league> League Cup`). |
+| **Cup logos** | A picture for the national cup, the super cup and the league cup, each on its own. Empty: an emblem with the cup's initials is drawn for it. |
 | **Exhibition only -- not in Master League** | For Kick Off and exhibition matches: a historical league, legends and the like. Its clubs never play a Master League season, so the league stands alone: no division above or below, no European places, no cups. It still shows in Master League's team list; pick your own club from another league. |
 | **Formation** | How the league's clubs line up. Pick one of the formations the game's clubs use (4-2-3-1, 4-1-2-3, 4-3-3, 5-3-2 ...; the list says how many clubs of the game play it): each new club gets a copy of the tactics of a club of the game with that formation, and its best eleven is lined up for it at Build. Empty: the game's default, a fixed 4-2-3-1. A single club can have its own (**Edit club**). |
 
 **World name** (on the same page) must start with `_FL26`. After **Build** the **League ID** column
 shows each league's competition id in the game, the one its logo file carries.
 
-**Pre-season cups** (button on the same page): friendly knockouts of 4 or 8 invited clubs in July, before the season, paired in the order you give them (first against second ...). A club is one of a new league or a club of the game (its id); at least one has to be from a new league, and its country hosts the cup. A career starts in August, so the first one is played in the second season.
+**Pre-season cups** (button on the same page): friendly knockouts of 4 or 8 invited clubs in July, before the season, paired in the order you give them (first against second ...). A club is one of a new league or a club of the game (its id); at least one has to be from a new league, and its country hosts the cup. A career starts in August, so the first one is played in the second season. Each cup can have a **Logo**; empty: one is drawn for it.
 
 **New clubs**: pick the league, then **Edit club** (name, short name, crest), **Paste names...**
 or **Load names from file...**. An empty name becomes `<league> 01`, `<league> 02` ...; a club
@@ -286,7 +287,9 @@ Conference League: a league phase of 36 clubs and a February play-off, like the 
 Champions League and the Europa League get their league phase of 36 and their February play-off
 either way. Off: no Conference League. (Mod Studio 0.1.3 and earlier left the Champions League and Europa
 League in the game's groups of four when this was off, which the mod cannot run -- they broke;
-Checks flags such a world: build it again.)
+Checks flags such a world: build it again.) **Conference League logo** next to it: your own picture
+for it; empty: a UECL emblem is drawn (the game has none for it). It is used by **Only the new
+European cups...** too.
 
 > **European places.** The places you give your leagues come after the ones the game's own
 > leagues have. Each competition takes 36 clubs; places past the 36th get nothing, and

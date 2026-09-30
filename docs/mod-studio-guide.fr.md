@@ -159,6 +159,7 @@ Le League Builder ajoute de nouvelles ligues au jeu et modifie celles du jeu. Ce
 | **Drapeau du pays** | Votre propre image du drapeau du pays, étirée dans le cadre des drapeaux du jeu. Elle remplace le drapeau de ce pays partout dans le jeu (Select Team, nationalité des joueurs, l'en-tête du pays dans Database > Competition Info) tant que le monde est activé. Vide : le drapeau du jeu. |
 | **Coupe** | Première division uniquement. **Coupe nationale** : le pays a sa propre coupe, avec le nom que vous donnez (vide : `<ligue> Cup`). Le jeu remplit la coupe d'un pays avec sa première division et la division en dessous, et la coupe les prend tous, quel que soit leur nombre jusqu'à 44 : les tours sont ceux d'une coupe du jeu de même taille, sinon ceux de la coupe anglaise, et quand le nombre n'est pas 8, 16, 32 ou 64, certains clubs sont exemptés du premier tour, comme dans la vraie FA Cup. Au-delà de 44 clubs, la coupe ne garde que la première division. Une nouvelle deuxième division sous un pays que le jeu a déjà (Allemagne, Russie ...) entre aussi dans la coupe de ce pays, après les clubs de première division, quand les tours de la coupe conviennent au nombre de clubs. **Supercoupe** : en plus, une supercoupe en un match avant la saison, le champion contre le vainqueur de la coupe. |
 | **Coupe de la ligue** | Première division uniquement. Une coupe à élimination directe de 16, 8 ou 4 clubs de cette ligue et de celle du dessous, selon le classement, le plus fort contre le plus faible : aller-retour à chaque tour, finale sur un match, de septembre à décembre. Donnez-lui un nom ou laissez vide (`<ligue> League Cup`). |
+| **Logos des coupes** | Une image pour la coupe nationale, la supercoupe et la coupe de la ligue, chacune à part. Vide : un emblème aux initiales de la coupe est dessiné. |
 | **Exhibition uniquement -- pas en Ligue des Masters** | Pour le Kick Off et les matchs amicaux : une ligue historique, des légendes, etc. Ses clubs ne jouent jamais de saison de Ligue des Masters, donc la ligue reste seule : pas de division au-dessus ni au-dessous, pas de places européennes, pas de coupes. Elle apparaît quand même dans la liste des équipes de la Ligue des Masters ; choisissez votre club dans une autre ligue. |
 | **Formation** | Comment les clubs de la ligue se placent. Choisissez une des formations des clubs du jeu (4-2-3-1, 4-1-2-3, 4-3-3, 5-3-2 ... ; la liste indique combien de clubs du jeu la jouent) : chaque nouveau club reçoit une copie de la tactique d'un club du jeu avec cette formation, et son meilleur onze est aligné en conséquence à la construction. Vide : celle du jeu, un 4-2-3-1 fixe. Un club peut avoir la sienne (**Modifier le club**). |
 
@@ -166,7 +167,7 @@ Le **Nom du monde** (sur la même page) doit commencer par `_FL26`. Après la **
 colonne **ID de la ligue** montre l'id de compétition de chaque ligue dans le jeu, celui que porte
 son fichier de logo.
 
-**Tournois de pré-saison** (bouton sur la même page) : des tournois amicaux à élimination directe de 4 ou 8 clubs invités en juillet, avant la saison, appariés dans l'ordre donné (le premier contre le deuxième ...). Un club est celui d'une nouvelle ligue ou un club du jeu (son id) ; au moins un doit venir d'une nouvelle ligue, dont le pays accueille le tournoi. Une carrière commence en août, donc le premier se joue la deuxième saison.
+**Tournois de pré-saison** (bouton sur la même page) : des tournois amicaux à élimination directe de 4 ou 8 clubs invités en juillet, avant la saison, appariés dans l'ordre donné (le premier contre le deuxième ...). Un club est celui d'une nouvelle ligue ou un club du jeu (son id) ; au moins un doit venir d'une nouvelle ligue, dont le pays accueille le tournoi. Une carrière commence en août, donc le premier se joue la deuxième saison. Chaque tournoi peut avoir son **Logo** ; vide : un logo est dessiné.
 
 **Nouveaux clubs** : choisissez la ligue, puis **Modifier le club** (nom, nom court, écusson),
 **Coller des noms...** ou **Charger des noms depuis un fichier...**. Un nom vide devient
@@ -311,7 +312,9 @@ les deux autres. La Ligue des champions et la Ligue Europa reçoivent leur phase
 leur barrage de février dans tous les cas. Désactivé : pas de Ligue Europa Conférence. (Mod Studio
 0.1.3 et les versions précédentes laissaient la Ligue des champions et la Ligue Europa dans les groupes de quatre du jeu quand
 c'était désactivé, ce que le mod ne sait pas gérer -- elles cassaient ; les Vérifications signalent
-un tel monde : reconstruisez-le.)
+un tel monde : reconstruisez-le.) **Logo de la Ligue Europa Conférence** à côté : votre propre
+image pour elle ; vide : un emblème UECL est dessiné (le jeu n'en a pas). **Seulement les nouvelles
+coupes européennes...** l'utilise aussi.
 
 > **Places européennes.** Les places que vous donnez à vos ligues viennent après celles des ligues
 > du jeu. Chaque compétition prend 36 clubs ; les places au-delà de la 36e ne donnent rien, et
