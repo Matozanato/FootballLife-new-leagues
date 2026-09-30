@@ -623,6 +623,19 @@ def country_of(text, names):
     return low.get(t.lower(), t)
 
 
+PLAYER_IDS = "fl26playerids.json"     # in the world folder: {club: {player key: id}} of the last Build
+
+
+def player_ids(game, world):
+    """{club: {player key: player id}} the last Build of `world` gave, or {}"""
+    import siderdir
+    try:
+        with open(os.path.join(siderdir.find(game), "livecpk", world, PLAYER_IDS), encoding="utf-8") as f:
+            return json.load(f).get("clubs") or {}
+    except (OSError, ValueError):
+        return {}
+
+
 def country_ids(base):
     """[(name, Country.bin id)] sorted by name: a player's Nationality is this id (measured: 146
     Brazil, 144 Argentina, 236 Spain on the game's own players). A name the table has twice
@@ -1639,11 +1652,14 @@ def build(pl, base, game, replace=False, log=print):
         call(mkplayers, ["--base", base, "--out", tmp, "--per", SQUAD, "--cap", PLAYER_CAP])
         log("  squads of %d for %d clubs" % (SQUAD, made))
     import lbplayers
-    faces = []
+    faces, ids = [], {}
     try:
-        lbplayers.apply(pl, base, db, PLAYER_CAP, log, faces, lineups=lineups)
+        lbplayers.apply(pl, base, db, PLAYER_CAP, log, faces, lineups=lineups, ids=ids)
     except lbplayers.Error as e:
         raise BuildError(str(e))
+    if ids:                                            # for Mod Studio's Players page and its CSV
+        with open(os.path.join(tmp, PLAYER_IDS), "w", encoding="utf-8") as f:
+            json.dump({"world": pl["world"], "clubs": ids}, f, indent=1, sort_keys=True)
     if faces:
         import lbfaces
         for n, (pid, folder) in enumerate(faces):

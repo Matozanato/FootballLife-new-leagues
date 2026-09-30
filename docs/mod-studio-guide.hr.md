@@ -233,6 +233,9 @@ Popis klubova ima i **Reprezentacije** i **Ostali klubovi (bez lige)**: momčadi
   ne ostaju.
 - Igrač koji dođe ide na kraj redoslijeda momčadi sa slobodnim brojem dresa; momčad iz koje je
   otišao zatvara redoslijed iza njega.
+- Stupac **ID igrača**: ID svakog igrača -- igrin, onaj koji si upisao ili onaj koji je novom
+  igraču dao zadnji **Build** (izgradi jednom prije nego radiš minifaces ili lica za nove igrače).
+  **Izvezi CSV...** ga zapisuje kao `player_id`; Uvezi CSV taj stupac preskače.
 - **ID kluba** (pokraj kluba) i **ID igrača** (kartica Osnovno): samo za tvoje **nove** klubove i
   igrače. Prazno = sljedeći slobodan ID pri Buildu. Upiši ga kad je paket dresova, grba ili lica
   rađen za određeni ID. ID kluba: od prvog iza klubova igre (71578) do 81919; ID igrača: iznad

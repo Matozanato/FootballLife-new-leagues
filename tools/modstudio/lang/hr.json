@@ -840,6 +840,7 @@
   "called up": "pozvan",
   "Players of any club join the national team and stay at their clubs": "Igrači bilo kojeg kluba ulaze u reprezentaciju i ostaju u svojim klubovima",
   "Players of other clubs move to this one (a transfer)": "Igrači drugih klubova prelaze u ovaj (transfer)",
+  "%d at the last Build": "%d pri zadnjem Buildu",
   "at Build": "pri Buildu",
   "The game's own players keep their ids: faces, portraits and saves are keyed on them. A new club's player can take an id of your own on his own club's page.": "Igrači igre zadržavaju svoje ID-eve: lica, slike i saveovi vezani su uz njih. Igrač novog kluba može dobiti vlastiti ID na stranici svog kluba.",
   "a new player's id is %d to %d (above the game's own)": "ID novog igrača je od %d do %d (iznad ID-eva igre)",

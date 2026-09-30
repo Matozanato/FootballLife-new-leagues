@@ -79,8 +79,8 @@ class Players(BuilderPage):
         self.tree.setRootIsDecorated(False)
         self.tree.setAlternatingRowColors(True)
         self.tree.setHeaderLabels([_("Order"), _("No."), _("Name"), _("Pos"), _("Age"), _("Rating"),
-                                   _("Foot"), _("Changed")])
-        for c, w in enumerate((62, 40, 220, 50, 40, 55, 50, 80)):
+                                   _("Foot"), _("Changed"), _("Player ID")])
+        for c, w in enumerate((62, 40, 220, 50, 40, 55, 50, 80, 80)):
             self.tree.setColumnWidth(c, w)
         self.tree.currentItemChanged.connect(lambda *_a: self.inspect())
         lv.addWidget(self.tree, 1)
@@ -598,14 +598,15 @@ class Players(BuilderPage):
                                   m.get("Age", ""), str(P.overall(m)), m.get("Stronger Foot", "")[:1],
                                   self.state.get(key) or
                                   (_("leaves") if gone else (_("new") if key.startswith(NEW) else
-                                                             (_("%d fields") % len(ch) if ch else "")))])
+                                                             (_("%d fields") % len(ch) if ch else ""))),
+                                  self.player_id(key, ch)])
             it.setData(0, Qt.UserRole, key)
             if str(m.get("order", "")).isdigit() and int(m["order"]) < 11 and not gone:
                 f = it.font(2)
                 f.setBold(True)
                 it.setFont(2, f)
             if gone:
-                for c in range(8):
+                for c in range(9):
                     it.setForeground(c, QBrush(QColor(theme.SUBTLE)))
                 f = it.font(2)
                 f.setStrikeOut(True)
@@ -719,13 +720,14 @@ class Players(BuilderPage):
         idw = self.ed["id"]
         idw.setReadOnly(not own)
         if own:
-            idw.setPlaceholderText(_("at Build"))
+            built = self.built_ids().get(key)
+            idw.setPlaceholderText(_("%d at the last Build") % built if built and not str(ch.get("id", "")).strip()
+                                   else _("at Build"))
             idw.setToolTip(_("Empty: Build gives the next free id. Or type the id a face, portrait or option "
                              "file was made for: above %d (the game's own), up to %d, one nobody else has.")
                            % (self.top_pid(), P.PID_MAX))
         else:
-            src, pid = P.split_ref(key if (key.isdigit() or "/" in key) else "")
-            idw.setText(str(pid) if src is None and pid is not None else "")
+            idw.setText(self.player_id(key, ch))
             idw.setPlaceholderText("")
             idw.setToolTip(_("The game's own players keep their ids: faces, portraits and saves are keyed on "
                              "them. A new club's player can take an id of your own on his own club's page."))
@@ -792,6 +794,34 @@ class Players(BuilderPage):
         """can this row's player take an id of the recipe's own? a new club's, or one added here"""
         return bool(key) and (key.startswith(NEW) or (bool(self.club) and not self.club.isdigit() and key.isdigit()
                                                       and key not in (self.changes().get("join") or [])))
+
+    def built_ids(self, club=None):
+        """{player key: id} the last Build gave the players of `club` (this one), from the world folder"""
+        game, world = self.app.game.folder, self.project.recipe.get("world")
+        if not game or not world:
+            return {}
+        path = os.path.join(self.app.game.livecpk_dir, world, B.PLAYER_IDS)
+        try:
+            stamp = (path, os.path.getmtime(path))
+        except OSError:
+            return {}
+        if getattr(self, "_built", (None,))[0] != stamp:
+            self._built = (stamp, B.player_ids(game, world))
+        return {k: v for k, v in (self._built[1].get(club or self.club) or {}).items()}
+
+    def player_id(self, key, ch=None):
+        """the id of this row's player as text: the game's own, the one set in the recipe, or the
+        one the last Build gave; empty when not known yet"""
+        if ch and str(ch.get("id", "")).strip():
+            return str(ch["id"]).strip()
+        if key.isdigit() and self.club.isdigit():
+            return key
+        if "/" in key or (key.isdigit() and key in (self.changes().get("join") or [])):
+            src, n = P.split_ref(key)
+            if src is None:
+                return str(n) if n is not None else ""
+            return str(self.built_ids(src).get(str(n), ""))
+        return str(self.built_ids().get(key, ""))
 
     def top_pid(self):
         sq = self.project.squads()
@@ -1154,7 +1184,7 @@ class Players(BuilderPage):
         p, _f = QFileDialog.getSaveFileName(self, _("Export CSV..."), name + ".csv", "CSV (*.csv)")
         if not p:
             return
-        P.export_csv(p, [m for k, m, ch, gone in self.view() if not gone])
+        P.export_csv(p, [dict(m, player_id=self.player_id(k, ch)) for k, m, ch, gone in self.view() if not gone])
         self.app.status(_("Squad written to %s") % p)
 
     def import_csv(self):

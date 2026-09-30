@@ -840,6 +840,7 @@
   "called up": "convocado",
   "Players of any club join the national team and stay at their clubs": "Jugadores de cualquier club entran en la selección y siguen en sus clubes",
   "Players of other clubs move to this one (a transfer)": "Jugadores de otros clubes pasan a este (un traspaso)",
+  "%d at the last Build": "%d en el último Build",
   "at Build": "en el Build",
   "The game's own players keep their ids: faces, portraits and saves are keyed on them. A new club's player can take an id of your own on his own club's page.": "Los jugadores del juego conservan sus ID: caras, retratos y partidas guardadas dependen de ellos. Un jugador de un club nuevo puede tomar un ID propio en la página de su club.",
   "a new player's id is %d to %d (above the game's own)": "el ID de un jugador nuevo va de %d a %d (por encima de los del juego)",

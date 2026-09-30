@@ -237,6 +237,9 @@ The club list also has **National teams** and **Other clubs (no league)**: the t
   own national squads, so there your call-ups do not stay.
 - A player who joins goes to the end of the squad order with a free shirt number; the squad he
   left closes its order up.
+- **Player ID** column: every player's id -- the game's own, the one you typed, or the one the
+  last **Build** gave a new player (build once before you make minifaces or faces for new
+  players). **Export CSV...** writes it as `player_id`; Import CSV ignores that column.
 - **Club ID** (next to the club) and **Player ID** (Basics tab): for your **new** clubs and
   players only. Empty = the next free id at Build. Type one when a kit, crest or face pack was
   made for a certain id. Club ids: from the first id after the game's clubs (71578) up to 81919;

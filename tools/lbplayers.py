@@ -366,12 +366,15 @@ def coach_portraits(pl, root, log=print):
     return done
 
 
-def apply(pl, base, db, cap, log=print, faces=None, lineups=None):
+def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None):
     r"""write the recipe's player changes into the world's tables in db (the world's
     common\etc\pesdb; Player.bin and PlayerAssignment.bin come from base when the world has
     none of its own yet).  pl is the plan: its leagues carry the team ids they were given.
     faces, a list, gets (player id, face folder) for every change with a "face". lineups:
-    {new club id: the role of each place 0-10} for the clubs with a formation of their own."""
+    {new club id: the role of each place 0-10} for the clubs with a formation of their own.
+    ids, a dict, gets {club: {player key: player id}} the way Mod Studio's Players page keys them:
+    a new club's players by their place in its squad ("0", "1" ...), and a player added to any
+    club as "+0", "+1" ... in the order of its "add" list."""
     changes = pl.get("players") or {}
     tids = {}
     for p in pl["leagues"]:
@@ -392,6 +395,10 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None):
         return sorted(((u32(assigns, i * A_REC + E.A_PACK) & E.ORDER_MASK) >> E.ORDER_SHIFT,
                        u32(assigns, i * A_REC + E.A_PID), i * A_REC)
                       for i in range(len(assigns) // A_REC) if u32(assigns, i * A_REC + E.A_TID) == tid)
+
+    # a new club's squad as mkplayers left it: place n in it is the recipe's key "n"
+    first = {key: [pid for _o, pid, _a in squad_of(tid)] for key, tid in tids.items()}
+    added_ids = {}                                     # club -> [id of each "add" entry]
 
     def club_tid(club):
         return int(club) if club.isdigit() else tids.get(club)
@@ -469,6 +476,7 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None):
                 while pid in index:
                     pid += 1
             next_pid = max(next_pid, pid + 1)
+            added_ids.setdefault(club, []).append(pid)
             rec[P_ID:P_ID + 4] = pid.to_bytes(4, "little")
             index[pid] = len(players)
             players += rec
@@ -605,6 +613,12 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None):
                       key=lambda r: u32(r, P_ID))
         players = players[:shipped_n] + b"".join(recs)
     _check_orders(assigns)
+    if ids is not None:
+        for key, pids in first.items():
+            gone = set((changes.get(key) or {}).get("remove") or [])
+            ids[key] = {str(n): renamed.get(pid, pid) for n, pid in enumerate(pids) if str(n) not in gone}
+        for club, pids in added_ids.items():
+            ids.setdefault(club, {}).update({"+%d" % n: pid for n, pid in enumerate(pids)})
     for n, b in (("Player.bin", players), ("PlayerAssignment.bin", assigns)):
         open(os.path.join(db, n), "wb").write(pesdb.wesys_pack(bytes(b)))
     if has_players(pl):
@@ -654,7 +668,7 @@ def _check_orders(assigns):
 # ---- CSV: the same columns as playeredit.py, one club at a time ----
 
 def export_csv(path, rows):
-    cols = ["player", "name", "shirt", "order"] + FIELDS
+    cols = ["player", "player_id", "name", "shirt", "order"] + FIELDS
     with open(path, "w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f)
         w.writerow(cols)
@@ -671,7 +685,7 @@ def import_csv(path, rows):
     if not lines:
         return {}, []
     head = [c.strip() for c in lines[0]]
-    unknown = [c for c in head if c and c not in KEYS and c not in ("player", "club", "like")]
+    unknown = [c for c in head if c and c not in KEYS and c not in ("player", "player_id", "club", "like")]
     if unknown:
         raise Error("unknown columns: %s" % ", ".join(unknown))
     by_key = {r["player"]: r for r in rows}

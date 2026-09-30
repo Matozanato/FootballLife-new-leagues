@@ -259,6 +259,10 @@ La liste des clubs a aussi **Équipes nationales** et **Autres clubs (sans ligue
   League le jeu choisit lui-même ses sélections, donc tes convocations n'y restent pas.
 - Un joueur qui arrive va à la fin de l'ordre de l'effectif avec un numéro libre ; l'effectif
   qu'il quitte resserre son ordre.
+- Colonne **ID du joueur** : l'id de chaque joueur -- celui du jeu, celui que tu as tapé, ou celui
+  que le dernier **Build** a donné à un nouveau joueur (fais un Build avant de créer des minifaces
+  ou des visages pour les nouveaux joueurs). **Exporter en CSV...** l'écrit comme `player_id` ;
+  Importer un CSV ignore cette colonne.
 - **ID du club** (à côté du club) et **ID du joueur** (onglet Bases) : seulement pour tes **nouveaux**
   clubs et joueurs. Vide = le prochain ID libre au Build. Tape-en un quand un pack de maillots,
   d'écusson ou de visages a été fait pour un ID précis. ID de club : du premier après les clubs du

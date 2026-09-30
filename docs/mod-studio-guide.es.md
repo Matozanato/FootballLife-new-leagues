@@ -250,6 +250,9 @@ La lista de clubes también tiene **Selecciones nacionales** y **Otros clubes (s
   el juego elige sus propias selecciones, así que allí tus convocatorias no se mantienen.
 - Un jugador que llega va al final del orden de la plantilla con un dorsal libre; la plantilla
   que deja cierra su orden.
+- Columna **ID del jugador**: el id de cada jugador -- el del juego, el que escribiste o el que el
+  último **Build** dio a un jugador nuevo (haz un Build antes de crear minifaces o caras para
+  jugadores nuevos). **Exportar CSV...** lo escribe como `player_id`; Importar CSV ignora esa columna.
 - **ID del club** (junto al club) e **ID del jugador** (pestaña Lo básico): solo para tus clubes y
   jugadores **nuevos**. Vacío = el siguiente ID libre en el Build. Escribe uno cuando un pack de
   equipaciones, escudo o caras se hizo para un ID concreto. ID de club: desde el primero tras los
