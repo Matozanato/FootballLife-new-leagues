@@ -429,6 +429,7 @@ def game_clubs(base):
 
 
 T_NATIONAL = 0x53                           # top bit set on the 144 national teams, never on a club
+T_COUNTRY = 0x46                            # the country: 9 bits from bit 2 (lbplayers.T_COUNTRY, clubnation.py)
 
 
 def game_others(base, leagues):
@@ -1584,6 +1585,10 @@ def build(pl, base, game, replace=False, log=print):
             r[W.T_ID:W.T_ID + 4] = tid.to_bytes(4, "little")
             r[W.T_ALT:W.T_ALT + 4] = (top_alt + 1 + made).to_bytes(4, "little")
             M.put(r, W.T_NAME, club_name(p, k), W.T_NAME_LEN)
+            # the club's country is its league's: the clone is Selangor FC, so without this every
+            # new club, and its manager (mkcoaches takes the club's), was Malaysian (Amir, FK Sloboda)
+            c = struct.unpack_from("<H", r, T_COUNTRY)[0]
+            struct.pack_into("<H", r, T_COUNTRY, (c & ~(0x1ff << 2)) | ((p["country"] & 0x1ff) << 2))
             mine = (p.get("club_abbrs") or [])[k:k + 1]
             if mine and mine[0].strip():
                 short = short_name(mine[0])
