@@ -216,7 +216,8 @@ jeu. Choisissez un club (ou appuyez sur **Joueurs** dans Nouveaux clubs), puis u
   nom tant que la construction ne le numérote pas (FL P00001 ...) ; tapez-en un dans **Nom**
   pour lui donner le vôtre ;
 - **Visage** : **Choisir...** un dossier de visage (section 8.1). **Effacer** redonne le visage du
-  jeu ;
+  jeu. Un nouveau joueur sans visage reçoit un visage du pack de visages des regens qui va avec sa
+  nationalité, avec son portrait (0.1.5.5, modules installés) ;
 - **Portrait** : **Choisir...** une image (PNG ou JPG) pour le petit portrait du joueur dans les listes
   de l'effectif, sans visage à lui. Le Build la met en 180 x 180 ; elle passe avant le portrait d'un
   dossier de visage ;

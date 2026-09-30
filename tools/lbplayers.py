@@ -409,6 +409,39 @@ def player_portraits(portraits, root, log=print):
     return done
 
 
+def _runs(ids):
+    """sorted ids as "a-b" / "a" words"""
+    out, ids = [], sorted(ids)
+    i = 0
+    while i < len(ids):
+        j = i
+        while j + 1 < len(ids) and ids[j + 1] == ids[j] + 1:
+            j += 1
+        out.append("%d-%d" % (ids[i], ids[j]) if j > i else "%d" % ids[i])
+        i = j + 1
+    return out
+
+
+def new_face_lines(base, db, faces=(), portraits=(), per=64):
+    """the world file's "newfaces" lines: the world's own players (ids above the game's, in db's
+    Player.bin) get a face of the regen face pack by nationality (fl26regen, GitHub #52). A player
+    with his own face folder is left out; one with only his own portrait goes in "newfaces3d"
+    lines (the 3D face, his picture kept)."""
+    if not os.path.exists(os.path.join(db, "Player.bin")):
+        return []
+    shipped, players = load(base, "Player.bin"), load(db, "Player.bin")
+    top = max(u32(shipped, i * P_REC + P_ID) for i in range(len(shipped) // P_REC))
+    own = {u32(players, i * P_REC + P_ID) for i in range(len(players) // P_REC)}
+    own = {pid for pid in own if pid > top}
+    own -= {pid for pid, _f in faces}
+    keep = own & {pid for pid, _p in portraits}
+    lines = []
+    for word, ids in (("newfaces", own - keep), ("newfaces3d", keep)):
+        runs = _runs(ids)
+        lines += ["%s %s" % (word, " ".join(runs[k:k + per])) for k in range(0, len(runs), per)]
+    return lines
+
+
 def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, portraits=None):
     r"""write the recipe's player changes into the world's tables in db (the world's
     common\etc\pesdb; Player.bin and PlayerAssignment.bin come from base when the world has

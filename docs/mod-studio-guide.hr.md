@@ -194,7 +194,9 @@ klub (ili stisni **Igrači** na Novim klubovima), pa igrača:
 - **Ocjena**: ocjena s popisa, od sposobnosti na koje se pozicija oslanja. Promjena pomiče
   svaku sposobnost igrača za isti iznos. Igrač novog kluba nema ime dok mu ga izgradnja ne
   da s brojem (FL P00001 ...); upiši ga u **Ime** i dobit će tvoje;
-- **Lice**: **Odaberi...** mapu s facom (poglavlje 8.1). **Makni** vraća facu iz igre;
+- **Lice**: **Odaberi...** mapu s facom (poglavlje 8.1). **Makni** vraća facu iz igre. Novi igrač
+  bez nje dobije facu iz paketa lica za regene koja paše njegovoj nacionalnosti, sa slikom
+  (0.1.5.5, uz instalirane module);
 - **Mala slika**: **Odaberi...** sliku (PNG ili JPG) za malu sliku igrača na popisima momčadi, bez
   vlastite face. Build je svodi na 180 x 180; ima prednost pred slikom iz mape lica;
 - **Gore / Dolje u redoslijedu**: redoslijed u momčadi. Prvih jedanaest počinje utakmicu;

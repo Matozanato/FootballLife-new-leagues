@@ -21,6 +21,11 @@ save loader (0x1412e5eb0):
     of the world, and the portrait that goes with it. The pack holds game renders, so it is
     not in this repository: Mod Studio's module pack carries it, and "Install the modules"
     puts it in place. Without it a regen keeps the generic face.
+  * the world's own new players (a new club's squad, an imported squad) would all have the same
+    default look: the world file (modulesl26world.txt) lists their ids in "newfaces" lines,
+    and with the face pack each gets a pack face of his part of the world and its portrait, as a
+    regen does ("newfaces3d": the 3D face only, the player keeps his own portrait). A player
+    with his own face is not listed.
 
 FLAGS: 1 = new names, 2 = new potential; 3 = both.
 
@@ -75,7 +80,13 @@ function m.rewrite(ctx, filename)
   if not id then id = filename:match(PORTRAIT); what = "portrait" end
   if not id then return nil end
   if DEBUG and seen < 80 then seen = seen + 1; log("fl26regen: [debug] " .. filename) end
-  if dll_is(tonumber(id)) == 0 then return nil end
+  if dll_is(tonumber(id)) == 0 then
+    -- a new player of the world: only his portrait, the pack face is in his appearance data
+    if what == "face" or nfaces == 0 then return nil end
+    local k = tonumber(dll_face(tonumber(id)))
+    if k < 0 then return nil end
+    return (filename:gsub(PORTRAIT, "symbol" .. sep .. "player" .. sep .. "regen" .. sep .. k .. ".dds", 1))
+  end
   hidden = hidden + 1
   if hidden <= 20 then log(string.format("fl26regen: %s of regen %s hidden (%s)", what, id, filename)) end
   if what == "face" then
@@ -92,6 +103,26 @@ function m.key_down(ctx, vkey)
   if vkey == 0x79 then drain("F10 report") end      -- F10
 end
 
+-- "newfaces 179673-179900 179950" / "newfaces3d 179901": the world's new players
+local function new_players(add, dllpath)
+  local f = io.open((dllpath:gsub("fl26regen%.dll$", "fl26world.txt")), "r")
+  if not f then return end
+  local n, players = 0, 0
+  for line in f:lines() do
+    local kind, rest = line:match("^%s*(newfaces3?d?)%s+(.*)$")
+    if kind == "newfaces" or kind == "newfaces3d" then
+      for a, b in rest:gmatch("(%d+)%-?(%d*)") do
+        local lo = tonumber(a)
+        local hi = b ~= "" and tonumber(b) or lo
+        n = tonumber(add(lo, hi, kind == "newfaces3d" and 1 or 0))
+        players = players + hi - lo + 1
+      end
+    end
+  end
+  f:close()
+  if players > 0 then log(string.format("fl26regen: %d new players of the world get pack faces (%d ranges)", players, n)) end
+end
+
 function m.init(ctx)
   if ffi == nil then log("fl26regen: global ffi is nil -- set luajit.ext.enabled = 1"); return end
   ffi.cdef([[
@@ -105,6 +136,7 @@ function m.init(ctx)
     typedef int  (*fl26_regen_is_t)(uint32_t);
     typedef int  (*fl26_regen_faces_load_t)(const char*);
     typedef int  (*fl26_regen_faces_t)(void);
+    typedef int  (*fl26_regen_new_t)(uint32_t, uint32_t, int);
   ]])
   local sep = string.char(92)
   local dllpath = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26regen.dll"
@@ -138,6 +170,8 @@ function m.init(ctx)
       nfaces = tonumber(ffi.cast("fl26_regen_faces_load_t", pfl)(pack))
       log(nfaces > 0 and string.format("fl26regen: face pack loaded, %d faces", nfaces)
                      or "fl26regen: no face pack (" .. pack .. "), regens keep the generic face")
+      local pnew = ffi.C.GetProcAddress(h, "fl26_regen_new")
+      if nfaces > 0 and pnew ~= nil then new_players(ffi.cast("fl26_regen_new_t", pnew), dllpath) end
     end
     if FACES then ctx.register("livecpk_rewrite", m.rewrite) end
     drain(nil)

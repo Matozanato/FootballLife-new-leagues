@@ -198,7 +198,9 @@ Pick a club (or press **Players** on New clubs), then a player:
 - **Rating**: the rating of the list, made of the abilities the position leans on. Changing
   it moves every ability of the player by the same amount. A player of a new club has no
   name until the Build numbers him (FL P00001 ...); type one in **Name** to give him yours;
-- **Face**: **Choose...** a face folder (section 8.1). **Clear** gives the game's face back;
+- **Face**: **Choose...** a face folder (section 8.1). **Clear** gives the game's face back. A
+  new player without one gets a face of the regen face pack that fits his nationality, with its
+  portrait (0.1.5.5, with the modules installed);
 - **Portrait**: **Choose...** a picture (PNG or JPG) for the player's small portrait in the squad
   lists, without a face of his own. Build makes it 180 x 180; it wins over a face folder's portrait;
 - **Order up / Order down**: the squad order. The first eleven start the match;

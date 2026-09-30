@@ -223,6 +223,15 @@ folder `FL26 Regen Faces`, which the install copies and loads with a `cpk.root` 
 own. The save does not keep names, so after every load the module finds the regens again and
 gives each the same name and face back. It works in new and in running careers.
 
+### All the players of my new clubs look the same
+
+The game gives a player without a face of his own one default look, and every player of a new
+club (or of an imported squad) is such a player. Since 0.1.5.5 the Build lists them in the world
+file, and `fl26regen` gives each a face of the regen face pack that fits his nationality, with
+the portrait that goes with it, the same face every time. A player you gave a **Face** keeps his
+own; one with only a **Portrait** gets the 3D face and keeps his picture. It needs **Install the
+modules** (the face pack comes with them), and the world built again with 0.1.5.5.
+
 ### What should I send when something is wrong?
 
 1. In Mod Studio: **Tools > Diagnostics > Copy a report**, and paste it into the issue.

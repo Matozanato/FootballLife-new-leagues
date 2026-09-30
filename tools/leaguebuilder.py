@@ -1694,6 +1694,7 @@ def build(pl, base, game, replace=False, log=print):
             lbfaces.install(tmp, pid, folder, n, log)
     lbplayers.player_portraits(portraits, tmp, log)
     lbplayers.coach_portraits(pl, tmp, log)
+    newfaces = lbplayers.new_face_lines(base, db, faces, portraits)   # fl26regen: pack faces (#52)
 
     splits = [p for p in pl["leagues"] if p.get("split")]
     if splits:
@@ -1769,7 +1770,7 @@ def build(pl, base, game, replace=False, log=print):
             % (sum(1 for e in own_places(pl) if e[2] in fl26world.UEFA_LINE), len(uefa)))
     fl26world.write_world(os.path.join(tmp, MARK), pl["world"], leagues, split_lines, uefa, uecl,
                           ccups + dates_lines(pl, db) + season_lines(pl, db) + order_lines(pl, base, confed)
-                          + (["nopool " + " ".join(str(t) for t in nopool)] if nopool else []))
+                          + (["nopool " + " ".join(str(t) for t in nopool)] if nopool else []) + newfaces)
     json.dump(pl, open(os.path.join(tmp, "leaguebuilder-plan.json"), "w", encoding="utf-8"), indent=1)
 
     pictures(pl, tmp, base, log)

@@ -389,6 +389,59 @@ static void note_regen(unsigned char* rec)
   apply_face(id, f);
 }
 
+/* ---- new players: the world's own players get a pack face too (GitHub #52) ----
+ *
+ * A player the builder made (a new club's squad, an imported one) has no face of his own: the
+ * game gives every one of them the same default look. The loader passes the ids the world file
+ * lists (fl26_regen_new), and each of those players the database holds gets a face of his part
+ * of the world, by nationality, as a regen does. A player with his own face or portrait is left
+ * out of the list by the builder; "keep" marks one with only his own portrait, who gets the 3D
+ * face but keeps his picture. The list is found again whenever the database block changes. */
+#define MAX_NEW 4096
+static uint32_t g_new_lo[MAX_NEW], g_new_hi[MAX_NEW];
+static uint8_t  g_new_keep[MAX_NEW];
+static int      g_nnew;
+typedef struct { uint32_t id; int16_t face; uint8_t keep, pad; } newp_t;
+static newp_t*  g_nlist;
+static int      g_nnlist;
+static unsigned char* g_new_blk;
+static uint32_t g_new_n;
+
+static int newp_cmp(const void* a, const void* b)
+{
+  uint32_t x = ((const newp_t*)a)->id, y = ((const newp_t*)b)->id;
+  return x < y ? -1 : x > y;
+}
+static const newp_t* new_find(uint32_t id)
+{
+  int lo = 0, hi = g_nnlist;
+  while (lo < hi) {
+    int mid = (lo + hi) / 2;
+    if (g_nlist[mid].id < id) lo = mid + 1; else hi = mid;
+  }
+  return lo < g_nnlist && g_nlist[lo].id == id ? &g_nlist[lo] : 0;
+}
+static void new_scan(void)
+{
+  unsigned char* blk = block();
+  uint32_t n = blk ? player_count(blk) : 0;
+  if (!g_nnew || !g_nfaces || !n || (blk == g_new_blk && n == g_new_n)) return;
+  if (!g_nlist && !(g_nlist = (newp_t*)calloc(MAX_RLIST, sizeof(newp_t)))) return;
+  g_new_blk = blk; g_new_n = n; g_nnlist = 0;
+  for (uint32_t i = 0; i < n && g_nnlist < MAX_RLIST; i++) {
+    unsigned char* r = blk + (size_t)i * STRIDE;
+    uint32_t id = *(uint32_t*)(r + R_ID);
+    for (int j = 0; j < g_nnew; j++)
+      if (id >= g_new_lo[j] && id <= g_new_hi[j]) {
+        newp_t* e = &g_nlist[g_nnlist++];
+        e->id = id; e->face = (int16_t)face_of(id, *(uint16_t*)(r + R_NAT) & 0x1ff); e->keep = g_new_keep[j];
+        break;
+      }
+  }
+  qsort(g_nlist, g_nnlist, sizeof(newp_t), newp_cmp);
+  logf("new players: %d of the world's ids in the database get a pack face", g_nnlist);
+}
+
 /* ---- the two wrappers ---- */
 static void regen_hook(unsigned char* rec)
 {
@@ -573,20 +626,38 @@ __declspec(dllexport) int fl26_regen_faces_load(const char* path)
   return g_app_tab_disp ? g_nfaces : 0;
 }
 
-/* the portrait number of a regen's face, or -1 (not a regen, or no face for him) */
+/* the portrait number of a regen's or a new player's face, or -1 (neither, no face for him, or
+   a new player who keeps his own portrait) */
 __declspec(dllexport) int fl26_regen_face(uint32_t id)
 {
-  if (!fl26_regen_is(id)) return -1;
+  if (!fl26_regen_is(id)) {
+    const newp_t* e = new_find(id);
+    return e && !e->keep && e->face >= 0 ? g_faces[e->face].key : -1;
+  }
   for (int i = 0; i < g_nrlist; i++)
     if (g_rlist_id[i] == id) return g_rlist_face[i] < 0 ? -1 : g_faces[g_rlist_face[i]].key;
   return -1;
 }
 
-/* write every regen's face into the appearance table again; returns how many records it found */
+/* the world's new players: ids from..to (keep = they keep their own portrait); returns how many
+   ranges it holds */
+__declspec(dllexport) int fl26_regen_new(uint32_t from, uint32_t to, int keep)
+{
+  if (g_nnew >= MAX_NEW || from > to || !from) return g_nnew;
+  g_new_lo[g_nnew] = from; g_new_hi[g_nnew] = to; g_new_keep[g_nnew] = (uint8_t)(keep != 0);
+  g_new_blk = 0;                               /* scan again */
+  return ++g_nnew;
+}
+
+/* write every regen's and new player's face into the appearance table again; returns how many
+   records it found */
 __declspec(dllexport) int fl26_regen_faces(void)
 {
   int n = 0;
+  new_scan();
   for (int i = 0; i < g_nrlist; i++) n += apply_face(g_rlist_id[i], g_rlist_face[i]);
+  for (int i = 0; i < g_nnlist; i++)
+    if (!fl26_regen_is(g_nlist[i].id)) n += apply_face(g_nlist[i].id, g_nlist[i].face);
   return n;
 }
 
