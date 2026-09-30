@@ -29,7 +29,7 @@ LOCAL_PATH_LINE = re.compile(r'^\s*sys\.path\.insert\(0, r"[A-Za-z]:\\[^"]*"\)\s
 HIDDEN = ["leaguebuilder", "lbplayers", "playeredit", "lbfaces", "lbpackage", "lbassets", "lbpack",
           "mkplayers", "mksplit", "mkreshape", "mkphases", "mkuecl", "mkeuropo", "mkkits", "mkemblems",
           "mkcrests", "mkregioncats", "mkregnames", "mkcup", "mkccup", "mkcoaches", "mkcatflags", "afp",
-          "siderdir", "mktactics",
+          "siderdir", "mktactics", "shieldcrest",
           "siderroot", "cpkread", "countries", "flpaths", "caltab", "boundscan", "capstone", "py7zr",
           "PIL.Image"]
 
