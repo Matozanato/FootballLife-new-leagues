@@ -275,6 +275,9 @@ in the League Builder, were Alikhaled_727's idea too.
   and ratings.
 - **Alby17** (Evo-Web): found that a shirt number typed as 10 came out as 11 in the game; the
   game stores the number minus one, and every editor here now goes through that.
+- **daemonkf-a11y** ([daemonkf-a11y](https://github.com/daemonkf-a11y)): a database mod that
+  renamed the Europa League and stopped the build, and a Romanian split too long for the
+  calendar ([#54](https://github.com/Matozanato/FootballLife-new-leagues/issues/54)).
 - **n1ne** (Discord): follows the work closely and asks the questions that show where the
   docs are not clear yet, such as how the European competitions get their clubs.
 
@@ -524,7 +527,7 @@ Contributors, and what each of them did, are listed in
 [The people who made this better](#the-people-who-made-this-better) near the top: above all
 **vmardonesdev** and **Alikhaled_727**, and **Stagnant09**, **pioup38**, **vector360**, **jibibi**, **bobzera**,
 **spursfan07**, **Amir**, **victormican**, **Alby17**, **jyanj083-dotcom**, **Gabyyy2008**, **alexfe87**,
-**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991** and **n1ne**.
+**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y** and **n1ne**.
 
 The licence asks nothing of you. I do: **if you use these findings, addresses, patch sets
 or tools in a mod, credit this work and link back** — see
