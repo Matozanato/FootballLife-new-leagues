@@ -47,8 +47,10 @@ let it write to (such as Program Files), it opens the release page instead: unpa
 yourself, or move the program to a folder of your own.
 
 **More than one Sider folder?** Sider does not have to be called `SiderAddons`. The program
-looks for the folder next to `FL_2026.exe` that holds a `sider.ini`; if there are several,
-**Settings → Sider folder** chooses which one it works on.
+looks for the folder next to `FL_2026.exe` that holds a `sider.ini`, and one level further
+down too (`sider\patch 1`, `sider\patch 2` ... when one folder holds a few Sider copies). If
+there are several, **Settings → Sider folder** chooses which one it works on; the others are
+not touched.
 
 ## 3. The pages
 

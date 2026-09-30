@@ -32,7 +32,8 @@ La ventana está en inglés. **Settings → Language → Español** la pasa a es
 ## 2. Primer inicio
 
 1. **Ajustes → Carpeta del juego**: pulsa `...` y elige la carpeta que contiene `FL_2026.exe`.
-   La línea de debajo dice si se encontró `SiderAddons\sider.ini`.
+   La línea de debajo dice si se encontró `SiderAddons\sider.ini`. Sider puede tener otro
+   nombre o estar un nivel más abajo (`sider\patch 1` ...); si hay varios, **Settings → Sider folder** elige con cuál trabaja el programa.
 2. Si quieres ligas nuevas o cambios de jugadores: **Ajustes → Desempaquetar las tablas del
    juego**. Lee los clubes, ligas y jugadores del juego en una carpeta de trabajo (unos
    segundos). Solo hay que repetirlo tras una actualización del juego.

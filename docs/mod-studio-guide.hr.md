@@ -30,7 +30,8 @@ Prozor je na engleskom. **Settings → Language → Hrvatski** ga prebaci na hrv
 ## 2. Prvo pokretanje
 
 1. **Postavke → Mapa igre**: stisni `...` i odaberi mapu u kojoj je `FL_2026.exe`. Redak
-   ispod kaže je li pronađen `SiderAddons\sider.ini`.
+   ispod kaže je li pronađen `SiderAddons\sider.ini`. Sider se može zvati i drukčije ili biti
+   razinu dublje (`sider\patch 1` ...); ako ih ima više, **Settings → Sider folder** bira s kojim program radi.
 2. Ako želiš nove lige ili promjene igrača: **Postavke → Raspakiraj tablice igre**. Pročita
    klubove, lige i igrače igre u radnu mapu (par sekundi). Ponovi samo nakon nadogradnje igre.
 3. Otvori **Pregled**. Pokazuje cijelu postavu na jednom mjestu i popis problema. Dvoklik na

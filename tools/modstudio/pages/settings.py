@@ -90,7 +90,7 @@ class Settings(Page):
             self.sider.addItem(n, n)
         if not names:
             self.sider.addItem(_("(none found)"), "")
-        self.sider.setCurrentIndex(max(0, self.sider.findData(os.path.basename(g.sider_dir))))
+        self.sider.setCurrentIndex(max(0, self.sider.findData(siderdir.name(g.folder, g.sider_dir))))
         self.sider.setEnabled(len(names) > 1)
         self.sider.blockSignals(False)
         self.sider_note.setVisible(len(names) > 1)
@@ -100,7 +100,7 @@ class Settings(Page):
             self.game_state.setObjectName("banner_warn")
         else:
             self.game_state.setText(_("Found: %s, Sider in %s, sider.ini.")
-                                    % (os.path.basename(g.exe), os.path.basename(g.sider_dir)))
+                                    % (os.path.basename(g.exe), siderdir.name(g.folder, g.sider_dir)))
             self.game_state.setObjectName("banner_ok")
         self.game_state.style().unpolish(self.game_state)
         self.game_state.style().polish(self.game_state)
@@ -129,7 +129,7 @@ class Settings(Page):
 
     def set_sider(self):
         name = self.sider.currentData()
-        if name and name != os.path.basename(self.app.game.sider_dir):
+        if name and name != siderdir.name(self.app.game.folder, self.app.game.sider_dir):
             self.app.set_sider(name)
         self.refresh()
 
