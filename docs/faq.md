@@ -196,6 +196,17 @@ every **Build** also keeps a copy in `%APPDATA%\FL26ModStudio\recipes\<world>.js
 Studio opens the last recipe again when it starts. The world an older version built stays in the
 game and keeps working; only its recipe has to be entered again to change it.
 
+### A retired star came back as a 16-year-old with the same name and face
+
+That is the game: in Master League a retiring player is turned back into a 16-year-old in place,
+with the same id, name, face and potential. Since 0.1.5 **Install the modules** also puts in
+`fl26regen`: a regen gets a new name (a family name and a given name of two other players of
+his country), a new potential that his ratings at 16 do not give away, and a new face with the
+portrait to match, one of 90 faces from nine parts of the world. The faces come as the livecpk
+folder `FL26 Regen Faces`, which the install copies and loads with a `cpk.root` line of its
+own. The save does not keep names, so after every load the module finds the regens again and
+gives each the same name and face back. It works in new and in running careers.
+
 ### What should I send when something is wrong?
 
 1. In Mod Studio: **Tools > Diagnostics > Copy a report**, and paste it into the issue.

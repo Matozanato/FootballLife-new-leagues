@@ -10,7 +10,12 @@ What goes in, and from where -- every file from a source that is ours and clean:
                             the world-file readers and the guards. Where the public repository
                             sits beside this one (../fl26-public), its copies are taken first, so
                             the pack is exactly what is published; otherwise this repository's.
-  tools/native/*.c          the four DLLs, compiled now with zig (tools/native/build-*.sh)
+  tools/native/*.c          the DLLs, compiled now with zig (tools/native/build-*.sh)
+  the regen face pack       fl26regen_faces.bin (into modules) and the livecpk root
+                            "FL26 Regen Faces" (into livecpk), from $FL26_REGEN_FACES or
+                            ../fl26-modding-research/out/regenfaces. It holds game renders, so it
+                            is never in a repository, only in the package; without it the pack
+                            is built anyway and regens keep the generic face.
 
 fl26regions.lua and fl26regnames.lua are not in the pack: they name the competitions and
 regions of one world, so the builder makes them per world and switch-on puts them in place.
@@ -31,14 +36,17 @@ ZIG = os.environ.get("ZIG") or next(
 ORDER = [
     "fl26caps", "fl26nullguard", "fl26nullguard2", "fl26nullguard4", "fl26nullguard5",
     "fl26nullguard7", "fl26nullguard8", "fl26nullguard9", "fl26nullguard10", "fl26joindll",
-    "fl26hdr192", "fl26chain", "fl26comptab", "fl26slotnames", "fl26clubs", "fl26editlist",
+    "fl26hdr192", "fl26chain", "fl26comptab", "fl26slotnames", "fl26clubs", "fl26regen", "fl26editlist",
     "fl26rank", "fl26deeprank", "fl26regions", "fl26reg64", "fl26regnames", "fl26catlist",
     "fl26swiss", "fl26augseason", "fl26superguard", "fl26resultsguard", "fl26ctlguard",
     "fl26seasonend",
 ]
 PER_WORLD = {"fl26regions", "fl26regnames"}
 DLLS = {"fl26join": "build-join.sh", "fl26chain": "build-chain.sh",
-        "fl26clubs": "build-clubs.sh", "fl26swiss": "build-swiss.sh"}
+        "fl26clubs": "build-clubs.sh", "fl26swiss": "build-swiss.sh", "fl26regen": "build-regen.sh"}
+FACES = os.environ.get("FL26_REGEN_FACES") or os.path.join(os.path.dirname(REPO), "fl26-modding-research",
+                                                           "out", "regenfaces")
+FACE_ROOT = "FL26 Regen Faces"            # the livecpk root of the portraits (install_modules)
 # written so that the line does not match itself
 PRIVATE = re.compile(r"[A-Za-z]:\\\\?(de[v]|User[s]|instalacij[a])|stuc[e]|fl26-dump[s]", re.I)
 
@@ -75,6 +83,13 @@ def build(out, log=print):
             p = os.path.join(mods, junk)
             if os.path.exists(p):
                 os.remove(p)
+    faces = os.path.join(FACES, "fl26regen_faces.bin")
+    if os.path.exists(faces) and os.path.isdir(os.path.join(FACES, FACE_ROOT)):
+        shutil.copy2(faces, mods)
+        shutil.copytree(os.path.join(FACES, FACE_ROOT), os.path.join(out, "livecpk", FACE_ROOT))
+        log("pack: regen face pack from %s" % FACES)
+    else:
+        log("pack: NO regen face pack (%s) -- regens will keep the generic face" % FACES)
     open(os.path.join(mods, "..", "modules.txt"), "w", encoding="utf-8", newline="\n").write(
         "".join(m + "\n" for m in ORDER))
     bad = []

@@ -2199,7 +2199,38 @@ def install_modules(game, log=print):
         log("modules: all %d already there" % same)
     have = {f[:-4] for f in os.listdir(dst) if f.endswith(".lua")}
     ensure_modules(game, order, [m for m in order if m in have], log)
+    roots = os.path.join(pack, "livecpk")
+    for r in sorted(os.listdir(roots)) if os.path.isdir(roots) else []:
+        install_root(game, os.path.join(roots, r), log)
     return changed
+
+
+def install_root(game, src, log=print):
+    """a livecpk root of the pack (the regen portraits): copied into the Sider folder's livecpk,
+    replacing an older copy, and loaded by a cpk.root line of its own. The line goes above the
+    first cpk.root there is; its name has no _FL26, so switching worlds (siderroot) leaves it."""
+    name = os.path.basename(src)
+    dst = os.path.join(siderdir.find(game), "livecpk", name)
+    if os.path.exists(dst):
+        shutil.rmtree(dst)
+    shutil.copytree(src, dst)
+    n = sum(len(fs) for _, _, fs in os.walk(dst))
+    ini, lines = ini_lines(game)
+    want = r'cpk.root = ".\livecpk\%s"' % name
+    key = lambda l: l.strip().lstrip(";#").strip().replace(" ", "").lower()
+    at = [i for i, l in enumerate(lines) if key(l) == key(want)]
+    if at and lines[at[0]].strip() == want:
+        log("livecpk: %s (%d files), already loaded" % (name, n))
+        return
+    if at:
+        lines[at[0]] = want
+    else:
+        roots = [i for i, l in enumerate(lines) if l.strip().startswith("cpk.root")]
+        mods = [i for i, l in enumerate(lines) if module_of(l)[0]]
+        lines.insert(roots[0] if roots else (mods[0] if mods else len(lines)), want)
+    shutil.copy2(ini, ini + ".before-builder") if not os.path.exists(ini + ".before-builder") else None
+    open(ini, "w", encoding="utf-8", newline="\r\n").write("\n".join(lines) + "\n")
+    log("livecpk: %s (%d files), sider.ini loads it" % (name, n))
 
 
 # ---- on: the live world ----
