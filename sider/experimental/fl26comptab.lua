@@ -471,6 +471,17 @@ function m.init(ctx)
       ours[id] = true
     end
   end
+  -- 190 shares slot 112 with the exe's row for 145 (the game's empty J2), which comes first, and
+  -- Select Team takes the slot's logo from that row: the league on 190 had no logo there (GitHub
+  -- #38, Paraguay). A world with a league on 190 has none on 145, so that row goes to the hidden
+  -- slot and 190 has 112 alone. Worlds from before 25 September keep their league on 145.
+  local on145 = false
+  for _, id in ipairs(OUR_IDS) do on145 = on145 or id == 145 end
+  if ours[190] and not on145 and byid[145] and row_u32(rows[byid[145]], OFF_SLOT) == 112
+     and row_u32(rows[byid[190]], OFF_SLOT) == 112 then
+    rows[byid[145]] = row_set(rows[byid[145]], OFF_SLOT, u32le(123))
+    log("fl26comptab: the exe's row 145 moved off slot 112 -- the league on 190 has it alone")
+  end
   -- 2b. a slot of ours must not land on a shipped competition. The free-slot list was read
   -- from a table dumped out of a run (Appendix A), and the table is built at startup, so it
   -- can differ from what this run actually has: check it against this run rather than trust it.
