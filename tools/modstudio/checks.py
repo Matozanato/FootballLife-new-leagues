@@ -43,9 +43,10 @@ def quick(game, ini, recipe=None):
                     "Lua modules", text, "Modules"))
     mods = {os.path.basename(e.value.replace("\\", "/")).lower(): e.enabled for e in ini.entries("lua.module")}
     for s in S.SERVERS:
-        on = mods.get(s.module.lower())
+        folder, module = s.pick(game.content_dir)
+        on = mods.get(module.lower())
         if on and not s.installed(game.content_dir):
-            out.append(("err", s.title, _("%s is on but there is no content\\%s folder") % (s.module, s.folder), None))
+            out.append(("err", s.title, _("%s is on but there is no content\\%s folder") % (module, folder), None))
     out += world_problems(game, ini, recipe)
     out += exe_problems(game)
     return out

@@ -38,13 +38,26 @@ class Map:
 
 class Server:
     def __init__(self, key, title, folder, module, maps, config=None, library=None,
-                 about="", settings=None):
+                 about="", settings=None, alias=None):
         self.key, self.title, self.folder, self.module = key, title, folder, module
         self.maps, self.config, self.library, self.about = maps, config, library, about
         self.settings = settings or {}     # key -> (label, kind, tip)
+        self.alias = alias                 # (folder, module) a pack ships under its own names
+
+    def pick(self, content_dir):
+        """(folder, module) in use: ours, or the alias when only the alias is there"""
+        if self.alias and content_dir and not os.path.isdir(os.path.join(content_dir, self.folder))                 and os.path.isfile(os.path.join(content_dir, self.alias[0], self.maps[0].file)):
+            return self.alias
+        return self.folder, self.module
+
+    def folder_in(self, content_dir):
+        return self.pick(content_dir)[0]
+
+    def module_in(self, content_dir):
+        return self.pick(content_dir)[1]
 
     def path(self, content_dir):
-        return os.path.join(content_dir, self.folder)
+        return os.path.join(content_dir, self.folder_in(content_dir))
 
     def installed(self, content_dir):
         return os.path.isdir(self.path(content_dir))
@@ -199,7 +212,7 @@ SERVERS = [
                Map("map.txt", "Clubs", [TEAM, Col("Kit folder", "item")], quote=(1,)),
                Map("map_comp.txt", "Competitions", [COMP, Col("Badge set", "text")]),
            ],
-           config="config.txt", library="folder",
+           config="config.txt", library="folder", alias=("kits", "kits.lua"),
            settings={"auto_select_gk": ("Pick the goalkeeper kit", "flag", ""),
                      "hide_comp_kits_badges": ("Hide competition badges", "flag", ""),
                      "armband_color_match": ("Armband matches the kit", "flag", ""),

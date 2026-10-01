@@ -633,12 +633,15 @@ class ServerView(QWidget):
     def dirty(self):
         return any(t.dirty for t in self.map_tabs) or bool(self.settings_tab and self.settings_tab.dirty)
 
+    def module(self):
+        return self.server.module_in(self.content_dir())
+
     def module_state(self):
         """(line in sider.ini or None, enabled)"""
         ini = self.app.ini()
         if ini is None:
             return None, False
-        stem = self.server.module.lower()
+        stem = self.module().lower()
         for e in ini.entries("lua.module"):
             if os.path.basename(e.value.replace("\\", "/")).lower() == stem:
                 return e, e.enabled
@@ -669,15 +672,15 @@ class ServerView(QWidget):
                 self.lib_tab.fill()
             self.loaded = True
         e, on = self.module_state()
-        exists = os.path.exists(os.path.join(self.app.game.modules_dir, self.server.module))
+        exists = os.path.exists(os.path.join(self.app.game.modules_dir, self.module()))
         if on:
-            txt, col = _("%s is on.") % self.server.module, theme.GOOD
+            txt, col = _("%s is on.") % self.module(), theme.GOOD
         elif e is not None:
-            txt, col = _("%s is switched off in sider.ini: the game does not use these maps.") % self.server.module, theme.WARN
+            txt, col = _("%s is switched off in sider.ini: the game does not use these maps.") % self.module(), theme.WARN
         elif exists:
-            txt, col = _("%s is not in sider.ini: the game does not use these maps.") % self.server.module, theme.WARN
+            txt, col = _("%s is not in sider.ini: the game does not use these maps.") % self.module(), theme.WARN
         else:
-            txt, col = _("%s is not in the modules folder.") % self.server.module, theme.WARN
+            txt, col = _("%s is not in the modules folder.") % self.module(), theme.WARN
         n = len(self.library_items()) if self.server.library and self.tabs.currentWidget() is self.lib_tab else None
         self.status.setText(txt + (("   " + _("%d items in the library") % n) if n is not None else ""))
         self.status.setStyleSheet("color: %s;" % col)
@@ -694,10 +697,10 @@ class ServerView(QWidget):
             return
         e, on = self.module_state()
         if e is None:
-            ini.add("lua.module", self.server.module)
+            ini.add("lua.module", self.module())
         else:
             ini.set_enabled(e, True)
-        self.app.save_ini(ini, "%s on" % self.server.module)
+        self.app.save_ini(ini, "%s on" % self.module())
         self.refresh()
 
     def save(self):
