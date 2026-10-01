@@ -1866,8 +1866,10 @@ class NewClubs(BuilderPage):
     def game_row(self, k, e, pl):
         tid = int(e["id"])
         name, short = self.project.game_cl.get(tid, (str(tid), ""))
+        ed = self.project.edits("clubs").get(str(tid), {})       # Edit club: a new name, crest ...
         n = len((pl.get(str(tid)) or {}).get("edits") or {})
-        it = QTreeWidgetItem([str(k + 1), name, short, str(tid), _("(the game's)"), str(n) if n else ""])
+        it = QTreeWidgetItem([str(k + 1), ed.get("name") or name, ed.get("abbr") or short, str(tid),
+                              _("(new crest)") if ed.get("crest") else _("(the game's)"), str(n) if n else ""])
         sw = e.get("swap")
         if isinstance(sw, dict):
             tip = _("A club of the game. A new club, %s, takes its place in the game.") % sw.get("name", "")
@@ -1876,6 +1878,7 @@ class NewClubs(BuilderPage):
                 % self.project.game_cl.get(int(sw), (str(sw), ""))[0]
         else:
             tip = _("A club of the game that played in no competition.")
+        tip += "  " + _("Edit club changes its name, crest, manager's portrait and stadium.")
         for c in range(6):
             it.setToolTip(c, tip)
         it.setForeground(4, QBrush(QColor(theme.SUBTLE)))
@@ -1972,9 +1975,9 @@ class NewClubs(BuilderPage):
         if not L or k is None:
             return
         if k in self.game_places(L):
-            QMessageBox.information(self, _("New clubs"), _("This is a club of the game: rename it or change its "
-                                                             "crest on Game's leagues and clubs, or pick another one "
-                                                             "with Club of the game."))
+            tid = self.game_places(L)[k]["id"]
+            if tid in self.project.game_cl and edit_game_club(self, tid):
+                self.refresh()
             return
         names, abbrs, crests = self.lists(L)
         coaches = list(L.get("club_coaches") or [])[:L["clubs"]]
@@ -2089,6 +2092,36 @@ def swap_of(project, tid):
         if int(b) == tid:
             return int(a)
     return None
+
+
+def edit_game_club(page, tid):
+    """the club dialog for club tid of the game: its new name, short name, crest, manager's
+    portrait and stadium go into the recipe's edits.clubs (Game's leagues and clubs, and a club
+    of the game on New clubs). True when something was kept."""
+    project = page.project
+    n, a = project.game_cl[tid]
+    e = project.edits("clubs").get(str(tid), {})
+    d = ClubDialog(page, e.get("name") or n, e.get("abbr") or a, e.get("crest"), was=(n, a),
+                   portrait=coach_portrait(project, str(tid)), stadium=club_stadium(project, str(tid)),
+                   stadium_lib=stadium_lib(page.app))
+    if not (d.finish() and d.result):
+        return False
+    set_coach_portrait(project, str(tid), d.portrait_path)
+    set_club_stadium(project, str(tid), d.stadium_value)
+    name, short, crest = d.result
+    e = {}
+    if name and name != n:
+        e["name"] = name
+    if short and short != a:
+        e["abbr"] = short
+    if crest:
+        e["crest"] = crest
+    if e:
+        project.edits("clubs")[str(tid)] = e
+    else:
+        project.edits("clubs").pop(str(tid), None)
+    project.dirty = True
+    return True
 
 
 class GameLeagues(BuilderPage):
@@ -2268,29 +2301,8 @@ class GameLeagues(BuilderPage):
         tid, it = self.selected_tid()
         if tid is None:
             return
-        n, a = self.project.game_cl[tid]
-        e = self.project.edits("clubs").get(str(tid), {})
-        d = ClubDialog(self, e.get("name") or n, e.get("abbr") or a, e.get("crest"), was=(n, a),
-                       portrait=coach_portrait(self.project, str(tid)), stadium=club_stadium(self.project, str(tid)),
-                       stadium_lib=stadium_lib(self.app))
-        if not (d.finish() and d.result):
-            return
-        set_coach_portrait(self.project, str(tid), d.portrait_path)
-        set_club_stadium(self.project, str(tid), d.stadium_value)
-        name, short, crest = d.result
-        e = {}
-        if name and name != n:
-            e["name"] = name
-        if short and short != a:
-            e["abbr"] = short
-        if crest:
-            e["crest"] = crest
-        if e:
-            self.project.edits("clubs")[str(tid)] = e
-        else:
-            self.project.edits("clubs").pop(str(tid), None)
-        self.club_row(it, tid)
-        self.project.dirty = True
+        if edit_game_club(self, tid):
+            self.club_row(it, tid)
 
     def undo_club(self):
         for it in self.tree.selectedItems():

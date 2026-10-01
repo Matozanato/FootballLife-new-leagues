@@ -228,7 +228,7 @@ lieu d'un nouveau : sélectionnez la place, puis **Club du jeu...**, et cherchez
 l'équipe (**Seulement les clubs sans ligue** réduit la liste). Le club garde son nom, son écusson,
 ses maillots, son entraîneur et ses joueurs, et ne joue que dans votre ligue. S'il joue quelque
 chose dans le jeu (une ligue, une coupe, la Ligue Europa ...), vous choisissez qui y prend sa
-place : un club du jeu qui ne joue rien, ou un nouveau club que vous nommez. Ainsi aucune
+place : un club du jeu qui ne joue rien, ou un nouveau club que vous nommez. Un tournoi de pré-saison (les *Pre-season friendly Cups* de SPFL26) ne compte pas : le club continue d'y jouer, comme les clubs de Premier League (0.1.7). **Modifier le club** sur un club du jeu change son nom, son blason, le portrait de l'entraîneur et le stade, comme sur *Ligues et clubs du jeu* (0.1.7). Ainsi aucune
 compétition du jeu ne change son nombre de clubs ; les ligues du jeu ne gardent leurs dates
 qu'avec le nombre pour lequel elles ont été faites. Les sélections nationales, les équipes
 classiques et par défaut et les clubs de moins de 18 joueurs ne peuvent pas être choisis.

@@ -207,7 +207,7 @@ kluba u igri.
 odaberi mjesto, pa **Klub iz igre...**, i traži po imenu ili ID-u kluba (**Samo klubovi bez lige**
 suzi popis). Klub zadržava ime, grb, dresove, trenera i igrače, a igra samo u tvojoj ligi. Ako u
 igri igra negdje (liga, kup, Europska liga ...), biraš tko tamo preuzima njegovo mjesto: klub iz
-igre koji ne igra nigdje ili novi klub kojem daš ime. Tako nijedno natjecanje igre ne mijenja broj
+igre koji ne igra nigdje ili novi klub kojem daš ime. Predsezonski turnir (*Pre-season friendly Cup* u SPFL26) se ne broji: klub ga i dalje igra, kao i klubovi Premier lige (0.1.7). **Uredi klub** na klubu iz igre mijenja ime, grb, sliku trenera i stadion, kao na *Postojeće lige i klubovi* (0.1.7). Tako nijedno natjecanje igre ne mijenja broj
 klubova; lige iz igre zadržavaju datume samo s brojem za koji su napravljene. Reprezentacije,
 klasični i zadani timovi te klubovi s manje od 18 igrača ne mogu se odabrati. **Novi klub ovdje**
 vraća mjesto novom klubu. Klub se više ne pojavljuje u grupama *Other ... clubs* u Master League karijeri.

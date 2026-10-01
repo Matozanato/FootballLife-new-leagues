@@ -211,7 +211,7 @@ of a new one: select the place, then **Club of the game...**, and search by name
 (**Only clubs in no league** narrows the list). The club keeps its name, crest, kits, manager and
 players, and plays in your league only. When it plays somewhere in the game (a league, a cup, the
 Europa League ...), you pick who takes its place there: a club of the game that plays in nothing,
-or a new club you name. That way no competition of the game changes its number of clubs; the
+or a new club you name. A pre-season tournament (the *Pre-season friendly Cups* of SPFL26) does not count: the club keeps playing it, as the Premier League's clubs do (0.1.7). **Edit club** on a club of the game changes its name, crest, manager's portrait and stadium, as on *Game's leagues and clubs* (0.1.7). That way no competition of the game changes its number of clubs; the
 game's leagues keep their dates only with the number they were made for. National teams, the
 classic and default teams and clubs with fewer than 18 players cannot be picked. **New club
 here** gives the place back to a new club. The club no longer shows under the Master League's

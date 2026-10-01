@@ -1007,7 +1007,9 @@
   "Put the countries in order, strongest first (drag, or Up / Down); untick a league to give it no European place. OK gives every league its places by UEFA's key, like UEFA's access list for 2024-27: the first 30 get places, and the places of missing ranks go to the next clubs of the strongest leagues in turn, so every competition stays full. You can still change any league's places by hand afterwards.": "Classez les pays, le plus fort d'abord (glissez, ou Monter / Descendre) ; décochez une ligue pour ne lui donner aucune place européenne. OK donne à chaque ligue ses places selon la clé de l'UEFA, comme la liste d'accès de l'UEFA pour 2024-27 : les 30 premiers ont des places, et les places des rangs manquants vont tour à tour aux clubs suivants des ligues les plus fortes, ainsi chaque compétition reste pleine. Vous pouvez encore changer à la main les places de n'importe quelle ligue ensuite.",
   "Not ranked, no European place: %s": "Pas classées, aucune place européenne : %s",
   "UEFA ranking applied: every ranked league has its European places. Check the plan shows them.": "Classement UEFA appliqué : chaque ligue classée a ses places européennes. Vérifier le plan les montre.",
-  "In the game: %s": "Dans le jeu : %s"
+  "In the game: %s": "Dans le jeu : %s",
+  "(new crest)": "(nouveau blason)",
+  "Edit club changes its name, crest, manager's portrait and stadium.": "Modifier le club change son nom, son blason, le portrait de l'entraîneur et le stade."
  },
  "log": [
   [

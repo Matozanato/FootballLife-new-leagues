@@ -544,7 +544,8 @@ def game_info(base):
     """what the tables say about the game's own teams, for picking clubs of the game:
     {"clubs": {id: (name, short)}, "national": {ids}, "entries": {id: [competition ids]},
      "squads": {id: players}, "league_cids": {competition ids of leagues},
-     "comp_names": {competition id: name}, "league_of": {id: league name}}"""
+     "comp_names": {competition id: name}, "league_of": {id: league name},
+     "friendly_cids": {competition ids of pre-season tournaments}}"""
     key = os.path.normcase(os.path.abspath(base))
     if key in _GAME_INFO:
         return _GAME_INFO[key]
@@ -565,9 +566,12 @@ def game_info(base):
         g = regs[i * M.REG:(i + 1) * M.REG]
         names.setdefault(g[M.R_CID], text(g[M.R_NAME:M.R_NAME + M.NAME_SLOT]))
     leagues = game_leagues(base)
+    friendly = friendly_cids(leagues)
+    leagues = [L for L in leagues if L[1] not in friendly]
     info = {"clubs": game_clubs(base), "national": national, "entries": entries, "squads": squads,
             "league_cids": {c for _r, c, _n, _t in leagues}, "comp_names": names,
-            "league_of": {t: n for _r, _c, n, ts in leagues for t in ts}, "base": base}
+            "league_of": {t: n for _r, _c, n, ts in leagues for t in ts}, "base": base,
+            "friendly_cids": friendly}
     _GAME_INFO[key] = info
     return info
 
@@ -593,9 +597,25 @@ def game_club_problem(info, tid):
     return None
 
 
+def friendly_cids(leagues):
+    """the competitions of game_leagues that are pre-season tournaments, not leagues: their
+    clubs also play in two or more other leagues (SPFL26's three Pre-season friendly Cups hold
+    clubs of the Premier League, Serie A, LaLiga ...). A club there keeps its place when it moves
+    to a new league, as the Premier League's clubs do."""
+    import collections
+    of = collections.defaultdict(set)
+    for _r, c, _n, ts in leagues:
+        for t in ts:
+            of[t].add(c)
+    return {c for _r, c, _n, ts in leagues
+            if len(set().union(*(of[t] for t in ts)) - {c}) >= 2}
+
+
 def game_club_where(info, tid):
-    """the names of the competitions the tables put club tid in, its league first ([] = none)"""
-    cids = sorted(set(info["entries"].get(tid) or []), key=lambda c: (c not in info["league_cids"], c))
+    """the names of the competitions the tables put club tid in, its league first ([] = none);
+    a pre-season tournament is left out (the club keeps playing it)"""
+    cids = sorted(set(info["entries"].get(tid) or []) - info.get("friendly_cids", set()),
+                  key=lambda c: (c not in info["league_cids"], c))
     return [info["comp_names"].get(c, "competition %d" % c) for c in cids]
 
 
@@ -2111,6 +2131,9 @@ def build(pl, base, game, replace=False, log=print):
                         % (info["clubs"][tid][0], p["name"],
                            sw["name"] if isinstance(sw, dict) else info["clubs"][g["swap_id"]][0], n,
                            ", ".join(game_club_where(info, tid))))
+                elif set(info["entries"].get(tid) or []) & info["friendly_cids"]:
+                    log("  %s moves to %s and keeps its place in the pre-season tournament"
+                        % (info["clubs"][tid][0], p["name"]))
                 else:
                     log("  %s (in no competition of the game) moves to %s" % (info["clubs"][tid][0], p["name"]))
 

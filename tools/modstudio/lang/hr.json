@@ -1007,7 +1007,9 @@
   "Put the countries in order, strongest first (drag, or Up / Down); untick a league to give it no European place. OK gives every league its places by UEFA's key, like UEFA's access list for 2024-27: the first 30 get places, and the places of missing ranks go to the next clubs of the strongest leagues in turn, so every competition stays full. You can still change any league's places by hand afterwards.": "Posloži države po redu, najjača prva (povuci mišem, ili Gore / Dolje); makni kvačicu s lige da ne dobije europsko mjesto. OK svakoj ligi da mjesta po UEFA-inom ključu, kao UEFA-in popis pristupa za 2024.-27.: prvih 30 dobiva mjesta, a mjesta rangova koji nedostaju idu redom sljedećim klubovima najjačih liga, pa svako natjecanje ostaje puno. Mjesta svake lige poslije i dalje možeš promijeniti ručno.",
   "Not ranked, no European place: %s": "Bez poretka, bez europskog mjesta: %s",
   "UEFA ranking applied: every ranked league has its European places. Check the plan shows them.": "UEFA poredak primijenjen: svaka liga s poretkom ima svoja europska mjesta. Provjeri plan ih pokazuje.",
-  "In the game: %s": "U igri: %s"
+  "In the game: %s": "U igri: %s",
+  "(new crest)": "(novi grb)",
+  "Edit club changes its name, crest, manager's portrait and stadium.": "Uredi klub mijenja ime, grb, sliku trenera i stadion."
  },
  "log": [
   [

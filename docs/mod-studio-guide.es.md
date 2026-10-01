@@ -220,7 +220,7 @@ juego en lugar de uno nuevo: selecciona el puesto, luego **Club del juego...**, 
 o ID del equipo (**Solo clubes sin liga** acorta la lista). El club conserva su nombre, escudo,
 equipaciones, entrenador y jugadores, y juega solo en tu liga. Si juega algo en el juego (una
 liga, una copa, la Europa League ...), eliges quién ocupa allí su lugar: un club del juego que no
-juega nada, o un club nuevo con el nombre que le des. Así ninguna competición del juego cambia su
+juega nada, o un club nuevo con el nombre que le des. Un torneo de pretemporada (las *Pre-season friendly Cups* de SPFL26) no cuenta: el club lo sigue jugando, como los clubes de la Premier League (0.1.7). **Editar club** en un club del juego cambia su nombre, escudo, foto del entrenador y estadio, como en *Ligas y clubes del juego* (0.1.7). Así ninguna competición del juego cambia su
 número de clubes; las ligas del juego solo mantienen sus fechas con el número para el que se
 hicieron. Las selecciones, los equipos clásicos y por defecto y los clubes con menos de 18
 jugadores no se pueden elegir. **Club nuevo aquí** devuelve el puesto a un club nuevo. El club ya
