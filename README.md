@@ -55,6 +55,14 @@ tell us where. Read [what works and what does not](#status) before you start a l
 - New clubs with your **names, short names and crests** (or a numbered badge), **managers**
   with names and portraits (0.1.4), kits lent from the game's clubs, and a **formation** per
   league or per club with the first eleven on a pitch (0.1.4).
+- **Real clubs and players** from the **NewLife Database** (0.1.5.5): pick a league and it
+  becomes a new league with its real clubs and squads — names, birth dates, positions,
+  ratings on the game's scale, club colours, ids that stay the same in every version. A club
+  with no crest gets a shield in its colours and the game's kit closest to them. A separate
+  download on our [Discord](https://discord.gg/StQqtk3G3M).
+- **Faces**: new players get a face that fits their nationality, and any player can get a
+  **portrait** instead of a 3D face (0.1.5.5).
+- **Regens** in Master League get a new name, a new potential and a new face (0.1.5.5).
 - **Clubs the game already has** in your new leagues. When such a club plays somewhere in the
   game, you pick who takes its place there, so no competition of the game changes size (0.1.4).
 - **Rename** the game's own leagues and clubs, with new logos and crests.
@@ -63,7 +71,8 @@ tell us where. Read [what works and what does not](#status) before you start a l
 - **Squads from a table**: any table of players — typed by hand, copied off a website, a
   Football Manager or EA FC export — becomes a club's squad.
 - **Transfers** between any two clubs and **national team call-ups** (0.1.4); your own
-  **club and player ids** for kit, crest and face packs made for a certain id (0.1.4).
+  **club and player ids** for kit, crest and face packs made for a certain id (0.1.4), and a
+  Player ID column for minifaces made for new players (0.1.5.5).
 
 **Cups and continents**
 
@@ -76,7 +85,8 @@ tell us where. Read [what works and what does not](#status) before you start a l
   0.1.4) and Copa Sudamericana; CAF Champions League and CAF Confederation Cup. The four the
   game does not have are built with your world.
 - A country's own **national cup** (any size up to 44 clubs, with byes like the FA Cup, 0.1.4)
-  and **super cup**, a **league cup**, and **pre-season cups** of 4 or 8 invited clubs in July.
+  and **super cup**, a **league cup**, and **pre-season cups** of 4 or 8 invited clubs in July,
+  each with your own **logo** (0.1.5.5).
   A new second division under a country the game has goes into that country's cup (0.1.4).
   The national cup of a new country is tested over two full seasons: it rebuilds from the
   current first division after every promotion and relegation (issue #46).
@@ -105,6 +115,7 @@ tell us where. Read [what works and what does not](#status) before you start a l
 | 0.1.3 | 2026-09-29 | cups of other continents, national and super cups, new countries on their own continent, manager names, **Add lower tier** |
 | 0.1.3.1 | 2026-09-29 | promotion and relegation outside Europe and for January-December leagues, the Rating field, a League window that fits 1080p |
 | 0.1.4 | 2026-09-30 | formations, clubs of the game in new leagues, transfers, national teams, club and player ids, manager portraits, national cups up to 44, February-December seasons, Libertadores qualifying, a shipped country's cup taking your second division, Europe only, the UEFA draw rules, split and Apertura/Clausura leagues fixed, the Kick Off order under Colombia and MLS |
+| 0.1.5.5 | 2026-09-30 | the NewLife Database (real clubs and players), regens with a new name, potential and face, faces by nationality for new players, player portraits, cup logos, shield crests and kits in a club's colours, a database mod that renamed the Europa League no longer stops the Build |
 
 The release notes of each version are on the
 [Releases](https://github.com/Matozanato/FootballLife-new-leagues/releases) page.
