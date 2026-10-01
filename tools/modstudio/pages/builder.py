@@ -24,6 +24,18 @@ from ..ui import Page, section, hint, row, ask, error, run_job
 EURO_WORLD = "_FL26Euro"
 
 
+def database_note(project):
+    """a warning for the build log when a database mod's tables are switched on but the world is
+    built from the game's plain ones (#36): the world's copy of the tables would hide the mod's"""
+    mods = project.other_databases()
+    if not mods:
+        return ""
+    return _("CAREFUL: %s has its own database tables, but this world is built from the game's plain ones "
+             "(Settings). The world carries a copy of the tables and sits above it in sider.ini, so the "
+             "leagues and clubs of %s would go back to the plain game's. To keep them, point Settings > "
+             "game tables to its common\\etc\\pesdb folder and build again.") % (", ".join(mods), ", ".join(mods))
+
+
 def exhibition_note(pl):
     """a warning for the build log when the world has exhibition leagues: the game's team list
     for a new Master League career is the one Kick Off uses, so their clubs are in it"""
@@ -1849,6 +1861,9 @@ class Build(BuilderPage):
 
         def go(log):
             log(B.describe(pl))
+            note = database_note(self.project)
+            if note:
+                log("\n" + note + "\n")
             log(_("building ..."))
             B.build(pl, base, game, replace, log=log)
             log("\n" + _("Next: switch %s on (it takes the place of any other world), then start the game "
@@ -1937,6 +1952,9 @@ class Build(BuilderPage):
             log(_("building ..."))
             B.build(pl, base, game, replace, log=log)
             log("\n" + _("Next: 3. Switch it on, then start the game."))
+            note = database_note(self.project)
+            if note:
+                log("\n" + note)
             note = exhibition_note(pl)
             if note:
                 log("\n" + note)

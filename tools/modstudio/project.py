@@ -98,6 +98,24 @@ class Project(QObject):
             self._squads = lbplayers.Squads(self.base)
         return self._squads
 
+    def other_databases(self):
+        """the database mods (UML ...) switched on in sider.ini whose own tables a world built from
+        the game's plain tables would hide (#36): enabled roots, not ours, with a pesdb folder
+        holding competition or team tables. Empty when the tables in Settings are a mod's own."""
+        if self.app.settings.get("tables"):
+            return []
+        from modstudio.siderini import root_path
+        ini = self.app.ini() if hasattr(self.app, "ini") else None
+        out = []
+        for e in (ini.entries("cpk.root") if ini else []):
+            d = root_path(self.app.game.sider_dir, e.value)
+            db = os.path.join(d, "common", "etc", "pesdb")
+            if e.enabled and not os.path.basename(d).startswith("_FL26") and any(
+                    os.path.exists(os.path.join(db, f)) for f in ("Competition.bin", "CompetitionRegulation.bin",
+                                                                     "CompetitionEntry.bin", "Team.bin")):
+                out.append(os.path.basename(d))
+        return out
+
     # ---- names by id (for the content-server maps) ----
     def world_tables(self):
         """pesdb folders of the League Builder worlds switched on in sider.ini"""
