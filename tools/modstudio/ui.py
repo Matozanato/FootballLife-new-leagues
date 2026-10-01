@@ -2,14 +2,16 @@
 import traceback
 from PySide6.QtCore import Qt, QObject, QRunnable, QThreadPool, Signal
 from PySide6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton,
-                               QVBoxLayout, QWidget, QSizePolicy, QFileDialog)
+                               QVBoxLayout, QWidget, QSizePolicy, QFileDialog, QToolButton)
 from .i18n import _
 
 
 class Page(QWidget):
-    """one section of the window.  title/hint are English (translated when shown)."""
+    """one section of the window.  title/hint/help are English (translated when shown); help
+    puts a "?" next to the title that says what the page is for"""
     title = ""
     hint = ""
+    help = ""
 
     def __init__(self, app):
         super().__init__()
@@ -23,6 +25,8 @@ class Page(QWidget):
         t = QLabel(_(self.title))
         t.setObjectName("pagetitle")
         head.addWidget(t)
+        if self.help:
+            head.addWidget(helpmark(self.help, self.title))
         head.addStretch(1)
         self.actions = head
         self.outer.addLayout(head)
@@ -63,6 +67,36 @@ class Page(QWidget):
     def shown(self):
         """called each time the page is opened"""
         self.refresh()
+
+
+class HelpMark(QToolButton):
+    """a small "?" next to a control, a dialog or a page: the pointer on it shows what the thing
+    is for, a click shows the same text in a box (a tooltip is easy to miss, and some people
+    never hover)"""
+
+    def __init__(self, text, title=None):
+        super().__init__()
+        self.setText("?")
+        self.setObjectName("helpmark")
+        self.setCursor(Qt.PointingHandCursor)
+        self.setFocusPolicy(Qt.NoFocus)
+        self.setToolTip("<p style='white-space:pre-wrap'>%s</p>" % text.replace("&", "&amp;").replace("<", "&lt;"))
+        self.help_text, self.help_title = text, title
+        self.clicked.connect(self.explain)
+
+    def explain(self):
+        QMessageBox.information(self.window(), _(self.help_title) if self.help_title else _("What is this?"),
+                                self.help_text)
+
+
+def helpmark(text, title=None):
+    """the "?" for one English text (translated here)"""
+    return HelpMark(_(text), title)
+
+
+def helped(widget, text, title=None):
+    """widget and its "?" side by side, for a form row or a layout"""
+    return row(widget, helpmark(text, title))
 
 
 def section(text):

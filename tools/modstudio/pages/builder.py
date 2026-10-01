@@ -22,7 +22,7 @@ from .. import theme
 from .. import servers as S
 from ..i18n import _, tr
 from ..backups import snapshot
-from ..ui import Page, section, hint, row, ask, error, run_job
+from ..ui import Page, section, hint, row, ask, error, run_job, helpmark, helped
 
 EURO_WORLD = "_FL26Euro"
 
@@ -268,8 +268,11 @@ class EuropeTable(QWidget):
 
 
 class Dialog(QDialog):
+    help = ""          # English; a "?" left of the OK button says what the dialog is for
+
     def __init__(self, parent, title):
         super().__init__(parent)
+        self.title_en = title
         self.setWindowTitle(_(title))
         # The form scrolls: the League dialog is taller than a 768-line screen, or a 1080 one at
         # 125 % scaling, and a dialog Qt cannot fit is placed with its top above the screen --
@@ -312,13 +315,19 @@ class Dialog(QDialog):
         bb.button(QDialogButtonBox.Cancel).setText(_("Cancel"))
         bb.accepted.connect(self.ok)
         bb.rejected.connect(self.reject)
-        self.v.addWidget(bb)
+        self.add_buttons(bb)
         self.fit()
         try:
             theme.dark_title_bar(self)
         except Exception:
             pass
         return self.exec() == QDialog.Accepted
+
+    def add_buttons(self, bb):
+        if self.help:
+            self.v.addWidget(row(helpmark(self.help, self.title_en), "stretch", bb, stretch=False))
+        else:
+            self.v.addWidget(bb)
 
     def ok(self):
         self.accept()
@@ -343,6 +352,17 @@ def tier_of(project, up, seen=()):
 
 class LeagueDialog(Dialog):
     """one new league: name, country, clubs, format, division, logo"""
+    help = ("Everything about one new league:\n"
+            "- Clubs: how many. They are made for you, with full squads and a manager.\n"
+            "- Format: everyone plays everyone 1 or more times; or a Scottish split (after the first rounds "
+            "the table splits into a top and a bottom group); or Apertura and Clausura (two short tournaments "
+            "a season, then playoffs).\n"
+            "- Division: the league one level up. (top division) = the best league of its country. Up / down "
+            "is how many clubs go up and down between the two.\n"
+            "- Season: August to May, or February to December like Brazil or Japan.\n"
+            "- Cup, Super cup, League cup: the country's cups, for a top division only.\n"
+            "- Formation: how the league's clubs line up.\n"
+            "- Europe: which table positions go to which continental competition (top division only).")
 
     def __init__(self, parent, project, league=None, title="League", new=None):
         super().__init__(parent, title)
@@ -416,7 +436,10 @@ class LeagueDialog(Dialog):
         self.show_tier()
         self.exhibition = QCheckBox(_("Exhibition only -- not in Master League"))
         self.exhibition.setChecked(bool(L.get("exhibition")))
-        self.form.addRow("", self.exhibition)
+        self.form.addRow("", helped(self.exhibition, "On: the league is only for Kick Off and exhibition matches "
+                                    "(legends, a historic season ...). Its clubs never play a Master League "
+                                    "season, so it has no division above or below, no cups and no European "
+                                    "places."))
         self.form.addRow("", hint(_("for Kick Off and exhibition matches: a historical league, legends ... Its "
                                     "clubs never play a Master League season. It stands alone: no division "
                                     "above or below, no European places, no cups")))
@@ -447,10 +470,14 @@ class LeagueDialog(Dialog):
         self.cup.setChecked(bool(L.get("cup")))
         self.cup_name = QLineEdit(L.get("cup_name", ""))
         self.cup_name.setPlaceholderText(_("(the league's name + Cup)"))
-        self.form.addRow(_("Cup"), row(self.cup, self.cup_name))
+        self.form.addRow(_("Cup"), row(self.cup, self.cup_name, helpmark(
+            "A knockout cup like the FA Cup for the clubs of this league and the division below it, from "
+            "September to May. Any number of clubs works: when the field is not 16, 32 ..., some clubs get a "
+            "bye into the next round. Top division only. Empty name = the league's name + Cup.")))
         self.supercup = QCheckBox(_("Super cup (champion v cup winner)"))
         self.supercup.setChecked(bool(L.get("supercup")))
-        self.form.addRow("", self.supercup)
+        self.form.addRow("", helped(self.supercup, "One match in late July: the league champion against the "
+                                    "cup winner. It needs the national cup."))
         self.cup.toggled.connect(lambda on: self.supercup.setEnabled(on and self.cup.isEnabled()))
         self.form.addRow("", hint(_("a top division of a new country: a national cup for it and the division "
                                     "below, any number of clubs (byes when the field is not 16, 32 ...)")))
@@ -458,7 +485,10 @@ class LeagueDialog(Dialog):
         self.lcup.setChecked(bool(L.get("league_cup")))
         self.lcup_name = QLineEdit(L.get("league_cup_name", ""))
         self.lcup_name.setPlaceholderText(_("(the league's name + League Cup)"))
-        self.form.addRow("", row(self.lcup, self.lcup_name))
+        self.form.addRow("", row(self.lcup, self.lcup_name, helpmark(
+            "A second knockout cup, like England's Carabao Cup: 16, 8 or 4 clubs of this league and the one "
+            "below, one match a round from September to December. When there are more clubs than that, the "
+            "extra ones play a pre-round in early September. Top division only.")))
         self.form.addRow("", hint(_("a knockout of 16, 8 or 4 clubs of this division and the one below, "
                                     "September to December; the clubs past it play a pre-round in early September")))
         self.cup_logo = PictureField(L.get("cup_logo"), 48)
@@ -733,6 +763,10 @@ class StadiumField(QWidget):
 
 class ClubDialog(Dialog):
     """one club: name, short name, crest -- a new club, or one of the game's"""
+    help = ("The name, short name and crest of one club, and its home stadium when Stadium Server is "
+            "installed. A new club also gets its manager, the manager's picture and its formation; a club of "
+            "the game keeps its own.\n\n"
+            "Changes reach the game after Build, while the world is switched on.")
 
     def __init__(self, parent, name, short, crest, was=None, coach=None, formation=None, formations=(),
                  league_formation="", portrait=None, stadium=None, stadium_lib=None):
@@ -809,6 +843,14 @@ class GameClubDialog(Dialog):
     """a club the game already has for one place of a new league (the league's "game_clubs",
     leaguebuilder.game_club_checks): the club and, when it plays somewhere in the game, the club
     that takes its place there -- one of the game's that plays in nothing, or a new one"""
+    help = ("Use a club the game already has (Al Kuwait, say) in this place of your new league, instead of a "
+            "new club. It keeps its name, crest, kits, manager and players.\n\n"
+            "A club plays in one league only. When it already plays somewhere in the game (a league, a cup, a "
+            "continental competition), it leaves all of that, and its old place must not stay empty, or that "
+            "league would be one club short. So under the list you pick who takes its old place:\n"
+            "- a club of the game that plays in nothing, or\n"
+            "- a new club with a name you type; Build makes it for you.\n\n"
+            "A club that plays in nothing just moves: there is no old place to fill.")
 
     def __init__(self, parent, project, taken, cur=None):
         super().__init__(parent, "Club of the game")
@@ -825,7 +867,9 @@ class GameClubDialog(Dialog):
         self.form.addRow(_("Search"), self.search)
         self.no_league = QCheckBox(_("Only clubs in no league"))
         self.no_league.toggled.connect(lambda *_a: self.fill())
-        self.form.addRow("", self.no_league)
+        self.form.addRow("", helped(self.no_league, "Shows only the clubs that play in no league of the game. "
+                                    "They just move into your league and leave no empty place behind, so "
+                                    "there is no one to pick for their old place."))
         self.tree = QTreeWidget()
         self.tree.setRootIsDecorated(False)
         self.tree.setAlternatingRowColors(True)
@@ -851,9 +895,15 @@ class GameClubDialog(Dialog):
         grp = QButtonGroup(self)
         grp.addButton(self.rb_game)
         grp.addButton(self.rb_new)
-        self.form.addRow(self.rb_game)
+        self.m_game = helpmark("The club you pick here takes the moved club's old place: its league, its cups "
+                               "and its continental competitions. Only clubs of the game that play in nothing "
+                               "are in the list, so no other place is left empty.")
+        self.m_new = helpmark("Build makes a brand new club with this name for the moved club's old place (its "
+                              "league, cups and continental competitions), with a placeholder squad and a "
+                              "numbered badge.")
+        self.form.addRow(row(self.rb_game, self.m_game))
         self.form.addRow("", self.swap_club)
-        self.form.addRow(self.rb_new)
+        self.form.addRow(row(self.rb_new, self.m_new))
         self.form.addRow("", self.swap_name)
         sw = cur.get("swap")
         if isinstance(sw, dict):
@@ -905,7 +955,7 @@ class GameClubDialog(Dialog):
                                  "pick who takes its place there.") % (self.info["clubs"][t][0], ", ".join(where)))
         else:
             self.where.setText(_("%s plays in nothing: it just moves.") % self.info["clubs"][t][0])
-        for w in (self.rb_game, self.swap_club, self.rb_new, self.swap_name):
+        for w in (self.rb_game, self.m_game, self.swap_club, self.rb_new, self.m_new, self.swap_name):
             w.setVisible(bool(where))          # a club that plays in nothing leaves no place to fill
 
     def ok(self):
@@ -1353,7 +1403,7 @@ class SouthAmericaDialog(Dialog):
         bb = QDialogButtonBox(QDialogButtonBox.Close)
         bb.button(QDialogButtonBox.Close).setText(_("Close"))
         bb.rejected.connect(self.reject)
-        self.v.addWidget(bb)
+        self.add_buttons(bb)
         try:
             theme.dark_title_bar(self)
         except Exception:
@@ -1461,6 +1511,21 @@ class NewLeagues(BuilderPage):
     title = "New leagues"
     hint = ("Leagues to add to the game. Each gets its clubs at once, with full squads and a manager; "
             "name them on the New clubs page, change their players on the Players page, then Build.")
+    help = ("What the buttons do:\n"
+            "- Add league: a new league; its clubs are made for you.\n"
+            "- Add lower tier: a league one division below the selected one, with promotion and relegation "
+            "between the two.\n"
+            "- Edit / Remove: change or delete the selected league.\n"
+            "- Pre-season cups: small friendly tournaments of 4 or 8 clubs in July.\n"
+            "- Cups of the game's countries: a league cup (like the Carabao Cup) for the game's own leagues, "
+            "and a super cup where the game has none.\n"
+            "- European places of the game's leagues: which positions of the Premier League, LaLiga ... go to "
+            "which European competition.\n"
+            "- UEFA ranking: put the European countries in order and every league gets its European places by "
+            "UEFA's rules.\n"
+            "- South American places: shows who goes to the Libertadores and the Copa Sudamericana.\n"
+            "- Competition names: new names and logos for cups and continental competitions.\n"
+            "- World name: the folder the world is built into.")
 
     def __init__(self, app):
         super().__init__(app)
@@ -1756,6 +1821,17 @@ class NewClubs(BuilderPage):
     hint = ("The clubs of one new league. An empty name becomes \"<league> 01\", \"<league> 02\" ...; an "
             "empty short name is made from the name; a club with no crest gets a numbered badge. A place can "
             "also hold a club the game already has: Club of the game.")
+    help = ("The clubs of the league picked at the top. Double-click a club (or Edit club) for its name, short "
+            "name, crest, manager, stadium and formation.\n"
+            "- Players: change the club's squad.\n"
+            "- Club of the game...: put a club the game already has (Al Kuwait, say) in this place instead of a "
+            "new club. If it plays somewhere in the game, you pick who takes its old place there.\n"
+            "- New club here: undo that; the place gets a new club again.\n"
+            "- Insert club / Remove club: a new club before the selected one, or the selected one out. The "
+            "league gets one club more or one less.\n"
+            "- Move to another league...: the club goes to another of your new leagues, with its name, crest, "
+            "manager and players.\n"
+            "- Paste names... / Load names from file...: name every club at once, one name per line, in order.")
 
     def __init__(self, app):
         super().__init__(app)
@@ -2042,6 +2118,11 @@ class NewClubs(BuilderPage):
 
 class SwapDialog(Dialog):
     """a club of another league of the game, to trade places with club tid"""
+    help = ("Two clubs of the game trade places: each takes the other's league, cups and European places. "
+            "Use it when a club went up or down in real life and the game still has it in its old league: "
+            "swap it with a club of the league it belongs in now.\n\n"
+            "Both leagues keep their number of clubs. For your new leagues use Club of the game on the New "
+            "clubs page instead.")
 
     def __init__(self, parent, project, tid, skip):
         super().__init__(parent, "Swap leagues")
@@ -2129,6 +2210,14 @@ class GameLeagues(BuilderPage):
     hint = ("The leagues and clubs the game already has: new names, logos and crests. Changes are written "
             "into your world, so they show while the world is switched on. A saved Edit file (EDIT00000000) "
             "in the game's save folder overrides club names: move it away to see them.")
+    help = ("Pick a league of the game on the left. Then:\n"
+            "- give the league a new name or logo and press Keep league changes;\n"
+            "- Edit club: a new name, short name or crest for the selected club;\n"
+            "- Players: change its squad;\n"
+            "- Swap leagues with a club...: two clubs of the game trade leagues (a promoted club for a "
+            "relegated one);\n"
+            "- Undo club changes: back to the game's own.\n\n"
+            "Nothing is changed in the game's files: it all goes into your world after Build.")
 
     def __init__(self, app):
         super().__init__(app)
@@ -2357,6 +2446,17 @@ class Build(BuilderPage):
     hint = ("Turn the recipe into a world: 1. check the plan, 2. build it into SiderAddons\\livecpk, "
             "3. switch it on in sider.ini, then start the game and 4. check sider.log. "
             "The builder's modules are installed once (0), and again after a new version of the program.")
+    help = ("The steps, in order:\n"
+            "0. Install the modules: puts Mod Studio's modules into sider. Once, and again after every new "
+            "version of Mod Studio.\n"
+            "1. Check the plan: reads your leagues and says what will be built and what is wrong. It changes "
+            "nothing.\n"
+            "2. Build the world: writes your leagues, clubs, players, cups and pictures into a folder in "
+            "SiderAddons\\livecpk.\n"
+            "3. Switch it on: adds the world to sider.ini, so the game loads it.\n"
+            "4. After a start: start the game, then press this. It reads sider.log and says whether every "
+            "module worked.\n\n"
+            "After building again, start a new Master League career: a career saved before keeps the old world.")
 
     def __init__(self, app):
         super().__init__(app)
@@ -2379,7 +2479,9 @@ class Build(BuilderPage):
         self.uecl.setToolTip(_("A league phase of 36 clubs and a February play-off, like the Champions League "
                                "and the Europa League"))
         self.uecl.toggled.connect(self.set_uecl)
-        self.outer.addWidget(row(self.uecl, hint(_("off = no Conference League; the Champions League and Europa "
+        self.outer.addWidget(row(self.uecl, helpmark(
+            "A league phase of 36 clubs and a February play-off, like the Champions League "
+            "and the Europa League"), hint(_("off = no Conference League; the Champions League and Europa "
                                                    "League keep their 36-club league phase and play-off either way"))))
         self.uecl_logo = PictureField(None, 48)
         self.uecl_logo.changed = self.set_uecl_logo
@@ -2396,7 +2498,10 @@ class Build(BuilderPage):
                                 "in late July. First played in a career's second season, when both cups "
                                 "have a winner"))
         self.cafsc.toggled.connect(self.set_cafsc)
-        self.outer.addWidget(row(self.cafsc, hint(_("only in a world with both African cups (the European "
+        self.outer.addWidget(row(self.cafsc, helpmark(
+            "The winners of the CAF Champions League and the Confederation Cup meet once, "
+            "in late July. First played in a career's second season, when both cups "
+            "have a winner"), hint(_("only in a world with both African cups (the European "
                                                     "places of your African leagues)"))))
         self.ekits = QCheckBox(_("Kits you can edit in the game"))
         self.ekits.setToolTip(_("On: the new clubs get no kit borrowed from a club of the game. A borrowed kit is "
@@ -2404,7 +2509,11 @@ class Build(BuilderPage):
                                 "strip\"). Without one each new club wears a plain kit that Edit > Teams > Strip "
                                 "changes like any other, Paste Image included. Build again after changing this."))
         self.ekits.toggled.connect(self.set_ekits)
-        self.outer.addWidget(row(self.ekits, hint(_("off = each new club borrows a kit of the game (it looks "
+        self.outer.addWidget(row(self.ekits, helpmark(
+            "On: the new clubs get no kit borrowed from a club of the game. A borrowed kit is "
+            "a licensed one, and the game's Edit mode refuses it (\"You cannot edit this "
+            "strip\"). Without one each new club wears a plain kit that Edit > Teams > Strip "
+            "changes like any other, Paste Image included. Build again after changing this."), hint(_("off = each new club borrows a kit of the game (it looks "
                                                     "real, but Edit mode cannot change it)"))))
         self.b_euro = QPushButton(_("Only the new European cups..."))
         self.b_euro.setToolTip(_("A world with nothing but the new Champions League and Europa League (league "
@@ -2412,7 +2521,11 @@ class Build(BuilderPage):
                                  "no new leagues, the game's clubs and leagues as they are. Your recipe is "
                                  "not changed."))
         self.b_euro.clicked.connect(self.do_europe_only)
-        self.outer.addWidget(row(self.b_euro, hint(_("for the new European format alone, without building "
+        self.outer.addWidget(row(self.b_euro, helpmark(
+            "A world with nothing but the new Champions League and Europa League (league "
+            "phase of 36 and play-off) and, when ticked above, the Conference League: "
+            "no new leagues, the game's clubs and leagues as they are. Your recipe is "
+            "not changed."), hint(_("for the new European format alone, without building "
                                                      "any league"))))
         self.state = hint("")
         self.outer.addWidget(self.state)

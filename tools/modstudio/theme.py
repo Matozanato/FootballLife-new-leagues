@@ -47,6 +47,9 @@ QPushButton#navitem:checked { background: %(SELECTION)s; border-left: 3px solid 
 QLabel#pagetitle { font-size: 13pt; font-weight: bold; }
 QLabel#section { color: %(ACCENT)s; font-weight: bold; letter-spacing: 1px; }
 QLabel#hint { color: %(SUBTLE)s; }
+QToolButton#helpmark { background: %(PANEL2)s; color: %(ACCENT)s; border: 1px solid %(BORDER)s; border-radius: 8px;
+                       font-weight: bold; min-width: 14px; max-width: 14px; min-height: 14px; max-height: 14px; padding: 0; }
+QToolButton#helpmark:hover { background: %(SELECTION)s; color: white; }
 QLabel#banner_warn { background: %(WARN_BG)s; color: %(WARN_FG)s; padding: 7px 10px; }
 QLabel#banner_err { background: %(ERROR_BG)s; color: %(TEXT)s; padding: 7px 10px; }
 QLabel#banner_ok { background: #1F3B2A; color: %(GOOD)s; padding: 7px 10px; }
