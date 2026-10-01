@@ -227,6 +227,72 @@ of 0.1.4 comes straight from those messages:
 Asian leagues with their own continental places, and with them the AFC Champions League Two
 in the League Builder, were Alikhaled_727's idea too.
 
+### vector360: the European format, checked against the real one
+
+**vector360** (Evo-Web, Discord) played the new European format season after season and
+compared it with the real UEFA one:
+
+- big clubs such as PSG, Real Madrid and Inter in the Conference League in a first season:
+  the reason the first season is ordered by squad strength;
+- a 36/36/36 list of the real 2026/27 clubs, the reason `fl26swiss` can take a first-season
+  list (`fl26swiss-first.txt`);
+- Manchester United drawn against Manchester City in the league phase, and the request for the
+  rest of UEFA's draw rules, which the draw follows since 0.1.4: no club meets a club of its own
+  country and at most two of any other ([#15](https://github.com/Matozanato/FootballLife-new-leagues/issues/15));
+- the request for a Carabao Cup, which became the league cup for the game's own countries in
+  0.1.7, and for a way to rename the Conference League.
+
+### Amir: Mod Studio, tested release by release
+
+**Amir** ([AmirPjanic](https://github.com/AmirPjanic), moderator on the Discord) tests Mod
+Studio release by release and asks for what a modder actually needs:
+
+- the Team ID and League ID columns, the division shown next to each league, nationality typed
+  by name, removing players from new clubs, club names with č, ć, š, ž, đ and the managers'
+  names of new clubs ([#23](https://github.com/Matozanato/FootballLife-new-leagues/issues/23));
+- a world with leagues of 26 clubs: the reason 0.1.4 lets a national cup have any number of
+  clubs;
+- the "set-hook signature mismatch" report, which showed two of our modules hooking the same
+  function in the wrong order, fixed in 0.1.3, and a second league with no ID, which is why
+  Mod Studio now says when a league is not built yet;
+- the national team editor, transfers between clubs, the formations of new clubs and a Balkan
+  friendly cup in July.
+
+### victormican: South America from top to bottom
+
+**victormican** ([victormican](https://github.com/victormican)) tests Mod Studio on a South
+American world and reports what breaks there:
+
+- the Asia-Oceania national teams and the Classic Teams disappearing from Kick Off
+  ([#26](https://github.com/Matozanato/FootballLife-new-leagues/issues/26)), the teams in no league that could not be found
+  ([#25](https://github.com/Matozanato/FootballLife-new-leagues/issues/25)) and the language switch ([#24](https://github.com/Matozanato/FootballLife-new-leagues/issues/24));
+- a Colombian second division that plays January to December ([#27](https://github.com/Matozanato/FootballLife-new-leagues/issues/27)), and
+  the Torneo BetPlay listed after the MLS in Select Team, fixed in 0.1.4
+  ([#38](https://github.com/Matozanato/FootballLife-new-leagues/issues/38));
+- the Kick Off order that did not follow Mod Studio's ([#30](https://github.com/Matozanato/FootballLife-new-leagues/issues/30)), the limit of
+  leagues ([#39](https://github.com/Matozanato/FootballLife-new-leagues/issues/39)) and the season and league choices of a new league
+  ([#56](https://github.com/Matozanato/FootballLife-new-leagues/issues/56));
+- the League window that did not fit the screen, the idea of a separate editor for
+  competitions, and Select all / Select none for league packages
+  ([#34](https://github.com/Matozanato/FootballLife-new-leagues/issues/34)).
+
+### jyanj083-dotcom: Peru and the Libertadores, tested to the end
+
+**jyanj083-dotcom** ([jyanj083-dotcom](https://github.com/jyanj083-dotcom)) builds Peruvian
+and other Latin American worlds and writes up every bug with screenshots:
+
+- the empty Libertadores qualifying places, the wrong continent in League Info, player names
+  and ratings that could not be changed and the Conference League switch that broke the other
+  two ([#33](https://github.com/Matozanato/FootballLife-new-leagues/issues/33));
+- the DFB Pokal that ignored a new 2. Bundesliga ([#32](https://github.com/Matozanato/FootballLife-new-leagues/issues/32)) and the League
+  window on a 1080p screen ([#35](https://github.com/Matozanato/FootballLife-new-leagues/issues/35));
+- an Apertura/Clausura with a liguilla of 8 that made no calendar ([#40](https://github.com/Matozanato/FootballLife-new-leagues/issues/40)),
+  and the kits, the Apertura/Clausura table and the moved clubs in Kick Off of Latin American
+  leagues ([#57](https://github.com/Matozanato/FootballLife-new-leagues/issues/57));
+- Liga 1 and Liga 2 of Peru with the NewLife Database ([#60](https://github.com/Matozanato/FootballLife-new-leagues/issues/60)), crests kept
+  across builds ([#67](https://github.com/Matozanato/FootballLife-new-leagues/issues/67)) and the competition places of new South American
+  leagues ([#71](https://github.com/Matozanato/FootballLife-new-leagues/issues/71)).
+
 ### Everyone else who helped
 
 - **Stagnant09**: the flags in the Select Team list. The idea, the hook on the
@@ -235,15 +301,6 @@ in the League Builder, were Alikhaled_727's idea too.
   `fl26comptab.lua` and `tools/mkflags.py` are built on it.
 - **pioup38**: the first report from a different game build and a clean configuration
   ([#3](https://github.com/Matozanato/FootballLife-new-leagues/issues/3)).
-- **vector360** (Evo-Web): tested the new European format and reported that in a first
-  season big clubs such as PSG, Real Madrid and Inter ended up in the Conference League.
-  That report is why the first season is now ordered by squad strength. vector360's own
-  36/36/36 list of 2026/27 clubs is why `fl26swiss` can take a first-season list
-  (`fl26swiss-first.txt`). vector360 also saw Manchester United drawn against Manchester City
-  in the league phase, which is why each pot is now spread so two clubs of one country do not
-  meet there, and asked for the rest of the real draw rules, which the draw follows since
-  0.1.4: no club meets a club of its own country and at most two of any other
-  ([#15](https://github.com/Matozanato/FootballLife-new-leagues/issues/15)).
 - **jibibi** (Evo-Web): tested the modules alongside a full French patch and the kit server
   and sent the logs, which show how the patch's own roots and the new clubs' kit names have to
   sit next to ours. jibibi's Sider folder with another name
@@ -257,33 +314,6 @@ in the League Builder, were Alikhaled_727's idea too.
   with blank names, and fixture dates that turned out to come from the regulation id
   itself. Those questions mapped a good part of what this project is built on, and
   spursfan07 is now testing the modules.
-- **Amir** ([AmirPjanic](https://github.com/AmirPjanic)): tests Mod Studio release by
-  release and asks for what a modder actually needs. The Team ID and League ID columns, the
-  division shown next to each league, nationality typed by name, removing players from new
-  clubs and club names with č, ć, š, ž, đ all came from those questions
-  ([#23](https://github.com/Matozanato/FootballLife-new-leagues/issues/23)), and so did the
-  managers' names of new clubs. Amir's own world, with leagues of 26 clubs, is why 0.1.4 lets a
-  national cup have any number of clubs, and Amir asked for the national team editor, transfers
-  between clubs and the formations of new clubs.
-- **victormican** ([victormican](https://github.com/victormican)): tested Mod Studio on a
-  South American world and reported what broke there: the Asia-Oceania national teams and the
-  Classic Teams disappearing from Kick Off
-  ([#26](https://github.com/Matozanato/FootballLife-new-leagues/issues/26)), a Colombian second
-  division that plays January to December
-  ([#27](https://github.com/Matozanato/FootballLife-new-leagues/issues/27)), the teams in no
-  league that could not be found ([#25](https://github.com/Matozanato/FootballLife-new-leagues/issues/25))
-  and the language switch ([#24](https://github.com/Matozanato/FootballLife-new-leagues/issues/24)),
-  the Kick Off order that did not follow Mod Studio's
-  ([#30](https://github.com/Matozanato/FootballLife-new-leagues/issues/30)) and the League
-  window that did not fit the screen, with the idea of a separate editor for competitions
-  ([#34](https://github.com/Matozanato/FootballLife-new-leagues/issues/34)).
-- **jyanj083-dotcom** ([jyanj083-dotcom](https://github.com/jyanj083-dotcom)): a Peruvian
-  world tested to the end: the empty Libertadores qualifying places, the wrong continent in
-  League Info, player names and ratings that could not be changed and the Conference League
-  switch that broke the other two
-  ([#33](https://github.com/Matozanato/FootballLife-new-leagues/issues/33)); the DFB Pokal that
-  ignored a new 2. Bundesliga ([#32](https://github.com/Matozanato/FootballLife-new-leagues/issues/32));
-  the League window on a 1080p screen ([#35](https://github.com/Matozanato/FootballLife-new-leagues/issues/35)).
 - **Gabyyy2008** ([Gabyyy2008](https://github.com/Gabyyy2008)): Apertura and Clausura in
   Argentina and Venezuela, and the same clubs playing the Libertadores and the Sudamericana
   ([#37](https://github.com/Matozanato/FootballLife-new-leagues/issues/37)).
