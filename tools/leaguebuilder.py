@@ -222,14 +222,20 @@ NATIONAL_CUPS_TWO = {44: ("ENGLAND_D1_CUP", 44)}
 # and 16 entries all on that calendar, a 20-club cup of ours measured on it 2026-09-18). So every
 # field of 9 to 64 clubs has all its rounds dated; the byes of a field that is not a power of two
 # are the game's own (Brazil's 41, Spain's 42).
+# The bracket a cup is built with is then always its field (national_cup), whatever the
+# prototype's: the game takes the number of rounds from the larger of bracket and field, and
+# the first round is the clubs past the round after it. 22 clubs on the FA Cup's bracket of 44
+# got six rounds, all 22 played the first and 11 winners went into a round of 32 (#74, measured
+# 2026-10-01: 11 matches, then 5); every shipped cup whose bracket equals its field (44, 30,
+# 20, 18, 16) plays clean, and Greece's 14 on 16 does too, as 16 makes no extra round.
 NATIONAL_CUP_ANY = ("ENGLAND_D1_CUP", 44)
 NATIONAL_CUP_MAX = 44                    # the FA Cup's 44: no shipped cup has a bigger field
 # The round ids each shipped domestic cup's calendar dates (tools/caltab.py, 2026-09-29), for a
 # second division of ours under a shipped top flight (GitHub #32): the country's cup then takes
 # both divisions, as the real DFB-Pokal does, when its calendar dates every round of that field
 # (cup_rounds). A 38-club DFB-Pokal on its shipped bracket of 24 lost its round of 16 (#21), so
-# the bracket is raised to the field; a field of up to 44 on a bracket of 44 is the FA Cup's own
-# shape, and a cup of ours of 20 on it was measured (2026-09-18).
+# the bracket is set to the field (until 0.1.7 it was raised to 44, which leaves a field of 32 or
+# fewer without its first round's byes -- see NATIONAL_CUP_ANY, #74).
 _CASE6 = {0x2e, 0x2f, 0x30, 0x33, 0x34, 0x35}
 CUP_DATED = {23: _CASE6, 24: _CASE6, 25: _CASE6, 26: _CASE6, 27: _CASE6, 28: _CASE6, 53: _CASE6,
              123: _CASE6, 125: _CASE6, 31: _CASE6, 68: _CASE6,
@@ -1663,6 +1669,7 @@ def national_cup(p, below):
     else:
         c["like"], c["bracket"] = NATIONAL_CUP_ANY
         c["clubs"], c["keep_top"] = p["clubs"], True
+    c["bracket"] = c["clubs"]           # the field, not the prototype's bracket (#74)
     c["below"] = below["rid"] if below else None
 
 
@@ -2206,9 +2213,10 @@ def build(pl, base, game, replace=False, log=print):
         o = rows[p["rid"]] * M.REG
         g = regs[o:o + M.REG]
         if p.get("cup_all"):
+            # the bracket is the whole field: 44 left a field of 32 or fewer without its
+            # first round's byes, as 22 on 44 did (#74)
             co = rows[p["cup"]] * M.REG + M.R_TEAMS
-            if regs[co] & 0x3f < NATIONAL_CUP_MAX:
-                regs[co] = (regs[co] & 0xc0) | NATIONAL_CUP_MAX
+            regs[co] = (regs[co] & 0xc0) | p["cup_all"]
         if p["above"]:
             po = rows[p["above"]] * M.REG
             # the child takes its parent's calendar shape, as deepen.py does, then its own
