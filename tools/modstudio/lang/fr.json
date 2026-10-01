@@ -982,7 +982,15 @@
   "A league takes %d to %d clubs.": "Une ligue a de %d à %d clubs.",
   "Undo club changes": "Annuler les changements du club",
   "Cup winner": "Vainqueur de la coupe",
-  "The league position, or Cup winner (below 1): the winner of the country's cup. When the winner already has a European place through the league, the place goes to the league's next club.": "La position en ligue, ou Vainqueur de la coupe (sous 1) : le vainqueur de la coupe du pays. Si le vainqueur a déjà une place européenne par la ligue, la place va au club suivant de la ligue."
+  "The league position, or Cup winner (below 1): the winner of the country's cup. When the winner already has a European place through the league, the place goes to the league's next club.": "La position en ligue, ou Vainqueur de la coupe (sous 1) : le vainqueur de la coupe du pays. Si le vainqueur a déjà une place européenne par la ligue, la place va au club suivant de la ligue.",
+  "Credits": "Crédits",
+  "Everyone who helped make Mod Studio": "Tous ceux qui ont aidé à faire Mod Studio",
+  "Close": "Fermer",
+  "Made by": "Fait par",
+  "The people who made it better": "Les personnes qui l'ont rendu meilleur",
+  "Everyone else who helped": "Tous les autres qui ont aidé",
+  "Mod Studio is tested in the open. Every fix in it goes back to someone who played, wrote down what happened and sent it. Thank you, all of you.": "Mod Studio est testé au grand jour. Chaque correction vient de quelqu'un qui a joué, noté ce qui s'est passé et l'a envoyé. Merci à tous.",
+  "Send a report on GitHub or Discord and your name goes on this list too.": "Envoie un rapport sur GitHub ou Discord et ton nom ira aussi sur cette liste."
  },
  "log": [
   [

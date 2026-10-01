@@ -206,6 +206,12 @@ class Main(QMainWindow):
         auto.toggled.connect(self.set_auto_updates)
         hb.menu().insertAction(hb.menu().actions()[2], auto)
         h.addWidget(hb)
+        cb = QToolButton()
+        cb.setObjectName("menu")
+        cb.setText(_("Credits"))
+        cb.setToolTip(_("Everyone who helped make Mod Studio"))
+        cb.clicked.connect(self.credits)
+        h.addWidget(cb)
         h.addStretch(1)
         self.run_label = QLabel("")
         self.run_label.setObjectName("subtle")
@@ -390,6 +396,25 @@ class Main(QMainWindow):
                               _("A mod manager and league builder for Football Life 2026."),
                               _("It changes sider.ini and the content folders only, and keeps a "
                                 "restore point before every change.")))
+
+    def credits(self):
+        """the Credits button next to Help: everyone who helped (modstudio/credits.py)"""
+        from modstudio import credits
+        d = QDialog(self)
+        d.setWindowTitle(_("Credits"))
+        v = QVBoxLayout(d)
+        t = QTextBrowser()
+        t.setOpenExternalLinks(True)
+        t.setHtml(credits.html(_))
+        v.addWidget(t, 1)
+        close = QPushButton(_("Close"))
+        close.clicked.connect(d.accept)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        row.addWidget(close)
+        v.addLayout(row)
+        d.resize(640, 640)
+        d.exec()
 
     def set_auto_updates(self, on):
         """Help > Check for updates at start: off = only when asked (the menu item above it)"""

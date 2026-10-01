@@ -46,6 +46,9 @@ the program asks only then. If the program sits in a folder Windows will not
 let it write to (such as Program Files), it opens the release page instead: unpack the zip
 yourself, or move the program to a folder of your own.
 
+**Credits.** The **Credits** button next to **Help** lists everyone who helped make Mod Studio:
+the testers, the people who sent reports and logs, and the ones whose ideas are in it.
+
 **More than one Sider folder?** Sider does not have to be called `SiderAddons`. The program
 looks for the folder next to `FL_2026.exe` that holds a `sider.ini`, and one level further
 down too (`sider\patch 1`, `sider\patch 2` ... when one folder holds a few Sider copies). If

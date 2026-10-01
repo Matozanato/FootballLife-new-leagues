@@ -38,6 +38,7 @@ the program has exited (both processes of the one-file .exe), then starts it aga
 | `backups.py`, `profiles.py` | Restore points and profiles. |
 | `checks.py` | The checks behind Overview and Diagnostics. |
 | `updater.py` | Help → Check for updates: the newest `modstudio-<version>` release, download, checksum, the swap after the program exits. |
+| `credits.py` | The Credits window next to Help: everyone who helped. A new name goes here and into the README's credits together. |
 | `project.py` | The League Builder recipe. The build itself is `tools/leaguebuilder.py`. |
 | `lbplayers.py`, `lbfaces.py`, `lbpackage.py` | Player changes, faces, league packages (`tools/`). |
 

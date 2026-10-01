@@ -345,6 +345,30 @@ and other Latin American worlds and writes up every bug with screenshots:
   Championship ([#68](https://github.com/Matozanato/FootballLife-new-leagues/issues/68)).
 - **n1ne** (Discord): follows the work closely and asks the questions that show where the
   docs are not clear yet, such as how the European competitions get their clubs.
+- **mushroomwehk** ([mushroomwehk](https://github.com/mushroomwehk)): a new 12-club league
+  that started on matchday 3 ([#41](https://github.com/Matozanato/FootballLife-new-leagues/issues/41)),
+  the request for the game's own clubs in new leagues ([#42](https://github.com/Matozanato/FootballLife-new-leagues/issues/42)),
+  an Asian league with a South American description ([#43](https://github.com/Matozanato/FootballLife-new-leagues/issues/43))
+  and Edit mode on a database of more than 30,001 players ([#65](https://github.com/Matozanato/FootballLife-new-leagues/issues/65)).
+- **pepponeee98** ([pepponeee98](https://github.com/pepponeee98)): leagues that disappeared
+  and a crash ([#62](https://github.com/Matozanato/FootballLife-new-leagues/issues/62)).
+- **okarin-hub** ([okarin-hub](https://github.com/okarin-hub), Okarin on the Discord): an
+  Indonesian league and the start-up crashes ([#59](https://github.com/Matozanato/FootballLife-new-leagues/issues/59)).
+- **iptory** ([iptory](https://github.com/iptory)): the Argentinian format, two zones of 15
+  and a play-off of eight ([#48](https://github.com/Matozanato/FootballLife-new-leagues/issues/48)).
+- **JamesNotLike** (Discord): LaLiga and Ligue 1 gone from Select Team, followed patiently
+  through log after log to four mods that wrote into the same empty spot of the game as
+  `fl26caps`; the reason 0.1.7 moves our code to a page of its own.
+- **KamyFC** (Discord): built an Asian pyramid step by step and asked every question on the
+  way, which shows where the Club of the game window has to explain itself better.
+- **San Marino** (Discord): NewLife players that were copied instead of moved, the reason
+  0.1.7 moves the game's own players, and a Polish cup of 36 whose bracket lost clubs.
+- **lukewcfc** (Discord): option files next to the new European cups.
+- **mauro1977doni** (Discord): a Europe-only world with an empty schedule.
+- **Vicentico12** (Discord): European places for the game's own leagues, which 0.1.7's UEFA
+  ranking gives, and a logo for the Copa Sudamericana.
+- **N3RO** (Discord): asked for the Czech Chance Liga.
+- **Hector** (Discord): crests and logos for the NewLife Database.
 
 Reports are welcome from anyone: open an
 [issue](https://github.com/Matozanato/FootballLife-new-leagues/issues) with what you

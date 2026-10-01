@@ -982,7 +982,15 @@
   "A league takes %d to %d clubs.": "Liga ima od %d do %d klubova.",
   "Undo club changes": "Poništi izmjene kluba",
   "Cup winner": "Pobjednik kupa",
-  "The league position, or Cup winner (below 1): the winner of the country's cup. When the winner already has a European place through the league, the place goes to the league's next club.": "Mjesto u ligi, ili Pobjednik kupa (ispod 1): pobjednik kupa te države. Ako pobjednik već ima europsko mjesto kroz ligu, mjesto ide sljedećem klubu lige."
+  "The league position, or Cup winner (below 1): the winner of the country's cup. When the winner already has a European place through the league, the place goes to the league's next club.": "Mjesto u ligi, ili Pobjednik kupa (ispod 1): pobjednik kupa te države. Ako pobjednik već ima europsko mjesto kroz ligu, mjesto ide sljedećem klubu lige.",
+  "Credits": "Zasluge",
+  "Everyone who helped make Mod Studio": "Svi koji su pomogli napraviti Mod Studio",
+  "Close": "Zatvori",
+  "Made by": "Napravio",
+  "The people who made it better": "Ljudi koji su ga učinili boljim",
+  "Everyone else who helped": "Svi ostali koji su pomogli",
+  "Mod Studio is tested in the open. Every fix in it goes back to someone who played, wrote down what happened and sent it. Thank you, all of you.": "Mod Studio se testira javno. Svaki popravak u njemu vodi do nekoga tko je igrao, zapisao što se dogodilo i poslao to. Hvala vam svima.",
+  "Send a report on GitHub or Discord and your name goes on this list too.": "Pošalji prijavu na GitHubu ili Discordu i tvoje ime ide na ovaj popis."
  },
  "log": [
   [
