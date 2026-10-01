@@ -175,7 +175,9 @@ ticked), with the game's own leagues and clubs. The scripts way is in
 **With a database mod (UML and the like):** the world carries its own copy of the competition
 and team tables, made from the tables in **Settings**, and by default those are the game's own.
 Point Settings to your database's `common\etc\pesdb` folder first, then build. Built from the
-game's own tables, the world puts the default leagues back over your database's (#36).
+game's own tables, the world puts the default leagues back over your database's (#36). Keep the
+world above the database mod in sider.ini, or the mod's tables hide the world's (empty league
+tables). Since 0.1.7 the *Overview* and *Diagnostics* checks say when either is wrong.
 Before 0.1.6 a world with only the European cups also left every league without a schedule at
 the start of a career (#54); update and start a new career.
 

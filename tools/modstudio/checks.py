@@ -107,6 +107,62 @@ def old_confed_tops(d, leagues, calendar=()):
             and code.get(L.get("cid"), UEFA_CODE) != UEFA_CODE]
 
 
+DB_TABLES = ("Team.bin", "Competition.bin", "CompetitionRegulation.bin", "CompetitionEntry.bin")
+
+
+def club_names(db):
+    """{team id: name} of the Team.bin in folder db, {} when there is none"""
+    import fl26world
+    import mkworld as W
+    try:
+        raw = fl26world.load(db, "Team.bin")            # packed or plain: a mod may ship either
+    except (OSError, ValueError, AssertionError):
+        return {}
+    out = {}
+    for o in range(0, len(raw) - W.T_REC + 1, W.T_REC):
+        name = bytes(raw[o + W.T_NAME:o + W.T_NAME + W.T_NAME_LEN]).split(b"\0")[0]
+        out[int.from_bytes(raw[o + W.T_ID:o + W.T_ID + 4], "little")] = name
+    return out
+
+
+def database_problems(game, ini, world, name, d):
+    """a database mod (UML ...: a root of its own with Team.bin or competition tables) switched on
+    with the world (GitHub #36, #54). Above the world in sider.ini its tables hide the world's: an
+    empty league table, the new cups gone. Below it, the world's copy of the tables hides the
+    mod's, which is right only when the world was built from that mod's tables (Settings > Use
+    another tables folder): then every club of the mod is in the world under the same name."""
+    out = []
+    mine = None
+    for e in ini.entries("cpk.root"):
+        if not e.enabled or e.index == world.index:
+            continue
+        r = root_path(game.sider_dir, e.value)
+        mod = os.path.basename(os.path.normpath(r))
+        db = os.path.join(r, "common", "etc", "pesdb")
+        if mod.startswith("_FL26") or not any(os.path.exists(os.path.join(db, f)) for f in DB_TABLES):
+            continue
+        if e.index < world.index:
+            out.append(("err", "League Builder",
+                        _("%s sits above your world %s in sider.ini and has its own database tables, which hide "
+                          "the world's: empty league tables, the new cups missing. Build the world from %s's "
+                          "tables (Settings > Use another tables folder...) and keep the world above it")
+                        % (mod, name, mod), "Settings"))
+            continue
+        theirs = club_names(db)
+        if not theirs:
+            continue
+        if mine is None:
+            mine = club_names(os.path.join(d, "common", "etc", "pesdb"))
+        off = [t for t, n in theirs.items() if mine.get(t) != n]
+        if len(off) > max(10, len(theirs) // 50):
+            out.append(("err", "League Builder",
+                        _("%s was built from other tables than %s's (%d of its clubs are missing or named "
+                          "differently in the world), so the world hides that database's leagues and clubs. "
+                          "Point Settings > Use another tables folder... at %s's common\\etc\\pesdb and build "
+                          "the world again") % (name, mod, len(off), mod), "Settings"))
+    return out
+
+
 def world_problems(game, ini, recipe=None):
     """the League Builder worlds switched on: leagues that send nobody to Europe (no uefa line of
     the world file names one of them), a Champions League / Europa League still in the game's
@@ -157,6 +213,7 @@ def world_problems(game, ini, recipe=None):
                         _("%s: the Champions League and Europa League are still in groups of four, "
                           "which fl26swiss.dll cannot run (a world built with the Conference League "
                           "off in Mod Studio 0.1.3 or earlier): build the world again") % name, "Build"))
+        out += database_problems(game, ini, e, name, d)
         if recipe is not None and recipe.get("world") == name:
             on = bool(recipe.get("uecl", True))
         else:
