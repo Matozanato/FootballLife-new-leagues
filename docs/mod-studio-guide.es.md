@@ -336,17 +336,24 @@ construir el mundo otra vez. Los dos los usa también **Solo las nuevas copas eu
 > se enfrenta a un club de su propio país, y como mucho dos de sus rivales son de un mismo
 > país distinto.
 >
-> **Los play-offs de agosto.** Una plaza de *(fase previa)* mete al club en un play-off de 16
-> clubes en agosto, a ida y vuelta; los ocho equipos más fuertes son cabezas de serie (vuelta en
-> casa) y dos clubes del mismo país nunca se cruzan. *Champions League (fase previa)*: los ocho
-> ganadores entran en la Champions League, los ocho perdedores en la Europa League. *Europa League
-> (fase previa)* (0.1.7): ganadores a la Europa League, perdedores a la Conference League.
-> *Conference League (fase previa)* (0.1.7): ganadores a la Conference League, los perdedores
-> quedan fuera. Cada play-off quita 8 plazas directas a las competiciones a las que van sus
-> ganadores y perdedores: con los tres, la Champions League admite 28 clubes directos, la Europa
-> League y la Conference League 20 cada una. Una plaza más allá se juega en el play-off de esa
-> competición. Las plazas de play-off de tus ligas van antes que las del juego (Portugal, Escocia,
-> Grecia, Dinamarca ...).
+> **La fase previa de agosto.** Una plaza de *(fase previa)* mete al club en la fase previa de
+> agosto de esa competición: hasta tres rondas (0.1.7) -- la segunda ronda previa (días 220 y
+> 225), la tercera (229 y 236) y el play-off (243 y 250; el de la Champions League 244 y 251) --,
+> cada una de 16 clubes a ida y vuelta; los ocho equipos más fuertes son cabezas de serie (vuelta
+> en casa) y dos clubes del mismo país nunca se cruzan. Los ganadores pasan a la ronda siguiente,
+> y del play-off a la fase de liga. Los perdedores bajan como en la UEFA: en la *Champions League
+> (fase previa)*, los del play-off a la Europa League, los de la tercera ronda al play-off de la
+> Europa League, los de la segunda a la tercera ronda de la Europa League; la *Europa League (fase
+> previa)* igual hacia la Conference League; los perdedores de la *Conference League (fase
+> previa)* quedan fuera. Las primeras plazas de la lista van al play-off, las siguientes a las
+> rondas anteriores. Cuántas rondas tiene un mundo depende de sus plazas, y cada ronda de la
+> Conference League pide 8 clubes más: 116 plazas en Europa para los tres play-offs solos, 132
+> para las nueve rondas. Con las plazas del propio juego solo hay play-offs; el resumen de Build
+> dice qué rondas tiene el mundo (*fase previa de agosto*). Cada play-off quita 8 plazas directas
+> a las competiciones a las que van sus ganadores y perdedores: con los tres, la Champions League
+> admite 28 clubes directos, la Europa League y la Conference League 20 cada una. Una plaza más
+> allá se juega en la fase previa de esa competición. Las plazas de fase previa de tus ligas van
+> antes que las del juego (Portugal, Escocia, Grecia, Dinamarca ...).
 
 Después **empieza una nueva carrera de Master League** (o Become a Legend). Las ligas nuevas están
 bajo su país en Select Team y Kick Off. En las listas de Kick Off y Edit un país asiático nuevo va

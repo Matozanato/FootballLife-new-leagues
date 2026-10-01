@@ -95,6 +95,85 @@ UCLQ, UELQ, UECLQ, PLAYOFF = 10, 11, 12, 16
 # each play-off: (the competition its winners join, the one its losers drop to or None)
 PLAYOFFS = {UCLQ: (0, 1), UELQ: (1, 2), UECLQ: (2, None)}
 UEFA_LINE = {c for c, _n in COMPETITIONS}        # the ones a uefa line carries
+# In front of a play-off a world can have a third (stage 1) and a second qualifying round (stage
+# 2), sixteen clubs each (`qround <competition> <round> <regulation>` lines, fl26swiss.dll's August
+# qualifying rounds). A round's winners go to the next round of its competition; its losers drop
+# as UEFA's do -- the Champions League's second qualifying round's to the Europa League's third,
+# its third's to the Europa League's play-off; the Europa League's the same way into the
+# Conference League; the Conference League's are out, and so is a loser whose round is missing.
+# Each round takes sixteen less eight for each round that feeds it, so every round of the
+# Conference League eliminates eight and costs eight more clubs: 116 in Europe with the three
+# play-offs, 132 with all nine rounds. A round is (competition 0..2, stage 0..2).
+QSTAGES = ("play-off", "third qualifying round", "second qualifying round")
+QROUND_NUMBER = {1: 3, 2: 2}                     # stage -> the round a qround line names
+_ALL = [(c, s) for s in range(3) for c in range(3)]
+# the round sets the League Builder picks from, the most rounds first (pick_rounds): every one
+# needs (Champions League, Europa League, Conference League) new qualifying clubs as noted
+QCONFIGS = [
+    _ALL,                                                            # 32 / 16 / 16
+    [r for r in _ALL if r != (2, 2)],                                # 32 / 16 / 8
+    [(0, 0), (0, 1), (0, 2), (1, 0), (1, 1), (2, 0)],                # 32 / 8 / 8
+    [(0, 0), (0, 1), (1, 0), (2, 0)],                                # 24 / 8 / 16
+    [(0, 0), (1, 0), (2, 0)],                                        # 16 / 16 / 16: the play-offs
+]
+
+
+def q_up(rounds, r):
+    """where round r's winners go: the next round of its competition, None for the league phase"""
+    c, s = r
+    return next(((c, t) for t in range(s - 1, -1, -1) if (c, t) in rounds), None)
+
+
+def q_down(rounds, r):
+    """where round r's losers go: a round, "phase" for the league phase below, None out"""
+    c, s = r
+    if c == 2:
+        return None
+    if s == 0:
+        return "phase"
+    return (c + 1, s - 1) if (c + 1, s - 1) in rounds else None
+
+
+def q_room(rounds, r):
+    """round r's new clubs: sixteen, less eight for every round that feeds it"""
+    return PLAYOFF - PLAYOFF // 2 * sum(1 for j in rounds if j != r and (q_up(rounds, j) == r or q_down(rounds, j) == r))
+
+
+def qual_room(rounds):
+    """{UCLQ / UELQ / UECLQ: new qualifying clubs} for a set of rounds"""
+    return {q: sum(q_room(rounds, r) for r in rounds if r[0] == q - UCLQ) for q in PLAYOFFS}
+
+
+def qual_places(out):
+    """{UCLQ / UELQ / UECLQ: clubs the uefa lines out send to that competition's qualifying}: its
+    own places and the direct places past the competition's direct entrants"""
+    room = direct_room(out)
+    return {q: sum(1 for e in out if e[2] == q) + max(0, sum(1 for e in out if e[2] == win) - room[win])
+            for q, (win, _l) in PLAYOFFS.items()}
+
+
+def pick_rounds(out, uecl=True):
+    """the qualifying rounds a world with the uefa lines out gets: the set of QCONFIGS with the most
+    rounds whose new clubs the listed places fill, each competition's -- only those of the
+    competitions with qualifying places (and with uecl False, none of the Conference League's);
+    the play-offs alone when none fits"""
+    listed = {q - UCLQ for q in PLAYOFFS if any(e[2] == q for e in out)}
+    if not uecl:
+        listed.discard(2)
+    have = qual_places(out)
+    for cfg in QCONFIGS:
+        rounds = [r for r in cfg if r[0] in listed]
+        need = qual_room(rounds)
+        if all(need[q] <= have[q] for q in PLAYOFFS if q - UCLQ in listed):
+            return rounds
+    return [r for r in QCONFIGS[-1] if r[0] in listed]
+
+
+def rounds_text(rounds):
+    """'Champions League: second qualifying round, third qualifying round, play-off; ...'"""
+    names = dict(COMPETITIONS)
+    return "; ".join("%s: %s" % (names[c], ", ".join(QSTAGES[s] for s in (2, 1, 0) if (c, s) in rounds))
+                     for c in range(3) if any(r[0] == c for r in rounds))
 
 # Continental cups the game does not have, built by tools/mkccup.py and run by fl26swiss.dll from
 # the world file's ccup lines: groups of four, then a knockout of the winners and runners-up (or a
@@ -159,7 +238,7 @@ SHIPPED_ACCESS = sorted(HOLDERS + [(r, n, c, 0) for r, n, c in (
 )], key=lambda e: [c for c, _n in COMPETITIONS].index(e[2]))   # stable: each section's holders stay first
 
 
-def uefa_places(own, replace=()):
+def uefa_places(own, replace=(), uecl=True):
     """the uefa lines of a world whose own leagues have places: the shipped list and the world's
     places, competition by competition (Champions League first, as fl26swiss hands them out in
     list order), each competition's shipped places before the world's -- except the play-off,
@@ -168,7 +247,9 @@ def uefa_places(own, replace=()):
     Second result: {competition: (places listed, room)} for those past their room (the last get
     nothing; for the play-off, the world's own places and the Champions League places past the
     28 direct ones, which fl26swiss sends there). replace: regulations of the game whose shipped
-    places are dropped -- the world lists its own for them (the recipe's game_europe)."""
+    places are dropped -- the world lists its own for them (the recipe's game_europe). The room of
+    each competition's qualifying is that of the rounds pick_rounds gives (uecl: with the
+    Conference League)."""
     own = [tuple(int(x) for x in e) for e in own]
     replace = set(replace)
     if not own and not replace:
@@ -179,7 +260,7 @@ def uefa_places(own, replace=()):
             mine = [e for e in own if e[2] == c]
             shipped = [e for e in SHIPPED_ACCESS if e[2] == c and e[0] not in replace]
             out += mine + shipped if c in PLAYOFFS else shipped + mine
-    return out, crowded(out, own)
+    return out, crowded(out, own, pick_rounds(out, uecl))
 
 
 def direct_room(out):
@@ -194,18 +275,20 @@ def direct_room(out):
     return room
 
 
-def crowded(out, own):
+def crowded(out, own, rounds=None):
     """{competition: (places listed, room)} for those of out past their room. A competition's
-    places past its direct entrants go to its own play-off when it has one (fl26swiss), ahead of
-    the play-off's shipped places; only the world's own count against its sixteen"""
+    places past its direct entrants go to its own qualifying when it has one (fl26swiss), ahead of
+    the qualifying's shipped places; only the world's own count against its room -- sixteen with
+    the play-offs alone, that of the rounds (pick_rounds) when given"""
     over, room = {}, direct_room(out)
+    qroom = qual_room(rounds) if rounds is not None else {q: PLAYOFF for q in PLAYOFFS}
     for q, (win, _lose) in PLAYOFFS.items():
         if not any(e[2] == q for e in out):
             continue
         spill = max(0, sum(1 for e in out if e[2] == win) - room[win])
         n = spill + sum(1 for e in own if e[2] == q)
-        if n > PLAYOFF:
-            over[q] = (n, PLAYOFF)
+        if n > qroom[q]:
+            over[q] = (n, qroom[q])
     for c in (0, 1, 2):
         q = [k for k, (w, _l) in PLAYOFFS.items() if w == c][0]
         n = sum(1 for e in out if e[2] == c)
@@ -231,11 +314,12 @@ def read_uefa(path):
 ALIASES = {"SOUTH KOREA": "Republic of Korea", "KOREA REPUBLIC": "Republic of Korea"}
 
 
-def write_world(path, name, leagues, splits=(), uefa=(), uecl=(), ccups=()):
+def write_world(path, name, leagues, splits=(), uefa=(), uecl=(), ccups=(), qrounds=()):
     """leagues: list of dicts with 'id', any of KEYS, and 'name'; splits: (total, regular,
     [groups]) for the split seasons among them; uefa: (regulation, position, competition, alt)
     places; uecl: the Conference League's first-season team ids; ccups: the ccup lines as
-    tools/mkccup.py prints them"""
+    tools/mkccup.py prints them; qrounds: (competition 10..12, round 3 or 2, regulation) of the
+    qualifying rounds in front of the play-offs"""
     lines = [FORMAT, "world %s" % name]
     for L in leagues:
         parts = ["league %d" % L["id"]]
@@ -251,6 +335,8 @@ def write_world(path, name, leagues, splits=(), uefa=(), uecl=(), ccups=()):
         lines.append("uefa %d %d %d %d" % tuple(e))
     if uecl:
         lines.append("uecl " + " ".join(map(str, uecl)))
+    for q in qrounds:
+        lines.append("qround %d %d %d" % tuple(q))
     lines += list(ccups)
     with open(path, "w", encoding="utf-8", newline="\r\n") as f:
         f.write("\n".join(lines) + "\n")

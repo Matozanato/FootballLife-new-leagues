@@ -320,16 +320,23 @@ European cups...** too.
 > League's. The league-phase draw follows UEFA's rules: no club meets a club from its own
 > country, and at most two of its opponents come from any one other country.
 >
-> **The August play-offs.** A *qualifying* place puts the club in a 16-club play-off in August,
-> two legs, the eight strongest squads seeded (second leg at home), two clubs of one country kept
-> apart. *Champions League qualifying*: the eight winners join the Champions League, the eight
-> losers the Europa League. *Europa League qualifying* (0.1.7): winners to the Europa League,
-> losers to the Conference League. *Conference League qualifying* (0.1.7): winners to the
-> Conference League, the losers are out. Every play-off takes 8 places off the direct entrants of
-> the competitions its winners and losers go to: with all three, the Champions League takes 28
-> clubs directly, the Europa League and the Conference League 20 each. A place past those is
-> played in that competition's own play-off. Your leagues' play-off places come before the game's
-> (Portugal, Scotland, Greece, Denmark ...).
+> **The August qualifying.** A *qualifying* place puts the club in the August qualifying of
+> that competition: up to three rounds (0.1.7) -- the second qualifying round (days 220 and 225),
+> the third (229 and 236) and the play-off (243 and 250; the Champions League's 244 and 251) --
+> each of 16 clubs over two legs, the eight strongest squads seeded (second leg at home), two
+> clubs of one country kept apart. Winners go on to the next round, from the play-off into the
+> league phase. Losers drop as UEFA's do: *Champions League qualifying*'s play-off losers to the
+> Europa League, its third round's to the Europa League play-off, its second round's to the
+> Europa League third round; *Europa League qualifying* the same way into the Conference League;
+> *Conference League qualifying*'s losers are out. The first places listed go to the play-off,
+> later ones to the earlier rounds. How many rounds a world gets follows from its places, and
+> every Conference League round needs 8 clubs more: 116 places in Europe for the three
+> play-offs alone, 132 for all nine rounds. With the game's own places it is the play-offs
+> alone; Build's summary says which rounds a world gets (*August qualifying*). Every play-off
+> takes 8 places off the direct entrants of the competitions its winners and losers go to: with
+> all three, the Champions League takes 28 clubs directly, the Europa League and the Conference
+> League 20 each. A place past those is played in that competition's qualifying. Your leagues'
+> qualifying places come before the game's (Portugal, Scotland, Greece, Denmark ...).
 
 Then **start a new Master League** (or Become a Legend) career. The new leagues are under their
 country in Select Team and Kick Off. In the Kick Off and Edit lists a new Asian country comes

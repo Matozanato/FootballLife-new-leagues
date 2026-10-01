@@ -1767,8 +1767,11 @@ def describe(pl):
         lines.append("  NOTE: no place in Select Team for %s: they play, but no career can start in them"
                      % ", ".join(unlisted))
     names = dict(fl26world.COMPETITIONS)
+    rounds = qual_rounds(pl)
+    if any(s for _c, s in rounds):
+        lines.append("  August qualifying: %s" % fl26world.rounds_text(rounds))
     for c, (n, room) in sorted(fl26world.uefa_places(own_places(pl) + [tuple(e) for e in pl.get("game_europe") or []],
-                                                     pl.get("game_replace") or [])[1].items()):
+                                                     pl.get("game_replace") or [], bool(pl.get("uecl")))[1].items()):
         lines.append("  NOTE: %s has %d places listed for %d clubs; the last %d get none"
                      % (names[c], n, room, n - room))
     libq = sum(1 for e in own_places(pl) if e[2] == 4)
@@ -2119,7 +2122,8 @@ def build(pl, base, game, replace=False, log=print):
                     raise BuildError("mksplit gave %d no Apertura and Clausura:\n%s" % (cup["league"], said))
                 cup["entry"] = [(ph[cup["phase"]], pos) for _r, pos in cup["entry"]]
 
-    uecl = europe(tmp, db, log, bool(pl.get("uecl")), pl.get("uecl_name"))
+    rounds = qual_rounds(pl)
+    uecl, qlines = europe(tmp, db, log, bool(pl.get("uecl")), pl.get("uecl_name"), rounds)
     national_cups(pl, tmp, db, log)
     hc = home_cups(pl, confed)
     ccups = continental((pl.get("ccups") or []) + hc, tmp, db, log)
@@ -2167,7 +2171,7 @@ def build(pl, base, game, replace=False, log=print):
         if up and up.get("own_cup", {}).get("keep_top"):
             L["cup"] = up["own_cup"]["reg"]            # fl26chain keeps the cup to the top league
     uefa, over = fl26world.uefa_places(own_places(pl) + [tuple(e) for e in pl.get("game_europe") or []],
-                                       pl.get("game_replace") or [])
+                                       pl.get("game_replace") or [], bool(pl.get("uecl")))
     names = dict(fl26world.COMPETITIONS)
     for c, (n, room) in sorted(over.items()):
         log("  NOTE: %s has %d places listed for %d clubs; the last %d get none"
@@ -2177,7 +2181,8 @@ def build(pl, base, game, replace=False, log=print):
             % (sum(1 for e in own_places(pl) if e[2] in fl26world.UEFA_LINE), len(uefa)))
     fl26world.write_world(os.path.join(tmp, MARK), pl["world"], leagues, split_lines, uefa, uecl,
                           ccups + dates_lines(pl, db) + season_lines(pl, db) + order_lines(pl, base, confed)
-                          + (["nopool " + " ".join(str(t) for t in nopool)] if nopool else []) + newfaces)
+                          + (["nopool " + " ".join(str(t) for t in nopool)] if nopool else []) + newfaces,
+                          qlines)
     json.dump(pl, open(os.path.join(tmp, "leaguebuilder-plan.json"), "w", encoding="utf-8"), indent=1)
 
     pictures(pl, tmp, base, log)
@@ -2210,11 +2215,20 @@ def is_live(world, game):
         return False
 
 
-def europe(root, db, log=print, uecl=True, name=None):
+def qual_rounds(pl):
+    """the August qualifying rounds the world gets (fl26world.pick_rounds): as many as the European
+    places it lists fill -- the play-offs alone with the game's own places"""
+    uefa, _over = fl26world.uefa_places(own_places(pl) + [tuple(e) for e in pl.get("game_europe") or []],
+                                        pl.get("game_replace") or [], bool(pl.get("uecl")))
+    return fl26world.pick_rounds(uefa, bool(pl.get("uecl")))
+
+
+def europe(root, db, log=print, uecl=True, name=None, rounds=()):
     """the European cups of the world being built (tables in <db>, the world folder <root>): the
     Champions League and Europa League league phase as one group of 36, then (uecl) mkuecl's
-    clone of the Europa League, and mkeuropo's play-offs, each in place. Returns the Conference
-    League's entrants, [] without it.
+    clone of the Europa League, mkeuropo's play-offs, and the qualifying rounds in front of them
+    of rounds ((competition, stage) pairs, qual_rounds), each in place. Returns the Conference
+    League's entrants ([] without it) and the world file's qround lines.
 
     The league phase is built with the Conference League off too: fl26swiss.dll always runs
     1027/1029 as a league phase of 36 (the access list, the draw, the top 16 into the knockout),
@@ -2235,7 +2249,14 @@ def europe(root, db, log=print, uecl=True, name=None):
         mkeuropo.build(db, root, log=log, uecl=uecl)
     except SystemExit as e:
         raise BuildError("%s: %s" % ("Conference League" if uecl else "Europa League play-off", e))
-    return clubs
+    extra = [r for r in rounds if r[1] and (uecl or r[0] != 2)]
+    qlines = []
+    if extra:
+        try:
+            qlines = mkeuropo.qualifying(db, root, extra, free_comp_ids(db)[1], log=log)
+        except SystemExit as e:
+            raise BuildError("qualifying rounds: %s" % e)
+    return clubs, qlines
 
 
 def free_comp_ids(db, reserved=()):

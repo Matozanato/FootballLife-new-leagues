@@ -92,12 +92,26 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
   ACCESS) and then the places of the recipe's leagues (their `europe` key, set in the League
   dialog). Each competition takes 36 clubs; places past the 36th get nothing. A list with any
   competition 10, 11 or 12 place switches that play-off on; each takes 8 off the direct entrants
-  of the competitions its winners and losers go to (with all three: 28 / 20 / 20). fl26swiss
-  fills, starts and registers each in August (regulation 2 days 205-240 in a career's first
-  summer, 188/189 days 217-240 every summer; legs on days 243/250, the Champions League's
-  244/251); from the second season regulation 2's rollover clubs are replaced by the list's.
-  A competition's places past its direct entrants spill into its own play-off ahead of the
-  shipped play-off places. The recipe's `game_europe` drops the shipped places of the named game leagues (`replace` in
+  of the competitions its winners and losers go to (with all three: 28 / 20 / 20). In front of
+  the play-offs Build can add a third and a second qualifying round per competition (0.1.7):
+  `fl26world.pick_rounds` takes the first set of `QCONFIGS` whose new clubs the listed places
+  fill (all nine rounds need 32 / 16 / 16 qualifying clubs, 132 places in Europe; the shipped
+  places alone give the play-offs), `mkeuropo.qualifying` copies regulation 2 and its eight ties
+  for each round under free ids (197 up, before the cups), and the world file names them as
+  `qround <10|11|12> <3|2> <regulation>` lines (fl26swiss.lua -> `fl26_swiss_qrounds`). A round
+  takes 16 less 8 for every round feeding it; winners go to the next round of their
+  competition, losers of a play-off to the league phase below, of a third / second round to the
+  next competition's play-off / third round (out when it is missing, and always from the
+  Conference League). Legs: second round days 220/225, third 229/236, play-off 243/250 (the
+  Champions League's 244/251). fl26swiss fills, starts and registers each round on the days
+  between the round before it and its first leg (second round 217-219, third 226-228, play-off
+  237-242, the Champions League's 237-243; without qualifying rounds regulation 2 from day 205
+  in a career's first summer and 188/189 from day 217), from the list's clubs and the earlier
+  rounds' results; an unplayed round passes its seeded clubs on. From the second season
+  regulation 2's rollover clubs are replaced by the list's (with a Champions League third round,
+  regulation 2 is left empty at the rollover and filled in August). The list's places fill the
+  play-off first, then the third round, then the second. A competition's places past its direct
+  entrants spill into its own qualifying ahead of the shipped qualifying places. The recipe's `game_europe` drops the shipped places of the named game leagues (`replace` in
   `fl26world.uefa_places`) and lists its own under the regulation the access list uses (the
   split leagues' phase: Scotland 134, Belgium 155, Denmark 147).
 - `game_cups` in the recipe: fl26swiss home cups (`ccup`) for the game's own top divisions,

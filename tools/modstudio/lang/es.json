@@ -986,6 +986,34 @@
  },
  "log": [
   [
+   "^  August qualifying: ",
+   "  fase previa de agosto: "
+  ],
+  [
+   "second qualifying round",
+   "segunda ronda previa"
+  ],
+  [
+   "third qualifying round",
+   "tercera ronda previa"
+  ],
+  [
+   "(?<=[:,] )play-off(?=;|$)",
+   "play-off"
+  ],
+  [
+   "^  qualifying rounds: ",
+   "  rondas previas: "
+  ],
+  [
+   " second\\)",
+   " segunda ronda previa)"
+  ],
+  [
+   " third\\)",
+   " tercera ronda previa)"
+  ],
+  [
    "^      plays February to December, promotion and relegation at New Year$",
    "      juega de febrero a diciembre, ascensos y descensos en Año Nuevo"
   ],

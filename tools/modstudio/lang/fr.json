@@ -986,6 +986,34 @@
  },
  "log": [
   [
+   "^  August qualifying: ",
+   "  qualifications d'août : "
+  ],
+  [
+   "second qualifying round",
+   "deuxième tour de qualification"
+  ],
+  [
+   "third qualifying round",
+   "troisième tour de qualification"
+  ],
+  [
+   "(?<=[:,] )play-off(?=;|$)",
+   "barrage"
+  ],
+  [
+   "^  qualifying rounds: ",
+   "  tours de qualification : "
+  ],
+  [
+   " second\\)",
+   " deuxième tour)"
+  ],
+  [
+   " third\\)",
+   " troisième tour)"
+  ],
+  [
    "^      plays February to December, promotion and relegation at New Year$",
    "      joue de février à décembre, montées et descentes au Nouvel An"
   ],

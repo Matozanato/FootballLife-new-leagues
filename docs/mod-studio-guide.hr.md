@@ -315,15 +315,22 @@ natjecanja...**.
 > pravila: nijedan klub ne igra protiv kluba iz svoje države, i najviše dva protivnika dolaze
 > iz iste druge države.
 >
-> **Kolovoška doigravanja.** Mjesto *(kvalifikacije)* šalje klub u kolovoško doigravanje 16
-> klubova, dvije utakmice; osam najjačih momčadi je nositelj (uzvrat doma), dva kluba iste države
-> se ne sastaju. *Liga prvaka (kvalifikacije)*: osam pobjednika ide u Ligu prvaka, osam poraženih
-> u Europsku ligu. *Europska liga (kvalifikacije)* (0.1.7): pobjednici u Europsku ligu, poraženi u
-> Konferencijsku. *Konferencijska liga (kvalifikacije)* (0.1.7): pobjednici u Konferencijsku ligu,
-> poraženi ispadaju. Svako doigravanje uzme 8 izravnih mjesta natjecanjima u koja idu njegovi
-> pobjednici i poraženi: sa sva tri Liga prvaka prima 28 klubova izravno, Europska i
-> Konferencijska po 20. Mjesto iza toga igra se u doigravanju tog natjecanja. Mjesta tvojih liga u
-> doigravanju dolaze prije mjesta iz igre (Portugal, Škotska, Grčka, Danska ...).
+> **Kolovoška pretkola.** Mjesto *(kvalifikacije)* šalje klub u kolovoške kvalifikacije tog
+> natjecanja: do tri kola (0.1.7) -- 2. pretkolo (dani 220 i 225), 3. pretkolo (229 i 236) i
+> doigravanje (243 i 250; Liga prvaka 244 i 251) -- svako 16 klubova, dvije utakmice; osam
+> najjačih momčadi je nositelj (uzvrat doma), dva kluba iste države se ne sastaju. Pobjednici idu
+> u sljedeće kolo, iz doigravanja u ligašku fazu. Poraženi padaju kao kod UEFA-e: iz *Lige prvaka
+> (kvalifikacije)* poraženi u doigravanju idu u Europsku ligu, u 3. pretkolu u doigravanje
+> Europske lige, u 2. pretkolu u 3. pretkolo Europske lige; *Europska liga (kvalifikacije)* isto
+> tako u Konferencijsku; poraženi u *Konferencijskoj ligi (kvalifikacije)* ispadaju. Prva mjesta na
+> popisu idu u doigravanje, kasnija u ranija kola. Koliko kola svijet dobije ovisi o mjestima, a
+> svako kolo Konferencijske lige traži 8 klubova više: 116 mjesta u Europi za samo tri
+> doigravanja, 132 za svih devet kola. S mjestima same igre to su samo doigravanja; Buildov
+> sažetak kaže koja kola svijet dobiva (*pretkola u kolovozu*). Svako doigravanje uzme 8 izravnih
+> mjesta natjecanjima u koja idu njegovi pobjednici i poraženi: sa sva tri Liga prvaka prima 28
+> klubova izravno, Europska i Konferencijska po 20. Mjesto iza toga igra se u kvalifikacijama tog
+> natjecanja. Mjesta tvojih liga u kvalifikacijama dolaze prije mjesta iz igre (Portugal,
+> Škotska, Grčka, Danska ...).
 
 Onda **započni novu Master League** (ili Become a Legend) karijeru. Nove lige su pod svojom
 državom u Select Team i Kick Off. U popisima Kick Offa i Edita nova azijska država dolazi

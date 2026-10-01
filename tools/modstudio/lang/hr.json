@@ -986,6 +986,34 @@
  },
  "log": [
   [
+   "^  August qualifying: ",
+   "  pretkola u kolovozu: "
+  ],
+  [
+   "second qualifying round",
+   "2. pretkolo"
+  ],
+  [
+   "third qualifying round",
+   "3. pretkolo"
+  ],
+  [
+   "(?<=[:,] )play-off(?=;|$)",
+   "doigravanje"
+  ],
+  [
+   "^  qualifying rounds: ",
+   "  pretkola: "
+  ],
+  [
+   " second\\)",
+   " 2. pretkolo)"
+  ],
+  [
+   " third\\)",
+   " 3. pretkolo)"
+  ],
+  [
    "^      plays February to December, promotion and relegation at New Year$",
    "      igra od veljače do prosinca, promocija i ispadanje za Novu godinu"
   ],

@@ -346,17 +346,25 @@ Conférence** en dessous : le nom que le jeu lui donne, *FL Conference League* s
 > phase de ligue suit les règles de l'UEFA : aucun club n'affronte un club de son propre pays,
 > et au plus deux de ses adversaires viennent d'un même autre pays.
 >
-> **Les barrages d'août.** Une place *(qualifications)* envoie le club dans un barrage de 16 clubs
-> en août, en deux matchs ; les huit effectifs les plus forts sont têtes de série (retour à
-> domicile), et deux clubs d'un même pays ne se rencontrent jamais. *Ligue des champions
-> (qualifications)* : les huit vainqueurs entrent en Ligue des champions, les huit perdants en
-> Ligue Europa. *Ligue Europa (qualifications)* (0.1.7) : vainqueurs en Ligue Europa, perdants en
-> Ligue Europa Conférence. *Ligue Europa Conférence (qualifications)* (0.1.7) : vainqueurs en
-> Ligue Europa Conférence, les perdants sont éliminés. Chaque barrage retire 8 places directes aux
+> **Les qualifications d'août.** Une place *(qualifications)* envoie le club dans les
+> qualifications d'août de cette compétition : jusqu'à trois tours (0.1.7) -- le deuxième tour de
+> qualification (jours 220 et 225), le troisième (229 et 236) et le barrage (243 et 250 ; celui de
+> la Ligue des champions 244 et 251) --, chacun de 16 clubs en deux matchs ; les huit effectifs
+> les plus forts sont têtes de série (retour à domicile), et deux clubs d'un même pays ne se
+> rencontrent jamais. Les vainqueurs passent au tour suivant, et du barrage à la phase de ligue.
+> Les perdants descendent comme à l'UEFA : en *Ligue des champions (qualifications)*, ceux du
+> barrage en Ligue Europa, ceux du troisième tour au barrage de la Ligue Europa, ceux du deuxième
+> au troisième tour de la Ligue Europa ; la *Ligue Europa (qualifications)* de même vers la Ligue
+> Europa Conférence ; les perdants de la *Ligue Europa Conférence (qualifications)* sont
+> éliminés. Les premières places de la liste vont au barrage, les suivantes aux tours précédents.
+> Le nombre de tours d'un monde dépend de ses places, et chaque tour de la Ligue Europa Conférence
+> demande 8 clubs de plus : 116 places en Europe pour les trois barrages seuls, 132 pour les neuf
+> tours. Avec les places du jeu seul, il n'y a que les barrages ; le résumé de Build indique les
+> tours du monde (*qualifications d'août*). Chaque barrage retire 8 places directes aux
 > compétitions où vont ses vainqueurs et ses perdants : avec les trois, la Ligue des champions
 > prend 28 clubs directement, la Ligue Europa et la Ligue Europa Conférence 20 chacune. Une place
-> au-delà se joue dans le barrage de cette compétition. Les places de barrage de vos ligues passent
-> avant celles du jeu (Portugal, Écosse, Grèce, Danemark ...).
+> au-delà se joue dans les qualifications de cette compétition. Les places de qualification de
+> vos ligues passent avant celles du jeu (Portugal, Écosse, Grèce, Danemark ...).
 
 Ensuite, **commencez une nouvelle carrière Master League** (ou Become a Legend). Les nouvelles
 ligues se trouvent sous leur pays dans Select Team et Kick Off. Dans les listes de Kick Off et

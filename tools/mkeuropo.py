@@ -26,6 +26,12 @@ build(pesdb, out) does the same inside a world that is being built (the league b
 no copy; build(..., uecl=False) gives the Europa League its play-off alone, for a world built
 without the Conference League (its league phase of 36 is still reshaped, see leaguebuilder
 europe()).
+
+The same copy of reg 2 makes the qualifying rounds in front of the August play-offs (0.1.7): the
+league builder asks qualifying(pesdb, out, rounds, ids) for the third and second qualifying rounds
+it picked (fl26world.pick_rounds), under free ids of its own, and writes them to the world file as
+`qround <competition> <round> <regulation>` lines -- fl26swiss.dll fills, dates and plays them in
+August like 188 and 189.
 """
 import contextlib, io, os, shutil, sys
 
@@ -52,10 +58,7 @@ def playoffs(regs, where="the world", uecl=True):
     world is not ready for them."""
     rows = [bytearray(regs[i * M.REG:(i + 1) * M.REG]) for i in range(len(regs) // M.REG)]
     used = {rid(r) for r in rows}
-    tpl = [r for r in rows if rid(r) & 0x3ff == TEMPLATE and rid(r) <= TEMPLATE + TIES * STEP
-           and r[M.R_CID] == 2]
-    if len(tpl) != 1 + TIES:
-        raise SystemExit("reg 2 should have one master and %d replicas, found %d rows" % (TIES, len(tpl)))
+    tpl = _template(rows)
 
     targets = [(UEL_CID, PLAYOFFS[0])]
     if uecl:
@@ -76,17 +79,70 @@ def playoffs(regs, where="the world", uecl=True):
         ids = [new + g * STEP for g in range(TIES + 1)]
         if used & set(ids):
             raise SystemExit("ids %s are taken" % sorted(used & set(ids)))
-        for t in tpl:
-            g = bytearray(t)
-            grp = g[R_GROUP]
-            g[M.R_ID:M.R_ID + 2] = (new if grp == 255 else new + (grp + 1) * STEP).to_bytes(2, "little")
-            if grp != 255:
-                g[R_BACK:R_BACK + 2] = new.to_bytes(2, "little")
-            g[M.R_CID] = cid
-            g[M.R_NAME:M.R_NAME + len(name)] = name
-            added += g
+        added += _copy(tpl, new, cid, name)
         said.append("competition %3d: play-off %d, ties %s" % (cid, new, ", ".join(map(str, ids[1:]))))
     return added, said
+
+
+def _template(rows):
+    tpl = [r for r in rows if rid(r) & 0x3ff == TEMPLATE and rid(r) <= TEMPLATE + TIES * STEP
+           and r[M.R_CID] == 2]
+    if len(tpl) != 1 + TIES:
+        raise SystemExit("reg 2 should have one master and %d replicas, found %d rows" % (TIES, len(tpl)))
+    return tpl
+
+
+def _copy(tpl, new, cid, name):
+    """reg 2 and its replicas as regulation new of competition cid, named name"""
+    out = bytearray()
+    for t in tpl:
+        g = bytearray(t)
+        grp = g[R_GROUP]
+        g[M.R_ID:M.R_ID + 2] = (new if grp == 255 else new + (grp + 1) * STEP).to_bytes(2, "little")
+        if grp != 255:
+            g[R_BACK:R_BACK + 2] = new.to_bytes(2, "little")
+        g[M.R_CID] = cid
+        g[M.R_NAME:M.R_NAME + len(name)] = name
+        out += g
+    return out
+
+
+def qualifying(base, out, rounds, ids, log=print):
+    """add the qualifying rounds rounds -- (competition 0..2, stage 1 the third qualifying round
+    or 2 the second) -- to the tables in <base>, each a copy of reg 2 and its eight replicas under
+    the next of ids (free regulation ids), and write the competition tables to <out> as build()
+    does. Returns the world file's (competition code 10..12, round 3 or 2, regulation) triples."""
+    comp, regs, ents = (M.load(base, n) for n in
+                        ("Competition.bin", "CompetitionRegulation.bin", "CompetitionEntry.bin"))
+    rows = [bytearray(regs[i * M.REG:(i + 1) * M.REG]) for i in range(len(regs) // M.REG)]
+    used = {rid(r) for r in rows}
+    tpl = _template(rows)
+    phase = [r for r in rows if rid(r) == UECL_REG]
+    cids = {0: 2, 1: UEL_CID, 2: phase[0][M.R_CID] if phase else None}
+    added, lines, ids = bytearray(), [], list(ids)
+    for c, stage in sorted(rounds, key=lambda r: (r[0], -r[1])):
+        if stage not in (1, 2):
+            continue
+        if cids[c] is None:
+            raise SystemExit("no regulation %d (the Conference League's league phase): no Conference "
+                             "League qualifying" % UECL_REG)
+        own = [r for r in rows if r[M.R_CID] == cids[c]]
+        if not own:
+            raise SystemExit("no competition %d" % cids[c])
+        if not ids:
+            raise SystemExit("no free regulation id left for the qualifying rounds")
+        new = ids.pop(0)
+        taken = used & {new + g * STEP for g in range(TIES + 1)}
+        if taken:
+            raise SystemExit("ids %s are taken" % sorted(taken))
+        added += _copy(tpl, new, cids[c], own[0][M.R_NAME:M.R_NAME + M.NAME_SLOTS * M.NAME_SLOT])
+        lines.append((10 + c, 3 if stage == 1 else 2, new))
+    if added:
+        with contextlib.redirect_stdout(io.StringIO()):
+            M.write_tables(out, comp, regs + added, ents)
+        log("  qualifying rounds: %s" % ", ".join("%d (%s %s)" % (r, ("Champions League", "Europa League",
+            "Conference League")[q - 10], "third" if n == 3 else "second") for q, n, r in lines))
+    return lines
 
 
 def build(base, out, log=print, uecl=True):

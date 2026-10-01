@@ -84,9 +84,11 @@ tell us where. Read [what works and what does not](#status) before you start a l
 - The **2024 European format**: Champions League and Europa League with a league phase of 36,
   the February play-off and a fixed knockout bracket, and a new **Conference League**. Filled
   from a UEFA access list from the second season; in the first, by squad strength. The draw
-  keeps clubs of one country apart as UEFA does (0.1.4). **August play-offs** of 16 clubs over
-  two legs (0.1.7): Champions League (losers to the Europa League), Europa League (losers to
-  the Conference League) and Conference League. Name the Conference League yourself (0.1.7).
+  keeps clubs of one country apart as UEFA does (0.1.4). **August qualifying** (0.1.7): up to
+  three rounds of 16 clubs over two legs -- second qualifying round, third, play-off -- for the
+  Champions League (losers drop to the Europa League), Europa League (losers to the Conference
+  League) and Conference League; a world gets as many rounds as its European places fill. Name
+  the Conference League yourself (0.1.7).
 - **Continental places** for your leagues: Champions League, Europa League, Conference League;
   AFC Champions League and Champions League Two; Copa Libertadores (also its qualifying round,
   0.1.4) and Copa Sudamericana; CAF Champions League and CAF Confederation Cup, and the CAF

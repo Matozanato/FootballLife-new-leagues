@@ -125,14 +125,18 @@ end
 -- League Two and Copa Sudamericana), { reg, ko, groups, {{reg, position}...} } from
 -- `ccup <groups master> ko=<id> groups=<n> entry=<reg>:<position>,... name=<text>`, and the
 -- options a league cup or a pre-season cup adds: fill=<day> national=1 days=<d>,<d>,...
--- clubs=<team id>,... (c.opts, fl26_swiss_ccup_opts).
+-- clubs=<team id>,... (c.opts, fl26_swiss_ccup_opts). Sixth: the qualifying rounds in front of
+-- the August play-offs, { competition, round, regulation } from `qround <competition> <round>
+-- <regulation>` (10 / 11 / 12, round 3 or 2; fl26_swiss_qrounds).
 local function read_world(ctx)
   local sep = string.char(92)
   local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
   local f = io.open(path, "r")
   if not f then return nil end
-  local leagues, splits, uefa, ccups, dlike = {}, {}, {}, {}, {}
+  local leagues, splits, uefa, ccups, dlike, qrounds = {}, {}, {}, {}, {}, {}
   for line in f:lines() do
+    local qc, qn, qr = line:match("^%s*qround%s+(%d+)%s+(%d+)%s+(%d+)")
+    if qc then qrounds[#qrounds + 1] = { tonumber(qc), tonumber(qn), tonumber(qr) } end
     -- `dates <our cup> like=<shipped cup>`: a national cup or super cup of a new country is
     -- dated as the shipped cup it was copied from (the game dates cups by id, 2..175 only)
     local dr, dl = line:match("^%s*dates%s+(%d+)%s+like=(%d+)")
@@ -175,7 +179,7 @@ local function read_world(ctx)
     end
   end
   f:close()
-  return leagues, splits, uefa, ccups, dlike
+  return leagues, splits, uefa, ccups, dlike, qrounds
 end
 
 -- `season <region> <type>` lines of the world file: { [region] = type }, 0 August-May, 1
@@ -263,8 +267,19 @@ function m.init(ctx)
       ffi.cast("fl26_swiss_uecl_t", pu)(ubuf, #UECL)
     end
     -- the leagues whose calendar follows their own size: the world file's, when there is one
-    local world, splits, uefa, ccups, dlike = read_world(ctx)
+    local world, splits, uefa, ccups, dlike, qrounds = read_world(ctx)
     if world then
+      if #qrounds > 0 then
+        local pq = ffi.C.GetProcAddress(h, "fl26_swiss_qrounds")
+        if pq == nil then
+          log("fl26swiss: this fl26swiss.dll has no qualifying rounds (fl26_swiss_qrounds); the play-offs are played alone")
+        else
+          local qbuf = ffi.new("uint16_t[?]", 3 * #qrounds)
+          for i, q in ipairs(qrounds) do qbuf[3 * i - 3], qbuf[3 * i - 2], qbuf[3 * i - 1] = q[1], q[2], q[3] end
+          local k = tonumber(ffi.cast("fl26_swiss_access_t", pq)(qbuf, #qrounds))
+          log(string.format("fl26swiss: world file -- %d qualifying round(s), %d taken", #qrounds, k))
+        end
+      end
       -- a world brings its own access list, or gets the DLL's
       if #uefa > 0 then ACCESS = uefa else ACCESS = nil end
       log(string.format("fl26swiss: world file -- %d leagues, %d split(s), %d UEFA place(s)%s", #world,
