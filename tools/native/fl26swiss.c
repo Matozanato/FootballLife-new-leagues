@@ -3838,8 +3838,11 @@ static int nocarry(uint16_t total)
   for (int i = 0; i < g_nnocarry; i++) if (g_nocarry[i] == total) return 1;
   return 0;
 }
+/* The Scottish line, with one date moved: the shipped 12 September (254) is the second day of
+ * the national cups' first round (calendar case 6: 251 and 254), so a split league met its own
+ * cup on the same day (#70, Egypt). 15 September (257) is free of every cup and European day. */
 static const uint16_t SCOT_DAYS[38] = {
-  226, 233, 240, 254, 261, 268, 275, 296, 300, 303, 310, 321, 324, 331, 338, 345, 356, 359, 363,
+  226, 233, 240, 257, 261, 268, 275, 296, 300, 303, 310, 321, 324, 331, 338, 345, 356, 359, 363,
   2, 13, 16, 20, 23, 31, 34, 37, 51, 58, 65, 72, 79, 100,
   107, 114, 121, 128, 142 };
 
@@ -3951,7 +3954,7 @@ static void split_keys(void)
  * that enters its season through register_all, a little after that (fl26join): the game put
  * those rounds a year later, after the season's end (191, Apertura, 2026-09-29: three rounds
  * dated August 2026). A career made in August is past the first of them too. So our splits
- * start on the fourth date, 12 September, whenever the season still fits in what is left --
+ * start on the fourth date, 15 September, whenever the season still fits in what is left --
  * the same for every phase of a split and every season, so the league builder can know the
  * days in advance (leaguebuilder SPLIT_SKIP, split_days). */
 #define SPLIT_SKIP 3

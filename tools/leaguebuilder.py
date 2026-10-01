@@ -282,7 +282,8 @@ LEAGUE_CUP_FILL = 253
 # resampled to its rounds (fl26swiss.c SCOT_DAYS, split_dates); split_days() does the same sums,
 # so the playoffs can be put between the league days. Continental cup days (CCUP_GROUP_DAYS,
 # CCUP_KO_DAYS there) are kept free when the league has European places.
-SPLIT_LINE = [226, 233, 240, 254, 261, 268, 275, 296, 300, 303, 310, 321, 324, 331, 338, 345, 356,
+# 257 is the shipped 254 moved off the national cups' first round (case 6: 251, 254), #70.
+SPLIT_LINE = [226, 233, 240, 257, 261, 268, 275, 296, 300, 303, 310, 321, 324, 331, 338, 345, 356,
               359, 363, 2, 13, 16, 20, 23, 31, 34, 37, 51, 58, 65, 72, 79, 100, 107, 114, 121, 128, 142]
 # fl26swiss starts our splits on the fourth date (SPLIT_SKIP there): the first three are behind
 # a league that joins its season through register_all, and a round dated there went a year on.
