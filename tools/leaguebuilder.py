@@ -62,11 +62,12 @@ which league sits above -- and nothing about ids:
   club_ids    optional, the team id of each club ("" or null = the next free one): an id a kit,
               crest or face pack was made for; above the game's clubs, at most CLUB_ID_MAX
   europe      optional European places: [[position, competition], ...], competition 0 Champions
-              League, 1 Europa League, 2 Conference League, 3 Libertadores, 4 its qualifying
+              League, 10 its play-off in August (the winners go on, the losers to the Europa
+              League), 1 Europa League, 2 Conference League, 3 Libertadores, 4 its qualifying
               round, 5 AFC Champions League, or one of the cups the game has not got: 6 CAF
               Champions League, 7 CAF Confederation Cup, 8 AFC Champions League Two, 9 Copa
               Sudamericana (fl26world.COMPETITIONS); each position once, and only the league's
-              own (1..clubs). 0..5 are written as uefa lines of the world file, after the shipped
+              own (1..clubs). 0..5 and 10 are written as uefa lines of the world file, after the shipped
               leagues' places (fl26world.uefa_places); 6..9 build that cup (see ccup_plan)
   cup         optional, a top division of a new country only: true gives the country a national
               cup (a knockout copied from a shipped one, see NATIONAL_CUPS). The game fills a
@@ -1466,9 +1467,9 @@ def describe(pl):
         lines.append("  NOTE: no place in Select Team for %s: they play, but no career can start in them"
                      % ", ".join(unlisted))
     names = dict(fl26world.COMPETITIONS)
-    for c, n in sorted(fl26world.uefa_places(own_places(pl))[1].items()):
+    for c, (n, room) in sorted(fl26world.uefa_places(own_places(pl))[1].items()):
         lines.append("  NOTE: %s has %d places listed for %d clubs; the last %d get none"
-                     % (names[c], n, fl26world.FIELD, n - fl26world.FIELD))
+                     % (names[c], n, room, n - room))
     libq = sum(1 for e in own_places(pl) if e[2] == 4)
     if libq > LIBQ_ROOM:
         # fl26swiss gives the new leagues all but two of the round's eight places (GitHub #66)
@@ -1856,9 +1857,9 @@ def build(pl, base, game, replace=False, log=print):
             L["cup"] = up["own_cup"]["reg"]            # fl26chain keeps the cup to the top league
     uefa, over = fl26world.uefa_places(own_places(pl))
     names = dict(fl26world.COMPETITIONS)
-    for c, n in sorted(over.items()):
+    for c, (n, room) in sorted(over.items()):
         log("  NOTE: %s has %d places listed for %d clubs; the last %d get none"
-            % (names[c], n, fl26world.FIELD, n - fl26world.FIELD))
+            % (names[c], n, room, n - room))
     if uefa:
         log("  European places: %d of the new leagues, %d in all"
             % (sum(1 for e in own_places(pl) if e[2] in fl26world.UEFA_LINE), len(uefa)))

@@ -561,10 +561,12 @@ static uint32_t canon_club(uint32_t h);
 static const char* club_note(uint32_t h, char* buf, size_t cap);
 typedef struct split_s split_t;
 static int split_part(uint16_t id, const split_t** out);
+static int q_setcl(uint16_t r, uint64_t id, uint64_t flag, char* ok);
 char setcl_handler(uint64_t id, u32vec* list, uint64_t flag)
 {
   uint16_t r = (uint16_t)id, row = ko_row(r);
   if (r == 1 && cwc_world()) return cwc_setcl(id, list, flag);
+  if (is_playoff(r)) { char ok; if (q_setcl(r, id, flag, &ok)) return ok; }
   /* A group of one of our splits is handed the regular phase's table rows by 0x141343d70, which
      starts it straight after (0x141343af0: set_clubs, then 0x141590420): the values are put
      right here, before its matches are made from them (see canon_club). */
@@ -1033,15 +1035,17 @@ static int po_finish(int ci, void* started)
  * filled here instead, from one list: association by association, which final positions go to
  * which competition. It follows the 2025/26 access list over the associations the game has (UEFA
  * ranking 2024; Russia suspended; Israel, Cyprus and the rest are not in the game), with the
- * qualifying rounds collapsed into direct places:
+ * earlier qualifying rounds collapsed into one play-off in August:
  *
- *   Champions League 36 -- champions of 1-10, runners-up of 1-6, thirds of 1-5, fourths of 1-4,
- *     the two extra places of 2025/26 (England and Spain, fifth), Portugal's runner-up; then what
- *     the qualifiers would give: champions of 11-15 (SCO SUI AUT NOR GRE) and France 4th,
- *     Netherlands 3rd, Belgium 2nd.
- *   Europa League 36 -- the next places of 1-15, cup places given to the next league position,
- *     and the champions of 16-27 who would have dropped from Champions League qualifying
- *     (Hungary has no league in these worlds; Slovakia's champion takes its place).
+ *   Champions League 28 direct -- champions of 1-9, runners-up of 1-6, thirds of 1-5, fourths of
+ *     1-4, the two extra places of 2025/26 (England and Spain, fifth), and the two holders.
+ *   The play-off 16 (UCLQ) -- Portugal 2nd and 3rd, Scotland, Greece, Denmark and Turkey's next
+ *     places, France 4th, Netherlands 3rd and 4th, Belgium 2nd and 3rd. Its eight winners join
+ *     the Champions League, its eight losers the Europa League (see the play-off below). A place
+ *     of competition UCL past the 28 is played in the play-off too, ahead of its own places.
+ *   Europa League 28 direct -- the Conference League holder and the next places of the big five,
+ *     Netherlands, Portugal and Belgium (topped up as below); plus the eight play-off losers.
+ *   A world listing no UCLQ place keeps the old way: 36 direct in both, no play-off.
  *   Conference League 36 -- the next place of every association from 1 to 27, the champions of
  *     the smaller ones (SVN FIN IRL BIH ALB MKD MNE) and six runners-up.
  *   A place whose league is missing, or whose club already went elsewhere, takes the next position
@@ -1064,7 +1068,9 @@ static int po_finish(int ci, void* started)
  * A position is read from last season's final table, captured at the July teardown before the
  * tables go; in a first season there is none, and the league ordered by squad strength stands in
  * (see seed_of below). */
-enum { UCL = 0, UEL = 1, UECL = 2, LIB = 3, LIBQ = 4, AFCL = 5 };
+enum { UCL = 0, UEL = 1, UECL = 2, LIB = 3, LIBQ = 4, AFCL = 5, UCLQ = 10 };
+/* UCLQ: a place in the Champions League play-off in August (see "the Champions League play-off"
+   below); the number is the League Builder's, 6..9 being its own continental cups */
 /* LIB, LIBQ, AFCL: the Libertadores group stage (reg 9), its qualifying round (reg 8) and the AFC
    Champions League (reg 15). Their places do not make a list of their own: they replace the
    "other" pool clubs the game fills those fields with (see cont_swap). */
@@ -1086,24 +1092,23 @@ typedef struct { uint16_t reg; uint8_t rank; uint8_t comp; uint16_t alt; } acces
 #define R_UCLKO 4
 #define R_UELKO 6
 static const access_t ACCESS[] = {
-  /* Champions League: the two holders, then the leagues */
+  /* Champions League: the two holders, then the leagues -- 28 direct entrants with the play-off */
   {R_UCLKO,0,UCL,R_ENG},{R_UELKO,0,UCL,R_ESP},
   {R_ENG,1,UCL},{R_ITA,1,UCL},{R_ESP,1,UCL},{R_GER,1,UCL},{R_FRA,1,UCL},{R_NED,1,UCL},{R_POR,1,UCL},
   {R_BEL,1,UCL},{R_TUR,1,UCL},
   {R_ENG,2,UCL},{R_ITA,2,UCL},{R_ESP,2,UCL},{R_GER,2,UCL},{R_FRA,2,UCL},{R_NED,2,UCL},
   {R_ENG,3,UCL},{R_ITA,3,UCL},{R_ESP,3,UCL},{R_GER,3,UCL},{R_FRA,3,UCL},
   {R_ENG,4,UCL},{R_ITA,4,UCL},{R_ESP,4,UCL},{R_GER,4,UCL},
-  {R_ENG,5,UCL},{R_ESP,5,UCL},{R_POR,2,UCL},
-  {R_SCO,1,UCL},{R_GRE,1,UCL},
-  {R_FRA,4,UCL},{R_NED,3,UCL},{R_BEL,2,UCL},
+  {R_ENG,5,UCL},{R_ESP,5,UCL},
+  /* the Champions League play-off: sixteen, eight to the Champions League, eight to the Europa League */
+  {R_POR,2,UCLQ},{R_SCO,1,UCLQ},{R_GRE,1,UCLQ},{R_FRA,4,UCLQ},{R_NED,3,UCLQ},{R_BEL,2,UCLQ},
+  {R_DEN,1,UCLQ},{R_TUR,2,UCLQ},{R_SCO,2,UCLQ},{R_GRE,2,UCLQ},{R_POR,3,UCLQ},{R_BEL,3,UCLQ},
+  {R_NED,4,UCLQ},{R_DEN,2,UCLQ},{R_TUR,3,UCLQ},{R_SCO,3,UCLQ},
   /* Europa League: the Conference League holder, then the leagues */
   {UECL_KO,0,UEL,R_ITA},
   {R_ENG,6,UEL},{R_ITA,5,UEL},{R_ESP,6,UEL},{R_GER,5,UEL},{R_FRA,5,UEL},
   {R_ENG,7,UEL},{R_ITA,6,UEL},{R_ESP,7,UEL},{R_GER,6,UEL},{R_FRA,6,UEL},
-  {R_NED,4,UEL},{R_NED,5,UEL},{R_POR,3,UEL},{R_POR,4,UEL},{R_BEL,3,UEL},{R_BEL,4,UEL},
-  {R_TUR,2,UEL},{R_TUR,3,UEL},
-  {R_SCO,2,UEL},{R_SCO,3,UEL},
-  {R_GRE,2,UEL},{R_DEN,1,UEL},{R_DEN,2,UEL},
+  {R_NED,5,UEL},{R_POR,4,UEL},{R_BEL,4,UEL},
   /* Conference League */
   {R_ENG,8,UECL},{R_ITA,7,UECL},{R_ESP,8,UECL},{R_GER,7,UECL},{R_FRA,7,UECL},
   {R_NED,6,UECL},{R_POR,5,UECL},{R_BEL,5,UECL},{R_TUR,4,UECL},
@@ -1334,12 +1339,47 @@ static int any_final_kept(void)
   for (int i = 0; i < g_nfinal; i++) if (d >= g_final[i].day && d - g_final[i].day < 120) return 1;
   return 0;
 }
-/* build the three lists; a slot whose club is missing or already placed takes the next position
-   of the same league */
-static int access_build(void)
+/* ---- the Champions League play-off (qualifying) ----
+ *
+ * A place of competition UCLQ is a place in the August play-off, the shipped regulation 2: sixteen
+ * clubs, eight ties over two legs (days 244 and 251, see is_playoff). Its eight winners join the
+ * Champions League's direct entrants and its eight losers the Europa League's, so with any UCLQ
+ * place in the list both competitions take 28 direct entrants instead of 36. A list with none
+ * (every world built before 0.1.7) works as it always has.
+ *   - From the second season on, the rights builder fills reg 2 and its eight ties (1026 ... 8194)
+ *     at the July rollover through set_clubs (from 0x14135c083 on day 181, measured 2026-10-01),
+ *     with the game's own clubs; setcl_handler hands it ours instead (q_setcl).
+ *   - A new career has no play-off at all: reg 2 holds its 33 data entries, the ties are empty,
+ *     nothing registers it, and its progression runs on day ~251 with no match played. The day
+ *     loop fills, starts and registers it on the career's first days (q_first_season).
+ *   - When it is over, the game's case 2 builds the league phases and the group draw of reg 3 asks
+ *     access_list, which reads each tie's winner (0x14151b2e0, the read po_finish makes). A tie
+ *     without a winner -- a play-off that could not be played -- sends its seeded club through.
+ * The eight strongest squads are seeded and listed second, at home in the second leg; the other
+ * eight are drawn against them, two clubs of one league kept apart where the draw allows. */
+#define Q_N 16
+static uint32_t g_q[Q_N]; static unsigned g_nq; static int g_q_day = -100000;
+static how_t g_qhow[Q_N];
+static uint32_t g_qwin[Q_N / 2], g_qlose[Q_N / 2];
+static uint16_t q_tie(int k) { return (uint16_t)(2 + 1024 * (k + 1)); }
+static int q_listed(void)
 {
-  uint32_t used[3 * FIELD + 8]; unsigned nused = 0; int tables = 0, orders = 0, gaps = 0, listed = 0;
+  for (size_t i = 0; i < g_naccess; i++) if (g_access[i].comp == UCLQ) return 1;
+  return 0;
+}
+static int q_world(void) { return g_access_on && q_listed() && get_rec(2) && get_rec(q_tie(Q_N / 2 - 1)); }
+
+/* build the lists; a slot whose club is missing or already placed takes the next position of the
+   same league. q: 0 no play-off (36 direct entrants each), 1 also the play-off's sixteen (g_q),
+   2 the play-off's sixteen are known (g_q) and are not placed again */
+static int access_build(int q)
+{
+  uint32_t used[3 * FIELD + Q_N + 8]; unsigned nused = 0; int tables = 0, orders = 0, gaps = 0, listed = 0;
+  unsigned cap[3] = { FIELD, FIELD, FIELD };
+  if (q) cap[UCL] = cap[UEL] = FIELD - Q_N / 2;
   g_nacc[0] = g_nacc[1] = g_nacc[2] = 0;
+  if (q == 1) g_nq = 0;
+  if (q == 2) for (unsigned i = 0; i < g_nq; i++) used[nused++] = g_q[i];
   if (g_nfirst[0] + g_nfirst[1] + g_nfirst[2] && !any_final_kept()) {
     int missing = 0, twice = 0, over = 0;
     for (int k = 0; k < 3; k++)
@@ -1347,7 +1387,7 @@ static int access_build(void)
         uint32_t c = club_of_id(g_first[k][i]);
         if (!c) { missing++; logf("fl26swiss: first-season list -- team %u is not in any league of this game", g_first[k][i]); continue; }
         if (has_club(used, nused, c)) { twice++; continue; }
-        if (g_nacc[k] >= FIELD) { over++; continue; }
+        if (g_nacc[k] >= cap[k]) { over++; continue; }
         g_how[k][g_nacc[k]].reg = 0; g_how[k][g_nacc[k]].rank = 0;
         g_acc[k][g_nacc[k]++] = c; used[nused++] = c; listed++;
       }
@@ -1356,7 +1396,9 @@ static int access_build(void)
   }
   for (size_t i = 0; i < g_naccess; i++) {
     const access_t* a = &g_access[i];
-    if (a->comp > UECL) continue;                   /* the other continents: cont_build below */
+    int qk = a->comp == UCLQ;
+    if (qk ? q != 1 : a->comp > UECL) continue;     /* the other continents: cont_build below */
+    if (qk && g_nq >= Q_N) continue;
     uint32_t c = 0; int ft = 0;
     uint16_t reg = a->reg; int first = a->rank;
     if (!first) {                                   /* cup winner, or the alt league's next place */
@@ -1371,7 +1413,23 @@ static int access_build(void)
       break;
     }
     if (!c) { gaps++; logf("fl26swiss: access -- reg %u %s %u: no club", (unsigned)a->reg, a->rank ? "position" : "winner", (unsigned)a->rank); continue; }
-    if (g_nacc[a->comp] >= FIELD || nused >= sizeof used / sizeof used[0]) continue;
+    if (nused >= sizeof used / sizeof used[0]) continue;
+    if (qk) {
+      g_qhow[g_nq].reg = a->reg; g_qhow[g_nq].rank = a->rank;
+      g_q[g_nq++] = c; used[nused++] = c;
+      if (ft) tables++; else orders++;
+      continue;
+    }
+    if (g_nacc[a->comp] >= cap[a->comp]) {
+      /* a Champions League place past the 28 goes to the play-off; the list has them before its
+         own play-off places, so they come ahead of the weakest shipped ones */
+      if (a->comp == UCL && q == 1 && g_nq < Q_N) {
+        g_qhow[g_nq].reg = a->reg; g_qhow[g_nq].rank = a->rank;
+        g_q[g_nq++] = c; used[nused++] = c;
+        if (ft) tables++; else orders++;
+      }
+      continue;
+    }
     g_how[a->comp][g_nacc[a->comp]].reg = a->reg; g_how[a->comp][g_nacc[a->comp]].rank = (uint8_t)(a->rank ? a->rank : 0);
     g_acc[a->comp][g_nacc[a->comp]++] = c;
     used[nused++] = c;
@@ -1380,11 +1438,17 @@ static int access_build(void)
   /* top-up: the next free positions of the big five, round robin */
   static const uint16_t RESERVE[5] = { R_ENG, R_ESP, R_ITA, R_GER, R_FRA };
   int topped = 0;
-  for (int k = 0; k < 3; k++) {
+  static const int ORDER[4] = { UCL, 3, UEL, UECL };   /* 3: the play-off, right after the Champions League */
+  for (int o = 0; o < 4; o++) {
+    int k = ORDER[o];
+    uint32_t* L = k < 3 ? g_acc[k] : g_q;
+    how_t* H = k < 3 ? g_how[k] : g_qhow;
+    unsigned* N = k < 3 ? &g_nacc[k] : &g_nq;
+    unsigned C = k < 3 ? cap[k] : q == 1 ? Q_N : 0;
     int rank[5] = { 1, 1, 1, 1, 1 }, stuck = 0;
-    while (g_nacc[k] < FIELD && nused < sizeof used / sizeof used[0] && stuck < 5) {
+    while (*N < C && nused < sizeof used / sizeof used[0] && stuck < 5) {
       stuck = 0;
-      for (int j = 0; j < 5 && g_nacc[k] < FIELD; j++) {
+      for (int j = 0; j < 5 && *N < C; j++) {
         uint32_t c = 0; int ft = 0;
         while (rank[j] <= FINAL_MAX) {
           c = access_club(RESERVE[j], rank[j]++, &ft);
@@ -1393,15 +1457,121 @@ static int access_build(void)
           c = 0;
         }
         if (!c) { stuck++; continue; }
-        g_how[k][g_nacc[k]].reg = RESERVE[j]; g_how[k][g_nacc[k]].rank = (uint8_t)(rank[j] - 1);
-        g_acc[k][g_nacc[k]++] = c; used[nused++] = c; topped++;
+        H[*N].reg = RESERVE[j]; H[*N].rank = (uint8_t)(rank[j] - 1);
+        L[(*N)++] = c; used[nused++] = c; topped++;
       }
     }
   }
   if (topped) logf("fl26swiss: access -- %d place(s) topped up from the big five", topped);
-  logf("fl26swiss: access -- %u / %u / %u clubs (%d from the first-season list, %d positions from last season's tables, %d from first-season order, %d missing)",
-       g_nacc[0], g_nacc[1], g_nacc[2], listed, tables, orders, gaps);
-  return g_nacc[0] == FIELD;
+  logf("fl26swiss: access -- %u / %u / %u clubs%s (%d from the first-season list, %d positions from last season's tables, %d from first-season order, %d missing)",
+       g_nacc[0], g_nacc[1], g_nacc[2], q == 1 ? ", play-off 16" : q == 2 ? " direct, the play-off's 16 left out" : "",
+       listed, tables, orders, gaps);
+  if (q == 1 && g_nq < Q_N) logf("fl26swiss: access -- the play-off has only %u club(s)", g_nq);
+  return g_nacc[0] == cap[0] && (q != 1 || g_nq == Q_N);
+}
+
+/* the play-off draw: g_q (with g_qhow) into eight ties, tie k = g_q[2k] v g_q[2k+1], seeded second */
+static uint32_t q_rand(uint32_t n) { coin(); return n ? g_rng % n : 0; }
+static void q_draw(void)
+{
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  void* blk = o ? *(void**)(o + 0x48) : 0;
+  int str[Q_N]; unsigned idx[Q_N];
+  for (unsigned i = 0; i < Q_N; i++) { idx[i] = i; str[i] = blk ? club_strength(blk, g_q[i]) : 0; }
+  for (unsigned i = 1; i < Q_N; i++)               /* strongest first, stable */
+    for (unsigned j = i; j > 0 && str[idx[j - 1]] < str[idx[j]]; j--) { unsigned t = idx[j]; idx[j] = idx[j - 1]; idx[j - 1] = t; }
+  unsigned* seed = idx; unsigned* un = idx + Q_N / 2;
+  for (unsigned i = Q_N / 2 - 1; i > 0; i--) { unsigned j = q_rand(i + 1), t = un[i]; un[i] = un[j]; un[j] = t; }
+  #define QLG(x) (g_qhow[x].reg)
+  for (unsigned k = 0; k < Q_N / 2; k++) {        /* two clubs of one league apart */
+    if (!QLG(un[k]) || QLG(un[k]) != QLG(seed[k])) continue;
+    for (unsigned j = 0; j < Q_N / 2; j++) {
+      if (j == k || QLG(un[j]) == QLG(seed[k]) || (QLG(un[k]) && QLG(un[k]) == QLG(seed[j]))) continue;
+      unsigned t = un[k]; un[k] = un[j]; un[j] = t;
+      break;
+    }
+  }
+  #undef QLG
+  uint32_t c[Q_N]; how_t h[Q_N];
+  for (unsigned k = 0; k < Q_N / 2; k++) {
+    c[2 * k] = g_q[un[k]]; h[2 * k] = g_qhow[un[k]];
+    c[2 * k + 1] = g_q[seed[k]]; h[2 * k + 1] = g_qhow[seed[k]];
+  }
+  memcpy(g_q, c, sizeof c); memcpy(g_qhow, h, sizeof h);
+}
+/* the play-off's sixteen for this summer, drawn; built once and kept for 60 days */
+static int q_prepare(void)
+{
+  int ad = abs_day();
+  if (g_nq == Q_N && ad >= g_q_day && ad - g_q_day < 60) return 1;
+  if (!access_build(1)) { g_nq = 0; logf("fl26swiss: play-off -- the access list came out short; the game's own play-off stands"); return 0; }
+  q_draw();
+  g_q_day = ad;
+  for (unsigned k = 0; k < Q_N / 2; k++)
+    logf("fl26swiss:   Champions League play-off tie %u: reg %u position %u (%08x) v reg %u position %u (%08x, seeded)", k,
+         (unsigned)g_qhow[2 * k].reg, (unsigned)g_qhow[2 * k].rank, g_q[2 * k],
+         (unsigned)g_qhow[2 * k + 1].reg, (unsigned)g_qhow[2 * k + 1].rank, g_q[2 * k + 1]);
+  return 1;
+}
+/* after the play-off: the sixteen as the ties hold them, and who went through. 0 when there is no
+   play-off of ours to read and none can be built */
+static int q_result(void)
+{
+  uint32_t pr[Q_N]; int ties = 1, nodec = 0;
+  for (int k = 0; k < Q_N / 2 && ties; k++) {
+    unsigned char* t = get_rec(q_tie(k));
+    if (!t || rec_count(t) != 2) ties = 0;
+    else { pr[2 * k] = rec_clubs(t)[0]; pr[2 * k + 1] = rec_clubs(t)[1]; }
+  }
+  if (ties) {
+    int same = g_nq == Q_N;
+    for (int i = 0; i < Q_N && same; i++) same = has_club(g_q, Q_N, pr[i]);
+    if (!same) {                                    /* after a restart, or the game's own clubs */
+      logf("fl26swiss: play-off -- the ties hold clubs this session did not draw; taken as they are");
+      memcpy(g_q, pr, sizeof pr); g_nq = Q_N;
+      for (int i = 0; i < Q_N; i++) { g_qhow[i].reg = 2; g_qhow[i].rank = (uint8_t)(i + 1); }
+    }
+  } else {
+    if (!q_prepare()) return 0;
+    memcpy(pr, g_q, sizeof pr);
+    logf("fl26swiss: play-off -- the ties were never filled (no play-off played); the seeded clubs go through");
+  }
+  for (int k = 0; k < Q_N / 2; k++) {
+    uint32_t w = 0;
+    if (ties) ((winner_fn)(uintptr_t)(g_base + WINNER_RVA))(&w, q_tie(k));
+    int i = !(w >> 14) ? -1 : same_club(w, pr[2 * k]) ? 0 : same_club(w, pr[2 * k + 1]) ? 1 : -1;
+    if (i < 0) { i = 1; nodec++; }
+    g_qwin[k] = pr[2 * k + i]; g_qlose[k] = pr[2 * k + (i ^ 1)];
+    logf("fl26swiss:   play-off tie %d: %08x through, %08x to the Europa League%s", k, g_qwin[k], g_qlose[k],
+         w >> 14 ? "" : " (no winner read: the seeded club)");
+  }
+  if (ties && nodec) logf("fl26swiss: play-off -- %d tie(s) without a winner", nodec);
+  return 1;
+}
+/* the winners into the Champions League, the losers into the Europa League */
+static void q_place(void)
+{
+  for (int k = 0; k < Q_N / 2; k++) {
+    if (g_nacc[UCL] < FIELD) { g_how[UCL][g_nacc[UCL]].reg = 2; g_how[UCL][g_nacc[UCL]].rank = (uint8_t)(k + 1); g_acc[UCL][g_nacc[UCL]++] = g_qwin[k]; }
+    if (g_nacc[UEL] < FIELD) { g_how[UEL][g_nacc[UEL]].reg = 2; g_how[UEL][g_nacc[UEL]].rank = (uint8_t)(k + 1); g_acc[UEL][g_nacc[UEL]++] = g_qlose[k]; }
+  }
+  logf("fl26swiss: access -- with the play-off: %u / %u / %u clubs", g_nacc[0], g_nacc[1], g_nacc[2]);
+}
+static int q_summer(void) { int d = today(); return d >= 180 && d < 259; }
+/* set_clubs on reg 2 or one of its ties in the summer: ours instead of the game's. 1 = handled */
+static int q_setcl(uint16_t r, uint64_t id, uint64_t flag, char* ok)
+{
+  if (!q_summer() || !q_world() || !q_prepare()) return 0;
+  int k = r == 2 ? -1 : (int)(r >> 10) - 1;
+  if (k >= Q_N / 2) return 0;
+  u32vec v;
+  if (k < 0) { v.b = g_q; v.e = v.c = g_q + Q_N; }
+  else { v.b = g_q + 2 * k; v.e = v.c = g_q + 2 * k + 2; }
+  *ok = ((setclr_fn)(uintptr_t)g_tramp_setcl)(id, &v, flag);
+  run_flush();
+  logf("fl26swiss: set_clubs reg %u on day %d -- the play-off's %s instead of the game's", (unsigned)r, today(),
+       k < 0 ? "sixteen" : "tie");
+  return 1;
 }
 /* August, inside the game's own hand-over after qualifying (case 2 of the progression): the group
    draw of reg 3 and then of reg 5 is given the access list instead of the game's, and the
@@ -1416,7 +1586,9 @@ static u32vec* access_list(uint16_t r, uint64_t flag)
      existed.  The test never worked, see get_rec, so every world has had its Europe rebuilt;
      since the list names only shipped leagues, that is kept, and the test is gone.) */
   if (r == 3) {
-    g_access_ready = access_build();
+    int q = q_world() && q_result();
+    g_access_ready = access_build(q ? 2 : 0);
+    if (g_access_ready && q) q_place();
     if (!g_access_ready) logf("fl26swiss: access -- Champions League list short; the game's lists stand");
     else
       for (int k = 0; k < 3; k++)
@@ -2705,7 +2877,7 @@ __declspec(dllexport) int fl26_swiss_access(const uint16_t* v, int n)
   int k = 0;
   for (int i = 0; v && i < n && k < ACCESS_MAX; i++) {
     const uint16_t* e = v + 4 * i;
-    if (!e[0] || e[2] > AFCL || e[1] > FINAL_MAX) continue;
+    if (!e[0] || (e[2] > AFCL && e[2] != UCLQ) || e[1] > FINAL_MAX) continue;
     g_access_buf[k].reg = e[0]; g_access_buf[k].rank = (uint8_t)e[1];
     g_access_buf[k].comp = (uint8_t)e[2]; g_access_buf[k].alt = e[3];
     k++;
@@ -3624,6 +3796,50 @@ static const unsigned char SIG_DAYCHK[17] = {
 typedef char (*daychk_fn)(void*);
 unsigned char* g_tramp_daychk = 0;
 static int g_td_fresh = 0;                /* a July teardown ran in this call of the day loop's check */
+/* A new career's play-off (see the Champions League play-off above): nothing fills or registers
+   reg 2 in the first season, so on the career's first days it is filled with the play-off's
+   sixteen, started and handed to register_all -- the steps the Club World Cup groups take. A
+   second season finds the ties already filled by the rollover and leaves them alone. */
+static int g_q_first_year = -1;
+static void q_first_season(void)
+{
+  int d = today();
+  if (d < 205 || d > 240) return;
+  int year = (abs_day() + 183) / 365;
+  if (g_q_first_year == year || !q_world()) return;
+  g_q_first_year = year;
+  unsigned char* t0 = get_rec(q_tie(0));
+  if (!t0 || rec_count(t0)) return;                 /* the rollover filled it: not a first season */
+  if (ccup_matches(2) > 0) return;
+  if (!q_prepare()) return;
+  for (int k = 0; k < Q_N / 2; k++)
+    ((freetab_fn)(uintptr_t)(g_base + FREETAB_RVA))(0, q_tie(k));
+  u32vec va = { g_q, g_q + Q_N, g_q + Q_N };
+  ((setclr_fn)(uintptr_t)g_tramp_setcl)(2, &va, 1);
+  for (int k = 0; k < Q_N / 2; k++) {
+    u32vec v = { g_q + 2 * k, g_q + 2 * k + 2, g_q + 2 * k + 2 };
+    ((setclr_fn)(uintptr_t)g_tramp_setcl)(q_tie(k), &v, 1);
+  }
+  run_flush();
+  start_stage(0, 2);
+  uint16_t id = 2;
+  struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { &id, &id + 1, &id + 1 };
+  ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
+  run_flush();
+  int m = ccup_matches(2), mt = 0;
+  for (int k = 0; k < Q_N / 2; k++) { int x = ccup_matches(q_tie(k)); if (x > 0) mt += x; }
+  if (m <= 0 && mt <= 0) {                          /* the ties are their own rows: register them too */
+    uint16_t ties[Q_N / 2];
+    for (int k = 0; k < Q_N / 2; k++) ties[k] = q_tie(k);
+    struct { uint16_t* b; uint16_t* e; uint16_t* c; } tv = { ties, ties + Q_N / 2, ties + Q_N / 2 };
+    ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &tv);
+    run_flush();
+    m = ccup_matches(2); mt = 0;
+    for (int k = 0; k < Q_N / 2; k++) { int x = ccup_matches(q_tie(k)); if (x > 0) mt += x; }
+  }
+  logf("fl26swiss: play-off -- a new career (day %d): reg 2 filled, started and registered; %d match record(s) under reg 2, %d under its ties",
+       d, m, mt);
+}
 char daychk_handler(void* ctx)
 {
   char r = ((daychk_fn)(uintptr_t)g_tramp_daychk)(ctx);
@@ -3637,6 +3853,7 @@ char daychk_handler(void* ctx)
   }
   apclau_keep();
   ccup_fill_days();
+  q_first_season();
   return r;
 }
 

@@ -84,8 +84,12 @@ PROTECTED_SLOTS = (4, 5, 6)
 
 # The competitions of a uefa line (fl26swiss's ACCESS comment): the number is what the line
 # carries, the name what a person picks.
-COMPETITIONS = [(0, "Champions League"), (1, "Europa League"), (2, "Conference League"),
-                (3, "Libertadores"), (4, "Libertadores qualifying"), (5, "AFC Champions League")]
+COMPETITIONS = [(0, "Champions League"), (10, "Champions League qualifying"), (1, "Europa League"),
+                (2, "Conference League"), (3, "Libertadores"), (4, "Libertadores qualifying"),
+                (5, "AFC Champions League")]
+# 10: the Champions League play-off in August, sixteen clubs: the eight winners join the Champions
+# League, the eight losers the Europa League, so with any such place both take 28 direct entrants
+UCLQ, PLAYOFF = 10, 16
 UEFA_LINE = {c for c, _n in COMPETITIONS}        # the ones a uefa line carries
 
 # Continental cups the game does not have, built by tools/mkccup.py and run by fl26swiss.dll from
@@ -125,42 +129,52 @@ SHIPPED_ACCESS = sorted(HOLDERS + [(r, n, c, 0) for r, n, c in (
     (_ENG, 2, 0), (_ITA, 2, 0), (_ESP, 2, 0), (_GER, 2, 0), (_FRA, 2, 0), (_NED, 2, 0),
     (_ENG, 3, 0), (_ITA, 3, 0), (_ESP, 3, 0), (_GER, 3, 0), (_FRA, 3, 0),
     (_ENG, 4, 0), (_ITA, 4, 0), (_ESP, 4, 0), (_GER, 4, 0),
-    (_ENG, 5, 0), (_ESP, 5, 0), (_POR, 2, 0),
-    (_SCO, 1, 0), (_GRE, 1, 0),
-    (_FRA, 4, 0), (_NED, 3, 0), (_BEL, 2, 0),
+    (_ENG, 5, 0), (_ESP, 5, 0),
+    # the Champions League play-off
+    (_POR, 2, 10), (_SCO, 1, 10), (_GRE, 1, 10), (_FRA, 4, 10), (_NED, 3, 10), (_BEL, 2, 10),
+    (_DEN, 1, 10), (_TUR, 2, 10), (_SCO, 2, 10), (_GRE, 2, 10), (_POR, 3, 10), (_BEL, 3, 10),
+    (_NED, 4, 10), (_DEN, 2, 10), (_TUR, 3, 10), (_SCO, 3, 10),
     # Europa League
     (_ENG, 6, 1), (_ITA, 5, 1), (_ESP, 6, 1), (_GER, 5, 1), (_FRA, 5, 1),
     (_ENG, 7, 1), (_ITA, 6, 1), (_ESP, 7, 1), (_GER, 6, 1), (_FRA, 6, 1),
-    (_NED, 4, 1), (_NED, 5, 1), (_POR, 3, 1), (_POR, 4, 1), (_BEL, 3, 1), (_BEL, 4, 1),
-    (_TUR, 2, 1), (_TUR, 3, 1),
-    (_SCO, 2, 1), (_SCO, 3, 1),
-    (_GRE, 2, 1), (_DEN, 1, 1), (_DEN, 2, 1),
+    (_NED, 5, 1), (_POR, 4, 1), (_BEL, 4, 1),
     # Conference League
     (_ENG, 8, 2), (_ITA, 7, 2), (_ESP, 8, 2), (_GER, 7, 2), (_FRA, 7, 2),
     (_NED, 6, 2), (_POR, 5, 2), (_BEL, 5, 2), (_TUR, 4, 2),
     (_SCO, 4, 2), (_GRE, 3, 2),
     (_DEN, 3, 2),
-)], key=lambda e: e[2])   # stable: each section's holders stay first
+)], key=lambda e: [c for c, _n in COMPETITIONS].index(e[2]))   # stable: each section's holders stay first
 
 
 def uefa_places(own):
     """the uefa lines of a world whose own leagues have places: the shipped list and the world's
     places, competition by competition (Champions League first, as fl26swiss hands them out in
-    list order), each competition's shipped places before the world's. own: (regulation,
+    list order), each competition's shipped places before the world's -- except the play-off,
+    where the world's come first and push the weakest shipped ones out. own: (regulation,
     position, competition, alt) tuples. Empty when own is: no lines, and the DLL's list stands.
-    Second result: {competition: places listed} for those past FIELD (the last get nothing)."""
+    Second result: {competition: (places listed, room)} for those past their room (the last get
+    nothing; for the play-off, the world's own places and the Champions League places past the
+    28 direct ones, which fl26swiss sends there)."""
     own = [tuple(int(x) for x in e) for e in own]
     if not own:
         return [], {}
     out = []
     for c, _n in COMPETITIONS:
         if c in UEFA_LINE:
-            out += [e for e in SHIPPED_ACCESS if e[2] == c] + [e for e in own if e[2] == c]
+            mine, shipped = [e for e in own if e[2] == c], [e for e in SHIPPED_ACCESS if e[2] == c]
+            out += mine + shipped if c == UCLQ else shipped + mine
+    # Champions League places past the 28 direct ones go to the play-off (fl26swiss), ahead of
+    # its shipped places; only the world's own count against its sixteen
     over = {}
-    for c in (0, 1, 2):
+    direct = FIELD - PLAYOFF // 2
+    spill = max(0, sum(1 for e in out if e[2] == 0) - direct)
+    n = spill + sum(1 for e in own if e[2] == UCLQ)
+    if n > PLAYOFF:
+        over[UCLQ] = (n, PLAYOFF)
+    for c, room in ((1, direct), (2, FIELD)):
         n = sum(1 for e in out if e[2] == c)
-        if n > FIELD:
-            over[c] = n
+        if n > room:
+            over[c] = (n, room)
     return out, over
 
 

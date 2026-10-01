@@ -50,8 +50,8 @@ ALL_CLUBS = -1
 # the European competitions a league place can lead to (fl26world.COMPETITIONS), short names for
 # the league list
 SHORT = {0: "UCL", 1: "UEL", 2: "UECL", 3: "LIB", 4: "LIB-Q", 5: "AFC", 6: "CAF CL", 7: "CAF CC",
-         8: "AFC CL2", 9: "SUD"}
-TOP_FLIGHT = [[1, 0], [2, 1], [3, 2]]      # the preset: 1st UCL, 2nd UEL, 3rd UECL
+         8: "AFC CL2", 9: "SUD", 10: "UCL-Q"}
+TOP_FLIGHT = [[1, 10], [2, 1], [3, 2]]     # the preset: 1st the UCL play-off, 2nd UEL, 3rd UECL
 # the preset by the country's confederation (Country.bin): Asia to the AFC Champions League and
 # Champions League Two, South America to the Libertadores and the Sudamericana, Africa to the CAF
 # Champions League and Confederation Cup; everyone else keeps the European one
@@ -68,8 +68,9 @@ PRESETS = {
         "1st and 2nd to the CAF Champions League, 3rd to the CAF Confederation Cup",
         [[1, 6], [2, 6], [3, 7]]),
 }
-UEFA_PRESET = ("Top flight: 1st UCL, 2nd UEL, 3rd UECL",
-               "1st to the Champions League, 2nd to the Europa League, 3rd to the Conference League", TOP_FLIGHT)
+UEFA_PRESET = ("Top flight: 1st UCL play-off, 2nd UEL, 3rd UECL",
+               "1st to the Champions League play-off (the winner plays the Champions League, the loser the "
+               "Europa League), 2nd to the Europa League, 3rd to the Conference League", TOP_FLIGHT)
 
 
 def pixmap(path, size, kit=None):
