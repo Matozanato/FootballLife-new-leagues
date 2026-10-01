@@ -1064,9 +1064,11 @@ static int po_finish(int ci, void* started)
  *   The title holders come first in their section, as in the real list: the Champions League's
  *   and the Europa League's winners (knockout regs 4 and 6, the same two the UEFA Super Cup
  *   takes) play the next Champions League, the Conference League's (187) the next Europa League.
- *   Being first, a holder that also finished high enough at home takes the holder's place and
- *   its league's places go one position further down. A holder not known (a first season)
- *   gives its place to the next club of a big-five league instead.
+ *   A holder that also finished high enough at home for the same competition takes the holder's
+ *   place, and the league place it leaves is not passed down its league: as at UEFA, it goes to
+ *   the top-up below (GitHub #54: two English holders plus England's places pushed further down
+ *   put eight English clubs in the league phase, which no draw can keep apart). A holder not
+ *   known (a first season) gives its place to the next club of a big-five league instead.
  *
  * Only the shipped leagues are compiled in (their regulation ids are the game's own, the same in
  * every world). Our leagues' ids are handed out by the world builder and mean a different
@@ -1483,13 +1485,38 @@ static uint32_t q_fill_from(int mask, int i)
   return d ? d : i ? 217 : 205;
 }
 
+/* c is on competition k's list as a title holder (the reg 4, 6 or 187 winner itself, not the
+   big-five club that stands in while no holder is known) */
+static int holder_in(int k, uint32_t c)
+{
+  for (unsigned j = 0; j < g_nacc[k]; j++) {
+    uint16_t r = g_how[k][j].reg;
+    if (same_club(g_acc[k][j], c) && !g_how[k][j].rank && (r == R_UCLKO || r == R_UELKO || r == UECL_KO)) {
+      uint32_t w = cup_winner(r);
+      return w && same_club(w, c);
+    }
+  }
+  return 0;
+}
+/* c is one of the clubs of league reg (a final table, the first-season order or the list) */
+static int in_league(uint16_t reg, uint32_t c)
+{
+  int ft;
+  for (int rank = 1; rank <= FINAL_MAX; rank++) {
+    uint32_t x = access_club(reg, rank, &ft);
+    if (!x) return 0;
+    if (same_club(x, c)) return 1;
+  }
+  return 0;
+}
+
 /* build the lists; a slot whose club is missing or already placed takes the next position of the
    same league. q: 0 no qualifying (36 direct entrants each), 1 also the rounds' new entrants (g_q),
    2 the rounds' clubs are known (g_q) and are not placed again. mask: the rounds on (bit i); a
    competition's places past its direct entrants go to its own rounds when it has them */
 static int access_build(int q, int mask)
 {
-  uint32_t used[3 * FIELD + NQR * Q_N + 8]; unsigned nused = 0; int tables = 0, orders = 0, gaps = 0, listed = 0;
+  uint32_t used[3 * FIELD + NQR * Q_N + 8]; unsigned nused = 0; int tables = 0, orders = 0, gaps = 0, listed = 0, held = 0;
   int on[NQR]; unsigned room[NQR];
   for (int i = 0; i < NQR; i++) { on[i] = q && (mask >> i & 1); room[i] = on[i] ? q_room(mask, i) : 0; }
   unsigned cap[3] = { FIELD, FIELD, FIELD };
@@ -1532,12 +1559,17 @@ static int access_build(int q, int mask)
       if (c && !has_club(used, nused, c)) ft = 1;
       else { c = 0; reg = a->alt; first = a->alt ? 1 : FINAL_MAX + 1; }
     }
+    int vacated = 0;
     for (int rank = first; !c && rank <= FINAL_MAX; rank++) {
       c = access_club(reg, rank, &ft);
       if (!c) break;
-      if (!(c >> 14) || has_club(used, nused, c)) { c = 0; continue; }
+      if (!(c >> 14) || has_club(used, nused, c)) {
+        if (a->rank && qp < 0 && holder_in(a->comp, c)) { c = 0; vacated = 1; break; }
+        c = 0; continue;
+      }
       break;
     }
+    if (vacated) { held++; continue; }
     if (!c) { gaps++; logf("fl26swiss: access -- reg %u %s %u: no club", (unsigned)a->reg, a->rank ? "position" : "winner", (unsigned)a->rank); continue; }
     if (nused >= sizeof used / sizeof used[0]) continue;
     if (qp < 0 && g_nacc[a->comp] >= cap[a->comp]) {
@@ -1559,7 +1591,9 @@ static int access_build(int q, int mask)
     if (ft) tables++; else orders++;
   }
   #undef QSLOT
-  /* top-up: the next free positions of the big five, round robin */
+  /* top-up: the next free positions of the big five, the league with the fewest clubs on the
+     list first (ties in this order), so a place a holder left does not go back to its own country
+     and no association crowds a league phase past what the draw can keep apart */
   static const uint16_t RESERVE[5] = { R_ENG, R_ESP, R_ITA, R_GER, R_FRA };
   int topped = 0;
   /* each competition, then its rounds from the play-off down: -1 - k is league phase k */
@@ -1570,23 +1604,28 @@ static int access_build(int q, int mask)
     how_t* H = qi < 0 ? g_how[k] : g_qhow[qi];
     unsigned* N = qi < 0 ? &g_nacc[k] : &g_nq[qi];
     unsigned C = qi < 0 ? cap[k] : q == 1 && on[qi] ? room[qi] : 0;
-    int rank[5] = { 1, 1, 1, 1, 1 }, stuck = 0;
-    while (*N < C && nused < sizeof used / sizeof used[0] && stuck < 5) {
-      stuck = 0;
-      for (int j = 0; j < 5 && *N < C; j++) {
-        uint32_t c = 0; int ft = 0;
-        while (rank[j] <= FINAL_MAX) {
-          c = access_club(RESERVE[j], rank[j]++, &ft);
-          if (!c) break;
-          if ((c >> 14) && !has_club(used, nused, c)) break;
-          c = 0;
-        }
-        if (!c) { stuck++; continue; }
-        H[*N].reg = RESERVE[j]; H[*N].rank = (uint8_t)(rank[j] - 1);
-        L[(*N)++] = c; used[nused++] = c; topped++;
+    int rank[5] = { 1, 1, 1, 1, 1 }, done[5] = { 0 }, cnt[5] = { 0 };
+    if (*N < C)
+      for (unsigned i = 0; i < *N; i++)
+        for (int j = 0; j < 5; j++)
+          if (H[i].reg == RESERVE[j] || in_league(RESERVE[j], L[i])) { cnt[j]++; break; }
+    while (*N < C && nused < sizeof used / sizeof used[0]) {
+      int j = -1;
+      for (int r = 0; r < 5; r++) if (!done[r] && (j < 0 || cnt[r] < cnt[j])) j = r;
+      if (j < 0) break;
+      uint32_t c = 0; int ft = 0;
+      while (rank[j] <= FINAL_MAX) {
+        c = access_club(RESERVE[j], rank[j]++, &ft);
+        if (!c) break;
+        if ((c >> 14) && !has_club(used, nused, c)) break;
+        c = 0;
       }
+      if (!c) { done[j] = 1; continue; }
+      H[*N].reg = RESERVE[j]; H[*N].rank = (uint8_t)(rank[j] - 1);
+      L[(*N)++] = c; used[nused++] = c; topped++; cnt[j]++;
     }
   }
+  if (held) logf("fl26swiss: access -- %d league place(s) left by a title holder, given to the top-up", held);
   if (topped) logf("fl26swiss: access -- %d place(s) topped up from the big five", topped);
   char qs[96] = "";
   if (q == 1) {

@@ -679,10 +679,11 @@ Press **F8** in the game any time to write a short report of what the module did
   writes them for you: the League window's *Europe* field becomes `uefa` lines of the world
   file, which replace the DLL's list.
 - **Title holders.** The Champions League and Europa League winners play the next Champions
-  League, the Conference League winner the next Europa League. They come first on the list, so
-  a holder that also finished high at home takes the holder's place and the next club of its
-  league moves up. While no holder is known (a first season), those places go to the next club
-  of England, Spain and Italy.
+  League, the Conference League winner the next Europa League. They come first on the list. A
+  holder that also finished high enough at home takes the holder's place, and the league place
+  it leaves goes to another country (the big-five league with the fewest clubs in that
+  competition), as at UEFA, not to the next club of its own league. While no holder is known
+  (a first season), those places go to the next club of England, Spain and Italy.
 - The Conference League play-off is drawn in December (the real draw is in late January) and
   played in February together with the Europa League's.
 - The European dates do not check the league calendars. A club can have a league match and
