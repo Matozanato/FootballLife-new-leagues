@@ -51,6 +51,9 @@ démarrage** et le programme ne vérifie plus que sur demande. Si le programme s
 dossier où Windows ne le laisse pas écrire (comme Program Files), il ouvre la page de la version à
 la place : décompressez le zip vous-même, ou déplacez le programme dans un dossier à vous.
 
+**Crédits.** Le bouton **Crédits**, à côté d'**Aide**, nomme tous ceux qui ont aidé à faire Mod
+Studio : les testeurs, ceux qui ont envoyé des rapports et des logs, et ceux dont les idées y sont.
+
 **Plusieurs dossiers Sider ?** Sider ne s'appelle pas forcément `SiderAddons`. Le programme
 cherche le dossier à côté de `FL_2026.exe` qui contient un `sider.ini` ; s'il y en a plusieurs,
 **Réglages → Dossier de Sider** choisit celui avec lequel il travaille.
@@ -172,6 +175,34 @@ son fichier de logo.
 **Coupes des pays du jeu** (bouton sur la même page) : une coupe de la Ligue -- la Carabao Cup, par exemple -- pour des ligues du jeu. Cochez **Coupe de la ligue** à côté d'une ligue : 16 clubs de cette ligue et de celle du dessous, selon le classement (au-delà de 16, par un tour préliminaire début septembre, 0.1.7), un match par tour de fin septembre à décembre, les jours que le calendrier des ligues et coupes du jeu laisse libres. **Supercoupe**, le champion contre le vainqueur de la coupe fin juillet, seulement là où le jeu n'en a pas (Brésil, Chili, Écosse, Grèce, États-Unis) ; une nouvelle carrière n'a pas encore de vainqueur de coupe, la première se joue donc le deuxième été. Nom vide : le nom de la ligue et *League Cup* / *Super Cup*.
 
 **Places européennes des ligues du jeu** (bouton sur la même page) : quelles places de la Premier League, de la LaLiga, de la Serie A ... vont dans quelle compétition européenne. La liste montre les places du jeu ; cochez **Places propres pour cette ligue** pour les changer. Une ligue non cochée garde celles du jeu, une ligue cochée sans lignes n'envoie personne.
+
+**Classement UEFA** (même page, 0.1.7) : toutes les ligues européennes du monde -- celles du jeu et
+vos nouvelles premières divisions -- dans une seule liste, le pays le plus fort d'abord. Glissez une
+ligue (ou **Monter** / **Descendre**) pour changer l'ordre, décochez-la pour ne lui donner aucune
+place européenne, et **Ordre de l'UEFA** remet la liste au classement des associations de l'UEFA
+pour 2026-27. La partie droite montre ce que reçoit chaque ligue, et **OK** l'écrit : les places de
+la clé de l'UEFA pour 2024-27 -- le rang 1 a cinq places en Ligue des champions, le rang 6 deux et
+une place de barrage, le rang 30 une place au deuxième tour de qualification de la Ligue des
+champions, et ainsi de suite, la place du vainqueur de la coupe en Ligue Europa comprise. Un monde
+n'a jamais les 55 pays de l'UEFA, donc les places des rangs absents vont tour à tour aux clubs
+suivants des ligues les plus fortes, un tour à la fois, et chaque compétition reste pleine : avec
+douze ligues, les 6e, 7e et 8e d'Angleterre vont aux qualifications de la Ligue des champions, par
+exemple. Après la 30e ligue il ne reste aucune place, et la liste le dit. Les places de
+qualification vont aux tours dans l'ordre de la clé, le pays le plus fort au tour le plus proche de
+la phase de ligue. Ensuite vous pouvez encore changer à la main les places de n'importe quelle ligue
+(*Europe* sur la ligue, *Places européennes des ligues du jeu*) : Build prend les places, pas le
+classement.
+
+**Places sud-américaines** (même page, 0.1.7, lecture seule) : pour chaque ligue sud-américaine,
+les quatre du jeu et les vôtres, quelles positions vont en Copa Libertadores, dans ses
+qualifications et en Copa Sudamericana. Les places en Libertadores des ligues du jeu sont celles du
+jeu (Brésil 1er-4e et le vainqueur de la Copa do Brasil, qualifications 5e-6e, et ainsi de suite --
+ce que montre aussi le Competition Info du jeu) ; la Copa Sudamericana est celle de Mod Studio,
+donc la liste montre combien de clubs chaque ligue du jeu y envoie avec vos places dedans : d'abord
+vos ligues, puis le Brésil, l'Argentine, le Chili et la Colombie, un club chacun à tour de rôle
+jusqu'à 32. Un club déjà en Libertadores ou dans ses qualifications laisse sa place au suivant de
+sa ligue. **Vérifier le plan** affiche la même liste dès que le monde a une place en Libertadores
+ou en Sudamericana.
 
 **Noms des compétitions** (bouton sur la même page) : un nouveau nom et un logo pour les coupes, supercoupes et compétitions continentales du jeu -- la FA Cup, la Ligue des champions, la Libertadores ... -- et pour les coupes continentales que le monde construit (CAF Champions League, Coupe de la Confédération, AFC Champions League Two, Copa Sudamericana, Supercoupe de la CAF). Toutes les phases de la compétition prennent le nom. Vide : celui du jeu. Les ligues du jeu se renomment dans *Game's leagues and clubs*.
 
@@ -451,6 +482,11 @@ plusieurs), plus *Free agents*, chacune de moins de 10 Mo. Ne téléchargez que 
   à ses dernières places, avec leur nom, écusson, maillots et joueurs. Celui qui joue aussi une
   compétition du jeu (Bâle et Young Boys jouent la Ligue Europa) a besoin du club qui prend sa
   place là-bas : *Nouveaux clubs*, choisissez-le, **Club du jeu**. Jusque-là, Build dit lesquels.
+- Un joueur que le jeu a déjà (le même joueur sous le même nom, par exemple Urbański au Górnik
+  dans le jeu et au Legia dans NewLife) passe au club NewLife au lieu d'être créé une deuxième fois
+  (0.1.7) : il garde son visage, son nom et son ID et prend le poste et les notes de NewLife. Il
+  reste où il est si son ancien club passait sous 18 joueurs ; NewLife fait alors sa propre copie,
+  comme avant.
 - Les clubs NewLife gardent leur ID NewLife dans le jeu (98304 et plus), donc tous les paquets de
   ligues faits avec la base donnent à un club le même ID.
 - Un club NewLife reçoit un écusson en forme de blason à ses couleurs et le maillot du jeu aux
@@ -465,8 +501,10 @@ partage **un seul fichier `.fl26pack`**. N'importe qui l'ajoute à sa propre rec
 ligues) :
 
 1. Nom, auteur, version et une courte description.
-2. Cochez les ligues à inclure. Une ligue placée sous une autre nouvelle ligue doit
-   l'accompagner.
+2. Cochez les ligues à inclure (**Tout cocher** / **Tout décocher** au-dessus de la liste). Une
+   ligue placée sous une autre nouvelle ligue doit l'accompagner.
+   Un paquet que la recette a déjà (le même nom) est remplacé par la nouvelle version (0.1.7) :
+   les ligues, clubs et changements de joueurs de l'ancien sortent, ceux du nouveau entrent.
 3. Si vous le voulez, **aussi mes modifications des ligues, clubs et joueurs du jeu**.
 4. Enregistrez. Le fichier contient les images et les visages, pas des chemins de votre
    ordinateur.

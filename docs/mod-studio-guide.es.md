@@ -49,6 +49,9 @@ marca de **Ayuda → Buscar actualizaciones al iniciar** y el programa solo preg
 el programa está en una carpeta donde Windows no le deja escribir (como Program Files), abre en su
 lugar la página de la versión: descomprime tú el zip, o mueve el programa a una carpeta tuya.
 
+**Créditos.** El botón **Créditos**, junto a **Ayuda**, nombra a todos los que ayudaron a hacer
+Mod Studio: los testers, quienes mandaron reportes y logs, y aquellos cuyas ideas están dentro.
+
 **¿Más de una carpeta de Sider?** Sider no tiene por qué llamarse `SiderAddons`. El programa
 busca la carpeta junto a `FL_2026.exe` que contiene un `sider.ini`; si hay varias, **Ajustes →
 Carpeta de Sider** elige con cuál trabaja.
@@ -166,6 +169,32 @@ su archivo de logo.
 **Copas de los países del juego** (botón en la misma página): una copa de la liga -- la Carabao Cup, por ejemplo -- para ligas del juego. Marca **Copa de la liga** junto a una liga: 16 clubes de ella y de la de abajo, por posición (los que pasan de 16, por una ronda previa a principios de septiembre, 0.1.7), un partido por ronda de finales de septiembre a diciembre, en días que el calendario de ligas y copas del juego deja libres. **Supercopa**, el campeón contra el ganador de la copa a finales de julio, solo donde el juego no tiene (Brasil, Chile, Escocia, Grecia, EE. UU.); una carrera nueva aún no tiene ganador de copa, así que la primera se juega el segundo verano. Nombre vacío: el nombre de la liga y *League Cup* / *Super Cup*.
 
 **Plazas europeas de las ligas del juego** (botón en la misma página): qué puestos de la Premier League, LaLiga, la Serie A ... van a qué competición europea. La lista muestra las plazas del juego; marca **Plazas propias para esta liga** para cambiarlas. Una liga sin marcar mantiene las del juego, una liga marcada sin filas no manda a nadie.
+
+**Ranking UEFA** (misma página, 0.1.7): todas las ligas europeas del mundo -- las del juego y tus
+primeras divisiones nuevas -- en una lista, el país más fuerte primero. Arrastra una liga (o
+**Subir** / **Bajar**) para cambiar el orden, desmárcala para que no tenga plaza europea, y
+**Orden de la UEFA** devuelve la lista al ranking de asociaciones de la UEFA para 2026-27. A la
+derecha se ve lo que recibe cada liga, y **OK** lo escribe: las plazas de la clave de la UEFA para
+2024-27 -- el puesto 1 tiene cinco plazas de Champions League, el 6 dos y una de play-off, el 30 una
+en la segunda ronda previa de la Champions League, etcétera, incluida la plaza del campeón de copa
+en la Europa League. Un mundo nunca tiene los 55 países de la UEFA, así que las plazas de los
+puestos que faltan van por turnos a los siguientes clubes de las ligas más fuertes, una ronda cada
+vez, y todas las competiciones siguen llenas: con doce ligas, el 6.º, 7.º y 8.º de Inglaterra van a
+la fase previa de la Champions League, por ejemplo. Después de la liga 30 no queda ninguna plaza, y
+la lista lo dice. Las plazas de fase previa van a las rondas en el orden de la clave, el país más
+fuerte a la ronda más cercana a la fase de liga. Después aún puedes cambiar a mano las plazas de
+cualquier liga (*Europa* en la liga, *Plazas europeas de las ligas del juego*): Construir usa las
+plazas, no el ranking.
+
+**Plazas sudamericanas** (misma página, 0.1.7, solo lectura): para cada liga sudamericana, las
+cuatro del juego y las tuyas, qué puestos van a la Copa Libertadores, a su fase previa y a la Copa
+Sudamericana. Las plazas de Libertadores de las ligas del juego son las del juego (Brasil 1.º-4.º y
+el campeón de la Copa do Brasil, fase previa 5.º-6.º, etcétera -- lo mismo que muestra el
+Competition Info del juego); la Copa Sudamericana es de Mod Studio, así que la lista muestra
+cuántos clubes manda a ella cada liga del juego con tus plazas dentro: primero tus ligas, luego
+Brasil, Argentina, Chile y Colombia, un club cada una por turnos hasta llegar a 32. Un club que ya
+está en la Libertadores o en su fase previa deja su sitio al siguiente de su liga. **Comprobar el
+plan** escribe la misma lista siempre que el mundo tiene una plaza de Libertadores o Sudamericana.
 
 **Nombres de las competiciones** (botón en la misma página): un nombre y un logo nuevos para las copas, supercopas y competiciones continentales del juego -- la FA Cup, la Champions League, la Libertadores ... -- y para las copas continentales que construye el mundo (CAF Champions League, Copa Confederación, AFC Champions League Two, Copa Sudamericana, Supercopa CAF). Todas las fases de la competición reciben el nombre. Vacío: el del juego. Las ligas del juego se renombran en *Game's leagues and clubs*.
 
@@ -435,6 +464,11 @@ de 10 MB. Descarga solo las partes que quieras.
   una competición del juego (el Basilea y el Young Boys juegan la Europa League) necesita el club
   que ocupa su lugar allí: *Clubes nuevos*, elígelo, **Club del juego**. Hasta entonces Build
   dice cuáles son.
+- Un jugador que el juego ya tiene (el mismo jugador con el mismo nombre, por ejemplo Urbański en
+  el Górnik en el juego y en el Legia en NewLife) se va al club NewLife en vez de crearse por
+  segunda vez (0.1.7): conserva su cara, nombre e ID y toma la posición y las valoraciones de
+  NewLife. Se queda donde está si su club antiguo bajara de 18 jugadores; entonces NewLife hace su
+  propia copia, como antes.
 - Los clubes NewLife conservan su ID NewLife en el juego (98304 en adelante), así que todos los
   paquetes de ligas hechos con la base le dan a un club el mismo ID.
 - Un club NewLife recibe un escudo en forma de blasón con sus colores y la equipación del juego
@@ -449,7 +483,10 @@ Un modder crea una liga una vez — clubes, nombres, escudos, logos, plantillas,
 ligas):
 
 1. Nombre, autor, versión y una descripción corta.
-2. Marca las ligas que van dentro. Una liga que está debajo de otra liga nueva debe ir con ella.
+2. Marca las ligas que van dentro (**Seleccionar todo** / **No seleccionar ninguno** encima de
+   la lista). Una liga que está debajo de otra liga nueva debe ir con ella.
+   Un paquete que la receta ya tiene (el mismo nombre) se sustituye por la versión nueva (0.1.7):
+   salen las ligas, clubes y cambios de jugadores del viejo y entran los del nuevo.
 3. Si quieres, **también mis cambios en las ligas, clubes y jugadores del propio juego**.
 4. Guarda. El archivo lleva las imágenes y las caras, no rutas de tu ordenador.
 
