@@ -117,6 +117,14 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
 - `game_cups` in the recipe: fl26swiss home cups (`ccup`) for the game's own top divisions,
   the same as a new country's league cup and super cup; codes `FL_G<reg>_LCUP` and
   `FL_G<reg>_SCUP`.
+- League cup pre-round (0.1.7): the clubs past 16, 8 or 4 (`leaguebuilder.cup_field`, at most
+  eight ties) play a two-legged pre-round on days 246/249 -- a copy of reg 2 under a free id
+  (`mkeuropo.prerounds`, master + 8 tie rows, the cup's competition id), written before
+  mkccup so the cup's `<tie>:0` entries resolve. World file: `lpre <reg> cup=<ko> fill=226
+  days=246,249 entry=...`, tie k = entries 2k (home first) and 2k+1. fl26swiss fills it like an
+  August round (`lpre_fill`), dates it from reg 2's records, tears it down in July; the cup
+  (fill=253) takes each tie's winner (`lpre_winner`, the better placed club when unplayed) and
+  skips the pre-round's clubs for its direct places.
 - Libertadores qualifying (4) places of new leagues: the round (regulation 8) is set on day 0
   with shipped clubs only, none of them from the pool slot 73 that the other places replace. So
   fl26swiss.c `cont_standins` gives each of our places the place of a shipped club: the last

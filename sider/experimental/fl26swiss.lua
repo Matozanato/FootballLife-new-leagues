@@ -127,14 +127,25 @@ end
 -- options a league cup or a pre-season cup adds: fill=<day> national=1 days=<d>,<d>,...
 -- clubs=<team id>,... (c.opts, fl26_swiss_ccup_opts). Sixth: the qualifying rounds in front of
 -- the August play-offs, { competition, round, regulation } from `qround <competition> <round>
--- <regulation>` (10 / 11 / 12, round 3 or 2; fl26_swiss_qrounds).
+-- <regulation>` (10 / 11 / 12, round 3 or 2; fl26_swiss_qrounds). Seventh: the league cups'
+-- pre-rounds, { reg, cup knockout, fill day, {day, day}, {{reg, position}...} } from
+-- `lpre <reg> cup=<ko> fill=<day> days=<d>,<d> entry=<reg>:<position>,...` (fl26_swiss_lpre).
 local function read_world(ctx)
   local sep = string.char(92)
   local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
   local f = io.open(path, "r")
   if not f then return nil end
-  local leagues, splits, uefa, ccups, dlike, qrounds = {}, {}, {}, {}, {}, {}
+  local leagues, splits, uefa, ccups, dlike, qrounds, lpres = {}, {}, {}, {}, {}, {}, {}
   for line in f:lines() do
+    local lr, lrest = line:match("^%s*lpre%s+(%d+)(.*)$")
+    if lr then
+      local L = { tonumber(lr), tonumber(lrest:match("cup=(%d+)") or 0), tonumber(lrest:match("fill=(%d+)") or 0), {}, {} }
+      for d in (lrest:match("days=([%d,]+)") or ""):gmatch("%d+") do L[4][#L[4] + 1] = tonumber(d) end
+      for er, ep in (lrest:match("entry=([%d:,]+)") or ""):gmatch("(%d+):(%d+)") do
+        L[5][#L[5] + 1] = { tonumber(er), tonumber(ep) }
+      end
+      if L[2] > 0 and #L[4] == 2 and #L[5] >= 2 then lpres[#lpres + 1] = L end
+    end
     local qc, qn, qr = line:match("^%s*qround%s+(%d+)%s+(%d+)%s+(%d+)")
     if qc then qrounds[#qrounds + 1] = { tonumber(qc), tonumber(qn), tonumber(qr) } end
     -- `dates <our cup> like=<shipped cup>`: a national cup or super cup of a new country is
@@ -179,7 +190,7 @@ local function read_world(ctx)
     end
   end
   f:close()
-  return leagues, splits, uefa, ccups, dlike, qrounds
+  return leagues, splits, uefa, ccups, dlike, qrounds, lpres
 end
 
 -- `season <region> <type>` lines of the world file: { [region] = type }, 0 August-May, 1
@@ -267,7 +278,7 @@ function m.init(ctx)
       ffi.cast("fl26_swiss_uecl_t", pu)(ubuf, #UECL)
     end
     -- the leagues whose calendar follows their own size: the world file's, when there is one
-    local world, splits, uefa, ccups, dlike, qrounds = read_world(ctx)
+    local world, splits, uefa, ccups, dlike, qrounds, lpres = read_world(ctx)
     if world then
       if #qrounds > 0 then
         local pq = ffi.C.GetProcAddress(h, "fl26_swiss_qrounds")
@@ -340,6 +351,24 @@ function m.init(ctx)
               end
               local m = tonumber(ffi.cast("fl26_swiss_first_t", po)(obuf, nopt))
               log(string.format("fl26swiss: world file -- options for %d cup(s), %d matched", nopt, m))
+            end
+          end
+          -- the league cups' pre-rounds, after the cups their winners go on to
+          if lpres and #lpres > 0 then
+            local pl = ffi.C.GetProcAddress(h, "fl26_swiss_lpre")
+            if pl == nil then
+              log("fl26swiss: this fl26swiss.dll plays no league cup pre-rounds (fl26_swiss_lpre); those league cups will not start")
+            else
+              local llen = 0
+              for _, L in ipairs(lpres) do llen = llen + 6 + 2 * #L[5] end
+              local lbuf, q = ffi.new("uint16_t[?]", llen), 0
+              for _, L in ipairs(lpres) do
+                lbuf[q], lbuf[q + 1], lbuf[q + 2], lbuf[q + 3], lbuf[q + 4], lbuf[q + 5] = L[1], L[2], L[3], L[4][1], L[4][2], #L[5]
+                q = q + 6
+                for _, e in ipairs(L[5]) do lbuf[q], lbuf[q + 1] = e[1], e[2]; q = q + 2 end
+              end
+              local m = tonumber(ffi.cast("fl26_swiss_access_t", pl)(lbuf, #lpres))
+              log(string.format("fl26swiss: world file -- %d league cup pre-round(s), %d taken", #lpres, m))
             end
           end
         end

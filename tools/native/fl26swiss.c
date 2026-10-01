@@ -2627,6 +2627,209 @@ __declspec(dllexport) int fl26_swiss_ccup_opts(const uint32_t* v, int n)
   return got;
 }
 
+/* ---- the league cups' pre-rounds ----
+ *
+ * A league cup takes the biggest of 16, 8 or 4 clubs its leagues have, and the clubs past it
+ * play a pre-round first (GitHub #70: a league of 20 left four of them out). tools/leaguebuilder.py
+ * makes the pre-round a copy of reg 2 -- a master and eight tie rows at reg + 1024 * (k + 1),
+ * two legs -- and names it in the world file:
+ *
+ *   lpre <reg> cup=<knockout> fill=<day> days=<d1>,<d2> entry=<reg>:<position>,...
+ *
+ * Tie k is entries 2k (at home first) and 2k + 1 (the better placed); its winner is the cup's
+ * entry <tie id>:0. The game knows nothing of the id, so it is run the way an August qualifying
+ * round is (q_fill): from the fill day to the eve of the first leg the clubs are taken from the
+ * league tables (cwc_club, as the cup's own are), set on the ties and the master, the master
+ * started and handed to register_all; the dates are reg 2's records moved to d1 and d2; the
+ * July teardown closes it. A tie whose winner cannot be read (never played) sends the better
+ * placed club. The cup, filled after it, leaves out the clubs the pre-round has: the tables can
+ * have moved between the two fill days. */
+#define MAX_LPRE 16
+#define LPRE_TIES 8
+typedef struct { uint16_t reg, ko, fill, ties; uint16_t days[2]; uint16_t ereg[2 * LPRE_TIES];
+                 uint8_t erank[2 * LPRE_TIES]; int filled_year; uint32_t club[2 * LPRE_TIES]; unsigned nclub; } lpre_t;
+static lpre_t g_lpre[MAX_LPRE]; static int g_nlpre = 0;
+static int season_ord(int d);
+static uint16_t lpre_tie(const lpre_t* l, int k) { return (uint16_t)(l->reg + 1024 * (k + 1)); }
+/* which pre-round a regulation belongs to (0-based; *tie -1 for the master), -1 none */
+static int lpre_of(uint16_t id, int* tie)
+{
+  for (int i = 0; i < g_nlpre; i++) {
+    if (id == g_lpre[i].reg) { *tie = -1; return i; }
+    if (id > 1024 && (id & 0x3ff) == g_lpre[i].reg && (id >> 10) <= LPRE_TIES) { *tie = (id >> 10) - 1; return i; }
+  }
+  return -1;
+}
+static int lpre_world(const lpre_t* l) { return get_rec(l->reg) && get_rec(lpre_tie(l, LPRE_TIES - 1)); }
+static int lpre_year(void) { return (abs_day() + 183) / 365; }          /* the season, as ccup_fill_days */
+/* match records under the master and its ties; -1 when the match table cannot be read */
+static int lpre_matches(const lpre_t* l)
+{
+  int m = ccup_matches(l->reg);
+  if (m < 0) return -1;
+  for (int k = 0; k < LPRE_TIES; k++) { int x = ccup_matches(lpre_tie(l, k)); if (x > 0) m += x; }
+  return m;
+}
+
+__declspec(dllexport) int fl26_swiss_lpre(const uint16_t* v, int n)
+{
+  /* per pre-round: reg, the cup's knockout, fill day, the two legs' days, entries, then
+     (reg, position) per entry. Called after fl26_swiss_ccup: the cup must be in its list. */
+  if ((!v && n) || n < 0) return -1;
+  g_nlpre = 0;
+  size_t p = 0;
+  for (int i = 0; i < n; i++) {
+    uint16_t reg = v[p], ko = v[p + 1], fill = v[p + 2], d1 = v[p + 3], d2 = v[p + 4];
+    unsigned ne = v[p + 5];
+    const uint16_t* e = v + p + 6;
+    p += 6 + 2 * (size_t)ne;
+    int k = -1;
+    for (int j = 0; j < g_nccup; j++) if (g_ccup[j].ko == ko && !g_ccup[j].groups) k = j;
+    if (g_nlpre >= MAX_LPRE || k < 0 || ne < 2 || ne > 2 * LPRE_TIES || ne % 2 || reg <= 2 || reg > 1023
+        || !fill || fill > 365 || !d1 || d1 > 365 || !d2 || d2 > 365) {
+      logf("fl26swiss: pre-round %u of cup %u (%u entries) -- not one this module can run; left out",
+           (unsigned)reg, (unsigned)ko, ne);
+      continue;
+    }
+    lpre_t* l = &g_lpre[g_nlpre++];
+    memset(l, 0, sizeof *l);
+    l->reg = reg; l->ko = ko; l->fill = fill; l->days[0] = d1; l->days[1] = d2;
+    l->ties = (uint16_t)(ne / 2); l->filled_year = -1;
+    for (unsigned j = 0; j < ne; j++) { l->ereg[j] = e[2 * j]; l->erank[j] = (uint8_t)e[2 * j + 1]; }
+    int fed = 0;
+    for (unsigned j = 0; j < g_ccup[k].n; j++) {
+      int t;
+      if (!g_ccup[k].erank[j] && lpre_of(g_ccup[k].ereg[j], &t) == g_nlpre - 1 && t >= 0 && t < l->ties) fed++;
+    }
+    logf("fl26swiss: pre-round %u from the world file: %u tie(s) for cup %u (%d of its places), filled from day %u, "
+         "played on days %u and %u", (unsigned)reg, (unsigned)l->ties, (unsigned)ko, fed, (unsigned)fill,
+         (unsigned)d1, (unsigned)d2);
+  }
+  return g_nlpre;
+}
+
+/* the clubs pre-round l has this season: the ones it was filled with in this session, else the
+   ones its ties hold once this season's matches are there (a save loaded after the fill) */
+static unsigned lpre_clubs(const lpre_t* l, uint32_t* out)
+{
+  if (l->filled_year == lpre_year() && l->nclub == 2u * l->ties) {
+    memcpy(out, l->club, l->nclub * sizeof(uint32_t));
+    return l->nclub;
+  }
+  if (lpre_matches(l) <= 0) return 0;
+  unsigned n = 0;
+  for (int k = 0; k < l->ties; k++) {
+    unsigned char* t = get_rec(lpre_tie(l, k));
+    if (!t || rec_count(t) != 2) return 0;
+    out[n++] = rec_clubs(t)[0]; out[n++] = rec_clubs(t)[1];
+  }
+  return n;
+}
+/* a club that plays the pre-round in front of cup ko this season */
+static int lpre_has(uint16_t ko, uint32_t c)
+{
+  for (int i = 0; i < g_nlpre; i++) {
+    if (g_lpre[i].ko != ko) continue;
+    uint32_t cl[2 * LPRE_TIES];
+    unsigned n = lpre_clubs(&g_lpre[i], cl);
+    if (has_club(cl, n, c)) return 1;
+  }
+  return 0;
+}
+/* who goes on from pre-round tie id: the winner the game reads, else (not played, or no
+   winner read) the better placed club, the tie's second; 0 when id is not a tie of ours */
+static uint32_t lpre_winner(uint16_t id, const char** how)
+{
+  int k, i = lpre_of(id, &k);
+  if (i < 0 || k < 0 || k >= g_lpre[i].ties) return 0;
+  const lpre_t* l = &g_lpre[i];
+  unsigned char* t = get_rec(id);
+  if (lpre_matches(l) > 0 && t && rec_count(t) == 2) {
+    uint32_t a = rec_clubs(t)[0], b = rec_clubs(t)[1], w = 0;
+    ((winner_fn)(uintptr_t)(g_base + WINNER_RVA))(&w, id);
+    if ((w >> 14) && (same_club(w, a) || same_club(w, b))) { *how = "pre-round winner"; return canon_club(same_club(w, a) ? a : b); }
+    *how = "pre-round, no winner read: the better placed";
+    return canon_club(b);
+  }
+  if (l->nclub == 2u * l->ties) { *how = "pre-round not played: the better placed"; return l->club[2 * k + 1]; }
+  *how = "pre-round never filled: the better placed";
+  for (int rank = l->erank[2 * k + 1]; rank >= 1 && rank <= FINAL_MAX; rank++) {
+    const char* h2 = "";
+    uint32_t c = cwc_club(l->ereg[2 * k + 1], rank, &h2);
+    if (!c) break;
+    if (c >> 14) return canon_club(c);
+  }
+  return 0;
+}
+/* on the days from its fill day to the eve of its first leg, once a season: the clubs, the ties,
+   the master started and registered -- q_fill's steps */
+static void lpre_fill(int i)
+{
+  lpre_t* l = &g_lpre[i];
+  int d = today();
+  if (d < 1) return;
+  int s = season_ord(d), f = season_ord(l->fill), last = season_ord(l->days[0]) - 1, year = lpre_year();
+  if (last < f) last = f + 7;
+  if (s < f || s > last || l->filled_year == year) return;
+  l->filled_year = year;
+  l->nclub = 0;
+  if (!lpre_world(l)) { logf("fl26swiss: pre-round %u -- its rows are not all in this world; left alone", (unsigned)l->reg); return; }
+  int m = lpre_matches(l);
+  if (m != 0) {
+    if (m > 0) logf("fl26swiss: pre-round %u already has %d match record(s) this season; not filled again", (unsigned)l->reg, m);
+    return;
+  }
+  unsigned n = 0;
+  for (unsigned j = 0; j < 2u * l->ties; j++) {
+    const char* how = ""; uint32_t club = 0;
+    for (int rank = l->erank[j]; rank >= 1 && rank <= FINAL_MAX; rank++) {
+      club = cwc_club(l->ereg[j], rank, &how);
+      if (!club) break;
+      if ((club >> 14) && !has_club(l->club, n, canon_club(club))) { club = canon_club(club); break; }
+      club = 0;
+    }
+    if (!club) {
+      logf("fl26swiss: pre-round %u -- reg %u position %u has no club to send; not filled", (unsigned)l->reg,
+           (unsigned)l->ereg[j], (unsigned)l->erank[j]);
+      return;
+    }
+    l->club[n++] = club;
+    logf("fl26swiss:   pre-round %u entry %2u: reg %u position %u -> %08x (%s)", (unsigned)l->reg, n,
+         (unsigned)l->ereg[j], (unsigned)l->erank[j], club, how);
+  }
+  for (int k = 0; k < LPRE_TIES; k++)
+    ((freetab_fn)(uintptr_t)(g_base + FREETAB_RVA))(0, lpre_tie(l, k));
+  u32vec va = { l->club, l->club + n, l->club + n };
+  ((setclr_fn)(uintptr_t)g_tramp_setcl)(l->reg, &va, 1);
+  for (int k = 0; k < l->ties; k++) {
+    u32vec v = { l->club + 2 * k, l->club + 2 * k + 2, l->club + 2 * k + 2 };
+    ((setclr_fn)(uintptr_t)g_tramp_setcl)(lpre_tie(l, k), &v, 1);
+  }
+  run_flush();
+  l->nclub = n;
+  start_stage(0, l->reg);
+  uint16_t id = l->reg;
+  struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { &id, &id + 1, &id + 1 };
+  ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
+  run_flush();
+  int mm = ccup_matches(l->reg), mt = 0;
+  for (int k = 0; k < l->ties; k++) { int x = ccup_matches(lpre_tie(l, k)); if (x > 0) mt += x; }
+  if (mm <= 0 && mt <= 0) {                         /* the ties are their own rows: register them too */
+    uint16_t ties[LPRE_TIES];
+    for (int k = 0; k < l->ties; k++) ties[k] = lpre_tie(l, k);
+    struct { uint16_t* b; uint16_t* e; uint16_t* c; } tv = { ties, ties + l->ties, ties + l->ties };
+    ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &tv);
+    run_flush();
+    mm = ccup_matches(l->reg); mt = 0;
+    for (int k = 0; k < l->ties; k++) { int x = ccup_matches(lpre_tie(l, k)); if (x > 0) mt += x; }
+  }
+  unsigned char* t0 = get_rec(lpre_tie(l, 0));
+  logf("fl26swiss: pre-round %u -- day %d: %u tie(s) filled (tie 0 holds %u), started and registered; "
+       "%d match record(s) under it, %d under its ties", (unsigned)l->reg, d, (unsigned)l->ties,
+       t0 ? rec_count(t0) : 0, mm, mt);
+}
+static void lpre_fill_days(void) { for (int i = 0; i < g_nlpre; i++) lpre_fill(i); }
+
 static int ccup_fill_one(int k, void* started)
 {
   const ccup_t* c = &g_ccup[k];
@@ -2654,15 +2857,17 @@ static int ccup_fill_one(int k, void* started)
       continue;
     }
     if (!c->erank[i]) {                            /* a cup's winner: that one club or none */
-      club = cup_winner(c->ereg[i]);
-      how = "cup winner";
+      int tk;
+      if (lpre_of(c->ereg[i], &tk) >= 0) club = lpre_winner(c->ereg[i], &how);
+      else { club = cup_winner(c->ereg[i]); how = "cup winner"; }
       if (club && has_club(g_ccup_field[k], n, club)) club = 0;
       if (!club) logf("fl26swiss:   cup %u entry: reg %u has no winner to send", (unsigned)c->reg, (unsigned)c->ereg[i]);
     } else
     for (int rank = c->erank[i]; rank <= FINAL_MAX; rank++) {
       club = cwc_club(c->ereg[i], rank, &how);
       if (!club) break;
-      if ((club >> 14) && !has_club(g_ccup_field[k], n, club) && (c->national || !ccup_taken(club))) break;
+      if ((club >> 14) && !has_club(g_ccup_field[k], n, club) && (c->national || !ccup_taken(club))
+          && !lpre_has(c->ko, club)) break;
       club = 0;
     }
     if (club) {
@@ -2765,7 +2970,8 @@ static void ccup_keep_winners(void)
   for (int k = 0; k < g_nccup; k++)
     for (unsigned i = 0; i < g_ccup[k].n; i++) {
       uint16_t reg = g_ccup[k].ereg[i];
-      if (g_ccup[k].erank[i]) continue;
+      int tk;
+      if (g_ccup[k].erank[i] || lpre_of(reg, &tk) >= 0) continue;     /* a pre-round's tie: lpre_winner */
       cupwin_t* w = cupwin_of(reg);
       if (w && ad >= w->day && ad - w->day < 60) continue;
       uint32_t c = winner_now(reg);
@@ -3086,6 +3292,7 @@ __declspec(dllexport) void fl26_swiss_ko_tick(void)
   if (!g_base) return;
   int d = today();
   abs_day();                      /* the loader calls this all year: it keeps abs_day() across New Year */
+  lpre_fill_days();
   ccup_fill_days();
   if (d < 60 || d > 150) return;
   static const uint16_t KO_REGS[3] = { 4, 6, UECL_KO };
@@ -3373,7 +3580,8 @@ uint64_t phname_handler(uint64_t reg)
   phrec_fn get = (phrec_fn)(uintptr_t)(g_base + PHREC_RVA);
   if (get(reg & 0xffff, rec)) return *(uint32_t*)(rec + 0x40);
   if ((uintptr_t)__builtin_return_address(0) == g_base + MENU_NAME_RA &&
-      ((uint16_t)reg == CUPS[1].po || (uint16_t)reg == CUPS[2].po || q_added((uint16_t)reg) >= 0) && get(CUPS[0].po, rec))
+      ((uint16_t)reg == CUPS[1].po || (uint16_t)reg == CUPS[2].po || q_added((uint16_t)reg) >= 0
+       || lpre_of((uint16_t)reg, &(int){0}) >= 0) && get(CUPS[0].po, rec))
     return *(uint32_t*)(rec + 0x40);
   return 0xffffffffull;
 }
@@ -3863,6 +4071,23 @@ uint64_t date_handler(uint64_t reg, void* vec)
     int ko, k = ccup_of(id, &ko);
     if (k >= 0 && ccup_world(&g_ccup[k])) return ccup_dates(k, ko, id, reg, vec);
   }
+  if (vec) {
+    /* a league cup's pre-round: reg 2's records (the same tie of it), on the pre-round's days */
+    int tk, li = lpre_of(id, &tk);
+    if (li >= 0) {
+      const lpre_t* l = &g_lpre[li];
+      uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | (uint16_t)((id & ~0x3ff) | 2), vec);
+      vec_t* v = (vec_t*)vec;
+      size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+      date_t* r = (date_t*)v->b;
+      for (size_t i = 0; i < have; i++) r[i].day = l->days[i < 2 ? i : 1];
+      static unsigned char said[MAX_LPRE];
+      if (!said[li]++)
+        logf("fl26swiss: reg %u -- league cup pre-round dated days %u and %u (%u record(s))", (unsigned)id,
+             l->days[0], l->days[1], (unsigned)have);
+      return rv;
+    }
+  }
   if (european(id)) seen_once(1, id, 0);
   if (vec && is_playoff(id)) {
     uint64_t prv = ((date_fn)(uintptr_t)g_tramp_date)(reg, vec);
@@ -4114,6 +4339,7 @@ char daychk_handler(void* ctx)
     last = d;
   }
   apclau_keep();
+  lpre_fill_days();
   ccup_fill_days();
   for (int p = NQR - 1; p >= 0; p--) q_fill(p);
   return r;
@@ -4216,6 +4442,16 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
       if (!there && get_rec(id) && k < 512) { g_td_list[k++] = id; npo++; }
     }
   if (npo) logf("fl26swiss: July teardown -- %d play-off and qualifying regulation(s) added", npo);
+  /* the league cups' pre-rounds: master and ties */
+  int npre = 0;
+  for (int i = 0; i < g_nlpre; i++)
+    for (int g = -1; g < LPRE_TIES; g++) {
+      uint16_t id = g < 0 ? g_lpre[i].reg : lpre_tie(&g_lpre[i], g);
+      int there = 0;
+      for (int j = 0; j < k; j++) if (g_td_list[j] == id) there = 1;
+      if (!there && get_rec(id) && k < 512) { g_td_list[k++] = id; npre++; }
+    }
+  if (npre) logf("fl26swiss: July teardown -- %d league cup pre-round regulation(s) added", npre);
   g_td_vec.b = g_td_list; g_td_vec.e = g_td_list + k; g_td_vec.c = g_td_list + 512;
   logf("fl26swiss: July teardown -- %d ids, Conference League %u/%u/%u added (the list %s 1027, %s 1029)",
        n, UECL_REG, UECL_KO, UECL_ROW, has1027 ? "has" : "does NOT have", has1029 ? "has" : "does NOT have");

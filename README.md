@@ -95,7 +95,7 @@ tell us where. Read [what works and what does not](#status) before you start a l
   Super Cup between their winners (0.1.6). The four the game does not have are built with your
   world. The **game's own leagues** can get their European places changed too (0.1.7).
 - A country's own **national cup** (any size up to 44 clubs, with byes like the FA Cup, 0.1.4)
-  and **super cup**, a **league cup**, and **pre-season cups** of 4 or 8 invited clubs in July,
+  and **super cup**, a **league cup** (the clubs past 16 through a pre-round, 0.1.7), and **pre-season cups** of 4 or 8 invited clubs in July,
   each with your own **logo** (0.1.5.5). A **league cup** for the game's own countries (the
   Carabao Cup), and a super cup where the game has none (Scotland, Greece ...) (0.1.7).
 - **Rename** any cup or continental competition of the game, and the ones the world builds,
@@ -201,7 +201,7 @@ If you use anything from this repository, vmardonesdev's name belongs next to it
 
 ### Alikhaled_727: the reports from outside Europe
 
-**Alikhaled_727** (Evo-Web) builds the leagues nobody else tests (Saudi Arabia, Egypt,
+**Alikhaled_727** (Evo-Web; Mohamed_248 on GitHub) builds the leagues nobody else tests (Saudi Arabia, Egypt,
 Morocco, the rest of Asia and Africa) and writes up every result in long, careful messages
 with screenshots: what the recipe was, which settings the career had, what the table, the
 calendar and the board said, and what happened on the next day. A good part of 0.1.3.1 and
@@ -220,6 +220,9 @@ of 0.1.4 comes straight from those messages:
   the Asian ones;
 - the ideas for moving the game's own clubs into new leagues, the CAF Super Cup, the CAF
   cups in Cup mode and the Club World Cup places for Africa.
+- a league of 20 whose league cup left four clubs out, and a league round played on a cup
+  day: the league cup pre-round and the split-date fix of 0.1.7
+  ([#70](https://github.com/Matozanato/FootballLife-new-leagues/issues/70)).
 
 Asian leagues with their own continental places, and with them the AFC Champions League Two
 in the League Builder, were Alikhaled_727's idea too.

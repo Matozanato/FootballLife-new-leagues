@@ -96,7 +96,7 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
     by `fl26swiss`; the phase tables and playoffs of a new country were put right in 0.1.4
     (see below).
   - **A second domestic cup (a League Cup)**: Mod Studio 0.1.3, a knockout of 16, 8 or 4 clubs
-    from September to December.
+    from September to December; since 0.1.7 the clubs past that play a pre-round first.
   - **Leagues for exhibition only (historic squads)**: Mod Studio 0.1.3. Their clubs still show
     in the team list of a new Master League career (the game has one list for Kick Off and
     Master League); do not pick one, their league never plays a season.

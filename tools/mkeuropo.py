@@ -32,6 +32,10 @@ league builder asks qualifying(pesdb, out, rounds, ids) for the third and second
 it picked (fl26world.pick_rounds), under free ids of its own, and writes them to the world file as
 `qround <competition> <round> <regulation>` lines -- fl26swiss.dll fills, dates and plays them in
 August like 188 and 189.
+
+And a league cup's pre-round (0.1.7): prerounds(pesdb, out, rounds) copies reg 2 under the cup's
+competition id, one tie row per pair of clubs past the cup's 16, 8 or 4 (the master holds
+2 x ties clubs; the other tie rows stay empty); the world file's `lpre` line names it.
 """
 import contextlib, io, os, shutil, sys
 
@@ -143,6 +147,38 @@ def qualifying(base, out, rounds, ids, log=print):
         log("  qualifying rounds: %s" % ", ".join("%d (%s %s)" % (r, ("Champions League", "Europa League",
             "Conference League")[q - 10], "third" if n == 3 else "second") for q, n, r in lines))
     return lines
+
+
+def prerounds(base, out, rounds, log=print):
+    """add the league cups' pre-rounds rounds -- (regulation, competition, cup name, ties 1..8) --
+    to the tables in <base>, each a copy of reg 2 and its eight replicas under that id, the
+    master holding 2 x ties clubs, and write the competition tables to <out> as qualifying()
+    does. The competition need not be in Competition.bin yet: the league builder adds the
+    pre-round first and its cup (mkccup.py) after it, as the cup's entries name the ties."""
+    comp, regs, ents = (M.load(base, n) for n in
+                        ("Competition.bin", "CompetitionRegulation.bin", "CompetitionEntry.bin"))
+    rows = [bytearray(regs[i * M.REG:(i + 1) * M.REG]) for i in range(len(regs) // M.REG)]
+    used = {rid(r) for r in rows}
+    tpl = _template(rows)
+    added = bytearray()
+    for new, cid, name, ties in rounds:
+        if not 1 <= ties <= TIES:
+            raise SystemExit("%s: a pre-round of %d ties -- 1 to %d" % (name, ties, TIES))
+        taken = used & {new + g * STEP for g in range(TIES + 1)}
+        if taken:
+            raise SystemExit("ids %s are taken" % sorted(taken))
+        rows_new = _copy(tpl, new, cid, b"")
+        for i in range(0, len(rows_new), M.REG):
+            for k in range(M.NAME_SLOTS):
+                M.put(rows_new, i + M.R_NAME + k * M.NAME_SLOT, name, M.NAME_SLOT)
+            if rows_new[i + R_GROUP] == 255:
+                rows_new[i + M.R_TEAMS] = (rows_new[i + M.R_TEAMS] & ~0x3f) | 2 * ties
+        added += rows_new
+        used |= {new + g * STEP for g in range(TIES + 1)}
+    with contextlib.redirect_stdout(io.StringIO()):
+        M.write_tables(out, comp, regs + added, ents)
+    log("  league cup pre-rounds: %s" % ", ".join("%d (%s, %d tie%s)" % (r, n, t, "" if t == 1 else "s")
+                                                  for r, _c, n, t in rounds))
 
 
 def build(base, out, log=print, uecl=True):

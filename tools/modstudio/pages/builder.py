@@ -459,7 +459,7 @@ class LeagueDialog(Dialog):
         self.lcup_name.setPlaceholderText(_("(the league's name + League Cup)"))
         self.form.addRow("", row(self.lcup, self.lcup_name))
         self.form.addRow("", hint(_("a knockout of 16, 8 or 4 clubs of this division and the one below, "
-                                    "September to December")))
+                                    "September to December; the clubs past it play a pre-round in early September")))
         self.cup_logo = PictureField(L.get("cup_logo"), 48)
         self.supercup_logo = PictureField(L.get("supercup_logo"), 48)
         self.lcup_logo = PictureField(L.get("league_cup_logo"), 48)
@@ -1249,7 +1249,8 @@ class GameCupsDialog(Dialog):
         self.tops = B.game_tops(project.base)
         have = {int(c["league"]): c for c in project.recipe.get("game_cups") or [] if str(c.get("league")).isdigit()}
         self.v.insertWidget(0, hint(_("A league cup is 16 clubs of the league and the one below it, by position, "
-                                      "one match a round from late September to December. A super cup -- the "
+                                      "one match a round from late September to December; the clubs past 16 play "
+                                      "a pre-round in early September. A super cup -- the "
                                       "champion v the cup winner in late July -- only where the game has none. "
                                       "Empty name = the league's name and League Cup / Super Cup.")))
         self.table = QTableWidget(len(self.tops), 5)
