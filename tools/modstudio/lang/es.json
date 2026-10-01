@@ -1098,6 +1098,20 @@
   [
    "Conference League",
    "Liga Conferencia"
+  ],
+  [
+   "a cup winner's place, but the country has no cup",
+   "una plaza para el campeón de copa, pero el país no tiene copa"
+  ],
+  [
+   "the cup winner goes to a UEFA, Libertadores or AFC competition only",
+   "el campeón de copa solo va a una competición UEFA, la Libertadores o la AFC"
+  ],
+  [
+   "\\bcup winner ",
+   "campeón de copa "
   ]
- ]
+ ],
+ "Cup winner": "Campeón de copa",
+ "The league position, or Cup winner (below 1): the winner of the country's cup. When the winner already has a European place through the league, the place goes to the league's next club.": "La posición en la liga, o Campeón de copa (por debajo de 1): el campeón de la copa del país. Si el campeón ya tiene plaza europea por la liga, la plaza pasa al siguiente club de la liga."
 }

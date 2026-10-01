@@ -1098,6 +1098,20 @@
   [
    "Conference League",
    "Konferencijska liga"
+  ],
+  [
+   "a cup winner's place, but the country has no cup",
+   "mjesto pobjednika kupa, a država nema kup"
+  ],
+  [
+   "the cup winner goes to a UEFA, Libertadores or AFC competition only",
+   "pobjednik kupa ide samo u UEFA natjecanje, Libertadores ili AFC"
+  ],
+  [
+   "\\bcup winner ",
+   "pobjednik kupa "
   ]
- ]
+ ],
+ "Cup winner": "Pobjednik kupa",
+ "The league position, or Cup winner (below 1): the winner of the country's cup. When the winner already has a European place through the league, the place goes to the league's next club.": "Mjesto u ligi, ili Pobjednik kupa (ispod 1): pobjednik kupa te države. Ako pobjednik već ima europsko mjesto kroz ligu, mjesto ide sljedećem klubu lige."
 }

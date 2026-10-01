@@ -216,8 +216,12 @@ class EuropeTable(QWidget):
         r = self.table.rowCount()
         self.table.insertRow(r)
         sp = QSpinBox()
-        sp.setRange(1, max(self.clubs, 1))
-        sp.setValue(min(max(int(pos), 1), max(self.clubs, 1)))
+        sp.setRange(B.CUP_WINNER, max(self.clubs, 1))
+        sp.setSpecialValueText(_("Cup winner"))
+        sp.setToolTip(_("The league position, or Cup winner (below 1): the winner of the country's cup. "
+                        "When the winner already has a European place through the league, the place "
+                        "goes to the league's next club."))
+        sp.setValue(min(max(int(pos), B.CUP_WINNER), max(self.clubs, 1)))
         cb = QComboBox()
         for c, name in fl26world.COMPETITIONS:
             cb.addItem(_(name), c)

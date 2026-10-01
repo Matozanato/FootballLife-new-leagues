@@ -68,7 +68,9 @@ which league sits above -- and nothing about ids:
               3 Libertadores, 4 its qualifying round, 5 AFC Champions League, or one of the cups the game has not got: 6 CAF
               Champions League, 7 CAF Confederation Cup, 8 AFC Champions League Two, 9 Copa
               Sudamericana (fl26world.COMPETITIONS); each position once, and only the league's
-              own (1..clubs). 0..5 and 10..12 are written as uefa lines of the world file, after the shipped
+              own (1..clubs), or 0 (CUP_WINNER) for the winner of the league's national cup
+              ("cup" below; for game_europe the country's cup in the game), its place going down
+              the league when the winner already has one. 0..5 and 10..12 are written as uefa lines of the world file, after the shipped
               leagues' places (fl26world.uefa_places); 6..9 build that cup (see ccup_plan)
   cup         optional, a top division of a new country only: true gives the country a national
               cup (a knockout copied from a shipped one, see NATIONAL_CUPS). The game fills a
@@ -949,7 +951,7 @@ def plan(recipe, base):
         for f in [p["formation"]] + p["club_formations"]:
             if f and formation_club(base, f) is None:
                 raise BuildError("%s: no formation %r (the Formation list has them)" % (name, f))
-        bad = europe_problems(n, L.get("europe") or [])
+        bad = europe_problems(n, L.get("europe") or [], bool(L.get("cup")))
         if bad:
             raise BuildError("%s: European places: %s" % (name, "; ".join(bad)))
         gc = {}
@@ -1287,7 +1289,8 @@ def game_europe(recipe, regrow, region_of_cid, base):
         if rid not in tops or M.get_tier(regrow[rid]) != 1:
             raise BuildError("European places: regulation %d is not a top division of the game" % rid)
         clubs = entries_of(base, regrow[rid][M.R_CID])
-        bad = europe_problems(clubs, europe or [])
+        cup = home_cup(regrow, region_of_cid, region_of_cid.get(regrow[rid][M.R_CID]))
+        bad = europe_problems(clubs, europe or [], cup is not None)
         bad += ["competition %d is a cup of the League Builder's, for new leagues" % int(e[1])
                 for e in europe or [] if str(e[1]).isdigit() and int(e[1]) not in fl26world.UEFA_LINE]
         if bad:
@@ -1295,7 +1298,8 @@ def game_europe(recipe, regrow, region_of_cid, base):
         r = access_reg(rid, regrow, region_of_cid)
         replace.append(r)
         names[str(r)] = tops[rid]
-        places += [(r, int(pos), int(comp), 0) for pos, comp in europe or []]
+        places += [(cup, 0, int(comp), r) if int(pos) == CUP_WINNER else (r, int(pos), int(comp), 0)
+                   for pos, comp in europe or []]
     return places, replace, names
 
 
@@ -1648,18 +1652,30 @@ def ccup_plan(own, clubs=None):
     return cups, notes
 
 
-def europe_problems(clubs, europe):
+CUP_WINNER = 0           # a European place's position 0: the country's cup winner
+
+
+def europe_problems(clubs, europe, cup=True):
     """what is wrong with a league's European places ([[position, competition], ...]): each a
-    position of the league's own, 1..clubs, none twice, and a competition fl26swiss knows"""
+    position of the league's own, 1..clubs, none twice, and a competition fl26swiss knows.
+    Position 0 is the cup winner (CUP_WINNER): only for a league whose country has a cup (cup),
+    and only for a UEFA, Libertadores or AFC place -- fl26swiss gives it to the cup winner, or,
+    when the winner already has a place through the league, to the league's next club"""
     out, seen = [], set()
     comps = {c for c, _n in fl26world.COMPETITIONS}
+    ccups = {c[0] for c in fl26world.CCUPS}
     for e in europe:
         try:
             pos, comp = int(e[0]), int(e[1])
         except (TypeError, ValueError, IndexError):
             out.append("%r is not a position and a competition" % (e,))
             continue
-        if not 1 <= pos <= clubs:
+        if pos == CUP_WINNER:
+            if not cup:
+                out.append("a cup winner's place, but the country has no cup")
+            if comp in ccups:
+                out.append("the cup winner goes to a UEFA, Libertadores or AFC competition only")
+        elif not 1 <= pos <= clubs:
             out.append("position %d -- the league has %d clubs" % (pos, clubs))
         if pos in seen:
             out.append("position %d is listed twice" % pos)
@@ -1670,8 +1686,11 @@ def europe_problems(clubs, europe):
 
 
 def own_places(pl):
-    """(regulation, position, competition, alt) for the new leagues' European places"""
-    return [(p["rid"], pos, comp, 0) for p in pl["leagues"] for pos, comp in p.get("europe") or []]
+    """(regulation, position, competition, alt) for the new leagues' European places; a cup
+    winner's place is (the national cup's regulation, 0, competition, the league) -- the
+    regulation is known once national_cups() has made the cup, 0 before"""
+    return [((p.get("own_cup") or {}).get("reg", 0), 0, comp, p["rid"]) if pos == CUP_WINNER
+            else (p["rid"], pos, comp, 0) for p in pl["leagues"] for pos, comp in p.get("europe") or []]
 
 
 def order_by_parents(leagues):
@@ -1695,6 +1714,10 @@ def order_by_parents(leagues):
     return order
 
 
+def place_name(pos, comp):
+    return "cup winner %s" % comp if pos == CUP_WINNER else "%d. %s" % (pos, comp)
+
+
 def describe(pl):
     e = pl.get("edits") or {}
     lines = ["world %s: %d new leagues, changes to %d of the game's leagues and %d of its clubs"
@@ -1711,9 +1734,9 @@ def describe(pl):
         lines.append("  player changes in %d clubs" % len(squads))
     cnames = dict(fl26world.COMPETITIONS)
     for r in pl.get("game_replace") or []:
-        mine = sorted((e[1], e[2]) for e in pl.get("game_europe") or [] if e[0] == r)
+        mine = sorted((e[1], e[2]) for e in pl.get("game_europe") or [] if e[0] == r or (e[1] == CUP_WINNER and e[3] == r))
         lines.append("  European places of %s (a league of the game): %s" % (
-            (pl.get("game_names") or {}).get(str(r), r), ", ".join("%d. %s" % (pos, cnames.get(c, c)) for pos, c in mine) or "none"))
+            (pl.get("game_names") or {}).get(str(r), r), ", ".join(place_name(pos, cnames.get(c, c)) for pos, c in mine) or "none"))
     for p in pl["leagues"]:
         shape = "%d clubs x%d" % (p["clubs"], p["legs"])
         if p.get("apertura"):
@@ -1731,7 +1754,7 @@ def describe(pl):
         if p.get("europe"):
             names = dict(fl26world.COMPETITIONS)
             lines.append("      European places: %s" % ", ".join(
-                "%d. %s" % (pos, names.get(comp, comp)) for pos, comp in sorted(p["europe"])))
+                place_name(pos, names.get(comp, comp)) for pos, comp in sorted(p["europe"])))
     if pl.get("saudi_august"):
         lines.append("  EXPERIMENTAL: the Saudi Pro League plays August to May (untested in game)")
     if pl["leagues"] and not own_places(pl):

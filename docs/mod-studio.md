@@ -79,7 +79,9 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
 - A split league is one `league` line for the regular phase plus
   `split <total> regular=<id> groups=<id>,<id>`.
 - `uefa <regulation> <position> <competition> <alt>`: one European place per line, in
-  hand-out order. Without any, fl26swiss uses the DLL's own list (shipped leagues only).
+  hand-out order. Position 0 is a cup winner: `<regulation>` is the cup, `<alt>` the league
+  whose next club without a place takes it when the winner already has one (a recipe's
+  `europe` position 0, 0.1.7). Without any, fl26swiss uses the DLL's own list (shipped leagues only).
   Competitions: 0 Champions League, 1 Europa League, 2 Conference League, 3 Libertadores,
   4 Libertadores qualifying, 5 AFC Champions League, and the four cups the game does not have:
   6 CAF Champions League, 7 CAF Confederation Cup, 8 AFC Champions League Two, 9 Copa

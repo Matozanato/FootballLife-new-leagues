@@ -1098,6 +1098,20 @@
   [
    "Conference League",
    "Ligue Europa Conférence"
+  ],
+  [
+   "a cup winner's place, but the country has no cup",
+   "une place pour le vainqueur de la coupe, mais le pays n'a pas de coupe"
+  ],
+  [
+   "the cup winner goes to a UEFA, Libertadores or AFC competition only",
+   "le vainqueur de la coupe ne va qu'en compétition UEFA, Libertadores ou AFC"
+  ],
+  [
+   "\\bcup winner ",
+   "vainqueur de la coupe "
   ]
- ]
+ ],
+ "Cup winner": "Vainqueur de la coupe",
+ "The league position, or Cup winner (below 1): the winner of the country's cup. When the winner already has a European place through the league, the place goes to the league's next club.": "La position en ligue, ou Vainqueur de la coupe (sous 1) : le vainqueur de la coupe du pays. Si le vainqueur a déjà une place européenne par la ligue, la place va au club suivant de la ligue."
 }
