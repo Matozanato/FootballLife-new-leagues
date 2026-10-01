@@ -146,7 +146,7 @@ SHIPPED_ACCESS = sorted(HOLDERS + [(r, n, c, 0) for r, n, c in (
 )], key=lambda e: [c for c, _n in COMPETITIONS].index(e[2]))   # stable: each section's holders stay first
 
 
-def uefa_places(own):
+def uefa_places(own, replace=()):
     """the uefa lines of a world whose own leagues have places: the shipped list and the world's
     places, competition by competition (Champions League first, as fl26swiss hands them out in
     list order), each competition's shipped places before the world's -- except the play-off,
@@ -154,14 +154,17 @@ def uefa_places(own):
     position, competition, alt) tuples. Empty when own is: no lines, and the DLL's list stands.
     Second result: {competition: (places listed, room)} for those past their room (the last get
     nothing; for the play-off, the world's own places and the Champions League places past the
-    28 direct ones, which fl26swiss sends there)."""
+    28 direct ones, which fl26swiss sends there). replace: regulations of the game whose shipped
+    places are dropped -- the world lists its own for them (the recipe's game_europe)."""
     own = [tuple(int(x) for x in e) for e in own]
-    if not own:
+    replace = set(replace)
+    if not own and not replace:
         return [], {}
     out = []
     for c, _n in COMPETITIONS:
         if c in UEFA_LINE:
-            mine, shipped = [e for e in own if e[2] == c], [e for e in SHIPPED_ACCESS if e[2] == c]
+            mine = [e for e in own if e[2] == c]
+            shipped = [e for e in SHIPPED_ACCESS if e[2] == c and e[0] not in replace]
             out += mine + shipped if c == UCLQ else shipped + mine
     # Champions League places past the 28 direct ones go to the play-off (fl26swiss), ahead of
     # its shipped places; only the world's own count against its sixteen

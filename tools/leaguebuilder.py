@@ -118,6 +118,10 @@ which league sits above -- and nothing about ids:
               "uecl_logo" is the Conference League's picture; without one it gets a drawn
               UECL emblem (the game has none for 174, issue #36). "uecl_name" is its name in
               the game; without one, "FL Conference League"
+  game_europe (the recipe, not a league) the European places of leagues of the game, in place of
+              the shipped ones: {"<regulation id of a top division of the game>": [[position,
+              competition], ...]}, competitions as europe above (UEFA and Libertadores ones). An
+              empty list sends the league nobody; a league not named keeps the shipped places
   game_cups   (the recipe, not a league) cups for countries of the game: [{"league": <the
               regulation id of a top division of the game>, "league_cup": true, "super_cup":
               false, "name", "logo", "super_name", "super_logo"}, ...]. A league cup is the one a
@@ -1056,6 +1060,7 @@ def plan(recipe, base):
                             {p["rid"]: p["clubs"] for p in out})
     home = [league_cup(p, out) for p in out if p.get("league_cup")]
     home += game_cups(recipe, regrow, region_of_cid, base, out)
+    ge, gr, gn = game_europe(recipe, regrow, region_of_cid, base)
     home += [c for p in out if p.get("apertura") for c in playoff_cups(p)]
     home += [preseason_cup(c, k, by_name) for k, c in enumerate(recipe.get("preseason_cups") or [])]
     if recipe.get("caf_super_cup", True) and {CAF_CL, CAF_CC} <= {c["number"] for c in cups}:
@@ -1067,6 +1072,7 @@ def plan(recipe, base):
             "players": recipe.get("players") or {}, "uecl": bool(recipe.get("uecl", True)),
             "uecl_logo": recipe.get("uecl_logo") or None,
             "uecl_name": (recipe.get("uecl_name") or "").strip() or None,
+            "game_europe": ge, "game_replace": gr, "game_names": gn,
             "ccups": cups, "ccup_notes": notes, "home_cups": home,
             "saudi_august": bool(recipe.get("saudi_august")),
             "editable_kits": bool(recipe.get("editable_kits"))}
@@ -1173,6 +1179,63 @@ def game_tops(base):
                      for i in range(len(comp) // M.COMP)}
     return [(r, n, bool(home_supercup(regrow, region_of_cid, region_of_cid[c])))
             for r, c, n, _t in game_leagues(base) if M.get_tier(regrow[r]) == 1]
+
+
+def access_reg(rid, regrow, region_of_cid):
+    """the regulation the access list names for top division rid: itself, or for a league the
+    game splits (Scotland, Belgium, Denmark) the phase of the same region the list names"""
+    shipped = {e[0] for e in fl26world.SHIPPED_ACCESS if e[0] < 1024}
+    if rid in shipped:
+        return rid
+    reg = region_of_cid.get(regrow[rid][M.R_CID])
+    return next((r for r in sorted(shipped) if r in regrow
+                 and region_of_cid.get(regrow[r][M.R_CID]) == reg), rid)
+
+
+def game_europe(recipe, regrow, region_of_cid, base):
+    """the recipe's game_europe: (regulation, position, competition, 0) places for leagues of the
+    game, and the regulations whose shipped places they replace"""
+    ge = recipe.get("game_europe") or {}
+    if not ge:
+        return [], [], {}
+    tops = {r: n for r, _c, n, _t in game_leagues(base)}
+    places, replace, names = [], [], {}
+    for key, europe in sorted(ge.items(), key=lambda kv: str(kv[0])):
+        try:
+            rid = int(key)
+        except (TypeError, ValueError):
+            raise BuildError("European places: %r is not a league of the game" % (key,))
+        if rid not in tops or M.get_tier(regrow[rid]) != 1:
+            raise BuildError("European places: regulation %d is not a top division of the game" % rid)
+        clubs = entries_of(base, regrow[rid][M.R_CID])
+        bad = europe_problems(clubs, europe or [])
+        bad += ["competition %d is a cup of the League Builder's, for new leagues" % int(e[1])
+                for e in europe or [] if str(e[1]).isdigit() and int(e[1]) not in fl26world.UEFA_LINE]
+        if bad:
+            raise BuildError("European places of %s: %s" % (tops[rid], "; ".join(bad)))
+        r = access_reg(rid, regrow, region_of_cid)
+        replace.append(r)
+        names[str(r)] = tops[rid]
+        places += [(r, int(pos), int(comp), 0) for pos, comp in europe or []]
+    return places, replace, names
+
+
+def game_europe_tops(base):
+    """[(reg id, name, clubs, [[position, competition], ...] shipped)] of the game's top
+    divisions, for the European places dialog"""
+    comp, regs = M.load(base, "Competition.bin"), M.load(base, "CompetitionRegulation.bin")
+    regrow = {u16(regs[i * M.REG:], M.R_ID): regs[i * M.REG:(i + 1) * M.REG]
+              for i in range(len(regs) // M.REG)}
+    region_of_cid = {comp[i * M.COMP + M.CID_OFF]: M.dec_region(comp[i * M.COMP + M.REGION_OFF])
+                     for i in range(len(comp) // M.COMP)}
+    out = []
+    for r, c, n, _t in game_leagues(base):
+        if M.get_tier(regrow[r]) != 1:
+            continue
+        a = access_reg(r, regrow, region_of_cid)
+        out.append((r, n, entries_of(base, c),
+                    sorted([e[1], e[2]] for e in fl26world.SHIPPED_ACCESS if e[0] == a)))
+    return out
 
 
 def game_cups(recipe, regrow, region_of_cid, base, out):
@@ -1507,6 +1570,11 @@ def describe(pl):
     squads = pl.get("players") or {}
     if squads:
         lines.append("  player changes in %d clubs" % len(squads))
+    cnames = dict(fl26world.COMPETITIONS)
+    for r in pl.get("game_replace") or []:
+        mine = sorted((e[1], e[2]) for e in pl.get("game_europe") or [] if e[0] == r)
+        lines.append("  European places of %s (a league of the game): %s" % (
+            (pl.get("game_names") or {}).get(str(r), r), ", ".join("%d. %s" % (pos, cnames.get(c, c)) for pos, c in mine) or "none"))
     for p in pl["leagues"]:
         shape = "%d clubs x%d" % (p["clubs"], p["legs"])
         if p.get("apertura"):
@@ -1537,7 +1605,8 @@ def describe(pl):
         lines.append("  NOTE: no place in Select Team for %s: they play, but no career can start in them"
                      % ", ".join(unlisted))
     names = dict(fl26world.COMPETITIONS)
-    for c, (n, room) in sorted(fl26world.uefa_places(own_places(pl))[1].items()):
+    for c, (n, room) in sorted(fl26world.uefa_places(own_places(pl) + [tuple(e) for e in pl.get("game_europe") or []],
+                                                     pl.get("game_replace") or [])[1].items()):
         lines.append("  NOTE: %s has %d places listed for %d clubs; the last %d get none"
                      % (names[c], n, room, n - room))
     libq = sum(1 for e in own_places(pl) if e[2] == 4)
@@ -1926,7 +1995,8 @@ def build(pl, base, game, replace=False, log=print):
         up = mine.get(p["above"]) if p["above"] else None
         if up and up.get("own_cup", {}).get("keep_top"):
             L["cup"] = up["own_cup"]["reg"]            # fl26chain keeps the cup to the top league
-    uefa, over = fl26world.uefa_places(own_places(pl))
+    uefa, over = fl26world.uefa_places(own_places(pl) + [tuple(e) for e in pl.get("game_europe") or []],
+                                       pl.get("game_replace") or [])
     names = dict(fl26world.COMPETITIONS)
     for c, (n, room) in sorted(over.items()):
         log("  NOTE: %s has %d places listed for %d clubs; the last %d get none"

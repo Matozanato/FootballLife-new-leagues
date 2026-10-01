@@ -941,7 +941,11 @@
   "Cups of the game's countries": "Coupes des pays du jeu",
   "A league cup (the Carabao Cup) for leagues of the game, and a super cup where the game has none": "Une coupe de la Ligue (la Carabao Cup) pour les ligues du jeu, et une supercoupe là où le jeu n'en a pas",
   "A league cup is 16 clubs of the league and the one below it, by position, one match a round from late September to December. A super cup -- the champion v the cup winner in late July -- only where the game has none. Empty name = the league's name and League Cup / Super Cup.": "Une coupe de la Ligue, ce sont 16 clubs de la ligue et de celle du dessous, selon le classement, un match par tour de fin septembre à décembre. Une supercoupe -- le champion contre le vainqueur de la coupe fin juillet -- seulement là où le jeu n'en a pas. Nom vide = le nom de la ligue et League Cup / Super Cup.",
-  "the game has one": "le jeu en a une"
+  "the game has one": "le jeu en a une",
+  "European places of the game's leagues": "Places européennes des ligues du jeu",
+  "Which positions of the Premier League, LaLiga ... go to which European competition, in place of the game's list": "Quelles places de la Premier League, de la LaLiga ... vont dans quelle compétition européenne, à la place de la liste du jeu",
+  "Tick a league to give it its own places; the others keep the game's. Places past a competition's room go to nobody (the Plan step says so).": "Coche une ligue pour lui donner ses propres places ; les autres gardent celles du jeu. Les places au-delà de la capacité d'une compétition ne vont à personne (l'étape Plan le signale).",
+  "Own places for this league": "Places propres pour cette ligue"
  },
  "log": [
   [

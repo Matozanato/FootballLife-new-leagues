@@ -956,6 +956,77 @@ class PreseasonDialog(Dialog):
         self.accept()
 
 
+class GameEuropeDialog(Dialog):
+    """the recipe's game_europe: the European places of the game's own top divisions, in place of
+    the shipped ones"""
+
+    def __init__(self, parent, project):
+        super().__init__(parent, "European places of the game's leagues")
+        self.tops = B.game_europe_tops(project.base)
+        self.places = {}
+        for k, v in (project.recipe.get("game_europe") or {}).items():
+            if str(k).isdigit():
+                self.places[int(k)] = [list(e) for e in v]
+        self.v.insertWidget(0, hint(_("Tick a league to give it its own places; the others keep the game's. "
+                                      "Places past a competition's room go to nobody (the Plan step says so).")))
+        body = QHBoxLayout()
+        self.list = QListWidget()
+        self.list.setFixedWidth(260)
+        for rid, name, _n, _s in self.tops:
+            self.list.addItem(name)
+        body.addWidget(self.list)
+        right = QVBoxLayout()
+        self.own = QCheckBox(_("Own places for this league"))
+        self.own.toggled.connect(self.toggle)
+        right.addWidget(self.own)
+        self.table = EuropeTable([], 20)
+        self.table.preset.setEnabled(False)
+        right.addWidget(self.table, 1)
+        body.addLayout(right, 1)
+        self.v.insertLayout(1, body, 1)
+        self.scroll.hide()
+        self.cur = -1
+        self.list.currentRowChanged.connect(self.show_league)
+        self.list.setCurrentRow(0)
+        self.setMinimumSize(720, 360)
+
+    def keep(self):
+        if 0 <= self.cur < len(self.tops) and self.own.isChecked():
+            self.places[self.tops[self.cur][0]] = self.table.places()
+
+    def show_league(self, i):
+        self.keep()
+        self.cur = i
+        if not 0 <= i < len(self.tops):
+            return
+        rid, _name, clubs, shipped = self.tops[i]
+        self.table.set_clubs(clubs)
+        mine = rid in self.places
+        self.own.blockSignals(True)
+        self.own.setChecked(mine)
+        self.own.blockSignals(False)
+        self.table.set_places(self.places[rid] if mine else shipped)
+        self.table.setEnabled(mine)
+        self.table.preset.setEnabled(False)
+
+    def toggle(self, on):
+        if not 0 <= self.cur < len(self.tops):
+            return
+        rid, _name, _clubs, shipped = self.tops[self.cur]
+        if on:
+            self.places[rid] = self.table.places()
+        else:
+            self.places.pop(rid, None)
+            self.table.set_places(shipped)
+        self.table.setEnabled(on)
+        self.table.preset.setEnabled(False)
+
+    def ok(self):
+        self.keep()
+        self.result = {str(r): p for r, p in sorted(self.places.items())}
+        self.accept()
+
+
 class GameCupsDialog(Dialog):
     """the recipe's game_cups: a league cup, and a super cup where the game has none, for the
     game's own top divisions (the Carabao Cup for the Premier League)"""
@@ -1066,6 +1137,8 @@ class NewLeagues(BuilderPage):
                     "July, before the season")
         self.action("Cups of the game's countries", self.game_cups, tip="A league cup (the Carabao Cup) for "
                     "leagues of the game, and a super cup where the game has none")
+        self.action("European places of the game's leagues", self.game_europe, tip="Which positions of the "
+                    "Premier League, LaLiga ... go to which European competition, in place of the game's list")
         top = QHBoxLayout()
         top.addWidget(QLabel(_("World name")))
         self.world = QLineEdit()
@@ -1231,6 +1304,17 @@ class NewLeagues(BuilderPage):
                 self.project.recipe["preseason_cups"] = d.cups
             else:
                 self.project.recipe.pop("preseason_cups", None)
+            self.project.touch()
+
+    def game_europe(self):
+        if self.need_tables():
+            return
+        d = GameEuropeDialog(self, self.project)
+        if d.finish():
+            if d.result:
+                self.project.recipe["game_europe"] = d.result
+            else:
+                self.project.recipe.pop("game_europe", None)
             self.project.touch()
 
     def game_cups(self):
@@ -1940,7 +2024,8 @@ class Build(BuilderPage):
             pl = B.plan({"world": name, "leagues": [], "edits": {}, "players": {}, "uecl": uecl,
                          "uecl_logo": self.project.recipe.get("uecl_logo"),
                          "uecl_name": self.project.recipe.get("uecl_name"),
-                         "game_cups": self.project.recipe.get("game_cups") or []}, self.project.base)
+                         "game_cups": self.project.recipe.get("game_cups") or [],
+                         "game_europe": self.project.recipe.get("game_europe") or {}}, self.project.base)
         except B.BuildError as e:
             self.out.clear()
             self.say(_("error: %s") % tr(str(e)))

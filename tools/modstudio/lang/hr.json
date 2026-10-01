@@ -941,7 +941,11 @@
   "Cups of the game's countries": "Kupovi država iz igre",
   "A league cup (the Carabao Cup) for leagues of the game, and a super cup where the game has none": "Ligaški kup (Carabao Cup) za lige iz igre i superkup gdje ga igra nema",
   "A league cup is 16 clubs of the league and the one below it, by position, one match a round from late September to December. A super cup -- the champion v the cup winner in late July -- only where the game has none. Empty name = the league's name and League Cup / Super Cup.": "Ligaški kup je 16 klubova te lige i one ispod nje, po poretku, jedna utakmica po kolu od kraja rujna do prosinca. Superkup -- prvak protiv pobjednika kupa krajem srpnja -- samo gdje ga igra nema. Prazno ime = ime lige i League Cup / Super Cup.",
-  "the game has one": "igra ga ima"
+  "the game has one": "igra ga ima",
+  "European places of the game's leagues": "Europska mjesta liga iz igre",
+  "Which positions of the Premier League, LaLiga ... go to which European competition, in place of the game's list": "Koja mjesta Premier Lige, LaLige ... idu u koje europsko natjecanje, umjesto popisa iz igre",
+  "Tick a league to give it its own places; the others keep the game's. Places past a competition's room go to nobody (the Plan step says so).": "Označi ligu da dobije svoja mjesta; ostale zadržavaju ona iz igre. Mjesta preko kapaciteta natjecanja ne dobiva nitko (korak Plan to javi).",
+  "Own places for this league": "Vlastita mjesta za ovu ligu"
  },
  "log": [
   [
