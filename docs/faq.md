@@ -40,6 +40,16 @@ without it a new league takes the place of one of the game's in the lists and th
 on its clubs. Since 0.1.7 Mod Studio's *Checks* say so. Put back the Steam `FL_2026.exe`
 ([install.md](install.md), step 1) and start the game again.
 
+### "Other European Leagues" or "Other Latin American Teams" is gone from Select Team
+
+Select Team has few free places, and four of them belong to the game's "other clubs" groups
+(Sparta Prague, APOEL ... / Penarol, LDU Quito ...). Up to 0.1.6 a world of 30 or more leagues
+took them (#73). Since 0.1.7 they are the last places a league gets: up to 32 leagues every
+group stays, the 33rd and 34th take the small *Other Clubs (Africa)* and *Other* groups, the
+35th to 37th play without a place in Select Team, and only the 38th and 39th take the two big
+groups. **Check the plan** names each league that takes a place; put the leagues you want to
+start a career in first. After updating, **Build the world** again and start a new career.
+
 ### My new country is at the bottom of the list, not with the others of its continent
 
 Since 0.1.3 a new country is listed among the countries of its continent, by name (Iceland
