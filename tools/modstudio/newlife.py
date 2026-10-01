@@ -10,7 +10,7 @@ anywhere but the recipe the person builds -- and the crests and league logos a r
 carry (crests/<club id>.png, logos/*.png named in newlife.json's league_logos, 1.2 on), which
 are unpacked to %APPDATA%\\FL26ModStudio\\newlife\\<version> for the recipe to point at.
 """
-import csv, glob, io, json, os, zipfile
+import collections, csv, glob, io, json, os, zipfile
 
 import leaguebuilder as B
 import lbplayers as P
@@ -216,7 +216,11 @@ def add_league(recipe, rel, L, legs=2, info=None):
     squad from the release. The whole squad is set: places the release has no player for leave
     the club, down to P.MIN_SQUAD. The league's clubs the game already has take the last places
     as clubs of the game ("game_clubs"): one that plays somewhere in the game still needs the
-    club that takes its place there (New clubs, Club of the game). Returns the new league's name."""
+    club that takes its place there (New clubs, Club of the game). A player the game already
+    has (the release's game_id, under the same name in these tables) moves to the club with a
+    "join" -- a copy would leave him at his old club as well -- unless his club would drop
+    below P.MIN_SQUAD; he keeps his name, face and id and takes the release's other fields.
+    Returns the new league's name."""
     game = game_clubs(L, info)
     if not fits(L, info):
         raise Error("%s has %d clubs; a league takes %d to %d" % (L["name"], len(L["clubs"]) + len(game),
@@ -243,17 +247,46 @@ def add_league(recipe, rel, L, legs=2, info=None):
     if game:
         recipe["leagues"][-1]["game_clubs"] = [{"at": len(clubs) + j, "id": t} for j, t in enumerate(game)]
     pl = recipe.setdefault("players", {})
+    db = P.Squads(info["base"]) if info and info.get("base") else None
+    national = (info or {}).get("national") or set()
+    taken = {str(r) for c in pl.values() for r in c.get("join") or []}   # moved by an earlier league
+    leaving = collections.Counter()
+
+    def mover(r):
+        """the game's id of the player in release row r when he can be moved, else None"""
+        g = str(r.get("game_id", "")).strip()
+        if db is None or not g.isdigit() or g in taken or int(g) not in db.index:
+            return None
+        if not P.same_name(r["name"], db.name(int(g))):
+            return None                       # another database: that id is somebody else
+        old = [t for t in db.clubs_of.get(int(g), []) if t not in national]
+        if old and len(db.by_club[old[0]]) - leaving[old[0]] - 1 < P.MIN_SQUAD:
+            return None
+        if old:
+            leaving[old[0]] += 1
+        taken.add(g)
+        return g
+
     for k, i in enumerate(clubs):
         sq = rel.squad(i)
-        ed = {}
-        for n, r in enumerate(sq):
+        ed, join = {}, []
+        for r in sq:
             ch = {"name": r["name"]}          # no order: Build picks the best eleven
             for f in P.FIELDS:
                 if r.get(f, "") != "":
                     ch[f] = r[f]
-            ed[str(n)] = ch
+            g = mover(r)
+            if g:
+                del ch["name"]                # the game's spelling stays
+                join.append(g)
+                ed[g] = ch
+            else:
+                ed[str(len(ed) - len(join))] = ch
         c = {"edits": ed}
-        if len(sq) < P.SQUAD:
-            c["remove"] = [str(n) for n in range(max(len(sq), P.MIN_SQUAD), P.SQUAD)]
+        if join:
+            c["join"] = join
+        keep = max(len(sq) - len(join), P.MIN_SQUAD - len(join))
+        if keep < P.SQUAD:
+            c["remove"] = [str(n) for n in range(keep, P.SQUAD)]
         pl[P.new_key(name, k)] = c
     return name

@@ -34,6 +34,12 @@ local patches = {
 --[[PATCHES]]
 }
 
+-- Pages outside the exe that some patches above write to (the fixture-date stub lives on
+-- one since 0.1.7: the zero padding at the end of .trace, where it used to be, is where
+-- other people's mods put their hooks too). Reserved before the verify pass, so a page we
+-- could not get shows up there as a mismatch and nothing is written.
+local PAGES = { --[[PAGES]] }
+
 local function unhex(s)
   local out = {}
   for i = 1, #s, 2 do
@@ -51,8 +57,41 @@ local function tohex(s)
   return table.concat(out)
 end
 
+local function reserve(page)
+  if ffi == nil then
+    log("fl26caps: global ffi is nil -- set luajit.ext.enabled = 1 in sider.ini")
+    return false
+  end
+  if not m.cdef then
+    -- a name of our own: another module may already have declared VirtualAlloc, and
+    -- declaring it twice is an error
+    ffi.cdef([[ void* fl26caps_VirtualAlloc(void*, size_t, uint32_t, uint32_t) asm("VirtualAlloc"); ]])
+    m.cdef = true
+  end
+  local function try(kind)
+    local p = ffi.C.fl26caps_VirtualAlloc(ffi.cast("void*", page), 0x1000, kind, 0x40)
+    return p ~= nil and tonumber(ffi.cast("uint64_t", p)) or 0
+  end
+  -- MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE; MEM_COMMIT alone if the page was
+  -- already reserved (fl26cave.lua from an older install does that)
+  local got = try(0x3000)
+  if got ~= page then got = try(0x1000) end
+  if got ~= page then
+    log(string.format("fl26caps: could not get the page at 0x%x (got 0x%x)", page, got))
+    return false
+  end
+  log(string.format("fl26caps: page 0x%x..0x%x ready", page, page + 0x1000))
+  return true
+end
+
 function m.init(ctx)
   local n = #patches
+  for _, page in ipairs(PAGES) do
+    if not reserve(page) then
+      log("fl26caps: ABORTED before verifying. Nothing was written; the game is unmodified.")
+      return
+    end
+  end
   log(string.format("fl26caps: set '%s', %d patches, verifying", "--[[SET]]", n))
 
   -- pass 1: read only. Nothing is written until every single site has been confirmed.

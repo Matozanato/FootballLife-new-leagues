@@ -547,7 +547,7 @@ def game_info(base):
     leagues = game_leagues(base)
     info = {"clubs": game_clubs(base), "national": national, "entries": entries, "squads": squads,
             "league_cids": {c for _r, c, _n, _t in leagues}, "comp_names": names,
-            "league_of": {t: n for _r, _c, n, ts in leagues for t in ts}}
+            "league_of": {t: n for _r, _c, n, ts in leagues for t in ts}, "base": base}
     _GAME_INFO[key] = info
     return info
 

@@ -2764,9 +2764,9 @@ local patches = {
   {va=0x141580377, old="30", new="3e", why="fixture dates: regulation 144 reuses a shipped id (case 48); send it to the stub"},
   {va=0x141580378, old="31", new="3e", why="fixture dates: regulation 145 reuses a shipped id (case 49); send it to the stub"},
   {va=0x141580379, old="32", new="3e", why="fixture dates: regulation 146 reuses a shipped id (case 50); send it to the stub"},
-  {va=0x14252e690, old="0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", new="0fb7c73d000100007352488d0d530000000fb604013cff74430fb7cf8bf883e707488bd34c8d4520a8107507e88f3e05ffeb05e8082a05ff488b0b488b5308483bca73188b0103c73d6d01000072052d6d01000089014883c10cebe34883c4205f5b5dc3ffffffffffffffffffffff01ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff02ffffffffffffffffffff010205ffffffffffffffffffffff05ff02ffffffffffffffffffffffffffffffff0602ff02ff04ff01ffffffffffffffff010101040502ffffffffffff02ffffffffffffffffffffffffffffffff020202ffff05020206ffffffffffffffffffffffffffffffffffffffffffffff0406ff0100ff01ff060400010501060110ffffff02ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", why="fixture dates: the date-spread stub and its table (11:league+1, 49:league+2, 60:league+1, 61:league+2, 62:league+5, 74:league+5, 76:league+2, 93:league+6, 94:league+2, 96:league+2, 98:league+4, 100:league+1, 109:league+1, 110:league+1, 111:league+1, 112:league+4, 113:league+5, 114:league+2, 121:league+2, 138:league+2, 139:league+2, 140:league+2, 143:league+5, 144:league+2, 145:league+2, 146:league+6, 170:league+4, 171:league+6, 173:league+1, 174:league+0, 176:league+1, 178:league+6, 179:league+4, 180:league+0, 181:league+1, 182:league+5, 183:league+1, 184:league+6, 185:league+1, 186:cup+0)"},
-  {va=0x1415802e4, old="3b015801", new="90e65202", why="fixture dates: case 62 (free ids 1..175) goes to the stub"},
-  {va=0x14157f84b, old="0f87ea080000", new="0f873feefa00", why="fixture dates: ids 176..1025 go to the stub instead of the empty return"},
+  {va=0x163000000, old="0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", new="0fb7c73d000100007352488d0d530000000fb604013cff74430fb7cf8bf883e707488bd34c8d4520a8107507e81f2558deeb05e8981058de488b0b488b5308483bca73188b0103c73d6d01000072052d6d01000089014883c10cebe34883c4205f5b5dc3ffffffffffffffffffffff01ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff02ffffffffffffffffffff010205ffffffffffffffffffffff05ff02ffffffffffffffffffffffffffffffff0602ff02ff04ff01ffffffffffffffff010101040502ffffffffffff02ffffffffffffffffffffffffffffffff020202ffff05020206ffffffffffffffffffffffffffffffffffffffffffffff0406ff0100ff01ff060400010501060110ffffff02ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", why="fixture dates: the date-spread stub and its table (11:league+1, 49:league+2, 60:league+1, 61:league+2, 62:league+5, 74:league+5, 76:league+2, 93:league+6, 94:league+2, 96:league+2, 98:league+4, 100:league+1, 109:league+1, 110:league+1, 111:league+1, 112:league+4, 113:league+5, 114:league+2, 121:league+2, 138:league+2, 139:league+2, 140:league+2, 143:league+5, 144:league+2, 145:league+2, 146:league+6, 170:league+4, 171:league+6, 173:league+1, 174:league+0, 176:league+1, 178:league+6, 179:league+4, 180:league+0, 181:league+1, 182:league+5, 183:league+1, 184:league+6, 185:league+1, 186:cup+0)"},
+  {va=0x1415802e4, old="3b015801", new="00000023", why="fixture dates: case 62 (free ids 1..175) goes to the stub"},
+  {va=0x14157f84b, old="0f87ea080000", new="0f87af07a821", why="fixture dates: ids 176..1025 go to the stub instead of the empty return"},
   {va=0x14407f017, old="bcf4ad00", new="70708701", why="impdata teams edit: 0xadf4bc -> 0x1877070 (lea rax, [rdx + 0xadf4bc])"},
   {va=0x1447e90e0, old="9c2ec100", new="3042c801", why="impdata regulations edit-manual: 0xc12e9c -> 0x1c84230 (cmp word ptr [rcx + rdi + 0xc12e9c], r9w)"},
   {va=0x144a52969, old="9c2ec100", new="3042c801", why="impdata regulations edit-manual: 0xc12e9c -> 0x1c84230 (lea rax, [rcx + 0xc12e9c])"},
@@ -2792,6 +2792,12 @@ local patches = {
   {va=0x144b24ab4, old="6861d600", new="84847203", why="impdata fixtures edit: 0xd66168 -> 0x3728484 (mov eax, dword ptr [rax + 0xd66168])"},
 }
 
+-- Pages outside the exe that some patches above write to (the fixture-date stub lives on
+-- one since 0.1.7: the zero padding at the end of .trace, where it used to be, is where
+-- other people's mods put their hooks too). Reserved before the verify pass, so a page we
+-- could not get shows up there as a mismatch and nothing is written.
+local PAGES = { 0x163000000 }
+
 local function unhex(s)
   local out = {}
   for i = 1, #s, 2 do
@@ -2809,8 +2815,41 @@ local function tohex(s)
   return table.concat(out)
 end
 
+local function reserve(page)
+  if ffi == nil then
+    log("fl26caps: global ffi is nil -- set luajit.ext.enabled = 1 in sider.ini")
+    return false
+  end
+  if not m.cdef then
+    -- a name of our own: another module may already have declared VirtualAlloc, and
+    -- declaring it twice is an error
+    ffi.cdef([[ void* fl26caps_VirtualAlloc(void*, size_t, uint32_t, uint32_t) asm("VirtualAlloc"); ]])
+    m.cdef = true
+  end
+  local function try(kind)
+    local p = ffi.C.fl26caps_VirtualAlloc(ffi.cast("void*", page), 0x1000, kind, 0x40)
+    return p ~= nil and tonumber(ffi.cast("uint64_t", p)) or 0
+  end
+  -- MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE; MEM_COMMIT alone if the page was
+  -- already reserved (fl26cave.lua from an older install does that)
+  local got = try(0x3000)
+  if got ~= page then got = try(0x1000) end
+  if got ~= page then
+    log(string.format("fl26caps: could not get the page at 0x%x (got 0x%x)", page, got))
+    return false
+  end
+  log(string.format("fl26caps: page 0x%x..0x%x ready", page, page + 0x1000))
+  return true
+end
+
 function m.init(ctx)
   local n = #patches
+  for _, page in ipairs(PAGES) do
+    if not reserve(page) then
+      log("fl26caps: ABORTED before verifying. Nothing was written; the game is unmodified.")
+      return
+    end
+  end
   log(string.format("fl26caps: set '%s', %d patches, verifying", "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures", n))
 
   -- pass 1: read only. Nothing is written until every single site has been confirmed.
@@ -2863,7 +2902,7 @@ function m.init(ctx)
   -- in doubt; the check was.
 
   if failed == 0 then
-    log(string.format("fl26caps: applied all %d patches -- %s", written, "block 0x1877068 -> 0x3cd4ae8, 2760 patches"))
+    log(string.format("fl26caps: applied all %d patches -- %s", written, "block 0x1877068 -> 0x3cd4ae8, 2759 patches"))
   else
     log(string.format("fl26caps: PARTIAL: %d written, %d failed. The game is now in an "
                       .. "inconsistent state -- quit and report the addresses above.",

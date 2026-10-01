@@ -27,17 +27,25 @@ below regulation 175"), and above 175 the switch never consults the case table, 
 `ja` is the single point where a cup id can be caught.  Everything else about the season
 is untouched: the same rounds, the same gaps, only on a different day of the week.
 
-The stub lives in the padding at the end of the code section (0x14252e68c..0x14252e800,
-372 bytes of zero); the code is 0x56 bytes and the table 256, hand-assembled below and
-checked with capstone so that the bytes and the listing cannot disagree.
+The stub lives on a page of its own at 0x163000000, which fl26caps.lua reserves with
+VirtualAlloc before its verify pass (the template's PAGES list, filled by patchset.py).
+Until 0.1.7 it sat in the zero padding at the end of the code section (0x14252e690), but
+that padding is part of the section as the file ships it, and other people's Sider mods
+put their own hooks there too (anticheat, awaygoals, injury_mod, attack_mentality write
+around 0x14252e670..0x14252e69f): fl26caps then found their bytes instead of zeros and
+refused the whole set.  The page is 0x23000000 past the image, close enough for every
+rel32 in and out of the stub.  The code is 0x64 bytes and the table 256, hand-assembled
+below and checked with capstone so that the bytes and the listing cannot disagree.
 
     python datecave.py                 print the listing for id 11 -> league +2 and
                                        id 186 -> cup
 """
 import struct, sys
 
-CAVE = 0x14252e690                   # 16-aligned, inside the section's tail padding
-CAVE_END = 0x14252e800
+CAVE = 0x163000000                   # a page of our own, reserved by fl26caps.lua
+CAVE_END = CAVE + 0x1000
+OLD_CAVE = 0x14252e690               # where the stub lived until 0.1.7 (.trace padding)
+IMAGE_END = 0x150000000              # past every section of the exe
 CASE5 = 0x141582550                  # the big-league calendar, called as a function
 CASE38 = 0x1415810d0                 # the 16-team domestic cup, same signature, 10 rounds
 SWITCH_TABLE = 0x1415801ec           # dword per case, RVA of the case's entry
@@ -152,7 +160,10 @@ def listing(code, code_len):
 def patches(offsets, exe_bytes, off_of):
     """the three patches: the stub, the switch dword for case 62, the `ja` for ids > 175"""
     code, _ = build(offsets)
-    old = exe_bytes[off_of(CAVE):off_of(CAVE) + len(code)]
+    if CAVE >= IMAGE_END:
+        old = bytes(len(code))               # a fresh VirtualAlloc page reads as zeros
+    else:
+        old = exe_bytes[off_of(CAVE):off_of(CAVE) + len(code)]
     if any(old):
         raise SystemExit("the code cave at 0x%x is not empty in this exe" % CAVE)
     dw = SWITCH_TABLE + CASE_EMPTY * 4

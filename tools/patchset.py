@@ -1455,8 +1455,13 @@ def main():
         '  {va=0x%s, old="%s", new="%s", why=%s},'
         % (p["va"][2:], p["old"], p["new"], json.dumps(p["why"]))
         for p in patches)
+    # Patches past the image (the date stub's page) need that page to exist before the
+    # verify pass reads it; the template reserves every page listed here first.
+    pages = sorted({int(p["va"], 16) & ~0xfff for p in patches
+                    if int(p["va"], 16) >= datecave.IMAGE_END})
     lua = (tpl.replace("--[[SET]]", which)
               .replace("--[[PATCHES]]", rows)
+              .replace("--[[PAGES]]", ", ".join("0x%x" % pg for pg in pages))
               .replace("--[[SUMMARY]]", "block 0x%x -> 0x%x, %d patches"
                        % (SIZE_OLD, new_size, len(patches))))
     # Two files, deliberately. fl26caps.<set>.lua keeps every set that has been generated,

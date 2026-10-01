@@ -133,6 +133,23 @@ def overall(row):
     return round(sum(vals) / len(vals)) if vals else 0
 
 
+def _letters(s):
+    import unicodedata
+    return "".join(ch for ch in unicodedata.normalize("NFKD", s.casefold()) if ch.isalnum())
+
+
+def same_name(a, b):
+    """the same player's name as two databases write it: whole, or with the first name cut to
+    its initial ("Florian Niederlechner" / "F. Niederlechner"); accents, case, hyphens aside"""
+    if _letters(a) == _letters(b):
+        return True
+    wa, wb = a.replace("-", " ").split(), b.replace("-", " ").split()
+    if len(wa) < 2 or len(wb) < 2:
+        return False
+    return (_letters(wa[0])[:1] == _letters(wb[0])[:1]
+            and _letters("".join(wa[1:])) == _letters("".join(wb[1:])))
+
+
 class Squads:
     """the players of a set of tables (the game's, or a built world's)"""
 
@@ -155,6 +172,10 @@ class Squads:
         for tid, v in self.by_club.items():
             for _order, pid, _shirt, _o in v:
                 self.clubs_of[pid].append(tid)
+
+    def name(self, pid):
+        o = self.index[pid]
+        return E.cstr(self.players[o + E.P_NAME:o + E.P_NAME + E.P_NAME_LEN])
 
     def summary(self):
         """[{player, name, Nationality, Registered Position, Age, rating, clubs}] of every player,
@@ -283,7 +304,8 @@ def check(recipe):
                 continue
             if c.get("add"):
                 err.append("players of %s: a new club cannot take extra players (change them instead)" % club)
-            if len(set(c.get("remove") or [])) > SQUAD - MIN_SQUAD:
+            # a player who joins counts towards the eleven and seven on the bench
+            if len(set(c.get("remove") or [])) - len(set(c.get("join") or [])) > SQUAD - MIN_SQUAD:
                 err.append("players of %s: a new club keeps at least %d players" % (club, MIN_SQUAD))
         if str(c.get("coach_portrait") or "").strip():
             bad = portrait_problem(c["coach_portrait"])
