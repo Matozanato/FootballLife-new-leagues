@@ -980,7 +980,9 @@
   "This is a club of the game: take it out with Club of the game and add it in the other league.": "Ovo je klub iz igre: makni ga preko Klub iz igre i dodaj ga u drugu ligu.",
   "No such club.": "Nema tog kluba.",
   "A league takes %d to %d clubs.": "Liga ima od %d do %d klubova.",
-  "Undo club changes": "Poništi izmjene kluba"
+  "Undo club changes": "Poništi izmjene kluba",
+  "Cup winner": "Pobjednik kupa",
+  "The league position, or Cup winner (below 1): the winner of the country's cup. When the winner already has a European place through the league, the place goes to the league's next club.": "Mjesto u ligi, ili Pobjednik kupa (ispod 1): pobjednik kupa te države. Ako pobjednik već ima europsko mjesto kroz ligu, mjesto ide sljedećem klubu lige."
  },
  "log": [
   [
@@ -1111,7 +1113,5 @@
    "\\bcup winner ",
    "pobjednik kupa "
   ]
- ],
- "Cup winner": "Pobjednik kupa",
- "The league position, or Cup winner (below 1): the winner of the country's cup. When the winner already has a European place through the league, the place goes to the league's next club.": "Mjesto u ligi, ili Pobjednik kupa (ispod 1): pobjednik kupa te države. Ako pobjednik već ima europsko mjesto kroz ligu, mjesto ide sljedećem klubu lige."
+ ]
 }

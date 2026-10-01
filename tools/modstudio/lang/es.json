@@ -980,7 +980,9 @@
   "This is a club of the game: take it out with Club of the game and add it in the other league.": "Es un club del juego: quítalo con Club del juego y añádelo en la otra liga.",
   "No such club.": "No existe ese club.",
   "A league takes %d to %d clubs.": "Una liga tiene de %d a %d clubes.",
-  "Undo club changes": "Deshacer cambios del club"
+  "Undo club changes": "Deshacer cambios del club",
+  "Cup winner": "Campeón de copa",
+  "The league position, or Cup winner (below 1): the winner of the country's cup. When the winner already has a European place through the league, the place goes to the league's next club.": "La posición en la liga, o Campeón de copa (por debajo de 1): el campeón de la copa del país. Si el campeón ya tiene plaza europea por la liga, la plaza pasa al siguiente club de la liga."
  },
  "log": [
   [
@@ -1111,7 +1113,5 @@
    "\\bcup winner ",
    "campeón de copa "
   ]
- ],
- "Cup winner": "Campeón de copa",
- "The league position, or Cup winner (below 1): the winner of the country's cup. When the winner already has a European place through the league, the place goes to the league's next club.": "La posición en la liga, o Campeón de copa (por debajo de 1): el campeón de la copa del país. Si el campeón ya tiene plaza europea por la liga, la plaza pasa al siguiente club de la liga."
+ ]
 }
