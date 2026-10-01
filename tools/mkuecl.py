@@ -65,21 +65,22 @@ def pick(base):
     return out
 
 
-def phases_args(base, out, clubs, cid=CID):
-    return ["--base", base, "--out", out, "--like", "UEFA_EUROPE_LEAGUE", "--name", NAME,
+def phases_args(base, out, clubs, cid=CID, name=None):
+    return ["--base", base, "--out", out, "--like", "UEFA_EUROPE_LEAGUE", "--name", name or NAME,
             "--code", CODE, "--cid", str(cid), "--teams", ",".join(map(str, clubs))]
 
 
-def build(base, out, cid=CID, log=print):
+def build(base, out, cid=CID, log=print, name=None):
     """add the Conference League to the tables in <base> and write them to the world <out>
-    (in place when <base> is <out>'s own pesdb). The Europa League must already have its one
-    league-phase group of 36 (mkreshape.py). Returns the entrants; SystemExit on anything off."""
+    (in place when <base> is <out>'s own pesdb), named <name> (NAME when empty). The Europa League
+    must already have its one league-phase group of 36 (mkreshape.py). Returns the entrants;
+    SystemExit on anything off."""
     import mkphases
     clubs = pick(base)
     if len(clubs) < FIELD:
         raise SystemExit("only %d Conference League entrants found, %d wanted" % (len(clubs), FIELD))
     old, buf = sys.argv, io.StringIO()
-    sys.argv = ["mkphases.py"] + phases_args(base, out, clubs, cid)
+    sys.argv = ["mkphases.py"] + phases_args(base, out, clubs, cid, name)
     try:
         with contextlib.redirect_stdout(buf):
             rc = mkphases.main()
@@ -96,8 +97,8 @@ def build(base, out, cid=CID, log=print):
         raise SystemExit("the Conference League got regulations %s, not %d/%d/%d -- fl26swiss and "
                          "the fixture dates know only those; is the Europa League reshaped "
                          "(one group of 36)?" % (sorted(have), REG, KO, ROW))
-    log("  Conference League: competition %d, regulations %d/%d (group %d), %d entrants"
-        % (cid, REG, KO, ROW, len(clubs)))
+    log("  %s: competition %d, regulations %d/%d (group %d), %d entrants"
+        % (name or NAME, cid, REG, KO, ROW, len(clubs)))
     return clubs
 
 
@@ -113,7 +114,7 @@ def main():
     print("%d entrants" % len(clubs))
     print("local UECL = { %s }" % ", ".join(map(str, clubs)))
     cmd = [sys.executable, os.path.join(HERE, "mkphases.py")] + phases_args(
-        os.path.join(src, PESDB), out, clubs, cid)
+        os.path.join(src, PESDB), out, clubs, cid, get("--name"))
     if "--dry" in a:
         return subprocess.call(cmd + ["--dry"])
     if os.path.exists(out):

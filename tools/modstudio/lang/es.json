@@ -935,7 +935,9 @@
   "CAREFUL: %s has its own database tables, but this world is built from the game's plain ones (Settings). The world carries a copy of the tables and sits above it in sider.ini, so the leagues and clubs of %s would go back to the plain game's. To keep them, point Settings > game tables to its common\\etc\\pesdb folder and build again.": "CUIDADO: %s tiene sus propias tablas de base de datos, pero este mundo se construye con las tablas normales del juego (Ajustes). El mundo lleva una copia de las tablas y está por encima en sider.ini, así que las ligas y los clubes de %s volverían a ser los del juego normal. Para conservarlos, apunta Ajustes > tablas del juego a su carpeta common\\etc\\pesdb y vuelve a construir.",
   "Champions League qualifying": "Champions League (fase previa)",
   "Top flight: 1st UCL play-off, 2nd UEL, 3rd UECL": "Primera división: 1.º fase previa UCL, 2.º UEL, 3.º UECL",
-  "1st to the Champions League play-off (the winner plays the Champions League, the loser the Europa League), 2nd to the Europa League, 3rd to the Conference League": "1.º a la fase previa de la Champions League (el ganador juega la Champions, el perdedor la Europa League), 2.º a la Europa League, 3.º a la Conference League"
+  "1st to the Champions League play-off (the winner plays the Champions League, the loser the Europa League), 2nd to the Europa League, 3rd to the Conference League": "1.º a la fase previa de la Champions League (el ganador juega la Champions, el perdedor la Europa League), 2.º a la Europa League, 3.º a la Conference League",
+  "Conference League name": "Nombre de la Conference League",
+  "empty = %s; a new name needs the world built again": "vacío = %s; un nombre nuevo requiere volver a construir el mundo"
  },
  "log": [
   [

@@ -1719,6 +1719,12 @@ class Build(BuilderPage):
         self.uecl_logo.changed = self.set_uecl_logo
         self.outer.addWidget(row(QLabel(_("Conference League logo")), self.uecl_logo,
                                  hint(_("empty = a UECL emblem drawn for you"))))
+        self.uecl_name = QLineEdit()
+        self.uecl_name.setPlaceholderText(B.mkuecl.NAME)
+        self.uecl_name.setMaxLength(60)
+        self.uecl_name.editingFinished.connect(self.set_uecl_name)
+        self.outer.addWidget(row(QLabel(_("Conference League name")), self.uecl_name,
+                                 hint(_("empty = %s; a new name needs the world built again") % B.mkuecl.NAME)))
         self.cafsc = QCheckBox(_("CAF Super Cup"))
         self.cafsc.setToolTip(_("The winners of the CAF Champions League and the Confederation Cup meet once, "
                                 "in late July. First played in a career's second season, when both cups "
@@ -1771,6 +1777,15 @@ class Build(BuilderPage):
                 self.project.recipe.pop("editable_kits", None)
             self.project.touch()
 
+    def set_uecl_name(self):
+        v = self.uecl_name.text().strip()
+        if v != (self.project.recipe.get("uecl_name") or ""):
+            if v:
+                self.project.recipe["uecl_name"] = v
+            else:
+                self.project.recipe.pop("uecl_name", None)
+            self.project.touch()
+
     def set_uecl_logo(self):
         if self.uecl_logo.path != self.project.recipe.get("uecl_logo"):
             if self.uecl_logo.path:
@@ -1793,6 +1808,7 @@ class Build(BuilderPage):
         self.ekits.blockSignals(False)
         self.uecl_logo.path = self.project.recipe.get("uecl_logo")
         self.uecl_logo.show_it()
+        self.uecl_name.setText(self.project.recipe.get("uecl_name") or "")
         built = os.path.exists(os.path.join(g.livecpk_dir, w)) if g.ok() else False
         missing = B.modules_missing(g.folder) if g.ok() else []
         bits = [_("World %s: %s") % (w, _("built") if built else _("not built yet"))]
@@ -1853,7 +1869,8 @@ class Build(BuilderPage):
             return
         try:
             pl = B.plan({"world": name, "leagues": [], "edits": {}, "players": {}, "uecl": uecl,
-                         "uecl_logo": self.project.recipe.get("uecl_logo")}, self.project.base)
+                         "uecl_logo": self.project.recipe.get("uecl_logo"),
+                         "uecl_name": self.project.recipe.get("uecl_name")}, self.project.base)
         except B.BuildError as e:
             self.out.clear()
             self.say(_("error: %s") % tr(str(e)))

@@ -935,7 +935,9 @@
   "CAREFUL: %s has its own database tables, but this world is built from the game's plain ones (Settings). The world carries a copy of the tables and sits above it in sider.ini, so the leagues and clubs of %s would go back to the plain game's. To keep them, point Settings > game tables to its common\\etc\\pesdb folder and build again.": "OPREZ: %s ima svoje tablice baze, ali ovaj svijet je izgrađen iz običnih tablica igre (Postavke). Svijet nosi kopiju tablica i u sider.ini stoji iznad njega, pa bi se lige i klubovi iz %s vratili na one obične igre. Da ostanu, u Postavke > tablice igre upiši njegovu mapu common\\etc\\pesdb i izgradi ponovno.",
   "Champions League qualifying": "Liga prvaka (kvalifikacije)",
   "Top flight: 1st UCL play-off, 2nd UEL, 3rd UECL": "Prva liga: 1. kvalifikacije LP, 2. EL, 3. UECL",
-  "1st to the Champions League play-off (the winner plays the Champions League, the loser the Europa League), 2nd to the Europa League, 3rd to the Conference League": "1. u kvalifikacije Lige prvaka (pobjednik igra Ligu prvaka, poraženi Europsku ligu), 2. u Europsku ligu, 3. u Konferencijsku ligu"
+  "1st to the Champions League play-off (the winner plays the Champions League, the loser the Europa League), 2nd to the Europa League, 3rd to the Conference League": "1. u kvalifikacije Lige prvaka (pobjednik igra Ligu prvaka, poraženi Europsku ligu), 2. u Europsku ligu, 3. u Konferencijsku ligu",
+  "Conference League name": "Ime Konferencijske lige",
+  "empty = %s; a new name needs the world built again": "prazno = %s; novo ime traži da se svijet ponovno izgradi"
  },
  "log": [
   [

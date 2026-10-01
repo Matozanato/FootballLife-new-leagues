@@ -116,7 +116,8 @@ which league sits above -- and nothing about ids:
               runs regulations 1027/1029 as that league phase in every world, and on the game's
               own groups of four it would put 36 clubs into group A (issue #33).
               "uecl_logo" is the Conference League's picture; without one it gets a drawn
-              UECL emblem (the game has none for 174, issue #36)
+              UECL emblem (the game has none for 174, issue #36). "uecl_name" is its name in
+              the game; without one, "FL Conference League"
   caf_super_cup  (the recipe, not a league) true, the default: a world that builds both the CAF
               Champions League and the Confederation Cup also gets the CAF Super Cup, one match
               of the two winners in late July (CAF_SUPER_DAYS), a two-club knockout whose
@@ -1056,6 +1057,7 @@ def plan(recipe, base):
     return {"world": recipe["world"], "leagues": out, "edits": recipe.get("edits") or {},
             "players": recipe.get("players") or {}, "uecl": bool(recipe.get("uecl", True)),
             "uecl_logo": recipe.get("uecl_logo") or None,
+            "uecl_name": (recipe.get("uecl_name") or "").strip() or None,
             "ccups": cups, "ccup_notes": notes, "home_cups": home,
             "saudi_august": bool(recipe.get("saudi_august")),
             "editable_kits": bool(recipe.get("editable_kits"))}
@@ -1809,7 +1811,7 @@ def build(pl, base, game, replace=False, log=print):
                     raise BuildError("mksplit gave %d no Apertura and Clausura:\n%s" % (cup["league"], said))
                 cup["entry"] = [(ph[cup["phase"]], pos) for _r, pos in cup["entry"]]
 
-    uecl = europe(tmp, db, log, bool(pl.get("uecl")))
+    uecl = europe(tmp, db, log, bool(pl.get("uecl")), pl.get("uecl_name"))
     national_cups(pl, tmp, db, log)
     hc = home_cups(pl, confed)
     ccups = continental((pl.get("ccups") or []) + hc, tmp, db, log)
@@ -1898,7 +1900,7 @@ def is_live(world, game):
         return False
 
 
-def europe(root, db, log=print, uecl=True):
+def europe(root, db, log=print, uecl=True, name=None):
     """the European cups of the world being built (tables in <db>, the world folder <root>): the
     Champions League and Europa League league phase as one group of 36, then (uecl) mkuecl's
     clone of the Europa League, and mkeuropo's play-offs, each in place. Returns the Conference
@@ -1919,7 +1921,7 @@ def europe(root, db, log=print, uecl=True):
             raise BuildError("the league phase reshape did not give group %d 36 clubs:\n%s" % (row, said))
     log("  Champions League and Europa League: league phase of 36 (groups 1027, 1029)")
     try:
-        clubs = mkuecl.build(db, root, log=log) if uecl else []
+        clubs = mkuecl.build(db, root, log=log, name=name) if uecl else []
         mkeuropo.build(db, root, log=log, uecl=uecl)
     except SystemExit as e:
         raise BuildError("%s: %s" % ("Conference League" if uecl else "Europa League play-off", e))
