@@ -67,6 +67,7 @@ local m = {}
 local BASE, STRIDE, NROWS = 0x1434fdf00, 0x108, 165
 local OFF_ID, OFF_SLOT, OFF_PROMOTE, OFF_DEMOTE = 0x00, 0x04, 0x30, 0x34
 local OFF_NAME, OFF_SHORT = 0x38, 0x3c
+local OFF_SPLIT_TEXT, OFF_INFO_TEXT = 0x44, 0x48   -- League Info lines (split format, "eligibility")
 local NO_LABEL = "\255\255\255\255"
 
 -- Every regulation id our world uses (not 186, the FL Champions League, which has no row).
@@ -509,16 +510,24 @@ function m.init(ctx)
   -- were inherited from a shipped competition and still held its label in +0x38, so the list
   -- showed that competition's name instead of ours. 0xffffffff is what the rows we build
   -- ourselves carry, and it is the value the UI treats as "no label of my own".
+  -- The same goes for the two League Info lines (+0x44 split format, +0x48 "You can choose to
+  -- play in any of the South American based leagues." and the like): a new Asian league on a
+  -- South American row showed that text (issue #43). Without a label the line is left out.
   do
-    local cleared = 0
+    local cleared, texts = 0, 0
     for _, id in ipairs(OUR_IDS) do
       local i = byid[id]
       if i then
         if row_u32(rows[i], OFF_NAME) ~= 0xffffffff then cleared = cleared + 1 end
+        if row_u32(rows[i], OFF_SPLIT_TEXT) ~= 0xffffffff or row_u32(rows[i], OFF_INFO_TEXT) ~= 0xffffffff then
+          texts = texts + 1
+        end
         rows[i] = row_set(row_set(rows[i], OFF_NAME, NO_LABEL), OFF_SHORT, NO_LABEL)
+        rows[i] = row_set(row_set(rows[i], OFF_SPLIT_TEXT, NO_LABEL), OFF_INFO_TEXT, NO_LABEL)
       end
     end
-    log(string.format("fl26comptab: name labels cleared on %d rows that had borrowed one", cleared))
+    log(string.format("fl26comptab: name labels cleared on %d rows that had borrowed one, "
+                      .. "League Info text on %d", cleared, texts))
   end
 
   -- 3. promotion/relegation counts
