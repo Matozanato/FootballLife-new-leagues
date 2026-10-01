@@ -17,6 +17,7 @@ import leaguebuilder as B
 import lbplayers
 import lbstadiums
 import fl26world
+import uefakey
 from .. import theme
 from .. import servers as S
 from ..i18n import _, tr
@@ -1240,6 +1241,88 @@ class GameEuropeDialog(Dialog):
         self.accept()
 
 
+class UefaRankDialog(Dialog):
+    """the UEFA key (tools/uefakey.py): the world's European top divisions in order, strongest
+    first, and the places the key gives each; OK writes them into the leagues' European places"""
+
+    def __init__(self, parent, project):
+        super().__init__(parent, "UEFA ranking")
+        self.project = project
+        on, off = uefakey.ranked(project.recipe, project.base)
+        self.v.insertWidget(0, hint(_("Put the countries in order, strongest first (drag, or Up / Down); untick a "
+                                      "league to give it no European place. OK gives every league its places by "
+                                      "UEFA's key, like UEFA's access list for 2024-27: the first 30 get places, "
+                                      "and the places of missing ranks go to the next clubs of the strongest leagues "
+                                      "in turn, so every competition stays full. You can still change any league's "
+                                      "places by hand afterwards.")))
+        body = QHBoxLayout()
+        left = QVBoxLayout()
+        self.list = QListWidget()
+        self.list.setDragDropMode(QAbstractItemView.InternalMove)
+        self.list.setMinimumWidth(300)
+        for c, ticked in [(c, True) for c in on] + [(c, False) for c in off]:
+            it = QListWidgetItem("%s (%s)" % (c["name"], c["country"]))
+            it.setData(Qt.UserRole, c)
+            it.setFlags(it.flags() | Qt.ItemIsUserCheckable)
+            it.setCheckState(Qt.Checked if ticked else Qt.Unchecked)
+            self.list.addItem(it)
+        left.addWidget(self.list, 1)
+        up, down, reset = QPushButton(_("Up")), QPushButton(_("Down")), QPushButton(_("UEFA's order"))
+        up.clicked.connect(lambda: self.move(-1))
+        down.clicked.connect(lambda: self.move(1))
+        reset.setToolTip(_("UEFA's association ranking for 2026-27"))
+        reset.clicked.connect(self.reset)
+        left.addWidget(row(up, down, reset))
+        body.addLayout(left)
+        self.view = QPlainTextEdit()
+        self.view.setReadOnly(True)
+        body.addWidget(self.view, 1)
+        self.v.insertLayout(1, body, 1)
+        self.scroll.hide()
+        self.list.model().rowsMoved.connect(self.refresh)
+        self.list.itemChanged.connect(self.refresh)
+        self.refresh()
+        self.setMinimumSize(900, 520)
+
+    def leagues(self):
+        items = [self.list.item(i) for i in range(self.list.count())]
+        on = [it.data(Qt.UserRole) for it in items if it.checkState() == Qt.Checked]
+        off = [it.data(Qt.UserRole) for it in items if it.checkState() != Qt.Checked]
+        return on, off
+
+    def move(self, d):
+        i = self.list.currentRow()
+        j = i + d
+        if i < 0 or not 0 <= j < self.list.count():
+            return
+        it = self.list.takeItem(i)
+        self.list.insertItem(j, it)
+        self.list.setCurrentRow(j)
+        self.refresh()
+
+    def reset(self):
+        items = [self.list.takeItem(0) for _i in range(self.list.count())]
+        items.sort(key=lambda it: (uefakey.default_rank(it.data(Qt.UserRole)["country"]),
+                                   not it.data(Qt.UserRole)["game"], it.data(Qt.UserRole)["name"]))
+        for it in items:
+            self.list.addItem(it)
+        self.refresh()
+
+    def refresh(self, *_a):
+        on, off = self.leagues()
+        tiers = {}
+        _places, _seed, notes = uefakey.assign(on, tiers)
+        lines = uefakey.table(on, tiers)
+        lines += ["", _("Not ranked, no European place: %s") % ", ".join(c["name"] for c in off)] if off else []
+        lines += [""] + notes if notes else []
+        self.view.setPlainText("\n".join(lines))
+
+    def ok(self):
+        on, off = self.leagues()
+        self.notes = uefakey.apply(self.project.recipe, on, off)
+        self.accept()
+
+
 class GameCupsDialog(Dialog):
     """the recipe's game_cups: a league cup, and a super cup where the game has none, for the
     game's own top divisions (the Carabao Cup for the Premier League)"""
@@ -1353,6 +1436,8 @@ class NewLeagues(BuilderPage):
                     "leagues of the game, and a super cup where the game has none")
         self.action("European places of the game's leagues", self.game_europe, tip="Which positions of the "
                     "Premier League, LaLiga ... go to which European competition, in place of the game's list")
+        self.action("UEFA ranking", self.uefa_rank, tip="Put the European countries in order and every league "
+                    "gets its European places by UEFA's key")
         self.action("Competition names", self.competition_names, tip="New names and logos for the cups and "
                     "continental competitions of the game, and for the continental cups the world builds")
         top = QHBoxLayout()
@@ -1553,6 +1638,16 @@ class NewLeagues(BuilderPage):
             else:
                 self.project.recipe.pop("game_europe", None)
             self.project.touch()
+
+    def uefa_rank(self):
+        if self.need_tables():
+            return
+        d = UefaRankDialog(self, self.project)
+        if d.finish():
+            self.project.touch()
+            self.refresh()
+            self.say(_("UEFA ranking applied: every ranked league has its European places. Check the plan shows "
+                       "them."), "ok")
 
     def game_cups(self):
         if self.need_tables():

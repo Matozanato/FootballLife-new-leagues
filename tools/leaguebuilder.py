@@ -126,6 +126,14 @@ which league sits above -- and nothing about ids:
               the shipped ones: {"<regulation id of a top division of the game>": [[position,
               competition], ...]}, competitions as europe above (UEFA and Libertadores ones). An
               empty list sends the league nobody; a league not named keeps the shipped places
+  uefa_rank   (the recipe, not a league) the UEFA key's ranking (tools/uefakey.py, Mod Studio's
+              UEFA ranking dialog): ["g<regulation of the game>" or a new league's name, ...],
+              strongest first. Applying it writes "europe", "game_europe" and "uefa_seed";
+              Build reads only those, so places changed by hand afterwards stand
+  uefa_seed   (the recipe, not a league) [[league, position, competition], ...] in the order
+              fl26swiss hands the places out (the key's: tier by tier, then by rank), league as in
+              uefa_rank: a competition's qualifying places go to its rounds in list order, the
+              strongest to the round nearest the league phase. Places not in it come after
   game_cups   (the recipe, not a league) cups for countries of the game: [{"league": <the
               regulation id of a top division of the game>, "league_cup": true, "super_cup":
               false, "name", "logo", "super_name", "super_logo"}, ...]. A league cup is the one a
@@ -1165,6 +1173,7 @@ def plan(recipe, base):
             "uecl_logo": recipe.get("uecl_logo") or None,
             "uecl_name": (recipe.get("uecl_name") or "").strip() or None,
             "game_europe": ge, "game_replace": gr, "game_names": gn,
+            "uefa_seed": uefa_seed(recipe, out, regrow, region_of_cid),
             "ccups": cups, "ccup_notes": notes, "home_cups": home,
             "saudi_august": bool(recipe.get("saudi_august")),
             "editable_kits": bool(recipe.get("editable_kits"))}
@@ -1336,6 +1345,34 @@ def game_europe(recipe, regrow, region_of_cid, base):
         places += [(cup, 0, int(comp), r) if int(pos) == CUP_WINNER else (r, int(pos), int(comp), 0)
                    for pos, comp in europe or []]
     return places, replace, names
+
+
+def uefa_seed(recipe, out, regrow, region_of_cid):
+    """the recipe's uefa_seed as (regulation the access list names, position, competition)"""
+    rid = {p["name"]: p["rid"] for p in out}
+    seed = []
+    for e in recipe.get("uefa_seed") or []:
+        try:
+            lg, pos, comp = str(e[0]), int(e[1]), int(e[2])
+        except (TypeError, ValueError, IndexError):
+            continue
+        if lg.startswith("g") and lg[1:].isdigit() and int(lg[1:]) in regrow:
+            seed.append([access_reg(int(lg[1:]), regrow, region_of_cid), pos, comp])
+        elif lg in rid:
+            seed.append([rid[lg], pos, comp])
+    return seed
+
+
+def all_places(pl):
+    """the world's European places, the new leagues' and game_europe's, as uefa_places takes them:
+    in uefa_seed's order where the plan has one (a place's league: its regulation, or for a cup
+    winner's place the league in alt), the rest after it as they come"""
+    places = own_places(pl) + [tuple(e) for e in pl.get("game_europe") or []]
+    order = {tuple(s): k for k, s in enumerate(pl.get("uefa_seed") or [])}
+    if not order:
+        return places
+    key = lambda e: order.get((e[0] if e[1] else e[3], e[1], e[2]), len(order))
+    return sorted(places, key=key)
 
 
 def game_europe_tops(base):
@@ -1804,7 +1841,7 @@ def describe(pl):
     rounds = qual_rounds(pl)
     if any(s for _c, s in rounds):
         lines.append("  August qualifying: %s" % fl26world.rounds_text(rounds))
-    for c, (n, room) in sorted(fl26world.uefa_places(own_places(pl) + [tuple(e) for e in pl.get("game_europe") or []],
+    for c, (n, room) in sorted(fl26world.uefa_places(all_places(pl),
                                                      pl.get("game_replace") or [], bool(pl.get("uecl")))[1].items()):
         lines.append("  NOTE: %s has %d places listed for %d clubs; the last %d get none"
                      % (names[c], n, room, n - room))
@@ -2207,7 +2244,7 @@ def build(pl, base, game, replace=False, log=print):
         up = mine.get(p["above"]) if p["above"] else None
         if up and up.get("own_cup", {}).get("keep_top"):
             L["cup"] = up["own_cup"]["reg"]            # fl26chain keeps the cup to the top league
-    uefa, over = fl26world.uefa_places(own_places(pl) + [tuple(e) for e in pl.get("game_europe") or []],
+    uefa, over = fl26world.uefa_places(all_places(pl),
                                        pl.get("game_replace") or [], bool(pl.get("uecl")))
     names = dict(fl26world.COMPETITIONS)
     for c, (n, room) in sorted(over.items()):
@@ -2255,7 +2292,7 @@ def is_live(world, game):
 def qual_rounds(pl):
     """the August qualifying rounds the world gets (fl26world.pick_rounds): as many as the European
     places it lists fill -- the play-offs alone with the game's own places"""
-    uefa, _over = fl26world.uefa_places(own_places(pl) + [tuple(e) for e in pl.get("game_europe") or []],
+    uefa, _over = fl26world.uefa_places(all_places(pl),
                                         pl.get("game_replace") or [], bool(pl.get("uecl")))
     return fl26world.pick_rounds(uefa, bool(pl.get("uecl")))
 
