@@ -63,11 +63,12 @@ which league sits above -- and nothing about ids:
               crest or face pack was made for; above the game's clubs, at most CLUB_ID_MAX
   europe      optional European places: [[position, competition], ...], competition 0 Champions
               League, 10 its play-off in August (the winners go on, the losers to the Europa
-              League), 1 Europa League, 2 Conference League, 3 Libertadores, 4 its qualifying
-              round, 5 AFC Champions League, or one of the cups the game has not got: 6 CAF
+              League), 1 Europa League, 11 its play-off (the winners go on, the losers to the
+              Conference League), 2 Conference League, 12 its play-off (the losers are out),
+              3 Libertadores, 4 its qualifying round, 5 AFC Champions League, or one of the cups the game has not got: 6 CAF
               Champions League, 7 CAF Confederation Cup, 8 AFC Champions League Two, 9 Copa
               Sudamericana (fl26world.COMPETITIONS); each position once, and only the league's
-              own (1..clubs). 0..5 and 10 are written as uefa lines of the world file, after the shipped
+              own (1..clubs). 0..5 and 10..12 are written as uefa lines of the world file, after the shipped
               leagues' places (fl26world.uefa_places); 6..9 build that cup (see ccup_plan)
   cup         optional, a top division of a new country only: true gives the country a national
               cup (a knockout copied from a shipped one, see NATIONAL_CUPS). The game fills a
@@ -1735,7 +1736,7 @@ def describe(pl):
         lines.append("  EXPERIMENTAL: the Saudi Pro League plays August to May (untested in game)")
     if pl["leagues"] and not own_places(pl):
         lines.append("  no European places: the new leagues send nobody to Europe")
-    if not pl.get("uecl") and any(e[2] == 2 for e in own_places(pl)):
+    if not pl.get("uecl") and any(e[2] in (2, 12) for e in own_places(pl)):
         lines.append("  NOTE: Conference League places, but the world gets no Conference League")
     unlisted = [p["name"] for p in pl["leagues"] if p["slot"] == fl26world.NO_SLOT and not p.get("exhibition")]
     if unlisted:

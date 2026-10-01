@@ -85,11 +85,15 @@ PROTECTED_SLOTS = (4, 5, 6)
 # The competitions of a uefa line (fl26swiss's ACCESS comment): the number is what the line
 # carries, the name what a person picks.
 COMPETITIONS = [(0, "Champions League"), (10, "Champions League qualifying"), (1, "Europa League"),
-                (2, "Conference League"), (3, "Libertadores"), (4, "Libertadores qualifying"),
-                (5, "AFC Champions League")]
-# 10: the Champions League play-off in August, sixteen clubs: the eight winners join the Champions
-# League, the eight losers the Europa League, so with any such place both take 28 direct entrants
-UCLQ, PLAYOFF = 10, 16
+                (11, "Europa League qualifying"), (2, "Conference League"), (12, "Conference League qualifying"),
+                (3, "Libertadores"), (4, "Libertadores qualifying"), (5, "AFC Champions League")]
+# 10, 11, 12: the play-offs in August, sixteen clubs each. The Champions League's eight winners
+# join it and its eight losers the Europa League; the Europa League's winners join it and its
+# losers the Conference League; the Conference League's winners join it and its losers are out.
+# So with all three, 28 / 20 / 20 direct entrants.
+UCLQ, UELQ, UECLQ, PLAYOFF = 10, 11, 12, 16
+# each play-off: (the competition its winners join, the one its losers drop to or None)
+PLAYOFFS = {UCLQ: (0, 1), UELQ: (1, 2), UECLQ: (2, None)}
 UEFA_LINE = {c for c, _n in COMPETITIONS}        # the ones a uefa line carries
 
 # Continental cups the game does not have, built by tools/mkccup.py and run by fl26swiss.dll from
@@ -138,11 +142,20 @@ SHIPPED_ACCESS = sorted(HOLDERS + [(r, n, c, 0) for r, n, c in (
     (_ENG, 6, 1), (_ITA, 5, 1), (_ESP, 6, 1), (_GER, 5, 1), (_FRA, 5, 1),
     (_ENG, 7, 1), (_ITA, 6, 1), (_ESP, 7, 1), (_GER, 6, 1), (_FRA, 6, 1),
     (_NED, 5, 1), (_POR, 4, 1), (_BEL, 4, 1),
+    (_TUR, 4, 1), (_SCO, 4, 1), (_GRE, 3, 1), (_DEN, 3, 1), (_NED, 6, 1), (_POR, 5, 1),
+    # the Europa League play-off
+    (_ENG, 8, 11), (_ITA, 7, 11), (_ESP, 8, 11), (_GER, 7, 11), (_FRA, 7, 11),
+    (_BEL, 5, 11), (_TUR, 5, 11), (_SCO, 5, 11), (_GRE, 4, 11), (_DEN, 4, 11),
+    (_NED, 7, 11), (_POR, 6, 11), (_BEL, 6, 11), (_TUR, 6, 11), (_GRE, 5, 11), (_DEN, 5, 11),
     # Conference League
-    (_ENG, 8, 2), (_ITA, 7, 2), (_ESP, 8, 2), (_GER, 7, 2), (_FRA, 7, 2),
-    (_NED, 6, 2), (_POR, 5, 2), (_BEL, 5, 2), (_TUR, 4, 2),
-    (_SCO, 4, 2), (_GRE, 3, 2),
-    (_DEN, 3, 2),
+    (_ENG, 9, 2), (_ITA, 8, 2), (_ESP, 9, 2), (_GER, 8, 2), (_FRA, 8, 2),
+    (_NED, 8, 2), (_POR, 7, 2), (_BEL, 7, 2), (_TUR, 7, 2), (_SCO, 6, 2), (_GRE, 6, 2), (_DEN, 6, 2),
+    (_NED, 9, 2), (_POR, 8, 2), (_BEL, 8, 2), (_TUR, 8, 2), (_GRE, 7, 2), (_SCO, 7, 2), (_DEN, 7, 2),
+    (_ENG, 10, 2),
+    # the Conference League play-off
+    (_ITA, 9, 12), (_ESP, 10, 12), (_GER, 9, 12), (_FRA, 9, 12), (_NED, 10, 12), (_POR, 9, 12),
+    (_BEL, 9, 12), (_TUR, 9, 12), (_GRE, 8, 12), (_SCO, 8, 12), (_DEN, 8, 12), (_ENG, 11, 12),
+    (_ITA, 10, 12), (_ESP, 11, 12), (_GER, 10, 12), (_FRA, 10, 12),
 )], key=lambda e: [c for c, _n in COMPETITIONS].index(e[2]))   # stable: each section's holders stay first
 
 
@@ -165,20 +178,40 @@ def uefa_places(own, replace=()):
         if c in UEFA_LINE:
             mine = [e for e in own if e[2] == c]
             shipped = [e for e in SHIPPED_ACCESS if e[2] == c and e[0] not in replace]
-            out += mine + shipped if c == UCLQ else shipped + mine
-    # Champions League places past the 28 direct ones go to the play-off (fl26swiss), ahead of
-    # its shipped places; only the world's own count against its sixteen
-    over = {}
-    direct = FIELD - PLAYOFF // 2
-    spill = max(0, sum(1 for e in out if e[2] == 0) - direct)
-    n = spill + sum(1 for e in own if e[2] == UCLQ)
-    if n > PLAYOFF:
-        over[UCLQ] = (n, PLAYOFF)
-    for c, room in ((1, direct), (2, FIELD)):
+            out += mine + shipped if c in PLAYOFFS else shipped + mine
+    return out, crowded(out, own)
+
+
+def direct_room(out):
+    """{competition: direct entrants} for the uefa lines out: 36, less eight for every play-off
+    (listed in out) whose winners join it or whose losers drop into it"""
+    room = {0: FIELD, 1: FIELD, 2: FIELD}
+    for q, (win, lose) in PLAYOFFS.items():
+        if any(e[2] == q for e in out):
+            room[win] -= PLAYOFF // 2
+            if lose is not None:
+                room[lose] -= PLAYOFF // 2
+    return room
+
+
+def crowded(out, own):
+    """{competition: (places listed, room)} for those of out past their room. A competition's
+    places past its direct entrants go to its own play-off when it has one (fl26swiss), ahead of
+    the play-off's shipped places; only the world's own count against its sixteen"""
+    over, room = {}, direct_room(out)
+    for q, (win, _lose) in PLAYOFFS.items():
+        if not any(e[2] == q for e in out):
+            continue
+        spill = max(0, sum(1 for e in out if e[2] == win) - room[win])
+        n = spill + sum(1 for e in own if e[2] == q)
+        if n > PLAYOFF:
+            over[q] = (n, PLAYOFF)
+    for c in (0, 1, 2):
+        q = [k for k, (w, _l) in PLAYOFFS.items() if w == c][0]
         n = sum(1 for e in out if e[2] == c)
-        if n > room:
-            over[c] = (n, room)
-    return out, over
+        if n > room[c] and not any(e[2] == q for e in out):
+            over[c] = (n, room[c])
+    return over
 
 
 def read_uefa(path):

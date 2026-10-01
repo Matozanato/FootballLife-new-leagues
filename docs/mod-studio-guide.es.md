@@ -336,13 +336,17 @@ construir el mundo otra vez. Los dos los usa también **Solo las nuevas copas eu
 > se enfrenta a un club de su propio país, y como mucho dos de sus rivales son de un mismo
 > país distinto.
 >
-> **El play-off de la Champions League.** Una plaza de *Champions League (fase previa)* mete al
-> club en un play-off de 16 clubes en agosto, a ida y vuelta: los ocho ganadores entran en la
-> Champions League, los ocho perdedores en la Europa League. Los ocho equipos más fuertes son
-> cabezas de serie (vuelta en casa), y dos clubes del mismo país nunca se cruzan. Con el play-off,
-> las dos competiciones admiten 28 clubes directos y 8 del play-off; una plaza de Champions League
-> más allá de la 28.ª se juega también en el play-off. Las plazas de play-off de tus ligas van antes
-> que las del juego (Portugal, Escocia, Grecia, Dinamarca ...).
+> **Los play-offs de agosto.** Una plaza de *(fase previa)* mete al club en un play-off de 16
+> clubes en agosto, a ida y vuelta; los ocho equipos más fuertes son cabezas de serie (vuelta en
+> casa) y dos clubes del mismo país nunca se cruzan. *Champions League (fase previa)*: los ocho
+> ganadores entran en la Champions League, los ocho perdedores en la Europa League. *Europa League
+> (fase previa)* (0.1.7): ganadores a la Europa League, perdedores a la Conference League.
+> *Conference League (fase previa)* (0.1.7): ganadores a la Conference League, los perdedores
+> quedan fuera. Cada play-off quita 8 plazas directas a las competiciones a las que van sus
+> ganadores y perdedores: con los tres, la Champions League admite 28 clubes directos, la Europa
+> League y la Conference League 20 cada una. Una plaza más allá se juega en el play-off de esa
+> competición. Las plazas de play-off de tus ligas van antes que las del juego (Portugal, Escocia,
+> Grecia, Dinamarca ...).
 
 Después **empieza una nueva carrera de Master League** (o Become a Legend). Las ligas nuevas están
 bajo su país en Select Team y Kick Off. En las listas de Kick Off y Edit un país asiático nuevo va

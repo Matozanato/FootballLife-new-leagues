@@ -52,7 +52,7 @@ ALL_CLUBS = -1
 # the European competitions a league place can lead to (fl26world.COMPETITIONS), short names for
 # the league list
 SHORT = {0: "UCL", 1: "UEL", 2: "UECL", 3: "LIB", 4: "LIB-Q", 5: "AFC", 6: "CAF CL", 7: "CAF CC",
-         8: "AFC CL2", 9: "SUD", 10: "UCL-Q"}
+         8: "AFC CL2", 9: "SUD", 10: "UCL-Q", 11: "UEL-Q", 12: "UECL-Q"}
 TOP_FLIGHT = [[1, 10], [2, 1], [3, 2]]     # the preset: 1st the UCL play-off, 2nd UEL, 3rd UECL
 # the preset by the country's confederation (Country.bin): Asia to the AFC Champions League and
 # Champions League Two, South America to the Libertadores and the Sudamericana, Africa to the CAF

@@ -346,13 +346,17 @@ Conférence** en dessous : le nom que le jeu lui donne, *FL Conference League* s
 > phase de ligue suit les règles de l'UEFA : aucun club n'affronte un club de son propre pays,
 > et au plus deux de ses adversaires viennent d'un même autre pays.
 >
-> **Le barrage de la Ligue des champions.** Une place *Ligue des champions (qualifications)*
-> envoie le club dans un barrage de 16 clubs en août, en deux matchs : les huit vainqueurs entrent
-> en Ligue des champions, les huit perdants en Ligue Europa. Les huit effectifs les plus forts
-> sont têtes de série (retour à domicile), et deux clubs d'un même pays ne se rencontrent jamais.
-> Avec le barrage, les deux compétitions prennent 28 clubs directement et 8 du barrage ; une place
-> en Ligue des champions au-delà de la 28e se joue aussi dans le barrage. Les places de barrage de
-> vos ligues passent avant celles du jeu (Portugal, Écosse, Grèce, Danemark ...).
+> **Les barrages d'août.** Une place *(qualifications)* envoie le club dans un barrage de 16 clubs
+> en août, en deux matchs ; les huit effectifs les plus forts sont têtes de série (retour à
+> domicile), et deux clubs d'un même pays ne se rencontrent jamais. *Ligue des champions
+> (qualifications)* : les huit vainqueurs entrent en Ligue des champions, les huit perdants en
+> Ligue Europa. *Ligue Europa (qualifications)* (0.1.7) : vainqueurs en Ligue Europa, perdants en
+> Ligue Europa Conférence. *Ligue Europa Conférence (qualifications)* (0.1.7) : vainqueurs en
+> Ligue Europa Conférence, les perdants sont éliminés. Chaque barrage retire 8 places directes aux
+> compétitions où vont ses vainqueurs et ses perdants : avec les trois, la Ligue des champions
+> prend 28 clubs directement, la Ligue Europa et la Ligue Europa Conférence 20 chacune. Une place
+> au-delà se joue dans le barrage de cette compétition. Les places de barrage de vos ligues passent
+> avant celles du jeu (Portugal, Écosse, Grèce, Danemark ...).
 
 Ensuite, **commencez une nouvelle carrière Master League** (ou Become a Legend). Les nouvelles
 ligues se trouvent sous leur pays dans Select Team et Kick Off. Dans les listes de Kick Off et
