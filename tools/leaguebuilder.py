@@ -182,7 +182,7 @@ leagues' European places. on() makes it the live world: the one active _FL26
 cpk.root in sider.ini (siderroot.py) and the world file copied to modules\. check() reads
 sider.log after a start and says, module by module, whether the world file was taken.
 """
-import contextlib, glob, io, json, os, shutil, struct, sys
+import contextlib, glob, io, json, os, re, shutil, struct, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -936,7 +936,7 @@ def plan(recipe, base):
         r = W.MOVED_REG.get(r, r)
         if (r in fl26world.DEFAULT_SLOT or r in fl26world.NO_SLOT_IDS) and r not in regrow:
             free.append(r)
-    free.sort(key=lambda r: r not in fl26world.DEFAULT_SLOT)     # slotted ids first, stable
+    free.sort(key=fl26world.id_rank)     # slotted ids first, the game's "other" groups last (#73)
     if leagues and len(leagues) > len(free):
         raise BuildError("%d leagues, but the game has room for %d (see docs/mod-studio.md)"
                          % (len(leagues), len(free)))
@@ -1919,6 +1919,11 @@ def describe(pl):
         # the Select Team list has room for 36 new leagues; the ids past it play but have no place (#39)
         lines.append("  NOTE: no place in Select Team for %s: they play, but no career can start in them"
                      % ", ".join(unlisted))
+    for p in pl["leagues"]:
+        if p["slot"] in fl26world.POOL_SLOTS and not p.get("exhibition"):
+            # the group the game shows on that slot is gone from Select Team (#73)
+            lines.append("  NOTE: %s takes the place of the game's \"%s\" group in Select Team"
+                         % (p["name"], fl26world.POOL_SLOTS[p["slot"]]))
     names = dict(fl26world.COMPETITIONS)
     rounds = qual_rounds(pl)
     if any(s for _c, s in rounds):
@@ -2991,9 +2996,14 @@ def switch_on(world, game, log=print):
 
 
 def modules_missing(game):
-    ini = open(os.path.join(siderdir.find(game), "sider.ini"), encoding="utf-8", errors="replace").read()
-    live = {l.split("=", 1)[1].strip().strip('"').lower()
-            for l in ini.splitlines() if l.strip().startswith("lua.module")}
+    ini = open(os.path.join(siderdir.find(game), "sider.ini"), encoding="utf-8-sig", errors="replace").read()
+    # a line may carry a comment after the value, no quotes, or a folder (GitHub #65: every
+    # module reported missing while sider.log showed them all loaded)
+    live = set()
+    for l in ini.splitlines():
+        m = re.match(r'\s*lua\.module\s*=\s*"([^"]*)"|\s*lua\.module\s*=\s*([^\s;#]+)', l)
+        if m:
+            live.add(os.path.basename((m.group(1) or m.group(2)).replace("\\", "/")).lower())
     return [m for m in READERS if m + ".lua" not in live]
 
 

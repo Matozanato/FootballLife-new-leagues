@@ -336,6 +336,14 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-01 (Mod Studio 0.1.7, GitHub issue #73): **with 33 or more new leagues, the game's
+  "Other European Leagues" and "Other Latin American Teams" groups vanished from Select
+  Team** (Sparta Prague, APOEL ... / Penarol, LDU Quito ...). Four of the ids the builder hands
+  out sit on the slots of the game's four "other clubs" groups, and they came before the last
+  ones. They now come last: the 33rd and 34th league take the two small groups ("Other Clubs
+  (Africa)", "Other"), the 35th to 37th get a hidden slot (they play, no career starts in
+  them), and only the 38th and 39th take the two big groups. The plan names every league that
+  takes a group's place. **Build the world again** and start a new career.
 - 2026-09-30 (Mod Studio 0.1.4): **a split or Apertura/Clausura league in a new country showed
   one club on every row** (issue #37, and an Egyptian split). The badge of a row goes by the
   team id, the name and the match by the team record, and the values our new clubs carried in

@@ -80,6 +80,28 @@ DEFAULT_SLOT = {
 # PROTECTED_SLOTS for the same reason, also in world files written before this.
 NO_SLOT_IDS = (183, 184, 185)
 PROTECTED_SLOTS = (4, 5, 6)
+# Slots the Select Team list fills with a group of the game's own "other clubs" when no league
+# sits there (fl26slotnames). Four of our ids land on them, so a big world hid those groups
+# (GitHub #73: Other European and Other Latin American gone with 36 leagues). The builder hands
+# these ids out last, in this order: the two small groups before the hidden ids above, the two
+# big ones (Sparta Prague, APOEL ... / Penarol, LDU Quito ...) only after them.
+POOL_SLOTS = {75: "Other Clubs (Africa)", 71: "Other", 73: "Other Latin American Teams",
+              69: "Other European Leagues"}
+POOL_BEFORE_HIDDEN = (75, 71)
+POOL_AFTER_HIDDEN = (73, 69)
+
+
+def id_rank(r):
+    """sort key of a regulation id in the builder's free list: a slot of its own first, then the
+    slots of the two small "other clubs" groups, the ids with no slot, the two big groups"""
+    s = DEFAULT_SLOT.get(r)
+    if s is None:
+        return (2, 0)
+    if s in POOL_BEFORE_HIDDEN:
+        return (1, POOL_BEFORE_HIDDEN.index(s))
+    if s in POOL_AFTER_HIDDEN:
+        return (3, POOL_AFTER_HIDDEN.index(s))
+    return (0, 0)
 
 
 # The competitions of a uefa line (fl26swiss's ACCESS comment): the number is what the line

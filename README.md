@@ -494,7 +494,7 @@ Mod Studio 0.1.4. The full list, with dates and details, is in
   and third seasons' July between the two CAF winners, each time with that year's winners
   (2026-10-01).
 - **Leagues of 10 to 24 clubs** with the right number of rounds, different sizes in one world.
-- **The menus**: the first 36 new leagues in Select Team, every one in Kick Off, Edit mode and Database →
+- **The menus**: up to 36 new leagues in Select Team (past 32 the plan names the ones that take the place of a game's "Other ..." group or get none), every one in Kick Off, Edit mode and Database →
   Competition Info, under its own country's name and flag.
 
 **Known problems**
