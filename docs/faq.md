@@ -162,6 +162,17 @@ game's own tables, the world puts the default leagues back over your database's 
 Before 0.1.6 a world with only the European cups also left every league without a schedule at
 the start of a career (#54); update and start a new career.
 
+### Can the Premier League (or another league of the game) get a league cup?
+
+Since 0.1.7: **Cups of the game's countries** on the *Build* page. Tick **League cup** next to
+the league: 16 clubs of it and the league below, September to December. **Super cup** is there
+too, only for countries where the game has none (Brazil, Chile, Scotland, Greece, the USA).
+
+### Can I change the European places of the Premier League, LaLiga ...?
+
+Since 0.1.7: **European places of the game's leagues** on the *Build* page. Tick **Own places
+for this league** and set them like a new league's. Then build the world again.
+
 ### My cups and the Conference League have no logo
 
 Since 0.1.5.5 every cup the builder makes gets one: the national cup, super cup, league cup,

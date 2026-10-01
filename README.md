@@ -81,15 +81,18 @@ tell us where. Read [what works and what does not](#status) before you start a l
 - The **2024 European format**: Champions League and Europa League with a league phase of 36,
   the February play-off and a fixed knockout bracket, and a new **Conference League**. Filled
   from a UEFA access list from the second season; in the first, by squad strength. The draw
-  keeps clubs of one country apart as UEFA does (0.1.4).
+  keeps clubs of one country apart as UEFA does (0.1.4). A **Champions League play-off** in
+  August, 16 clubs over two legs: winners to the Champions League, losers to the Europa League
+  (0.1.7). Name the Conference League yourself (0.1.7).
 - **Continental places** for your leagues: Champions League, Europa League, Conference League;
   AFC Champions League and Champions League Two; Copa Libertadores (also its qualifying round,
   0.1.4) and Copa Sudamericana; CAF Champions League and CAF Confederation Cup, and the CAF
   Super Cup between their winners (0.1.6). The four the game does not have are built with your
-  world.
+  world. The **game's own leagues** can get their European places changed too (0.1.7).
 - A country's own **national cup** (any size up to 44 clubs, with byes like the FA Cup, 0.1.4)
   and **super cup**, a **league cup**, and **pre-season cups** of 4 or 8 invited clubs in July,
-  each with your own **logo** (0.1.5.5).
+  each with your own **logo** (0.1.5.5). A **league cup** for the game's own countries (the
+  Carabao Cup), and a super cup where the game has none (Scotland, Greece ...) (0.1.7).
   A new second division under a country the game has goes into that country's cup (0.1.4).
   The national cup of a new country is tested over two full seasons: it rebuilds from the
   current first division after every promotion and relegation (issue #46).

@@ -140,7 +140,7 @@ sadržaja s imenom `_FL26...` koju igra čita dok je uključena.
 | **Rang** | *(prvi rang)* ili liga iznad nje: druga nova liga ili liga iz igre. Za novu ligu ispod druge nove lige u jednom koraku: odaberi je i stisni **Dodaj nižu ligu** (preuzme državu, broj klubova, format i gore/dolje od lige iznad; ostaje samo ime). |
 | **Gore / dolje** | Koliko klubova na kraju sezone zamijeni mjesta s ligom iznad. |
 | **Sezona** | Samo za prvi rang nove države: *kolovoz do svibanj* (zadano) ili *veljača do prosinac*, kao Brazil, Japan ili Saudijska Arabija: klubovi idu gore i dolje za Novu godinu, a lige ispod nje je slijede. Još ne uz podjelu, Aperturu/Clausuru, nacionalni kup ni liga kup. |
-| **Europa** | Samo za prvi rang: koje mjesto u ligi ide u koje europsko natjecanje. **Prva liga: 1. LP, 2. EL, 3. KL** upiše uobičajena tri; **Dodaj mjesto**, **Makni mjesto** i **Makni** za sve ostalo. Svako mjesto samo jednom, i samo mjesta koja liga ima. Za niži rang ostavi prazno. Predložak prati državu: Azija dobije AFC Ligu prvaka i AFC Ligu prvaka Two, Južna Amerika Libertadores i Copa Sudamericana, Afrika CAF Ligu prvaka i CAF Konfederacijski kup. Ta četiri kupa kojih igra nema grade se sa svijetom (odjeljak 8.2). Mjesto u *kvalifikacijama Libertadoresa* zauzme mjesto kluba iz igre u kvalifikacijskom kolu (zadnjeg iz države koja u njemu ima najviše klubova), najviše šest od njegovih osam mjesta; **Provjeri plan** kaže koje lige preko toga ostaju bez mjesta. |
+| **Europa** | Samo za prvi rang: koje mjesto u ligi ide u koje europsko natjecanje. **Prva liga: 1. kvalifikacije LP, 2. EL, 3. UECL** upiše uobičajena tri (*Liga prvaka (kvalifikacije)* je kolovoško doigravanje, vidi 8.2); **Dodaj mjesto**, **Makni mjesto** i **Makni** za sve ostalo. Svako mjesto samo jednom, i samo mjesta koja liga ima. Za niži rang ostavi prazno. Predložak prati državu: Azija dobije AFC Ligu prvaka i AFC Ligu prvaka Two, Južna Amerika Libertadores i Copa Sudamericana, Afrika CAF Ligu prvaka i CAF Konfederacijski kup. Ta četiri kupa kojih igra nema grade se sa svijetom (odjeljak 8.2). Mjesto u *kvalifikacijama Libertadoresa* zauzme mjesto kluba iz igre u kvalifikacijskom kolu (zadnjeg iz države koja u njemu ima najviše klubova), najviše šest od njegovih osam mjesta; **Provjeri plan** kaže koje lige preko toga ostaju bez mjesta. |
 | **Logo** | Bilo koja slika (najbolje izgleda PNG s prozirnom pozadinom). Prazno: nacrta se sam. |
 | **Zastava države** | Tvoja slika zastave države, razvučena u okvir zastave iz igre. Zamjenjuje zastavu te države posvuda u igri (Select Team, nacionalnost igrača, naslov države u Database > Competition Info) dok je svijet uključen. Prazno: zastava iz igre. |
 | **Kup** | Samo za prvi rang. **Nacionalni kup**: država dobije svoj kup, s imenom koje zadaš (prazno: `<liga> Cup`). Igra puni kup države iz prvog ranga i ranga ispod njega, i kup ih uzima sve, u bilo kojem broju do 44: kola su ona kupa iz igre iste veličine, ili inače engleskog kupa, a kad broj nije 8, 16, 32 ili 64, neki klubovi slobodno prolaze prvo kolo, kao u pravom FA kupu. S više od 44 kluba kup zadržava samo prvi rang. Nova druga liga pod državom koju igra već ima (Njemačka, Rusija ...) također ulazi u kup te države, iza klubova prvog ranga, kad kola kupa odgovaraju broju klubova. Nova treća liga ili niža (League One pod Championshipom) ostavlja kup države prvim dvjema ligama iz igre, kao u igri. **Superkup**: uz to i superkup od jedne utakmice prije sezone, prvak protiv osvajača kupa. |
@@ -153,6 +153,10 @@ sadržaja s imenom `_FL26...` koju igra čita dok je uključena.
 pokazuje ID natjecanja svake lige u igri, isti koji nosi datoteka njezina loga.
 
 **Predsezonski turniri** (gumb na istoj stranici): prijateljski kupovi na ispadanje s 4 ili 8 pozvanih klubova u srpnju, prije sezone, u parovima redom kojim ih upišeš (prvi protiv drugog ...). Klub je iz nove lige ili klub igre (njegov ID); barem jedan mora biti iz nove lige, a turnir je u njenoj državi. Karijera počinje u kolovozu, pa se prvi igra u drugoj sezoni. Svaki turnir može imati **Logo**; prazno: nacrta se sam.
+
+**Kupovi država iz igre** (gumb na istoj stranici): ligaški kup -- recimo Carabao Cup -- za lige iz igre. Označi **Ligaški kup** pored lige: 16 klubova te lige i one ispod nje, po poretku, jedna utakmica po kolu od kraja rujna do prosinca, u dane koje kalendar liga i kupova iz igre ostavlja slobodnima. **Superkup**, prvak protiv pobjednika kupa krajem srpnja, samo gdje ga igra nema (Brazil, Čile, Škotska, Grčka, SAD); nova karijera još nema pobjednika kupa, pa se prvi igra u drugom ljetu. Prazno ime: ime lige i *League Cup* / *Super Cup*.
+
+**Europska mjesta liga iz igre** (gumb na istoj stranici): koja mjesta Premier Lige, LaLige, Serie A ... idu u koje europsko natjecanje. Popis pokazuje mjesta iz igre; označi **Vlastita mjesta za ovu ligu** da ih promijeniš. Neoznačena liga zadržava mjesta iz igre, označena liga bez redova ne šalje nikoga.
 
 **Novi klubovi**: odaberi ligu, pa **Uredi klub** (ime, kratko ime, grb), **Zalijepi imena...**
 ili **Učitaj imena iz datoteke...**. Prazno ime postaje `<liga> 01`, `<liga> 02` ...; klub bez
@@ -290,16 +294,25 @@ natjecanja. Liga prvaka i Europska liga dobivaju ligašku fazu od 36 i veljačko
 svakom slučaju. Isključeno: bez Konferencijske lige. (Mod Studio 0.1.3 i starije verzije su uz isključenu opciju
 ostavljale Ligu prvaka i Europsku ligu u skupinama po četiri, koje mod ne zna voditi -- pa su se
 kvarile; Provjere označe takav svijet: izgradi ga ponovno.) **Logo Konferencijske lige** pored toga:
-tvoja slika za nju; prazno: nacrta se UECL amblem (igra ga nema). Koristi ga i **Samo nova
-europska natjecanja...**.
+tvoja slika za nju; prazno: nacrta se UECL amblem (igra ga nema). **Ime Konferencijske lige**
+ispod: kako je igra zove, prazno *FL Conference League* (upiši *UEFA Conference League* ako
+želiš); novo ime traži ponovnu izgradnju svijeta. Oboje koristi i **Samo nova europska
+natjecanja...**.
 
 > **Europska mjesta.** Mjesta koja daš svojim ligama dolaze iza mjesta liga iz igre. Svako
 > natjecanje prima 36 klubova; mjesta iza 36. ne dobiju ništa, i **Provjeri plan** to kaže.
 > Nove lige bez mjesta nikoga ne šalju u Europu, i Pregled na to upozori. Branitelji naslova
-> idu prvi: pobjednici Lige prvaka i Europske lige uzimaju dva od 36 mjesta u Ligi prvaka,
+> idu prvi: pobjednici Lige prvaka i Europske lige uzimaju dva izravna mjesta u Ligi prvaka,
 > pobjednik Konferencijske lige jedno u Europskoj ligi. Ždrijeb ligaške faze prati UEFA-ina
 > pravila: nijedan klub ne igra protiv kluba iz svoje države, i najviše dva protivnika dolaze
 > iz iste druge države.
+>
+> **Doigravanje za Ligu prvaka.** Mjesto *Liga prvaka (kvalifikacije)* šalje klub u kolovoško
+> doigravanje 16 klubova, dvije utakmice: osam pobjednika ide u Ligu prvaka, osam poraženih u
+> Europsku ligu. Osam najjačih momčadi je nositelj (uzvrat doma), dva kluba iste države se ne
+> sastaju. S doigravanjem oba natjecanja primaju 28 klubova izravno i 8 iz doigravanja; mjesto u
+> Ligi prvaka iza 28. također ide u doigravanje. Mjesta tvojih liga u doigravanju dolaze prije
+> mjesta iz igre (Portugal, Škotska, Grčka, Danska ...).
 
 Onda **započni novu Master League** (ili Become a Legend) karijeru. Nove lige su pod svojom
 državom u Select Team i Kick Off. U popisima Kick Offa i Edita nova azijska država dolazi

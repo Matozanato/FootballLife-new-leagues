@@ -83,10 +83,21 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
   Competitions: 0 Champions League, 1 Europa League, 2 Conference League, 3 Libertadores,
   4 Libertadores qualifying, 5 AFC Champions League, and the four cups the game does not have:
   6 CAF Champions League, 7 CAF Confederation Cup, 8 AFC Champions League Two, 9 Copa
-  Sudamericana (only places of the recipe's leagues go to 6-9). A list replaces the DLL's, so Build writes
+  Sudamericana (only places of the recipe's leagues go to 6-9), and 10 Champions League
+  qualifying (the August play-off, regulation 2). A list replaces the DLL's, so Build writes
   the shipped leagues' places first (`fl26world.SHIPPED_ACCESS`, a copy of fl26swiss.c's
   ACCESS) and then the places of the recipe's leagues (their `europe` key, set in the League
-  dialog). Each competition takes 36 clubs; places past the 36th get nothing.
+  dialog). Each competition takes 36 clubs; places past the 36th get nothing. A list with any
+  competition 10 place makes the Champions League and Europa League 28 direct + 8 from the
+  play-off: fl26swiss fills and starts regulation 2 itself in a career's first summer (days
+  205-240), and from the second the rollover's clubs are replaced by the list's; Champions
+  League places past the 28th spill into the play-off ahead of the shipped play-off places. The
+  recipe's `game_europe` drops the shipped places of the named game leagues (`replace` in
+  `fl26world.uefa_places`) and lists its own under the regulation the access list uses (the
+  split leagues' phase: Scotland 134, Belgium 155, Denmark 147).
+- `game_cups` in the recipe: fl26swiss home cups (`ccup`) for the game's own top divisions,
+  the same as a new country's league cup and super cup; codes `FL_G<reg>_LCUP` and
+  `FL_G<reg>_SCUP`.
 - Libertadores qualifying (4) places of new leagues: the round (regulation 8) is set on day 0
   with shipped clubs only, none of them from the pool slot 73 that the other places replace. So
   fl26swiss.c `cont_standins` gives each of our places the place of a shipped club: the last

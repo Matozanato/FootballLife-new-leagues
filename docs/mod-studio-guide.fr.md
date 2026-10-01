@@ -154,7 +154,7 @@ Le League Builder ajoute de nouvelles ligues au jeu et modifie celles du jeu. Ce
 | **Division** | *(première division)*, ou la ligue au-dessus : une autre nouvelle ligue, ou une ligue du jeu. Pour placer une nouvelle ligue sous une autre nouvelle ligue en une étape : sélectionnez-la et appuyez sur **Ajouter une division inférieure** (elle reprend le pays, le nombre de clubs, le format et les montées/descentes de la ligue au-dessus ; il ne reste que le nom). |
 | **Montée / descente** | Combien de clubs échangent leur place avec la ligue au-dessus en fin de saison. |
 | **Saison** | Première division d'un nouveau pays uniquement : *août à mai* (par défaut) ou *février à décembre*, comme le Brésil, le Japon ou l'Arabie saoudite : les clubs montent et descendent au Nouvel An, et les divisions en dessous la suivent. Pas encore avec une scission, Apertura/Clausura, une coupe nationale ni une coupe de la ligue. |
-| **Europe** | Première division uniquement : quelle position en ligue va dans quelle compétition européenne. **1re division : 1er LdC, 2e LE, 3e LEC** remplit les trois places habituelles ; **Ajouter une place**, **Retirer une place** et **Effacer** pour tout le reste. Chaque position une seule fois, et seulement les positions que la ligue a. Laissez vide pour une division inférieure. Le modèle suit le pays : l'Asie reçoit l'AFC Champions League et l'AFC Champions League Two, l'Amérique du Sud la Libertadores et la Copa Sudamericana, l'Afrique la Ligue des champions CAF et la Coupe de la Confédération CAF. Ces quatre coupes que le jeu n'a pas sont construites avec le monde (section 8.2). Une place en *qualifications de la Libertadores* prend la place d'un club du jeu au tour préliminaire (le dernier du pays qui y a le plus de clubs), au plus six de ses huit places ; **Vérifier le plan** indique quelles ligues restent dehors au-delà. |
+| **Europe** | Première division uniquement : quelle position en ligue va dans quelle compétition européenne. **Première division : 1er barrages LDC, 2e LE, 3e LECE** remplit les trois places habituelles (*Ligue des champions (qualifications)* est le barrage d'août, voir 8.2) ; **Ajouter une place**, **Retirer une place** et **Effacer** pour tout le reste. Chaque position une seule fois, et seulement les positions que la ligue a. Laissez vide pour une division inférieure. Le modèle suit le pays : l'Asie reçoit l'AFC Champions League et l'AFC Champions League Two, l'Amérique du Sud la Libertadores et la Copa Sudamericana, l'Afrique la Ligue des champions CAF et la Coupe de la Confédération CAF. Ces quatre coupes que le jeu n'a pas sont construites avec le monde (section 8.2). Une place en *qualifications de la Libertadores* prend la place d'un club du jeu au tour préliminaire (le dernier du pays qui y a le plus de clubs), au plus six de ses huit places ; **Vérifier le plan** indique quelles ligues restent dehors au-delà. |
 | **Logo** | N'importe quelle image (un PNG à fond transparent rend le mieux). Vide : un logo est dessiné pour vous. |
 | **Drapeau du pays** | Votre propre image du drapeau du pays, étirée dans le cadre des drapeaux du jeu. Elle remplace le drapeau de ce pays partout dans le jeu (Select Team, nationalité des joueurs, l'en-tête du pays dans Database > Competition Info) tant que le monde est activé. Vide : le drapeau du jeu. |
 | **Coupe** | Première division uniquement. **Coupe nationale** : le pays a sa propre coupe, avec le nom que vous donnez (vide : `<ligue> Cup`). Le jeu remplit la coupe d'un pays avec sa première division et la division en dessous, et la coupe les prend tous, quel que soit leur nombre jusqu'à 44 : les tours sont ceux d'une coupe du jeu de même taille, sinon ceux de la coupe anglaise, et quand le nombre n'est pas 8, 16, 32 ou 64, certains clubs sont exemptés du premier tour, comme dans la vraie FA Cup. Au-delà de 44 clubs, la coupe ne garde que la première division. Une nouvelle deuxième division sous un pays que le jeu a déjà (Allemagne, Russie ...) entre aussi dans la coupe de ce pays, après les clubs de première division, quand les tours de la coupe conviennent au nombre de clubs. Une nouvelle troisième division ou plus bas (League One sous la Championship) laisse la coupe du pays aux deux premières divisions du jeu, comme dans le jeu. **Supercoupe** : en plus, une supercoupe en un match avant la saison, le champion contre le vainqueur de la coupe. |
@@ -168,6 +168,10 @@ colonne **ID de la ligue** montre l'id de compétition de chaque ligue dans le j
 son fichier de logo.
 
 **Tournois de pré-saison** (bouton sur la même page) : des tournois amicaux à élimination directe de 4 ou 8 clubs invités en juillet, avant la saison, appariés dans l'ordre donné (le premier contre le deuxième ...). Un club est celui d'une nouvelle ligue ou un club du jeu (son id) ; au moins un doit venir d'une nouvelle ligue, dont le pays accueille le tournoi. Une carrière commence en août, donc le premier se joue la deuxième saison. Chaque tournoi peut avoir son **Logo** ; vide : un logo est dessiné.
+
+**Coupes des pays du jeu** (bouton sur la même page) : une coupe de la Ligue -- la Carabao Cup, par exemple -- pour des ligues du jeu. Cochez **Coupe de la ligue** à côté d'une ligue : 16 clubs de cette ligue et de celle du dessous, selon le classement, un match par tour de fin septembre à décembre, les jours que le calendrier des ligues et coupes du jeu laisse libres. **Supercoupe**, le champion contre le vainqueur de la coupe fin juillet, seulement là où le jeu n'en a pas (Brésil, Chili, Écosse, Grèce, États-Unis) ; une nouvelle carrière n'a pas encore de vainqueur de coupe, la première se joue donc le deuxième été. Nom vide : le nom de la ligue et *League Cup* / *Super Cup*.
+
+**Places européennes des ligues du jeu** (bouton sur la même page) : quelles places de la Premier League, de la LaLiga, de la Serie A ... vont dans quelle compétition européenne. La liste montre les places du jeu ; cochez **Places propres pour cette ligue** pour les changer. Une ligue non cochée garde celles du jeu, une ligue cochée sans lignes n'envoie personne.
 
 **Nouveaux clubs** : choisissez la ligue, puis **Modifier le club** (nom, nom court, écusson),
 **Coller des noms...** ou **Charger des noms depuis un fichier...**. Un nom vide devient
@@ -320,17 +324,27 @@ leur barrage de février dans tous les cas. Désactivé : pas de Ligue Europa Co
 0.1.3 et les versions précédentes laissaient la Ligue des champions et la Ligue Europa dans les groupes de quatre du jeu quand
 c'était désactivé, ce que le mod ne sait pas gérer -- elles cassaient ; les Vérifications signalent
 un tel monde : reconstruisez-le.) **Logo de la Ligue Europa Conférence** à côté : votre propre
-image pour elle ; vide : un emblème UECL est dessiné (le jeu n'en a pas). **Seulement les nouvelles
-coupes européennes...** l'utilise aussi.
+image pour elle ; vide : un emblème UECL est dessiné (le jeu n'en a pas). **Nom de la Ligue
+Conférence** en dessous : le nom que le jeu lui donne, *FL Conference League* si vide (tapez
+*UEFA Conference League* si vous voulez) ; un nouveau nom demande de reconstruire le monde.
+**Seulement les nouvelles coupes européennes...** utilise les deux aussi.
 
 > **Places européennes.** Les places que vous donnez à vos ligues viennent après celles des ligues
 > du jeu. Chaque compétition prend 36 clubs ; les places au-delà de la 36e ne donnent rien, et
 > **Vérifier le plan** le signale. Les nouvelles ligues sans places n'envoient personne en
 > Europe, et Vue d'ensemble vous en avertit. Les tenants du titre passent en premier : les
-> vainqueurs de la Ligue des champions et de la Ligue Europa prennent deux des 36 places de la
+> vainqueurs de la Ligue des champions et de la Ligue Europa prennent deux des places directes de la
 > Ligue des champions, celui de la Ligue Conférence une place en Ligue Europa. Le tirage de la
 > phase de ligue suit les règles de l'UEFA : aucun club n'affronte un club de son propre pays,
 > et au plus deux de ses adversaires viennent d'un même autre pays.
+>
+> **Le barrage de la Ligue des champions.** Une place *Ligue des champions (qualifications)*
+> envoie le club dans un barrage de 16 clubs en août, en deux matchs : les huit vainqueurs entrent
+> en Ligue des champions, les huit perdants en Ligue Europa. Les huit effectifs les plus forts
+> sont têtes de série (retour à domicile), et deux clubs d'un même pays ne se rencontrent jamais.
+> Avec le barrage, les deux compétitions prennent 28 clubs directement et 8 du barrage ; une place
+> en Ligue des champions au-delà de la 28e se joue aussi dans le barrage. Les places de barrage de
+> vos ligues passent avant celles du jeu (Portugal, Écosse, Grèce, Danemark ...).
 
 Ensuite, **commencez une nouvelle carrière Master League** (ou Become a Legend). Les nouvelles
 ligues se trouvent sous leur pays dans Select Team et Kick Off. Dans les listes de Kick Off et

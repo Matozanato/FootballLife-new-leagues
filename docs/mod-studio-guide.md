@@ -142,7 +142,7 @@ The League Builder adds new leagues to the game and changes the game's own. What
 | **Division** | *(top division)*, or the league above it: another new league, or one of the game's. To put a new league under another new league in one step: select it and press **Add lower tier** (it takes the country, club count, format and up/down of the league above; only the name is left). |
 | **Up / down** | How many clubs change places with the league above at the end of the season. |
 | **Season** | Top division of a new country only: *August to May* (the default) or *February to December*, like Brazil, Japan or Saudi Arabia: clubs go up and down at New Year, and the divisions below it follow it. Not with a split, Apertura/Clausura, a national cup or a league cup yet. |
-| **Europe** | Top division only: which league position goes to which European competition. **Top flight: 1st UCL, 2nd UEL, 3rd UECL** fills the usual three; **Add place**, **Remove place** and **Clear** for anything else. Each position once, and only positions the league has. Leave it empty for a lower tier. The preset follows the country: Asia gets the AFC Champions League and AFC Champions League Two, South America the Libertadores and the Copa Sudamericana, Africa the CAF Champions League and CAF Confederation Cup. Those four cups the game does not have are built with the world (section 8.2). A *Libertadores qualifying* place takes the place of a club of the game in the qualifying round (the last one of the country with the most clubs in it), at most six of its eight places; **Check the plan** says which leagues are left out past that. |
+| **Europe** | Top division only: which league position goes to which European competition. **Top flight: 1st UCL play-off, 2nd UEL, 3rd UECL** fills the usual three (*Champions League qualifying* is the August play-off, see 8.2); **Add place**, **Remove place** and **Clear** for anything else. Each position once, and only positions the league has. Leave it empty for a lower tier. The preset follows the country: Asia gets the AFC Champions League and AFC Champions League Two, South America the Libertadores and the Copa Sudamericana, Africa the CAF Champions League and CAF Confederation Cup. Those four cups the game does not have are built with the world (section 8.2). A *Libertadores qualifying* place takes the place of a club of the game in the qualifying round (the last one of the country with the most clubs in it), at most six of its eight places; **Check the plan** says which leagues are left out past that. |
 | **Logo** | Any picture (PNG with a transparent background looks best). Empty: one is drawn for you. |
 | **Country flag** | Your own picture of the country's flag, stretched into the game's flag frame. It replaces the game's flag of that country everywhere (Select Team, players' nationality, the country's heading in Database > Competition Info) while the world is on. Empty: the game's own flag. |
 | **Cup** | Top division only. **National cup**: the country gets its own cup, with the name you give (empty: `<league> Cup`). The game fills a country's cup from its top division and the division below it, and the cup takes them all, of any number up to 44: the rounds are those of a shipped cup of the same size, or else of the English cup, and when the number is not 8, 16, 32 or 64, some clubs get a bye in the first round, as in the real FA Cup. Past 44 clubs the cup keeps the top division alone. A new second division under a country the game already has (Germany, Russia ...) goes into that country's cup too, after the top division's clubs, when the cup's rounds fit the field. A new third division or lower (League One under the Championship) leaves the country's cup to the game's top two divisions, as in the game. **Super cup**: also a one-match super cup before the season, the champion against the cup winner. |
@@ -155,6 +155,10 @@ The League Builder adds new leagues to the game and changes the game's own. What
 shows each league's competition id in the game, the one its logo file carries.
 
 **Pre-season cups** (button on the same page): friendly knockouts of 4 or 8 invited clubs in July, before the season, paired in the order you give them (first against second ...). A club is one of a new league or a club of the game (its id); at least one has to be from a new league, and its country hosts the cup. A career starts in August, so the first one is played in the second season. Each cup can have a **Logo**; empty: one is drawn for it.
+
+**Cups of the game's countries** (same page): a league cup -- the Carabao Cup, say -- for leagues of the game. Tick **League cup** next to a league: 16 clubs of it and the league below it, by position, one match a round from late September to December, on days the game's league and cup calendar leaves free. **Super cup**, the champion against the cup winner in late July, only where the game has none (Brazil, Chile, Scotland, Greece, the USA); a new career has no cup winner yet, so the first one is played in the second summer. Empty name: the league's name and *League Cup* / *Super Cup*.
+
+**European places of the game's leagues** (same page): which positions of the Premier League, LaLiga, Serie A ... go to which European competition. The list shows the game's own places; tick **Own places for this league** to change them. A league not ticked keeps the game's places, a ticked league with no rows sends nobody.
 
 **New clubs**: pick the league, then **Edit club** (name, short name, crest), **Paste names...**
 or **Load names from file...**. An empty name becomes `<league> 01`, `<league> 02` ...; a club
@@ -295,16 +299,25 @@ Champions League and the Europa League get their league phase of 36 and their Fe
 either way. Off: no Conference League. (Mod Studio 0.1.3 and earlier left the Champions League and Europa
 League in the game's groups of four when this was off, which the mod cannot run -- they broke;
 Checks flags such a world: build it again.) **Conference League logo** next to it: your own picture
-for it; empty: a UECL emblem is drawn (the game has none for it). It is used by **Only the new
+for it; empty: a UECL emblem is drawn (the game has none for it). **Conference League name**
+under it: what the game calls it, *FL Conference League* when empty (type *UEFA Conference
+League* if you like); a new name needs the world built again. Both are used by **Only the new
 European cups...** too.
 
 > **European places.** The places you give your leagues come after the ones the game's own
 > leagues have. Each competition takes 36 clubs; places past the 36th get nothing, and
 > **Check the plan** says so. New leagues with no places send nobody to Europe, and Overview
 > warns about it. The title holders come first: the Champions League and Europa League winners
-> take two of the Champions League's 36 places, the Conference League winner one of the Europa
+> take two of the Champions League's direct places, the Conference League winner one of the Europa
 > League's. The league-phase draw follows UEFA's rules: no club meets a club from its own
 > country, and at most two of its opponents come from any one other country.
+>
+> **The Champions League play-off.** A *Champions League qualifying* place puts the club in a
+> 16-club play-off in August, two legs: the eight winners join the Champions League, the eight
+> losers the Europa League. The eight strongest squads are seeded (second leg at home), two
+> clubs of one country never meet. With the play-off, both competitions take 28 clubs directly
+> and 8 from the play-off; a Champions League place past the 28 is played in the play-off too.
+> Your leagues' play-off places come before the game's (Portugal, Scotland, Greece, Denmark ...).
 
 Then **start a new Master League** (or Become a Legend) career. The new leagues are under their
 country in Select Team and Kick Off. In the Kick Off and Edit lists a new Asian country comes

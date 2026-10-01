@@ -148,7 +148,7 @@ League Builder añade ligas nuevas al juego y cambia las del propio juego. Lo qu
 | **División** | *(primera división)*, o la liga que tiene encima: otra liga nueva o una del juego. Para poner una liga nueva bajo otra liga nueva en un paso: selecciónala y pulsa **Añadir división inferior** (toma el país, el número de clubes, el formato y los ascensos/descensos de la liga de arriba; solo falta el nombre). |
 | **Asc. / desc.** | Cuántos clubes cambian de sitio con la liga de arriba al final de la temporada. |
 | **Temporada** | Solo para la primera división de un país nuevo: *agosto a mayo* (por defecto) o *febrero a diciembre*, como Brasil, Japón o Arabia Saudí: los clubes suben y bajan en Año Nuevo, y las divisiones de abajo la siguen. Todavía no con división en grupos, Apertura/Clausura, copa nacional ni copa de la liga. |
-| **Europa** | Solo para primera división: qué puesto de la liga va a qué competición europea. **Primera: 1.º UCL, 2.º UEL, 3.º UECL** rellena las tres habituales; **Añadir plaza**, **Quitar plaza** y **Borrar** para todo lo demás. Cada puesto una sola vez, y solo puestos que la liga tiene. Déjalo vacío para una categoría inferior. La plantilla sigue al país: Asia recibe la AFC Champions League y la AFC Champions League Two, Sudamérica la Libertadores y la Copa Sudamericana, África la CAF Champions League y la Copa Confederación CAF. Esas cuatro copas que el juego no tiene se construyen con el mundo (sección 8.2). Una plaza de *clasificación a la Libertadores* ocupa el sitio de un club del juego en la ronda previa (el último del país con más clubes en ella), como mucho seis de sus ocho plazas; **Comprobar el plan** dice qué ligas se quedan fuera pasado ese número. |
+| **Europa** | Solo para primera división: qué puesto de la liga va a qué competición europea. **Primera división: 1.º fase previa UCL, 2.º UEL, 3.º UECL** rellena las tres habituales (*Champions League (fase previa)* es el play-off de agosto, ver 8.2); **Añadir plaza**, **Quitar plaza** y **Borrar** para todo lo demás. Cada puesto una sola vez, y solo puestos que la liga tiene. Déjalo vacío para una categoría inferior. La plantilla sigue al país: Asia recibe la AFC Champions League y la AFC Champions League Two, Sudamérica la Libertadores y la Copa Sudamericana, África la CAF Champions League y la Copa Confederación CAF. Esas cuatro copas que el juego no tiene se construyen con el mundo (sección 8.2). Una plaza de *clasificación a la Libertadores* ocupa el sitio de un club del juego en la ronda previa (el último del país con más clubes en ella), como mucho seis de sus ocho plazas; **Comprobar el plan** dice qué ligas se quedan fuera pasado ese número. |
 | **Logo** | Cualquier imagen (un PNG con fondo transparente queda mejor). Vacío: se dibuja uno por ti. |
 | **Bandera del país** | Tu propia imagen de la bandera del país, estirada al marco de las banderas del juego. Sustituye la bandera de ese país en todo el juego (Select Team, nacionalidad de los jugadores, el encabezado del país en Database > Competition Info) mientras el mundo esté activo. Vacío: la bandera del juego. |
 | **Copa** | Solo primera división. **Copa nacional**: el país tiene su propia copa, con el nombre que le des (vacío: `<liga> Cup`). El juego llena la copa de un país con su primera división y la división de debajo, y la copa los admite a todos, sean cuantos sean hasta 44: las rondas son las de una copa del juego del mismo tamaño o, si no la hay, las de la copa inglesa, y cuando el número no es 8, 16, 32 o 64, algunos clubes pasan la primera ronda sin jugar, como en la FA Cup real. Con más de 44 clubes la copa se queda solo con la primera división. Una segunda división nueva bajo un país que el juego ya tiene (Alemania, Rusia ...) también entra en la copa de ese país, detrás de los clubes de primera, cuando las rondas de la copa encajan con el número de clubes. Una nueva tercera división o inferior (League One bajo la Championship) deja la copa del país a las dos primeras divisiones del juego, como en el juego. **Supercopa**: además, una supercopa a partido único antes de la temporada, el campeón contra el ganador de la copa. |
@@ -162,6 +162,10 @@ columna **ID de la liga** muestra el id de competición de cada liga en el juego
 su archivo de logo.
 
 **Torneos de pretemporada** (botón en la misma página): eliminatorias amistosas de 4 u 8 clubes invitados en julio, antes de la temporada, emparejados en el orden en que los pones (el primero contra el segundo ...). Un club es de una liga nueva o un club del juego (su id); al menos uno tiene que ser de una liga nueva, y su país organiza el torneo. Una carrera empieza en agosto, así que el primero se juega en la segunda temporada. Cada torneo puede tener su **Logo**; vacío: se dibuja uno.
+
+**Copas de los países del juego** (botón en la misma página): una copa de la liga -- la Carabao Cup, por ejemplo -- para ligas del juego. Marca **Copa de la liga** junto a una liga: 16 clubes de ella y de la de abajo, por posición, un partido por ronda de finales de septiembre a diciembre, en días que el calendario de ligas y copas del juego deja libres. **Supercopa**, el campeón contra el ganador de la copa a finales de julio, solo donde el juego no tiene (Brasil, Chile, Escocia, Grecia, EE. UU.); una carrera nueva aún no tiene ganador de copa, así que la primera se juega el segundo verano. Nombre vacío: el nombre de la liga y *League Cup* / *Super Cup*.
+
+**Plazas europeas de las ligas del juego** (botón en la misma página): qué puestos de la Premier League, LaLiga, la Serie A ... van a qué competición europea. La lista muestra las plazas del juego; marca **Plazas propias para esta liga** para cambiarlas. Una liga sin marcar mantiene las del juego, una liga marcada sin filas no manda a nadie.
 
 **Clubes nuevos**: elige la liga y luego **Editar club** (nombre, abreviatura, escudo), **Pegar
 nombres...** o **Cargar nombres de un archivo...**. Un nombre vacío pasa a ser `<liga> 01`,
@@ -311,16 +315,26 @@ cualquier caso. Desactivado: sin Liga Conferencia. (Mod Studio 0.1.3 y anteriore
 y la Liga Europa en los grupos de cuatro del juego cuando estaba desactivado, y el mod no puede
 llevarlos -- se rompían; Comprobaciones marca ese mundo: vuelve a construirlo.) **Logo de la
 Conference League** al lado: tu propia imagen para ella; vacío: se dibuja un emblema UECL (el juego
-no tiene ninguno). También lo usa **Solo las nuevas copas europeas...**.
+no tiene ninguno). **Nombre de la Conference League** debajo: cómo la llama el juego, *FL Conference
+League* si está vacío (escribe *UEFA Conference League* si quieres); un nombre nuevo necesita
+construir el mundo otra vez. Los dos los usa también **Solo las nuevas copas europeas...**.
 
 > **Plazas europeas.** Las plazas que das a tus ligas van después de las que tienen las ligas del
 > propio juego. Cada competición admite 36 clubes; las plazas más allá de la 36.ª no reciben nada,
 > y **Comprobar el plan** lo avisa. Las ligas nuevas sin plazas no mandan a nadie a Europa, y
 > Resumen avisa de ello. Los campeones van primero: los ganadores de la Champions League y de la
-> Europa League ocupan dos de las 36 plazas de la Champions League, y el de la Conference League
+> Europa League ocupan dos de las plazas directas de la Champions League, y el de la Conference League
 > una de la Europa League. El sorteo de la fase de liga sigue las reglas de la UEFA: ningún club
 > se enfrenta a un club de su propio país, y como mucho dos de sus rivales son de un mismo
 > país distinto.
+>
+> **El play-off de la Champions League.** Una plaza de *Champions League (fase previa)* mete al
+> club en un play-off de 16 clubes en agosto, a ida y vuelta: los ocho ganadores entran en la
+> Champions League, los ocho perdedores en la Europa League. Los ocho equipos más fuertes son
+> cabezas de serie (vuelta en casa), y dos clubes del mismo país nunca se cruzan. Con el play-off,
+> las dos competiciones admiten 28 clubes directos y 8 del play-off; una plaza de Champions League
+> más allá de la 28.ª se juega también en el play-off. Las plazas de play-off de tus ligas van antes
+> que las del juego (Portugal, Escocia, Grecia, Dinamarca ...).
 
 Después **empieza una nueva carrera de Master League** (o Become a Legend). Las ligas nuevas están
 bajo su país en Select Team y Kick Off. En las listas de Kick Off y Edit un país asiático nuevo va
