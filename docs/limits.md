@@ -68,8 +68,9 @@ week of August. The hub shows the real date bottom right; quote that in reports.
 138 139 140 143 144 145 146 170 171 173 174 176 178 179 180 181 182 183 184 185 190
 ```
 
-Read straight out of the shipped `sider/fl26caps.lua` (the 256-byte table at
-`0x14252e690`, where `0xff` means "no calendar"). Each of the 40 is mapped to a weekday
+Read straight out of the shipped `sider/fl26caps.lua` (the 256-byte table after the stub
+at `0x163000000`, where `0xff` means "no calendar"; until 0.1.7 the stub and table sat at
+`0x14252e690`, in the padding other mods write into too, see `tools/datecave.py`). Each of the 40 is mapped to a weekday
 shift of 0–6 days so that the leagues do not all land on the same weekday. 190 is the 25th
 league in worlds built from 25 September 2026 on, 145 the same league in older worlds (see
 [build-your-world.md](build-your-world.md)). Anything outside this list gets no calendar at

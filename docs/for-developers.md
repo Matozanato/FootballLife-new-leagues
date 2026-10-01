@@ -58,7 +58,8 @@ a real load-path bug:
 
 `teams-coaches-regs-players-dates-matches-upper-mlcopy`: each part is a family of patches
 in `layout.json` — grow the team table and relocate it; grow coaches; grow regulations;
-raise the player cap in place; install the date-spread stub; grow the match record table;
+raise the player cap in place; install the date-spread stub (since 0.1.7 on a page of its own
+at `0x163000000`, which `fl26caps` reserves before it writes); grow the match record table;
 relocate the "upper belt" of small tables after it; grow the Master League save/load copy
 (`mlcopy`). Smaller sets exist for bisection but are not shipped here.
 

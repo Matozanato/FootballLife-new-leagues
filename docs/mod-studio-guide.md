@@ -163,6 +163,21 @@ shows each league's competition id in the game, the one its logo file carries.
 
 **European places of the game's leagues** (same page): which positions of the Premier League, LaLiga, Serie A ... go to which European competition. The list shows the game's own places; tick **Own places for this league** to change them. A league not ticked keeps the game's places, a ticked league with no rows sends nobody.
 
+**UEFA ranking** (same page, 0.1.7): every European league of the world -- the game's and your
+new top divisions -- in one list, strongest country first. Drag a league (or **Up** / **Down**)
+to change the order, untick one to give it no European place, **UEFA's order** puts the list back
+to UEFA's association ranking for 2026-27. The right side shows what each league gets, and
+**OK** writes it: the places of UEFA's key for 2024-27 -- rank 1 has five Champions League
+places, rank 6 two and a play-off place, rank 30 one place in the Champions League's second
+qualifying round, and so on, the cup winner's Europa League place included. A world never has all 55 of UEFA's countries, so
+the places of the ranks it does not have go to the next clubs of the strongest leagues in turn,
+one round at a time, and every competition stays full: with twelve leagues England's 6th, 7th
+and 8th go to the Champions League qualifying, say. Past the 30th league there is no place left, and
+the list says so. The qualifying places go to the rounds in the key's order, the strongest
+country to the round nearest the league phase. Afterwards you can still change any league's
+places by hand (*Europe* on the league, *European places of the game's leagues*): Build takes
+the places, not the ranking.
+
 **Competition names** (same page): a new name and logo for the game's cups, super cups and continental competitions -- the FA Cup, the Champions League, the Libertadores ... -- and for the continental cups the world builds (CAF Champions League, Confederation Cup, AFC Champions League Two, Copa Sudamericana, CAF Super Cup). Every stage of a competition takes the name. Empty: the game's own. The game's leagues are renamed on *Game's leagues and clubs*.
 
 **New clubs**: pick the league, then **Edit club** (name, short name, crest), **Paste names...**
@@ -421,6 +436,11 @@ under 10 MB. Download only the parts you want.
   that also plays a competition of the game (Basel and Young Boys play the Europa League) needs
   the club that takes its place there: *New clubs*, pick it, **Club of the game**. Build says
   which ones until then.
+- A player the game already has (the same player under the same name, Urbański at Górnik in
+  the game and at Legia in NewLife, say) moves to the NewLife club instead of being made a
+  second time (0.1.7): he keeps his face, name and id and takes NewLife's position and ratings.
+  He stays where he is when his old club would drop below 18 players; then NewLife makes its
+  own copy, as before.
 - NewLife clubs keep their NewLife ids in the game (98304 and up), so every league package made
   with the database gives a club the same id.
 - A NewLife club gets a shield crest in its colours and the kit of the game closest to its
