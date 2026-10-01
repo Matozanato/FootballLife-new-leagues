@@ -156,6 +156,14 @@ the game that plays in nothing, or a new club you name. That way no competition 
 changes its number of clubs. **Insert club** and **Remove club** change a league's clubs after it
 was built; then **Build** again and start a new career.
 
+### Can I move a club from one league to another?
+
+Since 0.1.7, yes. A new club: *New clubs* > **Move to another league...**, it goes to the end of the
+other new league with everything it has. Two clubs of the game's leagues (a promoted one for a
+relegated one, say): *Game's leagues and clubs* > **Swap leagues with a club...**; they trade every
+place, so the game's leagues keep their size. A club of the game into a new league: **Club of the game**
+(see above). Build again and start a new career.
+
 ### Can I build only the new European format, with no new leagues?
 
 Yes, since 0.1.4 (#36). On the *Build* page press **Only the new European cups...**: it builds a

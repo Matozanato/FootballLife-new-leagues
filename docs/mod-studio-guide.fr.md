@@ -209,7 +209,11 @@ retirent (10 à 24 clubs) ; noms, écussons, entraîneurs et changements de joue
 clubs. Vérifiez les places européennes de la ligue, puis relancez la **Construction**. Tout
 changement des clubs d'une ligue demande une **nouvelle carrière**.
 
+**Déplacer vers une autre ligue...** (0.1.7) emmène le nouveau club sélectionné à la fin d'une autre nouvelle ligue, avec son nom, son nom court, son écusson, son entraîneur, sa formation, ses maillots, son id NewLife et ses changements de joueurs ; la ligue qu'il quitte garde un club de moins. Un club du jeu se déplace avec **Club du jeu** : retirez-le d'une ligue, mettez-le dans l'autre.
+
 **Ligues et clubs du jeu** : nouveaux noms, logos et écussons pour ce que le jeu a déjà.
+
+**Échanger de ligue avec un club...** (0.1.7) : deux clubs des ligues du jeu échangent leurs places -- un promu contre un relégué, un club de la ligue d'un pays contre un club d'un autre. Chacun prend les places de l'autre dans la ligue, les coupes et les compétitions européennes, donc chaque ligue du jeu garde son nombre de clubs. Un club qui joue dans une nouvelle ligue de la recette ne peut pas aussi être échangé. **Annuler les changements du club** retire l'échange. Puis **Construire** à nouveau et commencez une nouvelle carrière.
 
 > **Fichier Edit.** Si le dossier de sauvegarde du jeu contient un fichier Edit (`EDIT00000000`),
 > il remplace les noms des clubs. Déplacez-le ailleurs pour voir vos noms.

@@ -174,6 +174,9 @@ and `tools/lbplayers.py`):
   (`{"folder": "Region\Stadium", "slot": "009", "name": ...}`, a folder of Stadium Server's
   library: Switch on writes it to `content/stadium-server/map_teams.txt` with the club's built
   id, `tools/lbstadiums.py`; 0.1.7).
+- `"edits"` / `"swaps"`: `[[team id, team id], ...]`, two clubs of the game's leagues that trade
+  every CompetitionEntry row (league, cups, continental), so no competition changes size
+  (`leaguebuilder.swap_problems`, `exchange_entries`; 0.1.7).
 - A recipe with no leagues and `"uecl"`: the new European format alone, the game's leagues and
   clubs as they are (Build page, *Only the new European cups...*).
 

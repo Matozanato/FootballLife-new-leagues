@@ -960,7 +960,25 @@
   "Home stadium": "Stade à domicile",
   "No folder %s in the stadium-server library.": "Pas de dossier %s dans la bibliothèque de stadium-server.",
   "a stadium of Stadium Server; written to its map_teams.txt when the world is switched on": "un stade de Stadium Server ; écrit dans son map_teams.txt quand le monde est activé",
-  "install Stadium Server (Stadiums page) to give the club a home stadium": "installez Stadium Server (page Stades) pour donner un stade au club"
+  "install Stadium Server (Stadiums page) to give the club a home stadium": "installez Stadium Server (page Stades) pour donner un stade au club",
+  "Swap leagues": "Échanger les ligues",
+  "Swap leagues with a club...": "Échanger de ligue avec un club...",
+  "Two clubs of the game's leagues trade places: a promoted club for a relegated one, say": "Deux clubs des ligues du jeu échangent leurs places : un promu contre un relégué, par exemple",
+  "%s (%s) takes the other club's places -- its league, cups and European competitions -- and the other club takes its places. Both leagues keep their number of clubs.": "%s (%s) prend les places de l'autre club -- sa ligue, ses coupes et compétitions européennes -- et l'autre club prend les siennes. Les deux ligues gardent leur nombre de clubs.",
+  "swaps with %s": "échange avec %s",
+  "This club plays in no league of the game.": "Ce club ne joue dans aucune ligue du jeu.",
+  "This club already plays in a new league of the recipe.": "Ce club joue déjà dans une nouvelle ligue de la recette.",
+  "Move to another league...": "Déplacer vers une autre ligue...",
+  "Move to another league": "Déplacer vers une autre ligue",
+  "The club goes to the end of another new league, with its name, crest, manager and players": "Le club passe à la fin d'une autre nouvelle ligue, avec son nom, son écusson, son entraîneur et ses joueurs",
+  "The recipe has no other new league.": "La recette n'a pas d'autre nouvelle ligue.",
+  "%s goes to the end of that league, with its name, crest, manager, formation, kits and player changes. %s keeps one club less.": "%s passe à la fin de cette ligue, avec son nom, son écusson, son entraîneur, sa formation, ses maillots et ses changements de joueurs. %s garde un club de moins.",
+  "The club is now the last of %s: check both leagues' European places on the New leagues page, then Build again and start a new career.": "Le club est maintenant le dernier de %s : vérifiez les places européennes des deux ligues sur la page Nouvelles ligues, puis reconstruisez et commencez une nouvelle carrière.",
+  "Pick another league.": "Choisissez une autre ligue.",
+  "This is a club of the game: take it out with Club of the game and add it in the other league.": "C'est un club du jeu : retirez-le avec Club du jeu et ajoutez-le dans l'autre ligue.",
+  "No such club.": "Ce club n'existe pas.",
+  "A league takes %d to %d clubs.": "Une ligue a de %d à %d clubs.",
+  "Undo club changes": "Annuler les changements du club"
  },
  "log": [
   [

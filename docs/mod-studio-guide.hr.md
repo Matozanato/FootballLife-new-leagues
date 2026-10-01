@@ -189,7 +189,11 @@ vraća mjesto novom klubu. Klub se više ne pojavljuje u grupama *Other ... club
 kluba); imena, grbovi, treneri i promjene igrača idu sa svojim klubovima. Provjeri europska mjesta
 lige, pa ponovno **Izgradi**. Svaka promjena klubova lige traži **novu karijeru**.
 
+**Premjesti u drugu ligu...** (0.1.7) odvede odabrani novi klub na kraj druge nove lige, s imenom, kratkim imenom, grbom, trenerom, formacijom, dresovima, NewLife id-em i izmjenama igrača; liga iz koje odlazi ima klub manje. Klub iz igre se seli preko **Klub iz igre**: makni ga iz jedne lige, stavi u drugu.
+
 **Postojeće lige i klubovi**: nova imena, logotipi i grbovi za ono što igra već ima.
+
+**Zamijeni ligu s klubom...** (0.1.7): dva kluba iz liga igre zamijene mjesta -- klub koji je ušao za onaj koji je ispao, klub lige jedne države za klub druge. Svaki preuzme mjesta drugoga u ligi, kupovima i europskim natjecanjima, pa svaka liga igre zadrži broj klubova. Klub koji igra u novoj ligi recepta ne može se i mijenjati. **Poništi izmjene kluba** vraća zamjenu. Zatim ponovno **Izgradi** i počni novu karijeru.
 
 > **Edit datoteka.** Ako u mapi sa spremanjima igre postoji Edit datoteka (`EDIT00000000`), ona
 > ima prednost za imena klubova. Makni je negdje drugdje da vidiš svoja imena.

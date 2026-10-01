@@ -67,7 +67,9 @@ tell us where. Read [what works and what does not](#status) before you start a l
   **portrait** instead of a 3D face (0.1.5.5).
 - **Regens** in Master League get a new name, a new potential and a new face (0.1.5.5).
 - **Clubs the game already has** in your new leagues. When such a club plays somewhere in the
-  game, you pick who takes its place there, so no competition of the game changes size (0.1.4).
+  game, you pick who takes its place there, so no competition of the game changes size (0.1.4). Move
+  a new club to another new league, or swap two clubs of the game's leagues -- a promoted one for a
+  relegated one (0.1.7).
 - **Rename** the game's own leagues and clubs, with new logos and crests.
 - **Edit every player of every club**: name, number, positions, abilities, skills, rating,
   face, squad order, best eleven, squad level; CSV export and import.

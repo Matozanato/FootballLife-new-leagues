@@ -960,7 +960,25 @@
   "Home stadium": "Domaći stadion",
   "No folder %s in the stadium-server library.": "Nema mape %s u biblioteci stadium-servera.",
   "a stadium of Stadium Server; written to its map_teams.txt when the world is switched on": "stadion iz Stadium Servera; upiše se u njegov map_teams.txt kad se svijet uključi",
-  "install Stadium Server (Stadiums page) to give the club a home stadium": "instaliraj Stadium Server (stranica Stadioni) da klub dobije domaći stadion"
+  "install Stadium Server (Stadiums page) to give the club a home stadium": "instaliraj Stadium Server (stranica Stadioni) da klub dobije domaći stadion",
+  "Swap leagues": "Zamjena liga",
+  "Swap leagues with a club...": "Zamijeni ligu s klubom...",
+  "Two clubs of the game's leagues trade places: a promoted club for a relegated one, say": "Dva kluba iz liga igre zamijene mjesta: recimo klub koji je ušao za onaj koji je ispao",
+  "%s (%s) takes the other club's places -- its league, cups and European competitions -- and the other club takes its places. Both leagues keep their number of clubs.": "%s (%s) preuzme mjesta drugog kluba -- njegovu ligu, kupove i europska natjecanja -- a drugi klub preuzme njegova. Obje lige zadrže broj klubova.",
+  "swaps with %s": "mijenja se s: %s",
+  "This club plays in no league of the game.": "Ovaj klub ne igra ni u jednoj ligi igre.",
+  "This club already plays in a new league of the recipe.": "Ovaj klub već igra u novoj ligi recepta.",
+  "Move to another league...": "Premjesti u drugu ligu...",
+  "Move to another league": "Premjesti u drugu ligu",
+  "The club goes to the end of another new league, with its name, crest, manager and players": "Klub ide na kraj druge nove lige, s imenom, grbom, trenerom i igračima",
+  "The recipe has no other new league.": "Recept nema drugu novu ligu.",
+  "%s goes to the end of that league, with its name, crest, manager, formation, kits and player changes. %s keeps one club less.": "%s ide na kraj te lige, s imenom, grbom, trenerom, formacijom, dresovima i izmjenama igrača. %s ima klub manje.",
+  "The club is now the last of %s: check both leagues' European places on the New leagues page, then Build again and start a new career.": "Klub je sada zadnji u ligi %s: provjeri europska mjesta obje lige na stranici Nove lige, pa ponovno izgradi i počni novu karijeru.",
+  "Pick another league.": "Odaberi drugu ligu.",
+  "This is a club of the game: take it out with Club of the game and add it in the other league.": "Ovo je klub iz igre: makni ga preko Klub iz igre i dodaj ga u drugu ligu.",
+  "No such club.": "Nema tog kluba.",
+  "A league takes %d to %d clubs.": "Liga ima od %d do %d klubova.",
+  "Undo club changes": "Poništi izmjene kluba"
  },
  "log": [
   [

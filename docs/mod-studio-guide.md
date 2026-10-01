@@ -193,7 +193,11 @@ here** gives the place back to a new club. The club no longer shows under the Ma
 24 clubs); names, crests, managers and player changes move with their clubs. Check the league's
 European places, then **Build** again. Any change to a league's clubs needs a **new career**.
 
+**Move to another league...** (0.1.7) takes the selected new club to the end of another new league, with its name, short name, crest, manager, formation, kits, NewLife id and player changes; the league it leaves keeps one club less. A club of the game moves with **Club of the game** instead: take it out of one league, put it in the other.
+
 **Game's leagues and clubs**: new names, logos and crests for what the game already has.
+
+**Swap leagues with a club...** (0.1.7): two clubs of the game's leagues trade places -- a promoted club for a relegated one, a club of one country's league for one of another's. Each takes the other's places in the league, the cups and the European competitions, so every league of the game keeps its number of clubs. A club in a new league of the recipe cannot swap too. **Undo club changes** takes the swap back. Then **Build** again and start a new career.
 
 > **Edit file.** If the game's save folder has an Edit file (`EDIT00000000`), it overrides club
 > names. Move it somewhere else to see your names.

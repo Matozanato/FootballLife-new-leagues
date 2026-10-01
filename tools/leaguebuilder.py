@@ -433,7 +433,8 @@ def load_recipe(path):
 def has_edits(r):
     e = r.get("edits") or {}
     import lbplayers
-    return bool(e.get("leagues") or e.get("clubs") or e.get("competitions")) or lbplayers.has_players(r)
+    return bool(e.get("leagues") or e.get("clubs") or e.get("competitions") or e.get("swaps")) \
+        or lbplayers.has_players(r)
 
 
 # ---- what the game already has: its leagues and clubs, for the edit tab ----
@@ -630,6 +631,55 @@ def rename_reg(regs, o, name):
     for k in range(M.NAME_SLOTS):
         if k != NAME_CODE_SLOT:
             M.put(regs, o + M.R_NAME + k * M.NAME_SLOT, name, M.NAME_SLOT)
+
+
+def swap_problems(recipe, base):
+    """why the recipe's swaps (edits.swaps: [[team id, team id], ...], two clubs of the game's
+    leagues trading places) cannot be built, as sentences"""
+    pairs = (recipe.get("edits") or {}).get("swaps") or []
+    if not pairs:
+        return []
+    info = game_info(base)
+    taken = set()
+    for L in recipe.get("leagues") or []:
+        for g in L.get("game_clubs") or []:
+            taken.add(int(g["id"]))
+            if g.get("swap") not in (None, "") and not isinstance(g["swap"], dict):
+                taken.add(int(g["swap"]))
+    err, seen = [], set()
+    for pair in pairs:
+        try:
+            a, b = (int(x) for x in pair)
+        except (TypeError, ValueError):
+            err.append("swap %r: two team ids" % (pair,))
+            continue
+        for t in (a, b):
+            if t not in info["league_of"]:
+                err.append("swap %d <-> %d: club %d plays in no league of the game" % (a, b, t))
+            if t in seen:
+                err.append("club %d is in two swaps" % t)
+            if t in taken:
+                err.append("club %d plays in a new league of the recipe; it cannot also swap" % t)
+            seen.add(t)
+        if a == b or (a in info["league_of"] and info["league_of"].get(a) == info["league_of"].get(b)):
+            err.append("swap %d <-> %d: the two clubs play in the same league" % (a, b))
+    return err
+
+
+def exchange_entries(ents, a, b):
+    """teams a and b trade every CompetitionEntry row: each takes the other's places in the
+    league, the cups and the continental competitions; returns (rows of a, rows of b)"""
+    na = nb = 0
+    for i in range(len(ents) // M.ENT):
+        o = i * M.ENT
+        t = int.from_bytes(ents[o + M.E_TEAM:o + M.E_TEAM + 4], "little")
+        if t == a:
+            ents[o + M.E_TEAM:o + M.E_TEAM + 4] = b.to_bytes(4, "little")
+            na += 1
+        elif t == b:
+            ents[o + M.E_TEAM:o + M.E_TEAM + 4] = a.to_bytes(4, "little")
+            nb += 1
+    return na, nb
 
 
 def swap_entries(ents, old, new):
@@ -1087,6 +1137,9 @@ def plan(recipe, base):
         c["logo"] = (recipe.get("ccup_logos") or {}).get(k) or c.get("logo")
         if "|" in c["name"]:
             raise BuildError("%s: a name cannot have a | in it" % c["name"])
+    bad = swap_problems(recipe, base)
+    if bad:
+        raise BuildError("clubs that swap leagues:\n  " + "\n  ".join(bad))
     bad = competition_problems(recipe.get("edits") or {}, base)
     if bad:
         raise BuildError("competition names:\n  " + "\n  ".join(bad))
@@ -1645,6 +1698,8 @@ def describe(pl):
     e = pl.get("edits") or {}
     lines = ["world %s: %d new leagues, changes to %d of the game's leagues and %d of its clubs"
              % (pl["world"], len(pl["leagues"]), len(e.get("leagues") or {}), len(e.get("clubs") or {}))]
+    for a, b in e.get("swaps") or []:
+        lines.append("  clubs %s and %s swap leagues" % (a, b))
     for cid, v in sorted((e.get("competitions") or {}).items(), key=lambda kv: int(kv[0])):
         lines.append("  competition %s: %s%s" % (cid, v.get("name") or "(its own name)",
                                                  ", own logo" if v.get("logo") else ""))
@@ -1967,6 +2022,14 @@ def build(pl, base, game, replace=False, log=print):
     for r in sorted(added, key=lambda r: int.from_bytes(r[W.T_ID:W.T_ID + 4], "little")):
         raw += r
     apply_edits(pl.get("edits") or {}, raw, regs, log)
+    swaps = (pl.get("edits") or {}).get("swaps") or []
+    if swaps:                                          # two clubs of the game's leagues trade places
+        info = game_info(base)
+        for a, b in ((int(x), int(y)) for x, y in swaps):
+            na, nb = exchange_entries(ents, a, b)
+            log("  %s (%s) and %s (%s) swap leagues: %d and %d place(s)"
+                % (info["clubs"].get(a, (a,))[0], info["league_of"].get(a, "?"),
+                   info["clubs"].get(b, (b,))[0], info["league_of"].get(b, "?"), na, nb))
     open(os.path.join(db, "Team.bin"), "wb").write(pesdb.wesys_pack(bytes(raw)))
     cpath = os.path.join(base, "Coach.bin")
     if os.path.exists(cpath):

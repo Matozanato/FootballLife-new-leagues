@@ -202,7 +202,11 @@ a 24 clubes); nombres, escudos, entrenadores y cambios de jugadores van con sus 
 plazas europeas de la liga y vuelve a **Construir**. Cualquier cambio en los clubes de una liga
 necesita una **carrera nueva**.
 
+**Mover a otra liga...** (0.1.7) lleva el club nuevo seleccionado al final de otra liga nueva, con su nombre, abreviatura, escudo, entrenador, formación, equipaciones, id de NewLife y cambios de jugadores; la liga que deja se queda con un club menos. Un club del juego se mueve con **Club del juego**: quítalo de una liga y ponlo en la otra.
+
 **Ligas y clubes del juego**: nombres, logos y escudos nuevos para lo que el juego ya tiene.
+
+**Intercambiar liga con un club...** (0.1.7): dos clubes de las ligas del juego intercambian sus plazas -- un ascendido por un descendido, un club de la liga de un país por uno de otro. Cada uno ocupa las plazas del otro en la liga, las copas y las competiciones europeas, así que cada liga del juego mantiene su número de clubes. Un club que juega en una liga nueva de la receta no puede intercambiarse también. **Deshacer cambios del club** quita el intercambio. Luego **Construir** otra vez y empieza una carrera nueva.
 
 > **Archivo Edit.** Si la carpeta de partidas guardadas del juego tiene un archivo Edit
 > (`EDIT00000000`), este anula los nombres de los clubes. Muévelo a otro sitio para ver tus nombres.

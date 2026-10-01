@@ -1622,6 +1622,8 @@ class NewClubs(BuilderPage):
         self.action("New club here", self.new_here, tip="Give this place back to a new club")
         self.action("Insert club", lambda: self.shift(1), tip="A new club before the selected one")
         self.action("Remove club", lambda: self.shift(-1), "danger", tip="Take the selected club out of the league")
+        self.action("Move to another league...", self.move_club,
+                    tip="The club goes to the end of another new league, with its name, crest, manager and players")
         self.action("Paste names...", self.paste)
         self.action("Load names from file...", self.load_file)
         top = QHBoxLayout()
@@ -1796,6 +1798,31 @@ class NewClubs(BuilderPage):
         self.say(_("%s now has %d clubs: check its European places on the New leagues page, then Build again "
                    "and start a new career.") % (L["name"], L["clubs"]), "ok")
 
+    def move_club(self):
+        L, k = self.league(), self.current()
+        if not L or k is None:
+            return
+        others = [x["name"] for x in self.project.recipe["leagues"] if x is not L]
+        if not others:
+            QMessageBox.information(self, _("New clubs"), _("The recipe has no other new league."))
+            return
+        d = Dialog(self, "Move to another league")
+        to = QComboBox()
+        to.addItems(others)
+        d.form.addRow(_("League"), to)
+        d.form.addRow("", hint(_("%s goes to the end of that league, with its name, crest, manager, formation, kits "
+                                 "and player changes. %s keeps one club less.") % (self.lists(L)[0][k] or
+                                                                                    "%s %02d" % (L["name"], k + 1), L["name"])))
+        if not d.finish():
+            return
+        dst = to.currentText()
+        bad = self.project.move_club(L["name"], k, dst)
+        if bad:
+            QMessageBox.warning(self, _("New clubs"), _(bad))
+            return
+        self.say(_("The club is now the last of %s: check both leagues' European places on the New leagues page, "
+                   "then Build again and start a new career.") % dst, "ok")
+
     def edit(self):
         L, k = self.league(), self.current()
         if not L or k is None:
@@ -1866,6 +1893,60 @@ class NewClubs(BuilderPage):
                 self.set_names([r[0].strip() for r in csv.reader(fh) if r and r[0].strip()])
 
 
+class SwapDialog(Dialog):
+    """a club of another league of the game, to trade places with club tid"""
+
+    def __init__(self, parent, project, tid, skip):
+        super().__init__(parent, "Swap leagues")
+        info = B.game_info(project.base)
+        mine = info["league_of"].get(tid)
+        n = project.game_cl.get(tid, (str(tid),))[0]
+        self.v.insertWidget(0, hint(_("%s (%s) takes the other club's places -- its league, cups and European "
+                                      "competitions -- and the other club takes its places. Both leagues keep "
+                                      "their number of clubs.") % (n, mine)))
+        self.search = QLineEdit()
+        self.search.setPlaceholderText(_("Find a league or club..."))
+        self.search.textChanged.connect(self.fill)
+        self.v.insertWidget(1, self.search)
+        self.list = QListWidget()
+        self.v.insertWidget(2, self.list, 1)
+        self.scroll.hide()
+        self.all = sorted(((project.game_cl[t][0], lg, t) for t, lg in info["league_of"].items()
+                           if lg != mine and t not in skip and t in project.game_cl),
+                          key=lambda x: (x[0].lower(), x[1]))
+        self.picked = None
+        self.fill()
+        self.setMinimumSize(520, 480)
+
+    def fill(self):
+        q = self.search.text().strip().lower()
+        self.list.clear()
+        for name, league, t in self.all:
+            if q and q not in name.lower() and q not in league.lower():
+                continue
+            it = QListWidgetItem("%s  (%s)" % (name, league))
+            it.setData(Qt.UserRole, t)
+            self.list.addItem(it)
+
+    def ok(self):
+        it = self.list.currentItem()
+        if it is None:
+            error(self, "Swap leagues", _("Pick a club."))
+            return
+        self.picked = it.data(Qt.UserRole)
+        self.accept()
+
+
+def swap_of(project, tid):
+    """the club tid trades leagues with, or None"""
+    for a, b in (project.recipe.get("edits") or {}).get("swaps") or []:
+        if int(a) == tid:
+            return int(b)
+        if int(b) == tid:
+            return int(a)
+    return None
+
+
 class GameLeagues(BuilderPage):
     title = "Game's leagues and clubs"
     hint = ("The leagues and clubs the game already has: new names, logos and crests. Changes are written "
@@ -1923,7 +2004,10 @@ class GameLeagues(BuilderPage):
         b2.clicked.connect(self.players)
         b3 = QPushButton(_("Undo club changes"))
         b3.clicked.connect(self.undo_club)
-        rv.addWidget(row(b1, b2, b3))
+        b4 = QPushButton(_("Swap leagues with a club..."))
+        b4.setToolTip(_("Two clubs of the game's leagues trade places: a promoted club for a relegated one, say"))
+        b4.clicked.connect(self.swap_club)
+        rv.addWidget(row(b1, b2, b4, b3))
         split.addWidget(right)
         split.setSizes([300, 900])
         self.outer.addWidget(split, 1)
@@ -2000,6 +2084,9 @@ class GameLeagues(BuilderPage):
         np = self.project.players().get(str(tid)) or {}
         k = len(np.get("edits") or {}) + len(np.get("add") or []) + len(np.get("remove") or [])
         marks = ([_("name/crest")] if e else []) + ([_("%d players") % k] if k else [])
+        sw = swap_of(self.project, tid)
+        if sw is not None:
+            marks.append(_("swaps with %s") % self.project.game_cl.get(sw, (str(sw),))[0])
         vals = [str(tid), e.get("name") or n, e.get("abbr") or a,
                 os.path.basename(e["crest"]) if e.get("crest") else "", ", ".join(marks)]
         for c, v in enumerate(vals):
@@ -2065,8 +2152,42 @@ class GameLeagues(BuilderPage):
         for it in self.tree.selectedItems():
             tid = it.data(0, Qt.UserRole)
             self.project.edits("clubs").pop(str(tid), None)
+            self.drop_swap(tid)
             self.club_row(it, tid)
         self.project.dirty = True
+
+    def drop_swap(self, tid):
+        e = self.project.recipe.setdefault("edits", {})
+        left = [p for p in e.get("swaps") or [] if tid not in (int(p[0]), int(p[1]))]
+        if left:
+            e["swaps"] = left
+        else:
+            e.pop("swaps", None)
+
+    def swap_club(self):
+        tid, it = self.selected_tid()
+        if tid is None:
+            return
+        info = B.game_info(self.project.base)
+        if tid not in info["league_of"]:
+            error(self, "Swap leagues", _("This club plays in no league of the game."))
+            return
+        e = self.project.recipe.setdefault("edits", {})
+        busy = {int(x) for p in e.get("swaps") or [] for x in p if tid not in (int(p[0]), int(p[1]))}
+        for L in self.project.recipe["leagues"]:
+            for g in L.get("game_clubs") or []:
+                busy.add(int(g["id"]))
+                if g.get("swap") not in (None, "") and not isinstance(g["swap"], dict):
+                    busy.add(int(g["swap"]))
+        if tid in busy:
+            error(self, "Swap leagues", _("This club already plays in a new league of the recipe."))
+            return
+        d = SwapDialog(self, self.project, tid, busy)
+        if not (d.finish() and d.picked is not None):
+            return
+        self.drop_swap(tid)
+        e.setdefault("swaps", []).append([tid, d.picked])
+        self.project.touch()
 
     def players(self):
         tid, it = self.selected_tid()

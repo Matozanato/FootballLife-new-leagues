@@ -214,7 +214,64 @@ class Project(QObject):
 
     # the lists that hold one value per club of a new league, and what an empty place holds
     PLACE_LISTS = (("club_names", ""), ("club_abbrs", ""), ("club_crests", None), ("club_coaches", ""),
-                   ("club_formations", ""), ("club_ids", ""))
+                   ("club_formations", ""), ("club_ids", ""), ("club_kits", ""), ("club_away_kits", ""))
+
+    def move_club(self, name, k, dst):
+        """move the new club at place k of league `name` to the end of league `dst`, with its name,
+        short name, crest, manager, formation, id, kits, NewLife id, player changes and every
+        reference to it (pre-season cups, packs, players who join from it). None, or why not."""
+        A, D = self.league(name), self.league(dst)
+        if not A or not D or A is D:
+            return "Pick another league."
+        if any(int(e.get("at", -1)) == k for e in A.get("game_clubs") or []):
+            return "This is a club of the game: take it out with Club of the game and add it in the other league."
+        nA, nD = int(A.get("clubs", 0)), int(D.get("clubs", 0))
+        if not 0 <= k < nA:
+            return "No such club."
+        if nA - 1 < B.CLUBS_MIN or nD + 1 > B.CLUBS_MAX:
+            return "A league takes %d to %d clubs." % (B.CLUBS_MIN, B.CLUBS_MAX)
+        vals = {key: (list(A.get(key) or []) + [empty] * nA)[k] for key, empty in self.PLACE_LISTS}
+        nl_a = list((A.get("newlife") or {}).get("clubs") or [])
+        nl_id = nl_a.pop(k) if k < len(nl_a) else None
+        src, to = "%s/%d" % (name, k), "%s/%d" % (dst, nD)
+        pl = self.players()
+        entry = pl.pop(src, None)
+        MOVING = "<the club that moves>"
+
+        def place(j):                  # a place of league `name` after the move: (league, place)
+            return (name, j) if j < k else (dst, nD) if j == k else (name, j - 1)
+        joins = []                     # player refs "league/place/n" of league `name`, fixed after
+        for c in pl.values():
+            for i, r in enumerate(c.get("join") or []):
+                club, _s, n = str(r).rpartition("/")
+                if club.rpartition("/")[0] == name and club.rpartition("/")[2].isdigit():
+                    joins.append((c["join"], i, "%s/%d/%s" % (place(int(club.rpartition("/")[2])) + (n,))))
+        for c in self.recipe.get("preseason_cups") or []:
+            c["clubs"] = [MOVING if x == src else x for x in c.get("clubs") or []]
+        for p in (self.recipe.get("packs") or {}).values():
+            p["players"] = [MOVING if x == src else x for x in p.get("players") or []]
+        if not self.shift_places(name, k, -1) or not self.shift_places(dst, nD, 1):
+            return "A league takes %d to %d clubs." % (B.CLUBS_MIN, B.CLUBS_MAX)
+        for key, empty in self.PLACE_LISTS:
+            if vals[key] != empty:
+                lst = list(D.get(key) or [])
+                D[key] = lst + [empty] * (nD + 1 - len(lst))
+                D[key][nD] = vals[key]
+        if nl_a or (A.get("newlife") or {}).get("clubs"):
+            A.setdefault("newlife", {})["clubs"] = nl_a
+        if nl_id:
+            lst = list((D.get("newlife") or {}).get("clubs") or [])
+            D.setdefault("newlife", {})["clubs"] = lst + [0] * (nD - len(lst)) + [nl_id]
+        if entry is not None:
+            pl[to] = entry
+        for lst, i, r in joins:
+            lst[i] = r
+        for c in self.recipe.get("preseason_cups") or []:
+            c["clubs"] = [to if x == MOVING else x for x in c.get("clubs") or []]
+        for p in (self.recipe.get("packs") or {}).values():
+            p["players"] = [to if x == MOVING else x for x in p.get("players") or []]
+        self.touch()
+        return None
 
     def shift_places(self, name, at, delta):
         """insert (delta 1) a new club before place `at` of league `name`, or remove (delta -1)
