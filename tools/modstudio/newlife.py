@@ -6,7 +6,9 @@ A release comes whole (newlife-<version>/: players.csv, clubs.csv, newlife.json)
 (NewLife-<version>-<part>.zip, one per continent or piece of one; split.py): the person
 downloads the parts they want into one folder and Mod Studio reads all of them from there, as
 they are. The release is downloaded separately (it is not on GitHub); nothing of it is copied
-anywhere but the recipe the person builds.
+anywhere but the recipe the person builds -- and the crests and league logos a release may
+carry (crests/<club id>.png, logos/*.png named in newlife.json's league_logos, 1.2 on), which
+are unpacked to %APPDATA%\\FL26ModStudio\\newlife\\<version> for the recipe to point at.
 """
 import csv, glob, io, json, os, zipfile
 
@@ -15,6 +17,7 @@ import lbplayers as P
 
 FILES = ("players.csv", "clubs.csv", "newlife.json")
 PART = "NewLife-*.zip"
+CACHE = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "FL26ModStudio", "newlife")
 
 
 class Error(Exception):
@@ -39,9 +42,13 @@ def find(folder):
 
 
 def _sources(where):
-    """[(label, open(name) -> text file)] -- the whole release, or every part"""
+    """[(label, open(name) -> text file, [picture names], read(name) -> bytes)] -- the whole
+    release, or every part"""
     if all(os.path.exists(os.path.join(where, f)) for f in FILES):
-        return [("", lambda n: open(os.path.join(where, n), encoding="utf-8", newline=""))]
+        pics = ["%s/%s" % (d, f) for d in ("crests", "logos") if os.path.isdir(os.path.join(where, d))
+                for f in sorted(os.listdir(os.path.join(where, d))) if f.lower().endswith(".png")]
+        return [("", lambda n: open(os.path.join(where, n), encoding="utf-8", newline=""), pics,
+                 lambda n: open(os.path.join(where, n), "rb").read())]
     out = []
     for zp in parts_in(where):
         try:
@@ -51,7 +58,9 @@ def _sources(where):
             raise Error("%s is not a NewLife part (%s) -- download it again" % (os.path.basename(zp), e))
         if missing:
             raise Error("%s is not a NewLife part: no %s" % (os.path.basename(zp), ", ".join(missing)))
-        out.append((os.path.basename(zp), lambda n, z=z: io.TextIOWrapper(z.open(n), encoding="utf-8", newline="")))
+        pics = [n for n in z.namelist() if n.split("/")[0] in ("crests", "logos") and n.lower().endswith(".png")]
+        out.append((os.path.basename(zp), lambda n, z=z: io.TextIOWrapper(z.open(n), encoding="utf-8", newline=""),
+                    pics, lambda n, z=z: z.read(n)))
     return out
 
 
@@ -64,14 +73,23 @@ class Release:
         self.folder = where
         self.meta, self.parts = None, []
         self.clubs, self.squads = {}, {}
+        self.crests, self.logos = {}, {}          # club id / (country, league) -> read() of the png
         versions = set()
-        for label, opener in _sources(where):
+        for label, opener, pics, read in _sources(where):
             with opener("newlife.json") as f:
                 m = json.load(f)
             versions.add(m.get("version", "?"))
             self.meta = self.meta or m
             if m.get("part"):
                 self.parts.append(m["part"].get("name", label))
+            for n in pics:
+                cid = os.path.splitext(n.split("/")[-1])[0]
+                if n.startswith("crests/") and cid.isdigit():
+                    self.crests[cid] = lambda n=n, read=read: read(n)
+            for e in m.get("league_logos") or []:
+                if isinstance(e, dict) and e.get("file") in pics:
+                    self.logos[(str(e.get("country", "")), e.get("league", ""))] = \
+                        lambda n=e["file"], read=read: read(n)
             with opener("clubs.csv") as f:
                 for r in csv.DictReader(f):
                     self.clubs[r["newlife_id"]] = r
@@ -82,6 +100,30 @@ class Release:
         if len(versions) > 1:
             raise Error("the parts in this folder are of different versions (%s): keep one version's parts "
                         "only" % ", ".join(sorted(versions)))
+
+    def _unpack(self, sub, name, read):
+        d = os.path.join(CACHE, "".join(ch if ch.isalnum() or ch in "._-" else "_"
+                                        for ch in str(self.meta.get("version", "0"))), sub)
+        path = os.path.join(d, name)
+        if not os.path.exists(path):
+            os.makedirs(d, exist_ok=True)
+            with open(path + ".part", "wb") as f:
+                f.write(read())
+            os.replace(path + ".part", path)
+        return path
+
+    def crest(self, cid):
+        """the path of club cid's crest from the release, unpacked, or None"""
+        read = self.crests.get(str(cid))
+        return self._unpack("crests", "%s.png" % cid, read) if read else None
+
+    def league_logo(self, L):
+        """the path of league L's logo (from leagues()) from the release, unpacked, or None"""
+        read = self.logos.get(tuple(L.get("key") or ()))
+        if not read:
+            return None
+        k = "%s_%s" % L["key"]
+        return self._unpack("logos", "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in k) + ".png", read)
 
     @property
     def version(self):
@@ -102,7 +144,8 @@ class Release:
         for (cty, name), ids in by.items():
             best = sorted((P.overall(r) for i in ids for r in self.squads.get(i, [])), reverse=True)
             top = best[:11 * len(ids)]
-            out.append({"name": name, "country": country_of(cty) if cty.isdigit() else "", "clubs": sorted(ids),
+            out.append({"name": name, "key": (cty, name),
+                        "country": country_of(cty) if cty.isdigit() else "", "clubs": sorted(ids),
                         "in_game": sorted(have.get((cty, name), [])),
                         "players": sum(min(len(self.squads.get(i, [])), P.SQUAD) for i in ids),
                         "strength": round(sum(top) / float(len(top))) if top else 0})
@@ -191,6 +234,12 @@ def add_league(recipe, rel, L, legs=2, info=None):
                               "club_kits": [rel.clubs[i].get("home_kit", "") for i in clubs],
                               "club_away_kits": [rel.clubs[i].get("away_kit", "") for i in clubs],
                               "newlife": {"version": rel.meta.get("version", ""), "clubs": [int(i) for i in clubs]}})
+    crests = [rel.crest(i) for i in clubs]
+    if any(crests):
+        recipe["leagues"][-1]["club_crests"] = crests
+    logo = rel.league_logo(L)
+    if logo:
+        recipe["leagues"][-1]["logo"] = logo
     if game:
         recipe["leagues"][-1]["game_clubs"] = [{"at": len(clubs) + j, "id": t} for j, t in enumerate(game)]
     pl = recipe.setdefault("players", {})
