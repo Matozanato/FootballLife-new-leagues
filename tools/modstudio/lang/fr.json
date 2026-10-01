@@ -937,7 +937,11 @@
   "Top flight: 1st UCL play-off, 2nd UEL, 3rd UECL": "Première division : 1er barrages LDC, 2e LE, 3e LECE",
   "1st to the Champions League play-off (the winner plays the Champions League, the loser the Europa League), 2nd to the Europa League, 3rd to the Conference League": "1er aux barrages de la Ligue des champions (le vainqueur joue la Ligue des champions, le perdant la Ligue Europa), 2e à la Ligue Europa, 3e à la Ligue Conférence",
   "Conference League name": "Nom de la Ligue Conférence",
-  "empty = %s; a new name needs the world built again": "vide = %s ; un nouveau nom demande de reconstruire le monde"
+  "empty = %s; a new name needs the world built again": "vide = %s ; un nouveau nom demande de reconstruire le monde",
+  "Cups of the game's countries": "Coupes des pays du jeu",
+  "A league cup (the Carabao Cup) for leagues of the game, and a super cup where the game has none": "Une coupe de la Ligue (la Carabao Cup) pour les ligues du jeu, et une supercoupe là où le jeu n'en a pas",
+  "A league cup is 16 clubs of the league and the one below it, by position, one match a round from late September to December. A super cup -- the champion v the cup winner in late July -- only where the game has none. Empty name = the league's name and League Cup / Super Cup.": "Une coupe de la Ligue, ce sont 16 clubs de la ligue et de celle du dessous, selon le classement, un match par tour de fin septembre à décembre. Une supercoupe -- le champion contre le vainqueur de la coupe fin juillet -- seulement là où le jeu n'en a pas. Nom vide = le nom de la ligue et League Cup / Super Cup.",
+  "the game has one": "le jeu en a une"
  },
  "log": [
   [

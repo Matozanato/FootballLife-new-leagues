@@ -9,7 +9,7 @@ from PySide6.QtGui import QPixmap, QImage, QColor, QBrush
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout,
                                QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QPlainTextEdit, QPushButton, QRadioButton, QSpinBox, QSplitter,
-                               QTableWidget, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
+                               QTableWidget, QTableWidgetItem, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
                                QFileDialog, QButtonGroup, QHeaderView, QAbstractItemView,
                                QMessageBox, QScrollArea, QApplication)
 
@@ -956,6 +956,62 @@ class PreseasonDialog(Dialog):
         self.accept()
 
 
+class GameCupsDialog(Dialog):
+    """the recipe's game_cups: a league cup, and a super cup where the game has none, for the
+    game's own top divisions (the Carabao Cup for the Premier League)"""
+
+    def __init__(self, parent, project):
+        super().__init__(parent, "Cups of the game's countries")
+        self.tops = B.game_tops(project.base)
+        have = {int(c["league"]): c for c in project.recipe.get("game_cups") or [] if str(c.get("league")).isdigit()}
+        self.v.insertWidget(0, hint(_("A league cup is 16 clubs of the league and the one below it, by position, "
+                                      "one match a round from late September to December. A super cup -- the "
+                                      "champion v the cup winner in late July -- only where the game has none. "
+                                      "Empty name = the league's name and League Cup / Super Cup.")))
+        self.table = QTableWidget(len(self.tops), 5)
+        self.table.setHorizontalHeaderLabels([_("League"), _("League cup"), _("Name"), _("Super cup"), _("Name")])
+        self.table.verticalHeader().hide()
+        self.rows = []
+        for i, (rid, name, has_super) in enumerate(self.tops):
+            c = have.get(rid, {})
+            item = QTableWidgetItem(name)
+            item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+            self.table.setItem(i, 0, item)
+            lc, ln = QCheckBox(), QLineEdit(c.get("name", ""))
+            lc.setChecked(bool(c) and bool(c.get("league_cup", True)))
+            sc, sn = QCheckBox(), QLineEdit(c.get("super_name", ""))
+            sc.setChecked(bool(c.get("super_cup")) and not has_super)
+            ln.setPlaceholderText(name + " League Cup")
+            sn.setPlaceholderText(_("the game has one") if has_super else name + " Super Cup")
+            sc.setEnabled(not has_super)
+            sn.setEnabled(not has_super)
+            for col, w in ((1, lc), (2, ln), (3, sc), (4, sn)):
+                self.table.setCellWidget(i, col, w)
+            self.rows.append((rid, lc, ln, sc, sn, c))
+        self.table.resizeColumnsToContents()
+        self.table.setColumnWidth(2, 220)
+        self.table.setColumnWidth(4, 220)
+        self.table.setMinimumSize(760, 420)
+        self.v.insertWidget(1, self.table, 1)
+        self.scroll.hide()
+        self.cups = []
+
+    def ok(self):
+        self.cups = []
+        for rid, lc, ln, sc, sn, old in self.rows:
+            if not (lc.isChecked() or sc.isChecked()):
+                continue
+            c = {"league": rid, "league_cup": lc.isChecked(), "super_cup": sc.isChecked()}
+            for key, w in (("name", ln), ("super_name", sn)):
+                if w.text().strip():
+                    c[key] = w.text().strip()
+            for key in ("logo", "super_logo"):
+                if old.get(key):
+                    c[key] = old[key]
+            self.cups.append(c)
+        self.accept()
+
+
 class PasteDialog(Dialog):
     def __init__(self, parent, lines):
         super().__init__(parent, "Paste club names")
@@ -1008,6 +1064,8 @@ class NewLeagues(BuilderPage):
         self.action("Remove", self.remove, "danger")
         self.action("Pre-season cups", self.preseason, tip="Friendly knockouts of 4 or 8 invited clubs in "
                     "July, before the season")
+        self.action("Cups of the game's countries", self.game_cups, tip="A league cup (the Carabao Cup) for "
+                    "leagues of the game, and a super cup where the game has none")
         top = QHBoxLayout()
         top.addWidget(QLabel(_("World name")))
         self.world = QLineEdit()
@@ -1173,6 +1231,17 @@ class NewLeagues(BuilderPage):
                 self.project.recipe["preseason_cups"] = d.cups
             else:
                 self.project.recipe.pop("preseason_cups", None)
+            self.project.touch()
+
+    def game_cups(self):
+        if self.need_tables():
+            return
+        d = GameCupsDialog(self, self.project)
+        if d.finish():
+            if d.cups:
+                self.project.recipe["game_cups"] = d.cups
+            else:
+                self.project.recipe.pop("game_cups", None)
             self.project.touch()
 
     def move(self, d):
@@ -1870,7 +1939,8 @@ class Build(BuilderPage):
         try:
             pl = B.plan({"world": name, "leagues": [], "edits": {}, "players": {}, "uecl": uecl,
                          "uecl_logo": self.project.recipe.get("uecl_logo"),
-                         "uecl_name": self.project.recipe.get("uecl_name")}, self.project.base)
+                         "uecl_name": self.project.recipe.get("uecl_name"),
+                         "game_cups": self.project.recipe.get("game_cups") or []}, self.project.base)
         except B.BuildError as e:
             self.out.clear()
             self.say(_("error: %s") % tr(str(e)))

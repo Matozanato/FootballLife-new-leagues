@@ -118,6 +118,14 @@ which league sits above -- and nothing about ids:
               "uecl_logo" is the Conference League's picture; without one it gets a drawn
               UECL emblem (the game has none for 174, issue #36). "uecl_name" is its name in
               the game; without one, "FL Conference League"
+  game_cups   (the recipe, not a league) cups for countries of the game: [{"league": <the
+              regulation id of a top division of the game>, "league_cup": true, "super_cup":
+              false, "name", "logo", "super_name", "super_logo"}, ...]. A league cup is the one a
+              new top division gets (league_cup above): 16 clubs of that league and the one
+              below it, by position, fl26swiss fills and dates it. A super cup -- the champion v
+              the cup winner, one match in late July -- only where the game has none (Brazil,
+              Chile, Scotland, Greece, the USA); a cup nobody has won yet (a new career) leaves
+              it unplayed that summer
   caf_super_cup  (the recipe, not a league) true, the default: a world that builds both the CAF
               Champions League and the Confederation Cup also gets the CAF Super Cup, one match
               of the two winners in late July (CAF_SUPER_DAYS), a two-club knockout whose
@@ -1047,6 +1055,7 @@ def plan(recipe, base):
     cups, notes = ccup_plan([(p["rid"], pos, comp, 0) for p in out for pos, comp in p["europe"]],
                             {p["rid"]: p["clubs"] for p in out})
     home = [league_cup(p, out) for p in out if p.get("league_cup")]
+    home += game_cups(recipe, regrow, region_of_cid, base, out)
     home += [c for p in out if p.get("apertura") for c in playoff_cups(p)]
     home += [preseason_cup(c, k, by_name) for k, c in enumerate(recipe.get("preseason_cups") or [])]
     if recipe.get("caf_super_cup", True) and {CAF_CL, CAF_CC} <= {c["number"] for c in cups}:
@@ -1153,6 +1162,65 @@ def league_cup(p, out):
             "logo": p["league_cup"].get("logo"),
             "country": p["country"], "region": p["region"], "groups": 0, "entry": field,
             "opts": {"fill": 0, "national": 1, "days": LEAGUE_CUP_DAYS}}
+
+
+def game_tops(base):
+    """[(reg id, name, has a super cup)] of the game's top divisions, for game_cups"""
+    comp, regs = M.load(base, "Competition.bin"), M.load(base, "CompetitionRegulation.bin")
+    regrow = {u16(regs[i * M.REG:], M.R_ID): regs[i * M.REG:(i + 1) * M.REG]
+              for i in range(len(regs) // M.REG)}
+    region_of_cid = {comp[i * M.COMP + M.CID_OFF]: M.dec_region(comp[i * M.COMP + M.REGION_OFF])
+                     for i in range(len(comp) // M.COMP)}
+    return [(r, n, bool(home_supercup(regrow, region_of_cid, region_of_cid[c])))
+            for r, c, n, _t in game_leagues(base) if M.get_tier(regrow[r]) == 1]
+
+
+def game_cups(recipe, regrow, region_of_cid, base, out):
+    """the recipe's game_cups: league cups (and super cups where the region has none) for top
+    divisions of the game, the same fl26swiss cups league_cup() gives a new country"""
+    res, seen = [], set()
+    tops = {r for r, _c, _n, _t in game_leagues(base)} if recipe.get("game_cups") else set()
+    for c in recipe.get("game_cups") or []:
+        try:
+            rid = int(c.get("league"))
+        except (TypeError, ValueError):
+            raise BuildError("game cups: %r is not a league of the game" % (c.get("league"),))
+        g = regrow.get(rid)
+        if g is None or rid not in tops or M.get_tier(g) != 1:
+            raise BuildError("game cups: regulation %d is not a top division of the game" % rid)
+        if rid in seen:
+            raise BuildError("game cups: league %d is listed twice" % rid)
+        seen.add(rid)
+        league = text(g[M.R_NAME:M.R_NAME + M.NAME_SLOT])
+        region = region_of_cid[g[M.R_CID]]
+        if c.get("league_cup", True):
+            field, q = [], rid
+            while q and len(field) < LEAGUE_CUP_SIZES[0]:
+                mine = next((p for p in out if p["rid"] == q), None)
+                n = mine["clubs"] if mine else entries_of(base, regrow[q][M.R_CID])
+                field += [(q, pos) for pos in range(1, n + 1)]
+                below = u16(regrow[q], M.R_BELOW) if q in regrow else 0
+                q = below or next((p["rid"] for p in out if p["above"] == q), None)
+            size = next((s for s in LEAGUE_CUP_SIZES if s <= len(field)), None)
+            if size is None:
+                raise BuildError("game cups: %s has %d clubs, a league cup needs %d"
+                                 % (league, len(field), LEAGUE_CUP_SIZES[-1]))
+            field = field[:size]
+            field = [field[j] for i in range(size // 2) for j in (i, size - 1 - i)]
+            res.append({"name": (c.get("name") or "").strip() or league + " League Cup",
+                        "code": "FL_G%03d_LCUP" % rid, "kind": "league", "logo": c.get("logo") or None,
+                        "country": None, "region": region, "groups": 0, "entry": field,
+                        "opts": {"fill": 0, "national": 1, "days": LEAGUE_CUP_DAYS}})
+        if c.get("super_cup"):
+            if home_supercup(regrow, region_of_cid, region):
+                raise BuildError("game cups: %s already has a super cup in the game" % league)
+            cup = home_cup(regrow, region_of_cid, region)
+            res.append({"name": (c.get("super_name") or "").strip() or league + " Super Cup",
+                        "code": "FL_G%03d_SCUP" % rid, "kind": "super", "logo": c.get("super_logo") or None,
+                        "country": None, "region": region, "groups": 0,
+                        "entry": [(rid, 1), (cup, 0)] if cup else [(rid, 1), (rid, 2)],
+                        "opts": {"fill": PRESEASON_FILL, "national": 1, "days": CAF_SUPER_DAYS}})
+    return res
 
 
 def rounds_of(clubs):
@@ -1505,7 +1573,8 @@ def describe(pl):
     for note in pl.get("ccup_notes") or []:
         lines.append("  NOTE: " + note)
     for cup in pl.get("home_cups") or []:
-        what = {"league": "league cup", "playoff": "playoff, filled on day %d" % cup["opts"]["fill"]}
+        what = {"league": "league cup", "playoff": "playoff, filled on day %d" % cup["opts"]["fill"],
+                "super": "super cup in late July"}
         lines.append("  %s: %s, a knockout of %d clubs" % (
             cup["name"], what.get(cup["kind"], "pre-season cup in July"), len(cup["entry"])))
     return "\n".join(lines)

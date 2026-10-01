@@ -937,7 +937,11 @@
   "Top flight: 1st UCL play-off, 2nd UEL, 3rd UECL": "Prva liga: 1. kvalifikacije LP, 2. EL, 3. UECL",
   "1st to the Champions League play-off (the winner plays the Champions League, the loser the Europa League), 2nd to the Europa League, 3rd to the Conference League": "1. u kvalifikacije Lige prvaka (pobjednik igra Ligu prvaka, poraženi Europsku ligu), 2. u Europsku ligu, 3. u Konferencijsku ligu",
   "Conference League name": "Ime Konferencijske lige",
-  "empty = %s; a new name needs the world built again": "prazno = %s; novo ime traži da se svijet ponovno izgradi"
+  "empty = %s; a new name needs the world built again": "prazno = %s; novo ime traži da se svijet ponovno izgradi",
+  "Cups of the game's countries": "Kupovi država iz igre",
+  "A league cup (the Carabao Cup) for leagues of the game, and a super cup where the game has none": "Ligaški kup (Carabao Cup) za lige iz igre i superkup gdje ga igra nema",
+  "A league cup is 16 clubs of the league and the one below it, by position, one match a round from late September to December. A super cup -- the champion v the cup winner in late July -- only where the game has none. Empty name = the league's name and League Cup / Super Cup.": "Ligaški kup je 16 klubova te lige i one ispod nje, po poretku, jedna utakmica po kolu od kraja rujna do prosinca. Superkup -- prvak protiv pobjednika kupa krajem srpnja -- samo gdje ga igra nema. Prazno ime = ime lige i League Cup / Super Cup.",
+  "the game has one": "igra ga ima"
  },
  "log": [
   [
