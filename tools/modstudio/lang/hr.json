@@ -956,7 +956,11 @@
   "Search a club or a league; pick one or more.": "Traži klub ili ligu; odaberi jedan ili više.",
   "Untick a club to leave it out; add clubs of other leagues (two promoted ones, say).": "Makni kvačicu da klub ostane vani; dodaj klubove drugih liga (recimo dva koja su ušla).",
   "%s would play in two leagues (%s and %s).": "%s bi igrao u dvije lige (%s i %s).",
-  "the recipe": "recept"
+  "the recipe": "recept",
+  "Home stadium": "Domaći stadion",
+  "No folder %s in the stadium-server library.": "Nema mape %s u biblioteci stadium-servera.",
+  "a stadium of Stadium Server; written to its map_teams.txt when the world is switched on": "stadion iz Stadium Servera; upiše se u njegov map_teams.txt kad se svijet uključi",
+  "install Stadium Server (Stadiums page) to give the club a home stadium": "instaliraj Stadium Server (stranica Stadioni) da klub dobije domaći stadion"
  },
  "log": [
   [

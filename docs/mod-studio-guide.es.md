@@ -184,6 +184,8 @@ columna **ID del club** muestra el id de cada club en el juego.
 
 **Formación**: en **Editar club** de un club nuevo puedes darle una formación propia; *Como la liga* mantiene la de la liga. El campo bajo la lista muestra dónde juega cada uno.
 
+**Estadio local** (0.1.7): en **Editar club**, un estadio de la biblioteca de Stadium Server para el club; la ranura y el nombre se rellenan desde la carpeta, cambia el nombre si quieres. Se escribe en el `map_teams.txt` de Stadium Server al activar el mundo (y al construir otra vez el mundo activo), así que nunca hay que buscar el id de un club nuevo. Una línea tuya para el mismo club se desactiva mientras tanto, y se activa otra vez cuando el club ya no tiene estadio aquí. *Ligas y clubes del juego* > **Editar club** lo tiene también para los clubes del juego. Stadium Server tiene que estar instalado (página *Estadios*).
+
 **Clubes que el juego ya tiene.** Un puesto de una liga nueva puede tener uno de los clubes del
 juego en lugar de uno nuevo: selecciona el puesto, luego **Club del juego...**, y busca por nombre
 o ID del equipo (**Solo clubes sin liga** acorta la lista). El club conserva su nombre, escudo,

@@ -170,7 +170,10 @@ and `tools/lbplayers.py`):
 - Under `"players"`, per club: `"join"` (players who come to the club and keep their record: a
   transfer to a club, a call-up to a national team), `"id"` (a new player's own id, up to
   399999) and `"coach_portrait"` (a picture Build writes to
-  `common/render/symbol/coach/coach_<coach id>.png`, 256 x 256).
+  `common/render/symbol/coach/coach_<coach id>.png`, 256 x 256), and `"stadium"`
+  (`{"folder": "Region\Stadium", "slot": "009", "name": ...}`, a folder of Stadium Server's
+  library: Switch on writes it to `content/stadium-server/map_teams.txt` with the club's built
+  id, `tools/lbstadiums.py`; 0.1.7).
 - A recipe with no leagues and `"uecl"`: the new European format alone, the game's leagues and
   clubs as they are (Build page, *Only the new European cups...*).
 

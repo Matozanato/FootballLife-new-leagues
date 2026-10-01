@@ -121,7 +121,8 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print):
     for key, c in (recipe.get("players") or {}).items():
         lg = key.rpartition("/")[0]
         if (lg in names) or (edits and key.isdigit()):
-            if c.get("edits") or c.get("add") or c.get("remove") or c.get("join") or c.get("coach_portrait"):
+            if (c.get("edits") or c.get("add") or c.get("remove") or c.get("join") or c.get("coach_portrait")
+                    or c.get("stadium")):
                 out_r["players"][key] = players_of(c)
     if edits:
         e = json.loads(json.dumps(recipe.get("edits") or {}))

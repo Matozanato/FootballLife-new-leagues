@@ -11,12 +11,14 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, 
                                QPlainTextEdit, QPushButton, QRadioButton, QSpinBox, QSplitter,
                                QTableWidget, QTableWidgetItem, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
                                QFileDialog, QButtonGroup, QHeaderView, QAbstractItemView,
-                               QMessageBox, QScrollArea, QApplication)
+                               QMessageBox, QScrollArea, QApplication, QCompleter)
 
 import leaguebuilder as B
 import lbplayers
+import lbstadiums
 import fl26world
 from .. import theme
+from .. import servers as S
 from ..i18n import _, tr
 from ..backups import snapshot
 from ..ui import Page, section, hint, row, ask, error, run_job
@@ -622,6 +624,15 @@ class LeagueDialog(Dialog):
         self.tier_lab.setText(_("= division %d") % t if t else "")
 
 
+def stadium_lib(app):
+    """Stadium Server's folder (its library of stadiums), None when it is not installed"""
+    try:
+        d = os.path.join(app.game.content_dir, "stadium-server")
+    except Exception:
+        return None
+    return d if os.path.isdir(d) else None
+
+
 def coach_portrait(project, key):
     """the picture of a club's manager (the recipe's players[key]["coach_portrait"]), '' for none"""
     return (project.players().get(key) or {}).get("coach_portrait") or ""
@@ -637,11 +648,89 @@ def set_coach_portrait(project, key, path):
             pl.pop(key)
 
 
+def club_stadium(project, key):
+    """a club's home stadium (the recipe's players[key]["stadium"]), {} for none"""
+    return dict((project.players().get(key) or {}).get("stadium") or {})
+
+
+def set_club_stadium(project, key, st):
+    pl = project.players()
+    if st:
+        pl.setdefault(key, {})["stadium"] = st
+    elif key in pl:
+        pl[key].pop("stadium", None)
+        if not pl[key]:
+            pl.pop(key)
+
+
+class StadiumField(QWidget):
+    """Home stadium: a folder of Stadium Server's library, its slot and the name the game shows"""
+
+    def __init__(self, lib, st):
+        super().__init__()
+        self.lib = lib                     # the stadium-server folder, None when not installed
+        v = QVBoxLayout(self)
+        v.setContentsMargins(0, 0, 0, 0)
+        self.folder = QComboBox()
+        self.folder.setEditable(True)
+        items = sorted(S.library(lib, "folder"), key=str.lower) if lib else []
+        self.folder.addItems([""] + items)
+        comp = QCompleter(items, self.folder)
+        comp.setCaseSensitivity(Qt.CaseInsensitive)
+        comp.setFilterMode(Qt.MatchContains)
+        self.folder.setCompleter(comp)
+        self.folder.lineEdit().setPlaceholderText(_("(the game's own)"))
+        self.folder.setEditText(st.get("folder") or "")
+        self.folder.setMinimumWidth(280)
+        self.folder.currentTextChanged.connect(self.picked)
+        v.addWidget(self.folder)
+        h = QHBoxLayout()
+        self.name = QLineEdit(st.get("name") or "")
+        self.name.setPlaceholderText(_("Stadium name"))
+        self.name.setMaxLength(60)
+        self.slot = QLineEdit(st.get("slot") or "")
+        self.slot.setPlaceholderText("009")
+        self.slot.setFixedWidth(60)
+        self.slot.setToolTip(_("the stadium slot the folder was made for (often 009)"))
+        h.addWidget(self.name, 1)
+        h.addWidget(QLabel(_("Slot")))
+        h.addWidget(self.slot)
+        v.addLayout(h)
+        if not lib:
+            self.folder.setEnabled(False)
+            self.name.setEnabled(False)
+            self.slot.setEnabled(False)
+
+    def picked(self, text):
+        folder = os.path.join(self.lib or "", text.strip())
+        if not self.lib or not text.strip() or not os.path.isdir(folder):
+            return
+        found = S.stadium_id(folder)
+        if found:
+            self.slot.setText(found)
+        self.name.setText(os.path.basename(text.strip().rstrip("\\/")))
+
+    def value(self):
+        """the recipe's entry, {} for none; raises ValueError with what is wrong"""
+        folder = self.folder.currentText().strip().strip("\\/")
+        if not folder:
+            return {}
+        st = {"folder": folder, "name": self.name.text().strip(), "slot": self.slot.text().strip()}
+        bad = lbstadiums.problem(st)
+        if bad:
+            raise ValueError(bad)
+        if self.lib and not os.path.isdir(os.path.join(self.lib, folder)):
+            raise ValueError(_("No folder %s in the stadium-server library.") % folder)
+        if st["slot"]:
+            st["slot"] = "%03d" % int(st["slot"])
+        return {k: v for k, v in st.items() if v}
+
+
 class ClubDialog(Dialog):
     """one club: name, short name, crest -- a new club, or one of the game's"""
 
     def __init__(self, parent, name, short, crest, was=None, coach=None, formation=None, formations=(),
-                 league_formation="", portrait=None):
+                 league_formation="", portrait=None, stadium=None, stadium_lib=None):
         super().__init__(parent, "Club")
         self.name = QLineEdit(name or "")
         self.name.setMinimumWidth(280)
@@ -654,6 +743,13 @@ class ClubDialog(Dialog):
                                     "names have no marks); empty = made from the name")))
         self.crest = PictureField(crest)
         self.form.addRow(_("Crest"), self.crest)
+        self.stadium, self.stadium_value = None, stadium
+        if stadium is not None:            # its home stadium (Stadium Server)
+            self.stadium = StadiumField(stadium_lib, stadium)
+            self.form.addRow(_("Home stadium"), self.stadium)
+            self.form.addRow("", hint(_("a stadium of Stadium Server; written to its map_teams.txt when the world "
+                                        "is switched on") if stadium_lib else
+                                      _("install Stadium Server (Stadiums page) to give the club a home stadium")))
         self.coach = None
         if coach is not None:              # a new club: its manager's name
             self.coach = QLineEdit(coach)
@@ -685,6 +781,12 @@ class ClubDialog(Dialog):
         if short and (not all(c.isalnum() for c in short) or not B.short_name(short)):
             error(self, "Club", _("The short name takes letters and digits only."))
             return
+        if self.stadium is not None:
+            try:
+                self.stadium_value = self.stadium.value()
+            except ValueError as e:
+                error(self, "Club", str(e))
+                return
         self.result = (self.name.text().strip(), B.short_name(short), self.crest.path)
         if self.coach is not None:
             self.coach_name = self.coach.text().strip()
@@ -1711,10 +1813,12 @@ class NewClubs(BuilderPage):
         key = "%s/%d" % (L["name"], k)
         d = ClubDialog(self, names[k], abbrs[k], crests[k], coach=coaches[k], formation=forms[k],
                        formations=self.project.formations(), league_formation=L.get("formation", ""),
-                       portrait=coach_portrait(self.project, key))
+                       portrait=coach_portrait(self.project, key), stadium=club_stadium(self.project, key),
+                       stadium_lib=stadium_lib(self.app))
         if d.finish() and d.result:
             names[k], abbrs[k], crests[k] = d.result
             set_coach_portrait(self.project, key, d.portrait_path)
+            set_club_stadium(self.project, key, d.stadium_value)
             coaches[k] = d.coach_name or ""
             if any(coaches):
                 L["club_coaches"] = coaches
@@ -1936,10 +2040,12 @@ class GameLeagues(BuilderPage):
         n, a = self.project.game_cl[tid]
         e = self.project.edits("clubs").get(str(tid), {})
         d = ClubDialog(self, e.get("name") or n, e.get("abbr") or a, e.get("crest"), was=(n, a),
-                       portrait=coach_portrait(self.project, str(tid)))
+                       portrait=coach_portrait(self.project, str(tid)), stadium=club_stadium(self.project, str(tid)),
+                       stadium_lib=stadium_lib(self.app))
         if not (d.finish() and d.result):
             return
         set_coach_portrait(self.project, str(tid), d.portrait_path)
+        set_club_stadium(self.project, str(tid), d.stadium_value)
         name, short, crest = d.result
         e = {}
         if name and name != n:

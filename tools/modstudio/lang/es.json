@@ -956,7 +956,11 @@
   "Search a club or a league; pick one or more.": "Busca un club o una liga; elige uno o varios.",
   "Untick a club to leave it out; add clubs of other leagues (two promoted ones, say).": "Desmarca un club para dejarlo fuera; añade clubes de otras ligas (dos ascendidos, por ejemplo).",
   "%s would play in two leagues (%s and %s).": "%s jugaría en dos ligas (%s y %s).",
-  "the recipe": "la receta"
+  "the recipe": "la receta",
+  "Home stadium": "Estadio local",
+  "No folder %s in the stadium-server library.": "No hay carpeta %s en la biblioteca de stadium-server.",
+  "a stadium of Stadium Server; written to its map_teams.txt when the world is switched on": "un estadio de Stadium Server; se escribe en su map_teams.txt al activar el mundo",
+  "install Stadium Server (Stadiums page) to give the club a home stadium": "instala Stadium Server (página Estadios) para dar al club un estadio local"
  },
  "log": [
   [

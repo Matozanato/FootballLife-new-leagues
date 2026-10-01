@@ -107,7 +107,8 @@ tell us where. Read [what works and what does not](#status) before you start a l
   each part is and where it goes, merges content-server map files into yours, and every mod it
   installs can be removed again.
 - **Content servers** (stadiums, kits, balls, commentary, music, scoreboards, menus ...) with
-  their map files edited as tables.
+  their map files edited as tables. A new club's **home stadium** is picked in Edit club and
+  written for you when the world is switched on (0.1.7).
 - **Sider setup**: content folders and Lua modules on, off and in order; profiles; a restore
   point for every file it changes; a diagnostics report to paste into a bug report.
 - **League packages** (`.fl26pack`): a modder makes a league once — clubs, names, crests,

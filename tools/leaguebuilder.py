@@ -2667,6 +2667,14 @@ def switch_on(world, game, log=print):
         shutil.copy2(dst, dst + ".prev")
     shutil.copy2(wf, dst)
     log("world file -> %s" % dst)
+    try:                                               # Edit club > Home stadium (Stadium Server)
+        with open(os.path.join(root, "leaguebuilder-plan.json"), encoding="utf-8") as f:
+            built = json.load(f)
+    except (OSError, ValueError):
+        built = None
+    if built is not None:
+        import lbstadiums
+        lbstadiums.write(built, siderdir.find(game), log)
     mods = os.path.join(root, "modules")
     for f in sorted(os.listdir(mods)) if os.path.isdir(mods) else []:
         dst = os.path.join(siderdir.find(game), "modules", f)

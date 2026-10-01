@@ -289,6 +289,11 @@ def check(recipe):
             bad = portrait_problem(c["coach_portrait"])
             if bad:
                 err.append("manager of %s: %s" % (club, bad))
+        if c.get("stadium"):
+            import lbstadiums
+            bad = lbstadiums.problem(c["stadium"])
+            if bad:
+                err.append("home stadium of %s: %s" % (club, bad))
         for key, ch in (c.get("edits") or {}).items():
             err += ["players of %s, player %s: %s" % (club, key, e) for e in check_edit(ch)]
             if "id" in ch and (club.isdigit() or not key.isdigit()):

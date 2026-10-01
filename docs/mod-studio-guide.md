@@ -176,6 +176,8 @@ the game.
 
 **Formation**: in **Edit club** of a new club you can give it a formation of its own; *As the league* keeps the league's. The pitch under the list shows where everyone stands.
 
+**Home stadium** (0.1.7): in **Edit club**, a stadium of Stadium Server's library for the club; the slot and the name are filled in from the folder, change the name if you like. It is written to Stadium Server's `map_teams.txt` when the world is switched on (and when the live world is built again), so a new club's id never has to be looked up. A line of your own for the same club is switched off meanwhile, and on again when the club no longer has one here. *Game's leagues and clubs* > **Edit club** has it for the game's clubs too. Stadium Server has to be installed (the *Stadiums* page).
+
 **Clubs the game already has.** A place of a new league can hold one of the game's clubs instead
 of a new one: select the place, then **Club of the game...**, and search by name or team ID
 (**Only clubs in no league** narrows the list). The club keeps its name, crest, kits, manager and

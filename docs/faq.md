@@ -235,6 +235,13 @@ game with that formation, its best eleven lined up for it. **Edit club** gives a
 its own. On the *Players* page a new club's first eleven is drawn on a pitch: select a player,
 click a place, and he goes there. Build again and start a new career to see it.
 
+### How do I give my new club a home stadium?
+
+Since 0.1.7: **Edit club** > **Home stadium**, pick a stadium of Stadium Server. Mod Studio writes the
+line in Stadium Server's `map_teams.txt` with the club's id when you switch the world on, so you never
+have to look the id up. Before 0.1.7: the *Stadiums* page, **Home stadiums**, add a line; the club
+list there has the new clubs of a built world.
+
 ### My new country outside Europe has no clubs and no matches from the second season
 
 A world built before Mod Studio 0.1.4 keeps some leagues of a new country outside Europe under
