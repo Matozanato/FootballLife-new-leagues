@@ -991,7 +991,10 @@
   "Everyone else who helped": "Tous les autres qui ont aidé",
   "Mod Studio is tested in the open. Every fix in it goes back to someone who played, wrote down what happened and sent it. Thank you, all of you.": "Mod Studio est testé au grand jour. Chaque correction vient de quelqu'un qui a joué, noté ce qui s'est passé et l'a envoyé. Merci à tous.",
   "Send a report on GitHub or Discord and your name goes on this list too.": "Envoie un rapport sur GitHub ou Discord et ton nom ira aussi sur cette liste.",
-  "Build makes a club of that name for the competitions the club leaves, with a placeholder squad and a numbered badge": "Construire crée un club de ce nom pour les compétitions que le club quitte, avec un effectif provisoire et un écusson numéroté"
+  "Build makes a club of that name for the competitions the club leaves, with a placeholder squad and a numbered badge": "Construire crée un club de ce nom pour les compétitions que le club quitte, avec un effectif provisoire et un écusson numéroté",
+  "Select all": "Tout cocher",
+  "Select none": "Tout décocher",
+  "The recipe already has %s. Replace it with this version? Its leagues, clubs and player changes go out and the new ones come in.": "La recette a déjà %s. Le remplacer par cette version ? Ses ligues, clubs et changements de joueurs sortent et les nouveaux entrent."
  },
  "log": [
   [

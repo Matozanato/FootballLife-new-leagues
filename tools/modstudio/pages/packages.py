@@ -5,8 +5,8 @@ import os
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
-                               QLineEdit, QListWidget, QListWidgetItem, QPlainTextEdit, QSplitter,
-                               QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
+                               QLineEdit, QListWidget, QListWidgetItem, QPlainTextEdit, QPushButton,
+                               QSplitter, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 
 import lbpackage as K
 from ..i18n import _
@@ -43,6 +43,10 @@ class MakeDialog(QDialog):
         f.addRow(_("Description"), self.desc)
         v.addLayout(f)
         v.addWidget(section("Leagues"))
+        every, none = QPushButton(_("Select all")), QPushButton(_("Select none"))
+        every.clicked.connect(lambda: self.tick(Qt.Checked))
+        none.clicked.connect(lambda: self.tick(Qt.Unchecked))
+        v.addWidget(row(every, none))
         self.leagues = QListWidget()
         for L in recipe.get("leagues", []):
             it = QListWidgetItem("%s   (%s, %d %s)" % (L["name"], L.get("country", ""), int(L.get("clubs", 0)),
@@ -67,6 +71,10 @@ class MakeDialog(QDialog):
         bb.accepted.connect(self.check)
         bb.rejected.connect(self.reject)
         v.addWidget(bb)
+
+    def tick(self, state):
+        for i in range(self.leagues.count()):
+            self.leagues.item(i).setCheckState(state)
 
     def picked(self):
         return [self.leagues.item(i).data(Qt.UserRole) for i in range(self.leagues.count())
@@ -185,7 +193,15 @@ class Packages(BuilderPage):
             text.append(_("It also changes some of the game's own leagues or clubs."))
         if man.get("description"):
             text += ["", man["description"]]
-        text += ["", _("Add it to the recipe?")]
+        # the same package again (its name): a new version takes the old one's place (GitHub #34)
+        same = lambda n: (n or "").strip().casefold() == (man.get("name") or "").strip().casefold()
+        old = [(t, p) for t, p in K.packs(self.project.recipe).items() if same(p.get("name"))]
+        if old:
+            text += ["", _("The recipe already has %s. Replace it with this version? Its leagues, clubs and "
+                           "player changes go out and the new ones come in.")
+                     % ", ".join("%s %s" % (p.get("name") or t, p.get("version") or "") for t, p in old)]
+        else:
+            text += ["", _("Add it to the recipe?")]
         if not ask(self, "Add a league package", "\n".join(text)):
             return
         try:
@@ -195,7 +211,8 @@ class Packages(BuilderPage):
             return
         tag = K.tag_of(man)
         rename = {}
-        clash = K.clashes(self.project.recipe, piece, tag)
+        going = {n for _t, p in old for n in p.get("leagues") or []}      # replaced, not clashing
+        clash = [n for n in K.clashes(self.project.recipe, piece, tag) if n not in going]
         if clash:
             if not ask(self, "Add a league package",
                        _("The recipe already has a league called %s. Add the package's with its name after it, "
@@ -208,6 +225,9 @@ class Packages(BuilderPage):
                     new, k = "%s (%s %d)" % (n, man.get("name"), k), k + 1
                 rename[n] = new
                 have.add(new)
+        for t, _p in old:
+            if t != tag:                      # K.add replaces a package of the same tag itself
+                K.remove(self.project.recipe, t)
         try:
             K.add(self.project.recipe, man, piece, folder, rename)
         except K.Error as e:
