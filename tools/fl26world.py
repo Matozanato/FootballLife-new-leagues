@@ -192,6 +192,20 @@ CCUPS = [
      [(r, p) for k in range(8) for r, p in ((_BRA, 7 + k), (_ARG, 7 + k), (_CHI, 3 + k), (_COL, 3 + k))]),
 ]
 COMPETITIONS += [(c, n) for c, n, _code, _conf, _fill in CCUPS]
+# The shipped leagues that fill the cups above, by regulation (for Check the plan).
+FILL_NAMES = {_BRA: "Brasileirão Série A (Brazil)", _ARG: "Liga Profesional (Argentina)",
+              _CHI: "Liga de Primera (Chile)", _COL: "Liga BetPlay (Colombia)", _J1: "J1 League (Japan)",
+              _CSL: "Chinese Super League (China)", _SPL: "Saudi Pro League (Saudi Arabia)"}
+# The game's own Libertadores places of its South American leagues: the rows of the exe's rights
+# table (0x1434f1fa0, targets 3 and 4 -- regulation 9, the group stage, and 8, the qualifying
+# round), which the game's Competition Info shows as the Libertadores' criteria. (league, group
+# stage, qualifying round)
+SAM_GAME = [
+    (_BRA, "1st-4th and the Copa do Brasil winner", "5th-6th"),
+    (_ARG, "1st-4th and the Copa Argentina winner", "5th"),
+    (_CHI, "1st and the Copa Chile winner", "2nd-3rd"),
+    (_COL, "the winners of the two playoffs (I and II)", "the Copa BetPlay winner"),
+]
 FIELD = 36                        # clubs in each UEFA league phase; places past it get nothing
 
 # The DLL's own access list (tools/native/fl26swiss.c, ACCESS): the shipped leagues' European

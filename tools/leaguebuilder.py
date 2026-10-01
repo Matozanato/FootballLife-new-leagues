@@ -1796,6 +1796,56 @@ def place_name(pos, comp):
     return "cup winner %s" % comp if pos == CUP_WINNER else "%d. %s" % (pos, comp)
 
 
+def nth(n):
+    return "%d%s" % (n, "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th"))
+
+
+def fill_share(cup):
+    """{shipped league: [positions]} of a continental cup's entries the game's leagues fill
+    (fl26world.CCUPS: after the world's own places, one of each league in turn)"""
+    out = {}
+    for r, pos in cup["entry"]:
+        if r in fl26world.FILL_NAMES and pos:
+            out.setdefault(r, []).append(pos)
+    return out
+
+
+def samerica_lines(own, names, cups):
+    """Check the plan's list of every South American league's places (GitHub #71): the game's
+    leagues -- their Libertadores places (fl26world.SAM_GAME) and the share of the Copa
+    Sudamericana they fill -- then the world's own leagues with a Libertadores or Sudamericana
+    place. own: (league, position, competition, alt) as own_places gives them, names: {league:
+    name}, cups: ccup_plan's. A Sudamericana entry takes the club at that position or, when it
+    already plays a continental cup, the next one of its league (fl26swiss ccup_taken)."""
+    sud = next((c for c in cups if c["number"] == 9), None)
+    share = fill_share(sud) if sud else {}
+    lines = ["  South American places (Copa Libertadores, its qualifying round, Copa Sudamericana):"]
+    for r, lib, libq in fl26world.SAM_GAME:
+        s = sorted(share.get(r) or [])
+        lines.append("    %s, a league of the game: Libertadores %s; qualifying %s; %s" % (
+            fl26world.FILL_NAMES[r], lib, libq,
+            "Copa Sudamericana %d clubs from %s down" % (len(s), nth(s[0])) if s
+            else "Copa Sudamericana: none" if sud else "no Copa Sudamericana in this world"))
+    cn = {3: "Libertadores", 4: "qualifying", 9: "Copa Sudamericana"}
+    mine = {}
+    for r, pos, comp, alt in own:
+        if comp in cn:
+            league = alt if pos == CUP_WINNER and alt else r
+            mine.setdefault(league, []).append((comp, pos))
+    for league, places in mine.items():
+        lines.append("    %s: %s" % (names.get(league, league), "; ".join(
+            "%s %s" % (cn[c], ", ".join("cup winner" if p == CUP_WINNER else nth(p)
+                                        for cc, p in sorted(places, key=lambda e: e[1]) if cc == c))
+            for c in (3, 4, 9) if any(cc == c for cc, _p in places))))
+    if any(c == 4 for v in mine.values() for c, _p in v):
+        lines.append("    the world's qualifying places take those of the game's leagues: of the league with the "
+                     "most clubs in the round, its lowest place first; two stay the game's")
+    if sud:
+        lines.append("    a Sudamericana club that already plays the Libertadores or its qualifying gives way "
+                     "to the next one of its league")
+    return lines
+
+
 def describe(pl):
     e = pl.get("edits") or {}
     lines = ["world %s: %d new leagues, changes to %d of the game's leagues and %d of its clubs"
@@ -1884,6 +1934,9 @@ def describe(pl):
                                              else "a knockout"))
     for note in pl.get("ccup_notes") or []:
         lines.append("  NOTE: " + note)
+    own = own_places(pl)
+    if any(c["number"] == 9 for c in pl.get("ccups") or []) or any(e[2] in (3, 4, 9) for e in own):
+        lines += samerica_lines(own, {p["rid"]: p["name"] for p in pl["leagues"]}, pl.get("ccups") or [])
     for cup in pl.get("home_cups") or []:
         what = {"league": "league cup", "playoff": "playoff, filled on day %d" % cup["opts"]["fill"],
                 "super": "super cup in late July"}

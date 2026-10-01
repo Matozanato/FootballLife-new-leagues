@@ -1325,6 +1325,43 @@ class UefaRankDialog(Dialog):
         self.accept()
 
 
+class SouthAmericaDialog(Dialog):
+    """read only (GitHub #71): every South American league's Libertadores, qualifying and Copa
+    Sudamericana places -- the game's leagues and the world's own -- as Check the plan lists them"""
+
+    def __init__(self, parent, project):
+        super().__init__(parent, "South American places")
+        own, names, clubs = [], {}, {}
+        for L in project.recipe["leagues"]:
+            n = L.get("name") or "?"
+            names[n], clubs[n] = n, L.get("clubs") or 0
+            for pos, comp in L.get("europe") or []:
+                own.append(("", 0, comp, n) if pos == B.CUP_WINNER else (n, pos, comp, 0))
+        cups, _notes = B.ccup_plan(own, clubs)
+        self.v.insertWidget(0, hint(_("Which positions go to the Copa Libertadores, its qualifying round and the "
+                                      "Copa Sudamericana, for the game's South American leagues and yours. The "
+                                      "game's Libertadores places are its own; the Copa Sudamericana is built by "
+                                      "Mod Studio, your leagues' places first, then the game's leagues in turn.")))
+        view = QPlainTextEdit()
+        view.setReadOnly(True)
+        view.setPlainText("\n".join(l[4:] for l in B.samerica_lines(own, names, cups)[1:]))
+        self.v.insertWidget(1, view, 1)
+        self.scroll.hide()
+        self.setMinimumSize(820, 360)
+
+    def finish(self):
+        bb = QDialogButtonBox(QDialogButtonBox.Close)
+        bb.button(QDialogButtonBox.Close).setText(_("Close"))
+        bb.rejected.connect(self.reject)
+        self.v.addWidget(bb)
+        try:
+            theme.dark_title_bar(self)
+        except Exception:
+            pass
+        self.exec()
+        return False
+
+
 class GameCupsDialog(Dialog):
     """the recipe's game_cups: a league cup, and a super cup where the game has none, for the
     game's own top divisions (the Carabao Cup for the Premier League)"""
@@ -1440,6 +1477,8 @@ class NewLeagues(BuilderPage):
                     "Premier League, LaLiga ... go to which European competition, in place of the game's list")
         self.action("UEFA ranking", self.uefa_rank, tip="Put the European countries in order and every league "
                     "gets its European places by UEFA's key")
+        self.action("South American places", self.samerica, tip="Which positions of every South American "
+                    "league, the game's and yours, go to the Libertadores, its qualifying and the Sudamericana")
         self.action("Competition names", self.competition_names, tip="New names and logos for the cups and "
                     "continental competitions of the game, and for the continental cups the world builds")
         top = QHBoxLayout()
@@ -1650,6 +1689,9 @@ class NewLeagues(BuilderPage):
             self.refresh()
             self.say(_("UEFA ranking applied: every ranked league has its European places. Check the plan shows "
                        "them."), "ok")
+
+    def samerica(self):
+        SouthAmericaDialog(self, self.project).finish()
 
     def game_cups(self):
         if self.need_tables():

@@ -994,7 +994,10 @@
   "Build makes a club of that name for the competitions the club leaves, with a placeholder squad and a numbered badge": "Construire crée un club de ce nom pour les compétitions que le club quitte, avec un effectif provisoire et un écusson numéroté",
   "Select all": "Tout cocher",
   "Select none": "Tout décocher",
-  "The recipe already has %s. Replace it with this version? Its leagues, clubs and player changes go out and the new ones come in.": "La recette a déjà %s. Le remplacer par cette version ? Ses ligues, clubs et changements de joueurs sortent et les nouveaux entrent."
+  "The recipe already has %s. Replace it with this version? Its leagues, clubs and player changes go out and the new ones come in.": "La recette a déjà %s. Le remplacer par cette version ? Ses ligues, clubs et changements de joueurs sortent et les nouveaux entrent.",
+  "South American places": "Places sud-américaines",
+  "Which positions of every South American league, the game's and yours, go to the Libertadores, its qualifying and the Sudamericana": "Quelles places de chaque championnat sud-américain, du jeu et les tiens, vont en Libertadores, en qualifications et en Sudamericana",
+  "Which positions go to the Copa Libertadores, its qualifying round and the Copa Sudamericana, for the game's South American leagues and yours. The game's Libertadores places are its own; the Copa Sudamericana is built by Mod Studio, your leagues' places first, then the game's leagues in turn.": "Quelles places vont en Copa Libertadores, à son tour de qualification et en Copa Sudamericana, pour les championnats sud-américains du jeu et les tiens. Les places de la Libertadores sont celles du jeu ; la Copa Sudamericana est créée par Mod Studio, d'abord les places de tes championnats, puis les championnats du jeu à tour de rôle."
  },
  "log": [
   [

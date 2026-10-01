@@ -178,6 +178,16 @@ country to the round nearest the league phase. Afterwards you can still change a
 places by hand (*Europe* on the league, *European places of the game's leagues*): Build takes
 the places, not the ranking.
 
+**South American places** (same page, 0.1.7, read only): for every South American league, the
+game's four and yours, which positions go to the Copa Libertadores, its qualifying round and the
+Copa Sudamericana. The game's Libertadores places are its own (Brazil 1st-4th and the Copa do
+Brasil winner, qualifying 5th-6th, and so on -- the same the game's Competition Info shows); the
+Copa Sudamericana is Mod Studio's, so the list shows how many clubs each of the game's leagues
+sends to it with your places in: your leagues first, then Brazil, Argentina, Chile and Colombia
+one club each in turn until 32. A club already in the Libertadores or its qualifying gives way to
+the next one of its league. **Check the plan** prints the same list whenever the world has a
+Libertadores or Sudamericana place.
+
 **Competition names** (same page): a new name and logo for the game's cups, super cups and continental competitions -- the FA Cup, the Champions League, the Libertadores ... -- and for the continental cups the world builds (CAF Champions League, Confederation Cup, AFC Champions League Two, Copa Sudamericana, CAF Super Cup). Every stage of a competition takes the name. Empty: the game's own. The game's leagues are renamed on *Game's leagues and clubs*.
 
 **New clubs**: pick the league, then **Edit club** (name, short name, crest), **Paste names...**
