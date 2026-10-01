@@ -94,6 +94,9 @@ tell us where. Read [what works and what does not](#status) before you start a l
   0.1.4) and Copa Sudamericana; CAF Champions League and CAF Confederation Cup, and the CAF
   Super Cup between their winners (0.1.6). The four the game does not have are built with your
   world. The **game's own leagues** can get their European places changed too (0.1.7).
+  **UEFA ranking** (0.1.7): put the world's European leagues in order and each gets its places
+  from UEFA's key; **South American places** lists the Libertadores and Sudamericana places of
+  every South American league, the game's and yours.
 - A country's own **national cup** (any size up to 44 clubs, with byes like the FA Cup, 0.1.4)
   and **super cup**, a **league cup** (the clubs past 16 through a pre-round, 0.1.7), and **pre-season cups** of 4 or 8 invited clubs in July,
   each with your own **logo** (0.1.5.5). A **league cup** for the game's own countries (the
@@ -114,9 +117,11 @@ tell us where. Read [what works and what does not](#status) before you start a l
   their map files edited as tables. A new club's **home stadium** is picked in Edit club and
   written for you when the world is switched on (0.1.7).
 - **Sider setup**: content folders and Lua modules on, off and in order; profiles; a restore
-  point for every file it changes; a diagnostics report to paste into a bug report.
+  point for every file it changes; a diagnostics report to paste into a bug report. The health
+  check also catches a database mod (UML ...) that hides the world's tables (0.1.7).
 - **League packages** (`.fl26pack`): a modder makes a league once — clubs, names, crests,
-  logos, squads, faces — and anybody adds it to their own game.
+  logos, squads, faces — and anybody adds it to their own game. Adding a newer version replaces
+  the old one (0.1.7).
 - English, Croatian, Spanish and French.
 
 **Versions**
