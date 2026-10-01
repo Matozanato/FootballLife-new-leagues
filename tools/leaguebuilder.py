@@ -208,7 +208,13 @@ MAX_SPLITS = 2                           # split seasons tested so far: two at a
 # and a cup's round dates are its prototype's. (code, bracket)
 NATIONAL_CUPS = {12: ("SCOTLAND_CUP", 12), 16: ("BELGIUM_CUP", 16), 18: ("NETHERLANDS_D1_CUP", 18),
                  20: ("ENGLAND_D1_CUP", 44)}
-NATIONAL_CUPS_TWO = {36: ("FRANCE_D1_CUP", 18), 40: ("ITALY_D1_CUP", 20), 44: ("ENGLAND_D1_CUP", 44)}
+# Two divisions always go on a bracket of the whole field. The Coupe de France (36 clubs on a
+# bracket of 18) and the Coppa Italia (40 on 20) were copied with their own brackets until
+# 0.1.7, and a Polish cup of 18 + 18 built on the French one played a first round of 32 and then
+# a round of 32 with only its 16 winners in it, the four clubs left over never drawn and the
+# final played between two clubs of the same half (Discord, 2026-10-01) -- the DFB-Pokal's
+# shipped bracket of 24 lost its round of 16 the same way (#21).
+NATIONAL_CUPS_TWO = {44: ("ENGLAND_D1_CUP", 44)}
 # Any other number of clubs: the English cup. Its calendar (exe case 6, shared by the Italian,
 # Spanish, French, Dutch, Portuguese, German, Russian and Turkish cups) dates round ids 0x2e,
 # 0x2f, 0x30 and 0x33..0x35, and the game numbers a knockout's rounds from 0x2e up to the
