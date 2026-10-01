@@ -304,7 +304,12 @@ SEASON_TURN = 182                        # the season's July turn: day-of-year o
 # AFC goes after the J1 League (slot 18), the last Asian league before Other Clubs (Asia) on 70 in
 # the exe's list (... 102, 119, 30, 18, 70, 22 ...), so the new Asian leagues sit with the game's
 # own and the "Other" entry stays last (GitHub #38, #43); CAF and OFC follow that entry
-KICKOFF_AFTER = {2: 25, 4: 67, 3: 18, 6: 17}     # UEFA, CONMEBOL, AFC, CONCACAF
+# CONMEBOL (4) goes after Colombia (slot 99, the game's last South American league before MLS in
+# that block) and after any division of the world below it, so the new South American leagues
+# sit with the game's own, before MLS and CONCACAF (GitHub #38); it used to be the end of the
+# block, after the Sudamericana's slot 67
+KICKOFF_AFTER = {2: 25, 4: 99, 3: 18, 6: 17}     # UEFA, CONMEBOL, AFC, CONCACAF
+COLOMBIA = 168
 KICKOFF_OTHER = 70                        # CAF, OFC: no club list of their own, after Asia
 SHIPPED_SLOT = {17: 7, 79: 50, 20: 8, 81: 52, 18: 9, 82: 53, 21: 10, 22: 12, 116: 91, 133: 114,
                 19: 11, 80: 51, 117: 94, 118: 96, 50: 16, 30: 14, 29: 13, 163: 122, 67: 15, 119: 99,
@@ -1990,7 +1995,19 @@ def kickoff_after(p, mine, confed):
             return q["slot"]
         if up in SHIPPED_SLOT:
             return SHIPPED_SLOT[up]
-    return KICKOFF_AFTER.get(confed.get(p["country"]), KICKOFF_OTHER)
+    conf = confed.get(p["country"])
+    if conf == 4:
+        # after Colombia's own divisions of this world too, so Torneo BetPlay stays next to the
+        # Liga BetPlay: the deepest league of the world under the Colombian top division
+        at, cur = KICKOFF_AFTER[4], COLOMBIA
+        for _ in range(8):
+            q = next((q for q in mine.values() if q.get("above") == cur and q is not p
+                      and q.get("slot") not in (None, fl26world.NO_SLOT)), None)
+            if not q:
+                break
+            at, cur = q["slot"], q["rid"]
+        return at
+    return KICKOFF_AFTER.get(conf, KICKOFF_OTHER)
 
 
 def confederations(base):

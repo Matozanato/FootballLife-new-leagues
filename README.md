@@ -511,7 +511,8 @@ Mod Studio 0.1.4. The full list, with dates and details, is in
   panel (the European cups for one that plays August to May, the South American text for some
   others) and in the board's objectives (issue #43). Its places go to its own continent's cups;
   only the text is wrong. Not fixed yet. (The list order is fixed in 0.1.6: a new Asian league
-  comes before *Other Clubs (Asia)*, a CONCACAF one after MLS; African and Oceanian countries
+  comes before *Other Clubs (Asia)*, a CONCACAF one after MLS, and in 0.1.7 a South American one
+  after Colombia, before MLS; African and Oceanian countries
   still come after Asia, since the game has no section for them.)
 - **An Exhibition only league still shows** in Master League's team list (the game has one
   list for Kick Off and Master League). Do not start a career with one of its clubs.

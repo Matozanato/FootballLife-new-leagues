@@ -386,7 +386,8 @@ construir el mundo otra vez. Los dos los usa también **Solo las nuevas copas eu
 
 Después **empieza una nueva carrera de Master League** (o Become a Legend). Las ligas nuevas están
 bajo su país en Select Team y Kick Off. En las listas de Kick Off y Edit un país asiático nuevo va
-antes de *Other Clubs (Asia)*, uno de la CONCACAF después de la MLS, y los africanos y de Oceanía
+antes de *Other Clubs (Asia)*, uno sudamericano junto a los del juego (después de Colombia, antes
+de la MLS, 0.1.7), uno de la CONCACAF después de la MLS, y los africanos y de Oceanía
 (el juego no tiene sección para ellos) después de Asia.
 
 > **Copas de otros continentes.** Cuando tus ligas mandan clubes a la CAF Champions League, la

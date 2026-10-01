@@ -361,7 +361,8 @@ natjecanja...**.
 
 Onda **započni novu Master League** (ili Become a Legend) karijeru. Nove lige su pod svojom
 državom u Select Team i Kick Off. U popisima Kick Offa i Edita nova azijska država dolazi
-prije *Other Clubs (Asia)*, CONCACAF država iza MLS-a, a afričke i oceanijske (igra za njih nema
+prije *Other Clubs (Asia)*, južnoamerička uz one iz igre (iza Kolumbije, prije MLS-a, 0.1.7),
+CONCACAF država iza MLS-a, a afričke i oceanijske (igra za njih nema
 odjeljak) iza Azije.
 
 > **Kupovi drugih kontinenata.** Kad tvoje lige šalju klubove u CAF Ligu prvaka, CAF

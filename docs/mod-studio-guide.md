@@ -368,7 +368,8 @@ European cups...** too.
 
 Then **start a new Master League** (or Become a Legend) career. The new leagues are under their
 country in Select Team and Kick Off. In the Kick Off and Edit lists a new Asian country comes
-before *Other Clubs (Asia)*, a CONCACAF one after MLS, and African and Oceanian ones (the game
+before *Other Clubs (Asia)*, a South American one with the game's (after Colombia, before MLS,
+0.1.7), a CONCACAF one after MLS, and African and Oceanian ones (the game
 has no section for them) after Asia.
 
 > **Other continents' cups.** When your leagues send clubs to the CAF Champions League, the

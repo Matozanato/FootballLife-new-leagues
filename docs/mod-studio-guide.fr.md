@@ -399,7 +399,8 @@ Conférence** en dessous : le nom que le jeu lui donne, *FL Conference League* s
 
 Ensuite, **commencez une nouvelle carrière Master League** (ou Become a Legend). Les nouvelles
 ligues se trouvent sous leur pays dans Select Team et Kick Off. Dans les listes de Kick Off et
-Edit, un nouveau pays d'Asie vient avant *Other Clubs (Asia)*, un pays de la CONCACAF après la MLS,
+Edit, un nouveau pays d'Asie vient avant *Other Clubs (Asia)*, un pays d'Amérique du Sud avec ceux du jeu (après la Colombie, avant la MLS, 0.1.7), un pays de la
+CONCACAF après la MLS,
 et les pays d'Afrique et d'Océanie (le jeu n'a pas de section pour eux) après l'Asie.
 
 > **Coupes des autres continents.** Quand vos ligues envoient des clubs en Ligue des champions
