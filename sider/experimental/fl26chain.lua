@@ -84,8 +84,13 @@ end
 -- league's clubs (GitHub #21: the game would put this league into it, or only this league).
 -- With cupall=1 the cup takes both leagues instead (GitHub #32), the builder having checked
 -- that the cup's calendar dates every round of that field.
+-- cuptop= and cuplow= on a division 3 or lower under a shipped league (Evo-Web 2026-10-01: League
+-- One, Two and the National League under the Championship, and the FA Cup went to League One
+-- and Two -- the game takes the region's lowest regulation id, ours) name the two shipped
+-- divisions the cup has in the game: {cup, top, second, both}.
 -- scup= on the same line is that country's super cup (GitHub #29): {super cup, the league
--- above, this league}; the DLL swaps a club of this league out of it.
+-- above -- the top flight, cuptop=, for a division 3 or lower --, this league}; the DLL swaps a
+-- club of this league out of it.
 local function from_world(world)
   local chains, protect, cups, scups = {}, {}, {}, {}
   for _, L in ipairs(world) do
@@ -94,8 +99,13 @@ local function from_world(world)
       local n = L.promote or 3
       chains[#chains + 1] = { L.above, L.id, n, n }
     end
-    if L.cup and L.above then cups[#cups + 1] = { L.cup, L.above, L.id, L.cupall == 1 } end
-    if L.scup and L.above then scups[#scups + 1] = { L.scup, L.above, L.id } end
+    if L.cup and L.cuptop and L.cuplow then
+      cups[#cups + 1] = { L.cup, L.cuptop, L.cuplow, true }
+    elseif L.cup and L.above then
+      cups[#cups + 1] = { L.cup, L.above, L.id, L.cupall == 1 }
+    end
+    -- below a shipped second division the clubs put back come from the top flight (cuptop=)
+    if L.scup and L.above then scups[#scups + 1] = { L.scup, L.cuptop or L.above, L.id } end
   end
   return chains, protect, cups, scups
 end

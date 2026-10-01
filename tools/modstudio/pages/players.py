@@ -1228,7 +1228,12 @@ class Players(BuilderPage):
             live = [dict(m, player=k) for k, m, ch, gone in self.view() if not gone and not k.startswith(NEW)]
             got, err = P.import_csv(p, live)
         except (P.Error, OSError, ValueError) as e:
-            error(self, "Import CSV...", str(e))
+            msg = str(e)
+            if msg.startswith("unknown columns"):       # someone else's table (GitHub #58)
+                msg += "\n\n" + _("Import CSV... reads back a table made with Export CSV... For a table from "
+                                   "anywhere else (a PES editor, a website, Football Manager) use Import a "
+                                   "squad from a table...")
+            error(self, "Import CSV...", msg)
             return
         if err:
             error(self, "Import CSV...", _("Nothing imported:") + "\n\n" + "\n".join(err[:15]))

@@ -361,6 +361,12 @@ calendar.
   cup's bracket in the world's tables); `fl26chain` gives the cup both leagues' clubs.
 - 2026-09-30 (Mod Studio 0.1.4): **a CAF cup with fewer than 4 places was not built** ("a cup
   needs 4 clubs"). It now takes the next CAF cup's places, then the next league positions.
+- 2026-10-01 (Mod Studio 0.1.6, GitHub issues #53 and #54): **a world with no league of ours
+  in the season** (only the European cups, or only exhibition leagues) **started a career with
+  no schedule for any league**. Without a league of ours `fl26join.dll` is not loaded, and
+  `fl26seasonend.lua` fell back to a guard meant for a setup without it, which took every
+  league off the list for the new season. `fl26seasonend` now changes nothing when the world
+  file holds no league that plays a season. Confirmed by the reporter.
 - 2026-09-30 (Mod Studio 0.1.4): **a national cup needed 12, 16, 18 or 20 clubs** (or 36, 40,
   44 with the division below). Any field up to 44 now plays on the English cup's calendar,
   which dates every round of a field of 9 to 64, with the game's own byes.

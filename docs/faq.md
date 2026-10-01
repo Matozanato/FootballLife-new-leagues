@@ -112,6 +112,10 @@ the game's own entries in that round (the last one of the country with the most 
 most half the round), so it plays the round. Update, **Install the modules**, **Build the
 world** again and start a new career.
 
+Since 0.1.6 the round gives away up to six of its eight places (#66); two stay with the game's
+clubs. With more places than that, the leagues listed last get none, and **Check the plan**
+says so.
+
 ### The same clubs play the Libertadores and the Copa Sudamericana
 
 Fixed in 0.1.4 (#37). A club that is already in the game's Copa Libertadores, its qualifying
@@ -150,6 +154,13 @@ Yes, since 0.1.4 (#36). On the *Build* page press **Only the new European cups..
 world with the new Champions League and Europa League (and the Conference League when it is
 ticked), with the game's own leagues and clubs. The scripts way is in
 [how-to.md](how-to.md), Part D, Route 1.
+
+**With a database mod (UML and the like):** the world carries its own copy of the competition
+and team tables, made from the tables in **Settings**, and by default those are the game's own.
+Point Settings to your database's `common\etc\pesdb` folder first, then build. Built from the
+game's own tables, the world puts the default leagues back over your database's (#36).
+Before 0.1.6 a world with only the European cups also left every league without a schedule at
+the start of a career (#54); update and start a new career.
 
 ### My cups and the Conference League have no logo
 
@@ -340,6 +351,24 @@ run `mkcoaches.py` first (see the question above).
 change, the game reads it instead of the data files and keeps showing the old names. Move it
 somewhere safe (do not just delete it if it holds edits you care about), start the game, and
 let Edit mode write a new one. From then on the new save carries the new names.
+
+### Edit mode says "You cannot edit this strip" for my new clubs
+
+Each new club borrows the kit of a club of the game, and that kit is a licensed one: Edit mode
+refuses it. Since 0.1.6, tick **Kits you can edit in the game** on the Build page and **Build
+the world** again. The new clubs then wear a plain kit that Edit > Teams > Strip changes like
+any other, Paste Image included. Move an old `EDIT00000000` aside first if the kits do not
+change.
+
+### Only my new divisions play the FA Cup
+
+Fixed in 0.1.6. The game fills a country's cup from the first league of the country it finds,
+and a new League One under the Championship was found before the Premier League, so the FA Cup
+went to League One and League Two. Now a new third division or lower leaves the cup to the
+Premier League and the Championship. The super cup is filled the same way, and in a test on
+2026-10-01 the first club of a new League One played the Community Shield against the champions;
+0.1.6 swaps such a club for one of the top flight. **Install the modules**, **Build the world**
+again and start a new career.
 
 ### Do the new clubs show up in the game's Edit mode?
 

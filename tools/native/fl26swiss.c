@@ -1614,7 +1614,9 @@ static int cont_mapped(int k, uint32_t c)
  * home (GitHub #33: "8 clubs, 0 from pool 73; our places 2, paired 0"). There a place of ours
  * takes a shipped club's instead: the last one listed of the league with the most clubs in the
  * round, so every league keeps one while another still has two, and a league's lower place gives
- * way before its higher. At most half the round is given away. The ties (1032, 2056 ...) come
+ * way before its higher. All but two places of the round can be given away (half of it until
+ * 2026-10-01: GitHub #66, six new leagues with a qualifying place each, two of them left out).
+ * The ties (1032, 2056 ...) come
  * right after the whole field, on the same day, with the same clubs: the map above makes the
  * same club give way there too (cont_mapped). Returns how many were put in. */
 static unsigned cont_standins(int k, u32vec* list, size_t n, void* blk, int pool, unsigned put, uint16_t id)
@@ -1635,7 +1637,8 @@ static unsigned cont_standins(int k, u32vec* list, size_t n, void* blk, int pool
     out[i] = !(c >> 14) || s == pool || has_club(g_cont[k], g_ncont[k], c) || cont_mapped(k, c);
     for (unsigned q = 0; q < g_nmap[k] && !out[i]; q++) out[i] = same_club(g_mto[k][q], c);
   }
-  unsigned cap = (unsigned)n / 2 > put ? (unsigned)n / 2 - put : 0;
+  unsigned room = n > 2 ? (unsigned)n - 2 : 0;
+  unsigned cap = room > put ? room - put : 0;
   while (need && cap) {
     int best = -1, most = 0;
     for (int i = (int)n - 1; i >= 0; i--) {         /* backwards: a league's last listed first */
@@ -1655,7 +1658,7 @@ static unsigned cont_standins(int k, u32vec* list, size_t n, void* blk, int pool
          CONT_NAME[k], h ? (unsigned)h->reg : 0u, h && !h->rank ? "winner" : "position", h ? (unsigned)h->rank : 0u,
          to, c, key[best], most);
   }
-  if (need) logf("fl26swiss: %s (reg %u) -- %u place(s) of ours left out: half the round is given away already",
+  if (need) logf("fl26swiss: %s (reg %u) -- %u place(s) of ours left out: all but two places of the round are given away already",
                  CONT_NAME[k], (unsigned)id, need);
   return done;
 }
@@ -1804,13 +1807,31 @@ typedef struct split_s split_t;
 static int split_part(uint16_t id, const split_t** out);
 static final_t g_ptab;
 static int g_ptab_day = -1;
-static final_t* phase_table(uint16_t reg)
+static int g_ctab_pts[3];                 /* count_table's first, second and last points, for the log */
+/* how many match records regulation reg has, played or not; -1 if the match table is not where it was */
+static int ccup_matches(uint16_t reg)
 {
-  const split_t* s;
-  int d = abs_day();
-  if (reg <= 175 || split_part(reg, &s) < 2) return 0;
-  if (g_ptab_day == d && g_ptab.reg == reg) return g_ptab.n ? &g_ptab : 0;
-  g_ptab_day = d; g_ptab.reg = reg; g_ptab.n = 0; g_ptab.day = d;
+  const unsigned char* bs = (const unsigned char*)(g_base + MATCH_BASE_SITE);
+  const unsigned char* cs = (const unsigned char*)(g_base + MATCH_CAP_SITE);
+  if (bs[0] != 0x48 || bs[1] != 0x8d || bs[2] != 0x88 || cs[0] != 0x81 || cs[1] != 0xff) return -1;
+  uint32_t base = *(const uint32_t*)(bs + 3), cap = *(const uint32_t*)(cs + 2);
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!blk || !cap || cap > 200000) return -1;
+  int n = 0;
+  for (uint32_t i = 0; i < cap; i++) {
+    const unsigned char* m = blk + base + (size_t)i * MATCH_STRIDE;
+    if (*(const uint16_t*)m != 0xffff && *(const uint16_t*)(m + 4) == reg) n++;
+  }
+  return n;
+}
+
+/* the table of the played matches of regulations regs[0..nr): its clubs into out (reg and day
+   left to the caller), the number of matches into *played; 0 clubs if the match table is not
+   where it was */
+static int count_table(const uint16_t* regs, int nr, final_t* out, int* played_out)
+{
+  *played_out = 0; out->n = 0;
   const unsigned char* bs = (const unsigned char*)(g_base + MATCH_BASE_SITE);
   const unsigned char* cs = (const unsigned char*)(g_base + MATCH_CAP_SITE);
   static int said;
@@ -1826,7 +1847,10 @@ static final_t* phase_table(uint16_t reg)
   int n = 0, played = 0;
   for (uint32_t i = 0; i < cap; i++) {
     const unsigned char* m = blk + base + (size_t)i * MATCH_STRIDE;
-    if (*(const uint16_t*)m == 0xffff || *(const uint16_t*)(m + 4) != reg || !(m[7] & 0x40)) continue;
+    if (*(const uint16_t*)m == 0xffff || !(m[7] & 0x40)) continue;
+    int mine = 0;
+    for (int r = 0; r < nr; r++) if (*(const uint16_t*)(m + 4) == regs[r]) mine = 1;
+    if (!mine) continue;
     uint32_t side[2] = { *(const uint32_t*)(m + 0x14), *(const uint32_t*)(m + 0x18) };
     int goals[2] = { m[0x1c], m[0x1f] }, at[2];
     for (int j = 0; j < 2; j++) {
@@ -1846,10 +1870,8 @@ static final_t* phase_table(uint16_t reg)
     }
     played++;
   }
-  if (n < 4 || played < n / 2) {
-    logf("fl26swiss: reg %u -- %d played match(es) of %d club(s): no table from matches", (unsigned)reg, played, n);
-    return 0;
-  }
+  *played_out = played;
+  if (n < 4) return 0;
   for (int a = 1; a < n; a++)                     /* insertion sort, stable: points, difference, scored */
     for (int b = a; b > 0; b--) {
       int x = b - 1, y = b;
@@ -1859,10 +1881,27 @@ static final_t* phase_table(uint16_t reg)
       t = gd[x]; gd[x] = gd[y]; gd[y] = t;
       t = gf[x]; gf[x] = gf[y]; gf[y] = t;
     }
-  g_ptab.n = (uint16_t)n;
-  for (int k = 0; k < n; k++) g_ptab.club[k] = club[k];
+  out->n = (uint16_t)n;
+  for (int k = 0; k < n; k++) out->club[k] = club[k];
+  g_ctab_pts[0] = pts[0]; g_ctab_pts[1] = pts[1]; g_ctab_pts[2] = pts[n - 1];
+  return n;
+}
+static final_t* phase_table(uint16_t reg)
+{
+  const split_t* s;
+  int d = abs_day(), played;
+  if (reg <= 175 || split_part(reg, &s) < 2) return 0;
+  if (g_ptab_day == d && g_ptab.reg == reg) return g_ptab.n ? &g_ptab : 0;
+  g_ptab_day = d; g_ptab.reg = reg; g_ptab.day = d;
+  int n = count_table(&reg, 1, &g_ptab, &played);
+  if (n < 4 || played < n / 2) {
+    logf("fl26swiss: reg %u -- %d played match(es) of %d club(s): no table from matches", (unsigned)reg, played, n);
+    g_ptab.n = 0;
+    return 0;
+  }
   logf("fl26swiss: reg %u -- table from %d played matches: %08x %d pts, %08x %d pts ... last %08x %d pts",
-       (unsigned)reg, played, club[0], pts[0], club[1], pts[1], club[n - 1], pts[n - 1]);
+       (unsigned)reg, played, g_ptab.club[0], g_ctab_pts[0], g_ptab.club[1], g_ctab_pts[1],
+       g_ptab.club[n - 1], g_ctab_pts[2]);
   return &g_ptab;
 }
 
@@ -2056,7 +2095,12 @@ static uint64_t cwc_dates(uint16_t id, uint64_t reg, void* vec)
  *
  * `groups=0` is a straight knockout (the CONCACAF Champions Cup): the master is the knockout
  * itself (`ccup <ko> ko=<ko> groups=0`), filled on the same day with the entries in the order
- * given -- first v second, third v fourth ... -- and started at once. */
+ * given -- first v second, third v fourth ... -- and started at once.
+ *
+ * An entry at position 0 is the winner of that regulation, a cup (<reg>:0): a super cup of two
+ * clubs, the CAF Super Cup, is `entry=<CAF CL knockout>:0,<Confederation Cup knockout>:0`. The
+ * winners are kept at the July teardown, before our cups are closed, as the UEFA holders are
+ * (access_capture); a cup nobody has won yet (a new career) leaves the super cup unfilled. */
 #define MAX_CCUP 8
 #define CCUP_MAX_GROUPS 8
 #define CCUP_MAX_ENTRY 32
@@ -2125,8 +2169,8 @@ __declspec(dllexport) int fl26_swiss_ccup(const uint16_t* v, int n)
       if (c->n < CCUP_MAX_ENTRY) { c->ereg[c->n] = v[p]; c->erank[c->n] = (uint8_t)v[p + 1]; c->n++; }
     if (!c->groups) {
       c->reg = c->ko;
-      if (c->n != 4 && c->n != 8 && c->n != 16 && c->n != 32) {
-        logf("fl26swiss: cup %u -- a knockout of %u clubs is not 4, 8, 16 or 32; left out", (unsigned)c->ko,
+      if (c->n != 2 && c->n != 4 && c->n != 8 && c->n != 16 && c->n != 32) {
+        logf("fl26swiss: cup %u -- a knockout of %u clubs is not 2, 4, 8, 16 or 32; left out", (unsigned)c->ko,
              (unsigned)c->n);
         continue;
       }
@@ -2186,8 +2230,9 @@ static int ccup_fill_one(int k, void* started)
   const ccup_t* c = &g_ccup[k];
   unsigned char* rec = get_rec(c->reg);
   if (!ccup_world(c)) { logf("fl26swiss: cup %u -- its rows are not all in this world; left alone", (unsigned)c->reg); return 0; }
-  if (rec_count(rec) || (c->groups && rec_count(get_rec(ccup_rep(c, 0))))) {
-    logf("fl26swiss: cup %u already holds %u clubs; not filled again", (unsigned)c->reg, rec_count(rec));
+  unsigned held = rec_count(rec);
+  if (c->groups && (held || rec_count(get_rec(ccup_rep(c, 0))))) {
+    logf("fl26swiss: cup %u already holds %u clubs; not filled again", (unsigned)c->reg, held);
     return 0;
   }
   unsigned n = 0, gaps = 0;
@@ -2206,6 +2251,12 @@ static int ccup_fill_one(int k, void* started)
       }
       continue;
     }
+    if (!c->erank[i]) {                            /* a cup's winner: that one club or none */
+      club = cup_winner(c->ereg[i]);
+      how = "cup winner";
+      if (club && has_club(g_ccup_field[k], n, club)) club = 0;
+      if (!club) logf("fl26swiss:   cup %u entry: reg %u has no winner to send", (unsigned)c->reg, (unsigned)c->ereg[i]);
+    } else
     for (int rank = c->erank[i]; rank <= FINAL_MAX; rank++) {
       club = cwc_club(c->ereg[i], rank, &how);
       if (!club) break;
@@ -2242,6 +2293,21 @@ static int ccup_fill_one(int k, void* started)
     return 0;
   }
   if (!c->groups) {
+    /* A knockout cup keeps last season's clubs through the July teardown: the CAF Super Cup of a
+       second season still held the pair of the first, and the old "any club in it = filled"
+       test left it at that, never registered (2026-09-30, cup 201). Only this season's own
+       field -- a save made after the fill and loaded again -- counts as filled; anything else
+       is replaced (set_clubs clears the list first). */
+    if (held) {
+      int same = held == n;
+      for (unsigned i = 0; i < n && same; i++) same = has_club(rec_clubs(rec), held, g_ccup_field[k][i]);
+      if (same) {
+        logf("fl26swiss: cup %u already holds this season's %u clubs; not filled again", (unsigned)c->reg, held);
+        return 0;
+      }
+      logf("fl26swiss: cup %u still holds %u club(s) of an earlier season (%08x ...) -- filled anew",
+           (unsigned)c->reg, held, rec_clubs(rec)[0]);
+    }
     u32vec v = { g_ccup_field[k], g_ccup_field[k] + n, g_ccup_field[k] + n };
     ((setcl_fn)(uintptr_t)(g_base + SETCL_RVA))(c->ko, &v, 1);
     run_flush();
@@ -2250,6 +2316,19 @@ static int ccup_fill_one(int k, void* started)
     check_reg(c->ko, "filled");
     if (rec_count(rec) != n) return 0;
     start_stage(started, c->ko);
+    /* Starting a stage does not make its matches: register_all does, for the ids the progression
+       hands it. A cup filled on its fill day or at the July teardown has no progression behind
+       it (started is NULL), so its knockout was started with no match at all -- the CAF Super
+       Cup and a pre-season cup never played (2026-09-30: cup 201 started, 0 records). The group
+       path below registers its groups itself; do the same here. */
+    if (!started) {
+      uint16_t id = c->ko;
+      struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { &id, &id + 1, &id + 1 };
+      ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
+      run_flush();
+      logf("fl26swiss: cup %u -- knockout registered, %d match record(s)", (unsigned)c->ko,
+           ccup_matches(c->ko));
+    }
     return 1;
   }
   u32vec v = { g_ccup_field[k], g_ccup_field[k] + n, g_ccup_field[k] + n };
@@ -2273,6 +2352,26 @@ static int ccup_fill_one(int k, void* started)
        (unsigned)reps[c->groups - 1]);
   g_ccup_done[k] = 0;
   return 0;
+}
+/* at the July teardown, before our cups are closed: the winners the cups' <reg>:0 entries ask
+   for, kept as access_capture keeps the UEFA holders' (a second teardown of the same summer
+   leaves them) */
+static void ccup_keep_winners(void)
+{
+  int d = today(), ad = abs_day();
+  if (d < 140 || d > 230) return;
+  for (int k = 0; k < g_nccup; k++)
+    for (unsigned i = 0; i < g_ccup[k].n; i++) {
+      uint16_t reg = g_ccup[k].ereg[i];
+      if (g_ccup[k].erank[i]) continue;
+      cupwin_t* w = cupwin_of(reg);
+      if (w && ad >= w->day && ad - w->day < 60) continue;
+      uint32_t c = winner_now(reg);
+      if (!c) continue;
+      if (!w) { if (g_ncupwin >= 32) continue; w = &g_cupwin[g_ncupwin++]; w->reg = reg; }
+      w->day = ad; w->club = c;
+      logf("fl26swiss: cup reg %u won by %08x (day %d), kept for cup %u", (unsigned)reg, c, d, (unsigned)g_ccup[k].ko);
+    }
 }
 static int ccup_fill(void* started)
 {
@@ -3476,6 +3575,40 @@ static int hook(unsigned char* target, const unsigned char* sig, int n, void* ha
    which still ends in the original.  fl26chain.dll holds set_clubs 0x141522b50 and loads first. */
 static int g_chained = 0;
 
+/* ---- Apertura + Clausura: the season's table ----
+ *
+ * The final table the July teardown keeps for a league (access_capture) is the one the game
+ * shows under the league's id, and for an Apertura/Clausura league that is the Clausura alone:
+ * the Clausura starts from zero points (carry=0), so the continental places went by half a
+ * season (GitHub #57, Liga 1 of Peru). The places belong to the two tournaments added
+ * together. So once every match of both is played -- each club meets every other once in
+ * each, n(n-1) matches -- the table is counted from them (count_table) and kept as the
+ * league's final table, dated that day; access_capture then leaves it alone (it keeps a table
+ * for 60 days) and every place reads it. Looked at once a day from the day loop, from the
+ * spring until the July teardown deletes the matches. */
+static void apclau_keep(void)
+{
+  static int last = -1;
+  int d = abs_day(), td = today();
+  if (d == last || td < 60 || td > 180 || !g_nnocarry) return;
+  last = d;
+  for (int k = 0; k < g_nsplits; k++) {
+    const split_t* s = &SPLITS[k];
+    if (!nocarry(s->total) || !s->group[0]) continue;
+    final_t* f = final_of(s->total);
+    if (f && d >= f->day && d - f->day < 60) continue;
+    uint16_t regs[2] = { s->regular, s->group[0] };
+    final_t t;
+    int played, n = count_table(regs, 2, &t, &played);
+    if (n < 4 || played < n * (n - 1)) continue;
+    if (!f) { if (g_nfinal >= 64) continue; f = &g_final[g_nfinal++]; }
+    *f = t; f->reg = s->total; f->day = d;
+    logf("fl26swiss: reg %u -- Apertura + Clausura table from %d matches kept as the final table: "
+         "%08x %d pts, %08x %d pts ... last %08x %d pts", (unsigned)s->total, played,
+         t.club[0], g_ctab_pts[0], t.club[1], g_ctab_pts[1], t.club[n - 1], g_ctab_pts[2]);
+  }
+}
+
 /* ---- the day loop: a cup's fill day, on the days the game stops on ----
  *
  * The loader's tick (every 64th file open) was the only caller of ccup_fill_days, and in July,
@@ -3502,6 +3635,7 @@ char daychk_handler(void* ctx)
     else if (last >= 0 && d > last + 1) logf("fl26swiss: day loop skipped day(s) %d..%d", last + 1, d - 1);
     last = d;
   }
+  apclau_keep();
   ccup_fill_days();
   return r;
 }
@@ -3530,6 +3664,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   int n = (int)(in->e - in->b), euro = 0, has186 = 0, has187 = 0, has1210 = 0, has1027 = 0, has1029 = 0;
   if (n + 24 > 512) return in;
   access_capture();
+  ccup_keep_winners();
   for (int j = 0; j < n; j++) {
     uint16_t id = in->b[j];
     if (id == 2) euro = 1;

@@ -411,14 +411,33 @@ static void fix_chain(chain_t* ch)
 
   uint32_t nb[MAX_CLUBS], nc[MAX_CLUBS]; int nnb = ch->n_list_mid, nnc = ch->n_list_low;
   memcpy(nb, ch->list_mid, nnb*4); memcpy(nc, ch->list_low, nnc*4);
-  for (int i = 0; i < nd; i++) { int r = remove_handle(nb, nnb, down[i]); if (r < 0) { logf("fix %u->%u: relegated club %08x is no longer in %u's list -- the game already moved this pair, leaving it as it is", ch->cfg.mid, ch->cfg.low, down[i], ch->cfg.mid); g_stat[3]++; return; } nnb = r; }
-  for (int i = 0; i < nu; i++) { int r = remove_handle(nc, nnc, up[i]);   if (r < 0) { logf("fix %u->%u: promoted club %08x is no longer in %u's list -- the game already moved this pair, leaving it as it is", ch->cfg.mid, ch->cfg.low, up[i], ch->cfg.low); g_stat[3]++; return; } nnc = r; }
-  if (nnb + nu > MAX_CLUBS || nnc + nd > MAX_CLUBS) { logf("fix: list overflow"); g_stat[3]++; return; }
-  for (int i = 0; i < nu; i++) nb[nnb++] = up[i];
-  for (int i = 0; i < nd; i++) nc[nnc++] = down[i];
+  /* Each list is brought to its end state whatever the game already did: the upper one loses
+     the relegated and gains the promoted it does not hold yet, the lower one the other way round.
+     GitHub #37 (Argentina 11 -> 49, 2026-09-30): the game had written 49's side of the pair only
+     -- relegated in, promoted out -- and the old test ("a promoted club is gone from 49, so the
+     game moved the pair") left 11 alone: the relegated played on in both leagues and the
+     promoted in neither. */
+  int done_mid = 1, done_low = 1;
+  for (int i = 0; i < nd; i++) { int r = remove_handle(nb, nnb, down[i]); if (r >= 0) { nnb = r; done_mid = 0; } }
+  for (int i = 0; i < nu; i++) { int r = remove_handle(nc, nnc, up[i]);   if (r >= 0) { nnc = r; done_low = 0; } }
+  int add_up = 0, add_down = 0;
+  for (int i = 0; i < nu; i++) { int have = 0; for (int j = 0; j < nnb; j++) have |= nb[j] == up[i];   if (!have) add_up++; }
+  for (int i = 0; i < nd; i++) { int have = 0; for (int j = 0; j < nnc; j++) have |= nc[j] == down[i]; if (!have) add_down++; }
+  if (add_up) done_mid = 0;
+  if (add_down) done_low = 0;
+  if (done_mid && done_low) { logf("fix %u->%u: the game already moved this pair, leaving it as it is", ch->cfg.mid, ch->cfg.low); g_stat[3]++; return; }
+  if (done_mid || done_low)
+    logf("fix %u->%u: the game had moved %u's side only -- finishing %u's", ch->cfg.mid, ch->cfg.low,
+         done_mid ? ch->cfg.mid : ch->cfg.low, done_mid ? ch->cfg.low : ch->cfg.mid);
+  if (nnb + add_up > MAX_CLUBS || nnc + add_down > MAX_CLUBS) { logf("fix: list overflow"); g_stat[3]++; return; }
+  /* each league's slot byte from a club that stays in it: the moved clubs' own may already be
+     the game's new one when it did half the pair */
+  unsigned char* s0 = nnb ? club(blk, nb[0]) : 0; unsigned char* s1 = nnc ? club(blk, nc[0]) : 0;
+  for (int i = 0; i < nu; i++) { int have = 0; for (int j = 0; j < nnb; j++) have |= nb[j] == up[i];   if (!have) nb[nnb++] = up[i]; }
+  for (int i = 0; i < nd; i++) { int have = 0; for (int j = 0; j < nnc; j++) have |= nc[j] == down[i]; if (!have) nc[nnc++] = down[i]; }
 
   /* league-slot byte, exactly like the mover: relegated take the slot of the promoted and vice versa */
-  unsigned char* c0 = club(blk, down[0]); unsigned char* c1 = club(blk, up[0]);
+  unsigned char* c0 = s0 ? s0 : club(blk, down[0]); unsigned char* c1 = s1 ? s1 : club(blk, up[0]);
   uint32_t slot_mid = c0 ? (*(uint32_t*)(c0 + OFF_SLOT) & 0x7f) : 0x7b;
   uint32_t slot_low = c1 ? (*(uint32_t*)(c1 + OFF_SLOT) & 0x7f) : 0x7b;
   for (int i = 0; i < nd; i++) { unsigned char* c = club(blk, down[i]); if (c) *(uint32_t*)(c + OFF_SLOT) = (*(uint32_t*)(c + OFF_SLOT) & 0xffffff80u) | slot_low; }

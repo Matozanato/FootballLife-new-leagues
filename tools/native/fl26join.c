@@ -221,8 +221,13 @@ vec16_t* join_pre(vec16_t* in)
        season (GitHub issue #19). Such a league goes in like any other -- unless the door has
        already let it in this season and only its table is still to come. */
     /* A calendar-year league of ours goes by its rounds, not its table: see has_rounds. */
+    /* ... and so does every league of ours while it has them. The door's memory is gone after
+       a load, and in the first season nobody has a table yet, so the first registration day
+       after a load let every one of our leagues in a second time: two schedules, each round
+       played twice, 121 points in League One (2026-10-01, loaded at day 232; rec 4020 and
+       rec 11026 both 22 rounds of Liga A). The rounds are in the save, the memory is not. */
     if (rec && ((*(const uint32_t*)(rec + 0x304) >> 8) & 1)
-        && ((calyr(g_ids[i]) ? has_rounds(rec) : has_table(g_ids[i]))
+        && (has_rounds(rec) || (!calyr(g_ids[i]) && has_table(g_ids[i]))
             || (g_ids[i] < 256 && g_door_yes[g_ids[i]])
             || (g_cal_midseason && calyr(g_ids[i])))) { already++; continue; }
     if (rec && ((*(const uint32_t*)(rec + 0x304) >> 8) & 1))
@@ -1072,7 +1077,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   }
   /* Any other list: a calendar-year league of ours closes with the shipped leagues of its own
      region -- the season group the list is. */
-  int cadd = 0; char cbuf[160]; int cp = 0; cbuf[0] = 0;
+  int cadd = 0, cdup = 0; char cbuf[160]; int cp = 0; cbuf[0] = 0;
   if (!euro) {
     for (int i = 0; i < g_ncal; i++) {
       uint16_t id = g_cal[i]; int dup = 0, mate = 0;
@@ -1083,14 +1088,21 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
         if (g_td_list[j] == id) dup = 1;
         else if (!ours(g_td_list[j]) && rec_region(find_record(g_td_list[j])) == reg) mate = 1;
       }
-      if (dup || !mate || k >= MAX_LIST) continue;
+      /* Already on the list -- a shipped calendar-year id the game closes itself (Uruguay on
+         93 in a new country of its own, no shipped league in its region): it closes all the
+         same, so the door's memory of it goes too. Kept, the July door YES and the mid-season
+         mark held it out on day 41 and it played no second season (2026-10-01: "door(93)
+         refused ... joins on day 41", then 13 of ours "already in a season", 93 without). */
+      if (dup) { if (id < 256) g_door_yes[id] = 0; cdup++; continue; }
+      if (!mate || k >= MAX_LIST) continue;
       g_td_list[k++] = id; changed++; cadd++;
       if (id < 256) g_door_yes[id] = 0;
       if (cp < (int)sizeof cbuf - 8) cp += snprintf(cbuf + cp, sizeof cbuf - (size_t)cp, "%u ", id);
     }
   }
+  if (cadd || cdup) g_cal_midseason = 0;
+  if (cdup) logf("teardown: %d calendar-year league(s) of ours on the list itself, closed with it", cdup);
   if (!changed) return in;
-  if (cadd) g_cal_midseason = 0;
   if (cadd) logf("teardown: calendar-year leagues of ours closed with their region: [%s]", cbuf);
   g_td_vec.b = g_td_list; g_td_vec.e = g_td_list + k; g_td_vec.c = g_td_list + MAX_LIST;
   logf("teardown: %d ids, ours %s: [%s]", n, euro ? "added" : "kept out", buf);

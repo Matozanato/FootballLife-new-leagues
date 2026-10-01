@@ -116,8 +116,17 @@ class Release:
         return sorted(out[:P.SQUAD], key=lambda r: -P.overall(r))
 
 
-def fits(L):
-    return B.CLUBS_MIN <= len(L["clubs"]) <= B.CLUBS_MAX
+def game_clubs(L, info=None):
+    """the team ids of league L's clubs the game already has (a NewLife club the game has keeps
+    the game's id) that can play in a league of ours: all of them without the game's tables
+    (info = leaguebuilder.game_info)"""
+    return [int(c) for c in L.get("in_game") or [] if info is None or B.game_club_problem(info, int(c)) is None]
+
+
+def fits(L, info=None):
+    """the league's new clubs and the game's own together make a league (GitHub #61: the Swiss
+    Super League, 9 new clubs and Basel, Young Boys and Lugano, was refused for 9)"""
+    return B.CLUBS_MIN <= len(L["clubs"]) + len(game_clubs(L, info)) <= B.CLUBS_MAX
 
 
 def unique_name(recipe, name):
@@ -159,12 +168,16 @@ def abbr(name, taken):
     return (w + "XX")[:2] + "0"
 
 
-def add_league(recipe, rel, L, legs=2):
+def add_league(recipe, rel, L, legs=2, info=None):
     """put league L (from rel.leagues) in the recipe: a new league with its clubs, every club's
     squad from the release. The whole squad is set: places the release has no player for leave
-    the club, down to P.MIN_SQUAD. Returns the new league's name."""
-    if not fits(L):
-        raise Error("%s has %d clubs; a league takes %d to %d" % (L["name"], len(L["clubs"]), B.CLUBS_MIN, B.CLUBS_MAX))
+    the club, down to P.MIN_SQUAD. The league's clubs the game already has take the last places
+    as clubs of the game ("game_clubs"): one that plays somewhere in the game still needs the
+    club that takes its place there (New clubs, Club of the game). Returns the new league's name."""
+    game = game_clubs(L, info)
+    if not fits(L, info):
+        raise Error("%s has %d clubs; a league takes %d to %d" % (L["name"], len(L["clubs"]) + len(game),
+                                                                  B.CLUBS_MIN, B.CLUBS_MAX))
     name = unique_name(recipe, L["name"])
     clubs = sorted(L["clubs"], key=lambda i: rel.clubs[i]["name"].lower())
     taken = set()
@@ -173,11 +186,13 @@ def add_league(recipe, rel, L, legs=2):
         a = abbr(rel.clubs[i]["name"], taken)
         taken.add(a)
         abbrs.append(a)
-    recipe["leagues"].append({"name": name, "country": L["country"], "clubs": len(clubs), "legs": legs,
+    recipe["leagues"].append({"name": name, "country": L["country"], "clubs": len(clubs) + len(game), "legs": legs,
                               "club_names": [rel.clubs[i]["name"] for i in clubs], "club_abbrs": abbrs,
                               "club_kits": [rel.clubs[i].get("home_kit", "") for i in clubs],
                               "club_away_kits": [rel.clubs[i].get("away_kit", "") for i in clubs],
                               "newlife": {"version": rel.meta.get("version", ""), "clubs": [int(i) for i in clubs]}})
+    if game:
+        recipe["leagues"][-1]["game_clubs"] = [{"at": len(clubs) + j, "id": t} for j, t in enumerate(game)]
     pl = recipe.setdefault("players", {})
     for k, i in enumerate(clubs):
         sq = rel.squad(i)

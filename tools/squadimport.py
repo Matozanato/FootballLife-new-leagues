@@ -111,9 +111,10 @@ RATINGS = {
 # "positioning" is attacking in EA FC and defensive in Football Manager: decided by the scale
 POSITIONING = ["positioning"]
 
-TARGETS = (["name", "first", "last", "position", "age", "born", "nationality", "height", "weight",
+TARGETS = (["name", "first", "last", "position", "posgrid", "age", "born", "nationality", "height", "weight",
             "foot", "shirt", "overall"] + sorted(RATINGS) + ["positioning"] + ABILITIES)
 LABELS = {"name": "Name", "first": "First name", "last": "Last name", "position": "Position(s)",
+          "posgrid": "Position grade (0/1/2)",
           "age": "Age", "born": "Birth date", "nationality": "Nationality", "height": "Height",
           "weight": "Weight", "foot": "Foot", "shirt": "Shirt number", "overall": "Overall rating",
           "positioning": "Positioning (EA: attacking, FM: defensive)"}
@@ -154,16 +155,28 @@ _ALIAS["weightkg"] = "weight"
 _ALIAS["strongerfoot"] = "foot"
 
 
+GRID = {p.lower(): p for p in E.POSITIONS}
+
+
 def guess(head, rows=()):
     """{column index: target} for the columns recognised by name; a name column made only of
     numbers (our own CSV's "player" id) is left out"""
     out, taken = {}, set()
+    vals = lambda i: [(r[i] if i < len(r) else "").strip() for r in rows]
+    # a PES editor's table: 13 columns GK..CF graded 0/1/2 and "POS" as the game's code 0..12
+    grid = bool(rows) and sum(1 for i, h in enumerate(head)
+                              if norm(h) in GRID and set(vals(i)) <= {"", "0", "1", "2"}) >= 10
     for i, h in enumerate(head):
         t = "shirt" if h.strip() == "#" else _ALIAS.get(norm(h))
         numeric = bool(rows) and all(re.fullmatch(r"\s*\d*\s*", r[i] if i < len(r) else "") for r in rows)
-        if t == "position" and numeric and norm(h) == "pos":
-            t = "positioning"                   # Football Manager's "Pos" attribute, 1-20
-        if t is None or (t in taken and t not in RATINGS and t not in ABILITIES and t != "positioning"):
+        if grid and norm(h) in GRID:
+            t = "posgrid"
+        elif t == "position" and numeric and norm(h) == "pos":
+            codes = [int(v) for v in vals(i) if v]
+            if not (codes and max(codes) <= 12 and (grid or min(codes) == 0)):
+                t = "positioning"               # Football Manager's "Pos" attribute, 1-20
+        if t is None or (t in taken and t not in RATINGS and t not in ABILITIES
+                         and t not in ("positioning", "posgrid")):
             continue
         if t == "name" and numeric:
             continue
@@ -226,6 +239,8 @@ FM_ROLE = {"GK": {"": "GK", "C": "GK"}, "D": {"C": "CB", "L": "LB", "R": "RB"},
 def positions(cell):
     """[our positions] of a position cell, the first the main one: "ST, LW", "D (RC), DM",
     "Centre-Forward", "AM (RL)" all read"""
+    if re.fullmatch(r"\s*\d{1,2}\s*", cell) and int(cell) < len(E.POSITIONS):
+        return [E.POSITIONS[int(cell)]]         # a PES editor's code: 0 GK, 1 CB ... 12 CF
     out = []
     for m in re.finditer(r"\b(GK|D|WB|DM|M|AM|ST|F)\s*\(([RLC]+)\)", cell.upper()):
         for side in m.group(2):
@@ -273,6 +288,8 @@ def weight_kg(cell):
 
 def foot(cell):
     k = norm(cell)
+    if k in ("0", "1"):                     # a PES editor's table: 0 right, 1 left
+        return "Left" if k == "1" else "Right"
     if k in ("left", "l", "lijeva", "lijevi", "links", "gauche", "izquierdo"):
         return "Left"
     if k in ("right", "r", "desna", "desni", "rechts", "droite", "derecho", "both", "obje"):
@@ -462,14 +479,23 @@ def convert(head, rows, mapping, model, countries, nation=None, today=None, leve
         pos = []
         for i in cols.get("position", []):
             pos += [x for x in positions(cell(r, i)) if x not in pos]
+        graded = {GRID[norm(head[i])]: cell(r, i).strip() for i in cols.get("posgrid", [])
+                  if i < len(head) and norm(head[i]) in GRID}
+        if not pos:
+            pos = [q for q in E.POSITIONS if graded.get(q) == "2"]
         if not pos:
             pos = ["CMF"]
             warn.append("line %d (%s): no position read, made a CMF" % (n, nm))
         main = pos[0]
         p["Registered Position"] = main
-        also = set(pos[1:]) | set(model.also.get(main, []))
-        for q in E.POSITIONS:
-            p[q] = "2" if q == main else "1" if q in also else "0"
+        if graded:                              # the table grades every position: take it as it is
+            for q in E.POSITIONS:
+                g = graded.get(q, "0")
+                p[q] = "2" if q == main or g == "2" else "1" if g == "1" or q in pos[1:] else "0"
+        else:
+            also = set(pos[1:]) | set(model.also.get(main, []))
+            for q in E.POSITIONS:
+                p[q] = "2" if q == main else "1" if q in also else "0"
 
         # abilities: what the table says, then the rest from the position's fit to the overall
         feed = collections.defaultdict(list)

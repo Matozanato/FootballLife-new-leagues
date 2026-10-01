@@ -905,7 +905,7 @@
   "Added: %s. Change them on New leagues, New clubs and Players, then Build.": "Ajouté : %s. Modifiez-les dans Nouvelles ligues, Nouveaux clubs et Joueurs, puis Build.",
   "Club": "Club",
   "Clubs": "Clubs",
-  "Clubs of this league the game already has: they stay where they are, the new league is made of the others": "Clubs de cette ligue que le jeu a déjà : ils restent où ils sont, la nouvelle ligue est faite des autres",
+  "Clubs of this league the game already has: they join the new league with their own names, crests, kits and players": "Clubs de cette ligue que le jeu a déjà : ils entrent dans la nouvelle ligue avec leur nom, écusson, maillots et joueurs",
   "Country": "Pays",
   "Each selected league becomes a new league with its clubs and players": "Chaque ligue choisie devient une nouvelle ligue avec ses clubs et ses joueurs",
   "In game": "Dans le jeu",
@@ -921,7 +921,17 @@
   "Search leagues or countries": "Chercher des ligues ou des pays",
   "Selected: %d more.": "Sélectionnés : %d de plus.",
   "a league takes %d to %d clubs": "une ligue a de %d à %d clubs",
-  "in the game": "dans le jeu"
+  "in the game": "dans le jeu",
+  "CAF Super Cup": "Supercoupe de la CAF",
+  "The winners of the CAF Champions League and the Confederation Cup meet once, in late July. First played in a career's second season, when both cups have a winner": "Les vainqueurs de la Ligue des champions de la CAF et de la Coupe de la Confédération se rencontrent une fois, fin juillet. Elle se joue pour la première fois lors de la deuxième saison de la carrière, quand les deux coupes ont un vainqueur",
+  "only in a world with both African cups (the European places of your African leagues)": "seulement dans un monde avec les deux coupes africaines (les places européennes de tes ligues africaines)",
+  "Playoffs": "Play-offs",
+  "Position grade (0/1/2)": "Niveau au poste (0/1/2)",
+  "Import CSV... reads back a table made with Export CSV... For a table from anywhere else (a PES editor, a website, Football Manager) use Import a squad from a table...": "Importer un CSV... relit un tableau fait avec Exporter en CSV... Pour un tableau venant d'ailleurs (un éditeur PES, un site web, Football Manager) utilisez Importer un effectif depuis un tableau...",
+  "%s also play in a competition of the game: on New clubs pick each one and use Club of the game to choose the club that takes its place there.": "%s jouent aussi une compétition du jeu : dans Nouveaux clubs, choisissez chacun et utilisez Club du jeu pour choisir le club qui prend sa place là-bas.",
+  "Kits you can edit in the game": "Maillots modifiables dans le jeu",
+  "On: the new clubs get no kit borrowed from a club of the game. A borrowed kit is a licensed one, and the game's Edit mode refuses it (\"You cannot edit this strip\"). Without one each new club wears a plain kit that Edit > Teams > Strip changes like any other, Paste Image included. Build again after changing this.": "Activé : les nouveaux clubs n'empruntent pas le maillot d'un club du jeu. Un maillot emprunté est sous licence et le mode Édition le refuse (\"You cannot edit this strip\"). Sans lui, chaque nouveau club porte un maillot simple que Édition > Équipes > Tenue modifie comme les autres, Coller une image compris. Reconstruisez après avoir changé ceci.",
+  "off = each new club borrows a kit of the game (it looks real, but Edit mode cannot change it)": "désactivé = chaque nouveau club emprunte un maillot du jeu (réaliste, mais le mode Édition ne peut pas le modifier)"
  },
  "log": [
   [

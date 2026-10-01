@@ -12,7 +12,9 @@ runners-up. Each --cup is one competition:
   groups  how many groups of four (1-8), or 0 for a straight knockout (reg is then the knockout
           itself: give reg = ko)
   entry   who plays: <league regulation>:<position>,... -- 4 x groups of them, pot 1 first; for a
-          knockout 4, 8, 16 or 32 of them, paired in order (first v second, third v fourth ...)
+          knockout 2, 4, 8, 16 or 32 of them, paired in order (first v second, third v fourth ...).
+          Position 0 is the winner of a cup (<cup regulation>:0), which may be one of the cups
+          made earlier in the same call: a super cup is a knockout of two such entries
   conf    optional: the confederation the competition row says (Competition.bin +6, low three
           bits: 3 AFC, 4 CONMEBOL, 5 CAF ...); without it the Libertadores' (4) is kept
   region  optional: the region the competition row names (a region id, mkleague.enc_region) --
@@ -78,8 +80,8 @@ def parse(spec):
     if c["groups"] == 0:
         if c["reg"] != c["ko"]:
             raise SystemExit("%s: a straight knockout (groups 0) wants reg = ko" % name)
-        if len(ent) not in (4, 8, 16, 32):
-            raise SystemExit("%s: a knockout of %d clubs -- use 4, 8, 16 or 32" % (name, len(ent)))
+        if len(ent) not in (2, 4, 8, 16, 32):
+            raise SystemExit("%s: a knockout of %d clubs -- use 2, 4, 8, 16 or 32" % (name, len(ent)))
     elif len(ent) != 4 * c["groups"]:
         raise SystemExit("%s: %d groups of four want %d entries, not %d"
                          % (name, c["groups"], 4 * c["groups"], len(ent)))
@@ -132,6 +134,7 @@ def main():
                 raise SystemExit("%s: no league regulation %d in this world" % (cup["name"], r))
         used_cid.add(cup["cid"])
         used_reg.update(ids)
+        cid_of_reg.update((i, cup["cid"]) for i in ids)     # a later super cup names these
         n = 4 * cup["groups"]
 
         c = bytearray(lib_comp[0])
@@ -171,6 +174,8 @@ def main():
 
         clubs = []
         for r, p in cup["entry"]:
+            if p < 1:                   # a cup's winner: nobody to write before it is played
+                continue
             lst = [t for _o, t in sorted(listed.get(cid_of_reg[r], []))]
             pick = [t for t in lst[p - 1:] + lst if t not in clubs]
             if pick:

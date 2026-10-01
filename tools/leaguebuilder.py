@@ -37,7 +37,7 @@ which league sits above -- and nothing about ids:
               stays for promotion and relegation. "playoff" 8 or 4 (default 8, 0 = none): the
               first clubs of each tournament then play a knockout, two legs a round and a
               one-match final (fl26swiss.dll fills it from that tournament's table the day
-              after its last round). Built as a split (mksplit, one group of all the clubs, the
+              after its last round; "playoff_logo" is the picture of both playoffs). Built as a split (mksplit, one group of all the clubs, the
               world file's carry=0); 18 clubs at most, 35 dates a season. Not with "split"
   season      optional, a top division of a new country only: "calendar" plays the country's
               season February to December, like Brazil, Japan or Saudi Arabia, promotion and
@@ -116,6 +116,17 @@ which league sits above -- and nothing about ids:
               own groups of four it would put 36 clubs into group A (issue #33).
               "uecl_logo" is the Conference League's picture; without one it gets a drawn
               UECL emblem (the game has none for 174, issue #36)
+  caf_super_cup  (the recipe, not a league) true, the default: a world that builds both the CAF
+              Champions League and the Confederation Cup also gets the CAF Super Cup, one match
+              of the two winners in late July (CAF_SUPER_DAYS), a two-club knockout whose
+              entries are the cups' winners (<knockout>:0, fl26swiss.dll). Nobody has won
+              either cup in a new career's first season, so it is first played in the second.
+              false: none. "caf_super_cup_logo" is its picture
+  editable_kits  (the recipe) true: the new clubs get no kit lent from a club of the game. A lent
+              kit is a licensed one (<key>_1st_realUni.bin) and Edit mode refuses it ("You cannot
+              edit this strip"); without one a club wears the engine's own kit, which Edit >
+              Teams > Strip edits like any unlicensed club's, Paste Image included, and the edit
+              stays in the Edit save (seen in the game 2026-09-30). Default false: lent kits
 
 What plan() decides, so that nothing is left to a person to get wrong:
 
@@ -190,6 +201,7 @@ CUP_DATED = {23: _CASE6, 24: _CASE6, 25: _CASE6, 26: _CASE6, 27: _CASE6, 28: _CA
              122: {0x2e, 0x33, 0x34, 0x35}, 124: {0x2e, 0x33, 0x34, 0x35},
              137: {0x2e, 0x33, 0x34, 0x35}, 142: {0x2e, 0x33, 0x34, 0x35}}
 SUPER_CUP_LIKE = "BELGIUM_SUPER_CUP"      # two clubs, one match, a European date
+LIBQ_ROOM = 6                             # Libertadores qualifying: 8 places, fl26swiss keeps 2 of the game's
 SEASONS = ("august", "calendar")           # a new country's season: August-May, February-December
 SAUDI_REGION, SAUDI_CUP, SAUDI_SUPER_CUP = 28, 164, 165    # the region holds KSA's 162/164/165 only
 CCUP_SIZES = (32, 16, 8, 4)              # the fields a continental cup can have (fl26swiss.dll)
@@ -202,6 +214,8 @@ CREATION_IDS = {2, 3, 4, 5, 6, 7, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28
                 59, 60, 61, 62, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 95, 115, 116,
                 117, 118, 122, 123, 124, 125, 128, 129, 130, 133, 134, 135, 136, 137, 141, 142, 147,
                 148, 151, 155, 156, 159, 172, 175}
+# the last id of the case table the game reads its in-play registrations from (fl26join.c)
+REG_CASE_MAX = 175
 # The days of the year the domestic knockouts are played on, one per record of the knockout
 # fl26swiss borrows (two legs of the last 16, quarter-finals, semi-finals, then the final):
 # always seven, a smaller field leaves the first ones unused. A league cup's are the day after
@@ -210,6 +224,11 @@ CREATION_IDS = {2, 3, 4, 5, 6, 7, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28
 LEAGUE_CUP_DAYS = [263, 277, 291, 305, 319, 333, 347]
 PRESEASON_FILL = 183
 PRESEASON_DAYS = [186, 189, 192, 195, 198, 201, 205]
+# The CAF Super Cup: filled with the pre-season cups, the day after the July teardown, from the
+# winners kept there; the knockout is handed seven days like every one, and a field of two plays
+# the last, the final, on 26 July -- after the pre-season cups, before the new season is built
+CAF_SUPER_DAYS = [187, 190, 193, 196, 199, 202, 207]
+CAF_CL, CAF_CC = 6, 7                    # fl26world.CCUPS numbers of the two cups it takes
 LEAGUE_CUP_SIZES = (16, 8, 4)
 # Apertura/Clausura: fl26swiss dates a split's phases on the Scottish season's 38 dates,
 # resampled to its rounds (fl26swiss.c SCOT_DAYS, split_dates); split_days() does the same sums,
@@ -231,8 +250,13 @@ SEASON_TURN = 182                        # the season's July turn: day-of-year o
 # the shipped order (read live 2026-09-28: Europe 0..27 ending on the European cups' slot 25,
 # South America 28..40 ending on the Sudamericana's 67, Asia 44..49 ending on 70). Shipped
 # leagues' slots from the same reading of the parameter table.
-KICKOFF_AFTER = {2: 25, 4: 67, 3: 70}     # UEFA, CONMEBOL, AFC
-KICKOFF_OTHER = 70                        # CAF, CONCACAF, OFC: no club list of their own, after Asia
+# CONCACAF (6) goes after MLS (slot 17, in the Americas block of the exe's list: ... 99, 17, 26,
+# 27, 28, 67 ...), so Mexico sits next to the USA, not behind Asia (GitHub #47)
+# AFC goes after the J1 League (slot 18), the last Asian league before Other Clubs (Asia) on 70 in
+# the exe's list (... 102, 119, 30, 18, 70, 22 ...), so the new Asian leagues sit with the game's
+# own and the "Other" entry stays last (GitHub #38, #43); CAF and OFC follow that entry
+KICKOFF_AFTER = {2: 25, 4: 67, 3: 18, 6: 17}     # UEFA, CONMEBOL, AFC, CONCACAF
+KICKOFF_OTHER = 70                        # CAF, OFC: no club list of their own, after Asia
 SHIPPED_SLOT = {17: 7, 79: 50, 20: 8, 81: 52, 18: 9, 82: 53, 21: 10, 22: 12, 116: 91, 133: 114,
                 19: 11, 80: 51, 117: 94, 118: 96, 50: 16, 30: 14, 29: 13, 163: 122, 67: 15, 119: 99,
                 51: 17, 120: 102, 162: 119, 52: 18,
@@ -696,6 +720,23 @@ def shipped_tiers(base):
             for i in range(len(regs) // M.REG)}
 
 
+def cup_field(regrow, region_of_cid, region, up):
+    """(cup, top league, second league) for a new division 3 or lower under shipped league up, or
+    None. The game fills a domestic cup from the region's first league -- the lowest regulation id
+    -- and the league linked below it, and a new league gets a low id: England with League One,
+    League Two and the National League added under the Championship (Evo-Web, 2026-10-01) played
+    the FA Cup between League One and League Two only. fl26chain gives the cup back the two
+    shipped divisions it has in the game (cuptop/cuplow on the league line)."""
+    cup = home_cup(regrow, region_of_cid, region)
+    r, seen = up, 0
+    while r in regrow and M.get_tier(regrow[r]) > 1 and seen < 8:
+        r, seen = u16(regrow[r], R_ABOVE), seen + 1
+    low = u16(regrow[r], M.R_BELOW) if r in regrow else 0
+    if not cup or r not in regrow or M.get_tier(regrow[r]) != 1 or low not in regrow:
+        return None
+    return cup, r, low
+
+
 def home_cup(regrow, region_of_cid, region):
     """the domestic cup of a region (a knockout, not a two-club super cup), or None.
 
@@ -781,7 +822,14 @@ def plan(recipe, base):
     rid_of, left = {}, list(free)
     for i in order:
         if leagues[i].get("exhibition"):
-            r = next((r for r in left if r not in CREATION_IDS), None)
+            # above REG_CASE_MAX first: the game also enters ids up to it into a running season
+            # on their registration day (fl26join.c), and 11, the first id outside CREATION_IDS,
+            # was played in the background of a career (GitHub #53, enter_season(11))
+            # (not 190: it stands in for 145, the league J1 relegates into)
+            r = next((r for r in left if r > REG_CASE_MAX and r in fl26world.DEFAULT_SLOT
+                      and r not in W.MOVED_REG.values()), None)
+            if r is None:
+                r = next((r for r in left if r not in CREATION_IDS), None)
             if r is None:
                 raise BuildError("%s: no free regulation id outside Master League for an exhibition "
                                  "league" % names[i])
@@ -854,6 +902,13 @@ def plan(recipe, base):
                                      % (name, up, u16(pr, M.R_BELOW)))
                 p["above"], p["tier"] = int(up), M.get_tier(pr) + 1
                 p["region"] = region_of_cid[pr[M.R_CID]]
+                if p["tier"] >= 3:
+                    p["cupfield"] = cup_field(regrow, region_of_cid, p["region"], int(up))
+                    # the super cup is filled the same way, from the region's lowest regulation
+                    # id: League One 01 played the Community Shield against Liverpool in the
+                    # first July (2026-10-01). fl26chain swaps such a club out, as for #29.
+                    if p["cupfield"]:
+                        p["scup"] = home_supercup(regrow, region_of_cid, p["region"])
                 if p["tier"] == 2:
                     p["cup"] = home_cup(regrow, region_of_cid, p["region"])
                     p["scup"] = home_supercup(regrow, region_of_cid, p["region"])
@@ -934,7 +989,7 @@ def plan(recipe, base):
                                  " -- 18 clubs at most" % (name, rounds_of(n), 2 * rounds_of(n),
                                                            len(SPLIT_LINE) - SPLIT_SKIP))
             p["split"] = {"legs": 1, "groups": [n], "group_legs": 1, "apertura": True}
-            p["apertura"] = {"playoff": po}
+            p["apertura"] = {"playoff": po, "logo": L.get("playoff_logo") or None}
         by_name[name.lower()] = p
         out.append(p)
     game_club_checks(out, base)
@@ -992,6 +1047,8 @@ def plan(recipe, base):
     home = [league_cup(p, out) for p in out if p.get("league_cup")]
     home += [c for p in out if p.get("apertura") for c in playoff_cups(p)]
     home += [preseason_cup(c, k, by_name) for k, c in enumerate(recipe.get("preseason_cups") or [])]
+    if recipe.get("caf_super_cup", True) and {CAF_CL, CAF_CC} <= {c["number"] for c in cups}:
+        cups.append(caf_super_cup(recipe))
     if len(cups) + len(home) > MAX_CCUP:
         raise BuildError("%d continental, league and pre-season cups -- fl26swiss.dll takes %d"
                          % (len(cups) + len(home), MAX_CCUP))
@@ -999,7 +1056,8 @@ def plan(recipe, base):
             "players": recipe.get("players") or {}, "uecl": bool(recipe.get("uecl", True)),
             "uecl_logo": recipe.get("uecl_logo") or None,
             "ccups": cups, "ccup_notes": notes, "home_cups": home,
-            "saudi_august": bool(recipe.get("saudi_august"))}
+            "saudi_august": bool(recipe.get("saudi_august")),
+            "editable_kits": bool(recipe.get("editable_kits"))}
 
 
 def game_club_checks(out, base):
@@ -1148,7 +1206,8 @@ def playoff_cups(p):
         busy = busy + days
         order = [pos for i in range(k // 2) for pos in (i + 1, k - i)]
         out.append({"name": "%s %s Playoffs" % (p["name"], tag), "code": "FL_%03d_%sPO" % (p["rid"], tag[0]),
-                    "kind": "playoff", "country": p["country"], "region": p["region"], "groups": 0,
+                    "kind": "playoff", "logo": p["apertura"].get("logo"),
+                    "country": p["country"], "region": p["region"], "groups": 0,
                     "league": p["rid"], "phase": part, "entry": [(p["rid"], pos) for pos in order],
                     "opts": {"fill": season_day(season_ord(days_of[-1]) + 1), "national": 1, "days": days}})
     return out
@@ -1181,6 +1240,15 @@ def preseason_cup(c, k, by_name):
             "country": host["country"], "region": host["region"], "groups": 0,
             "entry": [(host["rid"], pos) for pos in range(1, len(refs) + 1)], "refs": refs,
             "opts": {"fill": PRESEASON_FILL, "national": 1, "days": PRESEASON_DAYS}}
+
+
+def caf_super_cup(recipe):
+    """the CAF Super Cup: a knockout of two whose entries are the winners of the CAF Champions
+    League and the Confederation Cup -- ("ko", number) until continental() has their ids"""
+    return {"number": 0, "name": "CAF Super Cup", "code": "FL_CAFSC", "conf": 5, "groups": 0,
+            "kind": "super", "logo": recipe.get("caf_super_cup_logo") or None,
+            "entry": [("ko", CAF_CL), ("ko", CAF_CC)],
+            "opts": {"fill": PRESEASON_FILL, "national": 1, "days": CAF_SUPER_DAYS}}
 
 
 def cup_rounds(n):
@@ -1401,19 +1469,32 @@ def describe(pl):
     for c, n in sorted(fl26world.uefa_places(own_places(pl))[1].items()):
         lines.append("  NOTE: %s has %d places listed for %d clubs; the last %d get none"
                      % (names[c], n, fl26world.FIELD, n - fl26world.FIELD))
+    libq = sum(1 for e in own_places(pl) if e[2] == 4)
+    if libq > LIBQ_ROOM:
+        # fl26swiss gives the new leagues all but two of the round's eight places (GitHub #66)
+        lines.append("  NOTE: Libertadores qualifying has %d places listed, the round takes %d of them; "
+                     "the leagues listed last get none" % (libq, LIBQ_ROOM))
     for p in pl["leagues"]:
         if p.get("cup"):
             lines.append("  %s: the country's cup (regulation %d) %s" % (
                 p["name"], p["cup"], "takes both divisions, %d clubs" % p["cup_all"] if p.get("cup_all")
                 else "keeps the top division's clubs only"))
+        f = p.get("cupfield")
+        if f:
+            lines.append("  %s: the country's cup (regulation %d) keeps the game's divisions %d and %d"
+                         % (p["name"], f[0], f[1], f[2]))
         c = p.get("own_cup")
         if c:
-            lines.append("  %s: national cup of %d clubs (copied from %s)%s" % (
+            lines.append("  %s: national cup of %d clubs (a cup of its own; its rounds and dates follow %s)%s" % (
                 c["name"], c["clubs"], c["like"], ", the top division only" if c["keep_top"] else ""))
             if c.get("super"):
-                lines.append("  %s: super cup, the champion v the cup winner (copied from %s)"
+                lines.append("  %s: super cup, the champion v the cup winner (its date follows %s)"
                              % (c["super"], SUPER_CUP_LIKE))
     for cup in pl.get("ccups") or []:
+        if cup.get("kind") == "super":
+            lines.append("  %s: the winners of the CAF Champions League and the Confederation Cup, one "
+                         "match in late July (first played in a career's second season)" % cup["name"])
+            continue
         lines.append("  %s: %d clubs, %s" % (cup["name"], len(cup["entry"]),
                                              "%d groups of four, then a knockout of %d"
                                              % (cup["groups"], 2 * cup["groups"]) if cup["groups"]
@@ -1767,6 +1848,9 @@ def build(pl, base, game, replace=False, log=print):
                 L["cupall"] = 1                        # fl26chain: the cup takes both leagues (#32)
         if p.get("scup"):
             L["scup"] = p["scup"]
+        f = p.get("cupfield")
+        if f and not any(q.get("cupfield") == f for q in pl["leagues"][:pl["leagues"].index(p)]):
+            L["cup"], L["cuptop"], L["cuplow"], L["cupall"] = f[0], f[1], f[2], 1
         up = mine.get(p["above"]) if p["above"] else None
         if up and up.get("own_cup", {}).get("keep_top"):
             L["cup"] = up["own_cup"]["reg"]            # fl26chain keeps the cup to the top league
@@ -1790,7 +1874,27 @@ def build(pl, base, game, replace=False, log=print):
         shutil.rmtree(out)
     os.rename(tmp, out)
     log("built %s: %d leagues, %d clubs" % (out, len(pl["leagues"]), made))
+    if is_live(pl["world"], game):
+        # GitHub #69: the modules read SiderAddons/modules/fl26world.txt, a copy Switch on makes.
+        # A world built again while it was already on kept the old copy, and a change (February
+        # to December) never reached the game until Switch on was pressed once more.
+        log("%s is the live world: switching it on again, so the game reads what was just built" % pl["world"])
+        switch_on(pl["world"], game, log)
     return out
+
+
+def is_live(world, game):
+    """is <world> the one the modules read now (the world line of modules/fl26world.txt)?"""
+    try:
+        with open(os.path.join(siderdir.find(game), "modules", MARK), encoding="utf-8", errors="replace") as f:
+            # the file opens with its "# fl26world 1" header; the name is on the "world" line
+            for line in f:
+                w = line.split()
+                if w[:1] == ["world"]:
+                    return w[1:2] == [world]
+        return False
+    except (OSError, BuildError):
+        return False
 
 
 def europe(root, db, log=print, uecl=True):
@@ -1967,6 +2071,8 @@ def continental(cups, root, db, log=print):
         reg = free.pop(0)
         ko = free.pop(0) if cup["groups"] else reg        # a straight knockout is one regulation
         cup.update(cid=cids[k], reg=reg, ko=ko)
+        ko_of = {c.get("number"): c.get("ko") for c in cups[:k]}
+        cup["entry"] = [(ko_of[e[1]], 0) if e[0] == "ko" else e for e in cup["entry"]]
         args += ["--cup", "|".join(str(x) for x in (
             cup["name"], cup["code"], cids[k], reg, ko, cup["groups"],
             ",".join("%d:%d" % tuple(e) for e in cup["entry"]),
@@ -2047,6 +2153,10 @@ def pictures(pl, root, base, log=print):
         len(pl["leagues"]), len(cups), sum(len(p["teams"]) - len(game_places(p)) for p in pl["leagues"]),
         ", %d country flags" % len(flags) if flags else ""))
     if not any(p["teams"] for p in pl["leagues"]):
+        return
+    if pl.get("editable_kits"):
+        log("  kits: none lent -- the new clubs wear the game's own kit, which Edit > Teams > Strip can change "
+            "(Paste Image too)")
         return
     t = tables_root(base)
     unipar = os.path.join(t, UNIPAR.replace("/", os.sep)) if t else None

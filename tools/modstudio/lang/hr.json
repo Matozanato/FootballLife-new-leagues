@@ -905,7 +905,7 @@
   "Added: %s. Change them on New leagues, New clubs and Players, then Build.": "Dodano: %s. Promijeni ih na stranicama Nove lige, Novi klubovi i Igrači, pa Build.",
   "Club": "Klub",
   "Clubs": "Klubovi",
-  "Clubs of this league the game already has: they stay where they are, the new league is made of the others": "Klubovi ove lige koje igra već ima: ostaju gdje jesu, nova liga se slaže od ostalih",
+  "Clubs of this league the game already has: they join the new league with their own names, crests, kits and players": "Klubovi ove lige koje igra već ima: ulaze u novu ligu sa svojim imenom, grbom, dresovima i igračima",
   "Country": "Država",
   "Each selected league becomes a new league with its clubs and players": "Svaka odabrana liga postaje nova liga sa svojim klubovima i igračima",
   "In game": "U igri",
@@ -921,7 +921,17 @@
   "Search leagues or countries": "Traži lige ili države",
   "Selected: %d more.": "Odabrano: još %d.",
   "a league takes %d to %d clubs": "liga ima %d do %d klubova",
-  "in the game": "u igri"
+  "in the game": "u igri",
+  "CAF Super Cup": "CAF Superkup",
+  "The winners of the CAF Champions League and the Confederation Cup meet once, in late July. First played in a career's second season, when both cups have a winner": "Pobjednici CAF Lige prvaka i Konfederacijskog kupa igraju jednu utakmicu krajem srpnja. Prvi put se igra u drugoj sezoni karijere, kad oba kupa imaju pobjednika",
+  "only in a world with both African cups (the European places of your African leagues)": "samo u svijetu s oba afrička kupa (europska mjesta tvojih afričkih liga)",
+  "Playoffs": "Doigravanje",
+  "Position grade (0/1/2)": "Ocjena pozicije (0/1/2)",
+  "Import CSV... reads back a table made with Export CSV... For a table from anywhere else (a PES editor, a website, Football Manager) use Import a squad from a table...": "Uvezi CSV... čita natrag tablicu napravljenu s Izvezi CSV... Za tablicu s bilo kojeg drugog mjesta (PES editor, web stranica, Football Manager) koristi Uvezi momčad iz tablice...",
+  "%s also play in a competition of the game: on New clubs pick each one and use Club of the game to choose the club that takes its place there.": "%s igraju i u nekom natjecanju igre: na stranici Novi klubovi odaberi svakog i preko Klub iz igre izaberi klub koji ga tamo mijenja.",
+  "Kits you can edit in the game": "Dresovi koje možeš uređivati u igri",
+  "On: the new clubs get no kit borrowed from a club of the game. A borrowed kit is a licensed one, and the game's Edit mode refuses it (\"You cannot edit this strip\"). Without one each new club wears a plain kit that Edit > Teams > Strip changes like any other, Paste Image included. Build again after changing this.": "Uključeno: novi klubovi ne posuđuju dres od kluba iz igre. Posuđeni dres je licenciran i Edit mode ga ne da mijenjati (\"You cannot edit this strip\"). Bez njega svaki novi klub nosi obični dres koji se u Edit > Teams > Strip mijenja kao svaki drugi, uključujući Paste Image. Nakon promjene ponovno pritisni Build.",
+  "off = each new club borrows a kit of the game (it looks real, but Edit mode cannot change it)": "isključeno = svaki novi klub posudi dres iz igre (izgleda pravo, ali ga Edit mode ne može mijenjati)"
  },
  "log": [
   [

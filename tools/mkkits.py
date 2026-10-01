@@ -61,6 +61,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pesdb
 
 REC, ID_OFF, NAME_OFF, NAME_LEN = 1532, 0x08, 0x170, 0x46
+T_NATIONAL = 0x53          # top bit set on the 144 national teams (leaguebuilder.T_NATIONAL)
 FIRST_OURS = 71578
 KINDS = ("1st_realUni", "2nd_realUni", "GK1st_realUni")
 TEAM_DIR = "common/character0/model/character/uniform/team"
@@ -95,6 +96,14 @@ def roster(team_bin):
     return out
 
 
+def national_teams(team_bin):
+    """the ids of the game's national teams: never a kit donor, or a new club turns out in
+    Belgium's or Wales's shirt (GitHub #57)"""
+    raw = pesdb.wesys_unpack(open(team_bin, "rb").read())
+    return {struct.unpack_from("<I", raw, i * REC + ID_OFF)[0] for i in range(len(raw) // REC)
+            if raw[i * REC + T_NATIONAL] & 0x80}
+
+
 def archive(path):
     """-> (raw, [(name, offset, size)], the file's own 3-byte wesys prefix or None)"""
     raw, hdr = open(path, "rb").read(), None
@@ -114,13 +123,14 @@ def texture_names(blob):
     return m.group(0).decode() if m else None
 
 
-def donors(raw, es, textures=None):
+def donors(raw, es, textures=None, skip=()):
     """Shipped clubs with a complete set of the three kinds we hand out -- and, when the list of
-    shipped textures is given, whose three kits actually have their texture in the game."""
+    shipped textures is given, whose three kits actually have their texture in the game. `skip`:
+    ids that lend nothing (the national teams)."""
     blobs = {}
     for name, off, size in es:
         m = re.match(r"(\d+)_DEF_(.+)\.bin$", name)
-        if m and size == 120:
+        if m and size == 120 and int(m.group(1)) not in skip:
             blobs.setdefault(int(m.group(1)), {})[m.group(2)] = raw[off:off + size]
     full = [(tid, b) for tid, b in sorted(blobs.items()) if all(k in b for k in KINDS)]
     if textures is not None:
@@ -208,7 +218,7 @@ def build(argv):
         print("%d kit textures listed in %s" % (len(textures), tex))
     else:
         print("warning: no --textures list; a donor whose textures are missing lends a blank kit")
-    pool = donors(raw, es, textures)
+    pool = donors(raw, es, textures, national_teams(team_bin))
     if not pool:
         print("no shipped club has all of %s -- is that the right archive?" % (KINDS,))
         return 1

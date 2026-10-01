@@ -154,12 +154,12 @@ Le League Builder ajoute de nouvelles ligues au jeu et modifie celles du jeu. Ce
 | **Division** | *(première division)*, ou la ligue au-dessus : une autre nouvelle ligue, ou une ligue du jeu. Pour placer une nouvelle ligue sous une autre nouvelle ligue en une étape : sélectionnez-la et appuyez sur **Ajouter une division inférieure** (elle reprend le pays, le nombre de clubs, le format et les montées/descentes de la ligue au-dessus ; il ne reste que le nom). |
 | **Montée / descente** | Combien de clubs échangent leur place avec la ligue au-dessus en fin de saison. |
 | **Saison** | Première division d'un nouveau pays uniquement : *août à mai* (par défaut) ou *février à décembre*, comme le Brésil, le Japon ou l'Arabie saoudite : les clubs montent et descendent au Nouvel An, et les divisions en dessous la suivent. Pas encore avec une scission, Apertura/Clausura, une coupe nationale ni une coupe de la ligue. |
-| **Europe** | Première division uniquement : quelle position en ligue va dans quelle compétition européenne. **1re division : 1er LdC, 2e LE, 3e LEC** remplit les trois places habituelles ; **Ajouter une place**, **Retirer une place** et **Effacer** pour tout le reste. Chaque position une seule fois, et seulement les positions que la ligue a. Laissez vide pour une division inférieure. Le modèle suit le pays : l'Asie reçoit l'AFC Champions League et l'AFC Champions League Two, l'Amérique du Sud la Libertadores et la Copa Sudamericana, l'Afrique la Ligue des champions CAF et la Coupe de la Confédération CAF. Ces quatre coupes que le jeu n'a pas sont construites avec le monde (section 8.2). Une place en *qualifications de la Libertadores* prend la place d'un club du jeu au tour préliminaire (le dernier du pays qui y a le plus de clubs), au plus la moitié du tour. |
+| **Europe** | Première division uniquement : quelle position en ligue va dans quelle compétition européenne. **1re division : 1er LdC, 2e LE, 3e LEC** remplit les trois places habituelles ; **Ajouter une place**, **Retirer une place** et **Effacer** pour tout le reste. Chaque position une seule fois, et seulement les positions que la ligue a. Laissez vide pour une division inférieure. Le modèle suit le pays : l'Asie reçoit l'AFC Champions League et l'AFC Champions League Two, l'Amérique du Sud la Libertadores et la Copa Sudamericana, l'Afrique la Ligue des champions CAF et la Coupe de la Confédération CAF. Ces quatre coupes que le jeu n'a pas sont construites avec le monde (section 8.2). Une place en *qualifications de la Libertadores* prend la place d'un club du jeu au tour préliminaire (le dernier du pays qui y a le plus de clubs), au plus six de ses huit places ; **Vérifier le plan** indique quelles ligues restent dehors au-delà. |
 | **Logo** | N'importe quelle image (un PNG à fond transparent rend le mieux). Vide : un logo est dessiné pour vous. |
 | **Drapeau du pays** | Votre propre image du drapeau du pays, étirée dans le cadre des drapeaux du jeu. Elle remplace le drapeau de ce pays partout dans le jeu (Select Team, nationalité des joueurs, l'en-tête du pays dans Database > Competition Info) tant que le monde est activé. Vide : le drapeau du jeu. |
-| **Coupe** | Première division uniquement. **Coupe nationale** : le pays a sa propre coupe, avec le nom que vous donnez (vide : `<ligue> Cup`). Le jeu remplit la coupe d'un pays avec sa première division et la division en dessous, et la coupe les prend tous, quel que soit leur nombre jusqu'à 44 : les tours sont ceux d'une coupe du jeu de même taille, sinon ceux de la coupe anglaise, et quand le nombre n'est pas 8, 16, 32 ou 64, certains clubs sont exemptés du premier tour, comme dans la vraie FA Cup. Au-delà de 44 clubs, la coupe ne garde que la première division. Une nouvelle deuxième division sous un pays que le jeu a déjà (Allemagne, Russie ...) entre aussi dans la coupe de ce pays, après les clubs de première division, quand les tours de la coupe conviennent au nombre de clubs. **Supercoupe** : en plus, une supercoupe en un match avant la saison, le champion contre le vainqueur de la coupe. |
+| **Coupe** | Première division uniquement. **Coupe nationale** : le pays a sa propre coupe, avec le nom que vous donnez (vide : `<ligue> Cup`). Le jeu remplit la coupe d'un pays avec sa première division et la division en dessous, et la coupe les prend tous, quel que soit leur nombre jusqu'à 44 : les tours sont ceux d'une coupe du jeu de même taille, sinon ceux de la coupe anglaise, et quand le nombre n'est pas 8, 16, 32 ou 64, certains clubs sont exemptés du premier tour, comme dans la vraie FA Cup. Au-delà de 44 clubs, la coupe ne garde que la première division. Une nouvelle deuxième division sous un pays que le jeu a déjà (Allemagne, Russie ...) entre aussi dans la coupe de ce pays, après les clubs de première division, quand les tours de la coupe conviennent au nombre de clubs. Une nouvelle troisième division ou plus bas (League One sous la Championship) laisse la coupe du pays aux deux premières divisions du jeu, comme dans le jeu. **Supercoupe** : en plus, une supercoupe en un match avant la saison, le champion contre le vainqueur de la coupe. |
 | **Coupe de la ligue** | Première division uniquement. Une coupe à élimination directe de 16, 8 ou 4 clubs de cette ligue et de celle du dessous, selon le classement, le plus fort contre le plus faible : aller-retour à chaque tour, finale sur un match, de septembre à décembre. Donnez-lui un nom ou laissez vide (`<ligue> League Cup`). |
-| **Logos des coupes** | Une image pour la coupe nationale, la supercoupe et la coupe de la ligue, chacune à part. Vide : un emblème aux initiales de la coupe est dessiné. |
+| **Logos des coupes** | Une image pour la coupe nationale, la supercoupe, la coupe de la ligue et les play-offs de l'Apertura/Clausura, chacune à part. Vide : un emblème aux initiales de la coupe est dessiné. |
 | **Exhibition uniquement -- pas en Ligue des Masters** | Pour le Kick Off et les matchs amicaux : une ligue historique, des légendes, etc. Ses clubs ne jouent jamais de saison de Ligue des Masters, donc la ligue reste seule : pas de division au-dessus ni au-dessous, pas de places européennes, pas de coupes. Elle apparaît quand même dans la liste des équipes de la Ligue des Masters ; choisissez votre club dans une autre ligue. |
 | **Formation** | Comment les clubs de la ligue se placent. Choisissez une des formations des clubs du jeu (4-2-3-1, 4-1-2-3, 4-3-3, 5-3-2 ... ; la liste indique combien de clubs du jeu la jouent) : chaque nouveau club reçoit une copie de la tactique d'un club du jeu avec cette formation, et son meilleur onze est aligné en conséquence à la construction. Vide : celle du jeu, un 4-2-3-1 fixe. Un club peut avoir la sienne (**Modifier le club**). |
 
@@ -172,7 +172,10 @@ son fichier de logo.
 **Nouveaux clubs** : choisissez la ligue, puis **Modifier le club** (nom, nom court, écusson),
 **Coller des noms...** ou **Charger des noms depuis un fichier...**. Un nom vide devient
 `<ligue> 01`, `<ligue> 02` ... ; un club sans écusson reçoit un écusson numéroté. Les maillots sont
-empruntés aux clubs du jeu.
+empruntés aux clubs du jeu. Un tel maillot est sous licence, et le mode Edit refuse de le modifier
+("You cannot edit this strip") : cochez **Maillots modifiables dans le jeu** sur la page Construire
+et les nouveaux clubs n'en empruntent aucun ; chacun porte un maillot simple que Edit > Teams >
+Strip modifie comme celui de n'importe quel club, Paste Image compris.
 Les noms gardent leurs accents (FK Željezničar) ; le nom court de trois lettres n'en a pas, comme
 dans le jeu, donc Č, Ž, Đ y deviennent C, Z, D. Après la **Construction**, la colonne **ID du
 club** montre l'id de chaque club dans le jeu.
@@ -330,7 +333,9 @@ coupes européennes...** l'utilise aussi.
 > et au plus deux de ses adversaires viennent d'un même autre pays.
 
 Ensuite, **commencez une nouvelle carrière Master League** (ou Become a Legend). Les nouvelles
-ligues se trouvent sous leur pays dans Select Team et Kick Off.
+ligues se trouvent sous leur pays dans Select Team et Kick Off. Dans les listes de Kick Off et
+Edit, un nouveau pays d'Asie vient avant *Other Clubs (Asia)*, un pays de la CONCACAF après la MLS,
+et les pays d'Afrique et d'Océanie (le jeu n'a pas de section pour eux) après l'Asie.
 
 > **Coupes des autres continents.** Quand vos ligues envoient des clubs en Ligue des champions
 > CAF, en Coupe de la Confédération CAF, en AFC Champions League Two ou en Copa Sudamericana,
@@ -341,7 +346,9 @@ ligues se trouvent sous leur pays dans Select Team et Kick Off.
 > Un club qui joue déjà la Copa Libertadores, ses qualifications ou l'AFC Champions League
 > n'entre pas dans leur tirage. Une coupe CAF avec moins de 4 places prend d'abord les places
 > de la coupe CAF suivante (avec deux et deux, la Ligue des champions CAF a les quatre), puis
-> les positions suivantes de vos ligues.
+> les positions suivantes de vos ligues. **Supercoupe de la CAF** (page Construire, cochée par
+> défaut) fait se rencontrer les vainqueurs des deux coupes CAF en un match fin juillet, à partir
+> de la deuxième saison de la carrière.
 
 > **Les sauvegardes appartiennent à un monde.** Une carrière sauvegardée avec un monde activé a
 > besoin de ce même monde pour se charger.
@@ -399,10 +406,12 @@ plusieurs), plus *Free agents*, chacune de moins de 10 Mo. Ne téléchargez que 
    *Nouvelles ligues*, comme pour toute autre ligue.
 4. **Build**, activez le monde et commencez une nouvelle carrière (section 8.2).
 
-- Une ligue prend de 10 à 24 clubs ; les autres sont en gris. La ligne du bas compte les nouveaux
+- Une ligue prend de 10 à 24 clubs, ses nouveaux clubs et ceux du jeu ensemble ; les autres sont en gris. La ligne du bas compte les nouveaux
   clubs de la recette par rapport aux 793 qu'un monde accepte.
-- Les clubs que le jeu a déjà restent où ils sont pour l'instant ; la nouvelle ligue est faite
-  des autres.
+- Les clubs que le jeu a déjà entrent dans la nouvelle ligue comme clubs du jeu (section 8),
+  à ses dernières places, avec leur nom, écusson, maillots et joueurs. Celui qui joue aussi une
+  compétition du jeu (Bâle et Young Boys jouent la Ligue Europa) a besoin du club qui prend sa
+  place là-bas : *Nouveaux clubs*, choisissez-le, **Club du jeu**. Jusque-là, Build dit lesquels.
 - Les clubs NewLife gardent leur ID NewLife dans le jeu (98304 et plus), donc tous les paquets de
   ligues faits avec la base donnent à un club le même ID.
 - Un club NewLife reçoit un écusson en forme de blason à ses couleurs et le maillot du jeu aux

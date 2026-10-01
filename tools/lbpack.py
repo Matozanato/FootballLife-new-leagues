@@ -51,9 +51,28 @@ FACE_ROOT = "FL26 Regen Faces"            # the livecpk root of the portraits (i
 PRIVATE = re.compile(r"[A-Za-z]:\\\\?(de[v]|User[s]|instalacij[a])|stuc[e]|fl26-dump[s]", re.I)
 
 
+def is_public(root):
+    """is <root> a checkout of the public repository (its own worktrees included)?"""
+    try:
+        url = subprocess.run(["git", "-C", root, "remote", "get-url", "origin"],
+                             capture_output=True, text=True).stdout
+    except OSError:
+        return False
+    return "FootballLife-new-leagues" in url
+
+
 def source(m):
-    """the module's file: the public repository's copy first, then this one's"""
-    roots = [PUBLIC, REPO] if os.path.isdir(os.path.join(PUBLIC, "sider")) else [REPO]
+    """the module's file: this repository's when it is the public one, else the public
+    repository's copy first, then this one's.
+
+    0.1.4 to 0.1.5.5 were packed from a public worktree while an older fl26-public sat beside
+    it, and that folder won: four modules (fl26joindll, fl26swiss, fl26chain, fl26clubs) went
+    out as 0.1.3.1's Lua next to 0.1.5.5's DLLs, and the world's season lines, split phases and
+    built cups never reached the game (GitHub #69)."""
+    if is_public(REPO):
+        roots = [REPO]
+    else:
+        roots = [PUBLIC, REPO] if os.path.isdir(os.path.join(PUBLIC, "sider")) else [REPO]
     for root in roots:
         for sub in ("sider", os.path.join("sider", "experimental")):
             p = os.path.join(root, sub, m + ".lua")

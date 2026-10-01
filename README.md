@@ -53,13 +53,15 @@ tell us where. Read [what works and what does not](#status) before you start a l
 **Clubs and players**
 
 - New clubs with your **names, short names and crests** (or a numbered badge), **managers**
-  with names and portraits (0.1.4), kits lent from the game's clubs, and a **formation** per
+  with names and portraits (0.1.4), kits lent from the game's clubs or plain kits you can
+  change in the game's Edit mode, Paste Image included (0.1.6), and a **formation** per
   league or per club with the first eleven on a pitch (0.1.4).
 - **Real clubs and players** from the **NewLife Database** (0.1.5.5): pick a league and it
   becomes a new league with its real clubs and squads — names, birth dates, positions,
   ratings on the game's scale, club colours, ids that stay the same in every version. A club
   with no crest gets a shield in its colours and the game's kit closest to them. A separate
-  download on our [Discord](https://discord.gg/StQqtk3G3M).
+  download on our [Discord](https://discord.gg/StQqtk3G3M); version 1.1 (2026-10-01) is the
+  2026/27 season, with the summer transfers and the new divisions.
 - **Faces**: new players get a face that fits their nationality, and any player can get a
   **portrait** instead of a 3D face (0.1.5.5).
 - **Regens** in Master League get a new name, a new potential and a new face (0.1.5.5).
@@ -82,8 +84,9 @@ tell us where. Read [what works and what does not](#status) before you start a l
   keeps clubs of one country apart as UEFA does (0.1.4).
 - **Continental places** for your leagues: Champions League, Europa League, Conference League;
   AFC Champions League and Champions League Two; Copa Libertadores (also its qualifying round,
-  0.1.4) and Copa Sudamericana; CAF Champions League and CAF Confederation Cup. The four the
-  game does not have are built with your world.
+  0.1.4) and Copa Sudamericana; CAF Champions League and CAF Confederation Cup, and the CAF
+  Super Cup between their winners (0.1.6). The four the game does not have are built with your
+  world.
 - A country's own **national cup** (any size up to 44 clubs, with byes like the FA Cup, 0.1.4)
   and **super cup**, a **league cup**, and **pre-season cups** of 4 or 8 invited clubs in July,
   each with your own **logo** (0.1.5.5).
@@ -116,6 +119,7 @@ tell us where. Read [what works and what does not](#status) before you start a l
 | 0.1.3.1 | 2026-09-29 | promotion and relegation outside Europe and for January-December leagues, the Rating field, a League window that fits 1080p |
 | 0.1.4 | 2026-09-30 | formations, clubs of the game in new leagues, transfers, national teams, club and player ids, manager portraits, national cups up to 44, February-December seasons, Libertadores qualifying, a shipped country's cup taking your second division, Europe only, the UEFA draw rules, split and Apertura/Clausura leagues fixed, the Kick Off order under Colombia and MLS |
 | 0.1.5.5 | 2026-09-30 | the NewLife Database (real clubs and players), regens with a new name, potential and face, faces by nationality for new players, player portraits, cup logos, shield crests and kits in a club's colours, a database mod that renamed the Europa League no longer stops the Build |
+| 0.1.6 | 2026-10-01 | kits you can edit in the game, the CAF Super Cup, six Libertadores qualifying places, the FA Cup kept by the top two divisions, Asian leagues before *Other Clubs (Asia)*, CONCACAF after MLS, squad positions from a table, promotion chains outside Europe fixed, a third division kept out of the country's super cup, no second schedule for every new league after loading a first-season save, January-December leagues of a new country in their second season, a world with only the European cups or only exhibition leagues no longer leaves every league without a schedule, and the four modules 0.1.4 to 0.1.5.5 shipped from an older version (February-December seasons, split leagues and built cups were not reaching the game) |
 
 The release notes of each version are on the
 [Releases](https://github.com/Matozanato/FootballLife-new-leagues/releases) page.
@@ -288,7 +292,13 @@ in the League Builder, were Alikhaled_727's idea too.
   game stores the number minus one, and every editor here now goes through that.
 - **daemonkf-a11y** ([daemonkf-a11y](https://github.com/daemonkf-a11y)): a database mod that
   renamed the Europa League and stopped the build, and a Romanian split too long for the
-  calendar ([#54](https://github.com/Matozanato/FootballLife-new-leagues/issues/54)).
+  calendar, and a European-only world whose leagues got no schedule
+  ([#54](https://github.com/Matozanato/FootballLife-new-leagues/issues/54)).
+- **alby171994** ([alby171994](https://github.com/alby171994)): an exhibition-only world
+  that left every league without a schedule, narrowed down to one module
+  ([#53](https://github.com/Matozanato/FootballLife-new-leagues/issues/53)).
+- **Jabo9** (Evo-Web): saw a new League One take the FA Cup from the Premier League and the
+  Championship ([#68](https://github.com/Matozanato/FootballLife-new-leagues/issues/68)).
 - **n1ne** (Discord): follows the work closely and asks the questions that show where the
   docs are not clear yet, such as how the European competitions get their clubs.
 
@@ -406,7 +416,9 @@ Mod Studio 0.1.4. The full list, with dates and details, is in
   season's tables.
 - **Cups of other continents**: the CAF Champions League and CAF Confederation Cup play their
   groups and knockout; the Copa Sudamericana was drawn with 32 clubs on 2026-09-29, with the
-  clubs already in the Copa Libertadores left out.
+  clubs already in the Copa Libertadores left out. The CAF Super Cup was played in the second
+  and third seasons' July between the two CAF winners, each time with that year's winners
+  (2026-10-01).
 - **Leagues of 10 to 24 clubs** with the right number of rounds, different sizes in one world.
 - **The menus**: the first 36 new leagues in Select Team, every one in Kick Off, Edit mode and Database →
   Competition Info, under its own country's name and flag.
@@ -424,10 +436,10 @@ Mod Studio 0.1.4. The full list, with dates and details, is in
   any change to a league's clubs needs a new career.
 - **A new league outside Europe shows the wrong continent** in Select Team's League Info
   panel (the European cups for one that plays August to May, the South American text for some
-  others) and in the board's objectives, and a new Asian league sits below *Other Clubs (Asia)*
-  (issue #43). Its places go to its own continent's cups; only the text is wrong. A new African
-  or CONCACAF country (South Africa, Mexico) comes after Asia in the Kick Off and Edit lists,
-  since the game has no section for it (issue #47). Not fixed yet.
+  others) and in the board's objectives (issue #43). Its places go to its own continent's cups;
+  only the text is wrong. Not fixed yet. (The list order is fixed in 0.1.6: a new Asian league
+  comes before *Other Clubs (Asia)*, a CONCACAF one after MLS; African and Oceanian countries
+  still come after Asia, since the game has no section for them.)
 - **An Exhibition only league still shows** in Master League's team list (the game has one
   list for Kick Off and Master League). Do not start a career with one of its clubs.
 - **February-December seasons** cannot yet be combined with a split, Apertura/Clausura, a
@@ -538,7 +550,7 @@ Contributors, and what each of them did, are listed in
 [The people who made this better](#the-people-who-made-this-better) near the top: above all
 **vmardonesdev** and **Alikhaled_727**, and **Stagnant09**, **pioup38**, **vector360**, **jibibi**, **bobzera**,
 **spursfan07**, **Amir**, **victormican**, **Alby17**, **jyanj083-dotcom**, **Gabyyy2008**, **alexfe87**,
-**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y** and **n1ne**.
+**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9** and **n1ne**.
 
 The licence asks nothing of you. I do: **if you use these findings, addresses, patch sets
 or tools in a mod, credit this work and link back** — see

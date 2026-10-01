@@ -57,7 +57,32 @@ local function tohex(s)
   return table.concat(out)
 end
 
+-- Does the world file (modules\fl26world.txt, from FL26 Mod Studio) register a league of ours
+-- in the season? nil when there is no file. Without one, fl26joindll does not load
+-- fl26join.dll, the flag at 0x14252eef0 stays 0, and the guard's fallback erased every league
+-- that had no season yet from the list at the career's first rollover: a world of exhibition
+-- leagues only, or of none (Europe-only), started its career with no fixtures at all (GitHub
+-- #53, #54). With nothing of ours to end, the game's own season end is the right one.
+local function world_has_leagues(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local any = false
+  for line in f:lines() do
+    local rest = line:match("^%s*league%s+%d+(.*)$")
+    if rest then rest = rest:gsub("%sname=.*$", "") end
+    if rest and tonumber(rest:match("%sexhibition=(%d+)") or "0") == 0 then any = true end
+  end
+  f:close()
+  return any
+end
+
 function m.init(ctx)
+  if world_has_leagues(ctx) == false then
+    log("fl26seasonend: the world file has no league in the season -- nothing patched, the season end is the game's own")
+    return
+  end
   local n = #patches
   log(string.format("fl26seasonend: set '%s', %d patches, verifying", "seasonend", n))
 

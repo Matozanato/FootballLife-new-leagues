@@ -67,6 +67,13 @@ class NewLife(BuilderPage):
             self.load(folder)
         self.count()
 
+    def info(self):
+        """what the game's tables say about its own clubs (leaguebuilder.game_info), None without them"""
+        try:
+            return B.game_info(self.project.base) if self.project.base else None
+        except OSError:
+            return None
+
     def open_dir(self):
         d = pick_dir(self, "Open NewLife Database...", self.app.settings.get("newlife", ""))
         if d:
@@ -97,17 +104,18 @@ class NewLife(BuilderPage):
 
     def fill(self):
         q = self.search.text().strip().lower()
+        info = self.info()
         self.tree.clear()
         for i, L in enumerate(self.rows):
             if q and q not in L["name"].lower() and q not in L["country"].lower():
                 continue
-            ok = N.fits(L)
+            ok = N.fits(L, info)
             it = QTreeWidgetItem([L["name"], L["country"], str(len(L["clubs"])), str(len(L["in_game"]) or ""),
                                   str(L["players"]), str(L["strength"]), "" if ok else _("a league takes %d to %d clubs")
                                   % (B.CLUBS_MIN, B.CLUBS_MAX)])
             it.setData(0, Qt.UserRole, i)
-            it.setToolTip(3, _("Clubs of this league the game already has: they stay where they are, the new "
-                               "league is made of the others"))
+            it.setToolTip(3, _("Clubs of this league the game already has: they join the new league with "
+                               "their own names, crests, kits and players"))
             if not ok:
                 for c in range(7):
                     it.setForeground(c, Qt.gray)
@@ -134,8 +142,9 @@ class NewLife(BuilderPage):
         self.count()
 
     def count(self):
-        used = sum(L.get("clubs", 0) for L in self.project.recipe["leagues"])
-        sel = sum(len(L["clubs"]) for L in self.picked() if N.fits(L)) if self.rows else 0
+        info = self.info()
+        used = sum(B.new_club_count(L) for L in self.project.recipe["leagues"])
+        sel = sum(len(L["clubs"]) for L in self.picked() if N.fits(L, info)) if self.rows else 0
         room = self.room if self.room is not None else 0
         text = _("New clubs in the recipe: %d of the %d the game takes.") % (used, room)
         if sel:
@@ -144,16 +153,23 @@ class NewLife(BuilderPage):
         self.b_add.setEnabled(bool(sel) and used + sel <= room)
 
     def add(self):
-        sel = [L for L in self.picked() if N.fits(L)]
+        info = self.info()
+        sel = [L for L in self.picked() if N.fits(L, info)]
         if not sel or not self.rel:
             return
-        names = []
+        names, swap = [], []
         for L in sel:
             if not L["country"]:
                 error(self, "NewLife Database", _("%s has no country the game knows.") % L["name"])
                 continue
-            names.append(N.add_league(self.project.recipe, self.rel, L))
+            names.append(N.add_league(self.project.recipe, self.rel, L, info=info))
+            if info:
+                swap += [info["clubs"][e["id"]][0] for e in self.project.recipe["leagues"][-1].get("game_clubs") or []
+                         if B.game_club_where(info, e["id"])]
         if names:
             self.project.touch()
-            self.say(_("Added: %s. Change them on New leagues, New clubs and Players, then Build.")
-                     % ", ".join(names), "ok")
+            text = _("Added: %s. Change them on New leagues, New clubs and Players, then Build.") % ", ".join(names)
+            if swap:
+                text += "\n" + _("%s also play in a competition of the game: on New clubs pick each one and use "
+                                 "Club of the game to choose the club that takes its place there.") % ", ".join(swap)
+            self.say(text, "ok")

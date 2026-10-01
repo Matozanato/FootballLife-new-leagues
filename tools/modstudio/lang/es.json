@@ -905,7 +905,7 @@
   "Added: %s. Change them on New leagues, New clubs and Players, then Build.": "Añadido: %s. Cámbialas en Ligas nuevas, Clubes nuevos y Jugadores, y luego Build.",
   "Club": "Club",
   "Clubs": "Clubes",
-  "Clubs of this league the game already has: they stay where they are, the new league is made of the others": "Clubes de esta liga que el juego ya tiene: se quedan donde están, la liga nueva se hace con los demás",
+  "Clubs of this league the game already has: they join the new league with their own names, crests, kits and players": "Clubes de esta liga que el juego ya tiene: entran en la liga nueva con su nombre, escudo, equipaciones y jugadores",
   "Country": "País",
   "Each selected league becomes a new league with its clubs and players": "Cada liga seleccionada se convierte en una liga nueva con sus clubes y jugadores",
   "In game": "En el juego",
@@ -921,7 +921,17 @@
   "Search leagues or countries": "Buscar ligas o países",
   "Selected: %d more.": "Seleccionados: %d más.",
   "a league takes %d to %d clubs": "una liga tiene de %d a %d clubes",
-  "in the game": "en el juego"
+  "in the game": "en el juego",
+  "CAF Super Cup": "Supercopa de la CAF",
+  "The winners of the CAF Champions League and the Confederation Cup meet once, in late July. First played in a career's second season, when both cups have a winner": "Los campeones de la Liga de Campeones de la CAF y de la Copa Confederación juegan un partido a finales de julio. Se juega por primera vez en la segunda temporada de la carrera, cuando las dos copas tienen campeón",
+  "only in a world with both African cups (the European places of your African leagues)": "solo en un mundo con las dos copas africanas (las plazas europeas de tus ligas africanas)",
+  "Playoffs": "Playoffs",
+  "Position grade (0/1/2)": "Nivel en la posición (0/1/2)",
+  "Import CSV... reads back a table made with Export CSV... For a table from anywhere else (a PES editor, a website, Football Manager) use Import a squad from a table...": "Importar CSV... vuelve a leer una tabla hecha con Exportar CSV... Para una tabla de cualquier otro sitio (un editor de PES, una web, Football Manager) usa Importar una plantilla desde una tabla...",
+  "%s also play in a competition of the game: on New clubs pick each one and use Club of the game to choose the club that takes its place there.": "%s también juegan una competición del juego: en Clubes nuevos elige cada uno y usa Club del juego para escoger el club que ocupa su lugar allí.",
+  "Kits you can edit in the game": "Equipaciones que puedes editar en el juego",
+  "On: the new clubs get no kit borrowed from a club of the game. A borrowed kit is a licensed one, and the game's Edit mode refuses it (\"You cannot edit this strip\"). Without one each new club wears a plain kit that Edit > Teams > Strip changes like any other, Paste Image included. Build again after changing this.": "Activado: los clubes nuevos no toman prestada la equipación de un club del juego. Una equipación prestada es con licencia y el modo Editar la rechaza (\"You cannot edit this strip\"). Sin ella, cada club nuevo lleva una equipación sencilla que Editar > Equipos > Equipación cambia como cualquier otra, Pegar imagen incluido. Vuelve a construir tras cambiarlo.",
+  "off = each new club borrows a kit of the game (it looks real, but Edit mode cannot change it)": "desactivado = cada club nuevo toma prestada una equipación del juego (parece real, pero el modo Editar no puede cambiarla)"
  },
  "log": [
   [

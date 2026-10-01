@@ -126,6 +126,10 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
   CAF cup with fewer than 4 places (the game has no African leagues to fill it from) first takes
   the best places of the next CAF cup (the CAF Champions League takes all four of two plus two),
   then the next positions of its own leagues that no place claims; the plan says so in a NOTE.
+  An entry `<reg>:0` is the winner of that cup (kept from its final in the spring, sent in
+  July): Build's CAF Super Cup is `groups=0` with `entry=<CAF CL ko>:0,<CAF CC ko>:0`, filled
+  at the July teardown (day 181-183) and played in late July (recipe `"caf_super_cup": false`
+  leaves it out).
 
 A new country's own cup is not a line: with `"cup": true` on a top division (and optionally
 `"supercup": true`) Build copies a shipped cup (`tools/mkcup.py --like`) into the country's

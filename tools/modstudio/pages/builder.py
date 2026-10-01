@@ -444,8 +444,10 @@ class LeagueDialog(Dialog):
         self.cup_logo = PictureField(L.get("cup_logo"), 48)
         self.supercup_logo = PictureField(L.get("supercup_logo"), 48)
         self.lcup_logo = PictureField(L.get("league_cup_logo"), 48)
+        self.po_logo = PictureField(L.get("playoff_logo"), 48)
         self.form.addRow(_("Cup logos"), row(QLabel(_("Cup")), self.cup_logo, QLabel(_("Super cup")),
-                                             self.supercup_logo, QLabel(_("League cup")), self.lcup_logo))
+                                             self.supercup_logo, QLabel(_("League cup")), self.lcup_logo,
+                                             QLabel(_("Playoffs")), self.po_logo))
         from ..pitch import FormationPick
         self.formation = FormationPick(project.formations(), L.get("formation", ""))
         self.formation.pitch.setFixedHeight(190)
@@ -556,7 +558,7 @@ class LeagueDialog(Dialog):
         else:
             L["above"] = a
         for key, f in (("logo", self.logo), ("cup_logo", self.cup_logo), ("supercup_logo", self.supercup_logo),
-                       ("league_cup_logo", self.lcup_logo)):
+                       ("league_cup_logo", self.lcup_logo), ("playoff_logo", self.po_logo)):
             if f.path:
                 L[key] = f.path
             else:
@@ -1704,6 +1706,21 @@ class Build(BuilderPage):
         self.uecl_logo.changed = self.set_uecl_logo
         self.outer.addWidget(row(QLabel(_("Conference League logo")), self.uecl_logo,
                                  hint(_("empty = a UECL emblem drawn for you"))))
+        self.cafsc = QCheckBox(_("CAF Super Cup"))
+        self.cafsc.setToolTip(_("The winners of the CAF Champions League and the Confederation Cup meet once, "
+                                "in late July. First played in a career's second season, when both cups "
+                                "have a winner"))
+        self.cafsc.toggled.connect(self.set_cafsc)
+        self.outer.addWidget(row(self.cafsc, hint(_("only in a world with both African cups (the European "
+                                                    "places of your African leagues)"))))
+        self.ekits = QCheckBox(_("Kits you can edit in the game"))
+        self.ekits.setToolTip(_("On: the new clubs get no kit borrowed from a club of the game. A borrowed kit is "
+                                "a licensed one, and the game's Edit mode refuses it (\"You cannot edit this "
+                                "strip\"). Without one each new club wears a plain kit that Edit > Teams > Strip "
+                                "changes like any other, Paste Image included. Build again after changing this."))
+        self.ekits.toggled.connect(self.set_ekits)
+        self.outer.addWidget(row(self.ekits, hint(_("off = each new club borrows a kit of the game (it looks "
+                                                    "real, but Edit mode cannot change it)"))))
         self.b_euro = QPushButton(_("Only the new European cups..."))
         self.b_euro.setToolTip(_("A world with nothing but the new Champions League and Europa League (league "
                                  "phase of 36 and play-off) and, when ticked above, the Conference League: "
@@ -1728,6 +1745,19 @@ class Build(BuilderPage):
             self.project.recipe["uecl"] = on
             self.project.touch()
 
+    def set_cafsc(self, on):
+        if bool(self.project.recipe.get("caf_super_cup", True)) != on:
+            self.project.recipe["caf_super_cup"] = on
+            self.project.touch()
+
+    def set_ekits(self, on):
+        if bool(self.project.recipe.get("editable_kits")) != on:
+            if on:
+                self.project.recipe["editable_kits"] = True
+            else:
+                self.project.recipe.pop("editable_kits", None)
+            self.project.touch()
+
     def set_uecl_logo(self):
         if self.uecl_logo.path != self.project.recipe.get("uecl_logo"):
             if self.uecl_logo.path:
@@ -1742,6 +1772,12 @@ class Build(BuilderPage):
         self.uecl.blockSignals(True)
         self.uecl.setChecked(bool(self.project.recipe.get("uecl", True)))
         self.uecl.blockSignals(False)
+        self.cafsc.blockSignals(True)
+        self.cafsc.setChecked(bool(self.project.recipe.get("caf_super_cup", True)))
+        self.cafsc.blockSignals(False)
+        self.ekits.blockSignals(True)
+        self.ekits.setChecked(bool(self.project.recipe.get("editable_kits")))
+        self.ekits.blockSignals(False)
         self.uecl_logo.path = self.project.recipe.get("uecl_logo")
         self.uecl_logo.show_it()
         built = os.path.exists(os.path.join(g.livecpk_dir, w)) if g.ok() else False

@@ -148,12 +148,12 @@ League Builder añade ligas nuevas al juego y cambia las del propio juego. Lo qu
 | **División** | *(primera división)*, o la liga que tiene encima: otra liga nueva o una del juego. Para poner una liga nueva bajo otra liga nueva en un paso: selecciónala y pulsa **Añadir división inferior** (toma el país, el número de clubes, el formato y los ascensos/descensos de la liga de arriba; solo falta el nombre). |
 | **Asc. / desc.** | Cuántos clubes cambian de sitio con la liga de arriba al final de la temporada. |
 | **Temporada** | Solo para la primera división de un país nuevo: *agosto a mayo* (por defecto) o *febrero a diciembre*, como Brasil, Japón o Arabia Saudí: los clubes suben y bajan en Año Nuevo, y las divisiones de abajo la siguen. Todavía no con división en grupos, Apertura/Clausura, copa nacional ni copa de la liga. |
-| **Europa** | Solo para primera división: qué puesto de la liga va a qué competición europea. **Primera: 1.º UCL, 2.º UEL, 3.º UECL** rellena las tres habituales; **Añadir plaza**, **Quitar plaza** y **Borrar** para todo lo demás. Cada puesto una sola vez, y solo puestos que la liga tiene. Déjalo vacío para una categoría inferior. La plantilla sigue al país: Asia recibe la AFC Champions League y la AFC Champions League Two, Sudamérica la Libertadores y la Copa Sudamericana, África la CAF Champions League y la Copa Confederación CAF. Esas cuatro copas que el juego no tiene se construyen con el mundo (sección 8.2). Una plaza de *clasificación a la Libertadores* ocupa el sitio de un club del juego en la ronda previa (el último del país con más clubes en ella), como mucho la mitad de la ronda. |
+| **Europa** | Solo para primera división: qué puesto de la liga va a qué competición europea. **Primera: 1.º UCL, 2.º UEL, 3.º UECL** rellena las tres habituales; **Añadir plaza**, **Quitar plaza** y **Borrar** para todo lo demás. Cada puesto una sola vez, y solo puestos que la liga tiene. Déjalo vacío para una categoría inferior. La plantilla sigue al país: Asia recibe la AFC Champions League y la AFC Champions League Two, Sudamérica la Libertadores y la Copa Sudamericana, África la CAF Champions League y la Copa Confederación CAF. Esas cuatro copas que el juego no tiene se construyen con el mundo (sección 8.2). Una plaza de *clasificación a la Libertadores* ocupa el sitio de un club del juego en la ronda previa (el último del país con más clubes en ella), como mucho seis de sus ocho plazas; **Comprobar el plan** dice qué ligas se quedan fuera pasado ese número. |
 | **Logo** | Cualquier imagen (un PNG con fondo transparente queda mejor). Vacío: se dibuja uno por ti. |
 | **Bandera del país** | Tu propia imagen de la bandera del país, estirada al marco de las banderas del juego. Sustituye la bandera de ese país en todo el juego (Select Team, nacionalidad de los jugadores, el encabezado del país en Database > Competition Info) mientras el mundo esté activo. Vacío: la bandera del juego. |
-| **Copa** | Solo primera división. **Copa nacional**: el país tiene su propia copa, con el nombre que le des (vacío: `<liga> Cup`). El juego llena la copa de un país con su primera división y la división de debajo, y la copa los admite a todos, sean cuantos sean hasta 44: las rondas son las de una copa del juego del mismo tamaño o, si no la hay, las de la copa inglesa, y cuando el número no es 8, 16, 32 o 64, algunos clubes pasan la primera ronda sin jugar, como en la FA Cup real. Con más de 44 clubes la copa se queda solo con la primera división. Una segunda división nueva bajo un país que el juego ya tiene (Alemania, Rusia ...) también entra en la copa de ese país, detrás de los clubes de primera, cuando las rondas de la copa encajan con el número de clubes. **Supercopa**: además, una supercopa a partido único antes de la temporada, el campeón contra el ganador de la copa. |
+| **Copa** | Solo primera división. **Copa nacional**: el país tiene su propia copa, con el nombre que le des (vacío: `<liga> Cup`). El juego llena la copa de un país con su primera división y la división de debajo, y la copa los admite a todos, sean cuantos sean hasta 44: las rondas son las de una copa del juego del mismo tamaño o, si no la hay, las de la copa inglesa, y cuando el número no es 8, 16, 32 o 64, algunos clubes pasan la primera ronda sin jugar, como en la FA Cup real. Con más de 44 clubes la copa se queda solo con la primera división. Una segunda división nueva bajo un país que el juego ya tiene (Alemania, Rusia ...) también entra en la copa de ese país, detrás de los clubes de primera, cuando las rondas de la copa encajan con el número de clubes. Una nueva tercera división o inferior (League One bajo la Championship) deja la copa del país a las dos primeras divisiones del juego, como en el juego. **Supercopa**: además, una supercopa a partido único antes de la temporada, el campeón contra el ganador de la copa. |
 | **Copa de la liga** | Solo primera división. Una eliminatoria de 16, 8 o 4 clubes de esta liga y la de abajo, por posición, el más fuerte contra el más débil: ida y vuelta en cada ronda, la final a un partido, de septiembre a diciembre. Ponle un nombre o déjalo vacío (`<liga> League Cup`). |
-| **Logos de las copas** | Una imagen para la copa nacional, la supercopa y la copa de la liga, cada una por separado. Vacío: se dibuja un emblema con las iniciales de la copa. |
+| **Logos de las copas** | Una imagen para la copa nacional, la supercopa, la copa de la liga y los playoffs del Apertura/Clausura, cada una por separado. Vacío: se dibuja un emblema con las iniciales de la copa. |
 | **Solo exhibición -- no está en la Liga Máster** | Para Kick Off y partidos amistosos: una liga histórica, leyendas y cosas así. Sus clubes nunca juegan una temporada de Liga Máster, así que la liga va sola: sin división arriba ni abajo, sin plazas europeas, sin copas. Aun así aparece en la lista de equipos de la Liga Máster; elige tu club en otra liga. |
 | **Formación** | Cómo forman los clubes de la liga. Elige una de las formaciones que usan los clubes del juego (4-2-3-1, 4-1-2-3, 4-3-3, 5-3-2 ...; la lista dice cuántos clubes del juego la usan): cada club nuevo recibe una copia de la táctica de un club del juego con esa formación, y al construir se le coloca su mejor once. Vacío: la del juego, un 4-2-3-1 fijo. Un club puede tener la suya (**Editar club**). |
 
@@ -166,7 +166,10 @@ su archivo de logo.
 **Clubes nuevos**: elige la liga y luego **Editar club** (nombre, abreviatura, escudo), **Pegar
 nombres...** o **Cargar nombres de un archivo...**. Un nombre vacío pasa a ser `<liga> 01`,
 `<liga> 02` ...; un club sin escudo recibe un escudo con número. Las equipaciones se toman
-prestadas de los clubes del propio juego.
+prestadas de los clubes del propio juego. Una equipación así es con licencia, y el modo Edit no
+deja cambiarla ("You cannot edit this strip"): marca **Equipaciones que puedes editar en el juego**
+en la página Construir y los clubes nuevos no toman ninguna prestada; cada uno lleva una equipación
+sencilla que Edit > Teams > Strip cambia como la de cualquier otro club, Paste Image incluido.
 Los nombres conservan sus letras (FK Željezničar); la abreviatura de tres letras no lleva tildes
 ni marcas, como en el juego, así que ahí Č, Ž, Đ pasan a C, Z, D. Después de **Construir**, la
 columna **ID del club** muestra el id de cada club en el juego.
@@ -320,7 +323,9 @@ no tiene ninguno). También lo usa **Solo las nuevas copas europeas...**.
 > país distinto.
 
 Después **empieza una nueva carrera de Master League** (o Become a Legend). Las ligas nuevas están
-bajo su país en Select Team y Kick Off.
+bajo su país en Select Team y Kick Off. En las listas de Kick Off y Edit un país asiático nuevo va
+antes de *Other Clubs (Asia)*, uno de la CONCACAF después de la MLS, y los africanos y de Oceanía
+(el juego no tiene sección para ellos) después de Asia.
 
 > **Copas de otros continentes.** Cuando tus ligas mandan clubes a la CAF Champions League, la
 > Copa Confederación CAF, la AFC Champions League Two o la Copa Sudamericana, **Construir**
@@ -330,7 +335,9 @@ bajo su país en Select Team y Kick Off.
 > finales de agosto, con las tablas de las ligas. Un club que ya juega la Copa Libertadores, su
 > fase previa o la AFC Champions League no entra en su sorteo. Una copa de la CAF con menos de 4
 > plazas toma primero las plazas de la siguiente copa de la CAF (con dos y dos, la CAF Champions
-> League se queda las cuatro), y luego los siguientes puestos de tus ligas.
+> League se queda las cuatro), y luego los siguientes puestos de tus ligas. **Supercopa de la
+> CAF** (página Construir, activada por defecto) enfrenta a los ganadores de las dos copas de la
+> CAF en un partido a finales de julio, desde la segunda temporada de la carrera.
 
 > **Las partidas guardadas pertenecen a un mundo.** Una carrera guardada con un mundo activado
 > necesita ese mismo mundo para cargarse.
@@ -384,10 +391,13 @@ de 10 MB. Descarga solo las partes que quieras.
    Cambia su división, formato, plazas europeas y lo demás en *Ligas nuevas*, como cualquier otra.
 4. **Construir**, activa el mundo y empieza una carrera nueva (sección 8.2).
 
-- Una liga admite de 10 a 24 clubes; las demás salen en gris. La línea de abajo cuenta los clubes
+- Una liga admite de 10 a 24 clubes, sus clubes nuevos y los del juego juntos; las demás salen en gris. La línea de abajo cuenta los clubes
   nuevos de la receta frente a los 793 que admite un mundo.
-- Los clubes que el juego ya tiene se quedan donde están por ahora; la liga nueva se forma con
-  los demás.
+- Los clubes que el juego ya tiene entran en la liga nueva como clubes del juego (sección 8),
+  en sus últimos puestos, con su nombre, escudo, equipaciones y jugadores. Uno que además juega
+  una competición del juego (el Basilea y el Young Boys juegan la Europa League) necesita el club
+  que ocupa su lugar allí: *Clubes nuevos*, elígelo, **Club del juego**. Hasta entonces Build
+  dice cuáles son.
 - Los clubes NewLife conservan su ID NewLife en el juego (98304 en adelante), así que todos los
   paquetes de ligas hechos con la base le dan a un club el mismo ID.
 - Un club NewLife recibe un escudo en forma de blasón con sus colores y la equipación del juego

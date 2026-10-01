@@ -371,11 +371,12 @@ static unsigned char* app_record(uint32_t id)
   }
   return lo < n && *(uint32_t*)(t + (size_t)lo * APP_STRIDE) == id ? t + (size_t)lo * APP_STRIDE : 0;
 }
+static unsigned g_written;                     /* face records written since the last pass */
 static int apply_face(uint32_t id, int f)
 {
   unsigned char* r = f >= 0 ? app_record(id) : 0;
   if (!r) return 0;
-  if (memcmp(r + APP_DATA, g_faces[f].data, APP_LEN)) memcpy(r + APP_DATA, g_faces[f].data, APP_LEN);
+  if (memcmp(r + APP_DATA, g_faces[f].data, APP_LEN)) { memcpy(r + APP_DATA, g_faces[f].data, APP_LEN); g_written++; }
   return 1;
 }
 static void note_regen(unsigned char* rec)
@@ -653,11 +654,29 @@ __declspec(dllexport) int fl26_regen_new(uint32_t from, uint32_t to, int keep)
    records it found */
 __declspec(dllexport) int fl26_regen_faces(void)
 {
+  /* GitHub #64 (Game Plan lags while fl26regen is on): how long a pass takes and how many faces
+     it has to write again, logged now and then. A pass that keeps writing means the game put
+     the appearance back in between; a slow one means the pass itself is the cost. */
+  static unsigned passes, rewrites, logged;
+  static double slowest;
+  LARGE_INTEGER f, t0, t1;
+  QueryPerformanceFrequency(&f); QueryPerformanceCounter(&t0);
   int n = 0;
+  g_written = 0;
   new_scan();
   for (int i = 0; i < g_nrlist; i++) n += apply_face(g_rlist_id[i], g_rlist_face[i]);
   for (int i = 0; i < g_nnlist; i++)
     if (!fl26_regen_is(g_nlist[i].id)) n += apply_face(g_nlist[i].id, g_nlist[i].face);
+  QueryPerformanceCounter(&t1);
+  double ms = (double)(t1.QuadPart - t0.QuadPart) * 1000.0 / (double)f.QuadPart;
+  if (ms > slowest) slowest = ms;
+  passes++;
+  if (g_written && passes > 1) rewrites++;
+  if (g_written && passes > 1 && (logged < 20 || rewrites % 200 == 0)) {
+    logged++;
+    logf("faces: pass %u wrote %u of %d face(s) again (%u such passes so far; slowest pass %.2f ms)",
+         passes, g_written, n, rewrites, slowest);
+  }
   return n;
 }
 

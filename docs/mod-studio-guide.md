@@ -142,12 +142,12 @@ The League Builder adds new leagues to the game and changes the game's own. What
 | **Division** | *(top division)*, or the league above it: another new league, or one of the game's. To put a new league under another new league in one step: select it and press **Add lower tier** (it takes the country, club count, format and up/down of the league above; only the name is left). |
 | **Up / down** | How many clubs change places with the league above at the end of the season. |
 | **Season** | Top division of a new country only: *August to May* (the default) or *February to December*, like Brazil, Japan or Saudi Arabia: clubs go up and down at New Year, and the divisions below it follow it. Not with a split, Apertura/Clausura, a national cup or a league cup yet. |
-| **Europe** | Top division only: which league position goes to which European competition. **Top flight: 1st UCL, 2nd UEL, 3rd UECL** fills the usual three; **Add place**, **Remove place** and **Clear** for anything else. Each position once, and only positions the league has. Leave it empty for a lower tier. The preset follows the country: Asia gets the AFC Champions League and AFC Champions League Two, South America the Libertadores and the Copa Sudamericana, Africa the CAF Champions League and CAF Confederation Cup. Those four cups the game does not have are built with the world (section 8.2). A *Libertadores qualifying* place takes the place of a club of the game in the qualifying round (the last one of the country with the most clubs in it), at most half the round. |
+| **Europe** | Top division only: which league position goes to which European competition. **Top flight: 1st UCL, 2nd UEL, 3rd UECL** fills the usual three; **Add place**, **Remove place** and **Clear** for anything else. Each position once, and only positions the league has. Leave it empty for a lower tier. The preset follows the country: Asia gets the AFC Champions League and AFC Champions League Two, South America the Libertadores and the Copa Sudamericana, Africa the CAF Champions League and CAF Confederation Cup. Those four cups the game does not have are built with the world (section 8.2). A *Libertadores qualifying* place takes the place of a club of the game in the qualifying round (the last one of the country with the most clubs in it), at most six of its eight places; **Check the plan** says which leagues are left out past that. |
 | **Logo** | Any picture (PNG with a transparent background looks best). Empty: one is drawn for you. |
 | **Country flag** | Your own picture of the country's flag, stretched into the game's flag frame. It replaces the game's flag of that country everywhere (Select Team, players' nationality, the country's heading in Database > Competition Info) while the world is on. Empty: the game's own flag. |
-| **Cup** | Top division only. **National cup**: the country gets its own cup, with the name you give (empty: `<league> Cup`). The game fills a country's cup from its top division and the division below it, and the cup takes them all, of any number up to 44: the rounds are those of a shipped cup of the same size, or else of the English cup, and when the number is not 8, 16, 32 or 64, some clubs get a bye in the first round, as in the real FA Cup. Past 44 clubs the cup keeps the top division alone. A new second division under a country the game already has (Germany, Russia ...) goes into that country's cup too, after the top division's clubs, when the cup's rounds fit the field. **Super cup**: also a one-match super cup before the season, the champion against the cup winner. |
+| **Cup** | Top division only. **National cup**: the country gets its own cup, with the name you give (empty: `<league> Cup`). The game fills a country's cup from its top division and the division below it, and the cup takes them all, of any number up to 44: the rounds are those of a shipped cup of the same size, or else of the English cup, and when the number is not 8, 16, 32 or 64, some clubs get a bye in the first round, as in the real FA Cup. Past 44 clubs the cup keeps the top division alone. A new second division under a country the game already has (Germany, Russia ...) goes into that country's cup too, after the top division's clubs, when the cup's rounds fit the field. A new third division or lower (League One under the Championship) leaves the country's cup to the game's top two divisions, as in the game. **Super cup**: also a one-match super cup before the season, the champion against the cup winner. |
 | **League cup** | Top division only. A knockout of 16, 8 or 4 clubs of this league and the one below it, by league position, the strongest against the weakest: two legs a round, the final one match, September to December. Give it a name or leave it empty (`<league> League Cup`). |
-| **Cup logos** | A picture for the national cup, the super cup and the league cup, each on its own. Empty: an emblem with the cup's initials is drawn for it. |
+| **Cup logos** | A picture for the national cup, the super cup, the league cup and the Apertura/Clausura playoffs, each on its own. Empty: an emblem with the cup's initials is drawn for it. |
 | **Exhibition only -- not in Master League** | For Kick Off and exhibition matches: a historical league, legends and the like. Its clubs never play a Master League season, so the league stands alone: no division above or below, no European places, no cups. It still shows in Master League's team list; pick your own club from another league. |
 | **Formation** | How the league's clubs line up. Pick one of the formations the game's clubs use (4-2-3-1, 4-1-2-3, 4-3-3, 5-3-2 ...; the list says how many clubs of the game play it): each new club gets a copy of the tactics of a club of the game with that formation, and its best eleven is lined up for it at Build. Empty: the game's default, a fixed 4-2-3-1. A single club can have its own (**Edit club**). |
 
@@ -158,7 +158,10 @@ shows each league's competition id in the game, the one its logo file carries.
 
 **New clubs**: pick the league, then **Edit club** (name, short name, crest), **Paste names...**
 or **Load names from file...**. An empty name becomes `<league> 01`, `<league> 02` ...; a club
-with no crest gets a numbered badge. Kits are lent from the game's own clubs.
+with no crest gets a numbered badge. Kits are lent from the game's own clubs. Such a kit is a
+licensed one, and Edit mode will not change it ("You cannot edit this strip"): tick **Kits you
+can edit in the game** on the Build page and the new clubs borrow none, each wears a plain kit
+that Edit > Teams > Strip changes like any other club's, Paste Image included.
 Names keep their letters (FK Željezničar); the three-letter short name has none, as in the game,
 so Č, Ž, Đ become C, Z, D there. After **Build** the **Team ID** column shows each club's id in
 the game.
@@ -304,7 +307,9 @@ European cups...** too.
 > country, and at most two of its opponents come from any one other country.
 
 Then **start a new Master League** (or Become a Legend) career. The new leagues are under their
-country in Select Team and Kick Off.
+country in Select Team and Kick Off. In the Kick Off and Edit lists a new Asian country comes
+before *Other Clubs (Asia)*, a CONCACAF one after MLS, and African and Oceanian ones (the game
+has no section for them) after Asia.
 
 > **Other continents' cups.** When your leagues send clubs to the CAF Champions League, the
 > CAF Confederation Cup, the AFC Champions League Two or the Copa Sudamericana, **Build**
@@ -314,7 +319,9 @@ country in Select Team and Kick Off.
 > end of August, from the league tables. A club already in the Copa Libertadores, its
 > qualifying round or the AFC Champions League is not drawn into them. A CAF cup with fewer
 > than 4 places takes the next CAF cup's places first (with two and two, the CAF Champions
-> League gets all four), then the next positions of your leagues.
+> League gets all four), then the next positions of your leagues. **CAF Super Cup** (Build
+> page, on by default) has the winners of the two CAF cups meet once in late July, from a
+> career's second season on.
 
 > **Saves belong to a world.** A career saved with one world on needs that same world to load.
 
@@ -368,9 +375,13 @@ under 10 MB. Download only the parts you want.
    its division, format, European places and the rest on *New leagues*, like any other league.
 4. **Build**, switch the world on and start a new career (section 8.2).
 
-- A league takes 10 to 24 clubs; the others are grey. The line at the bottom counts the new clubs
+- A league takes 10 to 24 clubs, its new clubs and the game's own together; the others are grey. The line at the bottom counts the new clubs
   of the recipe against the 793 a world takes.
-- Clubs the game already has stay where they are for now; the new league is made of the others.
+- Clubs the game already has join the new league as clubs of the game (section 8, *Clubs the
+  game already has*), in its last places, with their own names, crests, kits and players. One
+  that also plays a competition of the game (Basel and Young Boys play the Europa League) needs
+  the club that takes its place there: *New clubs*, pick it, **Club of the game**. Build says
+  which ones until then.
 - NewLife clubs keep their NewLife ids in the game (98304 and up), so every league package made
   with the database gives a club the same id.
 - A NewLife club gets a shield crest in its colours and the kit of the game closest to its
