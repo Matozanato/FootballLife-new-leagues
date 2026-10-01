@@ -844,6 +844,8 @@ class GameClubDialog(Dialog):
             if not self.info["entries"].get(t):
                 self.swap_club.addItem("%s (%s, %d)" % (n, s, t), t)
         self.rb_new = QRadioButton(_("Its place goes to a new club, named:"))
+        self.rb_new.setToolTip(_("Build makes a club of that name for the competitions the club leaves, with a "
+                                 "placeholder squad and a numbered badge"))
         self.swap_name = QLineEdit()
         self.swap_name.setMaxLength(45)
         grp = QButtonGroup(self)
@@ -904,7 +906,7 @@ class GameClubDialog(Dialog):
         else:
             self.where.setText(_("%s plays in nothing: it just moves.") % self.info["clubs"][t][0])
         for w in (self.rb_game, self.swap_club, self.rb_new, self.swap_name):
-            w.setEnabled(bool(where))
+            w.setVisible(bool(where))          # a club that plays in nothing leaves no place to fill
 
     def ok(self):
         t = self.chosen()
