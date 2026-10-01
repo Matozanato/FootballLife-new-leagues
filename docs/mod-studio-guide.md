@@ -390,6 +390,10 @@ under 10 MB. Download only the parts you want.
    its division, format, European places and the rest on *New leagues*, like any other league.
 4. **Build**, switch the world on and start a new career (section 8.2).
 
+- **Your own line-up** (0.1.7): untick a club in the list on the right to leave it out, and
+  **Add a club from another league...** to bring in clubs of any league of the release -- this
+  season's first division is last season's with two promoted clubs, say. The league's row gets a
+  `*`. A club can be in one league of the recipe only.
 - A league takes 10 to 24 clubs, its new clubs and the game's own together; the others are grey. The line at the bottom counts the new clubs
   of the recipe against the 793 a world takes.
 - Clubs the game already has join the new league as clubs of the game (section 8, *Clubs the

@@ -407,6 +407,10 @@ de 10 MB. Descarga solo las partes que quieras.
    Cambia su división, formato, plazas europeas y lo demás en *Ligas nuevas*, como cualquier otra.
 4. **Construir**, activa el mundo y empieza una carrera nueva (sección 8.2).
 
+- **Tu propia composición** (0.1.7): desmarca un club en la lista de la derecha para dejarlo
+  fuera, y **Añadir un club de otra liga...** trae clubes de cualquier liga de la base -- la
+  primera división de esta temporada es la del año pasado con dos ascendidos, por ejemplo. La
+  fila de la liga lleva un `*`. Un club solo puede estar en una liga de la receta.
 - Una liga admite de 10 a 24 clubes, sus clubes nuevos y los del juego juntos; las demás salen en gris. La línea de abajo cuenta los clubes
   nuevos de la receta frente a los 793 que admite un mundo.
 - Los clubes que el juego ya tiene entran en la liga nueva como clubes del juego (sección 8),

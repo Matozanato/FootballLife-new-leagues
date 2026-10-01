@@ -384,6 +384,10 @@ više njih), plus *Free agents*, svaki manji od 10 MB. Preuzmi samo dijelove koj
    format, europska mjesta i ostalo mijenjaš na *Nove lige*, kao za svaku drugu ligu.
 4. **Izgradi**, uključi svijet i pokreni novu karijeru (poglavlje 8.2).
 
+- **Vlastiti sastav lige** (0.1.7): makni kvačicu klubu u popisu desno da ostane vani, a
+  **Dodaj klub iz druge lige...** dovodi klubove bilo koje lige iz baze -- recimo prva liga ove
+  sezone je prošlogodišnja s dva kluba koja su ušla. Redak lige dobije `*`. Klub može biti samo
+  u jednoj ligi recepta.
 - Liga prima 10 do 24 kluba, nove i one iz igre zajedno; ostale su sive. Redak na dnu broji nove klubove recepta prema 793
   koliko svijet prima.
 - Klubovi koje igra već ima ulaze u novu ligu kao klubovi iz igre (odjeljak 8, *Klubovi koje

@@ -62,6 +62,7 @@ tell us where. Read [what works and what does not](#status) before you start a l
   with no crest gets a shield in its colours and the game's kit closest to them. A separate
   download on our [Discord](https://discord.gg/StQqtk3G3M); version 1.1 (2026-10-01) is the
   2026/27 season, with the summer transfers and the new divisions.
+  Leave clubs out of a league or bring in clubs of other leagues (0.1.7).
 - **Faces**: new players get a face that fits their nationality, and any player can get a
   **portrait** instead of a 3D face (0.1.5.5).
 - **Regens** in Master League get a new name, a new potential and a new face (0.1.5.5).

@@ -422,6 +422,11 @@ plusieurs), plus *Free agents*, chacune de moins de 10 Mo. Ne téléchargez que 
    *Nouvelles ligues*, comme pour toute autre ligue.
 4. **Build**, activez le monde et commencez une nouvelle carrière (section 8.2).
 
+- **Votre propre composition** (0.1.7) : décochez un club dans la liste de droite pour le
+  laisser de côté, et **Ajouter un club d'une autre ligue...** amène des clubs de n'importe
+  quelle ligue de la base -- la première division de cette saison est celle de l'an dernier avec
+  deux promus, par exemple. La ligne de la ligue porte un `*`. Un club ne peut être que dans une
+  ligue de la recette.
 - Une ligue prend de 10 à 24 clubs, ses nouveaux clubs et ceux du jeu ensemble ; les autres sont en gris. La ligne du bas compte les nouveaux
   clubs de la recette par rapport aux 793 qu'un monde accepte.
 - Les clubs que le jeu a déjà entrent dans la nouvelle ligue comme clubs du jeu (section 8),

@@ -950,7 +950,13 @@
   "Competition names": "Imena natjecanja",
   "New names and logos for the cups and continental competitions of the game, and for the continental cups the world builds": "Nova imena i logotipi za kupove i kontinentalna natjecanja iz igre, i za kontinentalne kupove koje svijet gradi",
   "Cups, super cups and the continental competitions of the game, and the continental cups the League Builder makes. Leagues are renamed on Game's leagues and clubs. Empty name: the game's own.": "Kupovi, superkupovi i kontinentalna natjecanja iz igre, i kontinentalni kupovi koje radi League Builder. Lige se preimenuju na stranici Game's leagues and clubs. Prazno ime: ono iz igre.",
-  "Built with the world: %s": "Gradi se sa svijetom: %s"
+  "Built with the world: %s": "Gradi se sa svijetom: %s",
+  "Add a club from another league": "Dodaj klub iz druge lige",
+  "Add a club from another league...": "Dodaj klub iz druge lige...",
+  "Search a club or a league; pick one or more.": "Traži klub ili ligu; odaberi jedan ili više.",
+  "Untick a club to leave it out; add clubs of other leagues (two promoted ones, say).": "Makni kvačicu da klub ostane vani; dodaj klubove drugih liga (recimo dva koja su ušla).",
+  "%s would play in two leagues (%s and %s).": "%s bi igrao u dvije lige (%s i %s).",
+  "the recipe": "recept"
  },
  "log": [
   [

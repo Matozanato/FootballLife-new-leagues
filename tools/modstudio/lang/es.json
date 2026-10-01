@@ -950,7 +950,13 @@
   "Competition names": "Nombres de las competiciones",
   "New names and logos for the cups and continental competitions of the game, and for the continental cups the world builds": "Nuevos nombres y logos para las copas y competiciones continentales del juego, y para las copas continentales que construye el mundo",
   "Cups, super cups and the continental competitions of the game, and the continental cups the League Builder makes. Leagues are renamed on Game's leagues and clubs. Empty name: the game's own.": "Copas, supercopas y competiciones continentales del juego, y las copas continentales que hace League Builder. Las ligas se renombran en Game's leagues and clubs. Nombre vacío: el del juego.",
-  "Built with the world: %s": "Se construye con el mundo: %s"
+  "Built with the world: %s": "Se construye con el mundo: %s",
+  "Add a club from another league": "Añadir un club de otra liga",
+  "Add a club from another league...": "Añadir un club de otra liga...",
+  "Search a club or a league; pick one or more.": "Busca un club o una liga; elige uno o varios.",
+  "Untick a club to leave it out; add clubs of other leagues (two promoted ones, say).": "Desmarca un club para dejarlo fuera; añade clubes de otras ligas (dos ascendidos, por ejemplo).",
+  "%s would play in two leagues (%s and %s).": "%s jugaría en dos ligas (%s y %s).",
+  "the recipe": "la receta"
  },
  "log": [
   [
