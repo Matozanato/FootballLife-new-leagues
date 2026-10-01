@@ -32,6 +32,14 @@ If it still crashes, or it crashes later (in the menus, when a match or a career
 the report described [below](#what-should-i-send-when-something-is-wrong) and say exactly when
 it happens.
 
+### LaLiga or Ligue 1 is gone from Select Team, and the game crashes when I scroll a new league
+
+The game's `FL_2026.exe` is not the Steam build the modules know (#62), or another mod changed
+it. `fl26caps` then writes nothing (`fl26caps: ABORTED` near the top of `sider.log`), and
+without it a new league takes the place of one of the game's in the lists and the game crashes
+on its clubs. Since 0.1.7 Mod Studio's *Checks* say so. Put back the Steam `FL_2026.exe`
+([install.md](install.md), step 1) and start the game again.
+
 ### My new country is at the bottom of the list, not with the others of its continent
 
 Since 0.1.3 a new country is listed among the countries of its continent, by name (Iceland

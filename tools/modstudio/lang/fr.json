@@ -945,7 +945,8 @@
   "European places of the game's leagues": "Places européennes des ligues du jeu",
   "Which positions of the Premier League, LaLiga ... go to which European competition, in place of the game's list": "Quelles places de la Premier League, de la LaLiga ... vont dans quelle compétition européenne, à la place de la liste du jeu",
   "Tick a league to give it its own places; the others keep the game's. Places past a competition's room go to nobody (the Plan step says so).": "Coche une ligue pour lui donner ses propres places ; les autres gardent celles du jeu. Les places au-delà de la capacité d'une compétition ne vont à personne (l'étape Plan le signale).",
-  "Own places for this league": "Places propres pour cette ligue"
+  "Own places for this league": "Places propres pour cette ligue",
+  "%s refused the game's FL_2026.exe in the last game (ABORTED in sider.log): it is not the Steam build the modules know, or another mod changed it. New leagues then hide the game's leagues in Select Team and the game crashes there. Use the Steam FL_2026.exe (docs/install.md, step 1).": "%s a refusé le FL_2026.exe du jeu lors de la dernière partie (ABORTED dans sider.log) : ce n'est pas la version Steam que les modules connaissent, ou un autre mod l'a modifié. Les nouvelles ligues cachent alors les ligues du jeu dans Select Team et le jeu plante à cet endroit. Utilisez le FL_2026.exe de Steam (docs/install.md, étape 1)."
  },
  "log": [
   [

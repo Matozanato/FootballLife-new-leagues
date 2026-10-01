@@ -16,6 +16,8 @@ from .siderini import root_path
 PAGE_OF = {"stadiums": "Stadiums", "balls": "Balls", "kits": "Kits", "commentary": "Commentary",
            "goalsongs": "Music"}
 ERR_WORDS = re.compile(r"(error|failed|attempt to|not found|cannot|can't|unable|stack traceback)", re.I)
+REFUSED = re.compile(r"^\[([\w.-]+\.lua)\] [\w ]+: ABORTED")   # a module that found another exe
+_refused = {}
 
 
 def quick(game, ini, recipe=None):
@@ -45,7 +47,38 @@ def quick(game, ini, recipe=None):
         if on and not s.installed(game.content_dir):
             out.append(("err", s.title, _("%s is on but there is no content\\%s folder") % (s.module, s.folder), None))
     out += world_problems(game, ini, recipe)
+    out += exe_problems(game)
     return out
+
+
+def exe_problems(game):
+    """our modules that refused the game's exe in the last game (ABORTED at the start of
+    sider.log, which log_problems' tail does not reach). With fl26caps refused, new leagues push
+    the game's own out of Select Team and the game crashes there (issue #62: a cracked exe)."""
+    try:
+        st = os.stat(game.log_path)
+    except OSError:
+        return []
+    key = (game.log_path, st.st_mtime, st.st_size)
+    if key not in _refused:
+        mods = []
+        try:
+            with open(game.log_path, encoding="utf-8", errors="replace") as f:
+                for l in f:
+                    m = REFUSED.match(l)
+                    if m and m.group(1) not in mods:
+                        mods.append(m.group(1))
+        except OSError:
+            pass
+        _refused.clear()
+        _refused[key] = mods
+    mods = _refused[key]
+    if not mods:
+        return []
+    return [("err", "Game", _("%s refused the game's FL_2026.exe in the last game (ABORTED in sider.log): it is "
+                              "not the Steam build the modules know, or another mod changed it. New leagues then "
+                              "hide the game's leagues in Select Team and the game crashes there. Use the Steam "
+                              "FL_2026.exe (docs/install.md, step 1).") % ", ".join(mods), "Settings")]
 
 
 UECL_REGS = (186, 187, 1210)      # the Conference League's league phase, knockout and its group
