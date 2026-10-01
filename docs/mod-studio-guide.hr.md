@@ -158,6 +158,8 @@ pokazuje ID natjecanja svake lige u igri, isti koji nosi datoteka njezina loga.
 
 **Europska mjesta liga iz igre** (gumb na istoj stranici): koja mjesta Premier Lige, LaLige, Serie A ... idu u koje europsko natjecanje. Popis pokazuje mjesta iz igre; označi **Vlastita mjesta za ovu ligu** da ih promijeniš. Neoznačena liga zadržava mjesta iz igre, označena liga bez redova ne šalje nikoga.
 
+**Imena natjecanja** (gumb na istoj stranici): novo ime i logo za kupove, superkupove i kontinentalna natjecanja iz igre -- FA Cup, Ligu prvaka, Libertadores ... -- i za kontinentalne kupove koje svijet gradi (CAF Liga prvaka, Kup konfederacija, AFC Liga prvaka Two, Copa Sudamericana, CAF Superkup). Ime dobiju sve faze natjecanja. Prazno: ono iz igre. Lige iz igre preimenuju se na stranici *Game's leagues and clubs*.
+
 **Novi klubovi**: odaberi ligu, pa **Uredi klub** (ime, kratko ime, grb), **Zalijepi imena...**
 ili **Učitaj imena iz datoteke...**. Prazno ime postaje `<liga> 01`, `<liga> 02` ...; klub bez
 grba dobije grb s brojem. Dresovi se posude od klubova iz igre. Takav dres je licenciran i Edit

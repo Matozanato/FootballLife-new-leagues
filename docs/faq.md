@@ -181,6 +181,12 @@ too, only for countries where the game has none (Brazil, Chile, Scotland, Greece
 Since 0.1.7: **European places of the game's leagues** on the *Build* page. Tick **Own places
 for this league** and set them like a new league's. Then build the world again.
 
+### Can I rename the Champions League, the FA Cup ...?
+
+Since 0.1.7: **Competition names** on the *Build* page, for every cup and continental
+competition of the game and the continental cups the world builds, with a logo too. The game's
+leagues: *Game's leagues and clubs*. The Conference League: its name box on *Build*.
+
 ### My cups and the Conference League have no logo
 
 Since 0.1.5.5 every cup the builder makes gets one: the national cup, super cup, league cup,

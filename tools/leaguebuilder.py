@@ -130,6 +130,12 @@ which league sits above -- and nothing about ids:
               the cup winner, one match in late July -- only where the game has none (Brazil,
               Chile, Scotland, Greece, the USA); a cup nobody has won yet (a new career) leaves
               it unplayed that summer
+  edits.competitions  (the recipe) new names and emblems for the game's competitions that are
+              not leagues -- cups, super cups, the Champions League, the Libertadores ...:
+              {"<competition id>": {"name": ..., "logo": ...}}; every regulation of that
+              competition (stages, groups) takes the name. game_competitions() lists them
+  ccup_names, ccup_logos  (the recipe) names and pictures of the continental cups the world
+              builds: {"6": "CAF Champions League", "7", "8", "9", "0" (the CAF Super Cup)}
   caf_super_cup  (the recipe, not a league) true, the default: a world that builds both the CAF
               Champions League and the Confederation Cup also gets the CAF Super Cup, one match
               of the two winners in late July (CAF_SUPER_DAYS), a two-club knockout whose
@@ -427,7 +433,7 @@ def load_recipe(path):
 def has_edits(r):
     e = r.get("edits") or {}
     import lbplayers
-    return bool(e.get("leagues") or e.get("clubs")) or lbplayers.has_players(r)
+    return bool(e.get("leagues") or e.get("clubs") or e.get("competitions")) or lbplayers.has_players(r)
 
 
 # ---- what the game already has: its leagues and clubs, for the edit tab ----
@@ -609,11 +615,21 @@ def apply_edits(edits, raw, regs, log=print):
         o = i * M.REG
         e = leagues.get(u16(regs[o:], M.R_ID))
         if e and e.get("name"):
-            for k in range(M.NAME_SLOTS):
-                M.put(regs, o + M.R_NAME + k * M.NAME_SLOT, e["name"], M.NAME_SLOT)
+            rename_reg(regs, o, e["name"])
             m += 1
     if n or m:
         log("  changed %d of the game's clubs and %d of its leagues" % (n, m))
+
+
+NAME_CODE_SLOT = 9         # the tenth name is an internal label (ENGLAND_D1_LEAGUE,
+                           # UEFA_CHAMPIONS_LEAGUE_PLAYOFF), not a language: a rename keeps it
+
+
+def rename_reg(regs, o, name):
+    """the regulation at regs[o:] called `name` in every language"""
+    for k in range(M.NAME_SLOTS):
+        if k != NAME_CODE_SLOT:
+            M.put(regs, o + M.R_NAME + k * M.NAME_SLOT, name, M.NAME_SLOT)
 
 
 def swap_entries(ents, old, new):
@@ -1065,6 +1081,15 @@ def plan(recipe, base):
     home += [preseason_cup(c, k, by_name) for k, c in enumerate(recipe.get("preseason_cups") or [])]
     if recipe.get("caf_super_cup", True) and {CAF_CL, CAF_CC} <= {c["number"] for c in cups}:
         cups.append(caf_super_cup(recipe))
+    for c in cups:
+        k = str(c["number"])
+        c["name"] = ((recipe.get("ccup_names") or {}).get(k) or "").strip() or c["name"]
+        c["logo"] = (recipe.get("ccup_logos") or {}).get(k) or c.get("logo")
+        if "|" in c["name"]:
+            raise BuildError("%s: a name cannot have a | in it" % c["name"])
+    bad = competition_problems(recipe.get("edits") or {}, base)
+    if bad:
+        raise BuildError("competition names:\n  " + "\n  ".join(bad))
     if len(cups) + len(home) > MAX_CCUP:
         raise BuildError("%d continental, league and pre-season cups -- fl26swiss.dll takes %d"
                          % (len(cups) + len(home), MAX_CCUP))
@@ -1236,6 +1261,61 @@ def game_europe_tops(base):
         out.append((r, n, entries_of(base, c),
                     sorted([e[1], e[2]] for e in fl26world.SHIPPED_ACCESS if e[0] == a)))
     return out
+
+
+ENGLISH = 4                # the regulation's English name (the first is Korean on national-team rows)
+
+
+def game_competitions(base):
+    """[(competition id, name, [regulation ids])] of the game's competitions that are not
+    leagues (cups, super cups, continental and national-team ones), by id"""
+    regs = M.load(base, "CompetitionRegulation.bin")
+    leagues = {c for _r, c, _n, _t in game_leagues(base)}
+    out = {}
+    for i in range(len(regs) // M.REG):
+        g = regs[i * M.REG:(i + 1) * M.REG]
+        c = g[M.R_CID]
+        if c in leagues or g[M.R_TYPE] in (4, fl26world.SPLIT_TOTAL):
+            continue
+        name = text(g[M.R_NAME + ENGLISH * M.NAME_SLOT:M.R_NAME + (ENGLISH + 1) * M.NAME_SLOT])             or text(g[M.R_NAME:M.R_NAME + M.NAME_SLOT])
+        if name:
+            out.setdefault(c, [name, []])[1].append(u16(g, M.R_ID))
+    return [(c, n, r) for c, (n, r) in sorted(out.items())]
+
+
+def competition_problems(edits, base):
+    """what is wrong with the recipe's edits.competitions"""
+    want = edits.get("competitions") or {}
+    if not want:
+        return []
+    have = {c: n for c, n, _r in game_competitions(base)}
+    out = []
+    for k, v in want.items():
+        if not str(k).isdigit() or int(k) not in have:
+            out.append("%s is not a competition of the game (a league is renamed with the leagues)" % (k,))
+        elif not (v.get("name") or "").strip() and not v.get("logo"):
+            out.append("%s: no new name and no logo" % have[int(k)])
+    return out
+
+
+def rename_competitions(pl, db, log=print):
+    """edits.competitions into the world's regulation table: every regulation of a renamed
+    competition, once the cups that copy regulations (europe, continental) are built"""
+    want = {int(k): v["name"].strip() for k, v in ((pl.get("edits") or {}).get("competitions") or {}).items()
+            if (v.get("name") or "").strip()}
+    if not want:
+        return
+    path = os.path.join(db, "CompetitionRegulation.bin")
+    regs = M.load(db, "CompetitionRegulation.bin")
+    n = 0
+    for i in range(len(regs) // M.REG):
+        o = i * M.REG
+        name = want.get(regs[o + M.R_CID])
+        if name:
+            rename_reg(regs, o, name)
+            n += 1
+    open(path, "wb").write(pesdb.wesys_pack(bytes(regs)))
+    log("  renamed %d of the game's competitions (%d regulations)" % (len(want), n))
 
 
 def game_cups(recipe, regrow, region_of_cid, base, out):
@@ -1565,6 +1645,9 @@ def describe(pl):
     e = pl.get("edits") or {}
     lines = ["world %s: %d new leagues, changes to %d of the game's leagues and %d of its clubs"
              % (pl["world"], len(pl["leagues"]), len(e.get("leagues") or {}), len(e.get("clubs") or {}))]
+    for cid, v in sorted((e.get("competitions") or {}).items(), key=lambda kv: int(kv[0])):
+        lines.append("  competition %s: %s%s" % (cid, v.get("name") or "(its own name)",
+                                                 ", own logo" if v.get("logo") else ""))
     lines.append("  Conference League: %s" % ("yes (competition %d, regulations %d/%d)"
                                               % (UECL_CID, mkuecl.REG, mkuecl.KO) if pl.get("uecl") else "no"))
     squads = pl.get("players") or {}
@@ -1955,6 +2038,7 @@ def build(pl, base, game, replace=False, log=print):
     ccups = continental((pl.get("ccups") or []) + hc, tmp, db, log)
     for c, h in zip(hc, pl.get("home_cups") or []):
         h["cid"] = c["cid"]                            # for its emblem (pictures)
+    rename_competitions(pl, db, log)
 
     # the world file: the tables' own reading (fl26world.from_tables), with what the recipe
     # knows better -- the country chosen, and how many clubs go up and down
@@ -2285,6 +2369,9 @@ def pictures(pl, root, base, log=print):
                 cid_of = {r: c for r, c, _, _ in game_leagues(base)}
             if int(rid) in cid_of:
                 lbassets.league_logo(root, cid_of[int(rid)], v.get("name") or "", v["logo"])
+    for cid, v in (e.get("competitions") or {}).items():
+        if v.get("logo"):
+            lbassets.league_logo(root, int(cid), v.get("name") or "", v["logo"])
     for tid, v in (e.get("clubs") or {}).items():
         if v.get("crest"):
             lbassets.club_crest(root, int(tid), "", v["crest"])

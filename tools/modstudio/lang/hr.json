@@ -946,7 +946,11 @@
   "Which positions of the Premier League, LaLiga ... go to which European competition, in place of the game's list": "Koja mjesta Premier Lige, LaLige ... idu u koje europsko natjecanje, umjesto popisa iz igre",
   "Tick a league to give it its own places; the others keep the game's. Places past a competition's room go to nobody (the Plan step says so).": "Označi ligu da dobije svoja mjesta; ostale zadržavaju ona iz igre. Mjesta preko kapaciteta natjecanja ne dobiva nitko (korak Plan to javi).",
   "Own places for this league": "Vlastita mjesta za ovu ligu",
-  "%s refused the game's FL_2026.exe in the last game (ABORTED in sider.log): it is not the Steam build the modules know, or another mod changed it. New leagues then hide the game's leagues in Select Team and the game crashes there. Use the Steam FL_2026.exe (docs/install.md, step 1).": "%s je odbio FL_2026.exe u zadnjoj igri (ABORTED u sider.log): to nije Steam verzija koju moduli poznaju, ili ju je drugi mod promijenio. Nove lige tada skrivaju lige iz igre u Select Team i igra se tamo ruši. Koristi Steam FL_2026.exe (docs/install.md, korak 1)."
+  "%s refused the game's FL_2026.exe in the last game (ABORTED in sider.log): it is not the Steam build the modules know, or another mod changed it. New leagues then hide the game's leagues in Select Team and the game crashes there. Use the Steam FL_2026.exe (docs/install.md, step 1).": "%s je odbio FL_2026.exe u zadnjoj igri (ABORTED u sider.log): to nije Steam verzija koju moduli poznaju, ili ju je drugi mod promijenio. Nove lige tada skrivaju lige iz igre u Select Team i igra se tamo ruši. Koristi Steam FL_2026.exe (docs/install.md, korak 1).",
+  "Competition names": "Imena natjecanja",
+  "New names and logos for the cups and continental competitions of the game, and for the continental cups the world builds": "Nova imena i logotipi za kupove i kontinentalna natjecanja iz igre, i za kontinentalne kupove koje svijet gradi",
+  "Cups, super cups and the continental competitions of the game, and the continental cups the League Builder makes. Leagues are renamed on Game's leagues and clubs. Empty name: the game's own.": "Kupovi, superkupovi i kontinentalna natjecanja iz igre, i kontinentalni kupovi koje radi League Builder. Lige se preimenuju na stranici Game's leagues and clubs. Prazno ime: ono iz igre.",
+  "Built with the world: %s": "Gradi se sa svijetom: %s"
  },
  "log": [
   [

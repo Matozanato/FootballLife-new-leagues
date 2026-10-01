@@ -160,6 +160,8 @@ shows each league's competition id in the game, the one its logo file carries.
 
 **European places of the game's leagues** (same page): which positions of the Premier League, LaLiga, Serie A ... go to which European competition. The list shows the game's own places; tick **Own places for this league** to change them. A league not ticked keeps the game's places, a ticked league with no rows sends nobody.
 
+**Competition names** (same page): a new name and logo for the game's cups, super cups and continental competitions -- the FA Cup, the Champions League, the Libertadores ... -- and for the continental cups the world builds (CAF Champions League, Confederation Cup, AFC Champions League Two, Copa Sudamericana, CAF Super Cup). Every stage of a competition takes the name. Empty: the game's own. The game's leagues are renamed on *Game's leagues and clubs*.
+
 **New clubs**: pick the league, then **Edit club** (name, short name, crest), **Paste names...**
 or **Load names from file...**. An empty name becomes `<league> 01`, `<league> 02` ...; a club
 with no crest gets a numbered badge. Kits are lent from the game's own clubs. Such a kit is a

@@ -173,6 +173,8 @@ son fichier de logo.
 
 **Places européennes des ligues du jeu** (bouton sur la même page) : quelles places de la Premier League, de la LaLiga, de la Serie A ... vont dans quelle compétition européenne. La liste montre les places du jeu ; cochez **Places propres pour cette ligue** pour les changer. Une ligue non cochée garde celles du jeu, une ligue cochée sans lignes n'envoie personne.
 
+**Noms des compétitions** (bouton sur la même page) : un nouveau nom et un logo pour les coupes, supercoupes et compétitions continentales du jeu -- la FA Cup, la Ligue des champions, la Libertadores ... -- et pour les coupes continentales que le monde construit (CAF Champions League, Coupe de la Confédération, AFC Champions League Two, Copa Sudamericana, Supercoupe de la CAF). Toutes les phases de la compétition prennent le nom. Vide : celui du jeu. Les ligues du jeu se renomment dans *Game's leagues and clubs*.
+
 **Nouveaux clubs** : choisissez la ligue, puis **Modifier le club** (nom, nom court, écusson),
 **Coller des noms...** ou **Charger des noms depuis un fichier...**. Un nom vide devient
 `<ligue> 01`, `<ligue> 02` ... ; un club sans écusson reçoit un écusson numéroté. Les maillots sont

@@ -956,6 +956,113 @@ class PreseasonDialog(Dialog):
         self.accept()
 
 
+class CompetitionNamesDialog(Dialog):
+    """new names and logos for the game's competitions that are not leagues (edits.competitions)
+    and for the continental cups the world builds (ccup_names, ccup_logos)"""
+
+    OURS = [("6", "CAF Champions League"), ("7", "CAF Confederation Cup"), ("8", "AFC Champions League Two"),
+            ("9", "Copa Sudamericana"), ("0", "CAF Super Cup")]
+
+    def __init__(self, parent, project):
+        super().__init__(parent, "Competition names")
+        r = project.recipe
+        self.rows = [("game", str(c), n) for c, n, _r in B.game_competitions(project.base)] \
+            + [("ours", k, n) for k, n in self.OURS]
+        self.game = {k: dict(v) for k, v in ((r.get("edits") or {}).get("competitions") or {}).items()}
+        self.names = dict(r.get("ccup_names") or {})
+        self.logos = dict(r.get("ccup_logos") or {})
+        if r.get("caf_super_cup_logo") and "0" not in self.logos:
+            self.logos["0"] = r["caf_super_cup_logo"]
+        self.v.insertWidget(0, hint(_("Cups, super cups and the continental competitions of the game, and the "
+                                      "continental cups the League Builder makes. Leagues are renamed on Game's "
+                                      "leagues and clubs. Empty name: the game's own.")))
+        body = QHBoxLayout()
+        self.list = QListWidget()
+        self.list.setFixedWidth(300)
+        body.addWidget(self.list)
+        right = QVBoxLayout()
+        self.was = QLabel()
+        right.addWidget(self.was)
+        self.name = QLineEdit()
+        self.name.setMaxLength(60)
+        right.addWidget(QLabel(_("Name")))
+        right.addWidget(self.name)
+        right.addWidget(QLabel(_("Logo")))
+        self.logo_box = QVBoxLayout()
+        right.addLayout(self.logo_box)
+        self.logo = None
+        right.addStretch(1)
+        body.addLayout(right, 1)
+        self.v.insertLayout(1, body, 1)
+        self.scroll.hide()
+        self.cur = -1
+        self.fill()
+        self.list.currentRowChanged.connect(self.show_row)
+        self.list.setCurrentRow(0)
+        self.setMinimumSize(680, 420)
+
+    def value(self, i):
+        kind, k, n = self.rows[i]
+        if kind == "game":
+            e = self.game.get(k, {})
+            return e.get("name", ""), e.get("logo")
+        return self.names.get(k, ""), self.logos.get(k)
+
+    def fill(self):
+        self.list.blockSignals(True)
+        cur = self.list.currentRow()
+        self.list.clear()
+        for i, (kind, k, n) in enumerate(self.rows):
+            name, logo = self.value(i)
+            self.list.addItem((name or n) + ("  *" if name or logo else ""))
+        self.list.setCurrentRow(cur)
+        self.list.blockSignals(False)
+
+    def keep(self):
+        if not 0 <= self.cur < len(self.rows):
+            return
+        kind, k, n = self.rows[self.cur]
+        name = self.name.text().strip()
+        name = "" if name == n else name
+        logo = self.logo.path if self.logo else None
+        if kind == "game":
+            e = {}
+            if name:
+                e["name"] = name
+            if logo:
+                e["logo"] = logo
+            if e:
+                self.game[k] = e
+            else:
+                self.game.pop(k, None)
+        else:
+            for d, v in ((self.names, name), (self.logos, logo)):
+                if v:
+                    d[k] = v
+                else:
+                    d.pop(k, None)
+
+    def show_row(self, i):
+        self.keep()
+        self.fill()
+        self.cur = i
+        if not 0 <= i < len(self.rows):
+            return
+        kind, k, n = self.rows[i]
+        name, logo = self.value(i)
+        self.was.setText(_("In the game: %s") % n if kind == "game" else _("Built with the world: %s") % n)
+        self.name.setPlaceholderText(n)
+        self.name.setText(name)
+        if self.logo:
+            self.logo.setParent(None)
+        self.logo = PictureField(logo, 64, "(the game's own)" if kind == "game" else "(made for you)")
+        self.logo_box.addWidget(self.logo)
+
+    def ok(self):
+        self.keep()
+        self.accept()
+
+
 class GameEuropeDialog(Dialog):
     """the recipe's game_europe: the European places of the game's own top divisions, in place of
     the shipped ones"""
@@ -1139,6 +1246,8 @@ class NewLeagues(BuilderPage):
                     "leagues of the game, and a super cup where the game has none")
         self.action("European places of the game's leagues", self.game_europe, tip="Which positions of the "
                     "Premier League, LaLiga ... go to which European competition, in place of the game's list")
+        self.action("Competition names", self.competition_names, tip="New names and logos for the cups and "
+                    "continental competitions of the game, and for the continental cups the world builds")
         top = QHBoxLayout()
         top.addWidget(QLabel(_("World name")))
         self.world = QLineEdit()
@@ -1304,6 +1413,27 @@ class NewLeagues(BuilderPage):
                 self.project.recipe["preseason_cups"] = d.cups
             else:
                 self.project.recipe.pop("preseason_cups", None)
+            self.project.touch()
+
+    def competition_names(self):
+        if self.need_tables():
+            return
+        d = CompetitionNamesDialog(self, self.project)
+        if d.finish():
+            r = self.project.recipe
+            if d.game:
+                self.project.edits("competitions").clear()
+                self.project.edits("competitions").update(d.game)
+            else:
+                (r.get("edits") or {}).pop("competitions", None)
+            for key, v in (("ccup_names", d.names), ("ccup_logos", d.logos)):
+                if v:
+                    r[key] = v
+                else:
+                    r.pop(key, None)
+            r.pop("caf_super_cup_logo", None)
+            if d.logos.get("0"):
+                r["caf_super_cup_logo"] = d.logos["0"]
             self.project.touch()
 
     def game_europe(self):

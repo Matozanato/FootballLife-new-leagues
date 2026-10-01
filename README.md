@@ -93,6 +93,8 @@ tell us where. Read [what works and what does not](#status) before you start a l
   and **super cup**, a **league cup**, and **pre-season cups** of 4 or 8 invited clubs in July,
   each with your own **logo** (0.1.5.5). A **league cup** for the game's own countries (the
   Carabao Cup), and a super cup where the game has none (Scotland, Greece ...) (0.1.7).
+- **Rename** any cup or continental competition of the game, and the ones the world builds,
+  with your own logo (0.1.7); the game's leagues and clubs too.
   A new second division under a country the game has goes into that country's cup (0.1.4).
   The national cup of a new country is tested over two full seasons: it rebuilds from the
   current first division after every promotion and relegation (issue #46).
