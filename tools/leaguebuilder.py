@@ -477,10 +477,19 @@ def load_recipe(path):
 
 
 def has_edits(r):
+    """whether the recipe changes anything Build writes: the edit tab, the players, or a
+    recipe-level key plan() reads. A false uecl or caf_super_cup turns one off, so it counts
+    too. uefa_rank does not: applying it writes europe/game_europe/uefa_seed, the ones Build
+    reads."""
     e = r.get("edits") or {}
     import lbplayers
     return bool(e.get("leagues") or e.get("clubs") or e.get("competitions") or e.get("swaps")) \
-        or lbplayers.has_players(r)
+        or lbplayers.has_players(r) \
+        or bool(r.get("game_cups") or r.get("game_europe") or r.get("uefa_seed")
+                or r.get("preseason_cups") or r.get("ccup_names") or r.get("ccup_logos")
+                or r.get("uecl_name") or r.get("uecl_logo") or r.get("caf_super_cup_logo")
+                or r.get("saudi_august") or r.get("editable_kits")) \
+        or r.get("uecl") is False or r.get("caf_super_cup") is False
 
 
 # ---- what the game already has: its leagues and clubs, for the edit tab ----
