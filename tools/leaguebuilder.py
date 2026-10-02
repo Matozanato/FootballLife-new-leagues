@@ -866,7 +866,7 @@ def shipped_tiers(base):
             for i in range(len(regs) // M.REG)}
 
 
-def cup_field(regrow, region_of_cid, region, up):
+def cup_field_of_region(regrow, region_of_cid, region, up):
     """(cup, top league, second league) for a new division 3 or lower under shipped league up, or
     None. The game fills a domestic cup from the region's first league -- the lowest regulation id
     -- and the league linked below it, and a new league gets a low id: England with League One,
@@ -1049,7 +1049,7 @@ def plan(recipe, base):
                 p["above"], p["tier"] = int(up), M.get_tier(pr) + 1
                 p["region"] = region_of_cid[pr[M.R_CID]]
                 if p["tier"] >= 3:
-                    p["cupfield"] = cup_field(regrow, region_of_cid, p["region"], int(up))
+                    p["cupfield"] = cup_field_of_region(regrow, region_of_cid, p["region"], int(up))
                     # the super cup is filled the same way, from the region's lowest regulation
                     # id: League One 01 played the Community Shield against Liverpool in the
                     # first July (2026-10-01). fl26chain swaps such a club out, as for #29.
