@@ -3,6 +3,9 @@ contact_links:
   - name: Question or help (Discord)
     url: https://discord.gg/StQqtk3G3M
     about: How do I ..., does this work with ... Ask on the FL Mod Studio Discord. Bugs go here as an issue.
+  - name: Ideas and feature requests (Discord)
+    url: https://discord.gg/StQqtk3G3M
+    about: New ideas go to the requests forum on Discord, where you can follow their status (Planned, Done...).
   - name: FAQ
     url: https://github.com/Matozanato/FootballLife-new-leagues/blob/main/docs/faq.md
     about: Updating, crashes at start, cups, promotion, what to send when something is wrong.

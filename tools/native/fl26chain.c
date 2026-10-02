@@ -163,7 +163,13 @@ static int reg_list(uint16_t id, uint32_t* out)
  * the cup's bracket to 44 in the world's tables; the game, left alone, gives it both leagues
  * when ours has the higher id and ours alone when it has the lower. */
 #define CUP_ALL 0x8000
-typedef struct { uint16_t cup, top, low, all; } cup_t;
+/* GitHub #74: `cupn=` caps the field. The bracket screen (Database -> Competition Info -> the
+ * cup -> Fixtures) draws a cup of 32 or fewer only for 2-16, 18, 20, 24, 28 or 30 clubs:
+ * 0x140b33340 has no bye layout for the rest and 0x140b34501 reads its NULL. A world cup of
+ * both leagues with 22 clubs crashed it, and the cup's own entry list does not help -- the
+ * game fills a domestic cup from the leagues, not from the entries. So the cup is written with
+ * the top league's clubs and the first clubs of the one below, `max` in all (0 = no cap). */
+typedef struct { uint16_t cup, top, low, all, max; } cup_t;
 static cup_t    g_cup[MAX_CUPS]; static int g_ncup = 0;
 static uint64_t g_cup_flag[MAX_CUPS]; static int g_cup_seen[MAX_CUPS];
 
@@ -187,19 +193,24 @@ static int same_field(const uint32_t* list, int n, const uint32_t* a, int na, co
 static int cup_fix(cup_t* c, const uint32_t* list, int n, uint64_t flag, const char* when)
 {
   uint32_t top[2 * MAX_CLUBS], low[MAX_CLUBS];
-  int nt = reg_list(c->top, top), nl = reg_list(c->low, low);
-  if (nt <= 0 || nl <= 0) return 0;
+  int nt = reg_list(c->top, top), nl = c->low ? reg_list(c->low, low) : 0;
+  if (nt <= 0 || nl < 0 || (nl == 0 && !c->max)) return 0;
   if (c->all) {
-    if (nt + nl > 2 * MAX_CLUBS || same_field(list, n, top, nt, low, nl)) return 0;
+    if (nt + nl > 2 * MAX_CLUBS) return 0;
     memcpy(top + nt, low, nl * sizeof low[0]);
-    vec32_t v = { top, top + nt + nl, top + nt + nl };
+    int m = nt + nl;
+    if (c->max && m > c->max) m = c->max;           /* #74: a field the bracket screen draws */
+    if (n == m && same_field(list, n, top, m, low, 0)) return 0;
+    vec32_t v = { top, top + m, top + m };
     int was = g_reentrant; g_reentrant = 1;
     ((set_fn)(uintptr_t)g_tramp_set)(c->cup, &v, flag);
     g_reentrant = was;
-    logf("cup %u: %d clubs (%s) -- given %u's %d and %u's %d clubs", c->cup, n, when, c->top, nt, c->low, nl);
+    logf("cup %u: %d clubs (%s) -- given %u's %d and %u's %d clubs", c->cup, n, when, c->top,
+         nt < m ? nt : m, c->low, m > nt ? m - nt : 0);
     return 1;
   }
-  if (!holds_any(list, n, low, nl)) return 0;
+  if (c->max && nt > c->max) nt = c->max;
+  if (!holds_any(list, n, low, nl) && !(c->max && n > c->max)) return 0;
   vec32_t v = { top, top + nt, top + MAX_CLUBS };
   int was = g_reentrant; g_reentrant = 1;
   ((set_fn)(uintptr_t)g_tramp_set)(c->cup, &v, flag);
@@ -589,12 +600,26 @@ __declspec(dllexport) int fl26_chain_cups(const uint16_t* triples, int n)
   if (n > MAX_CUPS) n = MAX_CUPS;
   for (int i = 0; i < n; i++) {
     g_cup[i].cup = triples[3*i] & ~CUP_ALL; g_cup[i].all = (triples[3*i] & CUP_ALL) != 0;
-    g_cup[i].top = triples[3*i+1]; g_cup[i].low = triples[3*i+2];
+    g_cup[i].top = triples[3*i+1]; g_cup[i].low = triples[3*i+2]; g_cup[i].max = 0;
     logf("fl26chain: cup %u -- %s", g_cup[i].cup, g_cup[i].all ? "both leagues (cupall)" : "the top league only");
   }
   g_ncup = n;
   logf("fl26chain: %d domestic cup(s) with a league of ours below the top one", n);
   return n;
+}
+
+/* GitHub #74: n pairs {cup, the most clubs it takes}, for cups fl26_chain_cups already named */
+__declspec(dllexport) int fl26_chain_cupsize(const uint16_t* pairs, int n)
+{
+  if (!pairs || n < 0) return 0;
+  int set = 0;
+  for (int k = 0; k < n; k++)
+    for (int i = 0; i < g_ncup; i++)
+      if (g_cup[i].cup == pairs[2*k]) {
+        g_cup[i].max = pairs[2*k+1]; set++;
+        logf("fl26chain: cup %u -- at most %u clubs", g_cup[i].cup, g_cup[i].max);
+      }
+  return set;
 }
 
 /* the super cups to keep free of our league: n triples {super cup, top league, our league below it} */

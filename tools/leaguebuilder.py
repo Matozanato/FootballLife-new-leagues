@@ -228,6 +228,12 @@ NATIONAL_CUPS_TWO = {44: ("ENGLAND_D1_CUP", 44)}
 # got six rounds, all 22 played the first and 11 winners went into a round of 32 (#74, measured
 # 2026-10-01: 11 matches, then 5); every shipped cup whose bracket equals its field (44, 30,
 # 20, 18, 16) plays clean, and Greece's 14 on 16 does too, as 16 makes no extra round.
+# Fields of 32 or fewer the bracket screen can show: 0x140b33340 returns a bye layout for 2-16,
+# 18, 20, 24, 28 and 30 (32 needs none) and NULL for the rest, which 0x140b34501 then reads
+# (#74, a cup of 22, 2026-10-01). Every shipped cup of 32 or fewer is one of these sizes.
+# The entry list alone does not do it: the game fills the cup from both leagues (22 again,
+# 2026-10-02), so the world file names the field for fl26chain (cupn=).
+BRACKET_SIZES = set(range(2, 17)) | {18, 20, 24, 28, 30, 32}
 NATIONAL_CUP_ANY = ("ENGLAND_D1_CUP", 44)
 NATIONAL_CUP_MAX = 44                    # the FA Cup's 44: no shipped cup has a bigger field
 # The round ids each shipped domestic cup's calendar dates (tools/caltab.py, 2026-09-29), for a
@@ -1645,7 +1651,8 @@ def cup_rounds(n):
 def cup_takes_both(cup, n):
     """whether a shipped domestic cup can take a field of n clubs: every round dated, n <= 44"""
     dated = CUP_DATED.get(cup)
-    return bool(dated) and n <= NATIONAL_CUP_MAX and cup_rounds(n) <= dated
+    # a field of 32 or fewer only in a size the bracket screen draws (BRACKET_SIZES, #74)
+    return bool(dated) and n <= NATIONAL_CUP_MAX and cup_rounds(n) <= dated and (n > 32 or n in BRACKET_SIZES)
 
 
 def national_cup(p, below):
@@ -1669,6 +1676,11 @@ def national_cup(p, below):
     else:
         c["like"], c["bracket"] = NATIONAL_CUP_ANY
         c["clubs"], c["keep_top"] = p["clubs"], True
+    if c["clubs"] <= 32 and c["clubs"] not in BRACKET_SIZES:
+        # the bracket screen has a bye layout for these fields only (0x140b33340: none for
+        # 17, 19, 21-23, 25-27, 29); a cup of 22 crashed it at 0x140b34501 (#74). The cup takes
+        # the largest field it can draw: the top division and the first clubs of the one below
+        c["clubs"] = max(k for k in BRACKET_SIZES if k <= c["clubs"])
     c["bracket"] = c["clubs"]           # the field, not the prototype's bracket (#74)
     c["below"] = below["rid"] if below else None
 
@@ -2357,6 +2369,15 @@ def build(pl, base, game, replace=False, log=print):
         up = mine.get(p["above"]) if p["above"] else None
         if up and up.get("own_cup", {}).get("keep_top"):
             L["cup"] = up["own_cup"]["reg"]            # fl26chain keeps the cup to the top league
+            if up["own_cup"]["clubs"] < up["clubs"]:
+                L["cupn"] = up["own_cup"]["clubs"]     # and to a field the bracket screen draws (#74)
+        c = p.get("own_cup")
+        if c and c.get("reg") and not c["keep_top"] and c["clubs"] < p["clubs"] + (below["clubs"] if below else 0):
+            # the game fills the cup from both leagues whatever its entry list says, so fl26chain
+            # writes the top league's clubs and the first ones below, a field the bracket screen
+            # draws (#74: a cup of 22 crashed Competition Info -> Fixtures)
+            L["cup"], L["cuptop"], L["cuplow"], L["cupall"] = c["reg"], p["rid"], below["rid"] if below else 0, 1
+            L["cupn"] = c["clubs"]
     uefa, over = fl26world.uefa_places(all_places(pl),
                                        pl.get("game_replace") or [], bool(pl.get("uecl")))
     names = dict(fl26world.COMPETITIONS)
@@ -2562,6 +2583,7 @@ def national_cups(pl, root, db, log=print):
         teams = list(p["teams"])
         if not c["keep_top"] and c["below"]:
             teams += next(q["teams"] for q in pl["leagues"] if q["rid"] == c["below"])
+        teams = teams[:c["clubs"]]           # a field cut to a size the bracket screen draws (#74)
         c["cid"], c["reg"] = cids[0], regs[0]
         call(mkcup, ["--base", db, "--out", root, "--teams", ",".join(map(str, teams)),
                      "--cid", c["cid"], "--reg", c["reg"], "--region", p["region"], "--name", c["name"],

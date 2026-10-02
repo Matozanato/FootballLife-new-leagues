@@ -91,6 +91,11 @@ end
 -- scup= on the same line is that country's super cup (GitHub #29): {super cup, the league
 -- above -- the top flight, cuptop=, for a division 3 or lower --, this league}; the DLL swaps a
 -- club of this league out of it.
+-- cupn= caps the cup's field (GitHub #74): the bracket screen draws a cup of 32 or fewer only
+-- for 2-16, 18, 20, 24, 28 or 30 clubs, and the game fills the cup from the leagues, not from
+-- its entry list -- so the DLL writes the top league's clubs and the first ones below, cupn in
+-- all. A world's own national cup comes as cup=, cuptop=, cuplow= (0 = no league below) and
+-- cupall=1 on its top league's line.
 local function from_world(world)
   local chains, protect, cups, scups = {}, {}, {}, {}
   for _, L in ipairs(world) do
@@ -100,9 +105,9 @@ local function from_world(world)
       chains[#chains + 1] = { L.above, L.id, n, n }
     end
     if L.cup and L.cuptop and L.cuplow then
-      cups[#cups + 1] = { L.cup, L.cuptop, L.cuplow, true }
+      cups[#cups + 1] = { L.cup, L.cuptop, L.cuplow, L.cupall ~= 0, L.cupn }
     elseif L.cup and L.above then
-      cups[#cups + 1] = { L.cup, L.above, L.id, L.cupall == 1 }
+      cups[#cups + 1] = { L.cup, L.above, L.id, L.cupall == 1, L.cupn }
     end
     -- below a shipped second division the clubs put back come from the top flight (cuptop=)
     if L.scup and L.above then scups[#scups + 1] = { L.scup, L.cuptop or L.above, L.id } end
@@ -153,6 +158,7 @@ function m.init(ctx)
     typedef void (*fl26_chain_stats_t)(uint32_t*);
     typedef int  (*fl26_chain_protect_t)(const uint16_t*, int);
     typedef int  (*fl26_chain_cups_t)(const uint16_t*, int);
+    typedef int  (*fl26_chain_cupsize_t)(const uint16_t*, int);
   ]])
 
   local old = ffi.new("uint32_t[1]")
@@ -208,6 +214,21 @@ function m.init(ctx)
           end
         end
         ffi.cast("fl26_chain_cups_t", pc)(t, #CUPS)
+        local sized = {}
+        for _, c in ipairs(CUPS) do if c[5] then sized[#sized + 1] = c end end
+        if #sized > 0 then
+          local pz = ffi.C.GetProcAddress(h, "fl26_chain_cupsize")
+          if pz ~= nil then
+            local z = ffi.new("uint16_t[?]", 2 * #sized)
+            for i, c in ipairs(sized) do
+              z[2 * i - 2], z[2 * i - 1] = c[1], c[5]
+              log(string.format("fl26chain: live -- cup %d takes at most %d clubs", c[1], c[5]))
+            end
+            ffi.cast("fl26_chain_cupsize_t", pz)(z, #sized)
+          else
+            log("fl26chain: this fl26chain.dll cannot cap a cup's field (no fl26_chain_cupsize) -- rebuild it")
+          end
+        end
       else
         log("fl26chain: this fl26chain.dll cannot keep a cup to its league (no fl26_chain_cups) -- rebuild it")
       end

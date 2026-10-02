@@ -72,6 +72,11 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
   cup's calendar dates every round of that field and the field is at most 44 clubs, and raises
   the cup's bracket to that size in the world's tables; otherwise, or with `"cup_top_only": true`
   on the league in the recipe, the cup keeps the top flight's clubs only (plain `cup`).
+- `cupn=<clubs>` (with `cup`): the most clubs the cup takes (issue #74). The cup's bracket
+  screen draws a field of 32 or fewer only for 2 to 16, 18, 20, 24, 28 or 30 clubs, so a new
+  country's national cup of, say, 10 + 12 clubs is written as `cup=<its regulation> cuptop=<top
+  division> cuplow=<the one below, 0 if none> cupall=1 cupn=20` on the top division's line, and
+  fl26chain gives the cup the top division and the first clubs of the one below, 20 in all.
 - `nopool <team id> <team id> ...`: clubs the game already has that now play in a league of
   the world (the recipe's `game_clubs`), and the clubs that took their league places.
   fl26clubs.dll (`fl26_clubs_keep_out`) leaves them out of the Master League's *Other ...

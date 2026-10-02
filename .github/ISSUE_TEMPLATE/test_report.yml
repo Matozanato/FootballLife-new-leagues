@@ -1,0 +1,48 @@
+name: Test report
+description: Results of a test request from Discord (#test-requests), one report per version
+title: "Test report: <version> - <what you tested>"
+labels: ["test-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing! Fill in what you tested from the test list in #test-requests.
+        A test that went fine is just as useful as one that failed, so put those in too.
+  - type: input
+    id: version
+    attributes:
+      label: Mod Studio version
+      description: Help > About
+      placeholder: "0.1.7"
+    validations:
+      required: true
+  - type: input
+    id: tests
+    attributes:
+      label: Which tests from the list
+      description: The numbers from the test list, e.g. 1, 3, 4
+    validations:
+      required: true
+  - type: textarea
+    id: results
+    attributes:
+      label: Results
+      description: One line per test, OK or what went wrong. What you did, what you expected, what happened.
+      placeholder: |
+        1 - OK, cup ran to the final
+        3 - the qualifying round in August had no matches, screenshot below
+    validations:
+      required: true
+  - type: textarea
+    id: world
+    attributes:
+      label: Your world
+      description: Your recipe (File > Save recipe), or which leagues and cups you built
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and screenshots
+      description: |
+        If something failed: drag in `fl26join.log` and `sider.log` (in `<game>\SiderAddons`),
+        the Diagnostics report (Diagnostics > Run the checks > Copy a report) and screenshots.
+        If the game crashed: the fault offset from Windows Event Viewer and the day of the season.

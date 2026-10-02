@@ -336,6 +336,15 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-02 (Mod Studio 0.1.7, GitHub issue #74): **a national cup of 22 clubs crashed the game** on
+  the cup's bracket (Database > Competition Info > the cup > Fixtures) and after its first round.
+  The bracket screen has a layout for byes only for fields of 2 to 16, 18, 20, 24, 28, 30 and 32
+  clubs; for 17, 19, 21-23, 25-27 and 29 it reads a layout that is not there. A cup of a top
+  division and the one below now takes the largest field the screen can draw (22 -> 20: the top
+  division and the first clubs of the one below), and a game's cup only takes our second division
+  too when the sum is such a size. The game fills a national cup from the two leagues whatever
+  its entry list says, so it is `fl26chain.dll` that writes that field (`cupn=` in the world
+  file). **Build the world again** with 0.1.7's modules and start a new career.
 - 2026-10-01 (Mod Studio 0.1.7, GitHub issue #73): **with 33 or more new leagues, the game's
   "Other European Leagues" and "Other Latin American Teams" groups vanished from Select
   Team** (Sparta Prague, APOEL ... / Penarol, LDU Quito ...). Four of the ids the builder hands
