@@ -133,19 +133,36 @@ def overall(row):
     return round(sum(vals) / len(vals)) if vals else 0
 
 
+# the letters NFKD leaves whole, that one database folds to plain Latin anyway
+FOLD = str.maketrans({"\u0142": "l", "\u0141": "l", "\u00f8": "o", "\u00d8": "o",
+                      "\u0111": "d", "\u0110": "d", "\u00e6": "ae", "\u00c6": "ae",
+                      "\u0153": "oe", "\u0152": "oe"})
+
+
 def _letters(s):
     import unicodedata
-    return "".join(ch for ch in unicodedata.normalize("NFKD", s.casefold()) if ch.isalnum())
+    s = unicodedata.normalize("NFKD", s.casefold()).translate(FOLD)
+    return "".join(ch for ch in s if ch.isalnum())
+
+
+def _words(s):
+    """the words of a name; a full stop or a hyphen splits as a space does, so an initial
+    without its space ("K.Swiderski") is still its own word"""
+    import re
+    return [w for w in re.split(r"[\s\-.\u2013\u2014]+", s.strip()) if w]
 
 
 def same_name(a, b):
     """the same player's name as two databases write it: whole, or with the first name cut to
-    its initial ("Florian Niederlechner" / "F. Niederlechner"); accents, case, hyphens aside"""
+    its initial ("Florian Niederlechner" / "F. Niederlechner"), or with the surname first
+    ("Niederlechner Florian"); accents, case, hyphens aside"""
     if _letters(a) == _letters(b):
         return True
-    wa, wb = a.replace("-", " ").split(), b.replace("-", " ").split()
+    wa, wb = _words(a), _words(b)
     if len(wa) < 2 or len(wb) < 2:
         return False
+    if _letters("".join(sorted(wa))) == _letters("".join(sorted(wb))):   # the surname first
+        return True
     return (_letters(wa[0])[:1] == _letters(wb[0])[:1]
             and _letters("".join(wa[1:])) == _letters("".join(wb[1:])))
 
