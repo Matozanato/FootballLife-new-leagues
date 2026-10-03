@@ -364,6 +364,14 @@ calendar.
   a size a shipped cup has exactly. A field of 35 is cut to 32 and the world file's `cupn=`
   names it for fl26chain; a field of 22 still gives 20, and 44 is unchanged. **Build the
   world again** and start a new career.
+- 2026-10-04 (Mod Studio 0.1.8, GitHub issues #75 and #63): **a world built from tables
+  before SP's "National selection 2.2" update gave wrong starting line-ups and missing
+  transfers when it was on together with an edit file.** The builder unpacked only
+  `download/data_s2526*.cpk`, so its Team.bin / Player.bin came from the tables before the
+  update (`download/data_extra*.cpk`). The update's archives are now unpacked after those,
+  over them, and the kit-texture list sees them too; with no `data_extra*.cpk` nothing
+  changes. **Unpack the tables again in Settings > Unpack the game's tables** for this to
+  take effect -- Mod Studio does not do it by itself.
 - 2026-10-01 (Mod Studio 0.1.7, GitHub issue #73): **with 33 or more new leagues, the game's
   "Other European Leagues" and "Other Latin American Teams" groups vanished from Select
   Team** (Sparta Prague, APOEL ... / Penarol, LDU Quito ...). Four of the ids the builder hands

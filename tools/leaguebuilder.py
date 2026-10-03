@@ -434,12 +434,16 @@ def club_formations(pl):
 
 
 def unpack_tables(game, out, log=print):
-    """unpack the game's tables (download/data_s2526*.cpk, the later ones over the earlier, as
-    the game layers them) into <out>; returns the folder with Team.bin -- the --base of the rest"""
+    """unpack the game's tables (download/data_s2526*.cpk and the update's data_extra*.cpk, the
+    later ones over the earlier, as the game layers them) into <out>; returns the folder with
+    Team.bin -- the --base of the rest"""
     import cpkread
     cpks = sorted(glob.glob(os.path.join(game, "download", "data_s2526*.cpk")))
     if not cpks:
         raise BuildError("no download/data_s2526*.cpk in %s -- is that the game folder?" % game)
+    # the update's tables ("National selection 2.2") go over the ones above, as the game layers
+    # them: an edit file made for the updated database matches what we unpack then (#75, #63)
+    cpks += sorted(glob.glob(os.path.join(game, "download", "data_extra*.cpk")))
     for c in cpks:
         n = cpkread.extract(c, out, ["common/etc/pesdb/", UNIPAR])
         log("  %-20s %d tables" % (os.path.basename(c), n))
