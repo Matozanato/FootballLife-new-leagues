@@ -319,6 +319,8 @@ one face you mean.
 
 ### 8.2 Build, switch on, play
 
+**Keep the world's own Team.bin.** It is in the world folder and holds the world's clubs and its play-offs. Replacing it with the game's own Team.bin drops both, and the line-ups only look fixed because the world's clubs are gone (GitHub #75). Build the world again instead.
+
 **Build**:
 
 0. **Install the modules** — once, and again after a new version of the program. Files it
@@ -415,7 +417,7 @@ is instead of a world with new leagues: a world with new leagues already has the
 | Divisions in one country | down to the 7th |
 | Players per new club | 30 at the start; remove down to 18; signed players bring it up to 40 |
 | Players per national team | 26 |
-| National cup | the top division and the one below, up to 44 clubs; more: the top division alone |
+| National cup | the top division and the one below, up to 44 clubs. Up to 32 the sizes are 2-16, 18, 20, 24, 28, 30 and 32 -- the largest that fits (22 clubs give a cup of 20); 33 to 43 become 32; 44, or a size a shipped cup has, stays |
 
 ### 8.4 NewLife Database: real clubs and players
 

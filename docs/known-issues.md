@@ -334,6 +334,16 @@ calendar.
   thin is what starves the AI lineup pass at day 238 (see above). Bigger squads cost player
   slots: the budget is 18,266 new players in total.
 
+- **A world's own Team.bin must stay in the world.** It is in the world folder and holds the
+  world's clubs and its play-offs. Replacing it with the game's own Team.bin drops both: the
+  line-ups only look fixed because the world's clubs are gone (GitHub #75, found 2026-10-03).
+  There is no reason to swap it in; build the world again instead.
+- **A national cup takes these sizes** (GitHub #95, so answering "the cup picks only 20 of 22
+  clubs"): the field is the top division and the first clubs below it. Up to 32 the cup keeps
+  only 2-16, 18, 20, 24, 28, 30 and 32, the largest of those that fits -- 22 clubs give a cup
+  of 20, the top division and the first 2 of the division below. 33 to 43 become 32. 44, or a
+  size a shipped cup has, stays as it is.
+
 ## Fixed along the way (so you can confirm)
 
 - 2026-10-03 (Mod Studio 0.1.7.1, GitHub issue #80): **a new league right under a second division

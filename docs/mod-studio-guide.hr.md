@@ -313,6 +313,8 @@ svejedno vidi. Mapa s više faca unutra se odbija: odaberi točno onu jednu koju
 
 ### 8.2 Izgradi, uključi, igraj
 
+**Zadrži vlastiti Team.bin svijeta.** On je u mapi svijeta i drži klubove i doigravanja svijeta. Zamijeniš li ga Team.bin-om iz igre, i jedno i drugo nestane, a sastavi izgledaju popravljeni samo zato što klubova više nema (GitHub #75). Radije svijet sagradi ponovno.
+
 **Izgradnja**:
 
 0. **Postavi module** — jednom, i opet nakon nove verzije programa. Datoteke koje zamijeni
@@ -408,7 +410,7 @@ svijet s novim ligama već ima novi format.
 | Rangova u jednoj državi | do 7. |
 | Igrača po novom klubu | 30 na početku; makni do 18; dovedeni igrači do 40 |
 | Igrača po reprezentaciji | 26 |
-| Nacionalni kup | prvi rang i rang ispod, do 44 kluba; više: samo prvi rang |
+| Nacionalni kup | prvi rang i rang ispod, do 44 kluba. Do 32 veličine su 2-16, 18, 20, 24, 28, 30 i 32 -- najveća koja stane (22 kluba daju kup od 20); 33 do 43 postanu 32; 44 ili veličina koju ima neki kup iz igre ostaje |
 
 ### 8.4 NewLife Database: pravi klubovi i igrači
 

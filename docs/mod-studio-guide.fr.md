@@ -346,6 +346,8 @@ dossier contenant plus d'un visage est refusé : choisissez le visage que vous v
 
 ### 8.2 Construire, activer, jouer
 
+**Gardez le Team.bin du monde.** Il est dans le dossier du monde et contient les clubs et les barrages du monde. Le remplacer par le Team.bin du jeu les fait disparaître, et les compositions ont l'air réparées seulement parce que les clubs n'y sont plus (GitHub #75). Construisez plutôt le monde à nouveau.
+
 **Construction** :
 
 0. **Installer les modules** — une fois, puis à nouveau après une nouvelle version du programme.
@@ -450,7 +452,7 @@ nouvelles ligues a déjà le nouveau format.
 | Divisions dans un pays | jusqu'à la 7e |
 | Joueurs par nouveau club | 30 au départ ; retirez-en jusqu'à 18 ; avec des recrues, jusqu'à 40 |
 | Joueurs par sélection | 26 |
-| Coupe nationale | la première division et celle du dessous, jusqu'à 44 clubs ; au-delà : la première seule |
+| Coupe nationale | la première division et celle du dessous, jusqu'à 44 clubs. Jusqu'à 32 les tailles sont 2-16, 18, 20, 24, 28, 30 et 32 -- la plus grande qui tient (22 clubs donnent une coupe de 20) ; de 33 à 43 elles deviennent 32 ; 44 ou la taille d'une coupe du jeu reste |
 
 ### 8.4 NewLife Database : vrais clubs et vrais joueurs
 

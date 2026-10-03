@@ -335,6 +335,8 @@ rechaza: elige la cara concreta que quieres.
 
 ### 8.2 Construir, activar, jugar
 
+**Conserva el Team.bin del mundo.** Está en la carpeta del mundo y guarda los clubes y los play-offs del mundo. Si lo cambias por el Team.bin del juego, desaparecen, y las alineaciones parecen arregladas solo porque ya no están los clubes (GitHub #75). Mejor vuelve a construir el mundo.
+
 **Construir**:
 
 0. **Instalar los módulos** — una vez, y de nuevo tras una versión nueva del programa. Los
@@ -433,7 +435,7 @@ un mundo con ligas nuevas: un mundo con ligas nuevas ya tiene el formato nuevo.
 | Divisiones en un país | hasta la 7.ª |
 | Jugadores por club nuevo | 30 al principio; quita hasta dejar 18; con fichajes, hasta 40 |
 | Jugadores por selección | 26 |
-| Copa nacional | la primera división y la de debajo, hasta 44 clubes; más: solo la primera |
+| Copa nacional | la primera división y la de debajo, hasta 44 clubes. Hasta 32 los tamaños son 2-16, 18, 20, 24, 28, 30 y 32 -- el mayor que cabe (22 clubes dan una copa de 20); de 33 a 43 se quedan en 32; 44 o el tamaño de una copa del juego se queda |
 
 ### 8.4 NewLife Database: clubes y jugadores reales
 
