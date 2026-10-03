@@ -691,6 +691,21 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
             if i * A_REC not in drop:
                 keep += assigns[i * A_REC:(i + 1) * A_REC]
         assigns = keep
+    # a player left with no club and made in this build is the placeholder a NewLife squad
+    # replaced: the game lists him as a free agent (#96). A game player with no club stays --
+    # a recipe may drop one on purpose.
+    assigned = {u32(assigns, i * A_REC + E.A_PID) for i in range(len(assigns) // A_REC)}
+    base_ids = {u32(shipped, i * P_REC + P_ID) for i in range(len(shipped) // P_REC)}
+    drop_ids = set(index) - assigned - base_ids
+    if drop_ids:
+        players = b"".join(players[o:o + P_REC] for _pid, o in sorted(index.items(), key=lambda kv: kv[1])
+                           if _pid not in drop_ids)
+        for pid in drop_ids:
+            index.pop(pid, None)
+        if faces is not None:
+            faces[:] = [f for f in faces if f[0] not in drop_ids]
+        if portraits is not None:
+            portraits[:] = [f for f in portraits if f[0] not in drop_ids]
     # a squad someone left closes up -- orders 0, 1, 2 ... in the order they had -- so its
     # first eleven are still eleven
     for tid in touched:
@@ -717,15 +732,18 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
     if ids is not None:
         for key, pids in first.items():
             gone = set((changes.get(key) or {}).get("remove") or [])
-            ids[key] = {str(n): renamed.get(pid, pid) for n, pid in enumerate(pids) if str(n) not in gone}
+            ids[key] = {str(n): renamed.get(pid, pid) for n, pid in enumerate(pids)
+                        if str(n) not in gone and renamed.get(pid, pid) not in drop_ids}
         for club, pids in added_ids.items():
-            ids.setdefault(club, {}).update({"+%d" % n: pid for n, pid in enumerate(pids)})
+            ids.setdefault(club, {}).update({"+%d" % n: pid for n, pid in enumerate(pids)
+                                             if pid not in drop_ids})
     for n, b in (("Player.bin", players), ("PlayerAssignment.bin", assigns)):
         open(os.path.join(db, n), "wb").write(pesdb.wesys_pack(bytes(b)))
     if has_players(pl):
-        log("  players: %d changed, %d new, %d left their club%s%s" % (
+        log("  players: %d changed, %d new, %d left their club%s%s%s" % (
             changed, added, removed, ", %d joined a club or a national team" % joined if joined else "",
-            ", %d took an id of their own" % len(renamed) if renamed else ""))
+            ", %d took an id of their own" % len(renamed) if renamed else "",
+            ", %d placeholders deleted" % len(drop_ids) if drop_ids else ""))
     if lined:
         log("  best eleven picked for %d new clubs" % lined)
     return changed + added + removed + joined
