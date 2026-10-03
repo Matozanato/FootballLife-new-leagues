@@ -1,5 +1,6 @@
 # FootballLife — new leagues (public beta)
 
+[![Join the Discord](https://img.shields.io/badge/Discord-join%20the%20community-5865f2?logo=discord&logoColor=white)](https://discord.gg/StQqtk3G3M)
 [![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-support%20this%20work-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/mata28)
 
 > This is unpaid reverse-engineering work done in spare time. If it is useful to you,
