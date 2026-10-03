@@ -452,8 +452,8 @@ under 10 MB. Download only the parts you want.
 - A player the game already has (the same player under the same name, Urbański at Górnik in
   the game and at Legia in NewLife, say) moves to the NewLife club instead of being made a
   second time (0.1.7): he keeps his face, name and id and takes NewLife's position and ratings.
-  He stays where he is when his old club would drop below 18 players; then NewLife makes its
-  own copy, as before.
+  He stays where he is when his old club would drop below 18 players, or when an earlier league
+  already took him; then he is left out of the NewLife club, not copied (0.1.7.2).
 - A NewLife club takes a world id of its own (0.1.7.2), in the block the game reads for clubs,
   counting up after the ids the builder gives its own clubs. The **Club id** column on New clubs
   shows it, and a Kit Server's `map.txt` is keyed on it. A world built before 0.1.7.2 must be

@@ -443,7 +443,7 @@ više njih), plus *Free agents*, svaki manji od 10 MB. Preuzmi samo dijelove koj
 - Igrač kojeg igra već ima (isti igrač pod istim imenom, recimo Urbański u Górniku u igri i u
   Legiji u NewLifeu) prelazi u NewLife klub umjesto da nastane drugi put (0.1.7): zadržava lice,
   ime i ID, a uzima NewLifeovu poziciju i ocjene. Ostaje gdje jest kad bi njegov stari klub pao
-  ispod 18 igrača; tada NewLife napravi svoju kopiju, kao prije.
+  ispod 18 igrača ili ga je već uzela ranija liga; tada ga NewLife klub nema, ne kopira se (0.1.7.2).
 - NewLife klub dobiva vlastiti world ID (0.1.7.2), u bloku koji igra čita za klubove, iza ID-ova
   koje graditelj daje svojim klubovima. Stupac **ID kluba** na stranici Novi klubovi ga prikazuje,
   a Kit Serverov `map.txt` je vezan uz njega. Svijet napravljen prije 0.1.7.2 sagradi ponovno i

@@ -488,8 +488,8 @@ plusieurs), plus *Free agents*, chacune de moins de 10 Mo. Ne téléchargez que 
 - Un joueur que le jeu a déjà (le même joueur sous le même nom, par exemple Urbański au Górnik
   dans le jeu et au Legia dans NewLife) passe au club NewLife au lieu d'être créé une deuxième fois
   (0.1.7) : il garde son visage, son nom et son ID et prend le poste et les notes de NewLife. Il
-  reste où il est si son ancien club passait sous 18 joueurs ; NewLife fait alors sa propre copie,
-  comme avant.
+  reste où il est si son ancien club passait sous 18 joueurs ou si une ligue précédente l'a déjà ;
+  il est alors laissé hors du club NewLife, sans copie (0.1.7.2).
 - Un club NewLife reçoit un ID de monde à lui (0.1.7.2), dans le bloc que le jeu lit pour les
   clubs, après les ID que le constructeur donne aux siens. La colonne **ID du club** de la page
   Clubs nouveaux le montre, et le `map.txt` du Kit Server est bâti dessus. Un monde fait avant
