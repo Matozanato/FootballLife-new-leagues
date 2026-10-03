@@ -219,8 +219,11 @@ def add_league(recipe, rel, L, legs=2, info=None):
     club that takes its place there (New clubs, Club of the game). A player the game already
     has (the release's game_id, under the same name in these tables) moves to the club with a
     "join" -- a copy would leave him at his old club as well -- unless his club would drop
-    below P.MIN_SQUAD; he keeps his name, face and id and takes the release's other fields.
-    Returns the new league's name."""
+    below P.MIN_SQUAD or an earlier league already has him; he keeps his name, face and id and
+    takes the release's other fields. A player whose move is refused is left out of the club
+    rather than copied, and the prototype player of his place stays instead.
+    Returns (the new league's name, players left at their game club for lack of players,
+    players left out because another league has them)."""
     game = game_clubs(L, info)
     if not fits(L, info):
         raise Error("%s has %d clubs; a league takes %d to %d" % (L["name"], len(L["clubs"]) + len(game),
@@ -252,20 +255,29 @@ def add_league(recipe, rel, L, legs=2, info=None):
     taken = {str(r) for c in pl.values() for r in c.get("join") or []}   # moved by an earlier league
     leaving = collections.Counter()
 
+    stayed = elsewhere = 0
+
     def mover(r):
-        """the game's id of the player in release row r when he can be moved, else None"""
+        """("move", the game's id of the player in release row r) when he can come to his NewLife
+        club; ("keep", that id) when he is a player of these tables but must stay where he is --
+        his game club would drop below P.MIN_SQUAD, or an earlier league already took him; and
+        ("copy", None) when he is not a player of these tables and becomes a new player. A row
+        that is kept is left out of the NewLife club: copying him would put the same man at two
+        clubs, which is the thing the move exists to prevent."""
         g = str(r.get("game_id", "")).strip()
-        if db is None or not g.isdigit() or g in taken or int(g) not in db.index:
-            return None
+        if db is None or not g.isdigit() or int(g) not in db.index:
+            return "copy", None
         if not P.same_name(r["name"], db.name(int(g))):
-            return None                       # another database: that id is somebody else
+            return "copy", None               # another database: that id is somebody else
+        if g in taken:
+            return "keep", g                  # an earlier league already has him
         old = [t for t in db.clubs_of.get(int(g), []) if t not in national]
         if old and len(db.by_club[old[0]]) - leaving[old[0]] - 1 < P.MIN_SQUAD:
-            return None
+            return "keep", g                  # his club would have too few players left
         if old:
             leaving[old[0]] += 1
         taken.add(g)
-        return g
+        return "move", g
 
     for k, i in enumerate(clubs):
         sq = rel.squad(i)
@@ -275,11 +287,21 @@ def add_league(recipe, rel, L, legs=2, info=None):
             for f in P.FIELDS:
                 if r.get(f, "") != "":
                     ch[f] = r[f]
-            g = mover(r)
-            if g:
+            how, g = mover(r)
+            if how == "move":
                 del ch["name"]                # the game's spelling stays
                 join.append(g)
                 ed[g] = ch
+            elif how == "keep":
+                # left out: he is somebody the game already has, at a club that cannot spare
+                # him or at a NewLife club of an earlier league. The place stays with the
+                # prototype player mkplayers made (keep below keeps enough of them: the club
+                # never drops under P.MIN_SQUAD), so the club has one real player fewer and no
+                # copy of him anywhere.
+                if g in taken:
+                    elsewhere += 1
+                else:
+                    stayed += 1
             else:
                 ed[str(len(ed) - len(join))] = ch
         c = {"edits": ed}
@@ -289,4 +311,4 @@ def add_league(recipe, rel, L, legs=2, info=None):
         if keep < P.SQUAD:
             c["remove"] = [str(n) for n in range(keep, P.SQUAD)]
         pl[P.new_key(name, k)] = c
-    return name
+    return name, stayed, elsewhere

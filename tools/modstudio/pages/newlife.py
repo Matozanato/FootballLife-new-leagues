@@ -286,11 +286,15 @@ class NewLife(BuilderPage):
                     return
                 seen[i] = E["name"]
         names, swap = [], []
+        stayed = elsewhere = 0
         for L in sel:
             if not L["country"]:
                 error(self, "NewLife Database", _("%s has no country the game knows.") % L["name"])
                 continue
-            names.append(N.add_league(self.project.recipe, self.rel, L, info=info))
+            name, st, el = N.add_league(self.project.recipe, self.rel, L, info=info)
+            names.append(name)
+            stayed += st
+            elsewhere += el
             if info:
                 swap += [info["clubs"][e["id"]][0] for e in self.project.recipe["leagues"][-1].get("game_clubs") or []
                          if B.game_club_where(info, e["id"])]
@@ -300,4 +304,8 @@ class NewLife(BuilderPage):
             if swap:
                 text += "\n" + _("%s also play in a competition of the game: on New clubs pick each one and use "
                                  "Club of the game to choose the club that takes its place there.") % ", ".join(swap)
+            if stayed:
+                text += "\n" + _("%d players stay at their game club (their club would have too few players).") % stayed
+            if elsewhere:
+                text += "\n" + _("%d players are not added: another league already has them.") % elsewhere
             self.say(text, "ok")

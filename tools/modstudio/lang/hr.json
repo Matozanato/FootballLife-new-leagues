@@ -157,6 +157,8 @@
   "Comment": "Bilješka",
   "Commentary": "Komentar",
   "CommonLib has to be in sider.ini for %s (lib\\CommonLib.lua, before them)": "CommonLib mora biti u sider.ini za %s (lib\\CommonLib.lua, prije njih)",
+  "%d players stay at their game club (their club would have too few players).": "%d igrača ostaje u svom klubu iz igre (njihov klub bi imao premalo igrača).",
+  "%d players are not added: another league already has them.": "%d igrača nije dodano: druga liga ih već ima.",
   "CommonLib has to come before BallServer": "CommonLib mora doći prije BallServer",
   "CommonLib has to come before StadiumServer": "CommonLib mora doći prije StadiumServer",
   "Competition": "Natjecanje",

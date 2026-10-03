@@ -157,6 +157,8 @@
   "Comment": "Commentaire",
   "Commentary": "Commentaires",
   "CommonLib has to be in sider.ini for %s (lib\\CommonLib.lua, before them)": "CommonLib doit \u00eatre dans sider.ini pour %s (lib\\CommonLib.lua, avant eux)",
+  "%d players stay at their game club (their club would have too few players).": "%d joueurs restent dans leur club du jeu (leur club aurait trop peu de joueurs).",
+  "%d players are not added: another league already has them.": "%d joueurs ne sont pas ajoutés : une autre ligue les a déjà.",
   "CommonLib has to come before BallServer": "CommonLib doit venir avant BallServer",
   "CommonLib has to come before StadiumServer": "CommonLib doit venir avant StadiumServer",
   "Competition": "Compétition",
