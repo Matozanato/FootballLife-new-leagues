@@ -92,7 +92,7 @@ which league sits above -- and nothing about ids:
               cup, a straight knockout (two legs a round, the final one match) of 16, 8 or 4
               clubs -- the top division's by league position, then the division below's --
               the strongest v the weakest, played September to December (LEAGUE_CUP_DAYS);
-              the clubs past it play a pre-round in early September (cup_field, `lpre` line).
+              the clubs past it play a pre-round in late September (cup_field, `lpre` line).
               fl26swiss.dll fills and dates it (the ccup line's options); "league_cup_name",
               "league_cup_logo"
   preseason_cups  (the recipe, not a league) [{"name": ..., "clubs": [...]}]: a knockout of
@@ -284,7 +284,7 @@ LEAGUE_CUP_SIZES = (16, 8, 4)
 # field, the strongest v the weakest, home and away; the x winners take the knockout's last x
 # places, so nobody is left out (GitHub #70: 4 of 20 clubs never played). The pre-round is a copy
 # of reg 2 (mkeuropo.prerounds), eight ties at most; fl26swiss fills it from LEAGUE_PRE_FILL,
-# plays it on LEAGUE_PRE_DAYS (early September, between the August play-offs on 243/244 and
+# plays it on LEAGUE_PRE_DAYS (246 and 249: the first tie is 21 September, #93), between the
 # 250/251), and fills the knockout from LEAGUE_CUP_FILL, before its first day.
 LEAGUE_PRE_MAX = 8
 LEAGUE_PRE_FILL = 226
@@ -2072,7 +2072,7 @@ def describe(pl):
         pre = cup["opts"].get("pre")
         lines.append("  %s: %s, a knockout of %d clubs%s" % (
             cup["name"], what.get(cup["kind"], "pre-season cup in July"), len(cup["entry"]),
-            ", %d of them from a pre-round of %d clubs in early September"
+            ", %d of them from a pre-round of %d clubs in late September"
             % (len(pre["entry"]) // 2, len(pre["entry"])) if pre else ""))
     return "\n".join(lines)
 
