@@ -1660,8 +1660,9 @@ def cup_rounds(n):
 def cup_takes_both(cup, n):
     """whether a shipped domestic cup can take a field of n clubs: every round dated, n <= 44"""
     dated = CUP_DATED.get(cup)
-    # a field of 32 or fewer only in a size the bracket screen draws (BRACKET_SIZES, #74)
-    return bool(dated) and n <= NATIONAL_CUP_MAX and cup_rounds(n) <= dated and (n > 32 or n in BRACKET_SIZES)
+    # only a size the bracket screen draws: 32 or fewer in BRACKET_SIZES, above it 44 alone (#95)
+    return bool(dated) and n <= NATIONAL_CUP_MAX and cup_rounds(n) <= dated \
+        and (n == NATIONAL_CUP_MAX or n in BRACKET_SIZES)
 
 
 def national_cup(p, below):
@@ -1690,6 +1691,10 @@ def national_cup(p, below):
         # 17, 19, 21-23, 25-27, 29); a cup of 22 crashed it at 0x140b34501 (#74). The cup takes
         # the largest field it can draw: the top division and the first clubs of the one below
         c["clubs"] = max(k for k in BRACKET_SIZES if k <= c["clubs"])
+    elif 32 < c["clubs"] < NATIONAL_CUP_MAX and c["clubs"] not in exact:
+        # the same for a field of 33..43 that no shipped cup has exactly: no bye layout for it
+        # either, so the cup takes the 32 the screen draws (#95) and cupn names it (#74)
+        c["clubs"] = 32
     c["bracket"] = c["clubs"]           # the field, not the prototype's bracket (#74)
     c["below"] = below["rid"] if below else None
 
