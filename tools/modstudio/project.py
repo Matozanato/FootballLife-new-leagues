@@ -130,6 +130,12 @@ class Project(QObject):
                 out.append(db)
         return out
 
+    def drop_names(self):
+        """a world built or switched on in this session has clubs of its own: drop the cached
+        club lists so the pickers (Kits > Add a line and every other club picker) read them
+        again (GitHub #87)"""
+        self._names = None
+
     def names(self):
         """({team id: name}, {tournament id: name}); tournament id = regulation id, and the
         later stages of a competition are id + 1024 * k"""

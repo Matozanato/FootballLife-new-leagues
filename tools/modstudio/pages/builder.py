@@ -2665,6 +2665,7 @@ class Build(BuilderPage):
                 log("\n" + note + "\n")
             log(_("building ..."))
             B.build(pl, base, game, replace, log=log)
+            self.project.drop_names()
             log("\n" + _("Next: switch %s on (it takes the place of any other world), then start the game "
                           "and start a new Master League career.") % name)
 
@@ -2673,6 +2674,7 @@ class Build(BuilderPage):
                 def on(log):
                     snapshot(self.app.game.ini_path, "League Builder: switch on " + name, self.app.game.sider_dir)
                     B.switch_on(name, self.app.game.folder, log=log)
+                    self.project.drop_names()
                     log("\n" + _("Start the game, then 4. check."))
                 self.run(on)
                 self.app.bus.ini_changed.emit()
@@ -2750,6 +2752,7 @@ class Build(BuilderPage):
             log(B.describe(pl))
             log(_("building ..."))
             B.build(pl, base, game, replace, log=log)
+            self.project.drop_names()
             log("\n" + _("Next: 3. Switch it on, then start the game."))
             note = database_note(self.project)
             if note:
@@ -2765,6 +2768,7 @@ class Build(BuilderPage):
             def go(log):
                 snapshot(self.app.game.ini_path, "League Builder: switch on " + w, self.app.game.sider_dir)
                 B.switch_on(w, self.app.game.folder, log=log)
+                self.project.drop_names()
                 log("\n" + _("Start the game, then 4. check."))
             self.run(go)
             self.app.bus.ini_changed.emit()
