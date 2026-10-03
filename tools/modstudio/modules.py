@@ -55,7 +55,7 @@ RULES = [
 ]
 
 # (module, its name on the page) that read ctx.common_lib: they only work when
-# lib\CommonLib.lua is in sider.ini and loaded before them (#91)
+# lib\CommonLib.lua is in sider.ini and loaded before them
 COMMONLIB = [("scoreboardserver", "ScoreboardServer"), ("ballserver", "BallServer"),
              ("refkitserver", "RefKitServer"), ("menuserver", "MenuServer"),
              ("uicolors", "UIColors"), ("scoreboard-hexx", "scoreboard-hexx")]

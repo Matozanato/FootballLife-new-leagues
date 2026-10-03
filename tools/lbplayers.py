@@ -161,7 +161,7 @@ def same_name(a, b):
     wa, wb = _words(a), _words(b)
     if len(wa) < 2 or len(wb) < 2:
         return False
-    if _letters("".join(sorted(wa))) == _letters("".join(sorted(wb))):   # the surname first
+    if sorted(map(_letters, wa)) == sorted(map(_letters, wb)):   # the surname first
         return True
     return (_letters(wa[0])[:1] == _letters(wb[0])[:1]
             and _letters("".join(wa[1:])) == _letters("".join(wb[1:])))
