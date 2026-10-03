@@ -367,6 +367,14 @@ calendar.
   too when the sum is such a size. The game fills a national cup from the two leagues whatever
   its entry list says, so it is `fl26chain.dll` that writes that field (`cupn=` in the world
   file). **Build the world again** with 0.1.7's modules and start a new career.
+- 2026-10-04 (Mod Studio 0.1.7.2, Discord): **a NewLife player the game already has could end up
+  at two clubs.** He is meant to move to his NewLife club (same name in these tables), but when
+  the move was refused -- his game club would have dropped below 18 players, or an earlier league
+  had already taken him -- the row was added as a **new** player, so the same man was at both
+  clubs. A refused move now leaves the player out of the NewLife club; the prototype player of
+  his place stays, so the club never drops below 18. Rows with no `game_id`, or an id that is
+  not a player of these tables, are still added as new players. The NewLife page says how many
+  were left out. **Build the world again** and start a new career.
 - 2026-10-04 (Mod Studio 0.1.7.2, GitHub issues #90 and #88): **a NewLife Database club kept its
   NewLife id (98304 and up) as its team id in Team.bin**, which is outside the block the game
   reads for clubs (up to 81919), so no kit, crest or Kit Server `map.txt` could be keyed on it.
