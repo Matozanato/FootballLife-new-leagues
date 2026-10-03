@@ -54,6 +54,12 @@ RULES = [
     ("fl26chain", "fl26swiss", "fl26chain has to come before fl26swiss"),
 ]
 
+# (module, its name on the page) that read ctx.common_lib: they only work when
+# lib\CommonLib.lua is in sider.ini and loaded before them (#91)
+COMMONLIB = [("scoreboardserver", "ScoreboardServer"), ("ballserver", "BallServer"),
+             ("refkitserver", "RefKitServer"), ("menuserver", "MenuServer"),
+             ("uicolors", "UIColors"), ("scoreboard-hexx", "scoreboard-hexx")]
+
 # (module, sider.ini setting, value it needs, why)
 NEEDS = [
     ("goalsongserver", "match-stats.enabled", "1", "GoalSongServer needs match-stats.enabled = 1 in sider.ini"),
@@ -173,6 +179,11 @@ def check_order(ini, modules_dir):
             out.append(why)
     if "fl26cuphook" in pos and "fl26chain" in pos:
         out.append("fl26cuphook is the old version of fl26chain: switch fl26cuphook off")
+    if "commonlib" not in pos:
+        need = [name for m, name in COMMONLIB if m in pos]
+        if need:
+            out.append(("CommonLib has to be in sider.ini for %s (lib\\CommonLib.lua, before them)",
+                        ", ".join(need)))
     told = set()
     st = ini.settings()
     for m, key, val, why in NEEDS:

@@ -156,6 +156,7 @@
   "Column": "Stupac",
   "Comment": "Bilješka",
   "Commentary": "Komentar",
+  "CommonLib has to be in sider.ini for %s (lib\\CommonLib.lua, before them)": "CommonLib mora biti u sider.ini za %s (lib\\CommonLib.lua, prije njih)",
   "CommonLib has to come before BallServer": "CommonLib mora doći prije BallServer",
   "CommonLib has to come before StadiumServer": "CommonLib mora doći prije StadiumServer",
   "Competition": "Natjecanje",

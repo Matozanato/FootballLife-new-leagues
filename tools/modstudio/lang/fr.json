@@ -156,6 +156,7 @@
   "Column": "Colonne",
   "Comment": "Commentaire",
   "Commentary": "Commentaires",
+  "CommonLib has to be in sider.ini for %s (lib\\CommonLib.lua, before them)": "CommonLib doit \u00eatre dans sider.ini pour %s (lib\\CommonLib.lua, avant eux)",
   "CommonLib has to come before BallServer": "CommonLib doit venir avant BallServer",
   "CommonLib has to come before StadiumServer": "CommonLib doit venir avant StadiumServer",
   "Competition": "Compétition",
