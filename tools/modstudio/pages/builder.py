@@ -1899,7 +1899,29 @@ class NewClubs(BuilderPage):
     def built_ids(self, L):
         """the team ids a build gave this league's clubs, or []: ids are handed out at Build,
         after the game's own clubs"""
-        return list(built_league(self.app.game, self.project.recipe.get("world"), L["name"]).get("teams") or [])
+        got = list(built_league(self.app.game, self.project.recipe.get("world"), L["name"]).get("teams") or [])
+        if got:
+            return got
+        return self.plan_ids(L)
+
+    def plan_ids(self, L):
+        """the ids plan() would give this league's clubs (a NewLife club's world id is fixed
+        before a build, so a Kit Server's map.txt can be made for it), or []"""
+        if self.project.base is None:
+            return []
+        try:
+            m, _free = B.newlife_tids(self.project.recipe.get("leagues") or [], self.project.base)
+        except Exception:
+            return []
+        ids = list(L.get("club_ids") or [])
+        nl = list((L.get("newlife") or {}).get("clubs") or [])
+        out = []
+        for k in range(int(L.get("clubs") or 0)):
+            tid = ids[k] if k < len(ids) and ids[k] else None
+            if tid is None and k < len(nl) and nl[k]:
+                tid = m.get(int(nl[k]))
+            out.append(tid)
+        return out
 
     def show_clubs(self):
         cur = self.tree.currentItem()

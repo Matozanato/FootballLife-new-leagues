@@ -1197,6 +1197,9 @@ def plan(recipe, base):
     bad = club_id_problems(out, base)
     if bad:
         raise BuildError("club ids:\n  " + "\n  ".join(bad[:20]))
+    nlt, free_ids = newlife_tids(recipe.get("leagues") or [], base)   # #90 / #88
+    for p in out:
+        p["newlife_tid"] = nlt
     import lbplayers
     bad = lbplayers.check(recipe)
     if bad:
@@ -1226,7 +1229,7 @@ def plan(recipe, base):
         raise BuildError("%d continental, league and pre-season cups -- fl26swiss.dll takes %d"
                          % (len(cups) + len(home), MAX_CCUP))
     return {"world": recipe["world"], "leagues": out, "edits": recipe.get("edits") or {},
-            "players": recipe.get("players") or {}, "uecl": bool(recipe.get("uecl", True)),
+            "free_ids": free_ids, "players": recipe.get("players") or {}, "uecl": bool(recipe.get("uecl", True)),
             "uecl_logo": recipe.get("uecl_logo") or None,
             "uecl_name": (recipe.get("uecl_name") or "").strip() or None,
             "game_europe": ge, "game_replace": gr, "game_names": gn,
@@ -1289,6 +1292,62 @@ def game_club_checks(out, base):
                 raise BuildError("%s is used twice (%s)" % (info["clubs"][sid][0], used[sid]))
             used[sid] = "%s, in %s's place" % (p["name"], name)
             g["swap"] = sid
+
+
+def newlife_tids(leagues, base):
+    """({NewLife club id: world id}, free ids left in the new-club block) for every NewLife club
+    of the recipe's leagues that is built as a new club. Counting up after the ids the builder
+    gives its own clubs and after any recipe club_ids, in a fixed order (leagues in recipe order,
+    clubs in league order), so the same recipe always gives the same ids (#90 / #88). The
+    NewLife id of a club the game already has is not here: that club keeps the game's id."""
+    raw = pesdb.wesys_unpack(open(os.path.join(base, "Team.bin"), "rb").read())
+    have = {int.from_bytes(raw[o + W.T_ID:o + W.T_ID + 4], "little") for o in range(0, len(raw), W.T_REC)}
+    taken = set(have)
+    rows = []
+    for L in leagues:
+        n = int(L.get("clubs") or 0)
+        gc = set()
+        for e in L.get("game_clubs") or []:
+            try:
+                gc.add(int(e.get("at", -1)))
+            except (TypeError, ValueError, AttributeError):
+                pass
+        ids = [int(x) if str(x or "").strip().isdigit() else None for x in (L.get("club_ids") or [])][:n]
+        nl = [int(x) if str(x or "").strip().isdigit() else None
+              for x in ((L.get("newlife") or {}).get("clubs") or [])][:n]
+        rows.append((n, gc, ids + [None] * (n - len(ids)), nl + [None] * (n - len(nl))))
+        taken |= {t for t in ids if t}
+    top = max(have) if have else 0
+    nxt = top + 1
+
+    def take():
+        nonlocal nxt
+        while nxt in taken:
+            nxt += 1
+        if nxt > CLUB_ID_MAX:
+            raise BuildError("no team ids left up to %d: the new-club block %d..%d is full"
+                             % (CLUB_ID_MAX, top + 1, CLUB_ID_MAX))
+        v = nxt
+        taken.add(v)
+        nxt += 1
+        return v
+
+    def is_newlife(nl, k):
+        return k < len(nl) and nl[k] is not None and NEWLIFE_TEAMS[0] <= nl[k] <= NEWLIFE_TEAMS[1]
+
+    for n, gc, ids, nl in rows:                 # the builder's own clubs first
+        for k in range(n):
+            if k in gc or (k < len(ids) and ids[k]) or is_newlife(nl, k):
+                continue
+            take()
+    m = {}
+    for n, gc, ids, nl in rows:                 # then the NewLife clubs, in the same order
+        for k in range(n):
+            if not is_newlife(nl, k):
+                continue
+            m[nl[k]] = take()
+    return m, max(CLUB_ID_MAX - nxt + 1, 0)
+
 
 
 def club_id_problems(out, base):
@@ -1912,6 +1971,9 @@ def describe(pl):
     e = pl.get("edits") or {}
     lines = ["world %s: %d new leagues, changes to %d of the game's leagues and %d of its clubs"
              % (pl["world"], len(pl["leagues"]), len(e.get("leagues") or {}), len(e.get("clubs") or {}))]
+    if pl.get("free_ids") is not None:
+        lines.append("  team ids: %d free in the new-club block (%d..%d)"
+                     % (pl["free_ids"], CLUB_ID_MAX - pl["free_ids"] + 1, CLUB_ID_MAX))
     for a, b in e.get("swaps") or []:
         lines.append("  clubs %s and %s swap leagues" % (a, b))
     for cid, v in sorted((e.get("competitions") or {}).items(), key=lambda kv: int(kv[0])):
@@ -2195,7 +2257,12 @@ def build(pl, base, game, replace=False, log=print):
             if k < len(ids) and ids[k]:
                 tid = ids[k]                   # checked by plan(): free, in the block
             elif k < len(nl) and NEWLIFE_TEAMS[0] <= nl[k] <= NEWLIFE_TEAMS[1] and nl[k] not in have:
-                tid = nl[k]                    # a NewLife Database club keeps its NewLife id
+                # 0.1.8 (#90 / #88): a NewLife Database club gets a world id of its own, the one
+                # plan() gave it; the NewLife id is only how the recipe names the club
+                tid = (p.get("newlife_tid") or {}).get(nl[k])
+                if tid is None:
+                    raise BuildError("%s, club %d: no world id for the NewLife club %d"
+                                     % (p["name"], k + 1, nl[k]))
             else:
                 tid = top_id + 1 + own
                 own += 1

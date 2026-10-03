@@ -408,6 +408,15 @@ class Players(BuilderPage):
             lg, _s, k = key.rpartition("/")
             L = self.project.league(lg) or {}
             ids = list(L.get("club_ids") or [])
+            nl = list((L.get("newlife") or {}).get("clubs") or [])
+            if int(k) < len(nl) and nl[int(k)]:
+                self.club_id.setText(str(self.newlife_id(L, int(k)) or ""))
+                self.club_id.setReadOnly(True)
+                self.club_id.setPlaceholderText("")
+                self.club_id.setToolTip(_("A NewLife club takes the world id Build gives it: its kits, crests "
+                                          "and the Kit Server's map.txt are keyed on it."))
+                self.club_id.blockSignals(False)
+                return
             self.club_id.setText(str(ids[int(k)]) if int(k) < len(ids) and ids[int(k)] else "")
             self.club_id.setReadOnly(False)
             self.club_id.setPlaceholderText(_("at Build"))
@@ -415,6 +424,17 @@ class Players(BuilderPage):
                                       "face pack was made for: %d to %d, one no other club has.")
                                     % (self.first_club_id(), B.CLUB_ID_MAX))
         self.club_id.blockSignals(False)
+
+    def newlife_id(self, L, k):
+        """the world id plan() gives this league's NewLife club k (#90 / #88)"""
+        if self.project.base is None:
+            return None
+        try:
+            m, _free = B.newlife_tids(self.project.recipe.get("leagues") or [], self.project.base)
+        except Exception:
+            return None
+        nl = list((L.get("newlife") or {}).get("clubs") or [])
+        return m.get(int(nl[k])) if k < len(nl) and nl[k] else None
 
     def first_club_id(self):
         return max(t for t in self.project.game_cl if t < B.CLUB_ID_MAX) + 1 if self.project.game_cl else 71578
