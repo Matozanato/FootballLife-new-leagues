@@ -336,6 +336,18 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-03 (Mod Studio 0.1.7.1, GitHub issue #80): **a new league right under a second division
+  of the game (League One under the Championship, Serie C under Serie B ...) stopped *Check the
+  plan* with `TypeError: cup_field() takes 1 positional argument but 4 were given`.** Two functions
+  had the same name and the second one replaced the first. The one for a country's cup is now
+  `cup_field_of_region`. Checked without the game: a plan with League One and League Two under the
+  Championship now says the FA Cup keeps the game's divisions 17 and 79. Not yet checked in the game.
+- 2026-10-03 (Mod Studio 0.1.7.1, Discord, thanks vector360): **a recipe whose only change was a
+  league cup or super cup for a game country** (New leagues > cups of the game's countries) **was
+  "nothing to build".** The check now also counts the cups of the game's countries, European places
+  of the game's leagues, the UEFA ranking, pre-season cups, competition names and logos, the
+  Conference League and CAF Super Cup switches, the Saudi August start and editable kits. Checked
+  without the game: a recipe with only a Premier League league cup plans that cup.
 - 2026-10-02 (Mod Studio 0.1.7, GitHub issue #74): **a national cup of 22 clubs crashed the game** on
   the cup's bracket (Database > Competition Info > the cup > Fixtures) and after its first round.
   The bracket screen has a layout for byes only for fields of 2 to 16, 18, 20, 24, 28, 30 and 32
