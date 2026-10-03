@@ -454,8 +454,10 @@ under 10 MB. Download only the parts you want.
   second time (0.1.7): he keeps his face, name and id and takes NewLife's position and ratings.
   He stays where he is when his old club would drop below 18 players; then NewLife makes its
   own copy, as before.
-- NewLife clubs keep their NewLife ids in the game (98304 and up), so every league package made
-  with the database gives a club the same id.
+- A NewLife club takes a world id of its own (0.1.7.2), in the block the game reads for clubs,
+  counting up after the ids the builder gives its own clubs. The **Club id** column on New clubs
+  shows it, and a Kit Server's `map.txt` is keyed on it. A world built before 0.1.7.2 must be
+  built again and the career started new for the kits to follow.
 - A NewLife club gets a shield crest in its colours and the kit of the game closest to its
   colours, until you give it your own (**Edit club**).
 

@@ -490,8 +490,10 @@ plusieurs), plus *Free agents*, chacune de moins de 10 Mo. Ne téléchargez que 
   (0.1.7) : il garde son visage, son nom et son ID et prend le poste et les notes de NewLife. Il
   reste où il est si son ancien club passait sous 18 joueurs ; NewLife fait alors sa propre copie,
   comme avant.
-- Les clubs NewLife gardent leur ID NewLife dans le jeu (98304 et plus), donc tous les paquets de
-  ligues faits avec la base donnent à un club le même ID.
+- Un club NewLife reçoit un ID de monde à lui (0.1.7.2), dans le bloc que le jeu lit pour les
+  clubs, après les ID que le constructeur donne aux siens. La colonne **ID du club** de la page
+  Clubs nouveaux le montre, et le `map.txt` du Kit Server est bâti dessus. Un monde fait avant
+  0.1.7.2 doit être reconstruit et la carrière recommencée pour que les maillots suivent.
 - Un club NewLife reçoit un écusson en forme de blason à ses couleurs et le maillot du jeu aux
   couleurs les plus proches, jusqu'à ce que vous lui donniez les vôtres (**Modifier le club**).
 
