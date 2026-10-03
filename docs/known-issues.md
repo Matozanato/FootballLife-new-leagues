@@ -367,14 +367,14 @@ calendar.
   too when the sum is such a size. The game fills a national cup from the two leagues whatever
   its entry list says, so it is `fl26chain.dll` that writes that field (`cupn=` in the world
   file). **Build the world again** with 0.1.7's modules and start a new career.
-- 2026-10-04 (Mod Studio 0.1.8, GitHub issue #95): **a national cup of 33 to 43 clubs
+- 2026-10-04 (Mod Studio 0.1.7.2, GitHub issue #95): **a national cup of 33 to 43 clubs
   crashed the game** (a Copa Peru of 18 + 17 = 35). The rule above covers fields of 32 or
   fewer; a field of 33 to 43 that no shipped cup has exactly had no bracket either. The cup
   size rule is now: up to 32 the bracket sizes, above that 32, 44 (the FA Cup's own size) or
   a size a shipped cup has exactly. A field of 35 is cut to 32 and the world file's `cupn=`
   names it for fl26chain; a field of 22 still gives 20, and 44 is unchanged. **Build the
   world again** and start a new career.
-- 2026-10-04 (Mod Studio 0.1.8, GitHub issues #75 and #63): **a world built from tables
+- 2026-10-04 (Mod Studio 0.1.7.2, GitHub issues #75 and #63): **a world built from tables
   before SP's "National selection 2.2" update gave wrong starting line-ups and missing
   transfers when it was on together with an edit file.** The builder unpacked only
   `download/data_s2526*.cpk`, so its Team.bin / Player.bin came from the tables before the

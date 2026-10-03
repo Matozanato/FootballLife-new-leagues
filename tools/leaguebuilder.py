@@ -2257,7 +2257,7 @@ def build(pl, base, game, replace=False, log=print):
             if k < len(ids) and ids[k]:
                 tid = ids[k]                   # checked by plan(): free, in the block
             elif k < len(nl) and NEWLIFE_TEAMS[0] <= nl[k] <= NEWLIFE_TEAMS[1] and nl[k] not in have:
-                # 0.1.8 (#90 / #88): a NewLife Database club gets a world id of its own, the one
+                # 0.1.7.2 (#90 / #88): a NewLife Database club gets a world id of its own, the one
                 # plan() gave it; the NewLife id is only how the recipe names the club
                 tid = (p.get("newlife_tid") or {}).get(nl[k])
                 if tid is None:
