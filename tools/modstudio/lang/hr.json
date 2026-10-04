@@ -1158,7 +1158,11 @@
   "the live world": "živi svijet",
   "the open recipe is %s": "otvoreni recept je %s",
   "version %s": "verzija %s",
-  "world %s": "svijet %s"
+  "world %s": "svijet %s",
+  "%s, club %d": "%s, klub %d",
+  "takes %s's place": "zauzima mjesto kluba %s",
+  "already in this recipe: %s": "već je u ovom receptu: %s",
+  "Take it out of that place first (New clubs: New club here), then pick it here.": "Prvo ga makni s tog mjesta (Novi klubovi: New club here), pa ga izaberi ovdje."
  },
  "log": [
   [

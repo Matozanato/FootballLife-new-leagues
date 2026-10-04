@@ -1002,9 +1002,14 @@ class GameClubDialog(Dialog):
         super().__init__(parent, "Club of the game")
         self.info = B.game_info(project.base)
         cur = cur or {}
+        # a club the recipe already uses is listed greyed with where (astyleUZ 04.10.: Sparta
+        # Prague, already in his league, just did not turn up and looked impossible to pick)
+        self.taken = dict(taken) if isinstance(taken, dict) else {t: "" for t in taken}
         self.clubs = sorted(((t, n, s) for t, (n, s) in self.info["clubs"].items()
-                             if t not in taken and B.game_club_problem(self.info, t) is None),
+                             if t not in self.taken and B.game_club_problem(self.info, t) is None),
                             key=lambda c: (c[1] or "").lower())
+        self.used = sorted(((t, n, s) for t, (n, s) in self.info["clubs"].items() if t in self.taken),
+                           key=lambda c: (c[1] or "").lower())
         self.form.addRow(hint(_("The club keeps its name, crest, kits, manager and players. It leaves every "
                                 "competition it plays in the game and plays in this league instead.")))
         self.search = QLineEdit()
@@ -1082,6 +1087,13 @@ class GameClubDialog(Dialog):
             self.tree.addTopLevelItem(it)
             if t == keep:
                 pick = it
+        for t, n, s in self.used if want else []:
+            if want not in (n or "").lower() and want not in (s or "").lower() and want != str(t):
+                continue
+            it = QTreeWidgetItem([n, s, str(t), _("already in this recipe: %s") % self.taken[t]])
+            it.setFlags(it.flags() & ~(Qt.ItemIsSelectable | Qt.ItemIsEnabled))
+            it.setToolTip(3, _("Take it out of that place first (New clubs: New club here), then pick it here."))
+            self.tree.addTopLevelItem(it)
         if pick:
             self.tree.setCurrentItem(pick)
         self.tree.blockSignals(False)
@@ -2163,17 +2175,18 @@ class NewClubs(BuilderPage):
         return it.data(0, Qt.UserRole) if it else None
 
     def taken(self, skip):
-        """the clubs of the game the recipe already uses, in a place or taking one, but the one
-        at place `skip` of the league shown"""
-        out = set()
+        """{team id: where the recipe already uses it} for the clubs of the game in a place or
+        taking one, but the one at place `skip` of the league shown"""
+        out = {}
         cur = self.league()
+        names = (self.project.names()[0] or {}) if self.project.base else {}
         for L in self.project.recipe["leagues"]:
             for e in L.get("game_clubs") or []:
                 if L is cur and int(e.get("at", -1)) == skip:
                     continue
-                out.add(int(e["id"]))
+                out[int(e["id"])] = _("%s, club %d") % (L["name"], int(e.get("at", 0)) + 1)
                 if e.get("swap") is not None and not isinstance(e["swap"], dict):
-                    out.add(int(e["swap"]))
+                    out[int(e["swap"])] = _("takes %s's place") % names.get(int(e["id"]), e["id"])
         return out
 
     def game_club(self):

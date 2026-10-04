@@ -1158,7 +1158,11 @@
   "the live world": "el mundo activo",
   "the open recipe is %s": "la receta abierta es %s",
   "version %s": "versión %s",
-  "world %s": "mundo %s"
+  "world %s": "mundo %s",
+  "%s, club %d": "%s, club %d",
+  "takes %s's place": "ocupa el puesto de %s",
+  "already in this recipe: %s": "ya está en esta receta: %s",
+  "Take it out of that place first (New clubs: New club here), then pick it here.": "Quítalo antes de ese puesto (Clubes nuevos: New club here) y luego elígelo aquí."
  },
  "log": [
   [
