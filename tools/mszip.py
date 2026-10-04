@@ -5,8 +5,8 @@ FL26 Mod Studio in one folder:
   FL26ModStudio.exe     the window (tools/modstudio_main.py), frozen with PyInstaller as a
   _internal\            folder, not one file: a one-file .exe unpacks some 150 MB to a temporary
                         folder on every start, and an antivirus reads all of it each time --
-                        that was the slow start people reported. modstudio/lang and lang are
-                        in _internal
+                        that was the slow start people reported. modstudio/lang,
+                        modstudio/assets (the icon) and lang are in _internal
   pack\                 the modules the League Builder's "Install the modules" puts in place
                         (tools/lbpack.py)
   README.html           the guide (docs/mod-studio-guide.md)
@@ -88,7 +88,7 @@ def stage():
             dst = os.path.join(STAGE, os.path.relpath(src, HERE))
             if f.endswith(".py"):
                 put(src, dst)
-            elif f.endswith(".json"):
+            elif f.endswith((".json", ".ico", ".png")):
                 os.makedirs(os.path.dirname(dst), exist_ok=True)
                 shutil.copy2(src, dst)
     shutil.copytree(os.path.join(HERE, "lang"), os.path.join(STAGE, "lang"))
@@ -112,7 +112,9 @@ def freeze():
            "--contents-directory", "_internal",
            "--name", NAME, "--distpath", os.path.join(WORK, "dist"),
            "--workpath", os.path.join(WORK, "build"), "--specpath", WORK, "--paths", STAGE,
+           "--icon", os.path.join(STAGE, "modstudio", "assets", "app.ico"),
            "--add-data", os.path.join(STAGE, "lang") + sep + "lang",
+           "--add-data", os.path.join(STAGE, "modstudio", "assets") + sep + os.path.join("modstudio", "assets"),
            "--add-data", os.path.join(STAGE, "modstudio", "lang") + sep + os.path.join("modstudio", "lang")]
     for h in HIDDEN + modstudio_modules():
         cmd += ["--hidden-import", h]
