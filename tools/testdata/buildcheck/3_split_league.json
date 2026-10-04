@@ -1,0 +1,5 @@
+{ "world": "_FL26BcSplit",
+  "leagues": [
+    { "name": "Checks Split Premier", "country": "Egypt", "clubs": 12, "legs": 2,
+      "split": { "legs": 2, "groups": [6, 6], "group_legs": 2 } }
+  ] }

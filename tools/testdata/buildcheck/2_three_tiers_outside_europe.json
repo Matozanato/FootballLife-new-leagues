@@ -1,0 +1,6 @@
+{ "world": "_FL26BcTiers",
+  "leagues": [
+    { "name": "Checks Premier",      "country": "Egypt", "clubs": 16, "legs": 2 },
+    { "name": "Checks Championship", "country": "Egypt", "clubs": 16, "legs": 2, "above": "Checks Premier" },
+    { "name": "Checks Second",       "country": "Egypt", "clubs": 16, "legs": 2, "above": "Checks Championship" }
+  ] }
