@@ -93,6 +93,25 @@ def differences(ini, prof):
     return on, off, add
 
 
+def changes(ini, prof):
+    """{"on": [...], "off": [...]} -- the lines (as sider.ini spells them) applying the profile
+    would switch on (or add back) and switch off, cpk.root and lua.module alike"""
+    out = {"on": [], "off": []}
+    for k in KEYS:
+        want = {norm(v): en for v, en in prof.get(k, [])}
+        have = {}
+        for e in ini.entries(k):
+            have.setdefault(norm(e.value), (e.value, e.enabled))
+        for n, (v, en) in have.items():
+            w = want.get(n, False)
+            if w and not en:
+                out["on"].append(v)
+            elif en and not w:
+                out["off"].append(v)
+        out["on"] += [v for v, en in prof.get(k, []) if en and norm(v) not in have]
+    return out
+
+
 def apply(ini, prof, sider_dir, modules_dir):
     """change `ini` (not saved) to the profile; returns notes about lines that could not come back"""
     notes = []

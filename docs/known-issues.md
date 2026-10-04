@@ -372,6 +372,13 @@ calendar.
   first, second and goalkeeper kit. It now lends a third kit as well: the donor club's own when
   it has one whose texture is in the game (378 of 708 donors), otherwise the next donor's.
   Checked without the game: 30 clubs got 120 kit definitions. Not yet checked in the game.
+- 2026-10-04 (Mod Studio 0.1.8, Discord): **switching to a profile turned modules and the live
+  world off without a word.** A tester switched to "As found" (the setup Mod Studio found the
+  first time it ran). That profile is older than the tester's world, so it put an old world back
+  and turned off Regen Faces and two `fl26nullguard` modules. League Builder's *Switch on* was
+  not the cause. Profiles now lists what goes off and what goes on before anything changes, says
+  so when the live League Builder world or League Builder modules are among them, and changes
+  nothing until you say yes. A profile that changes nothing just says so.
 
 - 2026-10-03 (Mod Studio 0.1.7.1, GitHub issue #80): **a new league right under a second division
   of the game (League One under the Championship, Serie C under Serie B ...) stopped *Check the

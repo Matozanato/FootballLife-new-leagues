@@ -1045,7 +1045,15 @@
   "no club found": "aucun club trouvé",
   "%d pictures, %d matched to a club.": "%d images, %d associées à un club.",
   "%d crests imported.": "%d écussons importés.",
-  "%d clubs kept the crest they had.": "%d clubs ont gardé leur écusson."
+  "%d clubs kept the crest they had.": "%d clubs ont gardé leur écusson.",
+  "%s is the setup already: nothing changes.": "%s est déjà la configuration : rien ne change.",
+  "Will go off:": "Sera désactivé :",
+  "Will go on:": "Sera activé :",
+  "... and %d more": "... et %d de plus",
+  "This changes the live League Builder world.": "Cela change le monde actif du League Builder.",
+  "League Builder modules go off: worlds of yours may stop working.": "Des modules du League Builder sont désactivés : vos mondes peuvent cesser de fonctionner.",
+  "Switch to %s?": "Passer à %s ?",
+  "A NewLife club takes the world id Build gives it: its kits, crests and the Kit Server's map.txt are keyed on it.": "Un club NewLife prend l'ID du monde que Build lui donne : ses maillots, écussons et le map.txt du Kit Server sont liés à cet ID."
  },
  "log": [
   [

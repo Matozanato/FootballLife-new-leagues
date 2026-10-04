@@ -134,6 +134,30 @@ class Profiles(Page):
         ini = self.app.ini()
         if not p or ini is None:
             return
+        # 0.1.8: say what goes off before it does. "As found" switched a tester's live world back to
+        # an old one and took Regen Faces and two fl26nullguard modules with it, with no question asked
+        ch = PR.changes(ini, p)
+        if not ch["on"] and not ch["off"]:
+            self.say(_("%s is the setup already: nothing changes.") % p["name"], "ok")
+            return
+        short = lambda v: v.replace("/", "\\").rstrip("\\").rsplit("\\", 1)[-1]
+        lines = []
+        for head, vals in ((_("Will go off:"), ch["off"]), (_("Will go on:"), ch["on"])):
+            if vals:
+                lines.append(head)
+                lines += ["   " + short(v) for v in vals[:15]]
+                if len(vals) > 15:
+                    lines.append("   " + _("... and %d more") % (len(vals) - 15))
+        warn = []
+        if any("_FL26" in short(v) for v in ch["off"] + ch["on"]):
+            warn.append(_("This changes the live League Builder world."))
+        if any(short(v).lower().startswith("fl26") and v.lower().endswith(".lua") for v in ch["off"]):
+            warn.append(_("League Builder modules go off: worlds of yours may stop working."))
+        text = _("Switch to %s?") % p["name"] + "\n\n" + "\n".join(lines)
+        if warn:
+            text += "\n\n" + "\n".join(warn)
+        if not ask(self, "Profiles", text):
+            return
         g, s = self.app.game.running()
         if g and not ask(self, "Profiles", _("The game is running. The change takes effect at the next start. "
                                              "Switch anyway?")):
