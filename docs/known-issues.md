@@ -395,6 +395,17 @@ calendar.
   to one of these cups. Checked without the game: Saudi Pro League 2nd and 3rd went into the AFC
   Champions League Two (16 clubs) in pot 1 and pot 2, and its AFC Champions League place stayed.
   Not yet checked in the game.
+- 2026-10-04 (Mod Studio 0.1.8, GitHub issue #54): **a league round was played on the day of a
+  European match, hidden from the calendar, and the result went into both tables.** Each new
+  league plays the big leagues' calendar moved by a few days, and the number of days comes from
+  its regulation ID. The move was only there to spread the matches of a day and never looked at
+  the European days: Romania on ID 93 (+6 days) had five rounds on Conference League days.
+  Build now gives a league with European places the ID whose days miss the European ones (and
+  its league cup's), from the IDs of the same Select Team rank. Checked without the game: the
+  reporter's world went from up to 10 such days per league to at most 1 (a January Europa League
+  day and the Conference League final). **A world built again gets other IDs for these leagues,
+  so a career started on the old build of that world may not load: start a new one.** Not yet
+  checked in the game.
 - 2026-10-04 (Mod Studio 0.1.8, Discord): **switching to a profile turned modules and the live
   world off without a word.** A tester switched to "As found" (the setup Mod Studio found the
   first time it ran). That profile is older than the tester's world, so it put an old world back
