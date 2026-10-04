@@ -5,7 +5,7 @@ Every page edits app.project.recipe (modstudio/project.py); leaguebuilder.py doe
 import csv, io, json, os
 
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QPixmap, QImage, QColor, QBrush
+from PySide6.QtGui import QPixmap, QImage, QColor, QBrush, QKeySequence, QShortcut
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QFrame,
                                QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QPlainTextEdit, QPushButton, QRadioButton, QSpinBox, QSplitter,
@@ -1693,7 +1693,8 @@ class NewLeagues(BuilderPage):
             "- Add league: a new league; its clubs are made for you.\n"
             "- Add lower tier: a league one division below the selected one, with promotion and relegation "
             "between the two.\n"
-            "- Edit / Remove: change or delete the selected league.\n"
+            "- Edit / Remove: change or delete the selected league. Ctrl+click, Shift+click or Ctrl+A picks "
+            "several leagues, and Remove (or the Delete key) deletes them together.\n"
             "- Pre-season cups: small friendly tournaments of 4 or 8 clubs in July.\n"
             "- Cups of the game's countries: a league cup (like the Carabao Cup) for the game's own leagues, "
             "and a super cup where the game has none.\n"
@@ -1748,6 +1749,10 @@ class NewLeagues(BuilderPage):
         for c, w in enumerate((240, 80, 150, 60, 170, 230, 80, 150)):
             self.tree.setColumnWidth(c, w)
         self.tree.itemDoubleClicked.connect(lambda *a: self.edit())
+        # several leagues at once: Ctrl+click, Shift+click, Ctrl+A, then Remove or Delete
+        # (I know?, 2026-10-04: "can u do ctrl+a so i dont have to delete all of them one by one")
+        self.tree.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        QShortcut(QKeySequence.Delete, self.tree, self.remove, context=Qt.WidgetShortcut)
         self.outer.addWidget(self.tree, 1)
         self.foot = hint("")
         self.outer.addWidget(self.foot)
@@ -1867,16 +1872,24 @@ class NewLeagues(BuilderPage):
             self.project.touch()
 
     def remove(self):
-        i = self.selected()
-        if i is None:
+        rows = sorted({it.data(0, Qt.UserRole) for it in self.tree.selectedItems()})
+        if not rows and self.selected() is not None:
+            rows = [self.selected()]
+        if not rows:
             return
-        name = self.project.recipe["leagues"][i]["name"]
-        if ask(self, "Remove", _("Remove %s, with its clubs and their player changes?") % name):
-            del self.project.recipe["leagues"][i]
-            for L in self.project.recipe["leagues"]:
-                if L.get("above") == name:
+        leagues = self.project.recipe["leagues"]
+        names = [leagues[i]["name"] for i in rows]
+        q = (_("Remove %s, with its clubs and their player changes?") % names[0] if len(names) == 1 else
+             _("Remove these %d leagues, with their clubs and their player changes?") % len(names)
+             + "\n\n" + "\n".join(names))
+        if ask(self, "Remove", q):
+            for i in reversed(rows):
+                del leagues[i]
+            for L in leagues:
+                if L.get("above") in names:
                     L.pop("above")
-            self.project.drop_league(name)
+            for name in names:
+                self.project.drop_league(name)
             self.project.touch()
 
     def preseason(self):

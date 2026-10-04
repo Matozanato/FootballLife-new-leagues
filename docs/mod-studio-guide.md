@@ -136,6 +136,9 @@ Master League, one for online play, one for testing:
 The League Builder adds new leagues to the game and changes the game's own. What it makes is a
 **world**: a content folder named `_FL26...` that the game reads while it is switched on.
 
+**Remove** deletes the selected league with its clubs. To delete several at once (0.1.8), pick them
+with Ctrl+click, Shift+click or Ctrl+A, then **Remove** or the Delete key.
+
 **New leagues → Add league**
 
 | Field | What it means |

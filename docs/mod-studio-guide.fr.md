@@ -148,6 +148,9 @@ un pour la Master League, un pour le jeu en ligne, un pour les tests :
 Le League Builder ajoute de nouvelles ligues au jeu et modifie celles du jeu. Ce qu'il crée est un
 **monde** : un dossier de contenu nommé `_FL26...` que le jeu lit tant qu'il est activé.
 
+**Retirer** supprime la ligue sélectionnée avec ses clubs. Pour en supprimer plusieurs d'un coup (0.1.8),
+sélectionnez-les avec Ctrl+clic, Maj+clic ou Ctrl+A, puis **Retirer** ou la touche Suppr.
+
 **Nouvelles ligues → Ajouter une ligue**
 
 | Champ | Ce que cela veut dire |
