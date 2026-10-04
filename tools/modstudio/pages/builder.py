@@ -22,7 +22,7 @@ from .. import theme
 from .. import servers as S
 from ..i18n import _, tr
 from ..backups import snapshot
-from ..ui import Page, section, hint, row, ask, error, run_job, helpmark, helped
+from ..ui import Page, section, hint, row, ask, error, info, run_job, helpmark, helped
 
 EURO_WORLD = "_FL26Euro"
 
@@ -187,33 +187,41 @@ class PictureField(QWidget):
 
 
 class EuropeTable(QWidget):
-    """a league's European places: league position -> competition, one row each"""
+    """a league's European places: league position -> competition, one row each, with a button
+    that removes the row. tall: the table takes the height it is given (a dialog of its own)"""
 
-    def __init__(self, places, clubs):
+    def __init__(self, places, clubs, tall=False):
         super().__init__()
         self.clubs = clubs
         v = QVBoxLayout(self)
         v.setContentsMargins(0, 0, 0, 0)
-        self.table = QTableWidget(0, 2)
-        self.table.setHorizontalHeaderLabels([_("League position"), _("Competition")])
-        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.table = QTableWidget(0, 3)
+        self.table.setHorizontalHeaderLabels([_("League position"), _("Competition"), ""])
+        hh = self.table.horizontalHeader()
+        hh.setSectionResizeMode(0, QHeaderView.Fixed)
+        hh.setSectionResizeMode(1, QHeaderView.Stretch)
+        hh.setSectionResizeMode(2, QHeaderView.Fixed)
+        self.table.setColumnWidth(0, 170)
+        self.table.setColumnWidth(2, 44)
         self.table.verticalHeader().setVisible(False)
-        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.table.setMinimumHeight(120)
-        self.table.setMaximumHeight(170)
-        v.addWidget(self.table)
+        self.table.verticalHeader().setDefaultSectionSize(40)
+        self.table.setSelectionMode(QAbstractItemView.NoSelection)
+        self.table.setShowGrid(False)
+        if tall:
+            self.table.setMinimumHeight(240)
+        else:
+            self.table.setMinimumHeight(170)
+            self.table.setMaximumHeight(250)
+        v.addWidget(self.table, 1)
         self.preset = QPushButton()
         self.preset_places = TOP_FLIGHT
         self.set_confed(None)
         self.preset.clicked.connect(lambda: self.set_places(self.preset_places))
         add = QPushButton(_("Add place"))
         add.clicked.connect(self.add)
-        rem = QPushButton(_("Remove place"))
-        rem.clicked.connect(self.remove)
         clr = QPushButton(_("Clear"))
         clr.clicked.connect(lambda: self.set_places([]))
-        v.addWidget(row(self.preset, add, rem, clr))
+        v.addWidget(row(add, self.preset, "stretch", clr, stretch=False))
         self.set_places(places or [])
 
     def _row(self, pos, comp):
@@ -230,12 +238,24 @@ class EuropeTable(QWidget):
         for c, name in fl26world.COMPETITIONS:
             cb.addItem(_(name), c)
         cb.setCurrentIndex(max(0, cb.findData(int(comp))))
+        x = QPushButton("✕")
+        x.setToolTip(_("Remove this place"))
+        x.setFixedWidth(34)
+        x.clicked.connect(lambda _c=False, b=x: self.remove_row(b))
         self.table.setCellWidget(r, 0, sp)
         self.table.setCellWidget(r, 1, cb)
+        self.table.setCellWidget(r, 2, x)
+
+    def remove_row(self, button):
+        for r in range(self.table.rowCount()):
+            if self.table.cellWidget(r, 2) is button:
+                self.table.removeRow(r)
+                return
 
     def set_places(self, places):
         self.table.setRowCount(0)
-        for pos, comp in places:
+        # by position, the cup winner's place last
+        for pos, comp in sorted(places, key=lambda e: (int(e[0]) == B.CUP_WINNER, int(e[0]))):
             self._row(pos, comp)
 
     def add(self):
@@ -1362,16 +1382,22 @@ class GameEuropeDialog(Dialog):
                                       "Places past a competition's room go to nobody (the Plan step says so).")))
         body = QHBoxLayout()
         self.list = QListWidget()
-        self.list.setFixedWidth(260)
+        self.list.setFixedWidth(280)
         for rid, name, _n, _s in self.tops:
             self.list.addItem(name)
         body.addWidget(self.list)
         right = QVBoxLayout()
+        right.setSpacing(8)
+        self.l_name = QLabel("")
+        self.l_name.setObjectName("cardtitle")
+        right.addWidget(self.l_name)
         self.own = QCheckBox(_("Own places for this league"))
         self.own.toggled.connect(self.toggle)
         right.addWidget(self.own)
-        self.table = EuropeTable([], 20)
-        self.table.preset.setEnabled(False)
+        self.l_whose = hint("")
+        right.addWidget(self.l_whose)
+        self.table = EuropeTable([], 20, tall=True)
+        self.table.preset.hide()
         right.addWidget(self.table, 1)
         body.addLayout(right, 1)
         self.v.insertLayout(1, body, 1)
@@ -1379,7 +1405,19 @@ class GameEuropeDialog(Dialog):
         self.cur = -1
         self.list.currentRowChanged.connect(self.show_league)
         self.list.setCurrentRow(0)
-        self.setMinimumSize(720, 360)
+        self.marks()
+        self.setMinimumSize(980, 640)
+
+    def marks(self):
+        """a league with places of its own carries a dot in the list"""
+        for n, (rid, name, _c, _s) in enumerate(self.tops):
+            it = self.list.item(n)
+            it.setText(("●  " if rid in self.places else "    ") + name)
+            it.setForeground(QBrush(QColor(theme.ACCENT if rid in self.places else theme.TEXT)))
+
+    def whose(self, mine):
+        self.l_whose.setText(_("Your places: they replace the game's for this league.") if mine else
+                             _("The game's own places, shown for reference. Tick the box above to change them."))
 
     def keep(self):
         if 0 <= self.cur < len(self.tops) and self.own.isChecked():
@@ -1390,7 +1428,9 @@ class GameEuropeDialog(Dialog):
         self.cur = i
         if not 0 <= i < len(self.tops):
             return
-        rid, _name, clubs, shipped = self.tops[i]
+        rid, name, clubs, shipped = self.tops[i]
+        self.l_name.setText(name)
+        self.whose(rid in self.places)
         self.table.set_clubs(clubs)
         mine = rid in self.places
         self.own.blockSignals(True)
@@ -1398,7 +1438,6 @@ class GameEuropeDialog(Dialog):
         self.own.blockSignals(False)
         self.table.set_places(self.places[rid] if mine else shipped)
         self.table.setEnabled(mine)
-        self.table.preset.setEnabled(False)
 
     def toggle(self, on):
         if not 0 <= self.cur < len(self.tops):
@@ -1410,7 +1449,8 @@ class GameEuropeDialog(Dialog):
             self.places.pop(rid, None)
             self.table.set_places(shipped)
         self.table.setEnabled(on)
-        self.table.preset.setEnabled(False)
+        self.whose(on)
+        self.marks()
 
     def ok(self):
         self.keep()
@@ -2695,6 +2735,8 @@ class GameLeagues(BuilderPage):
 
     def selected_tid(self):
         it = self.tree.currentItem()
+        if not it:
+            info(self, "Clubs", _("Pick a club in the list first: click its row, then the button."))
         return (it.data(0, Qt.UserRole), it) if it else (None, None)
 
     def edit_club(self):

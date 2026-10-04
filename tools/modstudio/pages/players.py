@@ -4,7 +4,7 @@ import os
 
 from PySide6.QtCore import Qt, QStringListModel
 from PySide6.QtGui import QBrush, QColor, QFont
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QCompleter, QFileDialog, QFormLayout, QGridLayout,
+from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QComboBox, QCompleter, QFileDialog, QFormLayout, QGridLayout,
                                QHBoxLayout, QInputDialog, QLabel, QLineEdit, QPushButton, QScrollArea,
                                QSpinBox, QSplitter, QTabWidget, QTreeWidget, QTreeWidgetItem,
                                QVBoxLayout, QWidget)
@@ -83,6 +83,8 @@ class Players(BuilderPage):
         for c, w in enumerate((62, 40, 220, 50, 40, 55, 50, 80, 80)):
             self.tree.setColumnWidth(c, w)
         self.tree.currentItemChanged.connect(lambda *_a: self.inspect())
+        self.tree.setDragEnabled(True)                  # a player dragged onto the pitch
+        self.tree.setDragDropMode(QAbstractItemView.DragOnly)
         # the list and the rest (buttons, pitch) share the height through a splitter, so on a
         # small screen (1366 x 768) the list keeps its rows and the pitch gives way
         vsplit = QSplitter(Qt.Vertical)
@@ -122,9 +124,12 @@ class Players(BuilderPage):
         self.pitch = Pitch()
         self.pitch.setMinimumHeight(260)
         self.pitch.setMaximumHeight(420)
-        self.pitch.setToolTip(_("The first eleven in the club's formation. Select a player in the list, "
-                                "then click a place to put that player there."))
-        self.pitch.picked.connect(self.put_at)
+        self.pitch.setToolTip(_("The first eleven in the club's formation. Drag a player from the list onto "
+                                "a place, or drag one place onto another to swap the two players."))
+        self.pitch.setDraggable(True)
+        self.pitch.picked.connect(self.pick_place)
+        self.pitch.dropped.connect(self.put_at)
+        self.pitch.swapped.connect(self.swap_places)
         lv.addWidget(self.pitch, 1)
         vsplit.addWidget(under)
         vsplit.setStretchFactor(0, 1)
@@ -713,6 +718,27 @@ class Players(BuilderPage):
             if k == self.cur:
                 mark = int(o)
         self.pitch.show_places(self.places(), names, mark)
+
+    def pick_place(self, place):
+        """a click on a place selects the player standing there"""
+        live = [x for x in self.view() if not x[3]]
+        if place >= len(live):
+            return
+        for i in range(self.tree.topLevelItemCount()):
+            it = self.tree.topLevelItem(i)
+            if it.data(0, Qt.UserRole) == live[place][0]:
+                self.tree.setCurrentItem(it)
+                return
+
+    def swap_places(self, a, b):
+        """the players on two places of the eleven change places"""
+        if not self.club or self.club.isdigit():
+            return
+        live = [x for x in self.view() if not x[3]]
+        if max(a, b) >= len(live):
+            return
+        live[a], live[b] = live[b], live[a]
+        self.set_orders({x[0]: str(n) for n, x in enumerate(live)})
 
     def put_at(self, place):
         """the selected player takes the place (order) clicked; whoever was there takes his"""

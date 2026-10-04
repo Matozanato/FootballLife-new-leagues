@@ -3,8 +3,8 @@
 Places are mktactics' (place, role, depth, width): depth 3 (the goal line) .. 46 (up front),
 width 0 (left) .. 100 (right) as the team attacks -- drawn attacking up the widget, or, when the
 widget is wider than tall, attacking to the right (room for the names under a squad list)."""
-from PySide6.QtCore import Qt, QPointF, QRectF, Signal
-from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPen
+from PySide6.QtCore import Qt, QMimeData, QPointF, QRectF, Signal
+from PySide6.QtGui import QColor, QDrag, QFont, QFontMetrics, QPainter, QPen
 from PySide6.QtWidgets import QComboBox, QVBoxLayout, QWidget
 
 import mktactics
@@ -32,12 +32,17 @@ def default_places():
 
 
 class Pitch(QWidget):
-    """the formation; clicking a place emits picked(place)"""
+    """the formation; clicking a place emits picked(place). With draggable on, a place can be
+    dragged onto another (swapped(a, b)), and a row of a list dropped on one (dropped(place))"""
     picked = Signal(int)
+    swapped = Signal(int, int)
+    dropped = Signal(int)
+    MIME = "application/x-fl26-place"
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.places, self.names, self.mark = default_places(), {}, None
+        self.hover, self.press, self.draggable = None, None, False
         self.setMinimumSize(220, 250)
         self.setMouseTracking(True)
 
@@ -120,7 +125,7 @@ class Pitch(QWidget):
             # backs side by side do not write their names over each other
             room = min([abs(o.x() - c.x()) for m, o in enumerate(spots)
                         if m != n and abs(o.y() - c.y()) < rad + 2 * line] + [170.0]) - 6
-            on = place == self.mark
+            on = place == self.mark or place == self.hover
             p.setPen(QPen(QColor("#FFFFFF" if on else "#10301A"), 2 if on else 1))
             p.setBrush(QColor(theme.WARN if role == 0 else (theme.ACCENT if on else "#F2F5F3")))
             p.drawEllipse(c, rad, rad)
@@ -164,16 +169,90 @@ class Pitch(QWidget):
         p.setPen(QColor("#FFFFFF"))
         p.drawText(box, align, text)
 
-    def mousePressEvent(self, e):
-        pos = e.position() if hasattr(e, "position") else QPointF(e.pos())
+    def place_at(self, pos):
+        """the place under a point, or None"""
         best = None
         for place, _r, depth, width in self.places:
             c = self._at(depth, width)
             d = (c.x() - pos.x()) ** 2 + (c.y() - pos.y()) ** 2
             if best is None or d < best[0]:
                 best = (d, place)
-        if best and best[0] < (self._rad() * 2.2) ** 2:
-            self.picked.emit(best[1])
+        return best[1] if best and best[0] < (self._rad() * 2.2) ** 2 else None
+
+    def setDraggable(self, on):
+        self.draggable = on
+        self.setAcceptDrops(on)
+
+    @staticmethod
+    def _pos(e):
+        return e.position() if hasattr(e, "position") else QPointF(e.pos())
+
+    def mousePressEvent(self, e):
+        place = self.place_at(self._pos(e))
+        self.press = (place, self._pos(e)) if place is not None else None
+        if place is not None and not self.draggable:
+            self.picked.emit(place)
+
+    def mouseMoveEvent(self, e):
+        if not self.draggable:
+            return
+        if not self.press:
+            self.setCursor(Qt.OpenHandCursor if self.place_at(self._pos(e)) is not None else Qt.ArrowCursor)
+            return
+        place, at = self.press
+        if (self._pos(e) - at).manhattanLength() < 8:
+            return
+        self.press = None
+        drag = QDrag(self)
+        mime = QMimeData()
+        mime.setData(self.MIME, str(place).encode())
+        drag.setMimeData(mime)
+        drag.exec(Qt.MoveAction)
+
+    def mouseReleaseEvent(self, e):
+        if self.draggable and self.press:
+            self.picked.emit(self.press[0])
+        self.press = None
+
+    def _accepts(self, e):
+        md = e.mimeData()
+        return md.hasFormat(self.MIME) or (e.source() is not None and e.source() is not self
+                                            and md.hasFormat("application/x-qabstractitemmodeldatalist"))
+
+    def dragEnterEvent(self, e):
+        if self._accepts(e):
+            e.acceptProposedAction()
+
+    def dragMoveEvent(self, e):
+        if not self._accepts(e):
+            return
+        place = self.place_at(self._pos(e))
+        if place != self.hover:
+            self.hover = place
+            self.update()
+        if place is None:
+            e.ignore()
+        else:
+            e.acceptProposedAction()
+
+    def dragLeaveEvent(self, _e):
+        self.hover = None
+        self.update()
+
+    def dropEvent(self, e):
+        place = self.place_at(self._pos(e))
+        self.hover = None
+        self.update()
+        if place is None:
+            return
+        e.acceptProposedAction()
+        md = e.mimeData()
+        if md.hasFormat(self.MIME):
+            a = int(bytes(md.data(self.MIME)).decode())
+            if a != place:
+                self.swapped.emit(a, place)
+        else:
+            self.dropped.emit(place)
 
 
 class FormationPick(QWidget):
