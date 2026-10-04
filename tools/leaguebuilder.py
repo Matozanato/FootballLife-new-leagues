@@ -2676,7 +2676,9 @@ def build(pl, base, game, replace=False, log=print):
     pictures(pl, tmp, base, log)
     region_modules(pl, tmp, game, log)
 
+    write_manifest(tmp)                   # before keep_added: what this Build wrote, not what it kept
     if os.path.exists(out):
+        keep_added(out, tmp, log)
         shutil.rmtree(out)
     os.rename(tmp, out)
     log("built %s: %d leagues, %d clubs" % (out, len(pl["leagues"]), made))
@@ -2687,6 +2689,74 @@ def build(pl, base, game, replace=False, log=print):
         log("%s is the live world: switching it on again, so the game reads what was just built" % pl["world"])
         switch_on(pl["world"], game, log)
     return out
+
+
+MANIFEST = "leaguebuilder-files.txt"      # the files a Build wrote: path, and a hash for pictures
+ADDED_DIRS = ("common/render/",)          # crests and logos: where people put pictures by hand
+
+
+def built_files(root):
+    """relative paths (with /) of every file under root"""
+    out = set()
+    for d, _dirs, files in os.walk(root):
+        for f in files:
+            out.add(os.path.relpath(os.path.join(d, f), root).replace(os.sep, "/"))
+    return out
+
+
+def picture(rel):
+    return rel.lower().startswith(ADDED_DIRS) and rel.lower().endswith((".png", ".dds"))
+
+
+def file_hash(path):
+    import hashlib
+    with open(path, "rb") as f:
+        return hashlib.sha1(f.read()).hexdigest()
+
+
+def write_manifest(root):
+    lines = []
+    for rel in sorted(built_files(root) - {MANIFEST}):
+        lines.append(rel + ("\t" + file_hash(os.path.join(root, rel)) if picture(rel) else ""))
+    with open(os.path.join(root, MANIFEST), "w", encoding="utf-8", newline="\n") as f:
+        f.write("\n".join(lines) + "\n")
+
+
+def keep_added(old, new, log=print):
+    """carry into the new build the pictures someone put in the old world folder by hand (a crest
+    in common/render/symbol/flag, Xxspedd 04.10.): a Build replaces the whole folder.
+    - a file the last Build did not write, and this one does not either: copied over
+    - a picture the last Build wrote and someone replaced: theirs stays, as long as this Build
+      writes the same picture as the last one (a crest set in the recipe since then wins)
+    A world built before the manifest existed keeps only the pictures this Build does not write."""
+    ours = {}
+    try:
+        with open(os.path.join(old, MANIFEST), encoding="utf-8") as f:
+            for line in f:
+                rel, _t, h = line.rstrip("\n").partition("\t")
+                if rel:
+                    ours[rel] = h
+        known = True
+    except OSError:
+        known = False
+    made = built_files(new)
+    kept = []
+    for rel in sorted(built_files(old) - {MANIFEST}):
+        src, dst = os.path.join(old, rel), os.path.join(new, rel)
+        if rel not in made:
+            if (rel not in ours) if known else picture(rel):
+                kept.append(rel)
+        elif known and ours.get(rel) and picture(rel):
+            if file_hash(src) != ours[rel] and file_hash(dst) == ours[rel]:
+                kept.append(rel)
+    for rel in kept:
+        dst = os.path.join(new, rel)
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copy2(os.path.join(old, rel), dst)
+    if kept:
+        log("  kept %d file(s) you added to the world folder (%s%s); Import crests puts them in the recipe"
+            % (len(kept), ", ".join(kept[:3]), " ..." if len(kept) > 3 else ""))
+    return kept
 
 
 def is_live(world, game):
