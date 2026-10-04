@@ -225,6 +225,8 @@ European places, then **Build** again. Any change to a league's clubs needs a **
 
 **Game's leagues and clubs**: new names, logos and crests for what the game already has.
 
+**Import crests...** (0.1.8, on this page and on *New clubs*): crests for many clubs at once. Pick a folder of pictures; each is matched to a club by its file name -- the club's name (`Alianza Lima.png`, `alianza_lima_r_l.png`) or its team ID (`2287.png`, the crest packs' `e_2287_r.png`). The list shows every match with a tick; untick a wrong one before **OK**. A club that already has a crest keeps it unless **Replace crests already set** is ticked. The pictures stay in that folder and Build reads them from there, so keep it. (Matching by name is an idea from Xxspedd's crest script.)
+
 **Swap leagues with a club...** (0.1.7): two clubs of the game's leagues trade places -- a promoted club for a relegated one, a club of one country's league for one of another's. Each takes the other's places in the league, the cups and the European competitions, so every league of the game keeps its number of clubs. A club in a new league of the recipe cannot swap too. **Undo club changes** takes the swap back. Then **Build** again and start a new career.
 
 > **Edit file.** If the game's save folder has an Edit file (`EDIT00000000`), it overrides club

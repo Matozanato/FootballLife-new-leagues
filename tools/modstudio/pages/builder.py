@@ -1846,6 +1846,8 @@ class NewClubs(BuilderPage):
                     tip="The club goes to the end of another new league, with its name, crest, manager and players")
         self.action("Paste names...", self.paste)
         self.action("Load names from file...", self.load_file)
+        self.action("Import crests...", lambda: import_crests(self),
+                    tip="Crests for many clubs at once, from a folder of pictures named after the clubs")
         top = QHBoxLayout()
         top.addWidget(QLabel(_("League")))
         self.combo = QComboBox()
@@ -2227,6 +2229,158 @@ def edit_game_club(page, tid):
     return True
 
 
+PICTURE_EXT = (".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp")
+
+
+class CrestImportDialog(Dialog):
+    """crests for many clubs at once (0.1.8): every picture of a folder matched to a club by its
+    file name -- a club's name ("Alianza Lima.png", "alianza_lima_r_l.png") or its team id
+    ("2287.png", the crest packs' "e_2287_r.png"). A match goes where Edit club puts a crest: a
+    club of the game's in edits.clubs, a new club's in its league's club_crests. Matching by
+    name is tools/crestmatch.py, an idea from Xxspedd's escudos.py."""
+    help = ("Gives many clubs a crest at once. Pick a folder of pictures: each picture is matched to a club by "
+            "its file name, either the club's name (\"Alianza Lima.png\") or its team ID (\"2287.png\", "
+            "\"e_2287_r.png\").\n\n"
+            "Untick a wrong match before OK. A club that already has a crest keeps it unless \"Replace crests "
+            "already set\" is ticked. The pictures stay where they are: Build reads them from that folder, "
+            "so do not move or delete it.")
+
+    def __init__(self, parent, project):
+        super().__init__(parent, "Import crests")
+        import crestmatch
+        self.cm = crestmatch
+        self.project = project
+        self.clubs = []                 # (name, key): key ("game", tid) or ("new", league, place)
+        for tid, (n, _s) in sorted(project.game_cl.items()):
+            self.clubs.append((n, ("game", tid)))
+        for L in project.recipe["leagues"]:
+            gp = {int(e.get("at", -1)) for e in L.get("game_clubs") or []}
+            names = {"name": L["name"], "club_names": list(L.get("club_names") or [])}
+            for k in range(int(L.get("clubs", 0))):
+                if k not in gp:
+                    self.clubs.append((B.club_name(names, k), ("new", L["name"], k)))
+        self.form.addRow(hint(_("Each picture of the folder is matched to a club by its file name: the club's "
+                                "name or its team ID. Untick a wrong match.")))
+        self.folder = QLineEdit()
+        self.folder.setReadOnly(True)
+        pick = QPushButton(_("Pick folder..."))
+        pick.clicked.connect(self.pick)
+        self.form.addRow(_("Folder"), row(self.folder, pick, stretch=False))
+        self.only = QComboBox()
+        self.only.addItem(_("All clubs"), None)
+        self.only.addItem(_("The new leagues' clubs"), "new")
+        self.only.addItem(_("The game's clubs"), "game")
+        self.only.currentIndexChanged.connect(lambda *_a: self.fill())
+        self.form.addRow(_("Match to"), self.only)
+        self.replace = QCheckBox(_("Replace crests already set"))
+        self.form.addRow("", self.replace)
+        self.tree = QTreeWidget()
+        self.tree.setRootIsDecorated(False)
+        self.tree.setAlternatingRowColors(True)
+        self.tree.setIconSize(QSize(24, 24))
+        self.tree.setHeaderLabels([_("Picture"), _("Club"), _("Team ID"), _("Match")])
+        for c, w in enumerate((260, 260, 80)):
+            self.tree.setColumnWidth(c, w)
+        self.tree.setMinimumSize(720, 340)
+        self.form.addRow(self.tree)
+        self.said = hint("")
+        self.form.addRow(self.said)
+        self.files = []
+        self.result = None
+
+    def pick(self):
+        d = QFileDialog.getExistingDirectory(self, _("Pick folder..."), self.folder.text())
+        if not d:
+            return
+        self.folder.setText(os.path.normpath(d))
+        self.files = sorted(f for f in os.listdir(d) if f.lower().endswith(PICTURE_EXT))
+        self.fill()
+
+    def has_crest(self, key):
+        if key[0] == "game":
+            return bool(self.project.edits("clubs").get(str(key[1]), {}).get("crest"))
+        L = self.project.league(key[1])
+        crests = list((L or {}).get("club_crests") or [])
+        return key[2] < len(crests) and bool(crests[key[2]])
+
+    def matches(self):
+        """{file: ((club name, key), score)} for the clubs the Match to box allows"""
+        want = self.only.currentData()
+        clubs = [c for c in self.clubs if want is None or c[1][0] == want]
+        by_id = {c[1][1]: c for c in clubs if c[1][0] == "game"}
+        found, rest = {}, []
+        for f in self.files:
+            t = self.cm.file_id(f)
+            if t in by_id:
+                found[f] = (by_id[t], 1.0)
+            else:
+                rest.append(f)
+        taken = {found[f][0][1] for f in found}
+        left = [c for c in clubs if c[1] not in taken]
+        for f, j, sc in self.cm.match(rest, [(n, i) for i, (n, _k) in enumerate(left)]):
+            if j is not None:
+                found[f] = (left[j], sc)
+        return found
+
+    def fill(self):
+        found = self.matches()
+        self.tree.clear()
+        for f in self.files:
+            it = QTreeWidgetItem([f, "", "", ""])
+            pm = pixmap(os.path.join(self.folder.text(), f), 24)
+            if pm:
+                it.setIcon(0, pm)
+            if f in found:
+                (n, key), sc = found[f]
+                it.setText(1, n if key[0] == "game" else "%s (%s)" % (n, key[1]))
+                it.setText(2, str(key[1]) if key[0] == "game" else "")
+                it.setText(3, "%d %%" % round(sc * 100))
+                it.setData(0, Qt.UserRole, list(key))
+                it.setCheckState(0, Qt.Checked if sc >= 0.6 else Qt.Unchecked)
+            else:
+                it.setText(1, _("no club found"))
+                it.setForeground(1, QBrush(QColor(theme.SUBTLE)))
+            self.tree.addTopLevelItem(it)
+        self.said.setText(_("%d pictures, %d matched to a club.") % (len(self.files), len(found)))
+
+    def ok(self):
+        n = kept = 0
+        for i in range(self.tree.topLevelItemCount()):
+            it = self.tree.topLevelItem(i)
+            key = it.data(0, Qt.UserRole)
+            if not key or it.checkState(0) != Qt.Checked:
+                continue
+            if self.has_crest(key) and not self.replace.isChecked():
+                kept += 1
+                continue
+            path = os.path.join(self.folder.text(), it.text(0))
+            if key[0] == "game":
+                self.project.edits("clubs").setdefault(str(key[1]), {})["crest"] = path
+            else:
+                L = self.project.league(key[1])
+                crests = list(L.get("club_crests") or [])
+                crests += [None] * (int(L.get("clubs", 0)) - len(crests))
+                crests[key[2]] = path
+                L["club_crests"] = crests
+            n += 1
+        if n:
+            self.project.touch()
+        self.result = (n, kept)
+        self.accept()
+
+
+def import_crests(page):
+    """the Import crests dialog from a page; says what it did"""
+    if page.project.base is None:
+        page.need_tables()
+        return
+    d = CrestImportDialog(page, page.project)
+    if d.finish() and d.result:
+        n, kept = d.result
+        page.say(_("%d crests imported.") % n
+                 + ("  " + _("%d clubs kept the crest they had.") % kept if kept else ""), "ok")
+
+
 class GameLeagues(BuilderPage):
     title = "Game's leagues and clubs"
     hint = ("The leagues and clubs the game already has: new names, logos and crests. Changes are written "
@@ -2295,7 +2449,10 @@ class GameLeagues(BuilderPage):
         b4 = QPushButton(_("Swap leagues with a club..."))
         b4.setToolTip(_("Two clubs of the game's leagues trade places: a promoted club for a relegated one, say"))
         b4.clicked.connect(self.swap_club)
-        rv.addWidget(row(b1, b2, b4, b3))
+        b5 = QPushButton(_("Import crests..."))
+        b5.setToolTip(_("Crests for many clubs at once, from a folder of pictures named after the clubs"))
+        b5.clicked.connect(lambda: import_crests(self))
+        rv.addWidget(row(b1, b2, b4, b3, b5))
         split.addWidget(right)
         split.setSizes([300, 900])
         self.outer.addWidget(split, 1)

@@ -53,6 +53,20 @@ def words(text, is_file=False):
     return [w for w in _fold(t) if w not in FILLER]
 
 
+def file_id(name):
+    """the team id a file is named by, or None: "12345.png", "e_12345_r.png" (the crest packs'
+    flag/e_<id>_r.png names)"""
+    stem = name.rpartition(".")[0] or name
+    low = stem.lower()
+    for s in SIZES:
+        if low.endswith(s):
+            low = low[: -len(s)]
+            break
+    if low.startswith("e_"):
+        low = low[2:]
+    return int(low) if low.isdigit() else None
+
+
 def score(file_words, club_words):
     """Jaccard word overlap, or CONTAINS_SCORE when one joined name contains the other"""
     if not file_words or not club_words:

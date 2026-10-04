@@ -1028,7 +1028,24 @@
   "Shows only the clubs that play in no league of the game. They just move into your league and leave no empty place behind, so there is no one to pick for their old place.": "Muestra solo los clubes que no juegan en ninguna liga del juego. Simplemente se mudan a tu liga y no dejan ningún puesto vacío, así que no hay que elegir a nadie para su antiguo puesto.",
   "A knockout cup like the FA Cup for the clubs of this league and the division below it, from September to May. Any number of clubs works: when the field is not 16, 32 ..., some clubs get a bye into the next round. Top division only. Empty name = the league's name + Cup.": "Una copa eliminatoria como la FA Cup para los clubes de esta liga y la división inferior, de septiembre a mayo. Funciona con cualquier número de clubes: cuando no son 16, 32 ..., algunos pasan a la ronda siguiente sin jugar. Solo primera división. Nombre vacío = el nombre de la liga + Cup.",
   "A second knockout cup, like England's Carabao Cup: 16, 8 or 4 clubs of this league and the one below, one match a round from September to December. When there are more clubs than that, the extra ones play a pre-round in early September. Top division only.": "Una segunda copa eliminatoria, como la Carabao Cup inglesa: 16, 8 o 4 clubes de esta liga y la de abajo, un partido por ronda de septiembre a diciembre. Cuando hay más clubes, los que sobran juegan una ronda previa a principios de septiembre. Solo primera división.",
-  "What is this?": "¿Qué es esto?"
+  "What is this?": "¿Qué es esto?",
+  "Gives many clubs a crest at once. Pick a folder of pictures: each picture is matched to a club by its file name, either the club's name (\"Alianza Lima.png\") or its team ID (\"2287.png\", \"e_2287_r.png\").\n\nUntick a wrong match before OK. A club that already has a crest keeps it unless \"Replace crests already set\" is ticked. The pictures stay where they are: Build reads them from that folder, so do not move or delete it.": "Da escudo a muchos clubes a la vez. Elige una carpeta de imágenes: cada imagen se empareja con un club por el nombre del archivo, el nombre del club (\"Alianza Lima.png\") o su ID de equipo (\"2287.png\", \"e_2287_r.png\").\n\nDesmarca un emparejamiento erróneo antes de Aceptar. Un club que ya tiene escudo lo conserva, salvo que esté marcado \"Reemplazar los escudos ya puestos\". Las imágenes se quedan donde están: Build las lee de esa carpeta, así que no la muevas ni la borres.",
+  "Import crests": "Importar escudos",
+  "Import crests...": "Importar escudos...",
+  "Crests for many clubs at once, from a folder of pictures named after the clubs": "Escudos para muchos clubes a la vez, desde una carpeta de imágenes con el nombre de cada club",
+  "Each picture of the folder is matched to a club by its file name: the club's name or its team ID. Untick a wrong match.": "Cada imagen de la carpeta se empareja con un club por el nombre del archivo: el nombre del club o su ID de equipo. Desmarca un emparejamiento erróneo.",
+  "Pick folder...": "Elegir carpeta...",
+  "All clubs": "Todos los clubes",
+  "The new leagues' clubs": "Los clubes de las ligas nuevas",
+  "The game's clubs": "Los clubes del juego",
+  "Match to": "Emparejar con",
+  "Replace crests already set": "Reemplazar los escudos ya puestos",
+  "Picture": "Imagen",
+  "Match": "Coincidencia",
+  "no club found": "ningún club encontrado",
+  "%d pictures, %d matched to a club.": "%d imágenes, %d emparejadas con un club.",
+  "%d crests imported.": "%d escudos importados.",
+  "%d clubs kept the crest they had.": "%d clubes conservaron el escudo que tenían."
  },
  "log": [
   [

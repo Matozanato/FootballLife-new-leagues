@@ -1028,7 +1028,24 @@
   "Shows only the clubs that play in no league of the game. They just move into your league and leave no empty place behind, so there is no one to pick for their old place.": "Pokazuje samo klubove koji ne igraju ni u jednoj ligi igre. Oni se samo presele u tvoju ligu i ne ostavljaju prazno mjesto, pa ne treba birati nikoga za njihovo staro mjesto.",
   "A knockout cup like the FA Cup for the clubs of this league and the division below it, from September to May. Any number of clubs works: when the field is not 16, 32 ..., some clubs get a bye into the next round. Top division only. Empty name = the league's name + Cup.": "Kup na ispadanje kao FA Cup za klubove ove lige i ranga ispod, od rujna do svibnja. Radi s bilo kojim brojem klubova: kad ih nije 16, 32 ..., neki klubovi bez igre prolaze u sljedeće kolo. Samo za prvu ligu. Prazno ime = ime lige + Cup.",
   "A second knockout cup, like England's Carabao Cup: 16, 8 or 4 clubs of this league and the one below, one match a round from September to December. When there are more clubs than that, the extra ones play a pre-round in early September. Top division only.": "Drugi kup na ispadanje, kao engleski Carabao Cup: 16, 8 ili 4 kluba ove lige i one ispod, jedna utakmica po kolu od rujna do prosinca. Kad je klubova više, višak igra pretkolo početkom rujna. Samo za prvu ligu.",
-  "What is this?": "Što je ovo?"
+  "What is this?": "Što je ovo?",
+  "Gives many clubs a crest at once. Pick a folder of pictures: each picture is matched to a club by its file name, either the club's name (\"Alianza Lima.png\") or its team ID (\"2287.png\", \"e_2287_r.png\").\n\nUntick a wrong match before OK. A club that already has a crest keeps it unless \"Replace crests already set\" is ticked. The pictures stay where they are: Build reads them from that folder, so do not move or delete it.": "Daje grb mnogim klubovima odjednom. Odaberi mapu sa slikama: svaka slika se spaja s klubom po imenu datoteke, ili po imenu kluba (\"Alianza Lima.png\") ili po njegovom ID-u (\"2287.png\", \"e_2287_r.png\").\n\nPrije OK makni kvačicu s krivog spajanja. Klub koji već ima grb zadržava ga, osim ako je uključeno \"Zamijeni grbove koji su već postavljeni\". Slike ostaju gdje jesu: Build ih čita iz te mape, zato je nemoj premjestiti ni obrisati.",
+  "Import crests": "Uvoz grbova",
+  "Import crests...": "Uvezi grbove...",
+  "Crests for many clubs at once, from a folder of pictures named after the clubs": "Grbovi za mnoge klubove odjednom, iz mape slika nazvanih po klubovima",
+  "Each picture of the folder is matched to a club by its file name: the club's name or its team ID. Untick a wrong match.": "Svaka slika iz mape spaja se s klubom po imenu datoteke: imenu kluba ili njegovom ID-u. Makni kvačicu s krivog spajanja.",
+  "Pick folder...": "Odaberi mapu...",
+  "All clubs": "Svi klubovi",
+  "The new leagues' clubs": "Klubovi novih liga",
+  "The game's clubs": "Klubovi igre",
+  "Match to": "Spoji s",
+  "Replace crests already set": "Zamijeni grbove koji su već postavljeni",
+  "Picture": "Slika",
+  "Match": "Podudarnost",
+  "no club found": "nije nađen klub",
+  "%d pictures, %d matched to a club.": "Slika: %d, spojeno s klubom: %d.",
+  "%d crests imported.": "Uvezeno grbova: %d.",
+  "%d clubs kept the crest they had.": "Klubova koji su zadržali svoj grb: %d."
  },
  "log": [
   [

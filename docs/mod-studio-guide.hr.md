@@ -220,6 +220,8 @@ lige, pa ponovno **Izgradi**. Svaka promjena klubova lige traži **novu karijeru
 
 **Postojeće lige i klubovi**: nova imena, logotipi i grbovi za ono što igra već ima.
 
+**Uvezi grbove...** (0.1.8, na ovoj stranici i na *Novi klubovi*): grbovi za mnoge klubove odjednom. Odaberi mapu sa slikama; svaka se spaja s klubom po imenu datoteke -- imenu kluba (`Alianza Lima.png`, `alianza_lima_r_l.png`) ili ID-u kluba (`2287.png`, `e_2287_r.png` iz paketa grbova). Popis pokaže svako spajanje s kvačicom; makni kvačicu s krivog prije **OK**. Klub koji već ima grb zadržava ga, osim ako je uključeno **Zamijeni grbove koji su već postavljeni**. Slike ostaju u toj mapi i Build ih čita odande, zato je zadrži. (Spajanje po imenu je ideja iz Xxspeddove skripte za grbove.)
+
 **Zamijeni ligu s klubom...** (0.1.7): dva kluba iz liga igre zamijene mjesta -- klub koji je ušao za onaj koji je ispao, klub lige jedne države za klub druge. Svaki preuzme mjesta drugoga u ligi, kupovima i europskim natjecanjima, pa svaka liga igre zadrži broj klubova. Klub koji igra u novoj ligi recepta ne može se i mijenjati. **Poništi izmjene kluba** vraća zamjenu. Zatim ponovno **Izgradi** i počni novu karijeru.
 
 > **Edit datoteka.** Ako u mapi sa spremanjima igre postoji Edit datoteka (`EDIT00000000`), ona

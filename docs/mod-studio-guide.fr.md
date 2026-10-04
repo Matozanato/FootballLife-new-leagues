@@ -244,6 +244,8 @@ changement des clubs d'une ligue demande une **nouvelle carrière**.
 
 **Ligues et clubs du jeu** : nouveaux noms, logos et écussons pour ce que le jeu a déjà.
 
+**Importer des écussons...** (0.1.8, sur cette page et sur *Nouveaux clubs*) : des écussons pour beaucoup de clubs d'un coup. Choisissez un dossier d'images ; chacune est associée à un club par le nom du fichier -- le nom du club (`Alianza Lima.png`, `alianza_lima_r_l.png`) ou son ID d'équipe (`2287.png`, le `e_2287_r.png` des packs d'écussons). La liste montre chaque association cochée ; décochez une mauvaise avant **OK**. Un club qui a déjà un écusson le garde, sauf si **Remplacer les écussons déjà définis** est coché. Les images restent dans ce dossier et Build les lit là, gardez-le donc. (L'association par nom est une idée du script d'écussons de Xxspedd.)
+
 **Échanger de ligue avec un club...** (0.1.7) : deux clubs des ligues du jeu échangent leurs places -- un promu contre un relégué, un club de la ligue d'un pays contre un club d'un autre. Chacun prend les places de l'autre dans la ligue, les coupes et les compétitions européennes, donc chaque ligue du jeu garde son nombre de clubs. Un club qui joue dans une nouvelle ligue de la recette ne peut pas aussi être échangé. **Annuler les changements du club** retire l'échange. Puis **Construire** à nouveau et commencez une nouvelle carrière.
 
 > **Fichier Edit.** Si le dossier de sauvegarde du jeu contient un fichier Edit (`EDIT00000000`),

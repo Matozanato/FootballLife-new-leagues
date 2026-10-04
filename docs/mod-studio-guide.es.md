@@ -235,6 +235,8 @@ necesita una **carrera nueva**.
 
 **Ligas y clubes del juego**: nombres, logos y escudos nuevos para lo que el juego ya tiene.
 
+**Importar escudos...** (0.1.8, en esta página y en *Clubes nuevos*): escudos para muchos clubes a la vez. Elige una carpeta de imágenes; cada una se empareja con un club por el nombre del archivo -- el nombre del club (`Alianza Lima.png`, `alianza_lima_r_l.png`) o su ID de equipo (`2287.png`, el `e_2287_r.png` de los packs de escudos). La lista muestra cada emparejamiento con una marca; desmarca uno erróneo antes de **Aceptar**. Un club que ya tiene escudo lo conserva, salvo que esté marcado **Reemplazar los escudos ya puestos**. Las imágenes se quedan en esa carpeta y Build las lee de ahí, así que guárdala. (Emparejar por nombre es una idea del script de escudos de Xxspedd.)
+
 **Intercambiar liga con un club...** (0.1.7): dos clubes de las ligas del juego intercambian sus plazas -- un ascendido por un descendido, un club de la liga de un país por uno de otro. Cada uno ocupa las plazas del otro en la liga, las copas y las competiciones europeas, así que cada liga del juego mantiene su número de clubes. Un club que juega en una liga nueva de la receta no puede intercambiarse también. **Deshacer cambios del club** quita el intercambio. Luego **Construir** otra vez y empieza una carrera nueva.
 
 > **Archivo Edit.** Si la carpeta de partidas guardadas del juego tiene un archivo Edit

@@ -4,7 +4,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from crestmatch import match, words, score          # noqa: E402
+from crestmatch import match, words, score, file_id  # noqa: E402
 
 N = 0
 
@@ -76,5 +76,11 @@ check(match([], []), [], "nothing at all")
 check(score(["real", "madrid"], ["real"]), 0.7, "containment score")
 check(score(words("fc"), words("fc")), 0.0, "filler words leave nothing to score")
 check(score(["abc"], ["abcdef"]), 0.0, "containment needs 4 letters")
+
+# 13. a file named by its team id
+check(file_id("12345.png"), 12345, "id file")
+check(file_id("e_2215_r.png"), 2215, "crest pack flag name")
+check(file_id("e_2215_r_l.png"), 2215, "crest pack flag name, large")
+check(file_id("Real Madrid.png"), None, "a name is no id")
 
 print("all %d checks passed" % N)

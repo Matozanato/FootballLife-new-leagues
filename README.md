@@ -385,6 +385,9 @@ and other Latin American worlds and writes up every bug with screenshots:
   ranking gives, and a logo for the Copa Sudamericana.
 - **N3RO** (Discord): asked for the Czech Chance Liga.
 - **Hector** (Discord): crests and logos for the NewLife Database.
+- **Xxspedd** (Discord): shared his own crest, kit, squad and rating scripts; the idea of
+  matching a folder of crests to clubs by name (0.1.8's Import crests) is his, and he pointed
+  out the missing third kit.
 
 Reports are welcome from anyone: open an
 [issue](https://github.com/Matozanato/FootballLife-new-leagues/issues) with what you
@@ -635,7 +638,7 @@ Contributors, and what each of them did, are listed in
 [The people who made this better](#the-people-who-made-this-better) near the top: above all
 **vmardonesdev** and **Alikhaled_727**, and **Stagnant09**, **pioup38**, **vector360**, **jibibi**, **bobzera**,
 **spursfan07**, **Amir**, **victormican**, **Alby17**, **jyanj083-dotcom**, **Gabyyy2008**, **alexfe87**,
-**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9** and **n1ne**.
+**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9**, **Xxspedd** and **n1ne**.
 
 The licence asks nothing of you. I do: **if you use these findings, addresses, patch sets
 or tools in a mod, credit this work and link back** — see
