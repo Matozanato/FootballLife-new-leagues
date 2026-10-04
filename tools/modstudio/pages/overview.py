@@ -76,6 +76,11 @@ class Overview(Page):
         self.b_build.setObjectName("primary")
         self.b_build.setStyleSheet("font-size: 11pt; font-weight: bold; padding: 10px 26px; border-radius: 8px;")
         self.b_build.clicked.connect(self.build)
+        b_eu = QPushButton(_("Only the European cups..."))
+        b_eu.setToolTip(_("A world with just the new Champions League, Europa League and Conference League "
+                          "and the game's own leagues: no new leagues"))
+        b_eu.clicked.connect(self.europe_only)
+        h.addWidget(b_eu, 0, Qt.AlignVCenter)
         h.addWidget(self.b_build, 0, Qt.AlignVCenter)
         buv.addLayout(h)
         bv.addWidget(build)
@@ -238,6 +243,10 @@ class Overview(Page):
             self.app.page("NewLeagues").open_recipe()
         else:
             self.app.open_page("Leagues")
+
+    def europe_only(self):
+        self.app.open_page("Build")
+        self.app.page("Build").do_europe_only()
 
     def build(self):
         self.app.open_page("Build")

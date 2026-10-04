@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, 
                                QPlainTextEdit, QPushButton, QRadioButton, QSpinBox, QSplitter,
                                QTableWidget, QTableWidgetItem, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
                                QFileDialog, QButtonGroup, QHeaderView, QAbstractItemView,
-                               QMessageBox, QScrollArea, QApplication, QCompleter)
+                               QMessageBox, QScrollArea, QApplication, QCompleter, QToolButton, QMenu)
 
 import leaguebuilder as B
 import lbplayers
@@ -721,59 +721,158 @@ def set_club_stadium(project, key, st):
             pl.pop(key)
 
 
-class StadiumField(QWidget):
-    """Home stadium: a folder of Stadium Server's library, its slot and the name the game shows"""
+def pack_stadium_of(lib, tid):
+    """(name, folder) the stadium pack's map_teams.txt gives team tid now, None when none"""
+    if not lib or tid is None:
+        return None
+    lines, *_r = lbstadiums.read(os.path.join(lib, lbstadiums.FILE))
+    for line in lines:
+        m = lbstadiums.LINE.match(line)
+        if m and not m.group(1) and int(m.group(2)) == int(tid):
+            parts = [x.strip() for x in line.split("#")[0].split(",")]
+            if len(parts) >= 4:
+                return parts[2], parts[3]
+    return None
 
-    def __init__(self, lib, st):
+
+class StadiumPicker(QDialog):
+    """every stadium of the stadium pack, by country, with a search: pick one"""
+
+    def __init__(self, parent, lib, current=""):
+        super().__init__(parent)
+        self.setWindowTitle(_("Choose a home stadium"))
+        self.resize(560, 640)
+        self.choice = None
+        v = QVBoxLayout(self)
+        self.search = QLineEdit()
+        self.search.setPlaceholderText(_("Find a stadium or a country..."))
+        self.search.textChanged.connect(self.fill)
+        v.addWidget(self.search)
+        self.tree = QTreeWidget()
+        self.tree.setHeaderHidden(True)
+        self.tree.itemDoubleClicked.connect(lambda it, c: self.take())
+        v.addWidget(self.tree, 1)
+        self.count = hint("")
+        v.addWidget(self.count)
+        bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        bb.accepted.connect(self.take)
+        bb.rejected.connect(self.reject)
+        v.addWidget(bb)
+        self.items = sorted(S.library(lib, "folder"), key=str.lower)
+        self.current = current.replace("/", "\\")
+        self.fill()
+        self.search.setFocus()
+
+    def fill(self):
+        q = self.search.text().strip().lower()
+        self.tree.clear()
+        groups, n, pick = {}, 0, None
+        for rel in self.items:
+            country, _s, name = rel.rpartition("\\")
+            if q and q not in rel.lower():
+                continue
+            g = groups.get(country)
+            if g is None:
+                g = groups[country] = QTreeWidgetItem([country or _("(no country)")])
+                g.setFlags(Qt.ItemIsEnabled)
+                f = g.font(0)
+                f.setBold(True)
+                g.setFont(0, f)
+                self.tree.addTopLevelItem(g)
+            it = QTreeWidgetItem([name])
+            it.setData(0, Qt.UserRole, rel)
+            g.addChild(it)
+            n += 1
+            if rel.lower() == self.current.lower():
+                pick = it
+        if q or len(groups) == 1:
+            self.tree.expandAll()
+        if pick:
+            pick.parent().setExpanded(True)
+            self.tree.setCurrentItem(pick)
+            self.tree.scrollToItem(pick)
+        self.count.setText(_("%d stadiums") % n)
+
+    def take(self):
+        it = self.tree.currentItem()
+        rel = it.data(0, Qt.UserRole) if it else None
+        if not rel:
+            return
+        self.choice = rel
+        self.accept()
+
+
+class StadiumField(QWidget):
+    """Home stadium: picked from the stadium pack's list (Stadium Server); the name the game shows
+    can be changed, the slot is read from the stadium's folder"""
+
+    def __init__(self, lib, st, tid=None):
         super().__init__()
         self.lib = lib                     # the stadium-server folder, None when not installed
+        self.folder = st.get("folder") or ""
+        self.slot_v = st.get("slot") or ""
+        self.now = pack_stadium_of(lib, tid)
         v = QVBoxLayout(self)
         v.setContentsMargins(0, 0, 0, 0)
-        self.folder = QComboBox()
-        self.folder.setEditable(True)
-        items = sorted(S.library(lib, "folder"), key=str.lower) if lib else []
-        self.folder.addItems([""] + items)
-        comp = QCompleter(items, self.folder)
-        comp.setCaseSensitivity(Qt.CaseInsensitive)
-        comp.setFilterMode(Qt.MatchContains)
-        self.folder.setCompleter(comp)
-        self.folder.lineEdit().setPlaceholderText(_("(the game's own)"))
-        self.folder.setEditText(st.get("folder") or "")
-        self.folder.setMinimumWidth(280)
-        self.folder.currentTextChanged.connect(self.picked)
-        v.addWidget(self.folder)
         h = QHBoxLayout()
-        self.name = QLineEdit(st.get("name") or "")
-        self.name.setPlaceholderText(_("Stadium name"))
-        self.name.setMaxLength(60)
-        self.slot = QLineEdit(st.get("slot") or "")
-        self.slot.setPlaceholderText("009")
-        self.slot.setFixedWidth(60)
-        self.slot.setToolTip(_("the stadium slot the folder was made for (often 009)"))
-        h.addWidget(self.name, 1)
-        h.addWidget(QLabel(_("Slot")))
-        h.addWidget(self.slot)
+        self.shown = QLabel("")
+        self.shown.setWordWrap(True)
+        self.shown.setMinimumWidth(260)
+        h.addWidget(self.shown, 1)
+        self.b_pick = QPushButton(_("Choose stadium..."))
+        self.b_pick.setObjectName("primary")
+        self.b_pick.clicked.connect(self.pick)
+        self.b_clear = QPushButton(_("Game's own"))
+        self.b_clear.setToolTip(_("No stadium of ours: the club keeps the stadium it has now"))
+        self.b_clear.clicked.connect(self.clear)
+        h.addWidget(self.b_pick)
+        h.addWidget(self.b_clear)
         v.addLayout(h)
+        h2 = QHBoxLayout()
+        self.name_lab = QLabel(_("Name in the game"))
+        h2.addWidget(self.name_lab)
+        self.name = QLineEdit(st.get("name") or "")
+        self.name.setPlaceholderText(_("the folder's name"))
+        self.name.setMaxLength(60)
+        h2.addWidget(self.name, 1)
+        v.addLayout(h2)
         if not lib:
-            self.folder.setEnabled(False)
+            self.b_pick.setEnabled(False)
             self.name.setEnabled(False)
-            self.slot.setEnabled(False)
+        self.update_shown()
 
-    def picked(self, text):
-        folder = os.path.join(self.lib or "", text.strip())
-        if not self.lib or not text.strip() or not os.path.isdir(folder):
-            return
-        found = S.stadium_id(folder)
-        if found:
-            self.slot.setText(found)
-        self.name.setText(os.path.basename(text.strip().rstrip("\\/")))
+    def update_shown(self):
+        if self.folder:
+            country, _s, n = self.folder.replace("/", "\\").rpartition("\\")
+            self.shown.setText("<b>%s</b>  <span style='color:%s'>%s</span>" % (n, theme.SUBTLE, country))
+        elif self.now:
+            self.shown.setText(_("now: %s (from the stadium pack)") % self.now[0])
+        else:
+            self.shown.setText("<span style='color:%s'>%s</span>" % (theme.SUBTLE, _("the game's own stadium")))
+        self.name.setVisible(bool(self.folder))
+        self.name_lab.setVisible(bool(self.folder))
+        self.b_clear.setEnabled(bool(self.folder))
+
+    def pick(self):
+        d = StadiumPicker(self, self.lib, self.folder or (self.now[1] if self.now else ""))
+        if d.exec() and d.choice:
+            self.folder = d.choice
+            self.slot_v = S.stadium_id(os.path.join(self.lib, d.choice)) or ""
+            self.name.setText(d.choice.rpartition("\\")[2])
+            self.update_shown()
+
+    def clear(self):
+        self.folder, self.slot_v = "", ""
+        self.name.setText("")
+        self.update_shown()
 
     def value(self):
         """the recipe's entry, {} for none; raises ValueError with what is wrong"""
-        folder = self.folder.currentText().strip().strip("\\/")
+        folder = self.folder.strip().strip("\\/")
         if not folder:
             return {}
-        st = {"folder": folder, "name": self.name.text().strip(), "slot": self.slot.text().strip()}
+        st = {"folder": folder, "name": self.name.text().strip() or folder.rpartition("\\")[2],
+              "slot": str(self.slot_v).strip()}
         bad = lbstadiums.problem(st)
         if bad:
             raise ValueError(bad)
@@ -792,7 +891,7 @@ class ClubDialog(Dialog):
             "Changes reach the game after Build, while the world is switched on.")
 
     def __init__(self, parent, name, short, crest, was=None, coach=None, formation=None, formations=(),
-                 league_formation="", portrait=None, stadium=None, stadium_lib=None):
+                 league_formation="", portrait=None, stadium=None, stadium_lib=None, tid=None):
         super().__init__(parent, "Club")
         self.name = QLineEdit(name or "")
         self.name.setMinimumWidth(280)
@@ -807,10 +906,10 @@ class ClubDialog(Dialog):
         self.form.addRow(_("Crest"), self.crest)
         self.stadium, self.stadium_value = None, stadium
         if stadium is not None:            # its home stadium (Stadium Server)
-            self.stadium = StadiumField(stadium_lib, stadium)
+            self.stadium = StadiumField(stadium_lib, stadium, tid)
             self.form.addRow(_("Home stadium"), self.stadium)
-            self.form.addRow("", hint(_("a stadium of Stadium Server; written to its map_teams.txt when the world "
-                                        "is switched on") if stadium_lib else
+            self.form.addRow("", hint(_("%d stadiums in your stadium pack; the choice is written to its "
+                                        "map_teams.txt at Build") % len(S.library(stadium_lib, "folder")) if stadium_lib else
                                       _("install Stadium Server (Stadiums page) to give the club a home stadium")))
         self.coach = None
         if coach is not None:              # a new club: its manager's name
@@ -1841,9 +1940,8 @@ class NewLeagues(BuilderPage):
 
 class NewClubs(BuilderPage):
     title = "New clubs"
-    hint = ("The clubs of one new league. An empty name becomes \"<league> 01\", \"<league> 02\" ...; an "
-            "empty short name is made from the name; a club with no crest gets a numbered badge. A place can "
-            "also hold a club the game already has: Club of the game.")
+    hint = ("The clubs of one of your leagues. Double-click a club to give it a name, crest, stadium and "
+            "manager; More has the rest.")
     help = ("The clubs of the league picked at the top. Double-click a club (or Edit club) for its name, short "
             "name, crest, manager, stadium and formation.\n"
             "- Players: change the club's squad.\n"
@@ -1862,15 +1960,20 @@ class NewClubs(BuilderPage):
         self.action("Players", self.players, tip="Change this club's squad")
         self.action("Club of the game...", self.game_club,
                     tip="Put a club the game already has in this place, instead of a new club")
-        self.action("New club here", self.new_here, tip="Give this place back to a new club")
-        self.action("Insert club", lambda: self.shift(1), tip="A new club before the selected one")
-        self.action("Remove club", lambda: self.shift(-1), "danger", tip="Take the selected club out of the league")
-        self.action("Move to another league...", self.move_club,
-                    tip="The club goes to the end of another new league, with its name, crest, manager and players")
-        self.action("Paste names...", self.paste)
-        self.action("Load names from file...", self.load_file)
-        self.action("Import crests...", lambda: import_crests(self),
-                    tip="Crests for many clubs at once, from a folder of pictures named after the clubs")
+        more = QToolButton()
+        more.setText(_("More") + "  ▾")
+        more.setPopupMode(QToolButton.InstantPopup)
+        m = QMenu(more)
+        for it in (("New club here", self.new_here), ("Insert club", lambda: self.shift(1)),
+                   ("Remove club", lambda: self.shift(-1)), ("Move to another league...", self.move_club), None,
+                   ("Paste names...", self.paste), ("Load names from file...", self.load_file),
+                   ("Import crests...", lambda: import_crests(self))):
+            if it is None:
+                m.addSeparator()
+            else:
+                m.addAction(_(it[0])).triggered.connect(lambda _c=False, f=it[1]: f())
+        more.setMenu(m)
+        self.actions.addWidget(more)
         top = QHBoxLayout()
         top.addWidget(QLabel(_("League")))
         self.combo = QComboBox()
@@ -1906,7 +2009,7 @@ class NewClubs(BuilderPage):
         self.combo.blockSignals(False)
         self.show_clubs()
         if not names:
-            self.say(_("No new leagues yet: add one on the New leagues page."), "warn")
+            self.say(_("No new leagues yet: add one on the Leagues page."), "warn")
         elif self.project.base is not None:
             self.say("")
 
@@ -2065,7 +2168,7 @@ class NewClubs(BuilderPage):
         if not self.project.shift_places(L["name"], k, delta):
             QMessageBox.warning(self, _("New clubs"), _("A league has %d to %d clubs.") % (B.CLUBS_MIN, B.CLUBS_MAX))
             return
-        self.say(_("%s now has %d clubs: check its European places on the New leagues page, then Build again "
+        self.say(_("%s now has %d clubs: check its European places on the Leagues page, then Build again "
                    "and start a new career.") % (L["name"], L["clubs"]), "ok")
 
     def move_club(self):
@@ -2090,7 +2193,7 @@ class NewClubs(BuilderPage):
         if bad:
             QMessageBox.warning(self, _("New clubs"), _(bad))
             return
-        self.say(_("The club is now the last of %s: check both leagues' European places on the New leagues page, "
+        self.say(_("The club is now the last of %s: check both leagues' European places on the Leagues page, "
                    "then Build again and start a new career.") % dst, "ok")
 
     def edit(self):
@@ -2231,7 +2334,7 @@ def edit_game_club(page, tid):
     e = project.edits("clubs").get(str(tid), {})
     d = ClubDialog(page, e.get("name") or n, e.get("abbr") or a, e.get("crest"), was=(n, a),
                    portrait=coach_portrait(project, str(tid)), stadium=club_stadium(project, str(tid)),
-                   stadium_lib=stadium_lib(page.app))
+                   stadium_lib=stadium_lib(page.app), tid=tid)
     if not (d.finish() and d.result):
         return False
     set_coach_portrait(project, str(tid), d.portrait_path)
@@ -2769,30 +2872,53 @@ class Build(BuilderPage):
         one.addWidget(hint(_("All in one: the modules, the world, switching it on. Or step by step:")), 1)
         self.outer.addLayout(one)
         self.outer.addLayout(bar)
+        cards = QHBoxLayout()
+        cards.setSpacing(14)
+        euc = QFrame()
+        euc.setObjectName("card")
+        eu = QVBoxLayout(euc)
+        eu.setContentsMargins(18, 14, 18, 14)
+        eu.setSpacing(8)
+        t = QLabel(_("European cups"))
+        t.setObjectName("cardtitle")
+        eu.addWidget(t)
+        eu.addWidget(hint(_("Every world built here has the new Champions League and Europa League: a league "
+                            "phase of 36 clubs, then the play-off and the knockout rounds.")))
+        clc = QFrame()
+        clc.setObjectName("card")
+        cl = QVBoxLayout(clc)
+        cl.setContentsMargins(18, 14, 18, 14)
+        cl.setSpacing(8)
+        t2 = QLabel(_("New clubs"))
+        t2.setObjectName("cardtitle")
+        cl.addWidget(t2)
+        cards.addWidget(euc, 3)
+        cards.addWidget(clc, 2)
+        self.outer.addLayout(cards)
         self.uecl = QCheckBox(_("Include the Conference League"))
         self.uecl.setToolTip(_("A league phase of 36 clubs and a February play-off, like the Champions League "
                                "and the Europa League"))
         self.uecl.toggled.connect(self.set_uecl)
-        self.outer.addWidget(row(self.uecl, helpmark(
+        eu.addWidget(row(self.uecl, helpmark(
             "A league phase of 36 clubs and a February play-off, like the Champions League "
             "and the Europa League"), hint(_("off = no Conference League; the Champions League and Europa "
                                                    "League keep their 36-club league phase and play-off either way"))))
         self.uecl_logo = PictureField(None, 48)
         self.uecl_logo.changed = self.set_uecl_logo
-        self.outer.addWidget(row(QLabel(_("Conference League logo")), self.uecl_logo,
+        eu.addWidget(row(QLabel(_("Conference League logo")), self.uecl_logo,
                                  hint(_("empty = a UECL emblem drawn for you"))))
         self.uecl_name = QLineEdit()
         self.uecl_name.setPlaceholderText(B.mkuecl.NAME)
         self.uecl_name.setMaxLength(60)
         self.uecl_name.editingFinished.connect(self.set_uecl_name)
-        self.outer.addWidget(row(QLabel(_("Conference League name")), self.uecl_name,
+        eu.addWidget(row(QLabel(_("Conference League name")), self.uecl_name,
                                  hint(_("empty = %s; a new name needs the world built again") % B.mkuecl.NAME)))
         self.cafsc = QCheckBox(_("CAF Super Cup"))
         self.cafsc.setToolTip(_("The winners of the CAF Champions League and the Confederation Cup meet once, "
                                 "in late July. First played in a career's second season, when both cups "
                                 "have a winner"))
         self.cafsc.toggled.connect(self.set_cafsc)
-        self.outer.addWidget(row(self.cafsc, helpmark(
+        eu.addWidget(row(self.cafsc, helpmark(
             "The winners of the CAF Champions League and the Confederation Cup meet once, "
             "in late July. First played in a career's second season, when both cups "
             "have a winner"), hint(_("only in a world with both African cups (the European "
@@ -2803,24 +2929,25 @@ class Build(BuilderPage):
                                 "strip\"). Without one each new club wears a plain kit that Edit > Teams > Strip "
                                 "changes like any other, Paste Image included. Build again after changing this."))
         self.ekits.toggled.connect(self.set_ekits)
-        self.outer.addWidget(row(self.ekits, helpmark(
+        cl.addWidget(row(self.ekits, helpmark(
             "On: the new clubs get no kit borrowed from a club of the game. A borrowed kit is "
             "a licensed one, and the game's Edit mode refuses it (\"You cannot edit this "
             "strip\"). Without one each new club wears a plain kit that Edit > Teams > Strip "
             "changes like any other, Paste Image included. Build again after changing this."), hint(_("off = each new club borrows a kit of the game (it looks "
                                                     "real, but Edit mode cannot change it)"))))
-        self.b_euro = QPushButton(_("Only the new European cups..."))
+        self.b_euro = QPushButton(_("Build only the European cups..."))
         self.b_euro.setToolTip(_("A world with nothing but the new Champions League and Europa League (league "
                                  "phase of 36 and play-off) and, when ticked above, the Conference League: "
                                  "no new leagues, the game's clubs and leagues as they are. Your recipe is "
                                  "not changed."))
         self.b_euro.clicked.connect(self.do_europe_only)
-        self.outer.addWidget(row(self.b_euro, helpmark(
+        eu.addWidget(row(self.b_euro, helpmark(
             "A world with nothing but the new Champions League and Europa League (league "
             "phase of 36 and play-off) and, when ticked above, the Conference League: "
             "no new leagues, the game's clubs and leagues as they are. Your recipe is "
-            "not changed."), hint(_("for the new European format alone, without building "
-                                                     "any league"))))
+            "not changed."), hint(_("a world with just the new European format and the game's own leagues and "
+                                         "clubs: no new leagues"))))
+        cl.addStretch(1)
         self.state = hint("")
         self.outer.addWidget(self.state)
         self.out = QPlainTextEdit()

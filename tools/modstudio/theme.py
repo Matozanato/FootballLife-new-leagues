@@ -62,13 +62,13 @@ QPushButton { background: %(PANEL)s; border: 1px solid #39424D; border-radius: 6
 QPushButton:hover { background: %(SELECTION)s; border-color: %(ACCENT)s; }
 QPushButton:pressed { background: %(ACCENT)s; }
 QPushButton:disabled { color: #6A6A6A; background: %(PANEL)s; }
-QPushButton#primary { background: %(ACCENT)s; color: white; border-color: %(ACCENT)s; }
-QPushButton#primary:hover { background: #5A9DFD; }
+QPushButton#primary { background: #2563C9; color: white; border-color: #2563C9; font-weight: 600; }
+QPushButton#primary:hover { background: #3D8BFD; border-color: #3D8BFD; }
 QPushButton#big { font-size: 11pt; font-weight: bold; padding: 10px 26px; border-radius: 8px; }
 QPushButton#danger { color: %(DANGER)s; }
 QPushButton#primary:disabled, QPushButton#danger:disabled { color: #6A6A6A; background: %(PANEL)s; border-color: %(BORDER)s; }
 QPushButton#tab { background: %(PANEL2)s; border: 1px solid %(BORDER)s; padding: 5px 16px; border-radius: 6px; }
-QPushButton#tab:checked { background: %(ACCENT)s; color: white; border-color: %(ACCENT)s; }
+QPushButton#tab:checked { background: #2563C9; color: white; border-color: #2563C9; }
 
 /* inputs */
 QLineEdit, QSpinBox, QComboBox, QPlainTextEdit, QTextEdit {

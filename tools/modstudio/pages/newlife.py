@@ -300,7 +300,7 @@ class NewLife(BuilderPage):
                          if B.game_club_where(info, e["id"])]
         if names:
             self.project.touch()
-            text = _("Added: %s. Change them on New leagues, New clubs and Players, then Build.") % ", ".join(names)
+            text = _("Added: %s. Change them on Leagues, New clubs and Players, then Build.") % ", ".join(names)
             if swap:
                 text += "\n" + _("%s also play in a competition of the game: on New clubs pick each one and use "
                                  "Club of the game to choose the club that takes its place there.") % ", ".join(swap)
