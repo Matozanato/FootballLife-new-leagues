@@ -861,20 +861,34 @@ def shipped_parents(base):
     code = {comp[i * M.COMP + M.CID_OFF]:
             bytes(comp[i * M.COMP + M.CODE_OFF:(i + 1) * M.COMP]).split(b"\0")[0].decode("latin-1")
             for i in range(len(comp) // M.COMP)}
-    ids = {u16(regs[i * M.REG:(i + 1) * M.REG], M.R_ID) for i in range(len(regs) // M.REG)}
-    out = []
-    for i in range(len(regs) // M.REG):
-        g = regs[i * M.REG:(i + 1) * M.REG]
-        if g[M.R_TYPE] != 4 or u16(g, M.R_BELOW) in ids or fl26world.fmt(g) in (12, 13, 14, 15):
+    rows = {u16(regs[i * M.REG:(i + 1) * M.REG], M.R_ID): regs[i * M.REG:(i + 1) * M.REG]
+            for i in range(len(regs) // M.REG)}
+
+    def name(g):
+        raw = bytes(g[M.R_NAME:M.R_NAME + M.NAME_SLOT]).split(b"\0")[0]
+        try:
+            return raw.decode("utf-8")
+        except UnicodeDecodeError:
+            return raw.decode("latin-1")
+    out, halves = [], set()
+    for rid in sorted(rows):
+        g = rows[rid]
+        if g[M.R_TYPE] != 4 or u16(g, M.R_BELOW) in rows or fl26world.fmt(g) in (12, 13, 14, 15):
             continue
         if not re.search(r"_D\d_LEAGUE$", code.get(g[M.R_CID], "")):
             continue
-        raw = bytes(g[M.R_NAME:M.R_NAME + M.NAME_SLOT]).split(b"\0")[0]
-        try:
-            nm = raw.decode("utf-8")
-        except UnicodeDecodeError:
-            nm = raw.decode("latin-1")
-        out.append((u16(g, M.R_ID), nm))
+        # a shipped Apertura/Clausura season is a total (type 5) and its two halves (format 7, 8,
+        # +0x06 the total): Liga BetPlay DIMAYOR I and II, MLS First and Second Round. Both halves
+        # were listed, and Colombia read as two first divisions (GitHub #79): one entry now, the
+        # first half under the season's name, as before the link goes on that half
+        parent = u16(g, 0x06)
+        if fl26world.fmt(g) in (7, 8) and parent in rows:
+            if parent in halves:
+                continue
+            halves.add(parent)
+            out.append((rid, name(rows[parent])))
+            continue
+        out.append((rid, name(g)))
     return sorted(out, key=lambda x: x[1].lower())
 
 

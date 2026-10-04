@@ -370,6 +370,12 @@ calendar.
   follows it. Checked without the game: J1 League is in the list, and a build with a J2 under it
   links 52 -> 11 both ways. Promotion and relegation between J1 and the new league are not yet
   checked in the game.
+- 2026-10-04 (Mod Studio 0.1.8, GitHub issue #79): **Colombia showed up twice in the Division
+  list** (Liga BetPlay DIMAYOR I and II), and MLS too (First and Second Round). They are the two
+  halves of one Apertura/Clausura season of the game, not two first divisions. The list now has
+  one entry for each, under the season's name; a league put under it goes under the first half,
+  as before. Checked without the game: 18 divisions listed, each once. Promotion and relegation
+  under a league like that are not yet checked in the game.
 - 2026-10-04 (Mod Studio 0.1.8): **a new league, cup or phase had no name in ten of the game's
   languages.** A regulation keeps its 20 names as two runs of ten with 32 empty bytes between;
   Build wrote twenty in a row, so the second run started 32 bytes early and read empty (and a
