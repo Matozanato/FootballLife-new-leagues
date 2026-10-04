@@ -406,6 +406,20 @@ calendar.
   day and the Conference League final). **A world built again gets other IDs for these leagues,
   so a career started on the old build of that world may not load: start a new one.** Not yet
   checked in the game.
+- 2026-10-05 (Mod Studio 0.1.8, GitHub issue #77): **a new country's national cup kept last
+  season's goals, assists, individual titles and Team of the Tournament.** The game closes a
+  competition at the end of its season (old matches deleted, statistics cleared) only when it
+  is on a list in the exe, and a cup of ours is not. `fl26swiss` now closes the cup together
+  with the cup of the game it takes its dates from (the FA Cup, for most). Checked in the game
+  on a Croatian D1/D2 world: after the July rollover all four lists of the cup were empty, its
+  bracket held 20 clubs and opened, and the next season's first round was played. A world
+  built before 0.1.8 has no field size for its cup in the world file, and a cup of 22 clubs
+  then crashes the bracket screen (#74) once the cup is refilled. **Build the world again.**
+- 2026-10-04 (Mod Studio 0.1.8, GitHub issue #78): **Competition Info listed a league cup's
+  pre-round ten times under the same name.** A pre-round is one regulation and eight copies
+  for its ties, and the list for a country of the game shows every regulation. `fl26swiss`
+  now leaves the copies out of that list. Checked in the game: the Premier League's league cup
+  shows as two entries (pre-round and main cup), and both open.
 - 2026-10-04 (Mod Studio 0.1.8, GitHub issue #64): **Game Plan lagged while fl26regen was on.**
   The module puts the pack faces of regens and new players back every 32 files the game loads,
   and Game Plan loads hundreds of files at once (every bench player's picture). It now does this
