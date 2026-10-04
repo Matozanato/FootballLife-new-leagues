@@ -587,6 +587,75 @@ def game_others(base, leagues):
     return sorted(nat), sorted(other)
 
 
+def recipe_from_plan(pl, base):
+    """the recipe a built world was made from, read back from its leaguebuilder-plan.json: for a
+    world whose recipe was never saved (Mod Studio opens the live world, 0.1.8). The plan holds
+    everything the recipe said about the leagues; the ids it adds (rid, cid, slot, teams ...) are
+    left out, so the next Build gives them again."""
+    import mkflags
+    cty = mkflags.countries(mkflags.table("Country", [base]))
+    name_of_rid = {L["rid"]: L["name"] for L in pl.get("leagues") or []}
+    out = []
+    for L in pl.get("leagues") or []:
+        en = (cty.get(L.get("country")) or ("", None))[0]
+        r = {"name": L["name"], "country": mkflags.title(en) if en else "", "clubs": L["clubs"],
+             "legs": L.get("legs", 2), "exchange": L.get("exchange", 3)}
+        for k in ("logo", "flag", "formation"):
+            if L.get(k):
+                r[k] = L[k]
+        for k in ("club_names", "club_crests", "club_abbrs", "club_coaches", "club_formations",
+                  "club_kits", "club_away_kits"):
+            if any(L.get(k) or []):
+                r[k] = list(L[k])
+        if any(x is not None for x in L.get("club_ids") or []):
+            r["club_ids"] = ["" if x is None else str(x) for x in L["club_ids"]]
+        if (L.get("newlife") or {}).get("clubs"):
+            r["newlife"] = {"clubs": list(L["newlife"]["clubs"])}
+        if L.get("europe"):
+            r["europe"] = [list(e) for e in L["europe"]]
+        if L.get("exhibition"):
+            r["exhibition"] = True
+        gc = []
+        for at, e in sorted((L.get("game_clubs") or {}).items(), key=lambda x: int(x[0])):
+            g = {"at": int(at), "id": e["id"]}
+            if e.get("swap") is not None:
+                g["swap"] = e["swap"]
+            gc.append(g)
+        if gc:
+            r["game_clubs"] = gc
+        up = L.get("above")
+        if up is not None:
+            r["above"] = name_of_rid.get(up, up)
+        oc = L.get("own_cup")
+        if oc and L.get("above") is None:
+            r["cup"] = True
+            r["cup_name"] = oc.get("name") or ""
+            if oc.get("logo"):
+                r["cup_logo"] = oc["logo"]
+            if oc.get("super"):
+                r["supercup"] = True
+                r["supercup_name"] = oc["super"]
+                if oc.get("super_logo"):
+                    r["supercup_logo"] = oc["super_logo"]
+        lc = L.get("league_cup")
+        if lc:
+            r["league_cup"] = True
+            r["league_cup_name"] = lc.get("name") or ""
+            if lc.get("logo"):
+                r["league_cup_logo"] = lc["logo"]
+        if L.get("calendar"):
+            r["season"] = "calendar"
+        if L.get("split"):
+            r["split"] = L["split"]
+        out.append(r)
+    rec = {"world": pl["world"], "leagues": out, "edits": pl.get("edits") or {},
+           "players": pl.get("players") or {}}
+    for k in ("uecl", "uecl_logo", "uecl_name", "editable_kits", "saudi_august", "cafsc"):
+        if pl.get(k) not in (None, "", False) or k == "uecl":
+            rec[k] = pl.get(k)
+    return rec
+
+
 def game_league_confeds(base, leagues):
     """{competition id: confederation code} of the game's leagues -- the code most of its
     clubs' countries have (Team.bin T_COUNTRY, Country.bin); 0 when nothing is known"""

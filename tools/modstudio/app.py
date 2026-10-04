@@ -111,6 +111,19 @@ class Main(QMainWindow):
         if live and self.project.recipe.get("world") not in live:
             kept = os.path.join(self.project.copies_dir(), live[0] + ".json")
             was = self.project.recipe.get("world")
+            if not os.path.exists(kept) and self.project.base:
+                # no copy of its recipe (built before Build kept one, or elsewhere): read the
+                # recipe back from the plan the world carries (leaguebuilder.recipe_from_plan)
+                try:
+                    import leaguebuilder
+                    plan = os.path.join(self.game.livecpk_dir, live[0], "leaguebuilder-plan.json")
+                    with open(plan, encoding="utf-8") as f:
+                        rec = leaguebuilder.recipe_from_plan(json.load(f), self.project.base)
+                    os.makedirs(self.project.copies_dir(), exist_ok=True)
+                    with open(kept, "w", encoding="utf-8") as f:
+                        json.dump(rec, f, indent=1, ensure_ascii=False)
+                except Exception:
+                    pass
             if os.path.exists(kept):
                 try:
                     self.project.open(kept, copy=True)
