@@ -1,6 +1,14 @@
 # FootballLife — new leagues (public beta)
 
+[![Join the Discord](https://img.shields.io/badge/Discord-join%20the%20community-5865f2?logo=discord&logoColor=white)](https://discord.gg/StQqtk3G3M)
 [![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-support%20this%20work-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/mata28)
+
+[![Latest release](https://img.shields.io/github/v/release/Matozanato/FootballLife-new-leagues?display_name=release&label=release&color=2ea44f&logo=github&logoColor=white)](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/Matozanato/FootballLife-new-leagues/total?label=downloads&color=2ea44f&logo=github&logoColor=white)](https://github.com/Matozanato/FootballLife-new-leagues/releases)
+[![License: MIT](https://img.shields.io/github/license/Matozanato/FootballLife-new-leagues?color=blue)](LICENSE)
+![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078d4?logo=windows&logoColor=white)
+![Languages](https://img.shields.io/badge/languages-EN%20%C2%B7%20ES%20%C2%B7%20FR%20%C2%B7%20HR-6f42c1)
+![Game: Football Life 2026](https://img.shields.io/badge/game-Football%20Life%202026-c0392b)
 
 > This is unpaid reverse-engineering work done in spare time. If it is useful to you,
 > **[buy me a coffee on Ko-fi](https://ko-fi.com/mata28)** — it keeps the seasons running.
