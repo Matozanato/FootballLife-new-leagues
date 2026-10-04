@@ -271,6 +271,27 @@ CREATION_IDS = {2, 3, 4, 5, 6, 7, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28
                 148, 151, 155, 156, 159, 172, 175}
 # the last id of the case table the game reads its in-play registrations from (fl26join.c)
 REG_CASE_MAX = 175
+# A league of ours plays on the big-league calendar (case 5) shifted by its regulation id's day
+# (datecave.py; the patch set's date_offsets, patches/...-fixtures.json), resampled to its rounds
+# by fl26swiss's league_dates. The shift was there to spread the 280 matches a day, and knows
+# nothing of Europe: Romania on 93 (+6) played a league round on five Conference League days, the
+# result written to both tables (GitHub #54). So a league with European places takes, of the ids
+# left with a slot, the one whose days miss EURO_DAYS (plan()); +2 misses nearly all, +4 next.
+BIG_LEAGUE_DAYS = [233, 240, 261, 265, 268, 275, 296, 300, 303, 310, 321, 324, 331, 335, 338, 345,
+                   356, 359, 363, 2, 13, 16, 20, 23, 31, 34, 37, 51, 58, 65, 72, 79, 100, 107, 114,
+                   121, 128, 142]
+DATE_SHIFT = {11: 1, 49: 2, 60: 1, 61: 2, 62: 5, 74: 5, 76: 2, 93: 6, 94: 2, 96: 2, 98: 4, 100: 1,
+              109: 1, 110: 1, 111: 1, 112: 4, 113: 5, 114: 2, 121: 2, 138: 2, 139: 2, 140: 2, 143: 5,
+              144: 2, 145: 2, 146: 6, 170: 4, 171: 6, 173: 1, 174: 0, 176: 1, 178: 6, 179: 4, 180: 0,
+              181: 1, 182: 5, 183: 1, 184: 6, 185: 1, 190: 2}     # 190 has 145's (mkworld MOVED_REG)
+# fl26swiss.c: the Champions League's league phase (SWISS_DAYS), the Europa League's two days
+# later, the Conference League's (UECL_DAYS), the knockouts (KO_DAYS), qualifying (QR_DAYS) and
+# the play-offs (reg 2's moved to 244/251, the Europa/Conference League's 49/56)
+_SWISS = [259, 260, 273, 274, 294, 295, 308, 309, 329, 330, 343, 344, 20, 21, 28, 29]
+EURO_DAYS = (set(_SWISS) | {d + 2 for d in _SWISS}
+             | {273, 274, 294, 295, 308, 309, 329, 330, 343, 344, 350, 351}
+             | {68, 75, 96, 103, 117, 124, 149, 70, 77, 98, 105, 119, 126, 139, 146}
+             | {243, 250, 229, 236, 220, 225, 244, 251, 49, 56})
 # The days of the year the domestic knockouts are played on, one per record of the knockout
 # fl26swiss borrows (two legs of the last 16, quarter-finals, semi-finals, then the final):
 # always seven, a smaller field leaves the first ones unused. A league cup's are the day after
@@ -1030,6 +1051,19 @@ def plan(recipe, base):
                                  "league" % names[i])
             rid_of[i] = r
             left.remove(r)
+    # leagues with European places next: of the ids as good as the first one left (a slot of
+    # their own), the one whose days clash least with the European ones (GitHub #54)
+    for i in order:
+        L = leagues[i]
+        if i in rid_of or not L.get("europe") or not left:
+            continue
+        rounds = rounds_of(int(L.get("clubs", 0) or 0)) * int(L.get("legs", 2) or 2)
+        busy = EURO_DAYS | (set(LEAGUE_CUP_DAYS) if L.get("league_cup") else set())
+        best = fl26world.id_rank(left[0])
+        r = min((r for r in left if fl26world.id_rank(r) == best),
+                key=lambda r: (len(set(league_days(r, rounds)) & busy), left.index(r)))
+        rid_of[i] = r
+        left.remove(r)
     for i in order:
         if i not in rid_of:
             rid_of[i] = left.pop(0)
@@ -1665,6 +1699,17 @@ def game_cups(recipe, regrow, region_of_cid, base, out):
 def rounds_of(clubs):
     """a single round robin's rounds"""
     return clubs if clubs % 2 else clubs - 1
+
+
+def league_days(rid, rounds):
+    """the days of the year a league of ours on regulation `rid` plays its `rounds` on, as
+    datecave and fl26swiss's league_dates make them; [] when that is not the big-league calendar
+    (no shift for the id, or more rounds than it has: the Championship's is borrowed)"""
+    s, have = DATE_SHIFT.get(rid), len(BIG_LEAGUE_DAYS)
+    if s is None or not 2 <= rounds <= have:
+        return []
+    days = [(d + s) % 365 for d in BIG_LEAGUE_DAYS]
+    return [days[(i * (have - 1) * 2 + (rounds - 1)) // (2 * (rounds - 1))] for i in range(rounds)]
 
 
 def season_ord(day):
