@@ -1228,11 +1228,12 @@ def plan(recipe, base):
     bad = lbplayers.check(recipe)
     if bad:
         raise BuildError("player changes:\n  " + "\n  ".join(bad[:20]))
-    cups, notes = ccup_plan([(p["rid"], pos, comp, 0) for p in out for pos, comp in p["europe"]],
-                            {p["rid"]: p["clubs"] for p in out})
+    ge, gr, gn, gcc = game_europe(recipe, regrow, region_of_cid, base)
+    room = {p["rid"]: p["clubs"] for p in out}
+    room.update({r: entries_of(base, regrow[r][M.R_CID]) for r, _p, _c, _a in gcc})
+    cups, notes = ccup_plan([(p["rid"], pos, comp, 0) for p in out for pos, comp in p["europe"]] + gcc, room)
     home = [league_cup(p, out) for p in out if p.get("league_cup")]
     home += game_cups(recipe, regrow, region_of_cid, base, out)
-    ge, gr, gn = game_europe(recipe, regrow, region_of_cid, base)
     home += [c for p in out if p.get("apertura") for c in playoff_cups(p)]
     home += [preseason_cup(c, k, by_name) for k, c in enumerate(recipe.get("preseason_cups") or [])]
     if recipe.get("caf_super_cup", True) and {CAF_CL, CAF_CC} <= {c["number"] for c in cups}:
@@ -1459,12 +1460,14 @@ def access_reg(rid, regrow, region_of_cid):
 
 def game_europe(recipe, regrow, region_of_cid, base):
     """the recipe's game_europe: (regulation, position, competition, 0) places for leagues of the
-    game, and the regulations whose shipped places they replace"""
+    game, the regulations whose shipped places they replace, their names, and the places in the
+    League Builder's continental cups (competitions 6..9), which go to ccup_plan"""
     ge = recipe.get("game_europe") or {}
     if not ge:
-        return [], [], {}
+        return [], [], {}, []
     tops = {r: n for r, _c, n, _t in game_leagues(base)}
-    places, replace, names = [], [], {}
+    ccups = {c: n for c, n, _code, _conf, _fill in fl26world.CCUPS}
+    places, replace, names, cc = [], [], {}, []
     for key, europe in sorted(ge.items(), key=lambda kv: str(kv[0])):
         try:
             rid = int(key)
@@ -1475,16 +1478,26 @@ def game_europe(recipe, regrow, region_of_cid, base):
         clubs = entries_of(base, regrow[rid][M.R_CID])
         cup = home_cup(regrow, region_of_cid, region_of_cid.get(regrow[rid][M.R_CID]))
         bad = europe_problems(clubs, europe or [], cup is not None)
-        bad += ["competition %d is a cup of the League Builder's, for new leagues" % int(e[1])
-                for e in europe or [] if str(e[1]).isdigit() and int(e[1]) not in fl26world.UEFA_LINE]
+        bad += ["competition %d is not one a league's place can lead to" % int(e[1])
+                for e in europe or [] if str(e[1]).isdigit()
+                and int(e[1]) not in fl26world.UEFA_LINE and int(e[1]) not in ccups]
+        bad += ["the cup winner cannot go to the %s" % ccups[int(comp)] for pos, comp in europe or []
+                if int(pos) == CUP_WINNER and int(comp) in ccups]
         if bad:
             raise BuildError("European places of %s: %s" % (tops[rid], "; ".join(bad)))
+        # a place in a continental cup of the League Builder's (AFC Champions League Two, Copa
+        # Sudamericana ...) joins that cup with the new leagues' places; the shipped places of
+        # the league stay as they are (B2Y, #86: Saudi Pro League places in the ACL Two)
+        cc += [(rid, int(pos), int(comp), 0) for pos, comp in europe or [] if int(comp) in ccups]
+        europe = [e for e in europe or [] if int(e[1]) not in ccups]
+        if not europe:
+            continue
         r = access_reg(rid, regrow, region_of_cid)
         replace.append(r)
         names[str(r)] = tops[rid]
         places += [(cup, 0, int(comp), r) if int(pos) == CUP_WINNER else (r, int(pos), int(comp), 0)
-                   for pos, comp in europe or []]
-    return places, replace, names
+                   for pos, comp in europe]
+    return places, replace, names, cc
 
 
 def uefa_seed(recipe, out, regrow, region_of_cid):

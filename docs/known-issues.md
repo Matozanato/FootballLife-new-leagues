@@ -381,6 +381,14 @@ calendar.
   first, second and goalkeeper kit. It now lends a third kit as well: the donor club's own when
   it has one whose texture is in the game (378 of 708 donors), otherwise the next donor's.
   Checked without the game: 30 clubs got 120 kit definitions. Not yet checked in the game.
+- 2026-10-04 (Mod Studio 0.1.8, GitHub issue #86): **a league of the game could not send clubs
+  to the AFC Champions League Two (or another continental cup of the League Builder's).** The
+  European places window offered it, then Build stopped with "competition 8 is a cup of the
+  League Builder's, for new leagues". Such a place now joins that cup together with the new
+  leagues' places, and the league keeps its other places. A cup winner's place still cannot go
+  to one of these cups. Checked without the game: Saudi Pro League 2nd and 3rd went into the AFC
+  Champions League Two (16 clubs) in pot 1 and pot 2, and its AFC Champions League place stayed.
+  Not yet checked in the game.
 - 2026-10-04 (Mod Studio 0.1.8, Discord): **switching to a profile turned modules and the live
   world off without a word.** A tester switched to "As found" (the setup Mod Studio found the
   first time it ran). That profile is older than the tester's world, so it put an old world back
