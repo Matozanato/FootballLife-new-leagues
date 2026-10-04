@@ -250,7 +250,7 @@ python tools\mkkits.py   --team-bin <your root>\common\etc\pesdb\Team.bin --unip
 ```
 
 `mkcrests.py` draws a distinct two-tone crest per club and needs `pip install pillow`.
-`mkkits.py` lends each club a shipped club's first, second and goalkeeper kit; run it with no
+`mkkits.py` lends each club a shipped club's first, second, third and goalkeeper kit; run it with no
 arguments to see where `UniformParameter.bin` and the texture list come from.
 
 The files are named the way the engine looks them up, which is not the team id as it

@@ -368,6 +368,10 @@ calendar.
   names now use the two runs. Checked without the game: every league, split phase, Apertura /
   Clausura, play-off, league cup and Conference League regulation of two test worlds has its
   name in all 20 slots, and the bytes between the runs stay zero. **Build the world again.**
+- 2026-10-04 (Mod Studio 0.1.8, Discord): **new clubs had no third kit.** Build lent only the
+  first, second and goalkeeper kit. It now lends a third kit as well: the donor club's own when
+  it has one whose texture is in the game (378 of 708 donors), otherwise the next donor's.
+  Checked without the game: 30 clubs got 120 kit definitions. Not yet checked in the game.
 
 - 2026-10-03 (Mod Studio 0.1.7.1, GitHub issue #80): **a new league right under a second division
   of the game (League One under the Championship, Serie C under Serie B ...) stopped *Check the

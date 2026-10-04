@@ -64,6 +64,10 @@ REC, ID_OFF, NAME_OFF, NAME_LEN = 1532, 0x08, 0x170, 0x46
 T_NATIONAL = 0x53          # top bit set on the 144 national teams (leaguebuilder.T_NATIONAL)
 FIRST_OURS = 71578
 KINDS = ("1st_realUni", "2nd_realUni", "GK1st_realUni")
+# a third kit, lent when there is one: 511 of the 932 shipped clubs have a 3rd_realUni (6 a 4th).
+# A donor without one lends the next donor's, so every club of ours gets three (0.1.8, asked for
+# on Discord).
+THIRD = "3rd_realUni"
 TEAM_DIR = "common/character0/model/character/uniform/team"
 
 
@@ -136,7 +140,32 @@ def donors(raw, es, textures=None, skip=()):
     if textures is not None:
         full = [(tid, b) for tid, b in full
                 if all(texture_names(b[k]) in textures for k in KINDS)]
+        for _tid, b in full:
+            if THIRD in b and texture_names(b[THIRD]) not in textures:
+                del b[THIRD]
     return full
+
+
+def kinds_of(blobs):
+    """the kinds a club of ours is given: the three, and the third kit when it has one"""
+    return KINDS + ((THIRD,) if THIRD in blobs else ())
+
+
+def with_third(pairs, pool):
+    """pairs with a third kit for every club whose donor has none: the next donor's in pool order
+    that has one, so a club keeps it across re-runs"""
+    thirds = [(i, b[THIRD]) for i, (_tid, b) in enumerate(pool) if THIRD in b]
+    if not thirds:
+        return pairs
+    at = {tid: i for i, (tid, _b) in enumerate(pool)}
+    out = []
+    for c, (dtid, blobs) in pairs:
+        if THIRD not in blobs:
+            i = at.get(dtid, 0)
+            blobs = dict(blobs)
+            blobs[THIRD] = next((b for j, b in thirds if j > i), thirds[0][1])
+        out.append((c, (dtid, blobs)))
+    return out
 
 
 def colours_of(blob):
@@ -226,7 +255,7 @@ def build(argv):
 
     col = opt("--colours")
     colours = {int(k): v for k, v in json.load(open(col, encoding="utf-8")).items()} if col else {}
-    pairs = matched(clubs, pool, colours)
+    pairs = with_third(matched(clubs, pool, colours), pool)
     if colours:
         print("%d clubs dressed by their own colours" % sum(1 for (tid, _), _p in pairs if shirt((colours.get(tid) or [""])[0])))
     if do_list:
@@ -242,7 +271,7 @@ def build(argv):
         num, stem = kit_key(tid)
         d = os.path.join(root, TEAM_DIR.replace("/", os.sep), str(num))
         os.makedirs(d, exist_ok=True)
-        for kind in KINDS:
+        for kind in kinds_of(dblobs):
             open(os.path.join(d, "%s%s.bin" % (stem, kind)), "wb").write(dblobs[kind])
             written += 1
     print("wrote %d kit definitions under %s" % (written, os.path.join(root, TEAM_DIR)))
@@ -261,7 +290,7 @@ def repack(raw, es, pairs):
     """Shipped entries byte for byte, then ours -- same header/index/names/blobs shape."""
     items = [(name, raw[off:off + size]) for name, off, size in es]
     for (tid, _), (_, dblobs) in pairs:
-        for kind in KINDS:
+        for kind in kinds_of(dblobs):
             items.append(("%s%s.bin" % (kit_key(tid)[1], kind), dblobs[kind]))
     index_end = 8 + len(items) * 12
     names, name_at = bytearray(), {}
