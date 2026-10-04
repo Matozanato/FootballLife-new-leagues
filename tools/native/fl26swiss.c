@@ -4456,7 +4456,24 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
     if (id == 1027) has1027 = 1;
     if (id == 1029) has1029 = 1;
   }
-  if (!euro) return in;
+  /* A national cup or super cup of ours (a `dates` line, id 176 and up) is closed with the
+   * shipped cup it is dated as.  No event table names it, so it kept its old matches and its
+   * goals, assists, titles and Team of the Tournament into the next season (GitHub #77). */
+  uint16_t dcl[MAX_DATELIKE]; int ndcl = 0;
+  for (int i = 0; i < g_ndlike; i++) {
+    uint16_t id = g_dlike[i][0]; int like = 0, there = 0;
+    if (id < 176 || !get_rec(id)) continue;
+    for (int j = 0; j < n; j++) { if (in->b[j] == g_dlike[i][1]) like = 1; if (in->b[j] == id) there = 1; }
+    if (like && !there && n + ndcl < 512) dcl[ndcl++] = id;
+  }
+  if (!euro && !ndcl) return in;
+  if (!euro) {
+    memcpy(g_td_list, in->b, (size_t)n * sizeof(uint16_t));
+    memcpy(g_td_list + n, dcl, (size_t)ndcl * sizeof(uint16_t));
+    g_td_vec.b = g_td_list; g_td_vec.e = g_td_list + n + ndcl; g_td_vec.c = g_td_list + 512;
+    logf("fl26swiss: teardown on day %d -- %d cup(s) of ours closed with the cup they are dated as", today(), ndcl);
+    return &g_td_vec;
+  }
   g_td_fresh = 1;
   logf("fl26swiss: July teardown on day %d (%d ids)", today(), n);
   int uecl = get_rec(UECL_REG) && !(has186 && has187 && has1210);
@@ -4467,7 +4484,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
      left 188 and its ties out of the teardown, to outlive the season. */
   int pos = get_rec(CUPS[1].po) || get_rec(CUPS[2].po);
   for (int i = 3; i < 9; i++) if (g_qreg[i] && get_rec(g_qreg[i])) pos = 1;
-  if (!uecl && !cwc && !nccw && !pos) return in;
+  if (!uecl && !cwc && !nccw && !pos && !ndcl) return in;
   /* The list names every regulation it closes -- group rows are not reached through their
    * parent -- so the league phase's row goes in as well, or its 36 clubs, its tables and its
    * 144 matches outlive the season. */
@@ -4529,6 +4546,9 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
       if (!there && get_rec(id) && k < 512) { g_td_list[k++] = id; npre++; }
     }
   if (npre) logf("fl26swiss: July teardown -- %d league cup pre-round regulation(s) added", npre);
+  int nd = 0;
+  for (int i = 0; i < ndcl && k < 512; i++) { g_td_list[k++] = dcl[i]; nd++; }
+  if (nd) logf("fl26swiss: July teardown -- %d national/super cup(s) of ours added", nd);
   g_td_vec.b = g_td_list; g_td_vec.e = g_td_list + k; g_td_vec.c = g_td_list + 512;
   logf("fl26swiss: July teardown -- %d ids, Conference League %u/%u/%u added (the list %s 1027, %s 1029)",
        n, UECL_REG, UECL_KO, UECL_ROW, has1027 ? "has" : "does NOT have", has1029 ? "has" : "does NOT have");
