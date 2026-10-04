@@ -1,0 +1,254 @@
+{
+ "world": "_FL26RgHk",
+ "leagues": [
+  {
+   "clubs": 14,
+   "legs": 2,
+   "name": "Hong Kong First Division League",
+   "country": "Hkg",
+   "exchange": 1,
+   "above": 162,
+   "club_names": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+   ],
+   "club_abbrs": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+   ],
+   "club_crests": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+   ],
+   "game_clubs": [
+    {
+     "at": 0,
+     "id": 8048
+    },
+    {
+     "at": 1,
+     "id": 8016
+    },
+    {
+     "at": 2,
+     "id": 8017
+    },
+    {
+     "at": 3,
+     "id": 8010
+    },
+    {
+     "at": 4,
+     "id": 8051
+    },
+    {
+     "at": 5,
+     "id": 8038
+    },
+    {
+     "at": 6,
+     "id": 8019
+    },
+    {
+     "at": 7,
+     "id": 8028
+    },
+    {
+     "at": 8,
+     "id": 8015
+    },
+    {
+     "at": 9,
+     "id": 4116
+    },
+    {
+     "at": 10,
+     "id": 8036
+    },
+    {
+     "at": 11,
+     "id": 8021
+    },
+    {
+     "at": 12,
+     "id": 8033
+    },
+    {
+     "at": 13,
+     "id": 8005
+    }
+   ]
+  },
+  {
+   "clubs": 16,
+   "legs": 2,
+   "name": "Hong Kong Second Division League",
+   "country": "Hkg",
+   "exchange": 2,
+   "above": "Hong Kong First Division League",
+   "club_names": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+   ],
+   "club_abbrs": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+   ],
+   "club_crests": [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+   ],
+   "game_clubs": [
+    {
+     "at": 0,
+     "id": 8022
+    },
+    {
+     "at": 1,
+     "id": 8029
+    },
+    {
+     "at": 2,
+     "id": 8040
+    },
+    {
+     "at": 3,
+     "id": 8049
+    },
+    {
+     "at": 4,
+     "id": 8035
+    },
+    {
+     "at": 5,
+     "id": 8024
+    },
+    {
+     "at": 6,
+     "id": 8026
+    },
+    {
+     "at": 7,
+     "id": 8220
+    },
+    {
+     "at": 8,
+     "id": 8037
+    },
+    {
+     "at": 9,
+     "id": 8042
+    },
+    {
+     "at": 10,
+     "id": 8039
+    },
+    {
+     "at": 11,
+     "id": 8027
+    },
+    {
+     "at": 12,
+     "id": 8031
+    },
+    {
+     "at": 13,
+     "id": 8012
+    },
+    {
+     "at": 14,
+     "id": 8018
+    },
+    {
+     "at": 15,
+     "id": 8030
+    }
+   ]
+  }
+ ],
+ "edits": {
+  "leagues": {},
+  "clubs": {}
+ },
+ "players": {},
+ "uecl": false,
+ "caf_super_cup": false
+}
