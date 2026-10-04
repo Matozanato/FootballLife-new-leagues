@@ -33,6 +33,8 @@ import playeredit as E
 
 ABILITIES = [n for n, _b in E.ABILITIES]
 GK_ABILITIES = ["GK Awareness", "GK Catching", "GK Clearing", "GK Reflexes", "GK Reach"]
+# fields of ours a table can carry as they are (our own Export CSV does): taken when valid
+OWN = ["Weak Foot Usage", "Weak Foot Accuracy", "Form", "Injury Resistance", "Playing Style"] + [n for n, _b in E.SKILLS]
 LO, HI = 40, 99
 NAME_MAX = E.P_NAME_LEN - 1          # bytes, the name slot less its terminating zero
 
@@ -63,6 +65,8 @@ BASIC = {
     "shirt": ["shirt", "number", "no", "nr", "kitnumber", "jersey", "shirtnumber", "squadnumber",
               "clubjerseynumber", "broj", "brojdresa"],
     "overall": ["overall", "ovr", "rating", "overallrating", "ocjena", "ukupno"],
+    # the game's player id: a row with one replaces that player instead of taking a place
+    "id": ["playerid", "id", "pesid", "gameid", "idigraca"],
 }
 
 # a rating of the source -> the abilities of ours it speaks for (EA FC, FM, plain English)
@@ -111,9 +115,9 @@ RATINGS = {
 # "positioning" is attacking in EA FC and defensive in Football Manager: decided by the scale
 POSITIONING = ["positioning"]
 
-TARGETS = (["name", "first", "last", "position", "posgrid", "age", "born", "nationality", "height", "weight",
-            "foot", "shirt", "overall"] + sorted(RATINGS) + ["positioning"] + ABILITIES)
-LABELS = {"name": "Name", "first": "First name", "last": "Last name", "position": "Position(s)",
+TARGETS = (["id", "name", "first", "last", "position", "posgrid", "age", "born", "nationality", "height", "weight",
+            "foot", "shirt", "overall"] + sorted(RATINGS) + ["positioning"] + ABILITIES + OWN)
+LABELS = {"id": "Player ID (the game's)", "name": "Name", "first": "First name", "last": "Last name", "position": "Position(s)",
           "posgrid": "Position grade (0/1/2)",
           "age": "Age", "born": "Birth date", "nationality": "Nationality", "height": "Height",
           "weight": "Weight", "foot": "Foot", "shirt": "Shirt number", "overall": "Overall rating",
@@ -146,7 +150,7 @@ for _t, (_names, _abs) in RATINGS.items():
         _ALIAS.setdefault(_n, _t)
 for _n in POSITIONING:
     _ALIAS.setdefault(_n, "positioning")
-for _a in ABILITIES:
+for _a in ABILITIES + OWN:
     _ALIAS[norm(_a)] = _a              # our own names win: a table of ours reads back as it is
 _ALIAS["position"] = "position"
 _ALIAS["registeredposition"] = "position"
@@ -175,10 +179,10 @@ def guess(head, rows=()):
             codes = [int(v) for v in vals(i) if v]
             if not (codes and max(codes) <= 12 and (grid or min(codes) == 0)):
                 t = "positioning"               # Football Manager's "Pos" attribute, 1-20
+        if t == "name" and numeric:
+            t = "id"                            # our own CSV's "player" column: the player's id
         if t is None or (t in taken and t not in RATINGS and t not in ABILITIES
                          and t not in ("positioning", "posgrid")):
-            continue
-        if t == "name" and numeric:
             continue
         out[i] = t
         taken.add(t)
@@ -476,6 +480,10 @@ def convert(head, rows, mapping, model, countries, nation=None, today=None, leve
             nm = b[:NAME_MAX].decode("utf-8", "ignore")
             warn.append("line %d: name cut to %d bytes: %s" % (n, NAME_MAX, nm))
         p["name"] = nm
+        for i in cols.get("id", []):
+            v = cell(r, i).strip()
+            if v.isdigit() and int(v) > 0:
+                p["_id"] = v                    # not a field: import_table matches the player by it
         pos = []
         for i in cols.get("position", []):
             pos += [x for x in positions(cell(r, i)) if x not in pos]
@@ -567,6 +575,17 @@ def convert(head, rows, mapping, model, countries, nation=None, today=None, leve
                 p["shirt"] = str(int(v))
         for s, _b in E.SKILLS:
             p[s] = "0"
+        for t in OWN:                           # the table's own values of these win, when valid
+            for i in cols.get(t, []):
+                v = cell(r, i).strip()
+                if v == "":
+                    continue
+                try:
+                    E.parse(t, v)
+                except ValueError:
+                    warn.append("line %d (%s): %s %r not valid, not taken" % (n, nm, t, v))
+                    continue
+                p[t] = v
         out.append(p)
     if unrated:
         warn.append("%d player(s) with no rating in the table made %d: %s"

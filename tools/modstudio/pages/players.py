@@ -1312,9 +1312,12 @@ class Players(BuilderPage):
         info(self, "Import CSV...", _("%d players changed.") % len(got))
 
     def import_table(self):
-        """a squad from any table of players (squadimport.py): the table's players take the club's
-        places in squad order; a game club gains or loses players to match, a new club keeps its
-        30 places and can lose players down to 18"""
+        """a squad from any table of players (squadimport.py). A row with the game's id of a player
+        of this club changes that player; with the id of a player of another club, that player
+        joins this one (JamesNotLike 04.10.: the table's Tielemans took Bayindir's place and id and
+        the game had two). The other rows take the club's remaining places in squad order; a game
+        club gains or loses players to match, a new club keeps its 30 places and can lose players
+        down to 18"""
         import squadimport as Q
         from .tableimport import ImportDialog
         if not self.rows or not self.club:
@@ -1367,19 +1370,46 @@ class Players(BuilderPage):
             warn.append(_("The table has %d players; the club keeps %d, so %d stay as they were.")
                         % (len(players), P.MIN_SQUAD, P.MIN_SQUAD - len(players)))
 
+        # who is who: a row of this club by its id, a game player of another club by his, the rest by place
+        sq = self.project.squads()
+        mine, joins, rest = {}, {}, []
+        for pl in players:
+            pid = pl.pop("_id", None)
+            if pid and not new and pid in keys and pid not in mine:
+                mine[pid] = pl
+            elif (pid and pid not in joins and not (not new and pid in keys)
+                  and self.home_of(pid) is not None and sq.clubs_of.get(int(pid))):
+                joins[pid] = pl
+            else:
+                rest.append(pl)
+        if not new and len(keys) - len(mine) + len(rest) + len(joins) > P.CLUB_MAX:
+            warn.append(_("More than %d players: the last ones of the table were left out.") % P.CLUB_MAX)
         self.project.players().pop(self.club, None)
+        for club, cc in self.project.players().items():  # a player signs for one club at a time
+            if not self.is_national(club) and cc.get("join"):
+                cc["join"] = [r for r in cc["join"] if str(r) not in joins]
+                if not cc["join"]:
+                    cc.pop("join")
         c = self.changes(True)
+        if joins:
+            c["join"] = list(joins)
         ed = c.setdefault("edits", {})
-        for k, pl in zip(keys, players):
+        free = [k for k in keys if k not in mine]
+        placed = dict(mine)
+        placed.update(zip(free, rest))
+        for k, pl in list(placed.items()) + list(joins.items()):
             orig = self.original(k)
             ch = {f: v for f, v in pl.items() if v != str(orig.get(f, ""))}
             if ch:
                 ed[k] = ch
-        for pl in players[len(keys):]:              # a game club only: the rest join it
+        room = P.CLUB_MAX - len(keys) - len(joins)
+        for pl in rest[len(free):][:max(0, room)] if not new else []:    # a game club only: the rest join it
             like = next((r["player"] for r in self.rows
                          if r.get("Registered Position") == pl["Registered Position"]), keys[0])
             c.setdefault("add", []).append(dict(pl, like=like))
-        gone = keys[max(len(players), P.MIN_SQUAD):]
+        unused = [k for k in keys if k not in placed]
+        keep = max(0, P.MIN_SQUAD - len(placed) - len(joins))     # the club keeps at least MIN_SQUAD
+        gone = unused[keep:]
         if gone:
             c["remove"] = gone
         if not ed:
@@ -1391,6 +1421,8 @@ class Players(BuilderPage):
         else:
             self.set_orders(P.best_eleven([dict(m, player=k) for k, m, ch, g in self.view() if not g]))
         text = _("%d players imported.") % len(players)
+        if mine or joins:
+            text += "\n" + _("By player id: %d of this club changed, %d join from other clubs.") % (len(mine), len(joins))
         if warn:
             text += "\n\n" + "\n".join(warn[:12]) + ("\n..." if len(warn) > 12 else "")
         info(self, title, text)
