@@ -406,6 +406,11 @@ calendar.
   day and the Conference League final). **A world built again gets other IDs for these leagues,
   so a career started on the old build of that world may not load: start a new one.** Not yet
   checked in the game.
+- 2026-10-04 (Mod Studio 0.1.8, GitHub issue #64): **Game Plan lagged while fl26regen was on.**
+  The module puts the pack faces of regens and new players back every 32 files the game loads,
+  and Game Plan loads hundreds of files at once (every bench player's picture). It now does this
+  at most four times a second, and at once after a load. Looking for the world's new players in
+  the database also skips most players straight away. Not yet checked in the game.
 - 2026-10-04 (Mod Studio 0.1.8, Discord): **switching to a profile turned modules and the live
   world off without a word.** A tester switched to "As found" (the setup Mod Studio found the
   first time it ran). That profile is older than the tester's world, so it put an old world back

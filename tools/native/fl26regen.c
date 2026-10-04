@@ -402,6 +402,7 @@ static void note_regen(unsigned char* rec)
 static uint32_t g_new_lo[MAX_NEW], g_new_hi[MAX_NEW];
 static uint8_t  g_new_keep[MAX_NEW];
 static int      g_nnew;
+static uint32_t g_new_min = 0xffffffffu, g_new_max;   /* all the ranges lie between these */
 typedef struct { uint32_t id; int16_t face; uint8_t keep, pad; } newp_t;
 static newp_t*  g_nlist;
 static int      g_nnlist;
@@ -432,6 +433,7 @@ static void new_scan(void)
   for (uint32_t i = 0; i < n && g_nnlist < MAX_RLIST; i++) {
     unsigned char* r = blk + (size_t)i * STRIDE;
     uint32_t id = *(uint32_t*)(r + R_ID);
+    if (id < g_new_min || id > g_new_max) continue;  /* most players: no range to look through */
     for (int j = 0; j < g_nnew; j++)
       if (id >= g_new_lo[j] && id <= g_new_hi[j]) {
         newp_t* e = &g_nlist[g_nnlist++];
@@ -646,12 +648,15 @@ __declspec(dllexport) int fl26_regen_new(uint32_t from, uint32_t to, int keep)
 {
   if (g_nnew >= MAX_NEW || from > to || !from) return g_nnew;
   g_new_lo[g_nnew] = from; g_new_hi[g_nnew] = to; g_new_keep[g_nnew] = (uint8_t)(keep != 0);
+  if (from < g_new_min) g_new_min = from;
+  if (to > g_new_max) g_new_max = to;
   g_new_blk = 0;                               /* scan again */
   return ++g_nnew;
 }
 
 /* write every regen's and new player's face into the appearance table again; returns how many
-   records it found */
+   records it found, or -1 when the last pass was too recent */
+#define FACES_EVERY 250
 __declspec(dllexport) int fl26_regen_faces(void)
 {
   /* GitHub #64 (Game Plan lags while fl26regen is on): how long a pass takes and how many faces
@@ -659,6 +664,15 @@ __declspec(dllexport) int fl26_regen_faces(void)
      the appearance back in between; a slow one means the pass itself is the cost. */
   static unsigned passes, rewrites, logged;
   static double slowest;
+  static ULONGLONG last;
+  static unsigned char* last_blk;
+  /* The loader calls this every 32 file requests, and Game Plan asks for hundreds of files in a
+     row (every bench player's picture): at most one pass in FACES_EVERY ms, unless the database
+     block moved (a load), when the faces go back at once. */
+  ULONGLONG now = GetTickCount64();
+  unsigned char* blk = block();
+  if (passes && blk == last_blk && now - last < FACES_EVERY) return -1;
+  last = now; last_blk = blk;
   LARGE_INTEGER f, t0, t1;
   QueryPerformanceFrequency(&f); QueryPerformanceCounter(&t0);
   int n = 0;
