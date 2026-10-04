@@ -1056,7 +1056,18 @@
   "A NewLife club takes the world id Build gives it: its kits, crests and the Kit Server's map.txt are keyed on it.": "Un club de NewLife toma el ID del mundo que le da Build: sus equipaciones, escudos y el map.txt del Kit Server van con ese ID.",
   "Opened the recipe of %s, the world switched on in the game (the last one open was %s).": "Se abrió la receta de %s, el mundo activado en el juego (el último abierto era %s).",
   "The world switched on in the game is %s, but the recipe open is %s. Open the recipe of %s before you Build.": "El mundo activado en el juego es %s, pero la receta abierta es %s. Abre la receta de %s antes de Build.",
-  "Live world: %s": "Mundo activo: %s"
+  "Live world: %s": "Mundo activo: %s",
+  "Gives many clubs their kits at once. Pick a folder of ready kit-server kits: one folder per club, holding p1, p2, g1 ... and order.ini, named after the club (\"Dinamo Zagreb\") or its team ID (\"2215\").\n\nUntick a wrong match before OK. The kits are copied into the kit-server library and get a line in map.txt; press Save on the Kits page to write it. A club that already has a line keeps it unless \"Replace kits already set\" is ticked.\n\nThe kits of a new League Builder club go by the team ID Build gave it, so Build the world first and keep it switched on.": "Da equipaciones a muchos clubes a la vez. Elige una carpeta de equipaciones listas de kit-server: una carpeta por club, con p1, p2, g1 ... y order.ini, con el nombre del club (\"Dinamo Zagreb\") o su ID de equipo (\"2215\").\n\nDesmarca un emparejamiento erróneo antes de Aceptar. Las equipaciones se copian a la biblioteca de kit-server y reciben una línea en map.txt; pulsa Save en la página Kits para escribirlo. Un club que ya tiene línea la conserva, salvo que esté marcado \"Reemplazar las equipaciones ya puestas\".\n\nLas equipaciones de un club nuevo del League Builder van por el ID que le dio Build: haz Build del mundo primero y déjalo activado.",
+  "Kits for many clubs at once, from a folder of kit-server club folders named after the clubs": "Equipaciones para muchos clubes a la vez, desde una carpeta de carpetas de kit-server con el nombre de cada club",
+  "Import kits": "Importar equipaciones",
+  "Import kits...": "Importar equipaciones...",
+  "%d clubs got kits: press Save to write map.txt.": "%d clubes recibieron equipaciones: pulsa Save para escribir map.txt.",
+  "%d clubs kept the kits they had.": "%d clubes conservaron las equipaciones que tenían.",
+  "%d kit folders, %d matched to a club.": "%d carpetas de equipaciones, %d emparejadas con un club.",
+  "Could not copy the kits: %s": "No se pudieron copiar las equipaciones: %s",
+  "Each kit folder is matched to a club by its folder name: the club's name or its team ID. Untick a wrong match.": "Cada carpeta de equipaciones se empareja con un club por el nombre de la carpeta: el nombre del club o su ID de equipo. Desmarca un emparejamiento erróneo.",
+  "Replace kits already set": "Reemplazar las equipaciones ya puestas",
+  "The new clubs of the live world": "Los clubes nuevos del mundo activo"
  },
  "log": [
   [

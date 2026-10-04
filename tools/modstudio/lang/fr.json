@@ -1056,7 +1056,18 @@
   "A NewLife club takes the world id Build gives it: its kits, crests and the Kit Server's map.txt are keyed on it.": "Un club NewLife prend l'ID du monde que Build lui donne : ses maillots, écussons et le map.txt du Kit Server sont liés à cet ID.",
   "Opened the recipe of %s, the world switched on in the game (the last one open was %s).": "Recette de %s ouverte : c'est le monde activé dans le jeu (le dernier ouvert était %s).",
   "The world switched on in the game is %s, but the recipe open is %s. Open the recipe of %s before you Build.": "Le monde activé dans le jeu est %s, mais la recette ouverte est %s. Ouvre la recette de %s avant Build.",
-  "Live world: %s": "Monde actif : %s"
+  "Live world: %s": "Monde actif : %s",
+  "Gives many clubs their kits at once. Pick a folder of ready kit-server kits: one folder per club, holding p1, p2, g1 ... and order.ini, named after the club (\"Dinamo Zagreb\") or its team ID (\"2215\").\n\nUntick a wrong match before OK. The kits are copied into the kit-server library and get a line in map.txt; press Save on the Kits page to write it. A club that already has a line keeps it unless \"Replace kits already set\" is ticked.\n\nThe kits of a new League Builder club go by the team ID Build gave it, so Build the world first and keep it switched on.": "Donne leurs maillots à beaucoup de clubs d'un coup. Choisis un dossier de maillots kit-server prêts : un dossier par club, avec p1, p2, g1 ... et order.ini, nommé d'après le club (\"Dinamo Zagreb\") ou son ID d'équipe (\"2215\").\n\nDécoche une mauvaise association avant OK. Les maillots sont copiés dans la bibliothèque de kit-server et reçoivent une ligne dans map.txt ; appuie sur Save sur la page Kits pour l'écrire. Un club qui a déjà une ligne la garde, sauf si \"Remplacer les maillots déjà définis\" est coché.\n\nLes maillots d'un nouveau club du League Builder suivent l'ID que Build lui a donné : fais d'abord Build du monde et laisse-le activé.",
+  "Kits for many clubs at once, from a folder of kit-server club folders named after the clubs": "Des maillots pour beaucoup de clubs d'un coup, depuis un dossier de dossiers kit-server nommés d'après les clubs",
+  "Import kits": "Importer des maillots",
+  "Import kits...": "Importer des maillots...",
+  "%d clubs got kits: press Save to write map.txt.": "%d clubs ont reçu des maillots : appuie sur Save pour écrire map.txt.",
+  "%d clubs kept the kits they had.": "%d clubs ont gardé leurs maillots.",
+  "%d kit folders, %d matched to a club.": "%d dossiers de maillots, %d associés à un club.",
+  "Could not copy the kits: %s": "Impossible de copier les maillots : %s",
+  "Each kit folder is matched to a club by its folder name: the club's name or its team ID. Untick a wrong match.": "Chaque dossier de maillots est associé à un club par le nom du dossier : le nom du club ou son ID d'équipe. Décoche une mauvaise association.",
+  "Replace kits already set": "Remplacer les maillots déjà définis",
+  "The new clubs of the live world": "Les nouveaux clubs du monde actif"
  },
  "log": [
   [

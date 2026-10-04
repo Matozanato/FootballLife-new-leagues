@@ -131,6 +131,8 @@ Chaque page a :
 Le programme vérifie les tableaux avant d'enregistrer : un nombre là où il faut un nombre, pas de
 virgule dans un nom, un élément qui existe.
 
+**Importer des maillots...** (0.1.8, sur la page *Kits*) : des maillots pour beaucoup de clubs d'un coup. Choisissez un dossier de maillots kit-server prêts -- un dossier par club, avec `p1`, `p2`, `g1` ... et `order.ini`, nommé d'après le club (`Dinamo Zagreb`) ou son ID d'équipe (`2215`). La liste montre chaque association cochée ; décochez une mauvaise avant **OK**. Les maillots sont copiés dans la bibliothèque de kit-server (`Ligue\Club`, comme le dossier les avait) et chaque club reçoit une ligne dans `map.txt` ; **Save** l'écrit. Un club qui a déjà une ligne la garde, sauf si **Remplacer les maillots déjà définis** est coché. Les maillots d'un nouveau club du League Builder suivent l'ID que Build lui a donné : faites d'abord Build du monde et laissez-le activé. Mod Studio ne crée pas de maillots : les textures (`.ftex`) viennent prêtes d'un créateur de maillots.
+
 ## 7. Profils
 
 Un profil retient quels dossiers de contenu et modules sont activés, et dans quel ordre. Gardez-en

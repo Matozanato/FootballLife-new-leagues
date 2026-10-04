@@ -118,6 +118,8 @@ stranica ima:
 Prije spremanja program provjeri tablicu: broj gdje ide broj, bez zareza u imenu, stvar koja
 postoji.
 
+**Uvezi dresove...** (0.1.8, na stranici *Kits*): dresovi za mnoge klubove odjednom. Odaberi mapu s gotovim kit-server dresovima -- jedna mapa po klubu, s `p1`, `p2`, `g1` ... i `order.ini`, nazvana po klubu (`Dinamo Zagreb`) ili po njegovom ID-u (`2215`). Popis pokaže svako spajanje s kvačicom; makni kvačicu s krivog prije **OK**. Dresovi se kopiraju u kit-server knjižnicu (`Liga\Klub`, kako ih je mapa imala) i svaki klub dobije red u `map.txt`; **Save** ga zapisuje. Klub koji već ima red zadržava ga, osim ako je uključeno **Zamijeni već postavljene dresove**. Dresovi novog kluba iz League Buildera idu po ID-u koji mu je dao Build, zato prvo napravi Build svijeta i drži ga uključenim. Mod Studio ne izrađuje dresove: teksture (`.ftex`) dolaze gotove od izrađivača dresova.
+
 ## 7. Profili
 
 Profil pamti koje su mape sadržaja i moduli uključeni i kojim redom. Drži jedan za Master
