@@ -120,8 +120,8 @@ class Players(BuilderPage):
         lv.addWidget(self.foot)
         from ..pitch import Pitch
         self.pitch = Pitch()
-        self.pitch.setMinimumHeight(170)
-        self.pitch.setMaximumHeight(340)
+        self.pitch.setMinimumHeight(260)
+        self.pitch.setMaximumHeight(420)
         self.pitch.setToolTip(_("The first eleven in the club's formation. Select a player in the list, "
                                 "then click a place to put that player there."))
         self.pitch.picked.connect(self.put_at)

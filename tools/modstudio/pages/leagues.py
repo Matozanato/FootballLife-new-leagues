@@ -2,10 +2,10 @@
 in the order they are dragged into.  The one picked is edited on the right: a league of the game
 in the game's leagues panel, a league of ours with the league window."""
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QBrush, QColor
+from PySide6.QtGui import QBrush, QColor, QPixmap
 from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QHBoxLayout, QLabel, QLineEdit, QMenu,
                                QPushButton, QSplitter, QStackedWidget, QToolButton, QTreeWidget,
-                               QTreeWidgetItem, QVBoxLayout, QWidget, QFormLayout)
+                               QTreeWidgetItem, QVBoxLayout, QWidget, QFormLayout, QGridLayout)
 
 from ..i18n import _
 from ..ui import hint, row
@@ -15,6 +15,17 @@ from .builder import BuilderPage, GameLeagues, fmt_text, europe_text, tier_of, p
 CONTINENTS = ((2, "Europe"), (3, "Asia"), (4, "South America"), (5, "Africa"),
               (6, "North and Central America"), (7, "Oceania"), (0, "Other"))
 ROLE = Qt.UserRole
+
+
+def updown_text(r, L):
+    """how many clubs go up and down: with the league above, and with the league below"""
+    out = []
+    if L.get("above") not in (None, ""):
+        out.append(_("%d with %s above") % (int(L.get("exchange", 3)), L["above"]))
+    for M in r["leagues"]:
+        if M.get("above") == L["name"]:
+            out.append(_("%d with %s below") % (int(M.get("exchange", 3)), M["name"]))
+    return ", ".join(out) or "—"
 
 
 class LeagueTree(QTreeWidget):
@@ -106,8 +117,10 @@ class Leagues(BuilderPage):
         chips = QHBoxLayout()
         chips.setSpacing(6)
         self.filter = QButtonGroup(self)
+        self.chips = []
         for i, text in enumerate(("All", "Ours", "Changed")):
             b = QPushButton(_(text))
+            self.chips.append((b, _(text)))
             b.setObjectName("tab")
             b.setCheckable(True)
             b.setChecked(i == 0)
@@ -135,7 +148,10 @@ class Leagues(BuilderPage):
         ov.addWidget(self.o_tag)
         self.o_name = QLabel("")
         self.o_name.setObjectName("bigtitle")
-        ov.addWidget(self.o_name)
+        self.o_logo = QLabel()
+        self.o_logo.setFixedSize(64, 64)
+        self.o_logo.setAlignment(Qt.AlignCenter)
+        ov.addWidget(row(self.o_logo, self.o_name, "stretch"))
         f = QFormLayout()
         f.setHorizontalSpacing(18)
         f.setVerticalSpacing(8)
@@ -146,6 +162,10 @@ class Leagues(BuilderPage):
             self.o_rows[key] = lab
             f.addRow(_(key), lab)
         ov.addLayout(f)
+        self.o_crests = QGridLayout()
+        self.o_crests.setSpacing(10)
+        self.o_crests.setColumnStretch(5, 1)
+        ov.addLayout(self.o_crests)
         b_edit = QPushButton(_("Edit league..."))
         b_edit.setObjectName("primary")
         b_edit.clicked.connect(lambda: self.on_ours("edit"))
@@ -236,9 +256,11 @@ class Leagues(BuilderPage):
         tags = {"game": (_("game"), theme.SUBTLE), "ours": (_("ours"), theme.ACCENT),
                 "changed": (_("changed"), theme.WARN)}
         pick, shown, total = None, 0, 0
+        kinds = {}
         for e in self.entries():
             k, conf, name, kind, payload = e
             total += 1
+            kinds[kind] = kinds.get(kind, 0) + 1
             if q and q not in name.lower():
                 continue
             if want == 1 and kind != "ours" or want == 2 and kind != "changed":
@@ -271,6 +293,8 @@ class Leagues(BuilderPage):
             self.tree.setCurrentItem(pick)
         self.show_current()
         ours = len(self.project.recipe["leagues"])
+        for (b, text), n in zip(self.chips, (total, kinds.get("ours", 0), kinds.get("changed", 0))):
+            b.setText("%s  %d" % (text, n))
         self.count.setText(_("%d leagues: %d of the game, %d of yours.") % (total, total - ours, ours)
                            if shown == total else _("%d of %d leagues shown.") % (shown, total))
 
@@ -331,12 +355,59 @@ class Leagues(BuilderPage):
         self.o_name.setText(L["name"])
         vals = {"Country": L.get("country", ""), "Clubs": str(L.get("clubs", "")), "Format": fmt_text(L),
                 "Division": ("%d  (%s)" % (t, div)) if t else div,
-                "Up / down": str(L.get("exchange", 3)) if up not in (None, "") else "—",
+                "Up / down": updown_text(r, L),
                 "Europe": europe_text(L) or "—",
                 "League ID": str(b["cid"]) if b.get("cid") is not None else
                 (_("not built yet") if plan else "—")}
         for k, v in vals.items():
             self.o_rows[k].setText(v)
+        pm = pixmap(L.get("logo"), 60)
+        self.o_logo.setPixmap(pm if pm else QPixmap())
+        self.o_logo.setVisible(bool(pm))
+        self.show_crests(L)
+
+    def show_crests(self, L):
+        """the league's clubs, crest over short name, five to a row"""
+        while self.o_crests.count():
+            w = self.o_crests.takeAt(0).widget()
+            if w:
+                w.deleteLater()
+        P = self.project
+        crests = list(L.get("club_crests") or [])
+        abbrs = list(L.get("club_abbrs") or [])
+        names = list(L.get("club_names") or [])
+        kits = L.get("club_kits") or []
+        game = {int(e.get("at", -1)): e for e in L.get("game_clubs") or []}
+        for k in range(int(L.get("clubs") or 0)):
+            path, kit = (crests[k] if k < len(crests) else None), (kits[k] if k < len(kits) else None)
+            name = names[k] if k < len(names) and names[k] else ""
+            abbr = abbrs[k] if k < len(abbrs) and abbrs[k] else ""
+            if k in game:
+                tid = int(game[k]["id"])
+                ed = P.edits("clubs").get(str(tid), {})
+                gname, gshort = P.game_cl.get(tid, (str(tid), ""))
+                path, kit = ed.get("crest"), None
+                name, abbr = ed.get("name") or gname, ed.get("abbr") or gshort
+            cell = QLabel()
+            cell.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
+            cell.setFixedWidth(64)
+            pm = pixmap(path, 44, kit)
+            if pm:
+                cell.setPixmap(pm)
+            else:
+                cell.setText("—")
+                cell.setFixedHeight(44)
+            cap = QLabel(abbr or name[:3])
+            cap.setObjectName("subtle")
+            cap.setAlignment(Qt.AlignHCenter)
+            box = QWidget()
+            bv = QVBoxLayout(box)
+            bv.setContentsMargins(0, 0, 0, 0)
+            bv.setSpacing(2)
+            bv.addWidget(cell, 0, Qt.AlignHCenter)
+            bv.addWidget(cap)
+            box.setToolTip(name)
+            self.o_crests.addWidget(box, k // 5, k % 5)
 
     def on_ours(self, what):
         """run a New leagues button on the league picked here"""

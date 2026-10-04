@@ -1,7 +1,8 @@
 """A pitch with a formation on it: the eleven places, each with its role and optionally a name.
 
 Places are mktactics' (place, role, depth, width): depth 3 (the goal line) .. 46 (up front),
-width 0 (left) .. 100 (right) as the team attacks -- drawn attacking up the widget."""
+width 0 (left) .. 100 (right) as the team attacks -- drawn attacking up the widget, or, when the
+widget is wider than tall, attacking to the right (room for the names under a squad list)."""
 from PySide6.QtCore import Qt, QPointF, QRectF, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPen
 from PySide6.QtWidgets import QComboBox, QVBoxLayout, QWidget
@@ -46,31 +47,59 @@ class Pitch(QWidget):
         self.mark = mark
         self.update()
 
+    def _flat(self):
+        return self.width() > self.height() * 1.2
+
     def _field(self):
         m = 8
         r = QRectF(m, m, self.width() - 2 * m, self.height() - 2 * m)
+        if self._flat():
+            w = min(r.width(), r.height() * 1.75)
+            return QRectF(r.center().x() - w / 2, r.top(), w, r.height())
         h = r.height()
         w = min(r.width(), h * 0.85)                # a little wider than a real pitch: room for names
         return QRectF(r.center().x() - w / 2, r.top(), w, h)
 
     def _at(self, depth, width):
         f = self._field()
+        if self._flat():
+            return QPointF(f.left() + f.width() * (0.05 + 0.9 * depth / DEPTH),
+                           f.top() + f.height() * (0.06 + 0.78 * width / 100.0))
         return QPointF(f.left() + f.width() * (0.08 + 0.84 * width / 100.0),
                        f.bottom() - f.height() * (0.04 + 0.9 * depth / DEPTH))
+
+    def _rad(self):
+        f = self._field()
+        return max(10.0, min(f.width(), f.height()) / 22)
 
     def paintEvent(self, _e):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         f = self._field()
         p.fillRect(self.rect(), QColor(theme.PANEL))
+        flat = self._flat()
         for i in range(8):                          # mown stripes
-            band = QRectF(f.left(), f.top() + f.height() * i / 8, f.width(), f.height() / 8)
+            if flat:
+                band = QRectF(f.left() + f.width() * i / 8, f.top(), f.width() / 8, f.height())
+            else:
+                band = QRectF(f.left(), f.top() + f.height() * i / 8, f.width(), f.height() / 8)
             p.fillRect(band, QColor(GRASS if i % 2 else GRASS2))
         p.setPen(QPen(QColor(LINE), 1.2))
         p.drawRect(f)
-        p.drawLine(QPointF(f.left(), f.center().y()), QPointF(f.right(), f.center().y()))
-        p.drawEllipse(f.center(), f.width() * 0.14, f.width() * 0.14)
-        for top in (True, False):                   # penalty and goal areas
+        if flat:
+            p.drawLine(QPointF(f.center().x(), f.top()), QPointF(f.center().x(), f.bottom()))
+            p.drawEllipse(f.center(), f.height() * 0.14, f.height() * 0.14)
+            for left in (True, False):              # penalty and goal areas
+                bw, bh = f.width() * 0.15, f.height() * 0.58
+                x = f.left() if left else f.right() - bw
+                p.drawRect(QRectF(x, f.center().y() - bh / 2, bw, bh))
+                gw, gh = f.width() * 0.055, f.height() * 0.26
+                x = f.left() if left else f.right() - gw
+                p.drawRect(QRectF(x, f.center().y() - gh / 2, gw, gh))
+        else:
+            p.drawLine(QPointF(f.left(), f.center().y()), QPointF(f.right(), f.center().y()))
+            p.drawEllipse(f.center(), f.width() * 0.14, f.width() * 0.14)
+        for top in (() if flat else (True, False)):     # penalty and goal areas
             bw, bh = f.width() * 0.58, f.height() * 0.15
             y = f.top() if top else f.bottom() - bh
             p.drawRect(QRectF(f.center().x() - bw / 2, y, bw, bh))
@@ -78,10 +107,10 @@ class Pitch(QWidget):
             y = f.top() if top else f.bottom() - gh
             p.drawRect(QRectF(f.center().x() - gw / 2, y, gw, gh))
         small = QFont(self.font())
-        small.setPointSizeF(max(6.5, self.font().pointSizeF() - 1.5))
+        small.setPointSizeF(max(8.0, self.font().pointSizeF() - 0.5))
         bold = QFont(small)
         bold.setBold(True)
-        rad = max(9.0, f.width() / 22)
+        rad = self._rad()
         fm = QFontMetrics(small)
         line = fm.height()
         spots = [self._at(d, w) for _p, _r, d, w in self.places]
@@ -90,7 +119,7 @@ class Pitch(QWidget):
             # a label is as wide as the gap to the nearest place beside it, so two centre
             # backs side by side do not write their names over each other
             room = min([abs(o.x() - c.x()) for m, o in enumerate(spots)
-                        if m != n and abs(o.y() - c.y()) < rad + 2 * line] + [140.0]) - 6
+                        if m != n and abs(o.y() - c.y()) < rad + 2 * line] + [170.0]) - 6
             on = place == self.mark
             p.setPen(QPen(QColor("#FFFFFF" if on else "#10301A"), 2 if on else 1))
             p.setBrush(QColor(theme.WARN if role == 0 else (theme.ACCENT if on else "#F2F5F3")))
@@ -101,19 +130,39 @@ class Pitch(QWidget):
             label = mktactics.ROLES[role]
             name = self.names.get(place)
             p.setFont(small)
-            p.setPen(QColor("#FFFFFF"))
+            if flat:
+                # one line, the role and the surname: the places of a line stand close one under
+                # the other; the label may reach the circle of the nearest place beside it
+                gap = min([abs(o.x() - c.x()) for m, o in enumerate(spots)
+                           if m != n and abs(o.y() - c.y()) < rad + line] + [120.0])
+                room = 2 * (gap - rad) - 8
+                if name:
+                    label = fm.elidedText(label + " " + name.split()[-1], Qt.ElideRight, int(max(room, 2 * rad)))
+                box = QRectF(c.x() - room / 2 - 20, c.y() + rad + 1, room + 40, line + 2)
+                self._label(p, box, Qt.AlignHCenter | Qt.AlignTop, label)
+                continue
             if name:
                 label += "\n" + fm.elidedText(name, Qt.ElideRight, int(max(room, 2 * rad)))
-            if role == 0:                           # the goalkeeper's label beside him: below is the line
+            if role == 0 and not flat:              # the goalkeeper's label beside him: below is the line
                 room = f.right() - c.x() - rad - 4
                 box = QRectF(c.x() + rad + 4, c.y() - line, room, 2 * line + 2)
                 if name:
                     label = mktactics.ROLES[role] + "\n" + fm.elidedText(name, Qt.ElideRight, int(room))
-                p.drawText(box, Qt.AlignLeft | Qt.AlignTop, label)
+                self._label(p, box, Qt.AlignLeft | Qt.AlignTop, label)
                 continue
-            box = QRectF(c.x() - room / 2 - 20, c.y() + rad, room + 40, 2 * line + 2)
-            p.drawText(box, Qt.AlignHCenter | Qt.AlignTop, label)
+            box = QRectF(c.x() - room / 2 - 20, c.y() + rad + 1, room + 40, 2 * line + 2)
+            self._label(p, box, Qt.AlignHCenter | Qt.AlignTop, label)
         p.end()
+
+    @staticmethod
+    def _label(p, box, align, text):
+        """text on a dark plate, so it reads over the grass and the lines"""
+        r = p.boundingRect(box, align, text).adjusted(-4, -1, 4, 1)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(10, 25, 15, 170))
+        p.drawRoundedRect(r, 4, 4)
+        p.setPen(QColor("#FFFFFF"))
+        p.drawText(box, align, text)
 
     def mousePressEvent(self, e):
         pos = e.position() if hasattr(e, "position") else QPointF(e.pos())
@@ -123,7 +172,7 @@ class Pitch(QWidget):
             d = (c.x() - pos.x()) ** 2 + (c.y() - pos.y()) ** 2
             if best is None or d < best[0]:
                 best = (d, place)
-        if best and best[0] < (max(9.0, self._field().width() / 22) * 2.2) ** 2:
+        if best and best[0] < (self._rad() * 2.2) ** 2:
             self.picked.emit(best[1])
 
 

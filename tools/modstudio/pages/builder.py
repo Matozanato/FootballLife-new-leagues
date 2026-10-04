@@ -100,7 +100,8 @@ def pixmap(path, size, kit=None):
 
 
 def europe_text(L):
-    return ", ".join("%d %s" % (pos, SHORT.get(comp, comp)) for pos, comp in sorted(L.get("europe") or []))
+    return ", ".join((_("cup winner") if int(pos) == B.CUP_WINNER else str(pos)) + " " + SHORT.get(comp, comp)
+                     for pos, comp in sorted(L.get("europe") or [], key=lambda e: (int(e[0]) == B.CUP_WINNER, e[0])))
 
 
 def built_plan(g, world):
@@ -179,7 +180,9 @@ class PictureField(QWidget):
             self.view.setPixmap(pm)
         else:
             self.view.setPixmap(QPixmap())
-            self.view.setText(_(self.empty) if not self.path else _("(not readable)"))
+            self.view.setText(_(self.empty) if not self.path else
+                              _("(not readable)") if os.path.exists(self.path) else _("(file moved or deleted)"))
+            self.view.setToolTip(self.path or "")
             self.view.setWordWrap(True)
 
 
@@ -2108,6 +2111,9 @@ class NewClubs(BuilderPage):
         for c in range(6):
             it.setToolTip(c, tip)
         it.setForeground(4, QBrush(QColor(theme.SUBTLE)))
+        pm = pixmap(ed.get("crest"), 28)
+        if pm:
+            it.setIcon(1, pm)
         it.setData(0, Qt.UserRole, k)
         return it
 
