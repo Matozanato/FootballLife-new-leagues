@@ -508,6 +508,17 @@ class Players(BuilderPage):
         names = self.new_names(L) if L else []
         return names[int(k)] if L and k.isdigit() and int(k) < len(names) else key
 
+    def game_player(self, key):
+        """is `key` the id of a game player who is not in this club: one of another club, or one
+        of no club (a free agent: he signs for this one)"""
+        if not str(key).isdigit() or self.is_national():
+            return False
+        try:
+            self.project.squads().row(int(key))
+        except KeyError:
+            return False
+        return self.home_of(str(key)) != self.club
+
     def home_of(self, ref):
         """the club key a player belongs to before any transfer (None: no club)"""
         src, n = P.split_ref(ref)
@@ -1291,7 +1302,13 @@ class Players(BuilderPage):
             return
         try:
             live = [dict(m, player=k) for k, m, ch, gone in self.view() if not gone and not k.startswith(NEW)]
-            got, err = P.import_csv(p, live)
+            sq = self.project.squads()
+
+            def elsewhere(key):                  # a game player of another club joins this one
+                if not self.game_player(key):
+                    return None
+                return dict(self.joiner_row(key), player=key)
+            got, err, joins = P.import_csv(p, live, elsewhere)
         except (P.Error, OSError, ValueError) as e:
             msg = str(e)
             if msg.startswith("unknown columns"):       # someone else's table (GitHub #58)
@@ -1303,6 +1320,14 @@ class Players(BuilderPage):
         if err:
             error(self, "Import CSV...", _("Nothing imported:") + "\n\n" + "\n".join(err[:15]))
             return
+        if joins:
+            for club, cc in self.project.players().items():   # a player signs for one club at a time
+                if club != self.club and not self.is_national(club) and cc.get("join"):
+                    cc["join"] = [r for r in cc["join"] if str(r) not in joins]
+                    if not cc["join"]:
+                        cc.pop("join")
+            c = self.changes(True)
+            c["join"] = list(dict.fromkeys([str(r) for r in c.get("join") or []] + joins))
         ed = self.changes(True).setdefault("edits", {})
         for key, ch in got.items():
             orig = self.original(key)
@@ -1316,7 +1341,10 @@ class Players(BuilderPage):
                 ed.pop(key, None)
         self.project.dirty = True
         self.fill_squad()
-        info(self, "Import CSV...", _("%d players changed.") % len(got))
+        text = _("%d players changed.") % len(got)
+        if joins:
+            text += "\n" + _("%d players of other clubs join this one.") % len(joins)
+        info(self, "Import CSV...", text)
 
     def import_table(self):
         """a squad from any table of players (squadimport.py). A row with the game's id of a player
@@ -1385,7 +1413,7 @@ class Players(BuilderPage):
             if pid and not new and pid in keys and pid not in mine:
                 mine[pid] = pl
             elif (pid and pid not in joins and not (not new and pid in keys)
-                  and self.home_of(pid) is not None and sq.clubs_of.get(int(pid))):
+                  and self.game_player(pid)):
                 joins[pid] = pl
             else:
                 rest.append(pl)

@@ -858,10 +858,14 @@ def export_csv(path, rows):
             w.writerow([r.get(c, "") for c in cols])
 
 
-def import_csv(path, rows):
+def import_csv(path, rows, elsewhere=None):
     """changes {key: {field: text}} from a CSV of one club: a line matches a player by its
-    `player` cell, or when that is empty or unknown, by its place in the file; only cells
-    that differ from the player as he is become changes"""
+    `player` cell, or when that is empty, by its place in the file; only cells that differ
+    from the player as he is become changes. With `elsewhere` (key -> that player's row, or
+    None), a `player` cell naming a game player of another club gives all his cells and his
+    key in the third value returned, the players who join this club (JamesNotLike 04.10.: a
+    Man Utd file with Tielemans of Villa put him on Bayindir's place, and the game had two).
+    A `player` cell that names nobody is an error, not a place."""
     with open(path, newline="", encoding="utf-8-sig") as f:
         lines = list(csv.reader(f))
     if not lines:
@@ -871,13 +875,22 @@ def import_csv(path, rows):
     if unknown:
         raise Error("unknown columns: %s" % ", ".join(unknown))
     by_key = {r["player"]: r for r in rows}
-    out, err = {}, []
+    out, err, joins = {}, [], []
     for n, line in enumerate(lines[1:]):
         cell = {h: (line[i].strip() if i < len(line) else "") for i, h in enumerate(head) if h}
         if not any(cell.values()):
             continue
         key = cell.get("player", "")
-        r = by_key.get(key) or (rows[n] if n < len(rows) else None)
+        r = by_key.get(key)
+        if r is None and key and elsewhere is not None:
+            r = elsewhere(key)
+            if r is not None and key not in joins:
+                joins.append(key)
+        if r is None and key and elsewhere is not None:
+            err.append("line %d: there is no player %s in the game or in this club" % (n + 2, key))
+            continue
+        if r is None:
+            r = rows[n] if n < len(rows) else None
         if r is None:
             err.append("line %d: no player %s and no player in that place" % (n + 2, key or "?"))
             continue
@@ -886,5 +899,7 @@ def import_csv(path, rows):
         if e:
             err += ["line %d: %s" % (n + 2, x) for x in e]
         elif ch:
-            out[r["player"]] = ch
-    return out, err
+            out[r.get("player", key)] = ch
+    if elsewhere is None:
+        return out, err
+    return out, err, joins

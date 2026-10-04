@@ -1162,7 +1162,8 @@
   "%s, club %d": "%s, club %d",
   "takes %s's place": "prend la place de %s",
   "already in this recipe: %s": "déjà dans cette recette : %s",
-  "Take it out of that place first (New clubs: New club here), then pick it here.": "Retirez-le d'abord de cette place (Nouveaux clubs : New club here), puis choisissez-le ici."
+  "Take it out of that place first (New clubs: New club here), then pick it here.": "Retirez-le d'abord de cette place (Nouveaux clubs : New club here), puis choisissez-le ici.",
+  "%d players of other clubs join this one.": "%d joueurs d'autres clubs rejoignent celui-ci."
  },
  "log": [
   [

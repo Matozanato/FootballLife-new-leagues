@@ -1162,7 +1162,8 @@
   "%s, club %d": "%s, klub %d",
   "takes %s's place": "zauzima mjesto kluba %s",
   "already in this recipe: %s": "već je u ovom receptu: %s",
-  "Take it out of that place first (New clubs: New club here), then pick it here.": "Prvo ga makni s tog mjesta (Novi klubovi: New club here), pa ga izaberi ovdje."
+  "Take it out of that place first (New clubs: New club here), then pick it here.": "Prvo ga makni s tog mjesta (Novi klubovi: New club here), pa ga izaberi ovdje.",
+  "%d players of other clubs join this one.": "Igrača iz drugih klubova koji prelaze u ovaj: %d."
  },
  "log": [
   [
