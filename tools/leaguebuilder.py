@@ -1058,10 +1058,13 @@ def plan(recipe, base):
         if i in rid_of or not L.get("europe") or not left:
             continue
         rounds = rounds_of(int(L.get("clubs", 0) or 0)) * int(L.get("legs", 2) or 2)
-        busy = EURO_DAYS | (set(LEAGUE_CUP_DAYS) if L.get("league_cup") else set())
+        # European days first: a clash with a league-cup date only breaks a tie (#54: an 18-club
+        # league with a league cup took reg 98, 3 European clashes, to dodge two cup dates)
+        cup = set(LEAGUE_CUP_DAYS) if L.get("league_cup") else set()
         best = fl26world.id_rank(left[0])
         r = min((r for r in left if fl26world.id_rank(r) == best),
-                key=lambda r: (len(set(league_days(r, rounds)) & busy), left.index(r)))
+                key=lambda r: (len(set(league_days(r, rounds)) & EURO_DAYS),
+                               len(set(league_days(r, rounds)) & cup), left.index(r)))
         rid_of[i] = r
         left.remove(r)
     for i in order:
