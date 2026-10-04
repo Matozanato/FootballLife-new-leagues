@@ -4,7 +4,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from modstudio import newlife as N
+import lbplayers as N
 import lbplayers as P
 import playeredit as E
 

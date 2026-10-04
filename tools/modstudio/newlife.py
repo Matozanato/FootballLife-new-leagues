@@ -14,7 +14,6 @@ import collections, csv, glob, io, json, os, zipfile
 
 import leaguebuilder as B
 import lbplayers as P
-import playeredit as E
 
 FILES = ("players.csv", "clubs.csv", "newlife.json")
 PART = "NewLife-*.zip"
@@ -212,20 +211,6 @@ def abbr(name, taken):
     return (w + "XX")[:2] + "0"
 
 
-def fill_level(club, league):
-    """the rating a prototype player who stays at a NewLife club is brought to: the club's own
-    players' lower quarter, or the league's when the club has fewer than three; None: no ratings"""
-    xs = sorted(club if len(club) >= 3 else league)
-    return xs[len(xs) // 4] if xs else None
-
-
-def at_level(row, want):
-    """{ability: text} that move every ability of `row` by one amount, so its rating is `want`
-    (as Mod Studio's Squad level does: abilities stop at 40 and 99)"""
-    d = want - P.overall(row)
-    return {n: str(max(40, min(99, int(row.get(n) or 40) + d))) for n, _b in E.ABILITIES}
-
-
 def add_league(recipe, rel, L, legs=2, info=None):
     """put league L (from rel.leagues) in the recipe: a new league with its clubs, every club's
     squad from the release. The whole squad is set: places the release has no player for leave
@@ -238,7 +223,7 @@ def add_league(recipe, rel, L, legs=2, info=None):
     takes the release's other fields. A player whose move is refused is left out of the club
     rather than copied, and the prototype player of his place stays instead.
     A prototype player who stays (the release has fewer than P.MIN_SQUAD players for the club)
-    is brought to the club's level, a little under its own players (fill_level): the prototype
+    is brought to the club's level, a little under its own players (lbplayers.fill_level): the prototype
     is a top club's squad, and a fourth-tier side with eleven of its own had seven of them
     (Risto 04.10.).
     Returns (the new league's name, players left at their game club for lack of players,
@@ -327,10 +312,10 @@ def add_league(recipe, rel, L, legs=2, info=None):
             else:
                 ed[str(len(ed) - len(join))] = ch
         keep = max(len(sq) - len(join), P.MIN_SQUAD - len(join))
-        want = fill_level([P.overall(r) for r in sq], league_ovr)
+        want = P.fill_level([P.overall(r) for r in sq], league_ovr)
         for n in range(len(ed) - len(join), keep):          # prototype players who stay
             if n < len(proto) and want is not None and str(n) not in ed:
-                ed[str(n)] = at_level(proto[n], want)
+                ed[str(n)] = P.at_level(proto[n], want)
         c = {"edits": ed}
         if join:
             c["join"] = join

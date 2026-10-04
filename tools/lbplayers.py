@@ -241,6 +241,52 @@ class Squads:
         return rows
 
 
+def fill_level(club, league):
+    """the rating a prototype player who stays at a NewLife club is brought to: the club's own
+    players' lower quarter, or the league's when the club has fewer than three; None: no ratings"""
+    xs = sorted(club if len(club) >= 3 else league)
+    return xs[len(xs) // 4] if xs else None
+
+
+def at_level(row, want):
+    """{ability: text} that move every ability of `row` by one amount, so its rating is `want`
+    (as Mod Studio's Squad level does: abilities stop at 40 and 99)"""
+    d = want - overall(row)
+    return {n: str(max(40, min(99, int(row.get(n) or 40) + d))) for n, _b in E.ABILITIES}
+
+
+def fill_newlife(pl, base, log=print):
+    """pl's "players" with the prototype players who stay at a NewLife club brought to its level
+    (fill_level), for recipes whose leagues were added before Mod Studio did it itself (Risto
+    04.10.: a top club's clones at fourth-tier sides). A place the recipe edits is left alone.
+    Returns a new players dict; pl is not changed."""
+    import copy
+    out = copy.deepcopy(pl.get("players") or {})
+    proto, n = None, 0
+    for L in pl.get("leagues") or []:
+        nl = (L.get("newlife") or {}).get("clubs") or []
+        if not nl:
+            continue
+        clubs = [out.get(new_key(L["name"], k)) or {} for k in range(len(nl))]
+        own = [[overall(ch) for ch in (c.get("edits") or {}).values() if "Registered Position" in ch] for c in clubs]
+        league = [x for xs in own for x in xs]
+        for k, c in enumerate(clubs):
+            if not c.get("edits"):
+                continue                  # not a squad Mod Studio set from the release
+            if proto is None:
+                proto = Squads(base).proto()
+            want = fill_level(own[k], league)
+            gone = set(c.get("remove") or [])
+            for place in range(min(SQUAD, len(proto))):
+                key = str(place)
+                if want is not None and key not in c["edits"] and key not in gone:
+                    c["edits"][key] = at_level(proto[place], want)
+                    n += 1
+    if n:
+        log("  %d prototype players at NewLife clubs brought to their club's level" % n)
+    return out
+
+
 LINEUP = ["GK", "CB", "CB", "RB", "LB", "DMF", "DMF", "RMF", "LMF", "AMF", "CF"]   # 4-2-3-1
 
 

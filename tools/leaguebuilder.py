@@ -2565,7 +2565,8 @@ def build(pl, base, game, replace=False, log=print):
     import lbplayers
     faces, ids, portraits = [], {}, []
     try:
-        lbplayers.apply(pl, base, db, PLAYER_CAP, log, faces, lineups=lineups, ids=ids, portraits=portraits)
+        filled = dict(pl, players=lbplayers.fill_newlife(pl, base, log))   # the plan kept as it was
+        lbplayers.apply(filled, base, db, PLAYER_CAP, log, faces, lineups=lineups, ids=ids, portraits=portraits)
     except lbplayers.Error as e:
         raise BuildError(str(e))
     if ids:                                            # for Mod Studio's Players page and its CSV
