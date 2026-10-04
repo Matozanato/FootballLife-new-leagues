@@ -346,6 +346,15 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-04 (Mod Studio 0.1.8, GitHub issue #60, Discord): **a club of the game moved into a new
+  league (Sparta Prague, Universitario ...) was still listed in its old "Other European Leagues" /
+  "Other Latin American Teams" group as well.** The game files a club into those groups at start
+  from a value in the club's own record (Team.bin, byte 0x4f, high half), not from the
+  competitions, and Build did not touch it. Build now clears it for a moved club, and for the
+  club that takes a moved club's place in a league. Checked without the game: in a test world
+  Sparta Prague (2 -> 0) and Universitario (6 -> 0) changed and no other club did. Not yet
+  checked in the game. **Build the world again.**
+
 - 2026-10-03 (Mod Studio 0.1.7.1, GitHub issue #80): **a new league right under a second division
   of the game (League One under the Championship, Serie C under Serie B ...) stopped *Check the
   plan* with `TypeError: cup_field() takes 1 positional argument but 4 were given`.** Two functions

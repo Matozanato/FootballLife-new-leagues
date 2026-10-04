@@ -543,6 +543,8 @@ def game_clubs(base):
 
 T_NATIONAL = 0x53                           # top bit set on the 144 national teams, never on a club
 T_COUNTRY = 0x46                            # the country: 9 bits from bit 2 (lbplayers.T_COUNTRY, clubnation.py)
+T_POOL = 0x4f                               # high nibble: the game's "Other ..." group the club is filed in at
+                                            # boot (2 Other European, 6 Other Latin American, 7 Africa, 0 none)
 
 
 def game_others(base, leagues):
@@ -2226,11 +2228,15 @@ def build(pl, base, game, replace=False, log=print):
                 else:
                     g["swap_id"] = sw or None
                 nopool.append(tid)
+                # #60: the game files a club into an "Other ..." group by a nibble of its own record,
+                # at boot, whatever the competitions say -- so a moved club showed up there as well
+                raw[game_row[tid] + T_POOL] &= 0x0f
                 if g["swap_id"]:
                     n = swap_entries(ents, tid, g["swap_id"])
                     played_league = any(c in info["league_cids"] for c in info["entries"].get(tid) or [])
                     if played_league and not isinstance(sw, dict):
                         nopool.append(g["swap_id"])
+                        raw[game_row[g["swap_id"]] + T_POOL] &= 0x0f
                     log("  %s moves to %s; %s takes its %d place(s) in %s"
                         % (info["clubs"][tid][0], p["name"],
                            sw["name"] if isinstance(sw, dict) else info["clubs"][g["swap_id"]][0], n,
