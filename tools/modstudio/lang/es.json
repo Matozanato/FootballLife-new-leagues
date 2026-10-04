@@ -1163,7 +1163,16 @@
   "takes %s's place": "ocupa el puesto de %s",
   "already in this recipe: %s": "ya está en esta receta: %s",
   "Take it out of that place first (New clubs: New club here), then pick it here.": "Quítalo antes de ese puesto (Clubes nuevos: New club here) y luego elígelo aquí.",
-  "%d players of other clubs join this one.": "%d jugadores de otros clubes se unen a este."
+  "%d players of other clubs join this one.": "%d jugadores de otros clubes se unen a este.",
+  "Update my leagues to this version": "Actualizar mis ligas a esta versión",
+  "Leagues you added from another NewLife version get this version's clubs and players; their division, format, European places and cups stay": "Las ligas que añadiste desde otra versión de NewLife reciben los clubes y jugadores de esta versión; su división, formato, plazas europeas y copas se mantienen",
+  "%d of your leagues are from another NewLife version (%s): Update my leagues to this version brings them to %s.": "%d de tus ligas son de otra versión de NewLife (%s): Actualizar mis ligas a esta versión las lleva a %s.",
+  "Updated to %s: %s. Build again and start a new career.": "Actualizado a %s: %s. Vuelve a hacer Build y empieza una carrera nueva.",
+  "Clubs and players come from %s. Each league keeps its name, division, format, European places and cups, and a club that stays keeps its manager and the crest you picked. Player changes you made on the Players page for these clubs are replaced.": "Los clubes y jugadores vienen de %s. Cada liga mantiene su nombre, división, formato, plazas europeas y copas, y un club que se queda mantiene su entrenador y el escudo que elegiste. Los cambios de jugadores que hiciste en la página Players para estos clubes se reemplazan.",
+  "%d clubs now, %d in %s": "%d clubes ahora, %d en %s",
+  "(%d new, %d not in it)": "(%d nuevos, %d no están)",
+  "Keep my clubs": "Mantener mis clubes",
+  "Ticked: the league keeps the clubs it has (their squads still come from this version). Unticked: it gets the clubs it has in this version.": "Marcado: la liga mantiene sus clubes (sus plantillas vienen igualmente de esta versión). Sin marcar: recibe los clubes que tiene en esta versión."
  },
  "log": [
   [

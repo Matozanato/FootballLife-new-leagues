@@ -461,7 +461,18 @@ under 10 MB. Download only the parts you want.
 - A NewLife club takes a world id of its own (0.1.7.2), in the block the game reads for clubs,
   counting up after the ids the builder gives its own clubs. The **Club id** column on New clubs
   shows it, and a Kit Server's `map.txt` is keyed on it. A world built before 0.1.7.2 must be
-  built again and the career started new for the kits to follow.
+  built again and the career started new for the kits to follow. From 0.1.8 a club keeps the id
+  of its first Build (the recipe remembers it): removing, adding or updating another league no
+  longer moves it.
+- **A newer NewLife version** (0.1.8): put its parts in a folder (not mixed with the old ones),
+  **Open NewLife Database...** that folder and press **Update my leagues to this version**. Every
+  league you added from an older version is listed with what changes (*16 clubs now, 18 in
+  NewLife 1.3 (5 new, 3 not in it)*) and a **Keep my clubs** box: ticked, the league keeps its
+  clubs; unticked, it gets the clubs it has in the new version. Either way the squads come from
+  the new version, and the league keeps its name, division, format, European places and cups; a
+  club that stays keeps its manager and a crest you picked, and clubs of your own you put in the
+  league stay. Player changes you made on *Players* for those clubs are replaced. Then Build and
+  start a new career.
 - A NewLife club gets a shield crest in its colours and the kit of the game closest to its
   colours, until you give it your own (**Edit club**).
 

@@ -1163,7 +1163,16 @@
   "takes %s's place": "zauzima mjesto kluba %s",
   "already in this recipe: %s": "već je u ovom receptu: %s",
   "Take it out of that place first (New clubs: New club here), then pick it here.": "Prvo ga makni s tog mjesta (Novi klubovi: New club here), pa ga izaberi ovdje.",
-  "%d players of other clubs join this one.": "Igrača iz drugih klubova koji prelaze u ovaj: %d."
+  "%d players of other clubs join this one.": "Igrača iz drugih klubova koji prelaze u ovaj: %d.",
+  "Update my leagues to this version": "Ažuriraj moje lige na ovu verziju",
+  "Leagues you added from another NewLife version get this version's clubs and players; their division, format, European places and cups stay": "Lige dodane iz druge verzije NewLifea dobiju klubove i igrače ove verzije; rang, format, europska mjesta i kupovi ostaju",
+  "%d of your leagues are from another NewLife version (%s): Update my leagues to this version brings them to %s.": "%d tvojih liga je iz druge verzije NewLifea (%s): Ažuriraj moje lige na ovu verziju prebacuje ih na %s.",
+  "Updated to %s: %s. Build again and start a new career.": "Ažurirano na %s: %s. Ponovno Build i nova karijera.",
+  "Clubs and players come from %s. Each league keeps its name, division, format, European places and cups, and a club that stays keeps its manager and the crest you picked. Player changes you made on the Players page for these clubs are replaced.": "Klubovi i igrači dolaze iz %s. Svaka liga zadržava ime, rang, format, europska mjesta i kupove, a klub koji ostaje zadržava trenera i grb koji si odabrao. Izmjene igrača koje si za te klubove napravio na stranici Players se zamjenjuju.",
+  "%d clubs now, %d in %s": "sada %d klubova, %d u %s",
+  "(%d new, %d not in it)": "(%d novih, %d nije u njoj)",
+  "Keep my clubs": "Zadrži moje klubove",
+  "Ticked: the league keeps the clubs it has (their squads still come from this version). Unticked: it gets the clubs it has in this version.": "Označeno: liga zadržava svoje klubove (kadrovi ipak dolaze iz ove verzije). Neoznačeno: dobiva klubove koje ima u ovoj verziji."
  },
  "log": [
   [

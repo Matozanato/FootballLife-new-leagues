@@ -2094,7 +2094,8 @@ class NewClubs(BuilderPage):
         if self.project.base is None:
             return []
         try:
-            m, _free = B.newlife_tids(self.project.recipe.get("leagues") or [], self.project.base)
+            m, _free = B.newlife_tids(self.project.recipe.get("leagues") or [], self.project.base,
+                                         self.project.recipe.get("newlife_ids"))
         except Exception:
             return []
         ids = list(L.get("club_ids") or [])
@@ -3234,6 +3235,8 @@ class Build(BuilderPage):
     def do_build(self):
         try:
             pl = self.plan()
+            if B.pin_newlife(self.project.recipe, self.project.base):
+                self.project.touch()       # NewLife clubs keep these world ids from now on
         except B.BuildError as e:
             self.out.clear()
             self.say(_("error: %s") % tr(str(e)))
@@ -3273,6 +3276,8 @@ class Build(BuilderPage):
         that says what was done and what is left (restart the game, a new career)"""
         try:
             pl = self.plan()
+            if B.pin_newlife(self.project.recipe, self.project.base):
+                self.project.touch()
         except B.BuildError as e:
             self.out.clear()
             self.say(_("error: %s") % tr(str(e)))

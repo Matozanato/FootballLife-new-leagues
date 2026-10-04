@@ -211,7 +211,7 @@ def abbr(name, taken):
     return (w + "XX")[:2] + "0"
 
 
-def add_league(recipe, rel, L, legs=2, info=None):
+def add_league(recipe, rel, L, legs=2, info=None, custom=False, name=None, more=0):
     """put league L (from rel.leagues) in the recipe: a new league with its clubs, every club's
     squad from the release. The whole squad is set: places the release has no player for leave
     the club, down to P.MIN_SQUAD. The league's clubs the game already has take the last places
@@ -226,13 +226,17 @@ def add_league(recipe, rel, L, legs=2, info=None):
     is brought to the club's level, a little under its own players (lbplayers.fill_level): the prototype
     is a top club's squad, and a fourth-tier side with eleven of its own had seven of them
     (Risto 04.10.).
+    name: the league's name (update_league keeps the one it has), else the release's; more: the
+    clubs update_league puts in after (the person's own), counted for the league's size.
+    custom: the person changed the league's line-up (clubs left out or brought from other
+    leagues); update_league then keeps that line-up instead of the release's.
     Returns (the new league's name, players left at their game club for lack of players,
     players left out because another league has them)."""
     game = game_clubs(L, info)
-    if not fits(L, info):
-        raise Error("%s has %d clubs; a league takes %d to %d" % (L["name"], len(L["clubs"]) + len(game),
+    if not B.CLUBS_MIN <= len(L["clubs"]) + len(game) + more <= B.CLUBS_MAX:
+        raise Error("%s has %d clubs; a league takes %d to %d" % (L["name"], len(L["clubs"]) + len(game) + more,
                                                                   B.CLUBS_MIN, B.CLUBS_MAX))
-    name = unique_name(recipe, L["name"])
+    name = name or unique_name(recipe, L["name"])
     clubs = sorted(L["clubs"], key=lambda i: rel.clubs[i]["name"].lower())
     taken = set()
     abbrs = []
@@ -245,6 +249,10 @@ def add_league(recipe, rel, L, legs=2, info=None):
                               "club_kits": [rel.clubs[i].get("home_kit", "") for i in clubs],
                               "club_away_kits": [rel.clubs[i].get("away_kit", "") for i in clubs],
                               "newlife": {"version": rel.meta.get("version", ""), "clubs": [int(i) for i in clubs]}})
+    if L.get("key"):
+        recipe["leagues"][-1]["newlife"]["key"] = list(L["key"])
+    if custom:
+        recipe["leagues"][-1]["newlife"]["custom"] = True
     crests = [rel.crest(i) for i in clubs]
     if any(crests):
         recipe["leagues"][-1]["club_crests"] = crests
@@ -323,3 +331,188 @@ def add_league(recipe, rel, L, legs=2, info=None):
             c["remove"] = [str(n) for n in range(keep, P.SQUAD)]
         pl[P.new_key(name, k)] = c
     return name, stayed, elsewhere
+
+
+def outdated(recipe, rel):
+    """the recipe's leagues added from another version of the NewLife Database than rel's"""
+    v = str(rel.meta.get("version", ""))
+    return [x for x in recipe["leagues"] if x.get("newlife") and str(x["newlife"].get("version", "")) != v]
+
+
+def _from_cache(path):
+    """a crest or logo the release gave (unpacked to CACHE), not one the person picked"""
+    try:
+        return os.path.normcase(os.path.abspath(path)).startswith(os.path.normcase(os.path.abspath(CACHE)))
+    except (TypeError, ValueError):
+        return False
+
+
+# every list a league keeps per place (modstudio.project.Project.PLACE_LISTS)
+PLACE_LISTS = (("club_names", ""), ("club_abbrs", ""), ("club_crests", None), ("club_coaches", ""),
+               ("club_formations", ""), ("club_ids", ""), ("club_kits", ""), ("club_away_kits", ""))
+# per place of a league: what the person set, which an update keeps for the same club
+KEEP_LISTS = (("club_coaches", ""), ("club_formations", ""), ("club_ids", ""))
+# what an update takes from the release (and KEEP_LISTS put back club by club)
+FRESH = ("club_names", "club_abbrs", "club_crests", "club_kits", "club_away_kits", "game_clubs", "newlife",
+         "clubs") + tuple(k for k, _e in KEEP_LISTS)
+
+
+def keeps_lineup(x):
+    """what an update does with league x's clubs unless told: keep the line-up the person made
+    (custom), take the release's (a league added whole in 0.1.8 on), and keep it for a league
+    added before 0.1.8 -- nothing says whether its clubs were picked by hand"""
+    nl = x.get("newlife") or {}
+    return bool(nl.get("custom")) or not nl.get("key")
+
+
+def lineup(rel, x, rows, keep=None):
+    """(the league of rel league x of the recipe is, the clubs it gets: E with "clubs" and
+    "in_game") -- the release's line-up for it, or x's own clubs still in rel when keep
+    (keeps_lineup(x) when None). Error when rel has no such league."""
+    nl = x["newlife"]
+    old_nl = [str(i) for i in nl.get("clubs") or []]
+    gc_old = [str(e["id"]) for e in x.get("game_clubs") or []]
+    by_key = {tuple(L["key"]): L for L in rows}
+    k = tuple(nl.get("key") or ())
+    if k not in by_key:              # added before 0.1.8: the league most of its clubs are in now
+        votes = collections.Counter((rel.clubs[i].get("country", ""), rel.clubs[i].get("league", ""))
+                                    for i in old_nl + gc_old if i in rel.clubs)
+        k = next((v for v, _c in votes.most_common() if v in by_key), None)
+    if k is None:
+        raise Error("%s: NewLife %s has no league with its clubs" % (x["name"], rel.meta.get("version", "")))
+    E = dict(by_key[k])
+    if keeps_lineup(x) if keep is None else keep:
+        E["clubs"] = sorted(i for i in old_nl if i in rel.clubs and rel.clubs[i].get("in_game") != "1")
+        E["in_game"] = sorted(gc_old)
+    return by_key[k], E
+
+
+def update_league(recipe, rel, x, rows, info=None, keep=None):
+    """bring league x of the recipe (added from another NewLife version) to release rel, in its
+    place: the release's clubs and squads for it -- the clubs the league has in rel, or x's own
+    line-up when keep (see lineup) -- and everything else of the league as it was: its name,
+    division, format, European places, cups and the rest. A club that stays keeps its manager,
+    formation, id, a crest picked by hand, its manager's portrait and its stadium; a club of the
+    game keeps what was set for it. rows = rel.leagues(...).
+    Returns (the league's name, players left at their game club, players another league has,
+    [notes])."""
+    nl = x["newlife"]
+    name, idx = x["name"], recipe["leagues"].index(x)
+    old_n = int(x.get("clubs") or 0)
+    old_nl = [str(i) for i in nl.get("clubs") or []]
+    gc_old = {str(e["id"]): e for e in x.get("game_clubs") or []}
+    notes = []
+    _L, E = lineup(rel, x, rows, keep)
+    keep = keeps_lineup(x) if keep is None else keep
+    others = {str(i) for y in recipe["leagues"] if y is not x for i in (y.get("newlife") or {}).get("clubs") or []}
+    others |= {str(e["id"]) for y in recipe["leagues"] if y is not x for e in y.get("game_clubs") or []}
+    clash = [i for i in E["clubs"] + E["in_game"] if i in others]
+    if clash:
+        notes.append("%s: %s stay in the league they are in already" % (
+            name, ", ".join(rel.clubs[i]["name"] if i in rel.clubs else i for i in clash)))
+        E["clubs"] = [i for i in E["clubs"] if i not in clash]
+        E["in_game"] = [i for i in E["in_game"] if i not in clash]
+
+    # by club: ("n", NewLife id), ("g", the game's id) or ("o", place) for a club of the
+    # builder's own the person put in the league, which stays as it is
+    who = {}
+    for j in range(old_n):
+        g = next((i for i, e in gc_old.items() if int(e.get("at", -1)) == j), None)
+        i = old_nl[j] if j < len(old_nl) else ""
+        is_nl = i in rel.clubs or (i.isdigit() and B.NEWLIFE_TEAMS[0] <= int(i) <= B.NEWLIFE_TEAMS[1])
+        who[j] = ("g", g) if g else ("n", i) if is_nl else ("o", j)
+    own = [j for j in range(old_n) if who[j][0] == "o"]
+    total = len(E["clubs"]) + len(game_clubs(E, info)) + len(own)
+    if not B.CLUBS_MIN <= total <= B.CLUBS_MAX:
+        raise Error("%s would have %d clubs with NewLife %s; a league takes %d to %d" % (
+            name, total, rel.meta.get("version", ""), B.CLUBS_MIN, B.CLUBS_MAX))
+    pl = recipe.setdefault("players", {})
+    own_vals = {j: {key: (list(x.get(key) or []) + [e] * old_n)[j] for key, e in PLACE_LISTS} for j in own}
+    own_pl = {j: pl.get(P.new_key(name, j)) for j in own}
+    kept = {}
+    for j, w in who.items():
+        if w[0] == "o":
+            continue
+        d = {key: (list(x.get(key) or []) + [e] * old_n)[j] for key, e in KEEP_LISTS}
+        crest = (list(x.get("club_crests") or []) + [None] * old_n)[j]
+        if crest and not _from_cache(crest):
+            d["club_crests"] = crest
+        c = pl.get(P.new_key(name, j)) or {}
+        d.update({f: c[f] for f in ("coach_portrait", "stadium") if c.get(f)})
+        kept[w] = d
+
+    def club_ref(r):                 # "league/place" of this league -> who, else r as it is
+        lg, _s, j = r.rpartition("/") if isinstance(r, str) else ("", "", "")
+        return who.get(int(j)) if lg == name and j.isdigit() else r
+    cups = [(c, [club_ref(r) for r in c.get("clubs") or []]) for c in recipe.get("preseason_cups") or []]
+    for key in [key for key in pl if key.rpartition("/")[0] == name]:
+        del pl[key]
+    for c in pl.values():            # players other clubs took from this league's old squads
+        if c.get("join"):
+            c["join"] = [r for r in c["join"] if str(r).rpartition("/")[0].rpartition("/")[0] != name]
+
+    recipe["leagues"].pop(idx)
+    try:
+        got, stayed, elsewhere = add_league(recipe, rel, E, legs=x.get("legs", 2), info=info,
+                                            custom=bool(keep), name=name, more=len(own))
+    except Exception:
+        recipe["leagues"].insert(idx, x)
+        raise
+    y = recipe["leagues"].pop()
+    place = {}
+    z = {f: v for f, v in x.items() if f not in FRESH}
+    z.update({f: v for f, v in y.items() if f not in ("name", "legs", "logo", "country")})
+    if y.get("logo") and not (x.get("logo") and not _from_cache(x["logo"])):
+        z["logo"] = y["logo"]
+    for e in z.get("game_clubs") or []:
+        e.update({f: v for f, v in gc_old.get(str(e["id"]), {}).items() if f not in ("at", "id")})
+    n = int(z["clubs"])
+    pos = len(z["newlife"]["clubs"])     # the person's own clubs: after the NewLife ones, before the game's
+    for j in own:
+        for key, e in PLACE_LISTS:
+            lst = list(z.get(key) or [])
+            lst = lst[:n] + [e] * (n - len(lst))
+            lst.insert(pos, own_vals[j][key])
+            if any(v not in ("", None) for v in lst):
+                z[key] = lst
+            else:
+                z.pop(key, None)
+        for e in z.get("game_clubs") or []:
+            if int(e["at"]) >= pos:
+                e["at"] = int(e["at"]) + 1
+        for m in range(n - 1, pos - 1, -1):
+            if P.new_key(got, m) in pl:
+                pl[P.new_key(got, m + 1)] = pl.pop(P.new_key(got, m))
+        if own_pl[j]:
+            pl[P.new_key(got, pos)] = own_pl[j]
+        n += 1
+        z["clubs"] = n
+        place[("o", j)] = pos
+        pos += 1
+    place = dict(place)
+    place.update({("n", str(i)): j for j, i in enumerate(z["newlife"]["clubs"])})
+    place.update({("g", str(e["id"])): int(e["at"]) for e in z.get("game_clubs") or []})
+    for w, d in kept.items():
+        j = place.get(w)
+        if j is None:
+            continue
+        for key, v in d.items():
+            if key in ("coach_portrait", "stadium"):
+                pl.setdefault(P.new_key(got, j), {})[key] = v
+            elif v not in ("", None):
+                lst = list(z.get(key) or [])
+                z[key] = lst + [None if key == "club_crests" else ""] * (n - len(lst))
+                z[key][j] = v
+    for c, refs in cups:
+        c["clubs"] = [r if not isinstance(r, tuple) else "%s/%d" % (got, place[r])
+                      for r in refs if r is not None and (not isinstance(r, tuple) or r in place)]
+    if n != old_n:
+        sp = z.get("split")
+        if sp and z.get("apertura"):
+            sp["groups"] = [n]
+        elif sp and sp.get("groups"):
+            sp["groups"] = list(sp["groups"])
+            sp["groups"][-1] = int(sp["groups"][-1]) + n - old_n
+        notes.append("%s now has %d clubs (it had %d): check its European places and promotion" % (got, n, old_n))
+    recipe["leagues"].insert(idx, z)
+    return got, stayed, elsewhere, notes

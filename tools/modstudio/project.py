@@ -395,7 +395,7 @@ class Project(QObject):
         clean = dict(self.recipe)
         clean["players"] = {k: v for k, v in (clean.get("players") or {}).items()
                             if v.get("edits") or v.get("add") or v.get("remove") or v.get("join")
-                            or v.get("coach_portrait")}
+                            or v.get("coach_portrait") or v.get("stadium")}
         with open(path + ".tmp", "w", encoding="utf-8") as f:
             json.dump(clean, f, indent=1, ensure_ascii=False)
         os.replace(path + ".tmp", path)

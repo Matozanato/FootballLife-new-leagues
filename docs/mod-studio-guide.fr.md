@@ -497,7 +497,19 @@ plusieurs), plus *Free agents*, chacune de moins de 10 Mo. Ne téléchargez que 
 - Un club NewLife reçoit un ID de monde à lui (0.1.7.2), dans le bloc que le jeu lit pour les
   clubs, après les ID que le constructeur donne aux siens. La colonne **ID du club** de la page
   Clubs nouveaux le montre, et le `map.txt` du Kit Server est bâti dessus. Un monde fait avant
-  0.1.7.2 doit être reconstruit et la carrière recommencée pour que les maillots suivent.
+  0.1.7.2 doit être reconstruit et la carrière recommencée pour que les maillots suivent. Depuis
+  0.1.8, un club garde l'ID de son premier Build (la recette s'en souvient) : retirer, ajouter ou
+  mettre à jour une autre ligue ne le déplace plus.
+- **Une version plus récente de NewLife** (0.1.8) : mettez ses parties dans un dossier (sans
+  les mélanger avec les anciennes), **Ouvrir la NewLife Database...** sur ce dossier et appuyez sur
+  **Mettre mes ligues à jour vers cette version**. Chaque ligue ajoutée depuis une version plus
+  ancienne est listée avec ce qui change (*16 clubs maintenant, 18 dans NewLife 1.3 (5 nouveaux,
+  3 absents)*) et une case **Garder mes clubs** : cochée, la ligue garde ses clubs ; décochée,
+  elle reçoit les clubs qu'elle a dans la nouvelle version. Dans les deux cas, les effectifs
+  viennent de la nouvelle version, et la ligue garde son nom, sa division, son format, ses places
+  européennes et ses coupes ; un club qui reste garde son entraîneur et le blason que vous avez
+  choisi, et vos propres clubs mis dans la ligue restent. Les changements de joueurs faits dans
+  *Joueurs* pour ces clubs sont remplacés. Ensuite Build et nouvelle carrière.
 - Un club NewLife reçoit un écusson en forme de blason à ses couleurs et le maillot du jeu aux
   couleurs les plus proches, jusqu'à ce que vous lui donniez les vôtres (**Modifier le club**).
 

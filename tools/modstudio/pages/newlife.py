@@ -2,12 +2,12 @@
 import os
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QAbstractItemView, QLabel, QLineEdit, QListWidget, QListWidgetItem,
+from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QPushButton, QSplitter, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 
 import leaguebuilder as B
 from .. import newlife as N
-from ..i18n import _
+from ..i18n import _, tr
 from ..ui import hint, error, pick_dir, run_job
 from .builder import BuilderPage, Dialog
 
@@ -52,6 +52,51 @@ class ClubPickDialog(Dialog):
         self.accept()
 
 
+class UpdateDialog(Dialog):
+    """the leagues an update brings to a newer NewLife, each with what happens to its clubs and
+    a choice: this version's clubs for the league, or the person's own line-up"""
+
+    def __init__(self, parent, rel, leagues, rows):
+        super().__init__(parent, "Update my leagues to this version")
+        self.form.addRow(hint(_("Clubs and players come from %s. Each league keeps its name, division, format, "
+                                "European places and cups, and a club that stays keeps its manager and the crest "
+                                "you picked. Player changes you made on the Players page for these clubs are "
+                                "replaced.") % rel.version))
+        self.boxes = []
+        for x in leagues:
+            mine = {str(i) for i in (x.get("newlife") or {}).get("clubs") or []} | \
+                   {str(e["id"]) for e in x.get("game_clubs") or []}
+            try:
+                _L, E = N.lineup(rel, x, rows, keep=False)
+            except N.Error as e:
+                self.form.addRow(QLabel(x["name"]), QLabel(tr(str(e))))
+                continue
+            theirs = set(E["clubs"]) | set(E["in_game"])
+            own = max(int(x.get("clubs") or 0) - len(mine), 0)       # the person's own clubs stay either way
+            text = _("%d clubs now, %d in %s") % (len(mine) + own, len(theirs) + own, rel.version)
+            if mine != theirs:
+                text += "  " + _("(%d new, %d not in it)") % (len(theirs - mine), len(mine - theirs))
+            box = QCheckBox(_("Keep my clubs"))
+            box.setChecked(N.keeps_lineup(x))
+            box.setToolTip(_("Ticked: the league keeps the clubs it has (their squads still come from this "
+                             "version). Unticked: it gets the clubs it has in this version."))
+            box.setEnabled(mine != theirs)
+            if mine == theirs:
+                box.setChecked(False)
+            w = QWidget()
+            h = QVBoxLayout(w)
+            h.setContentsMargins(0, 0, 0, 0)
+            h.addWidget(QLabel(text))
+            h.addWidget(box)
+            self.form.addRow(QLabel(x["name"]), w)
+            self.boxes.append((x, box))
+        self.keep = {}
+
+    def ok(self):
+        self.keep = {id(x): box.isChecked() for x, box in self.boxes}
+        self.accept()
+
+
 class NewLife(BuilderPage):
     title = "NewLife Database"
     hint = ("Real clubs and players for new leagues. Put the NewLife parts you downloaded (a continent each) "
@@ -67,6 +112,10 @@ class NewLife(BuilderPage):
         self.action("Open NewLife Database...", self.open_dir)
         self.b_add = self.action("Add to the recipe", self.add, "primary",
                                  tip="Each selected league becomes a new league with its clubs and players")
+        self.b_update = self.action("Update my leagues to this version", self.update,
+                                    tip="Leagues you added from another NewLife version get this version's clubs "
+                                        "and players; their division, format, European places and cups stay")
+        self.b_update.setEnabled(False)
         self.where = hint(_("No NewLife Database opened."))
         self.outer.addWidget(self.where)
         self.search = QLineEdit()
@@ -267,8 +316,41 @@ class NewLife(BuilderPage):
         text = _("New clubs in the recipe: %d of the %d the game takes.") % (used, room)
         if sel:
             text += "  " + _("Selected: %d more.") % sel
+        old = N.outdated(self.project.recipe, self.rel) if self.rel else []
+        if old:
+            text += "\n" + _("%d of your leagues are from another NewLife version (%s): Update my leagues to this "
+                             "version brings them to %s.") % (len(old), ", ".join(x["name"] for x in old),
+                                                               self.rel.version)
         self.foot.setText(text)
         self.b_add.setEnabled(bool(sel) and used + sel <= room)
+        self.b_update.setEnabled(bool(old))
+
+    def update(self):
+        old = N.outdated(self.project.recipe, self.rel) if self.rel else []
+        if not old:
+            return
+        d = UpdateDialog(self, self.rel, old, self.rows)
+        if not d.finish():
+            return
+        info = self.info()
+        done, notes, failed = [], [], []
+        for x in old:
+            try:
+                name, _st, _el, nt = N.update_league(self.project.recipe, self.rel, x, self.rows, info=info,
+                                                     keep=d.keep.get(id(x)))
+            except N.Error as e:
+                failed.append(str(e))
+                continue
+            done.append(name)
+            notes += nt
+        if done:
+            self.project.touch()
+        text = _("Updated to %s: %s. Build again and start a new career.") % (self.rel.version, ", ".join(done)) \
+            if done else ""
+        for t in notes + failed:
+            text += ("\n" if text else "") + tr(t)
+        self.say(text, "ok" if done and not failed else "")
+        self.count()
 
     def add(self):
         info = self.info()
@@ -291,7 +373,7 @@ class NewLife(BuilderPage):
             if not L["country"]:
                 error(self, "NewLife Database", _("%s has no country the game knows.") % L["name"])
                 continue
-            name, st, el = N.add_league(self.project.recipe, self.rel, L, info=info)
+            name, st, el = N.add_league(self.project.recipe, self.rel, L, info=info, custom=key(L) in self.custom)
             names.append(name)
             stayed += st
             elsewhere += el

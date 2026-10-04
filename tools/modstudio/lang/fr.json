@@ -1163,7 +1163,16 @@
   "takes %s's place": "prend la place de %s",
   "already in this recipe: %s": "déjà dans cette recette : %s",
   "Take it out of that place first (New clubs: New club here), then pick it here.": "Retirez-le d'abord de cette place (Nouveaux clubs : New club here), puis choisissez-le ici.",
-  "%d players of other clubs join this one.": "%d joueurs d'autres clubs rejoignent celui-ci."
+  "%d players of other clubs join this one.": "%d joueurs d'autres clubs rejoignent celui-ci.",
+  "Update my leagues to this version": "Mettre mes ligues à jour vers cette version",
+  "Leagues you added from another NewLife version get this version's clubs and players; their division, format, European places and cups stay": "Les ligues ajoutées depuis une autre version de NewLife reçoivent les clubs et joueurs de cette version ; leur division, format, places européennes et coupes restent",
+  "%d of your leagues are from another NewLife version (%s): Update my leagues to this version brings them to %s.": "%d de tes ligues viennent d'une autre version de NewLife (%s) : Mettre mes ligues à jour vers cette version les passe à %s.",
+  "Updated to %s: %s. Build again and start a new career.": "Mis à jour vers %s : %s. Refais le Build et commence une nouvelle carrière.",
+  "Clubs and players come from %s. Each league keeps its name, division, format, European places and cups, and a club that stays keeps its manager and the crest you picked. Player changes you made on the Players page for these clubs are replaced.": "Les clubs et les joueurs viennent de %s. Chaque ligue garde son nom, sa division, son format, ses places européennes et ses coupes, et un club qui reste garde son entraîneur et le blason que tu as choisi. Les changements de joueurs faits sur la page Players pour ces clubs sont remplacés.",
+  "%d clubs now, %d in %s": "%d clubs maintenant, %d dans %s",
+  "(%d new, %d not in it)": "(%d nouveaux, %d absents)",
+  "Keep my clubs": "Garder mes clubs",
+  "Ticked: the league keeps the clubs it has (their squads still come from this version). Unticked: it gets the clubs it has in this version.": "Coché : la ligue garde ses clubs (leurs effectifs viennent quand même de cette version). Décoché : elle reçoit les clubs qu'elle a dans cette version."
  },
  "log": [
   [

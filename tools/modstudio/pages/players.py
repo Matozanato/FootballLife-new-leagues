@@ -435,7 +435,8 @@ class Players(BuilderPage):
         if self.project.base is None:
             return None
         try:
-            m, _free = B.newlife_tids(self.project.recipe.get("leagues") or [], self.project.base)
+            m, _free = B.newlife_tids(self.project.recipe.get("leagues") or [], self.project.base,
+                                         self.project.recipe.get("newlife_ids"))
         except Exception:
             return None
         nl = list((L.get("newlife") or {}).get("clubs") or [])

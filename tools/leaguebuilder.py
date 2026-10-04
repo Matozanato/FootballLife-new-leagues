@@ -1370,7 +1370,7 @@ def plan(recipe, base):
     bad = club_id_problems(out, base)
     if bad:
         raise BuildError("club ids:\n  " + "\n  ".join(bad[:20]))
-    nlt, free_ids = newlife_tids(recipe.get("leagues") or [], base)   # #90 / #88
+    nlt, free_ids = newlife_tids(recipe.get("leagues") or [], base, recipe.get("newlife_ids"))   # #90 / #88
     for p in out:
         p["newlife_tid"] = nlt
     import lbplayers
@@ -1468,12 +1468,15 @@ def game_club_checks(out, base):
             g["swap"] = sid
 
 
-def newlife_tids(leagues, base):
+def newlife_tids(leagues, base, pins=None):
     """({NewLife club id: world id}, free ids left in the new-club block) for every NewLife club
     of the recipe's leagues that is built as a new club. Counting up after the ids the builder
     gives its own clubs and after any recipe club_ids, in a fixed order (leagues in recipe order,
     clubs in league order), so the same recipe always gives the same ids (#90 / #88). The
-    NewLife id of a club the game already has is not here: that club keeps the game's id."""
+    NewLife id of a club the game already has is not here: that club keeps the game's id.
+    pins (the recipe's "newlife_ids", {NewLife id as text: world id}) are the ids clubs had at
+    an earlier Build: a club keeps its own when a league before it changes, is removed or is
+    updated to a newer NewLife, and a Kit Server map.txt keyed on it keeps working (0.1.8)."""
     raw = pesdb.wesys_unpack(open(os.path.join(base, "Team.bin"), "rb").read())
     have = {int.from_bytes(raw[o + W.T_ID:o + W.T_ID + 4], "little") for o in range(0, len(raw), W.T_REC)}
     taken = set(have)
@@ -1493,6 +1496,13 @@ def newlife_tids(leagues, base):
         taken |= {t for t in ids if t}
     top = max(have) if have else 0
     nxt = top + 1
+    present = {x for _n, _gc, _ids, nl in rows for x in nl if x is not None}
+    pinned = {}                                 # NewLife id -> its pinned world id, one club per id
+    for k, v in sorted((pins or {}).items(), key=lambda kv: str(kv[0])):
+        k, v = int(k) if str(k).isdigit() else None, int(v) if str(v).isdigit() else None
+        if k in present and v and top < v <= CLUB_ID_MAX and v not in taken and v not in pinned.values():
+            pinned[k] = v
+    taken |= set(pinned.values())
 
     def take():
         nonlocal nxt
@@ -1519,8 +1529,21 @@ def newlife_tids(leagues, base):
         for k in range(n):
             if not is_newlife(nl, k):
                 continue
-            m[nl[k]] = take()
-    return m, max(CLUB_ID_MAX - nxt + 1, 0)
+            m[nl[k]] = pinned[nl[k]] if nl[k] in pinned else take()
+    return m, max(CLUB_ID_MAX - max([nxt - 1] + list(pinned.values())), 0)
+
+
+def pin_newlife(recipe, base):
+    """write the world id every NewLife club of the recipe gets into recipe["newlife_ids"], so
+    the next Build gives it the same one (newlife_tids). A pin stays when its club leaves the
+    recipe: the club takes it back when it returns. True when the recipe changed."""
+    pins = recipe.setdefault("newlife_ids", {})
+    m, _free = newlife_tids(recipe.get("leagues") or [], base, pins)
+    new = {str(k): v for k, v in m.items() if pins.get(str(k)) != v}
+    pins.update(new)
+    if not pins:
+        recipe.pop("newlife_ids")
+    return bool(new)
 
 
 
@@ -2449,6 +2472,7 @@ def build(pl, base, game, replace=False, log=print):
                 else:
                     log("  %s (in no competition of the game) moves to %s" % (info["clubs"][tid][0], p["name"]))
 
+    nl_ids = {t for p in pl["leagues"] for t in (p.get("newlife_tid") or {}).values()}
     for p in pl["leagues"]:
         teams, p["abbrs"] = [], []
         gp = game_places(p)
@@ -2474,7 +2498,7 @@ def build(pl, base, game, replace=False, log=print):
             else:
                 tid = top_id + 1 + own
                 own += 1
-                while tid in have:
+                while tid in have or tid in nl_ids:    # a NewLife club's pinned id may sit lower
                     tid = top_id + 1 + own
                     own += 1
                 if tid > CLUB_ID_MAX:
