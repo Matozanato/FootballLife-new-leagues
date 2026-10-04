@@ -29,6 +29,7 @@ class Project(QObject):
         self.dirty = False
         self.base = None
         self.countries, self.parents, self.game_lgs, self.game_cl = [], [], [], {}
+        self.calendar_parents = set()
         self.confeds = {}
         self.game_nat, self.game_other = [], []
         self.parent_tiers = {}
@@ -48,6 +49,7 @@ class Project(QObject):
             self.confeds = B.country_confederations(self.base)
             self.parents = B.shipped_parents(self.base)
             self.parent_tiers = B.shipped_tiers(self.base)
+            self.calendar_parents = B.shipped_calendar(self.base)
             self.game_lgs = B.game_leagues(self.base)
             self.game_cl = B.game_clubs(self.base)
             self.game_nat, self.game_other = B.game_others(self.base, self.game_lgs)
@@ -57,6 +59,7 @@ class Project(QObject):
             self.confeds = {}
             self.game_nat, self.game_other = [], []
             self.parent_tiers = {}
+            self.calendar_parents = set()
         self._squads = None
         self._names = None
         self.tables_changed.emit()

@@ -253,6 +253,11 @@ CUP_DATED = {23: _CASE6, 24: _CASE6, 25: _CASE6, 26: _CASE6, 27: _CASE6, 28: _CA
 SUPER_CUP_LIKE = "BELGIUM_SUPER_CUP"      # two clubs, one match, a European date
 LIBQ_ROOM = 6                             # Libertadores qualifying: 8 places, fl26swiss keeps 2 of the game's
 SEASONS = ("august", "calendar")           # a new country's season: August-May, February-December
+# the shipped regions whose season is the calendar year, type 1 in the exe's region table
+# (0x141576140, read from FL_2026.exe 2026-10-04: 16 18 19 21 23 28, and 24): Brazil, Argentina,
+# Colombia, China, Chile, Japan, Saudi Arabia. A new division under one of their leagues plays
+# February to December with it (GitHub #86: the Saudi First Division "started in February")
+CALENDAR_REGIONS = {16, 18, 19, 21, 23, 24, 28}
 SAUDI_REGION, SAUDI_CUP, SAUDI_SUPER_CUP = 28, 164, 165    # the region holds KSA's 162/164/165 only
 CCUP_SIZES = (32, 16, 8, 4)              # the fields a continental cup can have (fl26swiss.dll)
 CCUP_REG_FROM = 197                      # its regulation ids: past the split phases' 191..196
@@ -873,6 +878,16 @@ def shipped_parents(base):
     return sorted(out, key=lambda x: x[1].lower())
 
 
+def shipped_calendar(base):
+    """regulation ids of the game's leagues whose country plays February to December
+    (CALENDAR_REGIONS): a division below one follows that season"""
+    comp, regs = M.load(base, "Competition.bin"), M.load(base, "CompetitionRegulation.bin")
+    region = {comp[i * M.COMP + M.CID_OFF]: M.dec_region(comp[i * M.COMP + M.REGION_OFF])
+              for i in range(len(comp) // M.COMP)}
+    return {u16(regs[i * M.REG:(i + 1) * M.REG], M.R_ID) for i in range(len(regs) // M.REG)
+            if regs[i * M.REG + M.R_TYPE] == 4 and region.get(regs[i * M.REG + M.R_CID]) in CALENDAR_REGIONS}
+
+
 def shipped_tiers(base):
     """{regulation id: division} of the game's leagues (1 = top), for saying which division a
     new league below one of them becomes"""
@@ -937,6 +952,11 @@ def clubs_room(base):
     the installed patch set allows -- with the shipped tables both come to 793"""
     n = lambda f, rec: len(pesdb.wesys_unpack(open(os.path.join(base, f), "rb").read())) // rec
     return min(TEAM_CAP - n("Team.bin", W.T_REC), (PLAYER_CAP - n("Player.bin", 312)) // SQUAD)
+
+
+def pl_saudi_august(recipe, region):
+    """the recipe's experimental saudi_august moves region 28 to August-May"""
+    return region == SAUDI_REGION and bool(recipe.get("saudi_august"))
 
 
 def plan(recipe, base):
@@ -1054,6 +1074,7 @@ def plan(recipe, base):
                 if parent is None:
                     raise BuildError("%s: no league called %r above it" % (name, up))
                 p["above"], p["tier"], p["region"] = parent["rid"], parent["tier"] + 1, parent["region"]
+                p["follows_calendar"] = bool(parent.get("calendar") or parent.get("follows_calendar"))
             else:
                 pr = regrow.get(int(up))
                 if pr is None or pr[M.R_TYPE] != 4:
@@ -1063,6 +1084,7 @@ def plan(recipe, base):
                                      % (name, up, u16(pr, M.R_BELOW)))
                 p["above"], p["tier"] = int(up), M.get_tier(pr) + 1
                 p["region"] = region_of_cid[pr[M.R_CID]]
+                p["follows_calendar"] = p["region"] in CALENDAR_REGIONS and not pl_saudi_august(recipe, p["region"])
                 if p["tier"] >= 3:
                     p["cupfield"] = cup_field_of_region(regrow, region_of_cid, p["region"], int(up))
                     # the super cup is filled the same way, from the region's lowest regulation
@@ -2005,6 +2027,9 @@ def describe(pl):
                         shape, "  EXHIBITION ONLY (not in Master League)" if p.get("exhibition") else ""))
         if p.get("calendar"):
             lines.append("      plays February to December, promotion and relegation at New Year")
+        elif p.get("follows_calendar"):
+            lines.append("      plays February to December with the league above it (the game's season for "
+                         "that country), promotion and relegation at New Year")
         if p.get("europe"):
             names = dict(fl26world.COMPETITIONS)
             lines.append("      European places: %s" % ", ".join(

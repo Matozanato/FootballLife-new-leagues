@@ -346,6 +346,15 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-04 (Mod Studio 0.1.8, GitHub issue #86): **a new division under the Saudi Pro League
+  started its season in February, though the League window said "August to May".** The game
+  plays Saudi Arabia, like Brazil, Argentina, Colombia, China, Chile and Japan, from February to
+  December (its region table, read from the game's exe), and a division below one of their
+  leagues plays that season with it. The window's Season box now shows that season for a
+  division under such a league (or under a new league that plays February to December), and
+  *Check the plan* says "plays February to December with the league above it". Nothing in the
+  built world changes: it already played that way.
+
 - 2026-10-04 (Mod Studio 0.1.8, GitHub issue #60, Discord): **a club of the game moved into a new
   league (Sparta Prague, Universitario ...) was still listed in its old "Other European Leagues" /
   "Other Latin American Teams" group as well.** The game files a club into those groups at start

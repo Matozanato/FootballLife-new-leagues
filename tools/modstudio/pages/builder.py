@@ -518,13 +518,36 @@ class LeagueDialog(Dialog):
         self.above.currentIndexChanged.connect(
             lambda _i: self.supercup.setEnabled(self.cup.isEnabled() and self.cup.isChecked()))
         self.supercup.setEnabled(self.cup.isEnabled() and self.cup.isChecked())
-        self.above.currentIndexChanged.connect(
-            lambda _i: self.season.setEnabled(self.above.currentData() is None and not self.exhibition.isChecked()))
+        self.above.currentIndexChanged.connect(lambda _i: self.season_follows())
         self.europe.set_confed(project.confeds.get(self.country_name()))
         self.country.currentTextChanged.connect(
             lambda t: self.europe.set_confed(project.confeds.get(B.country_of(t, project.countries))))
         self.exhibition.toggled.connect(lambda _on: self.exhibition_state())
         self.exhibition_state()
+
+    def season_follows(self):
+        """the season box of a division below another shows the season it really gets, the one of
+        the league above: a division under the Saudi Pro League or the J1 League plays February
+        to December with it (GitHub #86), whatever the box said before"""
+        top = self.above.currentData() is None
+        self.season.setEnabled(top and not self.exhibition.isChecked())
+        if top:
+            own = str(self.league.get("season") or "august")
+        else:
+            own = "calendar" if self.follows_calendar(self.above.currentData(), set()) else "august"
+        self.season.setCurrentIndex(max(0, self.season.findData(own)))
+
+    def follows_calendar(self, up, seen):
+        if isinstance(up, int):
+            return up in getattr(self.project, "calendar_parents", set())
+        x = next((x for x in self.project.recipe["leagues"] if x["name"] == up), None)
+        if x is None or up in seen:
+            return False
+        seen.add(up)
+        if x.get("above") in (None, ""):
+            return str(x.get("season") or "") == "calendar"
+        a = x["above"]
+        return self.follows_calendar(int(a) if isinstance(a, str) and a.isdigit() else a, seen)
 
     def country_name(self):
         """the game's name of the country picked or typed ("South Korea" -> "Republic of Korea")"""
@@ -545,7 +568,7 @@ class LeagueDialog(Dialog):
         self.cup.setEnabled(top and not on)
         self.lcup.setEnabled(top and not on)
         self.supercup.setEnabled(top and not on and self.cup.isChecked())
-        self.season.setEnabled(top and not on)
+        self.season_follows()
 
     def ok(self):
         L = self.league
