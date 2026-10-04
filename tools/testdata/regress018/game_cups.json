@@ -1,0 +1,5 @@
+{ "world": "_FL26GameCups",
+  "leagues": [
+    { "name": "Checks Ligue 3", "country": "France", "clubs": 14, "legs": 2, "above": 81 }
+  ],
+  "game_cups": [ {"league": 21, "league_cup": true}, {"league": 52, "league_cup": true} ] }

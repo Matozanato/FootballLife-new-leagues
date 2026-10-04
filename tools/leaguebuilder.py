@@ -1057,6 +1057,17 @@ def entries_of(base, cid):
     return sum(1 for i in range(len(ents) // M.ENT) if ents[i * M.ENT + M.E_CID] == cid)
 
 
+def comp_conf(base, cid):
+    """the confederation of the game's competition cid (Competition.bin +6, low three bits, see
+    CONFED_OFF), or None"""
+    comp = M.load(base, "Competition.bin")
+    for i in range(len(comp) // M.COMP):
+        c = comp[i * M.COMP:(i + 1) * M.COMP]
+        if c[M.CID_OFF] == cid and 2 <= c[M.FLAG_OFF] & 7 <= 7:
+            return c[M.FLAG_OFF] & 7
+    return None
+
+
 def home_supercup(regrow, region_of_cid, region):
     """the super cup of a region (a two-club cup), or None. GitHub #29: the new second division
     under a shipped top flight also put one of its clubs into it; fl26chain swaps it out."""
@@ -1757,6 +1768,9 @@ def game_cups(recipe, regrow, region_of_cid, base, out):
         seen.add(rid)
         league = text(g[M.R_NAME:M.R_NAME + M.NAME_SLOT])
         region = region_of_cid[g[M.R_CID]]
+        # the league's own confederation: with none, the cup kept the CONMEBOL of the row it is
+        # copied from (MiMo 03.10.), and an English league cup sat with South America's cups
+        conf = comp_conf(base, g[M.R_CID])
         if c.get("league_cup", True):
             field, q = [], rid
             while q and len(field) < LEAGUE_CUP_SIZES[0]:
@@ -1772,7 +1786,7 @@ def game_cups(recipe, regrow, region_of_cid, base, out):
                                  % (league, n, LEAGUE_CUP_SIZES[-1]))
             res.append({"name": (c.get("name") or "").strip() or league + " League Cup",
                         "code": "FL_G%03d_LCUP" % rid, "kind": "league", "logo": c.get("logo") or None,
-                        "country": None, "region": region, "groups": 0, "entry": field,
+                        "country": None, "conf": conf, "region": region, "groups": 0, "entry": field,
                         "opts": cup_opts(pre)})
         if c.get("super_cup"):
             if home_supercup(regrow, region_of_cid, region):
@@ -1780,7 +1794,7 @@ def game_cups(recipe, regrow, region_of_cid, base, out):
             cup = home_cup(regrow, region_of_cid, region)
             res.append({"name": (c.get("super_name") or "").strip() or league + " Super Cup",
                         "code": "FL_G%03d_SCUP" % rid, "kind": "super", "logo": c.get("super_logo") or None,
-                        "country": None, "region": region, "groups": 0,
+                        "country": None, "conf": conf, "region": region, "groups": 0,
                         "entry": [(rid, 1), (cup, 0)] if cup else [(rid, 1), (rid, 2)],
                         "opts": {"fill": PRESEASON_FILL, "national": 1, "days": CAF_SUPER_DAYS}})
     return res
@@ -3005,7 +3019,8 @@ def home_cups(pl, confed):
     teams = {p["rid"]: p["teams"] for p in pl["leagues"]}
     out = []
     for cup in pl.get("home_cups") or []:
-        c = dict(cup, conf=confed.get(cup["country"]), opts=dict(cup["opts"]))
+        c = dict(cup, conf=cup["conf"] if cup.get("conf") else confed.get(cup["country"]),
+                 opts=dict(cup["opts"]))
         if cup.get("refs"):
             c["opts"]["clubs"] = [r if isinstance(r, int) else teams[r[0]][r[1]] for r in cup["refs"]]
         out.append(c)
