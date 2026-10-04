@@ -100,6 +100,9 @@ def main():
 
     # ---- check 1: names of the regulations the world introduces or changes (base-relative) ----
     base_by_id = {reg_id(g): g for g in rows(base_regs, M.REG)} if base_regs is not None else {}
+    # a slot the game itself ships empty on some regulation (slot 3 of the European ones): a new
+    # regulation copied from such a prototype keeps it empty, and the game lives with that
+    shipped_empty = {k for g in base_by_id.values() for k in range(M.NAME_SLOTS) if not named(g, k)}
     changed = 0
     fail_lines, info_lines = [], []
     for g in world_rows:
@@ -110,13 +113,14 @@ def main():
         changed += 1
         new = br is None
         fail_empty = [k for k in range(M.NAME_SLOTS)
-                      if not named(g, k) and (new or named(br, k))]
+                      if not named(g, k) and (named(br, k) if not new else k not in shipped_empty)]
         info_empty = [k for k in range(M.NAME_SLOTS)
-                      if not named(g, k) and not new and not named(br, k)]
+                      if not named(g, k) and (not named(br, k) if not new else k in shipped_empty)]
         if fail_empty:
             fail_lines.append("reg %d: empty name slot(s) %s" % (i, fail_empty))
         if info_empty:
-            info_lines.append("reg %d: empty name slot(s) %s (also empty in the base)" % (i, info_empty))
+            info_lines.append("reg %d: empty name slot(s) %s (the base ships %s empty too)"
+                              % (i, info_empty, "it" if not new else "such a slot"))
         wgap = any(g[M.NAME_RUN2 - GAP:M.NAME_RUN2])
         bgap = (not new) and any(br[M.NAME_RUN2 - GAP:M.NAME_RUN2])
         if wgap and not bgap:
