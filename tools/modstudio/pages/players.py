@@ -628,6 +628,13 @@ class Players(BuilderPage):
             ch = ed.get(ref, {})
             m.update(ch)
             out.append((ref, m, ch, False))
+        # a player who comes with no shirt number gets the lowest free one at Build: show that one
+        # (Risto 04.10.: the box showed 1, its lowest value, for every signing)
+        taken = {str(m.get("shirt", "")).strip() for k, m, ch, g in out if not g}
+        for k, m, ch, g in out:
+            if not g and not str(m.get("shirt", "")).strip():
+                m["shirt"] = str(next(n for n in range(1, 100) if str(n) not in taken))
+                taken.add(m["shirt"])
         if self.club and not self.club.isdigit() and not any("order" in ch for ch in ed.values()):
             auto = P.best_eleven([dict(m, player=k) for k, m, ch, g in out if not g],    # what Build will do
                                  self.lineup())

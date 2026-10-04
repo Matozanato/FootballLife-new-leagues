@@ -601,7 +601,7 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
             rec[P_ID:P_ID + 4] = pid.to_bytes(4, "little")
             index[pid] = len(players)
             players += rec
-            shirt = E.free_shirt(u32(assigns, ao + E.A_PACK) for _o, _p, ao in sq)
+            shirt = E.free_shirt(u32(assigns, ao + E.A_PACK) for _o, _p, ao in sq if ao not in drop)
             order = max((o for o, _p, _a in sq), default=-1) + 1
             e = bytearray(A_REC)
             for off, v in ((E.A_EID, eid), (E.A_PID, pid), (E.A_TID, tid),

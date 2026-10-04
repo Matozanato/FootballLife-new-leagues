@@ -12,6 +12,26 @@ EXE_NAMES = ("FL_2026.exe", "PES2021.exe")
 LAUNCHERS = ("FL 2026 start.exe",)
 SAVE_DIR = os.path.join(os.path.expanduser("~"), "Documents", "KONAMI",
                         "eFootball PES 2021 SEASON UPDATE")
+# the game's Edit save: written before a Build, it hides the Build's squads and names in Exhibition
+# and Edit mode (Risto 04.10.: two signings in a career, not in an exhibition)
+EDIT_FILE = os.path.join(SAVE_DIR, "2026", "save", "EDIT00000000")
+
+
+def old_edit(since):
+    """the Edit save's path when there is one older than `since` (a time.time()), else None"""
+    try:
+        return EDIT_FILE if os.path.getmtime(EDIT_FILE) < since else None
+    except OSError:
+        return None
+
+
+def edit_aside(tag):
+    """rename the Edit save to EDIT00000000.before-<tag>-<date>, kept next to it; returns the new
+    name. Nothing is deleted: renaming it back brings the old Edit data back"""
+    import time
+    new = "%s.before-%s-%s" % (EDIT_FILE, tag, time.strftime("%Y%m%d-%H%M"))
+    os.rename(EDIT_FILE, new)
+    return os.path.basename(new)
 
 
 class Game:

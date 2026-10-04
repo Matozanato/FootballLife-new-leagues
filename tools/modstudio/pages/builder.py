@@ -2820,6 +2820,13 @@ class AfterBuild(QDialog):
                  ("ok", _("Switched on in sider.ini"), _("the live world"))]
         steps.append(("warn", _("The game is running with the old world: restart it to play the new one"), "")
                      if running else ("ok", _("Start the game to play it"), ""))
+        import time
+        from .. import game as G
+        self.world = info["world"]
+        self.edit = G.old_edit(time.time() - info.get("secs", 0) - 5)
+        if self.edit:
+            steps.append(("warn", _("An Edit save from before this Build is in the game's save folder. It hides "
+                                    "the new squads and names in Exhibition and Edit mode: move it aside."), ""))
         box = QFrame()
         box.setObjectName("card")
         bv = QVBoxLayout(box)
@@ -2857,6 +2864,10 @@ class AfterBuild(QDialog):
         v.addWidget(note)
         bb = QHBoxLayout()
         bb.addStretch(1)
+        if self.edit:
+            self.b_edit = QPushButton(_("Move the Edit save aside"))
+            self.b_edit.clicked.connect(self.edit_aside)
+            bb.addWidget(self.b_edit)
         if running:
             b = QPushButton(_("Close the game"))
             b.clicked.connect(self.close_game)
@@ -2866,6 +2877,18 @@ class AfterBuild(QDialog):
         ok.clicked.connect(self.accept)
         bb.addWidget(ok)
         v.addLayout(bb)
+
+    def edit_aside(self):
+        from .. import game as G
+        try:
+            name = G.edit_aside(self.world)
+        except OSError as e:
+            error(self, "Move the Edit save aside", str(e))
+            return
+        self.b_edit.setEnabled(False)
+        info(self, "Move the Edit save aside",
+             _("The Edit save is now %s, in the same folder. The game makes a new one; to get the old one "
+               "back, rename it to EDIT00000000.") % name)
 
     def close_game(self):
         from ..game import EXE_NAMES
