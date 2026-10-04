@@ -851,16 +851,18 @@ def country_ids(base):
 
 def shipped_parents(base):
     """[(regulation id, name)] of the shipped divisions (Competition code *_D<n>_LEAGUE) that
-    have no league below them yet -- the ones a new division can go under"""
+    have no league below them yet -- the ones a new division can go under. A link to a
+    regulation the tables do not have counts as none: J1 League's points at 145, the old J2"""
     import re
     comp, regs = M.load(base, "Competition.bin"), M.load(base, "CompetitionRegulation.bin")
     code = {comp[i * M.COMP + M.CID_OFF]:
             bytes(comp[i * M.COMP + M.CODE_OFF:(i + 1) * M.COMP]).split(b"\0")[0].decode("latin-1")
             for i in range(len(comp) // M.COMP)}
+    ids = {u16(regs[i * M.REG:(i + 1) * M.REG], M.R_ID) for i in range(len(regs) // M.REG)}
     out = []
     for i in range(len(regs) // M.REG):
         g = regs[i * M.REG:(i + 1) * M.REG]
-        if g[M.R_TYPE] != 4 or u16(g, M.R_BELOW) or fl26world.fmt(g) in (12, 13, 14, 15):
+        if g[M.R_TYPE] != 4 or u16(g, M.R_BELOW) in ids or fl26world.fmt(g) in (12, 13, 14, 15):
             continue
         if not re.search(r"_D\d_LEAGUE$", code.get(g[M.R_CID], "")):
             continue
@@ -1058,7 +1060,7 @@ def plan(recipe, base):
                 pr = regrow.get(int(up))
                 if pr is None or pr[M.R_TYPE] != 4:
                     raise BuildError("%s: regulation %s is not a shipped league" % (name, up))
-                if u16(pr, M.R_BELOW):
+                if u16(pr, M.R_BELOW) in regrow:
                     raise BuildError("%s: regulation %s already has a league below it (%d)"
                                      % (name, up, u16(pr, M.R_BELOW)))
                 p["above"], p["tier"] = int(up), M.get_tier(pr) + 1
@@ -1591,7 +1593,7 @@ def game_cups(recipe, regrow, region_of_cid, base, out):
                 n = mine["clubs"] if mine else entries_of(base, regrow[q][M.R_CID])
                 field += [(q, pos) for pos in range(1, n + 1)]
                 below = u16(regrow[q], M.R_BELOW) if q in regrow else 0
-                q = below or next((p["rid"] for p in out if p["above"] == q), None)
+                q = (below if below in regrow else 0) or next((p["rid"] for p in out if p["above"] == q), None)
             n = len(field)
             field, pre = cup_field(field)
             if field is None:

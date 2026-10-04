@@ -354,6 +354,13 @@ calendar.
   club that takes a moved club's place in a league. Checked without the game: in a test world
   Sparta Prague (2 -> 0) and Universitario (6 -> 0) changed and no other club did. Not yet
   checked in the game. **Build the world again.**
+- 2026-10-04 (Mod Studio 0.1.8, Discord): **J1 League was missing from the Division list, so no
+  league could go under it.** The game's J1 League still points down at regulation 145, the old
+  J2, which the tables do not have; the list took that as "already has a league below". A link
+  to a regulation that is not there now counts as none, and a J1 League league cup no longer
+  follows it. Checked without the game: J1 League is in the list, and a build with a J2 under it
+  links 52 -> 11 both ways. Promotion and relegation between J1 and the new league are not yet
+  checked in the game.
 
 - 2026-10-03 (Mod Studio 0.1.7.1, GitHub issue #80): **a new league right under a second division
   of the game (League One under the Championship, Serie C under Serie B ...) stopped *Check the
