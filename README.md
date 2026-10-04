@@ -521,13 +521,17 @@ Mod Studio 0.1.4. The full list, with dates and details, is in
   damaged.
 - **A saved career belongs to its world.** It loads only with the same world switched on, and
   any change to a league's clubs needs a new career.
-- **A new league outside Europe shows the wrong continent** in Select Team's League Info
-  panel (the European cups for one that plays August to May, the South American text for some
-  others) and in the board's objectives (issue #43). Its places go to its own continent's cups;
-  only the text is wrong. Not fixed yet. (The list order is fixed in 0.1.6: a new Asian league
-  comes before *Other Clubs (Asia)*, a CONCACAF one after MLS, and in 0.1.7 a South American one
-  after Colombia, before MLS; African and Oceanian countries
-  still come after Asia, since the game has no section for them.)
+- **A new league outside Europe can read as European in the board's objectives** (issues #43,
+  #70): a first division of a new country that plays August to May keeps the UEFA code, because
+  the game's July season-end step promotes and relegates only for that code, so the Master
+  League board can ask for the Champions League. Its places still go to its own continent's
+  cups. Not fixed yet: it needs a change inside the game's continent lookup and a test in the
+  game. Fixed along the way: the borrowed League Info line ("... South American based
+  leagues", 0.1.7: our leagues carry no such line now), the League Info cup icons (they follow
+  the country's confederation from the world file since 0.1.3.1), and the list order (0.1.6: a
+  new Asian league comes before *Other Clubs (Asia)*, a CONCACAF one after MLS, and in 0.1.7 a
+  South American one after Colombia, before MLS; African and Oceanian countries still come
+  after Asia, since the game has no section for them).
 - **An Exhibition only league still shows** in Master League's team list (the game has one
   list for Kick Off and Master League). Do not start a career with one of its clubs.
 - **February-December seasons** cannot yet be combined with a split, Apertura/Clausura, a
