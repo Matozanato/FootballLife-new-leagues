@@ -102,6 +102,23 @@ class Main(QMainWindow):
                                   == os.path.abspath(self.project.copies_dir()))
             except Exception:           # a recipe that no longer reads: start with an empty one
                 self.project.new()
+        # 0.1.8: the live world first. A tester's last recipe was an older world than the one
+        # switched on in sider.ini, and the next Build would have replaced the live one with it
+        self._start_note = ""
+        live = self.project.live_worlds()
+        if live and self.project.recipe.get("world") not in live:
+            kept = os.path.join(self.project.copies_dir(), live[0] + ".json")
+            was = self.project.recipe.get("world")
+            if os.path.exists(kept):
+                try:
+                    self.project.open(kept, copy=True)
+                    self._start_note = _("Opened the recipe of %s, the world switched on in the game "
+                                         "(the last one open was %s).") % (live[0], was)
+                except Exception:
+                    pass
+            if not self._start_note:
+                self._start_note = _("The world switched on in the game is %s, but the recipe open is %s. "
+                                     "Open the recipe of %s before you Build.") % (live[0], was, live[0])
         self.bus.game_changed.connect(self.project.load_tables)
         self.setWindowTitle("FL26 Mod Studio")
         self.resize(*self.settings.get("size", [1360, 820]))
@@ -149,6 +166,8 @@ class Main(QMainWindow):
         self._run_timer.start()
         QTimer.singleShot(0, self.update_running)       # after the window is up: tasklist takes ~0.3 s
         self.open_page(self.settings.get("page") if self.settings.get("page") in self.pages else first)
+        if self._start_note:
+            self.status(self._start_note)
 
     # ---- chrome ----
     def _menu_button(self, text, items):
@@ -336,7 +355,9 @@ class Main(QMainWindow):
         else:
             self.h_game.setText(_("No game folder yet: Game ▾ Choose the game folder"))
         prof = self.settings.get("profile")
-        self.h_profile.setText((_("Profile: %s") % prof) if prof else "")
+        live = self.project.live_worlds() if g.ok() else []
+        bits = ([_("Live world: %s") % ", ".join(live)] if live else []) + ([_("Profile: %s") % prof] if prof else [])
+        self.h_profile.setText("     ".join(bits))
 
     def update_running(self):
         g, s = Game.running()

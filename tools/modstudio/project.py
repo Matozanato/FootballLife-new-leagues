@@ -130,6 +130,11 @@ class Project(QObject):
                 out.append(db)
         return out
 
+    def live_worlds(self):
+        """names of the League Builder worlds switched on in sider.ini, the way it lists them"""
+        return [os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(db))))
+                for db in self.world_tables()]
+
     def drop_names(self):
         """a world built or switched on in this session has clubs of its own: drop the cached
         club lists so the pickers (Kits > Add a line and every other club picker) read them

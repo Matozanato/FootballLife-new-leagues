@@ -1053,7 +1053,10 @@
   "This changes the live League Builder world.": "Ovo mijenja živi svijet League Buildera.",
   "League Builder modules go off: worlds of yours may stop working.": "Gase se moduli League Buildera: tvoji svjetovi možda prestanu raditi.",
   "Switch to %s?": "Prebaciti na %s?",
-  "A NewLife club takes the world id Build gives it: its kits, crests and the Kit Server's map.txt are keyed on it.": "NewLife klub dobiva ID svijeta koji mu da Build: njegovi dresovi, grbovi i map.txt Kit Servera vezani su uz taj ID."
+  "A NewLife club takes the world id Build gives it: its kits, crests and the Kit Server's map.txt are keyed on it.": "NewLife klub dobiva ID svijeta koji mu da Build: njegovi dresovi, grbovi i map.txt Kit Servera vezani su uz taj ID.",
+  "Opened the recipe of %s, the world switched on in the game (the last one open was %s).": "Otvoren je recept svijeta %s, onog koji je uključen u igri (zadnji otvoren bio je %s).",
+  "The world switched on in the game is %s, but the recipe open is %s. Open the recipe of %s before you Build.": "U igri je uključen svijet %s, a otvoren je recept %s. Prije Builda otvori recept svijeta %s.",
+  "Live world: %s": "Živi svijet: %s"
  },
  "log": [
   [

@@ -1053,7 +1053,10 @@
   "This changes the live League Builder world.": "Cela change le monde actif du League Builder.",
   "League Builder modules go off: worlds of yours may stop working.": "Des modules du League Builder sont désactivés : vos mondes peuvent cesser de fonctionner.",
   "Switch to %s?": "Passer à %s ?",
-  "A NewLife club takes the world id Build gives it: its kits, crests and the Kit Server's map.txt are keyed on it.": "Un club NewLife prend l'ID du monde que Build lui donne : ses maillots, écussons et le map.txt du Kit Server sont liés à cet ID."
+  "A NewLife club takes the world id Build gives it: its kits, crests and the Kit Server's map.txt are keyed on it.": "Un club NewLife prend l'ID du monde que Build lui donne : ses maillots, écussons et le map.txt du Kit Server sont liés à cet ID.",
+  "Opened the recipe of %s, the world switched on in the game (the last one open was %s).": "Recette de %s ouverte : c'est le monde activé dans le jeu (le dernier ouvert était %s).",
+  "The world switched on in the game is %s, but the recipe open is %s. Open the recipe of %s before you Build.": "Le monde activé dans le jeu est %s, mais la recette ouverte est %s. Ouvre la recette de %s avant Build.",
+  "Live world: %s": "Monde actif : %s"
  },
  "log": [
   [

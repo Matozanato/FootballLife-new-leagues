@@ -378,7 +378,10 @@ calendar.
   and turned off Regen Faces and two `fl26nullguard` modules. League Builder's *Switch on* was
   not the cause. Profiles now lists what goes off and what goes on before anything changes, says
   so when the live League Builder world or League Builder modules are among them, and changes
-  nothing until you say yes. A profile that changes nothing just says so.
+  nothing until you say yes. A profile that changes nothing just says so. Mod Studio also starts
+  on the world switched on in the game now: the header shows it, and when the last recipe open
+  was another world, the recipe Build kept for the live one is opened instead (or the status bar
+  says which one to open).
 
 - 2026-10-03 (Mod Studio 0.1.7.1, GitHub issue #80): **a new league right under a second division
   of the game (League One under the Championship, Serie C under Serie B ...) stopped *Check the
