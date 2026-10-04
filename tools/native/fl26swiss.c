@@ -3660,6 +3660,41 @@ uint64_t gstage_handler(uint32_t* comp)
   return r;
 }
 
+/* ---- Competition Info -> one entry per league cup pre-round, not nine ----
+ *
+ * A category of Competition Info lists the regulations 0x1415789c0 hands it for the
+ * category's region, two ways: the grid beside the category list (0x140acd3f0) and the list
+ * behind it (0x140c6a540). A regulation in a country's region (the region test 0x1414cf160)
+ * gets an entry of its own; one in an international region goes in once per competition. A
+ * league cup's pre-round is reg 2 and its eight replicas (mkeuropo.prerounds), in the
+ * country's region, so the cup showed ten times under one name: the pre-round bracket, a page
+ * per tie, the unused ties empty, then the main knockout (GitHub #78). This takes the
+ * pre-round's ties out of what 0x1415789c0 returns -- a vector of u16 regulation ids -- so
+ * the pre-round bracket and the main knockout are what is left. The shipped replicas (the
+ * Champions League's and the rest) are international and listed once per competition anyway. */
+#define CATREGS_RVA 0x15789c0
+static const unsigned char SIG_CATREGS[15] = {
+  0x48, 0x89, 0x54, 0x24, 0x10, 0x55, 0x53, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56 };
+typedef uint64_t (*catregs_fn)(void* cat, uint16_t** vec);
+unsigned char* g_tramp_catregs = 0;
+static uint32_t g_catregs_n = 0;
+uint64_t catregs_handler(void* cat, uint16_t** vec)
+{
+  uint64_t r = ((catregs_fn)(uintptr_t)g_tramp_catregs)(cat, vec);
+  if (!vec || !vec[0] || !g_nlpre) return r;
+  uint16_t *in = vec[0], *out = vec[0], *end = vec[1];
+  int tie, cut = 0;
+  for (; in < end; in++) {
+    if (lpre_of(*in, &tie) >= 0 && tie >= 0) { cut++; continue; }
+    *out++ = *in;
+  }
+  if (cut) {
+    vec[1] = out;                    /* shorter only: the vector keeps its memory */
+    if (g_catregs_n++ < 4) logf("fl26swiss: Competition Info -- %d pre-round tie(s) left out of a category", cut);
+  }
+  return r;
+}
+
 /* ---- Competition Info -> Knockout Phase before the knockout phase exists ----
  *
  * The page builder 0x140caaa70 takes the knockout phase (0x14150af30 kind 3, else kind 4) and
@@ -4621,6 +4656,10 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
     logf("fl26swiss: group stage item live (@%llx)", (unsigned long long)(exe_base + GSTAGE_RVA));
   else
     logf("fl26swiss: group stage item NOT installed (signature)");
+  if (!hook((unsigned char*)(uintptr_t)(exe_base + CATREGS_RVA), SIG_CATREGS, 15, (void*)catregs_handler, &g_tramp_catregs))
+    logf("fl26swiss: pre-round ties out of Competition Info (@%llx)", (unsigned long long)(exe_base + CATREGS_RVA));
+  else
+    logf("fl26swiss: pre-round ties in Competition Info NOT installed (signature)");
   if (!memcmp((void*)(uintptr_t)(exe_base + STAND_RVA), SIG_STAND, 15) &&
       !hook((unsigned char*)(uintptr_t)(exe_base + STAND_RVA), SIG_STAND, 15, (void*)stand_handler, &g_tramp_stand))
     logf("fl26swiss: standings row guard live (@%llx)", (unsigned long long)(exe_base + STAND_RVA));
