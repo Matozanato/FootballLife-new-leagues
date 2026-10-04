@@ -587,6 +587,24 @@ def game_others(base, leagues):
     return sorted(nat), sorted(other)
 
 
+def game_league_confeds(base, leagues):
+    """{competition id: confederation code} of the game's leagues -- the code most of its
+    clubs' countries have (Team.bin T_COUNTRY, Country.bin); 0 when nothing is known"""
+    import collections
+    conf = confederations(base)
+    raw = pesdb.wesys_unpack(open(os.path.join(base, "Team.bin"), "rb").read())
+    of = {}
+    for i in range(len(raw) // W.T_REC):
+        r = raw[i * W.T_REC:(i + 1) * W.T_REC]
+        of[int.from_bytes(r[W.T_ID:W.T_ID + 4], "little")] = conf.get(
+            (int.from_bytes(r[T_COUNTRY:T_COUNTRY + 2], "little") >> 2) & 0x1ff, 0)
+    out = {}
+    for rid, cid, name, teams in leagues:
+        c = collections.Counter(of.get(t, 0) for t in teams if of.get(t, 0))
+        out[cid] = c.most_common(1)[0][0] if c else 0
+    return out
+
+
 # A club of the game in a league of ours (the league's "game_clubs"): it needs a squad that can
 # field a side (lbplayers.MIN_SQUAD), and it keeps its id, name, crest, kits, manager and players.
 MIN_GAME_SQUAD = 18

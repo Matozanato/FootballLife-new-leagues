@@ -6,7 +6,7 @@ import csv, io, json, os
 
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QPixmap, QImage, QColor, QBrush
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout,
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QFrame,
                                QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QPlainTextEdit, QPushButton, QRadioButton, QSpinBox, QSplitter,
                                QTableWidget, QTableWidgetItem, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
@@ -2643,6 +2643,88 @@ class GameLeagues(BuilderPage):
             self.app.open_page("Players")
 
 
+class AfterBuild(QDialog):
+    """what Build and install did, step by step, and what is left to do"""
+
+    def __init__(self, parent, info):
+        super().__init__(parent)
+        from ..game import Game
+        from .. import VERSION
+        self.setWindowTitle(_("Build finished"))
+        self.setMinimumWidth(620)
+        v = QVBoxLayout(self)
+        v.setContentsMargins(24, 20, 24, 18)
+        v.setSpacing(12)
+        top = QLabel(_("BUILD FINISHED · %d s") % info.get("secs", 0))
+        top.setObjectName("eyebrow")
+        v.addWidget(top)
+        t = QLabel(_("%s is installed.") % info["world"])
+        t.setObjectName("bigtitle")
+        t.setWordWrap(True)
+        v.addWidget(t)
+        running = Game.running()[0]
+        steps = [("ok", _("World built"), info["world"]),
+                 ("ok", _("Leagues and clubs"), _("%d leagues · %d new clubs") % (info["leagues"], info["clubs"])),
+                 ("ok", _("Modules installed and switched on"), _("version %s") % VERSION),
+                 ("ok", _("Switched on in sider.ini"), _("the live world"))]
+        steps.append(("warn", _("The game is running with the old world: restart it to play the new one"), "")
+                     if running else ("ok", _("Start the game to play it"), ""))
+        box = QFrame()
+        box.setObjectName("card")
+        bv = QVBoxLayout(box)
+        bv.setContentsMargins(18, 6, 18, 6)
+        for n, (kind, text, right) in enumerate(steps):
+            h = QHBoxLayout()
+            h.setContentsMargins(0, 8, 0, 8)
+            mark = QLabel("✓" if kind == "ok" else "!")
+            mark.setObjectName("tick_" + kind)
+            mark.setFixedWidth(22)
+            h.addWidget(mark)
+            lab = QLabel(text)
+            lab.setWordWrap(True)
+            h.addWidget(lab, 1)
+            r = QLabel(right)
+            r.setObjectName("subtle")
+            h.addWidget(r)
+            bv.addLayout(h)
+            if n < len(steps) - 1:
+                line = QFrame()
+                line.setObjectName("rowline")
+                bv.addWidget(line)
+        v.addWidget(box)
+        note = QFrame()
+        note.setObjectName("bluecard")
+        nv = QVBoxLayout(note)
+        nv.setContentsMargins(18, 12, 18, 12)
+        h2 = QLabel(_("Before you play"))
+        h2.setObjectName("cardtitle")
+        nv.addWidget(h2)
+        for text in [_("Start a new Master League career: a career saved before keeps the old world.")]                 + info.get("notes", []):
+            l = QLabel(text)
+            l.setWordWrap(True)
+            nv.addWidget(l)
+        v.addWidget(note)
+        bb = QHBoxLayout()
+        bb.addStretch(1)
+        if running:
+            b = QPushButton(_("Close the game"))
+            b.clicked.connect(self.close_game)
+            bb.addWidget(b)
+        ok = QPushButton(_("Done"))
+        ok.setObjectName("primary")
+        ok.clicked.connect(self.accept)
+        bb.addWidget(ok)
+        v.addLayout(bb)
+
+    def close_game(self):
+        from ..game import EXE_NAMES
+        import subprocess
+        if ask(self, "Close the game", _("Close the game now? Anything not saved in it is lost.")):
+            for n in EXE_NAMES:
+                subprocess.run(["taskkill", "/im", n], capture_output=True, creationflags=0x08000000)
+            self.accept()
+
+
 class Build(BuilderPage):
     title = "Build"
     hint = ("Turn the recipe into a world: 1. check the plan, 2. build it into SiderAddons\\livecpk, "
@@ -2666,7 +2748,7 @@ class Build(BuilderPage):
         bar = QHBoxLayout()
         for text, fn, kind in (("0. Install the modules", self.do_install, None),
                                ("1. Check the plan", self.do_plan, None),
-                               ("2. Build the world", self.do_build, "primary"),
+                               ("2. Build the world", self.do_build, None),
                                ("3. Switch it on", self.do_on, None),
                                ("4. After a start: check", self.do_check, None)):
             b = QPushButton(_(text))
@@ -2676,6 +2758,16 @@ class Build(BuilderPage):
             bar.addWidget(b)
             self.steps.append(b)
         bar.addStretch(1)
+        one = QHBoxLayout()
+        self.b_all = QPushButton(_("Build and install"))
+        self.b_all.setObjectName("primary")
+        self.b_all.setStyleSheet("font-size: 11pt; font-weight: bold; padding: 10px 26px; border-radius: 8px;")
+        self.b_all.setToolTip(_("Installs the modules, builds the world, switches it on and says what is left"))
+        self.b_all.clicked.connect(self.build_all)
+        self.steps.append(self.b_all)
+        one.addWidget(self.b_all)
+        one.addWidget(hint(_("All in one: the modules, the world, switching it on. Or step by step:")), 1)
+        self.outer.addLayout(one)
         self.outer.addLayout(bar)
         self.uecl = QCheckBox(_("Include the Conference League"))
         self.uecl.setToolTip(_("A league phase of 36 clubs and a February play-off, like the Champions League "
@@ -2963,6 +3055,48 @@ class Build(BuilderPage):
             if note:
                 log("\n" + note)
         self.run(go, background=True)
+
+    def build_all(self):
+        """0.1.8: one button -- install the modules, build the world, switch it on, then a page
+        that says what was done and what is left (restart the game, a new career)"""
+        try:
+            pl = self.plan()
+        except B.BuildError as e:
+            self.out.clear()
+            self.say(_("error: %s") % tr(str(e)))
+            return
+        game = self.app.game.folder
+        w = pl["world"]
+        replace = os.path.exists(os.path.join(self.app.game.livecpk_dir, w))
+        if not ask(self, "Build and install", _("Build %s and make it the live world? Mod Studio's modules are "
+                                                "installed too; sider.ini is backed up first.") % w):
+            return
+        base = self.project.base
+        try:
+            self.app.settings["last_recipe"] = self.project.keep_copy()
+        except OSError:
+            pass
+        import time
+        info = {"world": w, "t0": time.time(),
+                "leagues": len(self.project.recipe["leagues"]),
+                "clubs": sum(B.new_club_count(L) for L in self.project.recipe["leagues"])}
+
+        def go(log):
+            snapshot(self.app.game.ini_path, "League Builder: build and install " + w, self.app.game.sider_dir)
+            log(_("installing the modules ..."))
+            B.install_modules(game, log=log)
+            log(B.describe(pl))
+            log(_("building ..."))
+            B.build(pl, base, game, replace, log=log)
+            B.switch_on(w, game, log=log)
+            self.project.drop_names()
+            info["secs"] = int(time.time() - info["t0"])
+            info["notes"] = [n for n in (database_note(self.project), exhibition_note(pl)) if n]
+
+        def done():
+            self.app.bus.ini_changed.emit()
+            AfterBuild(self, info).exec()
+        self.run(go, background=True, done=done)
 
     def do_on(self):
         w = self.project.recipe.get("world", "").strip()

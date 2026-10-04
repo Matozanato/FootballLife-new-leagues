@@ -32,6 +32,7 @@ class Project(QObject):
         self.calendar_parents = set()
         self.confeds = {}
         self.game_nat, self.game_other = [], []
+        self.game_confeds = {}
         self.parent_tiers = {}
         self._squads = None
         self._names = None
@@ -53,11 +54,13 @@ class Project(QObject):
             self.game_lgs = B.game_leagues(self.base)
             self.game_cl = B.game_clubs(self.base)
             self.game_nat, self.game_other = B.game_others(self.base, self.game_lgs)
+            self.game_confeds = B.game_league_confeds(self.base, self.game_lgs)
         except (B.BuildError, OSError, ValueError, SystemExit):
             self.base = None
             self.countries, self.parents, self.game_lgs, self.game_cl = [], [], [], {}
             self.confeds = {}
             self.game_nat, self.game_other = [], []
+            self.game_confeds = {}
             self.parent_tiers = {}
             self.calendar_parents = set()
         self._squads = None

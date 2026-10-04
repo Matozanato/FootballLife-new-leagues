@@ -66,18 +66,20 @@ class Bus(QObject):
 
 
 def page_groups():
-    """(caption, [page classes]) in the order of the left bar"""
+    """(caption, [page classes]) in the order of the left bar; caption "" is a group without a
+    caption, None pages that are built but not in the bar (reached from another page)"""
     from modstudio.pages import overview, roots, modules, install, profiles, restore
     from modstudio.pages import content, stadiums, balls, kits, commentary, music
-    from modstudio.pages import builder, players, packages, diagnostics, settings, newlife
+    from modstudio.pages import builder, players, packages, diagnostics, settings, newlife, leagues
     return [
-        ("MANAGE", [overview.Overview, install.Install, roots.Roots, modules.Modules,
-                    profiles.Profiles, restore.Restore]),
-        ("GAME CONTENT", [stadiums.Stadiums, kits.Kits, balls.Balls, commentary.Commentary,
+        ("", [overview.Overview]),
+        ("LEAGUE BUILDER", [leagues.Leagues, builder.NewClubs, players.Players, newlife.NewLife,
+                            packages.Packages, builder.Build]),
+        ("GAME CONTENT", [kits.Kits, stadiums.Stadiums, balls.Balls, commentary.Commentary,
                           music.Music, content.Servers]),
-        ("LEAGUE BUILDER", [newlife.NewLife, builder.NewLeagues, builder.NewClubs, builder.GameLeagues,
-                            players.Players, packages.Packages, builder.Build]),
-        ("TOOLS", [diagnostics.Diagnostics, settings.Settings]),
+        ("MANAGE", [install.Install, modules.Modules, roots.Roots, profiles.Profiles, restore.Restore,
+                    diagnostics.Diagnostics, settings.Settings]),
+        (None, [builder.NewLeagues]),
     ]
 
 
@@ -263,7 +265,8 @@ class Main(QMainWindow):
     def _nav(self):
         outer = QScrollArea()
         outer.setWidgetResizable(True)
-        outer.setFixedWidth(232)
+        outer.setFixedWidth(220)
+        outer.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         outer.setFrameShape(QScrollArea.NoFrame)
         w = QWidget()
         w.setObjectName("nav")
@@ -272,10 +275,14 @@ class Main(QMainWindow):
         v.setSpacing(0)
         self.nav_group = QButtonGroup(self)
         self.nav_buttons = {}
+        v.addSpacing(10)
         for caption, classes in page_groups():
-            c = QLabel(_(caption))
-            c.setObjectName("navcaption")
-            v.addWidget(c)
+            if caption is None:
+                continue
+            if caption:
+                c = QLabel(_(caption))
+                c.setObjectName("navcaption")
+                v.addWidget(c)
             for cls in classes:
                 b = QPushButton(_(cls.title))
                 b.setObjectName("navitem")
@@ -295,7 +302,9 @@ class Main(QMainWindow):
     def open_page(self, name):
         p = self.pages[name]
         self.stack.setCurrentWidget(p)
-        self.nav_buttons[name].setChecked(True)
+        b = self.nav_buttons.get(name) or self.nav_buttons.get("Leagues")
+        if b:
+            b.setChecked(True)
         self.settings["page"] = name
         try:
             p.shown()
@@ -553,6 +562,9 @@ def main():
             ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("FL26.ModStudio")
         except Exception:
             pass
+    # 0.1.8: follow Windows scaling (125 %, 150 %) exactly, not rounded to 100 % or 200 %
+    from PySide6.QtGui import QGuiApplication
+    QGuiApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QApplication(sys.argv)
     theme.apply(app)
     # one Mod Studio at a time: the program takes a few seconds to unpack itself, a second
