@@ -2046,7 +2046,8 @@ def describe(pl):
             shape = "Apertura + Clausura, %d clubs x1 each" % p["clubs"]
         elif p.get("split"):
             s = p["split"]
-            shape += ", then %s x%d" % (" / ".join(map(str, s["groups"])), s["group_legs"])
+            shape = "%d clubs x%d, then %s x%d" % (p["clubs"], s["legs"], " / ".join(map(str, s["groups"])),
+                                                    s["group_legs"])
         lines.append("  %-26s reg %3d  comp %3d  region %2d  slot %3s  division %d%s  %s%s"
                      % (p["name"], p["rid"], p["cid"], p["region"],
                         "-" if p["slot"] == fl26world.NO_SLOT else p["slot"], p["tier"],
