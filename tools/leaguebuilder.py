@@ -709,9 +709,7 @@ NAME_CODE_SLOT = 9         # the tenth name is an internal label (ENGLAND_D1_LEA
 
 def rename_reg(regs, o, name):
     """the regulation at regs[o:] called `name` in every language"""
-    for k in range(M.NAME_SLOTS):
-        if k != NAME_CODE_SLOT:
-            M.put(regs, o + M.R_NAME + k * M.NAME_SLOT, name, M.NAME_SLOT)
+    M.put_names(regs, o, name, skip=(NAME_CODE_SLOT,))
 
 
 def swap_problems(recipe, base):

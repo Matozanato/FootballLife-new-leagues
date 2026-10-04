@@ -141,8 +141,7 @@ def main():
             g[R_PROMO:R_PROMO + 2] = bytes(2)          # promotes into nothing
             g[R_PARENT:R_PARENT + 2] = bytes(2)
             set_shape(g, LEAGUE_TYPE, fmt, clubs, rounds)
-            for s in range(M.NAME_SLOTS):
-                M.put(g, M.R_NAME + s * M.NAME_SLOT, "%s %s" % (name, phase), M.NAME_SLOT)
+            M.put_names(g, 0, "%s %s" % (name, phase))
             new.append(g)
             print("  reg %3d  %-20s %2d clubs x %d = %2d rounds" % (
                 ids[k], phase, clubs, rounds, (clubs - 1 if clubs % 2 == 0 else clubs) * rounds))

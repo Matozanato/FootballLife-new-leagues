@@ -79,7 +79,7 @@ def playoffs(regs, where="the world", uecl=True):
             raise SystemExit("no competition %d in %s" % (cid, where))
         if any(r[M.R_TYPE] == tpl[0][M.R_TYPE] and r[0x0d] >> 4 == tpl[0][0x0d] >> 4 for r in own):
             raise SystemExit("competition %d already has a play-off phase" % cid)
-        name = own[0][M.R_NAME:M.R_NAME + M.NAME_SLOTS * M.NAME_SLOT]
+        name = own[0][M.R_NAME:M.NAME_END]
         ids = [new + g * STEP for g in range(TIES + 1)]
         if used & set(ids):
             raise SystemExit("ids %s are taken" % sorted(used & set(ids)))
@@ -139,7 +139,7 @@ def qualifying(base, out, rounds, ids, log=print):
         taken = used & {new + g * STEP for g in range(TIES + 1)}
         if taken:
             raise SystemExit("ids %s are taken" % sorted(taken))
-        added += _copy(tpl, new, cids[c], own[0][M.R_NAME:M.R_NAME + M.NAME_SLOTS * M.NAME_SLOT])
+        added += _copy(tpl, new, cids[c], own[0][M.R_NAME:M.NAME_END])
         lines.append((10 + c, 3 if stage == 1 else 2, new))
     if added:
         with contextlib.redirect_stdout(io.StringIO()):
@@ -169,8 +169,7 @@ def prerounds(base, out, rounds, log=print):
             raise SystemExit("ids %s are taken" % sorted(taken))
         rows_new = _copy(tpl, new, cid, b"")
         for i in range(0, len(rows_new), M.REG):
-            for k in range(M.NAME_SLOTS):
-                M.put(rows_new, i + M.R_NAME + k * M.NAME_SLOT, name, M.NAME_SLOT)
+            M.put_names(rows_new, i, name)
             if rows_new[i + R_GROUP] == 255:
                 rows_new[i + M.R_TEAMS] = (rows_new[i + M.R_TEAMS] & ~0x3f) | 2 * ties
         added += rows_new

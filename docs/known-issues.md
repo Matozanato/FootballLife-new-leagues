@@ -361,6 +361,13 @@ calendar.
   follows it. Checked without the game: J1 League is in the list, and a build with a J2 under it
   links 52 -> 11 both ways. Promotion and relegation between J1 and the new league are not yet
   checked in the game.
+- 2026-10-04 (Mod Studio 0.1.8): **a new league, cup or phase had no name in ten of the game's
+  languages.** A regulation keeps its 20 names as two runs of ten with 32 empty bytes between;
+  Build wrote twenty in a row, so the second run started 32 bytes early and read empty (and a
+  renamed league of the game lost those ten names the same way). All six places that write the
+  names now use the two runs. Checked without the game: every league, split phase, Apertura /
+  Clausura, play-off, league cup and Conference League regulation of two test worlds has its
+  name in all 20 slots, and the bytes between the runs stay zero. **Build the world again.**
 
 - 2026-10-03 (Mod Studio 0.1.7.1, GitHub issue #80): **a new league right under a second division
   of the game (League One under the Championship, Serie C under Serie B ...) stopped *Check the

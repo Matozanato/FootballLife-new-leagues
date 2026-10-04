@@ -168,8 +168,7 @@ def main():
         k[M.R_TEAMS] = (k[M.R_TEAMS] & ~0x3f) | nko
         new.append(k)
         for g in new:
-            for s in range(M.NAME_SLOTS):
-                M.put(g, M.R_NAME + s * M.NAME_SLOT, cup["name"], M.NAME_SLOT)
+            M.put_names(g, 0, cup["name"])
         R.extend(new)
 
         clubs = []

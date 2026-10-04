@@ -245,8 +245,7 @@ def main():
             said = apply_phase(g, over[master_no[i]])
             if said:
                 print("   phase %d becomes %s" % (master_no[i], said))
-        for k in range(M.NAME_SLOTS):
-            M.put(g, M.R_NAME + k * M.NAME_SLOT, name, M.NAME_SLOT)
+        M.put_names(g, 0, name)
         regs += g
         added += 1
 

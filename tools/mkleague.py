@@ -36,6 +36,11 @@ REGION_OFF, CID_OFF, FLAG_OFF, CODE_OFF = 3, 5, 6, 8
 R_BELOW, R_ID, R_CID, R_TYPE, R_TEAMS, R_NAME = 0x00, 0x02, 0x08, 0x09, 0x0b, 0x14
 R_NAMEID = R_BELOW               # old name, kept so mkphases.py and any local script still run
 NAME_SLOTS, NAME_SLOT = 20, 0x73
+# the names are two runs of ten, not twenty in a row: slots 0..9 from R_NAME (9 is an internal
+# label, ENGLAND_D1_LEAGUE), 32 zero bytes, then slots 10..19 from NAME_RUN2 to the record's end.
+# Writing twenty in a row put the second run 0x20 bytes early, and those ten languages read empty.
+NAME_RUN2 = 0x4b2
+NAME_END = NAME_RUN2 + 10 * NAME_SLOT
 E_TEAM, E_EID, E_CID, E_ORDER = 0x00, 0x04, 0x08, 0x09
 
 
@@ -96,6 +101,18 @@ def find_code(comp, code):
 def put(b, off, s, n):
     v = s.encode("utf-8")[:n - 1].decode("utf-8", "ignore").encode("utf-8")   # never half a letter
     b[off:off + n] = v + b"\0" * (n - len(v))
+
+
+def name_at(k):
+    """offset of name slot k (0..19) in a regulation record"""
+    return R_NAME + k * NAME_SLOT if k < 10 else NAME_RUN2 + (k - 10) * NAME_SLOT
+
+
+def put_names(b, off, s, skip=()):
+    """the regulation at b[off:] called s in every name slot but those in skip"""
+    for k in range(NAME_SLOTS):
+        if k not in skip:
+            put(b, off + name_at(k), s, NAME_SLOT)
 
 
 def enc_region(rid):
@@ -189,8 +206,7 @@ def add_league(comp, regs, ents, cid, reg, region, name, code, teams,
     g[R_TEAMS] = (g[R_TEAMS] & 0xc0) | (len(teams) & 0x3f)
     if tier is not None:
         set_tier(g, tier)
-    for k in range(NAME_SLOTS):
-        put(g, R_NAME + k * NAME_SLOT, name, NAME_SLOT)
+    put_names(g, 0, name)
     regs += g
 
     eid = max(int.from_bytes(ents[i * ENT + E_EID:i * ENT + E_EID + 4], "little")

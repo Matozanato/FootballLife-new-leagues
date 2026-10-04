@@ -122,8 +122,7 @@ def main():
         rules = (rules & ~(LEGS_MASK << LEGS_SHIFT)) | (legs << LEGS_SHIFT)
         regs[o + R_RULES:o + R_RULES + 4] = rules.to_bytes(4, "little")
         if p.get("name"):
-            for k in range(M.NAME_SLOTS):
-                M.put(regs, o + M.R_NAME + k * M.NAME_SLOT, p["name"], M.NAME_SLOT)
+            M.put_names(regs, o, p["name"])
         rounds = (n - 1 if n % 2 == 0 else n) * legs
         name = regs[o + M.R_NAME:o + M.R_NAME + M.NAME_SLOT].split(b"\0")[0].decode("utf-8", "replace")
         print("reg %3d  %-26s %2d clubs x %d = %2d rounds%s" % (
