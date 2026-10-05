@@ -20,6 +20,7 @@ import fl26world
 import uefakey
 from .. import theme
 from .. import servers as S
+from .. import newlife as N
 from ..i18n import _, tr
 from ..backups import snapshot
 from ..ui import Page, section, hint, row, ask, error, info, run_job, helpmark, helped
@@ -2016,6 +2017,8 @@ class NewClubs(BuilderPage):
             "- Players: change the club's squad.\n"
             "- Club of the game...: put a club the game already has (Al Kuwait, say) in this place instead of a "
             "new club. If it plays somewhere in the game, you pick who takes its old place there.\n"
+            "- NewLife club...: put clubs of the NewLife Database, with their squads, in this place and the "
+            "places after it (open the NewLife Database on the NewLife page first).\n"
             "- New club here: undo that; the place gets a new club again.\n"
             "- Insert club / Remove club: a new club before the selected one, or the selected one out. The "
             "league gets one club more or one less.\n"
@@ -2029,6 +2032,8 @@ class NewClubs(BuilderPage):
         self.action("Players", self.players, tip="Change this club's squad")
         self.action("Club of the game...", self.game_club,
                     tip="Put a club the game already has in this place, instead of a new club")
+        self.action("NewLife club...", self.newlife_club,
+                    tip="Put clubs of the NewLife Database in this place and the ones after it")
         more = QToolButton()
         more.setText(_("More") + "  ▾")
         more.setPopupMode(QToolButton.InstantPopup)
@@ -2218,6 +2223,62 @@ class NewClubs(BuilderPage):
             gc = [x for x in L.get("game_clubs") or [] if int(x.get("at", -1)) != k]
             L["game_clubs"] = sorted(gc + [e], key=lambda x: int(x["at"]))
             self.project.touch()
+
+    def newlife_club(self):
+        """NewLife Database clubs into this place and the ones after it (#83): a league made by
+        hand gets real clubs with their squads, one tick per place"""
+        from .newlife import ClubPickDialog
+        L, k = self.league(), self.current()
+        if not L or k is None:
+            return
+        if self.project.base is None:
+            self.need_tables()
+            return
+        rel = getattr(self.app.pages.get("NewLife"), "rel", None) or getattr(self, "nl_rel", None)
+        if rel is None:
+            folder = self.app.settings.get("newlife")
+            if not folder or not os.path.isdir(folder):
+                QMessageBox.information(self, _("New clubs"), _("Open the NewLife Database on the NewLife page first."))
+                return
+            self.app.busy(True)
+
+            def done(r):
+                self.app.busy(False)
+                self.nl_rel = r
+                self.newlife_club()
+
+            run_job(lambda: N.Release(folder), done=done,
+                    failed=lambda tb: (self.app.busy(False), error(self, "NewLife club", tb.strip().splitlines()[-1])))
+            return
+        used = {int(i) for x in self.project.recipe["leagues"] for i in (x.get("newlife") or {}).get("clubs") or []
+                if str(i).isdigit()}
+        skip = used | {cid for cid, c in rel.clubs.items() if c.get("in_game") == "1"}
+        d = ClubPickDialog(self, rel, skip)
+        if not d.finish() or not d.picked:
+            return
+        room = int(L["clubs"]) - k
+        if len(d.picked) > room:
+            error(self, "NewLife club", _("%d clubs picked, but %s has only %d places from club %d on. Insert "
+                                          "clubs first (More > Insert club).") % (len(d.picked), L["name"], room, k + 1))
+            return
+        try:
+            game = B.game_info(self.project.base)
+        except OSError:
+            game = None
+        put = elsewhere = 0
+        try:
+            for j, cid in enumerate(d.picked):
+                elsewhere += N.put_club(self.project.recipe, rel, L, k + j, cid, game)[1]
+                put += 1
+        except N.Error as e:
+            error(self, "NewLife club", str(e))
+        if not put:
+            return
+        self.project.touch()
+        text = _("%d NewLife clubs put in %s.") % (put, L["name"])
+        if elsewhere:
+            text += " " + _("%d of their players stay out: another of your leagues has them.") % elsewhere
+        self.say(text + " " + _("Build again and start a new career."), "ok")
 
     def new_here(self):
         L, k = self.league(), self.current()
