@@ -653,12 +653,20 @@ Start a **new** Master League career.
   Ajax Amsterdam (116)
   ```
 
-  While there is no last-season table (the first season, or after a restart between June
-  and the August draw) these clubs go in first; ids the game does not have, and clubs listed
-  twice, are left out, and the access list fills the places that remain. In `sider.log`:
-  `first-season list from fl26swiss-first.txt: 36 / 36 / 36 team ids` at start-up and
-  `first-season list -- 36 / 36 / 36 clubs taken` at the draw. The idea and the first list
-  came from vector360 on Evo-Web.
+  In the first season of a career started in this session of the game these clubs go in
+  first; ids the game does not have, and clubs listed twice, are left out, and the access
+  list fills the places that remain. A season you load (or the second season of a career, if
+  the game was restarted between June and the August draw) leaves the list out: from the
+  second season the places decide. In `sider.log`: `first-season list from
+  fl26swiss-first.txt: 36 / 36 / 36 team ids` at start-up, `a new career, built on day ...`
+  when the career is made and `first-season list -- 36 / 36 / 36 clubs taken` at the draw.
+  The idea and the first list came from vector360 on Evo-Web.
+- **The same list from Mod Studio:** League builder -> **First-season European clubs** picks
+  the clubs of the three league phases from a list of your new clubs and the game's (search by
+  name, league or team id). Build writes them into the world file (`first 0|1|2 <team ids>`
+  lines), and they take the place of `fl26swiss-first.txt` while that world is switched on.
+  Up to 36 clubs per competition, no club in two; the rest are filled as above. A club of the
+  game must play in a league that season. The request came from AlexRufolo.
 
 Press **F8** in the game any time to write a short report of what the module did into
 `sider.log`.

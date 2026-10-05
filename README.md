@@ -105,7 +105,8 @@ tell us where. Read [what works and what does not](#status) before you start a l
   world. The **game's own leagues** can get their European places changed too (0.1.7).
   **UEFA ranking** (0.1.7): put the world's European leagues in order and each gets its places
   from UEFA's key; **South American places** lists the Libertadores and Sudamericana places of
-  every South American league, the game's and yours.
+  every South American league, the game's and yours. **First-season European clubs** (0.1.8):
+  pick by hand who plays the three European league phases in a new career's first season.
 - A country's own **national cup** (any size up to 44 clubs, with byes like the FA Cup, 0.1.4)
   and **super cup**, a **league cup** (the clubs past 16 through a pre-round, 0.1.7), and **pre-season cups** of 4 or 8 invited clubs in July,
   each with your own **logo** (0.1.5.5). A **league cup** for the game's own countries (the
@@ -315,6 +316,8 @@ and other Latin American worlds and writes up every bug with screenshots:
   slot-to-country lookup and the first working version
   ([#11](https://github.com/Matozanato/FootballLife-new-leagues/issues/11));
   `fl26comptab.lua` and `tools/mkflags.py` are built on it.
+- **AlexRufolo**: asked to pick the clubs of the European cups by hand, which became Mod
+  Studio's **First-season European clubs** (0.1.8).
 - **pioup38**: the first report from a different game build and a clean configuration
   ([#3](https://github.com/Matozanato/FootballLife-new-leagues/issues/3)).
 - **jibibi** (Evo-Web): tested the modules alongside a full French patch and the kit server

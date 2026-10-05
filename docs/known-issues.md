@@ -293,6 +293,13 @@ calendar.
 
 ## Things that are by design and will bite you
 
+- **From the second season on, our leagues start in July; the game's own leagues still start
+  in August.** At the July rollover the builder's leagues are dated again, and a league that
+  ends early enough gets its first rounds in July (2026-10-05: first round on 25 July instead
+  of 22 August, rounds played and kept through the day-216 build). The game's own leagues are
+  not dated again at the rollover; they keep the dates their career was made with, so a
+  shipped league cannot be moved to July from the world file. The first season of a career
+  always starts when the game builds it, in early August.
 - **Saves are tied to the world.** A save made with world A does not load with world B or
   with the shipped game. Move your saves aside when you switch roots.
 - **Rulebook ids must be in the date table** (the 39 ids a default `mkworld.py` run uses,

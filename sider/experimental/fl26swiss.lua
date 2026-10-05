@@ -193,6 +193,40 @@ local function read_world(ctx)
   return leagues, splits, uefa, ccups, dlike, qrounds, lpres
 end
 
+-- `july <reg> <day>` lines of the world file: { {reg, day}, ... }
+local function world_july(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  local out = {}
+  if not f then return out end
+  for line in f:lines() do
+    local r, d = line:match("^%s*july%s+(%d+)%s+(%d+)")
+    if r then out[#out + 1] = { tonumber(r), tonumber(d) } end
+  end
+  f:close()
+  return out
+end
+
+-- `first <competition> <team id> ...` lines of the world file (0 Champions League, 1 Europa
+-- League, 2 Conference League): the clubs Mod Studio's "First-season European clubs" put in
+-- the league phases of a new career's first season; { {competition, team id}, ... } or nil
+local function world_first(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local out = {}
+  for line in f:lines() do
+    local c, ids = line:match("^%s*first%s+(%d)%s+([%d%s]+)$")
+    if c and tonumber(c) <= 2 then
+      for t in ids:gmatch("%d+") do out[#out + 1] = { tonumber(c), tonumber(t) } end
+    end
+  end
+  f:close()
+  return #out > 0 and out or nil
+end
+
 -- `season <region> <type>` lines of the world file: { [region] = type }, 0 August-May, 1
 -- January-December (fl26joindll hands the same lines to fl26join.dll, which answers the game)
 local function world_seasons(ctx)
@@ -423,6 +457,17 @@ function m.init(ctx)
       elseif #cal > 0 then
         log("fl26swiss: this fl26swiss.dll has no fl26_swiss_calendar_year -- January-December leagues keep the European dates")
       end
+      -- `july <reg> <day>`: a league that starts in July (Poland, Denmark, Croatia ...), its
+      -- first round from that day on, from the second season (fl26_swiss_july)
+      local july = world_july(ctx)
+      local pj = ffi.C.GetProcAddress(h, "fl26_swiss_july")
+      if #july > 0 and pj ~= nil then
+        local jbuf = ffi.new("uint16_t[?]", 2 * #july)
+        for i, v in ipairs(july) do jbuf[2 * i - 2] = v[1]; jbuf[2 * i - 1] = v[2] end
+        ffi.cast("fl26_swiss_access_t", pj)(jbuf, #july)
+      elseif #july > 0 then
+        log("fl26swiss: this fl26swiss.dll has no fl26_swiss_july -- July leagues start in August")
+      end
       local eu = {}
       for r, t in pairs(seasons) do
         if t == 0 and CAL_REGIONS[r] and SHIPPED_REGION_LEAGUES[r] then
@@ -452,7 +497,11 @@ function m.init(ctx)
         else log(string.format("fl26swiss: access list from this file, %d of %d places", k, #ACCESS)) end
       end
     end
-    local first = read_first(ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. FIRST_FILE)
+    -- the world file's list first (Mod Studio), else a hand-written fl26swiss-first.txt
+    local first, from = world_first(ctx), "the world file"
+    if not first then
+      first, from = read_first(ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. FIRST_FILE), FIRST_FILE
+    end
     if first then
       local pf = ffi.C.GetProcAddress(h, "fl26_swiss_first")
       if pf == nil then
@@ -465,7 +514,7 @@ function m.init(ctx)
         end
         local k = tonumber(ffi.cast("fl26_swiss_first_t", pf)(fbuf, #first))
         log(string.format("fl26swiss: first-season list from %s: %d / %d / %d team ids (%d taken)",
-                          FIRST_FILE, per[1], per[2], per[3], k))
+                          from, per[1], per[2], per[3], k))
       end
     end
     local pk = ffi.C.GetProcAddress(h, "fl26_swiss_ko_tick")

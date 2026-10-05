@@ -1359,6 +1359,11 @@ static int g_access_on = 1;
    restart between the end of the season and the draw. Ids the game does not have, or that are
    already placed, are left out and the access list below fills the places that remain. */
 static uint32_t g_first[3][48]; static unsigned g_nfirst[3];
+/* The list is for a new career's first summer only: a career built in this session (its season
+   calendar dated on day 216, date_handler). Kept tables alone (any_final_kept) are not enough --
+   they live in memory, so a game quit between June and the August draw of a later season lost
+   them and the first season's list came back (2026-10-05). */
+static int g_new_career = 0, g_day_ticked = 0;
 /* where each placed club came from, for the log: reg 0 = the first-season list */
 typedef struct { uint16_t reg; uint8_t rank; } how_t;
 static how_t g_how[3][FIELD];
@@ -1537,7 +1542,11 @@ static int access_build(int q, int mask)
     if (q == 1 && on[i]) { g_nq[i] = 0; g_qdrawn[i] = 0; }
     if (q == 2 && on[i]) for (unsigned j = 0; j < g_nq[i]; j++) if (!has_club(used, nused, g_q[i][j])) used[nused++] = g_q[i][j];
   }
-  if (g_nfirst[0] + g_nfirst[1] + g_nfirst[2] && !any_final_kept()) {
+  if (g_nfirst[0] + g_nfirst[1] + g_nfirst[2] && !any_final_kept() && !g_new_career) {
+    static int said = 0;
+    if (!said++) logf("fl26swiss: first-season list -- not a career built in this session; the list is left out");
+  }
+  if (g_nfirst[0] + g_nfirst[1] + g_nfirst[2] && !any_final_kept() && g_new_career) {
     int missing = 0, twice = 0, over = 0;
     for (int k = 0; k < 3; k++)
       for (unsigned i = 0; i < g_nfirst[k]; i++) {
@@ -3988,6 +3997,53 @@ static int respace(date_t* r, uint32_t n, const uint8_t* bad, int gap)
   }
   return moved;
 }
+/* ---- leagues that start in July ----
+ * Every league of the game starts on the big leagues' calendar, the third week of August, and
+ * the first three weeks of July had not one match. In reality Poland, Denmark, Romania, Serbia,
+ * Croatia, Belgium ... kick off in mid or late July. The world file names them with the day
+ * their first round should be on (`july <reg> <day>`, fl26_swiss_july); their rounds before New
+ * Year come earlier by whole weeks -- the first by the most, a round near New Year not at all --
+ * so weekdays and the order stay and the gaps only grow. Only at the July rollover (day 181):
+ * a new career is built on day 216, and a round before that would never be played (GitHub #27).
+ * Measured 2026-10-05 (run16): our leagues are dated at the rollover and their July rounds are
+ * played and stay in the table through the day-216 build. The game's own leagues are not dated
+ * again at the rollover -- they keep the dates their career was made with, on day 216 -- so a
+ * `july` line for one of them changes nothing; it starts as the game dates it. */
+#define MAX_JULY 64
+static uint16_t g_july[MAX_JULY][2]; static int g_njuly = 0;
+__declspec(dllexport) int fl26_swiss_july(const uint16_t* v, int n)
+{
+  if ((!v && n) || n < 0) return -1;
+  if (n > MAX_JULY) n = MAX_JULY;
+  for (int i = 0; i < n; i++) { g_july[i][0] = v[2 * i]; g_july[i][1] = v[2 * i + 1]; }
+  g_njuly = n;
+  logf("fl26swiss: %d league(s) start in July", n);
+  return n;
+}
+static void july_start(uint16_t id, date_t* r, uint32_t n, int seen)
+{
+  uint32_t want = 0;
+  for (int i = 0; i < g_njuly; i++) if (g_july[i][0] == id) want = g_july[i][1];
+  if (!want || n < 2) return;
+  int t = today();
+  if (t < 175 || t >= BUILD_DAY) {
+    if (!seen) logf("fl26swiss: reg %u -- dated on day %d, not at the July rollover; starts as the game dates it",
+                    (unsigned)id, t);
+    return;
+  }
+  uint32_t f = season_pos(r[0].day), w = season_pos(want), ny = 183;   /* New Year's position */
+  if (r[0].day >= 365 || w >= f || f >= ny) return;
+  uint32_t weeks = (f - w) / 7, first = r[0].day;
+  for (uint32_t i = 0; i < n; i++) {
+    uint32_t p = season_pos(r[i].day);
+    if (r[i].day >= 365 || p >= ny) break;
+    uint32_t k = (weeks * (ny - p) + (ny - f) / 2) / (ny - f);           /* rounded, weeks..0 */
+    int32_t d = (int32_t)r[i].day - 7 * (int32_t)k;
+    r[i].day = (uint32_t)(d < 0 ? d + 365 : d);
+  }
+  if (!seen) logf("fl26swiss: reg %u -- starts in July: first round day %u, was %u", (unsigned)id, r[0].day, first);
+}
+
 static void rest_dates(uint16_t id, date_t* r, uint32_t n)
 {
   static const int LEVEL[4] = { 0, 1, 2, 2 }, GAP[4] = { REST, REST, REST, REST - 1 };
@@ -3996,6 +4052,7 @@ static void rest_dates(uint16_t id, date_t* r, uint32_t n)
   int seen = 0;
   for (int k = 0; k < nsaid; k++) if (said[k] == id) seen = 1;
   if (!seen && nsaid < 128) said[nsaid++] = id;
+  july_start(id, r, n, seen);
   g_org = 182;
   if (!in_order(r, n)) g_org = 0;
   if (!in_order(r, n)) {
@@ -4360,6 +4417,10 @@ static uint64_t datelike_dates(uint16_t id, uint64_t reg, void* vec)
 uint64_t date_handler(uint64_t reg, void* vec)
 {
   uint16_t id = (uint16_t)reg;
+  if (vec && !g_new_career && !g_day_ticked) {    /* a career built in this session (day 216), */
+    int t = today();                               /* before its first day has gone by */
+    if (t >= BUILD_DAY && t <= 240) { g_new_career = 1; logf("fl26swiss: a new career, built on day %d", t); }
+  }
   if (vec && g_ndlike) {
     for (int i = 0; i < g_ndlike; i++) if (g_dlike[i][0] == id) return datelike_dates(id, reg, vec);
   }
@@ -4724,6 +4785,7 @@ char daychk_handler(void* ctx)
   if (g_td_fresh) { g_td_fresh = 0; ccup_fill_ahead(0, "the July teardown", 0); }
   static int last = -1, seen;
   int d = abs_day();
+  g_day_ticked = 1;
   if (d != last) {
     if (seen++ < 3) logf("fl26swiss: day loop on day %d", today());
     else if (last >= 0 && d > last + 1) logf("fl26swiss: day loop skipped day(s) %d..%d", last + 1, d - 1);

@@ -125,6 +125,12 @@ which league sits above -- and nothing about ids:
               "uecl_logo" is the Conference League's picture; without one it gets a drawn
               UECL emblem (the game has none for 174, issue #36). "uecl_name" is its name in
               the game; without one, "FL Conference League"
+  europe_first (the recipe, not a league) the clubs of the European league phases in a new
+              career's first season, picked by hand (Mod Studio: First-season European clubs):
+              {"ucl": [...], "uel": [...], "uecl": [...]}, a club "<league>/<k>" or a club id of
+              the game, as preseason_cups. Each list goes in first, the automatic choice fills
+              the rest; from the second season the places decide again. fl26swiss.dll, the world
+              file's `first <0|1|2> <team id> ...` lines
   game_europe (the recipe, not a league) the European places of leagues of the game, in place of
               the shipped ones: {"<regulation id of a top division of the game>": [[position,
               competition], ...]}, competitions as europe above (UEFA and Libertadores ones). An
@@ -524,6 +530,7 @@ def has_edits(r):
         or lbplayers.has_players(r) \
         or bool(r.get("game_cups") or r.get("game_europe") or r.get("uefa_seed")
                 or r.get("preseason_cups") or r.get("ccup_names") or r.get("ccup_logos")
+                or any((r.get("europe_first") or {}).values())
                 or r.get("uecl_name") or r.get("uecl_logo") or r.get("caf_super_cup_logo")
                 or r.get("saudi_august") or r.get("editable_kits")) \
         or r.get("uecl") is False or r.get("caf_super_cup") is False
@@ -1427,6 +1434,7 @@ def plan(recipe, base):
             "game_europe": ge, "game_replace": gr, "game_names": gn,
             "uefa_seed": uefa_seed(recipe, out, regrow, region_of_cid),
             "ccups": cups, "ccup_notes": notes, "home_cups": home,
+            "europe_first": europe_first(recipe, by_name),
             "saudi_august": bool(recipe.get("saudi_august")),
             "editable_kits": bool(recipe.get("editable_kits"))}
 
@@ -1940,6 +1948,58 @@ def preseason_cup(c, k, by_name):
             "country": host["country"], "region": host["region"], "groups": 0,
             "entry": [(host["rid"], pos) for pos in range(1, len(refs) + 1)], "refs": refs,
             "opts": {"fill": PRESEASON_FILL, "national": 1, "days": PRESEASON_DAYS}}
+
+
+EUROPE_FIRST = (("ucl", "Champions League"), ("uel", "Europa League"), ("uecl", "Conference League"))
+FIRST_MAX = 36
+
+
+def europe_first(recipe, by_name):
+    """the recipe's europe_first as [[club, ...] for the Champions, Europa and Conference League],
+    a club a team id of the game or (league id, place) until build() knows the new clubs' ids"""
+    got = recipe.get("europe_first") or {}
+    out, seen = [], {}
+    for key, title in EUROPE_FIRST:
+        refs = []
+        for x in got.get(key) or []:
+            s = str(x).strip()
+            if s.isdigit():
+                ref = int(s)
+            else:
+                lg, _sl, i = s.rpartition("/")
+                p = by_name.get(lg.strip().lower())
+                if p is None or not i.strip().isdigit() or int(i) >= p["clubs"]:
+                    raise BuildError("First-season European clubs, %s: no club %r (a league of the recipe "
+                                     "and its club, from 0, or a club id of the game)" % (title, s))
+                ref = (p["rid"], int(i))
+            if ref in seen:
+                raise BuildError("First-season European clubs: %r is in the %s and the %s" % (s, seen[ref], title))
+            seen[ref] = title
+            refs.append(ref)
+        if len(refs) > FIRST_MAX:
+            raise BuildError("First-season European clubs, %s: %d clubs -- a league phase has %d"
+                             % (title, len(refs), FIRST_MAX))
+        out.append(refs)
+    return out
+
+
+def first_lines(pl):
+    """world file lines `first <0|1|2> <team id> ...` from the plan's europe_first, the new clubs'
+    ids known now (build() handed them out)"""
+    teams = {p["rid"]: p.get("teams") or [] for p in pl["leagues"]}
+    out = []
+    for c, refs in enumerate(pl.get("europe_first") or []):
+        ids = []
+        for ref in refs:
+            if isinstance(ref, (list, tuple)):
+                rid, k = ref
+                if k < len(teams.get(rid, [])):
+                    ids.append(teams[rid][k])
+            else:
+                ids.append(int(ref))
+        if ids:
+            out.append("first %d %s" % (c, " ".join(str(t) for t in ids)))
+    return out
 
 
 def caf_super_cup(recipe):
@@ -2730,7 +2790,8 @@ def build(pl, base, game, replace=False, log=print):
         log("  European places: %d of the new leagues, %d in all"
             % (sum(1 for e in own_places(pl) if e[2] in fl26world.UEFA_LINE), len(uefa)))
     fl26world.write_world(os.path.join(tmp, MARK), pl["world"], leagues, split_lines, uefa, uecl,
-                          ccups + dates_lines(pl, db) + season_lines(pl, db) + order_lines(pl, base, confed)
+                          ccups + dates_lines(pl, db) + season_lines(pl, db) + july_lines(pl, base) + first_lines(pl)
+                          + order_lines(pl, base, confed)
                           + (["nopool " + " ".join(str(t) for t in nopool)] if nopool else []) + newfaces,
                           qlines)
     json.dump(pl, open(os.path.join(tmp, "leaguebuilder-plan.json"), "w", encoding="utf-8"), indent=1)
@@ -2979,6 +3040,44 @@ def season_lines(pl, db):
             like = like_reg(db, code)
             if like:
                 out.append("dates %d like=%d" % (reg, like))
+    return out
+
+
+# The day a country's league really kicks off, as the Saturday of 2026 (day of the year, 1
+# January = 0): 191 = 11 July, 198 = 18 July, 205 = 25 July, 212 = 1 August, 219 = 8 August,
+# 226 = 15 August. The game starts every league on the big leagues' calendar (about 22 August),
+# and the first three weeks of July had no match at all. Countries not listed keep that.
+JULY_START = {
+    "Romania": 191, "Poland": 198, "Denmark": 198, "Serbia": 198, "Slovenia": 198, "Slovakia": 198,
+    "Czechia": 198, "Czech Republic": 198, "Russia": 198, "Bulgaria": 198,
+    "Bosnia and Herzegovina": 198, "Croatia": 205, "Hungary": 205, "Austria": 205,
+    "Switzerland": 205, "Belgium": 205, "Montenegro": 205, "North Macedonia": 212,
+    "Ukraine": 212, "Scotland": 212, "Netherlands": 219, "Portugal": 219, "Turkey": 219,
+    "France": 226,
+}
+
+
+def july_lines(pl, base):
+    """world file lines `july <reg> <day>`: a league of a country that kicks off before the big
+    leagues has its rounds before New Year brought forward by whole weeks, the first onto that
+    day (fl26swiss.dll, from the second season: a new career starts on 4 August)"""
+    import mkflags
+    import uefakey
+    cty = mkflags.countries(mkflags.table("Country", [base]))
+    out, seen = [], set()
+    for p in pl["leagues"]:
+        if p.get("calendar") or p.get("split") or p.get("apertura") or p.get("exhibition"):
+            continue
+        en = mkflags.title((cty.get(p.get("country")) or ("", None))[0] or "")
+        day = JULY_START.get(en)
+        if day and p.get("rid") and p["rid"] not in seen:
+            seen.add(p["rid"])
+            out.append("july %d %d" % (p["rid"], day))
+    for rid, country in sorted(uefakey.GAME_LEAGUES.items()):
+        day = JULY_START.get(country)
+        if day and rid not in seen and country != "Scotland":     # Scotland is a split (133-136)
+            seen.add(rid)
+            out.append("july %d %d" % (rid, day))
     return out
 
 

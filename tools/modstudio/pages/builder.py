@@ -1545,6 +1545,117 @@ class GameEuropeDialog(Dialog):
         self.accept()
 
 
+class EuropeFirstDialog(Dialog):
+    """the recipe's europe_first: clubs picked by hand for the Champions, Europa and Conference
+    League phases of a new career's first season (AlexRufolo); a club of a new league
+    ("<league>/<k>") or of the game (its team id)"""
+    help = ("Pick the clubs that play the league phase of the Champions League, Europa League and Conference "
+            "League in the first season of a new career.\n\n"
+            "Your clubs go in first; the game fills the rest of the 36 places as it always does. Leave a "
+            "competition empty and it is filled the usual way. From the second season on, the European places "
+            "of the leagues decide who goes.\n\n"
+            "A club of the game must play in a league that season. Only a career started after Build gets "
+            "these clubs; a career you already play keeps its own.")
+
+    def __init__(self, parent, project):
+        super().__init__(parent, "First-season European clubs")
+        info = B.game_info(project.base)
+        self.labels = {}
+        for L in project.recipe["leagues"]:
+            for k in range(int(L.get("clubs", 0))):
+                ref = "%s/%d" % (L["name"], k)
+                self.labels[ref] = "%s  (%s)" % (B.club_name(
+                    {"name": L["name"], "club_names": list(L.get("club_names") or [])}, k), L["name"])
+        for t, (n, s) in info["clubs"].items():
+            if t not in info["national"]:
+                self.labels[t] = "%s  (%s, %d)" % (n, s, t)
+        got = project.recipe.get("europe_first") or {}
+        self.picked = [[int(x) if str(x).isdigit() else x for x in got.get(key) or []]
+                       for key, _t in B.EUROPE_FIRST]
+        self.v.insertWidget(0, hint(_("Clubs for the league phases of a new career's first season. Your clubs "
+                                      "go in first, the game fills the rest; from the second season the "
+                                      "leagues' European places decide.")))
+        body = QHBoxLayout()
+        left = QVBoxLayout()
+        self.search = QLineEdit()
+        self.search.setPlaceholderText(_("Club, league or team ID"))
+        self.search.textChanged.connect(lambda *_a: self.fill())
+        left.addWidget(self.search)
+        self.pool = QListWidget()
+        self.pool.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.pool.setMinimumWidth(340)
+        left.addWidget(self.pool, 1)
+        adds = []
+        for c, (_key, title) in enumerate(B.EUROPE_FIRST):
+            b = QPushButton(_("Add to the %s") % _(title))
+            b.clicked.connect(lambda _c=False, c=c: self.add(c))
+            adds.append(b)
+        for b in adds:
+            left.addWidget(b)
+        body.addLayout(left, 1)
+        self.lists = []
+        for c, (_key, title) in enumerate(B.EUROPE_FIRST):
+            col = QVBoxLayout()
+            col.addWidget(QLabel(_(title)))
+            lw = QListWidget()
+            lw.setSelectionMode(QAbstractItemView.ExtendedSelection)
+            lw.setMinimumWidth(220)
+            col.addWidget(lw, 1)
+            rem = QPushButton(_("Remove"))
+            rem.clicked.connect(lambda _c=False, c=c: self.remove(c))
+            col.addWidget(rem)
+            self.lists.append(lw)
+            body.addLayout(col, 1)
+        self.v.insertLayout(1, body, 1)
+        self.scroll.hide()
+        self.fill()
+        self.show_picked()
+        self.setMinimumSize(1100, 600)
+
+    def label(self, ref):
+        return self.labels.get(ref, str(ref))
+
+    def fill(self):
+        q = self.search.text().strip().lower()
+        taken = {x for p in self.picked for x in p}
+        self.pool.clear()
+        for ref, text in sorted(self.labels.items(), key=lambda x: x[1].lower()):
+            if ref in taken or (q and q not in text.lower()):
+                continue
+            it = QListWidgetItem(text)
+            it.setData(Qt.UserRole, ref)
+            self.pool.addItem(it)
+
+    def show_picked(self):
+        for c, lw in enumerate(self.lists):
+            lw.clear()
+            for ref in self.picked[c]:
+                it = QListWidgetItem(self.label(ref))
+                it.setData(Qt.UserRole, ref)
+                lw.addItem(it)
+
+    def add(self, c):
+        refs = [it.data(Qt.UserRole) for it in self.pool.selectedItems()]
+        room = B.FIRST_MAX - len(self.picked[c])
+        if len(refs) > room:
+            error(self, "First-season European clubs", _("A league phase has %d clubs; %d more fit.")
+                  % (B.FIRST_MAX, room))
+            refs = refs[:room]
+        self.picked[c] += refs
+        self.fill()
+        self.show_picked()
+
+    def remove(self, c):
+        drop = {it.data(Qt.UserRole) for it in self.lists[c].selectedItems()}
+        self.picked[c] = [x for x in self.picked[c] if x not in drop]
+        self.fill()
+        self.show_picked()
+
+    def ok(self):
+        self.result = {key: list(p) for (key, _t), p in zip(B.EUROPE_FIRST, self.picked) if p}
+        self.accept()
+
+
 class UefaRankDialog(Dialog):
     """the UEFA key (tools/uefakey.py): the world's European top divisions in order, strongest
     first, and the places the key gives each; OK writes them into the leagues' European places"""
@@ -1774,6 +1885,8 @@ class NewLeagues(BuilderPage):
             "and a super cup where the game has none.\n"
             "- European places of the game's leagues: which positions of the Premier League, LaLiga ... go to "
             "which European competition.\n"
+            "- First-season European clubs: pick by hand who plays the Champions, Europa and Conference "
+            "League in a new career's first season.\n"
             "- UEFA ranking: put the European countries in order and every league gets its European places by "
             "UEFA's rules.\n"
             "- South American places: shows who goes to the Libertadores and the Copa Sudamericana.\n"
@@ -1793,6 +1906,8 @@ class NewLeagues(BuilderPage):
                     "leagues of the game, and a super cup where the game has none")
         self.action("European places of the game's leagues", self.game_europe, tip="Which positions of the "
                     "Premier League, LaLiga ... go to which European competition, in place of the game's list")
+        self.action("First-season European clubs", self.europe_first, tip="Pick by hand the clubs of the "
+                    "Champions, Europa and Conference League in a new career's first season")
         self.action("UEFA ranking", self.uefa_rank, tip="Put the European countries in order and every league "
                     "gets its European places by UEFA's key")
         self.action("South American places", self.samerica, tip="Which positions of every South American "
@@ -2008,6 +2123,17 @@ class NewLeagues(BuilderPage):
                 self.project.recipe["game_europe"] = d.result
             else:
                 self.project.recipe.pop("game_europe", None)
+            self.project.touch()
+
+    def europe_first(self):
+        if self.need_tables():
+            return
+        d = EuropeFirstDialog(self, self.project)
+        if d.finish():
+            if d.result:
+                self.project.recipe["europe_first"] = d.result
+            else:
+                self.project.recipe.pop("europe_first", None)
             self.project.touch()
 
     def uefa_rank(self):
