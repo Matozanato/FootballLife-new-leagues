@@ -159,9 +159,27 @@ freed and nothing is reallocated, so the memory stays exactly as the game laid i
 trick only ever shortens: a calendar longer than 38 rounds is refused rather than guessed at.
 
 The sixteen days are two a week through the European weeks of autumn and four in January
-(259, 260, 273, 274, 294, 295, 308, 309, 329, 330, 343, 344, 21, 22, 28, 29) -- January is a small
+(257, 258, 271, 272, 292, 293, 306, 307, 327, 328, 341, 342, 19, 20, 26, 27) -- January is a small
 number after a December one because the day counter is a calendar year, exactly as the shipped
-array wraps from 363 to 2.
+array wraps from 363 to 2. They are the Tuesday and Wednesday of the shipped league calendar's
+week (case 5 plays Saturday on 261, 268, 275 ...); until 0.1.8 they were 259/260 ... 28/29, the
+Thursday and Friday, and a club played the league the next day. The Conference League plays the
+Wednesday and Thursday (272/273 ... 349/350).
+
+Since 0.1.8 every league (format 4 or 5, four clubs or more: the game's own in the date hook,
+ours in `league_dates`) is also re-dated (`rest_dates`): every round at least three days from
+the rounds either side, from each continental cup day of a cup it sends clubs to, and -- for an
+August-May season -- from each European day (leagues with European places and ours), national
+cup day (case 6) and league cup day. A calendar-year league is measured from 1 January instead
+of 1 July (`g_org`), so its rounds stay in order -- two free days
+between a club's matches, the least moved in all (a shortest-path over the season's days), never
+before the calendar's first day or after its last. Where no such calendar exists the league cup
+days are dropped from the test first, then the national cups, then the gap is cut to two days,
+and last only the European day itself is kept free. On the Croatia world's calendars this
+moved 206 rounds (mostly a Saturday to the Sunday after a Thursday), left none within two days
+of another match, and the busiest day went from 259 to 264 matches (of 280). The League builder's
+league cup days (`LEAGUE_CUP_DAYS`) were moved for it, from Mondays a fortnight apart (263 +
+14n), around which no 36- or 38-round league had room, to 256, 287, 291, 314, 326, 340, 356.
 
 Both hooks are checked before either is patched, so a signature mismatch leaves the game
 unmodified rather than half hooked. Deployed; its `sider.ini` line is still commented out.
@@ -206,6 +224,11 @@ League career that starts in August:
   the Europa League is cut to 36.
 * **The table showed "Group A".** The standings screen pages the 36 rows with L1/R1 and its
   header says "League Phase".
+* **The phase was called "Group stage"** (0.1.8): above the score after a match and on the
+  Competition Info item. Both ask `0x1414cb830` for the phase's text (`0x3a20011`, the shipped
+  group regulations'; the game has no "League Phase" text). The module names the three league
+  phases with a text index of its own, `0x3a2fff1`, and answers that index in `0x1414996f0`, the
+  lookup both text paths end in.
 * **Knockout entry.** When a group stage ends, the progression `0x141345cc0` takes the first N
   rows of every group's table, N four bits of `+0x304` (bits 20-23) -- the top two of one group
   of 36. The hook on set_clubs `0x141522b50` (in front of `fl26chain.dll`'s own hook on the same

@@ -82,19 +82,20 @@ typedef struct { uint32_t day; uint32_t round; uint32_t kind; } date_t;  /* 12 b
 /* The league phase's sixteen matchdays, as days of the year.  Two matchdays a week in the
    European weeks the real competition uses, and the last four in January -- the day counter
    is a calendar year, so a January date is a small number after a December one, exactly as
-   the shipped 38-round array wraps from 363 to 2.  The seventh is on 21/22 January, not 20/21:
-   the shipped big-league calendar (case 5) plays a round on day 20, and a club of those leagues
-   then had two matches on one day (GitHub #54). */
+   the shipped 38-round array wraps from 363 to 2.  On a Tuesday and Wednesday of the shipped
+   big-league calendar's week (case 5: Saturday is 261, 268, ...): they were the Thursday and
+   Friday, the day before the league's Saturday, and a club played three matches in four days
+   (5 October). A league round still too near is moved by rest_dates. */
 #define FL26_DATE_KIND_LEAGUE 2
 static const uint32_t SWISS_DAYS[FL26_SWISS36_MATCHDAYS] = {
-  259, 260, 273, 274, 294, 295, 308, 309, 329, 330, 343, 344, 21, 22, 28, 29 };
+  257, 258, 271, 272, 292, 293, 306, 307, 327, 328, 341, 342, 19, 20, 26, 27 };
 
 /* The Conference League plays six matchdays, one opponent from each of six pots (the second
-   table in fl26swiss_table.h), on the real Thursdays: 2 and 23 October, 6 and 27 November,
-   11 and 18 December.  Each round is two dates because a fixture record holds 16 matches and
-   a round of 36 clubs is 18: the Wednesday before carries the first nine. */
+   table in fl26swiss_table.h), on the Thursdays of the same calendar: 1 and 22 October, 5 and
+   26 November, 10 and 17 December.  Each round is two dates because a fixture record holds 16
+   matches and a round of 36 clubs is 18: the Wednesday before carries the first nine. */
 static const uint32_t UECL_DAYS[FL26_SWISS6_MATCHDAYS] = {
-  273, 274, 294, 295, 308, 309, 329, 330, 343, 344, 350, 351 };
+  272, 273, 293, 294, 307, 308, 328, 329, 342, 343, 349, 350 };
 
 typedef char (*gen_fn)(void* ctx, uint64_t reg, uint64_t flag);
 typedef void (*grid_fn)(void* ctx);
@@ -146,7 +147,7 @@ static uint32_t day_shift(uint16_t reg)
    competitions on day 238, after both legs, so the play-off got no matches at all, the group
    stage never filled and the Europa League never started (2026-09-23, calread: no match of
    competition 2 on any day). Both legs move two weeks later, to 244 and 251, still a week
-   before the first league-phase matchday on 259. */
+   before the first league-phase matchday on 257. */
 #define PLAYOFF_SHIFT 14
 static volatile uint32_t g_playoff_said = 0;
 static int is_playoff(uint16_t id)
@@ -1821,7 +1822,7 @@ static void q_place(int mask)
   }
   logf("fl26swiss: access -- with the play-offs: %u / %u / %u clubs", g_nacc[0], g_nacc[1], g_nacc[2]);
 }
-static int q_summer(void) { int d = today(); return d >= 180 && d < 259; }
+static int q_summer(void) { int d = today(); return d >= 180 && d < 257; }
 /* set_clubs on reg 2 or one of its ties in the summer: ours instead of the game's. 1 = handled */
 static int q_setcl(uint16_t r, uint64_t id, uint64_t flag, char* ok)
 {
@@ -3612,6 +3613,28 @@ uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
  * (0x14151f7a2), the Europa and Conference League play-offs borrow the Champions League
  * play-off's name.  The function is too small to hook and call through (a rel32 call sits in
  * its first 17 bytes), so this is a full replacement of the same two lines of logic. */
+/* ---- "League Phase" for the three league phases ----
+ *
+ * The shipped Champions and Europa League group regulations name their phase with text
+ * 0x3a20011, "Group stage", and the Conference League row copies it; the match screens show
+ * it over the score (0x140ebc8f0 asks 0x1414cb830 for the phase of the match's regulation and
+ * formats it), as do the Competition Info items.  The game has no "League Phase" text, so the
+ * league phases get one of their own: phname_handler names them LP_TEXT, an index table 0x3a2
+ * does not use, and 0x1414996f0 -- the lookup both text paths (0x141497dd0, 0x141497e20) end
+ * in: table, u16 index -> the string -- answers it.  Every language reads "League Phase", the
+ * UEFA name. */
+#define LP_TEXT    0x3a2fff1u
+#define TXTGET_RVA 0x14996f0
+static const unsigned char SIG_TXTGET[14] = {
+  0x4c, 0x8b, 0x41, 0x08, 0x45, 0x33, 0xc9, 0x45, 0x8b, 0x10, 0x49, 0x8d, 0x40, 0x08 };
+typedef const char* (*txtget_fn)(void* table, uint64_t index);
+unsigned char* g_tramp_txtget = 0;
+const char* txtget_handler(void* table, uint64_t index)
+{
+  if ((uint16_t)index == (uint16_t)LP_TEXT) return "League Phase";
+  return ((txtget_fn)(uintptr_t)g_tramp_txtget)(table, index);
+}
+
 #define PHNAME_RVA 0x14cb830
 #define PHREC_RVA  0x14fdbc0
 #define MENU_NAME_RA 0x151f7a2
@@ -3623,6 +3646,8 @@ uint64_t phname_handler(uint64_t reg)
 {
   unsigned char rec[0x200];
   phrec_fn get = (phrec_fn)(uintptr_t)(g_base + PHREC_RVA);
+  for (int ci = 0; ci < 3 && g_tramp_txtget; ci++)   /* the league phases: "League Phase", see txtget_handler */
+    if ((uint16_t)reg == CUPS[ci].league || (uint16_t)reg == CUPS[ci].row) return LP_TEXT;
   if (get(reg & 0xffff, rec)) return *(uint32_t*)(rec + 0x40);
   if ((uintptr_t)__builtin_return_address(0) == g_base + MENU_NAME_RA &&
       ((uint16_t)reg == CUPS[1].po || (uint16_t)reg == CUPS[2].po || q_added((uint16_t)reg) >= 0
@@ -3855,6 +3880,153 @@ static void declash_log(uint16_t id, int moved)
   logf("fl26swiss: reg %u -- %d league round(s) moved off European days", (unsigned)id, moved);
 }
 
+/* ---- two free days between a club's matches ----
+ * Off the European day itself was not enough: a club played the league on Saturday, the
+ * Champions League on Sunday... -- 3 matches in 4 days (Anderlecht, 5 October: league 20,
+ * Champions League 21, league 23). Nobody plays Thursday and Saturday, or Sunday and Tuesday:
+ * a league round of a league with European places, or with a league cup of ours, is now at
+ * least REST days from every European day, national cup day (calendar case 6) and league cup
+ * day its clubs may play on, and from the rounds either side of it. The rounds are moved as
+ * little as they can be (the least days in all), in order, never before the first or after the
+ * last day the calendar had -- a split league's second phase and a season's start stay put.
+ * Measured on the Croatia world's calendars (calmodel): 194 rounds within two days of such a
+ * day before, none after; the busiest day 264 matches of the 280 a day holds.
+ * When no such calendar exists (a 46-round league with a league cup), the league cup is let
+ * go first, then the national cups, then the rest is cut to two days, and last the old
+ * rule -- off the European day itself -- stays. */
+#define REST 3
+static const uint16_t NATCUP_DAYS[12] = { 251, 254, 286, 289, 6, 9, 41, 44, 83, 86, 132, 135 };
+static int access_league(uint16_t id)
+{
+  for (size_t i = 0; i < g_naccess; i++) if (g_access[i].rank && g_access[i].reg == id) return 1;
+  return 0;
+}
+static int ccup_of_league(int k, uint16_t id)
+{
+  for (int e = 0; e < g_ccup[k].n && e < CCUP_MAX_ENTRY; e++) if (g_ccup[k].ereg[e] == id) return 1;
+  return 0;
+}
+static int cup_league(uint16_t id)
+{
+  for (int k = 0; k < g_nccup; k++) if (ccup_of_league(k, id)) return 1;
+  return 0;
+}
+/* rest positions count from g_org: 1 July (182) for an August-May season, 1 January for a
+   calendar-year one -- whichever keeps the league's rounds in order */
+static uint32_t g_org = 182;
+static uint32_t rpos(uint32_t d) { return (d + 365 - g_org) % 365; }
+static int in_order(const date_t* r, uint32_t n)
+{
+  for (uint32_t i = 0; i < n; i++)
+    if (r[i].day >= 365 || (i && rpos(r[i].day) <= rpos(r[i - 1].day))) return 0;
+  return 1;
+}
+static void block(uint8_t* bad, uint32_t d, int buf)
+{
+  if (d >= 365) return;
+  int p = (int)rpos(d);
+  for (int k = -(buf - 1); k <= buf - 1; k++) if (p + k >= 0 && p + k < 365) bad[p + k] = 1;
+}
+/* the days a league's clubs may play on besides the league: level 0 all of them, 1 without
+   the league cup, 2 without the national cups either. A calendar-year league (g_org 0) has
+   no European season and its own country's cups, so only its continental cups count. */
+static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
+{
+  memset(bad, 0, 365);
+  for (int k = 0; k < g_nccup; k++)                 /* CAF / AFC / CONMEBOL cups it feeds */
+    if (!g_ccup[k].national && ccup_of_league(k, id))
+      for (int i = 0; i < g_ccup[k].nd && i < CCUP_MAX_DAYS; i++) block(bad, g_ccup[k].days[i], buf);
+  if (g_org != 182) return;
+  if (access_league(id) || our_league(id)) {
+    for (int i = 0; i < FL26_SWISS36_MATCHDAYS; i++) block(bad, SWISS_DAYS[i], buf);
+    for (int i = 0; i < FL26_SWISS6_MATCHDAYS; i++) block(bad, UECL_DAYS[i], buf);
+    for (int c = 0; c < 3; c++) {
+      for (int i = 0; i < 7; i++) block(bad, KO_DAYS[c][i], buf);
+      for (int i = 0; i < 2; i++) { block(bad, QR_DAYS[c][i], buf); block(bad, CUPS[c].days[i], buf); }
+    }
+    block(bad, 230 + PLAYOFF_SHIFT, buf); block(bad, 237 + PLAYOFF_SHIFT, buf);
+  }
+  if (level < 2) for (int i = 0; i < 12; i++) block(bad, NATCUP_DAYS[i], buf);
+  if (level < 1)
+    for (int k = 0; k < g_nccup; k++) {
+      if (!g_ccup[k].national || !ccup_of_league(k, id)) continue;
+      for (int i = 0; i < g_ccup[k].nd && i < CCUP_MAX_DAYS; i++) block(bad, g_ccup[k].days[i], buf);
+      for (int li = 0; li < g_nlpre; li++)
+        if (g_lpre[li].ko == g_ccup[k].ko) { block(bad, g_lpre[li].days[0], buf); block(bad, g_lpre[li].days[1], buf); }
+    }
+}
+/* the n rounds on free days at least `gap` apart, the least moved in all; -1 when there is no
+   such calendar between the first and the last day */
+static int respace(date_t* r, uint32_t n, const uint8_t* bad, int gap)
+{
+  static int32_t cost[2][365]; static int16_t prev[64][365]; static int32_t o[64];
+  const int32_t INF = 0x3fffffff;
+  if (n < 2 || n > 64) return -1;
+  if (!in_order(r, n)) return -1;
+  for (uint32_t i = 0; i < n; i++) o[i] = (int32_t)rpos(r[i].day);
+  int lo = o[0], hi = o[n - 1];
+  for (int p = 0; p < 365; p++) cost[0][p] = (p >= lo && p <= hi && !bad[p]) ? abs(p - o[0]) : INF;
+  for (uint32_t i = 1; i < n; i++) {
+    int32_t* c = cost[i & 1]; const int32_t* b = cost[(i - 1) & 1];
+    int32_t best = INF; int arg = -1;
+    for (int p = 0; p < 365; p++) {
+      int q = p - gap;
+      if (q >= 0 && b[q] < best) { best = b[q]; arg = q; }
+      c[p] = INF; prev[i][p] = -1;
+      if (p >= lo && p <= hi && !bad[p] && best < INF) { c[p] = best + abs(p - o[i]); prev[i][p] = (int16_t)arg; }
+    }
+  }
+  const int32_t* last = cost[(n - 1) & 1];
+  int p = -1;
+  for (int k = 0; k < 365; k++) if (last[k] < INF && (p < 0 || last[k] < last[p])) p = k;
+  if (p < 0) return -1;
+  int moved = 0;
+  for (int i = (int)n - 1; i >= 0; i--) {
+    uint32_t d = ((uint32_t)p + g_org) % 365;
+    if (r[i].day != d) { r[i].day = d; moved++; }
+    if (i) p = prev[i][p];
+  }
+  return moved;
+}
+static void rest_dates(uint16_t id, date_t* r, uint32_t n)
+{
+  static const int LEVEL[4] = { 0, 1, 2, 2 }, GAP[4] = { REST, REST, REST, REST - 1 };
+  static uint8_t bad[365];
+  static uint16_t said[128]; static int nsaid = 0;
+  int seen = 0;
+  for (int k = 0; k < nsaid; k++) if (said[k] == id) seen = 1;
+  if (!seen && nsaid < 128) said[nsaid++] = id;
+  g_org = 182;
+  if (!in_order(r, n)) g_org = 0;
+  if (!in_order(r, n)) {
+    g_org = 182;
+    if (!seen) logf("fl26swiss: reg %u -- rounds not in date order; off European days only", (unsigned)id);
+    declash_log(id, declash(r, n));
+    return;
+  }
+  for (int t = 0; t < 4; t++) {
+    busy_days(id, LEVEL[t], GAP[t], bad);
+    int moved = respace(r, n, bad, GAP[t]);
+    if (moved < 0) continue;
+    g_org = 182;
+    if (!seen)
+      logf("fl26swiss: reg %u -- %d of %u round(s) moved for %d day(s) between matches%s", (unsigned)id, moved,
+           (unsigned)n, GAP[t], t == 1 ? " (not around the league cup)" : t >= 2 ? " (not around the cups)" : "");
+    return;
+  }
+  g_org = 182;
+  if (!seen) logf("fl26swiss: reg %u -- no calendar with free days between matches; off European days only", (unsigned)id);
+  declash_log(id, declash(r, n));
+}
+/* every league, the game's and ours: a round robin or a split phase of four clubs or more */
+static int rest_league(uint16_t id)
+{
+  unsigned char* rec = get_rec(id);
+  if (!rec || (rec[0x09] != 4 && rec[0x09] != 5)) return 0;
+  return (*(uint32_t*)(rec + 0x30c) & 0x7f) >= 4;
+}
+static void league_rest(uint16_t id, date_t* r, uint32_t n) { rest_dates(id, r, n); }
+
 static void league_dates(uint16_t id, uint64_t reg, void* vec)
 {
   unsigned char* rec = get_rec(id);
@@ -3865,7 +4037,7 @@ static void league_dates(uint16_t id, uint64_t reg, void* vec)
   uint32_t n = (clubs & 1 ? clubs : clubs - 1) * legs;
   int cy = calyear(id), eu = eudate(id);
   if (clubs < 4 || !legs) return;
-  if (n == have && !cy && !eu) { declash_log(id, declash((date_t*)v->b, n)); return; }
+  if (n == have && !cy && !eu) { league_rest(id, (date_t*)v->b, n); return; }
   static uint16_t said[64]; static int nsaid = 0; int seen = 0;
   for (int k = 0; k < nsaid; k++) if (said[k] == id) seen = 1;
   if (!seen && nsaid < 64) said[nsaid++] = id;
@@ -3901,7 +4073,7 @@ static void league_dates(uint16_t id, uint64_t reg, void* vec)
   }
   memcpy(r, tmp, n * sizeof(date_t));
   v->e = v->b + (size_t)n * sizeof(date_t);
-  declash_log(id, declash(r, n));
+  league_rest(id, r, n);
   if (!seen)
     logf("fl26swiss: reg %u -- %u clubs x %u = %u rounds, calendar resampled from %u dates (days %u..%u, shift %d)",
          (unsigned)id, clubs, legs, n, (unsigned)have, r[0].day, r[n - 1].day, (int)shift);
@@ -4132,7 +4304,7 @@ static uint64_t split_dates(uint16_t id, uint64_t reg, void* vec, int part, cons
     r[i].kind = FL26_DATE_KIND_LEAGUE;
   }
   v->e = v->b + (size_t)n * sizeof(date_t);
-  declash_log(id, declash(r, n));
+  league_rest(id, r, n);
   if (!seen)
     logf("fl26swiss: reg %u -- split %s of %u: %u rounds on days %u..%u (season %u+%u on a %u-date line)",
          (unsigned)id, part == 2 ? "regular phase" : "group", (unsigned)s->total, n,
@@ -4293,6 +4465,13 @@ uint64_t date_handler(uint64_t reg, void* vec)
   if (vec && (our_league(id) || eudate(id))) {
     uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)(reg, vec);
     league_dates(id, reg, vec);
+    return rv;
+  }
+  if (vec && !ours(id) && rest_league(id)) {         /* a league of the game's own */
+    uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)(reg, vec);
+    vec_t* v = (vec_t*)vec;
+    size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+    if (have >= 2 && have <= 64) rest_dates(id, (date_t*)v->b, (uint32_t)have);
     return rv;
   }
   if (!vec || !ours(id))
@@ -4803,6 +4982,10 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
     logf("fl26swiss: knockout item guard live (phase by kind@%llx)", (unsigned long long)(exe_base + PHKIND_RVA));
   else
     logf("fl26swiss: knockout item guard NOT installed (signature)");
+  if (!hook((unsigned char*)(uintptr_t)(exe_base + TXTGET_RVA), SIG_TXTGET, 14, (void*)txtget_handler, &g_tramp_txtget))
+    logf("fl26swiss: League Phase text live (@%llx)", (unsigned long long)(exe_base + TXTGET_RVA));
+  else
+    logf("fl26swiss: League Phase text NOT installed (signature)");
   if (!hook((unsigned char*)(uintptr_t)(exe_base + PHNAME_RVA), SIG_PHNAME, 17, (void*)phname_handler, &g_tramp_phname))
     logf("fl26swiss: play-off names live (@%llx)", (unsigned long long)(exe_base + PHNAME_RVA));
   else

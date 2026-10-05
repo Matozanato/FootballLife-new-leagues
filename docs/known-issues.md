@@ -341,6 +341,20 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-05 (Mod Studio 0.1.8, fl26swiss, Discord): **a club in Europe played three matches in
+  four days (league on Saturday, Champions League on Monday or Thursday, league again two days
+  later), and the result screen of a European league-phase match read "Group stage".** The
+  Champions League and Europa League league phase now play Tuesday/Wednesday and the Conference
+  League Wednesday/Thursday, as in reality. Every league -- the game's own and the League
+  builder's, top flights and lower divisions, August-May and calendar-year seasons -- has its
+  rounds moved the fewest days needed so that a club always has at least two free days between
+  two matches (league, national cup, league cup, European or continental cup); the League builder's league cup moved to days that leave room for it. The
+  result screen now reads "League Phase" for all three cups. Checked in game: in the second
+  season's calendar, read live, no league has two rounds less than three days apart (sider.log
+  `moved for 3 day(s) between matches` for the leagues it moved), the Belgian league's rounds
+  are clear of the European and cup days, and every match of the season is on the calendar
+  (9486 of 9486, busiest day 252 of the 280 the game allows).
+
 - 2026-10-05 (Mod Studio 0.1.8, fl26swiss, GitHub issue #75): **Champions League, Europa
   League and Conference League matches in the league phase were labelled Matchday 1, 3, 5, ...
   (or 4 for the second round) in the schedule and calendar.** fl26swiss splits each round into

@@ -292,17 +292,19 @@ DATE_SHIFT = {11: 1, 49: 2, 60: 1, 61: 2, 62: 5, 74: 5, 76: 2, 93: 6, 94: 2, 96:
 # (QR_DAYS) and the play-offs (reg 2's moved to 244/251, the Europa/Conference League's 49/56).
 # fl26swiss also moves any round of ours still on one of these days (declash), so this only
 # steers the choice of id.
-_SWISS = [259, 260, 273, 274, 294, 295, 308, 309, 329, 330, 343, 344, 21, 22, 28, 29]
+_SWISS = [257, 258, 271, 272, 292, 293, 306, 307, 327, 328, 341, 342, 19, 20, 26, 27]
 EURO_DAYS = (set(_SWISS)
-             | {273, 274, 294, 295, 308, 309, 329, 330, 343, 344, 350, 351}
+             | {272, 273, 293, 294, 307, 308, 328, 329, 342, 343, 349, 350}
              | {68, 75, 96, 103, 117, 124, 149, 70, 77, 98, 105, 119, 126, 139, 146}
-             | {243, 250, 229, 236, 220, 225, 244, 251, 49, 56})
+             | {243, 250, 229, 236, 220, 225, 244, 251, 47, 54, 49, 56})
 # The days of the year the domestic knockouts are played on, one per record of the knockout
 # fl26swiss borrows (two legs of the last 16, quarter-finals, semi-finals, then the final):
-# always seven, a smaller field leaves the first ones unused. A league cup's are the day after
-# the Champions League's weekday (CCUP_KO_DAYS, 73 + 7n), September to December; a pre-season
+# always seven, a smaller field leaves the first ones unused. A league cup's run September to
+# December on Mondays and midweek days chosen so that fl26swiss.rest_dates can keep two free days
+# around every round of a 36- or 38-round league as well (the old Mondays every fortnight, 263 +
+# 14n, left it no room and every such league fell back to ignoring its cup); a pre-season
 # cup's run from early July, after the season's July turn, filled on PRESEASON_FILL.
-LEAGUE_CUP_DAYS = [263, 277, 291, 305, 319, 333, 347]
+LEAGUE_CUP_DAYS = [256, 287, 291, 314, 326, 340, 356]
 PRESEASON_FILL = 183
 PRESEASON_DAYS = [186, 189, 192, 195, 198, 201, 205]
 # The CAF Super Cup: filled with the pre-season cups, the day after the July teardown, from the
