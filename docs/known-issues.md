@@ -346,6 +346,15 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-05 (Mod Studio 0.1.8, fl26swiss, GitHub issue #100): **Kick Off > Cup with the
+  Champions League or the Europa League showed "Draw Size 36", drew only group A and crashed
+  once a club was picked.** Their league phase of 36 is run by fl26swiss, and only in Master
+  League; Cup mode draws groups of four from it and cannot. The game has no setting that keeps
+  a competition out of Cup mode alone, so fl26swiss now leaves every competition whose group
+  phase has more than 32 clubs (the Champions, Europa and Conference League of the new format)
+  out of the Cup mode list. Master League is not touched. Checked in game: the list goes from
+  EURO straight to the Copa Libertadores.
+
 - 2026-10-05 (Mod Studio 0.1.8, fl26regen, Discord): **regens of a country full of imported
   players got a first name for a surname: a dozen Polish regens all called "Tahj".** Mod Studio
   wrote a player's whole name into all four name slots, the shirt name too. The regen module

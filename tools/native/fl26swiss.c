@@ -4278,6 +4278,57 @@ uint64_t date_handler(uint64_t reg, void* vec)
   return rv;
 }
 
+/* ---- Cup mode: no league phase of 36 (GitHub #100) ----
+ *
+ * Kick Off > Cup lists every competition of a category, and ours come along: the Champions,
+ * Europa and Conference League with their league phase of 36 clubs, one group, that only this
+ * module knows how to run, and only in Master League.  Cup mode draws groups of four from it --
+ * group A filled, the rest empty -- and crashes once a club is picked.  The game has no flag
+ * that keeps a competition out of Cup mode alone, so the Cup select menu (MenuModeCupSelect,
+ * vtable 0x142692c40, only reached from the Cup flow; Master League uses MenuModeCompeSelect)
+ * gets its init, slot +0xd8, wrapped: before the menu counts its choices, the list it built in
+ * this+0x90 (begin) / +0x98 (end), 12-byte items with the competition id at +0, loses every
+ * competition whose group phase (0x14150af30 kind 2, the one Regulations shows as Draw Size)
+ * holds more than 32 clubs. */
+#define CUPSEL_VT_RVA   0x2692d18   /* vtable 0x142692c40 + 0xd8 */
+#define CUPSEL_INIT_RVA 0xb1c990
+typedef char (*cupsel_fn)(void* self, uint64_t a, uint64_t b, uint64_t c);
+static uint32_t g_cupsel_n = 0;
+char cupsel_handler(unsigned char* self, uint64_t a, uint64_t b, uint64_t c)
+{
+  unsigned char** pb = (unsigned char**)(self + 0x90);
+  unsigned char** pe = (unsigned char**)(self + 0x98);
+  unsigned char* w = *pb;
+  int gone = 0;
+  for (unsigned char* p = *pb; p && p + 12 <= *pe; p += 12) {
+    uint32_t cid = *(uint32_t*)p;
+    uint16_t g = (uint16_t)((phkind_fn)(uintptr_t)(g_base + PHKIND_RVA))(&cid, 2);
+    unsigned char* rec = g != 0xffff ? find_rec(g) : 0;
+    if (rec && (rec[0x30c] & 0x7f) > 32) {
+      if (g_cupsel_n++ < 8)
+        logf("fl26swiss: Cup mode -- competition %u left out (group phase %u has %u clubs)",
+             (unsigned)*(uint32_t*)p, (unsigned)g, (unsigned)(rec[0x30c] & 0x7f));
+      gone++;
+      continue;
+    }
+    if (w != p) memmove(w, p, 12);
+    w += 12;
+  }
+  if (gone) *pe = w;
+  return ((cupsel_fn)(uintptr_t)(g_base + CUPSEL_INIT_RVA))(self, a, b, c);
+}
+
+static int cupsel_install(uint64_t exe_base)
+{
+  uint64_t* slot = (uint64_t*)(uintptr_t)(exe_base + CUPSEL_VT_RVA);
+  if (*slot != exe_base + CUPSEL_INIT_RVA) return 2;
+  DWORD old;
+  if (!VirtualProtect(slot, 8, PAGE_READWRITE, &old)) return 4;
+  *slot = (uint64_t)(uintptr_t)cupsel_handler;
+  VirtualProtect(slot, 8, old, &old);
+  return 0;
+}
+
 /* ---- install ---- */
 static int hook(unsigned char* target, const unsigned char* sig, int n, void* handler, unsigned char** tramp_out)
 {
@@ -4690,6 +4741,10 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
     logf("fl26swiss: league-phase header live (@%llx)", (unsigned long long)(exe_base + GNAME_RVA));
   else
     logf("fl26swiss: league-phase header NOT installed (signature)");
+  if (!cupsel_install(exe_base))
+    logf("fl26swiss: Cup mode list live (no league phase of 36 in Kick Off > Cup)");
+  else
+    logf("fl26swiss: Cup mode list NOT installed (vtable slot)");
   logf("fl26swiss: hooks live (schedule@%llx dates@%llx) for %d regulation(s)",
        (unsigned long long)(exe_base + GEN_RVA), (unsigned long long)(exe_base + DATE_RVA), nregs);
   return 0;
