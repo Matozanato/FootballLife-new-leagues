@@ -340,7 +340,10 @@ SPLIT_LINE = [226, 233, 240, 257, 261, 268, 275, 296, 300, 303, 310, 321, 324, 3
 # a league that joins its season through register_all, and a round dated there went a year on.
 SPLIT_SKIP = 3
 SPLIT_MAX_ROUNDS = 46                    # a split's rounds, both phases: the Championship's calendar
-CCUP_DAYS = [326, 333, 25, 32, 39, 46, 73, 80, 94, 101, 115, 122, 136]
+# fl26swiss.c CCUP_GROUP_DAYS + CCUP_KO_DAYS: the champions' cups on Tuesdays, the cups below
+# them on the Wednesdays of the same weeks (#70)
+CCUP_DAYS = [327, 334, 26, 33, 40, 47, 75, 82, 96, 103, 117, 124, 138,
+             328, 335, 27, 34, 41, 48, 76, 83, 97, 104, 118, 125, 139]
 PLAYOFF_SIZES = (8, 4)
 SEASON_TURN = 182                        # the season's July turn: day-of-year order starts here
 # The Kick Off and Edit team lists are ordered by a fixed list of 89 slots in the exe (0x1427d5920,

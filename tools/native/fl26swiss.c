@@ -1546,8 +1546,15 @@ static int access_build(int q, int mask)
     static int said = 0;
     if (!said++) logf("fl26swiss: first-season list -- not a career built in this session; the list is left out");
   }
-  if (g_nfirst[0] + g_nfirst[1] + g_nfirst[2] && !any_final_kept() && g_new_career) {
+  /* A career built in this session takes the list in its first European summer. A January
+     league's career has a final table of its own by then (2026-10-05: CSL, kept on day 176), so
+     the final tables do not tell the first summer from a later one there: the day of the first
+     use does -- every build within 120 days of it is the same summer. */
+  static int first_day = -1;
+  int first_summer = g_new_career && (first_day < 0 || abs_day() - first_day < 120);
+  if (g_nfirst[0] + g_nfirst[1] + g_nfirst[2] && first_summer) {
     int missing = 0, twice = 0, over = 0;
+    if (first_day < 0) first_day = abs_day();
     for (int k = 0; k < 3; k++)
       for (unsigned i = 0; i < g_nfirst[k]; i++) {
         uint32_t c = club_of_id(g_first[k][i]);
@@ -2574,12 +2581,30 @@ typedef struct { uint16_t reg, ko, groups, n; uint16_t ereg[CCUP_MAX_ENTRY]; uin
 static ccup_t g_ccup[MAX_CCUP]; static int g_nccup = 0;
 static uint32_t g_ccup_field[MAX_CCUP][CCUP_MAX_ENTRY]; static unsigned g_ccup_nf[MAX_CCUP];
 static unsigned g_ccup_done[MAX_CCUP];
-/* African weekends away from UEFA's evenings: 22/29 November, 26 January, 2/9/16 February;
-   the knockout 15/22 March, 5/12 April (the first pair is spare), 26 April/3 May, final 17 May */
-static const uint32_t CCUP_GROUP_DAYS[6] = { 326, 333, 25, 32, 39, 46 };
-static const uint32_t CCUP_KO_DAYS[7] = { 73, 80, 94, 101, 115, 122, 136 };
+/* Midweek, the way UEFA plays (GitHub #70): a cup the league champions go to (the CAF Champions
+   League) on the Tuesdays, the one below it -- no entry at position 1: the Confederation Cup,
+   the AFC Champions League Two, the Sudamericana -- on the Wednesdays of the same weeks, as the
+   Europa League takes the Champions League's: a league that feeds both keeps its Saturday three
+   days clear of either (rest_dates), where a Thursday would leave it no day of the week at all.
+   Weekdays on the big leagues' grid (case 5: Saturday is 261, so a Tuesday is d % 7 == 5).
+   Groups late November to mid February, the knockout mid March to the final in mid May (the
+   first pair is spare for a knockout of eight). They were the Mondays and Sundays. */
+static const uint32_t CCUP_GROUP_DAYS[2][6] = { { 327, 334, 26, 33, 40, 47 }, { 328, 335, 27, 34, 41, 48 } };
+static const uint32_t CCUP_KO_DAYS[2][7] = { { 75, 82, 96, 103, 117, 124, 138 }, { 76, 83, 97, 104, 118, 125, 139 } };
 
 static uint16_t ccup_rep(const ccup_t* c, int g) { return (uint16_t)(c->reg + 1024 * (g + 1)); }
+/* 0: a champions' cup (Tuesdays), 1: the cup below (Wednesdays) */
+static int ccup_tier(const ccup_t* c)
+{
+  for (int e = 0; e < c->n && e < CCUP_MAX_ENTRY; e++) if (c->erank[e] == 1) return 0;
+  return 1;
+}
+/* the j-th day of a cup's groups or knockout: the knockout's own days when the world file gives them */
+static uint32_t ccup_day(const ccup_t* c, int ko, int j)
+{
+  if (ko && c->nd) return c->days[j < c->nd ? j : c->nd - 1];
+  return ko ? CCUP_KO_DAYS[ccup_tier(c)][j] : CCUP_GROUP_DAYS[ccup_tier(c)][j];
+}
 static int ccup_world(const ccup_t* c)
 {
   if (!c->groups) return get_rec(c->ko) != 0;
@@ -3157,7 +3182,7 @@ static uint64_t ccup_dates(int k, int ko, uint16_t id, uint64_t reg, void* vec)
   /* a knockout of eight is handed the round-of-16 pair first; the last record is the final */
   for (size_t i = 0; i < have; i++) {
     size_t j = ko ? (i + 1 == have ? want - 1 : i + (want - have)) : i * want / have;
-    r[i].day = ko ? (cc->nd ? cc->days[j] : CCUP_KO_DAYS[j]) : CCUP_GROUP_DAYS[j];
+    r[i].day = ccup_day(cc, ko, (int)j);
   }
   if (!(said[k] & bit))
     logf("fl26swiss: cup reg %u dated: %s days %u..%u (%u records)", (unsigned)id, ko ? "knockout" : "groups",
@@ -3943,8 +3968,10 @@ static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
 {
   memset(bad, 0, 365);
   for (int k = 0; k < g_nccup; k++)                 /* CAF / AFC / CONMEBOL cups it feeds */
-    if (!g_ccup[k].national && ccup_of_league(k, id))
-      for (int i = 0; i < g_ccup[k].nd && i < CCUP_MAX_DAYS; i++) block(bad, g_ccup[k].days[i], buf);
+    if (!g_ccup[k].national && ccup_of_league(k, id)) {
+      if (g_ccup[k].groups) for (int i = 0; i < 6; i++) block(bad, ccup_day(&g_ccup[k], 0, i), buf);
+      for (int i = 0; i < (g_ccup[k].nd ? g_ccup[k].nd : 7) && i < CCUP_MAX_DAYS; i++) block(bad, ccup_day(&g_ccup[k], 1, i), buf);
+    }
   if (g_org != 182) return;
   if (access_league(id) || our_league(id)) {
     for (int i = 0; i < FL26_SWISS36_MATCHDAYS; i++) block(bad, SWISS_DAYS[i], buf);
@@ -4414,12 +4441,31 @@ static uint64_t datelike_dates(uint16_t id, uint64_t reg, void* vec)
   return (uint64_t)-1;
 }
 
+/* ---- the AFC Champions League midweek (GitHub #70) ----
+ * The game's own AFC Champions League (groups reg 15 and its rows 15 + 1024 * (g + 1), knockout
+ * reg 16) played Mondays to Wednesdays. Each of its dates goes to the nearest of Tuesday,
+ * Wednesday and Thursday on the big leagues' grid (Saturday 261): Sunday and Monday later,
+ * Friday and Saturday earlier, so the order of the rounds stays. */
+#define AFC_GROUPS 15
+#define AFC_KO     16
+static int afc_reg(uint16_t id)
+{
+  return id == AFC_KO || id == AFC_GROUPS || (id > 1024 && (id & 0x3ff) == AFC_GROUPS && id <= AFC_GROUPS + 1024 * 8);
+}
+static uint32_t midweek(uint32_t d)
+{
+  static const int to[7] = { 0, -1, -2, 2, 1, 0, 0 };   /* d % 7: Thu Fri Sat Sun Mon Tue Wed */
+  if (d >= 365) return d;
+  return (uint32_t)(((int)d + 365 + to[d % 7]) % 365);
+}
+
 uint64_t date_handler(uint64_t reg, void* vec)
 {
   uint16_t id = (uint16_t)reg;
   if (vec && !g_new_career && !g_day_ticked) {    /* a career built in this session (day 216), */
     int t = today();                               /* before its first day has gone by */
-    if (t >= BUILD_DAY && t <= 240) { g_new_career = 1; logf("fl26swiss: a new career, built on day %d", t); }
+    /* a career in a January league (China, Japan, ...) is built on day 0: measured 2026-10-05 */
+    if ((t >= BUILD_DAY && t <= 240) || t == 0) { g_new_career = 1; logf("fl26swiss: a new career, built on day %d", t); }
   }
   if (vec && g_ndlike) {
     for (int i = 0; i < g_ndlike; i++) if (g_dlike[i][0] == id) return datelike_dates(id, reg, vec);
@@ -4449,6 +4495,22 @@ uint64_t date_handler(uint64_t reg, void* vec)
              l->days[0], l->days[1], (unsigned)have);
       return rv;
     }
+  }
+  if (vec && afc_reg(id)) {
+    uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)(reg, vec);
+    vec_t* v = (vec_t*)vec;
+    size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+    date_t* r = (date_t*)v->b;
+    int moved = 0;
+    for (size_t i = 0; i < have; i++) {
+      uint32_t d = midweek(r[i].day);
+      if (d != r[i].day) { r[i].day = d; moved++; }
+    }
+    static unsigned char said[2];
+    if (have && !said[id == AFC_KO]++)
+      logf("fl26swiss: reg %u -- AFC Champions League %s: %d of %u date(s) moved to midweek, days %u..%u",
+           (unsigned)id, id == AFC_KO ? "knockout" : "groups", moved, (unsigned)have, r[0].day, r[have - 1].day);
+    return rv;
   }
   if (european(id)) seen_once(1, id, 0);
   if (vec && is_playoff(id)) {

@@ -360,6 +360,23 @@ calendar.
   players instead of "FL Pnnnnn". Confirm: add a NewLife league with small squads, Build, start
   a career: no "FL P" name in its clubs.
 
+- 2026-10-05 (Mod Studio 0.1.8, fl26swiss, GitHub #70): **the CAF Champions League and the
+  Confederation Cup played on Mondays and Sundays, the AFC Champions League partly at the
+  weekend.** The continental cups the world builds now play midweek, the way the European ones
+  do: a cup the league champions go to (CAF Champions League) on Tuesdays, the cup below it
+  (Confederation Cup, AFC Champions League Two, Copa Sudamericana) on the Wednesdays of the same
+  weeks. The game's own AFC Champions League has every date moved to the nearest Tuesday,
+  Wednesday or Thursday. The two free days between matches now also count those cup days.
+  Checked in game: AFC Champions League knockout, 2 of 8 dates moved, groups already on
+  Wednesdays. Confirm: a world with the CAF cups, Competition Info calendar of the CAF Champions
+  League: Tuesdays; Confederation Cup: Wednesdays.
+
+- 2026-10-05 (Mod Studio 0.1.8, fl26swiss): **the first-season European clubs picked in Mod
+  Studio were not taken in a career in a January league (China, Japan ...).** Such a career is
+  built on day 0, and the final table the game keeps from its first half-year made the module
+  think a season had already been played. Checked in game: a Chinese career, the European draw
+  takes the picked clubs (sider.log `first-season list -- 1 / 1 / 1 clubs taken`).
+
 - 2026-10-05 (Mod Studio 0.1.8, fl26swiss, Discord): **a club in Europe played three matches in
   four days (league on Saturday, Champions League on Monday or Thursday, league again two days
   later), and the result screen of a European league-phase match read "Group stage".** The
