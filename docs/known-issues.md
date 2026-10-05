@@ -346,6 +346,15 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-05 (Mod Studio 0.1.8, fl26comptab, GitHub issue #43): **A new league on one of the
+  game's group slots (the SuperSport HNL on slot 28) showed a category text in the Master League
+  Select Team panel -- "In this category, the leagues of the teams you have chosen ... South
+  American based leagues" -- instead of its League Info.** The panel picks that text by slot,
+  from a list in the executable, whatever league sits there. fl26comptab now turns the panel to
+  League Info for every slot one of our leagues is on; slots with none of ours (Other European
+  Leagues and the like) keep their category text. Checked in game: the HNL and Prva NL panels
+  read like the Premier League's (cups, promotion/relegation, higher and lower league).
+
 - 2026-10-05 (Mod Studio 0.1.8, fl26swiss, GitHub issue #100): **Kick Off > Cup with the
   Champions League or the Europa League showed "Draw Size 36", drew only group A and crashed
   once a club was picked.** Their league phase of 36 is run by fl26swiss, and only in Master

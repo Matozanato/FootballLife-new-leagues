@@ -397,6 +397,16 @@ local function install_order(slot_after, order)
                     n, placed, #late > 0 and (", " .. table.concat(late, ",") .. " at the end (no such slot)") or ""))
 end
 
+-- The Master League Select Team panel (0x140c98760) switches on the highlighted slot
+-- (0x140c987ec: slot-26 through the byte table 0x140c98eb0) and gives the game's group slots
+-- a hard-coded category text -- "In this category, the leagues of the teams you have chosen
+-- ..." -- whatever league sits there. Case 4 is the league path (League Info from the slot's
+-- regulation). A league of ours on one of these slots (HNL on 28) read as a category of South
+-- American leagues, so its byte is set to 4; a slot with none of ours keeps its category.
+local PANEL_SLOTS = 0x140c98eb0
+local PANEL_LEAGUE = 4
+local PANEL_CASE = { [26] = 0, [27] = 0, [28] = 0, [29] = 0, [30] = 1, [67] = 0, [69] = 2, [70] = 1, [73] = 3 }
+
 local function check_sites(list)
   for _, s in ipairs(list) do
     local n = #s[2] / 2
@@ -603,6 +613,26 @@ function m.init(ctx)
       end
     end
     install_order(slot_after, order)
+  end
+
+  -- 8. the Select Team panel of a league of ours on a slot the exe draws as a category
+  if world then
+    local done = {}
+    for _, L in ipairs(world) do
+      local i = byid[L.id]
+      local sl = i and row_u32(rows[i], OFF_SLOT)
+      local site = sl and PANEL_CASE[sl] and PANEL_SLOTS + (sl - 26)
+      if site and not done[sl] then
+        done[sl] = true
+        local got = memory.read(site, 1):byte()
+        if got == PANEL_CASE[sl] then
+          memory.write(site, string.char(PANEL_LEAGUE))
+          log(string.format("fl26comptab: slot %d (league %d) -- Select Team panel shows the league, not a category", sl, L.id))
+        elseif got ~= PANEL_LEAGUE then
+          log(string.format("fl26comptab: panel byte for slot %d is %d, expected %d -- left alone", sl, got, PANEL_CASE[sl]))
+        end
+      end
+    end
   end
 
   log(string.format("fl26comptab: table copied to 0x%x, %d rows (%d shipped + %d ours)", newbase, n, NROWS, n - NROWS))
