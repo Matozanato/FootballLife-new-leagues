@@ -450,6 +450,24 @@ The same rule about the Edit save applies here too. After you rebuild a world, m
 `EDIT00000000` aside before deciding that a change did not work. An Edit save written before a
 data change hides that change.
 
+### Edit mode forgets what I change on the new clubs
+
+Fixed in 0.1.8 by `fl26edit.dll` (GitHub #55), which Build installs with the other modules.
+The game's Edit save holds the changed clubs in three tables (team data, squad, tactics) with
+room for 750 clubs each, and every save fills them with the game's own 749 first. So a change to
+a club of ours (shirt numbers, formation, colours, a .ted squad) was dropped by the next save.
+
+The module gives those tables room for 2048 clubs. The `EDIT00000000` file stays exactly what
+the game writes: the first 749 clubs of each table, so the game without the module still loads
+it. The clubs past 749 go to `EDIT00000000.fl26x` next to it, and the previous one is kept as
+`EDIT00000000.fl26x.prev` (for when you answer No to "Overwrite data. Proceed?"). Keep the three
+files together when you move or back up your Edit save.
+
+Checked on 2026-10-05: a new club's colour changed in Edit mode, saved, and still there after a
+restart of the game; a second change answered with No was gone after a restart, and the first
+one stayed. In sider.log, `fl26edit: live` means the module is in; `install FAILED` says why it
+stood aside (Edit mode then works as before).
+
 ### How do I edit the players of the new clubs, if not in Edit mode?
 
 Edit mode reaches a club through its league, so players of a club in a new league can be

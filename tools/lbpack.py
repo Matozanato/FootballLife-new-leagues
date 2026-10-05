@@ -36,14 +36,15 @@ ZIG = os.environ.get("ZIG") or next(
 ORDER = [
     "fl26caps", "fl26nullguard", "fl26nullguard2", "fl26nullguard4", "fl26nullguard5",
     "fl26nullguard7", "fl26nullguard8", "fl26nullguard9", "fl26nullguard10", "fl26joindll",
-    "fl26hdr192", "fl26chain", "fl26comptab", "fl26slotnames", "fl26clubs", "fl26regen", "fl26editlist",
+    "fl26hdr192", "fl26chain", "fl26comptab", "fl26slotnames", "fl26clubs", "fl26regen", "fl26editlist", "fl26edit",
     "fl26rank", "fl26deeprank", "fl26regions", "fl26reg64", "fl26regnames", "fl26catlist",
     "fl26swiss", "fl26augseason", "fl26superguard", "fl26resultsguard", "fl26ctlguard",
     "fl26seasonend",
 ]
 PER_WORLD = {"fl26regions", "fl26regnames"}
 DLLS = {"fl26join": "build-join.sh", "fl26chain": "build-chain.sh",
-        "fl26clubs": "build-clubs.sh", "fl26swiss": "build-swiss.sh", "fl26regen": "build-regen.sh"}
+        "fl26clubs": "build-clubs.sh", "fl26swiss": "build-swiss.sh", "fl26regen": "build-regen.sh",
+        "fl26edit": "build-edit.sh"}
 FACES = os.environ.get("FL26_REGEN_FACES") or os.path.join(os.path.dirname(REPO), "fl26-modding-research",
                                                            "out", "regenfaces")
 FACE_ROOT = "FL26 Regen Faces"            # the livecpk root of the portraits (install_modules)

@@ -64,6 +64,11 @@ tell us where. Read [what works and what does not](#status) before you start a l
   with names and portraits (0.1.4), kits lent from the game's clubs or plain kits you can
   change in the game's Edit mode, Paste Image included (0.1.6), and a **formation** per
   league or per club with the first eleven on a pitch (0.1.4).
+- **Edit mode keeps what you change on the new clubs** (0.1.8): shirt numbers, formations,
+  colours, a squad imported from a .ted file. The game's Edit save has room for 750 clubs and
+  its own 749 fill it; `fl26edit.dll` gives it room for 2048 and keeps the clubs past 749 in
+  `EDIT00000000.fl26x` beside it. The EDIT file itself stays what the game writes
+  ([#55](https://github.com/Matozanato/FootballLife-new-leagues/issues/55)).
 - **Real clubs and players** from the **NewLife Database** (0.1.5.5): pick a league and it
   becomes a new league with its real clubs and squads — names, birth dates, positions,
   ratings on the game's scale, club colours, ids that stay the same in every version. A club
@@ -359,7 +364,9 @@ and other Latin American worlds and writes up every bug with screenshots:
   ([#54](https://github.com/Matozanato/FootballLife-new-leagues/issues/54)).
 - **alby171994** ([alby171994](https://github.com/alby171994)): an exhibition-only world
   that left every league without a schedule, narrowed down to one module
-  ([#53](https://github.com/Matozanato/FootballLife-new-leagues/issues/53)).
+  ([#53](https://github.com/Matozanato/FootballLife-new-leagues/issues/53)), and the Edit
+  mode changes to new clubs that were never saved
+  ([#55](https://github.com/Matozanato/FootballLife-new-leagues/issues/55)).
 - **Jabo9** (Evo-Web): saw a new League One take the FA Cup from the Premier League and the
   Championship ([#68](https://github.com/Matozanato/FootballLife-new-leagues/issues/68)).
 - **n1ne** (Discord): follows the work closely and asks the questions that show where the
