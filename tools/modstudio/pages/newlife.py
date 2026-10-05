@@ -21,7 +21,7 @@ class ClubPickDialog(Dialog):
 
     def __init__(self, parent, rel, skip):
         super().__init__(parent, "Add a club from another league")
-        self.v.insertWidget(0, QLabel(_("Search a club or a league; pick one or more.")))
+        self.v.insertWidget(0, QLabel(_("Search a club or a league; tick one or more.")))
         self.search = QLineEdit()
         self.search.textChanged.connect(self.fill)
         self.v.insertWidget(1, self.search)
@@ -31,24 +31,47 @@ class ClubPickDialog(Dialog):
         self.scroll.hide()
         self.all = sorted(((c["name"], c.get("league", ""), cid) for cid, c in rel.clubs.items()
                            if cid not in skip and c.get("league")), key=lambda x: (x[0].lower(), x[1]))
+        self.list.itemChanged.connect(self.toggled)
+        self.n = QLabel("")
+        self.v.insertWidget(3, self.n)
         self.picked = []
+        self.checked = set()
         self.fill()
         self.setMinimumSize(520, 480)
 
     def fill(self):
         q = self.search.text().strip().lower()
+        self.list.blockSignals(True)
         self.list.clear()
         for name, league, cid in self.all:
             if q and q not in name.lower() and q not in league.lower():
                 continue
             it = QListWidgetItem("%s  (%s)" % (name, league))
             it.setData(Qt.UserRole, cid)
+            # a box per club, kept across searches (victormican, #83: "checks para agregar de
+            # varios a la vez"); Ctrl/Shift+click still work and count as picked too
+            it.setFlags(it.flags() | Qt.ItemIsUserCheckable)
+            it.setCheckState(Qt.Checked if cid in self.checked else Qt.Unchecked)
             self.list.addItem(it)
             if self.list.count() >= 500 and not q:
                 break
+        self.list.blockSignals(False)
+        self.count()
+
+    def toggled(self, it):
+        cid = it.data(Qt.UserRole)
+        if it.checkState() == Qt.Checked:
+            self.checked.add(cid)
+        else:
+            self.checked.discard(cid)
+        self.count()
+
+    def count(self):
+        self.n.setText(_("%d picked") % len(self.checked) if self.checked else "")
 
     def ok(self):
-        self.picked = [it.data(Qt.UserRole) for it in self.list.selectedItems()]
+        sel = [it.data(Qt.UserRole) for it in self.list.selectedItems()]
+        self.picked = [cid for _n, _l, cid in self.all if cid in self.checked or cid in sel]
         self.accept()
 
 
