@@ -55,7 +55,10 @@ which league sits above -- and nothing about ids:
               "swap", the club that takes all its places there: a team id of a club of the game
               in no competition at all, or {"name": ...} for a new club (placeholder squad, a
               numbered badge). So no competition of the game changes its number of clubs --
-              the shipped leagues' dates and shapes follow that number. National teams, the
+              the shipped leagues' dates and shapes follow that number. "keep": true and the
+              club keeps its places in the continental competitions (CONTINENTAL_CIDS): a
+              swap then takes only the rest, and a club the continent is all it plays needs
+              none (#84). National teams, the
               special teams and squads under MIN_GAME_SQUAD are refused (game_club_checks).
               The world's nopool line keeps them out of the Master League's other-clubs
               groups (fl26clubs.dll)
@@ -622,6 +625,8 @@ def recipe_from_plan(pl, base):
             g = {"at": int(at), "id": e["id"]}
             if e.get("swap") is not None:
                 g["swap"] = e["swap"]
+            if e.get("keep"):
+                g["keep"] = True
             gc.append(g)
         if gc:
             r["game_clubs"] = gc
@@ -753,10 +758,18 @@ def friendly_cids(leagues):
             if len(set().union(*(of[t] for t in ts)) - {c}) >= 2}
 
 
-def game_club_where(info, tid):
+# the continental club competitions of the game (Club World Cup, Champions League, Europa League,
+# UEFA Super Cup, Libertadores, AFC Champions League and the two ids between): a moved club of
+# the game can keep its places there ("keep", #84)
+CONTINENTAL_CIDS = frozenset(range(1, 9))
+
+
+def game_club_where(info, tid, keep=False):
     """the names of the competitions the tables put club tid in, its league first ([] = none);
-    a pre-season tournament is left out (the club keeps playing it)"""
-    cids = sorted(set(info["entries"].get(tid) or []) - info.get("friendly_cids", set()),
+    a pre-season tournament is left out (the club keeps playing it), and with keep its
+    continental competitions too"""
+    cids = sorted(set(info["entries"].get(tid) or []) - info.get("friendly_cids", set())
+                  - (CONTINENTAL_CIDS if keep else set()),
                   key=lambda c: (c not in info["league_cids"], c))
     return [info["comp_names"].get(c, "competition %d" % c) for c in cids]
 
@@ -876,12 +889,13 @@ def exchange_entries(ents, a, b):
     return na, nb
 
 
-def swap_entries(ents, old, new):
-    """every CompetitionEntry row of team `old` given to team `new`; returns how many"""
+def swap_entries(ents, old, new, skip=()):
+    """every CompetitionEntry row of team `old` given to team `new`, but those of the
+    competitions in skip; returns how many"""
     n = 0
     for i in range(len(ents) // M.ENT):
         o = i * M.ENT
-        if int.from_bytes(ents[o + M.E_TEAM:o + M.E_TEAM + 4], "little") == old:
+        if int.from_bytes(ents[o + M.E_TEAM:o + M.E_TEAM + 4], "little") == old and ents[o + M.E_CID] not in skip:
             ents[o + M.E_TEAM:o + M.E_TEAM + 4] = new.to_bytes(4, "little")
             n += 1
     return n
@@ -1214,7 +1228,7 @@ def plan(recipe, base):
                                  % (name, at + 1, n))
             if at in gc:
                 raise BuildError("%s: two clubs of the game at place %d" % (name, at + 1))
-            gc[at] = {"id": tid, "swap": e.get("swap")}
+            gc[at] = {"id": tid, "swap": e.get("swap"), "keep": bool(e.get("keep"))}
         p["game_clubs"] = gc
         if len(p["club_names"]) > n:
             raise BuildError("%s: %d club names for %d clubs" % (name, len(p["club_names"]), n))
@@ -1439,7 +1453,7 @@ def game_club_checks(out, base):
         for at, g in sorted(p["game_clubs"].items()):
             tid, sw = g["id"], g.get("swap")
             name = info["clubs"][tid][0]
-            where = game_club_where(info, tid)
+            where = game_club_where(info, tid, g.get("keep"))
             if not where:
                 g["swap"] = None                     # nothing to hand over
                 continue
@@ -2458,8 +2472,12 @@ def build(pl, base, game, replace=False, log=print):
                 # #60: the game files a club into an "Other ..." group by a nibble of its own record,
                 # at boot, whatever the competitions say -- so a moved club showed up there as well
                 raw[game_row[tid] + T_POOL] &= 0x0f
+                kept = sorted(set(info["entries"].get(tid) or []) & CONTINENTAL_CIDS) if g.get("keep") else []
+                if kept:
+                    log("  %s keeps its place in %s" % (info["clubs"][tid][0],
+                                                       ", ".join(info["comp_names"].get(c, str(c)) for c in kept)))
                 if g["swap_id"]:
-                    n = swap_entries(ents, tid, g["swap_id"])
+                    n = swap_entries(ents, tid, g["swap_id"], CONTINENTAL_CIDS if g.get("keep") else ())
                     played_league = any(c in info["league_cids"] for c in info["entries"].get(tid) or [])
                     if played_league and not isinstance(sw, dict):
                         nopool.append(g["swap_id"])
@@ -2467,7 +2485,9 @@ def build(pl, base, game, replace=False, log=print):
                     log("  %s moves to %s; %s takes its %d place(s) in %s"
                         % (info["clubs"][tid][0], p["name"],
                            sw["name"] if isinstance(sw, dict) else info["clubs"][g["swap_id"]][0], n,
-                           ", ".join(game_club_where(info, tid))))
+                           ", ".join(game_club_where(info, tid, g.get("keep")))))
+                elif kept:
+                    log("  %s moves to %s" % (info["clubs"][tid][0], p["name"]))
                 elif set(info["entries"].get(tid) or []) & info["friendly_cids"]:
                     log("  %s moves to %s and keeps its place in the pre-season tournament"
                         % (info["clubs"][tid][0], p["name"]))

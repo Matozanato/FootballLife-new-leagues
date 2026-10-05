@@ -216,11 +216,13 @@ of a new one: select the place, then **Club of the game...**, and search by name
 (**Only clubs in no league** narrows the list). The club keeps its name, crest, kits, manager and
 players, and plays in your league only. When it plays somewhere in the game (a league, a cup, the
 Europa League ...), you pick who takes its place there: a club of the game that plays in nothing,
-or a new club you name. A pre-season tournament (the *Pre-season friendly Cups* of SPFL26) does not count: the club keeps playing it, as the Premier League's clubs do (0.1.7). **Edit club** on a club of the game changes its name, crest, manager's portrait and stadium, as on *Game's leagues and clubs* (0.1.7). That way no competition of the game changes its number of clubs; the
+or a new club you name. **It keeps its places in continental competitions** (0.1.8, #84) lets it go on playing the Champions League, Libertadores or AFC Champions League it is in: a club the continent is all it plays in the game then just moves, and one that also plays a league of the game hands only the league and cups to the club you pick. From the second season on your league's places decide who goes. A pre-season tournament (the *Pre-season friendly Cups* of SPFL26) does not count: the club keeps playing it, as the Premier League's clubs do (0.1.7). **Edit club** on a club of the game changes its name, crest, manager's portrait and stadium, as on *Game's leagues and clubs* (0.1.7). That way no competition of the game changes its number of clubs; the
 game's leagues keep their dates only with the number they were made for. National teams, the
 classic and default teams and clubs with fewer than 18 players cannot be picked. **New club
 here** gives the place back to a new club. The club no longer shows under the Master League's
 *Other ... clubs* groups.
+
+**NewLife club...** (0.1.8, #83) puts clubs of the NewLife Database, with their squads, in the selected place and the places after it: tick one or more clubs (search by club or by league) and each takes its place in order. A league you made by hand gets real clubs that way. Open the NewLife Database on the *NewLife* page first.
 
 **Insert club** and **Remove club** add a place before the selected club or take one out (10 to
 24 clubs); names, crests, managers and player changes move with their clubs. Check the league's

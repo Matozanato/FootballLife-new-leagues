@@ -233,12 +233,14 @@ lieu d'un nouveau : sélectionnez la place, puis **Club du jeu...**, et cherchez
 l'équipe (**Seulement les clubs sans ligue** réduit la liste). Le club garde son nom, son écusson,
 ses maillots, son entraîneur et ses joueurs, et ne joue que dans votre ligue. S'il joue quelque
 chose dans le jeu (une ligue, une coupe, la Ligue Europa ...), vous choisissez qui y prend sa
-place : un club du jeu qui ne joue rien, ou un nouveau club que vous nommez. Un tournoi de pré-saison (les *Pre-season friendly Cups* de SPFL26) ne compte pas : le club continue d'y jouer, comme les clubs de Premier League (0.1.7). **Modifier le club** sur un club du jeu change son nom, son blason, le portrait de l'entraîneur et le stade, comme sur *Ligues et clubs du jeu* (0.1.7). Ainsi aucune
+place : un club du jeu qui ne joue rien, ou un nouveau club que vous nommez. **Il garde ses places dans les compétitions continentales** (0.1.8, #84) le laisse disputer la Ligue des champions, la Libertadores ou l'AFC Champions League où il est : un club qui dans le jeu ne joue que le continent déménage simplement, et un club qui joue aussi une ligue du jeu ne cède que la ligue et les coupes au club que vous choisissez. À partir de la deuxième saison, les places de votre ligue décident qui y va. Un tournoi de pré-saison (les *Pre-season friendly Cups* de SPFL26) ne compte pas : le club continue d'y jouer, comme les clubs de Premier League (0.1.7). **Modifier le club** sur un club du jeu change son nom, son blason, le portrait de l'entraîneur et le stade, comme sur *Ligues et clubs du jeu* (0.1.7). Ainsi aucune
 compétition du jeu ne change son nombre de clubs ; les ligues du jeu ne gardent leurs dates
 qu'avec le nombre pour lequel elles ont été faites. Les sélections nationales, les équipes
 classiques et par défaut et les clubs de moins de 18 joueurs ne peuvent pas être choisis.
 **Nouveau club ici** rend la place à un nouveau club. Le club n'apparaît plus dans les groupes
 *Other ... clubs* de la Master League.
+
+**Club NewLife...** (0.1.8, #83) place des clubs de la NewLife Database, avec leurs effectifs, à la place sélectionnée et aux suivantes : cochez un ou plusieurs clubs (recherche par club ou par ligue), chacun prend sa place dans l'ordre. Une ligue faite à la main reçoit ainsi de vrais clubs. Ouvrez d'abord la NewLife Database sur la page *NewLife*.
 
 **Insérer un club** et **Retirer le club** ajoutent une place avant le club sélectionné ou la
 retirent (10 à 24 clubs) ; noms, écussons, entraîneurs et changements de joueurs suivent leurs

@@ -209,10 +209,12 @@ kluba u igri.
 odaberi mjesto, pa **Klub iz igre...**, i traži po imenu ili ID-u kluba (**Samo klubovi bez lige**
 suzi popis). Klub zadržava ime, grb, dresove, trenera i igrače, a igra samo u tvojoj ligi. Ako u
 igri igra negdje (liga, kup, Europska liga ...), biraš tko tamo preuzima njegovo mjesto: klub iz
-igre koji ne igra nigdje ili novi klub kojem daš ime. Predsezonski turnir (*Pre-season friendly Cup* u SPFL26) se ne broji: klub ga i dalje igra, kao i klubovi Premier lige (0.1.7). **Uredi klub** na klubu iz igre mijenja ime, grb, sliku trenera i stadion, kao na *Postojeće lige i klubovi* (0.1.7). Tako nijedno natjecanje igre ne mijenja broj
+igre koji ne igra nigdje ili novi klub kojem daš ime. **Zadržava mjesta u kontinentalnim natjecanjima** (0.1.8, #84) mu pušta da i dalje igra Ligu prvaka, Libertadores ili AFC Ligu prvaka u kojoj je: klub kojem je kontinent sve što igra u igri tada se samo seli, a onaj koji igra i ligu iz igre klubu kojeg odabereš predaje samo ligu i kupove. Od druge sezone mjesta tvoje lige odlučuju tko ide. Predsezonski turnir (*Pre-season friendly Cup* u SPFL26) se ne broji: klub ga i dalje igra, kao i klubovi Premier lige (0.1.7). **Uredi klub** na klubu iz igre mijenja ime, grb, sliku trenera i stadion, kao na *Postojeće lige i klubovi* (0.1.7). Tako nijedno natjecanje igre ne mijenja broj
 klubova; lige iz igre zadržavaju datume samo s brojem za koji su napravljene. Reprezentacije,
 klasični i zadani timovi te klubovi s manje od 18 igrača ne mogu se odabrati. **Novi klub ovdje**
 vraća mjesto novom klubu. Klub se više ne pojavljuje u grupama *Other ... clubs* u Master League karijeri.
+
+**NewLife klub...** (0.1.8, #83) stavlja klubove iz NewLife Database, s njihovim kadrovima, na odabrano mjesto i ona iza njega: označi jedan ili više klubova (pretraga po klubu ili ligi), svaki dobije svoje mjesto po redu. Tako liga koju si napravio sam dobije prave klubove. Prvo otvori NewLife Database na stranici *NewLife*.
 
 **Umetni klub** i **Makni klub** dodaju mjesto ispred odabranog kluba ili ga izbacuju (10 do 24
 kluba); imena, grbovi, treneri i promjene igrača idu sa svojim klubovima. Provjeri europska mjesta

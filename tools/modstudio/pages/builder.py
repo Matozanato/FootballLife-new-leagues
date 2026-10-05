@@ -1033,6 +1033,13 @@ class GameClubDialog(Dialog):
         self.form.addRow(self.tree)
         self.where = hint("")
         self.form.addRow(self.where)
+        self.keep = QCheckBox(_("It keeps its places in continental competitions"))
+        self.keep.setChecked(bool(cur.get("keep")))
+        self.keep.toggled.connect(lambda *_a: self.show_swap())
+        self.form.addRow(helped(self.keep, "The club plays in your league and still plays the Champions League, "
+                                "Libertadores or other continental competition it is in, so nobody has to take "
+                                "its place there. From the second season on, your league's places decide who "
+                                "goes."))
         self.rb_game = QRadioButton(_("Its place goes to a club of the game that plays in nothing:"))
         self.swap_club = QComboBox()
         self.swap_club.setMinimumWidth(320)
@@ -1106,12 +1113,17 @@ class GameClubDialog(Dialog):
 
     def show_swap(self):
         t = self.chosen()
-        where = B.game_club_where(self.info, t) if t is not None else []
+        cont = t is not None and bool(set(self.info["entries"].get(t) or []) & B.CONTINENTAL_CIDS)
+        self.keep.setVisible(cont)
+        where = B.game_club_where(self.info, t, cont and self.keep.isChecked()) if t is not None else []
         if t is None:
             self.where.setText(_("Pick a club above."))
         elif where:
             self.where.setText(_("%s plays in %s. Every one of those competitions keeps its number of clubs: "
                                  "pick who takes its place there.") % (self.info["clubs"][t][0], ", ".join(where)))
+        elif cont and self.keep.isChecked():
+            self.where.setText(_("%s keeps its continental places and leaves nothing else: it just moves.")
+                               % self.info["clubs"][t][0])
         else:
             self.where.setText(_("%s plays in nothing: it just moves.") % self.info["clubs"][t][0])
         for w in (self.rb_game, self.m_game, self.swap_club, self.rb_new, self.m_new, self.swap_name):
@@ -1123,7 +1135,8 @@ class GameClubDialog(Dialog):
             error(self, "Club of the game", _("Pick a club."))
             return
         swap = None
-        if B.game_club_where(self.info, t):
+        keep = self.keep.isVisible() and self.keep.isChecked()
+        if B.game_club_where(self.info, t, keep):
             if self.rb_new.isChecked():
                 if not self.swap_name.text().strip():
                     error(self, "Club of the game", _("Give the new club a name."))
@@ -1137,7 +1150,7 @@ class GameClubDialog(Dialog):
                 if swap == t:
                     error(self, "Club of the game", _("A club cannot take its own place."))
                     return
-        self.result = {"id": t, "swap": swap}
+        self.result = {"id": t, "swap": swap, "keep": keep}
         self.accept()
 
 
@@ -2220,6 +2233,8 @@ class NewClubs(BuilderPage):
             e = {"at": k, "id": d.result["id"]}
             if d.result["swap"] is not None:
                 e["swap"] = d.result["swap"]
+            if d.result.get("keep"):
+                e["keep"] = True
             gc = [x for x in L.get("game_clubs") or [] if int(x.get("at", -1)) != k]
             L["game_clubs"] = sorted(gc + [e], key=lambda x: int(x["at"]))
             self.project.touch()
