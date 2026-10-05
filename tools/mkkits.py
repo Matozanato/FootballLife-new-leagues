@@ -199,6 +199,18 @@ def closest(cands, want, used):
     return min(cands, key=cost)
 
 
+def painted(blob, want):
+    """blob with its first two colours (shirt, second) set to want (body, second): the menus
+    and scoreboards take a club's colours from its kit definition, the textures stay the
+    donor's (JamesNotLike: colours picked in Mod Studio)"""
+    if not want:
+        return blob
+    b = bytearray(blob)
+    for k, rgb in enumerate(want[:2]):
+        b[4 + 3 * k:7 + 3 * k] = bytes(rgb)
+    return bytes(b)
+
+
 def matched(clubs, pool, colours):
     """[(club, (home donor id, {kind: blob}))]: the home kit and goalkeeper kit of the donor whose
     first kit is nearest the club's home shirt, the second kit from whichever shipped first or
@@ -216,10 +228,11 @@ def matched(clubs, pool, colours):
         dtid = closest(firsts, home, used)[0]
         used[dtid] = used.get(dtid, 0) + 1
         blobs = dict(by_id[dtid])
+        blobs["1st_realUni"] = painted(blobs["1st_realUni"], home)
         if away:
             atid, ablob = closest([x for x in both if x[0] != dtid], away, used)
             used[atid] = used.get(atid, 0) + 1
-            blobs["2nd_realUni"] = ablob
+            blobs["2nd_realUni"] = painted(ablob, away)
         out.append((c, (dtid, blobs)))
     return out
 

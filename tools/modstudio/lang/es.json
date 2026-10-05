@@ -1184,7 +1184,28 @@
   "Keep my clubs": "Mantener mis clubes",
   "Ticked: the league keeps the clubs it has (their squads still come from this version). Unticked: it gets the clubs it has in this version.": "Marcado: la liga mantiene sus clubes (sus plantillas vienen igualmente de esta versión). Sin marcar: recibe los clubes que tiene en esta versión.",
   "Remove these %d leagues, with their clubs and their player changes?": "¿Quitar estas %d ligas, con sus clubes y los cambios de sus jugadores?",
-  "What the buttons do:\n- Add league: a new league; its clubs are made for you.\n- Add lower tier: a league one division below the selected one, with promotion and relegation between the two.\n- Edit / Remove: change or delete the selected league. Ctrl+click, Shift+click or Ctrl+A picks several leagues, and Remove (or the Delete key) deletes them together.\n- Pre-season cups: small friendly tournaments of 4 or 8 clubs in July.\n- Cups of the game's countries: a league cup (like the Carabao Cup) for the game's own leagues, and a super cup where the game has none.\n- European places of the game's leagues: which positions of the Premier League, LaLiga ... go to which European competition.\n- UEFA ranking: put the European countries in order and every league gets its European places by UEFA's rules.\n- South American places: shows who goes to the Libertadores and the Copa Sudamericana.\n- Competition names: new names and logos for cups and continental competitions.\n- World name: the folder the world is built into.": "Qué hacen los botones:\n- Añadir liga: una liga nueva; sus clubes se crean solos.\n- Añadir división inferior: una liga una división por debajo de la seleccionada, con ascensos y descensos entre las dos.\n- Editar / Quitar: cambia o borra la liga seleccionada. Ctrl+clic, Mayús+clic o Ctrl+A eligen varias ligas, y Quitar (o la tecla Supr) las borra juntas.\n- Torneos de pretemporada: pequeños torneos amistosos de 4 u 8 clubes en julio.\n- Copas de los países del juego: una copa de la liga (como la Carabao Cup) para las ligas del juego, y una supercopa donde el juego no tiene.\n- Plazas europeas de las ligas del juego: qué puestos de la Premier League, LaLiga ... van a qué competición europea.\n- Ranking UEFA: ordena los países europeos y cada liga recibe sus plazas europeas según las reglas de la UEFA.\n- Plazas sudamericanas: muestra quién va a la Libertadores y a la Copa Sudamericana.\n- Nombres de las competiciones: nombres y logos nuevos para copas y competiciones continentales.\n- Nombre del mundo: la carpeta donde se construye el mundo."
+  "What the buttons do:\n- Add league: a new league; its clubs are made for you.\n- Add lower tier: a league one division below the selected one, with promotion and relegation between the two.\n- Edit / Remove: change or delete the selected league. Ctrl+click, Shift+click or Ctrl+A picks several leagues, and Remove (or the Delete key) deletes them together.\n- Pre-season cups: small friendly tournaments of 4 or 8 clubs in July.\n- Cups of the game's countries: a league cup (like the Carabao Cup) for the game's own leagues, and a super cup where the game has none.\n- European places of the game's leagues: which positions of the Premier League, LaLiga ... go to which European competition.\n- UEFA ranking: put the European countries in order and every league gets its European places by UEFA's rules.\n- South American places: shows who goes to the Libertadores and the Copa Sudamericana.\n- Competition names: new names and logos for cups and continental competitions.\n- World name: the folder the world is built into.": "Qué hacen los botones:\n- Añadir liga: una liga nueva; sus clubes se crean solos.\n- Añadir división inferior: una liga una división por debajo de la seleccionada, con ascensos y descensos entre las dos.\n- Editar / Quitar: cambia o borra la liga seleccionada. Ctrl+clic, Mayús+clic o Ctrl+A eligen varias ligas, y Quitar (o la tecla Supr) las borra juntas.\n- Torneos de pretemporada: pequeños torneos amistosos de 4 u 8 clubes en julio.\n- Copas de los países del juego: una copa de la liga (como la Carabao Cup) para las ligas del juego, y una supercopa donde el juego no tiene.\n- Plazas europeas de las ligas del juego: qué puestos de la Premier League, LaLiga ... van a qué competición europea.\n- Ranking UEFA: ordena los países europeos y cada liga recibe sus plazas europeas según las reglas de la UEFA.\n- Plazas sudamericanas: muestra quién va a la Libertadores y a la Copa Sudamericana.\n- Nombres de las competiciones: nombres y logos nuevos para copas y competiciones continentales.\n- Nombre del mundo: la carpeta donde se construye el mundo.",
+  "%d clubs get their squad": "%d clubes reciben su plantilla",
+  "%s becomes %s": "%s pasa a ser %s",
+  "%s goes to %s's league": "%s pasa a la liga de %s",
+  "%s has none of the game's leagues.": "%s no tiene ninguna liga del juego.",
+  "Away kit colours": "Colores de la equipación visitante",
+  "Home kit colours": "Colores de la equipación local",
+  "Kit colour": "Color de la equipación",
+  "None": "Ninguno",
+  "shirt": "camiseta",
+  "second colour": "segundo color",
+  "Build gives the club the game's kit nearest these colours, and the colours themselves to the menus and scoreboards; None = Build picks a kit by itself": "Build da al club la equipación del juego más parecida a estos colores, y los colores a los menús y marcadores; Ninguno = Build elige una equipación por sí mismo",
+  "Clubs and players come from %s. The leagues keep their number of clubs, their format and their cups.": "Los clubes y jugadores vienen de %s. Las ligas mantienen su número de clubes, su formato y sus copas.",
+  "Done before with NewLife %s: doing it again replaces that.": "Ya hecho con NewLife %s: hacerlo de nuevo lo reemplaza.",
+  "The game's leagues are back as the game has them.": "Las ligas del juego vuelven a ser como las tiene el juego.",
+  "The game's leagues now have the %s season: %d clubs swap leagues, %d take the name of the club that came up, %d squads (%d players join from other clubs, %d new, %d leave). Build again and start a new career.": "Las ligas del juego tienen ahora la temporada de %s: %d clubes cambian de liga, %d toman el nombre del club que subió, %d plantillas (%d jugadores llegan de otros clubes, %d nuevos, %d se van). Vuelve a hacer Build y empieza una nueva carrera.",
+  "Bring the game's leagues to this season...": "Llevar las ligas del juego a esta temporada...",
+  "Bring the game's leagues to this season": "Llevar las ligas del juego a esta temporada",
+  "Undo the game's leagues": "Deshacer las ligas del juego",
+  "The game's own leagues get the clubs that went up and down and the squads they have in this NewLife season": "Las propias ligas del juego reciben los clubes que subieron y bajaron y las plantillas que tienen en esta temporada de NewLife",
+  "Takes back what Bring the game's leagues to this season did": "Deshace lo que hizo Llevar las ligas del juego a esta temporada",
+  "Each ticked league of the game gets the clubs and squads it has in this NewLife season. A club that went up or down between two leagues of the game swaps places with one going the other way; a club that went down out of the game's leagues becomes the club that came up in its place (its name, short name, crest and squad; its kit and stadium stay). Clubs you changed by hand stay as they are.": "Cada liga del juego marcada recibe los clubes y plantillas que tiene en esta temporada de NewLife. Un club que subió o bajó entre dos ligas del juego intercambia su sitio con uno que va en sentido contrario; un club que bajó fuera de las ligas del juego pasa a ser el club que subió en su lugar (nombre, nombre corto, escudo y plantilla; su equipación y estadio se mantienen). Los clubes que cambiaste a mano se quedan como están."
  },
  "log": [
   [
@@ -1342,6 +1363,18 @@
   [
    "\\bcup winner ",
    "campeón de copa "
+  ],
+  [
+   "^(\\d+) club\\(s\\) the release has elsewhere stay: no club comes up in their place$",
+   "\\1 club(es) que la versión tiene en otra parte se quedan: ningún club sube en su lugar"
+  ],
+  [
+   "^(\\d+) club\\(s\\) the release has in this league find no place: the league keeps its (\\d+) clubs$",
+   "\\1 club(es) que la versión tiene en esta liga no encuentran sitio: la liga mantiene sus \\2 clubes"
+  ],
+  [
+   "^(\\d+) club\\(s\\) the recipe already changes by hand are left as they are$",
+   "\\1 club(es) que la receta ya cambia a mano se quedan como están"
   ]
  ]
 }

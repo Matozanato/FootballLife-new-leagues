@@ -579,3 +579,255 @@ def update_league(recipe, rel, x, rows, info=None, keep=None):
         notes.append("%s now has %d clubs (it had %d): check its European places and promotion" % (got, n, old_n))
     recipe["leagues"].insert(idx, z)
     return got, stayed, elsewhere, notes
+
+
+# ---- the game's own leagues, brought to the release's season (0.1.8) ----
+#
+# The release lists the clubs of the game's leagues as they line up in its season: who went up,
+# who went down, and every squad with the game's player ids. Bringing a game league to it takes
+# three things, none of which changes how many clubs any competition of the game has:
+#   - a club that went up or down between two leagues of the game swaps places with one going
+#     the other way (edits.swaps, as Game's leagues and clubs > Swap does: every entry, the cup
+#     and a continental place too);
+#   - a club that went down out of the game's world (to League One, say) hands its place to a
+#     club the release brings up that the game has not got: the game's club takes that club's
+#     name, short name, crest and squad (edits.clubs and its players entry);
+#   - every club of the league gets the release's squad: players of the game join it from their
+#     old club ("join"), players the game has not got are added ("add"), the rest leave
+#     ("remove"), and everyone's abilities come from the release ("edits").
+# What it did is kept in recipe["newlife_game"], so doing it again (a newer release) or undoing
+# it takes back exactly that and nothing a person set by hand.
+
+MATCH = 0.5          # a release league is a game league when it holds this share of its clubs
+
+
+def _game_targets(rel, info):
+    """({game league cid: release league}, {team id: cid of the game league the release puts it
+    in}) for the game's leagues the release has"""
+    rows = rel.leagues(str)
+    match, target = {}, {}
+    for _r, cid, _n, ts in B.game_leagues(info["base"]):
+        if cid in info["friendly_cids"]:
+            continue
+        ts = set(ts)
+        best = max(rows, key=lambda L: len(ts & {int(x) for x in L["in_game"]}), default=None)
+        if best is not None and len(ts & {int(x) for x in best["in_game"]}) >= MATCH * len(ts):
+            match[cid] = best
+    for cid, L in match.items():
+        for t in L["in_game"]:
+            target[int(t)] = cid
+    return match, target
+
+
+def _refresh_record(recipe):
+    r = recipe.get("newlife_game") or {}
+    return {"version": r.get("version", ""), "swaps": [[int(a) for a in p] for p in r.get("swaps") or []],
+            "replaced": {int(k): v for k, v in (r.get("replaced") or {}).items()},
+            "clubs": [int(t) for t in r.get("clubs") or []]}
+
+
+def _hand_clubs(recipe):
+    """team ids the recipe already changes by hand: clubs of a new league, swaps and renames of
+    its own, and clubs whose players it changes"""
+    mine = _refresh_record(recipe)
+    used = set()
+    for x in recipe.get("leagues") or []:
+        for e in x.get("game_clubs") or []:
+            used.add(int(e["id"]))
+            if e.get("swap") not in (None, "") and not isinstance(e.get("swap"), dict):
+                used.add(int(e["swap"]))
+    for p in (recipe.get("edits") or {}).get("swaps") or []:
+        if [int(a) for a in p] not in mine["swaps"]:
+            used |= {int(a) for a in p}
+    used |= {int(k) for k in ((recipe.get("edits") or {}).get("clubs") or {}) if int(k) not in mine["replaced"]}
+    for k, c in (recipe.get("players") or {}).items():
+        if k.isdigit() and not c.get("newlife_game") and any(c.get(f) for f in ("edits", "join", "add", "remove")):
+            used.add(int(k))
+    return used
+
+
+def game_league_plan(recipe, rel, info):
+    """[{cid, name, release, swaps: [(team id, team id it swaps with)], replace: [(team id,
+    release club id)], clubs: [team id], notes: [...]}], one per game league the release has:
+    what refresh_game_leagues does to it (clubs: the team ids that get the release's squad)"""
+    match, target = _game_targets(rel, info)
+    league_of = {}
+    for _r, c, _n, ts in B.game_leagues(info["base"]):
+        for t in ts:
+            league_of.setdefault(t, c)
+    used = _hand_clubs(recipe)
+    moving = collections.defaultdict(list)          # (from league, to league) -> clubs
+    for t, c in sorted(target.items()):
+        cur = league_of.get(t)
+        if cur in match and cur != c and t not in used:
+            moving[(cur, c)].append(t)
+    swaps = {}
+    for (a, b), ts in sorted(moving.items()):
+        for x, y in zip(ts, moving.get((b, a), [])):
+            if x not in swaps and y not in swaps:
+                swaps[x], swaps[y] = y, x
+    out = []
+    for cid, L in sorted(match.items(), key=lambda kv: info["comp_names"].get(kv[0], "")):
+        ts = next(tt for _r, c, _n, tt in B.game_leagues(info["base"]) if c == cid)
+        p = {"cid": cid, "name": info["comp_names"].get(cid, str(cid)), "release": L["name"],
+             "swaps": [], "replace": [], "clubs": [], "notes": []}
+        p["swaps"] = [(t, swaps[t]) for t in ts if t in swaps]
+        down = [t for t in ts if target.get(t) != cid and t not in swaps and t not in used]
+        new = [c for c in L["clubs"] if c in rel.clubs]
+        p["replace"] = list(zip(down, new))
+        if len(down) > len(new):
+            p["notes"].append("%d club(s) the release has elsewhere stay: no club comes up in their place"
+                              % (len(down) - len(new)))
+        if len(new) > len(down):
+            p["notes"].append("%d club(s) the release has in this league find no place: the league keeps "
+                              "its %d clubs" % (len(new) - len(down), len(ts)))
+        hand = [t for t in ts if t in used]
+        if hand:
+            p["notes"].append("%d club(s) the recipe already changes by hand are left as they are" % len(hand))
+        p["clubs"] = [t for t in ts if target.get(t) == cid and t not in used] + [y for _x, y in p["swaps"]]
+        out.append(p)
+    return out
+
+
+def undo_game_leagues(recipe):
+    """take back what refresh_game_leagues did (recipe["newlife_game"]); True when there was any"""
+    if not recipe.get("newlife_game"):
+        return False
+    r = _refresh_record(recipe)
+    ed = recipe.get("edits") or {}
+    if r["swaps"] and ed.get("swaps"):
+        ed["swaps"] = [p for p in ed["swaps"] if [int(a) for a in p] not in r["swaps"]]
+        if not ed["swaps"]:
+            ed.pop("swaps")
+    clubs = ed.get("clubs") or {}
+    for t, was in r["replaced"].items():
+        e = clubs.get(str(t))
+        if e is None:
+            continue
+        for k, v in was.items():
+            if e.get(k) == v:
+                e.pop(k)
+        if not e:
+            clubs.pop(str(t))
+    if "clubs" in ed and not ed["clubs"]:
+        ed.pop("clubs")
+    if "edits" in recipe and not recipe["edits"]:
+        recipe.pop("edits")
+    pl = recipe.get("players") or {}
+    for t in r["clubs"]:
+        c = pl.get(str(t))
+        if c and c.pop("newlife_game", None):
+            for k in ("edits", "join", "add", "remove"):
+                c.pop(k, None)
+            if not c:
+                pl.pop(str(t))
+    recipe.pop("newlife_game")
+    return True
+
+
+def refresh_game_leagues(recipe, rel, info, cids):
+    """bring the game's leagues cids (competition ids, from game_league_plan) to the release's
+    season (see above); what an earlier refresh did goes first. Returns counts {"swaps",
+    "replaced", "clubs", "join", "add", "remove", "stayed"}."""
+    undo_game_leagues(recipe)
+    plan = [p for p in game_league_plan(recipe, rel, info) if p["cid"] in set(cids)]
+    ed = recipe.setdefault("edits", {})
+    rec = {"version": str(rel.meta.get("version", "")), "swaps": [], "replaced": {}, "clubs": []}
+    for p in plan:
+        for a, b in p["swaps"]:
+            if [b, a] not in rec["swaps"] and [a, b] not in rec["swaps"]:
+                rec["swaps"].append([a, b])
+    if rec["swaps"]:
+        ed["swaps"] = list(ed.get("swaps") or []) + [list(s) for s in rec["swaps"]]
+    clubs = ed.setdefault("clubs", {})
+    squads = {}                                    # team id -> release club id whose squad it gets
+    for p in plan:
+        for t in p["clubs"]:
+            squads[t] = str(t)
+    for p in plan:
+        for t, c in p["replace"]:
+            taken = {x.get("abbr") for k, x in clubs.items() if k != str(t)} | \
+                    {s for _n, s in info["clubs"].values()}
+            was = {"name": rel.clubs[c]["name"], "abbr": abbr(rel.clubs[c]["name"], taken)}
+            crest = rel.crest(c)
+            if crest:
+                was["crest"] = crest
+            clubs.setdefault(str(t), {}).update(was)
+            rec["replaced"][str(t)] = was
+            squads[t] = c
+    if not clubs:
+        ed.pop("clubs")
+    if not ed:
+        recipe.pop("edits")
+    n = _game_squads(recipe, rel, info, squads)
+    rec["clubs"] = sorted(int(k) for k, c in (recipe.get("players") or {}).items() if c.get("newlife_game"))
+    recipe["newlife_game"] = rec
+    n.update(swaps=len(rec["swaps"]), replaced=len(rec["replaced"]), clubs=len(rec["clubs"]))
+    return n
+
+
+def _game_squads(recipe, rel, info, squads):
+    """the release's squad (rel.squad) for each game club, squads: {team id: release club id}"""
+    db = P.Squads(info["base"])
+    national = info.get("national") or set()
+    pl = recipe.setdefault("players", {})
+    taken = {str(r) for c in pl.values() for r in c.get("join") or []}
+    size = {t: len(v) for t, v in db.by_club.items()}       # squads as joins and removals leave them
+    n = collections.Counter()
+    plan = {}
+    for t, c in sorted(squads.items()):
+        have = [pid for _o, pid, _s, _x in db.by_club.get(t, []) if pid in db.index]
+        keep, join, add, ed = [], [], [], {}
+        for r in rel.squad(c):
+            ch = {f: r[f] for f in P.FIELDS if r.get(f, "") != ""}
+            g = str(r.get("game_id", "")).strip()
+            if not g.isdigit():                   # no id in the release: one of his club's by name
+                g = next((str(p) for p in have if p not in keep and P.same_name(r["name"], db.name(p))), "")
+            if not g and len(r["name"].split()) == 1:  # "Gabriel": the one player of the club so called
+                one = [p for p in have if p not in keep and P._letters(r["name"]) in map(P._letters, P._words(db.name(p)))]
+                g = str(one[0]) if len(one) == 1 else ""
+                if g:
+                    r = dict(r, name=db.name(one[0]))
+            if g.isdigit() and int(g) in db.index and P.same_name(r["name"], db.name(int(g))):
+                if int(g) in have:
+                    keep.append(int(g))
+                    ed[g] = ch
+                    continue
+                old = [x for x in db.clubs_of.get(int(g), []) if x not in national]
+                if g in taken or (old and old[0] not in squads and size[old[0]] - 1 < P.MIN_SQUAD):
+                    n["stayed"] += 1              # another club has him and cannot spare him
+                    continue
+                if old:
+                    size[old[0]] -= 1
+                taken.add(g)
+                join.append(g)
+                ed[g] = ch
+                continue
+            ch["name"] = r["name"]
+            add.append(ch)
+        plan[t] = (have, keep, join, add, ed)
+    joining = {g for x in plan.values() for g in x[2]}
+    for t, (have, keep, join, add, ed) in plan.items():
+        out = sum(1 for p in have if str(p) in joining)          # signed by another club
+        gone = [p for p in have if p not in keep and str(p) not in joining]
+        gone = gone[:max(len(have) - out + len(join) + len(add) - P.MIN_SQUAD, 0)]   # a short squad keeps some
+        stays = len(have) - out - len(gone)
+        add = add[:max(P.CLUB_MAX - stays - len(join), 0)]
+        like = str(keep[0] if keep else have[0]) if have else ""
+        c = pl.setdefault(str(t), {})
+        if ed:
+            c["edits"] = ed
+        if join:
+            c["join"] = join
+        if add:
+            c["add"] = [dict(ch, like=like) if like else ch for ch in add]
+        if gone:
+            c["remove"] = [str(p) for p in gone]
+        if ed or join or add or gone:
+            c["newlife_game"] = True
+        elif not c:
+            pl.pop(str(t))
+        n["join"] += len(join)
+        n["add"] += len(add)
+        n["remove"] += len(gone)
+    return n

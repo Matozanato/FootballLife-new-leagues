@@ -12,11 +12,14 @@ when the live world is built again, which switches it on):
     OFF at its end), and switched back on when that club no longer gets ours;
   - the world's lines go at the end of the file.
 
-Nothing is written when Stadium Server is not installed (SiderAddons\content\stadium-server).
+Without Stadium Server (SiderAddons\content\stadium-server) the lines go to SPFL26's own stadium
+module, common\stadiums.lua, which reads the same files from content\stadiums (JamesNotLike,
+0.1.8); with neither nothing is written.
 """
 import codecs, os, re, shutil
 
 FOLDER = os.path.join("content", "stadium-server")
+OWN = os.path.join("content", "stadiums")            # SPFL26's common\stadiums.lua: same files, its own folder
 FILE = "map_teams.txt"
 TAG = "# FL26 Mod Studio:"
 OFF = "  # (switched off by FL26 Mod Studio)"
@@ -80,9 +83,18 @@ def read(path):
     return text.splitlines(), "\r\n" if "\r\n" in text or not text else "\n", bom, enc
 
 
+def library(sider):
+    """the stadium library the game reads: Stadium Server's, else SPFL26's own, None for neither"""
+    for f in (FOLDER, OWN):
+        d = os.path.join(sider, f)
+        if os.path.isdir(d):
+            return d
+    return None
+
+
 def write(pl, sider, log=print):
-    """the plan's home stadiums into sider\\content\\stadium-server\\map_teams.txt; the number written"""
-    lib = os.path.join(sider, FOLDER)
+    """the plan's home stadiums into the stadium library's map_teams.txt (library()); the number written"""
+    lib = library(sider) or os.path.join(sider, FOLDER)
     want = wanted(pl)
     if not os.path.isdir(lib):
         if want:

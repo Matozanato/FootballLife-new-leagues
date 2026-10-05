@@ -11,7 +11,8 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, 
                                QPlainTextEdit, QPushButton, QRadioButton, QSpinBox, QSplitter,
                                QTableWidget, QTableWidgetItem, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
                                QFileDialog, QButtonGroup, QHeaderView, QAbstractItemView,
-                               QMessageBox, QScrollArea, QApplication, QCompleter, QToolButton, QMenu)
+                               QMessageBox, QScrollArea, QApplication, QCompleter, QToolButton, QMenu,
+                               QColorDialog)
 
 import leaguebuilder as B
 import lbplayers
@@ -708,12 +709,12 @@ class LeagueDialog(Dialog):
 
 
 def stadium_lib(app):
-    """Stadium Server's folder (its library of stadiums), None when it is not installed"""
+    """Stadium Server's folder (its library of stadiums), else SPFL26's own content\\stadiums
+    (common\\stadiums.lua reads the same files), None for neither"""
     try:
-        d = os.path.join(app.game.content_dir, "stadium-server")
+        return lbstadiums.library(os.path.dirname(app.game.content_dir))
     except Exception:
         return None
-    return d if os.path.isdir(d) else None
 
 
 def coach_portrait(project, key):
@@ -908,6 +909,55 @@ class StadiumField(QWidget):
         return {k: v for k, v in st.items() if v}
 
 
+class ShirtColours(QWidget):
+    """a shirt's two colours, as the recipe writes them ("plain #body #second #trim", the NewLife
+    way): Build lends the shipped kit nearest them and gives the kit these colours, which the
+    menus and scoreboards show (JamesNotLike); empty = the kit Build picks by itself"""
+
+    def __init__(self, words):
+        super().__init__()
+        parts = (words or "").split()
+        self.pattern = parts[0] if parts else "plain"
+        self.cols = [c for c in parts[1:3] if QColor(c).isValid()]
+        h = QHBoxLayout(self)
+        h.setContentsMargins(0, 0, 0, 0)
+        self.btn = []
+        for i, tip in enumerate((_("shirt"), _("second colour"))):
+            b = QPushButton()
+            b.setFixedSize(54, 24)
+            b.setToolTip(tip)
+            b.clicked.connect(lambda _c=False, i=i: self.pick(i))
+            h.addWidget(b)
+            self.btn.append(b)
+        self.clear = QPushButton(_("None"))
+        self.clear.clicked.connect(lambda: self.set([]))
+        h.addWidget(self.clear)
+        h.addStretch(1)
+        self.set(self.cols)
+
+    def set(self, cols):
+        self.cols = list(cols)
+        for i, b in enumerate(self.btn):
+            c = self.cols[i] if i < len(self.cols) else None
+            b.setStyleSheet("background:%s; border:1px solid #888;" % c if c else "")
+            b.setText("" if c else "?")
+        self.clear.setEnabled(bool(self.cols))
+
+    def pick(self, i):
+        start = QColor(self.cols[i] if i < len(self.cols) else (self.cols[0] if self.cols else "#ffffff"))
+        c = QColorDialog.getColor(start, self, _("Kit colour"))
+        if not c.isValid():
+            return
+        cols = (self.cols + [c.name()] * 2)[:2] if self.cols else [c.name(), c.name()]
+        cols[i] = c.name()
+        self.set(cols)
+
+    def value(self):
+        if len(self.cols) < 2:
+            return ""
+        return "%s %s %s %s" % (self.pattern, self.cols[0], self.cols[1], self.cols[1])
+
+
 class ClubDialog(Dialog):
     """one club: name, short name, crest -- a new club, or one of the game's"""
     help = ("The name, short name and crest of one club, and its home stadium when Stadium Server is "
@@ -916,7 +966,7 @@ class ClubDialog(Dialog):
             "Changes reach the game after Build, while the world is switched on.")
 
     def __init__(self, parent, name, short, crest, was=None, coach=None, formation=None, formations=(),
-                 league_formation="", portrait=None, stadium=None, stadium_lib=None, tid=None):
+                 league_formation="", portrait=None, stadium=None, stadium_lib=None, tid=None, kits=None):
         super().__init__(parent, "Club")
         self.name = QLineEdit(name or "")
         self.name.setMinimumWidth(280)
@@ -958,6 +1008,14 @@ class ClubDialog(Dialog):
                      else _("As the league (the game's default 4-2-3-1)"))
             self.formation = FormationPick(formations, formation, first, places_of(formations, league_formation))
             self.form.addRow(_("Formation"), self.formation)
+        self.kits, self.kits_value = None, kits
+        if kits is not None:               # a new club: its shirt colours (club_kits, club_away_kits)
+            self.kits = (ShirtColours(kits[0]), ShirtColours(kits[1]))
+            self.form.addRow(_("Home kit colours"), self.kits[0])
+            self.form.addRow(_("Away kit colours"), self.kits[1])
+            self.form.addRow("", hint(_("Build gives the club the game's kit nearest these colours, and the "
+                                        "colours themselves to the menus and scoreboards; None = Build picks a "
+                                        "kit by itself")))
         if was:
             self.form.addRow("", hint(_("In the game: %s (%s)") % was))
         self.result = None
@@ -983,6 +1041,8 @@ class ClubDialog(Dialog):
             self.portrait_path = self.portrait.path or ""
         if self.formation is not None:
             self.formation_value = self.formation.value()
+        if self.kits is not None:
+            self.kits_value = (self.kits[0].value(), self.kits[1].value())
         self.accept()
 
 
@@ -2364,9 +2424,10 @@ class NewClubs(BuilderPage):
         d = ClubDialog(self, names[k], abbrs[k], crests[k], coach=coaches[k], formation=forms[k],
                        formations=self.project.formations(), league_formation=L.get("formation", ""),
                        portrait=coach_portrait(self.project, key), stadium=club_stadium(self.project, key),
-                       stadium_lib=stadium_lib(self.app))
+                       stadium_lib=stadium_lib(self.app), kits=self.kit_words(L, k))
         if d.finish() and d.result:
             names[k], abbrs[k], crests[k] = d.result
+            self.set_kit_words(L, k, d.kits_value)
             set_coach_portrait(self.project, key, d.portrait_path)
             set_club_stadium(self.project, key, d.stadium_value)
             coaches[k] = d.coach_name or ""
@@ -2380,6 +2441,21 @@ class NewClubs(BuilderPage):
             else:
                 L.pop("club_formations", None)
             self.project.touch()
+
+    @staticmethod
+    def kit_words(L, k):
+        return tuple((list(L.get(key) or []) + [""] * (k + 1))[k] or "" for key in ("club_kits", "club_away_kits"))
+
+    @staticmethod
+    def set_kit_words(L, k, words):
+        n = int(L.get("clubs") or 0)
+        for key, w in zip(("club_kits", "club_away_kits"), words or ("", "")):
+            lst = (list(L.get(key) or []) + [""] * n)[:n]
+            lst[k] = w or ""
+            if any(lst):
+                L[key] = lst
+            else:
+                L.pop(key, None)
 
     def players(self):
         L, k = self.league(), self.current()

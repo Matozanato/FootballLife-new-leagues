@@ -103,7 +103,7 @@ Moduli League Buildera ostaju redom kojim su postavljeni.
 ## 6. Sadržaj igre: content serveri
 
 **Stadioni, Dresovi, Lopte, Glazba, Komentar** i **Ostali sadržaj** (semafori, izbornici,
-dresovi sudaca, oznake na rukavu i vrijeme) pripadaju svaki jednom content serveru. Svaka
+dresovi sudaca, oznake na rukavu i vrijeme) pripadaju svaki jednom content serveru. SPFL26-ovi vlastiti moduli za dresove, stadione i semafore (`common\kits.lua`, `common\stadiums.lua`, `common\scoreboards.lua`) čitaju iste datoteke iz `content\kits`, `content\stadiums` i `content\scoreboards`; kad sam server nije instaliran, njegova stranica uređuje te (dresovi od 0.1.7, stadioni i semafori od 0.1.8). Svaka
 stranica ima:
 
 - **redak stanja**: je li modul uključen, postoji li njegova mapa sadržaja;
@@ -203,7 +203,7 @@ kluba u igri.
 
 **Formacija**: u **Uredi klub** novog kluba možeš mu dati vlastitu formaciju; *Kao liga* zadržava formaciju lige. Teren ispod popisa pokazuje gdje tko stoji.
 
-**Domaći stadion** (0.1.7): u **Uredi klub** stadion iz biblioteke Stadium Servera za klub; mjesto i ime popune se iz mape, ime možeš promijeniti. Upiše se u `map_teams.txt` Stadium Servera kad se svijet uključi (i kad se živi svijet ponovno izgradi), pa id novog kluba ne treba tražiti. Tvoj vlastiti redak za isti klub se za to vrijeme isključi, i opet uključi kad klub ovdje više nema stadion. *Postojeće lige i klubovi* > **Uredi klub** ima ga i za klubove igre. Stadium Server mora biti instaliran (stranica *Stadioni*).
+**Domaći stadion** (0.1.7): u **Uredi klub** stadion iz biblioteke Stadium Servera za klub; mjesto i ime popune se iz mape, ime možeš promijeniti. Upiše se u `map_teams.txt` Stadium Servera kad se svijet uključi (i kad se živi svijet ponovno izgradi), pa id novog kluba ne treba tražiti. Tvoj vlastiti redak za isti klub se za to vrijeme isključi, i opet uključi kad klub ovdje više nema stadion. *Postojeće lige i klubovi* > **Uredi klub** ima ga i za klubove igre. Mora biti instaliran Stadium Server (stranica *Stadioni*) ili SPFL26-ov vlastiti modul stadiona (`common\stadiums.lua` s mapom `content\stadiums`): od 0.1.8 Mod Studio piše tamo kad Stadium Server nije instaliran.
 
 **Klubovi koje igra već ima.** Na mjesto u novoj ligi može doći i klub iz igre umjesto novog:
 odaberi mjesto, pa **Klub iz igre...**, i traži po imenu ili ID-u kluba (**Samo klubovi bez lige**
@@ -454,6 +454,24 @@ više njih), plus *Free agents*, svaki manji od 10 MB. Preuzmi samo dijelove koj
   koje graditelj daje svojim klubovima. Stupac **ID kluba** na stranici Novi klubovi ga prikazuje,
   a Kit Serverov `map.txt` je vezan uz njega. Svijet napravljen prije 0.1.7.2 sagradi ponovno i
   započni novu karijeru da dresovi prate.
+- **Novija verzija NewLifea** (0.1.8): stavi njene dijelove u mapu (ne zajedno sa starima),
+  **Otvori NewLife Database...** na toj mapi i pritisni **Ažuriraj moje lige na ovu verziju**.
+  Svaka liga dodana iz starije verzije je na popisu sa onim što se mijenja i kvačicom **Zadrži
+  moje klubove**: označeno, liga zadržava svoje klubove; neoznačeno, dobiva klubove koje ima u
+  novoj verziji. Kadrovi u oba slučaja dolaze iz nove verzije, a liga zadržava ime, rang, format,
+  europska mjesta i kupove. Izmjene igrača na stranici *Igrači* za te klubove se zamjenjuju.
+  Zatim Build i nova karijera.
+- **Lige same igre u NewLife sezoni** (0.1.8): s otvorenom NewLife Database pritisni **Dovedi
+  lige igre u ovu sezonu...**. Svaka liga igre koju izdanje ima je na popisu s onim što joj se
+  događa, svaka s kvačicom. Klub koji je ušao ili ispao između dviju liga igre mijenja mjesto s
+  klubom koji ide obrnuto (Burnley u Championship, Coventry u Premier League), kao *Zamijeni ligu
+  s klubom...*. Klub koji je ispao iz liga igre (Leicester u League One) postaje klub koji je ušao
+  na njegovo mjesto (Bolton): ime, kratko ime, grb i kadar; dres, stadion i trener ostaju. Svaki
+  klub označenih liga dobiva NewLife kadar: igrači koje igra ima dolaze iz starog kluba, oni
+  kojih nema se dodaju, ostali odlaze kao slobodni igrači. Lige zadržavaju broj klubova, format i
+  kupove. Klubovi koje si već mijenjao ručno (zamjena, novo ime, klub nove lige, izmjene igrača)
+  ostaju kakvi jesu. Ponovno s novijom verzijom zamjenjuje ono što je napravila starija;
+  **Poništi lige igre** vraća sve. Build i nova karijera.
 - NewLife klub dobiva grb u obliku štita u svojim bojama i dres igre najbližih boja, dok mu ne
   daš svoje (**Uredi klub**).
 

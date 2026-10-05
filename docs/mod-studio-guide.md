@@ -106,7 +106,7 @@ Modules of the League Builder keep the order they were installed in.
 ## 6. Game content: the content servers
 
 **Stadiums, Kits, Balls, Music, Commentary** and **Other content** (scoreboards, menus, referee
-kits, sleeve badges and weather) each belong to one content server. Every page has:
+kits, sleeve badges and weather) each belong to one content server. SPFL26's own modules for kits, stadiums and scoreboards (`common\kits.lua`, `common\stadiums.lua`, `common\scoreboards.lua`) read the same files from `content\kits`, `content\stadiums` and `content\scoreboards`; when the server itself is not installed, its page edits those instead (kits since 0.1.7, stadiums and scoreboards since 0.1.8). Every page has:
 
 - a **status line**: is the module on, is its content folder there;
 - a tab per **map file**, shown as a table: which competition, club or stadium gets what.
@@ -209,7 +209,7 @@ the game.
 
 **Formation**: in **Edit club** of a new club you can give it a formation of its own; *As the league* keeps the league's. The pitch under the list shows where everyone stands.
 
-**Home stadium** (0.1.7): in **Edit club**, a stadium of Stadium Server's library for the club; the slot and the name are filled in from the folder, change the name if you like. It is written to Stadium Server's `map_teams.txt` when the world is switched on (and when the live world is built again), so a new club's id never has to be looked up. A line of your own for the same club is switched off meanwhile, and on again when the club no longer has one here. *Game's leagues and clubs* > **Edit club** has it for the game's clubs too. Stadium Server has to be installed (the *Stadiums* page).
+**Home stadium** (0.1.7): in **Edit club**, a stadium of Stadium Server's library for the club; the slot and the name are filled in from the folder, change the name if you like. It is written to Stadium Server's `map_teams.txt` when the world is switched on (and when the live world is built again), so a new club's id never has to be looked up. A line of your own for the same club is switched off meanwhile, and on again when the club no longer has one here. *Game's leagues and clubs* > **Edit club** has it for the game's clubs too. Stadium Server has to be installed (the *Stadiums* page), or SPFL26's own stadium module (`common\stadiums.lua` with its `content\stadiums` folder): since 0.1.8 Mod Studio writes there when Stadium Server is not installed.
 
 **Clubs the game already has.** A place of a new league can hold one of the game's clubs instead
 of a new one: select the place, then **Club of the game...**, and search by name or team ID
@@ -478,6 +478,19 @@ under 10 MB. Download only the parts you want.
   club that stays keeps its manager and a crest you picked, and clubs of your own you put in the
   league stay. Player changes you made on *Players* for those clubs are replaced. Then Build and
   start a new career.
+- **The game's own leagues in the NewLife season** (0.1.8): with a NewLife Database open, press
+  **Bring the game's leagues to this season...**. Every league of the game the release has is
+  listed with what happens to it, each with a box. A club that went up or down between two
+  leagues of the game swaps places with one going the other way (Burnley to the Championship,
+  Coventry to the Premier League), as *Swap leagues with a club...* does. A club that went down out
+  of the game's leagues (Leicester to League One) becomes the club that came up in its place
+  (Bolton): its name, short name, crest and squad; its kit, stadium and manager stay. Every club
+  of the ticked leagues gets its NewLife squad: players the game has join from their old club,
+  players it has not are added, the rest leave as free agents. The leagues keep their number of
+  clubs, their format and their cups. Clubs you already changed by hand (a swap, a rename, a
+  club of a new league, player changes) stay as they are. Doing it again with a newer version
+  replaces what the older one did; **Undo the game's leagues** takes it all back. Build and start
+  a new career.
 - A NewLife club gets a shield crest in its colours and the kit of the game closest to its
   colours, until you give it your own (**Edit club**).
 

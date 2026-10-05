@@ -1184,7 +1184,28 @@
   "Keep my clubs": "Zadrži moje klubove",
   "Ticked: the league keeps the clubs it has (their squads still come from this version). Unticked: it gets the clubs it has in this version.": "Označeno: liga zadržava svoje klubove (kadrovi ipak dolaze iz ove verzije). Neoznačeno: dobiva klubove koje ima u ovoj verziji.",
   "Remove these %d leagues, with their clubs and their player changes?": "Ukloniti ovih %d liga, s njihovim klubovima i izmjenama igrača?",
-  "What the buttons do:\n- Add league: a new league; its clubs are made for you.\n- Add lower tier: a league one division below the selected one, with promotion and relegation between the two.\n- Edit / Remove: change or delete the selected league. Ctrl+click, Shift+click or Ctrl+A picks several leagues, and Remove (or the Delete key) deletes them together.\n- Pre-season cups: small friendly tournaments of 4 or 8 clubs in July.\n- Cups of the game's countries: a league cup (like the Carabao Cup) for the game's own leagues, and a super cup where the game has none.\n- European places of the game's leagues: which positions of the Premier League, LaLiga ... go to which European competition.\n- UEFA ranking: put the European countries in order and every league gets its European places by UEFA's rules.\n- South American places: shows who goes to the Libertadores and the Copa Sudamericana.\n- Competition names: new names and logos for cups and continental competitions.\n- World name: the folder the world is built into.": "Što rade gumbi:\n- Dodaj ligu: nova liga; klubovi se naprave sami.\n- Dodaj nižu ligu: liga jedan rang ispod označene, s ulaskom i ispadanjem između njih.\n- Uredi / Makni: promijeni ili obriši označenu ligu. Ctrl+klik, Shift+klik ili Ctrl+A označi više liga, a Makni (ili tipka Delete) ih briše zajedno.\n- Predsezonski turniri: mali prijateljski turniri od 4 ili 8 klubova u srpnju.\n- Kupovi država iz igre: liga kup (kao Carabao Cup) za lige iz igre, i superkup gdje ga igra nema.\n- Europska mjesta liga iz igre: koja mjesta Premier lige, LaLige ... idu u koje europsko natjecanje.\n- UEFA poredak: poredaj europske države i svaka liga dobije europska mjesta po UEFA pravilima.\n- Južnoamerička mjesta: pokazuje tko ide u Libertadores i Copa Sudamericanu.\n- Imena natjecanja: nova imena i logotipi kupova i kontinentalnih natjecanja.\n- Ime svijeta: mapa u koju se gradi svijet."
+  "What the buttons do:\n- Add league: a new league; its clubs are made for you.\n- Add lower tier: a league one division below the selected one, with promotion and relegation between the two.\n- Edit / Remove: change or delete the selected league. Ctrl+click, Shift+click or Ctrl+A picks several leagues, and Remove (or the Delete key) deletes them together.\n- Pre-season cups: small friendly tournaments of 4 or 8 clubs in July.\n- Cups of the game's countries: a league cup (like the Carabao Cup) for the game's own leagues, and a super cup where the game has none.\n- European places of the game's leagues: which positions of the Premier League, LaLiga ... go to which European competition.\n- UEFA ranking: put the European countries in order and every league gets its European places by UEFA's rules.\n- South American places: shows who goes to the Libertadores and the Copa Sudamericana.\n- Competition names: new names and logos for cups and continental competitions.\n- World name: the folder the world is built into.": "Što rade gumbi:\n- Dodaj ligu: nova liga; klubovi se naprave sami.\n- Dodaj nižu ligu: liga jedan rang ispod označene, s ulaskom i ispadanjem između njih.\n- Uredi / Makni: promijeni ili obriši označenu ligu. Ctrl+klik, Shift+klik ili Ctrl+A označi više liga, a Makni (ili tipka Delete) ih briše zajedno.\n- Predsezonski turniri: mali prijateljski turniri od 4 ili 8 klubova u srpnju.\n- Kupovi država iz igre: liga kup (kao Carabao Cup) za lige iz igre, i superkup gdje ga igra nema.\n- Europska mjesta liga iz igre: koja mjesta Premier lige, LaLige ... idu u koje europsko natjecanje.\n- UEFA poredak: poredaj europske države i svaka liga dobije europska mjesta po UEFA pravilima.\n- Južnoamerička mjesta: pokazuje tko ide u Libertadores i Copa Sudamericanu.\n- Imena natjecanja: nova imena i logotipi kupova i kontinentalnih natjecanja.\n- Ime svijeta: mapa u koju se gradi svijet.",
+  "%d clubs get their squad": "%d klubova dobiva svoj kadar",
+  "%s becomes %s": "%s postaje %s",
+  "%s goes to %s's league": "%s ide u ligu kluba %s",
+  "%s has none of the game's leagues.": "%s nema nijednu ligu igre.",
+  "Away kit colours": "Boje gostujućeg dresa",
+  "Home kit colours": "Boje domaćeg dresa",
+  "Kit colour": "Boja dresa",
+  "None": "Ništa",
+  "shirt": "dres",
+  "second colour": "druga boja",
+  "Build gives the club the game's kit nearest these colours, and the colours themselves to the menus and scoreboards; None = Build picks a kit by itself": "Build klubu daje dres igre najbliži ovim bojama, a same boje izbornicima i semaforima; Ništa = Build sam bira dres",
+  "Clubs and players come from %s. The leagues keep their number of clubs, their format and their cups.": "Klubovi i igrači dolaze iz %s. Lige zadržavaju broj klubova, format i kupove.",
+  "Done before with NewLife %s: doing it again replaces that.": "Već napravljeno s NewLife %s: ponovno pokretanje to zamjenjuje.",
+  "The game's leagues are back as the game has them.": "Lige igre vraćene su kakve ih igra ima.",
+  "The game's leagues now have the %s season: %d clubs swap leagues, %d take the name of the club that came up, %d squads (%d players join from other clubs, %d new, %d leave). Build again and start a new career.": "Lige igre sad imaju sezonu %s: %d klubova mijenja ligu, %d preuzima ime kluba koji je ušao, %d kadrova (%d igrača dolazi iz drugih klubova, %d novih, %d odlazi). Ponovno Build i nova karijera.",
+  "Bring the game's leagues to this season...": "Dovedi lige igre u ovu sezonu...",
+  "Bring the game's leagues to this season": "Dovedi lige igre u ovu sezonu",
+  "Undo the game's leagues": "Poništi lige igre",
+  "The game's own leagues get the clubs that went up and down and the squads they have in this NewLife season": "Lige same igre dobivaju klubove koji su ušli i ispali te kadrove koje imaju u ovoj NewLife sezoni",
+  "Takes back what Bring the game's leagues to this season did": "Vraća ono što je napravilo Dovedi lige igre u ovu sezonu",
+  "Each ticked league of the game gets the clubs and squads it has in this NewLife season. A club that went up or down between two leagues of the game swaps places with one going the other way; a club that went down out of the game's leagues becomes the club that came up in its place (its name, short name, crest and squad; its kit and stadium stay). Clubs you changed by hand stay as they are.": "Svaka označena liga igre dobiva klubove i kadrove koje ima u ovoj NewLife sezoni. Klub koji je ušao ili ispao između dviju liga igre mijenja mjesto s klubom koji ide obrnuto; klub koji je ispao iz liga igre postaje klub koji je ušao na njegovo mjesto (ime, kratko ime, grb i kadar; dres i stadion ostaju). Klubovi koje si mijenjao ručno ostaju kakvi jesu."
  },
  "log": [
   [
@@ -1342,6 +1363,18 @@
   [
    "\\bcup winner ",
    "pobjednik kupa "
+  ],
+  [
+   "^(\\d+) club\\(s\\) the release has elsewhere stay: no club comes up in their place$",
+   "\\1 klub(ova) koje izdanje ima drugdje ostaje: nijedan klub ne ulazi na njihovo mjesto"
+  ],
+  [
+   "^(\\d+) club\\(s\\) the release has in this league find no place: the league keeps its (\\d+) clubs$",
+   "\\1 klub(ova) koje izdanje ima u ovoj ligi nema mjesta: liga zadržava svojih \\2 klubova"
+  ],
+  [
+   "^(\\d+) club\\(s\\) the recipe already changes by hand are left as they are$",
+   "\\1 klub(ova) koje recept već mijenja ručno ostaje kakvi jesu"
   ]
  ]
 }

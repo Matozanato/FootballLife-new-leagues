@@ -46,8 +46,12 @@ class Server:
 
     def pick(self, content_dir):
         """(folder, module) in use: ours, or the alias when only the alias is there"""
-        if self.alias and content_dir and not os.path.isdir(os.path.join(content_dir, self.folder))                 and os.path.isfile(os.path.join(content_dir, self.alias[0], self.maps[0].file)):
-            return self.alias
+        if self.alias and content_dir and not os.path.isdir(os.path.join(content_dir, self.folder)):
+            d = os.path.join(content_dir, self.alias[0])
+            # SPFL26's own stadium folder ships its map files as "(All packs) map_teams.txt"
+            if any(os.path.isfile(os.path.join(d, n)) for n in
+                   (self.maps[0].file, "(All packs) " + self.maps[0].file, self.config or "")):
+                return self.alias
         return self.folder, self.module
 
     def folder_in(self, content_dir):
@@ -182,7 +186,7 @@ SERVERS = [
                    COMP, Col("Slot", "id3", default="009"), Col("Stadium name", "text"),
                    Col("Stadium", "item")]),
            ],
-           config="config.ini", library="folder",
+           config="config.ini", library="folder", alias=("stadiums", "stadiums.lua"),
            settings={"favorite_stadium": ("Favourite stadium id", "int", "used when nothing else matches"),
                      "detailed_logging": ("Detailed log", "flag", "")}),
     Server("balls", "Balls", "ball-server", "BallServer.lua",
@@ -241,7 +245,7 @@ SERVERS = [
            about="The scoreboard of a competition; list a competition twice and one is picked "
                  "at random.",
            maps=[Map("map_competitions.txt", "Competitions", [COMP, Col("Scoreboard", "item")])],
-           config="config.ini", library="folder",
+           config="config.ini", library="folder", alias=("scoreboards", "scoreboards.lua"),
            settings={"favorite_scoreboard": ("Favourite scoreboard", "int", ""),
                      "detailed_logging": ("Detailed log", "flag", "")}),
     Server("menus", "Menus", "menu-server", "MenuServer.lua",

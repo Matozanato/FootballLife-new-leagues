@@ -110,7 +110,7 @@ Los módulos de League Builder mantienen el orden en que se instalaron.
 
 **Estadios, Equipaciones, Balones, Música, Comentarios** y **Otro contenido** (marcadores, menús,
 equipaciones arbitrales, parches de manga y tiempo) pertenecen cada uno a un servidor de
-contenido. Cada página tiene:
+contenido. Los módulos propios de SPFL26 para equipaciones, estadios y marcadores (`common\kits.lua`, `common\stadiums.lua`, `common\scoreboards.lua`) leen los mismos archivos de `content\kits`, `content\stadiums` y `content\scoreboards`; cuando el servidor no está instalado, su página edita esos (equipaciones desde 0.1.7, estadios y marcadores desde 0.1.8). Cada página tiene:
 
 - una **línea de estado**: si el módulo está activado y si existe su carpeta de contenido;
 - una pestaña por **archivo de mapa**, mostrado como tabla: qué recibe cada competición, club o
@@ -215,7 +215,7 @@ columna **ID del club** muestra el id de cada club en el juego.
 
 **Formación**: en **Editar club** de un club nuevo puedes darle una formación propia; *Como la liga* mantiene la de la liga. El campo bajo la lista muestra dónde juega cada uno.
 
-**Estadio local** (0.1.7): en **Editar club**, un estadio de la biblioteca de Stadium Server para el club; la ranura y el nombre se rellenan desde la carpeta, cambia el nombre si quieres. Se escribe en el `map_teams.txt` de Stadium Server al activar el mundo (y al construir otra vez el mundo activo), así que nunca hay que buscar el id de un club nuevo. Una línea tuya para el mismo club se desactiva mientras tanto, y se activa otra vez cuando el club ya no tiene estadio aquí. *Ligas y clubes del juego* > **Editar club** lo tiene también para los clubes del juego. Stadium Server tiene que estar instalado (página *Estadios*).
+**Estadio local** (0.1.7): en **Editar club**, un estadio de la biblioteca de Stadium Server para el club; la ranura y el nombre se rellenan desde la carpeta, cambia el nombre si quieres. Se escribe en el `map_teams.txt` de Stadium Server al activar el mundo (y al construir otra vez el mundo activo), así que nunca hay que buscar el id de un club nuevo. Una línea tuya para el mismo club se desactiva mientras tanto, y se activa otra vez cuando el club ya no tiene estadio aquí. *Ligas y clubes del juego* > **Editar club** lo tiene también para los clubes del juego. Tiene que estar instalado Stadium Server (página *Estadios*) o el módulo de estadios propio de SPFL26 (`common\stadiums.lua` con su carpeta `content\stadiums`): desde 0.1.8 Mod Studio escribe ahí cuando Stadium Server no está instalado.
 
 **Clubes que el juego ya tiene.** Un puesto de una liga nueva puede tener uno de los clubes del
 juego en lugar de uno nuevo: selecciona el puesto, luego **Club del juego...**, y busca por nombre
@@ -483,6 +483,26 @@ de 10 MB. Descarga solo las partes que quieras.
   página Clubes nuevos lo muestra, y el `map.txt` del Kit Server va con él. Un mundo hecho antes
   de 0.1.7.2 hay que construirlo de nuevo y empezar una carrera nueva para que las equipaciones
   le sigan.
+- **Una versión más nueva de NewLife** (0.1.8): pon sus partes en una carpeta (sin mezclarlas con
+  las antiguas), **Abrir NewLife Database...** en esa carpeta y pulsa **Actualizar mis ligas a esta
+  versión**. Cada liga añadida desde una versión anterior aparece con lo que cambia y una casilla
+  **Mantener mis clubes**: marcada, la liga mantiene sus clubes; sin marcar, recibe los clubes que
+  tiene en la nueva versión. En los dos casos las plantillas vienen de la nueva versión, y la liga
+  mantiene su nombre, división, formato, plazas europeas y copas. Los cambios de jugadores hechos
+  en *Jugadores* para esos clubes se reemplazan. Después Build y carrera nueva.
+- **Las propias ligas del juego en la temporada de NewLife** (0.1.8): con una NewLife Database
+  abierta, pulsa **Llevar las ligas del juego a esta temporada...**. Cada liga del juego que tiene
+  la versión aparece con lo que le pasa, cada una con su casilla. Un club que subió o bajó entre
+  dos ligas del juego intercambia su sitio con uno que va en sentido contrario (el Burnley a la
+  Championship, el Coventry a la Premier League), como *Intercambiar liga con un club...*. Un club que
+  bajó fuera de las ligas del juego (el Leicester a la League One) pasa a ser el club que subió en
+  su lugar (el Bolton): nombre, nombre corto, escudo y plantilla; su equipación, estadio y
+  entrenador se mantienen. Cada club de las ligas marcadas recibe su plantilla de NewLife: los
+  jugadores que el juego tiene llegan desde su club antiguo, los que no tiene se añaden, el resto
+  se va como agentes libres. Las ligas mantienen su número de clubes, su formato y sus copas. Los
+  clubes que ya cambiaste a mano (un intercambio, un nombre, un club de una liga nueva, cambios de
+  jugadores) se quedan como están. Hacerlo de nuevo con una versión más nueva reemplaza lo que hizo
+  la anterior; **Deshacer las ligas del juego** lo quita todo. Build y carrera nueva.
 - Un club NewLife recibe un escudo en forma de blasón con sus colores y la equipación del juego
   de colores más parecidos, hasta que le pongas los tuyos (**Editar club**).
 

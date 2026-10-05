@@ -1,5 +1,5 @@
 """NewLife Database: pick leagues from a NewLife release and put each in the recipe in one go"""
-import os
+import copy, os
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QLabel, QLineEdit, QListWidget, QListWidgetItem,
@@ -120,6 +120,46 @@ class UpdateDialog(Dialog):
         self.accept()
 
 
+class GameLeaguesDialog(Dialog):
+    """the game's own leagues the release has, each with what bringing it to the release's season
+    does: clubs that swap leagues, clubs renamed after the one that came up, squads"""
+    help = ("Each ticked league of the game gets the clubs and squads it has in this NewLife season. A club "
+            "that went up or down between two leagues of the game swaps places with one going the other way; "
+            "a club that went down out of the game's leagues becomes the club that came up in its place (its "
+            "name, short name, crest and squad; its kit and stadium stay). Clubs you changed by hand stay as "
+            "they are.")
+
+    def __init__(self, parent, rel, plan, info, done):
+        super().__init__(parent, "Bring the game's leagues to this season")
+        self.form.addRow(hint(_("Clubs and players come from %s. The leagues keep their number of clubs, their "
+                                "format and their cups.") % rel.version))
+        if done:
+            self.form.addRow(hint(_("Done before with NewLife %s: doing it again replaces that.") % done))
+        name = lambda t: info["clubs"].get(t, (str(t),))[0]
+        self.boxes = []
+        for p in plan:
+            box = QCheckBox("%s  (%s)" % (p["name"], p["release"]))
+            box.setChecked(True)
+            lines = [_("%d clubs get their squad") % len(p["clubs"])]
+            lines += [_("%s goes to %s's league") % (name(a), name(b)) for a, b in p["swaps"]]
+            lines += [_("%s becomes %s") % (name(t), rel.clubs[c]["name"]) for t, c in p["replace"]]
+            lines += [tr(n) for n in p["notes"]]
+            text = QLabel("\n".join(lines))
+            text.setWordWrap(True)
+            w = QWidget()
+            h = QVBoxLayout(w)
+            h.setContentsMargins(0, 0, 0, 6)
+            h.addWidget(box)
+            h.addWidget(text)
+            self.form.addRow(w)
+            self.boxes.append((p["cid"], box))
+        self.cids = []
+
+    def ok(self):
+        self.cids = [c for c, box in self.boxes if box.isChecked()]
+        self.accept()
+
+
 class NewLife(BuilderPage):
     title = "NewLife Database"
     hint = ("Real clubs and players for new leagues. Put the NewLife parts you downloaded (a continent each) "
@@ -139,6 +179,13 @@ class NewLife(BuilderPage):
                                     tip="Leagues you added from another NewLife version get this version's clubs "
                                         "and players; their division, format, European places and cups stay")
         self.b_update.setEnabled(False)
+        self.b_game = self.action("Bring the game's leagues to this season...", self.game_leagues,
+                                  tip="The game's own leagues get the clubs that went up and down and the squads "
+                                      "they have in this NewLife season")
+        self.b_game.setEnabled(False)
+        self.b_undo = self.action("Undo the game's leagues", self.undo_game,
+                                  tip="Takes back what Bring the game's leagues to this season did")
+        self.b_undo.setEnabled(False)
         self.where = hint(_("No NewLife Database opened."))
         self.outer.addWidget(self.where)
         self.search = QLineEdit()
@@ -347,6 +394,8 @@ class NewLife(BuilderPage):
         self.foot.setText(text)
         self.b_add.setEnabled(bool(sel) and used + sel <= room)
         self.b_update.setEnabled(bool(old))
+        self.b_game.setEnabled(bool(self.rel) and info is not None)
+        self.b_undo.setEnabled(bool(self.project.recipe.get("newlife_game")))
 
     def update(self):
         old = N.outdated(self.project.recipe, self.rel) if self.rel else []
@@ -414,3 +463,44 @@ class NewLife(BuilderPage):
             if elsewhere:
                 text += "\n" + _("%d players are not added: another league already has them.") % elsewhere
             self.say(text, "ok")
+
+    def game_leagues(self):
+        info = self.info()
+        if not self.rel or info is None:
+            return
+        rel, recipe = self.rel, self.project.recipe
+        plan = N.game_league_plan(recipe, rel, info)
+        if not plan:
+            self.say(_("%s has none of the game's leagues.") % rel.version)
+            return
+        d = GameLeaguesDialog(self, rel, plan, info, (recipe.get("newlife_game") or {}).get("version"))
+        if not d.finish() or not d.cids:
+            return
+        work = {k: copy.deepcopy(recipe[k]) for k in ("leagues", "edits", "players", "newlife_game") if k in recipe}
+        self.app.busy(True)
+
+        def done(n):
+            self.app.busy(False)
+            for k in ("edits", "players", "newlife_game"):
+                if k in work:
+                    recipe[k] = work[k]
+                else:
+                    recipe.pop(k, None)
+            self.project.touch()
+            self.say(_("The game's leagues now have the %s season: %d clubs swap leagues, %d take the name of the "
+                       "club that came up, %d squads (%d players join from other clubs, %d new, %d leave). Build "
+                       "again and start a new career.") % (rel.version, 2 * n["swaps"], n["replaced"], n["clubs"],
+                                                          n["join"], n["add"], n["remove"]), "ok")
+            self.count()
+
+        def failed(tb):
+            self.app.busy(False)
+            error(self, "NewLife Database", tb.strip().splitlines()[-1])
+
+        run_job(lambda progress: N.refresh_game_leagues(work, rel, info, d.cids), done, failed)
+
+    def undo_game(self):
+        if N.undo_game_leagues(self.project.recipe):
+            self.project.touch()
+            self.say(_("The game's leagues are back as the game has them."), "ok")
+        self.count()

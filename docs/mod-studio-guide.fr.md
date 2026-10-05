@@ -115,6 +115,7 @@ Les modules du League Builder gardent l'ordre dans lequel ils ont été install�
 
 **Stades, Maillots, Ballons, Musique, Commentaires** et **Autre contenu** (tableaux de score,
 menus, tenues d'arbitre, badges de manche et météo) appartiennent chacun à un serveur de contenu.
+Les modules propres à SPFL26 pour les maillots, les stades et les tableaux de score (`common\kits.lua`, `common\stadiums.lua`, `common\scoreboards.lua`) lisent les mêmes fichiers dans `content\kits`, `content\stadiums` et `content\scoreboards` ; quand le serveur lui-même n'est pas installé, sa page modifie ceux-là (maillots depuis 0.1.7, stades et tableaux de score depuis 0.1.8).
 Chaque page a :
 
 - une **ligne d'état** : le module est-il activé, son dossier de contenu est-il là ;
@@ -226,7 +227,7 @@ club** montre l'id de chaque club dans le jeu.
 
 **Formation** : dans **Modifier le club** d'un nouveau club, vous pouvez lui donner sa propre formation ; *Comme la ligue* garde celle de la ligue. Le terrain sous la liste montre la place de chacun.
 
-**Stade à domicile** (0.1.7) : dans **Modifier le club**, un stade de la bibliothèque de Stadium Server pour le club ; l'emplacement et le nom sont remplis depuis le dossier, changez le nom si vous voulez. Il est écrit dans le `map_teams.txt` de Stadium Server quand le monde est activé (et quand le monde actif est reconstruit), donc l'id d'un nouveau club n'a jamais à être cherché. Une ligne à vous pour le même club est désactivée en attendant, et réactivée quand le club n'a plus de stade ici. *Ligues et clubs du jeu* > **Modifier le club** l'a aussi pour les clubs du jeu. Stadium Server doit être installé (page *Stades*).
+**Stade à domicile** (0.1.7) : dans **Modifier le club**, un stade de la bibliothèque de Stadium Server pour le club ; l'emplacement et le nom sont remplis depuis le dossier, changez le nom si vous voulez. Il est écrit dans le `map_teams.txt` de Stadium Server quand le monde est activé (et quand le monde actif est reconstruit), donc l'id d'un nouveau club n'a jamais à être cherché. Une ligne à vous pour le même club est désactivée en attendant, et réactivée quand le club n'a plus de stade ici. *Ligues et clubs du jeu* > **Modifier le club** l'a aussi pour les clubs du jeu. Stadium Server doit être installé (page *Stades*), ou le module de stades propre à SPFL26 (`common\stadiums.lua` avec son dossier `content\stadiums`) : depuis 0.1.8, Mod Studio y écrit quand Stadium Server n'est pas installé.
 
 **Clubs que le jeu a déjà.** Une place d'une nouvelle ligue peut accueillir un des clubs du jeu au
 lieu d'un nouveau : sélectionnez la place, puis **Club du jeu...**, et cherchez par nom ou ID de
@@ -515,6 +516,19 @@ plusieurs), plus *Free agents*, chacune de moins de 10 Mo. Ne téléchargez que 
   européennes et ses coupes ; un club qui reste garde son entraîneur et le blason que vous avez
   choisi, et vos propres clubs mis dans la ligue restent. Les changements de joueurs faits dans
   *Joueurs* pour ces clubs sont remplacés. Ensuite Build et nouvelle carrière.
+- **Les ligues du jeu dans la saison NewLife** (0.1.8) : avec une NewLife Database ouverte,
+  appuyez sur **Amener les ligues du jeu à cette saison...**. Chaque ligue du jeu que la version
+  contient est listée avec ce qui lui arrive, chacune avec une case. Un club promu ou relégué entre
+  deux ligues du jeu échange sa place avec un club qui va dans l'autre sens (Burnley en
+  Championship, Coventry en Premier League), comme *Échanger de ligue avec un club...*. Un club
+  relégué hors des ligues du jeu (Leicester en League One) devient le club promu à sa place
+  (Bolton) : nom, nom court, blason et effectif ; son maillot, son stade et son entraîneur restent.
+  Chaque club des ligues cochées reçoit son effectif NewLife : les joueurs que le jeu a arrivent de
+  leur ancien club, ceux qu'il n'a pas sont ajoutés, les autres partent libres. Les ligues gardent
+  leur nombre de clubs, leur format et leurs coupes. Les clubs que vous avez déjà changés à la main
+  (un échange, un nom, un club d'une nouvelle ligue, des changements de joueurs) restent tels quels.
+  Le refaire avec une version plus récente remplace ce qu'a fait l'ancienne ; **Annuler les ligues
+  du jeu** retire tout. Build et nouvelle carrière.
 - Un club NewLife reçoit un écusson en forme de blason à ses couleurs et le maillot du jeu aux
   couleurs les plus proches, jusqu'à ce que vous lui donniez les vôtres (**Modifier le club**).
 
