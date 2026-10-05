@@ -546,7 +546,10 @@ ligues) :
    Un paquet que la recette a déjà (le même nom) est remplacé par la nouvelle version (0.1.7) :
    les ligues, clubs et changements de joueurs de l'ancien sortent, ceux du nouveau entrent.
 3. Si vous le voulez, **aussi mes modifications des ligues, clubs et joueurs du jeu**.
-4. Enregistrez. Le fichier contient les images et les visages, pas des chemins de votre
+4. Décochez **Inclure les effectifs** pour partager seulement blasons, entraîneurs et stades (0.1.8).
+   Ce paquet va sur une base d'effectifs mise à jour à part, comme NewLife, sans remettre les anciens
+   effectifs.
+5. Enregistrez. Le fichier contient les images et les visages, pas des chemins de votre
    ordinateur.
 
 **Ajouter un paquet** (Paquets de ligues → **Ajouter un paquet...**, Fichier → Ajouter un paquet
@@ -554,6 +557,8 @@ de ligues, ou déposez-le sur Installer des mods) :
 
 1. Le programme montre ce qu'il contient et vous demande.
 2. Une ligue dont vous avez déjà le nom est ajoutée sous la forme `Nom (Paquet)`.
+   Un paquet fait sans effectifs va sur cette ligue : ses blasons et entraîneurs vont aux clubs du
+   même nom, vos joueurs restent et le programme dit combien de clubs il a trouvés.
 3. **Enregistrer la recette**, puis **Construction**.
 
 Les id sont attribués quand chaque personne construit, d'après ce que son propre jeu contient :

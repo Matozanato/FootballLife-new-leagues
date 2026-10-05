@@ -505,13 +505,18 @@ A modder makes a league once — clubs, names, crests, logos, squads, faces — 
 2. Tick the leagues that go in (**Select all** / **Select none** over the list). A league below
    another new league must go with it.
 3. Optionally **also my changes to the game's own leagues, clubs and players**.
-4. Save. The file holds the pictures and faces, not paths on your computer.
+4. Untick **Include the squads** to share only crests, managers and stadiums (0.1.8). Such a package
+   goes on top of a squad database that is updated on its own, like NewLife, without putting old
+   squads back.
+5. Save. The file holds the pictures and faces, not paths on your computer.
 
 **Add a package** (League packages → **Add a package...**, File → Add a league package, or
 drop it on Install mods):
 
 1. The program shows what is inside and asks.
 2. A league with a name you already have is added as `Name (Package)`.
+   A package made without squads goes onto that league instead: its crests and managers land on the
+   clubs of the same name, your players stay, and the program says how many clubs it found.
    A package the recipe already has (the same name) is replaced by the new version (0.1.7): the old
    one's leagues, clubs and player changes go out, the new ones come in.
 3. **Save the recipe**, then **Build**.

@@ -265,7 +265,7 @@ A package is a zip with:
 ```
 manifest.json    {"format": "fl26pack", "format_version": 1, "name", "author", "version",
                   "description", "made_with", "leagues": [{"name", "country", "clubs"}],
-                  "clubs", "faces", "edits": {"leagues", "clubs"}, "player_changes"}
+                  "clubs", "faces", "players", "edits": {"leagues", "clubs"}, "player_changes"}
 recipe.json      the leagues as a recipe has them, the player changes of their clubs, and
                  optionally changes to the game's own leagues, clubs and players
 assets/...       the logos, crests and country flags used
@@ -273,6 +273,10 @@ faces/<n>/...    faces given to players (#Win, sourceimages, portrait.dds)
 ```
 
 - Paths in `recipe.json` are relative to the package.
+- `"players": false` (export `--no-players`, 0.1.8): no player changes inside, only crests,
+  managers, league pictures and stadiums. Added to a recipe that already has a league of the
+  same name, it goes onto that league (`lbpackage.overlay`), matching clubs by name, instead of
+  being added beside it; removing the package puts the old values back.
 - A package carries **no ids**. Club, player and league ids depend on what else a person's game
   already has, so they are given out when that person builds. That is what lets two packages
   and a person's own leagues live side by side.

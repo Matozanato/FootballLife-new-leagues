@@ -520,13 +520,18 @@ ligas):
    Un paquete que la receta ya tiene (el mismo nombre) se sustituye por la versión nueva (0.1.7):
    salen las ligas, clubes y cambios de jugadores del viejo y entran los del nuevo.
 3. Si quieres, **también mis cambios en las ligas, clubes y jugadores del propio juego**.
-4. Guarda. El archivo lleva las imágenes y las caras, no rutas de tu ordenador.
+4. Desmarca **Incluir las plantillas** para compartir solo escudos, entrenadores y estadios (0.1.8).
+   Ese paquete va encima de una base de plantillas que se actualiza sola, como NewLife, sin devolver
+   las plantillas antiguas.
+5. Guarda. El archivo lleva las imágenes y las caras, no rutas de tu ordenador.
 
 **Añadir un paquete** (Paquetes de ligas → **Añadir un paquete...**, Archivo → Añadir un paquete de
 ligas, o suéltalo en Instalar mods):
 
 1. El programa muestra lo que hay dentro y pregunta.
 2. Una liga con un nombre que ya tienes se añade como `Nombre (Paquete)`.
+   Un paquete hecho sin plantillas va encima de esa liga: sus escudos y entrenadores caen en los
+   clubes del mismo nombre, tus jugadores se quedan y el programa dice cuántos clubes encontró.
 3. **Guardar receta** y luego **Construir**.
 
 Los ids se asignan cuando cada persona construye, según lo que tiene su propio juego, así que un

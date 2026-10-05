@@ -64,6 +64,11 @@ class MakeDialog(QDialog):
         self.edits = QCheckBox(_("Also my changes to the game's own leagues, clubs and players (%d)") % n)
         self.edits.setEnabled(n > 0)
         v.addWidget(self.edits)
+        self.players = QCheckBox(_("Include the squads (every player change on these clubs)"))
+        self.players.setChecked(True)
+        self.players.setToolTip(_("Untick to share only crests, managers and stadiums -- then the package "
+                                  "can go on top of an updated squad database without putting old squads back."))
+        v.addWidget(self.players)
         v.addWidget(hint(_("A league below another league must go with it. A league placed below one of the "
                            "game's leagues works for everybody with the same game version.")))
         bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -191,6 +196,9 @@ class Packages(BuilderPage):
             text.append(_("%d player changes, %d faces") % (man["player_changes"], man.get("faces", 0)))
         if any(man.get("edits", {}).values()):
             text.append(_("It also changes some of the game's own leagues or clubs."))
+        if man.get("players") is False:
+            text.append(_("No squads: its crests and managers go onto the clubs of the same name in leagues "
+                          "you already have, and your players stay as they are."))
         if man.get("description"):
             text += ["", man["description"]]
         # the same package again (its name): a new version takes the old one's place (GitHub #34)
@@ -213,6 +221,8 @@ class Packages(BuilderPage):
         rename = {}
         going = {n for _t, p in old for n in p.get("leagues") or []}      # replaced, not clashing
         clash = [n for n in K.clashes(self.project.recipe, piece, tag) if n not in going]
+        if man.get("players") is False:
+            clash = []                        # it goes onto those leagues (lbpackage.overlay)
         if clash:
             if not ask(self, "Add a league package",
                        _("The recipe already has a league called %s. Add the package's with its name after it, "
@@ -234,7 +244,11 @@ class Packages(BuilderPage):
             error(self, "League packages", str(e))
             return
         self.project.touch()
-        self.say(_("Added %s. Save the recipe, then Build to put the leagues in the game.") % man.get("name"), "ok")
+        msg = _("Added %s. Save the recipe, then Build to put the leagues in the game.") % man.get("name")
+        matched = (self.project.recipe.get("packs") or {}).get(tag, {}).get("matched") or {}
+        if matched:
+            msg += " " + "; ".join(_("%s: %d of %d clubs found by name") % (n, h, t) for n, (h, t) in matched.items())
+        self.say(msg, "ok")
 
     def make_pack(self):
         r = self.project.recipe
@@ -256,11 +270,11 @@ class Packages(BuilderPage):
         self.app.settings["pack_dir"] = os.path.dirname(out)
         from .. import VERSION
         meta["made_with"] = "FL26 Mod Studio %s" % VERSION
-        leagues, edits = d.picked(), d.edits.isChecked()
+        leagues, edits, players = d.picked(), d.edits.isChecked(), d.players.isChecked()
         self.app.busy(True, _("Making the package"))
 
         def job(progress):
-            return K.export(r, out, meta, leagues, edits, log=progress)
+            return K.export(r, out, meta, leagues, edits, log=progress, players=players)
 
         def done(man):
             self.app.busy(False)

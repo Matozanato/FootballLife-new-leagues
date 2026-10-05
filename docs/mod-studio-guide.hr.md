@@ -488,13 +488,17 @@ datoteku `.fl26pack`**. Svatko je doda u svoj recept i izgradi.
    Paket koji recept već ima (isto ime) zamijeni nova verzija (0.1.7): lige, klubovi i promjene
    igrača starog izlaze, a novog ulaze.
 3. Po želji i **moje promjene na postojećim ligama, klubovima i igračima**.
-4. Spremi. Datoteka nosi slike i face, a ne putanje na tvom računalu.
+4. Isključi **Uključi kadrove** da dijeliš samo grbove, trenere i stadione (0.1.8). Takav paket ide
+   preko baze kadrova koja se osvježava zasebno, kao NewLife, bez vraćanja starih kadrova.
+5. Spremi. Datoteka nosi slike i face, a ne putanje na tvom računalu.
 
 **Dodaj paket** (Paketi liga → **Dodaj paket...**, Datoteka → Dodaj paket liga..., ili ga
 ispusti na Instaliraj modove):
 
 1. Program pokaže što je unutra i pita.
 2. Liga s imenom koje već imaš doda se kao `Ime (Paket)`.
+   Paket napravljen bez kadrova ide na tu ligu: grbovi i treneri sjednu na klubove istog imena,
+   tvoji igrači ostaju, a program kaže koliko je klubova našao.
 3. **Spremi recept**, pa **Izgradnja**.
 
 ID-evi se dodijele kad svaka osoba gradi, prema onome što ima njena igra, pa paket radi uz

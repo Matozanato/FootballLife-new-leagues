@@ -45,9 +45,11 @@ def tag_of(manifest):
 
 # ---- export ----
 
-def export(recipe, out, meta, leagues=None, edits=False, log=print):
+def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True):
     """write the package out from recipe; leagues are names (all when None), meta has name,
-    author, version, description.  Returns the manifest."""
+    author, version, description.  players=False leaves the player changes out and keeps the
+    rest -- crests, managers, stadiums -- so the package can go on top of a squad database that
+    is updated on its own (NewLife) without putting old squads back.  Returns the manifest."""
     if not str(meta.get("name", "")).strip():
         raise Error("the package needs a name")
     have = {L["name"]: L for L in recipe.get("leagues", [])}
@@ -121,6 +123,8 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print):
     for key, c in (recipe.get("players") or {}).items():
         lg = key.rpartition("/")[0]
         if (lg in names) or (edits and key.isdigit()):
+            if not players:
+                c = {k: c[k] for k in ("coach_portrait", "stadium") if c.get(k)}
             if (c.get("edits") or c.get("add") or c.get("remove") or c.get("join") or c.get("coach_portrait")
                     or c.get("stadium")):
                 out_r["players"][key] = players_of(c)
@@ -143,6 +147,7 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print):
                         "above": L.get("above")} for L in out_r["leagues"]],
            "clubs": sum(int(L.get("clubs", 0) or 0) for L in out_r["leagues"]),
            "faces": nface[0],
+           "players": bool(players),
            "edits": {k: len(v) for k, v in out_r["edits"].items()},
            "player_changes": sum(len(c.get("edits") or {}) + len(c.get("add") or []) for c in out_r["players"].values())}
     json.dump(man, open(os.path.join(tmp, "manifest.json"), "w", encoding="utf-8"), indent=1, ensure_ascii=False)
@@ -231,20 +236,68 @@ def clashes(recipe, piece, tag):
     return [L["name"] for L in piece.get("leagues", []) if L["name"] in mine]
 
 
+OVERLAY = ("club_crests", "club_coaches")
+
+
+def overlay(recipe, piece, got, names):
+    """a package made without players, on leagues the recipe already has (a squad database
+    such as NewLife, updated on its own): its crests, managers, league pictures and stadiums go
+    onto those leagues' clubs, matched by club name, and the squads stay as they are.  What
+    was there before is kept in got so remove() puts it back."""
+    have = {L["name"]: L for L in recipe.get("leagues", [])}
+    pl = recipe.setdefault("players", {})
+    for P in piece.get("leagues", []):
+        if P["name"] not in names:
+            continue
+        L = have[P["name"]]
+        was = {k: json.loads(json.dumps(L.get(k))) for k in OVERLAY + LEAGUE_PICTURES if k in L}
+        got.setdefault("overlay", {})[L["name"]] = was
+        at = {str(n).strip().lower(): i for i, n in enumerate(L.get("club_names") or [])}
+        moved, hit = {}, 0
+        for j, n in enumerate(P.get("club_names") or []):
+            i = at.get(str(n).strip().lower())
+            if i is None:
+                continue
+            moved[j], hit = i, hit + 1
+            for k in OVERLAY:
+                v = (P.get(k) or [])[j] if j < len(P.get(k) or []) else ""
+                if v:
+                    col = L.setdefault(k, [])
+                    col.extend([""] * (i + 1 - len(col)))
+                    col[i] = v
+        for k in LEAGUE_PICTURES:
+            if P.get(k):
+                L[k] = P[k]
+        for key, c in (piece.get("players") or {}).items():
+            lg, _s, j = key.rpartition("/")
+            if lg != P["name"] or not j.isdigit() or int(j) not in moved:
+                continue
+            dst = "%s/%d" % (lg, moved[int(j)])
+            got.setdefault("before", {})[dst] = json.loads(json.dumps(pl.get(dst)))
+            pl.setdefault(dst, {}).update({k: c[k] for k in ("coach_portrait", "stadium") if c.get(k)})
+            got["players"].append(dst)
+        got.setdefault("matched", {})[L["name"]] = [hit, len(P.get("club_names") or [])]
+
+
 def add(recipe, man, piece, folder, rename=None):
     """put a package's piece into recipe (changed in place).  rename maps a clashing league
-    name to the one it gets here.  A package added again (same tag) replaces itself."""
+    name to the one it gets here.  A package added again (same tag) replaces itself.  A
+    package made without players goes onto a league of the same name (see overlay())."""
     tag = tag_of(man)
     if tag in (recipe.get("packs") or {}):
         remove(recipe, tag)
     rename = dict(rename or {})
-    bad = [n for n in clashes(recipe, piece, tag) if n not in rename]
+    onto = [] if man.get("players", True) else [n for n in clashes(recipe, piece, tag) if n not in rename]
+    bad = [n for n in clashes(recipe, piece, tag) if n not in rename and n not in onto]
     if bad:
         raise Error("the recipe already has a league called %s" % ", ".join(bad))
     nm = lambda n: rename.get(n, n)
     got = {"name": man.get("name"), "author": man.get("author"), "version": man.get("version"),
            "folder": folder, "leagues": [], "players": [], "edits": {}}
+    overlay(recipe, piece, got, onto)
     for L in piece.get("leagues", []):
+        if L["name"] in onto:
+            continue
         L = dict(L)
         L["name"] = nm(L["name"])
         if isinstance(L.get("above"), str) and not L["above"].isdigit():
@@ -255,6 +308,8 @@ def add(recipe, man, piece, folder, rename=None):
     pl = recipe.setdefault("players", {})
     for key, c in (piece.get("players") or {}).items():
         lg, s, k = key.rpartition("/")
+        if s and lg in onto:
+            continue
         if s:
             key = "%s/%s" % (nm(lg), k)
         elif key in pl:
@@ -284,11 +339,19 @@ def remove(recipe, tag):
         raise Error("no package %s in the recipe" % tag)
     names = set(got.get("leagues") or [])
     recipe["leagues"] = [L for L in recipe.get("leagues", []) if L.get("pack") != tag]
+    for L in recipe.get("leagues", []):
+        was = (got.get("overlay") or {}).get(L["name"])
+        if was is not None:
+            for k in OVERLAY + LEAGUE_PICTURES:
+                if k in was:
+                    L[k] = was[k]
+                else:
+                    L.pop(k, None)
     pl = recipe.get("players") or {}
     # a club of the game that the recipe changed before the package came gets those back
     before = got.get("before") or {}
     for key in got.get("players") or []:
-        if key in before:
+        if before.get(key) is not None:
             pl[key] = before[key]
         else:
             pl.pop(key, None)
@@ -314,6 +377,8 @@ def main():
     e.add_argument("--description", default="")
     e.add_argument("--league", action="append")
     e.add_argument("--edits", action="store_true")
+    e.add_argument("--no-players", action="store_true",
+                   help="leave the player changes out: crests, managers and stadiums only")
     s = sub.add_parser("show")
     s.add_argument("pack")
     a = sub.add_parser("add")
@@ -328,7 +393,7 @@ def main():
         if o.cmd == "export":
             rec = json.load(open(o.recipe, encoding="utf-8"))
             export(rec, o.out, {"name": o.name, "author": o.author, "version": o.version,
-                                "description": o.description}, o.league, o.edits)
+                                "description": o.description}, o.league, o.edits, players=not o.no_players)
         elif o.cmd == "show":
             print(json.dumps(manifest(o.pack), indent=1, ensure_ascii=False))
         elif o.cmd == "add":
