@@ -546,9 +546,10 @@ ligues) :
    Un paquet que la recette a déjà (le même nom) est remplacé par la nouvelle version (0.1.7) :
    les ligues, clubs et changements de joueurs de l'ancien sortent, ceux du nouveau entrent.
 3. Si vous le voulez, **aussi mes modifications des ligues, clubs et joueurs du jeu**.
-4. Décochez **Inclure les effectifs** pour partager seulement blasons, entraîneurs et stades (0.1.8).
-   Ce paquet va sur une base d'effectifs mise à jour à part, comme NewLife, sans remettre les anciens
-   effectifs.
+4. **Ce qui va dedans** (0.1.8) : tout est coché ; décochez ce que vous ne voulez pas partager --
+   **Effectifs**, **Visages et portraits des joueurs**, **Blasons et logos des ligues**, **Entraîneurs**,
+   **Couleurs des maillots**, **Stades à domicile** (la ligne de Stadium Server, pas le stade lui-même).
+   Un paquet sans effectifs va sur une base mise à jour à part, comme NewLife, sans remettre les anciens.
 5. Enregistrez. Le fichier contient les images et les visages, pas des chemins de votre
    ordinateur.
 

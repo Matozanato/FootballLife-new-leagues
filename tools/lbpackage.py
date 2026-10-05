@@ -36,6 +36,11 @@ class Error(Exception):
 
 # a league's own pictures, one path each: its logo, the country's flag, its cups' logos
 LEAGUE_PICTURES = ("logo", "flag", "cup_logo", "supercup_logo", "league_cup_logo")
+# the league fields each part of a package (PARTS) carries
+LEAGUE_PARTS = {"squads": ("formation", "club_formations"),
+                "crests": LEAGUE_PICTURES + ("club_crests",),
+                "managers": ("club_coaches",),
+                "kits": ("club_kits", "club_away_kits")}
 
 
 def tag_of(manifest):
@@ -45,11 +50,31 @@ def tag_of(manifest):
 
 # ---- export ----
 
-def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True):
+# what a package can carry besides the leagues themselves; Make a package ticks them all
+PARTS = ("squads", "faces", "crests", "managers", "kits", "stadiums")
+
+
+def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True, parts=None):
     """write the package out from recipe; leagues are names (all when None), meta has name,
-    author, version, description.  players=False leaves the player changes out and keeps the
-    rest -- crests, managers, stadiums -- so the package can go on top of a squad database that
-    is updated on its own (NewLife) without putting old squads back.  Returns the manifest."""
+    author, version, description.  parts (all of PARTS when None) is what goes in:
+      squads    the player changes of the clubs (and their formations)
+      faces     the faces and portraits those players were given
+      crests    club crests, league logos and flags
+      managers  managers' names and portraits
+      kits      the clubs' shirt colours
+      stadiums  the clubs' home stadiums (the Stadium Server line, not the stadium itself)
+    A package without squads can go on top of a squad database that is updated on its own
+    (NewLife) without putting old squads back (see overlay()).  players=False is parts without
+    squads.  Returns the manifest."""
+    parts = set(PARTS if parts is None else parts)
+    if not players:
+        parts.discard("squads")
+    bad = parts - set(PARTS)
+    if bad:
+        raise Error("no such part of a package: %s" % ", ".join(sorted(bad)))
+    if "squads" not in parts:
+        parts.discard("faces")
+    squads = "squads" in parts
     if not str(meta.get("name", "")).strip():
         raise Error("the package needs a name")
     have = {L["name"]: L for L in recipe.get("leagues", [])}
@@ -98,6 +123,9 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
     def players_of(c):
         c = json.loads(json.dumps(c))
         for ch in list((c.get("edits") or {}).values()) + list(c.get("add") or []):
+            if "faces" not in parts:
+                ch.pop("face", None)
+                ch.pop("portrait", None)
             if str(ch.get("face", "")).strip():
                 ch["face"] = face(ch["face"])
             if str(ch.get("portrait", "")).strip():
@@ -114,6 +142,10 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
     for n in names:
         L = json.loads(json.dumps(have[n]))
         L.pop("pack", None)
+        for part, keys in LEAGUE_PARTS.items():
+            if part not in parts:
+                for k in keys:
+                    L.pop(k, None)
         for k in LEAGUE_PICTURES:
             if L.get(k):
                 L[k] = asset(L[k])
@@ -123,13 +155,23 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
     for key, c in (recipe.get("players") or {}).items():
         lg = key.rpartition("/")[0]
         if (lg in names) or (edits and key.isdigit()):
-            if not players:
+            if not squads:
                 c = {k: c[k] for k in ("coach_portrait", "stadium") if c.get(k)}
+            if "managers" not in parts:
+                c.pop("coach_portrait", None)
+            if "stadiums" not in parts:
+                c.pop("stadium", None)
             if (c.get("edits") or c.get("add") or c.get("remove") or c.get("join") or c.get("coach_portrait")
                     or c.get("stadium")):
                 out_r["players"][key] = players_of(c)
     if edits:
         e = json.loads(json.dumps(recipe.get("edits") or {}))
+        if "crests" not in parts:
+            for kind, key in (("leagues", "logo"), ("competitions", "logo"), ("clubs", "crest")):
+                for k, v in list((e.get(kind) or {}).items()):
+                    v.pop(key, None)
+                    if not v:
+                        e[kind].pop(k)
         for v in (e.get("leagues") or {}).values():
             if v.get("logo"):
                 v["logo"] = asset(v["logo"])
@@ -147,7 +189,8 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
                         "above": L.get("above")} for L in out_r["leagues"]],
            "clubs": sum(int(L.get("clubs", 0) or 0) for L in out_r["leagues"]),
            "faces": nface[0],
-           "players": bool(players),
+           "players": squads,
+           "parts": [x for x in PARTS if x in parts],
            "edits": {k: len(v) for k, v in out_r["edits"].items()},
            "player_changes": sum(len(c.get("edits") or {}) + len(c.get("add") or []) for c in out_r["players"].values())}
     json.dump(man, open(os.path.join(tmp, "manifest.json"), "w", encoding="utf-8"), indent=1, ensure_ascii=False)
@@ -236,7 +279,7 @@ def clashes(recipe, piece, tag):
     return [L["name"] for L in piece.get("leagues", []) if L["name"] in mine]
 
 
-OVERLAY = ("club_crests", "club_coaches")
+OVERLAY = ("club_crests", "club_coaches", "club_kits", "club_away_kits")
 
 
 def overlay(recipe, piece, got, names):
@@ -379,6 +422,8 @@ def main():
     e.add_argument("--edits", action="store_true")
     e.add_argument("--no-players", action="store_true",
                    help="leave the player changes out: crests, managers and stadiums only")
+    e.add_argument("--without", action="append", default=[], choices=PARTS,
+                   help="leave a part out (again for more): " + ", ".join(PARTS))
     s = sub.add_parser("show")
     s.add_argument("pack")
     a = sub.add_parser("add")
@@ -393,7 +438,8 @@ def main():
         if o.cmd == "export":
             rec = json.load(open(o.recipe, encoding="utf-8"))
             export(rec, o.out, {"name": o.name, "author": o.author, "version": o.version,
-                                "description": o.description}, o.league, o.edits, players=not o.no_players)
+                                "description": o.description}, o.league, o.edits, players=not o.no_players,
+                     parts=[x for x in PARTS if x not in o.without])
         elif o.cmd == "show":
             print(json.dumps(manifest(o.pack), indent=1, ensure_ascii=False))
         elif o.cmd == "add":

@@ -505,9 +505,10 @@ A modder makes a league once — clubs, names, crests, logos, squads, faces — 
 2. Tick the leagues that go in (**Select all** / **Select none** over the list). A league below
    another new league must go with it.
 3. Optionally **also my changes to the game's own leagues, clubs and players**.
-4. Untick **Include the squads** to share only crests, managers and stadiums (0.1.8). Such a package
-   goes on top of a squad database that is updated on its own, like NewLife, without putting old
-   squads back.
+4. **What goes in** (0.1.8): everything is ticked; untick what you do not want to share -- **Squads**,
+   **Player faces and portraits**, **Crests and league logos**, **Managers**, **Kit colours**, **Home
+   stadiums** (the Stadium Server line, not the stadium itself). A package without squads goes on top
+   of a squad database that is updated on its own, like NewLife, without putting old squads back.
 5. Save. The file holds the pictures and faces, not paths on your computer.
 
 **Add a package** (League packages → **Add a package...**, File → Add a league package, or

@@ -64,11 +64,21 @@ class MakeDialog(QDialog):
         self.edits = QCheckBox(_("Also my changes to the game's own leagues, clubs and players (%d)") % n)
         self.edits.setEnabled(n > 0)
         v.addWidget(self.edits)
-        self.players = QCheckBox(_("Include the squads (every player change on these clubs)"))
-        self.players.setChecked(True)
-        self.players.setToolTip(_("Untick to share only crests, managers and stadiums -- then the package "
-                                  "can go on top of an updated squad database without putting old squads back."))
-        v.addWidget(self.players)
+        v.addWidget(section("What goes in"))
+        labels = {"squads": _("Squads (every player change on these clubs)"),
+                  "faces": _("Player faces and portraits"),
+                  "crests": _("Crests and league logos"),
+                  "managers": _("Managers"),
+                  "kits": _("Kit colours"),
+                  "stadiums": _("Home stadiums (the Stadium Server line, not the stadium itself)")}
+        self.parts = {}
+        for k in K.PARTS:
+            b = self.parts[k] = QCheckBox(labels[k])
+            b.setChecked(True)
+            v.addWidget(b)
+        self.parts["squads"].setToolTip(_("Untick to share only crests, managers and stadiums -- then the package "
+                                          "can go on top of an updated squad database without putting old squads back."))
+        self.parts["squads"].toggled.connect(self.parts["faces"].setEnabled)
         v.addWidget(hint(_("A league below another league must go with it. A league placed below one of the "
                            "game's leagues works for everybody with the same game version.")))
         bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -270,11 +280,12 @@ class Packages(BuilderPage):
         self.app.settings["pack_dir"] = os.path.dirname(out)
         from .. import VERSION
         meta["made_with"] = "FL26 Mod Studio %s" % VERSION
-        leagues, edits, players = d.picked(), d.edits.isChecked(), d.players.isChecked()
+        leagues, edits = d.picked(), d.edits.isChecked()
+        parts = [k for k, b in d.parts.items() if b.isChecked() and b.isEnabled()]
         self.app.busy(True, _("Making the package"))
 
         def job(progress):
-            return K.export(r, out, meta, leagues, edits, log=progress, players=players)
+            return K.export(r, out, meta, leagues, edits, log=progress, parts=parts)
 
         def done(man):
             self.app.busy(False)

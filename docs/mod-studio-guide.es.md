@@ -520,9 +520,10 @@ ligas):
    Un paquete que la receta ya tiene (el mismo nombre) se sustituye por la versión nueva (0.1.7):
    salen las ligas, clubes y cambios de jugadores del viejo y entran los del nuevo.
 3. Si quieres, **también mis cambios en las ligas, clubes y jugadores del propio juego**.
-4. Desmarca **Incluir las plantillas** para compartir solo escudos, entrenadores y estadios (0.1.8).
-   Ese paquete va encima de una base de plantillas que se actualiza sola, como NewLife, sin devolver
-   las plantillas antiguas.
+4. **Qué va dentro** (0.1.8): todo viene marcado; desmarca lo que no quieras compartir -- **Plantillas**,
+   **Caras y retratos de jugadores**, **Escudos y logos de ligas**, **Entrenadores**, **Colores de las
+   equipaciones**, **Estadios locales** (la línea de Stadium Server, no el estadio en sí). Un paquete sin
+   plantillas va encima de una base que se actualiza sola, como NewLife, sin devolver las plantillas antiguas.
 5. Guarda. El archivo lleva las imágenes y las caras, no rutas de tu ordenador.
 
 **Añadir un paquete** (Paquetes de ligas → **Añadir un paquete...**, Archivo → Añadir un paquete de

@@ -265,7 +265,7 @@ A package is a zip with:
 ```
 manifest.json    {"format": "fl26pack", "format_version": 1, "name", "author", "version",
                   "description", "made_with", "leagues": [{"name", "country", "clubs"}],
-                  "clubs", "faces", "players", "edits": {"leagues", "clubs"}, "player_changes"}
+                  "clubs", "faces", "players", "parts", "edits": {"leagues", "clubs"}, "player_changes"}
 recipe.json      the leagues as a recipe has them, the player changes of their clubs, and
                  optionally changes to the game's own leagues, clubs and players
 assets/...       the logos, crests and country flags used
@@ -273,7 +273,9 @@ faces/<n>/...    faces given to players (#Win, sourceimages, portrait.dds)
 ```
 
 - Paths in `recipe.json` are relative to the package.
-- `"players": false` (export `--no-players`, 0.1.8): no player changes inside, only crests,
+- `"parts"` (0.1.8) lists what went in, of squads, faces, crests, managers, kits, stadiums
+  (export `--without <part>`, again for more; Make a package has a box for each).
+- `"players": false` (no squads; export `--no-players` or `--without squads`): no player changes inside, only crests,
   managers, league pictures and stadiums. Added to a recipe that already has a league of the
   same name, it goes onto that league (`lbpackage.overlay`), matching clubs by name, instead of
   being added beside it; removing the package puts the old values back.
