@@ -551,6 +551,23 @@ function m.init(ctx)
                       .. "League Info text on %d", cleared, texts))
   end
 
+  -- 2d. season awards (#86): +0x29 = 0 means "this competition has no awards" (getter
+  -- 0x1414cfb90). Competition Info then leaves out Individual Titles and Team of the Season,
+  -- and the season-end builders (0x140fbfbe0) skip the competition, so the Best XI stayed
+  -- empty. Ten of our leagues sit on shipped rows that carry 0 (HNL on 11 among them); the
+  -- rows we append copy TEMPLATE_ID, which already has 1.
+  do
+    local set = 0
+    for _, id in ipairs(OUR_IDS) do
+      local i = byid[id]
+      if i and rows[i]:byte(0x29 + 1) == 0 then
+        rows[i] = row_set(rows[i], 0x29, "\1")
+        set = set + 1
+      end
+    end
+    log(string.format("fl26comptab: season awards turned on for %d leagues", set))
+  end
+
   -- 3. promotion/relegation counts
   for id, pd in pairs(COUNTS) do
     local i = byid[id]

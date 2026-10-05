@@ -126,11 +126,6 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
   a career.
   Whether Kick Off shows the squad of the file is not checked yet. Transfers (`Sign players...`, `Transfer to...`) and the club and
   player ids did stay in the same career.
-- **Team of the Season of a new league is empty** (2026-09-30, GitHub #46). At the end of
-  season 1 and again of season 2 the screen for a new Icelandic league came up with all 11
-  places empty. Fixtures, tables, promotion and relegation and the national cup were fine in
-  the same career. Not investigated; whether a league the game already has shows its team in
-  the same career is asked on the issue.
 
 ## Added leagues that never entered the season — fixed 2026-09-22, one season measured
 
@@ -439,6 +434,12 @@ calendar.
   to one of these cups. Checked without the game: Saudi Pro League 2nd and 3rd went into the AFC
   Champions League Two (16 clubs) in pot 1 and pot 2, and its AFC Champions League place stayed.
   Not yet checked in the game.
+- 2026-10-05 (Mod Studio 0.1.8, GitHub issues #46 and #86): **the Team of the Season of a new
+  league was empty, and Competition Info had no Individual Titles or Team of the Season for
+  it.** The regulation row a new league sits on said "no season awards" for ten of them (the
+  HNL among them), so the game picked no team at the end of the season. The competition module
+  now turns the awards on for every new league. Checked in the game: at the end of a season the
+  HNL showed both items, and a full Team of the Season of eleven HNL players.
 - 2026-10-04 (Mod Studio 0.1.8, GitHub issue #54): **a league round was played on the day of a
   European match, hidden from the calendar, and the result went into both tables.** Each new
   league plays the big leagues' calendar moved by a few days, and the number of days comes from
