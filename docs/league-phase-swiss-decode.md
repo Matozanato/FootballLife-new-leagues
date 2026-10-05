@@ -159,7 +159,7 @@ freed and nothing is reallocated, so the memory stays exactly as the game laid i
 trick only ever shortens: a calendar longer than 38 rounds is refused rather than guessed at.
 
 The sixteen days are two a week through the European weeks of autumn and four in January
-(259, 260, 273, 274, 294, 295, 308, 309, 329, 330, 343, 344, 20, 21, 28, 29) -- January is a small
+(259, 260, 273, 274, 294, 295, 308, 309, 329, 330, 343, 344, 21, 22, 28, 29) -- January is a small
 number after a December one because the day counter is a calendar year, exactly as the shipped
 array wraps from 363 to 2.
 

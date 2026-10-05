@@ -284,11 +284,13 @@ DATE_SHIFT = {11: 1, 49: 2, 60: 1, 61: 2, 62: 5, 74: 5, 76: 2, 93: 6, 94: 2, 96:
               109: 1, 110: 1, 111: 1, 112: 4, 113: 5, 114: 2, 121: 2, 138: 2, 139: 2, 140: 2, 143: 5,
               144: 2, 145: 2, 146: 6, 170: 4, 171: 6, 173: 1, 174: 0, 176: 1, 178: 6, 179: 4, 180: 0,
               181: 1, 182: 5, 183: 1, 184: 6, 185: 1, 190: 2}     # 190 has 145's (mkworld MOVED_REG)
-# fl26swiss.c: the Champions League's league phase (SWISS_DAYS), the Europa League's two days
-# later, the Conference League's (UECL_DAYS), the knockouts (KO_DAYS), qualifying (QR_DAYS) and
-# the play-offs (reg 2's moved to 244/251, the Europa/Conference League's 49/56)
-_SWISS = [259, 260, 273, 274, 294, 295, 308, 309, 329, 330, 343, 344, 20, 21, 28, 29]
-EURO_DAYS = (set(_SWISS) | {d + 2 for d in _SWISS}
+# fl26swiss.c: the Champions League's and the Europa League's league phase (SWISS_DAYS, the same
+# days since #54), the Conference League's (UECL_DAYS), the knockouts (KO_DAYS), qualifying
+# (QR_DAYS) and the play-offs (reg 2's moved to 244/251, the Europa/Conference League's 49/56).
+# fl26swiss also moves any round of ours still on one of these days (declash), so this only
+# steers the choice of id.
+_SWISS = [259, 260, 273, 274, 294, 295, 308, 309, 329, 330, 343, 344, 21, 22, 28, 29]
+EURO_DAYS = (set(_SWISS)
              | {273, 274, 294, 295, 308, 309, 329, 330, 343, 344, 350, 351}
              | {68, 75, 96, 103, 117, 124, 149, 70, 77, 98, 105, 119, 126, 139, 146}
              | {243, 250, 229, 236, 220, 225, 244, 251, 49, 56})

@@ -346,6 +346,22 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-05 (Mod Studio 0.1.8, fl26swiss, GitHub issue #75): **Champions League, Europa
+  League and Conference League matches in the league phase were labelled Matchday 1, 3, 5, ...
+  (or 4 for the second round) in the schedule and calendar.** fl26swiss splits each round into
+  two halves internally and the game printed the half's number. The label now shows the round:
+  both halves read the same matchday; the internal numbering that ties a match to its date is
+  unchanged. Checked in game: Anderlecht's second and third Champions League games read
+  Matchday 2 and Matchday 3.
+
+- 2026-10-05 (Mod Studio 0.1.8, fl26swiss, GitHub issue #54): **Europa League league-phase
+  rounds fell on the same days as league rounds, and one Champions League round (day 20) did
+  too, so a club in both played twice in a day or had a match moved.** The Europa League now
+  plays on the Champions League days, and the January round moved a day. League rounds of
+  leagues built by the League builder that still land on a European day are stepped one to
+  three days off it, keeping their order. Checked in game: league and European dates of a
+  Belgian club in the Champions League no longer meet.
+
 - 2026-10-05 (Mod Studio 0.1.8, fl26comptab, GitHub issue #43): **A new league on one of the
   game's group slots (the SuperSport HNL on slot 28) showed a category text in the Master League
   Select Team panel -- "In this category, the leagues of the teams you have chosen ... South

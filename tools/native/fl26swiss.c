@@ -82,10 +82,12 @@ typedef struct { uint32_t day; uint32_t round; uint32_t kind; } date_t;  /* 12 b
 /* The league phase's sixteen matchdays, as days of the year.  Two matchdays a week in the
    European weeks the real competition uses, and the last four in January -- the day counter
    is a calendar year, so a January date is a small number after a December one, exactly as
-   the shipped 38-round array wraps from 363 to 2. */
+   the shipped 38-round array wraps from 363 to 2.  The seventh is on 21/22 January, not 20/21:
+   the shipped big-league calendar (case 5) plays a round on day 20, and a club of those leagues
+   then had two matches on one day (GitHub #54). */
 #define FL26_DATE_KIND_LEAGUE 2
 static const uint32_t SWISS_DAYS[FL26_SWISS36_MATCHDAYS] = {
-  259, 260, 273, 274, 294, 295, 308, 309, 329, 330, 343, 344, 20, 21, 28, 29 };
+  259, 260, 273, 274, 294, 295, 308, 309, 329, 330, 343, 344, 21, 22, 28, 29 };
 
 /* The Conference League plays six matchdays, one opponent from each of six pots (the second
    table in fl26swiss_table.h), on the real Thursdays: 2 and 23 October, 6 and 27 November,
@@ -126,12 +128,16 @@ static int ours(uint16_t reg)
   return 0;
 }
 
-/* Days after SWISS_DAYS that a listed competition plays: the first one on the days themselves,
-   each next one two days later -- the Champions League on its Tuesday and Wednesday, the Europa
-   League on the Thursday and Friday after. None of the shifted days crosses the year end. */
+/* Days after SWISS_DAYS that a listed competition plays.  It used to be two days a competition
+   -- the Europa League on the Thursday and Friday after the Champions League -- but those are
+   exactly the days the shipped league calendars play on (case 5: 261, 275, 296, 310, 331, 345,
+   23, 31; cases 28, 37, 44, 49 too), so a club of the game's own leagues had a league match on
+   eight of its sixteen Europa League days and one result went into both tables (GitHub #54,
+   Tony on Discord).  Every league phase now plays on the same days; a club is only ever in
+   one of them, and 36 more matches a day is far from the 280 a day holds. */
 static uint32_t day_shift(uint16_t reg)
 {
-  for (int i = 0; i < g_nreg; i++) if (g_reg[i] == reg) return 2u * (uint32_t)i;
+  (void)reg;
   return 0;
 }
 
@@ -3806,6 +3812,49 @@ static int eudate(uint16_t id)
   for (int i = 0; i < g_neudate; i++) if (g_eudate[i] == id) return 1;
   return 0;
 }
+/* ---- no league round of ours on a European day (GitHub #54) ----
+ * A league of ours plays the big-league calendar shifted by its id's day (datecave) and
+ * resampled to its rounds, and the shift knows nothing of Europe: Romania on 93 (+6) played
+ * league rounds on Conference League days 309 and 330, the club's league match was played on
+ * the European day and its result went into both tables.  Whatever a calendar comes out as,
+ * a round that lands on a day any European competition of ours plays is moved to the nearest
+ * free day (1, 2, 3 days either way) that keeps the rounds in order. */
+static int euro_day(uint32_t d)
+{
+  for (int i = 0; i < FL26_SWISS36_MATCHDAYS; i++) if (SWISS_DAYS[i] == d) return 1;
+  for (int i = 0; i < FL26_SWISS6_MATCHDAYS; i++) if (UECL_DAYS[i] == d) return 1;
+  for (int c = 0; c < 3; c++) {
+    for (int i = 0; i < 7; i++) if (KO_DAYS[c][i] == d) return 1;
+    for (int i = 0; i < 2; i++) if (QR_DAYS[c][i] == d || CUPS[c].days[i] == d) return 1;
+  }
+  return d == 230 + PLAYOFF_SHIFT || d == 237 + PLAYOFF_SHIFT;   /* reg 2's play-off */
+}
+static uint32_t season_pos(uint32_t d) { return d >= 182 ? d - 182 : d + 183; }   /* July first */
+static int declash(date_t* r, uint32_t n)
+{
+  static const int step[6] = { 1, -1, 2, -2, 3, -3 };
+  int moved = 0;
+  for (uint32_t i = 0; i < n; i++) {
+    if (!euro_day(r[i].day)) continue;
+    for (int k = 0; k < 6; k++) {
+      uint32_t d = (uint32_t)(((int)r[i].day + 365 + step[k]) % 365);
+      if (euro_day(d)) continue;
+      if (i && season_pos(d) <= season_pos(r[i - 1].day)) continue;
+      if (i + 1 < n && season_pos(d) >= season_pos(r[i + 1].day)) continue;
+      r[i].day = d; moved++; break;
+    }
+  }
+  return moved;
+}
+static void declash_log(uint16_t id, int moved)
+{
+  static uint16_t said[64]; static int nsaid = 0;
+  if (!moved) return;
+  for (int k = 0; k < nsaid; k++) if (said[k] == id) return;
+  if (nsaid < 64) said[nsaid++] = id;
+  logf("fl26swiss: reg %u -- %d league round(s) moved off European days", (unsigned)id, moved);
+}
+
 static void league_dates(uint16_t id, uint64_t reg, void* vec)
 {
   unsigned char* rec = get_rec(id);
@@ -3815,7 +3864,8 @@ static void league_dates(uint16_t id, uint64_t reg, void* vec)
   uint32_t clubs = *(uint32_t*)(rec + 0x30c) & 0x7f, legs = *(uint32_t*)(rec + 0x308) >> 29;
   uint32_t n = (clubs & 1 ? clubs : clubs - 1) * legs;
   int cy = calyear(id), eu = eudate(id);
-  if (clubs < 4 || !legs || (n == have && !cy && !eu)) return;
+  if (clubs < 4 || !legs) return;
+  if (n == have && !cy && !eu) { declash_log(id, declash((date_t*)v->b, n)); return; }
   static uint16_t said[64]; static int nsaid = 0; int seen = 0;
   for (int k = 0; k < nsaid; k++) if (said[k] == id) seen = 1;
   if (!seen && nsaid < 64) said[nsaid++] = id;
@@ -3851,6 +3901,7 @@ static void league_dates(uint16_t id, uint64_t reg, void* vec)
   }
   memcpy(r, tmp, n * sizeof(date_t));
   v->e = v->b + (size_t)n * sizeof(date_t);
+  declash_log(id, declash(r, n));
   if (!seen)
     logf("fl26swiss: reg %u -- %u clubs x %u = %u rounds, calendar resampled from %u dates (days %u..%u, shift %d)",
          (unsigned)id, clubs, legs, n, (unsigned)have, r[0].day, r[n - 1].day, (int)shift);
@@ -4081,6 +4132,7 @@ static uint64_t split_dates(uint16_t id, uint64_t reg, void* vec, int part, cons
     r[i].kind = FL26_DATE_KIND_LEAGUE;
   }
   v->e = v->b + (size_t)n * sizeof(date_t);
+  declash_log(id, declash(r, n));
   if (!seen)
     logf("fl26swiss: reg %u -- split %s of %u: %u rounds on days %u..%u (season %u+%u on a %u-date line)",
          (unsigned)id, part == 2 ? "regular phase" : "group", (unsigned)s->total, n,
@@ -4327,6 +4379,38 @@ static int cupsel_install(uint64_t exe_base)
   *slot = (uint64_t)(uintptr_t)cupsel_handler;
   VirtualProtect(slot, 8, old, &old);
   return 0;
+}
+
+/* ---- the league phase's matchday label (GitHub #75) ----
+ *
+ * The label a match shows ("Matchday %d") is its matchday index plus one, built by
+ * 0x14152a590(out, u16* reg, u32* md, u32* leg, u8, u8) for every screen (19 UI callers go
+ * through 0x14152af20). Our league phase splits each of UEFA's rounds over two matchdays (16
+ * for 36 clubs, 12 for the Conference League), so a club that plays the first half of every
+ * round read 1, 3, 5, ... The label gets half the index -- both halves of a round read the
+ * same round. Only the label: the index itself is the key that ties a match to its fixture
+ * record and its date, and stays as it is. Replicas (reg + k*0x400) are ours too; a cup round
+ * (index 0x2e and up) is left alone. */
+#define MDLABEL_RVA 0x152a590
+static const unsigned char SIG_MDLABEL[17] = {
+  0x40,0x55, 0x56, 0x57, 0x41,0x54, 0x41,0x55, 0x41,0x56, 0x41,0x57, 0x48,0x8d,0x6c,0x24,0xe0 };
+typedef void* (*mdlabel_fn)(void* out, uint16_t* reg, uint32_t* md, uint32_t* leg, uint8_t a5, uint8_t a6);
+unsigned char* g_tramp_mdlabel = 0;
+/* our rows are themselves replicas (1027 = 3 + 0x400), so masking only the id never matched;
+ * compare the low ten bits on both sides and stay above the shipped base row */
+static int ours_rep(uint16_t id)
+{
+  if (id < 0x400) return 0;
+  for (int i = 0; i < g_nreg; i++) if ((g_reg[i] & 0x3ff) == (id & 0x3ff)) return 1;
+  return 0;
+}
+void* mdlabel_handler(void* out, uint16_t* reg, uint32_t* md, uint32_t* leg, uint8_t a5, uint8_t a6)
+{
+  if (reg && md && *md < FL26_SWISS36_MATCHDAYS && ours_rep(*reg)) {
+    uint32_t m = *md / 2;
+    return ((mdlabel_fn)g_tramp_mdlabel)(out, reg, &m, leg, a5, a6);
+  }
+  return ((mdlabel_fn)g_tramp_mdlabel)(out, reg, md, leg, a5, a6);
 }
 
 /* ---- install ---- */
@@ -4741,6 +4825,10 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
     logf("fl26swiss: league-phase header live (@%llx)", (unsigned long long)(exe_base + GNAME_RVA));
   else
     logf("fl26swiss: league-phase header NOT installed (signature)");
+  if (!hook((unsigned char*)(uintptr_t)(exe_base + MDLABEL_RVA), SIG_MDLABEL, 17, (void*)mdlabel_handler, &g_tramp_mdlabel))
+    logf("fl26swiss: league-phase matchday labels live (@%llx: 1..8, not 1..16)", (unsigned long long)(exe_base + MDLABEL_RVA));
+  else
+    logf("fl26swiss: league-phase matchday labels NOT installed (signature)");
   if (!cupsel_install(exe_base))
     logf("fl26swiss: Cup mode list live (no league phase of 36 in Kick Off > Cup)");
   else
