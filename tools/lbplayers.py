@@ -822,10 +822,7 @@ def _write(players, assigns, po, ao, ch):
     E.natural(rec, old)
     name = str(ch.get("name", "")).strip()
     if name:
-        nm = name.encode("utf-8")
-        for k in range(E.P_NAME_SLOTS):
-            at = E.P_NAME + k * E.P_NAME_LEN
-            rec[at:at + E.P_NAME_LEN] = nm + bytes(E.P_NAME_LEN - len(nm))
+        rec[E.P_NAME:E.P_NAME + E.P_NAME_LEN * E.P_NAME_SLOTS] = E.name_slots(name)
     players[po:po + P_REC] = rec
     pack = u32(assigns, ao + E.A_PACK)
     if str(ch.get("shirt", "")).strip().isdigit():

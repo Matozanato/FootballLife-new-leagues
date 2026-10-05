@@ -206,6 +206,16 @@ static int split(const char* name, const char* shirt, char* given, char* family,
   fold(sp + 1, ft, sizeof ft);
   fold(head, fh, sizeof fh);
   if (strchr(head, '.') || strchr(sp + 1, '.')) return -1;
+  if (!ft[0] || !fh[0]) return -1;             /* "Tahj ": a trailing space is no family name */
+  /* "Duje Čop" in the shirt slot too, letter for letter: a player a world wrote (Mod Studio
+     before 0.1.8 put the whole name in all four slots). The game's own shirts are capitals, so
+     this is no family-first shirt; read it given-first, or 431 such Croats tip Croatia over and
+     every Croatian regen comes out "Ivan Duje". The shirt we keep is the family name. */
+  if (!strcmp(name, shirt)) {
+    copy_field(given, head, NAME_LEN); copy_field(family, sp + 1, NAME_LEN);
+    *whole = 2;
+    return 0;
+  }
   if (!strcmp(ft, fs)) { copy_field(given, head, NAME_LEN); copy_field(family, sp + 1, NAME_LEN); return 0; }
   if (!strcmp(fh, fs)) { copy_field(family, head, NAME_LEN); copy_field(given, sp + 1, NAME_LEN); return 1; }
   /* "Wu Lei", shirt WU LEI: the whole name on the shirt. In China and Korea that is the rule,
@@ -240,6 +250,7 @@ static void build_pools(unsigned char* blk, uint32_t n)
     int w1;
     int o = split(name, shirt, e[k].given, e[k].family, &w1);
     if (pass == 0) { if (o == 0) first[nat]++; else if (o == 1 || w1) last[nat]++; continue; }
+    if (w1 == 2) fold(e[k].family, shirt, NAME_LEN);   /* KOVACIC, as the game spells a shirt */
     int own = last[nat] > first[nat];
     if (o < 0) {
       if (!w1 || !own) continue;

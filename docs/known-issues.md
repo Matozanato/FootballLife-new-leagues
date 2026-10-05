@@ -346,6 +346,16 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-05 (Mod Studio 0.1.8, fl26regen, Discord): **regens of a country full of imported
+  players got a first name for a surname: a dozen Polish regens all called "Tahj".** Mod Studio
+  wrote a player's whole name into all four name slots, the shirt name too. The regen module
+  reads a shirt that is the whole name ("WU LEI") as a family-first country's, so a country with
+  more imported players than game players (Croatia with an imported HNL, Poland in NewLife) was
+  taken as family-first: the regens got another player's first name on the shirt and on screen.
+  The module now reads such a player given-first, and Mod Studio writes the family name in
+  capitals into the shirt slots, as the game does ("Luka Modrić" -> MODRIĆ). Regens already
+  named keep their names until the season is loaded again; then they get the right ones.
+
 - 2026-10-04 (Mod Studio 0.1.8, GitHub issue #86): **a new division under the Saudi Pro League
   started its season in February, though the League window said "August to May".** The game
   plays Saudi Arabia, like Brazil, Argentina, Colombia, China, Chile and Japan, from February to

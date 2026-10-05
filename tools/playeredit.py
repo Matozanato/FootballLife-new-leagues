@@ -146,6 +146,26 @@ def cstr(b):
     return b.split(b"\x00", 1)[0].decode("utf-8", "replace")
 
 
+def _slot(s):
+    """s as one zero-padded name slot, cut on a whole UTF-8 letter"""
+    b = s.encode("utf-8")[:P_NAME_LEN - 1]
+    return b.decode("utf-8", "ignore").encode("utf-8").ljust(P_NAME_LEN, b"\x00")
+
+
+def name_slots(name):
+    """the four name slots of a player called `name`, as bytes
+
+    The full name, then the shirt name twice, then the full name again. The shirt name is the
+    family name in capitals, the way the game spells its own players' ("Luka Modrić" ->
+    MODRIĆ). Before 0.1.8 the whole name went into all four; fl26regen read a shirt that
+    is the whole name as a family-first country's, and 431 such Croats were enough to give
+    every Croatian regen a first name on his back.
+    """
+    name = name.strip()
+    shirt = (name.split(" ", 1)[1] if " " in name else name).upper()
+    return _slot(name) + _slot(shirt) * 2 + _slot(name)
+
+
 def getf(rec, name):
     b, w, add = FIELDS[name]
     return (int.from_bytes(rec, "little") >> b & ((1 << w) - 1)) + add
@@ -361,10 +381,7 @@ def main():
             setf(rec, n, v)
         natural(rec, old)
         if name and name != cstr(rec[P_NAME:P_NAME + P_NAME_LEN]).strip():
-            nm = name.encode("utf-8")
-            for k in range(P_NAME_SLOTS):
-                at = P_NAME + k * P_NAME_LEN
-                rec[at:at + P_NAME_LEN] = nm + bytes(P_NAME_LEN - len(nm))
+            rec[P_NAME:P_NAME + P_NAME_LEN * P_NAME_SLOTS] = name_slots(name)
         players[o:o + P_REC] = rec
         if nums and pid in slot:
             at = slot[pid] + A_PACK

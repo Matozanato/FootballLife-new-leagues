@@ -101,10 +101,7 @@ class World:
             E.setf(rec, n, v)
         E.natural(rec, old)
         if name != self.name(pid):
-            nm = name.encode("utf-8")
-            for k in range(E.P_NAME_SLOTS):
-                at = E.P_NAME + k * E.P_NAME_LEN
-                rec[at:at + E.P_NAME_LEN] = nm + bytes(E.P_NAME_LEN - len(nm))
+            rec[E.P_NAME:E.P_NAME + E.P_NAME_LEN * E.P_NAME_SLOTS] = E.name_slots(name)
         if rec != self.players[o:o + E.P_REC]:
             self.players[o:o + E.P_REC] = rec
             self.dirty = True
