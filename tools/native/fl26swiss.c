@@ -574,6 +574,7 @@ static const int KO_ORDER[KO_N] = { 0, 15, 7, 8, 3, 12, 4, 11, 1, 14, 6, 9, 2, 1
 
 static int cwc_world(void);
 static char cwc_setcl(uint64_t id, u32vec* list, uint64_t flag);
+static void cwc_game_champions(u32vec* list);
 static uint32_t canon_club(uint32_t h);
 static const char* club_note(uint32_t h, char* buf, size_t cap);
 typedef struct split_s split_t;
@@ -583,6 +584,7 @@ char setcl_handler(uint64_t id, u32vec* list, uint64_t flag)
 {
   uint16_t r = (uint16_t)id, row = ko_row(r);
   if (r == 1 && cwc_world()) return cwc_setcl(id, list, flag);
+  if (r == 1 && list && list->b && list->e > list->b) cwc_game_champions(list);
   if (is_playoff(r)) { char ok; if (q_setcl(r, id, flag, &ok)) return ok; }
   /* A group of one of our splits is handed the regular phase's table rows by 0x141343d70, which
      starts it straight after (0x141343af0: set_clubs, then 0x141590420): the values are put
@@ -2391,6 +2393,53 @@ static uint32_t cwc_club(uint16_t reg, int rank, const char** how)
   return (uint32_t)rank <= rec_count(rec) ? rec_clubs(rec)[rank - 1] : 0;
 }
 
+/* The game's own Club World Cup (a world without the 32): its field comes from the game's
+ * pools, and the CAF champion of a world that builds the CAF Champions League never reaches it
+ * (GitHub #70: no African club at all). The champion of each continental cup of ours that the
+ * league champions go to takes the place of the first entrant of its confederation's
+ * countries -- for the CAF ones Country.bin +5 == 5, flag ids 44..95, 98, 312 -- else of the
+ * last entrant. The field the game offered is logged once a season, club, slot and country. */
+#define MAX_CCUP_FWD 8   /* MAX_CCUP, defined with the continental cups below */
+static int ccup_champions(uint32_t* out, int max, uint16_t* cup);
+static int caf_country(int f) { return (f >= 44 && f <= 95) || f == 98 || f == 312; }
+static void cwc_game_champions(u32vec* list)
+{
+  uint32_t cw[MAX_CCUP_FWD]; uint16_t cc[MAX_CCUP_FWD];
+  int nw = ccup_champions(cw, MAX_CCUP_FWD, cc);
+  size_t n = (size_t)(list->e - list->b);
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  void* blk = o ? *(void**)(o + 0x48) : 0;
+  static int said_year = -1;
+  int y = abs_day() / 365;
+  if (said_year != y && blk) {
+    said_year = y;
+    logf("fl26swiss: Club World Cup (the game's) -- day %d, %u club(s) offered, %d champion(s) of ours", today(),
+         (unsigned)n, nw);
+    for (size_t i = 0; i < n && i < 40; i++) {
+      unsigned char* t = ((teamget_fn)(uintptr_t)(g_base + TEAMGET_RVA))(blk, list->b[i]);
+      int ok = t && *(uint32_t*)t >> 14 == list->b[i] >> 14;
+      logf("fl26swiss:   entrant %2u: %08x slot %d country %d", (unsigned)i, list->b[i], ok ? t[0x41c] & 0x7f : -1,
+           ok ? *(uint16_t*)(t + 0x418) & 0x1ff : -1);
+    }
+  }
+  if (!blk) return;
+  for (int k = 0; k < nw; k++) {
+    if (has_club(list->b, n, cw[k])) continue;
+    size_t at = n;
+    for (size_t i = 0; i < n && at == n; i++) {
+      unsigned char* t = ((teamget_fn)(uintptr_t)(g_base + TEAMGET_RVA))(blk, list->b[i]);
+      int mine = 0;
+      for (int j = 0; j < nw; j++) if (list->b[i] == cw[j]) mine = 1;
+      if (!mine && t && *(uint32_t*)t >> 14 == list->b[i] >> 14 && caf_country(*(uint16_t*)(t + 0x418) & 0x1ff)) at = i;
+    }
+    const char* how = "an African entrant";
+    if (at == n) { at = n - 1; how = "the last entrant, no African one offered"; }
+    logf("fl26swiss: Club World Cup (the game's) -- winner of cup %u %08x in place of %08x (%s)", (unsigned)cc[k], cw[k],
+         list->b[at], how);
+    list->b[at] = cw[k];
+  }
+}
+
 static uint32_t g_cwc[CWC_N];
 static int cwc_add(unsigned* n, uint32_t c)
 {
@@ -2412,8 +2461,14 @@ static char cwc_setcl(uint64_t id, u32vec* list, uint64_t flag)
   unsigned n = 0, gaps = 0, game = 0;
   const size_t POT3 = 24;
   for (size_t i = 0; i < sizeof CWC_ACCESS / sizeof CWC_ACCESS[0]; i++) {
-    if (i == POT3)                                   /* the game's own entrants open pot 4 */
+    if (i == POT3) {                                 /* the game's own entrants open pot 4, */
+      uint32_t cw[MAX_CCUP_FWD]; uint16_t cc[MAX_CCUP_FWD];   /* after the champions of our */
+      int nw = ccup_champions(cw, MAX_CCUP_FWD, cc);           /* continental cups (#70)      */
+      for (int k = 0; k < nw; k++)
+        if (cwc_add(&n, cw[k]))
+          logf("fl26swiss:   Club World Cup %2u: winner of cup %u -> %08x", n, (unsigned)cc[k], cw[k]);
       for (size_t k = 0; k < offered; k++) if (cwc_add(&n, list->b[k])) game++;
+    }
     const char* how = "";
     uint32_t c = 0;
     for (int rank = CWC_ACCESS[i].rank; rank <= FINAL_MAX; rank++) {
@@ -2566,6 +2621,7 @@ static uint64_t cwc_dates(uint16_t id, uint64_t reg, void* vec)
  * winners are kept at the July teardown, before our cups are closed, as the UEFA holders are
  * (access_capture); a cup nobody has won yet (a new career) leaves the super cup unfilled. */
 #define MAX_CCUP 8
+_Static_assert(MAX_CCUP == MAX_CCUP_FWD, "the Club World Cup sizes its list of champions by MAX_CCUP_FWD");
 #define CCUP_MAX_GROUPS 8
 #define CCUP_MAX_ENTRY 32
 #define CCUP_MAX_DAYS 8
@@ -3060,6 +3116,32 @@ static void ccup_keep_winners(void)
       w->day = ad; w->club = c;
       logf("fl26swiss: cup reg %u won by %08x (day %d), kept for cup %u", (unsigned)reg, c, d, (unsigned)g_ccup[k].ko);
     }
+  for (int k = 0; k < g_nccup; k++) {                 /* and the champions, for the Club World Cup */
+    if (g_ccup[k].national || ccup_tier(&g_ccup[k])) continue;
+    uint16_t reg = g_ccup[k].ko;
+    cupwin_t* w = cupwin_of(reg);
+    if (w && ad >= w->day && ad - w->day < 60) continue;
+    uint32_t c = winner_now(reg);
+    if (!c) continue;
+    if (!w) { if (g_ncupwin >= 32) continue; w = &g_cupwin[g_ncupwin++]; w->reg = reg; }
+    w->day = ad; w->club = c;
+    logf("fl26swiss: cup %u won by %08x (day %d), kept for the Club World Cup", (unsigned)reg, c, d);
+  }
+}
+/* the Club World Cup's African (Asian ...) champions: the last winner of each continental cup of
+   ours the league champions go to, kept at the July teardown (ccup_keep_winners) -- the draw is
+   in late November, the final in May, so it is last season's, as the UEFA winners are. A new
+   career has none yet: the game's own entrants stand in. */
+static int ccup_champions(uint32_t* out, int max, uint16_t* cup)
+{
+  int n = 0, ad = abs_day();
+  for (int k = 0; k < g_nccup && n < max; k++) {
+    if (g_ccup[k].national || ccup_tier(&g_ccup[k])) continue;
+    cupwin_t* w = cupwin_of(g_ccup[k].ko);
+    if (!w || ad < w->day || ad - w->day > 300 || !(w->club >> 14)) continue;
+    cup[n] = g_ccup[k].ko; out[n++] = w->club;
+  }
+  return n;
 }
 static int ccup_fill(void* started)
 {

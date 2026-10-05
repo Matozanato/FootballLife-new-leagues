@@ -371,6 +371,14 @@ calendar.
   Wednesdays. Confirm: a world with the CAF cups, Competition Info calendar of the CAF Champions
   League: Tuesdays; Confederation Cup: Wednesdays.
 
+- 2026-10-06 (Mod Studio 0.1.8, fl26swiss, GitHub #70): **the Club World Cup had no club from
+  Africa or Asia when the world builds its own continental cups.** The winner of each continental
+  champions' cup of the world (CAF Champions League, AFC Champions League of ours) is kept past
+  the July teardown and goes into the Club World Cup: into our 32-club one, and into the game's
+  own, where it takes the place of an entrant from that confederation. Checked in game: season 2,
+  day 332, the CAF Champions League winner went into the game's Club World Cup in place of an
+  African entrant.
+
 - 2026-10-05 (Mod Studio 0.1.8, fl26swiss): **the first-season European clubs picked in Mod
   Studio were not taken in a career in a January league (China, Japan ...).** Such a career is
   built on day 0, and the final table the game keeps from its first half-year made the module
