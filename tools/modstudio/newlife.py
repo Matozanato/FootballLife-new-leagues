@@ -308,6 +308,31 @@ def _movers(recipe, info):
     return mover, db
 
 
+_NAMES = {}
+
+
+def stand_in_name(rel, i, n):
+    """a name for prototype player n who stays at NewLife club i (the release has too few
+    players for it): a first name and a surname of two other players of its league, always the
+    same two for the same place, so no "FL P00151" plays in a real club's squad"""
+    league = (rel.clubs.get(i) or {}).get("league") or ""
+    key = (id(rel), league)
+    if key not in _NAMES:
+        names = [r.get("name", "").split() for j in sorted(rel.clubs, key=str)
+                 if (rel.clubs[j].get("league") or "") == league for r in rel.squad(j)]
+        _NAMES[key] = ([x[0] for x in names if len(x) >= 2], [x[-1] for x in names if len(x) >= 2],
+                       {" ".join(x) for x in names})
+    firsts, lasts, real = _NAMES[key]
+    if not firsts:
+        return None
+    h = int(str(i)) * 131 + n * 7919 if str(i).isdigit() else n * 7919
+    for t in range(8):                    # not the name of a real player of the league
+        name = "%s %s" % (firsts[(h + t) % len(firsts)], lasts[(h // 7 + 3 + 5 * t) % len(lasts)])
+        if name not in real:
+            break
+    return name
+
+
 def _club_players(rel, i, mover, proto, league_ovr):
     """(the recipe's players entry for NewLife club i, players kept at their game club, players
     left out because another league has them): its squad from the release, see add_league"""
@@ -341,6 +366,9 @@ def _club_players(rel, i, mover, proto, league_ovr):
     for n in range(len(ed) - len(join), keep):              # prototype players who stay
         if n < len(proto) and want is not None and str(n) not in ed:
             ed[str(n)] = P.at_level(proto[n], want)
+            name = stand_in_name(rel, i, n)
+            if name:
+                ed[str(n)]["name"] = name
     c = {"edits": ed}
     if join:
         c["join"] = join

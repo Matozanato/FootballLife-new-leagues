@@ -567,8 +567,31 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
     first = {key: [pid for _o, pid, _a in squad_of(tid)] for key, tid in tids.items()}
     added_ids = {}                                     # club -> [id of each "add" entry]
 
+    # the recipe keys a new club by its league's name as Mod Studio wrote it, the plan by the
+    # name Build uses (stripped): a stray space or a change of case left a whole NewLife club
+    # on its placeholder squad ("FL P00151" ..., Discord 05.10.)
+    loose = {}
+    for key, tid in tids.items():
+        lg, _s, k = key.rpartition("/")
+        loose[(lg.strip().casefold(), k)] = tid
+
     def club_tid(club):
-        return int(club) if club.isdigit() else tids.get(club)
+        if club.isdigit():
+            return int(club)
+        if club in tids:
+            return tids[club]
+        lg, _s, k = club.rpartition("/")
+        return loose.get((lg.strip().casefold(), k.strip()))
+
+    built = {club_tid(club) for club in changes}
+    for p in pl["leagues"]:
+        nl = (p.get("newlife") or {}).get("clubs") or []
+        names = p.get("club_names") or []
+        for k, tid in enumerate(p.get("teams") or []):
+            if k < len(nl) and int(nl[k] or 0) and tid not in built:
+                log("  NOTE: %s (%s, a NewLife club) has no squad in the recipe and plays with "
+                    "placeholder players -- on the NewLife page, update or add %s again"
+                    % (names[k] if k < len(names) and names[k] else "club %d" % (k + 1), p["name"], p["name"]))
 
     # the players named in "join" lists, found before anything moves: a new club's player by
     # his place in its squad as mkplayers left it

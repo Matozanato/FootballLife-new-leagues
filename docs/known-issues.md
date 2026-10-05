@@ -341,6 +341,18 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-05 (Mod Studio 0.1.8, Discord): **a NewLife club played with the placeholder squad --
+  players called "FL P00151" ... rated like a top club -- although the NewLife Database has its
+  players** (CS Gloria Bistrita, Romanian Second League). Build matched a club's players to it
+  by the league's name exactly as Mod Studio wrote it, so a league whose name differed by a
+  space or a capital letter from the one Build uses left all its clubs on placeholders, and
+  said so only in a quiet log line. Build now matches the name loosely and writes a NOTE for
+  every NewLife club that still has no squad ("update or add the league again on the NewLife
+  page"). The placeholder players a NewLife club keeps because the release has fewer than 18
+  players for it now get a name made from a first name and a surname of their league's
+  players instead of "FL Pnnnnn". Confirm: add a NewLife league with small squads, Build, start
+  a career: no "FL P" name in its clubs.
+
 - 2026-10-05 (Mod Studio 0.1.8, fl26swiss, Discord): **a club in Europe played three matches in
   four days (league on Saturday, Champions League on Monday or Thursday, league again two days
   later), and the result screen of a European league-phase match read "Group stage".** The
