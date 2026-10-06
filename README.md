@@ -410,6 +410,11 @@ Reports are welcome from anyone: open an
 [issue](https://github.com/Matozanato/FootballLife-new-leagues/issues) with what you
 installed, what you did and what you saw, and you will be on this list too.
 
+### Supporters
+
+- **Thunder105**: the first person ever to support this project on
+  [Ko-fi](https://ko-fi.com/mata28). Thank you!
+
 ## Free to use — please credit
 
 Everything in this repository is **free**, and it stays free. MIT licence: use it, change
@@ -645,6 +650,9 @@ crash dumps went into it, and there is more to do (the crashes in the game's pro
 the African leagues' League Info panel, more competitions and formats). If you want to help it
 along: **[ko-fi.com/mata28](https://ko-fi.com/mata28)**. Testing and good bug reports help just
 as much — see the [testing guide](docs/testing-guide.md).
+
+Thank you to everyone who has: **Thunder105** was the first. Supporters are listed under
+[The people who made this better](#supporters).
 
 ## Licence and credits
 
