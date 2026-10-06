@@ -84,6 +84,12 @@ is not 8, 16, 32 or 64 some clubs get a bye in the first round. With more than 4
 keeps the top division alone. A third division does not change anything: the cup only ever
 looks at the first two.
 
+**Why does my cup have 20 clubs when my two divisions have 22?** The game's cup screens can
+draw a bracket of 2 to 16, 18, 20, 24, 28, 30 or 32 clubs and nothing in between; a cup of 22
+crashed them (#74). So the cup takes the largest of those sizes: the whole top division and the
+first clubs of the one below. A field of 33 to 43 clubs becomes 32 (#95). *Check the plan* says
+so on the cup's line. This is on purpose, not a bug.
+
 Two other cups have no such limit:
 - **League cup** (the tick under the national cup): a knockout of 16, 8 or 4 clubs of the top
   division and the one below, September to December. The clubs past that play a pre-round in

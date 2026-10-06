@@ -2439,8 +2439,11 @@ def describe(pl):
                          % (p["name"], f[0], f[1], f[2]))
         c = p.get("own_cup")
         if c:
+            total = p["clubs"] + sum(q["clubs"] for q in pl["leagues"] if c.get("below") and q.get("rid") == c["below"])
             lines.append("  %s: national cup of %d clubs (a cup of its own; its rounds and dates follow %s)%s" % (
-                c["name"], c["clubs"], c["like"], ", the top division only" if c["keep_top"] else ""))
+                c["name"], c["clubs"], c["like"], ", the top division only" if c["keep_top"] else
+                ", not all %d of the two divisions: the cup screens draw only some field sizes" % total
+                if c["clubs"] < total else ""))
             if c.get("super"):
                 lines.append("  %s: super cup, the champion v the cup winner (its date follows %s)"
                              % (c["super"], SUPER_CUP_LIKE))
@@ -2882,10 +2885,12 @@ def build(pl, base, game, replace=False, log=print):
             if up["own_cup"]["clubs"] < up["clubs"]:
                 L["cupn"] = up["own_cup"]["clubs"]     # and to a field the bracket screen draws (#74)
         c = p.get("own_cup")
-        if c and c.get("reg") and not c["keep_top"] and c["clubs"] < p["clubs"] + (below["clubs"] if below else 0):
+        if c and c.get("reg") and not c["keep_top"] and (below or c["clubs"] < p["clubs"]):
             # the game fills the cup from both leagues whatever its entry list says, so fl26chain
             # writes the top league's clubs and the first ones below, a field the bracket screen
-            # draws (#74: a cup of 22 crashed Competition Info -> Fixtures)
+            # draws (#74: a cup of 22 crashed Competition Info -> Fixtures). Also when the two
+            # leagues fill the bracket exactly (20 + 12 = 32): left alone, a split top league put
+            # only its own 20 into the cup of 32
             L["cup"], L["cuptop"], L["cuplow"], L["cupall"] = c["reg"], p["rid"], below["rid"] if below else 0, 1
             L["cupn"] = c["clubs"]
     uefa, over = fl26world.uefa_places(all_places(pl),
