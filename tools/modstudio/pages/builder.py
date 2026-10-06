@@ -41,6 +41,12 @@ def database_note(project):
              "game tables to its common\\etc\\pesdb folder and build again.") % (", ".join(mods), ", ".join(mods))
 
 
+# the game's groups of clubs in no league (leaguebuilder.OTHERS), as Select Team names them
+def others_labels():
+    return {"europe": _("Other European teams"), "latam": _("Other Latin American teams"),
+            "asia": _("Other Asia-Oceania teams"), "africa": _("Other Africa teams"), "classic": _("Classic Teams")}
+
+
 def exhibition_note(pl):
     """a warning for the build log when the world has exhibition leagues: the game's team list
     for a new Master League career is the one Kick Off uses, so their clubs are in it"""
@@ -406,9 +412,21 @@ class LeagueDialog(Dialog):
         self.country.completer().setFilterMode(Qt.MatchContains)      # "korea" finds both
         self.form.addRow(_("Country"), self.country)
         self.clubs = QSpinBox()
-        self.clubs.setRange(B.CLUBS_MIN, B.CLUBS_MAX)
+        self.clubs.setRange(1 if L.get("others") else B.CLUBS_MIN, B.OTHERS_MAX if L.get("others") else B.CLUBS_MAX)
         self.clubs.setValue(L.get("clubs", 12))
         self.form.addRow(_("Clubs"), self.clubs)
+        self.others = QComboBox()
+        self.others.addItem(_("(no -- a league)"), None)
+        for k, t in others_labels().items():
+            self.others.addItem(t, k)
+        self.others.setCurrentIndex(max(0, self.others.findData(L.get("others"))))
+        self.form.addRow(_("Clubs in no league"), row(self.others, helpmark(
+            "For one club, or a few, without a league around them: say only BATE Borisov from Belarus. They "
+            "go in the game's Other ... teams in Select Team, where the game keeps its own clubs that play in "
+            "no league (Dynamo Kyiv, Wydad Casablanca ...). They get names, crests, kits, a manager and players "
+            "like any new club; the name above is only how Mod Studio lists them.")))
+        self.form.addRow("", hint(_("one club or a few without a league: they go in the game's Other ... teams, "
+                                    "next to its own clubs that play in no league; 1 to %d clubs") % B.OTHERS_MAX))
 
         sp = L.get("split") or {}
         self.rr = QRadioButton(_("everyone plays everyone, times:"))
@@ -447,7 +465,7 @@ class LeagueDialog(Dialog):
         self.above = QComboBox()
         self.above.addItem(_("(top division)"), None)
         for x in project.recipe["leagues"]:
-            if x is not league:
+            if x is not league and not x.get("others"):
                 self.above.addItem(x["name"], x["name"])
         for r, n in project.parents:
             self.above.addItem("%s  [%d]" % (n, r), r)
@@ -549,14 +567,18 @@ class LeagueDialog(Dialog):
         self.country.currentTextChanged.connect(
             lambda t: self.europe.set_confed(project.confeds.get(B.country_of(t, project.countries))))
         self.exhibition.toggled.connect(lambda _on: self.exhibition_state())
+        self.others.currentIndexChanged.connect(lambda _i: self.exhibition_state())
         self.exhibition_state()
+
+    def is_others(self):
+        return self.others.currentData() is not None
 
     def season_follows(self):
         """the season box of a division below another shows the season it really gets, the one of
         the league above: a division under the Saudi Pro League or the J1 League plays February
         to December with it (GitHub #86), whatever the box said before"""
         top = self.above.currentData() is None
-        self.season.setEnabled(top and not self.exhibition.isChecked())
+        self.season.setEnabled(top and not self.exhibition.isChecked() and not self.is_others())
         if top:
             own = str(self.league.get("season") or "august")
         else:
@@ -580,8 +602,19 @@ class LeagueDialog(Dialog):
         return B.country_of(self.country.currentText(), self.project.countries)
 
     def exhibition_state(self):
-        """an exhibition league stands alone: the division, the cups, Europe and a split go grey"""
-        on = self.exhibition.isChecked()
+        """an exhibition league stands alone: the division, the cups, Europe and a split go grey;
+        clubs in no league have none of a league's things at all"""
+        loose = self.is_others()
+        if loose:
+            self.exhibition.setChecked(False)
+        for w in (self.exhibition, self.rr, self.legs, self.slegs, self.groups, self.glegs, self.exchange,
+                  self.logo, self.cup_name, self.lcup_name, self.cup_logo, self.supercup_logo,
+                  self.lcup_logo, self.po_logo):
+            w.setEnabled(not loose)
+        n = self.clubs.value()
+        self.clubs.setRange(1 if loose else B.CLUBS_MIN, B.OTHERS_MAX if loose else B.CLUBS_MAX)
+        self.clubs.setValue(n)
+        on = self.exhibition.isChecked() or loose
         if on:
             self.above.setCurrentIndex(0)
             self.rr.setChecked(True)
@@ -689,17 +722,32 @@ class LeagueDialog(Dialog):
         if clash:
             error(self, "League", _("There is already a league called %s.") % L["name"])
             return
-        if self.exhibition.isChecked():
-            below = [x["name"] for x in self.project.recipe["leagues"]
-                     if x is not self.orig and self.orig is not None and x.get("above") == self.orig.get("name")]
+        below = [x["name"] for x in self.project.recipe["leagues"]
+                 if x is not self.orig and self.orig is not None and x.get("above") == self.orig.get("name")]
+        if self.is_others():
+            if below:
+                error(self, "League", _("%s is below this league; clubs in no league have none.") % below[0])
+                return
+            if L.get("game_clubs"):
+                error(self, "League", _("Clubs in no league are all new clubs: take the clubs of the game "
+                                        "out first (Edit club)."))
+                return
+            for k in ("above", "cup", "supercup", "league_cup", "split", "apertura", "europe", "season",
+                      "exhibition", "legs", "exchange", "logo", "cup_name", "league_cup_name", "cup_logo",
+                      "supercup_logo", "league_cup_logo", "playoff_logo"):
+                L.pop(k, None)
+            L["others"] = self.others.currentData()
+        elif self.exhibition.isChecked():
             if below:
                 error(self, "League", _("%s is below this league; an exhibition league has none.") % below[0])
                 return
             for k in ("above", "cup", "supercup", "league_cup", "split", "apertura", "europe", "season"):
                 L.pop(k, None)
             L["exhibition"] = True
+            L.pop("others", None)
         else:
             L.pop("exhibition", None)
+            L.pop("others", None)
         self.accept()
 
 
@@ -1226,7 +1274,7 @@ class PreseasonDialog(Dialog):
                      for c in project.recipe.get("preseason_cups") or []]
         self.new_clubs = [("%s/%d" % (L["name"], k), B.club_name(
             {"name": L["name"], "club_names": list(L.get("club_names") or [])}, k))
-            for L in project.recipe["leagues"] for k in range(int(L.get("clubs", 0)))]
+            for L in project.recipe["leagues"] if not L.get("others") for k in range(int(L.get("clubs", 0)))]
         self.v.addWidget(hint(_("A knockout of 4 or 8 clubs in July, before the season: first v second, "
                                 "third v fourth ... At least one club of a new league, whose country hosts "
                                 "it. A club of the game (type its id) must play in a league that season.")))
@@ -1562,7 +1610,7 @@ class EuropeFirstDialog(Dialog):
         info = B.game_info(project.base)
         self.labels = {}
         for L in project.recipe["leagues"]:
-            for k in range(int(L.get("clubs", 0))):
+            for k in range(int(L.get("clubs", 0)) if not L.get("others") else 0):
                 ref = "%s/%d" % (L["name"], k)
                 self.labels[ref] = "%s  (%s)" % (B.club_name(
                     {"name": L["name"], "club_names": list(L.get("club_names") or [])}, k), L["name"])
@@ -1981,8 +2029,11 @@ class NewLeagues(BuilderPage):
             # (Amir, 2026-09-28: a second division added after the build, blank id, "the game
             # reads only the first league"). Say so rather than leave the cell empty.
             cid = str(b["cid"]) if b.get("cid") is not None else (_("not built yet") if plan else "")
+            fmt = fmt_text(L)
+            if L.get("others"):              # clubs in no league: no competition, no id, no division
+                cid, div, fmt = "", _("no league"), others_labels().get(L["others"], L["others"])
             it = QTreeWidgetItem([L["name"], cid,
-                                  L.get("country", ""), str(L.get("clubs", "")), fmt_text(L), div,
+                                  L.get("country", ""), str(L.get("clubs", "")), fmt, div,
                                   str(L.get("exchange", 3)) if up not in (None, "") else "", europe_text(L),
                                   str(n) if n else ""])
             if b.get("rid") is not None:
@@ -2022,6 +2073,9 @@ class NewLeagues(BuilderPage):
                        "the game's own leagues, use Add league and pick it at Division."), "warn")
             return
         up = self.project.recipe["leagues"][i]
+        if up.get("others"):
+            self.say(_("%s is clubs in no league: nothing goes under it.") % up["name"], "warn")
+            return
         new = {"country": up.get("country", ""), "clubs": up.get("clubs", 12), "legs": up.get("legs", 2),
                "above": up["name"], "exchange": up.get("exchange", 3)}
         if up.get("split"):
@@ -2410,6 +2464,10 @@ class NewClubs(BuilderPage):
     def game_club(self):
         L, k = self.league(), self.current()
         if not L or k is None:
+            return
+        if L.get("others"):
+            QMessageBox.information(self, _("New clubs"), _("%s is clubs in no league: every club in it is a new "
+                                                           "club, not one of the game's.") % L["name"])
             return
         if self.project.base is None:
             self.need_tables()

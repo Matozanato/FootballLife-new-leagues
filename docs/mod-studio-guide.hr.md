@@ -140,7 +140,8 @@ sadržaja s imenom `_FL26...` koju igra čita dok je uključena.
 |---|---|
 | **Ime** | Ime lige u igri. Dvije lige ne smiju imati isto ime. |
 | **Država** | Daje zastavu i mjesto gdje je liga na popisu. Država za koju igra nema ligu dobije svoj naslov. |
-| **Klubovi** | Od 10 do 24. |
+| **Klubovi** | Od 10 do 24 (od 1 do 24 za klubove bez lige). |
+| **Klubovi bez lige** | Za jedan klub, ili nekoliko njih, bez lige oko sebe (0.1.8): recimo samo BATE Borisov iz Bjelorusije. Odaberi grupu u koju idu: *Other European teams*, *Other Latin American teams*, *Other Asia-Oceania teams*, *Other Africa teams* ili *Classic Teams* -- tamo gdje igra drži svoje klubove koji ne igraju ni u jednoj ligi (Dynamo Kyiv, Wydad Casablanca ...). U Select Team se pojavljuju u toj grupi. Dobiju ime, grb, dresove, trenera, formaciju, igrače i domaći stadion kao svaki novi klub (**Edit club**, **Players**); ime gore je samo kako ih Mod Studio vodi. Ne igraju ligu, kup ni europsko natjecanje, a sve ostalo u ovom prozoru je sivo. |
 | **Format** | *Svi sa svima*, 1 do 4 puta, *dijeli se na pola (kao Škotska)* ili *Apertura i Clausura*: dva turnira u sezoni (rujan–početak siječnja, siječanj–svibanj), svaki od nula bodova, zatim doigravanje 8 ili 4 kluba (ili bez njega). O ulasku i ispadanju odlučuje ukupna tablica sezone. Najviše 18 klubova. Podijeljena liga ima najviše 46 kola, prije i poslije podjele zajedno (16 klubova dvaput je 30, pa najveća skupina dvaput smije imati 8 klubova, 14 kola). Zasad se u jednoj državi samo jedna liga smije dijeliti ili igrati Aperturu/Clausuru. |
 | **Rang** | *(prvi rang)* ili liga iznad nje: druga nova liga ili liga iz igre. Za novu ligu ispod druge nove lige u jednom koraku: odaberi je i stisni **Dodaj nižu ligu** (preuzme državu, broj klubova, format i gore/dolje od lige iznad; ostaje samo ime). |
 | **Gore / dolje** | Koliko klubova na kraju sezone zamijeni mjesta s ligom iznad. |

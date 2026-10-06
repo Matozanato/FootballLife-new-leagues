@@ -24,6 +24,11 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
 
 ## Missing or unverified features
 
+- **Clubs in no league (Mod Studio 0.1.8): squads are strong.** Checked in the game: a club
+  put alone in *Other European teams* shows in Select Team under that group with its crest
+  and 30 players. Its players are cloned from a club of the game like every new club's, so a
+  BATE Borisov comes out near 4.5 stars. Set the ratings in **Players** (or give the club a
+  squad from a table) until the generated squads take a level of their own.
 - **Continental competitions: explained, and it is the division flag.** New clubs have been
   seen taking part in the Champions League. The reason is not an overflow and nothing was
   taken from anyone: every league these tools build is a copy of a first-division prototype,

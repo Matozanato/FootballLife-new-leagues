@@ -91,6 +91,12 @@ which league sits above -- and nothing about ids:
               (a historical league, a league of legends ...). It stands alone: no division above
               or below it, no European places, no cups. Its regulation id is one the season
               builder does not take in at creation (CREATION_IDS), and fl26joindll leaves it out
+  others      optional, "europe", "latam", "asia", "africa" or "classic": no league at all -- the
+              clubs (1..OTHERS_MAX) go in the game's Other European / Latin American / Asia-
+              Oceania / Africa teams, or Classic Teams, where the game files its own clubs that
+              play in no league. Names, crests, kits, managers and players as in a league; no
+              division, season, cups or European places. The "league" is only the recipe's way
+              of holding them (pl["others"] after plan(), never pl["leagues"])
   league_cup  optional, a top division of a new country only: true gives the country a league
               cup, a straight knockout (two legs a round, the final one match) of 16, 8 or 4
               clubs -- the top division's by league position, then the division below's --
@@ -207,6 +213,14 @@ GAME = os.environ.get("FL26_DIR", r"C:\Football Life 2026")
 R_ABOVE = 0x04
 LEGS_SHIFT, LEGS_MASK = 12, 7
 CLUBS_MIN, CLUBS_MAX, LEGS_MAX = 10, 24, 4
+# "others": the game's groups of clubs in no league, by the nibble at T_POOL of a club's record
+# (Team.bin: 1 Classic Teams, 2 Other European, 3 Other Asia-Oceania, 6 Other Latin American,
+# 7 Other Africa; 5 holds the three "ML Default" clubs). The Discord request of 2026-10-06:
+# one club, BATE Borisov, without a league around it.
+OTHERS = {"europe": 2, "latam": 6, "asia": 3, "africa": 7, "classic": 1}
+OTHERS_MAX = 24                          # clubs in one such group of the recipe
+OTHERS_NAMES = {2: "Other European", 6: "Other Latin American", 3: "Other Asia-Oceania",
+                7: "Other Africa", 1: "Classic Teams"}
 REGION_FIRST, REGION_LAST = 29, 63
 CID_FROM = 130
 SQUAD, PLAYER_CAP = 30, 51729            # tools/mkplayers.py --per / --cap, as the guide uses
@@ -613,10 +627,13 @@ def recipe_from_plan(pl, base):
     cty = mkflags.countries(mkflags.table("Country", [base]))
     name_of_rid = {L["rid"]: L["name"] for L in pl.get("leagues") or []}
     out = []
-    for L in pl.get("leagues") or []:
+    for L in (pl.get("leagues") or []) + (pl.get("others") or []):
         en = (cty.get(L.get("country")) or ("", None))[0]
-        r = {"name": L["name"], "country": mkflags.title(en) if en else "", "clubs": L["clubs"],
-             "legs": L.get("legs", 2), "exchange": L.get("exchange", 3)}
+        r = {"name": L["name"], "country": mkflags.title(en) if en else "", "clubs": L["clubs"]}
+        if L.get("others"):
+            r["others"] = next(k for k, v in OTHERS.items() if v == L["others"])
+        else:
+            r["legs"], r["exchange"] = L.get("legs", 2), L.get("exchange", 3)
         for k in ("logo", "flag", "formation"):
             if L.get(k):
                 r[k] = L[k]
@@ -1131,10 +1148,15 @@ def plan(recipe, base):
     used_cid = set(region_of_cid)
     used_region = set(region_of_cid.values())
 
-    leagues = recipe["leagues"]
-    names = [L.get("name", "").strip() for L in leagues]
+    names = [L.get("name", "").strip() for L in recipe["leagues"]]
     if not all(names) or len(set(n.lower() for n in names)) != len(names):
         raise BuildError("every league needs a name, and no two the same")
+    # clubs in no league go their own way from here: no regulation, no competition, no region
+    others = others_plan([L for L in recipe["leagues"] if L.get("others")], base, cty)
+    full = recipe
+    recipe = dict(recipe, leagues=[L for L in recipe["leagues"] if not L.get("others")])
+    leagues = recipe["leagues"]
+    names = [L.get("name", "").strip() for L in leagues]
 
     # mkworld's order (the free list, 145 moved to 190), keeping only ids with a slot
     free = []
@@ -1152,7 +1174,7 @@ def plan(recipe, base):
     if len(cids) < len(leagues):
         raise BuildError("no free competition ids left")
     room = clubs_room(base)
-    total = sum(new_club_count(L) for L in leagues)
+    total = sum(new_club_count(L) for L in full["leagues"])
     if total > room:
         raise BuildError("%d new clubs, but the game has room for %d more (a full squad each)"
                          % (total, room))
@@ -1395,14 +1417,14 @@ def plan(recipe, base):
     for p in out:
         if p.get("own_cup"):
             national_cup(p, next((q for q in out if q["above"] == p["rid"]), None))
-    bad = club_id_problems(out, base)
+    bad = club_id_problems(out + others, base)
     if bad:
         raise BuildError("club ids:\n  " + "\n  ".join(bad[:20]))
-    nlt, free_ids = newlife_tids(recipe.get("leagues") or [], base, recipe.get("newlife_ids"))   # #90 / #88
-    for p in out:
+    nlt, free_ids = newlife_tids(full.get("leagues") or [], base, full.get("newlife_ids"))   # #90 / #88
+    for p in out + others:
         p["newlife_tid"] = nlt
     import lbplayers
-    bad = lbplayers.check(recipe)
+    bad = lbplayers.check(full)
     if bad:
         raise BuildError("player changes:\n  " + "\n  ".join(bad[:20]))
     ge, gr, gn, gcc = game_europe(recipe, regrow, region_of_cid, base)
@@ -1430,7 +1452,7 @@ def plan(recipe, base):
     if len(cups) + len(home) > MAX_CCUP:
         raise BuildError("%d continental, league and pre-season cups -- fl26swiss.dll takes %d"
                          % (len(cups) + len(home), MAX_CCUP))
-    return {"world": recipe["world"], "leagues": out, "edits": recipe.get("edits") or {},
+    return {"world": recipe["world"], "leagues": out, "others": others, "edits": recipe.get("edits") or {},
             "free_ids": free_ids, "players": recipe.get("players") or {}, "uecl": bool(recipe.get("uecl", True)),
             "uecl_logo": recipe.get("uecl_logo") or None,
             "uecl_name": (recipe.get("uecl_name") or "").strip() or None,
@@ -1440,6 +1462,52 @@ def plan(recipe, base):
             "europe_first": europe_first(recipe, by_name),
             "saudi_august": bool(recipe.get("saudi_august")),
             "editable_kits": bool(recipe.get("editable_kits"))}
+
+
+def others_plan(groups, base, cty):
+    """the plan of the recipe's clubs in no league (the "others" key): what plan() makes of a
+    league, less everything that belongs to a competition"""
+    import mkflags
+    out = []
+    for L in groups:
+        name = L["name"].strip()
+        pool = OTHERS.get(str(L.get("others")).strip().lower())
+        if pool is None:
+            raise BuildError("%s: others is %s, not %r" % (name, ", ".join(OTHERS), L.get("others")))
+        n = int(L.get("clubs", 0) or 0)
+        if not 1 <= n <= OTHERS_MAX:
+            raise BuildError("%s: %d clubs -- a group of clubs in no league has 1..%d" % (name, n, OTHERS_MAX))
+        fid = mkflags.by_name(cty, L.get("country", ""))
+        if fid is None:
+            raise BuildError("%s: no country called %r in Country.bin" % (name, L.get("country")))
+        bad = [w for w, on in (("the division above it", L.get("above") not in (None, "")),
+                               ("the European places", L.get("europe")), ("the national cup", L.get("cup")),
+                               ("the league cup", L.get("league_cup")), ("the split", L.get("split")),
+                               ("the Apertura/Clausura", L.get("apertura")), ("exhibition", L.get("exhibition")),
+                               ("clubs of the game", L.get("game_clubs"))) if on]
+        if bad:
+            raise BuildError("%s: clubs in no league have no league around them -- take off %s"
+                             % (name, ", ".join(bad)))
+        p = {"name": name, "others": pool, "country": fid, "clubs": n,
+             "club_names": list(L.get("club_names") or []),
+             "club_crests": list(L.get("club_crests") or []),
+             "club_abbrs": list(L.get("club_abbrs") or []),
+             "club_coaches": list(L.get("club_coaches") or []),
+             "formation": str(L.get("formation") or "").strip(),
+             "club_formations": [str(x or "").strip() for x in (L.get("club_formations") or [])],
+             "club_ids": [int(x) if str(x or "").strip().isdigit() else None
+                          for x in (L.get("club_ids") or [])][:n],
+             "club_kits": list(L.get("club_kits") or []),
+             "club_away_kits": list(L.get("club_away_kits") or []),
+             "newlife": {"clubs": [int(i) for i in (L.get("newlife") or {}).get("clubs") or []]},
+             "game_clubs": {}}
+        if len(p["club_names"]) > n:
+            raise BuildError("%s: %d club names for %d clubs" % (name, len(p["club_names"]), n))
+        for f in [p["formation"]] + p["club_formations"]:
+            if f and formation_club(base, f) is None:
+                raise BuildError("%s: no formation %r (the Formation list has them)" % (name, f))
+        out.append(p)
+    return out
 
 
 def game_club_checks(out, base):
@@ -2293,6 +2361,9 @@ def describe(pl):
         mine = sorted((e[1], e[2]) for e in pl.get("game_europe") or [] if e[0] == r or (e[1] == CUP_WINNER and e[3] == r))
         lines.append("  European places of %s (a league of the game): %s" % (
             (pl.get("game_names") or {}).get(str(r), r), ", ".join(place_name(pos, cnames.get(c, c)) for pos, c in mine) or "none"))
+    for p in pl.get("others") or []:
+        lines.append("  %-26s no league: %d club(s) in the game's %s teams"
+                     % (p["name"], p["clubs"], OTHERS_NAMES[p["others"]]))
     for p in pl["leagues"]:
         shape = "%d clubs x%d" % (p["clubs"], p["legs"])
         if p.get("apertura"):
@@ -2559,7 +2630,51 @@ def build(pl, base, game, replace=False, log=print):
                 else:
                     log("  %s (in no competition of the game) moves to %s" % (info["clubs"][tid][0], p["name"]))
 
-    nl_ids = {t for p in pl["leagues"] for t in (p.get("newlife_tid") or {}).values()}
+    others = pl.get("others") or []
+    nl_ids = {t for p in pl["leagues"] + others for t in (p.get("newlife_tid") or {}).values()}
+
+    def new_club(p, k):
+        """a new club's Team.bin record, the k-th of league (or group) p: [record, id, abbr]"""
+        nonlocal own, made
+        r = bytearray(proto)
+        ids = p.get("club_ids") or []
+        nl = (p.get("newlife") or {}).get("clubs") or []
+        if k < len(ids) and ids[k]:
+            tid = ids[k]                   # checked by plan(): free, in the block
+        elif k < len(nl) and NEWLIFE_TEAMS[0] <= nl[k] <= NEWLIFE_TEAMS[1] and nl[k] not in have:
+            # 0.1.7.2 (#90 / #88): a NewLife Database club gets a world id of its own, the one
+            # plan() gave it; the NewLife id is only how the recipe names the club
+            tid = (p.get("newlife_tid") or {}).get(nl[k])
+            if tid is None:
+                raise BuildError("%s, club %d: no world id for the NewLife club %d"
+                                 % (p["name"], k + 1, nl[k]))
+        else:
+            tid = top_id + 1 + own
+            own += 1
+            while tid in have or tid in nl_ids:    # a NewLife club's pinned id may sit lower
+                tid = top_id + 1 + own
+                own += 1
+            if tid > CLUB_ID_MAX:
+                raise BuildError("no team ids left up to %d" % CLUB_ID_MAX)
+        have.add(tid)
+        r[W.T_ID:W.T_ID + 4] = tid.to_bytes(4, "little")
+        r[W.T_ALT:W.T_ALT + 4] = (top_alt + 1 + made).to_bytes(4, "little")
+        M.put(r, W.T_NAME, club_name(p, k), W.T_NAME_LEN)
+        # the club's country is its league's: the clone is Selangor FC, so without this every
+        # new club, and its manager (mkcoaches takes the club's), was Malaysian (Amir, FK Sloboda)
+        c = struct.unpack_from("<H", r, T_COUNTRY)[0]
+        struct.pack_into("<H", r, T_COUNTRY, (c & ~(0x1ff << 2)) | ((p["country"] & 0x1ff) << 2))
+        mine = (p.get("club_abbrs") or [])[k:k + 1]
+        if mine and mine[0].strip():
+            short = short_name(mine[0])
+            used_abbr.add(short)
+        else:
+            short = abbr(club_name(p, k), used_abbr)
+        r[W.T_ABBR:W.T_ABBR + W.T_ABBR_LEN] = short.ljust(W.T_ABBR_LEN, bytes(1).decode()).encode("ascii")
+        added.append(r)
+        made += 1
+        return r, tid, r[W.T_ABBR:W.T_ABBR + W.T_ABBR_LEN].split(bytes(1))[0].decode("ascii")
+
     for p in pl["leagues"]:
         teams, p["abbrs"] = [], []
         gp = game_places(p)
@@ -2570,45 +2685,9 @@ def build(pl, base, game, replace=False, log=print):
                 teams.append(tid)
                 p["abbrs"].append(text(raw[o + W.T_ABBR:o + W.T_ABBR + W.T_ABBR_LEN]))
                 continue
-            r = bytearray(proto)
-            ids = p.get("club_ids") or []
-            nl = (p.get("newlife") or {}).get("clubs") or []
-            if k < len(ids) and ids[k]:
-                tid = ids[k]                   # checked by plan(): free, in the block
-            elif k < len(nl) and NEWLIFE_TEAMS[0] <= nl[k] <= NEWLIFE_TEAMS[1] and nl[k] not in have:
-                # 0.1.7.2 (#90 / #88): a NewLife Database club gets a world id of its own, the one
-                # plan() gave it; the NewLife id is only how the recipe names the club
-                tid = (p.get("newlife_tid") or {}).get(nl[k])
-                if tid is None:
-                    raise BuildError("%s, club %d: no world id for the NewLife club %d"
-                                     % (p["name"], k + 1, nl[k]))
-            else:
-                tid = top_id + 1 + own
-                own += 1
-                while tid in have or tid in nl_ids:    # a NewLife club's pinned id may sit lower
-                    tid = top_id + 1 + own
-                    own += 1
-                if tid > CLUB_ID_MAX:
-                    raise BuildError("no team ids left up to %d" % CLUB_ID_MAX)
-            have.add(tid)
-            r[W.T_ID:W.T_ID + 4] = tid.to_bytes(4, "little")
-            r[W.T_ALT:W.T_ALT + 4] = (top_alt + 1 + made).to_bytes(4, "little")
-            M.put(r, W.T_NAME, club_name(p, k), W.T_NAME_LEN)
-            # the club's country is its league's: the clone is Selangor FC, so without this every
-            # new club, and its manager (mkcoaches takes the club's), was Malaysian (Amir, FK Sloboda)
-            c = struct.unpack_from("<H", r, T_COUNTRY)[0]
-            struct.pack_into("<H", r, T_COUNTRY, (c & ~(0x1ff << 2)) | ((p["country"] & 0x1ff) << 2))
-            mine = (p.get("club_abbrs") or [])[k:k + 1]
-            if mine and mine[0].strip():
-                short = short_name(mine[0])
-                used_abbr.add(short)
-            else:
-                short = abbr(club_name(p, k), used_abbr)
-            r[W.T_ABBR:W.T_ABBR + W.T_ABBR_LEN] = short.ljust(W.T_ABBR_LEN, bytes(1).decode()).encode("ascii")
-            added.append(r)
+            _r, tid, short = new_club(p, k)
             teams.append(tid)
-            p["abbrs"].append(r[W.T_ABBR:W.T_ABBR + W.T_ABBR_LEN].split(bytes(1))[0].decode("ascii"))
-            made += 1
+            p["abbrs"].append(short)
         p["teams"] = teams
         M.add_league(comp, regs, ents, p["cid"], p["rid"], M.enc_region(p["region"]), p["name"],
                      "FL_%03d_LEAGUE" % p["rid"], teams, quiet=True, tier=p["tier"])
@@ -2648,6 +2727,19 @@ def build(pl, base, game, replace=False, log=print):
         log("  %-26s reg %d, %d clubs %s%s" % (p["name"], p["rid"], len(teams), id_spans(teams),
                                              ", %d of them the game's" % len(gp) if gp else ""))
 
+    # clubs in no league: the game files a club into an "Other ..." group by the nibble at T_POOL,
+    # at boot, with no competition behind it -- as its own Dynamo Kyiv or Wydad Casablanca
+    for p in others:
+        p["teams"], p["abbrs"] = [], []
+        for k in range(p["clubs"]):
+            r, tid, short = new_club(p, k)
+            r[T_POOL] = (r[T_POOL] & 0x0f) | (p["others"] << 4)
+            p["teams"].append(tid)
+            p["abbrs"].append(short)
+        log("  %-26s %d club(s) in no league, %s %s" % (p["name"], len(p["teams"]),
+                                                       OTHERS_NAMES[p["others"]], id_spans(p["teams"])))
+    clubs = dict(pl, leagues=pl["leagues"] + others)    # every new club, for what goes by club
+
     # the new clubs go in in id order, as the shipped ones are
     for r in sorted(added, key=lambda r: int.from_bytes(r[W.T_ID:W.T_ID + 4], "little")):
         raw += r
@@ -2665,7 +2757,7 @@ def build(pl, base, game, replace=False, log=print):
     if os.path.exists(cpath):
         craw = open(cpath, "rb").read()
         coaches = pesdb.wesys_unpack(craw)
-        named = {t: (p.get("club_coaches") or [])[k].strip() for p in pl["leagues"]
+        named = {t: (p.get("club_coaches") or [])[k].strip() for p in clubs["leagues"]
                  for k, t in enumerate(p["teams"])
                  if k < len(p.get("club_coaches") or []) and (p["club_coaches"][k] or "").strip()
                  and k not in game_places(p)}
@@ -2673,7 +2765,7 @@ def build(pl, base, game, replace=False, log=print):
         open(os.path.join(db, "Coach.bin"), "wb").write(pesdb.wesys_pack(coaches + add, craw[:3]))
         log("  %d managers" % st["added"])
     lineups = {}
-    wanted = club_formations(pl)
+    wanted = club_formations(clubs)
     if wanted:
         import mktactics
         donors = {t: formation_club(base, f) for t, f in wanted.items()}
@@ -2690,7 +2782,7 @@ def build(pl, base, game, replace=False, log=print):
     import lbplayers
     faces, ids, portraits = [], {}, []
     try:
-        filled = dict(pl, players=lbplayers.fill_newlife(pl, base, log))   # the plan kept as it was
+        filled = dict(clubs, players=lbplayers.fill_newlife(clubs, base, log))   # the plan kept as it was
         lbplayers.apply(filled, base, db, PLAYER_CAP, log, faces, lineups=lineups, ids=ids, portraits=portraits)
     except lbplayers.Error as e:
         raise BuildError(str(e))
@@ -2702,7 +2794,7 @@ def build(pl, base, game, replace=False, log=print):
         for n, (pid, folder) in enumerate(faces):
             lbfaces.install(tmp, pid, folder, n, log)
     lbplayers.player_portraits(portraits, tmp, log)
-    lbplayers.coach_portraits(pl, tmp, log)
+    lbplayers.coach_portraits(clubs, tmp, log)
     newfaces = lbplayers.new_face_lines(base, db, faces, portraits)   # fl26regen: pack faces (#52)
 
     splits = [p for p in pl["leagues"] if p.get("split")]
@@ -3195,8 +3287,9 @@ def pictures(pl, root, base, log=print):
     """league logos, club crests and kits for the new leagues (tools/lbassets.py)"""
     import lbassets
     flags = {}
-    for p in pl["leagues"]:
-        lbassets.league_logo(root, p["cid"], p["name"], p.get("logo"))
+    for p in pl["leagues"] + (pl.get("others") or []):
+        if not p.get("others"):              # clubs in no league: no competition, no logo
+            lbassets.league_logo(root, p["cid"], p["name"], p.get("logo"))
         if p.get("flag") and p["country"] not in flags:
             flags[p["country"]] = p["flag"]
             lbassets.country_flag(root, p["country"], p["flag"])
@@ -3228,9 +3321,10 @@ def pictures(pl, root, base, log=print):
     for cid, name, logo in cups:
         lbassets.league_logo(root, cid, name, logo)
     log("  %d league logos, %d cup logos, %d club crests%s" % (
-        len(pl["leagues"]), len(cups), sum(len(p["teams"]) - len(game_places(p)) for p in pl["leagues"]),
+        len(pl["leagues"]), len(cups), sum(len(p["teams"]) - len(game_places(p))
+                                           for p in pl["leagues"] + (pl.get("others") or [])),
         ", %d country flags" % len(flags) if flags else ""))
-    if not any(p["teams"] for p in pl["leagues"]):
+    if not any(p["teams"] for p in pl["leagues"] + (pl.get("others") or [])):
         return
     if pl.get("editable_kits"):
         log("  kits: none lent -- the new clubs wear the game's own kit, which Edit > Teams > Strip can change "
@@ -3245,7 +3339,7 @@ def pictures(pl, root, base, log=print):
     args = ["mkkits.py", "--team-bin", os.path.join(root, "common", "etc", "pesdb", "Team.bin"),
             "--unipar", unipar, "--root", root, "--archive"]
     colours = {}                    # NewLife clubs: the shipped kit nearest their own colours
-    for p in pl["leagues"]:
+    for p in pl["leagues"] + (pl.get("others") or []):
         home, away = p.get("club_kits") or [], p.get("club_away_kits") or []
         for k, tid in enumerate(p["teams"]):
             if k < len(home) and home[k]:

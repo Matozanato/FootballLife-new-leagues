@@ -55,7 +55,7 @@ def problem(st):
 def wanted(pl):
     """{team id: (club key, stadium entry)} for the plan's clubs that have a home stadium"""
     tids = {}
-    for p in pl.get("leagues") or []:
+    for p in (pl.get("leagues") or []) + (pl.get("others") or []):     # clubs in no league too
         for k, tid in enumerate(p.get("teams") or []):
             tids["%s/%d" % (p["name"], k)] = tid
     out = {}

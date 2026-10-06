@@ -1,0 +1,8 @@
+{"world": "_FL26RgOthers",
+ "leagues": [
+  {"name": "Test League", "country": "Croatia", "clubs": 10, "legs": 2},
+  {"name": "Belarus extras", "country": "Belarus", "clubs": 1, "others": "europe",
+   "club_names": ["BATE Borisov"], "club_abbrs": ["BAT"], "club_coaches": ["Test Coach"]},
+  {"name": "Legends", "country": "England", "clubs": 2, "others": "classic",
+   "club_names": ["Legends XI", "Legends B"]}
+ ]}
