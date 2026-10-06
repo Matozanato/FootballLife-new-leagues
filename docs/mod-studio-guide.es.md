@@ -126,6 +126,13 @@ contenido. Los módulos propios de SPFL26 para equipaciones, estadios y marcador
 El programa comprueba las tablas antes de guardar: un número donde va un número, sin comas dentro
 de un nombre, un elemento que existe.
 
+Una línea de competición va por una **fase** de la competición, no por la competición: el juego
+dice a los servidores de contenido la fase que se juega (la Conference League es 186, 1210, 187,
+189 y sus rondas posteriores 1213 ... 8381; la Champions 2, 3, 4 y las suyas), así que una línea
+con el número de la competición (174) nunca se usa. El selector de competiciones ofrece cada
+competición otra vez como **(todas las fases: N)**: elígela y se escribe una línea por fase (0.1.9).
+Una línea con el número de una competición sale marcada como problema.
+
 **Importar equipaciones...** (0.1.8, en la página *Kits*): equipaciones para muchos clubes a la vez. Elige una carpeta de equipaciones listas de kit-server -- una carpeta por club, con `p1`, `p2`, `g1` ... y `order.ini`, con el nombre del club (`Dinamo Zagreb`) o su ID de equipo (`2215`). La lista muestra cada emparejamiento con una marca; desmarca uno erróneo antes de **Aceptar**. Las equipaciones se copian a la biblioteca de kit-server (`Liga\Club`, como las tenía la carpeta) y cada club recibe una línea en `map.txt`; **Save** la escribe. Un club que ya tiene línea la conserva, salvo que esté marcado **Reemplazar las equipaciones ya puestas**. Las equipaciones de un club nuevo del League Builder van por el ID que le dio Build: haz Build del mundo y déjalo activado primero. Mod Studio no crea equipaciones: las texturas (`.ftex`) vienen listas de un creador de equipaciones.
 
 ## 7. Perfiles

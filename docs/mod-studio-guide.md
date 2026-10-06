@@ -120,6 +120,13 @@ kits, sleeve badges and weather) each belong to one content server. SPFL26's own
 The program checks the tables before saving: a number where a number goes, no commas inside a
 name, an item that exists.
 
+A competition line is keyed by a **stage** of the competition, not by the competition: the game
+tells the content servers the stage it is playing (the Conference League is 186, 1210, 187,
+189 and its later rounds 1213 ... 8381; the Champions League 2, 3, 4 and theirs), so a line
+with the competition's own number (174) is never used. The competition picker lists every
+competition once more as **(all N stages)**: pick that and one line is written for each stage
+(0.1.9). A line keyed by a competition number is marked as a problem.
+
 **Import kits...** (0.1.8, on the *Kits* page): kits for many clubs at once. Pick a folder of ready kit-server kits -- one folder per club, holding `p1`, `p2`, `g1` ... and `order.ini`, named after the club (`Dinamo Zagreb`) or its team ID (`2215`). The list shows every match with a tick; untick a wrong one before **OK**. The kits are copied into the kit-server library (`League\Club`, as the folder had them) and each club gets a line in `map.txt`; **Save** writes it. A club that already has a line keeps it unless **Replace kits already set** is ticked. A new League Builder club's kits go by the team ID Build gave it, so Build the world and keep it switched on first. Mod Studio does not make kits: the textures (`.ftex`) come ready from a kit maker.
 
 ## 7. Profiles

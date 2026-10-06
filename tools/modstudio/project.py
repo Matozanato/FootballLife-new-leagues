@@ -151,7 +151,7 @@ class Project(QObject):
         """({team id: name}, {tournament id: name}); tournament id = regulation id, and the
         later stages of a competition are id + 1024 * k"""
         if self._names is None:
-            teams, comps = {}, {65535: "Exhibition"}
+            teams, comps, cid_of = {}, {65535: "Exhibition"}, {}
             for db in ([self.base] if self.base else []) + self.world_tables():
                 try:
                     teams.update({k: v[0] for k, v in B.game_clubs(db).items()})
@@ -162,10 +162,22 @@ class Project(QObject):
                         name = B.text(g[B.M.R_NAME:B.M.R_NAME + B.M.NAME_SLOT])
                         if name and rid not in comps:
                             comps[rid] = name
+                        cid_of[rid] = g[B.M.R_CID]          # a world's own wins over the game's
                 except (OSError, ValueError, B.BuildError):
                     pass
+            self._stages = {}
+            for rid, cid in sorted(cid_of.items()):
+                self._stages.setdefault(cid, []).append(rid)
             self._names = (teams, comps)
         return self._names
+
+    def comp_stages(self, cid):
+        """the tournament ids (regulations) of competition cid: the Conference League (174) is
+        186, 1210, 187, 189 and its later rounds 1213 ... 8381. A content server is asked by
+        tournament id, so a line keyed by the competition id itself is never used (mauro1977doni:
+        "174" gave the Conference League no scoreboard)."""
+        self.names()
+        return list(self._stages.get(cid, []))
 
     def team_name(self, tid):
         return self.names()[0].get(tid, "")

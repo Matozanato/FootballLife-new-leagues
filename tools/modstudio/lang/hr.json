@@ -1247,7 +1247,9 @@
   "exhibition only": "samo egzibicija",
   "no place (it plays)": "nema mjesta (igra se)",
   "in place of %s": "umjesto %s",
-  "yes": "da"
+  "yes": "da",
+  "%s (all %d stages)": "%s (sve faze: %d)",
+  "%d is a competition, but the game asks by its stages (%s): pick it again as \"all stages\"": "%d je natjecanje, ali igra pita po njegovim fazama (%s): odaberi ga ponovno kao \"sve faze\""
  },
  "log": [
   [

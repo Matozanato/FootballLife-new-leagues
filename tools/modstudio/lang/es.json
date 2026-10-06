@@ -1247,7 +1247,9 @@
   "exhibition only": "solo exhibición",
   "no place (it plays)": "sin sitio (se juega)",
   "in place of %s": "en lugar de %s",
-  "yes": "sí"
+  "yes": "sí",
+  "%s (all %d stages)": "%s (todas las fases: %d)",
+  "%d is a competition, but the game asks by its stages (%s): pick it again as \"all stages\"": "%d es una competición, pero el juego pregunta por sus fases (%s): elígela otra vez como \"todas las fases\""
  },
  "log": [
   [

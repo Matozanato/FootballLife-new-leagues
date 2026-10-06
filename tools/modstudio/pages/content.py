@@ -45,12 +45,42 @@ def choices(app, kind):
         return []
     teams, comps = p.names()
     src = teams if kind == "team" else comps
-    return ["%d  %s" % (k, v) for k, v in sorted(src.items(), key=lambda kv: kv[1].lower())]
+    out = [(v, "%d  %s" % (k, v)) for k, v in src.items()]
+    if kind == "comp":
+        out += [(name, "%s%d  %s" % (ALL, cid, _("%s (all %d stages)") % (name, len(ids))))
+                for cid, ids, name in all_stages(p)]
+    return [t for _k, t in sorted(out, key=lambda kv: kv[0].lower())]
+
+
+ALL = "all:"     # "all:174" in a picker = one line for every stage of competition 174
+
+
+def all_stages(p):
+    """[(competition id, its tournament ids, name)] for the competitions with more than one"""
+    comps = p.names()[1]
+    out = []
+    for cid in sorted(p._stages):
+        ids = p.comp_stages(cid)
+        if len(ids) > 1 and comps.get(ids[0]):
+            out.append((cid, ids, comps[ids[0]]))
+    return out
 
 
 def number_of(text):
     t = (text or "").strip().split()
+    if t and t[0].startswith(ALL) and t[0][len(ALL):].isdigit():
+        return t[0]
     return t[0] if t and t[0].lstrip("-").isdigit() else ""
+
+
+def expand(app, vals):
+    """the lines one dialog stands for: an "all:<competition>" key gives one per stage"""
+    k = vals[0] if vals else ""
+    if not k.startswith(ALL):
+        return [vals]
+    p = project(app)
+    ids = p.comp_stages(int(k[len(ALL):])) if p is not None else []
+    return [[str(i)] + list(vals[1:]) for i in ids]
 
 
 # ---------------------------------------------------------------------------------------------
@@ -250,6 +280,12 @@ class MapTab(QWidget):
             v = r.fields[i] if i < len(r.fields) else ""
             if c.kind == "item" and v and lib is not None and S.norm_item(v) not in lib:
                 out.append(_("%s not found in the library") % v)
+        if self.m.key == "comp" and r.fields and r.fields[0].isdigit():
+            p = project(self.app)
+            n = int(r.fields[0])
+            if p is not None and p.base is not None and not p.comp_name(n) and len(p.comp_stages(n)) > 1:
+                out.append(_("%d is a competition, but the game asks by its stages (%s): pick it again "
+                             "as \"all stages\"") % (n, ", ".join(map(str, p.comp_stages(n)))))
         if self.m.key == "team" and r.enabled and r.fields:
             if r.fields[0] in seen:
                 out.append(_("this club is listed more than once; the first line counts"))
@@ -306,10 +342,13 @@ class MapTab(QWidget):
             return
         d = RowDialog(self.view, self.m, preset=preset if isinstance(preset, dict) else None)
         if d.exec() and d.vals is not None:
-            r = Row(d.vals, d.comment.text().strip(), d.enabled.isChecked(),
-                    quoted=[i for i in self.m.quote])
             cur = self.selected()
-            self.mf.add(r, after=cur[-1] if cur else self.last_like(r))
+            after = cur[-1] if cur else None
+            for vals in expand(self.app, d.vals):
+                r = Row(vals, d.comment.text().strip(), d.enabled.isChecked(),
+                        quoted=[i for i in self.m.quote])
+                self.mf.add(r, after=after or self.last_like(r))
+                after = r
             self.changed()
 
     def last_like(self, r):
@@ -324,10 +363,18 @@ class MapTab(QWidget):
         r = sel[0]
         d = RowDialog(self.view, self.m, r)
         if d.exec() and d.vals is not None:
-            r.fields[:len(d.vals)] = d.vals
+            lines = expand(self.app, d.vals)
+            if not lines:
+                return
+            r.fields[:len(d.vals)] = lines[0]
             r.comment = d.comment.text().strip()
             r.enabled = d.enabled.isChecked()
             r.touch()
+            after = r
+            for vals in lines[1:]:
+                x = Row(vals, r.comment, r.enabled, quoted=[i for i in self.m.quote])
+                self.mf.add(x, after=after)
+                after = x
             self.changed()
 
     def duplicate(self):

@@ -133,6 +133,13 @@ Chaque page a :
 Le programme vérifie les tableaux avant d'enregistrer : un nombre là où il faut un nombre, pas de
 virgule dans un nom, un élément qui existe.
 
+Une ligne de compétition va par **phase** de la compétition, pas par compétition : le jeu donne
+aux serveurs de contenu la phase jouée (la Conference League, c'est 186, 1210, 187, 189 et ses
+tours suivants 1213 ... 8381 ; la Ligue des champions 2, 3, 4 et les siens), donc une ligne avec
+le numéro de la compétition (174) ne sert jamais. Le sélecteur de compétitions propose chaque
+compétition une fois de plus en **(toutes les phases : N)** : choisissez-la et une ligne est écrite par
+phase (0.1.9). Une ligne avec le numéro d'une compétition est signalée comme problème.
+
 **Importer des maillots...** (0.1.8, sur la page *Kits*) : des maillots pour beaucoup de clubs d'un coup. Choisissez un dossier de maillots kit-server prêts -- un dossier par club, avec `p1`, `p2`, `g1` ... et `order.ini`, nommé d'après le club (`Dinamo Zagreb`) ou son ID d'équipe (`2215`). La liste montre chaque association cochée ; décochez une mauvaise avant **OK**. Les maillots sont copiés dans la bibliothèque de kit-server (`Ligue\Club`, comme le dossier les avait) et chaque club reçoit une ligne dans `map.txt` ; **Save** l'écrit. Un club qui a déjà une ligne la garde, sauf si **Remplacer les maillots déjà définis** est coché. Les maillots d'un nouveau club du League Builder suivent l'ID que Build lui a donné : faites d'abord Build du monde et laissez-le activé. Mod Studio ne crée pas de maillots : les textures (`.ftex`) viennent prêtes d'un créateur de maillots.
 
 ## 7. Profils
