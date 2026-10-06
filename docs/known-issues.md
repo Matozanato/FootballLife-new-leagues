@@ -305,6 +305,10 @@ calendar.
   not dated again at the rollover; they keep the dates their career was made with, so a
   shipped league cannot be moved to July from the world file. The first season of a career
   always starts when the game builds it, in early August.
+- **A long league name can show blank in Kick Off.** "Paraguay First Division Primera
+  División" (40 characters) was an empty row in Kick Off's league list, "Paraguay First
+  Division" showed (#101). The game's own longest competition name is 38 characters; Check the
+  plan writes a NOTE for a longer one. Where exactly the screen stops is not measured yet.
 - **Saves are tied to the world.** A save made with world A does not load with world B or
   with the shipped game. Move your saves aside when you switch roots.
 - **Rulebook ids must be in the date table** (the 39 ids a default `mkworld.py` run uses,

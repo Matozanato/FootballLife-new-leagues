@@ -2386,6 +2386,9 @@ def samerica_lines(own, names, cups):
     return lines
 
 
+LONGEST_NAME = 38       # characters: the longest name of a shipped regulation (its Russian, Greek, Dutch)
+
+
 def describe(pl):
     e = pl.get("edits") or {}
     lines = ["world %s: %d new leagues, changes to %d of the game's leagues and %d of its clubs"
@@ -2439,6 +2442,12 @@ def describe(pl):
         lines.append("  no European places: the new leagues send nobody to Europe")
     if not pl.get("uecl") and any(e[2] in (2, 12) for e in own_places(pl)):
         lines.append("  NOTE: Conference League places, but the world gets no Conference League")
+    for p in pl["leagues"]:
+        if len(p["name"]) > LONGEST_NAME:
+            # "Paraguay First Division Primera División" (40) was a blank row in Kick Off's league
+            # list, "Paraguay First Division" showed (#101); the game's own longest name is 38
+            lines.append("  NOTE: %s is %d characters; the game's longest competition name is %d, and a longer "
+                         "one can show blank in Kick Off" % (p["name"], len(p["name"]), LONGEST_NAME))
     unlisted = [p["name"] for p in pl["leagues"] if p["slot"] == fl26world.NO_SLOT and not p.get("exhibition")]
     if unlisted:
         # the Select Team list has room for 36 new leagues; the ids past it play but have no place (#39)
