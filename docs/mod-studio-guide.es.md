@@ -36,7 +36,8 @@ La ventana está en inglés. **Settings → Language → Español** la pasa a es
    nombre o estar un nivel más abajo (`sider\patch 1` ...); si hay varios, **Settings → Sider folder** elige con cuál trabaja el programa.
 2. Si quieres ligas nuevas o cambios de jugadores: **Ajustes → Desempaquetar las tablas del
    juego**. Lee los clubes, ligas y jugadores del juego en una carpeta de trabajo (unos
-   segundos). Solo hay que repetirlo tras una actualización del juego.
+   segundos). Solo hay que repetirlo tras una actualización del juego;
+   Build la nota (0.1.9) y ofrece desempaquetar de nuevo primero.
 3. Abre **Resumen**. Muestra tu configuración de un vistazo y una lista de problemas. Haz doble
    clic en un problema para abrir la página que lo arregla.
 
@@ -151,7 +152,7 @@ League Builder añade ligas nuevas al juego y cambia las del propio juego. Lo qu
 | **Clubes** | De 10 a 24 (de 1 a 24 para clubes sin liga). |
 | **Clubes sin liga** | Para un club, o unos pocos, sin una liga alrededor (0.1.8): por ejemplo solo el BATE Borisov de Bielorrusia. Elige el grupo al que van: *Other European teams*, *Other Latin American teams*, *Other Asia-Oceania teams*, *Other Africa teams* o *Classic Teams* -- donde el juego guarda sus propios clubes que no juegan en ninguna liga (Dynamo Kyiv, Wydad Casablanca ...). En Select Team aparecen en ese grupo. Tienen nombre, escudo, equipaciones, entrenador, formación, jugadores y estadio como cualquier club nuevo (**Edit club**, **Players**); el nombre de arriba es solo cómo los lista Mod Studio. No juegan liga, copa ni competición europea, y todo lo demás de este diálogo sale en gris. |
 | **Formato** | *Todos contra todos*, de 1 a 4 veces, *se divide en dos (estilo escocés)* o *Apertura y Clausura*: dos torneos por temporada (septiembre a principios de enero, enero a mayo), cada uno desde cero puntos, luego una liguilla de 8 o 4 clubes (o ninguna). La tabla de toda la temporada decide ascensos y descensos. 18 clubes como máximo. Una liga dividida tiene 46 jornadas como máximo, antes y después de la división juntas (16 clubes dos veces son 30, así que su grupo más grande dos veces puede tener 8 clubes, 14 jornadas). Por ahora, solo una liga por país puede dividirse o jugar Apertura/Clausura. |
-| **División** | *(primera división)*, o la liga que tiene encima: otra liga nueva o una del juego. Para poner una liga nueva bajo otra liga nueva en un paso: selecciónala y pulsa **Añadir división inferior** (toma el país, el número de clubes, el formato y los ascensos/descensos de la liga de arriba; solo falta el nombre). |
+| **División** | *(primera división)*, o la liga que tiene encima: otra liga nueva o una del juego. Para poner una liga nueva bajo otra liga nueva en un paso: selecciónala y pulsa **Añadir división inferior** (toma el país, el número de clubes, el formato y los ascensos/descensos de la liga de arriba; solo falta el nombre). Una liga que ya tiene otra liga nueva debajo sale en gris (0.1.9): el juego solo sigue un enlace hacia abajo desde una liga, así que los grupos de una misma división (tres grupos de la Serie C bajo la Serie B) todavía no son posibles. |
 | **Asc. / desc.** | Cuántos clubes cambian de sitio con la liga de arriba al final de la temporada. |
 | **Temporada** | Solo para la primera división de un país nuevo: *agosto a mayo* (por defecto) o *febrero a diciembre*, como Brasil, Japón o Arabia Saudí: los clubes suben y bajan en Año Nuevo, y las divisiones de abajo la siguen. Todavía no con división en grupos, Apertura/Clausura, copa nacional ni copa de la liga. |
 | **Europa** | Solo para primera división: qué puesto de la liga va a qué competición europea. **Primera división: 1.º fase previa UCL, 2.º UEL, 3.º UECL** rellena las tres habituales (*... (fase previa)* son los play-offs de agosto, ver 8.2); **Añadir plaza**, **Quitar plaza** y **Borrar** para todo lo demás. Cada puesto una sola vez, y solo puestos que la liga tiene. Por debajo de 1 el puesto dice **Campeón de copa** (0.1.7): el campeón de la copa del país (un país nuevo necesita **Copa nacional**) -- y si el campeón ya tiene plaza europea por la liga, la plaza baja por la liga al siguiente club, como hace la UEFA. Una liga del juego también puede tenerla (*Plazas europeas de las ligas del juego*). Déjalo vacío para una categoría inferior. La plantilla sigue al país: Asia recibe la AFC Champions League y la AFC Champions League Two, Sudamérica la Libertadores y la Copa Sudamericana, África la CAF Champions League y la Copa Confederación CAF. Esas cuatro copas que el juego no tiene se construyen con el mundo (sección 8.2). Una plaza de *clasificación a la Libertadores* ocupa el sitio de un club del juego en la ronda previa (el último del país con más clubes en ella), como mucho seis de sus ocho plazas; **Comprobar el plan** dice qué ligas se quedan fuera pasado ese número. |
@@ -470,13 +471,14 @@ de 10 MB. Descarga solo las partes que quieras.
   fuera, y **Añadir un club de otra liga...** trae clubes de cualquier liga de la base -- la
   primera división de esta temporada es la del año pasado con dos ascendidos, por ejemplo. La
   fila de la liga lleva un `*`. Un club solo puede estar en una liga de la receta.
-- Una liga admite de 10 a 24 clubes, sus clubes nuevos y los del juego juntos; las demás salen en gris. La línea de abajo cuenta los clubes
+- Una liga admite de 10 a 24 clubes, sus clubes nuevos y los del juego juntos; las demás salen en gris. Una liga que ya es del juego (la Premier League, la Championship ...) también sale en gris (0.1.9): ya está en el juego, llévala a la temporada de NewLife con **Llevar las ligas del juego a esta temporada...** más abajo. La línea de abajo cuenta los clubes
   nuevos de la receta frente a los 793 que admite un mundo.
 - Los clubes que el juego ya tiene entran en la liga nueva como clubes del juego (sección 8),
   en sus últimos puestos, con su nombre, escudo, equipaciones y jugadores. Uno que además juega
   una competición del juego (el Basilea y el Young Boys juegan la Europa League) necesita el club
   que ocupa su lugar allí: *Clubes nuevos*, elígelo, **Club del juego**. Hasta entonces Build
-  dice cuáles son.
+  dice cuáles son. Un club cuya única competición del juego es continental (el Ludogorets en la
+  fase previa de la Champions) la sigue jugando solo (0.1.9).
 - Un jugador que el juego ya tiene (el mismo jugador con el mismo nombre, por ejemplo Urbański en
   el Górnik en el juego y en el Legia en NewLife) se va al club NewLife en vez de crearse por
   segunda vez (0.1.7): conserva su cara, nombre e ID y toma la posición y las valoraciones de

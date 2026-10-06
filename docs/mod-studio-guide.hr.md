@@ -33,7 +33,8 @@ Prozor je na engleskom. **Settings → Language → Hrvatski** ga prebaci na hrv
    ispod kaže je li pronađen `SiderAddons\sider.ini`. Sider se može zvati i drukčije ili biti
    razinu dublje (`sider\patch 1` ...); ako ih ima više, **Settings → Sider folder** bira s kojim program radi.
 2. Ako želiš nove lige ili promjene igrača: **Postavke → Raspakiraj tablice igre**. Pročita
-   klubove, lige i igrače igre u radnu mapu (par sekundi). Ponovi samo nakon nadogradnje igre.
+   klubove, lige i igrače igre u radnu mapu (par sekundi). Ponovi samo nakon nadogradnje igre;
+   Build je sam primijeti (0.1.9) i ponudi da prvo opet raspakira.
 3. Otvori **Pregled**. Pokazuje cijelu postavu na jednom mjestu i popis problema. Dvoklik na
    problem otvara stranicu koja ga rješava.
 
@@ -143,7 +144,7 @@ sadržaja s imenom `_FL26...` koju igra čita dok je uključena.
 | **Klubovi** | Od 10 do 24 (od 1 do 24 za klubove bez lige). |
 | **Klubovi bez lige** | Za jedan klub, ili nekoliko njih, bez lige oko sebe (0.1.8): recimo samo BATE Borisov iz Bjelorusije. Odaberi grupu u koju idu: *Other European teams*, *Other Latin American teams*, *Other Asia-Oceania teams*, *Other Africa teams* ili *Classic Teams* -- tamo gdje igra drži svoje klubove koji ne igraju ni u jednoj ligi (Dynamo Kyiv, Wydad Casablanca ...). U Select Team se pojavljuju u toj grupi. Dobiju ime, grb, dresove, trenera, formaciju, igrače i domaći stadion kao svaki novi klub (**Edit club**, **Players**); ime gore je samo kako ih Mod Studio vodi. Ne igraju ligu, kup ni europsko natjecanje, a sve ostalo u ovom prozoru je sivo. |
 | **Format** | *Svi sa svima*, 1 do 4 puta, *dijeli se na pola (kao Škotska)* ili *Apertura i Clausura*: dva turnira u sezoni (rujan–početak siječnja, siječanj–svibanj), svaki od nula bodova, zatim doigravanje 8 ili 4 kluba (ili bez njega). O ulasku i ispadanju odlučuje ukupna tablica sezone. Najviše 18 klubova. Podijeljena liga ima najviše 46 kola, prije i poslije podjele zajedno (16 klubova dvaput je 30, pa najveća skupina dvaput smije imati 8 klubova, 14 kola). Zasad se u jednoj državi samo jedna liga smije dijeliti ili igrati Aperturu/Clausuru. |
-| **Rang** | *(prvi rang)* ili liga iznad nje: druga nova liga ili liga iz igre. Za novu ligu ispod druge nove lige u jednom koraku: odaberi je i stisni **Dodaj nižu ligu** (preuzme državu, broj klubova, format i gore/dolje od lige iznad; ostaje samo ime). |
+| **Rang** | *(prvi rang)* ili liga iznad nje: druga nova liga ili liga iz igre. Za novu ligu ispod druge nove lige u jednom koraku: odaberi je i stisni **Dodaj nižu ligu** (preuzme državu, broj klubova, format i gore/dolje od lige iznad; ostaje samo ime). Liga ispod koje je već druga nova liga je siva (0.1.9): igra od lige prati samo jednu vezu prema dolje, pa skupine jednog ranga (tri skupine Serie C ispod Serie B) još nisu moguće. |
 | **Gore / dolje** | Koliko klubova na kraju sezone zamijeni mjesta s ligom iznad. |
 | **Sezona** | Samo za prvi rang nove države: *kolovoz do svibanj* (zadano) ili *veljača do prosinac*, kao Brazil, Japan ili Saudijska Arabija: klubovi idu gore i dolje za Novu godinu, a lige ispod nje je slijede. Još ne uz podjelu, Aperturu/Clausuru, nacionalni kup ni liga kup. |
 | **Europa** | Samo za prvi rang: koje mjesto u ligi ide u koje europsko natjecanje. **Prva liga: 1. kvalifikacije LP, 2. EL, 3. UECL** upiše uobičajena tri (*... (kvalifikacije)* su kolovoška doigravanja, vidi 8.2); **Dodaj mjesto**, **Makni mjesto** i **Makni** za sve ostalo. Svako mjesto samo jednom, i samo mjesta koja liga ima. Ispod 1 mjesto glasi **Pobjednik kupa** (0.1.7): pobjednik kupa te države (nova država treba **Nacionalni kup**) -- a kad pobjednik već ima europsko mjesto kroz ligu, mjesto ide niz ligu sljedećem klubu, kao kod UEFA-e. Može ga imati i liga iz igre (*Europska mjesta liga iz igre*). Za niži rang ostavi prazno. Predložak prati državu: Azija dobije AFC Ligu prvaka i AFC Ligu prvaka Two, Južna Amerika Libertadores i Copa Sudamericana, Afrika CAF Ligu prvaka i CAF Konfederacijski kup. Ta četiri kupa kojih igra nema grade se sa svijetom (odjeljak 8.2). Mjesto u *kvalifikacijama Libertadoresa* zauzme mjesto kluba iz igre u kvalifikacijskom kolu (zadnjeg iz države koja u njemu ima najviše klubova), najviše šest od njegovih osam mjesta; **Provjeri plan** kaže koje lige preko toga ostaju bez mjesta. |
@@ -444,12 +445,14 @@ više njih), plus *Free agents*, svaki manji od 10 MB. Preuzmi samo dijelove koj
   **Dodaj klub iz druge lige...** dovodi klubove bilo koje lige iz baze -- recimo prva liga ove
   sezone je prošlogodišnja s dva kluba koja su ušla. Redak lige dobije `*`. Klub može biti samo
   u jednoj ligi recepta.
-- Liga prima 10 do 24 kluba, nove i one iz igre zajedno; ostale su sive. Redak na dnu broji nove klubove recepta prema 793
+- Liga prima 10 do 24 kluba, nove i one iz igre zajedno; ostale su sive. Liga koju igra već ima (Premier liga, Championship ...) je isto siva (0.1.9): dovedi je u NewLife sezonu s **Dovedi lige igre u ovu sezonu...** ispod. Redak na dnu broji nove klubove recepta prema 793
   koliko svijet prima.
 - Klubovi koje igra već ima ulaze u novu ligu kao klubovi iz igre (odjeljak 8, *Klubovi koje
   igra već ima*), na zadnja mjesta, sa svojim imenom, grbom, dresovima i igračima. Onaj koji
   igra i neko natjecanje igre (Basel i Young Boys igraju Europa ligu) treba klub koji ga tamo
   mijenja: *Novi klubovi*, odaberi ga, **Klub iz igre**. Do tada Build javlja koji su to.
+  Klub kojem je jedino natjecanje igre kontinentalno (Ludogorets u kvalifikacijama Lige prvaka)
+  sam ga nastavlja igrati (0.1.9).
 - Igrač kojeg igra već ima (isti igrač pod istim imenom, recimo Urbański u Górniku u igri i u
   Legiji u NewLifeu) prelazi u NewLife klub umjesto da nastane drugi put (0.1.7): zadržava lice,
   ime i ID, a uzima NewLifeovu poziciju i ocjene. Ostaje gdje jest kad bi njegov stari klub pao

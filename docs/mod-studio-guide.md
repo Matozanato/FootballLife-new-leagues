@@ -33,7 +33,7 @@ The window is in English. **Settings → Language** switches it to Croatian (Hrv
    The line under it says whether `SiderAddons\sider.ini` was found.
 2. If you want new leagues or player changes: **Settings → Unpack the game's tables**. It
    reads the game's clubs, leagues and players into a working folder (a few seconds). Do it
-   again only after a game update.
+   again only after a game update; Build notices one (0.1.9) and offers to unpack again first.
 3. Open **Overview**. It shows your setup at a glance and lists problems. Double-click a
    problem to open the page that fixes it.
 
@@ -148,7 +148,7 @@ with Ctrl+click, Shift+click or Ctrl+A, then **Remove** or the Delete key.
 | **Clubs** | 10 to 24 (1 to 24 for clubs in no league). |
 | **Clubs in no league** | For one club, or a few, without a league around them (0.1.8): say only BATE Borisov from Belarus. Pick the group they go in: *Other European teams*, *Other Latin American teams*, *Other Asia-Oceania teams*, *Other Africa teams* or *Classic Teams* -- where the game keeps its own clubs that play in no league (Dynamo Kyiv, Wydad Casablanca ...). In Select Team they show under that group. They get names, crests, kits, a manager, a formation, players and a home stadium like any new club (**Edit club**, **Players**); the name above is only how Mod Studio lists them. They play no league, no cup and no European competition, and everything else in this dialog goes grey. |
 | **Format** | *Everyone plays everyone*, 1 to 4 times, *splits in two (Scottish style)*, or *Apertura and Clausura*: two tournaments a season (September to early January, January to May), each from zero points, then playoffs of 8 or 4 clubs (or none). The whole season's table decides promotion and relegation. 18 clubs at most. A split is 46 rounds at most, before and after the split together (16 clubs twice is 30, so its biggest group twice can be 8 clubs, 14 rounds). One league per country can be split or Apertura/Clausura for now. |
-| **Division** | *(top division)*, or the league above it: another new league, or one of the game's. To put a new league under another new league in one step: select it and press **Add lower tier** (it takes the country, club count, format and up/down of the league above; only the name is left). |
+| **Division** | *(top division)*, or the league above it: another new league, or one of the game's. To put a new league under another new league in one step: select it and press **Add lower tier** (it takes the country, club count, format and up/down of the league above; only the name is left). A league another new league is already under is grey (0.1.9): the game follows one link down from a league, so groups of one division (three Serie C groups under Serie B) are not possible yet. |
 | **Up / down** | How many clubs change places with the league above at the end of the season. |
 | **Season** | Top division of a new country only: *August to May* (the default) or *February to December*, like Brazil, Japan or Saudi Arabia: clubs go up and down at New Year, and the divisions below it follow it. Not with a split, Apertura/Clausura, a national cup or a league cup yet. |
 | **Europe** | Top division only: which league position goes to which European competition. **Top flight: 1st UCL qualifying, 2nd UEL, 3rd UECL** fills the usual three (*... qualifying* are the August play-offs, see 8.2); **Add place**, **Remove place** and **Clear** for anything else. Each position once, and only positions the league has. Below 1 the position reads **Cup winner** (0.1.7): the winner of the country's cup (a new country needs **National cup**) -- and when the winner already has a European place through the league, the place goes down the league to its next club, as UEFA does it. A league of the game can have one too (*European places of the game's leagues*). Leave it empty for a lower tier. The preset follows the country: Asia gets the AFC Champions League and AFC Champions League Two, South America the Libertadores and the Copa Sudamericana, Africa the CAF Champions League and CAF Confederation Cup. Those four cups the game does not have are built with the world (section 8.2). A *Libertadores qualifying* place takes the place of a club of the game in the qualifying round (the last one of the country with the most clubs in it), at most six of its eight places; **Check the plan** says which leagues are left out past that. |
@@ -455,13 +455,14 @@ under 10 MB. Download only the parts you want.
   **Add a club from another league...** to bring in clubs of any league of the release -- this
   season's first division is last season's with two promoted clubs, say. The league's row gets a
   `*`. A club can be in one league of the recipe only.
-- A league takes 10 to 24 clubs, its new clubs and the game's own together; the others are grey. The line at the bottom counts the new clubs
+- A league takes 10 to 24 clubs, its new clubs and the game's own together; the others are grey. A league of the game itself (the Premier League, the Championship ...) is grey too (0.1.9): it is in the game already, bring it to the NewLife season with **Bring the game's leagues to this season...** below. The line at the bottom counts the new clubs
   of the recipe against the 793 a world takes.
 - Clubs the game already has join the new league as clubs of the game (section 8, *Clubs the
   game already has*), in its last places, with their own names, crests, kits and players. One
   that also plays a competition of the game (Basel and Young Boys play the Europa League) needs
   the club that takes its place there: *New clubs*, pick it, **Club of the game**. Build says
-  which ones until then.
+  which ones until then. A club whose only competition of the game is continental (Ludogorets in
+  the Champions League qualifying) keeps playing it on its own (0.1.9).
 - A player the game already has (the same player under the same name, Urbański at Górnik in
   the game and at Legia in NewLife, say) moves to the NewLife club instead of being made a
   second time (0.1.7): he keeps his face, name and id and takes NewLife's position and ratings.
