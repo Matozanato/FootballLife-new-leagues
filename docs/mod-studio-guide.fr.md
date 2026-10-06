@@ -278,7 +278,9 @@ jeu. Choisissez un club (ou appuyez sur **Joueurs** dans Nouveaux clubs), puis u
   pour lui donner le vôtre ;
 - **Visage** : **Choisir...** un dossier de visage (section 8.1). **Effacer** redonne le visage du
   jeu. Un nouveau joueur sans visage reçoit un visage du pack de visages des regens qui va avec sa
-  nationalité, avec son portrait (0.1.5.5, modules installés) ;
+  nationalité, avec son portrait (0.1.5.5, modules installés). Un visage fait pour un autre joueur
+  apporte aussi l'apparence de son corps : les bras et les jambes ont la couleur de peau de ce
+  visage (0.1.9) ;
 - **Portrait** : **Choisir...** une image (PNG ou JPG) pour le petit portrait du joueur dans les listes
   de l'effectif, sans visage à lui. Le Build la met en 180 x 180 ; elle passe avant le portrait d'un
   dossier de visage ;

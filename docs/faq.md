@@ -311,6 +311,13 @@ the portrait that goes with it, the same face every time. A player you gave a **
 own; one with only a **Portrait** gets the 3D face and keeps his picture. It needs **Install the
 modules** (the face pack comes with them), and the world built again with 0.1.5.5.
 
+Before 0.1.9 the 3D face of a new player never showed, only the portrait: the game draws a
+player from his appearance record, and a player the Build made has none. 0.1.9 puts one in.
+The game has room for about 2,000 of them (FL26 itself fills the rest), so in a world with
+more new players the others keep the default look, and sider.log says "appearance table
+full". A player you gave a **Face** made for another player takes that player's appearance
+too, so his arms and legs have the face's skin colour (GitHub #102).
+
 ### What should I send when something is wrong?
 
 1. In Mod Studio: **Tools > Diagnostics > Copy a report**, and paste it into the issue.

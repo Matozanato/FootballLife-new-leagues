@@ -26,6 +26,9 @@ save loader (0x1412e5eb0):
     and with the face pack each gets a pack face of his part of the world and its portrait, as a
     regen does ("newfaces3d": the 3D face only, the player keeps his own portrait). A player
     with his own face is not listed.
+  * a player given a face made for another player (Mod Studio's Face) takes that player's
+    appearance as well, from "faceapp <his id>:<the face's id>" lines: the face model brings
+    the head, the appearance record the body and its skin colour (GitHub #102).
 
 FLAGS: 1 = new names, 2 = new potential; 3 = both.
 
@@ -42,6 +45,7 @@ local DEBUG = false       -- log the first face/portrait file names seen
 
 local dll_log, dll_stats, dll_is, dll_face, dll_faces, logbuf, statbuf
 local nfaces = 0
+local ncopies = 0
 local ticks = 0
 local hidden = 0
 
@@ -64,7 +68,7 @@ function m.make_key(ctx, filename)
   ticks = ticks + 1
   if ticks % 32 == 0 then
     drain(nil)
-    if nfaces > 0 then dll_faces() end
+    if nfaces > 0 or ncopies > 0 then dll_faces() end
   end
   return nil
 end
@@ -123,6 +127,22 @@ local function new_players(add, dllpath)
   if players > 0 then log(string.format("fl26regen: %d new players of the world get pack faces (%d ranges)", players, n)) end
 end
 
+-- "faceapp 179700:36912 179701:40510": player 179700 wears the face made for 36912 (#102)
+local function face_copies(copy, dllpath)
+  local f = io.open((dllpath:gsub("fl26regen%.dll$", "fl26world.txt")), "r")
+  if not f then return 0 end
+  local n = 0
+  for line in f:lines() do
+    local rest = line:match("^%s*faceapp%s+(.*)$")
+    if rest then
+      for to, from in rest:gmatch("(%d+):(%d+)") do n = tonumber(copy(tonumber(to), tonumber(from))) end
+    end
+  end
+  f:close()
+  if n > 0 then log(string.format("fl26regen: %d player(s) take the appearance of the face they were given", n)) end
+  return n
+end
+
 function m.init(ctx)
   if ffi == nil then log("fl26regen: global ffi is nil -- set luajit.ext.enabled = 1"); return end
   ffi.cdef([[
@@ -137,6 +157,7 @@ function m.init(ctx)
     typedef int  (*fl26_regen_faces_load_t)(const char*);
     typedef int  (*fl26_regen_faces_t)(void);
     typedef int  (*fl26_regen_new_t)(uint32_t, uint32_t, int);
+    typedef int  (*fl26_regen_copy_t)(uint32_t, uint32_t);
   ]])
   local sep = string.char(92)
   local dllpath = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26regen.dll"
@@ -172,6 +193,11 @@ function m.init(ctx)
                      or "fl26regen: no face pack (" .. pack .. "), regens keep the generic face")
       local pnew = ffi.C.GetProcAddress(h, "fl26_regen_new")
       if nfaces > 0 and pnew ~= nil then new_players(ffi.cast("fl26_regen_new_t", pnew), dllpath) end
+    end
+    local pcopy = ffi.C.GetProcAddress(h, "fl26_regen_copy")
+    if pfa ~= nil and pcopy ~= nil then
+      dll_faces = dll_faces or ffi.cast("fl26_regen_faces_t", pfa)
+      ncopies = face_copies(ffi.cast("fl26_regen_copy_t", pcopy), dllpath)
     end
     if FACES then ctx.register("livecpk_rewrite", m.rewrite) end
     drain(nil)

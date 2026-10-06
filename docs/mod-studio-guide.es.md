@@ -265,7 +265,9 @@ propio juego. Elige un club (o pulsa **Jugadores** en Clubes nuevos) y luego un 
   escribe uno en **Nombre** para darle el tuyo;
 - **Cara**: **Elegir...** una carpeta de cara (sección 8.1). **Borrar** devuelve la cara del juego.
   Un jugador nuevo sin ella recibe una cara del paquete de caras de regens que va con su
-  nacionalidad, con su retrato (0.1.5.5, con los módulos instalados);
+  nacionalidad, con su retrato (0.1.5.5, con los módulos instalados). Una cara hecha para otro
+  jugador trae también el aspecto de su cuerpo, así que brazos y piernas tienen el color de piel
+  de esa cara (0.1.9);
 - **Retrato**: **Elegir...** una imagen (PNG o JPG) para el retrato pequeño del jugador en las listas
   de la plantilla, sin cara propia. El Build la deja en 180 x 180; tiene prioridad sobre el retrato de
   una carpeta de cara;

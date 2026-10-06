@@ -518,7 +518,7 @@ def new_face_lines(base, db, faces=(), portraits=(), per=64):
     with his own face folder is left out; one with only his own portrait goes in "newfaces3d"
     lines (the 3D face, his picture kept)."""
     if not os.path.exists(os.path.join(db, "Player.bin")):
-        return []
+        return face_app_lines(faces, per)
     shipped, players = load(base, "Player.bin"), load(db, "Player.bin")
     top = max(u32(shipped, i * P_REC + P_ID) for i in range(len(shipped) // P_REC))
     own = {u32(players, i * P_REC + P_ID) for i in range(len(players) // P_REC)}
@@ -529,7 +529,24 @@ def new_face_lines(base, db, faces=(), portraits=(), per=64):
     for word, ids in (("newfaces", own - keep), ("newfaces3d", keep)):
         runs = _runs(ids)
         lines += ["%s %s" % (word, " ".join(runs[k:k + per])) for k in range(0, len(runs), per)]
-    return lines
+    return lines + face_app_lines(faces, per)
+
+
+def face_app_lines(faces, per=64):
+    """the world file's "faceapp <id>:<face id>" lines: a player given a face made for another
+    player takes that player's appearance too (fl26regen), so the body and its skin colour go
+    with the head (GitHub #102)"""
+    import lbfaces
+    pairs = []
+    for pid, folder in faces:
+        try:
+            face = lbfaces.find(folder)
+            old = lbfaces.old_id(face) if face else ""
+        except (OSError, lbfaces.Error):
+            continue
+        if old.isdigit() and int(old) != pid:
+            pairs.append("%d:%d" % (pid, int(old)))
+    return ["faceapp " + " ".join(pairs[k:k + per]) for k in range(0, len(pairs), per)]
 
 
 def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, portraits=None):

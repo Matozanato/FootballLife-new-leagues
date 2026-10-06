@@ -383,9 +383,10 @@ static unsigned char* app_record(uint32_t id)
   return lo < n && *(uint32_t*)(t + (size_t)lo * APP_STRIDE) == id ? t + (size_t)lo * APP_STRIDE : 0;
 }
 static unsigned g_written;                     /* face records written since the last pass */
-static int apply_face(uint32_t id, int f)
+static unsigned char* app_insert(uint32_t id);
+static int apply_face(uint32_t id, int f, int add)
 {
-  unsigned char* r = f >= 0 ? app_record(id) : 0;
+  unsigned char* r = f < 0 ? 0 : add ? app_insert(id) : app_record(id);
   if (!r) return 0;
   if (memcmp(r + APP_DATA, g_faces[f].data, APP_LEN)) { memcpy(r + APP_DATA, g_faces[f].data, APP_LEN); g_written++; }
   return 1;
@@ -398,7 +399,7 @@ static void note_regen(unsigned char* rec)
   if (g_nrlist >= MAX_RLIST) return;
   int f = face_of(id, *(uint16_t*)(rec + R_NAT) & 0x1ff);
   g_rlist_id[g_nrlist] = id; g_rlist_face[g_nrlist] = (int16_t)f; g_nrlist++;
-  apply_face(id, f);
+  apply_face(id, f, 0);
 }
 
 /* ---- new players: the world's own players get a pack face too (GitHub #52) ----
@@ -665,6 +666,66 @@ __declspec(dllexport) int fl26_regen_new(uint32_t from, uint32_t to, int keep)
   return ++g_nnew;
 }
 
+/* a player who was given a face made for another player (Mod Studio's Face, moved to his id at
+   Build) takes that player's appearance too: the face model brings the head, but the body --
+   arms, legs, the skin colour -- is drawn from the appearance record, so without this a dark
+   face sat on white arms (GitHub #102). to <- from; returns how many pairs it holds */
+#define MAX_COPY 4096
+static uint32_t g_copy_to[MAX_COPY], g_copy_from[MAX_COPY];
+static int      g_ncopy;
+__declspec(dllexport) int fl26_regen_copy(uint32_t to, uint32_t from)
+{
+  if (g_ncopy >= MAX_COPY || !to || !from || to == from) return g_ncopy;
+  g_copy_to[g_ncopy] = to; g_copy_from[g_ncopy] = from;
+  return ++g_ncopy;
+}
+/* a player the builder made has no appearance record at all (the game draws its default look
+   for him), so his record is put in, in the table's order, while there is room. The room is
+   small: FL26 fills 27,927 of the 30,024 records, and a full table is worse than none -- the
+   lookup (0x1414bd160) refuses every id once the count reaches the capacity, so every player
+   in the game drops to the default look (measured 06.10.). APP_SPARE records stay free. */
+#define APP_SPARE 64
+static unsigned char* app_insert(uint32_t id)
+{
+  unsigned char* r = app_record(id);
+  if (r) return r;
+  unsigned char* owner = *(unsigned char**)(uintptr_t)(g_base + OWNER_RVA);
+  unsigned char* obj = owner ? *(unsigned char**)(owner + APP_OWNER) : 0;
+  if (!obj || !g_app_tab_disp || !id) return 0;
+  unsigned n = *(uint16_t*)(obj + g_app_cnt_disp);
+  if (n + APP_SPARE >= g_app_cap) {
+    static int told;
+    if (!told++) logf("appearance table full (%u of %u): the world's other new players keep the default look", n, g_app_cap);
+    return 0;
+  }
+  unsigned char* t = obj + g_app_tab_disp;
+  unsigned lo = 0, hi = n;
+  while (lo < hi) {
+    unsigned mid = (lo + hi) / 2;
+    uint32_t v = *(uint32_t*)(t + (size_t)mid * APP_STRIDE);
+    if (v - 1 < id - 1) lo = mid + 1; else hi = mid;
+  }
+  r = t + (size_t)lo * APP_STRIDE;
+  memmove(r + APP_STRIDE, r, (size_t)(n - lo) * APP_STRIDE);
+  memset(r, 0, APP_STRIDE);
+  *(uint32_t*)r = id;
+  *(uint16_t*)(obj + g_app_cnt_disp) = (uint16_t)(n + 1);
+  return r;
+}
+static int apply_copies(void)
+{
+  int n = 0;
+  for (int i = 0; i < g_ncopy; i++) {
+    unsigned char* s = app_record(g_copy_from[i]);
+    unsigned char* d = s ? app_insert(g_copy_to[i]) : 0;
+    if (d && d <= s) s = app_record(g_copy_from[i]);   /* the insert moved it */
+    if (!d || !s) continue;
+    n++;
+    if (memcmp(d + APP_DATA, s + APP_DATA, APP_LEN)) { memcpy(d + APP_DATA, s + APP_DATA, APP_LEN); g_written++; }
+  }
+  return n;
+}
+
 /* write every regen's and new player's face into the appearance table again; returns how many
    records it found, or -1 when the last pass was too recent */
 #define FACES_EVERY 250
@@ -689,9 +750,10 @@ __declspec(dllexport) int fl26_regen_faces(void)
   int n = 0;
   g_written = 0;
   new_scan();
-  for (int i = 0; i < g_nrlist; i++) n += apply_face(g_rlist_id[i], g_rlist_face[i]);
+  n += apply_copies();                         /* first: the room may not hold everyone */
+  for (int i = 0; i < g_nrlist; i++) n += apply_face(g_rlist_id[i], g_rlist_face[i], 0);
   for (int i = 0; i < g_nnlist; i++)
-    if (!fl26_regen_is(g_nlist[i].id)) n += apply_face(g_nlist[i].id, g_nlist[i].face);
+    if (!fl26_regen_is(g_nlist[i].id)) n += apply_face(g_nlist[i].id, g_nlist[i].face, 1);
   QueryPerformanceCounter(&t1);
   double ms = (double)(t1.QuadPart - t0.QuadPart) * 1000.0 / (double)f.QuadPart;
   if (ms > slowest) slowest = ms;
