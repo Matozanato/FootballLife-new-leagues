@@ -17,6 +17,10 @@ FEATURED = [
     ("vector360", "Evo-Web, Discord",
      "the European format checked against UEFA's: the first-season order, the draw rules, the "
      "real 2026/27 list and the Carabao Cup"),
+    ("jibibi", "Evo-Web, Discord moderator",
+     "tests on a heavily modded game (a full French patch, the kit server, Sider in any folder), "
+     "faces by nationality, the Players page on small screens, NewLife sorting, and the first "
+     "answer to everyone's questions on the Discord"),
     ("Amir (AmirPjanic)", "GitHub, Discord moderator",
      "Mod Studio tested release by release: the ID columns, names with č ć š ž đ, leagues of 26 "
      "and the national team editor"),
@@ -32,7 +36,6 @@ EVERYONE = [
     ("Stagnant09 (TrivialDice)", "GitHub, Evo-Web",
      "the flags in Select Team: the idea, the hook and the first working version"),
     ("pioup38", "GitHub", "the first report from another game build"),
-    ("jibibi", "Evo-Web", "tests next to a full French patch and the kit server; Sider in a folder of any name"),
     ("bobzera", "Evo-Web", "the default-kit problem of new clubs past id 65536"),
     ("spursfan07", "Evo-Web", "the first leagues built by hand in the database, and the walls they hit"),
     ("Gabyyy2008", "GitHub", "Apertura and Clausura in Argentina and Venezuela"),
