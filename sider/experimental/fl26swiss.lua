@@ -167,11 +167,15 @@ local function read_world(ctx)
       if fill > 0 or nat > 0 or #days > 0 or #clubs > 0 then
         c.opts = { fill = fill, national = nat, days = days, clubs = clubs }
       end
-      -- alt=<entry>:<league>,...: a national cup winner's entry and the league its place falls
-      -- back to (0.2.0, fl26_swiss_ccup_alt)
-      for ae, al in (crest:match("alt=([%d:,]+)") or ""):gmatch("(%d+):(%d+)") do
-        c.alt = c.alt or {}
-        c.alt[#c.alt + 1] = { tonumber(ae), tonumber(al) }
+      -- alt=<entry>:<league>[:<from>],...: a national cup winner's entry, the league its place
+      -- falls back to and the first position of it to try (0.2.0, fl26_swiss_ccup_alt: the
+      -- position rides in the bits above the league's ten)
+      for a in (crest:match("alt=([%d:,]+)") or ""):gmatch("[^,]+") do
+        local ae, al, af = a:match("^(%d+):(%d+):?(%d*)$")
+        if ae then
+          c.alt = c.alt or {}
+          c.alt[#c.alt + 1] = { tonumber(ae), tonumber(al) + 1024 * math.min(tonumber(af) or 0, 63) }
+        end
       end
       if c[2] > 0 then ccups[#ccups + 1] = c end   -- groups=0: a straight knockout
     end

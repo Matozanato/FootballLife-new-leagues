@@ -181,11 +181,14 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
   July): Build's CAF Super Cup is `groups=0` with `entry=<CAF CL ko>:0,<CAF CC ko>:0`, filled
   at the July teardown (day 181-183) and played in late July (recipe `"caf_super_cup": false`
   leaves it out).
-  `alt=<entry>:<league>,...` (0.2.0, #95): entry number `<entry>` (0-based) is a national cup's
-  winner -- a recipe place at position 0 in one of these cups -- and `<league>` is where its
+  `alt=<entry>:<league>:<from>,...` (0.2.0, #95): entry number `<entry>` (0-based) is a national
+  cup's winner -- a recipe place at position 0 in one of these cups -- and `<league>` is where its
   place goes when there is no winner to send: a new career, a winner already in this cup or in
   another continental one. fl26swiss then takes the best club of that league not playing yet,
-  as for a UEFA cup winner's place (`fl26_swiss_ccup_alt`). A world file has up to 16 `ccup`
+  from position `<from>` down, as for a UEFA cup winner's place (`fl26_swiss_ccup_alt`). Build
+  writes `<from>` as the first position no competition takes: past a new league's European
+  places, or for a league of the game, where its places in the game's lower cups begin (J1 5th,
+  so its champion stays with the Champions League Elite). Without `:<from>` it starts at 1st. A world file has up to 16 `ccup`
   lines, continental, league and pre-season cups together (8 before 0.2.0).
 - `confed <flag>:<code>,...` (0.2.0): every country's confederation from `Country.bin` +5 (2 UEFA,
   3 AFC, 4 CONMEBOL, 5 CAF, 6 CONCACAF, 7 OFC), written when the world has continental cups of

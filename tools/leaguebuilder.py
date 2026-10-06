@@ -2946,7 +2946,7 @@ def build(pl, base, game, replace=False, log=print):
     for c in pl.get("ccups") or []:
         c["winners"] = list(c.get("winners") or []) + [[r, own_cup[r]] for r in
                                                        {e[1] for e in c["entry"] if e[0] == "cup"} if own_cup.get(r)]
-    ccups = continental((pl.get("ccups") or []) + hc, tmp, db, log)
+    ccups = continental((pl.get("ccups") or []) + hc, tmp, db, log, alt_from(pl))
     if pl.get("ccups") and confed:
         ccups.append(confed_line(confed))
     for c, h in zip(hc, pl.get("home_cups") or []):
@@ -3346,7 +3346,7 @@ def national_cups(pl, root, db, log=print):
                 % (c["super"], cids[0], regs[0], SUPER_CUP_LIKE))
 
 
-def continental(cups, root, db, log=print):
+def continental(cups, root, db, log=print, start=None):
     """build the planned continental cups (ccup_plan) with mkccup.py into the world's tables in
     <db>, with ids nothing in them uses; returns the world file's ccup lines"""
     if not cups:
@@ -3359,7 +3359,7 @@ def continental(cups, root, db, log=print):
     args = ["--base", db, "--out", root]
     rounds = []
     for cup in cups:
-        cup_winners(cup)
+        cup_winners(cup, start)
     for k, cup in enumerate(cups):
         reg = free.pop(0)
         ko = free.pop(0) if cup["groups"] else reg        # a straight knockout is one regulation
@@ -3412,26 +3412,43 @@ def home_cups(pl, confed):
     return out
 
 
-def cup_winners(cup):
+def alt_from(pl):
+    """{league: the first position no competition takes}, where a cup winner's place falls back
+    to (cup_winners): a new league's past its European places, a league of the game's past where
+    its places in fl26world.CCUPS begin (the ones above go to the game's own cups)"""
+    start = {}
+    for _n, _name, _code, _conf, fill in fl26world.CCUPS:
+        for r, p in fill:
+            start[r] = min(start.get(r, p), p)
+    for p in pl.get("leagues") or []:
+        pos = [q for q, _comp in p.get("europe") or [] if q != CUP_WINNER]
+        start[p["rid"]] = max(pos) + 1 if pos else 1
+    return start
+
+
+def cup_winners(cup, start=None):
     """a cup winner's entry ("cup", league) of a continental cup (ccup_entry) -> (the league's
-    national cup's regulation, 0), the league kept in cup["alt"] as (entry index, league): the
-    world file's alt=, which fl26swiss follows when the cup has no winner to send"""
+    national cup's regulation, 0), the league kept in cup["alt"] as (entry index, league, the
+    position to start at -- alt_from): the world file's alt=, which fl26swiss follows when the
+    cup has no winner to send, from that position down so as not to take a club another
+    competition takes"""
     regs = {int(r): reg for r, reg in cup.get("winners") or []}
     entry, alt = [], []
     for i, e in enumerate(cup["entry"]):
         if e[0] == "cup":
             if not regs.get(int(e[1])):
                 raise BuildError("%s: the cup winner of league %s, but its country has no cup" % (cup["name"], e[1]))
-            alt.append((i, int(e[1])))
+            alt.append((i, int(e[1]), min((start or {}).get(int(e[1]), 1), 63)))
             e = (regs[int(e[1])], 0)
         entry.append(e)
     cup["entry"], cup["alt"] = entry, alt
 
 
 def ccup_alt(line, alt):
-    """a world file ccup line with its cup winners' leagues (cup_winners): alt=<entry>:<league>,..."""
+    """a world file ccup line with its cup winners' leagues (cup_winners):
+    alt=<entry>:<league>:<first position>,..."""
     head, sep, name = line.partition(" name=")
-    return "%s alt=%s%s%s" % (head, ",".join("%d:%d" % a for a in alt), sep, name)
+    return "%s alt=%s%s%s" % (head, ",".join("%d:%d:%d" % a for a in alt), sep, name)
 
 
 def ccup_options(line, cup):

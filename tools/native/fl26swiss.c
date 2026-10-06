@@ -2666,6 +2666,7 @@ _Static_assert(MAX_CCUP == MAX_CCUP_FWD, "the Club World Cup sizes its list of c
    place of CCUP_KO_DAYS; clubs -- team ids invited by name, in place of the league positions */
 typedef struct { uint16_t reg, ko, groups, n; uint16_t ereg[CCUP_MAX_ENTRY]; uint8_t erank[CCUP_MAX_ENTRY];
                  uint16_t ealt[CCUP_MAX_ENTRY];
+                 uint8_t efrom[CCUP_MAX_ENTRY];   /* alt=: the first position of ealt to try */
                  uint16_t fill, national, nd, nc; uint16_t days[CCUP_MAX_DAYS]; uint32_t clubs[CCUP_MAX_ENTRY];
                  int filled_year; } ccup_t;
 static ccup_t g_ccup[MAX_CCUP]; static int g_nccup = 0;
@@ -2738,6 +2739,7 @@ __declspec(dllexport) int fl26_swiss_ccup(const uint16_t* v, int n)
     c->reg = v[p]; c->ko = v[p + 1]; c->groups = v[p + 2]; unsigned ne = v[p + 3]; p += 4;
     c->n = 0; c->fill = c->national = c->nd = c->nc = 0; c->filled_year = -1;
     memset(c->ealt, 0, sizeof c->ealt);
+    memset(c->efrom, 0, sizeof c->efrom);
     for (unsigned e = 0; e < ne; e++, p += 2)
       if (c->n < CCUP_MAX_ENTRY) { c->ereg[c->n] = v[p]; c->erank[c->n] = (uint8_t)v[p + 1]; c->n++; }
     if (!c->groups) {
@@ -2799,8 +2801,10 @@ __declspec(dllexport) int fl26_swiss_ccup_opts(const uint32_t* v, int n)
 }
 
 /* The cup winners' leagues per cup, n records of u16: knockout id, entry index, league (the
-   world file's alt=, see the continental cups above). Called after fl26_swiss_ccup. Answers the
-   records taken. */
+   world file's alt=, see the continental cups above), the league's low 10 bits and in the bits
+   above them the first position to try -- the one after every place of that league in another
+   competition, so the fallback is not a champion the Libertadores or the AFC Champions League
+   takes as well (0 = from the top). Called after fl26_swiss_ccup. Answers the records taken. */
 __declspec(dllexport) int fl26_swiss_ccup_alt(const uint16_t* v, int n)
 {
   int got = 0;
@@ -2812,7 +2816,8 @@ __declspec(dllexport) int fl26_swiss_ccup_alt(const uint16_t* v, int n)
       logf("fl26swiss: cup %u -- alt for entry %u does not name a cup winner's entry; left out", (unsigned)ko, (unsigned)e);
       continue;
     }
-    c->ealt[e] = league;
+    c->ealt[e] = league & 0x3ff;
+    c->efrom[e] = (uint8_t)(league >> 10);
     got++;
   }
   if (got) logf("fl26swiss: %d cup winner place(s) with a league to fall back on", got);
@@ -3055,7 +3060,7 @@ static int ccup_fill_one(int k, void* started)
       if (club && has_club(g_ccup_field[k], n, club)) club = 0;
       if (club && c->ealt[i] && ((!c->national && ccup_taken(club)) || lpre_has(c->ko, club))) club = 0;
       if (!club && c->ealt[i]) {                   /* its league's next club (alt=) */
-        for (int rank = 1; rank <= FINAL_MAX; rank++) {
+        for (int rank = c->efrom[i] ? c->efrom[i] : 1; rank <= FINAL_MAX; rank++) {
           uint32_t a = cwc_club(c->ealt[i], rank, &how);
           if (!a) break;
           if ((a >> 14) && !has_club(g_ccup_field[k], n, a) && (c->national || !ccup_taken(a)) && !lpre_has(c->ko, a)) {
