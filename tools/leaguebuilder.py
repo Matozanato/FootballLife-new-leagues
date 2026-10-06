@@ -517,7 +517,41 @@ def unpack_tables(game, out, log=print):
     with open(os.path.join(out, KIT_TEXTURES), "w") as f:
         f.write("".join("%s.ftex\n" % t for t in sorted(tex)))
     log("  %d kit textures" % len(tex))
+    with open(os.path.join(out, UNPACKED), "w", encoding="utf-8") as f:
+        json.dump(_table_cpks(game), f, indent=1)
     return base
+
+
+UNPACKED = "fl26-unpacked.json"        # the archives an unpack read: {file name: [size, mtime]}
+
+
+def _table_cpks(game):
+    d = os.path.join(game, "download")
+    return {os.path.basename(c): [os.path.getsize(c), int(os.path.getmtime(c))]
+            for c in sorted(glob.glob(os.path.join(d, "data_s2526*.cpk")) + glob.glob(os.path.join(d, "data_extra*.cpk")))}
+
+
+def tables_stale(game, out):
+    """why the tables unpacked into <out> are older than the game's archives, or None: a game
+    update added or changed a data_*.cpk since (GitHub #63: tables without the update's
+    data_extra changed the starting elevens of the game's clubs). An unpack of an older Mod
+    Studio left no record; it counts as stale when the game has a data_extra archive."""
+    try:
+        now = _table_cpks(game)
+    except OSError:
+        return None
+    if not now or not os.path.isdir(out):
+        return None
+    try:
+        was = json.load(open(os.path.join(out, UNPACKED), encoding="utf-8"))
+    except (OSError, ValueError):
+        return ("unpacked by an older Mod Studio, before the game's update archives were read"
+                if any(k.startswith("data_extra") for k in now) else None)
+    new = [k for k in now if k not in was]
+    changed = [k for k in now if k in was and list(was[k]) != now[k]]
+    if new or changed:
+        return "the game was updated since (%s)" % ", ".join(new + changed)
+    return None
 
 
 def tables_root(base):

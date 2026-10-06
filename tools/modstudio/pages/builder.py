@@ -3594,7 +3594,32 @@ class Build(BuilderPage):
                 log("\n" + note)
         self.run(go)
 
+    def stale_tables(self, again):
+        """True when the game's tables Mod Studio unpacked are older than the game and the
+        person chose to unpack them first; `again` runs once they are (GitHub #63: tables
+        without the update's data_extra changed the starting elevens of the game's clubs)"""
+        if self.app.settings.get("tables"):
+            return False                      # a folder of tables picked by hand: left as it is
+        why = B.tables_stale(self.app.game.folder, self.project.tables_dir())
+        if not why or not ask(self, "Build", _("The game's tables Mod Studio uses are older than the game: %s. "
+                                               "Unpack them again first? It takes about a minute.") % tr(why)):
+            return False
+        self.app.busy(True, _("Unpacking the game's tables"))
+
+        def done(_r):
+            self.app.busy(False)
+            self.project.load_tables()
+            again()
+
+        def failed(tb):
+            self.app.busy(False)
+            error(self, "Build", tb.strip().splitlines()[-1])
+        run_job(lambda progress: self.project.unpack(log=progress), done, failed)
+        return True
+
     def do_build(self):
+        if self.stale_tables(self.do_build):
+            return
         try:
             pl = self.plan()
             if B.pin_newlife(self.project.recipe, self.project.base):
@@ -3636,6 +3661,8 @@ class Build(BuilderPage):
     def build_all(self):
         """0.1.8: one button -- install the modules, build the world, switch it on, then a page
         that says what was done and what is left (restart the game, a new career)"""
+        if self.stale_tables(self.build_all):
+            return
         try:
             pl = self.plan()
             if B.pin_newlife(self.project.recipe, self.project.base):
