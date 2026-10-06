@@ -8,9 +8,10 @@ AUTHOR = ("Matozanato", "GitHub", "Mod Studio, the League Builder and the module
 
 # the ones the README gives a section of their own
 FEATURED = [
-    ("vmardonesdev", "GitHub",
+    ("vmardonesdev", "GitHub, Vicentico12 on Discord",
      "the tester this project owes the most: full seasons and rollovers, a regression suite, a "
-     "testing plan and twenty-one of the first thirty-seven issues"),
+     "testing plan, twenty-one of the first thirty-seven issues, and on the Discord the European "
+     "places of the game's leagues"),
     ("Alikhaled_727", "Evo-Web, Mohamed_248 on GitHub",
      "the leagues outside Europe: Saudi Arabia, Egypt, Morocco, Asia and Africa, the CAF cups, "
      "the AFC Champions League Two and the league cup pre-round"),
@@ -65,8 +66,6 @@ EVERYONE = [
     ("San Marino", "Discord", "NewLife players copied instead of moved, and the Polish cup bracket"),
     ("lukewcfc", "Discord", "option files next to the new European cups"),
     ("mauro1977doni", "Discord", "a Europe-only world with an empty schedule"),
-    ("Vicentico12", "Discord",
-     "European places for the game's own leagues and a logo for the Copa Sudamericana"),
     ("N3RO", "Discord", "the Czech Chance Liga"),
     ("Hector", "Discord", "crests and logos for the NewLife Database"),
 ]

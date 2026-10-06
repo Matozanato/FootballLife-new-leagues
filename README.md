@@ -175,7 +175,7 @@ someone who played a season, wrote down what happened and sent it. Thank you, al
 
 ### vmardonesdev: the tester this project owes the most
 
-**vmardonesdev** has done more for this project than anyone besides its author. Twenty-one of
+**vmardonesdev** (Vicentico12 on the Discord) has done more for this project than anyone besides its author. Twenty-one of
 the first thirty-seven GitHub issues come from vmardonesdev, and every one is a proper test
 report: the exact commit, the exact world, what was installed, what was expected, what
 happened, with logs and saves attached. vmardonesdev runs full seasons and season rollovers
@@ -224,6 +224,8 @@ worst bugs here were found only because vmardonesdev played further than anyone 
 - [#31](https://github.com/Matozanato/FootballLife-new-leagues/issues/31): asked what to
   test next and turned the answer into the test runs for Apertura, the new countries' cups
   and the Kick Off order.
+- On the Discord, as Vicentico12: European places for the game's own leagues, which 0.1.7's
+  UEFA ranking gives, and a logo for the Copa Sudamericana.
 
 If you use anything from this repository, vmardonesdev's name belongs next to it.
 
@@ -410,8 +412,6 @@ and other Latin American worlds and writes up every bug with screenshots:
   0.1.7 moves the game's own players, and a Polish cup of 36 whose bracket lost clubs.
 - **lukewcfc** (Discord): option files next to the new European cups.
 - **mauro1977doni** (Discord): a Europe-only world with an empty schedule.
-- **Vicentico12** (Discord): European places for the game's own leagues, which 0.1.7's UEFA
-  ranking gives, and a logo for the Copa Sudamericana.
 - **N3RO** (Discord): asked for the Czech Chance Liga.
 - **Hector** (Discord): crests and logos for the NewLife Database.
 - **LaraCroft** (Discord): asked for BATE Borisov on its own, which became 0.1.8's
