@@ -49,6 +49,14 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
   the shipped leagues and tops the rest up from the big five; before, it named our world's
   leagues by id, and another world's leagues on the same ids got those countries' places
   (issue #8).
+- **The Conference League has no entrance scene of its own.** The walk-out before a
+  Champions League or Europa League match comes from FL26's own `Entrance.lua`, which names
+  those competitions' stage numbers one by one (2, 3, 1026 ... for the Champions League; 5, 6,
+  1029 ... for the Europa League). The Conference League that `fl26swiss` adds plays on stages
+  186, 187, 189, 1210, 1213 ... 8381, which that file does not know, so its matches get the
+  ordinary entrance. Not ours to change: the file belongs to the game's mod. The scoreboard and
+  the other content servers are keyed by stage the same way; Mod Studio's *all stages* choice
+  (0.1.9) writes a line for each.
 - **In a career that starts in August, the European competitions do not start.** Measured
   2026-09-23 with `sider/experimental/fl26augseason.lua`: the Champions League play-off is
   dated on days 230 and 237 of the year, and the game registers the European competitions
