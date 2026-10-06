@@ -3401,8 +3401,15 @@ def pictures(pl, root, base, log=print):
         log("  no kits: the game's UniformParameter.bin was not unpacked (Unpack from game)")
         return
     import mkkits
+    ours = []                       # the clubs this Build made: their ids depend on the database (#54)
+    for p in pl["leagues"] + (pl.get("others") or []):
+        gp = game_places(p)
+        ours += [tid for k, tid in enumerate(p["teams"]) if k not in gp]
+        ours += [g["swap_id"] for g in gp.values() if isinstance(g.get("swap"), dict) and g.get("swap_id")]
+    if not ours:
+        return
     args = ["mkkits.py", "--team-bin", os.path.join(root, "common", "etc", "pesdb", "Team.bin"),
-            "--unipar", unipar, "--root", root, "--archive"]
+            "--unipar", unipar, "--root", root, "--archive", "--clubs", ",".join(map(str, ours))]
     colours = {}                    # NewLife clubs: the shipped kit nearest their own colours
     for p in pl["leagues"] + (pl.get("others") or []):
         home, away = p.get("club_kits") or [], p.get("club_away_kits") or []

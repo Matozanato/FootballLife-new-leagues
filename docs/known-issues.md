@@ -367,6 +367,13 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-06 (Mod Studio 0.1.9, GitHub #54): **Build stopped with "No such file or directory:
+  ...UniformParameter.bin" on a custom database.** The kit step took "our clubs" to be the ids
+  from 71578 up, the first free id under the plain game. A database with fewer clubs leaves a
+  lower id free (71213 in the report), so none of the new clubs was found, no kit folder was
+  made and writing the kit archive failed. Build now names the clubs it made, and the folder is
+  made first. Reproduced and checked with a base whose new clubs start at 71213: 72 clubs, 288
+  kit files. A world on the plain game gets the same kits as before, byte for byte.
 - 2026-10-05 (Mod Studio 0.1.8, Discord): **a NewLife club played with the placeholder squad --
   players called "FL P00151" ... rated like a top club -- although the NewLife Database has its
   players** (CS Gloria Bistrita, Romanian Second League). Build matched a club's players to it

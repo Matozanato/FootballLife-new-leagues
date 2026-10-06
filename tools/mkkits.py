@@ -1,6 +1,7 @@
 r"""mkkits.py -- give OUR added clubs a kit, by lending them a shipped one.
 
-Our clubs (team id >= 71578) have crests but no kit definition at all, so on the pitch they
+Our clubs (the Build passes their ids with --clubs; without it, team id >= 71578) have crests
+but no kit definition at all, so on the pitch they
 wear whatever the engine falls back to. A kit definition is a named 120-byte blob:
 
     common/character0/model/character/uniform/team/<number>/<number><TAG><kind>_realUni.bin
@@ -87,13 +88,16 @@ def kit_key(tid):
     return num, "%d%s" % (num, TAGS[(tid >> 14) & 7])
 
 
-def roster(team_bin):
+def roster(team_bin, only=None):
+    """[(team id, name)] of our clubs: the ids in only, or every id from FIRST_OURS. The first
+    free id depends on the database under the world (a custom one may leave 71213 free, #54),
+    so the Build names its clubs."""
     raw = pesdb.wesys_unpack(open(team_bin, "rb").read())
     out = []
     for i in range(len(raw) // REC):
         r = raw[i * REC:(i + 1) * REC]
         tid = struct.unpack_from("<I", r, ID_OFF)[0]
-        if tid >= FIRST_OURS:
+        if (tid in only) if only is not None else tid >= FIRST_OURS:
             name = r[NAME_OFF:NAME_OFF + NAME_LEN].split(b"\0")[0].decode("utf-8", "replace")
             out.append((tid, name))
     out.sort()
@@ -252,7 +256,8 @@ def build(argv):
         return 2
     root, do_list = opt("--root"), "--list" in argv
 
-    clubs = roster(team_bin)
+    ids = opt("--clubs")
+    clubs = roster(team_bin, {int(x) for x in ids.split(",") if x.strip()} if ids is not None else None)
     raw, es, hdr = archive(unipar)
     tex = opt("--textures")
     textures = read_textures(tex) if tex else None
@@ -294,6 +299,7 @@ def build(argv):
         if hdr is not None:                       # keep the file's own wesys prefix
             out = pesdb.wesys_pack(out, hdr)
         p = os.path.join(root, TEAM_DIR.replace("/", os.sep), "UniformParameter.bin")
+        os.makedirs(os.path.dirname(p), exist_ok=True)     # no club written: no folder yet (#54)
         open(p, "wb").write(out)
         print("wrote %s (%d bytes, shipped entries plus ours)" % (p, len(out)))
     return 0
