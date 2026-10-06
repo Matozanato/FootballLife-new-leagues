@@ -272,16 +272,19 @@ class NewLife(BuilderPage):
     def fill(self):
         q = self.search.text().strip().lower()
         info = self.info()
+        self.gamekeys = self.game_keys(info)
         self.tree.clear()
         for i, L in enumerate(self.rows):
             if q and q not in L["name"].lower() and q not in L["country"].lower():
                 continue
             E = self.effective(L)
-            ok = N.fits(E, info)
+            game = tuple(L["key"]) in self.gamekeys
+            ok = N.fits(E, info) and not game
             it = QTreeWidgetItem([L["name"] + ("  *" if key(L) in self.custom else ""), L["country"],
                                   str(len(E["clubs"])), str(len(E["in_game"]) or ""),
-                                  str(L["players"]), str(L["strength"]), "" if ok else _("a league takes %d to %d clubs")
-                                  % (B.CLUBS_MIN, B.CLUBS_MAX)])
+                                  str(L["players"]), str(L["strength"]),
+                                  _("the game's own league: Bring the game's leagues to this season") if game
+                                  else "" if ok else _("a league takes %d to %d clubs") % (B.CLUBS_MIN, B.CLUBS_MAX)])
             it.setData(0, Qt.UserRole, i)
             it.setToolTip(3, _("Clubs of this league the game already has: they join the new league with "
                                "their own names, crests, kits and players"))
@@ -293,6 +296,25 @@ class NewLife(BuilderPage):
 
     def picked(self):
         return [self.rows[it.data(0, Qt.UserRole)] for it in self.tree.selectedItems()]
+
+    def game_keys(self, info):
+        """the release's leagues that are leagues of the game (Premier League, Championship ...).
+        Added as new leagues they stood beside the game's own, two Championships (Discord,
+        capital030); Bring the game's leagues to this season is their way in"""
+        if not self.rel or info is None:
+            return set()
+        tag = (id(self.rel), info.get("base"))
+        if getattr(self, "_gk", (None,))[0] != tag:
+            try:
+                match, _t = N._game_targets(self.rel, info)
+                self._gk = (tag, {tuple(L["key"]) for L in match.values()})
+            except Exception:
+                self._gk = (tag, set())
+        return self._gk[1]
+
+    def addable(self, info):
+        return [E for E in map(self.effective, self.picked())
+                if N.fits(E, info) and tuple(E["key"]) not in getattr(self, "gamekeys", set())]
 
     def effective(self, L):
         """league L with the clubs left out and the ones added from other leagues (self.custom)"""
@@ -381,7 +403,7 @@ class NewLife(BuilderPage):
     def count(self):
         info = self.info()
         used = sum(B.new_club_count(L) for L in self.project.recipe["leagues"])
-        sel = sum(len(E["clubs"]) for E in map(self.effective, self.picked()) if N.fits(E, info)) if self.rows else 0
+        sel = sum(len(E["clubs"]) for E in self.addable(info)) if self.rows else 0
         room = self.room if self.room is not None else 0
         text = _("New clubs in the recipe: %d of the %d the game takes.") % (used, room)
         if sel:
@@ -426,7 +448,7 @@ class NewLife(BuilderPage):
 
     def add(self):
         info = self.info()
-        sel = [E for E in map(self.effective, self.picked()) if N.fits(E, info)]
+        sel = self.addable(info)
         if not sel or not self.rel:
             return
         used = {str(i) for x in self.project.recipe["leagues"] for i in (x.get("newlife") or {}).get("clubs") or []}

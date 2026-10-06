@@ -1549,8 +1549,11 @@ def game_club_checks(out, base):
                 g["swap"] = None                     # nothing to hand over
                 continue
             if sw in (None, "", {}, 0):
-                raise BuildError("%s, club %d: %s plays in %s -- pick the club that takes its place there"
-                                 % (p["name"], at + 1, name, ", ".join(where)))
+                cont = not game_club_where(info, tid, True)
+                raise BuildError("%s, club %d: %s plays in %s -- pick the club that takes its place there%s"
+                                 % (p["name"], at + 1, name, ", ".join(where),
+                                    " (or tick 'It keeps its places in continental competitions' in Club of "
+                                    "the game)" if cont else ""))
             if isinstance(sw, dict):
                 nm = str(sw.get("name") or "").strip()
                 if not nm:

@@ -260,7 +260,7 @@ def add_league(recipe, rel, L, legs=2, info=None, custom=False, name=None, more=
     if logo:
         recipe["leagues"][-1]["logo"] = logo
     if game:
-        recipe["leagues"][-1]["game_clubs"] = [{"at": len(clubs) + j, "id": t} for j, t in enumerate(game)]
+        recipe["leagues"][-1]["game_clubs"] = [_game_entry(info, len(clubs) + j, t) for j, t in enumerate(game)]
     pl = recipe.setdefault("players", {})
     mover, db = _movers(recipe, info)
     proto = db.proto() if db is not None else []
@@ -627,6 +627,15 @@ def update_league(recipe, rel, x, rows, info=None, keep=None):
 # it takes back exactly that and nothing a person set by hand.
 
 MATCH = 0.5          # a release league is a game league when it holds this share of its clubs
+
+
+def _game_entry(info, at, tid):
+    """a club of the game in a NewLife league; one whose only places are continental keeps them,
+    so nobody has to take its place (GitHub #82: Ludogorets in the Europa League stopped the Build)"""
+    e = {"at": at, "id": tid}
+    if info is not None and B.game_club_where(info, int(tid)) and not B.game_club_where(info, int(tid), True):
+        e["keep"] = True
+    return e
 
 
 def _game_targets(rel, info):
