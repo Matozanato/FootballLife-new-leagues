@@ -464,11 +464,24 @@ class LeagueDialog(Dialog):
 
         self.above = QComboBox()
         self.above.addItem(_("(top division)"), None)
+        # a league another league already sits under is greyed: the game follows one link down
+        # (GitHub #98: three Serie C groups under Serie B)
+        taken = {}
+        for x in project.recipe["leagues"]:
+            a = x.get("above")
+            if x is not league and a not in (None, ""):
+                taken.setdefault(int(a) if isinstance(a, str) and a.isdigit() else a, x["name"])
+
+        def add(text, data):
+            self.above.addItem(text if data not in taken else "%s  -- %s" % (text, _("under it: %s") % taken[data]),
+                               data)
+            if data in taken:
+                self.above.model().item(self.above.count() - 1).setEnabled(False)
         for x in project.recipe["leagues"]:
             if x is not league and not x.get("others"):
-                self.above.addItem(x["name"], x["name"])
+                add(x["name"], x["name"])
         for r, n in project.parents:
-            self.above.addItem("%s  [%d]" % (n, r), r)
+            add("%s  [%d]" % (n, r), r)
         cur = L.get("above")
         i = self.above.findData(int(cur) if isinstance(cur, str) and cur.isdigit() else cur)
         self.above.setCurrentIndex(max(0, i))

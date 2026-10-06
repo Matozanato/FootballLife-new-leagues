@@ -1414,6 +1414,16 @@ def plan(recipe, base):
         if len(below) > 1:
             raise BuildError("%s has %d leagues below it; the game follows one link"
                              % (p["name"], len(below)))
+    # the same under a league of the game (GitHub #98: three Serie C groups under Serie B put the
+    # same relegated clubs into all three and lost the promoted ones)
+    ours = {p["rid"] for p in out}
+    gname = dict(shipped_parents(base))
+    for g in sorted({p["above"] for p in out if p["above"] and p["above"] not in ours}):
+        below = [p["name"] for p in out if p["above"] == g]
+        if len(below) > 1:
+            raise BuildError("%s are all under %s; the game follows one link down from a league, so only "
+                             "one of them can be under it -- groups of one division are not possible yet"
+                             % (", ".join(below), gname.get(g, "regulation %d" % g)))
     for p in out:
         if p.get("own_cup"):
             national_cup(p, next((q for q in out if q["above"] == p["rid"]), None))
@@ -3654,11 +3664,26 @@ def check(game, log=print):
     want = len(fl26world.read_world(wf)[1]) if os.path.exists(wf) else None
     if not os.path.exists(path):
         raise BuildError("no %s yet -- start the game once with the world switched on" % path)
+    if os.path.exists(wf) and os.path.getmtime(path) < os.path.getmtime(wf):
+        # the log is of a game started before the world was switched on (GitHub #94: every
+        # module "not loaded" right after Build)
+        log("  sider.log is older than the world switched on -- start the game to the main menu, then check again")
+        return False
     text = open(path, encoding="utf-8", errors="replace").read().splitlines()
     ok = True
+    # a module that refused the game's exe (GitHub #62: fl26caps ABORTED on another exe while the
+    # rest added the leagues, and the check said all was well)
+    for l in text:
+        m = re.match(r"^\[([\w.-]+)\.lua\] .*\bABORTED\b", l)
+        if m:
+            log("  %-14s refused the game's exe: %s" % (m.group(1), l.split("] ", 1)[-1].strip()))
+            ok = False
     for m in READERS:
         mine = [l for l in text if l.startswith("[%s.lua]" % m)]
         took = [l for l in mine if "world file --" in l]
+        # the line with the league count: fl26swiss writes its qualifying rounds' line first
+        # (Discord, Risto: "6 qualifying round(s) ... <- the file has 39")
+        took = [l for l in took if re.search(r"world file -- \d+ leagues?\b", l)] or took
         bad = [l for l in mine if any(w in l for w in ("aborting", "nothing written", "FAILED", "left alone"))]
         if not mine:
             log("  %-14s not loaded" % m)
