@@ -149,7 +149,7 @@
   ["^(.+): split groups (.+) must be 2 or 3 counts adding up to (\\d+)$", "\\1: skupine \\2 moraju biti 2 ili 3 broja koji zajedno daju \\3"],
   ["^at most (\\d+) split leagues for now.*$", "za sada najviše \\1 lige koje se dijele"],
   ["^(.+) has (\\d+) leagues below it; the game follows one link.*$", "\\1 ima \\2 lige ispod; igra prati samo jednu vezu"],
-  ["NOTE: (.+) is (\\d+) characters; the game's longest competition name is (\\d+), and a longer one can show blank in Kick Off$", "NAPOMENA: \\1 ima \\2 znakova; najduže ime natjecanja u igri ima \\3, a duže se u Kick Offu može prikazati prazno"],
+  ["NOTE: (.+) is (\\d+) characters; Kick Off shows at most (\\d+), a longer name is blank there$", "NAPOMENA: \\1 ima \\2 znakova; Kick Off prikazuje najviše \\3, duže ime je ondje prazno"],
   ["^(.+) are all under (.+); the game follows one link down.*$", "\\1 su sve ispod \\2; igra prati samo jednu vezu prema dolje, pa ispod nje može biti samo jedna -- skupine jednog ranga još nisu moguće"],
   ["^sider.log is older than the world switched on.*$", "sider.log je stariji od uključenog svijeta -- pokreni igru do glavnog izbornika pa provjeri opet"],
   ["refused the game's exe$", "odbio je exe igre"],

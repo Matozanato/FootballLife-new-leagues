@@ -2445,9 +2445,10 @@ def describe(pl):
     for p in pl["leagues"]:
         if len(p["name"]) > LONGEST_NAME:
             # "Paraguay First Division Primera División" (40) was a blank row in Kick Off's league
-            # list, "Paraguay First Division" showed (#101); the game's own longest name is 38
-            lines.append("  NOTE: %s is %d characters; the game's longest competition name is %d, and a longer "
-                         "one can show blank in Kick Off" % (p["name"], len(p["name"]), LONGEST_NAME))
+            # list, "Paraguay First Division" showed (#101); measured 06.10.: 38 characters show
+            # (accented letters count once), 39 are blank
+            lines.append("  NOTE: %s is %d characters; Kick Off shows at most %d, a longer name is blank there"
+                         % (p["name"], len(p["name"]), LONGEST_NAME))
     unlisted = [p["name"] for p in pl["leagues"] if p["slot"] == fl26world.NO_SLOT and not p.get("exhibition")]
     if unlisted:
         # the Select Team list has room for 36 new leagues; the ids past it play but have no place (#39)

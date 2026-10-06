@@ -149,7 +149,7 @@
   ["^(.+): split groups (.+) must be 2 or 3 counts adding up to (\\d+)$", "\\1 : les groupes \\2 doivent être 2 ou 3 nombres dont la somme fait \\3"],
   ["^at most (\\d+) split leagues for now.*$", "pour l'instant, au plus \\1 ligues qui se divisent"],
   ["^(.+) has (\\d+) leagues below it; the game follows one link.*$", "\\1 a \\2 ligues en dessous ; le jeu ne suit qu'un seul lien"],
-  ["NOTE: (.+) is (\\d+) characters; the game's longest competition name is (\\d+), and a longer one can show blank in Kick Off$", "NOTE : \\1 fait \\2 caractères ; le plus long nom de compétition du jeu en fait \\3, et un nom plus long peut s'afficher vide dans Kick Off"],
+  ["NOTE: (.+) is (\\d+) characters; Kick Off shows at most (\\d+), a longer name is blank there$", "NOTE : \\1 fait \\2 caractères ; Kick Off en affiche au plus \\3, un nom plus long y est vide"],
   ["^(.+) are all under (.+); the game follows one link down.*$", "\\1 sont toutes sous \\2 ; le jeu ne suit qu'un seul lien vers le bas, une seule peut donc être dessous -- les groupes d'une même division ne sont pas encore possibles"],
   ["^sider.log is older than the world switched on.*$", "sider.log est plus ancien que le monde activé -- lance le jeu jusqu'au menu principal puis vérifie à nouveau"],
   ["refused the game's exe$", "a refusé l'exe du jeu"],

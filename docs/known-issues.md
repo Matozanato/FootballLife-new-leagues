@@ -307,8 +307,9 @@ calendar.
   always starts when the game builds it, in early August.
 - **A long league name can show blank in Kick Off.** "Paraguay First Division Primera
   División" (40 characters) was an empty row in Kick Off's league list, "Paraguay First
-  Division" showed (#101). The game's own longest competition name is 38 characters; Check the
-  plan writes a NOTE for a longer one. Where exactly the screen stops is not measured yet.
+  Division" showed (#101). Measured in the game: up to 38 characters show, accented letters
+  included (they count as one each); 39 or more show blank. Check the plan writes a NOTE for a
+  name longer than 38, so keep league names at 38 characters or fewer.
 - **Saves are tied to the world.** A save made with world A does not load with world B or
   with the shipped game. Move your saves aside when you switch roots.
 - **Rulebook ids must be in the date table** (the 39 ids a default `mkworld.py` run uses,
