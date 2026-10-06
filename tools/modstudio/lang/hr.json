@@ -1238,7 +1238,8 @@
   "Clubs for the league phases of a new career's first season. Your clubs go in first, the game fills the rest; from the second season the leagues' European places decide.": "Klubovi za ligaške faze u prvoj sezoni nove karijere. Tvoji klubovi ulaze prvi, igra popuni ostatak; od druge sezone odlučuju europska mjesta liga.",
   "under it: %s": "ispod nje: %s",
   "the game's own league: Bring the game's leagues to this season": "igrina vlastita liga: Dovedi lige igre u ovu sezonu",
-  "The game's tables Mod Studio uses are older than the game: %s. Unpack them again first? It takes about a minute.": "Tablice igre koje Mod Studio koristi starije su od igre: %s. Prvo ih ponovno raspakirati? Traje oko minutu."
+  "The game's tables Mod Studio uses are older than the game: %s. Unpack them again first? It takes about a minute.": "Tablice igre koje Mod Studio koristi starije su od igre: %s. Prvo ih ponovno raspakirati? Traje oko minutu.",
+  "(made up from players of the club's country)": "(izmišljeno od igrača države kluba)"
  },
  "log": [
   [

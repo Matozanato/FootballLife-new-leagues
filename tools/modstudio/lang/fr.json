@@ -1238,7 +1238,8 @@
   "Clubs for the league phases of a new career's first season. Your clubs go in first, the game fills the rest; from the second season the leagues' European places decide.": "Clubs des phases de ligue de la première saison d'une nouvelle carrière. Vos clubs entrent en premier, le jeu remplit le reste ; à partir de la deuxième saison, les places européennes des ligues décident.",
   "under it: %s": "en dessous : %s",
   "the game's own league: Bring the game's leagues to this season": "ligue propre au jeu : Amener les ligues du jeu à cette saison",
-  "The game's tables Mod Studio uses are older than the game: %s. Unpack them again first? It takes about a minute.": "Les tables du jeu utilisées par Mod Studio sont plus anciennes que le jeu : %s. Les extraire à nouveau d'abord ? Cela prend environ une minute."
+  "The game's tables Mod Studio uses are older than the game: %s. Unpack them again first? It takes about a minute.": "Les tables du jeu utilisées par Mod Studio sont plus anciennes que le jeu : %s. Les extraire à nouveau d'abord ? Cela prend environ une minute.",
+  "(made up from players of the club's country)": "(inventé à partir des joueurs du pays du club)"
  },
  "log": [
   [

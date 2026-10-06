@@ -200,7 +200,7 @@ Imena zadržavaju kvačice (FK Željezničar); kratko ime od tri slova ih nema, 
 pa tamo Č, Ž, Đ postaju C, Z, D. Nakon **Izgradnje** stupac **ID kluba** pokazuje ID svakog
 kluba u igri.
 
-**Trener**: u **Uredi klub** novog kluba možeš upisati ime trenera. Prazno: numerirano ime (`FL M0001` ...). **Slika trenera** ispod daje treneru sliku (isto kao **Slika trenera...** na stranici Igrači); *Postojeće lige i klubovi* > **Uredi klub** ima je i za klubove igre.
+**Trener**: u **Uredi klub** novog kluba možeš upisati ime trenera. Prazno: izmišljeno ime od igrača države kluba (hrvatski klub dobije ime poput `Tomislav Krovinović`; isto na svakom Buildu), ili numerirano (`FL M0001` ...) za državu iz koje igra ima malo igrača. **Slika trenera** ispod daje treneru sliku (isto kao **Slika trenera...** na stranici Igrači); *Postojeće lige i klubovi* > **Uredi klub** ima je i za klubove igre.
 
 **Formacija**: u **Uredi klub** novog kluba možeš mu dati vlastitu formaciju; *Kao liga* zadržava formaciju lige. Teren ispod popisa pokazuje gdje tko stoji.
 

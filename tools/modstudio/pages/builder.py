@@ -1051,7 +1051,7 @@ class ClubDialog(Dialog):
         if coach is not None:              # a new club: its manager's name
             self.coach = QLineEdit(coach)
             self.coach.setMaxLength(45)
-            self.coach.setPlaceholderText("FL M0001")
+            self.coach.setPlaceholderText(_("(made up from players of the club's country)"))
             self.form.addRow(_("Manager"), self.coach)
             self.form.addRow("", hint(_("the manager's name in the game; empty = a numbered one")))
         self.coach_name = coach

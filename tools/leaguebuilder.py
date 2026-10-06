@@ -1269,7 +1269,7 @@ def plan(recipe, base):
              "logo": L.get("logo") or None, "flag": L.get("flag") or None,
              "club_crests": list(L.get("club_crests") or []),
              "club_abbrs": list(L.get("club_abbrs") or []),
-             "club_coaches": list(L.get("club_coaches") or []),     # managers' names, "" = FL Mnnnn
+             "club_coaches": list(L.get("club_coaches") or []),     # managers' names, "" = made up (mkcoaches)
              "formation": str(L.get("formation") or "").strip(),
              "club_formations": [str(x or "").strip() for x in (L.get("club_formations") or [])],
              "club_ids": [int(x) if str(x or "").strip().isdigit() else None
@@ -2811,7 +2811,10 @@ def build(pl, base, game, replace=False, log=print):
                  for k, t in enumerate(p["teams"])
                  if k < len(p.get("club_coaches") or []) and (p["club_coaches"][k] or "").strip()
                  and k not in game_places(p)}
-        add, st = mkcoaches.add_coaches(coaches, bytes(raw), top_id + 1, names=named)
+        ppath = os.path.join(base, "Player.bin")
+        pool = (mkcoaches.name_pool(pesdb.wesys_unpack(open(ppath, "rb").read()))
+                if os.path.exists(ppath) else None)
+        add, st = mkcoaches.add_coaches(coaches, bytes(raw), top_id + 1, names=named, pool=pool)
         open(os.path.join(db, "Coach.bin"), "wb").write(pesdb.wesys_pack(coaches + add, craw[:3]))
         log("  %d managers" % st["added"])
     lineups = {}

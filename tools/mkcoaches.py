@@ -11,7 +11,8 @@ Managers every club of every added league then lists "Jorge Jesus". mkworld.py n
 Coach.bin itself; this fixes a world that was built without it.
 
 This writes a Coach.bin that is the shipped one plus one record per added club whose manager
-id is missing: that id, a placeholder name (--name, default "FL M%04d", numbered by the club's
+id is missing: that id, a name (from Build: a first name and a surname of two players of the
+club's country, see made_up_name; otherwise --name, default "FL M%04d", numbered by the club's
 position among the added clubs, so FL 0031 gets FL M0031), and the rest cloned from a shipped
 coach no club employs. The Coach record is 100 bytes: id at +0, a packed dword at +4 whose low
 nine bits are the nationality (the same country codes as the club's), and the name twice, at
@@ -44,9 +45,47 @@ def club_country(rec):
     return (int.from_bytes(rec[lo:hi], "little") >> (T_NAT_BIT % 8)) & ((1 << NAT_BITS) - 1)
 
 
-def add_coaches(coaches, teams, min_id=FIRST_NEW_ID, fmt="FL M%04d", names=None):
+P_REC, P_NAME, P_NAME_LEN, P_NAT_BIT = 312, 0x44, 0x3d, 233
+POOL_MIN = 8                  # a country with fewer two-word player names keeps the numbered name
+
+
+def name_pool(players):
+    """country id -> (first names, surnames, whole names) of the players of that country in an
+    unpacked Player.bin: Croatia (200) gets Croatian names, Norway (226) Norwegian ones"""
+    out = {}
+    for o in range(0, len(players) - P_REC + 1, P_REC):
+        words = pesdb.cstr(players[o + P_NAME:o + P_NAME + P_NAME_LEN]).split()
+        if len(words) < 2 or any("." in w or len(w) < 2 for w in (words[0], words[-1])):
+            continue                      # "K. Mbappé", single names
+        nat = (int.from_bytes(players[o + P_NAT_BIT // 8:o + P_NAT_BIT // 8 + 2], "little")
+               >> (P_NAT_BIT % 8)) & ((1 << NAT_BITS) - 1)
+        f, l, whole = out.setdefault(nat, ([], [], set()))
+        f.append(words[0])
+        l.append(words[-1])
+        whole.add(" ".join(words))
+    return {k: (sorted(set(f)), sorted(set(l)), w) for k, (f, l, w) in out.items() if len(set(f)) >= POOL_MIN}
+
+
+def made_up_name(pool, country, club):
+    """a manager's name for a club that was given none (GitHub #91): a first name and a surname
+    of two players of its country, never a real player's whole name, and always the same one
+    for the same club, so a Build again does not rename him. None when the country has too
+    few players to draw from."""
+    if country not in (pool or {}):
+        return None
+    firsts, lasts, real = pool[country]
+    h = (club * 2654435761) & 0xffffffff
+    for t in range(8):
+        name = "%s %s" % (firsts[(h + 7 * t) % len(firsts)], lasts[(h // 13 + 3 + 5 * t) % len(lasts)])
+        if name not in real:
+            return name
+    return None
+
+
+def add_coaches(coaches, teams, min_id=FIRST_NEW_ID, fmt="FL M%04d", names=None, pool=None):
     """coaches, teams: unpacked Coach.bin and Team.bin. names: club id -> the manager's name, for
-    the clubs that have one given (the rest are fmt). Returns (records to append, stats)."""
+    the clubs that have one given; the rest get a name from pool (name_pool of the Player.bin),
+    or fmt. Returns (records to append, stats)."""
     assert len(coaches) % C_REC == 0 and len(teams) % T_REC == 0
     have = {u32(coaches, i) for i in range(0, len(coaches), C_REC)}
     # template: the last shipped coach no club employs, so a clone copies nobody's record
@@ -71,7 +110,9 @@ def add_coaches(coaches, teams, min_id=FIRST_NEW_ID, fmt="FL M%04d", names=None)
         new_ids.add(cid)
         r = bytearray(tpl)
         r[C_ID:C_ID + 4] = cid.to_bytes(4, "little")
-        nm = ((names or {}).get(u32(rec, T_ID)) or (fmt % clubs if "%" in fmt else fmt)).encode("utf-8")[:C_NAME_LEN - 1]
+        nm = ((names or {}).get(u32(rec, T_ID)) or made_up_name(pool, club_country(rec), u32(rec, T_ID))
+              or (fmt % clubs if "%" in fmt else fmt)).encode("utf-8")[:C_NAME_LEN - 1]
+        nm = nm.decode("utf-8", "ignore").encode("utf-8")      # not cut inside a letter
         nm += bytes(C_NAME_LEN - len(nm))
         r[C_NAME1:C_NAME1 + C_NAME_LEN] = nm
         r[C_NAME2:C_NAME2 + C_NAME_LEN] = nm

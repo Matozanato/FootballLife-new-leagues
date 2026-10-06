@@ -183,7 +183,8 @@ one (12, 16, 18, 20 for a top division alone; 36, 40, 44 with the one below); an
 to 44 clubs gets the English cup, whose calendar dates every round of a field of 9 to 64 clubs,
 and the game's own byes handle a field that is not a power of two. Past 44 the cup keeps the top
 division alone (`cup` on the second division's line). `"club_coaches"` in a league gives its new
-clubs' managers names (empty = `FL Mnnnn`).
+clubs' managers names (empty = a first name and a surname of two players of the club's country,
+the same at every Build, or `FL Mnnnn` when the game has fewer than 8 of them).
 
 Other recipe keys of Mod Studio 0.1.4 (the full list is the docstring of `tools/leaguebuilder.py`
 and `tools/lbplayers.py`):

@@ -206,7 +206,7 @@ Names keep their letters (FK Željezničar); the three-letter short name has non
 so Č, Ž, Đ become C, Z, D there. After **Build** the **Team ID** column shows each club's id in
 the game.
 
-**Manager**: in **Edit club** of a new club you can name its manager. Empty: a numbered one (`FL M0001` ...). **Manager picture** under it gives the manager a portrait (the same as **Manager portrait...** on the Players page); *Game's leagues and clubs* > **Edit club** has it for the game's clubs too.
+**Manager**: in **Edit club** of a new club you can name its manager. Empty: a made-up name from players of the club's country (a Croatian club gets a name like `Tomislav Krovinović`; the same one at every Build), or a numbered one (`FL M0001` ...) for a country the game has few players of. **Manager picture** under it gives the manager a portrait (the same as **Manager portrait...** on the Players page); *Game's leagues and clubs* > **Edit club** has it for the game's clubs too.
 
 **Formation**: in **Edit club** of a new club you can give it a formation of its own; *As the league* keeps the league's. The pitch under the list shows where everyone stands.
 

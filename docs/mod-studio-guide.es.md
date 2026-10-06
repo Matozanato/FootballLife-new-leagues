@@ -212,7 +212,7 @@ Los nombres conservan sus letras (FK Željezničar); la abreviatura de tres letr
 ni marcas, como en el juego, así que ahí Č, Ž, Đ pasan a C, Z, D. Después de **Construir**, la
 columna **ID del club** muestra el id de cada club en el juego.
 
-**Entrenador**: en **Editar club** de un club nuevo puedes poner el nombre de su entrenador. Vacío: uno numerado (`FL M0001` ...). **Foto del entrenador** debajo le da un retrato (lo mismo que **Retrato del entrenador...** en la página Jugadores); *Ligas y clubes del juego* > **Editar club** la tiene también para los clubes del juego.
+**Entrenador**: en **Editar club** de un club nuevo puedes poner el nombre de su entrenador. Vacío: un nombre inventado con jugadores del país del club (un club croata recibe algo como `Tomislav Krovinović`; el mismo en cada Build), o uno numerado (`FL M0001` ...) si el juego tiene pocos jugadores de ese país. **Foto del entrenador** debajo le da un retrato (lo mismo que **Retrato del entrenador...** en la página Jugadores); *Ligas y clubes del juego* > **Editar club** la tiene también para los clubes del juego.
 
 **Formación**: en **Editar club** de un club nuevo puedes darle una formación propia; *Como la liga* mantiene la de la liga. El campo bajo la lista muestra dónde juega cada uno.
 
