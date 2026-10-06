@@ -367,6 +367,15 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-06 (Mod Studio 0.1.9, Discord): **the first round of a new country's national cup paired
+  only clubs of the same division.** A cup is drawn in the order its clubs are written (1 v 2, 3
+  v 4 ...), and Build wrote the whole top division before the one below. The two divisions now
+  go in turn, so a first round is top flight against the second division; when one has more
+  clubs the extra ones meet each other at the end. A world built before needs Build again and a
+  new career.
+- 2026-10-06 (Mod Studio 0.1.9, Discord): **Build page text cut off with Windows scaling up.** On
+  a short window the European cups and New clubs cards were squeezed and their hints cut in
+  half. The hints sit under their option now and the cards scroll on their own; checked at 175%.
 - 2026-10-06 (Mod Studio 0.1.9, GitHub #54): **Build stopped with "No such file or directory:
   ...UniformParameter.bin" on a custom database.** The kit step took "our clubs" to be the ids
   from 71578 up, the first free id under the plain game. A database with fewer clubs leaves a
