@@ -32,6 +32,14 @@ If it still crashes, or it crashes later (in the menus, when a match or a career
 the report described [below](#what-should-i-send-when-something-is-wrong) and say exactly when
 it happens.
 
+### The game crashes when I open Edit (after installing a face pack)
+
+A face pack or another mod that brings its own `PlayerAppearance.bin` with more than 30,023
+records overflows the game's table (FL26 itself has 27,927), and Edit crashes (GitHub #65).
+Since 0.1.9 `fl26regen.dll` caps the load at 30,023, so the game no longer crashes; the players
+past that number keep the default look. Install the 0.1.9 modules. Before that, take the mod's
+`PlayerAppearance.bin` out.
+
 ### LaLiga or Ligue 1 is gone from Select Team, and the game crashes when I scroll a new league
 
 The game's `FL_2026.exe` is not the Steam build the modules know (#62), or another mod changed

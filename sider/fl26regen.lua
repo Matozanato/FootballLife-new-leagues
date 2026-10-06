@@ -22,13 +22,16 @@ save loader (0x1412e5eb0):
     not in this repository: Mod Studio's module pack carries it, and "Install the modules"
     puts it in place. Without it a regen keeps the generic face.
   * the world's own new players (a new club's squad, an imported squad) would all have the same
-    default look: the world file (modulesl26world.txt) lists their ids in "newfaces" lines,
+    default look: the world file (modules\fl26world.txt) lists their ids in "newfaces" lines,
     and with the face pack each gets a pack face of his part of the world and its portrait, as a
     regen does ("newfaces3d": the 3D face only, the player keeps his own portrait). A player
     with his own face is not listed.
   * a player given a face made for another player (Mod Studio's Face) takes that player's
     appearance as well, from "faceapp <his id>:<the face's id>" lines: the face model brings
     the head, the appearance record the body and its skin colour (GitHub #102).
+  * the game loads PlayerAppearance.bin into a table of 30,024 records without a check, so a
+    face pack with more records wrote past it and Edit crashed (GitHub #65): the DLL caps that
+    load at 30,023, whether or not the other parts are used.
 
 FLAGS: 1 = new names, 2 = new potential; 3 = both.
 

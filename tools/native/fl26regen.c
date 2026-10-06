@@ -66,7 +66,8 @@
 #define APP_CNT_INSN 0x14bd16f         /* movzx eax, word [rcx + disp32] -- appearance count  */
 #define APP_CAP_INSN 0x14bd17f         /* mov ecx, imm32                 -- appearance capacity */
 #define APP_TAB_INSN 0x14bd1bd         /* lea rcx, [rdx + disp32]        -- appearance records */
-#define APP_OWNER   0x60               /* appearance object = [[exe + OWNER_RVA] + 0x60]      */
+#define APP_LOAD    0x14bd7ad          /* the loader of PlayerAppearance.bin: count = size / 60 */
+#define APP_OWNER   0x60              /* appearance object = [[exe + OWNER_RVA] + 0x60]      */
 #define APP_STRIDE  0x48               /* u32 id, 8 zero bytes, 56 appearance bytes, u32 zero */
 #define APP_DATA    0x0c
 #define APP_LEN     56
@@ -89,7 +90,11 @@
 
 /* the first bytes of each function, as this build has them; both are position-free */
 static const unsigned char SIG_REGEN[15]  = { 0x48,0x8b,0xc4, 0x55, 0x53, 0x56, 0x57, 0x41,0x54, 0x41,0x55, 0x41,0x56, 0x41,0x57 };
-static const unsigned char SIG_UNPACK[19] = { 0x48,0x8b,0xc4, 0x55, 0x41,0x54, 0x41,0x55, 0x41,0x56, 0x41,0x57,
+/* the loader's head, 0x1414bd7ad .. 0x1414bd7c9: rbp = size / 60 with no cap (see app_guard) */
+static const unsigned char SIG_APPLOAD[28] = { 0x48,0xb8,0x89,0x88,0x88,0x88,0x88,0x88,0x88,0x88, 0x48,0x8b,0xfa,
+                                               0x49,0xf7,0xe0, 0x33,0xdb, 0x4c,0x8b,0xf1, 0x48,0x8b,0xea,
+                                               0x48,0xc1,0xed,0x05 };
+static const unsigned char SIG_UNPACK[19] ={ 0x48,0x8b,0xc4, 0x55, 0x41,0x54, 0x41,0x55, 0x41,0x56, 0x41,0x57,
                                               0x48,0x8d,0xa8,0xa8,0xfb,0xff,0xff };
 
 static uint64_t g_base;
@@ -559,6 +564,32 @@ static void* wrap(unsigned char* target, int stolen, void* handler)
   return t;
 }
 
+/* The game copies every record of PlayerAppearance.bin into a table of g_app_cap records
+   without a check, so a file with more (a face pack that adds records) writes past the end,
+   over the counters and the object after it -- and Edit crashes later (GitHub #65, 0x1ef8010 /
+   0x1405b0a; reproduced 06.10. with 30,100 records). The loader's head is rewritten, same 28
+   bytes, to take at most cap - 1 of them (one less, or the lookup refuses every id):
+     mov r14,rcx / mov rdi,rdx / xor ebx,ebx / mov eax,(cap-1)*60 / cmp r8,rax / cmovb rax,r8 /
+     cdq / push 60 / pop rcx / div ecx / mov ebp,eax
+   The rest of the file is left out, the highest ids. Only on this build's bytes. */
+static int app_guard(uint64_t exe_base)
+{
+  unsigned char* t = (unsigned char*)(uintptr_t)(exe_base + APP_LOAD);
+  const unsigned char* lea = t + 0x37;          /* lea rax, [rax + table/8] */
+  if (!g_app_cap || memcmp(t, SIG_APPLOAD, sizeof SIG_APPLOAD) ||
+      lea[0] != 0x48 || lea[1] != 0x8d || lea[2] != 0x80 || *(uint32_t*)(lea + 3) * 8 != g_app_tab_disp)
+    return 0;
+  unsigned char p[28] = { 0x4c,0x8b,0xf1, 0x48,0x8b,0xfa, 0x33,0xdb, 0xb8,0,0,0,0, 0x4c,0x3b,0xc0,
+                          0x49,0x0f,0x42,0xc0, 0x99, 0x6a,0x3c, 0x59, 0xf7,0xf1, 0x8b,0xe8 };
+  *(uint32_t*)(p + 9) = (g_app_cap - 1) * 60;
+  DWORD old;
+  if (!VirtualProtect(t, sizeof p, PAGE_EXECUTE_READWRITE, &old)) return 0;
+  memcpy(t, p, sizeof p);
+  VirtualProtect(t, sizeof p, old, &old);
+  FlushInstructionCache(GetCurrentProcess(), t, sizeof p);
+  return 1;
+}
+
 static uint64_t rip_target(uint64_t insn, int len)
 {
   return insn + len + (uint64_t)(int64_t)*(int32_t*)(uintptr_t)(insn + len - 4);
@@ -599,6 +630,8 @@ __declspec(dllexport) int fl26_regen_install(uint64_t exe_base, int flags)
     g_app_cnt_disp = *(uint32_t*)(ai + 3);
     g_app_cap      = *(uint32_t*)(ak + 1);
     g_app_tab_disp = *(uint32_t*)(at + 3);
+    logf(app_guard(exe_base) ? "appearance loader capped at %u records" :
+         "appearance loader not capped (not this build's bytes; %u)", g_app_cap - 1);
   }
   memset(g_nat_group, 0xff, sizeof g_nat_group);
   g_rng = mix(GetTickCount64());
