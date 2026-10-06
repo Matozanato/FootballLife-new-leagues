@@ -101,6 +101,15 @@ kaže koju.
 
 Moduli League Buildera ostaju redom kojim su postavljeni.
 
+**Isključivanje regena** (0.2.0): `fl26regen` daje regenima nova imena, novi potencijal i facu
+iz paketa lica za regene. Za igru bez njega makni kvačicu s **Sakrij module samog League
+Buildera (fl26...)** da se naši vide, makni kvačicu s `fl26regen` i pritisni **Primijeni**. Mod
+Studio to zapiše u `modules\fl26-off.txt` u mapi Sidera, pa ga **Build**, **Postavi module** i
+promjena svijeta ostave isključenog umjesto da ga opet uključe, kao što rade sa svim ostalim
+modulima. Igra tada sama radi regene: njen potencijal i njena imena, bez faca iz paketa lica za
+regene. Vrati kvačicu i **Primijeni** da ga opet uključiš. Samo se `fl26regen` može ovako držati
+isključenim.
+
 ## 6. Sadržaj igre: content serveri
 
 **Stadioni, Dresovi, Lopte, Glazba, Komentar** i **Ostali sadržaj** (semafori, izbornici,
@@ -153,7 +162,7 @@ sadržaja s imenom `_FL26...` koju igra čita dok je uključena.
 | **Rang** | *(prvi rang)* ili liga iznad nje: druga nova liga ili liga iz igre. Za novu ligu ispod druge nove lige u jednom koraku: odaberi je i stisni **Dodaj nižu ligu** (preuzme državu, broj klubova, format i gore/dolje od lige iznad; ostaje samo ime). Liga ispod koje je već druga nova liga je siva (0.1.9): igra od lige prati samo jednu vezu prema dolje, pa skupine jednog ranga (tri skupine Serie C ispod Serie B) još nisu moguće. |
 | **Gore / dolje** | Koliko klubova na kraju sezone zamijeni mjesta s ligom iznad. |
 | **Sezona** | Samo za prvi rang nove države: *kolovoz do svibanj* (zadano) ili *veljača do prosinac*, kao Brazil, Japan ili Saudijska Arabija: klubovi idu gore i dolje za Novu godinu, a lige ispod nje je slijede. Još ne uz podjelu, Aperturu/Clausuru, nacionalni kup ni liga kup. |
-| **Europa** | Samo za prvi rang: koje mjesto u ligi ide u koje europsko natjecanje. **Prva liga: 1. kvalifikacije LP, 2. EL, 3. UECL** upiše uobičajena tri (*... (kvalifikacije)* su kolovoška doigravanja, vidi 8.2); **Dodaj mjesto**, **Makni mjesto** i **Makni** za sve ostalo. Svako mjesto samo jednom, i samo mjesta koja liga ima. Ispod 1 mjesto glasi **Pobjednik kupa** (0.1.7): pobjednik kupa te države (nova država treba **Nacionalni kup**) -- a kad pobjednik već ima europsko mjesto kroz ligu, mjesto ide niz ligu sljedećem klubu, kao kod UEFA-e. Može ga imati i liga iz igre (*Europska mjesta liga iz igre*). Za niži rang ostavi prazno. Predložak prati državu: Azija dobije AFC Ligu prvaka i AFC Ligu prvaka Two, Južna Amerika Libertadores i Copa Sudamericana, Afrika CAF Ligu prvaka i CAF Konfederacijski kup. Ta četiri kupa kojih igra nema grade se sa svijetom (odjeljak 8.2). Mjesto u *kvalifikacijama Libertadoresa* zauzme mjesto kluba iz igre u kvalifikacijskom kolu (zadnjeg iz države koja u njemu ima najviše klubova), najviše šest od njegovih osam mjesta; **Provjeri plan** kaže koje lige preko toga ostaju bez mjesta. |
+| **Europa** | Samo za prvi rang: koje mjesto u ligi ide u koje europsko natjecanje. **Prva liga: 1. kvalifikacije LP, 2. EL, 3. UECL** upiše uobičajena tri (*... (kvalifikacije)* su kolovoška doigravanja, vidi 8.2); **Dodaj mjesto**, **Makni mjesto** i **Makni** za sve ostalo. Svako mjesto samo jednom, i samo mjesta koja liga ima. Ispod 1 mjesto glasi **Pobjednik kupa** (0.1.7): pobjednik kupa te države (nova država treba **Nacionalni kup**) -- a kad pobjednik već ima europsko mjesto kroz ligu, mjesto ide niz ligu sljedećem klubu, kao kod UEFA-e. Od 0.2.0 pobjednik kupa može ići i u kupove koje gradi Mod Studio (Copa Sudamericana, CAF Konfederacijski kup, AFC Liga prvaka Two ...); u novoj karijeri, prije nego što itko osvoji kup, to mjesto također ide sljedećem klubu lige. Može ga imati i liga iz igre (*Europska mjesta liga iz igre*). Za niži rang ostavi prazno. Predložak prati državu: Azija dobije AFC Ligu prvaka i AFC Ligu prvaka Two, Južna Amerika Libertadores i Copa Sudamericana, Afrika CAF Ligu prvaka i CAF Konfederacijski kup, Sjeverna i Srednja Amerika CONCACAF Champions Cup, Oceanija OFC Ligu prvaka. **AFC Challenge League** (0.2.0) je treći kup AFC-a, ispod AFC Lige prvaka Two, kao Konferencijska liga u Europi; dodaje se s **Dodaj mjesto** (u popisu liga *AFC CHL*). Tih sedam kupova kojih igra nema grade se sa svijetom (odjeljak 8.2). Mjesto u *kvalifikacijama Libertadoresa* zauzme mjesto kluba iz igre u kvalifikacijskom kolu (zadnjeg iz države koja u njemu ima najviše klubova), najviše šest od njegovih osam mjesta; **Provjeri plan** kaže koje lige preko toga ostaju bez mjesta. |
 | **Logo** | Bilo koja slika (najbolje izgleda PNG s prozirnom pozadinom). Prazno: nacrta se sam. |
 | **Zastava države** | Tvoja slika zastave države, razvučena u okvir zastave iz igre. Zamjenjuje zastavu te države posvuda u igri (Select Team, nacionalnost igrača, naslov države u Database > Competition Info) dok je svijet uključen. Prazno: zastava iz igre. |
 | **Kup** | Samo za prvi rang. **Nacionalni kup**: država dobije svoj kup, s imenom koje zadaš (prazno: `<liga> Cup`). Igra puni kup države iz prvog ranga i ranga ispod njega, a veličina kupa slijedi red Nacionalni kup u Granicama (8.3): najveća veličina koju ekran kupa crta i koja stane, pa 22 kluba daju kup od 20, prvo prvi rang. S više od 44 kluba kup zadržava samo prvi rang. Nova druga liga pod državom koju igra već ima (Njemačka, Rusija ...) također ulazi u kup te države, iza klubova prvog ranga, kad kola kupa odgovaraju broju klubova. Nova treća liga ili niža (League One pod Championshipom) ostavlja kup države prvim dvjema ligama iz igre, kao u igri. **Superkup**: uz to i superkup od jedne utakmice prije sezone, prvak protiv osvajača kupa. |
@@ -198,7 +207,7 @@ jedan klub dok ih ne bude 32. Klub koji je već u Libertadoresu ili njegovim kva
 ustupa mjesto sljedećem iz svoje lige. **Provjeri plan** ispiše isti popis kad god svijet ima
 mjesto u Libertadoresu ili Sudamericani.
 
-**Imena natjecanja** (gumb na istoj stranici): novo ime i logo za kupove, superkupove i kontinentalna natjecanja iz igre -- FA Cup, Ligu prvaka, Libertadores ... -- i za kontinentalne kupove koje svijet gradi (CAF Liga prvaka, Kup konfederacija, AFC Liga prvaka Two, Copa Sudamericana, CAF Superkup). Ime dobiju sve faze natjecanja. Prazno: ono iz igre. Lige iz igre preimenuju se na stranici *Game's leagues and clubs*.
+**Imena natjecanja** (gumb na istoj stranici): novo ime i logo za kupove, superkupove i kontinentalna natjecanja iz igre -- FA Cup, Ligu prvaka, Libertadores ... -- i za kontinentalne kupove koje svijet gradi (CAF Liga prvaka, Kup konfederacija, AFC Liga prvaka Two, Copa Sudamericana, CONCACAF Champions Cup, OFC Liga prvaka, AFC Challenge League, CAF Superkup). Ime dobiju sve faze natjecanja. Prazno: ono iz igre. Lige iz igre preimenuju se na stranici *Game's leagues and clubs*.
 
 **Novi klubovi**: odaberi ligu, pa **Uredi klub** (ime, kratko ime, grb), **Zalijepi imena...**
 ili **Učitaj imena iz datoteke...**. Prazno ime postaje `<liga> 01`, `<liga> 02` ...; klub bez
@@ -253,9 +262,11 @@ klub (ili stisni **Igrači** na Novim klubovima), pa igrača:
 - **Ocjena**: ocjena s popisa, od sposobnosti na koje se pozicija oslanja. Promjena pomiče
   svaku sposobnost igrača za isti iznos. Igrač novog kluba nema ime dok mu ga izgradnja ne
   da s brojem (FL P00001 ...); upiši ga u **Ime** i dobit će tvoje;
+  od 0.2.0 takav kadar počinje na razini svoje lige (oko 72 u prvoj ligi, do 57 od pete lige
+  naniže);
 - **Lice**: **Odaberi...** mapu s facom (poglavlje 8.1). **Makni** vraća facu iz igre. Novi igrač
   bez nje dobije facu iz paketa lica za regene koja paše njegovoj nacionalnosti, sa slikom
-  (0.1.5.5, uz instalirane module). Faca napravljena za drugog igrača donese i izgled njegova
+  (0.1.5.5, uz instalirane module i uključen `fl26regen`, odjeljak 5). Faca napravljena za drugog igrača donese i izgled njegova
   tijela, pa ruke i noge imaju boju kože te face (0.1.9);
 - **Mala slika**: **Odaberi...** sliku (PNG ili JPG) za malu sliku igrača na popisima momčadi, bez
   vlastite face. Build je svodi na 180 x 180; ima prednost pred slikom iz mape lica;
@@ -386,12 +397,15 @@ CONCACAF država iza MLS-a, a afričke i oceanijske (igra za njih nema
 odjeljak) iza Azije.
 
 > **Kupovi drugih kontinenata.** Kad tvoje lige šalju klubove u CAF Ligu prvaka, CAF
-> Konfederacijski kup, AFC Ligu prvaka Two ili Copa Sudamericana, **Izgradnja** napravi i te
+> Konfederacijski kup, AFC Ligu prvaka Two, AFC Challenge League, Copa Sudamericana, CONCACAF
+> Champions Cup ili OFC Ligu prvaka (zadnja tri novi su u 0.2.0), **Izgradnja** napravi i te
 > kupove. Svaki dobije 32, 16, 8 ili 4 kluba: prvo mjesta tvojih liga, zatim ga popune lige iz
-> igre s tog kontinenta (Azija i Južna Amerika). S 8 ili više igraju se skupine po četiri pa
-> nokaut; ispod 8 samo nokaut. Pune se krajem kolovoza, iz tablica liga. Klub koji već igra
-> Copa Libertadores, njezine kvalifikacije ili AFC Ligu prvaka ne ulazi u njihov ždrijeb. CAF
-> kup s manje od 4 mjesta prvo uzme mjesta sljedećeg CAF kupa (s dva i dva CAF Liga prvaka
+> igre s tog kontinenta (Azija, Južna Amerika, a za CONCACAF kup MLS); za AFC Challenge League
+> to su 11.-14. iz J1 League, 10.-13. iz kineske Super lige i 11.-14. iz saudijske Pro lige. S 8 ili više igraju se skupine po četiri pa
+> nokaut; ispod 8 samo nokaut. CONCACAF Champions Cup je uvijek nokaut, s najviše 16 klubova,
+> kao pravi, a dva kluba iste lige ne sastaju se u njegovom prvom kolu kad se to može izbjeći.
+> Pune se krajem kolovoza, iz tablica liga. Klub koji već igra Copa Libertadores, njezine
+> kvalifikacije ili AFC Ligu prvaka ne ulazi u njihov ždrijeb. CAF ili OFC kup s manje od 4 mjesta prvo uzme mjesta sljedećeg CAF kupa (s dva i dva CAF Liga prvaka
 > dobije sva četiri), zatim sljedeća mjesta tvojih liga. **CAF Superkup** (stranica Izgradnja,
 > zadano uključen) spoji pobjednike dvaju CAF kupova u jednoj utakmici krajem srpnja, od druge
 > sezone karijere.
@@ -442,7 +456,9 @@ više njih), plus *Free agents*, svaki manji od 10 MB. Preuzmi samo dijelove koj
    jesu. (To su LZMA zipovi: 7-Zip ih otvara, Windowsov preglednik zipova ne.)
 2. **League Builder > NewLife Database > Otvori NewLife Database...** i odaberi tu mapu. Popis
    pokazuje sve lige iz tih dijelova: državu, klubove, klubove koje igra već ima (*U igri*),
-   igrače i razinu. Klikni ligu da vidiš njene klubove.
+   igrače i razinu. Klikni ligu da vidiš njene klubove. Klik na naslov stupca (Liga, Država,
+   Klubovi, Igrači, Razina) slaže popis po njemu, drugi klik obrne redoslijed (0.2.0); popis se
+   otvara složen po državi.
 3. Odaberi jednu ili više liga (Ctrl ili Shift za više) i pritisni **Dodaj u recept**. Svaka
    postaje nova liga sa svojim klubovima i njihovim kadrovima, prva liga svoje države. Rang,
    format, europska mjesta i ostalo mijenjaš na *Nove lige*, kao za svaku drugu ligu.

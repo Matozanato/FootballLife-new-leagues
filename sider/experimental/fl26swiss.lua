@@ -130,12 +130,14 @@ end
 -- <regulation>` (10 / 11 / 12, round 3 or 2; fl26_swiss_qrounds). Seventh: the league cups'
 -- pre-rounds, { reg, cup knockout, fill day, {day, day}, {{reg, position}...} } from
 -- `lpre <reg> cup=<ko> fill=<day> days=<d>,<d> entry=<reg>:<position>,...` (fl26_swiss_lpre).
+local confed = {}               -- read_world: the confed line, { flag, code } pairs
 local function read_world(ctx)
   local sep = string.char(92)
   local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
   local f = io.open(path, "r")
   if not f then return nil end
   local leagues, splits, uefa, ccups, dlike, qrounds, lpres = {}, {}, {}, {}, {}, {}, {}
+  confed = {}
   for line in f:lines() do
     local lr, lrest = line:match("^%s*lpre%s+(%d+)(.*)$")
     if lr then
@@ -165,7 +167,19 @@ local function read_world(ctx)
       if fill > 0 or nat > 0 or #days > 0 or #clubs > 0 then
         c.opts = { fill = fill, national = nat, days = days, clubs = clubs }
       end
+      -- alt=<entry>:<league>,...: a national cup winner's entry and the league its place falls
+      -- back to (0.2.0, fl26_swiss_ccup_alt)
+      for ae, al in (crest:match("alt=([%d:,]+)") or ""):gmatch("(%d+):(%d+)") do
+        c.alt = c.alt or {}
+        c.alt[#c.alt + 1] = { tonumber(ae), tonumber(al) }
+      end
       if c[2] > 0 then ccups[#ccups + 1] = c end   -- groups=0: a straight knockout
+    end
+    -- confed <flag>:<code>,...: each country's confederation, so a continental champion of
+    -- ours replaces a club of its own confederation in the game's Club World Cup (0.2.0)
+    local cf = line:match("^%s*confed%s+([%d:,]+)")
+    if cf then
+      for f, c in cf:gmatch("(%d+):(%d+)") do confed[#confed + 1] = { tonumber(f), tonumber(c) } end
     end
     local ur, up, uc, ua = line:match("^%s*uefa%s+(%d+)%s+(%d+)%s+(%d+)%s+(%d+)")
     if ur then uefa[#uefa + 1] = { tonumber(ur), tonumber(up), tonumber(uc), tonumber(ua) } end
@@ -385,6 +399,32 @@ function m.init(ctx)
               end
               local m = tonumber(ffi.cast("fl26_swiss_first_t", po)(obuf, nopt))
               log(string.format("fl26swiss: world file -- options for %d cup(s), %d matched", nopt, m))
+            end
+          end
+          local alen = 0
+          for _, c in ipairs(ccups) do alen = alen + (c.alt and #c.alt or 0) end
+          if alen > 0 then
+            local pa = ffi.C.GetProcAddress(h, "fl26_swiss_ccup_alt")
+            if pa == nil then
+              log("fl26swiss: this fl26swiss.dll has no fl26_swiss_ccup_alt; a cup winner's place stays empty when there is no winner")
+            else
+              local abuf, q = ffi.new("uint16_t[?]", 3 * alen), 0
+              for _, c in ipairs(ccups) do
+                for _, a in ipairs(c.alt or {}) do abuf[q], abuf[q + 1], abuf[q + 2] = c[2], a[1], a[2]; q = q + 3 end
+              end
+              local m = tonumber(ffi.cast("fl26_swiss_access_t", pa)(abuf, alen))
+              log(string.format("fl26swiss: world file -- %d cup winner place(s), %d taken", alen, m))
+            end
+          end
+          if #confed > 0 then
+            local pc = ffi.C.GetProcAddress(h, "fl26_swiss_confed")
+            if pc == nil then
+              log("fl26swiss: this fl26swiss.dll has no fl26_swiss_confed; our champions replace an African club in the game's Club World Cup")
+            else
+              local cbuf = ffi.new("uint16_t[?]", 2 * #confed)
+              for i, p in ipairs(confed) do cbuf[2 * i - 2], cbuf[2 * i - 1] = p[1], p[2] end
+              local m = tonumber(ffi.cast("fl26_swiss_access_t", pc)(cbuf, #confed))
+              log(string.format("fl26swiss: world file -- confederations of %d countries", m))
             end
           end
           -- the league cups' pre-rounds, after the cups their winners go on to

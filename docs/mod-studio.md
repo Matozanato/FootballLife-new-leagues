@@ -89,9 +89,10 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
   whose next club without a place takes it when the winner already has one (a recipe's
   `europe` position 0, 0.1.7). Without any, fl26swiss uses the DLL's own list (shipped leagues only).
   Competitions: 0 Champions League, 1 Europa League, 2 Conference League, 3 Libertadores,
-  4 Libertadores qualifying, 5 AFC Champions League, and the four cups the game does not have:
+  4 Libertadores qualifying, 5 AFC Champions League, and the seven cups the game does not have:
   6 CAF Champions League, 7 CAF Confederation Cup, 8 AFC Champions League Two, 9 Copa
-  Sudamericana (only places of the recipe's leagues go to 6-9), and the August play-offs:
+  Sudamericana, 13 CONCACAF Champions Cup, 14 OFC Champions League, 15 AFC Challenge League
+  (0.2.0; places in these go to `ccup` lines, not `uefa` ones), and the August play-offs:
   10 Champions League qualifying (regulation 2), 11 Europa League qualifying (188), 12
   Conference League qualifying (189). A list replaces the DLL's, so Build writes
   the shipped leagues' places first (`fl26world.SHIPPED_ACCESS`, a copy of fl26swiss.c's
@@ -160,20 +161,38 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
   section 13.
 
 - `ccup <groups regulation> ko=<knockout regulation> groups=<n> entry=<reg>:<position>,... name=<text>`:
-  a continental cup of the four above, built by `tools/mkccup.py` into the world's tables and
+  a continental cup of the seven above, built by `tools/mkccup.py` into the world's tables and
   run by fl26swiss.dll: filled at the end of August from the leagues' tables (a club already in
   another of these cups, or in the game's own Libertadores (regulation 9), its qualifying round
   (8) or the AFC Champions League (15), is skipped), drawn into groups of four, then a knockout
   of 2 x groups clubs. `groups=0` is a straight knockout (then both regulations are the same).
   Build sizes each cup to 32, 16, 8 or 4 clubs: the recipe's places first, and for AFC Champions
-  League Two and the Copa Sudamericana the shipped leagues of that continent fill the rest. A
-  CAF cup with fewer than 4 places (the game has no African leagues to fill it from) first takes
+  League Two, the AFC Challenge League, the Copa Sudamericana and the CONCACAF Champions Cup the
+  shipped leagues of that continent fill the rest (MLS, regulation 51, positions 1-12 for the
+  CONCACAF one; J1 League 11th-14th, Chinese Super League 10th-13th and Saudi Pro League
+  11th-14th for the AFC Challenge League, the AFC's third cup, below Champions League Two). The
+  CONCACAF Champions Cup is always a straight knockout, 16 clubs at most
+  (`fl26world.CCUP_KNOCKOUT`), as the real one is; a knockout's pairs are the strongest against
+  the weakest, swapped where that keeps two clubs of one league apart in the first round. A
+  CAF or OFC cup with fewer than 4 places (the game has no leagues there to fill it from) first takes
   the best places of the next CAF cup (the CAF Champions League takes all four of two plus two),
   then the next positions of its own leagues that no place claims; the plan says so in a NOTE.
   An entry `<reg>:0` is the winner of that cup (kept from its final in the spring, sent in
   July): Build's CAF Super Cup is `groups=0` with `entry=<CAF CL ko>:0,<CAF CC ko>:0`, filled
   at the July teardown (day 181-183) and played in late July (recipe `"caf_super_cup": false`
   leaves it out).
+  `alt=<entry>:<league>,...` (0.2.0, #95): entry number `<entry>` (0-based) is a national cup's
+  winner -- a recipe place at position 0 in one of these cups -- and `<league>` is where its
+  place goes when there is no winner to send: a new career, a winner already in this cup or in
+  another continental one. fl26swiss then takes the best club of that league not playing yet,
+  as for a UEFA cup winner's place (`fl26_swiss_ccup_alt`). A world file has up to 16 `ccup`
+  lines, continental, league and pre-season cups together (8 before 0.2.0).
+- `confed <flag>:<code>,...` (0.2.0): every country's confederation from `Country.bin` +5 (2 UEFA,
+  3 AFC, 4 CONMEBOL, 5 CAF, 6 CONCACAF, 7 OFC), written when the world has continental cups of
+  its own. In a world without the 32-club Club World Cup, the champion of each of those cups
+  takes the place of the first entrant of its own confederation in the game's Club World Cup
+  (`fl26_swiss_confed`), or of the last entrant when none of its confederation is offered;
+  without the line it is an African entrant, as before 0.2.0.
 
 A new country's own cup is not a line: with `"cup": true` on a top division (and optionally
 `"supercup": true`) Build copies a shipped cup (`tools/mkcup.py --like`) into the country's

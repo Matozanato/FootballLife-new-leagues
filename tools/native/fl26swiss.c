@@ -2401,10 +2401,34 @@ static uint32_t cwc_club(uint16_t reg, int rank, const char** how)
  * (GitHub #70: no African club at all). The champion of each continental cup of ours that the
  * league champions go to takes the place of the first entrant of its confederation's
  * countries -- for the CAF ones Country.bin +5 == 5, flag ids 44..95, 98, 312 -- else of the
- * last entrant. The field the game offered is logged once a season, club, slot and country. */
-#define MAX_CCUP_FWD 8   /* MAX_CCUP, defined with the continental cups below */
+ * last entrant. The field the game offered is logged once a season, club, slot and country.
+ * 0.2.0: the world file's confed line gives every country's confederation (fl26_swiss_confed),
+ * and a champion takes the place of the first entrant of its own confederation -- the
+ * CONCACAF champion an American club's, not an African one's; without the line, as before. */
+#define MAX_CCUP_FWD 16  /* MAX_CCUP, defined with the continental cups below */
 static int ccup_champions(uint32_t* out, int max, uint16_t* cup);
 static int caf_country(int f) { return (f >= 44 && f <= 95) || f == 98 || f == 312; }
+static uint8_t g_confed[512];   /* flag id -> confederation (2..7), from the world file */
+static int g_confed_n;
+static int confed_of(int f)
+{
+  if (f < 0 || f >= 512) return 0;
+  if (g_confed_n) return g_confed[f];
+  return caf_country(f) ? 5 : 0;
+}
+__declspec(dllexport) int fl26_swiss_confed(const uint16_t* v, int n)
+{
+  memset(g_confed, 0, sizeof g_confed);
+  g_confed_n = 0;
+  for (int i = 0; i < n; i++)
+    if (v[2 * i] < 512 && v[2 * i + 1] >= 2 && v[2 * i + 1] <= 7) { g_confed[v[2 * i]] = (uint8_t)v[2 * i + 1]; g_confed_n++; }
+  return g_confed_n;
+}
+static int team_country(void* blk, uint32_t club)
+{
+  unsigned char* t = blk ? ((teamget_fn)(uintptr_t)(g_base + TEAMGET_RVA))(blk, club) : 0;
+  return t && *(uint32_t*)t >> 14 == club >> 14 ? *(uint16_t*)(t + 0x418) & 0x1ff : -1;
+}
 static void cwc_game_champions(u32vec* list)
 {
   uint32_t cw[MAX_CCUP_FWD]; uint16_t cc[MAX_CCUP_FWD];
@@ -2428,15 +2452,15 @@ static void cwc_game_champions(u32vec* list)
   if (!blk) return;
   for (int k = 0; k < nw; k++) {
     if (has_club(list->b, n, cw[k])) continue;
+    int want = g_confed_n ? confed_of(team_country(blk, cw[k])) : 5;
     size_t at = n;
     for (size_t i = 0; i < n && at == n; i++) {
-      unsigned char* t = ((teamget_fn)(uintptr_t)(g_base + TEAMGET_RVA))(blk, list->b[i]);
       int mine = 0;
       for (int j = 0; j < nw; j++) if (list->b[i] == cw[j]) mine = 1;
-      if (!mine && t && *(uint32_t*)t >> 14 == list->b[i] >> 14 && caf_country(*(uint16_t*)(t + 0x418) & 0x1ff)) at = i;
+      if (!mine && want && confed_of(team_country(blk, list->b[i])) == want) at = i;
     }
-    const char* how = "an African entrant";
-    if (at == n) { at = n - 1; how = "the last entrant, no African one offered"; }
+    const char* how = want == 5 ? "an African entrant" : "an entrant of its confederation";
+    if (at == n) { at = n - 1; how = "the last entrant, none of its confederation offered"; }
     logf("fl26swiss: Club World Cup (the game's) -- winner of cup %u %08x in place of %08x (%s)", (unsigned)cc[k], cw[k],
          list->b[at], how);
     list->b[at] = cw[k];
@@ -2622,8 +2646,14 @@ static uint64_t cwc_dates(uint16_t id, uint64_t reg, void* vec)
  * An entry at position 0 is the winner of that regulation, a cup (<reg>:0): a super cup of two
  * clubs, the CAF Super Cup, is `entry=<CAF CL knockout>:0,<Confederation Cup knockout>:0`. The
  * winners are kept at the July teardown, before our cups are closed, as the UEFA holders are
- * (access_capture); a cup nobody has won yet (a new career) leaves the super cup unfilled. */
-#define MAX_CCUP 8
+ * (access_capture); a cup nobody has won yet (a new career) leaves the super cup unfilled.
+ *
+ * `alt=<entry>:<league>,...` (0.2.0, GitHub #95): that entry is a national cup's winner, and the
+ * league is where its place goes when there is no winner to send -- a new career, a winner
+ * already in this cup or another continental one (ccup_taken), or in its league cup's pre-round:
+ * the best club of that league not playing yet, as a UEFA cup winner's place goes (access_build).
+ * Only those entries are held to ccup_taken; a super cup's winners play their own cups anyway. */
+#define MAX_CCUP 16      /* 8 until 0.2.0: CONCACAF and OFC cups next to league and pre-season cups */
 _Static_assert(MAX_CCUP == MAX_CCUP_FWD, "the Club World Cup sizes its list of champions by MAX_CCUP_FWD");
 #define CCUP_MAX_GROUPS 8
 #define CCUP_MAX_ENTRY 32
@@ -2635,6 +2665,7 @@ _Static_assert(MAX_CCUP == MAX_CCUP_FWD, "the Club World Cup sizes its list of c
    cups (a league cup's clubs play in the continental one too); days -- the knockout's own days in
    place of CCUP_KO_DAYS; clubs -- team ids invited by name, in place of the league positions */
 typedef struct { uint16_t reg, ko, groups, n; uint16_t ereg[CCUP_MAX_ENTRY]; uint8_t erank[CCUP_MAX_ENTRY];
+                 uint16_t ealt[CCUP_MAX_ENTRY];
                  uint16_t fill, national, nd, nc; uint16_t days[CCUP_MAX_DAYS]; uint32_t clubs[CCUP_MAX_ENTRY];
                  int filled_year; } ccup_t;
 static ccup_t g_ccup[MAX_CCUP]; static int g_nccup = 0;
@@ -2706,6 +2737,7 @@ __declspec(dllexport) int fl26_swiss_ccup(const uint16_t* v, int n)
     ccup_t* c = &g_ccup[g_nccup];
     c->reg = v[p]; c->ko = v[p + 1]; c->groups = v[p + 2]; unsigned ne = v[p + 3]; p += 4;
     c->n = 0; c->fill = c->national = c->nd = c->nc = 0; c->filled_year = -1;
+    memset(c->ealt, 0, sizeof c->ealt);
     for (unsigned e = 0; e < ne; e++, p += 2)
       if (c->n < CCUP_MAX_ENTRY) { c->ereg[c->n] = v[p]; c->erank[c->n] = (uint8_t)v[p + 1]; c->n++; }
     if (!c->groups) {
@@ -2763,6 +2795,27 @@ __declspec(dllexport) int fl26_swiss_ccup_opts(const uint32_t* v, int n)
          (unsigned)c->nd, (unsigned)c->nc);
     got++;
   }
+  return got;
+}
+
+/* The cup winners' leagues per cup, n records of u16: knockout id, entry index, league (the
+   world file's alt=, see the continental cups above). Called after fl26_swiss_ccup. Answers the
+   records taken. */
+__declspec(dllexport) int fl26_swiss_ccup_alt(const uint16_t* v, int n)
+{
+  int got = 0;
+  for (int i = 0; v && i < n; i++) {
+    uint16_t ko = v[3 * i], e = v[3 * i + 1], league = v[3 * i + 2];
+    ccup_t* c = 0;
+    for (int k = 0; k < g_nccup; k++) if (g_ccup[k].ko == ko) c = &g_ccup[k];
+    if (!c || e >= c->n || c->erank[e]) {
+      logf("fl26swiss: cup %u -- alt for entry %u does not name a cup winner's entry; left out", (unsigned)ko, (unsigned)e);
+      continue;
+    }
+    c->ealt[e] = league;
+    got++;
+  }
+  if (got) logf("fl26swiss: %d cup winner place(s) with a league to fall back on", got);
   return got;
 }
 
@@ -3000,6 +3053,19 @@ static int ccup_fill_one(int k, void* started)
       if (lpre_of(c->ereg[i], &tk) >= 0) club = lpre_winner(c->ereg[i], &how);
       else { club = cup_winner(c->ereg[i]); how = "cup winner"; }
       if (club && has_club(g_ccup_field[k], n, club)) club = 0;
+      if (club && c->ealt[i] && ((!c->national && ccup_taken(club)) || lpre_has(c->ko, club))) club = 0;
+      if (!club && c->ealt[i]) {                   /* its league's next club (alt=) */
+        for (int rank = 1; rank <= FINAL_MAX; rank++) {
+          uint32_t a = cwc_club(c->ealt[i], rank, &how);
+          if (!a) break;
+          if ((a >> 14) && !has_club(g_ccup_field[k], n, a) && (c->national || !ccup_taken(a)) && !lpre_has(c->ko, a)) {
+            club = a;
+            logf("fl26swiss:   cup %u entry: reg %u's winner place goes to reg %u position %d", (unsigned)c->reg,
+                 (unsigned)c->ereg[i], (unsigned)c->ealt[i], rank);
+            break;
+          }
+        }
+      }
       if (!club) logf("fl26swiss:   cup %u entry: reg %u has no winner to send", (unsigned)c->reg, (unsigned)c->ereg[i]);
     } else
     for (int rank = c->erank[i]; rank <= FINAL_MAX; rank++) {

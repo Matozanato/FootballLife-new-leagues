@@ -203,7 +203,7 @@ def rounds_text(rounds):
 # name, competition code, confederation (Competition.bin +6), and the shipped leagues' places --
 # (regulation, position), strongest first -- that fill the field when the world's own leagues do
 # not. A cup is built only in a world where some league names it.
-_J1, _CSL, _SPL = 52, 120, 162
+_J1, _CSL, _SPL, _MLS = 52, 120, 162, 51
 _BRA, _ARG, _CHI, _COL = 29, 30, 67, 168
 CCUPS = [
     (6, "CAF Champions League", "FL_CAFCL", 5, []),
@@ -212,12 +212,24 @@ CCUPS = [
      [(r, p) for k in range(6) for r, p in ((_J1, 5 + k), (_CSL, 4 + k), (_SPL, 5 + k))]),
     (9, "Copa Sudamericana", "FL_SUDAM", 4,
      [(r, p) for k in range(8) for r, p in ((_BRA, 7 + k), (_ARG, 7 + k), (_CHI, 3 + k), (_COL, 3 + k))]),
+    # 0.2.0: North and Central America and Oceania, asked for since 0.1.5 (#81: MLS to a CONCACAF
+    # cup). The CONCACAF Champions Cup is a straight knockout, as the real one is (CCUP_KNOCKOUT);
+    # MLS fills it from the top down after the world's own places. The OFC Champions League has
+    # no league of the game to fill from, so it is the world's own clubs only, as the CAF cups are.
+    (13, "CONCACAF Champions Cup", "FL_CONCACAF", 6, [(_MLS, p) for p in range(1, 13)]),
+    (14, "OFC Champions League", "FL_OFCCL", 7, []),
+    # 0.2.0: the AFC's third cup, under the Champions League Two (Discord, 2026-10-07: "acl, acl 2
+    # and Challenge League"); the shipped Asian leagues fill it from the places after ACL Two's.
+    (15, "AFC Challenge League", "FL_AFCCHL", 3,
+     [(r, p) for k in range(4) for r, p in ((_J1, 11 + k), (_CSL, 10 + k), (_SPL, 11 + k))]),
 ]
+CCUP_KNOCKOUT = {13}              # cups that play no groups: a knockout of 16 (or 8, 4) from the start
 COMPETITIONS += [(c, n) for c, n, _code, _conf, _fill in CCUPS]
 # The shipped leagues that fill the cups above, by regulation (for Check the plan).
 FILL_NAMES = {_BRA: "Brasileirão Série A (Brazil)", _ARG: "Liga Profesional (Argentina)",
               _CHI: "Liga de Primera (Chile)", _COL: "Liga BetPlay (Colombia)", _J1: "J1 League (Japan)",
-              _CSL: "Chinese Super League (China)", _SPL: "Saudi Pro League (Saudi Arabia)"}
+              _CSL: "Chinese Super League (China)", _SPL: "Saudi Pro League (Saudi Arabia)",
+              _MLS: "Major League Soccer (USA)"}
 # The game's own Libertadores places of its South American leagues: the rows of the exe's rights
 # table (0x1434f1fa0, targets 3 and 4 -- regulation 9, the group stage, and 8, the qualifying
 # round), which the game's Competition Info shows as the Libertadores' criteria. (league, group

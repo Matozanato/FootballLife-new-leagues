@@ -61,11 +61,12 @@ ALL_CLUBS = -1
 # the European competitions a league place can lead to (fl26world.COMPETITIONS), short names for
 # the league list
 SHORT = {0: "UCL", 1: "UEL", 2: "UECL", 3: "LIB", 4: "LIB-Q", 5: "AFC", 6: "CAF CL", 7: "CAF CC",
-         8: "AFC CL2", 9: "SUD", 10: "UCL-Q", 11: "UEL-Q", 12: "UECL-Q"}
+         8: "AFC CL2", 9: "SUD", 10: "UCL-Q", 11: "UEL-Q", 12: "UECL-Q", 13: "CONCACAF", 14: "OFC CL", 15: "AFC CHL"}
 TOP_FLIGHT = [[1, 10], [2, 1], [3, 2]]     # the preset: 1st UCL qualifying, 2nd UEL, 3rd UECL
 # the preset by the country's confederation (Country.bin): Asia to the AFC Champions League and
 # Champions League Two, South America to the Libertadores and the Sudamericana, Africa to the CAF
-# Champions League and Confederation Cup; everyone else keeps the European one
+# Champions League and Confederation Cup, North and Central America to the CONCACAF Champions Cup,
+# Oceania to the OFC Champions League; everyone else keeps the European one
 PRESETS = {
     3: ("Top flight: 1st and 2nd AFC Champions League, 3rd AFC CL Two",
         "1st and 2nd to the AFC Champions League, 3rd to the AFC Champions League Two",
@@ -78,6 +79,12 @@ PRESETS = {
     5: ("Top flight: 1st and 2nd CAF Champions League, 3rd Confederation Cup",
         "1st and 2nd to the CAF Champions League, 3rd to the CAF Confederation Cup",
         [[1, 6], [2, 6], [3, 7]]),
+    6: ("Top flight: 1st-4th CONCACAF Champions Cup",
+        "1st to 4th to the CONCACAF Champions Cup (a knockout; MLS fills the rest of it)",
+        [[1, 13], [2, 13], [3, 13], [4, 13]]),
+    7: ("Top flight: 1st and 2nd OFC Champions League",
+        "1st and 2nd to the OFC Champions League",
+        [[1, 14], [2, 14]]),
 }
 UEFA_PRESET = ("Top flight: 1st UCL qualifying, 2nd UEL, 3rd UECL",
                "1st to the Champions League qualifying, its August play-off (the winner plays the Champions "
@@ -1458,7 +1465,8 @@ class CompetitionNamesDialog(Dialog):
     and for the continental cups the world builds (ccup_names, ccup_logos)"""
 
     OURS = [("6", "CAF Champions League"), ("7", "CAF Confederation Cup"), ("8", "AFC Champions League Two"),
-            ("9", "Copa Sudamericana"), ("0", "CAF Super Cup")]
+            ("9", "Copa Sudamericana"), ("13", "CONCACAF Champions Cup"), ("14", "OFC Champions League"),
+            ("15", "AFC Challenge League"), ("0", "CAF Super Cup")]
 
     def __init__(self, parent, project):
         super().__init__(parent, "Competition names")

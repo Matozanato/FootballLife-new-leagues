@@ -190,7 +190,21 @@ class Modules(Page):
     def apply(self):
         if self.dirty:
             self.app.save_ini(self.ini, "modules changed")
+            self.remember_off()
             self.load()
+
+    def remember_off(self):
+        """an optional module of ours (the regens) switched off stays off through Build"""
+        mdir = self.app.game.modules_dir
+        if not mdir or not os.path.isdir(mdir):
+            return
+        import leaguebuilder as B
+        off = B.modules_off(mdir)
+        for e in self.entries():
+            m = os.path.basename(e.value.strip().strip('"').replace("\\", "/"))[:-4]
+            if m in B.OPTIONAL_MODULES:
+                (off.discard if e.enabled else off.add)(m)
+        B.set_modules_off(mdir, off)
 
     def inspect(self):
         it = self.tree.currentItem()

@@ -201,6 +201,10 @@ class NewLife(BuilderPage):
         for c, w in enumerate((300, 150, 55, 60, 65, 55, 220)):
             self.tree.setColumnWidth(c, w)
         self.tree.itemSelectionChanged.connect(self.show_league)
+        # click a column to sort by it, again to turn it round (jibibi, 2026-10-06); the list
+        # opens as the file has it, by country
+        self.tree.setSortingEnabled(True)
+        self.tree.sortByColumn(1, Qt.AscendingOrder)
         split.addWidget(self.tree)
         right = QWidget()
         rv = QVBoxLayout(right)
@@ -273,6 +277,7 @@ class NewLife(BuilderPage):
         q = self.search.text().strip().lower()
         info = self.info()
         self.gamekeys = self.game_keys(info)
+        self.tree.setSortingEnabled(False)
         self.tree.clear()
         for i, L in enumerate(self.rows):
             if q and q not in L["name"].lower() and q not in L["country"].lower():
@@ -286,12 +291,15 @@ class NewLife(BuilderPage):
                                   _("the game's own league: Bring the game's leagues to this season") if game
                                   else "" if ok else _("a league takes %d to %d clubs") % (B.CLUBS_MIN, B.CLUBS_MAX)])
             it.setData(0, Qt.UserRole, i)
+            for c, v in ((2, len(E["clubs"])), (4, L["players"]), (5, L["strength"])):
+                it.setData(c, Qt.DisplayRole, int(v or 0))     # numbers sort as numbers
             it.setToolTip(3, _("Clubs of this league the game already has: they join the new league with "
                                "their own names, crests, kits and players"))
             if not ok:
                 for c in range(7):
                     it.setForeground(c, Qt.gray)
             self.tree.addTopLevelItem(it)
+        self.tree.setSortingEnabled(True)
         self.count()
 
     def picked(self):

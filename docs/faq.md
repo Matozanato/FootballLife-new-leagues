@@ -155,7 +155,29 @@ says so.
 
 Fixed in 0.1.4 (#37). A club that is already in the game's Copa Libertadores, its qualifying
 round or the AFC Champions League is no longer drawn into the continental cups Mod Studio builds
-(Copa Sudamericana, AFC Champions League Two, the CAF cups).
+(Copa Sudamericana, AFC Champions League Two, the CAF cups, and since 0.2.0 the CONCACAF
+Champions Cup, the OFC Champions League and the AFC Challenge League).
+
+### Can the cup winner go to the Copa Sudamericana (or the Confederation Cup, the ACL Two)?
+
+Yes, since 0.2.0 (#95). In the League dialog's **Europe** places, set the position to **Cup
+winner** and pick the cup. In a new career nobody has won the cup yet, and a winner can already
+have a place through the league; in both cases the place goes to the league's next club that
+plays no continental cup, the way UEFA does it.
+
+### Is there a cup for North America or Oceania?
+
+Since 0.2.0: the **CONCACAF Champions Cup** (a knockout of up to 16 clubs, like the real one;
+MLS fills the places your leagues leave) and the **OFC Champions League** (your leagues' clubs
+only, the game has no league in Oceania). A new league in a CONCACAF or OFC country gets them
+as its preset.
+
+Asia got a third cup in 0.2.0 as well: the **AFC Challenge League**, below the AFC Champions
+League Two, as the Conference League is in Europe. Give it a place with **Add place** in the
+League dialog's **Europe** places (*AFC CHL* in the Leagues list); it is built only when a
+league of your world sends clubs to it. After your places, the J1 League's 11th-14th, the
+Chinese Super League's 10th-13th and the Saudi Pro League's 11th-14th fill it. It plays groups
+of four and then a knockout, like ACL Two (a small field is a straight knockout).
 
 ### My league table shows the same club on every row
 
@@ -257,6 +279,15 @@ by the same amount), and **Name** takes a name of your own for the players Build
 club (FL P00001 ...). You can also bring in a whole squad from a table: *Players > Import a squad
 from a table*.
 
+### Why was every new club of mine as strong as a top side?
+
+Until 0.2.0 every new club without a squad of its own started with the same copy of one squad
+of the game, about 78 on average, so a sixth-tier side was a 4.5-star team. Since 0.2.0 Build
+moves that squad to its division's level: about 72 in a top flight, 67 in the second division,
+63 in the third, 60 in the fourth and 57 from the fifth down. Every player moves by the same
+amount, so the squad keeps its spread. NewLife squads, clubs of the game, and players you edited
+on the *Players* page are left as they are.
+
 ### Can a player or a manager get a picture without a 3D face?
 
 Since 0.1.5.5, yes. A player: *Players* > select him > **Portrait** > **Choose...** a PNG or JPG;
@@ -311,6 +342,15 @@ portrait to match, one of 90 faces from nine parts of the world. The faces come 
 folder `FL26 Regen Faces`, which the install copies and loads with a `cpk.root` line of its
 own. The save does not keep names, so after every load the module finds the regens again and
 gives each the same name and face back. It works in new and in running careers.
+
+### Can I switch the regens off?
+
+Yes, since 0.2.0. On **Lua modules** untick **Hide the League Builder's own modules (fl26...)**
+so ours show, untick `fl26regen` and press **Apply**. Mod Studio writes that down in
+`modules\fl26-off.txt` in the Sider folder, so **Build**, **Install the modules** and switching
+worlds leave it off instead of turning it back on, as they do with every other module. The
+game then makes its own regens: its own potential and names, no faces from the regen face pack.
+Tick it again and **Apply** to switch it back on. Only `fl26regen` can be kept off this way.
 
 ### All the players of my new clubs look the same
 

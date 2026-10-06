@@ -103,6 +103,14 @@ in the wrong place. Some modules need a Sider setting (for example Goal Song Ser
 
 Modules of the League Builder keep the order they were installed in.
 
+**Switching the regens off** (0.2.0): `fl26regen` gives regens new names, a new potential and a
+face of the regen face pack. To play without it, untick **Hide the League Builder's own modules
+(fl26...)** so ours show, untick `fl26regen` and press **Apply**. Mod Studio writes it down in
+`modules\fl26-off.txt` in the Sider folder, so **Build**, **Install the modules** and switching
+worlds leave it off instead of turning it back on, as they do with every other module. The game
+then makes its own regens: its own potential and names, no faces from the regen face pack. Tick
+it again and **Apply** to switch it back on. Only `fl26regen` can be kept off this way.
+
 ## 6. Game content: the content servers
 
 **Stadiums, Kits, Balls, Music, Commentary** and **Other content** (scoreboards, menus, referee
@@ -158,7 +166,7 @@ with Ctrl+click, Shift+click or Ctrl+A, then **Remove** or the Delete key.
 | **Division** | *(top division)*, or the league above it: another new league, or one of the game's. To put a new league under another new league in one step: select it and press **Add lower tier** (it takes the country, club count, format and up/down of the league above; only the name is left). A league another new league is already under is grey (0.1.9): the game follows one link down from a league, so groups of one division (three Serie C groups under Serie B) are not possible yet. |
 | **Up / down** | How many clubs change places with the league above at the end of the season. |
 | **Season** | Top division of a new country only: *August to May* (the default) or *February to December*, like Brazil, Japan or Saudi Arabia: clubs go up and down at New Year, and the divisions below it follow it. Not with a split, Apertura/Clausura, a national cup or a league cup yet. |
-| **Europe** | Top division only: which league position goes to which European competition. **Top flight: 1st UCL qualifying, 2nd UEL, 3rd UECL** fills the usual three (*... qualifying* are the August play-offs, see 8.2); **Add place**, **Remove place** and **Clear** for anything else. Each position once, and only positions the league has. Below 1 the position reads **Cup winner** (0.1.7): the winner of the country's cup (a new country needs **National cup**) -- and when the winner already has a European place through the league, the place goes down the league to its next club, as UEFA does it. A league of the game can have one too (*European places of the game's leagues*). Leave it empty for a lower tier. The preset follows the country: Asia gets the AFC Champions League and AFC Champions League Two, South America the Libertadores and the Copa Sudamericana, Africa the CAF Champions League and CAF Confederation Cup. Those four cups the game does not have are built with the world (section 8.2). A *Libertadores qualifying* place takes the place of a club of the game in the qualifying round (the last one of the country with the most clubs in it), at most six of its eight places; **Check the plan** says which leagues are left out past that. |
+| **Europe** | Top division only: which league position goes to which European competition. **Top flight: 1st UCL qualifying, 2nd UEL, 3rd UECL** fills the usual three (*... qualifying* are the August play-offs, see 8.2); **Add place**, **Remove place** and **Clear** for anything else. Each position once, and only positions the league has. Below 1 the position reads **Cup winner** (0.1.7): the winner of the country's cup (a new country needs **National cup**) -- and when the winner already has a European place through the league, the place goes down the league to its next club, as UEFA does it. Since 0.2.0 the cup winner can also go to the cups Mod Studio builds (Copa Sudamericana, CAF Confederation Cup, AFC Champions League Two ...); in a new career, before anyone has won the cup, that place goes to the league's next club too. A league of the game can have one too (*European places of the game's leagues*). Leave it empty for a lower tier. The preset follows the country: Asia gets the AFC Champions League and AFC Champions League Two, South America the Libertadores and the Copa Sudamericana, Africa the CAF Champions League and CAF Confederation Cup, North and Central America the CONCACAF Champions Cup, Oceania the OFC Champions League. The **AFC Challenge League** (0.2.0) is the AFC's third cup, below the AFC Champions League Two as the Conference League is in Europe; pick it with **Add place** (*AFC CHL* in the Leagues list). Those seven cups the game does not have are built with the world (section 8.2). A *Libertadores qualifying* place takes the place of a club of the game in the qualifying round (the last one of the country with the most clubs in it), at most six of its eight places; **Check the plan** says which leagues are left out past that. |
 | **Logo** | Any picture (PNG with a transparent background looks best). Empty: one is drawn for you. |
 | **Country flag** | Your own picture of the country's flag, stretched into the game's flag frame. It replaces the game's flag of that country everywhere (Select Team, players' nationality, the country's heading in Database > Competition Info) while the world is on. Empty: the game's own flag. |
 | **Cup** | Top division only. **National cup**: the country gets its own cup, with the name you give (empty: `<league> Cup`). The game fills a country's cup from its top division and the division below it, and the cup's size follows the National cup row of the Limits (8.3): the largest size the cup screen draws that fits, so a field of 22 gives a cup of 20, the top division first. Past 44 clubs the cup keeps the top division alone. A new second division under a country the game already has (Germany, Russia ...) goes into that country's cup too, after the top division's clubs, when the cup's rounds fit the field. A new third division or lower (League One under the Championship) leaves the country's cup to the game's top two divisions, as in the game. **Super cup**: also a one-match super cup before the season, the champion against the cup winner. |
@@ -204,7 +212,7 @@ one club each in turn until 32. A club already in the Libertadores or its qualif
 the next one of its league. **Check the plan** prints the same list whenever the world has a
 Libertadores or Sudamericana place.
 
-**Competition names** (same page): a new name and logo for the game's cups, super cups and continental competitions -- the FA Cup, the Champions League, the Libertadores ... -- and for the continental cups the world builds (CAF Champions League, Confederation Cup, AFC Champions League Two, Copa Sudamericana, CAF Super Cup). Every stage of a competition takes the name. Empty: the game's own. The game's leagues are renamed on *Game's leagues and clubs*.
+**Competition names** (same page): a new name and logo for the game's cups, super cups and continental competitions -- the FA Cup, the Champions League, the Libertadores ... -- and for the continental cups the world builds (CAF Champions League, Confederation Cup, AFC Champions League Two, Copa Sudamericana, CONCACAF Champions Cup, OFC Champions League, AFC Challenge League, CAF Super Cup). Every stage of a competition takes the name. Empty: the game's own. The game's leagues are renamed on *Game's leagues and clubs*.
 
 **New clubs**: pick the league, then **Edit club** (name, short name, crest), **Paste names...**
 or **Load names from file...**. An empty name becomes `<league> 01`, `<league> 02` ...; a club
@@ -261,9 +269,11 @@ Pick a club (or press **Players** on New clubs), then a player:
 - **Rating**: the rating of the list, made of the abilities the position leans on. Changing
   it moves every ability of the player by the same amount. A player of a new club has no
   name until the Build numbers him (FL P00001 ...); type one in **Name** to give him yours;
+  since 0.2.0 such a squad starts at its division's level (about 72 in a top flight down to 57
+  from the fifth division);
 - **Face**: **Choose...** a face folder (section 8.1). **Clear** gives the game's face back. A
   new player without one gets a face of the regen face pack that fits his nationality, with its
-  portrait (0.1.5.5, with the modules installed). A face made for another player brings that
+  portrait (0.1.5.5, with the modules installed and `fl26regen` on, section 5). A face made for another player brings that
   player's look of the body too, so the arms and legs have the face's skin colour (0.1.9);
 - **Portrait**: **Choose...** a picture (PNG or JPG) for the player's small portrait in the squad
   lists, without a face of his own. Build makes it 180 x 180; it wins over a face folder's portrait;
@@ -396,12 +406,17 @@ before *Other Clubs (Asia)*, a South American one with the game's (after Colombi
 has no section for them) after Asia.
 
 > **Other continents' cups.** When your leagues send clubs to the CAF Champions League, the
-> CAF Confederation Cup, the AFC Champions League Two or the Copa Sudamericana, **Build**
-> makes those cups too. Each gets 32, 16, 8 or 4 clubs: your leagues' places first, then the
-> game's own leagues of that continent (Asia and South America) fill it. With 8 or more it
-> plays groups of four and then a knockout; below 8, a knockout only. They are filled at the
+> CAF Confederation Cup, the AFC Champions League Two, the AFC Challenge League, the Copa
+> Sudamericana, the CONCACAF Champions Cup or the OFC Champions League (the last three new in
+> 0.2.0), **Build** makes those cups too. Each gets 32, 16, 8 or 4 clubs: your leagues' places
+> first, then the game's own leagues of that continent (Asia, South America, and MLS for the
+> CONCACAF one) fill it; for the AFC Challenge League that is the J1 League's 11th-14th, the
+> Chinese Super League's 10th-13th and the Saudi Pro League's 11th-14th. With 8
+> or more it plays groups of four and then a knockout; below 8, a knockout only. The CONCACAF
+> Champions Cup is always a knockout, of 16 clubs at most, like the real one, and two clubs of
+> one league do not meet in its first round where that can be avoided. They are filled at the
 > end of August, from the league tables. A club already in the Copa Libertadores, its
-> qualifying round or the AFC Champions League is not drawn into them. A CAF cup with fewer
+> qualifying round or the AFC Champions League is not drawn into them. A CAF or OFC cup with fewer
 > than 4 places takes the next CAF cup's places first (with two and two, the CAF Champions
 > League gets all four), then the next positions of your leagues. **CAF Super Cup** (Build
 > page, on by default) has the winners of the two CAF cups meet once in late July, from a
@@ -453,7 +468,9 @@ under 10 MB. Download only the parts you want.
    they are. (They are LZMA zips: 7-Zip opens them, Windows' own zip viewer does not.)
 2. **League Builder > NewLife Database > Open NewLife Database...** and pick that folder. The list
    shows every league of those parts: country, clubs, clubs the game already has (*In game*),
-   players and level. Click a league to see its clubs.
+   players and level. Click a league to see its clubs. Click a column header (League, Country,
+   Clubs, Players, Level) to sort by it, again to turn the order round (0.2.0); the list opens
+   sorted by country.
 3. Select one or more leagues (Ctrl or Shift for more) and press **Add to the recipe**. Each
    becomes a new league with its clubs and their squads, the top division of its country. Change
    its division, format, European places and the rest on *New leagues*, like any other league.

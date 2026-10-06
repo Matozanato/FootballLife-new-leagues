@@ -287,6 +287,68 @@ def fill_newlife(pl, base, log=print):
     return out
 
 
+# The average rating a placeholder squad is brought to by the division it plays in: the first
+# division, the second ... and every one below the fifth as the fifth. Every new club used to
+# start with the same clone of one shipped squad (77.6 on average, the 2025-26 tables), so a
+# sixth-tier side was a 4.5-star team (Risto, Discord 03.10.).
+TIER_LEVEL = (72, 67, 63, 60, 57)
+
+
+def tier_of(p, mine):
+    """the division a planned league plays in: 1 for a top flight, 2 under it ...; a league of
+    the game above counts as a top flight"""
+    t, up = 1, p.get("above")
+    for _ in range(8):
+        if not up:
+            break
+        t += 1
+        q = mine.get(up)
+        up = q.get("above") if q else None
+    return t
+
+
+def fill_tiers(pl, base, log=print):
+    """pl's "players" with the placeholder squads of the new clubs that have no squad of their
+    own (no NewLife squad, not a club of the game) moved to their division's level
+    (TIER_LEVEL): every player by the same amount, so the squad keeps its spread. A place the
+    recipe edits or removes is left alone. Returns a new players dict; pl is not changed."""
+    import copy
+    out = copy.deepcopy(pl.get("players") or {})
+    mine = {p["rid"]: p for p in pl.get("leagues") or [] if "rid" in p}
+    proto, n, clubs = None, 0, 0
+    for p in pl.get("leagues") or []:
+        if (p.get("newlife") or {}).get("clubs"):
+            continue                      # fill_newlife's: the release's squads
+        game = {int(k) for k in (p.get("game_clubs") or {})}
+        want = TIER_LEVEL[min(tier_of(p, mine), len(TIER_LEVEL)) - 1]
+        for k in range(len(p.get("teams") or [])):
+            if k in game:
+                continue
+            c = out.setdefault(new_key(p["name"], k), {})
+            edits, gone = c.setdefault("edits", {}), set(c.get("remove") or [])
+            if proto is None:
+                proto = Squads(base).proto()
+                if not proto:
+                    return out
+            d = round(want - sum(overall(r) for r in proto) / len(proto))
+            moved = 0
+            for place in range(min(SQUAD, len(proto))):
+                key = str(place)
+                if key not in edits and key not in gone:
+                    edits[key] = at_level(proto[place], overall(proto[place]) + d)
+                    moved += 1
+            if not edits:
+                del c["edits"]
+            if not c:
+                del out[new_key(p["name"], k)]
+            n += moved
+            clubs += 1 if moved else 0
+    if n:
+        log("  placeholder squads of %d clubs brought to their division's level (%s)"
+            % (clubs, ", ".join("%d. %d" % (i + 1, v) for i, v in enumerate(TIER_LEVEL))))
+    return out
+
+
 LINEUP = ["GK", "CB", "CB", "RB", "LB", "DMF", "DMF", "RMF", "LMF", "AMF", "CF"]   # 4-2-3-1
 
 

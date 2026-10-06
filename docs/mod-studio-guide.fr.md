@@ -112,6 +112,16 @@ exemple Goal Song Server a besoin de `match-stats.enabled = 1`) ; le programme d
 
 Les modules du League Builder gardent l'ordre dans lequel ils ont été installés.
 
+**Désactiver les regens** (0.2.0) : `fl26regen` donne aux regens de nouveaux noms, un nouveau
+potentiel et un visage du pack de visages des regens. Pour jouer sans lui, décochez **Masquer
+les modules du League Builder (fl26...)** pour voir les nôtres, décochez `fl26regen` et appuyez
+sur **Appliquer**. Mod Studio le note dans `modules\fl26-off.txt` dans le dossier de Sider : la
+**Construction**, **Installer les modules** et le changement de monde le laissent désactivé au
+lieu de le réactiver, comme ils le font pour tous les autres modules. Le jeu fait alors ses
+propres regens : son potentiel et ses noms, sans visages du pack de visages des regens.
+Recochez-le et appuyez sur **Appliquer** pour le réactiver. Seul `fl26regen` peut rester
+désactivé ainsi.
+
 ## 6. Contenu du jeu : les serveurs de contenu
 
 **Stades, Maillots, Ballons, Musique, Commentaires** et **Autre contenu** (tableaux de score,
@@ -172,7 +182,7 @@ sélectionnez-les avec Ctrl+clic, Maj+clic ou Ctrl+A, puis **Retirer** ou la tou
 | **Division** | *(première division)*, ou la ligue au-dessus : une autre nouvelle ligue, ou une ligue du jeu. Pour placer une nouvelle ligue sous une autre nouvelle ligue en une étape : sélectionnez-la et appuyez sur **Ajouter une division inférieure** (elle reprend le pays, le nombre de clubs, le format et les montées/descentes de la ligue au-dessus ; il ne reste que le nom). Une ligue qui a déjà une autre nouvelle ligue en dessous est grisée (0.1.9) : le jeu ne suit qu'un seul lien vers le bas depuis une ligue, donc les groupes d'une même division (trois groupes de Serie C sous la Serie B) ne sont pas encore possibles. |
 | **Montée / descente** | Combien de clubs échangent leur place avec la ligue au-dessus en fin de saison. |
 | **Saison** | Première division d'un nouveau pays uniquement : *août à mai* (par défaut) ou *février à décembre*, comme le Brésil, le Japon ou l'Arabie saoudite : les clubs montent et descendent au Nouvel An, et les divisions en dessous la suivent. Pas encore avec une scission, Apertura/Clausura, une coupe nationale ni une coupe de la ligue. |
-| **Europe** | Première division uniquement : quelle position en ligue va dans quelle compétition européenne. **Première division : 1er qualifications LDC, 2e LE, 3e LECE** remplit les trois places habituelles (*... (qualifications)* sont les barrages d'août, voir 8.2) ; **Ajouter une place**, **Retirer une place** et **Effacer** pour tout le reste. Chaque position une seule fois, et seulement les positions que la ligue a. Sous 1, la position s'affiche **Vainqueur de la coupe** (0.1.7) : le vainqueur de la coupe du pays (un nouveau pays a besoin de **Coupe nationale**) -- et si le vainqueur a déjà une place européenne par la ligue, la place descend la ligue jusqu'au club suivant, comme à l'UEFA. Une ligue du jeu peut aussi en avoir une (*Places européennes des ligues du jeu*). Laissez vide pour une division inférieure. Le modèle suit le pays : l'Asie reçoit l'AFC Champions League et l'AFC Champions League Two, l'Amérique du Sud la Libertadores et la Copa Sudamericana, l'Afrique la Ligue des champions CAF et la Coupe de la Confédération CAF. Ces quatre coupes que le jeu n'a pas sont construites avec le monde (section 8.2). Une place en *qualifications de la Libertadores* prend la place d'un club du jeu au tour préliminaire (le dernier du pays qui y a le plus de clubs), au plus six de ses huit places ; **Vérifier le plan** indique quelles ligues restent dehors au-delà. |
+| **Europe** | Première division uniquement : quelle position en ligue va dans quelle compétition européenne. **Première division : 1er qualifications LDC, 2e LE, 3e LECE** remplit les trois places habituelles (*... (qualifications)* sont les barrages d'août, voir 8.2) ; **Ajouter une place**, **Retirer une place** et **Effacer** pour tout le reste. Chaque position une seule fois, et seulement les positions que la ligue a. Sous 1, la position s'affiche **Vainqueur de la coupe** (0.1.7) : le vainqueur de la coupe du pays (un nouveau pays a besoin de **Coupe nationale**) -- et si le vainqueur a déjà une place européenne par la ligue, la place descend la ligue jusqu'au club suivant, comme à l'UEFA. Depuis 0.2.0, le vainqueur de la coupe peut aussi aller dans les coupes que Mod Studio construit (Copa Sudamericana, Coupe de la Confédération CAF, AFC Champions League Two ...) ; dans une nouvelle carrière, avant que quiconque ait gagné la coupe, cette place va aussi au club suivant de la ligue. Une ligue du jeu peut aussi en avoir une (*Places européennes des ligues du jeu*). Laissez vide pour une division inférieure. Le modèle suit le pays : l'Asie reçoit l'AFC Champions League et l'AFC Champions League Two, l'Amérique du Sud la Libertadores et la Copa Sudamericana, l'Afrique la Ligue des champions CAF et la Coupe de la Confédération CAF, l'Amérique du Nord et centrale la CONCACAF Champions Cup, l'Océanie l'OFC Champions League. L'**AFC Challenge League** (0.2.0) est la troisième coupe de l'AFC, sous l'AFC Champions League Two, comme la Ligue Europa Conférence en Europe ; elle se choisit avec **Ajouter une place** (*AFC CHL* dans la liste des ligues). Ces sept coupes que le jeu n'a pas sont construites avec le monde (section 8.2). Une place en *qualifications de la Libertadores* prend la place d'un club du jeu au tour préliminaire (le dernier du pays qui y a le plus de clubs), au plus six de ses huit places ; **Vérifier le plan** indique quelles ligues restent dehors au-delà. |
 | **Logo** | N'importe quelle image (un PNG à fond transparent rend le mieux). Vide : un logo est dessiné pour vous. |
 | **Drapeau du pays** | Votre propre image du drapeau du pays, étirée dans le cadre des drapeaux du jeu. Elle remplace le drapeau de ce pays partout dans le jeu (Select Team, nationalité des joueurs, l'en-tête du pays dans Database > Competition Info) tant que le monde est activé. Vide : le drapeau du jeu. |
 | **Coupe** | Première division uniquement. **Coupe nationale** : le pays a sa propre coupe, avec le nom que vous donnez (vide : `<ligue> Cup`). Le jeu remplit la coupe d'un pays avec sa première division et la division en dessous, et la taille de la coupe suit la ligne Coupe nationale des Limites (8.3) : la plus grande taille que l'écran de la coupe dessine et qui tient, donc 22 clubs donnent une coupe de 20, la première division d'abord. Au-delà de 44 clubs, la coupe ne garde que la première division. Une nouvelle deuxième division sous un pays que le jeu a déjà (Allemagne, Russie ...) entre aussi dans la coupe de ce pays, après les clubs de première division, quand les tours de la coupe conviennent au nombre de clubs. Une nouvelle troisième division ou plus bas (League One sous la Championship) laisse la coupe du pays aux deux premières divisions du jeu, comme dans le jeu. **Supercoupe** : en plus, une supercoupe en un match avant la saison, le champion contre le vainqueur de la coupe. |
@@ -222,7 +232,7 @@ jusqu'à 32. Un club déjà en Libertadores ou dans ses qualifications laisse sa
 sa ligue. **Vérifier le plan** affiche la même liste dès que le monde a une place en Libertadores
 ou en Sudamericana.
 
-**Noms des compétitions** (bouton sur la même page) : un nouveau nom et un logo pour les coupes, supercoupes et compétitions continentales du jeu -- la FA Cup, la Ligue des champions, la Libertadores ... -- et pour les coupes continentales que le monde construit (CAF Champions League, Coupe de la Confédération, AFC Champions League Two, Copa Sudamericana, Supercoupe de la CAF). Toutes les phases de la compétition prennent le nom. Vide : celui du jeu. Les ligues du jeu se renomment dans *Game's leagues and clubs*.
+**Noms des compétitions** (bouton sur la même page) : un nouveau nom et un logo pour les coupes, supercoupes et compétitions continentales du jeu -- la FA Cup, la Ligue des champions, la Libertadores ... -- et pour les coupes continentales que le monde construit (CAF Champions League, Coupe de la Confédération, AFC Champions League Two, Copa Sudamericana, CONCACAF Champions Cup, OFC Champions League, AFC Challenge League, Supercoupe de la CAF). Toutes les phases de la compétition prennent le nom. Vide : celui du jeu. Les ligues du jeu se renomment dans *Game's leagues and clubs*.
 
 **Nouveaux clubs** : choisissez la ligue, puis **Modifier le club** (nom, nom court, écusson),
 **Coller des noms...** ou **Charger des noms depuis un fichier...**. Un nom vide devient
@@ -282,10 +292,12 @@ jeu. Choisissez un club (ou appuyez sur **Joueurs** dans Nouveaux clubs), puis u
 - **Note** : la note de la liste, faite des capacités sur lesquelles le poste s'appuie. La
   changer déplace chaque capacité du joueur d'autant. Un joueur d'un nouveau club n'a pas de
   nom tant que la construction ne le numérote pas (FL P00001 ...) ; tapez-en un dans **Nom**
-  pour lui donner le vôtre ;
+  pour lui donner le vôtre ; depuis 0.2.0 cet effectif part du niveau de sa division (environ
+  72 en première division, jusqu'à 57 à partir de la cinquième) ;
 - **Visage** : **Choisir...** un dossier de visage (section 8.1). **Effacer** redonne le visage du
   jeu. Un nouveau joueur sans visage reçoit un visage du pack de visages des regens qui va avec sa
-  nationalité, avec son portrait (0.1.5.5, modules installés). Un visage fait pour un autre joueur
+  nationalité, avec son portrait (0.1.5.5, modules installés et `fl26regen` actif, section 5).
+  Un visage fait pour un autre joueur
   apporte aussi l'apparence de son corps : les bras et les jambes ont la couleur de peau de ce
   visage (0.1.9) ;
 - **Portrait** : **Choisir...** une image (PNG ou JPG) pour le petit portrait du joueur dans les listes
@@ -430,13 +442,19 @@ CONCACAF après la MLS,
 et les pays d'Afrique et d'Océanie (le jeu n'a pas de section pour eux) après l'Asie.
 
 > **Coupes des autres continents.** Quand vos ligues envoient des clubs en Ligue des champions
-> CAF, en Coupe de la Confédération CAF, en AFC Champions League Two ou en Copa Sudamericana,
-> la **Construction** crée aussi ces coupes. Chacune a 32, 16, 8 ou 4 clubs : d'abord les places
-> de vos ligues, puis les ligues du jeu de ce continent (Asie et Amérique du Sud) la complètent.
-> À 8 ou plus, des groupes de quatre puis une phase à élimination directe ; en dessous de 8,
-> l'élimination directe seule. Elles sont remplies fin août, avec les classements des ligues.
-> Un club qui joue déjà la Copa Libertadores, ses qualifications ou l'AFC Champions League
-> n'entre pas dans leur tirage. Une coupe CAF avec moins de 4 places prend d'abord les places
+> CAF, en Coupe de la Confédération CAF, en AFC Champions League Two, en AFC Challenge League,
+> en Copa Sudamericana, en CONCACAF Champions Cup ou en OFC Champions League (ces trois
+> dernières nouvelles en 0.2.0), la **Construction** crée aussi ces coupes. Chacune a 32, 16, 8
+> ou 4 clubs : d'abord les places de vos ligues, puis les ligues du jeu de ce continent (Asie,
+> Amérique du Sud, et la MLS pour celle de la CONCACAF) la complètent ; pour l'AFC Challenge
+> League, ce sont les 11e-14e de la J1 League, les 10e-13e de la Super League chinoise et les
+> 11e-14e de la Saudi Pro League. À 8 ou plus, des groupes de quatre puis une phase à
+> élimination directe ; en dessous de 8, l'élimination directe seule. La CONCACAF Champions Cup
+> se joue toujours à élimination directe, à 16 clubs au plus, comme la vraie, et deux clubs
+> d'une même ligue ne se rencontrent pas à son premier tour quand c'est évitable. Elles sont
+> remplies fin août, avec les classements des ligues. Un club qui joue déjà la Copa
+> Libertadores, ses qualifications ou l'AFC Champions League n'entre pas dans leur tirage. Une
+> coupe CAF ou OFC avec moins de 4 places prend d'abord les places
 > de la coupe CAF suivante (avec deux et deux, la Ligue des champions CAF a les quatre), puis
 > les positions suivantes de vos ligues. **Supercoupe de la CAF** (page Construire, cochée par
 > défaut) fait se rencontrer les vainqueurs des deux coupes CAF en un match fin juillet, à partir
@@ -491,7 +509,9 @@ plusieurs), plus *Free agents*, chacune de moins de 10 Mo. Ne téléchargez que 
    lit les zip tels quels. (Ce sont des zip LZMA : 7-Zip les ouvre, le lecteur de zip de Windows non.)
 2. **League Builder > NewLife Database > Ouvrir la NewLife Database...** et choisissez ce dossier.
    La liste montre toutes les ligues de ces parties : pays, clubs, clubs que le jeu a déjà
-   (*Dans le jeu*), joueurs et niveau. Cliquez sur une ligue pour voir ses clubs.
+   (*Dans le jeu*), joueurs et niveau. Cliquez sur une ligue pour voir ses clubs. Un clic sur
+   l'en-tête d'une colonne (Ligue, Pays, Clubs, Joueurs, Niveau) trie selon elle, un second
+   clic inverse l'ordre (0.2.0) ; la liste s'ouvre triée par pays.
 3. Sélectionnez une ou plusieurs ligues (Ctrl ou Maj pour plusieurs) et appuyez sur **Ajouter à
    la recette**. Chacune devient une nouvelle ligue avec ses clubs et leurs effectifs, première
    division de son pays. Changez sa division, son format, ses places européennes et le reste dans

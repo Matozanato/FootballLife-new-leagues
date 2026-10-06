@@ -70,11 +70,13 @@ which league sits above -- and nothing about ids:
               Conference League), 2 Conference League, 12 its play-off (the losers are out),
               3 Libertadores, 4 its qualifying round, 5 AFC Champions League, or one of the cups the game has not got: 6 CAF
               Champions League, 7 CAF Confederation Cup, 8 AFC Champions League Two, 9 Copa
-              Sudamericana (fl26world.COMPETITIONS); each position once, and only the league's
-              own (1..clubs), or 0 (CUP_WINNER) for the winner of the league's national cup
-              ("cup" below; for game_europe the country's cup in the game), its place going down
-              the league when the winner already has one. 0..5 and 10..12 are written as uefa lines of the world file, after the shipped
-              leagues' places (fl26world.uefa_places); 6..9 build that cup (see ccup_plan)
+              Sudamericana, 13 CONCACAF Champions Cup, 14 OFC Champions League, 15 AFC Challenge League
+              (fl26world.COMPETITIONS); each position once, and only the league's own
+              (1..clubs), or 0 (CUP_WINNER) for the winner of the league's national cup ("cup"
+              below; for game_europe the country's cup in the game), its place going down the
+              league when the winner already has one or there is none yet -- for 6..14 too since
+              0.2.0 (#95). 0..5 and 10..12 are written as uefa lines of the world file, after the shipped
+              leagues' places (fl26world.uefa_places); 6..9, 13..15 build that cup (see ccup_plan)
   cup         optional, a top division of a new country only: true gives the country a national
               cup (a knockout copied from a shipped one, see NATIONAL_CUPS). The game fills a
               domestic cup with the region's first league and the league below it, and a cup's
@@ -285,7 +287,8 @@ SAUDI_REGION, SAUDI_CUP, SAUDI_SUPER_CUP = 28, 164, 165    # the region holds KS
 CCUP_SIZES = (32, 16, 8, 4)              # the fields a continental cup can have (fl26swiss.dll)
 CCUP_REG_FROM = 197                      # its regulation ids: past the split phases' 191..196
 CCUP_KEEP = set(range(186, 197))         # the Conference League's 186..189, 190 (moved 145), splits
-MAX_CCUP = 8                             # cups fl26swiss.dll takes from the world file (MAX_CCUP)
+MAX_CCUP = 16                            # cups fl26swiss.dll takes from the world file (MAX_CCUP)
+CCUP_KNOCKOUT_MAX = 16                   # a cup with no groups: four two-legged rounds at most
 # the ids the season builder 0x1413156e0 admits at creation, whatever fl26joindll says (its
 # include list as fl26join.log printed it on 2026-09-28): an exhibition league must not be one
 CREATION_IDS = {2, 3, 4, 5, 6, 7, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30, 49, 50, 53,
@@ -1475,6 +1478,10 @@ def plan(recipe, base):
     room = {p["rid"]: p["clubs"] for p in out}
     room.update({r: entries_of(base, regrow[r][M.R_CID]) for r, _p, _c, _a in gcc})
     cups, notes = ccup_plan([(p["rid"], pos, comp, 0) for p in out for pos, comp in p["europe"]] + gcc, room)
+    for c in cups:            # a game league's cup winner: its national cup is the game's (#95)
+        c["winners"] = [[e[1], home_cup(regrow, region_of_cid, region_of_cid.get(regrow[e[1]][M.R_CID]))]
+                        for e in c["entry"] if e[0] == "cup" and e[1] in regrow
+                        and e[1] not in {p["rid"] for p in out}]
     home = [league_cup(p, out) for p in out if p.get("league_cup")]
     home += game_cups(recipe, regrow, region_of_cid, base, out)
     home += [c for p in out if p.get("apertura") for c in playoff_cups(p)]
@@ -1777,7 +1784,7 @@ def access_reg(rid, regrow, region_of_cid):
 def game_europe(recipe, regrow, region_of_cid, base):
     """the recipe's game_europe: (regulation, position, competition, 0) places for leagues of the
     game, the regulations whose shipped places they replace, their names, and the places in the
-    League Builder's continental cups (competitions 6..9), which go to ccup_plan"""
+    League Builder's continental cups (competitions 6..9, 13..15), which go to ccup_plan"""
     ge = recipe.get("game_europe") or {}
     if not ge:
         return [], [], {}, []
@@ -1797,8 +1804,6 @@ def game_europe(recipe, regrow, region_of_cid, base):
         bad += ["competition %d is not one a league's place can lead to" % int(e[1])
                 for e in europe or [] if str(e[1]).isdigit()
                 and int(e[1]) not in fl26world.UEFA_LINE and int(e[1]) not in ccups]
-        bad += ["the cup winner cannot go to the %s" % ccups[int(comp)] for pos, comp in europe or []
-                if int(pos) == CUP_WINNER and int(comp) in ccups]
         if bad:
             raise BuildError("European places of %s: %s" % (tops[rid], "; ".join(bad)))
         # a place in a continental cup of the League Builder's (AFC Champions League Two, Copa
@@ -2188,18 +2193,19 @@ def ccup_short(own, clubs, notes):
     Champions League and 2 Confederation Cup places, Alikhaled_727 2026-09-29: neither cup was
     built, now the Champions League takes all four), then the next positions of its own leagues
     that no place of any competition claims, a league at a time (`clubs`: {league: its clubs})"""
-    places = {c: sorted(((r, pos) for r, pos, comp, _a in own if comp == c), key=lambda e: e[1])
+    places = {c: sorted((ccup_entry(r, pos, a) for r, pos, comp, a in own if comp == c), key=entry_key)
               for c, _n, _code, _conf, _fill in fl26world.CCUPS}
     claimed = {}
     for r, pos, _comp, _a in own:
-        claimed.setdefault(r, set()).add(pos)
+        if pos != CUP_WINNER:
+            claimed.setdefault(r, set()).add(pos)
     for i, (c, name, _code, conf, fill) in enumerate(fl26world.CCUPS):
         if fill or not 0 < len(places[c]) < 4:
             continue
         for c2, name2, _code2, conf2, fill2 in fl26world.CCUPS[i + 1:]:
             take = places[c2][:4 - len(places[c])] if conf2 == conf and not fill2 else []
             if take:
-                places[c] = sorted(places[c] + take, key=lambda e: e[1])
+                places[c] = sorted(places[c] + take, key=entry_key)
                 places[c2] = places[c2][len(take):]
                 notes.append("%s: %d place(s) of the %s moved up to it -- a cup needs 4 clubs"
                              % (name, len(take), name2))
@@ -2208,10 +2214,10 @@ def ccup_short(own, clubs, notes):
         if len(places[c]) >= 4:
             continue
         leagues = []
-        for r, _pos in places[c]:
-            if r not in leagues:
-                leagues.append(r)
-        nxt, pad = {r: max(claimed[r]) for r in leagues}, []
+        for e in places[c]:
+            if entry_league(e) not in leagues:
+                leagues.append(entry_league(e))
+        nxt, pad = {r: max(claimed.setdefault(r, {0})) for r in leagues}, []
         while len(places[c]) + len(pad) < 4:
             before = len(pad)
             for r in leagues:
@@ -2234,8 +2240,43 @@ def ccup_short(own, clubs, notes):
     return places
 
 
+def ccup_entry(r, pos, alt):
+    """a place in one of fl26world.CCUPS as ccup_plan's entry: (league, position), or for a cup
+    winner's place ("cup", league) -- the national cup's regulation is known only once Build has
+    made it, so continental() puts it in (cup_winners), with the league as the place to fall back
+    on: the next club of that league when the cup has no winner yet (a new career) or its winner
+    already plays (fl26swiss ccup alt=)"""
+    return ("cup", alt or r) if pos == CUP_WINNER else (r, pos)
+
+
+def entry_league(e):
+    return e[1] if e[0] == "cup" else e[0]
+
+
+def entry_key(e):
+    """a league's places best first, its cup winner's after them (the League dialog's order)"""
+    return 1000 if e[0] == "cup" else e[1]
+
+
+def apart(field):
+    """a knockout's pairs (first v second, third v fourth ...) with no two clubs of one league
+    in a tie where a swap of the second clubs of two ties can avoid it (a cup winner and the
+    champion of its league met in the first round)"""
+    field = list(field)
+    ties = len(field) // 2
+    for t in range(ties):
+        if entry_league(field[2 * t]) != entry_league(field[2 * t + 1]):
+            continue
+        for u in sorted(range(ties), key=lambda u: abs(u - t)):
+            a, b = field[2 * t], field[2 * u + 1]
+            if u != t and entry_league(a) != entry_league(b) and entry_league(field[2 * u]) != entry_league(field[2 * t + 1]):
+                field[2 * t + 1], field[2 * u + 1] = field[2 * u + 1], field[2 * t + 1]
+                break
+    return field
+
+
 def ccup_plan(own, clubs=None):
-    """the continental cups the new leagues' places lead to (competitions 6..9, fl26world.CCUPS),
+    """the continental cups the new leagues' places lead to (competitions 6..9, 13..15: fl26world.CCUPS),
     each only when some place names it. The field is the places of the world's own leagues and,
     where the cup has them, shipped leagues' places after those: the biggest of 32/16/8/4 clubs
     that there are clubs for, the world's own always in. Pots in the order a league's places
@@ -2249,7 +2290,8 @@ def ccup_plan(own, clubs=None):
         mine = places[c]
         if not mine:
             continue
-        size = next((s for s in CCUP_SIZES if s <= len(mine) + len(fill)), 0)
+        size = next((s for s in CCUP_SIZES if s <= len(mine) + len(fill)
+                     and (s <= CCUP_KNOCKOUT_MAX or c not in fl26world.CCUP_KNOCKOUT)), 0)
         if not size:
             notes.append("%s: %d place(s), and a cup needs 4 clubs -- not built" % (name, len(mine)))
             continue
@@ -2259,14 +2301,16 @@ def ccup_plan(own, clubs=None):
             mine = mine[:size]
         field = mine + [e for e in fill if e not in mine][:size - len(mine)]
         seen, ranked = {}, []
-        for i, (r, pos) in enumerate(field):
+        for i, e in enumerate(field):
+            r = entry_league(e)
             seen[r] = seen.get(r, -1) + 1
-            ranked.append((seen[r], i, (r, pos)))
-        field = [e for _k, _i, e in sorted(ranked)]
-        if size < 8:            # a knockout pairs entries in order: the strongest v the weakest
-            field = [field[j] for i in range(size // 2) for j in (i, size - 1 - i)]
+            ranked.append((seen[r], i, tuple(e)))
+        field = [e for _k, _i, e in sorted(ranked, key=lambda x: (x[0], x[1]))]
+        knockout = size < 8 or c in fl26world.CCUP_KNOCKOUT
+        if knockout:            # a knockout pairs entries in order: the strongest v the weakest
+            field = apart([field[j] for i in range(size // 2) for j in (i, size - 1 - i)])
         cups.append({"number": c, "name": name, "code": code, "conf": conf,
-                     "groups": size // 4 if size >= 8 else 0, "entry": field})
+                     "groups": 0 if knockout else size // 4, "entry": field})
     return cups, notes
 
 
@@ -2277,11 +2321,12 @@ def europe_problems(clubs, europe, cup=True):
     """what is wrong with a league's European places ([[position, competition], ...]): each a
     position of the league's own, 1..clubs, none twice, and a competition fl26swiss knows.
     Position 0 is the cup winner (CUP_WINNER): only for a league whose country has a cup (cup),
-    and only for a UEFA, Libertadores or AFC place -- fl26swiss gives it to the cup winner, or,
-    when the winner already has a place through the league, to the league's next club"""
+    -- fl26swiss gives it to the cup winner, or, when the winner already has a place through the
+    league (or a new career has no winner yet), to the league's next club. Since 0.2.0 that holds
+    for the League Builder's continental cups too (GitHub #95: the cup winner to the Copa
+    Sudamericana, the Confederation Cup, the AFC Champions League Two)"""
     out, seen = [], set()
     comps = {c for c, _n in fl26world.COMPETITIONS}
-    ccups = {c[0] for c in fl26world.CCUPS}
     for e in europe:
         try:
             pos, comp = int(e[0]), int(e[1])
@@ -2291,8 +2336,6 @@ def europe_problems(clubs, europe, cup=True):
         if pos == CUP_WINNER:
             if not cup:
                 out.append("a cup winner's place, but the country has no cup")
-            if comp in ccups:
-                out.append("the cup winner goes to a UEFA, Libertadores or AFC competition only")
         elif not 1 <= pos <= clubs:
             out.append("position %d -- the league has %d clubs" % (pos, clubs))
         if pos in seen:
@@ -2587,6 +2630,13 @@ def confederations(base):
     return out
 
 
+def confed_line(confed):
+    """the world file's confed line: each country's confederation, flag id:code, so fl26swiss
+    can put a continental champion of ours into the game's own Club World Cup in place of a
+    club of the champion's own confederation (0.2.0; until then always an African one)"""
+    return "confed " + ",".join("%d:%d" % fc for fc in sorted(confed.items()))
+
+
 def country_confederations(base):
     """{country name as country_names() gives it: confederation code} -- 2 UEFA, 3 AFC, 4 CONMEBOL,
     5 CAF, 6 CONCACAF, 7 OFC"""
@@ -2852,6 +2902,7 @@ def build(pl, base, game, replace=False, log=print):
     faces, ids, portraits = [], {}, []
     try:
         filled = dict(clubs, players=lbplayers.fill_newlife(clubs, base, log))   # the plan kept as it was
+        filled["players"] = lbplayers.fill_tiers(filled, base, log)
         lbplayers.apply(filled, base, db, PLAYER_CAP, log, faces, lineups=lineups, ids=ids, portraits=portraits)
     except lbplayers.Error as e:
         raise BuildError(str(e))
@@ -2891,7 +2942,13 @@ def build(pl, base, game, replace=False, log=print):
     uecl, qlines = europe(tmp, db, log, bool(pl.get("uecl")), pl.get("uecl_name"), rounds)
     national_cups(pl, tmp, db, log)
     hc = home_cups(pl, confed)
+    own_cup = {p["rid"]: (p.get("own_cup") or {}).get("reg") for p in pl["leagues"]}
+    for c in pl.get("ccups") or []:
+        c["winners"] = list(c.get("winners") or []) + [[r, own_cup[r]] for r in
+                                                       {e[1] for e in c["entry"] if e[0] == "cup"} if own_cup.get(r)]
     ccups = continental((pl.get("ccups") or []) + hc, tmp, db, log)
+    if pl.get("ccups") and confed:
+        ccups.append(confed_line(confed))
     for c, h in zip(hc, pl.get("home_cups") or []):
         h["cid"] = c["cid"]                            # for its emblem (pictures)
     rename_competitions(pl, db, log)
@@ -3301,6 +3358,8 @@ def continental(cups, root, db, log=print):
         raise BuildError("no free competition or regulation ids left for the continental cups")
     args = ["--base", db, "--out", root]
     rounds = []
+    for cup in cups:
+        cup_winners(cup)
     for k, cup in enumerate(cups):
         reg = free.pop(0)
         ko = free.pop(0) if cup["groups"] else reg        # a straight knockout is one regulation
@@ -3326,6 +3385,7 @@ def continental(cups, root, db, log=print):
     if len(lines) != len(cups):
         raise BuildError("mkccup made %d of %d continental cups:\n%s" % (len(lines), len(cups), said))
     lines = [ccup_options(l, cup) for l, cup in zip(lines, cups)]
+    lines = [l if not cup.get("alt") else ccup_alt(l, cup["alt"]) for l, cup in zip(lines, cups)]
     for cup in pres:
         pre = cup["opts"]["pre"]
         lines.append("lpre %d cup=%d fill=%d days=%s entry=%s" % (
@@ -3350,6 +3410,28 @@ def home_cups(pl, confed):
             c["opts"]["clubs"] = [r if isinstance(r, int) else teams[r[0]][r[1]] for r in cup["refs"]]
         out.append(c)
     return out
+
+
+def cup_winners(cup):
+    """a cup winner's entry ("cup", league) of a continental cup (ccup_entry) -> (the league's
+    national cup's regulation, 0), the league kept in cup["alt"] as (entry index, league): the
+    world file's alt=, which fl26swiss follows when the cup has no winner to send"""
+    regs = {int(r): reg for r, reg in cup.get("winners") or []}
+    entry, alt = [], []
+    for i, e in enumerate(cup["entry"]):
+        if e[0] == "cup":
+            if not regs.get(int(e[1])):
+                raise BuildError("%s: the cup winner of league %s, but its country has no cup" % (cup["name"], e[1]))
+            alt.append((i, int(e[1])))
+            e = (regs[int(e[1])], 0)
+        entry.append(e)
+    cup["entry"], cup["alt"] = entry, alt
+
+
+def ccup_alt(line, alt):
+    """a world file ccup line with its cup winners' leagues (cup_winners): alt=<entry>:<league>,..."""
+    head, sep, name = line.partition(" name=")
+    return "%s alt=%s%s%s" % (head, ",".join("%d:%d" % a for a in alt), sep, name)
 
 
 def ccup_options(line, cup):
@@ -3542,6 +3624,34 @@ def module_of(line):
     return (name[:-4] if name.endswith(".lua") else name), live
 
 
+# Modules of ours a player may switch off for good (Gu, 2026-10-07: "can the regen system be
+# disabled completely?"). Unticking one on the Lua modules page lists it in modulesl26-off.txt,
+# and Build / Install / switching worlds then leave its line switched off instead of turning it
+# back on as they do every other module of the pack.
+OPTIONAL_MODULES = ("fl26regen",)
+OFF_FILE = "fl26-off.txt"
+
+
+def modules_off(mdir):
+    """the optional modules the player switched off (OFF_FILE in the modules folder `mdir`)"""
+    try:
+        with open(os.path.join(mdir, OFF_FILE), encoding="utf-8") as f:
+            return {l.strip() for l in f if l.strip() in OPTIONAL_MODULES}
+    except OSError:
+        return set()
+
+
+def set_modules_off(mdir, off):
+    """write OFF_FILE: the optional modules in `off` stay off; none left removes the file"""
+    path = os.path.join(mdir, OFF_FILE)
+    off = sorted(m for m in set(off) if m in OPTIONAL_MODULES)
+    if off:
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("# switched off on the Lua modules page; Build leaves them off\n" + "\n".join(off) + "\n")
+    elif os.path.exists(path):
+        os.remove(path)
+
+
 def ensure_modules(game, order, want, log=print):
     """make every module in `want` a live lua.module line of sider.ini, in `order`'s order.
 
@@ -3554,6 +3664,10 @@ def ensure_modules(game, order, want, log=print):
     old copy is out of date, and its Lua looks for its DLL in modules, not next to itself
     (evo-web, 2026-09-29: every fl26 line read before-builder-1/..., LoadLibraryA failed
     with error 126 for all four DLLs, and the diagnostics said none of them was loaded)."""
+    off = modules_off(os.path.join(siderdir.find(game), "modules"))
+    if off & set(want):
+        log("sider.ini: left off as you switched them off: %s" % ", ".join(sorted(off & set(want))))
+    want = [m for m in want if m not in off]
     ini, lines = ini_lines(game)
     fixed, plain = [], {module_of(l)[0] for l in lines}
     for i, l in enumerate(lines):
