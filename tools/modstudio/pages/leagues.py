@@ -1,7 +1,7 @@
 """Leagues: every league in one list -- the game's and the ones the recipe adds -- by continent,
 in the order they are dragged into.  The one picked is edited on the right: a league of the game
 in the game's leagues panel, a league of ours with the league window."""
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QBrush, QColor, QPixmap
 from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QHBoxLayout, QLabel, QLineEdit, QMenu,
                                QPushButton, QSplitter, QStackedWidget, QToolButton, QTreeWidget,
@@ -72,6 +72,10 @@ class LeagueTree(QTreeWidget):
             at = parent.indexOfChild(dst) + (1 if self.dropIndicatorPosition() == QAbstractItemView.BelowItem else 0)
         parent.insertChild(at, src)
         self.setCurrentItem(src)
+        # the move is done here; a MoveAction handed back would have the drag remove the source
+        # row once more, and the league vanished from the list until it was filled again
+        # (Discord, capital030: it showed after Ours and back to All)
+        event.setDropAction(Qt.CopyAction)
         event.accept()
         self.moved.emit()
 
@@ -132,6 +136,8 @@ class Leagues(BuilderPage):
         self.tree = LeagueTree()
         self.tree.currentItemChanged.connect(lambda *_a: self.show_current())
         self.tree.moved.connect(self.save_order)
+        # save_order sorts the recipe's leagues, so the rows' indexes into it are refilled after
+        self.tree.moved.connect(lambda: QTimer.singleShot(0, self.fill))
         lv.addWidget(self.tree, 1)
         self.count = hint("")
         lv.addWidget(self.count)

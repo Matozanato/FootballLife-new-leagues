@@ -2642,6 +2642,12 @@ def build(pl, base, game, replace=False, log=print):
     game_row = {int.from_bytes(raw[i * W.T_REC + W.T_ID:i * W.T_REC + W.T_ID + 4], "little"): i * W.T_REC
                 for i in range(nteam)}
     nopool = []
+    # a NewLife club's id is pinned by plan() (newlife_tids) and sits just above the game's, so
+    # every id handed out here steps round those: the club taking a game club's places once got
+    # a NewLife club's id, the two shared one squad record and Build stopped on "57 players -- a
+    # club has at most 40" (Discord, rwee and capital030, 0.1.8)
+    others = pl.get("others") or []
+    nl_ids = {t for p in pl["leagues"] + others for t in (p.get("newlife_tid") or {}).values()}
     if any(game_places(p) for p in pl["leagues"]):
         info = game_info(base)
         for p in pl["leagues"]:
@@ -2651,6 +2657,9 @@ def build(pl, base, game, replace=False, log=print):
                     r = bytearray(proto)
                     sid = top_id + 1 + own
                     own += 1
+                    while sid in have or sid in nl_ids:
+                        sid = top_id + 1 + own
+                        own += 1
                     if sid > CLUB_ID_MAX:
                         raise BuildError("no team ids left up to %d" % CLUB_ID_MAX)
                     have.add(sid)
@@ -2689,9 +2698,6 @@ def build(pl, base, game, replace=False, log=print):
                         % (info["clubs"][tid][0], p["name"]))
                 else:
                     log("  %s (in no competition of the game) moves to %s" % (info["clubs"][tid][0], p["name"]))
-
-    others = pl.get("others") or []
-    nl_ids = {t for p in pl["leagues"] + others for t in (p.get("newlife_tid") or {}).values()}
 
     def new_club(p, k):
         """a new club's Team.bin record, the k-th of league (or group) p: [record, id, abbr]"""

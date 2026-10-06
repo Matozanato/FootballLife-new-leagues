@@ -376,6 +376,16 @@ calendar.
 - 2026-10-06 (Mod Studio 0.1.9, Discord): **Build page text cut off with Windows scaling up.** On
   a short window the European cups and New clubs cards were squeezed and their hints cut in
   half. The hints sit under their option now and the cards scroll on their own; checked at 175%.
+- 2026-10-06 (Mod Studio 0.1.9, Discord): **Build stopped with "players of ...: 57 players -- a
+  club has at most 40".** A NewLife club keeps its world id from one Build to the next (0.1.8),
+  and those ids sit just above the game's. A club made to take a game club's places (Swap leagues
+  with a club, a new name) was given the next id up without looking, so it got a NewLife club's
+  id: two clubs with one id, two squads of 30 on one club. Every id Build hands out now steps
+  round the NewLife ones. Reproduced with the reporter's recipe (Austrian Premier Division, RB
+  Salzburg and Sturm Graz swapped for new clubs); with the fix no two clubs share an id.
+- 2026-10-06 (Mod Studio 0.1.9, Discord): **Leagues page: a league dragged to a new place
+  disappeared** until the list was filled again (Ours and back to All). The drop moved it and the
+  drag then removed the row once more. Fixed; the list is also refilled after a move.
 - 2026-10-06 (Mod Studio 0.1.9, GitHub #54): **Build stopped with "No such file or directory:
   ...UniformParameter.bin" on a custom database.** The kit step took "our clubs" to be the ids
   from 71578 up, the first free id under the plain game. A database with fewer clubs leaves a
