@@ -573,7 +573,7 @@ calendar.
   too when the sum is such a size. The game fills a national cup from the two leagues whatever
   its entry list says, so it is `fl26chain.dll` that writes that field (`cupn=` in the world
   file). **Build the world again** with 0.1.7's modules and start a new career.
-- 2026-10-04 (Mod Studio 0.1.7.2, Discord): **a NewLife player the game already has could end up
+- 2026-10-04 (Mod Studio 0.1.8, Discord): **a NewLife player the game already has could end up
   at two clubs.** He is meant to move to his NewLife club (same name in these tables), but when
   the move was refused -- his game club would have dropped below 18 players, or an earlier league
   had already taken him -- the row was added as a **new** player, so the same man was at both
@@ -581,21 +581,21 @@ calendar.
   his place stays, so the club never drops below 18. Rows with no `game_id`, or an id that is
   not a player of these tables, are still added as new players. The NewLife page says how many
   were left out. **Build the world again** and start a new career.
-- 2026-10-04 (Mod Studio 0.1.7.2, GitHub issues #90 and #88): **a NewLife Database club kept its
+- 2026-10-04 (Mod Studio 0.1.8, GitHub issues #90 and #88): **a NewLife Database club kept its
   NewLife id (98304 and up) as its team id in Team.bin**, which is outside the block the game
   reads for clubs (up to 81919), so no kit, crest or Kit Server `map.txt` could be keyed on it.
   A NewLife club now gets a world id of its own, counting up after the ids the builder gives its
   own clubs and after any `club_ids` of the recipe, the same ids every time. The **Club id**
-  column on New clubs shows it before a build. **A world built before 0.1.7.2 must be built
+  column on New clubs shows it before a build. **A world built before 0.1.8 must be built
   again and the career started new for the kits to follow.**
-- 2026-10-04 (Mod Studio 0.1.7.2, GitHub issue #95): **a national cup of 33 to 43 clubs
+- 2026-10-04 (Mod Studio 0.1.8, GitHub issue #95): **a national cup of 33 to 43 clubs
   crashed the game** (a Copa Peru of 18 + 17 = 35). The rule above covers fields of 32 or
   fewer; a field of 33 to 43 that no shipped cup has exactly had no bracket either. The cup
   size rule is now: up to 32 the bracket sizes, above that 32, 44 (the FA Cup's own size) or
   a size a shipped cup has exactly. A field of 35 is cut to 32 and the world file's `cupn=`
   names it for fl26chain; a field of 22 still gives 20, and 44 is unchanged. **Build the
   world again** and start a new career.
-- 2026-10-04 (Mod Studio 0.1.7.2, GitHub issues #75 and #63): **a world built from tables
+- 2026-10-04 (Mod Studio 0.1.8, GitHub issues #75 and #63): **a world built from tables
   before SP's "National selection 2.2" update gave wrong starting line-ups and missing
   transfers when it was on together with an edit file.** The builder unpacked only
   `download/data_s2526*.cpk`, so its Team.bin / Player.bin came from the tables before the

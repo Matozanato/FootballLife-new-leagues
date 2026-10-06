@@ -478,11 +478,11 @@ de 10 MB. Descarga solo las partes que quieras.
   el Górnik en el juego y en el Legia en NewLife) se va al club NewLife en vez de crearse por
   segunda vez (0.1.7): conserva su cara, nombre e ID y toma la posición y las valoraciones de
   NewLife. Se queda donde está si su club antiguo bajara de 18 jugadores o si una liga anterior ya lo
-  tiene; entonces queda fuera del club de NewLife, sin copia (0.1.7.2).
-- Un club NewLife recibe un ID de mundo propio (0.1.7.2), en el bloque que el juego lee para los
+  tiene; entonces queda fuera del club de NewLife, sin copia (0.1.8).
+- Un club NewLife recibe un ID de mundo propio (0.1.8), en el bloque que el juego lee para los
   clubes, detrás de los ID que el constructor da a los suyos. La columna **ID de club** de la
   página Clubes nuevos lo muestra, y el `map.txt` del Kit Server va con él. Un mundo hecho antes
-  de 0.1.7.2 hay que construirlo de nuevo y empezar una carrera nueva para que las equipaciones
+  de 0.1.8 hay que construirlo de nuevo y empezar una carrera nueva para que las equipaciones
   le sigan.
 - **Una versión más nueva de NewLife** (0.1.8): pon sus partes en una carpeta (sin mezclarlas con
   las antiguas), **Abrir NewLife Database...** en esa carpeta y pulsa **Actualizar mis ligas a esta

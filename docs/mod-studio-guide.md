@@ -463,10 +463,10 @@ under 10 MB. Download only the parts you want.
   the game and at Legia in NewLife, say) moves to the NewLife club instead of being made a
   second time (0.1.7): he keeps his face, name and id and takes NewLife's position and ratings.
   He stays where he is when his old club would drop below 18 players, or when an earlier league
-  already took him; then he is left out of the NewLife club, not copied (0.1.7.2).
-- A NewLife club takes a world id of its own (0.1.7.2), in the block the game reads for clubs,
+  already took him; then he is left out of the NewLife club, not copied (0.1.8).
+- A NewLife club takes a world id of its own (0.1.8), in the block the game reads for clubs,
   counting up after the ids the builder gives its own clubs. The **Club id** column on New clubs
-  shows it, and a Kit Server's `map.txt` is keyed on it. A world built before 0.1.7.2 must be
+  shows it, and a Kit Server's `map.txt` is keyed on it. A world built before 0.1.8 must be
   built again and the career started new for the kits to follow. From 0.1.8 a club keeps the id
   of its first Build (the recipe remembers it): removing, adding or updating another league no
   longer moves it.
