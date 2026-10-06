@@ -180,13 +180,21 @@ local ID_COUNTRY = {
 -- One table per league -- id, then whatever the line gives: cid, region, country, slot, tier,
 -- above, promote, demote, clubs, legs (numbers), name (text) -- in file order. nil when
 -- there is no file: the module then keeps the built-in lists above.
+-- the world file's kickorder line: { regulation id, place } -- see install_order
+local KICKORDER = {}
+
 local function read_world(ctx)
   local sep = string.char(92)
   local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
   local f = io.open(path, "r")
   if not f then return nil end
   local leagues = {}
+  KICKORDER = {}
   for line in f:lines() do
+    local ko = line:match("^%s*kickorder%s+([%d:,]+)")
+    for kid, krank in (ko or ""):gmatch("(%d+):(%d+)") do
+      KICKORDER[#KICKORDER + 1] = { tonumber(kid), tonumber(krank) }
+    end
     local id, rest = line:match("^%s*league%s+(%d+)(.*)$")
     if id then
       local L = { id = tonumber(id) }
@@ -335,9 +343,16 @@ local ORDER_FN_BYTES = "33c0488d15877f92010f1f8000000000390a7410ffc04883c20483f8
 local ORDER_SITES = { { ORDER_FN, ORDER_FN_BYTES }, { ORDER_UNLISTED, "59000000" },
                       { 0x140c9359e, "3b05b021b401" } }   -- cmp eax,[0x1427d5754]
 
-local function install_order(slot_after, order)
+-- slot_rank (the world file's kickorder line, 0.2.0): {slot = place} for the leagues of the
+-- list by country, in the order Mod Studio's League order gives the countries. Those slots go
+-- together, in place order, where the first of them was (the top of the list), a country's
+-- leagues in the order they had; every other slot (cups, national teams, the "other" groups,
+-- Classic Teams) follows in its own order. Left in their positions, the leagues of a continent
+-- would have landed between another continent's groups.
+local function install_order(slot_after, order, slot_rank)
   local any = false                      -- sider's sandbox has no next()
   for _ in pairs(slot_after) do any = true; break end
+  for _ in pairs(slot_rank or {}) do any = true; break end
   if not any then return end
   for _, s in ipairs(ORDER_SITES) do
     local got = bin2hex(memory.read(s[1], #s[2] / 2))
@@ -381,6 +396,29 @@ local function install_order(slot_after, order)
     pending = rest
   until not progress or #pending == 0
   for _, sl in ipairs(pending) do list[#list + 1] = sl; late[#late + 1] = tostring(sl) end
+  local ranked = 0
+  if slot_rank then
+    local first, moved, rest = nil, {}, {}
+    for i, v in ipairs(list) do
+      if slot_rank[v] then
+        first = first or #rest + 1
+        moved[#moved + 1] = { v, i }
+      else
+        rest[#rest + 1] = v
+      end
+    end
+    table.sort(moved, function(a, b)       -- table.sort is not stable: the old place breaks ties
+      if slot_rank[a[1]] ~= slot_rank[b[1]] then return slot_rank[a[1]] < slot_rank[b[1]] end
+      return a[2] < b[2]
+    end)
+    if first then
+      list = {}
+      for k = 1, first - 1 do list[#list + 1] = rest[k] end
+      for _, m in ipairs(moved) do list[#list + 1] = m[1] end
+      for k = first, #rest do list[#list + 1] = rest[k] end
+    end
+    ranked = #moved
+  end
   local n = #list
   local buf = ffi.C.VirtualAlloc(nil, 4 * n, 0x3000, 0x04)
   if buf == nil then log("fl26comptab: VirtualAlloc for the Kick Off order failed -- left as it is"); return end
@@ -393,8 +431,9 @@ local function install_order(slot_after, order)
   assert(#code == 35, #code)
   memory.write(ORDER_UNLISTED, u32le(n))
   memory.write(ORDER_FN, code)
-  log(string.format("fl26comptab: Kick Off order -- %d slots, %d of ours placed after their league or continent%s",
-                    n, placed, #late > 0 and (", " .. table.concat(late, ",") .. " at the end (no such slot)") or ""))
+  log(string.format("fl26comptab: Kick Off order -- %d slots, %d of ours placed after their league or continent%s%s",
+                    n, placed, #late > 0 and (", " .. table.concat(late, ",") .. " at the end (no such slot)") or "",
+                    ranked > 0 and string.format(", %d leagues in the world's country order", ranked) or ""))
 end
 
 -- The Master League Select Team panel (0x140c98760) switches on the highlighted slot
@@ -629,7 +668,16 @@ function m.init(ctx)
         slot_after[sl] = L.kickoff; order[#order + 1] = sl
       end
     end
-    install_order(slot_after, order)
+    local slot_rank
+    for _, k in ipairs(KICKORDER) do
+      local i = byid[k[1]]
+      local sl = i and row_u32(rows[i], OFF_SLOT)
+      if sl and sl < 123 then
+        slot_rank = slot_rank or {}
+        if slot_rank[sl] == nil then slot_rank[sl] = k[2] end
+      end
+    end
+    install_order(slot_after, order, slot_rank)
   end
 
   -- 8. the Select Team panel of a league of ours on a slot the exe draws as a category

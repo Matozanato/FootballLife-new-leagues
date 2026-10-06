@@ -209,6 +209,8 @@ mjesto u Libertadoresu ili Sudamericani.
 
 **Imena natjecanja** (gumb na istoj stranici): novo ime i logo za kupove, superkupove i kontinentalna natjecanja iz igre -- FA Cup, Ligu prvaka, Libertadores ... -- i za kontinentalne kupove koje svijet gradi (CAF Liga prvaka, Kup konfederacija, AFC Liga prvaka Two, Copa Sudamericana, CONCACAF Champions Cup, OFC Liga prvaka, AFC Challenge League, CAF Superkup). Ime dobiju sve faze natjecanja. Prazno: ono iz igre. Lige iz igre preimenuju se na stranici *Game's leagues and clubs*.
 
+**Poredak liga** (gumb na istoj stranici, 0.2.0): poredak država u Select Teamu Master Lige i na popisu momčadi Kick Off / Edit. *Po kontinentima* je poredak igre (Europa, Amerike, Azija, pa Afrika, svaki od A do Ž). *Sve države od A do Ž* stavi ih sve u jedan abecedni niz, a *Moj poredak* daje da ih složite kako god želite (povlačenjem ili Gore / Dolje). Lige jedne države ostaju zajedno, prva liga prva, a klupska natjecanja, grupe "Other" i Classic Teams dolaze iza država. Njemačka, SAD, Japan i Saudijska Arabija su u Select Teamu u grupama "Other", pa se pomiču samo u Kick Offu. Nakon toga ponovno izgradite svijet.
+
 **Novi klubovi**: odaberi ligu, pa **Uredi klub** (ime, kratko ime, grb), **Zalijepi imena...**
 ili **Učitaj imena iz datoteke...**. Prazno ime postaje `<liga> 01`, `<liga> 02` ...; klub bez
 grba dobije grb s brojem. Dresovi se posude od klubova iz igre. Takav dres je licenciran i Edit

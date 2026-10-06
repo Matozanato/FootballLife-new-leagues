@@ -197,6 +197,14 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
   (`fl26_swiss_confed`), or of the last entrant when none of its confederation is offered;
   without the line it is an African entrant, as before 0.2.0.
 
+- `kickorder <regulation>:<place>,...` (0.2.0): written when the recipe has a `league_order`
+  (Mod Studio's League order: `"az"`, or a list of country names). Each league of the Kick Off /
+  Edit list -- the game's, by one regulation per slot, and the world's -- with its country's
+  place. fl26comptab puts those slots together, in place order, where the first of them was,
+  a country's leagues in the order they had, and every other slot after them in its own order.
+  The same order goes into the `order` line (Select Team's regions), with the club
+  competitions still first and the "other" groups and Classic Teams after the countries.
+
 A new country's own cup is not a line: with `"cup": true` on a top division (and optionally
 `"supercup": true`) Build copies a shipped cup (`tools/mkcup.py --like`) into the country's
 region, and a super cup from the Belgian one. The game fills a country's cup with its top

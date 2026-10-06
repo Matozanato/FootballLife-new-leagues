@@ -1852,6 +1852,83 @@ class UefaRankDialog(Dialog):
         self.accept()
 
 
+class LeagueOrderDialog(Dialog):
+    """the order of the countries in Select Team and the Kick Off list (the recipe's
+    league_order, leaguebuilder.country_rank): by continent as the game has it, A-Z, or the
+    user's own"""
+
+    MODES = [("continent", "By continent (the game's order)"), ("az", "Every country A-Z"),
+             ("custom", "My own order")]
+
+    def __init__(self, parent, project):
+        super().__init__(parent, "League order")
+        self.project = project
+        r = project.recipe
+        self.every = [nm for nm, _c in B.order_countries(r, project.base, B.confederations(project.base))]
+        want = r.get("league_order")
+        mode = "az" if want == "az" else "custom" if isinstance(want, list) and want else "continent"
+        self.v.insertWidget(0, hint(_("The order of the countries in Master League's Select Team and in the "
+                                      "Kick Off / Edit team list. A country's leagues stay together, top division "
+                                      "first. The club competitions, the \"Other\" groups and Classic Teams come "
+                                      "after the countries. Germany, the USA, Japan and Saudi Arabia are in the "
+                                      "\"Other\" groups of Select Team, so they move only in Kick Off. Build the "
+                                      "world again to use the new order.")))
+        self.mode = QComboBox()
+        for k, text in self.MODES:
+            self.mode.addItem(_(text), k)
+        self.mode.setCurrentIndex([k for k, _t in self.MODES].index(mode))
+        self.list = QListWidget()
+        self.list.setDragDropMode(QAbstractItemView.InternalMove)
+        self.list.setMinimumWidth(300)
+        start = [nm for nm in want if nm in self.every] if mode == "custom" else []
+        self.custom = start + [nm for nm in self.every if nm not in start]
+        self.up, self.down = QPushButton(_("Up")), QPushButton(_("Down"))
+        self.up.clicked.connect(lambda: self.move(-1))
+        self.down.clicked.connect(lambda: self.move(1))
+        box = QVBoxLayout()
+        box.addWidget(row(QLabel(_("Order")), self.mode, "stretch"))
+        box.addWidget(self.list, 1)
+        box.addWidget(row(self.up, self.down, "stretch"))
+        self.v.insertLayout(1, box, 1)
+        self.scroll.hide()
+        self.mode.currentIndexChanged.connect(self.show_mode)
+        self.list.model().rowsMoved.connect(self.keep)
+        self.show_mode()
+        self.setMinimumSize(420, 560)
+
+    def names(self):
+        return [self.list.item(i).text() for i in range(self.list.count())]
+
+    def keep(self, *_a):
+        if self.mode.currentData() == "custom":
+            self.custom = self.names()
+
+    def show_mode(self, *_a):
+        m = self.mode.currentData()
+        seq = sorted(self.every, key=str.lower) if m == "az" else self.custom if m == "custom" else self.every
+        self.list.clear()
+        self.list.addItems(seq)
+        own = m == "custom"
+        self.list.setDragEnabled(own)
+        self.up.setEnabled(own)
+        self.down.setEnabled(own)
+
+    def move(self, d):
+        i = self.list.currentRow()
+        j = i + d
+        if i < 0 or not 0 <= j < self.list.count():
+            return
+        it = self.list.takeItem(i)
+        self.list.insertItem(j, it)
+        self.list.setCurrentRow(j)
+        self.keep()
+
+    def ok(self):
+        m = self.mode.currentData()
+        self.result = None if m == "continent" else "az" if m == "az" else self.names()
+        self.accept()
+
+
 class SouthAmericaDialog(Dialog):
     """read only (GitHub #71): every South American league's Libertadores, qualifying and Copa
     Sudamericana places -- the game's leagues and the world's own -- as Check the plan lists them"""
@@ -2005,6 +2082,8 @@ class NewLeagues(BuilderPage):
             "UEFA's rules.\n"
             "- South American places: shows who goes to the Libertadores and the Copa Sudamericana.\n"
             "- Competition names: new names and logos for cups and continental competitions.\n"
+            "- League order: the order of the countries in Select Team and Kick Off -- by continent, A-Z "
+            "or your own.\n"
             "- World name: the folder the world is built into.")
 
     def __init__(self, app):
@@ -2028,6 +2107,8 @@ class NewLeagues(BuilderPage):
                     "league, the game's and yours, go to the Libertadores, its qualifying and the Sudamericana")
         self.action("Competition names", self.competition_names, tip="New names and logos for the cups and "
                     "continental competitions of the game, and for the continental cups the world builds")
+        self.action("League order", self.league_order, tip="The order of the countries in Select Team and the "
+                    "Kick Off list: by continent as the game has it, A-Z, or your own")
         top = QHBoxLayout()
         top.addWidget(QLabel(_("World name")))
         self.world = QLineEdit()
@@ -2282,6 +2363,17 @@ class NewLeagues(BuilderPage):
 
     def samerica(self):
         SouthAmericaDialog(self, self.project).finish()
+
+    def league_order(self):
+        if self.need_tables():
+            return
+        d = LeagueOrderDialog(self, self.project)
+        if d.finish():
+            if d.result:
+                self.project.recipe["league_order"] = d.result
+            else:
+                self.project.recipe.pop("league_order", None)
+            self.project.touch()
 
     def game_cups(self):
         if self.need_tables():

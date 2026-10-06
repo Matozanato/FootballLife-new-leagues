@@ -586,7 +586,7 @@ def has_edits(r):
                 or r.get("preseason_cups") or r.get("ccup_names") or r.get("ccup_logos")
                 or any((r.get("europe_first") or {}).values())
                 or r.get("uecl_name") or r.get("uecl_logo") or r.get("caf_super_cup_logo")
-                or r.get("saudi_august") or r.get("editable_kits")) \
+                or r.get("saudi_august") or r.get("editable_kits") or r.get("league_order")) \
         or r.get("uecl") is False or r.get("caf_super_cup") is False
 
 
@@ -1512,7 +1512,8 @@ def plan(recipe, base):
             "ccups": cups, "ccup_notes": notes, "home_cups": home,
             "europe_first": europe_first(recipe, by_name),
             "saudi_august": bool(recipe.get("saudi_august")),
-            "editable_kits": bool(recipe.get("editable_kits"))}
+            "editable_kits": bool(recipe.get("editable_kits")),
+            "league_order": recipe.get("league_order") or None}
 
 
 def others_plan(groups, base, cty):
@@ -3015,6 +3016,7 @@ def build(pl, base, game, replace=False, log=print):
     fl26world.write_world(os.path.join(tmp, MARK), pl["world"], leagues, split_lines, uefa, uecl,
                           ccups + dates_lines(pl, db) + season_lines(pl, db) + july_lines(pl, base) + first_lines(pl)
                           + order_lines(pl, base, confed)
+                          + kickorder_lines(pl, base, confed)
                           + (["nopool " + " ".join(str(t) for t in nopool)] if nopool else []) + newfaces,
                           qlines)
     json.dump(pl, open(os.path.join(tmp, "leaguebuilder-plan.json"), "w", encoding="utf-8"), indent=1)
@@ -3202,11 +3204,93 @@ CONTINENT = {2: 2, 3: 3, 4: 4, 6: 4, 7: 3, 5: 5}   # confederation -> block: CON
                                                     # Americas, OFC with Asia, CAF a block of its own
 
 
+# The recipe's "league_order" (Mod Studio's League order, 0.2.0): left out, the countries go by
+# continent as above; "az", every country A-Z; a list of country names, that order (a country
+# it does not name goes after them, by continent). The countries then come first as one run in
+# that order, and the club competitions, the "other" groups and Classic Teams after them in
+# their own order -- in Select Team (the `order` line, the club competitions still at the top)
+# and in the Kick Off / Edit list (the `kickorder` line, fl26comptab), where a country's
+# leagues stay together in the order they had.
+# The game's league slots in the Kick Off list (SHIPPED_SLOT's) and their countries; Germany,
+# the USA, Japan and Saudi Arabia have no region of their own in Select Team (they sit in the
+# "other" groups), so they move only in Kick Off.
+SLOT_COUNTRY = {7: "England", 50: "England", 8: "France", 52: "France", 9: "Italy", 53: "Italy",
+                10: "Netherlands", 11: "Spain", 51: "Spain", 12: "Portugal", 13: "Brazil", 122: "Brazil",
+                14: "Argentina", 15: "Chile", 16: "Germany", 17: "Usa", 18: "Japan", 88: "Belgium",
+                91: "Russia", 94: "Switzerland", 96: "Turkey", 99: "Colombia", 102: "China",
+                105: "Denmark", 114: "Scotland", 119: "Saudi Arabia"}
+OTHER_CONFED = {"Germany": 2, "Usa": 6, "Japan": 3, "Saudi Arabia": 3}
+
+
+def order_countries(pl, base, confed):
+    """[(country name, continent block)] of every country with a league in the game or the
+    world, in the default order (by continent, A-Z within it) -- the League order dialog's list"""
+    ids = country_ids(base)
+    names, fids = dict((fid, nm) for nm, fid in ids), dict(ids)
+    got = {nm: c for _r, nm, c in SHIPPED_REGIONS if nm}
+    for nm, c in OTHER_CONFED.items():
+        got.setdefault(nm, c)
+    for p in pl.get("leagues") or []:
+        c = p.get("country")                # an id once planned, the recipe's name before
+        nm = c if isinstance(c, str) else names.get(c)
+        if nm:
+            got.setdefault(nm, CONTINENT.get(confed.get(fids.get(nm, c)), 5))
+    blocks = (2, 4, 3, 5)
+    return sorted(((nm, CONTINENT.get(c, c)) for nm, c in got.items()),
+                  key=lambda x: (blocks.index(x[1]) if x[1] in blocks else 9, x[0].lower()))
+
+
+def country_rank(pl, base, confed):
+    """{country name: place} for the recipe's league_order, None for the default"""
+    want = pl.get("league_order")
+    if not want:
+        return None
+    every = [nm for nm, _c in order_countries(pl, base, confed)]
+    if want == "az":
+        seq = sorted(every, key=str.lower)
+    else:
+        seq = [nm for nm in want if nm in every]
+        seq += [nm for nm in every if nm not in seq]
+    return {nm: i for i, nm in enumerate(seq)}
+
+
+def reorder_named(seq, name_of, rank):
+    """seq with the entries that have a name (name_of) in rank order, together where the first
+    of them was; the others keep their order around them"""
+    at = [i for i, x in enumerate(seq) if name_of(x) in rank]
+    if not at:
+        return list(seq)
+    moved = sorted((seq[i] for i in at), key=lambda x: (rank[name_of(x)], seq.index(x)))
+    rest = [x for x in seq if name_of(x) not in rank]
+    return rest[:at[0]] + moved + rest[at[0]:]
+
+
+def kickorder_lines(pl, base, confed):
+    """the world file's `kickorder <regulation>:<place>,...` line (fl26comptab): the Kick Off /
+    Edit list's leagues by country, when the recipe has a league_order"""
+    rank = country_rank(pl, base, confed)
+    if rank is None:
+        return []
+    names = dict((fid, nm) for nm, fid in country_ids(base))
+    out, slots = [], set()
+    for reg, slot in sorted(SHIPPED_SLOT.items()):
+        nm = SLOT_COUNTRY.get(slot)
+        if nm in rank and slot not in slots:
+            slots.add(slot)
+            out.append((reg, rank[nm]))
+    for p in pl["leagues"]:
+        nm = names.get(p["country"])
+        if nm in rank and p.get("slot", fl26world.NO_SLOT) != fl26world.NO_SLOT:
+            out.append((p["rid"], rank[nm]))
+    return ["kickorder " + ",".join("%d:%d" % x for x in out)] if out else []
+
+
 def order_lines(pl, base, confed):
     """the world file's `order` line: the Select Team list's region order with our countries
-    in it (see SHIPPED_REGIONS)"""
+    in it (see SHIPPED_REGIONS), in the recipe's league_order when it has one"""
     names = dict((fid, nm) for nm, fid in country_ids(base))
     shipped = {r for r, _, _ in SHIPPED_REGIONS}
+    rank = country_rank(pl, base, confed)
     ours = {}
     # Exhibition leagues too: they have no Select Team entry, but Competition Info lists every
     # region with a live regulation, and a region the line leaves out goes after all the others
@@ -3216,7 +3300,7 @@ def order_lines(pl, base, confed):
         if r in shipped or r in ours:
             continue
         ours[r] = (names.get(p["country"], "~"), CONTINENT.get(confed.get(p["country"]), 5))
-    if not ours:
+    if not ours and rank is None:
         return []
     out = []
     for block in (2, 4, 3, 5):
@@ -3227,6 +3311,10 @@ def order_lines(pl, base, confed):
         if block == 2:
             out = [1, 26] + out
     out.append(25)
+    if rank is not None:
+        region_name = {r: nm for r, nm, _c in SHIPPED_REGIONS if nm}
+        region_name.update((r, nm) for r, (nm, _c) in ours.items())
+        out = reorder_named(out, region_name.get, rank)
     return ["order " + ",".join(map(str, out))]
 
 

@@ -214,6 +214,8 @@ Libertadores or Sudamericana place.
 
 **Competition names** (same page): a new name and logo for the game's cups, super cups and continental competitions -- the FA Cup, the Champions League, the Libertadores ... -- and for the continental cups the world builds (CAF Champions League, Confederation Cup, AFC Champions League Two, Copa Sudamericana, CONCACAF Champions Cup, OFC Champions League, AFC Challenge League, CAF Super Cup). Every stage of a competition takes the name. Empty: the game's own. The game's leagues are renamed on *Game's leagues and clubs*.
 
+**League order** (same page, 0.2.0): the order of the countries in Master League's Select Team and in the Kick Off / Edit team list. *By continent* is the game's order (Europe, the Americas, Asia, then Africa, each A-Z). *Every country A-Z* puts all of them in one alphabetical run, and *My own order* lets you put them any way you like (drag, or Up / Down). A country's leagues stay together, top division first, and the club competitions, the "Other" groups and Classic Teams come after the countries. Germany, the USA, Japan and Saudi Arabia sit in the "Other" groups of Select Team, so they move only in Kick Off. Build the world again afterwards.
+
 **New clubs**: pick the league, then **Edit club** (name, short name, crest), **Paste names...**
 or **Load names from file...**. An empty name becomes `<league> 01`, `<league> 02` ...; a club
 with no crest gets a numbered badge. Kits are lent from the game's own clubs. Such a kit is a
