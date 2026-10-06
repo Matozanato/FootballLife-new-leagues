@@ -369,8 +369,8 @@ calendar.
 
 - 2026-10-06 (Mod Studio 0.1.9, Discord): **the first round of a new country's national cup paired
   only clubs of the same division.** A cup is drawn in the order its clubs are written (1 v 2, 3
-  v 4 ...), and Build wrote the whole top division before the one below. The two divisions now
-  go in turn, so a first round is top flight against the second division; when one has more
+  v 4 ...), and both Build and the cup module (fl26chain, which refills a two-division cup at
+  run time) wrote the whole top division before the one below. The two divisions now go in turn, so a first round is top flight against the second division; when one has more
   clubs the extra ones meet each other at the end. A world built before needs Build again and a
   new career.
 - 2026-10-06 (Mod Studio 0.1.9, Discord): **Build page text cut off with Windows scaling up.** On

@@ -159,7 +159,8 @@ static int reg_list(uint16_t id, uint32_t* out)
  * file (`cup=` on the league line, written by the League Builder). */
 #define MAX_CUPS 16
 /* GitHub #32: `cupall=1` on the league line (bit 15 of the cup id here) is the other way round --
- * the cup takes both leagues, the top one's clubs first, as the real DFB-Pokal does. The League
+ * the cup takes both leagues, in turn (top, low, top ...) so the first round, which pairs 1 v 2,
+ * is top flight against the league below, as the real DFB-Pokal draws it. The League
  * Builder writes it only when the cup's calendar dates every round of that field and it raised
  * the cup's bracket to 44 in the world's tables; the game, left alone, gives it both leagues
  * when ours has the higher id and ours alone when it has the lower. */
@@ -180,15 +181,6 @@ static int holds_any(const uint32_t* list, int n, const uint32_t* of, int m)
   return 0;
 }
 
-/* 1 = the cup is exactly the clubs of both lists, in any order */
-static int same_field(const uint32_t* list, int n, const uint32_t* a, int na, const uint32_t* b, int nb)
-{
-  if (n != na + nb) return 0;
-  for (int i = 0; i < n; i++)
-    if (!holds_any(list + i, 1, a, na) && !holds_any(list + i, 1, b, nb)) return 0;
-  return 1;
-}
-
 /* 1 = the cup was written with the top league's clubs (through the original setter), or with
    both leagues' for a cupall cup */
 static int cup_fix(cup_t* c, const uint32_t* list, int n, uint64_t flag, const char* when)
@@ -201,8 +193,17 @@ static int cup_fix(cup_t* c, const uint32_t* list, int n, uint64_t flag, const c
     memcpy(top + nt, low, nl * sizeof low[0]);
     int m = nt + nl;
     if (c->max && m > c->max) m = c->max;           /* #74: a field the bracket screen draws */
-    if (n == m && same_field(list, n, top, m, low, 0)) return 0;
-    vec32_t v = { top, top + m, top + m };
+    /* the order of the list is the first-round draw (1 v 2, 3 v 4 ...): the two leagues in
+       turn, so a first round is top flight against the league below, not the top league among
+       itself (Discord, San Marino 2026-10-06); the extra clubs of the bigger one meet at the end */
+    uint32_t mix[2 * MAX_CLUBS];
+    int hi = nt < m ? nt : m, k = 0;
+    for (int i = 0; i < hi || hi + i < m; i++) {
+      if (i < hi) mix[k++] = top[i];
+      if (hi + i < m) mix[k++] = top[hi + i];
+    }
+    if (n == m && !memcmp(list, mix, m * sizeof mix[0])) return 0;
+    vec32_t v = { mix, mix + m, mix + m };
     int was = g_reentrant; g_reentrant = 1;
     ((set_fn)(uintptr_t)g_tramp_set)(c->cup, &v, flag);
     g_reentrant = was;
