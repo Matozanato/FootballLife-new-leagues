@@ -60,7 +60,8 @@ static const unsigned char SIG_APPLY[15] = {               /* push rdi (REX-pref
 
 typedef struct { uint32_t* b; uint32_t* e; uint32_t* c; } vec32_t;
 typedef struct { unsigned char* b; unsigned char* e; unsigned char* c; } vec16_t;
-typedef struct { uint16_t mid, low; uint8_t demote_mid, promote_low; uint8_t pad[2]; } fl26_chain_cfg_t;
+/* regular: the regular phase of mid when mid is a split league's total, else 0 (was padding) */
+typedef struct { uint16_t mid, low; uint8_t demote_mid, promote_low; uint16_t regular; } fl26_chain_cfg_t;
 
 typedef char           (*set_fn)(uint64_t id, vec32_t* v, uint64_t flag);
 typedef void           (*stand_fn)(void* ctx, vec16_t* out, uint64_t id, uint64_t fromInput);
@@ -72,8 +73,8 @@ typedef struct {
   fl26_chain_cfg_t cfg;
   uint32_t stand_mid[MAX_CLUBS], stand_low[MAX_CLUBS]; int n_stand_mid, n_stand_low;
   uint32_t list_mid[MAX_CLUBS],  list_low[MAX_CLUBS];  int n_list_mid,  n_list_low;
-  uint64_t flag_mid, flag_low;
-  int seen;                       /* bit0 = mid list captured, bit1 = low list captured */
+  uint64_t flag_mid, flag_low, flag_reg;
+  int seen;                       /* bit0 = mid list captured, bit1 = low list captured, bit2 = regular phase written */
 } chain_t;
 
 static uint64_t          g_base = 0;
@@ -296,6 +297,7 @@ int observe(uint64_t id, vec32_t* v, uint64_t flag)
     int m = n > MAX_CLUBS ? MAX_CLUBS : n;
     if ((uint16_t)id == ch->cfg.mid) { memcpy(ch->list_mid, v->b, m*4); ch->n_list_mid = m; ch->flag_mid = flag & 0xff; ch->seen |= 1; }
     if ((uint16_t)id == ch->cfg.low) { memcpy(ch->list_low, v->b, m*4); ch->n_list_low = m; ch->flag_low = flag & 0xff; ch->seen |= 2; }
+    if (ch->cfg.regular && (uint16_t)id == ch->cfg.regular) { ch->flag_reg = flag & 0xff; ch->seen |= 4; }
   }
   return 0;
 }
@@ -384,6 +386,31 @@ static int remove_handle(uint32_t* list, int n, uint32_t h)
   return -1;
 }
 
+/* A split league plays its season in the regular phase, not in the total the chain fixes
+   (GitHub #79/#81, Egypt 2026-10-06). The season pass writes the phase with last season's
+   clubs before apply returns, so it is brought along here: each relegated club's place goes
+   to a promoted one, matched by team id (the upper 18 bits; the lower 14 are a row). */
+static void split_regular(chain_t* ch, set_fn orig, const uint32_t* down, int nd, const uint32_t* up, int nu)
+{
+  uint32_t cur[MAX_CLUBS]; int n = reg_list(ch->cfg.regular, cur), swapped = 0;
+  if (n <= 0) { logf("fix %u: regular phase %u has no clubs, left as it is", ch->cfg.mid, ch->cfg.regular); return; }
+  for (int i = 0; i < nd && i < nu; i++) {
+    int at = -1, have = 0;
+    for (int j = 0; j < n; j++) {
+      if ((cur[j] >> 14) == (down[i] >> 14)) at = j;
+      if ((cur[j] >> 14) == (up[i] >> 14)) have = 1;
+    }
+    if (at >= 0 && !have) { cur[at] = up[i]; swapped++; }
+  }
+  if (!swapped) { logf("fix %u: regular phase %u already holds the new clubs", ch->cfg.mid, ch->cfg.regular); return; }
+  vec32_t v = { cur, cur + n, cur + MAX_CLUBS };
+  g_reentrant = 1;
+  orig(ch->cfg.regular, &v, (ch->seen & 4) ? ch->flag_reg : ch->flag_mid);
+  g_reentrant = 0;
+  logf("fix %u: regular phase %u -- %d relegated club(s) replaced by the promoted, %d clubs",
+       ch->cfg.mid, ch->cfg.regular, swapped, n);
+}
+
 static void fix_chain(chain_t* ch)
 {
   unsigned char* blk = block(); if (!blk) { logf("fix: no block"); g_stat[3]++; return; }
@@ -461,6 +488,7 @@ static void fix_chain(chain_t* ch)
   orig(ch->cfg.low, &vc, ch->flag_low);
   g_reentrant = 0;
   g_stat[1]++;
+  if (ch->cfg.regular) split_regular(ch, orig, down, nd, up, nu);
   logf("fix %u->%u: %d down (%08x %08x %08x) %d up (%08x %08x %08x); lists now %d/%d; slots %u/%u",
        ch->cfg.mid, ch->cfg.low, nd, down[0], nd>1?down[1]:0, nd>2?down[2]:0, nu, up[0], nu>1?up[1]:0, nu>2?up[2]:0,
        nnb, nnc, slot_mid, slot_low);
@@ -471,8 +499,8 @@ void apply_post(void* ctx)
   (void)ctx;
   for (int i = 0; i < g_nchain; i++) {
     chain_t* ch = &g_chain[i];
-    if (ch->seen == 3) fix_chain(ch);
-    else if (ch->seen) { logf("apply: chain %u->%u incomplete (seen %d) -- untouched", ch->cfg.mid, ch->cfg.low, ch->seen); g_stat[2]++; }
+    if ((ch->seen & 3) == 3) fix_chain(ch);
+    else if (ch->seen & 3) { logf("apply: chain %u->%u incomplete (seen %d) -- untouched", ch->cfg.mid, ch->cfg.low, ch->seen); g_stat[2]++; }
   }
   /* after the chains: the leagues' lists are the new season's now, whichever order the pass wrote them in */
   for (int i = 0; i < g_ncup; i++) {

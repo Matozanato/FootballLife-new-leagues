@@ -58,8 +58,10 @@ local function read_world(ctx)
   local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
   local f = io.open(path, "r")
   if not f then return nil end
-  local leagues = {}
+  local leagues, splits = {}, {}
   for line in f:lines() do
+    local sid = line:match("^%s*split%s+(%d+)")
+    if sid then splits[tonumber(sid)] = tonumber(line:match("regular=(%d+)")) or 0 end
     local id, rest = line:match("^%s*league%s+(%d+)(.*)$")
     if id then
       local L = { id = tonumber(id) }
@@ -70,6 +72,7 @@ local function read_world(ctx)
     end
   end
   f:close()
+  for _, L in ipairs(leagues) do L.splitabove = L.above ~= nil and splits[L.above] or nil end
   return leagues
 end
 
@@ -100,9 +103,13 @@ local function from_world(world)
   local chains, protect, cups, scups = {}, {}, {}, {}
   for _, L in ipairs(world) do
     protect[#protect + 1] = L.id
-    if L.above and L.tier and L.tier >= 3 and L.tier % 2 == 1 then
+    -- A league below a split one (GitHub #79/#81, Egypt 2026-10-06): the game's mover writes
+    -- nothing between a split league's total and the league below, so no club moved at all.
+    -- The pair goes to the DLL like a skipped one; the total's season table is the standings.
+    if L.above and L.tier and ((L.tier >= 3 and L.tier % 2 == 1) or L.splitabove) then
       local n = L.promote or 3
-      chains[#chains + 1] = { L.above, L.id, n, n }
+      -- the split's regular phase rides along: it plays the season the total's list decides
+      chains[#chains + 1] = { L.above, L.id, n, n, L.splitabove or 0 }
     end
     if L.cup and L.cuptop and L.cuplow then
       cups[#cups + 1] = { L.cup, L.cuptop, L.cuplow, L.cupall ~= 0, L.cupn }
@@ -152,7 +159,7 @@ function m.init(ctx)
     void*    GetModuleHandleA(const char*);
     unsigned long GetLastError(void);
     int      VirtualProtect(void*, size_t, uint32_t, uint32_t*);
-    typedef struct { uint16_t mid, low; uint8_t demote_mid, promote_low; uint8_t pad[2]; } fl26_chain_cfg_t;
+    typedef struct { uint16_t mid, low; uint8_t demote_mid, promote_low; uint16_t regular; } fl26_chain_cfg_t;
     typedef int  (*fl26_chain_install_t)(uint64_t, uint64_t, const fl26_chain_cfg_t*, int);
     typedef int  (*fl26_chain_log_t)(char*, int);
     typedef void (*fl26_chain_stats_t)(uint32_t*);
@@ -188,6 +195,7 @@ function m.init(ctx)
   cfg = ffi.new("fl26_chain_cfg_t[?]", math.max(#CHAINS, 1))
   for i, c in ipairs(CHAINS) do
     cfg[i - 1].mid, cfg[i - 1].low, cfg[i - 1].demote_mid, cfg[i - 1].promote_low = c[1], c[2], c[3], c[4]
+    cfg[i - 1].regular = c[5] or 0
   end
 
   local base = ffi.cast("uint64_t", ffi.C.GetModuleHandleA(nil))

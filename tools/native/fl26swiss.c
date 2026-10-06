@@ -580,6 +580,7 @@ static const char* club_note(uint32_t h, char* buf, size_t cap);
 typedef struct split_s split_t;
 static int split_part(uint16_t id, const split_t** out);
 static int q_setcl(uint16_t r, uint64_t id, uint64_t flag, char* ok);
+static void split_regular_clubs(uint16_t r, const split_t* s, u32vec* list);
 char setcl_handler(uint64_t id, u32vec* list, uint64_t flag)
 {
   uint16_t r = (uint16_t)id, row = ko_row(r);
@@ -590,6 +591,8 @@ char setcl_handler(uint64_t id, u32vec* list, uint64_t flag)
      starts it straight after (0x141343af0: set_clubs, then 0x141590420): the values are put
      right here, before its matches are made from them (see canon_club). */
   const split_t* sp;
+  if (r > 175 && list && list->b && list->e > list->b && split_part(r, &sp) == 2)
+    split_regular_clubs(r, sp, list);
   if (r > 175 && list && list->b && list->e > list->b && split_part(r, &sp) >= 2) {
     int bad = 0; uint32_t was = 0, now = 0;
     for (uint32_t* p = list->b; p < list->e; p++) {
@@ -4315,6 +4318,40 @@ static void canon_groups(const split_t* s)
 }
 
 /* 0 not a split row, 1 total, 2 regular phase, 3 a group */
+/* A split's regular phase takes the new season's clubs from its total (GitHub #79/#81, Egypt
+ * 2026-10-06). Promotion and relegation are done on the total, the league the one below names
+ * as the league above (fl26chain finishes the pair the game's mover leaves alone), but the
+ * matches are played by the regular phase, which the July pass refills with last season's 20:
+ * the relegated would play on at the top and the promoted nowhere. Only the same number of
+ * clubs, so the game's vector is rewritten in place. */
+static void split_regular_clubs(uint16_t r, const split_t* s, u32vec* list)
+{
+  unsigned char* t = get_rec(s->total);
+  uint32_t n = (uint32_t)(list->e - list->b), m = t ? rec_count(t) : 0;
+  if (!t || n > 48) return;
+  const uint32_t* want = rec_clubs(t);
+  /* the total has no dates of its own, and its count field can read 0: then the list runs to
+     the first empty slot, as check_reg reads it (the first try, 2026-10-06, returned here) */
+  if (!m) while (m < 48 && want[m] != 0xffffffffu) m++;
+  if (m != n) {
+    logf("fl26swiss: set_clubs reg %u -- total %u has %u club(s), the phase %u: left as it is",
+         (unsigned)r, (unsigned)s->total, m, n);
+    return;
+  }
+  /* a club is its team id, the upper 18 bits: the same club reads 45ea000e in the total's list
+     and 45ea8010 in the phase's (the lower 14 are a row, see canon_club) */
+  int moved = 0;
+  for (uint32_t i = 0; i < n; i++) {
+    int have = 0;
+    for (uint32_t j = 0; j < n; j++) have |= (list->b[j] >> 14) == (want[i] >> 14);
+    if (!have) moved++;
+  }
+  if (!moved) return;
+  for (uint32_t i = 0; i < n; i++) list->b[i] = canon_club(want[i]);
+  logf("fl26swiss: set_clubs reg %u -- the clubs of total %u taken on day %d: %d promoted in, %d relegated out",
+       (unsigned)r, (unsigned)s->total, today(), moved, moved);
+}
+
 static int split_part(uint16_t id, const split_t** out)
 {
   for (int i = 0; i < g_nsplits; i++) {

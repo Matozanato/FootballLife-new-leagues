@@ -379,6 +379,14 @@ calendar.
   day 332, the CAF Champions League winner went into the game's Club World Cup in place of an
   African entrant.
 
+- 2026-10-06 (Mod Studio 0.1.8, fl26chain, GitHub #79, #81): **nobody went up or down between
+  a split league (regular phase, then groups) and the league below it.** The game moves no club
+  between a split league and the league under it, and the regular phase is refilled with last
+  season's clubs before the season-end pass is over. The pair is now finished like a deeper
+  chain, and the regular phase takes the same swap: each relegated club's place goes to a
+  promoted one. Checked in game (Egypt, 20 + 18 clubs): after the rollover the top league, its
+  regular phase and the second division all had three clubs swapped, the same three.
+
 - 2026-10-05 (Mod Studio 0.1.8, fl26swiss): **the first-season European clubs picked in Mod
   Studio were not taken in a career in a January league (China, Japan ...).** Such a career is
   built on day 0, and the final table the game keeps from its first half-year made the module
