@@ -270,6 +270,24 @@ compared it with the real UEFA one:
 - the request for a Carabao Cup, which became the league cup for the game's own countries in
   0.1.7, and for a way to rename the Conference League.
 
+### jibibi: tester, moderator and the community's first answer
+
+**jibibi** (Evo-Web; moderator on the Discord) has been there from the first public builds,
+testing Mod Studio on a real, heavily modded game and helping everyone else get theirs working:
+
+- the modules tested alongside a full French patch and the kit server, with the logs that show
+  how the patch's own roots and the new clubs' kit names have to sit next to ours;
+- Sider in a folder with another name ([#28](https://github.com/Matozanato/FootballLife-new-leagues/issues/28)) and four Sider folders one level
+  down (`sider\patch 1` ... `sider\patch 4`): why Mod Studio finds Sider by its `sider.ini`,
+  whatever the folder is called and wherever it sits;
+- faces by nationality ([#52](https://github.com/Matozanato/FootballLife-new-leagues/issues/52)): the skin colour and face picked from a player's
+  country, the idea behind new players getting a face that fits their nationality;
+- the Players page on a 1366x768 screen, a whole Scottish pyramid of NewLife leagues under the
+  game's Premiership built step by step, NewLife ratings that were off in a Romanian second
+  division, and sorting the NewLife table by any column (0.2.0);
+- day after day on the Discord: answering members' questions about install order, face packs
+  and other patches before anyone else gets to them, and keeping the server tidy.
+
 ### Amir: Mod Studio, tested release by release
 
 **Amir** ([AmirPjanic](https://github.com/AmirPjanic), moderator on the Discord) tests Mod
@@ -331,11 +349,6 @@ and other Latin American worlds and writes up every bug with screenshots:
   Studio's **First-season European clubs** (0.1.8).
 - **pioup38**: the first report from a different game build and a clean configuration
   ([#3](https://github.com/Matozanato/FootballLife-new-leagues/issues/3)).
-- **jibibi** (Evo-Web): tested the modules alongside a full French patch and the kit server
-  and sent the logs, which show how the patch's own roots and the new clubs' kit names have to
-  sit next to ours. jibibi's Sider folder with another name
-  ([#28](https://github.com/Matozanato/FootballLife-new-leagues/issues/28)) is why Mod Studio
-  now finds Sider by its `sider.ini`, whatever the folder is called.
 - **bobzera** (Evo-Web): brought the "ACL71" kit problem into the open, new clubs past id
   65536 showing only the default kit, and worked on a fix of their own. That problem is the
   one `tools/mkkits.py` now solves by naming the kit files the way the engine looks them up.
@@ -666,7 +679,7 @@ is named.
 
 Contributors, and what each of them did, are listed in
 [The people who made this better](#the-people-who-made-this-better) near the top: above all
-**vmardonesdev** and **Alikhaled_727**, and **Stagnant09**, **pioup38**, **vector360**, **jibibi**, **bobzera**,
+**vmardonesdev** and **Alikhaled_727**, **vector360** and **jibibi**, and **Stagnant09**, **pioup38**, **bobzera**,
 **spursfan07**, **Amir**, **victormican**, **Alby17**, **jyanj083-dotcom**, **Gabyyy2008**, **alexfe87**,
 **ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9**, **Xxspedd** and **n1ne**.
 
