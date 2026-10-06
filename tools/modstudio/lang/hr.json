@@ -1239,7 +1239,15 @@
   "under it: %s": "ispod nje: %s",
   "the game's own league: Bring the game's leagues to this season": "igrina vlastita liga: Dovedi lige igre u ovu sezonu",
   "The game's tables Mod Studio uses are older than the game: %s. Unpack them again first? It takes about a minute.": "Tablice igre koje Mod Studio koristi starije su od igre: %s. Prvo ih ponovno raspakirati? Traje oko minutu.",
-  "(made up from players of the club's country)": "(izmišljeno od igrača države kluba)"
+  "(made up from players of the club's country)": "(izmišljeno od igrača države kluba)",
+  "Select Team": "Select Team",
+  "The league's place in the order (Move up / Move down): the first ones get a place in Select Team": "Mjesto lige u redoslijedu (Pomakni gore / dolje): prve dobivaju mjesto u Select Team",
+  "Where the last Build put the league in Select Team": "Gdje je zadnji Build stavio ligu u Select Team",
+  "The order changed since the last Build: Build again to see where it goes.": "Redoslijed se promijenio od zadnjeg Builda: Build opet da vidiš kamo ide.",
+  "exhibition only": "samo egzibicija",
+  "no place (it plays)": "nema mjesta (igra se)",
+  "in place of %s": "umjesto %s",
+  "yes": "da"
  },
  "log": [
   [

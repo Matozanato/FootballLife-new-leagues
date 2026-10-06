@@ -165,7 +165,10 @@ League Builder añade ligas nuevas al juego y cambia las del propio juego. Lo qu
 
 **Nombre del mundo** (en la misma página) debe empezar por `_FL26`. Después de **Construir**, la
 columna **ID de la liga** muestra el id de competición de cada liga en el juego, el mismo que lleva
-su archivo de logo.
+su archivo de logo. La columna **#** es el lugar de la liga en el orden (**Subir** / **Bajar**), y
+**Select Team** dice dónde la puso el último Build: *sí*, *en lugar de* uno de los grupos del juego, o
+*sin sitio (se juega)*. Un `*` ahí significa que el orden cambió desde entonces: vuelve a hacer Build para
+ver dónde va.
 
 **Torneos de pretemporada** (botón en la misma página): eliminatorias amistosas de 4 u 8 clubes invitados en julio, antes de la temporada, emparejados en el orden en que los pones (el primero contra el segundo ...). Un club es de una liga nueva o un club del juego (su id); al menos uno tiene que ser de una liga nueva, y su país organiza el torneo. Una carrera empieza en agosto, así que el primero se juega en la segunda temporada. Cada torneo puede tener su **Logo**; vacío: se dibuja uno.
 

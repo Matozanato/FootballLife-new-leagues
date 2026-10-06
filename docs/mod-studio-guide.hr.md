@@ -156,7 +156,10 @@ sadržaja s imenom `_FL26...` koju igra čita dok je uključena.
 | **Formacija** | Kako se klubovi lige postavljaju na terenu. Odaberi jednu od formacija koje igraju klubovi igre (4-2-3-1, 4-1-2-3, 4-3-3, 5-3-2 ...; popis kaže koliko ih klubova igre igra): svaki novi klub dobije kopiju taktike kluba iz igre s tom formacijom, a pri izgradnji mu se po njoj složi najboljih jedanaest. Prazno: zadano u igri, fiksni 4-2-3-1. Pojedini klub može imati svoju (**Uredi klub**). |
 
 **Ime svijeta** (na istoj stranici) mora počinjati s `_FL26`. Nakon **Izgradnje** stupac **ID lige**
-pokazuje ID natjecanja svake lige u igri, isti koji nosi datoteka njezina loga.
+pokazuje ID natjecanja svake lige u igri, isti koji nosi datoteka njezina loga. Stupac **#** je mjesto
+lige u redoslijedu (**Pomakni gore** / **Pomakni dolje**), a **Select Team** kaže kamo ju je zadnji Build
+stavio: *da*, *umjesto* neke grupe igre, ili *nema mjesta (igra se)*. `*` znači da se redoslijed od tada
+promijenio: Build opet da vidiš kamo ide.
 
 **Predsezonski turniri** (gumb na istoj stranici): prijateljski kupovi na ispadanje s 4 ili 8 pozvanih klubova u srpnju, prije sezone, u parovima redom kojim ih upišeš (prvi protiv drugog ...). Klub je iz nove lige ili klub igre (njegov ID); barem jedan mora biti iz nove lige, a turnir je u njenoj državi. Karijera počinje u kolovozu, pa se prvi igra u drugoj sezoni. Svaki turnir može imati **Logo**; prazno: nacrta se sam.
 

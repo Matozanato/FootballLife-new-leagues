@@ -1239,7 +1239,15 @@
   "under it: %s": "en dessous : %s",
   "the game's own league: Bring the game's leagues to this season": "ligue propre au jeu : Amener les ligues du jeu à cette saison",
   "The game's tables Mod Studio uses are older than the game: %s. Unpack them again first? It takes about a minute.": "Les tables du jeu utilisées par Mod Studio sont plus anciennes que le jeu : %s. Les extraire à nouveau d'abord ? Cela prend environ une minute.",
-  "(made up from players of the club's country)": "(inventé à partir des joueurs du pays du club)"
+  "(made up from players of the club's country)": "(inventé à partir des joueurs du pays du club)",
+  "Select Team": "Select Team",
+  "The league's place in the order (Move up / Move down): the first ones get a place in Select Team": "La place de la ligue dans l'ordre (Monter / Descendre) : les premières ont une place dans Select Team",
+  "Where the last Build put the league in Select Team": "Où le dernier Build a mis la ligue dans Select Team",
+  "The order changed since the last Build: Build again to see where it goes.": "L'ordre a changé depuis le dernier Build : refais un Build pour voir où elle va.",
+  "exhibition only": "exhibition uniquement",
+  "no place (it plays)": "pas de place (elle se joue)",
+  "in place of %s": "à la place de %s",
+  "yes": "oui"
  },
  "log": [
   [

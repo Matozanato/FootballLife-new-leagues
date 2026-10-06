@@ -161,7 +161,10 @@ with Ctrl+click, Shift+click or Ctrl+A, then **Remove** or the Delete key.
 | **Formation** | How the league's clubs line up. Pick one of the formations the game's clubs use (4-2-3-1, 4-1-2-3, 4-3-3, 5-3-2 ...; the list says how many clubs of the game play it): each new club gets a copy of the tactics of a club of the game with that formation, and its best eleven is lined up for it at Build. Empty: the game's default, a fixed 4-2-3-1. A single club can have its own (**Edit club**). |
 
 **World name** (on the same page) must start with `_FL26`. After **Build** the **League ID** column
-shows each league's competition id in the game, the one its logo file carries.
+shows each league's competition id in the game, the one its logo file carries. The **#** column is the
+league's place in the order (**Move up** / **Move down**), and **Select Team** says where the last Build
+put it: *yes*, *in place of* one of the game's groups, or *no place (it plays)*. A `*` there means the
+order changed since: Build again to see where it goes.
 
 **Pre-season cups** (button on the same page): friendly knockouts of 4 or 8 invited clubs in July, before the season, paired in the order you give them (first against second ...). A club is one of a new league or a club of the game (its id); at least one has to be from a new league, and its country hosts the cup. A career starts in August, so the first one is played in the second season. Each cup can have a **Logo**; empty: one is drawn for it.
 

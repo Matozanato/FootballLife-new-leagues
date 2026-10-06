@@ -175,7 +175,10 @@ sélectionnez-les avec Ctrl+clic, Maj+clic ou Ctrl+A, puis **Retirer** ou la tou
 
 Le **Nom du monde** (sur la même page) doit commencer par `_FL26`. Après la **Construction**, la
 colonne **ID de la ligue** montre l'id de compétition de chaque ligue dans le jeu, celui que porte
-son fichier de logo.
+son fichier de logo. La colonne **#** est la place de la ligue dans l'ordre (**Monter** / **Descendre**),
+et **Select Team** dit où le dernier Build l'a mise : *oui*, *à la place de* l'un des groupes du jeu, ou
+*pas de place (elle se joue)*. Un `*` veut dire que l'ordre a changé depuis : refaites un Build pour voir
+où elle va.
 
 **Tournois de pré-saison** (bouton sur la même page) : des tournois amicaux à élimination directe de 4 ou 8 clubs invités en juillet, avant la saison, appariés dans l'ordre donné (le premier contre le deuxième ...). Un club est celui d'une nouvelle ligue ou un club du jeu (son id) ; au moins un doit venir d'une nouvelle ligue, dont le pays accueille le tournoi. Une carrière commence en août, donc le premier se joue la deuxième saison. Chaque tournoi peut avoir son **Logo** ; vide : un logo est dessiné.
 

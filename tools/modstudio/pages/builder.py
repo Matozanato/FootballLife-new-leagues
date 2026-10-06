@@ -134,6 +134,23 @@ def built_league(g, world, name, built=None):
     return {}
 
 
+def select_team_text(L, b, plan):
+    """where the last Build put a league in Select Team: its own place, one of the game's groups
+    it took over (#73), or none (#39, it plays but no career starts in it)"""
+    if L.get("exhibition"):
+        return _("exhibition only")
+    if not b:
+        return _("not built yet") if plan else ""
+    slot = b.get("slot")
+    if slot is None:
+        return ""
+    if slot == fl26world.NO_SLOT:
+        return _("no place (it plays)")
+    if slot in fl26world.POOL_SLOTS:
+        return _("in place of %s") % _(fl26world.POOL_SLOTS[slot])
+    return _("yes")
+
+
 def fmt_text(L):
     if L.get("apertura"):
         return _("Apertura + Clausura")
@@ -1992,12 +2009,19 @@ class NewLeagues(BuilderPage):
         self.tree.setRootIsDecorated(False)
         self.tree.setAlternatingRowColors(True)
         self.tree.setIconSize(QSize(28, 28))
+        # the order and where each league shows in Select Team (GitHub #101, victormican: "to test the
+        # limits and the order")
         self.tree.setHeaderLabels([_("League"), _("League ID"), _("Country"), _("Clubs"), _("Format"),
-                                   _("Division"), _("Up / down"), _("Europe"), _("Players changed")])
+                                   _("Division"), _("Up / down"), _("Europe"), _("Players changed"), "#",
+                                   _("Select Team")])
         self.tree.headerItem().setToolTip(1, _("The league's competition id in the game (the one its logo "
                                                "file uses), given at Build"))
-        for c, w in enumerate((240, 80, 150, 60, 170, 230, 80, 150)):
+        self.tree.headerItem().setToolTip(9, _("The league's place in the order (Move up / Move down): the first "
+                                               "ones get a place in Select Team"))
+        self.tree.headerItem().setToolTip(10, _("Where the last Build put the league in Select Team"))
+        for c, w in enumerate((240, 80, 150, 60, 170, 230, 80, 150, 110, 40)):
             self.tree.setColumnWidth(c, w)
+        self.tree.header().moveSection(9, 0)        # "#" shown first, as asked
         self.tree.itemDoubleClicked.connect(lambda *a: self.edit())
         # several leagues at once: Ctrl+click, Shift+click, Ctrl+A, then Remove or Delete
         # (I know?, 2026-10-04: "can u do ctrl+a so i dont have to delete all of them one by one")
@@ -2030,6 +2054,8 @@ class NewLeagues(BuilderPage):
         names = dict(self.project.parents)
         pl = self.project.players()
         plan = built_plan(self.app.game, r.get("world"))
+        order = [L["name"] for L in r["leagues"] if not L.get("others")]
+        was = [p.get("name") for p in (plan or {}).get("leagues") or []]
         for i, L in enumerate(r["leagues"]):
             up = L.get("above")
             div = _("top") if up in (None, "") else _("below %s") % (names.get(up, up) if isinstance(up, int) else up)
@@ -2045,10 +2071,15 @@ class NewLeagues(BuilderPage):
             fmt = fmt_text(L)
             if L.get("others"):              # clubs in no league: no competition, no id, no division
                 cid, div, fmt = "", _("no league"), others_labels().get(L["others"], L["others"])
+            num, seen = ("", others_labels().get(L["others"], L["others"])) if L.get("others") else                 (str(order.index(L["name"]) + 1), select_team_text(L, b, plan))
+            if seen and b and was.index(L["name"]) != order.index(L["name"]):
+                seen += "  *"                 # the order changed since: the next Build may move it
             it = QTreeWidgetItem([L["name"], cid,
                                   L.get("country", ""), str(L.get("clubs", "")), fmt, div,
                                   str(L.get("exchange", 3)) if up not in (None, "") else "", europe_text(L),
-                                  str(n) if n else ""])
+                                  str(n) if n else "", num, seen])
+            if seen.endswith("*"):
+                it.setToolTip(10, _("The order changed since the last Build: Build again to see where it goes."))
             if b.get("rid") is not None:
                 it.setToolTip(1, _("competition %s, regulation %s") % (b.get("cid"), b["rid"]))
             elif plan:
