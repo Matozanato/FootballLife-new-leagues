@@ -18,7 +18,7 @@ For every *.json under tools/testdata/buildcheck/ and tools/testdata/regress018/
 Prints a summary table (recipe, build ok, buildcheck fails, worst European-day count) and exits
 1 on any FAIL.
 
---base defaults to D:\dev\fl26\wt\newlife13\out\base-pesdb; --only keeps recipes whose
+--base defaults to $FL26_PESDB; --only keeps recipes whose
 name contains the given text.
 """
 import json
@@ -35,7 +35,7 @@ TOOLS = HERE
 TESTDIRS = [os.path.join(TOOLS, "testdata", "buildcheck"),
             os.path.join(TOOLS, "testdata", "regress018")]
 SCRATCH = os.path.join(os.path.dirname(TOOLS), "out", "scratch", "regress")
-DEFAULT_BASE = r"D:\dev\fl26\wt\newlife13\out\base-pesdb"
+DEFAULT_BASE = os.environ.get("FL26_PESDB", "")
 ENV = dict(os.environ, PYTHONIOENCODING="utf-8")
 
 
