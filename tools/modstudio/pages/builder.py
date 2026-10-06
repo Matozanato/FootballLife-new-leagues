@@ -160,6 +160,34 @@ def fmt_text(L):
     return _("everyone %dx") % L.get("legs", 2)
 
 
+class FitCard(QFrame):
+    """a card that keeps the height its wrapped text needs at the width it has: a layout's minimum
+    height does not ask heightForWidth, so a short window squeezed the card and cut its hints off
+    (LaraCroft, 06.10.; the page scrolls instead now)"""
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        lay = self.layout()
+        if lay is not None and lay.hasHeightForWidth():
+            h = lay.heightForWidth(self.width())
+            if h > 0 and h != self.minimumHeight():
+                self.setMinimumHeight(h)
+
+
+def noted(*widgets):
+    """a row of controls with its hint under it, not beside it: a wrapped label beside a control
+    gets a height for a width it does not end up with, and with Windows scaling up the text was
+    cut off (LaraCroft, 06.10.)"""
+    *top, note = widgets
+    w = QWidget()
+    v = QVBoxLayout(w)
+    v.setContentsMargins(0, 0, 0, 0)
+    v.setSpacing(2)
+    v.addWidget(row(*top))
+    v.addWidget(note)
+    return w
+
+
 class PictureField(QWidget):
     """a picture file: a preview, Pick and Clear"""
 
@@ -3353,7 +3381,7 @@ class Build(BuilderPage):
         self.outer.addLayout(bar)
         cards = QHBoxLayout()
         cards.setSpacing(14)
-        euc = QFrame()
+        euc = FitCard()
         euc.setObjectName("card")
         eu = QVBoxLayout(euc)
         eu.setContentsMargins(18, 14, 18, 14)
@@ -3363,7 +3391,7 @@ class Build(BuilderPage):
         eu.addWidget(t)
         eu.addWidget(hint(_("Every world built here has the new Champions League and Europa League: a league "
                             "phase of 36 clubs, then the play-off and the knockout rounds.")))
-        clc = QFrame()
+        clc = FitCard()
         clc.setObjectName("card")
         cl = QVBoxLayout(clc)
         cl.setContentsMargins(18, 14, 18, 14)
@@ -3373,31 +3401,43 @@ class Build(BuilderPage):
         cl.addWidget(t2)
         cards.addWidget(euc, 3)
         cards.addWidget(clc, 2)
-        self.outer.addLayout(cards)
+        # the cards scroll on their own: on a short window (Windows scaling up) they kept their
+        # height and ran over the log under them (LaraCroft, 06.10.)
+        holder = QWidget()
+        holder.setLayout(cards)
+        cards.setContentsMargins(0, 0, 0, 0)
+        sa = QScrollArea()
+        sa.setWidgetResizable(True)
+        sa.setFrameShape(QScrollArea.NoFrame)
+        sa.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        sa.setWidget(holder)
+        sa.setStyleSheet("QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; }")
+        self.cards_area, self.cards_holder = sa, holder
+        self.outer.addWidget(sa, 10)
         self.uecl = QCheckBox(_("Include the Conference League"))
         self.uecl.setToolTip(_("A league phase of 36 clubs and a February play-off, like the Champions League "
                                "and the Europa League"))
         self.uecl.toggled.connect(self.set_uecl)
-        eu.addWidget(row(self.uecl, helpmark(
+        eu.addWidget(noted(self.uecl, helpmark(
             "A league phase of 36 clubs and a February play-off, like the Champions League "
             "and the Europa League"), hint(_("off = no Conference League; the Champions League and Europa "
                                                    "League keep their 36-club league phase and play-off either way"))))
         self.uecl_logo = PictureField(None, 48)
         self.uecl_logo.changed = self.set_uecl_logo
-        eu.addWidget(row(QLabel(_("Conference League logo")), self.uecl_logo,
+        eu.addWidget(noted(QLabel(_("Conference League logo")), self.uecl_logo,
                                  hint(_("empty = a UECL emblem drawn for you"))))
         self.uecl_name = QLineEdit()
         self.uecl_name.setPlaceholderText(B.mkuecl.NAME)
         self.uecl_name.setMaxLength(60)
         self.uecl_name.editingFinished.connect(self.set_uecl_name)
-        eu.addWidget(row(QLabel(_("Conference League name")), self.uecl_name,
+        eu.addWidget(noted(QLabel(_("Conference League name")), self.uecl_name,
                                  hint(_("empty = %s; a new name needs the world built again") % B.mkuecl.NAME)))
         self.cafsc = QCheckBox(_("CAF Super Cup"))
         self.cafsc.setToolTip(_("The winners of the CAF Champions League and the Confederation Cup meet once, "
                                 "in late July. First played in a career's second season, when both cups "
                                 "have a winner"))
         self.cafsc.toggled.connect(self.set_cafsc)
-        eu.addWidget(row(self.cafsc, helpmark(
+        eu.addWidget(noted(self.cafsc, helpmark(
             "The winners of the CAF Champions League and the Confederation Cup meet once, "
             "in late July. First played in a career's second season, when both cups "
             "have a winner"), hint(_("only in a world with both African cups (the European "
@@ -3408,19 +3448,20 @@ class Build(BuilderPage):
                                 "strip\"). Without one each new club wears a plain kit that Edit > Teams > Strip "
                                 "changes like any other, Paste Image included. Build again after changing this."))
         self.ekits.toggled.connect(self.set_ekits)
-        cl.addWidget(row(self.ekits, helpmark(
+        cl.addWidget(noted(self.ekits, helpmark(
             "On: the new clubs get no kit borrowed from a club of the game. A borrowed kit is "
             "a licensed one, and the game's Edit mode refuses it (\"You cannot edit this "
             "strip\"). Without one each new club wears a plain kit that Edit > Teams > Strip "
             "changes like any other, Paste Image included. Build again after changing this."), hint(_("off = each new club borrows a kit of the game (it looks "
-                                                    "real, but Edit mode cannot change it)"))))
+                                                    "real, but Edit mode cannot change it; on = Kit Server "
+                                                    "cannot dress the new clubs)"))))
         self.b_euro = QPushButton(_("Build only the European cups..."))
         self.b_euro.setToolTip(_("A world with nothing but the new Champions League and Europa League (league "
                                  "phase of 36 and play-off) and, when ticked above, the Conference League: "
                                  "no new leagues, the game's clubs and leagues as they are. Your recipe is "
                                  "not changed."))
         self.b_euro.clicked.connect(self.do_europe_only)
-        eu.addWidget(row(self.b_euro, helpmark(
+        eu.addWidget(noted(self.b_euro, helpmark(
             "A world with nothing but the new Champions League and Europa League (league "
             "phase of 36 and play-off) and, when ticked above, the Conference League: "
             "no new leagues, the game's clubs and leagues as they are. Your recipe is "
@@ -3432,7 +3473,15 @@ class Build(BuilderPage):
         self.out = QPlainTextEdit()
         self.out.setObjectName("log")
         self.out.setReadOnly(True)
+        self.out.setMinimumHeight(140)
         self.outer.addWidget(self.out, 1)
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        # all the cards need when the window has room for them, so no scroll bar and no gap
+        need = self.cards_holder.heightForWidth(self.cards_area.viewport().width())
+        if need > 0:
+            self.cards_area.setMaximumHeight(need + 2)
 
     def shown(self):
         self.need_tables()

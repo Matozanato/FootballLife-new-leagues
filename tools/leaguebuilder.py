@@ -3241,6 +3241,17 @@ def july_lines(pl, base):
     return out
 
 
+def cup_seeding(teams, top):
+    """the entry order of a national cup, which is its first-round draw (mkcup: entry n meets
+    entry n+1): the top division and the one below taken in turn, so a first round pairs a club
+    from each instead of the top division among itself (San Marino, 06.10.)"""
+    hi, lo = teams[:top], teams[top:]
+    out = []
+    for i in range(max(len(hi), len(lo))):
+        out += hi[i:i + 1] + lo[i:i + 1]
+    return out
+
+
 def national_cups(pl, root, db, log=print):
     """the national cups planned (national_cup) into the world's tables, one mkcup.py each"""
     import mkcup
@@ -3255,6 +3266,7 @@ def national_cups(pl, root, db, log=print):
         if not c["keep_top"] and c["below"]:
             teams += next(q["teams"] for q in pl["leagues"] if q["rid"] == c["below"])
         teams = teams[:c["clubs"]]           # a field cut to a size the bracket screen draws (#74)
+        teams = cup_seeding(teams, len(p["teams"]))
         c["cid"], c["reg"] = cids[0], regs[0]
         call(mkcup, ["--base", db, "--out", root, "--teams", ",".join(map(str, teams)),
                      "--cid", c["cid"], "--reg", c["reg"], "--region", p["region"], "--name", c["name"],

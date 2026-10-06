@@ -437,6 +437,16 @@ the world** again. The new clubs then wear a plain kit that Edit > Teams > Strip
 any other, Paste Image included. Move an old `EDIT00000000` aside first if the kits do not
 change.
 
+### Kit Server does not show the kits of my new clubs
+
+sider.log says `we have kitserver kits for: <id>, but the team is unlicensed. Disabling kits.`
+Kit Server dresses a club only when the club has a kit of its own in the game's data, and with
+**Kits you can edit in the game** ticked the new clubs get none (they wear the engine's plain
+kit). Untick it on the Build page and **Build the world** again: each new club then borrows a
+kit, and Kit Server swaps it for the one your `map.txt` names (the club id from New clubs, e.g.
+`71579, ISL\Arema`). The two do not go together: a kit from Kit Server, or a kit you change in
+Edit mode.
+
 ### Only my new divisions play the FA Cup
 
 Fixed in 0.1.6. The game fills a country's cup from the first league of the country it finds,
