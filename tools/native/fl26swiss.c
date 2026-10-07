@@ -4360,6 +4360,32 @@ static int declash(date_t* r, uint32_t n)
   }
   return moved;
 }
+/* a European day, or the day before or after one */
+static int euro_near(uint32_t d)
+{
+  return euro_day(d) || euro_day((d + 1) % 365) || euro_day((d + 364) % 365);
+}
+/* the last resort before declash: when no calendar has free days everywhere (an 18 or 20 club
+   league with European places: 34 or 38 rounds), a round right next to a European day still
+   moves, up to three days either way and in order, to a day with one free day each side of the
+   European one. rwee, 07.10.: Man City, Fulham and Bayern played the league the day after the
+   Champions League's January matchday; the 16 club leagues had room and were fine */
+static int declash_near(date_t* r, uint32_t n)
+{
+  static const int step[6] = { 1, -1, 2, -2, 3, -3 };
+  int moved = 0;
+  for (uint32_t i = 0; i < n; i++) {
+    if (r[i].day >= 365 || !euro_near(r[i].day)) continue;
+    for (int k = 0; k < 6; k++) {
+      uint32_t d = (uint32_t)(((int)r[i].day + 365 + step[k]) % 365);
+      if (euro_near(d)) continue;
+      if (i && season_pos(d) <= season_pos(r[i - 1].day)) continue;
+      if (i + 1 < n && season_pos(d) >= season_pos(r[i + 1].day)) continue;
+      r[i].day = d; moved++; break;
+    }
+  }
+  return moved;
+}
 static void declash_log(uint16_t id, int moved)
 {
   static uint16_t said[64]; static int nsaid = 0;
@@ -4554,7 +4580,9 @@ static void rest_dates(uint16_t id, date_t* r, uint32_t n)
     return;
   }
   g_org = 182;
-  if (!seen) logf("fl26swiss: reg %u -- no calendar with free days between matches; off European days only", (unsigned)id);
+  int kept = declash_near(r, n);
+  if (!seen) logf("fl26swiss: reg %u -- no calendar with free days between matches; %d round(s) moved a day clear of European days",
+                  (unsigned)id, kept);
   declash_log(id, declash(r, n));
 }
 /* every league, the game's and ours: a round robin or a split phase of four clubs or more */
