@@ -4823,6 +4823,78 @@ static int carry_install(uint64_t exe_base)
   return 0;
 }
 
+/* ---- the board's objective: a continental cup of the club's own continent ----
+ *
+ * At the season's objectives meeting the owner judges (menuutility::OwnerSeasonTaskJudge::*) ask
+ * 0x1415111c0(&club) for the club's continent and write the objective's regulation from it:
+ * 0 -> UEFA Champions League (4, or 6), 2 -> AFC Champions League (0x10), anything else ->
+ * Libertadores (0xa). The continent comes from the club's league's competition code, and a league
+ * of our own regions that plays August to May keeps the UEFA code on purpose (the season-end
+ * filter 0x141365c50 wants it, see leaguebuilder), so a club in a new Korean league was told to
+ * win the Champions League (GitHub #43).
+ *
+ * Only the 18 calls inside the judges (0x140edc75a..0x140ede324) go to cont_handler, through a
+ * 14-byte jump placed within reach of a rel32 call; nothing else that asks for the continent
+ * changes. The handler asks the game first and only replaces an answer of UEFA, and only for a
+ * club whose country the world file's conf= puts in the AFC (-> 2) or CONMEBOL (-> 1). The game
+ * has no objective for the African, North American or Oceanian cups, so those stay as they were. */
+#define CONT_RVA 0x15111c0
+static const uint32_t CONT_CALLS[] = {
+  0xedc75a, 0xedc77b, 0xedc87c, 0xedc893, 0xedca17, 0xedca2e, 0xedcc22, 0xedcc30, 0xedcc80,
+  0xedcca6, 0xedd507, 0xedd51b, 0xedd75a, 0xedd77b, 0xeddaa5, 0xeddacb, 0xede311, 0xede324 };
+typedef int (*cont_fn)(void* club);
+
+static int cont_handler(void* club)
+{
+  int r = ((cont_fn)(uintptr_t)(g_base + CONT_RVA))(club);
+  if (r != 0 || !g_confed_n || !club) return r;
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  void* blk = o ? *(void**)(o + 0x48) : 0;
+  int c = team_country(blk, *(uint32_t*)club);
+  int f = c >= 0 ? confed_of(c) : 0;
+  int want = f == 3 ? 2 : f == 4 ? 1 : 0;
+  static int said = 0;
+  if (want && said < 20) {
+    said++;
+    logf("fl26swiss: board objective -- club %08x (country %d, %s) gets the %s, not the Champions League",
+         *(uint32_t*)club, c, f == 3 ? "AFC" : "CONMEBOL", f == 3 ? "AFC Champions League" : "Libertadores");
+  }
+  return want;
+}
+
+/* A page for the jump, within +-2 GB of the exe: below its base, 64 KB steps. */
+static unsigned char* near_alloc(uint64_t exe_base)
+{
+  for (uint64_t a = (exe_base & ~0xffffULL) - 0x10000; a > exe_base - 0x70000000ULL; a -= 0x10000) {
+    void* p = VirtualAlloc((void*)(uintptr_t)a, 0x1000, MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    if (p) return (unsigned char*)p;
+  }
+  return 0;
+}
+
+/* 0 ok; 2 a call is not the one expected (nothing patched); 3 no page in reach; 4 VirtualProtect */
+static int cont_install(uint64_t exe_base)
+{
+  int n = (int)(sizeof CONT_CALLS / sizeof CONT_CALLS[0]);
+  for (int i = 0; i < n; i++) {
+    unsigned char* s = (unsigned char*)(uintptr_t)(exe_base + CONT_CALLS[i]);
+    if (s[0] != 0xE8 || (uint64_t)(uintptr_t)(s + 5) + *(int32_t*)(s + 1) != exe_base + CONT_RVA) return 2;
+  }
+  unsigned char* t = near_alloc(exe_base);
+  if (!t) return 3;
+  t[0] = 0xFF; t[1] = 0x25; *(uint32_t*)(t + 2) = 0; *(uint64_t*)(t + 6) = (uint64_t)(uintptr_t)cont_handler;
+  FlushInstructionCache(GetCurrentProcess(), t, 14);
+  for (int i = 0; i < n; i++) {
+    unsigned char* s = (unsigned char*)(uintptr_t)(exe_base + CONT_CALLS[i]);
+    DWORD old;
+    if (!VirtualProtect(s, 5, PAGE_EXECUTE_READWRITE, &old)) return 4;
+    *(int32_t*)(s + 1) = (int32_t)((int64_t)(uintptr_t)t - (int64_t)(uintptr_t)(s + 5));
+    VirtualProtect(s, 5, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), s, 5);
+  }
+  return 0;
+}
+
 /* Put the key of every live split into the stub, once. Cheap enough to call from the date,
  * progression and current-phase hooks, which between them run on load and on the split day. */
 static void split_keys(void)
@@ -5618,6 +5690,11 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
     int cr = carry_install(exe_base);
     if (!cr) logf("fl26swiss: split points carry live (key switch@%llx)", (unsigned long long)(exe_base + CARRY_SITE_RVA));
     else logf("fl26swiss: split points carry NOT installed (%d)", cr);
+  }
+  {
+    int cr = cont_install(exe_base);
+    if (!cr) logf("fl26swiss: board objective by continent live (18 calls of the owner's judges)");
+    else logf("fl26swiss: board objective by continent NOT installed (%d)", cr);
   }
   if (!hook((unsigned char*)(uintptr_t)(exe_base + CURPH_RVA), SIG_CURPH, 15, (void*)curph_handler, &g_tramp_curph))
     logf("fl26swiss: phase order live (current phase@%llx: league, play-off, knockout)",
