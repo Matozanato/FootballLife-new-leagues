@@ -68,6 +68,9 @@ EVERYONE = [
     ("mauro1977doni", "Discord", "a Europe-only world with an empty schedule"),
     ("N3RO", "Discord", "the Czech Chance Liga"),
     ("Hector", "Discord", "crests and logos for the NewLife Database"),
+    ("Xxspedd", "Discord",
+     "kits made from plain pictures (his png -> ftex conversion, 0.2.0), and the idea of matching a "
+     "folder of crests to clubs by name"),
 ]
 
 

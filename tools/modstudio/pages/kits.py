@@ -13,12 +13,34 @@ from .content import ServerPage, project
 
 
 def is_kit_folder(d):
-    """a club's kit folder as kit-server reads it: order.ini, or a p1 kit with its config.txt"""
+    """a club's kit folder as kit-server reads it: order.ini, or a p1 kit with its config.txt --
+    or a folder of kit pictures (p1.png, g1.png ...) to make one from (0.2.0, tools/kitpics.py)"""
     try:
         names = {n.lower() for n in os.listdir(d)}
     except OSError:
         return False
-    return "order.ini" in names or os.path.isfile(os.path.join(d, "p1", "config.txt"))
+    return ("order.ini" in names or os.path.isfile(os.path.join(d, "p1", "config.txt"))
+            or bool(pictures(d)))
+
+
+def pictures(d):
+    """the kit pictures of a picture folder, {"p1": path, ...}, or {} for any other folder"""
+    import kitpics
+    return kitpics.pictures(d)
+
+
+def number_kits(lib):
+    """the library's kit folders whose p1 has back numbers, leg numbers and a name font to lend a
+    kit made from pictures"""
+    out = []
+    for d in kit_folders(lib):
+        try:
+            names = [n.lower() for n in os.listdir(os.path.join(d, "p1"))]
+        except OSError:
+            continue
+        if all(any(n.endswith(s + ".ftex") for n in names) for s in ("_back", "_leg", "_name")):
+            out.append(d)
+    return out
 
 
 def kit_folders(root, depth=3):
@@ -69,10 +91,21 @@ def same_files(a, b):
         return False
 
 
-def place(src, lib, rel):
+def place(src, lib, rel, team_id=None, numbers=None):
     """copy one kit folder into the library at rel; -> the path the map line names. A folder
-    already there with other files is kept and this one goes next to it as "<club> (2)"."""
+    already there with other files is kept and this one goes next to it as "<club> (2)". A
+    folder of pictures is made into a kit for team_id there instead, with the number files of
+    the kit folder `numbers` (tools/kitpics.py)."""
     dst = os.path.join(lib, rel)
+    pics = {} if team_id is None or os.path.isfile(os.path.join(src, "order.ini")) else pictures(src)
+    if pics:
+        import kitpics
+        k = 1
+        while os.path.exists(dst):
+            k += 1
+            dst = os.path.join(lib, "%s (%d)" % (rel, k))
+        kitpics.make_kit(pics, team_id, dst, numbers)
+        return os.path.relpath(dst, lib)
     if os.path.normcase(os.path.abspath(src)) == os.path.normcase(os.path.abspath(dst)):
         return rel
     k = 1
@@ -96,6 +129,10 @@ def _dialog_class():
         help = ("Gives many clubs their kits at once. Pick a folder of ready kit-server kits: one folder per club, "
                 "holding p1, p2, g1 ... and order.ini, named after the club (\"Dinamo Zagreb\") or its team ID "
                 "(\"2215\").\n\n"
+                "A club folder can also hold plain kit pictures instead: p1.png, p2.png ... for the kits and g1.png "
+                "for the goalkeeper (2048 x 2048 is best; .jpg and .dds work too). Mod Studio turns them into "
+                "kit-server kits; the back numbers, leg numbers and name font come from the kit picked in "
+                "\"Numbers and names from\". The picture conversion is Xxspedd's.\n\n"
                 "Untick a wrong match before OK. The kits are copied into the kit-server library and get a line "
                 "in map.txt; press Save on the Kits page to write it. A club that already has a line keeps it "
                 "unless \"Replace kits already set\" is ticked.\n\n"
@@ -134,6 +171,15 @@ def _dialog_class():
             self.form.addRow(_("Match to"), self.only)
             self.replace = QCheckBox(_("Replace kits already set"))
             self.form.addRow("", self.replace)
+            # kits made from pictures (0.2.0) borrow these textures from a kit of the library
+            self.numbers = QComboBox()
+            self.numbers.addItem(_("(none: the game keeps the club's own)"), None)
+            lib = view.folder()
+            for d in number_kits(lib) if lib and os.path.isdir(lib) else []:
+                self.numbers.addItem(os.path.relpath(d, lib), d)
+            if self.numbers.count() > 1:
+                self.numbers.setCurrentIndex(1)
+            self.form.addRow(_("Numbers and names from"), self.numbers)
             self.tree = QTreeWidget()
             self.tree.setRootIsDecorated(False)
             self.tree.setAlternatingRowColors(True)
@@ -214,14 +260,15 @@ def _dialog_class():
                         kept += 1
                         continue
                     src = it.data(0, Qt.UserRole)
-                    rel = place(src, lib, library_path(self.folder.text(), src))
+                    rel = place(src, lib, library_path(self.folder.text(), src), tid,
+                                self.numbers.currentData())
                     if have:
                         have[0].fields[1:2] = [rel]
                         have[0].touch()
                     else:
                         mf.add(Row([str(tid), rel], quoted=[1]), after=self.tab.last_like(Row([str(tid)])))
                     n += 1
-            except OSError as e:
+            except (OSError, ValueError, ImportError) as e:
                 error(self, "Import kits", _("Could not copy the kits: %s") % e)
             if n:
                 self.view._lib = None
@@ -239,7 +286,7 @@ class Kits(ServerPage):
     def __init__(self, app):
         super().__init__(app)
         self.action("Import kits...", self.import_kits, tip="Kits for many clubs at once, from a folder of "
-                                                           "kit-server club folders named after the clubs")
+                                                           "kit-server club folders or kit pictures named after the clubs")
 
     def import_kits(self):
         v = self.view

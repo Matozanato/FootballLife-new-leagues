@@ -418,7 +418,8 @@ and other Latin American worlds and writes up every bug with screenshots:
   **Clubs in no league**.
 - **Xxspedd** (Discord): shared his own crest, kit, squad and rating scripts; the idea of
   matching a folder of crests to clubs by name (0.1.8's Import crests) is his, and he pointed
-  out the missing third kit.
+  out the missing third kit. 0.2.0's kits made from plain pictures (**Import kits** with
+  `p1.png`, `g1.png` ...) use his png -> ftex conversion, from his kit tool, given to Mod Studio.
 
 Reports are welcome from anyone: open an
 [issue](https://github.com/Matozanato/FootballLife-new-leagues/issues) with what you
