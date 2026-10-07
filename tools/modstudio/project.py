@@ -332,6 +332,16 @@ class Project(QObject):
             else:
                 lst.pop(at)
             L[key] = lst
+        # the NewLife ids by place too: a removed club kept its id, and NewLife's "would play in
+        # two leagues" check still found Schalke in a Bundesliga 2 it had left (Discord, lub7628)
+        nl = (L.get("newlife") or {}).get("clubs")
+        if nl and at < len(nl):
+            nl = list(nl)
+            if delta > 0:
+                nl.insert(at, 0)
+            else:
+                nl.pop(at)
+            L["newlife"]["clubs"] = nl
         gc = []
         for e in L.get("game_clubs") or []:
             k = moved(int(e.get("at", 0)))
