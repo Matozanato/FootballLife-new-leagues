@@ -383,6 +383,11 @@ calendar.
   id: two clubs with one id, two squads of 30 on one club. Every id Build hands out now steps
   round the NewLife ones. Reproduced with the reporter's recipe (Austrian Premier Division, RB
   Salzburg and Sturm Graz swapped for new clubs); with the fix no two clubs share an id.
+- 2026-10-07 (Mod Studio 0.2.0, GitHub #107): **a drag on the Leagues page re-sorted the Build
+  order by continent.** The page groups its list by continent and wrote that order back over the
+  whole recipe, so North and Central American and Oceanian leagues always came last: always the
+  ones without a Select Team place or in place of a game group, whatever Move up / Move down had
+  set. A drag now reorders a continent's leagues only among the places they already hold.
 - 2026-10-06 (Mod Studio 0.1.9, Discord): **Leagues page: a league dragged to a new place
   disappeared** until the list was filled again (Ours and back to All). The drop moved it and the
   drag then removed the row once more. Fixed; the list is also refilled after a move.

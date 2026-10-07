@@ -198,7 +198,7 @@ colonne **ID de la ligue** montre l'id de compétition de chaque ligue dans le j
 son fichier de logo. La colonne **#** est la place de la ligue dans l'ordre (**Monter** / **Descendre**),
 et **Select Team** dit où le dernier Build l'a mise : *oui*, *à la place de* l'un des groupes du jeu, ou
 *pas de place (elle se joue)*. Un `*` veut dire que l'ordre a changé depuis : refaites un Build pour voir
-où elle va.
+où elle va. Glisser une ligue sur la page **Ligues** ne la déplace qu'entre les places que les ligues de son continent ont déjà ici (0.2.0 ; avant, tout l'ordre passait par continent, et les ligues d'Amérique du Nord et d'Océanie finissaient toujours dernières).
 
 **Tournois de pré-saison** (bouton sur la même page) : des tournois amicaux à élimination directe de 4 ou 8 clubs invités en juillet, avant la saison, appariés dans l'ordre donné (le premier contre le deuxième ...). Un club est celui d'une nouvelle ligue ou un club du jeu (son id) ; au moins un doit venir d'une nouvelle ligue, dont le pays accueille le tournoi. Une carrière commence en août, donc le premier se joue la deuxième saison. Chaque tournoi peut avoir son **Logo** ; vide : un logo est dessiné.
 

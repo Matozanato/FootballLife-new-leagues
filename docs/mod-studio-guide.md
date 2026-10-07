@@ -181,7 +181,7 @@ with Ctrl+click, Shift+click or Ctrl+A, then **Remove** or the Delete key.
 shows each league's competition id in the game, the one its logo file carries. The **#** column is the
 league's place in the order (**Move up** / **Move down**), and **Select Team** says where the last Build
 put it: *yes*, *in place of* one of the game's groups, or *no place (it plays)*. A `*` there means the
-order changed since: Build again to see where it goes.
+order changed since: Build again to see where it goes. A drag on the **Leagues** page moves a league only among the places its continent's leagues already hold here (0.2.0; before, it put the whole order in continent order, so North American and Oceanian leagues always came last).
 
 **Pre-season cups** (button on the same page): friendly knockouts of 4 or 8 invited clubs in July, before the season, paired in the order you give them (first against second ...). A club is one of a new league or a club of the game (its id); at least one has to be from a new league, and its country hosts the cup. A career starts in August, so the first one is played in the second season. Each cup can have a **Logo**; empty: one is drawn for it.
 

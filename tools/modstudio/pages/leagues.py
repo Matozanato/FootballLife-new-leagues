@@ -17,6 +17,21 @@ CONTINENTS = ((2, "Europe"), (3, "Asia"), (4, "South America"), (5, "Africa"),
 ROLE = Qt.UserRole
 
 
+def keep_continent_places(leagues, keys, confeds):
+    """the recipe's leagues reordered by the list on screen, each continent only among the places
+    its leagues already hold: the list groups by continent, the recipe's order is the Build's
+    (who gets a Select Team place), so a drag inside Oceania must not move Oceania behind Europe"""
+    pos = {k: n for n, k in enumerate(keys)}
+    cont = [confeds.get(L.get("country", ""), 0) for L in leagues]
+    out = list(leagues)
+    for c in set(cont):
+        at = [i for i, x in enumerate(cont) if x == c]
+        mine = sorted((leagues[i] for i in at), key=lambda L: pos.get("o" + L["name"], len(pos)))
+        for i, L in zip(at, mine):
+            out[i] = L
+    return out
+
+
 def updown_text(r, L):
     """how many clubs go up and down: with the league above, and with the league below"""
     out = []
@@ -319,8 +334,7 @@ class Leagues(BuilderPage):
             keys = [next(it) if k in shown else k for k in full]
         r = self.project.recipe
         r["league_order"] = keys
-        pos = {k: n for n, k in enumerate(keys)}
-        r["leagues"].sort(key=lambda L: pos.get("o" + L["name"], len(pos)))
+        r["leagues"] = keep_continent_places(r["leagues"], keys, self.project.confeds)
         self.project.touch()
 
     # ---- the right side ----

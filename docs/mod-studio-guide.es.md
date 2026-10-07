@@ -188,7 +188,7 @@ columna **ID de la liga** muestra el id de competición de cada liga en el juego
 su archivo de logo. La columna **#** es el lugar de la liga en el orden (**Subir** / **Bajar**), y
 **Select Team** dice dónde la puso el último Build: *sí*, *en lugar de* uno de los grupos del juego, o
 *sin sitio (se juega)*. Un `*` ahí significa que el orden cambió desde entonces: vuelve a hacer Build para
-ver dónde va.
+ver dónde va. Arrastrar una liga en la página **Ligas** la mueve solo entre los puestos que ya tienen aquí las ligas de su continente (0.2.0; antes ponía todo el orden por continentes, y las ligas de Norteamérica y Oceanía quedaban siempre al final).
 
 **Torneos de pretemporada** (botón en la misma página): eliminatorias amistosas de 4 u 8 clubes invitados en julio, antes de la temporada, emparejados en el orden en que los pones (el primero contra el segundo ...). Un club es de una liga nueva o un club del juego (su id); al menos uno tiene que ser de una liga nueva, y su país organiza el torneo. Una carrera empieza en agosto, así que el primero se juega en la segunda temporada. Cada torneo puede tener su **Logo**; vacío: se dibuja uno.
 

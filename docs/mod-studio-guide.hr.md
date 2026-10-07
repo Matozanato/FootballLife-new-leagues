@@ -177,7 +177,7 @@ sadržaja s imenom `_FL26...` koju igra čita dok je uključena.
 pokazuje ID natjecanja svake lige u igri, isti koji nosi datoteka njezina loga. Stupac **#** je mjesto
 lige u redoslijedu (**Pomakni gore** / **Pomakni dolje**), a **Select Team** kaže kamo ju je zadnji Build
 stavio: *da*, *umjesto* neke grupe igre, ili *nema mjesta (igra se)*. `*` znači da se redoslijed od tada
-promijenio: Build opet da vidiš kamo ide.
+promijenio: Build opet da vidiš kamo ide. Povlačenje lige na stranici **Lige** pomiče je samo među mjestima koja ovdje već drže lige njezina kontinenta (0.2.0; prije je cijeli redoslijed slagalo po kontinentima, pa su lige Sjeverne Amerike i Oceanije uvijek bile zadnje).
 
 **Predsezonski turniri** (gumb na istoj stranici): prijateljski kupovi na ispadanje s 4 ili 8 pozvanih klubova u srpnju, prije sezone, u parovima redom kojim ih upišeš (prvi protiv drugog ...). Klub je iz nove lige ili klub igre (njegov ID); barem jedan mora biti iz nove lige, a turnir je u njenoj državi. Karijera počinje u kolovozu, pa se prvi igra u drugoj sezoni. Svaki turnir može imati **Logo**; prazno: nacrta se sam.
 
