@@ -43,6 +43,12 @@ Please open an issue with your version so we know which builds are out there.
 
 ## 2. Copy the modules
 
+> **Mod Studio installs these for you.** Since 0.2.0 it puts the eight `fl26nullguard` files in as one
+> bundle, `fl26guards.lua`, and `fl26superguard`, `fl26resultsguard` and `fl26ctlguard` as
+> `fl26lateguards.lua` (built by `tools/lbpack.py` from the files here, which stay the ones to read
+> and change). Use either the single files or the bundles, never both: Build switches the single
+> lines off. The steps below are for installing by hand.
+
 Copy all twelve files from this repository's `sider/` folder (not the `experimental`
 subfolder) into `SiderAddons\modules\`:
 

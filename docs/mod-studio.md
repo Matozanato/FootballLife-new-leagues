@@ -50,6 +50,14 @@ a world has from one plain text file, written at Build and copied to `modules\` 
 on*. A module that finds no file keeps its built-in list, so an install without the builder
 behaves exactly as before.
 
+The pack (`tools/lbpack.py`) ships the small guards as two bundles since 0.2.0: `fl26guards.lua`
+(fl26nullguard, 2, 4, 5, 7, 8, 9, 10, in that order) and `fl26lateguards.lua` (fl26superguard,
+fl26resultsguard, fl26ctlguard). Each part runs in its own function with its own locals and log
+lines; the bundle's init calls the parts' inits in order under `pcall`, so one that fails is
+logged (`<part>: init failed -- ...`) and the rest still run. The pack's `retired.txt` names
+the single modules; install switches their `lua.module` lines off and moves their files to
+`modulesefore-builder-<n>`, so a fix is never applied twice.
+
 ```
 # fl26world 1
 world _FL26Example
@@ -143,10 +151,15 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
   the world file"); fl26joindll.lua and fl26swiss.lua take the leagues of a type-1 region for
   calendar-year ones (registration, New Year promotion, round dates 45..333). Build writes
   `season <region> 1` for a new country whose top division has *February to December*
-  (recipe `"season": "calendar"`). `season 28 0` (recipe `saudi_august`, not in the UI) is
-  EXPERIMENTAL: the Saudi Pro League 162 then plays August-May, and its cups 164/165 get
-  `dates ... like=` lines of the Belgian ones; fl26swiss spreads 162's rounds over a European
-  season (`fl26_swiss_european`). Not tested in game.
+  (recipe `"season": "calendar"`). `season <region> 0` for a calendar-year country of the game
+  is EXPERIMENTAL (0.2.0, recipe `game_seasons`, Mod Studio's *Seasons of the game's leagues*;
+  the older `saudi_august` is Saudi Arabia): Brazil 16 (29, 163), Chile 18 (67), China 21 (120),
+  Japan 24 (52) and Saudi Arabia 28 (162) then play August-May. Their cups get `dates ... like=`
+  lines of an August-May cup of the same bracket (China 127 and Saudi 164 the Belgian cup, Japan
+  55 the English one, the super cups 97/132/165 the Belgian super cup; Brazil's and Chile's are on
+  the English cup's calendar already), and fl26swiss spreads the leagues' rounds over a European
+  season (`fl26_swiss_european`, `SHIPPED_REGION_LEAGUES`). Colombia and the USA (Apertura and
+  Clausura) cannot move.
 - `uecl <id> <id> ...`: the Conference League's 36 entrants at the start, written when the
   recipe's `uecl` is on (the default). Build then reshapes the Champions League and the Europa
   League to a league phase of 36 (mkreshape), clones FL_UECL as competition 174 with

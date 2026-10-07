@@ -254,3 +254,7 @@ description of it.
 
 The compiled `fl26clubs.dll`, `fl26chain.dll` and `fl26swiss.dll` are built from
 `tools/native/fl26clubs.c`, `tools/native/fl26chain.c` and `tools/native/fl26swiss.c`; their checksums and the build lines are in [tools/native/README.md](../../tools/native/README.md).
+
+Mod Studio (0.2.0 and later) installs `fl26superguard.lua`, `fl26resultsguard.lua` and
+`fl26ctlguard.lua` as one bundle, `fl26lateguards.lua`, and switches the single lines off. By
+hand, use the single files or the bundle, not both.

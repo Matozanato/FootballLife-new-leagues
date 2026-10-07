@@ -140,6 +140,13 @@ the League window of its top division. Clubs then go up and down at New Year, an
 division below follows it. It cannot be combined with a split, Apertura/Clausura, a national
 cup or a league cup yet.
 
+0.2.0 (experimental): the game's own February-December countries **Japan, China, Brazil, Chile
+and Saudi Arabia** can play **August to May** instead -- **Seasons of the game's leagues** on the
+League Builder page. Their league starts in August, promotion and relegation happen in summer,
+their cups move to August-May dates and their continental places come from the table that
+ended in May. A division of yours under one of them follows it. Build the world again and start
+a new career.
+
 ### Clubs I send to the Libertadores qualifying round stay at home
 
 Fixed in 0.1.4 (#33). A club of yours sent to the qualifying round now takes the place of one of

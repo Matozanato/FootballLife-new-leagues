@@ -118,10 +118,12 @@ which league sits above -- and nothing about ids:
               of that club's tactics (mktactics.py) and their best eleven follows its places.
               "club_formations" gives single clubs another one ("" = the league's). Without
               either the engine lines a club up in its fixed 4-2-3-1 (lbplayers.LINEUP)
-  saudi_august  (the recipe, not a league) EXPERIMENTAL, true: the game's Saudi Pro League (region
-              28) plays August to May -- `season 28 0`, and its King's Cup and Super Cup get
-              the dates of the Belgian ones (dates 164/165 like=...). Untested in game: Mod
-              Studio does not offer it
+  game_seasons  (the recipe, not a league) EXPERIMENTAL, a list of the game's countries that play
+              February to December -- Brazil, Chile, China, Japan, Saudi Arabia -- to play
+              August to May instead (GAME_SEASONS): `season <region> 0`, the leagues dated on
+              the European calendar and the cups as an August-May cup of their shape. A
+              division of ours below one of them plays August to May with it. The older
+              saudi_august: true is ["Saudi Arabia"]
   uecl        (the recipe, not a league) true, the default: the world gets the Conference
               League, cloned from the reshaped Europa League (mkuecl.py: competition 174,
               regulations 186/187, group 1210), and its play-off (mkeuropo.py: 189), the ids
@@ -284,6 +286,21 @@ SEASONS = ("august", "calendar")           # a new country's season: August-May,
 # February to December with it (GitHub #86: the Saudi First Division "started in February")
 CALENDAR_REGIONS = {16, 18, 19, 21, 23, 24, 28}
 SAUDI_REGION, SAUDI_CUP, SAUDI_SUPER_CUP = 28, 164, 165    # the region holds KSA's 162/164/165 only
+# The game's February-December countries a recipe can move to August-May ("game_seasons",
+# Gu 2026-10-07: the J.League goes to August-May from 2026/27): country -> (region, its leagues,
+# {cup: the shipped cup whose dates it takes}). The region's season line makes the game run it
+# August-May (fl26join), fl26swiss dates the leagues on the European league calendar
+# (SHIPPED_REGION_LEAGUES there) and the cups take an August-May cup's dates, one of the same
+# bracket where there is one (the English cup's calendar dates every round of 9 to 64 clubs).
+# Brazil's and Chile's cups are on the English cup's calendar already. Colombia and the USA
+# play Apertura and Clausura and stay as they are.
+GAME_SEASONS = {
+    "Brazil": (16, (29, 163), {}),
+    "Chile": (18, (67,), {}),
+    "China": (21, (120,), {127: "BELGIUM_CUP", 132: SUPER_CUP_LIKE}),
+    "Japan": (24, (52,), {55: "ENGLAND_D1_CUP", 97: SUPER_CUP_LIKE}),
+    "Saudi Arabia": (28, (162,), {SAUDI_CUP: "BELGIUM_CUP", SAUDI_SUPER_CUP: SUPER_CUP_LIKE}),
+}
 CCUP_SIZES = (32, 16, 8, 4)              # the fields a continental cup can have (fl26swiss.dll)
 CCUP_REG_FROM = 197                      # its regulation ids: past the split phases' 191..196
 CCUP_KEEP = set(range(186, 197))         # the Conference League's 186..189, 190 (moved 145), splits
@@ -586,7 +603,7 @@ def has_edits(r):
                 or r.get("preseason_cups") or r.get("ccup_names") or r.get("ccup_logos")
                 or any((r.get("europe_first") or {}).values())
                 or r.get("uecl_name") or r.get("uecl_logo") or r.get("caf_super_cup_logo")
-                or r.get("saudi_august") or r.get("editable_kits") or r.get("league_order")) \
+                or r.get("saudi_august") or r.get("game_seasons") or r.get("editable_kits") or r.get("league_order")) \
         or r.get("uecl") is False or r.get("caf_super_cup") is False
 
 
@@ -723,7 +740,7 @@ def recipe_from_plan(pl, base):
         out.append(r)
     rec = {"world": pl["world"], "leagues": out, "edits": pl.get("edits") or {},
            "players": pl.get("players") or {}}
-    for k in ("uecl", "uecl_logo", "uecl_name", "editable_kits", "saudi_august", "cafsc"):
+    for k in ("uecl", "uecl_logo", "uecl_name", "editable_kits", "game_seasons", "cafsc"):
         if pl.get(k) not in (None, "", False) or k == "uecl":
             rec[k] = pl.get(k)
     return rec
@@ -1169,9 +1186,27 @@ def clubs_room(base):
     return min(TEAM_CAP - n("Team.bin", W.T_REC), (PLAYER_CAP - n("Player.bin", 312)) // SQUAD)
 
 
+def august_countries(recipe):
+    """the game's countries the recipe moves from February-December to August-May
+    ("game_seasons", 0.2.0; the older "saudi_august" is Saudi Arabia)"""
+    got = [c for c in recipe.get("game_seasons") or [] if c in GAME_SEASONS]
+    if recipe.get("saudi_august") and "Saudi Arabia" not in got:
+        got.append("Saudi Arabia")
+    return sorted(got)
+
+
+def august_regions(recipe):
+    return {GAME_SEASONS[c][0] for c in august_countries(recipe)}
+
+
+def august_leagues(recipe):
+    """regulation ids of the game's leagues the recipe moves to August-May"""
+    return {r for c in august_countries(recipe) for r in GAME_SEASONS[c][1]}
+
+
 def pl_saudi_august(recipe, region):
-    """the recipe's experimental saudi_august moves region 28 to August-May"""
-    return region == SAUDI_REGION and bool(recipe.get("saudi_august"))
+    """whether the recipe moves the game's calendar-year region `region` to August-May"""
+    return region in august_regions(recipe)
 
 
 def plan(recipe, base):
@@ -1511,7 +1546,7 @@ def plan(recipe, base):
             "uefa_seed": uefa_seed(recipe, out, regrow, region_of_cid),
             "ccups": cups, "ccup_notes": notes, "home_cups": home,
             "europe_first": europe_first(recipe, by_name),
-            "saudi_august": bool(recipe.get("saudi_august")),
+            "game_seasons": august_countries(recipe),
             "editable_kits": bool(recipe.get("editable_kits")),
             "league_order": recipe.get("league_order") or None}
 
@@ -2480,8 +2515,9 @@ def describe(pl):
             names = dict(fl26world.COMPETITIONS)
             lines.append("      European places: %s" % ", ".join(
                 place_name(pos, names.get(comp, comp)) for pos, comp in sorted(p["europe"])))
-    if pl.get("saudi_august"):
-        lines.append("  EXPERIMENTAL: the Saudi Pro League plays August to May (untested in game)")
+    if pl.get("game_seasons"):
+        lines.append("  EXPERIMENTAL: the game's leagues of %s play August to May"
+                     % ", ".join(pl["game_seasons"]))
     if pl["leagues"] and not own_places(pl):
         lines.append("  no European places: the new leagues send nobody to Europe")
     if not pl.get("uecl") and any(e[2] in (2, 12) for e in own_places(pl)):
@@ -3343,11 +3379,11 @@ def season_lines(pl, db):
     front of that table, and fl26joindll/fl26swiss take a type-1 region's leagues for
     calendar-year ones (registration, New Year promotion, round dates)"""
     out = ["season %d 1" % r for r in sorted({p["region"] for p in pl["leagues"] if p.get("calendar")})]
-    if pl.get("saudi_august"):
-        # the Saudi cups keep their calendar dates otherwise; the Belgian ones are a 16-club cup
-        # and a one-match super cup, the shapes of 164 and 165
-        out.append("season %d 0" % SAUDI_REGION)
-        for reg, code in ((SAUDI_CUP, "BELGIUM_CUP"), (SAUDI_SUPER_CUP, SUPER_CUP_LIKE)):
+    for c in pl.get("game_seasons") or []:
+        # the moved country's cups keep their calendar-year dates otherwise (GAME_SEASONS)
+        region, _leagues, cups = GAME_SEASONS[c]
+        out.append("season %d 0" % region)
+        for reg, code in sorted(cups.items()):
             like = like_reg(db, code)
             if like:
                 out.append("dates %d like=%d" % (reg, like))
@@ -3757,6 +3793,15 @@ def set_modules_off(mdir, off):
         os.remove(path)
 
 
+def retired_modules():
+    """{old module: the bundle that replaced it} (the pack's retired.txt, lbpack.BUNDLES)"""
+    try:
+        with open(os.path.join(pack_dir(), "retired.txt"), encoding="utf-8") as f:
+            return dict(l.split()[:2] for l in f if len(l.split()) >= 2)
+    except (OSError, BuildError):
+        return {}
+
+
 def ensure_modules(game, order, want, log=print):
     """make every module in `want` a live lua.module line of sider.ini, in `order`'s order.
 
@@ -3774,6 +3819,14 @@ def ensure_modules(game, order, want, log=print):
         log("sider.ini: left off as you switched them off: %s" % ", ".join(sorted(off & set(want))))
     want = [m for m in want if m not in off]
     ini, lines = ini_lines(game)
+    # a module 0.2.0 bundled (fl26nullguard ... -> fl26guards): its own line goes off, or the
+    # fix would be applied twice and the second time refuse the already patched bytes
+    retired, gone = retired_modules(), []
+    for i, l in enumerate(lines):
+        m, live = module_of(l)
+        if live and m and m.replace("/", "\\").rpartition("\\")[2] in retired:
+            lines[i] = ";" + l.strip()
+            gone.append(m)
     fixed, plain = [], {module_of(l)[0] for l in lines}
     for i, l in enumerate(lines):
         m, live = module_of(l)
@@ -3819,15 +3872,19 @@ def ensure_modules(game, order, want, log=print):
             on = [i for i, l in enumerate(lines) if l.replace(" ", "").startswith("lua.enabled=")]
             lines.insert(on[0] + 1 if on else len(lines), "luajit.ext.enabled = 1")
         done.append("luajit.ext.enabled")
+    if gone:
+        log("sider.ini: switched off %s -- %s has them now" % (", ".join(gone), ", ".join(
+            sorted({retired[g.replace("/", "\\").rpartition("\\")[2]] for g in gone}))))
     if fixed:
         log("sider.ini: %d module(s) were loaded from a before-builder folder, now from modules: %s"
             % (len(fixed), ", ".join(fixed)))
         done += [m for m in fixed if m not in done]
-    if done:
+    if done or gone:
         shutil.copy2(ini, ini + ".before-builder") if not os.path.exists(ini + ".before-builder") else None
         open(ini, "w", encoding="utf-8", newline="\r\n").write("\n".join(lines) + "\n")
-        log("sider.ini: switched on %s" % ", ".join(done))
-    return done
+        if done:
+            log("sider.ini: switched on %s" % ", ".join(done))
+    return done + gone
 
 
 def install_modules(game, log=print):
@@ -3842,7 +3899,7 @@ def install_modules(game, log=print):
     if not os.path.isdir(dst):
         raise BuildError("no %s -- is Sider installed in this game folder?" % dst)
     src = os.path.join(pack, "modules")
-    changed, same = [], 0
+    changed, same, keep = [], 0, None
     for f in sorted(os.listdir(src)):
         a, b = os.path.join(src, f), os.path.join(dst, f)
         if os.path.exists(b) and open(a, "rb").read() == open(b, "rb").read():
@@ -3850,7 +3907,6 @@ def install_modules(game, log=print):
             continue
         changed.append(f)
     if changed:
-        keep = None
         for f in changed:
             b = os.path.join(dst, f)
             if os.path.exists(b):
@@ -3866,6 +3922,17 @@ def install_modules(game, log=print):
             ("; the old ones are in " + keep) if keep else ""))
     else:
         log("modules: all %d already there" % same)
+    old = [m for m in retired_modules() if os.path.exists(os.path.join(dst, m + ".lua"))]
+    if old:
+        # the single files a bundle replaced go with the other old copies
+        n = 1
+        while os.path.exists(os.path.join(dst, "before-builder-%d" % n)):
+            n += 1
+        keep = keep or os.path.join(dst, "before-builder-%d" % n)
+        os.makedirs(keep, exist_ok=True)
+        for m in old:
+            shutil.move(os.path.join(dst, m + ".lua"), os.path.join(keep, m + ".lua"))
+        log("modules: %s now ship bundled; the single files are in %s" % (", ".join(old), keep))
     have = {f[:-4] for f in os.listdir(dst) if f.endswith(".lua")}
     ensure_modules(game, order, [m for m in order if m in have], log)
     roots = os.path.join(pack, "livecpk")

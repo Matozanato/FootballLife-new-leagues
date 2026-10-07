@@ -107,6 +107,8 @@ ejemplo, Goal Song Server necesita `match-stats.enabled = 1`); el programa dice 
 
 Los módulos de League Builder mantienen el orden en que se instalaron.
 
+Desde 0.2.0 las once pequeñas protecciones contra cierres van en dos archivos, `fl26guards.lua` (las ocho `fl26nullguard`) y `fl26lateguards.lua` (`fl26superguard`, `fl26resultsguard`, `fl26ctlguard`), así la lista es más corta. sider.log sigue nombrando cada protección en su propia línea. Build desactiva las líneas sueltas antiguas y guarda los archivos viejos en `modulesefore-builder-<n>`; no hay que hacer nada a mano.
+
 **Desactivar los regens** (0.2.0): `fl26regen` da a los regens nombres nuevos, un potencial
 nuevo y una cara del paquete de caras de regens. Para jugar sin él, desmarca **Ocultar los
 módulos propios de League Builder (fl26...)** para que se vean los nuestros, desmarca
@@ -223,6 +225,8 @@ plan** escribe la misma lista siempre que el mundo tiene una plaza de Libertador
 **Nombres de las competiciones** (botón en la misma página): un nombre y un logo nuevos para las copas, supercopas y competiciones continentales del juego -- la FA Cup, la Champions League, la Libertadores ... -- y para las copas continentales que construye el mundo (CAF Champions League, Copa Confederación, AFC Champions League Two, Copa Sudamericana, CONCACAF Champions Cup, OFC Champions League, AFC Challenge League, Supercopa CAF). Todas las fases de la competición reciben el nombre. Vacío: el del juego. Las ligas del juego se renombran en *Game's leagues and clubs*.
 
 **Orden de las ligas** (botón en la misma página, 0.2.0): el orden de los países en Select Team de la Liga Master y en la lista de equipos de Kick Off / Edit. *Por continente* es el orden del juego (Europa, las Américas, Asia y luego África, cada uno de la A a la Z). *Todos los países de la A a la Z* los pone a todos en una sola serie alfabética, y *Mi propio orden* te deja ordenarlos como quieras (arrastrando, o con Up / Down). Las ligas de un país van juntas, primera división primero, y las competiciones de clubes, los grupos "Other" y Classic Teams van después de los países. Alemania, EE. UU., Japón y Arabia Saudí están en los grupos "Other" de Select Team, así que solo se mueven en Kick Off. Después vuelve a hacer Build del mundo.
+
+**Temporadas de las ligas del juego** (misma página, 0.2.0, experimental): Japón, China, Brasil, Chile y Arabia Saudí juegan de febrero a diciembre en el juego. Marca uno y sus ligas juegan de agosto a mayo como Europa: la temporada empieza en agosto, los ascensos y descensos son en verano, sus copas pasan a fechas de agosto a mayo y sus plazas continentales salen de la tabla que terminó en mayo. Una división tuya debajo de una de esas ligas la sigue. Colombia y EE. UU. juegan Apertura y Clausura y no se pueden mover. Vuelve a hacer Build del mundo y empieza una carrera nueva.
 
 **Clubes nuevos**: elige la liga y luego **Editar club** (nombre, abreviatura, escudo), **Pegar
 nombres...** o **Cargar nombres de un archivo...**. Un nombre vacío pasa a ser `<liga> 01`,

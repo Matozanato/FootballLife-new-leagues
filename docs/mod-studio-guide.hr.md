@@ -101,6 +101,8 @@ kaže koju.
 
 Moduli League Buildera ostaju redom kojim su postavljeni.
 
+Od 0.2.0 jedanaest malih zaštita od pada ide kao dvije datoteke, `fl26guards.lua` (osam `fl26nullguard` zaštita) i `fl26lateguards.lua` (`fl26superguard`, `fl26resultsguard`, `fl26ctlguard`), pa je popis kraći. sider.log i dalje svaku zaštitu piše u svom retku. Build stare pojedinačne retke isključi, a stare datoteke spremi u `modulesefore-builder-<n>`; ručno ne treba ništa.
+
 **Isključivanje regena** (0.2.0): `fl26regen` daje regenima nova imena, novi potencijal i facu
 iz paketa lica za regene. Za igru bez njega makni kvačicu s **Sakrij module samog League
 Buildera (fl26...)** da se naši vide, makni kvačicu s `fl26regen` i pritisni **Primijeni**. Mod
@@ -210,6 +212,8 @@ mjesto u Libertadoresu ili Sudamericani.
 **Imena natjecanja** (gumb na istoj stranici): novo ime i logo za kupove, superkupove i kontinentalna natjecanja iz igre -- FA Cup, Ligu prvaka, Libertadores ... -- i za kontinentalne kupove koje svijet gradi (CAF Liga prvaka, Kup konfederacija, AFC Liga prvaka Two, Copa Sudamericana, CONCACAF Champions Cup, OFC Liga prvaka, AFC Challenge League, CAF Superkup). Ime dobiju sve faze natjecanja. Prazno: ono iz igre. Lige iz igre preimenuju se na stranici *Game's leagues and clubs*.
 
 **Poredak liga** (gumb na istoj stranici, 0.2.0): poredak država u Select Teamu Master Lige i na popisu momčadi Kick Off / Edit. *Po kontinentima* je poredak igre (Europa, Amerike, Azija, pa Afrika, svaki od A do Ž). *Sve države od A do Ž* stavi ih sve u jedan abecedni niz, a *Moj poredak* daje da ih složite kako god želite (povlačenjem ili Gore / Dolje). Lige jedne države ostaju zajedno, prva liga prva, a klupska natjecanja, grupe "Other" i Classic Teams dolaze iza država. Njemačka, SAD, Japan i Saudijska Arabija su u Select Teamu u grupama "Other", pa se pomiču samo u Kick Offu. Nakon toga ponovno izgradite svijet.
+
+**Sezone liga iz igre** (ista stranica, 0.2.0, eksperimentalno): Japan, Kina, Brazil, Čile i Saudijska Arabija u igri igraju od veljače do prosinca. Označite jednu i njezine lige igraju od kolovoza do svibnja kao Europa: sezona počinje u kolovozu, ulazak i ispadanje su ljeti, kupovi idu na datume kolovoz-svibanj, a kontinentalna mjesta dolaze iz tablice završene u svibnju. Vaša liga ispod jedne od tih liga ide s njom. Kolumbija i SAD igraju Aperturu i Clausuru i ne mogu se pomaknuti. Ponovno izgradite svijet i pokrenite novu karijeru.
 
 **Novi klubovi**: odaberi ligu, pa **Uredi klub** (ime, kratko ime, grb), **Zalijepi imena...**
 ili **Učitaj imena iz datoteke...**. Prazno ime postaje `<liga> 01`, `<liga> 02` ...; klub bez

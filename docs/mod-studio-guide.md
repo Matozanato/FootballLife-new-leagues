@@ -103,6 +103,8 @@ in the wrong place. Some modules need a Sider setting (for example Goal Song Ser
 
 Modules of the League Builder keep the order they were installed in.
 
+Since 0.2.0 the eleven small crash guards go in as two files, `fl26guards.lua` (the eight `fl26nullguard` ones) and `fl26lateguards.lua` (`fl26superguard`, `fl26resultsguard`, `fl26ctlguard`), so the list is shorter. sider.log still names each guard on its own line. Build switches the old single lines off and keeps the old files in `modulesefore-builder-<n>`; there is nothing to do by hand.
+
 **Switching the regens off** (0.2.0): `fl26regen` gives regens new names, a new potential and a
 face of the regen face pack. To play without it, untick **Hide the League Builder's own modules
 (fl26...)** so ours show, untick `fl26regen` and press **Apply**. Mod Studio writes it down in
@@ -215,6 +217,8 @@ Libertadores or Sudamericana place.
 **Competition names** (same page): a new name and logo for the game's cups, super cups and continental competitions -- the FA Cup, the Champions League, the Libertadores ... -- and for the continental cups the world builds (CAF Champions League, Confederation Cup, AFC Champions League Two, Copa Sudamericana, CONCACAF Champions Cup, OFC Champions League, AFC Challenge League, CAF Super Cup). Every stage of a competition takes the name. Empty: the game's own. The game's leagues are renamed on *Game's leagues and clubs*.
 
 **League order** (same page, 0.2.0): the order of the countries in Master League's Select Team and in the Kick Off / Edit team list. *By continent* is the game's order (Europe, the Americas, Asia, then Africa, each A-Z). *Every country A-Z* puts all of them in one alphabetical run, and *My own order* lets you put them any way you like (drag, or Up / Down). A country's leagues stay together, top division first, and the club competitions, the "Other" groups and Classic Teams come after the countries. Germany, the USA, Japan and Saudi Arabia sit in the "Other" groups of Select Team, so they move only in Kick Off. Build the world again afterwards.
+
+**Seasons of the game's leagues** (same page, 0.2.0, experimental): Japan, China, Brazil, Chile and Saudi Arabia play February to December in the game. Tick one and its leagues play August to May like Europe: the season starts in August, promotion and relegation happen in summer, its cups move to August-May dates and its continental places come from the table that ended in May. A division of yours under one of those leagues follows it. Colombia and the USA play Apertura and Clausura and cannot move. Build the world again and start a new career.
 
 **New clubs**: pick the league, then **Edit club** (name, short name, crest), **Paste names...**
 or **Load names from file...**. An empty name becomes `<league> 01`, `<league> 02` ...; a club

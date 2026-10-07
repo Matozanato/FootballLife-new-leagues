@@ -34,13 +34,23 @@ ZIG = os.environ.get("ZIG") or next(
 
 # the lua.module lines, in load order (the order of the working install)
 ORDER = [
-    "fl26caps", "fl26nullguard", "fl26nullguard2", "fl26nullguard4", "fl26nullguard5",
-    "fl26nullguard7", "fl26nullguard8", "fl26nullguard9", "fl26nullguard10", "fl26joindll",
+    "fl26caps", "fl26guards", "fl26joindll",
     "fl26hdr192", "fl26chain", "fl26comptab", "fl26slotnames", "fl26clubs", "fl26regen", "fl26editlist", "fl26edit",
     "fl26rank", "fl26deeprank", "fl26regions", "fl26reg64", "fl26regnames", "fl26catlist",
-    "fl26swiss", "fl26augseason", "fl26superguard", "fl26resultsguard", "fl26ctlguard",
+    "fl26swiss", "fl26augseason", "fl26lateguards",
     "fl26seasonend",
 ]
+# Modules that ship as one file (0.2.0, Gu: "quite a lot of separate Lua/DLL modules now"): the
+# small one-fix guards, each still its own file in sider/ to read and change, go out bundled in
+# load order. Every part keeps its own log lines, so sider.log still says which fix did what,
+# and a part whose init fails is logged and skipped without taking the others with it. Build
+# switches the old single lines off and keeps the old files in before-builder-<n>
+# (leaguebuilder.install_modules, retired.txt in the pack).
+BUNDLES = {
+    "fl26guards": ["fl26nullguard", "fl26nullguard2", "fl26nullguard4", "fl26nullguard5",
+                   "fl26nullguard7", "fl26nullguard8", "fl26nullguard9", "fl26nullguard10"],
+    "fl26lateguards": ["fl26superguard", "fl26resultsguard", "fl26ctlguard"],
+}
 PER_WORLD = {"fl26regions", "fl26regnames"}
 DLLS = {"fl26join": "build-join.sh", "fl26chain": "build-chain.sh",
         "fl26clubs": "build-clubs.sh", "fl26swiss": "build-swiss.sh", "fl26regen": "build-regen.sh",
@@ -82,6 +92,29 @@ def source(m):
     raise SystemExit("%s.lua is in neither sider/ nor sider/experimental/" % m)
 
 
+def bundle(name, parts):
+    """one module of `parts`' sources: each part's chunk runs in a function of its own (its locals
+    stay its own) and the bundle's init calls theirs in order"""
+    out = ["-- %s.lua -- built by tools/lbpack.py from %s; edit those files, not this one."
+           % (name, ", ".join(p + ".lua" for p in parts)),
+           "-- Each part logs as it always did; a part whose init fails is logged and skipped.", ""]
+    for i, p in enumerate(parts):
+        src = open(source(p), encoding="utf-8").read().rstrip()
+        out += ["-- ==== %s.lua ====" % p, "local part%d = (function()" % i, src, "end)()", ""]
+    out += ["local PARTS = { " + ", ".join('{ "%s", part%d }' % (p, i) for i, p in enumerate(parts)) + " }",
+            "local m = {}",
+            "function m.init(ctx)",
+            "  for _, p in ipairs(PARTS) do",
+            '    if type(p[2]) == "table" and p[2].init then',
+            "      local ok, err = pcall(p[2].init, ctx)",
+            '      if not ok then log(string.format("%s: init failed -- %s", p[1], tostring(err))) end',
+            "    end",
+            "  end",
+            "end",
+            "return m", ""]
+    return "\n".join(out)
+
+
 def build(out, log=print):
     mods = os.path.join(out, "modules")
     if os.path.exists(out):
@@ -89,6 +122,9 @@ def build(out, log=print):
     os.makedirs(mods)
     for m in ORDER:
         if m in PER_WORLD:
+            continue
+        if m in BUNDLES:
+            open(os.path.join(mods, m + ".lua"), "w", encoding="utf-8", newline="\n").write(bundle(m, BUNDLES[m]))
             continue
         shutil.copy2(source(m), os.path.join(mods, m + ".lua"))
     env = dict(os.environ, ZIG=ZIG)
@@ -112,6 +148,8 @@ def build(out, log=print):
         log("pack: NO regen face pack (%s) -- regens will keep the generic face" % FACES)
     open(os.path.join(mods, "..", "modules.txt"), "w", encoding="utf-8", newline="\n").write(
         "".join(m + "\n" for m in ORDER))
+    open(os.path.join(mods, "..", "retired.txt"), "w", encoding="utf-8", newline="\n").write(
+        "".join("%s %s\n" % (p, b) for b, parts in BUNDLES.items() for p in parts))
     bad = []
     for f in sorted(os.listdir(mods)):
         if f.endswith(".lua"):

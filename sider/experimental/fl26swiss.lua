@@ -264,7 +264,8 @@ end
 -- The game's own leagues of a calendar-year region a `season <region> 0` line moves to
 -- August-May: they are dated on the European league calendar (fl26_swiss_european). Only the
 -- leagues: the region's cups take `dates <cup> like=<European cup>` lines. Experimental.
-local SHIPPED_REGION_LEAGUES = { [28] = { 162 } }
+-- (leaguebuilder GAME_SEASONS): Brazil, Chile, China, Japan, Saudi Arabia
+local SHIPPED_REGION_LEAGUES = { [16] = { 29, 163 }, [18] = { 67 }, [21] = { 120 }, [24] = { 52 }, [28] = { 162 } }
 
 local FIRST_FILE = "fl26swiss-first.txt"
 local function read_first(path)

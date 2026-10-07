@@ -652,7 +652,7 @@ class LeagueDialog(Dialog):
 
     def follows_calendar(self, up, seen):
         if isinstance(up, int):
-            return up in getattr(self.project, "calendar_parents", set())
+            return up in getattr(self.project, "calendar_parents", set())                 and up not in B.august_leagues(self.project.recipe)
         x = next((x for x in self.project.recipe["leagues"] if x["name"] == up), None)
         if x is None or up in seen:
             return False
@@ -1929,6 +1929,37 @@ class LeagueOrderDialog(Dialog):
         self.accept()
 
 
+class GameSeasonsDialog(Dialog):
+    """the game's February-December countries that play August-May instead (the recipe's
+    game_seasons, leaguebuilder.GAME_SEASONS; Gu 2026-10-07, the J.League from 2026/27)"""
+
+    def __init__(self, parent, project):
+        super().__init__(parent, "Seasons of the game's leagues")
+        self.project = project
+        have = set(B.august_countries(project.recipe))
+        self.v.insertWidget(0, hint(_("These countries of the game play February to December. Tick one to "
+                                      "make its leagues play August to May, like Europe: the season starts in "
+                                      "August, promotion and relegation in summer, its cups on August-May "
+                                      "dates, and continental places from the table that ended in May. A "
+                                      "division of yours below one of these leagues follows it. Experimental. "
+                                      "Build the world again and start a new career to use it.")))
+        self.boxes = {}
+        box = QVBoxLayout()
+        for c in sorted(B.GAME_SEASONS):
+            cb = QCheckBox(c)
+            cb.setChecked(c in have)
+            self.boxes[c] = cb
+            box.addWidget(cb)
+        box.addStretch(1)
+        self.v.insertLayout(1, box, 1)
+        self.scroll.hide()
+        self.setMinimumSize(420, 340)
+
+    def ok(self):
+        self.result = [c for c, cb in self.boxes.items() if cb.isChecked()]
+        self.accept()
+
+
 class SouthAmericaDialog(Dialog):
     """read only (GitHub #71): every South American league's Libertadores, qualifying and Copa
     Sudamericana places -- the game's leagues and the world's own -- as Check the plan lists them"""
@@ -2084,6 +2115,8 @@ class NewLeagues(BuilderPage):
             "- Competition names: new names and logos for cups and continental competitions.\n"
             "- League order: the order of the countries in Select Team and Kick Off -- by continent, A-Z "
             "or your own.\n"
+            "- Seasons of the game's leagues: Japan, China, Brazil, Chile or Saudi Arabia August to May "
+            "(experimental).\n"
             "- World name: the folder the world is built into.")
 
     def __init__(self, app):
@@ -2109,6 +2142,8 @@ class NewLeagues(BuilderPage):
                     "continental competitions of the game, and for the continental cups the world builds")
         self.action("League order", self.league_order, tip="The order of the countries in Select Team and the "
                     "Kick Off list: by continent as the game has it, A-Z, or your own")
+        self.action("Seasons of the game's leagues", self.game_seasons, tip="Experimental: the game's "
+                    "February-December leagues (Japan, China, Brazil, Chile, Saudi Arabia) August to May")
         top = QHBoxLayout()
         top.addWidget(QLabel(_("World name")))
         self.world = QLineEdit()
@@ -2373,6 +2408,18 @@ class NewLeagues(BuilderPage):
                 self.project.recipe["league_order"] = d.result
             else:
                 self.project.recipe.pop("league_order", None)
+            self.project.touch()
+
+    def game_seasons(self):
+        if self.need_tables():
+            return
+        d = GameSeasonsDialog(self, self.project)
+        if d.finish():
+            self.project.recipe.pop("saudi_august", None)
+            if d.result:
+                self.project.recipe["game_seasons"] = d.result
+            else:
+                self.project.recipe.pop("game_seasons", None)
             self.project.touch()
 
     def game_cups(self):
@@ -2678,7 +2725,7 @@ class NewClubs(BuilderPage):
                 self.nl_rel = r
                 self.newlife_club()
 
-            run_job(lambda: N.Release(folder), done=done,
+            run_job(lambda progress: N.Release(folder), done=done,
                     failed=lambda tb: (self.app.busy(False), error(self, "NewLife club", tb.strip().splitlines()[-1])))
             return
         used = {int(i) for x in self.project.recipe["leagues"] for i in (x.get("newlife") or {}).get("clubs") or []
