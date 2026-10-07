@@ -3182,6 +3182,25 @@ static int ccup_fill_one(int k, void* started)
    one, February to November) keeps going by its live table. access_capture keeps the UEFA
    leagues' only, so the AFC Champions League took J1 and the Saudi league, played August to May
    in a world with game seasons, by squad strength in the second summer too (run022, 2026-10-07). */
+/* 1 when every match regulation reg has is played (and it has some): a season over, whether or
+   not the teardown names it */
+static int season_played(uint16_t reg)
+{
+  const unsigned char* bs = (const unsigned char*)(g_base + MATCH_BASE_SITE);
+  const unsigned char* cs = (const unsigned char*)(g_base + MATCH_CAP_SITE);
+  if (bs[0] != 0x48 || bs[1] != 0x8d || bs[2] != 0x88 || cs[0] != 0x81 || cs[1] != 0xff) return 0;
+  uint32_t base = *(const uint32_t*)(bs + 3), cap = *(const uint32_t*)(cs + 2);
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!blk || !cap || cap > 200000) return 0;
+  int all = 0, played = 0;
+  for (uint32_t i = 0; i < cap; i++) {
+    const unsigned char* m = blk + base + (size_t)i * MATCH_STRIDE;
+    if (*(const uint16_t*)m == 0xffff || *(const uint16_t*)(m + 4) != reg) continue;
+    all++; played += (m[7] & 0x40) != 0;
+  }
+  return all > 0 && played == all;
+}
 static void ccup_keep_tables(const uint16_t* ids, int n)
 {
   int d = today(), ad = abs_day();
@@ -3192,6 +3211,10 @@ static void ccup_keep_tables(const uint16_t* ids, int n)
       for (int r = 0; r < 2; r++) {
         int closing = 0;
         for (int j = 0; j < n && regs[r] && !closing; j++) closing = ids[j] == regs[r];
+        /* J1 and the Saudi league played August to May (run023, 2026-10-07): the exe's event
+           table closes them at New Year, so the summer teardown never names them and their
+           finished table was not kept -- the AFC cups took them by squad strength again */
+        if (!closing && regs[r]) closing = season_played(regs[r]);
         if (closing && keep_final(regs[r], d, ad) > 0) {
           logf("fl26swiss: reg %u -- final table kept for cup %u (day %d)", (unsigned)regs[r],
                (unsigned)g_ccup[k].reg, d);

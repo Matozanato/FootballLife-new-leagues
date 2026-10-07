@@ -383,6 +383,12 @@ calendar.
   id: two clubs with one id, two squads of 30 on one club. Every id Build hands out now steps
   round the NewLife ones. Reproduced with the reporter's recipe (Austrian Premier Division, RB
   Salzburg and Sturm Graz swapped for new clubs); with the fix no two clubs share an id.
+- 2026-10-07 (Mod Studio 0.2.0, run023): **the AFC cups still took J1 and the Saudi league by squad
+  strength in the second summer.** In a world with game seasons both play August to May, but the
+  game's own event table closes them at New Year, so the summer teardown never named them and
+  their final table was not kept. A league a cup takes places from now has its table kept at the
+  summer teardown whenever every match of its season is played, named or not; one still in its
+  season (China) goes on by its live table. A rollover in game is still to be seen.
 - 2026-10-07 (Mod Studio 0.2.0, GitHub #106): **nobody went up or down under an Apertura/Clausura
   league.** Its Clausura starts from zero points, so the season's total has no table at the end
   ("season table missing, 0 clubs" for Peru and Uruguay) and fl26chain had nobody to relegate.
