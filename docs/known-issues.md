@@ -401,6 +401,16 @@ calendar.
   whole recipe, so North and Central American and Oceanian leagues always came last: always the
   ones without a Select Team place or in place of a game group, whatever Move up / Move down had
   set. A drag now reorders a continent's leagues only among the places they already hold.
+- 2026-10-08 (Mod Studio 0.2.0, fl26swiss, GitHub #43): **the board's season objective told a
+  club of a new Asian or South American league to win the UEFA Champions League.** The owner's
+  judges take the continent from the league's competition code, and a league of ours that plays
+  August to May keeps the UEFA code on purpose (the season-end filter needs it). Their 18 calls
+  now go through fl26swiss, which turns a UEFA answer into the AFC Champions League for a club
+  whose country is in the AFC, and into the Libertadores for CONMEBOL; Build writes each
+  country's confederation into the world file for this. The game has no objective for the
+  African, North American or Oceanian cups, so those clubs keep what the game picks. Checked in
+  game: the hook installs and the objectives meeting runs; the AFC objective itself is still to
+  be seen on a club the board expects in the continental cup.
 - 2026-10-06 (Mod Studio 0.1.9, Discord): **Leagues page: a league dragged to a new place
   disappeared** until the list was filled again (Ours and back to All). The drop moved it and the
   drag then removed the row once more. Fixed; the list is also refilled after a move.
