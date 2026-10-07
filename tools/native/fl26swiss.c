@@ -146,9 +146,11 @@ static uint32_t day_shift(uint16_t reg)
    case at 0x14158155b: days 230 and 237). A career that starts on day 212 enters the European
    competitions on day 238, after both legs, so the play-off got no matches at all, the group
    stage never filled and the Europa League never started (2026-09-23, calread: no match of
-   competition 2 on any day). Both legs move two weeks later, to 244 and 251, still a week
-   before the first league-phase matchday on 257. */
-#define PLAYOFF_SHIFT 14
+   competition 2 on any day). Both legs move 11 days later, to 241 and 248, still a week
+   before the first league-phase matchday on 257. (Until 0.2.0 14 days, to 244 and 251: 251 is
+   the national cups' first round (calendar case 6), and Slavia played Benfica and the Czech
+   cup's first leg on the same day -- rwee 07.10.) */
+#define PLAYOFF_SHIFT 11
 static volatile uint32_t g_playoff_said = 0;
 static int is_playoff(uint16_t id)
 {
@@ -1392,7 +1394,7 @@ static int any_final_kept(void)
  * and a second qualifying round (2). Round i is competition i % NQ at stage i / NQ, so rounds
  * 0..2 are the play-offs. A place of competition UCLQ, UELQ or UECLQ is a place in one of the
  * competition's rounds:
- *   - the Champions League's play-off is the shipped regulation 2 (days 244 and 251, see
+ *   - the Champions League's play-off is the shipped regulation 2 (days 241 and 248, see
  *     is_playoff), the Europa League's and the Conference League's the knockout play-offs
  *     tools/mkeuropo.py adds (188, 189, ties at id + 1024 * (k + 1)), the ones February uses
  *     again; the qualifying rounds in front of them are more copies of reg 2 the world builder
@@ -1408,8 +1410,10 @@ static int any_final_kept(void)
  *     nearest the league phase. A play-off's winners take places from the competition's direct
  *     entrants and its losers eight more in the one below: with all three, 28 / 20 / 20.
  *   - Days (QR_DAYS): the second qualifying round 220 and 225, the third 229 and 236, the
- *     play-offs 243 and 250 (the Champions League's 244 and 251), all on days no shipped
- *     competition plays. A round is filled on the days between the round before it and its first
+ *     play-offs 242 and 247 (the Champions League's 241 and 248), all on days no shipped
+ *     competition plays, and three days clear of the national cups' first round (251; until
+ *     0.2.0 243 and 250, 244 and 251, rwee 07.10.). The Europa and Conference League's second
+ *     legs stay before the Champions League's, whose end builds the league phases. A round is filled on the days between the round before it and its first
  *     leg (q_fill); the season is built on day 216, so nothing is filled before 217.
  *   - From the second season on, the rights builder fills reg 2 and its eight ties (1026 ... 8194)
  *     at the July rollover through set_clubs (from 0x14135c083 on day 181, measured 2026-10-01),
@@ -1417,7 +1421,7 @@ static int any_final_kept(void)
  *     qualifying round in front of it the sixteen are not known yet: the ties are left empty, as
  *     in a new career's first summer, and the day loop fills them.
  *   - A new career has no play-off at all: reg 2 holds its 33 data entries, the ties are empty,
- *     nothing registers it, and its progression runs on day ~251 with no match played. The day
+ *     nothing registers it, and its progression runs on day ~248 with no match played. The day
  *     loop fills, starts and registers it on the career's first days (q_fill). Nothing in the
  *     game knows 188, 189 or the qualifying rounds: the day loop does the same for them every
  *     summer.
@@ -1437,7 +1441,7 @@ static const qcup_t QCUPS[NQ] = {
 };
 static const char* const QSTAGE[3] = { "play-off", "third qualifying round", "second qualifying round" };
 /* each stage's two legs; the Champions League play-off's are reg 2's own (is_playoff) */
-static const uint32_t QR_DAYS[3][2] = { { 243, 250 }, { 229, 236 }, { 220, 225 } };
+static const uint32_t QR_DAYS[3][2] = { { 242, 247 }, { 229, 236 }, { 220, 225 } };
 static uint32_t g_q[NQR][Q_N]; static unsigned g_nq[NQR], g_nnew[NQR]; static int g_q_day = -100000, g_qmask = 0;
 static how_t g_qhow[NQR][Q_N];
 static unsigned char g_qdrawn[NQR];
@@ -1499,7 +1503,7 @@ static unsigned q_room(int mask, int i)
 /* the first leg of round i, and the first day it is filled on: after the last second leg of the
    rounds that feed it, never before the season's build on day 216 (reg 2 alone, in a new career
    that starts before it: from 205) */
-static uint32_t q_first_leg(int i) { return i ? QR_DAYS[i / NQ][0] : 244; }
+static uint32_t q_first_leg(int i) { return i ? QR_DAYS[i / NQ][0] : 230 + PLAYOFF_SHIFT; }
 static uint32_t q_fill_from(int mask, int i)
 {
   uint32_t d = 0;
