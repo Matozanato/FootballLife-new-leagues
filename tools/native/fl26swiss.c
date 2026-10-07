@@ -4847,6 +4847,12 @@ typedef int (*cont_fn)(void* club);
 static int cont_handler(void* club)
 {
   int r = ((cont_fn)(uintptr_t)(g_base + CONT_RVA))(club);
+  static int asked = 0;
+  if (asked < 3 && club) {
+    asked++;
+    logf("fl26swiss: board objective -- the owner asks the continent of club %08x: %d (%d countries known)",
+         *(uint32_t*)club, r, g_confed_n);
+  }
   if (r != 0 || !g_confed_n || !club) return r;
   unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
   void* blk = o ? *(void**)(o + 0x48) : 0;
