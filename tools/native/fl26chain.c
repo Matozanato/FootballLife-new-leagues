@@ -356,6 +356,77 @@ static int fetch_table(uint16_t id, uint32_t* out)
   return n;
 }
 
+/* Apertura/Clausura (GitHub #106, Peru and Uruguay 2026-10-07): a split whose second phase starts
+   from zero points (carry=0) leaves its total with no table at all -- "season table missing,
+   0 clubs" -- so nobody went down and nobody came up. The standings are then counted here from the
+   played matches of both phases, the way fl26swiss counts them for the continental places
+   (count_table, apclau_keep): 3 points a win, then goal difference, then goals scored. */
+#define MATCH_BASE_SITE 0x13146e8   /* lea rcx,[rax+base]: the match table's offset in the block */
+#define MATCH_CAP_SITE  0x131471b   /* cmp edi,cap: its record count (the caps patch moves both)  */
+#define MATCH_STRIDE    0x254
+#define MAX_APCLAU 4
+typedef struct { uint16_t regular, second; } apclau_t;
+static apclau_t g_apclau[MAX_APCLAU]; static int g_napclau = 0;
+
+static int apclau_table(uint16_t regular, uint32_t* out)
+{
+  uint16_t second = 0;
+  for (int i = 0; i < g_napclau; i++) if (g_apclau[i].regular == regular) second = g_apclau[i].second;
+  if (!second) return 0;
+  const unsigned char* bs = (const unsigned char*)(uintptr_t)(g_base + MATCH_BASE_SITE);
+  const unsigned char* cs = (const unsigned char*)(uintptr_t)(g_base + MATCH_CAP_SITE);
+  if (bs[0] != 0x48 || bs[1] != 0x8d || bs[2] != 0x88 || cs[0] != 0x81 || cs[1] != 0xff) {
+    logf("apclau %u+%u: the match table's walk is not where it was; no table", regular, second);
+    return 0;
+  }
+  uint32_t base = *(const uint32_t*)(bs + 3), cap = *(const uint32_t*)(cs + 2);
+  unsigned char* blk = block();
+  if (!blk || !cap || cap > 200000) return 0;
+  uint32_t club[MAX_CLUBS]; int pts[MAX_CLUBS], gd[MAX_CLUBS], gf[MAX_CLUBS], n = 0, played = 0;
+  for (uint32_t i = 0; i < cap; i++) {
+    const unsigned char* m = blk + base + (size_t)i * MATCH_STRIDE;
+    if (*(const uint16_t*)m == 0xffff || !(m[7] & 0x40)) continue;          /* empty, or not played */
+    uint16_t reg = *(const uint16_t*)(m + 4);
+    if (reg != regular && reg != second) continue;
+    uint32_t side[2] = { *(const uint32_t*)(m + 0x14), *(const uint32_t*)(m + 0x18) };
+    int goals[2] = { m[0x1c], m[0x1f] }, at[2];
+    for (int j = 0; j < 2; j++) {
+      int k = 0;
+      while (k < n && club[k] != side[j]) k++;
+      if (k == n) {
+        if (n >= MAX_CLUBS || !(side[j] >> 14)) k = -1;
+        else { club[n] = side[j]; pts[n] = gd[n] = gf[n] = 0; n++; }
+      }
+      at[j] = k;
+    }
+    if (at[0] < 0 || at[1] < 0) continue;
+    for (int j = 0; j < 2; j++) {
+      int me = goals[j], them = goals[1 - j];
+      pts[at[j]] += me > them ? 3 : me == them ? 1 : 0;
+      gd[at[j]] += me - them; gf[at[j]] += me;
+    }
+    played++;
+  }
+  /* each phase once round, or twice: n(n-1)/2 matches a phase at the least */
+  if (n < 4 || played < n * (n - 1)) {
+    logf("apclau %u+%u: %d played match(es) of %d club(s) -- not a finished season, no table", regular, second, played, n);
+    return 0;
+  }
+  for (int a = 1; a < n; a++)
+    for (int b = a; b > 0; b--) {
+      int x = b - 1, y = b;
+      if (pts[y] < pts[x] || (pts[y] == pts[x] && (gd[y] < gd[x] || (gd[y] == gd[x] && gf[y] <= gf[x])))) break;
+      uint32_t c = club[x]; club[x] = club[y]; club[y] = c;
+      int t = pts[x]; pts[x] = pts[y]; pts[y] = t;
+      t = gd[x]; gd[x] = gd[y]; gd[y] = t;
+      t = gf[x]; gf[x] = gf[y]; gf[y] = t;
+    }
+  for (int k = 0; k < n; k++) out[k] = club[k];
+  logf("apclau %u+%u: table from %d matches, %08x %d pts ... last %08x %d pts",
+       regular, second, played, club[0], pts[0], club[n - 1], pts[n - 1]);
+  return n;
+}
+
 static int standings(void* ctx, uint16_t id, uint32_t* out)
 {
   int n = fetch_standings(ctx, id, out);
@@ -374,6 +445,7 @@ void apply_pre(void* ctx)
     chain_t* ch = &g_chain[i];
     ch->seen = 0; ch->n_list_mid = ch->n_list_low = 0;
     ch->n_stand_mid = standings(ctx, ch->cfg.mid, ch->stand_mid);
+    if (ch->n_stand_mid <= 0 && ch->cfg.regular) ch->n_stand_mid = apclau_table(ch->cfg.regular, ch->stand_mid);
     ch->n_stand_low = standings(ctx, ch->cfg.low, ch->stand_low);
     logf("apply: chain %u->%u standings %d/%d", ch->cfg.mid, ch->cfg.low, ch->n_stand_mid, ch->n_stand_low);
   }
@@ -609,6 +681,16 @@ __declspec(dllexport) int fl26_chain_install(uint64_t exe_base, uint64_t cave_ad
   logf("fl26chain: hooks live (set@%llx apply@%llx), %d chain(s)%s", (unsigned long long)(exe_base + SET_RVA), (unsigned long long)(exe_base + APPLY_RVA), ncfg,
        g_chained ? ", in front of another module's hook" : "");
   return 0;
+}
+
+/* Apertura/Clausura splits: pairs {regular phase, second phase}; returns how many were taken */
+__declspec(dllexport) int fl26_chain_apclau(const uint16_t* pairs, int n)
+{
+  g_napclau = 0;
+  for (int i = 0; i < n && g_napclau < MAX_APCLAU; i++) {
+    g_apclau[g_napclau].regular = pairs[2 * i]; g_apclau[g_napclau].second = pairs[2 * i + 1]; g_napclau++;
+  }
+  return g_napclau;
 }
 
 /* the regulations the empty-list guard protects; returns how many were taken */

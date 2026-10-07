@@ -383,6 +383,12 @@ calendar.
   id: two clubs with one id, two squads of 30 on one club. Every id Build hands out now steps
   round the NewLife ones. Reproduced with the reporter's recipe (Austrian Premier Division, RB
   Salzburg and Sturm Graz swapped for new clubs); with the fix no two clubs share an id.
+- 2026-10-07 (Mod Studio 0.2.0, GitHub #106): **nobody went up or down under an Apertura/Clausura
+  league.** Its Clausura starts from zero points, so the season's total has no table at the end
+  ("season table missing, 0 clubs" for Peru and Uruguay) and fl26chain had nobody to relegate.
+  The standings are now counted from the played matches of both phases, as for the continental
+  places; half a season played gives no table. Checked without the game (test_chain_apclau.c);
+  a rollover in game is still to be seen.
 - 2026-10-07 (Mod Studio 0.2.0, GitHub #107): **a drag on the Leagues page re-sorted the Build
   order by continent.** The page groups its list by continent and wrote that order back over the
   whole recipe, so North and Central American and Oceanian leagues always came last: always the

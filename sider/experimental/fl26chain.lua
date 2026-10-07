@@ -53,6 +53,9 @@ local PROTECT = { 11, 49, 60, 61, 62, 74, 76, 93, 94, 96, 98, 100, 109, 110, 111
 -- One table per league -- id, then whatever the line gives: cid, region, country, slot, tier,
 -- above, promote, demote, clubs, legs, cup (numbers), name (text) -- in file order. nil when
 -- there is no file: the module then keeps the built-in lists above.
+-- carry=0 splits (Apertura/Clausura): {regular phase, second phase}, for the standings the
+-- total never gets (GitHub #106)
+local APCLAU = {}
 local function read_world(ctx)
   local sep = string.char(92)
   local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
@@ -61,7 +64,13 @@ local function read_world(ctx)
   local leagues, splits = {}, {}
   for line in f:lines() do
     local sid = line:match("^%s*split%s+(%d+)")
-    if sid then splits[tonumber(sid)] = tonumber(line:match("regular=(%d+)")) or 0 end
+    if sid then
+      splits[tonumber(sid)] = tonumber(line:match("regular=(%d+)")) or 0
+      local g = tonumber(line:match("groups=(%d+)"))
+      if line:match("carry=0") and g and splits[tonumber(sid)] > 0 then
+        APCLAU[#APCLAU + 1] = { splits[tonumber(sid)], g }
+      end
+    end
     local id, rest = line:match("^%s*league%s+(%d+)(.*)$")
     if id then
       local L = { id = tonumber(id) }
@@ -166,6 +175,7 @@ function m.init(ctx)
     typedef int  (*fl26_chain_protect_t)(const uint16_t*, int);
     typedef int  (*fl26_chain_cups_t)(const uint16_t*, int);
     typedef int  (*fl26_chain_cupsize_t)(const uint16_t*, int);
+    typedef int  (*fl26_chain_apclau_t)(const uint16_t*, int);
   ]])
 
   local old = ffi.new("uint32_t[1]")
@@ -239,6 +249,19 @@ function m.init(ctx)
         end
       else
         log("fl26chain: this fl26chain.dll cannot keep a cup to its league (no fl26_chain_cups) -- rebuild it")
+      end
+    end
+    if #APCLAU > 0 then
+      local pa = ffi.C.GetProcAddress(h, "fl26_chain_apclau")
+      if pa ~= nil then
+        local t = ffi.new("uint16_t[?]", 2 * #APCLAU)
+        for i, a in ipairs(APCLAU) do
+          t[2 * i - 2], t[2 * i - 1] = a[1], a[2]
+          log(string.format("fl26chain: live -- Apertura %d + Clausura %d count as one table for promotion", a[1], a[2]))
+        end
+        ffi.cast("fl26_chain_apclau_t", pa)(t, #APCLAU)
+      else
+        log("fl26chain: this fl26chain.dll cannot count an Apertura/Clausura table (no fl26_chain_apclau) -- rebuild it")
       end
     end
     if #SCUPS > 0 then
