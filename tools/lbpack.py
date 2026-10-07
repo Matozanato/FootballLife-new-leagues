@@ -97,7 +97,8 @@ def bundle(name, parts):
     stay its own) and the bundle's init calls theirs in order"""
     out = ["-- %s.lua -- built by tools/lbpack.py from %s; edit those files, not this one."
            % (name, ", ".join(p + ".lua" for p in parts)),
-           "-- Each part logs as it always did; a part whose init fails is logged and skipped.", ""]
+           "-- Each part logs as it always did. Sider's Lua has no pcall, so a part whose init raises",
+           "-- stops the ones after it -- the order puts the oldest, most tried guards first.", ""]
     for i, p in enumerate(parts):
         src = open(source(p), encoding="utf-8").read().rstrip()
         out += ["-- ==== %s.lua ====" % p, "local part%d = (function()" % i, src, "end)()", ""]
@@ -106,8 +107,7 @@ def bundle(name, parts):
             "function m.init(ctx)",
             "  for _, p in ipairs(PARTS) do",
             '    if type(p[2]) == "table" and p[2].init then',
-            "      local ok, err = pcall(p[2].init, ctx)",
-            '      if not ok then log(string.format("%s: init failed -- %s", p[1], tostring(err))) end',
+            "      p[2].init(ctx)          -- no pcall in Sider's Lua (run023, 2026-10-07)",
             "    end",
             "  end",
             "end",
