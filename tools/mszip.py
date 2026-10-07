@@ -29,9 +29,9 @@ LOCAL_PATH_LINE = re.compile(r'^\s*sys\.path\.insert\(0, r"[A-Za-z]:\\[^"]*"\)\s
 HIDDEN = ["leaguebuilder", "lbplayers", "playeredit", "lbfaces", "lbpackage", "lbassets", "lbpack", "lbstadiums",
           "mkplayers", "mksplit", "mkreshape", "mkphases", "mkuecl", "mkeuropo", "mkkits", "mkemblems",
           "mkcrests", "mkregioncats", "mkregnames", "mkcup", "mkccup", "mkcoaches", "mkcatflags", "afp",
-          "siderdir", "mktactics", "shieldcrest", "crestmatch",
+          "siderdir", "mktactics", "shieldcrest", "crestmatch", "kitpics",
           "siderroot", "cpkread", "countries", "flpaths", "caltab", "boundscan", "capstone", "py7zr",
-          "PIL.Image"]
+          "PIL.Image", "PIL.DdsImagePlugin"]
 
 CSS = """
 :root{--ink:#1d2328;--muted:#5b6670;--line:#dfe3e6;--bg:#fbfbfa;--accent:#0f6b4f;--code:#eef1f0}
