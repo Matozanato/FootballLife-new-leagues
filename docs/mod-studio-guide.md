@@ -519,8 +519,9 @@ under 10 MB. Download only the parts you want.
   clubs; unticked, it gets the clubs it has in the new version. Either way the squads come from
   the new version, and the league keeps its name, division, format, European places and cups; a
   club that stays keeps its manager and a crest you picked, and clubs of your own you put in the
-  league stay. Player changes you made on *Players* for those clubs are replaced. Then Build and
-  start a new career.
+  league stay. The squads' abilities, positions and the rest come from the new version; a face
+  you linked or a portrait you picked on *Players* stays with a player who is still at the club
+  (0.2.0, #111). Then Build and start a new career.
 - **The game's own leagues in the NewLife season** (0.1.8): with a NewLife Database open, press
   **Bring the game's leagues to this season...**. Every league of the game the release has is
   listed with what happens to it, each with a box. A club that went up or down between two
@@ -529,7 +530,9 @@ under 10 MB. Download only the parts you want.
   of the game's leagues (Leicester to League One) becomes the club that came up in its place
   (Bolton): its name, short name, crest and squad; its kit, stadium and manager stay. Every club
   of the ticked leagues gets its NewLife squad: players the game has join from their old club,
-  players it has not are added, the rest leave as free agents. The leagues keep their number of
+  players it has not are added, the rest leave as free agents. Ratings are put on the game's
+  scale, measured on the players both have, so a star lands where the game rates him (0.2.0;
+  before, the top end ran 2 to 4 higher). The leagues keep their number of
   clubs, their format and their cups. Clubs you already changed by hand (a swap, a rename, a
   club of a new league, player changes) stay as they are. Doing it again with a newer version
   replaces what the older one did; **Undo the game's leagues** takes it all back. Build and start

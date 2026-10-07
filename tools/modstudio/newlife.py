@@ -478,6 +478,27 @@ def lineup(rel, x, rows, keep=None):
     return by_key[k], E
 
 
+RELEASE_FIELDS = set(P.FIELDS) | {"name"}     # what a squad from the release sets: the rest is by hand
+
+
+def _keep_by_hand(c, mine):
+    """what the Players page set by hand (a linked face, a portrait...: fields the release does
+    not give) back on the players who are still at the club after an update: a player of the
+    game by his id, one the release adds by his name (#111, 07.10.: Update my leagues took the
+    faces people had linked)"""
+    ed = c.get("edits") or {}
+    for k, ch in mine:
+        hand = {f: v for f, v in ch.items() if f not in RELEASE_FIELDS}
+        if k in ed and (k.isdigit() and int(k) >= P.SQUAD):
+            ed[k].update(hand)                   # a player of the game: his id is the key
+            continue
+        if not ch.get("name"):
+            continue
+        m = next((x for x, e in ed.items() if P.same_name(e.get("name", ""), ch["name"])), None)
+        if m is not None:
+            ed[m].update(hand)
+
+
 def update_league(recipe, rel, x, rows, info=None, keep=None):
     """bring league x of the recipe (added from another NewLife version) to release rel, in its
     place: the release's clubs and squads for it -- the clubs the league has in rel, or x's own
@@ -520,7 +541,7 @@ def update_league(recipe, rel, x, rows, info=None, keep=None):
     pl = recipe.setdefault("players", {})
     own_vals = {j: {key: (list(x.get(key) or []) + [e] * old_n)[j] for key, e in PLACE_LISTS} for j in own}
     own_pl = {j: pl.get(P.new_key(name, j)) for j in own}
-    kept = {}
+    kept, by_hand = {}, {}
     for j, w in who.items():
         if w[0] == "o":
             continue
@@ -531,6 +552,9 @@ def update_league(recipe, rel, x, rows, info=None, keep=None):
         c = pl.get(P.new_key(name, j)) or {}
         d.update({f: c[f] for f in ("coach_portrait", "stadium") if c.get(f)})
         kept[w] = d
+        mine = [(k, ch) for k, ch in (c.get("edits") or {}).items() if set(ch) - RELEASE_FIELDS]
+        if mine:
+            by_hand[w] = mine
 
     def club_ref(r):                 # "league/place" of this league -> who, else r as it is
         lg, _s, j = r.rpartition("/") if isinstance(r, str) else ("", "", "")
@@ -594,6 +618,10 @@ def update_league(recipe, rel, x, rows, info=None, keep=None):
                 lst = list(z.get(key) or [])
                 z[key] = lst + [None if key == "club_crests" else ""] * (n - len(lst))
                 z[key][j] = v
+    for w, mine in by_hand.items():
+        j = place.get(w)
+        if j is not None:
+            _keep_by_hand(pl.get(P.new_key(got, j)) or {}, mine)
     for c, refs in cups:
         c["clubs"] = [r if not isinstance(r, tuple) else "%s/%d" % (got, place[r])
                       for r in refs if r is not None and (not isinstance(r, tuple) or r in place)]

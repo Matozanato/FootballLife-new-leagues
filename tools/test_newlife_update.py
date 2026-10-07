@@ -32,6 +32,11 @@ def main(old_dir, new_dir):
     x["club_crests"] = [None] * x["clubs"]
     x["club_crests"][0] = r"C:\my\crest.png"
     r["players"][P.new_key(name, 0)]["stadium"] = {"id": 7}
+    eds = r["players"][P.new_key(name, 0)]["edits"]
+    faced = {}                                      # #111: faces linked on the Players page stay
+    for k, ch in eds.items():
+        ch["face"] = "faces/%s" % k
+        faced[ch.get("name") or k] = ch["face"]
     r["preseason_cups"][0]["clubs"] = [P.new_key(name, 0), "First/3"]
     kept_club = str(x["newlife"]["clubs"][0])
     before = copy.deepcopy(r)
@@ -51,6 +56,11 @@ def main(old_dir, new_dir):
         assert z["club_coaches"][j] == "Coach 0", z.get("club_coaches")
         assert z["club_crests"][j] == r"C:\my\crest.png"
         assert r["players"][P.new_key(name, j)]["stadium"] == {"id": 7}
+        now = r["players"][P.new_key(name, j)]["edits"]
+        stay = [n for n in faced if any(P.same_name(e.get("name", ""), n) for e in now.values()) or n in now]
+        got_face = [n for n in stay if any(e.get("face") == faced[n] for e in now.values())]
+        assert stay and got_face == stay, (stay, got_face)
+        print("faces kept: %d of %d players who stayed" % (len(got_face), len(faced)))
         assert r["preseason_cups"][0]["clubs"] == [P.new_key(name, j), "First/3"]
     for k in range(len(z["newlife"]["clubs"])):
         assert r["players"][P.new_key(name, k)]["edits"], "a squad for every club"
