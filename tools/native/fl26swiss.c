@@ -1195,6 +1195,31 @@ static int unplayed(unsigned char* rec, unsigned char* t, uint32_t rows)
   for (uint32_t k = 0; k < rows && listed; k++) listed = *(uint32_t*)(t + k * 20) == rec_clubs(rec)[k];
   return listed;
 }
+/* keep reg's final table at the July teardown, while it still exists; 1 kept, -1 a table nobody
+   has played, 0 nothing to keep (or kept already this summer) */
+static int keep_final(uint16_t reg, int d, int ad)
+{
+  final_t* f = final_of(reg);
+  /* the first rollover of the summer has the final tables; a later one (day 216, when the new
+     season is built) already has next season's clubs in list order and must not replace it */
+  if (f && ad >= f->day && ad - f->day < 60) return 0;
+  unsigned char* rec = get_rec(reg);
+  if (!rec) return 0;
+  unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(reg);
+  uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
+  if (rows < 4 || rows > FINAL_MAX) return 0;
+  /* A new career is built on day 216 and its tables exist then, with nobody having played:
+     the clubs in list order. Kept, they stood in for last season's finish and the
+     first-season order below never ran (2026-09-27: "final tables of 31 league(s) kept on
+     day 216" in a career created that minute). A season's own build is the same rollover
+     and, as said above, never holds a final table; and a table in exactly the league's list
+     order is one nobody has played. */
+  if (d >= BUILD_DAY || unplayed(rec, t, rows)) return -1;
+  if (!f) { if (g_nfinal >= 64) return 0; f = &g_final[g_nfinal++]; f->reg = reg; }
+  f->n = (uint16_t)rows; f->day = ad;
+  for (uint32_t k = 0; k < rows; k++) f->club[k] = *(uint32_t*)(t + k * 20);
+  return 1;
+}
 /* at the July teardown: every access league's final table, while it still exists */
 static void access_capture(void)
 {
@@ -1212,26 +1237,8 @@ static void access_capture(void)
       logf("fl26swiss: access -- cup reg %u won by %08x (day %d)", (unsigned)reg, c, d);
       continue;
     }
-    final_t* f = final_of(reg);
-    /* the first rollover of the summer has the final tables; a later one (day 216, when the new
-       season is built) already has next season's clubs in list order and must not replace it */
-    if (f && ad >= f->day && ad - f->day < 60) continue;
-    unsigned char* rec = get_rec(reg);
-    if (!rec) continue;
-    unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(reg);
-    uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
-    if (rows < 4 || rows > FINAL_MAX) continue;
-    /* A new career is built on day 216 and its tables exist then, with nobody having played:
-       the clubs in list order. Kept, they stood in for last season's finish and the
-       first-season order below never ran (2026-09-27: "final tables of 31 league(s) kept on
-       day 216" in a career created that minute). A season's own build is the same rollover
-       and, as said above, never holds a final table; and a table in exactly the league's list
-       order is one nobody has played. */
-    if (d >= BUILD_DAY || unplayed(rec, t, rows)) { skipped++; continue; }
-    if (!f) { if (g_nfinal >= 64) continue; f = &g_final[g_nfinal++]; f->reg = reg; }
-    f->n = (uint16_t)rows; f->day = ad;
-    for (uint32_t k = 0; k < rows; k++) f->club[k] = *(uint32_t*)(t + k * 20);
-    got++;
+    int r = keep_final(reg, d, ad);
+    got += r > 0; skipped += r < 0;
   }
   if (got) logf("fl26swiss: access -- final tables of %d league(s) kept on day %d", got, d);
   if (skipped) logf("fl26swiss: access -- %d table(s) with no match played yet not kept (day %d)", skipped, d);
@@ -3170,6 +3177,28 @@ static int ccup_fill_one(int k, void* started)
   g_ccup_done[k] = 0;
   return 0;
 }
+/* at the July teardown: the final tables of the leagues our cups take places from, for those
+   leagues the teardown is closing (`ids`, n of them) -- a league still in its season (the Chinese
+   one, February to November) keeps going by its live table. access_capture keeps the UEFA
+   leagues' only, so the AFC Champions League took J1 and the Saudi league, played August to May
+   in a world with game seasons, by squad strength in the second summer too (run022, 2026-10-07). */
+static void ccup_keep_tables(const uint16_t* ids, int n)
+{
+  int d = today(), ad = abs_day();
+  if (d < 140 || d > 230) return;
+  for (int k = 0; k < g_nccup; k++)
+    for (unsigned i = 0; i < g_ccup[k].n; i++) {
+      uint16_t regs[2] = { g_ccup[k].erank[i] ? g_ccup[k].ereg[i] : 0, g_ccup[k].ealt[i] };
+      for (int r = 0; r < 2; r++) {
+        int closing = 0;
+        for (int j = 0; j < n && regs[r] && !closing; j++) closing = ids[j] == regs[r];
+        if (closing && keep_final(regs[r], d, ad) > 0) {
+          logf("fl26swiss: reg %u -- final table kept for cup %u (day %d)", (unsigned)regs[r],
+               (unsigned)g_ccup[k].reg, d);
+        }
+      }
+    }
+}
 /* at the July teardown, before our cups are closed: the winners the cups' <reg>:0 entries ask
    for, kept as access_capture keeps the UEFA holders' (a second teardown of the same summer
    leaves them) */
@@ -5074,6 +5103,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   int n = (int)(in->e - in->b), euro = 0, has186 = 0, has187 = 0, has1210 = 0, has1027 = 0, has1029 = 0;
   if (n + 24 > 512) return in;
   access_capture();
+  ccup_keep_tables(in->b, n);
   ccup_keep_winners();
   for (int j = 0; j < n; j++) {
     uint16_t id = in->b[j];
