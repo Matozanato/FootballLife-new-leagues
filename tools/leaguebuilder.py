@@ -3824,10 +3824,15 @@ def ensure_modules(game, order, want, log=print):
     ini, lines = ini_lines(game)
     # a module 0.2.0 bundled (fl26nullguard ... -> fl26guards): its own line goes off, or the
     # fix would be applied twice and the second time refuse the already patched bytes
+    # only when the bundle is loaded too: Switch on hands in the world's modules alone, and turned
+    # the guards off with no fl26guards line in the file (07.10., the modpack world)
     retired, gone = retired_modules(), []
+    have = set(want) | {module_of(l)[0].replace("/", "\\").rpartition("\\")[2]
+                        for l in lines if module_of(l)[0] and module_of(l)[1]}
     for i, l in enumerate(lines):
         m, live = module_of(l)
-        if live and m and m.replace("/", "\\").rpartition("\\")[2] in retired:
+        base = m.replace("/", "\\").rpartition("\\")[2] if m else None
+        if live and base in retired and retired[base] in have:
             lines[i] = ";" + l.strip()
             gone.append(m)
     fixed, plain = [], {module_of(l)[0] for l in lines}
