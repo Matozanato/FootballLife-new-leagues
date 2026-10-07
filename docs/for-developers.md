@@ -1,5 +1,7 @@
 # For developers
 
+Making your own version of Mod Studio: see [forking.md](forking.md).
+
 ## FL26 Mod Studio and the world file
 
 The modules read which leagues a world has from `SiderAddons\modules\fl26world.txt`, written

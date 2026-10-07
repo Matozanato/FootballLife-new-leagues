@@ -655,8 +655,12 @@ patches/            the patch set as JSON plus the layout tables the generator r
 docs/               mod-studio-guide (en/hr/es/fr), mod-studio (how it works, package format),
                     faq, how-to, beginners-guide, step-by-step, install, build-your-world,
                     testing-guide, known-issues, limits, how-it-works, for-developers,
-                    league-phase-swiss-decode, player-record
+                    forking, league-phase-swiss-decode, player-record
 ```
+
+**Want your own version?** Mod Studio is MIT licensed: fork it and change what you like.
+[docs/forking.md](docs/forking.md) is the map of the code, how to run and build it, and how
+to add a page, a recipe key or a module.
 
 ## Support
 
