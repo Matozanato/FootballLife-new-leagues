@@ -3234,7 +3234,7 @@ SHIPPED_REGIONS = [                       # (region, name, confederation); None 
     (7, "Netherlands", 2), (6, "Portugal", 2), (9, "Russia", 2), (15, "Scotland", 2),
     (4, "Spain", 2), (10, "Switzerland", 2), (27, "Turkey", 2), (22, None, 2),
     (17, "Argentina", 4), (16, "Brazil", 4), (18, "Chile", 4), (19, "Colombia", 4), (23, None, 4),
-    (21, "China", 3), (28, "Thailand", 3), (24, None, 3),
+    (21, "China", 3), (28, "Saudi Arabia", 3), (24, None, 3),
     (25, None, 9),
 ]
 CONTINENT = {2: 2, 3: 3, 4: 4, 6: 4, 7: 3, 5: 5}   # confederation -> block: CONCACAF with the
@@ -3251,14 +3251,14 @@ CONTINENT = {2: 2, 3: 3, 4: 4, 6: 4, 7: 3, 5: 5}   # confederation -> block: CON
 # (Not "league_order": that is the Leagues page's drag order of Mod Studio's own list since 0.1.8,
 # a list of league keys -- read as country names it matched none and reordered Kick Off anyway.)
 # The game's league slots in the Kick Off list (SHIPPED_SLOT's) and their countries; Germany,
-# the USA, Japan and Saudi Arabia have no region of their own in Select Team (they sit in the
-# "other" groups), so they move only in Kick Off.
+# the USA and Japan have no region of their own in Select Team (they sit in the "other" groups),
+# so they move only in Kick Off. Saudi Arabia has Thailand's old region 28 (Discord, LaraCroft).
 SLOT_COUNTRY = {7: "England", 50: "England", 8: "France", 52: "France", 9: "Italy", 53: "Italy",
                 10: "Netherlands", 11: "Spain", 51: "Spain", 12: "Portugal", 13: "Brazil", 122: "Brazil",
                 14: "Argentina", 15: "Chile", 16: "Germany", 17: "Usa", 18: "Japan", 88: "Belgium",
                 91: "Russia", 94: "Switzerland", 96: "Turkey", 99: "Colombia", 102: "China",
                 105: "Denmark", 114: "Scotland", 119: "Saudi Arabia"}
-OTHER_CONFED = {"Germany": 2, "Usa": 6, "Japan": 3, "Saudi Arabia": 3}
+OTHER_CONFED = {"Germany": 2, "Usa": 6, "Japan": 3}
 
 
 def order_countries(pl, base, confed):

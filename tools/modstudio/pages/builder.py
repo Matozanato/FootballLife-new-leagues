@@ -1876,7 +1876,7 @@ class LeagueOrderDialog(Dialog):
         self.v.insertWidget(0, hint(_("The order of the countries in Master League's Select Team and in the "
                                       "Kick Off / Edit team list. A country's leagues stay together, top division "
                                       "first. The club competitions, the \"Other\" groups and Classic Teams come "
-                                      "after the countries. Germany, the USA, Japan and Saudi Arabia are in the "
+                                      "after the countries. Germany, the USA and Japan are in the "
                                       "\"Other\" groups of Select Team, so they move only in Kick Off. Build the "
                                       "world again to use the new order.")))
         self.mode = QComboBox()
