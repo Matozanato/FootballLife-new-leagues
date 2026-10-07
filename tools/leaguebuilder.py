@@ -603,7 +603,7 @@ def has_edits(r):
                 or r.get("preseason_cups") or r.get("ccup_names") or r.get("ccup_logos")
                 or any((r.get("europe_first") or {}).values())
                 or r.get("uecl_name") or r.get("uecl_logo") or r.get("caf_super_cup_logo")
-                or r.get("saudi_august") or r.get("game_seasons") or r.get("editable_kits") or r.get("league_order")) \
+                or r.get("saudi_august") or r.get("game_seasons") or r.get("editable_kits") or r.get("country_order")) \
         or r.get("uecl") is False or r.get("caf_super_cup") is False
 
 
@@ -1468,9 +1468,10 @@ def plan(recipe, base):
                              " for now -- with two, the game mixes up their phases and neither plays"
                              % (p["name"], q["name"]))
     for p in out:
-        if not p.get("calendar"):
+        if not (p.get("calendar") or p.get("follows_calendar")):
             continue
-        # the whole country plays February to December: its cups and phases have European dates
+        # the whole country plays February to December: its cups and phases have European dates.
+        # A division under the game's own Feb-Dec league (Colombia's) too (Discord, aaron 07.10.)
         bad = [w for q in out if q["region"] == p["region"]
                for w, on in (("a split (%s)" % q["name"], q.get("split") and not q.get("apertura")),
                              ("Apertura/Clausura (%s)" % q["name"], q.get("apertura")),
@@ -1548,7 +1549,7 @@ def plan(recipe, base):
             "europe_first": europe_first(recipe, by_name),
             "game_seasons": august_countries(recipe),
             "editable_kits": bool(recipe.get("editable_kits")),
-            "league_order": recipe.get("league_order") or None}
+            "country_order": recipe.get("country_order") or None}
 
 
 def others_plan(groups, base, cty):
@@ -3240,13 +3241,15 @@ CONTINENT = {2: 2, 3: 3, 4: 4, 6: 4, 7: 3, 5: 5}   # confederation -> block: CON
                                                     # Americas, OFC with Asia, CAF a block of its own
 
 
-# The recipe's "league_order" (Mod Studio's League order, 0.2.0): left out, the countries go by
+# The recipe's "country_order" (Mod Studio's League order, 0.2.0): left out, the countries go by
 # continent as above; "az", every country A-Z; a list of country names, that order (a country
 # it does not name goes after them, by continent). The countries then come first as one run in
 # that order, and the club competitions, the "other" groups and Classic Teams after them in
 # their own order -- in Select Team (the `order` line, the club competitions still at the top)
 # and in the Kick Off / Edit list (the `kickorder` line, fl26comptab), where a country's
 # leagues stay together in the order they had.
+# (Not "league_order": that is the Leagues page's drag order of Mod Studio's own list since 0.1.8,
+# a list of league keys -- read as country names it matched none and reordered Kick Off anyway.)
 # The game's league slots in the Kick Off list (SHIPPED_SLOT's) and their countries; Germany,
 # the USA, Japan and Saudi Arabia have no region of their own in Select Team (they sit in the
 # "other" groups), so they move only in Kick Off.
@@ -3277,8 +3280,8 @@ def order_countries(pl, base, confed):
 
 
 def country_rank(pl, base, confed):
-    """{country name: place} for the recipe's league_order, None for the default"""
-    want = pl.get("league_order")
+    """{country name: place} for the recipe's country_order, None for the default"""
+    want = pl.get("country_order")
     if not want:
         return None
     every = [nm for nm, _c in order_countries(pl, base, confed)]
@@ -3303,7 +3306,7 @@ def reorder_named(seq, name_of, rank):
 
 def kickorder_lines(pl, base, confed):
     """the world file's `kickorder <regulation>:<place>,...` line (fl26comptab): the Kick Off /
-    Edit list's leagues by country, when the recipe has a league_order"""
+    Edit list's leagues by country, when the recipe has a country_order"""
     rank = country_rank(pl, base, confed)
     if rank is None:
         return []
@@ -3323,7 +3326,7 @@ def kickorder_lines(pl, base, confed):
 
 def order_lines(pl, base, confed):
     """the world file's `order` line: the Select Team list's region order with our countries
-    in it (see SHIPPED_REGIONS), in the recipe's league_order when it has one"""
+    in it (see SHIPPED_REGIONS), in the recipe's country_order when it has one"""
     names = dict((fid, nm) for nm, fid in country_ids(base))
     shipped = {r for r, _, _ in SHIPPED_REGIONS}
     rank = country_rank(pl, base, confed)

@@ -736,6 +736,12 @@ class LeagueDialog(Dialog):
             L["league_cup_name"] = self.lcup_name.text().strip()
         else:
             L.pop("league_cup_name", None)
+        if self.above.currentData() is not None and (L.get("split") or L.get("apertura")) \
+                and self.follows_calendar(self.above.currentData(), set()):
+            # a division under a February-December league plays that season (Discord, aaron 07.10.)
+            error(self, "League", _("This division plays February to December with the league above it, and "
+                                    "a league playing February to December has no split or Apertura/Clausura yet."))
+            return
         if self.season.currentData() == "calendar" and self.above.currentData() is None \
                 and not self.exhibition.isChecked():
             if L.get("split") or L.get("apertura") or L.get("cup") or L.get("league_cup"):
@@ -1854,7 +1860,7 @@ class UefaRankDialog(Dialog):
 
 class LeagueOrderDialog(Dialog):
     """the order of the countries in Select Team and the Kick Off list (the recipe's
-    league_order, leaguebuilder.country_rank): by continent as the game has it, A-Z, or the
+    country_order, leaguebuilder.country_rank): by continent as the game has it, A-Z, or the
     user's own"""
 
     MODES = [("continent", "By continent (the game's order)"), ("az", "Every country A-Z"),
@@ -1865,7 +1871,7 @@ class LeagueOrderDialog(Dialog):
         self.project = project
         r = project.recipe
         self.every = [nm for nm, _c in B.order_countries(r, project.base, B.confederations(project.base))]
-        want = r.get("league_order")
+        want = r.get("country_order")
         mode = "az" if want == "az" else "custom" if isinstance(want, list) and want else "continent"
         self.v.insertWidget(0, hint(_("The order of the countries in Master League's Select Team and in the "
                                       "Kick Off / Edit team list. A country's leagues stay together, top division "
@@ -2405,9 +2411,9 @@ class NewLeagues(BuilderPage):
         d = LeagueOrderDialog(self, self.project)
         if d.finish():
             if d.result:
-                self.project.recipe["league_order"] = d.result
+                self.project.recipe["country_order"] = d.result
             else:
-                self.project.recipe.pop("league_order", None)
+                self.project.recipe.pop("country_order", None)
             self.project.touch()
 
     def game_seasons(self):
