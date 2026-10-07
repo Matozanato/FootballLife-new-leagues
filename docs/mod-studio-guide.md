@@ -103,7 +103,7 @@ in the wrong place. Some modules need a Sider setting (for example Goal Song Ser
 
 Modules of the League Builder keep the order they were installed in.
 
-Since 0.2.0 the eleven small crash guards go in as two files, `fl26guards.lua` (the eight `fl26nullguard` ones) and `fl26lateguards.lua` (`fl26superguard`, `fl26resultsguard`, `fl26ctlguard`), so the list is shorter. sider.log still names each guard on its own line. Build switches the old single lines off and keeps the old files in `modulesefore-builder-<n>`; there is nothing to do by hand.
+Since 0.2.0 the twelve small crash guards go in as two files, `fl26guards.lua` (the eight `fl26nullguard` ones) and `fl26lateguards.lua` (`fl26superguard`, `fl26resultsguard`, `fl26ctlguard`, `fl26kitguard`), so the list is shorter. sider.log still names each guard on its own line. Build switches the old single lines off and keeps the old files in `modulesefore-builder-<n>`; there is nothing to do by hand.
 
 **Switching the regens off** (0.2.0): `fl26regen` gives regens new names, a new potential and a
 face of the regen face pack. To play without it, untick **Hide the League Builder's own modules

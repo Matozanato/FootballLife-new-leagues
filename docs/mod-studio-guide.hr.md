@@ -101,7 +101,7 @@ kaže koju.
 
 Moduli League Buildera ostaju redom kojim su postavljeni.
 
-Od 0.2.0 jedanaest malih zaštita od pada ide kao dvije datoteke, `fl26guards.lua` (osam `fl26nullguard` zaštita) i `fl26lateguards.lua` (`fl26superguard`, `fl26resultsguard`, `fl26ctlguard`), pa je popis kraći. sider.log i dalje svaku zaštitu piše u svom retku. Build stare pojedinačne retke isključi, a stare datoteke spremi u `modulesefore-builder-<n>`; ručno ne treba ništa.
+Od 0.2.0 dvanaest malih zaštita od pada ide kao dvije datoteke, `fl26guards.lua` (osam `fl26nullguard` zaštita) i `fl26lateguards.lua` (`fl26superguard`, `fl26resultsguard`, `fl26ctlguard`, `fl26kitguard`), pa je popis kraći. sider.log i dalje svaku zaštitu piše u svom retku. Build stare pojedinačne retke isključi, a stare datoteke spremi u `modulesefore-builder-<n>`; ručno ne treba ništa.
 
 **Isključivanje regena** (0.2.0): `fl26regen` daje regenima nova imena, novi potencijal i facu
 iz paketa lica za regene. Za igru bez njega makni kvačicu s **Sakrij module samog League

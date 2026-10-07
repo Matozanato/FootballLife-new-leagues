@@ -49,7 +49,7 @@ ORDER = [
 BUNDLES = {
     "fl26guards": ["fl26nullguard", "fl26nullguard2", "fl26nullguard4", "fl26nullguard5",
                    "fl26nullguard7", "fl26nullguard8", "fl26nullguard9", "fl26nullguard10"],
-    "fl26lateguards": ["fl26superguard", "fl26resultsguard", "fl26ctlguard"],
+    "fl26lateguards": ["fl26superguard", "fl26resultsguard", "fl26ctlguard", "fl26kitguard"],
 }
 PER_WORLD = {"fl26regions", "fl26regnames"}
 DLLS = {"fl26join": "build-join.sh", "fl26chain": "build-chain.sh",

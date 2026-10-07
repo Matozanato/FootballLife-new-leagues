@@ -494,6 +494,14 @@ kit, and Kit Server swaps it for the one your `map.txt` names (the club id from 
 `71579, ISL\Arema`). The two do not go together: a kit from Kit Server, or a kit you change in
 Edit mode.
 
+### Every match crashes with Kit Server and Kits you can edit in the game
+
+sider.log says `[string "common\kits.lua"]:1143: attempt to index local 'p_home' (a nil value)`.
+Fixed in 0.2.0 by `fl26kitguard` (in `fl26lateguards.lua`): Kit Server picks the goalkeepers'
+kits at every kick-off from the shirt colours of the outfield kits, and a new club with an
+editable kit has no kit of the game to read them from. The guard hands it a neutral grey for
+that pick only, so the match starts. Kit Server still dresses no such club (see above).
+
 ### Only my new divisions play the FA Cup
 
 Fixed in 0.1.6. The game fills a country's cup from the first league of the country it finds,

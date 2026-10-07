@@ -112,7 +112,7 @@ exemple Goal Song Server a besoin de `match-stats.enabled = 1`) ; le programme d
 
 Les modules du League Builder gardent l'ordre dans lequel ils ont été installés.
 
-Depuis 0.2.0 les onze petites protections contre les plantages arrivent en deux fichiers, `fl26guards.lua` (les huit `fl26nullguard`) et `fl26lateguards.lua` (`fl26superguard`, `fl26resultsguard`, `fl26ctlguard`), la liste est donc plus courte. sider.log nomme toujours chaque protection sur sa propre ligne. Le Build désactive les anciennes lignes séparées et garde les anciens fichiers dans `modulesefore-builder-<n>` ; rien à faire à la main.
+Depuis 0.2.0 les douze petites protections contre les plantages arrivent en deux fichiers, `fl26guards.lua` (les huit `fl26nullguard`) et `fl26lateguards.lua` (`fl26superguard`, `fl26resultsguard`, `fl26ctlguard`, `fl26kitguard`), la liste est donc plus courte. sider.log nomme toujours chaque protection sur sa propre ligne. Le Build désactive les anciennes lignes séparées et garde les anciens fichiers dans `modulesefore-builder-<n>` ; rien à faire à la main.
 
 **Désactiver les regens** (0.2.0) : `fl26regen` donne aux regens de nouveaux noms, un nouveau
 potentiel et un visage du pack de visages des regens. Pour jouer sans lui, décochez **Masquer
