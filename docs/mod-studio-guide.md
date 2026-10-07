@@ -428,6 +428,13 @@ has no section for them) after Asia.
 > page, on by default) has the winners of the two CAF cups meet once in late July, from a
 > career's second season on.
 
+> **Country cup draw** (Build page) decides how the national cups of your leagues are drawn.
+> *Seeded* (the default): the top division's clubs get the byes and the later rounds, are spread
+> evenly over both halves of the bracket, and meet the lower leagues' clubs rather than each
+> other in the early rounds. *Random*: a blind draw. *Off*: the game fills the bracket in list
+> order, which puts every top club on one side. In the world file it is the line
+> `cupdraw seeded|random|off`; `cupdraw <cup regulation> seeded|random|off` sets one cup.
+
 > **Saves belong to a world.** A career saved with one world on needs that same world to load.
 
 **File → Save recipe** stores everything in a `.json` file; **Open recipe** brings it back.

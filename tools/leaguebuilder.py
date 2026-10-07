@@ -1549,7 +1549,22 @@ def plan(recipe, base):
             "europe_first": europe_first(recipe, by_name),
             "game_seasons": august_countries(recipe),
             "editable_kits": bool(recipe.get("editable_kits")),
-            "country_order": recipe.get("country_order") or None}
+            "country_order": recipe.get("country_order") or None,
+            "cup_draw": cup_draw(recipe)}
+
+
+CUP_DRAWS = ("seeded", "random", "off")
+
+
+def cup_draw(recipe):
+    """how the country cups are drawn: "seeded" (the default) puts the top division's clubs into
+    the later rounds and spreads them over both halves, so they meet the lower leagues' clubs
+    and not each other early; "random" draws the bracket blind; "off" leaves it as the game
+    fills it, in list order -- every top club on one side (in game, 07.10.)"""
+    v = (recipe.get("cup_draw") or "seeded").strip().lower()
+    if v not in CUP_DRAWS:
+        raise BuildError("cup_draw %r: one of %s" % (v, ", ".join(CUP_DRAWS)))
+    return v
 
 
 def others_plan(groups, base, cty):
@@ -3054,7 +3069,8 @@ def build(pl, base, game, replace=False, log=print):
                           ccups + dates_lines(pl, db) + season_lines(pl, db) + july_lines(pl, base) + first_lines(pl)
                           + order_lines(pl, base, confed)
                           + kickorder_lines(pl, base, confed)
-                          + (["nopool " + " ".join(str(t) for t in nopool)] if nopool else []) + newfaces,
+                          + (["nopool " + " ".join(str(t) for t in nopool)] if nopool else []) + newfaces
+                          + ["cupdraw %s" % pl.get("cup_draw", "seeded")],
                           qlines)
     json.dump(pl, open(os.path.join(tmp, "leaguebuilder-plan.json"), "w", encoding="utf-8"), indent=1)
 
@@ -4012,10 +4028,46 @@ def switch_on(world, game, log=print):
     if os.path.isdir(mods):
         import lbpack
         ensure_modules(game, lbpack.ORDER, [f[:-4] for f in os.listdir(mods) if f.endswith(".lua")], log)
+    commonlib_leagues(game, world, wf, log)
     missing = modules_missing(game)
     if missing:
         log("NOTE: sider.ini does not load %s -- those parts of the world will not work"
             % ", ".join(missing))
+
+
+COMMONLIB_TAG = "-- FL26 world"
+
+
+def commonlib_leagues(game, world, wf, log=print):
+    """the world's leagues into lib\\CommonLib.lua's playable league list. Scoreboard, menu and
+    ball servers pick a Kick Off match's competition only when both clubs are of one league on
+    that list, and it knows the game's leagues alone: a Kick Off between two clubs of a new league
+    got the exhibition scoreboard and menu (in game, 07.10.). One line of ours, replaced on every
+    Switch on; nothing else in the file is touched."""
+    path = os.path.join(siderdir.find(game), "modules", "lib", "CommonLib.lua")
+    if not os.path.exists(path):
+        return
+    try:
+        cids = sorted({int(L["cid"]) for L in fl26world.read_world(wf)[1] if L.get("cid")})
+    except Exception as e:                       # an old world file: leave the list as it is
+        log("CommonLib: world file not read (%s), playable list left as it is" % e)
+        return
+    text = open(path, encoding="utf-8", errors="replace", newline="").read()
+    m = re.search(r"local\s+playable_league_comp_ids\s*=\s*\{(.*?)\n(\s*)\}", text, re.S)
+    if not m:
+        log("CommonLib: no playable_league_comp_ids list found, left as it is")
+        return
+    nl = "\r\n" if "\r\n" in text else "\n"
+    body = [l for l in m.group(1).split("\n") if COMMONLIB_TAG not in l]
+    if cids:
+        body.append("                             %s, %s %s (Mod Studio, Switch on)%s"
+                    % (", ".join(map(str, cids)), COMMONLIB_TAG, world, "\r" if nl == "\r\n" else ""))
+    new = text[:m.start(1)] + "\n".join(body) + text[m.end(1):]
+    if new != text:
+        if not os.path.exists(path + ".before-builder"):
+            shutil.copy2(path, path + ".before-builder")
+        open(path, "w", encoding="utf-8", newline="").write(new)
+    log("CommonLib: %d league(s) of %s in the Kick Off league list" % (len(cids), world))
 
 
 def modules_missing(game):

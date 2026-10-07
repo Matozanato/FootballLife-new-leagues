@@ -3574,6 +3574,252 @@ static int ko_bracket(uint16_t reg, uint32_t kind, const char* name)
   return 1;
 }
 
+/* ---- a country cup's draw: seeds meet unseeded clubs ----
+ *
+ * The game fills a cup's bracket strictly in the order of its entry list, top to bottom, and the
+ * list runs from the top division down: in a 24-club cup of 10 + 14 clubs every group of three
+ * (the club let through to the second round, then the two of a first-round tie) took the next
+ * three clubs of the list, so the whole top division sat in one half and the other half was the
+ * second division alone (in game, 07.10.: "the left side of the cup draw is far too strong").
+ *
+ * A cup's rounds are its fixture records (fixfind, one per kind); measured on the HNL cup the same
+ * day, a 24-club cup is a first round of 8 ties (both clubs known), a second round of 8 whose home
+ * side is a club let through and whose away side is a winner of the first round (0x3fffff until
+ * then), then the quarter-finals. Once the game has made them and before a ball is kicked, this
+ * hands the known places out again: the strongest clubs get the places furthest on (the ones let
+ * through), and every tie of two known clubs is one of the next best against one of the rest, the
+ * weaker club at home, both picked at random. Strength is the division first (the world's leagues
+ * of the cup, top down), then the squad (club_strength). Mode 2 draws every place at random; 0
+ * leaves the game's order. A slot's two clubs and its match records (+0x14 home, +0x18 away, the
+ * second leg the other way round) are all that is written, as ko_bracket does. */
+#define CD_MAX     32                 /* cups */
+#define CD_TIERS   6
+#define CD_CLUBS   128
+typedef struct { uint16_t reg, mode, ntier, tier[CD_TIERS]; uint32_t kmask, done_key; } cupdraw_t;
+static cupdraw_t g_cd[CD_MAX];
+static int g_ncd;
+
+/* the world's cups: n entries of reg, mode (0 off, 1 seeded, 2 random), k, then k league regs, the
+   top division first; returns how many were taken */
+__declspec(dllexport) int fl26_swiss_cupdraw(const uint16_t* v, int n)
+{
+  g_ncd = 0;
+  for (int i = 0, q = 0; i < n && g_ncd < CD_MAX; i++) {
+    cupdraw_t* c = &g_cd[g_ncd];
+    c->reg = v[q]; c->mode = v[q + 1]; c->ntier = v[q + 2]; q += 3;
+    for (int k = 0; k < c->ntier; k++, q++) if (k < CD_TIERS) c->tier[k] = v[q];
+    if (c->ntier > CD_TIERS) c->ntier = CD_TIERS;
+    c->kmask = 0; c->done_key = 0;
+    if (c->reg && c->mode) g_ncd++;
+  }
+  logf("fl26swiss: %d country cup draw(s) taken", g_ncd);
+  return g_ncd;
+}
+
+static uint32_t cd_rng;
+static uint32_t cd_rand(uint32_t n)
+{
+  cd_rng ^= cd_rng << 13; cd_rng ^= cd_rng >> 17; cd_rng ^= cd_rng << 5;
+  return n ? cd_rng % n : 0;
+}
+static void cd_shuffle(uint32_t* a, int n)
+{
+  for (int i = n - 1; i > 0; i--) { int j = (int)cd_rand((uint32_t)i + 1); uint32_t t = a[i]; a[i] = a[j]; a[j] = t; }
+}
+
+typedef struct { uint32_t* sl; uint16_t legs[2]; int round, both, side, slot, nslots; } cd_place_t;
+
+/* the slot's place in the bracket, read from the final down: bit-reversed, so slots taken in this
+   order alternate halves, then quarters ... (0 4 2 6 1 5 3 7 of eight) */
+static int cd_bitrev(int s, int n)
+{
+  int bits = 0, r = 0;
+  while ((1 << bits) < n) bits++;
+  for (int i = 0; i < bits; i++) if (s >> i & 1) r |= 1 << (bits - 1 - i);
+  return r;
+}
+
+/* hand clubs[0..n) (the strongest first) to the places idx[0..n) so the strongest are spread over
+   the halves and quarters of the bracket: the places in bit-reversed slot order (after a random
+   flip of the slot bits, so it is not always the same corner), the clubs shuffled only among
+   clubs of the same division. In a 24-club cup the two top-division clubs left for the first
+   round went to the same half when the clubs were simply shuffled (in game, 07.10.). */
+static void cd_deal(const cd_place_t* pl, const int* idx, int n, uint32_t* clubs, const int* tiers, uint32_t* want)
+{
+  int ord[CD_CLUBS], ns = n ? pl[idx[0]].nslots : 1, bits = 0;
+  while ((1 << bits) < ns) bits++;
+  int flip = (int)cd_rand(1u << bits);
+  for (int i = 0; i < n; i++) ord[i] = idx[i];
+  for (int i = 1; i < n; i++)
+    for (int j = i; j > 0 && cd_bitrev(pl[ord[j - 1]].slot ^ flip, ns) > cd_bitrev(pl[ord[j]].slot ^ flip, ns); j--) {
+      int t = ord[j]; ord[j] = ord[j - 1]; ord[j - 1] = t;
+    }
+  for (int a = 0; a < n;) {
+    int b = a;
+    while (b < n && tiers[b] == tiers[a]) b++;
+    cd_shuffle(clubs + a, b - a);
+    a = b;
+  }
+  for (int i = 0; i < n; i++) want[ord[i]] = clubs[i];
+}
+
+/* 1 = drawn now, 0 = nothing to do (not made yet, or under way), -1 = done for the season */
+static int cup_draw(cupdraw_t* c)
+{
+  unsigned char* rounds[16]; int kinds[16], nr = 0;
+  for (int pass = c->kmask ? 0 : 1; pass < 2 && !nr; pass++) {   /* the kinds found before, else all */
+    uint32_t mask = pass ? 0xffffffffu : c->kmask, found = 0;
+    for (uint32_t kind = 0x20; kind < 0x40 && nr < 16; kind++) {
+      if (!(mask >> (kind - 0x20) & 1)) continue;
+      unsigned char* r = ko_round(c->reg, kind);
+      if (!r || *(uint16_t*)r != c->reg || ko_slots(r) < 1 || ko_slots(r) > 16) continue;
+      int dup = 0;
+      for (int i = 0; i < nr; i++) dup |= rounds[i] == r;
+      if (!dup) { rounds[nr] = r; kinds[nr] = (int)kind; nr++; found |= 1u << (kind - 0x20); }
+    }
+    if (pass == 0 && found != c->kmask) nr = 0;  /* the cup changed shape: look at every kind */
+    if (nr) c->kmask = found;
+  }
+  if (!nr) return 0;
+  /* this season's cup: its first round's first match; once handled it is left alone */
+  uint32_t ckey = ((uint32_t)*(uint16_t*)(ko_slot(rounds[0], 0) + 2) << 16) ^ (uint32_t)(uintptr_t)rounds[0];
+  if (ckey == c->done_key) return 0;
+  cd_place_t pl[CD_CLUBS]; int np = 0;
+  uint32_t club[CD_CLUBS]; int nc = 0;
+  for (int i = 0; i < nr; i++)
+    for (int s = 0; s < ko_slots(rounds[i]); s++) {
+      uint32_t* sl = ko_slot(rounds[i], s);
+      int k0 = (sl[0] & KO_TBD) != KO_TBD, k1 = (sl[1] & KO_TBD) != KO_TBD;
+      if (!k0 && !k1) continue;
+      uint16_t* ids = (uint16_t*)(sl + 2);
+      for (int l = 0; l < 2; l++) {               /* a tie already played: the cup is under way */
+        if (ids[l] == 0xffff) continue;
+        unsigned char* m = ko_match(ids[l]);
+        if (m && (m[7] & 0x40)) { c->done_key = ckey; return -1; }
+      }
+      for (int side = 0; side < 2; side++) {
+        if (!(side ? k1 : k0) || np >= CD_CLUBS) continue;
+        pl[np].sl = sl; pl[np].legs[0] = ids[0]; pl[np].legs[1] = ids[1];
+        pl[np].round = i; pl[np].both = k0 && k1; pl[np].side = side;
+        pl[np].slot = s; pl[np].nslots = ko_slots(rounds[i]); np++;
+        club[nc++] = sl[side];
+      }
+    }
+  if (nc < 4) return 0;
+  /* the order of strength: division, then squad */
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  void* blk = o ? *(void**)(o + 0x48) : 0;
+  int key[CD_CLUBS], tier[CD_CLUBS], ntiers_seen = 0, seen[CD_TIERS + 1] = { 0 };
+  for (int k = 0; k < nc; k++) {
+    int t = c->ntier;
+    for (int i = 0; i < c->ntier; i++) if (in_league(c->tier[i], club[k])) { t = i; break; }
+    tier[k] = t;
+    if (!seen[t]++) ntiers_seen++;
+    key[k] = t * 100000 - (blk ? club_strength(blk, club[k]) : 0);
+  }
+  /* already drawn by us (a season loaded again): every place let through holds a club of a
+     division no lower than any first-round club's, and in every tie the home club's division is
+     no higher than the away club's. Only worth asking when the cup mixes divisions. */
+  if (c->mode == 1 && ntiers_seen > 1) {
+    int ok = 1, worst_single = -1, best_pair = 1 << 30;
+    for (int k = 0; k < np; k++) {
+      if (pl[k].both) { if (tier[k] < best_pair) best_pair = tier[k]; }
+      else if (tier[k] > worst_single) worst_single = tier[k];
+      if (pl[k].both && pl[k].side == 0 && k + 1 < np && pl[k + 1].sl == pl[k].sl && tier[k] < tier[k + 1]) ok = 0;
+    }
+    int max_away = -1, min_home = 1 << 30;
+    for (int k = 0; k < np; k++) if (pl[k].both) {
+      if (pl[k].side) { if (tier[k] > max_away) max_away = tier[k]; }
+      else if (tier[k] < min_home) min_home = tier[k];
+    }
+    if (worst_single > best_pair || max_away > min_home) ok = 0;
+    if (ok) { c->done_key = ckey; return -1; }
+  }
+  /* the same draw every time for the same cup and season */
+  cd_rng = 0x9e3779b9u ^ ((uint32_t)c->reg << 16) ^ (uint32_t)pl[0].legs[0] * 2654435761u ^ (uint32_t)((abs_day() + 183) / 365);
+  if (!cd_rng) cd_rng = 1;
+  uint32_t order[CD_CLUBS]; int ord_key[CD_CLUBS], ord_tier[CD_CLUBS];
+  for (int k = 0; k < nc; k++) { order[k] = club[k]; ord_key[k] = key[k]; ord_tier[k] = tier[k]; }
+  for (int k = 1; k < nc; k++)                    /* stable: the strongest first */
+    for (int j = k; j > 0 && ord_key[j - 1] > ord_key[j]; j--) {
+      int t = ord_key[j]; ord_key[j] = ord_key[j - 1]; ord_key[j - 1] = t;
+      t = ord_tier[j]; ord_tier[j] = ord_tier[j - 1]; ord_tier[j - 1] = t;
+      uint32_t u = order[j]; order[j] = order[j - 1]; order[j - 1] = u;
+    }
+  uint32_t want[CD_CLUBS];
+  if (c->mode == 2) {
+    cd_shuffle(order, nc);
+    for (int k = 0; k < np; k++) want[k] = order[k];
+  } else {
+    int next = 0;
+    for (int r = nr - 1; r >= 0; r--) {
+      /* places let through in this round: the next best clubs, spread over the bracket */
+      int idx[CD_CLUBS], n1 = 0;
+      for (int k = 0; k < np; k++) if (pl[k].round == r && !pl[k].both) idx[n1++] = k;
+      if (n1) {
+        cd_deal(pl, idx, n1, order + next, ord_tier + next, want);
+        next += n1;
+      }
+      /* ties of two known clubs: one of the next best (away) against one of the rest (home) */
+      int home[CD_CLUBS], away[CD_CLUBS], nt = 0;
+      for (int k = 0; k < np; k++)
+        if (pl[k].round == r && pl[k].both && pl[k].side == 0 && k + 1 < np && pl[k + 1].sl == pl[k].sl) {
+          home[nt] = k; away[nt] = k + 1; nt++;
+        }
+      if (nt) {
+        cd_deal(pl, away, nt, order + next, ord_tier + next, want);
+        cd_deal(pl, home, nt, order + next + nt, ord_tier + next + nt, want);
+        next += 2 * nt;
+      }
+    }
+    if (next != np) { c->done_key = ckey; return -1; }   /* a shape this does not know: leave it */
+  }
+  int moved = 0;
+  for (int k = 0; k < np; k++) if ((want[k] & KO_TBD) != (club[k] & KO_TBD)) moved++;
+  for (int k = 0; k < np; k++) {
+    uint32_t* sl = pl[k].sl;
+    sl[pl[k].side] = want[k];
+    unsigned char* m1 = ko_match(pl[k].legs[0]);
+    unsigned char* m2 = ko_match(pl[k].legs[1]);
+    if (m1) *(uint32_t*)(m1 + (pl[k].side ? 0x18 : 0x14)) = want[k];
+    if (m2) *(uint32_t*)(m2 + (pl[k].side ? 0x14 : 0x18)) = want[k];
+  }
+  /* the bracket screen (Competition Info -> the cup -> Fixtures) does not read the rounds: it lays
+     the entry list out again, in the order the game drew from it, so it still showed the old draw
+     over the new matches (in game, 07.10.). Each club of the list takes the place its old holder
+     had: the club that went to the place of list entry p is written at p. */
+  unsigned char* rec = get_rec(c->reg);
+  int relisted = 0;
+  if (rec) {
+    uint32_t* lst = rec_clubs(rec);
+    for (int p = 0; p < CD_CLUBS && lst[p] != 0xffffffffu; p++)
+      for (int k = 0; k < np; k++)
+        if (club[k] == lst[p]) { if (lst[p] != want[k]) relisted++; lst[p] = want[k]; break; }
+  }
+  logf("fl26swiss: cup %d drawn %s: %d place(s) in %d round(s), %d club(s) moved, %d division(s), %d entry list place(s) rewritten; day %d",
+       c->reg, c->mode == 2 ? "at random" : "with seeds", np, nr, moved, ntiers_seen, relisted, today());
+  for (int k = 0; k < np; k++) {
+    if (!pl[k].both)
+      logf("fl26swiss:   cup %d round %#x slot: %06x through", c->reg, kinds[pl[k].round], want[k] & KO_TBD);
+    else if (pl[k].side == 0 && k + 1 < np)
+      logf("fl26swiss:   cup %d round %#x tie: %06x v %06x", c->reg, kinds[pl[k].round], want[k] & KO_TBD,
+           want[k + 1] & KO_TBD);
+  }
+  c->done_key = ckey;
+  return 1;
+}
+
+static void cupdraw_tick(void)
+{
+  static ULONGLONG last;
+  if (!g_ncd) return;
+  ULONGLONG now = GetTickCount64();
+  if (now - last < 3000) return;                  /* fixfind walks the table: not on every file open */
+  last = now;
+  for (int i = 0; i < g_ncd; i++)
+    if (get_rec(g_cd[i].reg)) cup_draw(&g_cd[i]);
+}
+
 /* called by the loader every few dozen file opens; cheap outside spring */
 __declspec(dllexport) void fl26_swiss_ko_tick(void)
 {
@@ -3582,6 +3828,7 @@ __declspec(dllexport) void fl26_swiss_ko_tick(void)
   abs_day();                      /* the loader calls this all year: it keeps abs_day() across New Year */
   lpre_fill_days();
   ccup_fill_days();
+  cupdraw_tick();
   if (d < 60 || d > 150) return;
   static const uint16_t KO_REGS[3] = { 4, 6, UECL_KO };
   static const char* KO_NAME[3] = { "Champions League", "Europa League", "Conference League" };

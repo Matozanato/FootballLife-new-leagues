@@ -26,10 +26,20 @@ EMBLEM_DIR = ("common", "render", "symbol", "emblemLc")
 CREST_DIR = ("common", "render", "symbol", "flag")
 
 
+FILL = 0.96   # the part of the square a picture spans, as the game's own logos and crests do
+
+
 def square(path, size):
-    """the picture at `path`, fitted into a transparent size x size square"""
+    """the picture at `path`, fitted into a transparent size x size square: its empty border cut
+    off and scaled up as well as down. thumbnail() only shrank, so a 139 x 181 league logo stayed
+    a speck in the middle of the 512 square, and a crest with a wide transparent margin came out
+    small (in game, 07.10.)"""
     im = Image.open(path).convert("RGBA")
-    im.thumbnail((size, size), Image.LANCZOS)
+    box = im.getchannel("A").point(lambda v: 255 if v > 8 else 0).getbbox()
+    if box:
+        im = im.crop(box)
+    k = size * FILL / max(im.width, im.height)
+    im = im.resize((max(1, round(im.width * k)), max(1, round(im.height * k))), Image.LANCZOS)
     out = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     out.paste(im, ((size - im.width) // 2, (size - im.height) // 2), im)
     return out

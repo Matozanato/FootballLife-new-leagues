@@ -3595,6 +3595,15 @@ class Build(BuilderPage):
             "in late July. First played in a career's second season, when both cups "
             "have a winner"), hint(_("only in a world with both African cups (the European "
                                                     "places of your African leagues)"))))
+        self.cupdraw = QComboBox()
+        for v, t in (("seeded", _("Seeded: top division clubs meet the lower leagues first")),
+                     ("random", _("Random: a blind draw")),
+                     ("off", _("Off: as the game fills it (list order)"))):
+            self.cupdraw.addItem(t, v)
+        self.cupdraw.currentIndexChanged.connect(self.set_cupdraw)
+        eu.addWidget(noted(QLabel(_("Country cup draw")), self.cupdraw,
+                           hint(_("the national cups of your leagues; seeded also spreads the top "
+                                  "clubs over both halves of the bracket"))))
         self.ekits = QCheckBox(_("Kits you can edit in the game"))
         self.ekits.setToolTip(_("On: the new clubs get no kit borrowed from a club of the game. A borrowed kit is "
                                 "a licensed one, and the game's Edit mode refuses it (\"You cannot edit this "
@@ -3650,6 +3659,15 @@ class Build(BuilderPage):
             self.project.recipe["caf_super_cup"] = on
             self.project.touch()
 
+    def set_cupdraw(self, i):
+        v = self.cupdraw.itemData(i)
+        if (self.project.recipe.get("cup_draw") or "seeded") != v:
+            if v == "seeded":
+                self.project.recipe.pop("cup_draw", None)
+            else:
+                self.project.recipe["cup_draw"] = v
+            self.project.touch()
+
     def set_ekits(self, on):
         if bool(self.project.recipe.get("editable_kits")) != on:
             if on:
@@ -3684,6 +3702,9 @@ class Build(BuilderPage):
         self.cafsc.blockSignals(True)
         self.cafsc.setChecked(bool(self.project.recipe.get("caf_super_cup", True)))
         self.cafsc.blockSignals(False)
+        self.cupdraw.blockSignals(True)
+        self.cupdraw.setCurrentIndex(max(0, self.cupdraw.findData(self.project.recipe.get("cup_draw") or "seeded")))
+        self.cupdraw.blockSignals(False)
         self.ekits.blockSignals(True)
         self.ekits.setChecked(bool(self.project.recipe.get("editable_kits")))
         self.ekits.blockSignals(False)

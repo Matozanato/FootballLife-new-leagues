@@ -66,6 +66,8 @@
 #define APP_CNT_INSN 0x14bd16f         /* movzx eax, word [rcx + disp32] -- appearance count  */
 #define APP_CAP_INSN 0x14bd17f         /* mov ecx, imm32                 -- appearance capacity */
 #define APP_TAB_INSN 0x14bd1bd         /* lea rcx, [rdx + disp32]        -- appearance records */
+#define APP_LKC     0x14bd160          /* lookup by id, copy out (obj, out, key) -> al        */
+#define APP_LKP     0x14bd220          /* lookup by id, pointer (obj, key) -> record or 0     */
 #define APP_LOAD    0x14bd7ad          /* the loader of PlayerAppearance.bin: count = size / 60 */
 #define APP_OWNER   0x60              /* appearance object = [[exe + OWNER_RVA] + 0x60]      */
 #define APP_STRIDE  0x48               /* u32 id, 8 zero bytes, 56 appearance bytes, u32 zero */
@@ -94,6 +96,8 @@ static const unsigned char SIG_REGEN[15]  = { 0x48,0x8b,0xc4, 0x55, 0x53, 0x56, 
 static const unsigned char SIG_APPLOAD[28] = { 0x48,0xb8,0x89,0x88,0x88,0x88,0x88,0x88,0x88,0x88, 0x48,0x8b,0xfa,
                                                0x49,0xf7,0xe0, 0x33,0xdb, 0x4c,0x8b,0xf1, 0x48,0x8b,0xea,
                                                0x48,0xc1,0xed,0x05 };
+static const unsigned char SIG_LKC[15] = { 0x48,0x89,0x5c,0x24,0x20, 0x4c,0x89,0x44,0x24,0x18, 0x56, 0x48,0x83,0xec,0x20 };
+static const unsigned char SIG_LKP[17] = { 0x48,0x89,0x54,0x24,0x10, 0x53, 0x48,0x83,0xec,0x20, 0x0f,0xb7,0x81,0,0,0,0 };
 static const unsigned char SIG_UNPACK[19] ={ 0x48,0x8b,0xc4, 0x55, 0x41,0x54, 0x41,0x55, 0x41,0x56, 0x41,0x57,
                                               0x48,0x8d,0xa8,0xa8,0xfb,0xff,0xff };
 
@@ -423,6 +427,8 @@ static uint32_t g_new_min = 0xffffffffu, g_new_max;   /* all the ranges lie betw
 typedef struct { uint32_t id; int16_t face; uint8_t keep, pad; } newp_t;
 static newp_t*  g_nlist;
 static int      g_nnlist;
+/* the appearance record each of them is drawn from when the table has none (see app_lookup) */
+static unsigned char* g_syn;
 static unsigned char* g_new_blk;
 static uint32_t g_new_n;
 
@@ -446,6 +452,7 @@ static void new_scan(void)
   uint32_t n = blk ? player_count(blk) : 0;
   if (!g_nnew || !g_nfaces || !n || (blk == g_new_blk && n == g_new_n)) return;
   if (!g_nlist && !(g_nlist = (newp_t*)calloc(MAX_RLIST, sizeof(newp_t)))) return;
+  if (!g_syn) g_syn = (unsigned char*)calloc(MAX_RLIST, APP_STRIDE);   /* never freed: lookups hold pointers */
   g_new_blk = blk; g_new_n = n; g_nnlist = 0;
   for (uint32_t i = 0; i < n && g_nnlist < MAX_RLIST; i++) {
     unsigned char* r = blk + (size_t)i * STRIDE;
@@ -459,7 +466,52 @@ static void new_scan(void)
       }
   }
   qsort(g_nlist, g_nnlist, sizeof(newp_t), newp_cmp);
+  for (int i = 0; g_syn && i < g_nnlist; i++) {
+    unsigned char* r = g_syn + (size_t)i * APP_STRIDE;
+    memset(r, 0, APP_STRIDE);
+    *(uint32_t*)r = g_nlist[i].id;
+    if (g_nlist[i].face >= 0) memcpy(r + APP_DATA, g_faces[g_nlist[i].face].data, APP_LEN);
+  }
   logf("new players: %d of the world's ids in the database get a pack face", g_nnlist);
+}
+
+/* ---- the appearance lookups: a new player the table has no room for ----
+ *
+ * The table holds 30,024 records and FL26 fills 29,960 of them (the 07.10. modpack world: 16,372
+ * new players, 64 put in, every other one the same default face -- "both teams have the same
+ * face"). Growing it means moving a 2.4 MB object the game made before us. Instead the game's two
+ * lookups by id are wrapped: 0x1414bd160 (obj, out, key) copies the record out and returns 1,
+ * 0x1414bd220 (obj, key) returns a pointer to it; the id is (key >> 32) & 0xf00fffff in both.
+ * When the table has no record and the id is one of the world's new players with a face, the
+ * answer is that player's record from g_syn instead. The table itself is never touched. */
+typedef uint8_t (*lkc_fn)(void*, void*, uint64_t);
+typedef void*   (*lkp_fn)(void*, uint64_t);
+static lkc_fn g_lkc;
+static lkp_fn g_lkp;
+static uint32_t g_syn_hits;
+static unsigned char* syn_find(uint64_t key)
+{
+  if (!g_syn || !g_nnlist) return 0;
+  uint32_t id = (uint32_t)(key >> 32) & 0xf00fffffu;
+  if (id < g_new_min || id > g_new_max) return 0;
+  const newp_t* e = new_find(id);
+  if (!e || e->face < 0) return 0;
+  g_syn_hits++;
+  return g_syn + (size_t)(e - g_nlist) * APP_STRIDE;
+}
+static uint8_t lkc_hook(void* obj, void* out, uint64_t key)
+{
+  uint8_t ok = g_lkc(obj, out, key);
+  if (ok & 1) return ok;
+  unsigned char* r = syn_find(key);
+  if (!r || !out) return ok;
+  memcpy(out, r, APP_STRIDE);
+  return 1;
+}
+static void* lkp_hook(void* obj, uint64_t key)
+{
+  void* r = g_lkp(obj, key);
+  return r ? r : (void*)syn_find(key);
 }
 
 /* ---- the two wrappers ---- */
@@ -635,6 +687,17 @@ __declspec(dllexport) int fl26_regen_install(uint64_t exe_base, int flags)
   }
   memset(g_nat_group, 0xff, sizeof g_nat_group);
   g_rng = mix(GetTickCount64());
+  if (g_app_tab_disp) {                        /* new players past the table: see app_lookup */
+    unsigned char* lc = (unsigned char*)(uintptr_t)(exe_base + APP_LKC);
+    unsigned char* lp = (unsigned char*)(uintptr_t)(exe_base + APP_LKP);
+    unsigned char sp[17]; memcpy(sp, SIG_LKP, 13); memcpy(sp + 13, &g_app_cnt_disp, 4);
+    if (!memcmp(lc, SIG_LKC, sizeof SIG_LKC) && !memcmp(lp, sp, sizeof sp)) {
+      g_lkc = (lkc_fn)wrap(lc, sizeof SIG_LKC, (void*)lkc_hook);
+      g_lkp = g_lkc ? (lkp_fn)wrap(lp, sizeof sp, (void*)lkp_hook) : 0;
+    }
+    logf(g_lkp ? "appearance lookups wrapped: new players past the table get their face" :
+         "appearance lookups not wrapped (not this build's bytes): new players past the table keep the default look");
+  }
   if (!(g_regen = (regen_fn)wrap(regen, sizeof SIG_REGEN, (void*)regen_hook))) return 6;
   if (!(g_unpack = (unpack_fn)wrap(unpack, sizeof SIG_UNPACK, (void*)unpack_hook))) return 6;
   logf("regen@%llx and load@%llx wrapped; names %s, potential %s; count at block+%#x, side table +%#x (%u)",
@@ -728,7 +791,7 @@ static unsigned char* app_insert(uint32_t id)
   unsigned n = *(uint16_t*)(obj + g_app_cnt_disp);
   if (n + APP_SPARE >= g_app_cap) {
     static int told;
-    if (!told++) logf("appearance table full (%u of %u): the world's other new players keep the default look", n, g_app_cap);
+    if (!told++ && !g_lkp) logf("appearance table full (%u of %u): the world's other new players keep the default look", n, g_app_cap);
     return 0;
   }
   unsigned char* t = obj + g_app_tab_disp;
@@ -786,7 +849,9 @@ __declspec(dllexport) int fl26_regen_faces(void)
   n += apply_copies();                         /* first: the room may not hold everyone */
   for (int i = 0; i < g_nrlist; i++) n += apply_face(g_rlist_id[i], g_rlist_face[i], 0);
   for (int i = 0; i < g_nnlist; i++)
-    if (!fl26_regen_is(g_nlist[i].id)) n += apply_face(g_nlist[i].id, g_nlist[i].face, 1);
+    if (!fl26_regen_is(g_nlist[i].id)) n += apply_face(g_nlist[i].id, g_nlist[i].face, !g_lkp);
+  static int told_syn;
+  if (g_syn_hits && !told_syn++) logf("appearance: new players past the table now drawn with their face (%u lookups so far)", g_syn_hits);
   QueryPerformanceCounter(&t1);
   double ms = (double)(t1.QuadPart - t0.QuadPart) * 1000.0 / (double)f.QuadPart;
   if (ms > slowest) slowest = ms;

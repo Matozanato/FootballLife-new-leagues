@@ -131,6 +131,7 @@ end
 -- pre-rounds, { reg, cup knockout, fill day, {day, day}, {{reg, position}...} } from
 -- `lpre <reg> cup=<ko> fill=<day> days=<d>,<d> entry=<reg>:<position>,...` (fl26_swiss_lpre).
 local confed = {}               -- read_world: the confed line, { flag, code } pairs
+local CUPDRAW = { all = 1 }     -- read_world: the cupdraw lines, a mode per cup and one for all (0 off, 1 seeded, 2 random)
 local function read_world(ctx)
   local sep = string.char(92)
   local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
@@ -138,6 +139,7 @@ local function read_world(ctx)
   if not f then return nil end
   local leagues, splits, uefa, ccups, dlike, qrounds, lpres = {}, {}, {}, {}, {}, {}, {}
   confed = {}
+  CUPDRAW = { all = 1 }
   for line in f:lines() do
     local lr, lrest = line:match("^%s*lpre%s+(%d+)(.*)$")
     if lr then
@@ -152,6 +154,13 @@ local function read_world(ctx)
     if qc then qrounds[#qrounds + 1] = { tonumber(qc), tonumber(qn), tonumber(qr) } end
     -- `dates <our cup> like=<shipped cup>`: a national cup or super cup of a new country is
     -- dated as the shipped cup it was copied from (the game dates cups by id, 2..175 only)
+    -- `cupdraw seeded|random|off` (every cup) or `cupdraw <reg> seeded|random|off` (one cup)
+    local cw1, cw2 = line:match("^%s*cupdraw%s+(%S+)%s*(%S*)")
+    if cw1 then
+      local M = { off = 0, seeded = 1, random = 2 }
+      if tonumber(cw1) and M[cw2] then CUPDRAW[tonumber(cw1)] = M[cw2]
+      elseif M[cw1] then CUPDRAW.all = M[cw1] end
+    end
     local dr, dl = line:match("^%s*dates%s+(%d+)%s+like=(%d+)")
     if dr then dlike[#dlike + 1] = { tonumber(dr), tonumber(dl) } end
     local cid, crest = line:match("^%s*ccup%s+(%d+)(.*)$")
@@ -204,6 +213,7 @@ local function read_world(ctx)
       local name = rest:match("%sname=(.-)%s*$")
       if name then L.name = name; rest = rest:gsub("%sname=.*$", "") end
       for k, v in rest:gmatch("(%a+)=(%-?%d+)") do L[k] = tonumber(v) end
+      L.cup1 = tonumber(rest:match("%scup=(%d+)") or "")   -- the country cup: the first cup= of a line
       leagues[#leagues + 1] = L
     end
   end
@@ -450,6 +460,49 @@ function m.init(ctx)
               log(string.format("fl26swiss: world file -- %d league cup pre-round(s), %d taken", #lpres, m))
             end
           end
+        end
+      end
+      -- the country cups' draws: seeds against unseeded clubs (fl26_swiss_cupdraw). A cup of the
+      -- world is a new country's (a `dates` line) or a cup a league line fills with its divisions
+      -- (cupall=1: cuptop, cuplow, and the league itself); its divisions go top down
+      do
+        local cups, order = {}, {}
+        local function add(reg, regs)
+          if not reg or reg <= 0 then return end
+          if not cups[reg] then cups[reg] = {}; order[#order + 1] = reg end
+          for _, r in ipairs(regs) do
+            local dup = false
+            for _, x in ipairs(cups[reg]) do dup = dup or x == r end
+            if r and r > 0 and not dup then table.insert(cups[reg], r) end
+          end
+        end
+        for _, L in ipairs(world) do
+          if L.cup1 and L.cupall == 1 then add(L.cup1, { L.cuptop or 0, L.cuplow or 0, L.id }) end
+        end
+        for _, d in ipairs(dlike or {}) do
+          local regs = {}
+          local byt = {}
+          for _, L in ipairs(world) do if L.cup1 == d[1] then byt[#byt + 1] = L end end
+          table.sort(byt, function(a, b) return (a.tier or 9) < (b.tier or 9) end)
+          for _, L in ipairs(byt) do regs[#regs + 1] = L.id end
+          add(d[1], regs)
+        end
+        local pcd = ffi.C.GetProcAddress(h, "fl26_swiss_cupdraw")
+        if #order > 0 and pcd == nil then
+          log("fl26swiss: this fl26swiss.dll cannot seed a cup draw (fl26_swiss_cupdraw); the cups are filled in list order")
+        elseif #order > 0 then
+          local len = 0
+          for _, reg in ipairs(order) do len = len + 3 + #cups[reg] end
+          local cbuf, q = ffi.new("uint16_t[?]", len), 0
+          for _, reg in ipairs(order) do
+            local mode = CUPDRAW[reg] or CUPDRAW.all
+            cbuf[q], cbuf[q + 1], cbuf[q + 2] = reg, mode, #cups[reg]
+            q = q + 3
+            for _, r in ipairs(cups[reg]) do cbuf[q] = r; q = q + 1 end
+          end
+          local k = tonumber(ffi.cast("fl26_swiss_access_t", pcd)(cbuf, #order))
+          log(string.format("fl26swiss: world file -- %d cup draw(s), %d seeded or random (cupdraw %s)", #order, k,
+                            ({ [0] = "off", "seeded", "random" })[CUPDRAW.all] or "?"))
         end
       end
       if dlike and #dlike > 0 then
