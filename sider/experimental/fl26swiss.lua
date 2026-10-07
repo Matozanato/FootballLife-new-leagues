@@ -431,17 +431,6 @@ function m.init(ctx)
               log(string.format("fl26swiss: world file -- %d cup winner place(s), %d taken", alen, m))
             end
           end
-          if #confed > 0 then
-            local pc = ffi.C.GetProcAddress(h, "fl26_swiss_confed")
-            if pc == nil then
-              log("fl26swiss: this fl26swiss.dll has no fl26_swiss_confed; our champions replace an African club in the game's Club World Cup")
-            else
-              local cbuf = ffi.new("uint16_t[?]", 2 * #confed)
-              for i, p in ipairs(confed) do cbuf[2 * i - 2], cbuf[2 * i - 1] = p[1], p[2] end
-              local m = tonumber(ffi.cast("fl26_swiss_access_t", pc)(cbuf, #confed))
-              log(string.format("fl26swiss: world file -- confederations of %d countries", m))
-            end
-          end
           -- the league cups' pre-rounds, after the cups their winners go on to
           if lpres and #lpres > 0 then
             local pl = ffi.C.GetProcAddress(h, "fl26_swiss_lpre")
@@ -460,6 +449,19 @@ function m.init(ctx)
               log(string.format("fl26swiss: world file -- %d league cup pre-round(s), %d taken", #lpres, m))
             end
           end
+        end
+      end
+      -- each country's confederation: the Club World Cup (with continental cups of ours) and the
+      -- board objective of a club of ours outside UEFA (GitHub #43, any world)
+      if #confed > 0 then
+        local pc = ffi.C.GetProcAddress(h, "fl26_swiss_confed")
+        if pc == nil then
+          log("fl26swiss: this fl26swiss.dll has no fl26_swiss_confed; our champions replace an African club in the game's Club World Cup")
+        else
+          local cbuf = ffi.new("uint16_t[?]", 2 * #confed)
+          for i, p in ipairs(confed) do cbuf[2 * i - 2], cbuf[2 * i - 1] = p[1], p[2] end
+          local m = tonumber(ffi.cast("fl26_swiss_access_t", pc)(cbuf, #confed))
+          log(string.format("fl26swiss: world file -- confederations of %d countries", m))
         end
       end
       -- the country cups' draws: seeds against unseeded clubs (fl26_swiss_cupdraw). A cup of the
