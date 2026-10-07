@@ -803,6 +803,42 @@ def refresh_game_leagues(recipe, rel, info, cids):
     return n
 
 
+def game_scale(rel, db, clubs):
+    """overall rating -> the rating the game gives such a player, fitted on the players both the
+    release and the game have in clubs (the mean of the game's rating at each of ours, pooled
+    with its neighbours until it never goes down as ours goes up); outside what was measured the nearest step's difference holds.
+    Jabo9 07.10.: the release's top end ran 2 to 4 above the game's (Mbappe 96 to the game's 92),
+    so a game league brought to the season had its stars rated above every other club's"""
+    got = collections.defaultdict(list)
+    for c in set(clubs):
+        for r in rel.squad(c):
+            g = str(r.get("game_id", "")).strip()
+            if g.isdigit() and int(g) in db.index and P.same_name(r["name"], db.name(int(g))):
+                a, b = P.overall(r), P.overall(db.row(int(g)))
+                if a and b:
+                    got[a].append(b)
+    blocks = []                                    # [ours, mean of the game's, weight], pooled
+    for a in sorted(got):                          # until the means never go down (isotonic)
+        blocks.append([a, sum(got[a]) / len(got[a]), len(got[a])])
+        while len(blocks) > 1 and blocks[-2][1] >= blocks[-1][1]:
+            a2, m2, w2 = blocks.pop()
+            a1, m1, w1 = blocks.pop()
+            blocks.append([(a1 * w1 + a2 * w2) / (w1 + w2), (m1 * w1 + m2 * w2) / (w1 + w2), w1 + w2])
+    steps = [(a, m) for a, m, _w in blocks]
+    if len(steps) < 2:
+        return lambda o: o
+
+    def level(o):
+        if o <= steps[0][0]:
+            return max(40, min(99, round(o + steps[0][1] - steps[0][0])))
+        if o >= steps[-1][0]:
+            return max(40, min(99, round(o + steps[-1][1] - steps[-1][0])))
+        for (a, x), (b, y) in zip(steps, steps[1:]):
+            if a <= o <= b:
+                return round(x + (y - x) * (o - a) / (b - a)) if b > a else round(x)
+    return level
+
+
 def _game_squads(recipe, rel, info, squads):
     """the release's squad (rel.squad) for each game club, squads: {team id: release club id}"""
     db = P.Squads(info["base"])
@@ -812,11 +848,15 @@ def _game_squads(recipe, rel, info, squads):
     size = {t: len(v) for t, v in db.by_club.items()}       # squads as joins and removals leave them
     n = collections.Counter()
     plan = {}
+    level = game_scale(rel, db, squads.values())
     for t, c in sorted(squads.items()):
         have = [pid for _o, pid, _s, _x in db.by_club.get(t, []) if pid in db.index]
         keep, join, add, ed = [], [], [], {}
         for r in rel.squad(c):
             ch = {f: r[f] for f in P.FIELDS if r.get(f, "") != ""}
+            o = P.overall(r)
+            if o and level(o) != o:
+                ch.update(P.at_level(r, level(o)))
             g = str(r.get("game_id", "")).strip()
             if not g.isdigit():                   # no id in the release: one of his club's by name
                 g = next((str(p) for p in have if p not in keep and P.same_name(r["name"], db.name(p))), "")
