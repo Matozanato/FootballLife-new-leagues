@@ -3000,7 +3000,10 @@ def build(pl, base, game, replace=False, log=print):
         c["winners"] = list(c.get("winners") or []) + [[r, own_cup[r]] for r in
                                                        {e[1] for e in c["entry"] if e[0] == "cup"} if own_cup.get(r)]
     ccups = continental((pl.get("ccups") or []) + hc, tmp, db, log, alt_from(pl))
-    if pl.get("ccups") and confed:
+    # the confed line also tells fl26swiss which of our clubs the board sends to the AFC
+    # Champions League or the Libertadores instead of the Champions League (GitHub #43), so a
+    # world with a league outside UEFA gets it even with no continental cup
+    if confed and (pl.get("ccups") or any(confed.get(p["country"], 2) != 2 for p in pl["leagues"])):
         ccups.append(confed_line(confed))
     for c, h in zip(hc, pl.get("home_cups") or []):
         h["cid"] = c["cid"]                            # for its emblem (pictures)
