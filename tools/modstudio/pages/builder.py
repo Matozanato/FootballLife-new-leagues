@@ -3415,7 +3415,9 @@ class AfterBuild(QDialog):
         self.edit = G.old_edit(time.time() - info.get("secs", 0) - 5)
         if self.edit:
             steps.append(("warn", _("An Edit save from before this Build is in the game's save folder. It hides "
-                                    "the new squads and names in Exhibition and Edit mode: move it aside."), ""))
+                                    "the new squads and names in Exhibition and Edit mode, and clubs added since "
+                                    "are missing from Other European: move it aside. A new Edit save, made after "
+                                    "this Build, has them all."), ""))
         box = QFrame()
         box.setObjectName("card")
         bv = QVBoxLayout(box)

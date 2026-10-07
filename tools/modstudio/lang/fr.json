@@ -1129,7 +1129,7 @@
   "Added: %s. Change them on Leagues, New clubs and Players, then Build.": "Ajouté : %s. Modifiez-les dans Ligues, Nouveaux clubs et Joueurs, puis faites un Build.",
   "All in one: the modules, the world, switching it on. Or step by step:": "Tout en un : les modules, le monde, son activation. Ou étape par étape :",
   "All restore points": "Tous les points de restauration",
-  "An Edit save from before this Build is in the game's save folder. It hides the new squads and names in Exhibition and Edit mode: move it aside.": "Une sauvegarde Edit antérieure à ce Build se trouve dans le dossier de sauvegardes du jeu. Elle cache les nouveaux effectifs et noms en match amical et en mode Edit : mettez-la de côté.",
+  "An Edit save from before this Build is in the game's save folder. It hides the new squads and names in Exhibition and Edit mode, and clubs added since are missing from Other European: move it aside. A new Edit save, made after this Build, has them all.": "Une sauvegarde Edit antérieure à ce Build est dans le dossier des sauvegardes du jeu. Elle cache les nouveaux effectifs et noms en Exhibition et en mode Edit, et les clubs ajoutés depuis manquent dans Other European : mettez-la de côté. Une nouvelle sauvegarde Edit, faite après ce Build, les a tous.",
   "BUILD FINISHED · %d s": "BUILD TERMINÉ · %d s",
   "Before you play": "Avant de jouer",
   "Build %s and make it the live world? Mod Studio's modules are installed too; sider.ini is backed up first.": "Construire %s et en faire le monde actif ? Les modules de Mod Studio sont aussi installés ; sider.ini est d'abord sauvegardé.",

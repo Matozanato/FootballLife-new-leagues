@@ -1129,7 +1129,7 @@
   "Added: %s. Change them on Leagues, New clubs and Players, then Build.": "Dodano: %s. Mijenjaj ih na stranicama Lige, Novi klubovi i Igrači, pa pokreni Build.",
   "All in one: the modules, the world, switching it on. Or step by step:": "Sve odjednom: moduli, svijet, uključivanje. Ili korak po korak:",
   "All restore points": "Sve točke vraćanja",
-  "An Edit save from before this Build is in the game's save folder. It hides the new squads and names in Exhibition and Edit mode: move it aside.": "U mapi saveova igre je Edit save stariji od ovog Builda. Skriva nove momčadi i imena u egzibiciji i Edit modu: makni ga u stranu.",
+  "An Edit save from before this Build is in the game's save folder. It hides the new squads and names in Exhibition and Edit mode, and clubs added since are missing from Other European: move it aside. A new Edit save, made after this Build, has them all.": "U mapi saveova igre je Edit save od prije ovog Builda. Skriva nove momčadi i imena u Exhibitionu i Edit modu, a klubovi dodani nakon njega nedostaju u Other European: makni ga. Novi Edit save, napravljen nakon ovog Builda, ima sve.",
   "BUILD FINISHED · %d s": "BUILD GOTOV · %d s",
   "Before you play": "Prije igre",
   "Build %s and make it the live world? Mod Studio's modules are installed too; sider.ini is backed up first.": "Izgraditi %s i postaviti ga kao živi svijet? Instaliraju se i moduli Mod Studija; sider.ini se prvo sprema u kopiju.",
