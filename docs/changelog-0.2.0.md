@@ -64,6 +64,12 @@ world, about 1,000 matches a season).
 - **Seasons of the game's leagues** (League Builder page, experimental): Japan, China, Brazil, Chile
   and Saudi Arabia can play August to May like Europe. Their cups are dated to match, and a
   division below follows its top flight.
+- **League cups are played like the real ones**: the Carabao Cup and every league cup of a
+  new or a game league is now the top division and the one below, up to 44 clubs, one match a
+  round from late September to December, the semi-final and the final too. The top division's
+  clubs get the byes into the second round, every tie is drawn at random, and the cup has its
+  own midweek days, never on a national cup or European day. No more pre-round. Build the world
+  again and start a new career to get it; an older world or career keeps the old cup.
 - **Apertura/Clausura: the league below gets promotion and relegation** (#106). The table is
   counted from the matches of both tournaments.
 - **Seeded country cup draws** for every world. The top division's clubs get the byes and the

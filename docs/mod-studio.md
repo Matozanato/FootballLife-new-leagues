@@ -137,7 +137,19 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
 - `game_cups` in the recipe: fl26swiss home cups (`ccup`) for the game's own top divisions,
   the same as a new country's league cup and super cup; codes `FL_G<reg>_LCUP` and
   `FL_G<reg>_SCUP`.
-- League cup pre-round (0.1.7): the clubs past 16, 8 or 4 (`leaguebuilder.cup_field`, at most
+- Single-match league cup (0.2.0, `leaguebuilder.league_ko_cup`): the top division and the one
+  below, cut to the largest bracket size up to 44 (`LEAGUE_KO_SIZES`). mkccup copies the
+  knockout row from reg 23 (the FA Cup: format 2, one match a round) with its bracket set to
+  the field (`--cup` 10th field `like`). World file: `ccup <reg> ... fill=253 national=1
+  days=265,279,300,321,335,356 like=23 draw=byes`, no `lpre`. fl26swiss names it with the new
+  export `fl26_swiss_ccup_like` (lua calls it before `fl26_swiss_ccup`), takes it only when the
+  live row is format 2 with bracket = field (`ccup_like_ok`), dates it by borrowing reg 23's
+  calendar and moving round k to `days[k]` (`ccup_like_dates`), and the cup draw mode 3
+  (`byes`) gives the byes to the top division and draws the rest at random. An older career
+  (format 30 row) falls back to the old two-legged knockout of the largest power of two on the
+  old days; an old world keeps its old lines. Where the old cup had a pre-round, its regulation
+  id is still taken (`reserve`), so every later cup keeps its id.
+- League cup pre-round (0.1.7, worlds built before 0.2.0): the clubs past 16, 8 or 4 (`leaguebuilder.cup_field`, at most
   eight ties) play a two-legged pre-round on days 246/249 -- a copy of reg 2 under a free id
   (`mkeuropo.prerounds`, master + 8 tie rows, the cup's competition id), written before
   mkccup so the cup's `<tie>:0` entries resolve. World file: `lpre <reg> cup=<ko> fill=226

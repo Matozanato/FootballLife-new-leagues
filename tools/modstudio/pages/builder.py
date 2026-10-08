@@ -595,11 +595,12 @@ class LeagueDialog(Dialog):
         self.lcup_name = QLineEdit(L.get("league_cup_name", ""))
         self.lcup_name.setPlaceholderText(_("(the league's name + League Cup)"))
         self.form.addRow("", row(self.lcup, self.lcup_name, helpmark(
-            "A second knockout cup, like England's Carabao Cup: 16, 8 or 4 clubs of this league and the one "
-            "below, one match a round from September to December. When there are more clubs than that, the "
-            "extra ones play a pre-round in early September. Top division only.")))
-        self.form.addRow("", hint(_("a knockout of 16, 8 or 4 clubs of this division and the one below, "
-                                    "September to December; the clubs past it play a pre-round in early September")))
+            "A second knockout cup, like England's Carabao Cup: this league and the one below it, up to 44 "
+            "clubs, one match a round from late September to December, the semi-final and the final too. "
+            "The draw is random; when the field is not 16, 32 ... the clubs of this league get the byes and "
+            "start in the second round. Top division only.")))
+        self.form.addRow("", hint(_("a single-match knockout of this division and the one below (up to 44 clubs), "
+                                    "late September to December; this division's clubs get the byes")))
         self.cup_logo = PictureField(L.get("cup_logo"), 48)
         self.supercup_logo = PictureField(L.get("supercup_logo"), 48)
         self.lcup_logo = PictureField(L.get("league_cup_logo"), 48)
@@ -2011,9 +2012,10 @@ class GameCupsDialog(Dialog):
         super().__init__(parent, "Cups of the game's countries")
         self.tops = B.game_tops(project.base)
         have = {int(c["league"]): c for c in project.recipe.get("game_cups") or [] if str(c.get("league")).isdigit()}
-        self.v.insertWidget(0, hint(_("A league cup is 16 clubs of the league and the one below it, by position, "
-                                      "one match a round from late September to December; the clubs past 16 play "
-                                      "a pre-round in early September. A super cup -- the "
+        self.v.insertWidget(0, hint(_("A league cup is the league and the one below it, up to 44 clubs (the "
+                                      "Premier League and the Championship), one match a round from late "
+                                      "September to December, drawn at random; the league's own clubs get the "
+                                      "byes and start in the second round. A super cup -- the "
                                       "champion v the cup winner in late July -- only where the game has none. "
                                       "Empty name = the league's name and League Cup / Super Cup; "
                                       "no logo = an emblem with the cup's initials.")))

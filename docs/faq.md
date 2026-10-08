@@ -101,9 +101,9 @@ first clubs of the one below. A field of 33 to 43 clubs becomes 32 (#95). *Check
 so on the cup's line. This is on purpose, not a bug.
 
 Two other cups have no such limit:
-- **League cup** (the tick under the national cup): a knockout of 16, 8 or 4 clubs of the top
-  division and the one below, September to December. The clubs past that play a pre-round in
-  early September (0.1.7), so a league of 20 leaves nobody out.
+- **League cup** (the tick under the national cup): a single-match knockout of the top
+  division and the one below, up to 44 clubs, late September to December (0.2.0). The top
+  division's clubs get the byes and start in the second round.
 - **Pre-season cups** (the button on the New leagues page): a friendly knockout of 4 or 8 clubs
   you invite, from any league, in July.
 
@@ -239,8 +239,8 @@ the start of a career (#54); update and start a new career.
 ### Can the Premier League (or another league of the game) get a league cup?
 
 Since 0.1.7: **Cups of the game's countries** on the *Build* page. Tick **League cup** next to
-the league: 16 clubs of it and the league below (the rest through a pre-round in early
-September), September to December. **Super cup** is there
+the league: it and the league below, up to 44 clubs, one match a round from late September to
+December, drawn at random, the league's clubs with the byes (0.2.0). **Super cup** is there
 too, only for countries where the game has none (Brazil, Chile, Scotland, Greece, the USA).
 Since 0.2.0 each of the two takes its own **Logo** in that window.
 
