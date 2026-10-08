@@ -26,6 +26,15 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
 
 ## Missing or unverified features
 
+- **Club World Cup: the game's own, every season (Mod Studio 0.2.0).** The Club World Cup is
+  the game's: a knockout of four in mid-December (15-19 December), every season, and the
+  champions of the continental cups a world builds (CAF, AFC) go into it in place of an entrant
+  of their confederation. The Champions League and Europa League play their last December
+  matchday on 8-9 December and the Conference League cannot have a Club World Cup club, so
+  those never clash. Not checked: a new league plays the big leagues' calendar moved by 0-6
+  days, so one of its rounds can fall on a Club World Cup day; only its champion in the Club
+  World Cup could then have two matches on one day. Report it on GitHub if you see it. The
+  2025 format (32 clubs in June and July, every four years) is not in Mod Studio.
 - **Clubs in no league (Mod Studio 0.1.8): squads are strong.** Checked in the game: a club
   put alone in *Other European teams* shows in Select Team under that group with its crest
   and 30 players. Its players are cloned from a club of the game like every new club's, so a

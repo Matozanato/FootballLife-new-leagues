@@ -30,6 +30,11 @@ CPKs: it all goes in through Sider modules and data files, and comes out again.
 > wrong): [docs/faq.md](docs/faq.md) · how it works and the package format:
 > [docs/mod-studio.md](docs/mod-studio.md)
 >
+> **0.2.0 is the last release with new features.** From here on: bug fixes, about once a week.
+> What's new in it: [docs/changelog-0.2.0.md](docs/changelog-0.2.0.md). Want to take Mod Studio
+> further? There is now **complete documentation for forks**: [docs/forking.md](docs/forking.md)
+> and the chapters in [docs/fork/](docs/fork/).
+>
 > **Discord:** [FL Mod Studio](https://discord.gg/StQqtk3G3M): questions, help, new versions, and new
 > GitHub issues posted there as they come in. Bugs still go to a GitHub issue.
 
@@ -108,10 +113,11 @@ tell us where. Read [what works and what does not](#status) before you start a l
   League) and Conference League; a world gets as many rounds as its European places fill. Name
   the Conference League yourself (0.1.7).
 - **Continental places** for your leagues: Champions League, Europa League, Conference League;
-  AFC Champions League and Champions League Two; Copa Libertadores (also its qualifying round,
-  0.1.4) and Copa Sudamericana; CAF Champions League and CAF Confederation Cup, and the CAF
-  Super Cup between their winners (0.1.6). The four the game does not have are built with your
-  world. The **game's own leagues** can get their European places changed too (0.1.7).
+  AFC Champions League, Champions League Two and the AFC Challenge League (0.2.0); Copa
+  Libertadores (also its qualifying round, 0.1.4) and Copa Sudamericana; CAF Champions League
+  and CAF Confederation Cup, and the CAF Super Cup between their winners (0.1.6); the CONCACAF
+  Champions Cup and the OFC Champions League (0.2.0). The ones the game does not have are built
+  with your world, and their champions go to the game's Club World Cup. The **game's own leagues** can get their European places changed too (0.1.7).
   **UEFA ranking** (0.1.7): put the world's European leagues in order and each gets its places
   from UEFA's key; **South American places** lists the Libertadores and Sudamericana places of
   every South American league, the game's and yours. **First-season European clubs** (0.1.8):
@@ -159,6 +165,7 @@ tell us where. Read [what works and what does not](#status) before you start a l
 | 0.1.7.1 | 2026-10-03 | a fix release made with a smaller AI model and not yet tested in the game: a new league right under a second division of the game (League One under the Championship ...) no longer stops the plan with a TypeError (#80), and a recipe whose only change is a league cup or super cup for a game country is no longer "nothing to build" |
 | 0.1.8 | 2026-10-06 | every fix since 0.1.7 in one release and a new Mod Studio (new look, Home with one Build and install button, one Leagues list with drag order, starts on the live world): Edit mode keeps what you change on new clubs (#55), clubs in no league (BATE Borisov alone in *Other European teams*), first-season European clubs picked by hand, our leagues start in July, two free days between matches in every league, continental cups midweek and the continental champions in the Club World Cup (#70), promotion and relegation under a split league (#79, #81), Team of the Season for new leagues (#46, #86), NewLife clubs with world ids of their own (#88, #90), import crests and kits from a folder, a third kit, league packages without squads, removing several leagues at once, and the fixes for #54, #60, #63, #75, #77, #78, #83, #84, #87, #93, #95, #96, #100 |
 | 0.1.9 | 2026-10-06 | fixes: the Edit mode crash with face packs and other mods that bring a big `PlayerAppearance.bin` (#65), a national cup with two divisions draws top flight against the league below (Copa Peru of 32 checked in a Master League season), Build stopped with "a club has at most 40" when a new club took a game club's places next to NewLife clubs, kits for a custom database with lower club ids (#54), a linked face brings its body's skin colour (#102), "all stages" in Other content gets every stage, a dragged league no longer vanishes from the Leagues list, several leagues under one league of the game refused (#98), the game's own leagues are not added again from NewLife (#82), made-up manager names (#91), Build asks to unpack again after a game update (#63), Leagues list columns # and Select Team (#101), Build page readable with Windows scaling |
+| 0.2.0 | 2026-10-08 | **a calendar day holds 792 matches instead of 280** (careers saved with an older release do not load: start a new one; worlds need no new Build), league rounds spread so big worlds keep every match, the game's own leagues kept off European days; new: CONCACAF, OFC and AFC Challenge League cups and cup winners to our continental cups (#95), league order by continent / A-Z / your own in Select Team and Kick Off, seasons of the game's leagues, seeded country cup draws, Apertura/Clausura promotion for the league below (#106), kits from plain pictures (Import kits), logos for the cups of the game's countries, board objective by continent for AFC/CONMEBOL clubs (#43); fixes: Other European lost its last clubs after a Build, editable kits get real plain kit slots (#112), NewLife Update keeps linked faces (#111) and game leagues take the game's rating scale, Kit Server goalkeeper crash with editable kits, old Edit save warning, NewLife club insert from an old recipe (#105), a dragged league stays in its continent (#107), Team ID shows "at Build"; **complete documentation for forks** (docs/forking.md and docs/fork/: code map, recipe keys, world file, modules and DLLs, building, testing, NewLife format). **Last release with new features: from here on bug fixes only.** Full list: [docs/changelog-0.2.0.md](docs/changelog-0.2.0.md) |
 
 The release notes of each version are on the
 [Releases](https://github.com/Matozanato/FootballLife-new-leagues/releases) page.
