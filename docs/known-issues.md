@@ -31,13 +31,6 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
   European matches are on the calendar and in the club's schedule, only the strip leaves them
   out. A match listed twice on one day is now listed once (`sider.log`: `day lists --`). Not
   checked in the game yet whether that was the cause of the strip's doubled entries.
-- **A qualifying club can meet its national cup's first round a day apart (0.2.0).** The
-  qualifying rounds take six weeks, one leg a week, between the season's build (5 August, the
-  game's) and the league phase (mid-September); the national cups' first round (the game's
-  days 251 and 254, 9 and 12 September) is always in one of those weeks. The qualifying leg in
-  that week goes on the midweek day furthest from it, one or two days. Only a club that plays
-  in both is concerned.
-
 - **Qualifying rounds in Competition Info (0.2.0), not checked in the game yet.** In August
   the Play-offs item opens the qualifying round in play and names it "2nd Qualifying Round",
   "3rd Qualifying Round" or "Play-offs" (`sider.log`: `Competition Info -- ... shown under

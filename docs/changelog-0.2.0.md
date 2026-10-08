@@ -92,7 +92,9 @@ world, about 1,000 matches a season).
   the play-off take six weeks in a row, one leg a week, with the league's weekend round between
   the legs (2025: 7/14 Aug, 20/27 Aug, 3/10 Sep), for all three competitions. Where the
   play-off ends less than six days before the league phase, its first matchday is a week later
-  (2026: 22/23 September).
+  (2026: 22/23 September). The national cups' first round moves out of the qualifying weeks
+  to a Tuesday and Friday three days clear of every European day (2025: 23/26 September; the
+  game had it on 9/12 September).
 - **Competition Info follows the qualifying**: in August the Play-offs item opens the round in
   play, named "2nd Qualifying Round", "3rd Qualifying Round" or "Play-offs" (also on the page
   and in the schedule), for the Champions League, Europa League and Conference League.
@@ -202,8 +204,7 @@ See [known-issues.md](known-issues.md). Most important:
 - Careers from older versions do not load (see the top of this page).
 - European qualifying is the second and third qualifying round and the play-off, in August
   after the season is built (5 August). There is no first qualifying round, and the second and
-  third qualifying rounds are later than the real July ones. The national cups' first round
-  falls in one of the six qualifying weeks: a club in both can play them a day apart.
+  third qualifying rounds are later than the real July ones.
 - The hub's "Next" strip does not show European matches yet.
 - Clubs of new African, North American and Oceanian leagues keep the objective the game picks:
   the game has no board objective for those cups.

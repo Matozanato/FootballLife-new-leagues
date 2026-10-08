@@ -1490,9 +1490,8 @@ static int any_final_kept(void)
  *     September).  A league has its weekend between every two legs, three days clear of both
  *     (rcal_cost, busy_days).  Where the play-off's second leg leaves less than six days to the
  *     first league-phase matchday, that matchday is a week later (swiss_day).  The national
- *     cups' first round (251, 254) is in one of the six weeks every year; the leg in that week
- *     is put as far from it as the week allows, one day in most years -- a club in both plays
- *     them a day apart.  Until 0.2.0 the two legs of a stage were two days apart (Tuesday and
+ *     cups' first round (251, 254) would be in one of the six weeks every year; it moves to a
+ *     Tuesday and Friday clear of every European day (natcup_day).  Until 0.2.0 the two legs of a stage were two days apart (Tuesday and
  *     Thursday), and before that on weekends: a Dinamo played Saturday and Wednesday in Europe
  *     and Thursday in the league (2026-10-08).  All play-off second legs are on one day: the
  *     progressions run in the day loop after the day's matches, the Europa and Conference
@@ -1532,28 +1531,23 @@ static const char* const QSTAGE[3] = { "play-off", "third qualifying round", "se
    second leg on its first leg's weekday where it can.  Each stage is filled on the days between
    the stage before and its first leg (two days at least: a Thursday, then the Tuesday or
    Wednesday after).  The national cups' first round (251 and 254, calendar case 6, the game's
-   days) falls in one of those six weeks in every year: in that week the leg goes on the
-   midweek day furthest from it.  The Champions League play-off's days are reg 2's own
+   days) would fall in one of those six weeks in every year; it moves out of them (natcup_day).
+   The Champions League play-off's days are reg 2's own
    (is_playoff), the same.  Until 0.2.0 (08.10.) the legs of a stage were two days apart. */
-#define QR_NATCUP0 251
-#define QR_NATCUP1 254
 static uint32_t g_qr_leg[3][2]; static int g_qr_sy = -1;
-static uint32_t qr_absd(uint32_t a, uint32_t b) { return a > b ? a - b : b - a; }
 static uint32_t qr_pick(uint32_t mon, uint32_t first, uint32_t lim, int sy)
 {
   /* the leg in the week from Monday mon: Wednesday, Tuesday, Thursday in that order of liking;
      first (a second leg's first leg, or 0): its weekday first, 6..8 days after it; lim (or 0):
      the latest day it may take while another fits */
   static const int PREF[3] = { 2, 1, 3 };
-  uint32_t best = 0; int bs = -1;
+  uint32_t best = 0;
   for (int k = 0; k < 4; k++) {
     uint32_t d = k == 0 ? (first ? first + 7 : 0) : mon + (uint32_t)PREF[k - 1];
     if (!d || d < 218 || d < mon + 1 || d > mon + 3) continue;
     if (first && (d < first + 6 || d > first + 8)) continue;
     if (lim && d > lim && best) continue;
-    uint32_t n0 = qr_absd(d, QR_NATCUP0), n1 = qr_absd(d, QR_NATCUP1), n = n0 < n1 ? n0 : n1;
-    int sc = (int)(n > 3 ? 3 : n);
-    if (sc > bs || (lim && best > lim && d <= lim)) { bs = sc; best = d; }
+    if (!best || (lim && best > lim && d <= lim)) best = d;
   }
   (void)sy;
   return best ? best : mon + 2;
@@ -4814,6 +4808,67 @@ static void declash_log(uint16_t id, int moved)
  * rule -- off the European day itself -- stays. */
 #define REST 3
 static const uint16_t NATCUP_DAYS[12] = { 251, 254, 286, 289, 6, 9, 41, 44, 83, 86, 132, 135 };
+/* The national cups' first round (calendar case 6: 251 and 254) is in one of the qualifying's six
+   weeks every year (qr_day), and a club in both played them a day apart.  It moves to the first
+   Tuesday and Friday after them that are three days clear of every European day of ours (the
+   qualifying, the league phases' matchdays as swiss_day has them, the Conference League's) and
+   three before the second round (286): 2025 Tuesday 23 and Friday 26 September.  The rounds
+   after it keep the game's days.  natcup_fix rewrites a calendar of case 6 to them. */
+static int natcup_clear(uint32_t d)
+{
+#define NC_FAR(e) do { uint32_t e_ = (e); if ((d > e_ ? d - e_ : e_ - d) < 3) return 0; } while (0)
+  for (int s_ = 0; s_ < 3; s_++) for (int l = 0; l < 2; l++) NC_FAR(qr_day(s_, l));
+  for (int i = 0; i < FL26_SWISS36_MATCHDAYS; i++) NC_FAR(swiss_day(i));
+  for (int i = 0; i < FL26_SWISS6_MATCHDAYS; i++) NC_FAR(eday(UECL_DAYS[i]));
+#undef NC_FAR
+  return 1;
+}
+static uint32_t natcup_day(int i)
+{
+  if (i >= 2) return NATCUP_DAYS[i];
+  static int sy_ = -1; static uint32_t a_ = 0;
+  int sy = season_year();
+  if (sy != sy_ || !a_) {
+    a_ = NATCUP_DAYS[0];
+    for (uint32_t a = NATCUP_DAYS[0] + 1; a + 3 + 3 <= NATCUP_DAYS[2]; a++)
+      if (wday(a) == 1 && natcup_clear(a) && natcup_clear(a + 3)) { a_ = a; break; }
+    sy_ = sy;
+  }
+  return a_ + (i ? 3u : 0u);
+}
+/* a calendar the game gave from case 6 -- every day one of NATCUP_DAYS, its first round's two
+   among them -- gets the first round's days moved; answers how many dates moved */
+static int natcup_fix(uint16_t id, void* vec)
+{
+  vec_t* v = (vec_t*)vec;
+  size_t have = (v && v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+  if (have < 2 || have > 64) return 0;
+  date_t* r = (date_t*)v->b;
+  int r1 = 0;
+  for (size_t i = 0; i < have; i++) {
+    int k = -1;
+    for (int j = 0; j < 12; j++) if (r[i].day == NATCUP_DAYS[j]) k = j;
+    if (k < 0) return 0;
+    if (k < 2) r1++;
+  }
+  if (!r1) return 0;
+  uint32_t a = natcup_day(0), b = natcup_day(1);
+  if (a == NATCUP_DAYS[0]) return 0;
+  int moved = 0;
+  for (size_t i = 0; i < have; i++)
+    if (r[i].day == NATCUP_DAYS[0]) { r[i].day = a; moved++; }
+    else if (r[i].day == NATCUP_DAYS[1]) { r[i].day = b; moved++; }
+  static uint16_t said[64]; static int nsaid = 0; int seen = 0;
+  SAID_RESET(nsaid);
+  for (int k = 0; k < nsaid; k++) if (said[k] == id) seen = 1;
+  if (!seen && nsaid < 64) {
+    said[nsaid++] = id;
+    char b0[24], b1[24];
+    logf("fl26swiss: reg %u -- national cup first round on %s and %s (days %u and %u, not 251 and 254): clear of the European days",
+         (unsigned)id, dstr(a, b0, sizeof b0), dstr(b, b1, sizeof b1), a, b);
+  }
+  return moved;
+}
 static int access_league(uint16_t id)
 {
   for (size_t i = 0; i < g_naccess; i++) if (g_access[i].rank && g_access[i].reg == id) return 1;
@@ -4893,7 +4948,7 @@ static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
   /* a national cup round two days from a league round, not three: with three, the one day left
      between New Year's round and the cup's (day 3), and between early February's and the cup's
      (day 38), took every league of a big world -- 330 matches asked of 280 (2026-10-08) */
-  if (level < 2) for (int i = 0; i < 12; i++) block(bad, NATCUP_DAYS[i], buf > 2 ? buf - 1 : buf);
+  if (level < 2) for (int i = 0; i < 12; i++) block(bad, natcup_day(i), buf > 2 ? buf - 1 : buf);
   if (level < 1)
     for (int k = 0; k < g_nccup; k++) {
       if (!g_ccup[k].national || g_ccup[k].nc || !ccup_of_league(k, id)) continue;
@@ -5150,7 +5205,7 @@ static void rcal_cost(uint16_t id, const rcal_t* c, int strict, int euhard, int3
   }
   /* the national cups: an August-May league's country plays them (a calendar-year one has none
      of these days) */
-  if (strict && g_org == 182) for (int i = 0; i < 12; i++) RNEAR(NATCUP_DAYS[i], 1, 2);
+  if (strict && g_org == 182) for (int i = 0; i < 12; i++) RNEAR(natcup_day(i), 1, 2);
 #undef RNEAR
 }
 /* the n rounds on the cheapest days at least gap apart, each near its share of the season (its
@@ -6035,6 +6090,7 @@ static uint64_t datelike_dates(uint16_t id, uint64_t reg, void* vec)
   for (int i = 0; i < g_ndlike; i++) {
     if (g_dlike[i][0] != id) continue;
     uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | g_dlike[i][1], vec);
+    natcup_fix(id, vec);
     vec_t* v = (vec_t*)vec;
     size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
     int seen = 0;
@@ -6209,6 +6265,7 @@ uint64_t date_handler(uint64_t reg, void* vec)
   }
   if (vec && !ours(id)) {                           /* a league of the game's own */
     uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)(reg, vec);
+    if (natcup_fix(id, vec)) return rv;             /* ... or a national cup (case 6) */
     vec_t* v = (vec_t*)vec;
     size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
     if (have >= 2 && have <= 64 && rest_league(id, have)) rest_dates(id, (date_t*)v->b, (uint32_t)have);
