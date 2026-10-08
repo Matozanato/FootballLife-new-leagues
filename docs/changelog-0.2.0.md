@@ -19,6 +19,40 @@ testing, the NewLife release format). The code is MIT licensed.
   (Other European among them). Build warns about it. Delete or rename the old save so the game
   makes a new one.
 
+## Honestly: what we tested and what we did not
+
+We are putting 0.2.0 out a little early, on purpose: so the whole community can test it, on many
+more PCs and in longer Master League runs than we can manage ourselves. On our side most of it
+works, but not everything has been played yet. This is where things stand.
+
+**Tested by us, in the game:**
+
+- 792 matches a day: a new career played through a whole season, including days with more than
+  280 matches, with no crash.
+- The league cups: the Carabao Cup with its 44 clubs, the first rounds played on their dates.
+- The national cup in September, and the gaps between matches (no clashes in the first months).
+- Starting elevens: goalkeepers in goal and the right formation (checked on Manchester United
+  and Chelsea in Kick Off).
+
+**Not tested yet, this is where we need you:**
+
+- **A second season**: the rollover, the new real calendar and the European qualifying again.
+- **The European qualifying rounds** over a whole August: the round names in Competition Info,
+  no clash with league matches, two clear days around every European match.
+- **Followers and money of new clubs** (small clubs should now have small numbers).
+- The Libertadores places of February-December leagues (#119): the fix needs a full year to show.
+- The crash when unticking clubs on the NewLife page (#120): we could not make it happen here, so
+  the fix is our best guess.
+- The new continental cups (CONCACAF Champions Cup, OFC Champions League, AFC Challenge League)
+  and cup winners going to them, over a full season.
+- Seasons of the game's leagues (experimental), the seeded country cup draws and the board
+  objectives by continent in a long career.
+- Export the world on another PC: the install side was run on a clean copy, not yet played in the
+  game on a second PC.
+
+What to test is also in #test-requests on the Discord. Send what you find (sider.log and a
+screenshot) on GitHub or in #issues.
+
 ## The big one: 792 matches a day
 
 Until now a day in the game's calendar had room for 280 matches. A world with many leagues
