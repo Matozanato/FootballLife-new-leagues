@@ -66,10 +66,33 @@ world, about 1,000 matches a season).
   division below follows its top flight.
 - **League cups are played like the real ones**: the Carabao Cup and every league cup of a
   new or a game league is now the top division and the one below, up to 44 clubs, one match a
-  round from late September to December, the semi-final and the final too. The top division's
+  round on the Carabao Cup's weeks (27 August, 23 September, 28 October, 23 December, 14
+  January, the final on Sunday 15 March; a February-December league: late September to
+  December), the semi-final and the final too. The top division's
   clubs get the byes into the second round, every tie is drawn at random, and the cup has its
   own midweek days, never on a national cup or European day. No more pre-round. Build the world
   again and start a new career to get it; an older world or career keeps the old cup.
+- **Real season calendars**: every league plays on its real dates, every season. The first
+  and the last round fall where the real league's do (the HNL from the end of July to late May,
+  Norway and Sweden from late March to November, the Premier League in mid-August), with the
+  real winter break (the HNL from Christmas to February, Montenegro's long one), and the rounds
+  go on the league's own weekdays (weekends; Fridays for Kosovo). A league never plays within a
+  day of a Champions League, Europa League or Conference League league-phase or knockout day if
+  its clubs play in Europe, nor on a national cup day. The dates come from a table of the real
+  calendars of every country, by division, and from the confederation's for any other league; a
+  recipe can set its own (`real_calendar`). In a new career's first season a July league starts
+  on 8 August, because the season is built on 5 August. An older world keeps the old calendar;
+  `python tools/realcal.py <fl26world.txt> --write` adds the calendars to it without a new
+  Build.
+- **Champions League knockouts on Wednesdays** (and its play-off), like the real ones, so the
+  Tuesday and Thursday stay free for the leagues.
+- **Super cup without a cup winner**: when there is no cup winner yet (a new career's first
+  summer), or the champion also won the cup, the league's runner-up plays. Before, Supercopa Rei
+  and the Chilean super cup did not start (only 1 of 2 clubs).
+- **UEFA places for ranks 29-31**: Albania, Montenegro and North Macedonia get their real places
+  (champion: Champions League second qualifying round; cup winner, 2nd and 3rd: Conference League
+  second qualifying round). A qualifying round holds sixteen clubs, so with every rank in a world
+  the lowest ranks' places past the sixteen are left out, and the notes say which.
 - **Apertura/Clausura: the league below gets promotion and relegation** (#106). The table is
   counted from the matches of both tournaments.
 - **Seeded country cup draws** for every world. The top division's clubs get the byes and the
@@ -162,6 +185,9 @@ world, about 1,000 matches a season).
 See [known-issues.md](known-issues.md). Most important:
 
 - Careers from older versions do not load (see the top of this page).
+- European qualifying is the second and third qualifying round and the play-off, in August
+  after the season is built (5 August). There is no first qualifying round, and the rounds are
+  not on their real July weeks.
 - Clubs of new African, North American and Oceanian leagues keep the objective the game picks:
   the game has no board objective for those cups.
 - The Club World Cup is the game's own (every season, mid-December), with the champions of the

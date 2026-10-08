@@ -39,6 +39,7 @@ tables (`python tools/fl26world.py --root <world>`), but it only knows `league`,
 | `dates` | `dates 203 like=23` | `leaguebuilder.dates_lines` | fl26swiss (`fl26_swiss_datelike`) |
 | `season` | `season 39 1` | `leaguebuilder.season_lines` | fl26joindll -> fl26join.dll (`fl26_join_season_types`), fl26swiss |
 | `july` | `july 49 205` | `leaguebuilder.july_lines` | fl26swiss (`fl26_swiss_july`) |
+| `rcal` | `rcal 76 211 142 354 21 96 16` | `leaguebuilder.rcal_lines` (`tools/realcal.py`) | fl26swiss (`fl26_swiss_rcal`) |
 | `first` | `first 0 <team id> ...` | `leaguebuilder.first_lines` | fl26swiss (`fl26_swiss_first`) |
 | `order` | `order 1,26,29,...` | `leaguebuilder.order_lines` | fl26catlist |
 | `kickorder` | `kickorder <reg>:<place>,...` | `leaguebuilder.kickorder_lines` | fl26comptab |
@@ -83,6 +84,20 @@ are handed out in. This page doesn't repeat that.
 - **`july <reg> <day>`**: some leagues kick off before the big ones. For such a league,
   fl26swiss brings its rounds before New Year forward by whole weeks, the first one onto that day.
   This applies from the second season on, because a new career starts on 4 August.
+- **`rcal <reg> <first> <last> <break from> <break to> <days> <also> [eu]`** (0.2.0): the
+  league's real season. Days of the year in 2026's frame (1 January = 0, Saturday 1 August =
+  212); an August-May league counts across New Year (first 205, last 142). The break is two days
+  inside it (0 0 for none). `days` and `also` are weekday bits, Monday 1 ... Saturday 32, Sunday
+  64: the rounds go on `days`, on `also` at a small cost, on any other weekday only when the
+  season is too short. `eu` 1 treats the league as one with European clubs; without it fl26swiss
+  finds that from the `uefa` lines and the cup draws. fl26swiss dates the league from this line
+  alone, every season: the first round on the first weekend, the last on the last, nothing in the
+  break, the rounds spread evenly, never within a day of a European league-phase or knockout day
+  (two days only when nothing else is left), of a national cup day, of its league cup's days or
+  of a pre-season cup its clubs play; an August qualifying day closes only its own day. In a new
+  career's first season a league that really starts in July starts on Saturday 8 August. A
+  league with no `rcal` line keeps the old calendar (`july` and the spacing). `python
+  tools/realcal.py <fl26world.txt> --write` adds the lines to a built world.
 - **`first <0|1|2> <team id> ...`**: the clubs picked by hand (`europe_first`) for the
   Champions League (0), Europa League (1) and Conference League (2) league phases of a new
   career's first season. They go in first and the automatic choice fills the rest. From the

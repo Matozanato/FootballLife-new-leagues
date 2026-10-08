@@ -63,6 +63,7 @@ Rules that hold for every key:
 | `split` | {legs, groups: [n, n], group_legs} | Scottish-style split (`mksplit.py`) | `split` |
 | `apertura` | true or {"playoff": 8/4/0} | Apertura/Clausura, optional knockout playoff; `playoff_logo` | `split ... carry=0`, `ccup` |
 | `season` | `august` (default) or `calendar` | a new country's top division plays February-December | `season <region> 1` |
+| `real_calendar` | {first, last, break, days, also} or `false` (0.2.0) | the league's own season dates (`"07-25"`, `"05-23"`, `["12-21", "01-22"]` or null, weekday names); without it the country's real calendar (`tools/realcal.py` COUNTRY, by tier), else the confederation's; `false`: the old calendar | `rcal` |
 | `club_names`, `club_abbrs` | lists | names and short names, `""` = made up | tables |
 | `club_ids` | list of team ids or `""` | an id a kit, crest or face pack was made for, up to 81919 (`CLUB_ID_MAX`) | tables |
 | `club_crests` | list of pictures | crests; `""` = a shield in the club's shirt colours when `club_kits` gives them (`shieldcrest.py`), else a numbered placeholder (`lbassets.py`) | pictures |
@@ -75,7 +76,7 @@ Rules that hold for every key:
 | `cup_top_only` | bool | a shipped country's cup keeps the top flight only (no `cupall`) | `cup=` |
 | (none: `above` a shipped league) | | a division under a game league gets that country's cup and super cup on its line, so fl26chain keeps them right | `cup=`, `scup=`, `cuptop=` ... |
 | `supercup`, `supercup_name`, `supercup_logo` | | the super cup that goes with `cup` | tables, `dates` |
-| `league_cup`, `league_cup_name`, `league_cup_logo` | | a league cup of 16, 8 or 4 clubs | `ccup`, `lpre` |
+| `league_cup`, `league_cup_name`, `league_cup_logo` | | a single-match league cup of the division and the one below, up to 44 clubs, on the Carabao Cup's weeks (0.2.0; before, 16, 8 or 4 clubs with a pre-round) | `ccup` (`like=23`) |
 | `exhibition` | bool | Kick Off only, never in a Master League season | `exhibition=1` |
 | `others` | `europe`, `latam`, `asia`, `africa`, `classic` | not a league: clubs for the game's "Other ..." groups | tables only |
 | `newlife` | {"version": ..., "clubs": [NewLife club id, ...]} | written by the NewLife page: which release clubs fill the places | tables |
