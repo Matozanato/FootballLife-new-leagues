@@ -4436,8 +4436,18 @@ uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
      phname_handler).  The enable check reads only the drawn bit (+0x304 bit 8) of what it is
      given; our qualifying regulations are filled without the game's draw, so for them it is
      answered with reg 2, which the game keeps marked drawn all year. */
-  if (comp && kind == 0 && (ra == g_base + MENU_GRP_RA || ra == g_base + MENU_GRP2_RA || ra == g_base + PAGE_GRP_RA)
+  /* Each of the three sites asks with a kind of its own: the item 0x14151f78c with 2 (until
+     08.10. this tested kind 0 there, so the item never rolled), the enable check with 0, the
+     page builder with its page type. */
+  if (comp && (ra == g_base + MENU_GRP_RA || ra == g_base + MENU_GRP2_RA || ra == g_base + PAGE_GRP_RA)
       && (uint16_t)r != 0xffff) {
+    static int asked = 0;
+    if (asked < 6 && q_summer()) {
+      asked++;
+      logf("fl26swiss: Competition Info -- site %s asks kind %u, the game answers regulation %u",
+           ra == g_base + MENU_GRP_RA ? "item" : ra == g_base + MENU_GRP2_RA ? "enable" : "page",
+           (unsigned)kind, (unsigned)(uint16_t)r);
+    }
     int i = q_rolling((uint16_t)r);
     if (i >= 0) {
       uint16_t q = q_reg(i);
@@ -4446,9 +4456,9 @@ uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
         if (!(qr && ((*(uint32_t*)(qr + 0x304) >> 8) & 1)) && r2 && ((*(uint32_t*)(r2 + 0x304) >> 8) & 1))
           q = CUPS[0].po;
       }
-      if (ra == g_base + MENU_GRP_RA && g_roll_n++ < 12)
-        logf("fl26swiss: Competition Info -- %s %s shown under its play-off item (regulation %u)",
-             QNAME(i), (unsigned)q_reg(i));
+      if (ra != g_base + MENU_GRP2_RA && g_roll_n++ < 12)
+        logf("fl26swiss: Competition Info -- %s %s shown under its play-off %s (regulation %u)",
+             QNAME(i), ra == g_base + MENU_GRP_RA ? "item" : "page", (unsigned)q_reg(i));
       return (r & ~0xffffull) | q;
     }
   }
@@ -4521,7 +4531,13 @@ uint64_t phname_handler(uint64_t reg)
   /* the qualifying rounds (and their ties, so a match screen says it too), as LP_TEXT above --
      before the record: a qualifying round is a copy of reg 2 and its record says "Play-offs" */
   int qa = q_added((uint16_t)reg);
-  if (qa >= 0 && g_tramp_txtget) return qa / NQ == 1 ? QR3_TEXT : QR2_TEXT;
+  if (qa >= 0 && g_tramp_txtget) {
+    static int said = 0;
+    if (said < 4) { said++; logf("fl26swiss: phase name -- regulation %u named %s qualifying round (asked from %llx)",
+                                 (unsigned)(uint16_t)reg, qa / NQ == 1 ? "3rd" : "2nd",
+                                 (unsigned long long)((uintptr_t)__builtin_return_address(0) - g_base + 0x140000000ull)); }
+    return qa / NQ == 1 ? QR3_TEXT : QR2_TEXT;
+  }
   if (get(reg & 0xffff, rec)) return *(uint32_t*)(rec + 0x40);
   if ((uintptr_t)__builtin_return_address(0) == g_base + MENU_NAME_RA &&
       ((uint16_t)reg == CUPS[1].po || (uint16_t)reg == CUPS[2].po || q_added((uint16_t)reg) >= 0
@@ -5660,6 +5676,59 @@ static void po_fill(void)
   for (int i = 3; i < 9; i++) v[i - 1] = g_qreg[i] ? g_qreg[i] : 0xffff;
   for (int i = 0; i < MAX_LPRE; i++) v[8 + i] = i < g_nlpre ? g_lpre[i].reg : 0xffff;
   for (int i = 0; i < PO_SLOTS; i++) g_po_tab[i] = v[i];
+}
+
+/* ---- the qualifying rounds' name in the match titles ----
+ * Two builders of a match's title -- Match Results / schedule (0x14152a590, the phase in si) and
+ * the other one at 0x140cadf.. (the phase in r14w) -- put the text "Play-offs" (0x3a20010, or
+ * 0x510029) by a constant for anything that is not a group or league, and never ask
+ * 0x1414cb830, so phname_handler's names did not reach them (08.10.: "UEFA Champions League
+ * Play-offs - 1st leg" for a second qualifying round).  Their call of the text fetch
+ * 0x141496ca0 (string, text id, ...) goes through a stub that hands the phase over in r8
+ * (the fetch is variadic and these texts take no argument): title_text puts the round's own
+ * text for one of our qualifying rounds or their ties, and the original for all else. */
+#define TTL_CALL1 0x152a7e6   /* phase in si */
+#define TTL_CALL2 0x0cae00c   /* phase in r14w */
+#define TEXTFETCH_RVA 0x1496ca0
+typedef void* (*textfetch_fn)(void* str, uint64_t id);
+static void* title_text(void* str, uint64_t id, uint64_t phase)
+{
+  uint32_t t = (uint32_t)id;
+  if (t == 0x3a20010u || t == 0x510029u) {
+    int qa = q_added((uint16_t)phase);
+    if (qa >= 0 && g_tramp_txtget) {
+      static int said = 0;
+      if (said < 4) { said++; logf("fl26swiss: match title -- regulation %u named %s qualifying round", (unsigned)(uint16_t)phase, qa / NQ == 1 ? "3rd" : "2nd"); }
+      t = qa / NQ == 1 ? QR3_TEXT : QR2_TEXT;
+    }
+  }
+  return ((textfetch_fn)(uintptr_t)(g_base + TEXTFETCH_RVA))(str, t);
+}
+static int ttl_install(uint64_t exe_base)
+{
+  static const uint32_t SITE[2] = { TTL_CALL1, TTL_CALL2 };
+  static const unsigned char MOV[2][3] = { { 0x49, 0x89, 0xf0 }, { 0x4d, 0x89, 0xf0 } };   /* mov r8, rsi / r14 */
+  for (int i = 0; i < 2; i++) {
+    unsigned char* c = (unsigned char*)(uintptr_t)(exe_base + SITE[i]);
+    if (c[0] != 0xE8 || (uint64_t)(uintptr_t)(c + 5) + *(int32_t*)(c + 1) != exe_base + TEXTFETCH_RVA) return 2;
+  }
+  unsigned char* t = near_alloc(exe_base);
+  if (!t) return 3;
+  for (int i = 0; i < 2; i++) {
+    unsigned char* s = t + 0x20 * i;
+    memcpy(s, MOV[i], 3);
+    s[3] = 0xFF; s[4] = 0x25; *(uint32_t*)(s + 5) = 0; *(uint64_t*)(s + 9) = (uint64_t)(uintptr_t)title_text;
+  }
+  FlushInstructionCache(GetCurrentProcess(), t, 0x40);
+  for (int i = 0; i < 2; i++) {
+    unsigned char* c = (unsigned char*)(uintptr_t)(exe_base + SITE[i]);
+    DWORD old;
+    if (!VirtualProtect(c, 5, PAGE_EXECUTE_READWRITE, &old)) return 4;
+    *(int32_t*)(c + 1) = (int32_t)((int64_t)(uintptr_t)(t + 0x20 * i) - (int64_t)(uintptr_t)(c + 5));
+    VirtualProtect(c, 5, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), c, 5);
+  }
+  return 0;
 }
 
 /* 0 ok; 2 a site is not the one expected (nothing patched); 3 no page in reach; 4 VirtualProtect */
@@ -6922,6 +6991,10 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
     if (!pr) logf("fl26swiss: our play-offs on Match Results live (subclass@%llx, title@%llx)",
                   (unsigned long long)(exe_base + POSEL_CALL), (unsigned long long)(exe_base + POTTL_SITE));
     else logf("fl26swiss: our play-offs on Match Results NOT installed (%d)", pr);
+    int tr = ttl_install(exe_base);
+    if (!tr) logf("fl26swiss: qualifying round names in match titles live (@%llx, @%llx)",
+                  (unsigned long long)(exe_base + TTL_CALL1), (unsigned long long)(exe_base + TTL_CALL2));
+    else logf("fl26swiss: qualifying round names in match titles NOT installed (%d)", tr);
   }
   {
     int gr = grp_install(exe_base);
