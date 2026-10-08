@@ -50,8 +50,8 @@
 #define CLOSE_RVA 0x1363210  /* close_listed(ctx, vec_u16*): New Year close of calendar-year comps */
 #define BLD_RET_RVA 0x1315c0b /* return address of the builder's call to the door (0x141315c06)  */
 #define OWNER_RVA 0x3705e10  /* *(void**)  -> owner; [owner+0x48] = edit block              */
-#ifndef REG_ARRAY_OFF   /* -DREG_ARRAY_OFF=... builds for a set that moves the block (the -calendar set) */
-#define REG_ARRAY_OFF 0x1c84230 /* edit block + this = regulation records, stride 0x314 (caps sets) */
+#ifndef REG_ARRAY_OFF   /* the -calendar set (0.2.0); -DREG_ARRAY_OFF=0x1c84230 builds for the older -fixtures set */
+#define REG_ARRAY_OFF 0x1d4c330 /* edit block + this = regulation records, stride 0x314 (caps sets) */
 #endif
 #define REG_STRIDE    0x314
 #define REG_CAP       600       /* the caps sets raise the array to 600 rows; unused rows carry id 0 */
@@ -893,8 +893,8 @@ static void ensure_tables(const vec16_t* in)
 #define DOOR_RET_RVA 0x13ac37e   /* enter_season's return address inside the door          */
 #define SUBRESET_RVA 0x158f870   /* (u8* subrecord): clear its tables                        */
 #define SUBFILL_RVA  0x158f9b0   /* (u8* entry, u16 year, u8 flag): build the year's tables  */
-#ifndef TODAY_OFF   /* -DTODAY_OFF=... builds for a set that moves the block (the -calendar set) */
-#define TODAY_OFF    0x1642a24   /* u32 date in the edit block: low word = year              */
+#ifndef TODAY_OFF   /* the -calendar set (0.2.0): the unit tail moved by 0x2cebc8; -DTODAY_OFF=... for an older set */
+#define TODAY_OFF    0x19115ec   /* u32 date in the edit block: low word = year              */
 #endif
 typedef void (*subreset_fn)(unsigned char* sub);
 typedef void (*subfill_fn)(unsigned char* entry, uint64_t year, uint64_t flag);
