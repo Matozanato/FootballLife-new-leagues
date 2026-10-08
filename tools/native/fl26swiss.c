@@ -4444,6 +4444,15 @@ static int ccup_of_league(int k, uint16_t id)
   for (int e = 0; e < g_ccup[k].n && e < CCUP_MAX_ENTRY; e++) if (g_ccup[k].ereg[e] == id) return 1;
   return 0;
 }
+/* a pre-season cup that invites a club of league id: its days are that league's as well -- the
+   Balkan Cup kept clear of the host's (HNL) days only, and the Bosnian league played the day
+   after its semi-final and final (2026-10-08) */
+static int ccup_invites(int k, uint16_t id)
+{
+  for (int i = 0; i < g_ccup[k].nc && i < CCUP_MAX_ENTRY; i++)
+    if (in_rec(id, canon_club(full_club(g_ccup[k].clubs[i])))) return 1;
+  return 0;
+}
 static int cup_league(uint16_t id)
 {
   for (int k = 0; k < g_nccup; k++) if (ccup_of_league(k, id)) return 1;
@@ -4495,7 +4504,7 @@ static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
   if (level < 2) for (int i = 0; i < 12; i++) block(bad, NATCUP_DAYS[i], buf > 2 ? buf - 1 : buf);
   if (level < 1)
     for (int k = 0; k < g_nccup; k++) {
-      if (!g_ccup[k].national || !ccup_of_league(k, id)) continue;
+      if (!g_ccup[k].national || !(ccup_of_league(k, id) || ccup_invites(k, id))) continue;
       for (int i = 0; i < g_ccup[k].nd && i < CCUP_MAX_DAYS; i++) block(bad, g_ccup[k].days[i], buf);
       for (int li = 0; li < g_nlpre; li++)
         if (g_lpre[li].ko == g_ccup[k].ko) { block(bad, g_lpre[li].days[0], buf); block(bad, g_lpre[li].days[1], buf); }
