@@ -1265,6 +1265,11 @@ static final_t* final_of(uint16_t reg)
   return 0;
 }
 #define BUILD_DAY 210   /* the day-216 rollover builds the new season; nothing after this is final */
+/* New Year's teardown, where a February-December league's season ends (days NEWYEAR_FROM..365
+   and 1..NEWYEAR_TO) */
+#define NEWYEAR_FROM 335
+#define NEWYEAR_TO   45
+static int season_played(uint16_t reg);
 /* a table in exactly the league's list order is one nobody has played yet */
 static int unplayed(unsigned char* rec, unsigned char* t, uint32_t rows)
 {
@@ -1291,7 +1296,7 @@ static int keep_final(uint16_t reg, int d, int ad)
      day 216" in a career created that minute). A season's own build is the same rollover
      and, as said above, never holds a final table; and a table in exactly the league's list
      order is one nobody has played. */
-  if (d >= BUILD_DAY || unplayed(rec, t, rows)) return -1;
+  if ((d >= BUILD_DAY && d < NEWYEAR_FROM) || unplayed(rec, t, rows)) return -1;
   if (!f) { if (g_nfinal >= 64) return 0; f = &g_final[g_nfinal++]; f->reg = reg; }
   f->n = (uint16_t)rows; f->day = ad;
   for (uint32_t k = 0; k < rows; k++) f->club[k] = *(uint32_t*)(t + k * 20);
@@ -1300,10 +1305,31 @@ static int keep_final(uint16_t reg, int d, int ad)
 /* at the July teardown: every access league's final table, while it still exists */
 static void access_capture(void)
 {
-  int got = 0, skipped = 0, d = today(), ad = abs_day();
-  if (d < 140 || d > 230) return;                 /* the summer rollover only, not New Year's */
+  int got = 0, skipped = 0, running = 0, d = today(), ad = abs_day();
+  /* GitHub #119: a February-December league ends at New Year, and its final table was never
+     kept -- the July teardown kept it half-way through its next season, so the Libertadores took
+     the clubs on top in July (Peru: ADT and Cienciano instead of champion Juan Pablo II). New
+     Year keeps the tables of the access leagues whose every match is played; July then leaves
+     a league alone whose season is still running and whose New Year table it has. */
+  int newyear = d >= NEWYEAR_FROM || d <= NEWYEAR_TO;
+  if (newyear) {
+    for (size_t i = 0; i < g_naccess; i++) {
+      uint16_t reg = g_access[i].reg;
+      if (!g_access[i].rank || !season_played(reg)) continue;
+      int dup = 0;
+      for (size_t j = 0; j < i; j++) dup |= g_access[j].rank && g_access[j].reg == reg;
+      if (!dup && keep_final(reg, d, ad) > 0) got++;
+    }
+    if (got) logf("fl26swiss: access -- New Year: final tables of %d league(s) kept on day %d", got, d);
+    return;
+  }
+  if (d < 140 || d > 230) return;                 /* the summer rollover, and New Year's above */
   for (size_t i = 0; i < g_naccess; i++) {
     uint16_t reg = g_access[i].reg;
+    if (g_access[i].rank && !season_played(reg)) {
+      final_t* f = final_of(reg);
+      if (f && ad >= f->day && ad - f->day < 250) { running++; continue; }
+    }
     if (!g_access[i].rank) {                        /* a cup: keep its winner, same summer rule */
       cupwin_t* w = cupwin_of(reg);
       if (w && ad >= w->day && ad - w->day < 60) continue;
@@ -1319,6 +1345,7 @@ static void access_capture(void)
   }
   if (got) logf("fl26swiss: access -- final tables of %d league(s) kept on day %d", got, d);
   if (skipped) logf("fl26swiss: access -- %d table(s) with no match played yet not kept (day %d)", skipped, d);
+  if (running) logf("fl26swiss: access -- %d league(s) mid-season: their New Year table stands (day %d)", running, d);
 }
 /* a cup's winner: kept at the July teardown, else asked of the game now */
 static uint32_t cup_winner(uint16_t reg)
