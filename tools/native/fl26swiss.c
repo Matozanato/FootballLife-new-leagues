@@ -2879,6 +2879,7 @@ static int lpre_matches(const lpre_t* l)
   return m;
 }
 
+static void po_fill(void);          /* the Match Results play-off ids, below */
 __declspec(dllexport) int fl26_swiss_lpre(const uint16_t* v, int n)
 {
   /* per pre-round: reg, the cup's knockout, fill day, the two legs' days, entries, then
@@ -2913,6 +2914,7 @@ __declspec(dllexport) int fl26_swiss_lpre(const uint16_t* v, int n)
          "played on days %u and %u", (unsigned)reg, (unsigned)l->ties, (unsigned)ko, fed, (unsigned)fill,
          (unsigned)d1, (unsigned)d2);
   }
+  po_fill();                        /* the Match Results title: the pre-rounds are play-offs */
   return g_nlpre;
 }
 
@@ -4954,8 +4956,9 @@ static int cont_install(uint64_t exe_base)
 /* ---- our play-offs on the Match Results screen (n1ne, CUSTOM_PLAYOFF_MATCH_RESULTS_FIX) ----
  *
  * The Champions League play-off's replicas (0x402, 0x802 ...), the Europa and Conference League
- * play-offs (188, 189, ties at id + 1024 * (k + 1)) and the qualifying rounds (g_qreg) are copies
- * of reg 2, but only the exact ids the game knows get the play-off treatment on the results
+ * play-offs (188, 189, ties at id + 1024 * (k + 1)), the qualifying rounds (g_qreg) and the league
+ * cups' pre-rounds (g_lpre: the Carabao Cup's first round read "Group stage - Matchday 54",
+ * 08.10.) are copies of reg 2, but only the exact ids the game knows get the play-off treatment on the results
  * screen: the subclass selector 0x140af93f0 takes the group-stage subclass for them, and the
  * title 0x14152a590 builds "Group stage - Matchday 54" instead of "Play-offs". Two patches,
  * both for our ids only, so every shipped competition goes as before:
@@ -4965,7 +4968,7 @@ static int cont_install(uint64_t exe_base)
  *  - POAB13: the title's last play-off test (sub si,0x45 / cmp si,4 at 0x14152ada3) jumps to a
  *    stub that sends ours to the native Play-offs branch 0x14152ad97 and runs the original test
  *    for everything else. Only rax is used, saved; [rsp+0x28] is never touched (POAB11 crashed
- *    reading it). The ids are a table in the stub's page, filled from g_qreg (po_fill). */
+ *    reading it). The ids are a table in the stub's page, filled from g_qreg and g_lpre (po_fill). */
 #define ACTCOMP_RVA  0x150c230
 #define POSEL_CALL   0xaf9421
 #define POTTL_SITE   0x152ada3
@@ -4976,7 +4979,8 @@ typedef uint64_t (*actcomp_fn)(uint64_t, uint64_t, uint64_t, uint64_t);
 
 static int our_po(uint16_t id)
 {
-  return (is_playoff(id) && id >= 0x400) || new_po(id) || q_added(id) >= 0;
+  int tie;
+  return (is_playoff(id) && id >= 0x400) || new_po(id) || q_added(id) >= 0 || lpre_of(id, &tie) >= 0;
 }
 
 static uint64_t po_sel(uint64_t a, uint64_t b, uint64_t c, uint64_t d)
@@ -4991,7 +4995,7 @@ static uint64_t po_sel(uint64_t a, uint64_t b, uint64_t c, uint64_t d)
   return (r & ~0xffffULL) | 2;
 }
 
-#define PO_SLOTS 8
+#define PO_SLOTS (8 + MAX_LPRE)             /* 188, 189, six qualifying rounds, the pre-rounds */
 static uint32_t* g_po_tab = 0;               /* low ids the title takes as play-offs; 0xffff empty */
 static void po_fill(void)
 {
@@ -4999,6 +5003,7 @@ static void po_fill(void)
   uint32_t v[PO_SLOTS];
   v[0] = UEL_PO; v[1] = UECL_PO;
   for (int i = 3; i < 9; i++) v[i - 1] = g_qreg[i] ? g_qreg[i] : 0xffff;
+  for (int i = 0; i < MAX_LPRE; i++) v[8 + i] = i < g_nlpre ? g_lpre[i].reg : 0xffff;
   for (int i = 0; i < PO_SLOTS; i++) g_po_tab[i] = v[i];
 }
 
@@ -5013,8 +5018,8 @@ static int po_install(uint64_t exe_base)
   if (!t) return 3;
   /* +0: jmp po_sel */
   t[0] = 0xFF; t[1] = 0x25; *(uint32_t*)(t + 2) = 0; *(uint64_t*)(t + 6) = (uint64_t)(uintptr_t)po_sel;
-  /* +0x20: the title stub (about 0xa0 bytes); +0x200: the id table */
-  g_po_tab = (uint32_t*)(t + 0x200);
+  /* +0x20: the title stub (about 0x170 bytes, near jumps: the table outgrew rel8); +0x400: the id table */
+  g_po_tab = (uint32_t*)(t + 0x400);
   for (int i = 0; i < PO_SLOTS; i++) g_po_tab[i] = 0xffff;
   po_fill();
   unsigned char* s = t + 0x20;
@@ -5022,31 +5027,31 @@ static int po_install(uint64_t exe_base)
   s[n++] = 0x50;                                            /* push rax */
   s[n++] = 0x0f; s[n++] = 0xb7; s[n++] = 0xc6;              /* movzx eax, si */
   s[n++] = 0x3d; *(uint32_t*)(s + n) = 0x23ff; n += 4;      /* cmp eax, 8*1024+0x3ff */
-  s[n++] = 0x77; jo = n++;                                  /* ja other */
+  s[n++] = 0x0f; s[n++] = 0x87; jo = n; n += 4;             /* ja other (near) */
   /* replica test: ah & 0xfc != 0 -> eax >= 0x400 */
   s[n++] = 0xf6; s[n++] = 0xc4; s[n++] = 0xfc;              /* test ah, 0xfc */
   s[n++] = 0x74; int jz = n++;                              /* jz low (an exact id) */
   s[n++] = 0x25; *(uint32_t*)(s + n) = 0x3ff; n += 4;       /* and eax, 0x3ff */
   s[n++] = 0x83; s[n++] = 0xf8; s[n++] = 0x02;              /* cmp eax, 2 */
-  s[n++] = 0x74; jn[nj++] = n++;                            /* je ours (a UCL play-off replica) */
+  s[n++] = 0x0f; s[n++] = 0x84; jn[nj++] = n; n += 4;       /* je ours (a UCL play-off replica, near) */
   s[jz] = (unsigned char)(n - (jz + 1));
   s[n++] = 0x25; *(uint32_t*)(s + n) = 0x3ff; n += 4;       /* low: and eax, 0x3ff */
   for (int i = 0; i < PO_SLOTS; i++) {                      /* cmp eax, [rip -> tab+i] ; je ours */
     s[n++] = 0x3b; s[n++] = 0x05;
     *(int32_t*)(s + n) = (int32_t)((unsigned char*)(g_po_tab + i) - (s + n + 4)); n += 4;
-    s[n++] = 0x74; jn[nj++] = n++;
+    s[n++] = 0x0f; s[n++] = 0x84; jn[nj++] = n; n += 4;     /* near */
   }
-  s[jo] = (unsigned char)(n - (jo + 1));
+  *(int32_t*)(s + jo) = n - (jo + 4);
   s[n++] = 0x58;                                            /* other: pop rax */
   s[n++] = 0x66; s[n++] = 0x83; s[n++] = 0xee; s[n++] = 0x45; /* sub si, 0x45 */
   s[n++] = 0x66; s[n++] = 0x83; s[n++] = 0xfe; s[n++] = 0x04; /* cmp si, 4 */
   s[n++] = 0xFF; s[n++] = 0x25; *(uint32_t*)(s + n) = 0; n += 4;
   *(uint64_t*)(s + n) = exe_base + POTTL_RESUME; n += 8;    /* jmp resume (the jbe) */
-  for (int i = 0; i < nj; i++) s[jn[i]] = (unsigned char)(n - (jn[i] + 1));
+  for (int i = 0; i < nj; i++) *(int32_t*)(s + jn[i]) = n - (jn[i] + 4);
   s[n++] = 0x58;                                            /* ours: pop rax */
   s[n++] = 0xFF; s[n++] = 0x25; *(uint32_t*)(s + n) = 0; n += 4;
   *(uint64_t*)(s + n) = exe_base + POTTL_NATIVE; n += 8;    /* jmp the Play-offs branch */
-  FlushInstructionCache(GetCurrentProcess(), t, 0x220);
+  FlushInstructionCache(GetCurrentProcess(), t, 0x400 + 4 * PO_SLOTS);
   DWORD old;
   if (!VirtualProtect(call, 5, PAGE_EXECUTE_READWRITE, &old)) return 4;
   *(int32_t*)(call + 1) = (int32_t)((int64_t)(uintptr_t)t - (int64_t)(uintptr_t)(call + 5));
