@@ -5171,6 +5171,127 @@ static int grp_install(uint64_t exe_base)
   return 0;
 }
 
+/* ---- "which league is team X in" without the linear regulation searches ----
+ *
+ * 0x141543510 answers which league a team plays in. For every competition id of a list
+ * (0x1414ccd10, ~73 ids) it searches the regulation table (0x314-byte records) for the id --
+ * twice, the second search (0x1415435d7..0x14154360d, through the same block pointer) finding
+ * the very record the first already found -- and then walks that league's clubs. It is called
+ * for every match the season builder places, so with our 300 regulations the two searches were
+ * 46 % of the game's time on the ML creation loading screen (sample 08.10., Druga NL club, a
+ * load of several minutes; fl26regfast had already removed the 0x1414bb000 re-searches).
+ *  - the first search (0x14154358d) jumps to a stub that looks the id up in a 64K table of
+ *    record indices and checks the hit (index below the count, the record carries the id), so
+ *    a stale entry is never used; a miss runs the original linear search from 0 -- the same
+ *    first match -- and remembers the index. The table is cleared whenever the count changes.
+ *    Out: rdx = index * 0x314 at 0x1415435c0, as the original loop leaves it; eax/ecx/rdx/r8
+ *    and the flags are the original's scratch registers (nothing reads them after).
+ *  - the second search is skipped: `call 0x1414b6a60` at 0x1415435ce becomes `jmp 0x14154361a`,
+ *    where rax still holds the record (0x1415435c0 put it there, 0x1415435cb copied it to r15).
+ * REGS and COUNT are read from the code when this runs, after fl26caps relocated them. */
+#define RIX_SITE   0x154358d
+#define RIX_CMP1   0x15435a9
+#define RIX_CMP2   0x15435fa
+#define RIX_CNT2   0x15435da
+#define RIX_FOUND  0x15435c0
+#define RIX_NONE   0x154368b
+#define RIX_SKIP   0x15435ce
+#define RIX_AFTER  0x154361a
+static const unsigned char SIG_RIX[5]    = { 0x33,0xc0, 0x45,0x8b,0x85 };        /* xor eax,eax; mov r8d,[r13+COUNT] */
+static const unsigned char SIG_RIXT[5]   = { 0x45,0x85,0xc0, 0x0f,0x84 };        /* test r8d,r8d; je */
+static const unsigned char SIG_RCMP1[5]  = { 0x66,0x42,0x39,0x9c,0x2a };         /* cmp word [rdx+r13+REGS], bx */
+static const unsigned char SIG_RCMP2[5]  = { 0x66,0x42,0x39,0x9c,0x12 };         /* cmp word [rdx+r10+REGS], bx */
+static const unsigned char SIG_RCNT2[3]  = { 0x45,0x8b,0x8a };                   /* mov r9d, [r10+COUNT] */
+static const unsigned char SIG_RAFTER[6] = { 0x8b,0x88,0x08,0x03,0x00,0x00 };    /* mov ecx, [rax+0x308] */
+
+static int put_jmp_abs(unsigned char* s, int n, uint64_t to)
+{
+  s[n++] = 0xFF; s[n++] = 0x25; *(uint32_t*)(s + n) = 0; n += 4; *(uint64_t*)(s + n) = to; n += 8;
+  return n;
+}
+
+/* 0 ok; 2 a site is not the one expected (nothing patched); 3 no page in reach; 4 VirtualProtect; 5 no table */
+static int rix_install(uint64_t exe_base)
+{
+  unsigned char* site = (unsigned char*)(uintptr_t)(exe_base + RIX_SITE);
+  unsigned char* c1 = (unsigned char*)(uintptr_t)(exe_base + RIX_CMP1);
+  unsigned char* c2 = (unsigned char*)(uintptr_t)(exe_base + RIX_CMP2);
+  unsigned char* n2 = (unsigned char*)(uintptr_t)(exe_base + RIX_CNT2);
+  unsigned char* skip = (unsigned char*)(uintptr_t)(exe_base + RIX_SKIP);
+  unsigned char* after = (unsigned char*)(uintptr_t)(exe_base + RIX_AFTER);
+  if (memcmp(site, SIG_RIX, 5) || memcmp(site + 9, SIG_RIXT, 5) || memcmp(c1, SIG_RCMP1, 5) ||
+      memcmp(c2, SIG_RCMP2, 5) || memcmp(n2, SIG_RCNT2, 3) || memcmp(after, SIG_RAFTER, 6) || skip[0] != 0xE8)
+    return 2;
+  uint32_t count = *(uint32_t*)(site + 5), regs = *(uint32_t*)(c1 + 5);
+  if (regs != *(uint32_t*)(c2 + 5) || count != *(uint32_t*)(n2 + 3)) return 2;   /* the two searches disagree */
+  uint16_t* tab = (uint16_t*)VirtualAlloc(0, 0x20000, MEM_COMMIT|MEM_RESERVE, PAGE_READWRITE);
+  if (!tab) return 5;
+  memset(tab, 0xff, 0x20000);
+  unsigned char* t = near_alloc(exe_base);
+  if (!t) return 3;
+  uint32_t* last = (uint32_t*)(t + 0x800);                 /* the count the table was built for */
+  *last = 0xffffffffu;
+  unsigned char* s = t;
+  int n = 0, j_cached, j_slow1, j_slow2, j_none, j_loop, j_hit, j_next;
+  s[n++] = 0x0f; s[n++] = 0xb7; s[n++] = 0xc3;                                   /* movzx eax, bx */
+  s[n++] = 0x48; s[n++] = 0xb9; *(uint64_t*)(s + n) = (uint64_t)(uintptr_t)tab; n += 8; /* mov rcx, tab */
+  s[n++] = 0x45; s[n++] = 0x8b; s[n++] = 0x85; *(uint32_t*)(s + n) = count; n += 4; /* mov r8d, [r13+COUNT] */
+  s[n++] = 0x44; s[n++] = 0x3b; s[n++] = 0x05;                                   /* cmp r8d, [rip -> last] */
+  *(int32_t*)(s + n) = (int32_t)((unsigned char*)last - (s + n + 4)); n += 4;
+  s[n++] = 0x74; j_cached = n++;                                                 /* je cached */
+  s[n++] = 0x44; s[n++] = 0x89; s[n++] = 0x05;                                   /* mov [rip -> last], r8d */
+  *(int32_t*)(s + n) = (int32_t)((unsigned char*)last - (s + n + 4)); n += 4;
+  s[n++] = 0x57; s[n++] = 0x51;                                                  /* push rdi; push rcx */
+  s[n++] = 0x48; s[n++] = 0x89; s[n++] = 0xcf;                                   /* mov rdi, rcx */
+  s[n++] = 0xb9; *(uint32_t*)(s + n) = 0x4000; n += 4;                           /* mov ecx, 0x4000 */
+  s[n++] = 0x48; s[n++] = 0xc7; s[n++] = 0xc0; *(uint32_t*)(s + n) = 0xffffffffu; n += 4; /* mov rax, -1 */
+  s[n++] = 0xf3; s[n++] = 0x48; s[n++] = 0xab;                                   /* rep stosq */
+  s[n++] = 0x59; s[n++] = 0x5f;                                                  /* pop rcx; pop rdi */
+  s[n++] = 0x0f; s[n++] = 0xb7; s[n++] = 0xc3;                                   /* movzx eax, bx */
+  s[j_cached] = (unsigned char)(n - (j_cached + 1));
+  s[n++] = 0x0f; s[n++] = 0xb7; s[n++] = 0x14; s[n++] = 0x41;                     /* cached: movzx edx, word [rcx+rax*2] */
+  s[n++] = 0x44; s[n++] = 0x39; s[n++] = 0xc2;                                   /* cmp edx, r8d */
+  s[n++] = 0x73; j_slow1 = n++;                                                  /* jae slow */
+  s[n++] = 0x48; s[n++] = 0x69; s[n++] = 0xd2; *(uint32_t*)(s + n) = 0x314; n += 4; /* imul rdx, rdx, 0x314 */
+  s[n++] = 0x66; s[n++] = 0x42; s[n++] = 0x39; s[n++] = 0x9c; s[n++] = 0x2a;     /* cmp word [rdx+r13+REGS], bx */
+  *(uint32_t*)(s + n) = regs; n += 4;
+  s[n++] = 0x75; j_slow2 = n++;                                                  /* jne slow */
+  n = put_jmp_abs(s, n, exe_base + RIX_FOUND);                                   /* jmp found */
+  s[j_slow1] = (unsigned char)(n - (j_slow1 + 1));
+  s[j_slow2] = (unsigned char)(n - (j_slow2 + 1));
+  s[n++] = 0x31; s[n++] = 0xc0;                                                  /* slow: xor eax, eax */
+  s[n++] = 0x45; s[n++] = 0x85; s[n++] = 0xc0;                                   /* test r8d, r8d */
+  s[n++] = 0x74; j_none = n++;                                                   /* je none */
+  j_loop = n;
+  s[n++] = 0x89; s[n++] = 0xc2;                                                  /* loop: mov edx, eax */
+  s[n++] = 0x48; s[n++] = 0x69; s[n++] = 0xd2; *(uint32_t*)(s + n) = 0x314; n += 4; /* imul rdx, rdx, 0x314 */
+  s[n++] = 0x66; s[n++] = 0x42; s[n++] = 0x39; s[n++] = 0x9c; s[n++] = 0x2a;     /* cmp word [rdx+r13+REGS], bx */
+  *(uint32_t*)(s + n) = regs; n += 4;
+  s[n++] = 0x74; j_hit = n++;                                                    /* je hit */
+  s[n++] = 0xff; s[n++] = 0xc0;                                                  /* inc eax */
+  s[n++] = 0x44; s[n++] = 0x39; s[n++] = 0xc0;                                   /* cmp eax, r8d */
+  s[n++] = 0x72; j_next = n++;                                                   /* jb loop */
+  s[j_next] = (unsigned char)(j_loop - (j_next + 1));
+  s[j_none] = (unsigned char)(n - (j_none + 1));
+  n = put_jmp_abs(s, n, exe_base + RIX_NONE);                                    /* none: the original "not found" */
+  s[j_hit] = (unsigned char)(n - (j_hit + 1));
+  s[n++] = 0x44; s[n++] = 0x0f; s[n++] = 0xb7; s[n++] = 0xc3;                     /* hit: movzx r8d, bx */
+  s[n++] = 0x66; s[n++] = 0x42; s[n++] = 0x89; s[n++] = 0x04; s[n++] = 0x41;     /* mov word [rcx+r8*2], ax */
+  n = put_jmp_abs(s, n, exe_base + RIX_FOUND);                                   /* jmp found */
+  FlushInstructionCache(GetCurrentProcess(), t, n);
+  DWORD old;
+  if (!VirtualProtect(site, 5, PAGE_EXECUTE_READWRITE, &old)) return 4;
+  site[0] = 0xE9; *(int32_t*)(site + 1) = (int32_t)((int64_t)(uintptr_t)t - (int64_t)(uintptr_t)(site + 5));
+  VirtualProtect(site, 5, old, &old);
+  FlushInstructionCache(GetCurrentProcess(), site, 5);
+  if (!VirtualProtect(skip, 2, PAGE_EXECUTE_READWRITE, &old)) return 4;
+  skip[0] = 0xEB; skip[1] = (unsigned char)(RIX_AFTER - (RIX_SKIP + 2));         /* jmp 0x14154361a */
+  VirtualProtect(skip, 2, old, &old);
+  FlushInstructionCache(GetCurrentProcess(), skip, 2);
+  logf("fl26swiss: team-to-league lookup indexed (REGS +0x%x, COUNT +0x%x, stub %d bytes)", regs, count, n);
+  return 0;
+}
+
 /* Put the key of every live split into the stub, once. Cheap enough to call from the date,
  * progression and current-phase hooks, which between them run on load and on the split day. */
 static void split_keys(void)
@@ -6021,6 +6142,10 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
     int gr = grp_install(exe_base);
     if (!gr) logf("fl26swiss: League Phase instead of Group A / Group stage live (%d sites)", GRP_N);
     else logf("fl26swiss: League Phase instead of Group A NOT installed (%d)", gr);
+  }
+  {
+    int rx = rix_install(exe_base);
+    if (rx) logf("fl26swiss: team-to-league lookup index NOT installed (%d)", rx);
   }
   if (!cupsel_install(exe_base))
     logf("fl26swiss: Cup mode list live (no league phase of 36 in Kick Off > Cup)");
