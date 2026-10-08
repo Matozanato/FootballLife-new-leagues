@@ -18,9 +18,9 @@ League place for the two best associations of the season before given for good t
 LP 26 + the two title holders, EL 19 + one, KL 20: with the play-off winners and the clubs that
 drop down from the rounds above, 36 in each league phase.
 
-With fewer ranked leagues than KEY has rows (30), the places of the missing ranks are not lost:
+With fewer ranked leagues than KEY has rows (31), the places of the missing ranks are not lost:
 each of them goes, tier by tier, to the next club of the strongest leagues in turn -- the first
-league's next club, then the second's ... -- so every competition stays full. Past 30 a league
+league's next club, then the second's ... -- so every competition stays full. Past 31 a league
 gets no place; the notes say so. In each league the stronger competitions take the higher
 positions (a league with a Champions League third qualifying place and a Europa League place
 gives the higher one to the Champions League).
@@ -56,10 +56,18 @@ _row([16], Q3=[1], Q2=[2], ELQ2=[CUP], KL=[3])
 _row(_R(17, 18), Q3=[1], ELQ2=[CUP], KL=[2])
 _row(_R(19, 20), Q2=[1], ELQ2=[CUP], KL=[2])
 _row(_R(21, 28), Q2=[1], KLQ2=[CUP, 2])
-_row(_R(29, 30), Q2=[1])
+# 0.2.0: ranks 29-31 (Albania, Montenegro, North Macedonia in the modpack), whose clubs really
+# start in the first qualifying round, which the world does not have: the champion in the
+# Champions League's second qualifying round, the cup winner and places 2 and 3 in the
+# Conference League's. Those rounds hold sixteen clubs each (CAP), so with all 31 ranks filled
+# the last places listed get none (assign's notes say which)
+_row(_R(29, 31), Q2=[1], KLQ2=[CUP, 2, 3])
 RANKS = len(KEY)
 TOTAL = collections.Counter({t: sum(len(KEY[r][t]) for r in KEY) for t in TIERS})
-assert dict(TOTAL) == {"LP": 26, "PO": 8, "Q3": 8, "Q2": 16, "EL": 19, "ELQ2": 16, "KL": 20, "KLQ2": 16}
+assert dict(TOTAL) == {"LP": 26, "PO": 8, "Q3": 8, "Q2": 17, "EL": 19, "ELQ2": 16, "KL": 20, "KLQ2": 25}
+# the clubs each tier's competition round takes (fl26world.QCONFIGS with all nine rounds: sixteen
+# a qualifying round; the league phases' direct entrants as ever)
+CAP = {"LP": 26, "PO": 8, "Q3": 8, "Q2": 16, "EL": 19, "ELQ2": 16, "KL": 20, "KLQ2": 16}
 
 # UEFA's association ranking for 2026-27 (the 2025 coefficients), Russia left out as UEFA does;
 # Country.bin's names. The modder reorders as they like.
@@ -174,7 +182,10 @@ def assign(leagues, tiers=None):
     # the missing ranks' places: tier by tier, one to each league in rank order, round and round
     room = {L["id"]: L["clubs"] for L in leagues[:RANKS]}
     for t in TIERS:
-        need = TOTAL[t] - count[t]
+        if count[t] > CAP[t]:
+            notes.append("%s: %d places for %d clubs -- the last %d listed (the lowest ranks) get none"
+                         % (NAMES[t], count[t], CAP[t], count[t] - CAP[t]))
+        need = min(TOTAL[t], CAP[t]) - count[t]
         k = 0
         while need > 0 and n:
             ids = [L["id"] for L in leagues[:RANKS] if len(slots[L["id"]]) - sum(c for _t, c in slots[L["id"]]) < room[L["id"]]]
