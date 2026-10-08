@@ -209,7 +209,8 @@ See [known-issues.md](known-issues.md). Most important:
 - Clubs of new African, North American and Oceanian leagues keep the objective the game picks:
   the game has no board objective for those cups.
 - The Club World Cup is the game's own (every season, mid-December), with the champions of the
-  continental cups your world builds in it. The 2025 format with 32 clubs is not in Mod Studio.
+  continental cups your world builds in it. The 2025 format with 32 clubs is not in Mod Studio; its unfinished code is shared for
+  anyone who wants to finish it: [docs/fork/club-world-cup-32.md](fork/club-world-cup-32.md).
 
 ## Thanks
 

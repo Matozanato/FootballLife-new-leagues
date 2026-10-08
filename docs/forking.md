@@ -20,6 +20,7 @@ things (a page, a recipe key, a module, a translation). The details are in the c
 | [fork/building.md](fork/building.md) | zig and the DLL build scripts, checksums, the module pack, PyInstaller and `mszip.py`, the version, pointing the updater at your releases |
 | [fork/testing.md](fork/testing.md) | every test and what it proves, `regress018.py`, `buildcheck.py`, the C tests, and the in-game checklist |
 | [fork/newlife-format.md](fork/newlife-format.md) | the NewLife release format as Mod Studio reads it |
+| [fork/club-world-cup-32.md](fork/club-world-cup-32.md) | the unfinished 32-club Club World Cup (2025 format): the table script and the module code that exist, and what is missing to put it in Mod Studio |
 
 ## What you need
 
