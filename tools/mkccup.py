@@ -1,4 +1,4 @@
-r"""python mkccup.py --base <pesdb dir> --out <livecpk root> --cup "NAME|CODE|cid|reg|ko|groups|entry[|conf[|region]]" ... [--dry]
+r"""python mkccup.py --base <pesdb dir> --out <livecpk root> --cup "NAME|CODE|cid|reg|ko|groups|entry[|conf[|region[|like]]]" ... [--dry]
 
 Add continental club cups where the game has none (Africa: the CAF Champions League and the
 Confederation Cup): groups of four played home and away, then a knockout of the group winners and
@@ -19,6 +19,11 @@ runners-up. Each --cup is one competition:
           bits: 3 AFC, 4 CONMEBOL, 5 CAF ...); without it the Libertadores' (4) is kept
   region  optional: the region the competition row names (a region id, mkleague.enc_region) --
           a country's league cup or pre-season cup sits under its country, not the continent's
+  like    optional, a straight knockout only (0.2.0): the regulation id of a shipped domestic cup
+          whose row the knockout is copied from instead of the Europa League's -- 23, the FA
+          Cup: one match a round, format 2 -- with its bracket set to the entries, which may then
+          be any number the bracket screen draws (LIKE_SIZES): byes where it is not a power of
+          two. fl26swiss.dll dates it as that cup (the ccup line's like=, leaguebuilder)
 
 Both phases are shapes the engine already plays:
 
@@ -50,6 +55,10 @@ R_BACK, R_GROUP, R_GROUPS = 0x06, 0x0a, 0x10
 REPLICA_STEP, NO_GROUP = 1024, 255
 LIB_CID, LIB_GROUPS, UEL_KO = 5, 9, 6
 CONF_MASK = 7
+R_TYPE, KNOCKOUT = 0x09, 3
+# the fields a single-match cup (like) may have: the ones the bracket screen draws (2-16, 18, 20,
+# 24, 28, 30, 32 -- leaguebuilder BRACKET_SIZES) and the FA Cup's 44
+LIKE_SIZES = set(range(2, 17)) | {18, 20, 24, 28, 30, 32, 44}
 
 
 def rid(r):
@@ -62,17 +71,18 @@ def rows(b, size):
 
 def parse(spec):
     bits = spec.split("|")
-    if len(bits) not in (7, 8, 9):
-        raise SystemExit("--cup wants NAME|CODE|cid|reg|ko|groups|entry[|conf[|region]], got %r" % spec)
+    if len(bits) not in (7, 8, 9, 10):
+        raise SystemExit("--cup wants NAME|CODE|cid|reg|ko|groups|entry[|conf[|region[|like]]], got %r" % spec)
     name, code, cid, reg, ko, groups, entry = bits[:7]
     conf = int(bits[7]) if len(bits) >= 8 and bits[7] else None
-    region = int(bits[8]) if len(bits) == 9 and bits[8] else None
+    region = int(bits[8]) if len(bits) >= 9 and bits[8] else None
+    like = int(bits[9]) if len(bits) == 10 and bits[9] else None
     ent = []
     for e in entry.split(","):
         r, _, p = e.partition(":")
         ent.append((int(r), int(p)))
     c = {"name": name, "code": code, "cid": int(cid), "reg": int(reg), "ko": int(ko),
-         "groups": int(groups), "entry": ent, "conf": conf, "region": region}
+         "groups": int(groups), "entry": ent, "conf": conf, "region": region, "like": like}
     if conf is not None and not 2 <= conf <= 7:
         raise SystemExit("%s: confederation %d -- use 2..7" % (name, conf))
     if not 0 <= c["groups"] <= 8:
@@ -80,8 +90,14 @@ def parse(spec):
     if c["groups"] == 0:
         if c["reg"] != c["ko"]:
             raise SystemExit("%s: a straight knockout (groups 0) wants reg = ko" % name)
-        if len(ent) not in (2, 4, 8, 16, 32):
+        if like is not None:
+            if len(ent) not in LIKE_SIZES:
+                raise SystemExit("%s: a single-match knockout of %d clubs -- use %s"
+                                 % (name, len(ent), ", ".join(map(str, sorted(LIKE_SIZES)))))
+        elif len(ent) not in (2, 4, 8, 16, 32):
             raise SystemExit("%s: a knockout of %d clubs -- use 2, 4, 8, 16 or 32" % (name, len(ent)))
+    elif like is not None:
+        raise SystemExit("%s: like= is for a straight knockout (groups 0)" % name)
     elif len(ent) != 4 * c["groups"]:
         raise SystemExit("%s: %d groups of four want %d entries, not %d"
                          % (name, c["groups"], 4 * c["groups"], len(ent)))
@@ -160,7 +176,14 @@ def main():
             else:
                 g[R_BACK:R_BACK + 2] = cup["reg"].to_bytes(2, "little")
             new.append(g)
-        k = bytearray(ko_src[0])
+        if cup["like"] is not None:              # a shipped domestic cup's row: one match a round
+            src = [r for r in R if rid(r) == cup["like"]]
+            if len(src) != 1 or src[0][R_TYPE] != KNOCKOUT:
+                raise SystemExit("%s: regulation %d is not a knockout of this world to copy"
+                                 % (cup["name"], cup["like"]))
+            k = bytearray(src[0])
+        else:
+            k = bytearray(ko_src[0])
         k[M.R_BELOW:M.R_BELOW + 2] = bytes(2)
         k[M.R_ID:M.R_ID + 2] = cup["ko"].to_bytes(2, "little")
         k[M.R_CID] = cup["cid"]
@@ -192,8 +215,9 @@ def main():
                   % (cup["name"], cup["cid"], cup["reg"], cup["groups"],
                      " ".join(str(i) for i in ids[2:]), cup["ko"], nko, len(clubs)))
         else:
-            print("%s: competition %d, knockout %d (%d clubs), %d entries"
-                  % (cup["name"], cup["cid"], cup["ko"], nko, len(clubs)))
+            print("%s: competition %d, knockout %d (%d clubs%s), %d entries"
+                  % (cup["name"], cup["cid"], cup["ko"], nko,
+                     ", one match a round as reg %d" % cup["like"] if cup["like"] is not None else "", len(clubs)))
         lines.append("ccup %d ko=%d groups=%d entry=%s name=%s" % (
             cup["reg"], cup["ko"], cup["groups"],
             ",".join("%d:%d" % e for e in cup["entry"]), cup["name"]))

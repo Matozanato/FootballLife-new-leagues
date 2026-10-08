@@ -100,12 +100,13 @@ which league sits above -- and nothing about ids:
               division, season, cups or European places. The "league" is only the recipe's way
               of holding them (pl["others"] after plan(), never pl["leagues"])
   league_cup  optional, a top division of a new country only: true gives the country a league
-              cup, a straight knockout (two legs a round, the final one match) of 16, 8 or 4
-              clubs -- the top division's by league position, then the division below's --
-              the strongest v the weakest, played September to December (LEAGUE_CUP_DAYS);
-              the clubs past it play a pre-round in late September (cup_field, `lpre` line).
-              fl26swiss.dll fills and dates it (the ccup line's options); "league_cup_name",
-              "league_cup_logo"
+              cup (0.2.0, league_ko_cup): the top division and the one below it, as many clubs
+              as the bracket screen draws up to 44 (BRACKET_SIZES), one match a round on a copy
+              of the FA Cup's shape (LEAGUE_KO_LIKE) -- byes where the field is not a power of
+              two go to the top division, every tie drawn at random (cupdraw byes) -- played
+              late September to December on days of its own (LEAGUE_KO_DAYS), the semi-final
+              and the final one match too. fl26swiss.dll fills and dates it (the ccup line's
+              options, like= and draw=); "league_cup_name", "league_cup_logo"
   preseason_cups  (the recipe, not a league) [{"name": ..., "clubs": [...]}]: a knockout of
               4 or 8 invited clubs in July, before the season (PRESEASON_DAYS), paired in the
               order given (first v second ...). A club is "<league>/<k>" (the k-th club of a
@@ -365,6 +366,23 @@ LEAGUE_PRE_MAX = 8
 LEAGUE_PRE_FILL = 226
 LEAGUE_PRE_DAYS = [246, 249]
 LEAGUE_CUP_FILL = 253
+# The league cup since 0.2.0: one match a round, the way the Carabao Cup, the Taca da Liga and the
+# J.League Cup are played, instead of the two-legged knockout of 16 with its pre-round above
+# (cup_field, kept for the ids: league_ko_cup). The knockout row is a copy of the FA Cup's
+# (ENGLAND_D1_CUP, reg 23: format 2, a single match a round, the bracket = the field), whose
+# calendar (exe case 6) dates every round of a field of 9 to 64 -- round ids 0x2e, 0x2f, 0x30
+# and the quarter-final 0x33, 0x34, 0x35; fl26swiss moves them to LEAGUE_KO_DAYS, one day a
+# round, the last the final. The field is the top division and the one below it, top first, cut
+# to the largest size the bracket screen draws (BRACKET_SIZES, 44 above 32: Premier League +
+# Championship); where it is not a power of two the game lets the first places through to the
+# second round and the cup draw (`draw=byes`) gives those to the top division and draws every
+# tie at random. The days are midweek (Tuesday d % 7 == 5, Wednesday 6 on the big leagues'
+# grid), at least three days from every European day (EURO_DAYS) and national cup day
+# (calendar case 6: 251/254, 286/289), after the fill day and inside September to December, so
+# a calendar-year season holds them as well as an August-May one.
+LEAGUE_KO_LIKE = 23
+LEAGUE_KO_DAYS = [265, 279, 300, 321, 335, 356]
+LEAGUE_KO_SIZES = sorted(s for s in BRACKET_SIZES | {NATIONAL_CUP_MAX} if s >= 4)
 # Apertura/Clausura: fl26swiss dates a split's phases on the Scottish season's 38 dates,
 # resampled to its rounds (fl26swiss.c SCOT_DAYS, split_dates); split_days() does the same sums,
 # so the playoffs can be put between the league days. Continental cup days (CCUP_GROUP_DAYS,
@@ -1282,7 +1300,7 @@ def plan(recipe, base):
         rounds = rounds_of(int(L.get("clubs", 0) or 0)) * int(L.get("legs", 2) or 2)
         # European days first: a clash with a league-cup date only breaks a tie (#54: an 18-club
         # league with a league cup took reg 98, 3 European clashes, to dodge two cup dates)
-        cup = set(LEAGUE_CUP_DAYS) if L.get("league_cup") else set()
+        cup = set(LEAGUE_KO_DAYS) if L.get("league_cup") else set()
         best = fl26world.id_rank(left[0])
         r = min((r for r in left if fl26world.id_rank(r) == best),
                 key=lambda r: (len(set(league_days(r, rounds)) & EURO_DAYS),
@@ -1790,27 +1808,43 @@ def cup_field(field):
     return [main[j] for i in range(size // 2) for j in (i, size - 1 - i)], pre
 
 
-def cup_opts(pre):
-    """a league cup's options: filled with the August play-off, or after its pre-round"""
-    o = {"fill": LEAGUE_CUP_FILL if pre else 0, "national": 1, "days": LEAGUE_CUP_DAYS}
-    if pre:
-        o["pre"] = {"entry": pre, "fill": LEAGUE_PRE_FILL, "days": LEAGUE_PRE_DAYS}
-    return o
+def league_ko_cup(tiers):
+    """a single-match league cup of tiers [(league, clubs)] -- the top division and the divisions
+    under it, top first: its entries, the top division's places first and then the next
+    division's, cut to the largest of LEAGUE_KO_SIZES there are clubs for (only the first two
+    divisions play), and its options; (None, None) under LEAGUE_KO_SIZES[0] clubs.
+    The options keep the id the two-legged cup's pre-round had (`reserve`): that cup took the
+    biggest of LEAGUE_CUP_SIZES its divisions filled and a pre-round of the rest, and every cup
+    built after it in the same world keeps the regulation id it had."""
+    field = [(r, pos) for r, n in tiers[:2] for pos in range(1, n + 1)]
+    size = max((s for s in LEAGUE_KO_SIZES if s <= len(field)), default=None)
+    if size is None:
+        return None, None
+    old = []
+    for r, n in tiers:
+        if len(old) >= LEAGUE_CUP_SIZES[0]:
+            break
+        old += [(r, pos) for pos in range(1, n + 1)]
+    _main, pre = cup_field(old)
+    return field[:size], {"fill": LEAGUE_CUP_FILL, "national": 1, "days": LEAGUE_KO_DAYS,
+                          "like": LEAGUE_KO_LIKE, "draw": "byes", "reserve": 1 if pre else 0}
 
 
 def league_cup(p, out):
-    """the league cup of top division p: the biggest of LEAGUE_CUP_SIZES its division and the
-    ones below it (the recipe's) have clubs for, by league position, the strongest v the weakest,
-    the clubs past it through a pre-round (cup_field)"""
-    field, q = [], p
-    while q and len(field) < LEAGUE_CUP_SIZES[0]:
-        field += [(q["rid"], pos) for pos in range(1, q["clubs"] + 1)]
+    """the league cup of top division p: a single-match knockout of its division and the one
+    below it (the recipe's), league_ko_cup"""
+    tiers, q = [], p
+    while q and len(tiers) < 4:
+        tiers.append((q["rid"], q["clubs"]))
         q = next((b for b in out if b["above"] == q["rid"]), None)
-    field, pre = cup_field(field)
+    field, opts = league_ko_cup(tiers)
+    if field is None:
+        raise BuildError("%s has %d clubs, a league cup needs %d"
+                         % (p["name"], p["clubs"], LEAGUE_KO_SIZES[0]))
     return {"name": p["league_cup"]["name"], "code": "FL_%03d_LCUP" % p["rid"], "kind": "league",
             "logo": p["league_cup"].get("logo"),
             "country": p["country"], "region": p["region"], "groups": 0, "entry": field,
-            "opts": cup_opts(pre)}
+            "opts": opts}
 
 
 def game_tops(base):
@@ -1998,22 +2032,21 @@ def game_cups(recipe, regrow, region_of_cid, base, out):
         # copied from (MiMo 03.10.), and an English league cup sat with South America's cups
         conf = comp_conf(base, g[M.R_CID])
         if c.get("league_cup", True):
-            field, q = [], rid
-            while q and len(field) < LEAGUE_CUP_SIZES[0]:
+            tiers, q = [], rid
+            while q and len(tiers) < 4:
                 mine = next((p for p in out if p["rid"] == q), None)
                 n = mine["clubs"] if mine else entries_of(base, regrow[q][M.R_CID])
-                field += [(q, pos) for pos in range(1, n + 1)]
+                tiers.append((q, n))
                 below = u16(regrow[q], M.R_BELOW) if q in regrow else 0
                 q = (below if below in regrow else 0) or next((p["rid"] for p in out if p["above"] == q), None)
-            n = len(field)
-            field, pre = cup_field(field)
+            field, opts = league_ko_cup(tiers)
             if field is None:
                 raise BuildError("game cups: %s has %d clubs, a league cup needs %d"
-                                 % (league, n, LEAGUE_CUP_SIZES[-1]))
+                                 % (league, sum(t[1] for t in tiers[:2]), LEAGUE_KO_SIZES[0]))
             res.append({"name": (c.get("name") or "").strip() or league + " League Cup",
                         "code": "FL_G%03d_LCUP" % rid, "kind": "league", "logo": c.get("logo") or None,
                         "country": None, "conf": conf, "region": region, "groups": 0, "entry": field,
-                        "opts": cup_opts(pre)})
+                        "opts": opts})
         if c.get("super_cup"):
             if home_supercup(regrow, region_of_cid, region):
                 raise BuildError("game cups: %s already has a super cup in the game" % league)
@@ -2084,7 +2117,7 @@ def playoff_cups(p):
     if not k:
         return []
     ap, cl = split_days(rounds_of(p["clubs"]), rounds_of(p["clubs"]))
-    busy = ap + cl + (CCUP_DAYS if p.get("europe") else []) + (LEAGUE_CUP_DAYS if p.get("league_cup") else [])
+    busy = ap + cl + (CCUP_DAYS if p.get("europe") else []) + (LEAGUE_KO_DAYS if p.get("league_cup") else [])
     out = []
     for part, (days_of, tag) in enumerate(((ap, "Apertura"), (cl, "Clausura"))):
         days = playoff_days(days_of[-1], busy)
@@ -2607,8 +2640,9 @@ def describe(pl):
         what = {"league": "league cup", "playoff": "playoff, filled on day %d" % cup["opts"]["fill"],
                 "super": "super cup in late July"}
         pre = cup["opts"].get("pre")
-        lines.append("  %s: %s, a knockout of %d clubs%s" % (
-            cup["name"], what.get(cup["kind"], "pre-season cup in July"), len(cup["entry"]),
+        lines.append("  %s: %s, a %sknockout of %d clubs%s" % (
+            cup["name"], what.get(cup["kind"], "pre-season cup in July"),
+            "single-match " if cup["opts"].get("like") else "", len(cup["entry"]),
             ", %d of them from a pre-round of %d clubs in late September"
             % (len(pre["entry"]) // 2, len(pre["entry"])) if pre else ""))
     return "\n".join(lines)
@@ -3502,7 +3536,8 @@ def continental(cups, root, db, log=print, start=None):
     import mkccup
     cids, free = free_comp_ids(db)
     pres = [c for c in cups if (c.get("opts") or {}).get("pre")]
-    if len(cids) < len(cups) or len(free) < sum(2 if c["groups"] else 1 for c in cups) + len(pres):
+    keep = sum(1 for c in cups if (c.get("opts") or {}).get("reserve"))
+    if len(cids) < len(cups) or len(free) < sum(2 if c["groups"] else 1 for c in cups) + len(pres) + keep:
         raise BuildError("no free competition or regulation ids left for the continental cups")
     args = ["--base", db, "--out", root]
     rounds = []
@@ -3518,10 +3553,14 @@ def continental(cups, root, db, log=print, start=None):
             cup["pre_reg"] = pre = free.pop(0)
             rounds.append((pre, cids[k], cup["name"], len(cup["opts"]["pre"]["entry"]) // 2))
             cup["entry"] = [(pre + 1024 * (e[1] + 1), 0) if e[0] == "pre" else e for e in cup["entry"]]
+        elif (cup.get("opts") or {}).get("reserve"):
+            free.pop(0)                                # the old cup's pre-round id: later ids stay put
+        like = (cup.get("opts") or {}).get("like")
         args += ["--cup", "|".join(str(x) for x in (
             cup["name"], cup["code"], cids[k], reg, ko, cup["groups"],
             ",".join("%d:%d" % tuple(e) for e in cup["entry"]),
-            "" if cup.get("conf") is None else cup["conf"], cup.get("region", "")))]
+            "" if cup.get("conf") is None else cup["conf"], cup.get("region", ""))
+            + ((like,) if like else ()))]
     if rounds:                                         # before mkccup, which wants the ties there
         import mkeuropo
         try:
@@ -3609,6 +3648,8 @@ def ccup_options(line, cup):
              "days=" + ",".join(map(str, o["days"]))]
     if o.get("clubs"):
         words.append("clubs=" + ",".join(map(str, o["clubs"])))
+    if o.get("like"):                                  # 0.2.0: a single-match league cup
+        words += ["like=%d" % o["like"], "draw=%s" % (o.get("draw") or "byes")]
     head, sep, name = line.partition(" name=")
     return "%s %s%s%s" % (head, " ".join(words), sep, name)
 
