@@ -363,7 +363,10 @@ def best_eleven(rows, lineup=None):
         def score(r):
             rating = int(r.get(pos, "0") or 0) if str(r.get(pos, "")).isdigit() else 0
             own = r.get("Registered Position") == pos
-            return (own or rating == 2, rating, overall(dict(r, **{"Registered Position": pos})))
+            # a goalkeeper in goal, and nobody else while there is one; no goalkeeper outfield
+            # while an outfield player is left (Dinamo Zagreb's third keeper at centre back)
+            keeper = (r.get("Registered Position") == "GK") == (pos == "GK")
+            return (keeper, own or rating == 2, rating, overall(dict(r, **{"Registered Position": pos})))
         if not left:
             break
         best = max(left, key=score)
@@ -371,6 +374,156 @@ def best_eleven(rows, lineup=None):
         left.remove(best)
     left.sort(key=lambda r: int(r.get("order", "0") or 0))
     return {r["player"]: str(n) for n, r in enumerate(pick + left)}
+
+
+def lineup_problems(rows, lineup=None):
+    """what is wrong with a squad's first eleven (rows in squad order) for the formation
+    lineup (the role of each place 0-10, or the default 4-2-3-1): ["gk"] for a goalkeeper
+    outfield or an outfield player in goal, ["pos"] for a starter with no rating at all for
+    his place; [] when it is fine"""
+    out = []
+    eleven = sorted(rows, key=lambda r: int(r.get("order", "0") or 0))[:11]
+    for r, pos in zip(eleven, lineup or LINEUP):
+        reg = r.get("Registered Position")
+        if (reg == "GK") != (pos == "GK"):
+            out.append("gk")
+        elif reg != pos and str(r.get(pos, "0")) in ("", "0"):
+            out.append("pos")
+    return sorted(set(out))
+
+
+def club_lineups(db, base):
+    """{team id: the role of each place 0-10} from the first tactics of every club that has
+    any (the world's Tactics.bin, or the game's when the world writes none)"""
+    import mktactics
+    src = db if os.path.exists(os.path.join(db, "Tactics.bin")) else base
+    if not os.path.exists(os.path.join(src, "Tactics.bin")):
+        return {}
+    rows, forms, _h = mktactics.read(src)
+    out = {}
+    for k, club, _s in rows:
+        if club not in out and k in forms and len(forms[k][0]) == mktactics.PLACES:
+            out[club] = mktactics.roles(forms[k][0])
+    return out
+
+
+T_NATIONAL = 0x53                          # Team.bin: top bit set on the national teams
+MIN_KEEPERS = 2
+MIN_SQUAD = 18                             # eleven and a full bench; the game ships 19 at least
+# the shape a short squad is filled towards: how many of each kind a squad of 18 has
+SHAPE = [("GK", ("GK",), 2), ("CB", ("CB",), 4), ("FB", ("LB", "RB"), 3),
+         ("MF", ("DMF", "CMF", "AMF", "LMF", "RMF"), 5), ("FW", ("CF", "SS", "LWF", "RWF"), 4)]
+
+
+def sign_keepers(db, log=print):
+    """gives every club of db with fewer than MIN_KEEPERS goalkeepers the ones it lacks, and
+    one with fewer than MIN_SQUAD players the rest (the kinds of player it is shortest of, by
+    SHAPE): free agents (players with no club, in the world's tables) at about the level of
+    its first eleven, at the end of its squad order. A club whose keeper moved on in the
+    NewLife data with nobody coming in (RB Salzburg), or a NewLife squad with one keeper, had
+    none to start or one to cover. Returns {team id: [player id]}."""
+    import mkworld as W
+    sq = Squads(db)
+    raw = load(db, "Team.bin")
+    national, clubs = set(), set()
+    for o in range(0, len(raw) - W.T_REC + 1, W.T_REC):
+        t = u32(raw, o + W.T_ID)
+        (national if raw[o + T_NATIONAL] & 0x80 else clubs).add(t)
+    taken = {pid for t, v in sq.by_club.items() if t in clubs for _o, pid, _s, _a in v}
+    # a free agent who shares a name (and so may be the same man) with a player at a club is
+    # left alone: the NewLife data can give a real player an id of its own
+    def key(name):
+        w = [_letters(x) for x in _words(name)]
+        return (w[0][:1], "".join(w[1:])) if len(w) > 1 else ("", "".join(w))
+    names = {key(sq.name(pid)) for pid in taken if pid in sq.index}
+    pool = []
+    for pid in sorted(sq.index):
+        if pid in taken:
+            continue
+        r = sq.row(pid)
+        if r.get("name") and key(r["name"]) not in names:
+            pool.append((pid, overall(r), int(r.get("Age") or 0), r.get("Registered Position")))
+    kind = {pos: k for k, poss, _n in SHAPE for pos in poss}
+    assigns = sq.assigns
+    eid = max(u32(assigns, i * A_REC + E.A_EID) for i in range(len(assigns) // A_REC)) + 1
+    signed = {}
+    for tid in sorted(clubs):
+        v = sq.by_club.get(tid) or []
+        if not v:
+            continue
+        rows = [sq.row(pid) for _o, pid, _s, _a in v if pid in sq.index]
+        count = collections.Counter(kind.get(r.get("Registered Position"), "MF") for r in rows)
+        need = []
+        for _k in range(MIN_KEEPERS - count["GK"]):
+            need.append("GK")
+            count["GK"] += 1
+        while len(rows) + len(need) < MIN_SQUAD:
+            k = max(SHAPE[1:], key=lambda e: e[2] - count[e[0]])[0]
+            need.append(k)
+            count[k] += 1
+        if not need:
+            continue
+        level = sorted((overall(r) for r in rows), reverse=True)[:11]
+        want = (sum(level) / len(level) if level else 65) - 3
+        packs = [u32(assigns, a + E.A_PACK) for _o, _p, _s, a in v]
+        order = max(o for o, _p, _s, _a in v) + 1
+        for k in need:
+            fit = [g for g in pool if kind.get(g[3], "MF") == k]
+            if not fit or order > E.ORDER_MASK >> E.ORDER_SHIFT:
+                break
+            best = min(fit, key=lambda g: (abs(g[1] - want) + (0 if 19 <= g[2] <= 34 else 4), g[0]))
+            pool.remove(best)
+            shirt = E.free_shirt(packs)
+            pack = E.with_shirt(order << E.ORDER_SHIFT, shirt)
+            e = bytearray(A_REC)
+            for off, x in ((E.A_EID, eid), (E.A_PID, best[0]), (E.A_TID, tid), (E.A_PACK, pack)):
+                e[off:off + 4] = x.to_bytes(4, "little")
+            assigns += e
+            packs.append(pack)
+            eid += 1
+            order += 1
+            signed.setdefault(tid, []).append(best[0])
+    if signed:
+        _check_orders(assigns)
+        open(os.path.join(db, "PlayerAssignment.bin"), "wb").write(pesdb.wesys_pack(bytes(assigns)))
+        log("  %d club(s) short of goalkeepers or players signed %d free agent(s)"
+            % (len(signed), sum(len(x) for x in signed.values())))
+    return signed
+
+
+def line_up(db, base, ordered=(), log=print):
+    """puts a best eleven at orders 0-10 of every team of db whose first eleven does not fit its
+    formation: a goalkeeper outfield or an outfield player in goal, or a starter with no rating
+    for his place. A squad sorted by position (goalkeepers first, then the centre backs: how the
+    NewLife tables and placeholder squads come) started its second and third keepers at centre
+    back. ordered: teams whose order the recipe sets -- only a goalkeeper out of place is
+    mended there. Returns {team id: [problems]} of the teams it reordered."""
+    sq = Squads(db)
+    roles = club_lineups(db, base)
+    assigns = sq.assigns
+    fixed = {}
+    for tid, v in sq.by_club.items():
+        rows = []
+        for order, pid, _shirt, o in v:
+            if pid in sq.index:
+                r = sq.row(pid)
+                r["player"], r["order"] = str(o), str(order)
+                rows.append(r)
+        lu = roles.get(tid)
+        bad = lineup_problems(rows, lu)
+        if not bad or (tid in ordered and "gk" not in bad):
+            continue
+        for o, n in best_eleven(rows, lu).items():
+            o = int(o)
+            pack = u32(assigns, o + E.A_PACK) & ~E.ORDER_MASK | int(n) << E.ORDER_SHIFT
+            assigns[o + E.A_PACK:o + E.A_PACK + 4] = pack.to_bytes(4, "little")
+        fixed[tid] = bad
+    if fixed:
+        _check_orders(assigns)
+        open(os.path.join(db, "PlayerAssignment.bin"), "wb").write(pesdb.wesys_pack(bytes(assigns)))
+        log("  first eleven fitted to the formation for %d teams (%d had a goalkeeper out of place)"
+            % (len(fixed), sum(1 for b in fixed.values() if "gk" in b)))
+    return fixed
 
 
 def merged(rows, edits):

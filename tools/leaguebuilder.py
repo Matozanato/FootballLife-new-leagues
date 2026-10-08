@@ -2787,6 +2787,21 @@ FAME_CLASS = [(84, 8), (82, 7), (80, 6), (79, 5), (78, 4), (77, 3), (76, 2), (75
 FANS_PCT = [100, 40, 15, 8, 5]
 
 
+def recipe_ordered(filled, clubs):
+    """the team ids whose squad order the recipe's players set"""
+    team_of = {}
+    for p in clubs["leagues"]:
+        for k, t in enumerate(p.get("teams") or []):
+            team_of["%s/%d" % (p["name"], k)] = t
+    out = set()
+    for key, c in (filled.get("players") or {}).items():
+        if any("order" in ch for ch in (c.get("edits") or {}).values()):
+            t = int(key) if str(key).isdigit() else team_of.get(key)
+            if t is not None:
+                out.add(t)
+    return out
+
+
 def club_strength(rows):
     """the mean rough overall of a squad's best eleven (0 for no squad)"""
     import lbplayers
@@ -3099,6 +3114,8 @@ def build(pl, base, game, replace=False, log=print):
     except lbplayers.Error as e:
         raise BuildError(str(e))
     fans = club_money(new_of, pl, db, log)
+    lbplayers.sign_keepers(db, log)
+    lbplayers.line_up(db, base, recipe_ordered(filled, clubs), log)
     if ids:                                            # for Mod Studio's Players page and its CSV
         with open(os.path.join(tmp, PLAYER_IDS), "w", encoding="utf-8") as f:
             json.dump({"world": pl["world"], "clubs": ids}, f, indent=1, sort_keys=True)

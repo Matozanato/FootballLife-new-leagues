@@ -110,6 +110,10 @@ The left bar comes from `page_groups()` in `app.py`:
      `fill_tiers`, `apply`), faces (`lbfaces`), portraits;
    - the new clubs' transfer budget base in Team.bin and their `fans` lines
      (`club_money`, by squad strength and division);
+   - every club short of goalkeepers (fewer than 2) or players (fewer than 18) signs free
+     agents (`lbplayers.sign_keepers`), and every team whose first eleven does not fit its
+     formation -- a goalkeeper outfield, a starter with no rating for his place -- gets a best
+     eleven (`lbplayers.line_up`; the NewLife tables come sorted by position);
    - splits (`mksplit`); European competitions (`europe`: `mkreshape`, `mkuecl`,
      `mkeuropo`); national cups (`mkcup`); continental and league cups (`continental`:
      `mkccup`);
