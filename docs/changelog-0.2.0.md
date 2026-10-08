@@ -159,6 +159,8 @@ world, about 1,000 matches a season).
 
 - The twelve small crash guards are installed as two files, `fl26guards.lua` and
   `fl26lateguards.lua`, so the `sider.ini` list is shorter. sider.log still names each guard.
+- **Credits** (next to Help) has a Supporters section: the people who supported the project on
+  Ko-fi.
 - **Documentation for forks**: [forking.md](forking.md) and the chapters in `docs/fork/`. They
   cover the code map, every recipe key, the world file, every module and DLL, building, testing
   and the NewLife release format.
@@ -231,3 +233,6 @@ See [known-issues.md](known-issues.md). Most important:
 Everyone who reported, tested and helped, on GitHub and on the Discord. In particular Gu (game
 seasons, the guard bundles), Xxspedd (kits from pictures), LumpierTheGunner, LaraCroft, lub7628, aaron, rwee,
 vmardonesdev, victormican, jibibi and Risto. The full list is in the README credits.
+
+And thank you to everyone who supported the project on Ko-fi: Thunder105, GutGut, Scott Weir
+(LaraCroft) and Pierro1912. They are in Credits (next to Help) and in the README under Supporters.

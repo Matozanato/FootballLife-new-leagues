@@ -73,6 +73,10 @@ EVERYONE = [
      "folder of crests to clubs by name"),
 ]
 
+# the people who supported the project on Ko-fi (ko-fi.com/mata28), first first; the README's
+# "Supporters" lists the same names
+SUPPORTERS = ["Thunder105", "GutGut", "Scott Weir (LaraCroft)", "Pierro1912"]
+
 
 def html(_=lambda s: s):
     """the Credits window's text"""
@@ -85,5 +89,8 @@ def html(_=lambda s: s):
     out += [row(*p) for p in FEATURED]
     out.append("<h3>%s</h3>" % _("Everyone else who helped"))
     out += [row(*p) for p in EVERYONE]
+    out.append("<h3>%s</h3>" % _("Supporters"))
+    out.append("<p>%s</p>" % _("They supported the project on Ko-fi. Thank you!"))
+    out.append("<p style='margin:0 0 7px 0'>%s</p>" % "<br>".join("<b>%s</b>" % n for n in SUPPORTERS))
     out.append("<p>%s</p>" % _("Send a report on GitHub or Discord and your name goes on this list too."))
     return "\n".join(out)

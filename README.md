@@ -434,8 +434,12 @@ installed, what you did and what you saw, and you will be on this list too.
 
 ### Supporters
 
-- **Thunder105**: the first person ever to support this project on
-  [Ko-fi](https://ko-fi.com/mata28). Thank you!
+They supported this project on [Ko-fi](https://ko-fi.com/mata28). Thank you!
+
+- **Thunder105**, the first one ever
+- **GutGut**
+- **Scott Weir** (LaraCroft)
+- **Pierro1912**
 
 ## Free to use — please credit
 
@@ -686,7 +690,7 @@ the African leagues' League Info panel, more competitions and formats). If you w
 along: **[ko-fi.com/mata28](https://ko-fi.com/mata28)**. Testing and good bug reports help just
 as much — see the [testing guide](docs/testing-guide.md).
 
-Thank you to everyone who has: **Thunder105** was the first. Supporters are listed under
+Thank you to everyone who has: **Thunder105**, **GutGut**, **Scott Weir** and **Pierro1912**. Supporters are listed under
 [The people who made this better](#supporters).
 
 ## Licence and credits
