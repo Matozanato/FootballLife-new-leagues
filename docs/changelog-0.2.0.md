@@ -118,7 +118,13 @@ world, about 1,000 matches a season).
 ## Fixes
 
 - The league phase of the Champions League, Europa League and Conference League was called
-  "Group A" and "Group stage" on some screens. It now says "League Phase".
+  "Group A" and "Group stage" on some screens. It now says "League Phase", the Competition
+  Info standings included.
+- Competition Info: the Champions League play-off page opened on eight empty ties under a
+  "%s" header before any play-off was drawn. It now appears once its ties are drawn, as the
+  Europa and Conference League play-offs already did.
+- Competition Info: the Europa and Conference League league phase stays viewable before the
+  draw once the game has built its table, as the Champions League's is.
 - Match Results showed "Group stage - Matchday 54" for the Champions League, Europa League
   and Conference League play-offs and qualifying rounds. They now show as play-offs (fix by
   n1ne).

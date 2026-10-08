@@ -4096,6 +4096,14 @@ uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
       unsigned char* po = find_rec(c->po);
       if (!po || !((*(uint32_t*)(po + 0x304) >> 8) & 1)) return r | 0xffff;
     }
+    /* The Champions League's is reg 2, which the game marks drawn all year (it is also the
+       August round), so its page opened on eight empty ties under a "%s" header (08.10.).
+       Left out the same way while its first tie holds no club -- i.e. until a play-off is
+       actually drawn into it, in August or in February. */
+    if ((uint16_t)r == CUPS[0].po) {
+      unsigned char* tie = find_rec(tie_id(&CUPS[0], 0));
+      if (!tie || !rec_count(tie)) return r | 0xffff;
+    }
   }
   return r;
 }
@@ -4178,6 +4186,15 @@ uint64_t gstage_handler(uint32_t* comp)
     unsigned char* lg = find_rec(c->league);
     if (!lg || *(uint32_t*)(lg + 0x80) != *comp) continue;
     uint64_t on = (*(uint32_t*)(lg + 0x304) >> 8) & 1;
+    /* ... or a table the page can show already: the league phase's clubs are in from the July
+       access list and the game has built its 24+ row table (the same test po_start makes), so
+       the Europa and Conference League read like the Champions League before the draw (08.10.:
+       "clubs listed, no league phase").  Without a table it stays grey -- an empty one aborted. */
+    if (!on && rec_count(lg) >= 24) {
+      unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(c->row);
+      uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
+      if (rows >= 24 && rows <= 48) on = 1;
+    }
     if ((r & 0xff) != on && g_gstage_n++ < 8)
       logf("fl26swiss: %s Group stage item %s (league phase %u)", c->name, on ? "enabled" : "disabled",
            (unsigned)c->league);
@@ -5044,9 +5061,17 @@ static int po_install(uint64_t exe_base)
  * those only when the letter is "A", the one group a league phase has. */
 #define GRP_GROUP 0x3a20013u
 #define GRP_STAGE 0x3a20011u
-typedef struct { uint32_t rva, text; int kind; } grp_site_t;   /* kind 0 active, 1 si, 2 word [r13-0x10] */
+/* kind 0 active, 1 si, 2 word [r13-0x10], 3 the standings widget in rsi, 4 its sibling in r14.
+ * The two standings headers ran on kind 0, but on Competition Info -> Standings the active
+ * competition is not set and the resolver answers 0xffff (08.10.: "Group A at 140af54b4 for
+ * regulation 65535 -> kept"), so they read the widget they draw instead: 0x140af72b0 calls
+ * 0x140af53e0 with rsi = the widget, 0x140af6ce0 calls 0x140af52b0 with r14 = its sibling, and
+ * neither callee touches that register.  The widget holds the shown phase's groups (a vector of
+ * 24-byte vectors at +0xa0, rows 0x28 bytes; the sibling's at +0xb0) -- our league phase is the
+ * only phase of one group with 24 or more clubs. */
+typedef struct { uint32_t rva, text; int kind; } grp_site_t;
 static const grp_site_t GRP_SITES[] = {
-  { 0xaf5384,  GRP_GROUP, 0 }, { 0xaf54b4,  GRP_GROUP, 0 }, { 0xca5d8c, GRP_GROUP, 0 },
+  { 0xaf5384,  GRP_GROUP, 4 }, { 0xaf54b4,  GRP_GROUP, 3 }, { 0xca5d8c, GRP_GROUP, 0 },
   { 0xcb9e2d,  GRP_GROUP, 0 }, { 0x12aaf3e, GRP_GROUP, 2 }, { 0x152a75c, GRP_STAGE, 1 } };
 #define GRP_N ((int)(sizeof GRP_SITES / sizeof GRP_SITES[0]))
 
@@ -5057,11 +5082,33 @@ static int lp_ours(uint32_t id)
   return 0;
 }
 
-static uint32_t grp_text(uint32_t text, uint32_t reg, const char* letter, uint32_t site)
+/* one group of 24 or more: the widget's groups at +vec, rows of 0x28 bytes (sibling: groups only) */
+static int grp_one_big(const unsigned char* w, int vec, int rows_known)
+{
+  if (!w || IsBadReadPtr(w + vec, 16)) return 0;
+  const unsigned char* b = *(unsigned char* const*)(w + vec);
+  const unsigned char* e = *(unsigned char* const*)(w + vec + 8);
+  if (!b || e - b != 24) return 0;
+  if (!rows_known) return 1;
+  const unsigned char* rb = *(unsigned char* const*)b;
+  const unsigned char* re = *(unsigned char* const*)(b + 8);
+  return rb && re > rb && (re - rb) % 0x28 == 0 && (re - rb) / 0x28 >= 24;
+}
+
+static uint32_t grp_text(uint32_t text, uint64_t arg, const char* letter, uint32_t site)
 {
   if (!g_tramp_txtget || !g_nreg) return text;
+  int kind = GRP_SITES[site].kind;
+  uint32_t reg = kind >= 3 ? 0xffffffffu : (uint32_t)arg;
   if (text == GRP_GROUP) {
     if (!letter || letter[0] != 'A' || letter[1]) return text;
+    if (kind >= 3) {
+      int big = grp_one_big((const unsigned char*)(uintptr_t)arg, kind == 3 ? 0xa0 : 0xb0, kind == 3);
+      static int said_w = 0;
+      if (said_w < 6) { said_w++; logf("fl26swiss: Group A at %llx -- the shown phase is %s",
+          (unsigned long long)(0x140000000ull + GRP_SITES[site].rva), big ? "one group of 24+ (League Phase)" : "not ours"); }
+      return big ? LP_TEXT : text;
+    }
     if (reg == 0xffffffffu) {
       unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
       unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
@@ -5100,6 +5147,8 @@ static int grp_install(uint64_t exe_base)
     t[n++] = 0xb9; *(uint32_t*)(t + n) = GRP_SITES[i].text; n += 4;   /* mov ecx, text */
     if (GRP_SITES[i].kind == 1) { t[n++] = 0x0f; t[n++] = 0xb7; t[n++] = 0xd6; }              /* movzx edx, si */
     else if (GRP_SITES[i].kind == 2) { t[n++] = 0x41; t[n++] = 0x0f; t[n++] = 0xb7; t[n++] = 0x55; t[n++] = 0xf0; } /* movzx edx, word [r13-0x10] */
+    else if (GRP_SITES[i].kind == 3) { t[n++] = 0x48; t[n++] = 0x89; t[n++] = 0xf2; }       /* mov rdx, rsi */
+    else if (GRP_SITES[i].kind == 4) { t[n++] = 0x4c; t[n++] = 0x89; t[n++] = 0xf2; }       /* mov rdx, r14 */
     else { t[n++] = 0xba; *(uint32_t*)(t + n) = 0xffffffffu; n += 4; }                        /* mov edx, -1 */
     t[n++] = 0x41; t[n++] = 0xb9; *(uint32_t*)(t + n) = (uint32_t)i; n += 4;                  /* mov r9d, site */
     t[n++] = 0x48; t[n++] = 0xb8; *(uint64_t*)(t + n) = (uint64_t)(uintptr_t)grp_text; n += 8; /* mov rax, grp_text */
