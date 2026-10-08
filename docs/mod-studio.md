@@ -52,11 +52,16 @@ behaves exactly as before.
 
 The pack (`tools/lbpack.py`) ships the small guards as two bundles since 0.2.0: `fl26guards.lua`
 (fl26nullguard, 2, 4, 5, 7, 8, 9, 10, in that order) and `fl26lateguards.lua` (fl26superguard,
-fl26resultsguard, fl26ctlguard). Each part runs in its own function with its own locals and log
-lines; the bundle's init calls the parts' inits in order under `pcall`, so one that fails is
-logged (`<part>: init failed -- ...`) and the rest still run. The pack's `retired.txt` names
-the single modules; install switches their `lua.module` lines off and moves their files to
-`modulesefore-builder-<n>`, so a fix is never applied twice.
+fl26resultsguard, fl26ctlguard, fl26kitguard). Each part runs in its own function with its own
+locals and log lines, and the bundle's init calls the parts' inits in order. Sider's Lua has no
+`pcall`, so a part whose init raises an error stops the parts after it; the oldest, most tried
+guards come first. The pack's `retired.txt` names the single modules; install switches their
+`lua.module` lines off and moves their files to `modules\before-builder-<n>`, so a fix is never
+applied twice.
+
+Every line kind, with the code that writes it and the modules that read it, is listed in
+[fork/world-file.md](fork/world-file.md); the kinds below are the ones that need the most
+explaining.
 
 ```
 # fl26world 1

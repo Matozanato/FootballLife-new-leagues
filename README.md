@@ -652,17 +652,24 @@ tools/              world builders (mkworld, mkplayers, mkcrests, mkkits, mkcup,
 tools/modstudio/    FL26 Mod Studio (tools/modstudio_main.py starts it from source,
                     tools/mszip.py makes the release zip) and the League Builder behind it
                     (leaguebuilder, lbplayers, lbfaces, lbpackage, lbpack ...)
-tools/native/       the C source of the four DLLs, their build scripts and checksums
+tools/native/       the C source of the six DLLs, their build scripts and checksums
 patches/            the patch set as JSON plus the layout tables the generator reads
 docs/               mod-studio-guide (en/hr/es/fr), mod-studio (how it works, package format),
                     faq, how-to, beginners-guide, step-by-step, install, build-your-world,
                     testing-guide, known-issues, limits, how-it-works, for-developers,
                     forking, league-phase-swiss-decode, player-record
+docs/fork/          the fork chapters: code-map, recipe-keys, world-file, modules,
+                    building, testing, newlife-format
 ```
 
 **Want your own version?** Mod Studio is MIT licensed: fork it and change what you like.
 [docs/forking.md](docs/forking.md) is the map of the code, how to run and build it, and how
-to add a page, a recipe key or a module.
+to add a page, a recipe key or a module. The chapters in [docs/fork/](docs/fork/) go into
+detail: [code map](docs/fork/code-map.md), [recipe keys](docs/fork/recipe-keys.md),
+[world file](docs/fork/world-file.md), [modules and DLLs](docs/fork/modules.md),
+[building](docs/fork/building.md), [testing](docs/fork/testing.md) and the
+[NewLife release format](docs/fork/newlife-format.md). 0.2.0 is the last release with new
+features; after it there are only bug fixes, once a week.
 
 ## Support
 

@@ -1,6 +1,10 @@
 # For developers
 
-Making your own version of Mod Studio: see [forking.md](forking.md).
+Making your own version of Mod Studio: see [forking.md](forking.md) and its chapters in
+[fork/](fork/): [code map](fork/code-map.md), [recipe keys](fork/recipe-keys.md),
+[world file](fork/world-file.md), [modules and DLLs](fork/modules.md) (including the 0.2.0
+`-calendar` constants and what to do when the game exe changes), [building](fork/building.md),
+[testing](fork/testing.md), [NewLife release format](fork/newlife-format.md).
 
 ## FL26 Mod Studio and the world file
 
@@ -65,19 +69,21 @@ a real load-path bug:
 
 ## What the set name means
 
-`teams-coaches-regs-players-dates-matches-upper-mlcopy`: each part is a family of patches
+`teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar` (3519 patches): each part is a family of patches
 in `layout.json` — grow the team table and relocate it; grow coaches; grow regulations;
 raise the player cap in place; install the date-spread stub (since 0.1.7 on a page of its own
 at `0x163000000`, which `fl26caps` reserves before it writes); grow the match record table;
 relocate the "upper belt" of small tables after it; grow the Master League save/load copy
-(`mlcopy`). Smaller sets exist for bisection but are not shipped here.
+(`mlcopy`); grow the global fixture table from 2000 to 8000 rounds (`fixtures`); widen every
+calendar day from 280 to 792 match ids and move the calendar unit to the top of the edit block
+(`calendar`, 0.2.0). Smaller sets exist for bisection but are not shipped here.
 
 ## Reading a crash
 
 A fault offset from Event Viewer plus `0x140000000` is the absolute address. Sections:
 `.trace` (game code) is where every crash we could reason about lives; `0x1484ed4c0` is
 outside it and is the shipped generation crash (it also happens with none of our modules and
-no patch set; see known-issues.md). The five guards' headers describe the
+no patch set; see known-issues.md). The guards' headers (`fl26nullguard*`, `fl26superguard`, `fl26resultsguard`, `fl26ctlguard`) describe the
 disassembly around each guarded site, and the crash table in known-issues.md lists what is
 open.
 
@@ -113,7 +119,7 @@ players 0x17c, clubs 0x690, coaches 0x258, regulations 0x314, match records 0x25
 | `mkuecl.py`, `mkeuropo.py` | add the Conference League; give the Europa and Conference League the 9-24 play-off |
 | `mkswiss.py` | generate and check the league-phase draw tables compiled into `fl26swiss.dll` |
 | `mksizes.py` | set each added league's club count and how many times the clubs meet (you write the plan; format at the top of the script) |
-| `native/fl26join.c`, `native/fl26clubs.c`, `native/fl26chain.c`, `native/fl26swiss.c` and their build scripts | the sources of the four DLLs and the one-line `zig cc` build; see [native/README.md](../tools/native/README.md) |
+| `native/fl26join.c`, `native/fl26clubs.c`, `native/fl26chain.c`, `native/fl26swiss.c`, `native/fl26regen.c`, `native/fl26edit.c` and their build scripts | the sources of the six DLLs and the one-line `zig cc` build; see [native/README.md](../tools/native/README.md) and [fork/building.md](fork/building.md) |
 
 Tools we use in development but did not include: the automation harness that plays seasons
 unattended with a virtual pad and screen reading, and the disassembly indices. They are tied

@@ -1,12 +1,25 @@
 # Making your own fork of FL26 Mod Studio
 
+> **0.2.0 is the last release of FL26 Mod Studio with new features.** After it this repository
+> only gets bug fixes, about once a week. New features are what forks are for, and this page
+> and the chapters below are written so that you can carry the project on without us.
+
 Mod Studio is MIT licensed (see `LICENSE`). Fork it, rename it, change it, ship it: no
 permission needed. Keep the licence file and the copyright line, and say in your README that
 your fork is based on FL26 Mod Studio. That is all the licence asks.
 
 This page is the map: what lives where, how to run and build it, and how to add the usual
-things (a page, a recipe key, a module, a translation). After 0.2.0 this repository only gets
-bug fixes, so new features are what forks are for.
+things (a page, a recipe key, a module, a translation). The details are in the chapters:
+
+| chapter | what is in it |
+|---|---|
+| [fork/code-map.md](fork/code-map.md) | every file of the program and the builder, every page, and what calls what when someone presses Build |
+| [fork/recipe-keys.md](fork/recipe-keys.md) | every recipe key the code reads, its type, its meaning and the world-file line it becomes |
+| [fork/world-file.md](fork/world-file.md) | every line kind of `fl26world.txt`, the code that writes it and the modules that read it |
+| [fork/modules.md](fork/modules.md) | every Sider module and DLL: load order, bundles, exports, hooks, status codes; the 0.2.0 `-calendar` patch set; what to do when the game exe changes |
+| [fork/building.md](fork/building.md) | zig and the DLL build scripts, checksums, the module pack, PyInstaller and `mszip.py`, the version, pointing the updater at your releases |
+| [fork/testing.md](fork/testing.md) | every test and what it proves, `regress018.py`, `buildcheck.py`, the C tests, and the in-game checklist |
+| [fork/newlife-format.md](fork/newlife-format.md) | the NewLife release format as Mod Studio reads it |
 
 ## What you need
 
@@ -14,9 +27,9 @@ bug fixes, so new features are what forks are for.
   test with.
 - **Python 3.11 or newer** with `PySide6`, `Pillow` and `capstone`
   (`pip install PySide6 Pillow capstone`). `py7zr` is optional (7z kit and face packs).
-- **zig** (0.16) for the four DLLs in `tools/native/`. Only needed when you change their C
-  source; the built DLLs ship in the release zip.
-- **PyInstaller** for the `.exe` (`pip install pyinstaller`). Only needed for a release.
+- **zig 0.16.0** for the six DLLs in `tools/native/` (`ZIG=<path to zig.exe>`). The module
+  pack compiles them, so you need it for a release and whenever you change their C source.
+- **PyInstaller** and **markdown** for a release (`pip install pyinstaller markdown`).
 
 ## Run it from source
 
@@ -28,8 +41,8 @@ python modstudio_main.py
 The first start asks for the game folder and unpacks the game's tables into
 `%APPDATA%\FL26ModStudio\tables` (Settings > Unpack the game's tables). Your settings are in
 `%APPDATA%\FL26ModStudio\settings.json`. A fork that wants its own settings and tables next to
-the official ones changes the folder name in `tools/modstudio/app.py` (`load_settings`) and
-`tools/modstudio/project.py`.
+the official ones changes the folder name in `APPDIR` (`tools/modstudio/app.py`; the tables and
+recipe copies of `project.py` follow it) and in `CACHE` (`tools/modstudio/newlife.py`).
 
 ## The parts
 
@@ -50,7 +63,8 @@ tools/mszip.py                the release: frozen exe + pack + guides -> one zip
 sider/*.lua                   the Sider modules that are always on (fl26caps: table sizes ...)
 sider/experimental/*.lua      the rest: fl26swiss (UEFA cups), fl26chain (promotion),
                               fl26edit, the crash guards ...
-tools/native/*.c              fl26join, fl26clubs, fl26chain, fl26swiss (built with zig)
+tools/native/*.c              fl26join, fl26clubs, fl26chain, fl26swiss, fl26regen, fl26edit
+                              (built with zig)
 docs/                         the guides (mod-studio-guide.md and its hr/es/fr copies)
 ```
 
@@ -60,12 +74,15 @@ the window you can also do from the command line:
 
 ```
 python tools/leaguebuilder.py plan  my-recipe.json --base <the unpacked pesdb folder>
-python tools/leaguebuilder.py build my-recipe.json --base <...> --game "<game folder>"
+python tools/leaguebuilder.py build my-recipe.json --base <...> --game "<game folder>" --replace
+python tools/leaguebuilder.py on    _FL26MyWorld --game "<game folder>"
+python tools/leaguebuilder.py check --game "<game folder>"
 ```
 
 `plan` checks the recipe and prints what it would build; `build` writes the world into
-`SiderAddons` and switches it on. The recipe keys are listed in the docstring at the top of
-`leaguebuilder.py`, and that list is the reference.
+`SiderAddons\livecpk` (`--replace` when it exists already); `on` switches it on; `check` reads
+`sider.log` after a game start. The recipe keys are listed in the docstring at the top of
+`leaguebuilder.py` and, checked against the code, in [fork/recipe-keys.md](fork/recipe-keys.md).
 
 ## The world file
 
@@ -74,7 +91,8 @@ Build writes `SiderAddons\modules\fl26world.txt`, a plain text file with one lin
 modules read it at game start; none of them knows anything about a recipe. When you add a
 feature that the game has to do at runtime, this is the bridge: a recipe key, a world-file
 line written in `leaguebuilder.py` (via `tools/fl26world.py`), and a module that reads the
-line. `docs/mod-studio.md` describes the lines.
+line. [fork/world-file.md](fork/world-file.md) lists every line kind with its writer and
+readers; `docs/mod-studio.md` explains the cup, European and calendar lines in depth.
 
 ## Adding things
 
@@ -99,7 +117,10 @@ installs the pack and makes every module of `ORDER` a live `lua.module` line of 
 Lua has no `pcall`, `debug` or `rawget`: check every value before you index it, and log what
 you do. `fl26kitguard.lua` is a short example of wrapping a function another module calls.
 Patching game code: `sider/fl26caps.lua` shows the pattern (verify the original bytes,
-then write); the addresses in this repository are for the FL26 exe (26.1.1c).
+then write); the addresses in this repository are for `FL_2026.exe` of 458,910,720 bytes
+(Football Life 2026 v2.0, file version 26.0.0.0; v2.2, 26.2.0.3, has the same size and is
+known to work).
+Every module and DLL is listed in [fork/modules.md](fork/modules.md).
 
 **A translation.** Every UI string is `_("English text")`. Add the English text as a key in
 `tools/modstudio/lang/<code>.json` with its translation. `python tools/langcheck.py` lists what
@@ -116,7 +137,8 @@ python tools/langcheck.py
 ```
 
 Then test in the game: a new Master League career in a world with your change, played past
-the first matchday and, for anything that touches seasons, past the season change.
+the first matchday and, for anything that touches seasons, past the season change, then saved
+and loaded. The full list and what each test proves: [fork/testing.md](fork/testing.md).
 
 ## Building a release
 
@@ -131,7 +153,9 @@ to package a file that contains a drive path or a user name. The version is `VER
 `tools/modstudio/__init__.py`.
 
 The updater (`tools/modstudio/updater.py`) looks at this repository's GitHub releases. A fork
-points it at its own repository, or nobody gets your updates (and your users get ours).
+points it at its own repository (`REPO`), or nobody gets your updates (and your users get
+ours). Releases are tagged `modstudio-<version>` with the zip attached. Details, and the regen
+face pack (`FL26_REGEN_FACES`), are in [fork/building.md](fork/building.md).
 
 ## Rules that keep a fork out of trouble
 
