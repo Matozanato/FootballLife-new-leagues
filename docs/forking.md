@@ -1,8 +1,14 @@
 # Making your own fork of FL26 Mod Studio
 
 > **0.2.0 is the last release of FL26 Mod Studio with new features.** After it this repository
-> only gets bug fixes, about once a week. New features are what forks are for, and this page
+> only gets bug fixes from us, about once a week. New features now come from you, and this page
 > and the chapters below are written so that you can carry the project on without us.
+
+> **You do not have to go it alone.** If you would rather your work end up in FL26 Mod Studio
+> itself, send it as a pull request: fork, change it on a branch, open the pull request, and we
+> test it and merge it into the next release (see
+> [Contributing](../README.md#contributing)). Fixes and new features are both welcome. A
+> separate fork is for when you want to take the project somewhere of your own.
 
 Mod Studio is MIT licensed (see `LICENSE`). Fork it, rename it, change it, ship it: no
 permission needed. Keep the licence file and the copyright line, and say in your README that

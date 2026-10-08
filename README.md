@@ -644,6 +644,24 @@ and the save file if the problem can be repeated from a save.
 For questions that are not bugs (how do I ..., does this work with ...), ask on
 [Discord](https://discord.gg/StQqtk3G3M).
 
+## Contributing
+
+You do not need your own separate Mod Studio to add something. Send it to this one with a pull
+request and everyone gets it in the next release:
+
+1. **Fork** the repository. On GitHub that is just your working copy, not a new project.
+2. Make your fix or feature there, on a branch.
+3. **Open a pull request.** We read it, test it in the game and may ask for small changes;
+   you push them to the same branch and the pull request updates itself.
+4. We **merge** it, it ships with the next release, and you go in the credits.
+
+Bug fixes and new features are both welcome this way: 0.2.0 was the last release where *we*
+add features, not the last one that gets them. Before something big, open an issue or ask on
+[Discord](https://discord.gg/StQqtk3G3M) so two people do not build the same thing.
+[docs/forking.md](docs/forking.md) and the [fork chapters](docs/fork/) explain the code; they
+work the same for a pull request as for a fork. For `sider/` and `patches/`, describe the
+disassembly evidence in the pull request the way the module headers do.
+
 ## Layout
 
 ```
@@ -680,7 +698,8 @@ detail: [code map](docs/fork/code-map.md), [recipe keys](docs/fork/recipe-keys.m
 [world file](docs/fork/world-file.md), [modules and DLLs](docs/fork/modules.md),
 [building](docs/fork/building.md), [testing](docs/fork/testing.md) and the
 [NewLife release format](docs/fork/newlife-format.md). 0.2.0 is the last release with new
-features; after it there are only bug fixes, once a week.
+features from us; after it we do bug fixes once a week, and new features come as pull requests
+(see [Contributing](#contributing)).
 
 ## Support
 

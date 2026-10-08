@@ -130,5 +130,7 @@ large world runs into. It reads the running game only; it writes nothing.
 ## Contributing
 
 Issues with fault offsets, saves and `mkworld.py` output are the most valuable thing right
-now. Pull requests are welcome for anything in `tools/`; for `sider/` and `patches/`,
-please describe the disassembly evidence in the PR the way the module headers do.
+now. Pull requests are welcome for anything, fixes and new features alike: we test them and
+merge them into the next release (how: [Contributing](../README.md#contributing)). For
+`sider/` and `patches/`, please describe the disassembly evidence in the PR the way the module
+headers do.
