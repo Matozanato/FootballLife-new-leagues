@@ -21,6 +21,7 @@ things (a page, a recipe key, a module, a translation). The details are in the c
 | [fork/testing.md](fork/testing.md) | every test and what it proves, `regress018.py`, `buildcheck.py`, the C tests, and the in-game checklist |
 | [fork/newlife-format.md](fork/newlife-format.md) | the NewLife release format as Mod Studio reads it |
 | [fork/club-world-cup-32.md](fork/club-world-cup-32.md) | the unfinished 32-club Club World Cup (2025 format): the table script and the module code that exist, and what is missing to put it in Mod Studio |
+| [research-findings.md](research-findings.md) | the research log: everything found in the exe and the data tables, in the order it was found (early entries are often superseded later) |
 
 ## What you need
 
