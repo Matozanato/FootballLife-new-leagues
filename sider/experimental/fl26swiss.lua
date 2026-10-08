@@ -228,6 +228,29 @@ local function read_world(ctx)
   return leagues, splits, uefa, ccups, dlike, qrounds, lpres
 end
 
+-- `rcal <reg> <first> <last> <break from> <break to> <days> <also> [eu]` lines of the world file
+-- (tools/realcal.py, 0.2.0): a league's real calendar, eight numbers each, eu 0 when left out
+local function world_rcal(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  local out = {}
+  if not f then return out end
+  for line in f:lines() do
+    local rest = line:match("^%s*rcal%s+(.*)$")
+    if rest then
+      local v = {}
+      for x in rest:gmatch("%d+") do v[#v + 1] = tonumber(x) end
+      if #v >= 7 then
+        v[8] = v[8] or 0
+        out[#out + 1] = v
+      end
+    end
+  end
+  f:close()
+  return out
+end
+
 -- `july <reg> <day>` lines of the world file: { {reg, day}, ... }
 local function world_july(ctx)
   local sep = string.char(92)
@@ -600,6 +623,19 @@ function m.init(ctx)
         ffi.cast("fl26_swiss_access_t", pj)(jbuf, #july)
       elseif #july > 0 then
         log("fl26swiss: this fl26swiss.dll has no fl26_swiss_july -- July leagues start in August")
+      end
+      -- `rcal`: the real calendar of a league of ours (fl26_swiss_rcal, 0.2.0); without the
+      -- export (an older DLL) the leagues keep the calendar above
+      local rcal = world_rcal(ctx)
+      local pr = ffi.C.GetProcAddress(h, "fl26_swiss_rcal")
+      if #rcal > 0 and pr ~= nil then
+        local rbuf = ffi.new("uint16_t[?]", 8 * #rcal)
+        for i, v in ipairs(rcal) do
+          for k = 1, 8 do rbuf[8 * (i - 1) + k - 1] = v[k] end
+        end
+        ffi.cast("fl26_swiss_access_t", pr)(rbuf, #rcal)
+      elseif #rcal > 0 then
+        log("fl26swiss: this fl26swiss.dll has no fl26_swiss_rcal -- the leagues keep the old calendar")
       end
       local eu = {}
       for r, t in pairs(seasons) do
