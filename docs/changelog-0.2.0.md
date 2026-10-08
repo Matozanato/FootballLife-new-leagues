@@ -99,7 +99,8 @@ world, about 1,000 matches a season).
 - **Update my leagues** keeps the faces and portraits you linked on the Players page for players
   who stay in the league (#111).
 - **A game league brought to the NewLife season takes the game's rating scale**, measured on
-  the players both have, so a star lands where the game rates him.
+  the players both have and matched by rank, so a star lands where the game rates its stars
+  and the best clubs keep the strength the game gives them.
 - The NewLife table sorts by any column (click a header; click again to reverse).
 - **NewLife club...** under New clubs works before you open the NewLife page (#105).
 - **Remove club / Insert club** move a league's NewLife ids with the places. A removed club no

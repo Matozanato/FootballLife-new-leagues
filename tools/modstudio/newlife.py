@@ -833,26 +833,33 @@ def refresh_game_leagues(recipe, rel, info, cids):
 
 def game_scale(rel, db, clubs):
     """overall rating -> the rating the game gives such a player, fitted on the players both the
-    release and the game have in clubs (the mean of the game's rating at each of ours, pooled
-    with its neighbours until it never goes down as ours goes up); outside what was measured the nearest step's difference holds.
+    release and the game have in clubs, by rank: the player at the release's 90th percentile gets
+    the game's 90th percentile; outside what was measured the nearest end's difference holds.
     Jabo9 07.10.: the release's top end ran 2 to 4 above the game's (Mbappe 96 to the game's 92),
-    so a game league brought to the season had its stars rated above every other club's"""
-    got = collections.defaultdict(list)
+    so a game league brought to the season had its stars rated above every other club's.
+    By rank, not the game's mean at each rating of ours (08.10.): a mean pulls the best players
+    towards the middle, and the Premier League came out a point under the game's own"""
+    ours, game = [], []
     for c in set(clubs):
         for r in rel.squad(c):
             g = str(r.get("game_id", "")).strip()
             if g.isdigit() and int(g) in db.index and P.same_name(r["name"], db.name(int(g))):
                 a, b = P.overall(r), P.overall(db.row(int(g)))
                 if a and b:
-                    got[a].append(b)
-    blocks = []                                    # [ours, mean of the game's, weight], pooled
-    for a in sorted(got):                          # until the means never go down (isotonic)
-        blocks.append([a, sum(got[a]) / len(got[a]), len(got[a])])
-        while len(blocks) > 1 and blocks[-2][1] >= blocks[-1][1]:
-            a2, m2, w2 = blocks.pop()
-            a1, m1, w1 = blocks.pop()
-            blocks.append([(a1 * w1 + a2 * w2) / (w1 + w2), (m1 * w1 + m2 * w2) / (w1 + w2), w1 + w2])
-    steps = [(a, m) for a, m, _w in blocks]
+                    ours.append(a)
+                    game.append(b)
+    if len(ours) < 50:
+        return lambda o: o
+    ours.sort()
+    game.sort()
+    n = len(ours) - 1
+    steps = []                                     # [(ours, the game's)], ours rising
+    for q in [0.005, 0.01, 0.025] + [i / 20.0 for i in range(1, 20)] + [0.975, 0.99, 0.995]:
+        a, m = ours[int(q * n)], game[int(q * n)]
+        if steps and a <= steps[-1][0]:
+            steps[-1] = (steps[-1][0], (steps[-1][1] + m) / 2.0)
+        else:
+            steps.append((a, m))
     if len(steps) < 2:
         return lambda o: o
 
