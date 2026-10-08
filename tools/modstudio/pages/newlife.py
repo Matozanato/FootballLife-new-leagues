@@ -1,7 +1,7 @@
 """NewLife Database: pick leagues from a NewLife release and put each in the recipe in one go"""
 import copy, os
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QLabel, QLineEdit, QListWidget, QListWidgetItem,
                                QPushButton, QSplitter, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 
@@ -385,7 +385,9 @@ class NewLife(BuilderPage):
         else:
             c["off"].add(cid)
         self.tidy(L)
-        self.refresh_row(L)
+        # later, not inside this signal: refresh_row rebuilds the club list, and deleting the item
+        # Qt is still emitting itemChanged for crashed Mod Studio in Qt6Widgets (GitHub #120)
+        QTimer.singleShot(0, lambda: self.refresh_row(L))
 
     def refresh_row(self, L):
         cur = self.tree.currentItem()
