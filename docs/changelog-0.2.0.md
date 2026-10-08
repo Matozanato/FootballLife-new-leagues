@@ -88,12 +88,14 @@ world, about 1,000 matches a season).
   Build.
 - **Champions League knockouts on Wednesdays** (and its play-off), like the real ones, so the
   Tuesday and Thursday stay free for the leagues.
-- **Qualifying rounds in midweek**: the second qualifying round on Tuesday and Thursday of the
-  second week of August, the third on two Wednesdays, the play-off on Tuesday and Thursday at
-  the turn of August (12/14 Aug, 20/27 Aug, 2/4 Sep in 2025), for all three competitions.
+- **Qualifying rounds in midweek, one leg a week**: the second qualifying round, the third and
+  the play-off take six weeks in a row, one leg a week, with the league's weekend round between
+  the legs (2025: 7/14 Aug, 20/27 Aug, 3/10 Sep), for all three competitions. Where the
+  play-off ends less than six days before the league phase, its first matchday is a week later
+  (2026: 22/23 September).
 - **Competition Info follows the qualifying**: in August the Play-offs item opens the round in
-  play, named "2nd Qualifying Round", "3rd Qualifying Round" or "Play-offs", for the Champions
-  League, Europa League and Conference League.
+  play, named "2nd Qualifying Round", "3rd Qualifying Round" or "Play-offs" (also on the page
+  and in the schedule), for the Champions League, Europa League and Conference League.
 - **Super cup without a cup winner**: when there is no cup winner yet (a new career's first
   summer), or the champion also won the cup, the league's runner-up plays. Before, Supercopa Rei
   and the Chilean super cup did not start (only 1 of 2 clubs).
@@ -200,7 +202,8 @@ See [known-issues.md](known-issues.md). Most important:
 - Careers from older versions do not load (see the top of this page).
 - European qualifying is the second and third qualifying round and the play-off, in August
   after the season is built (5 August). There is no first qualifying round, and the second and
-  third qualifying rounds are later than the real July ones.
+  third qualifying rounds are later than the real July ones. The national cups' first round
+  falls in one of the six qualifying weeks: a club in both can play them a day apart.
 - The hub's "Next" strip does not show European matches yet.
 - Clubs of new African, North American and Oceanian leagues keep the objective the game picks:
   the game has no board objective for those cups.

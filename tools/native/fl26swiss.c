@@ -146,12 +146,11 @@ static uint32_t day_shift(uint16_t reg)
    case at 0x14158155b: days 230 and 237). A career that starts on day 212 enters the European
    competitions on day 238, after both legs, so the play-off got no matches at all, the group
    stage never filled and the Europa League never started (2026-09-23, calread: no match of
-   competition 2 on any day). Both legs move to the August play-offs' midweek days (qr_day:
-   Tuesday and Thursday of the week before the national cups' first round, by 248), still a
-   week before the first league-phase matchday. (Until 0.2.0 11 days later, to 241 and 248, a
-   Saturday in 2025; before that 14, to 244 and 251: 251 is the national cups' first round
-   (calendar case 6), and Slavia played Benfica and the Czech cup's first leg on the same day
-   -- rwee 07.10.) */
+   competition 2 on any day). Both legs move to the August play-offs' days (qr_day: the fifth
+   and sixth of the qualifying's six weeks, one leg a week), at least six days before the first
+   league-phase matchday (swiss_day). (In 0.2.0 before 08.10. Tuesday and Thursday of one week;
+   until then 241 and 248, before that 244 and 251, the national cups' first round -- Slavia
+   played Benfica and the Czech cup's first leg on the same day, rwee 07.10.) */
 static volatile uint32_t g_playoff_said = 0;
 static int is_playoff(uint16_t id)
 {
@@ -1484,21 +1483,22 @@ static int any_final_kept(void)
  *     entrants are a competition's qualifying places in list order, the strongest to the round
  *     nearest the league phase. A play-off's winners take places from the competition's direct
  *     entrants and its losers eight more in the one below: with all three, 28 / 20 / 20.
- *   - Days (qr_day): midweek, the same for all three competitions. M is the Monday before the
- *     first Tuesday from day 219 on, in the season's own weekdays (2025: 11 August): the second
- *     qualifying round on Tuesday M+1 and Thursday M+3, the third on the Wednesdays M+9 and
- *     M+16, the play-offs (the Champions League's, reg 2, too) on Tuesday M+22 and Thursday
- *     M+24 -- by 248 in every year, three days clear of the national cups' first round (251).
- *     A league has a weekend day three days from all of them in every week (Sunday M+6,
- *     Saturday/Sunday M+12/13, Saturday M+19, Sunday M+27): no club in a qualifier plays the
- *     league the day before or after, or two days from it (rcal_cost, busy_days). Until 0.2.0
- *     220 and 225, 229 and 236, 242 and 247 (the Champions League's 241 and 248), weekends
- *     too, and a Dinamo played Saturday and Wednesday in Europe and Thursday in the league
- *     (2026-10-08). All play-off second legs are on one day: the progressions run in the day
- *     loop after the day's matches, the Europa and Conference League's before reg 2's, whose
- *     end builds the league phases (measured: 189, 188, then 2, one batch). A round is filled
- *     on the days between the round before it and its first leg (q_fill); the season is built
- *     on day 216, so nothing is filled before 217.
+ *   - Days (qr_day): midweek, the same for all three competitions, one leg a week: the second
+ *     qualifying round in the first week the season's build leaves a midweek day in (2025: Thu
+ *     7 and 14 August), the third in the two weeks after it (Wed 20 and 27 August), the
+ *     play-offs (the Champions League's, reg 2, too) in the two after that (Wed 3 and 10
+ *     September).  A league has its weekend between every two legs, three days clear of both
+ *     (rcal_cost, busy_days).  Where the play-off's second leg leaves less than six days to the
+ *     first league-phase matchday, that matchday is a week later (swiss_day).  The national
+ *     cups' first round (251, 254) is in one of the six weeks every year; the leg in that week
+ *     is put as far from it as the week allows, one day in most years -- a club in both plays
+ *     them a day apart.  Until 0.2.0 the two legs of a stage were two days apart (Tuesday and
+ *     Thursday), and before that on weekends: a Dinamo played Saturday and Wednesday in Europe
+ *     and Thursday in the league (2026-10-08).  All play-off second legs are on one day: the
+ *     progressions run in the day loop after the day's matches, the Europa and Conference
+ *     League's before reg 2's, whose end builds the league phases (measured: 189, 188, then 2,
+ *     one batch).  A round is filled on the days between the round before it and its first leg
+ *     (q_fill); the season is built on day 216, so nothing is filled before 217.
  *   - From the second season on, the rights builder fills reg 2 and its eight ties (1026 ... 8194)
  *     at the July rollover through set_clubs (from 0x14135c083 on day 181, measured 2026-10-01),
  *     with the game's own clubs; setcl_handler hands it ours instead (q_setcl). With a third
@@ -1524,16 +1524,71 @@ static const qcup_t QCUPS[NQ] = {
   { UECL_PO, UECLQ, UECL, 0xff, "Conference League" },
 };
 static const char* const QSTAGE[3] = { "play-off", "third qualifying round", "second qualifying round" };
-/* each stage's two legs (0 play-off, 1 third, 2 second qualifying round), days after M; the
-   Champions League play-off's are reg 2's own (is_playoff) on the same days */
-static const uint8_t QR_OFF[3][2] = { { 22, 24 }, { 9, 16 }, { 1, 3 } };
-static uint32_t qr_m(void)
+/* each stage's two legs (0 play-off, 1 third, 2 second qualifying round), a week apart: six
+   midweeks in a row from the first one the season's build (day 216) leaves room for, one leg a
+   week, so a league plays its weekend round between the legs.  A leg goes on the Wednesday (both
+   weekend days three clear), the Tuesday or Thursday where the Wednesday is taken -- the first
+   week's Wednesday can be the day after the build, and nothing is filled before 217 -- and a
+   second leg on its first leg's weekday where it can.  Each stage is filled on the days between
+   the stage before and its first leg (two days at least: a Thursday, then the Tuesday or
+   Wednesday after).  The national cups' first round (251 and 254, calendar case 6, the game's
+   days) falls in one of those six weeks in every year: in that week the leg goes on the
+   midweek day furthest from it.  The Champions League play-off's days are reg 2's own
+   (is_playoff), the same.  Until 0.2.0 (08.10.) the legs of a stage were two days apart. */
+#define QR_NATCUP0 251
+#define QR_NATCUP1 254
+static uint32_t g_qr_leg[3][2]; static int g_qr_sy = -1;
+static uint32_t qr_absd(uint32_t a, uint32_t b) { return a > b ? a - b : b - a; }
+static uint32_t qr_pick(uint32_t mon, uint32_t first, uint32_t lim, int sy)
+{
+  /* the leg in the week from Monday mon: Wednesday, Tuesday, Thursday in that order of liking;
+     first (a second leg's first leg, or 0): its weekday first, 6..8 days after it; lim (or 0):
+     the latest day it may take while another fits */
+  static const int PREF[3] = { 2, 1, 3 };
+  uint32_t best = 0; int bs = -1;
+  for (int k = 0; k < 4; k++) {
+    uint32_t d = k == 0 ? (first ? first + 7 : 0) : mon + (uint32_t)PREF[k - 1];
+    if (!d || d < 218 || d < mon + 1 || d > mon + 3) continue;
+    if (first && (d < first + 6 || d > first + 8)) continue;
+    if (lim && d > lim && best) continue;
+    uint32_t n0 = qr_absd(d, QR_NATCUP0), n1 = qr_absd(d, QR_NATCUP1), n = n0 < n1 ? n0 : n1;
+    int sc = (int)(n > 3 ? 3 : n);
+    if (sc > bs || (lim && best > lim && d <= lim)) { bs = sc; best = d; }
+  }
+  (void)sy;
+  return best ? best : mon + 2;
+}
+static void qr_plan(void)
 {
   int sy = season_year();
-  for (uint32_t d = 219; d < 226; d++) if (wday_in(d, sy) == 1) return d - 1;
-  return 221;
+  if (sy == g_qr_sy && g_qr_leg[0][0]) return;
+  uint32_t d = 218;
+  while (d < 230 && (wday_in(d, sy) < 1 || wday_in(d, sy) > 3)) d++;
+  uint32_t mon = d - (uint32_t)wday_in(d, sy);
+  for (int st = 2; st >= 0; st--) {
+    /* the play-off's second leg no later than lets the first league-phase matchday move one
+       week at most (swiss_day): two weeks would put it on the second matchday */
+    uint32_t a = qr_pick(mon, 0, 0, sy);
+    g_qr_leg[st][0] = a;
+    g_qr_leg[st][1] = qr_pick(mon + 7, a, st ? 0 : eday(SWISS_DAYS[0]) + 1, sy);
+    mon += 14;
+  }
+  g_qr_sy = sy;
 }
-static uint32_t qr_day(int stage, int leg) { return qr_m() + QR_OFF[stage][leg]; }
+static uint32_t qr_day(int stage, int leg) { qr_plan(); return g_qr_leg[stage][leg]; }
+/* The league phases' first matchday (SWISS_DAYS 0 and 1): six days after the play-offs' second
+   leg at least, so the game's hand-over (case 2, when reg 2 ends) builds them in time -- the
+   shipped Tuesday where the six weeks leave room for it, a week later where they do not (2026:
+   the play-off on 9 and 16 September, the first matchday on 22 and 23). */
+static uint32_t swiss_day(int i)
+{
+  uint32_t d = eday(SWISS_DAYS[i]);
+  if (i < 2) {
+    uint32_t md = eday(SWISS_DAYS[0]), last = qr_day(0, 1);
+    while (md < last + 6) { md += 7; d += 7; }
+  }
+  return d;
+}
 static uint32_t g_q[NQR][Q_N]; static unsigned g_nq[NQR], g_nnew[NQR]; static int g_q_day = -100000, g_qmask = 0;
 static how_t g_qhow[NQR][Q_N];
 static unsigned char g_qdrawn[NQR];
@@ -1950,7 +2005,8 @@ static void q_place(int mask)
   }
   logf("fl26swiss: access -- with the play-offs: %u / %u / %u clubs", g_nacc[0], g_nacc[1], g_nacc[2]);
 }
-static int q_summer(void) { int d = today(); return d >= 180 && d < 257; }
+/* the summer's qualifying: from the July rollover to the first league-phase matchday */
+static int q_summer(void) { int d = today(); return d >= 180 && d < (int)swiss_day(0); }
 /* set_clubs on reg 2 or one of its ties in the summer: ours instead of the game's. 1 = handled */
 static int q_setcl(uint16_t r, uint64_t id, uint64_t flag, char* ok)
 {
@@ -4344,10 +4400,13 @@ unsigned char* g_tramp_phkind = 0;
 static uint32_t g_kogrey_n = 0, g_roll_n = 0;
 /* The round of a competition's summer qualifying in play: the latest of its play-off, third and
    second qualifying round (QCUPS order) whose first tie holds clubs; -1 for none drawn yet. */
-static int q_rolling(uint16_t po)
+static int q_rolling(uint16_t r)
 {
-  int p = -1;
-  for (int k = 0; k < NQ; k++) if (QCUPS[k].reg == po) p = k;
+  /* the game answers its format table's first grouped phase: the play-off, or in a world whose
+     builder listed the qualifying rounds in front of it, the second qualifying round */
+  int p = -1, qa = q_added(r);
+  for (int k = 0; k < NQ; k++) if (QCUPS[k].reg == r) p = k;
+  if (p < 0 && qa >= 0 && (r >> 10) == 0) p = qa % NQ;
   if (p < 0 || !q_summer()) return -1;
   for (int st = 0; st < 3; st++) {
     int i = p + NQ * st;
@@ -4465,10 +4524,11 @@ uint64_t phname_handler(uint64_t reg)
   phrec_fn get = (phrec_fn)(uintptr_t)(g_base + PHREC_RVA);
   for (int ci = 0; ci < 3 && g_tramp_txtget; ci++)   /* the league phases: "League Phase", see txtget_handler */
     if ((uint16_t)reg == CUPS[ci].league || (uint16_t)reg == CUPS[ci].row) return LP_TEXT;
-  if (get(reg & 0xffff, rec)) return *(uint32_t*)(rec + 0x40);
-  /* the qualifying rounds (and their ties, so a match screen says it too), as LP_TEXT above */
+  /* the qualifying rounds (and their ties, so a match screen says it too), as LP_TEXT above --
+     before the record: a qualifying round is a copy of reg 2 and its record says "Play-offs" */
   int qa = q_added((uint16_t)reg);
   if (qa >= 0 && g_tramp_txtget) return qa / NQ == 1 ? QR3_TEXT : QR2_TEXT;
+  if (get(reg & 0xffff, rec)) return *(uint32_t*)(rec + 0x40);
   if ((uintptr_t)__builtin_return_address(0) == g_base + MENU_NAME_RA &&
       ((uint16_t)reg == CUPS[1].po || (uint16_t)reg == CUPS[2].po || q_added((uint16_t)reg) >= 0
        || lpre_of((uint16_t)reg, &(int){0}) >= 0) && get(CUPS[0].po, rec))
@@ -4678,7 +4738,7 @@ static int eudate(uint16_t id)
  * free day (1, 2, 3 days either way) that keeps the rounds in order. */
 static int euro_day(uint32_t d)
 {
-  for (int i = 0; i < FL26_SWISS36_MATCHDAYS; i++) if (eday(SWISS_DAYS[i]) == d) return 1;
+  for (int i = 0; i < FL26_SWISS36_MATCHDAYS; i++) if (swiss_day(i) == d) return 1;
   for (int i = 0; i < FL26_SWISS6_MATCHDAYS; i++) if (eday(UECL_DAYS[i]) == d) return 1;
   for (int c = 0; c < 3; c++) {
     for (int i = 0; i < 7; i++) if (eday(KO_DAYS[c][i]) == d) return 1;
@@ -4821,7 +4881,7 @@ static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
      by them as well had one day left between a midweek round and a European week, and every
      league of a big world met on it (2026-10-08, the modpack: day 65 asked 403 matches of 280) */
   if (access_league(id)) {
-    for (int i = 0; i < FL26_SWISS36_MATCHDAYS; i++) block(bad, eday(SWISS_DAYS[i]), buf);
+    for (int i = 0; i < FL26_SWISS36_MATCHDAYS; i++) block(bad, swiss_day(i), buf);
     for (int i = 0; i < FL26_SWISS6_MATCHDAYS; i++) block(bad, eday(UECL_DAYS[i]), buf);
     for (int c = 0; c < 3; c++) {
       for (int i = 0; i < 7; i++) block(bad, eday(KO_DAYS[c][i]), buf);
@@ -5036,7 +5096,7 @@ static int uefa_days(uint32_t* out, int cap, int quals)
     for (int c = 0; c < 3; c++) for (int i = 0; i < 2; i++) UD(qr_day(c, i));
     return n;
   }
-  for (int i = 0; i < FL26_SWISS36_MATCHDAYS; i++) UD(eday(SWISS_DAYS[i]));
+  for (int i = 0; i < FL26_SWISS36_MATCHDAYS; i++) UD(swiss_day(i));
   for (int i = 0; i < FL26_SWISS6_MATCHDAYS; i++) UD(eday(UECL_DAYS[i]));
   for (int c = 0; c < 3; c++) {
     for (int i = 0; i < 7; i++) UD(eday(KO_DAYS[c][i]));
@@ -6173,7 +6233,7 @@ uint64_t date_handler(uint64_t reg, void* vec)
   uint32_t shift = six ? 0 : day_shift(id);
   const uint32_t* days = six ? UECL_DAYS : SWISS_DAYS;
   for (int i = 0; i < nmd; i++) {
-    r[i].day   = eday(days[i]) + shift;
+    r[i].day   = (six ? eday(days[i]) : swiss_day(i)) + shift;
     r[i].round = (uint32_t)i;
     r[i].kind  = FL26_DATE_KIND_LEAGUE;
   }
@@ -6355,7 +6415,7 @@ static int g_q_fill_year[NQR] = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
 static void q_fill(int p)
 {
   int d = today();
-  if (d < 205 || d > 247 || !q_world_p(p)) return;
+  if (d < 205 || d > (int)qr_day(0, 1) || !q_world_p(p)) return;
   int mask = q_world_mask();
   if (d < (int)q_fill_from(mask, p) || d >= (int)q_first_leg(p)) return;
   int year = (abs_day() + 183) / 365;
