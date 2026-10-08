@@ -403,14 +403,20 @@ calendar.
   set. A drag now reorders a continent's leagues only among the places they already hold.
 - 2026-10-08 (Mod Studio 0.2.0, fl26swiss): **in a big world, league matches were never
   played and no screen said so.** A calendar day holds 280 matches and the game drops the rest
-  without a word. Every league took the same few days: the Saturday between a midweek round
-  and a European week was the only day left once all of a league's rounds kept clear of the
-  European days, so in a world of 34 leagues day 65 asked for 403 matches and nine days were
-  over. 688 matches of a season were lost (calcomp.py: up to 96 in one league). Now only a
-  league that sends clubs to Europe keeps clear of its days, and each league's rounds lean a
-  day or two later by regulation id, the way real leagues spread over Saturday to Monday.
-  Checked in game (the same world, a new career): 118 lost instead of 688, on four days
-  instead of nine. Those left are in leagues of 46 rounds, whose calendar has no free day.
+  without a word. Every league took the same few days: the one day left between a midweek
+  round and a European week, or between New Year's round and a national cup round, so in a
+  world of 34 leagues day 65 asked for 403 matches and nine days were over the 280. 688 to
+  1078 matches of a season were lost (calcomp.py: up to 96 in one league). Now only a league
+  that sends clubs to Europe keeps clear of the European days, a league round may be two days
+  from a national cup round instead of three, and each league's rounds lean a day or two later
+  by regulation id, the way real leagues spread over Saturday to Monday. Checked in game (the
+  same world, a new career): 2 matches of 14,400 left without a day.
+- 2026-10-08 (Mod Studio 0.2.0, fl26swiss, rwee on Discord): **the game's own leagues played on
+  Champions League days** (the Bundesliga, the Super Lig and the Pro League on the January
+  matchday, day 20). The two free days around European and cup days were meant for every
+  league since 0.1.8, but the test that picked the game's leagues read a field that is only
+  there in the file's record, so none of them was ever spaced. Checked in game: no league
+  with European places has a round on a European day.
 - 2026-10-08 (Mod Studio 0.2.0, fl26swiss, GitHub #43): **the board's season objective told a
   club of a new Asian or South American league to win the UEFA Champions League.** The owner's
   judges take the continent from the league's competition code, and a league of ours that plays

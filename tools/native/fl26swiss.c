@@ -4470,7 +4470,10 @@ static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
     }
     block(bad, 230 + PLAYOFF_SHIFT, buf); block(bad, 237 + PLAYOFF_SHIFT, buf);
   }
-  if (level < 2) for (int i = 0; i < 12; i++) block(bad, NATCUP_DAYS[i], buf);
+  /* a national cup round two days from a league round, not three: with three, the one day left
+     between New Year's round and the cup's (day 3), and between early February's and the cup's
+     (day 38), took every league of a big world -- 330 matches asked of 280 (2026-10-08) */
+  if (level < 2) for (int i = 0; i < 12; i++) block(bad, NATCUP_DAYS[i], buf > 2 ? buf - 1 : buf);
   if (level < 1)
     for (int k = 0; k < g_nccup; k++) {
       if (!g_ccup[k].national || !ccup_of_league(k, id)) continue;
@@ -4597,12 +4600,18 @@ static void rest_dates(uint16_t id, date_t* r, uint32_t n)
                   (unsigned)id, kept);
   declash_log(id, declash(r, n));
 }
-/* every league, the game's and ours: a round robin or a split phase of four clubs or more */
-static int rest_league(uint16_t id)
+/* every league, the game's and ours: a round robin of four clubs or more, told by its legs
+   (a knockout's are 0) and a calendar of 9 dates or more (a cup group's has 6). It read a type
+   at +0x09, where the file's record has it; the live record has its name there, so no league
+   of the game's was ever spaced (2026-10-08: the Bundesliga, the Super Lig and the Pro League
+   on the January Champions League day 20). The club count is no test of the calendar: the
+   Bundesliga's record says 20 and its calendar has the 34 rounds of 18. */
+static int rest_league(uint16_t id, size_t have)
 {
   unsigned char* rec = get_rec(id);
-  if (!rec || (rec[0x09] != 4 && rec[0x09] != 5)) return 0;
-  return (*(uint32_t*)(rec + 0x30c) & 0x7f) >= 4;
+  if (!rec) return 0;
+  uint32_t clubs = *(uint32_t*)(rec + 0x30c) & 0x7f, legs = *(uint32_t*)(rec + 0x308) >> 29;
+  return clubs >= 4 && legs && have >= 9;
 }
 static void league_rest(uint16_t id, date_t* r, uint32_t n) { rest_dates(id, r, n); }
 
@@ -5197,11 +5206,11 @@ uint64_t date_handler(uint64_t reg, void* vec)
     league_dates(id, reg, vec);
     return rv;
   }
-  if (vec && !ours(id) && rest_league(id)) {         /* a league of the game's own */
+  if (vec && !ours(id)) {                           /* a league of the game's own */
     uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)(reg, vec);
     vec_t* v = (vec_t*)vec;
     size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
-    if (have >= 2 && have <= 64) rest_dates(id, (date_t*)v->b, (uint32_t)have);
+    if (have >= 2 && have <= 64 && rest_league(id, have)) rest_dates(id, (date_t*)v->b, (uint32_t)have);
     return rv;
   }
   if (!vec || !ours(id))
