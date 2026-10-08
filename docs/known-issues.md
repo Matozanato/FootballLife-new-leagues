@@ -401,6 +401,16 @@ calendar.
   whole recipe, so North and Central American and Oceanian leagues always came last: always the
   ones without a Select Team place or in place of a game group, whatever Move up / Move down had
   set. A drag now reorders a continent's leagues only among the places they already hold.
+- 2026-10-08 (Mod Studio 0.2.0, fl26swiss): **in a big world, league matches were never
+  played and no screen said so.** A calendar day holds 280 matches and the game drops the rest
+  without a word. Every league took the same few days: the Saturday between a midweek round
+  and a European week was the only day left once all of a league's rounds kept clear of the
+  European days, so in a world of 34 leagues day 65 asked for 403 matches and nine days were
+  over. 688 matches of a season were lost (calcomp.py: up to 96 in one league). Now only a
+  league that sends clubs to Europe keeps clear of its days, and each league's rounds lean a
+  day or two later by regulation id, the way real leagues spread over Saturday to Monday.
+  Checked in game (the same world, a new career): 118 lost instead of 688, on four days
+  instead of nine. Those left are in leagues of 46 rounds, whose calendar has no free day.
 - 2026-10-08 (Mod Studio 0.2.0, fl26swiss, GitHub #43): **the board's season objective told a
   club of a new Asian or South American league to win the UEFA Champions League.** The owner's
   judges take the continent from the league's competition code, and a league of ours that plays

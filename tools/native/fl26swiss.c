@@ -4458,7 +4458,10 @@ static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
       for (int i = 0; i < (g_ccup[k].nd ? g_ccup[k].nd : 7) && i < CCUP_MAX_DAYS; i++) block(bad, ccup_day(&g_ccup[k], 1, i), buf);
     }
   if (g_org != 182) return;
-  if (access_league(id) || our_league(id)) {
+  /* only a league that sends clubs to Europe keeps clear of its days: a second division blocked
+     by them as well had one day left between a midweek round and a European week, and every
+     league of a big world met on it (2026-10-08, the modpack: day 65 asked 403 matches of 280) */
+  if (access_league(id)) {
     for (int i = 0; i < FL26_SWISS36_MATCHDAYS; i++) block(bad, SWISS_DAYS[i], buf);
     for (int i = 0; i < FL26_SWISS6_MATCHDAYS; i++) block(bad, UECL_DAYS[i], buf);
     for (int c = 0; c < 3; c++) {
@@ -4477,8 +4480,13 @@ static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
     }
 }
 /* the n rounds on free days at least `gap` apart, the least moved in all; -1 when there is no
-   such calendar between the first and the last day */
-static int respace(date_t* r, uint32_t n, const uint8_t* bad, int gap)
+   such calendar between the first and the last day. `jit` (0..2) is where a round would rather
+   be: that many days after its own date. Every league took the same few days -- the first
+   round of every 26-date calendar on day 261, the spring rounds on 65 and 114 -- and a world of
+   34 leagues asked 325 matches of day 261 (2026-10-08, the modpack: 105 matches on 4 days that
+   did not fit in the 280 and were never played, daydemand.py). Spread by the regulation id
+   over a Saturday, a Sunday and a Monday, as real leagues are, no day holds a third of it. */
+static int respace(date_t* r, uint32_t n, const uint8_t* bad, int gap, int jit)
 {
   static int32_t cost[2][365]; static int16_t prev[64][365]; static int32_t o[64];
   const int32_t INF = 0x3fffffff;
@@ -4486,7 +4494,7 @@ static int respace(date_t* r, uint32_t n, const uint8_t* bad, int gap)
   if (!in_order(r, n)) return -1;
   for (uint32_t i = 0; i < n; i++) o[i] = (int32_t)rpos(r[i].day);
   int lo = o[0], hi = o[n - 1];
-  for (int p = 0; p < 365; p++) cost[0][p] = (p >= lo && p <= hi && !bad[p]) ? abs(p - o[0]) : INF;
+  for (int p = 0; p < 365; p++) cost[0][p] = (p >= lo && p <= hi && !bad[p]) ? abs(p - o[0] - jit) : INF;
   for (uint32_t i = 1; i < n; i++) {
     int32_t* c = cost[i & 1]; const int32_t* b = cost[(i - 1) & 1];
     int32_t best = INF; int arg = -1;
@@ -4494,7 +4502,7 @@ static int respace(date_t* r, uint32_t n, const uint8_t* bad, int gap)
       int q = p - gap;
       if (q >= 0 && b[q] < best) { best = b[q]; arg = q; }
       c[p] = INF; prev[i][p] = -1;
-      if (p >= lo && p <= hi && !bad[p] && best < INF) { c[p] = best + abs(p - o[i]); prev[i][p] = (int16_t)arg; }
+      if (p >= lo && p <= hi && !bad[p] && best < INF) { c[p] = best + abs(p - o[i] - jit); prev[i][p] = (int16_t)arg; }
     }
   }
   const int32_t* last = cost[(n - 1) & 1];
@@ -4575,7 +4583,7 @@ static void rest_dates(uint16_t id, date_t* r, uint32_t n)
   }
   for (int t = 0; t < 4; t++) {
     busy_days(id, LEVEL[t], GAP[t], bad);
-    int moved = respace(r, n, bad, GAP[t]);
+    int moved = respace(r, n, bad, GAP[t], id % 3);
     if (moved < 0) continue;
     g_org = 182;
     if (!seen)
