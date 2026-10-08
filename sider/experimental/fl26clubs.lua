@@ -39,6 +39,13 @@ served from its regulation, and every league on a slot the switch sends into a p
 sits on a served slot, the DLL is not installed. Without the file the built-in lists below
 are used, as before.
 
+Followers (2026-10-08): the world file's "fans <class> <percent> <team id> ..." lines (League
+Builder, one per class and share) give each new club the club-ranking class it is treated as
+when the game's ranking has no place for it (the ranking holds 750 clubs, and a club it cannot
+find was treated as its number one: millions of followers for a third-division side), and the
+share of the game's followers base it gets. See fl26clubs.c, "followers and the club ranking".
+A world without the lines leaves both as the game has them.
+
 Requires sider.ini: luajit.ext.enabled = 1 (global ffi). Load after fl26comptab.lua.
 --]]
 
@@ -78,8 +85,12 @@ local function read_world(ctx)
   local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
   local f = io.open(path, "r")
   if not f then return nil end
-  local leagues, nopool = {}, {}
+  local leagues, nopool, fans = {}, {}, {}
   for line in f:lines() do
+    local cls, pct, ids = line:match("^%s*fans%s+(%d+)%s+(%d+)%s+([%d%s]+)$")
+    if cls then
+      for t in ids:gmatch("%d+") do fans[#fans + 1] = { tonumber(t), tonumber(cls), tonumber(pct) } end
+    end
     local np = line:match("^%s*nopool%s+([%d%s]+)$")
     if np then
       for t in np:gmatch("%d+") do nopool[#nopool + 1] = tonumber(t) end
@@ -94,7 +105,7 @@ local function read_world(ctx)
     end
   end
   f:close()
-  return leagues, nopool
+  return leagues, nopool, fans
 end
 
 -- From the world file. SERVED: the slots the game fills with lists of its own (national teams,
@@ -176,9 +187,10 @@ function m.init(ctx)
     typedef void (*fl26_clubs_stats_t)(uint32_t*);
     typedef uint32_t (*fl26_clubs_pool_t)(void);
     typedef int  (*fl26_clubs_keep_out_t)(const uint32_t*, int);
+    typedef int  (*fl26_clubs_fans_t)(const uint32_t*, int);
   ]])
-  local world, nopool = read_world(ctx)
-  nopool = nopool or {}
+  local world, nopool, fans = read_world(ctx)
+  nopool, fans = nopool or {}, fans or {}
   if world then
     SLOTS, REMAP_OWN = from_world(world)
     log(string.format("fl26clubs: world file -- %d leagues, %d on slots the game fills itself, %d on pool slots",
@@ -215,6 +227,21 @@ function m.init(ctx)
       kept = tonumber(ffi.cast("fl26_clubs_keep_out_t", pk)(arr, #nopool))
     end
   end
+  local nfans = 0
+  if #fans > 0 then
+    local pf = ffi.C.GetProcAddress(h, "fl26_clubs_fans")
+    if pf == nil then
+      log("fl26clubs: this fl26clubs.dll is older than the world (no fl26_clubs_fans): " .. #fans ..
+          " new club(s) keep the game's followers -- install the modules again")
+    else
+      local arr = ffi.new("uint32_t[?]", 2 * #fans)
+      for i, r in ipairs(fans) do
+        arr[2 * i - 2] = r[1]
+        arr[2 * i - 1] = r[2] * 256 + math.min(r[3], 255)
+      end
+      nfans = tonumber(ffi.cast("fl26_clubs_fans_t", pf)(arr, #fans))
+    end
+  end
   -- with no slot and no kept club the readers are still replaced: the pool slots then only get
   -- the stale-count fix (an Edit list longer than the boot one, see fl26clubs.c keep_build)
   cfg = ffi.new("fl26_clubs_cfg_t[?]", math.max(#SLOTS, 1))
@@ -229,6 +256,7 @@ function m.init(ctx)
     for _, s in ipairs(SLOTS) do parts[#parts + 1] = string.format("%d<-%d", s[1], s[2]) end
     log("fl26clubs: live -- " .. #SLOTS .. " slots served from our own regulations: " ..
         table.concat(parts, " ") .. (kept > 0 and (", " .. kept .. " club(s) of the game kept out of the pools") or "") ..
+        (nfans > 0 and (", followers class and share for " .. nfans .. " new club(s)") or "") ..
         " (F10 = report)")
     ctx.register("livecpk_make_key", m.make_key)
     ctx.register("key_down", m.key_down)

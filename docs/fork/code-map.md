@@ -108,6 +108,8 @@ The left bar comes from `page_groups()` in `app.py`:
    - `M.add_league` per league; teams, coaches (`mkcoaches`), tactics (`mktactics`);
    - `M.write_tables`; squads (`mkplayers`); players (`lbplayers.fill_newlife`,
      `fill_tiers`, `apply`), faces (`lbfaces`), portraits;
+   - the new clubs' transfer budget base in Team.bin and their `fans` lines
+     (`club_money`, by squad strength and division);
    - splits (`mksplit`); European competitions (`europe`: `mkreshape`, `mkuecl`,
      `mkeuropo`); national cups (`mkcup`); continental and league cups (`continental`:
      `mkccup`);

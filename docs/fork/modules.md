@@ -128,14 +128,21 @@ writing the tables itself. The loaders drain `<dll>_log` and `<dll>_stats` into 
 ### fl26clubs.dll (loader `fl26clubs.lua`)
 
 - **Exports:** `fl26_clubs_install`, `fl26_clubs_keep_out` (the `nopool` line),
-  `fl26_clubs_log`, `fl26_clubs_stats`, `fl26_clubs_pool_calls`, and the handlers
-  `set_hook`, `count_hook`, `get_hook`.
+  `fl26_clubs_log`, `fl26_clubs_stats`, `fl26_clubs_pool_calls`, `fl26_clubs_fans` (the
+  `fans` lines), `fl26_clubs_fan_stats`, and the handlers `set_hook`, `count_hook`,
+  `get_hook`, `rank_find_hook`, `fans_post`.
 - **Hooks:**
   - it replaces the two Select Team readers, count 0x1414d62c0 and get 0x1414d6290, and
     answers from the league's own rulebook for the slots in its list. Any other slot
     falls through to the game's answer;
   - the list setter 0x1414d6330 is hooked so our clubs stay out of the Club World Cup
-    "other clubs" pools.
+    "other clubs" pools;
+  - with `fans` lines in the world, it replaces the club ranking lookup 0x140de2310 and wraps
+    the followers base 0x14150e950. The ranking holds 750 clubs at most and the lookup
+    answered a miss with the top club, so a new club past it got the top class and millions
+    of followers. A listed club now gets an entry of its own, with the class from its line,
+    and the followers base is cut to the line's percent. Without `fans` lines nothing is
+    hooked.
 - **Status:**
   - 2 = count reader code not as expected, 3 = get reader code not as expected;
   - 4 / 5 = `VirtualProtect` on the count / get reader;

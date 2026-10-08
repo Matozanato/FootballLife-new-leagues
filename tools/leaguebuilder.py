@@ -2767,6 +2767,85 @@ def id_spans(ids):
             out.append([t, t])
     return ", ".join("%d" % a if a == b else "%d-%d" % (a, b) for a, b in out)
 
+# ---- a new club's money and following (2026-10-08) ----
+# Every new club is a copy of the last Team.bin record, so each one had that club's transfer
+# budget base (raw 0x34, low 24 bits: the Master League budget is it times the money setting's
+# factor) and, missing from the club ranking the game fills at career start (750 clubs at most),
+# the top club's following: millions of followers for a third-division side. The NewLife data
+# carries no reputation or finance fields, so both go by what a club has on the pitch (the mean
+# rough overall of its best eleven) and the division it plays in, on a scale read off the
+# shipped clubs: a top-flight eleven of 76 has a base about 11000, of 80 about 90000, of 84
+# about 1.4M. The following goes to fl26clubs as world lines "fans <class> <percent> <ids>":
+# the ranking class (0..9) a club out of the ranking counts as, and the share of the game's
+# figure a lower division keeps.
+MONEY_BY_OVR = [(66, 300), (70, 1300), (74, 5500), (76, 11000), (78, 22000), (80, 90000),
+                (82, 480000), (84, 1400000)]
+MONEY_TIER = [1.0, 0.75, 0.5, 0.35, 0.25]          # division 1, 2, ... (the last for any lower)
+MONEY_MIN = 500
+MONEY_B = [(86, 1200000), (84, 900000), (82, 300000), (80, 50000), (78, 30000)]   # else 10000
+FAME_CLASS = [(84, 8), (82, 7), (80, 6), (79, 5), (78, 4), (77, 3), (76, 2), (75, 1)]
+FANS_PCT = [100, 50, 25, 15, 10]
+
+
+def club_strength(rows):
+    """the mean rough overall of a squad's best eleven (0 for no squad)"""
+    import lbplayers
+    best = sorted((lbplayers.overall(r) for r in rows), reverse=True)[:11]
+    return sum(best) / len(best) if best else 0.0
+
+
+def money_base(q, tier):
+    """the transfer budget base of a club of strength q in division tier"""
+    import math
+    pts = MONEY_BY_OVR
+    if q <= pts[0][0]:
+        v = pts[0][1]
+    elif q >= pts[-1][0]:
+        v = pts[-1][1]
+    else:
+        (x0, y0), (x1, y1) = next((a, b) for a, b in zip(pts, pts[1:]) if a[0] <= q <= b[0])
+        v = math.exp(math.log(y0) + (math.log(y1) - math.log(y0)) * (q - x0) / (x1 - x0))
+    v *= MONEY_TIER[min(tier, len(MONEY_TIER)) - 1]
+    return max(MONEY_MIN, int(round(v / 100.0)) * 100)
+
+
+def club_money(new_of, pl, db, log=print):
+    """sets the money of the new clubs (new_of: {id: league or group}) in db's Team.bin by their
+    squads and divisions; returns the world's "fans" lines for fl26clubs"""
+    import lbplayers
+    if not new_of:
+        return []
+    path = os.path.join(db, "Team.bin")
+    raw = bytearray(pesdb.wesys_unpack(open(path, "rb").read()))
+    mine = {p["rid"]: p for p in pl.get("leagues") or [] if "rid" in p}
+    squads = lbplayers.Squads(db)
+    groups, n = {}, 0
+    for o in range(0, len(raw) - W.T_REC + 1, W.T_REC):
+        tid = int.from_bytes(raw[o + W.T_ID:o + W.T_ID + 4], "little")
+        p = new_of.get(tid)
+        if p is None:
+            continue
+        q = club_strength(squads.squad(tid))
+        tier = 1 if p.get("others") else lbplayers.tier_of(p, mine)
+        a = money_base(q, tier) & 0xffffff
+        b = next((v for m, v in MONEY_B if q >= m), 10000) if tier == 1 else 10000
+        x = struct.unpack_from("<I", raw, o + 0x34)[0]
+        struct.pack_into("<I", raw, o + 0x34, (x & 0xff000000) | a)
+        x = struct.unpack_from("<I", raw, o + 0x38)[0]
+        struct.pack_into("<I", raw, o + 0x38, (x & ~0x7fffff & 0xffffffff) | (b & 0x7fffff))
+        cls = max(0, next((c for m, c in FAME_CLASS if q >= m), 0) - (tier - 1))
+        pct = FANS_PCT[min(tier, len(FANS_PCT)) - 1]
+        groups.setdefault((cls, pct), []).append(tid)
+        n += 1
+    open(path, "wb").write(pesdb.wesys_pack(bytes(raw)))
+    lines = []
+    for (cls, pct), ids in sorted(groups.items()):
+        for k in range(0, len(ids), 64):
+            lines.append("fans %d %d %s" % (cls, pct, " ".join(str(t) for t in ids[k:k + 64])))
+    log("  money and following for %d new club(s), by squad and division" % n)
+    return lines
+
+
 def build(pl, base, game, replace=False, log=print):
     out = os.path.join(siderdir.find(game), "livecpk", pl["world"])
     if os.path.exists(out):
@@ -2859,6 +2938,8 @@ def build(pl, base, game, replace=False, log=print):
                 else:
                     log("  %s (in no competition of the game) moves to %s" % (info["clubs"][tid][0], p["name"]))
 
+    new_of = {}                                        # every new club's id: its league (or group)
+
     def new_club(p, k):
         """a new club's Team.bin record, the k-th of league (or group) p: [record, id, abbr]"""
         nonlocal own, made
@@ -2883,6 +2964,7 @@ def build(pl, base, game, replace=False, log=print):
             if tid > CLUB_ID_MAX:
                 raise BuildError("no team ids left up to %d" % CLUB_ID_MAX)
         have.add(tid)
+        new_of[tid] = p
         r[W.T_ID:W.T_ID + 4] = tid.to_bytes(4, "little")
         r[W.T_ALT:W.T_ALT + 4] = (top_alt + 1 + made).to_bytes(4, "little")
         M.put(r, W.T_NAME, club_name(p, k), W.T_NAME_LEN)
@@ -3016,6 +3098,7 @@ def build(pl, base, game, replace=False, log=print):
         lbplayers.apply(filled, base, db, PLAYER_CAP, log, faces, lineups=lineups, ids=ids, portraits=portraits)
     except lbplayers.Error as e:
         raise BuildError(str(e))
+    fans = club_money(new_of, pl, db, log)
     if ids:                                            # for Mod Studio's Players page and its CSV
         with open(os.path.join(tmp, PLAYER_IDS), "w", encoding="utf-8") as f:
             json.dump({"world": pl["world"], "clubs": ids}, f, indent=1, sort_keys=True)
@@ -3131,6 +3214,7 @@ def build(pl, base, game, replace=False, log=print):
                           + order_lines(pl, base, confed)
                           + kickorder_lines(pl, base, confed)
                           + (["nopool " + " ".join(str(t) for t in nopool)] if nopool else []) + newfaces
+                          + fans
                           + ["cupdraw %s" % pl.get("cup_draw", "seeded")],
                           qlines)
     json.dump(pl, open(os.path.join(tmp, "leaguebuilder-plan.json"), "w", encoding="utf-8"), indent=1)

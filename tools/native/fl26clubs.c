@@ -72,6 +72,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdlib.h>
 
 #define COUNT_RVA  0x14d62c0   /* u16 count(void* this, unsigned slot)            */
 #define GET_RVA    0x14d6290   /* u32 get(void* this, unsigned slot, unsigned i)  */
@@ -314,6 +315,155 @@ __declspec(dllexport) unsigned get_hook(void* self, unsigned slot, unsigned idx)
   return *(uint32_t*)((unsigned char*)self + (slot * STRIDE + idx) * 4);
 }
 
+/* ---- followers and the club ranking (2026-10-08) ----
+ *
+ * A Master League club's followers are set when the career starts (0x140ef9614) and again
+ * each season (0x141300d6d) by 0x14150e950(team handle):
+ *
+ *   base = {10000,15000,20000,25000,35000,50000,65000,80000,110000,140000}[class]
+ *          + 32 * mean popularity of the club's best eleven
+ *   followers = round(base * {1,1.25,1.5,2,3,4.5,6,7.5,10,40}[class]) + star players
+ *     (0x141589f49; block+0x1798b80 holds base, block+0x1798b8c the followers)
+ *
+ * `class` is byte +0x0e of the club's entry in the club ranking (block+0x16705a8: 750 entries
+ * of 16 bytes, the count at +0x2ee0), 9 for ranks 1-10 down to 0 past 400 (0x141323b84). The
+ * ranking is filled when a career starts (0x141324d00) with the first 750 clubs that qualify,
+ * in team-array order -- so in a world with more clubs than that, the newest clubs are not in
+ * it. The lookup 0x140de2310 answers a club it cannot find with entry 0: the top-ranked club.
+ * Every club past the 750 therefore had class 9 and x40 followers (NK Inker Zaprešić, a
+ * third-division side: 7,157,582), and class 9 everywhere else the 51 callers use it
+ * (sponsor money, a player's popularity, the transfer screens).
+ *
+ * The lookup is replaced with the same search. On a miss, for a club the world file lists
+ * (a "fans" line, written by Mod Studio's League Builder from the club's division and
+ * squad), it answers with an entry of that club's own: its handle, a rank inside the class,
+ * no points, and the class the line gives. A club the file does not list still gets entry
+ * 0, as the game does. All 51 callers only read the entry (+0x04, +0x0a, +0x0e), so the entry
+ * lives in a small ring of our own.
+ *
+ * The same line gives a percentage for the followers' base: 0x14150e950 is wrapped and its
+ * result scaled for a listed club, so a lower division has fewer followers than a top flight
+ * with the same class (the game's lowest class still gives a third-division club ~35,000).
+ */
+#define RANKFIND_RVA 0x0de2310  /* entry* find(ranking*, const u32* handle)          */
+static int replace(unsigned char* target, void* handler);
+#define FANS_RVA     0x150e950  /* int followers_base(u32 handle)                    */
+#define RANK_COUNT   0x2ee0
+#define MAX_FANS     4096
+
+typedef struct { uint32_t tid; uint8_t cls, pct; } fan_t;
+static fan_t    g_fans[MAX_FANS];
+static int      g_nfans;
+static unsigned char g_virt[8][16];
+static volatile long g_virt_i;
+static uint32_t g_fstat[2];                /* own ranking entries handed out, bases scaled */
+unsigned char* g_tramp_fans = 0;
+static const uint32_t CLASS_RANK[10] = { 450, 370, 310, 250, 190, 130, 80, 45, 20, 5 };
+
+static const fan_t* fan_of(uint32_t tid)
+{
+  int lo = 0, hi = g_nfans - 1;
+  while (lo <= hi) {
+    int m = (lo + hi) / 2;
+    if (g_fans[m].tid == tid) return &g_fans[m];
+    if (g_fans[m].tid < tid) lo = m + 1; else hi = m - 1;
+  }
+  return 0;
+}
+
+__declspec(dllexport) void* rank_find_hook(unsigned char* table, const uint32_t* key)
+{
+  uint32_t n = *(uint32_t*)(table + RANK_COUNT), h = *key;
+  for (uint32_t i = 0; i < n; i++)
+    if (*(uint32_t*)(table + 16 * i) == h) return table + 16 * i;
+  const fan_t* f = g_nfans ? fan_of(h >> HANDLE_SHIFT) : 0;
+  if (!f) return table;
+  unsigned char* e = g_virt[(unsigned long)InterlockedIncrement(&g_virt_i) & 7];
+  memset(e, 0, 16);
+  *(uint32_t*)e = h;
+  *(uint32_t*)(e + 4) = CLASS_RANK[f->cls];
+  e[0x0e] = f->cls;
+  g_fstat[0]++;
+  return e;
+}
+
+__declspec(dllexport) int fans_post(uint32_t h, int base)
+{
+  const fan_t* f = g_nfans ? fan_of(h >> HANDLE_SHIFT) : 0;
+  if (!f || f->pct >= 100 || base <= 0) return base;
+  int v = (int)((int64_t)base * f->pct / 100);
+  g_fstat[1]++;
+  return v < 1000 ? 1000 : v;
+}
+
+/* CALL-style wrap of 0x14150e950: the original through its trampoline, then fans_post.
+   entry rsp = 8 mod 16; push -> 0; sub 0x20 -> 0, the callees' home space inside it. */
+__attribute__((naked)) void fans_handler(void)
+{
+  __asm__ volatile(
+    "push %rbx\n"
+    "sub  $0x20, %rsp\n"
+    "mov  %ecx, %ebx\n"
+    "call *g_tramp_fans(%rip)\n"
+    "mov  %ebx, %ecx\n"
+    "mov  %eax, %edx\n"
+    "call fans_post\n"
+    "add  $0x20, %rsp\n"
+    "pop  %rbx\n"
+    "ret\n");
+}
+
+static const unsigned char SIG_RANKFIND[14] = {
+  0x48,0x89,0x5c,0x24,0x10, 0x48,0x89,0x6c,0x24,0x18, 0x48,0x89,0x74,0x24 };
+/* mov [rsp+8],ecx; push rbp/rbx/rsi/rdi/r13/r14/r15 -- fourteen bytes, nothing rip-relative */
+static const unsigned char SIG_FANS[14] = {
+  0x89,0x4c,0x24,0x08, 0x55,0x53,0x56,0x57, 0x41,0x55,0x41,0x56,0x41,0x57 };
+
+static int cmp_fan(const void* a, const void* b)
+{
+  uint32_t x = ((const fan_t*)a)->tid, y = ((const fan_t*)b)->tid;
+  return x < y ? -1 : x > y;
+}
+
+/* The world file's fans lines, before fl26_clubs_install: rows of {team id, class << 8 | pct}.
+   Returns how many were taken. */
+__declspec(dllexport) int fl26_clubs_fans(const uint32_t* rows, int n)
+{
+  g_nfans = 0;
+  for (int k = 0; rows && k < n && g_nfans < MAX_FANS; k++) {
+    uint32_t cls = (rows[2 * k + 1] >> 8) & 0xff, pct = rows[2 * k + 1] & 0xff;
+    if (!rows[2 * k] || cls > 9 || !pct) continue;
+    g_fans[g_nfans].tid = rows[2 * k]; g_fans[g_nfans].cls = (uint8_t)cls; g_fans[g_nfans].pct = (uint8_t)pct;
+    g_nfans++;
+  }
+  qsort(g_fans, g_nfans, sizeof g_fans[0], cmp_fan);
+  return g_nfans;
+}
+
+/* 0 both in; 1 the lookup's signature differs; 2 the followers function's; 3 alloc/protect */
+static int install_fans(uint64_t exe_base)
+{
+  unsigned char* rf = (unsigned char*)(uintptr_t)(exe_base + RANKFIND_RVA);
+  unsigned char* fb = (unsigned char*)(uintptr_t)(exe_base + FANS_RVA);
+  if (memcmp(rf, SIG_RANKFIND, 14)) return 1;
+  if (memcmp(fb, SIG_FANS, 14)) return 2;
+  unsigned char* t = (unsigned char*)VirtualAlloc(0, 0x40, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+  if (!t) return 3;
+  memcpy(t, fb, 14);
+  t[14] = 0xFF; t[15] = 0x25; *(uint32_t*)(t + 16) = 0; *(uint64_t*)(t + 20) = (uint64_t)(uintptr_t)(fb + 14);
+  FlushInstructionCache(GetCurrentProcess(), t, 0x40);
+  g_tramp_fans = t;
+  if (replace(rf, (void*)rank_find_hook)) return 3;
+  if (replace(fb, (void*)fans_handler)) return 3;
+  return 0;
+}
+
+/* own ranking entries handed out, followers bases scaled */
+__declspec(dllexport) void fl26_clubs_fan_stats(uint32_t* out2)
+{
+  out2[0] = g_fstat[0]; out2[1] = g_fstat[1];
+}
+
 /* ---- install ---- */
 
 /* The first fourteen bytes of each reader, as this build has them. Both functions are longer
@@ -369,6 +519,15 @@ __declspec(dllexport) int fl26_clubs_install(uint64_t exe_base, const fl26_clubs
   if (replace((unsigned char*)(uintptr_t)(exe_base + COUNT_RVA), (void*)count_hook)) return 4;
   if (replace((unsigned char*)(uintptr_t)(exe_base + GET_RVA),   (void*)get_hook))   return 5;
   if (replace((unsigned char*)(uintptr_t)(exe_base + SET_RVA),   (void*)set_hook))   return 7;
+  if (g_nfans) {
+    /* not fatal: without it the clubs keep the game's followers, as before */
+    int r = install_fans(exe_base);
+    if (r) logf("fl26clubs: followers NOT fixed (%s) -- %d club(s) keep the game's ranking fallback",
+                r == 1 ? "ranking lookup signature differs" : r == 2 ? "followers function signature differs"
+                : "alloc/protect failed", g_nfans);
+    else logf("fl26clubs: club ranking lookup replaced, followers wrapped -- %d club(s) with a class and "
+              "followers share of their own", g_nfans);
+  }
   logf("fl26clubs: readers and the setter replaced (count@%llx get@%llx), %d slot(s) served from our regulations, "
        "%d club(s) kept out of the pools",
        (unsigned long long)(exe_base + COUNT_RVA), (unsigned long long)(exe_base + GET_RVA), ncfg, g_nkeep);
