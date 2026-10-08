@@ -122,6 +122,12 @@ COPIER_BLOCKS = (0x1413fbf97, 1)   # mov ecx, 5     -> k
 SIZE_SITES = (0x1414b9da3, 0x1414ba4d8, 0x1414bac08, 0x1424957d6)  # mov edx, 0x2c4 -> stride
 UNIT_SITE = 0x140af1fc6                                # mov r8d, 0x6cd00 -> the new unit
 AFTER_IMM = (0x140af201f, 0x1414babe2)                 # add rcx, 0x3f180 -> + growth
+# 0x14157a820 (the managed club's fixtures for the hub's "Next" strip) walks the per-day
+# fixture table past the calendar off the calendar base, `movzx ebp, word [rax + 0x3f188]`
+# with rax = base + day * 16 -- an add the taint does not carry, so the survey never tagged
+# it. Left at 0x3f188 it read the widened calendar's own day lists (Albanian league ids) and
+# the hub showed Elbasani v Dinamo City and Tirana v Teuta to every club (08.10.).
+AFTER_DISP = ((0x14157adfe, 0x3f188),)                 # disp past the calendar -> + growth
 # One base reference lives in `.impdata`, where the survey (which reads `.trace`) never looks:
 # lea rcx, [r14 + 0x16038a8] at 0x14438cced, which hands 0x1414c8fd0 the calendar.  Found from
 # a crash, not a scan -- calaudit cannot vouch for it.
@@ -272,6 +278,11 @@ def build(ids, new_base):
         out.append(dword(exe, va, find(exe, va, v), v, v + growth,
                          "past the calendar, added rather than addressed: +0x%x -> +0x%x"
                          % (v, v + growth)))
+
+    for va, v in AFTER_DISP:
+        out.append(dword(exe, va, find(exe, va, v), v, v + growth,
+                         "past the calendar, which is now longer: +0x%x -> +0x%x "
+                         "(the hub's Next strip, by hand)" % (v, v + growth)))
 
     for va in IMPDATA_BASE:
         out.append(dword(exe, va, 0, OLD_BASE, new_base,

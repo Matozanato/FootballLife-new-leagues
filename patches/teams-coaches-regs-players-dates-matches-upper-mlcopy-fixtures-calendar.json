@@ -24615,6 +24615,13 @@
    "new": "ec159101",
    "why": "impdata past the calendar, by its own block offset: 0x1642a24 -> 0x19115ec (mov eax, dword ptr [rcx + 0x1642a24])",
    "asm": "mov eax, dword ptr [rcx + 0x1642a24]"
+  },
+  {
+   "va": "0x14157ae01",
+   "old": "88f10300",
+   "new": "88a50900",
+   "why": "past the calendar, which is now longer: +0x3f188 -> +0x9a588 (the hub's Next strip, by hand)",
+   "asm": "disp32/imm32"
   }
  ],
  "mlcopy": {
@@ -24908,7 +24915,7 @@
   "unit_growth": 373760,
   "tail_sites": 171,
   "unit_bytes": 819456,
-  "patches": 739,
+  "patches": 740,
   "skipped": [
    {
     "va": "0x140fc2ffa",
