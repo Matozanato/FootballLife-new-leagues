@@ -2305,6 +2305,23 @@ static int ccup_matches(uint16_t reg)
   }
   return n;
 }
+/* the same, the unplayed ones only (match +7 bit 6 = played) */
+static int ccup_unplayed(uint16_t reg)
+{
+  const unsigned char* bs = (const unsigned char*)(g_base + MATCH_BASE_SITE);
+  const unsigned char* cs = (const unsigned char*)(g_base + MATCH_CAP_SITE);
+  if (bs[0] != 0x48 || bs[1] != 0x8d || bs[2] != 0x88 || cs[0] != 0x81 || cs[1] != 0xff) return -1;
+  uint32_t base = *(const uint32_t*)(bs + 3), cap = *(const uint32_t*)(cs + 2);
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!blk || !cap || cap > 200000) return -1;
+  int n = 0;
+  for (uint32_t i = 0; i < cap; i++) {
+    const unsigned char* m = blk + base + (size_t)i * MATCH_STRIDE;
+    if (*(const uint16_t*)m != 0xffff && *(const uint16_t*)(m + 4) == reg && !(m[7] & 0x40)) n++;
+  }
+  return n;
+}
 
 /* the table of the played matches of regulations regs[0..nr): its clubs into out (reg and day
    left to the caller), the number of matches into *played; 0 clubs if the match table is not
@@ -2663,11 +2680,24 @@ static uint64_t cwc_dates(uint16_t id, uint64_t reg, void* vec)
  * league is where its place goes when there is no winner to send -- a new career, a winner
  * already in this cup or another continental one (ccup_taken), or in its league cup's pre-round:
  * the best club of that league not playing yet, as a UEFA cup winner's place goes (access_build).
- * Only those entries are held to ccup_taken; a super cup's winners play their own cups anyway. */
+ * Only those entries are held to ccup_taken; a super cup's winners play their own cups anyway.
+ *
+ * A single-match league cup (0.2.0, `like=<shipped cup>` on the ccup line, fl26_swiss_ccup_like):
+ * the knockout row is a copy of a shipped domestic cup -- ENGLAND_D1_CUP, format 2, one match a
+ * round, bracket = field -- so it takes any field the bracket screen draws (2-16, 18, 20, 24, 28,
+ * 30, 32, 44), not only 2/4/8/16/32. The game lays the bracket out with byes where the field is
+ * not a power of two (44: twelve first-round ties, twenty clubs straight into the round of 32),
+ * and the cup draw (cupdraw mode 3, `draw=byes`) gives the byes to the top division and draws
+ * every tie at random. Its rounds are dated as the shipped cup's (calendar case 6: round ids
+ * 0x2e, 0x2f, 0x30, 0x33, 0x34, 0x35) and moved to the cup's own days, one per round. The
+ * live row is checked before any of it (ccup_like_ok): a career whose save still holds the old
+ * two-legged copy of the Europa League knockout under the same id keeps the old way, with the
+ * first entries that fit its bracket. */
 #define MAX_CCUP 16      /* 8 until 0.2.0: CONCACAF and OFC cups next to league and pre-season cups */
 _Static_assert(MAX_CCUP == MAX_CCUP_FWD, "the Club World Cup sizes its list of champions by MAX_CCUP_FWD");
 #define CCUP_MAX_GROUPS 8
-#define CCUP_MAX_ENTRY 32
+#define CCUP_MAX_ENTRY 48     /* 32 until 0.2.0: a single-match league cup takes up to 44 */
+#define CCUP_LIKE_MAX 44      /* the FA Cup's field: the largest a shipped cup has (and the screen draws) */
 #define CCUP_MAX_DAYS 8
 #define R_LIBGROUP 9
 #define R_UCLKO    4
@@ -2679,8 +2709,23 @@ typedef struct { uint16_t reg, ko, groups, n; uint16_t ereg[CCUP_MAX_ENTRY]; uin
                  uint16_t ealt[CCUP_MAX_ENTRY];
                  uint8_t efrom[CCUP_MAX_ENTRY];   /* alt=: the first position of ealt to try */
                  uint16_t fill, national, nd, nc; uint16_t days[CCUP_MAX_DAYS]; uint32_t clubs[CCUP_MAX_ENTRY];
-                 int filled_year; } ccup_t;
+                 int filled_year;
+                 uint16_t like;      /* 0.2.0: the shipped domestic cup whose shape and dates it takes, 0 = none */
+               } ccup_t;
 static ccup_t g_ccup[MAX_CCUP]; static int g_nccup = 0;
+/* fl26_swiss_ccup_like's records, read by fl26_swiss_ccup (called after it): knockout -> shipped cup */
+static uint16_t g_clike[MAX_CCUP][2]; static int g_nclike = 0;
+static uint16_t clike_of(uint16_t ko)
+{
+  for (int i = 0; i < g_nclike; i++) if (g_clike[i][0] == ko) return g_clike[i][1];
+  return 0;
+}
+/* a field the bracket screen draws and a shipped domestic cup's calendar dates every round of */
+static int like_size_ok(unsigned n)
+{
+  if (n < 2 || n > CCUP_LIKE_MAX || n > CCUP_MAX_ENTRY) return 0;
+  return n <= 16 || n == 18 || n == 20 || n == 24 || n == 28 || n == 30 || n == 32 || n == 44;
+}
 static uint32_t g_ccup_field[MAX_CCUP][CCUP_MAX_ENTRY]; static unsigned g_ccup_nf[MAX_CCUP];
 static unsigned g_ccup_done[MAX_CCUP];
 /* Midweek, the way UEFA plays (GitHub #70): a cup the league champions go to (the CAF Champions
@@ -2702,8 +2747,13 @@ static int ccup_tier(const ccup_t* c)
   return 1;
 }
 /* the j-th day of a cup's groups or knockout: the knockout's own days when the world file gives them */
+static int ccup_like_ok(const ccup_t* c);
+/* the two-legged league cup's days before 0.2.0 (leaguebuilder LEAGUE_CUP_DAYS): a single-match
+   cup of the world file played the old way by a career with the old row (ccup_size) */
+static const uint32_t LCUP_OLD_DAYS[7] = { 256, 287, 291, 314, 326, 340, 356 };
 static uint32_t ccup_day(const ccup_t* c, int ko, int j)
 {
+  if (ko && c->like && !ccup_like_ok(c)) return LCUP_OLD_DAYS[j < 7 ? j : 6];
   if (ko && c->nd) return c->days[j < c->nd ? j : c->nd - 1];
   return ko ? CCUP_KO_DAYS[ccup_tier(c)][j] : CCUP_GROUP_DAYS[ccup_tier(c)][j];
 }
@@ -2748,13 +2798,25 @@ __declspec(dllexport) int fl26_swiss_ccup(const uint16_t* v, int n)
   for (int i = 0; i < n && g_nccup < MAX_CCUP; i++) {
     ccup_t* c = &g_ccup[g_nccup];
     c->reg = v[p]; c->ko = v[p + 1]; c->groups = v[p + 2]; unsigned ne = v[p + 3]; p += 4;
-    c->n = 0; c->fill = c->national = c->nd = c->nc = 0; c->filled_year = -1;
+    c->n = 0; c->fill = c->national = c->nd = c->nc = 0; c->filled_year = -1; c->like = 0;
     memset(c->ealt, 0, sizeof c->ealt);
     memset(c->efrom, 0, sizeof c->efrom);
     for (unsigned e = 0; e < ne; e++, p += 2)
       if (c->n < CCUP_MAX_ENTRY) { c->ereg[c->n] = v[p]; c->erank[c->n] = (uint8_t)v[p + 1]; c->n++; }
     if (!c->groups) {
       c->reg = c->ko;
+      c->like = clike_of(c->ko);
+      if (c->like) {
+        if (ne > CCUP_MAX_ENTRY || !like_size_ok(c->n)) {
+          logf("fl26swiss: cup %u -- a single-match knockout of %u clubs is not a field the bracket screen draws; left out",
+               (unsigned)c->ko, (unsigned)ne);
+          continue;
+        }
+        logf("fl26swiss: cup %u from the world file: a single-match knockout of %u, shaped and dated as reg %u",
+             (unsigned)c->ko, (unsigned)c->n, (unsigned)c->like);
+        g_nccup++;
+        continue;
+      }
       if (c->n != 2 && c->n != 4 && c->n != 8 && c->n != 16 && c->n != 32) {
         logf("fl26swiss: cup %u -- a knockout of %u clubs is not 2, 4, 8, 16 or 32; left out", (unsigned)c->ko,
              (unsigned)c->n);
@@ -2833,6 +2895,57 @@ __declspec(dllexport) int fl26_swiss_ccup_alt(const uint16_t* v, int n)
   }
   if (got) logf("fl26swiss: %d cup winner place(s) with a league to fall back on", got);
   return got;
+}
+
+/* The single-match league cups (0.2.0), n records of u16: knockout id, the shipped domestic cup
+   (2..175) whose shape the knockout row was copied from and whose calendar dates it. Called
+   BEFORE fl26_swiss_ccup, which then takes such a knockout at any field like_size_ok allows (an
+   older fl26swiss.dll has no such export: the module says so, and the cup is left out there as a
+   knockout that is not 2, 4, 8, 16 or 32). Answers the records taken. */
+__declspec(dllexport) int fl26_swiss_ccup_like(const uint16_t* v, int n)
+{
+  g_nclike = 0;
+  for (int i = 0; v && i < n && g_nclike < MAX_CCUP; i++) {
+    uint16_t ko = v[2 * i], like = v[2 * i + 1];
+    if (ko < 176 || ko > 1023 || like < 2 || like > 175) {
+      logf("fl26swiss: single-match cup record %u like %u -- not a cup of ours and a shipped cup; left out", (unsigned)ko, (unsigned)like);
+      continue;
+    }
+    g_clike[g_nclike][0] = ko; g_clike[g_nclike][1] = like; g_nclike++;
+  }
+  logf("fl26swiss: %d single-match league cup(s) named by the world file", g_nclike);
+  return g_nclike;
+}
+
+/* the live knockout row of a single-match cup is the domestic cup shape the world file says: a
+   format-2 knockout (+0x308 bits 23-28) with a bracket (+0x30c bits 0-6) of the cup's field. A
+   career saved with the old two-legged row under the same id (format 30, bracket 16) is not. */
+static int ccup_like_ok(const ccup_t* c)
+{
+  if (!c->like || c->groups) return 0;
+  unsigned char* r = get_rec(c->ko);
+  if (!r) return 0;
+  uint32_t fmt = (*(uint32_t*)(r + 0x308) >> 23) & 0x3f, br = *(uint32_t*)(r + 0x30c) & 0x7f;
+  return fmt == 2 && br == c->n;
+}
+/* how many of a cup's entries it plays with: all of them, but for a single-match cup whose live
+   row is not that shape -- an old career -- the first ones its own bracket holds, a power of two
+   (the entries run top division first, so that is the old cup's field, with no pre-round) */
+static unsigned ccup_size(const ccup_t* c)
+{
+  if (!c->like || ccup_like_ok(c)) return c->n;
+  unsigned char* r = get_rec(c->ko);
+  unsigned br = r ? (*(uint32_t*)(r + 0x30c) & 0x7f) : 0, p = 1;
+  while (p * 2 <= br && p * 2 <= c->n) p *= 2;
+  static uint16_t said[MAX_CCUP]; static int nsaid = 0; int seen = 0;
+  for (int i = 0; i < nsaid; i++) seen |= said[i] == c->ko;
+  if (!seen && nsaid < MAX_CCUP) {
+    said[nsaid++] = c->ko;
+    logf("fl26swiss: cup %u -- the world file makes it a single-match cup of %u, but this career's row is format %u, bracket %u: "
+         "the old two-legged knockout of %u is played", (unsigned)c->ko, (unsigned)c->n,
+         r ? (unsigned)((*(uint32_t*)(r + 0x308) >> 23) & 0x3f) : 0u, br, p >= 2 ? p : 0u);
+  }
+  return p >= 2 ? p : 0;
 }
 
 /* ---- the league cups' pre-rounds ----
@@ -3050,10 +3163,15 @@ static int ccup_fill_one(int k, void* started)
     logf("fl26swiss: cup %u already holds %u clubs; not filled again", (unsigned)c->reg, held);
     return 0;
   }
-  unsigned n = 0, gaps = 0;
+  unsigned n = 0, gaps = 0, cn = ccup_size(c);
   uint16_t unplayed_phase = 0;
   g_ccup_nf[k] = 0;
-  for (unsigned i = 0; i < c->n; i++) {
+  if (!cn) return 0;
+  int single = ccup_like_ok(c);
+  if (single)
+    logf("fl26swiss: cup %u -- a single-match knockout of %u (reg %u's shape), day %d", (unsigned)c->ko, cn,
+         (unsigned)c->like, today());
+  for (unsigned i = 0; i < cn; i++) {
     const char* how = ""; uint32_t club = 0;
     if (c->nc) {                                   /* invited by name */
       club = canon_club(full_club(c->clubs[i]));
@@ -3117,8 +3235,8 @@ static int ccup_fill_one(int k, void* started)
     g_ccup_nf[k] = 0;
     return 0;
   }
-  if (n != c->n) {
-    logf("fl26swiss: cup %u -- only %u of %u clubs found; not started", (unsigned)c->reg, n, (unsigned)c->n);
+  if (n != cn) {
+    logf("fl26swiss: cup %u -- only %u of %u clubs found; not started", (unsigned)c->reg, n, cn);
     g_ccup_nf[k] = 0;
     return 0;
   }
@@ -3133,6 +3251,13 @@ static int ccup_fill_one(int k, void* started)
       for (unsigned i = 0; i < n && same; i++) same = has_club(rec_clubs(rec), held, g_ccup_field[k][i]);
       if (same) {
         logf("fl26swiss: cup %u already holds this season's %u clubs; not filled again", (unsigned)c->reg, held);
+        return 0;
+      }
+      /* a domestic cup's shape: should the game ever fill and register it itself, its matches
+         stand -- filling it again over unplayed matches would leave them without clubs */
+      if (single && ccup_unplayed(c->ko) > 0) {
+        logf("fl26swiss: cup %u -- the game has filled it itself (%u clubs, %d unplayed match(es)); left as it is",
+             (unsigned)c->ko, held, ccup_unplayed(c->ko));
         return 0;
       }
       logf("fl26swiss: cup %u still holds %u club(s) of an earlier season (%08x ...) -- filled anew",
@@ -3373,14 +3498,55 @@ static int ccup_progress(int k, uint16_t r, void* started)
   return 1;
 }
 
+/* a single-match cup's round (a domestic cup's id: 0x2e up to the quarter-final 0x33, then 0x34,
+   0x35) as its place in the cup's own days: one day a round, -1 for an id that is none of them */
+static int like_slot(uint32_t round)
+{
+  switch (round) {
+    case 0x2e: return 0; case 0x2f: return 1; case 0x30: case 0x31: case 0x32: return 2;
+    case 0x33: return 3; case 0x34: return 4; case 0x35: return 5;
+  }
+  return -1;
+}
+static uint64_t ccup_like_dates(int k, uint16_t id, uint64_t reg, void* vec)
+{
+  const ccup_t* cc = &g_ccup[k];
+  uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | cc->like, vec);
+  vec_t* v = (vec_t*)vec;
+  size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+  date_t* r = (date_t*)v->b;
+  static unsigned char said[MAX_CCUP];
+  if (!have || !cc->nd) {
+    if (!said[k]) logf("fl26swiss: cup reg %u: reg %u's calendar gave %u record(s), %u day(s) of its own; left as it is",
+                       (unsigned)id, (unsigned)cc->like, (unsigned)have, (unsigned)cc->nd);
+    said[k] = 1;
+    return rv;
+  }
+  for (size_t i = 0; i < have; i++) {
+    int j = like_slot(r[i].kind);
+    if (j < 0) j = like_slot(r[i].round);
+    if (j < 0) j = (int)(have > 1 ? i * 5 / (have - 1) : 5);    /* by order, the last the final */
+    if (!said[k])
+      logf("fl26swiss: cup reg %u borrowed record %u: day %u round %#x kind %#x -> day %u", (unsigned)id, (unsigned)i,
+           r[i].day, r[i].round, r[i].kind, (unsigned)cc->days[j < cc->nd ? j : cc->nd - 1]);
+    r[i].day = cc->days[j < cc->nd ? j : cc->nd - 1];
+  }
+  if (!said[k])
+    logf("fl26swiss: cup reg %u dated as reg %u: %u record(s), days %u..%u", (unsigned)id, (unsigned)cc->like,
+         (unsigned)have, r[0].day, r[have - 1].day);
+  said[k] = 1;
+  return rv;
+}
+
 static uint64_t ccup_dates(int k, int ko, uint16_t id, uint64_t reg, void* vec)
 {
+  if (ccup_like_ok(&g_ccup[k])) return ccup_like_dates(k, id, reg, vec);
   uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | (ko ? R_UCLKO : R_LIBGROUP), vec);
   vec_t* v = (vec_t*)vec;
   size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
   date_t* r = (date_t*)v->b;
   const ccup_t* cc = &g_ccup[k];
-  size_t want = ko ? (cc->nd ? cc->nd : 7) : 6;
+  size_t want = ko ? ((cc->nd && !cc->like) ? cc->nd : 7) : 6;   /* like here: an old row, the old days */
   static unsigned said[MAX_CCUP];
   unsigned bit = ko ? 1 : 2;
   if (have == 0 || have > want) {
@@ -3605,7 +3771,8 @@ typedef struct { uint16_t reg, mode, ntier, tier[CD_TIERS]; uint32_t kmask, done
 static cupdraw_t g_cd[CD_MAX];
 static int g_ncd;
 
-/* the world's cups: n entries of reg, mode (0 off, 1 seeded, 2 random), k, then k league regs, the
+/* the world's cups: n entries of reg, mode (0 off, 1 seeded, 2 random, 3 byes: the places let through
+   to the top division, every tie at random -- a single-match league cup), k, then k league regs, the
    top division first; returns how many were taken */
 __declspec(dllexport) int fl26_swiss_cupdraw(const uint16_t* v, int n)
 {
@@ -3721,12 +3888,12 @@ static int cup_draw(cupdraw_t* c)
     for (int i = 0; i < c->ntier; i++) if (in_league(c->tier[i], club[k])) { t = i; break; }
     tier[k] = t;
     if (!seen[t]++) ntiers_seen++;
-    key[k] = t * 100000 - (blk ? club_strength(blk, club[k]) : 0);
+    key[k] = t * 100000 - (blk && c->mode != 3 ? club_strength(blk, club[k]) : 0);   /* 3: the division alone */
   }
   /* already drawn by us (a season loaded again): every place let through holds a club of a
      division no lower than any first-round club's, and in every tie the home club's division is
      no higher than the away club's. Only worth asking when the cup mixes divisions. */
-  if (c->mode == 1 && ntiers_seen > 1) {
+  if ((c->mode == 1 || c->mode == 3) && ntiers_seen > 1) {
     int ok = 1, worst_single = -1, best_pair = 1 << 30;
     for (int k = 0; k < np; k++) {
       if (pl[k].both) { if (tier[k] < best_pair) best_pair = tier[k]; }
@@ -3751,6 +3918,13 @@ static int cup_draw(cupdraw_t* c)
       int t = ord_key[j]; ord_key[j] = ord_key[j - 1]; ord_key[j - 1] = t;
       t = ord_tier[j]; ord_tier[j] = ord_tier[j - 1]; ord_tier[j - 1] = t;
       uint32_t u = order[j]; order[j] = order[j - 1]; order[j - 1] = u;
+    }
+  if (c->mode == 3)                               /* byes: a division's clubs in random order */
+    for (int a = 0; a < nc;) {
+      int b = a;
+      while (b < nc && ord_tier[b] == ord_tier[a]) b++;
+      cd_shuffle(order + a, b - a);
+      a = b;
     }
   uint32_t want[CD_CLUBS];
   if (c->mode == 2) {
@@ -3803,7 +3977,7 @@ static int cup_draw(cupdraw_t* c)
         if (club[k] == lst[p]) { if (lst[p] != want[k]) relisted++; lst[p] = want[k]; break; }
   }
   logf("fl26swiss: cup %d drawn %s: %d place(s) in %d round(s), %d club(s) moved, %d division(s), %d entry list place(s) rewritten; day %d",
-       c->reg, c->mode == 2 ? "at random" : "with seeds", np, nr, moved, ntiers_seen, relisted, today());
+       c->reg, c->mode == 2 ? "at random" : c->mode == 3 ? "at random, the byes to the top division" : "with seeds", np, nr, moved, ntiers_seen, relisted, today());
   for (int k = 0; k < np; k++) {
     if (!pl[k].both)
       logf("fl26swiss:   cup %d round %#x slot: %06x through", c->reg, kinds[pl[k].round], want[k] & KO_TBD);
