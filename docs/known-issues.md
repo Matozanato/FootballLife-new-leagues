@@ -417,7 +417,19 @@ calendar.
   a bigger one. The patch set now widens every day of the calendar (the `-calendar` part,
   3519 patches in all) and moves the calendar to the top of the edit block. **A career saved
   with an older release does not load in 0.2.0** (it stays on the loading screen): start a new
-  one. The worlds themselves are unchanged and need no new Build.
+  one. The worlds themselves are unchanged and need no new Build. Checked in game: a new
+  career played a whole season, days of 281 matches included, without a crash.
+- 2026-10-08 (Mod Studio 0.2.0, fl26clubs, LaraCroft on Discord): **Other European lost its last
+  clubs** -- as many as a Build moved from it into new leagues (Finland took one: Zalgiris was
+  gone; Hungary: Wisla). Entering a mode, the game loads the Edit save's own club lists and
+  writes the clubs without raising the list's count, which still holds the shorter list the
+  game counted at boot. fl26clubs now watches those writes and serves each "other clubs" list
+  as far as it was really written.
+- 2026-10-08 (Mod Studio 0.2.0, Vicentico12 on Discord): **Cups of the game's countries had no
+  logo.** The league cups and super cups Build adds to the game's leagues always got the drawn
+  emblem; that window now has a Logo for each.
+- 2026-10-08 (Mod Studio 0.2.0, LaraCroft on Discord): **New clubs page: Team ID showed "None"**
+  for a club that gets its id at Build. It now says so ("at Build").
 - 2026-10-08 (Mod Studio 0.2.0, fl26swiss, rwee on Discord): **the game's own leagues played on
   Champions League days** (the Bundesliga, the Super Lig and the Pro League on the January
   matchday, day 20). The two free days around European and cup days were meant for every
