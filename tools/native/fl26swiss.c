@@ -910,8 +910,8 @@ static int uecl_ko(void* started)
  * Which of the two uses of reg 2 is meant is read from the game's own day counter, not kept in
  * the DLL, so a save loaded in the middle of the play-off still goes the right way: August
  * starts on day 212, the play-off is in February. */
-#ifndef TODAY_OFF   /* -DTODAY_OFF=... builds for a set that moves the block (the -calendar set) */
-#define TODAY_OFF  0x1642a1c
+#ifndef TODAY_OFF   /* the -calendar set (0.2.0): the unit tail moved by 0x2cebc8; -DTODAY_OFF=... for an older set */
+#define TODAY_OFF  0x19115e4
 #endif
 #define WINNER_RVA 0x151b2e0
 #define FREETAB_RVA 0x1363040   /* (this, u16 id): free a regulation's tie tables -- the July teardown's own step */

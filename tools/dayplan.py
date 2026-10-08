@@ -1,6 +1,6 @@
 """python dayplan.py [--set NAME] [--iters N]  -> a better date-spread assignment
 
-A calendar day holds 280 match ids and the scheduler at 0x141350290 drops the rest without
+A calendar day holds 280 match ids (792 with the -calendar set of 0.2.0) and the scheduler at 0x141350290 drops the rest without
 a word, so how the new leagues are spread over the seven day-shifts of the datecave stub
 decides how many leagues a world can carry.  Dealing the shifts round-robin is not good
 enough: the shipped competitions are not spread evenly either, so some shifts start out
@@ -33,7 +33,8 @@ import livedump as L
 LAY = L.LAYOUT
 H = L.H
 ROOT = L.ROOT
-CAL, DAYS, DAY, NCOUNT = 0x16038a8, 365, 0x2c4, 0x230
+_C = L.calendar()                  # FL26_SET: the -calendar set moves and widens it
+CAL, DAYS, DAY, NCOUNT, CAP = _C["base"], 365, _C["stride"], _C["count"], _C["ids"]
 SHIFTS = 7
 
 
@@ -147,6 +148,9 @@ def main():
         "FL26_SET", "teams-coaches-regs-players-dates-matches-upper-mlcopy"))
     iters = int(get("--iters", "600"))
     st = load(setname)
+    global CAL, DAY, NCOUNT, CAP
+    _c = L.calendar(setname)
+    CAL, DAY, NCOUNT, CAP = _c["base"], _c["stride"], _c["count"], _c["ids"]
     if not st.get("date_offsets"):
         raise SystemExit("%s was not generated with --date-offsets, so there is no "
                          "spread to improve" % setname)
@@ -187,10 +191,10 @@ def main():
     top = sorted(range(DAYS), key=lambda d: -tot[d])[:6]
     print("searched: peak %d   busiest: %s"
           % (best, ", ".join("day %d = %d" % (d, tot[d]) for d in top)))
-    print("headroom on the busiest day: %d of 280" % (280 - best))
-    if best > 280:
+    print("headroom on the busiest day: %d of %d" % (CAP - best, CAP))
+    if best > CAP:
         print("STILL OVER: %d matches want a place that does not exist, so a day-shift "
-              "alone does not fit this season" % sum(max(0, n - 280) for n in tot))
+              "alone does not fit this season" % sum(max(0, n - CAP) for n in tot))
     print("\n--date-offsets %s" % ",".join("%d:%d" % (k, asg[k]) for k in keys))
     return 0
 

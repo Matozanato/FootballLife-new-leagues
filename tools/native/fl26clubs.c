@@ -75,6 +75,7 @@
 
 #define COUNT_RVA  0x14d62c0   /* u16 count(void* this, unsigned slot)            */
 #define GET_RVA    0x14d6290   /* u32 get(void* this, unsigned slot, unsigned i)  */
+#define SET_RVA    0x14d6330   /* set(void* this, unsigned slot, unsigned i, u32) */
 #define REG_RVA    0x14bb000   /* void* regulation(void* block, unsigned id)      */
 #define OWNER_RVA  0x3705e10   /* global: owner; block = [owner+0x48]             */
 
@@ -203,14 +204,53 @@ static unsigned pool_build(void* self, unsigned slot, int i)
    now play in a league of ours. Rebuilt at each count (the stored lists are filled once, at
    boot, and a count before that must not be cached as empty); a get with no count before it
    builds it too. */
+static int is_pad(uint32_t v) { return v == 0 || v == 0x3ffffu || v == 0xffffffffu; }
+
+/* The stored count is not always the length of the list. Entering a mode, 0x141f14960 loads
+   the Edit save's own lists (category 27 -> slot 69, Other European) with the setter alone: the
+   entries are written, the count is left as the boot fill set it. An Edit list longer than the
+   boot one then loses its last clubs to the old count. So the setter is ours too, and records
+   how far each pool slot of that list object was really written; the list is served that far.
+   Never further on a guess: past the count of another list object (a Master League season being
+   built) the words are not a list, and serving them crashed creation at 0x140aeed0b (8 October). */
+static void*    g_hi_self[4];
+static unsigned g_hi[4];
+
+__declspec(dllexport) void set_hook(void* self, unsigned slot, unsigned idx, uint32_t v)
+{
+  if (slot >= SLOTS || idx >= STRIDE) return;
+  ((uint32_t*)self)[slot * STRIDE + idx] = v;
+  int p = pool_index(slot);
+  if (p < 0) return;
+  if (g_hi_self[p] != self) { g_hi_self[p] = self; g_hi[p] = 0; }
+  if (idx + 1 > g_hi[p]) g_hi[p] = idx + 1;
+}
+
+static int g_kp_said[4];
+
 static unsigned keep_build(void* self, unsigned slot, int p)
 {
   unsigned n = *(uint16_t*)((unsigned char*)self + COUNT_OFF + slot * 2);
   if (n > STRIDE) n = STRIDE;
   const uint32_t* stored = (const uint32_t*)((unsigned char*)self + slot * STRIDE * 4);
+  unsigned len = n;
+  if (g_hi_self[p] == self && g_hi[p] > n) {
+    len = g_hi[p];
+    if (!g_kp_said[p]) {
+      g_kp_said[p] = 1;
+      logf("fl26clubs: slot %u was written %u past its count of %u (an Edit list) -- served to its end",
+           slot, len - n, n);
+    }
+  }
   int m = 0;
-  for (unsigned k = 0; k < n; k++)
-    if (!kept_out(stored[k])) g_kp[p][m++] = stored[k];
+  for (unsigned k = 0; k < len; k++) {
+    uint32_t v = stored[k];
+    if (k >= n && is_pad(v)) continue;
+    if (kept_out(v)) continue;
+    int dup = 0;
+    if (k >= n) for (int j = 0; j < m && !dup; j++) if (g_kp[p][j] == v) dup = 1;
+    if (!dup) g_kp[p][m++] = v;
+  }
   g_kn[p] = m;
   return (unsigned)m;
 }
@@ -231,7 +271,7 @@ __declspec(dllexport) unsigned count_hook(void* self, unsigned slot)
     g_stat[3]++;
   }
   if (slot >= SLOTS || !self) return 0;
-  if (g_nkeep && i < 0) {
+  if (i < 0) {
     int p = pool_index(slot);
     if (p >= 0) return keep_build(self, slot, p);
   }
@@ -250,7 +290,7 @@ __declspec(dllexport) unsigned get_hook(void* self, unsigned slot, unsigned idx)
     return g_list[i][idx];
   }
   if (slot >= SLOTS || !self) return 0xffffffffu;
-  if (g_nkeep && i < 0) {
+  if (i < 0) {
     int p = pool_index(slot);
     if (p >= 0) {
       if (g_kn[p] < 0) keep_build(self, slot, p);
@@ -272,6 +312,9 @@ static const unsigned char SIG_GET[14] = {
   0x83,0xfa,0x7b, 0x73,0x20, 0x8b,0xd2, 0x0f,0xb7,0x84,0x51,0x68,0xa1,0x05 };
 
 /* Replace, do not wrap: jmp [rip+0] ; qword handler. Fourteen bytes, nothing stolen. */
+static const unsigned char SIG_SET[14] = {
+  0x83,0xfa,0x7b,0x73,0x1c,0x41,0x81,0xf8,0xee,0x02,0x00,0x00,0x73,0x13 };
+
 static int replace(unsigned char* target, void* handler)
 {
   DWORD old;
@@ -295,11 +338,11 @@ __declspec(dllexport) int fl26_clubs_keep_out(const uint32_t* tids, int n)
   return g_nkeep;
 }
 
-/* 0 ok; 2 count signature; 3 get signature; 4/5 protect failed; 9 bad config. ncfg may be 0
-   when fl26_clubs_keep_out gave clubs: the pools are then all there is to answer. */
+/* 0 ok; 2 count signature; 3 get signature; 6 set signature; 4/5/7 protect failed; 9 bad config. ncfg may be 0:
+   the pools (kept-out clubs, the count an Edit refill leaves stale) are then all there is. */
 __declspec(dllexport) int fl26_clubs_install(uint64_t exe_base, const fl26_clubs_cfg_t* cfg, int ncfg)
 {
-  if (ncfg < 0 || ncfg > MAX_CFG || (ncfg && !cfg) || (!ncfg && !g_nkeep)) return 9;
+  if (ncfg < 0 || ncfg > MAX_CFG || (ncfg && !cfg)) return 9;
   g_base = exe_base;
   g_ncfg = ncfg;
   for (int i = 0; i < ncfg; i++) {
@@ -310,9 +353,11 @@ __declspec(dllexport) int fl26_clubs_install(uint64_t exe_base, const fl26_clubs
   /* check both before touching either, so a mismatch leaves the game unmodified */
   if (memcmp((void*)(uintptr_t)(exe_base + COUNT_RVA), SIG_COUNT, 14)) return 2;
   if (memcmp((void*)(uintptr_t)(exe_base + GET_RVA),   SIG_GET,   14)) return 3;
+  if (memcmp((void*)(uintptr_t)(exe_base + SET_RVA),   SIG_SET,   14)) return 6;
   if (replace((unsigned char*)(uintptr_t)(exe_base + COUNT_RVA), (void*)count_hook)) return 4;
   if (replace((unsigned char*)(uintptr_t)(exe_base + GET_RVA),   (void*)get_hook))   return 5;
-  logf("fl26clubs: readers replaced (count@%llx get@%llx), %d slot(s) served from our regulations, "
+  if (replace((unsigned char*)(uintptr_t)(exe_base + SET_RVA),   (void*)set_hook))   return 7;
+  logf("fl26clubs: readers and the setter replaced (count@%llx get@%llx), %d slot(s) served from our regulations, "
        "%d club(s) kept out of the pools",
        (unsigned long long)(exe_base + COUNT_RVA), (unsigned long long)(exe_base + GET_RVA), ncfg, g_nkeep);
   return 0;

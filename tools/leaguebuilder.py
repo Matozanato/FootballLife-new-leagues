@@ -175,9 +175,11 @@ which league sits above -- and nothing about ids:
               false: none. "caf_super_cup_logo" is its picture
   editable_kits  (the recipe) true: the new clubs get no kit lent from a club of the game. A lent
               kit is a licensed one (<key>_1st_realUni.bin) and Edit mode refuses it ("You cannot
-              edit this strip"); without one a club wears the engine's own kit, which Edit >
-              Teams > Strip edits like any unlicensed club's, Paste Image included, and the edit
-              stays in the Edit save (seen in the game 2026-09-30). Default false: lent kits
+              edit this strip"). Instead each club gets plain 1st/2nd/GK definitions of its own
+              (mkkits --plain: the 96-byte kind unlicensed clubs carry), which Edit > Teams >
+              Strip edits like any unlicensed club's, Paste Image included. Before 0.2.0 it got
+              none and wore team 0's fallback, where Paste Image did not stick (#112). Default
+              false: lent kits
 
 What plan() decides, so that nothing is left to a person to get wrong:
 
@@ -3654,10 +3656,7 @@ def pictures(pl, root, base, log=print):
         ", %d country flags" % len(flags) if flags else ""))
     if not any(p["teams"] for p in pl["leagues"] + (pl.get("others") or [])):
         return
-    if pl.get("editable_kits"):
-        log("  kits: none lent -- the new clubs wear the game's own kit, which Edit > Teams > Strip can change "
-            "(Paste Image too)")
-        return
+    plain = bool(pl.get("editable_kits"))
     t = tables_root(base)
     unipar = os.path.join(t, UNIPAR.replace("/", os.sep)) if t else None
     if not unipar or not os.path.exists(unipar):
@@ -3673,6 +3672,18 @@ def pictures(pl, root, base, log=print):
         return
     args = ["mkkits.py", "--team-bin", os.path.join(root, "common", "etc", "pesdb", "Team.bin"),
             "--unipar", unipar, "--root", root, "--archive", "--clubs", ",".join(map(str, ours))]
+    if plain:
+        # editable_kits: no licensed kit lent; each club gets plain 1st/2nd/GK definitions of its
+        # own, the kind Edit > Teams > Strip paints (Paste Image too).  Without them a club wore
+        # team 0's fallback and Paste Image did not stick (GitHub #112)
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = mkkits.build(args + ["--plain"])
+        if rc:
+            raise BuildError("kits: %s" % buf.getvalue())
+        log("  kits: plain, editable in Edit > Teams > Strip -- " + next(
+            (l.strip() for l in buf.getvalue().splitlines() if l.startswith("wrote") and "kit" in l), "written"))
+        return
     colours = {}                    # NewLife clubs: the shipped kit nearest their own colours
     for p in pl["leagues"] + (pl.get("others") or []):
         home, away = p.get("club_kits") or [], p.get("club_away_kits") or []

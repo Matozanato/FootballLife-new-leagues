@@ -72,6 +72,12 @@ fl26hdr127.lua        room for 127 competitions in a season
 yourself from the source in `tools/native/` are in
 [tools/native/README.md](../tools/native/README.md).
 
+> **Updating to 0.2.0?** **`sider/fl26caps.lua` is new** (3519 patches): a calendar day holds
+> 792 matches instead of 280. It changes the size of the tables a career is saved with, so
+> **a career saved before 0.2.0 does not load** (it stays on the loading screen). Start a new
+> career after you replace the file. Replace `fl26join.dll` too (and `fl26chain.dll`,
+> `fl26swiss.dll` if you use the experimental modules): they read the moved tables.
+>
 > **Updating from an earlier download?** On 2026-09-30 **`sider/fl26nullguard10.lua` is
 > new**: add the file and its line after `fl26nullguard9.lua` (step 3). It stops an endless
 > loop that could fill the memory in a February-December career. It changes no table, so
@@ -148,7 +154,7 @@ Start FL26 once, get to the main menu, quit, and open `SiderAddons\sider.log`. Y
 eleven lines like these, one per module line in `sider.ini`:
 
 ```
-[fl26caps.lua] fl26caps: applied all 2759 patches -- block 0x1877068 -> 0x3cd4ae8, 2759 patches
+[fl26caps.lua] fl26caps: applied all 3519 patches -- block 0x1877068 -> 0x3d9cbe8, 3519 patches
 [fl26nullguard.lua] fl26caps: applied all 2 patches -- nullguard: null-check at 0x141fea5b0
 [fl26nullguard2.lua] fl26caps: applied all 2 patches -- nullguard2: null-check at 0x140fc9238
 [fl26nullguard4.lua] fl26caps: applied all 2 patches -- nullguard4: null-check at 0x1415720d0

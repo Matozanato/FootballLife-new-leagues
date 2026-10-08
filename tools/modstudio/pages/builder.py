@@ -2015,9 +2015,11 @@ class GameCupsDialog(Dialog):
                                       "one match a round from late September to December; the clubs past 16 play "
                                       "a pre-round in early September. A super cup -- the "
                                       "champion v the cup winner in late July -- only where the game has none. "
-                                      "Empty name = the league's name and League Cup / Super Cup.")))
-        self.table = QTableWidget(len(self.tops), 5)
-        self.table.setHorizontalHeaderLabels([_("League"), _("League cup"), _("Name"), _("Super cup"), _("Name")])
+                                      "Empty name = the league's name and League Cup / Super Cup; "
+                                      "no logo = an emblem with the cup's initials.")))
+        self.table = QTableWidget(len(self.tops), 7)
+        self.table.setHorizontalHeaderLabels([_("League"), _("League cup"), _("Name"), _("Logo"),
+                                              _("Super cup"), _("Name"), _("Logo")])
         self.table.verticalHeader().hide()
         self.rows = []
         for i, (rid, name, has_super) in enumerate(self.tops):
@@ -2031,31 +2033,34 @@ class GameCupsDialog(Dialog):
             sc.setChecked(bool(c.get("super_cup")) and not has_super)
             ln.setPlaceholderText(name + " League Cup")
             sn.setPlaceholderText(_("the game has one") if has_super else name + " Super Cup")
+            lg, sg = PictureField(c.get("logo"), 32), PictureField(c.get("super_logo"), 32)
             sc.setEnabled(not has_super)
             sn.setEnabled(not has_super)
-            for col, w in ((1, lc), (2, ln), (3, sc), (4, sn)):
+            sg.setEnabled(not has_super)
+            for col, w in ((1, lc), (2, ln), (3, lg), (4, sc), (5, sn), (6, sg)):
                 self.table.setCellWidget(i, col, w)
-            self.rows.append((rid, lc, ln, sc, sn, c))
+            self.table.setRowHeight(i, 52)
+            self.rows.append((rid, lc, ln, lg, sc, sn, sg))
         self.table.resizeColumnsToContents()
-        self.table.setColumnWidth(2, 220)
-        self.table.setColumnWidth(4, 220)
-        self.table.setMinimumSize(760, 420)
+        self.table.setColumnWidth(2, 200)
+        self.table.setColumnWidth(5, 200)
+        self.table.setMinimumSize(1000, 420)
         self.v.insertWidget(1, self.table, 1)
         self.scroll.hide()
         self.cups = []
 
     def ok(self):
         self.cups = []
-        for rid, lc, ln, sc, sn, old in self.rows:
+        for rid, lc, ln, lg, sc, sn, sg in self.rows:
             if not (lc.isChecked() or sc.isChecked()):
                 continue
             c = {"league": rid, "league_cup": lc.isChecked(), "super_cup": sc.isChecked()}
             for key, w in (("name", ln), ("super_name", sn)):
                 if w.text().strip():
                     c[key] = w.text().strip()
-            for key in ("logo", "super_logo"):
-                if old.get(key):
-                    c[key] = old[key]
+            for key, f in (("logo", lg), ("super_logo", sg)):
+                if f.path:
+                    c[key] = f.path
             self.cups.append(c)
         self.accept()
 
@@ -2624,7 +2629,8 @@ class NewClubs(BuilderPage):
                 continue
             n = len((pl.get("%s/%d" % (L["name"], k)) or {}).get("edits") or {})
             it = QTreeWidgetItem([str(k + 1), names[k] or "%s %02d" % (L["name"], k + 1), abbrs[k] or "",
-                                  str(ids[k]) if k < len(ids) else "",
+                                  # an id is handed out at Build; until then there is none to show
+                                  str(ids[k]) if k < len(ids) and ids[k] is not None else _("at Build"),
                                   os.path.basename(crests[k]) if crests[k] else "", str(n) if n else ""])
             if not names[k]:
                 it.setForeground(1, QBrush(QColor(theme.SUBTLE)))

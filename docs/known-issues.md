@@ -345,8 +345,9 @@ calendar.
 - **1,536 clubs in total is a wall** in the season generator, independent of the 1,600 table
   size. 793 new clubs is the most we have built and loaded; the world played across four
   seasons had 39 leagues and 780.
-- **A calendar day holds 280 match ids**; overflow is dropped silently by the scheduler.
-  More leagues on the same weekday lose fixtures with no error at all. Do not trust the
+- **A calendar day holds 792 match ids** since 0.2.0 (280 before); overflow is dropped
+  silently by the scheduler. More leagues on the same weekday lose fixtures with no error at
+  all. Do not trust the
   calendar to tell you: it counts what was accepted, so a day that turned matches away reads
   as a tidy 280. Count the match records instead — measured once at 280 accepted against 351
   that wanted the day. `tools/dayplan.py --demand` does this and prints the day-spread that
@@ -411,6 +412,12 @@ calendar.
   from a national cup round instead of three, and each league's rounds lean a day or two later
   by regulation id, the way real leagues spread over Saturday to Monday. Checked in game (the
   same world, a new career): 2 matches of 14,400 left without a day.
+- 2026-10-08 (Mod Studio 0.2.0, fl26caps): **a calendar day holds 792 matches instead of 280.**
+  Spreading the leagues kept the 34-league world just under the old ceiling, with no room for
+  a bigger one. The patch set now widens every day of the calendar (the `-calendar` part,
+  3519 patches in all) and moves the calendar to the top of the edit block. **A career saved
+  with an older release does not load in 0.2.0** (it stays on the loading screen): start a new
+  one. The worlds themselves are unchanged and need no new Build.
 - 2026-10-08 (Mod Studio 0.2.0, fl26swiss, rwee on Discord): **the game's own leagues played on
   Champions League days** (the Bundesliga, the Super Lig and the Pro League on the January
   matchday, day 20). The two free days around European and cup days were meant for every

@@ -242,6 +242,7 @@ Since 0.1.7: **Cups of the game's countries** on the *Build* page. Tick **League
 the league: 16 clubs of it and the league below (the rest through a pre-round in early
 September), September to December. **Super cup** is there
 too, only for countries where the game has none (Brazil, Chile, Scotland, Greece, the USA).
+Since 0.2.0 each of the two takes its own **Logo** in that window.
 
 ### Can I change the European places of the Premier League, LaLiga ...?
 

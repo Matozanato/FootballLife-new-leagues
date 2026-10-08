@@ -97,6 +97,10 @@ COPIER_BLOCKS = (0x1413fbf97, 1)   # mov ecx, 5     -> k
 SIZE_SITES = (0x1414b9da3, 0x1414ba4d8, 0x1414bac08, 0x1424957d6)  # mov edx, 0x2c4 -> stride
 UNIT_SITE = 0x140af1fc6                                # mov r8d, 0x6cd00 -> the new unit
 AFTER_IMM = (0x140af201f, 0x1414babe2)                 # add rcx, 0x3f180 -> + growth
+# One base reference lives in `.impdata`, where the survey (which reads `.trace`) never looks:
+# lea rcx, [r14 + 0x16038a8] at 0x14438cced, which hands 0x1414c8fd0 the calendar.  Found from
+# a crash, not a scan -- calaudit cannot vouch for it.
+IMPDATA_BASE = (0x14438ccf0,)                          # the disp32 itself
 
 # 0x140aed760 copies a whole day record onto its own stack and reads it there, so its frame
 # has to grow with the record.  The shipped numbers fall out of one formula, which is the
@@ -113,6 +117,21 @@ STACK = {"func": 0x140aed760, "buf": 0x40,
 # eighths.  An exception that unwinds through this function restores rsp from that number,
 # so it has to agree with the prologue.  UNWIND_INFO 0x142f2e7f4, node 7 (a u16, 0x320/8).
 UNWIND_SLOT = 0x142f2e806
+
+# 0x1412e72d0 does the same with an rbp frame: rbp = rsp - 0x320 before sub rsp, 0x420, so the
+# body sees rbp = rsp + 0x100, the buffer at rbp + 0x40, the cookie at rbp + 0x310.  The frame
+# grows by the same amount as the cookie moves, which keeps rbp = rsp + 0x100 and leaves every
+# rbp-relative local below the buffer (and the EH funclets that use them) where it was.  Its
+# unwind data has no frame register, only UWOP_ALLOC_LARGE and the rbx save above the frame.
+STACK2 = {"func": 0x1412e72d0, "buf": 0x40,
+          "rbp": (0x1412e72dc,),                  # lea rbp, [rsp - 0x320]
+          "frame": (0x1412e72e4, 0x1412e80cc),    # sub rsp, 0x420 / add rsp, 0x420
+          "home": (0x1412e72f3, 0x1412e80c4),     # rbx at [rsp + 0x460], the caller's home
+          "cookie": (0x1412e7305, 0x1412e80b5),   # [rbp + 0x310]
+          "blocks": 0x1412e738f,                  # mov eax, 5
+          "count": (0x1412e7419, 0x1412e7746),    # movzx r15d, word [rbp + 0x270]
+          "events": (0x1412e7850, 0x1412e785e),   # [rbp + 0x274], the 0x12 event qwords
+          "uw_home": 0x1430cfdb6, "uw_alloc": 0x1430cfdba}
 
 
 class Exe:
@@ -229,6 +248,11 @@ def build(ids, new_base):
                          "past the calendar, added rather than addressed: +0x%x -> +0x%x"
                          % (v, v + growth)))
 
+    for va in IMPDATA_BASE:
+        out.append(dword(exe, va, 0, OLD_BASE, new_base,
+                         "impdata calendar base: 0x%x -> 0x%x (lea rcx, [r14 + 0x%x] -> "
+                         "0x1414c8fd0, which wants the calendar base)" % (OLD_BASE, new_base, OLD_BASE)))
+
     # the stack copy
     buf = STACK["buf"]
     cookie_new = (buf + stride + 15) & ~15
@@ -260,6 +284,48 @@ def build(ids, new_base):
                 "why": "0x%x's frame size in its unwind data, in eighths: %d -> %d"
                        % (STACK["func"], frame_old // 8, frame_new // 8),
                 "asm": "UWOP_ALLOC_LARGE"})
+
+    # the second stack copy (rbp frame)
+    S2, f = STACK2, "0x%x" % STACK2["func"]
+    buf = S2["buf"]
+    c_old = (buf + OLD_STRIDE + 15) & ~15
+    c_new = (buf + stride + 15) & ~15
+    g = c_new - c_old
+    rbp_old, fr_old = -(c_old + 0x10), c_old + 0x110
+    for va in S2["rbp"]:
+        out.append(dword(exe, va, find(exe, va, rbp_old), rbp_old, rbp_old - g,
+                         "%s copies a day onto its stack: rbp = rsp - 0x%x -> - 0x%x"
+                         % (f, -rbp_old, g - rbp_old)))
+    for va in S2["frame"]:
+        out.append(dword(exe, va, find(exe, va, fr_old), fr_old, fr_old + g,
+                         "%s copies a day onto its stack: the frame grows 0x%x -> 0x%x"
+                         % (f, fr_old, fr_old + g)))
+    for va in S2["home"]:
+        out.append(dword(exe, va, find(exe, va, fr_old + 0x40), fr_old + 0x40, fr_old + 0x40 + g,
+                         "%s: rbx home slot above the frame, +0x%x -> +0x%x"
+                         % (f, fr_old + 0x40, fr_old + 0x40 + g)))
+    for va in S2["cookie"]:
+        out.append(dword(exe, va, find(exe, va, c_old), c_old, c_new,
+                         "%s: the security cookie moves with the frame, rbp+0x%x -> +0x%x"
+                         % (f, c_old, c_new)))
+    out.append(dword(exe, S2["blocks"], 1, 5, k,
+                     "%s: the same unrolled copy, 5 blocks of 0x80 -> %d" % (f, k)))
+    for key, old_off, new_off, what in (("count", OLD_COUNT, count_off, "count"),
+                                        ("events", OLD_EVENTS, events_off, "events")):
+        for va in S2[key]:
+            out.append(dword(exe, va, find(exe, va, buf + old_off), buf + old_off, buf + new_off,
+                             "%s reads the %s out of its own copy: rbp+0x%x -> +0x%x"
+                             % (f, what, buf + old_off, buf + new_off)))
+    for va, old, what in ((S2["uw_home"], fr_old + 0x40, "UWOP_SAVE_NONVOL rbx"),
+                          (S2["uw_alloc"], fr_old, "UWOP_ALLOC_LARGE")):
+        have = struct.unpack_from("<H", exe.read(va, 2))[0]
+        if have != old // 8:
+            raise SystemExit("the unwind node at 0x%x holds %d, not %d" % (va, have, old // 8))
+        out.append({"va": "0x%x" % va, "old": struct.pack("<H", old // 8).hex(),
+                    "new": struct.pack("<H", (old + g) // 8).hex(),
+                    "why": "%s's unwind data, %s in eighths: 0x%x -> 0x%x"
+                           % (f, what, old // 8, (old + g) // 8),
+                    "asm": what.split()[0]})
 
     info = {
         "ids_per_day": real_ids, "blocks_of_0x80": k, "stride": "0x%x" % stride,

@@ -47,6 +47,8 @@ pokretanju** i program pita samo tada. Ako je program u mapi u koju Windows ne d
 (npr. Program Files), otvori se stranica izdanja: raspakiraj zip sam ili premjesti program u
 svoju mapu.
 
+**Karijere iz verzija prije 0.2.0.** U 0.2.0 dan u kalendaru prima 792 utakmice umjesto 280, a to mijenja tablice s kojima se karijera sprema: **karijera spremljena starijom verzijom se ne učita** (ostane na ekranu učitavanja). Nakon ažuriranja pokreni novu karijeru. Svjetovi, projekti i Edit podaci ostaju kakvi jesu.
+
 **Zasluge.** Gumb **Zasluge** pored **Pomoć** nabraja sve koji su pomogli napraviti Mod Studio:
 testere, one koji su slali prijave i logove, i one čije su ideje u njemu.
 
@@ -181,7 +183,7 @@ promijenio: Build opet da vidiš kamo ide. Povlačenje lige na stranici **Lige**
 
 **Predsezonski turniri** (gumb na istoj stranici): prijateljski kupovi na ispadanje s 4 ili 8 pozvanih klubova u srpnju, prije sezone, u parovima redom kojim ih upišeš (prvi protiv drugog ...). Klub je iz nove lige ili klub igre (njegov ID); barem jedan mora biti iz nove lige, a turnir je u njenoj državi. Karijera počinje u kolovozu, pa se prvi igra u drugoj sezoni. Svaki turnir može imati **Logo**; prazno: nacrta se sam.
 
-**Kupovi država iz igre** (gumb na istoj stranici): ligaški kup -- recimo Carabao Cup -- za lige iz igre. Označi **Ligaški kup** pored lige: 16 klubova te lige i one ispod nje, po poretku (klubovi iza 16. kroz pretkolo početkom rujna, 0.1.7), jedna utakmica po kolu od kraja rujna do prosinca, u dane koje kalendar liga i kupova iz igre ostavlja slobodnima. **Superkup**, prvak protiv pobjednika kupa krajem srpnja, samo gdje ga igra nema (Brazil, Čile, Škotska, Grčka, SAD); nova karijera još nema pobjednika kupa, pa se prvi igra u drugom ljetu. Prazno ime: ime lige i *League Cup* / *Super Cup*.
+**Kupovi država iz igre** (gumb na istoj stranici): ligaški kup -- recimo Carabao Cup -- za lige iz igre. Označi **Ligaški kup** pored lige: 16 klubova te lige i one ispod nje, po poretku (klubovi iza 16. kroz pretkolo početkom rujna, 0.1.7), jedna utakmica po kolu od kraja rujna do prosinca, u dane koje kalendar liga i kupova iz igre ostavlja slobodnima. **Superkup**, prvak protiv pobjednika kupa krajem srpnja, samo gdje ga igra nema (Brazil, Čile, Škotska, Grčka, SAD); nova karijera još nema pobjednika kupa, pa se prvi igra u drugom ljetu. Prazno ime: ime lige i *League Cup* / *Super Cup*. **Logo** pored svakog imena (0.2.0): slika za taj kup; bez nje, amblem s inicijalima kupa.
 
 **Europska mjesta liga iz igre** (gumb na istoj stranici): koja mjesta Premier Lige, LaLige, Serie A ... idu u koje europsko natjecanje. Popis pokazuje mjesta iz igre; označi **Vlastita mjesta za ovu ligu** da ih promijeniš. Neoznačena liga zadržava mjesta iz igre, označena liga bez redova ne šalje nikoga.
 

@@ -69,6 +69,14 @@ KINDS = ("1st_realUni", "2nd_realUni", "GK1st_realUni")
 # A donor without one lends the next donor's, so every club of ours gets three (0.1.8, asked for
 # on Discord).
 THIRD = "3rd_realUni"
+# --plain (editable_kits, GitHub #112): the unlicensed kind of definition instead.  A suffix-less
+# <id>_DEF_<kind>.bin is 96 bytes of design parameters and colours, no texture names -- what
+# the clubs Edit mode lets you paint carry (199 Zalgiris, 200, 899, 1386 have only those), and
+# what team 0 holds as the engine's fallback.  A club with none of its own wears team 0's
+# fallback without a slot of its own, and Paste Image did not stick on it; with these it has
+# its own 1st/2nd/GK like those clubs.
+PLAIN_KINDS = ("1st", "2nd", "GK1st")
+PLAIN_SIZE = 96
 TEAM_DIR = "common/character0/model/character/uniform/team"
 
 
@@ -151,8 +159,26 @@ def donors(raw, es, textures=None, skip=()):
 
 
 def kinds_of(blobs):
-    """the kinds a club of ours is given: the three, and the third kit when it has one"""
-    return KINDS + ((THIRD,) if THIRD in blobs else ())
+    """the kinds a club of ours is given: the three, and the third kit when it has one (the
+    realUni ones), or the three plain ones"""
+    return tuple(k for k in KINDS + (THIRD,) + PLAIN_KINDS if k in blobs)
+
+
+def plain_donors(raw, es, skip=()):
+    """[(id, {kind: blob})] of the shipped teams whose 1st/2nd/GK are only plain definitions
+    (no _realUni of any kind), team 0 first"""
+    plain, licensed = {}, set()
+    for name, off, size in es:
+        m = re.match(r"(\d+)_DEF_(.+)\.bin$", name)
+        if not m:
+            continue
+        tid, kind = int(m.group(1)), m.group(2)
+        if kind.endswith("_realUni"):
+            licensed.add(tid)
+        elif kind in PLAIN_KINDS and size == PLAIN_SIZE and tid not in skip:
+            plain.setdefault(tid, {})[kind] = raw[off:off + size]
+    return [(tid, b) for tid, b in sorted(plain.items())
+            if tid not in licensed and all(k in b for k in PLAIN_KINDS)]
 
 
 def with_third(pairs, pool):
@@ -265,6 +291,14 @@ def build(argv):
         print("%d kit textures listed in %s" % (len(textures), tex))
     else:
         print("warning: no --textures list; a donor whose textures are missing lends a blank kit")
+    if "--plain" in argv:
+        pool = plain_donors(raw, es, national_teams(team_bin))
+        if not pool:
+            print("no shipped team has plain %s definitions -- is that the right archive?" % (PLAIN_KINDS,))
+            return 1
+        print("%d clubs of ours, plain kits from shipped teams %s" % (len(clubs), [t for t, _ in pool]))
+        pairs = [(c, pool[i % len(pool)]) for i, c in enumerate(clubs)]
+        return write(argv, root, do_list, raw, es, hdr, pairs)
     pool = donors(raw, es, textures, national_teams(team_bin))
     if not pool:
         print("no shipped club has all of %s -- is that the right archive?" % (KINDS,))
@@ -276,6 +310,10 @@ def build(argv):
     pairs = with_third(matched(clubs, pool, colours), pool)
     if colours:
         print("%d clubs dressed by their own colours" % sum(1 for (tid, _), _p in pairs if shirt((colours.get(tid) or [""])[0])))
+    return write(argv, root, do_list, raw, es, hdr, pairs)
+
+
+def write(argv, root, do_list, raw, es, hdr, pairs):
     if do_list:
         for (tid, name), (dtid, _) in pairs:
             print("  %6d  %-30s <- shipped club %d" % (tid, name, dtid))

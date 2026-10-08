@@ -50,6 +50,8 @@ marca de **Ayuda → Buscar actualizaciones al iniciar** y el programa solo preg
 el programa está en una carpeta donde Windows no le deja escribir (como Program Files), abre en su
 lugar la página de la versión: descomprime tú el zip, o mueve el programa a una carpeta tuya.
 
+**Carreras de antes de la 0.2.0.** La 0.2.0 permite 792 partidos por día del calendario en lugar de 280, y eso cambia las tablas con las que se guarda una carrera: **una carrera guardada con una versión anterior no carga** (se queda en la pantalla de carga). Empieza una carrera nueva después de actualizar. Tus mundos, proyectos y datos de Edit no cambian.
+
 **Créditos.** El botón **Créditos**, junto a **Ayuda**, nombra a todos los que ayudaron a hacer
 Mod Studio: los testers, quienes mandaron reportes y logs, y aquellos cuyas ideas están dentro.
 
@@ -192,7 +194,7 @@ ver dónde va. Arrastrar una liga en la página **Ligas** la mueve solo entre lo
 
 **Torneos de pretemporada** (botón en la misma página): eliminatorias amistosas de 4 u 8 clubes invitados en julio, antes de la temporada, emparejados en el orden en que los pones (el primero contra el segundo ...). Un club es de una liga nueva o un club del juego (su id); al menos uno tiene que ser de una liga nueva, y su país organiza el torneo. Una carrera empieza en agosto, así que el primero se juega en la segunda temporada. Cada torneo puede tener su **Logo**; vacío: se dibuja uno.
 
-**Copas de los países del juego** (botón en la misma página): una copa de la liga -- la Carabao Cup, por ejemplo -- para ligas del juego. Marca **Copa de la liga** junto a una liga: 16 clubes de ella y de la de abajo, por posición (los que pasan de 16, por una ronda previa a principios de septiembre, 0.1.7), un partido por ronda de finales de septiembre a diciembre, en días que el calendario de ligas y copas del juego deja libres. **Supercopa**, el campeón contra el ganador de la copa a finales de julio, solo donde el juego no tiene (Brasil, Chile, Escocia, Grecia, EE. UU.); una carrera nueva aún no tiene ganador de copa, así que la primera se juega el segundo verano. Nombre vacío: el nombre de la liga y *League Cup* / *Super Cup*.
+**Copas de los países del juego** (botón en la misma página): una copa de la liga -- la Carabao Cup, por ejemplo -- para ligas del juego. Marca **Copa de la liga** junto a una liga: 16 clubes de ella y de la de abajo, por posición (los que pasan de 16, por una ronda previa a principios de septiembre, 0.1.7), un partido por ronda de finales de septiembre a diciembre, en días que el calendario de ligas y copas del juego deja libres. **Supercopa**, el campeón contra el ganador de la copa a finales de julio, solo donde el juego no tiene (Brasil, Chile, Escocia, Grecia, EE. UU.); una carrera nueva aún no tiene ganador de copa, así que la primera se juega el segundo verano. Nombre vacío: el nombre de la liga y *League Cup* / *Super Cup*. **Logo** junto a cada nombre (0.2.0): una imagen para esa copa; sin ella, un emblema con las iniciales de la copa.
 
 **Plazas europeas de las ligas del juego** (botón en la misma página): qué puestos de la Premier League, LaLiga, la Serie A ... van a qué competición europea. La lista muestra las plazas del juego; marca **Plazas propias para esta liga** para cambiarlas. Una liga sin marcar mantiene las del juego, una liga marcada sin filas no manda a nadie.
 

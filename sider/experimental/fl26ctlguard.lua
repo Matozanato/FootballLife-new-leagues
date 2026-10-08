@@ -33,12 +33,12 @@ array:
 
 The day schedule. The hub's fixture strip ("Next") does not read the controller bytes. It
 reads a per-controller table of one entry per day, {match id, competition, round, kind,
-team}, at block+0x1642a28 + controller*0x16dc (365 entries of 16 bytes after an 8-byte
+team}, at block+0x19115f0 + controller*0x16dc (0x1642a28 before the -calendar set of 0.2.0) (365 entries of 16 bytes after an 8-byte
 head whose +4 is the owner club's handle). 0x14158cfb0 files every scheduled match into the
 table of each side's controller (0x14151ad90 = the team's +0x41d), so while the old club was
 still at 0 its whole season went into the user's table, and it stays there after the byte is
 fixed. The day loop (0x1413071e1 -> 0x1413007d0 -> 0x141350650) rebuilds table 0 with
-0x14158c820 whenever the owner handle at block+0x1642a2c is not the user club. Writing -1
+0x14158c820 whenever the owner handle at block+0x19115f4 (was 0x1642a2c) is not the user club. Writing -1
 there is how this guard asks for that rebuild; it happens the next day, from the corrected
 controller bytes.
 
@@ -62,7 +62,7 @@ local TRAMP = "4883ec28e877e7dcfe488b05006f1d014885c00f84dc0000004c8b40484d85c00
   .. "74104439ca740b41bbffffffffbaffffffff4489c825ff3f00003dfd3f00000f837e0000004869c090"
   .. "060000498d8c00707087014439090f856600000080b91d040000000f8559000000498d887070870141"
   .. "8b808008b20385c00f84430000003d004000000f873800000080b91d040000007524448b114539ca74"
-  .. "1c4539da74174139d27412c6811d040000ff41c7802c2a6401ffffffff4881c190060000ffc875c848"
+  .. "1c4539da74174139d27412c6811d040000ff41c780f4159101ffffffff4881c190060000ffc875c848"
   .. "83c428c3"
 local TEAMS_LE, COUNT_LE = "70708701", "8008b203"
 

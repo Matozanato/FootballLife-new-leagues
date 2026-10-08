@@ -215,7 +215,8 @@ function m.init(ctx)
       kept = tonumber(ffi.cast("fl26_clubs_keep_out_t", pk)(arr, #nopool))
     end
   end
-  if #SLOTS == 0 and kept == 0 then log("fl26clubs: no league of this world sits on a slot the game fills itself -- nothing to serve"); return end
+  -- with no slot and no kept club the readers are still replaced: the pool slots then only get
+  -- the stale-count fix (an Edit list longer than the boot one, see fl26clubs.c keep_build)
   cfg = ffi.new("fl26_clubs_cfg_t[?]", math.max(#SLOTS, 1))
   for i, s in ipairs(SLOTS) do
     cfg[i - 1].slot, cfg[i - 1].reg = s[1], s[2]
@@ -236,6 +237,8 @@ function m.init(ctx)
     local msg = ({ [2] = "count-reader signature mismatch", [3] = "get-reader signature mismatch",
                    [4] = "VirtualProtect failed on the count reader",
                    [5] = "VirtualProtect failed on the get reader",
+                   [6] = "list-setter signature mismatch",
+                   [7] = "VirtualProtect failed on the list setter",
                    [9] = "bad slot list" })[status] or "unknown"
     log("fl26clubs: install FAILED (status " .. status .. ") -- " .. msg .. ". The game is unmodified.")
   end

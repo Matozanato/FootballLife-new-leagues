@@ -183,7 +183,7 @@ Rules for this file that catch people out:
 **You should see** eleven lines like these (the numbers after `applied all` can differ):
 
 ```
-[fl26caps.lua] fl26caps: applied all 2759 patches -- ...
+[fl26caps.lua] fl26caps: applied all 3519 patches -- ...
 [fl26nullguard.lua] fl26caps: applied all 2 patches -- ...
 [fl26nullguard2.lua] fl26caps: applied all 2 patches -- ...
 [fl26nullguard4.lua] fl26caps: applied all 2 patches -- ...
@@ -767,10 +767,11 @@ instead of the world. Move `Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\20
 somewhere safe (do not just delete it if it holds edits you want), start the game, and let
 Edit mode write a new one.
 
-### E8. The shipped 1,536-club and 280-matches-a-day walls
+### E8. The 1,536-club and 792-matches-a-day walls
 
-The season generator stops at **1,536 clubs** in total, and a calendar day holds **280
-matches**; what is past that is dropped without a word. Up to 39 leagues of 20 clubs is
+The season generator stops at **1,536 clubs** in total, and a calendar day holds **792
+matches** since 0.2.0 (280 in the game as shipped); what is past that is dropped without a
+word. Up to 39 leagues of 20 clubs is
 inside both. Details and the ways around: [limits.md](limits.md).
 
 ### E9. Other experimental modules

@@ -13,8 +13,8 @@ So the whole shipped calendar is readable from the file:
     python caltab.py --ids                 # regulation id -> case -> days
     python caltab.py --root <livecpk root> # per-day match demand of a whole world
 
-The last one is the useful one. A calendar day holds 280 match ids and the scheduler at
-0x141350290 drops the rest without a word, so a world that asks for more than 280 on a day
+The last one is the useful one. A calendar day holds 792 match ids (280 before 0.2.0) and the scheduler at
+0x141350290 drops the rest without a word, so a world that asks for more than that on a day
 loses matches silently. `daydemand.py` measures that from a running season; this predicts it
 from the files, which means it can be answered before a world is ever built.
 
@@ -47,7 +47,8 @@ from capstone.x86 import X86_OP_IMM, X86_OP_REG
 SWITCH_TABLE = 0x1415801ec     # dword per case: the case's entry, as an RVA
 CASE_BYTES = 0x1415802e8       # one byte per regulation id 1..175: which case it takes
 NCASES, LAST_ID, CASE_EMPTY = 63, 175, 62
-DAY_CAP = 280                  # what a calendar day holds before the scheduler drops the rest
+DAY_CAP = 792                  # what a calendar day holds before the scheduler drops the rest:
+                               # 792 with the -calendar set (0.2.0), 280 in the game as shipped
 
 REC, R_ID, R_FORMAT, R_CLUBS, R_NAME = 2352, 0x02, 0x09, 0x0b, 0x14
 LEAGUE_FORMATS = (4, 5)        # +0x09: 4 round robin, 5 split season; 1..3 are knockouts

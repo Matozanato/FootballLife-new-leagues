@@ -18,15 +18,22 @@ already uses some of those ids), or when you change a cap.
 Requirements: Python 3.10+, `pip install capstone`, the game exe reachable through
 `FL26_DIR` (or `FL26_EXE`), and this repository's `patches/` and `sider/fl26caps.template.lua`.
 
-The shipped set was generated with:
+The shipped set (0.2.0, 3519 patches, 792 matches a calendar day) was generated with:
 
 ```
-python tools\patchset.py teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures ^
+python tools\patchset.py teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar ^
     --player-cap 51729 ^
     --date-keys 11,49,60,61,62,74,76,93,94,96,98,100,109,110,111,112,113,114,121,138,139,140,143,144,145,146,170,171,173,174,176,178,179,180,181,182,183,184,185,190 ^
     --date-offsets 11:1,49:2,60:1,61:2,62:5,74:5,76:2,93:6,94:2,96:2,98:4,100:1,109:1,110:1,111:1,112:4,113:5,114:2,121:2,138:2,139:2,140:2,143:5,144:2,145:2,146:6,170:4,171:6,173:1,174:0,176:1,178:6,179:4,180:0,181:1,182:5,183:1,184:6,185:1,190:2 ^
     --cup-keys 186
 ```
+
+The `-calendar` part widens every calendar day from 280 to 792 match ids (`tools/calwiden.py`,
+fed by `patches/calendar-sites.json` and `patches/calendar-tail-sites.json`) and moves the
+calendar unit to the top of the edit block, so a career saved under the older
+`...-fixtures` set does not load under it. `python tools\calaudit.py patches\<set>.json`
+re-checks every calendar reference of the exe against the set. Leave `-calendar` off for the
+older layout; the DLLs then need `-DREG_ARRAY_OFF=0x1c84230` (see `tools/native/`).
 
 - `--date-keys` are the rulebook ids of your new leagues (the `regulation ids` line of
   `mkworld.py`). They must be within 1–255. **Passing them is not optional in practice.**
@@ -37,7 +44,7 @@ python tools\patchset.py teams-coaches-regs-players-dates-matches-upper-mlcopy-f
   [known-issues.md](known-issues.md). The generator now says out loud when it falls back.
 - `--date-offsets` assigns each key a weekday shift 0–6. A bare list (`--date-offsets 2,6,5,1`)
   deals shifts round-robin; the `key:shift` form above assigns them one by one. Spreading
-  leagues over the emptier weekdays is what keeps the 280-ids-per-day calendar from
+  leagues over the emptier weekdays is what keeps the 792-ids-per-day calendar (280 without `-calendar`) from
   overflowing; an even deal is not always the flattest.
 - `--cup-keys` gives a regulation a cup's calendar instead of a league's (186 is the
   Conference League's regulation in a world built with `mkuecl.py`).
@@ -94,10 +101,10 @@ players 0x17c, clubs 0x690, coaches 0x258, regulations 0x314, match records 0x25
 | `playeredit.py` | the player editor: export a club (or everything) to CSV with every field by name, import it back with range checks, create new players; field map in [player-record.md](player-record.md) |
 | `playereditor.py` | the same editor with a window (tkinter): club list, squad in lineup order, every field in tabs, new players, save |
 | `siderroot.py` | switch which `_FL26*` cpk.root is active |
-| `patchset.py` + `callindex.py`, `datecave.py`, `copyfields.py`, `impscan.py`, `calwiden.py`, `boundscan.py` | the patch set generator and its helpers (`calwiden.py` is only used by the unpublished calendar-widening set, but the generator imports it) |
+| `patchset.py` + `callindex.py`, `datecave.py`, `copyfields.py`, `impscan.py`, `calwiden.py`, `boundscan.py` | the patch set generator and its helpers (`calwiden.py` widens the calendar for the `-calendar` set; `calaudit.py`, `calstride.py`, `tailscan.py` find and check its sites) |
 | `flpaths.py` | where your game is; environment variables |
 | `livedump.py` | locate the running game and read its edit block; the reader the next tool needs |
-| `dayplan.py` | measure a running season and print the `--date-offsets` day-spread that clears the 280-per-day ceiling |
+| `dayplan.py` | measure a running season and print the `--date-offsets` day-spread that clears the per-day ceiling (792, or 280 without `-calendar`); reads `FL26_SET`/`--set` for the layout |
 | `deepen.py` | put one of your leagues below another as the next division down; `--deep-rank` for real ranks, `--retier` to renumber a chain built before the rank was widened |
 | `mkrankpatch.py` | regenerate `sider/experimental/fl26rank.lua` (it finds every site that reads or writes the league rank and emits the same-length rewrite); needs `capstone` |
 | `spreadregions.py` | give every added league a region (country) of its own, `--plan own`; needs `sider/experimental/fl26reg64.lua` in the game |

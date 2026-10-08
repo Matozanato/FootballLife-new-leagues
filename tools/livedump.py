@@ -37,6 +37,27 @@ class PROCESSENTRY32(ctypes.Structure):
                 ("dwFlags", w.DWORD), ("szExeFile", ctypes.c_char * 260)]
 
 
+def calendar(setname=None):
+    """where the season calendar and the day counter sit in the edit block for a patch set
+
+    The -calendar set moves the whole calendar unit (365 days, then the day counter and the
+    date) to the top of the block and widens a day from 280 to 792 match ids, so every tool
+    that reads the day or the calendar has to take the numbers from the set, not from the
+    shipped layout.  Without a set, or for a set that leaves the calendar alone, these are
+    the shipped numbers."""
+    c = dict(base=0x16038a8, stride=0x2c4, ids=280, count=0x230, events=0x234,
+             today=0x1642a1c, date=0x1642a24)
+    setname = setname or os.environ.get("FL26_SET")
+    if setname:
+        path = os.path.join(ROOT, "patches", setname + ".json")
+        cal = json.load(open(path)).get("calendar") if os.path.exists(path) else None
+        if cal:
+            base, stride = H(cal["base_new"]), H(cal["stride"])
+            shift = base - c["base"] + cal["unit_growth"]      # the tail sits past all 365 days
+            c.update(base=base, stride=stride, ids=cal["ids_per_day"], count=H(cal["count_off"]),
+                     events=H(cal["events_off"]), today=c["today"] + shift, date=c["date"] + shift)
+    return c
+
 def find_pid(name=b"FL_2026.exe"):
     snap = k32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
     if snap == -1:

@@ -11,10 +11,10 @@ What the shipped game holds, what `fl26caps.lua` raises it to, and which walls r
 | players | 30,001 (27,927 used) | 51,729 | the cap must be ≡ 17 mod 32; 719 of our clubs carry a full 30 |
 | match records per season | 13,000 | 46,000 | our 39-league season of 20-club leagues used 21,010; raised on 2026-09-24 so that an old season still being freed and the new one being built both fit at the rollover |
 | fixtures list | 2,000 | **8,000** | one record is one round of one competition, stride 0x208. Records are handed back as rounds finish, so a four-season world peaks under 2,700 |
-| calendar | 365 days, 280 match ids per day | unchanged | overflow is dropped silently. Beware the obvious measurement: walking the calendar counts what the scheduler *accepted*, so a full day reads as exactly 280 and hides the matches it turned away. The match records carry their own dates and show the real demand — measured once at 280 on the calendar and 351 in the records for the same day |
+| calendar | 365 days, 280 match ids per day | **792 per day** (0.2.0) | overflow is dropped silently. The wider day moves the whole calendar unit to the top of the edit block, so a career saved before 0.2.0 does not load. Beware the obvious measurement: walking the calendar counts what the scheduler *accepted*, so a full day reads as exactly its cap and hides the matches it turned away. The match records carry their own dates and show the real demand — measured once at 280 on the calendar and 351 in the records for the same day |
 | menu regions | 24 in use of 29 slots | unchanged | new leagues go into an existing slot |
 | league size | 10–30 clubs | — | 10 is the shipped game's own smallest league, not a floor of ours. The round list holds 58 entries, which is a double round robin of 30 exactly; above that the extra rounds are dropped without an error |
-| edit block (all tables together) | 0x1877068 bytes | 0x3cd4ae8 bytes | |
+| edit block (all tables together) | 0x1877068 bytes | 0x3d9cbe8 bytes | 0x3cd4ae8 before 0.2.0; the wider calendar adds 0xc8100 |
 | second copy of the tables (used for save/load) | 0x15b6d94 bytes | 0x25a7cc4 bytes | grown by the `mlcopy` part of the set |
 | competitions a season can hold at once | 100 | **127**, or **192** with the experimental module | raised by `fl26hdr127.lua`; entries are never released, so the count only rises — see known-issues.md |
 | per-phase standings tables | 600 | 599 (597 at 192) | they pay for the wider header; a running season uses about 375 |
@@ -85,12 +85,15 @@ are stable between runs and machines.
 
 ## The ceiling that costs you rounds, and how to live with it
 
-A calendar day holds 280 matches. The scheduler drops the rest without a word: no error, no
-entry in any log, nothing in the world files. A league simply plays one round fewer than it
-should, and the only way to notice is to count.
+A calendar day holds 792 matches since 0.2.0 (280 in the game as shipped and in every
+release before). The scheduler drops the rest without a word: no error, no entry in any log,
+nothing in the world files. A league simply plays one round fewer than it should, and the
+only way to notice is to count.
 
-The ceiling cannot usefully be raised. What works is to stop every league from wanting the
-same weekday. Each new league is given a whole-number shift of 0 to 6 days, so moving a
+0.2.0 raised the ceiling by widening every calendar day (the `-calendar` part of the patch
+set, `tools/calwiden.py`); a 39-league world now peaks near 280 of 792. Spreading the leagues
+over the week still matters for a bigger world, and is what kept the older releases under 280:
+stop every league from wanting the same weekday. Each new league is given a whole-number shift of 0 to 6 days, so moving a
 league from shift a to shift b moves all of its fixtures by (b - a) days; `patchset.py`
 takes that assignment as `--date-offsets`.
 

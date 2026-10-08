@@ -469,7 +469,7 @@ game loses everything past the shipped count, and a coach lookup lands on the wr
 Mod Studio installs and sets up everything below for you; this part is for anyone who wants
 to know how it works, or to build by hand. The project does two things:
 
-1. **`sider/fl26caps.lua`** — a runtime patch set of 2,759 byte changes, applied by Sider at
+1. **`sider/fl26caps.lua`** — a runtime patch set of 3,519 byte changes, applied by Sider at
    startup, that grows those tables and every piece of code that indexes them:
 
    | table | shipped | with fl26caps |
@@ -578,8 +578,10 @@ Mod Studio 0.1.4. The full list, with dates and details, is in
   plays a match. Mod Studio refuses such a world since 0.1.4.
 - **The Team of the Season of a new league is empty** at the end of a season (11 empty
   places, issue #46). Nothing else in the season is affected. Not looked into yet.
-- **A calendar day holds 280 matches**; everything past that is dropped in silence. A world of
-  39 leagues stays under it; `tools/dayplan.py` measures a running season.
+- **A calendar day holds 792 matches** since 0.2.0 (280 before); everything past that is
+  dropped in silence. A world of 39 leagues uses about 280 on its busiest day;
+  `tools/dayplan.py` measures a running season. Careers started before 0.2.0 do not load in
+  0.2.0: the wider calendar changes the save, so start a new career.
 - **The competition table can fill up** over many seasons: `fl26hdr127.lua` raises it from 100
   to 127 and the experimental `fl26hdr192.lua` to 192. Long-running worlds are the most useful
   thing you can report — see the [testing guide](docs/testing-guide.md).

@@ -112,8 +112,8 @@ static int vcount32(vec32_t* v) { return (v && v->b && v->e >= v->b) ? (int)((v-
  * leagues -- with EMPTY club lists, in the middle of their August-May season. The ids come
  * from the loader (fl26_chain_protect). */
 #define MAX_PROTECT 128
-#ifndef REG_ARRAY_OFF   /* -DREG_ARRAY_OFF=... builds for a set that moves the block (the -calendar set) */
-#define REG_ARRAY_OFF 0x1c84230   /* edit block + this = regulation records (caps sets), as fl26join.c */
+#ifndef REG_ARRAY_OFF   /* the -calendar set (0.2.0); -DREG_ARRAY_OFF=0x1c84230 builds for the older -fixtures set */
+#define REG_ARRAY_OFF 0x1d4c330   /* edit block + this = regulation records (caps sets), as fl26join.c */
 #endif
 #define REG_STRIDE    0x314
 #define REG_CAP       600

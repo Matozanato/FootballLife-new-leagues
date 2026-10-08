@@ -116,12 +116,13 @@ an entry that writes nothing.
 
 ### If you build many leagues: spread them over the week
 
-A calendar day holds **280 matches** and the scheduler drops the rest without a word. No
+A calendar day holds **792 matches** (280 before 0.2.0) and the scheduler drops the rest without a word. No
 error, no log line, nothing in the world files — a league just plays one round fewer than it
 should. Each new league is given a shift of 0 to 6 days so that they do not all want the
 same weekday, and the shipped set already carries a spread measured on a 39-league world.
 
-Past about 39 leagues you need your own. `tools/dayplan.py` reads a running season out of
+With 792 a day the shipped spread leaves plenty of room for 39 leagues; a much bigger world
+(or a set built without the `-calendar` part, which keeps 280) needs its own. `tools/dayplan.py` reads a running season out of
 the game, separates the shipped competitions' load from each of your leagues', and prints
 the `--date-offsets` argument for `patchset.py` that makes the busiest day as quiet as it
 can be:
@@ -133,7 +134,7 @@ python tools/dayplan.py --set <your set name> --demand   # after the first rollo
 
 Then regenerate the set with what it printed and create the season again. Use `--demand`
 once a world has rolled over: walking the calendar only counts the matches that were
-accepted, so a day that turned matches away still reads as a tidy 280, while the match
+accepted, so a day that turned matches away still reads as exactly its cap, while the match
 records show what was really wanted.
 
 ### Sizes worth knowing
@@ -141,8 +142,8 @@ records show what was really wanted.
 Our largest built world: **39 leagues, 793 clubs**, built with `--leagues 39` and sizes
 around 20; the world that has been played across four seasons is 39 leagues of exactly 20,
 780 clubs. Bigger is possible on paper (1,600 club slots) but **1,536 clubs in total is a
-hard wall** in the season generator, and a calendar day holds 280 match ids at most, so the
-scheduler runs out of room somewhere past 39 leagues on the same weekdays. Start smaller.
+hard wall** in the season generator, and a calendar day holds 792 match ids at most (280
+before 0.2.0), so the club wall comes long before the calendar does. Start smaller.
 A world of 6 leagues × 20 clubs is a fine first test; 12 leagues with `--sizes 24,22,20,18,16,14`
 is a good second.
 

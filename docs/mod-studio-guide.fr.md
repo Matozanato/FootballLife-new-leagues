@@ -52,6 +52,8 @@ démarrage** et le programme ne vérifie plus que sur demande. Si le programme s
 dossier où Windows ne le laisse pas écrire (comme Program Files), il ouvre la page de la version à
 la place : décompressez le zip vous-même, ou déplacez le programme dans un dossier à vous.
 
+**Carrières d'avant la 0.2.0.** La 0.2.0 permet 792 matchs par jour du calendrier au lieu de 280, ce qui change les tables avec lesquelles une carrière est sauvegardée : **une carrière sauvegardée avec une version plus ancienne ne se charge pas** (elle reste sur l'écran de chargement). Commencez une nouvelle carrière après la mise à jour. Vos mondes, projets et données Edit ne changent pas.
+
 **Crédits.** Le bouton **Crédits**, à côté d'**Aide**, nomme tous ceux qui ont aidé à faire Mod
 Studio : les testeurs, ceux qui ont envoyé des rapports et des logs, et ceux dont les idées y sont.
 
@@ -202,7 +204,7 @@ où elle va. Glisser une ligue sur la page **Ligues** ne la déplace qu'entre le
 
 **Tournois de pré-saison** (bouton sur la même page) : des tournois amicaux à élimination directe de 4 ou 8 clubs invités en juillet, avant la saison, appariés dans l'ordre donné (le premier contre le deuxième ...). Un club est celui d'une nouvelle ligue ou un club du jeu (son id) ; au moins un doit venir d'une nouvelle ligue, dont le pays accueille le tournoi. Une carrière commence en août, donc le premier se joue la deuxième saison. Chaque tournoi peut avoir son **Logo** ; vide : un logo est dessiné.
 
-**Coupes des pays du jeu** (bouton sur la même page) : une coupe de la Ligue -- la Carabao Cup, par exemple -- pour des ligues du jeu. Cochez **Coupe de la ligue** à côté d'une ligue : 16 clubs de cette ligue et de celle du dessous, selon le classement (au-delà de 16, par un tour préliminaire début septembre, 0.1.7), un match par tour de fin septembre à décembre, les jours que le calendrier des ligues et coupes du jeu laisse libres. **Supercoupe**, le champion contre le vainqueur de la coupe fin juillet, seulement là où le jeu n'en a pas (Brésil, Chili, Écosse, Grèce, États-Unis) ; une nouvelle carrière n'a pas encore de vainqueur de coupe, la première se joue donc le deuxième été. Nom vide : le nom de la ligue et *League Cup* / *Super Cup*.
+**Coupes des pays du jeu** (bouton sur la même page) : une coupe de la Ligue -- la Carabao Cup, par exemple -- pour des ligues du jeu. Cochez **Coupe de la ligue** à côté d'une ligue : 16 clubs de cette ligue et de celle du dessous, selon le classement (au-delà de 16, par un tour préliminaire début septembre, 0.1.7), un match par tour de fin septembre à décembre, les jours que le calendrier des ligues et coupes du jeu laisse libres. **Supercoupe**, le champion contre le vainqueur de la coupe fin juillet, seulement là où le jeu n'en a pas (Brésil, Chili, Écosse, Grèce, États-Unis) ; une nouvelle carrière n'a pas encore de vainqueur de coupe, la première se joue donc le deuxième été. Nom vide : le nom de la ligue et *League Cup* / *Super Cup*. **Logo** à côté de chaque nom (0.2.0) : une image pour cette coupe ; sans elle, un emblème avec les initiales de la coupe.
 
 **Places européennes des ligues du jeu** (bouton sur la même page) : quelles places de la Premier League, de la LaLiga, de la Serie A ... vont dans quelle compétition européenne. La liste montre les places du jeu ; cochez **Places propres pour cette ligue** pour les changer. Une ligue non cochée garde celles du jeu, une ligue cochée sans lignes n'envoie personne.
 

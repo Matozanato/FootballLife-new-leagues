@@ -46,6 +46,8 @@ the program asks only then. If the program sits in a folder Windows will not
 let it write to (such as Program Files), it opens the release page instead: unpack the zip
 yourself, or move the program to a folder of your own.
 
+**Careers from before 0.2.0.** 0.2.0 lets a calendar day hold 792 matches instead of 280, and that changes the tables a career is saved with: **a career saved with an older version does not load** (it stays on the loading screen). Start a new career after the update. Your worlds, projects and Edit data are not affected.
+
 **Credits.** The **Credits** button next to **Help** lists everyone who helped make Mod Studio:
 the testers, the people who sent reports and logs, and the ones whose ideas are in it.
 
@@ -185,7 +187,7 @@ order changed since: Build again to see where it goes. A drag on the **Leagues**
 
 **Pre-season cups** (button on the same page): friendly knockouts of 4 or 8 invited clubs in July, before the season, paired in the order you give them (first against second ...). A club is one of a new league or a club of the game (its id); at least one has to be from a new league, and its country hosts the cup. A career starts in August, so the first one is played in the second season. Each cup can have a **Logo**; empty: one is drawn for it.
 
-**Cups of the game's countries** (same page): a league cup -- the Carabao Cup, say -- for leagues of the game. Tick **League cup** next to a league: 16 clubs of it and the league below it, by position (the clubs past 16 through a pre-round in early September, 0.1.7), one match a round from late September to December, on days the game's league and cup calendar leaves free. **Super cup**, the champion against the cup winner in late July, only where the game has none (Brazil, Chile, Scotland, Greece, the USA); a new career has no cup winner yet, so the first one is played in the second summer. Empty name: the league's name and *League Cup* / *Super Cup*.
+**Cups of the game's countries** (same page): a league cup -- the Carabao Cup, say -- for leagues of the game. Tick **League cup** next to a league: 16 clubs of it and the league below it, by position (the clubs past 16 through a pre-round in early September, 0.1.7), one match a round from late September to December, on days the game's league and cup calendar leaves free. **Super cup**, the champion against the cup winner in late July, only where the game has none (Brazil, Chile, Scotland, Greece, the USA); a new career has no cup winner yet, so the first one is played in the second summer. Empty name: the league's name and *League Cup* / *Super Cup*. **Logo** next to each name (0.2.0): a picture for that cup; none, an emblem with the cup's initials.
 
 **European places of the game's leagues** (same page): which positions of the Premier League, LaLiga, Serie A ... go to which European competition. The list shows the game's own places; tick **Own places for this league** to change them. A league not ticked keeps the game's places, a ticked league with no rows sends nobody.
 
