@@ -76,16 +76,24 @@ world, about 1,000 matches a season).
   and the last round fall where the real league's do (the HNL from the end of July to late May,
   Norway and Sweden from late March to November, the Premier League in mid-August), with the
   real winter break (the HNL from Christmas to February, Montenegro's long one), and the rounds
-  go on the league's own weekdays (weekends; Fridays for Kosovo). A league never plays within a
-  day of a Champions League, Europa League or Conference League league-phase or knockout day if
-  its clubs play in Europe, nor on a national cup day. The dates come from a table of the real
+  go on the league's own weekdays (weekends; Fridays for Kosovo), on the real weekday of each
+  year. A league whose clubs play in Europe keeps two clear days from every Champions League,
+  Europa League and Conference League day, the qualifying rounds included (Thursday in Europe,
+  Sunday in the league), and it never plays on a national cup day. The dates come from a table of the real
   calendars of every country, by division, and from the confederation's for any other league; a
   recipe can set its own (`real_calendar`). In a new career's first season a July league starts
-  on 8 August, because the season is built on 5 August. An older world keeps the old calendar;
+  on the first weekend after 5 August, the day the season is built. Every new career gets its
+  calendar, also the second one in the same game session. An older world keeps the old calendar;
   `python tools/realcal.py <fl26world.txt> --write` adds the calendars to it without a new
   Build.
 - **Champions League knockouts on Wednesdays** (and its play-off), like the real ones, so the
   Tuesday and Thursday stay free for the leagues.
+- **Qualifying rounds in midweek**: the second qualifying round on Tuesday and Thursday of the
+  second week of August, the third on two Wednesdays, the play-off on Tuesday and Thursday at
+  the turn of August (12/14 Aug, 20/27 Aug, 2/4 Sep in 2025), for all three competitions.
+- **Competition Info follows the qualifying**: in August the Play-offs item opens the round in
+  play, named "2nd Qualifying Round", "3rd Qualifying Round" or "Play-offs", for the Champions
+  League, Europa League and Conference League.
 - **Super cup without a cup winner**: when there is no cup winner yet (a new career's first
   summer), or the champion also won the cup, the league's runner-up plays. Before, Supercopa Rei
   and the Chilean super cup did not start (only 1 of 2 clubs).
@@ -177,6 +185,11 @@ world, about 1,000 matches a season).
 - The League order dialog wrote a key Build did not read.
 - A split or Apertura/Clausura under a February-December league (Liga BetPlay, J1 League ...) is
   refused with a clear message. Before, the division played the wrong season.
+- The real calendar was only used for the first new career of a game session; a second career
+  got the old dates. Every career now gets it, every season.
+- A league round could fall on the day of a qualifying round of one of its clubs.
+- A match listed twice on one calendar day is listed once (a check after every day's
+  scheduling; `sider.log` says "day lists --").
 - The old Edit save warning now says that it also hides new clubs from Other European.
 - Team ID shows "at Build" for a club that gets its id when you Build.
 
@@ -186,8 +199,9 @@ See [known-issues.md](known-issues.md). Most important:
 
 - Careers from older versions do not load (see the top of this page).
 - European qualifying is the second and third qualifying round and the play-off, in August
-  after the season is built (5 August). There is no first qualifying round, and the rounds are
-  not on their real July weeks.
+  after the season is built (5 August). There is no first qualifying round, and the second and
+  third qualifying rounds are later than the real July ones.
+- The hub's "Next" strip does not show European matches yet.
 - Clubs of new African, North American and Oceanian leagues keep the objective the game picks:
   the game has no board objective for those cups.
 - The Club World Cup is the game's own (every season, mid-December), with the champions of the

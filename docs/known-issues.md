@@ -26,6 +26,18 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
 
 ## Missing or unverified features
 
+- **The hub's "Next" strip shows no European matches (0.2.0).** It reads a per-club event
+  table the game fills on its own (at calendar `+0x3f180`, moved by the patch set); the
+  European matches are on the calendar and in the club's schedule, only the strip leaves them
+  out. A match listed twice on one day is now listed once (`sider.log`: `day lists --`). Not
+  checked in the game yet whether that was the cause of the strip's doubled entries.
+- **Qualifying rounds in Competition Info (0.2.0), not checked in the game yet.** In August
+  the Play-offs item opens the qualifying round in play and names it "2nd Qualifying Round",
+  "3rd Qualifying Round" or "Play-offs" (`sider.log`: `Competition Info -- ... shown under
+  its play-off item`).
+- **The game's year has no 29 February.** The rounds keep each date's real weekday, so in a
+  leap year the weekdays jump by two from 28 February to 1 March.
+
 - **Club World Cup: the game's own, every season (Mod Studio 0.2.0).** The Club World Cup is
   the game's: a knockout of four in mid-December (15-19 December), every season, and the
   champions of the continental cups a world builds (CAF, AFC) go into it in place of an entrant

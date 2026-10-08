@@ -146,11 +146,12 @@ static uint32_t day_shift(uint16_t reg)
    case at 0x14158155b: days 230 and 237). A career that starts on day 212 enters the European
    competitions on day 238, after both legs, so the play-off got no matches at all, the group
    stage never filled and the Europa League never started (2026-09-23, calread: no match of
-   competition 2 on any day). Both legs move 11 days later, to 241 and 248, still a week
-   before the first league-phase matchday on 257. (Until 0.2.0 14 days, to 244 and 251: 251 is
-   the national cups' first round (calendar case 6), and Slavia played Benfica and the Czech
-   cup's first leg on the same day -- rwee 07.10.) */
-#define PLAYOFF_SHIFT 11
+   competition 2 on any day). Both legs move to the August play-offs' midweek days (qr_day:
+   Tuesday and Thursday of the week before the national cups' first round, by 248), still a
+   week before the first league-phase matchday. (Until 0.2.0 11 days later, to 241 and 248, a
+   Saturday in 2025; before that 14, to 244 and 251: 251 is the national cups' first round
+   (calendar case 6), and Slavia played Benfica and the Czech cup's first leg on the same day
+   -- rwee 07.10.) */
 static volatile uint32_t g_playoff_said = 0;
 static int is_playoff(uint16_t id)
 {
@@ -933,15 +934,90 @@ static int po_season_half(void) { int d = today(); return d >= 0 && d < PO_MONTH
  * cleared the memory, which is why a replay "worked". abs_day() counts on across New Year (a drop
  * of more than half a year is a new year; a jump forward of as much is a save of the year before
  * loaded) and every such guard compares it instead of the raw day. */
-static int g_year_off = 0, g_last_day = -1;
+/* A day counter that goes back otherwise than at New Year is another timeline: a second career
+ * built in the same game session, or an older save loaded. It used to be taken for the same
+ * season, so everything kept "for this season" -- a qualifying round filled, a play-off
+ * started, a career built in this session -- stayed done for the next career (2026-10-08: the
+ * second career of a session). Now it counts two years on, so no such guard matches any more,
+ * and the new career is told apart again (g_new_career, g_day_ticked). */
+static int g_year_off = 0, g_last_day = -1, g_timeline = 0;
+static int g_new_career = 0, g_day_ticked = 0, g_first_day = -1;
 static int abs_day(void)
 {
   int d = today();
   if (d < 0) return d;
-  if (g_last_day >= 0 && d + 182 < g_last_day) g_year_off += 365;
+  if (g_last_day >= 0 && d < g_last_day) {
+    if (d + 182 < g_last_day && g_last_day >= 300) g_year_off += 365;     /* New Year */
+    else {
+      g_year_off += 730; g_timeline++;
+      g_new_career = 0; g_day_ticked = 0; g_first_day = -1;
+    }
+  }
   else if (g_last_day >= 0 && d > g_last_day + 182 && g_year_off >= 365) g_year_off -= 365;
   g_last_day = d;
   return d + g_year_off;
+}
+/* one key per season and timeline: what is logged once per regulation is logged again for the
+   next season's calendars and for another career's */
+static int log_season(void) { int a = abs_day(); return a < 0 ? -1 : (a + 184) / 365; }
+#define SAID_RESET(n) do { static int sg_ = -1000; int sk_ = log_season(); if (sk_ != sg_) { sg_ = sk_; (n) = 0; } } while (0)
+
+/* ---- the season's own weekdays (0.2.0) ----
+ * The fixed European days and the real calendars were laid out on 2026's weekdays (day 0 a
+ * Thursday). The first season is 2025/26, whose August to December is a weekday earlier: a
+ * league round meant for a Friday was a Thursday (7 August 2025), the Champions League's
+ * Tuesday a Monday. The year is the game date's low word (u16 year, month, day after the day
+ * counter); days from 1 July (181) are the season's first year, the others its second. With no
+ * year to read (a test without a game), the 2026 frame. Leap days are not counted: the game's
+ * day counter has none. */
+static const uint16_t MONTH0[13] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365 };
+static int g_test_year = 0;
+static int season_year(void)
+{
+  if (g_test_year) return g_test_year;
+  /* asked for every day of every calendar built: read again only when the clock has moved */
+  static uint64_t at = 0; static int was = 0;
+  uint64_t now = GetTickCount64();
+  if (at && now - at < 50) return was;
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!blk) return was = 0;
+  int t = *(uint16_t*)(blk + TODAY_OFF), y = *(uint16_t*)(blk + TODAY_OFF + 8);
+  at = now;
+  return was = t >= 365 || y < 1990 || y > 2200 ? 0 : t >= 175 ? y : y - 1;
+}
+static int dow(int y, int m, int dd)                 /* 0 Monday .. 6 Sunday */
+{
+  static const int T[12] = { 0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4 };
+  if (m < 3) y--;
+  return ((y + y / 4 - y / 100 + y / 400 + T[m - 1] + dd) + 6) % 7;
+}
+static int wday_in(uint32_t d, int sy)
+{
+  if (!sy || d >= 365) return (int)((d + 3) % 7);
+  int y = d >= 181 ? sy : sy + 1, m = 1;
+  while (m < 12 && d >= MONTH0[m]) m++;
+  return dow(y, m, (int)(d - MONTH0[m - 1]) + 1);
+}
+static int wday(uint32_t d) { return wday_in(d, season_year()); }
+/* day d as the game shows it, "Fri 01.08.2025", for the log */
+static const char* dstr(uint32_t d, char* buf, size_t cap)
+{
+  static const char* const W[7] = { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" };
+  int sy = season_year(), m = 1;
+  if (d >= 365) { snprintf(buf, cap, "day %u", d); return buf; }
+  while (m < 12 && d >= MONTH0[m]) m++;
+  snprintf(buf, cap, "%s %02u.%02d.%d", W[wday_in(d, sy)], d - MONTH0[m - 1] + 1, m, sy ? (d >= 181 ? sy : sy + 1) : 0);
+  return buf;
+}
+/* a day of the 2026 frame (the fixed European days) on the same weekday of its own season:
+   moved by up to three days within its week */
+static uint32_t eday(uint32_t d)
+{
+  if (d >= 365) return d;
+  int s = ((int)((d + 3) % 7) - wday(d) + 7) % 7;
+  if (s > 3) s -= 7;
+  return (uint32_t)(((int)d + s + 365) % 365);
 }
 static uint32_t g_rng;
 static int coin(void)
@@ -1377,7 +1453,6 @@ static uint32_t g_first[3][48]; static unsigned g_nfirst[3];
    calendar dated on day 216, date_handler). Kept tables alone (any_final_kept) are not enough --
    they live in memory, so a game quit between June and the August draw of a later season lost
    them and the first season's list came back (2026-10-05). */
-static int g_new_career = 0, g_day_ticked = 0;
 /* where each placed club came from, for the log: reg 0 = the first-season list */
 typedef struct { uint16_t reg; uint8_t rank; } how_t;
 static how_t g_how[3][FIELD];
@@ -1394,7 +1469,7 @@ static int any_final_kept(void)
  * and a second qualifying round (2). Round i is competition i % NQ at stage i / NQ, so rounds
  * 0..2 are the play-offs. A place of competition UCLQ, UELQ or UECLQ is a place in one of the
  * competition's rounds:
- *   - the Champions League's play-off is the shipped regulation 2 (days 241 and 248, see
+ *   - the Champions League's play-off is the shipped regulation 2 (the play-offs' days, see
  *     is_playoff), the Europa League's and the Conference League's the knockout play-offs
  *     tools/mkeuropo.py adds (188, 189, ties at id + 1024 * (k + 1)), the ones February uses
  *     again; the qualifying rounds in front of them are more copies of reg 2 the world builder
@@ -1409,12 +1484,21 @@ static int any_final_kept(void)
  *     entrants are a competition's qualifying places in list order, the strongest to the round
  *     nearest the league phase. A play-off's winners take places from the competition's direct
  *     entrants and its losers eight more in the one below: with all three, 28 / 20 / 20.
- *   - Days (QR_DAYS): the second qualifying round 220 and 225, the third 229 and 236, the
- *     play-offs 242 and 247 (the Champions League's 241 and 248), all on days no shipped
- *     competition plays, and three days clear of the national cups' first round (251; until
- *     0.2.0 243 and 250, 244 and 251, rwee 07.10.). The Europa and Conference League's second
- *     legs stay before the Champions League's, whose end builds the league phases. A round is filled on the days between the round before it and its first
- *     leg (q_fill); the season is built on day 216, so nothing is filled before 217.
+ *   - Days (qr_day): midweek, the same for all three competitions. M is the Monday before the
+ *     first Tuesday from day 219 on, in the season's own weekdays (2025: 11 August): the second
+ *     qualifying round on Tuesday M+1 and Thursday M+3, the third on the Wednesdays M+9 and
+ *     M+16, the play-offs (the Champions League's, reg 2, too) on Tuesday M+22 and Thursday
+ *     M+24 -- by 248 in every year, three days clear of the national cups' first round (251).
+ *     A league has a weekend day three days from all of them in every week (Sunday M+6,
+ *     Saturday/Sunday M+12/13, Saturday M+19, Sunday M+27): no club in a qualifier plays the
+ *     league the day before or after, or two days from it (rcal_cost, busy_days). Until 0.2.0
+ *     220 and 225, 229 and 236, 242 and 247 (the Champions League's 241 and 248), weekends
+ *     too, and a Dinamo played Saturday and Wednesday in Europe and Thursday in the league
+ *     (2026-10-08). All play-off second legs are on one day: the progressions run in the day
+ *     loop after the day's matches, the Europa and Conference League's before reg 2's, whose
+ *     end builds the league phases (measured: 189, 188, then 2, one batch). A round is filled
+ *     on the days between the round before it and its first leg (q_fill); the season is built
+ *     on day 216, so nothing is filled before 217.
  *   - From the second season on, the rights builder fills reg 2 and its eight ties (1026 ... 8194)
  *     at the July rollover through set_clubs (from 0x14135c083 on day 181, measured 2026-10-01),
  *     with the game's own clubs; setcl_handler hands it ours instead (q_setcl). With a third
@@ -1440,8 +1524,16 @@ static const qcup_t QCUPS[NQ] = {
   { UECL_PO, UECLQ, UECL, 0xff, "Conference League" },
 };
 static const char* const QSTAGE[3] = { "play-off", "third qualifying round", "second qualifying round" };
-/* each stage's two legs; the Champions League play-off's are reg 2's own (is_playoff) */
-static const uint32_t QR_DAYS[3][2] = { { 242, 247 }, { 229, 236 }, { 220, 225 } };
+/* each stage's two legs (0 play-off, 1 third, 2 second qualifying round), days after M; the
+   Champions League play-off's are reg 2's own (is_playoff) on the same days */
+static const uint8_t QR_OFF[3][2] = { { 22, 24 }, { 9, 16 }, { 1, 3 } };
+static uint32_t qr_m(void)
+{
+  int sy = season_year();
+  for (uint32_t d = 219; d < 226; d++) if (wday_in(d, sy) == 1) return d - 1;
+  return 221;
+}
+static uint32_t qr_day(int stage, int leg) { return qr_m() + QR_OFF[stage][leg]; }
 static uint32_t g_q[NQR][Q_N]; static unsigned g_nq[NQR], g_nnew[NQR]; static int g_q_day = -100000, g_qmask = 0;
 static how_t g_qhow[NQR][Q_N];
 static unsigned char g_qdrawn[NQR];
@@ -1503,13 +1595,18 @@ static unsigned q_room(int mask, int i)
 /* the first leg of round i, and the first day it is filled on: after the last second leg of the
    rounds that feed it, never before the season's build on day 216 (reg 2 alone, in a new career
    that starts before it: from 205) */
-static uint32_t q_first_leg(int i) { return i ? QR_DAYS[i / NQ][0] : 230 + PLAYOFF_SHIFT; }
+static uint32_t q_first_leg(int i) { return qr_day(i / NQ, 0); }
 static uint32_t q_fill_from(int mask, int i)
 {
   uint32_t d = 0;
   for (int j = 0; j < NQR; j++)
-    if (j != i && (mask >> j & 1) && (q_up(mask, j) == i || q_down(mask, j) == i) && QR_DAYS[j / NQ][1] + 1 > d)
-      d = QR_DAYS[j / NQ][1] + 1;
+    if (j != i && (mask >> j & 1) && (q_up(mask, j) == i || q_down(mask, j) == i)) {
+      /* and after the second leg the round before had until 0.2.0 (225, 236): a save of then,
+         its rounds dated the old way, is not filled before they are over */
+      uint32_t e = qr_day(j / NQ, 1) + 1, old = j / NQ == 2 ? 226 : 237;
+      if (e < old) e = old;
+      if (e > d) d = e;
+    }
   return d ? d : i ? 217 : 205;
 }
 
@@ -1566,11 +1663,10 @@ static int access_build(int q, int mask)
      league's career has a final table of its own by then (2026-10-05: CSL, kept on day 176), so
      the final tables do not tell the first summer from a later one there: the day of the first
      use does -- every build within 120 days of it is the same summer. */
-  static int first_day = -1;
-  int first_summer = g_new_career && (first_day < 0 || abs_day() - first_day < 120);
+  int first_summer = g_new_career && (g_first_day < 0 || abs_day() - g_first_day < 120);
   if (g_nfirst[0] + g_nfirst[1] + g_nfirst[2] && first_summer) {
     int missing = 0, twice = 0, over = 0;
-    if (first_day < 0) first_day = abs_day();
+    if (g_first_day < 0) g_first_day = abs_day();
     for (int k = 0; k < 3; k++)
       for (unsigned i = 0; i < g_nfirst[k]; i++) {
         uint32_t c = club_of_id(g_first[k][i]);
@@ -4244,7 +4340,23 @@ unsigned char* g_tramp_phkind = 0;
 #define MENU_KO4_RA 0x151f7da   /* ... and its kind 4 fallback */
 #define MENU_GRP_RA  0x151f78c  /* the menu's grouped-phase item, kind 0 */
 #define MENU_GRP2_RA 0x151fc11  /* ... and its enable check */
-static uint32_t g_kogrey_n = 0;
+#define PAGE_GRP_RA  0x1542354  /* the page builder 0x141542300, page type 0: its ties (0x141541480) */
+static uint32_t g_kogrey_n = 0, g_roll_n = 0;
+/* The round of a competition's summer qualifying in play: the latest of its play-off, third and
+   second qualifying round (QCUPS order) whose first tie holds clubs; -1 for none drawn yet. */
+static int q_rolling(uint16_t po)
+{
+  int p = -1;
+  for (int k = 0; k < NQ; k++) if (QCUPS[k].reg == po) p = k;
+  if (p < 0 || !q_summer()) return -1;
+  for (int st = 0; st < 3; st++) {
+    int i = p + NQ * st;
+    if (!q_reg(i) || !find_rec(q_reg(i))) continue;
+    unsigned char* tie = find_rec(q_tie_of(i, 0));
+    if (tie && rec_count(tie)) return i;
+  }
+  return -1;
+}
 uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
 {
   uint64_t r = ((phkind_fn)(uintptr_t)g_tramp_phkind)(comp, kind);
@@ -4265,6 +4377,28 @@ uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
      it is live); until the play-off is drawn (+0x304 bit 8) the item is left out, as the
      Knockout Phase item is, rather than offered under the game's fallback name "W-L Table"
      with a page behind it that has nothing to show. */
+  /* In the summer the item rolls with the qualifying (08.10.): from the second qualifying round's
+     draw to the play-off's it stands for the round in play -- its own regulation, a copy of reg 2
+     with the same eight ties, which the page builder lists as it lists the play-offs (named by
+     phname_handler).  The enable check reads only the drawn bit (+0x304 bit 8) of what it is
+     given; our qualifying regulations are filled without the game's draw, so for them it is
+     answered with reg 2, which the game keeps marked drawn all year. */
+  if (comp && kind == 0 && (ra == g_base + MENU_GRP_RA || ra == g_base + MENU_GRP2_RA || ra == g_base + PAGE_GRP_RA)
+      && (uint16_t)r != 0xffff) {
+    int i = q_rolling((uint16_t)r);
+    if (i >= 0) {
+      uint16_t q = q_reg(i);
+      if (ra == g_base + MENU_GRP2_RA) {
+        unsigned char* qr = find_rec(q), *r2 = find_rec(CUPS[0].po);
+        if (!(qr && ((*(uint32_t*)(qr + 0x304) >> 8) & 1)) && r2 && ((*(uint32_t*)(r2 + 0x304) >> 8) & 1))
+          q = CUPS[0].po;
+      }
+      if (ra == g_base + MENU_GRP_RA && g_roll_n++ < 12)
+        logf("fl26swiss: Competition Info -- %s %s shown under its play-off item (regulation %u)",
+             QNAME(i), (unsigned)q_reg(i));
+      return (r & ~0xffffull) | q;
+    }
+  }
   if (comp && kind == 0 && (ra == g_base + MENU_GRP_RA || ra == g_base + MENU_GRP2_RA)) {
     for (int ci = 1; ci < 3; ci++) {
       const cup_t* c = &CUPS[ci];
@@ -4303,6 +4437,8 @@ uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
  * in: table, u16 index -> the string -- answers it.  Every language reads "League Phase", the
  * UEFA name. */
 #define LP_TEXT    0x3a2fff1u
+#define QR3_TEXT   0x3a2fff2u   /* "3rd Qualifying Round" */
+#define QR2_TEXT   0x3a2fff3u   /* "2nd Qualifying Round" */
 #define TXTGET_RVA 0x14996f0
 static const unsigned char SIG_TXTGET[14] = {
   0x4c, 0x8b, 0x41, 0x08, 0x45, 0x33, 0xc9, 0x45, 0x8b, 0x10, 0x49, 0x8d, 0x40, 0x08 };
@@ -4311,6 +4447,8 @@ unsigned char* g_tramp_txtget = 0;
 const char* txtget_handler(void* table, uint64_t index)
 {
   if ((uint16_t)index == (uint16_t)LP_TEXT) return "League Phase";
+  if ((uint16_t)index == (uint16_t)QR3_TEXT) return "3rd Qualifying Round";
+  if ((uint16_t)index == (uint16_t)QR2_TEXT) return "2nd Qualifying Round";
   return ((txtget_fn)(uintptr_t)g_tramp_txtget)(table, index);
 }
 
@@ -4328,6 +4466,9 @@ uint64_t phname_handler(uint64_t reg)
   for (int ci = 0; ci < 3 && g_tramp_txtget; ci++)   /* the league phases: "League Phase", see txtget_handler */
     if ((uint16_t)reg == CUPS[ci].league || (uint16_t)reg == CUPS[ci].row) return LP_TEXT;
   if (get(reg & 0xffff, rec)) return *(uint32_t*)(rec + 0x40);
+  /* the qualifying rounds (and their ties, so a match screen says it too), as LP_TEXT above */
+  int qa = q_added((uint16_t)reg);
+  if (qa >= 0 && g_tramp_txtget) return qa / NQ == 1 ? QR3_TEXT : QR2_TEXT;
   if ((uintptr_t)__builtin_return_address(0) == g_base + MENU_NAME_RA &&
       ((uint16_t)reg == CUPS[1].po || (uint16_t)reg == CUPS[2].po || q_added((uint16_t)reg) >= 0
        || lpre_of((uint16_t)reg, &(int){0}) >= 0) && get(CUPS[0].po, rec))
@@ -4537,13 +4678,13 @@ static int eudate(uint16_t id)
  * free day (1, 2, 3 days either way) that keeps the rounds in order. */
 static int euro_day(uint32_t d)
 {
-  for (int i = 0; i < FL26_SWISS36_MATCHDAYS; i++) if (SWISS_DAYS[i] == d) return 1;
-  for (int i = 0; i < FL26_SWISS6_MATCHDAYS; i++) if (UECL_DAYS[i] == d) return 1;
+  for (int i = 0; i < FL26_SWISS36_MATCHDAYS; i++) if (eday(SWISS_DAYS[i]) == d) return 1;
+  for (int i = 0; i < FL26_SWISS6_MATCHDAYS; i++) if (eday(UECL_DAYS[i]) == d) return 1;
   for (int c = 0; c < 3; c++) {
-    for (int i = 0; i < 7; i++) if (KO_DAYS[c][i] == d) return 1;
-    for (int i = 0; i < 2; i++) if (QR_DAYS[c][i] == d || CUPS[c].days[i] == d) return 1;
+    for (int i = 0; i < 7; i++) if (eday(KO_DAYS[c][i]) == d) return 1;
+    for (int i = 0; i < 2; i++) if (qr_day(c, i) == d || eday(CUPS[c].days[i]) == d) return 1;
   }
-  return d == 230 + PLAYOFF_SHIFT || d == 237 + PLAYOFF_SHIFT;   /* reg 2's play-off */
+  return 0;
 }
 static uint32_t season_pos(uint32_t d) { return d >= 182 ? d - 182 : d + 183; }   /* July first */
 static int declash(date_t* r, uint32_t n)
@@ -4680,13 +4821,14 @@ static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
      by them as well had one day left between a midweek round and a European week, and every
      league of a big world met on it (2026-10-08, the modpack: day 65 asked 403 matches of 280) */
   if (access_league(id)) {
-    for (int i = 0; i < FL26_SWISS36_MATCHDAYS; i++) block(bad, SWISS_DAYS[i], buf);
-    for (int i = 0; i < FL26_SWISS6_MATCHDAYS; i++) block(bad, UECL_DAYS[i], buf);
+    for (int i = 0; i < FL26_SWISS36_MATCHDAYS; i++) block(bad, eday(SWISS_DAYS[i]), buf);
+    for (int i = 0; i < FL26_SWISS6_MATCHDAYS; i++) block(bad, eday(UECL_DAYS[i]), buf);
     for (int c = 0; c < 3; c++) {
-      for (int i = 0; i < 7; i++) block(bad, KO_DAYS[c][i], buf);
-      for (int i = 0; i < 2; i++) { block(bad, QR_DAYS[c][i], buf); block(bad, CUPS[c].days[i], buf); }
+      for (int i = 0; i < 7; i++) block(bad, eday(KO_DAYS[c][i]), buf);
+      /* the qualifying rounds three days clear at every level (a league round two days from
+         one is a club's two matches in three days) */
+      for (int i = 0; i < 2; i++) { block(bad, qr_day(c, i), buf < 3 ? 3 : buf); block(bad, eday(CUPS[c].days[i]), buf); }
     }
-    block(bad, 230 + PLAYOFF_SHIFT, buf); block(bad, 237 + PLAYOFF_SHIFT, buf);
   }
   /* a national cup round two days from a league round, not three: with three, the one day left
      between New Year's round and the cup's (day 3), and between early February's and the cup's
@@ -4797,6 +4939,7 @@ static void rest_dates(uint16_t id, date_t* r, uint32_t n)
   static uint8_t bad[365];
   static uint16_t said[128]; static int nsaid = 0;
   int seen = 0;
+  SAID_RESET(nsaid);
   for (int k = 0; k < nsaid; k++) if (said[k] == id) seen = 1;
   if (!seen && nsaid < 128) said[nsaid++] = id;
   july_start(id, r, n, seen);
@@ -4833,18 +4976,19 @@ static void rest_dates(uint16_t id, date_t* r, uint32_t n)
  * a Friday where the league really plays one) and spread evenly over the weeks it has -- in the
  * first season too, and the same every season after it. The rounds go on the free days nearest
  * to that, two days at least between them:
- *   - never within a day of a European day when a club of the league can be in Europe (a place
- *     of its own, or its country's cup winner's: the line's last field, or an access line), and
- *     a day further only when no other day is left (two days from Thursday's and Tuesday's
- *     matches of two European weeks in a row); the August qualifying rounds and play-offs,
- *     a club or two of the league, close their own day and cost a day either side;
+ *   - never within two days of a European day when a club of the league can be in Europe (a
+ *     place of its own, or its country's cup winner's: the line's last field, or an access
+ *     line) -- Saturday before Tuesday, Sunday after Thursday --, a league phase or knockout
+ *     day two days off only when no other calendar fits (the last level); the August
+ *     qualifying rounds and play-offs are midweek and closed two days either side always;
  *   - never within a day of a national cup day, of its league cup's days, two of a pre-season cup
  *     its clubs play or a continental cup it feeds;
  *   - a weekday that is not its own only when the season is too short for its rounds (46 rounds
  *     between August and early May: the English Tuesdays).
  * A new career is built on day 216 (5 August): a league that really starts in July starts on the
  * first weekend after it in the first season (RCAL_SEASON1), the real one from the July rollover
- * on. Days are those of 2026, the European days' frame (0 = Thursday 1 January). */
+ * on. Weekdays are the season's own (wday: 2025/26 from the game date's year), and so are the
+ * fixed European days, moved within their week (eday). */
 #define MAX_RCAL 128
 #define RCAL_SEASON1 219          /* Saturday 8 August, the first weekend of a new career */
 typedef struct { uint16_t reg, first, last, b0, b1, days, also, eu; } rcal_t;
@@ -4869,7 +5013,6 @@ static const rcal_t* rcal_of(uint16_t id)
   for (int i = 0; i < g_nrcal; i++) if (g_rcal[i].reg == id) return &g_rcal[i];
   return 0;
 }
-static int wday(uint32_t d) { return (int)((d + 3) % 7); }      /* 0 Monday .. 6 Sunday (2026) */
 /* a club of league id can play in Europe: a place of its own, or its country's cup's, whose
    divisions the world's cup draw lists */
 static int euro_league(uint16_t id, const rcal_t* c)
@@ -4890,21 +5033,20 @@ static int uefa_days(uint32_t* out, int cap, int quals)
   int n = 0;
 #define UD(d) do { if (n < cap) out[n++] = (d); } while (0)
   if (quals) {
-    for (int c = 0; c < 3; c++) for (int i = 0; i < 2; i++) UD(QR_DAYS[c][i]);
-    UD(230 + PLAYOFF_SHIFT); UD(237 + PLAYOFF_SHIFT);
+    for (int c = 0; c < 3; c++) for (int i = 0; i < 2; i++) UD(qr_day(c, i));
     return n;
   }
-  for (int i = 0; i < FL26_SWISS36_MATCHDAYS; i++) UD(SWISS_DAYS[i]);
-  for (int i = 0; i < FL26_SWISS6_MATCHDAYS; i++) UD(UECL_DAYS[i]);
+  for (int i = 0; i < FL26_SWISS36_MATCHDAYS; i++) UD(eday(SWISS_DAYS[i]));
+  for (int i = 0; i < FL26_SWISS6_MATCHDAYS; i++) UD(eday(UECL_DAYS[i]));
   for (int c = 0; c < 3; c++) {
-    for (int i = 0; i < 7; i++) UD(KO_DAYS[c][i]);
-    for (int i = 0; i < 2; i++) UD(CUPS[c].days[i]);
+    for (int i = 0; i < 7; i++) UD(eday(KO_DAYS[c][i]));
+    for (int i = 0; i < 2; i++) UD(eday(CUPS[c].days[i]));
   }
 #undef UD
   return n;
 }
 /* the cost of a round on each day (rpos, g_org): -1 never; `strict` 0 lets the cups go */
-static void rcal_cost(uint16_t id, const rcal_t* c, int strict, int32_t* pen)
+static void rcal_cost(uint16_t id, const rcal_t* c, int strict, int euhard, int32_t* pen)
 {
   static const int32_t OTHER[7] = { 8, 12, 12, 14, 8, 6, 6 };    /* Mon .. Sun, not its own */
   for (int p = 0; p < 365; p++) {
@@ -4913,31 +5055,25 @@ static void rcal_cost(uint16_t id, const rcal_t* c, int strict, int32_t* pen)
     pen[p] = (c->days >> w & 1) ? 0 : (c->also >> w & 1) ? 2 : OTHER[w];
   }
   if (c->b0 || c->b1) {                              /* the break, both ends in it */
-    int a = (int)rpos(c->b0), b = (int)rpos(c->b1);
+    int a = (int)rpos(eday(c->b0)), b = (int)rpos(eday(c->b1));
     for (int p = 0; p < 365; p++) if (a <= b ? p >= a && p <= b : p >= a || p <= b) pen[p] = -1;
   }
 #define RNEAR(d, hard, soft) do { if ((d) < 365) { int q_ = (int)rpos(d); \
     for (int k_ = -(soft); k_ <= (soft); k_++) { int p_ = q_ + k_; if (p_ < 0 || p_ >= 365 || pen[p_] < 0) continue; \
       if (abs(k_) <= (hard)) pen[p_] = -1; else pen[p_] += 10; } } } while (0)
   if (euro_league(id, c)) {
+    /* Two full days between a European match and a league round (0.2.0): Tuesday's after
+       Saturday's, Sunday's after Thursday's. Only the last level (one day between matches)
+       lets a league phase or knockout day come within two days. */
     uint32_t ud[96]; int nu = uefa_days(ud, 96, 0);
-    for (int i = 0; i < nu; i++) RNEAR(ud[i], 1, 2);
-    /* The August qualifying rounds and play-offs fall on any weekday, weekends too (Sunday 9,
-       Friday 14, Sunday 30 August ...: they fit three two-legged rounds between the season's
-       build on 5 August and the league phase), and they are one or two clubs of a league, not
-       all of it: blocked like the rest, they kept a European league from playing for four
-       weeks (22 August to 19 September). So only their own day is closed; a day either side
-       costs, the clubs having to play twice in two days only when no other weekend is left. */
+    for (int i = 0; i < nu; i++) RNEAR(ud[i], euhard, 2);
+    /* The August qualifying rounds and play-offs are midweek (qr_day) and leave a weekend day
+       three days clear in every week, so they are closed two days either side at every level:
+       a club in a qualifier never plays the league within two days of it (2026-10-08: Dinamo,
+       Wednesday's second leg and Thursday's league round). Until 0.2.0 only their own day was
+       closed -- they fell on weekends then. */
     nu = uefa_days(ud, 96, 1);
-    for (int i = 0; i < nu; i++) {
-      if (ud[i] >= 365) continue;
-      int q = (int)rpos(ud[i]);
-      for (int k = -2; k <= 2; k++) {
-        int p = q + k;
-        if (p < 0 || p >= 365 || pen[p] < 0) continue;
-        if (!k) pen[p] = -1; else pen[p] += abs(k) == 1 ? 9 : 4;
-      }
-    }
+    for (int i = 0; i < nu; i++) RNEAR(ud[i], 2, 2);
   }
   for (int k = 0; k < g_nccup; k++) {
     const ccup_t* x = &g_ccup[k];
@@ -5001,26 +5137,28 @@ static int rcal_dates(uint16_t id, const rcal_t* c, date_t* r, uint32_t n, int s
   static int32_t pen[365];
   int cy = c->first < c->last;
   g_org = cy ? 0 : 182;
-  int lo = (int)rpos(c->first), hi = (int)rpos(c->last), t = today();
+  /* the line's days are 2026's (realcal.py): on the same weekdays of this season */
+  int lo = (int)rpos(eday(c->first)), hi = (int)rpos(eday(c->last)), t = today();
   if (cy && lo < CAL_FIRST) lo = CAL_FIRST;           /* a January league joins its season in February */
-  if (!cy && !(t >= 175 && t < BUILD_DAY) && (int)rpos(RCAL_SEASON1) > lo) lo = (int)rpos(RCAL_SEASON1);
-  static const int RSTRICT[3] = { 1, 0, 0 }, RGAP[3] = { REST, REST, REST - 1 };
+  if (!cy && !(t >= 175 && t < BUILD_DAY) && (int)rpos(eday(RCAL_SEASON1)) > lo) lo = (int)rpos(eday(RCAL_SEASON1));
+  static const int RSTRICT[3] = { 1, 0, 0 }, RGAP[3] = { REST, REST, REST - 1 }, REU[3] = { 2, 2, 1 };
   int moved = -1, soft = 0, lv = 0;
   for (; lv < 3 && moved < 0; lv++) {
-    rcal_cost(id, c, RSTRICT[lv], pen);
+    rcal_cost(id, c, RSTRICT[lv], REU[lv], pen);
     moved = rcal_pick(pen, lo, hi, RGAP[lv], r, n, &soft);
   }
   g_org = 182;
   if (moved < 0) {
     if (!seen) logf("fl26swiss: reg %u -- no real calendar fits %u rounds between days %u and %u; dated the old way",
-                    (unsigned)id, (unsigned)n, c->first, c->last);
+                    (unsigned)id, (unsigned)n, eday(c->first), eday(c->last));
     return -1;
   }
   if (!seen) {
     int wk = 0;
     for (uint32_t i = 0; i < n; i++) wk += c->days >> wday(r[i].day) & 1 || c->also >> wday(r[i].day) & 1;
-    logf("fl26swiss: reg %u -- real calendar: %u rounds, days %u..%u (wanted %u..%u%s), %d on its weekdays, %d two days from a European one%s",
-         (unsigned)id, (unsigned)n, r[0].day, r[n - 1].day, c->first, c->last, lo > (int)rpos(c->first) && !cy ? ", a new career's first weekend" : "",
+    char b0[24], b1[24];
+    logf("fl26swiss: reg %u -- real calendar: %u rounds, first %s, then %s, days %u..%u (wanted %u..%u%s), %d on its weekdays, %d on a costly day (another weekday, two days from a cup)%s",
+         (unsigned)id, (unsigned)n, dstr(r[0].day, b0, sizeof b0), dstr(r[1].day, b1, sizeof b1), r[0].day, r[n - 1].day, eday(c->first), eday(c->last), lo > (int)rpos(eday(c->first)) && !cy ? ", a new career's first weekend" : "",
          wk, soft, lv > 1 ? (lv > 2 ? " (one day between matches)" : " (cups let go)") : "");
   }
   return moved;
@@ -5043,6 +5181,7 @@ static void league_rest(uint16_t id, date_t* r, uint32_t n)
   const rcal_t* c = rcal_of(id);
   if (c) {
     static uint16_t said[MAX_RCAL]; static int nsaid = 0; int seen = 0;
+    SAID_RESET(nsaid);
     for (int k = 0; k < nsaid; k++) if (said[k] == id) seen = 1;
     if (!seen && nsaid < MAX_RCAL) said[nsaid++] = id;
     if (rcal_dates(id, c, r, n, seen) >= 0) return;
@@ -5062,6 +5201,7 @@ static void league_dates(uint16_t id, uint64_t reg, void* vec)
   if (clubs < 4 || !legs) return;
   if (n == have && !cy && !eu) { league_rest(id, (date_t*)v->b, n); return; }
   static uint16_t said[64]; static int nsaid = 0; int seen = 0;
+  SAID_RESET(nsaid);
   for (int k = 0; k < nsaid; k++) if (said[k] == id) seen = 1;
   if (!seen && nsaid < 64) said[nsaid++] = id;
   date_t* r = (date_t*)v->b;
@@ -5761,6 +5901,7 @@ static uint64_t split_dates(uint16_t id, uint64_t reg, void* vec, int part, cons
 {
   vec_t* v = (vec_t*)vec;
   static uint16_t said[16]; static int nsaid = 0; int seen = 0;
+  SAID_RESET(nsaid);
   for (int k = 0; k < nsaid; k++) if (said[k] == id) seen = 1;
   if (!seen && nsaid < 16) said[nsaid++] = id;
 
@@ -5871,6 +6012,7 @@ static uint32_t midweek(uint32_t d)
 uint64_t date_handler(uint64_t reg, void* vec)
 {
   uint16_t id = (uint16_t)reg;
+  if (vec) abs_day();                              /* a day gone back: another career (abs_day) */
   if (vec && !g_new_career && !g_day_ticked) {    /* a career built in this session (day 216), */
     int t = today();                               /* before its first day has gone by */
     /* a career in a January league (China, Japan, ...) is built on day 0: measured 2026-10-05 */
@@ -5928,17 +6070,20 @@ uint64_t date_handler(uint64_t reg, void* vec)
     size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
     date_t* r = (date_t*)v->b;
     if (g_po_enabled && po_season_half()) {          /* the February knockout play-off */
-      for (size_t i = 0; i < have; i++) r[i].day = CUPS[0].days[i < 2 ? i : 1];
+      for (size_t i = 0; i < have; i++) r[i].day = eday(CUPS[0].days[i < 2 ? i : 1]);
       static int said = 0;
+      SAID_RESET(said);
       if (have && !said++) logf("fl26swiss: reg %u -- knockout play-off dated days %u and %u (%u record(s))",
-                                (unsigned)id, CUPS[0].days[0], CUPS[0].days[1], (unsigned)have);
+                                (unsigned)id, eday(CUPS[0].days[0]), eday(CUPS[0].days[1]), (unsigned)have);
       return prv;
     }
+    /* the shipped 230 and 237 (first and second leg) on the August play-offs' midweek days */
     for (size_t i = 0; i < have; i++)
-      if (r[i].day >= 200 && r[i].day + PLAYOFF_SHIFT <= 365) r[i].day += PLAYOFF_SHIFT;
+      if (r[i].day >= 200 && r[i].day < 300) r[i].day = qr_day(0, r[i].day < 234 ? 0 : 1);
+    SAID_RESET(g_playoff_said);
     if (have && !g_playoff_said++)
-      logf("fl26swiss: reg %u -- play-off moved %d days later, first leg on day %u",
-           (unsigned)id, PLAYOFF_SHIFT, r[0].day);
+      logf("fl26swiss: reg %u -- play-off on days %u and %u (shipped 230 and 237), first leg on day %u",
+           (unsigned)id, qr_day(0, 0), qr_day(0, 1), r[0].day);
     return prv;
   }
   if (vec && (new_po(id) || q_added(id) >= 0)) {
@@ -5949,11 +6094,13 @@ uint64_t date_handler(uint64_t reg, void* vec)
     vec_t* v = (vec_t*)vec;
     size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
     date_t* r = (date_t*)v->b;
-    /* in the summer the play-offs are the August ones (q_fill), a day before the Champions League's */
+    /* in the summer the play-offs are the August ones (q_fill), on the Champions League's days */
     int aug = q_summer() || qi >= 0;
-    const uint32_t* days = qi >= 0 ? QR_DAYS[qi / NQ] : aug ? QR_DAYS[0] : CUPS[ci].days;
+    uint32_t days[2];
+    for (int l = 0; l < 2; l++) days[l] = qi >= 0 ? qr_day(qi / NQ, l) : aug ? qr_day(0, l) : eday(CUPS[ci].days[l]);
     for (size_t i = 0; i < have; i++) r[i].day = days[i < 2 ? i : 1];
-    static int said[2][NQR];
+    static int said[2][NQR], sk = -1000;
+    { int k_ = log_season(); if (k_ != sk) { sk = k_; memset(said, 0, sizeof said); } }
     int si = qi >= 0 ? qi : ci;
     if (!said[aug][si]++)
       logf("fl26swiss: reg %u -- %s %s %s dated days %u and %u (%u record(s))", (unsigned)id, CUPS[ci].name,
@@ -5972,18 +6119,19 @@ uint64_t date_handler(uint64_t reg, void* vec)
     date_t* r = (date_t*)v->b;
     int k = id == 4 ? 0 : id == 6 ? 1 : 2;
     static int said[3];
+    { static int sk = -1000; int k_ = log_season(); if (k_ != sk) { sk = k_; memset(said, 0, sizeof said); } }
     if (have == 9) {
       /* reg 6's shipped calendar still has the old round of 32 in front (rounds 46, 47, 51, 52,
          53). A knockout of sixteen plays its round of 16 on the FIRST pair and skips the second
          (measured on reg 187, 2026-09-24: 18/25 Feb, then April), so both pairs get the round of
          16's dates and the rest follow in order. */
-      r[0].day = r[2].day = KO_DAYS[k][0];
-      r[1].day = r[3].day = KO_DAYS[k][1];
-      for (int i = 4; i < 9; i++) r[i].day = KO_DAYS[k][i - 2];
+      r[0].day = r[2].day = eday(KO_DAYS[k][0]);
+      r[1].day = r[3].day = eday(KO_DAYS[k][1]);
+      for (int i = 4; i < 9; i++) r[i].day = eday(KO_DAYS[k][i - 2]);
       if (!said[k]++) logf("fl26swiss: reg %u -- knockout (9 records) on UEFA's dates: %u/%u, %u/%u, %u/%u, final %u",
                            (unsigned)id, r[0].day, r[1].day, r[4].day, r[5].day, r[6].day, r[7].day, r[8].day);
     } else if (have == 7) {
-      for (int i = 0; i < 7; i++) r[i].day = KO_DAYS[k][i];
+      for (int i = 0; i < 7; i++) r[i].day = eday(KO_DAYS[k][i]);
       if (!said[k]++) logf("fl26swiss: reg %u -- knockout on UEFA's dates: %u/%u, %u/%u, %u/%u, final %u",
                            (unsigned)id, r[0].day, r[1].day, r[2].day, r[3].day, r[4].day, r[5].day, r[6].day);
     } else if (!said[k]++) {
@@ -6025,7 +6173,7 @@ uint64_t date_handler(uint64_t reg, void* vec)
   uint32_t shift = six ? 0 : day_shift(id);
   const uint32_t* days = six ? UECL_DAYS : SWISS_DAYS;
   for (int i = 0; i < nmd; i++) {
-    r[i].day   = days[i] + shift;
+    r[i].day   = eday(days[i]) + shift;
     r[i].round = (uint32_t)i;
     r[i].kind  = FL26_DATE_KIND_LEAGUE;
   }
@@ -6033,11 +6181,12 @@ uint64_t date_handler(uint64_t reg, void* vec)
   g_stat[4]++;
   /* asked for once per match placed, so say it once per regulation */
   static uint16_t said[MAX_REGS]; static int nsaid = 0; int seen = 0;
+  SAID_RESET(nsaid);
   for (int k = 0; k < nsaid; k++) if (said[k] == id) seen = 1;
   if (!seen && nsaid < MAX_REGS) said[nsaid++] = id;
   if (!seen)
     logf("fl26swiss: reg %u -- calendar written: %d matchdays, days %u..%u",
-         (unsigned)id, nmd, days[0] + shift, days[nmd - 1] + shift);
+         (unsigned)id, nmd, r[0].day, r[nmd - 1].day);
   return rv;
 }
 
@@ -6206,7 +6355,7 @@ static int g_q_fill_year[NQR] = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
 static void q_fill(int p)
 {
   int d = today();
-  if (d < 205 || d > 243 || !q_world_p(p)) return;
+  if (d < 205 || d > 247 || !q_world_p(p)) return;
   int mask = q_world_mask();
   if (d < (int)q_fill_from(mask, p) || d >= (int)q_first_leg(p)) return;
   int year = (abs_day() + 183) / 365;
@@ -6250,12 +6399,111 @@ static void q_fill(int p)
   logf("fl26swiss: %s %s -- day %d: reg %u filled, started and registered; %d match record(s) under it, %d under its ties",
        QNAME(p), d, (unsigned)reg, m, mt);
 }
+/* ---- one match, one entry in the day lists (0.2.0) ----
+ * The calendar is 365 day records after the unit: a 0xffff-terminated list of u16 match ids,
+ * its count (+0x230; +0x630 in the -calendar set, 792 ids a day), then the day's events. The
+ * scheduler (0x141350290) appends an id with no check, so a match handed to it twice is listed
+ * twice, and the hub's Next strip -- the 32 tables of 0x16dc after the calendar, one cell a day
+ * -- showed every match twice (2026-10-08, the second career of a session). Every day loop:
+ *   - an id twice in one day's list keeps its first entry;
+ *   - an id in the lists of two days stays only on the day its match record names (the
+ *     record's date, +8: u16 year, u8 month, u8 day), when exactly one of them is that day;
+ * and what was found is logged, with a summary once a season. */
+#if TODAY_OFF == 0x19115e4
+#define CAL_STRIDE 0x6c4
+#define CAL_IDCAP  792
+#define CAL_COUNT  0x630
+#else
+#define CAL_STRIDE 0x2c4
+#define CAL_IDCAP  280
+#define CAL_COUNT  0x230
+#endif
+#define CAL_BASE   (TODAY_OFF - 365 * CAL_STRIDE)
+#define MREC_RVA   0x14bb280      /* (blk, u16 id) -> the match record, the scheduler's own lookup */
+typedef unsigned char* (*mrec_fn)(void* blk, uint64_t id);
+static uint16_t g_cal_first[65536];
+#ifdef FL26_RCAL_TEST
+int rcal_test_recday(uint16_t id);
+#endif
+static int rec_day(unsigned char* blk, uint16_t id)
+{
+#ifdef FL26_RCAL_TEST
+  return rcal_test_recday(id);
+#endif
+  unsigned char* m = ((mrec_fn)(uintptr_t)(g_base + MREC_RVA))(blk, id);
+  if (!m || *(uint16_t*)m != id) return -1;
+  int mo = m[8 + 2], dd = m[8 + 3];
+  if (mo < 1 || mo > 12 || dd < 1 || dd > 31) return -1;
+  return MONTH0[mo - 1] + dd - 1;
+}
+static void cal_dedupe(void)
+{
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!blk) return;
+  static uint8_t seen[65536 / 8];
+  int same = 0, cross = 0, fixed = 0, total = 0, ex = 0;
+  char exs[200]; size_t el = 0; exs[0] = 0;
+  memset(g_cal_first, 0xff, sizeof g_cal_first);
+  for (int d = 0; d < 365; d++) {
+    unsigned char* day = blk + CAL_BASE + (size_t)d * CAL_STRIDE;
+    uint16_t* ids = (uint16_t*)day;
+    int n = 0, w = 0, removed = 0;
+    while (n < CAL_IDCAP && ids[n] != 0xffff) n++;
+    for (int i = 0; i < n; i++) {
+      uint16_t v = ids[i];
+      if (seen[v >> 3] & (1 << (v & 7))) {
+        removed++;
+        if (ex < 6 && el < sizeof exs - 24) { el += snprintf(exs + el, sizeof exs - el, " %u@%d", v, d); ex++; }
+        continue;
+      }
+      seen[v >> 3] |= (uint8_t)(1 << (v & 7));
+      ids[w++] = v;
+    }
+    for (int i = 0; i < w; i++) seen[ids[i] >> 3] = 0;
+    if (removed) {
+      for (int i = w; i < n; i++) ids[i] = 0xffff;
+      uint16_t* cnt = (uint16_t*)(day + CAL_COUNT);
+      *cnt = (uint16_t)(*cnt >= removed ? *cnt - removed : w);
+      same += removed;
+    }
+    total += w;
+    /* the same match on two days */
+    for (int i = 0; i < w; i++) {
+      uint16_t v = ids[i];
+      if (g_cal_first[v] == 0xffff) { g_cal_first[v] = (uint16_t)d; continue; }
+      cross++;
+      int e = g_cal_first[v], rd = rec_day(blk, v), drop = rd == d ? e : rd == e ? d : -1;
+      if (ex < 6 && el < sizeof exs - 32) { el += snprintf(exs + el, sizeof exs - el, " %u@%d+%d(rec %d)", v, e, d, rd); ex++; }
+      if (drop < 0) continue;
+      unsigned char* dr = blk + CAL_BASE + (size_t)drop * CAL_STRIDE;
+      uint16_t* dl = (uint16_t*)dr;
+      int m = 0; while (m < CAL_IDCAP && dl[m] != 0xffff) m++;
+      for (int k = 0; k < m; k++)
+        if (dl[k] == v) {
+          memmove(dl + k, dl + k + 1, (size_t)(m - k - 1) * 2); dl[m - 1] = 0xffff;
+          uint16_t* cnt = (uint16_t*)(dr + CAL_COUNT); if (*cnt) (*cnt)--;
+          fixed++;
+          if (drop == d) { w--; i--; }               /* this day's list moved down by one */
+          break;
+        }
+      g_cal_first[v] = (uint16_t)(rd == d ? d : e);
+    }
+  }
+  static int sk = -1000;
+  int k_ = log_season();
+  if (same || cross) logf("fl26swiss: day lists -- %d id(s) twice on one day removed, %d on two days (%d taken off the day their record does not name):%s",
+                          same, cross, fixed, exs);
+  else if (k_ != sk) logf("fl26swiss: day lists -- %d match id(s), each listed once", total);
+  sk = k_;
+}
 char daychk_handler(void* ctx)
 {
   char r = ((daychk_fn)(uintptr_t)g_tramp_daychk)(ctx);
   if (g_td_fresh) { g_td_fresh = 0; ccup_fill_ahead(0, "the July teardown", 0); }
-  static int last = -1, seen;
+  static int last = -1, seen, tl = 0;
   int d = abs_day();
+  if (tl != g_timeline) { tl = g_timeline; seen = 0; last = -1; }
   g_day_ticked = 1;
   if (d != last) {
     if (seen++ < 3) logf("fl26swiss: day loop on day %d", today());
@@ -6266,6 +6514,7 @@ char daychk_handler(void* ctx)
   lpre_fill_days();
   ccup_fill_days();
   for (int p = NQR - 1; p >= 0; p--) q_fill(p);
+  cal_dedupe();
   return r;
 }
 
