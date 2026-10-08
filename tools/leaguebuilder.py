@@ -99,13 +99,19 @@ which league sits above -- and nothing about ids:
               play in no league. Names, crests, kits, managers and players as in a league; no
               division, season, cups or European places. The "league" is only the recipe's way
               of holding them (pl["others"] after plan(), never pl["leagues"])
+  real_calendar  optional (0.2.0): the league's own season dates, {"first": "07-25", "last":
+              "05-23", "break": ["12-21", "01-22"] or null, "days": "sat sun", "also": "fri"}
+              (month-day, weekday names), or false for the old calendar; without it the
+              country's real calendar (tools/realcal.py COUNTRY, by tier), else its
+              confederation's. fl26swiss.dll dates the rounds from it (the world's rcal line)
   league_cup  optional, a top division of a new country only: true gives the country a league
               cup (0.2.0, league_ko_cup): the top division and the one below it, as many clubs
               as the bracket screen draws up to 44 (BRACKET_SIZES), one match a round on a copy
               of the FA Cup's shape (LEAGUE_KO_LIKE) -- byes where the field is not a power of
               two go to the top division, every tie drawn at random (cupdraw byes) -- played
-              late September to December on days of its own (LEAGUE_KO_DAYS), the semi-final
-              and the final one match too. fl26swiss.dll fills and dates it (the ccup line's
+              late August to mid-March on the Carabao Cup's weeks (LEAGUE_KO_DAYS; a
+              calendar-year league's September to December), the semi-final and the final
+              one match too. fl26swiss.dll fills and dates it (the ccup line's
               options, like= and draw=); "league_cup_name", "league_cup_logo"
   preseason_cups  (the recipe, not a league) [{"name": ..., "clubs": [...]}]: a knockout of
               4 or 8 invited clubs in July, before the season (PRESEASON_DAYS), paired in the
@@ -332,14 +338,15 @@ DATE_SHIFT = {11: 1, 49: 2, 60: 1, 61: 2, 62: 5, 74: 5, 76: 2, 93: 6, 94: 2, 96:
               181: 1, 182: 5, 183: 1, 184: 6, 185: 1, 190: 2}     # 190 has 145's (mkworld MOVED_REG)
 # fl26swiss.c: the Champions League's and the Europa League's league phase (SWISS_DAYS, the same
 # days since #54), the Conference League's (UECL_DAYS), the knockouts (KO_DAYS), qualifying
-# (QR_DAYS) and the play-offs (reg 2's moved to 241/248, the Europa/Conference League's 49/56).
+# (QR_DAYS) and the play-offs (reg 2's moved to 241/248, the Europa/Conference League's 49/56);
+# the Champions League's knockouts on Wednesdays since 0.2.0 (69 ..., its play-off 48/55).
 # fl26swiss also moves any round of ours still on one of these days (declash), so this only
 # steers the choice of id.
 _SWISS = [257, 258, 271, 272, 292, 293, 306, 307, 327, 328, 341, 342, 19, 20, 26, 27]
 EURO_DAYS = (set(_SWISS)
              | {272, 273, 293, 294, 307, 308, 328, 329, 342, 343, 349, 350}
-             | {68, 75, 96, 103, 117, 124, 149, 70, 77, 98, 105, 119, 126, 139, 146}
-             | {242, 247, 229, 236, 220, 225, 241, 248, 47, 54, 49, 56})
+             | {69, 76, 97, 104, 118, 125, 149, 70, 77, 98, 105, 119, 126, 139, 146}
+             | {242, 247, 229, 236, 220, 225, 241, 248, 48, 55, 49, 56})
 # The days of the year the domestic knockouts are played on, one per record of the knockout
 # fl26swiss borrows (two legs of the last 16, quarter-finals, semi-finals, then the final):
 # always seven, a smaller field leaves the first ones unused. A league cup's run September to
@@ -381,7 +388,14 @@ LEAGUE_CUP_FILL = 253
 # (calendar case 6: 251/254, 286/289), after the fill day and inside September to December, so
 # a calendar-year season holds them as well as an August-May one.
 LEAGUE_KO_LIKE = 23
-LEAGUE_KO_DAYS = [265, 279, 300, 321, 335, 356]
+LEAGUE_KO_CAL_DAYS = [265, 279, 300, 321, 335, 356]
+# 0.2.0: an August-May league's cup on the Carabao Cup's real weeks, one day a round (the first
+# rounds a smaller field skips): 27 August, 23 September, 28 October, the quarter-final 23
+# December, the semi-final 14 January, the final Sunday 15 March -- midweek clear of the European
+# days by two days or more and of the national cups' by three, filled on 15 August. A
+# calendar-year league's cup (the J.League's) keeps LEAGUE_KO_CAL_DAYS, inside its season.
+LEAGUE_KO_DAYS = [238, 265, 300, 356, 13, 73]
+LEAGUE_KO_FILL = 226
 LEAGUE_KO_SIZES = sorted(s for s in BRACKET_SIZES | {NATIONAL_CUP_MAX} if s >= 4)
 # Apertura/Clausura: fl26swiss dates a split's phases on the Scottish season's 38 dates,
 # resampled to its rounds (fl26swiss.c SCOT_DAYS, split_dates); split_days() does the same sums,
@@ -1336,6 +1350,7 @@ def plan(recipe, base):
              "club_away_kits": list(L.get("club_away_kits") or []),   # and for picking kits (mkkits)
              "newlife": {"clubs": [int(i) for i in (L.get("newlife") or {}).get("clubs") or []]},
              "exchange": int(L.get("exchange", 3)), "above": None, "tier": 1,
+             "real_calendar": L.get("real_calendar"),     # realcal.py: dates, or false for none
              "europe": [[int(a), int(b)] for a, b in (L.get("europe") or [])]}
         for f in [p["formation"]] + p["club_formations"]:
             if f and formation_club(base, f) is None:
@@ -1808,7 +1823,7 @@ def cup_field(field):
     return [main[j] for i in range(size // 2) for j in (i, size - 1 - i)], pre
 
 
-def league_ko_cup(tiers):
+def league_ko_cup(tiers, calendar=False):
     """a single-match league cup of tiers [(league, clubs)] -- the top division and the divisions
     under it, top first: its entries, the top division's places first and then the next
     division's, cut to the largest of LEAGUE_KO_SIZES there are clubs for (only the first two
@@ -1826,7 +1841,8 @@ def league_ko_cup(tiers):
             break
         old += [(r, pos) for pos in range(1, n + 1)]
     _main, pre = cup_field(old)
-    return field[:size], {"fill": LEAGUE_CUP_FILL, "national": 1, "days": LEAGUE_KO_DAYS,
+    return field[:size], {"fill": LEAGUE_CUP_FILL if calendar else LEAGUE_KO_FILL, "national": 1,
+                          "days": LEAGUE_KO_CAL_DAYS if calendar else LEAGUE_KO_DAYS,
                           "like": LEAGUE_KO_LIKE, "draw": "byes", "reserve": 1 if pre else 0}
 
 
@@ -1837,7 +1853,7 @@ def league_cup(p, out):
     while q and len(tiers) < 4:
         tiers.append((q["rid"], q["clubs"]))
         q = next((b for b in out if b["above"] == q["rid"]), None)
-    field, opts = league_ko_cup(tiers)
+    field, opts = league_ko_cup(tiers, bool(p.get("calendar") or p.get("follows_calendar")))
     if field is None:
         raise BuildError("%s has %d clubs, a league cup needs %d"
                          % (p["name"], p["clubs"], LEAGUE_KO_SIZES[0]))
@@ -2039,7 +2055,8 @@ def game_cups(recipe, regrow, region_of_cid, base, out):
                 tiers.append((q, n))
                 below = u16(regrow[q], M.R_BELOW) if q in regrow else 0
                 q = (below if below in regrow else 0) or next((p["rid"] for p in out if p["above"] == q), None)
-            field, opts = league_ko_cup(tiers)
+            moved = {GAME_SEASONS[n][0] for n in recipe.get("game_seasons") or [] if n in GAME_SEASONS}
+            field, opts = league_ko_cup(tiers, region in CALENDAR_REGIONS and region not in moved)
             if field is None:
                 raise BuildError("game cups: %s has %d clubs, a league cup needs %d"
                                  % (league, sum(t[1] for t in tiers[:2]), LEAGUE_KO_SIZES[0]))
@@ -2055,6 +2072,10 @@ def game_cups(recipe, regrow, region_of_cid, base, out):
                         "code": "FL_G%03d_SCUP" % rid, "kind": "super", "logo": c.get("super_logo") or None,
                         "country": None, "conf": conf, "region": region, "groups": 0,
                         "entry": [(rid, 1), (cup, 0)] if cup else [(rid, 1), (rid, 2)],
+                        # no cup winner yet (a first season), or the champion won the cup too: the
+                        # league's runner-up plays (fl26swiss alt=; "only 1 of 2 clubs found" and
+                        # the cup never started, Supercopa Rei and de Chile 08.10.)
+                        "alt_fixed": [(1, rid, 2)] if cup else [],
                         "opts": {"fill": PRESEASON_FILL, "national": 1, "days": CAF_SUPER_DAYS}})
     return res
 
@@ -3105,7 +3126,8 @@ def build(pl, base, game, replace=False, log=print):
         log("  European places: %d of the new leagues, %d in all"
             % (sum(1 for e in own_places(pl) if e[2] in fl26world.UEFA_LINE), len(uefa)))
     fl26world.write_world(os.path.join(tmp, MARK), pl["world"], leagues, split_lines, uefa, uecl,
-                          ccups + dates_lines(pl, db) + season_lines(pl, db) + july_lines(pl, base) + first_lines(pl)
+                          ccups + dates_lines(pl, db) + season_lines(pl, db) + july_lines(pl, base)
+                          + rcal_lines(pl, base, confed) + first_lines(pl)
                           + order_lines(pl, base, confed)
                           + kickorder_lines(pl, base, confed)
                           + (["nopool " + " ".join(str(t) for t in nopool)] if nopool else []) + newfaces
@@ -3486,6 +3508,27 @@ def july_lines(pl, base):
     return out
 
 
+def rcal_lines(pl, base, confed):
+    """world file lines `rcal <reg> <first> <last> <break> <break> <days> <also>` (0.2.0,
+    tools/realcal.py): every new league's real calendar -- the recipe league's "real_calendar",
+    else its country's (and tier's) real one, else its confederation's -- which fl26swiss.dll
+    dates its rounds from. A split, an Apertura/Clausura and an exhibition league get none."""
+    import mkflags
+    import realcal
+    cty = mkflags.countries(mkflags.table("Country", [base]))
+    out, seen = [], set()
+    for p in pl["leagues"]:
+        if p.get("split") or p.get("apertura") or p.get("exhibition") or not p.get("rid") or p["rid"] in seen:
+            continue
+        en = mkflags.title((cty.get(p.get("country")) or ("", None))[0] or "")
+        c = realcal.calendar_of(en, int(p.get("tier") or 1), (confed or {}).get(p.get("country")),
+                                bool(p.get("calendar") or p.get("follows_calendar")), p.get("real_calendar"))
+        if c:
+            seen.add(p["rid"])
+            out.append(realcal.line(p["rid"], c))
+    return out
+
+
 def cup_seeding(teams, top):
     """the entry order of a national cup, which is its first-round draw (mkcup: entry n meets
     entry n+1): the top division and the one below taken in turn, so a first round pairs a club
@@ -3628,14 +3671,14 @@ def cup_winners(cup, start=None):
             alt.append((i, int(e[1]), min((start or {}).get(int(e[1]), 1), 63)))
             e = (regs[int(e[1])], 0)
         entry.append(e)
-    cup["entry"], cup["alt"] = entry, alt
+    cup["entry"], cup["alt"] = entry, list(cup.get("alt_fixed") or []) + alt
 
 
 def ccup_alt(line, alt):
     """a world file ccup line with its cup winners' leagues (cup_winners):
     alt=<entry>:<league>:<first position>,..."""
     head, sep, name = line.partition(" name=")
-    return "%s alt=%s%s%s" % (head, ",".join("%d:%d:%d" % a for a in alt), sep, name)
+    return "%s alt=%s%s%s" % (head, ",".join("%d:%d:%d" % tuple(a) for a in alt), sep, name)
 
 
 def ccup_options(line, cup):
