@@ -217,6 +217,9 @@ See [known-issues.md](known-issues.md). Most important:
 - European qualifying is the second and third qualifying round and the play-off, in August
   after the season is built (5 August). There is no first qualifying round, and the second and
   third qualifying rounds are later than the real July ones.
+- The league cups (Carabao Cup ...) play the semi-final in one match; the real one has two legs.
+  The game sets one or two legs for a whole cup, so this needs the cup split in two parts; it
+  comes in the first fix release.
 - Clubs of new African, North American and Oceanian leagues keep the objective the game picks:
   the game has no board objective for those cups.
 - The Club World Cup is the game's own (every season, mid-December), with the champions of the

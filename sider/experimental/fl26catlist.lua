@@ -152,6 +152,19 @@ local function read_world(ctx)
   return leagues
 end
 
+-- Shipped regions the exe names wrongly. Its 25 {country, region} pairs are PES 2021's: region
+-- 10 is Switzerland and 28 Thailand, while the game's data put the Greek Super League in 10 and
+-- the Saudi Pro League in 28, and MLS's 23 (a special 0xfffd) printed as Mexico -- "SWITZERLAND"
+-- over the Greek flag, "THAILAND" over the Saudi one (in game, 07.10.). Only the category label
+-- takes these: the season code keeps the exe's answer for a shipped region, as it always had.
+local LABEL = {
+  [10] = 211,   -- Greece
+  [20] = 135,   -- USA: the MLS row still read MEXICO with 23 alone, so the label asks for 20
+  [23] = 135,   -- USA
+  [28] = 31,    -- Saudi Arabia
+}
+local LABEL_RET = 0x1415788dc   -- where 0x1415787c0's call to COUNTRY_FN returns
+
 -- From the world file: region -> country for the regions no shipped league uses -- 29 and up,
 -- and the four headless ids 11, 13, 14, 20. A shipped region is never overridden: its country
 -- is also what the season code compares club and player nationality with.
@@ -190,10 +203,13 @@ local function rel32(from_next, to)
   return u32le(d)
 end
 
--- the stub: 40 bytes of code, then the 64-entry u16 region -> country table
---   0  cmp ecx,0x3f ; ja orig          5  mov eax,ecx ; lea rdx,[tbl]
---  14  movzx eax,word [rdx+rax*2]      18  cmp ax,-1 ; je orig ; ret
---  25  orig: push rbp ; lea rbp,[rsp-0x57] ; jmp COUNTRY_FN+7
+-- the stub: 80 bytes of code, then two 64-entry u16 region -> country tables, COUNTRY at 80
+-- and LABEL at 208
+--   0  cmp ecx,0x3f ; ja orig          5  mov eax,ecx
+--   7  mov rdx,LABEL_RET ; cmp [rsp],rdx ; jne all      (the category label's call only)
+--  23  lea rdx,[LABEL] ; movzx edx,word [rdx+rax*2] ; cmp dx,-1 ; je all ; mov eax,edx ; ret
+--  43  all: lea rdx,[COUNTRY] ; movzx eax,word [rdx+rax*2] ; cmp ax,-1 ; je orig ; ret
+--  61  orig: push rbp ; lea rbp,[rsp-0x57] ; jmp COUNTRY_FN+7
 local function install_country()
   if bin2hex(memory.read(COUNTRY_FN, 7)) ~= COUNTRY_ENTRY then
     log(string.format("fl26catlist: bytes at 0x%x are %s, expected %s -- country names left alone",
@@ -206,20 +222,26 @@ local function install_country()
     if p ~= nil then stub = tonumber(ffi.cast("uint64_t", p)); break end
   end
   if not stub then log("fl26catlist: VirtualAlloc for the country stub failed -- names left alone"); return end
-  local back = rel32(stub + 37, COUNTRY_FN + 7)
+  local back = rel32(stub + 73, COUNTRY_FN + 7)
   local into = rel32(COUNTRY_FN + 5, stub)
   if not (back and into) then log("fl26catlist: country stub out of jump range -- names left alone"); return end
-  local code = "\131\249\63" .. "\119\20" .. "\137\200" .. "\72\141\21" .. u32le(26)
-            .. "\15\183\4\66" .. "\102\131\248\255" .. "\116\1" .. "\195"
-            .. "\64\85\72\141\108\36\169" .. "\233" .. back .. "\204\204\204"
-  assert(#code == 40)
-  local tbl, named = {}, 0
+  local code = "\131\249\63" .. "\119\56" .. "\137\200"
+            .. "\72\186" .. u32le(LABEL_RET % 0x100000000) .. u32le(math.floor(LABEL_RET / 0x100000000))
+            .. "\72\57\20\36" .. "\117\20"
+            .. "\72\141\21" .. u32le(178) .. "\15\183\20\66" .. "\102\131\250\255" .. "\116\3"
+            .. "\137\208" .. "\195"
+            .. "\72\141\21" .. u32le(30) .. "\15\183\4\66" .. "\102\131\248\255" .. "\116\1" .. "\195"
+            .. "\64\85\72\141\108\36\169" .. "\233" .. back .. string.rep("\204", 7)
+  assert(#code == 80)
+  local tbl, lbl, named = {}, {}, 0
   for r = 0, 63 do
     local c = COUNTRY[r] or 0xffff
     if COUNTRY[r] then named = named + 1 end
     tbl[#tbl + 1] = string.char(c % 256, math.floor(c / 256))
+    local l = (not COUNTRY[r] and LABEL[r]) or 0xffff
+    lbl[#lbl + 1] = string.char(l % 256, math.floor(l / 256))
   end
-  local body = code .. table.concat(tbl)
+  local body = code .. table.concat(tbl) .. table.concat(lbl)
   ffi.copy(ffi.cast("void*", stub), body, #body)
   memory.write(COUNTRY_FN, "\233" .. into .. "\144\144")
   log(string.format("fl26catlist: country names -- stub at 0x%x, %d regions named", stub, named))

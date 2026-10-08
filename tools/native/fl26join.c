@@ -711,6 +711,7 @@ static void ensure_tables(const vec16_t* in);
 vec16_t* mover_pre(void* ctx, vec16_t* in)
 {
   ensure_tables(in);
+  log_tables();
   if (!in || !in->b || in->e < in->b) return in;
   int n = (int)(in->e - in->b), k = 0, d = 0;
   if (n > MAX_LIST) return in;
@@ -751,8 +752,14 @@ static void log_tables(void)
   if (!g_base) return;
   hastab_fn has = (hastab_fn)(uintptr_t)(g_base + HASTAB_RVA);
   char yes[400], no[400]; int py = 0, pn = 0; yes[0] = no[0] = 0;
-  for (int i = 0; i < g_nids + 2; i++) {
-    uint16_t id = i < g_nids ? g_ids[i] : (i == g_nids ? 81 : 82);
+  /* ours, our split phases, then Ligue 2 / Serie B and Scotland's shipped split (133 total,
+     134-136 phases) as yardsticks: a split total of ours ends its season with no table and
+     nobody goes up or down (#70, #79); does the game's own total ever get one? */
+  static const uint16_t YARD[] = { 81, 82, 133, 134, 135, 136 };
+  int nyard = (int)(sizeof YARD / sizeof YARD[0]);
+  for (int i = 0; i < g_nids + g_ntd_extra + nyard; i++) {
+    uint16_t id = i < g_nids ? g_ids[i] : i < g_nids + g_ntd_extra ? g_td_extra[i - g_nids]
+                : YARD[i - g_nids - g_ntd_extra];
     if (!find_record(id)) continue;
     int t = has(id) & 1;
     char* b = t ? yes : no; int* pp = t ? &py : &pn;
