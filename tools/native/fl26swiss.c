@@ -4485,6 +4485,11 @@ static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
       if (g_ccup[k].groups) for (int i = 0; i < 6; i++) block(bad, ccup_day(&g_ccup[k], 0, i), buf);
       for (int i = 0; i < (g_ccup[k].nd ? g_ccup[k].nd : 7) && i < CCUP_MAX_DAYS; i++) block(bad, ccup_day(&g_ccup[k], 1, i), buf);
     }
+  /* a pre-season cup (invited clubs): its few July days at every level and in every kind of
+     season, for the host's league and each invited club's -- any world's cup, not one */
+  for (int k = 0; k < g_nccup; k++)
+    if (g_ccup[k].national && g_ccup[k].nc && (ccup_of_league(k, id) || ccup_invites(k, id)))
+      for (int i = 0; i < g_ccup[k].nd && i < CCUP_MAX_DAYS; i++) block(bad, g_ccup[k].days[i], buf);
   if (g_org != 182) return;
   /* only a league that sends clubs to Europe keeps clear of its days: a second division blocked
      by them as well had one day left between a midweek round and a European week, and every
@@ -4504,7 +4509,7 @@ static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
   if (level < 2) for (int i = 0; i < 12; i++) block(bad, NATCUP_DAYS[i], buf > 2 ? buf - 1 : buf);
   if (level < 1)
     for (int k = 0; k < g_nccup; k++) {
-      if (!g_ccup[k].national || !(ccup_of_league(k, id) || ccup_invites(k, id))) continue;
+      if (!g_ccup[k].national || g_ccup[k].nc || !ccup_of_league(k, id)) continue;
       for (int i = 0; i < g_ccup[k].nd && i < CCUP_MAX_DAYS; i++) block(bad, g_ccup[k].days[i], buf);
       for (int li = 0; li < g_nlpre; li++)
         if (g_lpre[li].ko == g_ccup[k].ko) { block(bad, g_lpre[li].days[0], buf); block(bad, g_lpre[li].days[1], buf); }
