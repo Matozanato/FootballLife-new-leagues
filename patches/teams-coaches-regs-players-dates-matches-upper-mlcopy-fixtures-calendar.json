@@ -5024,20 +5024,6 @@
    "asm": "disp32/imm32"
   },
   {
-   "va": "0x140fc2ffd",
-   "old": "44020000",
-   "new": "44060000",
-   "why": "event slot moves: +0x244 -> +0x644 (lea rdx, [rdi + 0x244])",
-   "asm": "disp32/imm32"
-  },
-  {
-   "va": "0x140fc300c",
-   "old": "44020000",
-   "new": "44060000",
-   "why": "event slot moves: +0x244 -> +0x644 (lea rdx, [rdi + 0x244])",
-   "asm": "disp32/imm32"
-  },
-  {
    "va": "0x140fc3126",
    "old": "30020000",
    "new": "30060000",
@@ -5234,48 +5220,6 @@
    "asm": "disp32/imm32"
   },
   {
-   "va": "0x14128068c",
-   "old": "44020000",
-   "new": "44060000",
-   "why": "event slot moves: +0x244 -> +0x644 (lea rcx, [rsi + 0x244])",
-   "asm": "disp32/imm32"
-  },
-  {
-   "va": "0x14128069a",
-   "old": "44020000",
-   "new": "44060000",
-   "why": "event slot moves: +0x244 -> +0x644 (lea rcx, [rsi + 0x244])",
-   "asm": "disp32/imm32"
-  },
-  {
-   "va": "0x14128089c",
-   "old": "44020000",
-   "new": "44060000",
-   "why": "event slot moves: +0x244 -> +0x644 (lea rcx, [rsi + 0x244])",
-   "asm": "disp32/imm32"
-  },
-  {
-   "va": "0x1412808aa",
-   "old": "44020000",
-   "new": "44060000",
-   "why": "event slot moves: +0x244 -> +0x644 (lea rcx, [rsi + 0x244])",
-   "asm": "disp32/imm32"
-  },
-  {
-   "va": "0x14128117b",
-   "old": "44020000",
-   "new": "44060000",
-   "why": "event slot moves: +0x244 -> +0x644 (lea rcx, [r14 + 0x244])",
-   "asm": "disp32/imm32"
-  },
-  {
-   "va": "0x141281189",
-   "old": "44020000",
-   "new": "44060000",
-   "why": "event slot moves: +0x244 -> +0x644 (lea rcx, [r14 + 0x244])",
-   "asm": "disp32/imm32"
-  },
-  {
    "va": "0x14129d582",
    "old": "a8386001",
    "new": "70708701",
@@ -5315,13 +5259,6 @@
    "old": "30020000",
    "new": "30060000",
    "why": "the day's count moves: +0x230 -> +0x630 (movzx eax, word ptr [rdi + 0x230])",
-   "asm": "disp32/imm32"
-  },
-  {
-   "va": "0x14129fbbb",
-   "old": "51020000",
-   "new": "51060000",
-   "why": "event slot moves: +0x251 -> +0x651 (movzx ecx, byte ptr [rax + 0x251])",
    "asm": "disp32/imm32"
   },
   {
@@ -6249,20 +6186,6 @@
    "asm": "disp32/imm32"
   },
   {
-   "va": "0x141321379",
-   "old": "44020000",
-   "new": "44060000",
-   "why": "event slot moves: +0x244 -> +0x644 (lea rdx, [rsi + 0x244])",
-   "asm": "disp32/imm32"
-  },
-  {
-   "va": "0x141321387",
-   "old": "44020000",
-   "new": "44060000",
-   "why": "event slot moves: +0x244 -> +0x644 (lea rdx, [rsi + 0x244])",
-   "asm": "disp32/imm32"
-  },
-  {
    "va": "0x14132149f",
    "old": "30020000",
    "new": "30060000",
@@ -6295,20 +6218,6 @@
    "old": "18010000",
    "new": "18030000",
    "why": "ids a day holds: 280 -> 792 (cmp edx, 0x118)",
-   "asm": "disp32/imm32"
-  },
-  {
-   "va": "0x1413219c9",
-   "old": "44020000",
-   "new": "44060000",
-   "why": "event slot moves: +0x244 -> +0x644 (lea rsi, [r13 + 0x244])",
-   "asm": "disp32/imm32"
-  },
-  {
-   "va": "0x1413219d8",
-   "old": "44020000",
-   "new": "44060000",
-   "why": "event slot moves: +0x244 -> +0x644 (lea rsi, [r13 + 0x244])",
    "asm": "disp32/imm32"
   },
   {
@@ -7327,27 +7236,6 @@
    "asm": "disp32/imm32"
   },
   {
-   "va": "0x1415254ce",
-   "old": "57020000",
-   "new": "57060000",
-   "why": "event slot moves: +0x257 -> +0x657 (movzx eax, byte ptr [r13 + 0x257])",
-   "asm": "disp32/imm32"
-  },
-  {
-   "va": "0x141526414",
-   "old": "51020000",
-   "new": "51060000",
-   "why": "event slot moves: +0x251 -> +0x651 (movzx r8d, byte ptr [r13 + 0x251])",
-   "asm": "disp32/imm32"
-  },
-  {
-   "va": "0x1415264c7",
-   "old": "48020000",
-   "new": "48060000",
-   "why": "event slot moves: +0x248 -> +0x648 (mov byte ptr [rax + r13 + 0x248], 0xff)",
-   "asm": "disp32/imm32"
-  },
-  {
    "va": "0x14152650c",
    "old": "30020000",
    "new": "30060000",
@@ -7359,13 +7247,6 @@
    "old": "a8386001",
    "new": "70708701",
    "why": "calendar base: 0x16038a8 -> 0x1877070 (lea rbx, [r15 + 0x16038a8])",
-   "asm": "disp32/imm32"
-  },
-  {
-   "va": "0x141526d6f",
-   "old": "51020000",
-   "new": "51060000",
-   "why": "event slot moves: +0x251 -> +0x651 (movzx ecx, byte ptr [rsi + 0x251])",
    "asm": "disp32/imm32"
   },
   {
@@ -25027,8 +24908,76 @@
   "unit_growth": 373760,
   "tail_sites": 171,
   "unit_bytes": 819456,
-  "patches": 756,
+  "patches": 739,
   "skipped": [
+   {
+    "va": "0x140fc2ffa",
+    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+   },
+   {
+    "va": "0x140fc3009",
+    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+   },
+   {
+    "va": "0x141280689",
+    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+   },
+   {
+    "va": "0x141280697",
+    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+   },
+   {
+    "va": "0x141280899",
+    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+   },
+   {
+    "va": "0x1412808a7",
+    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+   },
+   {
+    "va": "0x141281178",
+    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+   },
+   {
+    "va": "0x141281186",
+    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+   },
+   {
+    "va": "0x14129fbb8",
+    "why": "a 0x258-byte match-side team record (0x1414baec0 -> block+0xc4ca0c / +0xe58 + side*0x258), not an event slot"
+   },
+   {
+    "va": "0x141321376",
+    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+   },
+   {
+    "va": "0x141321384",
+    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+   },
+   {
+    "va": "0x1413219c6",
+    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+   },
+   {
+    "va": "0x1413219d5",
+    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+   },
+   {
+    "va": "0x1415254ca",
+    "why": "a 0x258-byte match-side team record (0x1414bc780 -> block+0xc4ca0c / +0xe58 + side*0x258), not an event slot"
+   },
+   {
+    "va": "0x141526410",
+    "why": "a 0x258-byte match-side team record (0x1414bc780 -> block+0xc4ca0c / +0xe58 + side*0x258), not an event slot"
+   },
+   {
+    "va": "0x1415264c3",
+    "why": "a 0x258-byte match-side team record (0x1414bc780 -> block+0xc4ca0c / +0xe58 + side*0x258), not an event slot"
+   },
+   {
+    "va": "0x141526d6c",
+    "why": "a 0x258-byte match-side team record (0x1414c20c0 -> block+0xc4ca0c / +0xe58 + side*0x258), not an event slot"
+   },
    {
     "va": "0x1412f9043",
     "why": "MenuUtilityDemoPlayer+0x2b0, a vector of 0x230-byte entries, not an event slot"
