@@ -117,6 +117,9 @@ world, about 1,000 matches a season).
 
 ## Fixes
 
+- Match Results showed "Group stage - Matchday 54" for the Champions League, Europa League
+  and Conference League play-offs and qualifying rounds. They now show as play-offs (fix by
+  n1ne).
 - **Other European lost its last clubs after a Build** that moved some of its clubs into new
   leagues. The game loads the Edit save's club lists without raising their length; the module
   now follows how far each list was really written.

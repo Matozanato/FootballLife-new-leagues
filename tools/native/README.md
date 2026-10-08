@@ -51,7 +51,7 @@ source in this folder at the 0.2.0 commit:
 | `fl26join.dll` | `279475866af983a6c9147f212c08afa578c4830930f61c330944b86139f51477` |
 | `fl26clubs.dll` | `db5a7f6307406c1651c95a63cb198ac26ad960fc03a764a44daa1b02eb7ad315` |
 | `fl26chain.dll` | `4d02be33e8d99a299842c8f55dfe4eef82cc85bd17e83afa55dabbe4097d44c4` |
-| `fl26swiss.dll` | `ed196168247ff32f20acd40306f7dbe1f62e7d8291f277e030bd878fba175abc` |
+| `fl26swiss.dll` | `8a7590510d48b58496998790c314dd34bc832b33a2c2057fef65fee0c1507193` |
 | `fl26regen.dll` | `234edc1def515f565a72bd07dffcd746bbb251fbe2cae4a2aa54a32f07a7ff68` |
 | `fl26edit.dll` | `fd3787f66ef7f5b030f43fb694651d5ae99081fef3fe258814c638c6e046b53d` |
 

@@ -3868,6 +3868,7 @@ __declspec(dllexport) int fl26_swiss_access(const uint16_t* v, int n)
    competition (10, 11, 12: the Champions League's, Europa League's, Conference League's), round
    (3 the third qualifying round, 2 the second) and its regulation, a copy of reg 2 with its eight
    ties at id + 1024 * (k + 1). Answers how many were taken. */
+static void po_fill(void);          /* the Match Results play-off ids, below */
 __declspec(dllexport) int fl26_swiss_qrounds(const uint16_t* v, int n)
 {
   memset(g_qreg, 0, sizeof g_qreg);
@@ -3878,6 +3879,7 @@ __declspec(dllexport) int fl26_swiss_qrounds(const uint16_t* v, int n)
     g_qreg[(e[0] - UCLQ) + NQ * (e[1] == 3 ? 1 : 2)] = e[2];
     k++;
   }
+  po_fill();
   return k;
 }
 
@@ -4918,6 +4920,115 @@ static int cont_install(uint64_t exe_base)
   return 0;
 }
 
+/* ---- our play-offs on the Match Results screen (n1ne, CUSTOM_PLAYOFF_MATCH_RESULTS_FIX) ----
+ *
+ * The Champions League play-off's replicas (0x402, 0x802 ...), the Europa and Conference League
+ * play-offs (188, 189, ties at id + 1024 * (k + 1)) and the qualifying rounds (g_qreg) are copies
+ * of reg 2, but only the exact ids the game knows get the play-off treatment on the results
+ * screen: the subclass selector 0x140af93f0 takes the group-stage subclass for them, and the
+ * title 0x14152a590 builds "Group stage - Matchday 54" instead of "Play-offs". Two patches,
+ * both for our ids only, so every shipped competition goes as before:
+ *  - POAB9: the selector's call of the active-competition resolver (0x14150c230 at 0x140af9421)
+ *    goes to po_sel, which answers 2 for one of ours -- the id the selector already whitelists.
+ *    The call site alone; nothing else that asks for the active competition changes.
+ *  - POAB13: the title's last play-off test (sub si,0x45 / cmp si,4 at 0x14152ada3) jumps to a
+ *    stub that sends ours to the native Play-offs branch 0x14152ad97 and runs the original test
+ *    for everything else. Only rax is used, saved; [rsp+0x28] is never touched (POAB11 crashed
+ *    reading it). The ids are a table in the stub's page, filled from g_qreg (po_fill). */
+#define ACTCOMP_RVA  0x150c230
+#define POSEL_CALL   0xaf9421
+#define POTTL_SITE   0x152ada3
+#define POTTL_NATIVE 0x152ad97
+#define POTTL_RESUME 0x152adab
+static const unsigned char SIG_POTTL[10] = { 0x66,0x83,0xee,0x45, 0x66,0x83,0xfe,0x04, 0x76,0xea };
+typedef uint64_t (*actcomp_fn)(uint64_t, uint64_t, uint64_t, uint64_t);
+
+static int our_po(uint16_t id)
+{
+  return (is_playoff(id) && id >= 0x400) || new_po(id) || q_added(id) >= 0;
+}
+
+static uint64_t po_sel(uint64_t a, uint64_t b, uint64_t c, uint64_t d)
+{
+  uint64_t r = ((actcomp_fn)(uintptr_t)(g_base + ACTCOMP_RVA))(a, b, c, d);
+  uint16_t id = (uint16_t)r;
+  if (!our_po(id)) return r;
+  unsigned char* rec = get_rec(id);
+  if (!rec || *(uint32_t*)(rec + 0x84) != 2) return r;
+  static int said = 0;
+  if (said < 5) { said++; logf("fl26swiss: Match Results -- regulation %u shown as a play-off", id); }
+  return (r & ~0xffffULL) | 2;
+}
+
+#define PO_SLOTS 8
+static uint32_t* g_po_tab = 0;               /* low ids the title takes as play-offs; 0xffff empty */
+static void po_fill(void)
+{
+  if (!g_po_tab) return;
+  uint32_t v[PO_SLOTS];
+  v[0] = UEL_PO; v[1] = UECL_PO;
+  for (int i = 3; i < 9; i++) v[i - 1] = g_qreg[i] ? g_qreg[i] : 0xffff;
+  for (int i = 0; i < PO_SLOTS; i++) g_po_tab[i] = v[i];
+}
+
+/* 0 ok; 2 a site is not the one expected (nothing patched); 3 no page in reach; 4 VirtualProtect */
+static int po_install(uint64_t exe_base)
+{
+  unsigned char* call = (unsigned char*)(uintptr_t)(exe_base + POSEL_CALL);
+  unsigned char* site = (unsigned char*)(uintptr_t)(exe_base + POTTL_SITE);
+  if (call[0] != 0xE8 || (uint64_t)(uintptr_t)(call + 5) + *(int32_t*)(call + 1) != exe_base + ACTCOMP_RVA) return 2;
+  if (memcmp(site, SIG_POTTL, 10)) return 2;
+  unsigned char* t = near_alloc(exe_base);
+  if (!t) return 3;
+  /* +0: jmp po_sel */
+  t[0] = 0xFF; t[1] = 0x25; *(uint32_t*)(t + 2) = 0; *(uint64_t*)(t + 6) = (uint64_t)(uintptr_t)po_sel;
+  /* +0x20: the title stub (about 0xa0 bytes); +0x200: the id table */
+  g_po_tab = (uint32_t*)(t + 0x200);
+  for (int i = 0; i < PO_SLOTS; i++) g_po_tab[i] = 0xffff;
+  po_fill();
+  unsigned char* s = t + 0x20;
+  int n = 0, jn[PO_SLOTS + 2], nj = 0, jo = 0;
+  s[n++] = 0x50;                                            /* push rax */
+  s[n++] = 0x0f; s[n++] = 0xb7; s[n++] = 0xc6;              /* movzx eax, si */
+  s[n++] = 0x3d; *(uint32_t*)(s + n) = 0x23ff; n += 4;      /* cmp eax, 8*1024+0x3ff */
+  s[n++] = 0x77; jo = n++;                                  /* ja other */
+  /* replica test: ah & 0xfc != 0 -> eax >= 0x400 */
+  s[n++] = 0xf6; s[n++] = 0xc4; s[n++] = 0xfc;              /* test ah, 0xfc */
+  s[n++] = 0x74; int jz = n++;                              /* jz low (an exact id) */
+  s[n++] = 0x25; *(uint32_t*)(s + n) = 0x3ff; n += 4;       /* and eax, 0x3ff */
+  s[n++] = 0x83; s[n++] = 0xf8; s[n++] = 0x02;              /* cmp eax, 2 */
+  s[n++] = 0x74; jn[nj++] = n++;                            /* je ours (a UCL play-off replica) */
+  s[jz] = (unsigned char)(n - (jz + 1));
+  s[n++] = 0x25; *(uint32_t*)(s + n) = 0x3ff; n += 4;       /* low: and eax, 0x3ff */
+  for (int i = 0; i < PO_SLOTS; i++) {                      /* cmp eax, [rip -> tab+i] ; je ours */
+    s[n++] = 0x3b; s[n++] = 0x05;
+    *(int32_t*)(s + n) = (int32_t)((unsigned char*)(g_po_tab + i) - (s + n + 4)); n += 4;
+    s[n++] = 0x74; jn[nj++] = n++;
+  }
+  s[jo] = (unsigned char)(n - (jo + 1));
+  s[n++] = 0x58;                                            /* other: pop rax */
+  s[n++] = 0x66; s[n++] = 0x83; s[n++] = 0xee; s[n++] = 0x45; /* sub si, 0x45 */
+  s[n++] = 0x66; s[n++] = 0x83; s[n++] = 0xfe; s[n++] = 0x04; /* cmp si, 4 */
+  s[n++] = 0xFF; s[n++] = 0x25; *(uint32_t*)(s + n) = 0; n += 4;
+  *(uint64_t*)(s + n) = exe_base + POTTL_RESUME; n += 8;    /* jmp resume (the jbe) */
+  for (int i = 0; i < nj; i++) s[jn[i]] = (unsigned char)(n - (jn[i] + 1));
+  s[n++] = 0x58;                                            /* ours: pop rax */
+  s[n++] = 0xFF; s[n++] = 0x25; *(uint32_t*)(s + n) = 0; n += 4;
+  *(uint64_t*)(s + n) = exe_base + POTTL_NATIVE; n += 8;    /* jmp the Play-offs branch */
+  FlushInstructionCache(GetCurrentProcess(), t, 0x220);
+  DWORD old;
+  if (!VirtualProtect(call, 5, PAGE_EXECUTE_READWRITE, &old)) return 4;
+  *(int32_t*)(call + 1) = (int32_t)((int64_t)(uintptr_t)t - (int64_t)(uintptr_t)(call + 5));
+  VirtualProtect(call, 5, old, &old);
+  FlushInstructionCache(GetCurrentProcess(), call, 5);
+  if (!VirtualProtect(site, 8, PAGE_EXECUTE_READWRITE, &old)) return 4;
+  site[0] = 0xE9; *(int32_t*)(site + 1) = (int32_t)((int64_t)(uintptr_t)s - (int64_t)(uintptr_t)(site + 5));
+  site[5] = site[6] = site[7] = 0x90;
+  VirtualProtect(site, 8, old, &old);
+  FlushInstructionCache(GetCurrentProcess(), site, 8);
+  return 0;
+}
+
 /* Put the key of every live split into the stub, once. Cheap enough to call from the date,
  * progression and current-phase hooks, which between them run on load and on the split day. */
 static void split_keys(void)
@@ -5758,6 +5869,12 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
     logf("fl26swiss: league-phase matchday labels live (@%llx: 1..8, not 1..16)", (unsigned long long)(exe_base + MDLABEL_RVA));
   else
     logf("fl26swiss: league-phase matchday labels NOT installed (signature)");
+  {
+    int pr = po_install(exe_base);
+    if (!pr) logf("fl26swiss: our play-offs on Match Results live (subclass@%llx, title@%llx)",
+                  (unsigned long long)(exe_base + POSEL_CALL), (unsigned long long)(exe_base + POTTL_SITE));
+    else logf("fl26swiss: our play-offs on Match Results NOT installed (%d)", pr);
+  }
   if (!cupsel_install(exe_base))
     logf("fl26swiss: Cup mode list live (no league phase of 36 in Kick Off > Cup)");
   else
