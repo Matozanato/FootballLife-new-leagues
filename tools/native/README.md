@@ -49,7 +49,7 @@ source in this folder at the 0.2.0 commit:
 | file | SHA-256 |
 |---|---|
 | `fl26join.dll` | `279475866af983a6c9147f212c08afa578c4830930f61c330944b86139f51477` |
-| `fl26clubs.dll` | `62ba844d117291854814ea21f47b2677590eed89fc7b53d968cc3223ef882935` |
+| `fl26clubs.dll` | `db5a7f6307406c1651c95a63cb198ac26ad960fc03a764a44daa1b02eb7ad315` |
 | `fl26chain.dll` | `4d02be33e8d99a299842c8f55dfe4eef82cc85bd17e83afa55dabbe4097d44c4` |
 | `fl26swiss.dll` | `ed196168247ff32f20acd40306f7dbe1f62e7d8291f277e030bd878fba175abc` |
 | `fl26regen.dll` | `234edc1def515f565a72bd07dffcd746bbb251fbe2cae4a2aa54a32f07a7ff68` |

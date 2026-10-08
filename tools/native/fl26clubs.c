@@ -216,13 +216,25 @@ static int is_pad(uint32_t v) { return v == 0 || v == 0x3ffffu || v == 0xfffffff
 static void*    g_hi_self[4];
 static unsigned g_hi[4];
 
+/* Only the Edit refill's own call (0x141f14af6) counts. The setter's other caller, 0x1414f6e20,
+   sets the count first and then writes the list, and does it again with fewer clubs while a
+   Master League season is built: a mark kept from its longer fill served stale words past the
+   new count and creation crashed at 0x140aeee1e (8 October, second time). A list that caller
+   rewrites is served by its count again; the refill starts its mark over at each fill. */
+#define EDIT_REFILL_SET_RET 0x1f14afb
+
 __declspec(dllexport) void set_hook(void* self, unsigned slot, unsigned idx, uint32_t v)
 {
   if (slot >= SLOTS || idx >= STRIDE) return;
   ((uint32_t*)self)[slot * STRIDE + idx] = v;
   int p = pool_index(slot);
   if (p < 0) return;
-  if (g_hi_self[p] != self) { g_hi_self[p] = self; g_hi[p] = 0; }
+  uintptr_t ra = (uintptr_t)__builtin_return_address(0) - (uintptr_t)g_base;
+  if (ra != EDIT_REFILL_SET_RET) {
+    if (g_hi_self[p] == self) { g_hi_self[p] = 0; g_hi[p] = 0; }
+    return;
+  }
+  if (g_hi_self[p] != self || idx == 0) { g_hi_self[p] = self; g_hi[p] = 0; }
   if (idx + 1 > g_hi[p]) g_hi[p] = idx + 1;
 }
 
