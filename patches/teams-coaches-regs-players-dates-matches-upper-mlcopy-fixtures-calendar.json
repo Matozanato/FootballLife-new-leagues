@@ -5759,13 +5759,6 @@
    "asm": "disp32/imm32"
   },
   {
-   "va": "0x1412f9046",
-   "old": "b0020000",
-   "new": "b0060000",
-   "why": "event slot moves: +0x2b0 -> +0x6b0 (lea rbx, [rax + 0x2b0])",
-   "asm": "disp32/imm32"
-  },
-  {
    "va": "0x1412f90c8",
    "old": "a8386001",
    "new": "70708701",
@@ -25034,8 +25027,12 @@
   "unit_growth": 373760,
   "tail_sites": 171,
   "unit_bytes": 819456,
-  "patches": 757,
+  "patches": 756,
   "skipped": [
+   {
+    "va": "0x1412f9043",
+    "why": "MenuUtilityDemoPlayer+0x2b0, a vector of 0x230-byte entries, not an event slot"
+   },
    {
     "va": "0x1414bc5a8",
     "why": "the match table's end pointer, moved with the match table"

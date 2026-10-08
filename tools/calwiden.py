@@ -71,7 +71,10 @@ BLOCK_TAIL = 0x44                  # the copier's fixed tail; the stride is k*0x
 # 596-byte match table's binary search with the calendar base, because the table ends there.
 # It belongs to that table and patchset.py already moves it with it. Moving it here as well
 # would move it twice.
-NOT_OURS = {0x1414bc5a8: "the match table's end pointer, moved with the match table"}
+NOT_OURS = {0x1414bc5a8: "the match table's end pointer, moved with the match table",
+            # 08.10.: rax there is the MenuUtilityDemoPlayer singleton (call 0x140e9e2b0), not a
+            # day; +0x6b0 is past the 0x620-byte object and crashed Master League creation
+            0x1412f9043: "MenuUtilityDemoPlayer+0x2b0, a vector of 0x230-byte entries, not an event slot"}
 
 # 0x1413fbf60 -- the copier.  Its `mov ecx, 5` is the only thing in it the survey cannot
 # see: the block count of an unrolled 0x80-byte copy is not a calendar constant to look at,
