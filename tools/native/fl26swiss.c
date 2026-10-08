@@ -5029,6 +5029,99 @@ static int po_install(uint64_t exe_base)
   return 0;
 }
 
+/* ---- "League Phase", not "Group A" ----
+ *
+ * The game names a group with text 0x3a20013 ("Group %s", the letter as the argument) in five
+ * places: the standings header and its sibling (0x140af53e0, 0x140af52b0), two group-table
+ * widgets (0x140ca5110, 0x140cb9900) and 0x1412aa680; and the match title 0x14152a590 puts
+ * text 0x3a20011, "Group stage", in front of "Matchday %d". Our league phase is one group of
+ * 36, so it read "Group A" and "Group stage". Each `mov edx, <text>` (5 bytes) becomes a call
+ * to a small stub that keeps every volatile register but edx, asks grp_text, and loads edx
+ * with the answer: LP_TEXT ("League Phase", txtget_handler) for one of our league phases, the
+ * game's own text otherwise -- the letter argument is then simply not used. The regulation
+ * comes from si in the title, from the record the caller read at 0x1412aaf3e, and elsewhere
+ * from the screen's active competition (0x14150c230, as the Match Results selector asks it);
+ * those only when the letter is "A", the one group a league phase has. */
+#define GRP_GROUP 0x3a20013u
+#define GRP_STAGE 0x3a20011u
+typedef struct { uint32_t rva, text; int kind; } grp_site_t;   /* kind 0 active, 1 si, 2 word [r13-0x10] */
+static const grp_site_t GRP_SITES[] = {
+  { 0xaf5384,  GRP_GROUP, 0 }, { 0xaf54b4,  GRP_GROUP, 0 }, { 0xca5d8c, GRP_GROUP, 0 },
+  { 0xcb9e2d,  GRP_GROUP, 0 }, { 0x12aaf3e, GRP_GROUP, 2 }, { 0x152a75c, GRP_STAGE, 1 } };
+#define GRP_N ((int)(sizeof GRP_SITES / sizeof GRP_SITES[0]))
+
+static int lp_ours(uint32_t id)
+{
+  if (id > 0xffff || (id >> 10) > 8) return 0;
+  for (int i = 0; i < g_nreg; i++) if ((g_reg[i] & 0x3ff) == (id & 0x3ff)) return 1;
+  return 0;
+}
+
+static uint32_t grp_text(uint32_t text, uint32_t reg, const char* letter, uint32_t site)
+{
+  if (!g_tramp_txtget || !g_nreg) return text;
+  if (text == GRP_GROUP) {
+    if (!letter || letter[0] != 'A' || letter[1]) return text;
+    if (reg == 0xffffffffu) {
+      unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+      unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+      if (!blk) return text;
+      reg = (uint16_t)((actcomp_fn)(uintptr_t)(g_base + ACTCOMP_RVA))(*(uint32_t*)(blk + 0x1787b5c),
+                                                                       *(uint16_t*)(blk + 0x1642a1c), 0, 0);
+    }
+  }
+  int ours = lp_ours(reg);
+  static int said = 0;
+  if (said < 12 && (text == GRP_GROUP || ours)) {
+    said++;
+    logf("fl26swiss: %s at %llx for regulation %u -> %s", text == GRP_GROUP ? "Group A" : "Group stage",
+         (unsigned long long)(0x140000000ull + GRP_SITES[site].rva), reg, ours ? "League Phase" : "kept");
+  }
+  return ours ? LP_TEXT : text;
+}
+
+/* 0 ok; 2 a site is not the one expected (nothing patched); 3 no page in reach; 4 VirtualProtect */
+static int grp_install(uint64_t exe_base)
+{
+  for (int i = 0; i < GRP_N; i++) {
+    unsigned char* s = (unsigned char*)(uintptr_t)(exe_base + GRP_SITES[i].rva);
+    if (s[0] != 0xBA || *(uint32_t*)(s + 1) != GRP_SITES[i].text) return 2;
+  }
+  unsigned char* t = near_alloc(exe_base);
+  if (!t) return 3;
+  unsigned char* stub[GRP_N];
+  int n = 0;
+  for (int i = 0; i < GRP_N; i++) {
+    stub[i] = t + n;
+    t[n++] = 0x50; t[n++] = 0x51;                             /* push rax; push rcx */
+    t[n++] = 0x41; t[n++] = 0x50; t[n++] = 0x41; t[n++] = 0x51; /* push r8; push r9 */
+    t[n++] = 0x41; t[n++] = 0x52; t[n++] = 0x41; t[n++] = 0x53; /* push r10; push r11 */
+    t[n++] = 0x48; t[n++] = 0x83; t[n++] = 0xec; t[n++] = 0x28; /* sub rsp, 0x28 */
+    t[n++] = 0xb9; *(uint32_t*)(t + n) = GRP_SITES[i].text; n += 4;   /* mov ecx, text */
+    if (GRP_SITES[i].kind == 1) { t[n++] = 0x0f; t[n++] = 0xb7; t[n++] = 0xd6; }              /* movzx edx, si */
+    else if (GRP_SITES[i].kind == 2) { t[n++] = 0x41; t[n++] = 0x0f; t[n++] = 0xb7; t[n++] = 0x55; t[n++] = 0xf0; } /* movzx edx, word [r13-0x10] */
+    else { t[n++] = 0xba; *(uint32_t*)(t + n) = 0xffffffffu; n += 4; }                        /* mov edx, -1 */
+    t[n++] = 0x41; t[n++] = 0xb9; *(uint32_t*)(t + n) = (uint32_t)i; n += 4;                  /* mov r9d, site */
+    t[n++] = 0x48; t[n++] = 0xb8; *(uint64_t*)(t + n) = (uint64_t)(uintptr_t)grp_text; n += 8; /* mov rax, grp_text */
+    t[n++] = 0xff; t[n++] = 0xd0;                             /* call rax */
+    t[n++] = 0x48; t[n++] = 0x83; t[n++] = 0xc4; t[n++] = 0x28; /* add rsp, 0x28 */
+    t[n++] = 0x89; t[n++] = 0xc2;                             /* mov edx, eax */
+    t[n++] = 0x41; t[n++] = 0x5b; t[n++] = 0x41; t[n++] = 0x5a; /* pop r11; pop r10 */
+    t[n++] = 0x41; t[n++] = 0x59; t[n++] = 0x41; t[n++] = 0x58; /* pop r9; pop r8 */
+    t[n++] = 0x59; t[n++] = 0x58; t[n++] = 0xc3;              /* pop rcx; pop rax; ret */
+  }
+  FlushInstructionCache(GetCurrentProcess(), t, n);
+  for (int i = 0; i < GRP_N; i++) {
+    unsigned char* s = (unsigned char*)(uintptr_t)(exe_base + GRP_SITES[i].rva);
+    DWORD old;
+    if (!VirtualProtect(s, 5, PAGE_EXECUTE_READWRITE, &old)) return 4;
+    s[0] = 0xE8; *(int32_t*)(s + 1) = (int32_t)((int64_t)(uintptr_t)stub[i] - (int64_t)(uintptr_t)(s + 5));
+    VirtualProtect(s, 5, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), s, 5);
+  }
+  return 0;
+}
+
 /* Put the key of every live split into the stub, once. Cheap enough to call from the date,
  * progression and current-phase hooks, which between them run on load and on the split day. */
 static void split_keys(void)
@@ -5874,6 +5967,11 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
     if (!pr) logf("fl26swiss: our play-offs on Match Results live (subclass@%llx, title@%llx)",
                   (unsigned long long)(exe_base + POSEL_CALL), (unsigned long long)(exe_base + POTTL_SITE));
     else logf("fl26swiss: our play-offs on Match Results NOT installed (%d)", pr);
+  }
+  {
+    int gr = grp_install(exe_base);
+    if (!gr) logf("fl26swiss: League Phase instead of Group A / Group stage live (%d sites)", GRP_N);
+    else logf("fl26swiss: League Phase instead of Group A NOT installed (%d)", gr);
   }
   if (!cupsel_install(exe_base))
     logf("fl26swiss: Cup mode list live (no league phase of 36 in Kick Off > Cup)");
