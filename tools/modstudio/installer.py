@@ -11,6 +11,13 @@ parts, and each part goes where Sider wants it.
     module           a .lua file: copied to SiderAddons\modules and listed as a lua.module
     packed cpk       a .cpk: unpacked into a livecpk root (Sider reads loose files)
     league package   a .fl26pack: handed to the League Builder (see lbpackage.py)
+    world            a built League Builder world (a livecpk root named _FL26... holding its
+                     fl26world.txt, or a SiderAddons copy with that file in modules): the root
+                     is copied under the world's own name and its world file goes to
+                     modules\fl26world.txt, where the modules read it -- the "newfaces" /
+                     "faceapp" lines in it are what gives the world's new players their faces
+                     (fl26regen.lua).  The Install page then switches it on.  export_world()
+                     makes such a zip.
 
 Everything done is written to SiderAddons\ModStudio\installed.json, one record per mod:
 files created, files replaced (with the restore point that holds the old one), sider.ini lines
@@ -30,11 +37,120 @@ EXTRA_SERVERS = {"soundtrack-server", "turf-loader", "ui-colors", "fans-server",
                  "stadium_cornerflag", "tournament_anth_tunnel", "whistle_ref", "custom-exhibition-match"}
 
 
+WORLD_FILE = "fl26world.txt"             # the world file of a League Builder world
+FACE_PACK = "fl26regen_faces.bin"        # Mod Studio's face pack; Install the modules puts it in modules
+WORLD_README = "READ ME - FL26 world.txt"
+WORLD_INFO = "fl26worldpack.json"
+WORLD_NOTE = "a League Builder world: it is switched on, its world file goes to modules\\fl26world.txt"
+
+
+def world_name(path):
+    """the name on the "world" line of a world file, or None"""
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                w = line.split()
+                if w[:1] == ["world"] and len(w) > 1:
+                    return w[1]
+    except OSError:
+        pass
+    return None
+
+
+def face_players(path):
+    """how many players the world file's "newfaces" / "newfaces3d" / "faceapp" lines name"""
+    n = 0
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                w = line.split()
+                if w[:1] in (["newfaces"], ["newfaces3d"]):
+                    for t in w[1:]:
+                        a, _s, b = t.partition("-")
+                        if a.isdigit():
+                            n += (int(b) - int(a) + 1) if b.isdigit() else 1
+                elif w[:1] == ["faceapp"]:
+                    n += sum(1 for t in w[1:] if ":" in t)
+    except OSError:
+        pass
+    return n
+
+
+def face_pack_missing(sider_dir):
+    """True when Mod Studio's modules with the face pack are not in this Sider's modules folder"""
+    mods = os.path.join(sider_dir, "modules")
+    return not all(os.path.exists(os.path.join(mods, f)) for f in (FACE_PACK, "fl26regen.dll", "fl26regen.lua"))
+
+
+README = """FL26 world: {world}
+
+Install it with FL26 Mod Studio: Install mods > drop this zip > Install. Mod Studio copies
+SiderAddons\\livecpk\\{world}, puts its world file (fl26world.txt) in SiderAddons\\modules
+and switches the world on.
+
+REQUIRED: FL26 Mod Studio's modules with the face pack (SiderAddons\\modules\\{pack}).
+Install them once: League Builder > Build > 0. Install the modules (or Build and install).
+{faces} new players of this world get a generated face from that pack: they are listed on
+the newfaces / faceapp lines of fl26world.txt. Without the modules, or without
+fl26world.txt in SiderAddons\\modules, every new player looks the same.
+
+By hand: copy SiderAddons into the game folder, copy livecpk\\{world}\\fl26world.txt to
+SiderAddons\\modules\\fl26world.txt, and put  cpk.root = ".\\livecpk\\{world}"  in
+sider.ini above the other roots (with any other _FL26 world switched off).
+"""
+
+
+def export_world(sider_dir, world, out, log=lambda t: None):
+    r"""zip the built world SiderAddons\livecpk\<world> for another PC, laid out as
+    SiderAddons\livecpk\<world>\... so Install mods (or a copy by hand) puts it in place.
+
+    The world folder holds fl26world.txt, the world file Switch on copies to modules: its
+    "newfaces" / "faceapp" lines are the players who get a generated face.  The zip always
+    carries it; when the folder's copy has no face lines but the live copy in modules (same
+    world) has, the live one goes in.  A read-me and fl26worldpack.json say what the receiver
+    needs: Mod Studio's modules with the face pack, or every new player looks the same.
+    Returns the info written to fl26worldpack.json."""
+    root = os.path.join(sider_dir, "livecpk", world)
+    wf = os.path.join(root, WORLD_FILE)
+    if not os.path.isfile(wf):
+        raise ValueError("%s has no %s: build the world first" % (root, WORLD_FILE))
+    live = os.path.join(sider_dir, "modules", WORLD_FILE)
+    use = wf
+    if face_players(wf) == 0 and world_name(live) == world and face_players(live) > 0:
+        use = live
+    faces = face_players(use)
+    info = {"format": "fl26world", "format_version": 1, "world": world, "face_players": faces,
+            "world_file": "SiderAddons/livecpk/%s/%s" % (world, WORLD_FILE),
+            "needs": ["FL26 Mod Studio modules with the face pack (%s): League Builder > Build > "
+                      "0. Install the modules" % FACE_PACK]}
+    text = README.format(world=world, pack=FACE_PACK, faces=faces).replace("\n", "\r\n")
+    part = out + ".part"
+    n = 0
+    with zipfile.ZipFile(part, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr(WORLD_README, text)
+        z.writestr(WORLD_INFO, json.dumps(info, indent=1, ensure_ascii=False))
+        for dp, dn, fn in os.walk(root):
+            dn.sort()
+            for f in sorted(fn):
+                p = os.path.join(dp, f)
+                rel = os.path.relpath(p, root).replace(os.sep, "/")
+                if rel == ".modstudio":
+                    continue
+                z.write(use if rel == WORLD_FILE else p, "SiderAddons/livecpk/%s/%s" % (world, rel))
+                n += 1
+                if n % 2000 == 0:
+                    log("%d files ..." % n)
+    os.replace(part, out)
+    log("wrote %s: %d files, %d players with generated faces" % (out, n, faces))
+    return info
+
+
 class Part:
     """one thing a mod brings"""
 
     def __init__(self, kind, src, name, server=None, note=""):
         self.kind, self.src, self.name, self.server, self.note = kind, src, name, server, note
+        self.world_file = None            # a world: its fl26world.txt
         self.install = True
         self.warnings = []
         self.size = 0
@@ -125,6 +241,7 @@ def server_by_maps(d):
 def detect(top, label="mod"):
     """the parts of the mod unpacked at `top`"""
     parts = []
+    loose = []                            # world files found in a modules folder
 
     def visit(d, depth):
         low = lower_names(d)
@@ -144,7 +261,9 @@ def detect(top, label="mod"):
                                 visit_content(os.path.join(sub, n))
                     else:
                         for n in sorted(os.listdir(sub)):
-                            if n.lower().endswith(".lua"):
+                            if n.lower() == WORLD_FILE:
+                                loose.append(os.path.join(sub, n))
+                            elif n.lower().endswith(".lua"):
                                 parts.append(Part("module", os.path.join(sub, n), n))
                             elif n.lower().endswith(".dll"):
                                 parts.append(Part("dll", os.path.join(sub, n), n))
@@ -180,6 +299,13 @@ def detect(top, label="mod"):
                 parts.append(Part("dll", p, real))
 
     def visit_root(d, name):
+        wf = lower_names(d).get(WORLD_FILE)
+        w = world_name(os.path.join(d, wf)) if wf else None
+        if w and w.startswith("_FL26") and safe(w) == w:
+            p = Part("world", d, w, note=WORLD_NOTE)
+            p.world_file = os.path.join(d, wf)
+            parts.append(p)
+            return
         p = Part("root", d, safe(name))
         if os.path.isdir(os.path.join(d, "common", "etc", "pesdb")) or \
                 os.path.isdir(os.path.join(d, "common", "etc")) and \
@@ -199,6 +325,13 @@ def detect(top, label="mod"):
         visit(os.path.dirname(top), 0)
     else:
         visit(top, 0)
+    # a SiderAddons copy whose world folder has no world file of its own: the one in modules
+    for wf in loose:
+        w = world_name(wf)
+        for p in parts:
+            if p.kind == "root" and w and w.startswith("_FL26") and safe(w) == w \
+                    and os.path.basename(p.src).lower() == w.lower():
+                p.kind, p.name, p.world_file, p.note = "world", w, wf, WORLD_NOTE
     for p in parts:
         if os.path.isdir(p.src):
             p.files, p.size = measure(p.src)
@@ -293,6 +426,31 @@ class Installer:
             # the first root listed wins; a mod that replaces the database goes last
             self.ini.add("cpk.root", value, where="first" if where == "top" and not p.warnings else None)
             self.rec["ini"].append(["cpk.root", value])
+
+    def do_world(self, p, where):
+        """a League Builder world: the folder under its own name (Switch on and the modules look
+        for livecpk\\<world>), and its world file into modules, where the modules read it"""
+        dst = os.path.join(self.game.livecpk_dir, p.name)
+        if os.path.exists(dst) and not os.path.exists(os.path.join(dst, ".modstudio")):
+            raise ValueError("a world called %s is in livecpk already (built on this PC?): remove or "
+                             "rename that folder first" % p.name)
+        self.copy_tree(p.src, dst)
+        own = os.path.join(dst, WORLD_FILE)
+        if p.world_file and not os.path.exists(own):
+            self.copy_file(p.world_file, own)
+        mark = os.path.join(dst, ".modstudio")
+        if not os.path.exists(mark):
+            with open(mark, "w", encoding="utf-8") as f:
+                f.write(self.name)
+            self.rec["created"].append(self.rel(mark))
+        value = ".\\livecpk\\" + p.name
+        if not self.ini.find("cpk.root", value):
+            self.ini.add("cpk.root", value, where="first")
+            self.rec["ini"].append(["cpk.root", value])
+        # the copy the modules read; Switch on makes the same one, this one is undone on removal
+        self.copy_file(own, os.path.join(self.game.modules_dir, WORLD_FILE))
+        self.rec["world"] = p.name
+        self.rec["face_players"] = face_players(own)
 
     def do_module(self, p, where):
         dst = os.path.join(self.game.modules_dir, os.path.basename(p.src))

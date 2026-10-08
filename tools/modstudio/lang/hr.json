@@ -1267,7 +1267,19 @@
   "in place of %s": "umjesto %s",
   "yes": "da",
   "%s (all %d stages)": "%s (sve faze: %d)",
-  "%d is a competition, but the game asks by its stages (%s): pick it again as \"all stages\"": "%d je natjecanje, ali igra pita po njegovim fazama (%s): odaberi ga ponovno kao \"sve faze\""
+  "%d is a competition, but the game asks by its stages (%s): pick it again as \"all stages\"": "%d je natjecanje, ali igra pita po njegovim fazama (%s): odaberi ga ponovno kao \"sve faze\"",
+  "League Builder world (switched on)": "Svijet League Buildera (uključuje se)",
+  "a League Builder world: it is switched on, its world file goes to modules\\fl26world.txt": "svijet League Buildera: uključuje se, a njegova datoteka svijeta ide u modules\\fl26world.txt",
+  "Mod Studio's modules with the face pack are not installed: the new players of this world will all look the same until you install them (League Builder > Build > 0. Install the modules).": "Moduli Mod Studija s paketom lica nisu postavljeni: svi novi igrači ovog svijeta izgledat će isto dok ih ne postaviš (League Builder > Izgradnja > 0. Postavi module).",
+  "%d new players of %s get a generated face from Mod Studio's face pack, which is not installed here. Without it they all look the same. Install Mod Studio's modules now?": "%d novih igrača svijeta %s dobiva generirano lice iz paketa lica Mod Studija, koji ovdje nije postavljen. Bez njega svi izgledaju isto. Postaviti module Mod Studija sada?",
+  "%s is installed, but switching it on stopped:": "%s je instaliran, ali uključivanje je stalo:",
+  "%s is not built yet: 2. Build the world first.": "%s još nije izgrađen: prvo 2. Izgradi svijet.",
+  "%s is the live world. Start the game and a new Master League career.": "%s je živi svijet. Pokreni igru i novu karijeru u Master ligi.",
+  "Export the world...": "Izvezi svijet...",
+  "Export the world": "Izvezi svijet",
+  "One .zip of the built world for another PC: the world folder, its world file with the players who get a generated face, and a read-me. The other PC installs it on Install mods and needs Mod Studio's modules (the face pack).": "Jedan .zip izgrađenog svijeta za drugo računalo: mapa svijeta, njegova datoteka svijeta s igračima koji dobivaju generirano lice, i upute. Drugo računalo ga instalira na Instaliraj modove i treba module Mod Studija (paket lica).",
+  "Open League Builder > Build and press 0. Install the modules, then 3. Switch it on.": "Otvori League Builder > Izgradnja i stisni 0. Postavi module, pa 3. Uključi ga.",
+  "Saved %s\n\n%d new players get a generated face (the newfaces / faceapp lines of the world file in the zip). Whoever installs it needs Mod Studio's modules with the face pack (League Builder > Build > 0. Install the modules); without them every new player looks the same. The zip has a read-me that says so.": "Spremljeno: %s\n\n%d novih igrača dobiva generirano lice (redovi newfaces / faceapp u datoteci svijeta u zipu). Tko ga instalira treba module Mod Studija s paketom lica (League Builder > Izgradnja > 0. Postavi module); bez njih svi novi igrači izgledaju isto. U zipu su upute koje to kažu."
  },
  "log": [
   [

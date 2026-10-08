@@ -14,7 +14,10 @@ from ..ui import Page, section, hint, row, ask, error, info, run_job
 
 ROW = Qt.UserRole
 KIND = {"root": "Content folder (livecpk)", "content": "Content server files", "module": "Lua module",
-        "cpk": "Packed .cpk (unpacked on install)", "pack": "League package", "dll": "DLL (not installed)"}
+        "cpk": "Packed .cpk (unpacked on install)", "pack": "League package", "dll": "DLL (not installed)",
+        "world": "League Builder world (switched on)"}
+NO_FACES = ("Mod Studio's modules with the face pack are not installed: the new players of this world "
+            "will all look the same until you install them (League Builder > Build > 0. Install the modules).")
 
 
 class Drop(QFrame):
@@ -142,9 +145,15 @@ class Install(Page):
         self.go.setEnabled(False)
         self.app.busy(True, _("Looking inside the mod"))
 
+        sider_dir = self.app.game.sider_dir
+
         def job(progress):
             top = I.unpack(path, self.work)
-            return I.detect(top, label)
+            parts = I.detect(top, label)
+            for p in parts:
+                if p.kind == "world" and I.face_players(p.world_file) and I.face_pack_missing(sider_dir):
+                    p.warnings.append(NO_FACES)
+            return parts
 
         run_job(job, self.looked, self.failed)
 
@@ -238,6 +247,8 @@ class Install(Page):
             self.what.setText(_("%s is installed.") % name)
             self.say(_("%s is installed: %d file(s) added, %d replaced (the old ones are kept).")
                      % (name, len(rec["created"]), len(rec["replaced"])), "ok")
+            if rec.get("world"):
+                self.world_on(rec)
 
         def failed(tb):
             self.app.busy(False)
@@ -245,6 +256,34 @@ class Install(Page):
             error(self, "Install mods", _("The install stopped:") + "\n\n" + tb.strip().splitlines()[-1] +
                   "\n\n" + _("What was done so far is in Restore points."))
         run_job(job, done, failed)
+
+    def world_on(self, rec):
+        """a League Builder world was installed: install Mod Studio's modules when the face pack
+        is missing (its new players' faces come from it), then switch the world on as Build's
+        Switch on does (sider.ini, the world file in modules, the world's own modules)"""
+        import leaguebuilder as B
+        from ..backups import snapshot
+        w, game = rec["world"], self.app.game
+        modules = rec.get("face_players") and I.face_pack_missing(game.sider_dir) and \
+            ask(self, "Install mods", _("%d new players of %s get a generated face from Mod Studio's face pack, "
+                                        "which is not installed here. Without it they all look the same. "
+                                        "Install Mod Studio's modules now?") % (rec["face_players"], w))
+        log = []
+        try:
+            snapshot(game.ini_path, "Install mods: switch on " + w, game.sider_dir)
+            if modules:
+                B.install_modules(game.folder, log=log.append)
+            B.switch_on(w, game.folder, log=log.append)
+        except Exception as e:                            # BuildError, a missing module pack
+            error(self, "Install mods", _("%s is installed, but switching it on stopped:") % w + "\n\n" + str(e)
+                  + "\n\n" + _("Open League Builder > Build and press 0. Install the modules, then 3. Switch it on."))
+            return
+        finally:
+            self.app.bus.ini_changed.emit()
+        if rec.get("face_players") and I.face_pack_missing(game.sider_dir):
+            info(self, "Install mods", _(NO_FACES))
+        else:
+            self.say(_("%s is the live world. Start the game and a new Master League career.") % w, "ok")
 
     # ---- installed ----
     def refresh(self):

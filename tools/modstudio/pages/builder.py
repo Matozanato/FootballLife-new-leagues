@@ -3531,6 +3531,13 @@ class Build(BuilderPage):
             bar.addWidget(b)
             self.steps.append(b)
         bar.addStretch(1)
+        b = QPushButton(_("Export the world..."))
+        b.setToolTip(_("One .zip of the built world for another PC: the world folder, its world file with the "
+                       "players who get a generated face, and a read-me. The other PC installs it on Install "
+                       "mods and needs Mod Studio's modules (the face pack)."))
+        b.clicked.connect(self.do_export)
+        bar.addWidget(b)
+        self.steps.append(b)
         one = QHBoxLayout()
         self.b_all = QPushButton(_("Build and install"))
         self.b_all.setObjectName("primary")
@@ -3992,3 +3999,34 @@ class Build(BuilderPage):
 
     def do_check(self):
         self.run(lambda log: B.check(self.app.game.folder, log=log))
+
+    def do_export(self):
+        """the built world as one zip for another PC (installer.export_world): its folder, its
+        world file (the newfaces / faceapp lines of the players who get a generated face) and a
+        read-me that says Mod Studio's modules with the face pack are needed"""
+        from .. import installer as I
+        w = self.project.recipe.get("world", "").strip()
+        sd = self.app.game.sider_dir
+        if not w or not os.path.isfile(os.path.join(sd, "livecpk", w, I.WORLD_FILE)):
+            error(self, "Export the world", _("%s is not built yet: 2. Build the world first.") % (w or "?"))
+            return
+        start = os.path.join(self.app.settings.get("export_dir", os.path.expanduser("~")), w + ".zip")
+        out, _f = QFileDialog.getSaveFileName(self, _("Export the world..."), start, "Zip (*.zip)")
+        if not out:
+            return
+        self.app.settings["export_dir"] = os.path.dirname(out)
+        got = {}
+
+        def go(log):
+            try:
+                got.update(I.export_world(sd, w, out, log=log))
+            except (OSError, ValueError) as e:
+                raise B.BuildError(str(e))
+
+        def done():
+            info(self, "Export the world",
+                 _("Saved %s\n\n%d new players get a generated face (the newfaces / faceapp lines of the world "
+                   "file in the zip). Whoever installs it needs Mod Studio's modules with the face pack "
+                   "(League Builder > Build > 0. Install the modules); without them every new player looks "
+                   "the same. The zip has a read-me that says so.") % (out, got.get("face_players", 0)))
+        self.run(go, background=True, done=done)

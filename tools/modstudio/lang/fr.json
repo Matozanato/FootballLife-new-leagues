@@ -1267,7 +1267,19 @@
   "in place of %s": "à la place de %s",
   "yes": "oui",
   "%s (all %d stages)": "%s (toutes les phases : %d)",
-  "%d is a competition, but the game asks by its stages (%s): pick it again as \"all stages\"": "%d est une compétition, mais le jeu demande par ses phases (%s) : choisissez-la à nouveau en \"toutes les phases\""
+  "%d is a competition, but the game asks by its stages (%s): pick it again as \"all stages\"": "%d est une compétition, mais le jeu demande par ses phases (%s) : choisissez-la à nouveau en \"toutes les phases\"",
+  "League Builder world (switched on)": "Monde League Builder (activé)",
+  "a League Builder world: it is switched on, its world file goes to modules\\fl26world.txt": "un monde League Builder : il est activé, son fichier de monde va dans modules\\fl26world.txt",
+  "Mod Studio's modules with the face pack are not installed: the new players of this world will all look the same until you install them (League Builder > Build > 0. Install the modules).": "Les modules de Mod Studio avec le pack de visages ne sont pas installés : les nouveaux joueurs de ce monde auront tous le même visage tant que vous ne les installez pas (League Builder > Construction > 0. Installer les modules).",
+  "%d new players of %s get a generated face from Mod Studio's face pack, which is not installed here. Without it they all look the same. Install Mod Studio's modules now?": "%d nouveaux joueurs de %s reçoivent un visage généré du pack de visages de Mod Studio, qui n'est pas installé ici. Sans lui, ils ont tous le même visage. Installer les modules de Mod Studio maintenant ?",
+  "%s is installed, but switching it on stopped:": "%s est installé, mais l'activation s'est arrêtée :",
+  "%s is not built yet: 2. Build the world first.": "%s n'est pas encore construit : d'abord 2. Construire le monde.",
+  "%s is the live world. Start the game and a new Master League career.": "%s est le monde actif. Lancez le jeu et une nouvelle carrière Master League.",
+  "Export the world...": "Exporter le monde...",
+  "Export the world": "Exporter le monde",
+  "One .zip of the built world for another PC: the world folder, its world file with the players who get a generated face, and a read-me. The other PC installs it on Install mods and needs Mod Studio's modules (the face pack).": "Un .zip du monde construit pour un autre PC : le dossier du monde, son fichier de monde avec les joueurs qui reçoivent un visage généré, et un lisez-moi. L'autre PC l'installe dans Installer des mods et a besoin des modules de Mod Studio (le pack de visages).",
+  "Open League Builder > Build and press 0. Install the modules, then 3. Switch it on.": "Ouvrez League Builder > Construction et cliquez sur 0. Installer les modules, puis 3. L'activer.",
+  "Saved %s\n\n%d new players get a generated face (the newfaces / faceapp lines of the world file in the zip). Whoever installs it needs Mod Studio's modules with the face pack (League Builder > Build > 0. Install the modules); without them every new player looks the same. The zip has a read-me that says so.": "Enregistré %s\n\n%d nouveaux joueurs reçoivent un visage généré (les lignes newfaces / faceapp du fichier de monde du zip). Qui l'installe a besoin des modules de Mod Studio avec le pack de visages (League Builder > Construction > 0. Installer les modules) ; sans eux, tous les nouveaux joueurs ont le même visage. Le zip contient un lisez-moi qui le dit."
  },
  "log": [
   [

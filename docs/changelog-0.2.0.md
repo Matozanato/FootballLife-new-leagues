@@ -91,6 +91,13 @@ world, about 1,000 matches a season).
   with the cup's initials.
 - **Editable kits (#112)**: new clubs now get real plain kits that you can paint in Edit (Paste
   Image). Before, they got the kits of team 0.
+- **Export the world** (Build page): one `.zip` of a built world for another PC. It always
+  carries the world file (`fl26world.txt`) with its `newfaces` / `faceapp` lines, the list of new
+  players who get a generated face, plus a read-me saying that Mod Studio's modules with the face
+  pack are needed. **Install mods** knows such a zip (or a copied `SiderAddons` folder with the
+  world file in `modules`): it puts the world file in `SiderAddons\modules`, offers to install the
+  modules when the face pack is missing, and switches the world on. Before, a world copied by hand
+  without that file gave every new player the same face.
 - Faces of players past the game's appearance table are drawn with their own face.
 - Crests and logos you add are cropped and scaled to fill the square.
 

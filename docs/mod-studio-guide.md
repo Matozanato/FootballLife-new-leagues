@@ -82,6 +82,7 @@ The program looks inside and lists each part: what it is and where it will go.
 | Lua module | Copied to `SiderAddons\modules` and switched on in the right place of the order. |
 | Packed .cpk | Unpacked into a content folder on install. |
 | League package | Added to your League Builder recipe (section 9). |
+| League Builder world | A built world from **Export the world** (section 9.1), or a copied `SiderAddons` folder with `modules\fl26world.txt`. The world folder is copied under its own name, its world file goes to `SiderAddons\modules`, and the world is switched on. |
 | DLL | **Not installed.** A DLL runs with the game's rights; install one only from a source you trust, by hand. |
 
 Give the mod a name, choose whether new content folders go on top (they win) or at the
@@ -575,6 +576,28 @@ to other packages and next to your own leagues. **Remove from the recipe** takes
 again, including the changes it made to the game's clubs.
 
 A league placed below one of the game's leagues works for everybody with the same game version.
+
+### 9.1 Export the world: a built world for another PC
+
+A package needs the other person to build. To hand over the world exactly as you built it,
+press **Export the world...** on the Build page (after **2. Build the world**). It saves one
+`.zip`:
+
+- `SiderAddons\livecpk\<world>\...`: the whole world folder, with its **world file**
+  `fl26world.txt`. The `newfaces` / `faceapp` lines in that file list the new players who get a
+  generated face. Without them every new player looks the same.
+- `READ ME - FL26 world.txt` and `fl26worldpack.json`: what the receiver needs.
+
+**The receiver needs Mod Studio's modules with the face pack** (`modules\fl26regen_faces.bin`):
+League Builder → Build → **0. Install the modules**, once. The faces come from that pack, so the
+zip does not carry them.
+
+To install it, drop the zip on **Install mods** and press **Install**. Mod Studio copies the world, puts
+`fl26world.txt` in `SiderAddons\modules` (where `fl26regen` reads it), offers to install the
+modules if the face pack is missing, and switches the world on. Then start a new Master League
+career. **Remove the mod** takes the world out again and puts the previous world file back.
+Mod Studio does not install over a world of the same name that was built on that PC: rename or
+remove that folder first.
 
 ## 10. Tools
 
