@@ -1,10 +1,14 @@
-# Native modules: fl26join.dll, fl26clubs.dll, fl26chain.dll and fl26swiss.dll
+# Native modules: fl26join, fl26clubs, fl26chain, fl26swiss, fl26regen and fl26edit
 
-Four modules here are compiled rather than written in Lua, because each of them has to run a
+Six modules here are compiled rather than written in Lua, because each of them has to run a
 few instructions of its own inside a live call, which is easier to get right in C than in
 hand-assembled bytes. In each case a Lua loader (`sider/fl26joindll.lua`,
 `sider/experimental/fl26clubs.lua`, `sider/experimental/fl26chain.lua`, `sider/experimental/fl26swiss.lua`) loads the DLL from `SiderAddons\modules\` at startup and
 hands it the configuration; the DLL does the rest.
+
+`fl26regen.dll` (regen names, potential and faces) and `fl26edit.dll` (the Edit mode lists) work
+the same way, through `fl26regen.lua` and `fl26edit.lua`. Every export, hook and status code of
+all six is in [docs/fork/modules.md](../../docs/fork/modules.md).
 
 - **`fl26join.dll`** hooks eight functions so that added leagues are registered into a
   Master League season and closed again at the end of it, the way the shipped leagues are.
@@ -39,15 +43,20 @@ None has third-party code or any network access.
 
 ## The shipped binaries
 
+Mod Studio 0.2.0 ships all six in its module pack (`pack/modules/` in the zip), built from the
+source in this folder at the 0.2.0 commit:
+
 | file | SHA-256 |
 |---|---|
-| `sider/fl26join.dll` | `f1235180fa83b3d5a166a257468cf1085c336efbcf02fc94cba86bc147c5d311` |
-| `sider/experimental/fl26clubs.dll` | `ddd572832ec68eec36bbaf18eba4cdc1e1c8341c6da40114bb61a3a8637cd943` |
-| `sider/experimental/fl26chain.dll` | `4425f3fceee9a7a4fc8cb03234745280644dd6240aa9b072f87a474b99d7bb67` |
-| `sider/experimental/fl26swiss.dll` | `074494fd2ec5be271ec49c7e13106fcf10ce44d45025c1f32e01193cba9c80a3` |
+| `fl26join.dll` | `279475866af983a6c9147f212c08afa578c4830930f61c330944b86139f51477` |
+| `fl26clubs.dll` | `62ba844d117291854814ea21f47b2677590eed89fc7b53d968cc3223ef882935` |
+| `fl26chain.dll` | `4d02be33e8d99a299842c8f55dfe4eef82cc85bd17e83afa55dabbe4097d44c4` |
+| `fl26swiss.dll` | `ed196168247ff32f20acd40306f7dbe1f62e7d8291f277e030bd878fba175abc` |
+| `fl26regen.dll` | `234edc1def515f565a72bd07dffcd746bbb251fbe2cae4a2aa54a32f07a7ff68` |
+| `fl26edit.dll` | `fd3787f66ef7f5b030f43fb694651d5ae99081fef3fe258814c638c6e046b53d` |
 
 ```powershell
-(Get-FileHash "C:\fl26\sider\fl26join.dll" -Algorithm SHA256).Hash
+(Get-FileHash ".\pack\modules\fl26join.dll" -Algorithm SHA256).Hash
 ```
 
 If you would rather not run a binary you did not build, build it yourself; each is a plain
