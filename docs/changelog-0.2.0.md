@@ -196,6 +196,18 @@ world, about 1,000 matches a season).
   scheduling; `sider.log` says "day lists --").
 - The old Edit save warning now says that it also hides new clubs from Other European.
 - Team ID shows "at Build" for a club that gets its id when you Build.
+- **Starting elevens**: NewLife lists a squad by position, goalkeepers first, and the game took
+  the first eleven of that list as the line-up, so a second or third goalkeeper played centre
+  back (and in some clubs a defender went in goal). Build now picks every club's eleven for its
+  formation, never a goalkeeper outside goal while there is another choice, and a club with
+  fewer than two goalkeepers or 18 players signs free agents of about its level.
+- **New clubs' followers and money**: new clubs had the game's first record's followers (millions
+  for a village club) and TV money as if unranked. They now get followers and a budget by their
+  size (NewLife where it has them, else the division).
+- **Libertadores places of February-December leagues** came from the table half-way through the
+  next season (#119). The final table is now kept at New Year.
+- Mod Studio could close when clubs were unticked on the NewLife page while it was still busy
+  (#120).
 
 ## Known issues
 
@@ -205,7 +217,6 @@ See [known-issues.md](known-issues.md). Most important:
 - European qualifying is the second and third qualifying round and the play-off, in August
   after the season is built (5 August). There is no first qualifying round, and the second and
   third qualifying rounds are later than the real July ones.
-- The hub's "Next" strip does not show European matches yet.
 - Clubs of new African, North American and Oceanian leagues keep the objective the game picks:
   the game has no board objective for those cups.
 - The Club World Cup is the game's own (every season, mid-December), with the champions of the
