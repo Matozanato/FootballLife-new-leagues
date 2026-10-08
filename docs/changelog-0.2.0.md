@@ -117,6 +117,8 @@ world, about 1,000 matches a season).
 
 ## Fixes
 
+- The league phase of the Champions League, Europa League and Conference League was called
+  "Group A" and "Group stage" on some screens. It now says "League Phase".
 - Match Results showed "Group stage - Matchday 54" for the Champions League, Europa League
   and Conference League play-offs and qualifying rounds. They now show as play-offs (fix by
   n1ne).
