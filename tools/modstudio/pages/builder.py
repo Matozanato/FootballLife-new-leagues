@@ -2105,10 +2105,16 @@ class BuilderPage(Page):
         self.project = app.project
         self.project.tables_changed.connect(self._tables)
 
-    def need_tables(self):
+    def need_tables(self, offer=False):
+        """True when there are no game tables; offer: also ask to open Settings (an action that needs them)"""
         if self.project.base is None:
             self.say(_("The League Builder needs the game's tables: Settings > Unpack the game's tables "
                        "(once, and again after a game update)."), "warn")
+            if offer and ask(self, "Game tables", _(
+                    "Mod Studio has no game tables on this PC yet (the game's list of clubs, leagues and "
+                    "players). It needs them once on every PC, and again after a game update.\n\n"
+                    "Open Settings and click \"Unpack the game's tables\" now?")):
+                self.app.open_page("Settings")
             return True
         return False
 
@@ -2278,7 +2284,7 @@ class NewLeagues(BuilderPage):
         return it.data(0, Qt.UserRole) if it else None
 
     def add(self):
-        if self.need_tables():
+        if self.need_tables(True):
             return
         d = LeagueDialog(self, self.project)
         if d.finish():
@@ -2287,7 +2293,7 @@ class NewLeagues(BuilderPage):
 
     def add_lower(self):
         """a league under the selected one, filled in from it: only the name is left to give"""
-        if self.need_tables():
+        if self.need_tables(True):
             return
         i = self.selected()
         if i is None:
@@ -2370,7 +2376,7 @@ class NewLeagues(BuilderPage):
             self.project.touch()
 
     def competition_names(self):
-        if self.need_tables():
+        if self.need_tables(True):
             return
         d = CompetitionNamesDialog(self, self.project)
         if d.finish():
@@ -2391,7 +2397,7 @@ class NewLeagues(BuilderPage):
             self.project.touch()
 
     def game_europe(self):
-        if self.need_tables():
+        if self.need_tables(True):
             return
         d = GameEuropeDialog(self, self.project)
         if d.finish():
@@ -2402,7 +2408,7 @@ class NewLeagues(BuilderPage):
             self.project.touch()
 
     def europe_first(self):
-        if self.need_tables():
+        if self.need_tables(True):
             return
         d = EuropeFirstDialog(self, self.project)
         if d.finish():
@@ -2413,7 +2419,7 @@ class NewLeagues(BuilderPage):
             self.project.touch()
 
     def uefa_rank(self):
-        if self.need_tables():
+        if self.need_tables(True):
             return
         d = UefaRankDialog(self, self.project)
         if d.finish():
@@ -2426,7 +2432,7 @@ class NewLeagues(BuilderPage):
         SouthAmericaDialog(self, self.project).finish()
 
     def league_order(self):
-        if self.need_tables():
+        if self.need_tables(True):
             return
         d = LeagueOrderDialog(self, self.project)
         if d.finish():
@@ -2437,7 +2443,7 @@ class NewLeagues(BuilderPage):
             self.project.touch()
 
     def game_seasons(self):
-        if self.need_tables():
+        if self.need_tables(True):
             return
         d = GameSeasonsDialog(self, self.project)
         if d.finish():
@@ -2449,7 +2455,7 @@ class NewLeagues(BuilderPage):
             self.project.touch()
 
     def game_cups(self):
-        if self.need_tables():
+        if self.need_tables(True):
             return
         d = GameCupsDialog(self, self.project)
         if d.finish():

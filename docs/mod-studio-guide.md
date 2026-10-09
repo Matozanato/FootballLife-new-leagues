@@ -33,7 +33,9 @@ The window is in English. **Settings → Language** switches it to Croatian (Hrv
    The line under it says whether `SiderAddons\sider.ini` was found.
 2. If you want new leagues or player changes: **Settings → Unpack the game's tables**. It
    reads the game's clubs, leagues and players into a working folder (a few seconds). Do it
-   again only after a game update; Build notices one (0.1.9) and offers to unpack again first.
+   again only after a game update; Build notices one (0.1.9) and offers to unpack again first. It is needed once on every PC (a
+   package or a new world asks for it, and offers to open Settings). **Use another tables folder**
+   only if you already have an unpacked `pesdb` folder (Team.bin, Competition.bin ...).
 3. Open **Overview**. It shows your setup at a glance and lists problems. Double-click a
    problem to open the page that fixes it.
 

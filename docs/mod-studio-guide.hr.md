@@ -34,7 +34,9 @@ Prozor je na engleskom. **Settings → Language → Hrvatski** ga prebaci na hrv
    razinu dublje (`sider\patch 1` ...); ako ih ima više, **Settings → Sider folder** bira s kojim program radi.
 2. Ako želiš nove lige ili promjene igrača: **Postavke → Raspakiraj tablice igre**. Pročita
    klubove, lige i igrače igre u radnu mapu (par sekundi). Ponovi samo nakon nadogradnje igre;
-   Build je sam primijeti (0.1.9) i ponudi da prvo opet raspakira.
+   Build je sam primijeti (0.1.9) i ponudi da prvo opet raspakira. Treba jednom na svakom
+   PC-u (paket ili novi svijet to traže i ponude otvoriti Postavke). **Koristi drugu mapu s
+   tablicama** samo ako već imaš raspakiranu `pesdb` mapu (Team.bin, Competition.bin ...).
 3. Otvori **Pregled**. Pokazuje cijelu postavu na jednom mjestu i popis problema. Dvoklik na
    problem otvara stranicu koja ga rješava.
 

@@ -228,7 +228,7 @@ class NewLife(BuilderPage):
         self.project.changed.connect(self.count)
 
     def shown(self):
-        if self.need_tables():
+        if self.need_tables(True):
             return
         if self.room is None:
             self.room = B.clubs_room(self.project.base)

@@ -38,7 +38,10 @@ La fenêtre est en anglais. **Settings → Language → Français** la passe en 
 2. Si vous voulez de nouvelles ligues ou des modifications de joueurs : **Réglages → Extraire les
    tables du jeu**. Le programme lit les clubs, ligues et joueurs du jeu dans un dossier de
    travail (quelques secondes). À refaire seulement après une mise à jour du jeu ;
-   Build la remarque (0.1.9) et propose d'abord une nouvelle extraction.
+   Build la remarque (0.1.9) et propose d'abord une nouvelle extraction. Il le faut une fois
+   sur chaque PC (un paquet ou un nouveau monde le demande et propose d'ouvrir les Réglages).
+   **Utiliser un autre dossier de tables** seulement si vous avez déjà un dossier `pesdb` extrait
+   (Team.bin, Competition.bin ...).
 3. Ouvrez **Vue d'ensemble**. Elle montre votre configuration en un coup d'œil et liste les
    problèmes. Double-cliquez sur un problème pour ouvrir la page qui le corrige.
 

@@ -243,6 +243,8 @@ class Packages(BuilderPage):
 
     # ---- actions ----
     def add_pack(self, path=None):
+        if self.need_tables(True):
+            return
         if not path:
             path, _f = QFileDialog.getOpenFileName(self, _("Add a league package"),
                                                    self.app.settings.get("pack_dir", ""), _(FILTER))

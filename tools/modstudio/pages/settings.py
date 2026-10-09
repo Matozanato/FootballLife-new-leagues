@@ -47,8 +47,10 @@ class Settings(Page):
         self.lang.currentIndexChanged.connect(self.set_lang)
         form.addRow(_("Language"), row(self.lang))
         form.addRow(section("League Builder"), QLabel(""))
-        form.addRow("", hint(_("The League Builder reads the game's own tables (clubs, leagues, players). "
-                               "Unpack them once from your game; do it again after a game update.")))
+        form.addRow("", hint(_("Mod Studio needs the game's tables (its list of clubs, leagues and players) once "
+                               "on every PC, and again after a game update. Click Unpack the game's tables. Use "
+                               "another tables folder only if you already have an unpacked pesdb folder (Team.bin, "
+                               "Competition.bin ...).")))
         self.tables = QLabel("")
         self.tables.setWordWrap(True)
         self.unpack_btn = QPushButton(_("Unpack the game's tables"))
@@ -175,4 +177,6 @@ class Settings(Page):
             self.app.settings.pop("tables", None)
             error(self, "Settings", _("No game tables in that folder."))
             p.load_tables()
+        else:
+            info(self, "Settings", _("Tables loaded: %d clubs, %d leagues.") % (len(p.game_cl), len(p.game_lgs)))
         self.refresh()

@@ -37,7 +37,9 @@ La ventana está en inglés. **Settings → Language → Español** la pasa a es
 2. Si quieres ligas nuevas o cambios de jugadores: **Ajustes → Desempaquetar las tablas del
    juego**. Lee los clubes, ligas y jugadores del juego en una carpeta de trabajo (unos
    segundos). Solo hay que repetirlo tras una actualización del juego;
-   Build la nota (0.1.9) y ofrece desempaquetar de nuevo primero.
+   Build la nota (0.1.9) y ofrece desempaquetar de nuevo primero. Hace falta una vez en
+   cada PC (un paquete o un mundo nuevo lo piden y ofrecen abrir Ajustes). **Usar otra carpeta
+   de tablas** solo si ya tienes una carpeta `pesdb` desempaquetada (Team.bin, Competition.bin ...).
 3. Abre **Resumen**. Muestra tu configuración de un vistazo y una lista de problemas. Haz doble
    clic en un problema para abrir la página que lo arregla.
 
