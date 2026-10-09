@@ -3818,22 +3818,41 @@ def ccup_options(line, cup):
     return "%s %s%s%s" % (head, " ".join(words), sep, name)
 
 
+def have_picture(path, name, log, what="crest", instead="drawn badge"):
+    """the picture file at `path` when there is one, else None and one line of the log.
+
+    A recipe made on another PC keeps that PC's picture paths, so the file may not be here any
+    more.  A picture that is gone is treated as the recipe's empty field: the club gets the
+    drawn badge with its initials (or the shield of its shirt), the league, cup or competition
+    the drawn emblem, the country no flag of ours.  Build stopped with a FileNotFoundError in
+    lbassets.square() before (0.2.1)."""
+    if not path or os.path.isfile(path):
+        return path
+    log("  %s picture not found, %s instead: %s (%s)" % (what, instead, name, path))
+    return None
+
+
 def pictures(pl, root, base, log=print):
     """league logos, club crests and kits for the new leagues (tools/lbassets.py)"""
     import lbassets
-    flags = {}
+    flags, done = {}, set()
     for p in pl["leagues"] + (pl.get("others") or []):
         if not p.get("others"):              # clubs in no league: no competition, no logo
-            lbassets.league_logo(root, p["cid"], p["name"], p.get("logo"))
-        if p.get("flag") and p["country"] not in flags:
-            flags[p["country"]] = p["flag"]
-            lbassets.country_flag(root, p["country"], p["flag"])
+            lbassets.league_logo(root, p["cid"], p["name"],
+                                 have_picture(p.get("logo"), p["name"], log, "logo", "drawn emblem"))
+        if p.get("flag") and p["country"] not in done:
+            done.add(p["country"])
+            flag = have_picture(p["flag"], p["name"], log, "flag", "the game's flag kept")
+            if flag:                         # no flag picture: the game's own flag stays
+                flags[p["country"]] = flag
+                lbassets.country_flag(root, p["country"], flag)
         crests, kits = p.get("club_crests") or [], p.get("club_kits") or []
         gp = game_places(p)
         for k, tid in enumerate(p["teams"]):
             if k in gp:                      # a club of the game keeps its crest
                 continue
             pic = crests[k] if k < len(crests) else None
+            pic = have_picture(pic, club_name(p, k), log)
             lbassets.club_crest(root, tid, p["abbrs"][k], pic, kits[k] if k < len(kits) else None)
         for g in gp.values():                # a new club taking a game club's place: a badge
             if isinstance(g.get("swap"), dict) and g.get("swap_id"):
@@ -3845,16 +3864,21 @@ def pictures(pl, root, base, log=print):
             if not cid_of:
                 cid_of = {r: c for r, c, _, _ in game_leagues(base)}
             if int(rid) in cid_of:
-                lbassets.league_logo(root, cid_of[int(rid)], v.get("name") or "", v["logo"])
+                lbassets.league_logo(root, cid_of[int(rid)], v.get("name") or "",
+                                     have_picture(v["logo"], v.get("name") or "league %s" % rid, log,
+                                                  "logo", "drawn emblem"))
     for cid, v in (e.get("competitions") or {}).items():
         if v.get("logo"):
-            lbassets.league_logo(root, int(cid), v.get("name") or "", v["logo"])
+            lbassets.league_logo(root, int(cid), v.get("name") or "",
+                                 have_picture(v["logo"], v.get("name") or "competition %s" % cid, log,
+                                              "logo", "drawn emblem"))
     for tid, v in (e.get("clubs") or {}).items():
         if v.get("crest"):
-            lbassets.club_crest(root, int(tid), "", v["crest"])
+            lbassets.club_crest(root, int(tid), "",
+                                have_picture(v["crest"], v.get("name") or tid, log))
     cups = cup_emblems(pl)
     for cid, name, logo in cups:
-        lbassets.league_logo(root, cid, name, logo)
+        lbassets.league_logo(root, cid, name, have_picture(logo, name, log, "logo", "drawn emblem"))
     log("  %d league logos, %d cup logos, %d club crests%s" % (
         len(pl["leagues"]), len(cups), sum(len(p["teams"]) - len(game_places(p))
                                            for p in pl["leagues"] + (pl.get("others") or [])),
