@@ -6,7 +6,7 @@ and sider/fl26caps.template.lua. Editing it by hand loses the guarantee that eve
 below came from disassembling the instruction at that address.
 
 Set:     teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar
-Summary: block 0x1877068 -> 0x3d9cbe8, 3520 patches
+Summary: block 0x1877068 -> 0x3d9cbe8, 3502 patches
 
 What it does, and the one rule it follows: read every target address first and compare it
 against the bytes the generator saw in the exe; only if all of them match does it write
@@ -733,8 +733,6 @@ local patches = {
   {va=0x140fc2f13, old="c4020000", new="c4060000", why="day stride: 0x2c4 -> 0x6c4 (imul r13, rax, 0x2c4)"},
   {va=0x140fc2f26, old="30020000", new="30060000", why="the day's count moves: +0x230 -> +0x630 (cmp r10w, word ptr [r13 + 0x230])"},
   {va=0x140fc2f33, old="18010000", new="18030000", why="ids a day holds: 280 -> 792 (cmp r12d, 0x118)"},
-  {va=0x140fc2ffd, old="44020000", new="44060000", why="event slot moves: +0x244 -> +0x644 (lea rdx, [rdi + 0x244])"},
-  {va=0x140fc300c, old="44020000", new="44060000", why="event slot moves: +0x244 -> +0x644 (lea rdx, [rdi + 0x244])"},
   {va=0x140fc3126, old="30020000", new="30060000", why="the day's count moves: +0x230 -> +0x630 (movzx eax, word ptr [r13 + 0x230])"},
   {va=0x140fc313d, old="a8386001", new="70708701", why="calendar base: 0x16038a8 -> 0x1877070 (lea r9, [rbp + 0x16038a8])"},
   {va=0x140fc3148, old="78f10300", new="78a50900", why="past the calendar, which is now longer: +0x3f178 -> +0x9a578 (movzx eax, word ptr [r9 + 0x3f178])"},
@@ -763,19 +761,12 @@ local patches = {
   {va=0x1412804fd, old="30020000", new="30060000", why="the day's count moves: +0x230 -> +0x630 (cmp r15w, word ptr [r14 + 0x230])"},
   {va=0x141280505, old="18010000", new="18030000", why="ids a day holds: 280 -> 792 (cmp esi, 0x118)"},
   {va=0x141280572, old="30020000", new="30060000", why="the day's count moves: +0x230 -> +0x630 (movzx eax, word ptr [r14 + 0x230])"},
-  {va=0x14128068c, old="44020000", new="44060000", why="event slot moves: +0x244 -> +0x644 (lea rcx, [rsi + 0x244])"},
-  {va=0x14128069a, old="44020000", new="44060000", why="event slot moves: +0x244 -> +0x644 (lea rcx, [rsi + 0x244])"},
-  {va=0x14128089c, old="44020000", new="44060000", why="event slot moves: +0x244 -> +0x644 (lea rcx, [rsi + 0x244])"},
-  {va=0x1412808aa, old="44020000", new="44060000", why="event slot moves: +0x244 -> +0x644 (lea rcx, [rsi + 0x244])"},
-  {va=0x14128117b, old="44020000", new="44060000", why="event slot moves: +0x244 -> +0x644 (lea rcx, [r14 + 0x244])"},
-  {va=0x141281189, old="44020000", new="44060000", why="event slot moves: +0x244 -> +0x644 (lea rcx, [r14 + 0x244])"},
   {va=0x14129d582, old="a8386001", new="70708701", why="calendar base: 0x16038a8 -> 0x1877070 (lea rbx, [r13 + 0x16038a8])"},
   {va=0x14129d588, old="7cf10300", new="7ca50900", why="past the calendar, which is now longer: +0x3f17c -> +0x9a57c (mov eax, dword ptr [rbx + 0x3f17c])"},
   {va=0x14129d5bb, old="c4020000", new="c4060000", why="day stride: 0x2c4 -> 0x6c4 (imul rdi, rcx, 0x2c4)"},
   {va=0x14129d5c9, old="30020000", new="30060000", why="the day's count moves: +0x230 -> +0x630 (cmp r12w, word ptr [rdi + 0x230])"},
   {va=0x14129d5d5, old="18010000", new="18030000", why="ids a day holds: 280 -> 792 (cmp ebx, 0x118)"},
   {va=0x14129d631, old="30020000", new="30060000", why="the day's count moves: +0x230 -> +0x630 (movzx eax, word ptr [rdi + 0x230])"},
-  {va=0x14129fbbb, old="51020000", new="51060000", why="event slot moves: +0x251 -> +0x651 (movzx ecx, byte ptr [rax + 0x251])"},
   {va=0x1412a06b4, old="a8386001", new="70708701", why="calendar base: 0x16038a8 -> 0x1877070 (lea r12, [r15 + 0x16038a8])"},
   {va=0x1412a06c0, old="78f10300", new="78a50900", why="past the calendar, which is now longer: +0x3f178 -> +0x9a578 (cmp si, word ptr [r12 + 0x3f178])"},
   {va=0x1412a06e4, old="c4020000", new="c4060000", why="day stride: 0x2c4 -> 0x6c4 (imul rdi, rax, 0x2c4)"},
@@ -838,7 +829,6 @@ local patches = {
   {va=0x1412f4565, old="a8386001", new="70708701", why="calendar base: 0x16038a8 -> 0x1877070 (lea rcx, [r12 + 0x16038a8])"},
   {va=0x1412f5b27, old="a8386001", new="70708701", why="calendar base: 0x16038a8 -> 0x1877070 (lea rcx, [rbx + 0x16038a8])"},
   {va=0x1412f6ad2, old="a8386001", new="70708701", why="calendar base: 0x16038a8 -> 0x1877070 (lea rcx, [rdi + 0x16038a8])"},
-  {va=0x1412f9046, old="b0020000", new="b0060000", why="event slot moves: +0x2b0 -> +0x6b0 (lea rbx, [rax + 0x2b0])"},
   {va=0x1412f90c8, old="a8386001", new="70708701", why="calendar base: 0x16038a8 -> 0x1877070 (lea r12, [rdi + 0x16038a8])"},
   {va=0x1412f90d1, old="74f10300", new="74a50900", why="past the calendar, which is now longer: +0x3f174 -> +0x9a574 (movzx eax, word ptr [r12 + 0x3f174])"},
   {va=0x1412f90df, old="c4020000", new="c4060000", why="day stride: 0x2c4 -> 0x6c4 (imul rcx, rax, 0x2c4)"},
@@ -909,15 +899,11 @@ local patches = {
   {va=0x141321296, old="c4020000", new="c4060000", why="day stride: 0x2c4 -> 0x6c4 (imul rcx, rax, 0x2c4)"},
   {va=0x1413212a7, old="30020000", new="30060000", why="the day's count moves: +0x230 -> +0x630 (cmp ax, word ptr [r12 + 0x230])"},
   {va=0x1413212b4, old="18010000", new="18030000", why="ids a day holds: 280 -> 792 (cmp r15d, 0x118)"},
-  {va=0x141321379, old="44020000", new="44060000", why="event slot moves: +0x244 -> +0x644 (lea rdx, [rsi + 0x244])"},
-  {va=0x141321387, old="44020000", new="44060000", why="event slot moves: +0x244 -> +0x644 (lea rdx, [rsi + 0x244])"},
   {va=0x14132149f, old="30020000", new="30060000", why="the day's count moves: +0x230 -> +0x630 (movzx eax, word ptr [r12 + 0x230])"},
   {va=0x141321838, old="a8386001", new="70708701", why="calendar base: 0x16038a8 -> 0x1877070 (lea rbx, [r14 + 0x16038a8])"},
   {va=0x14132184d, old="c4020000", new="c4060000", why="day stride: 0x2c4 -> 0x6c4 (imul rcx, rax, 0x2c4)"},
   {va=0x141321863, old="30020000", new="30060000", why="the day's count moves: +0x230 -> +0x630 (cmp r12w, word ptr [rbx + 0x230])"},
   {va=0x141321879, old="18010000", new="18030000", why="ids a day holds: 280 -> 792 (cmp edx, 0x118)"},
-  {va=0x1413219c9, old="44020000", new="44060000", why="event slot moves: +0x244 -> +0x644 (lea rsi, [r13 + 0x244])"},
-  {va=0x1413219d8, old="44020000", new="44060000", why="event slot moves: +0x244 -> +0x644 (lea rsi, [r13 + 0x244])"},
   {va=0x141321d96, old="30020000", new="30060000", why="the day's count moves: +0x230 -> +0x630 (movzx eax, word ptr [rbx + 0x230])"},
   {va=0x141330231, old="a8386001", new="70708701", why="calendar base: 0x16038a8 -> 0x1877070 (lea r14, [r15 + 0x16038a8])"},
   {va=0x141330350, old="c4020000", new="c4060000", why="day stride: 0x2c4 -> 0x6c4 (imul rsi, rax, 0x2c4)"},
@@ -1063,12 +1049,8 @@ local patches = {
   {va=0x141525273, old="c4020000", new="c4060000", why="day stride: 0x2c4 -> 0x6c4 (imul rdx, rax, 0x2c4)"},
   {va=0x14152528c, old="30020000", new="30060000", why="the day's count moves: +0x230 -> +0x630 (cmp si, word ptr [rdx + 0x230])"},
   {va=0x1415252a2, old="18010000", new="18030000", why="ids a day holds: 280 -> 792 (cmp ecx, 0x118)"},
-  {va=0x1415254ce, old="57020000", new="57060000", why="event slot moves: +0x257 -> +0x657 (movzx eax, byte ptr [r13 + 0x257])"},
-  {va=0x141526414, old="51020000", new="51060000", why="event slot moves: +0x251 -> +0x651 (movzx r8d, byte ptr [r13 + 0x251])"},
-  {va=0x1415264c7, old="48020000", new="48060000", why="event slot moves: +0x248 -> +0x648 (mov byte ptr [rax + r13 + 0x248], 0xff)"},
   {va=0x14152650c, old="30020000", new="30060000", why="the day's count moves: +0x230 -> +0x630 (movzx eax, word ptr [rdx + 0x230])"},
   {va=0x1415265f9, old="a8386001", new="70708701", why="calendar base: 0x16038a8 -> 0x1877070 (lea rbx, [r15 + 0x16038a8])"},
-  {va=0x141526d6f, old="51020000", new="51060000", why="event slot moves: +0x251 -> +0x651 (movzx ecx, byte ptr [rsi + 0x251])"},
   {va=0x1415429d6, old="a8386001", new="70708701", why="calendar base: 0x16038a8 -> 0x1877070 (lea r14, [r15 + 0x16038a8])"},
   {va=0x1415429eb, old="c4020000", new="c4060000", why="day stride: 0x2c4 -> 0x6c4 (imul rcx, rax, 0x2c4)"},
   {va=0x141542a06, old="30020000", new="30060000", why="the day's count moves: +0x230 -> +0x630 (cmp si, word ptr [r14 + 0x230])"},
@@ -3663,7 +3645,7 @@ function m.init(ctx)
   -- in doubt; the check was.
 
   if failed == 0 then
-    log(string.format("fl26caps: applied all %d patches -- %s", written, "block 0x1877068 -> 0x3d9cbe8, 3519 patches"))
+    log(string.format("fl26caps: applied all %d patches -- %s", written, "block 0x1877068 -> 0x3d9cbe8, 3501 patches"))
   else
     log(string.format("fl26caps: PARTIAL: %d written, %d failed. The game is now in an "
                       .. "inconsistent state -- quit and report the addresses above.",

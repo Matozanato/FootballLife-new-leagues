@@ -413,6 +413,7 @@ SPLIT_MAX_ROUNDS = 46                    # a split's rounds, both phases: the Ch
 CCUP_DAYS = [327, 334, 26, 33, 40, 47, 75, 82, 96, 103, 117, 124, 138,
              328, 335, 27, 34, 41, 48, 76, 83, 97, 104, 118, 125, 139]
 PLAYOFF_SIZES = (8, 4)
+SHARED_SLOT_REG = 49                     # shares Select Team slot 49 with the Copa Libertadores (177)
 SEASON_TURN = 182                        # the season's July turn: day-of-year order starts here
 # The Kick Off and Edit team lists are ordered by a fixed list of 89 slots in the exe (0x1427d5920,
 # read by 0x140ead990): a slot that is not on it sorts last, after Classic Teams -- Peru on slot 49
@@ -1307,23 +1308,32 @@ def plan(recipe, base):
             left.remove(r)
     # leagues with European places next: of the ids as good as the first one left (a slot of
     # their own), the one whose days clash least with the European ones (GitHub #54)
+    # a split season stays off reg 49: its Select Team slot is the Copa Libertadores' too
+    # (competition 177, fl26comptab), and a Master League made with Uruguay's Apertura/Clausura
+    # there crashed while the same split on reg 76 did not (GitHub #122, Discord 09.10.)
+    ok = lambda i, r: not (r == SHARED_SLOT_REG and (leagues[i].get("split") or leagues[i].get("apertura")))
     for i in order:
         L = leagues[i]
-        if i in rid_of or not L.get("europe") or not left:
+        if i in rid_of or not L.get("europe") or not [r for r in left if ok(i, r)]:
             continue
         rounds = rounds_of(int(L.get("clubs", 0) or 0)) * int(L.get("legs", 2) or 2)
         # European days first: a clash with a league-cup date only breaks a tie (#54: an 18-club
         # league with a league cup took reg 98, 3 European clashes, to dodge two cup dates)
         cup = set(LEAGUE_KO_DAYS) if L.get("league_cup") else set()
-        best = fl26world.id_rank(left[0])
-        r = min((r for r in left if fl26world.id_rank(r) == best),
+        mine = [r for r in left if ok(i, r)]
+        best = fl26world.id_rank(mine[0])
+        r = min((r for r in mine if fl26world.id_rank(r) == best),
                 key=lambda r: (len(set(league_days(r, rounds)) & EURO_DAYS),
                                len(set(league_days(r, rounds)) & cup), left.index(r)))
         rid_of[i] = r
         left.remove(r)
     for i in order:
         if i not in rid_of:
-            rid_of[i] = left.pop(0)
+            r = next((r for r in left if ok(i, r)), None)
+            if r is None:
+                raise BuildError("%s: no free regulation id for a split season" % names[i])
+            rid_of[i] = r
+            left.remove(r)
     for k, i in enumerate(order):
         L = leagues[i]
         name = names[i]
@@ -3114,8 +3124,9 @@ def build(pl, base, game, replace=False, log=print):
     except lbplayers.Error as e:
         raise BuildError(str(e))
     fans = club_money(new_of, pl, db, log)
-    lbplayers.sign_keepers(db, log)
-    lbplayers.line_up(db, base, recipe_ordered(filled, clubs), log)
+    if os.path.exists(os.path.join(db, "Player.bin")):   # a world of cups only keeps the game's players
+        lbplayers.sign_keepers(db, log)
+        lbplayers.line_up(db, base, recipe_ordered(filled, clubs), log)
     if ids:                                            # for Mod Studio's Players page and its CSV
         with open(os.path.join(tmp, PLAYER_IDS), "w", encoding="utf-8") as f:
             json.dump({"world": pl["world"], "clubs": ids}, f, indent=1, sort_keys=True)
