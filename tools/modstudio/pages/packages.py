@@ -70,6 +70,8 @@ class MakeDialog(QDialog):
                   "crests": _("Crests and league logos"),
                   "managers": _("Managers"),
                   "kits": _("Kit colours"),
+                  "kitfiles": _("Kits (the Kit Server kits of the clubs)"),
+                  "scoreboards": _("Scoreboards (the Scoreboard Server scoreboard of each league)"),
                   "stadiums": _("Home stadiums (the Stadium Server line, not the stadium itself)")}
         self.parts = {}
         for k in K.PARTS:
@@ -282,10 +284,11 @@ class Packages(BuilderPage):
         meta["made_with"] = "FL26 Mod Studio %s" % VERSION
         leagues, edits = d.picked(), d.edits.isChecked()
         parts = [k for k, b in d.parts.items() if b.isChecked() and b.isEnabled()]
+        sider = getattr(self.app.game, "sider_dir", None) if self.app.game else None
         self.app.busy(True, _("Making the package"))
 
         def job(progress):
-            return K.export(r, out, meta, leagues, edits, log=progress, parts=parts)
+            return K.export(r, out, meta, leagues, edits, log=progress, parts=parts, sider=sider)
 
         def done(man):
             self.app.busy(False)

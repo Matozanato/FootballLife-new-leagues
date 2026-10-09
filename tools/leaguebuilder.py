@@ -1359,6 +1359,8 @@ def plan(recipe, base):
              "club_kits": list(L.get("club_kits") or []),     # shirt words (shieldcrest) for crests
              "club_away_kits": list(L.get("club_away_kits") or []),   # and for picking kits (mkkits)
              "newlife": {"clubs": [int(i) for i in (L.get("newlife") or {}).get("clubs") or []]},
+             "kit_folders": list(L.get("kit_folders") or []),     # Kit Server folders and the
+             "scoreboard": L.get("scoreboard") or None,           # Scoreboard Server one (lbservers)
              "exchange": int(L.get("exchange", 3)), "above": None, "tier": 1,
              "real_calendar": L.get("real_calendar"),     # realcal.py: dates, or false for none
              "europe": [[int(a), int(b)] for a, b in (L.get("europe") or [])]}
@@ -4226,8 +4228,9 @@ def switch_on(world, game, log=print):
     except (OSError, ValueError):
         built = None
     if built is not None:
-        import lbstadiums
+        import lbstadiums, lbservers
         lbstadiums.write(built, siderdir.find(game), log)
+        lbservers.write(built, siderdir.find(game), log)
     mods = os.path.join(root, "modules")
     for f in sorted(os.listdir(mods)) if os.path.isdir(mods) else []:
         dst = os.path.join(siderdir.find(game), "modules", f)

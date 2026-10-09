@@ -1623,9 +1623,22 @@ class GameEuropeDialog(Dialog):
             it.setText(("●  " if rid in self.places else "    ") + name)
             it.setForeground(QBrush(QColor(theme.ACCENT if rid in self.places else theme.TEXT)))
 
-    def whose(self, mine):
-        self.l_whose.setText(_("Your places: they replace the game's for this league.") if mine else
-                             _("The game's own places, shown for reference. Tick the box above to change them."))
+    def whose(self, mine, rid=None, shipped=None):
+        if mine:
+            self.l_whose.setText(_("Your places: they replace the game's for this league."))
+            return
+        sam = {r: (lib, libq) for r, lib, libq in fl26world.SAM_GAME}
+        if not shipped and rid in sam:
+            # the game keeps a South American league's Libertadores places in the exe, not in the
+            # European access list the table shows, so the table is empty for them (Vicentico12)
+            self.l_whose.setText(_("The game gives this league its Libertadores places itself: group stage %s, "
+                                   "qualifying round %s. They are not in this table. Tick the box above to set "
+                                   "your own.") % sam[rid])
+        elif not shipped:
+            self.l_whose.setText(_("The game gives this league no places in this table. Tick the box above to "
+                                   "give it some."))
+        else:
+            self.l_whose.setText(_("The game's own places, shown for reference. Tick the box above to change them."))
 
     def keep(self):
         if 0 <= self.cur < len(self.tops) and self.own.isChecked():
@@ -1638,7 +1651,7 @@ class GameEuropeDialog(Dialog):
             return
         rid, name, clubs, shipped = self.tops[i]
         self.l_name.setText(name)
-        self.whose(rid in self.places)
+        self.whose(rid in self.places, rid, shipped)
         self.table.set_clubs(clubs)
         mine = rid in self.places
         self.own.blockSignals(True)
@@ -1657,7 +1670,7 @@ class GameEuropeDialog(Dialog):
             self.places.pop(rid, None)
             self.table.set_places(shipped)
         self.table.setEnabled(on)
-        self.whose(on)
+        self.whose(on, rid, shipped)
         self.marks()
 
     def ok(self):

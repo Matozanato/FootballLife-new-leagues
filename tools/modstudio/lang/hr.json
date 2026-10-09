@@ -121,6 +121,8 @@
   "Crests and league logos": "Grbovi i logotipi liga",
   "Managers": "Treneri",
   "Kit colours": "Boje dresova",
+  "Kits (the Kit Server kits of the clubs)": "Dresovi (Kit Server dresovi klubova)",
+  "Scoreboards (the Scoreboard Server scoreboard of each league)": "Scoreboardi (Scoreboard Server scoreboard svake lige)",
   "Home stadiums (the Stadium Server line, not the stadium itself)": "Domaći stadioni (linija za Stadium Server, ne sam stadion)",
   "Untick to share only crests, managers and stadiums -- then the package can go on top of an updated squad database without putting old squads back.": "Isključi da dijeliš samo grbove, trenere i stadione -- tada paket može ići preko osvježene baze kadrova bez vraćanja starih kadrova.",
   "No squads: its crests and managers go onto the clubs of the same name in leagues you already have, and your players stay as they are.": "Bez kadrova: grbovi i treneri idu na klubove istog imena u ligama koje već imaš, a tvoji igrači ostaju kakvi jesu.",

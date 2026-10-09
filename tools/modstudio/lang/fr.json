@@ -121,6 +121,8 @@
   "Crests and league logos": "Blasons et logos des ligues",
   "Managers": "Entraîneurs",
   "Kit colours": "Couleurs des maillots",
+  "Kits (the Kit Server kits of the clubs)": "Maillots (ceux de Kit Server des clubs)",
+  "Scoreboards (the Scoreboard Server scoreboard of each league)": "Tableaux de score (celui de Scoreboard Server de chaque ligue)",
   "Home stadiums (the Stadium Server line, not the stadium itself)": "Stades à domicile (la ligne de Stadium Server, pas le stade lui-même)",
   "Untick to share only crests, managers and stadiums -- then the package can go on top of an updated squad database without putting old squads back.": "Décoche pour partager seulement les blasons, entraîneurs et stades : le paquet peut alors aller sur une base d'effectifs mise à jour sans remettre les anciens effectifs.",
   "No squads: its crests and managers go onto the clubs of the same name in leagues you already have, and your players stay as they are.": "Sans effectifs : ses blasons et entraîneurs vont sur les clubs du même nom dans les ligues que tu as déjà, et tes joueurs restent tels quels.",

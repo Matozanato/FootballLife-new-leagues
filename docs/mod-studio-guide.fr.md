@@ -592,10 +592,14 @@ ligues) :
 3. Si vous le voulez, **aussi mes modifications des ligues, clubs et joueurs du jeu**.
 4. **Ce qui va dedans** (0.1.8) : tout est coché ; décochez ce que vous ne voulez pas partager --
    **Effectifs**, **Visages et portraits des joueurs**, **Blasons et logos des ligues**, **Entraîneurs**,
-   **Couleurs des maillots**, **Stades à domicile** (la ligne de Stadium Server, pas le stade lui-même).
+   **Couleurs des maillots**, **Stades à domicile** (la ligne de Stadium Server, pas le stade lui-même)
+   et (0.2.1) **Maillots** (ceux de Kit Server des clubs) et **Tableaux de score** (celui de Scoreboard
+   Server de chaque ligue), pris dans votre jeu tel qu'est le monde maintenant (kit-server\map.txt et
+   scoreboard-server\map_competitions.txt).
    Un paquet sans effectifs va sur une base mise à jour à part, comme NewLife, sans remettre les anciens.
-5. Enregistrez. Le fichier contient les images et les visages, pas des chemins de votre
-   ordinateur.
+5. Enregistrez. Le fichier contient les images, les visages, les maillots et les tableaux de score, pas
+   des chemins de votre ordinateur. Qui l'ajoute les reçoit en place, avec ses propres ids d'équipes et
+   de ligues, au Build (Kit Server / Scoreboard Server requis).
 
 **Ajouter un paquet** (Paquets de ligues → **Ajouter un paquet...**, Fichier → Ajouter un paquet
 de ligues, ou déposez-le sur Installer des mods) :

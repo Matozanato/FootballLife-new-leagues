@@ -558,9 +558,14 @@ A modder makes a league once — clubs, names, crests, logos, squads, faces — 
 3. Optionally **also my changes to the game's own leagues, clubs and players**.
 4. **What goes in** (0.1.8): everything is ticked; untick what you do not want to share -- **Squads**,
    **Player faces and portraits**, **Crests and league logos**, **Managers**, **Kit colours**, **Home
-   stadiums** (the Stadium Server line, not the stadium itself). A package without squads goes on top
+   stadiums** (the Stadium Server line, not the stadium itself), and (0.2.1) **Kits** (the clubs'
+   Kit Server kits) and **Scoreboards** (each league's Scoreboard Server scoreboard). Kits and
+   scoreboards are taken from your game as the world is now: whatever kit-server\map.txt and
+   scoreboard-server\map_competitions.txt give its clubs and leagues. A package without squads goes on top
    of a squad database that is updated on its own, like NewLife, without putting old squads back.
-5. Save. The file holds the pictures and faces, not paths on your computer.
+5. Save. The file holds the pictures, faces, kits and scoreboards, not paths on your computer.
+   Whoever adds it gets the kits and scoreboards in place with their own team and league ids when
+   they Build (Kit Server / Scoreboard Server must be installed).
 
 **Add a package** (League packages → **Add a package...**, File → Add a league package, or
 drop it on Install mods):

@@ -528,9 +528,12 @@ datoteku `.fl26pack`**. Svatko je doda u svoj recept i izgradi.
 3. Po želji i **moje promjene na postojećim ligama, klubovima i igračima**.
 4. **Što ide unutra** (0.1.8): sve je označeno; odznači što ne želiš dijeliti -- **Kadrovi**, **Lica i
    portreti igrača**, **Grbovi i logotipi liga**, **Treneri**, **Boje dresova**, **Domaći stadioni**
-   (linija za Stadium Server, ne sam stadion). Paket bez kadrova ide preko baze koja se osvježava
+   (linija za Stadium Server, ne sam stadion) i (0.2.1) **Dresovi** (Kit Server dresovi klubova) i
+   **Scoreboardi** (Scoreboard Server scoreboard svake lige), uzeti iz tvoje igre kakav je svijet sada
+   (kit-server\map.txt i scoreboard-server\map_competitions.txt). Paket bez kadrova ide preko baze koja se osvježava
    zasebno, kao NewLife, bez vraćanja starih kadrova.
-5. Spremi. Datoteka nosi slike i face, a ne putanje na tvom računalu.
+5. Spremi. Datoteka nosi slike, face, dresove i scoreboarde, a ne putanje na tvom računalu. Tko ga
+   doda, na Build ih dobije na mjestu sa svojim ID-evima klubova i liga (treba Kit Server / Scoreboard Server).
 
 **Dodaj paket** (Paketi liga → **Dodaj paket...**, Datoteka → Dodaj paket liga..., ili ga
 ispusti na Instaliraj modove):

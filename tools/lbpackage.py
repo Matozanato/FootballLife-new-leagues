@@ -1,7 +1,7 @@
 r"""league packages (.fl26pack): a modder makes leagues once, anybody adds them to their own game.
 
     python lbpackage.py export <recipe.json> <out.fl26pack> --name "..." [--author ..] [--version ..]
-                            [--league "League A" --league "League B"] [--edits]
+                            [--league "League A" --league "League B"] [--edits] [--sider <SiderAddons>]
     python lbpackage.py show   <pack.fl26pack>
     python lbpackage.py add    <pack.fl26pack> <recipe.json> [--store <dir>]
     python lbpackage.py remove <tag> <recipe.json>
@@ -15,6 +15,8 @@ also why faces travel as they were made and are moved to their players' ids at b
     recipe.json      the leagues (as a recipe has them), their clubs' player changes, and with
                      --edits the changes to the game's own leagues, clubs and players
     assets\...       logos and crests the leagues and clubs use
+    kitserver\<n>\   a club's Kit Server kit folder (p1, p2, g1 ...), lbservers.py writes its line
+    scoreboards\<n>\ a league's Scoreboard Server folder, the same
     faces\<n>\...    the faces players were given (#Win, sourceimages, portrait.dds)
 
 Paths in recipe.json are relative to the package.  add() unpacks a package into a store
@@ -40,7 +42,9 @@ LEAGUE_PICTURES = ("logo", "flag", "cup_logo", "supercup_logo", "league_cup_logo
 LEAGUE_PARTS = {"squads": ("formation", "club_formations"),
                 "crests": LEAGUE_PICTURES + ("club_crests",),
                 "managers": ("club_coaches",),
-                "kits": ("club_kits", "club_away_kits")}
+                "kits": ("club_kits", "club_away_kits"),
+                "kitfiles": ("kit_folders",),
+                "scoreboards": ("scoreboard",)}
 
 
 def tag_of(manifest):
@@ -51,10 +55,10 @@ def tag_of(manifest):
 # ---- export ----
 
 # what a package can carry besides the leagues themselves; Make a package ticks them all
-PARTS = ("squads", "faces", "crests", "managers", "kits", "stadiums")
+PARTS = ("squads", "faces", "crests", "managers", "kits", "kitfiles", "scoreboards", "stadiums")
 
 
-def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True, parts=None):
+def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True, parts=None, sider=None):
     """write the package out from recipe; leagues are names (all when None), meta has name,
     author, version, description.  parts (all of PARTS when None) is what goes in:
       squads    the player changes of the clubs (and their formations)
@@ -62,7 +66,11 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
       crests    club crests, league logos and flags
       managers  managers' names and portraits
       kits      the clubs' shirt colours
+      kitfiles  the clubs' Kit Server kits (their folders, p1 p2 g1 ...)
+      scoreboards  the leagues' Scoreboard Server scoreboards
       stadiums  the clubs' home stadiums (the Stadium Server line, not the stadium itself)
+    sider (the SiderAddons folder): kits and scoreboards a league has no folder for in the recipe
+    are taken from the world as it is in the game (lbservers.collect).
     A package without squads can go on top of a squad database that is updated on its own
     (NewLife) without putting old squads back (see overlay()).  players=False is parts without
     squads.  Returns the manifest."""
@@ -77,6 +85,18 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
     squads = "squads" in parts
     if not str(meta.get("name", "")).strip():
         raise Error("the package needs a name")
+    if sider and ({"kitfiles", "scoreboards"} & parts):
+        import lbservers
+        try:
+            with open(os.path.join(sider, "livecpk", recipe.get("world") or "", "leaguebuilder-plan.json"),
+                      encoding="utf-8") as f:
+                built = json.load(f)
+        except (OSError, ValueError):
+            built = None
+        if built:
+            recipe = json.loads(json.dumps(recipe))
+            nk, nb = lbservers.collect(recipe, built, sider, leagues)
+            log("from the game: %d club kits, %d scoreboards" % (nk, nb))
     have = {L["name"]: L for L in recipe.get("leagues", [])}
     names = list(have) if leagues is None else list(leagues)
     missing = [n for n in names if n not in have]
@@ -113,6 +133,17 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
         return "assets/" + name
 
     nface = [0]
+    nfold = {"kitserver": 0, "scoreboards": 0}
+
+    def folder(path, kind):
+        if not path:
+            return path
+        if not os.path.isdir(path):
+            raise Error("folder %s is missing" % path)
+        rel = "%s/%d" % (kind, nfold[kind])
+        nfold[kind] += 1
+        shutil.copytree(path, os.path.join(tmp, kind, str(nfold[kind] - 1)))
+        return rel
 
     def face(path):
         d = os.path.join(tmp, "faces", str(nface[0]))
@@ -151,6 +182,10 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
                 L[k] = asset(L[k])
         if L.get("club_crests"):
             L["club_crests"] = [asset(p) if p else p for p in L["club_crests"]]
+        if L.get("kit_folders"):
+            L["kit_folders"] = [folder(p, "kitserver") if p else "" for p in L["kit_folders"]]
+        if L.get("scoreboard"):
+            L["scoreboard"] = folder(L["scoreboard"], "scoreboards")
         out_r["leagues"].append(L)
     for key, c in (recipe.get("players") or {}).items():
         lg = key.rpartition("/")[0]
@@ -189,6 +224,7 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
                         "above": L.get("above")} for L in out_r["leagues"]],
            "clubs": sum(int(L.get("clubs", 0) or 0) for L in out_r["leagues"]),
            "faces": nface[0],
+           "kits": nfold["kitserver"], "scoreboards": nfold["scoreboards"],
            "players": squads,
            "parts": [x for x in PARTS if x in parts],
            "edits": {k: len(v) for k, v in out_r["edits"].items()},
@@ -203,7 +239,8 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
                 z.write(p, os.path.relpath(p, tmp).replace(os.sep, "/"))
     shutil.rmtree(tmp)
     os.replace(part, out)
-    log("wrote %s: %d leagues, %d clubs, %d faces" % (out, len(man["leagues"]), man["clubs"], man["faces"]))
+    log("wrote %s: %d leagues, %d clubs, %d faces, %d kits, %d scoreboards"
+        % (out, len(man["leagues"]), man["clubs"], man["faces"], man["kits"], man["scoreboards"]))
     return man
 
 
@@ -253,6 +290,10 @@ def unpack(path, store):
                 L[k] = full(L[k])
         if L.get("club_crests"):
             L["club_crests"] = [full(p) if p else p for p in L["club_crests"]]
+        if L.get("kit_folders"):
+            L["kit_folders"] = [full(p) if p else p for p in L["kit_folders"]]
+        if L.get("scoreboard"):
+            L["scoreboard"] = full(L["scoreboard"])
     for c in (r.get("players") or {}).values():
         for ch in list((c.get("edits") or {}).values()) + list(c.get("add") or []):
             if ch.get("face"):
@@ -279,7 +320,7 @@ def clashes(recipe, piece, tag):
     return [L["name"] for L in piece.get("leagues", []) if L["name"] in mine]
 
 
-OVERLAY = ("club_crests", "club_coaches", "club_kits", "club_away_kits")
+OVERLAY = ("club_crests", "club_coaches", "club_kits", "club_away_kits", "kit_folders", "scoreboard")
 
 
 def overlay(recipe, piece, got, names):
@@ -424,6 +465,8 @@ def main():
                    help="leave the player changes out: crests, managers and stadiums only")
     e.add_argument("--without", action="append", default=[], choices=PARTS,
                    help="leave a part out (again for more): " + ", ".join(PARTS))
+    e.add_argument("--sider", default=None,
+                   help="the SiderAddons folder: kits and scoreboards the recipe has no folder for come from the game")
     s = sub.add_parser("show")
     s.add_argument("pack")
     a = sub.add_parser("add")
@@ -439,7 +482,7 @@ def main():
             rec = json.load(open(o.recipe, encoding="utf-8"))
             export(rec, o.out, {"name": o.name, "author": o.author, "version": o.version,
                                 "description": o.description}, o.league, o.edits, players=not o.no_players,
-                     parts=[x for x in PARTS if x not in o.without])
+                     parts=[x for x in PARTS if x not in o.without], sider=o.sider)
         elif o.cmd == "show":
             print(json.dumps(manifest(o.pack), indent=1, ensure_ascii=False))
         elif o.cmd == "add":

@@ -565,9 +565,13 @@ ligas):
 3. Si quieres, **también mis cambios en las ligas, clubes y jugadores del propio juego**.
 4. **Qué va dentro** (0.1.8): todo viene marcado; desmarca lo que no quieras compartir -- **Plantillas**,
    **Caras y retratos de jugadores**, **Escudos y logos de ligas**, **Entrenadores**, **Colores de las
-   equipaciones**, **Estadios locales** (la línea de Stadium Server, no el estadio en sí). Un paquete sin
+   equipaciones**, **Estadios locales** (la línea de Stadium Server, no el estadio en sí) y (0.2.1) **Equipaciones** (las
+   de Kit Server de los clubes) y **Marcadores** (el de Scoreboard Server de cada liga), tomados de tu
+   juego tal como está el mundo ahora (kit-server\map.txt y scoreboard-server\map_competitions.txt). Un paquete sin
    plantillas va encima de una base que se actualiza sola, como NewLife, sin devolver las plantillas antiguas.
-5. Guarda. El archivo lleva las imágenes y las caras, no rutas de tu ordenador.
+5. Guarda. El archivo lleva las imágenes, las caras, las equipaciones y los marcadores, no rutas de tu
+   ordenador. Quien lo añade los recibe en su sitio, con sus propios ids de equipos y ligas, al hacer
+   Build (hace falta Kit Server / Scoreboard Server).
 
 **Añadir un paquete** (Paquetes de ligas → **Añadir un paquete...**, Archivo → Añadir un paquete de
 ligas, o suéltalo en Instalar mods):
