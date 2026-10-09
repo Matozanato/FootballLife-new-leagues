@@ -39,7 +39,9 @@ La ventana está en inglés. **Settings → Language → Español** la pasa a es
    segundos). Solo hay que repetirlo tras una actualización del juego;
    Build la nota (0.1.9) y ofrece desempaquetar de nuevo primero. Hace falta una vez en
    cada PC (un paquete o un mundo nuevo lo piden y ofrecen abrir Ajustes). **Usar otra carpeta
-   de tablas** solo si ya tienes una carpeta `pesdb` desempaquetada (Team.bin, Competition.bin ...).
+   de tablas** sirve para una base de datos propia, como una carpeta `pesdb` en livecpk: desempaqueta
+   primero las tablas del juego y luego elige esa carpeta. Sus archivos van encima de los del juego,
+   que ponen lo que a ella le falte.
 3. Abre **Resumen**. Muestra tu configuración de un vistazo y una lista de problemas. Haz doble
    clic en un problema para abrir la página que lo arregla.
 

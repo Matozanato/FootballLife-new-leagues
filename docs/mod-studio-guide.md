@@ -35,7 +35,8 @@ The window is in English. **Settings → Language** switches it to Croatian (Hrv
    reads the game's clubs, leagues and players into a working folder (a few seconds). Do it
    again only after a game update; Build notices one (0.1.9) and offers to unpack again first. It is needed once on every PC (a
    package or a new world asks for it, and offers to open Settings). **Use another tables folder**
-   only if you already have an unpacked `pesdb` folder (Team.bin, Competition.bin ...).
+   is for a database of your own, such as a `pesdb` folder in livecpk: unpack the game's tables
+   first, then pick that folder. Its files go over the game's, which give whatever it does not have.
 3. Open **Overview**. It shows your setup at a glance and lists problems. Double-click a
    problem to open the page that fixes it.
 

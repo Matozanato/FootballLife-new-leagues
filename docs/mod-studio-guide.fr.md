@@ -40,8 +40,9 @@ La fenêtre est en anglais. **Settings → Language → Français** la passe en 
    travail (quelques secondes). À refaire seulement après une mise à jour du jeu ;
    Build la remarque (0.1.9) et propose d'abord une nouvelle extraction. Il le faut une fois
    sur chaque PC (un paquet ou un nouveau monde le demande et propose d'ouvrir les Réglages).
-   **Utiliser un autre dossier de tables** seulement si vous avez déjà un dossier `pesdb` extrait
-   (Team.bin, Competition.bin ...).
+   **Utiliser un autre dossier de tables** sert pour votre propre base, comme un dossier `pesdb`
+   dans livecpk : extrayez d'abord les tables du jeu, puis choisissez ce dossier. Ses fichiers passent
+   par-dessus ceux du jeu, qui fournissent tout ce qu'il n'a pas.
 3. Ouvrez **Vue d'ensemble**. Elle montre votre configuration en un coup d'œil et liste les
    problèmes. Double-cliquez sur un problème pour ouvrir la page qui le corrige.
 

@@ -4,7 +4,7 @@ The recipe is the same JSON leaguebuilder.py builds from.  The tables are the ga
 Team/Competition/Player tables, unpacked once from the person's game into
 %APPDATA%\\FL26ModStudio\\tables (Settings > Unpack the game's tables).
 """
-import json, os
+import json, os, shutil
 
 from PySide6.QtCore import QObject, Signal
 
@@ -28,6 +28,8 @@ class Project(QObject):
         self.path = None
         self.dirty = False
         self.base = None
+        self.overlay = 0            # files of the chosen tables folder laid over the game's (0: a full set)
+        self.tables_error = ""
         self.countries, self.parents, self.game_lgs, self.game_cl = [], [], [], {}
         self.calendar_parents = set()
         self.confeds = {}
@@ -42,10 +44,43 @@ class Project(QObject):
         from modstudio.app import APPDIR
         return os.path.join(APPDIR, "tables")
 
+    def _tables_of(self, where):
+        """the tables folder to read for the chosen folder where. A mod's database (a pesdb folder
+        in livecpk) usually holds only the tables it changes, Team.bin and Player.bin but no
+        CompetitionRegulation.bin (jibibi 09.10.): its files then go over a copy of the game's
+        unpacked tables, which give the rest"""
+        d = where
+        for sub in (("common", "etc", "pesdb"), ("etc", "pesdb"), ("pesdb",)):
+            if os.path.isdir(os.path.join(where, *sub)):
+                d = os.path.join(where, *sub)
+                break
+        if os.path.exists(os.path.join(d, "CompetitionRegulation.bin")):
+            return d
+        mine = [n for n in os.listdir(d) if n.lower().endswith(".bin") and os.path.isfile(os.path.join(d, n))]             if os.path.isdir(d) else []
+        if not mine:
+            raise B.BuildError("no tables in that folder")
+        game = self._default_tables()
+        if not os.path.exists(os.path.join(game, "CompetitionRegulation.bin")):
+            raise B.BuildError("only part of the tables: unpack the game's tables first")
+        out = os.path.join(self.tables_dir() + "-with-your-database", "pesdb")
+        os.makedirs(out, exist_ok=True)
+        for n in set(os.listdir(game)) | set(mine):
+            src = os.path.join(d if n in mine else game, n)
+            dst = os.path.join(out, n)
+            if not os.path.isfile(src):
+                continue
+            a = os.stat(src)
+            b = os.stat(dst) if os.path.exists(dst) else None
+            if b is None or b.st_size != a.st_size or int(b.st_mtime) != int(a.st_mtime):
+                shutil.copy2(src, dst)
+        self.overlay = len(mine)
+        return out
+
     def load_tables(self, where=None):
         where = where or self.app.settings.get("tables") or None
+        self.overlay, self.tables_error = 0, ""
         try:
-            self.base = B.base_dir(where) if where else B.base_dir(self._default_tables())
+            self.base = B.base_dir(self._tables_of(where)) if where else B.base_dir(self._default_tables())
             self.countries = B.country_names(self.base)
             self.confeds = B.country_confederations(self.base)
             self.parents = B.shipped_parents(self.base)
@@ -55,7 +90,8 @@ class Project(QObject):
             self.game_cl = B.game_clubs(self.base)
             self.game_nat, self.game_other = B.game_others(self.base, self.game_lgs)
             self.game_confeds = B.game_league_confeds(self.base, self.game_lgs)
-        except (B.BuildError, OSError, ValueError, SystemExit):
+        except (B.BuildError, OSError, ValueError, SystemExit) as e:
+            self.tables_error = str(e)
             self.base = None
             self.countries, self.parents, self.game_lgs, self.game_cl = [], [], [], {}
             self.confeds = {}

@@ -36,7 +36,8 @@ Prozor je na engleskom. **Settings → Language → Hrvatski** ga prebaci na hrv
    klubove, lige i igrače igre u radnu mapu (par sekundi). Ponovi samo nakon nadogradnje igre;
    Build je sam primijeti (0.1.9) i ponudi da prvo opet raspakira. Treba jednom na svakom
    PC-u (paket ili novi svijet to traže i ponude otvoriti Postavke). **Koristi drugu mapu s
-   tablicama** samo ako već imaš raspakiranu `pesdb` mapu (Team.bin, Competition.bin ...).
+   tablicama** služi za vlastitu bazu, npr. `pesdb` mapu u livecpk: prvo raspakiraj tablice igre,
+   zatim odaberi tu mapu. Njezine datoteke idu preko igrinih, a igrine daju sve što ona nema.
 3. Otvori **Pregled**. Pokazuje cijelu postavu na jednom mjestu i popis problema. Dvoklik na
    problem otvara stranicu koja ga rješava.
 

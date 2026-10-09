@@ -48,9 +48,10 @@ class Settings(Page):
         form.addRow(_("Language"), row(self.lang))
         form.addRow(section("League Builder"), QLabel(""))
         form.addRow("", hint(_("Mod Studio needs the game's tables (its list of clubs, leagues and players) once "
-                               "on every PC, and again after a game update. Click Unpack the game's tables. Use "
-                               "another tables folder only if you already have an unpacked pesdb folder (Team.bin, "
-                               "Competition.bin ...).")))
+                               "on every PC, and again after a game update. Click Unpack the game's tables. To build "
+                               "on a database of your own (a pesdb folder in livecpk), unpack the game's tables "
+                               "first, then pick that folder with Use another tables folder: its files go over the "
+                               "game's, which give whatever it does not have.")))
         self.tables = QLabel("")
         self.tables.setWordWrap(True)
         self.unpack_btn = QPushButton(_("Unpack the game's tables"))
@@ -112,7 +113,11 @@ class Settings(Page):
         p = getattr(self.app, "project", None)
         if p is not None and p.base:
             n = len(p.game_cl)
-            self.tables.setText(_("%s  (%d clubs, %d leagues)") % (p.base, n, len(p.game_lgs)))
+            if p.overlay:
+                self.tables.setText(_("%s  (%d clubs, %d leagues; %d files from it, the rest from the game's "
+                                      "tables)") % (self.app.settings.get("tables", ""), n, len(p.game_lgs), p.overlay))
+            else:
+                self.tables.setText(_("%s  (%d clubs, %d leagues)") % (p.base, n, len(p.game_lgs)))
         else:
             self.tables.setText(_("Not unpacked yet."))
 
@@ -156,7 +161,8 @@ class Settings(Page):
         def done(r):
             self.app.busy(False)
             self.unpack_btn.setEnabled(True)
-            self.app.settings.pop("tables", None)
+            if not p.overlay:          # a database of your own stays on top of the new tables
+                self.app.settings.pop("tables", None)
             p.load_tables()
             self.refresh()
             self.log.appendPlainText(_("Done."))
@@ -168,15 +174,25 @@ class Settings(Page):
         run_job(job, done, failed, progress=lambda t: self.log.appendPlainText(i18n.tr(str(t))))
 
     def pick_tables(self):
-        d = QFileDialog.getExistingDirectory(self, _("A folder with Team.bin, Competition.bin ..."))
+        d = QFileDialog.getExistingDirectory(self, _("A pesdb folder: Team.bin, Player.bin ..."))
         if not d:
             return
         p = self.app.project
         self.app.settings["tables"] = d
         if not p.load_tables(d):
+            why = p.tables_error
             self.app.settings.pop("tables", None)
-            error(self, "Settings", _("No game tables in that folder."))
             p.load_tables()
+            if "unpack" in why:
+                error(self, "Settings", _("That folder has only part of the tables, as a database in livecpk "
+                                          "usually does. Click Unpack the game's tables first, then pick the "
+                                          "folder again: its files go over the game's tables."))
+            else:
+                error(self, "Settings", _("No tables in that folder: pick the pesdb folder with Team.bin, "
+                                          "Player.bin ..."))
+        elif p.overlay:
+            info(self, "Settings", _("Tables loaded: %d clubs, %d leagues. %d files come from your folder, "
+                                     "the rest from the game's tables.") % (len(p.game_cl), len(p.game_lgs), p.overlay))
         else:
             info(self, "Settings", _("Tables loaded: %d clubs, %d leagues.") % (len(p.game_cl), len(p.game_lgs)))
         self.refresh()
