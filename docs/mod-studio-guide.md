@@ -570,12 +570,16 @@ A modder makes a league once — clubs, names, crests, logos, squads, faces — 
    of a squad database that is updated on its own, like NewLife, without putting old squads back.
 5. Save. The file holds the pictures, faces, kits and scoreboards, not paths on your computer.
    Whoever adds it gets the kits and scoreboards in place with their own team and league ids when
-   they Build (Kit Server / Scoreboard Server must be installed).
+   they Build (Kit Server / Scoreboard Server must be installed). Kits add about 10 MB per league and
+   a scoreboard about 7 MB, so such a package is often over Discord's 10 MB limit: share it through a
+   cloud service (Google Drive, Dropbox, MEGA ...); the program says so when the file is bigger.
 
 **Add a package** (League packages → **Add a package...**, File → Add a league package, or
 drop it on Install mods):
 
-1. The program shows what is inside and asks.
+1. The program shows what is inside and asks. A package of several leagues lists them, all ticked:
+   untick the ones you do not want (0.2.1). A league below another league of the package brings that
+   one with it.
 2. A league with a name you already have is added as `Name (Package)`.
    A package made without squads goes onto that league instead: its crests and managers land on the
    clubs of the same name, your players stay, and the program says how many clubs it found.

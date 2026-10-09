@@ -81,6 +81,9 @@ class MakeDialog(QDialog):
         self.parts["squads"].setToolTip(_("Untick to share only crests, managers and stadiums -- then the package "
                                           "can go on top of an updated squad database without putting old squads back."))
         self.parts["squads"].toggled.connect(self.parts["faces"].setEnabled)
+        v.addWidget(hint(_("Kits add about 10 MB per league and a scoreboard about 7 MB. With them the package "
+                           "is often bigger than Discord's 10 MB limit: share it through a cloud service (Google "
+                           "Drive, Dropbox, MEGA ...), or untick them, or make one package per league.")))
         v.addWidget(hint(_("A league below another league must go with it. A league placed below one of the "
                            "game's leagues works for everybody with the same game version.")))
         bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -107,6 +110,56 @@ class MakeDialog(QDialog):
             return
         if not self.picked() and not self.edits.isChecked():
             error(self, "Make a league package", _("Tick at least one league."))
+            return
+        self.accept()
+
+
+class AddDialog(QDialog):
+    """what a package holds, and which of its leagues to add"""
+    def __init__(self, parent, text, leagues):
+        super().__init__(parent)
+        self.setWindowTitle(_("Add a league package"))
+        self.setMinimumWidth(520)
+        v = QVBoxLayout(self)
+        v.addWidget(hint(text[0]))
+        self.leagues = QListWidget()
+        if len(leagues) > 1:
+            v.addWidget(section("Leagues"))
+            every, none = QPushButton(_("Select all")), QPushButton(_("Select none"))
+            every.clicked.connect(lambda: self.tick(Qt.Checked))
+            none.clicked.connect(lambda: self.tick(Qt.Unchecked))
+            v.addWidget(row(every, none))
+            for L in leagues:
+                it = QListWidgetItem("%s   (%s, %d %s)" % (L["name"], L.get("country", ""),
+                                                           int(L.get("clubs") or 0), _("clubs")))
+                it.setData(Qt.UserRole, L["name"])
+                it.setFlags(it.flags() | Qt.ItemIsUserCheckable)
+                it.setCheckState(Qt.Checked)
+                self.leagues.addItem(it)
+            v.addWidget(self.leagues, 1)
+            v.addWidget(hint(_("Untick the leagues you do not want. A league below another league of the "
+                               "package brings that one with it.")))
+        if text[1:]:
+            v.addWidget(hint("\n".join(text[1:]).strip()))
+        bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        bb.accepted.connect(self.check)
+        bb.rejected.connect(self.reject)
+        v.addWidget(bb)
+
+    def tick(self, state):
+        for i in range(self.leagues.count()):
+            self.leagues.item(i).setCheckState(state)
+
+    def picked(self):
+        """the leagues ticked, or None when the package has one league (or none)"""
+        if not self.leagues.count():
+            return None
+        return [self.leagues.item(i).data(Qt.UserRole) for i in range(self.leagues.count())
+                if self.leagues.item(i).checkState() == Qt.Checked]
+
+    def check(self):
+        if self.picked() == []:
+            error(self, "Add a league package", _("Tick at least one league."))
             return
         self.accept()
 
@@ -202,8 +255,9 @@ class Packages(BuilderPage):
             error(self, "League packages", str(e))
             return
         text = [_("%s %s by %s") % (man.get("name"), man.get("version"), man.get("author") or "?"), ""]
-        text += ["  %s  (%s, %d %s)" % (L["name"], L.get("country", ""), int(L.get("clubs") or 0), _("clubs"))
-                 for L in man.get("leagues", [])]
+        if len(man.get("leagues", [])) < 2:
+            text += ["  %s  (%s, %d %s)" % (L["name"], L.get("country", ""), int(L.get("clubs") or 0), _("clubs"))
+                     for L in man.get("leagues", [])]
         if man.get("player_changes"):
             text.append(_("%d player changes, %d faces") % (man["player_changes"], man.get("faces", 0)))
         if any(man.get("edits", {}).values()):
@@ -222,13 +276,17 @@ class Packages(BuilderPage):
                      % ", ".join("%s %s" % (p.get("name") or t, p.get("version") or "") for t, p in old)]
         else:
             text += ["", _("Add it to the recipe?")]
-        if not ask(self, "Add a league package", "\n".join(text)):
+        dlg = AddDialog(self, text, man.get("leagues", []))
+        if dlg.exec() != QDialog.Accepted:
             return
         try:
             man, piece, folder = K.unpack(path, store())
         except K.Error as e:
             error(self, "League packages", str(e))
             return
+        brought = []
+        if dlg.picked() is not None:
+            piece, brought = K.only(piece, dlg.picked())
         tag = K.tag_of(man)
         rename = {}
         going = {n for _t, p in old for n in p.get("leagues") or []}      # replaced, not clashing
@@ -257,6 +315,8 @@ class Packages(BuilderPage):
             return
         self.project.touch()
         msg = _("Added %s. Save the recipe, then Build to put the leagues in the game.") % man.get("name")
+        if brought:
+            msg += " " + _("Also added, as the leagues you picked sit below them: %s.") % ", ".join(brought)
         matched = (self.project.recipe.get("packs") or {}).get(tag, {}).get("matched") or {}
         if matched:
             msg += " " + "; ".join(_("%s: %d of %d clubs found by name") % (n, h, t) for n, (h, t) in matched.items())
@@ -294,7 +354,10 @@ class Packages(BuilderPage):
             self.app.busy(False)
             info(self, "Make a league package",
                  _("Saved %s\n\n%d leagues, %d clubs, %d faces. Share this one file; people add it on this page.")
-                 % (out, len(man["leagues"]), man["clubs"], man["faces"]))
+                 % (out, len(man["leagues"]), man["clubs"], man["faces"])
+                 + (("\n\n" + _("The file is %d MB, over Discord's 10 MB limit: share it through a cloud service "
+                                 "(Google Drive, Dropbox, MEGA ...).") % round(os.path.getsize(out) / 1048576))
+                    if os.path.getsize(out) > 10 * 1048576 else ""))
 
         def failed(tb):
             self.app.busy(False)

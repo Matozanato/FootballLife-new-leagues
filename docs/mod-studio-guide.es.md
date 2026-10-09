@@ -577,12 +577,16 @@ ligas):
    plantillas va encima de una base que se actualiza sola, como NewLife, sin devolver las plantillas antiguas.
 5. Guarda. El archivo lleva las imágenes, las caras, las equipaciones y los marcadores, no rutas de tu
    ordenador. Quien lo añade los recibe en su sitio, con sus propios ids de equipos y ligas, al hacer
-   Build (hace falta Kit Server / Scoreboard Server).
+   Build (hace falta Kit Server / Scoreboard Server). Las equipaciones suman unos 10 MB por liga y un
+   marcador unos 7 MB, así que un paquete así suele pasar el límite de 10 MB de Discord: compártelo por
+   un servicio en la nube (Google Drive, Dropbox, MEGA ...); el programa lo avisa si el archivo es mayor.
 
 **Añadir un paquete** (Paquetes de ligas → **Añadir un paquete...**, Archivo → Añadir un paquete de
 ligas, o suéltalo en Instalar mods):
 
-1. El programa muestra lo que hay dentro y pregunta.
+1. El programa muestra lo que hay dentro y pregunta. Un paquete de varias ligas las lista, todas
+   marcadas: desmarca las que no quieras (0.2.1). Una liga que está debajo de otra del paquete trae
+   también esa.
 2. Una liga con un nombre que ya tienes se añade como `Nombre (Paquete)`.
    Un paquete hecho sin plantillas va encima de esa liga: sus escudos y entrenadores caen en los
    clubes del mismo nombre, tus jugadores se quedan y el programa dice cuántos clubes encontró.

@@ -363,6 +363,25 @@ def overlay(recipe, piece, got, names):
         got.setdefault("matched", {})[L["name"]] = [hit, len(P.get("club_names") or [])]
 
 
+def only(piece, names):
+    """(piece with only the leagues named and every new league one of them sits below, the
+    leagues added for that).  The players of the leagues left out go too; changes to the game's
+    own clubs and leagues stay."""
+    by = {L["name"]: L for L in piece.get("leagues", [])}
+    keep = {n for n in names if n in by}
+    todo = list(keep)
+    while todo:
+        up = by[todo.pop()].get("above")
+        if isinstance(up, str) and up in by and up not in keep:
+            keep.add(up)
+            todo.append(up)
+    out = dict(piece)
+    out["leagues"] = [L for L in piece.get("leagues", []) if L["name"] in keep]
+    out["players"] = {k: v for k, v in (piece.get("players") or {}).items()
+                      if not (k.rpartition("/")[1] and k.rpartition("/")[0] in by and k.rpartition("/")[0] not in keep)}
+    return out, [n for n in by if n in keep and n not in names]
+
+
 def add(recipe, man, piece, folder, rename=None):
     """put a package's piece into recipe (changed in place).  rename maps a clashing league
     name to the one it gets here.  A package added again (same tag) replaces itself.  A

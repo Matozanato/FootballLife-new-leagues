@@ -605,12 +605,16 @@ ligues) :
    Un paquet sans effectifs va sur une base mise à jour à part, comme NewLife, sans remettre les anciens.
 5. Enregistrez. Le fichier contient les images, les visages, les maillots et les tableaux de score, pas
    des chemins de votre ordinateur. Qui l'ajoute les reçoit en place, avec ses propres ids d'équipes et
-   de ligues, au Build (Kit Server / Scoreboard Server requis).
+   de ligues, au Build (Kit Server / Scoreboard Server requis). Les maillots ajoutent environ 10 Mo par
+   ligue et un tableau de score environ 7 Mo : un tel paquet dépasse souvent la limite de 10 Mo de
+   Discord, partagez-le par un service cloud (Google Drive, Dropbox, MEGA ...) ; le programme le signale.
 
 **Ajouter un paquet** (Paquets de ligues → **Ajouter un paquet...**, Fichier → Ajouter un paquet
 de ligues, ou déposez-le sur Installer des mods) :
 
-1. Le programme montre ce qu'il contient et vous demande.
+1. Le programme montre ce qu'il contient et vous demande. Un paquet de plusieurs ligues les liste,
+   toutes cochées : décochez celles que vous ne voulez pas (0.2.1). Une ligue placée sous une autre
+   ligue du paquet amène celle-ci avec elle.
 2. Une ligue dont vous avez déjà le nom est ajoutée sous la forme `Nom (Paquet)`.
    Un paquet fait sans effectifs va sur cette ligue : ses blasons et entraîneurs vont aux clubs du
    même nom, vos joueurs restent et le programme dit combien de clubs il a trouvés.

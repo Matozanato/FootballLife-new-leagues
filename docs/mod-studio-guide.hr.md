@@ -539,11 +539,14 @@ datoteku `.fl26pack`**. Svatko je doda u svoj recept i izgradi.
    zasebno, kao NewLife, bez vraćanja starih kadrova.
 5. Spremi. Datoteka nosi slike, face, dresove i scoreboarde, a ne putanje na tvom računalu. Tko ga
    doda, na Build ih dobije na mjestu sa svojim ID-evima klubova i liga (treba Kit Server / Scoreboard Server).
+   Dresovi dodaju oko 10 MB po ligi, a scoreboard oko 7 MB, pa je takav paket često preko Discordovog
+   limita od 10 MB: podijeli ga preko cloud servisa (Google Drive, Dropbox, MEGA ...); program to javi.
 
 **Dodaj paket** (Paketi liga → **Dodaj paket...**, Datoteka → Dodaj paket liga..., ili ga
 ispusti na Instaliraj modove):
 
-1. Program pokaže što je unutra i pita.
+1. Program pokaže što je unutra i pita. Paket s više liga ih nabroji, sve označene: odznači one koje
+   ne želiš (0.2.1). Liga ispod druge lige iz paketa povlači i tu ligu.
 2. Liga s imenom koje već imaš doda se kao `Ime (Paket)`.
    Paket napravljen bez kadrova ide na tu ligu: grbovi i treneri sjednu na klubove istog imena,
    tvoji igrači ostaju, a program kaže koliko je klubova našao.
