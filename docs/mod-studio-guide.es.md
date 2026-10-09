@@ -237,6 +237,12 @@ prestadas de los clubes del propio juego. Una equipación así es con licencia, 
 deja cambiarla ("You cannot edit this strip"): marca **Equipaciones que puedes editar en el juego**
 en la página Construir y los clubes nuevos no toman ninguna prestada; cada uno lleva una equipación
 sencilla que Edit > Teams > Strip cambia como la de cualquier otro club, Paste Image incluido.
+Con Kit Server instalado, **Crear equipaciones para los clubes nuevos** (página Construir, activado
+salvo que lo desmarques, 0.2.1) crea a cada club nuevo la local, la visitante, la tercera y la de
+portero en los colores de su camiseta (los de NewLife, o los del escudo si no tiene), con el escudo
+en el pecho y en el pantalón, para ligas enteras a la vez al activar el mundo. Un escudo que pongas
+después (Importar escudos) pasa a las equipaciones en la siguiente activación. Un club con
+equipación propia de Kit Server, o solo con el escudo numerado, no recibe ninguna.
 Los nombres conservan sus letras (FK Željezničar); la abreviatura de tres letras no lleva tildes
 ni marcas, como en el juego, así que ahí Č, Ž, Đ pasan a C, Z, D. Después de **Construir**, la
 columna **ID del club** muestra el id de cada club en el juego.

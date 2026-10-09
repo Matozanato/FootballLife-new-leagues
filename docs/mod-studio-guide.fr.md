@@ -249,6 +249,12 @@ empruntés aux clubs du jeu. Un tel maillot est sous licence, et le mode Edit re
 ("You cannot edit this strip") : cochez **Maillots modifiables dans le jeu** sur la page Construire
 et les nouveaux clubs n'en empruntent aucun ; chacun porte un maillot simple que Edit > Teams >
 Strip modifie comme celui de n'importe quel club, Paste Image compris.
+Avec Kit Server installé, **Créer les maillots des nouveaux clubs** (page Construire, activé sauf si
+vous le décochez, 0.2.1) crée pour chaque nouveau club domicile, extérieur, troisième et gardien dans
+les couleurs de son maillot (celles de NewLife, ou de l'écusson à défaut), avec l'écusson sur la
+poitrine et le short, pour des ligues entières d'un coup à l'activation du monde. Un écusson ajouté
+plus tard (Importer des écussons) passe sur les maillots à l'activation suivante. Un club qui a son
+propre maillot Kit Server, ou seulement l'écusson numéroté, n'en reçoit pas.
 Les noms gardent leurs accents (FK Željezničar) ; le nom court de trois lettres n'en a pas, comme
 dans le jeu, donc Č, Ž, Đ y deviennent C, Z, D. Après la **Construction**, la colonne **ID du
 club** montre l'id de chaque club dans le jeu.

@@ -223,6 +223,11 @@ grba dobije grb s brojem. Dresovi se posude od klubova iz igre. Takav dres je li
 mode ga ne da mijenjati ("You cannot edit this strip"): označi **Dresovi koje možeš uređivati u
 igri** na stranici Izgradnja i novi klubovi ne posuđuju nijedan; svaki nosi jednostavan dres koji
 Edit > Teams > Strip mijenja kao i svaki drugi, Paste Image uključen.
+Uz instaliran Kit Server, **Napravi dresove za nove klubove** (stranica Izgradnja, uključeno dok
+ne odznačiš, 0.2.1) svakom novom klubu napravi domaći, gostujući, treći i golmanski dres u bojama
+njegovog dresa (iz NewLifea, ili iz grba ako ih nema), s grbom na prsima i hlačicama, za cijele
+lige odjednom kad se svijet uključi. Grb koji staviš kasnije (Uvezi grbove) ide na dresove pri
+idućem uključivanju. Klub s vlastitim Kit Server dresom, ili samo s grbom s brojem, ne dobije ga.
 Imena zadržavaju kvačice (FK Željezničar); kratko ime od tri slova ih nema, kao ni u igri,
 pa tamo Č, Ž, Đ postaju C, Z, D. Nakon **Izgradnje** stupac **ID kluba** pokazuje ID svakog
 kluba u igri.

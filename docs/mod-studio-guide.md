@@ -231,6 +231,11 @@ with no crest gets a numbered badge. Kits are lent from the game's own clubs. Su
 licensed one, and Edit mode will not change it ("You cannot edit this strip"): tick **Kits you
 can edit in the game** on the Build page and the new clubs borrow none, each wears a plain kit
 that Edit > Teams > Strip changes like any other club's, Paste Image included.
+With Kit Server installed, **Make kits for the new clubs** (Build page, on unless you untick it, 0.2.1)
+makes each new club home, away, third and goalkeeper kits in its shirt colours (NewLife's, or the
+crest's when it has none), with its crest on the chest and the shorts, for whole leagues at once
+when the world is switched on. A crest you put in later (Import crests) goes on the kits at the
+next switch-on. A club with a Kit Server kit of its own, or only a numbered badge, gets none.
 Names keep their letters (FK Željezničar); the three-letter short name has none, as in the game,
 so Č, Ž, Đ become C, Z, D there. After **Build** the **Team ID** column shows each club's id in
 the game.

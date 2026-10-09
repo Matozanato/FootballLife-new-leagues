@@ -3647,6 +3647,14 @@ class Build(BuilderPage):
             "changes like any other, Paste Image included. Build again after changing this."), hint(_("off = each new club borrows a kit of the game (it looks "
                                                     "real, but Edit mode cannot change it; on = Kit Server "
                                                     "cannot dress the new clubs)"))))
+        self.mkits = QCheckBox(_("Make kits for the new clubs"))
+        tip = ("On (with Kit Server installed): every new club without kits of its own gets home, away, third and "
+               "goalkeeper kits made in its shirt colours (or its crest's), with its crest on the chest, when the "
+               "world is switched on. A crest you change later goes on the kits at the next switch-on.")
+        self.mkits.setToolTip(_(tip))
+        self.mkits.toggled.connect(self.set_mkits)
+        cl.addWidget(noted(self.mkits, helpmark(tip), hint(_("a whole league's kits at once; off = the new clubs "
+                                                             "keep the kit borrowed from the game"))))
         self.b_euro = QPushButton(_("Build only the European cups..."))
         self.b_euro.setToolTip(_("A world with nothing but the new Champions League and Europa League (league "
                                  "phase of 36 and play-off) and, when ticked above, the Conference League: "
@@ -3706,6 +3714,14 @@ class Build(BuilderPage):
                 self.project.recipe.pop("editable_kits", None)
             self.project.touch()
 
+    def set_mkits(self, on):
+        if (self.project.recipe.get("make_kits") is not False) != on:
+            if on:
+                self.project.recipe.pop("make_kits", None)
+            else:
+                self.project.recipe["make_kits"] = False
+            self.project.touch()
+
     def set_uecl_name(self):
         v = self.uecl_name.text().strip()
         if v != (self.project.recipe.get("uecl_name") or ""):
@@ -3738,6 +3754,9 @@ class Build(BuilderPage):
         self.ekits.blockSignals(True)
         self.ekits.setChecked(bool(self.project.recipe.get("editable_kits")))
         self.ekits.blockSignals(False)
+        self.mkits.blockSignals(True)
+        self.mkits.setChecked(self.project.recipe.get("make_kits") is not False)
+        self.mkits.blockSignals(False)
         self.uecl_logo.path = self.project.recipe.get("uecl_logo")
         self.uecl_logo.show_it()
         self.uecl_name.setText(self.project.recipe.get("uecl_name") or "")

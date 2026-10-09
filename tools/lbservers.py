@@ -55,6 +55,77 @@ def wanted(pl):
     return kits, boards
 
 
+def to_make(pl, root):
+    """[(team id, league, place, home words, away words, crest picture)] of the new clubs that get a
+    kit made (kitmaker): no Kit Server folder of their own, a shirt in words or a crest picture of
+    their own.  A club of the game keeps its kits; "make_kits": false makes none."""
+    import kitmaker
+    if pl.get("make_kits") is False:
+        return []
+    out = []
+    for p in (pl.get("leagues") or []) + (pl.get("others") or []):
+        teams, folders = p.get("teams") or [], p.get("kit_folders") or []
+        game = {int(k) for k in (p.get("game_clubs") or {})}
+        home, away = p.get("club_kits") or [], p.get("club_away_kits") or []
+        crests = p.get("club_crests") or []
+        for k, tid in enumerate(teams):
+            if tid is None or k in game or (k < len(folders) and folders[k]):
+                continue
+            crest = os.path.join(root, "common", "render", "symbol", "flag", "e_%06d_r_ll.png" % int(tid))
+            words = kitmaker.words(home[k] if k < len(home) else "")
+            own = k < len(crests) and crests[k]
+            if not os.path.isfile(crest) or not (words or own):
+                continue                      # a numbered placeholder badge: the lent kit stays
+            if not words:
+                words = kitmaker.crest_kit(crest)
+                if not words:
+                    continue
+            out.append((int(tid), p.get("name") or "Other clubs", k, words,
+                        kitmaker.words(away[k] if k < len(away) else ""), crest))
+    return out
+
+
+def numbers_kit(lib, ours):
+    """a kit of the library to lend back numbers, leg numbers and a name font: the first, by name,
+    whose p1 has all three, outside the folders we write"""
+    for d, subs, files in sorted(os.walk(lib)):
+        rel = os.path.relpath(d, lib)
+        if rel.split(os.sep)[0] == ours:
+            subs[:] = []
+            continue
+        if os.path.basename(d).lower() == "p1":
+            names = [f.lower() for f in files]
+            if all(any(n.endswith(s + ".ftex") for n in names) for s in ("_back", "_leg", "_name")):
+                return os.path.dirname(d)
+    return None
+
+
+def _made(tid, words, away, crest, dst, numbers, log):
+    """the kit folder dst made from words and crest, unless it was made from the same ones"""
+    import hashlib, kitmaker, kitpics, tempfile
+    h = hashlib.md5()
+    for x in (words, away or "", numbers or "", os.path.getsize(kitmaker.MASK)):
+        h.update(str(x).encode("utf-8") + b"\0")
+    h.update(open(crest, "rb").read())
+    stamp = os.path.join(dst, "kitmaker.txt")
+    try:
+        if open(stamp, encoding="utf-8").read().strip() == h.hexdigest():
+            return False
+    except OSError:
+        pass
+    tmp = tempfile.mkdtemp(prefix="fl26kit")
+    try:
+        pics = kitmaker.pictures(tmp, words, away, crest)
+        if os.path.isdir(dst):
+            shutil.rmtree(dst)
+        kitpics.make_kit(pics, tid, dst, numbers)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    with open(stamp, "w", encoding="utf-8") as f:
+        f.write(h.hexdigest() + "\n")
+    return True
+
+
 def _copy(src, dst):
     """src's files into dst (dst made again only when they differ: a size or a time)"""
     same = os.path.isdir(dst)
@@ -109,10 +180,23 @@ def _map(path, mine, log, what):
     return len(mine)
 
 
-def write(pl, sider, log=print):
-    """the plan's kits and scoreboards into Kit Server and Scoreboard Server; (kits, scoreboards) written"""
+def write(pl, sider, log=print, root=None):
+    """the plan's kits and scoreboards into Kit Server and Scoreboard Server, and a kit made for
+    every other new club with colours or a crest (root: the world's folder, for the crests);
+    (kits, scoreboards) written"""
     kits, boards = wanted(pl)
     world = safe(pl.get("world") or "FL26 world")
+    make = to_make(pl, root) if root and os.path.isdir(os.path.join(sider, KITS)) else []
+    if make:                                 # a club with a kit line of your own keeps that kit
+        lines = lbstadiums.read(os.path.join(sider, KITS, "map.txt"))[0]
+        yours = set()
+        for l in lines:
+            if TAG in l:
+                continue
+            m = LINE.match(l[:-len(OFF)] if l.endswith(OFF) else l)
+            if m and (not m.group(1) or l.endswith(OFF)):
+                yours.add(int(m.group(2)))
+        make = [x for x in make if x[0] not in yours]
     done = []
     for lib, file, items, what in ((KITS, "map.txt", kits, "kits"),
                                    (BOARDS, "map_competitions.txt", boards, "scoreboards")):
@@ -138,6 +222,21 @@ def write(pl, sider, log=print):
                 text = "%d, %s   %s %s" % (key, rel, TAG, name)
             _copy(src, os.path.join(root, rel))
             mine.append((key, text))
+        if what == "kits" and make:
+            numbers = numbers_kit(root, world)
+            new = 0
+            for tid, league, k, words, away, crest in make:
+                cn = [p for p in (pl.get("leagues") or []) + (pl.get("others") or [])
+                      if (p.get("name") or "Other clubs") == league][0].get("club_names") or []
+                rel = "%s\\%s\\%s" % (world, safe(league), safe(cn[k] if k < len(cn) and cn[k] else "club %d" % k))
+                try:
+                    new += _made(tid, words, away, crest, os.path.join(root, rel), numbers, log)
+                except Exception as e:               # one bad crest picture must not stop the Build
+                    log("  kit of %s: not made (%s)" % (rel, e))
+                    continue
+                mine.append((tid, '%d, "%s"   %s %s/%d made' % (tid, rel, TAG, league, k)))
+            log("kits made from colours and crests: %d (%d new or changed)%s" % (
+                len(make), new, "" if numbers else "; no kit in the library lends back numbers, so the game's own are used"))
         done.append(_map(os.path.join(root, file), mine, log, what))
     return tuple(done)
 

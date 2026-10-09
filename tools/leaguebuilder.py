@@ -180,6 +180,10 @@ which league sits above -- and nothing about ids:
               entries are the cups' winners (<knockout>:0, fl26swiss.dll). Nobody has won
               either cup in a new career's first season, so it is first played in the second.
               false: none. "caf_super_cup_logo" is its picture
+  make_kits   (the recipe) false: no kit is made. Otherwise, with Kit Server installed, every new
+              club without a Kit Server folder of its own gets a kit made when the world is switched
+              on (lbservers, kitmaker): home, away, third and goalkeeper in its shirt colours
+              (club_kits / club_away_kits, NewLife's), or its crest's, with its crest on the chest.
   editable_kits  (the recipe) true: the new clubs get no kit lent from a club of the game. A lent
               kit is a licensed one (<key>_1st_realUni.bin) and Edit mode refuses it ("You cannot
               edit this strip"). Instead each club gets plain 1st/2nd/GK definitions of its own
@@ -778,6 +782,8 @@ def recipe_from_plan(pl, base):
     for k in ("uecl", "uecl_logo", "uecl_name", "editable_kits", "game_seasons", "cafsc"):
         if pl.get(k) not in (None, "", False) or k == "uecl":
             rec[k] = pl.get(k)
+    if pl.get("make_kits") is False:
+        rec["make_kits"] = False
     return rec
 
 
@@ -1596,6 +1602,7 @@ def plan(recipe, base):
             "europe_first": europe_first(recipe, by_name),
             "game_seasons": august_countries(recipe),
             "editable_kits": bool(recipe.get("editable_kits")),
+            "make_kits": recipe.get("make_kits", True) is not False,
             "country_order": recipe.get("country_order") or None,
             "cup_draw": cup_draw(recipe)}
 
@@ -4230,7 +4237,7 @@ def switch_on(world, game, log=print):
     if built is not None:
         import lbstadiums, lbservers
         lbstadiums.write(built, siderdir.find(game), log)
-        lbservers.write(built, siderdir.find(game), log)
+        lbservers.write(built, siderdir.find(game), log, root)
     mods = os.path.join(root, "modules")
     for f in sorted(os.listdir(mods)) if os.path.isdir(mods) else []:
         dst = os.path.join(siderdir.find(game), "modules", f)
