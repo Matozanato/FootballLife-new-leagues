@@ -549,7 +549,8 @@ datoteku `.fl26pack`**. Svatko je doda u svoj recept i izgradi.
 ispusti na Instaliraj modove):
 
 1. Program pokaže što je unutra i pita. Paket s više liga ih nabroji, sve označene: odznači one koje
-   ne želiš (0.2.1). Liga ispod druge lige iz paketa povlači i tu ligu.
+   ne želiš (0.2.1). Liga ispod druge lige iz paketa povlači i tu ligu. Pod Što uzeti možeš odznačiti
+   i dijelove paketa (scoreboarde, dresove, grbove, lica ...), npr. da scoreboarde uzmeš iz drugog paketa.
 2. Liga s imenom koje već imaš doda se kao `Ime (Paket)`.
    Paket napravljen bez kadrova ide na tu ligu: grbovi i treneri sjednu na klubove istog imena,
    tvoji igrači ostaju, a program kaže koliko je klubova našao.

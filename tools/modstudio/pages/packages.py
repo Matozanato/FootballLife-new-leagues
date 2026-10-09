@@ -21,6 +21,17 @@ def store():
     return os.path.join(APPDIR, "packs")
 
 
+def part_labels():
+    return {"squads": _("Squads (every player change on these clubs)"),
+            "faces": _("Player faces and portraits"),
+            "crests": _("Crests and league logos"),
+            "managers": _("Managers"),
+            "kits": _("Kit colours"),
+            "kitfiles": _("Kits (the Kit Server kits of the clubs)"),
+            "scoreboards": _("Scoreboards (the Scoreboard Server scoreboard of each league)"),
+            "stadiums": _("Home stadiums (the Stadium Server line, not the stadium itself)")}
+
+
 class MakeDialog(QDialog):
     def __init__(self, parent, recipe, last):
         super().__init__(parent)
@@ -65,14 +76,7 @@ class MakeDialog(QDialog):
         self.edits.setEnabled(n > 0)
         v.addWidget(self.edits)
         v.addWidget(section("What goes in"))
-        labels = {"squads": _("Squads (every player change on these clubs)"),
-                  "faces": _("Player faces and portraits"),
-                  "crests": _("Crests and league logos"),
-                  "managers": _("Managers"),
-                  "kits": _("Kit colours"),
-                  "kitfiles": _("Kits (the Kit Server kits of the clubs)"),
-                  "scoreboards": _("Scoreboards (the Scoreboard Server scoreboard of each league)"),
-                  "stadiums": _("Home stadiums (the Stadium Server line, not the stadium itself)")}
+        labels = part_labels()
         self.parts = {}
         for k in K.PARTS:
             b = self.parts[k] = QCheckBox(labels[k])
@@ -115,8 +119,8 @@ class MakeDialog(QDialog):
 
 
 class AddDialog(QDialog):
-    """what a package holds, and which of its leagues to add"""
-    def __init__(self, parent, text, leagues):
+    """what a package holds, which of its leagues to add and which of its parts"""
+    def __init__(self, parent, text, leagues, parts=()):
         super().__init__(parent)
         self.setWindowTitle(_("Add a league package"))
         self.setMinimumWidth(520)
@@ -139,6 +143,19 @@ class AddDialog(QDialog):
             v.addWidget(self.leagues, 1)
             v.addWidget(hint(_("Untick the leagues you do not want. A league below another league of the "
                                "package brings that one with it.")))
+        self.parts = {}
+        if len(parts) > 1:
+            v.addWidget(section("What to take"))
+            labels = part_labels()
+            for k in parts:
+                b = self.parts[k] = QCheckBox(labels.get(k, k))
+                b.setChecked(True)
+                v.addWidget(b)
+            if "squads" in self.parts and "faces" in self.parts:
+                self.parts["squads"].toggled.connect(self.parts["faces"].setEnabled)
+            v.addWidget(hint(_("Untick what you do not want from this package, e.g. its scoreboards when you "
+                               "take them from another one. Without squads the new clubs get players made at "
+                               "Build.")))
         if text[1:]:
             v.addWidget(hint("\n".join(text[1:]).strip()))
         bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -156,6 +173,12 @@ class AddDialog(QDialog):
             return None
         return [self.leagues.item(i).data(Qt.UserRole) for i in range(self.leagues.count())
                 if self.leagues.item(i).checkState() == Qt.Checked]
+
+    def picked_parts(self):
+        """the parts ticked, or None when everything is taken"""
+        if all(b.isChecked() for b in self.parts.values()):
+            return None
+        return [k for k, b in self.parts.items() if b.isChecked() and b.isEnabled()]
 
     def check(self):
         if self.picked() == []:
@@ -278,7 +301,10 @@ class Packages(BuilderPage):
                      % ", ".join("%s %s" % (p.get("name") or t, p.get("version") or "") for t, p in old)]
         else:
             text += ["", _("Add it to the recipe?")]
-        dlg = AddDialog(self, text, man.get("leagues", []))
+        parts = [p for p in K.PARTS if p in (man.get("parts") or K.PARTS)]
+        if man.get("players") is False:
+            parts = [p for p in parts if p not in ("squads", "faces")]
+        dlg = AddDialog(self, text, man.get("leagues", []), parts)
         if dlg.exec() != QDialog.Accepted:
             return
         try:
@@ -289,6 +315,8 @@ class Packages(BuilderPage):
         brought = []
         if dlg.picked() is not None:
             piece, brought = K.only(piece, dlg.picked())
+        if dlg.picked_parts() is not None:
+            piece = K.parts_only(piece, dlg.picked_parts())
         tag = K.tag_of(man)
         rename = {}
         going = {n for _t, p in old for n in p.get("leagues") or []}      # replaced, not clashing

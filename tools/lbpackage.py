@@ -382,6 +382,44 @@ def only(piece, names):
     return out, [n for n in by if n in keep and n not in names]
 
 
+def parts_only(piece, parts):
+    """piece with only the parts named (PARTS), as if the package had been made with just those:
+    a person takes the leagues of a package but, say, not its scoreboards or kits"""
+    parts = set(parts)
+    if "squads" not in parts:
+        parts.discard("faces")
+    out = json.loads(json.dumps(piece))
+    for L in out.get("leagues", []):
+        for part, keys in LEAGUE_PARTS.items():
+            if part not in parts:
+                for k in keys:
+                    L.pop(k, None)
+    pl = {}
+    for key, c in (out.get("players") or {}).items():
+        if "squads" not in parts:
+            c = {k: c[k] for k in ("coach_portrait", "stadium") if c.get(k)}
+        if "faces" not in parts:
+            for ch in list((c.get("edits") or {}).values()) + list(c.get("add") or []):
+                ch.pop("face", None)
+                ch.pop("portrait", None)
+        if "managers" not in parts:
+            c.pop("coach_portrait", None)
+        if "stadiums" not in parts:
+            c.pop("stadium", None)
+        if any(c.get(k) for k in ("edits", "add", "remove", "join", "coach_portrait", "stadium")):
+            pl[key] = c
+    out["players"] = pl
+    if "crests" not in parts:
+        e = out.get("edits") or {}
+        for kind, key in (("leagues", "logo"), ("competitions", "logo"), ("clubs", "crest")):
+            for k, v in list((e.get(kind) or {}).items()):
+                v.pop(key, None)
+                if not v:
+                    e[kind].pop(k)
+        out["edits"] = {k: v for k, v in e.items() if v}
+    return out
+
+
 def add(recipe, man, piece, folder, rename=None):
     """put a package's piece into recipe (changed in place).  rename maps a clashing league
     name to the one it gets here.  A package added again (same tag) replaces itself.  A

@@ -618,7 +618,9 @@ de ligues, ou déposez-le sur Installer des mods) :
 
 1. Le programme montre ce qu'il contient et vous demande. Un paquet de plusieurs ligues les liste,
    toutes cochées : décochez celles que vous ne voulez pas (0.2.1). Une ligue placée sous une autre
-   ligue du paquet amène celle-ci avec elle.
+   ligue du paquet amène celle-ci avec elle. Sous Que prendre, vous pouvez aussi décocher des parties du
+   paquet (tableaux de score, maillots, écussons, visages ...), par exemple pour prendre les tableaux de
+   score d'un autre paquet.
 2. Une ligue dont vous avez déjà le nom est ajoutée sous la forme `Nom (Paquet)`.
    Un paquet fait sans effectifs va sur cette ligue : ses blasons et entraîneurs vont aux clubs du
    même nom, vos joueurs restent et le programme dit combien de clubs il a trouvés.

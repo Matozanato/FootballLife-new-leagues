@@ -590,7 +590,8 @@ ligas, o suéltalo en Instalar mods):
 
 1. El programa muestra lo que hay dentro y pregunta. Un paquete de varias ligas las lista, todas
    marcadas: desmarca las que no quieras (0.2.1). Una liga que está debajo de otra del paquete trae
-   también esa.
+   también esa. En Qué tomar puedes desmarcar también partes del paquete (marcadores, equipaciones,
+   escudos, caras ...), por ejemplo para tomar los marcadores de otro paquete.
 2. Una liga con un nombre que ya tienes se añade como `Nombre (Paquete)`.
    Un paquete hecho sin plantillas va encima de esa liga: sus escudos y entrenadores caen en los
    clubes del mismo nombre, tus jugadores se quedan y el programa dice cuántos clubes encontró.

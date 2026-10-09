@@ -582,7 +582,8 @@ drop it on Install mods):
 
 1. The program shows what is inside and asks. A package of several leagues lists them, all ticked:
    untick the ones you do not want (0.2.1). A league below another league of the package brings that
-   one with it.
+   one with it. Under What to take you can also untick parts of it (scoreboards, kits, crests,
+   faces ...), e.g. to take the scoreboards from another package.
 2. A league with a name you already have is added as `Name (Package)`.
    A package made without squads goes onto that league instead: its crests and managers land on the
    clubs of the same name, your players stay, and the program says how many clubs it found.
