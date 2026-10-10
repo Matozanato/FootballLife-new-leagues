@@ -376,6 +376,46 @@ more new players the others keep the default look, and sider.log says "appearanc
 full". A player you gave a **Face** made for another player takes that player's appearance
 too, so his arms and legs have the face's skin colour (GitHub #102).
 
+### I imported kits, but the game still shows the old ones
+
+Clubs that already had a line in Kit Server's `map.txt` keep that line: **Import kits** skips them
+unless you tick **Replace kits already set** in the import window. Import again with it ticked,
+press **Save** (it writes `map.txt`) and start the game again; Kit Server reads its kits only when
+the game starts.
+
+To see what is wrong with a line, tick **Only lines with problems** on the Kits page and hold the
+mouse over a yellow line: the reason shows as a tooltip. The most common one is "... not found in
+the library": `map.txt` sends the club to a folder (such as `Premier League\Newcastle`) that is
+not in Kit Server's kits folder, so the game has nothing to show. The **Library** tab lists the
+folders that are really there. Point the line at one of them, or select it and press **Remove**.
+
+### The stadium is completely black
+
+Not a Build problem: Stadium Server's `map_teams.txt` sends the home club to a stadium folder
+that is missing, or only half installed (a wrong folder name, a wrong slot, a stadium that was
+not unpacked whole). The game loads nothing and the stadium is black. Open the **Stadiums** page,
+tick **Only lines with problems** and hold the mouse over the club's line to see why. Point it
+at a stadium the **Library** tab lists, or remove the line and the club plays in its old stadium
+again. Press **Save** and start the game again.
+
+### A player is a free agent, or has no face, in the world I built
+
+A world carries a full copy of the game's database (players, clubs, who plays where) from the
+moment it was built, and it sits above the game. Anything newer that a game update or a face
+update brings for the same players is covered by that copy. After such an update press
+**Settings > Unpack the game's tables** again and **Build** again; then the world has what your
+game has now. A ready-made world from somebody else (an exported world, see the guide 9.1) was
+built from that person's tables; Mod Studio reads a recipe back from it when it starts with that
+world switched on, so you can Build it again on yours (a few parts, such as pre-season cups and
+competition names, do not come back: the guide 9.1 lists them).
+
+### I cannot remove any more players from my new club
+
+A new club keeps at least 18 players. In 0.2.1 the Players page counts only the club's own
+squad for that rule and forgets the players you signed for it, so it can refuse even when the
+list shows 30 or more. Build itself counts the signings. Until the fix, remove one of the signed
+players instead (that always works), or leave the extra player in.
+
 ### What should I send when something is wrong?
 
 1. In Mod Studio: **Tools > Diagnostics > Copy a report**, and paste it into the issue.

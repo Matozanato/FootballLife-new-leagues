@@ -4,6 +4,24 @@ Honest list, as of 2026-09-28. Addresses are given so that a fault offset in you
 Viewer can be matched against them: the offset is the address minus `0x140000000`
 (so `0x1414c674d` shows up as exception offset `0x14c674d`).
 
+## Open in Mod Studio 0.2.1 (2026-10-10)
+
+- **A league package made from NewLife, with some clubs added by hand, stops Check the plan**
+  (Python error `int() argument must be ... not 'NoneType'`). The package lists a NewLife id for
+  each club, and a club that is not from NewLife has none. The 0.2.1 changelog says an older
+  package with an empty "exchange" field works again; that is true, but this is a different
+  field, and it is not fixed yet. Reported on Discord with the EFL League One/Two/National
+  package.
+- **Players page: a new club refuses to lose more players too early.** The rule is that a new
+  club keeps at least 18 players, but the page counts only the club's own squad and forgets the
+  players signed for it. Build counts them correctly. Remove a signed player instead, or leave
+  the extra player in. See the [FAQ](faq.md).
+- **"Make kits for the new clubs": some new clubs still wear another club's kit** (GitHub #129,
+  Austria Vienna and Rapid with Kit Server installed). Being looked at.
+- **Import kits keeps a club's existing `map.txt` line** unless **Replace kits already set** is
+  ticked. That is intended, but a broken old line then looks as if the import did nothing. See
+  the [FAQ](faq.md).
+
 ## Crashes
 
 | where | address | status |
