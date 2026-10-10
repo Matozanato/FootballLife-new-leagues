@@ -4,7 +4,7 @@ The recipe is the same JSON leaguebuilder.py builds from.  The tables are the ga
 Team/Competition/Player tables, unpacked once from the person's game into
 %APPDATA%\\FL26ModStudio\\tables (Settings > Unpack the game's tables).
 """
-import json, os, shutil
+import json, os, shutil, zlib
 
 from PySide6.QtCore import QObject, Signal
 
@@ -90,8 +90,12 @@ class Project(QObject):
             self.game_cl = B.game_clubs(self.base)
             self.game_nat, self.game_other = B.game_others(self.base, self.game_lgs)
             self.game_confeds = B.game_league_confeds(self.base, self.game_lgs)
-        except (B.BuildError, OSError, ValueError, SystemExit) as e:
-            self.tables_error = str(e)
+        except (B.BuildError, OSError, ValueError, SystemExit, AssertionError, zlib.error) as e:
+            # a .bin that is not one of the game's packed tables (a patch's files copied over them)
+            self.tables_error = (str(e) if isinstance(e, (B.BuildError, OSError, ValueError, SystemExit))
+                                 else "one of the .bin files in the tables folder is not a game table "
+                                      "(a patch's files copied over it?) -- put the original tables back "
+                                      "or choose another tables folder in Settings")
             self.base = None
             self.countries, self.parents, self.game_lgs, self.game_cl = [], [], [], {}
             self.confeds = {}

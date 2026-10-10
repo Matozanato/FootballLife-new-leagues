@@ -1367,7 +1367,8 @@ def plan(recipe, base):
              "newlife": {"clubs": [int(i) for i in (L.get("newlife") or {}).get("clubs") or []]},
              "kit_folders": list(L.get("kit_folders") or []),     # Kit Server folders and the
              "scoreboard": L.get("scoreboard") or None,           # Scoreboard Server one (lbservers)
-             "exchange": int(L.get("exchange", 3)), "above": None, "tier": 1,
+             "exchange": int(3 if L.get("exchange") is None else L["exchange"]),   # null in an old package
+             "above": None, "tier": 1,
              "real_calendar": L.get("real_calendar"),     # realcal.py: dates, or false for none
              "europe": [[int(a), int(b)] for a, b in (L.get("europe") or [])]}
         for f in [p["formation"]] + p["club_formations"]:
