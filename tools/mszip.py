@@ -51,6 +51,49 @@ blockquote p{margin:.2rem 0} li{margin:.25rem 0}
 """
 
 
+# sites a shipped patch set must never touch again: each crashed a release once
+KNOWN_BAD = {"1412f9046": "MenuUtilityDemoPlayer+0x2b0 -> +0x6b0, the Master League / Be a Legend "
+                          "creation crash of the 0.2.0 package (GitHub #122, #125)"}
+
+
+def same_text(a, b):
+    """two text files, line endings aside"""
+    rd = lambda p: open(p, "rb").read().replace(b"\r\n", b"\n")
+    return rd(a) == rd(b)
+
+
+def check_pack(pack):
+    """what went wrong once must not go out again (0.2.0 shipped an old fl26caps.lua):
+    a known crash site in a module stops the zip; so does a fl26caps.lua that is not the
+    patch set last generated (sider/fl26caps.<set>.lua, made by patchset.py and never copied
+    over) or not the one installed in the game we test with (FL26_DIR). Modules that differ
+    from the game's copy are listed: they were not played in the game in that form."""
+    bad, untested = [], []
+    mods = os.path.join(pack, "modules")
+    for f in sorted(os.listdir(mods)):
+        text = open(os.path.join(mods, f), "rb").read().decode("utf-8", "replace").lower()
+        bad += ["%s: %s" % (f, why) for site, why in KNOWN_BAD.items() if site in text]
+    caps = os.path.join(mods, "fl26caps.lua")
+    sider = os.path.join(REPO, "sider")
+    for g in sorted(os.listdir(sider)):
+        if (g.startswith("fl26caps.") and g.endswith(".lua") and g not in ("fl26caps.lua", "fl26caps.template.lua")
+                and not same_text(caps, os.path.join(sider, g))):
+            bad.append("fl26caps.lua is not the generated sider/%s -- copy it over sider/fl26caps.lua" % g)
+    game = os.environ.get("FL26_DIR")
+    gmods = os.path.join(game, "SiderAddons", "modules") if game else None
+    if gmods and os.path.isdir(gmods):
+        for f in sorted(os.listdir(mods)):
+            g = os.path.join(gmods, f)
+            if f.endswith(".lua") and (not os.path.exists(g) or not same_text(os.path.join(mods, f), g)):
+                (bad if f == "fl26caps.lua" else untested).append(
+                    f + (": not the one installed in the game (FL26_DIR) -- test the shipped file" if f == "fl26caps.lua" else ""))
+    else:
+        print("pack check: FL26_DIR not set, the modules are not compared with the game's")
+    for f in untested:
+        print("pack check: NOT PLAYED in the game in this form: %s" % f)
+    return bad
+
+
 def guide(md, html, lang):
     import markdown
     body = markdown.markdown(open(md, encoding="utf-8").read(), extensions=["tables", "fenced_code"])
@@ -143,6 +186,7 @@ def main():
         bad += freeze()
     shutil.copytree(os.path.join(WORK, "dist", NAME), OUT, dirs_exist_ok=True)
     lbpack.build(os.path.join(OUT, "pack"))
+    bad += check_pack(os.path.join(OUT, "pack"))
     guide(os.path.join(REPO, "docs", "mod-studio-guide.md"), os.path.join(OUT, "README.html"), "en")
     langs = ("hr", "es", "fr")
     for code in langs:
@@ -153,7 +197,7 @@ def main():
             if PRIVATE.search(l):
                 bad.append("%s:%d: %s" % (f, i, l.strip()[:110]))
     if bad:
-        raise SystemExit("private text in the package:\n  " + "\n  ".join(bad))
+        raise SystemExit("the package cannot go out (private text, or a check above):\n  " + "\n  ".join(bad))
     z = os.path.join(REPO, "out", "%s-%s.zip" % (NAME, version()))
     with zipfile.ZipFile(z, "w", zipfile.ZIP_DEFLATED) as zf:
         for root, _, files in os.walk(OUT):

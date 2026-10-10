@@ -108,6 +108,13 @@ python tools/mszip.py --no-exe   # reuse the last frozen program (out/msexe/dist
    - **A new `tools/*.py` that Build imports must be added to `HIDDEN`**, or the frozen
      program fails where the checkout works.
 3. **Pack.** `lbpack.build(out/mszip/pack)`.
+   **Pack check** (`check_pack`, since 0.2.1; 0.2.0 went out with an old `fl26caps.lua`): the
+   release stops when a module holds a site from `KNOWN_BAD` (one that crashed a release
+   once), when `pack/modules/fl26caps.lua` is not the set `patchset.py` generated last
+   (`sider/fl26caps.<set>.lua`, copy it over `sider/fl26caps.lua`), or, with `FL26_DIR`
+   set, when it is not the `fl26caps.lua` installed in that game. Other modules that differ
+   from the game's copy are printed as "NOT PLAYED in the game in this form": install the
+   package's modules and play them before the release.
 4. **Guides.** `docs/mod-studio-guide.md` -> `README.html`, and the `hr`, `es`, `fr` copies
    -> `README.<code>.html` (the `markdown` package).
 5. **Check.** Every staged source inside the exe, the guides and `pack/modules.txt` is
