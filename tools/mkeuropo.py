@@ -78,7 +78,12 @@ def playoffs(regs, where="the world", uecl=True):
         if not own:
             raise SystemExit("no competition %d in %s" % (cid, where))
         if any(r[M.R_TYPE] == tpl[0][M.R_TYPE] and r[0x0d] >> 4 == tpl[0][0x0d] >> 4 for r in own):
-            raise SystemExit("competition %d already has a play-off phase" % cid)
+            # GitHub/Discord 10.10.: tables of a built world, or a patch's database pasted over the
+            # game's, already carry one -- say what to do, not only what was found
+            raise SystemExit("competition %d already has a play-off phase -- the tables in use are not the "
+                             "game's own (a built world's, or another patch's Competition*.bin copied over "
+                             "them?); put the game's original tables back or choose another tables folder "
+                             "in Settings" % cid)
         name = own[0][M.R_NAME:M.NAME_END]
         ids = [new + g * STEP for g in range(TIES + 1)]
         if used & set(ids):
