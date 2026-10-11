@@ -131,7 +131,14 @@ class Players(BuilderPage):
         self.pitch.dropped.connect(self.put_at)
         self.pitch.swapped.connect(self.swap_places)
         lv.addWidget(self.pitch, 1)
-        vsplit.addWidget(under)
+        # the buttons and the pitch scroll, so the splitter handle can make the list taller even
+        # when the window is short; without this the pitch's minimum height held the handle still
+        below = QScrollArea()
+        below.setWidgetResizable(True)
+        below.setFrameShape(QScrollArea.NoFrame)
+        below.setWidget(under)
+        self.tree.setMinimumHeight(120)
+        vsplit.addWidget(below)
         vsplit.setStretchFactor(0, 1)
         vsplit.setStretchFactor(1, 0)
         split.addWidget(left)
