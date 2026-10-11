@@ -3343,6 +3343,28 @@ static void lpre_fill(int i)
 }
 static void lpre_fill_days(void) { for (int i = 0; i < g_nlpre; i++) lpre_fill(i); }
 
+/* A league position for a cup of ours. A league that also sends clubs to the Libertadores or the
+   AFC Champions League is counted the way those places are (last season's kept table, else
+   squad strength): the cup went by the live table instead, a few rounds into a first season, and
+   the Libertadores by squad strength -- one club of Peru got both cups, the 5th neither
+   (GitHub #132). A club of this season's Libertadores / AFC lists is passed over too. */
+static int cont_league(uint16_t reg)
+{
+  for (size_t i = 0; i < g_naccess; i++)
+    if (g_access[i].comp >= LIB && g_access[i].comp <= AFCL && (g_access[i].reg == reg || g_access[i].alt == reg)) return 1;
+  return 0;
+}
+static uint32_t ccup_club(const ccup_t* c, uint16_t reg, int rank, const char** how)
+{
+  if (c->national || !cont_league(reg)) return cwc_club(reg, rank, how);
+  int ft = 0;
+  uint32_t x = access_club_kept(reg, rank, &ft, CONT_KEEP);
+  *how = ft ? "kept table" : seed_of(reg) ? "squad strength" : "list order";
+  for (int k = 0; x && k < 3; k++) if (has_club(g_cont[k], g_ncont[k], x)) *how = "in the Libertadores / AFC list";
+  return x;
+}
+static int ccup_cont(const char* how) { return !strcmp(how, "in the Libertadores / AFC list"); }
+
 static int ccup_fill_one(int k, void* started)
 {
   const ccup_t* c = &g_ccup[k];
@@ -3357,6 +3379,7 @@ static int ccup_fill_one(int k, void* started)
   uint16_t unplayed_phase = 0;
   g_ccup_nf[k] = 0;
   if (!cn) return 0;
+  if (!c->national) cont_build();                 /* this season's Libertadores / AFC places, for ccup_club */
   int single = ccup_like_ok(c);
   if (single)
     logf("fl26swiss: cup %u -- a single-match knockout of %u (reg %u's shape), day %d", (unsigned)c->ko, cn,
@@ -3382,9 +3405,9 @@ static int ccup_fill_one(int k, void* started)
       if (club && c->ealt[i] && ((!c->national && ccup_taken(club)) || lpre_has(c->ko, club))) club = 0;
       if (!club && c->ealt[i]) {                   /* its league's next club (alt=) */
         for (int rank = c->efrom[i] ? c->efrom[i] : 1; rank <= FINAL_MAX; rank++) {
-          uint32_t a = cwc_club(c->ealt[i], rank, &how);
+          uint32_t a = ccup_club(c, c->ealt[i], rank, &how);
           if (!a) break;
-          if ((a >> 14) && !has_club(g_ccup_field[k], n, a) && (c->national || !ccup_taken(a)) && !lpre_has(c->ko, a)) {
+          if ((a >> 14) && !ccup_cont(how) && !has_club(g_ccup_field[k], n, a) && (c->national || !ccup_taken(a)) && !lpre_has(c->ko, a)) {
             club = a;
             logf("fl26swiss:   cup %u entry: reg %u's winner place goes to reg %u position %d", (unsigned)c->reg,
                  (unsigned)c->ereg[i], (unsigned)c->ealt[i], rank);
@@ -3395,9 +3418,9 @@ static int ccup_fill_one(int k, void* started)
       if (!club) logf("fl26swiss:   cup %u entry: reg %u has no winner to send", (unsigned)c->reg, (unsigned)c->ereg[i]);
     } else
     for (int rank = c->erank[i]; rank <= FINAL_MAX; rank++) {
-      club = cwc_club(c->ereg[i], rank, &how);
+      club = ccup_club(c, c->ereg[i], rank, &how);
       if (!club) break;
-      if ((club >> 14) && !has_club(g_ccup_field[k], n, club) && (c->national || !ccup_taken(club))
+      if ((club >> 14) && !ccup_cont(how) && !has_club(g_ccup_field[k], n, club) && (c->national || !ccup_taken(club))
           && !lpre_has(c->ko, club)) break;
       club = 0;
     }
