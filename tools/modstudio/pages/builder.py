@@ -532,8 +532,14 @@ class LeagueDialog(Dialog):
         for x in project.recipe["leagues"]:
             if x is not league and not x.get("others"):
                 add(x["name"], x["name"])
+        # two clubs of each: a patch that put another country in a slot keeps the slot's old name
+        # in the tables (LaraCroft, 10.10.: Greece in Smoke Patch's "Switzerland" slot read as a
+        # second Switzerland); the clubs say which league it really is
+        clubs_of = {g[0]: g[3] for g in project.game_lgs}
         for r, n in project.parents:
-            add("%s  [%d]" % (n, r), r)
+            two = [project.game_cl.get(t, ("",))[0] for t in clubs_of.get(r, [])[:2]]
+            two = ", ".join(c for c in two if c)
+            add("%s  [%d]%s" % (n, r, "  (%s ...)" % two if two else ""), r)
         cur = L.get("above")
         i = self.above.findData(int(cur) if isinstance(cur, str) and cur.isdigit() else cur)
         self.above.setCurrentIndex(max(0, i))

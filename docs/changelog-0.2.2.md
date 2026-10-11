@@ -24,6 +24,8 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   down (then it refused the game and sider.log said MISMATCH).
 - The country cup draw (cup_draw random or seeded) rewrites only the clubs the cup's entry
   list holds (GitHub #122).
+- League > Division lists two clubs beside each of the game's leagues, so a slot a patch gave
+  another country (Greece in Smoke Patch's "Switzerland") can be told apart.
 - Import kits replaces a map line whose kit folder is missing, instead of keeping it.
 - Players: the "a new club keeps at least 18 players" check counts the players who joined it.
 - A package whose NewLife club list has gaps no longer stops Check the plan.
