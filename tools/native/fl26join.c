@@ -264,6 +264,10 @@ vec16_t* join_pre(vec16_t* in)
    wrapper's return address is still on the stack -- the wrapper pushes rsi and subtracts
    0x20 before calling, so its own return address sits 0x30 further up -- and that one names
    the real call site. */
+/* Lines per season start, not per process: a second career in the same run logged none of its
+   entries (GitHub #124, the Poland log: door YES and then silence, the cap long spent). The July
+   list starts the count again. */
+static int g_reg_logged = 0;
 void reg_pre(uint64_t compid, uint64_t ret, uint64_t ret2)
 {
   g_stat[3]++;
@@ -274,7 +278,7 @@ void reg_pre(uint64_t compid, uint64_t ret, uint64_t ret2)
     g_cave[1] = (g_cave[1] + 1) & 255;
     g_cave[0]++;
   }
-  if (g_stat[3] <= 200) {
+  if (++g_reg_logged <= 200) {
     uint64_t site = (ret == g_base + 0x159044c) ? ret2 : ret;
     logf("enter_season(%u) from %llx", (unsigned)(compid & 0xffff),
          (unsigned long long)site);
@@ -1058,7 +1062,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   if (n + g_nids + g_ntd_extra > MAX_LIST) return in;
   for (int j = 0; j < n; j++) if (in->b[j] == 2) { euro = 1; break; }
   if (euro) memset(g_door_yes, 0, sizeof g_door_yes);   /* a new season: nobody let in yet */
-  if (euro) { g_cal_midseason = 1; memset(g_cal_shut, 0, sizeof g_cal_shut); }
+  if (euro) { g_cal_midseason = 1; memset(g_cal_shut, 0, sizeof g_cal_shut); g_reg_logged = 0; }
   char buf[320]; int p = 0; buf[0] = 0;
   for (int j = 0; j < n; j++) {
     uint16_t id = in->b[j];
