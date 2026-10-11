@@ -4171,6 +4171,16 @@ def ensure_modules(game, order, want, log=print):
             where = {x: ((i + 1 if i >= at else i), lv) for x, (i, lv) in where.items()}
         where[m] = (lines.index('lua.module = "%s.lua"' % m), True)
         done.append(m)
+    # fl26caps first: the others check the bytes it moves. A file where it came after fl26swiss
+    # (Yanis, 09.10.: MISMATCH at 0x14154358f, caps aborted) kept that order, since nothing
+    # else moves -- the caps line alone goes up to the first live module of ours.
+    live = [(i, module_of(l)[0]) for i, l in enumerate(lines) if module_of(l)[1]]
+    ours_at = [i for i, m in live if m.replace("/", "\\").rpartition("\\")[2] in order]
+    caps_at = [i for i, m in live if m == order[0]]
+    if caps_at and ours_at and caps_at[0] > ours_at[0]:
+        lines.insert(ours_at[0], lines.pop(caps_at[0]))
+        done.append("%s moved first" % order[0])
+        log("sider.ini: %s moved before the other modules of ours -- it has to load first" % order[0])
     ext = [i for i, l in enumerate(lines) if l.strip().lstrip(";#").strip().startswith("luajit.ext.enabled")]
     if not ext or lines[ext[0]].replace(" ", "") != "luajit.ext.enabled=1":
         if ext:
@@ -4189,8 +4199,9 @@ def ensure_modules(game, order, want, log=print):
     if done or gone:
         shutil.copy2(ini, ini + ".before-builder") if not os.path.exists(ini + ".before-builder") else None
         open(ini, "w", encoding="utf-8", newline="\r\n").write("\n".join(lines) + "\n")
-        if done:
-            log("sider.ini: switched on %s" % ", ".join(done))
+        on = [m for m in done if not m.endswith(" moved first")]
+        if on:
+            log("sider.ini: switched on %s" % ", ".join(on))
     return done + gone
 
 
