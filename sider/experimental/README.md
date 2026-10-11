@@ -28,6 +28,7 @@ runs exactly as it did before.
 | `fl26deeprank.lua` | the **relegation gate**, so a club goes down from any division, not only the second | replaces `fl26deep4.lua`; load it AFTER `fl26rank.lua` and turn `fl26deep4.lua` off, or the bytes will not match |
 | `fl26deep4.lua` | one byte, so that a **third** division relegates into a fourth | superseded by `fl26rank` + `fl26deeprank`, which do it properly; kept for anyone who wants the one-byte version without the rank change |
 | `fl26reg64.lua` | the number of **regions** (countries the menus group by) from 29 to **64** | one instruction: the shipped code masks the region to five bits and throws away anything from 29 up, while the runtime field it feeds is six bits wide. Every shipped row keeps the region it had. Two more patches keep a region-29 league in a new Master League career (the career builder had a dead "skip region 29" test) |
+| `fl26reg128.lua` | the number of **regions** from 64 to **128** (ids 0..127). **Replaces `fl26reg64.lua`**: load one or the other | 44 in-place patches. The game keeps the region in a 6-bit field; the module moves the full region into a byte of the same record that the game writes and never reads (`+0x2fe`, marked by `0x5a` at `+0x2ff`), rewrites the one setter and all 32 readers to use it, and keeps `min(region, 63)` in the old field. In the file the seventh bit is bit 1 of `Competition.bin +3`, which was zero in every row ever written, so a world that never uses a region of 64 or more reads exactly as before. All or nothing: if any of the 44 sites holds unexpected bytes, nothing is written. Careers saved before it need the updated `fl26join.dll` (`fl26_join_regions`), which gives their records the region back on load. |
 | `fl26augseason.lua` | a Master League career in one of the added leagues **starts in August** (day 212) instead of 1 January | one jump: the lookup that picks the season type knows only the shipped regions 2..28, and a region of 29 or more fell through to "calendar year". Needs `fl26reg64.lua` (a league only reaches region 29+ with it). **Known side effect:** in an August-start career the Champions League play-off is registered after its own two dates, so on its own it gets no matches and the European competitions never start. With `fl26swiss` installed the DLL runs the play-off itself and all three competitions start (measured 2026-09-24) |
 | `fl26superguard.lua` | the **UEFA Super Cup setup** no longer crashes when the Champions League or Europa League entry it looks for is missing | one bounds check. When an entry is missing, that season has no Super Cup instead of a crash. Seen in an August-start career without `fl26swiss`; the play-off problem above is the likely cause. With `fl26swiss` the Super Cup was set up normally in the first and the third season of a run on 2026-09-25. Keep the guard installed anyway |
 | `fl26resultsguard.lua` | the **matchday-results screen** after *Skip Match* no longer ends the game when it has nothing to list | two jumps into the function's own exit, used only when its list is empty; the page then stays empty. Without it, the day of the first leg of the Europa and Conference League play-offs (with `fl26swiss`, around 18 February) crashed twice here in a row, in `ucrtbase.dll` at offset `0xa527e` (issue #9 hit the same at the Europa League knockout). With it, the career went on past that day on 2026-09-25 and both play-offs were played to the end. Why the screen gets an empty list on that day is still open |
@@ -54,8 +55,9 @@ lua.module = "fl26clubs.lua"
 lua.module = "fl26rank.lua"
 ; after rank, and with fl26deep4 off
 lua.module = "fl26deeprank.lua"
-lua.module = "fl26reg64.lua"
-; needs reg64
+; or fl26reg64.lua (64 regions), never both
+lua.module = "fl26reg128.lua"
+; needs reg128 (or reg64)
 lua.module = "fl26augseason.lua"
 lua.module = "fl26superguard.lua"
 lua.module = "fl26resultsguard.lua"
@@ -64,7 +66,7 @@ lua.module = "fl26ctlguard.lua"
 lua.module = "fl26seasonend.lua"
 ; after comptab (the counts must agree)
 lua.module = "fl26chain.lua"
-; after reg64
+; after reg128
 lua.module = "fl26catlist.lua"
 ; after comptab
 lua.module = "fl26editlist.lua"
@@ -115,7 +117,7 @@ guess a slot.** `fl26slotnames.lua` names, for each slot, the case byte it expec
 and the heading that case draws today — if your install disagrees it changes nothing and
 logs what it saw, which is the report we want.
 
-## What `fl26rank.lua` and `fl26reg64.lua` are for, in one paragraph each
+## What `fl26rank.lua` and `fl26reg64.lua` / `fl26reg128.lua` are for
 
 **Rank.** Every rulebook carries its place in the national pyramid, and the game keeps it in
 two bits, which count to three. Build a fourth and a fifth division and all of D3, D4 and D5
@@ -134,6 +136,45 @@ before it. So regions 29 and up work as groupings and borrow a name. The module 
 them headings of their own copies the game's own rows, and the version that exists carries
 those rows inside itself as a blob of shipped bytes; this repository does not redistribute
 game data, so it will be published once it copies them out of memory at startup instead.
+
+## `fl26reg128.lua`: 128 regions
+
+```ini
+; in place of lua.module = "fl26reg64.lua", same position (before fl26augseason and fl26catlist)
+lua.module = "fl26reg128.lua"
+```
+
+Files for `SiderAddons\modules`: `fl26reg128.lua`, and the updated `fl26catlist.lua`,
+`fl26augseason.lua`, `fl26joindll.lua` + `fl26join.dll` and `fl26swiss.dll`, which all
+accept regions up to 127 now. Mod Studio's pack ships `fl26reg128` instead of `fl26reg64` and
+switches the old line off (`retired.txt`).
+
+Why 64 stopped it: `fl26reg64` widened the parser to six bits, and the runtime field is six
+bits. The record has a 16-bit word at `+0x2fe` that the game writes (from nine bits of the
+competition row it never uses, and as `0xffff` on reset) but that a scan of the whole exe
+finds no reader for. The module makes the region setter store the full region in its low
+byte and `min(region, 63)` in the old field, the parser mark the high byte with `0x5a`, turns
+every one of the 32 reads of the old field into a read of that byte (same length), and
+makes the resets clear the word. The
+three dead "region 29" tests the stock parser had hidden now compare with 0. Every patch was
+checked against the exe on disk, and no branch or table in the exe lands inside a replaced
+range.
+
+In `Competition.bin +3` the region is: bits 3..7 = region bits 0..4, bit 0 = bit 5 (as with
+`fl26reg64`), bit 1 = bit 6. `tools/mkleague.py` (`enc_region` / `dec_region`) writes it, and
+`tools/test_region_enc.py` checks the round trip. A world built for 64 regions needs no
+rebuild.
+
+Old careers: a save made before the module has junk in that word and never the mark.
+`fl26join.dll` hooks the game's recount of the career records (run on load and after every
+write-back) and gives each unmarked record its 6-bit value, which is the whole region an old
+career had (region 63 included), and the mark. Without the updated DLL an old career shows wrong regions in
+its menus. New careers do not need it.
+
+Not checked in a game yet: everything above is static analysis. To report: the line
+`fl26reg128: 44 of 44 sites rewritten` in sider.log, a league on region 64 or more in
+Select Team and Competition Info, and an old career loaded with the log line `regions: N
+regulation record(s) of an old career given their region`.
 
 ## The European format and league sizes (`fl26swiss`)
 

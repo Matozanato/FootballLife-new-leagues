@@ -33,8 +33,9 @@ Two plans (2026-09-21):
                      blank, it renders whatever the previous lookup left behind.
     --plan own       a region of its own for every one of our leagues -- every free id, in
                      order, the four below 29 first.  With 39 leagues and 39 free ids this is
-                     an exact fit, and it needs sider/fl26reg64.lua for everything above 28
-                     (the engine reads 64 regions once that byte is in, but only 29 without).
+                     an exact fit, and it needs sider/fl26reg128.lua for everything above 28
+                     (the engine reads 128 regions once that module is in, but only 29
+                     without).
     --plan shipped   spread them over the shipped country regions instead, at most three of
                      ours per region and never taking a region past eight competitions in
                      total.  They inherit a real name and a real flag, and they take nothing
@@ -161,7 +162,8 @@ def own_plan(raw, ours):
 
     Free means no shipped competition uses the id and it is not one of the groupings. Ids
     below 29 come first, because those work on an unpatched exe; everything from 29 up needs
-    sider/fl26reg64.lua, and this says so rather than assuming it.
+    sider/fl26reg128.lua, and this says so rather than assuming it. A world that fits below
+    64 allocates exactly as before.
     """
     used = set()
     for i in range(len(raw) // REC):
@@ -180,7 +182,7 @@ def own_plan(raw, ours):
         print("  leaving %d league(s) where they are, inside a shipped country: %s"
               % (len(settled), ", ".join("FL %d in region %d" % (fl, rid)
                                          for fl, rid in sorted(settled.items()))))
-    free = [rid for rid in range(1, 64) if rid not in used and rid not in NOT_A_COUNTRY]
+    free = [rid for rid in range(1, M.REGION_MAX + 1) if rid not in used and rid not in NOT_A_COUNTRY]
     wants = [fl for fl in sorted(ours.values()) if fl not in settled]
     if len(free) < len(wants):
         raise SystemExit("only %d free regions for %d leagues" % (len(free), len(wants)))
@@ -189,9 +191,9 @@ def own_plan(raw, ours):
         plan[fl] = rid
     high = [fl for fl, rid in plan.items() if rid > 28]
     if high:
-        print("  %d of them land above region 28, so this world needs sider/fl26reg64.lua;"
+        print("  %d of them land above region 28, so this world needs sider/fl26reg128.lua;"
               % len(high))
-        print("  without it the game reads those regions as 32 lower than they are.")
+        print("  without it the game reads those regions as a lower region than they are.")
     return plan
 
 

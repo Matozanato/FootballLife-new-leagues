@@ -6467,6 +6467,21 @@ static int rix_install(uint64_t exe_base)
   return 0;
 }
 
+/* A record's region, the key 0x1415415f0 answers. With fl26reg128 live that getter reads the
+ * full region (0..127) from the byte at +0x2fe, which the module marks with 0x5a at +0x2ff,
+ * and the 6-bit field at +0x30c bits 7..12 holds min(region, 63); without it the 6-bit field
+ * is the region. An unmarked record (an old career fl26join has not repaired yet) falls back
+ * to the field. */
+static unsigned rec_region(const unsigned char* rr)
+{
+  static const unsigned char NEW[7] = { 0x0f,0xb6,0x80,0xfe,0x02,0x00,0x00 };   /* fl26reg128 at 0x141541639 */
+  unsigned six = (*(const uint32_t*)(rr + 0x30c) >> 7) & 0x3f;
+  if (g_base && !memcmp((const void*)(uintptr_t)(g_base + 0x1541639), NEW, sizeof NEW)
+      && rr[0x2ff] == 0x5a && rr[0x2fe] <= 127)
+    return rr[0x2fe];
+  return six;
+}
+
 /* Put the key of every live split into the stub, once. Cheap enough to call from the date,
  * progression and current-phase hooks, which between them run on load and on the split day. */
 static void split_keys(void)
@@ -6476,7 +6491,7 @@ static void split_keys(void)
   for (int k = 0; k < g_nsplits; k++) {
     unsigned char* rr = get_rec(SPLITS[k].regular);
     if (!rr || ((*(uint32_t*)(rr + 0x308) >> 23) & 0x3f) != 12) continue;
-    unsigned key = (*(uint32_t*)(rr + 0x30c) >> 7) & 0x3f;
+    unsigned key = rec_region(rr);   /* key - 12 fits the stub's signed imm8 for every key 0..127 */
     if (nocarry(SPLITS[k].total)) {
       if (k < 32 && !(said_nc & (1u << k))) {
         said_nc |= 1u << k;

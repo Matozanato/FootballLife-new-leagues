@@ -36,7 +36,7 @@ ZIG = os.environ.get("ZIG") or next(
 ORDER = [
     "fl26caps", "fl26guards", "fl26joindll",
     "fl26hdr192", "fl26chain", "fl26comptab", "fl26slotnames", "fl26clubs", "fl26regen", "fl26editlist", "fl26edit",
-    "fl26rank", "fl26deeprank", "fl26regions", "fl26reg64", "fl26regnames", "fl26catlist",
+    "fl26rank", "fl26deeprank", "fl26regions", "fl26reg128", "fl26regnames", "fl26catlist",
     "fl26swiss", "fl26augseason", "fl26lateguards",
     "fl26seasonend",
 ]
@@ -51,6 +51,10 @@ BUNDLES = {
                    "fl26nullguard7", "fl26nullguard8", "fl26nullguard9", "fl26nullguard10"],
     "fl26lateguards": ["fl26superguard", "fl26resultsguard", "fl26ctlguard", "fl26kitguard"],
 }
+# Single modules a newer one replaced outright: the old line goes off and the old file goes
+# with the other old copies, as for a bundle (retired.txt). fl26reg128 does all fl26reg64 did,
+# from 64 regions up to 128, and the two must not both be loaded.
+REPLACED = {"fl26reg64": "fl26reg128"}
 PER_WORLD = {"fl26regions", "fl26regnames"}
 DLLS = {"fl26join": "build-join.sh", "fl26chain": "build-chain.sh",
         "fl26clubs": "build-clubs.sh", "fl26swiss": "build-swiss.sh", "fl26regen": "build-regen.sh",
@@ -149,7 +153,8 @@ def build(out, log=print):
     open(os.path.join(mods, "..", "modules.txt"), "w", encoding="utf-8", newline="\n").write(
         "".join(m + "\n" for m in ORDER))
     open(os.path.join(mods, "..", "retired.txt"), "w", encoding="utf-8", newline="\n").write(
-        "".join("%s %s\n" % (p, b) for b, parts in BUNDLES.items() for p in parts))
+        "".join("%s %s\n" % (p, b) for b, parts in BUNDLES.items() for p in parts)
+        + "".join("%s %s\n" % (o, n) for o, n in REPLACED.items()))
     bad = []
     for f in sorted(os.listdir(mods)):
         if f.endswith(".lua"):

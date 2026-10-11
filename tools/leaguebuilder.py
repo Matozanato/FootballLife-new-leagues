@@ -206,7 +206,7 @@ What plan() decides, so that nothing is left to a person to get wrong:
   team ids         a league's "club_ids" where it gives one; every other club counts up from
                    the last shipped one, at most CLUB_ID_MAX
   regions         a league with "above" takes its parent's; a new country gets the next
-                   region from 29 up that nothing uses (sider/fl26reg64.lua reads 29..63)
+                   region from 29 up that nothing uses (sider/fl26reg128.lua reads 29..127)
   tier             1, or the parent's plus one
   split phases     mksplit's ids from 191 up (the range split seasons were tested on)
 
@@ -241,7 +241,7 @@ OTHERS = {"europe": 2, "latam": 6, "asia": 3, "africa": 7, "classic": 1}
 OTHERS_MAX = 24                          # clubs in one such group of the recipe
 OTHERS_NAMES = {2: "Other European", 6: "Other Latin American", 3: "Other Asia-Oceania",
                 7: "Other Africa", 1: "Classic Teams"}
-REGION_FIRST, REGION_LAST = 29, 63
+REGION_FIRST, REGION_LAST = 29, M.REGION_MAX
 CID_FROM = 130
 SQUAD, PLAYER_CAP = 22, 61905            # limits branch: the lim2400 layout (--player-cap 61905); 30 a squad in releases
 TEAM_CAP = 2400                          # clubs in all, shipped ones included (1536 in releases)
@@ -3548,7 +3548,7 @@ def like_reg(db, code):
 # The Select Team list is ordered by region first, in the order of a list of 28 region ids in
 # the exe (0x1427d5760; the comparator 0x140eadae0): the club competitions, then Europe, Latin
 # America and Asia, each alphabetical with its "other" group last. fl26catlist.lua copies that
-# list and appended our regions 29..63 after it, so a new country came after Thailand whatever
+# list and appended our regions 29..127 after it, so a new country came after Thailand whatever
 # its name. The `order` line puts each of our countries in its continent, by name.
 SHIPPED_REGIONS = [                       # (region, name, confederation); None = a group
     (1, None, 0), (26, None, 0),

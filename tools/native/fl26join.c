@@ -131,7 +131,19 @@ static int td_extra(uint16_t id) { for (int i = 0; i < g_ntd_extra; i++) if (g_t
    them half way through and they ended every season with no final table (GitHub #27). */
 static uint16_t g_cal[MAX_IDS]; static int g_ncal = 0;
 static int calyr(uint16_t id) { for (int i = 0; i < g_ncal; i++) if (g_cal[i] == id) return 1; return 0; }
-static int rec_region(const unsigned char* rec) { return rec ? (int)((*(const uint32_t*)(rec + 0x30c) >> 7) & 63) : -1; }
+/* A record's region. With fl26reg128 live the full region (0..127) is the byte at +0x2fe,
+   marked by REG128_MARK at +0x2ff, and the 6-bit field at +0x30c bits 7..12 holds
+   min(region, 63); without it the 6-bit field is all there is. An unmarked record (an old
+   career before fl26_join_regions repaired it) falls back to the 6-bit field. */
+#define REG128_MARK 0x5a
+static int reg128_live(void);
+static int rec_region(const unsigned char* rec)
+{
+  if (!rec) return -1;
+  int six = (int)((*(const uint32_t*)(rec + 0x30c) >> 7) & 63);
+  if (reg128_live() && rec[0x2ff] == REG128_MARK && rec[0x2fe] <= 127) return rec[0x2fe];
+  return six;
+}
 /* shipped leagues that do enter, as a yardstick beside ours in the door log */
 static int control(uint16_t id) { return id == 17 || id == 21 || id == 50 || id == 81 || id == 82; }
 
@@ -1267,7 +1279,7 @@ __declspec(dllexport) int fl26_join_teardown_extra(const uint16_t* ids, int n)
  * pairs the function builds on its stack from .rdata: 0 the European season (August-May), 1
  * the calendar year (Brazil 16, Chile 18, Colombia 19, China 21, United States 23, Japan 24,
  * Saudi Arabia 28), 2 and 3 two more that only unused regions and Argentina (17) carry. A region
- * not in the table gets 5, which fl26augseason turns into 0 for our regions 29..63. The answer
+ * not in the table gets 5, which fl26augseason turns into 0 for our regions 29..127. The answer
  * drives the whole season: the career's start date (0x1412695b0), and the filter 0x141365c50
  * that picks, at every turn of the season (July, New Year), the competitions whose season
  * ends then -- the same filter fl26seasonend hooks, which calls this function for every region
@@ -1293,16 +1305,16 @@ static const uint32_t STYPE_RDATA[12] = {
 static const uint32_t STYPE_EXPECT[25][2] = {
   {2,0},{4,0},{5,0},{3,0},{7,0},{6,0},{22,0},{8,0},{9,0},{27,0},{15,0},{10,0},{11,0},{12,0},
   {14,2},{13,2},{16,1},{18,1},{23,1},{19,1},{17,3},{20,3},{21,1},{28,1},{24,1} };
-static uint8_t g_stype[64];
+static uint8_t g_stype[128];
 static int g_stype_live = 0;
 unsigned char* g_tramp_stype = 0;       /* made by hook(), never called: the handler answers alone */
 uint32_t stype_handler(const int32_t* region)
 {
   int32_t r = *region;
-  if (r >= 0 && r < 64 && g_stype[r] != 0xff) return g_stype[r];
+  if (r >= 0 && r < 128 && g_stype[r] != 0xff) return g_stype[r];
   if (!r) return 5;
   for (int i = 0; i < 25; i++) if ((int32_t)STYPE_EXPECT[i][0] == r) return STYPE_EXPECT[i][1];
-  return (r >= 29 && r < 64) ? 0 : 5;   /* fl26augseason's answer for ours, the game's for the rest */
+  return (r >= 29 && r < 128) ? 0 : 5;   /* fl26augseason's answer for ours, the game's for the rest */
 }
 
 /* v: n pairs (region, type), type 0..3. Call after fl26_join_install. Returns the number of
@@ -1310,12 +1322,12 @@ uint32_t stype_handler(const int32_t* region)
    -3 when the hook could not be written. */
 __declspec(dllexport) int fl26_join_season_types(const uint8_t* v, int n)
 {
-  if ((!v && n) || n < 0 || n > 64 || !g_base) return -1;
+  if ((!v && n) || n < 0 || n > 128 || !g_base) return -1;
   memset(g_stype, 0xff, sizeof g_stype);
   int k = 0;
   for (int i = 0; i < n; i++) {
     uint8_t r = v[2 * i], t = v[2 * i + 1];
-    if (r >= 64 || t > 3) continue;
+    if (r >= 128 || t > 3) continue;
     g_stype[r] = t; k++;
   }
   if (!k) return 0;
@@ -1334,12 +1346,140 @@ __declspec(dllexport) int fl26_join_season_types(const uint8_t* v, int n)
     }
     g_stype_live = 1;
   }
-  char buf[200]; int p = 0;
-  for (int r = 0; r < 64 && p < (int)sizeof buf - 12; r++)
+  char buf[400]; int p = 0;
+  for (int r = 0; r < 128 && p < (int)sizeof buf - 12; r++)
     if (g_stype[r] != 0xff) p += snprintf(buf + p, sizeof buf - (size_t)p, "%d:%u ", r, g_stype[r]);
   buf[p] = 0;
   logf("season types from the world file (region:type, 0 August-May, 1 January-December): %s", buf);
   return k;
+}
+
+/* ---- fl26reg128: old careers get their full regions back ----
+ *
+ * fl26reg128 keeps the full region (0..127) in the byte at +0x2fe of every regulation record,
+ * marks it with 0x5a at +0x2ff (the parser writes the mark right after the region setter),
+ * and keeps min(region, 63) in the old 6-bit field (+0x30c bits 7..12); every reader now
+ * reads the byte. A Master League save made before it carries 0xffff there (the reset value)
+ * or the old Competition.bin d0 bits 18..26 (at most 0x1ff), and never the mark. Loaded as
+ * is, every competition of that career would show a junk region.
+ *
+ * So the records are put right whenever the game recounts them: 0x1414bc0a0 (rcx = a mode
+ * block) runs after every mode-copy write-back, at mode-data creation and on load. A BEFORE
+ * hook walks the live edit block's records and gives every unmarked row region = its 6-bit
+ * field, and the mark. A career saved before the module never had a region above 63
+ * (fl26reg64 at most), so the 6-bit field IS its region -- region 63 included, which a
+ * plain consistency test could not have told from a junk 64. A marked row is left alone,
+ * so a new career pays one compare per record.
+ *
+ * The row count comes from the block constructor's own imm (0x1414b87dd `mov r14d, N`, 300
+ * stock, 600 under fl26caps), never from a guess: this writes, unlike find_record. */
+#define RECOUNT_RVA 0x14bc0a0
+static const unsigned char SIG_RECOUNT[16] = {  /* mov [rsp+18],rbx; push rbp,rsi,rdi,r12..r15 */
+  0x48,0x89,0x5c,0x24,0x18, 0x55, 0x56, 0x57, 0x41,0x54, 0x41,0x55, 0x41,0x56, 0x41,0x57 };
+#define REG128_RVA 0x1541639   /* the getter 0x1415415f0's read, as fl26reg128 writes it */
+static const unsigned char REG128_NEW[7] = { 0x0f,0xb6,0x80,0xfe,0x02,0x00,0x00 };  /* movzx eax, byte [rax+0x2fe] */
+#define REGCTOR_RVA 0x14b87dd  /* block constructor: mov r14d, <regulation rows> */
+unsigned char* g_tramp_recount = 0;
+static int g_regions_live = 0;
+static volatile uint32_t g_regions_fixed = 0, g_regions_passes = 0;
+
+static int reg128_live(void)
+{
+  return g_base && !memcmp((const void*)(uintptr_t)(g_base + REG128_RVA), REG128_NEW, sizeof REG128_NEW);
+}
+
+static uint32_t reg_rows(void)
+{
+  const unsigned char* p = (const unsigned char*)(uintptr_t)(g_base + REGCTOR_RVA);
+  if (p[0] == 0x41 && p[1] == 0xbe) {
+    uint32_t n = *(const uint32_t*)(p + 2);
+    if (n >= 1 && n <= REG_CAP) return n;
+  }
+  return 300;
+}
+
+static int repair_block(unsigned char* block)
+{
+  unsigned char* rec = block + reg_off();
+  uint32_t rows = reg_rows();
+  int fixed = 0;
+  for (uint32_t i = 0; i < rows; i++, rec += REG_STRIDE) {
+    if (*(const uint16_t*)rec == 0) continue;            /* unused row */
+    if (rec[0x2ff] == REG128_MARK) continue;               /* written by fl26reg128's parser */
+    rec[0x2fe] = (unsigned char)((*(const uint32_t*)(rec + 0x30c) >> 7) & 63);
+    rec[0x2ff] = REG128_MARK;
+    fixed++;
+  }
+  return fixed;
+}
+
+/* `block` is the recount's own argument (or 0): a block of the edit block's type -- the recount
+   walks its regulations at the same offset fl26caps gives reg_off() (0x1414bc1bc: array + 0x314)
+   -- so it is repaired as well as the live edit block, when it is another one. */
+static int repair_regions(unsigned char* block)
+{
+  if (!reg128_live()) return 0;
+  int fixed = 0;
+  void** owner = *(void***)(uintptr_t)(g_base + OWNER_RVA);
+  unsigned char* edit = owner ? (unsigned char*)owner[0x48 / 8] : 0;
+  if (edit) fixed += repair_block(edit);
+  if (block && block != edit) fixed += repair_block(block);
+  return fixed;
+}
+
+void recount_pre(unsigned char* block)
+{
+  int n = repair_regions(block);
+  g_regions_passes++;
+  if (n) {
+    g_regions_fixed += (uint32_t)n;
+    static int logged = 0;
+    if (logged++ < 40) logf("regions: %d regulation record(s) of an old career given their region from the 6-bit field (recount %u)", n, g_regions_passes);
+  }
+}
+
+/* BEFORE-hook on the recount: every argument register is put back. 7 pushes + 0x20 keeps the
+   stack 16-aligned at the call (entry rsp is 8 mod 16); rcx, untouched, is recount_pre's
+   argument -- the block being recounted. */
+__attribute__((naked)) void recount_handler(void)
+{
+  __asm__ volatile(
+    "push %rcx\n"
+    "push %rdx\n"
+    "push %r8\n"
+    "push %r9\n"
+    "push %r10\n"
+    "push %r11\n"
+    "push %rax\n"
+    "sub  $0x20, %rsp\n"
+    "call recount_pre\n"
+    "add  $0x20, %rsp\n"
+    "pop  %rax\n"
+    "pop  %r11\n"
+    "pop  %r10\n"
+    "pop  %r9\n"
+    "pop  %r8\n"
+    "pop  %rdx\n"
+    "pop  %rcx\n"
+    "jmp  *g_tramp_recount(%rip)\n");
+}
+
+/* Call after fl26_join_install. 0 hooked (or already), 2 the recount's prologue differs, 3/4
+   alloc/protect failed, -1 not installed. The hook goes in whatever the module order: each
+   pass checks that fl26reg128's bytes are live and does nothing when they are not (fl26reg128
+   may be listed after fl26joindll in sider.ini). Repairs once right away as well. */
+__declspec(dllexport) int fl26_join_regions(void)
+{
+  if (!g_base) return -1;
+  if (!g_regions_live) {
+    int r = hook((unsigned char*)(uintptr_t)(g_base + RECOUNT_RVA), SIG_RECOUNT, 16, (void*)recount_handler, &g_tramp_recount);
+    if (r) { logf("regions: recount 0x1414bc0a0 hook failed (%d) -- old careers keep wrong regions", r); return r; }
+    g_regions_live = 1;
+  }
+  int n = repair_regions(0);
+  logf("regions: old-career repair hooked on the recount, %u rows per block, fl26reg128 %s, %d fixed now",
+       reg_rows(), reg128_live() ? "live" : "not live yet", n);
+  return 0;
 }
 
 __declspec(dllexport) int fl26_join_log(char* out, int cap)

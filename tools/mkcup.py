@@ -49,7 +49,7 @@ start a season, and look at the fixture list.
     python mkcup.py --base ...\pesdb --out ...\livecpk\_FL26E39x793 ^
                     --name "FL Cup 01" --code FL_CUP_01 --region 2 --teams 72318,72319,...
 
---region is a region id (2 England, 29..63 the ones new countries get), encoded the way
+--region is a region id (2 England, 29..127 the ones new countries get), encoded the way
 mkleague.enc_region writes it. Until 28 September it was the raw Competition.bin byte, so
 "--region 29" put the cup in region 35.
 

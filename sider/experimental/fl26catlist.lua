@@ -5,7 +5,7 @@ Why: the category list on that screen is built by 0x140ead9f0 from a static list
 region ids compiled into FL_2026.exe (.rdata 0x1427d5760: 1,26,8,12,2,...,25 -- the display
 order). For every region in that list it looks for a live regulation whose region
 (+0x30c bits 7..12) matches, and adds the region if one exists. Our leagues sit in regions
-30..60 (fl26reg64 widened the field to 64), none of which is in the list, so a league in an
+30 and up (fl26reg64 widened the field to 64, fl26reg128 to 128), none of which is in the list, so a league in an
 existing country shows up (France D3..D5 under France) and a league in a country of its own
 does not appear at all.
 
@@ -15,7 +15,7 @@ region it does not know keeps the default 'compeCategory-interClub' image, so a 
 country gets a generic picture, not a crash.
 
 What this does, at boot, runtime only: copies the 28 shipped ids into a private table,
-appends 29..63 (only regions with a live regulation get listed, so the unused ones cost
+appends the rest of 1..127 (only regions with a live regulation get listed, so the unused ones cost
 nothing), re-points the two rip-relative leas at the copy and raises the two loop counts.
 All four code sites are checked against their expected bytes first (all-or-nothing).
 
@@ -52,7 +52,7 @@ built before that keeps the European icons until it is rebuilt.
 
 This fixes the page itself, for old worlds and new: a 12-byte run at 0x140c6cd97 (the read of
 the league's code) becomes a call to a stub that reads the code as before and then, for a
-region 29..63 that has an entry in a 64-byte table, returns that region's code instead. The
+region 29..127 that has an entry in a 128-byte table, returns that region's code instead. The
 entry comes from the world file: the league's `conf=` (the builder writes the country's
 confederation, 2..7), else the continent its `uefa` places go to (0-2 UEFA, 3/4/9 CONMEBOL,
 5/8 AFC, 6/7 CAF), else the league above it. Regions 0..28 have no entry, so every shipped
@@ -71,7 +71,7 @@ local m = {}
 
 local SHIPPED = 0x1427d5760
 local NSHIPPED = 28
-local LAST_REGION = 63
+local LAST_REGION = 127   -- fl26reg128; with fl26reg64 the ids above 63 simply never match
 
 -- {va, expected bytes (hex)}
 local LEAS = {
@@ -203,9 +203,9 @@ local function rel32(from_next, to)
   return u32le(d)
 end
 
--- the stub: 80 bytes of code, then two 64-entry u16 region -> country tables, COUNTRY at 80
--- and LABEL at 208
---   0  cmp ecx,0x3f ; ja orig          5  mov eax,ecx
+-- the stub: 80 bytes of code, then two 128-entry u16 region -> country tables, COUNTRY at 80
+-- and LABEL at 336
+--   0  cmp ecx,0x7f ; ja orig          5  mov eax,ecx
 --   7  mov rdx,LABEL_RET ; cmp [rsp],rdx ; jne all      (the category label's call only)
 --  23  lea rdx,[LABEL] ; movzx edx,word [rdx+rax*2] ; cmp dx,-1 ; je all ; mov eax,edx ; ret
 --  43  all: lea rdx,[COUNTRY] ; movzx eax,word [rdx+rax*2] ; cmp ax,-1 ; je orig ; ret
@@ -225,16 +225,16 @@ local function install_country()
   local back = rel32(stub + 73, COUNTRY_FN + 7)
   local into = rel32(COUNTRY_FN + 5, stub)
   if not (back and into) then log("fl26catlist: country stub out of jump range -- names left alone"); return end
-  local code = "\131\249\63" .. "\119\56" .. "\137\200"
+  local code = "\131\249\127" .. "\119\56" .. "\137\200"
             .. "\72\186" .. u32le(LABEL_RET % 0x100000000) .. u32le(math.floor(LABEL_RET / 0x100000000))
             .. "\72\57\20\36" .. "\117\20"
-            .. "\72\141\21" .. u32le(178) .. "\15\183\20\66" .. "\102\131\250\255" .. "\116\3"
+            .. "\72\141\21" .. u32le(336 - 30) .. "\15\183\20\66" .. "\102\131\250\255" .. "\116\3"
             .. "\137\208" .. "\195"
-            .. "\72\141\21" .. u32le(30) .. "\15\183\4\66" .. "\102\131\248\255" .. "\116\1" .. "\195"
+            .. "\72\141\21" .. u32le(80 - 50) .. "\15\183\4\66" .. "\102\131\248\255" .. "\116\1" .. "\195"
             .. "\64\85\72\141\108\36\169" .. "\233" .. back .. string.rep("\204", 7)
   assert(#code == 80)
   local tbl, lbl, named = {}, {}, 0
-  for r = 0, 63 do
+  for r = 0, LAST_REGION do
     local c = COUNTRY[r] or 0xffff
     if COUNTRY[r] then named = named + 1 end
     tbl[#tbl + 1] = string.char(c % 256, math.floor(c / 256))
@@ -256,7 +256,7 @@ local CONF_TABLE_BYTES = "080000000700000001000000020000000500000006000000030000
 -- the continent a `uefa` place goes to (fl26world.COMPETITIONS / CCUPS), as a file code
 local PLACE_CONF = { [0] = 2, [1] = 2, [2] = 2, [3] = 4, [4] = 4, [5] = 3, [6] = 5, [7] = 5, [8] = 3, [9] = 4 }
 
--- region 29..63 -> confederation as Competition.bin / Country.bin write it (2..7), from the world
+-- region 29..127 -> confederation as Competition.bin / Country.bin write it (2..7), from the world
 -- file: a league's conf=, else where its places go, else the league above it
 local function world_confeds(world)
   local conf_of, by_id = {}, {}
@@ -281,9 +281,9 @@ local function world_confeds(world)
   return out
 end
 
--- the stub: 35 bytes of code, then the 64-entry u8 region -> runtime code table (0xff = keep)
+-- the stub: 35 bytes of code, then the 128-entry u8 region -> runtime code table (0xff = keep)
 --   0  mov ecx,[rax+0x300] ; shr ecx,0x19 ; and ecx,0xf     (the original read)
---  12  cmp edx,0x3f ; ja done                               (edx = the league's region)
+--  12  cmp edx,0x7f ; ja done                               (edx = the league's region)
 --  17  lea rax,[tbl] ; movzx eax,byte [rax+rdx]
 --  28  cmp al,0xff ; je done ; mov ecx,eax
 --  34  done: ret
@@ -317,14 +317,14 @@ local function install_icons(confeds)
   local into = rel32(ICONS_SITE + 5, stub)
   if not into then log("fl26catlist: icons stub out of call range -- League Info icons left alone"); return end
   local code = "\139\136\0\3\0\0" .. "\193\233\25" .. "\131\225\15"
-            .. "\131\250\63" .. "\119\17"
+            .. "\131\250\127" .. "\119\17"
             .. "\72\141\5" .. u32le(40) .. "\15\182\4\16"
             .. "\60\255" .. "\116\2" .. "\137\193"
             .. "\195"
   assert(#code == 35)
   code = code .. string.rep("\204", 64 - #code)
   local tbl, set = {}, {}
-  for r = 0, 63 do
+  for r = 0, LAST_REGION do
     local c = r >= 29 and confeds[r]
     if c then set[#set + 1] = string.format("%d=%d", r, runtime[c]) end
     tbl[#tbl + 1] = string.char(c and runtime[c] or 255)

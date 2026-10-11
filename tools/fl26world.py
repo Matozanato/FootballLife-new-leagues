@@ -30,7 +30,7 @@ What comes from where:
                                          4 CONMEBOL, 5 CAF, 6 CONCACAF, 7 OFC); the league builder
                                          writes it, this does not (a row built before Mod Studio 0.1.3 says
                                          UEFA whatever the country). fl26catlist gives a region
-                                         29..63 that continent's icons on the League Info page
+                                         29..127 that continent's icons on the League Info page
   kickoff                                the slot the league follows in the Kick Off / Edit team
                                          lists (fl26comptab; leaguebuilder kickoff_after)
   split                                  a split season (tools/mksplit.py): the total's row is the
