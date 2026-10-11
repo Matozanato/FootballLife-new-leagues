@@ -82,7 +82,7 @@ def exe_problems(game):
                               "FL_2026.exe (docs/install.md, step 1).") % ", ".join(mods), "Settings")]
 
 
-UECL_REGS = (186, 187, 1210)      # the Conference League's league phase, knockout and its group
+UECL_REGS = (186, 187, 189, 1210) # the Conference League's league phase, knockout, play-off (mkeuropo) and its group
 OLD_GROUPS = (2051, 2053)         # group B of the Champions League / Europa League: only in the
                                   # game's own format, which fl26swiss.dll cannot run (issue #33)
 FIRST_OWN_REGION = 29             # regions 0-28 are the game's own, 29 and up the new countries'
