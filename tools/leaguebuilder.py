@@ -292,6 +292,7 @@ CUP_DATED = {23: _CASE6, 24: _CASE6, 25: _CASE6, 26: _CASE6, 27: _CASE6, 28: _CA
              137: {0x2e, 0x33, 0x34, 0x35}, 142: {0x2e, 0x33, 0x34, 0x35}}
 SUPER_CUP_LIKE = "BELGIUM_SUPER_CUP"      # two clubs, one match, a European date
 LIBQ_ROOM = 6                             # Libertadores qualifying: 8 places, fl26swiss keeps 2 of the game's
+LIB_ROOM = 8                              # Libertadores group stage: the pool clubs (73) ours replace, 8 (GitHub #127)
 SEASONS = ("august", "calendar")           # a new country's season: August-May, February-December
 # the shipped regions whose season is the calendar year, type 1 in the exe's region table
 # (0x141576140, read from FL_2026.exe 2026-10-04: 16 18 19 21 23 28, and 24): Brazil, Argentina,
@@ -2646,6 +2647,11 @@ def describe(pl):
         # fl26swiss gives the new leagues all but two of the round's eight places (GitHub #66)
         lines.append("  NOTE: Libertadores qualifying has %d places listed, the round takes %d of them; "
                      "the leagues listed last get none" % (libq, LIBQ_ROOM))
+    lib = sum(1 for e in own_places(pl) if e[2] == 3)
+    if lib > LIB_ROOM:
+        # the game fills the group stage itself and leaves ours only its pool clubs' places
+        lines.append("  NOTE: Copa Libertadores has %d direct places listed, the game leaves %d for new leagues; "
+                     "the leagues listed last get none (give the rest qualifying places)" % (lib, LIB_ROOM))
     for p in pl["leagues"]:
         if p.get("cup"):
             lines.append("  %s: the country's cup (regulation %d) %s" % (
