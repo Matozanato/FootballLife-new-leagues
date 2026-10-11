@@ -50,6 +50,9 @@ DRAFT -- not released. Every line below still needs its in-game check before the
 - A player joined from another database that the game does not have is skipped.
 - Check the plan says so when more than 8 Libertadores group stage places are listed
   (the game only leaves the new leagues 8, GitHub #127).
+- A super cup added to a league of the game (Supercopa de Chile, Supercopa Rei) shows in
+  League Info beside the country's other cups. It is built as a domestic cup now; a career
+  started before keeps the old cup, which still plays, only without the icon.
 - League cup hints say late August to mid-March, the dates since 0.2.0.
 - Home: Switch world... shows the worlds.
 - sider.log says why a qualifying round is not played in a season (GitHub #128, log only).

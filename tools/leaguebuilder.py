@@ -2163,7 +2163,11 @@ def game_cups(recipe, regrow, region_of_cid, base, out):
                         # league's runner-up plays (fl26swiss alt=; "only 1 of 2 clubs found" and
                         # the cup never started, Supercopa Rei and de Chile 08.10.)
                         "alt_fixed": [(1, rid, 2)] if cup else [],
-                        "opts": {"fill": PRESEASON_FILL, "national": 1, "days": CAF_SUPER_DAYS}})
+                        # a domestic cup's row (format 2), not the Europa League knockout's (30):
+                        # League Info lists a country's cups only by format 2, 3, 16 or 17
+                        # (0x140c6ccb0), so the Supercopa de Chile was missing from it (0.2.2)
+                        "opts": {"fill": PRESEASON_FILL, "national": 1, "days": CAF_SUPER_DAYS,
+                                 "like": LEAGUE_KO_LIKE, "draw": "byes"}})
     return res
 
 
