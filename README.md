@@ -52,6 +52,9 @@ CPKs: it all goes in through Sider modules and data files, and comes out again.
 > tells you when a new version is out and installs it (*Help → Check for updates*); your
 > settings and recipes stay.
 >
+> **Never used it? Start here:** [first steps, every click in order](docs/first-steps.md) ·
+> [hrvatski](docs/first-steps.hr.md)
+>
 > Guide: [English](docs/mod-studio-guide.md) · [hrvatski](docs/mod-studio-guide.hr.md) ·
 > [español](docs/mod-studio-guide.es.md) · [français](docs/mod-studio-guide.fr.md) ·
 > **questions** (updating, crashes at start, cups, promotion, what to send when something is
@@ -793,7 +796,7 @@ tools/modstudio/    FL26 Mod Studio (tools/modstudio_main.py starts it from sour
                     (leaguebuilder, lbplayers, lbfaces, lbpackage, lbpack ...)
 tools/native/       the C source of the six DLLs, their build scripts and checksums
 patches/            the patch set as JSON plus the layout tables the generator reads
-docs/               mod-studio-guide (en/hr/es/fr), mod-studio (how it works, package format),
+docs/               first-steps (en/hr), mod-studio-guide (en/hr/es/fr), mod-studio (how it works, package format),
                     faq, how-to, beginners-guide, step-by-step, install, build-your-world,
                     testing-guide, known-issues, limits, how-it-works, for-developers,
                     forking, league-phase-swiss-decode, player-record

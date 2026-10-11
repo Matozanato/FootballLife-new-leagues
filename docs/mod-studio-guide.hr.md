@@ -1,5 +1,7 @@
 # FL26 Mod Studio — upute
 
+> Prvi put? [Prvi koraci, svaki klik redom](first-steps.hr.md)
+
 > Česta pitanja (ažuriranje, rušenje pri pokretanju, kupovi, promocija, što poslati kad nešto ne
 > radi), na engleskom: [faq.md](faq.md) · pitanja i pomoć na [Discordu](https://discord.gg/StQqtk3G3M)
 

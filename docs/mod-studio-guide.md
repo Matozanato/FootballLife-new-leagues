@@ -1,5 +1,7 @@
 # FL26 Mod Studio — user guide
 
+> First time? [First steps, every click in order](first-steps.md)
+
 > Common questions (updating, crashes at start, cups, promotion, what to send when something is
 > wrong): [faq.md](faq.md) · questions and help on [Discord](https://discord.gg/StQqtk3G3M)
 
