@@ -26,6 +26,8 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   list holds (GitHub #122).
 - League > Division lists two clubs beside each of the game's leagues, so a slot a patch gave
   another country (Greece in Smoke Patch's "Switzerland") can be told apart.
+- With a league order (A-Z or your own) the "Other European / Latin American / Asian" groups
+  stay after the last country of their continent instead of going after every country.
 - Import kits replaces a map line whose kit folder is missing, instead of keeping it.
 - Players: the "a new club keeps at least 18 players" check counts the players who joined it.
 - A package whose NewLife club list has gaps no longer stops Check the plan.

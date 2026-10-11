@@ -3592,6 +3592,17 @@ def order_lines(pl, base, confed):
         region_name = {r: nm for r, nm, _c in SHIPPED_REGIONS if nm}
         region_name.update((r, nm) for r, (nm, _c) in ours.items())
         out = reorder_named(out, region_name.get, rank)
+        # the "Other ..." groups have no name, so reorder_named left them behind every country
+        # (LaraCroft, 09.10.: Other European after Asia): each goes after the last country of its
+        # continent again
+        block_of = {r: c for r, nm, c in SHIPPED_REGIONS if nm}
+        block_of.update((r, c) for r, (nm, c) in ours.items())
+        for r, nm, c in SHIPPED_REGIONS:
+            if nm or c not in (2, 3, 4) or r not in out:
+                continue
+            out.remove(r)
+            last = [i for i, x in enumerate(out) if block_of.get(x) == c]
+            out.insert(last[-1] + 1 if last else len(out) - 1, r)
     return ["order " + ",".join(map(str, out))]
 
 
