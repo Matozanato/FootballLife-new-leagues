@@ -90,7 +90,8 @@ EVERYONE = [
     ("Nickdaw", "Discord", "crash reports on the modpack world"),
     ("the_pelado", "Dream Patch", "how the game picks trophy ceremonies"),
     ("capital030", "Discord", "packages without squads, and logos for the community"),
-    ("novarama", "Discord", "NewLife's refresh getting in the way of a league added after it"),
+    ("novarama", "Discord moderator",
+     "a developer's look at Mod Studio: the poll's most thorough answer, NewLife's missing crests and refresh"),
 ]
 
 # the people who supported the project on Ko-fi (ko-fi.com/mata28), first first; the README's
