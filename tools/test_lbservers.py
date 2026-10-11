@@ -123,6 +123,27 @@ def main():
         c = os.path.join(tmp, "c")
         os.makedirs(c)
         ok("no Kit Server / Scoreboard Server: nothing written", S.write(pb, c, log=lambda *_: None) == (0, 0))
+
+        # GitHub #129: a clean SPFL26 loads its own common\kits.lua and common\scoreboards.lua,
+        # which read content\kits and content\scoreboards; a kit-server folder there is not read
+        d = os.path.join(tmp, "d")
+        put(os.path.join(d, "sider.ini"), 'lua.module = "common\\kits.lua"\n;lua.module = "kserv.lua"\n'
+                                          'lua.module = "common\\scoreboards.lua"\n')
+        put(os.path.join(d, S.SPFL_KITS, "map.txt"), '100, "Premier League\\Manchester United"\n')
+        os.makedirs(os.path.join(d, S.SPFL_BOARDS))
+        os.makedirs(os.path.join(d, S.KITS))
+        ok("SPFL26's own servers: their folders", S.libs(d) == (S.SPFL_KITS, S.SPFL_BOARDS))
+        S.write(dict(pm, leagues=[dict(pm["leagues"][0], kit_folders=[]), dict(L, name="HNL", teams=[921, 922, 923], rid=430)]),
+                d, log=lambda *_: None, root=w)
+        km = lines(os.path.join(d, S.SPFL_KITS, "map.txt"))
+        ok("SPFL26's own Kit Server: made and package kits in content\\kits",
+           any(l.startswith('911, "My world\\Liga\\Red"') for l in km) and any(l.startswith('921, "My world\\HNL') for l in km)
+           and '100, "Premier League\\Manchester United"' in km)
+        ok("SPFL26's own Kit Server: nothing in kit-server", not os.listdir(os.path.join(d, S.KITS)))
+        ok("SPFL26's own Scoreboard Server: line in content\\scoreboards",
+           any(l.startswith("430, My world\\HNL") for l in lines(os.path.join(d, S.SPFL_BOARDS, "map_competitions.txt"))))
+        put(os.path.join(d, "sider.ini"), 'lua.module = "common\\kits.lua"\nlua.module = "kserv.lua"\n')
+        ok("kserv.lua loaded too: kit-server", S.libs(d) == (S.KITS, S.BOARDS))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("%d cases passed" % N)

@@ -18,6 +18,26 @@ import os, re
 from .mapfile import MapFile, IniFile
 
 
+def _base(module):
+    r"""a module's name without folder and .lua, lower case ("common\kits.lua" -> "kits")"""
+    n = os.path.basename(module.replace("\\", "/")).lower()
+    return n[:-4] if n.endswith(".lua") else n
+
+
+def _live_modules(ini):
+    """the modules the live lua.module lines of a sider.ini load, as _base names"""
+    out = set()
+    try:
+        with open(ini, encoding="utf-8-sig", errors="replace") as f:
+            for l in f:
+                s = l.strip()
+                if s.startswith("lua.module") and "=" in s:
+                    out.add(_base(s.split("=", 1)[1].split(";")[0].strip().strip('"')))
+    except OSError:
+        pass
+    return out
+
+
 class Col:
     def __init__(self, title, kind="text", tip="", default=""):
         self.title, self.kind, self.tip, self.default = title, kind, tip, default
@@ -45,7 +65,13 @@ class Server:
         self.alias = alias                 # (folder, module) a pack ships under its own names
 
     def pick(self, content_dir):
-        """(folder, module) in use: ours, or the alias when only the alias is there"""
+        r"""(folder, module) in use: ours, or the alias when only the alias is there or when
+        sider.ini loads the alias's module and not ours (GitHub #129: SPFL26's own kits.lua reads
+        content\kits, though a kit-server folder may be there too)"""
+        if self.alias and content_dir and os.path.isdir(os.path.join(content_dir, self.alias[0])):
+            mods = _live_modules(os.path.join(os.path.dirname(os.path.normpath(content_dir)), "sider.ini"))
+            if _base(self.alias[1]) in mods and _base(self.module) not in mods:
+                return self.alias
         if self.alias and content_dir and not os.path.isdir(os.path.join(content_dir, self.folder)):
             d = os.path.join(content_dir, self.alias[0])
             # SPFL26's own stadium folder ships its map files as "(All packs) map_teams.txt"

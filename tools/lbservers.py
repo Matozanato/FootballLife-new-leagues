@@ -20,16 +20,47 @@ world is switched on, the way lbstadiums does the home stadiums:
 
 The scoreboard line is keyed by the league's regulation id, as the FL26 Modpack's are.
 Without Kit Server or Scoreboard Server nothing is written for it.
+
+Kit Server and Scoreboard Server come in two kinds each: kserv.lua reads content\kit-server and
+ScoreboardServer.lua content\scoreboard-server, SPFL26's own ones (common\kits.lua and
+common\scoreboards.lua, the ones a clean install loads) read content\kits and content\scoreboards,
+the same files.  Ours go where the module sider.ini loads reads them (GitHub #129: the made kits
+went to kit-server, which that game never read).
 """
 import os, re, shutil
 
 import lbstadiums
 
 KITS = os.path.join("content", "kit-server")
+SPFL_KITS = os.path.join("content", "kits")       # SPFL26's own Kit Server, common\kits.lua
 BOARDS = os.path.join("content", "scoreboard-server")
+SPFL_BOARDS = os.path.join("content", "scoreboards")   # and its common\scoreboards.lua
 TAG = lbstadiums.TAG
 OFF = lbstadiums.OFF
 LINE = re.compile(r"^\s*(#\s*)?(\d+)\s*,\s*\"?([^\"#]*)")
+
+
+def _live_modules(sider):
+    """the modules the live lua.module lines of sider.ini load: names without folder and .lua"""
+    mods = set()
+    try:
+        with open(os.path.join(sider, "sider.ini"), encoding="utf-8-sig", errors="replace") as f:
+            for l in f:
+                s = l.strip()
+                if s.startswith("lua.module") and "=" in s:
+                    n = os.path.basename(s.split("=", 1)[1].split(";")[0].strip().strip('"').replace("\\", "/")).lower()
+                    mods.add(n[:-4] if n.endswith(".lua") else n)
+    except OSError:
+        pass
+    return mods
+
+
+def libs(sider):
+    r"""(kits folder, scoreboards folder) the game reads: SPFL26's own when sider.ini loads its
+    module and not ours, else content\kit-server and content\scoreboard-server"""
+    mods = _live_modules(sider)
+    return (SPFL_KITS if "kits" in mods and "kserv" not in mods else KITS,
+            SPFL_BOARDS if "scoreboards" in mods and "scoreboardserver" not in mods else BOARDS)
 
 
 def safe(name):
@@ -186,9 +217,10 @@ def write(pl, sider, log=print, root=None):
     (kits, scoreboards) written"""
     kits, boards = wanted(pl)
     world = safe(pl.get("world") or "FL26 world")
-    make = to_make(pl, root) if root and os.path.isdir(os.path.join(sider, KITS)) else []
+    klib, blib = libs(sider)
+    make = to_make(pl, root) if root and os.path.isdir(os.path.join(sider, klib)) else []
     if make:                                 # a club with a kit line of your own keeps that kit
-        lines = lbstadiums.read(os.path.join(sider, KITS, "map.txt"))[0]
+        lines = lbstadiums.read(os.path.join(sider, klib, "map.txt"))[0]
         yours = set()
         for l in lines:
             if TAG in l:
@@ -198,8 +230,8 @@ def write(pl, sider, log=print, root=None):
                 yours.add(int(m.group(2)))
         make = [x for x in make if x[0] not in yours]
     done = []
-    for lib, file, items, what in ((KITS, "map.txt", kits, "kits"),
-                                   (BOARDS, "map_competitions.txt", boards, "scoreboards")):
+    for lib, file, items, what in ((klib, "map.txt", kits, "kits"),
+                                   (blib, "map_competitions.txt", boards, "scoreboards")):
         root = os.path.join(sider, lib)
         if not os.path.isdir(root):
             if items:
@@ -257,8 +289,9 @@ def collect(recipe, pl, sider, names=None):
     Kit Server and Scoreboard Server maps give the built plan's team and regulation ids.  A
     league that has them already keeps its own.  Returns (kit folders, scoreboards) found."""
     built = {p["name"]: p for p in (pl or {}).get("leagues") or []}
-    kmap = _read_map(os.path.join(sider, KITS, "map.txt"))
-    bmap = _read_map(os.path.join(sider, BOARDS, "map_competitions.txt"))
+    klib, blib = libs(sider)
+    kmap = _read_map(os.path.join(sider, klib, "map.txt"))
+    bmap = _read_map(os.path.join(sider, blib, "map_competitions.txt"))
     nk = nb = 0
     for L in recipe.get("leagues") or []:
         p = built.get(L["name"])
@@ -269,14 +302,14 @@ def collect(recipe, pl, sider, names=None):
             fs = []
             for tid in teams:
                 rel = kmap.get(int(tid)) if tid is not None else None
-                d = os.path.join(sider, KITS, rel) if rel else ""
+                d = os.path.join(sider, klib, rel) if rel else ""
                 fs.append(d if d and is_kit_folder(d) else "")
             if any(fs):
                 L["kit_folders"] = fs
                 nk += sum(1 for f in fs if f)
         if not L.get("scoreboard") and p.get("rid") is not None:
             rel = bmap.get(int(p["rid"]))
-            d = os.path.join(sider, BOARDS, rel) if rel else ""
+            d = os.path.join(sider, blib, rel) if rel else ""
             if d and os.path.isdir(d):
                 L["scoreboard"] = d
                 nb += 1
