@@ -11,7 +11,8 @@ FEATURED = [
     ("vmardonesdev", "GitHub, Vicentico12 on Discord",
      "the tester this project owes the most: full seasons and rollovers, a regression suite, a "
      "testing plan, twenty-one of the first thirty-seven issues, and on the Discord the European "
-     "places of the game's leagues"),
+     "places of the game's leagues, the calendar events lost after 0.2.0 and the July leagues "
+     "that never reach the hub"),
     ("Alikhaled_727", "Evo-Web, Mohamed_248 on GitHub",
      "the leagues outside Europe: Saudi Arabia, Egypt, Morocco, Asia and Africa, the CAF cups, "
      "the AFC Champions League Two and the league cup pre-round"),
@@ -71,6 +72,24 @@ EVERYONE = [
     ("Xxspedd", "Discord",
      "kits made from plain pictures (his png -> ftex conversion, 0.2.0), and the idea of matching a "
      "folder of crests to clubs by name"),
+    ("LaraCroft", "Discord", "Clubs in no league, clubs listed A-Z, the same club in two Dutch leagues"),
+    ("AlexRufolo", "GitHub, Discord",
+     "First-season European clubs, clubs listed A-Z and the Korean league that never started"),
+    ("DavidBDJ", "GitHub", "full test reports from Austria: kits of new clubs and the European qualifiers"),
+    ("B2Y26Arabia", "GitHub", "the Kick Off > Cup crash, Edit mode and the skin colour of linked faces"),
+    ("rickydicky4444", "GitHub", "the UECL gameweeks in the calendar"),
+    ("MIQABARI", "GitHub", "a Master League creation crash"),
+    ("rwee", "Discord", "the Champions League's January matchday, a full world recipe and the squad limit"),
+    ("Risto", "Discord", "the modpack's smaller countries club by club, and NewLife duplicates"),
+    ("Yanis", "Discord", "fl26caps below the other modules in sider.ini"),
+    ("LumpierTheGunner", "Discord", "the Kit Server crash with editable kits and the competition id page"),
+    ("Bon Kirk", "Discord", "recipe changes lost on closing"),
+    ("wishfulshot", "Discord", "an old league package that stopped Check the plan"),
+    ("beny609o", "Discord", "Import kits keeping a broken map line"),
+    ("Nickdaw", "Discord", "crash reports on the modpack world"),
+    ("the_pelado", "Dream Patch", "how the game picks trophy ceremonies"),
+    ("capital030", "Discord", "packages without squads, and logos for the community"),
+    ("novarama", "Discord", "NewLife's refresh getting in the way of a league added after it"),
 ]
 
 # the people who supported the project on Ko-fi (ko-fi.com/mata28), first first; the README's
