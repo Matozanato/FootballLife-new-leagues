@@ -83,6 +83,22 @@
 #define SLOTS       123        /* the engine's slot count; 123 also means "none"  */
 #define STRIDE      750        /* dwords per slot in the list array               */
 #define COUNT_OFF   0x5a168    /* SLOTS * STRIDE * 4: where the u16 counts begin  */
+
+/* fl26slots (limits branch, 2026-10-11) raises the slot count past 123 and gives every slot a
+   capacity of its own, listed in tables on its page; the readers it leaves behind are a jmp to
+   that page. When it is there, this layout is read off its code instead of the constants above:
+   g_slots slots (123 stays "none"), slot s at dword g_off[s] of the region with room for
+   g_cap[s] clubs, the counts at g_cntoff. Without it these hold the shipped layout. */
+static unsigned        g_slots  = SLOTS;
+static unsigned        g_cntoff = COUNT_OFF;
+static const uint32_t* g_off    = 0;
+static const uint32_t* g_cap    = 0;
+static int      slot_ok(unsigned s) { return s < g_slots && (!g_off || s != 123); }
+static unsigned slot_cap(unsigned s) { return g_cap ? g_cap[s] : STRIDE; }
+static uint32_t* slot_list(void* self, unsigned s)
+{ return (uint32_t*)self + (g_off ? g_off[s] : s * STRIDE); }
+static uint16_t* slot_count(void* self, unsigned s)
+{ return (uint16_t*)((unsigned char*)self + g_cntoff + s * 2); }
 #define REG_CLUBS   0x170      /* regulation record: club handle list             */
 #define MAX_CLUBS   48         /* the game's own cap on that list                 */
 #define HANDLE_SHIFT 14        /* handle = team_id << 14                          */
@@ -188,10 +204,10 @@ static int kept_out(uint32_t v)
 static unsigned pool_build(void* self, unsigned slot, int i)
 {
   g_npool = 0; g_pool_slot = slot; g_pool_calls++;
-  unsigned n = *(uint16_t*)((unsigned char*)self + COUNT_OFF + slot * 2);
-  if (n > STRIDE) n = STRIDE;
+  unsigned n = *slot_count(self, slot);
+  if (n > slot_cap(slot)) n = slot_cap(slot);
   int ours = rebuild(i);
-  const uint32_t* stored = (const uint32_t*)((unsigned char*)self + slot * STRIDE * 4);
+  const uint32_t* stored = slot_list(self, slot);
   for (unsigned k = 0; k < n; k++) {
     uint32_t v = stored[k];
     int mine = kept_out(v);
@@ -226,8 +242,8 @@ static unsigned g_hi[4];
 
 __declspec(dllexport) void set_hook(void* self, unsigned slot, unsigned idx, uint32_t v)
 {
-  if (slot >= SLOTS || idx >= STRIDE) return;
-  ((uint32_t*)self)[slot * STRIDE + idx] = v;
+  if (!slot_ok(slot) || idx >= slot_cap(slot)) return;
+  slot_list(self, slot)[idx] = v;
   int p = pool_index(slot);
   if (p < 0) return;
   uintptr_t ra = (uintptr_t)__builtin_return_address(0) - (uintptr_t)g_base;
@@ -243,9 +259,9 @@ static int g_kp_said[4];
 
 static unsigned keep_build(void* self, unsigned slot, int p)
 {
-  unsigned n = *(uint16_t*)((unsigned char*)self + COUNT_OFF + slot * 2);
-  if (n > STRIDE) n = STRIDE;
-  const uint32_t* stored = (const uint32_t*)((unsigned char*)self + slot * STRIDE * 4);
+  unsigned n = *slot_count(self, slot);
+  if (n > slot_cap(slot)) n = slot_cap(slot);
+  const uint32_t* stored = slot_list(self, slot);
   unsigned len = n;
   if (g_hi_self[p] == self && g_hi[p] > n) {
     len = g_hi[p];
@@ -283,12 +299,13 @@ __declspec(dllexport) unsigned count_hook(void* self, unsigned slot)
     if (n) { g_stat[0]++; return (unsigned)n; }
     g_stat[3]++;
   }
-  if (slot >= SLOTS || !self) return 0;
+  if (!slot_ok(slot) || !self) return 0;
   if (i < 0) {
     int p = pool_index(slot);
     if (p >= 0) return keep_build(self, slot, p);
   }
-  return *(uint16_t*)((unsigned char*)self + COUNT_OFF + slot * 2);
+  unsigned n = *slot_count(self, slot);
+  return n > slot_cap(slot) ? slot_cap(slot) : n;
 }
 
 __declspec(dllexport) unsigned get_hook(void* self, unsigned slot, unsigned idx)
@@ -302,7 +319,7 @@ __declspec(dllexport) unsigned get_hook(void* self, unsigned slot, unsigned idx)
     g_stat[1]++;
     return g_list[i][idx];
   }
-  if (slot >= SLOTS || !self) return 0xffffffffu;
+  if (!slot_ok(slot) || !self) return 0xffffffffu;
   if (i < 0) {
     int p = pool_index(slot);
     if (p >= 0) {
@@ -310,9 +327,9 @@ __declspec(dllexport) unsigned get_hook(void* self, unsigned slot, unsigned idx)
       return idx < (unsigned)g_kn[p] ? g_kp[p][idx] : 0xffffffffu;
     }
   }
-  unsigned n = *(uint16_t*)((unsigned char*)self + COUNT_OFF + slot * 2);
-  if (idx >= n) return 0xffffffffu;
-  return *(uint32_t*)((unsigned char*)self + (slot * STRIDE + idx) * 4);
+  unsigned n = *slot_count(self, slot);
+  if (idx >= n || idx >= slot_cap(slot)) return 0xffffffffu;
+  return slot_list(self, slot)[idx];
 }
 
 /* ---- followers and the club ranking (2026-10-08) ----
@@ -598,22 +615,65 @@ __declspec(dllexport) int fl26_clubs_keep_out(const uint32_t* tids, int n)
   return g_nkeep;
 }
 
-/* 0 ok; 2 count signature; 3 get signature; 6 set signature; 4/5/7 protect failed; 9 bad config. ncfg may be 0:
+/* fl26slots' readers, when it is loaded: 1 and the layout taken, 0 not there (shipped readers),
+   -1 there but not as expected. Each of the three entries is a jmp rel32 into its page; the
+   count body starts `xor eax,eax; cmp edx, N`, reads the count `movzx eax, word [rcx+rax*2+D]`
+   and the capacity table through the first `lea rdx,[rip+x]`; the get body's second lea is the
+   table of first entries. */
+static uint64_t jmp_target(uint64_t at)
+{
+  const unsigned char* b = (const unsigned char*)(uintptr_t)at;
+  return b[0] == 0xE9 ? at + 5 + (int64_t)*(const int32_t*)(b + 1) : 0;
+}
+static uint64_t nth_lea_rdx(uint64_t body, int nth)
+{
+  const unsigned char* b = (const unsigned char*)(uintptr_t)body;
+  for (int k = 0; k < 0x40; k++)
+    if (b[k] == 0x48 && b[k + 1] == 0x8d && b[k + 2] == 0x15 && --nth == 0)
+      return body + k + 7 + (int64_t)*(const int32_t*)(b + k + 3);
+  return 0;
+}
+static int slots_layout(uint64_t exe_base)
+{
+  uint64_t c = jmp_target(exe_base + COUNT_RVA), g = jmp_target(exe_base + GET_RVA),
+           t = jmp_target(exe_base + SET_RVA);
+  if (!c && !g && !t) return 0;
+  if (!c || !g || !t) return -1;
+  const unsigned char* b = (const unsigned char*)(uintptr_t)c;
+  if (b[0] != 0x31 || b[1] != 0xc0 || b[2] != 0x81 || b[3] != 0xfa) return -1;
+  unsigned n = *(const uint32_t*)(b + 4), d = 0;
+  for (int k = 0; k < 0x40 && !d; k++)
+    if (b[k] == 0x0f && b[k + 1] == 0xb7 && b[k + 2] == 0x84 && b[k + 3] == 0x41) d = *(const uint32_t*)(b + k + 4);
+  uint64_t cap = nth_lea_rdx(c, 1), off = nth_lea_rdx(g, 2);
+  if (n <= SLOTS || n > 1024 || !d || !cap || !off) return -1;
+  g_slots = n; g_cntoff = d;
+  g_cap = (const uint32_t*)(uintptr_t)cap; g_off = (const uint32_t*)(uintptr_t)off;
+  logf("fl26clubs: fl26slots is loaded -- %u slots, counts at +0x%x, capacities at %llx, lists from %llx",
+       n, d, (unsigned long long)cap, (unsigned long long)off);
+  return 1;
+}
+
+/* 0 ok; 2 count signature; 3 get signature; 6 set signature; 4/5/7 protect failed; 9 bad config;
+   10 fl26slots' readers not as expected. ncfg may be 0:
    the pools (kept-out clubs, the count an Edit refill leaves stale) are then all there is. */
 __declspec(dllexport) int fl26_clubs_install(uint64_t exe_base, const fl26_clubs_cfg_t* cfg, int ncfg)
 {
   if (ncfg < 0 || ncfg > MAX_CFG || (ncfg && !cfg)) return 9;
   g_base = exe_base;
   g_ncfg = ncfg;
+  int widened = slots_layout(exe_base);
+  if (widened < 0) return 10;
   for (int i = 0; i < ncfg; i++) {
-    if (cfg[i].slot >= SLOTS) return 9;
+    if (!slot_ok(cfg[i].slot)) return 9;
     g_cfg[i] = cfg[i];
     g_n[i] = -1;
   }
   /* check both before touching either, so a mismatch leaves the game unmodified */
-  if (memcmp((void*)(uintptr_t)(exe_base + COUNT_RVA), SIG_COUNT, 14)) return 2;
-  if (memcmp((void*)(uintptr_t)(exe_base + GET_RVA),   SIG_GET,   14)) return 3;
-  if (memcmp((void*)(uintptr_t)(exe_base + SET_RVA),   SIG_SET,   14)) return 6;
+  if (!widened) {
+    if (memcmp((void*)(uintptr_t)(exe_base + COUNT_RVA), SIG_COUNT, 14)) return 2;
+    if (memcmp((void*)(uintptr_t)(exe_base + GET_RVA),   SIG_GET,   14)) return 3;
+    if (memcmp((void*)(uintptr_t)(exe_base + SET_RVA),   SIG_SET,   14)) return 6;
+  }
   if (replace((unsigned char*)(uintptr_t)(exe_base + COUNT_RVA), (void*)count_hook)) return 4;
   if (replace((unsigned char*)(uintptr_t)(exe_base + GET_RVA),   (void*)get_hook))   return 5;
   if (replace((unsigned char*)(uintptr_t)(exe_base + SET_RVA),   (void*)set_hook))   return 7;

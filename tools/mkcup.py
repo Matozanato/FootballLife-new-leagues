@@ -121,7 +121,7 @@ def main():
     # earlier belief that they did not came from the Select Team list, which is a different
     # question.  BAD_REG is still avoided: those are the ids the game reassigns as phases of
     # somebody else's competition.
-    autocid = W.free_ids(used_cid, W.CID_MAX, 1, 130)[0]
+    autocid = [c for c in W.cid_pool() if c not in used_cid][0]
     autoreg = W.free_ids(used_reg | W.BAD_REG, W.REG_MAX, 1, 186)[0]
     cid, reg = M.add_league(comp, regs, ents,
                             int(get("--cid", str(autocid))), int(get("--reg", str(autoreg))),

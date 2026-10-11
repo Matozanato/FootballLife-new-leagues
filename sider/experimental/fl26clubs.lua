@@ -267,7 +267,8 @@ function m.init(ctx)
                    [5] = "VirtualProtect failed on the get reader",
                    [6] = "list-setter signature mismatch",
                    [7] = "VirtualProtect failed on the list setter",
-                   [9] = "bad slot list" })[status] or "unknown"
+                   [9] = "bad slot list",
+                   [10] = "fl26slots is loaded but its readers are not as expected" })[status] or "unknown"
     log("fl26clubs: install FAILED (status " .. status .. ") -- " .. msg .. ". The game is unmodified.")
   end
 end

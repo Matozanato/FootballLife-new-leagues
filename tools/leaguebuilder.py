@@ -1318,7 +1318,7 @@ def plan(recipe, base):
     if leagues and len(leagues) > len(free):
         raise BuildError("%d leagues, but the game has room for %d (see docs/mod-studio.md)"
                          % (len(leagues), len(free)))
-    cids = [c for c in range(CID_FROM, W.CID_MAX + 1) if c not in used_cid and c != UECL_CID][:len(leagues)]
+    cids = [c for c in W.cid_pool(CID_FROM) if c not in used_cid and c != UECL_CID][:len(leagues)]
     if len(cids) < len(leagues):
         raise BuildError("no free competition ids left")
     room = clubs_room(base)
@@ -3532,7 +3532,7 @@ def free_comp_ids(db, reserved=()):
     used_reg = {u16(regs[i:], M.R_ID) & 0x3ff for i in range(0, len(regs), M.REG)}
     taken = (used_reg | CCUP_KEEP | W.BAD_REG | set(W.MOVED_REG.values()) | set(fl26world.DEFAULT_SLOT)
              | set(fl26world.NO_SLOT_IDS) | set(reserved))
-    return ([c for c in range(CID_FROM, W.CID_MAX + 1) if c not in used_cid and c != UECL_CID],
+    return ([c for c in W.cid_pool(CID_FROM) if c not in used_cid and c != UECL_CID],
             [r for r in range(CCUP_REG_FROM, 1024) if r not in taken])
 
 
