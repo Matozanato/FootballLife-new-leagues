@@ -596,11 +596,13 @@ class LeagueDialog(Dialog):
         self.lcup_name.setPlaceholderText(_("(the league's name + League Cup)"))
         self.form.addRow("", row(self.lcup, self.lcup_name, helpmark(
             "A second knockout cup, like England's Carabao Cup: this league and the one below it, up to 44 "
-            "clubs, one match a round from late September to December, the semi-final and the final too. "
+            "clubs, one match a round from late August to mid-March (a calendar-year league: September to "
+            "December), the semi-final and the final too. "
             "The draw is random; when the field is not 16, 32 ... the clubs of this league get the byes and "
             "start in the second round. Top division only.")))
         self.form.addRow("", hint(_("a single-match knockout of this division and the one below (up to 44 clubs), "
-                                    "late September to December; this division's clubs get the byes")))
+                                    "late August to mid-March (a calendar-year league: September to December); "
+                                    "this division's clubs get the byes")))
         self.cup_logo = PictureField(L.get("cup_logo"), 48)
         self.supercup_logo = PictureField(L.get("supercup_logo"), 48)
         self.lcup_logo = PictureField(L.get("league_cup_logo"), 48)
@@ -2027,7 +2029,7 @@ class GameCupsDialog(Dialog):
         have = {int(c["league"]): c for c in project.recipe.get("game_cups") or [] if str(c.get("league")).isdigit()}
         self.v.insertWidget(0, hint(_("A league cup is the league and the one below it, up to 44 clubs (the "
                                       "Premier League and the Championship), one match a round from late "
-                                      "September to December, drawn at random; the league's own clubs get the "
+                                      "August to mid-March (a calendar-year league: September to December), drawn at random; the league's own clubs get the "
                                       "byes and start in the second round. A super cup -- the "
                                       "champion v the cup winner in late July -- only where the game has none. "
                                       "Empty name = the league's name and League Cup / Super Cup; "
