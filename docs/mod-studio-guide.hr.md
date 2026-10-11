@@ -25,7 +25,7 @@ svaki mod koji instalira može se opet maknuti.
 - **Ugasi igru** dok mijenjaš stvari. Sider čita postavke kad se igra pokrene.
 
 Prozor je na engleskom. **Settings → Language → Hrvatski** ga prebaci na hrvatski (ima i
-španjolski i francuski).
+španjolski, brazilski portugalski i francuski).
 
 ## 2. Prvo pokretanje
 

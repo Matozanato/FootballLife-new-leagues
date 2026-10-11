@@ -176,7 +176,7 @@ tell us where. Read [what works and what does not](#status) before you start a l
 - **League packages** (`.fl26pack`): a modder makes a league once — clubs, names, crests,
   logos, squads, faces — and anybody adds it to their own game. Adding a newer version replaces
   the old one (0.1.7).
-- English, Croatian, Spanish and French.
+- English, Croatian, Spanish, Brazilian Portuguese and French.
 
 **Versions**
 

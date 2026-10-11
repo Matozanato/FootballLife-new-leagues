@@ -18,7 +18,7 @@ import argparse, ast, json, os, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 MOD = os.path.join(HERE, "modstudio")
 PAGES = os.path.join(MOD, "pages")
-LANGS = ("es", "fr", "hr")
+LANGS = ("es", "fr", "hr", "pt")
 
 
 def sources():

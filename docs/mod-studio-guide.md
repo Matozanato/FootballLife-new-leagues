@@ -25,7 +25,7 @@ mod it installs can be removed again.
 - **Close the game** while you change things. Sider reads its setup when the game starts.
 
 The window is in English. **Settings → Language** switches it to Croatian (Hrvatski), Spanish
-(Español) or French (Français).
+(Español), Brazilian Portuguese (Português) or French (Français).
 
 ## 2. First run
 
