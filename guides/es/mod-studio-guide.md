@@ -1,7 +1,13 @@
 # FL26 Mod Studio — guía de uso
 
+> [English](../en/mod-studio-guide.md) · [hrvatski](../hr/mod-studio-guide.md) · **español** · [português](../pt/mod-studio-guide.md) · [français](../fr/mod-studio-guide.md)
+
+> **¿Primera vez con Mod Studio?** Dos guías paso a paso, cada clic en orden: [Instalar un paquete listo](install-a-pack.md)
+> (alguien te dio un mundo, un modpack o un `.fl26pack`) · [Crear tus propias ligas y paquetes](make-your-own-leagues.md)
+> (tú eliges las ligas y las construyes). Esta guía explica cada página y opción a fondo.
+
 > Preguntas frecuentes (actualizar, cierres al arrancar, copas, ascensos, qué enviar cuando algo
-> falla), en inglés: [faq.md](faq.md) · preguntas y ayuda en [Discord](https://discord.gg/StQqtk3G3M)
+> falla), en inglés: [faq.md](../../docs/faq.md) · preguntas y ayuda en [Discord](https://discord.gg/StQqtk3G3M)
 
 FL26 Mod Studio es un solo programa para todo lo que añades a Football Life 2026:
 

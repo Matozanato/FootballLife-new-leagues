@@ -6,7 +6,7 @@ writing down what you did before something went wrong.
 
 If you have not installed it yet, do that first with
 [by-hand.md](by-hand.md), which walks a stock install through to a playing season (or
-[first-steps.md](../first-steps.md) with Mod Studio).
+[Install a ready pack](../../guides/en/install-a-pack.md) with Mod Studio).
 This file picks up where that one ends: what to try once it runs, and in what order.
 
 ## Before you start

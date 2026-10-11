@@ -1,19 +1,27 @@
-# First steps with FL26 Mod Studio: every click, in order
+# Install a ready pack: every click, in order
 
-> [hrvatski](first-steps.hr.md) · the full guide to every page: [mod-studio-guide.md](mod-studio-guide.md)
-> · questions: [faq.md](faq.md) · help: [Discord](https://discord.gg/StQqtk3G3M)
+> **English** · [hrvatski](../hr/install-a-pack.md) · [español](../es/install-a-pack.md) · [português](../pt/install-a-pack.md)
 
-This page is for someone who has never opened Mod Studio. It does not explain how anything
-works. It only says what to click, in what order, and what you should see after each step.
-Do the steps in order and do not skip one. If you see something different from what a step
-says, stop there and go to [If something goes wrong](#if-something-goes-wrong).
+> The other step-by-step guide: [Make your own leagues and packs](make-your-own-leagues.md)
+> · every page explained: [mod-studio-guide.md](mod-studio-guide.md)
+> · questions: [faq.md](../../docs/faq.md) · help: [Discord](https://discord.gg/StQqtk3G3M)
 
-There are three ways to get new leagues. Steps 1 to 5 are the same for all three. Then pick one:
+This page is for someone who has never opened Mod Studio and has been given something ready to
+play: a world, a modpack or a league package. It does not explain how anything works. It only
+says what to click, in what order, and what you should see after each step. Do the steps in
+order and do not skip one. If you see something different from what a step says, stop there
+and go to [If something goes wrong](#if-something-goes-wrong).
 
-- **Way A: a ready world someone sent you**, as one `.zip` (a modpack, a friend's world).
-  The quickest way: nothing to build.
-- **Way B: real leagues from the NewLife Database.** You choose the leagues, Mod Studio builds them.
-- **Way C: a league package** (a `.fl26pack` file someone made).
+Steps 1 to 5 are the same for everyone and you do them once. Then pick the way that matches
+the file you were given:
+
+- **Way A: a ready world**, as one `.zip` (a modpack, a friend's world). The quickest way:
+  nothing to build.
+- **Way C: a league package**, a `.fl26pack` file someone made. Mod Studio builds it for you.
+
+Nobody gave you anything, and you want to choose real leagues yourself (from the NewLife
+Database) or make your own? That is the other guide:
+[Make your own leagues and packs](make-your-own-leagues.md). Do steps 1 to 5 here first.
 
 ---
 
@@ -67,14 +75,14 @@ If you skip this step, Build later says `error: no game tables -- Settings > Unp
 ## Step 5. Install Mod Studio's modules
 
 1. Left bar, under **LEAGUE BUILDER**: click **Build**.
-2. Click **0. Install the modules**.
+2. Click **0. Install the modules**. It asks whether to copy them: click **Yes**.
 
 **You should see:** in the box at the bottom, the modules listed as installed.
 
 The new leagues only work with these modules. They also carry the face pack that gives the new
 players their faces. You do this once, and again after every new version of Mod Studio.
 
-Now pick **one** of the three ways.
+Now pick the way that matches your file.
 
 ---
 
@@ -100,46 +108,11 @@ Do **not** press Build for a ready world. It is already built. Go to [Step 6](#s
 
 ---
 
-## Way B: real leagues from the NewLife Database
+## Way B: build your own leagues
 
-**B1. Download the database.** It is not on GitHub. Get it from the NewLife channel of our
-[Discord](https://discord.gg/StQqtk3G3M). It comes in parts (one per continent, plus *Free
-agents*). Download the parts you want.
-
-**B2.** Put all the parts in **one** folder, for example `Documents\NewLife`. **Do not unzip
-them.** Mod Studio reads the zips as they are.
-
-**B3.** Left bar, under **LEAGUE BUILDER**: click **NewLife Database**.
-
-**B4.** Click **Open NewLife Database...** and pick the folder from B2.
-
-**You should see:** a list of leagues with columns League, Country, Clubs, In game, Players, Level.
-
-**B5.** Click a league to select it. For more than one, hold **Ctrl** and click each.
-Grey leagues cannot be added (the game already has them, or they are too small or too big).
-
-**B6.** Click **Add to the recipe**.
-
-**You should see:** "Added: ... Change them on Leagues, New clubs and Players, then Build."
-
-**B7.** Left bar: click **Leagues**. Your new leagues are in the list (the **Ours** button shows
-only them). Click one to see and change its clubs, its tier, its European places. Nothing here is
-required; the defaults work.
-
-**B8.** Top bar: **File → Save recipe**. Give it a name. (The recipe is your list of leagues.
-Save it so you can change it later.)
-
-**B9.** Left bar: click **Build**. Click the big blue **Build and install**. Answer **Yes**.
-
-It installs the modules, builds the world and switches it on, all in one. It takes from a few
-seconds to a few minutes.
-
-**You should see:** in the box at the bottom, the steps done, and no line starting with `error:`.
-
-(Step by step instead of the big button: **1. Check the plan** → **2. Build the world** →
-**3. Switch it on**. Same result.)
-
-Go to [Step 6](#step-6-start-the-game).
+Choosing real leagues from the NewLife Database, or making leagues of your own, has a guide of
+its own, with every field explained:
+[Make your own leagues and packs](make-your-own-leagues.md).
 
 ---
 
@@ -150,13 +123,29 @@ Go to [Step 6](#step-6-start-the-game).
 **C2.** Click **Add a package...** and pick the `.fl26pack` file. (Or top bar: **File → Add a
 league package...**.)
 
-**C3.** It shows what is inside and asks. Click **OK** / **Yes**.
+**C3. You should see:** a window **Add a league package** with what is inside: its name, version
+and author, then its leagues, each ticked. A package with several leagues has **Select all** /
+**Select none** over the list: untick a league you do not want. Under **What to take** you can
+untick parts (for example **Scoreboards ...**). If you are not sure, leave everything ticked.
+Click **OK**.
 
-**C4.** Top bar: **File → Save recipe**.
+If the package has a league with a name you already have, it asks whether to add it under a
+new name: click **Yes**.
 
-**C5.** Left bar: **Build** → **Build and install** → **Yes**.
+**You should see:** a green line under the page title: "Added ... Save the recipe, then Build to
+put the leagues in the game."
 
-**You should see:** the steps done, and no line starting with `error:`.
+**C4.** Top bar: **File → Save recipe**. The first time, a save window opens: give the file a
+name and click **Save**. (The recipe is your list of leagues. Save it so you can change it later.)
+
+**C5.** Left bar: **Build** → the big blue **Build and install** → **Yes**.
+
+It installs the modules, builds the world and switches it on, all in one. It takes from a few
+seconds to a few minutes.
+
+**You should see:** a window **Build finished** with ticks (World built, Leagues and clubs,
+Modules installed and switched on, Switched on in sider.ini). Click **Done**. In the box at the
+bottom of the Build page there is no line starting with `error:`.
 
 ---
 
@@ -178,7 +167,9 @@ The new leagues are also in **Kick Off** → League, and in **Database → Compe
 1. Close the game.
 2. In Mod Studio: **Build** → **4. After a start: check**.
 
-**You should see:** module by module, that the world was taken. A red line tells you what is wrong.
+**You should see:** one line per module saying how many leagues it read from the world, and at
+the end `the world works as built`. A line saying `not loaded` or `did NOT read the world file`,
+and the last line `something is wrong -- see the lines above`, tell you what is wrong.
 
 ---
 
@@ -187,8 +178,9 @@ The new leagues are also in **Kick Off** → League, and in **Database → Compe
 | What you see | What to do |
 |---|---|
 | `error: no game tables -- Settings > Unpack the game's tables` | Do [Step 4](#step-4-unpack-the-games-tables). |
-| No new leagues at Select Team | Did you start a **new** Master League? Then **Build → 4. After a start: check**. If its log says `world file -- 0 leagues`, the recipe was empty: add leagues (Way B or C) and build again. |
+| No new leagues at Select Team | Did you start a **new** Master League? Then **Build → 4. After a start: check**. If its log says `world file -- 0 leagues`, the recipe was empty: add the package again (Way C) and build again. |
 | The world says it was built with `0 leagues, 0 clubs` | Same: the recipe had no leagues. Add some first, then Build. |
+| `sider.log is older than the world switched on -- start the game to the main menu, then check again` | The check ran before you started the game. Start it to the main menu, close it, press **4. After a start: check** again. |
 | All new players have the same face | **Build → 0. Install the modules** (it brings the face pack), then start the game again. |
 | The game crashes at start | Start it once more through the launcher (a crash in the first 10 seconds also happens without mods). If it keeps crashing: **Game → Start the game without mods (safe mode)...** and ask on Discord. |
 | You want everything back as it was | **MANAGE → Install mods → Remove the mod** for an installed world; **MANAGE → Restore points** puts back any file Mod Studio changed. |

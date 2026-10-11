@@ -108,8 +108,8 @@ python tools/mszip.py --no-exe   # reuse the last frozen program (out/msexe/dist
    - **A new `tools/*.py` that Build imports must be added to `HIDDEN`**, or the frozen
      program fails where the checkout works.
 3. **Pack.** `lbpack.build(out/mszip/pack)`.
-4. **Guides.** `docs/mod-studio-guide.md` -> `README.html`, and the `hr`, `es`, `fr` copies
-   -> `README.<code>.html` (the `markdown` package).
+4. **Guides.** `guides/en/mod-studio-guide.md` -> `README.html`, and `guides/<code>/mod-studio-guide.md`
+   for `hr`, `es`, `fr`, `pt` -> `README.<code>.html` (the `markdown` package).
 5. **Check.** Every staged source inside the exe, the guides and `pack/modules.txt` is
    searched for drive paths and user names (`PRIVATE`). Any match stops the release.
 6. **Zip.** `out/FL26ModStudio-<VERSION>.zip`, with everything inside a folder called

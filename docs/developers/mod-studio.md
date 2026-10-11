@@ -1,7 +1,8 @@
 # FL26 Mod Studio — how it works
 
-The user guide is [mod-studio-guide.md](../mod-studio-guide.md) ([hrvatski](../mod-studio-guide.hr.md),
-[español](../mod-studio-guide.es.md), [français](../mod-studio-guide.fr.md)).
+The user guide is [mod-studio-guide.md](../../guides/en/mod-studio-guide.md) ([hrvatski](../../guides/hr/mod-studio-guide.md),
+[español](../../guides/es/mod-studio-guide.md), [português](../../guides/pt/mod-studio-guide.md),
+[français](../../guides/fr/mod-studio-guide.md)).
 This page is for modders and developers: what the program does to the game folder, and the
 league package format.
 

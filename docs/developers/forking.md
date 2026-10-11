@@ -73,7 +73,7 @@ sider/experimental/*.lua      the rest: fl26swiss (UEFA cups), fl26chain (promot
                               fl26edit, the crash guards ...
 tools/native/*.c              fl26join, fl26clubs, fl26chain, fl26swiss, fl26regen, fl26edit
                               (built with zig)
-docs/                         the guides (mod-studio-guide.md and its hr/es/fr copies)
+guides/<lang>/                the guides (install-a-pack, make-your-own-leagues, mod-studio-guide)
 ```
 
 The split that matters: **the window never builds anything itself.** Every page edits the

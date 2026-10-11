@@ -9,6 +9,8 @@
 ![Languages](https://img.shields.io/badge/languages-EN%20%C2%B7%20ES%20%C2%B7%20FR%20%C2%B7%20HR-6f42c1)
 ![Game: Football Life 2026](https://img.shields.io/badge/game-Football%20Life%202026-c0392b)
 
+**📖 Guides, step by step:** [install a ready pack or make your own leagues](guides/README.md) (English · hrvatski · español · português · français)
+
 <div align="center">
 
 ## ❤️ Supporters
@@ -52,8 +54,9 @@ CPKs: it all goes in through Sider modules and data files, and comes out again.
 > tells you when a new version is out and installs it (*Help → Check for updates*); your
 > settings and recipes stay.
 >
-> **Never used it? Start here:** [first steps, every click in order](docs/first-steps.md) ·
-> [hrvatski](docs/first-steps.hr.md)
+> **Never used it? Start here,** every click in order: [install a ready pack](guides/en/install-a-pack.md)
+> (you were given a world, a modpack or a `.fl26pack`) · [make your own leagues and packs](guides/en/make-your-own-leagues.md)
+> (you pick the leagues). Other languages: [guides/](guides/README.md)
 >
 > **0.2.0 is the last release with new features.** From here on: bug fixes, about once a week.
 > **0.2.1** is a quick interim update that fixes the Master League / Be a Legend crash of the
@@ -70,11 +73,12 @@ long career.
 
 All of it, folder by folder: [docs/README.md](docs/README.md).
 
-- **[First steps](docs/first-steps.md)** ([hrvatski](docs/first-steps.hr.md)): from nothing to
-  a new Master League, every click in order.
-- **Guide to every page** of Mod Studio: [English](docs/mod-studio-guide.md) ·
-  [hrvatski](docs/mod-studio-guide.hr.md) · [español](docs/mod-studio-guide.es.md) ·
-  [français](docs/mod-studio-guide.fr.md).
+- **[Guides](guides/README.md)** in English, hrvatski, español, português and français:
+  - **[Install a ready pack](guides/en/install-a-pack.md)**: someone gave you a world or a
+    league package; from nothing to a new Master League, every click in order.
+  - **[Make your own leagues and packs](guides/en/make-your-own-leagues.md)**: real leagues from
+    the NewLife Database, every setting of a league, Build, and sharing what you made.
+  - **[Guide to every page](guides/en/mod-studio-guide.md)** of Mod Studio.
 - **[Questions](docs/faq.md)**: updating, crashes at start, cups, promotion, what to send when
   something is wrong. **[Known issues](docs/known-issues.md)**: what works, what does not yet.
 - **[Changelog](docs/changelog/README.md)**: what each version brought.

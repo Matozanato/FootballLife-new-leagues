@@ -9,8 +9,8 @@ FL26 Mod Studio in one folder:
                         modstudio/assets (the icon) and lang are in _internal
   pack\                 the modules the League Builder's "Install the modules" puts in place
                         (tools/lbpack.py)
-  README.html           the guide (docs/mod-studio-guide.md)
-  README.<hr|es|fr>.html  the same in Croatian, Spanish, French (docs/mod-studio-guide.<code>.md)
+  README.html           the guide (guides/en/mod-studio-guide.md)
+  README.<hr|es|fr|pt>.html  the same in Croatian, Spanish, French, Portuguese (guides/<code>/mod-studio-guide.md)
 
 Frozen from a staged copy of tools/ without the lines that point at
 this machine's folders, and every staged source inside the .exe, the pack and the guides is
@@ -143,10 +143,10 @@ def main():
         bad += freeze()
     shutil.copytree(os.path.join(WORK, "dist", NAME), OUT, dirs_exist_ok=True)
     lbpack.build(os.path.join(OUT, "pack"))
-    guide(os.path.join(REPO, "docs", "mod-studio-guide.md"), os.path.join(OUT, "README.html"), "en")
-    langs = ("hr", "es", "fr")
+    guide(os.path.join(REPO, "guides", "en", "mod-studio-guide.md"), os.path.join(OUT, "README.html"), "en")
+    langs = ("hr", "es", "fr", "pt")
     for code in langs:
-        guide(os.path.join(REPO, "docs", "mod-studio-guide.%s.md" % code),
+        guide(os.path.join(REPO, "guides", code, "mod-studio-guide.md"),
               os.path.join(OUT, "README.%s.html" % code), code)
     for f in ["README.html"] + ["README.%s.html" % c for c in langs] + [os.path.join("pack", "modules.txt")]:
         for i, l in enumerate(open(os.path.join(OUT, f), encoding="utf-8"), 1):

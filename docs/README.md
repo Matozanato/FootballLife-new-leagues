@@ -2,14 +2,18 @@
 
 ## Where to start
 
-**Never used Mod Studio?** [first-steps.md](first-steps.md) ([hrvatski](first-steps.hr.md)):
-from downloading it to a new Master League with new leagues, every click in order.
+The guides for players are in [guides/](../guides/README.md), one folder per language (English,
+hrvatski, español, português; the Mod Studio guide also in français):
+
+- [Install a ready pack](../guides/en/install-a-pack.md): pick this when someone gave you a world,
+  a modpack or a `.fl26pack` league package.
+- [Make your own leagues and packs](../guides/en/make-your-own-leagues.md): pick this when you
+  want to choose real leagues from the NewLife Database, set them up yourself and share them.
 
 ## For players
 
-- [mod-studio-guide.md](mod-studio-guide.md): every page of Mod Studio, explained
-  ([hrvatski](mod-studio-guide.hr.md) · [español](mod-studio-guide.es.md) ·
-  [français](mod-studio-guide.fr.md)).
+- [Mod Studio guide](../guides/en/mod-studio-guide.md): every page of Mod Studio, explained
+  (other languages: [guides/](../guides/README.md)).
 - [faq.md](faq.md): the questions people ask (updating, crashes at start, cups, promotion, what
   to send when something is wrong).
 - [known-issues.md](known-issues.md): what works, what does not yet, and what was fixed.

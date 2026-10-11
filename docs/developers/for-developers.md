@@ -40,8 +40,9 @@ tools/modstudio/    FL26 Mod Studio (tools/modstudio_main.py starts it from sour
                     (leaguebuilder, lbplayers, lbfaces, lbpackage, lbpack ...)
 tools/native/       the C source of the six DLLs, their build scripts and checksums
 patches/            the patch set as JSON plus the layout tables the generator reads
-docs/               the user docs: first-steps (en/hr), mod-studio-guide (en/hr/es/fr), faq,
-                    known-issues, and README.md, the index
+guides/<lang>/      the user guides: install-a-pack, make-your-own-leagues, mod-studio-guide
+                    (en, hr, es, pt; fr has mod-studio-guide only), and README.md, the picker
+docs/               faq, known-issues, and README.md, the index
 docs/changelog/     the release notes and the version history
 docs/developers/    for-developers, forking, mod-studio (how it works, package format),
                     by-hand (the manual route with Python), testing-guide

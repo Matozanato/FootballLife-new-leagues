@@ -1,9 +1,13 @@
 # FL26 Mod Studio — upute
 
-> Prvi put? [Prvi koraci, svaki klik redom](first-steps.hr.md)
+> [English](../en/mod-studio-guide.md) · **hrvatski** · [español](../es/mod-studio-guide.md) · [português](../pt/mod-studio-guide.md) · [français](../fr/mod-studio-guide.md)
+
+> **Prvi put u Mod Studiju?** Dva vodiča korak po korak, svaki klik redom: [Instaliraj gotov paket](install-a-pack.md)
+> (netko ti je poslao svijet, modpack ili `.fl26pack`) · [Napravi svoje lige i pakete](make-your-own-leagues.md)
+> (sam biraš lige i gradiš ih). Ove upute objašnjavaju svaku stranicu i opciju u dubinu.
 
 > Česta pitanja (ažuriranje, rušenje pri pokretanju, kupovi, promocija, što poslati kad nešto ne
-> radi), na engleskom: [faq.md](faq.md) · pitanja i pomoć na [Discordu](https://discord.gg/StQqtk3G3M)
+> radi), na engleskom: [faq.md](../../docs/faq.md) · pitanja i pomoć na [Discordu](https://discord.gg/StQqtk3G3M)
 
 FL26 Mod Studio je jedan program za sve što dodaješ u Football Life 2026:
 

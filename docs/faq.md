@@ -201,7 +201,8 @@ From the NewLife Database (since 0.1.5.5): a separate download on the NewLife ch
 [Discord](https://discord.gg/StQqtk3G3M), in parts per continent. Put the parts in one folder,
 open it on **League Builder > NewLife Database**, pick leagues and press **Add to the recipe**:
 each becomes a new league with its real clubs and squads. See section 8.4 of the
-[Mod Studio guide](mod-studio-guide.md).
+[Mod Studio guide](../guides/en/mod-studio-guide.md), and step by step:
+[Make your own leagues and packs](../guides/en/make-your-own-leagues.md).
 
 ### Can I put a club the game already has into my new league?
 
@@ -436,7 +437,8 @@ Yes: FL26 Mod Studio, a Windows program (beta). It installs the modules, builds 
 clubs, edits the players of any club, adds faces, installs other mods and content servers,
 and keeps restore points. Download it from the
 [latest release](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest);
-the guide is [mod-studio-guide.md](mod-studio-guide.md) ([hrvatski](mod-studio-guide.hr.md)).
+the guides (step by step, and every page explained, in five languages) are in
+[guides/](../guides/README.md).
 
 ### Every new club has the same manager, "Jorge Jesus"
 
