@@ -1144,7 +1144,8 @@ class Players(BuilderPage):
             return
         if not self.club.isdigit():
             gone = self.changes().get("remove") or []
-            if self.cur not in gone and len(self.rows) - len(gone) <= P.MIN_SQUAD:
+            joins = set(self.changes().get("join") or [])    # signed players count too (pepponeee98)
+            if self.cur not in gone and len(self.rows) - len(set(gone)) + len(joins) <= P.MIN_SQUAD:
                 self.say(_("A new club keeps at least %d players.") % P.MIN_SQUAD, "err")
                 return
         c = self.changes(True)

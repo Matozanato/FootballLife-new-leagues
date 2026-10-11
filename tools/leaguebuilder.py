@@ -1364,7 +1364,8 @@ def plan(recipe, base):
                           for x in (L.get("club_ids") or [])][:n],     # ids of the recipe's own
              "club_kits": list(L.get("club_kits") or []),     # shirt words (shieldcrest) for crests
              "club_away_kits": list(L.get("club_away_kits") or []),   # and for picking kits (mkkits)
-             "newlife": {"clubs": [int(i) for i in (L.get("newlife") or {}).get("clubs") or []]},
+             "newlife": {"clubs": [int(i) if str(i or "").strip().isdigit() else None   # None: a club of its
+                                    for i in (L.get("newlife") or {}).get("clubs") or []]},   # own (Dale pack)
              "kit_folders": list(L.get("kit_folders") or []),     # Kit Server folders and the
              "scoreboard": L.get("scoreboard") or None,           # Scoreboard Server one (lbservers)
              "exchange": int(3 if L.get("exchange") is None else L["exchange"]),   # null in an old package
@@ -1657,7 +1658,8 @@ def others_plan(groups, base, cty):
                           for x in (L.get("club_ids") or [])][:n],
              "club_kits": list(L.get("club_kits") or []),
              "club_away_kits": list(L.get("club_away_kits") or []),
-             "newlife": {"clubs": [int(i) for i in (L.get("newlife") or {}).get("clubs") or []]},
+             "newlife": {"clubs": [int(i) if str(i or "").strip().isdigit() else None   # None: a club of its
+                                    for i in (L.get("newlife") or {}).get("clubs") or []]},   # own (Dale pack)
              "game_clubs": {}}
         if len(p["club_names"]) > n:
             raise BuildError("%s: %d club names for %d clubs" % (name, len(p["club_names"]), n))
@@ -2983,7 +2985,7 @@ def build(pl, base, game, replace=False, log=print):
         nl = (p.get("newlife") or {}).get("clubs") or []
         if k < len(ids) and ids[k]:
             tid = ids[k]                   # checked by plan(): free, in the block
-        elif k < len(nl) and NEWLIFE_TEAMS[0] <= nl[k] <= NEWLIFE_TEAMS[1] and nl[k] not in have:
+        elif k < len(nl) and nl[k] is not None and NEWLIFE_TEAMS[0] <= nl[k] <= NEWLIFE_TEAMS[1] and nl[k] not in have:
             # 0.1.8 (#90 / #88): a NewLife Database club gets a world id of its own, the one
             # plan() gave it; the NewLife id is only how the recipe names the club
             tid = (p.get("newlife_tid") or {}).get(nl[k])

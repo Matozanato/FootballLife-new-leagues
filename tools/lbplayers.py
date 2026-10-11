@@ -832,8 +832,9 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
         for ref in c.get("join") or []:
             srcclub, n = split_ref(ref)
             if srcclub is None:
-                if n not in index:
-                    raise Error("players of %s: no player %d in the game" % (club, n))
+                if n not in index:     # a player of another database (eduu: UML + a package): skip him
+                    log("  NOTE: players of %s: no player %d in the game, his transfer is skipped" % (club, n))
+                    continue
                 refs[str(ref)] = n
             else:
                 t = tids.get(srcclub)
@@ -942,6 +943,8 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
             continue
         national = kinds.get(tid, (False, 0))[0]
         for ref in c["join"]:
+            if str(ref) not in refs:                   # not in the game (NOTE above)
+                continue
             pid = refs[str(ref)]
             pid = renamed.get(pid, pid)
             rows = [(i * A_REC, u32(assigns, i * A_REC + E.A_TID)) for i in range(len(assigns) // A_REC)
