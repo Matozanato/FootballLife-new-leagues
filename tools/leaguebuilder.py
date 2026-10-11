@@ -184,6 +184,9 @@ which league sits above -- and nothing about ids:
               club without a Kit Server folder of its own gets a kit made when the world is switched
               on (lbservers, kitmaker): home, away, third and goalkeeper in its shirt colours
               (club_kits / club_away_kits, NewLife's), or its crest's, with its crest on the chest.
+  pack_faces  (the recipe) false: the world's new players get no face of the regen face pack (no
+              newfaces lines), so the look the game gives them, or one set in the game's Edit mode,
+              stays (Jabo9, 11.10.: Edit-mode looks covered by pack faces in Master League).
   editable_kits  (the recipe) true: the new clubs get no kit lent from a club of the game. A lent
               kit is a licensed one (<key>_1st_realUni.bin) and Edit mode refuses it ("You cannot
               edit this strip"). Instead each club gets plain 1st/2nd/GK definitions of its own
@@ -785,6 +788,8 @@ def recipe_from_plan(pl, base):
             rec[k] = pl.get(k)
     if pl.get("make_kits") is False:
         rec["make_kits"] = False
+    if pl.get("pack_faces") is False:
+        rec["pack_faces"] = False
     return rec
 
 
@@ -1635,6 +1640,7 @@ def plan(recipe, base):
             "game_seasons": august_countries(recipe),
             "editable_kits": bool(recipe.get("editable_kits")),
             "make_kits": recipe.get("make_kits", True) is not False,
+            "pack_faces": recipe.get("pack_faces", True) is not False,
             "country_order": recipe.get("country_order") or None,
             "cup_draw": cup_draw(recipe)}
 
@@ -2041,6 +2047,35 @@ def game_competitions(base):
         if name:
             out.setdefault(c, [name, []])[1].append(u16(g, M.R_ID))
     return [(c, n, r) for c, (n, r) in sorted(out.items())]
+
+
+def competition_ids(db, base=None):
+    """[(competition id, [regulation ids], name, kind, new)] of every competition in the tables at
+    <db> (a built world's, or the game's), by id: the ids modules, Sider maps and scoreboards ask
+    for, on one page instead of in the files (the poll, LumpierTheGunner and Bon Kirk 11.10.).
+    kind is "league" or "cup"; new = not in the tables at <base> (the world made it)."""
+    regs = M.load(db, "CompetitionRegulation.bin")
+    old = None
+    if base and os.path.abspath(base) != os.path.abspath(db):
+        try:
+            b = M.load(base, "CompetitionRegulation.bin")
+            old = {b[i * M.REG + M.R_CID] for i in range(len(b) // M.REG)}
+        except (OSError, ValueError):
+            old = None
+    out = {}
+    for i in range(len(regs) // M.REG):
+        g = regs[i * M.REG:(i + 1) * M.REG]
+        c, rid = g[M.R_CID], u16(g, M.R_ID)
+        if rid >= 1024:                           # a group or phase row of a competition
+            continue
+        name = text(g[M.R_NAME + ENGLISH * M.NAME_SLOT:M.R_NAME + (ENGLISH + 1) * M.NAME_SLOT])             or text(g[M.R_NAME:M.R_NAME + M.NAME_SLOT])
+        e = out.setdefault(c, [name, [], "cup", old is not None and c not in old])
+        e[1].append(rid)
+        if g[M.R_TYPE] in (4, fl26world.SPLIT_TOTAL):
+            e[2] = "league"
+        if not e[0]:
+            e[0] = name
+    return [(c, sorted(r), n, k, new) for c, (n, r, k, new) in sorted(out.items())]
 
 
 def competition_problems(edits, base):
@@ -2918,6 +2953,48 @@ def club_money(new_of, pl, db, log=print):
     return lines
 
 
+# words a club's name is filed without (FC Augsburg under A): the game's own lists do the same
+CLUB_PREFIX = {"fc", "afc", "ac", "as", "sc", "cd", "ca", "cf", "sl", "sv", "vfb", "vfl", "tsg", "fk", "nk",
+               "hnk", "gnk", "ks", "sk", "if", "bk", "rc", "rcd", "ud", "sd", "gd", "ogc", "aj", "us", "ss",
+               "ssc", "kv", "krc", "kaa", "rsc", "pfc", "cs", "csd", "club", "the", "rb", "scr", "tsv", "fsv",
+               "ssv", "sg", "spvgg", "kfc", "fsc", "nac"}
+
+
+def club_sort_key(name):
+    words = name.replace(".", " ").split()
+    while len(words) > 1 and words[0].casefold() in CLUB_PREFIX:
+        words = words[1:]
+    return " ".join(words).casefold()
+
+
+def club_order(pl, ents, regs, raw, top_id, log=print):
+    """the clubs of our leagues, and of a league of the game a new club joins, entered A-Z: the
+    game lists a league's clubs (Select Team, Edit) in entry order, so the clubs of the game
+    that came into a league of ours came last, and so did a NewLife club in a refreshed league
+    of the game (LaraCroft, AlexRufolo 10.10.). The game's own leagues keep their order."""
+    name = {int.from_bytes(raw[i + W.T_ID:i + W.T_ID + 4], "little"): text(raw[i + W.T_NAME:i + W.T_NAME + W.T_NAME_LEN])
+            for i in range(0, len(raw) - W.T_REC + 1, W.T_REC)}
+    leagues = {regs[i + M.R_CID] for i in range(0, len(regs) - M.REG + 1, M.REG) if regs[i + M.R_TYPE] == 4}
+    ours = {p["cid"] for p in pl["leagues"] if p.get("cid") and not p.get("others")}
+    by_cid = {}
+    for i in range(0, len(ents) - M.ENT + 1, M.ENT):
+        by_cid.setdefault(ents[i + M.E_CID], []).append(i)
+    done = 0
+    for cid, rows in by_cid.items():
+        team = {i: int.from_bytes(ents[i + M.E_TEAM:i + M.E_TEAM + 4], "little") for i in rows}
+        if cid not in ours and not (cid in leagues and any(t > top_id for t in team.values())):
+            continue
+        rows = sorted(rows, key=lambda i: ents[i + M.E_ORDER])
+        want = sorted(rows, key=lambda i: club_sort_key(name.get(team[i], "")))
+        if want != rows:
+            orders = [ents[i + M.E_ORDER] for i in rows]
+            for i, o in zip(want, orders):
+                ents[i + M.E_ORDER] = o
+            done += 1
+    if done:
+        log("  clubs A-Z in %d league(s)" % done)
+
+
 def build(pl, base, game, replace=False, log=print):
     out = os.path.join(siderdir.find(game), "livecpk", pl["world"])
     if os.path.exists(out):
@@ -3155,6 +3232,7 @@ def build(pl, base, game, replace=False, log=print):
         shown = mktactics.write(base, db, donors)
         lineups = {t: mktactics.roles(places) for t, places in shown.items()}
         log("  formations for %d clubs" % len(shown))
+    club_order(pl, ents, regs, raw, top_id, log)
     with contextlib.redirect_stdout(io.StringIO()):
         M.write_tables(tmp, comp, regs, ents)
 
@@ -3186,6 +3264,8 @@ def build(pl, base, game, replace=False, log=print):
     lbplayers.player_portraits(portraits, tmp, log)
     lbplayers.coach_portraits(clubs, tmp, log)
     newfaces = lbplayers.new_face_lines(base, db, faces, portraits)   # fl26regen: pack faces (#52)
+    if pl.get("pack_faces") is False:                  # the looks of the game / Edit mode stay
+        newfaces = [l for l in newfaces if not l.startswith("newfaces")]
 
     splits = [p for p in pl["leagues"] if p.get("split")]
     if splits:

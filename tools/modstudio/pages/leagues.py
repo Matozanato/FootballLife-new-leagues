@@ -117,7 +117,7 @@ class Leagues(BuilderPage):
         for label, name in (("Pre-season cups", "preseason"), ("Cups of the game's countries", "game_cups"),
                             ("European places of the game's leagues", "game_europe"),
                             ("UEFA ranking", "uefa_rank"), ("South American places", "samerica"),
-                            ("Competition names", "competition_names")):
+                            ("Competition names", "competition_names"), ("Competition IDs", "competition_ids")):
             m.addAction(_(label)).triggered.connect(lambda _c=False, n=name: getattr(self.nl(), n)())
         m.addSeparator()
         m.addAction(_("World name and recipe...")).triggered.connect(lambda: self.app.open_page("NewLeagues"))

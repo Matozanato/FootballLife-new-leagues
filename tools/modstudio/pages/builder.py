@@ -1481,6 +1481,62 @@ class PreseasonDialog(Dialog):
         self.accept()
 
 
+class _IdItem(QTreeWidgetItem):
+    """a row that sorts its id column as a number"""
+
+    def __lt__(self, other):
+        c = self.treeWidget().sortColumn() if self.treeWidget() else 0
+        if c == 2:
+            return int(self.text(2)) < int(other.text(2))
+        return self.text(c).casefold() < other.text(c).casefold()
+
+
+class CompetitionIdsDialog(Dialog):
+    """every competition with its ids, read only: of the world switched on, else of the game's
+    tables (the poll, 11.10.: "a page with all the ids instead of digging in the files")"""
+
+    def __init__(self, parent, project):
+        super().__init__(parent, "Competition IDs")
+        worlds = project.world_tables()
+        db = worlds[0] if worlds else project.base
+        self.rows = B.competition_ids(db, project.base)
+        where = (_("the world switched on (%s)") % project.live_worlds()[0]) if worlds else _("the game's tables")
+        self.v.insertWidget(0, hint(_("Every league and cup in %s. Competition ID is what scoreboards, kits and "
+                                      "the competition maps of Sider ask for; regulation IDs are the ones in "
+                                      "sider.log and the world file. New = made by this world.") % where))
+        self.find = QLineEdit()
+        self.find.setPlaceholderText(_("Find..."))
+        self.find.textChanged.connect(self.fill)
+        self.v.insertWidget(1, self.find)
+        self.table = QTreeWidget()
+        self.table.setHeaderLabels([_("Name"), _("Kind"), _("Competition ID"), _("Regulation IDs"), _("New")])
+        self.table.setRootIsDecorated(False)
+        self.table.setSortingEnabled(True)
+        self.v.insertWidget(2, self.table, 1)
+        self.scroll.hide()
+        self.fill()
+        self.table.sortByColumn(2, Qt.AscendingOrder)
+        for c in range(5):
+            self.table.resizeColumnToContents(c)
+        self.setMinimumSize(760, 520)
+
+    def fill(self):
+        want = self.find.text().strip().casefold()
+        self.table.clear()
+        for cid, regs, name, kind, new in self.rows:
+            line = [name, _(kind), str(cid), ", ".join(map(str, regs)), _("yes") if new else ""]
+            if want and want not in " ".join(line).casefold():
+                continue
+            self.table.addTopLevelItem(_IdItem(line))
+
+    def add_buttons(self, bb):
+        bb.button(QDialogButtonBox.Cancel).hide()
+        copy = QPushButton(_("Copy the list"))
+        copy.clicked.connect(lambda: QApplication.clipboard().setText("\n".join(
+            "\t".join((str(c), ",".join(map(str, r)), n, k, "new" if nw else "")) for c, r, n, k, nw in self.rows)))
+        self.v.addWidget(row(copy, "stretch", bb, stretch=False))
+
+
 class CompetitionNamesDialog(Dialog):
     """new names and logos for the game's competitions that are not leagues (edits.competitions)
     and for the continental cups the world builds (ccup_names, ccup_logos)"""
@@ -2388,6 +2444,11 @@ class NewLeagues(BuilderPage):
             else:
                 self.project.recipe.pop("preseason_cups", None)
             self.project.touch()
+
+    def competition_ids(self):
+        if self.need_tables(True):
+            return
+        CompetitionIdsDialog(self, self.project).finish()
 
     def competition_names(self):
         if self.need_tables(True):
@@ -3675,6 +3736,14 @@ class Build(BuilderPage):
         self.mkits.toggled.connect(self.set_mkits)
         cl.addWidget(noted(self.mkits, helpmark(tip), hint(_("a whole league's kits at once; off = the new clubs "
                                                              "keep the kit borrowed from the game"))))
+        self.pfaces = QCheckBox(_("Faces from the regen face pack for new players"))
+        tip = ("On: every new player without a face of his own gets a face of the regen face pack by his "
+               "nationality. Off: new players keep the look the game gives them, or the one you set in the "
+               "game's Edit mode (it was covered by a pack face in Master League).")
+        self.pfaces.setToolTip(_(tip))
+        self.pfaces.toggled.connect(self.set_pfaces)
+        cl.addWidget(noted(self.pfaces, helpmark(tip), hint(_("off = the looks from Edit mode stay; "
+                                                               "takes effect at the next Build"))))
         self.b_euro = QPushButton(_("Build only the European cups..."))
         self.b_euro.setToolTip(_("A world with nothing but the new Champions League and Europa League (league "
                                  "phase of 36 and play-off) and, when ticked above, the Conference League: "
@@ -3734,6 +3803,14 @@ class Build(BuilderPage):
                 self.project.recipe.pop("editable_kits", None)
             self.project.touch()
 
+    def set_pfaces(self, on):
+        if (self.project.recipe.get("pack_faces") is not False) != on:
+            if on:
+                self.project.recipe.pop("pack_faces", None)
+            else:
+                self.project.recipe["pack_faces"] = False
+            self.project.touch()
+
     def set_mkits(self, on):
         if (self.project.recipe.get("make_kits") is not False) != on:
             if on:
@@ -3777,6 +3854,9 @@ class Build(BuilderPage):
         self.mkits.blockSignals(True)
         self.mkits.setChecked(self.project.recipe.get("make_kits") is not False)
         self.mkits.blockSignals(False)
+        self.pfaces.blockSignals(True)
+        self.pfaces.setChecked(self.project.recipe.get("pack_faces") is not False)
+        self.pfaces.blockSignals(False)
         self.uecl_logo.path = self.project.recipe.get("uecl_logo")
         self.uecl_logo.show_it()
         self.uecl_name.setText(self.project.recipe.get("uecl_name") or "")

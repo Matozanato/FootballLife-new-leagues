@@ -10,6 +10,14 @@ DRAFT -- not released. Every line below still needs its in-game check before the
 - Closing Mod Studio with recipe changes not saved asks whether to save them (they were lost
   without a word; a recipe never saved goes to the copy the next start opens).
 
+- The clubs of a new league, and of a league of the game a new club joins, are listed A-Z in
+  Select Team and Edit (FC, AC, SC ... left out, so FC Augsburg sits under A). The game's own
+  leagues keep their order.
+- Leagues > More > Competition IDs: every league and cup with its competition id and
+  regulation ids, from the world switched on, with a button that copies the list.
+- More > World name and recipe: "Faces from the regen face pack for new players". Off keeps
+  the look the game gives new players, or the one set in the game's Edit mode.
+
 ## Fixes
 
 - **The calendar stops on a day and shows nothing** (national team days, awards and other
