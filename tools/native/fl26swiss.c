@@ -4184,8 +4184,12 @@ static int cup_draw(cupdraw_t* c)
   unsigned char* rec = get_rec(c->reg);
   int relisted = 0;
   if (rec) {
+    /* the list holds rec_count clubs and ends at +0x308, 102 places in: a walk to CD_CLUBS or a
+       0xffffffff ran into the count word of a full list (same class as fl26clubs, 22.09.) */
     uint32_t* lst = rec_clubs(rec);
-    for (int p = 0; p < CD_CLUBS && lst[p] != 0xffffffffu; p++)
+    int nl = (int)rec_count(rec);
+    if (nl > (0x308 - 0x170) / 4) nl = (0x308 - 0x170) / 4;
+    for (int p = 0; p < nl && lst[p] != 0xffffffffu; p++)
       for (int k = 0; k < np; k++)
         if (club[k] == lst[p]) { if (lst[p] != want[k]) relisted++; lst[p] = want[k]; break; }
   }
