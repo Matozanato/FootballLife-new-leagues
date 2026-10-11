@@ -75,7 +75,9 @@ EVERYONE = [
 
 # the people who supported the project on Ko-fi (ko-fi.com/mata28), first first; the README's
 # "Supporters" lists the same names
-SUPPORTERS = ["Thunder105", "GutGut", "Scott Weir (LaraCroft)", "Pierro1912"]
+SUPPORTERS = ["Thunder105", "GutGut", "Scott Weir (LaraCroft)", "Pierro1912", "David.BDJ"]
+# a special thank you, above the list
+SPECIAL = "Ultimate Master League (UML)"
 
 
 def html(_=lambda s: s):
@@ -91,6 +93,8 @@ def html(_=lambda s: s):
     out += [row(*p) for p in EVERYONE]
     out.append("<h3>%s</h3>" % _("Supporters"))
     out.append("<p>%s</p>" % _("They supported the project on Ko-fi. Thank you!"))
+    out.append("<p style='margin:0 0 7px 0'><b>%s</b><br>%s</p>" % (SPECIAL, _(
+        "A special thank you to the UML crew, who covered a big part of what the project costs.")))
     out.append("<p style='margin:0 0 7px 0'>%s</p>" % "<br>".join("<b>%s</b>" % n for n in SUPPORTERS))
     out.append("<p>%s</p>" % _("Send a report on GitHub or Discord and your name goes on this list too."))
     return "\n".join(out)

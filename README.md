@@ -438,10 +438,14 @@ installed, what you did and what you saw, and you will be on this list too.
 
 They supported this project on [Ko-fi](https://ko-fi.com/mata28). Thank you!
 
+A special thank you to the **Ultimate Master League (UML)** crew, who covered a big part of
+what the project costs.
+
 - **Thunder105**, the first one ever
 - **GutGut**
 - **Scott Weir** (LaraCroft)
 - **Pierro1912**
+- **David.BDJ**
 
 ## Free to use — please credit
 
