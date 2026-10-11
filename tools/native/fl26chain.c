@@ -112,7 +112,7 @@ static int vcount32(vec32_t* v) { return (v && v->b && v->e >= v->b) ? (int)((v-
  * 76, 93, 94, 96, 98 and 162 -- ours, on ids the shipped data treats as calendar-year
  * leagues -- with EMPTY club lists, in the middle of their August-May season. The ids come
  * from the loader (fl26_chain_protect). */
-#define MAX_PROTECT 128
+#define MAX_PROTECT 256
 #ifndef REG_ARRAY_OFF   /* fallback only: reg_off() reads the real one from the code */
 #define REG_ARRAY_OFF 0x1d4c330   /* edit block + this = regulation records (caps sets), as fl26join.c */
 #endif

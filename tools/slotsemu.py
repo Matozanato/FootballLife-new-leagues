@@ -67,6 +67,8 @@ def call(fn, rcx=REG, rdx=0, r8=0, r9=0, keep=()):
     return mu.reg_read(UC_X86_REG_RAX)
 
 GET, COUNT, CLEAR, SET, SETCNT = 0x1414d6290, 0x1414d62c0, 0x1414d62e0, 0x1414d6330, 0x1414d6360
+if "--big" in sys.argv:                         # the module was made with mkslots.py --big
+    M.BIG[79] = M.BIG[80] = int(sys.argv[sys.argv.index("--big") + 1])
 L = M.layout(N)
 caps = L["caps"]
 FILLSRC = 0x14351ae44
@@ -115,9 +117,9 @@ for s in (123, N, 255, 0xffffffff):
 mu.mem_write(REG + L["cnt"] + 2 * 10, struct.pack("<H", 0xffff))
 assert call(COUNT, rdx=10) & 0xffff == caps[10]
 assert call(GET, rdx=10, r8=caps[10]) & 0xffffffff == 0xffffffff
-# the big slots hold 1600
+# the big slots hold what the layout gives them
 if N > 80:
-    assert call(SETCNT, rdx=80, r8=1600) is not None and call(COUNT, rdx=80) & 0xffff == 1600
+    assert call(SETCNT, rdx=80, r8=M.BIG[80]) is not None and call(COUNT, rdx=80) & 0xffff == M.BIG[80]
     call(SET, rdx=80, r8=1599, r9=0x1234)
     assert call(GET, rdx=80, r8=1599) & 0xffffffff == 0x1234
 print("accessors ok: %d slots, caps %s, slot 123 and >= N refused, no write outside the region"

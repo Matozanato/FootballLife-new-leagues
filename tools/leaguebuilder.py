@@ -243,8 +243,8 @@ OTHERS_NAMES = {2: "Other European", 6: "Other Latin American", 3: "Other Asia-O
                 7: "Other Africa", 1: "Classic Teams"}
 REGION_FIRST, REGION_LAST = 29, 63
 CID_FROM = 130
-SQUAD, PLAYER_CAP = 30, 51729            # tools/mkplayers.py --per / --cap, as the guide uses
-TEAM_CAP = 1536                          # clubs in all, shipped ones included
+SQUAD, PLAYER_CAP = 22, 61905            # limits branch: the lim2400 layout (--player-cap 61905); 30 a squad in releases
+TEAM_CAP = 2400                          # clubs in all, shipped ones included (1536 in releases)
 MAX_SPLITS = 2                           # split seasons tested so far: two at a time (191..196)
 # national cups to copy, by the clubs the game puts in them: the top division alone, or the top
 # division and the one below. European ones only -- a new country plays the European calendar,

@@ -373,6 +373,11 @@ Install:
 def main():
     a = [x for x in sys.argv[1:] if not x.startswith("--")]
     n = int(a[0]) if a else 250
+    if "--big" in sys.argv:
+        # the two all-club slots sized for a bigger club table (2400 with the lim2400 layout):
+        # every other slot pays for it out of the same fixed region
+        big = int(sys.argv[sys.argv.index("--big") + 1])
+        BIG[79] = BIG[80] = big
     out = (sys.argv[sys.argv.index("--out") + 1] if "--out" in sys.argv
            else os.path.join(HERE, "fl26slots%d.lua" % n))
     d = open(EXE, "rb").read()

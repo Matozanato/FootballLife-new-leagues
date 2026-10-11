@@ -4753,7 +4753,7 @@ static const uint32_t KO_DAYS[3][7] = {
  * rounds, which runs into June).
  * Twenty clubs twice is 38 and is left exactly as it was. */
 /* The built-in list: the ids the world builder hands out; a world file replaces it (fl26_swiss_leagues). */
-#define MAX_OUR_LEAGUES 128
+#define MAX_OUR_LEAGUES 256
 static uint16_t OUR_LEAGUES[MAX_OUR_LEAGUES] = {
   11, 49, 60, 61, 62, 74, 76, 93, 94, 96, 98, 100, 109, 110, 111, 112, 113, 114, 121, 138, 139,
   140, 143, 144, 145, 146, 170, 171, 173, 174, 176, 178, 179, 180, 181, 182, 183, 184, 185, 190 };
@@ -5108,7 +5108,7 @@ static int respace(date_t* r, uint32_t n, const uint8_t* bad, int gap, int jit)
  * played and stay in the table through the day-216 build. The game's own leagues are not dated
  * again at the rollover -- they keep the dates their career was made with, on day 216 -- so a
  * `july` line for one of them changes nothing; it starts as the game dates it. */
-#define MAX_JULY 64
+#define MAX_JULY 256
 static uint16_t g_july[MAX_JULY][2]; static int g_njuly = 0;
 __declspec(dllexport) int fl26_swiss_july(const uint16_t* v, int n)
 {
@@ -5199,7 +5199,7 @@ static void rest_dates(uint16_t id, date_t* r, uint32_t n)
  * first weekend after it in the first season (RCAL_SEASON1), the real one from the July rollover
  * on. Weekdays are the season's own (wday: 2025/26 from the game date's year), and so are the
  * fixed European days, moved within their week (eday). */
-#define MAX_RCAL 128
+#define MAX_RCAL 256
 #define RCAL_SEASON1 219          /* Saturday 8 August, the first weekend of a new career */
 typedef struct { uint16_t reg, first, last, b0, b1, days, also, eu; } rcal_t;
 static rcal_t g_rcal[MAX_RCAL]; static int g_nrcal = 0;

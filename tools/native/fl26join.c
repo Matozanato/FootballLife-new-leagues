@@ -56,8 +56,8 @@
 #define REG_STRIDE    0x314
 #define REG_CAP       600       /* the caps sets raise the array to 600 rows; unused rows carry id 0 */
 
-#define MAX_IDS   64         /* our competitions */
-#define MAX_LIST  512        /* merged include list */
+#define MAX_IDS   256        /* our competitions (64 until the limits branch: a world of 75+ leagues) */
+#define MAX_LIST  1024       /* merged include list */
 
 /* 15 whole instructions worth of prologue at each site, checked before anything is written */
 static const unsigned char SIG_JOIN[16] = {
