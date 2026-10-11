@@ -2165,12 +2165,20 @@ static void cont_build(void)
     g_cont[k][g_ncont[k]++] = c; used[nused++] = c;
   }
 }
+/* The league slot in +0x41c: the low 7 bits, or the whole byte when fl26slot7 is in (it moves
+ * the flag in bit 7 to +0x41a and turns every `and 0x7f` reader into `and 0xff`; the first of
+ * those readers, 0x140b08f74, says which). */
+#define SLOT7_PROBE_RVA 0xb08f74
+static int slot_of(const unsigned char* t)
+{
+  return t[0x41c] & (*(const unsigned char*)(uintptr_t)(g_base + SLOT7_PROBE_RVA) == 0xff ? 0xff : 0x7f);
+}
 /* a club's Master League slot (+0x41c), -1 when its record cannot be read */
 static int club_slot(void* blk, uint32_t c)
 {
   unsigned char* t = ((teamget_fn)(uintptr_t)(g_base + TEAMGET_RVA))(blk, c);
   if (!t || *(uint32_t*)t >> 14 != c >> 14) return -1;
-  return t[0x41c] & 0x7f;
+  return slot_of(t);
 }
 /* ---- the league-phase draw: no club meets its own association, none meets three of one ----
  *
@@ -2186,7 +2194,7 @@ static int club_slot(void* blk, uint32_t c)
 #define NATION_RVA 0x14cdda0
 static const unsigned char NATION_SIG[] = { 0x40, 0x55, 0x48, 0x8d, 0x6c, 0x24, 0xa9, 0x48, 0x81, 0xec, 0x00, 0x01, 0x00, 0x00 };
 typedef uint32_t (*nation_fn)(uint32_t slot);
-static uint16_t g_nat[128];                              /* slot -> country, 0 = not given */
+static uint16_t g_nat[256];                              /* slot -> country, 0 = not given */
 
 /* pairs (slot, country) from the world file's league lines; returns how many were taken */
 __declspec(dllexport) int fl26_swiss_nations(const uint16_t* v, int n)
@@ -2194,7 +2202,7 @@ __declspec(dllexport) int fl26_swiss_nations(const uint16_t* v, int n)
   if (!v || n < 0) return -1;
   int k = 0;
   for (int i = 0; i < n; i++)
-    if (v[2 * i] < 123 && v[2 * i + 1]) { g_nat[v[2 * i]] = v[2 * i + 1]; k++; }
+    if (v[2 * i] != 123 && v[2 * i] < 250 && v[2 * i + 1]) { g_nat[v[2 * i]] = v[2 * i + 1]; k++; }
   logf("fl26swiss: league-phase draw -- countries of %d league slot(s) from the world file", k);
   return k;
 }
@@ -2203,15 +2211,15 @@ static int club_key(void* blk, uint32_t c, int i)
 {
   unsigned char* t = ((teamget_fn)(uintptr_t)(g_base + TEAMGET_RVA))(blk, c);
   if (!t || *(uint32_t*)t >> 14 != c >> 14) return 2000 + i;
-  int s = t[0x41c] & 0x7f;
-  if (s < 123 && g_nat[s]) return g_nat[s];
+  int s = slot_of(t);
+  if (s != 123 && s < 250 && g_nat[s]) return g_nat[s];
   if (s < 123 && !memcmp((const void*)(g_base + NATION_RVA), NATION_SIG, sizeof NATION_SIG)) {
     uint32_t k = ((nation_fn)(uintptr_t)(g_base + NATION_RVA))((uint32_t)s) & 0xffff;
     if (k && k < 0xfffc) return (int)k;
   }
   int own = *(uint16_t*)(t + 0x418) & 0x1ff;
   if (own && own != 21) return own;
-  return s < 123 ? 1000 + s : 2000 + i;
+  return s != 123 && s < 250 ? 1000 + s : 2000 + i;
 }
 
 static int spread_leagues(const uint32_t* clubs, int n, const fl26_pair_t* table, int npairs, int pot,
@@ -2663,7 +2671,7 @@ static void cwc_game_champions(u32vec* list)
     for (size_t i = 0; i < n && i < 40; i++) {
       unsigned char* t = ((teamget_fn)(uintptr_t)(g_base + TEAMGET_RVA))(blk, list->b[i]);
       int ok = t && *(uint32_t*)t >> 14 == list->b[i] >> 14;
-      logf("fl26swiss:   entrant %2u: %08x slot %d country %d", (unsigned)i, list->b[i], ok ? t[0x41c] & 0x7f : -1,
+      logf("fl26swiss:   entrant %2u: %08x slot %d country %d", (unsigned)i, list->b[i], ok ? slot_of(t) : -1,
            ok ? *(uint16_t*)(t + 0x418) & 0x1ff : -1);
     }
   }

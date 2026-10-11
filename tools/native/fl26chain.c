@@ -24,7 +24,8 @@
  *     the regulation, pushes each non-null handle (cap 48), stores the flag, finalises.
  *   - 0x141353750 fills a vector of 16-byte entries, handle at +0, standings order top-down;
  *     the out vector must be zero-initialised; the game allocates it (we leak ~1 KB/season).
- *   - club record = 0x1414bca80(block, handle) or NULL; +0x41c low 7 bits = league slot;
+ *   - club record = 0x1414bca80(block, handle) or NULL; +0x41c low 7 bits = league slot
+ *     (the whole byte with fl26slot7, see slot_mask);
  *     +0x628 != 0 => never promoted. block = [[0x143705e10]+0x48].
  *   - A pass that moves clubs in one direction only would change league sizes; the mover
  *     itself does that, we do not: if either side has nothing to move, nothing moves.
@@ -131,6 +132,20 @@ static uint32_t reg_off(void)
   if (p[0] == 0x66 && p[1] == 0x42 && p[2] == 0x39 && p[3] == 0x9c && p[4] == 0x2a)
     return *(const uint32_t*)(p + 5);
   return REG_ARRAY_OFF;
+}
+
+/* The club's league slot: the low 7 bits of +0x41c, or the whole byte when fl26slot7 is in
+ * (it moves the flag in bit 7 to +0x41a and turns every `and 0x7f` reader into `and 0xff`;
+ * the first of those readers, 0x140b08f74, says which). */
+#define SLOT7_PROBE_RVA 0xb08f74
+static uint32_t slot_mask(void)
+{
+  return *(const unsigned char*)(uintptr_t)(g_base + SLOT7_PROBE_RVA) == 0xff ? 0xff : 0x7f;
+}
+static void set_slot(unsigned char* c, uint32_t slot, uint32_t mask)
+{
+  if (mask == 0xff) c[OFF_SLOT] = (unsigned char)slot;
+  else *(uint32_t*)(c + OFF_SLOT) = (*(uint32_t*)(c + OFF_SLOT) & 0xffffff80u) | slot;
 }
 
 /* clubs in the regulation's +0x170 list (u32 handles, 0xffffffff ends it), -1 if not found */
@@ -562,10 +577,11 @@ static void fix_chain(chain_t* ch)
 
   /* league-slot byte, exactly like the mover: relegated take the slot of the promoted and vice versa */
   unsigned char* c0 = s0 ? s0 : club(blk, down[0]); unsigned char* c1 = s1 ? s1 : club(blk, up[0]);
-  uint32_t slot_mid = c0 ? (*(uint32_t*)(c0 + OFF_SLOT) & 0x7f) : 0x7b;
-  uint32_t slot_low = c1 ? (*(uint32_t*)(c1 + OFF_SLOT) & 0x7f) : 0x7b;
-  for (int i = 0; i < nd; i++) { unsigned char* c = club(blk, down[i]); if (c) *(uint32_t*)(c + OFF_SLOT) = (*(uint32_t*)(c + OFF_SLOT) & 0xffffff80u) | slot_low; }
-  for (int i = 0; i < nu; i++) { unsigned char* c = club(blk, up[i]);   if (c) *(uint32_t*)(c + OFF_SLOT) = (*(uint32_t*)(c + OFF_SLOT) & 0xffffff80u) | slot_mid; }
+  uint32_t mask = slot_mask();
+  uint32_t slot_mid = c0 ? (*(uint32_t*)(c0 + OFF_SLOT) & mask) : 0x7b;
+  uint32_t slot_low = c1 ? (*(uint32_t*)(c1 + OFF_SLOT) & mask) : 0x7b;
+  for (int i = 0; i < nd; i++) { unsigned char* c = club(blk, down[i]); if (c) set_slot(c, slot_low, mask); }
+  for (int i = 0; i < nu; i++) { unsigned char* c = club(blk, up[i]);   if (c) set_slot(c, slot_mid, mask); }
 
   vec32_t vb = { nb, nb + nnb, nb + MAX_CLUBS }, vc = { nc, nc + nnc, nc + MAX_CLUBS };
   set_fn orig = (set_fn)(uintptr_t)g_tramp_set;
