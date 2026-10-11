@@ -209,6 +209,13 @@ undoes it.
   in December, the Europa League one in February), and then shows the ties. The page heading
   still reads *Group stage - Matchday ...*; that is the game's own heading and harmless. The
   extra sider.log line is `play-off names live`.
+  Update 2026-10-11 (not yet checked in the game): each qualifying round (2nd, 3rd, play-off
+  round) gets its own item once its ties hold clubs; from late January the play-off item reads
+  *Knockout round play-offs*; the knockout list reads *Round of 16* instead of *Round of 32* /
+  *First knockout round*; the Conference League and world-built continental cups show the
+  same list as the Champions League instead of a bracket. sider.log lines:
+  `Competition Info knockouts as a list live`, `Round of 16 names live`,
+  `Competition Info item per qualifying round live`.
 
 **What is not right yet, plainly:**
 
