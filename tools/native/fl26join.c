@@ -176,6 +176,9 @@ static uint8_t g_door_yes[256];
    division under 162, 2026-09-29: "season end: ... 11(no table) 162(below has none)"). The
    door's own memory does not survive a load, this does not need to. */
 static int g_cal_midseason = 0;
+/* Closed this season (reset by the July list): the New Year list closes every calendar-year
+   league of ours that no region list has closed yet, and none is closed twice. */
+static uint8_t g_cal_shut[256];
 /* A season in progress has its rounds: the phase count at +0x300 bits 19-24 and the first
    fixture index at +0x88. A calendar-year league of ours closed at New Year has neither, but it
    does have what the other test goes by: apply (0x141522b50) flags it again the moment it
@@ -1055,7 +1058,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   if (n + g_nids + g_ntd_extra > MAX_LIST) return in;
   for (int j = 0; j < n; j++) if (in->b[j] == 2) { euro = 1; break; }
   if (euro) memset(g_door_yes, 0, sizeof g_door_yes);   /* a new season: nobody let in yet */
-  if (euro) g_cal_midseason = 1;
+  if (euro) { g_cal_midseason = 1; memset(g_cal_shut, 0, sizeof g_cal_shut); }
   char buf[320]; int p = 0; buf[0] = 0;
   for (int j = 0; j < n; j++) {
     uint16_t id = in->b[j];
@@ -1085,6 +1088,14 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   /* Any other list: a calendar-year league of ours closes with the shipped leagues of its own
      region -- the season group the list is. */
   int cadd = 0, cdup = 0; char cbuf[160]; int cp = 0; cbuf[0] = 0;
+  /* The New Year list is the one with shipped id 8, as the July list is the one with 2. A
+     calendar-year league of ours in a region with no league of the game's (Norway and Sweden
+     in the modpack, regions 39 and 45) never has a mate on any list: it was never closed, the
+     mid-season mark held, and on day 41 it was "already in a season" -- no second season, and
+     in the first one it never started at all (GitHub #124: "Norway ... the league never
+     starts"). Such a league closes with the New Year list. */
+  int newyear = 0;
+  for (int j = 0; j < n; j++) if (in->b[j] == 8) { newyear = 1; break; }
   if (!euro) {
     for (int i = 0; i < g_ncal; i++) {
       uint16_t id = g_cal[i]; int dup = 0, mate = 0;
@@ -1100,10 +1111,11 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
          same, so the door's memory of it goes too. Kept, the July door YES and the mid-season
          mark held it out on day 41 and it played no second season (2026-10-01: "door(93)
          refused ... joins on day 41", then 13 of ours "already in a season", 93 without). */
-      if (dup) { if (id < 256) g_door_yes[id] = 0; cdup++; continue; }
-      if (!mate || k >= MAX_LIST) continue;
+      if (dup) { if (id < 256) { g_door_yes[id] = 0; g_cal_shut[id] = 1; } cdup++; continue; }
+      if (id < 256 && g_cal_shut[id]) continue;
+      if ((!mate && !newyear) || k >= MAX_LIST) continue;
       g_td_list[k++] = id; changed++; cadd++;
-      if (id < 256) g_door_yes[id] = 0;
+      if (id < 256) { g_door_yes[id] = 0; g_cal_shut[id] = 1; }
       if (cp < (int)sizeof cbuf - 8) cp += snprintf(cbuf + cp, sizeof cbuf - (size_t)cp, "%u ", id);
     }
   }
