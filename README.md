@@ -263,6 +263,22 @@ worst bugs here were found only because vmardonesdev played further than anyone 
 - [#31](https://github.com/Matozanato/FootballLife-new-leagues/issues/31): asked what to
   test next and turned the answer into the test runs for Apertura, the new countries' cups
   and the Kick Off order.
+- [#44](https://github.com/Matozanato/FootballLife-new-leagues/issues/44), [#45](https://github.com/Matozanato/FootballLife-new-leagues/issues/45), [#46](https://github.com/Matozanato/FootballLife-new-leagues/issues/46), [#47](https://github.com/Matozanato/FootballLife-new-leagues/issues/47): new clubs missing from Players, Apertura/Clausura with no table or
+  calendar, the national cup over two full seasons and the Kick Off / Edit order (0.1.3.1).
+- [#49](https://github.com/Matozanato/FootballLife-new-leagues/issues/49), [#52](https://github.com/Matozanato/FootballLife-new-leagues/issues/52): the Player ID column and random looks for generated players.
+- [#61](https://github.com/Matozanato/FootballLife-new-leagues/issues/61), [#63](https://github.com/Matozanato/FootballLife-new-leagues/issues/63), [#64](https://github.com/Matozanato/FootballLife-new-leagues/issues/64): NewLife tested on a whole world: duplicated faces, the Game Plan lag of
+  `fl26regen`, minifaces that did not match and the game clubs' starting elevens.
+- [#66](https://github.com/Matozanato/FootballLife-new-leagues/issues/66), [#68](https://github.com/Matozanato/FootballLife-new-leagues/issues/68), [#69](https://github.com/Matozanato/FootballLife-new-leagues/issues/69): Libertadores qualifying places, a Brazilian cup taken over by a new lower
+  division and the February to December season.
+- [#74](https://github.com/Matozanato/FootballLife-new-leagues/issues/74), [#77](https://github.com/Matozanato/FootballLife-new-leagues/issues/77), [#78](https://github.com/Matozanato/FootballLife-new-leagues/issues/78): the Croatian cup bracket crash and full 0.1.7 runs with Croatia, UEFA and
+  the league cup of a game country.
+- [#87](https://github.com/Matozanato/FootballLife-new-leagues/issues/87), [#89](https://github.com/Matozanato/FootballLife-new-leagues/issues/89), [#90](https://github.com/Matozanato/FootballLife-new-leagues/issues/90), [#92](https://github.com/Matozanato/FootballLife-new-leagues/issues/92), [#93](https://github.com/Matozanato/FootballLife-new-leagues/issues/93): clubs missing in Kits, the UEFA ranking moving European places,
+  Kit Server kits of NewLife clubs, leagues under a second division and a game country with
+  only a league cup.
+- [#112](https://github.com/Matozanato/FootballLife-new-leagues/issues/112), [#119](https://github.com/Matozanato/FootballLife-new-leagues/issues/119), [#122](https://github.com/Matozanato/FootballLife-new-leagues/issues/122): Paste Image on the base kits of added clubs, a combined South American
+  world whose Libertadores did not use the final table, and the cup draw crash on a new career.
+- [#124](https://github.com/Matozanato/FootballLife-new-leagues/issues/124), [#127](https://github.com/Matozanato/FootballLife-new-leagues/issues/127), [#131](https://github.com/Matozanato/FootballLife-new-leagues/issues/131): the 34 extra leagues of the FL26 Modpack tested one by one, and the
+  Libertadores places after a first season.
 - On the Discord, as Vicentico12: European places for the game's own leagues, which 0.1.7's
   UEFA ranking gives, a logo for the Copa Sudamericana, the calendar that stopped showing its
   events after 0.2.0 (with a save to test it on), the July leagues of the modpack that never
@@ -295,6 +311,9 @@ of 0.1.4 comes straight from those messages:
 - a league of 20 whose league cup left four clubs out, and a league round played on a cup
   day: the league cup pre-round and the split-date fix of 0.1.7
   ([#70](https://github.com/Matozanato/FootballLife-new-leagues/issues/70)).
+
+In 0.2.0 a whole African world: the Egyptian split table, the promotion arrows, the league cup
+played after the Super Cup and the continent's best player ([#70](https://github.com/Matozanato/FootballLife-new-leagues/issues/70)).
 
 Asian leagues with their own continental places, and with them the AFC Champions League Two
 in the League Builder, were Alikhaled_727's idea too.
@@ -329,6 +348,8 @@ testing Mod Studio on a real, heavily modded game and helping everyone else get 
 - the Players page on a 1366x768 screen, a whole Scottish pyramid of NewLife leagues under the
   game's Premiership built step by step, NewLife ratings that were off in a Romanian second
   division, and sorting the NewLife table by any column (0.2.0);
+- material for NewLife and the modpack: the real 2026/27 UEFA lists, Croatian clubs and the
+  skills and positions of a player scraper;
 - day after day on the Discord: answering members' questions about install order, face packs
   and other patches before anyone else gets to them, and keeping the server tidy.
 
@@ -364,7 +385,15 @@ American world and reports what breaks there:
   ([#56](https://github.com/Matozanato/FootballLife-new-leagues/issues/56));
 - the League window that did not fit the screen, the idea of a separate editor for
   competitions, and Select all / Select none for league packages
-  ([#34](https://github.com/Matozanato/FootballLife-new-leagues/issues/34)).
+  ([#34](https://github.com/Matozanato/FootballLife-new-leagues/issues/34));
+- a new club in place of a game club, the other South Americans and Europeans missing in
+  Select Team, a plan that would not build and the new South American cups in Cup mode
+  ([#72](https://github.com/Matozanato/FootballLife-new-leagues/issues/72), [#73](https://github.com/Matozanato/FootballLife-new-leagues/issues/73), [#80](https://github.com/Matozanato/FootballLife-new-leagues/issues/80), [#81](https://github.com/Matozanato/FootballLife-new-leagues/issues/81));
+- the game's clubs in no league, quicker checks from the NewLife Database and the Uruguayan
+  format ([#82](https://github.com/Matozanato/FootballLife-new-leagues/issues/82), [#83](https://github.com/Matozanato/FootballLife-new-leagues/issues/83), [#99](https://github.com/Matozanato/FootballLife-new-leagues/issues/99));
+- 0.1.9 tested to its limits: NewLife clubs in a recipe, the order of leagues and of
+  countries, the rest of the leagues not updating, reordering new clubs, the limit of 38
+  leagues, the "Others" groups and a crash ([#101](https://github.com/Matozanato/FootballLife-new-leagues/issues/101), [#105](https://github.com/Matozanato/FootballLife-new-leagues/issues/105), [#107](https://github.com/Matozanato/FootballLife-new-leagues/issues/107), [#113](https://github.com/Matozanato/FootballLife-new-leagues/issues/113), [#114](https://github.com/Matozanato/FootballLife-new-leagues/issues/114), [#115](https://github.com/Matozanato/FootballLife-new-leagues/issues/115), [#116](https://github.com/Matozanato/FootballLife-new-leagues/issues/116), [#117](https://github.com/Matozanato/FootballLife-new-leagues/issues/117), [#120](https://github.com/Matozanato/FootballLife-new-leagues/issues/120)).
 
 ### jyanj083-dotcom: Peru and the Libertadores, tested to the end
 
@@ -381,7 +410,11 @@ and other Latin American worlds and writes up every bug with screenshots:
   leagues ([#57](https://github.com/Matozanato/FootballLife-new-leagues/issues/57));
 - Liga 1 and Liga 2 of Peru with the NewLife Database ([#60](https://github.com/Matozanato/FootballLife-new-leagues/issues/60)), crests kept
   across builds ([#67](https://github.com/Matozanato/FootballLife-new-leagues/issues/67)) and the competition places of new South American
-  leagues ([#71](https://github.com/Matozanato/FootballLife-new-leagues/issues/71)).
+  leagues ([#71](https://github.com/Matozanato/FootballLife-new-leagues/issues/71));
+- league creation bugs, kits of new clubs past id 65535 and random managers
+  ([#79](https://github.com/Matozanato/FootballLife-new-leagues/issues/79), [#85](https://github.com/Matozanato/FootballLife-new-leagues/issues/85), [#88](https://github.com/Matozanato/FootballLife-new-leagues/issues/88), [#91](https://github.com/Matozanato/FootballLife-new-leagues/issues/91));
+- the Copa Peru crash after its first round, promotion with Apertura/Clausura, the Be a
+  Legend crash of 0.2.0 and a long list of bugs from 0.2.1 ([#95](https://github.com/Matozanato/FootballLife-new-leagues/issues/95), [#106](https://github.com/Matozanato/FootballLife-new-leagues/issues/106), [#125](https://github.com/Matozanato/FootballLife-new-leagues/issues/125), [#132](https://github.com/Matozanato/FootballLife-new-leagues/issues/132)).
 
 ### Everyone else who helped
 
@@ -391,9 +424,11 @@ and other Latin American worlds and writes up every bug with screenshots:
   `fl26comptab.lua` and `tools/mkflags.py` are built on it.
 - **AlexRufolo**: asked to pick the clubs of the European cups by hand, which became Mod
   Studio's **First-season European clubs** (0.1.8); asked for clubs listed A-Z, and found the
-  Korean January-December league that never started.
+  Korean January-December league that never started; a second-season crash, Serie C with no
+  promotion and two Carabao Cups ([#97](https://github.com/Matozanato/FootballLife-new-leagues/issues/97), [#98](https://github.com/Matozanato/FootballLife-new-leagues/issues/98), [#118](https://github.com/Matozanato/FootballLife-new-leagues/issues/118)).
 - **pioup38**: the first report from a different game build and a clean configuration
-  ([#3](https://github.com/Matozanato/FootballLife-new-leagues/issues/3)).
+  ([#3](https://github.com/Matozanato/FootballLife-new-leagues/issues/3)), and players
+  created from a CSV file ([#58](https://github.com/Matozanato/FootballLife-new-leagues/issues/58)).
 - **bobzera** (Evo-Web): brought the "ACL71" kit problem into the open, new clubs past id
   65536 showing only the default kit, and worked on a fix of their own. That problem is the
   one `tools/mkkits.py` now solves by naming the kit files the way the engine looks them up.
@@ -407,7 +442,8 @@ and other Latin American worlds and writes up every bug with screenshots:
   ([#37](https://github.com/Matozanato/FootballLife-new-leagues/issues/37)).
 - **alexfe87** ([alexfe87](https://github.com/alexfe87)): asked for the new UEFA formats on
   their own, without any new league, which is why 0.1.4 has a Europe-only build
-  ([#36](https://github.com/Matozanato/FootballLife-new-leagues/issues/36)).
+  ([#36](https://github.com/Matozanato/FootballLife-new-leagues/issues/36)), and the
+  question of a clean install ([#130](https://github.com/Matozanato/FootballLife-new-leagues/issues/130)).
 - **ThanosMJ** (Evo-Web): Greek leagues three divisions deep, the league order in Select Team,
   and the request to edit team and player ids in Mod Studio.
 - **NudnyNick999** (Evo-Web): asked for a league to appear higher in the selection menu, which
@@ -425,12 +461,14 @@ and other Latin American worlds and writes up every bug with screenshots:
 - **daemonkf-a11y** ([daemonkf-a11y](https://github.com/daemonkf-a11y)): a database mod that
   renamed the Europa League and stopped the build, and a Romanian split too long for the
   calendar, and a European-only world whose leagues got no schedule
-  ([#54](https://github.com/Matozanato/FootballLife-new-leagues/issues/54)).
+  ([#54](https://github.com/Matozanato/FootballLife-new-leagues/issues/54)), and the same
+  match shown twice in the hub, followed over two versions.
 - **alby171994** ([alby171994](https://github.com/alby171994)): an exhibition-only world
   that left every league without a schedule, narrowed down to one module
   ([#53](https://github.com/Matozanato/FootballLife-new-leagues/issues/53)), and the Edit
   mode changes to new clubs that were never saved
-  ([#55](https://github.com/Matozanato/FootballLife-new-leagues/issues/55)).
+  ([#55](https://github.com/Matozanato/FootballLife-new-leagues/issues/55)), and faces and hair
+  reset to the dummy ([#104](https://github.com/Matozanato/FootballLife-new-leagues/issues/104)).
 - **Jabo9** (Evo-Web): saw a new League One take the FA Cup from the Premier League and the
   Championship ([#68](https://github.com/Matozanato/FootballLife-new-leagues/issues/68)),
   and asked for new players to keep the look the game gives them, now a switch in More.
@@ -442,9 +480,11 @@ and other Latin American worlds and writes up every bug with screenshots:
   an Asian league with a South American description ([#43](https://github.com/Matozanato/FootballLife-new-leagues/issues/43))
   and Edit mode on a database of more than 30,001 players ([#65](https://github.com/Matozanato/FootballLife-new-leagues/issues/65)).
 - **pepponeee98** ([pepponeee98](https://github.com/pepponeee98)): leagues that disappeared
-  and a crash ([#62](https://github.com/Matozanato/FootballLife-new-leagues/issues/62)).
+  and a crash ([#62](https://github.com/Matozanato/FootballLife-new-leagues/issues/62)), and free
+  agents created when a new world is loaded ([#96](https://github.com/Matozanato/FootballLife-new-leagues/issues/96)).
 - **okarin-hub** ([okarin-hub](https://github.com/okarin-hub), Okarin on the Discord): an
-  Indonesian league and the start-up crashes ([#59](https://github.com/Matozanato/FootballLife-new-leagues/issues/59)).
+  Indonesian league and the start-up crashes ([#59](https://github.com/Matozanato/FootballLife-new-leagues/issues/59)), and the
+  Kit Server kits of a new club ([#103](https://github.com/Matozanato/FootballLife-new-leagues/issues/103)).
 - **iptory** ([iptory](https://github.com/iptory)): the Argentinian format, two zones of 15
   and a play-off of eight ([#48](https://github.com/Matozanato/FootballLife-new-leagues/issues/48)).
 - **JamesNotLike** (Discord): LaLiga and Ligue 1 gone from Select Team, followed patiently

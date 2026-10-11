@@ -28,10 +28,10 @@ FEATURED = [
      "and the national team editor"),
     ("victormican", "GitHub",
      "South America from top to bottom: Kick Off, Select Team order, Colombia's calendar, the "
-     "limit of leagues"),
+     "limit of leagues, and 0.1.9 tested to its limits"),
     ("jyanj083-dotcom", "GitHub",
      "Peru and the Libertadores tested to the end: qualifying places, Apertura/Clausura, NewLife "
-     "and the competition places"),
+     "and the competition places, the Copa Peru and a long 0.2.1 bug list"),
 ]
 
 EVERYONE = [
@@ -50,14 +50,15 @@ EVERYONE = [
     ("Zega_1991", "Reddit", "regens that do not come back as a retired player"),
     ("Alby17", "Evo-Web", "shirt number 10 that came out as 11"),
     ("daemonkf-a11y", "GitHub",
-     "a renamed Europa League, a Romanian split, the Europe-only schedule and the play-off loser"),
-    ("alby171994", "GitHub", "an exhibition-only world with no schedule, narrowed to one module"),
+     "a renamed Europa League, a Romanian split, the Europe-only schedule, the play-off loser "
+     "and the same match twice in the hub"),
+    ("alby171994", "GitHub", "an exhibition-only world with no schedule, narrowed to one module; faces reset"),
     ("Jabo9", "Evo-Web, Discord", "a new League One that took the FA Cup; league play-offs"),
     ("n1ne", "Discord", "the questions that show where the docs are not clear yet"),
     ("mushroomwehk", "GitHub",
      "a 12-club league that started on matchday 3, clubs of the game in new leagues, the Asian "
      "league's description and Edit mode past 30,001 players"),
-    ("pepponeee98", "GitHub", "leagues that disappeared and a crash"),
+    ("pepponeee98", "GitHub", "leagues that disappeared, a crash and free agents from a new world"),
     ("okarin-hub (Okarin)", "GitHub, Discord", "an Indonesian league and the start-up crashes"),
     ("iptory", "GitHub", "the Argentinian format: two zones and a play-off of eight"),
     ("JamesNotLike", "Discord",
