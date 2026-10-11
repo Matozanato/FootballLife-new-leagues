@@ -273,7 +273,10 @@ def build(ids, new_base):
                      OLD_UNIT + growth,
                      "the unit is cleared in one call: 0x%x -> 0x%x bytes"
                      % (OLD_UNIT, OLD_UNIT + growth)))
+    surveyed = {int(s["va"], 16) for s in sites}
     for va in AFTER_IMM:
+        if va in surveyed:
+            continue               # the survey reaches it now (tail jumps, 11.10.): once only
         v = exe.i32(va + find(exe, va, 0x3f180))
         out.append(dword(exe, va, find(exe, va, v), v, v + growth,
                          "past the calendar, added rather than addressed: +0x%x -> +0x%x"

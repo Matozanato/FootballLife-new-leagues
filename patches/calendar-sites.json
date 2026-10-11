@@ -2488,6 +2488,15 @@
    "text": "lea rcx, [rdi + 0x16038a8]"
   },
   {
+   "kind": "after",
+   "by": "taint",
+   "disp": 258432,
+   "va": "0x1414babe2",
+   "func": "0x1414babd0",
+   "at": 3,
+   "text": "add rcx, 0x3f180"
+  },
+  {
    "kind": "base",
    "va": "0x1414bbac6",
    "func": "0x1414bb970",
@@ -2930,6 +2939,24 @@
    "func": "0x141511410",
    "at": 3,
    "text": "lea rdx, [r14 + 0x16038a8]"
+  },
+  {
+   "kind": "event",
+   "by": "taint",
+   "va": "0x1415165e8",
+   "func": "0x1415165a0",
+   "disp": 564,
+   "at": 3,
+   "text": "lea rcx, [rbx + 0x234]"
+  },
+  {
+   "kind": "event",
+   "by": "shape",
+   "va": "0x141516821",
+   "func": "0x1415165a0",
+   "disp": 564,
+   "at": 4,
+   "text": "mov rax, qword ptr [rcx + rax*8 + 0x234]"
   },
   {
    "kind": "base",

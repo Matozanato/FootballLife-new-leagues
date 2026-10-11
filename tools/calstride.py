@@ -312,7 +312,13 @@ def walk(f, sites, odd, shape_ok=True, seed=(), passed=None):
         # from thirty callers and walks a day record with every constant this file rewrites,
         # and no instruction in it names the base.  Without following the argument the whole
         # function is invisible to the survey.
-        if passed is not None and ins.id == X86_INS_CALL and ops and ops[0].type == X86_OP_IMM:
+        # A tail jump is the same hand-over: 0x141516840 computes a day and ends in `jmp
+        # 0x1415165a0`, which walks that day's 18 event slots at +0x234.  Missed, it read the
+        # events from inside the widened id list (GitHub #70 / #132: the calendar stops on a
+        # day and shows nothing, national team days skipped).
+        tail = ins.id == X86_INS_JMP and ops and ops[0].type == X86_OP_IMM \
+            and not (lo <= ops[0].imm < hi)
+        if passed is not None and (ins.id == X86_INS_CALL or tail) and ops and ops[0].type == X86_OP_IMM:
             for r in ARGS:
                 if tag.get(r) == "CAL":
                     passed.add((ops[0].imm, r))

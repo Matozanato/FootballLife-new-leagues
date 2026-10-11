@@ -6,7 +6,7 @@ and sider/fl26caps.template.lua. Editing it by hand loses the guarantee that eve
 below came from disassembling the instruction at that address.
 
 Set:     teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar
-Summary: block 0x1877068 -> 0x3d9cbe8, 3502 patches
+Summary: block 0x1877068 -> 0x3d9cbe8, 3504 patches
 
 What it does, and the one rule it follows: read every target address first and compare it
 against the bytes the generator saw in the exe; only if all of them match does it write
@@ -1009,6 +1009,8 @@ local patches = {
   {va=0x141511535, old="18010000", new="18030000", why="ids a day holds: 280 -> 792 (cmp r13d, 0x118)"},
   {va=0x141511812, old="30020000", new="30060000", why="the day's count moves: +0x230 -> +0x630 (movzx eax, word ptr [rcx + 0x230])"},
   {va=0x14151188e, old="a8386001", new="70708701", why="calendar base: 0x16038a8 -> 0x1877070 (lea rdx, [r14 + 0x16038a8])"},
+  {va=0x1415165eb, old="34020000", new="34060000", why="event slot moves: +0x234 -> +0x634 (lea rcx, [rbx + 0x234])"},
+  {va=0x141516825, old="34020000", new="34060000", why="event slot moves: +0x234 -> +0x634 (mov rax, qword ptr [rcx + rax*8 + 0x234])"},
   {va=0x141516854, old="a8386001", new="70708701", why="calendar base: 0x16038a8 -> 0x1877070 (add rcx, 0x16038a8)"},
   {va=0x141516863, old="c4020000", new="c4060000", why="day stride: 0x2c4 -> 0x6c4 (imul rdx, rbx, 0x2c4)"},
   {va=0x141516951, old="a8386001", new="70708701", why="calendar base: 0x16038a8 -> 0x1877070 (add rdx, 0x16038a8)"},
