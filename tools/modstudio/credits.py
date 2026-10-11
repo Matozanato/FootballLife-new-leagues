@@ -8,7 +8,7 @@ AUTHOR = ("Matozanato", "GitHub", "Mod Studio, the League Builder and the module
 
 # the ones the README gives a section of their own
 FEATURED = [
-    ("vmardonesdev", "GitHub, Vicentico12 on Discord",
+    ("vmardonesdev", "GitHub, Vicentico12 on Discord (moderator)",
      "the tester this project owes the most: full seasons and rollovers, a regression suite, a "
      "testing plan, twenty-one of the first thirty-seven issues, and on the Discord the European "
      "places of the game's leagues, the calendar events lost after 0.2.0 and the July leagues "
@@ -23,7 +23,7 @@ FEATURED = [
      "tests on a heavily modded game (a full French patch, the kit server, Sider in any folder), "
      "faces by nationality, the Players page on small screens, NewLife sorting, and the first "
      "answer to everyone's questions on the Discord"),
-    ("Amir (AmirPjanic)", "GitHub, Discord moderator",
+    ("Amir (AmirPjanic)", "GitHub, Discord",
      "Mod Studio tested release by release: the ID columns, names with č ć š ž đ, leagues of 26 "
      "and the national team editor"),
     ("victormican", "GitHub",

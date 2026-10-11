@@ -211,7 +211,7 @@ someone who played a season, wrote down what happened and sent it. Thank you, al
 
 ### vmardonesdev: the tester this project owes the most
 
-**vmardonesdev** (Vicentico12 on the Discord) has done more for this project than anyone besides its author. Twenty-one of
+**vmardonesdev** (Vicentico12 and a moderator on the Discord) has done more for this project than anyone besides its author. Twenty-one of
 the first thirty-seven GitHub issues come from vmardonesdev, and every one is a proper test
 report: the exact commit, the exact world, what was installed, what was expected, what
 happened, with logs and saves attached. vmardonesdev runs full seasons and season rollovers
@@ -352,8 +352,8 @@ testing Mod Studio on a real, heavily modded game and helping everyone else get 
 
 ### novarama: moderator on the Discord, with a developer's eye
 
-**novarama** (moderator on the Discord) keeps the server running next to jibibi and Amir and
-looks at Mod Studio the way a professional developer does:
+**novarama** joined jibibi and vmardonesdev as a moderator on the Discord on 11 October 2026,
+and looks at Mod Studio the way a professional developer does:
 
 - the Bundesliga 2 crests missing from NewLife 1.3, which put the crests back into every
   NewLife build;
@@ -368,7 +368,7 @@ looks at Mod Studio the way a professional developer does:
 
 ### Amir: Mod Studio, tested release by release
 
-**Amir** ([AmirPjanic](https://github.com/AmirPjanic), moderator on the Discord) tests Mod
+**Amir** ([AmirPjanic](https://github.com/AmirPjanic)) tests Mod
 Studio release by release and asks for what a modder actually needs:
 
 - the Team ID and League ID columns, the division shown next to each league, nationality typed
