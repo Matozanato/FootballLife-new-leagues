@@ -6241,18 +6241,25 @@ uint64_t ci_menu_handler(ci_vec_t* v, uint32_t* comp, uint64_t flag)
   }
   return r;
 }
-unsigned char* ci_sel_handler(unsigned char* menu)
+/* 0x140e3d310(flow) is not given the menu and does not return an item: `flow` is the screen's flow
+   object, its context at +0x88 holds the transition entries (+0x398..+0x3a0, 0x30 each: +0x28 the
+   list, +0x2c the item index or -1 for any, +8 the target flow name as a std::string), the current
+   list at +0xa0 and the chosen item's index at +0xd8, and it returns the name of the flow the chosen
+   item leads to (12.10., in game: the old reading never fired, every item opened the current round).
+   Our items lead to "playoff" like the native grouped-phase item, so a "playoff" answer while our
+   menu is up takes the chosen index from +0xd8. */
+unsigned char* ci_sel_handler(unsigned char* flow)
 {
-  unsigned char* e = ((cisel_fn)(uintptr_t)g_tramp_cisel)(menu);
-  if (e && menu && g_ci_vec && (void*)(menu + 0x2d8) == (void*)g_ci_vec && *(uint64_t*)menu == g_base + CIV_VTBL
-      && *(uint32_t*)(e + 0x28) == 2) {
-    int idx = *(int32_t*)(e + 0x2c);
-    uint16_t p = idx >= 0 && idx < g_ci_n ? g_ci_reg[idx] : 0xffff;
-    g_ci_pick = p; g_ci_pick_comp = g_ci_comp;
-    if (g_ci_sel_n++ < 12) {
-      if (p != 0xffff) logf("fl26swiss: Competition Info -- item %d chosen: regulation %u", idx, (unsigned)p);
-      else logf("fl26swiss: Competition Info -- item %d chosen (the game's own)", idx);
-    }
+  unsigned char* e = ((cisel_fn)(uintptr_t)g_tramp_cisel)(flow);
+  if (!e || !flow || !g_ci_vec || strcmp((const char*)e, "playoff")) return e;
+  unsigned char* ctx = *(unsigned char**)(flow + 0x88);
+  if (!ctx) return e;
+  int list = *(int32_t*)(ctx + 0xa0), idx = *(int32_t*)(ctx + 0xd8), alt = *(int32_t*)(ctx + 0xfc);
+  uint16_t p = idx >= 0 && idx < g_ci_n ? g_ci_reg[idx] : 0xffff;
+  g_ci_pick = p; g_ci_pick_comp = g_ci_comp;
+  if (g_ci_sel_n++ < 16) {
+    if (p != 0xffff) logf("fl26swiss: Competition Info -- item %d chosen: regulation %u (list %d, +0xfc %d)", idx, (unsigned)p, list, alt);
+    else logf("fl26swiss: Competition Info -- item %d chosen, the game's own (list %d, +0xfc %d, %d items)", idx, list, alt, g_ci_n);
   }
   return e;
 }
