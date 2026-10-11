@@ -256,7 +256,10 @@ def _dialog_class():
                     if tid is None or it.checkState(0) != Qt.Checked:
                         continue
                     have = [r for r in mf.rows() if r.enabled and r.fields and r.fields[0].strip() == str(tid)]
-                    if have and not self.replace.isChecked():
+                    # a line whose kit folder is not in the library dresses nobody: replace it
+                    # anyway (beny 10.10.: 92 clubs kept such lines and the import "did nothing")
+                    gone = have and not os.path.isdir(os.path.join(lib, (have[0].fields[1:2] or [""])[0].strip().strip('"')))
+                    if have and not gone and not self.replace.isChecked():
                         kept += 1
                         continue
                     src = it.data(0, Qt.UserRole)
