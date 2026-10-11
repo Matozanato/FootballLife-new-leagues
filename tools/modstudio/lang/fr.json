@@ -801,6 +801,8 @@
   "no sider.ini in SiderAddons": "pas de sider.ini dans SiderAddons",
   "FL26 Mod Studio is already open. Look for its window on the taskbar.": "FL26 Mod Studio est déjà ouvert. Cherchez sa fenêtre dans la barre des tâches.",
   "League cup": "Coupe de la ligue",
+  "Unsaved changes": "Modifications non enregistrées",
+  "The recipe has changes that are not saved yet. Save them before closing?": "La recette a des modifications pas encore enregistrées. Les enregistrer avant de fermer ?",
   "(the league's name + Super Cup)": "(nom de la ligue + Super Cup)",
   "(the league's name + League Cup)": "(nom de la ligue + League Cup)",
   "a single-match knockout of this division and the one below (up to 44 clubs), late August to mid-March (a calendar-year league: September to December); this division's clubs get the byes": "une élimination directe sur un match de cette division et de celle du dessous (jusqu'à 44 clubs), de fin août à mi-mars (une ligue sur l'année civile : de septembre à décembre) ; les clubs de cette division sont exemptés",

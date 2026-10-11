@@ -7,6 +7,9 @@ DRAFT -- not released. Every line below still needs its in-game check before the
 - League: a name field for the super cup, beside the national cup's and the league cup's
   (empty = the league's name + Super Cup).
 
+- Closing Mod Studio with recipe changes not saved asks whether to save them (they were lost
+  without a word; a recipe never saved goes to the copy the next start opens).
+
 ## Fixes
 
 - **The calendar stops on a day and shows nothing** (national team days, awards and other

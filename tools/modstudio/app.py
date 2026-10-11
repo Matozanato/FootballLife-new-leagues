@@ -560,6 +560,29 @@ class Main(QMainWindow):
         run_job(lambda pr: updater.download(info, pr), done, failed, progress)
 
     def closeEvent(self, e):
+        # changes made since the last Save recipe or Build were lost without a word when Mod
+        # Studio closed (the poll, Bon Kirk 11.10.: "an Apply button" -- OK only keeps a change
+        # in the open recipe)
+        if self.project.dirty:
+            box = QMessageBox(QMessageBox.Question, _("Unsaved changes"),
+                              _("The recipe has changes that are not saved yet. Save them before closing?"),
+                              QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel, self)
+            box.setDefaultButton(QMessageBox.Save)
+            r = box.exec()
+            if r == QMessageBox.Cancel:
+                e.ignore()
+                return
+            if r == QMessageBox.Save:
+                try:
+                    if self.project.path:
+                        self.project.save()
+                        self.settings["last_recipe"] = self.project.path
+                    else:                  # never saved: the copy the next start opens again
+                        self.settings["last_recipe"] = self.project.keep_copy()
+                except OSError as err:
+                    QMessageBox.warning(self, _("Unsaved changes"), str(err))
+                    e.ignore()
+                    return
         self.settings["size"] = [self.width(), self.height()]
         self.save_settings()
         super().closeEvent(e)
