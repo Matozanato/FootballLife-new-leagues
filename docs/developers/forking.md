@@ -7,7 +7,7 @@
 > **You do not have to go it alone.** If you would rather your work end up in FL26 Mod Studio
 > itself, send it as a pull request: fork, change it on a branch, open the pull request, and we
 > test it and merge it into the next release (see
-> [Contributing](../README.md#contributing)). Fixes and new features are both welcome. A
+> [Contributing](../../README.md#contributing)). Fixes and new features are both welcome. A
 > separate fork is for when you want to take the project somewhere of your own.
 
 Mod Studio is MIT licensed (see `LICENSE`). Fork it, rename it, change it, ship it: no
@@ -27,7 +27,7 @@ things (a page, a recipe key, a module, a translation). The details are in the c
 | [fork/testing.md](fork/testing.md) | every test and what it proves, `regress018.py`, `buildcheck.py`, the C tests, and the in-game checklist |
 | [fork/newlife-format.md](fork/newlife-format.md) | the NewLife release format as Mod Studio reads it |
 | [fork/club-world-cup-32.md](fork/club-world-cup-32.md) | the unfinished 32-club Club World Cup (2025 format): the table script and the module code that exist, and what is missing to put it in Mod Studio |
-| [research-findings.md](research-findings.md) | the research log: everything found in the exe and the data tables, in the order it was found (early entries are often superseded later) |
+| [research-findings.md](../research/research-findings.md) | the research log: everything found in the exe and the data tables, in the order it was found (early entries are often superseded later) |
 
 ## What you need
 
@@ -100,7 +100,7 @@ modules read it at game start; none of them knows anything about a recipe. When 
 feature that the game has to do at runtime, this is the bridge: a recipe key, a world-file
 line written in `leaguebuilder.py` (via `tools/fl26world.py`), and a module that reads the
 line. [fork/world-file.md](fork/world-file.md) lists every line kind with its writer and
-readers; `docs/mod-studio.md` explains the cup, European and calendar lines in depth.
+readers; [mod-studio.md](mod-studio.md) explains the cup, European and calendar lines in depth.
 
 ## Adding things
 

@@ -73,7 +73,7 @@ at `0x163000000`, where `0xff` means "no calendar"; until 0.1.7 the stub and tab
 `0x14252e690`, in the padding other mods write into too, see `tools/datecave.py`). Each of the 40 is mapped to a weekday
 shift of 0–6 days so that the leagues do not all land on the same weekday. 190 is the 25th
 league in worlds built from 25 September 2026 on, 145 the same league in older worlds (see
-[build-your-world.md](build-your-world.md)). Anything outside this list gets no calendar at
+[by-hand.md, E4](../developers/by-hand.md#e4-the-regulation-ids)). Anything outside this list gets no calendar at
 all, even though the stub itself is reached for every id from 1 to 1025.
 
 ## Game build

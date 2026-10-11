@@ -1,5 +1,59 @@
 # How it works, briefly
 
+## What the project changes
+
+Football Life 2026 (PES 2021 engine) keeps every club, coach, competition and fixture in
+fixed-size tables inside the executable's memory. Shipped, those tables hold 750 clubs, 1,300
+coaches, 300 competition rulebooks and 13,000 match records. Add a few more leagues and the
+data simply falls off the end: the season generator drops fixtures without a word, a saved
+game loses everything past the shipped count, and a coach lookup lands on the wrong record.
+
+Mod Studio installs and sets up everything below for you; this part is for anyone who wants
+to know how it works, or to build by hand ([by-hand.md](../developers/by-hand.md)). The project does two things:
+
+1. **`sider/fl26caps.lua`** — a runtime patch set of 3,519 byte changes, applied by Sider at
+   startup, that grows those tables and every piece of code that indexes them:
+
+   | table | shipped | with fl26caps |
+   |---|---|---|
+   | clubs | 750 | 1,600 |
+   | coaches | 1,300 | 2,600 |
+   | competition rulebooks (regulations) | 300 | 600 |
+   | players | 30,001 | 51,729 |
+   | match records per season | 13,000 | 46,000 |
+   | fixtures list | 2,000 | 8,000 |
+   | competitions a season can hold | 100 | 192 with `fl26hdr192.lua` (experimental, used on our test world); 127 with the stable `fl26hdr127.lua` |
+
+   Every module verifies the bytes it is about to change and refuses to touch a different
+   game build. If anything does not match, the game runs unmodified and `sider.log` says why.
+
+2. **`tools/`** — Python scripts that build a set of new leagues and placeholder clubs
+   (with squads) from **your own** game data, as a Sider `livecpk` root. No game data is
+   shipped in this repository; everything is generated on your machine from your install.
+
+Plus seven small **null-guard modules** that stop known crashes in the game's own code which
+the larger world exposes, **`fl26hdr127.lua`**, which widens the table a season uses to
+hold its competitions from 100 to 127 — the fix for league tables showing 76 matches played
+and ~130 points — and **`fl26joindll.lua` + `fl26join.dll`**, which get every added league
+*into* the season and, since 2026-09-23, *out of it again* at the end. The game registers
+and closes competitions from lists compiled into the executable, so a new league standing in
+a country of its own was never presented to the season at all, and once it was, it was never
+closed and carried its table on into the next season. The module handles both. It is the one
+compiled piece in the main folder; its source and how to build it are in
+[tools/native/](../../tools/native/README.md).
+
+`sider/experimental/` holds seventeen more that go further and **were first run on our own
+test worlds**: 192 competitions instead of 127; every league selectable in the Select Team
+list, under its own name, showing its own clubs; 64 menu regions instead of 29; a league rank
+wide enough for a pyramid five divisions deep, with the relegation gate to match; a career
+that starts in August instead of January; promotion and relegation through a whole pyramid,
+not just its top joint; guards for the Super Cup and the play-off results screen; **the 2024 European format** for the
+Champions League, the Europa League and a new Conference League, filled from a UEFA access
+list, with leagues of 10 to 24 clubs; the added countries listed by name under
+Database -> Competition Info; and every added league in Edit mode's team lists. They abort cleanly if anything does
+not match, and they are the part where another pair of hands helps most —
+[what they are, and in what order](../../sider/experimental/README.md).
+
 ## Where the limits live
 
 When a mode such as Master League starts, FL26 allocates one large block of memory (the
@@ -116,4 +170,4 @@ the usual Team.bin / kit / face editing — and it sits on top of these files un
 
 The full research log behind this (several thousand lines, addresses, dead ends and all) is
 not part of this repository; the parts that a developer needs are summarised in
-[for-developers.md](for-developers.md).
+[for-developers.md](../developers/for-developers.md).

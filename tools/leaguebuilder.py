@@ -4,7 +4,7 @@ r"""python leaguebuilder.py plan  <recipe.json> [--base <pesdb dir>]
    python leaguebuilder.py check [--game <dir>]
 
 The league builder's core: one recipe in, one finished world out. The window (stage C,
-docs/mod-studio.md) calls these same functions; this command line is for tests.
+docs/developers/mod-studio.md) calls these same functions; this command line is for tests.
 
 A recipe says what a person would say -- which country, how many clubs, how often they meet,
 which league sits above -- and nothing about ids:
@@ -1281,7 +1281,7 @@ def plan(recipe, base):
             free.append(r)
     free.sort(key=fl26world.id_rank)     # slotted ids first, the game's "other" groups last (#73)
     if leagues and len(leagues) > len(free):
-        raise BuildError("%d leagues, but the game has room for %d (see docs/mod-studio.md)"
+        raise BuildError("%d leagues, but the game has room for %d (see docs/developers/mod-studio.md)"
                          % (len(leagues), len(free)))
     cids = [c for c in range(CID_FROM, W.CID_MAX + 1) if c not in used_cid and c != UECL_CID][:len(leagues)]
     if len(cids) < len(leagues):

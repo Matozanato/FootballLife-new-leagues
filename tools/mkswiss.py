@@ -4,7 +4,7 @@ Builds and verifies the fixture set that `fl26swiss.dll` installs for a modern U
 phase (Champions League and Europa League since 2024): one table of 36 clubs, each club
 playing 8 of the other 35.
 
-The engine cannot express this (docs/league-phase-swiss-decode.md): a league regulation always
+The engine cannot express this (docs/research/league-phase-swiss-decode.md): a league regulation always
 plays a complete round robin, so the pairings have to be handed to it. This script produces
 them, checks every property that matters, and writes a C header the DLL compiles in. It reads
 nothing from the game.

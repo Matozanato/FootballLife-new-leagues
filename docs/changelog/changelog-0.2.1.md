@@ -26,7 +26,7 @@ leagues joining their season, the Conference League knockout and more) comes lat
   again in Settings.
 - An older league package with an empty "exchange" field no longer stops Check the plan.
   (Correction, 10.10.: a package made from NewLife with some clubs added by hand still stops
-  it, for another reason. See [Known issues](known-issues.md).)
+  it, for another reason. See [Known issues](../known-issues.md).)
 
 ## New in packages and kits
 

@@ -6,7 +6,7 @@ The world file: one plain-text description of the leagues a world adds, read by 
 that used to carry its own hard-coded list (fl26joindll, fl26chain, fl26comptab, fl26editlist,
 fl26kickofflist, fl26catlist, fl26clubs, fl26slotnames, fl26swiss). The league builder writes
 it when it builds a world; this writes it for a world that already exists, from the world's own
-competition tables. See docs/mod-studio.md.
+competition tables. See docs/developers/mod-studio.md.
 
     # fl26world 1
     world _FL26BiH

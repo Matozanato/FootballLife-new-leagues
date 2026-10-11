@@ -1,7 +1,7 @@
 # FL26 Mod Studio — how it works
 
-The user guide is [mod-studio-guide.md](mod-studio-guide.md) ([hrvatski](mod-studio-guide.hr.md),
-[español](mod-studio-guide.es.md), [français](mod-studio-guide.fr.md)).
+The user guide is [mod-studio-guide.md](../mod-studio-guide.md) ([hrvatski](../mod-studio-guide.hr.md),
+[español](../mod-studio-guide.es.md), [français](../mod-studio-guide.fr.md)).
 This page is for modders and developers: what the program does to the game folder, and the
 league package format.
 
@@ -187,7 +187,7 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
   club meets a club of its own country, and none meets more than two of any one other country.
   A club's country is its league's: the `country=` of a league line of the world file for a
   league of ours (fl26swiss.lua hands the DLL `slot, country` pairs, `fl26_swiss_nations`),
-  else the game's own. See [league-phase-swiss-decode.md](league-phase-swiss-decode.md),
+  else the game's own. See [league-phase-swiss-decode.md](../research/league-phase-swiss-decode.md),
   section 13.
 
 - `ccup <groups regulation> ko=<knockout regulation> groups=<n> entry=<reg>:<position>,... name=<text>`:

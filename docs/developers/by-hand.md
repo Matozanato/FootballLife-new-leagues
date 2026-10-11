@@ -1,8 +1,9 @@
-# The complete how-to
+# Build it by hand, with Python
 
-> **Easier way:** [FL26 Mod Studio](mod-studio-guide.md) ([hrvatski](mod-studio-guide.hr.md)) does
+> **Easier way:** [FL26 Mod Studio](../mod-studio-guide.md) ([hrvatski](../mod-studio-guide.hr.md)) does
 > all of this from one window -- install, build leagues, edit players, switch mods on and
-> off. This page is the manual route, and what the program does underneath.
+> off. Start with [first-steps.md](../first-steps.md). This page is the manual route, and what the
+> program does underneath.
 
 One page, every step, in order. It answers the three questions people ask most:
 
@@ -11,11 +12,13 @@ One page, every step, in order. It answers the three questions people ask most:
 3. **How do I get the new Champions League format with a real schedule?** → [Part D](#part-d-the-new-champions-league-format-2024-with-a-real-schedule)
 
 Much of what this page says works was found broken first by testers, above all
-**vmardonesdev**. Who did what: [The people who made this better](../README.md#the-people-who-made-this-better).
+**vmardonesdev**. Who did what: [The people who made this better](../../README.md#the-people-who-made-this-better).
 
 Then there is a list of [things to watch out for](#part-e-things-to-watch-out-for),
-a [table of problems and fixes](#part-f-if-something-goes-wrong), and
-[how to ask for help](#part-h-asking-for-help) so that someone can actually help.
+a [table of problems and fixes](#part-f-if-something-goes-wrong),
+[how to ask for help](#part-h-asking-for-help) so that someone can actually help, and at the
+end [every world-building option](#part-i-every-world-building-option) for bigger and deeper
+worlds, crests and kits.
 
 Every command on this page was run on a clean copy of the game tables before it was
 written down, and each step says **what you should see**. If you see something else, stop
@@ -116,6 +119,18 @@ In PowerShell (your own game path):
 If the number is different, stop. The modules will switch themselves off on that version
 (nothing breaks, they just do nothing). Open an issue with the number.
 
+To check the exact build too:
+
+```powershell
+(Get-FileHash "C:\Football Life 2026\FL_2026.exe" -Algorithm SHA256).Hash
+```
+
+v2.0 gives `7C27ECB303B71331E36F9CCD8AC879F0F0D8C56C754BD4D0D2E9C8353464F847` (the build the
+modules were made against); v2.2 (reported by a tester, all patches applied) gives
+`9EE0C30651E5E3C37E3D308FB8224F5FEA135CD8E929DEE2CDDCA6E041836281`. A different hash does not
+by itself mean the modules will refuse; `sider.log` tells you (A9). Everything is byte-exact:
+a module that finds other bytes logs `MISMATCH` and `ABORTED` and changes nothing.
+
 ### A7. Copy the twelve files
 
 From `C:\fl26\sider` copy these **12 files** into `C:\Football Life 2026\SiderAddons\modules\`:
@@ -131,11 +146,22 @@ fl26nullguard10.lua   fl26joindll.lua       fl26join.dll          fl26hdr127.lua
 - If Windows asks whether to replace files, you had an older version: say **yes**.
 - If you have an `fl26nullguard3.lua` in `modules` from an older download, delete it.
 - If your antivirus complains about `fl26join.dll`: it is built from the C source in
-  `tools\native\`, and [tools/native/README.md](../tools/native/README.md) has its checksum
+  `tools\native\`, and [tools/native/README.md](../../tools/native/README.md) has its checksum
   and how to build it yourself. If the antivirus removes it, the log in step A9 says
   `LoadLibraryA failed`.
 
 **You should see** all 12 in the `modules` folder, among the files that were already there.
+
+What they are: `fl26caps.lua` is the patch set (bigger tables), the eight `fl26nullguard`
+files are crash guards, `fl26joindll.lua` gets every added league into the season and loads
+`fl26join.dll` from the same folder (the two must sit next to each other), and
+`fl26hdr127.lua` makes room for 127 competitions in a season.
+
+> **Mod Studio installs these as bundles.** Since 0.2.0 it puts the eight `fl26nullguard` files
+> in as one `fl26guards.lua`, and `fl26superguard`, `fl26resultsguard`, `fl26ctlguard` and
+> `fl26kitguard` as `fl26lateguards.lua` (built by `tools/lbpack.py` from the single files,
+> which stay the ones to read and change). Use either the single files or the bundles, never
+> both: Mod Studio's Build switches the single lines off.
 
 ### A8. Switch them on in sider.ini
 
@@ -161,7 +187,9 @@ fl26nullguard10.lua   fl26joindll.lua       fl26join.dll          fl26hdr127.lua
    ```
 
    Eleven lines for twelve files: `fl26join.dll` has no line of its own, `fl26joindll.lua`
-   loads it. **The order matters**: `fl26caps.lua` first, `fl26hdr127.lua` last.
+   loads it. **The order matters**: `fl26caps.lua` first, `fl26hdr127.lua` last. The guards
+   write small trampolines into fixed spare bytes of the code section and claim them in this
+   order, and `fl26joindll.lua` goes after the guards; that is the order the set was verified in.
 4. `Ctrl+F`, search for `luajit.ext.enabled`.
    - Found: make sure the line reads exactly `luajit.ext.enabled = 1`.
    - Not found: add the line `luajit.ext.enabled = 1` at the end of the file.
@@ -199,13 +227,21 @@ Rules for this file that catch people out:
 The words that matter are **`applied all`** (nine times) and **`installed`** (once). Anything
 else: [Part F](#part-f-if-something-goes-wrong).
 
-A new file `SiderAddons\fl26join.log` appears. That is normal.
+The `fl26joindll` line is followed by one from the DLL itself,
+`fl26join: hooks live (register_all ..., enter_season ..., builder ..., door ...), 39 competition ids`.
+A new file `SiderAddons\fl26join.log` appears. That is normal: the module writes one line
+there per decision it takes, it is short until a season is created, and it is the file to
+attach when an added league has no fixtures.
+
+`ABORTED` is safe (that module wrote nothing). `PARTIAL` is not: quit the game and report the
+log.
 
 ### A10. Check that nothing changed
 
 Play an exhibition match, and start a Master League career with any club and go a few days
 forward. Everything should be exactly as before: the modules only made room, they added
-nothing yet.
+nothing yet. If anything at all behaves differently at this point, that is a bug in the patch
+set itself, and the most valuable report you can send.
 
 > If the game crashes **while a Master League career is being created** (after you confirm
 > the manager settings), start it again. That crash is in the game itself: it happens on an
@@ -259,6 +295,11 @@ The tools build the new leagues from your own game's data, so first it has to be
 >
 > **After every game update** (a new `data_s2526*.cpk` appears) do B1 again and build the
 > world again (B2 onwards), into a **new** world folder.
+>
+> To see what an archive holds, `python tools\cpk.py <file>` lists it; the tables are the
+> files under `common/etc/pesdb/`. If you run the tools often, set
+> `$env:FL26_PESDB = "C:\fl26\pesdb\common\etc\pesdb"` and `$env:FL26_DIR` (your game folder)
+> once per PowerShell window.
 
 ### B2. Build the leagues
 
@@ -321,6 +362,12 @@ Start the game.
      season runs from August. That is expected.
    - After the registration day, every added league should show "38 Home & Away Fixtures" in
      League Info.
+   - `SiderAddons\fl26join.log` should then hold one line
+     `register_all 1: game gave N ids [...], we appended 39 -> ...` (all 39 listed ids are
+     presented; the ones a six-league world does not have are turned away with `no-record`,
+     which is expected) and, for each of your league ids, `door(ID) -> YES  ours flag on kind 1
+     clubs 20`. A `door(ID) -> no` for one of yours, or a league with no fixtures while the log
+     says YES, is exactly the report we want: attach the log.
 
 ### B6. Save, load, and a season change
 
@@ -337,19 +384,19 @@ table that shows 76 matches played means `fl26hdr127.lua` did not apply (check `
   but only a league of **20 clubs playing twice** has its fixture dates without extra help.
   Any other size needs `fl26swiss.dll` from Part D for its dates, or it ends early or runs
   out of dates. Stay at 20 unless you also do Part D.
-- **Divisions, promotion and relegation:** [build-your-world.md](build-your-world.md#divisions-and-why-they-matter-more-than-they-look).
-- The full list of options: [build-your-world.md](build-your-world.md).
+- **Divisions, promotion and relegation:** [Part I](#divisions-and-why-they-matter-more-than-they-look).
+- The full list of options: [Part I](#part-i-every-world-building-option).
 
 ### B8. Optional: names, crests, kits, players
 
 - **League and club names for all at once**: `mkworld.py` takes `--league-name "My League %02d"`
   and `--club-name "My Club %04d"`.
 - **One club at a time, and managers:** `tools\rename.py`, see
-  [faq.md](faq.md#how-do-i-rename-the-new-clubs).
+  [faq.md](../faq.md#how-do-i-rename-the-new-clubs).
 - **One league's own name:** see [C4](#c4-give-the-league-its-own-name).
 - **Players:** `tools\playereditor.py` (a window) or `tools\playeredit.py` (Excel), see
-  [beginners-guide.md](beginners-guide.md#optional-give-clubs-and-players-real-names).
-- **Crests and kits:** [step-by-step.md, step 7](step-by-step.md#7-optional-give-the-clubs-their-own-crests-and-kits).
+  [faq.md](../faq.md#how-do-i-edit-the-players-of-the-new-clubs-if-not-in-edit-mode).
+- **Crests and kits:** [Part I](#crests-and-kits-if-you-want-them-to-look-like-sides).
 
 After any of these: move the Edit save aside ([E7](#e7-the-edit-save-shows-old-names)) and
 start a **new** career. A career that already started keeps its own copy of the clubs.
@@ -683,7 +730,7 @@ Press **F8** in the game any time to write a short report of what the module did
 - **New leagues get no European places on this route.** The access list names only the game's
   own leagues; the places of countries that are missing are topped up from the big five.
   Giving your leagues places here means editing `ACCESS` in `tools\native\fl26swiss.c` and
-  building the DLL again ([tools/native/README.md](../tools/native/README.md)). Mod Studio
+  building the DLL again ([tools/native/README.md](../../tools/native/README.md)). Mod Studio
   writes them for you: the League window's *Europe* field becomes `uefa` lines of the world
   file, which replace the DLL's list.
 - **Title holders.** The Champions League and Europa League winners play the next Champions
@@ -699,7 +746,7 @@ Press **F8** in the game any time to write a short report of what the module did
 - The page heading in Competition Info says *Group stage - Matchday ...*. That is the game's
   own text.
 
-More detail on all of it: [sider/experimental/README.md](../sider/experimental/README.md#the-european-format-and-league-sizes-fl26swiss).
+More detail on all of it: [sider/experimental/README.md](../../sider/experimental/README.md#the-european-format-and-league-sizes-fl26swiss).
 
 ---
 
@@ -743,6 +790,23 @@ looked up by that id, and only these 39 are set up (plus 145, for older worlds):
 you build get the first N ids. If yours differ, the leagues appear in the menus and never
 play: report it with the mkworld output.
 
+Two things are keyed by that id:
+
+1. **The fixture dates** come from a small table inside `fl26caps.lua`. A league whose id is
+   not in it is never scheduled. Covering another id needs a regenerated patch set
+   ([for-developers.md](for-developers.md)).
+2. **The entry into the season** is done by `fl26joindll.lua`, which lists the same ids near
+   the top of the file (`local IDS = { ... }`) and presents each of them to the game on the
+   first registration day. A league that is dated but not in that list is entered only if
+   the game lists it by itself, which a league standing in a country of its own is not. If
+   your ids differ, edit that list too: a plain text edit, no regeneration needed. Ids in the
+   list that your world does not use are harmless; the log notes them as `no-record`.
+
+The 25th league is on **190**. Worlds built before 25 September 2026 have it on **145**
+instead; 145 stays covered everywhere, so those worlds keep working. It was moved because the
+game's own J1 League relegates into 145, which sent Japanese clubs into that league. Why an id
+decides this at all: [how-it-works.md](../research/how-it-works.md).
+
 ### E5. One world at a time
 
 Only one `_FL26...` world root may be switched on. Two roots with different tables give a
@@ -772,14 +836,14 @@ Edit mode write a new one.
 The season generator stops at **1,536 clubs** in total, and a calendar day holds **792
 matches** since 0.2.0 (280 in the game as shipped); what is past that is dropped without a
 word. Up to 39 leagues of 20 clubs is
-inside both. Details and the ways around: [limits.md](limits.md).
+inside both. Details and the ways around: [limits.md](../research/limits.md).
 
 ### E9. Other experimental modules
 
 `sider\experimental\` holds more: every league in the Select Team list (with its country's flag,
 filled in by `tools\mkflags.py`), 64 regions, a career that starts in August, promotion and relegation through a whole pyramid, Edit mode lists.
 Several of them carry lists of **our** world's ids that you must change for yours. Read
-[sider/experimental/README.md](../sider/experimental/README.md) before adding any, and add them
+[sider/experimental/README.md](../../sider/experimental/README.md) before adding any, and add them
 **one at a time**.
 
 ---
@@ -807,7 +871,7 @@ Several of them carry lists of **our** world's ids that you must change for your
 | `fl26swiss: ... this world has no regulation 188` (or 189) | `mkeuropo.py` was skipped | D3, run all three tools |
 | old club names | the old Edit save is read | E7 |
 | crash while a career is created | the game's own crash | try again (E6) |
-| clubs of new leagues play in the Copa Libertadores / Club World Cup | issue #8 | the experimental `fl26clubs.lua` + `fl26clubs.dll` stop it for careers created after installing them; read its entry in [sider/experimental/README.md](../sider/experimental/README.md) first (it has a slot list of its own) |
+| clubs of new leagues play in the Copa Libertadores / Club World Cup | issue #8 | the experimental `fl26clubs.lua` + `fl26clubs.dll` stop it for careers created after installing them; read its entry in [sider/experimental/README.md](../../sider/experimental/README.md) first (it has a slot list of its own) |
 
 ---
 
@@ -820,17 +884,41 @@ Several of them carry lists of **our** world's ids that you must change for your
 
 The game's own files were never changed, so that is all. You can leave the files in
 `modules` and the world folders in `livecpk`; without the lines in `sider.ini` nothing reads
-them. Careers made with the mod will not load without it.
+them. `luajit.ext.enabled` can stay as it is; Sider's own modules do not mind it. Careers
+made with the mod will not load without it.
 
 ### Updating to a newer version of this mod
 
-1. Read the top of [README.md](../README.md) and [install.md](install.md#2-copy-the-modules):
-   it says which files changed and whether saves still load.
+1. Read the [changelogs](../changelog/) and the notes below: they say which files changed and
+   whether saves still load.
 2. Download the ZIP again, replace the files in `modules` with the new ones (all of them,
    also the `.dll`s).
 3. If the notes say a tool changed the way worlds are built, build the world again into a
    **new** folder (B2 onwards) and switch to it.
 4. New career if the notes say so (E2).
+
+What changed in the twelve files, newest first:
+
+- **0.2.0: `fl26caps.lua` is new** (3519 patches): a calendar day holds 792 matches instead
+  of 280. It changes the size of the tables a career is saved with, so **a career saved before
+  0.2.0 does not load** (it stays on the loading screen). Start a new career after you replace
+  the file. Replace `fl26join.dll` too (and `fl26chain.dll`, `fl26swiss.dll` if you use the
+  experimental modules): they read the moved tables.
+- **2026-09-30: `fl26nullguard10.lua` is new.** Add the file and its line after
+  `fl26nullguard9.lua`. It stops an endless loop that could fill the memory in a
+  February-December career. It changes no table, so saves still load.
+- **2026-09-25: `fl26caps.lua` lost one patch** (2,760 -> 2,759): it handed one game function
+  the end of the moved match table where that function wants the start of the calendar. The
+  edit block kept its size, so saves still load.
+- **2026-09-22: `fl26nullguard3.lua` is replaced by `fl26nullguard9.lua`**, which guards the
+  same unchecked read of the schedule list on both paths that reach it. They patch
+  overlapping bytes, so **delete `fl26nullguard3.lua` and its `sider.ini` line**; with both,
+  whichever loads second logs `MISMATCH` and `ABORTED`. **`fl26joindll.lua` + `fl26join.dll`
+  are new** the same day and need `luajit.ext.enabled = 1` (A8); saves still load.
+- **Before 2026-09-17:** `fl26caps.lua` changed then and made the edit block bigger. A save is
+  only loadable by the patch set that wrote it, so saves made with that earlier version do not
+  load. The guards, `fl26joindll.lua` and `fl26hdr127.lua` only write small trampolines into
+  spare code, and saves survive them.
 
 ---
 
@@ -852,9 +940,183 @@ A screenshot of a wrong menu says more than a description of it.
 
 Other pages, for when you want to know more:
 
-- [beginners-guide.md](beginners-guide.md) — Parts A and B again, even slower
-- [step-by-step.md](step-by-step.md) — the testing walkthrough, with what to report
-- [build-your-world.md](build-your-world.md) — every world-building option
-- [sider/experimental/README.md](../sider/experimental/README.md) — the experimental modules
-- [known-issues.md](known-issues.md) and [limits.md](limits.md) — what is still wrong, and the hard numbers
-- [faq.md](faq.md) — Mod Studio questions (updating, crashes, cups, promotion, what to send); renaming, managers, Edit mode, editing players
+- [testing-guide.md](testing-guide.md) — the tests worth running once a world plays, and what each should show
+- [sider/experimental/README.md](../../sider/experimental/README.md) — the experimental modules
+- [known-issues.md](../known-issues.md) and [limits.md](../research/limits.md) — what is still wrong, and the hard numbers
+- [faq.md](../faq.md) — Mod Studio questions (updating, crashes, cups, promotion, what to send); renaming, managers, Edit mode, editing players
+
+---
+
+## Part I. Every world-building option
+
+The reference for `mkworld.py` and the tools around it. Parts B and C use the defaults; this
+is for bigger, mixed or deeper worlds. The clubs are deliberately placeholders (`FL League 03`,
+`FL 0042`, players `FL P17021`): naming and dressing them is ordinary Team.bin and kit editing
+on top of the same files (B8).
+
+### The options
+
+`--out` is the livecpk root; put it under `SiderAddons\livecpk\` with a name that sorts to
+the top, for example `_FL26World`.
+
+| option | default | notes |
+|---|---|---|
+| `--leagues N` | 6 | how many new leagues |
+| `--clubs M` | 20 | clubs per league |
+| `--sizes A,B,C` | | different sizes, cycled over the run, e.g. `--sizes 24,22,20,18` (10–30 all work; above 30 the round list runs out). Sizes other than 20 need `fl26swiss` for their dates (B7) |
+| `--region N` | 16 | which existing menu region the leagues appear under (16 = England's slot; see C1) |
+| `--regions A,B,C` | | one region per league, dealt out in order |
+| `--tiers A,B,C` | | the division of each league, cycled over the run (see below) |
+| `--group-regions N` | | how many consecutive leagues share a region |
+| `--league-name`, `--club-name` | | name patterns, e.g. `"My Club %04d"` |
+| `--cid-from N` | 130 | first competition id; leave it |
+| `--reg-from N` | 1 | first rulebook id, handed out from the free list; **leave it** (E4) |
+| `--cap` (mkplayers) | 30001 | must be **51729** with this patch set; it is the player table size |
+| `--per` (mkplayers) | 23 | players per club; the budget is 51,729 − 27,927 shipped = 23,802 players ≈ 793 squads of 30, so `--per 30` fits a 39-league world |
+
+`mkworld.py` prints what it did. **Keep that output**: it lists the competition and rulebook
+ids it used, and both the check in E4 and any bug report need it.
+
+```
+competition ids 130, 131, 132, 133, 134, 135
+regulation  ids 11, 49, 60, 61, 62, 74
+  FL League 01     competition 130  regulation 11   20 clubs 71578-71597  region  16  division 1
+  ...
+  wrote Team.bin (863 records)
+  wrote Coach.bin (1081 records, 120 new managers)
+
+6 leagues, 120 clubs added; 863 clubs in all
+```
+
+(The summary lines show the first eight ids; the per-league lines always show every league's.)
+
+### Sizes worth knowing
+
+Our largest built world: **39 leagues, 793 clubs**, built with `--leagues 39` and sizes
+around 20; the world that has been played across four seasons is 39 leagues of exactly 20,
+780 clubs. Bigger is possible on paper (1,600 club slots) but **1,536 clubs in total is a
+hard wall** in the season generator, and a calendar day holds 792 match ids at most (280
+before 0.2.0), so the club wall comes long before the calendar does. Start smaller. A world
+of 6 leagues × 20 clubs is a fine first test; 12 leagues with `--sizes 24,22,20,18,16,14` is a
+good second.
+
+A world of 39 leagues of 10 to 24 clubs (some playing each other three or four times), with
+the Champions League, Europa League and a Conference League in the 2024 format, needs the
+experimental modules and the tools of Part D on top; the route, command by command, is in
+[sider/experimental](../../sider/experimental/README.md#the-european-format-and-league-sizes-fl26swiss).
+
+### If you build many leagues: spread them over the week
+
+A calendar day holds **792 matches** (280 before 0.2.0) and the scheduler drops the rest
+without a word: no error, no log line, a league just plays one round fewer than it should.
+Each new league is given a shift of 0 to 6 days so that they do not all want the same weekday,
+and the shipped set already carries a spread measured on a 39-league world.
+
+With 792 a day the shipped spread leaves plenty of room for 39 leagues; a much bigger world
+(or a set built without the `-calendar` part, which keeps 280) needs its own.
+`tools/dayplan.py` reads a running season out of the game, separates the shipped
+competitions' load from each of your leagues', and prints the `--date-offsets` argument for
+`patchset.py` that makes the busiest day as quiet as it can be:
+
+```
+python tools/dayplan.py --set <your set name>
+python tools/dayplan.py --set <your set name> --demand   # after the first rollover
+```
+
+Then regenerate the set with what it printed ([for-developers.md](for-developers.md)) and
+create the season again. Use `--demand` once a world has rolled over: walking the calendar
+only counts the matches that were accepted, so a day that turned matches away still reads as
+exactly its cap, while the match records show what was really wanted.
+
+### Switching between worlds
+
+To try a different world, build it into a different folder and switch the root line (B4). To
+go back to the shipped game, comment the line out. **Move your Master League save aside
+between worlds**: a save carries the club table of the world it was made in.
+
+### Divisions, and why they matter more than they look
+
+Every league these tools build is a copy of a first-division prototype, which means that by
+default **all of your leagues are first divisions**. Two consequences, both measured:
+
+* a first division in a region is offered European places by the engine, so your new clubs
+  can turn up in the Champions League;
+* the promotion resolver only looks for the league above when the lower league is division 2
+  or 3, so three leagues linked as a pyramid but all left as division 1 will never promote
+  or relegate anybody.
+
+```powershell
+python tools\mkworld.py --base $env:FL26_PESDB --out <root> --leagues 9 --tiers 1,2,3 --group-regions 3
+```
+
+`--tiers` cycles over the run, `--group-regions` says how many consecutive leagues share a
+region, so the line above builds three three-division pyramids, each one inside its own
+region, which is the shape the engine understands. The division *number* stops at three, but
+a pyramid does not have to: see [limits.md](../research/limits.md), and `sider/experimental/fl26rank.lua`
+below, which raises the number itself to seven.
+
+The shipped game reads a region number below 29 and ignores anything higher, so that is the
+ceiling unless `sider/experimental/fl26reg64.lua` is installed, which raises it to 64. Above
+the shipped 24 a region has no heading of its own and borrows the previous country's name in
+the menus; it still groups the leagues correctly. Four ids (11, 13, 14 and 20) have no heading
+row at all and are otherwise free.
+
+`tools\deepen.py` does the other version of this: it takes one of your leagues and puts it
+**underneath an existing pyramid**, one division lower (France and Italy each ship two),
+copying the parent's region and calendar shape and writing the promotion link both ways. Run
+it again on the league it just made and you get a fourth division, and again for a fifth:
+
+```
+python tools\deepen.py --root <root> --league 60 --below 81   # your league becomes Ligue 3
+python tools\deepen.py --root <root> --league 61 --below 60   # and this one Ligue 4
+```
+
+Anything below the third division promotes upwards out of the box but is never relegated
+into, until you install `sider/experimental/fl26deep4.lua`: one verified byte that makes the
+engine's second relegation gate accept a third division as well as a second. `deepen.py`
+says so when it builds one.
+
+There is a better version of that, also experimental. The rank a league carries is a
+**two-bit** field, so D3, D4 and D5 all store the value 3 and nothing can tell them apart,
+which is why the League Info panel shows a fourth division as its own lower league.
+`sider/experimental/fl26rank.lua` widens the field to three bits and `fl26deeprank.lua`
+replaces the one-byte gate with the real rule (read
+[sider/experimental/README.md](../../sider/experimental/README.md) for the order; `fl26deep4.lua`
+must be off). With `fl26rank.lua` installed, build the chain with `--deep-rank` so each child
+gets its parent's rank plus one, and renumber a pyramid you built earlier with:
+
+```
+python tools\deepen.py --root <root> --retier 20,18,11        # name the TOP league of each chain
+```
+
+`deepen.py` is the one tool here that writes into a shipped competition's own record (the
+parent's relegation pointer), in your livecpk copy of the table. Nothing is replaced, but
+Ligue 2's bottom clubs now have somewhere to fall.
+
+### Crests and kits, if you want them to look like sides
+
+A new club has no crest and no kit of its own: in the game it shows no crest and wears the
+engine's plain default kit. Two tools fix that, and neither touches a shipped file: both only
+write files for ids no shipped file uses.
+
+```powershell
+python -m pip install pillow
+python tools\mkcrests.py --team-bin <your root>\common\etc\pesdb\Team.bin --flags <your root>
+python tools\mkkits.py   --team-bin <your root>\common\etc\pesdb\Team.bin --unipar <UniformParameter.bin> --textures <cpklist.txt> --root <your root> --archive
+```
+
+`mkcrests.py` draws a distinct two-tone crest per club and needs Pillow. `mkkits.py` lends
+each club a shipped club's first, second, third and goalkeeper kit; it needs one more archive
+out of the game (`uniform/team/UniformParameter.bin`) and a list of the kit textures the game
+ships. Run it with no arguments to see where both come from.
+
+The files are named the way the engine looks them up, which is not the team id as it stands.
+The engine splits the id: the low bits are the number in the path and bits 14-16 pick a tag.
+Ids 65536..81919 get the tag `_ACL_` and lose 65536, so club 72163's first kit is
+`uniform/team/6627/6627_ACL_1st_realUni.bin`, the same form the game uses for its own AFC
+clubs. A file named `72163_DEF_...` is never asked for, and the club plays in the default kit.
+`mkkits.py` handles this for any id (`kit_key()` in the tool); if you write kit files by hand
+for a new club, use the same rule.
+
+None of this changes whether a season works. After it, move the Edit save aside (E7) and
+start a new career.

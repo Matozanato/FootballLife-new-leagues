@@ -22,6 +22,83 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
   ticked. That is intended, but a broken old line then looks as if the import did nothing. See
   the [FAQ](faq.md).
 
+## Status summary
+
+Everything below was measured on our own test worlds, by playing Master League seasons
+unattended with matches simulated. This section was last checked on **2026-09-29**, against
+Mod Studio 0.1.4. The full list, with dates and details, is the rest of this page; the hard
+numbers are in [limits.md](research/limits.md).
+
+### Measured and working
+
+- **A Master League career in a new league, or with a club of the game**: the season
+  generates, every league gets its fixtures, the Team Sheet shows a real squad (30 players a
+  new club) and the hub shows the standings. On 2026-09-29 a career with a club of the game, in
+  a world with two new South American leagues, played 338 days in one unattended run.
+- **Saving and loading**: the club, the squad, the manager, the standings and the fixtures all
+  come back, also from a save made after a full season.
+- **Season after season.** The added leagues close in July with the game's own and open again
+  with empty tables and the right year; leagues that play January to December go on into their
+  next season too. Four rollovers in a row on one world, and 655 game days in one run without a crash.
+- **Promotion and relegation through whole pyramids**: three up and three down at every joint
+  of five chains, one of them under the Championship (2026-09-28). New countries outside Europe
+  and January-December leagues go on into their second season (0.1.3.1), and so does a league
+  outside Europe with no division below it (0.1.4: Egypt, Morocco and Venezuela, 2026-09-29).
+- **The 2024 European format**: the league phase of 36, the play-off and the knockout of all
+  three competitions, and in the second season 108 of 108 places filled from the previous
+  season's tables.
+- **Cups of other continents**: the CAF Champions League and CAF Confederation Cup play their
+  groups and knockout; the Copa Sudamericana was drawn with 32 clubs on 2026-09-29, with the
+  clubs already in the Copa Libertadores left out. The CAF Super Cup was played in the second
+  and third seasons' July between the two CAF winners, each time with that year's winners
+  (2026-10-01).
+- **Leagues of 10 to 24 clubs** with the right number of rounds, different sizes in one world.
+- **The menus**: up to 36 new leagues in Select Team (past 32 the plan names the ones that take the place of a game's "Other ..." group or get none), every one in Kick Off, Edit mode and Database →
+  Competition Info, under its own country's name and flag.
+
+### Known problems
+
+- **The game crashes now and then inside its own protected code** (fault offsets `0x84ed4c0`,
+  `0x131cc313`, `0x18ecc042`) while a scene is being set up: generating a season, loading a
+  match, a season rollover. **They are the game's own:** on 2026-09-25/26, with none of our
+  modules and no patch set, 10 of 12 season creations crashed at the manager-settings step, and
+  the untouched game started without Sider crashed at the same step in 4 of 8. Start the game
+  from its launcher, start again or reload, and **save often**: the saved season is not
+  damaged.
+- **A saved career belongs to its world.** It loads only with the same world switched on, and
+  any change to a league's clubs needs a new career.
+- **A new league outside Europe can read as European in the board's objectives** (issues #43,
+  #70): a first division of a new country that plays August to May keeps the UEFA code, because
+  the game's July season-end step promotes and relegates only for that code, so the Master
+  League board can ask for the Champions League. Its places still go to its own continent's
+  cups. Not fixed yet: it needs a change inside the game's continent lookup and a test in the
+  game. Fixed along the way: the borrowed League Info line ("... South American based
+  leagues", 0.1.7: our leagues carry no such line now), the League Info cup icons (they follow
+  the country's confederation from the world file since 0.1.3.1), and the list order (0.1.6: a
+  new Asian league comes before *Other Clubs (Asia)*, a CONCACAF one after MLS, and in 0.1.7 a
+  South American one after Colombia, before MLS; African and Oceanian countries still come
+  after Asia, since the game has no section for them).
+- **An Exhibition only league still shows** in Master League's team list (the game has one
+  list for Kick Off and Master League). Do not start a career with one of its clubs.
+- **February-December seasons** cannot yet be combined with a split, Apertura/Clausura, a
+  national cup or a league cup.
+- **Only one league per country can be split or Apertura/Clausura.** With two (Iceland, both
+  divisions Apertura/Clausura, issue #45) the game mixes up their phases and neither league
+  plays a match. Mod Studio refuses such a world since 0.1.4.
+- **The Team of the Season of a new league is empty** at the end of a season (11 empty
+  places, issue #46). Nothing else in the season is affected. Not looked into yet.
+- **A calendar day holds 792 matches** since 0.2.0 (280 before); everything past that is
+  dropped in silence. A world of 39 leagues uses about 280 on its busiest day;
+  `tools/dayplan.py` measures a running season. Careers started before 0.2.0 do not load in
+  0.2.0: the wider calendar changes the save, so start a new career.
+- **The competition table can fill up** over many seasons: `fl26hdr127.lua` raises it from 100
+  to 127 and the experimental `fl26hdr192.lua` to 192. Long-running worlds are the most useful
+  thing you can report — see the [testing guide](developers/testing-guide.md).
+- **39 new leagues in one world** and **1,536 clubs in all** are walls; more leagues need a
+  regenerated patch set ([why](developers/for-developers.md)).
+- **A new patch set means a new career**: a save made under one `fl26caps.lua` does not load
+  under another.
+
 ## Crashes
 
 | where | address | status |
@@ -108,7 +185,7 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
 - **Promotion and relegation between new leagues.** A chain of three of our leagues moved no
   club, and the likely reason is now known and is data, not code: all three were first
   divisions, and the resolver only looks for the league above when the lower league is
-  division 2 or 3. Build the pyramid with `--tiers 1,2,3` (see build-your-world.md).
+  division 2 or 3. Build the pyramid with `--tiers 1,2,3` (see [by-hand.md](developers/by-hand.md#divisions-and-why-they-matter-more-than-they-look)).
   **Played through a rollover on 2026-09-23**, on our world with a third, fourth and fifth
   division under Ligue 2 and under Serie B: with the experimental `fl26chain` (which
   completes the joints of a chain the game skips) and `fl26seasonend` (which lets France and
@@ -366,8 +443,8 @@ calendar.
   also keep 145 for worlds built before 2026-09-25). A league outside the first is silently
   never scheduled; a league outside the second is only entered into the season if the game
   happens to list it itself. Together these are the single most common way a new league
-  ends up existing but never playing. See build-your-world.md and
-  [how-it-works.md](how-it-works.md).
+  ends up existing but never playing. See [by-hand.md, E4](developers/by-hand.md#e4-the-regulation-ids) and
+  [how-it-works.md](research/how-it-works.md).
 - **Rulebook ids above 175 do work**, but by default a league on one is invisible in the
   **Select Team** list. It generates, schedules and plays a full Master League season; only
   that one menu cannot show it. Easy to mistake for a data error. That list comes from a
@@ -390,7 +467,7 @@ calendar.
   calendar to tell you: it counts what was accepted, so a day that turned matches away reads
   as a tidy 280. Count the match records instead — measured once at 280 accepted against 351
   that wanted the day. `tools/dayplan.py --demand` does this and prints the day-spread that
-  fixes it; see [limits.md](limits.md).
+  fixes it; see [limits.md](research/limits.md).
 - **The calendar is 365 days** and cannot be extended in place.
 - Squads are exactly `--per` players (default 23). We do not yet know whether a squad that
   thin is what starves the AI lineup pass at day 238 (see above). Bigger squads cost player

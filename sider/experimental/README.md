@@ -85,7 +85,7 @@ created. Switching between 127 and 192 means starting a new season.
 `fl26clubs`, `fl26editlist`, `fl26catlist`, `fl26chain` and `fl26swiss` take their leagues,
 slots, countries, chains, sizes and European places from it. A module that finds no world file
 keeps the built-in lists below, exactly as before. The format is in
-[docs/mod-studio.md](../../docs/mod-studio.md#the-world-file-sideraddonsmodulesfl26worldtxt).
+[docs/developers/mod-studio.md](../../docs/developers/mod-studio.md#the-world-file-sideraddonsmodulesfl26worldtxt).
 The rest of this section is for worlds built by hand with the scripts.
 
 Besides the two `SLOTS` tables described below: `COUNTS` in `fl26comptab.lua` (how many clubs each of your leagues
@@ -151,7 +151,7 @@ and a knockout from the round of 16 to the final whose bracket is fixed in advan
 added leagues get real sizes: 10 clubs playing four times (36 rounds), 12 playing three
 times (33), 16, 18, 22 and 24 clubs (46 rounds), next to the 20-club leagues.
 
-**Building the world.** Start from a world built as in [build-your-world](../../docs/build-your-world.md),
+**Building the world.** Start from a world built as in [by-hand.md](../../docs/developers/by-hand.md#part-i-every-world-building-option),
 with its leagues spread one region per league (`tools/spreadregions.py --root <root> --plan own`,
 needs `fl26reg64.lua`). Then, each step writing a new livecpk root (`--out`) from the previous one:
 
@@ -218,7 +218,7 @@ undoes it.
   season there are no final tables yet, so each league is ordered by squad strength (the
   eleven best players by their ratings); `sider.log` shows `first season -- reg ... by squad
   strength`. To choose the first-season field yourself, put `fl26swiss-first.txt` in
-  `modules` (format in [how-to D6](../../docs/how-to.md#d6-play-and-check)).
+  `modules` (format in [by-hand.md, D6](../../docs/developers/by-hand.md#d6-play-and-check)).
 - The Conference League play-off is drawn in December, straight after its league phase
   (the real draw is at the end of January), and played in February with the Europa League's.
 - The Conference League's league phase is **six** matches a club (six opponents, one from each

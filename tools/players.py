@@ -18,7 +18,7 @@ player, all of which the file format is known for:
   shirt        the shirt number, 1..99, in PlayerAssignment.bin (bits 0-9 of +0x0c)
 
 To set single fields -- any ability, position, height, foot, skill -- or to create new
-players, use playeredit.py, which knows every field of the record (docs/player-record.md).
+players, use playeredit.py, which knows every field of the record (docs/research/player-record.md).
 
 --list prints player id, club id, shirt number and name, one player per line.  --club
 limits it to one club (its team id, or its name exactly as rename.py --list prints it).

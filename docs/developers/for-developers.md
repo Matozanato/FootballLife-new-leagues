@@ -6,6 +6,51 @@ Making your own version of Mod Studio: see [forking.md](forking.md) and its chap
 `-calendar` constants and what to do when the game exe changes), [building](fork/building.md),
 [testing](fork/testing.md), [NewLife release format](fork/newlife-format.md).
 
+## Requirements
+
+- Football Life 2026 with its bundled Sider (`SiderAddons` folder next to `FL_2026.exe`).
+  The modules were built against `FL_2026.exe` version **26.0.0.0**, 458,910,720 bytes,
+  SHA-256 `7c27ecb303b71331e36f9ccd8ac879f0f0d8c56c754bd4d0d2e9c8353464f847`. A different build
+  is refused, safely, at startup.
+- Python 3.10 or newer for the world-building tools. No third-party packages are needed to
+  build a world. Regenerating the patch set needs `capstone`.
+- FL26 Mod Studio from source (`python tools/modstudio_main.py`) needs `PySide6`, `Pillow` and
+  `py7zr`; making the release zip (`tools/mszip.py`) also needs `pyinstaller`, `markdown` and
+  zig for the DLLs. The release `.exe` needs nothing.
+- Windows. The tools were only ever run on Windows.
+
+## Repository layout
+
+```
+sider/              fl26caps.lua (generated patch set), the null guards, fl26hdr127.lua,
+                    fl26joindll.lua and the compiled fl26join.dll it loads
+sider/experimental/ seventeen modules that go further: 192 competitions, the Select Team
+                    list (names, slots, club lists, flags, Kick Off order), 64 regions, a
+                    3-bit league rank and its relegation gate, an August start, season-end
+                    promotion through a pyramid (fl26chain.dll), Super Cup, results-screen and
+                    club-change guards, the 2024 European format, league sizes, split
+                    seasons and other continents' cups (fl26swiss.dll), country names in
+                    Competition Info, the added leagues in Edit mode's team lists
+tools/              world builders (mkworld, mkplayers, mkcrests, mkkits, mkcup, mkflags,
+                    mkreshape, mkuecl, mkeuropo, mksizes, mktactics, rename, players,
+                    playeredit, playereditor ...), pesdb/CPK readers, the patch-set generator
+                    and its checkers
+tools/modstudio/    FL26 Mod Studio (tools/modstudio_main.py starts it from source,
+                    tools/mszip.py makes the release zip) and the League Builder behind it
+                    (leaguebuilder, lbplayers, lbfaces, lbpackage, lbpack ...)
+tools/native/       the C source of the six DLLs, their build scripts and checksums
+patches/            the patch set as JSON plus the layout tables the generator reads
+docs/               the user docs: first-steps (en/hr), mod-studio-guide (en/hr/es/fr), faq,
+                    known-issues, and README.md, the index
+docs/changelog/     the release notes and the version history
+docs/developers/    for-developers, forking, mod-studio (how it works, package format),
+                    by-hand (the manual route with Python), testing-guide
+docs/developers/fork/ the fork chapters: code-map, recipe-keys, world-file, modules,
+                    building, testing, newlife-format, club-world-cup-32
+docs/research/      research-findings (the research log), how-it-works, limits,
+                    league-phase-swiss-decode, player-record
+```
+
 ## FL26 Mod Studio and the world file
 
 The modules read which leagues a world has from `SiderAddons\modules\fl26world.txt`, written
@@ -45,7 +90,7 @@ older layout; the DLLs then need `-DREG_ARRAY_OFF=0x1c84230` (see `tools/native/
   league's matches are then allocated with no date, nothing ever puts them on a calendar
   day, and those leagues quietly play nothing from the second season onward. That is
   exactly how the set published on 2026-09-16 shipped broken; see
-  [known-issues.md](known-issues.md). The generator now says out loud when it falls back.
+  [known-issues.md](../known-issues.md). The generator now says out loud when it falls back.
 - `--date-offsets` assigns each key a weekday shift 0–6. A bare list (`--date-offsets 2,6,5,1`)
   deals shifts round-robin; the `key:shift` form above assigns them one by one. Spreading
   leagues over the emptier weekdays is what keeps the 792-ids-per-day calendar (280 without `-calendar`) from
@@ -104,7 +149,7 @@ players 0x17c, clubs 0x690, coaches 0x258, regulations 0x314, match records 0x25
 | `mkcup.py` | a knockout cup among chosen clubs |
 | `rename.py` | list the clubs of a world, or rename them (name and abbreviation) or their managers from a CSV file |
 | `players.py` | list the players of a world or one club, and change a player's name, shirt number, or copy the playing side (position, abilities, skills) from another player |
-| `playeredit.py` | the player editor: export a club (or everything) to CSV with every field by name, import it back with range checks, create new players; field map in [player-record.md](player-record.md) |
+| `playeredit.py` | the player editor: export a club (or everything) to CSV with every field by name, import it back with range checks, create new players; field map in [player-record.md](../research/player-record.md) |
 | `playereditor.py` | the same editor with a window (tkinter): club list, squad in lineup order, every field in tabs, new players, save |
 | `siderroot.py` | switch which `_FL26*` cpk.root is active |
 | `patchset.py` + `callindex.py`, `datecave.py`, `copyfields.py`, `impscan.py`, `calwiden.py`, `boundscan.py` | the patch set generator and its helpers (`calwiden.py` widens the calendar for the `-calendar` set; `calaudit.py`, `calstride.py`, `tailscan.py` find and check its sites) |
@@ -119,7 +164,7 @@ players 0x17c, clubs 0x690, coaches 0x258, regulations 0x314, match records 0x25
 | `mkuecl.py`, `mkeuropo.py` | add the Conference League; give the Europa and Conference League the 9-24 play-off |
 | `mkswiss.py` | generate and check the league-phase draw tables compiled into `fl26swiss.dll` |
 | `mksizes.py` | set each added league's club count and how many times the clubs meet (you write the plan; format at the top of the script) |
-| `native/fl26join.c`, `native/fl26clubs.c`, `native/fl26chain.c`, `native/fl26swiss.c`, `native/fl26regen.c`, `native/fl26edit.c` and their build scripts | the sources of the six DLLs and the one-line `zig cc` build; see [native/README.md](../tools/native/README.md) and [fork/building.md](fork/building.md) |
+| `native/fl26join.c`, `native/fl26clubs.c`, `native/fl26chain.c`, `native/fl26swiss.c`, `native/fl26regen.c`, `native/fl26edit.c` and their build scripts | the sources of the six DLLs and the one-line `zig cc` build; see [native/README.md](../../tools/native/README.md) and [fork/building.md](fork/building.md) |
 
 Tools we use in development but did not include: the automation harness that plays seasons
 unattended with a virtual pad and screen reading, and the disassembly indices. They are tied
@@ -131,6 +176,6 @@ large world runs into. It reads the running game only; it writes nothing.
 
 Issues with fault offsets, saves and `mkworld.py` output are the most valuable thing right
 now. Pull requests are welcome for anything, fixes and new features alike: we test them and
-merge them into the next release (how: [Contributing](../README.md#contributing)). For
+merge them into the next release (how: [Contributing](../../README.md#contributing)). For
 `sider/` and `patches/`, please describe the disassembly evidence in the PR the way the module
 headers do.

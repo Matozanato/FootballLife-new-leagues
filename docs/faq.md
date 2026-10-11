@@ -48,7 +48,7 @@ The game's `FL_2026.exe` is not the Steam build the modules know (#62), or anoth
 it. `fl26caps` then writes nothing (`fl26caps: ABORTED` near the top of `sider.log`), and
 without it a new league takes the place of one of the game's in the lists and the game crashes
 on its clubs. Since 0.1.7 Mod Studio's *Checks* say so. Put back the Steam `FL_2026.exe`
-([install.md](install.md), step 1) and start the game again.
+([by-hand.md](developers/by-hand.md#a6-check-your-game-version), step A6) and start the game again.
 
 ### "Other European Leagues" or "Other Latin American Teams" is gone from Select Team
 
@@ -225,7 +225,7 @@ place, so the game's leagues keep their size. A club of the game into a new leag
 Yes, since 0.1.4 (#36). On the *Build* page press **Only the new European cups...**: it builds a
 world with the new Champions League and Europa League (and the Conference League when it is
 ticked), with the game's own leagues and clubs. The scripts way is in
-[how-to.md](how-to.md), Part D, Route 1.
+[by-hand.md](developers/by-hand.md#route-1-the-new-format-with-the-games-own-leagues-only-no-new-leagues), Part D, Route 1.
 
 **With a database mod (UML and the like):** the world carries its own copy of the competition
 and team tables, made from the tables in **Settings**, and by default those are the game's own.
@@ -609,15 +609,19 @@ Outside Edit mode, the easiest way is the editor with a window:
 python tools\playereditor.py --root <your livecpk world>
 ```
 
-Pick a club, pick a player, change any field, **Apply**, **Save**. **New player** creates one,
-**Up** / **Down** change the squad order (the green rows are the starting eleven). It uses the
-same checks as the spreadsheet route below.
+Pick a club, pick a player, change any field, **Apply**, **Save**. The fields are in four tabs
+(Profile, Positions, Abilities, Skills). **New player** creates one as a copy of the selected
+player, **Up** / **Down** change the squad order (the green rows are the starting eleven). It
+uses the same checks as the spreadsheet route below: a value the game cannot store (Speed 150,
+say) is refused with a message and nothing is changed. Without `--root` it asks for the world
+folder (the one that holds `common`). The first Save keeps the originals as `Player.bin.bak`
+and `PlayerAssignment.bin.bak`.
 
 For many players at once, edit the world's data files with `tools/playeredit.py`, the same way
 `rename.py` does clubs. The players live in the world's `common\etc\pesdb\Player.bin`, and
 which club each one plays for, with his shirt number and his place in the squad, in
 `PlayerAssignment.bin`. Every field of a player is known (see
-[player-record.md](player-record.md)), so you can set any of them, and create new players.
+[player-record.md](research/player-record.md)), so you can set any of them, and create new players.
 
 **1. Export the club to a spreadsheet.**
 
