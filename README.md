@@ -33,6 +33,7 @@ who covered a big part of what the project costs
 <td align="center">⭐<br><b>LaraCroft</b></td>
 <td align="center">⭐<br><b>Pierro1912</b></td>
 <td align="center">⭐<br><b>David.BDJ</b></td>
+<td align="center">⭐<br><b>Facemaker Jacobson</b></td>
 </tr>
 </table>
 
@@ -821,7 +822,7 @@ the African leagues' League Info panel, more competitions and formats). If you w
 along: **[ko-fi.com/mata28](https://ko-fi.com/mata28)**. Testing and good bug reports help just
 as much — see the [testing guide](docs/testing-guide.md).
 
-Thank you to everyone who has: **Thunder105**, **GutGut**, **LaraCroft**, **Pierro1912** and **David.BDJ**. Supporters are listed at
+Thank you to everyone who has: **Thunder105**, **GutGut**, **LaraCroft**, **Pierro1912**, **David.BDJ** and **Facemaker Jacobson**. Supporters are listed at
 the top of this page.
 
 ## Licence and credits
