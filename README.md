@@ -1,7 +1,6 @@
 # FootballLife — new leagues (public beta)
 
 [![Join the Discord](https://img.shields.io/badge/Discord-join%20the%20community-5865f2?logo=discord&logoColor=white)](https://discord.gg/StQqtk3G3M)
-[![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-support%20this%20work-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/mata28)
 
 [![Latest release](https://img.shields.io/github/v/release/Matozanato/FootballLife-new-leagues?display_name=release&label=release&color=2ea44f&logo=github&logoColor=white)](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/Matozanato/FootballLife-new-leagues/total?label=downloads&color=2ea44f&logo=github&logoColor=white)](https://github.com/Matozanato/FootballLife-new-leagues/releases)
@@ -10,14 +9,12 @@
 ![Languages](https://img.shields.io/badge/languages-EN%20%C2%B7%20ES%20%C2%B7%20FR%20%C2%B7%20HR-6f42c1)
 ![Game: Football Life 2026](https://img.shields.io/badge/game-Football%20Life%202026-c0392b)
 
-> This is unpaid reverse-engineering work done in spare time. If it is useful to you,
-> **[buy me a coffee on Ko-fi](https://ko-fi.com/mata28)** — it keeps the seasons running.
-
 <div align="center">
 
 ## ❤️ Supporters
 
-**They keep this project going. Thank you!**
+This is unpaid reverse-engineering work done in spare time.
+**They keep it going. Thank you!**
 
 <table>
 <tr><td align="center">
@@ -353,6 +350,22 @@ testing Mod Studio on a real, heavily modded game and helping everyone else get 
 - day after day on the Discord: answering members' questions about install order, face packs
   and other patches before anyone else gets to them, and keeping the server tidy.
 
+### novarama: moderator on the Discord, with a developer's eye
+
+**novarama** (moderator on the Discord) keeps the server running next to jibibi and Amir and
+looks at Mod Studio the way a professional developer does:
+
+- the Bundesliga 2 crests missing from NewLife 1.3, which put the crests back into every
+  NewLife build;
+- NewLife's refresh of the game's leagues getting in the way of a league added after it
+  (French National taking a club Ligue 2 had already turned into another);
+- the most thorough answer to the community poll: what is not clear in the interface for
+  someone who is not a modder, why replacing a club that plays in another league should not
+  be the user's job, a list of every change made to a world, restore points, and a small
+  separate installer just for league packs and the modpack;
+- every day on the Discord: answering members, testing what they report and keeping the
+  channels in order.
+
 ### Amir: Mod Studio, tested release by release
 
 **Amir** ([AmirPjanic](https://github.com/AmirPjanic), moderator on the Discord) tests Mod
@@ -532,8 +545,6 @@ and other Latin American worlds and writes up every bug with screenshots:
 - **the_pelado** (Dream Patch): a full write-up of how the game picks trophy ceremonies.
 - **capital030** (Discord): the idea of packages without squads that only add to leagues already
   there, and offered logos for the community.
-- **novarama** (Discord): NewLife's refresh of the game's leagues getting in the way of a league
-  added after it.
 
 Reports are welcome from anyone: open an
 [issue](https://github.com/Matozanato/FootballLife-new-leagues/issues) with what you
@@ -823,7 +834,7 @@ Contributors, and what each of them did, are listed in
 [The people who made this better](#the-people-who-made-this-better) near the top: above all
 **vmardonesdev** and **Alikhaled_727**, **vector360** and **jibibi**, and **Stagnant09**, **pioup38**, **bobzera**,
 **spursfan07**, **Amir**, **victormican**, **Alby17**, **jyanj083-dotcom**, **Gabyyy2008**, **alexfe87**,
-**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9**, **Xxspedd**, **n1ne**, **LaraCroft**, **AlexRufolo**, **DavidBDJ**, **B2Y26Arabia**, **rwee**, **Risto**, **Yanis**, **LumpierTheGunner**, **Bon Kirk**, **wishfulshot**, **beny609o**, **Nickdaw**, **the_pelado**, **capital030**, **novarama**, **rickydicky4444** and **MIQABARI**.
+**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9**, **Xxspedd**, **n1ne**, **LaraCroft**, **AlexRufolo**, **DavidBDJ**, **B2Y26Arabia**, **rwee**, **Risto**, **Yanis**, **LumpierTheGunner**, **Bon Kirk**, **wishfulshot**, **beny609o**, **Nickdaw**, **the_pelado**, **capital030**, **novarama** (moderator), **rickydicky4444** and **MIQABARI**.
 
 The licence asks nothing of you. I do: **if you use these findings, addresses, patch sets
 or tools in a mod, credit this work and link back** — see
