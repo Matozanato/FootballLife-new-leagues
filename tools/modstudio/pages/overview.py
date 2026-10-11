@@ -56,7 +56,7 @@ class Overview(Page):
         self.b_open = b1 = QPushButton(_("Open its leagues"))
         b1.clicked.connect(self.open_live)
         b2 = QPushButton(_("Switch world..."))
-        b2.clicked.connect(lambda: self.app.open_page("Roots"))
+        b2.clicked.connect(self.switch_world)
         top.addWidget(b1, 0, Qt.AlignVCenter)
         top.addWidget(b2, 0, Qt.AlignVCenter)
         lv.addLayout(top)
@@ -236,6 +236,14 @@ class Overview(Page):
             self._row(self.recent_rows, when, h.get("reason") or h["file"], last=n == min(len(hist), 6) - 1)
         if not hist:
             self.recent_rows.addWidget(_label(_("Nothing changed yet."), "subtle"))
+
+    def switch_world(self):
+        """Content folders with the League Builder worlds shown: they are what a world switch picks
+        from, and the page hides them by default"""
+        self.app.open_page("Roots")
+        r = self.app.pages.get("Roots")
+        if r is not None and hasattr(r, "show_worlds"):
+            r.show_worlds.setChecked(True)
 
     def open_live(self):
         live = self.app.project.live_worlds()
