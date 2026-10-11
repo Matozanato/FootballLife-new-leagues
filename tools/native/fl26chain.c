@@ -112,7 +112,7 @@ static int vcount32(vec32_t* v) { return (v && v->b && v->e >= v->b) ? (int)((v-
  * leagues -- with EMPTY club lists, in the middle of their August-May season. The ids come
  * from the loader (fl26_chain_protect). */
 #define MAX_PROTECT 128
-#ifndef REG_ARRAY_OFF   /* the -calendar set (0.2.0); -DREG_ARRAY_OFF=0x1c84230 builds for the older -fixtures set */
+#ifndef REG_ARRAY_OFF   /* fallback only: reg_off() reads the real one from the code */
 #define REG_ARRAY_OFF 0x1d4c330   /* edit block + this = regulation records (caps sets), as fl26join.c */
 #endif
 #define REG_STRIDE    0x314
@@ -120,11 +120,24 @@ static int vcount32(vec32_t* v) { return (v && v->b && v->e >= v->b) ? (int)((v-
 static uint16_t g_protect[MAX_PROTECT]; static int g_nprotect = 0;
 static int is_protected(uint16_t id) { for (int i = 0; i < g_nprotect; i++) if (g_protect[i] == id) return 1; return 0; }
 
+/* Where the regulation records start: the displacement fl26caps wrote into the cmp at
+ * 0x1415435a9 (`cmp word [rdx+r13+disp32], bx`, the site fl26regfast reads too), so the DLL
+ * follows whichever caps set is installed. REG_ARRAY_OFF is only the fallback for when the
+ * bytes there are not that cmp. */
+#define REG_DISP_RVA 0x15435a9
+static uint32_t reg_off(void)
+{
+  const unsigned char* p = (const unsigned char*)(uintptr_t)(g_base + REG_DISP_RVA);
+  if (p[0] == 0x66 && p[1] == 0x42 && p[2] == 0x39 && p[3] == 0x9c && p[4] == 0x2a)
+    return *(const uint32_t*)(p + 5);
+  return REG_ARRAY_OFF;
+}
+
 /* clubs in the regulation's +0x170 list (u32 handles, 0xffffffff ends it), -1 if not found */
 static int reg_count(uint16_t id)
 {
   unsigned char* blk = block(); if (!blk) return -1;
-  unsigned char* rec = blk + REG_ARRAY_OFF;
+  unsigned char* rec = blk + reg_off();
   for (int i = 0; i < REG_CAP; i++, rec += REG_STRIDE) {
     if (*(uint16_t*)rec != id) continue;
     int n = 0;
@@ -138,7 +151,7 @@ static int reg_count(uint16_t id)
 static int reg_list(uint16_t id, uint32_t* out)
 {
   unsigned char* blk = block(); if (!blk) return -1;
-  unsigned char* rec = blk + REG_ARRAY_OFF;
+  unsigned char* rec = blk + reg_off();
   for (int i = 0; i < REG_CAP; i++, rec += REG_STRIDE) {
     if (*(uint16_t*)rec != id) continue;
     int n = 0;

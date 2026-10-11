@@ -50,7 +50,7 @@
 #define CLOSE_RVA 0x1363210  /* close_listed(ctx, vec_u16*): New Year close of calendar-year comps */
 #define BLD_RET_RVA 0x1315c0b /* return address of the builder's call to the door (0x141315c06)  */
 #define OWNER_RVA 0x3705e10  /* *(void**)  -> owner; [owner+0x48] = edit block              */
-#ifndef REG_ARRAY_OFF   /* the -calendar set (0.2.0); -DREG_ARRAY_OFF=0x1c84230 builds for the older -fixtures set */
+#ifndef REG_ARRAY_OFF   /* fallback only: reg_off() reads the real one from the code */
 #define REG_ARRAY_OFF 0x1d4c330 /* edit block + this = regulation records, stride 0x314 (caps sets) */
 #endif
 #define REG_STRIDE    0x314
@@ -301,6 +301,19 @@ void bld_pre(uint64_t ctx, uint64_t events, vec16_t* inc)
   }
 }
 
+/* Where the regulation records start: the displacement fl26caps wrote into the cmp at
+ * 0x1415435a9 (`cmp word [rdx+r13+disp32], bx`, the site fl26regfast reads too), so the DLL
+ * follows whichever caps set is installed. REG_ARRAY_OFF is only the fallback for when the
+ * bytes there are not that cmp. */
+#define REG_DISP_RVA 0x15435a9
+static uint32_t reg_off(void)
+{
+  const unsigned char* p = (const unsigned char*)(uintptr_t)(g_base + REG_DISP_RVA);
+  if (p[0] == 0x66 && p[1] == 0x42 && p[2] == 0x39 && p[3] == 0x9c && p[4] == 0x2a)
+    return *(const uint32_t*)(p + 5);
+  return REG_ARRAY_OFF;
+}
+
 /* ---- observation only: what the door answered, and the record it looked at ----
  *
  * The record is found by walking the regulation array ourselves. An earlier build asked the
@@ -318,7 +331,7 @@ static const unsigned char* find_record(uint16_t cid)
   /* All 600 rows are walked rather than the live count: the count's offset differs between
    * caps sets (0x2bc5de8 under ...-mlcopy, 0x3b20888 under ...-fixtures) while the array's
    * does not, and an unused row has id 0, which no competition of ours carries. */
-  const unsigned char* rec = block + REG_ARRAY_OFF;
+  const unsigned char* rec = block + reg_off();
   for (uint32_t i = 0; i < REG_CAP; i++, rec += REG_STRIDE)
     if (*(const uint16_t*)rec == cid) return rec;
   return 0;
