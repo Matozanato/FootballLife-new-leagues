@@ -13,6 +13,36 @@
 > This is unpaid reverse-engineering work done in spare time. If it is useful to you,
 > **[buy me a coffee on Ko-fi](https://ko-fi.com/mata28)** — it keeps the seasons running.
 
+<div align="center">
+
+## ❤️ Supporters
+
+**They keep this project going. Thank you!**
+
+<table>
+<tr><td align="center">
+
+### 🏆 Special thanks to the **Ultimate Master League (UML)** crew
+
+who covered a big part of what the project costs
+
+</td></tr>
+</table>
+
+<table>
+<tr>
+<td align="center">⭐<br><b>Thunder105</b><br><sub>the first one ever</sub></td>
+<td align="center">⭐<br><b>GutGut</b></td>
+<td align="center">⭐<br><b>Scott Weir</b><br><sub>LaraCroft</sub></td>
+<td align="center">⭐<br><b>Pierro1912</b></td>
+<td align="center">⭐<br><b>David.BDJ</b></td>
+</tr>
+</table>
+
+[![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-become%20a%20supporter-ff5e5b?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/mata28)
+
+</div>
+
 **New leagues, new clubs and whole new countries in Football Life 2026's Master League**, plus
 one program to manage everything else you add to the game. No patched executable, no repacked
 CPKs: it all goes in through Sider modules and data files, and comes out again.
@@ -41,16 +71,6 @@ CPKs: it all goes in through Sider modules and data files, and comes out again.
 
 This is a **beta**. It is published so that people who mod this game can use it, break it and
 tell us where. Read [what works and what does not](#status) before you start a long career.
-
-## Supporters
-
-They supported this project on [Ko-fi](https://ko-fi.com/mata28) and keep it going. Thank you!
-
-**A special thank you to the Ultimate Master League (UML) crew**, who covered a big part of
-what the project costs.
-
-**Thunder105** (the first one ever) · **GutGut** · **Scott Weir** (LaraCroft) ·
-**Pierro1912** · **David.BDJ**
 
 ## What you can do
 
