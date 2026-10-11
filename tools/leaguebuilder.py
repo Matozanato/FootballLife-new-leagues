@@ -1084,6 +1084,35 @@ def player_ids(game, world):
         return {}
 
 
+def last_build_ids(game, world):
+    """the whole fl26playerids.json of the last Build of `world` ({"clubs": ..., "names": ...}), or {}:
+    Build gives the world's own players those ids again (GitHub #126)"""
+    import siderdir
+    try:
+        with open(os.path.join(siderdir.find(game), "livecpk", world, PLAYER_IDS), encoding="utf-8") as f:
+            got = json.load(f)
+        return got if isinstance(got, dict) else {}
+    except (OSError, ValueError, TypeError):
+        return {}
+
+
+def id_names(plan, ids):
+    """{club: {player key: name}} for the keys in ids whose change names the player: the next
+    Build keeps a key's id only for the same player"""
+    out = {}
+    for club, keys in ids.items():
+        c = (plan.get("players") or {}).get(club) or {}
+        adds = c.get("add") or []
+        for key in keys:
+            if key.startswith("+") and key[1:].isdigit():
+                ch = adds[int(key[1:])] if int(key[1:]) < len(adds) else {}
+            else:
+                ch = (c.get("edits") or {}).get(key) or {}
+            if ch.get("name"):
+                out.setdefault(club, {})[key] = ch["name"]
+    return out
+
+
 def country_ids(base):
     """[(name, Country.bin id)] sorted by name: a player's Nationality is this id (measured: 146
     Brazil, 144 Argentina, 236 Spain on the game's own players). A name the table has twice
@@ -3138,7 +3167,9 @@ def build(pl, base, game, replace=False, log=print):
     try:
         filled = dict(clubs, players=lbplayers.fill_newlife(clubs, base, log))   # the plan kept as it was
         filled["players"] = lbplayers.fill_tiers(filled, base, log)
-        lbplayers.apply(filled, base, db, PLAYER_CAP, log, faces, lineups=lineups, ids=ids, portraits=portraits)
+        last = last_build_ids(game, pl["world"])
+        lbplayers.apply(filled, base, db, PLAYER_CAP, log, faces, lineups=lineups, ids=ids, portraits=portraits,
+                        prev=last.get("clubs"), prev_names=last.get("names"))
     except lbplayers.Error as e:
         raise BuildError(str(e))
     fans = club_money(new_of, pl, db, log)
@@ -3147,7 +3178,7 @@ def build(pl, base, game, replace=False, log=print):
         lbplayers.line_up(db, base, recipe_ordered(filled, clubs), log)
     if ids:                                            # for Mod Studio's Players page and its CSV
         with open(os.path.join(tmp, PLAYER_IDS), "w", encoding="utf-8") as f:
-            json.dump({"world": pl["world"], "clubs": ids}, f, indent=1, sort_keys=True)
+            json.dump({"world": pl["world"], "clubs": ids, "names": id_names(filled, ids)}, f, indent=1, sort_keys=True)
     if faces:
         import lbfaces
         for n, (pid, folder) in enumerate(faces):

@@ -764,7 +764,77 @@ def face_app_lines(faces, per=64):
     return ["faceapp " + " ".join(pairs[k:k + per]) for k in range(0, len(pairs), per)]
 
 
-def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, portraits=None):
+def _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_top):
+    """the ids the last Build gave the world's own players stay theirs (GitHub #126): a face linked
+    to a new player by his id -- in the game's Edit mode or a face pack -- was lost when a change
+    elsewhere handed the ids out in another order. prev: {club: {player key: id}} of the last
+    Build, prev_names {club: {player key: name}}; a key whose player now has another name keeps
+    nothing. A new club's squad (first) is renumbered here, in place; returns {(club, "+n"): id}
+    for the players added with "add", taken when they are made."""
+    if not prev:
+        return {}
+    taken = set()                                      # ids a change sets itself: never handed out
+    for c in changes.values():
+        for ch in list((c.get("edits") or {}).values()) + list(c.get("add") or []):
+            if str(ch.get("id", "")).strip().isdigit():
+                taken.add(int(ch["id"]))
+    pin, later, wanted = {}, {}, set()
+    for club, keys in prev.items():
+        c = changes.get(club) or {}
+        for key, want in (keys or {}).items():
+            try:
+                want = int(want)
+            except (TypeError, ValueError):
+                continue
+            if want <= game_top or want > PID_MAX or want in taken or want in wanted:
+                continue
+            ch = (c.get("edits") or {}).get(key) or {}
+            if key.startswith("+") and key[1:].isdigit():
+                n = int(key[1:])
+                adds = c.get("add") or []
+                ch = adds[n] if n < len(adds) else None
+                if ch is None or str(ch.get("id", "")).strip():
+                    continue
+            elif not (key.isdigit() and club in first and int(key) < len(first[club])) or str(ch.get("id", "")).strip():
+                continue
+            was = ((prev_names or {}).get(club) or {}).get(key) or ""
+            if was and ch.get("name") and ch["name"] != was:
+                continue
+            wanted.add(want)
+            if key.startswith("+"):
+                later[(club, key)] = want
+            else:
+                pin[(club, int(key))] = want
+    # every player in the way moves to a free id first: those pinned, and whoever holds an id
+    # someone is pinned to; then the pinned ones take theirs
+    pinned = {first[club][n] for club, n in pin}
+    moving = pinned | {pid for pid in wanted if pid in index}
+    spare = max(list(index) + list(wanted) + list(taken)) + 1
+    temp = {}
+    for pid in sorted(moving):
+        temp[pid] = spare
+        _renumber(players, assigns, index, pid, spare)
+        spare += 1
+    for club in first:
+        first[club] = [temp.get(pid, pid) for pid in first[club]]
+    for (club, n), want in pin.items():
+        _renumber(players, assigns, index, first[club][n], want)
+        first[club][n] = want
+    return later
+
+
+def _renumber(players, assigns, index, old, pid):
+    """player `old` takes id `pid`, in Player.bin and every assignment of his"""
+    o = index.pop(old)
+    players[o + P_ID:o + P_ID + 4] = pid.to_bytes(4, "little")
+    index[pid] = o
+    for i in range(len(assigns) // A_REC):
+        if u32(assigns, i * A_REC + E.A_PID) == old:
+            assigns[i * A_REC + E.A_PID:i * A_REC + E.A_PID + 4] = pid.to_bytes(4, "little")
+
+
+def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, portraits=None,
+          prev=None, prev_names=None):
     r"""write the recipe's player changes into the world's tables in db (the world's
     common\etc\pesdb; Player.bin and PlayerAssignment.bin come from base when the world has
     none of its own yet).  pl is the plan: its leagues carry the team ids they were given.
@@ -798,6 +868,7 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
     # a new club's squad as mkplayers left it: place n in it is the recipe's key "n"
     first = {key: [pid for _o, pid, _a in squad_of(tid)] for key, tid in tids.items()}
     added_ids = {}                                     # club -> [id of each "add" entry]
+    reserved = _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_top)
 
     # the recipe keys a new club by its league's name as Mod Studio wrote it, the plan by the
     # name Build uses (stripped): a stray space or a change of case left a whole NewLife club
@@ -892,11 +963,14 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
             if len(index) + 1 > cap:
                 raise Error("the player table is full (%d)" % cap)
             rec = bytearray(players[index[srcpid]:index[srcpid] + P_REC])
+            again = reserved.pop((club, "+%d" % len(added_ids.get(club, []))), None)
             if str(ch.get("id", "")).strip():
                 pid = new_id(ch["id"])
+            elif again is not None and again not in index:
+                pid = again                            # the id the last Build gave him (#126)
             else:
                 pid = next_pid
-                while pid in index:
+                while pid in index or pid in reserved.values():
                     pid += 1
             next_pid = max(next_pid, pid + 1)
             added_ids.setdefault(club, []).append(pid)
