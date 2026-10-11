@@ -591,8 +591,10 @@ class LeagueDialog(Dialog):
             "bye into the next round. Top division only. Empty name = the league's name + Cup.")))
         self.supercup = QCheckBox(_("Super cup (champion v cup winner)"))
         self.supercup.setChecked(bool(L.get("supercup")))
-        self.form.addRow("", helped(self.supercup, "One match in late July: the league champion against the "
-                                    "cup winner. It needs the national cup."))
+        self.supercup_name = QLineEdit(L.get("supercup_name", ""))
+        self.supercup_name.setPlaceholderText(_("(the league's name + Super Cup)"))
+        self.form.addRow("", row(helped(self.supercup, "One match in late July: the league champion against the "
+                                        "cup winner. It needs the national cup."), self.supercup_name))
         self.cup.toggled.connect(lambda on: self.supercup.setEnabled(on and self.cup.isEnabled()))
         self.form.addRow("", hint(_("a top division of a new country: a national cup for it and the division "
                                     "below, any number of clubs (byes when the field is not 16, 32 ...)")))
@@ -682,7 +684,7 @@ class LeagueDialog(Dialog):
         if loose:
             self.exhibition.setChecked(False)
         for w in (self.exhibition, self.rr, self.legs, self.slegs, self.groups, self.glegs, self.exchange,
-                  self.logo, self.cup_name, self.lcup_name, self.cup_logo, self.supercup_logo,
+                  self.logo, self.cup_name, self.supercup_name, self.lcup_name, self.cup_logo, self.supercup_logo,
                   self.lcup_logo, self.po_logo):
             w.setEnabled(not loose)
         n = self.clubs.value()
@@ -737,6 +739,10 @@ class LeagueDialog(Dialog):
             L["cup_name"] = self.cup_name.text().strip()
         else:
             L.pop("cup_name", None)
+        if self.supercup_name.text().strip():
+            L["supercup_name"] = self.supercup_name.text().strip()
+        else:
+            L.pop("supercup_name", None)
         if self.lcup.isChecked() and self.above.currentData() is None:
             L["league_cup"] = True
         else:
@@ -813,7 +819,7 @@ class LeagueDialog(Dialog):
                                         "out first (Edit club)."))
                 return
             for k in ("above", "cup", "supercup", "league_cup", "split", "apertura", "europe", "season",
-                      "exhibition", "legs", "exchange", "logo", "cup_name", "league_cup_name", "cup_logo",
+                      "exhibition", "legs", "exchange", "logo", "cup_name", "supercup_name", "league_cup_name", "cup_logo",
                       "supercup_logo", "league_cup_logo", "playoff_logo"):
                 L.pop(k, None)
             L["others"] = self.others.currentData()
