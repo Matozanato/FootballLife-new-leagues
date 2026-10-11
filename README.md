@@ -42,6 +42,16 @@ CPKs: it all goes in through Sider modules and data files, and comes out again.
 This is a **beta**. It is published so that people who mod this game can use it, break it and
 tell us where. Read [what works and what does not](#status) before you start a long career.
 
+## Supporters
+
+They supported this project on [Ko-fi](https://ko-fi.com/mata28) and keep it going. Thank you!
+
+**A special thank you to the Ultimate Master League (UML) crew**, who covered a big part of
+what the project costs.
+
+**Thunder105** (the first one ever) · **GutGut** · **Scott Weir** (LaraCroft) ·
+**Pierro1912** · **David.BDJ**
+
 ## What you can do
 
 **Leagues and countries**
@@ -234,7 +244,10 @@ worst bugs here were found only because vmardonesdev played further than anyone 
   test next and turned the answer into the test runs for Apertura, the new countries' cups
   and the Kick Off order.
 - On the Discord, as Vicentico12: European places for the game's own leagues, which 0.1.7's
-  UEFA ranking gives, and a logo for the Copa Sudamericana.
+  UEFA ranking gives, a logo for the Copa Sudamericana, the calendar that stopped showing its
+  events after 0.2.0 (with a save to test it on), the July leagues of the modpack that never
+  reach the hub, and Norway's league that never started
+  ([#124](https://github.com/Matozanato/FootballLife-new-leagues/issues/124)).
 
 If you use anything from this repository, vmardonesdev's name belongs next to it.
 
@@ -357,7 +370,8 @@ and other Latin American worlds and writes up every bug with screenshots:
   ([#11](https://github.com/Matozanato/FootballLife-new-leagues/issues/11));
   `fl26comptab.lua` and `tools/mkflags.py` are built on it.
 - **AlexRufolo**: asked to pick the clubs of the European cups by hand, which became Mod
-  Studio's **First-season European clubs** (0.1.8).
+  Studio's **First-season European clubs** (0.1.8); asked for clubs listed A-Z, and found the
+  Korean January-December league that never started.
 - **pioup38**: the first report from a different game build and a clean configuration
   ([#3](https://github.com/Matozanato/FootballLife-new-leagues/issues/3)).
 - **bobzera** (Evo-Web): brought the "ACL71" kit problem into the open, new clubs past id
@@ -398,7 +412,8 @@ and other Latin American worlds and writes up every bug with screenshots:
   mode changes to new clubs that were never saved
   ([#55](https://github.com/Matozanato/FootballLife-new-leagues/issues/55)).
 - **Jabo9** (Evo-Web): saw a new League One take the FA Cup from the Premier League and the
-  Championship ([#68](https://github.com/Matozanato/FootballLife-new-leagues/issues/68)).
+  Championship ([#68](https://github.com/Matozanato/FootballLife-new-leagues/issues/68)),
+  and asked for new players to keep the look the game gives them.
 - **n1ne** (Discord): follows the work closely and asks the questions that show where the
   docs are not clear yet, such as how the European competitions get their clubs.
 - **mushroomwehk** ([mushroomwehk](https://github.com/mushroomwehk)): a new 12-club league
@@ -424,24 +439,45 @@ and other Latin American worlds and writes up every bug with screenshots:
 - **N3RO** (Discord): asked for the Czech Chance Liga.
 - **Hector** (Discord): crests and logos for the NewLife Database.
 - **LaraCroft** (Discord): asked for BATE Borisov on its own, which became 0.1.8's
-  **Clubs in no league**.
+  **Clubs in no league**, and for the clubs of a league listed A-Z; found the game's clubs
+  showing up in two Dutch leagues at once.
 - **Xxspedd** (Discord): shared his own crest, kit, squad and rating scripts; the idea of
   matching a folder of crests to clubs by name (0.1.8's Import crests) is his, and he pointed
   out the missing third kit. 0.2.0's kits made from plain pictures (**Import kits** with
   `p1.png`, `g1.png` ...) use his png -> ftex conversion, from his kit tool, given to Mod Studio.
 
+- **DavidBDJ** ([DavidBDJ](https://github.com/DavidBDJ)): complete test reports with saves
+  and logs from two seasons in Austria
+  ([#128](https://github.com/Matozanato/FootballLife-new-leagues/issues/128),
+  [#129](https://github.com/Matozanato/FootballLife-new-leagues/issues/129)): the kits of new
+  clubs that went to a folder the Kit Server does not read, and the European qualifiers.
+- **B2Y26Arabia** ([B2Y26Arabia](https://github.com/B2Y26Arabia)): found the Kick Off > Cup
+  crash with the Champions League of 36
+  ([#100](https://github.com/Matozanato/FootballLife-new-leagues/issues/100)), plus new leagues
+  missing in Edit mode and the skin colour of linked faces.
+- **rickydicky4444** and **MIQABARI**: the UECL gameweeks shown wrong in the calendar
+  ([#75](https://github.com/Matozanato/FootballLife-new-leagues/issues/75)) and a Master League
+  creation crash ([#123](https://github.com/Matozanato/FootballLife-new-leagues/issues/123)).
+- **rwee** (Discord): the Champions League's January matchday landing on a league day in leagues
+  of 18 and 20, a full world recipe to reproduce with, and the squad limit regression of 0.1.8.
+- **Risto** (Discord): club by club corrections for the FL26 Modpack's smaller countries
+  (Armenia, Moldova, the Faroe Islands ...) and the duplicate players in NewLife.
+- **Yanis** (Discord): `fl26caps` below the other modules in sider.ini.
+- **LumpierTheGunner** (Discord): the Kit Server crash with editable kits (now caught by
+  `fl26kitguard`) and the idea of a page with every competition id.
+- **Bon Kirk** (Discord): the recipe changes lost on closing Mod Studio.
+- **wishfulshot** (Discord): an old league package that stopped Check the plan.
+- **beny609o** (Discord): Import kits keeping a broken map line.
+- **Nickdaw** (Discord): patient crash reports on the modpack world.
+- **the_pelado** (Dream Patch): a full write-up of how the game picks trophy ceremonies.
+- **capital030** (Discord): the idea of packages without squads that only add to leagues already
+  there, and offered logos for the community.
+- **novarama** (Discord): NewLife's refresh of the game's leagues getting in the way of a league
+  added after it.
+
 Reports are welcome from anyone: open an
 [issue](https://github.com/Matozanato/FootballLife-new-leagues/issues) with what you
 installed, what you did and what you saw, and you will be on this list too.
-
-### Supporters
-
-They supported this project on [Ko-fi](https://ko-fi.com/mata28). Thank you!
-
-- **Thunder105**, the first one ever
-- **GutGut**
-- **Scott Weir** (LaraCroft)
-- **Pierro1912**
 
 ## Free to use — please credit
 
@@ -727,7 +763,7 @@ Contributors, and what each of them did, are listed in
 [The people who made this better](#the-people-who-made-this-better) near the top: above all
 **vmardonesdev** and **Alikhaled_727**, **vector360** and **jibibi**, and **Stagnant09**, **pioup38**, **bobzera**,
 **spursfan07**, **Amir**, **victormican**, **Alby17**, **jyanj083-dotcom**, **Gabyyy2008**, **alexfe87**,
-**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9**, **Xxspedd** and **n1ne**.
+**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9**, **Xxspedd**, **n1ne**, **LaraCroft**, **AlexRufolo**, **DavidBDJ**, **B2Y26Arabia**, **rwee**, **Risto**, **Yanis**, **LumpierTheGunner**, **Bon Kirk**, **wishfulshot**, **beny609o**, **Nickdaw**, **the_pelado**, **capital030**, **novarama**, **rickydicky4444** and **MIQABARI**.
 
 The licence asks nothing of you. I do: **if you use these findings, addresses, patch sets
 or tools in a mod, credit this work and link back** — see
