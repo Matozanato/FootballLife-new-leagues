@@ -1638,6 +1638,21 @@ static int q_world_p(int i)
   if (i >= NQ && !q_world_p(i % NQ)) return 0;
   return get_rec(q_reg(i)) && get_rec(q_tie_of(i, Q_N / 2 - 1));
 }
+/* why round i is not played, once a season (GitHub #128: a modpack career had no qualifying at
+   all, and nothing in the log said which test failed) */
+static void q_why(int i)
+{
+  static int said[NQR] = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+  int y = season_year();
+  if (said[i] == y) return;
+  said[i] = y;
+  const char* why = !g_access_on ? "the access list is off" : !q_reg(i) ? "no regulation named for it"
+                  : !q_listed(i) ? "no place of the access list is in it"
+                  : i >= NQ && !q_world_p(i % NQ) ? "its play-off is not played"
+                  : !get_rec(q_reg(i)) ? "its regulation is not found" : "its last tie is not found";
+  logf("fl26swiss: %s %s not played this season: %s (reg %u, tie %u, day %d)", QNAME(i), why,
+       (unsigned)q_reg(i), (unsigned)q_tie_of(i, Q_N / 2 - 1), today());
+}
 static int q_world(void) { return q_world_p(0); }
 static int q_world_mask(void)
 {
@@ -2031,7 +2046,9 @@ static int q_summer(void) { int d = today(); return d >= 180 && d < (int)swiss_d
 /* set_clubs on reg 2 or one of its ties in the summer: ours instead of the game's. 1 = handled */
 static int q_setcl(uint16_t r, uint64_t id, uint64_t flag, char* ok)
 {
-  if (!q_summer() || !q_world() || !(q_prepare() & 1)) return 0;
+  if (!q_summer()) return 0;
+  if (!q_world()) { q_why(0); return 0; }
+  if (!(q_prepare() & 1)) return 0;
   int k = r == 2 ? -1 : (int)(r >> 10) - 1;
   if (k >= Q_N / 2) return 0;
   u32vec v;
@@ -6568,7 +6585,8 @@ static int g_q_fill_year[NQR] = { -1, -1, -1, -1, -1, -1, -1, -1, -1 };
 static void q_fill(int p)
 {
   int d = today();
-  if (d < 205 || d > (int)qr_day(0, 1) || !q_world_p(p)) return;
+  if (d < 205 || d > (int)qr_day(0, 1)) return;
+  if (!q_world_p(p)) { if (q_reg(p)) q_why(p); return; }
   int mask = q_world_mask();
   if (d < (int)q_fill_from(mask, p) || d >= (int)q_first_leg(p)) return;
   int year = (abs_day() + 183) / 365;
