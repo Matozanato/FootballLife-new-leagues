@@ -20,6 +20,10 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   his name is the same.
 - Kits made for new clubs and package kits and scoreboards now go where your Kit Server and
   Scoreboard Server read them, also on a clean SPFL26 (GitHub #129).
+- Switch on puts `fl26caps` before the other modules of ours in sider.ini when it was further
+  down (then it refused the game and sider.log said MISMATCH).
+- The country cup draw (cup_draw random or seeded) rewrites only the clubs the cup's entry
+  list holds (GitHub #122).
 - Import kits replaces a map line whose kit folder is missing, instead of keeping it.
 - Players: the "a new club keeps at least 18 players" check counts the players who joined it.
 - A package whose NewLife club list has gaps no longer stops Check the plan.
