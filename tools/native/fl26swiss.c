@@ -218,8 +218,17 @@ static cell_t* cell_at(void* ctx, uint32_t leg, uint32_t i, uint32_t j)
 /* The replacement for 0x1413f3e00. MS x64 ABI: rcx = ctx, dx = regulation id, r8b = flag. */
 static int spread_leagues(const uint32_t* clubs, int n, const fl26_pair_t* table, int npairs, int pot,
                           uint8_t* perm, uint16_t id);
+#include "nordeste_schedule.h"
+static void nd_tick(void);
+static int nd_phase_id(uint16_t id);
+static uint64_t nd_current(uint64_t comp, uint64_t original);
+static int nd_hidden_comp(uint32_t comp);
+static uint64_t nd_menu_kind(const uint32_t* comp, uint64_t kind, uint64_t r, uintptr_t ra);
+
 char gen_handler(void* ctx, uint64_t reg, uint64_t flag)
 {
+  if (nd_row((uint16_t)reg) >= 0) return nd_generate(ctx, nd_row((uint16_t)reg));
+  if (nd_show_group((uint16_t)reg) >= 0) return nd_generate_empty(ctx, (uint16_t)reg);
   g_stat[0]++;
   uint16_t id = (uint16_t)reg;
   if (ctx && european(id)) {
@@ -310,6 +319,7 @@ char gen_handler(void* ctx, uint64_t reg, uint64_t flag)
  * group of four never reaches the threshold and gets the original. */
 char group_handler(void* ctx)
 {
+  if (nd_group(ctx)) return 0;
   vec_t* clubs = ctx ? (vec_t*)((unsigned char*)ctx + OFF_CLUBS) : 0;
   size_t nclubs = (clubs && clubs->b && clubs->e >= clubs->b) ? (size_t)(clubs->e - clubs->b) / 4 : 0;
   if (nclubs < FL26_SWISS_MIN_CLUBS)
@@ -4606,6 +4616,7 @@ static void canon_groups(const split_t* s);
 
 char prog_handler(void* ctx, uint64_t id, void* started)
 {
+  { int ndp = nd_phase_id((uint16_t)id); if (ndp >= 0 && ndp != 2) { nd_tick(); return 1; } }
   uint16_t r = (uint16_t)id;
   split_keys();
   {
@@ -5040,6 +5051,7 @@ static void cupdraw_tick(void)
 __declspec(dllexport) void fl26_swiss_ko_tick(void)
 {
   if (!g_base) return;
+  nd_tick();
   int d = today();
   abs_day();                      /* the loader calls this all year: it keeps abs_day() across New Year */
   lpre_fill_days();
@@ -5268,6 +5280,7 @@ uint64_t curph_handler(uint64_t comp, uint64_t flag, uint64_t flag2)
 {
   split_keys();
   uint64_t r = ((curph_fn)(uintptr_t)g_tramp_curph)(comp, flag, flag2);
+  uint64_t nr = nd_current(comp, r); if (nr != r) return nr;
   for (int ci = 0; ci < 3; ci++) {
     const cup_t* c = &CUPS[ci];
     unsigned char* lg = find_rec(c->league);
@@ -5441,6 +5454,11 @@ void tlist_handler(uint64_t phase, void* out)
 {
   tlist_fn f = (tlist_fn)(uintptr_t)g_tramp_tlist;
   if ((uintptr_t)__builtin_return_address(0) != g_base + TLIST_RA) { f(phase, out); return; }
+  if (nd_reg && nd_show && (uint16_t)phase == nd_reg) {
+    static int said_nd;
+    if (!said_nd++) logf("nordeste: a page asked for the groups of %u (A/B, C/D) -- given %u's, A-D", (unsigned)nd_reg, (unsigned)nd_show);
+    f((phase & ~0xffffull) | nd_show, out); return;
+  }
   if (g_tlist_only) { f((phase & ~0xffffull) | g_tlist_only, out); return; }
   /* asked for a qualifying phase of ours or reg 8: all of them, in play order */
   uint16_t ph = (uint16_t)phase, order[MAX_LPRE + 1];
@@ -5699,6 +5717,11 @@ uint64_t skipph_handler(uint64_t reg)
   uintptr_t ra = (uintptr_t)__builtin_return_address(0);
   if (ra != g_base + LIST_RA1 && ra != g_base + LIST_RA2 && ra != g_base + LIST_RA3) return 0;
   uint32_t comp = *(uint32_t*)(r + 0x80);
+  if (nd_hidden_comp(comp)) {
+    static int said_nd;
+    if (!said_nd++) logf("nordeste: Info Database -- competition %u (the matches) left out of the list", comp);
+    return 1;
+  }
   {
     uint32_t cc = 0, own = 0;
     if (sud_stage(&cc, &own) >= 0 && comp == own) {
@@ -6096,6 +6119,7 @@ uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
 {
   uint64_t r = ((phkind_fn)(uintptr_t)g_tramp_phkind)(comp, kind);
   uintptr_t ra = (uintptr_t)__builtin_return_address(0);
+  { uint64_t nr = nd_menu_kind(comp, kind, r, ra); if (nr != r) return nr; }
   /* ---- Copa Sudamericana -> its first stage as "Fase classificatoria" (2026-10-05) ----
      The first stage is a competition of its own; the cup has no play-off. When the cup's menu
      or page asks for a phase of a kind it has none of (0xffff), the first stage's master is the
@@ -7962,8 +7986,11 @@ static uint32_t midweek(uint32_t d)
   return (uint32_t)(((int)d + 365 + to[d % 7]) % 365);
 }
 
+#include "nordeste_engine.h"
+
 uint64_t date_handler(uint64_t reg, void* vec)
 {
+  if (nd_phase_id((uint16_t)reg) >= 0 && vec) return nd_phase_dates(reg, vec);
   uint16_t id = (uint16_t)reg;
   if (vec) abs_day();                              /* a day gone back: another career (abs_day) */
   if (vec && !g_new_career && !g_day_ticked) {    /* a career built in this session (day 216), */
@@ -8505,6 +8532,7 @@ char daychk_handler(void* ctx)
   lpre_fill_days();
   ccup_fill_days();
   for (int p = NQR - 1; p >= 0; p--) q_fill(p);
+  nd_tick();
   cal_dedupe();
   return r;
 }
@@ -8526,7 +8554,7 @@ typedef struct { uint16_t* b; uint16_t* e; uint16_t* c; } vec16_t;
 unsigned char* g_tramp_teardown = 0;
 static uint16_t g_td_list[512];
 static vec16_t  g_td_vec;
-vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
+static vec16_t* teardown_pre_base(uint64_t ctx, vec16_t* in)
 {
   (void)ctx;
   if (!in || !in->b || in->e < in->b) return in;
@@ -8680,6 +8708,26 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
        n, UECL_REG, UECL_KO, UECL_ROW, has1027 ? "has" : "does NOT have", has1029 ? "has" : "does NOT have");
   return &g_td_vec;
 }
+
+vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
+{
+  vec16_t* v = teardown_pre_base(ctx, in);
+  if (!nd_reg || !nd_show || !nd_ko || !v || !v->b || v->e < v->b || v->e - v->b > 480) return v;
+  int bra = 0;
+  for (uint16_t* p = v->b; p < v->e; p++) if (*p == 29) bra = 1;
+  static uint16_t ids[512]; static vec16_t out;
+  unsigned n = 0;
+  for (uint16_t* p = v->b; p < v->e; p++) if (nd_phase_id(*p) < 0) ids[n++] = *p;
+  if (bra) {                                   /* the Nordeste closes with the calendar-year group */
+    ids[n++] = nd_reg; ids[n++] = (uint16_t)(nd_reg + 1024); ids[n++] = (uint16_t)(nd_reg + 2048);
+    for (unsigned g = 0; g <= 4; g++) ids[n++] = (uint16_t)(nd_show + 1024 * g);
+    ids[n++] = nd_ko;
+    nd_last_status = 0; g_nd_tab_played = -1;
+  }
+  out.b = ids; out.e = ids + n; out.c = ids + 512;
+  return &out;
+}
+
 __attribute__((naked)) void teardown_handler(void)
 {
   __asm__ volatile(

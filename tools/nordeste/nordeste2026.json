@@ -1,0 +1,629 @@
+{
+  "name": "Copa do Nordeste 2026",
+  "upstream": "FL26 Mod Studio 0.2.1",
+  "status": "rules_and_scheduler_components_live_integration_pending",
+  "source": "https://ge.globo.com/pe/futebol/copa-do-nordeste/noticia/2026/03/03/copa-do-nordeste-2026-veja-grupos-formula-de-disputa-e-datas.ghtml",
+  "base": "D:\\FL26Lab_dist\\base-pesdb\\common\\etc\\pesdb",
+  "team_bin_sha256": "13cf4ca12daacf9728a94c1cfba229126ccb5fa6a37b9d9eae7c7461d57b5511",
+  "upstream_sha256": {
+    "leaguebuilder.py": "2b6a1d4d551d68692e66141b1ab21a62798f3baf53b00fe99e589cfa753c8226",
+    "mkccup.py": "63314702f7802d7aee0f77c9d4ebe1e33670e84c738a4b9d529113950a55d566",
+    "native/fl26swiss.c": "4ad5f38e5ba2dc984d9b69d4ecde6f7cd8adfee010b47372a9510c558ede5799"
+  },
+  "participants": [
+    {
+      "group": "A",
+      "slot": 0,
+      "name": "Vitória",
+      "state": "BA",
+      "abbr": "VIT",
+      "team_id": 1937,
+      "database_name": "EC Vitória",
+      "squad": "existing"
+    },
+    {
+      "group": "A",
+      "slot": 1,
+      "name": "ASA",
+      "state": "AL",
+      "abbr": "ASA",
+      "team_id": 71578,
+      "database_name": "ASA",
+      "squad": "mod_placeholder"
+    },
+    {
+      "group": "A",
+      "slot": 2,
+      "name": "Sousa",
+      "state": "PB",
+      "abbr": "SOU",
+      "team_id": 71579,
+      "database_name": "Sousa",
+      "squad": "mod_placeholder"
+    },
+    {
+      "group": "A",
+      "slot": 3,
+      "name": "Itabaiana",
+      "state": "SE",
+      "abbr": "ITA",
+      "team_id": 71580,
+      "database_name": "Itabaiana",
+      "squad": "mod_placeholder"
+    },
+    {
+      "group": "A",
+      "slot": 4,
+      "name": "Fluminense-PI",
+      "state": "PI",
+      "abbr": "FPI",
+      "team_id": 71581,
+      "database_name": "Fluminense-PI",
+      "squad": "mod_placeholder"
+    },
+    {
+      "group": "B",
+      "slot": 0,
+      "name": "Juazeirense",
+      "state": "BA",
+      "abbr": "JUA",
+      "team_id": 71582,
+      "database_name": "Juazeirense",
+      "squad": "mod_placeholder"
+    },
+    {
+      "group": "B",
+      "slot": 1,
+      "name": "CRB",
+      "state": "AL",
+      "abbr": "CRB",
+      "team_id": 2506,
+      "database_name": "Clube de Regatas Brasil",
+      "squad": "existing"
+    },
+    {
+      "group": "B",
+      "slot": 2,
+      "name": "Botafogo-PB",
+      "state": "PB",
+      "abbr": "BOT",
+      "team_id": 71583,
+      "database_name": "Botafogo-PB",
+      "squad": "mod_placeholder"
+    },
+    {
+      "group": "B",
+      "slot": 3,
+      "name": "Confiança",
+      "state": "SE",
+      "abbr": "CON",
+      "team_id": 71584,
+      "database_name": "Confiança",
+      "squad": "mod_placeholder"
+    },
+    {
+      "group": "B",
+      "slot": 4,
+      "name": "Piauí",
+      "state": "PI",
+      "abbr": "PIA",
+      "team_id": 71585,
+      "database_name": "Piauí",
+      "squad": "mod_placeholder"
+    },
+    {
+      "group": "C",
+      "slot": 0,
+      "name": "Ceará",
+      "state": "CE",
+      "abbr": "CEA",
+      "team_id": 2454,
+      "database_name": "Ceará SC",
+      "squad": "existing"
+    },
+    {
+      "group": "C",
+      "slot": 1,
+      "name": "Sport",
+      "state": "PE",
+      "abbr": "SPT",
+      "team_id": 1936,
+      "database_name": "Sport Recife",
+      "squad": "existing"
+    },
+    {
+      "group": "C",
+      "slot": 2,
+      "name": "América-RN",
+      "state": "RN",
+      "abbr": "ARN",
+      "team_id": 71586,
+      "database_name": "América-RN",
+      "squad": "mod_placeholder"
+    },
+    {
+      "group": "C",
+      "slot": 3,
+      "name": "Imperatriz",
+      "state": "MA",
+      "abbr": "IMP",
+      "team_id": 71587,
+      "database_name": "Imperatriz",
+      "squad": "mod_placeholder"
+    },
+    {
+      "group": "C",
+      "slot": 4,
+      "name": "Ferroviário",
+      "state": "CE",
+      "abbr": "FER",
+      "team_id": 5573,
+      "database_name": "Ferroviário AC",
+      "squad": "existing"
+    },
+    {
+      "group": "D",
+      "slot": 0,
+      "name": "Fortaleza",
+      "state": "CE",
+      "abbr": "FOR",
+      "team_id": 5143,
+      "database_name": "Fortaleza EC",
+      "squad": "existing"
+    },
+    {
+      "group": "D",
+      "slot": 1,
+      "name": "Retrô",
+      "state": "PE",
+      "abbr": "RET",
+      "team_id": 71588,
+      "database_name": "Retrô",
+      "squad": "mod_placeholder"
+    },
+    {
+      "group": "D",
+      "slot": 2,
+      "name": "ABC",
+      "state": "RN",
+      "abbr": "ABC",
+      "team_id": 71589,
+      "database_name": "ABC",
+      "squad": "mod_placeholder"
+    },
+    {
+      "group": "D",
+      "slot": 3,
+      "name": "Maranhão",
+      "state": "MA",
+      "abbr": "MAR",
+      "team_id": 71590,
+      "database_name": "Maranhão",
+      "squad": "mod_placeholder"
+    },
+    {
+      "group": "D",
+      "slot": 4,
+      "name": "Jacuipense",
+      "state": "BA",
+      "abbr": "JAC",
+      "team_id": 71591,
+      "database_name": "Jacuipense",
+      "squad": "mod_placeholder"
+    }
+  ],
+  "fixed_entrants": true,
+  "fixtures": [
+    {
+      "round": 1,
+      "home": "Vitória",
+      "away": "Juazeirense",
+      "home_id": 1937,
+      "away_id": 71582
+    },
+    {
+      "round": 1,
+      "home": "ASA",
+      "away": "CRB",
+      "home_id": 71578,
+      "away_id": 2506
+    },
+    {
+      "round": 1,
+      "home": "Sousa",
+      "away": "Botafogo-PB",
+      "home_id": 71579,
+      "away_id": 71583
+    },
+    {
+      "round": 1,
+      "home": "Itabaiana",
+      "away": "Confiança",
+      "home_id": 71580,
+      "away_id": 71584
+    },
+    {
+      "round": 1,
+      "home": "Fluminense-PI",
+      "away": "Piauí",
+      "home_id": 71581,
+      "away_id": 71585
+    },
+    {
+      "round": 1,
+      "home": "Ceará",
+      "away": "Fortaleza",
+      "home_id": 2454,
+      "away_id": 5143
+    },
+    {
+      "round": 1,
+      "home": "Sport",
+      "away": "Retrô",
+      "home_id": 1936,
+      "away_id": 71588
+    },
+    {
+      "round": 1,
+      "home": "América-RN",
+      "away": "ABC",
+      "home_id": 71586,
+      "away_id": 71589
+    },
+    {
+      "round": 1,
+      "home": "Imperatriz",
+      "away": "Maranhão",
+      "home_id": 71587,
+      "away_id": 71590
+    },
+    {
+      "round": 1,
+      "home": "Ferroviário",
+      "away": "Jacuipense",
+      "home_id": 5573,
+      "away_id": 71591
+    },
+    {
+      "round": 2,
+      "home": "CRB",
+      "away": "Vitória",
+      "home_id": 2506,
+      "away_id": 1937
+    },
+    {
+      "round": 2,
+      "home": "Botafogo-PB",
+      "away": "ASA",
+      "home_id": 71583,
+      "away_id": 71578
+    },
+    {
+      "round": 2,
+      "home": "Confiança",
+      "away": "Sousa",
+      "home_id": 71584,
+      "away_id": 71579
+    },
+    {
+      "round": 2,
+      "home": "Piauí",
+      "away": "Itabaiana",
+      "home_id": 71585,
+      "away_id": 71580
+    },
+    {
+      "round": 2,
+      "home": "Juazeirense",
+      "away": "Fluminense-PI",
+      "home_id": 71582,
+      "away_id": 71581
+    },
+    {
+      "round": 2,
+      "home": "Retrô",
+      "away": "Ceará",
+      "home_id": 71588,
+      "away_id": 2454
+    },
+    {
+      "round": 2,
+      "home": "ABC",
+      "away": "Sport",
+      "home_id": 71589,
+      "away_id": 1936
+    },
+    {
+      "round": 2,
+      "home": "Maranhão",
+      "away": "América-RN",
+      "home_id": 71590,
+      "away_id": 71586
+    },
+    {
+      "round": 2,
+      "home": "Jacuipense",
+      "away": "Imperatriz",
+      "home_id": 71591,
+      "away_id": 71587
+    },
+    {
+      "round": 2,
+      "home": "Fortaleza",
+      "away": "Ferroviário",
+      "home_id": 5143,
+      "away_id": 5573
+    },
+    {
+      "round": 3,
+      "home": "Vitória",
+      "away": "Botafogo-PB",
+      "home_id": 1937,
+      "away_id": 71583
+    },
+    {
+      "round": 3,
+      "home": "ASA",
+      "away": "Confiança",
+      "home_id": 71578,
+      "away_id": 71584
+    },
+    {
+      "round": 3,
+      "home": "Sousa",
+      "away": "Piauí",
+      "home_id": 71579,
+      "away_id": 71585
+    },
+    {
+      "round": 3,
+      "home": "Itabaiana",
+      "away": "Juazeirense",
+      "home_id": 71580,
+      "away_id": 71582
+    },
+    {
+      "round": 3,
+      "home": "Fluminense-PI",
+      "away": "CRB",
+      "home_id": 71581,
+      "away_id": 2506
+    },
+    {
+      "round": 3,
+      "home": "Ceará",
+      "away": "ABC",
+      "home_id": 2454,
+      "away_id": 71589
+    },
+    {
+      "round": 3,
+      "home": "Sport",
+      "away": "Maranhão",
+      "home_id": 1936,
+      "away_id": 71590
+    },
+    {
+      "round": 3,
+      "home": "América-RN",
+      "away": "Jacuipense",
+      "home_id": 71586,
+      "away_id": 71591
+    },
+    {
+      "round": 3,
+      "home": "Imperatriz",
+      "away": "Fortaleza",
+      "home_id": 71587,
+      "away_id": 5143
+    },
+    {
+      "round": 3,
+      "home": "Ferroviário",
+      "away": "Retrô",
+      "home_id": 5573,
+      "away_id": 71588
+    },
+    {
+      "round": 4,
+      "home": "Confiança",
+      "away": "Vitória",
+      "home_id": 71584,
+      "away_id": 1937
+    },
+    {
+      "round": 4,
+      "home": "Piauí",
+      "away": "ASA",
+      "home_id": 71585,
+      "away_id": 71578
+    },
+    {
+      "round": 4,
+      "home": "Juazeirense",
+      "away": "Sousa",
+      "home_id": 71582,
+      "away_id": 71579
+    },
+    {
+      "round": 4,
+      "home": "CRB",
+      "away": "Itabaiana",
+      "home_id": 2506,
+      "away_id": 71580
+    },
+    {
+      "round": 4,
+      "home": "Botafogo-PB",
+      "away": "Fluminense-PI",
+      "home_id": 71583,
+      "away_id": 71581
+    },
+    {
+      "round": 4,
+      "home": "Maranhão",
+      "away": "Ceará",
+      "home_id": 71590,
+      "away_id": 2454
+    },
+    {
+      "round": 4,
+      "home": "Jacuipense",
+      "away": "Sport",
+      "home_id": 71591,
+      "away_id": 1936
+    },
+    {
+      "round": 4,
+      "home": "Fortaleza",
+      "away": "América-RN",
+      "home_id": 5143,
+      "away_id": 71586
+    },
+    {
+      "round": 4,
+      "home": "Retrô",
+      "away": "Imperatriz",
+      "home_id": 71588,
+      "away_id": 71587
+    },
+    {
+      "round": 4,
+      "home": "ABC",
+      "away": "Ferroviário",
+      "home_id": 71589,
+      "away_id": 5573
+    },
+    {
+      "round": 5,
+      "home": "Vitória",
+      "away": "Piauí",
+      "home_id": 1937,
+      "away_id": 71585
+    },
+    {
+      "round": 5,
+      "home": "ASA",
+      "away": "Juazeirense",
+      "home_id": 71578,
+      "away_id": 71582
+    },
+    {
+      "round": 5,
+      "home": "Sousa",
+      "away": "CRB",
+      "home_id": 71579,
+      "away_id": 2506
+    },
+    {
+      "round": 5,
+      "home": "Itabaiana",
+      "away": "Botafogo-PB",
+      "home_id": 71580,
+      "away_id": 71583
+    },
+    {
+      "round": 5,
+      "home": "Fluminense-PI",
+      "away": "Confiança",
+      "home_id": 71581,
+      "away_id": 71584
+    },
+    {
+      "round": 5,
+      "home": "Ceará",
+      "away": "Jacuipense",
+      "home_id": 2454,
+      "away_id": 71591
+    },
+    {
+      "round": 5,
+      "home": "Sport",
+      "away": "Fortaleza",
+      "home_id": 1936,
+      "away_id": 5143
+    },
+    {
+      "round": 5,
+      "home": "América-RN",
+      "away": "Retrô",
+      "home_id": 71586,
+      "away_id": 71588
+    },
+    {
+      "round": 5,
+      "home": "Imperatriz",
+      "away": "ABC",
+      "home_id": 71587,
+      "away_id": 71589
+    },
+    {
+      "round": 5,
+      "home": "Ferroviário",
+      "away": "Maranhão",
+      "home_id": 5573,
+      "away_id": 71590
+    }
+  ],
+  "fixture_order": "generated_not_official",
+  "quarterfinals": [
+    [
+      "A1",
+      "C2"
+    ],
+    [
+      "B1",
+      "D2"
+    ],
+    [
+      "C1",
+      "A2"
+    ],
+    [
+      "D1",
+      "B2"
+    ]
+  ],
+  "semifinals": [
+    [
+      "E",
+      "H"
+    ],
+    [
+      "F",
+      "G"
+    ]
+  ],
+  "rec_source": "https://www.srgoool.com.br/downloads.php?id_anexo=1583",
+  "tiebreakers": [
+    "points",
+    "wins",
+    "goal_difference",
+    "goals_for",
+    "fewer_red_cards",
+    "fewer_yellow_cards",
+    "draw"
+  ],
+  "knockout": {
+    "extra_time": false,
+    "away_goals": false,
+    "tied_score": "penalties",
+    "return_host": "cumulative_campaign"
+  },
+  "legs": {
+    "groups": 1,
+    "quarterfinals": 1,
+    "semifinals": 2,
+    "final": 2
+  },
+  "qualification": {
+    "per_group": 2
+  },
+  "pending": [
+    "runtime cross-group fixtures and four separate standings",
+    "quarterfinal/semifinal/final progression and home advantage",
+    "official tiebreakers and calendar integration",
+    "resolve placeholder clubs outside season leagues",
+    "save/load and season rollover validation"
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "world": "_FL26Nordeste2026Clubs",
+  "uecl": false,
+  "leagues": [
+    {
+      "name": "Nordeste 2026 - elencos ficticios",
+      "country": "Brazil",
+      "others": "latam",
+      "clubs": 14,
+      "club_names": [
+        "ASA",
+        "Sousa",
+        "Itabaiana",
+        "Fluminense-PI",
+        "Juazeirense",
+        "Botafogo-PB",
+        "Confiança",
+        "Piauí",
+        "América-RN",
+        "Imperatriz",
+        "Retrô",
+        "ABC",
+        "Maranhão",
+        "Jacuipense"
+      ],
+      "club_abbrs": [
+        "ASA",
+        "SOU",
+        "ITA",
+        "FPI",
+        "JUA",
+        "BOT",
+        "CON",
+        "PIA",
+        "ARN",
+        "IMP",
+        "RET",
+        "ABC",
+        "MAR",
+        "JAC"
+      ]
+    }
+  ]
+}
