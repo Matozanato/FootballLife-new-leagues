@@ -6723,9 +6723,70 @@ static void block(uint8_t* bad, uint32_t d, int buf)
   int p = (int)rpos(d);
   for (int k = -(buf - 1); k <= buf - 1; k++) if (p + k >= 0 && p + k < 365) bad[p + k] = 1;
 }
+/* ---- a calendar-year league and its country's own cup ----
+ * A league of the game on the calendar year (Chile, Colombia ...) is respaced around its
+ * continental cups only, and the national cup of its country -- the game's own, on the game's
+ * own dates -- was not counted: Colombia's league round of 16 February moved onto the Copa
+ * BetPlay's first leg, and the user's club had two matches that day, the calendar showing one
+ * and the match screen the other (a tester's report, 2026-10-12, Fortaleza CEIF; Flamengo too).
+ * The cups are the game's knockouts of the league's region in another competition (masters,
+ * none of ours); their days are the game's own calendar for them (the date function, the
+ * original), read once a season and kept. */
+#define HOME_CUPS 8               /* a league's own cups at most */
+#define HOME_CUP_DAYS 40
+#define HCUP_CACHE 128            /* every cup of every league read this season: with 8 the Copa BetPlay
+                                     came after the cache was full and Colombia kept its collision
+                                     (2026-10-12, the second run) */
+static uint16_t g_hcup_id[HCUP_CACHE]; static uint16_t g_hcup_day[HCUP_CACHE][HOME_CUP_DAYS];
+static int g_hcup_n[HCUP_CACHE], g_hcup_count = 0, g_hcup_year = -1;
+static int home_cup_days(uint16_t id, uint16_t* out, int max)
+{
+  unsigned char* r = find_rec(id);
+  if (!r || !g_tramp_date) return 0;
+  uint32_t region = (*(uint32_t*)(r + 0x30c) >> 7) & 0x3f, comp = *(uint32_t*)(r + 0x80);
+  int year = season_year();
+  if (year != g_hcup_year) { g_hcup_year = year; g_hcup_count = 0; }
+  uint32_t n = 0;
+  unsigned char* list = reg_list(&n);
+  int got = 0;
+  for (uint32_t i = 0; list && i < n; i++) {
+    uint16_t c = *(uint16_t*)(list + 0x314ull * i);
+    if (c >= 1024 || c == id) continue;
+    unsigned char* rc = find_rec(c);
+    int tie, ko;
+    if (!rc || *(uint32_t*)(rc + 0x84) != 3 || *(uint32_t*)(rc + 0x80) == comp
+        || ((*(uint32_t*)(rc + 0x30c) >> 7) & 0x3f) != region) continue;
+    if (ours(c) || lpre_of(c, &tie) >= 0 || ccup_of(c, &ko) >= 0 || nd_phase_id(c) >= 0) continue;
+    int k = 0;
+    while (k < g_hcup_count && g_hcup_id[k] != c) k++;
+    if (k == g_hcup_count) {
+      if (g_hcup_count == HCUP_CACHE) {
+        static int full;
+        if (!full++) logf("fl26swiss: country cups -- the cache of %d is full; reg %u's cup %u not kept clear", HCUP_CACHE, (unsigned)id, (unsigned)c);
+        continue;
+      }
+      vec_t v = {0, 0, 0};                     /* the game's own allocator grows it (a small leak, once a season) */
+      ((date_fn)(uintptr_t)g_tramp_date)(c, &v);
+      size_t have = v.b && v.e >= v.b ? (size_t)(v.e - v.b) / sizeof(date_t) : 0;
+      g_hcup_id[k] = c; g_hcup_n[k] = 0;
+      for (size_t j = 0; j < have && g_hcup_n[k] < HOME_CUP_DAYS; j++) {
+        uint32_t d = ((date_t*)v.b)[j].day;
+        if (d < 365) g_hcup_day[k][g_hcup_n[k]++] = (uint16_t)d;
+      }
+      g_hcup_count++;
+      logf("fl26swiss: reg %u -- the country's cup %u (competition %u): %d date(s), days %u..%u, kept clear", (unsigned)id,
+           (unsigned)c, *(uint32_t*)(rc + 0x80), g_hcup_n[k], g_hcup_n[k] ? g_hcup_day[k][0] : 0u,
+           g_hcup_n[k] ? g_hcup_day[k][g_hcup_n[k] - 1] : 0u);
+    }
+    for (int j = 0; j < g_hcup_n[k] && got < max; j++) out[got++] = g_hcup_day[k][j];
+  }
+  return got;
+}
+
 /* the days a league's clubs may play on besides the league: level 0 all of them, 1 without
    the league cup, 2 without the national cups either. A calendar-year league (g_org 0) has
-   no European season and its own country's cups, so only its continental cups count. */
+   no European season: its continental cups count, and below level 2 its country's own cup
+   (home_cup_days). */
 static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
 {
   memset(bad, 0, 365);
@@ -6739,7 +6800,14 @@ static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
   for (int k = 0; k < g_nccup; k++)
     if (g_ccup[k].national && g_ccup[k].nc && (ccup_of_league(k, id) || ccup_invites(k, id)))
       for (int i = 0; i < g_ccup[k].nd && i < CCUP_MAX_DAYS; i++) block(bad, g_ccup[k].days[i], buf);
-  if (g_org != 182) return;
+  if (g_org != 182) {
+    if (level < 2) {
+      uint16_t cd[HOME_CUPS * HOME_CUP_DAYS];
+      int nc = home_cup_days(id, cd, HOME_CUPS * HOME_CUP_DAYS);
+      for (int i = 0; i < nc; i++) block(bad, cd[i], buf > 2 ? buf - 1 : buf);
+    }
+    return;
+  }
   /* only a league that sends clubs to Europe keeps clear of its days: a second division blocked
      by them as well had one day left between a midweek round and a European week, and every
      league of a big world met on it (2026-10-08, the modpack: day 65 asked 403 matches of 280) */
@@ -6757,6 +6825,19 @@ static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
      between New Year's round and the cup's (day 3), and between early February's and the cup's
      (day 38), took every league of a big world -- 330 matches asked of 280 (2026-10-08) */
   if (level < 2) for (int i = 0; i < 12; i++) block(bad, natcup_day(i), buf > 2 ? buf - 1 : buf);
+  /* and its country's own cup when that is on other days than the European cups' calendar: a
+     league of the game in the first half of the year only (Colombia's Liga BetPlay I, February to
+     June) reads as an August-May one here and met the Copa BetPlay's days (2026-10-12). A cup on
+     NATCUP_DAYS is the case above already, so the European leagues are as they were. */
+  if (level < 2) {
+    uint16_t cd[HOME_CUPS * HOME_CUP_DAYS];
+    int nc = home_cup_days(id, cd, HOME_CUPS * HOME_CUP_DAYS);
+    for (int i = 0; i < nc; i++) {
+      int eu = 0;
+      for (int j = 0; j < 12; j++) if (cd[i] == NATCUP_DAYS[j]) eu = 1;
+      if (!eu) block(bad, cd[i], buf > 2 ? buf - 1 : buf);
+    }
+  }
   if (level < 1)
     for (int k = 0; k < g_nccup; k++) {
       if (!g_ccup[k].national || g_ccup[k].nc || !ccup_of_league(k, id)) continue;
@@ -6882,6 +6963,12 @@ static void rest_dates(uint16_t id, date_t* r, uint32_t n)
     if (!seen)
       logf("fl26swiss: reg %u -- %d of %u round(s) moved for %d day(s) between matches%s", (unsigned)id, moved,
            (unsigned)n, GAP[t], t == 1 ? " (not around the league cup)" : t >= 2 ? " (not around the cups)" : "");
+    if (!seen) {                                      /* what is left on the country's cup days */
+      uint16_t cd[HOME_CUPS * HOME_CUP_DAYS];
+      int nc = home_cup_days(id, cd, HOME_CUPS * HOME_CUP_DAYS), same = 0;
+      for (uint32_t i = 0; i < n; i++) for (int j = 0; j < nc; j++) if (r[i].day == cd[j]) { same++; break; }
+      if (nc) logf("fl26swiss: reg %u -- %d round(s) on a day of its country's cup", (unsigned)id, same);
+    }
     return;
   }
   g_org = 182;
