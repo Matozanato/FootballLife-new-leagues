@@ -4,9 +4,10 @@ A Brazilian regional cup on top of the South American cups world: 20 clubs in fo
 of five, A plays B and C plays D (one round, five matchdays), two per group into one-match
 quarter-finals A1-C2, B1-D2, C1-A2, D1-B2, then two-leg semi-finals and final.
 
-**Status: experimental.** Group stage generation, the Info Database entry and the group
-tables are being checked in game (lab, 0.2.1 modules + fl26caps 3510); the knockout has not
-been played in game yet. Not for players.
+**Status: experimental.** Checked in game (lab, 0.2.1 modules + fl26caps 3510): the single
+Info Database entry, the 50 group matches, the four group tables (0 points from day 1), the
+knockout filled on day 118 and played (one-match quarter-finals on day 125, two-leg
+semi-finals and final), its menu item live. Not for players yet.
 
 ## How it is built
 
@@ -26,6 +27,9 @@ other group's clubs has no shape in the regulation tables. So the cup is three m
 - leaves the carrier out of the list (`skipph_handler`);
 - greys the group stage items until the four tables exist;
 - hands a page that asks for the carrier's groups (the table after a match) the groups A-D;
+- lights the Knockout stage item once the knockout has matches (`nd_pastgrp`, 0x14151c5e0:
+  the shown groups play nothing and never read finished);
+- counts the carrier's goals and assists into the cup's rankings;
 - ranks a group: points, wins, goal difference, goals scored, then a draw seeded by the
   season and the club (the disciplinary criteria are not read yet).
 

@@ -387,7 +387,10 @@ static uint64_t nd_menu_kind(const uint32_t* comp, uint64_t kind, uint64_t r, ui
 
 /* the knockout's records, borrowed from the Libertadores knockout (reg 10: round of 16, quarter-,
    semi-finals two legs, the final one) and made into the cup's five: the quarter-finals one match
-   (kind 2), the semi-finals and the final two legs (kinds 0 and 1).  Rounds 0x33 0x34 0x35. */
+   (kind 2), the semi-finals and the final two legs (kinds 0 and 1).  Rounds 0x2e 0x34 0x35: the
+   game numbers a knockout's first round 0x2e whatever the field (read live 2026-10-12: the eight's
+   quarter-final records are round 0x2e, the semi-finals 0x34, the final 0x35; dated as 0x33 the
+   quarter-finals stayed undated, state 3, and two legs). */
 #define ND_KO_LIKE 10
 static uint64_t nd_phase_dates(uint64_t reg, void* vec)
 {
@@ -409,7 +412,7 @@ static uint64_t nd_phase_dates(uint64_t reg, void* vec)
     if (!said++) logf("nordeste: knockout %u -- reg %u gave %u record(s), 5 wanted; no dates", (unsigned)nd_ko, ND_KO_LIKE, (unsigned)have);
     return result;
   }
-  static const uint32_t round[5] = {0x33, 0x34, 0x34, 0x35, 0x35}, kind[5] = {2, 0, 1, 0, 1};
+  static const uint32_t round[5] = {0x2e, 0x34, 0x34, 0x35, 0x35}, kind[5] = {2, 0, 1, 0, 1};
   date_t* d = (date_t*)v->b;
   for (unsigned i = 0; i < 5; i++) { d[i].day = nd_ko_days[i]; d[i].round = round[i]; d[i].kind = kind[i]; }
   v->e = v->b + 5 * sizeof(date_t);
@@ -420,7 +423,7 @@ static uint64_t nd_phase_dates(uint64_t reg, void* vec)
 
 /* ---- the quarter-finals one match: the tie builder asks 0x14151d1e0(reg, round) whether a round
    is one match; the knockout's legs mode (2, every round two legs) answers no, so the quarter-final
-   round 0x33 of ours is answered yes and everything else asks the game ---- */
+   round of ours (0x2e, the first round) is answered yes and everything else asks the game ---- */
 #define ONEMATCH_RVA 0x151d1e0
 static const unsigned char SIG_ONEMATCH[15] = {
   0x48, 0x89, 0x5c, 0x24, 0x08, 0x48, 0x89, 0x6c, 0x24, 0x10, 0x48, 0x89, 0x74, 0x24, 0x18 };
@@ -428,7 +431,7 @@ typedef char (*onematch_fn)(uint64_t reg, uint64_t round);
 unsigned char* g_tramp_onematch = 0;
 char nd_onematch(uint64_t reg, uint64_t round)
 {
-  if (nd_ko && (uint16_t)reg == nd_ko && (uint32_t)round == 0x33) return 1;
+  if (nd_ko && (uint16_t)reg == nd_ko && (uint32_t)round == 0x2e) return 1;
   return ((onematch_fn)(uintptr_t)g_tramp_onematch)(reg, round);
 }
 
@@ -517,6 +520,41 @@ static int nd_table_patch(void)
   return 0;
 }
 
+/* ---- the menu's Knockout stage item ----
+   It is live when 0x14151c5e0(comp) says the competition is past its groups: the group phase that
+   leads to a knockout (+0x78) has to read finished (0x141546c70).  The shown groups play nothing
+   and never finish, so the item stayed grey with the quarter-finals played (2026-10-12, day 142).
+   For the cup: past its groups once the knockout has its matches; anything else asks the game. */
+#define PASTGRP_RVA 0x151c5e0
+static const unsigned char SIG_PASTGRP[22] = {      /* push rsi carries a REX byte (40 56) */
+  0x40, 0x56, 0x57, 0x41, 0x54, 0x41, 0x56, 0x41, 0x57, 0x48, 0x83, 0xec, 0x40,
+  0x48, 0xc7, 0x44, 0x24, 0x20, 0xfe, 0xff, 0xff, 0xff };
+typedef uint64_t (*pastgrp_fn)(uint32_t* comp);
+unsigned char* g_tramp_pastgrp = 0;
+static int nd_cup_comp(uint32_t comp);
+uint64_t nd_pastgrp(uint32_t* comp)
+{
+  uint64_t r = ((pastgrp_fn)(uintptr_t)g_tramp_pastgrp)(comp);
+  if (!comp || IsBadReadPtr(comp, 4) || !nd_cup_comp(*comp)) return r;
+  uint64_t out = ccup_matches(nd_ko) > 0 ? 1 : 0;
+  static int said = -1;
+  if (said != (int)out) {
+    said = (int)out;
+    logf("nordeste: Knockout stage item %s (the game said %d)", out ? "live: the knockout has its matches" : "grey: no knockout yet",
+         (int)(uint8_t)r);
+  }
+  return (r & ~0xffull) | out;
+}
+
+/* the cup's own competition (the one listed): its goal and assist rankings count the carrier's
+   matches in (rank_build, hasrank_handler) */
+static int nd_cup_comp(uint32_t comp)
+{
+  if (!nd_show) return 0;
+  unsigned char* g = find_rec(nd_show);
+  return g && *(uint32_t*)(g + 0x80) == comp;
+}
+
 /* the carrier: the competition holding the matches, left out of the Info Database (skipph_handler) */
 static int nd_hidden_comp(uint32_t comp)
 {
@@ -555,7 +593,10 @@ __declspec(dllexport) int fl26_nd_engine_install(void)
   static int b = -1, c = -1;
   if (b != 0) b = nd_region_patch();
   if (c != 0) c = nd_table_patch();
-  logf("nordeste: one-match quarter-finals %s (%d), Info Database single entry %s (%d), row table log %s (%d)",
-       a ? "NOT installed" : "live", a, b ? "NOT installed" : "live", b, c ? "NOT installed" : "live", c);
+  int e = g_tramp_pastgrp ? 0 : hook((unsigned char*)(uintptr_t)(g_base + PASTGRP_RVA), SIG_PASTGRP, 22,
+                                    (void*)nd_pastgrp, &g_tramp_pastgrp);
+  logf("nordeste: one-match quarter-finals %s (%d), Info Database single entry %s (%d), row table log %s (%d), knockout item %s (%d)",
+       a ? "NOT installed" : "live", a, b ? "NOT installed" : "live", b, c ? "NOT installed" : "live", c,
+       e ? "NOT installed" : "live", e);
   return !a && !b;
 }

@@ -223,6 +223,7 @@ static void nd_tick(void);
 static int nd_phase_id(uint16_t id);
 static uint64_t nd_current(uint64_t comp, uint64_t original);
 static int nd_hidden_comp(uint32_t comp);
+static int nd_cup_comp(uint32_t comp);
 static uint64_t nd_menu_kind(const uint32_t* comp, uint64_t kind, uint64_t r, uintptr_t ra);
 
 char gen_handler(void* ctx, uint64_t reg, uint64_t flag)
@@ -6018,7 +6019,7 @@ static unsigned char* rank_build(uint16_t reg, int as, const char* who)
   uint32_t comp = *(uint32_t*)(rr + 0x80), cc = 0;
   /* the Copa Sudamericana: the regulation asked about may have no table of its own -- the cup's
      table is whichever of its regulations has one */
-  if ((!t || !*(uint32_t*)(t + 0x320)) && sud_stage(&cc, 0) >= 0 && comp == cc) {
+  if ((!t || !*(uint32_t*)(t + 0x320)) && ((sud_stage(&cc, 0) >= 0 && comp == cc) || nd_cup_comp(comp))) {
     uint32_t n = 0;
     unsigned char* list = reg_list(&n);
     for (uint32_t i = 0; list && i < n; i++) {
@@ -6034,6 +6035,10 @@ static unsigned char* rank_build(uint16_t reg, int as, const char* who)
   for (int i = 0; i < g_nlpre && ne < MAX_LPRE; i++) {
     if (comp == LIB_CID_RT && g_lpre[i].alias) extra[ne++] = g_lpre[i].reg;
     else if (si >= 0 && comp == cc && (i == si || g_lpre[i].poko)) extra[ne++] = g_lpre[i].reg;
+  }
+  /* the Copa do Nordeste: its group matches are the carrier's (its master and rows A/B, C/D) */
+  if (nd_cup_comp(comp) && ne + 3 <= MAX_LPRE) {
+    extra[ne++] = nd_reg; extra[ne++] = (uint16_t)(nd_reg + 1024); extra[ne++] = (uint16_t)(nd_reg + 2048);
   }
   if (!ne) return t;
   static unsigned char all[4 * RANK_MAX * 4][0x14];
@@ -6100,7 +6105,7 @@ uint64_t hasrank_handler(uint64_t reg, uint8_t* goals)
   uint32_t cc = 0;
   if (!rr) return r;
   uint32_t comp = *(uint32_t*)(rr + 0x80);
-  if (comp != LIB_CID_RT && !(sud_stage(&cc, 0) >= 0 && comp == cc)) return r;
+  if (comp != LIB_CID_RT && !(sud_stage(&cc, 0) >= 0 && comp == cc) && !nd_cup_comp(comp)) return r;
   rank_survey("the ranking items");
   unsigned char* t = rank_build((uint16_t)reg, *goals == 0, "item check");
   int yes = t && *(uint32_t*)(t + 0x320) > 0;
@@ -6332,6 +6337,23 @@ unsigned char* g_tramp_ptitle = 0;
 void* ptitle_handler(void* out, uint16_t* reg, uint32_t* round, uint32_t* kind, uint64_t f1, uint64_t f2)
 {
   ptitle_fn f = (ptitle_fn)(uintptr_t)g_tramp_ptitle;
+  /* the Copa do Nordeste's shown groups A-D play nothing (zero matchdays), so a page titled by
+     one of them past its first round read "%s" (2026-10-12, the table after the second match):
+     they are titled as the matches' row A/B, which has the five rounds */
+  if (reg && !IsBadReadPtr(reg, 2) && nd_show && (nd_show_group(*reg) >= 0 || *reg == nd_show)) {
+    static uint32_t seen[16]; static int nseen;
+    uint32_t sig = ((uint32_t)*reg << 8) | (round && !IsBadReadPtr(round, 4) ? (*round & 0xff) : 0xff);
+    int known = 0;
+    for (int q = 0; q < nseen; q++) if (seen[q] == sig) known = 1;
+    if (!known && nseen < 16) {
+      seen[nseen++] = sig;
+      logf("nordeste: stage title of shown group %u (round %d, kind %d) -- titled as row %u", (unsigned)*reg,
+           round && !IsBadReadPtr(round, 4) ? (int)*round : -1, kind && !IsBadReadPtr(kind, 4) ? (int)*kind : -1,
+           (unsigned)(nd_reg + 1024));
+    }
+    uint16_t as = (uint16_t)(nd_reg + 1024);
+    return f(out, &as, round, kind, f1, f2);
+  }
   int tk, li = reg && !IsBadReadPtr(reg, 2) ? lpre_of(*reg, &tk) : -1;
   if (li < 0 || !(g_lpre[li].single || g_lpre[li].alias || g_lpre[li].poko) || g_lpre[li].own) return f(out, reg, round, kind, f1, f2);
   uint16_t as = g_lpre[li].poko ? 2 : 8;           /* the play-off: reg 2's "Play-offs" */
