@@ -132,6 +132,24 @@ AFTER_DISP = ((0x14157adfe, 0x3f188),)                 # disp past the calendar 
 # lea rcx, [r14 + 0x16038a8] at 0x14438cced, which hands 0x1414c8fd0 the calendar.  Found from
 # a crash, not a scan -- calaudit cannot vouch for it.
 IMPDATA_BASE = (0x14438ccf0,)                          # the disp32 itself
+# Three event-slot references the survey does not reach, found 2026-10-11 chasing the missing
+# event icons (the advance-time grid and the team calendar show only the league crests once the
+# day is widened).  All three move like any "event" site, by events_off - 0x234:
+#  - 0x1447909f0 is in `.impdata`: it clears a day's 18 event slots (type 0x3f, param 0xffff,
+#    the default date) before the day's events are put back in, reached from the inserter
+#    (return 0x141306f2e).  `lea rax, [rcx + 0x240]` is the first slot + 0xc, the loop writes
+#    [rax - 0xc].  Left alone it never clears the events (they pile up season after season) and
+#    writes the empty-slot pattern over match ids 288..360 of the day instead.
+#  - 0x1415165a0 (chained chunks 0x1415165ae and 0x141516809) picks a day's event for the
+#    calendar screens (from 0x140caea9f).  It is handed the day as an argument, which is where
+#    the walk from the calendar base stops.  Left alone it reads the day's match ids as events,
+#    so no screen ever finds one and no event icon is drawn.
+#    0x1415165e8 lea rcx, [rbx + 0x234]; 0x141516821 mov rax, qword ptr [rcx + rax*8 + 0x234].
+# Measured with a page guard on the shipped calendar (the 0.1.9 layout): these are the reads
+# and writes of the event slots that the widened set left at the shipped offsets.
+# 0x1415165e8 and 0x141516821 are in patches/calendar-sites.json already (0.2.2's survey), so
+# only the .impdata clear is added by hand here.
+EVENT_BY_HAND = ((0x1447909f0, 0x240),)
 
 # 0x140aed760 copies a whole day record onto its own stack and reads it there, so its frame
 # has to grow with the record.  The shipped numbers fall out of one formula, which is the
@@ -148,6 +166,13 @@ STACK = {"func": 0x140aed760, "buf": 0x40,
 # eighths.  An exception that unwinds through this function restores rsp from that number,
 # so it has to agree with the prologue.  UNWIND_INFO 0x142f2e7f4, node 7 (a u16, 0x320/8).
 UNWIND_SLOT = 0x142f2e806
+# The same UNWIND_INFO also has three UWOP_SAVE_NONVOL nodes (rsi, rbp, rbx, saved in the
+# caller's home area and so counted from rsp *after* the allocation: 0x368, 0x360, 0x358 in
+# eighths 109, 108, 107), and the function's GS handler data holds the cookie offset (0x310).
+# All four move with the frame; otherwise an exception unwinding through it restores the wrong
+# registers or checks the cookie at the old offset.
+UNWIND_SAVES = (0x142f2e7fa, 0x142f2e7fe, 0x142f2e802)  # u16 slots, in eighths
+GS_COOKIE = 0x142f2e818                                 # dword: the cookie offset
 
 # 0x1412e72d0 does the same with an rbp frame: rbp = rsp - 0x320 before sub rsp, 0x420, so the
 # body sees rbp = rsp + 0x100, the buffer at rbp + 0x40, the cookie at rbp + 0x310.  The frame
@@ -162,7 +187,8 @@ STACK2 = {"func": 0x1412e72d0, "buf": 0x40,
           "blocks": 0x1412e738f,                  # mov eax, 5
           "count": (0x1412e7419, 0x1412e7746),    # movzx r15d, word [rbp + 0x270]
           "events": (0x1412e7850, 0x1412e785e),   # [rbp + 0x274], the 0x12 event qwords
-          "uw_home": 0x1430cfdb6, "uw_alloc": 0x1430cfdba}
+          "uw_home": 0x1430cfdb6, "uw_alloc": 0x1430cfdba,
+          "gs_cookie": 0x1430cfdd4}               # GS handler data: 0x412 = 0x410 | flags 2
 
 
 class Exe:
@@ -292,6 +318,12 @@ def build(ids, new_base):
                          "impdata calendar base: 0x%x -> 0x%x (lea rcx, [r14 + 0x%x] -> "
                          "0x1414c8fd0, which wants the calendar base)" % (OLD_BASE, new_base, OLD_BASE)))
 
+    for va, v in EVENT_BY_HAND:
+        out.append(dword(exe, va, find(exe, va, v), v, v + ev_shift,
+                         "event slot moves: +0x%x -> +0x%x (by hand: %s)"
+                         % (v, v + ev_shift, "the day-event clear in .impdata" if va == 0x1447909f0
+                            else "the calendar screens' event pick, 0x1415165a0")))
+
     # the stack copy
     buf = STACK["buf"]
     cookie_new = (buf + stride + 15) & ~15
@@ -323,6 +355,20 @@ def build(ids, new_base):
                 "why": "0x%x's frame size in its unwind data, in eighths: %d -> %d"
                        % (STACK["func"], frame_old // 8, frame_new // 8),
                 "asm": "UWOP_ALLOC_LARGE"})
+    grow = (frame_new - frame_old) // 8
+    for va in UNWIND_SAVES:
+        have = struct.unpack_from("<H", exe.read(va, 2))[0]
+        if not frame_old // 8 < have < frame_old // 8 + 0x10:
+            raise SystemExit("the unwind node at 0x%x holds %d, not a save above a frame of %d"
+                             % (va, have, frame_old // 8))
+        out.append({"va": "0x%x" % va, "old": struct.pack("<H", have).hex(),
+                    "new": struct.pack("<H", have + grow).hex(),
+                    "why": "0x%x's unwind data, a register saved above the frame, in eighths: "
+                           "%d -> %d" % (STACK["func"], have, have + grow),
+                    "asm": "UWOP_SAVE_NONVOL"})
+    out.append(dword(exe, GS_COOKIE, 0, cookie_old, cookie_new,
+                     "0x%x's GS handler data, the cookie offset: 0x%x -> 0x%x"
+                     % (STACK["func"], cookie_old, cookie_new)))
 
     # the second stack copy (rbp frame)
     S2, f = STACK2, "0x%x" % STACK2["func"]
@@ -365,6 +411,12 @@ def build(ids, new_base):
                     "why": "%s's unwind data, %s in eighths: 0x%x -> 0x%x"
                            % (f, what, old // 8, (old + g) // 8),
                     "asm": what.split()[0]})
+    # its GS handler data: the cookie's offset from the frame (rbp + c_old = rsp + 0x100 + c_old)
+    # with the GS flag bits in the low nibble, 0x412 as shipped
+    gs_old = (0x100 + c_old) | 2
+    out.append(dword(exe, S2["gs_cookie"], 0, gs_old, gs_old + g,
+                     "%s's GS handler data, the cookie offset: 0x%x -> 0x%x (flag bits kept)"
+                     % (f, gs_old & ~0xf, (gs_old + g) & ~0xf)))
 
     info = {
         "ids_per_day": real_ids, "blocks_of_0x80": k, "stride": "0x%x" % stride,

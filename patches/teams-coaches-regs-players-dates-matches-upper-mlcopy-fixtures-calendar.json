@@ -9671,6 +9671,13 @@
    "asm": "disp32/imm32"
   },
   {
+   "va": "0x1447909f3",
+   "old": "40020000",
+   "new": "40060000",
+   "why": "event slot moves: +0x240 -> +0x640 (by hand: the day-event clear in .impdata)",
+   "asm": "disp32/imm32"
+  },
+  {
    "va": "0x140aed77b",
    "old": "20030000",
    "new": "20070000",
@@ -9718,6 +9725,34 @@
    "new": "e400",
    "why": "0x140aed760's frame size in its unwind data, in eighths: 100 -> 228",
    "asm": "UWOP_ALLOC_LARGE"
+  },
+  {
+   "va": "0x142f2e7fa",
+   "old": "6d00",
+   "new": "ed00",
+   "why": "0x140aed760's unwind data, a register saved above the frame, in eighths: 109 -> 237",
+   "asm": "UWOP_SAVE_NONVOL"
+  },
+  {
+   "va": "0x142f2e7fe",
+   "old": "6c00",
+   "new": "ec00",
+   "why": "0x140aed760's unwind data, a register saved above the frame, in eighths: 108 -> 236",
+   "asm": "UWOP_SAVE_NONVOL"
+  },
+  {
+   "va": "0x142f2e802",
+   "old": "6b00",
+   "new": "eb00",
+   "why": "0x140aed760's unwind data, a register saved above the frame, in eighths: 107 -> 235",
+   "asm": "UWOP_SAVE_NONVOL"
+  },
+  {
+   "va": "0x142f2e818",
+   "old": "10030000",
+   "new": "10070000",
+   "why": "0x140aed760's GS handler data, the cookie offset: 0x310 -> 0x710",
+   "asm": "disp32/imm32"
   },
   {
    "va": "0x1412e72e0",
@@ -9816,6 +9851,13 @@
    "new": "0401",
    "why": "0x1412e72d0's unwind data, UWOP_ALLOC_LARGE in eighths: 0x84 -> 0x104",
    "asm": "UWOP_ALLOC_LARGE"
+  },
+  {
+   "va": "0x1430cfdd4",
+   "old": "12040000",
+   "new": "12080000",
+   "why": "0x1412e72d0's GS handler data, the cookie offset: 0x410 -> 0x810 (flag bits kept)",
+   "asm": "disp32/imm32"
   },
   {
    "va": "0x1408e17cd",
@@ -25047,7 +25089,7 @@
   "unit_growth": 373760,
   "tail_sites": 171,
   "unit_bytes": 819456,
-  "patches": 742,
+  "patches": 748,
   "skipped": [
    {
     "va": "0x140fc2ffa",

@@ -6,7 +6,7 @@ and sider/fl26caps.template.lua. Editing it by hand loses the guarantee that eve
 below came from disassembling the instruction at that address.
 
 Set:     teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar
-Summary: block 0x1877068 -> 0x4a2b568, 3504 patches
+Summary: block 0x1877068 -> 0x4a2b568, 3510 patches
 
 What it does, and the one rule it follows: read every target address first and compare it
 against the bytes the generator saw in the exe; only if all of them match does it write
@@ -1380,6 +1380,7 @@ local patches = {
   {va=0x140af2022, old="80f10300", new="80a50900", why="past the calendar, added rather than addressed: +0x3f180 -> +0x9a580"},
   {va=0x14157ae01, old="88f10300", new="88a50900", why="past the calendar, which is now longer: +0x3f188 -> +0x9a588 (the hub's Next strip, by hand)"},
   {va=0x14438ccf0, old="a8386001", new="70708701", why="impdata calendar base: 0x16038a8 -> 0x1877070 (lea rcx, [r14 + 0x16038a8] -> 0x1414c8fd0, which wants the calendar base)"},
+  {va=0x1447909f3, old="40020000", new="40060000", why="event slot moves: +0x240 -> +0x640 (by hand: the day-event clear in .impdata)"},
   {va=0x140aed77b, old="20030000", new="20070000", why="0x140aed760 copies a day onto its stack: the frame grows 0x320 -> 0x720"},
   {va=0x140aed970, old="20030000", new="20070000", why="0x140aed760 copies a day onto its stack: the frame grows 0x320 -> 0x720"},
   {va=0x140aed78d, old="10030000", new="10070000", why="0x140aed760: the security cookie moves with the frame, +0x310 -> +0x710"},
@@ -1387,6 +1388,10 @@ local patches = {
   {va=0x140aed7f4, old="05000000", new="0d000000", why="0x140aed760: the same unrolled copy, 5 blocks of 0x80 -> 13"},
   {va=0x140aed87d, old="70020000", new="70060000", why="0x140aed760 reads the count out of its own copy: +0x270 -> +0x670"},
   {va=0x142f2e806, old="6400", new="e400", why="0x140aed760's frame size in its unwind data, in eighths: 100 -> 228"},
+  {va=0x142f2e7fa, old="6d00", new="ed00", why="0x140aed760's unwind data, a register saved above the frame, in eighths: 109 -> 237"},
+  {va=0x142f2e7fe, old="6c00", new="ec00", why="0x140aed760's unwind data, a register saved above the frame, in eighths: 108 -> 236"},
+  {va=0x142f2e802, old="6b00", new="eb00", why="0x140aed760's unwind data, a register saved above the frame, in eighths: 107 -> 235"},
+  {va=0x142f2e818, old="10030000", new="10070000", why="0x140aed760's GS handler data, the cookie offset: 0x310 -> 0x710"},
   {va=0x1412e72e0, old="e0fcffff", new="e0f8ffff", why="0x1412e72d0 copies a day onto its stack: rbp = rsp - 0x320 -> - 0x720"},
   {va=0x1412e72e7, old="20040000", new="20080000", why="0x1412e72d0 copies a day onto its stack: the frame grows 0x420 -> 0x820"},
   {va=0x1412e80cf, old="20040000", new="20080000", why="0x1412e72d0 copies a day onto its stack: the frame grows 0x420 -> 0x820"},
@@ -1401,6 +1406,7 @@ local patches = {
   {va=0x1412e7861, old="74020000", new="74060000", why="0x1412e72d0 reads the events out of its own copy: rbp+0x274 -> +0x674"},
   {va=0x1430cfdb6, old="8c00", new="0c01", why="0x1412e72d0's unwind data, UWOP_SAVE_NONVOL rbx in eighths: 0x8c -> 0x10c"},
   {va=0x1430cfdba, old="8400", new="0401", why="0x1412e72d0's unwind data, UWOP_ALLOC_LARGE in eighths: 0x84 -> 0x104"},
+  {va=0x1430cfdd4, old="12040000", new="12080000", why="0x1412e72d0's GS handler data, the cookie offset: 0x410 -> 0x810 (flag bits kept)"},
   {va=0x1408e17cd, old="488d82bcf4ad00", new="488d8270f19301", why="teams edit: 0xadf4bc -> 0x193f170 (lea rax, [rdx + 0xadf4bc])"},
   {va=0x1408e2ace, old="488d82bcf4ad00", new="488d8270f19301", why="teams edit: 0xadf4bc -> 0x193f170 (lea rax, [rdx + 0xadf4bc])"},
   {va=0x140adeffe, old="498daebcf4ad00", new="498dae70f19301", why="teams edit: 0xadf4bc -> 0x193f170 (lea rbp, [r14 + 0xadf4bc])"},
@@ -3647,7 +3653,7 @@ function m.init(ctx)
   -- in doubt; the check was.
 
   if failed == 0 then
-    log(string.format("fl26caps: applied all %d patches -- %s", written, "block 0x1877068 -> 0x4a2b568, 3504 patches"))
+    log(string.format("fl26caps: applied all %d patches -- %s", written, "block 0x1877068 -> 0x4a2b568, 3510 patches"))
   else
     log(string.format("fl26caps: PARTIAL: %d written, %d failed. The game is now in an "
                       .. "inconsistent state -- quit and report the addresses above.",
