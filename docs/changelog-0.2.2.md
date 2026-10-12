@@ -40,6 +40,20 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   another editor, Discord). Build's own UniformParameter.bin hid theirs; Build now keeps the
   entries of the other copies Sider serves, and never replaces a kit another mod gave a club.
   A club of the database with no kit at all (added by another editor) gets one lent too.
+- **A league played the day after a cup match** (Chile D2 the day after a Copa Chile
+  quarter-final, Discord). Rounds kept clear of our own cups and the European days only; Build
+  now also hands over the dates of every cup of the league's country, the game's own cups
+  too, and the rounds keep at least a day clear of them, in the leagues of the game as well.
+- **A renamed league of the game gave its name to a new league** that took its place in the
+  world (a Série C came out "Campeonato Carioca", Discord). The old rename now stays with the
+  game's league.
+- **Competition Info showed a generic flag for Asian and African countries.** Build looked for
+  their flag under the wrong name (the game writes Iraq as flag_012). Your own flag for such a
+  country now also replaces the game's.
+- **The club you manage could lose its Libertadores qualifying place** to a club of a new
+  league taking a place there (Discord). Your club is never the one that gives way now.
+- New players of a very big world (more than about 4000 player ranges, 80+ leagues) all get
+  their regen face; the last clubs' players kept the default look.
 - Switch on puts `fl26caps` before the other modules of ours in sider.ini when it was further
   down (then it refused the game and sider.log said MISMATCH).
 - The country cup draw (cup_draw random or seeded) rewrites only the clubs the cup's entry
