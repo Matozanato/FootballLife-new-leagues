@@ -294,6 +294,15 @@ CUP_DATED = {23: _CASE6, 24: _CASE6, 25: _CASE6, 26: _CASE6, 27: _CASE6, 28: _CA
              122: {0x2e, 0x33, 0x34, 0x35}, 124: {0x2e, 0x33, 0x34, 0x35},
              137: {0x2e, 0x33, 0x34, 0x35}, 142: {0x2e, 0x33, 0x34, 0x35}}
 SUPER_CUP_LIKE = "BELGIUM_SUPER_CUP"      # two clubs, one match, a European date
+
+# Calendar-year domestic cups. The English cup carries all seven case-6 knockout
+# round ids needed by fields up to NATIONAL_CUP_MAX. Give those records explicit
+# March-November dates: its last two round ids share the same shipped dates.
+# The super cup gets its two records at the end of January.
+CALENDAR_CUP_DATE_LIKE = "ENGLAND_D1_CUP"
+CALENDAR_CUP_DATE_DAYS = (65, 107, 149, 191, 233, 275, 317)
+CALENDAR_SUPER_DATE_LIKE = "JAPAN_SUPER_CUP"
+CALENDAR_SUPER_DATE_DAYS = (30,)
 LIBQ_ROOM = 6                             # Libertadores qualifying: 8 places, fl26swiss keeps 2 of the game's
 LIB_ROOM = 8                              # Libertadores group stage: the pool clubs (73) ours replace, 8 (GitHub #127)
 SEASONS = ("august", "calendar")           # a new country's season: August-May, February-December
@@ -1633,7 +1642,6 @@ def plan(recipe, base, prev=None):
         bad = [w for q in out if q["region"] == p["region"]
                for w, on in (("a split (%s)" % q["name"], q.get("split") and not q.get("apertura")),
                              ("Apertura/Clausura (%s)" % q["name"], q.get("apertura")),
-                             ("the national cup", q.get("own_cup")),
                              ("the league cup", q.get("league_cup"))) if on]
         if bad:
             raise BuildError("%s: a country playing February to December cannot have %s yet -- take it off"
@@ -2430,7 +2438,12 @@ def national_cup(p, below):
     c = p["own_cup"]
     n = p["clubs"] + (below["clubs"] if below else 0)
     exact = NATIONAL_CUPS_TWO if below else NATIONAL_CUPS
-    if n in exact:
+    # Calendar-year cups already use the English case-6 calendar. Use its
+    # knockout shape too, rather than mixing another cup shape with those dates.
+    if (p.get("calendar") or p.get("follows_calendar")) and n <= NATIONAL_CUP_MAX:
+        c["like"], c["bracket"] = NATIONAL_CUP_ANY
+        c["clubs"], c["keep_top"] = n, False
+    elif n in exact:
         c["like"], c["bracket"] = exact[n]
         c["clubs"], c["keep_top"] = n, False
     elif n <= NATIONAL_CUP_MAX:
@@ -3438,7 +3451,11 @@ def build(pl, base, game, replace=False, log=print):
             if up["own_cup"]["clubs"] < up["clubs"]:
                 L["cupn"] = up["own_cup"]["clubs"]     # and to a field the bracket screen draws (#74)
         c = p.get("own_cup")
-        if c and c.get("reg") and not c["keep_top"] and (below or c["clubs"] < p["clubs"]):
+        if c and c.get("super_reg"):
+            L["scup"] = c["super_reg"]
+        if c and c.get("reg") and not c["keep_top"] and (
+            below or c["clubs"] < p["clubs"]
+            or p.get("calendar") or p.get("follows_calendar")):
             # the game fills the cup from both leagues whatever its entry list says, so fl26chain
             # writes the top league's clubs and the first ones below, a field the bracket screen
             # draws (#74: a cup of 22 crashed Competition Info -> Fixtures). Also when the two
@@ -3795,20 +3812,41 @@ def order_lines(pl, base, confed):
 
 
 def dates_lines(pl, db):
-    """world file lines `dates <our cup> like=<shipped cup>`: the game dates a cup's rounds by its
-    regulation id, in a switch over the shipped ids 2..175, so a national cup or super cup of
-    ours (id 176 and up) got its draw but not one date, and was never played (CUPT world,
-    2026-09-28: 197 and 198, 20 records, all undated). fl26swiss.dll asks the game for the dates
-    of the cup it was copied from instead."""
+    """World-file `dates` lines for national cups and super cups.
+
+    Normally a new cup takes the dates of the shipped cup it was copied from.
+    A calendar-year country instead takes a complete shipped calendar and shifts
+    its days into February-December; fl26swiss.dll applies the optional shift.
+    """
     out = []
     for p in pl["leagues"]:
         c = p.get("own_cup")
         if not c or not c.get("reg"):
             continue
-        for reg, code in ((c["reg"], c["like"]), (c.get("super_reg"), SUPER_CUP_LIKE if c.get("super") else None)):
-            like = like_reg(db, code) if reg and code else None
-            if like:
-                out.append("dates %d like=%d" % (reg, like))
+
+        calendar = bool(p.get("calendar") or p.get("follows_calendar"))
+
+        cups = (
+            (c["reg"], c["like"],
+             CALENDAR_CUP_DATE_LIKE, CALENDAR_CUP_DATE_DAYS),
+            (c.get("super_reg"), SUPER_CUP_LIKE if c.get("super") else None,
+             CALENDAR_SUPER_DATE_LIKE, CALENDAR_SUPER_DATE_DAYS),
+        )
+
+        for reg, normal_code, calendar_code, days in cups:
+            if not reg or not normal_code:
+                continue
+
+            code = calendar_code if calendar else normal_code
+            like = like_reg(db, code)
+            if not like:
+                continue
+
+            line = "dates %d like=%d" % (reg, like)
+            if calendar:
+                line += " days=%s" % ",".join(map(str, days))
+            out.append(line)
+
     return out
 
 

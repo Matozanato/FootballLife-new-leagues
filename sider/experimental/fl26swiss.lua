@@ -165,8 +165,18 @@ local function read_world(ctx)
       if tonumber(cw1) and M[cw2] then CUPDRAW[tonumber(cw1)] = M[cw2]
       elseif M[cw1] then CUPDRAW.all = M[cw1] end
     end
-    local dr, dl = line:match("^%s*dates%s+(%d+)%s+like=(%d+)")
-    if dr then dlike[#dlike + 1] = { tonumber(dr), tonumber(dl) } end
+    local dr, drest = line:match("^%s*dates%s+(%d+)(.*)$")
+    if dr then
+      local dl = drest:match("like=(%d+)")
+      local ds = drest:match("shift=(%d+)")
+      local dd = {}
+      for d in (drest:match("days=([%d,]+)") or ""):gmatch("%d+") do
+        dd[#dd + 1] = tonumber(d)
+      end
+      if dl then
+        dlike[#dlike + 1] = { tonumber(dr), tonumber(dl), tonumber(ds or 0), dd }
+      end
+    end
     local cid, crest = line:match("^%s*ccup%s+(%d+)(.*)$")
     if cid then
       local c = { tonumber(cid), tonumber(crest:match("ko=(%d+)") or 0), tonumber(crest:match("groups=(%d+)") or 0), {} }
@@ -593,6 +603,68 @@ function m.init(ctx)
           log(string.format("fl26swiss: world file -- %d cup(s) dated as the cup they were copied from", k))
         end
       end
+
+      -- Explicit per-record cup dates. Reset first so switching worlds in one
+      -- Sider session cannot retain dates from the previous world.
+      local explicit = {}
+      for _, d in ipairs(dlike or {}) do
+        if d[4] and #d[4] > 0 then
+          explicit[#explicit + 1] = d
+        end
+      end
+
+      local pdd = ffi.C.GetProcAddress(h, "fl26_swiss_datedays")
+      if pdd == nil then
+        if #explicit > 0 then
+          log("fl26swiss: this fl26swiss.dll cannot set explicit cup dates (fl26_swiss_datedays)")
+        end
+      else
+        local fdd = ffi.cast("fl26_swiss_access_t", pdd)
+        local zero = ffi.new("uint16_t[1]")
+        fdd(zero, 0)
+
+        local kd = 0
+        for _, d in ipairs(explicit) do
+          local db = ffi.new("uint16_t[?]", 1 + #d[4])
+          db[0] = d[1]
+          for j, day in ipairs(d[4]) do
+            db[j] = day
+          end
+          if tonumber(fdd(db, 1 + #d[4])) > 0 then
+            kd = kd + 1
+          end
+        end
+
+        if #explicit > 0 then
+          log(string.format("fl26swiss: world file -- explicit dates set for %d cup(s)", kd))
+        end
+      end
+
+      -- Always reset the optional date-shift table. Without this, switching from a
+      -- calendar-year world to one without shifted cups in the same Sider session
+      -- could leave the previous world's shifts alive in the DLL.
+      local shifted = {}
+      for _, d in ipairs(dlike or {}) do
+        if d[3] and d[3] ~= 0 then
+          shifted[#shifted + 1] = { d[1], d[3] }
+        end
+      end
+      local ps = ffi.C.GetProcAddress(h, "fl26_swiss_dateshift")
+      if ps == nil then
+        if #shifted > 0 then
+          log("fl26swiss: this fl26swiss.dll cannot shift cup dates (fl26_swiss_dateshift)")
+        end
+      else
+        local sbuf = ffi.new("uint16_t[?]", math.max(2 * #shifted, 2))
+        for i, d in ipairs(shifted) do
+          sbuf[2 * i - 2], sbuf[2 * i - 1] = d[1], d[2]
+        end
+        local ks = tonumber(ffi.cast("fl26_swiss_access_t", ps)(sbuf, #shifted))
+        if #shifted > 0 then
+          log(string.format("fl26swiss: world file -- date shift set for %d cup(s)", ks))
+        end
+      end
+
       local pw = ffi.C.GetProcAddress(h, "fl26_swiss_leagues")
       if pw == nil then
         log("fl26swiss: this fl26swiss.dll takes no world file (fl26_swiss_leagues); its built-in league list stands")
@@ -618,11 +690,17 @@ function m.init(ctx)
       -- not those a `season <region> 0` line makes August-May), as fl26joindll reads them
       local CAL_REGIONS = { [16] = true, [18] = true, [19] = true, [21] = true, [23] = true, [24] = true, [28] = true }
       local seasons = world_seasons(ctx)
-      local cal = {}
+      local cal, scups, scseen = {}, {}, {}
       for _, L in ipairs(world) do
         local r = L.region
         local c = r ~= nil and (seasons[r] ~= nil and seasons[r] == 1 or seasons[r] == nil and CAL_REGIONS[r] == true)
-        if c then cal[#cal + 1] = L.id end
+        if c then
+          cal[#cal + 1] = L.id
+          if L.scup and L.scup > 0 and L.cup1 and L.cup1 > 0 and not scseen[L.scup] then
+            scups[#scups + 1] = { L.scup, L.id, L.cup1 }
+            scseen[L.scup] = true
+          end
+        end
       end
       local pc = ffi.C.GetProcAddress(h, "fl26_swiss_calendar_year")
       if #cal > 0 and pc ~= nil then
@@ -631,6 +709,18 @@ function m.init(ctx)
         ffi.cast("fl26_swiss_access_t", pc)(cbuf, #cal)
       elseif #cal > 0 then
         log("fl26swiss: this fl26swiss.dll has no fl26_swiss_calendar_year -- January-December leagues keep the European dates")
+      end
+
+      local ps = ffi.C.GetProcAddress(h, "fl26_swiss_calendar_supercups")
+      if #scups > 0 and ps ~= nil then
+        local sbuf = ffi.new("uint16_t[?]", 3 * #scups)
+        for i, s in ipairs(scups) do
+          sbuf[3 * i - 3], sbuf[3 * i - 2], sbuf[3 * i - 1] = s[1], s[2], s[3]
+        end
+        local k = tonumber(ffi.cast("fl26_swiss_access_t", ps)(sbuf, #scups))
+        log(string.format("fl26swiss: world file -- %d calendar-year Super Cup(s), %d taken", #scups, k))
+      elseif #scups > 0 then
+        log("fl26swiss: this fl26swiss.dll has no calendar-year Super Cup support")
       end
       -- `july <reg> <day>`: a league that starts in July (Poland, Denmark, Croatia ...), its
       -- first round from that day on, from the second season (fl26_swiss_july)

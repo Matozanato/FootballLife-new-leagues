@@ -94,6 +94,24 @@ static int       g_nids = 0;
 static uint16_t  g_list[MAX_LIST];
 static vec16_t   g_vec;
 
+/* Extra competitions that must be present in the calendar-year season builder.
+   Keep these separate from g_ids: g_ids are leagues appended to register_all and
+   participate in the league-specific rollover/door logic below. */
+static uint16_t  g_builder_extra[MAX_IDS];
+static int       g_nbuilder_extra = 0;
+static uint16_t  g_builder_list[MAX_LIST];
+static vec16_t   g_builder_vec;
+typedef struct { uint16_t id, conf; } builder_conf_t;
+static builder_conf_t g_builder_conf[MAX_IDS];
+static int g_nbuilder_conf = 0;
+
+static int builder_runtime_conf(uint16_t id)
+{
+  for (int i = 0; i < g_nbuilder_conf; i++)
+    if (g_builder_conf[i].id == id) return g_builder_conf[i].conf;
+  return -1;
+}
+
 /* 0 register_all calls, 1 ids appended, 2 register_all calls refused because the list was
    already long, 3 registrations observed, 4 builder calls, 5 door calls, 6 door refusals,
    7 door calls for our ids */
@@ -297,20 +315,87 @@ void reg_pre(uint64_t compid, uint64_t ret, uint64_t ret2)
   }
 }
 
-/* ---- observation only: the builder's include list ---- */
-void bld_pre(uint64_t ctx, uint64_t events, vec16_t* inc)
+/* ---- the builder's include list ----
+ *
+ * The executable's calendar-year list contains the shipped national/super cups
+ * (55/97/127/164/165), but an added cup cannot appear in that compiled table.
+ * The loader gives such cups to us separately from g_ids; on the calendar-year
+ * builder only, append them to a private copy of the include vector. */
+vec16_t* bld_pre(uint64_t ctx, uint64_t events, vec16_t* inc)
 {
   (void)ctx; (void)events;
   g_stat[4]++;
   int n = (inc && inc->b && inc->e >= inc->b) ? (int)(inc->e - inc->b) : 0;
+
   /* An August world's builder admits the European leagues, and shipped id 2 (England D1)
      is always among them; a calendar-year world's builder never lists it. */
   g_euro_build = 0;
-  for (int j = 0; j < n; j++) if (inc->b[j] == 2) { g_euro_build = 1; break; }
+  int calendar_build = 0;
+  for (int j = 0; j < n; j++) {
+    uint16_t id = inc->b[j];
+    if (id == 2) g_euro_build = 1;
+    if (id == 55 || id == 97 || id == 127 || id == 164 || id == 165)
+      calendar_build = 1;
+  }
+
   if (g_stat[4] <= 8) {
     char buf[480]; list_ids(inc ? inc->b : 0, n, buf, sizeof buf);
     logf("builder %u: include list has %d ids [%s]", g_stat[4], n, buf);
   }
+
+  if (calendar_build && g_nbuilder_extra && g_nbuilder_conf) {
+    for (int i = 0; i < g_nbuilder_extra; i++) {
+      uint16_t id = g_builder_extra[i];
+      int runtime_conf = builder_runtime_conf(id);
+      if (runtime_conf < 0) continue;
+
+      unsigned char* rec = (unsigned char*)find_record(id);
+      if (!rec) continue;
+
+      uint32_t* meta = (uint32_t*)(rec + 0x300);
+      uint32_t before = *meta;
+      uint32_t old_conf = (before >> 25) & 0xf;
+      if (old_conf == (uint32_t)runtime_conf) continue;
+
+      *meta = (before & ~(0xFu << 25)) | ((uint32_t)runtime_conf << 25);
+      logf("builder extra %u: runtime conf %u -> %u",
+           id, old_conf, (unsigned)runtime_conf);
+    }
+  }
+
+  if (!calendar_build || !g_nbuilder_extra || !inc || !inc->b || inc->e < inc->b)
+    return inc;
+  if (n + g_nbuilder_extra > MAX_LIST) {
+    logf("builder %u: cannot append %d calendar cup(s): %d + %d exceeds %d",
+         g_stat[4], g_nbuilder_extra, n, g_nbuilder_extra, MAX_LIST);
+    return inc;
+  }
+
+  memcpy(g_builder_list, inc->b, (size_t)n * sizeof g_builder_list[0]);
+  int k = n, added = 0;
+  char buf[160]; int p = 0; buf[0] = 0;
+
+  for (int i = 0; i < g_nbuilder_extra; i++) {
+    uint16_t id = g_builder_extra[i];
+    int dup = 0;
+    for (int j = 0; j < k; j++)
+      if (g_builder_list[j] == id) { dup = 1; break; }
+    if (dup) continue;
+
+    g_builder_list[k++] = id;
+    added++;
+    if (p < (int)sizeof buf - 8)
+      p += snprintf(buf + p, sizeof buf - (size_t)p, "%u ", id);
+  }
+
+  if (!added) return inc;
+
+  g_builder_vec.b = g_builder_list;
+  g_builder_vec.e = g_builder_list + k;
+  g_builder_vec.c = g_builder_list + MAX_LIST;
+  logf("builder %u: appended %d calendar cup(s) [%s] -> %d ids",
+       g_stat[4], added, buf, k);
+  return &g_builder_vec;
 }
 
 /* Where the regulation records start: the displacement fl26caps wrote into the cmp at
@@ -597,9 +682,9 @@ __attribute__((naked)) void bld_handler(void)
     "mov  %rdx, %rsi\n"
     "mov  %r8,  %rdi\n"
     "call bld_pre\n"
+    "mov  %rax, %r8\n"
     "mov  %rbx, %rcx\n"
     "mov  %rsi, %rdx\n"
-    "mov  %rdi, %r8\n"
     "call *g_tramp_bld(%rip)\n"
     "add  $0x28, %rsp\n"
     "pop  %rdi\n"
@@ -1251,6 +1336,44 @@ __declspec(dllexport) int fl26_join_install(uint64_t exe_base, uint64_t cave_add
 }
 
 /* copy and clear the pending log text; returns bytes copied */
+/* Competitions added only to the calendar-year season builder. They are deliberately
+   not g_ids: no register_all, league door, promotion or league teardown behaviour applies. */
+__declspec(dllexport) int fl26_join_builder_extra(const uint16_t* ids, int n)
+{
+  if ((!ids && n) || n < 0 || n > MAX_IDS) return -1;
+  g_nbuilder_extra = n;
+  for (int i = 0; i < n; i++) g_builder_extra[i] = ids[i];
+
+  char buf[160]; list_ids(g_builder_extra, g_nbuilder_extra, buf, sizeof buf);
+  logf("calendar-year builder extras: %d ids [%s]", g_nbuilder_extra, buf);
+  return n;
+}
+
+/* Runtime confederation for calendar-year cups added to the season builder.
+   v is n pairs: { regulation id, runtime conf code }. */
+__declspec(dllexport) int fl26_join_builder_conf(const uint16_t* v, int n)
+{
+  if ((!v && n) || n < 0 || n > MAX_IDS) return -1;
+  g_nbuilder_conf = 0;
+  for (int i = 0; i < n; i++) {
+    uint16_t id = v[2 * i], conf = v[2 * i + 1];
+    if (!id || conf > 15) continue;
+
+    int found = -1;
+    for (int j = 0; j < g_nbuilder_conf; j++)
+      if (g_builder_conf[j].id == id) { found = j; break; }
+
+    if (found >= 0) g_builder_conf[found].conf = conf;
+    else {
+      g_builder_conf[g_nbuilder_conf].id = id;
+      g_builder_conf[g_nbuilder_conf].conf = conf;
+      g_nbuilder_conf++;
+    }
+  }
+  logf("calendar-year builder runtime confs: %d", g_nbuilder_conf);
+  return g_nbuilder_conf;
+}
+
 __declspec(dllexport) int fl26_join_calendar(const uint16_t* ids, int n)
 {
   if ((!ids && n) || n < 0) return -1;

@@ -565,8 +565,8 @@ class LeagueDialog(Dialog):
         self.form.addRow(_("Season"), self.season)
         self.form.addRow("", hint(_("a top division of a new country: February to December plays like Brazil, Japan or "
                                     "Saudi Arabia, clubs going up and down at New Year; the divisions "
-                                    "below it follow it. Not with a split, Apertura/Clausura or the "
-                                    "country's cups yet")))
+                                    "below it follow it. Not with a split, Apertura/Clausura or a league cup "
+                                    "yet")))
         self.form.addRow("", hint(_("Careful: the game has one team list for Kick Off and Master League, so its "
                                     "clubs still show when you pick your club for a new career. Do not start a "
                                     "career with one: its league never plays.")))
@@ -586,14 +586,14 @@ class LeagueDialog(Dialog):
         self.cup_name = QLineEdit(L.get("cup_name", ""))
         self.cup_name.setPlaceholderText(_("(the league's name + Cup)"))
         self.form.addRow(_("Cup"), row(self.cup, self.cup_name, helpmark(
-            "A knockout cup like the FA Cup for the clubs of this league and the division below it, from "
-            "September to May. Any number of clubs works: when the field is not 16, 32 ..., some clubs get a "
+            "A knockout cup like the FA Cup for the clubs of this league and the division below it, played "
+            "inside the country's season. Any number of clubs works: when the field is not 16, 32 ..., some clubs get a "
             "bye into the next round. Top division only. Empty name = the league's name + Cup.")))
         self.supercup = QCheckBox(_("Super cup (champion v cup winner)"))
         self.supercup.setChecked(bool(L.get("supercup")))
         self.supercup_name = QLineEdit(L.get("supercup_name", ""))
         self.supercup_name.setPlaceholderText(_("(the league's name + Super Cup)"))
-        self.form.addRow("", row(helped(self.supercup, "One match in late July: the league champion against the "
+        self.form.addRow("", row(helped(self.supercup, "One match shortly before the season: the league champion against the "
                                         "cup winner. It needs the national cup."), self.supercup_name))
         self.cup.toggled.connect(lambda on: self.supercup.setEnabled(on and self.cup.isEnabled()))
         self.form.addRow("", hint(_("a top division of a new country: a national cup for it and the division "
@@ -759,9 +759,8 @@ class LeagueDialog(Dialog):
             return
         if self.season.currentData() == "calendar" and self.above.currentData() is None \
                 and not self.exhibition.isChecked():
-            if L.get("split") or L.get("apertura") or L.get("cup") or L.get("league_cup"):
-                error(self, "League", _("A league playing February to December has no split, Apertura/Clausura, "
-                                                "national cup or league cup yet."))
+            if L.get("split") or L.get("apertura") or L.get("league_cup"):
+                error(self, "League", _("A league playing February to December has no split, Apertura/Clausura or league cup yet."))
                 return
             L["season"] = "calendar"
         else:
