@@ -101,7 +101,7 @@ def country_flag(root, fid, picture):
         out.paste(Image.new("RGBA", (box[2] - box[0], box[3] - box[1]), FLAG_BORDER), box[:2])
         inner = (box[0] + b, box[1] + b, box[2] - b, box[3] - b)
         out.paste(src.resize((inner[2] - inner[0], inner[3] - inner[1]), Image.LANCZOS), inner[:2])
-        out.save(os.path.join(d, "flag_%d%s.png" % (fid, suf)))
+        out.save(os.path.join(d, "flag_%03d%s.png" % (fid, suf)))   # the game's name: flag_012 (Iraq)
 
 
 def preview(picture, size=96):
