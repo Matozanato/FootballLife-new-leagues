@@ -78,6 +78,9 @@ THIRD = "3rd_realUni"
 PLAIN_KINDS = ("1st", "2nd", "GK1st")
 PLAIN_SIZE = 96
 TEAM_DIR = "common/character0/model/character/uniform/team"
+# --fill leaves these alone: the three Master League default teams have no kit in the shipped game
+# either, and are never on a pitch
+ML_DEFAULTS = (140, 2469, 2696)
 
 
 # The engine does not use a team id as it stands in a kit name.  Bits 14-16 of the id are a
@@ -272,6 +275,45 @@ def read_textures(path):
     return set(re.findall(r"(u\d{4,5}[a-z]\d)\.ftex", open(path, encoding="utf-8", errors="replace").read()))
 
 
+def overlay(raw, es, paths):
+    """[(name, blob)] of the archive the game would read without ours: the shipped entries with
+    every other mod's UniformParameter.bin laid over them, lowest priority first (an entry a mod
+    changes takes its blob, a new one is added).  Our file goes in the first cpk root and hides
+    theirs, so without this a club another tool dressed (Kit Studio) lost its entry and Kit
+    Server found no kit info for it (Discord 12.10., team 9702)."""
+    items = {name: raw[off:off + size] for name, off, size in es}
+    for path in paths:
+        try:
+            r, e, _h = archive(path)
+        except (OSError, ValueError, struct.error) as x:
+            print("warning: %s not read (%s)" % (path, x))
+            continue
+        new = sum(1 for name, _o, _s in e if name not in items)
+        for name, off, size in e:
+            items[name] = r[off:off + size]
+        print("%s: %d entries, %d not in the game's" % (path, len(e), new))
+    return list(items.items())
+
+
+def unclothed(team_bin, names, skip=()):
+    """[(team id, name)] of the clubs in the database with no kit definition of their own at all
+    -- clubs another editor added (Discord 12.10.): Kit Server has no kit info to hook for them,
+    and on the pitch they wear the engine's fallback"""
+    nat = national_teams(team_bin)
+    raw = pesdb.wesys_unpack(open(team_bin, "rb").read())
+    out = []
+    for i in range(len(raw) // REC):
+        r = raw[i * REC:(i + 1) * REC]
+        tid = struct.unpack_from("<I", r, ID_OFF)[0]
+        if tid in nat or tid in skip or tid in ML_DEFAULTS:
+            continue
+        stem = kit_key(tid)[1]
+        if stem + "1st_realUni.bin" not in names and stem + "1st.bin" not in names:
+            out.append((tid, r[NAME_OFF:NAME_OFF + NAME_LEN].split(b"\0")[0].decode("utf-8", "replace")))
+    out.sort()
+    return out
+
+
 def build(argv):
     def opt(flag, default=None):
         return argv[argv.index(flag) + 1] if flag in argv else default
@@ -285,6 +327,14 @@ def build(argv):
     ids = opt("--clubs")
     clubs = roster(team_bin, {int(x) for x in ids.split(",") if x.strip()} if ids is not None else None)
     raw, es, hdr = archive(unipar)
+    # --over a;b: the other UniformParameter.bin files the game reads, lowest priority first
+    over = [x for x in (opt("--over") or "").split(";") if x]
+    items = overlay(raw, es, over) if over else None
+    names = {n for n, _b in items} if items else {n for n, _o, _s in es}
+    fill = unclothed(team_bin, names, {t for t, _ in clubs}) if "--fill" in argv else []
+    if fill:
+        print("%d clubs of the database have no kit of their own, they get one too: %s" % (
+            len(fill), ", ".join("%d %s" % c for c in fill[:20]) + (" ..." if len(fill) > 20 else "")))
     tex = opt("--textures")
     textures = read_textures(tex) if tex else None
     if textures is not None:
@@ -298,7 +348,8 @@ def build(argv):
             return 1
         print("%d clubs of ours, plain kits from shipped teams %s" % (len(clubs), [t for t, _ in pool]))
         pairs = [(c, pool[i % len(pool)]) for i, c in enumerate(clubs)]
-        return write(argv, root, do_list, raw, es, hdr, pairs)
+        pairs += [(c, pool[i % len(pool)]) for i, c in enumerate(fill)]
+        return write(argv, root, do_list, raw, es, hdr, pairs, items)
     pool = donors(raw, es, textures, national_teams(team_bin))
     if not pool:
         print("no shipped club has all of %s -- is that the right archive?" % (KINDS,))
@@ -308,12 +359,14 @@ def build(argv):
     col = opt("--colours")
     colours = {int(k): v for k, v in json.load(open(col, encoding="utf-8")).items()} if col else {}
     pairs = with_third(matched(clubs, pool, colours), pool)
+    # after ours, and numbered on their own: the clubs of ours keep their donors across re-runs
+    pairs += with_third(matched(fill, pool, {}), pool)
     if colours:
         print("%d clubs dressed by their own colours" % sum(1 for (tid, _), _p in pairs if shirt((colours.get(tid) or [""])[0])))
-    return write(argv, root, do_list, raw, es, hdr, pairs)
+    return write(argv, root, do_list, raw, es, hdr, pairs, items)
 
 
-def write(argv, root, do_list, raw, es, hdr, pairs):
+def write(argv, root, do_list, raw, es, hdr, pairs, items=None):
     if do_list:
         for (tid, name), (dtid, _) in pairs:
             print("  %6d  %-30s <- shipped club %d" % (tid, name, dtid))
@@ -322,6 +375,12 @@ def write(argv, root, do_list, raw, es, hdr, pairs):
         print("nothing written: pass --root <livecpk-root> or --list")
         return 0
 
+    if items is None:
+        items = [(name, raw[off:off + size]) for name, off, size in es]
+    have = {n for n, _b in items}
+    # a kit another mod already gave the club stays: ours would only hide it
+    pairs = [((tid, nm), (d, {k: b for k, b in dblobs.items() if "%s%s.bin" % (kit_key(tid)[1], k) not in have}))
+             for (tid, nm), (d, dblobs) in pairs]
     written = 0
     for (tid, _), (_, dblobs) in pairs:
         num, stem = kit_key(tid)
@@ -333,7 +392,7 @@ def write(argv, root, do_list, raw, es, hdr, pairs):
     print("wrote %d kit definitions under %s" % (written, os.path.join(root, TEAM_DIR)))
 
     if "--archive" in argv:
-        out = repack(raw, es, pairs)
+        out = repack(items, pairs)
         if hdr is not None:                       # keep the file's own wesys prefix
             out = pesdb.wesys_pack(out, hdr)
         p = os.path.join(root, TEAM_DIR.replace("/", os.sep), "UniformParameter.bin")
@@ -343,9 +402,10 @@ def write(argv, root, do_list, raw, es, hdr, pairs):
     return 0
 
 
-def repack(raw, es, pairs):
-    """Shipped entries byte for byte, then ours -- same header/index/names/blobs shape."""
-    items = [(name, raw[off:off + size]) for name, off, size in es]
+def repack(items, pairs):
+    """[(name, blob)] entries byte for byte (the shipped ones and other mods'), then ours -- same
+    header/index/names/blobs shape."""
+    items = list(items)
     for (tid, _), (_, dblobs) in pairs:
         for kind in kinds_of(dblobs):
             items.append(("%s%s.bin" % (kit_key(tid)[1], kind), dblobs[kind]))

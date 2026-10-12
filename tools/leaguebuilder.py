@@ -3380,7 +3380,7 @@ def build(pl, base, game, replace=False, log=print):
                           qlines)
     json.dump(pl, open(os.path.join(tmp, "leaguebuilder-plan.json"), "w", encoding="utf-8"), indent=1)
 
-    pictures(pl, tmp, base, log)
+    pictures(pl, tmp, base, log, game)
     region_modules(pl, tmp, game, log)
 
     write_manifest(tmp)                   # before keep_added: what this Build wrote, not what it kept
@@ -3967,7 +3967,7 @@ def have_picture(path, name, log, what="crest", instead="drawn badge"):
     return None
 
 
-def pictures(pl, root, base, log=print):
+def pictures(pl, root, base, log=print, game=None):
     """league logos, club crests and kits for the new leagues (tools/lbassets.py)"""
     import lbassets
     flags, done = {}, set()
@@ -4035,7 +4035,12 @@ def pictures(pl, root, base, log=print):
     if not ours:
         return
     args = ["mkkits.py", "--team-bin", os.path.join(root, "common", "etc", "pesdb", "Team.bin"),
-            "--unipar", unipar, "--root", root, "--archive", "--clubs", ",".join(map(str, ours))]
+            "--unipar", unipar, "--root", root, "--archive", "--clubs", ",".join(map(str, ours)),
+            "--fill"]               # clubs another editor added get a kit too (Discord 12.10.)
+    over = other_uniforms(game)
+    if over:
+        # their entries go into ours: ours is read first and would hide them (Kit Studio clubs)
+        args += ["--over", ";".join(over)]
     if plain:
         # editable_kits: no licensed kit lent; each club gets plain 1st/2nd/GK definitions of its
         # own, the kind Edit > Teams > Strip paints (Paste Image too).  Without them a club wore
@@ -4068,6 +4073,31 @@ def pictures(pl, root, base, log=print):
     if rc:
         raise BuildError("kits: %s" % buf.getvalue())
     log("  kits: " + next((l.strip() for l in buf.getvalue().splitlines() if l.startswith("wrote") and "kit" in l), "written"))
+
+
+def other_uniforms(game):
+    """the UniformParameter.bin files of the other mods sider.ini serves, lowest priority first
+    (sider gives the root listed first the priority).  The worlds of ours are left out: the one
+    being built is replaced, and an old one is not served."""
+    try:
+        import siderdir
+        sider = siderdir.find(game) if game else None
+        if not sider:
+            return []
+        lines = open(os.path.join(sider, "sider.ini"), encoding="utf-8-sig", errors="replace").read().splitlines()
+    except (OSError, ImportError, ValueError):
+        return []
+    out = []
+    for l in lines:
+        m = re.match(r'\s*cpk\.root\s*=\s*"([^"]+)"', l)
+        if not m:
+            continue
+        d = m.group(1)
+        d = os.path.normpath(d if os.path.isabs(d) else os.path.join(sider, d))
+        f = os.path.join(d, UNIPAR.replace("/", os.sep))
+        if os.path.exists(f) and not os.path.exists(os.path.join(d, "leaguebuilder-plan.json")):
+            out.append(f)
+    return out[::-1]
 
 
 def cup_emblems(pl):
