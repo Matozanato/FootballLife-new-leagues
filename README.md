@@ -74,9 +74,11 @@ tell us where. Read [what works and what does not](#status) before you start a l
 
 **Leagues and countries**
 
-- Up to **39 new leagues** in one world, **10 to 24 clubs** each, playing each other 1 to 4
-  times with the real number of rounds (10 clubs four times = 36 rounds). Select Team has room
-  for 36 of them: the 37th to 39th play their season, but no career can start in them.
+- **Many new leagues** in one world, **10 to 24 clubs** each, playing each other 1 to 4
+  times with the real number of rounds (10 clubs four times = 36 rounds). Since 0.2.2 there
+  is room for 2,400 clubs in all, and our test world plays 86 new leagues with 1,294 new
+  clubs; Build stops with a message when regulation ids or club room run out. Every league
+  is selectable in Select Team (250 slots).
 - **Any country.** A league is listed under its country in Select Team and Kick Off, with the
   country's flag; a country the game has no league for gets a heading of its own and plays on
   its own continent's calendar and cups (Europe, South America, Asia, Africa ...).
@@ -593,18 +595,20 @@ game loses everything past the shipped count, and a coach lookup lands on the wr
 Mod Studio installs and sets up everything below for you; this part is for anyone who wants
 to know how it works, or to build by hand. The project does two things:
 
-1. **`sider/fl26caps.lua`** — a runtime patch set of 3,519 byte changes, applied by Sider at
+1. **`sider/fl26caps.lua`** — a runtime patch set of 3,504 byte changes, applied by Sider at
    startup, that grows those tables and every piece of code that indexes them:
 
    | table | shipped | with fl26caps |
    |---|---|---|
-   | clubs | 750 | 1,600 |
-   | coaches | 1,300 | 2,600 |
+   | clubs | 750 | 2,400 |
+   | coaches | 1,300 | 3,400 |
    | competition rulebooks (regulations) | 300 | 600 |
-   | players | 30,001 | 51,729 |
+   | players | 30,001 | 61,905 |
    | match records per season | 13,000 | 46,000 |
    | fixtures list | 2,000 | 8,000 |
-   | competitions a season can hold | 100 | 192 with `fl26hdr192.lua` (experimental, used on our test world); 127 with the stable `fl26hdr127.lua` |
+   | competitions a season can hold | 100 | 255 with `fl26hdr255.lua` (0.2.2; replaces `fl26hdr127.lua` and `fl26hdr192.lua`) |
+   | menu regions | 29 | 128 with `fl26reg128.lua` (0.2.2; replaces `fl26reg64.lua`) |
+   | Select Team slots | 124 | 250 with `fl26slots250.lua` |
 
    Every module verifies the bytes it is about to change and refuses to touch a different
    game build. If anything does not match, the game runs unmodified and `sider.log` says why.
@@ -616,7 +620,8 @@ to know how it works, or to build by hand. The project does two things:
 Plus seven small **null-guard modules** that stop known crashes in the game's own code which
 the larger world exposes, **`fl26hdr127.lua`**, which widens the table a season uses to
 hold its competitions from 100 to 127 — the fix for league tables showing 76 matches played
-and ~130 points — and **`fl26joindll.lua` + `fl26join.dll`**, which get every added league
+and ~130 points; Mod Studio 0.2.2 installs `experimental/fl26hdr255.lua` (255) in its place —
+and **`fl26joindll.lua` + `fl26join.dll`**, which get every added league
 *into* the season and, since 2026-09-23, *out of it again* at the end. The game registers
 and closes competitions from lists compiled into the executable, so a new league standing in
 a country of its own was never presented to the season at all, and once it was, it was never
@@ -624,9 +629,9 @@ closed and carried its table on into the next season. The module handles both. I
 compiled piece in the main folder; its source and how to build it are in
 [tools/native/](tools/native/README.md).
 
-`sider/experimental/` holds seventeen more that go further and **were first run on our own
-test worlds**: 192 competitions instead of 127; every league selectable in the Select Team
-list, under its own name, showing its own clubs; 64 menu regions instead of 29; a league rank
+`sider/experimental/` holds more that go further and **were first run on our own
+test worlds**: 255 competitions instead of 127; every league selectable in the Select Team
+list (250 slots), under its own name, showing its own clubs; 128 menu regions instead of 29; a league rank
 wide enough for a pyramid five divisions deep, with the relegation gate to match; a career
 that starts in August instead of January; promotion and relegation through a whole pyramid,
 not just its top joint; guards for the Super Cup and the play-off results screen; **the 2024 European format** for the
@@ -647,8 +652,8 @@ Mod Studio 0.1.4. The full list, with dates and details, is in
 **Measured and working**
 
 - **A Master League career in a new league, or with a club of the game**: the season
-  generates, every league gets its fixtures, the Team Sheet shows a real squad (30 players a
-  new club) and the hub shows the standings. On 2026-09-29 a career with a club of the game, in
+  generates, every league gets its fixtures, the Team Sheet shows a real squad (22 players a
+  new club since 0.2.2, 30 before) and the hub shows the standings. On 2026-09-29 a career with a club of the game, in
   a world with two new South American leagues, played 338 days in one unattended run.
 - **Saving and loading**: the club, the squad, the manager, the standings and the fixtures all
   come back, also from a save made after a full season.
@@ -706,13 +711,18 @@ Mod Studio 0.1.4. The full list, with dates and details, is in
   dropped in silence. A world of 39 leagues uses about 280 on its busiest day;
   `tools/dayplan.py` measures a running season. Careers started before 0.2.0 do not load in
   0.2.0: the wider calendar changes the save, so start a new career.
-- **The competition table can fill up** over many seasons: `fl26hdr127.lua` raises it from 100
-  to 127 and the experimental `fl26hdr192.lua` to 192. Long-running worlds are the most useful
+- **The competition table can fill up** over many seasons: `fl26hdr255.lua` raises it from 100
+  to 255 (0.2.2; it replaces `fl26hdr127.lua` and `fl26hdr192.lua`). Long-running worlds are the most useful
   thing you can report — see the [testing guide](docs/testing-guide.md).
-- **39 new leagues in one world** and **1,536 clubs in all** are walls; more leagues need a
-  regenerated patch set ([why](docs/for-developers.md)).
+- **2,400 clubs in all** is the wall since 0.2.2 (1,536 up to 0.2.1, when 39 new leagues
+  were also the most a world could have). Build stops with a message when regulation ids or
+  club room run out; our test world plays 86 new leagues. A league whose regulation id is not
+  in the patch set's date table needs a regenerated set ([why](docs/for-developers.md)).
 - **A new patch set means a new career**: a save made under one `fl26caps.lua` does not load
-  under another.
+  under another, so careers saved before 0.2.2 do not load in 0.2.2. Worlds keep working
+  (Build them again), and from 0.2.2 a Build keeps the competition, regulation, region, team
+  and cup ids of leagues already built, even when a league is added, removed or the recipe
+  reordered.
 
 ## Requirements
 
@@ -780,8 +790,8 @@ disassembly evidence in the pull request the way the module headers do.
 ```
 sider/              fl26caps.lua (generated patch set), the null guards, fl26hdr127.lua,
                     fl26joindll.lua and the compiled fl26join.dll it loads
-sider/experimental/ seventeen modules that go further: 192 competitions, the Select Team
-                    list (names, slots, club lists, flags, Kick Off order), 64 regions, a
+sider/experimental/ modules that go further: 255 competitions, the Select Team
+                    list (names, 250 slots, club lists, flags, Kick Off order), 128 regions, a
                     3-bit league rank and its relegation gate, an August start, season-end
                     promotion through a pyramid (fl26chain.dll), Super Cup, results-screen and
                     club-change guards, the 2024 European format, league sizes, split

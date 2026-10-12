@@ -113,7 +113,8 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
   the cup's own entry list, and the shipped cup calendar only has dates for a sixteen-club
   bracket. So the feeder league must have sixteen clubs; with twenty, the extra round lands on
   a date row that does not exist and that round never plays. No executable patch is involved.
-- **Menu regions: the ceiling is 64, not 29, and headings are a separate table.** Spreading
+- **Menu regions: the ceiling is 64, not 29, and headings are a separate table.** (Since 0.2.2
+  `fl26reg128.lua` raises it to 128 and replaces `fl26reg64.lua`.) Spreading
   leagues across the shipped countries needs no executable change (`mkworld.py --regions`).
   Above that, two separate things were measured on 2026-09-21. First, the parser that reads a
   competition's region masks it to five bits and throws away anything from 29 up, while the
@@ -250,7 +251,8 @@ that has ever run keeps its slot for good, so the count only rises. Watched acro
 seasons it went 88, 115, 119, **124 of 127**. Whether it stops there or reaches 127 is not
 yet known, and if it reaches 127 the same silent turning-away returns at the higher number.
 127 is also the ceiling of this patch's approach, so going further is a different and larger
-job (the experimental `fl26hdr192.lua` is that job). If you are playing many seasons on one
+job (the experimental `fl26hdr192.lua` is that job; since 0.2.2 `fl26hdr255.lua` replaces
+both and holds 255). If you are playing many seasons on one
 world, this is the thing to watch.
 
 **Three sites added on 2026-09-23 (29 -> 32 patches).** Reading the live code after two
@@ -363,9 +365,10 @@ calendar.
   clubs instead (measured 2026-09-25). Nothing is deleted: remove the module, or give those
   three leagues other slots in its `APPEND` list, and the entries come back. Every other free
   slot is already in use, which is why they were taken.
-- **1,536 clubs in total is a wall** in the season generator, independent of the 1,600 table
-  size. 793 new clubs is the most we have built and loaded; the world played across four
-  seasons had 39 leagues and 780.
+- **2,400 clubs in total is the wall** since 0.2.2 (0.2.1 and earlier: 1,536 in the season
+  generator, independent of the 1,600 table size). Our 0.2.2 test world runs 86 new leagues
+  with 1,294 new clubs; up to 0.2.1, 793 new clubs was the most we built and loaded, and the
+  world played across four seasons had 39 leagues and 780.
 - **A calendar day holds 792 match ids** since 0.2.0 (280 before); overflow is dropped
   silently by the scheduler. More leagues on the same weekday lose fixtures with no error at
   all. Do not trust the

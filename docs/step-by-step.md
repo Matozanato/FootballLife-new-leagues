@@ -129,7 +129,7 @@ Start the game, get to the main menu, quit. Open `SiderAddons\sider.log` and loo
 lines like these, one per module:
 
 ```
-[fl26caps.lua] fl26caps: applied all 3519 patches -- block 0x1877068 -> 0x3d9cbe8, 3519 patches
+[fl26caps.lua] fl26caps: applied all 3504 patches -- block 0x1877068 -> 0x4a2b568, 3504 patches
 [fl26nullguard.lua] fl26caps: applied all 2 patches -- nullguard: null-check at 0x141fea5b0
 ...
 [fl26nullguard9.lua] fl26caps: applied all 2 patches -- nullguard9: empty schedule list guarded at 0x140cd6a18
@@ -191,7 +191,7 @@ beta's own testing was done on, so a failure here is a clear signal:
 
 ```powershell
 python tools\mkworld.py   --base $env:FL26_PESDB --out "C:\Football Life 2026\SiderAddons\livecpk\_FL26World" --leagues 6 --clubs 20
-python tools\mkplayers.py --base $env:FL26_PESDB --out "C:\Football Life 2026\SiderAddons\livecpk\_FL26World" --per 30 --cap 51729
+python tools\mkplayers.py --base $env:FL26_PESDB --out "C:\Football Life 2026\SiderAddons\livecpk\_FL26World" --per 30 --cap 61905
 ```
 
 **Keep the output of `mkworld.py`.** It lists the competition and rulebook id of every league

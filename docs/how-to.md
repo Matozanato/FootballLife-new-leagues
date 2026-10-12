@@ -183,7 +183,7 @@ Rules for this file that catch people out:
 **You should see** eleven lines like these (the numbers after `applied all` can differ):
 
 ```
-[fl26caps.lua] fl26caps: applied all 3519 patches -- ...
+[fl26caps.lua] fl26caps: applied all 3504 patches -- ...
 [fl26nullguard.lua] fl26caps: applied all 2 patches -- ...
 [fl26nullguard2.lua] fl26caps: applied all 2 patches -- ...
 [fl26nullguard4.lua] fl26caps: applied all 2 patches -- ...
@@ -283,12 +283,12 @@ and at the end `6 leagues, 120 clubs added; 863 clubs in all`.
 ### B3. Give every club a squad
 
 ```powershell
-python tools\mkplayers.py --base C:\fl26\pesdb\common\etc\pesdb --out "C:\Football Life 2026\SiderAddons\livecpk\_FL26World" --per 30 --cap 51729
+python tools\mkplayers.py --base C:\fl26\pesdb\common\etc\pesdb --out "C:\Football Life 2026\SiderAddons\livecpk\_FL26World" --per 30 --cap 61905
 ```
 
-**You should see** at the end `120 clubs given 30 players each; ... players in all (cap 51729)`.
+**You should see** at the end `120 clubs given 30 players each; ... players in all (cap 61905)`.
 
-`--cap 51729` is not optional: it is the size of the player table with the mod installed.
+`--cap 61905` is not optional: it is the size of the player table with the mod installed.
 
 ### B4. Switch the world on
 
@@ -330,9 +330,11 @@ table that shows 76 matches played means `fl26hdr127.lua` did not apply (check `
 
 ### B7. Bigger worlds
 
-- **More leagues:** `--leagues 39` is the most the shipped files are set up for (39 leagues
-  of 20 = 780 clubs, `--per 30` still fits). More than 39 needs a regenerated patch set:
-  [for-developers.md](for-developers.md).
+- **More leagues:** `--leagues 39` is the most `mkworld.py` is set up for with the shipped
+  files (39 leagues of 20 = 780 clubs, `--per 30` still fits). More than 39 from `mkworld.py`
+  needs a regenerated patch set: [for-developers.md](for-developers.md). Mod Studio's Build
+  goes further since 0.2.2: leagues past the game's free regulation ids take ids 255
+  downward, which the shipped set dates, and our test world plays 86 new leagues.
 - **Other league sizes** (`--clubs 18`, `--sizes 24,22,20,18`): the leagues are built fine,
   but only a league of **20 clubs playing twice** has its fixture dates without extra help.
   Any other size needs `fl26swiss.dll` from Part D for its dates, or it ends early or runs
@@ -415,7 +417,7 @@ Japanese one) and the regulation column `11, 49, 60, 61, 62, 74, 76` (for seven 
 Then B3 (squads) and B4 (switch it on) with `_FL26Asia` instead of `_FL26World`:
 
 ```powershell
-python tools\mkplayers.py --base C:\fl26\pesdb\common\etc\pesdb --out "C:\Football Life 2026\SiderAddons\livecpk\_FL26Asia" --per 30 --cap 51729
+python tools\mkplayers.py --base C:\fl26\pesdb\common\etc\pesdb --out "C:\Football Life 2026\SiderAddons\livecpk\_FL26Asia" --per 30 --cap 61905
 $env:FL26_DIR = "C:\Football Life 2026"
 python tools\siderroot.py _FL26Asia
 ```
@@ -767,17 +769,17 @@ instead of the world. Move `Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\20
 somewhere safe (do not just delete it if it holds edits you want), start the game, and let
 Edit mode write a new one.
 
-### E8. The 1,536-club and 792-matches-a-day walls
+### E8. The 2,400-club and 792-matches-a-day walls
 
-The season generator stops at **1,536 clubs** in total, and a calendar day holds **792
-matches** since 0.2.0 (280 in the game as shipped); what is past that is dropped without a
-word. Up to 39 leagues of 20 clubs is
-inside both. Details and the ways around: [limits.md](limits.md).
+The club table holds **2,400 clubs** in total since 0.2.2 (the season generator stopped at
+1,536 up to 0.2.1), and a calendar day holds **792 matches** since 0.2.0 (280 in the game as
+shipped); what is past that is dropped without a word. Up to 39 leagues of 20 clubs is
+well inside both; our 0.2.2 test world has 86 new leagues and 1,294 new clubs. Details and the ways around: [limits.md](limits.md).
 
 ### E9. Other experimental modules
 
 `sider\experimental\` holds more: every league in the Select Team list (with its country's flag,
-filled in by `tools\mkflags.py`), 64 regions, a career that starts in August, promotion and relegation through a whole pyramid, Edit mode lists.
+filled in by `tools\mkflags.py`), 128 regions, a career that starts in August, promotion and relegation through a whole pyramid, Edit mode lists.
 Several of them carry lists of **our** world's ids that you must change for yours. Read
 [sider/experimental/README.md](../sider/experimental/README.md) before adding any, and add them
 **one at a time**.

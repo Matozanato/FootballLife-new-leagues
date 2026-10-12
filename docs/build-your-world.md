@@ -45,7 +45,7 @@ sorts to the top, for example `_FL26World`.
 
 ```
 python tools\mkworld.py   --base %FL26_PESDB% --out "C:\Football Life 2026\SiderAddons\livecpk\_FL26World" --leagues 6 --clubs 20
-python tools\mkplayers.py --base %FL26_PESDB% --out "C:\Football Life 2026\SiderAddons\livecpk\_FL26World" --per 30 --cap 51729
+python tools\mkplayers.py --base %FL26_PESDB% --out "C:\Football Life 2026\SiderAddons\livecpk\_FL26World" --per 30 --cap 61905
 ```
 
 What the options mean:
@@ -58,8 +58,8 @@ What the options mean:
 | `--region N` | 16 | which existing menu region the leagues appear under (16 = England's slot) |
 | `--cid-from N` | 130 | first competition id; leave it |
 | `--reg-from N` | 1 | first rulebook id, handed out from the free list; **leave it** (see below) |
-| `--cap` (mkplayers) | 30001 | must be **51729** with this patch set; it is the player table size |
-| `--per` (mkplayers) | 23 | players per club; the budget is 51,729 − 27,927 shipped = 23,802 players ≈ 793 squads of 30, so `--per 30` fits a 39-league world |
+| `--cap` (mkplayers) | 30001 | must be **61905** with this patch set (51729 up to 0.2.1); it is the player table size |
+| `--per` (mkplayers) | 23 | players per club; the budget is 61,905 − 27,927 shipped = 33,978 players ≈ 1,132 squads of 30, so `--per 30` fits a 39-league world (Mod Studio's Build gives new clubs 22 since 0.2.2) |
 
 `mkworld.py` prints what it did. **Keep that output** — it lists the competition ids and
 rulebook ids it used, and you will need it for the check below and for any bug report:
@@ -84,7 +84,9 @@ every league's ids.)
 A new league gets its fixture dates from a small table inside `fl26caps.lua`, keyed by the
 league's **rulebook (regulation) id**. A league whose id is not in that table is never
 scheduled: it appears in the menus, you can pick a club from it, and the season generator
-simply gives it no matches. The shipped `fl26caps.lua` covers these 39 ids (and 145, see below):
+simply gives it no matches. The shipped `fl26caps.lua` covers these 39 ids (and 145, see below),
+and since 0.2.2 also 197 to 255, the ids Mod Studio's Build hands out from 255 downward once
+the game's free ids are gone:
 
 ```
 11 49 60 61 62 74 76 93 94 96 98 100 109 110 111 112 113 114 121
@@ -139,11 +141,13 @@ records show what was really wanted.
 
 ### Sizes worth knowing
 
-Our largest built world: **39 leagues, 793 clubs**, built with `--leagues 39` and sizes
-around 20; the world that has been played across four seasons is 39 leagues of exactly 20,
-780 clubs. Bigger is possible on paper (1,600 club slots) but **1,536 clubs in total is a
-hard wall** in the season generator, and a calendar day holds 792 match ids at most (280
-before 0.2.0), so the club wall comes long before the calendar does. Start smaller.
+Our largest world built with `mkworld.py`: **39 leagues, 793 clubs**, built with
+`--leagues 39` and sizes around 20; the world that has been played across four seasons is 39
+leagues of exactly 20, 780 clubs. Since 0.2.2 the club table holds **2,400 clubs in all**
+(up to 0.2.1, **1,536 clubs in total was a hard wall** in the season generator), and a
+calendar day holds 792 match ids at most (280 before 0.2.0). Our 0.2.2 test world, built with
+Mod Studio, plays 86 new leagues of 10 to 24 clubs, 1,294 new clubs; Build stops with a
+message when regulation ids or club room run out. Start smaller.
 A world of 6 leagues × 20 clubs is a fine first test; 12 leagues with `--sizes 24,22,20,18,16,14`
 is a good second.
 
@@ -202,7 +206,8 @@ a pyramid does not have to: see [limits.md](limits.md), and
 
 Regions are given with `--region N` (one for all) or `--regions A,B,C` (dealt out). The
 shipped game reads a region number below 29 and ignores anything higher, so that is the
-ceiling unless `sider/experimental/fl26reg64.lua` is installed, which raises it to 64. Above
+ceiling unless `sider/experimental/fl26reg128.lua` is installed, which raises it to 128 (0.2.2;
+it replaces `fl26reg64.lua`, which gave 64). Above
 the shipped 24 a region has no heading of its own and borrows the previous country's name in
 the menus; it still groups the leagues correctly. Four ids -- 11, 13, 14 and 20 -- have no
 heading row at all and are otherwise free.

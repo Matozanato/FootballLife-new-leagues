@@ -2,6 +2,23 @@
 
 DRAFT -- not released. Every line below still needs its in-game check before the release.
 
+## Bigger worlds
+
+- **Raised limits.** 2,400 clubs in a world (1,536 before), 3,400 coaches, 61,905 players
+  (new clubs get 22-man squads), 255 competitions a season (127 before), 128 menu regions and
+  250 Select Team slots, so a league past the game's free ids is still selectable and can
+  start a career. Our test world plays 86 new leagues with 1,294 new clubs. New modules:
+  `fl26appcap`, `fl26regs600`, `fl26slots250`, `fl26slot7`, `fl26regfast`, `fl26walk`,
+  `fl26hdr255` (replaces `fl26hdr127`/`fl26hdr192`), `fl26reg128` (replaces `fl26reg64`).
+  Build installs them. **Careers saved before 0.2.2 do not load**: start a new career after
+  Build. Your recipe and world carry over.
+- **A Build keeps the ids of leagues already built.** Adding a league in front of others,
+  removing one or changing the order used to give every league after it new competition,
+  regulation, region and club ids, so a Kit Server map, the scoreboard map and faces lost
+  them. Now each league keeps its competition id, regulation id, region, club ids and its
+  cups' ids from the last Build; only a new (or renamed) league gets new ones.
+- New leagues never get a competition id below 130 (those caused conflicts).
+
 ## Small additions (asked for on Discord)
 
 - League: a name field for the super cup, beside the national cup's and the league cup's
@@ -87,9 +104,10 @@ DRAFT -- not released. Every line below still needs its in-game check before the
 - Release tool (for forks): `mszip.py` now stops when `FL26_DIR` is not set or the package has
   no regen face pack, instead of printing a note and going on (`--untested`, `--no-faces` let a
   fork's own build through); lbpack finds the face pack from a worktree too.
-- Install modules switches off three old modules a shipped one replaced, when an old manual
+- Install modules switches off old modules a shipped one replaced, when an old manual
   install still has them: `fl26nullguard3` (replaced by the guards bundle), `fl26hdr127`
-  (by `fl26hdr192`) and `fl26deep4` (by `fl26deeprank`). Each pair overlaps, the second one
+  and `fl26hdr192` (by `fl26hdr255`), `fl26reg64` (by `fl26reg128`) and `fl26deep4` (by
+  `fl26deeprank`). Each pair overlaps, the second one
   refused its bytes, and the check after Build called that "refused the game's exe".
 - Edit mode team lists show the leagues on the new competition slots 124-249 too
   (`fl26editlist` stopped at 123, the old slot count).

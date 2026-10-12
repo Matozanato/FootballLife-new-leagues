@@ -100,7 +100,7 @@ August.
 
 ## The null guards
 
-A world of 1,536 clubs walks code paths the shipped data never reaches. Several of them
+A world of up to 2,400 clubs walks code paths the shipped data never reaches. Several of them
 look up a record and read through the result without checking for "not found". Each
 `fl26nullguardN.lua` replaces a few bytes at one such site with a jump to a tiny stub that
 tests the pointer and takes the function's own existing "nothing to do" path when it is null.

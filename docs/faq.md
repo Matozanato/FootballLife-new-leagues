@@ -60,6 +60,10 @@ group stays, the 33rd and 34th take the small *Other Clubs (Africa)* and *Other*
 groups. **Check the plan** names each league that takes a place; put the leagues you want to
 start a career in first. After updating, **Build the world** again and start a new career.
 
+That is 0.2.1 and earlier. Since 0.2.2 the leagues after the 32nd take regulation ids from 255
+downward, each with a Select Team slot of its own (124 up), before any id that sits on one of
+those groups: the groups stay and every league is selectable until those ids run out.
+
 ### My new country is at the bottom of the list, not with the others of its continent
 
 Since 0.1.3 a new country is listed among the countries of its continent, by name (Iceland

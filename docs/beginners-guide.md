@@ -153,7 +153,7 @@ there.
 **You should see** lines like these (the numbers can differ):
 
 ```
-[fl26caps.lua] fl26caps: applied all 3519 patches -- ...
+[fl26caps.lua] fl26caps: applied all 3504 patches -- ...
 [fl26nullguard.lua] fl26caps: applied all 2 patches -- ...
 ...
 [fl26joindll.lua] fl26joindll: installed -- 39 added leagues will be registered ...
@@ -210,7 +210,7 @@ python tools\mkworld.py --base C:\fl26\pesdb\common\etc\pesdb --out "C:\Football
 `6 leagues, 120 clubs added`.
 
 ```powershell
-python tools\mkplayers.py --base C:\fl26\pesdb\common\etc\pesdb --out "C:\Football Life 2026\SiderAddons\livecpk\_FL26World" --per 30 --cap 51729
+python tools\mkplayers.py --base C:\fl26\pesdb\common\etc\pesdb --out "C:\Football Life 2026\SiderAddons\livecpk\_FL26World" --per 30 --cap 61905
 ```
 
 **You should see** at the end `120 clubs given 30 players each`.
@@ -299,7 +299,7 @@ already started keeps its own copy of the clubs.
 
 ## Optional: more leagues and bigger features
 
-The six-league world above is the tested, safe start. Bigger worlds (39 leagues, different
+The six-league world above is the tested, safe start. Bigger worlds (more leagues, different
 league sizes, promotion and relegation, the new Champions League format) need the
 experimental modules. Only try them after the steps above work:
 [sider/experimental/README.md](../sider/experimental/README.md) and

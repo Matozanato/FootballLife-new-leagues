@@ -4,20 +4,21 @@ What the shipped game holds, what `fl26caps.lua` raises it to, and which walls r
 
 | what | shipped | with fl26caps | notes |
 |---|---|---|---|
-| clubs (team table) | 750 (743 used) | 1,600 | **1,536 clubs in total is a hard wall** elsewhere in the season generator |
-| coaches | 1,300 (961 used) | 2,600 | one per club is invented by the game for new clubs |
+| clubs (team table) | 750 (743 used) | 2,400 | 0.2.2; up to 0.2.1 the table held 1,600 and **1,536 clubs in total was a hard wall** in the season generator. New clubs get 22-man squads (30 up to 0.2.1). Our test world plays 86 new leagues with 1,294 new clubs |
+| coaches | 1,300 (961 used) | 3,400 | 2,600 up to 0.2.1; one per club is invented by the game for new clubs |
 | competition rulebooks (regulations) | 300 (214 used) | 600 | ids are 16-bit; the date table covers ids 1–255 |
 | competitions | 256 ids (91 used, max id 141) | unchanged | ids are one byte in every table |
-| players | 30,001 (27,927 used) | 51,729 | the cap must be ≡ 17 mod 32; 719 of our clubs carry a full 30 |
+| players | 30,001 (27,927 used) | 61,905 | 51,729 up to 0.2.1; the cap must be ≡ 17 mod 32 |
 | match records per season | 13,000 | 46,000 | our 39-league season of 20-club leagues used 21,010; raised on 2026-09-24 so that an old season still being freed and the new one being built both fit at the rollover |
 | fixtures list | 2,000 | **8,000** | one record is one round of one competition, stride 0x208. Records are handed back as rounds finish, so a four-season world peaks under 2,700 |
 | calendar | 365 days, 280 match ids per day | **792 per day** (0.2.0) | overflow is dropped silently. The wider day moves the whole calendar unit to the top of the edit block, so a career saved before 0.2.0 does not load. Beware the obvious measurement: walking the calendar counts what the scheduler *accepted*, so a full day reads as exactly its cap and hides the matches it turned away. The match records carry their own dates and show the real demand — measured once at 280 on the calendar and 351 in the records for the same day |
-| menu regions | 24 in use of 29 slots | unchanged | new leagues go into an existing slot |
+| menu regions | 24 in use of 29 slots | **128** with `fl26reg128.lua` | 0.2.2; replaces `fl26reg64.lua` (64). Without either module new leagues go into an existing slot |
+| Select Team slots | 124 | **250** with `fl26slots250.lua` | 0.2.2, with `fl26slot7.lua` making a club's league slot a whole byte. Leagues past the game's free regulation ids take ids 255 downward with a slot of their own (124 …), so they are selectable |
 | league size | 10–30 clubs | — | 10 is the shipped game's own smallest league, not a floor of ours. The round list holds 58 entries, which is a double round robin of 30 exactly; above that the extra rounds are dropped without an error |
-| edit block (all tables together) | 0x1877068 bytes | 0x3d9cbe8 bytes | 0x3cd4ae8 before 0.2.0; the wider calendar adds 0xc8100 |
-| second copy of the tables (used for save/load) | 0x15b6d94 bytes | 0x25a7cc4 bytes | grown by the `mlcopy` part of the set |
-| competitions a season can hold at once | 100 | **127**, or **192** with the experimental module | raised by `fl26hdr127.lua`; entries are never released, so the count only rises — see known-issues.md |
-| per-phase standings tables | 600 | 599 (597 at 192) | they pay for the wider header; a running season uses about 375 |
+| edit block (all tables together) | 0x1877068 bytes | 0x4a2b568 bytes | 0.2.2 (3,504 patches); 0x3d9cbe8 in 0.2.0 and 0.2.1 (3,519 patches), 0x3cd4ae8 before 0.2.0, when the wider calendar added 0xc8100 |
+| second copy of the tables (used for save/load) | 0x15b6d94 bytes | 0x3f71da4 bytes | grown by the `mlcopy` part of the set |
+| competitions a season can hold at once | 100 | **255** with `fl26hdr255.lua` | 0.2.2; replaces `fl26hdr127.lua` (127) and `fl26hdr192.lua` (192). Entries are never released, so the count only rises — see known-issues.md |
+| per-phase standings tables | 600 | 595 with `fl26hdr255.lua` (599 at 127, 597 at 192) | they pay for the wider header; a running season uses about 375 |
 
 ## Divisions: three values, but a pyramid can be deeper than three
 
@@ -112,6 +113,12 @@ reading the match records shows what was wanted, including everything that was t
 
 Work on this branch only; nothing here is in a Mod Studio release yet.
 
+*Status in 0.2.2:* the 255 competitions and the 250 slots below shipped in 0.2.2, with the
+club, coach, player and region numbers in the table at the top. The 65,000 match records did
+not: 0.2.2 keeps 46,000. The 7-bit league slot is no longer a wall either: `fl26slot7.lua`
+makes a club's league slot a whole byte, and leagues past the game's free regulation ids sit
+on slots from 124 up.
+
 - **Matches in the season table, 46,000 -> 65,000** (`patches/layout.json`, `cap_new` of
   `rec596` and `matchflags`). The record index is a u16 with 0xffff as "free", so 65,534 is
   the real end. A Master League career was created and four rounds skipped on it.
@@ -142,7 +149,7 @@ Work on this branch only; nothing here is in a Mod Studio release yet.
 Written down because they are the next things to move, and because knowing where a ceiling
 *is not* saves the next person the same search.
 
-**The competition header, 100 → 127 → 192.** 127 was not the engine's limit but a byte's:
+**The competition header, 100 → 127 → 192** (255 since 0.2.2, `fl26hdr255.lua`)**.** 127 was not the engine's limit but a byte's:
 all thirteen bounds are `cmp r32, 0x64`, and 0x7f is the largest value that fits in the
 one-byte immediate. Each of those thirteen is a compare plus a short branch — five bytes,
 six with a prefix — which is exactly the room a long jump needs, so each can be redirected
@@ -150,13 +157,14 @@ to a stub holding a wider compare. `sider/experimental/fl26hdr192.lua` does that
 of three of the 600 per-phase tables. Not played yet; that is what the experimental folder
 is for.
 
-**Players, 51,729.** Not an engine number either: the player table starts at the very
+**Players, 51,729** (0.2.1 and earlier; 0.2.2 moves the calendar and ships 61,905)**.** Not an engine number either: the player table starts at the very
 beginning of the block and cannot be moved, so it grows into whatever sits above it, and
 what sits above it is the season calendar. Move the calendar and the ceiling becomes 61,905
 — another 10,000 players, about 339 squads of thirty. The work that moves the calendar is
 done but not yet played, so it is not published here.
 
-**1,536 clubs.** Still the wall, and still not explained. What is now certain is that the
+**1,536 clubs** (0.2.1 and earlier; 0.2.2's layout raises the club room to 2,400, and our
+test world runs 1,294 new clubs on top of the game's 743)**.** It was never explained. What is certain is that the
 number is not written in the executable at all: no array is bounded at 1536 with any stride,
 the constant appears in exactly two comparisons and both are message-code switches, and no
 `mov` of it counts clubs. So it is either a capacity computed while the game runs or a

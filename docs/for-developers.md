@@ -16,19 +16,21 @@ league package format (`.fl26pack`) are in [mod-studio.md](mod-studio.md).
 ## Regenerating the patch set
 
 You need to regenerate `fl26caps.lua` when your world's rulebook ids are not all in the
-shipped date table (more than 39 leagues, a non-default `--reg-from`, a data pack that
-already uses some of those ids), or when you change a cap.
+shipped date table (more than 39 leagues built with `mkworld.py`, a non-default `--reg-from`,
+a data pack that already uses some of those ids), or when you change a cap.
 
 Requirements: Python 3.10+, `pip install capstone`, the game exe reachable through
 `FL26_DIR` (or `FL26_EXE`), and this repository's `patches/` and `sider/fl26caps.template.lua`.
 
-The shipped set (0.2.0, 3519 patches, 792 matches a calendar day) was generated with:
+The shipped set (0.2.2, 3504 patches, 792 matches a calendar day, 61,905 players) was generated with (keys 197–255 are the regulation ids the league builder hands a league once
+the game's free ids are gone, from 255 down, see `EXTRA_IDS` in `tools/fl26world.py`; the same list is recorded in `patches/<set>.json`, and running
+this reproduces the shipped `fl26caps.lua` patch for patch):
 
 ```
 python tools\patchset.py teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar ^
-    --player-cap 51729 ^
-    --date-keys 11,49,60,61,62,74,76,93,94,96,98,100,109,110,111,112,113,114,121,138,139,140,143,144,145,146,170,171,173,174,176,178,179,180,181,182,183,184,185,190 ^
-    --date-offsets 11:1,49:2,60:1,61:2,62:5,74:5,76:2,93:6,94:2,96:2,98:4,100:1,109:1,110:1,111:1,112:4,113:5,114:2,121:2,138:2,139:2,140:2,143:5,144:2,145:2,146:6,170:4,171:6,173:1,174:0,176:1,178:6,179:4,180:0,181:1,182:5,183:1,184:6,185:1,190:2 ^
+    --player-cap 61905 ^
+    --date-keys 11,49,60,61,62,74,76,93,94,96,98,100,109,110,111,112,113,114,121,138,139,140,143,144,145,146,170,171,173,174,176,178,179,180,181,182,183,184,185,190,255,254,253,252,251,250,249,248,247,246,245,244,243,242,241,240,239,238,237,236,235,234,233,232,231,230,229,228,227,226,225,224,223,222,221,220,219,218,217,216,215,214,213,212,211,210,209,208,207,206,205,204,203,202,201,200,199,198,197 ^
+    --date-offsets 11:1,49:2,60:1,61:2,62:5,74:5,76:2,93:6,94:2,96:2,98:4,100:1,109:1,110:1,111:1,112:4,113:5,114:2,121:2,138:2,139:2,140:2,143:5,144:2,145:2,146:6,170:4,171:6,173:1,174:0,176:1,178:6,179:4,180:0,181:1,182:5,183:1,184:6,185:1,190:2,255:0,254:1,253:2,252:3,251:4,250:5,249:6,248:0,247:1,246:2,245:3,244:4,243:5,242:6,241:0,240:1,239:2,238:3,237:4,236:5,235:6,234:0,233:1,232:2,231:3,230:4,229:5,228:6,227:0,226:1,225:2,224:3,223:4,222:5,221:6,220:0,219:1,218:2,217:3,216:4,215:5,214:6,213:0,212:1,211:2,210:3,209:4,208:5,207:6,206:0,205:1,204:2,203:3,202:4,201:5,200:6,199:0,198:1,197:2 ^
     --cup-keys 186
 ```
 
@@ -69,7 +71,7 @@ a real load-path bug:
 
 ## What the set name means
 
-`teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar` (3519 patches): each part is a family of patches
+`teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar` (3504 patches in 0.2.2): each part is a family of patches
 in `layout.json` — grow the team table and relocate it; grow coaches; grow regulations;
 raise the player cap in place; install the date-spread stub (since 0.1.7 on a page of its own
 at `0x163000000`, which `fl26caps` reserves before it writes); grow the match record table;
