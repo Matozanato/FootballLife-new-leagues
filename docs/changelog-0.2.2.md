@@ -37,6 +37,12 @@ DRAFT -- not released. Every line below still needs its in-game check before the
 
 ## Easier to use (from the poll)
 
+- **Competition Info: every European qualifying round has its own item** (2nd and 3rd
+  qualifying round, play-off round), so you can open each and see who plays whom; before, all
+  of them sat under one "Play-offs" item that only showed the current round. The February
+  play-off for places 9-24 is named "Knockout round play-offs", "Round of 32" / "First knockout
+  round" read "Round of 16", and the Conference League shows its knockouts as a list of ties
+  like the Champions and Europa League.
 - File > Changes in this world: everything your recipe changes in one list (clubs of the
   game, leagues, competitions, swaps, squads), and Undo for the lines you pick.
 - The status bar says whether your changes are saved; click it, or Ctrl+S, to save. Edits
