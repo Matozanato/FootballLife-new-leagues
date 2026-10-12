@@ -243,8 +243,8 @@ OTHERS_NAMES = {2: "Other European", 6: "Other Latin American", 3: "Other Asia-O
                 7: "Other Africa", 1: "Classic Teams"}
 REGION_FIRST, REGION_LAST = 29, M.REGION_MAX
 CID_FROM = 130
-SQUAD, PLAYER_CAP = 22, 61905            # limits branch: the lim2400 layout (--player-cap 61905); 30 a squad in releases
-TEAM_CAP = 2400                          # clubs in all, shipped ones included (1536 in releases)
+SQUAD, PLAYER_CAP = 22, 61905            # 0.2.2: the lim2400 layout (--player-cap 61905); 30 a squad up to 0.2.1
+TEAM_CAP = 2400                          # clubs in all, shipped ones included (1536 up to 0.2.1)
 MAX_SPLITS = 2                           # split seasons tested so far: two at a time (191..196)
 # national cups to copy, by the clubs the game puts in them: the top division alone, or the top
 # division and the one below. European ones only -- a new country plays the European calendar,
@@ -1297,7 +1297,23 @@ def pl_saudi_august(recipe, region):
     return region in august_regions(recipe)
 
 
-def plan(recipe, base):
+def prev_pins(prev):
+    """{league name, lower case: what the last Build gave it} from that Build's plan (its
+    leaguebuilder-plan.json): a league built before keeps its competition, regulation and
+    region ids and its new clubs' team ids, so a league added, removed or moved in front of it
+    does not hand every league after it new ids. A Master League career, a Kit Server map.txt
+    and the scoreboard map all hold those ids (audit 12.10.; only NewLife clubs kept theirs)."""
+    out = {}
+    for q in (prev or {}).get("leagues") or []:
+        if isinstance(q, dict) and q.get("name"):
+            out[str(q["name"]).strip().lower()] = q
+    return out
+
+
+def plan(recipe, base, prev=None):
+    """the plan of `recipe`; `prev` is the plan of the world's last Build, whose ids the
+    leagues built then keep (prev_pins)"""
+    pins = prev_pins(prev)
     comp, regs = M.load(base, "Competition.bin"), M.load(base, "CompetitionRegulation.bin")
     import mkflags
     cty = mkflags.countries(mkflags.table("Country", [base]))
@@ -1330,9 +1346,22 @@ def plan(recipe, base):
     if leagues and len(leagues) > len(free):
         raise BuildError("%d leagues, but the game has room for %d (see docs/mod-studio.md)"
                          % (len(leagues), len(free)))
-    cids = [c for c in W.cid_pool(CID_FROM) if c not in used_cid and c != UECL_CID][:len(leagues)]
-    if len(cids) < len(leagues):
-        raise BuildError("no free competition ids left")
+    # a league built before keeps its competition id; the others take the first free ones
+    cid_of, taken_cid = {}, set()
+    pool = [c for c in W.cid_pool(CID_FROM) if c not in used_cid and c != UECL_CID]
+    for i, nm in enumerate(names):
+        c = (pins.get(nm.lower()) or {}).get("cid")
+        if isinstance(c, int) and c in pool and c not in taken_cid:
+            cid_of[i] = c
+            taken_cid.add(c)
+    # nor a cup's id of the last Build: build() gives the cup its own back (pinned_ids)
+    cup_cids = {w.get("cid") for w in ((prev or {}).get("cup_ids") or {}).values() if isinstance(w, dict)}
+    rest = iter(c for c in pool if c not in taken_cid and c not in cup_cids)
+    for i in range(len(leagues)):
+        if i not in cid_of:
+            cid_of[i] = next(rest, None)
+            if cid_of[i] is None:
+                raise BuildError("no free competition ids left")
     room = clubs_room(base)
     total = sum(new_club_count(L) for L in full["leagues"])
     if total > room:
@@ -1344,7 +1373,19 @@ def plan(recipe, base):
     # an exhibition league first takes an id the season builder leaves alone; the others then
     # take what is left, in the usual order
     rid_of, left = {}, list(free)
+    # a league built before keeps its regulation id (and with it its slot and dates), as long as
+    # the id is still free and still suits it (same exhibition kind; a split season off reg 49)
     for i in order:
+        q = pins.get(names[i].lower()) or {}
+        r = q.get("rid")
+        if (isinstance(r, int) and r in left
+                and not (r == SHARED_SLOT_REG and (leagues[i].get("split") or leagues[i].get("apertura")))
+                and bool(q.get("exhibition")) == bool(leagues[i].get("exhibition"))):
+            rid_of[i] = r
+            left.remove(r)
+    for i in order:
+        if i in rid_of:
+            continue
         if leagues[i].get("exhibition"):
             # above REG_CASE_MAX first: the game also enters ids up to it into a running season
             # on their registration day (fl26join.c), and 11, the first id outside CREATION_IDS,
@@ -1387,6 +1428,15 @@ def plan(recipe, base):
                 raise BuildError("%s: no free regulation id for a split season" % names[i])
             rid_of[i] = r
             left.remove(r)
+    # a country built before keeps its region: claimed before any league takes the first free one
+    for i in order:
+        L, q = leagues[i], pins.get(names[i].lower()) or {}
+        fid = mkflags.by_name(cty, L.get("country", ""))
+        if (L.get("above") in (None, "") and q.get("above") is None and fid is not None and q.get("country") == fid
+                and fid not in country_region and isinstance(q.get("region"), int)
+                and REGION_FIRST <= q["region"] <= REGION_LAST and q["region"] not in used_region):
+            used_region.add(q["region"])
+            country_region[fid] = q["region"]
     for k, i in enumerate(order):
         L = leagues[i]
         name = names[i]
@@ -1398,7 +1448,7 @@ def plan(recipe, base):
         fid = mkflags.by_name(cty, L.get("country", ""))
         if fid is None:
             raise BuildError("%s: no country called %r in Country.bin" % (name, L.get("country")))
-        p = {"name": name, "country": fid, "clubs": n, "legs": legs, "rid": rid_of[i], "cid": cids[k],
+        p = {"name": name, "country": fid, "clubs": n, "legs": legs, "rid": rid_of[i], "cid": cid_of[i],
              "slot": fl26world.DEFAULT_SLOT.get(rid_of[i], fl26world.NO_SLOT), "club_names": list(L.get("club_names") or []),
              "exhibition": bool(L.get("exhibition")),
              "logo": L.get("logo") or None, "flag": L.get("flag") or None,
@@ -1419,6 +1469,12 @@ def plan(recipe, base):
              "above": None, "tier": 1,
              "real_calendar": L.get("real_calendar"),     # realcal.py: dates, or false for none
              "europe": [[int(a), int(b)] for a, b in (L.get("europe") or [])]}
+        q = pins.get(name.lower()) or {}
+        if q.get("teams"):
+            # the team ids the last Build gave this league's places, and the names they had:
+            # build() gives a new club its old id back (pinned_tid)
+            p["prev_teams"] = [t if isinstance(t, int) else None for t in q["teams"]]
+            p["prev_names"] = [str(x or "").strip().lower() for x in (q.get("club_names") or [])]
         for f in [p["formation"]] + p["club_formations"]:
             if f and formation_club(base, f) is None:
                 raise BuildError("%s: no formation %r (the Formation list has them)" % (name, f))
@@ -1654,7 +1710,9 @@ def plan(recipe, base):
             "make_kits": recipe.get("make_kits", True) is not False,
             "pack_faces": recipe.get("pack_faces", True) is not False,
             "country_order": recipe.get("country_order") or None,
-            "cup_draw": cup_draw(recipe)}
+            "cup_draw": cup_draw(recipe),
+            # the cups' ids of the last Build, {key: {cid, reg, ...}}: build() gives each its own back
+            "prev_cup_ids": dict((prev or {}).get("cup_ids") or {})}
 
 
 CUP_DRAWS = ("seeded", "random", "off")
@@ -3052,6 +3110,17 @@ def build(pl, base, game, replace=False, log=print):
     # club has at most 40" (Discord, rwee and capital030, 0.1.8)
     others = pl.get("others") or []
     nl_ids = {t for p in pl["leagues"] + others for t in (p.get("newlife_tid") or {}).values()}
+    # a new club's id from the last Build (plan: prev_teams): kept when it is still free, and no
+    # other new club counts up into one (audit 12.10.: a league added in front moved them all)
+    pins_all = {t for p in pl["leagues"] for t in (p.get("prev_teams") or [])
+                if t and top_id < t <= CLUB_ID_MAX and t not in nl_ids and t not in mine}
+
+    def pinned_tid(p, k):
+        prev, names = p.get("prev_teams") or [], p.get("prev_names") or []
+        nm = str((p.get("club_names") or [])[k] if k < len(p.get("club_names") or []) else "").strip().lower()
+        j = names.index(nm) if nm and nm in names else (k if not nm and not (names[k:k + 1] or [""])[0] else None)
+        t = prev[j] if j is not None and j < len(prev) else None
+        return t if t in pins_all and t not in have else None
     if any(game_places(p) for p in pl["leagues"]):
         info = game_info(base)
         for p in pl["leagues"]:
@@ -3120,10 +3189,12 @@ def build(pl, base, game, replace=False, log=print):
             if tid is None:
                 raise BuildError("%s, club %d: no world id for the NewLife club %d"
                                  % (p["name"], k + 1, nl[k]))
+        elif pinned_tid(p, k):
+            tid = pinned_tid(p, k)
         else:
             tid = top_id + 1 + own
             own += 1
-            while tid in have or tid in nl_ids:    # a NewLife club's pinned id may sit lower
+            while tid in have or tid in nl_ids or tid in pins_all:    # a NewLife club's pinned id may sit lower
                 tid = top_id + 1 + own
                 own += 1
             if tid > CLUB_ID_MAX:
@@ -3312,7 +3383,10 @@ def build(pl, base, game, replace=False, log=print):
     for c in pl.get("ccups") or []:
         c["winners"] = list(c.get("winners") or []) + [[r, own_cup[r]] for r in
                                                        {e[1] for e in c["entry"] if e[0] == "cup"} if own_cup.get(r)]
-    ccups = continental((pl.get("ccups") or []) + hc, tmp, db, log, alt_from(pl))
+    ccups = continental((pl.get("ccups") or []) + hc, tmp, db, log, alt_from(pl), pl.get("prev_cup_ids"))
+    for c in (pl.get("ccups") or []) + hc:
+        pl.setdefault("cup_ids", {})["ccup:" + (c.get("code") or c["name"])] = {
+            f: c[f] for f in ("cid", "reg", "ko", "pre_reg") if isinstance(c.get(f), int)}
     # the confed line also tells fl26swiss which of our clubs the board sends to the AFC
     # Champions League or the Libertadores instead of the Champions League (GitHub #43), so a
     # world with a league outside UEFA gets it even with no continental cup
@@ -3390,6 +3464,9 @@ def build(pl, base, game, replace=False, log=print):
                           + fans
                           + ["cupdraw %s" % pl.get("cup_draw", "seeded")],
                           qlines)
+    pl.pop("prev_cup_ids", None)      # this Build's own are in cup_ids; the old ones must not pile up
+    for p in pl["leagues"]:
+        p.pop("prev_teams", None), p.pop("prev_names", None)
     json.dump(pl, open(os.path.join(tmp, "leaguebuilder-plan.json"), "w", encoding="utf-8"), indent=1)
 
     pictures(pl, tmp, base, log, game)
@@ -3534,6 +3611,21 @@ def europe(root, db, log=print, uecl=True, name=None, rounds=()):
         except SystemExit as e:
             raise BuildError("qualifying rounds: %s" % e)
     return clubs, qlines
+
+
+def pinned_ids(pl, db, key):
+    """free_comp_ids for the cup `key`: its ids of the last Build first when they are still free
+    (pl["prev_cup_ids"]), and no other cup's old ids (audit 12.10.: a league added in front gave
+    every cup after it new ids, and a career holds them)"""
+    want = pl.get("prev_cup_ids") or {}
+    cids, regs = free_comp_ids(db)
+    mine = want.get(key) or {}
+    others_c = {w.get("cid") for k, w in want.items() if k != key}
+    others_r = {v for k, w in want.items() if k != key for f, v in w.items() if f != "cid"}
+    c0 = [mine["cid"]] if mine.get("cid") in cids else []
+    r0 = [mine["reg"]] if mine.get("reg") in regs else []
+    return (c0 + [c for c in cids if c not in others_c and c not in c0],
+            r0 + [r for r in regs if r not in others_r and r not in r0])
 
 
 def free_comp_ids(db, reserved=()):
@@ -3875,7 +3967,7 @@ def national_cups(pl, root, db, log=print):
         c = p.get("own_cup")
         if not c:
             continue
-        cids, regs = free_comp_ids(db)
+        cids, regs = pinned_ids(pl, db, "cup:" + p["name"])
         if not cids or not regs:
             raise BuildError("no free competition or regulation ids left for %s" % c["name"])
         teams = list(p["teams"])
@@ -3889,8 +3981,10 @@ def national_cups(pl, root, db, log=print):
                      "--code", "FL_%03d_CUP" % p["rid"], "--like", c["like"], "--bracket", c["bracket"]])
         log("  %s: competition %d, regulation %d, %d clubs (copied from %s)"
             % (c["name"], c["cid"], c["reg"], len(teams), c["like"]))
+        pl.setdefault("cup_ids", {})["cup:" + p["name"]] = {"cid": c["cid"], "reg": c["reg"]}
         if c.get("super"):
-            cids, regs = free_comp_ids(db)
+            cids, regs = pinned_ids(pl, db, "super:" + p["name"])
+            pl["cup_ids"]["super:" + p["name"]] = {"cid": cids[0], "reg": regs[0]}
             c["super_cid"], c["super_reg"] = cids[0], regs[0]
             call(mkcup, ["--base", db, "--out", root, "--teams", ",".join(map(str, p["teams"][:2])),
                          "--cid", cids[0], "--reg", regs[0], "--region", p["region"], "--name", c["super"],
@@ -3899,36 +3993,54 @@ def national_cups(pl, root, db, log=print):
                 % (c["super"], cids[0], regs[0], SUPER_CUP_LIKE))
 
 
-def continental(cups, root, db, log=print, start=None):
+def continental(cups, root, db, log=print, start=None, want=None):
     """build the planned continental cups (ccup_plan) with mkccup.py into the world's tables in
-    <db>, with ids nothing in them uses; returns the world file's ccup lines"""
+    <db>, with ids nothing in them uses -- a cup's own of the last Build first (want, the plan's
+    prev_cup_ids); returns the world file's ccup lines"""
     if not cups:
         return []
     import mkccup
-    cids, free = free_comp_ids(db)
+    want = want or {}
+    all_c, all_r = free_comp_ids(db)
+    pin_c = {w.get("cid") for w in want.values()}
+    pin_r = {v for w in want.values() for f, v in w.items() if f != "cid"}
+    cids = [c for c in all_c if c not in pin_c]
+    free = [r for r in all_r if r not in pin_r]
+    used_c, used_r = set(), set()
+
+    def own(key, field, pool, pinned_ok):
+        v = (want.get(key) or {}).get(field)
+        if v in pinned_ok and v not in used_c | used_r:
+            (used_c if field == "cid" else used_r).add(v)
+            return v
+        if not pool:
+            raise BuildError("no free competition or regulation ids left for the continental cups")
+        return pool.pop(0)
     pres = [c for c in cups if (c.get("opts") or {}).get("pre")]
     keep = sum(1 for c in cups if (c.get("opts") or {}).get("reserve"))
-    if len(cids) < len(cups) or len(free) < sum(2 if c["groups"] else 1 for c in cups) + len(pres) + keep:
+    if len(all_c) < len(cups) or len(all_r) < sum(2 if c["groups"] else 1 for c in cups) + len(pres) + keep:
         raise BuildError("no free competition or regulation ids left for the continental cups")
     args = ["--base", db, "--out", root]
     rounds = []
     for cup in cups:
         cup_winners(cup, start)
     for k, cup in enumerate(cups):
-        reg = free.pop(0)
-        ko = free.pop(0) if cup["groups"] else reg        # a straight knockout is one regulation
-        cup.update(cid=cids[k], reg=reg, ko=ko)
+        key = "ccup:" + (cup.get("code") or cup["name"])
+        cid = own(key, "cid", cids, all_c)
+        reg = own(key, "reg", free, all_r)
+        ko = own(key, "ko", free, all_r) if cup["groups"] else reg        # a straight knockout is one regulation
+        cup.update(cid=cid, reg=reg, ko=ko)
         ko_of = {c.get("number"): c.get("ko") for c in cups[:k]}
         cup["entry"] = [(ko_of[e[1]], 0) if e[0] == "ko" else e for e in cup["entry"]]
         if (cup.get("opts") or {}).get("pre"):         # its ties are <pre> + 1024 * (k + 1)
-            cup["pre_reg"] = pre = free.pop(0)
-            rounds.append((pre, cids[k], cup["name"], len(cup["opts"]["pre"]["entry"]) // 2))
+            cup["pre_reg"] = pre = own(key, "pre_reg", free, all_r)
+            rounds.append((pre, cid, cup["name"], len(cup["opts"]["pre"]["entry"]) // 2))
             cup["entry"] = [(pre + 1024 * (e[1] + 1), 0) if e[0] == "pre" else e for e in cup["entry"]]
         elif (cup.get("opts") or {}).get("reserve"):
             free.pop(0)                                # the old cup's pre-round id: later ids stay put
         like = (cup.get("opts") or {}).get("like")
         args += ["--cup", "|".join(str(x) for x in (
-            cup["name"], cup["code"], cids[k], reg, ko, cup["groups"],
+            cup["name"], cup["code"], cid, reg, ko, cup["groups"],
             ",".join("%d:%d" % tuple(e) for e in cup["entry"]),
             "" if cup.get("conf") is None else cup["conf"], cup.get("region", ""))
             + ((like,) if like else ()))]
@@ -4635,7 +4747,15 @@ def main():
             switch_on(a[1], game)
             return 0
         base = base_dir(get("--base"))
-        pl = plan(load_recipe(a[1]), base)
+        recipe = load_recipe(a[1])
+        prev = None
+        try:   # the world's last Build: its leagues keep their ids (prev_pins)
+            with open(os.path.join(siderdir.find(game), "livecpk", recipe.get("world", ""), "leaguebuilder-plan.json"),
+                      encoding="utf-8") as f:
+                prev = json.load(f)
+        except (OSError, ValueError, AttributeError, TypeError):
+            pass
+        pl = plan(recipe, base, prev)
         print(describe(pl))
         if a[0] == "build":
             build(pl, base, game, "--replace" in a)

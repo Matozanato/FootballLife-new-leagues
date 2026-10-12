@@ -3888,7 +3888,8 @@ class Build(BuilderPage):
         if not r["leagues"] and not B.has_edits(r):
             raise B.BuildError(_("nothing to build: add a league or change one of the game's -- or, for "
                                  "the new European cups alone, press \"Only the new European cups...\""))
-        return B.plan(r, self.project.base)
+        # the leagues of the last Build keep their ids (a career, Kit Server and scoreboard maps hold them)
+        return B.plan(r, self.project.base, built_plan(self.app.game, r["world"]))
 
     def do_europe_only(self):
         """#36: the new European format with the game's own leagues and clubs, and nothing else.
