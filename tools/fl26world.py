@@ -90,12 +90,16 @@ POOL_SLOTS = {75: "Other Clubs (Africa)", 71: "Other", 73: "Other Latin American
 POOL_BEFORE_HIDDEN = (75, 71)
 POOL_AFTER_HIDDEN = (73, 69)
 # Limits branch: past those, a league takes a regulation id from the top of the date table down
-# (255, 254 ... 220; cups take theirs from 197 up) and a Select Team slot of its own above 123.
-# Needs fl26slots250 (slots up to 249), fl26slot7 (a club's league slot is a whole byte, not 7
-# bits) and a caps set whose --date-keys include these ids. Handed out after the ids with a
-# slot of their own and before the pool and no-slot ids, so no group of the game is hidden.
-EXTRA_IDS = tuple(range(255, 219, -1))
-EXTRA_SLOT = {r: 124 + i for i, r in enumerate(EXTRA_IDS)}      # 255 -> 124 ... 220 -> 159
+# (254, 253 ... 197) and a Select Team slot of its own above 123. Needs fl26slots250 (slots up
+# to 249), fl26slot7 (a club's league slot is a whole byte, not 7 bits) and a caps set whose
+# --date-keys include these ids (the shipped set dates 197..255). Handed out after the ids with
+# a slot of their own and before the pool and no-slot ids, so no group of the game is hidden.
+# 255 stays out: 0xff is "no league" in more than one place. 196 and below are taken: 191..196
+# split-season phases (mksplit), 188/189 the Europa play-offs, 186/187 the Conference League,
+# and the date stub (datecave.py) knows ids up to 255 only -- so 36 + 3 + 58 = 97 leagues is
+# the ceiling of this layout; the next one needs a wider date stub.
+EXTRA_IDS = tuple(range(254, 196, -1))
+EXTRA_SLOT = {r: 124 + i for i, r in enumerate(EXTRA_IDS)}      # 254 -> 124 ... 197 -> 181
 DEFAULT_SLOT.update(EXTRA_SLOT)
 
 

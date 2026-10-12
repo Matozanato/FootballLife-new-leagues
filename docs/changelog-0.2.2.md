@@ -11,7 +11,12 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   `fl26appcap`, `fl26regs600`, `fl26slots250`, `fl26slot7`, `fl26regfast`, `fl26walk`,
   `fl26hdr255` (replaces `fl26hdr127`/`fl26hdr192`), `fl26reg128` (replaces `fl26reg64`).
   Build installs them. **Careers saved before 0.2.2 do not load**: start a new career after
-  Build. Your recipe and world carry over.
+  Build. Your recipe and world carry over. A world now holds up to 97 new leagues (75 before):
+  past the game's free ids a league takes a regulation id from 254 down to 197 (255 stays
+  out, it means "no league" in places; 196 and below belong to split seasons and the European
+  play-offs). The game's date stub knows ids up to 255, so 97 is this layout's ceiling; cups
+  are not counted, they take ids above 255. Competition ids are the tighter budget: 121 for
+  leagues and cups together (130-255 less the game's five).
 - **A Build keeps the ids of leagues already built.** Adding a league in front of others,
   removing one or changing the order used to give every league after it new competition,
   regulation, region and club ids, so a Kit Server map, the scoreboard map and faces lost
