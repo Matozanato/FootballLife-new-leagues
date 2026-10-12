@@ -2,7 +2,8 @@
 
 The release guard (mszip.check_pack): the 0.2.0 package went out with an old fl26caps.lua,
 so the zip now stops on a known crash site, on a fl26caps.lua that is not the generated set
-or not the one in the game we test with, and lists modules not played in the game in that form.
+or not the one in the game we test with, without FL26_DIR or without the regen face pack (51ab5df),
+and lists modules not played in the game in that form.
 """
 import os, shutil, sys, tempfile
 
@@ -38,6 +39,10 @@ def main():
         write(os.path.join(pack, "modules", "fl26swiss.lua"), "-- swiss\n")
         write(os.path.join(game, "SiderAddons", "modules", "fl26caps.lua"), caps.replace("\n", "\r\n"))
         write(os.path.join(game, "SiderAddons", "modules", "fl26swiss.lua"), "-- swiss\n")
+        write(os.path.join(pack, "modules", "fl26regen_faces.bin"), "faces")
+        write(os.path.join(pack, "livecpk", "FL26 Regen Faces", "face.dds"), "face")
+        os.environ.pop("FL26_DIR", None)
+        ok("no FL26_DIR stops it", any("FL26_DIR is not set" in b for b in mszip.check_pack(pack)))
         os.environ["FL26_DIR"] = game
         ok("the tested set goes out (line endings aside)", mszip.check_pack(pack) == [])
 
@@ -50,6 +55,9 @@ def main():
         write(os.path.join(pack, "modules", "fl26caps.lua"), caps)
         write(os.path.join(pack, "modules", "fl26swiss.lua"), "-- swiss, newer\n")
         ok("a module the game has in another form is only listed", mszip.check_pack(pack) == [])
+
+        os.remove(os.path.join(pack, "modules", "fl26regen_faces.bin"))
+        ok("a package without the regen faces stops it", any("no regen face pack" in b for b in mszip.check_pack(pack)))
     finally:
         mszip.REPO = repo
         if keep is None:
