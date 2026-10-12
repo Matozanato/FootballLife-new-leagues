@@ -604,7 +604,7 @@ to know how it works, or to build by hand. The project does two things:
    | coaches | 1,300 | 3,400 |
    | competition rulebooks (regulations) | 300 | 600 |
    | players | 30,001 | 61,905 |
-   | match records per season | 13,000 | 46,000 |
+   | match records per season | 13,000 | 65,000 |
    | fixtures list | 2,000 | 8,000 |
    | competitions a season can hold | 100 | 255 with `fl26hdr255.lua` (0.2.2; replaces `fl26hdr127.lua` and `fl26hdr192.lua`) |
    | menu regions | 29 | 128 with `fl26reg128.lua` (0.2.2; replaces `fl26reg64.lua`) |

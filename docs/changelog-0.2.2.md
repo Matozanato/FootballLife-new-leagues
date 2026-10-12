@@ -17,6 +17,13 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   regulation, region and club ids, so a Kit Server map, the scoreboard map and faces lost
   them. Now each league keeps its competition id, regulation id, region, club ids and its
   cups' ids from the last Build; only a new (or renamed) league gets new ones.
+- **Faster Master League creation** with a club of a new league: `fl26regfast` drops two
+  repeated searches of the regulation table, and `fl26walk` remembers your club and its league
+  while the game walks the calendar (a Druga NL career sat 5-10 minutes on the loading screen).
+- **Promotion arrows in the standings on every tier** with a league above it (the game drew
+  them on the second tier only, and hid the down arrows while doing it).
+- The season's match table holds 65,000 matches (46,000 before), and players' looks
+  (PlayerAppearance) 65,000 records instead of 30,024, so big databases keep every face.
 - New leagues never get a competition id below 130 (those caused conflicts).
 
 ## Small additions (asked for on Discord)
@@ -30,6 +37,9 @@ DRAFT -- not released. Every line below still needs its in-game check before the
 - The clubs of a new league, and of a league of the game a new club joins, are listed A-Z in
   Select Team and Edit (FC, AC, SC ... left out, so FC Augsburg sits under A). The game's own
   leagues keep their order.
+- Mod Studio in Português (Brasil) (Language menu).
+- Players: the squad list can be dragged taller on a short window (the pitch under it held it
+  still).
 - Leagues > More > Competition IDs: every league and cup with its competition id and
   regulation ids, from the world switched on, with a button that copies the list.
 - More > World name and recipe: "Faces from the regen face pack for new players". Off keeps
@@ -99,6 +109,7 @@ DRAFT -- not released. Every line below still needs its in-game check before the
 - Players: the "a new club keeps at least 18 players" check counts the players who joined it.
 - A package whose NewLife club list has gaps no longer stops Check the plan.
 - A player joined from another database that the game does not have is skipped.
+- Check the plan reports a Conference League world without its play-off (regulation 189).
 - Check the plan says so when more than 8 Libertadores group stage places are listed
   (the game only leaves the new leagues 8, GitHub #127).
 - A super cup added to a league of the game (Supercopa de Chile, Supercopa Rei) shows in

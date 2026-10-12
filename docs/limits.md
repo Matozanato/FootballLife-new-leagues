@@ -9,7 +9,7 @@ What the shipped game holds, what `fl26caps.lua` raises it to, and which walls r
 | competition rulebooks (regulations) | 300 (214 used) | 600 | ids are 16-bit; the date table covers ids 1–255 |
 | competitions | 256 ids (91 used, max id 141) | unchanged | ids are one byte in every table |
 | players | 30,001 (27,927 used) | 61,905 | 51,729 up to 0.2.1; the cap must be ≡ 17 mod 32 |
-| match records per season | 13,000 | 46,000 | our 39-league season of 20-club leagues used 21,010; raised on 2026-09-24 so that an old season still being freed and the new one being built both fit at the rollover |
+| match records per season | 13,000 | **65,000** (46,000 in 0.2.0/0.2.1) | our 39-league season of 20-club leagues used 21,010; raised on 2026-09-24 so that an old season still being freed and the new one being built both fit at the rollover |
 | fixtures list | 2,000 | **8,000** | one record is one round of one competition, stride 0x208. Records are handed back as rounds finish, so a four-season world peaks under 2,700 |
 | calendar | 365 days, 280 match ids per day | **792 per day** (0.2.0) | overflow is dropped silently. The wider day moves the whole calendar unit to the top of the edit block, so a career saved before 0.2.0 does not load. Beware the obvious measurement: walking the calendar counts what the scheduler *accepted*, so a full day reads as exactly its cap and hides the matches it turned away. The match records carry their own dates and show the real demand — measured once at 280 on the calendar and 351 in the records for the same day |
 | menu regions | 24 in use of 29 slots | **128** with `fl26reg128.lua` | 0.2.2; replaces `fl26reg64.lua` (64). Without either module new leagues go into an existing slot |
@@ -114,8 +114,8 @@ reading the match records shows what was wanted, including everything that was t
 Work on this branch only; nothing here is in a Mod Studio release yet.
 
 *Status in 0.2.2:* the 255 competitions and the 250 slots below shipped in 0.2.2, with the
-club, coach, player and region numbers in the table at the top. The 65,000 match records did
-not: 0.2.2 keeps 46,000. The 7-bit league slot is no longer a wall either: `fl26slot7.lua`
+club, coach, player and region numbers in the table at the top, and so did the 65,000 match
+records (the match table in the shipped set is 596 x 65,000 bytes). The 7-bit league slot is no longer a wall either: `fl26slot7.lua`
 makes a club's league slot a whole byte, and leagues past the game's free regulation ids sit
 on slots from 124 up.
 
