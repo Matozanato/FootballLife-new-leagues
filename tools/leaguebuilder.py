@@ -2329,8 +2329,9 @@ def samerica_calendar(recipe, cups, by_name):
     "sudamericana_calendar", default true; fl26swiss cal=1): the Sudamericana drawn in February
     and played on the Libertadores' own days, the Recopa in late February between last
     November's two winners. With "sudamericana_first_stage" -- [[league, first position, clubs],
-    ...], a league of the recipe by name or a shipped regulation id, an even number of clubs each
-    and 32 in all -- the cup gets the real first stage: 16 one-match ties between clubs of the
+    ...], a league of the recipe by name or a shipped regulation id, an even number of clubs each,
+    or ["team", home id, away id], one tie of two clubs of the game (the Outros America clubs, in
+    no league), and 32 in all -- the cup gets the real first stage: 16 one-match ties between clubs of the
     same country, the better placed at home against the worst placed left (first v last, second v
     second-last ...), the 16 winners into the groups with six clubs each of Brazil and Argentina
     (the first six of their Sudamericana places of the game: 7th-12th, the next one down for a
@@ -2348,7 +2349,16 @@ def samerica_calendar(recipe, cups, by_name):
         ties = []
         for item in first:
             if not isinstance(item, (list, tuple)) or len(item) != 3:
-                raise BuildError("sudamericana_first_stage: %r -- want [league, first position, clubs]" % (item,))
+                raise BuildError("sudamericana_first_stage: %r -- want [league, first position, clubs] "
+                                 "or [\"team\", home id, away id]" % (item,))
+            if item[0] == "team":
+                # one tie of two clubs of the game by team id, in a league or in none (the Outros
+                # America clubs): the first named at home -- the ties above list the away club first
+                home, away = int(item[1]), int(item[2])
+                if not (0 < home < 65536 and 0 < away < 65536) or home == away:
+                    raise BuildError("sudamericana_first_stage: %r -- two different team ids of the game" % (item,))
+                ties.append([(away, LIBQ_INVITED), (home, LIBQ_INVITED)])
+                continue
             league, start, count = item
             if isinstance(league, int) or str(league).strip().isdigit():
                 rid = int(league)
