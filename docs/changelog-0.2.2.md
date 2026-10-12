@@ -87,3 +87,7 @@ DRAFT -- not released. Every line below still needs its in-game check before the
 - Release tool (for forks): `mszip.py` now stops when `FL26_DIR` is not set or the package has
   no regen face pack, instead of printing a note and going on (`--untested`, `--no-faces` let a
   fork's own build through); lbpack finds the face pack from a worktree too.
+- Install modules switches off three old modules a shipped one replaced, when an old manual
+  install still has them: `fl26nullguard3` (replaced by the guards bundle), `fl26hdr127`
+  (by `fl26hdr192`) and `fl26deep4` (by `fl26deeprank`). Each pair overlaps, the second one
+  refused its bytes, and the check after Build called that "refused the game's exe".

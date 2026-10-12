@@ -43,7 +43,8 @@ ORDER = [
 # Modules that ship as one file (0.2.0, Gu: "quite a lot of separate Lua/DLL modules now"): the
 # small one-fix guards, each still its own file in sider/ to read and change, go out bundled in
 # load order. Every part keeps its own log lines, so sider.log still says which fix did what,
-# and a part whose init fails is logged and skipped without taking the others with it. Build
+# and a part that refuses its bytes logs it and leaves the others be (there is no pcall: a part
+# whose init raises stops the parts after it, so the best-tried ones go first). Build
 # switches the old single lines off and keeps the old files in before-builder-<n>
 # (leaguebuilder.install_modules, retired.txt in the pack).
 BUNDLES = {
@@ -51,6 +52,12 @@ BUNDLES = {
                    "fl26nullguard7", "fl26nullguard8", "fl26nullguard9", "fl26nullguard10"],
     "fl26lateguards": ["fl26superguard", "fl26resultsguard", "fl26ctlguard", "fl26kitguard"],
 }
+# modules a shipped one replaced, not bundled into it: an old manual install still has their line,
+# the two overlap, the second refuses its bytes, and check() read that as "refused the game's exe"
+# (audit 12.10., GitHub #130). Build switches them off like the bundled ones.
+SUPERSEDED = {"fl26nullguard3": "fl26guards",      # nullguard9 (in fl26guards) replaced it 22.09.
+              "fl26hdr127": "fl26hdr192",          # hdr192 expects what hdr127 leaves unpatched
+              "fl26deep4": "fl26deeprank"}         # rank + deeprank do the third division properly
 PER_WORLD = {"fl26regions", "fl26regnames"}
 DLLS = {"fl26join": "build-join.sh", "fl26chain": "build-chain.sh",
         "fl26clubs": "build-clubs.sh", "fl26swiss": "build-swiss.sh", "fl26regen": "build-regen.sh",
@@ -162,7 +169,8 @@ def build(out, log=print):
     open(os.path.join(mods, "..", "modules.txt"), "w", encoding="utf-8", newline="\n").write(
         "".join(m + "\n" for m in ORDER))
     open(os.path.join(mods, "..", "retired.txt"), "w", encoding="utf-8", newline="\n").write(
-        "".join("%s %s\n" % (p, b) for b, parts in BUNDLES.items() for p in parts))
+        "".join("%s %s\n" % (p, b) for b, parts in BUNDLES.items() for p in parts)
+        + "".join("%s %s\n" % (p, b) for p, b in SUPERSEDED.items()))
     bad = []
     for f in sorted(os.listdir(mods)):
         if f.endswith(".lua"):
