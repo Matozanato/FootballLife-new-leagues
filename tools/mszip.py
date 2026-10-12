@@ -1,4 +1,4 @@
-r"""python mszip.py [--no-exe]   -> out\mszip\ and out\FL26ModStudio-<version>.zip
+r"""python mszip.py [--no-exe] [--untested] [--no-faces]   -> out\mszip\ and out\FL26ModStudio-<version>.zip
 
 FL26 Mod Studio in one folder:
 
@@ -87,8 +87,17 @@ def check_pack(pack):
             if f.endswith(".lua") and (not os.path.exists(g) or not same_text(os.path.join(mods, f), g)):
                 (bad if f == "fl26caps.lua" else untested).append(
                     f + (": not the one installed in the game (FL26_DIR) -- test the shipped file" if f == "fl26caps.lua" else ""))
+    elif "--untested" in sys.argv:
+        print("pack check: FL26_DIR not set, the modules are not compared with the game's (--untested)")
     else:
-        print("pack check: FL26_DIR not set, the modules are not compared with the game's")
+        bad.append("FL26_DIR is not set, so nothing says these modules were played in the game -- "
+                   "set it to the game folder you test with (or pass --untested for a fork's own build)")
+    # 0.2.0 went out once without the regen faces (lbpack only logs a missing face pack)
+    if "--no-faces" not in sys.argv and not (
+            os.path.exists(os.path.join(mods, "fl26regen_faces.bin"))
+            and os.path.isdir(os.path.join(pack, "livecpk", "FL26 Regen Faces"))):
+        bad.append("no regen face pack in the package -- set FL26_REGEN_FACES (or pass --no-faces "
+                   "for a fork without the face renders)")
     for f in untested:
         print("pack check: NOT PLAYED in the game in this form: %s" % f)
     return bad

@@ -84,3 +84,6 @@ DRAFT -- not released. Every line below still needs its in-game check before the
 - League cup hints say late August to mid-March, the dates since 0.2.0.
 - Home: Switch world... shows the worlds.
 - sider.log says why a qualifying round is not played in a season (GitHub #128, log only).
+- Release tool (for forks): `mszip.py` now stops when `FL26_DIR` is not set or the package has
+  no regen face pack, instead of printing a note and going on (`--untested`, `--no-faces` let a
+  fork's own build through); lbpack finds the face pack from a worktree too.

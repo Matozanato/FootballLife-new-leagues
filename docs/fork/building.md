@@ -79,8 +79,8 @@ run of Mod Studio finds the pack in `out/lbpack` (`leaguebuilder.pack_dir`). See
 
 **The regen face pack** is `fl26regen_faces.bin` plus a content root `FL26 Regen Faces`.
 It holds renders made from game faces, so it is never in a repository. lbpack takes it from
-`$FL26_REGEN_FACES`, else from `../fl26-modding-research/out/regenfaces` beside the
-repository. Without it the pack is still built, and the log says
+`$FL26_REGEN_FACES`, else from `fl26-modding-research/out/regenfaces` beside the
+repository or beside any folder above it (so a worktree finds it too). Without it the pack is still built, and the log says
 `NO regen face pack -- regens will keep the generic face`. A fork that wants regen faces makes
 its own face pack and points `FL26_REGEN_FACES` at it.
 
@@ -96,6 +96,7 @@ GitHub #69.
 ```
 python tools/mszip.py            # freeze + pack + guides + zip
 python tools/mszip.py --no-exe   # reuse the last frozen program (out/msexe/dist)
+python tools/mszip.py --untested --no-faces   # a fork's build: no game to compare with, no face pack
 ```
 
 1. **Stage.** `tools/` is copied to `out/msexe/src` without any `sys.path.insert(0, r"<drive>:\...")`
@@ -111,8 +112,10 @@ python tools/mszip.py --no-exe   # reuse the last frozen program (out/msexe/dist
    **Pack check** (`check_pack`, since 0.2.1; 0.2.0 went out with an old `fl26caps.lua`): the
    release stops when a module holds a site from `KNOWN_BAD` (one that crashed a release
    once), when `pack/modules/fl26caps.lua` is not the set `patchset.py` generated last
-   (`sider/fl26caps.<set>.lua`, copy it over `sider/fl26caps.lua`), or, with `FL26_DIR`
-   set, when it is not the `fl26caps.lua` installed in that game. Other modules that differ
+   (`sider/fl26caps.<set>.lua`, copy it over `sider/fl26caps.lua`), when it is not the
+   `fl26caps.lua` installed in the game `FL26_DIR` names, when `FL26_DIR` is not set at all
+   (since 0.2.2; `--untested` lets a fork's build through), and when the pack has no regen
+   face pack (since 0.2.2; `--no-faces` for a fork without one). Other modules that differ
    from the game's copy are printed as "NOT PLAYED in the game in this form": install the
    package's modules and play them before the release.
 4. **Guides.** `docs/mod-studio-guide.md` -> `README.html`, and the `hr`, `es`, `fr` copies
@@ -122,8 +125,8 @@ python tools/mszip.py --no-exe   # reuse the last frozen program (out/msexe/dist
 6. **Zip.** `out/FL26ModStudio-<VERSION>.zip`, with everything inside a folder called
    `FL26 Mod Studio`.
 
-**When mszip runs outside a checkout that has the face pack beside it** (a clean worktree, a
-temporary folder), set `FL26_REGEN_FACES` first. Otherwise the zip goes out without regen
+**When mszip runs where no face pack is found** (a temporary folder), set
+`FL26_REGEN_FACES` first. Since 0.2.2 the release stops instead of going out without regen
 faces.
 
 ## The version

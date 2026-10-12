@@ -55,8 +55,21 @@ PER_WORLD = {"fl26regions", "fl26regnames"}
 DLLS = {"fl26join": "build-join.sh", "fl26chain": "build-chain.sh",
         "fl26clubs": "build-clubs.sh", "fl26swiss": "build-swiss.sh", "fl26regen": "build-regen.sh",
         "fl26edit": "build-edit.sh"}
-FACES = os.environ.get("FL26_REGEN_FACES") or os.path.join(os.path.dirname(REPO), "fl26-modding-research",
-                                                           "out", "regenfaces")
+def _faces_dir():
+    """$FL26_REGEN_FACES, else fl26-modding-research/out/regenfaces next to the repo or next to
+    any folder above it (a worktree sits deeper than the repo, and the faces were missed there)"""
+    if os.environ.get("FL26_REGEN_FACES"):
+        return os.environ["FL26_REGEN_FACES"]
+    d = REPO
+    while os.path.dirname(d) != d:
+        d = os.path.dirname(d)
+        f = os.path.join(d, "fl26-modding-research", "out", "regenfaces")
+        if os.path.isdir(f):
+            return f
+    return os.path.join(os.path.dirname(REPO), "fl26-modding-research", "out", "regenfaces")
+
+
+FACES = _faces_dir()
 FACE_ROOT = "FL26 Regen Faces"            # the livecpk root of the portraits (install_modules)
 # written so that the line does not match itself
 PRIVATE = re.compile(r"[A-Za-z]:\\\\?(de[v]|User[s]|instalacij[a])|stuc[e]|fl26-dump[s]", re.I)
