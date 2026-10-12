@@ -222,6 +222,7 @@ class Main(QMainWindow):
             ("Open recipe...", lambda: self.page("NewLeagues").open_recipe()),
             ("Save recipe", lambda: self.page("NewLeagues").save_recipe()),
             ("Save recipe as...", lambda: self.page("NewLeagues").save_recipe(True)),
+            ("Changes in this world...", self.show_changes),
             None,
             ("Add a league package...", lambda: (self.open_page("Packages"), self.page("Packages").add_pack())),
             ("Make a league package...", lambda: (self.open_page("Packages"), self.page("Packages").make_pack())),
@@ -365,6 +366,10 @@ class Main(QMainWindow):
 
     def status(self, text):
         self.status_left.setText(text)
+
+    def show_changes(self):
+        from modstudio.pages.changes import WorldChangesDialog
+        WorldChangesDialog(self, self.project).exec()
 
     def show_saved(self):
         p = self.project

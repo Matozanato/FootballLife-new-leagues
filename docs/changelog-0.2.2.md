@@ -18,6 +18,16 @@ DRAFT -- not released. Every line below still needs its in-game check before the
 - More > World name and recipe: "Faces from the regen face pack for new players". Off keeps
   the look the game gives new players, or the one set in the game's Edit mode.
 
+## Easier to use (from the poll)
+
+- File > Changes in this world: everything your recipe changes in one list (clubs of the
+  game, leagues, competitions, swaps, squads), and Undo for the lines you pick.
+- The status bar says whether your changes are saved; click it, or Ctrl+S, to save. Edits
+  of clubs, players and leagues count straight away, there is no Apply to press.
+- Build > New clubs: the two kit options say which is which. "Kits made in the clubs'
+  colours" comes first; "Plain kits to change in Edit mode" is the alternative and greys the
+  first out, since Kit Server does not dress the clubs then.
+
 ## Fixes
 
 - **The calendar stops on a day and shows nothing** (national team days, awards and other
