@@ -419,7 +419,7 @@ static void note_regen(unsigned char* rec)
  * of the world, by nationality, as a regen does. A player with his own face or portrait is left
  * out of the list by the builder; "keep" marks one with only his own portrait, who gets the 3D
  * face but keeps his picture. The list is found again whenever the database block changes. */
-#define MAX_NEW 4096
+#define MAX_NEW 32768   /* ranges; a 86-league world lists 4759 (4096 left 663 without faces) */
 static uint32_t g_new_lo[MAX_NEW], g_new_hi[MAX_NEW];
 static uint8_t  g_new_keep[MAX_NEW];
 static int      g_nnew;
@@ -446,6 +446,30 @@ static const newp_t* new_find(uint32_t id)
   }
   return lo < g_nnlist && g_nlist[lo].id == id ? &g_nlist[lo] : 0;
 }
+/* the range holding id, or -1: the ranges are sorted by their start the first time it is asked
+   (the world file lists them in order already, so this is mostly a check) */
+static int g_new_sorted;
+static int new_range(uint32_t id)
+{
+  if (!g_new_sorted) {
+    for (int i = 1; i < g_nnew; i++) {            /* insertion sort: nearly sorted input */
+      uint32_t lo = g_new_lo[i], hi = g_new_hi[i]; uint8_t k = g_new_keep[i]; int j = i - 1;
+      while (j >= 0 && g_new_lo[j] > lo) {
+        g_new_lo[j + 1] = g_new_lo[j]; g_new_hi[j + 1] = g_new_hi[j]; g_new_keep[j + 1] = g_new_keep[j]; j--;
+      }
+      g_new_lo[j + 1] = lo; g_new_hi[j + 1] = hi; g_new_keep[j + 1] = k;
+    }
+    g_new_sorted = 1;
+  }
+  int lo = 0, hi = g_nnew;                       /* the last range starting at or before id */
+  while (lo < hi) {
+    int mid = (lo + hi) / 2;
+    if (g_new_lo[mid] <= id) lo = mid + 1; else hi = mid;
+  }
+  for (int j = lo - 1; j >= 0 && j >= lo - 8; j--)  /* overlapping lists: look a few back */
+    if (id <= g_new_hi[j]) return j;
+  return -1;
+}
 static void new_scan(void)
 {
   unsigned char* blk = block();
@@ -458,12 +482,11 @@ static void new_scan(void)
     unsigned char* r = blk + (size_t)i * STRIDE;
     uint32_t id = *(uint32_t*)(r + R_ID);
     if (id < g_new_min || id > g_new_max) continue;  /* most players: no range to look through */
-    for (int j = 0; j < g_nnew; j++)
-      if (id >= g_new_lo[j] && id <= g_new_hi[j]) {
-        newp_t* e = &g_nlist[g_nnlist++];
-        e->id = id; e->face = (int16_t)face_of(id, *(uint16_t*)(r + R_NAT) & 0x1ff); e->keep = g_new_keep[j];
-        break;
-      }
+    int j = new_range(id);
+    if (j >= 0) {
+      newp_t* e = &g_nlist[g_nnlist++];
+      e->id = id; e->face = (int16_t)face_of(id, *(uint16_t*)(r + R_NAT) & 0x1ff); e->keep = g_new_keep[j];
+    }
   }
   qsort(g_nlist, g_nnlist, sizeof(newp_t), newp_cmp);
   for (int i = 0; g_syn && i < g_nnlist; i++) {
@@ -758,7 +781,7 @@ __declspec(dllexport) int fl26_regen_new(uint32_t from, uint32_t to, int keep)
   g_new_lo[g_nnew] = from; g_new_hi[g_nnew] = to; g_new_keep[g_nnew] = (uint8_t)(keep != 0);
   if (from < g_new_min) g_new_min = from;
   if (to > g_new_max) g_new_max = to;
-  g_new_blk = 0;                               /* scan again */
+  g_new_blk = 0; g_new_sorted = 0;             /* scan again */
   return ++g_nnew;
 }
 
