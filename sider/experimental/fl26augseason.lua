@@ -5,16 +5,16 @@ Why the world started on 1 January. When a career is created, 0x1412695b0 picks 
 type from the user's competition: 0x1415762a0(comp) -> region -> 0x141576140(region), a
 lookup in a table of 25 (region, type) pairs covering the shipped regions 2..28. Type 0 is
 the European calendar (the August start dates 0x10807e9 / 0x10707e9); type 1 is the
-calendar year. Our standalone leagues live in regions 29..63 (fl26reg64), which the table
+calendar year. Our standalone leagues live in regions 29..127 (fl26reg64 / fl26reg128), which the table
 does not know, so the lookup fell through to `mov eax,5` at 0x14157623d -- and 0x1412695b0
 turns 5 into 1. The whole world then ran January-December, with the leagues' August-May
 fixture calendar folded into it and no promotion at year end.
 
 What this writes. The fall-through `mov eax,5` (5 bytes) becomes a jmp to a trampoline that
-returns type 0 for regions 29..63 and 5 for everything else, then resumes at 0x141576242:
+returns type 0 for regions 29..127 and 5 for everything else, then resumes at 0x141576242:
 
     14252ee00  lea  eax, [r8-0x1d]     ; r8d = the region being looked up
-    14252ee04  cmp  eax, 0x23          ; 29..63 ?
+    14252ee04  cmp  eax, 0x63          ; 29..127 ?
     14252ee07  mov  eax, 5             ; the original answer
     14252ee0c  jae  +2
     14252ee0e  xor  eax, eax           ; ours: European calendar
@@ -32,7 +32,7 @@ Same apply rule as every fl26 module: verify all sites first, write only if all 
 local m = {}
 
 local patches = {
-  {va=0x14252ee00, old="000000000000000000000000000000000000000000", new="418d40e383f823b805000000730231c0e92d7404ff", why="season-type trampoline: regions 29..63 (ours) -> type 0 (European, August start), others keep 5; jmp 0x141576242"},
+  {va=0x14252ee00, old="000000000000000000000000000000000000000000", new="418d40e383f863b805000000730231c0e92d7404ff", why="season-type trampoline: regions 29..127 (ours) -> type 0 (European, August start), others keep 5; jmp 0x141576242"},
   {va=0x14157623d, old="b805000000", new="e9be8bfb00", why="redirect the not-found answer of the region->season-type lookup 0x141576140 (mov eax,5) to the trampoline at 0x14252ee00"},
 }
 
@@ -107,7 +107,7 @@ function m.init(ctx)
   -- in doubt; the check was.
 
   if failed == 0 then
-    log(string.format("fl26augseason: applied all %d patches -- %s", written, "our regions 29..63 get the European season type, so a career in our league starts in August"))
+    log(string.format("fl26augseason: applied all %d patches -- %s", written, "our regions 29..127 get the European season type, so a career in our league starts in August"))
   else
     log(string.format("fl26augseason: PARTIAL: %d written, %d failed. The game is now in an "
                       .. "inconsistent state -- quit and report the addresses above.",

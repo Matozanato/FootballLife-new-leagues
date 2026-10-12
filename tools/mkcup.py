@@ -49,7 +49,7 @@ start a season, and look at the fixture list.
     python mkcup.py --base ...\pesdb --out ...\livecpk\_FL26E39x793 ^
                     --name "FL Cup 01" --code FL_CUP_01 --region 2 --teams 72318,72319,...
 
---region is a region id (2 England, 29..63 the ones new countries get), encoded the way
+--region is a region id (2 England, 29..127 the ones new countries get), encoded the way
 mkleague.enc_region writes it. Until 28 September it was the raw Competition.bin byte, so
 "--region 29" put the cup in region 35.
 
@@ -121,7 +121,7 @@ def main():
     # earlier belief that they did not came from the Select Team list, which is a different
     # question.  BAD_REG is still avoided: those are the ids the game reassigns as phases of
     # somebody else's competition.
-    autocid = W.free_ids(used_cid, W.CID_MAX, 1, 130)[0]
+    autocid = [c for c in W.cid_pool() if c not in used_cid][0]
     autoreg = W.free_ids(used_reg | W.BAD_REG, W.REG_MAX, 1, 186)[0]
     cid, reg = M.add_league(comp, regs, ents,
                             int(get("--cid", str(autocid))), int(get("--reg", str(autoreg))),

@@ -108,6 +108,35 @@ regenerate the set, create the season again.
 Use `--demand` after the first rollover. Walking the calendar shows only what was accepted;
 reading the match records shows what was wanted, including everything that was turned away.
 
+## The limits branch (2026-10-11, not released)
+
+Work on this branch only; nothing here is in a Mod Studio release yet.
+
+- **Matches in the season table, 46,000 -> 65,000** (`patches/layout.json`, `cap_new` of
+  `rec596` and `matchflags`). The record index is a u16 with 0xffff as "free", so 65,534 is
+  the real end. A Master League career was created and four rounds skipped on it.
+- **Competitions in a season, 192 -> 255** (`sider/experimental/fl26hdr255.lua`, made by
+  `python tools/hdr127.py 255`). Same thirteen trampolines as the 192 version; five of the
+  600 per-phase tables pay for it.
+- **Competition slots, 123 -> 250** (`sider/experimental/fl26slots250.lua`, made by
+  `tools/mkslots.py`, checked by `tools/slotsemu.py`, which runs the patched accessors in an
+  emulator on the exe's own bytes). The club-list region cannot grow, so each slot gets a
+  capacity of its own from a table on the module's page (0x163400000): 1,600 for the two
+  slots the game fills with nearly every club (79, 80), 750 for the region and merge slots
+  (0..5, 69..78), 333 for the rest. Slot 123 stays the "no slot" value. A club's league slot
+  is stored in 7 bits of the team record, so **leagues must sit on slots below 128**; slots
+  128..249 are for cups and other competitions. `fl26clubs.dll` reads the new layout off the
+  module's code when it is loaded. A career made with the module must be loaded with it.
+- **Competition ids below 130**: `mkworld.cid_pool()` hands out 130..255 first and then the
+  28 low ids the exe never names (`CID_SAFE_LOW`), then nine that only change the match
+  presentation. 6, 7, 48, 65, 91 and 92 are never used (continental competitions, prize
+  multiplier, cup round names).
+- **Competition ids above 255**: designed, not built. Each of Competition, CompetitionEntry
+  and CompetitionRegulation has one spare byte (+7, +0xb, +0x910) that can hold the high
+  byte, and five loader hooks would read it; the game keeps the id as a 32-bit number after
+  loading. `fl26join.c` keys two tables of 256 on the regulation id and would need widening
+  first. The next wall after that is the 300 regulation records.
+
 ## The three walls we are working on now
 
 Written down because they are the next things to move, and because knowing where a ceiling

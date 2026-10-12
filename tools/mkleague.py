@@ -116,21 +116,32 @@ def put_names(b, off, s, skip=()):
 
 
 def enc_region(rid):
-    """Competition.bin +3 from a region id.
+    """Competition.bin +3 from a region id, 0..127.
 
-    Bits 3..7 hold the region and bits 0..2 are zero in every shipped row, so ids 0..31 are
-    just rid * 8, exactly as they have always been. Bit 0 carries the sixth bit, which the
-    game only reads once sider/fl26reg64.lua is installed -- without it a region above 31
-    silently decodes as rid - 32, so the module and the data go together.
+    The byte: bits 3..7 = region bits 0..4, bit 0 = region bit 5, bit 1 = region bit 6, bit 2
+    unused (zero).
+
+      * ids 0..31 are rid * 8, as they have always been -- the stock game reads bits 3..7 only;
+      * bit 0 (ids 32..63) is read once sider/fl26reg64.lua or fl26reg128.lua is installed;
+      * bit 1 (ids 64..127) is read only by sider/fl26reg128.lua.
+
+    Bits 0..2 were zero in every shipped row and bit 1 in every row ever written, so a world
+    that never uses a region >= 64 encodes and decodes exactly as before. Without the module a
+    high region silently decodes as a lower one (rid & 31, or rid & 63 under fl26reg64), so the
+    module and the data go together.
     """
-    if not 0 <= rid < 64:
-        raise ValueError("region %d is outside 0..63" % rid)
-    return ((rid & 0x1f) << 3) | ((rid >> 5) & 1)
+    if not 0 <= rid < 128:
+        raise ValueError("region %d is outside 0..127" % rid)
+    return ((rid & 0x1f) << 3) | ((rid >> 5) & 3)
 
 
 def dec_region(byte):
-    """The region id in a Competition.bin +3 byte, read the way fl26reg64 makes the game read it."""
-    return ((byte >> 3) & 0x1f) | ((byte & 1) << 5)
+    """The region id in a Competition.bin +3 byte, read the way fl26reg128 makes the game read
+    it (bits 3..7, then bit 0 -> 5 and bit 1 -> 6). The inverse of enc_region for 0..127."""
+    return ((byte >> 3) & 0x1f) | ((byte & 3) << 5)
+
+
+REGION_MAX = 127        # the top region fl26reg128 reads
 
 
 R_TIER = 0x10                    # dword; bits 15-17 hold the division (1 = D1, 2 = D2, 3 = D3)

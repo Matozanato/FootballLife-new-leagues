@@ -68,6 +68,12 @@ local PATCHES = {
   {va=0x140a9d2cd, old="83e33f", new="83e31f", why="group-read: and ebx, 0x3f"},
   {va=0x140aee421, old="25000000c0", new="25000000e0", why="rank-read: and eax, 0xc0000000"},
   {va=0x140aee426, old="3d00000080", new="3d00000040", why="rank-read: cmp eax, 0x80000000"},
+  -- standings arrows (0x140aee370): the game had two tiers, so it drew the up arrows only on
+  -- tier 2 and, drawing them, hid every other row's icon -- the down arrows too. Any league with
+  -- a league above it (+0x7c) now gets its up arrows, and a row that is not a promotion place
+  -- keeps what the down-arrow pass gave it.
+  {va=0x140aee42b, old="7544", new="9090", why="arrows: up arrows on every tier with a league above (was: tier 2 only)"},
+  {va=0x140aee448, old="731a", new="7327", why="arrows: a row past the promotion places keeps its down arrow (was: icon hidden)"},
   {va=0x140ec2587, old="81e1000000c0", new="81e1000000e0", why="rank-read: and ecx, 0xc0000000"},
   {va=0x140ec258d, old="81f900000040", new="81f900000020", why="rank-read: cmp ecx, 0x40000000"},
   {va=0x140ec261b, old="81e1000000c0", new="81e1000000e0", why="rank-read: and ecx, 0xc0000000"},

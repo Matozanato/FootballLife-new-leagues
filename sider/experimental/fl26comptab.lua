@@ -285,18 +285,18 @@ local function row_set(row, off, bytes) return row:sub(1, off) .. bytes .. row:s
 -- to extend, so the function is hooked with one of our own, keyed on the slots this module
 -- has just handed out. A slot the table leaves at 0xffff falls through to the original code,
 -- so the 23 shipped answers do not change. The stub (Stagnant09's, issue #11):
---   0x00 cmp ecx,0x7b ; ja 0x21        slots are 0..123; anything above is not ours
---   0x09 mov eax,ecx ; lea rdx,[tbl]
---   0x12 movzx eax,word [rdx+rax*2]    our country for that slot
---   0x16 cmp ax,-1 ; je 0x21 ; ret     0xffff: not ours, let the engine answer
---   0x21 the engine's own 18 prologue bytes, replayed, then jmp SLOT_FN+0x12
---   0x38 124 u16, one per slot
+--   0x00 cmp ecx,0xf9 ; ja 0x24        slots are 0..249 (fl26slots250); anything above is not ours
+--   0x0c mov eax,ecx ; lea rdx,[tbl]
+--   0x15 movzx eax,word [rdx+rax*2]    our country for that slot
+--   0x19 cmp ax,-1 ; je 0x24 ; ret     0xffff: not ours, let the engine answer
+--   0x24 the engine's own 18 prologue bytes, replayed, then jmp SLOT_FN+0x12
+--   0x3b 250 u16, one per slot (slots above 123 exist only with fl26slots250)
 -- The stub writes nothing to the stack, so the replayed prologue is all the frame the
 -- original needs; the rip-relative load at +0x12 still runs where it was compiled.
 local SLOT_FN = 0x140c950d0
 local SLOT_FN_PROLOGUE = "48895c240855488d6c24a94881ecd0000000"   -- 18 bytes
 local SLOT_FN_RESUME = 0x12
-local NSLOTS = 124
+local NSLOTS = 250
 
 local function install_flags(slot_country, named)
   local got = bin2hex(memory.read(SLOT_FN, #SLOT_FN_PROLOGUE / 2))
@@ -311,13 +311,13 @@ local function install_flags(slot_country, named)
     if p ~= nil then stub = tonumber(ffi.cast("uint64_t", p)); break end
   end
   if not stub then log("fl26comptab: VirtualAlloc for the flag stub failed -- no flags"); return end
-  local back = rel32(stub + 0x38, SLOT_FN + SLOT_FN_RESUME)
+  local back = rel32(stub + 0x3b, SLOT_FN + SLOT_FN_RESUME)
   local into = rel32(SLOT_FN + 5, stub)
   if not (back and into) then log("fl26comptab: flag stub out of jump range -- no flags"); return end
-  local code = "\131\249\123" .. "\15\135\24\0\0\0" .. "\137\200" .. "\72\141\21\38\0\0\0"
+  local code = "\129\249\249\0\0\0" .. "\15\135\24\0\0\0" .. "\137\200" .. "\72\141\21\38\0\0\0"
             .. "\15\183\4\66" .. "\102\61\255\255" .. "\15\132\1\0\0\0" .. "\195"
             .. hex2bin(SLOT_FN_PROLOGUE) .. "\233" .. back
-  assert(#code == 0x38, #code)
+  assert(#code == 0x3b, #code)
   local tbl = {}
   for sl = 0, NSLOTS - 1 do
     local c = slot_country[sl] or 0xffff
@@ -664,7 +664,7 @@ function m.init(ctx)
     for _, L in ipairs(world) do
       local i = byid[L.id]
       local sl = i and row_u32(rows[i], OFF_SLOT)
-      if L.kickoff and sl and sl < 123 and sl ~= L.kickoff and not slot_after[sl] then
+      if L.kickoff and sl and sl ~= 123 and sl < NSLOTS and sl ~= L.kickoff and not slot_after[sl] then
         slot_after[sl] = L.kickoff; order[#order + 1] = sl
       end
     end
@@ -672,7 +672,7 @@ function m.init(ctx)
     for _, k in ipairs(KICKORDER) do
       local i = byid[k[1]]
       local sl = i and row_u32(rows[i], OFF_SLOT)
-      if sl and sl < 123 then
+      if sl and sl ~= 123 and sl < NSLOTS then
         slot_rank = slot_rank or {}
         if slot_rank[sl] == nil then slot_rank[sl] = k[2] end
       end

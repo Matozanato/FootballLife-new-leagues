@@ -2165,12 +2165,20 @@ static void cont_build(void)
     g_cont[k][g_ncont[k]++] = c; used[nused++] = c;
   }
 }
+/* The league slot in +0x41c: the low 7 bits, or the whole byte when fl26slot7 is in (it moves
+ * the flag in bit 7 to +0x41a and turns every `and 0x7f` reader into `and 0xff`; the first of
+ * those readers, 0x140b08f74, says which). */
+#define SLOT7_PROBE_RVA 0xb08f74
+static int slot_of(const unsigned char* t)
+{
+  return t[0x41c] & (*(const unsigned char*)(uintptr_t)(g_base + SLOT7_PROBE_RVA) == 0xff ? 0xff : 0x7f);
+}
 /* a club's Master League slot (+0x41c), -1 when its record cannot be read */
 static int club_slot(void* blk, uint32_t c)
 {
   unsigned char* t = ((teamget_fn)(uintptr_t)(g_base + TEAMGET_RVA))(blk, c);
   if (!t || *(uint32_t*)t >> 14 != c >> 14) return -1;
-  return t[0x41c] & 0x7f;
+  return slot_of(t);
 }
 /* ---- the league-phase draw: no club meets its own association, none meets three of one ----
  *
@@ -2186,7 +2194,7 @@ static int club_slot(void* blk, uint32_t c)
 #define NATION_RVA 0x14cdda0
 static const unsigned char NATION_SIG[] = { 0x40, 0x55, 0x48, 0x8d, 0x6c, 0x24, 0xa9, 0x48, 0x81, 0xec, 0x00, 0x01, 0x00, 0x00 };
 typedef uint32_t (*nation_fn)(uint32_t slot);
-static uint16_t g_nat[128];                              /* slot -> country, 0 = not given */
+static uint16_t g_nat[256];                              /* slot -> country, 0 = not given */
 
 /* pairs (slot, country) from the world file's league lines; returns how many were taken */
 __declspec(dllexport) int fl26_swiss_nations(const uint16_t* v, int n)
@@ -2194,7 +2202,7 @@ __declspec(dllexport) int fl26_swiss_nations(const uint16_t* v, int n)
   if (!v || n < 0) return -1;
   int k = 0;
   for (int i = 0; i < n; i++)
-    if (v[2 * i] < 123 && v[2 * i + 1]) { g_nat[v[2 * i]] = v[2 * i + 1]; k++; }
+    if (v[2 * i] != 123 && v[2 * i] < 250 && v[2 * i + 1]) { g_nat[v[2 * i]] = v[2 * i + 1]; k++; }
   logf("fl26swiss: league-phase draw -- countries of %d league slot(s) from the world file", k);
   return k;
 }
@@ -2203,15 +2211,15 @@ static int club_key(void* blk, uint32_t c, int i)
 {
   unsigned char* t = ((teamget_fn)(uintptr_t)(g_base + TEAMGET_RVA))(blk, c);
   if (!t || *(uint32_t*)t >> 14 != c >> 14) return 2000 + i;
-  int s = t[0x41c] & 0x7f;
-  if (s < 123 && g_nat[s]) return g_nat[s];
+  int s = slot_of(t);
+  if (s != 123 && s < 250 && g_nat[s]) return g_nat[s];
   if (s < 123 && !memcmp((const void*)(g_base + NATION_RVA), NATION_SIG, sizeof NATION_SIG)) {
     uint32_t k = ((nation_fn)(uintptr_t)(g_base + NATION_RVA))((uint32_t)s) & 0xffff;
     if (k && k < 0xfffc) return (int)k;
   }
   int own = *(uint16_t*)(t + 0x418) & 0x1ff;
   if (own && own != 21) return own;
-  return s < 123 ? 1000 + s : 2000 + i;
+  return s != 123 && s < 250 ? 1000 + s : 2000 + i;
 }
 
 static int spread_leagues(const uint32_t* clubs, int n, const fl26_pair_t* table, int npairs, int pot,
@@ -2681,7 +2689,7 @@ static void cwc_game_champions(u32vec* list)
     for (size_t i = 0; i < n && i < 40; i++) {
       unsigned char* t = ((teamget_fn)(uintptr_t)(g_base + TEAMGET_RVA))(blk, list->b[i]);
       int ok = t && *(uint32_t*)t >> 14 == list->b[i] >> 14;
-      logf("fl26swiss:   entrant %2u: %08x slot %d country %d", (unsigned)i, list->b[i], ok ? t[0x41c] & 0x7f : -1,
+      logf("fl26swiss:   entrant %2u: %08x slot %d country %d", (unsigned)i, list->b[i], ok ? slot_of(t) : -1,
            ok ? *(uint16_t*)(t + 0x418) & 0x1ff : -1);
     }
   }
@@ -4481,6 +4489,39 @@ unsigned char* g_tramp_phkind = 0;
 #define MENU_GRP2_RA 0x151fc11  /* ... and its enable check */
 #define PAGE_GRP_RA  0x1542354  /* the page builder 0x141542300, page type 0: its ties (0x141541480) */
 static uint32_t g_kogrey_n = 0, g_roll_n = 0;
+/* Competition Info -> one item per qualifying round (11.10.), see ci_menu_handler below: the
+   regulation the menu's own grouped-phase item ended up with (phkind at MENU_GRP_RA, after the
+   roll), and the regulation of the extra item last picked, which the page builder is then given
+   (PAGE_GRP_RA) instead of the game's answer. 0xffff = none. */
+static uint16_t g_ci_native = 0xffff, g_ci_pick = 0xffff;
+static uint32_t g_ci_native_comp = 0xffffffffu, g_ci_pick_comp = 0xffffffffu, g_ci_pick_n = 0;
+/* which of CUPS a competition id is (by its league phase's record), -1 none */
+static int ci_of_comp(uint32_t comp)
+{
+  for (int ci = 0; ci < 3; ci++) {
+    unsigned char* lg = find_rec(CUPS[ci].league);
+    if (lg && *(uint32_t*)(lg + 0x80) == comp) return ci;
+  }
+  return -1;
+}
+/* The February knockout play-off is played in the August play-off's own regulation (2, 188, 189),
+   so the one regulation holds the one or the other: the February round from po_start's draw (this
+   session) or, in a loaded save, from the end of the league phase (day 28) to the July teardown. */
+static int kopo_window(int ci)
+{
+  int d = today();
+  if (d < 0 || ci < 0 || ci > 2) return 0;
+  int ad = abs_day();
+  if (g_po_day[ci] > -100000 && ad >= g_po_day[ci] && ad - g_po_day[ci] < 160) return 1;
+  return d >= 28 && d < PO_MONTHS_BEFORE;
+}
+/* a regulation that is one of our play-offs (2, 188, 189) or a tie of one: its CUPS index, -1 none */
+static int po_cup_of(uint16_t id)
+{
+  for (int ci = 0; ci < 3; ci++)
+    if ((id & 0x3ff) == CUPS[ci].po && (id >> 10) <= 8) return ci;
+  return -1;
+}
 /* The round of a competition's summer qualifying in play: the latest of its play-off, third and
    second qualifying round (QCUPS order) whose first tie holds clubs; -1 for none drawn yet. */
 static int q_rolling(uint16_t r)
@@ -4499,10 +4540,25 @@ static int q_rolling(uint16_t r)
   }
   return -1;
 }
+static uint64_t phkind_core(uint32_t* comp, uint64_t kind, uintptr_t ra);
 uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
 {
-  uint64_t r = ((phkind_fn)(uintptr_t)g_tramp_phkind)(comp, kind);
   uintptr_t ra = (uintptr_t)__builtin_return_address(0);
+  uint64_t r = phkind_core(comp, kind, ra);
+  if (!comp) return r;
+  if (ra == g_base + MENU_GRP_RA) { g_ci_native = (uint16_t)r; g_ci_native_comp = *comp; }
+  /* an extra Competition Info item was picked (ci_sel_handler): its page shows that round */
+  if (ra == g_base + PAGE_GRP_RA && g_ci_pick != 0xffff && *comp == g_ci_pick_comp && find_rec(g_ci_pick)) {
+    if (g_ci_pick_n++ < 12)
+      logf("fl26swiss: Competition Info -- page shows regulation %u (picked item; the game answered %u)",
+           (unsigned)g_ci_pick, (unsigned)(uint16_t)r);
+    return (r & ~0xffffull) | g_ci_pick;
+  }
+  return r;
+}
+static uint64_t phkind_core(uint32_t* comp, uint64_t kind, uintptr_t ra)
+{
+  uint64_t r = ((phkind_fn)(uintptr_t)g_tramp_phkind)(comp, kind);
   if (comp && (uint16_t)r != 0xffff &&
       ((kind == 3 && ra == g_base + MENU_KO_RA) || (kind == 4 && ra == g_base + MENU_KO4_RA))) {
     uint64_t cur = ((curph_fn)(uintptr_t)(g_base + CURPH_RVA))(*comp, 1, 0);
@@ -4591,6 +4647,7 @@ uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
 #define LP_TEXT    0x3a2fff1u
 #define QR3_TEXT   0x3a2fff2u   /* "3rd Qualifying Round" */
 #define QR2_TEXT   0x3a2fff3u   /* "2nd Qualifying Round" */
+#define KOPO_TEXT  0x3a2fff4u   /* "Knockout round play-offs" (11.10.: the February play-off, see kopo_window) */
 #define TXTGET_RVA 0x14996f0
 static const unsigned char SIG_TXTGET[14] = {
   0x4c, 0x8b, 0x41, 0x08, 0x45, 0x33, 0xc9, 0x45, 0x8b, 0x10, 0x49, 0x8d, 0x40, 0x08 };
@@ -4601,6 +4658,7 @@ const char* txtget_handler(void* table, uint64_t index)
   if ((uint16_t)index == (uint16_t)LP_TEXT) return "League Phase";
   if ((uint16_t)index == (uint16_t)QR3_TEXT) return "3rd Qualifying Round";
   if ((uint16_t)index == (uint16_t)QR2_TEXT) return "2nd Qualifying Round";
+  if ((uint16_t)index == (uint16_t)KOPO_TEXT) return "Knockout round play-offs";
   return ((txtget_fn)(uintptr_t)g_tramp_txtget)(table, index);
 }
 
@@ -4626,6 +4684,14 @@ uint64_t phname_handler(uint64_t reg)
                                  (unsigned)(uint16_t)reg, qa / NQ == 1 ? "3rd" : "2nd",
                                  (unsigned long long)((uintptr_t)__builtin_return_address(0) - g_base + 0x140000000ull)); }
     return qa / NQ == 1 ? QR3_TEXT : QR2_TEXT;
+  }
+  /* the February knockout play-off (and its ties, for the match screens): "Knockout round play-offs" */
+  int pc = po_cup_of((uint16_t)reg);
+  if (pc >= 0 && g_tramp_txtget && kopo_window(pc)) {
+    static int said_ko = 0;
+    if (said_ko < 4) { said_ko++; logf("fl26swiss: phase name -- regulation %u named Knockout round play-offs (%s)",
+                                       (unsigned)(uint16_t)reg, CUPS[pc].name); }
+    return KOPO_TEXT;
   }
   if (get(reg & 0xffff, rec)) return *(uint32_t*)(rec + 0x40);
   if ((uintptr_t)__builtin_return_address(0) == g_base + MENU_NAME_RA &&
@@ -4763,7 +4829,7 @@ static const uint32_t KO_DAYS[3][7] = {
  * rounds, which runs into June).
  * Twenty clubs twice is 38 and is left exactly as it was. */
 /* The built-in list: the ids the world builder hands out; a world file replaces it (fl26_swiss_leagues). */
-#define MAX_OUR_LEAGUES 128
+#define MAX_OUR_LEAGUES 256
 static uint16_t OUR_LEAGUES[MAX_OUR_LEAGUES] = {
   11, 49, 60, 61, 62, 74, 76, 93, 94, 96, 98, 100, 109, 110, 111, 112, 113, 114, 121, 138, 139,
   140, 143, 144, 145, 146, 170, 171, 173, 174, 176, 178, 179, 180, 181, 182, 183, 184, 185, 190 };
@@ -5155,7 +5221,7 @@ static int respace(date_t* r, uint32_t n, const uint8_t* bad, int gap, int jit)
  * played and stay in the table through the day-216 build. The game's own leagues are not dated
  * again at the rollover -- they keep the dates their career was made with, on day 216 -- so a
  * `july` line for one of them changes nothing; it starts as the game dates it. */
-#define MAX_JULY 64
+#define MAX_JULY 256
 static uint16_t g_july[MAX_JULY][2]; static int g_njuly = 0;
 __declspec(dllexport) int fl26_swiss_july(const uint16_t* v, int n)
 {
@@ -5246,7 +5312,7 @@ static void rest_dates(uint16_t id, date_t* r, uint32_t n)
  * first weekend after it in the first season (RCAL_SEASON1), the real one from the July rollover
  * on. Weekdays are the season's own (wday: 2025/26 from the game date's year), and so are the
  * fixed European days, moved within their week (eday). */
-#define MAX_RCAL 128
+#define MAX_RCAL 256
 #define RCAL_SEASON1 219          /* Saturday 8 August, the first weekend of a new career */
 typedef struct { uint16_t reg, first, last, b0, b1, days, also, eu; } rcal_t;
 static rcal_t g_rcal[MAX_RCAL]; static int g_nrcal = 0;
@@ -5830,6 +5896,8 @@ static void* title_text(void* str, uint64_t id, uint64_t phase)
       if (said < 4) { said++; logf("fl26swiss: match title -- regulation %u named %s qualifying round", (unsigned)(uint16_t)phase, qa / NQ == 1 ? "3rd" : "2nd"); }
       t = qa / NQ == 1 ? QR3_TEXT : QR2_TEXT;
     }
+    int pc = po_cup_of((uint16_t)phase);
+    if (qa < 0 && pc >= 0 && g_tramp_txtget && kopo_window(pc)) t = KOPO_TEXT;
   }
   return ((textfetch_fn)(uintptr_t)(g_base + TEXTFETCH_RVA))(str, t);
 }
@@ -6043,6 +6111,306 @@ static int grp_install(uint64_t exe_base)
   return 0;
 }
 
+/* ---- Competition Info for the continental cups: a list, not a bracket; Round of 16; one item a round ----
+ * (11.10.)
+ *
+ * 1. List, not bracket. Competition Info -> Fixtures ("tournamentdraw") opens
+ *    MatchResultsFactory::CreateObjectTournament (0x140af9810, registered for
+ *    Common/CmnTournamentMenu). It shows the round-by-round list (0x140caa5a0) for the
+ *    competition ids it knows -- 2, 3, 5, 6, 8, 43, 44 (mask 0x180000000016c), 70-72, 91, 97,
+ *    103, 128 (mask 0x400000208200007 from 70) -- or when 0x141548120(knockout) says so, and a
+ *    bracket otherwise: MenuModeTournamentProgress, or TournamentProgressOver32 above 32 clubs
+ *    (+0x308 bits 16-22). The Conference League (competition 174) and the continental cups the
+ *    world builder adds (ccup lines with a group stage, not a league cup's like=) are none of
+ *    them, so they got a bracket. The call of 0x141548120 at 0x140af98c9 goes through kolist_test,
+ *    which answers yes for their knockouts and asks the game for everything else.
+ *
+ * 2. Round of 16. The list labels every tie with the match title 0x14152a590 (through
+ *    0x14152af20), which for the first knockout round (kind 0x2e) goes by the competition id:
+ *    2 -> "First knockout round" (0x3a20017), 3 -> "Round of 32" (0x3a20018) whatever the size,
+ *    5/6/8/48/91 -> "Round of 16"; any other id by its clubs (+0x30a, else +0x30c), and a
+ *    knockout of 9-31 clubs after a group (+0x7a set) is "First knockout round" again. Since 2024
+ *    the UEFA knockout starts with sixteen clubs, so for the knockouts of our three cups (4, 6,
+ *    187, in a world with our league phases) and for the world-built continental cups' knockouts
+ *    of 9-16 clubs the title takes the competition-8 branch, which reads "Round of 16" (long
+ *    0x3a20019, short 0x5000bf). The schedule's match line (0x140cade70, the same switch on the
+ *    competition id) is answered from the same rule, all sizes. Both are a 5/6-byte jump at the
+ *    switch's first case into a stub that asks ko_text and, without an answer, runs the original
+ *    compare.
+ *
+ * 3. One item a round. The competition-wide menu (0x14151f5f0, items of 0x30 bytes: type, enabled
+ *    @4, text @8, the flow name as a std::string @0x10) has one item per type, and the grouped
+ *    phase's item rolls with the summer (phkind_handler). ci_menu_handler adds, after the game has
+ *    built the list, an item for each qualifying round of the cup that holds clubs and is not the
+ *    one the native item shows: second qualifying round, third qualifying round, play-off (or
+ *    "Knockout round play-offs" in the February window) -- same flow name "playoff", so the same
+ *    page opens. Which item was chosen is read when the menu asks for the chosen item's flow entry
+ *    (0x140e3d310: entry +0x28 list 2, +0x2c the item's index, as 0x140affc10 registered it), and
+ *    the page builder's grouped-phase lookup (PAGE_GRP_RA) is then given that round's regulation.
+ */
+#define CIV_VTBL     0x2689d98   /* CompeViewItemSelect's vtable (Common/CmnCompeInfoMenu) */
+#define CIMENU_RVA   0x151f5f0
+#define CIPUSH_RVA   0x152c9e0   /* vector<item>::push_back(vec, const item*) */
+#define CISEL_RVA    0x0e3d310   /* (menu) -> the chosen item's flow entry */
+#define KOLIST_CALL  0x0af98c9
+#define KOLIST_RVA   0x1548120
+#define SCHED_SITE   0x0cae1db   /* cmp ebx,2; jne -- kind 0x2e in 0x140cade70 */
+#define SCHED_TEXT   0x0cae217   /* lea rcx,[rsp+0x50]; call 0x141496ca0; jmp */
+#define SCHED_C2     0x0cae1e0
+#define SCHED_NOT2   0x0cae1f4
+#define TITLE_SITE   0x152a9e7   /* cmp r14d,2; jne -- kind 0x2e in 0x14152a590 */
+#define TITLE_R16    0x152aa31   /* the competition-8 branch: Round of 16, long or short */
+#define TITLE_C2     0x152a9ed
+#define TITLE_NOT2   0x152aa09
+static const unsigned char SIG_CIMENU[17] = {
+  0x40, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56, 0x41, 0x57, 0x48, 0x8d, 0x6c, 0x24, 0xd9 };
+static const unsigned char SIG_CISEL[20] = {
+  0x48, 0x89, 0x5c, 0x24, 0x08, 0x57, 0x48, 0x83, 0xec, 0x20, 0x48, 0x8b, 0xf9, 0x48, 0x8b, 0x89, 0x88, 0x00, 0x00, 0x00 };
+static const unsigned char SIG_SCHED[5]  = { 0x83, 0xfb, 0x02, 0x75, 0x14 };
+static const unsigned char SIG_SCHEDT[5] = { 0x48, 0x8d, 0x4c, 0x24, 0x50 };
+static const unsigned char SIG_TITLE[6]  = { 0x41, 0x83, 0xfe, 0x02, 0x75, 0x1c };
+static const unsigned char SIG_TITLER[7] = { 0x48, 0x8d, 0x4c, 0x24, 0x50, 0x84, 0xdb };
+
+/* a world-built continental cup's knockout (a ccup with a group stage, not a league cup's copy) */
+static int ccup_cont_ko(uint16_t reg)
+{
+  for (int k = 0; k < g_nccup; k++) {
+    const ccup_t* c = &g_ccup[k];
+    if (c->groups && !c->like && reg == c->ko) return 1;
+  }
+  return 0;
+}
+/* the knockout of one of our UEFA cups, in a world with our league phases: its CUPS index, -1 none */
+static int uefa_ko_of(uint16_t reg)
+{
+  for (int ci = 0; ci < 3; ci++) {
+    const cup_t* c = &CUPS[ci];
+    if (((reg & 0x3ff) == c->ko && (reg >> 10) <= 16) && (lp_ours(c->league) || lp_ours(c->row))) return ci;
+  }
+  return -1;
+}
+/* The first knockout round's name for our continental knockouts, 0 = the game's own. */
+static uint32_t g_kotext_n = 0;
+static uint32_t ko_text(uint32_t comp, uint32_t reg, uint32_t clubs, const char* where)
+{
+  uint32_t n = 0;
+  if (uefa_ko_of((uint16_t)reg) >= 0) n = 16;           /* UEFA, since 2024: the round of 16 */
+  else if (ccup_cont_ko((uint16_t)reg)) n = clubs & 0x7f;
+  if (!n) return 0;
+  uint32_t t = n > 16 ? 0x3a20018u : n > 8 ? 0x3a20019u : n > 4 ? 0x3a2001bu : n > 2 ? 0x3a2001cu : 0x3a2001du;
+  if (g_kotext_n++ < 6)
+    logf("fl26swiss: %s -- knockout %u (competition %u, %u clubs): first round named %s", where, reg, comp, n,
+         t == 0x3a20019u ? "Round of 16" : t == 0x3a20018u ? "Round of 32" : t == 0x3a2001bu ? "Quarter-finals" :
+         t == 0x3a2001cu ? "Semi-finals" : "Final");
+  return t;
+}
+uint64_t ko_sched_text(uint64_t comp, uint64_t reg, uint64_t clubs, uint64_t prev)
+{
+  (void)prev;
+  return ko_text((uint32_t)comp, (uint32_t)(uint16_t)reg, (uint32_t)clubs, "schedule");
+}
+uint64_t ko_title_r16(uint64_t comp, uint64_t reg, uint64_t clubs, uint64_t prev)
+{
+  (void)prev;
+  return ko_text((uint32_t)comp, (uint32_t)(uint16_t)reg, (uint32_t)clubs, "match title") == 0x3a20019u;
+}
+
+typedef uint64_t (*kolist_fn)(uint64_t reg);
+static uint32_t g_kolist_n = 0;
+uint64_t kolist_test(uint64_t reg)
+{
+  uint16_t id = (uint16_t)reg;
+  if ((id == UECL_KO && (lp_ours(UECL_REG) || lp_ours(UECL_ROW))) || ccup_cont_ko(id)) {
+    if (g_kolist_n++ < 6) logf("fl26swiss: Competition Info -- knockout %u shown as a list, not a bracket", (unsigned)id);
+    return 1;
+  }
+  return ((kolist_fn)(uintptr_t)(g_base + KOLIST_RVA))(reg);
+}
+
+typedef struct { uint32_t type; uint8_t en; uint8_t pad[3]; uint32_t text; uint32_t pad2;
+                 char buf[16]; uint64_t size, cap; } ci_item_t;
+_Static_assert(sizeof(ci_item_t) == 0x30, "Competition Info item is 0x30 bytes");
+typedef struct { ci_item_t *b, *e, *c; } ci_vec_t;
+typedef uint64_t (*cimenu_fn)(ci_vec_t* v, uint32_t* comp, uint64_t flag);
+typedef void (*cipush_fn)(ci_vec_t* v, const ci_item_t* it);
+typedef unsigned char* (*cisel_fn)(unsigned char* menu);
+unsigned char* g_tramp_cimenu = 0;
+unsigned char* g_tramp_cisel = 0;
+#define CI_MAX 32
+static ci_vec_t* g_ci_vec = 0;
+static int g_ci_n = 0;
+static uint16_t g_ci_reg[CI_MAX];
+static uint32_t g_ci_comp = 0xffffffffu, g_ci_menu_n = 0, g_ci_sel_n = 0;
+uint64_t ci_menu_handler(ci_vec_t* v, uint32_t* comp, uint64_t flag)
+{
+  g_ci_native = 0xffff; g_ci_native_comp = 0xffffffffu;
+  uint64_t r = ((cimenu_fn)(uintptr_t)g_tramp_cimenu)(v, comp, flag);
+  g_ci_pick = 0xffff;
+  if (v == g_ci_vec) { g_ci_vec = 0; g_ci_n = 0; }
+  if (!v || !comp || !v->b || v->e < v->b || !g_tramp_txtget) return r;
+  int ci = ci_of_comp(*comp);
+  if (ci < 0) return r;
+  uint16_t native = g_ci_native_comp == *comp ? g_ci_native : 0xffff;
+  uint16_t xr[3]; uint32_t xt[3]; int nx = 0;
+  for (int st = 2; st >= 0; st--) {                       /* 2nd qualifying, 3rd qualifying, play-off */
+    int i = ci + NQ * st;
+    uint16_t q = q_reg(i);
+    if (!q || q == native || !find_rec(q)) continue;
+    unsigned char* tie = find_rec(q_tie_of(i, 0));
+    if (!tie || !rec_count(tie)) continue;
+    xr[nx] = q;
+    xt[nx] = st == 2 ? QR2_TEXT : st == 1 ? QR3_TEXT : kopo_window(ci) ? KOPO_TEXT : 0x3a20010u;
+    nx++;
+  }
+  int n = (int)(v->e - v->b);
+  if (!nx || n + nx > CI_MAX) return r;
+  /* in front of the native grouped-phase item (type 0), else of the first item listed after it in
+     the game's table (0x142980850: 3, 4, 12, 0, then 2, 6, 1, 7, 8, 10, 11, 9), else at the end */
+  int pos = -1;
+  for (int k = 0; k < n && pos < 0; k++) if (v->b[k].type == 0) pos = k;
+  for (int k = 0; k < n && pos < 0; k++) { uint32_t t = v->b[k].type; if (t != 3 && t != 4 && t != 12) pos = k; }
+  if (pos < 0) pos = n;
+  uint16_t map[CI_MAX];
+  for (int k = 0; k < n; k++) map[k] = 0xffff;
+  for (int j = 0; j < nx; j++) {
+    ci_item_t it;
+    memset(&it, 0, sizeof it);
+    it.type = 0; it.en = 1; it.text = xt[j];
+    memcpy(it.buf, "playoff", 8); it.size = 7; it.cap = 15;   /* the native item's flow name, in place */
+    ((cipush_fn)(uintptr_t)(g_base + CIPUSH_RVA))(v, &it);
+    int m = (int)(v->e - v->b);
+    if (m != n + 1) { logf("fl26swiss: Competition Info -- item not added (vector %d -> %d)", n, m); break; }
+    ci_item_t last = v->b[m - 1];                          /* std::string relocates bitwise (no proxy) */
+    memmove(v->b + pos + 1, v->b + pos, (size_t)(m - 1 - pos) * sizeof(ci_item_t));
+    v->b[pos] = last;
+    memmove(map + pos + 1, map + pos, (size_t)(n - pos) * sizeof map[0]);
+    map[pos] = xr[j];
+    n = m; pos++;
+  }
+  memcpy(g_ci_reg, map, (size_t)n * sizeof map[0]);
+  g_ci_n = n; g_ci_vec = v; g_ci_comp = *comp;
+  if (g_ci_menu_n++ < 12) {
+    char b[128]; int o = 0;
+    for (int k = 0; k < n && o < 100; k++)
+      if (map[k] != 0xffff) o += snprintf(b + o, sizeof b - o, " %u@%d", (unsigned)map[k], k);
+    b[o] = 0;
+    logf("fl26swiss: Competition Info -- %s menu: %d item(s) for its rounds (regulation@item:%s; the native item shows %u)",
+         CUPS[ci].name, nx, b, (unsigned)native);
+  }
+  return r;
+}
+/* 0x140e3d310(flow) is not given the menu and does not return an item: `flow` is the screen's flow
+   object, its context at +0x88 holds the transition entries (+0x398..+0x3a0, 0x30 each: +0x28 the
+   list, +0x2c the item index or -1 for any, +8 the target flow name as a std::string), the current
+   list at +0xa0 and the chosen item's index at +0xd8, and it returns the name of the flow the chosen
+   item leads to (12.10., in game: the old reading never fired, every item opened the current round).
+   Our items lead to "playoff" like the native grouped-phase item, so a "playoff" answer while our
+   menu is up takes the chosen index from +0xd8. */
+unsigned char* ci_sel_handler(unsigned char* flow)
+{
+  unsigned char* e = ((cisel_fn)(uintptr_t)g_tramp_cisel)(flow);
+  if (!e || !flow || !g_ci_vec || strcmp((const char*)e, "playoff")) return e;
+  unsigned char* ctx = *(unsigned char**)(flow + 0x88);
+  if (!ctx) return e;
+  int list = *(int32_t*)(ctx + 0xa0), idx = *(int32_t*)(ctx + 0xd8), alt = *(int32_t*)(ctx + 0xfc);
+  uint16_t p = idx >= 0 && idx < g_ci_n ? g_ci_reg[idx] : 0xffff;
+  g_ci_pick = p; g_ci_pick_comp = g_ci_comp;
+  if (g_ci_sel_n++ < 16) {
+    if (p != 0xffff) logf("fl26swiss: Competition Info -- item %d chosen: regulation %u (list %d, +0xfc %d)", idx, (unsigned)p, list, alt);
+    else logf("fl26swiss: Competition Info -- item %d chosen, the game's own (list %d, +0xfc %d, %d items)", idx, list, alt, g_ci_n);
+  }
+  return e;
+}
+
+static int ci_jmp(unsigned char* s, int n, uint64_t to)
+{
+  s[n++] = 0xFF; s[n++] = 0x25; *(uint32_t*)(s + n) = 0; n += 4; *(uint64_t*)(s + n) = to; n += 8;
+  return n;
+}
+/* The stub both label sites share: align the stack, call fn(ecx, edx, r8d, r9d) as loaded by `ld`
+   (ld_n bytes), restore; eax != 0 -> (mov edx, eax when keep_edx) jmp yes; else the replaced
+   compare (cmp_n bytes), then jne no / jmp eq. Every volatile register is dead at both sites (the
+   paths that follow load them afresh or call). Returns the stub's length. */
+static int ci_stub(unsigned char* s, const unsigned char* ld, int ld_n, void* fn, int keep_edx, uint64_t yes,
+                   const unsigned char* cmp, int cmp_n, uint64_t eq, uint64_t no)
+{
+  int n = 0;
+  static const unsigned char PRO[12] = { 0x55, 0x48, 0x89, 0xe5, 0x48, 0x83, 0xe4, 0xf0, 0x48, 0x83, 0xec, 0x20 };
+  memcpy(s + n, PRO, 12); n += 12;                                                    /* push rbp; mov rbp,rsp; and rsp,-16; sub rsp,0x20 */
+  memcpy(s + n, ld, ld_n); n += ld_n;
+  s[n++] = 0x48; s[n++] = 0xb8; *(uint64_t*)(s + n) = (uint64_t)(uintptr_t)fn; n += 8;   /* mov rax, fn */
+  s[n++] = 0xff; s[n++] = 0xd0;                                                       /* call rax */
+  s[n++] = 0x48; s[n++] = 0x89; s[n++] = 0xec; s[n++] = 0x5d;                         /* mov rsp, rbp; pop rbp */
+  s[n++] = 0x85; s[n++] = 0xc0;                                                       /* test eax, eax */
+  s[n++] = 0x74; int jz = n++;                                                        /* jz orig */
+  if (keep_edx) { s[n++] = 0x89; s[n++] = 0xc2; }                                     /* mov edx, eax */
+  n = ci_jmp(s, n, yes);
+  s[jz] = (unsigned char)(n - (jz + 1));
+  memcpy(s + n, cmp, cmp_n); n += cmp_n;                                              /* orig: the compare */
+  s[n++] = 0x75; s[n++] = 14;                                                         /* jne no */
+  n = ci_jmp(s, n, eq);
+  n = ci_jmp(s, n, no);
+  return n;
+}
+static int ci_patch(unsigned char* site, int len, unsigned char* to)
+{
+  DWORD old;
+  if (!VirtualProtect(site, len, PAGE_EXECUTE_READWRITE, &old)) return 4;
+  site[0] = 0xE9; *(int32_t*)(site + 1) = (int32_t)((int64_t)(uintptr_t)to - (int64_t)(uintptr_t)(site + 5));
+  for (int i = 5; i < len; i++) site[i] = 0x90;
+  VirtualProtect(site, len, old, &old);
+  FlushInstructionCache(GetCurrentProcess(), site, len);
+  return 0;
+}
+/* list instead of bracket: 0 ok; 2 the call is not the one expected; 3 no page in reach; 4 VirtualProtect */
+static int kolist_install(uint64_t exe_base)
+{
+  unsigned char* c = (unsigned char*)(uintptr_t)(exe_base + KOLIST_CALL);
+  if (c[0] != 0xE8 || (uint64_t)(uintptr_t)(c + 5) + *(int32_t*)(c + 1) != exe_base + KOLIST_RVA) return 2;
+  unsigned char* t = near_alloc(exe_base);
+  if (!t) return 3;
+  ci_jmp(t, 0, (uint64_t)(uintptr_t)kolist_test);
+  FlushInstructionCache(GetCurrentProcess(), t, 14);
+  DWORD old;
+  if (!VirtualProtect(c, 5, PAGE_EXECUTE_READWRITE, &old)) return 4;
+  *(int32_t*)(c + 1) = (int32_t)((int64_t)(uintptr_t)t - (int64_t)(uintptr_t)(c + 5));
+  VirtualProtect(c, 5, old, &old);
+  FlushInstructionCache(GetCurrentProcess(), c, 5);
+  return 0;
+}
+/* Round of 16: bit 0 the schedule line, bit 1 the match title; *why gets 2/3/4 for a failed one */
+static int kotext_install(uint64_t exe_base, int* why)
+{
+  int done = 0;
+  *why = 0;
+  unsigned char* ss = (unsigned char*)(uintptr_t)(exe_base + SCHED_SITE);
+  unsigned char* st = (unsigned char*)(uintptr_t)(exe_base + SCHED_TEXT);
+  unsigned char* ts = (unsigned char*)(uintptr_t)(exe_base + TITLE_SITE);
+  unsigned char* tr = (unsigned char*)(uintptr_t)(exe_base + TITLE_R16);
+  unsigned char* t = near_alloc(exe_base);
+  if (!t) { *why = 3; return 0; }
+  if (!memcmp(ss, SIG_SCHED, 5) && !memcmp(st, SIG_SCHEDT, 5) && *(uint32_t*)(st - 4) == 0x3a20019u) {
+    /* mov ecx, ebx (competition); movzx edx, r14w (knockout); mov r8d, r15d (+0x30c clubs); movzx r9d, r12w (+0x7a) */
+    static const unsigned char LD[13] = { 0x89, 0xd9, 0x41, 0x0f, 0xb7, 0xd6, 0x45, 0x89, 0xf8, 0x45, 0x0f, 0xb7, 0xcc };
+    int n = ci_stub(t, LD, 13, (void*)ko_sched_text, 1, exe_base + SCHED_TEXT, SIG_SCHED, 3,
+                    exe_base + SCHED_C2, exe_base + SCHED_NOT2);
+    FlushInstructionCache(GetCurrentProcess(), t, n);
+    int e = ci_patch(ss, 5, t);
+    if (!e) done |= 1; else *why = e;
+  } else *why = 2;
+  if (!memcmp(ts, SIG_TITLE, 6) && !memcmp(tr, SIG_TITLER, 7)) {
+    /* mov ecx, r14d (competition); movzx edx, si (regulation); mov r8d, r15d (clubs); movzx r9d, r13w (+0x7a) */
+    static const unsigned char LD[13] = { 0x44, 0x89, 0xf1, 0x0f, 0xb7, 0xd6, 0x45, 0x89, 0xf8, 0x45, 0x0f, 0xb7, 0xcd };
+    unsigned char* s = t + 0x100;
+    int n = ci_stub(s, LD, 13, (void*)ko_title_r16, 0, exe_base + TITLE_R16, SIG_TITLE, 4,
+                    exe_base + TITLE_C2, exe_base + TITLE_NOT2);
+    FlushInstructionCache(GetCurrentProcess(), s, n);
+    int e = ci_patch(ts, 6, s);
+    if (!e) done |= 2; else *why = e;
+  } else *why = 2;
+  return done;
+}
+
 /* ---- "which league is team X in" without the linear regulation searches ----
  *
  * 0x141543510 answers which league a team plays in. For every competition id of a list
@@ -6164,6 +6532,21 @@ static int rix_install(uint64_t exe_base)
   return 0;
 }
 
+/* A record's region, the key 0x1415415f0 answers. With fl26reg128 live that getter reads the
+ * full region (0..127) from the byte at +0x2fe, which the module marks with 0x5a at +0x2ff,
+ * and the 6-bit field at +0x30c bits 7..12 holds min(region, 63); without it the 6-bit field
+ * is the region. An unmarked record (an old career fl26join has not repaired yet) falls back
+ * to the field. */
+static unsigned rec_region(const unsigned char* rr)
+{
+  static const unsigned char NEW[7] = { 0x0f,0xb6,0x80,0xfe,0x02,0x00,0x00 };   /* fl26reg128 at 0x141541639 */
+  unsigned six = (*(const uint32_t*)(rr + 0x30c) >> 7) & 0x3f;
+  if (g_base && !memcmp((const void*)(uintptr_t)(g_base + 0x1541639), NEW, sizeof NEW)
+      && rr[0x2ff] == 0x5a && rr[0x2fe] <= 127)
+    return rr[0x2fe];
+  return six;
+}
+
 /* Put the key of every live split into the stub, once. Cheap enough to call from the date,
  * progression and current-phase hooks, which between them run on load and on the split day. */
 static void split_keys(void)
@@ -6173,7 +6556,7 @@ static void split_keys(void)
   for (int k = 0; k < g_nsplits; k++) {
     unsigned char* rr = get_rec(SPLITS[k].regular);
     if (!rr || ((*(uint32_t*)(rr + 0x308) >> 23) & 0x3f) != 12) continue;
-    unsigned key = (*(uint32_t*)(rr + 0x30c) >> 7) & 0x3f;
+    unsigned key = rec_region(rr);   /* key - 12 fits the stub's signed imm8 for every key 0..127 */
     if (nocarry(SPLITS[k].total)) {
       if (k < 32 && !(said_nc & (1u << k))) {
         said_nc |= 1u << k;
@@ -7134,6 +7517,23 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
   {
     int rx = rix_install(exe_base);
     if (rx) logf("fl26swiss: team-to-league lookup index NOT installed (%d)", rx);
+  }
+  {
+    int kl = kolist_install(exe_base);
+    if (!kl) logf("fl26swiss: Competition Info knockouts as a list live (Conference League, world-built continental cups; call@%llx)",
+                  (unsigned long long)(exe_base + KOLIST_CALL));
+    else logf("fl26swiss: Competition Info knockouts as a list NOT installed (%d); they stay brackets", kl);
+    int why = 0, kt = kotext_install(exe_base, &why);
+    logf("fl26swiss: Round of 16 names %s (schedule line %s, match title / Competition Info list %s%s)",
+         kt == 3 ? "live" : kt ? "partly live" : "NOT installed", kt & 1 ? "yes" : "no", kt & 2 ? "yes" : "no",
+         why == 2 ? "; a site was not the one expected" : why == 3 ? "; no page in reach" : why == 4 ? "; VirtualProtect" : "");
+    if (!hook((unsigned char*)(uintptr_t)(exe_base + CIMENU_RVA), SIG_CIMENU, 17, (void*)ci_menu_handler, &g_tramp_cimenu)
+        && !hook((unsigned char*)(uintptr_t)(exe_base + CISEL_RVA), SIG_CISEL, 20, (void*)ci_sel_handler, &g_tramp_cisel))
+      logf("fl26swiss: Competition Info item per qualifying round live (menu@%llx, choice@%llx)",
+           (unsigned long long)(exe_base + CIMENU_RVA), (unsigned long long)(exe_base + CISEL_RVA));
+    else
+      logf("fl26swiss: Competition Info item per qualifying round NOT installed (signature)%s",
+           g_tramp_cimenu ? " -- menu hooked, choice not: extra items open the native item's page" : "");
   }
   if (!cupsel_install(exe_base))
     logf("fl26swiss: Cup mode list live (no league phase of 36 in Kick Off > Cup)");

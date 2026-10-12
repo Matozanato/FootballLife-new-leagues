@@ -646,7 +646,8 @@ static void* wrap(unsigned char* target, int stolen, void* handler)
    bytes, to take at most cap - 1 of them (one less, or the lookup refuses every id):
      mov r14,rcx / mov rdi,rdx / xor ebx,ebx / mov eax,(cap-1)*60 / cmp r8,rax / cmovb rax,r8 /
      cdq / push 60 / pop rcx / div ecx / mov ebp,eax
-   The rest of the file is left out, the highest ids. Only on this build's bytes. */
+   The rest of the file is left out, the highest ids. Only on this build's bytes. The cap is
+   read from the code: 30,024 shipped, 65,000 with fl26appcap.lua (which must load first). */
 static int app_guard(uint64_t exe_base)
 {
   unsigned char* t = (unsigned char*)(uintptr_t)(exe_base + APP_LOAD);
@@ -705,8 +706,16 @@ __declspec(dllexport) int fl26_regen_install(uint64_t exe_base, int flags)
     g_app_cnt_disp = *(uint32_t*)(ai + 3);
     g_app_cap      = *(uint32_t*)(ak + 1);
     g_app_tab_disp = *(uint32_t*)(at + 3);
-    logf(app_guard(exe_base) ? "appearance loader capped at %u records" :
-         "appearance loader not capped (not this build's bytes; %u)", g_app_cap - 1);
+    /* fl26appcap.lua (loaded before this) grows the table in place: the counts sit right
+       behind it, +cap*0x48 then +2, shipped or grown. Anything else is not a layout we know. */
+    if (g_app_cap >= 65536 || g_app_tab_disp + g_app_cap * APP_STRIDE + 2 != g_app_cnt_disp) {
+      logf("appearance table layout not recognised (cap %u, table +%#x, count +%#x): faces off",
+           g_app_cap, g_app_tab_disp, g_app_cnt_disp);
+      g_app_cnt_disp = g_app_cap = g_app_tab_disp = 0;
+    } else
+      logf(app_guard(exe_base) ? "appearance table %u records, loader capped at %u" :
+           "appearance table %u records, loader not capped (not this build's bytes; %u)",
+           g_app_cap, g_app_cap - 1);
   }
   memset(g_nat_group, 0xff, sizeof g_nat_group);
   g_rng = mix(GetTickCount64());

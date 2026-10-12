@@ -606,7 +606,7 @@ function m.init(ctx)
       if pn ~= nil then
         local nat = {}
         for _, L in ipairs(world) do
-          if L.slot and L.country and L.slot >= 0 and L.slot < 123 and L.country > 0 then nat[#nat + 1] = L end
+          if L.slot and L.country and L.slot >= 0 and L.slot ~= 123 and L.slot < 250 and L.country > 0 then nat[#nat + 1] = L end
         end
         local nbuf = ffi.new("uint16_t[?]", math.max(2 * #nat, 2))
         for i, L in ipairs(nat) do nbuf[2 * i - 2] = L.slot; nbuf[2 * i - 1] = L.country end

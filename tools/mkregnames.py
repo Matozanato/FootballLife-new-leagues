@@ -60,8 +60,12 @@ The picture names
                                                     <root>/fl26world.txt)
     python mkregnames.py --show          -> the shipped table, decoded
 
-With --root, ids above 28 also need sider/fl26reg64.lua: without it the game never sees a
-region above 28 in the first place.
+With --root, ids above 28 also need sider/fl26reg128.lua (fl26reg64 for ids up to 62):
+without it the game never sees a region above 28 in the first place.
+
+The row count is an 8-bit compare (`cmp ecx, imm8`, sign-extended), so the table holds at most
+127 rows. The 24 shipped rows plus one per region that has none still fits for every region
+1..127 a world can use: at most 24 + 103 = 127.
 
 Nothing here has been run in a game.
 """
@@ -167,7 +171,7 @@ def main(argv):
               % (os.path.basename(root.rstrip("/\\")), len(used), len(need), need,
                  sum(rid in own for rid in need)))
         if need and max(need) > 28:
-            print("  ids above 28 also need sider/fl26reg64.lua to be read at all")
+            print("  ids above 28 also need sider/fl26reg128.lua to be read at all")
     for part in get("--map", DEFAULT_MAP).split(","):
         if not part:                # an empty map: every league sits in a region that has a heading
             continue

@@ -34,9 +34,10 @@ ZIG = os.environ.get("ZIG") or next(
 
 # the lua.module lines, in load order (the order of the working install)
 ORDER = [
-    "fl26caps", "fl26guards", "fl26joindll",
-    "fl26hdr192", "fl26chain", "fl26comptab", "fl26slotnames", "fl26clubs", "fl26regen", "fl26editlist", "fl26edit",
-    "fl26rank", "fl26deeprank", "fl26regions", "fl26reg64", "fl26regnames", "fl26catlist",
+    "fl26caps", "fl26appcap", "fl26regs600", "fl26slots250", "fl26slot7", "fl26guards", "fl26regfast", "fl26walk",
+    "fl26joindll",
+    "fl26hdr255", "fl26chain", "fl26comptab", "fl26slotnames", "fl26clubs", "fl26regen", "fl26editlist", "fl26edit",
+    "fl26rank", "fl26deeprank", "fl26regions", "fl26reg128", "fl26regnames", "fl26catlist",
     "fl26swiss", "fl26augseason", "fl26lateguards",
     "fl26seasonend",
 ]
@@ -52,16 +53,18 @@ BUNDLES = {
                    "fl26nullguard7", "fl26nullguard8", "fl26nullguard9", "fl26nullguard10"],
     "fl26lateguards": ["fl26superguard", "fl26resultsguard", "fl26ctlguard", "fl26kitguard"],
 }
-# modules a shipped one replaced, not bundled into it: an old manual install still has their line,
-# the two overlap, the second refuses its bytes, and check() read that as "refused the game's exe"
-# (audit 12.10., GitHub #130). Build switches them off like the bundled ones.
+# modules a shipped one replaced, not bundled into it: an old install still has their line, the
+# two overlap, the second refuses its bytes, and check() read that as "refused the game's exe"
+# (audit 12.10., GitHub #130). Build switches them off like the bundled ones (retired.txt).
 SUPERSEDED = {"fl26nullguard3": "fl26guards",      # nullguard9 (in fl26guards) replaced it 22.09.
-              "fl26hdr127": "fl26hdr192",          # hdr192 expects what hdr127 leaves unpatched
-              "fl26deep4": "fl26deeprank"}         # rank + deeprank do the third division properly
+              "fl26hdr127": "fl26hdr255",          # hdr255 expects what hdr127 leaves unpatched
+              "fl26hdr192": "fl26hdr255",          # 0.2.2: the season header for 255 competitions
+              "fl26deep4": "fl26deeprank",         # rank + deeprank do the third division properly
+              "fl26reg64": "fl26reg128"}           # reg128 does all reg64 did, 64 -> 128 regions
 PER_WORLD = {"fl26regions", "fl26regnames"}
 DLLS = {"fl26join": "build-join.sh", "fl26chain": "build-chain.sh",
         "fl26clubs": "build-clubs.sh", "fl26swiss": "build-swiss.sh", "fl26regen": "build-regen.sh",
-        "fl26edit": "build-edit.sh"}
+        "fl26edit": "build-edit.sh", "fl26walk": "build-walk.sh"}
 def _faces_dir():
     """$FL26_REGEN_FACES, else fl26-modding-research/out/regenfaces next to the repo or next to
     any folder above it (a worktree sits deeper than the repo, and the faces were missed there)"""

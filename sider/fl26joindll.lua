@@ -179,6 +179,7 @@ function m.init(ctx)
     typedef int  (*fl26_join_teardown_extra_t)(const uint16_t*, int);
     typedef int  (*fl26_join_calendar_t)(const uint16_t*, int);
     typedef int  (*fl26_join_season_types_t)(const uint8_t*, int);
+    typedef int  (*fl26_join_regions_t)(void);
   ]])
 
   local old = ffi.new("uint32_t[1]")
@@ -260,7 +261,7 @@ function m.init(ctx)
       if cal_region(L.region) and (L.exhibition or 0) == 0 then CAL[#CAL + 1] = L.id end
     end
     local SP = {}
-    for r, t in pairs(SEASONS) do if r >= 0 and r < 64 and t >= 0 and t <= 3 then SP[#SP + 1] = { r, t } end end
+    for r, t in pairs(SEASONS) do if r >= 0 and r < 128 and t >= 0 and t <= 3 then SP[#SP + 1] = { r, t } end end
     if #SP > 0 then
       local pst = ffi.C.GetProcAddress(h, "fl26_join_season_types")
       if pst == nil then log("fl26joindll: this fl26join.dll has no fl26_join_season_types -- the world's season lines are ignored")
@@ -281,6 +282,13 @@ function m.init(ctx)
         local n = tonumber(ffi.cast("fl26_join_calendar_t", pc)(cbuf, #CAL))
         log(string.format("fl26joindll: %d January-December league(s) close at New Year with their region", n))
       end
+    end
+    -- fl26reg128: a career saved before it gets its regions back from the 6-bit field on load
+    local prg = ffi.C.GetProcAddress(h, "fl26_join_regions")
+    if prg == nil then log("fl26joindll: this fl26join.dll has no fl26_join_regions -- careers saved before fl26reg128 keep wrong regions")
+    else
+      local st = tonumber(ffi.cast("fl26_join_regions_t", prg)())
+      if st ~= 0 then log(string.format("fl26joindll: old-career region repair NOT hooked (status %d) -- see fl26join.log", st)) end
     end
     ctx.register("livecpk_make_key", m.make_key)
     ctx.register("key_down", m.key_down)

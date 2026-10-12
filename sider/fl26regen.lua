@@ -31,7 +31,8 @@ save loader (0x1412e5eb0):
     the head, the appearance record the body and its skin colour (GitHub #102).
   * the game loads PlayerAppearance.bin into a table of 30,024 records without a check, so a
     face pack with more records wrote past it and Edit crashed (GitHub #65): the DLL caps that
-    load at 30,023, whether or not the other parts are used.
+    load at 30,023, whether or not the other parts are used. With fl26appcap.lua (listed
+    BEFORE this module) the table holds 65,000 records and the cap is 64,999.
 
 FLAGS: 1 = new names, 2 = new potential; 3 = both.
 

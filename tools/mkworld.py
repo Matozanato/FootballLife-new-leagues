@@ -36,6 +36,22 @@ T_ABBR, T_ABBR_LEN = 0x372, 3
 
 CID_MAX, REG_MAX = 255, 600
 
+# Competition ids below 130 that the exe treats like any other (limits branch, 2026-10-11:
+# every compare, branch and table on a competition id in .trace read statically; none of
+# these 28 is named).  Handed out only after 130..255 is used up, so a world that fits keeps
+# the ids it always had.  Not here on purpose: 6, 7, 48, 91 (continental: menus, prize
+# multiplier, eligibility), 92 (continental cup category), 65 (cup round names), and the nine
+# 50-58/64 that only pick the match presentation (CID_COSMETIC_LOW, used last of all).
+CID_SAFE_LOW = (25, 26, 38, 59, 60, 61, 62, 63, 80, 81, 83, 85, 87, 88, 89, 93, 94, 95, 96, 98,
+                99, 104, 105, 106, 107, 108, 109, 110)
+CID_COSMETIC_LOW = (50, 51, 52, 53, 54, 55, 57, 58, 64)
+
+
+def cid_pool(cid_from=130):
+    """competition ids in the order they are handed out: cid_from..255, then the safe low ones"""
+    return ([c for c in range(cid_from, CID_MAX + 1)]
+            + [c for c in CID_SAFE_LOW + CID_COSMETIC_LOW if c < cid_from])
+
 # Regulation ids that are free in the tables but not free in the game: a league built on one
 # of these shows Libertadores and Asian clubs in its table, so the exe knows them.  14, 32 and
 # 33 were found that way one at a time; the other sixteen were measured together, by building
@@ -162,7 +178,9 @@ def main():
     used_cid = {comp[i * M.COMP + M.CID_OFF] for i in range(len(comp) // M.COMP)}
     used_reg = {int.from_bytes(regs[i * M.REG + M.R_ID:i * M.REG + M.R_ID + 2], "little")
                 for i in range(len(regs) // M.REG)}
-    cids = free_ids(used_cid, CID_MAX, nleague, cid_from)
+    cids = [c for c in cid_pool(cid_from) if c not in used_cid][:nleague]
+    if len(cids) < nleague:
+        raise SystemExit("only %d free competition ids, %d wanted" % (len(cids), nleague))
     # Which regulation ids a world uses is the one variable that has ever changed whether a
     # league comes up holding its own clubs, so it has to be nameable rather than derived.
     # --reg-ids takes the list verbatim, in league order, and checks it against the file

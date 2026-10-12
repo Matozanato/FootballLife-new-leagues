@@ -55,9 +55,9 @@ def main():
         ok("with fl26guards: the guards it bundles go off", not live(game, "fl26nullguard") and not live(game, "fl26nullguard2"))
         if "fl26hdr127" in retired:
             ok("with fl26guards: the old nullguard3 it replaced goes off", not live(game, "fl26nullguard3"))
-            ok("without fl26hdr192: hdr127 stays on", live(game, "fl26hdr127"))
-            B.ensure_modules(game, lbpack.ORDER, ["fl26hdr192"], log=lambda s: None)
-            ok("with fl26hdr192: hdr127 goes off (audit 12.10.)", live(game, "fl26hdr192") and not live(game, "fl26hdr127"))
+            ok("without fl26hdr255: hdr127 stays on", live(game, "fl26hdr127"))
+            B.ensure_modules(game, lbpack.ORDER, ["fl26hdr255"], log=lambda s: None)
+            ok("with fl26hdr255: hdr127 goes off (audit 12.10.)", live(game, "fl26hdr255") and not live(game, "fl26hdr127"))
     finally:
         shutil.rmtree(game, ignore_errors=True)
     print("1..%d" % N)
