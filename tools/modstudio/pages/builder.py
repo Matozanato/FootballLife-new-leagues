@@ -3715,7 +3715,16 @@ class Build(BuilderPage):
         eu.addWidget(noted(QLabel(_("Country cup draw")), self.cupdraw,
                            hint(_("the national cups of your leagues; seeded also spreads the top "
                                   "clubs over both halves of the bracket"))))
-        self.ekits = QCheckBox(_("Kits you can edit in the game"))
+        self.mkits = QCheckBox(_("New clubs: kits made in their colours (Kit Server)"))
+        tip = ("On (with Kit Server installed): every new club without kits of its own gets home, away, third and "
+               "goalkeeper kits made in its shirt colours (or its crest's), with its crest on the chest, when the "
+               "world is switched on. A crest you change later goes on the kits at the next switch-on.")
+        self.mkits.setToolTip(_(tip))
+        self.mkits.toggled.connect(self.set_mkits)
+        cl.addWidget(noted(self.mkits, helpmark(tip), hint(_("a whole league's kits at once, with the crest on the "
+                                                             "chest; off = the new clubs keep the kit borrowed "
+                                                             "from the game"))))
+        self.ekits = QCheckBox(_("New clubs: plain kits you change yourself in Edit mode"))
         self.ekits.setToolTip(_("On: the new clubs get no kit borrowed from a club of the game. A borrowed kit is "
                                 "a licensed one, and the game's Edit mode refuses it (\"You cannot edit this "
                                 "strip\"). Without one each new club wears a plain kit that Edit > Teams > Strip "
@@ -3725,17 +3734,10 @@ class Build(BuilderPage):
             "On: the new clubs get no kit borrowed from a club of the game. A borrowed kit is "
             "a licensed one, and the game's Edit mode refuses it (\"You cannot edit this "
             "strip\"). Without one each new club wears a plain kit that Edit > Teams > Strip "
-            "changes like any other, Paste Image included. Build again after changing this."), hint(_("off = each new club borrows a kit of the game (it looks "
-                                                    "real, but Edit mode cannot change it; on = Kit Server "
-                                                    "cannot dress the new clubs)"))))
-        self.mkits = QCheckBox(_("Make kits for the new clubs"))
-        tip = ("On (with Kit Server installed): every new club without kits of its own gets home, away, third and "
-               "goalkeeper kits made in its shirt colours (or its crest's), with its crest on the chest, when the "
-               "world is switched on. A crest you change later goes on the kits at the next switch-on.")
-        self.mkits.setToolTip(_(tip))
-        self.mkits.toggled.connect(self.set_mkits)
-        cl.addWidget(noted(self.mkits, helpmark(tip), hint(_("a whole league's kits at once; off = the new clubs "
-                                                             "keep the kit borrowed from the game"))))
+            "changes like any other, Paste Image included. Build again after changing this."),
+            hint(_("instead of the kits above: with this on, Kit Server does not dress the new "
+                   "clubs, so the made kits are switched off"))))
+        self.ekits.toggled.connect(lambda on: self.mkits.setEnabled(not on))
         self.pfaces = QCheckBox(_("Faces from the regen face pack for new players"))
         tip = ("On: every new player without a face of his own gets a face of the regen face pack by his "
                "nationality. Off: new players keep the look the game gives them, or the one you set in the "
@@ -3854,6 +3856,7 @@ class Build(BuilderPage):
         self.mkits.blockSignals(True)
         self.mkits.setChecked(self.project.recipe.get("make_kits") is not False)
         self.mkits.blockSignals(False)
+        self.mkits.setEnabled(not self.ekits.isChecked())
         self.pfaces.blockSignals(True)
         self.pfaces.setChecked(self.project.recipe.get("pack_faces") is not False)
         self.pfaces.blockSignals(False)
