@@ -100,6 +100,24 @@ class Source:
             shutil.rmtree(self.tmp, ignore_errors=True)
 
 
+def flag_picture(root, src, fid):
+    """the large picture of flag fid: the world's own (the League Builder's, from the user's
+    picture), else the game's. The game names a flag by three digits -- flag_012_l.png, Iraq --
+    and only from 100 on are both spellings the same: every country below 100 (all of Asia and
+    Africa) was looked for as flag_12_l.png, never found, and kept the generic heading in
+    Competition Info (2026-10-12)."""
+    names = ["flag_%d_l.png" % fid] + (["flag_%03d_l.png" % fid] if fid < 100 else [])
+    for nm in names:
+        own = os.path.join(root, *FLAGS.split("/"), nm)
+        if os.path.exists(own):
+            return own
+    for nm in names:
+        p = src.find(FLAGS + nm)
+        if p:
+            return p
+    return None
+
+
 def ours(path):
     """a package this already wrote (in another world, or this one installed elsewhere): never
     a base, or the pictures would pile up"""
@@ -148,8 +166,7 @@ def main():
         items, keys, missing = [], {}, []
         for fid in sorted(set(regions.values())):
             nm = KEY % fid
-            own = os.path.join(root, *FLAGS.split("/"), "flag_%d_l.png" % fid)
-            png = own if os.path.exists(own) else src.find(FLAGS + "flag_%d_l.png" % fid)
+            png = flag_picture(root, src, fid)
             if not png:
                 missing.append(fid)
                 continue
