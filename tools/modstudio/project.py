@@ -276,7 +276,11 @@ class Project(QObject):
                 isinstance(x, str) and x.rpartition("/")[0] == name
                 and x.rpartition("/")[2].isdigit() and int(x.rpartition("/")[2]) >= keep)]
         L = self.league(name)
-        if L and keep and L.get("game_clubs"):                 # and so do its clubs of the game
+        if L and L.get("game_clubs"):                          # and so do its clubs of the game
+            for e in L["game_clubs"]:                          # with the release's squads they got
+                if int(e.get("at", 0)) >= keep and (pl.get(str(e["id"])) or {}).get("newlife_game"):
+                    pl.pop(str(e["id"]))
+        if L and keep and L.get("game_clubs"):
             L["game_clubs"] = [e for e in L["game_clubs"] if int(e.get("at", 0)) < keep]
             if not L["game_clubs"]:
                 L.pop("game_clubs")

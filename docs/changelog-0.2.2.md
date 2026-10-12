@@ -30,6 +30,11 @@ DRAFT -- not released. Every line below still needs its in-game check before the
 - The season's match table holds 65,000 matches (46,000 before), and players' looks
   (PlayerAppearance) 65,000 records instead of 30,024, so big databases keep every face.
 - New leagues never get a competition id below 130 (those caused conflicts).
+- **A NewLife league's clubs the game already has get the NewLife squad too.** Until now
+  only the league's new clubs did, and a club of the game in it (Dinamo, Hajduk, Legia,
+  Basel...) kept the game's own players, so a player NewLife had moved was still at his old
+  club. Update my leagues to this version gives those squads again; Remove league takes
+  them away.
 
 ## Small additions (asked for on Discord)
 

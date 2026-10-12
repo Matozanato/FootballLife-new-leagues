@@ -270,6 +270,12 @@ def add_league(recipe, rel, L, legs=2, info=None, custom=False, name=None, more=
         c, s, e = _club_players(rel, i, mover, proto, league_ovr)
         stayed, elsewhere = stayed + s, elsewhere + e
         pl[P.new_key(name, k)] = c
+    # the league's clubs of the game get the release's squad too, as refresh_game_leagues
+    # gives it to a league of the game: until 12.10. they kept the game's own (Iker Almena
+    # stayed at Hajduk while the release, and the season, had him at Dinamo)
+    squads = {t: str(t) for t in game if str(t) in rel.clubs and info and info.get("base")}
+    if squads:
+        stayed += _game_squads(recipe, rel, info, squads)["stayed"]
     return name, stayed, elsewhere
 
 
@@ -562,6 +568,9 @@ def update_league(recipe, rel, x, rows, info=None, keep=None):
     cups = [(c, [club_ref(r) for r in c.get("clubs") or []]) for c in recipe.get("preseason_cups") or []]
     for key in [key for key in pl if key.rpartition("/")[0] == name]:
         del pl[key]
+    for g in gc_old:                 # the release's squads of its clubs of the game: add_league gives them again
+        if (pl.get(g) or {}).get("newlife_game"):
+            del pl[g]
     for c in pl.values():            # players other clubs took from this league's old squads
         if c.get("join"):
             c["join"] = [r for r in c["join"] if str(r).rpartition("/")[0].rpartition("/")[0] != name]
