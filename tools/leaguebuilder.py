@@ -935,8 +935,19 @@ def short_name(txt):
     return ascii_letters(txt)[:W.T_ABBR_LEN]
 
 
-def apply_edits(edits, raw, regs, log=print):
-    """the recipe's changes to the game's own clubs and leagues, in the world's tables"""
+def game_league_edits(pl):
+    """edits.leagues of the game's leagues the world still has: a regulation id a new league
+    took over (the game's league dropped, its slot reused) keeps the new league's own name and
+    logo, not an old rename of the league that left (Matheus 12.10.: Serie C as rid 11 came
+    out "Campeonato Carioca")"""
+    taken = {p["rid"] for p in pl.get("leagues") or [] if "rid" in p}
+    return {int(k): v for k, v in ((pl.get("edits") or {}).get("leagues") or {}).items()
+            if int(k) not in taken}
+
+
+def apply_edits(edits, raw, regs, log=print, leagues=None):
+    """the recipe's changes to the game's own clubs and leagues, in the world's tables;
+    `leagues` (game_league_edits) in place of edits.leagues"""
     clubs = {int(k): v for k, v in (edits.get("clubs") or {}).items()}
     n = 0
     for i in range(len(raw) // W.T_REC):
@@ -949,7 +960,8 @@ def apply_edits(edits, raw, regs, log=print):
         if e.get("abbr"):
             raw[o + W.T_ABBR:o + W.T_ABBR + W.T_ABBR_LEN] = short_name(e["abbr"]).ljust(W.T_ABBR_LEN, bytes(1).decode()).encode("ascii")
         n += 1
-    leagues = {int(k): v for k, v in (edits.get("leagues") or {}).items()}
+    if leagues is None:
+        leagues = {int(k): v for k, v in (edits.get("leagues") or {}).items()}
     m = 0
     for i in range(len(regs) // M.REG):
         o = i * M.REG
@@ -3204,7 +3216,7 @@ def build(pl, base, game, replace=False, log=print):
     # the new clubs go in in id order, as the shipped ones are
     for r in sorted(added, key=lambda r: int.from_bytes(r[W.T_ID:W.T_ID + 4], "little")):
         raw += r
-    apply_edits(pl.get("edits") or {}, raw, regs, log)
+    apply_edits(pl.get("edits") or {}, raw, regs, log, game_league_edits(pl))
     swaps = (pl.get("edits") or {}).get("swaps") or []
     if swaps:                                          # two clubs of the game's leagues trade places
         info = game_info(base)
@@ -3994,7 +4006,7 @@ def pictures(pl, root, base, log=print):
                 lbassets.club_crest(root, g["swap_id"], g.get("swap_abbr") or "", None)
     e = pl.get("edits") or {}
     cid_of = {}
-    for rid, v in (e.get("leagues") or {}).items():
+    for rid, v in game_league_edits(pl).items():
         if v.get("logo"):
             if not cid_of:
                 cid_of = {r: c for r, c, _, _ in game_leagues(base)}
