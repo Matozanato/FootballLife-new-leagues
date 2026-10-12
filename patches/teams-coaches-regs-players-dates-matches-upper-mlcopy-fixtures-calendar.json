@@ -9525,10 +9525,38 @@
    "asm": "disp32/imm32"
   },
   {
+   "va": "0x14157ae01",
+   "old": "88f10300",
+   "new": "88a50900",
+   "why": "past the calendar, which is now longer: +0x3f188 -> +0x9a588 (the hub's Next strip, by hand)",
+   "asm": "disp32/imm32"
+  },
+  {
    "va": "0x14438ccf0",
    "old": "a8386001",
    "new": "70708701",
    "why": "impdata calendar base: 0x16038a8 -> 0x1877070 (lea rcx, [r14 + 0x16038a8] -> 0x1414c8fd0, which wants the calendar base)",
+   "asm": "disp32/imm32"
+  },
+  {
+   "va": "0x1447909f3",
+   "old": "40020000",
+   "new": "40060000",
+   "why": "event slot moves: +0x240 -> +0x640 (by hand: the day-event clear in .impdata)",
+   "asm": "disp32/imm32"
+  },
+  {
+   "va": "0x1415165eb",
+   "old": "34020000",
+   "new": "34060000",
+   "why": "event slot moves: +0x234 -> +0x634 (by hand: the calendar screens' event pick, 0x1415165a0)",
+   "asm": "disp32/imm32"
+  },
+  {
+   "va": "0x141516825",
+   "old": "34020000",
+   "new": "34060000",
+   "why": "event slot moves: +0x234 -> +0x634 (by hand: the calendar screens' event pick, 0x1415165a0)",
    "asm": "disp32/imm32"
   },
   {
@@ -9579,6 +9607,34 @@
    "new": "e400",
    "why": "0x140aed760's frame size in its unwind data, in eighths: 100 -> 228",
    "asm": "UWOP_ALLOC_LARGE"
+  },
+  {
+   "va": "0x142f2e7fa",
+   "old": "6d00",
+   "new": "ed00",
+   "why": "0x140aed760's unwind data, a register saved above the frame, in eighths: 109 -> 237",
+   "asm": "UWOP_SAVE_NONVOL"
+  },
+  {
+   "va": "0x142f2e7fe",
+   "old": "6c00",
+   "new": "ec00",
+   "why": "0x140aed760's unwind data, a register saved above the frame, in eighths: 108 -> 236",
+   "asm": "UWOP_SAVE_NONVOL"
+  },
+  {
+   "va": "0x142f2e802",
+   "old": "6b00",
+   "new": "eb00",
+   "why": "0x140aed760's unwind data, a register saved above the frame, in eighths: 107 -> 235",
+   "asm": "UWOP_SAVE_NONVOL"
+  },
+  {
+   "va": "0x142f2e818",
+   "old": "10030000",
+   "new": "10070000",
+   "why": "0x140aed760's GS handler data, the cookie offset: 0x310 -> 0x710",
+   "asm": "disp32/imm32"
   },
   {
    "va": "0x1412e72e0",
@@ -9677,6 +9733,13 @@
    "new": "0401",
    "why": "0x1412e72d0's unwind data, UWOP_ALLOC_LARGE in eighths: 0x84 -> 0x104",
    "asm": "UWOP_ALLOC_LARGE"
+  },
+  {
+   "va": "0x1430cfdd4",
+   "old": "12040000",
+   "new": "12080000",
+   "why": "0x1412e72d0's GS handler data, the cookie offset: 0x410 -> 0x810 (flag bits kept)",
+   "asm": "disp32/imm32"
   },
   {
    "va": "0x1408e17cd",
@@ -24615,13 +24678,6 @@
    "new": "ec159101",
    "why": "impdata past the calendar, by its own block offset: 0x1642a24 -> 0x19115ec (mov eax, dword ptr [rcx + 0x1642a24])",
    "asm": "mov eax, dword ptr [rcx + 0x1642a24]"
-  },
-  {
-   "va": "0x14157ae01",
-   "old": "88f10300",
-   "new": "88a50900",
-   "why": "past the calendar, which is now longer: +0x3f188 -> +0x9a588 (the hub's Next strip, by hand)",
-   "asm": "disp32/imm32"
   }
  ],
  "mlcopy": {
@@ -24915,83 +24971,83 @@
   "unit_growth": 373760,
   "tail_sites": 171,
   "unit_bytes": 819456,
-  "patches": 740,
+  "patches": 748,
   "skipped": [
    {
     "va": "0x140fc2ffa",
-    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+    "why": "0x254-byte match record (0x1414bb280), +0x244 is its last 16-byte entry"
    },
    {
     "va": "0x140fc3009",
-    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+    "why": "0x254-byte match record (0x1414bb280), +0x244 is its last 16-byte entry"
    },
    {
     "va": "0x141280689",
-    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+    "why": "0x254-byte match record (0x1414bb280), +0x244 is its last 16-byte entry"
    },
    {
     "va": "0x141280697",
-    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+    "why": "0x254-byte match record (0x1414bb280), +0x244 is its last 16-byte entry"
    },
    {
     "va": "0x141280899",
-    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+    "why": "0x254-byte match record (0x1414bb280), +0x244 is its last 16-byte entry"
    },
    {
     "va": "0x1412808a7",
-    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+    "why": "0x254-byte match record (0x1414bb280), +0x244 is its last 16-byte entry"
    },
    {
     "va": "0x141281178",
-    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+    "why": "0x254-byte match record (0x1414bb280), +0x244 is its last 16-byte entry"
    },
    {
     "va": "0x141281186",
-    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
+    "why": "0x254-byte match record (0x1414bb280), +0x244 is its last 16-byte entry"
    },
    {
     "va": "0x14129fbb8",
-    "why": "a 0x258-byte match-side team record (0x1414baec0 -> block+0xc4ca0c / +0xe58 + side*0x258), not an event slot"
-   },
-   {
-    "va": "0x141321376",
-    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
-   },
-   {
-    "va": "0x141321384",
-    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
-   },
-   {
-    "va": "0x1413219c6",
-    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
-   },
-   {
-    "va": "0x1413219d5",
-    "why": "a 0x254-byte match record (0x1414bb280 -> match-table lookup 0x1414bc560), +0x244 is its last 16-byte entry, not an event slot"
-   },
-   {
-    "va": "0x1415254ca",
-    "why": "a 0x258-byte match-side team record (0x1414bc780 -> block+0xc4ca0c / +0xe58 + side*0x258), not an event slot"
-   },
-   {
-    "va": "0x141526410",
-    "why": "a 0x258-byte match-side team record (0x1414bc780 -> block+0xc4ca0c / +0xe58 + side*0x258), not an event slot"
-   },
-   {
-    "va": "0x1415264c3",
-    "why": "a 0x258-byte match-side team record (0x1414bc780 -> block+0xc4ca0c / +0xe58 + side*0x258), not an event slot"
-   },
-   {
-    "va": "0x141526d6c",
-    "why": "a 0x258-byte match-side team record (0x1414c20c0 -> block+0xc4ca0c / +0xe58 + side*0x258), not an event slot"
+    "why": "0x258-byte match-side team record, not a day"
    },
    {
     "va": "0x1412f9043",
     "why": "MenuUtilityDemoPlayer+0x2b0, a vector of 0x230-byte entries, not an event slot"
    },
    {
+    "va": "0x141321376",
+    "why": "0x254-byte match record (0x1414bb280), +0x244 is its last 16-byte entry"
+   },
+   {
+    "va": "0x141321384",
+    "why": "0x254-byte match record (0x1414bb280), +0x244 is its last 16-byte entry"
+   },
+   {
+    "va": "0x1413219c6",
+    "why": "0x254-byte match record (0x1414bb280), +0x244 is its last 16-byte entry"
+   },
+   {
+    "va": "0x1413219d5",
+    "why": "0x254-byte match record (0x1414bb280), +0x244 is its last 16-byte entry"
+   },
+   {
     "va": "0x1414bc5a8",
     "why": "the match table's end pointer, moved with the match table"
+   },
+   {
+    "va": "0x1415254ca",
+    "why": "0x258-byte match-side team record, not a day"
+   },
+   {
+    "va": "0x141526410",
+    "why": "0x258-byte match-side team record, not a day"
+   },
+   {
+    "va": "0x1415264c3",
+    "why": "0x258-byte match-side team record, not a day"
+   },
+   {
+    "va": "0x141526d6c",
+    "why": "0x258-byte match-side team record, not a day"
    }
   ]
  }

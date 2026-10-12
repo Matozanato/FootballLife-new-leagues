@@ -13682,3 +13682,61 @@ and without recoding a league.
 
 Not yet read: which of 8 and 9 is handed the list, and when in the season (the Libertadores
 follows the calendar year in this world); how many pool clubs a field normally carries.
+
+## The `-calendar` set: three event-slot sites it does not reach, and the missing event icons (2026-10-11)
+
+**What a player sees.** With the `-calendar` set the advance-time grid and the team calendar
+show the league crest on match days and nothing else: no transfer window, no national-team job
+offers, no trophy on a final, and the "surprise" event at a stop shows nothing either. The same
+world on the shipped calendar (the `-fixtures` set) shows them all. This is the 0.2.1 package
+as released (3502 patches), and also a 1304-id build of the same set.
+
+**What was measured.** Not read off the code: a page guard on the calendar, injected into the
+running game, logs every instruction that touches the event slots and the call chain it came
+from. With the advance-time grid and the team calendar on screen:
+
+- on the shipped calendar, `0x1415165a0` (chained chunks `0x1415165ae` and `0x141516809`,
+  reached from `0x140caea9f`) reads the event slots of the days the screen shows;
+- on the widened calendar nothing reads them at all. The day records hold the right events
+  at `+0x634` (dumped live), the readers the survey patched (`0x141575680`, `0x141576fa0`, ...)
+  are not called while the screen is up, and the slot list the stop screen builds
+  (`0x1413b2d90`) carries the same items in both layouts.
+
+`0x1415165a0` is handed the day as an argument and reads the slots at the shipped offset:
+
+    1415165e8  lea  rcx, [rbx + 0x234]                   the first slot
+    141516821  mov  rax, qword ptr [rcx + rax*8 + 0x234] slot N
+
+On the widened day that is the match id list, so the screens never find an event to draw.
+The survey walks from the calendar base; a function that only ever sees the day it is given
+is where that walk stops.
+
+**The second one is in `.impdata`.** The same guard, over the whole calendar unit on the
+shipped layout, shows one instruction outside `.trace` touching it: `0x1447909f0`, which clears
+a day's 18 event slots (type `0x3f`, param `0xffff`, the default date) before the day's events
+are put back in (reached from the inserter, return `0x141306f2e`):
+
+    1447909f0  lea  rax, [rcx + 0x240]        the first slot + 0xc; the loop writes [rax - 0xc]
+
+Left at `0x240` on the widened day it never clears the events, so they pile up from one
+season to the next (a day carries last year's copy next to this year's), and it writes the
+empty-slot pattern over match ids 288..360 of the day. With it moved, the events step through
+their processing again (`param` 0xfff5 -> 0xffeb -> 0xffe1, as on the shipped layout; on the
+widened one they stayed at 0xfff5).
+
+**And five unwind words.** Two functions copy a whole day onto their stack and the set
+already grows their frames. The unwind data of `0x140aed760` also has three
+`UWOP_SAVE_NONVOL` nodes above the frame (`0x142f2e7fa/7fe/802`, eighths 109/108/107) and its
+GS handler data the cookie offset (`0x142f2e818`, 0x310); `0x1412e72d0`'s GS data holds its own
+(`0x1430cfdd4`, 0x412 = 0x410 with the flag bits). An exception unwinding through either
+function restores the wrong registers or checks the cookie at the old place unless they move
+with the frame.
+
+**The change.** `calwiden.py` lists the three event sites by hand, next to `AFTER_DISP` and
+`IMPDATA_BASE`, and moves them like every other event site (`events_off - 0x234`); it emits the
+four `0x140aed760` words and `0x1412e72d0`'s cookie with the frames. The shipped set goes 3502 ->
+3510 patches: the 3502 are unchanged byte for byte and the block layout is the same
+(0x1877068 -> 0x3d9cbe8).
+
+**Checked in the game** with the 0.2.1 module pack: sider.log `applied all 3510 patches`, and
+the advance-time grid and the team calendar show the event icons again.
