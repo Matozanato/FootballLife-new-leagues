@@ -15,7 +15,7 @@ if os.path.dirname(HERE) not in sys.path:
     sys.path.insert(0, os.path.dirname(HERE))
 
 from PySide6.QtCore import Qt, QTimer, Signal, QObject
-from PySide6.QtGui import QAction, QIcon, QKeySequence
+from PySide6.QtGui import QAction, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (QApplication, QButtonGroup, QDialog, QHBoxLayout, QLabel, QMainWindow,
                                QMenu, QPushButton, QScrollArea, QStackedWidget, QStatusBar, QTextBrowser,
                                QToolButton, QVBoxLayout, QWidget, QMessageBox)
@@ -161,8 +161,18 @@ class Main(QMainWindow):
         self.status_busy = QLabel("")
         sb.addWidget(self.status_left, 1)
         sb.addPermanentWidget(self.status_busy)
+        # edits of clubs, players and leagues go into the recipe at once; this says whether the
+        # recipe file has them yet (poll, 11.10.: people looked for an Apply button)
+        self.status_saved = QPushButton("")
+        self.status_saved.setFlat(True)
+        self.status_saved.setCursor(Qt.PointingHandCursor)
+        self.status_saved.clicked.connect(lambda: self.page("NewLeagues").save_recipe())
+        sb.addPermanentWidget(self.status_saved)
         sb.addPermanentWidget(QLabel("v" + VERSION))
         self.setStatusBar(sb)
+        self.project.changed.connect(self.show_saved)
+        QShortcut(QKeySequence.Save, self, lambda: self.page("NewLeagues").save_recipe())
+        self.show_saved()
         self._blink = QTimer(self, interval=550, timeout=self._blink_step)
         self._busy = 0
 
@@ -355,6 +365,19 @@ class Main(QMainWindow):
 
     def status(self, text):
         self.status_left.setText(text)
+
+    def show_saved(self):
+        p = self.project
+        if p.dirty:
+            self.status_saved.setText("● " + _("Not saved yet: click to save (Ctrl+S)"))
+            self.status_saved.setStyleSheet("color: %s;" % theme.ACCENT)
+            self.status_saved.setToolTip(_("Your edits already count (Build uses them); saving keeps them "
+                                           "for the next time Mod Studio starts"))
+        else:
+            self.status_saved.setText(("✓ " + _("Recipe saved")) if p.path else "")
+            self.status_saved.setStyleSheet("")
+            self.status_saved.setToolTip(p.path or "")
+        self.status_saved.setVisible(bool(self.status_saved.text()))
 
     def busy(self, on, text=None):
         self._busy = max(0, self._busy + (1 if on else -1))

@@ -1320,10 +1320,13 @@
   "One .zip of the built world for another PC: the world folder, its world file with the players who get a generated face, and a read-me. The other PC installs it on Install mods and needs Mod Studio's modules (the face pack).": "Un .zip del mundo construido para otro PC: la carpeta del mundo, su archivo de mundo con los jugadores que reciben una cara generada y un léame. El otro PC lo instala en Instalar mods y necesita los módulos de Mod Studio (el paquete de caras).",
   "Open League Builder > Build and press 0. Install the modules, then 3. Switch it on.": "Abre League Builder > Construir y pulsa 0. Instalar los módulos, luego 3. Activarlo.",
   "Saved %s\n\n%d new players get a generated face (the newfaces / faceapp lines of the world file in the zip). Whoever installs it needs Mod Studio's modules with the face pack (League Builder > Build > 0. Install the modules); without them every new player looks the same. The zip has a read-me that says so.": "Guardado %s\n\n%d jugadores nuevos reciben una cara generada (las líneas newfaces / faceapp del archivo de mundo del zip). Quien lo instale necesita los módulos de Mod Studio con el paquete de caras (League Builder > Construir > 0. Instalar los módulos); sin ellos todos los jugadores nuevos tienen la misma cara. El zip trae un léame que lo dice.",
-  "New clubs: kits made in their colours (Kit Server)": "Clubes nuevos: equipaciones hechas con sus colores (Kit Server)",
   "a whole league's kits at once, with the crest on the chest; off = the new clubs keep the kit borrowed from the game": "las equipaciones de toda una liga de una vez, con el escudo en el pecho; desactivado = los clubes nuevos se quedan con la equipación prestada del juego",
-  "New clubs: plain kits you change yourself in Edit mode": "Clubes nuevos: equipaciones simples que cambias tú en el modo Edición",
-  "instead of the kits above: with this on, Kit Server does not dress the new clubs, so the made kits are switched off": "en lugar de las equipaciones de arriba: con esto activado, Kit Server no viste a los clubes nuevos, así que las equipaciones hechas quedan desactivadas"
+  "instead of the kits above: with this on, Kit Server does not dress the new clubs, so the made kits are switched off": "en lugar de las equipaciones de arriba: con esto activado, Kit Server no viste a los clubes nuevos, así que las equipaciones hechas quedan desactivadas",
+  "Kits made in the clubs' colours": "Equipaciones con los colores del club",
+  "Plain kits to change in Edit mode": "Equipaciones simples para el modo Edición",
+  "Recipe saved": "Receta guardada",
+  "Your edits already count (Build uses them); saving keeps them for the next time Mod Studio starts": "Tus cambios ya cuentan (Build los usa); guardar los conserva para la próxima vez que abras Mod Studio",
+  "Not saved yet: click to save (Ctrl+S)": "Aún sin guardar: clic para guardar (Ctrl+S)"
  },
  "log": [
   [

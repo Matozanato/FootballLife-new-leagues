@@ -3715,7 +3715,7 @@ class Build(BuilderPage):
         eu.addWidget(noted(QLabel(_("Country cup draw")), self.cupdraw,
                            hint(_("the national cups of your leagues; seeded also spreads the top "
                                   "clubs over both halves of the bracket"))))
-        self.mkits = QCheckBox(_("New clubs: kits made in their colours (Kit Server)"))
+        self.mkits = QCheckBox(_("Kits made in the clubs' colours"))
         tip = ("On (with Kit Server installed): every new club without kits of its own gets home, away, third and "
                "goalkeeper kits made in its shirt colours (or its crest's), with its crest on the chest, when the "
                "world is switched on. A crest you change later goes on the kits at the next switch-on.")
@@ -3724,7 +3724,7 @@ class Build(BuilderPage):
         cl.addWidget(noted(self.mkits, helpmark(tip), hint(_("a whole league's kits at once, with the crest on the "
                                                              "chest; off = the new clubs keep the kit borrowed "
                                                              "from the game"))))
-        self.ekits = QCheckBox(_("New clubs: plain kits you change yourself in Edit mode"))
+        self.ekits = QCheckBox(_("Plain kits to change in Edit mode"))
         self.ekits.setToolTip(_("On: the new clubs get no kit borrowed from a club of the game. A borrowed kit is "
                                 "a licensed one, and the game's Edit mode refuses it (\"You cannot edit this "
                                 "strip\"). Without one each new club wears a plain kit that Edit > Teams > Strip "

@@ -1320,10 +1320,13 @@
   "One .zip of the built world for another PC: the world folder, its world file with the players who get a generated face, and a read-me. The other PC installs it on Install mods and needs Mod Studio's modules (the face pack).": "Jedan .zip izgrađenog svijeta za drugo računalo: mapa svijeta, njegova datoteka svijeta s igračima koji dobivaju generirano lice, i upute. Drugo računalo ga instalira na Instaliraj modove i treba module Mod Studija (paket lica).",
   "Open League Builder > Build and press 0. Install the modules, then 3. Switch it on.": "Otvori League Builder > Izgradnja i stisni 0. Postavi module, pa 3. Uključi ga.",
   "Saved %s\n\n%d new players get a generated face (the newfaces / faceapp lines of the world file in the zip). Whoever installs it needs Mod Studio's modules with the face pack (League Builder > Build > 0. Install the modules); without them every new player looks the same. The zip has a read-me that says so.": "Spremljeno: %s\n\n%d novih igrača dobiva generirano lice (redovi newfaces / faceapp u datoteci svijeta u zipu). Tko ga instalira treba module Mod Studija s paketom lica (League Builder > Izgradnja > 0. Postavi module); bez njih svi novi igrači izgledaju isto. U zipu su upute koje to kažu.",
-  "New clubs: kits made in their colours (Kit Server)": "Novi klubovi: dresovi u njihovim bojama (Kit Server)",
   "a whole league's kits at once, with the crest on the chest; off = the new clubs keep the kit borrowed from the game": "dresovi cijele lige odjednom, s grbom na prsima; isključeno = novi klubovi zadrže dres posuđen iz igre",
-  "New clubs: plain kits you change yourself in Edit mode": "Novi klubovi: obični dresovi koje sam mijenjaš u Edit modu",
-  "instead of the kits above: with this on, Kit Server does not dress the new clubs, so the made kits are switched off": "umjesto dresova iznad: kad je ovo uključeno, Kit Server ne oblači nove klubove, pa su napravljeni dresovi isključeni"
+  "instead of the kits above: with this on, Kit Server does not dress the new clubs, so the made kits are switched off": "umjesto dresova iznad: kad je ovo uključeno, Kit Server ne oblači nove klubove, pa su napravljeni dresovi isključeni",
+  "Kits made in the clubs' colours": "Dresovi u bojama klubova",
+  "Plain kits to change in Edit mode": "Obični dresovi za Edit mod",
+  "Recipe saved": "Recept spremljen",
+  "Your edits already count (Build uses them); saving keeps them for the next time Mod Studio starts": "Izmjene već vrijede (Build ih koristi); spremanje ih čuva za sljedeće pokretanje Mod Studija",
+  "Not saved yet: click to save (Ctrl+S)": "Nije još spremljeno: klikni za spremanje (Ctrl+S)"
  },
  "log": [
   [
