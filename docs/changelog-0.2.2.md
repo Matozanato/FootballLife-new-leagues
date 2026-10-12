@@ -36,6 +36,10 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   his name is the same.
 - Kits made for new clubs and package kits and scoreboards now go where your Kit Server and
   Scoreboard Server read them, also on a clean SPFL26 (GitHub #129).
+- **Kit Server found no kit for clubs another tool dressed** (Kit Studio, clubs added with
+  another editor, Discord). Build's own UniformParameter.bin hid theirs; Build now keeps the
+  entries of the other copies Sider serves, and never replaces a kit another mod gave a club.
+  A club of the database with no kit at all (added by another editor) gets one lent too.
 - Switch on puts `fl26caps` before the other modules of ours in sider.ini when it was further
   down (then it refused the game and sider.log said MISMATCH).
 - The country cup draw (cup_draw random or seeded) rewrites only the clubs the cup's entry
