@@ -39,6 +39,21 @@ def main(folder, base):
     again = copy.deepcopy(r)
     N.refresh_game_leagues(again, rel, info, [p["cid"] for p in plan])
     assert json.dumps(again, sort_keys=True) == json.dumps(r, sort_keys=True), "doing it again changes nothing"
+    # the record lost (13.10.: a recipe kept 454 squads of an earlier refresh without it): doing it
+    # again still takes the old squads away first, so their joins do not block the new ones
+    lost = copy.deepcopy(r)
+    lost.pop("newlife_game")
+    m = N.refresh_game_leagues(lost, rel, info, [p["cid"] for p in plan])
+    # (a few more stay: the swapped clubs keep the squad they had, so a contested player stays theirs)
+    assert m["stayed"] < 100 and m["join"] > n["join"] // 2, ("without the record", dict(m))
+    for k, c in lost["players"].items():
+        if c.get("newlife_game"):
+            assert not set(c.get("join") or []) & set(c.get("remove") or []), k
+    joined = [g for c in lost["players"].values() for g in c.get("join") or []]
+    assert len(joined) == len(set(joined)), "a player joins two clubs (record lost)"
+    swapped = {str(t) for a, b in r["newlife_game"]["swaps"] for t in (a, b)}
+    for t in swapped:      # the record lost, a swap counts as one by hand: the club keeps its squad
+        assert lost["players"].get(t) == r["players"].get(t), t
     assert N.undo_game_leagues(r)
     assert r == before, "undo takes back exactly what it did"
     assert not N.undo_game_leagues(r)

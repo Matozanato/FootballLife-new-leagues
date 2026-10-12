@@ -34,7 +34,9 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   only the league's new clubs did, and a club of the game in it (Dinamo, Hajduk, Legia,
   Basel...) kept the game's own players, so a player NewLife had moved was still at his old
   club. Update my leagues to this version gives those squads again; Remove league takes
-  them away.
+  them away. Bring the game's leagues to this season, done again on a recipe that lost the
+  record of the first time, now takes the old squads away before giving the new ones (their
+  players counted as taken, and most of the new squad "stayed").
 
 ## Small additions (asked for on Discord)
 

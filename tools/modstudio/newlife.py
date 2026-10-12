@@ -795,7 +795,7 @@ def undo_game_leagues(recipe):
                 c.pop(k, None)
             if not c:
                 pl.pop(str(t))
-    recipe.pop("newlife_game")
+    recipe.pop("newlife_game", None)
     return True
 
 
@@ -833,8 +833,20 @@ def refresh_game_leagues(recipe, rel, info, cids):
         ed.pop("clubs")
     if not ed:
         recipe.pop("edits")
+    # a squad of an earlier refresh whose record is lost (13.10.: a recipe kept 454 of them
+    # without it, and their joins blocked the new squads: 3594 stayed): taken away first, for
+    # the clubs this refresh gives a squad; a club of the game in a NewLife league keeps its
+    # (add_league's), it is not among them
+    pl = recipe.get("players") or {}
+    for t in squads:
+        c = pl.get(str(t))
+        if c and c.get("newlife_game"):
+            pl.pop(str(t))
     n = _game_squads(recipe, rel, info, squads)
-    rec["clubs"] = sorted(int(k) for k, c in (recipe.get("players") or {}).items() if c.get("newlife_game"))
+    # only the clubs this refresh gave a squad: a club of the game in a NewLife league carries
+    # newlife_game too (add_league), and belongs to its league, not to this record
+    pl = recipe.get("players") or {}
+    rec["clubs"] = sorted(int(t) for t in squads if (pl.get(str(t)) or {}).get("newlife_game"))
     recipe["newlife_game"] = rec
     n.update(swaps=len(rec["swaps"]), replaced=len(rec["replaced"]), clubs=len(rec["clubs"]))
     return n
