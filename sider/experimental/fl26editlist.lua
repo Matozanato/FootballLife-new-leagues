@@ -55,6 +55,7 @@ local LISTED = {
   84, 73, 102, 119, 18, 22, 30, 70,  0, 1, 2, 3, 4, 5, 6,
 }
 local NO_SLOT = 123
+local NSLOTS = 250       -- fl26slots250: slots 124..249 are real (audit 12.10.: they were left out)
 
 local TABLE_LEA  = 0x1414fdbda    -- lea r12,[table] in the lookup by id (re-pointed by fl26comptab)
 local COUNT_IMM  = 0x1414fe1e1    -- imm32 of mov eax, count in the row count getter
@@ -165,7 +166,7 @@ function m.slots()
     local slot = slot_of[id]
     if slot == nil then
       missing[#missing + 1] = tostring(id)
-    elseif slot < NO_SLOT and not skip[slot] then
+    elseif slot < NSLOTS and not skip[slot] then
       skip[slot] = true
       out[#out + 1] = slot
     end

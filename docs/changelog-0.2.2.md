@@ -91,3 +91,5 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   install still has them: `fl26nullguard3` (replaced by the guards bundle), `fl26hdr127`
   (by `fl26hdr192`) and `fl26deep4` (by `fl26deeprank`). Each pair overlaps, the second one
   refused its bytes, and the check after Build called that "refused the game's exe".
+- Edit mode team lists show the leagues on the new competition slots 124-249 too
+  (`fl26editlist` stopped at 123, the old slot count).
