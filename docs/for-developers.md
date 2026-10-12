@@ -41,6 +41,22 @@ calendar unit to the top of the edit block, so a career saved under the older
 re-checks every calendar reference of the exe against the set. Leave `-calendar` off for the
 older layout; the DLLs then need `-DREG_ARRAY_OFF=0x1c84230` (see `tools/native/`).
 
+`--calendar-ids N` asks for another day size (the copier steps in 0x80-byte blocks, so the
+sizes are 536, 792, 1048, 1304 ...; 792 is what ships). A big world can need it: a world of
+about sixty leagues measured 733-796 matches on its busiest days, past 792. Any size other
+than 792 moves the fields past the calendar and the arrays above it, so the modules that read
+them by block offset need new constants. The generator prints them:
+
+```
+regulations array moves to +0x...                       -> REG_ARRAY_OFF (fl26join, fl26chain)
+module constants for this layout: fl26swiss TODAY_OFF 0x..., fl26join TODAY_OFF 0x...,
+fl26ctlguard controller table block+0x..., owner handle block+0x...
+```
+
+Build the DLLs with those `-D...` values and change the two fl26ctlguard offsets (see
+[fork/modules.md](fork/modules.md), "Module constants that changed with it"). A career made
+under one size does not load under another.
+
 - `--date-keys` are the rulebook ids of your new leagues (the `regulation ids` line of
   `mkworld.py`). They must be within 1–255. **Passing them is not optional in practice.**
   Leave the flag off and the generator falls back to a single test league: every other

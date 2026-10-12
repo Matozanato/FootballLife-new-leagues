@@ -239,6 +239,12 @@ example the 0x1642a1c -> 0x19115e4 date references). Modules that read those fie
 have to be changed by hand, which is what the table lists. `OWNER_RVA` 0x3705e10 (fl26join,
 fl26chain, fl26clubs, fl26regen) is a global of the exe and did not move.
 
+The table is for the shipped 792 ids a day. A set made with `--calendar-ids N` (another day
+size) moves all of these: `patchset.py` prints `REG_ARRAY_OFF` (the "regulations array moves
+to" line) and the four calendar-tail values (`module constants for this layout: ...`). For
+1304 ids (this set, `--player-cap 51729`) they are `REG_ARRAY_OFF` 0x1da7730, fl26swiss `TODAY_OFF` 0x196c9e4, fl26join
+`TODAY_OFF` 0x196c9ec, fl26ctlguard block+0x196c9f0 / +0x196c9f4.
+
 ## fl26caps: how a patch set is made
 
 Do not edit `fl26caps.lua` by hand. `tools/patchset.py <set> ...` disassembles the exe

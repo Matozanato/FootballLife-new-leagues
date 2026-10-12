@@ -556,6 +556,9 @@ MLCOPY_SETS = {"teams-coaches-regs-players-dates-matches-upper-mlcopy",
                "teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar"}
 # Sets that widen the calendar day.  CALENDAR_IDS is how many match ids a day then holds;
 # calwiden.shape() rounds it up to the next stride the mode copy's copier can step by.
+# `--calendar-ids N` asks for another size (calwiden.py lists the strides: 536, 792, 1048,
+# 1304 ...).  792 is what ships; any other size moves the fields past the calendar, so the
+# modules that read them by block offset need the values this prints (see modules.md).
 CALENDAR_SETS = {"teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar"}
 CALENDAR_IDS = 792
 # set in main(): whether this set moves copy A's own table bases, which is what makes a
@@ -1168,9 +1171,19 @@ def copyb_patches():
 
 
 def main():
-    global MLCOPY_ON, SLOTS32, CALENDAR_GROWTH
+    global MLCOPY_ON, SLOTS32, CALENDAR_GROWTH, CALENDAR_IDS
     which = sys.argv[1] if len(sys.argv) > 1 else "block"
     MLCOPY_ON = which in MLCOPY_SETS
+    if "--calendar-ids" in sys.argv:
+        if which not in CALENDAR_SETS:
+            raise SystemExit("--calendar-ids only means something for the -calendar set")
+        CALENDAR_IDS = int(sys.argv[sys.argv.index("--calendar-ids") + 1])
+        if CALENDAR_IDS <= 280:
+            raise SystemExit("--calendar-ids %d: the shipped day already holds 280" % CALENDAR_IDS)
+        real = calwiden.shape(CALENDAR_IDS)[2] // 2
+        if real != CALENDAR_IDS:
+            print("--calendar-ids %d: the copier steps in 0x80-byte blocks, so a day holds %d"
+                  % (CALENDAR_IDS, real))
     if which in CALENDAR_SETS:
         # mlcopy has to know before it plans the copy: the copy's calendar unit grows by
         # exactly what the block's does, and every copy field above it moves by that much.
@@ -1284,6 +1297,14 @@ def main():
         print("   %d of those sites reach the unit's trailing part by its own block offset "
               "(tailscan.py); the copy's unit grew by the same %d through mlcopy"
               % (info["tail_sites"], info["unit_growth"]))
+        # The four fields past the 365 days (today, the date, the controller schedules and the
+        # schedule owner) sit right after the calendar.  fl26caps moves the game's own reads of
+        # them; the modules that read them by block offset are built for the shipped 792 and
+        # need these values for any other size (modules.md, "Constants that depend on the set").
+        today = bases["calendar"] + calwiden.DAYS * int(info["stride"], 16)
+        print("   module constants for this layout: fl26swiss TODAY_OFF 0x%x, fl26join TODAY_OFF "
+              "0x%x, fl26ctlguard controller table block+0x%x, owner handle block+0x%x"
+              % (today, today + 8, today + 0xc, today + 0x10))
         calendar = info
     if relocate:
         att = json.load(open(os.path.join(ROOT, "patches", "attrib.json")))
