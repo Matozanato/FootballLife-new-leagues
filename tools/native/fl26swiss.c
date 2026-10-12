@@ -43,6 +43,7 @@
 #include "fl26swiss_table.h"
 #include "fl26swiss_draw.h"
 
+#define STYPE_RVA 0x1576140    /* season type for a region: 0 Aug-May, 1 Jan-Dec */
 #define GEN_RVA   0x13f3e00    /* bool build_generic_schedule(ctx, u16 reg id, u8 flag) */
 #define GRID_RVA  0x13f30f0    /* void alloc_grid(ctx) -- legs x N x N cells, cleared     */
 #define DATE_RVA  0x157f810    /* void fixture_dates(u16 reg id in cx, vector<date>* rdx)  */
@@ -1244,6 +1245,482 @@ typedef uint32_t* (*right_fn)(uint32_t* out, uint64_t source, uint32_t type);
 typedef struct { uint16_t reg; int day; uint32_t club; } cupwin_t;
 static cupwin_t g_cupwin[32]; static int g_ncupwin = 0;
 
+/* Broad windows in which FL26 performs the two season rollovers.
+   They are deliberately ranges: the game does not necessarily visit every calendar day. */
+#define YEAR_END_WINDOW_FROM    335
+#define YEAR_END_WINDOW_TO       45
+#define SUMMER_ROLLOVER_FROM    140
+#define SUMMER_ROLLOVER_TO      230
+
+/* ---- Master League snapshot-keyed persistence ----
+ *
+ * The retained domestic tables and cup winners exist only in fl26swiss memory.  A full game
+ * restart therefore used to lose them.  The mode-copy's compressed payload is stable for one
+ * exact ML save snapshot, so it is used as the key into an append-only state journal.
+ *
+ * No save filename is needed: SAVE records the current fl26swiss state under the payload key,
+ * and LOAD restores the record carrying the same key.  Different careers and older snapshots
+ * of the same slot therefore cannot borrow each other's retained tables.
+ */
+#define MLSTATE_GET_RVA         0x1400bb0
+#define MLSTATE_SEND_RVA        0x0ebaab0
+#define MLSTATE_SEND_BODY_RVA   0x0ebaac0
+#define MLSTATE_SEND_GLOBAL_RVA 0x036fba28
+#define MLSTATE_MAX_PAYLOAD     0x04000000u
+#define MLSTATE_VERSION         2u
+
+static const unsigned char MLSTATE_MAGIC[8] =
+  { 'F','L','2','6','S','W','0','2' };
+
+typedef struct {
+  unsigned char magic[8];
+  uint32_t version;
+  uint32_t record_size;
+} mlstate_header_t;
+
+typedef struct {
+  uint64_t hash1;
+  uint64_t hash2;
+  uint32_t compressed_len;
+  int32_t year_off;
+  int32_t last_day;
+  uint16_t nfinal;
+  uint16_t ncupwin;
+  uint32_t reserved;
+  final_t final[64];
+  cupwin_t cupwin[32];
+  uint64_t check;
+} mlstate_record_t;
+
+static uint32_t g_mlstate_buflen_off = 0;
+static uint32_t g_mlstate_complen_off = 0;
+static uint32_t g_mlstate_buffer_off = 0;
+static unsigned char* g_mlstate_get_tramp = 0;
+static char g_mlstate_path[MAX_PATH];
+
+static int hook(unsigned char* target, const unsigned char* sig, int n,
+                void* handler, unsigned char** tramp_out);
+
+static uint64_t mlstate_hash1(const unsigned char* p, uint32_t n)
+{
+  uint64_t h = 1469598103934665603ULL;
+  for (uint32_t i = 0; i < n; i++) {
+    h ^= p[i];
+    h *= 1099511628211ULL;
+  }
+  return h;
+}
+
+static uint64_t mlstate_hash2(const unsigned char* p, uint32_t n)
+{
+  uint64_t h = 0x84222325cbf29ce4ULL;
+  for (uint32_t i = 0; i < n; i++) {
+    h ^= (uint64_t)p[i] + 0x9dULL;
+    h *= 0x9e3779b185ebca87ULL;
+    h ^= h >> 29;
+  }
+  return h;
+}
+
+static uint64_t mlstate_record_check(const mlstate_record_t* r)
+{
+  return mlstate_hash1((const unsigned char*)r,
+                       (uint32_t)(sizeof(*r) - sizeof(r->check)));
+}
+
+static int mlstate_path_init(void)
+{
+  if (g_mlstate_path[0]) return 1;
+
+  HMODULE self = 0;
+  if (!GetModuleHandleExA(
+        GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+        GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        (LPCSTR)(uintptr_t)&mlstate_path_init, &self))
+    return 0;
+
+  DWORD n = GetModuleFileNameA(self, g_mlstate_path,
+                               (DWORD)sizeof(g_mlstate_path));
+  if (!n || n >= sizeof(g_mlstate_path)) {
+    g_mlstate_path[0] = 0;
+    return 0;
+  }
+
+  char* slash = strrchr(g_mlstate_path, '\\');
+  if (!slash) slash = strrchr(g_mlstate_path, '/');
+  if (!slash) {
+    g_mlstate_path[0] = 0;
+    return 0;
+  }
+
+  slash[1] = 0;
+  static const char name[] = "fl26swiss-snapshots.bin";
+  size_t have = strlen(g_mlstate_path);
+  if (have + sizeof(name) > sizeof(g_mlstate_path)) {
+    g_mlstate_path[0] = 0;
+    return 0;
+  }
+  memcpy(g_mlstate_path + have, name, sizeof(name));
+  return 1;
+}
+
+static HANDLE mlstate_open(int write)
+{
+  if (!mlstate_path_init()) return INVALID_HANDLE_VALUE;
+
+  HANDLE h = CreateFileA(
+      g_mlstate_path,
+      GENERIC_READ | (write ? GENERIC_WRITE : 0),
+      FILE_SHARE_READ,
+      0,
+      write ? OPEN_ALWAYS : OPEN_EXISTING,
+      FILE_ATTRIBUTE_NORMAL,
+      0);
+
+  if (h == INVALID_HANDLE_VALUE) return h;
+
+  LARGE_INTEGER size;
+  if (!GetFileSizeEx(h, &size)) {
+    CloseHandle(h);
+    return INVALID_HANDLE_VALUE;
+  }
+
+  mlstate_header_t hdr;
+  memset(&hdr, 0, sizeof hdr);
+
+  if (size.QuadPart == 0) {
+    if (!write) {
+      CloseHandle(h);
+      return INVALID_HANDLE_VALUE;
+    }
+
+    memcpy(hdr.magic, MLSTATE_MAGIC, sizeof hdr.magic);
+    hdr.version = MLSTATE_VERSION;
+    hdr.record_size = (uint32_t)sizeof(mlstate_record_t);
+
+    DWORD put = 0;
+    if (!WriteFile(h, &hdr, sizeof hdr, &put, 0) ||
+        put != sizeof hdr) {
+      CloseHandle(h);
+      return INVALID_HANDLE_VALUE;
+    }
+    FlushFileBuffers(h);
+  } else {
+    LARGE_INTEGER zero;
+    zero.QuadPart = 0;
+    SetFilePointerEx(h, zero, 0, FILE_BEGIN);
+
+    DWORD got = 0;
+    if (!ReadFile(h, &hdr, sizeof hdr, &got, 0) ||
+        got != sizeof hdr ||
+        memcmp(hdr.magic, MLSTATE_MAGIC, sizeof hdr.magic) ||
+        hdr.version != MLSTATE_VERSION ||
+        hdr.record_size != sizeof(mlstate_record_t)) {
+      CloseHandle(h);
+      return INVALID_HANDLE_VALUE;
+    }
+  }
+
+  LARGE_INTEGER pos;
+  pos.QuadPart = sizeof(mlstate_header_t);
+  SetFilePointerEx(h, pos, 0, FILE_BEGIN);
+  return h;
+}
+
+static void mlstate_apply(const mlstate_record_t* r)
+{
+  /*
+   * Give every load in this process a fresh two-year epoch.  The retained record ages remain
+   * identical because its absolute days and g_year_off move by the same amount, while all of
+   * fl26swiss's season guards see a different timeline.
+   */
+  g_timeline++;
+  int shift = g_timeline * 730;
+
+  g_nfinal = 0;
+  g_ncupwin = 0;
+  memset(g_final, 0, sizeof g_final);
+  memset(g_cupwin, 0, sizeof g_cupwin);
+
+  if (r) {
+    g_nfinal = r->nfinal <= 64 ? r->nfinal : 64;
+    g_ncupwin = r->ncupwin <= 32 ? r->ncupwin : 32;
+
+    if (g_nfinal)
+      memcpy(g_final, r->final, (size_t)g_nfinal * sizeof(g_final[0]));
+    if (g_ncupwin)
+      memcpy(g_cupwin, r->cupwin, (size_t)g_ncupwin * sizeof(g_cupwin[0]));
+
+    g_year_off = r->year_off + shift;
+    g_last_day = r->last_day;
+
+    for (int i = 0; i < g_nfinal; i++)
+      g_final[i].day += shift;
+    for (int i = 0; i < g_ncupwin; i++)
+      g_cupwin[i].day += shift;
+  } else {
+    g_year_off = shift;
+    g_last_day = -1;
+  }
+
+  g_new_career = 0;
+  g_day_ticked = 0;
+  g_first_day = -1;
+}
+
+static void mlstate_restore(uint64_t h1, uint64_t h2, uint32_t clen)
+{
+  HANDLE h = mlstate_open(0);
+  if (h == INVALID_HANDLE_VALUE) {
+    mlstate_apply(0);
+    logf("fl26swiss: state -- no snapshot journal; starting retained sources empty");
+    return;
+  }
+
+  mlstate_record_t r, best;
+  int found = 0;
+  DWORD got = 0;
+
+  while (ReadFile(h, &r, sizeof r, &got, 0) && got == sizeof r) {
+    if (r.nfinal > 64 || r.ncupwin > 32) continue;
+    if (r.check != mlstate_record_check(&r)) continue;
+
+    if (r.hash1 == h1 &&
+        r.hash2 == h2 &&
+        r.compressed_len == clen) {
+      best = r;
+      found = 1;
+    }
+  }
+
+  CloseHandle(h);
+
+  if (!found) {
+    mlstate_apply(0);
+    logf("fl26swiss: state -- snapshot %016llx not known; retained sources start empty",
+         (unsigned long long)h1);
+    return;
+  }
+
+  mlstate_apply(&best);
+  logf("fl26swiss: state -- snapshot %016llx restored (%u final table(s), %u cup winner(s))",
+       (unsigned long long)h1,
+       (unsigned)best.nfinal,
+       (unsigned)best.ncupwin);
+}
+
+static void mlstate_store(uint64_t h1, uint64_t h2, uint32_t clen)
+{
+  /* Make the saved temporal anchor exactly the one current at this save. */
+  (void)abs_day();
+
+  mlstate_record_t out;
+  memset(&out, 0, sizeof out);
+
+  out.hash1 = h1;
+  out.hash2 = h2;
+  out.compressed_len = clen;
+  out.year_off = g_year_off;
+  out.last_day = g_last_day;
+  out.nfinal = (uint16_t)(g_nfinal < 64 ? g_nfinal : 64);
+  out.ncupwin = (uint16_t)(g_ncupwin < 32 ? g_ncupwin : 32);
+
+  if (out.nfinal)
+    memcpy(out.final, g_final, (size_t)out.nfinal * sizeof(g_final[0]));
+  if (out.ncupwin)
+    memcpy(out.cupwin, g_cupwin, (size_t)out.ncupwin * sizeof(g_cupwin[0]));
+
+  out.check = mlstate_record_check(&out);
+
+  HANDLE h = mlstate_open(1);
+  if (h == INVALID_HANDLE_VALUE) {
+    logf("fl26swiss: state -- cannot open snapshot journal for writing");
+    return;
+  }
+
+  mlstate_record_t old;
+  DWORD got = 0;
+  int identical = 0;
+
+  LARGE_INTEGER good;
+  good.QuadPart = sizeof(mlstate_header_t);
+
+  while (ReadFile(h, &old, sizeof old, &got, 0) && got == sizeof old) {
+    good.QuadPart += sizeof old;
+
+    if (old.nfinal > 64 || old.ncupwin > 32) continue;
+    if (old.check != mlstate_record_check(&old)) continue;
+
+    if (old.hash1 == out.hash1 &&
+        old.hash2 == out.hash2 &&
+        old.compressed_len == out.compressed_len &&
+        old.check == out.check)
+      identical = 1;
+  }
+
+  if (identical) {
+    CloseHandle(h);
+    return;
+  }
+
+  /*
+   * A crash can leave one partial record at EOF.  Drop only that incomplete tail before
+   * appending; every earlier complete snapshot remains available for old-save rollback.
+   */
+  SetFilePointerEx(h, good, 0, FILE_BEGIN);
+  SetEndOfFile(h);
+
+  DWORD put = 0;
+  int ok = WriteFile(h, &out, sizeof out, &put, 0) &&
+           put == sizeof out;
+
+  if (ok) FlushFileBuffers(h);
+  CloseHandle(h);
+
+  if (ok)
+    logf("fl26swiss: state -- snapshot %016llx saved (%u final table(s), %u cup winner(s))",
+         (unsigned long long)h1,
+         (unsigned)out.nfinal,
+         (unsigned)out.ncupwin);
+  else
+    logf("fl26swiss: state -- snapshot journal write failed");
+}
+
+typedef unsigned char* (*mlstate_get_fn)(void* copy);
+
+static unsigned char* mlstate_get_handler(void* copy)
+{
+  unsigned char* payload =
+      ((mlstate_get_fn)(uintptr_t)g_mlstate_get_tramp)(copy);
+
+  if (!copy || !payload) return payload;
+
+  const unsigned char* b = (const unsigned char*)copy;
+  uint32_t clen = *(const uint32_t*)(b + g_mlstate_complen_off);
+
+  if (clen && clen < MLSTATE_MAX_PAYLOAD) {
+    uint64_t h1 = mlstate_hash1(payload, clen);
+    uint64_t h2 = mlstate_hash2(payload, clen);
+    mlstate_restore(h1, h2, clen);
+  }
+
+  return payload;
+}
+
+typedef void (*mlstate_send_body_fn)(void* owner, void* copy);
+
+static void mlstate_send_handler(void* ignored, void* copy)
+{
+  (void)ignored;
+
+  if (copy) {
+    const unsigned char* b = (const unsigned char*)copy;
+
+    uint32_t raw =
+        *(const uint32_t*)(b + g_mlstate_buflen_off);
+    uint32_t clen =
+        *(const uint32_t*)(b + g_mlstate_complen_off);
+
+    if (raw && clen &&
+        raw < MLSTATE_MAX_PAYLOAD &&
+        clen < MLSTATE_MAX_PAYLOAD) {
+      const unsigned char* payload =
+          b + g_mlstate_buffer_off + raw;
+
+      uint64_t h1 = mlstate_hash1(payload, clen);
+      uint64_t h2 = mlstate_hash2(payload, clen);
+      mlstate_store(h1, h2, clen);
+    }
+  }
+
+  void* owner =
+      *(void**)(uintptr_t)(g_base + MLSTATE_SEND_GLOBAL_RVA);
+
+  ((mlstate_send_body_fn)(uintptr_t)
+      (g_base + MLSTATE_SEND_BODY_RVA))(owner, copy);
+}
+
+static int mlstate_install(uint64_t exe_base)
+{
+  unsigned char* get =
+      (unsigned char*)(uintptr_t)(exe_base + MLSTATE_GET_RVA);
+
+  /*
+   * Read the mode-copy offsets from the already patched getter instead of hard-coding either
+   * the shipped layout or fl26caps' enlarged mlcopy layout:
+   *
+   *   mov eax,[rcx+buffer_len]
+   *   add rax,buffer
+   *   add rax,rcx
+   *   ret
+   */
+  if (get[0] != 0x8b || get[1] != 0x81 ||
+      get[6] != 0x48 || get[7] != 0x05 ||
+      get[12] != 0x48 || get[13] != 0x03 ||
+      get[14] != 0xc1 || get[15] != 0xc3)
+    return 2;
+
+  g_mlstate_buflen_off = *(uint32_t*)(get + 2);
+  g_mlstate_buffer_off = *(uint32_t*)(get + 8);
+  g_mlstate_complen_off = g_mlstate_buflen_off + 4;
+
+  if (g_mlstate_buffer_off != g_mlstate_buflen_off + 0x10)
+    return 2;
+
+  unsigned char* send =
+      (unsigned char*)(uintptr_t)(exe_base + MLSTATE_SEND_RVA);
+
+  static const unsigned char SEND_SIG[14] = {
+    0x48,0x8b,0x0d,0x71,0x0f,0x84,0x02,
+    0xe9,0x04,0x00,0x00,0x00,
+    0xcc,0xcc
+  };
+
+  if (memcmp(send, SEND_SIG, sizeof SEND_SIG))
+    return 2;
+
+  if (!mlstate_path_init())
+    return 5;
+
+  /*
+   * Hook the compressed-payload getter.  Its first 15 bytes are position independent after
+   * the mode-copy offsets have been patched, so the existing trampoline helper is safe here.
+   */
+  unsigned char get_sig[15];
+  memcpy(get_sig, get, sizeof get_sig);
+
+  int hr = hook(get, get_sig, 15,
+                (void*)mlstate_get_handler,
+                &g_mlstate_get_tramp);
+  if (hr) return hr;
+
+  /*
+   * The send stub itself contains RIP-relative control flow, so do not trampoline it.
+   * Replace the complete 14-byte stub and have the handler call its body at +0x10 directly.
+   */
+  unsigned char j[14] = {
+    0xff,0x25,0x00,0x00,0x00,0x00,
+    0,0,0,0,0,0,0,0
+  };
+  uint64_t dst = (uint64_t)(uintptr_t)mlstate_send_handler;
+  memcpy(j + 6, &dst, sizeof dst);
+
+  DWORD old;
+  if (!VirtualProtect(send, sizeof j, PAGE_EXECUTE_READWRITE, &old))
+    return 4;
+
+  memcpy(send, j, sizeof j);
+
+  DWORD dummy;
+  VirtualProtect(send, sizeof j, old, &dummy);
+  FlushInstructionCache(GetCurrentProcess(), send, sizeof j);
+
+  logf("fl26swiss: state -- snapshot persistence live (buffer +0x%x, journal %s)",
+       (unsigned)g_mlstate_buffer_off, g_mlstate_path);
+  return 0;
+}
+
+
 /* the winner of a competition as the game's own rights code sees it, or 0 */
 static uint32_t winner_now(uint16_t reg)
 {
@@ -1323,7 +1800,7 @@ static void access_capture(void)
     if (got) logf("fl26swiss: access -- New Year: final tables of %d league(s) kept on day %d", got, d);
     return;
   }
-  if (d < 140 || d > 230) return;                 /* the summer rollover, and New Year's above */
+  if (d < SUMMER_ROLLOVER_FROM || d > SUMMER_ROLLOVER_TO) return;                 /* the summer rollover, and New Year's above */
   for (size_t i = 0; i < g_naccess; i++) {
     uint16_t reg = g_access[i].reg;
     if (g_access[i].rank && !season_played(reg)) {
@@ -1347,12 +1824,15 @@ static void access_capture(void)
   if (skipped) logf("fl26swiss: access -- %d table(s) with no match played yet not kept (day %d)", skipped, d);
   if (running) logf("fl26swiss: access -- %d league(s) mid-season: their New Year table stands (day %d)", running, d);
 }
-/* a cup's winner: kept at the July teardown, else asked of the game now */
+#define CCUP_CONT_KEEP 330
+
+/* a cup's winner: kept long enough for the next continental-cup edition,
+   else asked of the game now */
 static uint32_t cup_winner(uint16_t reg)
 {
   cupwin_t* w = cupwin_of(reg);
   int d = abs_day();
-  if (w && d >= w->day && d - w->day < 120) return w->club;
+  if (w && d >= w->day && d - w->day < CCUP_CONT_KEEP) return w->club;
   return winner_now(reg);
 }
 /* ---- a first season: the league ordered by squad strength ----
@@ -2579,11 +3059,11 @@ static final_t* phase_table(uint16_t reg)
    this summer's, else the live table (in June it is the season just finished) once a match has
    been played, else -- a phase of our splits -- the table counted from its matches, else the
    league ordered by squad strength, else list order */
-static uint32_t cwc_club(uint16_t reg, int rank, const char** how)
+static uint32_t cwc_club_kept(uint16_t reg, int rank, const char** how, int keep)
 {
   final_t* f = final_of(reg);
   int d = abs_day();
-  if (f && rank <= f->n && d >= f->day && d - f->day < 120) { *how = "kept table"; return f->club[rank - 1]; }
+  if (f && rank <= f->n && d >= f->day && d - f->day < keep) { *how = "kept table"; return f->club[rank - 1]; }
   unsigned char* rec = get_rec(reg);
   if (!rec) return 0;
   unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(reg);
@@ -2595,6 +3075,11 @@ static uint32_t cwc_club(uint16_t reg, int rank, const char** how)
   if (s) { *how = "squad strength"; return (uint32_t)rank <= s->n ? s->club[rank - 1] : 0; }
   *how = "list order";
   return (uint32_t)rank <= rec_count(rec) ? rec_clubs(rec)[rank - 1] : 0;
+}
+
+static uint32_t cwc_club(uint16_t reg, int rank, const char** how)
+{
+  return cwc_club_kept(reg, rank, how, 120);
 }
 
 /* The game's own Club World Cup (a world without the 32): its field comes from the game's
@@ -2884,6 +3369,7 @@ typedef struct { uint16_t reg, ko, groups, n; uint16_t ereg[CCUP_MAX_ENTRY]; uin
                  uint16_t fill, national, nd, nc; uint16_t days[CCUP_MAX_DAYS]; uint32_t clubs[CCUP_MAX_ENTRY];
                  int filled_year;
                  uint16_t like;      /* 0.2.0: the shipped domestic cup whose shape and dates it takes, 0 = none */
+                 uint8_t calendar_year; /* plays and closes within one January-December season */
                } ccup_t;
 static ccup_t g_ccup[MAX_CCUP]; static int g_nccup = 0;
 /* fl26_swiss_ccup_like's records, read by fl26_swiss_ccup (called after it): knockout -> shipped cup */
@@ -2924,8 +3410,12 @@ static int ccup_like_ok(const ccup_t* c);
 /* the two-legged league cup's days before 0.2.0 (leaguebuilder LEAGUE_CUP_DAYS): a single-match
    cup of the world file played the old way by a career with the old row (ccup_size) */
 static const uint32_t LCUP_OLD_DAYS[7] = { 256, 287, 291, 314, 326, 340, 356 };
+static const uint32_t CCUP_YEAR_GROUP_DAYS[6] = { 97, 104, 118, 125, 139, 146 };
+
 static uint32_t ccup_day(const ccup_t* c, int ko, int j)
 {
+  if (!ko && c->calendar_year)
+    return CCUP_YEAR_GROUP_DAYS[j < 6 ? j : 5];
   if (ko && c->like && !ccup_like_ok(c)) return LCUP_OLD_DAYS[j < 7 ? j : 6];
   if (ko && c->nd) return c->days[j < c->nd ? j : c->nd - 1];
   return ko ? CCUP_KO_DAYS[ccup_tier(c)][j] : CCUP_GROUP_DAYS[ccup_tier(c)][j];
@@ -2971,7 +3461,7 @@ __declspec(dllexport) int fl26_swiss_ccup(const uint16_t* v, int n)
   for (int i = 0; i < n && g_nccup < MAX_CCUP; i++) {
     ccup_t* c = &g_ccup[g_nccup];
     c->reg = v[p]; c->ko = v[p + 1]; c->groups = v[p + 2]; unsigned ne = v[p + 3]; p += 4;
-    c->n = 0; c->fill = c->national = c->nd = c->nc = 0; c->filled_year = -1; c->like = 0;
+    c->n = 0; c->fill = c->national = c->nd = c->nc = 0; c->filled_year = -1; c->like = 0; c->calendar_year = 0;
     memset(c->ealt, 0, sizeof c->ealt);
     memset(c->efrom, 0, sizeof c->efrom);
     for (unsigned e = 0; e < ne; e++, p += 2)
@@ -3009,6 +3499,23 @@ __declspec(dllexport) int fl26_swiss_ccup(const uint16_t* v, int n)
     g_nccup++;
   }
   return g_nccup;
+}
+
+/* Mark cups whose whole lifecycle belongs to one calendar year. Each record is the
+   knockout id of a cup already registered by fl26_swiss_ccup. */
+__declspec(dllexport) int fl26_swiss_ccup_calendar(const uint16_t* v, int n)
+{
+  int got = 0;
+  for (int i = 0; v && i < n; i++) {
+    for (int k = 0; k < g_nccup; k++) {
+      if (g_ccup[k].ko != v[i])
+        continue;
+      g_ccup[k].calendar_year = 1;
+      got++;
+      break;
+    }
+  }
+  return got;
 }
 
 /* The options per cup, n records of u32: knockout id, fill day, national (0/1), the number of
@@ -3329,6 +3836,7 @@ static void lpre_fill_days(void) { for (int i = 0; i < g_nlpre; i++) lpre_fill(i
 static int ccup_fill_one(int k, void* started)
 {
   const ccup_t* c = &g_ccup[k];
+  int table_keep = c->national ? 120 : CCUP_CONT_KEEP;
   unsigned char* rec = get_rec(c->reg);
   if (!ccup_world(c)) { logf("fl26swiss: cup %u -- its rows are not all in this world; left alone", (unsigned)c->reg); return 0; }
   unsigned held = rec_count(rec);
@@ -3365,7 +3873,7 @@ static int ccup_fill_one(int k, void* started)
       if (club && c->ealt[i] && ((!c->national && ccup_taken(club)) || lpre_has(c->ko, club))) club = 0;
       if (!club && c->ealt[i]) {                   /* its league's next club (alt=) */
         for (int rank = c->efrom[i] ? c->efrom[i] : 1; rank <= FINAL_MAX; rank++) {
-          uint32_t a = cwc_club(c->ealt[i], rank, &how);
+          uint32_t a = cwc_club_kept(c->ealt[i], rank, &how, table_keep);
           if (!a) break;
           if ((a >> 14) && !has_club(g_ccup_field[k], n, a) && (c->national || !ccup_taken(a)) && !lpre_has(c->ko, a)) {
             club = a;
@@ -3378,7 +3886,7 @@ static int ccup_fill_one(int k, void* started)
       if (!club) logf("fl26swiss:   cup %u entry: reg %u has no winner to send", (unsigned)c->reg, (unsigned)c->ereg[i]);
     } else
     for (int rank = c->erank[i]; rank <= FINAL_MAX; rank++) {
-      club = cwc_club(c->ereg[i], rank, &how);
+      club = cwc_club_kept(c->ereg[i], rank, &how, table_keep);
       if (!club) break;
       if ((club >> 14) && !has_club(g_ccup_field[k], n, club) && (c->national || !ccup_taken(club))
           && !lpre_has(c->ko, club)) break;
@@ -3505,23 +4013,51 @@ static int season_played(uint16_t reg)
   }
   return all > 0 && played == all;
 }
+typedef uint32_t (*stype_fn)(const int32_t* region);
+
+static int league_calendar_year(uint16_t reg)
+{
+  unsigned char* rec = get_rec(reg);
+  if (!rec) return 0;
+
+  int32_t region = (int32_t)((*(uint32_t*)(rec + 0x30c) >> 7) & 63);
+  return ((stype_fn)(uintptr_t)(g_base + STYPE_RVA))(&region) == 1;
+}
+
 static void ccup_keep_tables(const uint16_t* ids, int n)
 {
   int d = today(), ad = abs_day();
-  if (d < 140 || d > 230) return;
+  int newyear = d >= YEAR_END_WINDOW_FROM || d <= YEAR_END_WINDOW_TO;
+
+  if (!newyear && (d < SUMMER_ROLLOVER_FROM || d > SUMMER_ROLLOVER_TO))
+    return;
+
   for (int k = 0; k < g_nccup; k++)
     for (unsigned i = 0; i < g_ccup[k].n; i++) {
-      uint16_t regs[2] = { g_ccup[k].erank[i] ? g_ccup[k].ereg[i] : 0, g_ccup[k].ealt[i] };
+      uint16_t regs[2] = {
+        g_ccup[k].erank[i] ? g_ccup[k].ereg[i] : 0,
+        g_ccup[k].ealt[i]
+      };
+
       for (int r = 0; r < 2; r++) {
-        int closing = 0;
-        for (int j = 0; j < n && regs[r] && !closing; j++) closing = ids[j] == regs[r];
-        /* J1 and the Saudi league played August to May (run023, 2026-10-07): the exe's event
-           table closes them at New Year, so the summer teardown never names them and their
-           finished table was not kept -- the AFC cups took them by squad strength again */
-        if (!closing && regs[r]) closing = season_played(regs[r]);
+        if (!regs[r])
+          continue;
+
+        int listed = 0;
+        for (int j = 0; j < n && !listed; j++)
+          listed = ids[j] == regs[r];
+
+        int calendar_year = league_calendar_year(regs[r]);
+        int closing;
+
+        if (newyear)
+          closing = calendar_year && (listed || season_played(regs[r]));
+        else
+          closing = !calendar_year && (listed || season_played(regs[r]));
+
         if (closing && keep_final(regs[r], d, ad) > 0) {
-          logf("fl26swiss: reg %u -- final table kept for cup %u (day %d)", (unsigned)regs[r],
-               (unsigned)g_ccup[k].reg, d);
+          logf("fl26swiss: reg %u -- final table kept for cup %u (day %d)",
+               (unsigned)regs[r], (unsigned)g_ccup[k].reg, d);
         }
       }
     }
@@ -3532,7 +4068,7 @@ static void ccup_keep_tables(const uint16_t* ids, int n)
 static void ccup_keep_winners(void)
 {
   int d = today(), ad = abs_day();
-  if (d < 140 || d > 230) return;
+  if (d < SUMMER_ROLLOVER_FROM || d > SUMMER_ROLLOVER_TO) return;
   for (int k = 0; k < g_nccup; k++)
     for (unsigned i = 0; i < g_ccup[k].n; i++) {
       uint16_t reg = g_ccup[k].ereg[i];
@@ -6776,12 +7312,75 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
     for (int j = 0; j < n; j++) { if (in->b[j] == g_dlike[i][1]) like = 1; if (in->b[j] == id) there = 1; }
     if (like && !there && n + ndcl < 512) dcl[ndcl++] = id;
   }
-  if (!euro && !ndcl) return in;
+  int dnow = today();
+  int year_end = dnow >= YEAR_END_WINDOW_FROM || dnow <= YEAR_END_WINDOW_TO;
+  int nyccup = 0;
+
+  if (!euro && year_end) {
+    for (int c = 0; c < g_nccup && !nyccup; c++) {
+      const ccup_t* cc = &g_ccup[c];
+      if (!cc->calendar_year || !ccup_world(cc))
+        continue;
+
+      for (int g = -2; g < cc->groups; g++) {
+        uint16_t id =
+          g == -2 ? cc->ko :
+          g == -1 ? cc->reg :
+                    ccup_rep(cc, g);
+        unsigned char* rec = get_rec(id);
+        if (rec && rec_count(rec)) {
+          nyccup = 1;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!euro && !ndcl && !nyccup) return in;
+
   if (!euro) {
     memcpy(g_td_list, in->b, (size_t)n * sizeof(uint16_t));
     memcpy(g_td_list + n, dcl, (size_t)ndcl * sizeof(uint16_t));
-    g_td_vec.b = g_td_list; g_td_vec.e = g_td_list + n + ndcl; g_td_vec.c = g_td_list + 512;
-    logf("fl26swiss: teardown on day %d -- %d cup(s) of ours closed with the cup they are dated as", today(), ndcl);
+    int k = n + ndcl;
+
+    if (nyccup) {
+      for (int c = 0; c < g_nccup; c++) {
+        const ccup_t* cc = &g_ccup[c];
+        if (!cc->calendar_year || !ccup_world(cc))
+          continue;
+
+        int nc = 0;
+        for (int g = -2; g < cc->groups; g++) {
+          uint16_t id =
+            g == -2 ? cc->ko :
+            g == -1 ? cc->reg :
+                      ccup_rep(cc, g);
+          int there = 0;
+
+          for (int j = 0; j < k; j++)
+            if (g_td_list[j] == id) {
+              there = 1;
+              break;
+            }
+
+          if (!there && get_rec(id) && k < 512) {
+            g_td_list[k++] = id;
+            nc++;
+          }
+        }
+
+        if (nc)
+          logf("fl26swiss: calendar-year cup %u -- %d regulation(s) added to year-end teardown",
+               (unsigned)cc->reg, nc);
+      }
+    }
+
+    g_td_vec.b = g_td_list;
+    g_td_vec.e = g_td_list + k;
+    g_td_vec.c = g_td_list + 512;
+
+    logf("fl26swiss: teardown on day %d -- %d cup(s) of ours closed with the cup they are dated as",
+         dnow, ndcl);
     return &g_td_vec;
   }
   g_td_fresh = 1;
@@ -6820,6 +7419,11 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   for (int c = 0; c < g_nccup; c++) {
     const ccup_t* cc = &g_ccup[c];
     if (!ccup_world(cc)) continue;
+    if (cc->calendar_year) {
+      logf("fl26swiss: cup %u -- kept alive across July teardown",
+           (unsigned)cc->reg);
+      continue;
+    }
     int nc = 0;
     for (int g = -2; g < cc->groups; g++) {
       uint16_t id = g == -2 ? cc->ko : g == -1 ? cc->reg : ccup_rep(cc, g);
@@ -7038,6 +7642,11 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
     logf("fl26swiss: Cup mode list NOT installed (vtable slot)");
   logf("fl26swiss: hooks live (schedule@%llx dates@%llx) for %d regulation(s)",
        (unsigned long long)(exe_base + GEN_RVA), (unsigned long long)(exe_base + DATE_RVA), nregs);
+  {
+    int sr = mlstate_install(exe_base);
+    if (sr)
+      logf("fl26swiss: state -- snapshot persistence NOT installed (%d)", sr);
+  }
   return 0;
 }
 
