@@ -184,6 +184,13 @@ which league sits above -- and nothing about ids:
               club without a Kit Server folder of its own gets a kit made when the world is switched
               on (lbservers, kitmaker): home, away, third and goalkeeper in its shirt colours
               (club_kits / club_away_kits, NewLife's), or its crest's, with its crest on the chest.
+  samerica_super_cup  (the recipe, not a league) true, the default: a world that builds the Copa
+              Sudamericana also gets the Recopa Sudamericana, one match of the Sudamericana's
+              winner against the game's own Libertadores champion (regulation 10, native --
+              unlike the CAF Super Cup, only one side is a cup this tool built) in late July
+              (CAF_SUPER_DAYS). Nobody has won the Sudamericana in a new career's first season,
+              so it is first played in the second. false: none. "samerica_super_cup_logo" is its
+              picture
   editable_kits  (the recipe) true: the new clubs get no kit lent from a club of the game. A lent
               kit is a licensed one (<key>_1st_realUni.bin) and Edit mode refuses it ("You cannot
               edit this strip"). Instead each club gets plain 1st/2nd/GK definitions of its own
@@ -366,6 +373,40 @@ PRESEASON_DAYS = [186, 189, 192, 195, 198, 201, 205]
 # the last, the final, on 26 July -- after the pre-season cups, before the new season is built
 CAF_SUPER_DAYS = [187, 190, 193, 196, 199, 202, 207]
 CAF_CL, CAF_CC = 6, 7                    # fl26world.CCUPS numbers of the two cups it takes
+SUDAM = 9                                # fl26world.CCUPS number of the Copa Sudamericana
+LIBERTADORES_KO = 10                     # the game's own Libertadores knockout/final stage --
+# native, not built by this tool, so its champion is read by regulation id directly (entry
+# tuples not tagged "ko" pass through continental()'s resolver unchanged, see samerica_super_cup)
+# The South American calendar (fl26swiss cal=1): the game fills its Libertadores on day 41 and
+# plays its group stage on days 62, 76 ... 139, one weekday; the days below are that weekday too.
+# The Sudamericana's first stage: 16 one-match ties, one play-off of sixteen (`lpre ... single=1`,
+# mkeuropo.prerounds_single),
+# filled from day 42 to the eve of its day, played on 17 February
+SAM_FIRST_FILL, SAM_FIRST_DAY = 42, 48
+SAM_FIRST_TIES = 16                      # 32 clubs
+SAM_FIRST_NAME = "Pré-Sudamericana"
+SAM_DIRECT = 6                           # Brazil's and Argentina's clubs straight into the groups each
+SAM_LIB_LOSERS = 4                       # the Libertadores qualifying round's losers (fl26swiss QUAL_LOSER)
+LIB_QUAL, QUAL_LOSER = 8, 255
+# The Libertadores qualifying phases 1 and 2 (recipe "libertadores_qualifying", fl26swiss
+# lib8_swap): two-leg play-offs in a competition of their own, phase 2's eight winners become
+# the game's qualifying round, reg 8 (days 34 and 41). Days of January, before it.
+# both phases in one competition; the Database shows its current phase (fl26swiss curph: the
+# latest phase filled this season)
+LIBQ_NAME, LIBQ_CODE = "Pré-Libertadores", "FL_LIBQ"
+LIBQ_P1 = {"fill": 2, "days": [6, 13]}
+LIBQ_P2 = {"fill": 14, "days": [20, 27]}
+LIBQ_INVITED, LIBQ_GAME8 = 254, 253
+# The Sudamericana's knockout play-off (CONMEBOL since 2023, recipe "sudamericana_playoffs",
+# default on with the first stage): its eight group runners-up v the eight thirds of the
+# Libertadores groups (reg 9's groups), two legs, after both group stages (day 139); the winners
+# and the eight group winners make the round of sixteen (day 163, fl26swiss poko_ko).
+SPO_NAME, SPO_CODE = "Sudamericana Playoffs", "FL_SUDAPO"
+SPO_FILL, SPO_DAYS = 140, [146, 153]
+LIB_GROUPS = 9      # short: a long name ran over in the game's records
+SAM_GROUP_FILL = 49                      # the group stage drawn the day after; dated as the Libertadores'
+SAM_SUPER_FILL = 42                      # the Recopa: last November's two winners ...
+SAM_SUPER_DAYS = [49, 50, 51, 52, 53, 54, 55]   # ... one match on the last day, 24 February
 LEAGUE_CUP_SIZES = (16, 8, 4)
 # A league cup's clubs past its 16, 8 or 4 play a pre-round first: the last 2x places of the
 # field, the strongest v the weakest, home and away; the x winners take the knockout's last x
@@ -1578,6 +1619,10 @@ def plan(recipe, base):
     home += [preseason_cup(c, k, by_name) for k, c in enumerate(recipe.get("preseason_cups") or [])]
     if recipe.get("caf_super_cup", True) and {CAF_CL, CAF_CC} <= {c["number"] for c in cups}:
         cups.append(caf_super_cup(recipe))
+    if recipe.get("samerica_super_cup", True) and SUDAM in {c["number"] for c in cups}:
+        cups.append(samerica_super_cup(recipe))
+    samerica_calendar(recipe, cups, by_name)
+    libq = libq_plan(recipe, by_name)
     for c in cups:
         k = str(c["number"])
         c["name"] = ((recipe.get("ccup_names") or {}).get(k) or "").strip() or c["name"]
@@ -1599,10 +1644,12 @@ def plan(recipe, base):
             "uecl_name": (recipe.get("uecl_name") or "").strip() or None,
             "game_europe": ge, "game_replace": gr, "game_names": gn,
             "uefa_seed": uefa_seed(recipe, out, regrow, region_of_cid),
-            "ccups": cups, "ccup_notes": notes, "home_cups": home,
+            "ccups": cups, "ccup_notes": notes, "home_cups": home, "libq": libq,
             "europe_first": europe_first(recipe, by_name),
             "game_seasons": august_countries(recipe),
             "editable_kits": bool(recipe.get("editable_kits")),
+            "sud_playoffs": bool(recipe.get("sudamericana_playoffs", True)),
+            "saudi_august": bool(recipe.get("saudi_august")),
             "make_kits": recipe.get("make_kits", True) is not False,
             "country_order": recipe.get("country_order") or None,
             "cup_draw": cup_draw(recipe)}
@@ -2262,6 +2309,200 @@ def caf_super_cup(recipe):
             "opts": {"fill": PRESEASON_FILL, "national": 1, "days": CAF_SUPER_DAYS}}
 
 
+def samerica_super_cup(recipe):
+    """the Recopa Sudamericana: a knockout of two, the Sudamericana's winner (("ko", SUDAM),
+    this world's own, resolved once continental() has its id) against the game's own
+    Libertadores champion. The Libertadores is not built by this tool -- its knockout/final
+    stage is the game's regulation 10, fixed and already known, so that entry is a plain
+    (regulation, 0) pair, which the "ko" resolver in ccup_plan leaves untouched (only entries
+    tagged "ko" go through it). number -1: not a fl26world.CCUPS code (0 is the CAF Super
+    Cup's, 9 the Sudamericana's own -- reusing either would collide with the lookups keyed on
+    them, e.g. samerica_lines' and ccup_plan's "number == 9" checks)."""
+    return {"number": -1, "name": "Recopa Sudamericana", "code": "FL_SAMRC", "conf": 4, "groups": 0,
+            "kind": "super", "logo": recipe.get("samerica_super_cup_logo") or None,
+            "entry": [(LIBERTADORES_KO, 0), ("ko", SUDAM)],
+            "opts": {"fill": PRESEASON_FILL, "national": 1, "days": CAF_SUPER_DAYS}}
+
+
+def samerica_calendar(recipe, cups, by_name):
+    """the Copa Sudamericana and the Recopa on the South American calendar (recipe
+    "sudamericana_calendar", default true; fl26swiss cal=1): the Sudamericana drawn in February
+    and played on the Libertadores' own days, the Recopa in late February between last
+    November's two winners. With "sudamericana_first_stage" -- [[league, first position, clubs],
+    ...], a league of the recipe by name or a shipped regulation id, an even number of clubs each
+    and 32 in all -- the cup gets the real first stage: 16 one-match ties between clubs of the
+    same country, the better placed at home against the worst placed left (first v last, second v
+    second-last ...), the 16 winners into the groups with six clubs each of Brazil and Argentina
+    (the first six of their Sudamericana places of the game: 7th-12th, the next one down for a
+    club already in the Libertadores) and the four clubs eliminated in the Libertadores
+    qualifying round (CONMEBOL since 2023), the winners the last two pots. The first
+    stage is the pre-Libertadores' model: one play-off of sixteen ties (reg 8's copy) with the
+    regulation's legs mode 0 -- one match a tie -- in a competition of their own (twenty tables a
+    competition): fl26swiss `lpre ... single=1`, mkeuropo.prerounds_single."""
+    sud = next((c for c in cups if c["number"] == SUDAM), None)
+    if not sud or not recipe.get("sudamericana_calendar", True):
+        return
+    sud["opts"] = {"fill": SAM_GROUP_FILL, "national": 0, "days": [], "cal": 1}
+    first = recipe.get("sudamericana_first_stage")
+    if first:
+        ties = []
+        for item in first:
+            if not isinstance(item, (list, tuple)) or len(item) != 3:
+                raise BuildError("sudamericana_first_stage: %r -- want [league, first position, clubs]" % (item,))
+            league, start, count = item
+            if isinstance(league, int) or str(league).strip().isdigit():
+                rid = int(league)
+            else:
+                p = by_name.get(str(league).strip().lower())
+                if p is None:
+                    raise BuildError("sudamericana_first_stage: no league %r in the recipe" % league)
+                rid = p["rid"]
+            start, count = int(start), int(count)
+            if start < 1 or count < 2 or count % 2:
+                raise BuildError("sudamericana_first_stage: %s -- an even number of clubs from position 1 on" % league)
+            pos = list(range(start, start + count))
+            for i in range(count // 2):
+                ties.append([(rid, pos[-1 - i]), (rid, pos[i])])   # the worse placed, then the better (at home)
+        if len(ties) != SAM_FIRST_TIES:
+            raise BuildError("sudamericana_first_stage: %d clubs -- the first stage is 32 (16 ties)" % (2 * len(ties)))
+        fill = next(f for c, _n, _code, _conf, f in fl26world.CCUPS if c == SUDAM)
+        bra = [e for e in fill if e[0] == fl26world._BRA][:SAM_DIRECT]
+        arg = [e for e in fill if e[0] == fl26world._ARG][:SAM_DIRECT]
+        sud["groups"] = 8
+        # the entry order is the draw's pots (fl26swiss deals each pot of eight one to a group):
+        # Brazil, Argentina and the Libertadores qualifying round's four losers, then the first
+        # stage's winners -- each group two of them, as the real cup
+        sud["entry"] = (bra + arg + [(LIB_QUAL, QUAL_LOSER)] * SAM_LIB_LOSERS
+                        + [("pre", j) for j in range(SAM_FIRST_TIES)])
+        sud["first_stage"] = len(ties)
+        sud["opts"]["preq"] = {"ties": [[e for e in t] for t in ties], "fill": SAM_FIRST_FILL,
+                               "day": SAM_FIRST_DAY, "name": SAM_FIRST_NAME}
+    rec = next((c for c in cups if c.get("code") == "FL_SAMRC"), None)
+    if rec:
+        rec["opts"] = {"fill": SAM_SUPER_FILL, "national": 1, "days": SAM_SUPER_DAYS, "cal": 1}
+        # recipe "samerica_super_cup_first": [Libertadores winner, Sudamericana winner] team ids for
+        # a new career's first Recopa, which has no winners of the season before (2026: Flamengo
+        # 1248 v Lanus 1929); later seasons play the real winners
+        first = recipe.get("samerica_super_cup_first")
+        if first:
+            if len(first) != 2 or not all(str(t).isdigit() and 0 < int(t) < 65536 for t in first):
+                raise BuildError("samerica_super_cup_first: %r -- two team ids of the game" % (first,))
+            rec["opts"]["first"] = [int(t) for t in first]
+
+
+def libq_plan(recipe, by_name):
+    """the Libertadores qualifying phases 1 and 2 of recipe "libertadores_qualifying":
+    {"phase1": [entry, ...], "phase2": [entry, ...]}, an entry [league, position] (a league of
+    the recipe by name or a shipped regulation id), ["team", id] (a club of the game by team id,
+    in a league or in none -- the Outros America clubs) or ["game8"] (the next club the game's
+    own rights put in its qualifying round: Brazil 5th-6th, Argentina 5th, Chile 2nd-3rd, the
+    Copa BetPlay winner). Phase 1 is an even number of clubs, tie k entries 2k and 2k + 1; phase 2
+    gets phase 1's winners after its own and is paired first against last, so the winners meet
+    the clubs listed first. Phase 2 must come to 16 (eight ties, reg 8's four ties take them in
+    pairs). None without the option."""
+    q = recipe.get("libertadores_qualifying")
+    if not q:
+        return None
+
+    def one(item, where):
+        if not isinstance(item, (list, tuple)) or not item:
+            raise BuildError("libertadores_qualifying %s: %r -- want [league, position], [\"team\", id] or [\"game8\"]"
+                             % (where, item))
+        if item[0] == "game8":
+            return (LIB_QUAL, LIBQ_GAME8)
+        if item[0] == "team":
+            t = int(item[1])
+            if not 0 < t < 65536:
+                raise BuildError("libertadores_qualifying %s: team %d -- a team id of the game under 65536" % (where, t))
+            return (t, LIBQ_INVITED)
+        league, pos = item[0], int(item[1])
+        if isinstance(league, int) or str(league).strip().isdigit():
+            rid = int(league)
+        else:
+            p = by_name.get(str(league).strip().lower())
+            if p is None:
+                raise BuildError("libertadores_qualifying %s: no league %r in the recipe" % (where, league))
+            rid = p["rid"]
+        if not 1 <= pos <= 40:
+            raise BuildError("libertadores_qualifying %s: position %d" % (where, pos))
+        return (rid, pos)
+
+    p1 = [one(e, "phase1") for e in q.get("phase1") or []]
+    p2 = [one(e, "phase2") for e in q.get("phase2") or []]
+    if len(p1) % 2 or not 2 <= len(p1) <= 16:
+        raise BuildError("libertadores_qualifying: phase 1 has %d clubs -- an even number, 2 to 16" % len(p1))
+    if len(p2) + len(p1) // 2 != 16:
+        raise BuildError("libertadores_qualifying: phase 2 has %d clubs and %d winners of phase 1 -- 16 in all"
+                         % (len(p2), len(p1) // 2))
+    return {"phase1": p1, "phase2": p2}
+
+
+def libertadores_qualifying(pl, root, db, log=print):
+    """build the Libertadores qualifying phases 1 and 2 (libq_plan) into the world's tables in
+    <db>: one competition, a copy of the Libertadores' row, with two two-leg play-offs copied
+    from its qualifying round (mkeuropo.prerounds_single, one_match=False); returns the world
+    file's lpre lines (cup=0 po=1, phase 2 feed=8)"""
+    q = pl.get("libq")
+    if not q:
+        return []
+    import mkeuropo
+    cids, free = free_comp_ids(db)
+    if not cids or len(free) < 2:
+        raise BuildError("no free competition or regulation ids left for the Libertadores qualifying")
+    cid, m1, m2 = cids[0], free[0], free[1]
+    c1 = c2 = cid
+    n1 = len(q["phase1"]) // 2
+    try:
+        # its phases are shown on the Libertadores' own qualifying page (pages 1 and 2 before
+        # phase 3); fl26swiss leaves the competition out of the Info Database list only
+        mkeuropo.prerounds_single(db, root, cid, LIBQ_CODE, LIBQ_NAME, [(m1, n1), (m2, 8)],
+                                  log=log, one_match=False)
+    except SystemExit as e:
+        raise BuildError("Libertadores qualifying: %s" % e)
+    # phase 2: its own clubs, then phase 1's winners; first against last, the second named
+    # first (at home in the first leg, the clubs listed first host the second)
+    full = list(q["phase2"]) + [(m1 + 1024 * (k + 1), 0) for k in range(n1)]
+    pairs = []
+    for k in range(8):
+        pairs += [full[15 - k], full[k]]
+    fmt = lambda es: ",".join("%d:%d" % tuple(e) for e in es)
+    lines = ["lpre %d cup=0 fill=%d days=%d,%d entry=%s po=1" % (
+                 m1, LIBQ_P1["fill"], LIBQ_P1["days"][0], LIBQ_P1["days"][1], fmt(q["phase1"])),
+             "lpre %d cup=0 fill=%d days=%d,%d entry=%s po=1 feed=8" % (
+                 m2, LIBQ_P2["fill"], LIBQ_P2["days"][0], LIBQ_P2["days"][1], fmt(pairs))]
+    log("  Libertadores qualifying: phase 1 competition %d reg %d (%d ties, days %d and %d), phase 2 "
+        "competition %d reg %d (8 ties, days %d and %d) -> reg 8"
+        % (c1, m1, n1, LIBQ_P1["days"][0], LIBQ_P1["days"][1], c2, m2,
+           LIBQ_P2["days"][0], LIBQ_P2["days"][1]))
+    return lines
+
+
+def sudamericana_playoffs(pl, root, db, log=print):
+    """the Sudamericana's knockout play-off: a competition of its own (hidden from the Info
+    Database by fl26swiss) with one two-leg play-off of eight ties copied from the Libertadores
+    qualifying round. Tie k: the third of Libertadores group 7 - k (at home first) v the
+    runner-up of Sudamericana group k (at home in the second leg). Returns its lpre line."""
+    sud = next((c for c in pl.get("ccups") or [] if c.get("number") == SUDAM), None)
+    if not sud or not sud.get("first_stage") or not sud.get("ko") or sud.get("groups") != 8:
+        return []
+    import mkeuropo
+    cids, free = free_comp_ids(db)
+    if not cids or not free:
+        raise BuildError("no free competition or regulation id left for the Sudamericana play-off")
+    cid, m = cids[0], free[0]
+    try:
+        mkeuropo.prerounds_single(db, root, cid, SPO_CODE, SPO_NAME, [(m, 8)], log=log, one_match=False)
+    except SystemExit as e:
+        raise BuildError("Sudamericana play-off: %s" % e)
+    entry = []
+    for k in range(8):
+        entry += [(LIB_GROUPS + 1024 * (8 - k), 3), (sud["reg"] + 1024 * (k + 1), 2)]
+    log("  %s: competition %d, reg %d (8 ties, days %d and %d): Sudamericana runners-up v Libertadores "
+        "thirds -> the round of 16 (knockout %d)" % (SPO_NAME, cid, m, SPO_DAYS[0], SPO_DAYS[1], sud["ko"]))
+    return ["lpre %d cup=%d fill=%d days=%d,%d entry=%s poko=1" % (
+        m, sud["ko"], SPO_FILL, SPO_DAYS[0], SPO_DAYS[1], ",".join("%d:%d" % e for e in entry))]
+
+
 def cup_rounds(n):
     """the round ids a knockout of n clubs plays: the first is 0x2e, the ones after it count up
     to the quarter-final, which is 0x33 (then 0x34, 0x35) -- a field of eight or fewer starts on
@@ -2664,14 +2905,32 @@ def describe(pl):
                 lines.append("  %s: super cup, the champion v the cup winner (its date follows %s)"
                              % (c["super"], SUPER_CUP_LIKE))
     for cup in pl.get("ccups") or []:
+        o = cup.get("opts") or {}
         if cup.get("kind") == "super":
-            lines.append("  %s: the winners of the CAF Champions League and the Confederation Cup, one "
-                         "match in late July (first played in a career's second season)" % cup["name"])
+            what = ("the Sudamericana's winner against the game's own Libertadores champion"
+                    if cup["code"] == "FL_SAMRC" else
+                    "the winners of the CAF Champions League and the Confederation Cup")
+            first = ("a new career's first one: teams %s, preset" % " v ".join(map(str, o["first"]))
+                     if o.get("first") else "first played in a career's second season")
+            lines.append("  %s: %s, one match %s (%s)"
+                         % (cup["name"], what, "on day %d, late February, of last November's winners"
+                            % o["days"][-1] if o.get("cal") else "in late July", first))
             continue
         lines.append("  %s: %d clubs, %s" % (cup["name"], len(cup["entry"]),
                                              "%d groups of four, then a knockout of %d"
                                              % (cup["groups"], 2 * cup["groups"]) if cup["groups"]
                                              else "a knockout"))
+        if o.get("cal"):
+            lines.append("      on the South American calendar: drawn on day %d, played on the "
+                         "Libertadores' own days, closed with the Brasileirao" % o["fill"])
+        if cup.get("first_stage"):
+            n = cup["first_stage"]
+            lines.append("      first stage: %d clubs, %d one-match ties between clubs of the same country "
+                         "(the better placed at home) on day %d; the winners go into the groups"
+                         % (2 * n, n, SAM_FIRST_DAY))
+            nl = sum(1 for e in cup["entry"] if tuple(e) == (LIB_QUAL, QUAL_LOSER))
+            if nl:
+                lines.append("      groups: also the %d clubs eliminated in the Libertadores qualifying round" % nl)
     for note in pl.get("ccup_notes") or []:
         lines.append("  NOTE: " + note)
     own = own_places(pl)
@@ -3178,6 +3437,9 @@ def build(pl, base, game, replace=False, log=print):
         c["winners"] = list(c.get("winners") or []) + [[r, own_cup[r]] for r in
                                                        {e[1] for e in c["entry"] if e[0] == "cup"} if own_cup.get(r)]
     ccups = continental((pl.get("ccups") or []) + hc, tmp, db, log, alt_from(pl))
+    ccups += libertadores_qualifying(pl, tmp, db, log)
+    if pl.get("sud_playoffs", True):
+        ccups += sudamericana_playoffs(pl, tmp, db, log)
     # the confed line also tells fl26swiss which of our clubs the board sends to the AFC
     # Champions League or the Libertadores instead of the Champions League (GitHub #43), so a
     # world with a league outside UEFA gets it even with no continental cup
@@ -3702,8 +3964,14 @@ def continental(cups, root, db, log=print, start=None):
     cids, free = free_comp_ids(db)
     pres = [c for c in cups if (c.get("opts") or {}).get("pre")]
     keep = sum(1 for c in cups if (c.get("opts") or {}).get("reserve"))
-    if len(cids) < len(cups) or len(free) < sum(2 if c["groups"] else 1 for c in cups) + len(pres) + keep:
+    # a first stage of one-match play-offs (samerica_calendar): pre-rounds of eight ties, reg 2's
+    # copy with the legs mode 0, in a competition of their own (mkeuropo.prerounds_single)
+    preqs = [c for c in cups if (c.get("opts") or {}).get("preq")]
+    needq = len(preqs)
+    if (len(cids) < len(cups) + len(preqs)
+            or len(free) < sum(2 if c["groups"] else 1 for c in cups) + len(pres) + needq + keep):
         raise BuildError("no free competition or regulation ids left for the continental cups")
+    rounds1 = []
     args = ["--base", db, "--out", root]
     rounds = []
     for cup in cups:
@@ -3720,6 +3988,12 @@ def continental(cups, root, db, log=print, start=None):
             cup["entry"] = [(pre + 1024 * (e[1] + 1), 0) if e[0] == "pre" else e for e in cup["entry"]]
         elif (cup.get("opts") or {}).get("reserve"):
             free.pop(0)                                # the old cup's pre-round id: later ids stay put
+        if (cup.get("opts") or {}).get("preq"):        # tie j is <master> + 1024 * (j + 1)
+            ties = cup["opts"]["preq"]["ties"]
+            cup["preq_reg"] = m = free.pop(0)
+            cup["preq_cid"] = cids[len(cups) + len(rounds1)]
+            rounds1.append((cup["preq_cid"], cup["code"] + "Q", cup["opts"]["preq"]["name"], [(m, len(ties))]))
+            cup["entry"] = [(m + 1024 * (e[1] + 1), 0) if e[0] == "pre" else e for e in cup["entry"]]
         like = (cup.get("opts") or {}).get("like")
         args += ["--cup", "|".join(str(x) for x in (
             cup["name"], cup["code"], cids[k], reg, ko, cup["groups"],
@@ -3732,6 +4006,12 @@ def continental(cups, root, db, log=print, start=None):
             mkeuropo.prerounds(db, root, rounds, log=log)
         except SystemExit as e:
             raise BuildError("league cup pre-rounds: %s" % e)
+    for qcid, code, name, rs in rounds1:
+        import mkeuropo
+        try:
+            mkeuropo.prerounds_single(db, root, qcid, code, name, rs, log=log)
+        except SystemExit as e:
+            raise BuildError("one-match play-offs: %s" % e)
     said = call(mkccup, args)
     lines = [l.strip() for l in said.splitlines() if l.startswith("ccup ")]
     if len(lines) != len(cups):
@@ -3743,6 +4023,11 @@ def continental(cups, root, db, log=print, start=None):
         lines.append("lpre %d cup=%d fill=%d days=%s entry=%s" % (
             cup["pre_reg"], cup["ko"], pre["fill"], ",".join(map(str, pre["days"])),
             ",".join("%d:%d" % tuple(e) for e in pre["entry"])))
+    for cup in preqs:
+        pre = cup["opts"]["preq"]
+        lines.append("lpre %d cup=%d fill=%d days=%d,%d entry=%s single=1" % (
+            cup["preq_reg"], cup["ko"], pre["fill"], pre["day"], pre["day"],
+            ",".join("%d:%d" % tuple(e) for t in pre["ties"] for e in t)))
     for cup in cups:
         log("  %s: competition %d, %d clubs, %s" % (
             cup["name"], cup["cid"], len(cup["entry"]),
@@ -3815,6 +4100,10 @@ def ccup_options(line, cup):
         words.append("clubs=" + ",".join(map(str, o["clubs"])))
     if o.get("like"):                                  # 0.2.0: a single-match league cup
         words += ["like=%d" % o["like"], "draw=%s" % (o.get("draw") or "byes")]
+    if o.get("cal"):
+        words.append("cal=1")              # fl26swiss: the South American calendar (samerica_calendar)
+    if o.get("first"):
+        words.append("first=" + ",".join(map(str, o["first"])))   # fl26swiss: clubs for places no winner fills yet
     head, sep, name = line.partition(" name=")
     return "%s %s%s%s" % (head, " ".join(words), sep, name)
 
@@ -3951,6 +4240,8 @@ def cup_emblems(pl):
     for c in (pl.get("ccups") or []) + (pl.get("home_cups") or []):
         if c.get("cid"):
             out.append((c["cid"], c["name"], c.get("logo")))
+        if c.get("preq_cid"):                        # the first stage's own competition: the cup's emblem
+            out.append((c["preq_cid"], c["opts"]["preq"]["name"], c.get("logo")))
     if pl.get("uecl"):
         out.append((UECL_CID, "UECL", pl.get("uecl_logo")))
     return out
