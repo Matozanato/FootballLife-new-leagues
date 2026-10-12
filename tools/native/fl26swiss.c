@@ -583,9 +583,74 @@ typedef struct split_s split_t;
 static int split_part(uint16_t id, const split_t** out);
 static int q_setcl(uint16_t r, uint64_t id, uint64_t flag, char* ok);
 static void split_regular_clubs(uint16_t r, const split_t* s, u32vec* list);
+#define RIGHT_RVA 0x15799e0   /* u32* (u32* out, u16 source, u32 right_type): 0 = winner, 13+n = position n+1 */
+#define NOCLUB_RVA 0x351ae44  /* what it answers when nobody holds the right */
+typedef uint32_t* (*right_fn)(uint32_t* out, uint64_t source, uint32_t type);
+
+#define MAX_CAL_SCUPS 32
+typedef struct { uint16_t reg, league, cup; } cal_scup_t;
+static cal_scup_t g_cal_scup[MAX_CAL_SCUPS];
+static int g_ncal_scup = 0;
+
+static const cal_scup_t* calendar_scup(uint16_t reg)
+{
+  for (int i = 0; i < g_ncal_scup; i++)
+    if (g_cal_scup[i].reg == reg) return &g_cal_scup[i];
+  return 0;
+}
+
+static uint32_t calendar_scup_right(uint16_t source, uint32_t type)
+{
+  uint32_t c = 0;
+  ((right_fn)(uintptr_t)(g_base + RIGHT_RVA))(&c, source, type);
+  if (c == *(uint32_t*)(g_base + NOCLUB_RVA) || !(c >> 14)) return 0;
+  return c;
+}
+
+__declspec(dllexport) int fl26_swiss_calendar_supercups(const uint16_t* v, int n)
+{
+  if ((!v && n) || n < 0) return -1;
+  int k = 0;
+  for (int i = 0; i < n && k < MAX_CAL_SCUPS; i++) {
+    uint16_t reg = v[3 * i], league = v[3 * i + 1], cup = v[3 * i + 2];
+    if (!reg || !league || !cup) continue;
+    int dup = 0;
+    for (int j = 0; j < k; j++) if (g_cal_scup[j].reg == reg) dup = 1;
+    if (dup) continue;
+    g_cal_scup[k].reg = reg;
+    g_cal_scup[k].league = league;
+    g_cal_scup[k].cup = cup;
+    k++;
+  }
+  g_ncal_scup = k;
+  logf("fl26swiss: %d calendar-year Super Cup(s) configured", k);
+  return k;
+}
+
 char setcl_handler(uint64_t id, u32vec* list, uint64_t flag)
 {
   uint16_t r = (uint16_t)id, row = ko_row(r);
+  const cal_scup_t* cs = calendar_scup(r);
+  if (cs && list && list->b && list->e >= list->b && list->e - list->b == 2) {
+    uint32_t champion = calendar_scup_right(cs->league, 13);
+    uint32_t runner   = calendar_scup_right(cs->league, 14);
+    uint32_t cupwin   = calendar_scup_right(cs->cup, 0);
+
+    if (champion && cupwin) {
+      uint32_t opponent =
+        ((champion >> 14) == (cupwin >> 14)) ? runner : cupwin;
+
+      if (opponent && (opponent >> 14) != (champion >> 14)) {
+        uint32_t clubs[2] = { champion, opponent };
+        u32vec fixed = { clubs, clubs + 2, clubs + 2 };
+        logf("fl26swiss: calendar Super Cup %u -- league %u champion %u v %s %u",
+             (unsigned)cs->reg, (unsigned)cs->league, champion >> 14,
+             (champion >> 14) == (cupwin >> 14) ? "league runner-up" : "cup winner",
+             opponent >> 14);
+        return ((setclr_fn)(uintptr_t)g_tramp_setcl)(id, &fixed, flag);
+      }
+    }
+  }
   if (r == 1 && cwc_world()) return cwc_setcl(id, list, flag);
   if (r == 1 && list && list->b && list->e > list->b) cwc_game_champions(list);
   if (is_playoff(r)) { char ok; if (q_setcl(r, id, flag, &ok)) return ok; }
@@ -1238,9 +1303,7 @@ static int g_access_cfg = 0;
 typedef struct { uint16_t reg; uint16_t n; int day; uint32_t club[FINAL_MAX]; } final_t;
 static final_t g_final[64]; static int g_nfinal = 0;
 static const char* COMP_NAME[3] = { "Champions League", "Europa League", "Conference League" };
-#define RIGHT_RVA 0x15799e0   /* u32* (u32* out, u16 source, u32 right_type): 0 = winner, 13+n = position n+1 */
-#define NOCLUB_RVA 0x351ae44  /* what it answers when nobody holds the right */
-typedef uint32_t* (*right_fn)(uint32_t* out, uint64_t source, uint32_t type);
+
 typedef struct { uint16_t reg; int day; uint32_t club; } cupwin_t;
 static cupwin_t g_cupwin[32]; static int g_ncupwin = 0;
 
@@ -4850,6 +4913,11 @@ static void declash_log(uint16_t id, int moved)
  * go first, then the national cups, then the rest is cut to two days, and last the old
  * rule -- off the European day itself -- stays. */
 #define REST 3
+#define CALENDAR_NATCUP_LIKE 23
+static uint16_t g_calendar_natcup_shift = 0;
+#define MAX_DATE_DAYS 32
+static uint16_t g_calendar_natcup_days[MAX_DATE_DAYS];
+static int g_calendar_natcup_ndays = 0;
 static const uint16_t NATCUP_DAYS[12] = { 251, 254, 286, 289, 6, 9, 41, 44, 83, 86, 132, 135 };
 /* The national cups' first round (calendar case 6: 251 and 254) is in one of the qualifying's six
    weeks every year (qr_day), and a club in both played them a day apart.  It moves to the first
@@ -4974,11 +5042,12 @@ static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
   for (int k = 0; k < g_nccup; k++)
     if (g_ccup[k].national && g_ccup[k].nc && (ccup_of_league(k, id) || ccup_invites(k, id)))
       for (int i = 0; i < g_ccup[k].nd && i < CCUP_MAX_DAYS; i++) block(bad, g_ccup[k].days[i], buf);
-  if (g_org != 182) return;
+  /* Calendar-year leagues do not use UEFA dates, but may now have
+     their own national cup and league cup. */
   /* only a league that sends clubs to Europe keeps clear of its days: a second division blocked
      by them as well had one day left between a midweek round and a European week, and every
      league of a big world met on it (2026-10-08, the modpack: day 65 asked 403 matches of 280) */
-  if (access_league(id)) {
+  if (g_org == 182 && access_league(id)) {
     for (int i = 0; i < FL26_SWISS36_MATCHDAYS; i++) block(bad, swiss_day(i), buf);
     for (int i = 0; i < FL26_SWISS6_MATCHDAYS; i++) block(bad, eday(UECL_DAYS[i]), buf);
     for (int c = 0; c < 3; c++) {
@@ -4991,7 +5060,19 @@ static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
   /* a national cup round two days from a league round, not three: with three, the one day left
      between New Year's round and the cup's (day 3), and between early February's and the cup's
      (day 38), took every league of a big world -- 330 matches asked of 280 (2026-10-08) */
-  if (level < 2) for (int i = 0; i < 12; i++) block(bad, natcup_day(i), buf > 2 ? buf - 1 : buf);
+  if (level < 2) {
+    if (g_org == 182) {
+      for (int i = 0; i < 12; i++)
+        block(bad, natcup_day(i), buf > 2 ? buf - 1 : buf);
+    } else if (g_calendar_natcup_ndays) {
+      for (int i = 0; i < g_calendar_natcup_ndays; i++)
+        block(bad, g_calendar_natcup_days[i], buf > 2 ? buf - 1 : buf);
+    } else if (g_calendar_natcup_shift) {
+      for (int i = 0; i < 12; i++)
+        block(bad, (NATCUP_DAYS[i] + g_calendar_natcup_shift) % 365u,
+              buf > 2 ? buf - 1 : buf);
+    }
+  }
   if (level < 1)
     for (int k = 0; k < g_nccup; k++) {
       if (!g_ccup[k].national || g_ccup[k].nc || !ccup_of_league(k, id)) continue;
@@ -6167,6 +6248,128 @@ static uint64_t split_dates(uint16_t id, uint64_t reg, void* vec, int part, cons
 #define MAX_DATELIKE 32
 static uint16_t g_dlike[MAX_DATELIKE][2]; static int g_ndlike = 0;
 
+/* Optional day shift for `dates <ours> like=<shipped> shift=<days>`.
+   Kept separate from datelike so old world files keep their old behaviour. */
+static uint16_t g_dshift[MAX_DATELIKE][2]; static int g_ndshift = 0;
+
+typedef struct {
+  uint16_t id, n;
+  uint16_t day[MAX_DATE_DAYS];
+} datedays_t;
+
+static datedays_t g_ddays[MAX_DATELIKE];
+static int g_nddays = 0;
+
+#define CALENDAR_CUP_TEARDOWN_LIKE   55  /* Japan Cup: calendar-year cup rollover */
+#define CALENDAR_SUPER_TEARDOWN_LIKE 97  /* Japan Super Cup: calendar-year super cup rollover */
+
+static uint16_t date_shift_for(uint16_t id)
+{
+  for (int i = 0; i < g_ndshift; i++)
+    if (g_dshift[i][0] == id) return g_dshift[i][1];
+  return 0;
+}
+
+static const datedays_t* date_days_for(uint16_t id)
+{
+  for (int i = 0; i < g_nddays; i++)
+    if (g_ddays[i].id == id) return &g_ddays[i];
+  return 0;
+}
+
+static int calendar_natcup_round_slot(uint32_t round)
+{
+  static const uint16_t rounds[7] = {
+    0x2e, 0x2f, 0x30, 0x33, 0x34, 0x35, 0x36
+  };
+
+  for (int i = 0; i < 7; i++)
+    if (round == rounds[i]) return i;
+
+  return -1;
+}
+
+static int calendar_natcup_slot(uint32_t round, uint32_t kind)
+{
+  int r = calendar_natcup_round_slot(round);
+  if (r < 0 || kind > 1) return -1;
+  return 2 * r + (int)kind;
+}
+
+__declspec(dllexport) int fl26_swiss_datedays(const uint16_t* v, int n)
+{
+  if ((!v && n) || n < 0) return -1;
+
+  if (n == 0) {
+    g_nddays = 0;
+    g_calendar_natcup_ndays = 0;
+    return 0;
+  }
+
+  if (n < 2 || n > MAX_DATE_DAYS + 1) return -1;
+
+  uint16_t id = v[0];
+  if (id < 2) return 0;
+
+  int k = -1;
+  for (int i = 0; i < g_nddays; i++)
+    if (g_ddays[i].id == id) {
+      k = i;
+      break;
+    }
+
+  if (k < 0) {
+    if (g_nddays >= MAX_DATELIKE) return 0;
+    k = g_nddays++;
+  }
+
+  g_ddays[k].id = id;
+  g_ddays[k].n = (uint16_t)(n - 1);
+
+  for (int i = 1; i < n; i++)
+    g_ddays[k].day[i - 1] = (uint16_t)(v[i] % 365u);
+
+  for (int i = 0; i < g_ndlike; i++)
+    if (g_dlike[i][0] == id &&
+        g_dlike[i][1] == CALENDAR_NATCUP_LIKE) {
+      g_calendar_natcup_ndays = n - 1;
+      memcpy(g_calendar_natcup_days, g_ddays[k].day,
+             (size_t)g_calendar_natcup_ndays * sizeof(uint16_t));
+    }
+
+  logf("fl26swiss: explicit date days set for reg %u (%d records)",
+       (unsigned)id, n - 1);
+  return 1;
+}
+
+__declspec(dllexport) int fl26_swiss_dateshift(const uint16_t* v, int n)
+{
+  if ((!v && n) || n < 0) return -1;
+  if (n > MAX_DATELIKE) n = MAX_DATELIKE;
+
+  g_calendar_natcup_shift = 0;
+  int k = 0;
+  for (int i = 0; i < n; i++) {
+    uint16_t id = v[2 * i];
+    uint16_t shift = (uint16_t)(v[2 * i + 1] % 365u);
+
+    if (id >= 2 && shift) {
+      g_dshift[k][0] = id;
+      g_dshift[k][1] = shift;
+
+      for (int j = 0; j < g_ndlike; j++)
+        if (g_dlike[j][0] == id && g_dlike[j][1] == CALENDAR_NATCUP_LIKE)
+          g_calendar_natcup_shift = shift;
+
+      k++;
+    }
+  }
+
+  g_ndshift = k;
+  logf("fl26swiss: date shift set for %d cup(s)", k);
+  return k;
+}
+
 __declspec(dllexport) int fl26_swiss_datelike(const uint16_t* v, int n)
 {
   if ((!v && n) || n < 0) return -1;
@@ -6186,7 +6389,67 @@ static uint64_t datelike_dates(uint16_t id, uint64_t reg, void* vec)
   for (int i = 0; i < g_ndlike; i++) {
     if (g_dlike[i][0] != id) continue;
     uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | g_dlike[i][1], vec);
-    natcup_fix(id, vec);
+    const datedays_t* dd = date_days_for(id);
+
+    if (dd) {
+      vec_t* sv = (vec_t*)vec;
+      size_t sn = (sv && sv->b && sv->e >= sv->b)
+                ? (size_t)(sv->e - sv->b) / sizeof(date_t) : 0;
+      date_t* sr = sv ? (date_t*)sv->b : 0;
+      int ok = sr != 0;
+
+      if (ok && g_dlike[i][1] == CALENDAR_NATCUP_LIKE && dd->n == 7) {
+        for (size_t j = 0; j < sn; j++)
+          if (calendar_natcup_round_slot(sr[j].round) < 0)
+            ok = 0;
+
+        if (ok)
+          for (size_t j = 0; j < sn; j++)
+            sr[j].day = dd->day[calendar_natcup_round_slot(sr[j].round)];
+      } else if (ok && g_dlike[i][1] == CALENDAR_NATCUP_LIKE && dd->n == 14) {
+        for (size_t j = 0; j < sn; j++)
+          if (calendar_natcup_slot(sr[j].round, sr[j].kind) < 0)
+            ok = 0;
+
+        if (ok)
+          for (size_t j = 0; j < sn; j++)
+            sr[j].day = dd->day[calendar_natcup_slot(sr[j].round, sr[j].kind)];
+      } else if (ok && g_dlike[i][1] == CALENDAR_SUPER_TEARDOWN_LIKE && dd->n == 1) {
+        for (size_t j = 0; j < sn; j++)
+          sr[j].day = dd->day[0];
+      } else if (ok && g_dlike[i][1] == CALENDAR_SUPER_TEARDOWN_LIKE && dd->n == 2) {
+        for (size_t j = 0; j < sn; j++)
+          if (sr[j].kind > 1)
+            ok = 0;
+
+        if (ok)
+          for (size_t j = 0; j < sn; j++)
+            sr[j].day = dd->day[sr[j].kind];
+      } else if (ok && sn == dd->n) {
+        for (size_t j = 0; j < sn; j++)
+          sr[j].day = dd->day[j];
+      } else {
+        ok = 0;
+      }
+
+      if (!ok)
+        logf("fl26swiss: reg %u -- explicit dates rejected: game gave %u records, world has %u",
+             (unsigned)id, (unsigned)sn, (unsigned)dd->n);
+    } else {
+      uint16_t shift = date_shift_for(id);
+
+      if (shift) {
+        vec_t* sv = (vec_t*)vec;
+        size_t sn = (sv && sv->b && sv->e >= sv->b)
+                  ? (size_t)(sv->e - sv->b) / sizeof(date_t) : 0;
+        date_t* sr = sv ? (date_t*)sv->b : 0;
+
+        for (size_t j = 0; sr && j < sn; j++)
+          sr[j].day = (sr[j].day + shift) % 365u;
+      } else {
+        natcup_fix(id, vec);
+      }
+    }
     vec_t* v = (vec_t*)vec;
     size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
     int seen = 0;
@@ -6710,6 +6973,58 @@ static void cal_dedupe(void)
   else if (k_ != sk) logf("fl26swiss: day lists -- %d match id(s), each listed once", total);
   sk = k_;
 }
+/* A calendar-year Super Cup is admitted by the season builder before the
+ * New Year teardown. The teardown then closes it, but unlike a national cup
+ * nothing in the game's progression fills it again. Once last season's league
+ * and cup rights exist, rebuild the two-club field and register the cup so its
+ * match is made. */
+static void calendar_scup_fill_days(void)
+{
+  int d = today();
+  if (!g_ncal_scup || d < 0 || d >= 38) return;
+
+  for (int i = 0; i < g_ncal_scup; i++) {
+    const cal_scup_t* cs = &g_cal_scup[i];
+    unsigned char* rec = get_rec(cs->reg);
+    if (!rec || ccup_matches(cs->reg) > 0) continue;
+
+    uint32_t champion = calendar_scup_right(cs->league, 13);
+    uint32_t runner   = calendar_scup_right(cs->league, 14);
+    uint32_t cupwin   = calendar_scup_right(cs->cup, 0);
+    if (!champion || !cupwin) continue;
+
+    uint32_t opponent =
+      ((champion >> 14) == (cupwin >> 14)) ? runner : cupwin;
+    if (!opponent || (opponent >> 14) == (champion >> 14)) continue;
+
+    uint32_t clubs[2] = { champion, opponent };
+    u32vec v = { clubs, clubs + 2, clubs + 2 };
+
+    ((setclr_fn)(uintptr_t)g_tramp_setcl)(cs->reg, &v, 1);
+    run_flush();
+
+    if (rec_count(rec) != 2) {
+      logf("fl26swiss: calendar Super Cup %u -- day %d: set_clubs left %u club(s)",
+           (unsigned)cs->reg, d, (unsigned)rec_count(rec));
+      continue;
+    }
+
+    start_stage(0, cs->reg);
+
+    uint16_t id = cs->reg;
+    struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv =
+      { &id, &id + 1, &id + 1 };
+
+    ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
+    run_flush();
+
+    logf("fl26swiss: calendar Super Cup %u -- day %d: league %u champion %u v %s %u; registered, %d match record(s)",
+         (unsigned)cs->reg, d, (unsigned)cs->league, champion >> 14,
+         (champion >> 14) == (cupwin >> 14) ? "league runner-up" : "cup winner",
+         opponent >> 14, ccup_matches(cs->reg));
+  }
+}
+
 char daychk_handler(void* ctx)
 {
   char r = ((daychk_fn)(uintptr_t)g_tramp_daychk)(ctx);
@@ -6726,6 +7041,7 @@ char daychk_handler(void* ctx)
   apclau_keep();
   lpre_fill_days();
   ccup_fill_days();
+  calendar_scup_fill_days();
   for (int p = NQR - 1; p >= 0; p--) q_fill(p);
   cal_dedupe();
   return r;
@@ -6772,8 +7088,12 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   uint16_t dcl[MAX_DATELIKE]; int ndcl = 0;
   for (int i = 0; i < g_ndlike; i++) {
     uint16_t id = g_dlike[i][0]; int like = 0, there = 0;
+    uint16_t close_like = g_dlike[i][1];
+    if (date_shift_for(id) || date_days_for(id))
+      close_like = g_dlike[i][1] == CALENDAR_SUPER_TEARDOWN_LIKE
+                 ? CALENDAR_SUPER_TEARDOWN_LIKE : CALENDAR_CUP_TEARDOWN_LIKE;
     if (id < 176 || !get_rec(id)) continue;
-    for (int j = 0; j < n; j++) { if (in->b[j] == g_dlike[i][1]) like = 1; if (in->b[j] == id) there = 1; }
+    for (int j = 0; j < n; j++) { if (in->b[j] == close_like) like = 1; if (in->b[j] == id) there = 1; }
     if (like && !there && n + ndcl < 512) dcl[ndcl++] = id;
   }
   if (!euro && !ndcl) return in;

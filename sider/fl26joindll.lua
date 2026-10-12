@@ -81,6 +81,15 @@ local IDS = { 11, 49, 60, 61, 62, 74, 76, 93, 94, 96, 98, 100, 109, 110, 111, 11
 -- split lines (groups=); empty when the world has no split.
 local TD_EXTRA = {}
 
+-- National and super cups of our calendar-year countries must join the season builder
+-- at creation, like the shipped cups. They stay separate from IDS: IDS are leagues.
+local BUILDER_EXTRA = {}
+local BUILDER_CONF = {}
+
+-- Competition.bin confederation code -> regulation runtime code (+0x300 bits 25..28).
+-- 2 UEFA, 3 AFC, 4 CONMEBOL, 5 CAF, 6 CONCACAF, 7 OFC.
+local RUNTIME_CONF = { [2] = 1, [3] = 2, [4] = 5, [5] = 6, [6] = 3, [7] = 0 }
+
 -- The world file: modules\fl26world.txt, written by FL26 Mod Studio's League Builder.
 -- One table per league -- id, then whatever the line gives: cid, region, country, slot, tier,
 -- above, promote, demote, clubs, legs (numbers), name (text) -- in file order. nil when
@@ -178,6 +187,8 @@ function m.init(ctx)
     typedef void (*fl26_join_stats_t)(uint32_t*);
     typedef int  (*fl26_join_teardown_extra_t)(const uint16_t*, int);
     typedef int  (*fl26_join_calendar_t)(const uint16_t*, int);
+    typedef int  (*fl26_join_builder_extra_t)(const uint16_t*, int);
+    typedef int  (*fl26_join_builder_conf_t)(const uint16_t*, int);
     typedef int  (*fl26_join_season_types_t)(const uint8_t*, int);
   ]])
 
@@ -207,6 +218,31 @@ function m.init(ctx)
 
   local world, regular, groups, seasons = read_world(ctx)
   SEASONS = seasons or {}
+
+  BUILDER_EXTRA = {}
+  BUILDER_CONF = {}
+  if world then
+    local seen = {}
+    for _, L in ipairs(world) do
+      -- Added national and super cups are absent from the EXE's compiled calendar-year
+      -- include list; shipped cups are already there.
+      if (L.exhibition or 0) == 0 and cal_region(L.region)
+          and L.cup and L.cup > 175 and not seen[L.cup] then
+        BUILDER_EXTRA[#BUILDER_EXTRA + 1] = L.cup
+        local rc = RUNTIME_CONF[L.conf]
+        if rc ~= nil then BUILDER_CONF[#BUILDER_CONF + 1] = { L.cup, rc } end
+        seen[L.cup] = true
+      end
+      if (L.exhibition or 0) == 0 and cal_region(L.region)
+          and L.scup and L.scup > 175 and not seen[L.scup] then
+        BUILDER_EXTRA[#BUILDER_EXTRA + 1] = L.scup
+        local rc = RUNTIME_CONF[L.conf]
+        if rc ~= nil then BUILDER_CONF[#BUILDER_CONF + 1] = { L.scup, rc } end
+        seen[L.scup] = true
+      end
+    end
+  end
+
   if world then
     IDS = {}
     local shown = 0
@@ -245,6 +281,32 @@ function m.init(ctx)
   local status = tonumber(install(base, CAVE_VA, idbuf, #IDS, logpath))
   if status == 0 then
     log(string.format("fl26joindll: installed -- %d added leagues will be registered on the first registration day of the season; the DLL's own log is %s (F10 = counters)", #IDS, logpath))
+
+    if #BUILDER_EXTRA > 0 then
+      local pb = ffi.C.GetProcAddress(h, "fl26_join_builder_extra")
+      if pb == nil then
+        log("fl26joindll: this fl26join.dll has no fl26_join_builder_extra -- calendar-year cups are not added to the season builder")
+      else
+        local bbuf = ffi.new("uint16_t[?]", #BUILDER_EXTRA)
+        for i, v in ipairs(BUILDER_EXTRA) do bbuf[i - 1] = v end
+        local k = tonumber(ffi.cast("fl26_join_builder_extra_t", pb)(bbuf, #BUILDER_EXTRA))
+        log(string.format("fl26joindll: %d calendar-year cup(s) added to the season builder", k))
+      end
+    end
+    if #BUILDER_CONF > 0 then
+      local pc = ffi.C.GetProcAddress(h, "fl26_join_builder_conf")
+      if pc == nil then
+        log("fl26joindll: this fl26join.dll has no fl26_join_builder_conf -- added calendar-year cups keep their copied confederation")
+      else
+        local cbuf = ffi.new("uint16_t[?]", 2 * #BUILDER_CONF)
+        for i, v in ipairs(BUILDER_CONF) do
+          cbuf[2 * i - 2], cbuf[2 * i - 1] = v[1], v[2]
+        end
+        local k = tonumber(ffi.cast("fl26_join_builder_conf_t", pc)(cbuf, #BUILDER_CONF))
+        log(string.format("fl26joindll: runtime confederation set for %d calendar-year cup(s)", k))
+      end
+    end
+
     if #TD_EXTRA > 0 then
       local pt = ffi.C.GetProcAddress(h, "fl26_join_teardown_extra")
       if pt == nil then log("fl26joindll: this fl26join.dll has no fl26_join_teardown_extra -- split groups will not be closed")
