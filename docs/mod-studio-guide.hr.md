@@ -289,7 +289,9 @@ klub (ili stisni **Igrači** na Novim klubovima), pa igrača:
 - **Gore / Dolje u redoslijedu**: redoslijed u momčadi. Prvih jedanaest počinje utakmicu;
 - **Dodaj igrača** (kopija igrača kojeg odabereš, s novim ID-om; samo klubovi iz igre),
   **Makni iz kluba** (novi klub zadržava barem 18 igrača);
-- **Najboljih jedanaest** stavi najjačeg igrača na svako mjesto; **Razina momčadi...** podigne
+- **Najboljih jedanaest** stavi najjačeg igrača na svako mjesto (igrač kojem to nije
+  registrirana pozicija, ali je može igrati, broji se sa 6 manje, a ostaje za svoju poziciju
+  kad bi ona ostala prazna); **Razina momčadi...** podigne
   ili spusti sve sposobnosti cijele momčadi;
 - **Teren** (novi klubovi): prvih jedanaest u formaciji kluba. Odaberi igrača na popisu, pa
   klikni mjesto da ga staviš tamo; tko je ondje stajao, uzima njegovo mjesto u redoslijedu momčadi;

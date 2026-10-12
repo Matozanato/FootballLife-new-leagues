@@ -352,21 +352,37 @@ def fill_tiers(pl, base, log=print):
 LINEUP = ["GK", "CB", "CB", "RB", "LB", "DMF", "DMF", "RMF", "LMF", "AMF", "CF"]   # 4-2-3-1
 
 
+SECOND_POS = 6   # a player at a position he can also play (rating 1) counts with this much off
+
+
 def best_eleven(rows, lineup=None):
     """{player: new order} that puts the strongest player for each place of the formation at
     orders 0-10 (the formation hands out places in that order) -- lineup, the role of each
     place, or the new clubs' default 4-2-3-1 -- and everyone else after them in the order
-    they had"""
+    they had. A player whose registered position the place is (or rated 2 there) competes at
+    his overall; one who can also play there (rated 1) at his overall less SECOND_POS, so a
+    Declan Rice (CMF, can play DMF) starts over a 62-rated youth DMF, but a real DMF close
+    to him keeps the place; one who cannot play there comes after everyone who can, and one
+    whose own position would be left short later stays for it."""
     left = list(rows)
     pick = []
-    for pos in lineup or LINEUP:
+    places = list(lineup or LINEUP)
+    for i, pos in enumerate(places):
+        later = places[i + 1:]
+
+        def needed(r):
+            """taking r for this place would leave a later place of his own position short"""
+            reg = r.get("Registered Position")
+            return later.count(reg) > sum(1 for x in left if x is not r and x.get("Registered Position") == reg)
+
         def score(r):
             rating = int(r.get(pos, "0") or 0) if str(r.get(pos, "")).isdigit() else 0
-            own = r.get("Registered Position") == pos
+            own = r.get("Registered Position") == pos or rating == 2
             # a goalkeeper in goal, and nobody else while there is one; no goalkeeper outfield
             # while an outfield player is left (Dinamo Zagreb's third keeper at centre back)
             keeper = (r.get("Registered Position") == "GK") == (pos == "GK")
-            return (keeper, own or rating == 2, rating, overall(dict(r, **{"Registered Position": pos})))
+            o = overall(dict(r, **{"Registered Position": pos}))
+            return (keeper, own or not needed(r), own or rating == 1, o - (0 if own else SECOND_POS), own, o)
         if not left:
             break
         best = max(left, key=score)

@@ -312,7 +312,9 @@ propio juego. Elige un club (o pulsa **Jugadores** en Clubes nuevos) y luego un 
   titulares;
 - **Añadir jugador** (una copia del jugador que elijas, con un id nuevo; solo clubes del juego),
   **Quitar del club** (un club nuevo conserva al menos 18 jugadores);
-- **Mejor once** pone al jugador más fuerte en cada puesto; **Nivel de la plantilla...** sube o
+- **Mejor once** pone al jugador más fuerte en cada puesto (un jugador que puede jugar ahí
+  pero está registrado en otro puesto cuenta con 6 menos, y se queda para su puesto cuando
+  este quedaría sin nadie); **Nivel de la plantilla...** sube o
   baja cada capacidad de toda la plantilla;
 - **Campo** (clubes nuevos): los once primeros en la formación del club. Elige un jugador en la
   lista y haz clic en un puesto para ponerlo ahí; quien estaba ahí toma su lugar en el orden de la plantilla;

@@ -107,6 +107,12 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   stay after the last country of their continent instead of going after every country.
 - Import kits replaces a map line whose kit folder is missing, instead of keeping it.
 - Players: the "a new club keeps at least 18 players" check counts the players who joined it.
+- Best eleven (and the line-up Build gives a new club) lets a player who can also play a
+  place take it from a much weaker player registered there: he counts with 6 off, so Rice
+  (CMF, can play DMF, 83) starts at DMF over a 62 youth DMF while a real DMF close to him keeps
+  the place; a player stays for his own place when it would otherwise be left short. Before,
+  the registered position always won, so a club's best midfielder sat on the bench behind
+  its weakest.
 - A package whose NewLife club list has gaps no longer stops Check the plan.
 - A player joined from another database that the game does not have is skipped.
 - Check the plan reports a Conference League world without its play-off (regulation 189).

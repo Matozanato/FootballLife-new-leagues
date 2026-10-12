@@ -325,7 +325,9 @@ jeu. Choisissez un club (ou appuyez sur **Joueurs** dans Nouveaux clubs), puis u
   commencent le match ;
 - **Ajouter un joueur** (une copie du joueur choisi, avec un nouvel id ; clubs du jeu seulement),
   **Retirer du club** (un nouveau club garde au moins 18 joueurs) ;
-- **Meilleur onze** place le joueur le plus fort à chaque poste ; **Niveau de l'effectif...**
+- **Meilleur onze** place le joueur le plus fort à chaque poste (un joueur qui peut y jouer
+  mais est enregistré à un autre poste compte 6 de moins, et reste pour son poste quand
+  celui-ci resterait vide) ; **Niveau de l'effectif...**
   monte ou baisse chaque capacité de tout l'effectif ;
 - **Terrain** (nouveaux clubs) : le onze de départ dans la formation du club. Choisissez un joueur
   dans la liste, puis cliquez sur un poste pour l'y placer ; celui qui s'y trouvait prend sa place dans l'ordre de l'effectif ;

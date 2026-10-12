@@ -299,7 +299,9 @@ Pick a club (or press **Players** on New clubs), then a player:
 - **Order up / Order down**: the squad order. The first eleven start the match;
 - **Add player** (a copy of the player you pick, with a new id; clubs of the game only),
   **Remove from club** (a new club keeps at least 18 players);
-- **Best eleven** puts the strongest player at every place; **Squad level...** raises or
+- **Best eleven** puts the strongest player at every place (a player who can also play
+  the place, but is registered elsewhere, counts with 6 off, and he stays for his own
+  place when it would be left short); **Squad level...** raises or
   lowers every ability of the whole squad;
 - **Pitch** (new clubs): the first eleven in the club's formation. Select a player in the list,
   then click a place to put him there; whoever stood there takes his place in the squad order;
