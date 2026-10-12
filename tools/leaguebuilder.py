@@ -3383,7 +3383,7 @@ def build(pl, base, game, replace=False, log=print):
             % (sum(1 for e in own_places(pl) if e[2] in fl26world.UEFA_LINE), len(uefa)))
     fl26world.write_world(os.path.join(tmp, MARK), pl["world"], leagues, split_lines, uefa, uecl,
                           ccups + dates_lines(pl, db) + season_lines(pl, db) + july_lines(pl, base)
-                          + rcal_lines(pl, base, confed) + first_lines(pl)
+                          + rcal_lines(pl, base, confed) + cupdays_lines(pl, base, db, log) + first_lines(pl)
                           + order_lines(pl, base, confed)
                           + kickorder_lines(pl, base, confed)
                           + (["nopool " + " ".join(str(t) for t in nopool)] if nopool else []) + newfaces
@@ -3794,6 +3794,66 @@ def rcal_lines(pl, base, confed):
         if c:
             seen.add(p["rid"])
             out.append(realcal.line(p["rid"], c))
+    return out
+
+
+CUPDAYS_MAX = 48                          # days a `cupdays` line carries (fl26swiss CUPD_DAYS)
+
+
+def cupdays_lines(pl, base, db, log=print):
+    """world file lines `cupdays <league reg> <day> ...`: the days the cups of the league's country
+    play on, for fl26swiss.dll to keep its rounds a day clear of. It knew only our own cups, the
+    European days and the August-May national cups (calendar case 6); a cup of any other calendar
+    -- Copa Chile's February and March rounds (case 9) -- had a new Chile D2 play the league the
+    day after its quarter-final (antonimus, 2026-10-12). Every league of a country with a cup
+    gets one, the game's leagues as well as ours: the game's cups by the dates the exe ships
+    (tools/caltab.py, the switch over regulation ids 2..175), a cup of ours by the cup it is
+    dated like (`dates <cup> like=<cup>`). Nothing when the exe cannot be read."""
+    try:
+        import caltab
+        img = caltab.Image()
+        cs, idc = caltab.cases(img), caltab.id_case(img)
+    except Exception as e:                          # no exe at hand: the old spacing stays
+        log("  NOTE: the game's cup dates could not be read (%s); leagues keep clear of our cups only" % e)
+        return []
+
+    natcup = {251, 254, 286, 289, 6, 9, 41, 44, 83, 86, 132, 135}   # fl26swiss NATCUP_DAYS
+
+    def days_of(rid):
+        c = idc.get(rid) if rid and rid <= caltab.LAST_ID else None
+        d = set(cs[c][2]) if c is not None and c != caltab.CASE_EMPTY and c in cs else set()
+        return set() if d <= natcup else d          # case 6: the DLL moves and keeps clear of those
+
+    comp, regs = M.load(base, "Competition.bin"), M.load(base, "CompetitionRegulation.bin")
+    region_of_cid = {comp[i * M.COMP + M.CID_OFF]: M.dec_region(comp[i * M.COMP + M.REGION_OFF])
+                     for i in range(len(comp) // M.COMP)}
+    cup_days, game = {}, {}
+    for i in range(len(regs) // M.REG):
+        g = regs[i * M.REG:(i + 1) * M.REG]
+        rid, region = u16(g, M.R_ID), region_of_cid.get(g[M.R_CID])
+        if region is None or rid >= 1024:
+            continue
+        if g[M.R_TYPE] == 3:                        # a knockout cup of the country
+            cup_days.setdefault(region, set()).update(days_of(rid))
+        elif g[M.R_TYPE] in (4, fl26world.SPLIT_TOTAL):
+            game[rid] = region
+    for p in pl["leagues"]:                         # a new country's own cups
+        c = p.get("own_cup")
+        if not c or not c.get("reg") or p.get("region") is None:
+            continue
+        for reg, code in ((c["reg"], c["like"]), (c.get("super_reg"), SUPER_CUP_LIKE if c.get("super") else None)):
+            like = like_reg(db, code) if reg and code else None
+            if like:
+                cup_days.setdefault(p["region"], set()).update(days_of(like))
+    leagues = dict(game)
+    for p in pl["leagues"]:
+        if p.get("rid") and p.get("region") is not None and not p.get("exhibition"):
+            leagues[p["rid"]] = p["region"]
+    out = []
+    for rid, region in sorted(leagues.items()):
+        days = sorted(cup_days.get(region) or ())[:CUPDAYS_MAX]
+        if days:
+            out.append("cupdays %d %s" % (rid, " ".join(str(d) for d in days)))
     return out
 
 

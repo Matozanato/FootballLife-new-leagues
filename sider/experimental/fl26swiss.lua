@@ -251,6 +251,25 @@ local function world_rcal(ctx)
   return out
 end
 
+-- `cupdays <reg> <day> ...` lines of the world file: { {reg, day, day ...}, ... }
+local function world_cupdays(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  local out = {}
+  if not f then return out end
+  for line in f:lines() do
+    local rest = line:match("^%s*cupdays%s+(.*)$")
+    if rest then
+      local v = {}
+      for x in rest:gmatch("%d+") do v[#v + 1] = tonumber(x) end
+      if #v >= 2 then out[#out + 1] = v end
+    end
+  end
+  f:close()
+  return out
+end
+
 -- `july <reg> <day>` lines of the world file: { {reg, day}, ... }
 local function world_july(ctx)
   local sep = string.char(92)
@@ -636,6 +655,21 @@ function m.init(ctx)
         ffi.cast("fl26_swiss_access_t", pr)(rbuf, #rcal)
       elseif #rcal > 0 then
         log("fl26swiss: this fl26swiss.dll has no fl26_swiss_rcal -- the leagues keep the old calendar")
+      end
+      -- `cupdays`: the days the cups of each league's country play on (fl26_swiss_cupdays):
+      -- its rounds keep a day clear of them. 50 values a league: reg, count, 48 days
+      local cupd = world_cupdays(ctx)
+      local pcd2 = ffi.C.GetProcAddress(h, "fl26_swiss_cupdays")
+      if #cupd > 0 and pcd2 ~= nil then
+        local cb = ffi.new("uint16_t[?]", 50 * #cupd)
+        for i, v in ipairs(cupd) do
+          local o, n = 50 * (i - 1), math.min(#v - 1, 48)
+          cb[o] = v[1]; cb[o + 1] = n
+          for k = 1, n do cb[o + 1 + k] = v[k + 1] end
+        end
+        ffi.cast("fl26_swiss_access_t", pcd2)(cb, #cupd)
+      elseif #cupd > 0 then
+        log("fl26swiss: this fl26swiss.dll has no fl26_swiss_cupdays -- leagues keep clear of our own cups only")
       end
       local eu = {}
       for r, t in pairs(seasons) do
