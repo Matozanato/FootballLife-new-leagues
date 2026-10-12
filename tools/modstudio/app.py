@@ -371,8 +371,9 @@ class Main(QMainWindow):
         if p.dirty:
             self.status_saved.setText("● " + _("Not saved yet: click to save (Ctrl+S)"))
             self.status_saved.setStyleSheet("color: %s;" % theme.ACCENT)
-            self.status_saved.setToolTip(_("Your edits already count (Build uses them); saving keeps them "
-                                           "for the next time Mod Studio starts"))
+            self.status_saved.setToolTip(_("The recipe is the file with all your choices for the world: leagues, "
+                                           "clubs, players, options. Your edits already count (Build uses them); "
+                                           "saving keeps them for the next time Mod Studio starts"))
         else:
             self.status_saved.setText(("✓ " + _("Recipe saved")) if p.path else "")
             self.status_saved.setStyleSheet("")
