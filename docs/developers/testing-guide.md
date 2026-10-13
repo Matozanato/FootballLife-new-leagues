@@ -5,14 +5,15 @@ anything about the patches to help; you need patience, a fresh save slot, and th
 writing down what you did before something went wrong.
 
 If you have not installed it yet, do that first with
-[step-by-step.md](step-by-step.md), which walks a stock install through to a playing season.
+[by-hand.md](by-hand.md), which walks a stock install through to a playing season (or
+[Install a ready pack](../../guides/en/install-a-pack.md) with Mod Studio).
 This file picks up where that one ends: what to try once it runs, and in what order.
 
 ## Before you start
 
 - Modules installed and `sider.log` shows nine `applied all` lines plus `fl26joindll:
-  installed` ([install.md](install.md)).
-- A world built and active ([build-your-world.md](build-your-world.md)), and you kept the
+  installed` ([by-hand.md, A9](by-hand.md#a9-first-start-read-siderlog)).
+- A world built and active ([by-hand.md, Part B](by-hand.md#part-b-add-new-leagues)), and you kept the
   `mkworld.py` output.
 - Saves backed up. Use an empty save slot for testing.
 
@@ -43,7 +44,7 @@ Dumps then appear in `C:\fl26-dumps\` (mini dumps, tens of MB). Zip one and atta
 ### T1 — Play as deep into the season as you can
 
 Until 2026-09-16 the game died a day after matchday 1 here, every time; that was our bug and
-it is fixed (see [known-issues](known-issues.md)). Since then one world here has played
+it is fixed (see [known-issues](../known-issues.md)). Since then one world here has played
 **four seasons end to end**, across rollovers and New Year, with saves and loads in between.
 What nobody has done is run one on a different machine, on a different install, past a few
 matchdays. How far you get is the most useful number you can send us — and a long career is
@@ -68,7 +69,7 @@ fewer leagues (6, 12, 20); different sizes; a shipped club as your team instead 
 on one machine. This test is the one that tells us whether it holds up elsewhere. It takes
 one season creation and a few minutes of Forward Time.
 
-**Set-up.** Any world; the six-league default from step-by-step is fine. Start a Master
+**Set-up.** Any world; the six-league default from [by-hand.md](by-hand.md#part-b-add-new-leagues) is fine. Start a Master
 League with a club from one of the *added* leagues. Note the date the hub shows when it
 first appears.
 
@@ -174,7 +175,7 @@ Eight modules in `sider\experimental\` were built and verified against the execu
 running game. **None of them has been
 through a season.** That gap is the whole reason they are published, and this is the test
 that closes it. Read
-[sider/experimental/README.md](../sider/experimental/README.md) first — several depend on
+[sider/experimental/README.md](../../sider/experimental/README.md) first — several depend on
 each other, and two carry a slot list you must fill in from your own world.
 
 Add them **one at a time**, in the order that file gives, starting the game and reading

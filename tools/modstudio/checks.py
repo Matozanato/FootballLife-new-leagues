@@ -79,7 +79,7 @@ def exe_problems(game):
     return [("err", "Game", _("%s refused the game's FL_2026.exe in the last game (ABORTED in sider.log): it is "
                               "not the Steam build the modules know, or another mod changed it. New leagues then "
                               "hide the game's leagues in Select Team and the game crashes there. Use the Steam "
-                              "FL_2026.exe (docs/install.md, step 1).") % ", ".join(mods), "Settings")]
+                              "FL_2026.exe (docs/developers/by-hand.md, step A6).") % ", ".join(mods), "Settings")]
 
 
 UECL_REGS = (186, 187, 189, 1210) # the Conference League's league phase, knockout, play-off (mkeuropo) and its group

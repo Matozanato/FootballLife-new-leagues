@@ -8,7 +8,7 @@ hands it the configuration; the DLL does the rest.
 
 `fl26regen.dll` (regen names, potential and faces) and `fl26edit.dll` (the Edit mode lists) work
 the same way, through `fl26regen.lua` and `fl26edit.lua`. Every export, hook and status code of
-all six is in [docs/fork/modules.md](../../docs/fork/modules.md).
+all six is in [docs/developers/fork/modules.md](../../docs/developers/fork/modules.md).
 
 - **`fl26join.dll`** hooks eight functions so that added leagues are registered into a
   Master League season and closed again at the end of it, the way the shipped leagues are.

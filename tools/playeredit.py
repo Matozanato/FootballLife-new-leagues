@@ -27,7 +27,7 @@ describes the whole player:
 
 The new player gets the next free player id and joins the end of the squad.  The player table
 has a ceiling that depends on the patch set installed -- see mkplayers.py; --cap says which
-(default 51729, the players set used in docs/beginners-guide.md).
+(default 51729, the players set used in docs/developers/by-hand.md).
 
 The squad order matters: the first eleven of a club's squad order are its starting eleven,
 and the formation hands them their places in a fixed order.  For the default 4-2-3-1 of the
@@ -38,7 +38,7 @@ Every line is checked before anything is written -- a value out of range, an unk
 or club, a clash of squad orders -- and one bad line stops the run with the whole list of
 problems.  The original files are kept as .bak the first time.
 
-Fields and their ranges (see docs/player-record.md for where each one sits in the record):
+Fields and their ranges (see docs/research/player-record.md for where each one sits in the record):
 
   Registered Position   GK CB LB RB DMF CMF LMF RMF AMF LWF RWF SS CF
   GK .. CF              position rating for each position: 0 none, 1 can play, 2 natural;

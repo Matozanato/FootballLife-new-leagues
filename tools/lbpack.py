@@ -1,7 +1,7 @@
 r"""python lbpack.py <out dir>   -> the module pack the league builder installs
 
 The builder's worlds are read by our modules, and only by the versions that read the world
-file (docs/mod-studio.md). A person who has the public release, or nothing at all, needs
+file (docs/developers/mod-studio.md). A person who has the public release, or nothing at all, needs
 this exact set, so it ships inside the builder and "Install modules" puts it in place.
 
 What goes in, and from where -- every file from a source that is ours and clean:

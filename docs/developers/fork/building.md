@@ -118,8 +118,8 @@ python tools/mszip.py --untested --no-faces   # a fork's build: no game to compa
    face pack (since 0.2.2; `--no-faces` for a fork without one). Other modules that differ
    from the game's copy are printed as "NOT PLAYED in the game in this form": install the
    package's modules and play them before the release.
-4. **Guides.** `docs/mod-studio-guide.md` -> `README.html`, and the `hr`, `es`, `fr` copies
-   -> `README.<code>.html` (the `markdown` package).
+4. **Guides.** `guides/en/mod-studio-guide.md` -> `README.html`, and `guides/<code>/mod-studio-guide.md`
+   for `hr`, `es`, `fr`, `pt` -> `README.<code>.html` (the `markdown` package).
 5. **Check.** Every staged source inside the exe, the guides and `pack/modules.txt` is
    searched for drive paths and user names (`PRIVATE`). Any match stops the release.
 6. **Zip.** `out/FL26ModStudio-<VERSION>.zip`, with everything inside a folder called

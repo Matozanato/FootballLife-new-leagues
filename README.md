@@ -9,6 +9,8 @@
 ![Languages](https://img.shields.io/badge/languages-EN%20%C2%B7%20ES%20%C2%B7%20FR%20%C2%B7%20HR-6f42c1)
 ![Game: Football Life 2026](https://img.shields.io/badge/game-Football%20Life%202026-c0392b)
 
+**📖 Guides, step by step:** [install a ready pack or make your own leagues](guides/README.md) (English · hrvatski · español · português · français)
+
 <div align="center">
 
 ## ❤️ Supporters
@@ -52,24 +54,38 @@ CPKs: it all goes in through Sider modules and data files, and comes out again.
 > tells you when a new version is out and installs it (*Help → Check for updates*); your
 > settings and recipes stay.
 >
-> Guide: [English](docs/mod-studio-guide.md) · [hrvatski](docs/mod-studio-guide.hr.md) ·
-> [español](docs/mod-studio-guide.es.md) · [français](docs/mod-studio-guide.fr.md) ·
-> **questions** (updating, crashes at start, cups, promotion, what to send when something is
-> wrong): [docs/faq.md](docs/faq.md) · how it works and the package format:
-> [docs/mod-studio.md](docs/mod-studio.md)
+> **Never used it? Start here,** every click in order: [install a ready pack](guides/en/install-a-pack.md)
+> (you were given a world, a modpack or a `.fl26pack`) · [make your own leagues and packs](guides/en/make-your-own-leagues.md)
+> (you pick the leagues). Other languages: [guides/](guides/README.md)
 >
 > **0.2.0 is the last release with new features.** From here on: bug fixes, about once a week.
-> What's new in it: [docs/changelog-0.2.0.md](docs/changelog-0.2.0.md). **0.2.1** is a quick interim update that fixes the
-> Master League / Be a Legend crash of the 0.2.0 package: [docs/changelog-0.2.1.md](docs/changelog-0.2.1.md). **0.2.2** is the big fix
-> update with raised limits (2,400 clubs, 97 new leagues): [docs/changelog-0.2.2.md](docs/changelog-0.2.2.md). Want to take Mod Studio
-> further? There is now **complete documentation for forks**: [docs/forking.md](docs/forking.md)
-> and the chapters in [docs/fork/](docs/fork/).
+> **0.2.2** is the big fix update with raised limits (2,400 clubs, up to 97 new leagues).
+> Careers saved before 0.2.2 do not load: start a new one after Build. What changed:
+> [changelog-0.2.2](docs/changelog/changelog-0.2.2.md) · every version: [changelog](docs/changelog/README.md).
 >
 > **Discord:** [FL Mod Studio](https://discord.gg/StQqtk3G3M): questions, help, new versions, and new
 > GitHub issues posted there as they come in. Bugs still go to a GitHub issue.
 
 This is a **beta**. It is published so that people who mod this game can use it, break it and
-tell us where. Read [what works and what does not](#status) before you start a long career.
+tell us where. Read [what works and what does not](docs/known-issues.md) before you start a
+long career.
+
+## Documentation
+
+All of it, folder by folder: [docs/README.md](docs/README.md).
+
+- **[Guides](guides/README.md)** in English, hrvatski, español, português and français:
+  - **[Install a ready pack](guides/en/install-a-pack.md)**: someone gave you a world or a
+    league package; from nothing to a new Master League, every click in order.
+  - **[Make your own leagues and packs](guides/en/make-your-own-leagues.md)**: real leagues from
+    the NewLife Database, every setting of a league, Build, and sharing what you made.
+  - **[Guide to every page](guides/en/mod-studio-guide.md)** of Mod Studio.
+- **[Questions](docs/faq.md)**: updating, crashes at start, cups, promotion, what to send when
+  something is wrong. **[Known issues](docs/known-issues.md)**: what works, what does not yet.
+- **[Changelog](docs/changelog/README.md)**: what each version brought.
+- **[Developers](docs/developers/for-developers.md)**: forks, pull requests, the code, the
+  manual route with Python. **[Research](docs/research/research-findings.md)**: how the game
+  was taken apart, limits and addresses.
 
 ## What you can do
 
@@ -181,33 +197,12 @@ tell us where. Read [what works and what does not](#status) before you start a l
   the old one (0.1.7).
 - English, Croatian, Spanish, Brazilian Portuguese and French.
 
-**Versions**
 
-| Version | Date | What it brought |
-|---|---|---|
-| 0.1.0 | 2026-09-28 | the mod manager and the League Builder |
-| 0.1.1 | 2026-09-28 | the Conference League, European places for new leagues, updates itself |
-| 0.1.2 | 2026-09-28 | squads from a table, the League ID column, Spanish and French |
-| 0.1.3 | 2026-09-29 | cups of other continents, national and super cups, new countries on their own continent, manager names, **Add lower tier** |
-| 0.1.3.1 | 2026-09-29 | promotion and relegation outside Europe and for January-December leagues, the Rating field, a League window that fits 1080p |
-| 0.1.4 | 2026-09-30 | formations, clubs of the game in new leagues, transfers, national teams, club and player ids, manager portraits, national cups up to 44, February-December seasons, Libertadores qualifying, a shipped country's cup taking your second division, Europe only, the UEFA draw rules, split and Apertura/Clausura leagues fixed, the Kick Off order under Colombia and MLS |
-| 0.1.5.5 | 2026-09-30 | the NewLife Database (real clubs and players), regens with a new name, potential and face, faces by nationality for new players, player portraits, cup logos, shield crests and kits in a club's colours, a database mod that renamed the Europa League no longer stops the Build |
-| 0.1.6 | 2026-10-01 | kits you can edit in the game, the CAF Super Cup, six Libertadores qualifying places, the FA Cup kept by the top two divisions, Asian leagues before *Other Clubs (Asia)*, CONCACAF after MLS, squad positions from a table, promotion chains outside Europe fixed, a third division kept out of the country's super cup, no second schedule for every new league after loading a first-season save, January-December leagues of a new country in their second season, a world with only the European cups or only exhibition leagues no longer leaves every league without a schedule, and the four modules 0.1.4 to 0.1.5.5 shipped from an older version (February-December seasons, split leagues and built cups were not reaching the game) |
-| 0.1.7 | 2026-10-02 | cups and European places for the game's own countries and leagues, UEFA ranking and South American places, renaming any cup or continental competition, August qualifying rounds and play-offs for all three European cups, a European place for the cup winner, NewLife: crests and league logos, leaving clubs out or adding others, moving the game's players; a club's home stadium, moving a new club to another league, swapping two clubs of the game's leagues, a check for database mods (#36), Select Team keeps the game's Other groups (#73), a national cup of an odd size between 17 and 29 clubs no longer crashes the cup screens (#74), "?" help marks on every page |
-| 0.1.7.1 | 2026-10-03 | a fix release made with a smaller AI model and not yet tested in the game: a new league right under a second division of the game (League One under the Championship ...) no longer stops the plan with a TypeError (#80), and a recipe whose only change is a league cup or super cup for a game country is no longer "nothing to build" |
-| 0.1.8 | 2026-10-06 | every fix since 0.1.7 in one release and a new Mod Studio (new look, Home with one Build and install button, one Leagues list with drag order, starts on the live world): Edit mode keeps what you change on new clubs (#55), clubs in no league (BATE Borisov alone in *Other European teams*), first-season European clubs picked by hand, our leagues start in July, two free days between matches in every league, continental cups midweek and the continental champions in the Club World Cup (#70), promotion and relegation under a split league (#79, #81), Team of the Season for new leagues (#46, #86), NewLife clubs with world ids of their own (#88, #90), import crests and kits from a folder, a third kit, league packages without squads, removing several leagues at once, and the fixes for #54, #60, #63, #75, #77, #78, #83, #84, #87, #93, #95, #96, #100 |
-| 0.1.9 | 2026-10-06 | fixes: the Edit mode crash with face packs and other mods that bring a big `PlayerAppearance.bin` (#65), a national cup with two divisions draws top flight against the league below (Copa Peru of 32 checked in a Master League season), Build stopped with "a club has at most 40" when a new club took a game club's places next to NewLife clubs, kits for a custom database with lower club ids (#54), a linked face brings its body's skin colour (#102), "all stages" in Other content gets every stage, a dragged league no longer vanishes from the Leagues list, several leagues under one league of the game refused (#98), the game's own leagues are not added again from NewLife (#82), made-up manager names (#91), Build asks to unpack again after a game update (#63), Leagues list columns # and Select Team (#101), Build page readable with Windows scaling |
-| 0.2.0 | 2026-10-08 | **a calendar day holds 792 matches instead of 280** (careers saved with an older release do not load: start a new one; worlds need no new Build), league rounds spread so big worlds keep every match, the game's own leagues kept off European days; new: CONCACAF, OFC and AFC Challenge League cups and cup winners to our continental cups (#95), league order by continent / A-Z / your own in Select Team and Kick Off, seasons of the game's leagues, seeded country cup draws, Apertura/Clausura promotion for the league below (#106), kits from plain pictures (Import kits), logos for the cups of the game's countries, board objective by continent for AFC/CONMEBOL clubs (#43); fixes: Other European lost its last clubs after a Build, editable kits get real plain kit slots (#112), NewLife Update keeps linked faces (#111) and game leagues take the game's rating scale, Kit Server goalkeeper crash with editable kits, old Edit save warning, NewLife club insert from an old recipe (#105), a dragged league stays in its continent (#107), Team ID shows "at Build"; **complete documentation for forks** (docs/forking.md and docs/fork/: code map, recipe keys, world file, modules and DLLs, building, testing, NewLife format). **Last release with new features: from here on bug fixes only.** Full list: [docs/changelog-0.2.0.md](docs/changelog-0.2.0.md) |
-| 0.2.1 | 2026-10-10 | quick interim update: **the Master League / Be a Legend creation crash of the 0.2.0 package is fixed** (old `fl26caps.lua`, sider.log 3520 -> 3502 patches; #122, #125), cups-only worlds build again, a missing crest/logo/flag picture no longer stops Build, Mod Studio no longer crashes on a non-game .bin in the tables folder, old packages with an empty exchange field; Add a package takes only the leagues and parts you tick (also the FL26 Modpack), packages carry Kit Server kits and Scoreboard Server scoreboards, kits made for new clubs from their colours and crest, a partial database (pesdb in livecpk) over the game's tables. A bigger fix update comes later. Full list: [docs/changelog-0.2.1.md](docs/changelog-0.2.1.md) |
-| 0.2.2 | 2026-10-13 | the big fix update, **with raised limits**: 2,400 clubs, 3,400 coaches, 61,905 players, 255 competitions a season, 128 menu regions and 250 Select Team slots, up to 97 new leagues (careers saved before 0.2.2 do not load: start a new one after Build); a Build keeps the ids of leagues already built, faster Master League creation, the end of the transfer window no longer loads for minutes (`fl26compcache`), Create Edit Data in big worlds (managers table), the calendar no longer stops on event days (#70, #132), January-December leagues through New Year (#124), Europa League round of 16 in the second season, Libertadores and Sudamericana no longer share a club (#132), qualifying rounds and Knockout round play-offs in Competition Info, the UEFA league phase as one table of 36 (DavidBDJ), the national cup and super cup of February-December leagues (vmardonesdev, #139), the calendar set's last sites (nissindiaz, #135), Export the world with kits and scoreboards, Make a package with read-only folders (#141). Full list: [docs/changelog-0.2.2.md](docs/changelog-0.2.2.md) |
+Every version and what it brought: [docs/changelog](docs/changelog/README.md).
 
-The release notes of each version are on the
-[Releases](https://github.com/Matozanato/FootballLife-new-leagues/releases) page.
-
-> **Rather do it by hand, with Python?** [docs/how-to.md](docs/how-to.md) is the complete
-> how-to on one page, [docs/beginners-guide.md](docs/beginners-guide.md) takes someone who has
-> never used Python through every step, and [docs/step-by-step.md](docs/step-by-step.md) has
-> the same path with everything worth checking along the way.
+> **Rather do it by hand, with Python?** [docs/developers/by-hand.md](docs/developers/by-hand.md)
+> is the whole manual route on one page: install the modules, build leagues, put one in a
+> country of your choice, the new European format, and every world-building option.
 
 ## The people who made this better
 
@@ -602,183 +597,11 @@ If you are building something on top of this, I would rather hear about it than 
 Open an issue and say what you are making; if a limit is in your way, it may already be
 mapped.
 
-## What it is
-
-Football Life 2026 (PES 2021 engine) keeps every club, coach, competition and fixture in
-fixed-size tables inside the executable's memory. Shipped, those tables hold 750 clubs, 1,300
-coaches, 300 competition rulebooks and 13,000 match records. Add a few more leagues and the
-data simply falls off the end: the season generator drops fixtures without a word, a saved
-game loses everything past the shipped count, and a coach lookup lands on the wrong record.
-
-Mod Studio installs and sets up everything below for you; this part is for anyone who wants
-to know how it works, or to build by hand. The project does two things:
-
-1. **`sider/fl26caps.lua`** — a runtime patch set of 3,504 byte changes, applied by Sider at
-   startup, that grows those tables and every piece of code that indexes them:
-
-   | table | shipped | with fl26caps |
-   |---|---|---|
-   | clubs | 750 | 2,400 |
-   | coaches | 1,300 | 3,400 |
-   | competition rulebooks (regulations) | 300 | 600 |
-   | players | 30,001 | 61,905 |
-   | match records per season | 13,000 | 65,000 |
-   | fixtures list | 2,000 | 8,000 |
-   | competitions a season can hold | 100 | 255 with `fl26hdr255.lua` (0.2.2; replaces `fl26hdr127.lua` and `fl26hdr192.lua`) |
-   | menu regions | 29 | 128 with `fl26reg128.lua` (0.2.2; replaces `fl26reg64.lua`) |
-   | Select Team slots | 124 | 250 with `fl26slots250.lua` |
-
-   Every module verifies the bytes it is about to change and refuses to touch a different
-   game build. If anything does not match, the game runs unmodified and `sider.log` says why.
-
-2. **`tools/`** — Python scripts that build a set of new leagues and placeholder clubs
-   (with squads) from **your own** game data, as a Sider `livecpk` root. No game data is
-   shipped in this repository; everything is generated on your machine from your install.
-
-Plus seven small **null-guard modules** that stop known crashes in the game's own code which
-the larger world exposes, **`fl26hdr127.lua`**, which widens the table a season uses to
-hold its competitions from 100 to 127 — the fix for league tables showing 76 matches played
-and ~130 points; Mod Studio 0.2.2 installs `experimental/fl26hdr255.lua` (255) in its place —
-and **`fl26joindll.lua` + `fl26join.dll`**, which get every added league
-*into* the season and, since 2026-09-23, *out of it again* at the end. The game registers
-and closes competitions from lists compiled into the executable, so a new league standing in
-a country of its own was never presented to the season at all, and once it was, it was never
-closed and carried its table on into the next season. The module handles both. It is the one
-compiled piece in the main folder; its source and how to build it are in
-[tools/native/](tools/native/README.md).
-
-`sider/experimental/` holds more that go further and **were first run on our own
-test worlds**: 255 competitions instead of 127; every league selectable in the Select Team
-list (250 slots), under its own name, showing its own clubs; 128 menu regions instead of 29; a league rank
-wide enough for a pyramid five divisions deep, with the relegation gate to match; a career
-that starts in August instead of January; promotion and relegation through a whole pyramid,
-not just its top joint; guards for the Super Cup and the play-off results screen; **the 2024 European format** for the
-Champions League, the Europa League and a new Conference League, filled from a UEFA access
-list, with leagues of 10 to 24 clubs; the added countries listed by name under
-Database -> Competition Info; and every added league in Edit mode's team lists. They abort cleanly if anything does
-not match, and they are the part where another pair of hands helps most —
-[what they are, and in what order](sider/experimental/README.md).
-
-## Status
-
-Everything below was measured on our own test worlds, by playing Master League seasons
-unattended with matches simulated. This section was last checked on **2026-09-29**, against
-Mod Studio 0.1.4. The full list, with dates and details, is in
-[docs/known-issues.md](docs/known-issues.md); the hard numbers are in
-[docs/limits.md](docs/limits.md).
-
-**Measured and working**
-
-- **A Master League career in a new league, or with a club of the game**: the season
-  generates, every league gets its fixtures, the Team Sheet shows a real squad (22 players a
-  new club since 0.2.2, 30 before) and the hub shows the standings. On 2026-09-29 a career with a club of the game, in
-  a world with two new South American leagues, played 338 days in one unattended run.
-- **Saving and loading**: the club, the squad, the manager, the standings and the fixtures all
-  come back, also from a save made after a full season.
-- **Season after season.** The added leagues close in July with the game's own and open again
-  with empty tables and the right year; leagues that play January to December go on into their
-  next season too. Four rollovers in a row on one world, and 655 game days in one run without a crash.
-- **Promotion and relegation through whole pyramids**: three up and three down at every joint
-  of five chains, one of them under the Championship (2026-09-28). New countries outside Europe
-  and January-December leagues go on into their second season (0.1.3.1), and so does a league
-  outside Europe with no division below it (0.1.4: Egypt, Morocco and Venezuela, 2026-09-29).
-- **The 2024 European format**: the league phase of 36, the play-off and the knockout of all
-  three competitions, and in the second season 108 of 108 places filled from the previous
-  season's tables.
-- **Cups of other continents**: the CAF Champions League and CAF Confederation Cup play their
-  groups and knockout; the Copa Sudamericana was drawn with 32 clubs on 2026-09-29, with the
-  clubs already in the Copa Libertadores left out. The CAF Super Cup was played in the second
-  and third seasons' July between the two CAF winners, each time with that year's winners
-  (2026-10-01).
-- **Leagues of 10 to 24 clubs** with the right number of rounds, different sizes in one world.
-- **The menus**: up to 36 new leagues in Select Team (past 32 the plan names the ones that take the place of a game's "Other ..." group or get none), every one in Kick Off, Edit mode and Database →
-  Competition Info, under its own country's name and flag.
-
-**Known problems**
-
-- **The game crashes now and then inside its own protected code** (fault offsets `0x84ed4c0`,
-  `0x131cc313`, `0x18ecc042`) while a scene is being set up: generating a season, loading a
-  match, a season rollover. **They are the game's own:** on 2026-09-25/26, with none of our
-  modules and no patch set, 10 of 12 season creations crashed at the manager-settings step, and
-  the untouched game started without Sider crashed at the same step in 4 of 8. Start the game
-  from its launcher, start again or reload, and **save often**: the saved season is not
-  damaged.
-- **A saved career belongs to its world.** It loads only with the same world switched on, and
-  any change to a league's clubs needs a new career.
-- **A new league outside Europe can read as European in the board's objectives** (issues #43,
-  #70): a first division of a new country that plays August to May keeps the UEFA code, because
-  the game's July season-end step promotes and relegates only for that code, so the Master
-  League board can ask for the Champions League. Its places still go to its own continent's
-  cups. Not fixed yet: it needs a change inside the game's continent lookup and a test in the
-  game. Fixed along the way: the borrowed League Info line ("... South American based
-  leagues", 0.1.7: our leagues carry no such line now), the League Info cup icons (they follow
-  the country's confederation from the world file since 0.1.3.1), and the list order (0.1.6: a
-  new Asian league comes before *Other Clubs (Asia)*, a CONCACAF one after MLS, and in 0.1.7 a
-  South American one after Colombia, before MLS; African and Oceanian countries still come
-  after Asia, since the game has no section for them).
-- **An Exhibition only league still shows** in Master League's team list (the game has one
-  list for Kick Off and Master League). Do not start a career with one of its clubs.
-- **February-December seasons** cannot yet be combined with a split, Apertura/Clausura, a
-  national cup or a league cup.
-- **Only one league per country can be split or Apertura/Clausura.** With two (Iceland, both
-  divisions Apertura/Clausura, issue #45) the game mixes up their phases and neither league
-  plays a match. Mod Studio refuses such a world since 0.1.4.
-- **The Team of the Season of a new league is empty** at the end of a season (11 empty
-  places, issue #46). Nothing else in the season is affected. Not looked into yet.
-- **A calendar day holds 792 matches** since 0.2.0 (280 before); everything past that is
-  dropped in silence. A world of 39 leagues uses about 280 on its busiest day;
-  `tools/dayplan.py` measures a running season. Careers started before 0.2.0 do not load in
-  0.2.0: the wider calendar changes the save, so start a new career.
-- **The competition table can fill up** over many seasons: `fl26hdr255.lua` raises it from 100
-  to 255 (0.2.2; it replaces `fl26hdr127.lua` and `fl26hdr192.lua`). Long-running worlds are the most useful
-  thing you can report — see the [testing guide](docs/testing-guide.md).
-- **2,400 clubs in all** is the wall since 0.2.2 (1,536 up to 0.2.1, when 39 new leagues
-  were also the most a world could have). Build stops with a message when regulation ids or
-  club room run out; our test world plays 86 new leagues. A league whose regulation id is not
-  in the patch set's date table needs a regenerated set ([why](docs/for-developers.md)).
-- **A new patch set means a new career**: a save made under one `fl26caps.lua` does not load
-  under another, so careers saved before 0.2.2 do not load in 0.2.2. Worlds keep working
-  (Build them again), and from 0.2.2 a Build keeps the competition, regulation, region, team
-  and cup ids of leagues already built, even when a league is added, removed or the recipe
-  reordered.
-
-## Requirements
-
-- Football Life 2026 with its bundled Sider (`SiderAddons` folder next to `FL_2026.exe`).
-  The modules were built against `FL_2026.exe` version **26.0.0.0**, 458,910,720 bytes,
-  SHA-256 `7c27ecb303b71331e36f9ccd8ac879f0f0d8c56c754bd4d0d2e9c8353464f847`. A different build
-  is refused, safely, at startup.
-- Python 3.10 or newer for the world-building tools. No third-party packages are needed to
-  build a world. Regenerating the patch set (developers only) needs `capstone`.
-- FL26 Mod Studio: nothing, the release `.exe` carries what it needs. Run from source
-  (`python tools/modstudio_main.py`) it needs `PySide6`, `Pillow` and `py7zr`; making the
-  release zip (`tools/mszip.py`) also needs `pyinstaller`, `markdown` and zig for the DLLs.
-- Windows. The tools were only ever run on Windows.
-
-## Quick start
-
-1. **Back up** your save folder
-   (`Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\2026\save`) and your `sider.ini`.
-2. Download **FL26 Mod Studio** from
-   [Releases](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest), unzip it
-   and run `FL26ModStudio.exe`. In **Settings**, pick the game folder (the one with
-   `FL_2026.exe`) and press **Unpack the game's tables**.
-3. **League Builder → New leagues → Add league**: a name, a country, the number of clubs.
-   Then **Build**: install the modules, check the plan, build the world, switch it on.
-4. Start the game through its launcher, come back and press **After a start: check**. Then
-   start a **new** Master League career: the new leagues are under their country in Select
-   Team.
-
-The [guide](docs/mod-studio-guide.md) goes through every page, and the
-[FAQ](docs/faq.md) answers what people ask most. Building by hand with Python instead:
-[docs/how-to.md](docs/how-to.md), then [docs/install.md](docs/install.md) and
-[docs/build-your-world.md](docs/build-your-world.md).
-
 ## Reporting
 
 Open a GitHub issue. From Mod Studio, **Diagnostics → Run the checks → Copy a report** puts
 everything useful in the clipboard; paste it into the issue. The
-[testing guide](docs/testing-guide.md#what-to-send) says what else helps: your `sider.log`, the
+[testing guide](docs/developers/testing-guide.md#what-to-send) says what else helps: your `sider.log`, the
 crash's *fault offset* from Windows Event Viewer, your recipe (or how you built your world),
 and the save file if the problem can be repeated from a save.
 
@@ -799,48 +622,9 @@ request and everyone gets it in the next release:
 Bug fixes and new features are both welcome this way: 0.2.0 was the last release where *we*
 add features, not the last one that gets them. Before something big, open an issue or ask on
 [Discord](https://discord.gg/StQqtk3G3M) so two people do not build the same thing.
-[docs/forking.md](docs/forking.md) and the [fork chapters](docs/fork/) explain the code; they
+[docs/developers/forking.md](docs/developers/forking.md) and the [fork chapters](docs/developers/fork/) explain the code; they
 work the same for a pull request as for a fork. For `sider/` and `patches/`, describe the
 disassembly evidence in the pull request the way the module headers do.
-
-## Layout
-
-```
-sider/              fl26caps.lua (generated patch set), the null guards, fl26hdr127.lua,
-                    fl26joindll.lua and the compiled fl26join.dll it loads
-sider/experimental/ modules that go further: 255 competitions, the Select Team
-                    list (names, 250 slots, club lists, flags, Kick Off order), 128 regions, a
-                    3-bit league rank and its relegation gate, an August start, season-end
-                    promotion through a pyramid (fl26chain.dll), Super Cup, results-screen and
-                    club-change guards, the 2024 European format, league sizes, split
-                    seasons and other continents' cups (fl26swiss.dll), country names in
-                    Competition Info, the added leagues in Edit mode's team lists
-tools/              world builders (mkworld, mkplayers, mkcrests, mkkits, mkcup, mkflags,
-                    mkreshape, mkuecl, mkeuropo, mksizes, mktactics, rename, players,
-                    playeredit, playereditor ...), pesdb/CPK readers, the patch-set generator
-                    and its checkers
-tools/modstudio/    FL26 Mod Studio (tools/modstudio_main.py starts it from source,
-                    tools/mszip.py makes the release zip) and the League Builder behind it
-                    (leaguebuilder, lbplayers, lbfaces, lbpackage, lbpack ...)
-tools/native/       the C source of the six DLLs, their build scripts and checksums
-patches/            the patch set as JSON plus the layout tables the generator reads
-docs/               mod-studio-guide (en/hr/es/fr), mod-studio (how it works, package format),
-                    faq, how-to, beginners-guide, step-by-step, install, build-your-world,
-                    testing-guide, known-issues, limits, how-it-works, for-developers,
-                    forking, league-phase-swiss-decode, player-record
-docs/fork/          the fork chapters: code-map, recipe-keys, world-file, modules,
-                    building, testing, newlife-format
-```
-
-**Want your own version?** Mod Studio is MIT licensed: fork it and change what you like.
-[docs/forking.md](docs/forking.md) is the map of the code, how to run and build it, and how
-to add a page, a recipe key or a module. The chapters in [docs/fork/](docs/fork/) go into
-detail: [code map](docs/fork/code-map.md), [recipe keys](docs/fork/recipe-keys.md),
-[world file](docs/fork/world-file.md), [modules and DLLs](docs/fork/modules.md),
-[building](docs/fork/building.md), [testing](docs/fork/testing.md) and the
-[NewLife release format](docs/fork/newlife-format.md). 0.2.0 is the last release with new
-features from us; after it we do bug fixes once a week, and new features come as pull requests
-(see [Contributing](#contributing)).
 
 ## Support
 
@@ -848,7 +632,7 @@ Everything here is free and MIT-licensed. Weeks of disassembly, unattended test 
 crash dumps went into it, and there is more to do (the crashes in the game's protected code,
 the African leagues' League Info panel, more competitions and formats). If you want to help it
 along: **[ko-fi.com/mata28](https://ko-fi.com/mata28)**. Testing and good bug reports help just
-as much — see the [testing guide](docs/testing-guide.md).
+as much — see the [testing guide](docs/developers/testing-guide.md).
 
 Thank you to everyone who has: **Thunder105**, **GutGut**, **LaraCroft**, **Pierro1912**, **David.BDJ** and **Facemaker Jacobson**. Supporters are listed at
 the top of this page.

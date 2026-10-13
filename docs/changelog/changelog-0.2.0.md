@@ -2,8 +2,8 @@
 
 0.2.0 is the **last release with new features**. From here on Mod Studio only gets bug fixes,
 about once a week. If you want to take it further, fork it: **0.2.0 comes with complete
-documentation for forks**, from [forking.md](forking.md) through the chapters in
-[docs/fork/](fork/) (code map, every recipe key, the world file, every module and DLL, building,
+documentation for forks**, from [forking.md](../developers/forking.md) through the chapters in
+[docs/developers/fork/](../developers/fork/) (code map, every recipe key, the world file, every module and DLL, building,
 testing, the NewLife release format). The code is MIT licensed.
 
 ## Read this first
@@ -195,7 +195,7 @@ world, about 1,000 matches a season).
   `fl26lateguards.lua`, so the `sider.ini` list is shorter. sider.log still names each guard.
 - **Credits** (next to Help) has a Supporters section: the people who supported the project on
   Ko-fi.
-- **Documentation for forks**: [forking.md](forking.md) and the chapters in `docs/fork/`. They
+- **Documentation for forks**: [forking.md](../developers/forking.md) and the chapters in `docs/fork/`. They
   cover the code map, every recipe key, the world file, every module and DLL, building, testing
   and the NewLife release format.
 
@@ -247,7 +247,7 @@ world, about 1,000 matches a season).
 
 ## Known issues
 
-See [known-issues.md](known-issues.md). Most important:
+See [known-issues.md](../known-issues.md). Most important:
 
 - Careers from older versions do not load (see the top of this page).
 - European qualifying is the second and third qualifying round and the play-off, in August
@@ -260,7 +260,7 @@ See [known-issues.md](known-issues.md). Most important:
   the game has no board objective for those cups.
 - The Club World Cup is the game's own (every season, mid-December), with the champions of the
   continental cups your world builds in it. The 2025 format with 32 clubs is not in Mod Studio; its unfinished code is shared for
-  anyone who wants to finish it: [docs/fork/club-world-cup-32.md](fork/club-world-cup-32.md).
+  anyone who wants to finish it: [docs/fork/club-world-cup-32.md](../developers/fork/club-world-cup-32.md).
 
 ## Thanks
 

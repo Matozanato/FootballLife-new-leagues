@@ -48,7 +48,7 @@ The game's `FL_2026.exe` is not the Steam build the modules know (#62), or anoth
 it. `fl26caps` then writes nothing (`fl26caps: ABORTED` near the top of `sider.log`), and
 without it a new league takes the place of one of the game's in the lists and the game crashes
 on its clubs. Since 0.1.7 Mod Studio's *Checks* say so. Put back the Steam `FL_2026.exe`
-([install.md](install.md), step 1) and start the game again.
+([by-hand.md](developers/by-hand.md#a6-check-your-game-version), step A6) and start the game again.
 
 ### "Other European Leagues" or "Other Latin American Teams" is gone from Select Team
 
@@ -205,7 +205,8 @@ From the NewLife Database (since 0.1.5.5): a separate download on the NewLife ch
 [Discord](https://discord.gg/StQqtk3G3M), in parts per continent. Put the parts in one folder,
 open it on **League Builder > NewLife Database**, pick leagues and press **Add to the recipe**:
 each becomes a new league with its real clubs and squads. See section 8.4 of the
-[Mod Studio guide](mod-studio-guide.md).
+[Mod Studio guide](../guides/en/mod-studio-guide.md), and step by step:
+[Make your own leagues and packs](../guides/en/make-your-own-leagues.md).
 
 ### Can I put a club the game already has into my new league?
 
@@ -229,7 +230,7 @@ place, so the game's leagues keep their size. A club of the game into a new leag
 Yes, since 0.1.4 (#36). On the *Build* page press **Only the new European cups...**: it builds a
 world with the new Champions League and Europa League (and the Conference League when it is
 ticked), with the game's own leagues and clubs. The scripts way is in
-[how-to.md](how-to.md), Part D, Route 1.
+[by-hand.md](developers/by-hand.md#route-1-the-new-format-with-the-games-own-leagues-only-no-new-leagues), Part D, Route 1.
 
 **With a database mod (UML and the like):** the world carries its own copy of the competition
 and team tables, made from the tables in **Settings**, and by default those are the game's own.
@@ -380,6 +381,46 @@ more new players the others keep the default look, and sider.log says "appearanc
 full". A player you gave a **Face** made for another player takes that player's appearance
 too, so his arms and legs have the face's skin colour (GitHub #102).
 
+### I imported kits, but the game still shows the old ones
+
+Clubs that already had a line in Kit Server's `map.txt` keep that line: **Import kits** skips them
+unless you tick **Replace kits already set** in the import window. Import again with it ticked,
+press **Save** (it writes `map.txt`) and start the game again; Kit Server reads its kits only when
+the game starts.
+
+To see what is wrong with a line, tick **Only lines with problems** on the Kits page and hold the
+mouse over a yellow line: the reason shows as a tooltip. The most common one is "... not found in
+the library": `map.txt` sends the club to a folder (such as `Premier League\Newcastle`) that is
+not in Kit Server's kits folder, so the game has nothing to show. The **Library** tab lists the
+folders that are really there. Point the line at one of them, or select it and press **Remove**.
+
+### The stadium is completely black
+
+Not a Build problem: Stadium Server's `map_teams.txt` sends the home club to a stadium folder
+that is missing, or only half installed (a wrong folder name, a wrong slot, a stadium that was
+not unpacked whole). The game loads nothing and the stadium is black. Open the **Stadiums** page,
+tick **Only lines with problems** and hold the mouse over the club's line to see why. Point it
+at a stadium the **Library** tab lists, or remove the line and the club plays in its old stadium
+again. Press **Save** and start the game again.
+
+### A player is a free agent, or has no face, in the world I built
+
+A world carries a full copy of the game's database (players, clubs, who plays where) from the
+moment it was built, and it sits above the game. Anything newer that a game update or a face
+update brings for the same players is covered by that copy. After such an update press
+**Settings > Unpack the game's tables** again and **Build** again; then the world has what your
+game has now. A ready-made world from somebody else (an exported world, see the guide 9.1) was
+built from that person's tables; Mod Studio reads a recipe back from it when it starts with that
+world switched on, so you can Build it again on yours (a few parts, such as pre-season cups and
+competition names, do not come back: the guide 9.1 lists them).
+
+### I cannot remove any more players from my new club
+
+A new club keeps at least 18 players. In 0.2.1 the Players page counts only the club's own
+squad for that rule and forgets the players you signed for it, so it can refuse even when the
+list shows 30 or more. Build itself counts the signings. Until the fix, remove one of the signed
+players instead (that always works), or leave the extra player in.
+
 ### What should I send when something is wrong?
 
 1. In Mod Studio: **Tools > Diagnostics > Copy a report**, and paste it into the issue.
@@ -400,7 +441,8 @@ Yes: FL26 Mod Studio, a Windows program (beta). It installs the modules, builds 
 clubs, edits the players of any club, adds faces, installs other mods and content servers,
 and keeps restore points. Download it from the
 [latest release](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest);
-the guide is [mod-studio-guide.md](mod-studio-guide.md) ([hrvatski](mod-studio-guide.hr.md)).
+the guides (step by step, and every page explained, in five languages) are in
+[guides/](../guides/README.md).
 
 ### Every new club has the same manager, "Jorge Jesus"
 
@@ -578,15 +620,19 @@ Outside Edit mode, the easiest way is the editor with a window:
 python tools\playereditor.py --root <your livecpk world>
 ```
 
-Pick a club, pick a player, change any field, **Apply**, **Save**. **New player** creates one,
-**Up** / **Down** change the squad order (the green rows are the starting eleven). It uses the
-same checks as the spreadsheet route below.
+Pick a club, pick a player, change any field, **Apply**, **Save**. The fields are in four tabs
+(Profile, Positions, Abilities, Skills). **New player** creates one as a copy of the selected
+player, **Up** / **Down** change the squad order (the green rows are the starting eleven). It
+uses the same checks as the spreadsheet route below: a value the game cannot store (Speed 150,
+say) is refused with a message and nothing is changed. Without `--root` it asks for the world
+folder (the one that holds `common`). The first Save keeps the originals as `Player.bin.bak`
+and `PlayerAssignment.bin.bak`.
 
 For many players at once, edit the world's data files with `tools/playeredit.py`, the same way
 `rename.py` does clubs. The players live in the world's `common\etc\pesdb\Player.bin`, and
 which club each one plays for, with his shirt number and his place in the squad, in
 `PlayerAssignment.bin`. Every field of a player is known (see
-[player-record.md](player-record.md)), so you can set any of them, and create new players.
+[player-record.md](research/player-record.md)), so you can set any of them, and create new players.
 
 **1. Export the club to a spreadsheet.**
 

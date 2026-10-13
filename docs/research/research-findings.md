@@ -5,7 +5,7 @@
 > sections (the TL;DR included) describe the state at the time and are often superseded further
 > down -- search for an address or a table name and read its latest entry. Scripts it mentions
 > under `scratchpad/` or in the private research tree are not part of the repository. The
-> current, checked state of the code is in [forking.md](forking.md) and [fork/](fork/).
+> current, checked state of the code is in [forking.md](../developers/forking.md) and [fork/](../developers/fork/).
 
 What is known about Football Life 2026 / PES 2021 competition data and the parts of
 `FL_2026.exe` that constrain it. Every address, offset and bit position here was read
