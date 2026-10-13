@@ -53,6 +53,10 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   the cup plays through the league's own year, the super cup opens it. Made by vmardonesdev
   (GitHub #139).
 
+- **Export the world** takes the world's kits and scoreboards too (Kit Server and Scoreboard
+  Server, with their map lines); before, the receiver got the world without its kits. Install
+  mods puts the kits where the receiver's Kit Server reads them.
+
 - League: a name field for the super cup, beside the national cup's and the league cup's
   (empty = the league's name + Super Cup).
 

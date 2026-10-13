@@ -4163,5 +4163,7 @@ class Build(BuilderPage):
                  _("Saved %s\n\n%d new players get a generated face (the newfaces / faceapp lines of the world "
                    "file in the zip). Whoever installs it needs Mod Studio's modules with the face pack "
                    "(League Builder > Build > 0. Install the modules); without them every new player looks "
-                   "the same. The zip has a read-me that says so.") % (out, got.get("face_players", 0)))
+                   "the same. The zip has a read-me that says so.") % (out, got.get("face_players", 0))
+                 + _("\n\nIn the same zip: the kits of %d clubs (Kit Server) and the scoreboards of %d leagues "
+                     "(Scoreboard Server).") % (got.get("kits", 0), got.get("scoreboards", 0)))
         self.run(go, background=True, done=done)

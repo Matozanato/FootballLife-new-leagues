@@ -608,6 +608,12 @@ press **Export the world...** on the Build page (after **2. Build the world**). 
 - `SiderAddons\livecpk\<world>\...`: the whole world folder, with its **world file**
   `fl26world.txt`. The `newfaces` / `faceapp` lines in that file list the new players who get a
   generated face. Without them every new player looks the same.
+- `SiderAddons\content\kit-server\<world>\...` and `...\scoreboard-server\<world>\...`: the
+  world's **kits** (the Kit Server kits of its clubs, also the ones made from colours and crests)
+  and **scoreboards**, each with a `map.txt` / `map_competitions.txt` of only this world's lines.
+  Install mods adds those lines to the receiver's maps (a line of theirs for the same club is
+  switched off and comes back when the mod is removed). The kits go to the Kit Server the
+  receiver's game loads (`content\kits` for SPFL26's own one).
 - `READ ME - FL26 world.txt` and `fl26worldpack.json`: what the receiver needs.
 
 **The receiver needs Mod Studio's modules with the face pack** (`modules\fl26regen_faces.bin`):

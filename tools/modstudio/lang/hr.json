@@ -1,5 +1,9 @@
 {
  "text": {
+  "a top division of a new country: February to December plays like Brazil, Japan or Saudi Arabia, clubs going up and down at New Year; the divisions below it follow it. Not with a split, Apertura/Clausura or a league cup yet": "prva liga nove zemlje: veljača do prosinca igra kao Brazil, Japan ili Saudijska Arabija, klubovi idu gore i dolje na Novu godinu; lige ispod nje je prate. Još ne s podjelom, Apertura/Clausura ni ligaškim kupom",
+  "The game gives this league no places in this table. Tick the box above to give it some.": "Igra ovoj ligi ne daje mjesta u ovoj tablici. Označi kvačicu iznad da joj ih daš.",
+  "The game gives this league its Libertadores places itself: group stage %s, qualifying round %s. They are not in this table. Tick the box above to set your own.": "Igra sama daje ovoj ligi mjesta u Libertadoresu: grupna faza %s, kvalifikacije %s. Nisu u ovoj tablici. Označi kvačicu iznad za svoja.",
+  "A league playing February to December has no split, Apertura/Clausura or league cup yet.": "Liga koja igra od veljače do prosinca još nema podjelu, Apertura/Clausura ni ligaški kup.",
   "\"As found\" is kept: it is the way back to the game as it was.": "\"Zatečeno\" ostaje: to je put natrag do igre kakva je bila.",
   "%d League Builder worlds are switched on; only one should be": "Uključeno je %d svjetova League Buildera; treba biti samo jedan",
   "%d changes in this club.": "Promjena u ovom klubu: %d.",
@@ -1320,6 +1324,7 @@
   "One .zip of the built world for another PC: the world folder, its world file with the players who get a generated face, and a read-me. The other PC installs it on Install mods and needs Mod Studio's modules (the face pack).": "Jedan .zip izgrađenog svijeta za drugo računalo: mapa svijeta, njegova datoteka svijeta s igračima koji dobivaju generirano lice, i upute. Drugo računalo ga instalira na Instaliraj modove i treba module Mod Studija (paket lica).",
   "Open League Builder > Build and press 0. Install the modules, then 3. Switch it on.": "Otvori League Builder > Izgradnja i stisni 0. Postavi module, pa 3. Uključi ga.",
   "Saved %s\n\n%d new players get a generated face (the newfaces / faceapp lines of the world file in the zip). Whoever installs it needs Mod Studio's modules with the face pack (League Builder > Build > 0. Install the modules); without them every new player looks the same. The zip has a read-me that says so.": "Spremljeno: %s\n\n%d novih igrača dobiva generirano lice (redovi newfaces / faceapp u datoteci svijeta u zipu). Tko ga instalira treba module Mod Studija s paketom lica (League Builder > Izgradnja > 0. Postavi module); bez njih svi novi igrači izgledaju isto. U zipu su upute koje to kažu.",
+  "\n\nIn the same zip: the kits of %d clubs (Kit Server) and the scoreboards of %d leagues (Scoreboard Server).": "\n\nU istom zipu: dresovi %d klubova (Kit Server) i scoreboardi %d liga (Scoreboard Server).",
   "a whole league's kits at once, with the crest on the chest; off = the new clubs keep the kit borrowed from the game": "dresovi cijele lige odjednom, s grbom na prsima; isključeno = novi klubovi zadrže dres posuđen iz igre",
   "instead of the kits above: with this on, Kit Server does not dress the new clubs, so the made kits are switched off": "umjesto dresova iznad: kad je ovo uključeno, Kit Server ne oblači nove klubove, pa su napravljeni dresovi isključeni",
   "Kits made in the clubs' colours": "Dresovi u bojama klubova",

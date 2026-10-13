@@ -39,6 +39,8 @@ EXTRA_SERVERS = {"soundtrack-server", "turf-loader", "ui-colors", "fans-server",
 
 WORLD_FILE = "fl26world.txt"             # the world file of a League Builder world
 FACE_PACK = "fl26regen_faces.bin"        # Mod Studio's face pack; Install the modules puts it in modules
+OUR_LINE = "# FL26 Mod Studio:"          # the end of a map line Build wrote (lbstadiums.TAG)
+WORLD_SERVERS = ("kits", "scoreboards")  # what Build writes under content\<server>\<world>
 WORLD_README = "READ ME - FL26 world.txt"
 WORLD_INFO = "fl26worldpack.json"
 WORLD_NOTE = "a League Builder world: it is switched on, its world file goes to modules\\fl26world.txt"
@@ -76,6 +78,26 @@ def face_players(path):
     return n
 
 
+def world_lines(path, world):
+    """the map lines Build wrote for `world` (switched on, ending in our tag, a folder under
+    <world>\\), as bytes: the map's own encoding stays as it is"""
+    try:
+        with open(path, "rb") as f:
+            raw = f.read()
+    except OSError:
+        return []
+    if raw.startswith(b"\xef\xbb\xbf"):
+        raw = raw[3:]
+    tag, under = OUR_LINE.encode(), (world + "\\").lower().encode()
+    out = []
+    for l in raw.split(b"\n"):
+        l = l.rstrip(b"\r")
+        body, _t, _r = l.partition(tag)
+        if _t and not l.lstrip().startswith(b"#") and under in body.lower():
+            out.append(l)
+    return out
+
+
 def face_pack_missing(sider_dir):
     """True when Mod Studio's modules with the face pack are not in this Sider's modules folder"""
     mods = os.path.join(sider_dir, "modules")
@@ -94,9 +116,13 @@ Install them once: League Builder > Build > 0. Install the modules (or Build and
 the newfaces / faceapp lines of fl26world.txt. Without the modules, or without
 fl26world.txt in SiderAddons\\modules, every new player looks the same.
 
+Kits ({kits} clubs) and scoreboards ({boards} leagues), when the world has them, are in
+SiderAddons\\content (Kit Server, Scoreboard Server): Install mods adds their map lines.
+
 By hand: copy SiderAddons into the game folder, copy livecpk\\{world}\\fl26world.txt to
 SiderAddons\\modules\\fl26world.txt, and put  cpk.root = ".\\livecpk\\{world}"  in
-sider.ini above the other roots (with any other _FL26 world switched off).
+sider.ini above the other roots (with any other _FL26 world switched off). For the kits and
+scoreboards add the lines of the zip's map.txt / map_competitions.txt to your own.
 """
 
 
@@ -109,6 +135,11 @@ def export_world(sider_dir, world, out, log=lambda t: None):
     carries it; when the folder's copy has no face lines but the live copy in modules (same
     world) has, the live one goes in.  A read-me and fl26worldpack.json say what the receiver
     needs: Mod Studio's modules with the face pack, or every new player looks the same.
+
+    The world's kits and scoreboards go too: Build puts them in content\<server>\<world> (Kit
+    Server, Scoreboard Server) with a map line each.  The zip has them as
+    SiderAddons\content\<server>\<world>\... next to a map file of only those lines, which
+    Install mods merges into the receiver's map (and takes out again on removal).
     Returns the info written to fl26worldpack.json."""
     root = os.path.join(sider_dir, "livecpk", world)
     wf = os.path.join(root, WORLD_FILE)
@@ -123,12 +154,35 @@ def export_world(sider_dir, world, out, log=lambda t: None):
             "world_file": "SiderAddons/livecpk/%s/%s" % (world, WORLD_FILE),
             "needs": ["FL26 Mod Studio modules with the face pack (%s): League Builder > Build > "
                       "0. Install the modules" % FACE_PACK]}
-    text = README.format(world=world, pack=FACE_PACK, faces=faces).replace("\n", "\r\n")
+    content = os.path.join(sider_dir, "content")
+    extra = []                            # (server, its folder here, our map lines of this world)
+    for key in WORLD_SERVERS:
+        s = S.BY_KEY[key]
+        here = os.path.join(content, s.folder_in(content))
+        lines = world_lines(os.path.join(here, s.maps[0].file), world)
+        if not os.path.isdir(os.path.join(here, world)):
+            lines = []
+        if lines:
+            extra.append((s, here, lines))
+        info[key] = len(lines)
+    text = README.format(world=world, pack=FACE_PACK, faces=faces, kits=info["kits"],
+                         boards=info["scoreboards"]).replace("\n", "\r\n")
     part = out + ".part"
     n = 0
     with zipfile.ZipFile(part, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr(WORLD_README, text)
         z.writestr(WORLD_INFO, json.dumps(info, indent=1, ensure_ascii=False))
+        for s, here, lines in extra:
+            z.writestr("SiderAddons/content/%s/%s" % (s.folder, s.maps[0].file), b"\r\n".join(lines) + b"\r\n")
+            src = os.path.join(here, world)
+            for dp, dn, fn in os.walk(src):
+                dn.sort()
+                for f in sorted(fn):
+                    p = os.path.join(dp, f)
+                    rel = os.path.relpath(p, src).replace(os.sep, "/")
+                    z.write(p, "SiderAddons/content/%s/%s/%s" % (s.folder, world, rel))
+                    n += 1
+            log("%s: %d map line(s) from %s" % (s.title, len(lines), here))
         for dp, dn, fn in os.walk(root):
             dn.sort()
             for f in sorted(fn):
@@ -141,7 +195,8 @@ def export_world(sider_dir, world, out, log=lambda t: None):
                 if n % 2000 == 0:
                     log("%d files ..." % n)
     os.replace(part, out)
-    log("wrote %s: %d files, %d players with generated faces" % (out, n, faces))
+    log("wrote %s: %d files, %d players with generated faces, %d kits, %d scoreboards"
+        % (out, n, faces, info["kits"], info["scoreboards"]))
     return info
 
 
@@ -476,8 +531,9 @@ class Installer:
         pass
 
     def do_content(self, p, where):
-        dst = os.path.join(self.game.content_dir, p.name)
         s = S.BY_KEY.get(p.server) if p.server else None
+        # the folder the loaded module reads: SPFL26's own kits.lua reads content\kits (GitHub #129)
+        dst = os.path.join(self.game.content_dir, s.folder_in(self.game.content_dir) if s else p.name)
         maps = {m.file.lower(): m for m in (s.maps if s else [])}
         cfg = s.config.lower() if s and s.config else None
         skip = set(maps) | ({cfg} if cfg and os.path.exists(os.path.join(dst, s.config)) else set())

@@ -7,6 +7,7 @@ them every new player looks the same (08.10., the modpack world).
 Export the world -> zip -> Install mods on another Sider folder: the world folder lands under its
 own name, the world file lands in modules, removing the mod puts the old world file back.  A
 SiderAddons copy whose world folder lost its world file takes the one in its modules folder.
+The world's kits and scoreboards (content\\<server>\\<world> and their map lines) go along.
 """
 import os, shutil, sys, tempfile, zipfile
 
@@ -98,6 +99,50 @@ def main():
         rec, _ini = install(d, os.path.join(tmp, "copy"))
         assert open(os.path.join(d, "modules", I.WORLD_FILE), encoding="utf-8").read() == TEXT
         assert os.path.isfile(os.path.join(d, "livecpk", WORLD, I.WORLD_FILE))
+        # ---- kits and scoreboards: content\<server>\<world> and their map lines go along ----
+        tag = I.OUR_LINE
+        put(os.path.join(a, "content", "kit-server", "map.txt"),
+            '100, "Mine\\Club"\n'
+            '72001, "%s\\L One\\Club A"   %s L One/0 made\n'
+            '72002, "_FL26Other\\L\\Club"   %s L/0 made\n'
+            '#71599, "Modpack\\X\\Y"  # (switched off by FL26 Mod Studio)\n' % (WORLD, tag, tag))
+        put(os.path.join(a, "content", "kit-server", WORLD, "L One", "Club A", "p1", "u0001p1.ftex"), "k")
+        put(os.path.join(a, "content", "kit-server", "_FL26Other", "L", "Club", "p1", "x.ftex"), "o")
+        put(os.path.join(a, "content", "scoreboard-server", "map_competitions.txt"),
+            "263, %s\\L One   %s L One\n" % (WORLD, tag))
+        put(os.path.join(a, "content", "scoreboard-server", WORLD, "L One", "board.dds"), "b")
+        zk = os.path.join(tmp, WORLD + "-kits.zip")
+        info = I.export_world(a, WORLD, zk)
+        assert info["kits"] == 1 and info["scoreboards"] == 1, info
+        with zipfile.ZipFile(zk) as z:
+            names = set(z.namelist())
+            km = z.read("SiderAddons/content/kit-server/map.txt").decode()
+            assert km.strip() == '72001, "%s\\L One\\Club A"   %s L One/0 made' % (WORLD, tag), km
+            assert "SiderAddons/content/kit-server/%s/L One/Club A/p1/u0001p1.ftex" % WORLD in names
+            assert not any("_FL26Other" in n for n in names), names
+            assert "SiderAddons/content/scoreboard-server/%s/L One/board.dds" % WORLD in names
+            assert "Kits (1 clubs)" in z.read(I.WORLD_README).decode()
+        # another PC with a kit line of its own for the same club: ours replaces it, removal brings it back
+        f = sider(os.path.join(tmp, "f"))
+        own = '72001, "Mine\\Old"\n'
+        put(os.path.join(f, "content", "kit-server", "map.txt"), own)
+        rec, ini = install(f, zk)
+        km = open(os.path.join(f, "content", "kit-server", "map.txt"), encoding="utf-8").read()
+        assert '72001, "%s\\L One\\Club A"' % WORLD in km and tag in km, km
+        assert not any(l.startswith('72001, "Mine') for l in km.splitlines()), km
+        assert os.path.isfile(os.path.join(f, "content", "kit-server", WORLD, "L One", "Club A", "p1", "u0001p1.ftex"))
+        assert os.path.isfile(os.path.join(f, "content", "scoreboard-server", WORLD, "L One", "board.dds"))
+        I.uninstall(Game(f), ini, rec)
+        km = open(os.path.join(f, "content", "kit-server", "map.txt"), encoding="utf-8").read()
+        assert '72001, "Mine\\Old"' in km and WORLD not in km, km
+        # SPFL26's own Kit Server (common\kits.lua reads content\kits): the kits go there (GitHub #129)
+        g = sider(os.path.join(tmp, "g"))
+        put(os.path.join(g, "sider.ini"), '[sider]\nlua.module = "common\\kits.lua"\n')
+        put(os.path.join(g, "content", "kits", "map.txt"), "")
+        install(g, zk)
+        assert os.path.isfile(os.path.join(g, "content", "kits", WORLD, "L One", "Club A", "p1", "u0001p1.ftex"))
+        assert WORLD in open(os.path.join(g, "content", "kits", "map.txt"), encoding="utf-8").read()
+        assert not os.path.exists(os.path.join(g, "content", "kit-server"))
         # ---- a world of the same name built on this PC is not overwritten ----
         e = sider(os.path.join(tmp, "e"))
         put(os.path.join(e, "livecpk", WORLD, I.WORLD_FILE), "world %s\n" % WORLD)
