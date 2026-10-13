@@ -33,6 +33,21 @@ def out_dir():
     return OUT
 
 
+def use_game(folder, sider=None):
+    r"""point every tool at this game folder: Mod Studio and the League Builder pass the folder
+    they were given, so a game outside C:\Football Life 2026 is found with no FL26_DIR set
+    (0.2.2/0.2.3: Build stopped with "FL_2026.exe not found" on such a PC). FL26_EXE still wins."""
+    global GAME_DIR, EXE, SIDER_DIR, SIDER_INI, LIVECPK
+    if not folder:
+        return
+    GAME_DIR = folder
+    if "FL26_EXE" not in os.environ:
+        EXE = os.path.join(folder, "FL_2026.exe")
+    SIDER_DIR = sider or os.path.join(folder, "SiderAddons")
+    SIDER_INI = os.path.join(SIDER_DIR, "sider.ini")
+    LIVECPK = os.path.join(SIDER_DIR, "livecpk")
+
+
 def need_exe():
     if not os.path.isfile(EXE):
         raise SystemExit(

@@ -228,6 +228,7 @@ import mkcoaches
 import mkuecl
 import fl26world
 import siderdir
+import flpaths
 
 GAME = os.environ.get("FL26_DIR", r"C:\Football Life 2026")
 R_ABOVE = 0x04
@@ -3083,6 +3084,7 @@ def club_order(pl, ents, regs, raw, top_id, log=print):
 
 
 def build(pl, base, game, replace=False, log=print):
+    flpaths.use_game(game, siderdir.find(game))   # the exe readers (caltab, region headings) look here
     out = os.path.join(siderdir.find(game), "livecpk", pl["world"])
     if os.path.exists(out):
         if not replace:
@@ -3943,7 +3945,7 @@ def cupdays_lines(pl, base, db, log=print):
         import caltab
         img = caltab.Image()
         cs, idc = caltab.cases(img), caltab.id_case(img)
-    except Exception as e:                          # no exe at hand: the old spacing stays
+    except (Exception, SystemExit) as e:            # no exe at hand: the old spacing stays
         log("  NOTE: the game's cup dates could not be read (%s); leagues keep clear of our cups only" % e)
         return []
 

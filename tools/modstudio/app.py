@@ -93,6 +93,7 @@ class Main(QMainWindow):
         siderdir.PREFERRED = self.settings.get("sider") or None
         folder = self.settings.get("game") or next(iter(guess_folders()), "")
         self.game = Game(folder)
+        self.game_paths()
         from modstudio.project import Project
         self.project = Project(self)
         self.project.load_tables()
@@ -353,15 +354,24 @@ class Main(QMainWindow):
 
     def set_game(self, folder):
         self.game = Game(folder)
+        self.game_paths()
         self.settings["game"] = self.game.folder
         self.save_settings()
         self.bus.game_changed.emit()
+
+    def game_paths(self):
+        """the builder's tools find the exe through flpaths: give them this game folder, not the
+        default C:/Football Life 2026 (0.2.3: "FL_2026.exe not found" on Build)"""
+        import flpaths
+        if self.game.folder:
+            flpaths.use_game(self.game.folder, self.game.sider_dir)
 
     def set_sider(self, name):
         """use the Sider folder `name` of the game folder (one of siderdir.candidates)"""
         siderdir.PREFERRED = name or None
         self.settings["sider"] = name or ""
         self.save_settings()
+        self.game_paths()
         self.bus.game_changed.emit()
 
     def status(self, text):

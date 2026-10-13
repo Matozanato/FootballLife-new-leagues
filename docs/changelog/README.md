@@ -2,6 +2,8 @@
 
 What each release of FL26 Mod Studio brought. The full notes of the latest releases:
 
+- [0.2.4](changelog-0.2.4.md) (2026-10-13): Build no longer stops with "FL_2026.exe not found"
+  when the game is not in C:\Football Life 2026; it uses the game folder from Settings.
 - [0.2.3](changelog-0.2.3.md) (2026-10-13): a quick fix for 0.2.2 -- Mod Studio no longer closes
   during Build; it shows the builder's message instead, and a crash writes crash.log.
 - [0.2.2](changelog-0.2.2.md) (2026-10-13): the big fix update, with raised limits (2,400 clubs,
