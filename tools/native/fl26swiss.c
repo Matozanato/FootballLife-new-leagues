@@ -569,6 +569,63 @@ typedef char (*setclr_fn)(uint64_t id, u32vec* list, uint64_t flag);
 typedef unsigned char* (*table_fn)(uint64_t id);
 unsigned char* g_tramp_setcl = 0;
 #define KO_N 16
+/* A league phase's table when its competition's next season is already open.
+ * 0x141579b90 answers from the competition's LATEST season: 0x14159ebf0 takes the higher year of
+ * the two season slots in the competition's header ([owner+0x78] + h*0xb4, slots at +4 and +0x5c,
+ * u16 year at +4, up to 20 table indices at +8), and 0x14158df30 walks that slot's tables for the
+ * id.  On 2026-10-13 (test world, second season) the Europa League's header held 2026 and 2027 by
+ * February -- its next season opened early, over the 2025 slot, while the Champions League still
+ * held 2025 / 2026 -- so reg 1029 read the new season's empty table: 0 rows, the play-off's end
+ * found "no table" and the round of 16 was never drawn.  The 2026 table was intact (36 rows).
+ * So when the latest season's table of a league-phase row is short, this walks both slots of
+ * every header the same way and takes that id's table with the most rows (24..48).  The offset
+ * of the table array and so the number of headers come from the live lea at 0x14158df91
+ * (fl26hdr255 moves the array behind 255 headers). */
+static unsigned char* season_table(uint16_t reg, unsigned* year_out)
+{
+  unsigned char* lea = (unsigned char*)(uintptr_t)(g_base + 0x158df91);
+  if (lea[0] != 0x49 || lea[1] != 0x8d || lea[2] != 0x82) return 0;
+  uint32_t arr; memcpy(&arr, lea + 3, 4);
+  unsigned nh = arr / 0xb4;
+  if (arr % 0xb4 || nh < 100 || nh > 255) return 0;
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* s = o ? *(unsigned char**)(o + 0x78) : 0;
+  if (!s) return 0;
+  unsigned char* best = 0; unsigned brows = 0, byear = 0;
+  for (unsigned h = 0; h < nh; h++)
+    for (int k = 0; k < 2; k++) {
+      unsigned char* slot = s + h * 0xb4 + 4 + k * 0x58;
+      if (*(uint32_t*)slot == 0xffffffffu || *(uint16_t*)(slot + 4) == 0xffff) continue;
+      for (int i = 0; i < 20; i++) {
+        int32_t ix = *(int32_t*)(slot + 8 + 4 * i);
+        if (ix == -1) break;
+        if (ix < 0 || ix >= 600) continue;
+        unsigned char* e = s + arr + (size_t)ix * 0x187c;
+        if (*(uint16_t*)e != reg) continue;
+        unsigned rows = *(uint32_t*)(e + 0x318 + 0x3c0);
+        if (rows >= 24 && rows <= 48 && rows > brows) { best = e + 0x318; brows = rows; byear = *(uint16_t*)(e + 2); }
+      }
+    }
+  if (year_out) *year_out = byear;
+  return best;
+}
+/* the league phase's table: the game's, or, when that is short, the one season_table finds */
+static unsigned char* lp_table(uint16_t row)
+{
+  unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(row);
+  uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
+  if (rows >= 24 && rows <= 48) return t;
+  unsigned yr = 0;
+  unsigned char* t2 = season_table(row, &yr);
+  if (!t2) return t;
+  static uint16_t said[4]; int k = row == 1027 ? 0 : row == 1029 ? 1 : row == UECL_ROW ? 2 : 3;
+  if (said[k] != (uint16_t)yr) {
+    said[k] = (uint16_t)yr;
+    logf("fl26swiss: reg %u -- the latest season's table has %u rows; season %u's table (%u rows) is used",
+         (unsigned)row, rows, yr, *(uint32_t*)(t2 + 0x3c0));
+  }
+  return t2;
+}
 static uint16_t ko_row(uint16_t id) { return id == 4 ? 1027 : id == 6 ? 1029 : id == UECL_KO ? UECL_ROW : 0xffff; }
 /* list positions -> table ranks (0-based).  If the knockout pairs neighbours, the ties are
    1-16, 8-9, 4-13, 5-12, 2-15, 7-10, 3-14, 6-11: the seeded half meets the unseeded half. */
@@ -689,7 +746,7 @@ char setcl_handler(uint64_t id, u32vec* list, uint64_t flag)
          n ? list->b[0] : 0, n ? list->b[n - 1] : 0);
   if (row != 0xffff && n) {
     unsigned char* ph = get_rec(row);
-    unsigned char* t = ph && rec_count(ph) >= FL26_SWISS_MIN_CLUBS ? ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(row) : 0;
+    unsigned char* t = ph && rec_count(ph) >= FL26_SWISS_MIN_CLUBS ? lp_table(row) : 0;
     uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
     if (rows >= KO_N && rows <= 48) {
       static uint32_t buf[KO_N];
@@ -1111,7 +1168,7 @@ static int po_start(int ci, void* started)
     return 1;
   }
   unsigned char* ph = get_rec(c->row);
-  unsigned char* t = ph && rec_count(ph) >= 24 ? ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(c->row) : 0;
+  unsigned char* t = ph && rec_count(ph) >= 24 ? lp_table(c->row) : 0;
   uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
   if (rows < 24 || rows > 48) {
     logf("fl26swiss: %s play-off not built (table rows %u)", c->name, rows);
@@ -1152,7 +1209,7 @@ static int po_finish(int ci, void* started)
 {
   const cup_t* c = &CUPS[ci];
   unsigned char* ph = get_rec(c->row);
-  unsigned char* t = ph && rec_count(ph) >= 24 ? ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(c->row) : 0;
+  unsigned char* t = ph && rec_count(ph) >= 24 ? lp_table(c->row) : 0;
   uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
   if (rows < 24) {
     logf("fl26swiss: %s play-off ended but reg %u has no table (rows %u)", c->name, (unsigned)c->row, rows);

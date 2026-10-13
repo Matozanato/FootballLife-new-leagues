@@ -205,6 +205,13 @@ writing the tables itself. The loaders drain `<dll>_log` and `<dll>_stats` into 
   and `build-swiss.sh` runs that first. `fl26swiss_draw.h` keeps associations apart, and
   `swissdraw_test.c` tests it offline.
 - **Constant:** `TODAY_OFF` 0x19115e4.
+- **League phase table of a past season** (`lp_table`, 0.2.2): the play-off and the round of 16
+  read the league phase table through 0x14158b6f0, which takes the competition's newest season.
+  The Europa League (competition 3, header 144) opens its next season around the play-off draw
+  (seen on day 27 of season 2), and that table is empty. When it is, `season_table` walks the
+  two season slots of every header (`[owner+0x78]`, stride 0xb4, slots at +4 / +0x5c, table
+  indices at +8; the table array offset is read from the lea at 0x14158df91) and takes the
+  fullest table of that regulation.
 - **Status:**
   - 2 / 12 / 22 = code not as expected at 0x1413f3e00 / 0x14157f810 / 0x1413f3c30;
   - 3 = `VirtualAlloc`, 4 = `VirtualProtect`;

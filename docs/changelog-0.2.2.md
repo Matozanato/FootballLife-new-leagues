@@ -89,6 +89,12 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   asked the same competition question again for each of the 61,905 players. The new module
   `fl26compcache` keeps each answer for the length of one pass: on our test world day 30 now
   takes under a minute. Build installs it.
+- **No Europa League round of 16 in the second season** (the play-off was played, then the
+  competition ended). Around the play-off draw the game already opens the Europa League's next
+  season, and from then on it shows the league phase table of that season, still empty, so the
+  play-off winners had no one to meet. `fl26swiss` now takes the league phase table of the
+  season that was played when the newest one is empty (sider.log says `the latest season's
+  table has 0 rows; season 2026's table (36 rows) is used`).
 - **The calendar stops on a day and shows nothing** (national team days, awards and other
   events, GitHub #70, #132). Since 0.2.0 a calendar day holds more matches, and one place in
   the game that reads the day's events still looked at the old spot. `fl26caps.lua` now
