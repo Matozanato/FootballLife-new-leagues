@@ -35,7 +35,7 @@ ZIG = os.environ.get("ZIG") or next(
 # the lua.module lines, in load order (the order of the working install)
 ORDER = [
     "fl26caps", "fl26appcap", "fl26regs600", "fl26slots250", "fl26slot7", "fl26guards", "fl26regfast", "fl26walk",
-    "fl26joindll",
+    "fl26compcache", "fl26joindll",
     "fl26hdr255", "fl26chain", "fl26comptab", "fl26slotnames", "fl26clubs", "fl26regen", "fl26editlist", "fl26edit",
     "fl26rank", "fl26deeprank", "fl26regions", "fl26reg128", "fl26regnames", "fl26catlist",
     "fl26swiss", "fl26augseason", "fl26lateguards",
@@ -64,7 +64,8 @@ SUPERSEDED = {"fl26nullguard3": "fl26guards",      # nullguard9 (in fl26guards) 
 PER_WORLD = {"fl26regions", "fl26regnames"}
 DLLS = {"fl26join": "build-join.sh", "fl26chain": "build-chain.sh",
         "fl26clubs": "build-clubs.sh", "fl26swiss": "build-swiss.sh", "fl26regen": "build-regen.sh",
-        "fl26edit": "build-edit.sh", "fl26walk": "build-walk.sh"}
+        "fl26edit": "build-edit.sh", "fl26walk": "build-walk.sh",
+        "fl26compcache": "build-compcache.sh"}
 def _faces_dir():
     """$FL26_REGEN_FACES, else fl26-modding-research/out/regenfaces next to the repo or next to
     any folder above it (a worktree sits deeper than the repo, and the faces were missed there)"""

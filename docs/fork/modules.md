@@ -18,7 +18,7 @@ work. It has no ASLR
 
 ```
 fl26caps, fl26appcap, fl26regs600, fl26slots250, fl26slot7, fl26guards, fl26regfast, fl26walk,
-fl26joindll, fl26hdr255, fl26chain, fl26comptab, fl26slotnames, fl26clubs, fl26regen,
+fl26compcache, fl26joindll, fl26hdr255, fl26chain, fl26comptab, fl26slotnames, fl26clubs, fl26regen,
 fl26editlist, fl26edit, fl26rank, fl26deeprank, fl26regions, fl26reg128, fl26regnames,
 fl26catlist, fl26swiss, fl26augseason, fl26lateguards, fl26seasonend
 ```
@@ -56,6 +56,7 @@ Sider's Lua also has no `debug` or `rawget`. Check every value before you index 
 | `fl26slot7` | itself | a club's league slot is a whole byte (0..249), not 7 bits (0.2.2; needs `fl26slots250`) |
 | `fl26regfast` | itself | speed fix: drops two redundant regulation searches from "which league is team X in" |
 | `fl26walk` | itself + `fl26walk.dll` | speed fix: keeps the user's club and league for one calendar walk (Master League creation, day advance) |
+| `fl26compcache` | itself + `fl26compcache.dll` | speed fix: the game's per-player competition scan (end of January, transfer deadline) asks each competition's lookup once per scan instead of once per player |
 | `fl26nullguard`, `2`, `4`, `5`, `7`, `8`, `9`, `10` | `fl26guards` | code-cave guards at crash sites in the shipped code: a null or out-of-range value takes the safe path instead of crashing. Each header shows the disassembly of its site |
 | `fl26joindll` | itself + `fl26join.dll` | gets our leagues into a Master League season and closes them at season end, the way shipped leagues are handled |
 | `fl26hdr255` | itself | season competition header from 100 to 255 entries, 595 per-phase tables left (a patch set of the same kind as fl26caps; it replaced `fl26hdr192` and `sider/fl26hdr127.lua` in 0.2.2) |

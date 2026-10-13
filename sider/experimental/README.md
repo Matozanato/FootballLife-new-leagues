@@ -18,7 +18,7 @@ runs exactly as it did before.
 
 **0.2.2: the raised limits.** Mod Studio 0.2.2's pack ships `fl26hdr255` (255 competitions a
 season, in place of `fl26hdr127`/`fl26hdr192`), `fl26reg128` (in place of `fl26reg64`),
-`fl26slots250`, `fl26slot7`, `fl26regs600`, `fl26appcap` and `fl26walk` from this folder, with
+`fl26slots250`, `fl26slot7`, `fl26regs600`, `fl26appcap`, `fl26walk` and `fl26compcache` from this folder, with
 the 0.2.2 `fl26caps.lua` (2,400 clubs, 61,905 players). They are played on our 86-league test
 world; take them from the pack (Build installs them), not one by one from here, since they
 expect each other. The sections below on `fl26hdr192` and `fl26reg64` describe the older set.
@@ -50,6 +50,7 @@ expect each other. The sections below on `fl26hdr192` and `fl26reg64` describe t
 | `fl26slot7.lua` | a club's Master League **league slot** becomes a whole byte (0..249) instead of 7 bits | 59 patches; the game's flag in that byte moves to padding beside it. Without it a club of a league on slot 130 got slot 2 when a career was created |
 | `fl26regs600.lua` | the game's **regulation recount** looks at all 600 records instead of 300 | 4 patches; without it the highest regulation ids (late cup and European ties) were left out of the Master League save once a world had more than 300 |
 | `fl26walk.lua` + `fl26walk.dll` | **faster Master League creation** and day advance with a club of an added league | speed fix, not a capacity patch: the DLL remembers the user's club and league for the length of one calendar walk (a career with a Druga NL club sat 113 s on the loading screen before it) |
+| `fl26compcache.lua` + `fl26compcache.dll` | **no 20-40 minute loading screen at the end of January** in a big world | speed fix, not a capacity patch: on the winter transfer deadline the game scores every player's club against every league, asking the same competition lookup again for each of 61,905 players. The DLL keeps each competition's answer for the length of one scan (each scan 0.1-0.2 s after, the test world went from day 30 to day 51 in one move; before, 20-36 minutes on day 30). `fl26compcache.log` beside the dll times every scan |
 | `fl26editlist.lua` | **Edit mode's team lists** (Edit > Teams, Edit > Players > Edit Player, Transfer, Managers) show every added league with its clubs, so their clubs and players can be edited there like shipped ones | those lists do not come from the data at all: one function in the exe hands every Edit screen the same thirty competition slots, written into its code. The module adds the slots of your leagues to what it returns (read from the table `fl26comptab.lua` sets up, so load it after that) and changes nothing else. Checked in game 2026-09-26: every added league of our world listed and openable (32 were missing without it). Side effect: the "Other" heading (free agents, created players) is no longer the last one; it now sits just before the block of added leagues |
 
 ## Order, and which of these need each other
