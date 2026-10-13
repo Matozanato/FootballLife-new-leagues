@@ -13,7 +13,8 @@ FEATURED = [
      "testing plan, twenty-one of the first thirty-seven issues, and on the Discord the European "
      "places of the game's leagues, the calendar events lost after 0.2.0 and the July leagues "
      "that never reach the hub; and code: the national cup and super cup of February-December "
-     "leagues (#139, 0.2.2)"),
+     "leagues (#139, 0.2.2); and the night 0.2.2 came out, the traceback of the Build "
+     "that stopped outside the default game folder, with the fix confirmed within minutes (0.2.3)"),
     ("Alikhaled_727", "Evo-Web, Mohamed_248 on GitHub",
      "the leagues outside Europe: Saudi Arabia, Egypt, Morocco, Asia and Africa, the CAF cups, "
      "the AFC Champions League Two and the league cup pre-round"),

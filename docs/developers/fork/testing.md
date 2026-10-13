@@ -1,8 +1,9 @@
 # Testing
 
-There are three layers. Small Python tests check one rule each. `regress018.py` builds a set of
-test recipes and checks the worlds without the game. Only the game itself proves that a world
-plays. Run all three before a release.
+There are four layers. Small Python tests check one rule each. `regress018.py` builds a set of
+test recipes and checks the worlds without the game. `test_modstudio_build.py` runs Build and
+install through Mod Studio itself, on a PC set up like a player's. Only the game itself proves
+that a world plays. Run all four before a release.
 
 The tests need no framework. Each is a script with plain `assert`s. It stops at the first
 failure, and most print an `ok` line per check. Run them from the repository root.
@@ -46,6 +47,31 @@ python tools/test_newlife_update.py <NewLife folder A> <NewLife folder B>
 ```
 
 A NewLife folder is an unpacked release (see [newlife-format.md](newlife-format.md)).
+
+## `test_modstudio_build.py`: Build through Mod Studio, on a player's PC
+
+```
+python tools/test_modstudio_build.py <game folder> [<tables>] [--recipe <json>] [--keep]
+```
+
+`regress018.py` and the command line builder run on the developer's PC, where `FL26_DIR` is
+set and the game sits where the tools expect it. A player's PC is not like that, and 0.2.2
+went out with two Build bugs that only showed there: Mod Studio closed during Build (an error
+inside the worker thread), and Build stopped with "FL_2026.exe not found at C:\Football Life
+2026" when the game was anywhere else (OneDrive, another drive). This test runs the Build
+page's *Build and install* offscreen with:
+
+- the game in a temporary folder with a space and a letter outside ASCII in its path
+  (`Football Life Ž test\Juego`), never `C:\Football Life 2026`;
+- `FL26_DIR`, `FL26_EXE` and `FL26_SIDER` removed from the environment, so Mod Studio has only
+  its Settings;
+- a fresh Mod Studio settings folder holding only the tables and the recipe.
+
+It passes when Build and install finishes (the after-build window), the output has no error,
+the game's cup dates were read from the exe in that folder, and the world is built and
+switched on. `<game folder>` only gives `FL_2026.exe`; `<tables>` defaults to
+`%APPDATA%\FL26ModStudio	ables`; the recipe defaults to `testdata/regress018/eu_places.json`.
+Needs PySide6. Before a release, also start the exe from the release zip once and press Build.
 
 ## `regress018.py`: build every test recipe
 

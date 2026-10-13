@@ -286,6 +286,9 @@ worst bugs here were found only because vmardonesdev played further than anyone 
 - Code, too: [#139](https://github.com/Matozanato/FootballLife-new-leagues/pull/139) gives a
   February-December league its national cup and super cup (`fl26swiss`, `fl26join`, the League
   Builder and a test of its own), in 0.2.2.
+- The night 0.2.2 came out: the traceback that showed why Build stopped for everyone whose game
+  is not in `C:\Football Life 2026`, sent the moment it happened, and the fix tested and
+  confirmed within minutes, so 0.2.3 could go out for everyone the same evening.
 
 If you use anything from this repository, vmardonesdev's name belongs next to it.
 
