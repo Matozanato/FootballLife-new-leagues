@@ -1,6 +1,15 @@
 # What's new in Mod Studio 0.2.2
 
-DRAFT -- not released. Every line below still needs its in-game check before the release.
+0.2.2 is the big fix update promised with 0.2.1, and it raises the limits: bigger worlds,
+more leagues and more clubs.
+
+## Read this first
+
+- **Careers saved before 0.2.2 do not load** (the game stays on the loading screen). Start a
+  new career after Build. Your recipe and your world carry over.
+- Install the modules (Install page, or Build and install does it), then **Build** once: the
+  new limits need the new modules and a world built with them.
+- Not checked in the game yet: see the end of this page.
 
 ## Bigger worlds
 
@@ -203,3 +212,17 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   refused its bytes, and the check after Build called that "refused the game's exe".
 - Edit mode team lists show the leagues on the new competition slots 124-249 too
   (`fl26editlist` stopped at 123, the old slot count).
+
+## Not checked in the game yet
+
+- The national cup and super cup of a February-December league (GitHub #139): its own tests
+  pass, a career with one has not been played yet.
+- The sider.log line that says why a qualifying round is not played (GitHub #128): in our test
+  world every round is played, so the line never came.
+- Export the world with kits: installed and removed again on a second Sider folder, not yet
+  played on another PC.
+
+## Known, for a later update
+
+- The Copa Sudamericana still follows the European calendar (filled at the end of August,
+  groups November-February) instead of South America's.
