@@ -87,7 +87,9 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   skipped are expected to come back with it.
 - **A January-December league in a country with no league of the game never started**
   (Norway and Sweden in the modpack, GitHub #124). Nothing closed its season at New Year, so
-  in February it still counted as playing. It now closes with the game's New Year leagues.
+  in February it still counted as playing. It now closes with the game's New Year leagues,
+  and on the registration day a league whose old rounds have no match left starts its new
+  season (the close kept those rounds, so the second season never came).
 - **Copa Sudamericana and Libertadores could share a club** in a first season while the next
   club in the league got neither (GitHub #132: Alianza Lima). Both cups now count a league's
   places the same way, and a club with a Libertadores place does not take a Sudamericana one.

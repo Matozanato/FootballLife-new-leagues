@@ -222,6 +222,41 @@ static int has_rounds(const unsigned char* rec)
   return rec && ((*(const uint32_t*)(rec + 0x300) >> 19) & 0x3f)
          && *(const uint32_t*)(rec + 0x88) != 0xffffffffu;
 }
+/* ... but a calendar-year league of ours in a region with no league of the game's (Norway,
+   Sweden, the Dominican Republic, New Zealand, the USL under Liga MX) keeps its rounds through
+   the New Year close: phases 30 and a first fixture whose matches the game has meanwhile given to
+   other competitions (2026-10-13, y2 day 51: 111 with first fixture 0xc11 pointing at match
+   0x5ed2, now regulation 163; 0 match records of 111, 144, 199, 200, 201, 250 in the table, 182
+   of 62 that has a mate). It read as "already in a season" on day 41 and played no season at all
+   (GitHub #124 again). A league in a season has match records, played or not, until the
+   teardown, so rounds with none behind them are last season's. The match table's place and size
+   are read off the July teardown's own walk, as fl26swiss does. -1: the table is not where it was. */
+#define MATCH_BASE_SITE 0x13146e8
+#define MATCH_CAP_SITE  0x131471b
+#define MATCH_STRIDE    0x254
+static int league_matches(uint16_t id)
+{
+  const unsigned char* bs = (const unsigned char*)(uintptr_t)(g_base + MATCH_BASE_SITE);
+  const unsigned char* cs = (const unsigned char*)(uintptr_t)(g_base + MATCH_CAP_SITE);
+  if (bs[0] != 0x48 || bs[1] != 0x8d || bs[2] != 0x88 || cs[0] != 0x81 || cs[1] != 0xff) return -1;
+  uint32_t base = *(const uint32_t*)(bs + 3), cap = *(const uint32_t*)(cs + 2);
+  void** owner = *(void***)(uintptr_t)(g_base + OWNER_RVA);
+  const unsigned char* blk = owner ? (const unsigned char*)owner[0x48 / 8] : 0;
+  if (!blk || !cap || cap > 200000) return -1;
+  int n = 0;
+  for (uint32_t i = 0; i < cap; i++) {
+    const unsigned char* m = blk + base + (size_t)i * MATCH_STRIDE;
+    if (*(const uint16_t*)m != 0xffff && *(const uint16_t*)(m + 4) == id) n++;
+  }
+  return n;
+}
+static int live_rounds(uint16_t id, const unsigned char* rec)
+{
+  if (!has_rounds(rec)) return 0;
+  if (!calyr(id) || league_matches(id) != 0) return 1;
+  logf("register_all: %u has rounds but no match left in the table -- last season's, let in", id);
+  return 0;
+}
 vec16_t* join_pre(vec16_t* in)
 {
   g_stat[0]++;
@@ -260,7 +295,7 @@ vec16_t* join_pre(vec16_t* in)
        played twice, 121 points in League One (2026-10-01, loaded at day 232; rec 4020 and
        rec 11026 both 22 rounds of Liga A). The rounds are in the save, the memory is not. */
     if (rec && ((*(const uint32_t*)(rec + 0x304) >> 8) & 1)
-        && (has_rounds(rec) || (!calyr(g_ids[i]) && has_table(g_ids[i]))
+        && (live_rounds(g_ids[i], rec) || (!calyr(g_ids[i]) && has_table(g_ids[i]))
             || (g_ids[i] < 256 && g_door_yes[g_ids[i]])
             || (g_cal_midseason && calyr(g_ids[i])))) { already++; continue; }
     if (rec && ((*(const uint32_t*)(rec + 0x304) >> 8) & 1))
