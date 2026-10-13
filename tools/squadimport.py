@@ -61,7 +61,8 @@ BASIC = {
                     "nationalteam", "drzavljanstvo", "drzava", "nacionalnost"],
     "height": ["height", "heightcm", "visina"],
     "weight": ["weight", "weightkg", "tezina"],
-    "foot": ["foot", "preferredfoot", "strongerfoot", "strongfoot", "noga", "jacanoga"],
+    "foot": ["foot", "preferredfoot", "strongerfoot", "strongfoot", "noga", "jacanoga",
+             "pie", "pierna", "piedominante", "piehabil", "piernahabil", "pe", "pepreferido", "pedominante"],
     "shirt": ["shirt", "number", "no", "nr", "kitnumber", "jersey", "shirtnumber", "squadnumber",
               "clubjerseynumber", "broj", "brojdresa"],
     "overall": ["overall", "ovr", "rating", "overallrating", "ocjena", "ukupno"],
@@ -294,9 +295,12 @@ def foot(cell):
     k = norm(cell)
     if k in ("0", "1"):                     # a PES editor's table: 0 right, 1 left
         return "Left" if k == "1" else "Right"
-    if k in ("left", "l", "lijeva", "lijevi", "links", "gauche", "izquierdo"):
+    if k in ("left", "l", "lijeva", "lijevi", "links", "gauche", "izquierdo", "izquierda", "i", "zurdo",
+             "zurda", "esquerdo", "esquerda", "canhoto", "canhota", "sinistro", "mancino"):
         return "Left"
-    if k in ("right", "r", "desna", "desni", "rechts", "droite", "derecho", "both", "obje"):
+    if k in ("right", "r", "desna", "desni", "rechts", "droite", "derecho", "derecha", "d", "diestro",
+             "diestra", "direito", "direita", "destro", "destra", "both", "obje", "ambos", "ambidiestro",
+             "ambidestro", "ambidextrous"):
         return "Right"
     return None
 

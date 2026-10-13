@@ -33,6 +33,11 @@ def main():
     # a table with a PES editor's "ID" column
     g = Q.guess(["ID", "Name", "Pos"], [["123", "A B", "CF"]])
     assert g == {0: "id", 1: "name", 2: "position"}, g
+    # a Spanish table: "Pie" with Izquierda / Zurdo / Diestro (Discord)
+    g = Q.guess(["Nombre", "Pie"], [["A B", "Izquierda"]])
+    assert g.get(1) == "foot", g
+    assert [Q.foot(v) for v in ("Izquierda", "Zurdo", "Diestro", "Derecha", "Pé esquerdo")] ==         ["Left", "Left", "Right", "Right", None], "Spanish foot values"
+    assert Q.foot("Canhoto") == "Left" and Q.foot("Ambos") == "Right"
     print("all passed")
 
 

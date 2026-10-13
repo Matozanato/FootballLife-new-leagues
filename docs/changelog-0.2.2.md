@@ -130,6 +130,9 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   its weakest.
 - A package whose NewLife club list has gaps no longer stops Check the plan.
 - A player joined from another database that the game does not have is skipped.
+- Import players reads a Spanish or Portuguese foot column ("Pie", "Pierna", "Pé") and its
+  values (Izquierda, Zurdo, Diestro, Esquerdo, Canhoto...); every player came out right-footed
+  (Discord).
 - Check the plan reports a Conference League world without its play-off (regulation 189).
 - Check the plan says so when more than 8 Libertadores group stage places are listed
   (the game only leaves the new leagues 8, GitHub #127).
