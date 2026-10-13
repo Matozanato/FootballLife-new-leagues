@@ -4656,18 +4656,33 @@ static uint64_t phkind_core(uint32_t* comp, uint64_t kind, uintptr_t ra)
            ra == g_base + MENU_GRP_RA ? "item" : ra == g_base + MENU_GRP2_RA ? "enable" : "page",
            (unsigned)kind, (unsigned)(uint16_t)r);
     }
-    int i = q_rolling((uint16_t)r);
+    /* Only the item still rolls. Since 11.10. every drawn qualifying round has an item of its own
+       (ci_menu_handler), so the Play-offs item rolling to the round in play opened the third
+       qualifying round under "Play-offs" (13.10., in game, season 2, day 232). The Play-offs item
+       stands for the play-off alone: live once its draw has put clubs in the first tie. */
+    int i = ra == g_base + MENU_GRP_RA ? q_rolling((uint16_t)r) : -1;
     if (i >= 0) {
-      uint16_t q = q_reg(i);
-      if (ra == g_base + MENU_GRP2_RA) {
-        unsigned char* qr = find_rec(q), *r2 = find_rec(CUPS[0].po);
-        if (!(qr && ((*(uint32_t*)(qr + 0x304) >> 8) & 1)) && r2 && ((*(uint32_t*)(r2 + 0x304) >> 8) & 1))
-          q = CUPS[0].po;
+      if (g_roll_n++ < 12)
+        logf("fl26swiss: Competition Info -- %s item shown under its play-off item (regulation %u)",
+             QNAME(i), (unsigned)q_reg(i));
+      return (r & ~0xffffull) | q_reg(i);
+    }
+    if (ra == g_base + MENU_GRP2_RA && q_summer()) {
+      for (int ci = 0; ci < 3; ci++) {
+        const cup_t* c = &CUPS[ci];
+        if ((uint16_t)r != c->po) continue;
+        unsigned char* tie = find_rec(tie_id(c, 0)), *po = find_rec(c->po), *r2 = find_rec(CUPS[0].po);
+        if (!tie || !rec_count(tie)) {
+          static int said_grey = 0;
+          if (said_grey++ < 6) logf("fl26swiss: Competition Info -- %s Play-offs greyed: not drawn yet", c->name);
+          return r | 0xffff;
+        }
+        /* the enable check reads the drawn bit only; the summer play-offs are filled without the
+           game's draw, reg 2 is marked drawn all year */
+        if (!(po && ((*(uint32_t*)(po + 0x304) >> 8) & 1)) && r2 && ((*(uint32_t*)(r2 + 0x304) >> 8) & 1))
+          return (r & ~0xffffull) | CUPS[0].po;
+        return r;
       }
-      if (ra != g_base + MENU_GRP2_RA && g_roll_n++ < 12)
-        logf("fl26swiss: Competition Info -- %s %s shown under its play-off %s (regulation %u)",
-             QNAME(i), ra == g_base + MENU_GRP_RA ? "item" : "page", (unsigned)q_reg(i));
-      return (r & ~0xffffull) | q;
     }
   }
   if (comp && kind == 0 && (ra == g_base + MENU_GRP_RA || ra == g_base + MENU_GRP2_RA)) {
@@ -4786,7 +4801,9 @@ uint64_t gstage_handler(uint32_t* comp)
 {
   uint64_t r = ((gstage_fn)(uintptr_t)g_tramp_gstage)(comp);
   if (!comp) return r;
-  for (int ci = 1; ci < 3; ci++) {
+  /* The Champions League too (13.10.): the game reads its play-off, reg 2, marked drawn all year,
+     so before the draw League Phase opened on an empty "Group A". */
+  for (int ci = 0; ci < 3; ci++) {
     const cup_t* c = &CUPS[ci];
     unsigned char* lg = find_rec(c->league);
     if (!lg || *(uint32_t*)(lg + 0x80) != *comp) continue;

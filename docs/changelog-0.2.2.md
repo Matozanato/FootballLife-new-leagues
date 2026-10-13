@@ -138,6 +138,9 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   the copy kept that. Folders now go in without it.
 - Competition Info no longer lists "Knockout round play-offs" twice after the February
   play-off draw (the game's own item already opens that round).
+- Competition Info in August: Play-offs stays grey until the play-off is drawn (it opened the
+  3rd qualifying round under the Play-offs name), and the Champions League's League Phase stays
+  grey until its draw (it opened an empty "Group A").
 - League cup hints say late August to mid-March, the dates since 0.2.0.
 - Home: Switch world... shows the worlds.
 - sider.log says why a qualifying round is not played in a season (GitHub #128, log only).
