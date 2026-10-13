@@ -382,7 +382,8 @@ LIBERTADORES_KO = 10                     # the game's own Libertadores knockout/
 # The Sudamericana's first stage: 16 one-match ties, one play-off of sixteen (`lpre ... single=1`,
 # mkeuropo.prerounds_single),
 # filled from day 42 to the eve of its day, played on 17 February
-SAM_FIRST_FILL, SAM_FIRST_DAY = 42, 48
+SAM_FIRST_FILL, SAM_FIRST_DAY = 36, 44   # day 44 (14 February): 48 was the Copa BetPlay's second leg; filled from day 36, as the game
+                                         # skips days its user's club does not play (42..43 skipped, the stage never filled: 2026-10-12)
 SAM_FIRST_TIES = 16                      # 32 clubs
 SAM_FIRST_NAME = "Pré-Sudamericana"
 SAM_DIRECT = 6                           # Brazil's and Argentina's clubs straight into the groups each
@@ -394,8 +395,12 @@ LIB_QUAL, QUAL_LOSER = 8, 255
 # both phases in one competition; the Database shows its current phase (fl26swiss curph: the
 # latest phase filled this season)
 LIBQ_NAME, LIBQ_CODE = "Pré-Libertadores", "FL_LIBQ"
-LIBQ_P1 = {"fill": 2, "days": [6, 13]}
-LIBQ_P2 = {"fill": 14, "days": [20, 27]}
+# phase 2's first leg on day 18, not 20: the game's own Copa Chile (the Copa do Brasil's calendar)
+# plays day 20 and two Chilean clubs had two matches on 21 January; phase 1 a day earlier (11) so
+# phase 2 is filled over six days (12..17) -- the game skips days its user's club does not play
+# (2026-10-12)
+LIBQ_P1 = {"fill": 2, "days": [6, 11]}
+LIBQ_P2 = {"fill": 12, "days": [18, 27]}
 LIBQ_INVITED, LIBQ_GAME8 = 254, 253
 # The Sudamericana's knockout play-off (CONMEBOL since 2023, recipe "sudamericana_playoffs",
 # default on with the first stage): its eight group runners-up v the eight thirds of the

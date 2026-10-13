@@ -223,6 +223,8 @@ static void nd_tick(void);
 static int nd_phase_id(uint16_t id);
 static uint64_t nd_current(uint64_t comp, uint64_t original);
 static int nd_hidden_comp(uint32_t comp);
+static int nd_roster(uint32_t team);
+static int nd_league_days(uint32_t region, uint16_t* out, int max);
 static int nd_cup_comp(uint32_t comp);
 static uint64_t nd_menu_kind(const uint32_t* comp, uint64_t kind, uint64_t r, uintptr_t ra);
 
@@ -1284,11 +1286,15 @@ static final_t* final_of(uint16_t reg)
 #define NEWYEAR_FROM 335
 #define NEWYEAR_TO   45
 static int season_played(uint16_t reg);
-/* a table in exactly the league's list order is one nobody has played yet */
+/* a table in exactly the league's list order is one nobody has played yet -- and with no
+   match in any row (+0xf, played): a Libertadores group that finished in pot order read as
+   unplayed, its third place came from squad strength, and Cruz Azul, second in the group,
+   played the Sudamericana play-off and both rounds of 16 (2026-10-12) */
 static int unplayed(unsigned char* rec, unsigned char* t, uint32_t rows)
 {
   int listed = rec_count(rec) == rows;
-  for (uint32_t k = 0; k < rows && listed; k++) listed = *(uint32_t*)(t + k * 20) == rec_clubs(rec)[k];
+  for (uint32_t k = 0; k < rows && listed; k++)
+    listed = *(uint32_t*)(t + k * 20) == rec_clubs(rec)[k] && !t[k * 20 + 0xf];
   return listed;
 }
 /* keep reg's final table at the July teardown, while it still exists; 1 kept, -1 a table nobody
@@ -3563,13 +3569,20 @@ static uint32_t game8_club(const uint32_t* taken, unsigned nt, int self)
   void* blk = o ? *(void**)(o + 0x48) : 0;
   unsigned char* r = get_rec(R_LIBQ);
   unsigned m = r ? rec_count(r) : 0;
-  for (int pool = 0; pool < 2; pool++)
-    for (unsigned i = 0; blk && i < m && i < 64; i++) {
-      uint32_t c = canon_club(rec_clubs(r)[i]);
-      if (!(c >> 14) || (club_slot(blk, c) == POOL_LATAM) != pool || has_club(taken, nt, c) || lpre_other_has(self, c)) continue;
-      if (pool) logf("fl26swiss:   reg 8 has no rights club left -- pool club %08x taken instead", c);
-      return c;
-    }
+  /* South American clubs first: the game's rights for reg 8 also hold MLS clubs, whose January
+     league rounds met phase 2's days (2026-10-12) -- with the world's confederations known
+     (confed line, CONMEBOL = 4), a club of another confederation only when nothing else is left */
+  for (int any = 0; any < 2; any++)
+    for (int pool = 0; pool < 2; pool++)
+      for (unsigned i = 0; blk && i < m && i < 64; i++) {
+        uint32_t c = canon_club(rec_clubs(r)[i]);
+        if (!(c >> 14) || (club_slot(blk, c) == POOL_LATAM) != pool || has_club(taken, nt, c) || lpre_other_has(self, c)) continue;
+        int cf = g_confed_n ? confed_of(team_country(blk, c)) : 4;
+        if (!any && cf && cf != 4) continue;
+        if (pool) logf("fl26swiss:   reg 8 has no rights club left -- pool club %08x taken instead", c);
+        if (any && cf != 4) logf("fl26swiss:   reg 8 has no South American club left -- %08x (confederation %d) taken", c, cf);
+        return c;
+      }
   return 0;
 }
 /* a pre-round whose every tie has a winner read from its matches */
@@ -3767,6 +3780,7 @@ static void lib9_clean(u32vec* list)
     for (uint32_t t = 0; t < na && !sub; t++) {
       uint32_t v = team_at(a, t);
       if (!(v >> 14) || (v & 0x3fff) != t || club_slot(blk, v) != POOL_LATAM) continue;
+      if (nd_roster(v >> 14)) continue;           /* the Copa do Nordeste's clubs: ASA, ABC ... (2026-10-12) */
       if (lpre_invites(v) || has_club(list->b, n, v) || (r8 && has_club(rec_clubs(r8), rec_count(r8), v))) continue;
       sub = v;
     }
@@ -6724,6 +6738,31 @@ static int ccup_invites(int k, uint16_t id)
     if (in_rec(id, canon_club(full_club(g_ccup[k].clubs[i])))) return 1;
   return 0;
 }
+/* a league whose clubs reach continental cup k at all: by the cup's own entries or by a pre-round
+   of it (the Sudamericana's first stage takes Chile's and Colombia's), and any regulation of the
+   same competition (Colombia's Liga BetPlay II is not on the list, its first half is). Chile's
+   league met the play-off of 27 May and Colombia's second half the round of 16 (2026-10-12) */
+static int feeds_ccup(int k, uint16_t id)
+{
+  if (ccup_of_league(k, id)) return 1;
+  unsigned char* r = find_rec(id);
+  uint32_t comp = r ? *(uint32_t*)(r + 0x80) : 0xffffffffu;
+  for (int e = 0; e < g_ccup[k].n && e < CCUP_MAX_ENTRY; e++) {
+    unsigned char* er = g_ccup[k].ereg[e] ? find_rec(g_ccup[k].ereg[e]) : 0;
+    if (er && r && *(uint32_t*)(er + 0x80) == comp && *(uint32_t*)(er + 0x84) == *(uint32_t*)(r + 0x84)) return 1;
+  }
+  for (int li = 0; li < g_nlpre; li++) {
+    if (g_lpre[li].ko != g_ccup[k].ko) continue;
+    for (unsigned j = 0; j < 2u * g_lpre[li].ties && j < 64; j++) {
+      uint16_t er_id = g_lpre[li].ereg[j];
+      if (g_lpre[li].erank[j] == 0 || g_lpre[li].erank[j] >= 253) continue;   /* winners, invited, the game's places */
+      if (er_id == id) return 1;
+      unsigned char* er = find_rec(er_id);
+      if (er && r && *(uint32_t*)(er + 0x80) == comp) return 1;
+    }
+  }
+  return 0;
+}
 static int cup_league(uint16_t id)
 {
   for (int k = 0; k < g_nccup; k++) if (ccup_of_league(k, id)) return 1;
@@ -6802,6 +6841,7 @@ static int home_cup_days(uint16_t id, uint16_t* out, int max)
     }
     for (int j = 0; j < g_hcup_n[k] && got < max; j++) out[got++] = g_hcup_day[k][j];
   }
+  got += nd_league_days(region, out + got, max - got);   /* the Copa do Nordeste, in Brazil */
   return got;
 }
 
@@ -6813,9 +6853,14 @@ static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
 {
   memset(bad, 0, 365);
   for (int k = 0; k < g_nccup; k++)                 /* CAF / AFC / CONMEBOL cups it feeds */
-    if (!g_ccup[k].national && ccup_of_league(k, id)) {
+    if (!g_ccup[k].national && feeds_ccup(k, id)) {
       if (g_ccup[k].groups) for (int i = 0; i < 6; i++) block(bad, ccup_day(&g_ccup[k], 0, i), buf);
       for (int i = 0; i < (g_ccup[k].nd ? g_ccup[k].nd : 7) && i < CCUP_MAX_DAYS; i++) block(bad, ccup_day(&g_ccup[k], 1, i), buf);
+      /* every pre-round and play-off of the South American calendar: the cup's first stage and
+         play-off (the Sudamericana's 146/153 met the Brasileirao's and Chile's rounds of 27 May)
+         and the Libertadores qualifying phases a league of it sends clubs to (phase 2's 20/27 met
+         Colombia's rounds of 21 and 28 January) -- 2026-10-12 */
+      for (int li = 0; li < g_nlpre; li++) { block(bad, g_lpre[li].days[0], buf); block(bad, g_lpre[li].days[1], buf); }
     }
   /* a pre-season cup (invited clubs): its few July days at every level and in every kind of
      season, for the host's league and each invited club's -- any world's cup, not one */
@@ -6961,7 +7006,10 @@ static void july_start(uint16_t id, date_t* r, uint32_t n, int seen)
 
 static void rest_dates(uint16_t id, date_t* r, uint32_t n)
 {
-  static const int LEVEL[4] = { 0, 1, 2, 2 }, GAP[4] = { REST, REST, REST, REST - 1 };
+  /* a day less between matches before the cups' days are given up: Colombia's first half, kept
+     off the Copa BetPlay, the pre-rounds and the Sudamericana, found no calendar at three days and
+     went to level 2 -- one round back on a Copa BetPlay day (2026-10-12) */
+  static const int LEVEL[5] = { 0, 1, 1, 2, 2 }, GAP[5] = { REST, REST, REST - 1, REST, REST - 1 };
   static uint8_t bad[365];
   static uint16_t said[128]; static int nsaid = 0;
   int seen = 0;
@@ -6977,14 +7025,14 @@ static void rest_dates(uint16_t id, date_t* r, uint32_t n)
     declash_log(id, declash(r, n));
     return;
   }
-  for (int t = 0; t < 4; t++) {
+  for (int t = 0; t < 5; t++) {
     busy_days(id, LEVEL[t], GAP[t], bad);
     int moved = respace(r, n, bad, GAP[t], id % 3);
     if (moved < 0) continue;
     g_org = 182;
     if (!seen)
       logf("fl26swiss: reg %u -- %d of %u round(s) moved for %d day(s) between matches%s", (unsigned)id, moved,
-           (unsigned)n, GAP[t], t == 1 ? " (not around the league cup)" : t >= 2 ? " (not around the cups)" : "");
+           (unsigned)n, GAP[t], LEVEL[t] == 1 ? " (not around the league cup)" : LEVEL[t] >= 2 ? " (not around the cups)" : "");
     if (!seen) {                                      /* what is left on the country's cup days */
       uint16_t cd[HOME_CUPS * HOME_CUP_DAYS];
       int nc = home_cup_days(id, cd, HOME_CUPS * HOME_CUP_DAYS), same = 0;
@@ -8821,6 +8869,9 @@ static vec16_t* teardown_pre_base(uint64_t ctx, vec16_t* in)
 vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
 {
   vec16_t* v = teardown_pre_base(ctx, in);
+  /* the season's clashes, before the calendar-year teardown takes its matches (any world) */
+  if (in && in->b && in->e > in->b && in->e - in->b <= 480)
+    for (uint16_t* p = in->b; p < in->e; p++) if (*p == 29) { season_clash_audit(); break; }
   if (!nd_reg || !nd_show || !nd_ko || !v || !v->b || v->e < v->b || v->e - v->b > 480) return v;
   int bra = 0;
   for (uint16_t* p = v->b; p < v->e; p++) if (*p == 29) bra = 1;
