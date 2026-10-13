@@ -61,7 +61,8 @@ the `.dll` files committed in `sider/`: the pack builds them fresh from the sour
 > **Updating to 0.2.2?** The raised limits are in: 2400 clubs, 250 competition slots, 255
 > competitions a season (`fl26hdr255` replaces `fl26hdr192`), 128 regions (`fl26reg128`
 > replaces `fl26reg64`), 600 regulations, 65,000 appearance records. `fl26caps.lua` is a new
-> set (3510 patches), so **a career saved with 0.2.1 or older does not load**: start a new one.
+> set (3510 patches), so **a career saved with 0.2.1 or older does not load** (the game stays on
+> the loading screen with no message; close it in Task Manager): start a new one.
 > Install modules switches off the old lines it replaces (`fl26hdr192`, `fl26hdr127`,
 > `fl26reg64`, `fl26deep4`, `fl26nullguard3` and the single guards of the bundles).
 >
