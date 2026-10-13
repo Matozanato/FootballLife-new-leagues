@@ -177,6 +177,12 @@ local PATCHES = {
   {va=0x141543815, old="81f900000080", new="81f900000040", why="rank-read: cmp ecx, 0x80000000"},
   {va=0x14154721b, old="81e1000000c0", new="81e1000000e0", why="rank-read: and ecx, 0xc0000000"},
   {va=0x141547221, old="81f900000080", new="81f900000040", why="rank-read: cmp ecx, 0x80000000"},
+  -- "is this club promoted" (0x141547b60) first asks 0x141547170 whether the club plays in a
+  -- tier-2 league, so the top of a third or deeper division was never promoted in the game's
+  -- eyes: the Promotion/Relegation screen left the upper column empty (Druga NL -> Prva NL,
+  -- 2026-10-13). Tier 2 or deeper now; who goes up is still the league's own promotion count
+  -- (comptab +0x30) taken from its table, as for tier 2.
+  {va=0x141547227, old="7557", new="7257", why="promotion: a club of the second division or deeper can be promoted (was: second division only)"},
   {va=0x14154732e, old="81e1000000c0", new="81e1000000e0", why="rank-read: and ecx, 0xc0000000"},
   {va=0x141547334, old="81f900000040", new="81f900000020", why="rank-read: cmp ecx, 0x40000000"},
   {va=0x141556bb9, old="83e13f", new="83e11f", why="group-read: and ecx, 0x3f -- byte +0x307, six bits"},

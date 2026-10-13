@@ -27,6 +27,9 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   while the game walks the calendar (a Druga NL career sat 5-10 minutes on the loading screen).
 - **Promotion arrows in the standings on every tier** with a league above it (the game drew
   them on the second tier only, and hid the down arrows while doing it).
+- The end-of-season Promotion/Relegation screen lists the clubs promoted from the third tier
+  or deeper too (the upper column of a Prva NL / Druga NL pair was empty: the game counted
+  only a second-division club as promoted).
 - The season's match table holds 65,000 matches (46,000 before), and players' looks
   (PlayerAppearance) 65,000 records instead of 30,024, so big databases keep every face.
 - New leagues never get a competition id below 130 (those caused conflicts).
