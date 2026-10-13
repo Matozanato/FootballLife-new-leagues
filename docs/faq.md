@@ -556,6 +556,11 @@ it. The clubs past 749 go to `EDIT00000000.fl26x` next to it, and the previous o
 `EDIT00000000.fl26x.prev` (for when you answer No to "Overwrite data. Proceed?"). Keep the three
 files together when you move or back up your Edit save.
 
+Since 0.2.2 the same goes for the managers table, which the game keeps at 1300. In a big world
+the first "Create Edit Data" used to go back to the menu without making a save, because the
+clubs past 749 had managers with no room left. Now it has room for 4096 managers, and the ones
+past 1299 go to `EDIT00000000.fl26x` too.
+
 Checked on 2026-10-05: a new club's colour changed in Edit mode, saved, and still there after a
 restart of the game; a second change answered with No was gone after a restart, and the first
 one stayed. In sider.log, `fl26edit: live` means the module is in; `install FAILED` says why it

@@ -89,6 +89,14 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   asked the same competition question again for each of the 61,905 players. The new module
   `fl26compcache` keeps each answer for the length of one pass: on our test world day 30 now
   takes under a minute. Build installs it.
+- **"Create Edit Data" went back to the menu and made no Edit save** in a big world (reported
+  on Discord: three leagues of ours worked, the fourth did not). The first save puts every club
+  in, and every club's manager with it, but the game's managers table has room for 1300 and our
+  test world has 1976. The check the game runs before saving then finds clubs whose manager is
+  missing and gives up. `fl26edit` now gives the managers table room for 4096 too; the managers
+  past the game's 1299 go to `EDIT00000000.fl26x` with the clubs past 749 (sider.log:
+  `fl26edit: save: 1955 / 1955 / 1955 clubs, 1976 managers ...`). A `.fl26x` written by 0.2.1
+  still loads.
 - **No Europa League round of 16 in the second season** (the play-off was played, then the
   competition ended). Around the play-off draw the game already opens the Europa League's next
   season, and from then on it shows the league phase table of that season, still empty, so the

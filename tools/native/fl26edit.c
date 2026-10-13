@@ -10,20 +10,27 @@
  * ours gets a turn: a change to one of our clubs is never stored, and on the next load it is
  * gone. Changing a club the game ships works because its record is already there.
  *
+ * The managers table has the same kind of limit, 1300 (0x141eeddd0), and it shows when the Edit
+ * data is first made (2026-10-13): then every club goes in, ours too, but their managers stop at
+ * 1299, and the check before the save (0x141ee85f0) wants each club's manager in the table. With
+ * 656 of them missing it refuses, and "Create Edit Data" goes back to the menu without a file.
+ *
  * What this does, without changing the EDIT file:
  *
- *   - the object grows by a block of our own (EXT below): three tables of TEAMS records, and the
- *     cap is TEAMS. The three accessors the game reaches the tables through answer with our
- *     tables, so the game itself fills, sorts and reads them as before -- only with room.
- *   - the save hands the game a copy of the inner part instead of the live one: the first 749
- *     records of each table in the old places, counts cut to 749 -- the file the game has always
- *     written, which an unmodded game loads as before. The records past 749 (our clubs: their
- *     ids sort last) go to EDIT00000000.fl26x next to it, tagged with the 32 random bytes the
- *     game stamps into each save's header.
+ *   - the object grows by a block of our own (EXT below): the three club tables with TEAMS
+ *     records and the managers table with MANAGERS, and the caps follow. The accessors the game
+ *     reaches the tables through answer with our tables, so the game itself fills, sorts and
+ *     reads them as before -- only with room.
+ *   - the save hands the game a copy of the inner part instead of the live one: the records that
+ *     fit the old places (749 clubs, 1299 managers), counts cut to that -- the file the game has
+ *     always written, which an unmodded game loads as before. The records past them (our clubs:
+ *     their ids sort last) go to EDIT00000000.fl26x next to it, tagged with the 32 random bytes
+ *     the game stamps into each save's header.
  *   - after a load the header carries a tag our block has not seen; the first touch of a table
  *     (an accessor or a count read) then rebuilds our tables from the old places, plus the
  *     .fl26x records when their tag is that header's. A file without one (the game's own
- *     dataSP EDIT, an older save) simply has no records past 749.
+ *     dataSP EDIT, an older save) simply has no records past the old places. A .fl26x of 0.2.1
+ *     and older (FL26EDX1) holds the three club tables only.
  *
  * Every byte patched is checked first; if one is not what it should be, nothing is patched.
  * If the Edit data already exists when the module installs (it would be the old size), nothing
@@ -43,13 +50,14 @@
 #define MGR_GLOBAL   0x37f5c28          /* EditManager*; the object is at +0x70               */
 #define CTOR_RVA     0x1eeace0          /* inner ctor (rcx = object + 8)                       */
 #define SAVE_RVA     0x1f080a7          /* save flow, after the header stamp: lea r8,[rsi+8]   */
-#define CAP_RVA      0x1ef21d0          /* mov eax, 0x2ee ; ret                                */
+#define CAP_RVA      0x1ef21d0          /* mov eax, 0x2ee ; ret  (clubs)                       */
+#define MCAP_RVA     0x1eeddd0          /* mov eax, 0x514 ; ret  (managers)                    */
 
 #define OLD_SIZE     0xa7c860u
 #define INNER_SIZE   0xa7c858u          /* what goes to disk (0x50 header + 0xa7c808)         */
-#define OLD_CAP      750
-#define FILE_MAX     749                /* the game never stores more than cap - 1            */
 #define TEAMS        2048
+#define MANAGERS     4096               /* the database has room for 3400 (fl26caps)          */
+#define NT           4
 
 #define EXT          OLD_SIZE           /* our block, from the old end of the object          */
 #define EXT_MAGIC    0x0
@@ -64,14 +72,19 @@ typedef struct {
   uint32_t rec;         /* record size                                                      */
   uint32_t cnt_off;     /* u16 count in the object                                          */
   uint32_t get_rva;     /* the count getter: movzx eax, word [rcx + disp8] ; ...            */
+  uint32_t old_cap;     /* records in the old place; the game stores cap - 1 at most        */
+  uint32_t cap;         /* records in ours                                                  */
   uint32_t new_off;     /* our table                                                        */
 } table_t;
 
-static table_t T[3] = {
-  { 0x1ef2940, 0x8ed304, 0x24c, 0x6c, 0x14083e0, 0 },   /* team data                 */
-  { 0x1ef2040, 0x9d4650, 0x11c, 0x78, 0x1408320, 0 },   /* squad                     */
-  { 0x1ef21c0, 0xa09888, 0x274, 0x7c, 0x1408330, 0 },   /* tactics                   */
+/* in the order of the .fl26x file */
+static table_t T[NT] = {
+  { 0x1ef2940, 0x8ed304, 0x24c, 0x6c, 0x14083e0,  750, TEAMS,    0 },   /* team data       */
+  { 0x1ef2040, 0x9d4650, 0x11c, 0x78, 0x1408320,  750, TEAMS,    0 },   /* squad           */
+  { 0x1ef21c0, 0xa09888, 0x274, 0x7c, 0x1408330,  750, TEAMS,    0 },   /* tactics         */
+  { 0x1eeddc0, 0x958dac, 0x058, 0x6e, 0x14082e0, 1300, MANAGERS, 0 },   /* managers        */
 };
+#define FILE_MAX(k)  (T[k].old_cap - 1)  /* what the old place holds                          */
 static uint32_t g_new_size;
 
 /* the places that know the object's size: {rva of the imm32, old value} */
@@ -125,17 +138,19 @@ static void* ctor_hook(unsigned char* inner)
   return r;
 }
 
-/* ---- the side file ---- */
-#define SIDE_MAGIC "FL26EDX1"
+/* ---- the side file: magic, tag, a count per table, then the records table by table ---- */
+#define SIDE_MAGIC  "FL26EDX2"          /* the four tables                                    */
+#define SIDE_MAGIC1 "FL26EDX1"          /* 0.2.1 and older: the three club tables             */
 static int side_read(const char* path, const unsigned char* tag, unsigned char* o, uint32_t* cnt)
 {
   FILE* f = fopen(path, "rb");
   if (!f) return 0;
-  char m[8]; unsigned char t[TAG_LEN]; uint32_t n[3]; int got = 0;
-  if (fread(m, 1, 8, f) == 8 && !memcmp(m, SIDE_MAGIC, 8) && fread(t, 1, TAG_LEN, f) == TAG_LEN &&
-      !memcmp(t, tag, TAG_LEN) && fread(n, 4, 3, f) == 3) {
-    for (int k = 0; k < 3; k++) {
-      uint32_t room = TEAMS - 1 - cnt[k];
+  char m[8]; unsigned char t[TAG_LEN]; uint32_t n[NT]; int got = 0, nt = 0;
+  if (fread(m, 1, 8, f) == 8) nt = !memcmp(m, SIDE_MAGIC, 8) ? NT : !memcmp(m, SIDE_MAGIC1, 8) ? 3 : 0;
+  if (nt && fread(t, 1, TAG_LEN, f) == TAG_LEN && !memcmp(t, tag, TAG_LEN) &&
+      fread(n, 4, nt, f) == (size_t)nt) {
+    for (int k = 0; k < nt; k++) {
+      uint32_t room = T[k].cap - 1 - cnt[k];
       uint32_t take = n[k] < room ? n[k] : room;
       unsigned char* dst = o + T[k].new_off + (size_t)cnt[k] * T[k].rec;
       if (fread(dst, T[k].rec, take, f) != take) break;
@@ -149,8 +164,8 @@ static int side_read(const char* path, const unsigned char* tag, unsigned char* 
 
 static void side_write(const unsigned char* tag, unsigned char* o, const uint32_t* from, const uint32_t* to)
 {
-  uint32_t n[3], all = 0;
-  for (int k = 0; k < 3; k++) { n[k] = to[k] - from[k]; all += n[k]; }
+  uint32_t n[NT], all = 0;
+  for (int k = 0; k < NT; k++) { n[k] = to[k] - from[k]; all += n[k]; }
   /* The file is written when the game builds its save, before "Overwrite data. Proceed?" -- a No
    * there keeps the old EDIT file, whose tag is the previous .fl26x's. So that one stays, as .prev. */
   char tmp[MAX_PATH + 8], prev[MAX_PATH + 8];
@@ -160,8 +175,8 @@ static void side_write(const unsigned char* tag, unsigned char* o, const uint32_
   snprintf(tmp, sizeof tmp, "%s.tmp", g_side);
   FILE* f = fopen(tmp, "wb");
   if (!f) { logf("save: cannot write %s", tmp); return; }
-  int ok = fwrite(SIDE_MAGIC, 1, 8, f) == 8 && fwrite(tag, 1, TAG_LEN, f) == TAG_LEN && fwrite(n, 4, 3, f) == 3;
-  for (int k = 0; k < 3 && ok; k++)
+  int ok = fwrite(SIDE_MAGIC, 1, 8, f) == 8 && fwrite(tag, 1, TAG_LEN, f) == TAG_LEN && fwrite(n, 4, NT, f) == NT;
+  for (int k = 0; k < NT && ok; k++)
     ok = fwrite(o + T[k].new_off + (size_t)from[k] * T[k].rec, T[k].rec, n[k], f) == n[k];
   ok = fclose(f) == 0 && ok;
   if (ok && MoveFileExA(tmp, g_side, MOVEFILE_REPLACE_EXISTING)) g_stat[3] += all;
@@ -176,15 +191,15 @@ static void ensure(unsigned char* o)
   if (*(uint32_t*)(ext + EXT_MAGIC) == 0x45363246u && !memcmp(ext + EXT_TAG, tag, TAG_LEN)) return;
   AcquireSRWLockExclusive(&g_lock);
   if (!(*(uint32_t*)(ext + EXT_MAGIC) == 0x45363246u && !memcmp(ext + EXT_TAG, tag, TAG_LEN))) {
-    uint32_t cnt[3];
-    for (int k = 0; k < 3; k++) {
+    uint32_t cnt[NT];
+    for (int k = 0; k < NT; k++) {
       uint32_t c = *(uint16_t*)(o + T[k].cnt_off);
-      if (c > FILE_MAX) c = FILE_MAX;                    /* the old places hold 750 at most */
+      if (c > FILE_MAX(k)) c = FILE_MAX(k);              /* what the old place can hold */
       unsigned char* src = o + T[k].old_off;
       unsigned char* dst = o + T[k].new_off;
       memcpy(dst, src, (size_t)c * T[k].rec);
       const unsigned char* empty = src + (size_t)c * T[k].rec;   /* an unused record of the game's */
-      for (uint32_t i = c; i < TEAMS; i++) memcpy(dst + (size_t)i * T[k].rec, empty, T[k].rec);
+      for (uint32_t i = c; i < T[k].cap; i++) memcpy(dst + (size_t)i * T[k].rec, empty, T[k].rec);
       cnt[k] = c;
     }
     int side = 0;
@@ -196,35 +211,38 @@ static void ensure(unsigned char* o)
       side = side_read(g_side, tag, o, cnt);
       if (!side) side = side_read(prev, tag, o, cnt);
     }
-    for (int k = 0; k < 3; k++) *(uint16_t*)(o + T[k].cnt_off) = (uint16_t)cnt[k];
+    for (int k = 0; k < NT; k++) *(uint16_t*)(o + T[k].cnt_off) = (uint16_t)cnt[k];
     memcpy(ext + EXT_TAG, tag, TAG_LEN);
     *(uint32_t*)(ext + EXT_MAGIC) = 0x45363246u;      /* "F26E" */
     g_stat[0]++; g_stat[1] += side;
     if (g_stat[0] <= 20 || side)
-      logf("tables built for %p: %u / %u / %u clubs (team data / squad / tactics), %d from %s",
-           (void*)o, cnt[0], cnt[1], cnt[2], side, side ? "the .fl26x file" : "no .fl26x file");
+      logf("tables built for %p: %u / %u / %u clubs (team data / squad / tactics), %u managers, %d from %s",
+           (void*)o, cnt[0], cnt[1], cnt[2], cnt[3], side, side ? "the .fl26x file" : "no .fl26x file");
   }
   ReleaseSRWLockExclusive(&g_lock);
 }
 
-/* the three accessors (only the Edit data's vtable reaches them) */
+/* the accessors (only the Edit data's vtable reaches them) */
 static void* acc0(unsigned char* o) { ensure(o); return o + T[0].new_off; }
 static void* acc1(unsigned char* o) { ensure(o); return o + T[1].new_off; }
 static void* acc2(unsigned char* o) { ensure(o); return o + T[2].new_off; }
+static void* acc3(unsigned char* o) { ensure(o); return o + T[3].new_off; }
 
-/* the three count getters: rcx = the header at object + 0x58 */
+/* the count getters: rcx = the header at object + 0x58 */
 static char getc_(int k, unsigned char* hdr, uint32_t* out)
 {
   unsigned char* o = hdr - 0x58;
   if (known(o) && *(uint64_t*)o == g_base + EDIT_VT) ensure(o);
   uint32_t c = *(uint16_t*)(hdr + (T[k].cnt_off - 0x58));
-  if (c >= TEAMS - 1 && k == 0 && !g_stat[4]++) logf("the Edit tables are full (%d clubs)", TEAMS - 1);
+  if (c >= T[k].cap - 1 && (k == 0 || k == 3) && !g_stat[4]++)
+    logf("an Edit table is full (%u %s)", T[k].cap - 1, k ? "managers" : "clubs");
   *out = c;
   return 1;
 }
 static char get0(unsigned char* h, uint32_t* out) { return getc_(0, h, out); }
 static char get1(unsigned char* h, uint32_t* out) { return getc_(1, h, out); }
 static char get2(unsigned char* h, uint32_t* out) { return getc_(2, h, out); }
+static char get3(unsigned char* h, uint32_t* out) { return getc_(3, h, out); }
 
 /* the save: which buffer the game writes (rsi + 8 for anything that is not the Edit data) */
 static unsigned char* save_buf(unsigned char* o)
@@ -233,15 +251,15 @@ static unsigned char* save_buf(unsigned char* o)
   AcquireSRWLockExclusive(&g_lock);
   unsigned char* inner = o + 8;
   memcpy(g_copy, inner, INNER_SIZE);
-  uint32_t from[3], to[3];
-  for (int k = 0; k < 3; k++) {
+  uint32_t from[NT], to[NT];
+  for (int k = 0; k < NT; k++) {
     uint32_t c = *(uint16_t*)(o + T[k].cnt_off);
-    uint32_t n = c < FILE_MAX ? c : FILE_MAX;
+    uint32_t n = c < FILE_MAX(k) ? c : FILE_MAX(k);
     unsigned char* src = o + T[k].new_off;
     unsigned char* dst = g_copy + (T[k].old_off - 8);
     memcpy(dst, src, (size_t)n * T[k].rec);
-    const unsigned char* empty = src + (size_t)c * T[k].rec;     /* c < TEAMS - 1 always */
-    for (uint32_t i = n; i < OLD_CAP; i++) memcpy(dst + (size_t)i * T[k].rec, empty, T[k].rec);
+    const unsigned char* empty = src + (size_t)c * T[k].rec;     /* c < cap - 1 always */
+    for (uint32_t i = n; i < T[k].old_cap; i++) memcpy(dst + (size_t)i * T[k].rec, empty, T[k].rec);
     *(uint16_t*)(g_copy + (T[k].cnt_off - 8)) = (uint16_t)n;
     from[k] = n; to[k] = c;
   }
@@ -249,8 +267,8 @@ static unsigned char* save_buf(unsigned char* o)
   /* the live header has the new tag: our tables are what it describes */
   memcpy(o + EXT + EXT_TAG, inner + TAG_AT, TAG_LEN);
   g_stat[2]++;
-  logf("save: %u / %u / %u clubs, %u / %u / %u past %d to %s", to[0], to[1], to[2],
-       to[0] - from[0], to[1] - from[1], to[2] - from[2], FILE_MAX, g_side);
+  logf("save: %u / %u / %u clubs, %u managers; past the old places %u / %u / %u, %u to %s",
+       to[0], to[1], to[2], to[3], to[0] - from[0], to[1] - from[1], to[2] - from[2], to[3] - from[3], g_side);
   ReleaseSRWLockExclusive(&g_lock);
   return g_copy;
 }
@@ -291,6 +309,7 @@ static const unsigned char SIG_CTOR[15] = { 0x48,0x89,0x5c,0x24,0x08, 0x48,0x89,
 /* mov [rsp+28],r14 ; xor r9d,r9d ; lea r8,[rsi+8] ; xor edx,edx */
 static const unsigned char SIG_SAVE[14] = { 0x4c,0x89,0x74,0x24,0x28, 0x45,0x33,0xc9, 0x4c,0x8d,0x46,0x08, 0x33,0xd2 };
 static const unsigned char SIG_CAP[6]   = { 0xb8,0xee,0x02,0x00,0x00,0xc3 };
+static const unsigned char SIG_MCAP[6]  = { 0xb8,0x14,0x05,0x00,0x00,0xc3 };
 
 /* 0 ok; 2 a signature differs; 3 the Edit data exists already; 4 memory; 5 patch failed */
 __declspec(dllexport) int fl26_edit_install(uint64_t exe_base)
@@ -301,7 +320,8 @@ __declspec(dllexport) int fl26_edit_install(uint64_t exe_base)
   if (memcmp(B + CTOR_RVA, SIG_CTOR, sizeof SIG_CTOR)) { logf("ctor bytes differ"); return 2; }
   if (memcmp(B + SAVE_RVA, SIG_SAVE, sizeof SIG_SAVE)) { logf("save bytes differ"); return 2; }
   if (memcmp(B + CAP_RVA, SIG_CAP, sizeof SIG_CAP))    { logf("cap bytes differ"); return 2; }
-  for (int k = 0; k < 3; k++) {
+  if (memcmp(B + MCAP_RVA, SIG_MCAP, sizeof SIG_MCAP)) { logf("managers cap bytes differ"); return 2; }
+  for (int k = 0; k < NT; k++) {
     const unsigned char* a = B + T[k].acc_rva;
     if (a[0] != 0x48 || a[1] != 0x8d || a[2] != 0x81 || *(uint32_t*)(a + 3) != T[k].old_off || a[7] != 0xc3) {
       logf("accessor %d bytes differ", k); return 2;
@@ -322,7 +342,7 @@ __declspec(dllexport) int fl26_edit_install(uint64_t exe_base)
 
   /* the new layout */
   uint32_t at = EXT + EXT_HDR;
-  for (int k = 0; k < 3; k++) { T[k].new_off = at; at += TEAMS * T[k].rec; }
+  for (int k = 0; k < NT; k++) { T[k].new_off = at; at += T[k].cap * T[k].rec; }
   g_new_size = (at + 15) & ~15u;
   g_copy = (unsigned char*)VirtualAlloc(0, INNER_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
   if (!g_copy) return 4;
@@ -351,18 +371,19 @@ __declspec(dllexport) int fl26_edit_install(uint64_t exe_base)
   }
   uint32_t ms = g_new_size - (8 + 0xa09880);          /* the ctor zeroes up to the new end */
   if (!put(exe_base + CTOR_MEMSET, &ms, 4)) return 5;
-  uint32_t cap = TEAMS;
+  uint32_t cap = TEAMS, mcap = MANAGERS;
   if (!put(exe_base + CAP_RVA + 1, &cap, 4)) return 5;
-  void* acc[3] = { (void*)acc0, (void*)acc1, (void*)acc2 };
-  void* get[3] = { (void*)get0, (void*)get1, (void*)get2 };
-  for (int k = 0; k < 3; k++) {
+  if (!put(exe_base + MCAP_RVA + 1, &mcap, 4)) return 5;
+  void* acc[NT] = { (void*)acc0, (void*)acc1, (void*)acc2, (void*)acc3 };
+  void* get[NT] = { (void*)get0, (void*)get1, (void*)get2, (void*)get3 };
+  for (int k = 0; k < NT; k++) {
     if (!jmp_to(exe_base + T[k].acc_rva, acc[k], 16)) return 5;
     if (!jmp_to(exe_base + T[k].get_rva, get[k], 16)) return 5;
   }
   if (!(g_ctor = (ctor_fn)wrap(B + CTOR_RVA, sizeof SIG_CTOR, (void*)ctor_hook))) return 5;
   if (!jmp_to(exe_base + SAVE_RVA, t, 14)) return 5;
-  logf("live: Edit data %#x -> %#x bytes, %d clubs per table (team data / squad / tactics); "
-       "clubs past %d saved to %s", OLD_SIZE, g_new_size, TEAMS, FILE_MAX, g_side);
+  logf("live: Edit data %#x -> %#x bytes, %d clubs per table (team data / squad / tactics), %d managers; "
+       "records past the old places saved to %s", OLD_SIZE, g_new_size, TEAMS, MANAGERS, g_side);
   return 0;
 }
 

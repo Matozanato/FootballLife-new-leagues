@@ -164,9 +164,13 @@ writing the tables itself. The loaders drain `<dll>_log` and `<dll>_stats` into 
 
 - **Exports:** `fl26_edit_install`, `fl26_edit_log`, `fl26_edit_stats`.
 - **What it does:** it patches the Edit data constructor (0x1eeace0), the save flow
-  (0x1f080a7) and the 750-team cap function (0x1ef21d0). The Edit data then has room for
-  every club of a world: 750 per table in the save itself, and the records past that in
-  `EDIT00000000.fl26x` next to the save.
+  (0x1f080a7), the 750-team cap function (0x1ef21d0) and, since 0.2.2, the 1300-manager cap
+  function (0x1eeddd0). The Edit data then has room for every club of a world and its
+  manager: the old room in the save itself (749 clubs, 1299 managers), and the records past
+  that in `EDIT00000000.fl26x` next to the save (`FL26EDX2`: tag, four counts, then team data,
+  squad, tactics and managers; a 0.2.1 file is `FL26EDX1` with the first three only). Without
+  the managers part, "Create Edit Data" fails in a big world: the check before the save
+  (0x141ee85f0) wants every club's manager in the Edit data.
 - **Status:**
   - 2 = code not as expected;
   - 3 = the Edit data was made before the module loaded (load order);
