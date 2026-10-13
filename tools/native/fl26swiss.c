@@ -6337,6 +6337,22 @@ uint64_t ci_menu_handler(ci_vec_t* v, uint32_t* comp, uint64_t flag)
     int i = ci + NQ * st;
     uint16_t q = q_reg(i);
     if (!q || q == native || !find_rec(q)) continue;
+    /* The Champions League's play-off is reg 2, the game's own grouped-phase item, and in February
+       that regulation holds the knockout play-off: the native item then opens it under the same
+       name, and ours was a second "Knockout round play-offs" with the same ties (13.10., in game;
+       the August ties are gone from the regulation by then, po_start draws over them). A native
+       item already carrying the name this one would get is that round. */
+    if (st == 0) {
+      uint32_t want = kopo_window(ci) ? KOPO_TEXT : 0x3a20010u;
+      int dup = 0;
+      for (ci_item_t* k = v->b; k < v->e; k++) if (k->text == want) dup = 1;
+      if (dup) {
+        static int said_dup = 0;
+        if (said_dup++ < 4) logf("fl26swiss: Competition Info -- %s play-off item left out: a native item already shows it",
+                                 CUPS[ci].name);
+        continue;
+      }
+    }
     unsigned char* tie = find_rec(q_tie_of(i, 0));
     if (!tie || !rec_count(tie)) continue;
     xr[nx] = q;
