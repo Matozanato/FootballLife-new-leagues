@@ -337,7 +337,9 @@ static void nd_tick(void)
     g_nd_tab_played = played; g_nd_tab_day = day;
   }
   if (played < 50 || n != 50) { nd_status(1); goto done; }
-  if (rec_count(get_rec(nd_ko)) || ccup_matches(nd_ko) > 0) { nd_status(2); goto done; }
+  /* started: its matches this season -- not its club list, which the New Year teardown leaves
+     as last season's (2026-10-12: the second season's knockout was never started) */
+  if (ccup_matches(nd_ko) > 0) { nd_status(2); goto done; }
   if (day >= nd_ko_days[0]) { nd_status(-4); goto done; }
   uint32_t q[8], list[8];
   if (fl26_nd_quarters(matches, n, q) != 1) { nd_status(-3); goto done; }
@@ -544,6 +546,76 @@ uint64_t nd_pastgrp(uint32_t* comp)
          (int)(uint8_t)r);
   }
   return (r & ~0xffull) | out;
+}
+
+/* ---- the season's clash audit, logged at the calendar-year teardown ----
+   Every dated match of the season still in the match table: a club with two matches on one day is
+   counted and the first cases logged (club, date, the two regulations).  Read only; 2026-10-12, so
+   that every New Year says what a hand-run scan of memory said (24 clashes, then 7, then 0). */
+static void season_clash_audit(void)
+{
+  const unsigned char* bs = (const unsigned char*)(g_base + MATCH_BASE_SITE);
+  const unsigned char* cs = (const unsigned char*)(g_base + MATCH_CAP_SITE);
+  if (bs[0] != 0x48 || bs[1] != 0x8d || bs[2] != 0x88 || cs[0] != 0x81 || cs[1] != 0xff) return;
+  unsigned base = *(const unsigned*)(bs + 3), cap = *(const unsigned*)(cs + 2);
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!blk || !cap || cap > 200000) return;
+  /* (club, day) pairs of every dated match, sorted; a club and day twice is a clash */
+  static uint64_t keys[2 * 200000];
+  unsigned nk = 0, matches = 0;
+  for (unsigned i = 0; i < cap; i++) {
+    const unsigned char* r = blk + base + (size_t)i * MATCH_STRIDE;
+    if (*(const uint16_t*)r == 0xffff) continue;
+    uint16_t y = *(const uint16_t*)(r + 8); uint8_t m = r[10], d = r[11];
+    if (y == 0xffff || !m || m > 12 || !d) continue;
+    matches++;
+    uint32_t day = (uint32_t)y * 400 + m * 32 + d;
+    for (int side = 0; side < 2; side++) {
+      uint32_t c = *(const uint32_t*)(r + 0x14 + 4 * side);
+      if (c == 0xffffffffu || !(c >> 14)) continue;
+      keys[nk++] = ((uint64_t)(c >> 14) << 40) | ((uint64_t)day << 20) | i;
+    }
+  }
+  /* shell sort: a season is ~20000 entries */
+  for (unsigned gap = nk / 2; gap; gap /= 2)
+    for (unsigned i = gap; i < nk; i++) {
+      uint64_t v = keys[i]; unsigned j = i;
+      while (j >= gap && keys[j - gap] > v) { keys[j] = keys[j - gap]; j -= gap; }
+      keys[j] = v;
+    }
+  unsigned clashes = 0, shown = 0;
+  for (unsigned i = 1; i < nk; i++) {
+    if ((keys[i] >> 20) != (keys[i - 1] >> 20)) continue;
+    if (i >= 2 && (keys[i - 1] >> 20) == (keys[i - 2] >> 20)) continue;   /* a third match counted once */
+    clashes++;
+    if (shown < 12) {
+      const unsigned char* a = blk + base + (size_t)(keys[i - 1] & 0xfffff) * MATCH_STRIDE;
+      const unsigned char* b = blk + base + (size_t)(keys[i] & 0xfffff) * MATCH_STRIDE;
+      logf("fl26swiss: clash -- team %u on %u-%02u-%02u: regulation %u and %u", (unsigned)(keys[i] >> 40),
+           *(const uint16_t*)(a + 8), a[10], a[11], *(const uint16_t*)(a + 4), *(const uint16_t*)(b + 4));
+      shown++;
+    }
+  }
+  logf("fl26swiss: season clash audit -- %u dated match(es), %u club-day(s) with two matches", matches, clashes);
+}
+
+/* a club of the cup's roster (a team id): the fictional ones are in the Other Latin American
+   pool, and the Libertadores' pool swap took ASA and ABC into its groups (2026-10-12) */
+static int nd_roster(uint32_t team) { return nd_reg && team && nd_slot(team) >= 0; }
+
+/* the cup's days for the leagues of its country (home_cup_days): a league of the region of the
+   cup's matches keeps its rounds off them -- the Brasileirao met the semi-final of 27 May
+   (2026-10-12) */
+static int nd_league_days(uint32_t region, uint16_t* out, int max)
+{
+  if (!nd_reg || max <= 0) return 0;
+  unsigned char* m = find_rec(nd_reg);
+  if (!m || ((*(uint32_t*)(m + 0x30c) >> 7) & 0x3f) != region) return 0;
+  int n = 0;
+  for (int i = 0; i < 5 && n < max; i++) if (nd_days[i]) out[n++] = nd_days[i];
+  for (int i = 0; i < 5 && n < max; i++) if (nd_ko_days[i]) out[n++] = nd_ko_days[i];
+  return n;
 }
 
 /* the cup's own competition (the one listed): its goal and assist rankings count the carrier's

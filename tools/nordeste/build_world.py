@@ -150,7 +150,13 @@ def main():
         p["team_id"] = candidates[0]["id"]
     cid, phases = add_competition(root, spec["participants"])
     # Day-of-year values, zero based. These candidate dates still require live collision audit.
-    days = [83, 86, 97, 104, 118, 125, 139, 146, 153, 157]
+    # January to April: off the Copa do Brasil (16..86), the continental group days (62, 76, 83,
+    # 104, 118), the Libertadores qualifying (34, 41) and the Sudamericana play-off (146, 153); the
+    # Brazilian leagues keep their rounds off these (2026-10-12: the old May-June dates met the
+    # Sudamericana groups and the Brasileirao)
+    # the first round on day 25, not 27: the Libertadores qualifying phase 2 plays its second leg on
+    # day 27, and a Brazilian club can be in both
+    days = [25, 47, 54, 68, 74, 90, 93, 100, 107, 113]
     config = dict(competition=cid, phases=phases, days=days,
                   participants=spec["participants"], status="experimental_not_live_validated",
                   limitations=["disciplinary data adapter and card reset missing",
