@@ -49,6 +49,10 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   one table of 36 that scrolls, instead of four pages of nine (Return no longer covers row 9).
   Made by DavidBDJ.
 
+- A February-December league (season "calendar") can have its national cup and super cup:
+  the cup plays through the league's own year, the super cup opens it. Made by vmardonesdev
+  (GitHub #139).
+
 - League: a name field for the super cup, beside the national cup's and the league cup's
   (empty = the league's name + Super Cup).
 
@@ -106,7 +110,8 @@ DRAFT -- not released. Every line below still needs its in-game check before the
 - **The calendar stops on a day and shows nothing** (national team days, awards and other
   events, GitHub #70, #132). Since 0.2.0 a calendar day holds more matches, and one place in
   the game that reads the day's events still looked at the old spot. `fl26caps.lua` now
-  moves that read too (sider.log says `3510 patches`). National team matches that were
+  moves that read too (sider.log says `3510 patches`; the last six sites were found by
+  nissindiaz, GitHub #135). National team matches that were
   skipped are expected to come back with it.
 - **A January-December league in a country with no league of the game never started**
   (Norway and Sweden in the modpack, GitHub #124). Nothing closed its season at New Year, so
@@ -182,6 +187,8 @@ DRAFT -- not released. Every line below still needs its in-game check before the
 - League cup hints say late August to mid-March, the dates since 0.2.0.
 - Home: Switch world... shows the worlds.
 - sider.log says why a qualifying round is not played in a season (GitHub #128, log only).
+- For forks: `patchset.py --calendar-ids N` builds the set for another calendar day size and
+  prints the module constants that layout needs (nissindiaz, GitHub #136).
 - Release tool (for forks): `mszip.py` now stops when `FL26_DIR` is not set or the package has
   no regen face pack, instead of printing a note and going on (`--untested`, `--no-faces` let a
   fork's own build through); lbpack finds the face pack from a worktree too.

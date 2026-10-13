@@ -12,7 +12,8 @@ FEATURED = [
      "the tester this project owes the most: full seasons and rollovers, a regression suite, a "
      "testing plan, twenty-one of the first thirty-seven issues, and on the Discord the European "
      "places of the game's leagues, the calendar events lost after 0.2.0 and the July leagues "
-     "that never reach the hub"),
+     "that never reach the hub; and code: the national cup and super cup of February-December "
+     "leagues (#139, 0.2.2)"),
     ("Alikhaled_727", "Evo-Web, Mohamed_248 on GitHub",
      "the leagues outside Europe: Saudi Arabia, Egypt, Morocco, Asia and Africa, the CAF cups, "
      "the AFC Champions League Two and the league cup pre-round"),
@@ -55,9 +56,10 @@ EVERYONE = [
     ("alby171994", "GitHub", "an exhibition-only world with no schedule, narrowed to one module; faces reset"),
     ("Jabo9", "Evo-Web, Discord", "a new League One that took the FA Cup; league play-offs"),
     ("n1ne", "Discord", "the questions that show where the docs are not clear yet"),
-    ("mushroomwehk", "GitHub",
+    ("mushroomwehk", "GitHub, Gu on Discord",
      "a 12-club league that started on matchday 3, clubs of the game in new leagues, the Asian "
-     "league's description and Edit mode past 30,001 players"),
+     "league's description, Edit mode past 30,001 players, the AFC Challenge League and Create "
+     "Edit Data in a big world"),
     ("pepponeee98", "GitHub", "leagues that disappeared, a crash and free agents from a new world"),
     ("okarin-hub (Okarin)", "GitHub, Discord", "an Indonesian league and the start-up crashes"),
     ("iptory", "GitHub", "the Argentinian format: two zones and a play-off of eight"),
@@ -76,7 +78,9 @@ EVERYONE = [
     ("LaraCroft", "Discord", "Clubs in no league, clubs listed A-Z, the same club in two Dutch leagues"),
     ("AlexRufolo", "GitHub, Discord",
      "First-season European clubs, clubs listed A-Z and the Korean league that never started"),
-    ("DavidBDJ", "GitHub", "full test reports from Austria: kits of new clubs and the European qualifiers"),
+    ("DavidBDJ", "GitHub",
+     "the UEFA league phase as one scrolling table in Competition Info (his code, 0.2.2), and full "
+     "test reports from Austria: kits of new clubs and the European qualifiers"),
     ("B2Y26Arabia", "GitHub", "the Kick Off > Cup crash, Edit mode and the skin colour of linked faces"),
     ("rickydicky4444", "GitHub", "the UECL gameweeks in the calendar"),
     ("MIQABARI", "GitHub", "a Master League creation crash"),
@@ -92,6 +96,10 @@ EVERYONE = [
     ("capital030", "Discord", "packages without squads, and logos for the community"),
     ("novarama", "Discord moderator",
      "a developer's look at Mod Studio: the poll's most thorough answer, NewLife's missing crests and refresh"),
+    ("nissindiaz", "GitHub",
+     "code for the calendar patch set: the event icons back (#135) and another calendar day size "
+     "with patchset.py --calendar-ids (#136), 0.2.2"),
+    ("Julio (juliorivera10)", "Discord", "a Spanish foot column that made every imported player right-footed"),
 ]
 
 # the people who supported the project on Ko-fi (ko-fi.com/mata28), first first; the README's

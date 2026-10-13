@@ -284,6 +284,9 @@ worst bugs here were found only because vmardonesdev played further than anyone 
   events after 0.2.0 (with a save to test it on), the July leagues of the modpack that never
   reach the hub, and Norway's league that never started
   ([#124](https://github.com/Matozanato/FootballLife-new-leagues/issues/124)).
+- Code, too: [#139](https://github.com/Matozanato/FootballLife-new-leagues/pull/139) gives a
+  February-December league its national cup and super cup (`fl26swiss`, `fl26join`, the League
+  Builder and a test of its own), in 0.2.2.
 
 If you use anything from this repository, vmardonesdev's name belongs next to it.
 
@@ -495,6 +498,9 @@ and other Latin American worlds and writes up every bug with screenshots:
   the request for the game's own clubs in new leagues ([#42](https://github.com/Matozanato/FootballLife-new-leagues/issues/42)),
   an Asian league with a South American description ([#43](https://github.com/Matozanato/FootballLife-new-leagues/issues/43))
   and Edit mode on a database of more than 30,001 players ([#65](https://github.com/Matozanato/FootballLife-new-leagues/issues/65)).
+  As Gu on the Discord: the AFC Challenge League, Asian leagues by strength, the regen faces past
+  30,023 players, and Create Edit Data that made no save in a big world (the managers table
+  `fl26edit` widens in 0.2.2).
 - **pepponeee98** ([pepponeee98](https://github.com/pepponeee98)): leagues that disappeared
   and a crash ([#62](https://github.com/Matozanato/FootballLife-new-leagues/issues/62)), and free
   agents created when a new world is loaded ([#96](https://github.com/Matozanato/FootballLife-new-leagues/issues/96)).
@@ -553,6 +559,14 @@ and other Latin American worlds and writes up every bug with screenshots:
   starting point for ceremonies of added competitions.
 - **capital030** (Discord): the idea of packages without squads that only add to leagues already
   there, and offered logos for the community.
+- **nissindiaz** ([nissindiaz](https://github.com/nissindiaz)): code for the calendar patch set
+  ([#135](https://github.com/Matozanato/FootballLife-new-leagues/pull/135): three sites that read
+  a day's events and five unwind words the survey missed, so the calendar shows its event icons
+  again) and `patchset.py --calendar-ids N` for another calendar day size, with the module
+  constants it needs ([#136](https://github.com/Matozanato/FootballLife-new-leagues/pull/136)),
+  both in 0.2.2; and the Copa do Nordeste with the South American cups on the way.
+- **Julio** (juliorivera10, Discord): players imported with a Spanish foot column all came out
+  right-footed; Import players reads "Pie", "Zurdo", "Diestro" ... since 0.2.2.
 
 Reports are welcome from anyone: open an
 [issue](https://github.com/Matozanato/FootballLife-new-leagues/issues) with what you
@@ -850,7 +864,7 @@ Contributors, and what each of them did, are listed in
 [The people who made this better](#the-people-who-made-this-better) near the top: above all
 **vmardonesdev** and **Alikhaled_727**, **vector360** and **jibibi**, and **Stagnant09**, **pioup38**, **bobzera**,
 **spursfan07**, **Amir**, **victormican**, **Alby17**, **jyanj083-dotcom**, **Gabyyy2008**, **alexfe87**,
-**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9**, **Xxspedd**, **n1ne**, **LaraCroft**, **AlexRufolo**, **DavidBDJ**, **B2Y26Arabia**, **rwee**, **Risto**, **Yanis**, **LumpierTheGunner**, **Bon Kirk**, **wishfulshot**, **beny609o**, **Nickdaw**, **the_pelado**, **capital030**, **novarama** (moderator), **rickydicky4444** and **MIQABARI**.
+**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9**, **Xxspedd**, **n1ne**, **LaraCroft**, **AlexRufolo**, **DavidBDJ**, **B2Y26Arabia**, **rwee**, **Risto**, **Yanis**, **LumpierTheGunner**, **Bon Kirk**, **wishfulshot**, **beny609o**, **Nickdaw**, **the_pelado**, **capital030**, **novarama** (moderator), **rickydicky4444**, **MIQABARI**, **nissindiaz** and **Julio**.
 
 The licence asks nothing of you. I do: **if you use these findings, addresses, patch sets
 or tools in a mod, credit this work and link back** — see
