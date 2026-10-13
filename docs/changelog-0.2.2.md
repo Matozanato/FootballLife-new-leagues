@@ -45,6 +45,10 @@ DRAFT -- not released. Every line below still needs its in-game check before the
 
 ## Small additions (asked for on Discord)
 
+- Competition Info: the Champions League, Europa League and Conference League league phase is
+  one table of 36 that scrolls, instead of four pages of nine (Return no longer covers row 9).
+  Made by DavidBDJ.
+
 - League: a name field for the super cup, beside the national cup's and the league cup's
   (empty = the league's name + Super Cup).
 

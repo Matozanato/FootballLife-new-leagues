@@ -522,7 +522,9 @@ and other Latin American worlds and writes up every bug with screenshots:
   out the missing third kit. 0.2.0's kits made from plain pictures (**Import kits** with
   `p1.png`, `g1.png` ...) use his png -> ftex conversion, from his kit tool, given to Mod Studio.
 
-- **DavidBDJ** ([DavidBDJ](https://github.com/DavidBDJ)): complete test reports with saves
+- **DavidBDJ** ([DavidBDJ](https://github.com/DavidBDJ)): the UEFA league phase as one scrolling
+  table in Competition Info (the game's league standings page for the 36 clubs instead of four
+  group pages; reverse engineering, code and tests are his, in `fl26swiss.c`). Before that, complete test reports with saves
   and logs from two seasons in Austria
   ([#128](https://github.com/Matozanato/FootballLife-new-leagues/issues/128),
   [#129](https://github.com/Matozanato/FootballLife-new-leagues/issues/129)): the kits of new

@@ -7779,6 +7779,103 @@ static int hook_or_chain(unsigned char* target, const unsigned char* sig, int n,
   return 0;
 }
 
+/* The league phase as one scrolling table -- by David (david.bdj), 2026-10-13, taken over as he
+ * sent it (notes/prilozi/david-UEFA_tabla_vertical_20261013.zip: src/uefa_vertical.inc, with
+ * mocked routing tests in tests/test_uefa.c).  Presentation only: no world or save writes.
+ *
+ * Competition Info drew the 36-club league phase with the game's group page, four pages of nine
+ * (and Return covered row 9).  af4e20 builds that group controller.  For competition 2 / 3 / 174
+ * with the league-phase row selected (1027 / 1029 / 1210, or nothing selected yet) and a native
+ * table of exactly 36, it builds the game's own league standings controller (aed610) instead,
+ * points it at the row (+a8) and gives it a copy of the league vtable 2684408 whose initializer
+ * slot d8 (aeda10) is wrapped only to log the row count.  Everything else gets the original
+ * factory with its arguments untouched.  The competition selection is read at the disp32 the
+ * game's own code uses at af4ea9 and aed39c, decoded live, both must agree.
+ *
+ * Checked on our exe 2026-10-13 (live, test022 caps): the af4e20 and aed610 prologues, both
+ * selection references (offset 0x1787b5c) and vtable slot d8 == aeda10 all as he found them;
+ * none of our hooks touches af4e20 (the knockout list is the call at af98c9).
+ * Ranks of clubs level on points (his report: 1 pt 1-1 shared 13th, 1 pt 2-2 shared 19th) are
+ * the stored table's, the old page shows the same -- not changed here. */
+typedef uint64_t (*u10_factory_fn)(uint64_t,uint64_t,uint64_t);
+typedef uint64_t (*u10_init_fn)(uint64_t,uint64_t,uint64_t,uint64_t);
+static unsigned char* u10_group_tramp;
+static uintptr_t u10_vtable[1+0x250/8];
+static int32_t u10_selection_offset;
+static owner_fn u10_owner;
+static table_fn u10_table;
+static u10_factory_fn u10_league;
+static u10_init_fn u10_native_init;
+static unsigned u10_logs;
+
+static uint16_t u10_reg(unsigned comp,unsigned selected) {
+ unsigned phase=comp==2?3:comp==3?5:comp==174?186:0;
+ unsigned row=phase==3?1027:phase==5?1029:phase==186?1210:0;
+ if(!phase || (selected!=0xffff && selected!=phase && selected!=row))return 0;
+ return (uint16_t)row;
+}
+static unsigned u10_count(uint64_t self) {
+ uintptr_t b=*(uintptr_t*)(self+0x90),e=*(uintptr_t*)(self+0x98),c=*(uintptr_t*)(self+0xa0);
+ return b && e>=b && c>=e && e-b<=48*4 && (e-b)%4==0?(unsigned)((e-b)/4):0;
+}
+static uint64_t u10_initialize(uint64_t a,uint64_t b,uint64_t c,uint64_t d) {
+ uint64_t ok=u10_native_init(a,b,c,d);
+ unsigned reg=*(uint16_t*)(a+0xa8),count=u10_count(a);
+ logf("UEFA10 initialized reg=%u result=%u rows=%u expected=36",reg,(unsigned)(ok&255),count);
+ return ok;
+}
+static uint64_t u10_factory(uint64_t a,uint64_t b,uint64_t c) {
+ unsigned char* owner=u10_owner();
+ unsigned char* block=owner?*(unsigned char**)(owner+0x48):0;
+ unsigned comp=0,selected=0;uint16_t row=0;
+ if(block) {
+   comp=*(uint32_t*)(block+u10_selection_offset);
+   selected=*(uint16_t*)(block+u10_selection_offset+4);
+   row=u10_reg(comp,selected);
+ }
+ unsigned char* table=row?u10_table(row):0;
+ unsigned count=table?*(uint32_t*)(table+0x3c0):0;
+ if(!row || count!=36) {
+   if(u10_logs++<80)logf("UEFA10 original comp=%u selected=%u row=%u count=%u",comp,selected,row,count);
+   return ((u10_factory_fn)(uintptr_t)u10_group_tramp)(a,b,c);
+ }
+ uint64_t self=u10_league(a,b,c);
+ if(self) {
+   /* aed610 returns the newly constructed object before asynchronous init.
+      The league initializer consumes +a8 and reads its native table itself. */
+   *(uint16_t*)(self+0xa8)=row;
+   *(uintptr_t*)self=(uintptr_t)(u10_vtable+1);
+ }
+ logf("UEFA10 routed comp=%u selected=%u row=%u count=%u object=%llx",comp,selected,row,count,(unsigned long long)self);
+ return self;
+}
+static int u10_decode_offset(unsigned char* compare,unsigned char* load,int32_t* out) {
+ /* Decode both LIVE references, since the capacity module relocates ML data.
+    af4ea9: cmp dword [r8+disp32],8; aed39c: movsd xmm0,[rcx+disp32]. */
+ static const unsigned char cmp[]={0x41,0x83,0xb8};
+ static const unsigned char mov[]={0xf2,0x0f,0x10,0x81};
+ if(memcmp(compare,cmp,3) || compare[7]!=8 || memcmp(load,mov,4))return 0;
+ int32_t x,y;memcpy(&x,compare+3,4);memcpy(&y,load+4,4);
+ if(x!=y || x<0x1000 || x>0x10000000)return 0;
+ *out=x;return 1;
+}
+static void u10_install(void) {
+ static const unsigned char sig[]={0x40,0x57,0x48,0x83,0xec,0x30,0x48,0xc7,0x44,0x24,0x20,0xfe,0xff,0xff,0xff};
+ uintptr_t* vt=(uintptr_t*)(uintptr_t)(g_base+0x2684408);
+ if(!u10_decode_offset((unsigned char*)(uintptr_t)(g_base+0xaf4ea9),(unsigned char*)(uintptr_t)(g_base+0xaed39c),&u10_selection_offset)
+    || vt[0xd8/8]!=g_base+0xaeda10) {
+   logf("UEFA10 disabled: selection signatures or league initializer differ");return;
+ }
+ memcpy(u10_vtable,vt-1,sizeof u10_vtable);
+ u10_vtable[1+0xd8/8]=(uintptr_t)u10_initialize;
+ u10_owner=(owner_fn)(uintptr_t)(g_base+OWNER_RVA);
+ u10_table=(table_fn)(uintptr_t)(g_base+TABLE_RVA);
+ u10_league=(u10_factory_fn)(uintptr_t)(g_base+0xaed610);
+ u10_native_init=(u10_init_fn)(uintptr_t)(g_base+0xaeda10);
+ int status=hook((unsigned char*)(uintptr_t)(g_base+0xaf4e20),sig,sizeof sig,(void*)u10_factory,&u10_group_tramp);
+ logf("UEFA10 install=%d selection-offset=%x; exact UEFA 36-team tables only",status,(unsigned)u10_selection_offset);
+}
+
 /* 0 ok; 2 signature mismatch; 3 VirtualAlloc failed; 4 VirtualProtect failed; 9 bad config;
    +10 for the date hook, +20 for the group hook */
 __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* regs, int nregs)
@@ -7925,6 +8022,7 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
       logf("fl26swiss: Competition Info item per qualifying round NOT installed (signature)%s",
            g_tramp_cimenu ? " -- menu hooked, choice not: extra items open the native item's page" : "");
   }
+  u10_install();
   if (!cupsel_install(exe_base))
     logf("fl26swiss: Cup mode list live (no league phase of 36 in Kick Off > Cup)");
   else
