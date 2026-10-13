@@ -61,7 +61,7 @@ the `.dll` files committed in `sider/`: the pack builds them fresh from the sour
 > **Updating to 0.2.2?** The raised limits are in: 2400 clubs, 250 competition slots, 255
 > competitions a season (`fl26hdr255` replaces `fl26hdr192`), 128 regions (`fl26reg128`
 > replaces `fl26reg64`), 600 regulations, 65,000 appearance records. `fl26caps.lua` is a new
-> set (3504 patches), so **a career saved with 0.2.1 or older does not load**: start a new one.
+> set (3510 patches), so **a career saved with 0.2.1 or older does not load**: start a new one.
 > Install modules switches off the old lines it replaces (`fl26hdr192`, `fl26hdr127`,
 > `fl26reg64`, `fl26deep4`, `fl26nullguard3` and the single guards of the bundles).
 >
@@ -128,7 +128,7 @@ Start FL26 once, get to the main menu, quit, and open `SiderAddons\sider.log`. E
 writes an `applied all ...` line (or says why it did nothing). Among them:
 
 ```
-[fl26caps.lua] fl26caps: applied all 3504 patches -- block 0x1877068 -> 0x4a2b568, 3504 patches
+[fl26caps.lua] fl26caps: applied all 3510 patches -- block 0x1877068 -> 0x4a2b568, 3510 patches
 [fl26regs600.lua] fl26regs: applied all 4 patches -- regulation records 600: ...
 [fl26slots250.lua] fl26slots: applied all 35 patches -- competition slots 123 -> 250 ...
 [fl26guards.lua] fl26caps: applied all 2 patches -- nullguard: null-check at 0x141fea5b0

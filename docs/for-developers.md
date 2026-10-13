@@ -22,7 +22,7 @@ a data pack that already uses some of those ids), or when you change a cap.
 Requirements: Python 3.10+, `pip install capstone`, the game exe reachable through
 `FL26_DIR` (or `FL26_EXE`), and this repository's `patches/` and `sider/fl26caps.template.lua`.
 
-The shipped set (0.2.2, 3504 patches, 792 matches a calendar day, 61,905 players) was generated with (keys 197–255 are the regulation ids the league builder hands a league once
+The shipped set (0.2.2, 3510 patches, 792 matches a calendar day, 61,905 players) was generated with (keys 197–255 are the regulation ids the league builder hands a league once
 the game's free ids are gone, from 255 down, see `EXTRA_IDS` in `tools/fl26world.py`; the same list is recorded in `patches/<set>.json`, and running
 this reproduces the shipped `fl26caps.lua` patch for patch):
 
@@ -87,7 +87,7 @@ a real load-path bug:
 
 ## What the set name means
 
-`teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar` (3504 patches in 0.2.2): each part is a family of patches
+`teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar` (3510 patches in 0.2.2): each part is a family of patches
 in `layout.json` — grow the team table and relocate it; grow coaches; grow regulations;
 raise the player cap in place; install the date-spread stub (since 0.1.7 on a page of its own
 at `0x163000000`, which `fl26caps` reserves before it writes); grow the match record table;

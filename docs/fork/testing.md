@@ -129,7 +129,7 @@ Nothing above starts the game. Before a release, play this checklist with a worl
 your change, with every module installed by Build:
 
 1. **Start the game and read `sider.log`.**
-   - `fl26caps: applied all 3504 patches`;
+   - `fl26caps: applied all 3510 patches`;
    - no `MISMATCH`, `ABORTED` or status number from any module;
    - every reader says `world file -- <n> leagues`. Mod Studio's Build > *Check* reads this
      for you.

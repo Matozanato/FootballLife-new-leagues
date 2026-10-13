@@ -213,7 +213,7 @@ writing the tables itself. The loaders drain `<dll>_log` and `<dll>_stats` into 
 
 0.2.2 ships (as 0.2.0 did, with the raised limits) `teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar`.
 `sider/fl26caps.lua` is that set (the same file as
-`sider/fl26caps.<set>.lua`), and its header says `block 0x1877068 -> 0x4a2b568, 3504 patches`.
+`sider/fl26caps.<set>.lua`), and its header says `block 0x1877068 -> 0x4a2b568, 3510 patches`.
 
 - **What `-calendar` changes.** It widens every calendar day from 280 to 792 match ids. The
   day stride goes from 0x2c4 to 0x6c4 bytes (`tools/calwiden.py`, with the sites in

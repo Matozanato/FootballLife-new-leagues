@@ -81,7 +81,7 @@ DRAFT -- not released. Every line below still needs its in-game check before the
 - **The calendar stops on a day and shows nothing** (national team days, awards and other
   events, GitHub #70, #132). Since 0.2.0 a calendar day holds more matches, and one place in
   the game that reads the day's events still looked at the old spot. `fl26caps.lua` now
-  moves that read too (sider.log says `3504 patches`). National team matches that were
+  moves that read too (sider.log says `3510 patches`). National team matches that were
   skipped are expected to come back with it.
 - **A January-December league in a country with no league of the game never started**
   (Norway and Sweden in the modpack, GitHub #124). Nothing closed its season at New Year, so
