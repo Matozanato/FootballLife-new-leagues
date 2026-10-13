@@ -59,8 +59,7 @@ CPKs: it all goes in through Sider modules and data files, and comes out again.
 > (you pick the leagues). Other languages: [guides/](guides/README.md)
 >
 > **0.2.0 is the last release with new features.** From here on: bug fixes, about once a week.
-> **0.2.3** (same evening) fixes Mod Studio closing during Build: [changelog-0.2.3](docs/changelog/changelog-0.2.3.md).
-> **0.2.4** fixes Build stopping with "FL_2026.exe not found" when the game is in another folder: [changelog-0.2.4](docs/changelog/changelog-0.2.4.md).
+> **0.2.3** (same evening) fixes Mod Studio closing or stopping during Build: [changelog-0.2.3](docs/changelog/changelog-0.2.3.md).
 >
 > **0.2.2** is the big fix update with raised limits (2,400 clubs, up to 97 new leagues).
 > Careers saved before 0.2.2 do not load: start a new one after Build. What changed:

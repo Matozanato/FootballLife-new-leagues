@@ -8,6 +8,11 @@
   Build with a message of their own; in 0.2.2 that message took the whole program down instead
   of showing up. Build now stops with the message in a window, so you see what to change (or
   can send it to us).
+- **Build stopped with "FL_2026.exe not found at C:\Football Life 2026".** With the game in any
+  other folder, Build read the game's cup dates from the default folder instead of the one in
+  Settings, and stopped there (in 0.2.2 this closed the program). The builder now uses the game
+  folder from Settings for everything it reads from the game, and if the cup dates still cannot
+  be read, Build goes on without them instead of stopping.
 - **A crash now leaves a note.** If Mod Studio still closes on its own, it writes where it was
   to `%APPDATA%\FL26ModStudio\crash.log`. Send that file with your sider.log.
 
