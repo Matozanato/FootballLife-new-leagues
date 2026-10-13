@@ -10,6 +10,11 @@ more leagues and more clubs.
 - Install the modules (Install page, or Build and install does it), then **Build** once: the
   new limits need the new modules and a world built with them.
 - Not checked in the game yet: see the end of this page.
+- **NewLife 1.5 and the FL26 Modpack come a little later**, each with its own post and its own
+  list of changes. NewLife 1.5 brings this summer's transfers (about 10,000 players at a new
+  club, about 3,300 new players) and ratings below 50 for the weakest leagues; the Modpack is
+  our 0.2.2 test world (86 leagues, 1,294 new clubs, their kits and 3D faces) built on it, as
+  one zip for Install mods. Mod Studio 0.2.2 works with NewLife 1.4.2 until then.
 
 ## Bigger worlds
 
