@@ -23,7 +23,7 @@ Paths in recipe.json are relative to the package.  add() unpacks a package into 
 folder, makes its paths full again and puts its leagues into a recipe, remembering under
 "packs" what came from which package so remove() can take exactly that out again.
 """
-import argparse, json, os, re, shutil, sys, zipfile
+import argparse, json, os, re, shutil, stat, sys, zipfile
 
 import lbfaces
 
@@ -34,6 +34,33 @@ EXT = ".fl26pack"
 
 class Error(Exception):
     pass
+
+
+def _writable(func, path, _exc):
+    """rmtree's error hook: clear the read-only bit and try once more"""
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
+
+
+def rmtree(path):
+    """shutil.rmtree that also removes read-only files and folders.  The game's scoreboard
+    folders can be read-only, copytree hands the bit on to the copy, and Windows will not
+    remove a read-only folder: "Make a package" stopped on PermissionError [WinError 5] for
+    the temporary scoreboards/<n> folder (GitHub #141, Discord 13.10.)."""
+    if sys.version_info >= (3, 12):
+        shutil.rmtree(path, onexc=_writable)
+    else:
+        shutil.rmtree(path, onerror=_writable)
+
+
+def copytree(src, dst):
+    """copy a folder without its read-only bits (see rmtree)"""
+    shutil.copytree(src, dst, copy_function=shutil.copyfile)
+    for d, subs, files in os.walk(dst):
+        for n in subs + files:
+            p = os.path.join(d, n)
+            os.chmod(p, os.stat(p).st_mode | stat.S_IWRITE)
+    os.chmod(dst, os.stat(dst).st_mode | stat.S_IWRITE)
 
 
 # a league's own pictures, one path each: its logo, the country's flag, its cups' logos
@@ -111,7 +138,7 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
 
     tmp = out + ".making"
     if os.path.exists(tmp):
-        shutil.rmtree(tmp)
+        rmtree(tmp)
     os.makedirs(tmp)
     used = {}
 
@@ -142,7 +169,7 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
             raise Error("folder %s is missing" % path)
         rel = "%s/%d" % (kind, nfold[kind])
         nfold[kind] += 1
-        shutil.copytree(path, os.path.join(tmp, kind, str(nfold[kind] - 1)))
+        copytree(path, os.path.join(tmp, kind, str(nfold[kind] - 1)))
         return rel
 
     def face(path):
@@ -237,7 +264,7 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
             for f in files:
                 p = os.path.join(d, f)
                 z.write(p, os.path.relpath(p, tmp).replace(os.sep, "/"))
-    shutil.rmtree(tmp)
+    rmtree(tmp)
     os.replace(part, out)
     log("wrote %s: %d leagues, %d clubs, %d faces, %d kits, %d scoreboards"
         % (out, len(man["leagues"]), man["clubs"], man["faces"], man["kits"], man["scoreboards"]))
@@ -265,7 +292,7 @@ def unpack(path, store):
     man = manifest(path)
     dst = os.path.join(store, tag_of(man))
     if os.path.exists(dst):
-        shutil.rmtree(dst)
+        rmtree(dst)
     os.makedirs(dst)
     root = os.path.realpath(dst)
     with zipfile.ZipFile(path) as z:
