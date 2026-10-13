@@ -165,9 +165,12 @@ which league sits above -- and nothing about ids:
               false, "name", "logo", "super_name", "super_logo"}, ...]. A league cup is the one a
               new top division gets (league_cup above): 16 clubs of that league and the one
               below it, by position, the rest through a pre-round; fl26swiss fills and dates it. A super cup -- the champion v
-              the cup winner, one match in late July -- only where the game has none (Brazil,
-              Chile, Scotland, Greece, the USA); a cup nobody has won yet (a new career) leaves
-              it unplayed that summer
+              the cup winner, one match -- only where the game has none (Brazil, Chile, Scotland,
+              Greece, the USA): the same two-club copy of SUPER_CUP_LIKE a new league's super
+              cup is (game_super_cups), which the game fills itself; dated as SUPER_CUP_LIKE
+              (July), in a February-December country at the end of January after the season
+              (CALENDAR_SUPER_DATE_LIKE). 0.2.3 built it on the FA Cup's row, and the game
+              filled that with every club of the country (Vicentico 13.10.)
   edits.competitions  (the recipe) new names and emblems for the game's competitions that are
               not leagues -- cups, super cups, the Champions League, the Libertadores ...:
               {"<competition id>": {"name": ..., "logo": ...}}; every regulation of that
@@ -1686,7 +1689,8 @@ def plan(recipe, base, prev=None):
                         for e in c["entry"] if e[0] == "cup" and e[1] in regrow
                         and e[1] not in {p["rid"] for p in out}]
     home = [league_cup(p, out) for p in out if p.get("league_cup")]
-    home += game_cups(recipe, regrow, region_of_cid, base, out)
+    gcups, gsupers = game_cups(recipe, regrow, region_of_cid, base, out)
+    home += gcups
     home += [c for p in out if p.get("apertura") for c in playoff_cups(p)]
     home += [preseason_cup(c, k, by_name) for k, c in enumerate(recipe.get("preseason_cups") or [])]
     if recipe.get("caf_super_cup", True) and {CAF_CL, CAF_CC} <= {c["number"] for c in cups}:
@@ -1712,7 +1716,7 @@ def plan(recipe, base, prev=None):
             "uecl_name": (recipe.get("uecl_name") or "").strip() or None,
             "game_europe": ge, "game_replace": gr, "game_names": gn,
             "uefa_seed": uefa_seed(recipe, out, regrow, region_of_cid),
-            "ccups": cups, "ccup_notes": notes, "home_cups": home,
+            "ccups": cups, "ccup_notes": notes, "home_cups": home, "game_supers": gsupers,
             "europe_first": europe_first(recipe, by_name),
             "game_seasons": august_countries(recipe),
             "editable_kits": bool(recipe.get("editable_kits")),
@@ -2193,10 +2197,12 @@ def rename_competitions(pl, db, log=print):
 
 
 def game_cups(recipe, regrow, region_of_cid, base, out):
-    """the recipe's game_cups: league cups (and super cups where the region has none) for top
-    divisions of the game, the same fl26swiss cups league_cup() gives a new country"""
-    res, seen = [], set()
+    """the recipe's game_cups for top divisions of the game: (league cups, the same fl26swiss
+    cups league_cup() gives a new country; super cups where the region has none, built as a new
+    country's by game_super_cups())"""
+    res, supers, seen = [], [], set()
     tops = {r for r, _c, _n, _t in game_leagues(base)} if recipe.get("game_cups") else set()
+    moved_regions = {GAME_SEASONS[n][0] for n in recipe.get("game_seasons") or [] if n in GAME_SEASONS}
     for c in recipe.get("game_cups") or []:
         try:
             rid = int(c.get("league"))
@@ -2233,21 +2239,16 @@ def game_cups(recipe, regrow, region_of_cid, base, out):
         if c.get("super_cup"):
             if home_supercup(regrow, region_of_cid, region):
                 raise BuildError("game cups: %s already has a super cup in the game" % league)
-            cup = home_cup(regrow, region_of_cid, region)
-            res.append({"name": (c.get("super_name") or "").strip() or league + " Super Cup",
-                        "code": "FL_G%03d_SCUP" % rid, "kind": "super", "logo": c.get("super_logo") or None,
-                        "country": None, "conf": conf, "region": region, "groups": 0,
-                        "entry": [(rid, 1), (cup, 0)] if cup else [(rid, 1), (rid, 2)],
-                        # no cup winner yet (a first season), or the champion won the cup too: the
-                        # league's runner-up plays (fl26swiss alt=; "only 1 of 2 clubs found" and
-                        # the cup never started, Supercopa Rei and de Chile 08.10.)
-                        "alt_fixed": [(1, rid, 2)] if cup else [],
-                        # a domestic cup's row (format 2), not the Europa League knockout's (30):
-                        # League Info lists a country's cups only by format 2, 3, 16 or 17
-                        # (0x140c6ccb0), so the Supercopa de Chile was missing from it (0.2.2)
-                        "opts": {"fill": PRESEASON_FILL, "national": 1, "days": CAF_SUPER_DAYS,
-                                 "like": LEAGUE_KO_LIKE, "draw": "byes"}})
-    return res
+            # the game's own super cup shape, as a new league's (national_cups: a copy of
+            # SUPER_CUP_LIKE, two clubs) -- not a fl26swiss knockout on the FA Cup's row: the game
+            # fills a format-2 cup of a region from its leagues, so the Supercopa de Chile and Rei
+            # came out a 16- and 26-club bracket, drawn in July from the table of a February-
+            # December league still running and never played right (Vicentico 13.10.)
+            supers.append({"name": (c.get("super_name") or "").strip() or league + " Super Cup",
+                           "code": "FL_G%03d_SCUP" % rid, "logo": c.get("super_logo") or None,
+                           "league": rid, "league_cid": g[M.R_CID], "region": region,
+                           "calendar": region in CALENDAR_REGIONS and region not in moved_regions})
+    return res, supers
 
 
 def rounds_of(clubs):
@@ -2846,6 +2847,10 @@ def describe(pl):
             "single-match " if cup["opts"].get("like") else "", len(cup["entry"]),
             ", %d of them from a pre-round of %d clubs in late September"
             % (len(pre["entry"]) // 2, len(pre["entry"])) if pre else ""))
+    for s in pl.get("game_supers") or []:
+        lines.append("  %s: super cup, the champion v the cup winner, %s" % (
+            s["name"], "at the end of January (February-December season)" if s["calendar"]
+            else "its date follows %s" % SUPER_CUP_LIKE))
     return "\n".join(lines)
 
 
@@ -3393,6 +3398,7 @@ def build(pl, base, game, replace=False, log=print):
     rounds = qual_rounds(pl)
     uecl, qlines = europe(tmp, db, log, bool(pl.get("uecl")), pl.get("uecl_name"), rounds)
     national_cups(pl, tmp, db, log)
+    game_super_cups(pl, tmp, db, log)
     hc = home_cups(pl, confed)
     own_cup = {p["rid"]: (p.get("own_cup") or {}).get("reg") for p in pl["leagues"]}
     for c in pl.get("ccups") or []:
@@ -3849,6 +3855,12 @@ def dates_lines(pl, db):
                 line += " days=%s" % ",".join(map(str, days))
             out.append(line)
 
+    for s in pl.get("game_supers") or []:              # a game league's super cup (game_super_cups)
+        like = like_reg(db, CALENDAR_SUPER_DATE_LIKE if s["calendar"] else SUPER_CUP_LIKE) if s.get("reg") else None
+        if like:
+            out.append("dates %d like=%d" % (s["reg"], like) + (
+                " days=%s" % ",".join(map(str, CALENDAR_SUPER_DATE_DAYS)) if s["calendar"] else ""))
+
     return out
 
 
@@ -3977,6 +3989,10 @@ def cupdays_lines(pl, base, db, log=print):
             like = like_reg(db, code) if reg and code else None
             if like:
                 cup_days.setdefault(p["region"], set()).update(days_of(like))
+    for s in pl.get("game_supers") or []:              # a game league's new super cup
+        like = like_reg(db, SUPER_CUP_LIKE)
+        cup_days.setdefault(s["region"], set()).update(
+            set(CALENDAR_SUPER_DATE_DAYS) if s["calendar"] else days_of(like) if like else set())
     leagues = dict(game)
     for p in pl["leagues"]:
         if p.get("rid") and p.get("region") is not None and not p.get("exhibition"):
@@ -4031,6 +4047,33 @@ def national_cups(pl, root, db, log=print):
                          "--code", "FL_%03d_SUPER" % p["rid"], "--like", SUPER_CUP_LIKE, "--bracket", 2])
             log("  %s: competition %d, regulation %d (copied from %s)"
                 % (c["super"], cids[0], regs[0], SUPER_CUP_LIKE))
+
+
+def game_super_cups(pl, root, db, log=print):
+    """the super cups of the game's leagues (game_supers) into the world's tables, one mkcup.py
+    each, the way national_cups() makes a new league's: a copy of SUPER_CUP_LIKE in the league's
+    region with its first two clubs, which the game then fills with the champion and the cup
+    winner itself (dates_lines dates it)"""
+    import mkcup
+    ents = M.load(db, "CompetitionEntry.bin")
+    for s in pl.get("game_supers") or []:
+        listed = sorted((ents[i + M.E_ORDER], int.from_bytes(ents[i + M.E_TEAM:i + M.E_TEAM + 4], "little"))
+                        for i in range(0, len(ents), M.ENT) if ents[i + M.E_CID] == s["league_cid"])
+        teams = [t for _o, t in listed][:2]
+        if len(teams) < 2:
+            raise BuildError("%s: league %d has %d clubs in the tables" % (s["name"], s["league"], len(teams)))
+        cids, regs = pinned_ids(pl, db, "gsuper:" + s["code"])
+        if not cids or not regs:
+            raise BuildError("no free competition or regulation ids left for %s" % s["name"])
+        s["cid"], s["reg"] = cids[0], regs[0]
+        call(mkcup, ["--base", db, "--out", root, "--teams", ",".join(map(str, teams)),
+                     "--cid", s["cid"], "--reg", s["reg"], "--region", s["region"], "--name", s["name"],
+                     "--code", s["code"], "--like", SUPER_CUP_LIKE, "--bracket", 2])
+        pl.setdefault("cup_ids", {})["gsuper:" + s["code"]] = {"cid": s["cid"], "reg": s["reg"]}
+        log("  %s: competition %d, regulation %d (copied from %s%s)"
+            % (s["name"], s["cid"], s["reg"], SUPER_CUP_LIKE,
+               ", dated as %s, day %s" % (CALENDAR_SUPER_DATE_LIKE, ",".join(map(str, CALENDAR_SUPER_DATE_DAYS)))
+               if s["calendar"] else ""))
 
 
 def continental(cups, root, db, log=print, start=None, want=None):
@@ -4336,7 +4379,7 @@ def cup_emblems(pl):
             out.append((c["cid"], c["name"], c.get("logo")))
         if c.get("super_cid"):
             out.append((c["super_cid"], c["super"], c.get("super_logo")))
-    for c in (pl.get("ccups") or []) + (pl.get("home_cups") or []):
+    for c in (pl.get("ccups") or []) + (pl.get("home_cups") or []) + (pl.get("game_supers") or []):
         if c.get("cid"):
             out.append((c["cid"], c["name"], c.get("logo")))
     if pl.get("uecl"):

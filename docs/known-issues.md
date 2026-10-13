@@ -493,6 +493,17 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-13 (next update, Discord, thanks Vicentico): **a super cup added to a league of the game
+  (New leagues > cups of the game's countries) was not a super cup.** The Supercopa de Chile came
+  out as a 16-club knockout and the Supercopa Rei as a bracket of every Brazilian club ("from the
+  2nd round"); in July the two clubs were taken from the table of a February-December league that
+  was still running, and the match was not played properly and kept no stats. It was built on the
+  FA Cup's shape, which the game fills with every club of the country. It is now built the way a
+  new league's super cup is (a two-club copy of the game's super cup, which the game fills with the
+  champion and the cup winner itself), and in a February-December country it is played at the end
+  of January, after the season. Checked without the game (Build through Mod Studio: Chile, Brazil
+  and Scotland each get a two-club cup in their country, Chile and Brazil dated day 30). Needs
+  Build again. Not yet checked in the game.
 - 2026-10-06 (Mod Studio 0.1.9, Discord): **the first round of a new country's national cup paired
   only clubs of the same division.** A cup is drawn in the order its clubs are written (1 v 2, 3
   v 4 ...), and both Build and the cup module (fl26chain, which refills a two-division cup at

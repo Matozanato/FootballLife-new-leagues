@@ -35,7 +35,7 @@ Rules that hold for every key:
 | `game_europe` | {"<reg of a game top division>": [[pos, comp], ...]} | European places of the game's leagues in place of the shipped ones | `uefa` |
 | `uefa_rank` | list | Mod Studio's UEFA ranking dialog. Applying it writes `europe`, `game_europe` and `uefa_seed`; Build itself does not read it | none |
 | `uefa_seed` | [[league, pos, comp], ...] | the order fl26swiss hands places out in | `uefa` order |
-| `game_cups` | list of {league, league_cup, super_cup, name, logo, super_name, super_logo} | a league cup and/or super cup for a country of the game | `ccup`, `dates` |
+| `game_cups` | list of {league, league_cup, super_cup, name, logo, super_name, super_logo} | a league cup (`ccup`) and/or super cup for a country of the game; the super cup is a two-club copy of the game's super cup in that country, played at the end of January in a February-December country | `ccup`, tables + `dates` |
 | `game_seasons` | list of country names | EXPERIMENTAL: Brazil, Chile, China, Japan, Saudi Arabia play August-May | `season <region> 0`, `dates` |
 | `saudi_august` | bool | the older form of `game_seasons: ["Saudi Arabia"]` | as above |
 | `preseason_cups` | list of {name, clubs, logo} | July knockouts of 4 or 8 invited clubs | `ccup` |

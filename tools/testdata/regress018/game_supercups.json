@@ -1,0 +1,9 @@
+{
+ "world": "_FL26GameSuperCups",
+ "leagues": [],
+ "game_cups": [
+  {"league": 67, "league_cup": false, "super_cup": true},
+  {"league": 29, "league_cup": false, "super_cup": true},
+  {"league": 133, "league_cup": false, "super_cup": true}
+ ]
+}
