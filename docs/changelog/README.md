@@ -1,7 +1,9 @@
 # Changelog
 
-What each release of FL26 Mod Studio brought. The full notes of the three latest releases:
+What each release of FL26 Mod Studio brought. The full notes of the latest releases:
 
+- [0.2.3](changelog-0.2.3.md) (2026-10-13): a quick fix for 0.2.2 -- Mod Studio no longer closes
+  during Build; it shows the builder's message instead, and a crash writes crash.log.
 - [0.2.2](changelog-0.2.2.md) (2026-10-13): the big fix update, with raised limits (2,400 clubs,
   up to 97 new leagues). Careers saved before 0.2.2 do not load: start a new one after Build.
 - [0.2.1](changelog-0.2.1.md) (2026-10-10): a quick interim update that fixes the Master League /

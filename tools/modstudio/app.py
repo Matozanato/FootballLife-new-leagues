@@ -644,6 +644,13 @@ def main():
             QMessageBox.information(None, "FL26 Mod Studio",
                                     _("FL26 Mod Studio is already open. Look for its window on the taskbar."))
             return
+    # 0.2.3: a crash that takes the program down writes where it was to crash.log (people send it)
+    try:
+        import faulthandler
+        os.makedirs(APPDIR, exist_ok=True)
+        faulthandler.enable(open(os.path.join(APPDIR, "crash.log"), "w", encoding="utf-8"))
+    except Exception:
+        pass
     w = Main()
     theme.dark_title_bar(w)
     w.show()
