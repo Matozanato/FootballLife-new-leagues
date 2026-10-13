@@ -149,6 +149,11 @@ DRAFT -- not released. Every line below still needs its in-game check before the
 - Competition Info in August: Play-offs stays grey until the play-off is drawn (it opened the
   3rd qualifying round under the Play-offs name), and the Champions League's League Phase stays
   grey until its draw (it opened an empty "Group A").
+- **A club could be in two European competitions' August rounds** (Tirana in the Conference
+  League qualifying and in the Champions League play-off) after the game was restarted during
+  the qualifying: the play-offs were filled from a fresh draw that did not know which clubs the
+  rounds already held. A round the game already plays now keeps its clubs, and none of them is
+  placed again.
 - League cup hints say late August to mid-March, the dates since 0.2.0.
 - Home: Switch world... shows the worlds.
 - sider.log says why a qualifying round is not played in a season (GitHub #128, log only).

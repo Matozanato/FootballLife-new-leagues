@@ -1789,6 +1789,8 @@ static int in_league(uint16_t reg, uint32_t c)
   return 0;
 }
 
+static int q_matches(int p);
+static int q_summer(void);
 /* build the lists; a slot whose club is missing or already placed takes the next position of the
    same league. q: 0 no qualifying (36 direct entrants each), 1 also the rounds' new entrants (g_q),
    2 the rounds' clubs are known (g_q) and are not placed again. mask: the rounds on (bit i); a
@@ -1808,6 +1810,41 @@ static int access_build(int q, int mask)
   for (int i = 0; i < NQR; i++) {
     if (q == 1 && on[i]) { g_nq[i] = 0; g_qdrawn[i] = 0; }
     if (q == 2 && on[i]) for (unsigned j = 0; j < g_nq[i]; j++) if (!has_club(used, nused, g_q[i][j])) used[nused++] = g_q[i][j];
+  }
+  /* A round the game already plays this summer -- filled before a restart, its ties holding this
+     summer's matches -- keeps the clubs it has: they are placed first, as they are, and no place
+     of the list goes to one of them again. The rounds live in memory only, so after a restart the
+     build drew every round afresh and placed the clubs it did not draw again (13.10.: a save
+     loaded on day 232, the play-offs built on day 246 put Tirana, in the Conference League's
+     second qualifying round, into the Champions League play-off as well). A round's new entrants
+     are its clubs that no round feeding it holds. */
+  if (q == 1 && q_summer()) {
+    uint32_t qt[NQR][Q_N]; int filled[NQR], kept = 0;
+    for (int i = 0; i < NQR; i++) {
+      filled[i] = on[i] && q_matches(i) > 0;
+      for (int k = 0; k < Q_N / 2 && filled[i]; k++) {
+        unsigned char* t = get_rec(q_tie_of(i, k));
+        if (!t || rec_count(t) != 2) filled[i] = 0;
+        else { qt[i][2 * k] = rec_clubs(t)[0]; qt[i][2 * k + 1] = rec_clubs(t)[1]; }
+      }
+    }
+    for (int i = 0; i < NQR; i++) {
+      if (!filled[i]) continue;
+      for (int n = 0; n < Q_N; n++) {
+        uint32_t c = qt[i][n];
+        if (!(c >> 14) || has_club(used, nused, c)) continue;
+        used[nused++] = c;
+        int fed = 0;
+        for (int j = 0; j < NQR && !fed; j++)
+          if (j != i && filled[j] && (q_up(mask, j) == i || q_down(mask, j) == i)) fed = has_club(qt[j], Q_N, c);
+        if (!fed && g_nq[i] < room[i]) {
+          g_qhow[i][g_nq[i]].reg = q_reg(i); g_qhow[i][g_nq[i]].rank = 0;
+          g_q[i][g_nq[i]++] = c;
+        }
+      }
+      kept++;
+    }
+    if (kept) logf("fl26swiss: access -- %d qualifying round(s) already played this summer keep their clubs", kept);
   }
   if (g_nfirst[0] + g_nfirst[1] + g_nfirst[2] && !any_final_kept() && !g_new_career) {
     static int said = 0;
