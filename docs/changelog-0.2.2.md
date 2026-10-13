@@ -54,7 +54,7 @@ DRAFT -- not released. Every line below still needs its in-game check before the
   still).
 - Leagues > More > Competition IDs: every league and cup with its competition id and
   regulation ids, from the world switched on, with a button that copies the list.
-- More > World name and recipe: "Faces from the regen face pack for new players". Off keeps
+- Build: "Faces from the regen face pack for new players". Off keeps
   the look the game gives new players, or the one set in the game's Edit mode.
 
 ## Easier to use (from the poll)
@@ -133,6 +133,11 @@ DRAFT -- not released. Every line below still needs its in-game check before the
 - A super cup added to a league of the game (Supercopa de Chile, Supercopa Rei) shows in
   League Info beside the country's other cups. It is built as a domestic cup now; a career
   started before keeps the old cup, which still plays, only without the icon.
+- **Make a package stopped with "PermissionError: [WinError 5] Access denied"** on a
+  `scoreboards\<n>` folder (GitHub #141): the game's scoreboard folders can be read-only, and
+  the copy kept that. Folders now go in without it.
+- Competition Info no longer lists "Knockout round play-offs" twice after the February
+  play-off draw (the game's own item already opens that round).
 - League cup hints say late August to mid-March, the dates since 0.2.0.
 - Home: Switch world... shows the worlds.
 - sider.log says why a qualifying round is not played in a season (GitHub #128, log only).
