@@ -112,13 +112,17 @@ def main():
         S.write(pm, b, log=log.append, root=w)
         ok("a changed crest makes that kit again", any("(1 new or changed)" in l for l in log))
         with open(os.path.join(b, S.KITS, "map.txt"), "a", encoding="utf-8") as f:
-            f.write('912, "Mine\\Blue"\n')
+            f.write('912, "Mine\\Blue"\n911, "Gone\\Red"\n')
+        os.makedirs(os.path.join(b, S.KITS, "Mine", "Blue"))
         S.write(pm, b, log=lambda *_: None, root=w)
         km = lines(os.path.join(b, S.KITS, "map.txt"))
         ok("a club with a kit line of your own keeps it, no kit made",
            '912, "Mine\\Blue"' in km and not any(l.startswith('912, "My world') for l in km))
+        ok("a line of your own to a kit that is not installed: the made kit, that line off",
+           any(l.startswith('911, "My world\\Liga\\Red"') for l in km)
+           and any(l.startswith('#911, "Gone\\Red"') and l.endswith(S.OFF) for l in km))
         S.write(dict(pm, make_kits=False), b, log=lambda *_: None, root=w)
-        ok("make_kits false: no made kit lines", not any("911," in l for l in lines(os.path.join(b, S.KITS, "map.txt"))))
+        ok("make_kits false: no made kit lines", not any('911, "My world' in l for l in lines(os.path.join(b, S.KITS, "map.txt"))))
 
         c = os.path.join(tmp, "c")
         os.makedirs(c)

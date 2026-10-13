@@ -613,7 +613,9 @@ press **Export the world...** on the Build page (after **2. Build the world**). 
   and **scoreboards**, each with a `map.txt` / `map_competitions.txt` of only this world's lines.
   Install mods adds those lines to the receiver's maps (a line of theirs for the same club is
   switched off and comes back when the mod is removed). The kits go to the Kit Server the
-  receiver's game loads (`content\kits` for SPFL26's own one).
+  receiver's game loads (`content\kits` for SPFL26's own one). A club of the world that wears
+  a kit from another pack on your PC (SPFL26's Other Europe, a modpack) takes a copy of that kit
+  along, in `<world>\_kits\`, so the receiver does not need that pack.
 - `READ ME - FL26 world.txt` and `fl26worldpack.json`: what the receiver needs.
 
 **The receiver needs Mod Studio's modules with the face pack** (`modules\fl26regen_faces.bin`):

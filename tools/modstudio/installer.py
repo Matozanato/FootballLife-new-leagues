@@ -41,6 +41,7 @@ WORLD_FILE = "fl26world.txt"             # the world file of a League Builder wo
 FACE_PACK = "fl26regen_faces.bin"        # Mod Studio's face pack; Install the modules puts it in modules
 OUR_LINE = "# FL26 Mod Studio:"          # the end of a map line Build wrote (lbstadiums.TAG)
 WORLD_SERVERS = ("kits", "scoreboards")  # what Build writes under content\<server>\<world>
+BORROWED = "_kits"                       # content\kit-server\<world>\_kits: other packs' kits a world zip carries
 WORLD_README = "READ ME - FL26 world.txt"
 WORLD_INFO = "fl26worldpack.json"
 WORLD_NOTE = "a League Builder world: it is switched on, its world file goes to modules\\fl26world.txt"
@@ -96,6 +97,41 @@ def world_lines(path, world):
         if _t and not l.lstrip().startswith(b"#") and under in body.lower():
             out.append(l)
     return out
+
+
+def borrowed_kits(path, world, teams, have):
+    """the world's clubs whose kit comes from a line of another pack (SPFL26's own folders, a
+    modpack ...): [(team id, kit folder as in the map)], one per club, the first line in
+    effect.  `have`: the team ids Build already gave a kit of ours."""
+    try:
+        with open(path, "rb") as f:
+            raw = f.read()
+    except OSError:
+        return []
+    if raw.startswith(b"\xef\xbb\xbf"):
+        raw = raw[3:]
+    text = raw.decode("utf-8", "replace")
+    want, out = set(teams) - set(have), {}
+    for l in text.split("\n"):
+        s = l.strip()
+        if not s or s.startswith("#") or OUR_LINE in s:
+            continue
+        m = re.match(r'(\d+)\s*,\s*"([^"]+)"', s)
+        if m and int(m.group(1)) in want and int(m.group(1)) not in out \
+                and not m.group(2).lower().startswith((world + "\\").lower()):
+            out[int(m.group(1))] = m.group(2).strip()
+    return sorted(out.items())
+
+
+def world_teams(root):
+    """the team ids of a built world's leagues and other clubs (leaguebuilder-plan.json)"""
+    try:
+        with open(os.path.join(root, "leaguebuilder-plan.json"), encoding="utf-8") as f:
+            pl = json.load(f)
+    except (OSError, ValueError):
+        return []
+    return [int(t) for p in (pl.get("leagues") or []) + (pl.get("others") or [])
+            for t in (p.get("teams") or []) if isinstance(t, int) or str(t).isdigit()]
 
 
 def face_pack_missing(sider_dir):
@@ -162,9 +198,20 @@ def export_world(sider_dir, world, out, log=lambda t: None):
         lines = world_lines(os.path.join(here, s.maps[0].file), world)
         if not os.path.isdir(os.path.join(here, world)):
             lines = []
+        lent = []                         # kits of other packs the world's clubs wear: they go too
+        if key == "kits":
+            have = [int(l.split(b",", 1)[0]) for l in lines if l.split(b",", 1)[0].strip().isdigit()]
+            for tid, folder in borrowed_kits(os.path.join(here, s.maps[0].file), world,
+                                             world_teams(root), have):
+                if os.path.isdir(os.path.join(here, folder)):
+                    lent.append((os.path.join(here, folder), "%s\\%s\\%s" % (world, BORROWED, folder)))
+                    lines.append(('%d, "%s\\%s\\%s"   %s kit of %s' % (
+                        tid, world, BORROWED, folder, OUR_LINE, folder)).encode("utf-8"))
         if lines:
-            extra.append((s, here, lines))
+            extra.append((s, here, lines, lent))
         info[key] = len(lines)
+        if lent:
+            info["kits_borrowed"] = len(lent)
     text = README.format(world=world, pack=FACE_PACK, faces=faces, kits=info["kits"],
                          boards=info["scoreboards"]).replace("\n", "\r\n")
     part = out + ".part"
@@ -172,17 +219,24 @@ def export_world(sider_dir, world, out, log=lambda t: None):
     with zipfile.ZipFile(part, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr(WORLD_README, text)
         z.writestr(WORLD_INFO, json.dumps(info, indent=1, ensure_ascii=False))
-        for s, here, lines in extra:
+        for s, here, lines, lent in extra:
             z.writestr("SiderAddons/content/%s/%s" % (s.folder, s.maps[0].file), b"\r\n".join(lines) + b"\r\n")
-            src = os.path.join(here, world)
-            for dp, dn, fn in os.walk(src):
-                dn.sort()
-                for f in sorted(fn):
-                    p = os.path.join(dp, f)
-                    rel = os.path.relpath(p, src).replace(os.sep, "/")
-                    z.write(p, "SiderAddons/content/%s/%s/%s" % (s.folder, world, rel))
-                    n += 1
-            log("%s: %d map line(s) from %s" % (s.title, len(lines), here))
+            done = set()
+            for src, dst in [(os.path.join(here, world), world)] + lent:
+                if dst.lower() in done or not os.path.isdir(src):
+                    continue
+                done.add(dst.lower())
+                for dp, dn, fn in os.walk(src):
+                    dn.sort()
+                    for f in sorted(fn):
+                        p = os.path.join(dp, f)
+                        rel = os.path.relpath(p, src).replace(os.sep, "/")
+                        if dst == world and rel.lower().startswith(BORROWED.lower() + "/"):
+                            continue              # an older copy of borrowed kits: the fresh one goes
+                        z.write(p, "SiderAddons/content/%s/%s/%s" % (s.folder, dst.replace("\\", "/"), rel))
+                        n += 1
+            log("%s: %d map line(s) from %s%s" % (s.title, len(lines), here,
+                ", %d of them kits of other packs" % len(lent) if lent else ""))
         for dp, dn, fn in os.walk(root):
             dn.sort()
             for f in sorted(fn):

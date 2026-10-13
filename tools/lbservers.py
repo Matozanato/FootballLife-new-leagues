@@ -226,7 +226,10 @@ def write(pl, sider, log=print, root=None):
             if TAG in l:
                 continue
             m = LINE.match(l[:-len(OFF)] if l.endswith(OFF) else l)
-            if m and (not m.group(1) or l.endswith(OFF)):
+            # ... when its folder is there: a line to a kit that is not installed gives the club
+            # nothing, so it gets a made one (22 clubs of the modpack world, 13.10.)
+            if m and (not m.group(1) or l.endswith(OFF)) and m.group(3).strip() \
+                    and os.path.isdir(os.path.join(sider, klib, m.group(3).strip())):
                 yours.add(int(m.group(2)))
         make = [x for x in make if x[0] not in yours]
     done = []

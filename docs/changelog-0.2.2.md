@@ -64,7 +64,8 @@ more leagues and more clubs.
 
 - **Export the world** takes the world's kits and scoreboards too (Kit Server and Scoreboard
   Server, with their map lines); before, the receiver got the world without its kits. Install
-  mods puts the kits where the receiver's Kit Server reads them.
+  mods puts the kits where the receiver's Kit Server reads them. A club wearing a kit from
+  another pack (SPFL26's Other Europe, a modpack) takes a copy of it along.
 
 - League: a name field for the super cup, beside the national cup's and the league cup's
   (empty = the league's name + Super Cup).
@@ -166,6 +167,10 @@ more leagues and more clubs.
 - With a league order (A-Z or your own) the "Other European / Latin American / Asian" groups
   stay after the last country of their continent instead of going after every country.
 - Import kits replaces a map line whose kit folder is missing, instead of keeping it.
+- **New clubs with no kit** although Build makes one in their colours (22 clubs in a big world:
+  AFC clubs, Larissa, Huesca, Bari ...). A kit line of an older install whose folder is gone
+  counted as "your own kit", so none was made. A line to a missing folder no longer counts: the
+  made kit goes in and that line is switched off.
 - Players: the "a new club keeps at least 18 players" check counts the players who joined it.
 - Best eleven (and the line-up Build gives a new club) lets a player who can also play a
   place take it from a much weaker player registered there: he counts with 6 off, so Rice

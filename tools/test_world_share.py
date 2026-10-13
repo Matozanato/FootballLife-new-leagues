@@ -115,13 +115,28 @@ def main():
         info = I.export_world(a, WORLD, zk)
         assert info["kits"] == 1 and info["scoreboards"] == 1, info
         with zipfile.ZipFile(zk) as z:
-            names = set(z.namelist())
             km = z.read("SiderAddons/content/kit-server/map.txt").decode()
             assert km.strip() == '72001, "%s\\L One\\Club A"   %s L One/0 made' % (WORLD, tag), km
+        # a club of the world wearing another pack's kit (SPFL26's Other Europe, a modpack): it goes too
+        put(os.path.join(a, "livecpk", WORLD, "leaguebuilder-plan.json"),
+            '{"leagues": [{"name": "L One", "teams": [72001, 1586, 72003, 100]}]}')
+        with open(os.path.join(a, "content", "kit-server", "map.txt"), "a", encoding="utf-8") as fh:
+            fh.write('1586, "Other Europe\\Salzburg"\n1586, "Old\\Salzburg"\n72003, "Gone\\Nowhere"\n')
+        put(os.path.join(a, "content", "kit-server", "Other Europe", "Salzburg", "p1", "s.ftex"), "s")
+        put(os.path.join(a, "content", "kit-server", "Mine", "Club", "p1", "m.ftex"), "m")
+        info = I.export_world(a, WORLD, zk)
+        assert info["kits"] == 3 and info.get("kits_borrowed") == 2, info     # 72001 ours, 1586, 100 lent
+        with zipfile.ZipFile(zk) as z:
+            names = set(z.namelist())
+            km = z.read("SiderAddons/content/kit-server/map.txt").decode().splitlines()
+            assert '1586, "%s\\_kits\\Other Europe\\Salzburg"   %s kit of Other Europe\\Salzburg' % (WORLD, tag) in km, km
+            assert '100, "%s\\_kits\\Mine\\Club"   %s kit of Mine\\Club' % (WORLD, tag) in km, km
+            assert not any("Gone" in l or "Old" in l for l in km), km
+            assert "SiderAddons/content/kit-server/%s/_kits/Other Europe/Salzburg/p1/s.ftex" % WORLD in names, names
             assert "SiderAddons/content/kit-server/%s/L One/Club A/p1/u0001p1.ftex" % WORLD in names
             assert not any("_FL26Other" in n for n in names), names
             assert "SiderAddons/content/scoreboard-server/%s/L One/board.dds" % WORLD in names
-            assert "Kits (1 clubs)" in z.read(I.WORLD_README).decode()
+            assert "Kits (3 clubs)" in z.read(I.WORLD_README).decode()
         # another PC with a kit line of its own for the same club: ours replaces it, removal brings it back
         f = sider(os.path.join(tmp, "f"))
         own = '72001, "Mine\\Old"\n'
