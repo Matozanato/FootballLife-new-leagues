@@ -87,7 +87,8 @@ A club of the game is keyed by its team id and its players by player id. A new c
 before Build, so it is keyed `"<league name>/<k>"`, and its players by their place in the squad.
 Values are the texts `playeredit.py`'s CSV takes (`"CF"`, `"Right"`, `"85"`), checked at Build.
 `join` moves a player with his record (a transfer, or a national-team call-up). `id` picks a new
-player's id (Mod Studio stays at or below `PID_MAX` = 399999). The examples are in the docstring of
+player's id (Mod Studio stays at or below `PID_MAX` = 262143: the game packs a player id into 18 bits,
+and a world with a higher one crashes when a Master League is created). The examples are in the docstring of
 `tools/lbplayers.py`.
 
 ## Adding a key

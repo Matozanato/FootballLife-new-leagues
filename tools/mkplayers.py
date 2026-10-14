@@ -118,12 +118,18 @@ def main():
     if not fresh:
         raise SystemExit("no room for even one squad")
 
-    pid = max(index) + 1
+    pid = 179673                                  # the first id above the game's own, gaps filled
+                                                  # below: the engine packs a player id into 18 bits
+                                                  # (lbplayers.PID_MAX), so nothing may drift upwards
     eid = max(int.from_bytes(assigns[i * A_REC + A_EID:i * A_REC + A_EID + 4], "little")
               for i in range(len(assigns) // A_REC)) + 1
     made = 0
     for club in fresh:
         for src_pid, pack in proto:
+            while pid in index:
+                pid += 1
+            if pid > 262143:
+                raise SystemExit("no free player id left below 262144 (the game packs a player id into 18 bits)")
             r = bytearray(players[index[src_pid] * P_REC:(index[src_pid] + 1) * P_REC])
             r[P_ID:P_ID + 4] = pid.to_bytes(4, "little")
             nm = pname % (made + 1)

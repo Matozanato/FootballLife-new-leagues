@@ -56,7 +56,10 @@ MIN_SQUAD = 18        # a new club may lose players down to this: eleven and sev
 FIELDS = list(E.FIELDS)
 CLUB_MAX = 40         # the most players a shipped club has
 NATIONAL_MAX = 26     # the most a shipped national team has
-PID_MAX = 399999      # a player id Mod Studio hands out stays below this
+PID_MAX = 262143      # a player id Mod Studio hands out stays below this: the engine packs a
+                      # player id into 18 bits (handle = id << 14 | n), and a world with a player
+                      # id of 262144 or more crashes when a new Master League is created
+                      # (FL_2026.exe+0xf325a4, the player lookup returns nothing; measured 14.10.2026)
 T_NATIONAL = 0x53     # Team.bin: top bit set on the 144 national teams (leaguebuilder.T_NATIONAL)
 T_COUNTRY = 0x46      # Team.bin: the country, 9 bits from bit 2 (144 of 144 national teams)
 T_COACH = 0x00        # Team.bin: the id of the club's manager in Coach.bin (mkcoaches.T_COACH)
@@ -825,11 +828,20 @@ def _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_to
     # someone is pinned to; then the pinned ones take theirs
     pinned = {first[club][n] for club, n in pin}
     moving = pinned | {pid for pid in wanted if pid in index}
-    spare = max(list(index) + list(wanted) + list(taken)) + 1
+    # the first free ids above the game's own, not max + 1: a player moved out of the way and
+    # not pinned himself keeps this id, and the engine packs a player id into 18 bits (PID_MAX);
+    # max + 1 left 500 players of the Modpack world at 279513..289512 (14.10.2026)
+    busy = set(index) | wanted | taken
+    spare = game_top + 1
     temp = {}
     for pid in sorted(moving):
+        while spare in busy:
+            spare += 1
+        if spare > PID_MAX:
+            raise Error("no free player id left below %d (the game packs a player id into 18 bits)" % (PID_MAX + 1))
         temp[pid] = spare
         _renumber(players, assigns, index, pid, spare)
+        busy.add(spare)
         spare += 1
     for club in first:
         first[club] = [temp.get(pid, pid) for pid in first[club]]
@@ -960,7 +972,11 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
         renamed[old] = pid
 
     changed = added = removed = joined = 0
-    next_pid = max(index) + 1
+    reserved_ids = set(reserved.values())         # ids kept for later adds, never handed out here
+    next_pid = game_top + 1                      # fill the gaps above the game's own ids: from
+                                                  # max(index) + 1 a rebuilt world drifts upwards
+                                                  # with every Build (220246 -> 288301 in three
+                                                  # builds, 12.-14.10.2026) until it crosses PID_MAX
     eid = max(u32(assigns, i * A_REC + E.A_EID) for i in range(len(assigns) // A_REC)) + 1
     drop = set()
     touched = set()                                    # clubs whose squad order may have gaps
@@ -994,9 +1010,13 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
                 pid = again                            # the id the last Build gave him (#126)
             else:
                 pid = next_pid
-                while pid in index or pid in reserved.values():
+                while pid in index or pid in reserved_ids:
                     pid += 1
-            next_pid = max(next_pid, pid + 1)
+                if pid > PID_MAX:
+                    raise Error("players of %s: no free player id left below %d (the game packs a "
+                                "player id into 18 bits)" % (club, PID_MAX + 1))
+                next_pid = pid + 1                     # only a handed-out id moves the cursor: a kept
+                                                       # or chosen one near the top would skip every gap
             added_ids.setdefault(club, []).append(pid)
             rec[P_ID:P_ID + 4] = pid.to_bytes(4, "little")
             index[pid] = len(players)

@@ -5263,12 +5263,13 @@ static int access_league(uint16_t id)
  * qualifying round reg 8, the group stage reg 9, the knockout reg 10) kept no day clear of
  * them: Nacional played the Liga AUF Uruguaya on 22 September and a Libertadores quarter-final
  * the day after (antonimus, 2026-10-14). The game dates those three through the same stub as
- * everything else, so the first league the stub dates asks it for them (the high bits of `reg`
- * are the game's context, so only from inside the stub) and keeps them for the session; a
- * league with such a place then stays two days clear of each of them, as it does of a
- * continental cup of ours. The vector the game fills is left to it: a few records, once. */
+ * everything else, before the leagues of ours (they join on the season's first registration
+ * day), so the stub keeps their days as they go by (lib_note) and a league with such a place
+ * then stays two days clear of each of them, as it does of a continental cup of ours.
+ * Asking the game for them from inside a league's call, with a vector of our own, crashed the
+ * season build twice at 0x140f325a4 (2026-10-14), so they are only ever noted in passing. */
 #define LIB_MAX_DAYS 64
-static uint32_t g_libday[LIB_MAX_DAYS]; static int g_nlibday = -1;
+static uint32_t g_libday[LIB_MAX_DAYS]; static int g_nlibday = 0;
 static int lib_league(uint16_t id)
 {
   for (size_t i = 0; i < g_naccess; i++)
@@ -5276,30 +5277,28 @@ static int lib_league(uint16_t id)
         (g_access[i].reg == id || (!g_access[i].rank && g_access[i].alt == id))) return 1;
   return 0;
 }
-static void lib_fetch(uint64_t reg)
+/* the dates the game just gave one of its Libertadores regulations (8, 9, 10, or a group /
+   tie row of theirs, id + 1024 n): kept, each day once */
+static void lib_note(uint16_t id, void* vec)
 {
-  if (g_nlibday >= 0) return;
-  g_nlibday = 0;
-#ifndef FL26_RCAL_TEST                   /* the calendar test harness: no game to ask */
-  static const uint16_t REGS[3] = { 8, 9, 10 };
-  if (!g_tramp_date || (!cont_any(LIB) && !cont_any(LIBQ))) return;
-  for (int k = 0; k < 3; k++) {
-    vec_t tmp = { 0, 0, 0 };
-    ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | REGS[k], &tmp);
-    size_t have = (tmp.b && tmp.e >= tmp.b) ? (size_t)(tmp.e - tmp.b) / sizeof(date_t) : 0;
-    const date_t* r = (const date_t*)tmp.b;
-    char buf[LIB_MAX_DAYS * 5 + 1]; size_t bl = 0; buf[0] = 0;
-    for (size_t i = 0; i < have && i < 64; i++) {
-      uint32_t d = r[i].day; int dup = 0;
-      if (d >= 365) continue;
-      for (int j = 0; j < g_nlibday; j++) if (g_libday[j] == d) dup = 1;
-      if (!dup && g_nlibday < LIB_MAX_DAYS) g_libday[g_nlibday++] = d;
-      if (bl + 6 < sizeof buf) bl += (size_t)snprintf(buf + bl, sizeof buf - bl, "%s%u", bl ? " " : "", d);
-    }
-    logf("fl26swiss: the game's reg %u (Libertadores) plays %u date(s): %s -- a league with a place in it keeps two days clear",
-         (unsigned)REGS[k], (unsigned)have, buf);
+  uint16_t b = id > 1024 ? (uint16_t)(id & 0x3ff) : id;
+  if (b < 8 || b > 10 || !vec) return;
+  if (!cont_any(LIB) && !cont_any(LIBQ)) return;   /* no league of ours sends clubs there */
+  vec_t* v = (vec_t*)vec;
+  size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+  const date_t* r = (const date_t*)v->b;
+  char buf[LIB_MAX_DAYS * 5 + 1]; size_t bl = 0; buf[0] = 0;
+  int fresh = 0;
+  for (size_t i = 0; i < have && i < 64; i++) {
+    uint32_t d = r[i].day; int dup = 0;
+    if (d >= 365) continue;
+    for (int j = 0; j < g_nlibday; j++) if (g_libday[j] == d) dup = 1;
+    if (!dup && g_nlibday < LIB_MAX_DAYS) { g_libday[g_nlibday++] = d; fresh++; }
+    if (bl + 6 < sizeof buf) bl += (size_t)snprintf(buf + bl, sizeof buf - bl, "%s%u", bl ? " " : "", d);
   }
-#endif
+  if (fresh)
+    logf("fl26swiss: the game's reg %u (Libertadores) plays %u date(s): %s -- a league with a place in it keeps two days clear",
+         (unsigned)id, (unsigned)have, buf);
 }
 /* a calendar-year league whose country's cup is dated like the national cups (`dates <cup>
    like=23`, with or without explicit days): see cal_cup_league below the date lines */
@@ -7310,14 +7309,13 @@ uint64_t date_handler(uint64_t reg, void* vec)
   }
   if (vec && (our_league(id) || eudate(id))) {
     uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)(reg, vec);
-    lib_fetch(reg);                                 /* the game's Libertadores days, once */
     league_dates(id, reg, vec);
     return rv;
   }
   if (vec && !ours(id)) {                           /* a league of the game's own */
     uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)(reg, vec);
+    lib_note(id, vec);                              /* ... or the Libertadores: its days kept */
     if (natcup_fix(id, vec)) return rv;             /* ... or a national cup (case 6) */
-    lib_fetch(reg);
     vec_t* v = (vec_t*)vec;
     size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
     if (have >= 2 && have <= 64 && rest_league(id, have)) rest_dates(id, (date_t*)v->b, (uint32_t)have);
