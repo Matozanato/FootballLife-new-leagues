@@ -104,7 +104,8 @@ class Game:
     def version(self):
         """a short label from the newest data_s*.cpk in download (FL26 updates add them)"""
         try:
-            cpks = sorted(f for f in os.listdir(self.download_dir) if f.lower().startswith("data_s"))
+            from leaguebuilder import cpk_key
+            cpks = sorted((f for f in os.listdir(self.download_dir) if f.lower().startswith("data_s")), key=cpk_key)
             return cpks[-1][:-4] if cpks else ""
         except OSError:
             return ""

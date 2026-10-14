@@ -565,12 +565,22 @@ def club_formations(pl):
     return out
 
 
+def cpk_key(path):
+    """the order the game layers download\\data_s*.cpk in, for sorted(): data_s2526, a, b, c, d,
+    then the 2.2 update's data_s25262b -- the alphabet puts "25262b" before "2526b", so its
+    tables (the newest) would be covered by the older ones (13.10.)"""
+    m = re.match(r"data_s(\d{4})(\d*)([a-z]*)\.cpk$", os.path.basename(path).lower())
+    if not m:
+        return (1, 0, 0, os.path.basename(path).lower())
+    return (0, int(m.group(1)), int(m.group(2) or 0), m.group(3))
+
+
 def unpack_tables(game, out, log=print):
     """unpack the game's tables (download/data_s2526*.cpk and the update's data_extra*.cpk, the
     later ones over the earlier, as the game layers them) into <out>; returns the folder with
     Team.bin -- the --base of the rest"""
     import cpkread
-    cpks = sorted(glob.glob(os.path.join(game, "download", "data_s2526*.cpk")))
+    cpks = sorted(glob.glob(os.path.join(game, "download", "data_s2526*.cpk")), key=cpk_key)
     if not cpks:
         raise BuildError("no download/data_s2526*.cpk in %s -- is that the game folder?" % game)
     # the update's tables ("National selection 2.2") go over the ones above, as the game layers
@@ -604,7 +614,8 @@ UNPACKED = "fl26-unpacked.json"        # the archives an unpack read: {file name
 def _table_cpks(game):
     d = os.path.join(game, "download")
     return {os.path.basename(c): [os.path.getsize(c), int(os.path.getmtime(c))]
-            for c in sorted(glob.glob(os.path.join(d, "data_s2526*.cpk")) + glob.glob(os.path.join(d, "data_extra*.cpk")))}
+            for c in sorted(glob.glob(os.path.join(d, "data_s2526*.cpk")), key=cpk_key) +
+            sorted(glob.glob(os.path.join(d, "data_extra*.cpk")))}
 
 
 def tables_stale(game, out):

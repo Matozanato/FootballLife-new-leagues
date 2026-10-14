@@ -2951,6 +2951,7 @@ class NewClubs(BuilderPage):
             else:
                 L.pop("club_formations", None)
             self.project.touch()
+            self.show_clubs()                # the row shows the new name and crest at once (GitHub #140)
 
     @staticmethod
     def kit_words(L, k):

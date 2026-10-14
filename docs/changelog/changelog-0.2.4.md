@@ -14,6 +14,13 @@ once, and your 0.2.2 career keeps working.
 
 ## Fixed
 
+- **FL26 update 2.2 (`data_s25262b.cpk`): Mod Studio read its tables before the older ones.**
+  The game's files were taken in alphabetical order, which puts `data_s25262b` before
+  `data_s2526b`, so the newest tables were covered by older ones and the version label said
+  `data_s2526d`. They are now layered the way the game does it; unpack the tables again
+  (Tools, or the next Build does it). Thanks to everyone on the 2.2 update.
+- **New clubs: the crest picked in the club dialog did not show in the table** until another
+  league was chosen (the pick was saved; only the row was stale). GitHub #140, thanks B2Y26Arabia.
 - **Cup mode: a saved cup (World Cup, Euro...) could not be loaded.** With the modules the
   load ran for a minute or two and the game closed; without them the same save loaded in
   seconds. The raised club limits had moved the game's tables but not three places where a
