@@ -493,6 +493,18 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-14 (next update, Discord, thanks Micarodvzla22): **The February knockout play-off of the
+  Champions, Europa and Conference League showed 7 ties (14 clubs) instead of 8**, and in August the
+  qualifying rounds had 6 and the play-offs 7 (sider.log: "14 under its ties", "2 tie(s) without a
+  winner"). fl26swiss drew all 16; the game never entered the 8th tie. Cause: a world with more than
+  300 regulations (the 0.2.1 Modpack: 334) played with the 0.2.1 modules. The game's regulation
+  recount (0x1414bc0a0) covers the first 300 records of an array sorted by id, so the highest ids
+  -- the last ties of every two-legged round, ids + 7168 / + 8192 -- were left out of the
+  register_all walk that enters a round's ties. `fl26regs600.lua` (0.2.2) widens the recount to
+  600. Checks now reports a world whose regulation count is above what the switched-on modules let
+  the game count (test_regs_recount). To confirm in the game: Install the modules, new career on
+  the Modpack world, sider.log says "16 under its ties" for every August round and play-off, and
+  the February Play-offs page lists 8 ties.
 - 2026-10-14 (next update, Discord, thanks Vicentico): **NewLife Database: "Bring the game's leagues
   to this season" left out the Brasileirão Série B, as if the game had no Série B.** The game
   ships it (20 clubs), but its line-up is years old: only 6 of the 20 play in the release's 2026

@@ -87,6 +87,25 @@ OLD_GROUPS = (2051, 2053)         # group B of the Champions League / Europa Lea
                                   # game's own format, which fl26swiss.dll cannot run (issue #33)
 FIRST_OWN_REGION = 29             # regions 0-28 are the game's own, 29 and up the new countries'
 UEFA_CODE = 2                     # Competition.bin +6, low three bits: the confederation
+# The game counts its regulation records again after every load (0x1414bc0a0), and only the first
+# 300: the array is sorted by id, so in a world with more rows the highest ids drop out -- the
+# last ties of the two-legged European rounds (their round's id + 7168 and + 8192), of the
+# Libertadores and AFC groups. register_all never enters them, so they get no matches: a play-off
+# of 16 shows 7 ties and a qualifying round 6 (Discord 13.10., Micarodvzla22, the 0.2.1 Modpack
+# world of 334 rows: "14 under its ties", "2 tie(s) without a winner"). fl26regs600 (0.2.2)
+# makes the recount cover all 600 rows fl26caps gives the array.
+RECOUNT_ROWS = 300
+RECOUNT_MODULE = re.compile(r"^fl26regs(\d+)\.lua$")
+
+
+def recount_rows(ini):
+    """how many regulation rows the game counts with the modules switched on in sider.ini"""
+    n = RECOUNT_ROWS
+    for e in ini.entries("lua.module"):
+        m = RECOUNT_MODULE.match(os.path.basename(e.value.replace("\\", "/")).lower())
+        if e.enabled and m:
+            n = max(n, int(m.group(1)))
+    return n
 
 
 def old_confed_tops(d, leagues, calendar=()):
@@ -209,6 +228,13 @@ def world_problems(game, ini, recipe=None):
                     for i in range(len(regs) // M.REG)}
         except (OSError, ValueError):
             have = set()
+        counted = recount_rows(ini)
+        if len(have) > counted:
+            out.append(("err", "Lua modules",
+                        _("%s has %d competition regulations, but the game counts only the first %d "
+                          "without fl26regs600.lua: the last ties of the European rounds are never played "
+                          "(a play-off of 16 shows 7 ties). Install the modules (Mod Studio 0.2.2 or "
+                          "later) and start a new career") % (name, len(have), counted), "Modules"))
         if any(r in have for r in OLD_GROUPS):
             out.append(("err", "League Builder",
                         _("%s: the Champions League and Europa League are still in groups of four, "
