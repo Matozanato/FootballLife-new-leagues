@@ -76,7 +76,7 @@ class Overview(Page):
         self.b_build.setObjectName("primary")
         self.b_build.setStyleSheet("font-size: 11pt; font-weight: bold; padding: 10px 26px; border-radius: 8px;")
         self.b_build.clicked.connect(self.build)
-        b_eu = QPushButton(_("Only the European cups..."))
+        self.b_eu = b_eu = QPushButton(_("Only the European cups..."))
         b_eu.setToolTip(_("A world with just the new Champions League, Europa League and Conference League "
                           "and the game's own leagues: no new leagues"))
         b_eu.clicked.connect(self.europe_only)
@@ -200,7 +200,15 @@ class Overview(Page):
                     or json.dumps(old.get("edits"), sort_keys=True) != json.dumps(r.get("edits"), sort_keys=True)
             except (OSError, ValueError):
                 pass
-        if not r["leagues"] and not r.get("edits"):
+        ready = [w for w in live if installer.ready_world(g, w)]
+        self.b_build.setVisible(not ready)
+        self.b_eu.setVisible(not ready)
+        if ready:
+            # 0.2.4: a world installed from a zip is built already; Build would switch it off
+            self.l_changes.setText(_("Ready to play"))
+            self.l_changes_detail.setText(_("%s is a ready world, installed from a zip: nothing to build. "
+                                            "Press Play and start a new Master League.") % ready[0])
+        elif not r["leagues"] and not r.get("edits"):
             self.l_changes.setText(_("Nothing to build yet"))
             self.l_changes_detail.setText(_("Add a league or change one of the game's on the Leagues page."))
         elif changed or r.get("world") not in live:

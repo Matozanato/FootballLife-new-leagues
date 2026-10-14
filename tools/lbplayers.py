@@ -139,7 +139,11 @@ def overall(row):
 # the letters NFKD leaves whole, that one database folds to plain Latin anyway
 FOLD = str.maketrans({"\u0142": "l", "\u0141": "l", "\u00f8": "o", "\u00d8": "o",
                       "\u0111": "d", "\u0110": "d", "\u00e6": "ae", "\u00c6": "ae",
-                      "\u0153": "oe", "\u0152": "oe"})
+                      "\u0153": "oe", "\u0152": "oe",
+                      # the Turkish dotless i: "Y\u0131ld\u0131z" is "Yildiz" in the game (B31); \u00df, \u00fe, \u00f0, \u0127, \u0140
+                      "\u0131": "i", "\u00df": "ss", "\u00fe": "th", "\u00de": "th",
+                      "\u00f0": "d", "\u00d0": "d", "\u0127": "h", "\u0126": "h",
+                      "\u0140": "l", "\u013f": "l"})
 
 
 def _letters(s):
@@ -166,8 +170,15 @@ def same_name(a, b):
         return False
     if sorted(map(_letters, wa)) == sorted(map(_letters, wb)):   # the surname first
         return True
-    return (_letters(wa[0])[:1] == _letters(wb[0])[:1]
-            and _letters("".join(wa[1:])) == _letters("".join(wb[1:])))
+    if (_letters(wa[0])[:1] == _letters(wb[0])[:1]
+            and _letters("".join(wa[1:])) == _letters("".join(wb[1:]))):
+        return True
+    # a middle name one database leaves out ("Yann Aurel Bisseck" / "Yann Bisseck", B31): the
+    # same first and last name, and every middle word of the shorter name in the longer one
+    la, lb = list(map(_letters, wa)), list(map(_letters, wb))
+    short, full = (la, lb) if len(la) < len(lb) else (lb, la)
+    return (len(short) < len(full) and short[0] == full[0] and short[-1] == full[-1]
+            and all(w in full[1:-1] for w in short[1:-1]))
 
 
 class Squads:

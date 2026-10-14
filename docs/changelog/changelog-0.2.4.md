@@ -11,9 +11,24 @@ once, and your 0.2.2 career keeps working.
   pack, a modpack's, the zip carries those folders under `<world>\_packs` with their map lines, as
   it already did for kits. The receiver needs nothing else; the themes show with the Menu Server
   module on in `sider.ini`. Guide 9.1.
+- **A ready world installs in one click, and a newer version replaces the older one.** Install
+  mods shows **Install the world** for a world zip and hides the options a ready world does not
+  need. If the same world is installed already (an earlier Modpack), it asks once and takes the
+  older one out first, so no file of it stays behind. The modules come along with the world every
+  time, without a question. Guide: Install a ready pack, Way A.
+- **Build is switched off while a ready world is on.** A world installed from a zip is built
+  already; Build would have replaced it with the open recipe. The Build steps are greyed out with
+  a note, Home says **Ready to play**, and Build, Plan, Switch on and Only the European cups
+  explain what to do instead: press Play, or switch your own world on first. A world installed
+  from a zip and built again on this PC counts as your own from then on.
 
 ## Fixed
 
+- **Some clubs of the game lost a player to a new copy of him when NewLife refreshed them.** The
+  name check that keeps a player's game id read "Yıldız" (the Turkish dotless i) and "Yildiz" as
+  two names, and "Yann Aurel Bisseck" and "Yann Bisseck" too. Such a player got a new id, so the
+  club had him twice or his old self played on elsewhere. The check now folds ı, ß, þ, ð, ħ and ŀ
+  like the game does, and a middle name one database leaves out no longer counts.
 - **Install mods: a world zip's scoreboards and kits of other packs were gone right after the
   install, and a league package's kits with them.** Install mods ends with Switch on, which
   writes the world's own kit and scoreboard map lines and takes every line of Mod Studio's out

@@ -701,6 +701,38 @@ class Installer:
         self.log("  %s: %d line(s) added, %d replaced" % (m.file, len(added), len(removed)))
 
 
+def ready_world(game, world):
+    """True when livecpk\\<world> came from Install mods (a ready world from a zip, marked
+    .modstudio) and not from Build on this PC: Build would only switch it off"""
+    return bool(world) and os.path.exists(os.path.join(game.livecpk_dir, world, ".modstudio"))
+
+
+def installed_as(sider_dir, world):
+    """the install records that brought `world` in, oldest first"""
+    return sorted((r for r in records(sider_dir)
+                   if r.get("world") == world or ["world", world] in (r.get("parts") or [])),
+                  key=lambda r: r.get("time", ""))
+
+
+def replace_world(game, ini, world, log=lambda t: None):
+    """take out an older install of the same ready world before a new one goes in: every record
+    that brought it in is removed as Remove the mod does (newest first), and what is left of
+    livecpk\\<world> goes too -- copying a new version over the old one kept the old one's
+    files (a club the new version no longer has kept its kit folder, a stale id file stayed).
+    Only a world Install mods put there is touched; returns notes as uninstall does"""
+    olds = installed_as(game.sider_dir, world)
+    d = os.path.join(game.livecpk_dir, world)
+    marked = os.path.exists(os.path.join(d, ".modstudio"))
+    notes = []
+    for rec in reversed(olds):
+        log("removing the older %s (%s)" % (world, rec.get("name")))
+        notes += uninstall(game, ini, rec, log=log)
+    if (olds or marked) and os.path.isdir(d):
+        shutil.rmtree(d)
+        log("livecpk\\%s: what was left of the older one deleted" % world)
+    return notes
+
+
 def uninstall(game, ini, rec, log=lambda t: None):
     """undo one record; returns notes about what could not be undone"""
     sd, notes = game.sider_dir, []

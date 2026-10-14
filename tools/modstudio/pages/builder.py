@@ -3841,6 +3841,32 @@ class Build(BuilderPage):
                 self.project.recipe.pop("uecl_logo", None)
             self.project.touch()
 
+    def ready_live(self):
+        """the switched-on worlds that came ready from Install mods (a zip): Build only switches
+        such a world off, or builds the open recipe over it"""
+        from .. import installer as I
+        g = self.app.game
+        if not g.ok():
+            return []
+        try:
+            return [w for w in self.project.live_worlds() if I.ready_world(g, w)]
+        except Exception:
+            return []
+
+    def ready_blocks(self):
+        """Build is not for a ready world: say what to do instead (beta testers pressed Build after
+        installing the Modpack and lost it); True when the step must not run"""
+        ready = self.ready_live()
+        if not ready:
+            return False
+        w = ", ".join(ready)
+        info(self, "Build", _("%s is on: a ready world, installed from a zip. It is built already: press "
+                              "Play and start a new Master League.\n\nBuild makes the world of your own "
+                              "recipe and would switch %s off. To build your own leagues, switch your own "
+                              "world on first (Home > Switch world...), or remove the ready one (Install mods > "
+                              "Remove the mod).") % (w, w))
+        return True
+
     def refresh(self):
         g = self.app.game
         w = self.project.recipe.get("world", "")
@@ -3872,6 +3898,13 @@ class Build(BuilderPage):
         if g.ok():
             bits.append(_("builder modules: %s") % (_("installed") if not missing else
                                                      _("%d missing, press 0") % len(missing)))
+        ready = self.ready_live()
+        for b in self.steps[1:4] + [self.b_all]:          # plan, build, switch on, Build and install
+            b.setEnabled(not ready)
+            b.setToolTip(_("Off: %s is a ready world from Install mods. It is built already.") % ", ".join(ready)
+                         if ready else "")
+        if ready:
+            bits.insert(0, _("%s is a ready world (installed from a zip): no Build needed, press Play") % ", ".join(ready))
         self.state.setText("   ·   ".join(bits))
 
     def say(self, text, kind=None):
@@ -3898,6 +3931,8 @@ class Build(BuilderPage):
         """#36: the new European format with the game's own leagues and clubs, and nothing else.
         An empty recipe builds just that (leaguebuilder.build always reshapes the European cups),
         so this builds one into a world of its own and leaves the recipe being edited alone."""
+        if self.ready_blocks():
+            return
         from PySide6.QtWidgets import QInputDialog
         title = _("Only the new European cups...")
         if self.project.base is None:
@@ -4013,6 +4048,8 @@ class Build(BuilderPage):
         run_job(job, done=lambda r: finish(err=r), failed=failed, progress=self.say)
 
     def do_plan(self):
+        if self.ready_blocks():
+            return
         def go(log):
             pl = self.plan()
             log(B.describe(pl))
@@ -4045,6 +4082,8 @@ class Build(BuilderPage):
         return True
 
     def do_build(self):
+        if self.ready_blocks():
+            return
         if self.stale_tables(self.do_build):
             return
         try:
@@ -4090,6 +4129,8 @@ class Build(BuilderPage):
     def build_all(self):
         """0.1.8: one button -- install the modules, build the world, switch it on, then a page
         that says what was done and what is left (restart the game, a new career)"""
+        if self.ready_blocks():
+            return
         if self.stale_tables(self.build_all):
             return
         try:
@@ -4136,6 +4177,8 @@ class Build(BuilderPage):
         self.run(go, background=True, done=done)
 
     def do_on(self):
+        if self.ready_blocks():
+            return
         w = self.project.recipe.get("world", "").strip()
         if not can_write(self, self.app.game):
             return

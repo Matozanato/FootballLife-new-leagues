@@ -15,7 +15,8 @@ em que ordem, e o que você deve ver depois de cada passo. Faça os passos na or
 nenhum. Se você vir algo diferente do que um passo diz, pare ali e vá para
 [Se algo der errado](#se-algo-der-errado).
 
-Os passos 1 a 5 são iguais para todo mundo e você faz uma vez só. Depois escolha o caminho que
+Os passos 1 a 5 são iguais para todo mundo e você faz uma vez só. Um mundo pronto (caminho A)
+precisa só dos passos 1 a 3: a instalação traz os módulos junto. Depois escolha o caminho que
 combina com o arquivo que você recebeu:
 
 - **Caminho A: um mundo pronto**, como um `.zip` (um modpack, o mundo de um amigo). O jeito
@@ -107,12 +108,15 @@ Use este quando alguém te passou um mundo como zip (um modpack, um mundo export
 parecido, marcado como mundo do League Builder), uniformes e placares. Tudo vem marcado.
 Deixe assim.
 
-**A5.** Clique em **Install**. Espere até dizer que terminou. O Mod Studio copia o mundo,
-coloca o arquivo do mundo onde os módulos leem ele, e liga o mundo.
+**A5.** Clique em **Install the world**. Se uma versão mais antiga do mesmo mundo já estiver
+instalada (um Modpack anterior), ele pergunta se deve trocar: diga **Yes**. A antiga sai primeiro,
+então nada dela fica para trás. Espere até dizer que terminou. O Mod Studio instala os módulos
+(os desta versão), copia o mundo, coloca o arquivo do mundo onde os módulos leem ele, e liga o
+mundo.
 
-**A6.** Se ele perguntar se deve instalar os módulos: diga **Yes**.
-
-**Não** aperte Build para um mundo pronto. Ele já está montado. Vá para
+Um mundo pronto não precisa de Build: ele já está montado. Enquanto ele está ligado, os passos do
+Build ficam desligados (0.2.4). Para montar ligas suas depois, ligue primeiro o seu próprio mundo
+(**Home → Switch world...**). Vá para
 [Passo 6](#passo-6-inicie-o-jogo).
 
 ---

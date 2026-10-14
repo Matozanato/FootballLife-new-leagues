@@ -230,6 +230,33 @@ def main():
             raise AssertionError("installed over a world built here")
         except ValueError:
             pass
+        assert not I.ready_world(Game(e), WORLD)           # built here: Build stays open
+        # ---- a newer version of a ready world replaces the older one (beta, 14.10.) ----
+        # copied over it, the older one's files stayed (a club the new one no longer has, stale ids)
+        f = sider(os.path.join(tmp, "f"))
+        g = Game(f)
+        rec1, ini = install(f, zp)
+        stale = os.path.join(f, "livecpk", WORLD, "common", "only-in-v1.bin")
+        put(stale, "old")                                  # as if v1 had it and v2 has not
+        rec1b, ini = install(f, zp)                        # installed twice, as testers did
+        assert I.ready_world(g, WORLD) and len(I.installed_as(f, WORLD)) == 2
+        put(os.path.join(a, "livecpk", WORLD, I.WORLD_FILE), TEXT + "league 2 y\n")
+        z2 = os.path.join(tmp, WORLD + "-v2.zip")
+        I.export_world(a, WORLD, z2)
+        ini = SiderIni.load(os.path.join(f, "sider.ini"))
+        notes = I.replace_world(g, ini, WORLD)
+        ini.save(backup=False)
+        assert not notes, notes
+        assert not os.path.exists(os.path.join(f, "livecpk", WORLD)), "the older world is still there"
+        assert I.installed_as(f, WORLD) == [] and not ini.find("cpk.root", ".\\livecpk\\" + WORLD)
+        rec2, ini = install(f, z2)
+        assert not os.path.exists(stale)
+        assert "league 2 y" in open(os.path.join(f, "modules", I.WORLD_FILE), encoding="utf-8").read()
+        assert len(I.installed_as(f, WORLD)) == 1 and I.ready_world(g, WORLD)
+        assert [e.value for e in ini.entries("cpk.root")].count(".\\livecpk\\" + WORLD) == 1
+        # replacing touches only a world Install mods put there
+        assert I.replace_world(Game(e), SiderIni.load(os.path.join(e, "sider.ini")), WORLD) == []
+        assert os.path.isfile(os.path.join(e, "livecpk", WORLD, I.WORLD_FILE))
         print("world share: ok")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)

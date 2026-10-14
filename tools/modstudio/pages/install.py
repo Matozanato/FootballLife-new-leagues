@@ -188,6 +188,14 @@ class Install(Page):
                 it.setFlags(it.flags() & ~Qt.ItemIsUserCheckable)
             self.tree.addTopLevelItem(it)
         packs = [p for p in parts if p.kind == "pack"]
+        world = any(p.kind == "world" for p in parts)
+        # a ready world takes the defaults: nothing to choose, one button
+        self.where.setVisible(not world)
+        self.lines.setVisible(not world)
+        if world:
+            self.where.setCurrentIndex(0)
+            self.lines.setCurrentIndex(0)
+        self.go.setText(_("Install the world") if world else _("Install"))
         self.go.setEnabled(len(packs) < len(parts))
         if packs and ask(self, "Install mods", _("%s holds %d league package(s). A league package goes into the "
                                                  "League Builder recipe and into the game when you Build. "
@@ -222,7 +230,16 @@ class Install(Page):
                                                  "Install anyway?")):
             return
         name = self.name.text().strip() or "mod"
-        if any(r["name"].lower() == name.lower() for r in I.records(self.app.game.sider_dir)) and \
+        sd = self.app.game.sider_dir
+        older = [p.name for p in chosen if p.kind == "world"
+                 and (I.installed_as(sd, p.name) or I.ready_world(self.app.game, p.name))]
+        if older and not ask(self, "Install mods", _("%s is installed already (an older version). It is taken out "
+                                                     "first, then this one goes in. Your saves are not touched; "
+                                                     "start a new Master League with the new version.\n\n"
+                                                     "Replace it?") % ", ".join(older)):
+            return
+        replaced = {r["name"].lower() for w in older for r in I.installed_as(sd, w)}
+        if name.lower() not in replaced and any(r["name"].lower() == name.lower() for r in I.records(self.app.game.sider_dir)) and \
                 not ask(self, "Install mods", _("A mod called %s is installed already. Install this one as well?") % name):
             return
         ini = self.app.ini()
@@ -237,6 +254,8 @@ class Install(Page):
         where, repl = self.where.currentData(), self.lines.currentData()
 
         def job(progress):
+            for w in older:                       # the older version out first, not copied over
+                I.replace_world(self.app.game, ini, w, log=log.append)
             inst = I.Installer(self.app.game, ini, name, log=log.append, replace_lines=repl)
             return inst.run(self.parts, where)
 
@@ -262,16 +281,14 @@ class Install(Page):
         run_job(job, done, failed)
 
     def world_on(self, rec):
-        """a League Builder world was installed: install Mod Studio's modules when the face pack
-        is missing (its new players' faces come from it), then switch the world on as Build's
-        Switch on does (sider.ini, the world file in modules, the world's own modules)"""
+        """a League Builder world was installed: install this version's modules (the face pack the
+        new players' faces come from is one of them), then switch the world on as Build's Switch
+        on does (sider.ini, the world file in modules, the world's own modules). Always: modules
+        of an older Mod Studio, face pack and all, left a new world on the old ones without a word"""
         import leaguebuilder as B
         from ..backups import snapshot
         w, game = rec["world"], self.app.game
-        modules = rec.get("face_players") and I.face_pack_missing(game.sider_dir) and \
-            ask(self, "Install mods", _("%d new players of %s get a generated face from Mod Studio's face pack, "
-                                        "which is not installed here. Without it they all look the same. "
-                                        "Install Mod Studio's modules now?") % (rec["face_players"], w))
+        modules = True
         log = []
         try:
             snapshot(game.ini_path, "Install mods: switch on " + w, game.sider_dir)

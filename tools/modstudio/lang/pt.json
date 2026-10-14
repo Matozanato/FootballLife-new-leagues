@@ -1362,7 +1362,9 @@
   "kits": "uniformes",
   "manager": "treinador",
   "country": "país",
-  "NewLife": "NewLife"
+  "NewLife": "NewLife",
+  "Ready to play": "Pronto para jogar",
+  "%s is a ready world, installed from a zip: nothing to build. Press Play and start a new Master League.": "%s é um mundo pronto, instalado de um zip: nada para montar. Aperte Play e comece uma nova Master League."
  },
  "log": [
   [

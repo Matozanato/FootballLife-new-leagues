@@ -1362,7 +1362,9 @@
   "kits": "dresovi",
   "manager": "trener",
   "country": "država",
-  "NewLife": "NewLife"
+  "NewLife": "NewLife",
+  "Ready to play": "Spremno za igru",
+  "%s is a ready world, installed from a zip: nothing to build. Press Play and start a new Master League.": "%s je gotov svijet, instaliran iz zipa: ništa se ne gradi. Stisni Play i pokreni novu Master League."
  },
  "log": [
   [

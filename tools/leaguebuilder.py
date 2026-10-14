@@ -3676,7 +3676,9 @@ def keep_added(old, new, log=print):
         known = False
     made = built_files(new)
     kept = []
-    for rel in sorted(built_files(old) - {MANIFEST}):
+    # .modstudio marks a world installed from a zip (installer.ready_world): once built on this PC
+    # it is not one any more, and kept it would switch Build off for the world just built (0.2.4)
+    for rel in sorted(built_files(old) - {MANIFEST, ".modstudio"}):
         src, dst = os.path.join(old, rel), os.path.join(new, rel)
         if rel not in made:
             if (rel not in ours) if known else picture(rel):

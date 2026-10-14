@@ -16,7 +16,8 @@ qué orden y qué deberías ver después de cada paso. Haz los pasos en orden y 
 ninguno. Si ves algo distinto de lo que dice un paso, para ahí y ve a
 [Si algo sale mal](#si-algo-sale-mal).
 
-Los pasos 1 a 5 son iguales para todos y se hacen una sola vez. Luego elige el camino que
+Los pasos 1 a 5 son iguales para todos y se hacen una sola vez. Un mundo listo (camino A) solo
+necesita los pasos 1 a 3: al instalarlo trae los módulos. Luego elige el camino que
 corresponde al archivo que te dieron:
 
 - **Camino A: un mundo listo**, como un solo `.zip` (un modpack, el mundo de un amigo). El camino
@@ -111,12 +112,15 @@ esa página.)
 parecido, marcado como mundo de League Builder), equipaciones y marcadores. Todo está marcado.
 Déjalo así.
 
-**A5.** Pulsa **Install** (*Instalar*). Espera hasta que diga que ha terminado. Mod Studio copia
-el mundo, pone su archivo de mundo donde lo leen los módulos y activa el mundo.
+**A5.** Pulsa **Install the world** (*Instalar el mundo*). Si ya hay instalada una versión anterior
+del mismo mundo (un Modpack anterior), pregunta si la reemplaza: di **Yes**. La anterior se quita
+primero, así no queda nada de ella. Espera hasta que diga que ha terminado. Mod Studio instala sus
+módulos (los de esta versión), copia el mundo, pone su archivo de mundo donde lo leen los módulos
+y activa el mundo.
 
-**A6.** Si pregunta si instala los módulos: di **Yes**.
-
-**No** pulses Build para un mundo listo. Ya está construido. Ve al [Paso 6](#paso-6-inicia-el-juego).
+Un mundo listo no necesita Build: ya está construido. Mientras está activo, los pasos de Build
+están apagados (0.2.4). Para construir ligas propias más tarde, activa primero tu propio mundo
+(**Home → Switch world...**). Ve al [Paso 6](#paso-6-inicia-el-juego).
 
 ---
 

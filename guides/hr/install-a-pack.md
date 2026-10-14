@@ -14,8 +14,8 @@ vidiš nešto drugo nego što korak kaže, stani tu i idi na [Ako nešto ne valj
 Vodič piše engleske nazive gumba, kako ih Mod Studio pokazuje. (Prozor možeš prebaciti na
 hrvatski: gore **Language** → Hrvatski.)
 
-Koraci 1 do 5 su isti za sve i radiš ih jednom. Onda izaberi način koji odgovara datoteci koju
-si dobio:
+Koraci 1 do 5 su isti za sve i radiš ih jednom. Gotov svijet (način A) treba samo korake 1 do 3:
+njegova instalacija sama donese module. Onda izaberi način koji odgovara datoteci koju si dobio:
 
 - **Način A: gotov svijet**, kao jedan `.zip` (modpack, svijet od prijatelja). Najbrže: ništa se
   ne gradi.
@@ -102,12 +102,13 @@ Za kad ti je netko dao svijet kao zip (modpack, izvezeni svijet).
 **A4. Trebaš vidjeti:** popis što je unutra, npr. svijet (`_FL26Modpack` ili slično, označen kao
 League Builder world), dresovi i scoreboardi. Sve je označeno kvačicom. Tako i ostavi.
 
-**A5.** Klikni **Install**. Pričekaj dok ne kaže da je gotovo. Mod Studio kopira svijet, stavi
+**A5.** Klikni **Install the world**. Ako je starija verzija istog svijeta već instalirana (raniji
+Modpack), pita da je zamijeni: **Yes**. Stara se prvo makne, pa ništa od nje ne ostaje. Pričekaj
+dok ne kaže da je gotovo. Mod Studio instalira svoje module (ove verzije), kopira svijet, stavi
 njegovu datoteku svijeta gdje je moduli čitaju i upali svijet.
 
-**A6.** Ako pita da instalira module: **Yes**.
-
-Za gotov svijet **ne** stišći Build. Već je napravljen. Idi na [Korak 6](#korak-6-pokreni-igru).
+Gotov svijet ne treba Build: već je napravljen. Dok je upaljen, koraci Builda su ugašeni (0.2.4).
+Za svoje lige kasnije prvo upali svoj svijet (**Home → Switch world...**). Idi na [Korak 6](#korak-6-pokreni-igru).
 
 ---
 

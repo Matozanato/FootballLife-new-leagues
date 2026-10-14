@@ -12,8 +12,9 @@ says what to click, in what order, and what you should see after each step. Do t
 order and do not skip one. If you see something different from what a step says, stop there
 and go to [If something goes wrong](#if-something-goes-wrong).
 
-Steps 1 to 5 are the same for everyone and you do them once. Then pick the way that matches
-the file you were given:
+Steps 1 to 5 are the same for everyone and you do them once. A ready world (Way A) needs only
+steps 1 to 3: installing it brings the modules along. Then pick the way that matches the file
+you were given:
 
 - **Way A: a ready world**, as one `.zip` (a modpack, a friend's world). The quickest way:
   nothing to build.
@@ -99,12 +100,15 @@ Use this when someone gave you a world as a zip (a modpack, an exported world).
 **A4. You should see:** a list of what is inside, for example the world (`_FL26Modpack` or
 similar, marked as a League Builder world), kits and scoreboards. Everything is ticked. Leave it so.
 
-**A5.** Click **Install**. Wait until it says it is done. Mod Studio copies the world, puts its
-world file where the modules read it, and switches the world on.
+**A5.** Click **Install the world**. If an older version of the same world is installed (an
+earlier Modpack), it asks to replace it: say **Yes**. The older one is taken out first, so
+nothing of it stays behind. Wait until it says it is done. Mod Studio installs its modules (the
+ones of this version), copies the world, puts its world file where the modules read it, and
+switches the world on.
 
-**A6.** If it asks to install the modules: say **Yes**.
-
-Do **not** press Build for a ready world. It is already built. Go to [Step 6](#step-6-start-the-game).
+A ready world needs no Build: it is already built. While it is on, the Build steps are switched
+off (0.2.4). To build leagues of your own later, switch your own world on first (**Home → Switch
+world...**). Go to [Step 6](#step-6-start-the-game).
 
 ---
 
