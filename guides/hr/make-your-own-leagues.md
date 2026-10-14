@@ -179,7 +179,7 @@ dodaje; nikad ne miče ono što je već tamo.
 
 ## Korak 6. Stranica Leagues: sve postavke lige
 
-1. Lijevo: **Edit your world**, kartica **Leagues**.
+1. Lijevo: **Build and edit your world**, kartica **Leagues**.
 2. Iznad popisa klikni **Ours**: popis pokazuje samo lige tvog svijeta. (**All** pokazuje sve
    lige, i one iz igre; **Changed** lige iz igre koje si promijenio.) Lige su složene po
    kontinentima.
@@ -287,7 +287,8 @@ igre u **Division** (one s brojem u zagradi). Tada s njom igra ulazak i ispadanj
 
 ## Korak 8. Kartica Clubs: imena, grbovi, dresovi, klubovi iz igre
 
-1. Lijevo: **Edit your world**, kartica **Clubs** (ili **Clubs and names** na kartici Leagues).
+1. Lijevo: **Build and edit your world**, kartica **Clubs** (ili **Clubs and names** na kartici
+   Leagues).
 2. Gore, **League**: izaberi jednu od svojih liga.
 
 **Trebaš vidjeti:** njene klubove sa stupcima **#**, **Name**, **Short name** i **Players
@@ -363,8 +364,8 @@ ručno dobije prave klubove.
 NewLife klubovi dolaze s punim kadrovima, pa ovu stranicu ne moraš dirati. Tu je ako želiš
 promijeniti kadar.
 
-1. Lijevo: **Edit your world**, kartica **Players** (ili označi klub na kartici **Clubs** i klikni
-   **More ▾ → Players**).
+1. Lijevo: **Build and edit your world**, kartica **Players** (ili označi klub na kartici **Clubs**
+   i klikni **More ▾ → Players**).
 2. Gore izaberi **League** i **Club**. (Ili upiši u *Find a club...*.)
 
 **Trebaš vidjeti:** kadar sa stupcima **Order**, **No.**, **Name**, **Pos**, **Age**,
@@ -412,14 +413,17 @@ Mod Studio pri pokretanju opet otvori tvoj svijet, pa ono što si napravio nikad
 
 ## Korak 12. Build
 
-1. Lijevo: **Build your world**, kartica **Build**.
+1. Lijevo: **Build and edit your world**, kartica **Build**.
 
 **Trebaš vidjeti:** veliki plavi gumb **Build and install** i ispod njega dva sklopiva dijela:
 **World options: European cups, country cups, kits and faces of the new clubs** (dvije kartice,
 **European cups** i **New clubs**, s opcijama) i **Step by step, and Export the world** (red
 **0. Install the modules**, **1. Check the plan**, **2. Build the world**, **3. Switch it on**,
 **4. After a start: check** i **Export the world...**). Pa red poput
-`World _FL26MyWorld: not built yet · builder modules: installed`, i okvir za log dolje.
+`World _FL26MyWorld: not built yet · builder modules: installed`, i okvir za log dolje. Iznad
+kartica, na svakoj kartici, traka pokazuje ime tvog svijeta, koliko ima liga i klubova i gumb
+**Build and install**; dok se svijet gradi, pokazuje koliko traje i na kojem je koraku
+(`Building... 3:12 · squads: filling them`).
 
 2. Otvori **Step by step, and Export the world** i prvo klikni **1. Check the plan**. Ne mijenja
    ništa; samo čita tvoj svijet.
@@ -483,8 +487,8 @@ Zadane postavke su u redu.
 Onda neka Mod Studio provjeri je li igra preuzela svijet:
 
 1. Ugasi igru (ili je barem jednom pokreni do glavnog izbornika).
-2. U Mod Studiju: **Build your world** → **Step by step, and Export the world** → **4. After a
-   start: check**.
+2. U Mod Studiju: **Build and edit your world** → kartica **Build** → **Step by step, and Export
+   the world** → **4. After a start: check**.
 
 **Trebaš vidjeti:** za svaki modul red koji kaže koliko je liga pročitao iz datoteke svijeta, a na
 kraju `the world works as built`. Red `not loaded` ili `did NOT read the world file`, i na kraju
@@ -494,9 +498,9 @@ kraju `the world works as built`. Red `not loaded` ili `did NOT read the world f
 
 1. Ugasi igru.
 2. Otvori Mod Studio. Sam otvori tvoj svijet (ili **File → Open a world...**).
-3. Promijeni što želiš na **NewLife Database**, ili na **Edit your world**: **Leagues**,
-   **Clubs** ili **Players**. Sam se spremi.
-4. **Build your world** → **Build and install** → **Yes**.
+3. Promijeni što želiš na **NewLife Database**, ili na **Build and edit your world**: kartica
+   **Leagues**, **Clubs** ili **Players**. Sam se spremi.
+4. **Build and install** (u traci iznad kartica, ili na kartici **Build**) → **Yes**.
 
 **Treba li ti nova karijera?** Da: pokreni novu Master Ligu nakon svake promjene koju izgradiš.
 Karijera kad počne uzme vlastitu kopiju liga, klubova i kadrova, pa karijera u kojoj već jesi
@@ -524,8 +528,8 @@ Postoje dva načina. Izaberi jedan:
 
 ### Paket liga
 
-1. Lijevo: **Build your world**, kartica **League packages** → **Make a package...** (ili gore:
-   **File → Make a league package...**).
+1. Lijevo: **Build and edit your world**, kartica **League packages** → **Make a package...** (ili
+   gore: **File → Make a league package...**).
 
 **Trebaš vidjeti:** prozor **Make a league package**.
 
@@ -552,8 +556,8 @@ Više: [9. Paketi liga](mod-studio-guide.md#9-paketi-liga-podijeli-cijelu-ligu).
 ### Cijeli svijet (zip)
 
 1. Prvo Build (Korak 12). Svijet mora biti izgrađen.
-2. Lijevo: **Build your world** → **Step by step, and Export the world** → **Export the
-   world...**.
+2. Lijevo: **Build and edit your world** → kartica **Build** → **Step by step, and Export the
+   world** → **Export the world...**.
 3. Otvori se prozor za spremanje s imenom svijeta kao imenom datoteke (`_FL26MyWorld.zip`), prvi
    put u tvojoj korisničkoj mapi (nakon toga u mapi koju si zadnju koristio). Izaberi mapu i klikni
    **Save**.
@@ -614,9 +618,9 @@ logu Builda iza `error:`. `<...>` stoji umjesto imena ili broja.
 | `Give the package a name.` / `Tick at least one league.` / `Your world has no leagues yet.` | U **Make a league package** upiši **Name** i označi ligu; tvoj svijet prvo treba lige. |
 | Nema novih liga na Select Team | Pokreni **novu** Master Ligu. Onda **4. After a start: check** (Korak 13). |
 | `sider.log is older than the world switched on -- start the game to the main menu, then check again` | Pokreni igru do glavnog izbornika, ugasi je, opet provjeri. |
-| `<module> not loaded` / `did NOT read the world file` | **Build your world → Step by step, and Export the world → 0. Install the modules**, pa **3. Switch it on**, opet pokreni igru i opet provjeri. I dalje ne valja: pitaj na Discordu. |
+| `<module> not loaded` / `did NOT read the world file` | **Build and edit your world → Build → Step by step, and Export the world → 0. Install the modules**, pa **3. Switch it on**, opet pokreni igru i opet provjeri. I dalje ne valja: pitaj na Discordu. |
 | Imena klubova su ona iz igre, ne tvoja | Skriva ih stari Edit save: **Move the Edit save aside** u prozoru **Build finished**, ili makni `EDIT00000000` iz mape sa spremanjima igre. |
-| Svi novi igrači imaju isto lice | **Home → Install now** (kad Home kaže da moduli fale ili su stariji), ili **Build your world → Step by step, and Export the world → 0. Install the modules**: donosi paket lica. Pa opet pokreni igru. |
+| Svi novi igrači imaju isto lice | **Home → Install now** (kad Home kaže da moduli fale ili su stariji), ili **Build and edit your world → Build → Step by step, and Export the world → 0. Install the modules**: donosi paket lica. Pa opet pokreni igru. |
 
 **Kad tražiš pomoć:** na [Discordu](https://discord.gg/StQqtk3G3M) pošalji sliku onoga što vidiš,
 tekst loga Builda i svoj `sider.log` (**Game → Open sider.log**).

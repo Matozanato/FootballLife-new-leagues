@@ -88,11 +88,11 @@ The list on the left starts with **Home**, then three groups, and **Settings** a
 
 | Group | Pages |
 |---|---|
-| **Your world** | Build your world (tabs Build, League packages), Import your world, Edit your world (tabs Leagues, Clubs, Players, Kits, Stadiums), NewLife Database |
+| **Your world** | Build and edit your world (tabs Build, Leagues, Clubs, Players, Kits, Stadiums, League packages), Import your world, NewLife Database |
 | **Game content** | Balls, Commentary, Music, Other content |
 | **Tools** | Lua modules, Content folders, Profiles, Restore points, Diagnostics |
 
-**Leagues** (Edit your world) lists every league by continent, the game's and yours (filters **All**, **Ours**,
+**Leagues** (Build and edit your world) lists every league by continent, the game's and yours (filters **All**, **Ours**,
 **Changed**, and a search box). Pick one: a league of yours gets **Edit league...**, **Add lower
 tier**, **Clubs and names**, **Players** and **Remove**; a league of the game gets its name, logo
 and clubs (section 8, "The game's leagues"). **Add league** makes a new one. **More ▾** has
@@ -285,7 +285,7 @@ the clubs of the Champions League, Europa League and Conference League phase in 
 first season. Your clubs go in first and the game fills the rest; from the second season the
 European places decide.
 
-**Clubs** (a tab of Edit your world): pick the league, then **Edit club** (name, short name, crest), or **More ▾ → Paste
+**Clubs** (a tab of Build and edit your world): pick the league, then **Edit club** (name, short name, crest), or **More ▾ → Paste
 names...** / **Load names from file...** (the same menu has **Insert club**, **Remove club**, **New
 club here**, **Move to another league...** and **Import crests...**). An empty name becomes `<league> 01`, `<league> 02` ...; a club
 with no crest gets a numbered badge. Kits are lent from the game's own clubs. Such a kit is a
@@ -439,9 +439,11 @@ one face you mean.
 
 **Keep the world's own Team.bin.** It is in the world folder and holds the world's clubs and its play-offs. Replacing it with the game's own Team.bin drops both, and the line-ups only look fixed because the world's clubs are gone (GitHub #75). Build the world again instead.
 
-**Build and install** (Build your world, and on Home) does 0, 2 and 3 below in one press, then shows what
+**Build and install** (Build and edit your world, and on Home) does 0, 2 and 3 below in one press, then shows what
 is left to do: a **Build finished** window that can also **Move the Edit save aside** and **Close the
-game**. Or step by step, under **Step by step, and Export the world** on the **Build** tab:
+game**. On Build and edit your world it is also in the bar above the tabs, on every tab, next to the
+open world's name and its number of leagues and clubs; while the world builds, that bar and the bottom bar
+show the time so far and the step it is at (`Building... 3:12 · squads: filling them`). Or step by step, under **Step by step, and Export the world** on the **Build** tab:
 
 0. **Install the modules** — once, and again after a new version of the program. Files it
    replaces are kept in `SiderAddons\modules\before-builder-1\`.
@@ -629,7 +631,7 @@ under 10 MB. Download only the parts you want.
 A modder makes a league once — clubs, names, crests, logos, squads, faces — and shares **one
 `.fl26pack` file**. Anybody adds it to their own world and builds.
 
-**Make a package** (Build your world → League packages → **Make a package...**, or File → Make a league package):
+**Make a package** (Build and edit your world → League packages → **Make a package...**, or File → Make a league package):
 
 1. Name, author, version and a short description.
 2. Tick the leagues that go in (**Select all** / **Select none** over the list). A league below
@@ -650,8 +652,8 @@ A modder makes a league once — clubs, names, crests, logos, squads, faces — 
    a scoreboard about 7 MB, so such a package is often over Discord's 10 MB limit: share it through a
    cloud service (Google Drive, Dropbox, MEGA ...); the program says so when the file is bigger.
 
-**Add a package** (Build your world → League packages → **Add a package...**, File → Add a league
-package, or drop it on **Import your world**, where **Build and install** then starts by itself):
+**Add a package** (Build and edit your world → League packages → **Add a package...**, File → Add a
+league package, or drop it on **Import your world**, where **Build and install** then starts by itself):
 
 1. The program shows what is inside and asks. A package of several leagues lists them, all ticked:
    untick the ones you do not want (0.2.1). A league below another league of the package brings that

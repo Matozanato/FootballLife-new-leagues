@@ -1293,6 +1293,7 @@
   "Build your world": "Monte seu mundo",
   "Import your world": "Importe seu mundo",
   "Edit your world": "Edite seu mundo",
+  "Build and edit your world": "Monte e edite seu mundo",
   "SETTINGS": "CONFIGURAÇÕES",
   "A world or a mod (.zip)": "Um mundo ou um mod (.zip)",
   "A league package (.fl26pack)": "Um pacote de ligas (.fl26pack)",
@@ -1366,7 +1367,7 @@
   "Install puts it in the game and switches it on, with Mod Studio's modules. No Build needed.": "Instalar coloca no jogo e liga, com os módulos do Mod Studio. Não precisa de Build.",
   "Install the world": "Instalar o mundo",
   "Its leagues are in your world now. Build and install puts them in the game.": "Os campeonatos dele já estão no seu mundo. Construir e instalar os coloca no jogo.",
-  "League packages in your world: %d (Build your world > League packages)": "Pacotes de campeonatos no seu mundo: %d (Monte seu mundo > Pacotes de campeonatos)",
+  "League packages in your world: %d (Build and edit your world > League packages)": "Pacotes de campeonatos no seu mundo: %d (Monte e edite seu mundo > Pacotes de campeonatos)",
   "Mod Studio already runs as administrator: the folder or a file in it is read-only, or another program (an antivirus, the game) holds it.": "O Mod Studio já roda como administrador: a pasta ou um arquivo nela é somente leitura, ou outro programa (um antivírus, o jogo) está com ele aberto.",
   "Mod Studio could not start itself as administrator. Close it, right-click FL26ModStudio.exe and choose Run as administrator.": "O Mod Studio não conseguiu se abrir como administrador. Feche, clique direito em FL26ModStudio.exe e escolha Executar como administrador.",
   "Mod Studio has %s open": "O Mod Studio está com %s aberto",
@@ -1435,7 +1436,7 @@
   "The new clubs of the world in the game": "Os clubes novos do mundo do jogo",
   "%d worlds are in the game; only one should be": "Há %d mundos no jogo; só deveria haver um",
   "This changes the world in the game.": "Isto muda o mundo do jogo.",
-  "For modders. Build your world makes a world of your own from your leagues, clubs and players. To play a ready modpack you do not need it: Import your world, then Play.": "Para modders. Monte seu mundo faz um mundo seu com os seus campeonatos, clubes e jogadores. Para jogar um modpack pronto você não precisa disso: Importe seu mundo e depois Play.",
+  "For modders. Build and edit your world makes a world of your own from your leagues, clubs and players. To play a ready modpack you do not need it: Import your world, then Play.": "Para modders. Monte e edite seu mundo faz um mundo seu com os seus campeonatos, clubes e jogadores. Para jogar um modpack pronto você não precisa disso: Importe seu mundo e depois Play.",
   "IN THE GAME NOW": "NO JOGO AGORA",
   "Packs installed here": "Packs instalados aqui",
   "Team ID: %s": "ID do time: %s",
@@ -1468,7 +1469,7 @@
   "a ready world: it goes in the game, its world file goes to modules\\fl26world.txt": "um mundo pronto: ele vai para o jogo e o arquivo do mundo vai para modules\\fl26world.txt",
   "Gives many clubs their kits at once. Pick a folder of ready kit-server kits: one folder per club, holding p1, p2, g1 ... and order.ini, named after the club (\"Dinamo Zagreb\") or its team ID (\"2215\").\n\nA club folder can also hold plain kit pictures instead: p1.png, p2.png ... for the kits and g1.png for the goalkeeper (2048 x 2048 is best; .jpg and .dds work too). Mod Studio turns them into kit-server kits; the back numbers, leg numbers and name font come from the kit picked in \"Numbers and names from\". The picture conversion is Xxspedd's.\n\nUntick a wrong match before OK. The kits are copied into the kit-server library and get a line in map.txt; press Save on the Kits page to write it. A club that already has a line keeps it unless \"Replace kits already set\" is ticked.\n\nThe kits of a new club of your world go by the team ID Build gave it, so Build and install first.": "Dá uniformes a muitos clubes de uma vez. Escolha uma pasta de uniformes prontos do kit-server: uma pasta por clube, com p1, p2, g1 ... e order.ini, com o nome do clube (\"Dinamo Zagreb\") ou o ID do time (\"2215\").\n\nA pasta de um clube também pode ter imagens simples dos uniformes: p1.png, p2.png ... para os uniformes e g1.png para o goleiro (2048 x 2048 é o ideal; .jpg e .dds também funcionam). O Mod Studio transforma elas em uniformes do kit-server; os números das costas, os números do calção e a fonte do nome vêm do uniforme escolhido em \"Números e nomes de\". A conversão das imagens é do Xxspedd.\n\nDesmarque uma ligação errada antes do OK. Os uniformes são copiados para a biblioteca do kit-server e ganham uma linha no map.txt; clique em Salvar na página Uniformes para gravar. Um clube que já tem uma linha fica com ela, a não ser que \"Substituir uniformes já definidos\" esteja marcado.\n\nOs uniformes de um clube novo do seu mundo vão pelo ID do time que o Build deu a ele, então faça Construir e instalar antes.",
   "Cups, super cups and the continental competitions of the game, and the continental cups Mod Studio makes. Leagues are renamed on Game's leagues and clubs. Empty name: the game's own.": "Copas, supercopas e as competições continentais do jogo, e as copas continentais que o Mod Studio cria. Os campeonatos são renomeados em Campeonatos e clubes do jogo. Nome vazio: o do próprio jogo.",
-  "Share leagues: make a package of your leagues for other people, or add somebody's package to your world. Added leagues show up on every page of Edit your world; Build and install puts them in the game.": "Compartilhe campeonatos: faça um pacote dos seus campeonatos para outras pessoas ou adicione o pacote de alguém ao seu mundo. Os campeonatos adicionados aparecem em todas as páginas de Edite seu mundo; Construir e instalar os coloca no jogo.",
+  "Share leagues: make a package of your leagues for other people, or add somebody's package to your world. Added leagues show up on every tab of Build and edit your world; Build and install puts them in the game.": "Compartilhe campeonatos: faça um pacote dos seus campeonatos para outras pessoas ou adicione o pacote de alguém ao seu mundo. Os campeonatos adicionados aparecem em todas as abas de Monte e edite seu mundo; Construir e instalar os coloca no jogo.",
   "Mod Studio's modules go off: worlds of yours may stop working.": "Módulos do Mod Studio vão ser desativados: seus mundos podem parar de funcionar.",
   "Copy Mod Studio's modules into %s and load them from sider.ini? Files it replaces are kept in a before-builder folder next to them.": "Copiar os módulos do Mod Studio para %s e carregá-los pelo sider.ini? Os arquivos que forem substituídos ficam guardados numa pasta before-builder ao lado deles.",
   "In the game now": "No jogo agora",
@@ -1483,7 +1484,7 @@
   "File: Mod Studio's copy from the last Build (%s)": "Arquivo: a cópia do Mod Studio do último Build (%s)",
   "File: not saved yet": "Arquivo: ainda não salvo",
   "Add leagues": "Adicionar ligas",
-  "A world of your own: New world, then add its leagues under Edit your world. Build and install puts it in the game.": "Um mundo seu: New world, e adicione as ligas em Edit your world. Build and install o coloca no jogo."
+  "A world of your own: New world, then add its leagues on the Leagues tab. Build and install puts it in the game.": "Um mundo seu: New world, e adicione as ligas na aba Leagues. Build and install o coloca no jogo."
  },
  "log": [
   [

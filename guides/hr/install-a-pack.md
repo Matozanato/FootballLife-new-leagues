@@ -46,9 +46,9 @@ Pogledaj traku dolje: nema prozora Football Lifea, nema launchera.
 4. Otvori tu mapu i dvaput klikni `FL26ModStudio.exe`.
 
 **Trebaš vidjeti:** tamni prozor. Gore: **File, Game, Profiles, Language, Help, Credits** i
-zeleni gumb **Play** desno. Lijevo: **Home**, pa **YOUR WORLD** (**Build your world**, **Import
-your world**, **Edit your world**, **NewLife Database**), **GAME CONTENT**, **TOOLS** i, skroz
-dolje, **Settings**.
+zeleni gumb **Play** desno. Lijevo: **Home**, pa **YOUR WORLD** (**Build and edit your world**,
+**Import your world**, **NewLife Database**), **GAME CONTENT**, **TOOLS** i, skroz dolje,
+**Settings**.
 
 Ako Windows kaže "Windows protected your PC": klikni **More info** → **Run anyway**.
 
@@ -117,7 +117,8 @@ poljem objašnjenim: [Napravi svoje lige i pakete](make-your-own-leagues.md).
 
 ## Način C: paket liga (.fl26pack)
 
-**C1.** Lijevo, pod **YOUR WORLD**: klikni **Build your world**, pa karticu **League packages**.
+**C1.** Lijevo, pod **YOUR WORLD**: klikni **Build and edit your world**, pa karticu **League
+packages**.
 
 **C2.** Klikni **Add a package...** i izaberi `.fl26pack` datoteku. (Ili gore: **File → Add a
 league package...**.)
@@ -164,8 +165,8 @@ Nove lige su i u **Kick Off** → League, i u **Database → Competition Info**.
 ## Korak 6. Neka Mod Studio provjeri je li uspjelo
 
 1. Ugasi igru.
-2. U Mod Studiju: **Build your world** → **Step by step, and Export the world** → **4. After a
-   start: check**.
+2. U Mod Studiju: **Build and edit your world** → kartica **Build** → **Step by step, and Export
+   the world** → **4. After a start: check**.
 
 **Trebaš vidjeti:** za svaki modul red koji kaže koliko je liga pročitao iz svijeta, a na kraju
 `the world works as built`. Red koji kaže `not loaded` ili `did NOT read the world file`, i zadnji
@@ -181,7 +182,7 @@ red `something is wrong -- see the lines above`, kažu ti što ne valja.
 | Nema novih liga na Select Team | Jesi li pokrenuo **novu** Master Ligu? Onda **4. After a start: check** ([Korak 6](#korak-6-neka-mod-studio-provjeri-je-li-uspjelo)). Ako u logu piše `world file -- 0 leagues`, tvoj svijet je bio prazan: opet dodaj paket (Način C) i opet Build. |
 | Svijet je napravljen s `0 leagues, 0 clubs` | Isto: tvoj svijet nije imao liga. Prvo dodaj lige, pa Build. |
 | `sider.log is older than the world switched on -- start the game to the main menu, then check again` | Provjera je pokrenuta prije nego si pokrenuo igru. Pokreni je do glavnog izbornika, ugasi je i opet stisni **4. After a start: check**. |
-| Svi novi igrači imaju isto lice | **Home → Install now** (kad Home kaže da moduli fale ili su stariji), ili **Build your world → Step by step, and Export the world → 0. Install the modules**: donosi paket lica. Pa opet pokreni igru. |
+| Svi novi igrači imaju isto lice | **Home → Install now** (kad Home kaže da moduli fale ili su stariji), ili **Build and edit your world → Build → Step by step, and Export the world → 0. Install the modules**: donosi paket lica. Pa opet pokreni igru. |
 | Igra se ruši pri pokretanju | Pokreni je još jednom preko launchera (pad u prvih 10 sekundi se događa i bez modova). Ako se i dalje ruši: **Game → Start the game without mods (safe mode)...** i pitaj na Discordu. |
 | Hoćeš sve vratiti kako je bilo | **Import your world** → označi ga pod **In the game now** → **Remove** vadi instalirani svijet. **TOOLS → Restore points → Put Sider back as before Mod Studio...** (i u izborniku **Game**) vraća svaku datoteku koju je Mod Studio promijenio i vadi ono što je donio. Ništa se ne briše: čuva se u `SiderAddons\ModStudio\reset-<time>`, a **Undo the last reset** to vraća. |
 

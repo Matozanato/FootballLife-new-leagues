@@ -179,7 +179,7 @@ click adds; it never removes what is there.
 
 ## Step 6. The Leagues page: every setting of a league
 
-1. Left bar: **Edit your world**, tab **Leagues**.
+1. Left bar: **Build and edit your world**, tab **Leagues**.
 2. Above the list, click **Ours**: the list shows only the leagues of your world. (**All**
    shows every league, the game's too; **Changed**, the game's leagues you changed.) The
    leagues are grouped by continent.
@@ -292,7 +292,8 @@ window opens with the country, clubs, format and division already filled in. Giv
 
 ## Step 8. The Clubs tab: names, crests, kits, clubs of the game
 
-1. Left bar: **Edit your world**, tab **Clubs** (or **Clubs and names** on the Leagues tab).
+1. Left bar: **Build and edit your world**, tab **Clubs** (or **Clubs and names** on the Leagues
+   tab).
 2. At the top, **League**: pick one of your leagues.
 
 **You should see:** its clubs with the columns **#**, **Name**, **Short name** and **Players
@@ -368,8 +369,8 @@ hand gets real clubs.
 NewLife clubs come with full squads, so you do not have to touch this page. It is there if you
 want to change a squad.
 
-1. Left bar: **Edit your world**, tab **Players** (or select a club on the **Clubs** tab and click
-   **More ▾ → Players**).
+1. Left bar: **Build and edit your world**, tab **Players** (or select a club on the **Clubs** tab
+   and click **More ▾ → Players**).
 2. At the top, pick the **League** and the **Club**. (Or type in *Find a club...*.)
 
 **You should see:** the squad with the columns **Order**, **No.**, **Name**, **Pos**, **Age**,
@@ -417,7 +418,7 @@ Mod Studio opens your world again when it starts, so what you made is never lost
 
 ## Step 12. Build
 
-1. Left bar: **Build your world**, tab **Build**.
+1. Left bar: **Build and edit your world**, tab **Build**.
 
 **You should see:** the big blue **Build and install** button and two folds under it: **World
 options: European cups, country cups, kits and faces of the new clubs** (two cards, **European
@@ -425,7 +426,9 @@ cups** and **New clubs**, with options) and **Step by step, and Export the world
 **0. Install the modules**, **1. Check the plan**, **2. Build the world**, **3. Switch it on**,
 **4. After a start: check** and **Export the world...**). Then a line like
 `World _FL26MyWorld: not built yet · builder modules: installed`, and a box for the log at the
-bottom.
+bottom. Above the tabs, on every tab, a bar shows your world's name, its number of leagues and
+clubs, and a **Build and install** button; while the world builds, it shows the time so far and
+the step it is at (`Building... 3:12 · squads: filling them`).
 
 2. Open **Step by step, and Export the world** and click **1. Check the plan** first. It changes
    nothing; it only reads your world.
@@ -490,8 +493,8 @@ defaults are fine.
 Then let Mod Studio check that the game took the world:
 
 1. Close the game (or at least start it once to the main menu).
-2. In Mod Studio: **Build your world** → **Step by step, and Export the world** → **4. After a
-   start: check**.
+2. In Mod Studio: **Build and edit your world** → tab **Build** → **Step by step, and Export the
+   world** → **4. After a start: check**.
 
 **You should see:** one line per module saying how many leagues it read from the world file, and
 at the end `the world works as built`. A line `not loaded` or `did NOT read the world file`, and
@@ -502,9 +505,9 @@ table at the end.
 
 1. Close the game.
 2. Open Mod Studio. It opens your world by itself (or **File → Open a world...**).
-3. Change what you want on **NewLife Database**, or on **Edit your world**: **Leagues**,
-   **Clubs** or **Players**. It saves itself.
-4. **Build your world** → **Build and install** → **Yes**.
+3. Change what you want on **NewLife Database**, or on **Build and edit your world**: tab
+   **Leagues**, **Clubs** or **Players**. It saves itself.
+4. **Build and install** (in the bar above the tabs, or on the tab **Build**) → **Yes**.
 
 **Do you need a new career?** Yes: start a new Master League after every change you build.
 A career takes its own copy of the leagues, clubs and squads when it starts, so a career you are
@@ -532,8 +535,8 @@ There are two ways. Pick one:
 
 ### A league package
 
-1. Left bar: **Build your world**, tab **League packages** → **Make a package...** (or top bar:
-   **File → Make a league package...**).
+1. Left bar: **Build and edit your world**, tab **League packages** → **Make a package...** (or
+   top bar: **File → Make a league package...**).
 
 **You should see:** a window **Make a league package**.
 
@@ -560,8 +563,8 @@ More: [9. League packages](mod-studio-guide.md#9-league-packages-share-a-whole-l
 ### A whole world (zip)
 
 1. Build first (Step 12). The world must be built.
-2. Left bar: **Build your world** → **Step by step, and Export the world** → **Export the
-   world...**.
+2. Left bar: **Build and edit your world** → tab **Build** → **Step by step, and Export the
+   world** → **Export the world...**.
 3. A save window opens with the world's name as the file name (`_FL26MyWorld.zip`), in your
    user folder the first time (after that, in the folder you used last). Pick a folder and click
    **Save**.
@@ -622,9 +625,9 @@ the Build log after `error:`. `<...>` stands for a name or number.
 | `Give the package a name.` / `Tick at least one league.` / `Your world has no leagues yet.` | In **Make a league package**, fill in **Name** and tick a league; your world needs leagues first. |
 | No new leagues at Select Team | Start a **new** Master League. Then **4. After a start: check** (Step 13). |
 | `sider.log is older than the world switched on -- start the game to the main menu, then check again` | Start the game to its main menu, close it, check again. |
-| `<module> not loaded` / `did NOT read the world file` | **Build your world → Step by step, and Export the world → 0. Install the modules**, then **3. Switch it on**, start the game again and check again. Still wrong: ask on Discord. |
+| `<module> not loaded` / `did NOT read the world file` | **Build and edit your world → Build → Step by step, and Export the world → 0. Install the modules**, then **3. Switch it on**, start the game again and check again. Still wrong: ask on Discord. |
 | Club names are the game's, not yours | An old Edit save hides them: **Move the Edit save aside** in the **Build finished** window, or move `EDIT00000000` out of the game's save folder. |
-| All new players have the same face | **Home → Install now** (when Home says the modules are missing or older), or **Build your world → Step by step, and Export the world → 0. Install the modules**: it brings the face pack. Then start the game again. |
+| All new players have the same face | **Home → Install now** (when Home says the modules are missing or older), or **Build and edit your world → Build → Step by step, and Export the world → 0. Install the modules**: it brings the face pack. Then start the game again. |
 
 **Asking for help:** on the [Discord](https://discord.gg/StQqtk3G3M), send a screenshot of what
 you see, the text of the Build log, and your `sider.log` (**Game → Open sider.log**).

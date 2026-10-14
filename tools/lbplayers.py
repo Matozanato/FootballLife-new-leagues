@@ -956,31 +956,42 @@ def _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_to
     busy = set(index) | wanted | taken
     spare = game_top + 1
     moved = {}                                         # player id before -> after
+    # 0.2.4: where each player's assignments are, found once -- _renumber looked through every
+    # assignment for every player it moved, and a rebuilt Modpack moves thousands (the Modpack's
+    # Build in the exe took about 20 minutes, 15.10.)
+    where = collections.defaultdict(list)
+    for i in range(len(assigns) // A_REC):
+        where[u32(assigns, i * A_REC + E.A_PID)].append(i * A_REC)
     for pid in sorted(moving):
         while spare in busy:
             spare += 1
         if spare > PID_MAX:
             raise Error("no free player id left below %d (the game packs a player id into 18 bits)" % (PID_MAX + 1))
         moved[pid] = spare
-        _renumber(players, assigns, index, pid, spare)
+        _renumber(players, assigns, index, pid, spare, where)
         busy.add(spare)
         spare += 1
     for pid, want in pin.items():
-        _renumber(players, assigns, index, moved[pid], want)
+        _renumber(players, assigns, index, moved[pid], want, where)
         moved[pid] = want
     for club in first:                                 # every copy of a player follows him
         first[club] = [moved.get(pid, pid) for pid in first[club]]
     return later
 
 
-def _renumber(players, assigns, index, old, pid):
-    """player `old` takes id `pid`, in Player.bin and every assignment of his"""
+def _renumber(players, assigns, index, old, pid, where=None):
+    """player `old` takes id `pid`, in Player.bin and every assignment of his; where:
+    {player id: offsets of his assignments}, kept up to date (None: look through them all)"""
     o = index.pop(old)
     players[o + P_ID:o + P_ID + 4] = pid.to_bytes(4, "little")
     index[pid] = o
-    for i in range(len(assigns) // A_REC):
-        if u32(assigns, i * A_REC + E.A_PID) == old:
-            assigns[i * A_REC + E.A_PID:i * A_REC + E.A_PID + 4] = pid.to_bytes(4, "little")
+    if where is None:
+        offs = [i * A_REC for i in range(len(assigns) // A_REC) if u32(assigns, i * A_REC + E.A_PID) == old]
+    else:
+        offs = where.pop(old, [])
+        where[pid] = where.get(pid, []) + offs
+    for ao in offs:
+        assigns[ao + E.A_PID:ao + E.A_PID + 4] = pid.to_bytes(4, "little")
 
 
 def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, portraits=None,

@@ -190,8 +190,8 @@ class AddDialog(QDialog):
 class Packages(BuilderPage):
     title = "League packages"
     hint = ("Share leagues: make a package of your leagues for other people, or add somebody's package to "
-            "your world. Added leagues show up on every page of Edit your world; Build and install puts them in the "
-            "game.")
+            "your world. Added leagues show up on every tab of Build and edit your world; Build and install puts them "
+            "in the game.")
 
     def __init__(self, app):
         super().__init__(app)

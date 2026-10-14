@@ -49,10 +49,10 @@ cuando arranca el juego. Mira la barra de tareas: ninguna ventana de Football Li
 
 **Deberías ver:** una ventana oscura. Arriba: **File, Game, Profiles, Language, Help, Credits**
 (*Archivo, Juego, Perfiles, Idioma, Ayuda, Créditos*) y un botón verde **Play** (*Jugar*) a la
-derecha. A la izquierda: **Home** (*Inicio*), luego **YOUR WORLD** (*TU MUNDO*: **Build your
-world** (*Construye tu mundo*), **Import your world** (*Importa tu mundo*), **Edit your world**
-(*Edita tu mundo*), **NewLife Database**), **GAME CONTENT** (*CONTENIDO DEL JUEGO*), **TOOLS**
-(*HERRAMIENTAS*) y, abajo del todo, **Settings** (*Ajustes*).
+derecha. A la izquierda: **Home** (*Inicio*), luego **YOUR WORLD** (*TU MUNDO*: **Build and
+edit your world** (*Construye y edita tu mundo*), **Import your world** (*Importa tu mundo*),
+**NewLife Database**), **GAME CONTENT** (*CONTENIDO DEL JUEGO*), **TOOLS** (*HERRAMIENTAS*) y,
+abajo del todo, **Settings** (*Ajustes*).
 
 Si Windows dice "Windows protected your PC": pulsa **More info** → **Run anyway**.
 
@@ -129,8 +129,8 @@ campo explicado:
 
 ## Camino C: un paquete de ligas (.fl26pack)
 
-**C1.** Barra de la izquierda, en **YOUR WORLD**: pulsa **Build your world** (*Construye tu
-mundo*) y luego la pestaña **League packages** (*Paquetes de ligas*).
+**C1.** Barra de la izquierda, en **YOUR WORLD**: pulsa **Build and edit your world** (*Construye
+y edita tu mundo*) y luego la pestaña **League packages** (*Paquetes de ligas*).
 
 **C2.** Pulsa **Add a package...** (*Añadir un paquete...*) y elige el archivo `.fl26pack`. (O
 barra de arriba: **File → Add a league package...** (*Archivo → Añadir un paquete de ligas...*).)
@@ -183,8 +183,8 @@ Las ligas nuevas también están en **Kick Off** → League, y en **Database →
 ## Paso 6. Deja que Mod Studio compruebe que funcionó
 
 1. Cierra el juego.
-2. En Mod Studio: **Build your world** → **Step by step, and Export the world** (*Paso a paso, y
-   Exportar el mundo*) → **4. After a start: check**.
+2. En Mod Studio: **Build and edit your world** → pestaña **Build** → **Step by step, and Export
+   the world** (*Paso a paso, y Exportar el mundo*) → **4. After a start: check**.
 
 **Deberías ver:** una línea por módulo que dice cuántas ligas leyó del mundo, y al final
 `the world works as built`. Una línea que dice `not loaded` o `did NOT read the world file`, y la
@@ -200,7 +200,7 @@ Las ligas nuevas también están en **Kick Off** → League, y en **Database →
 | No hay ligas nuevas en Select Team | ¿Empezaste una Liga Máster **nueva**? Luego **4. After a start: check** ([Paso 6](#paso-6-deja-que-mod-studio-compruebe-que-funcionó)). Si su registro dice `world file -- 0 leagues`, tu mundo estaba vacío: vuelve a añadir el paquete (Camino C) y vuelve a construir. |
 | El mundo dice que se construyó con `0 leagues, 0 clubs` | Lo mismo: tu mundo no tenía ligas. Añade algunas primero y luego Build. |
 | `sider.log is older than the world switched on -- start the game to the main menu, then check again` | La comprobación se hizo antes de iniciar el juego. Inícialo hasta el menú principal, ciérralo y vuelve a pulsar **4. After a start: check**. |
-| Todos los jugadores nuevos tienen la misma cara | **Home → Install now** (*Inicio → Instalar ahora*, cuando Home dice que los módulos faltan o son antiguos), o **Build your world → Step by step, and Export the world → 0. Install the modules**: trae el paquete de caras. Luego vuelve a iniciar el juego. |
+| Todos los jugadores nuevos tienen la misma cara | **Home → Install now** (*Inicio → Instalar ahora*, cuando Home dice que los módulos faltan o son antiguos), o **Build and edit your world → Build → Step by step, and Export the world → 0. Install the modules**: trae el paquete de caras. Luego vuelve a iniciar el juego. |
 | El juego se cierra al arrancar | Inícialo otra vez por el launcher (un cierre en los primeros 10 segundos también pasa sin mods). Si sigue cerrándose: **Game → Start the game without mods (safe mode)...** (*Juego → Iniciar el juego sin mods (modo seguro)...*) y pregunta en Discord. |
 | Quieres todo como estaba | **Import your world** → selecciónalo en **In the game now** (*En el juego ahora*) → **Remove** (*Quitar*) saca un mundo instalado. **TOOLS → Restore points → Put Sider back as before Mod Studio...** (*HERRAMIENTAS → Puntos de restauración → Devolver Sider a antes de Mod Studio...*, también en el menú **Game**) devuelve cada archivo que Mod Studio cambió y quita lo que trajo. No se borra nada: queda guardado en `SiderAddons\ModStudio\reset-<time>`, y **Undo the last reset** (*Deshacer el último reinicio*) lo vuelve a poner. |
 

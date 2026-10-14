@@ -88,11 +88,11 @@ A lista à esquerda começa com **Home**, depois vêm três grupos, e **Settings
 
 | Grupo | Páginas |
 |---|---|
-| **Your world** | Build your world (abas Build, League packages), Import your world, Edit your world (abas Leagues, Clubs, Players, Kits, Stadiums), NewLife Database |
+| **Your world** | Build and edit your world (abas Build, Leagues, Clubs, Players, Kits, Stadiums, League packages), Import your world, NewLife Database |
 | **Game content** | Balls, Commentary, Music, Other content |
 | **Tools** | Lua modules, Content folders, Profiles, Restore points, Diagnostics |
 
-**Leagues** (Edit your world) lista todas as ligas por continente, as do jogo e as suas (filtros **All**, **Ours**,
+**Leagues** (Build and edit your world) lista todas as ligas por continente, as do jogo e as suas (filtros **All**, **Ours**,
 **Changed**, e uma caixa de busca). Escolha uma: uma liga sua ganha **Edit league...**, **Add lower
 tier**, **Clubs and names**, **Players** e **Remove**; uma liga do jogo ganha nome, logo
 e clubes (seção 8, "As ligas do jogo"). **Add league** cria uma nova. **More ▾** tem
@@ -285,7 +285,7 @@ os clubes da fase de liga da Champions League, Europa League e Conference League
 temporada de uma carreira nova. Seus clubes entram primeiro e o jogo completa o resto; a partir da segunda temporada as
 vagas europeias decidem.
 
-**Clubs** (uma aba do Edit your world): escolha a liga, depois **Edit club** (nome, nome curto, escudo), ou **More ▾ → Paste
+**Clubs** (uma aba do Build and edit your world): escolha a liga, depois **Edit club** (nome, nome curto, escudo), ou **More ▾ → Paste
 names...** / **Load names from file...** (o mesmo menu tem **Insert club**, **Remove club**, **New
 club here**, **Move to another league...** e **Import crests...**). Um nome vazio vira `<league> 01`, `<league> 02` ...; um clube
 sem escudo ganha um distintivo numerado. Os uniformes são emprestados dos próprios clubes do jogo. Um uniforme desses é
@@ -435,9 +435,11 @@ rosto que você quer.
 
 **Mantenha o Team.bin do próprio mundo.** Ele fica na pasta do mundo e guarda os clubes do mundo e os play-offs dele. Trocar ele pelo Team.bin do próprio jogo apaga os dois, e as escalações só parecem consertadas porque os clubes do mundo sumiram (GitHub #75). Faça o Build do mundo de novo no lugar.
 
-**Build and install** (Build your world, e na Home) faz o 0, o 2 e o 3 abaixo com um clique, depois mostra o que
+**Build and install** (Build and edit your world, e na Home) faz o 0, o 2 e o 3 abaixo com um clique, depois mostra o que
 falta fazer: uma janela **Build finished** que também pode **Move the Edit save aside** e **Close the
-game**. Ou passo a passo, em **Step by step, and Export the world** na aba **Build**:
+game**. Em Build and edit your world ele também fica na barra acima das abas, em todas elas, ao lado do
+nome do mundo aberto e do número de ligas e clubes; enquanto o mundo é montado, essa barra e a barra de
+baixo mostram o tempo decorrido e a etapa em que está (`Building... 3:12 · squads: filling them`). Ou passo a passo, em **Step by step, and Export the world** na aba **Build**:
 
 0. **Install the modules** — uma vez, e de novo depois de uma versão nova do programa. Os arquivos que ele
    substitui ficam guardados em `SiderAddons\modules\before-builder-1\`.
@@ -625,7 +627,7 @@ uma com menos de 10 MB. Baixe só as partes que você quer.
 Um modder faz uma liga uma vez — clubes, nomes, escudos, logos, elencos, rostos — e compartilha **um
 arquivo `.fl26pack`**. Qualquer um adiciona ao próprio mundo e monta.
 
-**Criar um pacote** (Build your world → League packages → **Make a package...**, ou File → Make a league package):
+**Criar um pacote** (Build and edit your world → League packages → **Make a package...**, ou File → Make a league package):
 
 1. Nome, autor, versão e uma descrição curta.
 2. Marque as ligas que entram (**Select all** / **Select none** em cima da lista). Uma liga embaixo de
@@ -644,8 +646,8 @@ arquivo `.fl26pack`**. Qualquer um adiciona ao próprio mundo e monta.
    um placar uns 7 MB, então um pacote desses muitas vezes passa do limite de 10 MB do Discord: compartilhe por um
    serviço de nuvem (Google Drive, Dropbox, MEGA ...); o programa avisa quando o arquivo é maior.
 
-**Adicionar um pacote** (Build your world → League packages → **Add a package...**, File → Add a
-league package, ou arraste para **Import your world**, onde o **Build and install** então começa sozinho):
+**Adicionar um pacote** (Build and edit your world → League packages → **Add a package...**, File →
+Add a league package, ou arraste para **Import your world**, onde o **Build and install** então começa sozinho):
 
 1. O programa mostra o que tem dentro e pergunta. Um pacote de várias ligas lista elas, todas marcadas:
    desmarque as que você não quer (0.2.1). Uma liga embaixo de outra liga do pacote traz essa

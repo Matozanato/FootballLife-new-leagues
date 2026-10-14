@@ -4,7 +4,7 @@ Every page edits app.project.recipe (modstudio/project.py); leaguebuilder.py doe
 """
 import csv, html, io, json, os
 
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, QTimer
 from PySide6.QtGui import QPixmap, QImage, QColor, QBrush, QKeySequence, QShortcut
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, QFormLayout, QFrame,
                                QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem,
@@ -23,6 +23,7 @@ from .. import theme
 from .. import servers as S
 from .. import newlife as N
 from .. import access
+from .. import apart
 from ..i18n import _, tr
 from ..backups import snapshot
 from ..ui import Fold, Page, section, hint, row, ask, error, info, run_job, helpmark, helped, can_write, denied_box
@@ -2565,7 +2566,7 @@ class NewLeagues(BuilderPage):
             return
         self.app.settings["recipes"] = os.path.dirname(p)
         self.app.settings["last_recipe"] = p
-        # 0.2.4: an opened world is usually built next -- Build your world, not its name and file
+        # 0.2.4: an opened world is usually built next -- the Build tab, not its name and file
         # (exe test 14.10.: Open a world landed on Edit your world, and Build was two clicks away)
         self.app.open_page("Build")
 
@@ -3607,7 +3608,7 @@ class AfterBuild(QDialog):
             self.accept()
 
 
-FOR_MODDERS = ("For modders. Build your world makes a world of your own from your leagues, clubs and players. "
+FOR_MODDERS = ("For modders. Build and edit your world makes a world of your own from your leagues, clubs and players. "
                "To play a ready modpack you do not need it: Import your world, then Play.")
 
 
@@ -3673,7 +3674,7 @@ class Build(BuilderPage):
             b.clicked.connect(fn)
             start.addWidget(b)
             self.steps.append(b)
-        start.addWidget(hint(_("A world of your own: New world, then add its leagues under Edit your world. "
+        start.addWidget(hint(_("A world of your own: New world, then add its leagues on the Leagues tab. "
                                "Build and install puts it in the game.")), 1)
         self.outer.addLayout(start)
         one = QHBoxLayout()
@@ -3954,10 +3955,8 @@ class Build(BuilderPage):
             bits.append(_("Mod Studio's modules: %s") % (_("installed") if not missing else
                                                      _("%d missing: Home > Install now") % len(missing)))
         r = self.project.recipe
-        self.what.setText("<b>%s</b>" % html.escape(_("Your world: %s") % w) + "&nbsp;&nbsp;&nbsp;"
-                          + html.escape(_("%d leagues, %d clubs") % (len(r.get("leagues") or []),
-                                        sum(int(L.get("clubs") or 0) for L in r.get("leagues") or [])))
-                          + "<br>" + html.escape(self.file_text(w)))
+        # the world's name and size are in the bar above the tabs (0.2.4: Build and edit your world)
+        self.what.setText(html.escape(self.file_text(w)))
         ready = self.ready_live()
         for b in self.steps[1:4] + [self.b_all]:          # plan, build, switch on, Build and install
             b.setEnabled(not ready)
@@ -3966,6 +3965,7 @@ class Build(BuilderPage):
         if ready:
             bits.insert(0, _("%s is a ready world (installed from a zip): no Build needed, press Play") % ", ".join(ready))
         self.state.setText("   ·   ".join(bits))
+        self.app.update_world_bar()
 
     def new_world(self):
         """an empty world, then the Leagues page to add its leagues"""
@@ -4056,7 +4056,7 @@ class Build(BuilderPage):
             if note:
                 log("\n" + note + "\n")
             log(_("building ..."))
-            B.build(pl, base, game, replace, log=log)
+            apart.build(pl, base, game, replace, log)
             self.project.drop_names()
             log("\n" + _("Next: switch %s on (it takes the place of any other world), then start the game "
                           "and start a new Master League career.") % name)
@@ -4093,8 +4093,30 @@ class Build(BuilderPage):
         for b in self.steps:
             b.setEnabled(False)
         self.app.busy(True, _("Building..."))
+        # 0.2.4: the time so far and the step it is at, in the bottom bar and above the log (exe
+        # test 15.10.: a big world builds for 20 minutes with only "Building..." blinking)
+        import time
+        t0, last = time.monotonic(), [""]
+        clock = QTimer(self)
+
+        def tick():
+            m, sec = divmod(int(time.monotonic() - t0), 60)
+            text = "%s %d:%02d" % (_("Building..."), m, sec) + ("   ·   " + last[0] if last[0] else "")
+            self.app.status_busy.setText("● " + text)
+            self.state.setText(text)
+            self.app.update_world_bar(text)
+        clock.timeout.connect(tick)
+        clock.start(1000)
+
+        def said(t):
+            self.say(t)
+            line = tr(str(t)).strip().splitlines()
+            if line:
+                last[0] = line[-1][:90]
 
         def finish(result=None, err=None):
+            clock.stop()
+            self.app.update_world_bar("")
             self.app.busy(False)
             for b in self.steps:
                 b.setEnabled(True)
@@ -4121,7 +4143,7 @@ class Build(BuilderPage):
                 return
             finish(err=_("stopped: Windows does not let Mod Studio write in %s") % (path or self.app.game.folder))
             denied_box(self, path)
-        run_job(job, done=lambda r: finish(err=r), failed=failed, progress=self.say)
+        run_job(job, done=lambda r: finish(err=r), failed=failed, progress=said)
 
     def do_plan(self):
         if self.ready_blocks():
@@ -4191,7 +4213,7 @@ class Build(BuilderPage):
         def go(log):
             log(B.describe(pl))
             log(_("building ..."))
-            B.build(pl, base, game, replace, log=log)
+            apart.build(pl, base, game, replace, log)
             self.project.drop_names()
             log("\n" + _("Next: 3. Switch it on, then start the game."))
             note = database_note(self.project)
@@ -4241,7 +4263,7 @@ class Build(BuilderPage):
             B.install_modules(game, log=log)
             log(B.describe(pl))
             log(_("building ..."))
-            B.build(pl, base, game, replace, log=log)
+            apart.build(pl, base, game, replace, log)
             B.switch_on(w, game, log=log)
             self.project.drop_names()
             info["secs"] = int(time.time() - info["t0"])

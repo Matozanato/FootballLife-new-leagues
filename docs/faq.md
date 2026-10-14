@@ -11,9 +11,9 @@ Just a question, not a bug? Ask on [Discord](https://discord.gg/StQqtk3G3M).
 ### I updated Mod Studio. What do I do now?
 
 Every update can change the modules and the world's tables. After updating, open **Home**: if
-it has a red line about Mod Studio's modules, press **Install now**. Then on **Build your world**
-press **Build and install** again. If you play a ready modpack, drop the new modpack zip on
-**Import your world** instead: Mod Studio sees it is a newer version of the world you have and
+it has a red line about Mod Studio's modules, press **Install now**. Then on **Build and edit
+your world** press **Build and install** again. If you play a ready modpack, drop the new
+modpack zip on **Import your world** instead: Mod Studio sees it is a newer version of the world you have and
 puts it in place of the old one. Then start a **new Master League career**: a career started before the build was made
 with the old world and does not pick up everything that changed.
 

@@ -89,11 +89,11 @@ La lista de la izquierda empieza con **Home**, luego tiene tres grupos y, abajo 
 
 | Grupo | Páginas |
 |---|---|
-| **Tu mundo** | Construye tu mundo (pestañas Construir, Paquetes de ligas), Importa tu mundo, Edita tu mundo (pestañas Ligas, Clubes, Jugadores, Equipaciones, Estadios), NewLife Database |
+| **Tu mundo** | Construye y edita tu mundo (pestañas Construir, Ligas, Clubes, Jugadores, Equipaciones, Estadios, Paquetes de ligas), Importa tu mundo, NewLife Database |
 | **Contenido del juego** | Balones, Comentarios, Música, Otro contenido |
 | **Herramientas** | Módulos Lua, Carpetas de contenido, Perfiles, Puntos de restauración, Diagnóstico |
 
-**Ligas** (Edita tu mundo) muestra todas las ligas por continente, las del juego y las tuyas (filtros **All**, **Ours**,
+**Ligas** (Construye y edita tu mundo) muestra todas las ligas por continente, las del juego y las tuyas (filtros **All**, **Ours**,
 **Changed** y un cuadro de búsqueda). Elige una: una liga tuya tiene **Editar liga...**, **Añadir
 división inferior**, **Clubes y nombres**, **Jugadores** y **Remove**; una liga del juego tiene su
 nombre, logo y clubes (sección 8, "Las ligas del juego"). **Add league** crea una nueva. **Más ▾**
@@ -293,7 +293,7 @@ elige a mano los clubes de la fase de la Champions League, la Europa League y la
 en la primera temporada de una carrera nueva. Tus clubes entran primero y el juego llena el resto;
 desde la segunda temporada deciden las plazas europeas.
 
-**Clubes** (una pestaña de Edita tu mundo): elige la liga y luego **Editar club** (nombre, abreviatura, escudo), o **Más ▾ →
+**Clubes** (una pestaña de Construye y edita tu mundo): elige la liga y luego **Editar club** (nombre, abreviatura, escudo), o **Más ▾ →
 Paste names...** / **Load names from file...** (el mismo menú tiene **Insertar club**, **Quitar
 club**, **Club nuevo aquí**, **Mover a otra liga...** e **Importar escudos...**). Un nombre vacío pasa a ser `<liga> 01`,
 `<liga> 02` ...; un club sin escudo recibe un escudo con número. Las equipaciones se toman
@@ -455,9 +455,12 @@ rechaza: elige la cara concreta que quieres.
 
 **Conserva el Team.bin del mundo.** Está en la carpeta del mundo y guarda los clubes y los play-offs del mundo. Si lo cambias por el Team.bin del juego, desaparecen, y las alineaciones parecen arregladas solo porque ya no están los clubes (GitHub #75). Mejor vuelve a construir el mundo.
 
-**Construir e instalar** (Construye tu mundo, y en Home) hace 0, 2 y 3 de abajo en un solo clic, y luego
+**Construir e instalar** (Construye y edita tu mundo, y en Home) hace 0, 2 y 3 de abajo en un solo clic, y luego
 muestra lo que queda por hacer: una ventana **Construcción terminada** que también puede **Apartar el
-guardado de Edit** y **Cerrar el juego**. O paso a paso, en **Paso a paso, y Exportar el mundo** de
+guardado de Edit** y **Cerrar el juego**. En Construye y edita tu mundo el botón está también en la
+barra encima de las pestañas, en todas, junto al nombre del mundo abierto y sus ligas y clubes;
+mientras el mundo se construye, esa barra y la barra de abajo muestran el tiempo que lleva y el paso
+en el que está (`Construyendo... 3:12 · squads: filling them`). O paso a paso, en **Paso a paso, y Exportar el mundo** de
 la pestaña **Construir**:
 
 0. **Instalar los módulos** — una vez, y de nuevo tras una versión nueva del programa. Los
@@ -636,7 +639,7 @@ de 10 MB. Descarga solo las partes que quieras.
 Un modder crea una liga una vez — clubes, nombres, escudos, logos, plantillas, caras — y comparte
 **un solo archivo `.fl26pack`**. Cualquiera lo añade a su propio mundo y construye.
 
-**Crear un paquete** (Construye tu mundo → Paquetes de ligas → **Crear un paquete...**, o Archivo → Crear un paquete de
+**Crear un paquete** (Construye y edita tu mundo → Paquetes de ligas → **Crear un paquete...**, o Archivo → Crear un paquete de
 ligas):
 
 1. Nombre, autor, versión y una descripción corta.
@@ -657,8 +660,8 @@ ligas):
    marcador unos 7 MB, así que un paquete así suele pasar el límite de 10 MB de Discord: compártelo por
    un servicio en la nube (Google Drive, Dropbox, MEGA ...); el programa lo avisa si el archivo es mayor.
 
-**Añadir un paquete** (Construye tu mundo → Paquetes de ligas → **Añadir un paquete...**, Archivo →
-Añadir un paquete de ligas, o suéltalo en **Importa tu mundo**, donde luego **Construir e instalar**
+**Añadir un paquete** (Construye y edita tu mundo → Paquetes de ligas → **Añadir un paquete...**,
+Archivo → Añadir un paquete de ligas, o suéltalo en **Importa tu mundo**, donde luego **Construir e instalar**
 empieza solo):
 
 1. El programa muestra lo que hay dentro y pregunta. Un paquete de varias ligas las lista, todas

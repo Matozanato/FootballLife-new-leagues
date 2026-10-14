@@ -48,8 +48,8 @@ quando o jogo inicia. Olhe a barra de tarefas: nenhuma janela do Football Life, 
 
 **Você deve ver:** uma janela escura. Em cima: **File, Game, Profiles, Language, Help,
 Credits**, e um botão verde **Play** à direita. Na esquerda: **Home**, depois **YOUR WORLD**
-(**Build your world**, **Import your world**, **Edit your world**, **NewLife Database**),
-**GAME CONTENT**, **TOOLS** e, embaixo, **Settings**.
+(**Build and edit your world**, **Import your world**, **NewLife Database**), **GAME CONTENT**,
+**TOOLS** e, embaixo, **Settings**.
 
 Se o Windows disser "Windows protected your PC": clique em **More info** → **Run anyway**.
 
@@ -122,8 +122,8 @@ campo explicado:
 
 ## Caminho C: um pacote de liga (.fl26pack)
 
-**C1.** Barra da esquerda, em **YOUR WORLD**: clique em **Build your world**, depois na aba
-**League packages**.
+**C1.** Barra da esquerda, em **YOUR WORLD**: clique em **Build and edit your world**, depois na
+aba **League packages**.
 
 **C2.** Clique em **Add a package...** e escolha o arquivo `.fl26pack`. (Ou na barra de cima:
 **File → Add a league package...**.)
@@ -175,8 +175,8 @@ As ligas novas também estão em **Kick Off** → League, e em **Database → Co
 ## Passo 6. Deixe o Mod Studio conferir se funcionou
 
 1. Feche o jogo.
-2. No Mod Studio: **Build your world** → **Step by step, and Export the world** → **4. After a
-   start: check**.
+2. No Mod Studio: **Build and edit your world** → aba **Build** → **Step by step, and Export the
+   world** → **4. After a start: check**.
 
 **Você deve ver:** uma linha por módulo dizendo quantas ligas ele leu do mundo, e no fim
 `the world works as built`. Uma linha dizendo `not loaded` ou `did NOT read the world file`,
@@ -192,7 +192,7 @@ e a última linha `something is wrong -- see the lines above`, dizem o que está
 | Nenhuma liga nova no Select Team | Você começou uma Master League **nova**? Depois **4. After a start: check** ([Passo 6](#passo-6-deixe-o-mod-studio-conferir-se-funcionou)). Se o log dele diz `world file -- 0 leagues`, o seu mundo estava vazio: adicione o pacote de novo (Caminho C) e faça o Build de novo. |
 | O mundo diz que foi montado com `0 leagues, 0 clubs` | O mesmo: o seu mundo não tinha ligas. Adicione algumas antes, depois Build. |
 | `sider.log is older than the world switched on -- start the game to the main menu, then check again` | A conferência rodou antes de você iniciar o jogo. Inicie ele até o menu principal, feche, aperte **4. After a start: check** de novo. |
-| Todos os jogadores novos têm o mesmo rosto | **Home → Install now** (quando a Home diz que os módulos estão faltando ou são mais antigos), ou **Build your world → Step by step, and Export the world → 0. Install the modules**: traz o pacote de rostos. Depois inicie o jogo de novo. |
+| Todos os jogadores novos têm o mesmo rosto | **Home → Install now** (quando a Home diz que os módulos estão faltando ou são mais antigos), ou **Build and edit your world → Build → Step by step, and Export the world → 0. Install the modules**: traz o pacote de rostos. Depois inicie o jogo de novo. |
 | O jogo dá crash ao iniciar | Inicie ele mais uma vez pelo launcher (um crash nos primeiros 10 segundos também acontece sem mods). Se continuar dando crash: **Game → Start the game without mods (safe mode)...** e pergunte no Discord. |
 | Você quer tudo de volta como era | **Import your world** → selecione ele em **In the game now** → **Remove** tira um mundo instalado. **TOOLS → Restore points → Put Sider back as before Mod Studio...** (também no menu **Game**) devolve cada arquivo que o Mod Studio mudou e tira o que ele trouxe. Nada é apagado: fica guardado em `SiderAddons\ModStudio\reset-<time>`, e **Undo the last reset** coloca de volta. |
 

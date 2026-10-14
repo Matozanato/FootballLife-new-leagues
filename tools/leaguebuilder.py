@@ -3438,6 +3438,7 @@ def build(pl, base, game, replace=False, log=print):
 
     import lbplayers
     lbplayers.SQUAD = SQUAD                # a new club's places: the squads Build makes
+    log("  squads: filling them (a big world takes some minutes)")   # 0.2.4: the window says where Build is
     try:
         filled = dict(clubs, players=lbplayers.fill_newlife(clubs, base, log))   # the plan kept as it was
         filled["players"] = lbplayers.fill_tiers(filled, base, log)
@@ -3471,6 +3472,7 @@ def build(pl, base, game, replace=False, log=print):
             log("  squads of %d for %d clubs" % (per, made) + ("" if per == SQUAD else
                 " (%d new clubs: %d players each would pass the %d player records)" % (made, SQUAD, PLAYER_CAP)))
         faces, ids, portraits, picked = [], {}, [], {}
+        log("  players: writing them into the tables")
         try:
             lbplayers.apply(copy.deepcopy(filled), base, db, PLAYER_CAP + made * SQUAD, log, faces,
                             lineups=lineups, ids=ids, portraits=portraits,
@@ -4906,8 +4908,8 @@ def dll_message(problems, dst):
                                      "it" if len(changed) == 1 else "them"))
     text.append("Add the SiderAddons folder (%s) as an exclusion in your antivirus (Windows Security: Virus & "
                 "threat protection > Manage settings > Exclusions > Add or remove exclusions > Add an exclusion "
-                "> Folder), then press Install the modules again (Home > Install now, or Build your world > "
-                "Step by step > 0. Install the modules)." % os.path.dirname(os.path.normpath(dst)))
+                "> Folder), then press Install the modules again (Home > Install now, or Build and edit your "
+                "world > Build > Step by step > 0. Install the modules)." % os.path.dirname(os.path.normpath(dst)))
     return " ".join(text)
 
 

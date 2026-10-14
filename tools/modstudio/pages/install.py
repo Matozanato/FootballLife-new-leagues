@@ -423,7 +423,7 @@ class Install(Page):
             n = len(K.packs(self.app.page("Packages").project.recipe))
         except Exception:
             return ""
-        return (_("League packages in your world: %d (Build your world > League packages)") % n) if n else ""
+        return (_("League packages in your world: %d (Build and edit your world > League packages)") % n) if n else ""
 
     def uninstall(self):
         it = self.done.currentItem()

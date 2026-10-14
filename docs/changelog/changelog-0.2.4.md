@@ -22,10 +22,21 @@ once, and your 0.2.2 career keeps working.
   explain what to do instead: press Play, or switch your own world on first. A world installed
   from a zip and built again on this PC counts as your own from then on.
 
-- **The left bar is by what you want to do.** Home; then YOUR WORLD with **Build your world**
-  (for modders, it says so at the top), **Import your world** (a world zip or a mod, and a league
-  package), **Edit your world** (leagues, clubs, players, kits, stadiums as tabs) and **NewLife
-  Database**; GAME CONTENT and TOOLS fold away; Settings at the bottom.
+- **The left bar is by what you want to do.** Home; then YOUR WORLD with **Build and edit your
+  world** (for modders, it says so at the top), **Import your world** (a world zip or a mod, and
+  a league package) and **NewLife Database**; GAME CONTENT and TOOLS fold away; Settings at the
+  bottom.
+- **Build and edit in one place.** Build and edit your world has the tabs Build, Leagues, Clubs,
+  Players, Kits, Stadiums and League packages, so you build right next to what you changed. Above
+  the tabs, on every tab, a bar shows the open world's name, how many leagues and clubs it has,
+  and **Build and install**.
+- **You see how far Build is.** The Build tab, the bar above the tabs and the bottom bar show the
+  time Build has taken so far and the step it is at (`Building... 3:12 · squads: filling them`),
+  instead of only a blinking "Building...".
+- **Keeping the players' ids from the last Build is much faster on a big world.** Build looked
+  through every squad place of the world again for each player it gave another id
+  (`lbplayers.py`), and a rebuilt Modpack moves thousands. It now finds each player's places
+  once.
 - **Modules in one line, fixed in one click.** Home and Lua modules say whether Mod Studio's
   modules are installed, up to date and switched on; when not, **Install now** puts them right.
   In `sider.ini` Mod Studio's module lines now stand together in one block of their own, with a
@@ -57,13 +68,14 @@ once, and your 0.2.2 career keeps working.
 - **The leagues list goes by country, each country's divisions from the top down.** The game's
   leagues and yours stand together (Bundesliga, 2. Bundesliga, 3. Liga), until you drag one;
   then the list keeps your order as before. A world's order of leagues for Build is not changed.
-- **Open a world takes you to Build your world**, where **Build and install** is, instead of the
-  world's name and file under Edit your world. Above the button the page says which world it
-  builds: its name, how many leagues and clubs, and the file it is kept in.
+- **Open a world takes you to Build and edit your world, tab Build**, where **Build and install**
+  is, instead of a page with only the world's name and file. The bar above the tabs says which
+  world it builds: its name and how many leagues and clubs; the Build tab adds the file it is
+  kept in.
   **New world**, **Open a world...** and **Add leagues** are there too, for a world of your own.
-- **One main button per page.** Build your world shows **Build and install**; the world's
-  options and the single steps with Export the world fold away under **World options** and
-  **Step by step**, and stay open or closed as you left them. League packages is a tab of Build
+- **One main button per page.** The Build tab shows **Build and install**; the world's options
+  and the single steps with Export the world fold away under **World options** and **Step by
+  step**, and stay open or closed as you left them. League packages is a tab of Build and edit
   your world. Players, Clubs, the clubs of a league and NewLife Database keep their main button
   and put the others under **More**; the team id and the crest's file name moved into the
   club's tooltip.
@@ -225,6 +237,12 @@ once, and your 0.2.2 career keeps working.
   shipped) and stops with a message that names the file and says to add `SiderAddons` as an
   exclusion in the antivirus and install again; Home, Diagnostics and *4. Check* say the same
   while a DLL a switched-on module needs is missing. FAQ. Thanks bikolunar42.
+
+- **Mod Studio went "Not Responding" while a big world built.** Opening another tab during Build
+  (the Modpack: League packages, then back to Build) froze the window until Build was over.
+  Build now runs in a process of its own, and the window stays free while it works.
+- **Pages were cut off with Windows display scaling at 125 % or 150 %, or in a small window**:
+  the buttons were squeezed to a line. Every page now scrolls when it is taller than the window.
 
 ## Read this first
 

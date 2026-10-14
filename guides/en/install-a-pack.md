@@ -44,8 +44,8 @@ starts. Check the taskbar: no Football Life window, no launcher.
 
 **You should see:** a dark window. Along the top: **File, Game, Profiles, Language, Help,
 Credits**, and a green **Play** button on the right. Down the left: **Home**, then **YOUR WORLD**
-(**Build your world**, **Import your world**, **Edit your world**, **NewLife Database**), **GAME
-CONTENT**, **TOOLS** and, at the bottom, **Settings**.
+(**Build and edit your world**, **Import your world**, **NewLife Database**), **GAME CONTENT**,
+**TOOLS** and, at the bottom, **Settings**.
 
 If Windows says "Windows protected your PC": click **More info** → **Run anyway**.
 
@@ -115,8 +115,8 @@ its own, with every field explained:
 
 ## Way C: a league package (.fl26pack)
 
-**C1.** Left bar, under **YOUR WORLD**: click **Build your world**, then the tab **League
-packages**.
+**C1.** Left bar, under **YOUR WORLD**: click **Build and edit your world**, then the tab
+**League packages**.
 
 **C2.** Click **Add a package...** and pick the `.fl26pack` file. (Or top bar: **File → Add a
 league package...**.)
@@ -166,8 +166,8 @@ The new leagues are also in **Kick Off** → League, and in **Database → Compe
 ## Step 6. Let Mod Studio check that it worked
 
 1. Close the game.
-2. In Mod Studio: **Build your world** → **Step by step, and Export the world** → **4. After a
-   start: check**.
+2. In Mod Studio: **Build and edit your world** → tab **Build** → **Step by step, and Export the
+   world** → **4. After a start: check**.
 
 **You should see:** one line per module saying how many leagues it read from the world, and at
 the end `the world works as built`. A line saying `not loaded` or `did NOT read the world file`,
@@ -183,7 +183,7 @@ and the last line `something is wrong -- see the lines above`, tell you what is 
 | No new leagues at Select Team | Did you start a **new** Master League? Then **4. After a start: check** ([Step 6](#step-6-let-mod-studio-check-that-it-worked)). If its log says `world file -- 0 leagues`, your world was empty: add the package again (Way C) and build again. |
 | The world says it was built with `0 leagues, 0 clubs` | Same: your world had no leagues. Add some first, then Build. |
 | `sider.log is older than the world switched on -- start the game to the main menu, then check again` | The check ran before you started the game. Start it to the main menu, close it, press **4. After a start: check** again. |
-| All new players have the same face | **Home → Install now** (when Home says the modules are missing or older), or **Build your world → Step by step, and Export the world → 0. Install the modules**: it brings the face pack. Then start the game again. |
+| All new players have the same face | **Home → Install now** (when Home says the modules are missing or older), or **Build and edit your world → Build → Step by step, and Export the world → 0. Install the modules**: it brings the face pack. Then start the game again. |
 | The game crashes at start | Start it once more through the launcher (a crash in the first 10 seconds also happens without mods). If it keeps crashing: **Game → Start the game without mods (safe mode)...** and ask on Discord. |
 | You want everything back as it was | **Import your world** → select it under **In the game now** → **Remove** takes out an installed world. **TOOLS → Restore points → Put Sider back as before Mod Studio...** (also in the **Game** menu) puts back every file Mod Studio changed and takes out what it brought. Nothing is deleted: it is kept in `SiderAddons\ModStudio\reset-<time>`, and **Undo the last reset** puts it back. |
 

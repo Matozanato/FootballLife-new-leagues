@@ -1293,6 +1293,7 @@
   "Build your world": "Izgradi svoj svijet",
   "Import your world": "Uvezi svijet",
   "Edit your world": "Uredi svoj svijet",
+  "Build and edit your world": "Izgradi i uredi svoj svijet",
   "SETTINGS": "POSTAVKE",
   "A world or a mod (.zip)": "Svijet ili mod (.zip)",
   "A league package (.fl26pack)": "Paket liga (.fl26pack)",
@@ -1366,7 +1367,7 @@
   "Install puts it in the game and switches it on, with Mod Studio's modules. No Build needed.": "Instaliraj ga stavlja u igru i uključuje, s modulima Mod Studija. Build ne treba.",
   "Install the world": "Instaliraj svijet",
   "Its leagues are in your world now. Build and install puts them in the game.": "Njegove lige su sad u tvom svijetu. Izgradi i instaliraj ih stavlja u igru.",
-  "League packages in your world: %d (Build your world > League packages)": "Paketi liga u tvom svijetu: %d (Izgradi svoj svijet > Paketi liga)",
+  "League packages in your world: %d (Build and edit your world > League packages)": "Paketi liga u tvom svijetu: %d (Izgradi i uredi svoj svijet > Paketi liga)",
   "Mod Studio already runs as administrator: the folder or a file in it is read-only, or another program (an antivirus, the game) holds it.": "Mod Studio već radi kao administrator: mapa ili datoteka u njoj je samo za čitanje, ili je drži drugi program (antivirus, igra).",
   "Mod Studio could not start itself as administrator. Close it, right-click FL26ModStudio.exe and choose Run as administrator.": "Mod Studio se nije uspio pokrenuti kao administrator. Zatvori ga, desni klik na FL26ModStudio.exe i odaberi Run as administrator.",
   "Mod Studio has %s open": "Mod Studio ima otvoren %s",
@@ -1434,7 +1435,7 @@
   "The new clubs of the world in the game": "Novi klubovi svijeta u igri",
   "%d worlds are in the game; only one should be": "U igri je %d svjetova; treba biti samo jedan",
   "This changes the world in the game.": "Ovo mijenja svijet u igri.",
-  "For modders. Build your world makes a world of your own from your leagues, clubs and players. To play a ready modpack you do not need it: Import your world, then Play.": "Za moddere. Izgradi svoj svijet radi vlastiti svijet od tvojih liga, klubova i igrača. Za igranje gotovog modpacka ne treba ti: Uvezi svijet, pa Play.",
+  "For modders. Build and edit your world makes a world of your own from your leagues, clubs and players. To play a ready modpack you do not need it: Import your world, then Play.": "Za moddere. Izgradi i uredi svoj svijet radi vlastiti svijet od tvojih liga, klubova i igrača. Za igranje gotovog modpacka ne treba ti: Uvezi svijet, pa Play.",
   "IN THE GAME NOW": "U IGRI SADA",
   "Packs installed here": "Paketa instalirano ovdje",
   "Team ID: %s": "ID kluba: %s",
@@ -1467,7 +1468,7 @@
   "a ready world: it goes in the game, its world file goes to modules\\fl26world.txt": "gotov svijet: ide u igru, a njegova datoteka svijeta ide u modules\\fl26world.txt",
   "Gives many clubs their kits at once. Pick a folder of ready kit-server kits: one folder per club, holding p1, p2, g1 ... and order.ini, named after the club (\"Dinamo Zagreb\") or its team ID (\"2215\").\n\nA club folder can also hold plain kit pictures instead: p1.png, p2.png ... for the kits and g1.png for the goalkeeper (2048 x 2048 is best; .jpg and .dds work too). Mod Studio turns them into kit-server kits; the back numbers, leg numbers and name font come from the kit picked in \"Numbers and names from\". The picture conversion is Xxspedd's.\n\nUntick a wrong match before OK. The kits are copied into the kit-server library and get a line in map.txt; press Save on the Kits page to write it. A club that already has a line keeps it unless \"Replace kits already set\" is ticked.\n\nThe kits of a new club of your world go by the team ID Build gave it, so Build and install first.": "Daje dresove mnogim klubovima odjednom. Odaberi mapu s gotovim kit-server dresovima: jedna mapa po klubu, s p1, p2, g1 ... i order.ini, nazvana po klubu (\"Dinamo Zagreb\") ili po njegovom ID-u (\"2215\").\n\nMapa kluba može umjesto toga imati i obične slike dresova: p1.png, p2.png ... za dresove i g1.png za golmana (najbolje 2048 x 2048; rade i .jpg i .dds). Mod Studio od njih napravi kit-server dresove; brojevi na leđima, brojevi na hlačicama i font imena uzimaju se iz dresa odabranog u \"Brojevi i imena iz\". Pretvorbu slika napravio je Xxspedd.\n\nPrije OK makni kvačicu s krivog spajanja. Dresovi se kopiraju u kit-server knjižnicu i dobiju red u map.txt; pritisni Save na stranici Kits da se zapiše. Klub koji već ima red zadržava ga, osim ako je uključeno \"Zamijeni već postavljene dresove\".\n\nDresovi novog kluba tvog svijeta idu po ID-u koji mu je dao Build, zato prvo napravi Izgradi i instaliraj.",
   "Cups, super cups and the continental competitions of the game, and the continental cups Mod Studio makes. Leagues are renamed on Game's leagues and clubs. Empty name: the game's own.": "Kupovi, superkupovi i kontinentalna natjecanja iz igre, i kontinentalni kupovi koje radi Mod Studio. Lige se preimenuju na stranici Game's leagues and clubs. Prazno ime: ono iz igre.",
-  "Share leagues: make a package of your leagues for other people, or add somebody's package to your world. Added leagues show up on every page of Edit your world; Build and install puts them in the game.": "Dijeli lige: napravi paket svojih liga za druge ili dodaj nečiji paket u svoj svijet. Dodane lige vide se na svim stranicama Uredi svoj svijet; Izgradi i instaliraj stavlja ih u igru.",
+  "Share leagues: make a package of your leagues for other people, or add somebody's package to your world. Added leagues show up on every tab of Build and edit your world; Build and install puts them in the game.": "Dijeli lige: napravi paket svojih liga za druge ili dodaj nečiji paket u svoj svijet. Dodane lige vide se na svim karticama Izgradi i uredi svoj svijet; Izgradi i instaliraj stavlja ih u igru.",
   "Mod Studio's modules go off: worlds of yours may stop working.": "Gase se moduli Mod Studija: tvoji svjetovi možda prestanu raditi.",
   "Copy Mod Studio's modules into %s and load them from sider.ini? Files it replaces are kept in a before-builder folder next to them.": "Kopirati module Mod Studija u %s i učitati ih iz sider.ini? Datoteke koje zamijene čuvaju se u mapi before-builder pokraj njih.",
   "In the game now": "U igri sada",
@@ -1482,7 +1483,7 @@
   "File: Mod Studio's copy from the last Build (%s)": "Datoteka: kopija Mod Studija od zadnjeg Builda (%s)",
   "File: not saved yet": "Datoteka: još nije spremljeno",
   "Add leagues": "Dodaj lige",
-  "A world of your own: New world, then add its leagues under Edit your world. Build and install puts it in the game.": "Vlastiti svijet: New world, pa dodaj lige pod Edit your world. Build and install ga stavlja u igru."
+  "A world of your own: New world, then add its leagues on the Leagues tab. Build and install puts it in the game.": "Vlastiti svijet: New world, pa dodaj lige na kartici Leagues. Build and install ga stavlja u igru."
  },
  "log": [
   [

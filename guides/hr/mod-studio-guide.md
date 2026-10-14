@@ -86,11 +86,11 @@ Popis s lijeve strane počinje s **Home**, pa tri skupine, a **Postavke** su skr
 
 | Skupina | Stranice |
 |---|---|
-| **Tvoj svijet** | Izgradi svoj svijet (kartice Build, Paketi liga), Uvezi svijet, Uredi svoj svijet (kartice Lige, Klubovi, Igrači, Dresovi, Stadioni), NewLife Database |
+| **Tvoj svijet** | Izgradi i uredi svoj svijet (kartice Build, Lige, Klubovi, Igrači, Dresovi, Stadioni, Paketi liga), Uvezi svijet, NewLife Database |
 | **Sadržaj igre** | Lopte, Komentar, Glazba, Ostali sadržaj |
 | **Alati** | Lua moduli, Mape sadržaja, Profili, Točke vraćanja, Dijagnostika |
 
-**Lige** (Uredi svoj svijet) nabraja sve lige po kontinentima, one iz igre i tvoje (filtri **All**, **Ours**,
+**Lige** (Izgradi i uredi svoj svijet) nabraja sve lige po kontinentima, one iz igre i tvoje (filtri **All**, **Ours**,
 **Changed** i polje za traženje). Odaberi jednu: tvoja liga ima **Uredi ligu...**, **Dodaj nižu
 ligu**, **Klubovi i imena**, **Igrači** i **Remove**; liga iz igre ima svoje ime, logo i klubove
 (poglavlje 8, "Lige iz igre"). **Add league** napravi novu. **Više ▾** ima **Predsezonski turniri**,
@@ -275,7 +275,7 @@ mjesto u Libertadoresu ili Sudamericani.
 klubove ligaške faze Lige prvaka, Europske lige i Konferencijske lige u prvoj sezoni nove karijere.
 Tvoji klubovi ulaze prvi, a igra popuni ostalo; od druge sezone odlučuju europska mjesta.
 
-**Klubovi** (kartica Uredi svoj svijet): odaberi ligu, pa **Uredi klub** (ime, kratko ime, grb), ili **Više ▾ → Paste
+**Klubovi** (kartica Izgradi i uredi svoj svijet): odaberi ligu, pa **Uredi klub** (ime, kratko ime, grb), ili **Više ▾ → Paste
 names...** / **Load names from file...** (isti izbornik ima **Umetni klub**, **Makni klub**, **Novi
 klub ovdje**, **Premjesti u drugu ligu...** i **Uvezi grbove...**). Prazno ime postaje `<liga> 01`, `<liga> 02` ...; klub bez
 grba dobije grb s brojem. Dresovi se posude od klubova iz igre. Takav dres je licenciran i Edit
@@ -422,9 +422,11 @@ svejedno vidi. Mapa s više faca unutra se odbija: odaberi točno onu jednu koju
 
 **Zadrži vlastiti Team.bin svijeta.** On je u mapi svijeta i drži klubove i doigravanja svijeta. Zamijeniš li ga Team.bin-om iz igre, i jedno i drugo nestane, a sastavi izgledaju popravljeni samo zato što klubova više nema (GitHub #75). Radije svijet sagradi ponovno.
 
-**Izgradi i instaliraj** (Izgradi svoj svijet, i na Home) napravi 0, 2 i 3 odozdo jednim klikom, pa
+**Izgradi i instaliraj** (Izgradi i uredi svoj svijet, i na Home) napravi 0, 2 i 3 odozdo jednim klikom, pa
 pokaže što je ostalo: prozor **Build gotov** koji može i **Makni Edit save u stranu** i **Zatvori
-igru**. Ili korak po korak, pod **Korak po korak i Izvezi svijet** na kartici **Build**:
+igru**. Na Izgradi i uredi svoj svijet gumb je i u traci iznad kartica, na svakoj kartici, uz ime
+otvorenog svijeta i broj liga i klubova; dok se svijet gradi, ta traka i donja traka pokazuju koliko
+traje i na kojem je koraku (`Gradim... 3:12 · squads: filling them`). Ili korak po korak, pod **Korak po korak i Izvezi svijet** na kartici **Build**:
 
 0. **Postavi module** — jednom, i opet nakon nove verzije programa. Datoteke koje zamijeni
    čuvaju se u `SiderAddons\modules\before-builder-1\`.
@@ -591,7 +593,7 @@ više njih), plus *Free agents*, svaki manji od 10 MB. Preuzmi samo dijelove koj
 Moder napravi ligu jednom — klubove, imena, grbove, logotipe, momčadi, face — i podijeli **jednu
 datoteku `.fl26pack`**. Svatko je doda u svoj svijet i izgradi.
 
-**Napravi paket** (Izgradi svoj svijet → Paketi liga → **Napravi paket...**, ili Datoteka → Napravi paket liga...):
+**Napravi paket** (Izgradi i uredi svoj svijet → Paketi liga → **Napravi paket...**, ili Datoteka → Napravi paket liga...):
 
 1. Ime, autor, verzija i kratak opis.
 2. Označi lige koje idu unutra (**Označi sve** / **Odznači sve** iznad popisa). Liga ispod
@@ -610,8 +612,8 @@ datoteku `.fl26pack`**. Svatko je doda u svoj svijet i izgradi.
    Dresovi dodaju oko 10 MB po ligi, a scoreboard oko 7 MB, pa je takav paket često preko Discordovog
    limita od 10 MB: podijeli ga preko cloud servisa (Google Drive, Dropbox, MEGA ...); program to javi.
 
-**Dodaj paket** (Izgradi svoj svijet → Paketi liga → **Dodaj paket...**, Datoteka → Dodaj paket
-liga..., ili ga ispusti na **Uvezi svijet**, gdje onda sam krene **Izgradi i instaliraj**):
+**Dodaj paket** (Izgradi i uredi svoj svijet → Paketi liga → **Dodaj paket...**, Datoteka → Dodaj
+paket liga..., ili ga ispusti na **Uvezi svijet**, gdje onda sam krene **Izgradi i instaliraj**):
 
 1. Program pokaže što je unutra i pita. Paket s više liga ih nabroji, sve označene: odznači one koje
    ne želiš (0.2.1). Liga ispod druge lige iz paketa povlači i tu ligu. Pod Što uzeti možeš odznačiti

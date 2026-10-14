@@ -89,9 +89,11 @@ def page_groups():
 NAV = [
     ("", False, [("Overview", "Home", ["Overview"])]),
     ("YOUR WORLD", False, [
-        ("BuildWorld", "Build your world", ["Build", "Packages"]),
+        # 0.2.4: one section, Build a tab next to what it builds (exe test 15.10.: "no sense editing
+        # in one tab and building in another"); the bar above the tabs has Build and install
+        ("World", "Build and edit your world", ["Build", "Leagues", "NewClubs", "Players", "Kits", "Stadiums",
+                                                "Packages"]),
         ("ImportWorld", "Import your world", ["Install"]),
-        ("EditWorld", "Edit your world", ["Leagues", "NewClubs", "Players", "Kits", "Stadiums"]),
         ("NewLife", "NewLife Database", ["NewLife"]),
     ]),
     ("GAME CONTENT", True, [(n, None, [n]) for n in ("Balls", "Commentary", "Music", "Servers")]),
@@ -100,7 +102,7 @@ NAV = [
 ]
 TAB_TITLE = {"Build": "Build", "Packages": "League packages",
              "NewClubs": "Clubs"}
-OPEN_FOR = {"NewLeagues": "EditWorld"}     # a page not in the bar: the section that stays lit
+OPEN_FOR = {"NewLeagues": "World"}     # a page not in the bar: the section that stays lit
 
 
 class Main(QMainWindow):
@@ -395,13 +397,26 @@ class Main(QMainWindow):
         """the stack: a section of one page is the page, one of more holds its pages as tabs"""
         from PySide6.QtWidgets import QTabWidget
         self.section_of, self.section_tabs = {}, {}
+        # 0.2.4: every page in a scroll area of its own (exe test 15.10., Windows at 125/150 %: a
+        # page taller than the window had its buttons squeezed to a line; now it scrolls)
+        self.holder_of = {}
+
+        def held(name):
+            sa = QScrollArea()
+            sa.setWidgetResizable(True)
+            sa.setFrameShape(QScrollArea.NoFrame)
+            sa.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            sa.setStyleSheet("QScrollArea { background: transparent; }")
+            sa.setWidget(self.pages[name])
+            self.holder_of[name] = sa
+            return sa
         placed = set()
         for _caption, _folds, sections in NAV:
             for key, _title, names in sections:
                 for n in names:
                     self.section_of[n] = key
                 if len(names) == 1:
-                    self.stack.addWidget(self.pages[names[0]])
+                    self.stack.addWidget(held(names[0]))
                     placed.add(names[0])
                     continue
                 holder = QWidget()
@@ -414,16 +429,69 @@ class Main(QMainWindow):
                 tabs.setObjectName("sectiontabs")
                 tabs.setDocumentMode(True)
                 for n in names:
-                    tabs.addTab(self.pages[n], _(TAB_TITLE.get(n) or self.pages[n].title))
+                    tabs.addTab(held(n), _(TAB_TITLE.get(n) or self.pages[n].title))
                     placed.add(n)
                 tabs.currentChanged.connect(lambda _i, t=tabs: self.open_page(
-                    next(k for k, p in self.pages.items() if p is t.currentWidget())))
+                    next(k for k, h in self.holder_of.items() if h is t.currentWidget())))
+                if key == "World":
+                    hv.addWidget(self._world_bar(holder))
                 hv.addWidget(tabs)
                 self.section_tabs[key] = tabs
                 self.stack.addWidget(holder)
         for n, p in self.pages.items():
             if n not in placed:
-                self.stack.addWidget(p)
+                self.stack.addWidget(held(n))
+
+    def _world_bar(self, holder):
+        """above the tabs of Build and edit your world: the open world and Build and install, on
+        every tab; while it builds, the time so far and the step it is at"""
+        from PySide6.QtWidgets import QFrame
+        bar = QFrame()
+        bar.setObjectName("card")
+        h = QHBoxLayout(bar)
+        h.setContentsMargins(14, 8, 10, 8)
+        h.setSpacing(12)
+        self.wb_name = QLabel()
+        self.wb_name.setTextFormat(Qt.RichText)
+        h.addWidget(self.wb_name)
+        self.wb_state = QLabel()
+        self.wb_state.setStyleSheet("color: %s;" % theme.ACCENT)
+        h.addWidget(self.wb_state, 1)
+        self.wb_build = QPushButton(_("Build and install"))
+        self.wb_build.setObjectName("primary")
+        self.wb_build.setToolTip(_("Installs the modules, builds the world, switches it on and says what is left"))
+        self.wb_build.clicked.connect(self._world_build)
+        h.addWidget(self.wb_build)
+        self._wb_holder = holder
+        t = QTimer(self, interval=1500, timeout=lambda: holder.isVisible() and self.update_world_bar())
+        t.start()
+        wrap = QWidget()
+        v = QVBoxLayout(wrap)
+        v.setContentsMargins(0, 0, 0, 8)
+        v.addWidget(bar)
+        return wrap
+
+    def _world_build(self):
+        self.open_page("Build")
+        self.page("Build").build_all()
+
+    def update_world_bar(self, progress=None):
+        """the world bar now: progress is the build's time and step ("" when it is over)"""
+        if not hasattr(self, "wb_name"):
+            return
+        import html
+        r = self.project.recipe
+        n = len(r.get("leagues") or [])
+        clubs = sum(int(L.get("clubs") or 0) for L in r.get("leagues") or [])
+        self.wb_name.setText("<b>%s</b>&nbsp;&nbsp;&nbsp;%s" % (
+            html.escape(_("Your world: %s") % (r.get("world") or "")), html.escape(_("%d leagues, %d clubs") % (n, clubs))))
+        if progress is not None:
+            self.wb_state.setText(progress)
+        b = self.pages.get("Build")
+        if b is not None and hasattr(b, "b_all"):
+            self.wb_build.setEnabled(b.b_all.isEnabled())
+            self.wb_build.setToolTip(b.b_all.toolTip() or _("Installs the modules, builds the world, switches it "
+                                                            "on and says what is left"))
 
     # ---- pages ----
     def page(self, name):
@@ -435,12 +503,12 @@ class Main(QMainWindow):
         tabs = self.section_tabs.get(key) if name in self.section_of else None
         if tabs is not None:
             self.stack.setCurrentWidget(tabs.parentWidget())
-            if tabs.currentWidget() is not p:
+            if tabs.currentWidget() is not self.holder_of[name]:
                 tabs.blockSignals(True)
-                tabs.setCurrentWidget(p)
+                tabs.setCurrentWidget(self.holder_of[name])
                 tabs.blockSignals(False)
         else:
-            self.stack.setCurrentWidget(p)
+            self.stack.setCurrentWidget(self.holder_of[name])
         b = self.nav_buttons.get(key)
         if b:
             group = self.nav_group_of.get(key)
@@ -448,6 +516,8 @@ class Main(QMainWindow):
                 self.fold(group, True)
             b.setChecked(True)
         self.settings["page"] = name
+        if key == "World":
+            self.update_world_bar()
         try:
             p.shown()
         except Exception as e:
@@ -768,6 +838,9 @@ def denied_hook(previous):
 
 
 def main():
+    # 0.2.4: Build runs in a thread of this process; the window gets its turn every millisecond
+    # instead of every five, so it keeps answering while a big world builds (exe test 15.10.)
+    sys.setswitchinterval(0.001)
     if sys.platform == "win32":
         try:
             import ctypes

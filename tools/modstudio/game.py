@@ -4,7 +4,7 @@ A Game is the folder that holds FL_2026.exe.  Everything else is found from ther
 the Sider folder (sider.exe, sider.ini, modules, content, livecpk; SiderAddons or any folder
 that holds a sider.ini, see siderdir) and the save folder.
 """
-import os, subprocess
+import os, subprocess, time
 
 import siderdir
 
@@ -49,7 +49,15 @@ class Game:
 
     @property
     def sider_dir(self):
-        return siderdir.find(self.folder)
+        # 0.2.4: kept for two seconds -- every look lists the game folder and the one below, and
+        # a page asks many times over; while Build ran in its thread each look waited for it,
+        # and the window stopped answering (exe test 15.10., Build tab -> League packages -> back)
+        key = (self.folder, siderdir.PREFERRED)
+        now = time.monotonic()
+        got = getattr(self, "_sider", None)
+        if got is None or got[0] != key or now - got[1] > 2:
+            got = self._sider = (key, now, siderdir.find(self.folder))
+        return got[2]
 
     @property
     def ini_path(self):
