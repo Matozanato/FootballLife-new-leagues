@@ -26,7 +26,7 @@ bits in the player record at +0x148 according to the flags:
 
 The lookup returns 0 when the handle names a player who is not in Player.bin, and the
 first "or" then writes to address 0x148: access violation at 0x140f325a4.  Seen four times on
-14.10.2026 (dumps in D:\dev\fl26-dumps): team index 11 (Aston Villa, team 107), player
+14.10.2026 (four crash dumps): team index 11 (Aston Villa, team 107), player
 213663 -- a player the previous world had and the rebuilt one numbers differently.  The
 squad list that still names him is not in the world's tables (all seven, scanned) but in
 the game's own saved state, so a player who installs a rebuilt world over an older one
