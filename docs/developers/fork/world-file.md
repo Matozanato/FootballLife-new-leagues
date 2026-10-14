@@ -68,7 +68,7 @@ the line. The keys `fl26world.KEYS` knows are:
 | `clubs`, `legs` | league size and how often clubs meet | fl26swiss (calendar) |
 | `cup` | the country cup this line governs (see below) | fl26chain, fl26swiss |
 | `cupall`, `cuptop`, `cuplow`, `cupn` | the cup takes both divisions / top division / lower division / at most n clubs (#32, #74) | fl26chain |
-| `scup` | the country's super cup (#29) | fl26chain |
+| `scup` | the country's super cup (#29). On a top division's line in a February-December region it is also the league's own super cup, which fl26joindll adds to the New Year season and fl26swiss fills with this league's champion v the `cup=` winner; on a division's line (`above=`) only fl26chain reads it | fl26chain, fl26joindll, fl26swiss |
 | `exhibition` | 1 = Kick Off only, never registered in a season | fl26joindll, fl26seasonend |
 | `kickoff` | the slot this league follows in the Kick Off / Edit lists | fl26comptab |
 

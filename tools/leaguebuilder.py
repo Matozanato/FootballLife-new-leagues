@@ -2842,8 +2842,13 @@ def describe(pl):
                 ", not all %d of the two divisions: the cup screens draw only some field sizes" % total
                 if c["clubs"] < total else ""))
             if c.get("super"):
-                lines.append("  %s: super cup, the champion v the cup winner (its date follows %s)"
-                             % (c["super"], SUPER_CUP_LIKE))
+                # a February-December country's is dated as dates_lines dates it: the Japanese
+                # super cup's records moved to the end of January, after the season
+                lines.append("  %s: super cup, the champion v the cup winner (%s)" % (
+                    c["super"], "at the end of January, after the February-December season: dated as %s, day %s"
+                    % (CALENDAR_SUPER_DATE_LIKE, ",".join(map(str, CALENDAR_SUPER_DATE_DAYS)))
+                    if p.get("calendar") or p.get("follows_calendar")
+                    else "its date follows %s" % SUPER_CUP_LIKE))
     for cup in pl.get("ccups") or []:
         if cup.get("kind") == "super":
             lines.append("  %s: the winners of the CAF Champions League and the Confederation Cup, one "

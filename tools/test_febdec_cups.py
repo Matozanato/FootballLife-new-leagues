@@ -35,6 +35,16 @@ def main(base):
     assert p.get("own_cup", {}).get("super"), "super cup was not planned"
     print("accepted: February-December + national cup + super cup")
 
+    # 2b. Build's summary dates it as dates_lines() does: the end of January (JAPAN_SUPER_CUP,
+    #     day 30), not "follows BELGIUM_SUPER_CUP" (the August-May one's)
+    text = [l for l in B.describe(pl).splitlines() if "super cup, the champion" in l]
+    assert len(text) == 1 and B.CALENDAR_SUPER_DATE_LIKE in text[0] and "end of January" in text[0]         and B.SUPER_CUP_LIKE not in text[0], text
+    aug = recipe(cup=True, supercup=True)
+    aug["leagues"][0].pop("season")
+    text = [l for l in B.describe(B.plan(aug, base)).splitlines() if "super cup, the champion" in l]
+    assert len(text) == 1 and "follows %s" % B.SUPER_CUP_LIKE in text[0], text
+    print("summary: February-December super cup at the end of January, August-May as before")
+
     # 3. League cup remains unsupported for February-December countries.
     try:
         B.plan(recipe(league_cup=True), base)

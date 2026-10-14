@@ -717,7 +717,11 @@ function m.init(ctx)
         local c = r ~= nil and (seasons[r] ~= nil and seasons[r] == 1 or seasons[r] == nil and CAL_REGIONS[r] == true)
         if c then
           cal[#cal + 1] = L.id
-          if L.scup and L.scup > 0 and L.cup1 and L.cup1 > 0 and not scseen[L.scup] then
+          -- a top division's line only: a division under a league (above=) carries the
+          -- region's super cup as scup= for fl26chain (GitHub #29), and taken here it made the
+          -- champion of a new J2 under the J.League play the Japanese super cup
+          if (L.above == nil or L.above == 0) and L.scup and L.scup > 0 and L.cup1 and L.cup1 > 0
+              and not scseen[L.scup] then
             scups[#scups + 1] = { L.scup, L.id, L.cup1 }
             scseen[L.scup] = true
           end

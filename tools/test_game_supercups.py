@@ -134,7 +134,46 @@ def main(base):
     # 6. no new league: fl26joindll does not install, so Build says the January one is not played
     text = B.describe(pl)
     assert "NOTE:" in text and "at least one new league" in text, text
+
+    # 7. a new J2 under the J.League: its line carries the region's super cup (scup=97, for
+    #    fl26chain) and cup=55, but fl26swiss takes a calendar super cup's league only from a top
+    #    division's line -- else the Japanese super cup got the J2 champion
+    j2 = B.plan({"world": "_TestJ2", "leagues": [{"name": "J2 Test", "country": "Japan", "clubs": 12,
+                                                    "legs": 2, "above": 52}]}, base)["leagues"][0]
+    assert (j2["above"], j2.get("scup"), j2.get("cup"), j2["region"]) == (52, 97, 55, 24), j2
+    cond = re.search(r"if ([^\n]*(?:\n[^\n]*?)?) then\s*\n\s*scups\[#scups \+ 1\] = \{ L\.scup, L\.id, L\.cup1 \}",
+                     swiss)
+    assert cond and re.search(r"\(L\.above == nil or L\.above == 0\)|not L\.above", cond.group(1)), \
+        "fl26swiss takes a division's line for a calendar super cup: %r" % (cond and cond.group(1))
+    lines = [{"id": j2["rid"], "region": 24, "above": 52, "cup": 55, "cup1": 55, "scup": 97},
+             {"id": 200, "region": 18, "cup": 301, "cup1": 301, "scup": 302}]
+    got = run_scups(swiss, lines)
+    if got is None:
+        print("J2 under the J.League: guard present (no Lua runtime here: pip install lupa to run it)")
+    else:
+        assert got == [[302, 200, 301]], got
+        print("J2 under the J.League: fl26swiss's calendar super cups", got)
     print("all passed")
+
+
+def run_scups(swiss, leagues):
+    """fl26swiss.lua's calendar super cup list for these league lines, run in LuaJIT when lupa is
+    there (None when it is not); no gsuper lines, every region's season the shipped one"""
+    try:
+        from lupa import luajit21 as lj
+    except ImportError:
+        try:
+            from lupa import lua54 as lj
+        except ImportError:
+            return None
+    blk = re.search(r"      local CAL_REGIONS = .*?(?=      local pc = ffi)", swiss, re.S).group(0)
+    lua = lj.LuaRuntime()
+    f = lua.execute("local function world_seasons(ctx) return {} end\n"
+                    "local function world_gsupers(ctx) return {} end\n"
+                    "return function(ctx, world)\n" + blk + "\nreturn scups end")
+    world = lua.table_from([lua.table_from(L) for L in leagues])
+    out = f(lua.table_from({}), world)
+    return [[out[i][k] for k in (1, 2, 3)] for i in range(1, len(out) + 1)]
 
 
 if __name__ == "__main__":
