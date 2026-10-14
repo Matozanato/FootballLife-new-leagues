@@ -502,6 +502,28 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-14 (next update, Discord, thanks Yanis): **With a database mod that moves the game's
+  leagues around (UML 2026 v3: Ligue 1 where the Russian Premier Liga was), Mod Studio took a
+  game league's country from its regulation id, and NewLife's "in the game" from the plain
+  game's clubs.** Settings pointed at the mod's own tables (**Use another tables folder**), but
+  the UEFA ranking listed the league in the Russian slot as Russia (and left it out, as Russia
+  is by default), the July starts and the Kick Off order (League order) went by the slot's
+  country too, and the NewLife Database counted a club as one of the game's whenever the plain
+  game has its id -- so a NewLife league whose clubs the mod left out or gave other clubs' ids
+  (the Russian league, Ligue 2) was either grey as "the game's own league" or too small to add.
+  A game league's country is now the one most of the clubs the tables enter in it are of
+  (Competition.bin has no country, only the menu region of the slot), and a NewLife club is in
+  the game only when the tables have a club under its id that is the same club (the release's
+  country, or failing that its name); the others become new clubs. With the game's own tables
+  every answer is what it was: `tools/test_moved_leagues.py` compares the old and new code on
+  the plain tables (13 UEFA-key leagues, 7 July starts, the Kick Off order, NewLife 1.4.2, 1.5
+  and 1.5b1 with the same 571 clubs in the game), then swaps the entries of Ligue 1 and the
+  Russian league and gives the Russian clubs' ids away; it fails on 0.2.3 and passes now.
+  Checked without the game and without UML's own files. Still by slot: the menu region headings
+  (the exe draws them), the Kick Off slots, *Seasons of the game's leagues* (by region) and the
+  shipped European access list. Until the update: in **UEFA ranking** tick the league shown as
+  Russia and drag it to France's place (its name is right, only the country in brackets is
+  not); there is no way round the NewLife part in 0.2.3 except making that league by hand.
 - 2026-10-14 (next update, Discord, thanks pepponeee98): **Build switched off the kit lines you
   set yourself for the clubs of a league package with kits** ("(switched off by FL26 Mod Studio)"
   on his Serie C clubs, and a line of Mod Studio's to `<world>\Italian Serie C Girone C\<club>`

@@ -83,10 +83,35 @@ DEFAULT_ORDER = [
 ]
 OUT_BY_DEFAULT = {"Russia"}      # in the game, suspended by UEFA: unticked until the modder ticks it
 
-# the game's own top divisions in UEFA countries (regulation -> country)
+# the game's own top divisions in UEFA countries as the game ships them (regulation -> country).
+# What a regulation holds is read from the tables in use (game_countries): this is only the
+# answer for a league whose clubs name no country
 GAME_LEAGUES = {17: "England", 18: "Italy", 19: "Spain", 20: "France", 21: "Netherlands",
                 22: "Portugal", 50: "Germany", 115: "Belgium", 116: "Russia", 117: "Greece",
                 118: "Turkey", 133: "Scotland", 141: "Denmark"}
+
+
+def game_countries(base):
+    """{regulation: country} of the game's top divisions in a UEFA country, read from the tables
+    in use: a top division's country is the one most of its clubs are of
+    (leaguebuilder.game_league_countries), and it is here when that country is in UEFA. A
+    database mod moves leagues into other leagues' places -- UML 2026 v3 has Ligue 1 where the
+    Russian Premier Liga was -- and the regulation ids alone (GAME_LEAGUES) showed it as Russia,
+    left it out as Russia is, and gave France's place in the key to whatever sat in Ligue 1's
+    slot (Yanis, 14.10.). The game's own tables give GAME_LEAGUES exactly."""
+    import leaguebuilder as B
+    countries = B.game_league_countries(base)
+    conf = B.country_confederations(base)
+    out = {}
+    for rid, _name, _clubs, _shipped in B.game_europe_tops(base):
+        c = countries.get(rid)
+        if c is None:
+            c = GAME_LEAGUES.get(rid)      # no club with a country: as the game ships it
+        elif conf.get(c) != 2 and not (c not in conf and c == GAME_LEAGUES.get(rid)):
+            c = None
+        if c:
+            out[rid] = c
+    return out
 
 
 def candidates(recipe, base):
@@ -101,10 +126,11 @@ def candidates(recipe, base):
     region_of_cid = {comp[i * M.COMP + M.CID_OFF]: M.dec_region(comp[i * M.COMP + M.REGION_OFF])
                      for i in range(len(comp) // M.COMP)}
     out = []
+    country = game_countries(base)
     for rid, name, clubs, _shipped in B.game_europe_tops(base):
-        if rid in GAME_LEAGUES:
+        if rid in country:
             cup = B.home_cup(regrow, region_of_cid, region_of_cid.get(regrow[rid][M.R_CID]))
-            out.append({"id": "g%d" % rid, "name": name, "country": GAME_LEAGUES[rid], "clubs": clubs,
+            out.append({"id": "g%d" % rid, "name": name, "country": country[rid], "clubs": clubs,
                         "cup": cup is not None, "game": True})
     conf = B.country_confederations(base)
     for L in recipe.get("leagues") or []:

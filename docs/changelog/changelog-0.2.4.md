@@ -14,6 +14,15 @@ once, and your 0.2.2 career keeps working.
 
 ## Fixed
 
+- **A database mod that moves the game's leagues (UML 2026 v3) got the wrong countries and the
+  wrong NewLife leagues.** With Settings on the mod's tables (**Use another tables folder**),
+  Mod Studio still took a game league's country from its slot: UML's Ligue 1, in the Russian
+  league's slot, was "Russia" in the UEFA ranking (and left out like Russia), in the July
+  starts and in the League order. The country now comes from the clubs the tables put in the
+  league. The NewLife Database took "in the game" from the plain game's clubs, so a league
+  whose clubs the mod left out or renumbered (the Russian league, Ligue 2) could not be added;
+  now a club is in the game only when the tables have it, and the rest are new clubs. With the
+  game's own tables nothing changes. Build again. Thanks Yanis.
 - **Build switched off your own kits for the clubs of a league package that carries kits.** A
   `map.txt` line you set on the Kits page (`71578, "Serie C\Catania FC"`) was greyed out with
   "(switched off by FL26 Mod Studio)" at every Build, and the package's kit went into

@@ -822,21 +822,60 @@ def recipe_from_plan(pl, base):
     return rec
 
 
+def club_countries(base):
+    """{team id: Country.bin id} of every team in Team.bin (T_COUNTRY)"""
+    raw = pesdb.wesys_unpack(open(os.path.join(base, "Team.bin"), "rb").read())
+    out = {}
+    for i in range(len(raw) // W.T_REC):
+        r = raw[i * W.T_REC:(i + 1) * W.T_REC]
+        out[int.from_bytes(r[W.T_ID:W.T_ID + 4], "little")] = \
+            (int.from_bytes(r[T_COUNTRY:T_COUNTRY + 2], "little") >> 2) & 0x1ff
+    return out
+
+
 def game_league_confeds(base, leagues):
     """{competition id: confederation code} of the game's leagues -- the code most of its
     clubs' countries have (Team.bin T_COUNTRY, Country.bin); 0 when nothing is known"""
     import collections
     conf = confederations(base)
-    raw = pesdb.wesys_unpack(open(os.path.join(base, "Team.bin"), "rb").read())
-    of = {}
-    for i in range(len(raw) // W.T_REC):
-        r = raw[i * W.T_REC:(i + 1) * W.T_REC]
-        of[int.from_bytes(r[W.T_ID:W.T_ID + 4], "little")] = conf.get(
-            (int.from_bytes(r[T_COUNTRY:T_COUNTRY + 2], "little") >> 2) & 0x1ff, 0)
+    of = {t: conf.get(c, 0) for t, c in club_countries(base).items()}
     out = {}
     for rid, cid, name, teams in leagues:
         c = collections.Counter(of.get(t, 0) for t in teams if of.get(t, 0))
         out[cid] = c.most_common(1)[0][0] if c else 0
+    return out
+
+
+# The country each league of the game has as shipped, by regulation (measured on the plain tables
+# 2026-10-14: every club entered in it is of that country, MLS's two Canadian ones aside). It is
+# not what a league is -- game_league_countries reads that from the tables in use -- but what
+# the regulation held before a database mod put another country's league in it, for the answers
+# that were written for the shipped league (SLOT_COUNTRY's).
+SHIPPED_COUNTRY = {17: "England", 18: "Italy", 19: "Spain", 20: "France", 21: "Netherlands",
+                   22: "Portugal", 29: "Brazil", 30: "Argentina", 50: "Germany", 52: "Japan",
+                   67: "Chile", 79: "England", 80: "Spain", 81: "France", 82: "Italy",
+                   115: "Belgium", 116: "Russia", 117: "Greece", 118: "Turkey", 120: "China",
+                   133: "Scotland", 141: "Denmark", 162: "Saudi Arabia", 163: "Brazil",
+                   166: "Usa", 168: "Colombia"}
+
+
+def game_league_countries(base, leagues=None):
+    """{regulation id: country name (country_ids' spelling)} of the game's leagues (game_leagues,
+    or leagues), read from the tables in use: the country most of the clubs entered in the
+    league are of (Team.bin T_COUNTRY), as game_league_confeds finds its confederation. A
+    league none of whose clubs has a country the tables name is left out.
+    Competition.bin has no country of its own, only the region byte, which picks the menu
+    heading the exe draws (regions-plan.md) and stays with the slot. A database mod moves
+    leagues into other leagues' slots -- UML 2026 v3 has Ligue 1 where the Russian Premier Liga
+    was -- so a table of regulation ids named the wrong country (Yanis, 14.10.)."""
+    import collections
+    names = dict((fid, nm) for nm, fid in country_ids(base))
+    of = club_countries(base)
+    out = {}
+    for rid, _cid, _name, teams in (game_leagues(base) if leagues is None else leagues):
+        c = collections.Counter(of[t] for t in teams if of.get(t) in names)
+        if c:
+            out[rid] = names[c.most_common(1)[0][0]]
     return out
 
 
@@ -851,7 +890,8 @@ def game_info(base):
     {"clubs": {id: (name, short)}, "national": {ids}, "entries": {id: [competition ids]},
      "squads": {id: players}, "league_cids": {competition ids of leagues},
      "comp_names": {competition id: name}, "league_of": {id: league name},
-     "friendly_cids": {competition ids of pre-season tournaments}}"""
+     "friendly_cids": {competition ids of pre-season tournaments},
+     "club_country": {id: Country.bin id}}"""
     key = os.path.normcase(os.path.abspath(base))
     if key in _GAME_INFO:
         return _GAME_INFO[key]
@@ -877,7 +917,7 @@ def game_info(base):
     info = {"clubs": game_clubs(base), "national": national, "entries": entries, "squads": squads,
             "league_cids": {c for _r, c, _n, _t in leagues}, "comp_names": names,
             "league_of": {t: n for _r, _c, n, ts in leagues for t in ts}, "base": base,
-            "friendly_cids": friendly}
+            "friendly_cids": friendly, "club_country": club_countries(base)}
     _GAME_INFO[key] = info
     return info
 
@@ -3759,6 +3799,34 @@ SLOT_COUNTRY = {7: "England", 50: "England", 8: "France", 52: "France", 9: "Ital
 OTHER_CONFED = {"Germany": 2, "Usa": 6, "Japan": 3}
 
 
+def moved_countries(base):
+    """{regulation id: country} of the game's leagues that the tables in use give another
+    country than the game ships in that regulation (game_league_countries v SHIPPED_COUNTRY):
+    a database mod's moved leagues, UML 2026 v3's Ligue 1 in the Russian Premier Liga's place.
+    Empty with the game's own tables."""
+    return {r: nm for r, nm in game_league_countries(base).items()
+            if r in SHIPPED_COUNTRY and nm != SHIPPED_COUNTRY[r]}
+
+
+def slot_countries(base):
+    """{Kick Off slot: country} of the game's league slots (SHIPPED_SLOT): SLOT_COUNTRY's, but
+    the country of the league the tables in use have there when a database mod moved another
+    country's league into it (moved_countries) -- the slot's regulation, or the league whose
+    phase it is (Belgium's regular season, MLS's First Round ...), by competition id"""
+    moved = moved_countries(base)
+    out = dict(SLOT_COUNTRY)
+    if not moved:
+        return out
+    regs = M.load(base, "CompetitionRegulation.bin")
+    cid_of = {u16(regs[i * M.REG:], M.R_ID): regs[i * M.REG + M.R_CID] for i in range(len(regs) // M.REG)}
+    league_of = {c: r for r, c, _n, _t in game_leagues(base)}
+    for reg, slot in sorted(SHIPPED_SLOT.items()):
+        nm = moved.get(league_of.get(cid_of.get(reg)))
+        if nm:
+            out[slot] = nm
+    return out
+
+
 def order_countries(pl, base, confed):
     """[(country name, continent block)] of every country with a league in the game or the
     world, in the default order (by continent, A-Z within it) -- the League order dialog's list"""
@@ -3767,6 +3835,8 @@ def order_countries(pl, base, confed):
     got = {nm: c for _r, nm, c in SHIPPED_REGIONS if nm}
     for nm, c in OTHER_CONFED.items():
         got.setdefault(nm, c)
+    for nm in sorted(set(moved_countries(base).values())):     # a database mod's league in a game slot
+        got.setdefault(nm, CONTINENT.get(confed.get(fids.get(nm)), 5))
     for p in pl.get("leagues") or []:
         c = p.get("country")                # an id once planned, the recipe's name before
         nm = c if isinstance(c, str) else names.get(c)
@@ -3810,8 +3880,9 @@ def kickorder_lines(pl, base, confed):
         return []
     names = dict((fid, nm) for nm, fid in country_ids(base))
     out, slots = [], set()
+    slot_country = slot_countries(base)
     for reg, slot in sorted(SHIPPED_SLOT.items()):
-        nm = SLOT_COUNTRY.get(slot)
+        nm = slot_country.get(slot)
         if nm in rank and slot not in slots:
             slots.add(slot)
             out.append((reg, rank[nm]))
@@ -3945,6 +4016,7 @@ def season_lines(pl, db):
 # January = 0): 191 = 11 July, 198 = 18 July, 205 = 25 July, 212 = 1 August, 219 = 8 August,
 # 226 = 15 August. The game starts every league on the big leagues' calendar (about 22 August),
 # and the first three weeks of July had no match at all. Countries not listed keep that.
+SCOTLAND_SPLIT = 133                      # the Scottish Premiership's first phase (SHIPPED_SLOT)
 JULY_START = {
     "Romania": 191, "Poland": 198, "Denmark": 198, "Serbia": 198, "Slovenia": 198, "Slovakia": 198,
     "Czechia": 198, "Czech Republic": 198, "Russia": 198, "Bulgaria": 198,
@@ -3971,9 +4043,10 @@ def july_lines(pl, base):
         if day and p.get("rid") and p["rid"] not in seen:
             seen.add(p["rid"])
             out.append("july %d %d" % (p["rid"], day))
-    for rid, country in sorted(uefakey.GAME_LEAGUES.items()):
+    for rid, country in sorted(uefakey.game_countries(base).items()):
         day = JULY_START.get(country)
-        if day and rid not in seen and country != "Scotland":     # Scotland is a split (133-136)
+        # Scotland is a split (133-136): its first phase is the regulation, not the whole season
+        if day and rid not in seen and country != "Scotland" and rid != SCOTLAND_SPLIT:
             seen.add(rid)
             out.append("july %d %d" % (rid, day))
     return out

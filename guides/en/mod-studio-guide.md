@@ -44,6 +44,9 @@ The window is in English. **Settings → Language** switches it to Croatian (Hrv
    package or a new world asks for it, and offers to open Settings). **Use another tables folder**
    is for a database of your own, such as a `pesdb` folder in livecpk: unpack the game's tables
    first, then pick that folder. Its files go over the game's, which give whatever it does not have.
+   A database mod that moves the game's leagues into other leagues' places (UML 2026 and the like)
+   is fine: each league of the game takes the country most of its clubs are of, and the NewLife
+   Database counts a club as one of the game's only when these tables have it (0.2.4).
 3. Open **Home** (the first page). It shows the live world and your setup and lists problems;
    **Open** next to a problem goes to the page that fixes it. Home also has **Build and install**
    (all of Build in one press), **Only the European cups...**, **Open its leagues** and

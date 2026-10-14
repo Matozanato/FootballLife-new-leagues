@@ -44,6 +44,9 @@ A janela está em inglês. **Settings → Language** troca para croata (Hrvatski
    pacote ou um mundo novo pede isso e oferece abrir o Settings). **Use another tables folder**
    serve para um banco de dados seu, como uma pasta `pesdb` no livecpk: descompacte primeiro as tabelas do jogo,
    depois escolha essa pasta. Os arquivos dela vão por cima dos do jogo, que fornecem tudo o que ela não tem.
+   Um mod de banco de dados que muda as ligas do jogo de lugar (UML 2026 e parecidos) funciona: cada
+   liga do jogo fica com o país da maioria dos seus clubes, e o NewLife Database só conta um clube como
+   do jogo quando essas tabelas o têm (0.2.4).
 3. Abra **Home** (a primeira página). Ela mostra o mundo ativo e sua configuração e lista os problemas;
    **Open** ao lado de um problema leva à página que resolve. A Home também tem **Build and install**
    (todo o Build com um clique), **Only the European cups...**, **Open its leagues** e

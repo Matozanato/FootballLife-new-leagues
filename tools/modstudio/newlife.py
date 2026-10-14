@@ -12,6 +12,7 @@ are unpacked to %APPDATA%\\FL26ModStudio\\newlife\\<version> for the recipe to p
 """
 import collections, csv, glob, io, json, os, zipfile
 
+import crestmatch
 import leaguebuilder as B
 import lbplayers as P
 
@@ -71,6 +72,7 @@ class Release:
             raise Error("no NewLife Database here: put the NewLife-....zip parts you downloaded in one folder "
                         "(no need to unpack them) and open that folder")
         self.folder = where
+        self.tables = None                        # the tables folder in_game was checked against
         self.meta, self.parts = None, []
         self.clubs, self.squads = {}, {}
         self.crests, self.logos = {}, {}          # club id / (country, league) -> read() of the png
@@ -129,11 +131,31 @@ class Release:
     def version(self):
         return "%s %s" % (self.meta.get("name", "NewLife Database"), self.meta.get("version", "?"))
 
-    def leagues(self, country_of):
+    def use_tables(self, info):
+        """which clubs are in the game, by the tables in use (info = leaguebuilder.game_info):
+        clubs.csv's in_game says the plain game has the club under its NewLife id, and with a
+        database mod (UML 2026 v3, Yanis 14.10.) the tables may not have it -- left out, or its
+        id given to another club. A club stays "in the game" when the tables have a club under
+        its id that is the same one (same_club); the others are new clubs, as any NewLife club
+        the game has not got. The release's own answer is kept in "release_in_game". Done once
+        per tables folder; info None leaves the release's answer."""
+        if info is None or "clubs" not in info:
+            return
+        tag = info.get("base") or id(info)
+        if self.tables == tag:
+            return
+        self.tables = tag
+        for cid, c in self.clubs.items():
+            was = c.setdefault("release_in_game", c.get("in_game", ""))
+            if was == "1":
+                c["in_game"] = "1" if cid.isdigit() and same_club(info, int(cid), c) else "0"
+
+    def leagues(self, country_of, info=None):
         """[{name, country, clubs: [club id], in_game: [club id], players, strength}] --
         country_of(Country.bin id) gives the country's name; strongest first within a country.
         clubs are the ones a new league makes; in_game the league's clubs the game already has
-        (they stay where the game has them)"""
+        (they stay where the game has them) -- the tables info says, when given (use_tables)"""
+        self.use_tables(info)
         by, have = {}, {}
         for cid, c in self.clubs.items():
             if c.get("league"):
@@ -157,6 +179,30 @@ class Release:
         gk = [r for r in rows if r.get("Registered Position") == "GK"][:3]
         out = gk + [r for r in rows if r.get("Registered Position") != "GK"]
         return sorted(out[:P.SQUAD], key=lambda r: -P.overall(r))
+
+
+def same_club(info, tid, c):
+    """whether team tid of the tables in use (info = leaguebuilder.game_info) is NewLife club c
+    (a clubs.csv row): a club, not a national team, of the release's country, or failing that
+    with the release's name (crestmatch's score; the release spells names its own way, R. Madrid
+    for Real Madrid CF, and two clubs of the game's MLS are Canadian). With the game's own
+    tables every club the release has in the game is the same one."""
+    if tid not in info["clubs"] or tid in (info.get("national") or ()):
+        return False
+    have = (info.get("club_country") or {}).get(tid)
+    if have is not None and str(have) == str(c.get("country", "")).strip():
+        return True
+    return crestmatch.score(crestmatch.words(c.get("name", "")),
+                            crestmatch.words(info["clubs"][tid][0] or "")) >= crestmatch.MIN_SCORE
+
+
+def regroup(rel, L):
+    """league L (rel.leagues) with its clubs split again by rel's in_game (use_tables): a club
+    the tables in use have not got goes with the new clubs. A club rel does not know stays
+    where it is."""
+    both = list(L.get("clubs") or []) + list(L.get("in_game") or [])
+    game = lambda i: rel.clubs[i].get("in_game") == "1" if i in rel.clubs else i in (L.get("in_game") or [])
+    return dict(L, clubs=sorted(i for i in both if not game(i)), in_game=sorted(i for i in both if game(i)))
 
 
 def game_clubs(L, info=None):
@@ -232,6 +278,9 @@ def add_league(recipe, rel, L, legs=2, info=None, custom=False, name=None, more=
     leagues); update_league then keeps that line-up instead of the release's.
     Returns (the new league's name, players left at their game club for lack of players,
     players left out because another league has them)."""
+    if info is not None:
+        rel.use_tables(info)
+        L = regroup(rel, L)
     game = game_clubs(L, info)
     if not B.CLUBS_MIN <= len(L["clubs"]) + len(game) + more <= B.CLUBS_MAX:
         raise Error("%s has %d clubs; a league takes %d to %d" % (L["name"], len(L["clubs"]) + len(game) + more,
@@ -390,6 +439,7 @@ def put_club(recipe, rel, x, k, cid, info=None):
     place goes: a club of the game there (game_clubs) and its player changes (victormican, #83:
     NewLife clubs into the empty places of a league made by hand). Returns (players kept at
     their game club, players left out because another league has them)."""
+    rel.use_tables(info)
     c = rel.clubs[cid]
     n = int(x.get("clubs") or 0)
     if not 0 <= k < n:
@@ -516,6 +566,7 @@ def update_league(recipe, rel, x, rows, info=None, keep=None):
     game keeps what was set for it. rows = rel.leagues(...).
     Returns (the league's name, players left at their game club, players another league has,
     [notes])."""
+    rel.use_tables(info)
     nl = x["newlife"]
     name, idx = x["name"], recipe["leagues"].index(x)
     old_n = int(x.get("clubs") or 0)
@@ -683,8 +734,9 @@ def _game_entry(info, at, tid):
 
 def _game_targets(rel, info):
     """({game league cid: release league}, {team id: cid of the game league the release puts it
-    in}) for the game's leagues the release has"""
-    rows = rel.leagues(str)
+    in}) for the game's leagues the release has -- by the clubs the tables in use have, not the
+    plain game's (use_tables)"""
+    rows = rel.leagues(str, info)
     match, target = {}, {}
     leagues = [(cid, set(ts)) for _r, cid, _n, ts in B.game_leagues(info["base"]) if cid not in info["friendly_cids"]]
     for cid, ts in leagues:
