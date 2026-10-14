@@ -284,6 +284,9 @@ makes each new club home, away, third and goalkeeper kits in its shirt colours (
 crest's when it has none), with its crest on the chest and the shorts, for whole leagues at once
 when the world is switched on. A crest you put in later (Import crests) goes on the kits at the
 next switch-on. A club with a Kit Server kit of its own, or only a numbered badge, gets none.
+A kit line of your own in `map.txt` (one you set on the *Kits* page, to a kit that is in the
+library) always wins: Build makes no kit for that club, puts no package kit on it and leaves your
+line switched on (0.2.4; 0.2.3 switched it off for a league package's kit at every Build).
 Names keep their letters (FK Željezničar); the three-letter short name has none, as in the game,
 so Č, Ž, Đ become C, Z, D there. After **Build** the **Team ID** column shows each club's id in
 the game.
@@ -627,7 +630,9 @@ A modder makes a league once — clubs, names, crests, logos, squads, faces — 
    of a squad database that is updated on its own, like NewLife, without putting old squads back.
 5. Save. The file holds the pictures, faces, kits and scoreboards, not paths on your computer.
    Whoever adds it gets the kits and scoreboards in place with their own team and league ids when
-   they Build (Kit Server / Scoreboard Server must be installed). Kits add about 10 MB per league and
+   they Build (Kit Server / Scoreboard Server must be installed); a club they gave a kit line of their
+   own on the *Kits* page keeps that kit (0.2.4), and a package kit stays with its club when a club is
+   removed, inserted or moved, or the league is updated to a newer NewLife. Kits add about 10 MB per league and
    a scoreboard about 7 MB, so such a package is often over Discord's 10 MB limit: share it through a
    cloud service (Google Drive, Dropbox, MEGA ...); the program says so when the file is bigger.
 

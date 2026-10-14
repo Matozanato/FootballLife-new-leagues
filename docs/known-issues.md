@@ -493,6 +493,21 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-14 (next update, Discord, thanks pepponeee98): **Build switched off the kit lines you
+  set yourself for the clubs of a league package with kits** ("(switched off by FL26 Mod Studio)"
+  on his Serie C clubs, and a line of Mod Studio's to `<world>\Italian Serie C Girone C\<club>`
+  after it, at every Build). The package's kit folders (`kit_folders`, the *Kits* part of a
+  package) went into Kit Server whatever `map.txt` already gave the club; only the kits made in
+  the clubs' colours checked for a line of yours first (since 0.2.1), so the leagues without
+  package kits were fine. Both now give way to a switched-on line of yours, or one an older Build
+  switched off, whose folder is in the library; a line to a kit that is not installed still gets
+  ours. The package's kit folders were also kept by place, not by club: Remove, Insert or Move
+  club and a NewLife update left the clubs after it wearing their neighbour's kit; they move with
+  their club now. Checked without the game (test_own_kit_line, test_lbservers,
+  test_newlife_update). In 0.2.3: add the same package again (League packages > Add a package)
+  with **Kits (the Kit Server kits of the clubs)** unticked and Build; your lines come back on.
+  Adding it again replaces that package's leagues, so changes you made to them since come out.
+
 - 2026-10-14 (next update, Discord, thanks Vicentico): **NewLife Database: "Bring the game's leagues
   to this season" left out the Brasileirão Série B, as if the game had no Série B.** The game
   ships it (20 clubs), but its line-up is years old: only 6 of the 20 play in the release's 2026

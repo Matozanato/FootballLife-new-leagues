@@ -446,9 +446,11 @@ def _from_cache(path):
 
 # every list a league keeps per place (modstudio.project.Project.PLACE_LISTS)
 PLACE_LISTS = (("club_names", ""), ("club_abbrs", ""), ("club_crests", None), ("club_coaches", ""),
-               ("club_formations", ""), ("club_ids", ""), ("club_kits", ""), ("club_away_kits", ""))
-# per place of a league: what the person set, which an update keeps for the same club
-KEEP_LISTS = (("club_coaches", ""), ("club_formations", ""), ("club_ids", ""))
+               ("club_formations", ""), ("club_ids", ""), ("club_kits", ""), ("club_away_kits", ""),
+               ("kit_folders", ""))
+# per place of a league: what the person set, which an update keeps for the same club (and a
+# league package's Kit Server folder, which belongs to its club, not to the place: 14.10.)
+KEEP_LISTS = (("club_coaches", ""), ("club_formations", ""), ("club_ids", ""), ("kit_folders", ""))
 # what an update takes from the release (and KEEP_LISTS put back club by club)
 FRESH = ("club_names", "club_abbrs", "club_crests", "club_kits", "club_away_kits", "game_clubs", "newlife",
          "clubs") + tuple(k for k, _e in KEEP_LISTS)

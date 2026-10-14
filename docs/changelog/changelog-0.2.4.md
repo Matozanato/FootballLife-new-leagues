@@ -14,6 +14,16 @@ once, and your 0.2.2 career keeps working.
 
 ## Fixed
 
+- **Build switched off your own kits for the clubs of a league package that carries kits.** A
+  `map.txt` line you set on the Kits page (`71578, "Serie C\Catania FC"`) was greyed out with
+  "(switched off by FL26 Mod Studio)" at every Build, and the package's kit went into
+  `<world>\<league>\<club>` with a line of Mod Studio's. Only kits made in the clubs' colours
+  gave way to a line of yours; a package's kits did not, which is why it hit one league. Now a
+  club with a line of your own (to a kit that is in the library) keeps it, gets no package kit
+  and no made kit, and a line of yours an older Build switched off is switched on again at the
+  next Build. Package kits also stay with their club when you Remove, Insert or Move a club, or
+  update the league to a newer NewLife (they stayed by place, so the clubs below wore the next
+  club's kit). Thanks pepponeee98.
 - **A league with a place in the game's Copa Libertadores played the day before or after it.**
   Nacional (Uruguay) had a league round on 22 September and the Libertadores quarter-final on
   the 23rd. The fixture module now asks the game for the Libertadores days (qualifying round,
