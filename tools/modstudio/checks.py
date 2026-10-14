@@ -111,6 +111,24 @@ def old_confed_tops(d, leagues, calendar=()):
 DB_TABLES = ("Team.bin", "Competition.bin", "CompetitionRegulation.bin", "CompetitionEntry.bin")
 
 
+def short_squads(d):
+    """{team id: players} of the world's new clubs (the plan it was built from, leaguebuilder-plan.json)
+    with fewer than lbplayers.MIN_SQUAD players in its PlayerAssignment.bin; {} when there is no
+    plan or no player table. The game crashes when such a club is picked and Become a Legend does
+    not start (B28: a Modpack world whose last 80 clubs got no placeholder squad)"""
+    try:
+        import lbplayers
+        with open(os.path.join(d, "leaguebuilder-plan.json"), encoding="utf-8") as f:
+            plan = json.load(f)
+        tids = [t for p in plan.get("leagues") or [] for k, t in enumerate(p.get("teams") or [])
+                if str(k) not in (p.get("game_clubs") or {})]
+        if not tids:
+            return {}
+        return lbplayers.short_squads(os.path.join(d, "common", "etc", "pesdb"), tids)
+    except (ImportError, OSError, ValueError, TypeError, AttributeError):
+        return {}
+
+
 def club_names(db):
     """{team id: name} of the Team.bin in folder db, {} when there is none"""
     import fl26world
@@ -215,6 +233,13 @@ def world_problems(game, ini, recipe=None):
                           "which fl26swiss.dll cannot run (a world built with the Conference League "
                           "off in Mod Studio 0.1.3 or earlier): build the world again") % name, "Build"))
         out += database_problems(game, ini, e, name, d)
+        short = short_squads(d)
+        if short:
+            out.append(("err", "League Builder",
+                        _("%s: %d club(s) have fewer than 18 players (ids %s): the game crashes when one is "
+                          "picked and Become a Legend does not start. Build the world again")
+                        % (name, len(short), ", ".join(str(t) for t in sorted(short)[:8])
+                           + (" ..." if len(short) > 8 else "")), "Build"))
         if recipe is not None and recipe.get("world") == name:
             on = bool(recipe.get("uecl", True))
         else:

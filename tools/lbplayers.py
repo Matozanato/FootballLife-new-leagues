@@ -507,6 +507,16 @@ def sign_keepers(db, log=print):
     return signed
 
 
+def short_squads(db, tids, least=MIN_SQUAD):
+    """{team id: players} of the clubs in `tids` with fewer than `least` players in db's
+    PlayerAssignment.bin -- a club with none crashes the game when it is picked, and Become
+    a Legend does not start (B28: 65 clubs of a Modpack world the placeholder squads had not
+    reached). sign_keepers leaves a club with no players alone, so this is the last word."""
+    assigns = load(db, "PlayerAssignment.bin")
+    count = collections.Counter(u32(assigns, i * A_REC + E.A_TID) for i in range(len(assigns) // A_REC))
+    return {tid: count.get(tid, 0) for tid in tids if count.get(tid, 0) < least}
+
+
 def line_up(db, base, ordered=(), log=print):
     """puts a best eleven at orders 0-10 of every team of db whose first eleven does not fit its
     formation: a goalkeeper outfield or an outfield player in goal, or a starter with no rating
