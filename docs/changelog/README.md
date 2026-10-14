@@ -2,6 +2,8 @@
 
 What each release of FL26 Mod Studio brought. The full notes of the latest releases:
 
+- [0.2.4](changelog-0.2.4.md) (in progress): bug fixes -- a saved cup loads again in Cup mode, the
+  League Two arrows, super cups of the game's leagues, a 0.2.1 recipe's missing players.
 - [0.2.3](changelog-0.2.3.md) (2026-10-13): a quick fix for 0.2.2 -- Mod Studio no longer closes
   during Build; it shows the builder's message instead, a crash writes crash.log, and Build
   finds the game in the folder from Settings (not only C:\Football Life 2026).

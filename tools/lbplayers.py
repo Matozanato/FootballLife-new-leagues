@@ -925,9 +925,17 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
                 refs[str(ref)] = n
             else:
                 t = tids.get(srcclub)
+                if t is None:
+                    t = club_tid(srcclub)      # the league renamed since the transfer was made
                 sq = squad_of(t) if t is not None else []
-                if n is None or n >= len(sq):
+                if t is None:
                     raise Error("players of %s: no player %s (was the club built?)" % (club, ref))
+                if n is None or n >= len(sq):
+                    # a recipe of 0.2.1 (30-man squads) may move the 23rd..30th player of a new club;
+                    # since 0.2.2 a new club has 22, so he is gone: say so and go on (diwwanmago, 14.10.)
+                    log("  NOTE: players of %s: no player %s (the club has %d), his transfer is skipped"
+                        % (club, ref, len(sq)))
+                    continue
                 refs[str(ref)] = sq[n][1]
 
     renamed = {}                                       # old player id -> the id of the recipe

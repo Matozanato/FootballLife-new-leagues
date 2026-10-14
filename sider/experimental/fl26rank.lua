@@ -66,6 +66,13 @@ local PATCHES = {
   {va=0x140a9ba52, old="4183e13f", new="4183e11f", why="group-read: and r9d, 0x3f"},
   {va=0x140a9baab, old="4183e13f", new="4183e11f", why="group-read: and r9d, 0x3f"},
   {va=0x140a9d2cd, old="83e33f", new="83e31f", why="group-read: and ebx, 0x3f"},
+  -- A league with no league below (+0x7e) skipped the down-arrow pass, and since 0x140aee448
+  -- below a row past the promotion places no longer touches the icon, a widget that once drew an
+  -- up arrow kept it when the scrolling list re-bound it to another club: the arrows stuck to
+  -- the first screen rows (League Two, Vicentico, 13 October). Jump into the down-arrow pass's
+  -- "no arrow" branch instead (esi is still the club count, so every row takes it): the icon
+  -- is reset for every row, and the up-arrow pass then draws on the promotion places only.
+  {va=0x140aee3dc, old="743d", new="740e", why="arrows: no league below -> reset every row's icon before the up-arrow pass (was: skip, icon kept its last club's arrow)"},
   {va=0x140aee421, old="25000000c0", new="25000000e0", why="rank-read: and eax, 0xc0000000"},
   {va=0x140aee426, old="3d00000080", new="3d00000040", why="rank-read: cmp eax, 0x80000000"},
   -- standings arrows (0x140aee370): the game had two tiers, so it drew the up arrows only on

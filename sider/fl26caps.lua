@@ -6,7 +6,7 @@ and sider/fl26caps.template.lua. Editing it by hand loses the guarantee that eve
 below came from disassembling the instruction at that address.
 
 Set:     teams-coaches-regs-players-dates-matches-upper-mlcopy-fixtures-calendar
-Summary: block 0x1877068 -> 0x4a2b568, 3510 patches
+Summary: block 0x1877068 -> 0x4a2b568, 3534 patches
 
 What it does, and the one rule it follows: read every target address first and compare it
 against the bytes the generator saw in the exe; only if all of them match does it write
@@ -510,7 +510,7 @@ local patches = {
   {va=0x141401508, old="b8e95b0100", new="b8e4cd0200", why="mode-copy players, A fallback: memcpy chunks: 0x15be9 -> 0x2cde4"},
   {va=0x140af23cf, old="ba30750000", new="bad0f10000", why="mode-copy players, B -> block: BH1 adopted with this count: 0x7530 -> 0xf1d0"},
   {va=0x140afda04, old="d28e00000f1f", new="b52601000f1f", why="mode-copy players, B: packed table memcpy chunks: 0x8ed2 -> 0x126b5"},
-  {va=0x1413fea01, old="10bd3501c3cc", new="90ae8101c3cc", why="mode-copy players, B: object size: 0x135bd10 -> 0x181ae90"},
+  {va=0x1413fea01, old="10bd3501c3cc", new="902f8e01c3cc", why="mode-copy players, B: object size: 0x135bd10 -> 0x181ae90; copy B calendar unit inside the saved prefix, player part up by 0xc8100: 0x181ae90 -> 0x18e2f90"},
   {va=0x140afd87b, old="ba48f3ad00", new="bac8f06601", why="mode-copy players, B fallback: vector allocation: 0xadf348 -> 0x166f0c8"},
   {va=0x140afd8a1, old="48c70030750000", new="48c700d0f10000", why="mode-copy players, B fallback: vector count: 0x7530 -> 0xf1d0"},
   {va=0x140afd8bd, old="41b830750000", new="41b8d0f10000", why="mode-copy players, B fallback: records constructed: 0x7530 -> 0xf1d0"},
@@ -2744,7 +2744,7 @@ local patches = {
   {va=0x1413fc885, old="4439b3ecbcd000", new="4439b320738704", why="count:teams edit: 0xd0bcec -> 0x4877320 (cmp dword ptr [rbx + 0xd0bcec], r14d)"},
   {va=0x1413fc8ce, old="3bbbecbcd000", new="3bbb20738704", why="count:teams edit: 0xd0bcec -> 0x4877320 (cmp edi, dword ptr [rbx + 0xd0bcec])"},
   {va=0x1413feddc, old="39abecbcd000", new="39ab20738704", why="count:teams edit: 0xd0bcec -> 0x4877320 (cmp dword ptr [rbx + 0xd0bcec], ebp)"},
-  {va=0x1413fee1f, old="3bbbecbcd000", new="3bbb20738704", why="count:teams edit: 0xd0bcec -> 0x4877320 (cmp edi, dword ptr [rbx + 0xd0bcec])"},
+  {va=0x1413fee1f, old="3bbbecbcd000", new="81ffee020000", why="copy B teams: block -> B stops at B's 750 records, not at the block's count (cmp edi, 750); replaces: count:teams edit: 0xd0bcec -> 0x4877320 (cmp edi, dword ptr [rbx + 0xd0bcec])"},
   {va=0x141401c65, old="4439b3ecbcd000", new="4439b320738704", why="count:teams edit: 0xd0bcec -> 0x4877320 (cmp dword ptr [rbx + 0xd0bcec], r14d)"},
   {va=0x141401cab, old="3bbbecbcd000", new="3bbb20738704", why="count:teams edit: 0xd0bcec -> 0x4877320 (cmp edi, dword ptr [rbx + 0xd0bcec])"},
   {va=0x1414bb5fa, old="8b83ecbcd000", new="8b8320738704", why="count:teams edit-pattern: 0xd0bcec -> 0x4877320 (mov eax, dword ptr [rbx + 0xd0bcec])"},
@@ -2804,7 +2804,7 @@ local patches = {
   {va=0x1413fc8d9, old="4439b3f0bcd000", new="4439b324738704", why="count:coaches edit: 0xd0bcf0 -> 0x4877324 (cmp dword ptr [rbx + 0xd0bcf0], r14d)"},
   {va=0x1413fc920, old="3bbbf0bcd000", new="3bbb24738704", why="count:coaches edit: 0xd0bcf0 -> 0x4877324 (cmp edi, dword ptr [rbx + 0xd0bcf0])"},
   {va=0x1413fee29, old="39abf0bcd000", new="39ab24738704", why="count:coaches edit: 0xd0bcf0 -> 0x4877324 (cmp dword ptr [rbx + 0xd0bcf0], ebp)"},
-  {va=0x1413fee6f, old="3bbbf0bcd000", new="3bbb24738704", why="count:coaches edit: 0xd0bcf0 -> 0x4877324 (cmp edi, dword ptr [rbx + 0xd0bcf0])"},
+  {va=0x1413fee6f, old="3bbbf0bcd000", new="81ff14050000", why="copy B coaches: block -> B stops at B's 1300 records, not at the block's count (cmp edi, 1300); replaces: count:coaches edit: 0xd0bcf0 -> 0x4877324 (cmp edi, dword ptr [rbx + 0xd0bcf0])"},
   {va=0x141401ce6, old="4439b3f0bcd000", new="4439b324738704", why="count:coaches edit: 0xd0bcf0 -> 0x4877324 (cmp dword ptr [rbx + 0xd0bcf0], r14d)"},
   {va=0x141401d2e, old="3bbbf0bcd000", new="3bbb24738704", why="count:coaches edit: 0xd0bcf0 -> 0x4877324 (cmp edi, dword ptr [rbx + 0xd0bcf0])"},
   {va=0x1414b887f, old="4c89bff0bcd000", new="4c89bf24738704", why="count:coaches edit-pattern: 0xd0bcf0 -> 0x4877324 (mov qword ptr [rdi + 0xd0bcf0], r15)"},
@@ -3090,7 +3090,7 @@ local patches = {
   {va=0x1413fc92b, old="4439b3f4bcd000", new="4439b328738704", why="count:regulations edit: 0xd0bcf4 -> 0x4877328 (cmp dword ptr [rbx + 0xd0bcf4], r14d)"},
   {va=0x1413fc972, old="3bbbf4bcd000", new="3bbb28738704", why="count:regulations edit: 0xd0bcf4 -> 0x4877328 (cmp edi, dword ptr [rbx + 0xd0bcf4])"},
   {va=0x1413fee79, old="39abf4bcd000", new="39ab28738704", why="count:regulations edit: 0xd0bcf4 -> 0x4877328 (cmp dword ptr [rbx + 0xd0bcf4], ebp)"},
-  {va=0x1413feebf, old="3bbbf4bcd000", new="3bbb28738704", why="count:regulations edit: 0xd0bcf4 -> 0x4877328 (cmp edi, dword ptr [rbx + 0xd0bcf4])"},
+  {va=0x1413feebf, old="3bbbf4bcd000", new="81ffb4000000", why="copy B regulations: block -> B stops at B's 180 records, not at the block's count (cmp edi, 180); replaces: count:regulations edit: 0xd0bcf4 -> 0x4877328 (cmp edi, dword ptr [rbx + 0xd0bcf4])"},
   {va=0x141401d39, old="4439b3f4bcd000", new="4439b328738704", why="count:regulations edit: 0xd0bcf4 -> 0x4877328 (cmp dword ptr [rbx + 0xd0bcf4], r14d)"},
   {va=0x141401d80, old="3bbbf4bcd000", new="3bbb28738704", why="count:regulations edit: 0xd0bcf4 -> 0x4877328 (cmp edi, dword ptr [rbx + 0xd0bcf4])"},
   {va=0x1414bb070, old="8b81f4bcd000", new="8b8128738704", why="count:regulations edit-pattern: 0xd0bcf4 -> 0x4877328 (mov eax, dword ptr [rcx + 0xd0bcf4])"},
@@ -3541,6 +3541,30 @@ local patches = {
   {va=0x1445c2fc5, old="1c2a6401", new="e4159101", why="impdata past the calendar, by its own block offset: 0x1642a1c -> 0x19115e4 (movzx ecx, word ptr [rdx + 0x1642a1c])"},
   {va=0x1445c2fd0, old="1e2a6401", new="e6159101", why="impdata past the calendar, by its own block offset: 0x1642a1e -> 0x19115e6 (movzx ebx, word ptr [rdx + 0x1642a1e])"},
   {va=0x144a5fadd, old="242a6401", new="ec159101", why="impdata past the calendar, by its own block offset: 0x1642a24 -> 0x19115ec (mov eax, dword ptr [rcx + 0x1642a24])"},
+  {va=0x1413fc524, old="ec09a000", new="a0068601", why="copy S (Cup save) teams biased: 0xa009ec -> 0x18606a0, S -> block writes the cup's teams at the moved table [block 0x193f170 - save 0xdead0] (lea rcx, [r14 + 0xa009ec])"},
+  {va=0x1413fc564, old="7c55b500", new="e002c201", why="copy S (Cup save) coaches biased: 0xb5557c -> 0x1c202e0, S -> block writes the cup's coaches at the moved table [block 0x1d17770 - save 0xf7490] (lea rcx, [r14 + 0xb5557c])"},
+  {va=0x1413fc5a4, old="6c2db100", new="0097e001", why="copy S (Cup save) regulations biased: 0xb12d6c -> 0x1e09700, S -> block writes the cup's regulations at the moved table [block 0x1f09830 - save 0x100130] (lea rcx, [r14 + 0xb12d6c])"},
+  {va=0x140afd72b, old="cc509e00", new="c053ee00", why="copy B calendar unit: +0x9e50cc -> +0xee53c0, where the player part began, inside what a Cup save stores (lea ecx, [rsi + 0x9e50cc])"},
+  {va=0x1413febbd, old="cc509e00", new="c053ee00", why="copy B calendar unit: +0x9e50cc -> +0xee53c0, where the player part began, inside what a Cup save stores (lea edx, [rsi + 0x9e50cc])"},
+  {va=0x1413fef5e, old="cc509e00", new="c053ee00", why="copy B calendar unit: +0x9e50cc -> +0xee53c0, where the player part began, inside what a Cup save stores (lea ecx, [rsi + 0x9e50cc])"},
+  {va=0x140afd842, old="c053ee00", new="c0d4fa00", why="copy B player part up by the calendar unit: +0xee53c0 -> +0xfad4c0 (mov qword ptr [rsi + 0xee53c0], rdi)"},
+  {va=0x140afd849, old="d053ee00", new="d0d4fa00", why="copy B player part up by the calendar unit: +0xee53d0 -> +0xfad4d0 (lea rbx, [rsi + 0xee53d0])"},
+  {va=0x1413fed66, old="c053ee00", new="c0d4fa00", why="copy B player part up by the calendar unit: +0xee53c0 -> +0xfad4c0 (mov eax, dword ptr [rsi + 0xee53c0])"},
+  {va=0x1413fed78, old="c453ee00", new="c4d4fa00", why="copy B player part up by the calendar unit: +0xee53c4 -> +0xfad4c4 (mov eax, dword ptr [rsi + 0xee53c4])"},
+  {va=0x1413ff12d, old="c053ee00", new="c0d4fa00", why="copy B player part up by the calendar unit: +0xee53c0 -> +0xfad4c0 (mov dword ptr [rsi + 0xee53c0], eax)"},
+  {va=0x1413ff13e, old="c453ee00", new="c4d4fa00", why="copy B player part up by the calendar unit: +0xee53c4 -> +0xfad4c4 (mov dword ptr [rsi + 0xee53c4], eax)"},
+  {va=0x140af23b6, old="d053ee00", new="d0d4fa00", why="copy B player part up by the calendar unit: +0xee53d0 -> +0xfad4d0 (lea rax, [rcx + 0xee53d0])"},
+  {va=0x140af23bd, old="c853ee00", new="c8d4fa00", why="copy B player part up by the calendar unit: +0xee53c8 -> +0xfad4c8 (mov qword ptr [rcx + 0xee53c8], rax)"},
+  {va=0x140af23d7, old="c853ee00", new="c8d4fa00", why="copy B player part up by the calendar unit: +0xee53c8 -> +0xfad4c8 (mov rcx, qword ptr [rcx + 0xee53c8])"},
+  {va=0x1412e67ff, old="d053ee00", new="d0d4fa00", why="copy B player part up by the calendar unit: +0xee53d0 -> +0xfad4d0 (mov dword ptr [rdi + 0x180], 0xee53d0)"},
+  {va=0x140af229b, old="80d31500", new="d06e5f00", why="copy S (Cup save) calendar unit: +0x15d380 -> +0x5f6ed0, past the object's end, so the widened unit no longer overruns the cup state at +0x1ca080 (lea rcx, [rsi + 0x15d380])"},
+  {va=0x1413fc641, old="80d31500", new="d06e5f00", why="copy S (Cup save) calendar unit: +0x15d380 -> +0x5f6ed0, past the object's end, so the widened unit no longer overruns the cup state at +0x1ca080 (lea rdx, [r15 + 0x15d380])"},
+  {va=0x1413fca0b, old="80d31500", new="d06e5f00", why="copy S (Cup save) calendar unit: +0x15d380 -> +0x5f6ed0, past the object's end, so the widened unit no longer overruns the cup state at +0x1ca080 (lea rcx, [rsi + 0x15d380])"},
+  {va=0x140af185c, old="d06e5f00", new="d0ef6b00", why="copy S (Cup save) object: 0x5f6ed0 -> 0x6befd0, the calendar unit appended (mov edx, 0x5f6ed0)"},
+  {va=0x140afc043, old="d06e5f00", new="d0ef6b00", why="copy S (Cup save) object: 0x5f6ed0 -> 0x6befd0, the calendar unit appended (mov edx, 0x5f6ed0)"},
+  {va=0x140b0ed53, old="d06e5f00", new="d0ef6b00", why="copy S (Cup save) object: 0x5f6ed0 -> 0x6befd0, the calendar unit appended (mov edx, 0x5f6ed0)"},
+  {va=0x1412e665f, old="d06e5f00", new="d0ef6b00", why="copy S (Cup save) object: 0x5f6ed0 -> 0x6befd0, the calendar unit appended (mov dword ptr [rbx + 0x180], 0x5f6ed0)"},
+  {va=0x141409d07, old="806e5f00", new="80ef6b00", why="copy S (Cup save) file payload for the nine cup types: 0x5f6e80 -> 0x6bef80, so the appended calendar unit is written and read back (mov r8d, 0x5f6e80)"},
 }
 
 -- Pages outside the exe that some patches above write to (the fixture-date stub lives on
@@ -3653,7 +3677,7 @@ function m.init(ctx)
   -- in doubt; the check was.
 
   if failed == 0 then
-    log(string.format("fl26caps: applied all %d patches -- %s", written, "block 0x1877068 -> 0x4a2b568, 3510 patches"))
+    log(string.format("fl26caps: applied all %d patches -- %s", written, "block 0x1877068 -> 0x4a2b568, 3534 patches"))
   else
     log(string.format("fl26caps: PARTIAL: %d written, %d failed. The game is now in an "
                       .. "inconsistent state -- quit and report the addresses above.",

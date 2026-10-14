@@ -493,6 +493,33 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-14 (next update, Discord, thanks Vicentico): **Cup mode: a saved World Cup (or any
+  cup) could not be loaded -- the game loaded for a minute or two and closed** (0xc0000409 in
+  ucrtbase, with the modules; without them the same save loaded in three seconds). The game keeps
+  a cup save as its own copy of the season (teams, coaches, regulations, fixtures and the calendar),
+  and writes it back into the live season on load. Three of that copy's destinations -- the cup's
+  60 teams, 60 coaches and 40 regulations -- were addressed with a pre-computed offset that the
+  raised limits never moved, so on load the cup's teams landed in the table's old place, which
+  nothing reads any more, and the live season had no teams at all: the first match of the day
+  found no team of yours, looked for the day's key date in an empty list and the game aborted.
+  The three destinations now move with the tables (the calendar copy of the same object, which
+  overran the cup state, was moved to the end of the object earlier in this update). Checked in
+  the game on 2026-10-14: a World Cup save made with the modules loads in a few seconds and shows
+  the cup menu (Sweden v Albania, Matchday 1); the live season holds the cup's 32 teams. A save
+  made before this update loads too (it was the load, not the save, that went wrong).
+- 2026-10-14 (next update, Discord, thanks Vicentico): **League Two: the promotion / relegation
+  arrows stuck to the first rows of the standings when you scrolled.** The up-arrow pass only
+  runs for leagues with a league below; a league without one skipped it, and since the down-arrow
+  pass no longer touches a row past the relegation places, a row widget that once drew an arrow
+  kept it when the scrolling list re-bound it to another club. The skip now jumps into the
+  "no arrow" branch instead, so every row's icon is reset before the arrows are drawn. Checked
+  without the game (the patched branch; the arrows are a 0.2.0 module, fl26rank); in-game check
+  pending.
+- 2026-10-14 (next update, Discord, thanks diwwanmago): **Build stopped with "players of <club>:
+  no player <n> (was the club built?)" on a recipe from 0.2.1.** A 0.2.1 recipe may move the
+  23rd..30th player of a new club (new clubs had 30 then; since 0.2.2 they have 22), and a club of
+  a renamed league was looked up under its old name. Build now finds the club under the current
+  name and skips the transfer of a player the club no longer has, with a NOTE in the log.
 - 2026-10-13 (next update, Discord, thanks Vicentico): **a super cup added to a league of the game
   (New leagues > cups of the game's countries) was not a super cup.** The Supercopa de Chile came
   out as a 16-club knockout and the Supercopa Rei as a bracket of every Brazilian club ("from the

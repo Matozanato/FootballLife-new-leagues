@@ -1170,6 +1170,230 @@ def copyb_patches():
     return out
 
 
+# Variant B is what Cup Mode and League Mode save into (mode 8: 0x140afc10f sizes it,
+# 0x140afd660 builds it, 0x1413feda0 fills it from the block, 0x1413fea10 fills the block
+# back on load).  The calendar set widens the block's calendar unit from 0x6cd00 to
+# 0xc8100 bytes, and the unit is copied by one operator (0x1413fbf60) that A, B and the
+# block share -- so B's slot for it, 0x6cd04 bytes at +0x9e50cc, was written 0x5b400 bytes
+# past its end over the singletons that follow, and read back the same way.  A Cup Mode
+# save then loaded a calendar whose days name matches that are not there, and 0x140adcc40
+# threw out of `v[0]` on an empty day (0xc0000409, Vicentico, 13.10.).
+#
+# The unit cannot go to the end of B.  A Cup save does not write B whole: the save
+# descriptor (0x1412e67b0) records +0xee53d0, where the BH1 player part starts, and only
+# the bytes below it are stored as they are -- the player part is serialised on its own and
+# re-adopted on load (0x140af23b3).  A unit past the player part was never saved, and the
+# load handed the block the constructor's empty calendar (365 empty days in the dump of
+# 14.10.), with the same throw.  So the unit goes where the player part began, +0xee53c0,
+# and the player part with its 16-byte header (+0xee53c0 count, +0xee53c4, +0xee53c8 the
+# pointer to it) moves up by the unit.  The descriptor's split moves with it, so the saved
+# prefix now holds the calendar.  B's size grows by the unit either way.
+#
+# The block -> B loops for teams, coaches and regulations also stop at the block's own
+# counts, not at B's caps (the overrun copy A had before mlcopy).  B -> block reads back
+# exactly 750 / 750 / 180 records, so B -> block's mirror is a fixed count as well.
+COPYB_SIZE_SITE = 0x1413fea01             # mov eax, <size> in the getter 0x1413fea00
+COPYB_CAL_OLD = 0x9e50cc
+COPYB_TAIL = 0xee53c0                     # the player part's header; the unit goes here
+COPYB_TAIL_SITES = [                      # (instruction, the B offset it carries)
+    (0x140afd83f, 0xee53c0),   # ctor: mov qword ptr [rsi + 0xee53c0], rdi
+    (0x140afd846, 0xee53d0),   # ctor: lea rbx, [rsi + 0xee53d0]   (BH1 built here)
+    (0x1413fed64, 0xee53c0),   # B -> block: mov eax, dword ptr [rsi + 0xee53c0]
+    (0x1413fed76, 0xee53c4),   # B -> block: mov eax, dword ptr [rsi + 0xee53c4]
+    (0x1413ff12b, 0xee53c0),   # block -> B: mov dword ptr [rsi + 0xee53c0], eax
+    (0x1413ff13c, 0xee53c4),   # block -> B: mov dword ptr [rsi + 0xee53c4], eax
+    (0x140af23b3, 0xee53d0),   # load: lea rax, [rcx + 0xee53d0]
+    (0x140af23ba, 0xee53c8),   # load: mov qword ptr [rcx + 0xee53c8], rax
+    (0x140af23d4, 0xee53c8),   # load: mov rcx, qword ptr [rcx + 0xee53c8]
+    (0x1412e67f9, 0xee53d0),   # save descriptor: mov dword ptr [rdi + 0x180], 0xee53d0
+]
+COPYB_CLAMPS = [(0x1413fee1f, "teams", 750), (0x1413fee6f, "coaches", 1300),
+                (0x1413feebf, "regulations", 180)]
+
+# Copy S: the third mode copy, the one a Cup save stores (mode 7 at the switch 0x140af3742,
+# [obj+0x260]; ctor 0x140af21c0, S -> block 0x1413fc480, block -> S 0x1413fc800).  Its
+# calendar unit sits at +0x15d380 and the cup state follows at +0x1ca080 = +0x15d380 +
+# 0x6cd00, the shipped unit size.  The shared copier 0x1413fbf60 moves the widened unit
+# (unit_bytes) both ways, so block -> S at save time overran the cup state and S -> block at
+# load time brought the cup state back as calendar days: the Cup Mode save -> load crash
+# (0xc0000409 at 0x140adcc40, Vicentico 13.10.).  Like copy B, the unit goes to the end of
+# the object, where nothing else lives, and the object grows by it: three leas carry the
+# unit's place, three allocations and the save descriptor carry the size (the exe holds no
+# other 0x5f6ed0; the object's own last fields at +0x5f6ec4 stay where they are).
+COPYS_SIZE_OLD = 0x5f6ed0
+COPYS_CAL_OLD = 0x15d380
+COPYS_CAL_SITES = [
+    0x140af2298,   # ctor: lea rcx, [rsi + 0x15d380]; call 0x140af1fb0 (unit init)
+    0x1413fc63e,   # S -> block: lea rdx, [r15 + 0x15d380]
+    0x1413fca08,   # block -> S: lea rcx, [rsi + 0x15d380]
+]
+COPYS_SIZE_SITES = [
+    0x140af185b,   # new career, mode 7: mov edx, 0x5f6ed0; call operator new 0x1403fb410
+    0x140afc042,   # save path: mov edx, 0x5f6ed0
+    0x140b0ed52,   # save path: mov edx, 0x5f6ed0
+    0x1412e6659,   # save descriptor 0x1412e65b0: mov dword ptr [rbx + 0x180], 0x5f6ed0
+]
+# The bytes a Cup save file carries are not the descriptor's: the save header writer
+# 0x1414318a0 asks 0x141409cd0(type) for the payload, a switch over the 50 save types in
+# which all nine cup types (CUP, CL, EL, LB, NEXTLB, SD, NEXTSD, ACL, EURO) land on
+# `mov r8d, 0x5f6e80` -- the object less its 0x50-byte header.  League asks copy B's own
+# getter 0x1413fea00 there and Master League 0x141400ba0, so those two grow by themselves;
+# the cup payload is the one literal and has to grow with the object, or the appended unit
+# is never written and a load gets the ctor's empty one back (measured 14.10.: the file
+# stayed 6,256,289 bytes with the four sites above patched).
+COPYS_HEADER = 0x50
+COPYS_PAYLOAD_SITE = 0x141409d05   # mov r8d, 0x5f6e80
+
+
+# S -> block (0x1413fc480) fills the block's team, coach and regulation tables from the
+# cup save with pre-biased displacements -- `lea rcx, [r14 + X]; add rcx, rsi` with r14 =
+# block - S and rsi walking the save's own table, so X = block_base - save_table_offset.
+# The attribution never sees these (no table base appears in them), and a load wrote the
+# cup's 60 teams to the shipped base while every reader looked at the moved one: an empty
+# team table, no "user's team" for the day's matches, and 0x140adcc40's empty event vector
+# aborted the game (Vicentico 13.10., dump 7512 measured 14.10.).  The save side
+# (0x1413fc800) carries the bases directly and is attributed like any other site.
+COPYS_BIASED = [                           # (instruction, table, the save's table offset)
+    (0x1413fc521, "teams", 0xdead0),       # lea rcx, [r14 + 0xa009ec]  (60 records)
+    (0x1413fc561, "coaches", 0xf7490),     # lea rcx, [r14 + 0xb5557c]  (60 records)
+    (0x1413fc5a1, "regulations", 0x100130),  # lea rcx, [r14 + 0xb12d6c]  (40 records)
+]
+
+
+def copys_table_patches(patches):
+    """move S -> block's pre-biased team/coach/regulation destinations with the tables"""
+    by_va = {H(p["va"]): p for p in patches}
+    out = []
+    for va, name, copy_off in COPYS_BIASED:
+        base_old = H(LAYOUT["arrays"][name]["base_old"])
+        tag = "%s edit: 0x%x -> " % (name, base_old)
+        news = set(H(p["why"][len(tag):].split()[0]) for p in patches if p["why"].startswith(tag))
+        if len(news) != 1:
+            if not news:
+                continue                   # the table did not move in this set
+            raise SystemExit("copy S: %s moves to %d different bases" % (name, len(news)))
+        base_new = news.pop()
+        old, new = base_old - copy_off, base_new - copy_off
+        ins = insn_at(va)
+        raw = bytes(ins.bytes)
+        want = struct.pack("<I", old)
+        k = raw.find(want)
+        if ins.address != va or k < 0 or raw.find(want, k + 1) >= 0:
+            raise SystemExit("copy S: 0x%x does not carry 0x%x exactly once (%s %s)"
+                             % (va, old, ins.mnemonic, ins.op_str))
+        if va + k in by_va:
+            raise SystemExit("copy S: 0x%x is already patched" % (va + k))
+        out.append({"va": "0x%x" % (va + k), "old": want.hex(),
+                    "new": struct.pack("<I", new).hex(),
+                    "why": "copy S (Cup save) %s biased: 0x%x -> 0x%x, S -> block writes the "
+                           "cup's %s at the moved table [block 0x%x - save 0x%x] (%s %s)"
+                           % (name, old, new, name, base_new, copy_off, ins.mnemonic, ins.op_str),
+                    "asm": "%s %s" % (ins.mnemonic, ins.op_str)})
+    return out
+
+
+def copys_calendar_patches(patches, unit_bytes):
+    by_va = {H(p["va"]): p for p in patches}
+    grow = align(unit_bytes, 0x10)
+    cal_new = COPYS_SIZE_OLD
+    size_new = COPYS_SIZE_OLD + grow
+    out = []
+    for va, old, new, why in (
+            [(va, COPYS_CAL_OLD, cal_new,
+              "copy S (Cup save) calendar unit: +0x%x -> +0x%x, past the object's end, so the "
+              "widened unit no longer overruns the cup state at +0x1ca080" % (COPYS_CAL_OLD, cal_new))
+             for va in COPYS_CAL_SITES] +
+            [(va, COPYS_SIZE_OLD, size_new,
+              "copy S (Cup save) object: 0x%x -> 0x%x, the calendar unit appended"
+              % (COPYS_SIZE_OLD, size_new))
+             for va in COPYS_SIZE_SITES] +
+            [(COPYS_PAYLOAD_SITE, COPYS_SIZE_OLD - COPYS_HEADER, size_new - COPYS_HEADER,
+              "copy S (Cup save) file payload for the nine cup types: 0x%x -> 0x%x, so the "
+              "appended calendar unit is written and read back"
+              % (COPYS_SIZE_OLD - COPYS_HEADER, size_new - COPYS_HEADER))]):
+        ins = insn_at(va)
+        raw = bytes(ins.bytes)
+        want = struct.pack("<I", old)
+        k = raw.find(want)
+        if ins.address != va or k < 0 or raw.find(want, k + 1) >= 0:
+            raise SystemExit("copy S: 0x%x does not carry 0x%x exactly once (%s %s)"
+                             % (va, old, ins.mnemonic, ins.op_str))
+        if va + k in by_va:
+            raise SystemExit("copy S: 0x%x is already patched" % (va + k))
+        out.append({"va": "0x%x" % (va + k), "old": want.hex(),
+                    "new": struct.pack("<I", new).hex(),
+                    "why": "%s (%s %s)" % (why, ins.mnemonic, ins.op_str),
+                    "asm": "%s %s" % (ins.mnemonic, ins.op_str)})
+    return out, cal_new, size_new
+
+
+def copyb_calendar_patches(patches, unit_bytes):
+    by_va = {H(p["va"]): p for p in patches}
+    size_p = by_va.get(COPYB_SIZE_SITE)
+    if size_p is None:
+        raise SystemExit("copy B: the object size at 0x%x is not patched by the players part"
+                         % COPYB_SIZE_SITE)
+    size_old = int.from_bytes(bytes.fromhex(size_p["new"])[:4], "little")
+    grow = align(unit_bytes, 0x10)
+    cal_new = COPYB_TAIL
+    size_new = size_old + grow
+    new = bytearray.fromhex(size_p["new"])
+    new[:4] = size_new.to_bytes(4, "little")
+    size_p["new"] = new.hex()
+    size_p["why"] += ("; copy B calendar unit inside the saved prefix, player part up by "
+                      "0x%x: 0x%x -> 0x%x" % (grow, size_old, size_new))
+    out = []
+    vb = LAYOUT["copy"]["variant_b"]
+    sites = [s for s in vb["sites"] if H(s["value"]) == COPYB_CAL_OLD]
+    if len(sites) != 3:
+        raise SystemExit("copy B: expected 3 calendar sites in copy.variant_b.sites, found %d"
+                         % len(sites))
+    for s in sites:
+        va = H(s["va"])
+        want = struct.pack("<I", COPYB_CAL_OLD)
+        k = d[off_of(va):off_of(va) + 16].find(want)
+        if k < 0:
+            raise SystemExit("copy B: %s does not carry 0x%x" % (s["va"], COPYB_CAL_OLD))
+        if va + k in by_va:
+            raise SystemExit("copy B: %s is already patched" % s["va"])
+        out.append({"va": "0x%x" % (va + k), "old": want.hex(),
+                    "new": struct.pack("<I", cal_new).hex(),
+                    "why": "copy B calendar unit: +0x%x -> +0x%x, where the player part "
+                           "began, inside what a Cup save stores (%s)"
+                           % (COPYB_CAL_OLD, cal_new, s["text"]),
+                    "asm": s["text"]})
+    for va, val in COPYB_TAIL_SITES:
+        ins = insn_at(va)
+        raw = bytes(ins.bytes)
+        want = struct.pack("<I", val)
+        k = raw.find(want)
+        if ins.address != va or k < 0 or raw.find(want, k + 1) >= 0:
+            raise SystemExit("copy B: 0x%x does not carry 0x%x exactly once (%s %s)"
+                             % (va, val, ins.mnemonic, ins.op_str))
+        if va + k in by_va:
+            raise SystemExit("copy B: 0x%x is already patched" % (va + k))
+        out.append({"va": "0x%x" % (va + k), "old": want.hex(),
+                    "new": struct.pack("<I", val + grow).hex(),
+                    "why": "copy B player part up by the calendar unit: +0x%x -> +0x%x (%s %s)"
+                           % (val, val + grow, ins.mnemonic, ins.op_str),
+                    "asm": "%s %s" % (ins.mnemonic, ins.op_str)})
+    for va, name, cap in COPYB_CLAMPS:
+        ins = insn_at(va)
+        raw = bytes(ins.bytes)
+        if ins.mnemonic != "cmp" or raw[:2] != b"\x3b\xbb" or len(raw) != 6:
+            raise SystemExit("copy B: 0x%x is not `cmp edi, dword ptr [rbx + disp32]`" % va)
+        clamp = b"\x81\xff" + struct.pack("<I", cap)          # cmp edi, imm32
+        p = by_va.get(va)
+        why = ("copy B %s: block -> B stops at B's %d records, not at the block's count "
+               "(cmp edi, %d)" % (name, cap, cap))
+        if p is not None:
+            p["new"], p["why"] = clamp.hex(), why + "; replaces: " + p["why"]
+        else:
+            out.append({"va": "0x%x" % va, "old": raw.hex(), "new": clamp.hex(), "why": why,
+                        "asm": "%s %s" % (ins.mnemonic, ins.op_str)})
+    return out, cal_new, size_new
+
+
 def main():
     global MLCOPY_ON, SLOTS32, CALENDAR_GROWTH, CALENDAR_IDS
     which = sys.argv[1] if len(sys.argv) > 1 else "block"
@@ -1434,6 +1658,24 @@ def main():
     imp = impscan.scan(patches)
     patches += imp
     print("impdata: %d offsets the .trace attribution cannot see" % len(imp))
+
+    ct = copys_table_patches(patches)
+    patches += ct
+    if ct:
+        print("copy S (Cup save): %d biased table destinations moved (%s)"
+              % (len(ct), ", ".join(name for _, name, _ in COPYS_BIASED)))
+
+    if calendar:
+        cb, cal_b, size_b = copyb_calendar_patches(patches, calendar["unit_bytes"])
+        patches += cb
+        calendar["copy_b_unit"], calendar["copy_b_size"] = "0x%x" % cal_b, "0x%x" % size_b
+        print("copy B (Cup/League Mode): calendar unit at +0x%x, player part after it, object 0x%x; team/coach/"
+              "regulation fills stop at 750/1300/180" % (cal_b, size_b))
+        cs, cal_s, size_s = copys_calendar_patches(patches, calendar["unit_bytes"])
+        patches += cs
+        calendar["copy_s_unit"], calendar["copy_s_size"] = "0x%x" % cal_s, "0x%x" % size_s
+        print("copy S (Cup save): calendar unit at +0x%x, object 0x%x -> 0x%x, file payload "
+              "0x%x (%d patches)" % (cal_s, COPYS_SIZE_OLD, size_s, size_s - COPYS_HEADER, len(cs)))
 
     seen = {}
     for p in patches:

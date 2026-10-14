@@ -3583,8 +3583,8 @@
   {
    "va": "0x1413fea01",
    "old": "10bd3501c3cc",
-   "new": "90ae8101c3cc",
-   "why": "mode-copy players, B: object size: 0x135bd10 -> 0x181ae90",
+   "new": "902f8e01c3cc",
+   "why": "mode-copy players, B: object size: 0x135bd10 -> 0x181ae90; copy B calendar unit inside the saved prefix, player part up by 0xc8100: 0x181ae90 -> 0x18e2f90",
    "asm": "adc byte ptr [rbp - 0x333cfecb], bh"
   },
   {
@@ -19221,8 +19221,8 @@
   {
    "va": "0x1413fee1f",
    "old": "3bbbecbcd000",
-   "new": "3bbb20738704",
-   "why": "count:teams edit: 0xd0bcec -> 0x4877320 (cmp edi, dword ptr [rbx + 0xd0bcec])",
+   "new": "81ffee020000",
+   "why": "copy B teams: block -> B stops at B's 750 records, not at the block's count (cmp edi, 750); replaces: count:teams edit: 0xd0bcec -> 0x4877320 (cmp edi, dword ptr [rbx + 0xd0bcec])",
    "asm": "cmp edi, dword ptr [rbx + 0xd0bcec]"
   },
   {
@@ -19641,8 +19641,8 @@
   {
    "va": "0x1413fee6f",
    "old": "3bbbf0bcd000",
-   "new": "3bbb24738704",
-   "why": "count:coaches edit: 0xd0bcf0 -> 0x4877324 (cmp edi, dword ptr [rbx + 0xd0bcf0])",
+   "new": "81ff14050000",
+   "why": "copy B coaches: block -> B stops at B's 1300 records, not at the block's count (cmp edi, 1300); replaces: count:coaches edit: 0xd0bcf0 -> 0x4877324 (cmp edi, dword ptr [rbx + 0xd0bcf0])",
    "asm": "cmp edi, dword ptr [rbx + 0xd0bcf0]"
   },
   {
@@ -21643,8 +21643,8 @@
   {
    "va": "0x1413feebf",
    "old": "3bbbf4bcd000",
-   "new": "3bbb28738704",
-   "why": "count:regulations edit: 0xd0bcf4 -> 0x4877328 (cmp edi, dword ptr [rbx + 0xd0bcf4])",
+   "new": "81ffb4000000",
+   "why": "copy B regulations: block -> B stops at B's 180 records, not at the block's count (cmp edi, 180); replaces: count:regulations edit: 0xd0bcf4 -> 0x4877328 (cmp edi, dword ptr [rbx + 0xd0bcf4])",
    "asm": "cmp edi, dword ptr [rbx + 0xd0bcf4]"
   },
   {
@@ -24796,6 +24796,174 @@
    "new": "ec159101",
    "why": "impdata past the calendar, by its own block offset: 0x1642a24 -> 0x19115ec (mov eax, dword ptr [rcx + 0x1642a24])",
    "asm": "mov eax, dword ptr [rcx + 0x1642a24]"
+  },
+  {
+   "va": "0x1413fc524",
+   "old": "ec09a000",
+   "new": "a0068601",
+   "why": "copy S (Cup save) teams biased: 0xa009ec -> 0x18606a0, S -> block writes the cup's teams at the moved table [block 0x193f170 - save 0xdead0] (lea rcx, [r14 + 0xa009ec])",
+   "asm": "lea rcx, [r14 + 0xa009ec]"
+  },
+  {
+   "va": "0x1413fc564",
+   "old": "7c55b500",
+   "new": "e002c201",
+   "why": "copy S (Cup save) coaches biased: 0xb5557c -> 0x1c202e0, S -> block writes the cup's coaches at the moved table [block 0x1d17770 - save 0xf7490] (lea rcx, [r14 + 0xb5557c])",
+   "asm": "lea rcx, [r14 + 0xb5557c]"
+  },
+  {
+   "va": "0x1413fc5a4",
+   "old": "6c2db100",
+   "new": "0097e001",
+   "why": "copy S (Cup save) regulations biased: 0xb12d6c -> 0x1e09700, S -> block writes the cup's regulations at the moved table [block 0x1f09830 - save 0x100130] (lea rcx, [r14 + 0xb12d6c])",
+   "asm": "lea rcx, [r14 + 0xb12d6c]"
+  },
+  {
+   "va": "0x140afd72b",
+   "old": "cc509e00",
+   "new": "c053ee00",
+   "why": "copy B calendar unit: +0x9e50cc -> +0xee53c0, where the player part began, inside what a Cup save stores (lea ecx, [rsi + 0x9e50cc])",
+   "asm": "lea ecx, [rsi + 0x9e50cc]"
+  },
+  {
+   "va": "0x1413febbd",
+   "old": "cc509e00",
+   "new": "c053ee00",
+   "why": "copy B calendar unit: +0x9e50cc -> +0xee53c0, where the player part began, inside what a Cup save stores (lea edx, [rsi + 0x9e50cc])",
+   "asm": "lea edx, [rsi + 0x9e50cc]"
+  },
+  {
+   "va": "0x1413fef5e",
+   "old": "cc509e00",
+   "new": "c053ee00",
+   "why": "copy B calendar unit: +0x9e50cc -> +0xee53c0, where the player part began, inside what a Cup save stores (lea ecx, [rsi + 0x9e50cc])",
+   "asm": "lea ecx, [rsi + 0x9e50cc]"
+  },
+  {
+   "va": "0x140afd842",
+   "old": "c053ee00",
+   "new": "c0d4fa00",
+   "why": "copy B player part up by the calendar unit: +0xee53c0 -> +0xfad4c0 (mov qword ptr [rsi + 0xee53c0], rdi)",
+   "asm": "mov qword ptr [rsi + 0xee53c0], rdi"
+  },
+  {
+   "va": "0x140afd849",
+   "old": "d053ee00",
+   "new": "d0d4fa00",
+   "why": "copy B player part up by the calendar unit: +0xee53d0 -> +0xfad4d0 (lea rbx, [rsi + 0xee53d0])",
+   "asm": "lea rbx, [rsi + 0xee53d0]"
+  },
+  {
+   "va": "0x1413fed66",
+   "old": "c053ee00",
+   "new": "c0d4fa00",
+   "why": "copy B player part up by the calendar unit: +0xee53c0 -> +0xfad4c0 (mov eax, dword ptr [rsi + 0xee53c0])",
+   "asm": "mov eax, dword ptr [rsi + 0xee53c0]"
+  },
+  {
+   "va": "0x1413fed78",
+   "old": "c453ee00",
+   "new": "c4d4fa00",
+   "why": "copy B player part up by the calendar unit: +0xee53c4 -> +0xfad4c4 (mov eax, dword ptr [rsi + 0xee53c4])",
+   "asm": "mov eax, dword ptr [rsi + 0xee53c4]"
+  },
+  {
+   "va": "0x1413ff12d",
+   "old": "c053ee00",
+   "new": "c0d4fa00",
+   "why": "copy B player part up by the calendar unit: +0xee53c0 -> +0xfad4c0 (mov dword ptr [rsi + 0xee53c0], eax)",
+   "asm": "mov dword ptr [rsi + 0xee53c0], eax"
+  },
+  {
+   "va": "0x1413ff13e",
+   "old": "c453ee00",
+   "new": "c4d4fa00",
+   "why": "copy B player part up by the calendar unit: +0xee53c4 -> +0xfad4c4 (mov dword ptr [rsi + 0xee53c4], eax)",
+   "asm": "mov dword ptr [rsi + 0xee53c4], eax"
+  },
+  {
+   "va": "0x140af23b6",
+   "old": "d053ee00",
+   "new": "d0d4fa00",
+   "why": "copy B player part up by the calendar unit: +0xee53d0 -> +0xfad4d0 (lea rax, [rcx + 0xee53d0])",
+   "asm": "lea rax, [rcx + 0xee53d0]"
+  },
+  {
+   "va": "0x140af23bd",
+   "old": "c853ee00",
+   "new": "c8d4fa00",
+   "why": "copy B player part up by the calendar unit: +0xee53c8 -> +0xfad4c8 (mov qword ptr [rcx + 0xee53c8], rax)",
+   "asm": "mov qword ptr [rcx + 0xee53c8], rax"
+  },
+  {
+   "va": "0x140af23d7",
+   "old": "c853ee00",
+   "new": "c8d4fa00",
+   "why": "copy B player part up by the calendar unit: +0xee53c8 -> +0xfad4c8 (mov rcx, qword ptr [rcx + 0xee53c8])",
+   "asm": "mov rcx, qword ptr [rcx + 0xee53c8]"
+  },
+  {
+   "va": "0x1412e67ff",
+   "old": "d053ee00",
+   "new": "d0d4fa00",
+   "why": "copy B player part up by the calendar unit: +0xee53d0 -> +0xfad4d0 (mov dword ptr [rdi + 0x180], 0xee53d0)",
+   "asm": "mov dword ptr [rdi + 0x180], 0xee53d0"
+  },
+  {
+   "va": "0x140af229b",
+   "old": "80d31500",
+   "new": "d06e5f00",
+   "why": "copy S (Cup save) calendar unit: +0x15d380 -> +0x5f6ed0, past the object's end, so the widened unit no longer overruns the cup state at +0x1ca080 (lea rcx, [rsi + 0x15d380])",
+   "asm": "lea rcx, [rsi + 0x15d380]"
+  },
+  {
+   "va": "0x1413fc641",
+   "old": "80d31500",
+   "new": "d06e5f00",
+   "why": "copy S (Cup save) calendar unit: +0x15d380 -> +0x5f6ed0, past the object's end, so the widened unit no longer overruns the cup state at +0x1ca080 (lea rdx, [r15 + 0x15d380])",
+   "asm": "lea rdx, [r15 + 0x15d380]"
+  },
+  {
+   "va": "0x1413fca0b",
+   "old": "80d31500",
+   "new": "d06e5f00",
+   "why": "copy S (Cup save) calendar unit: +0x15d380 -> +0x5f6ed0, past the object's end, so the widened unit no longer overruns the cup state at +0x1ca080 (lea rcx, [rsi + 0x15d380])",
+   "asm": "lea rcx, [rsi + 0x15d380]"
+  },
+  {
+   "va": "0x140af185c",
+   "old": "d06e5f00",
+   "new": "d0ef6b00",
+   "why": "copy S (Cup save) object: 0x5f6ed0 -> 0x6befd0, the calendar unit appended (mov edx, 0x5f6ed0)",
+   "asm": "mov edx, 0x5f6ed0"
+  },
+  {
+   "va": "0x140afc043",
+   "old": "d06e5f00",
+   "new": "d0ef6b00",
+   "why": "copy S (Cup save) object: 0x5f6ed0 -> 0x6befd0, the calendar unit appended (mov edx, 0x5f6ed0)",
+   "asm": "mov edx, 0x5f6ed0"
+  },
+  {
+   "va": "0x140b0ed53",
+   "old": "d06e5f00",
+   "new": "d0ef6b00",
+   "why": "copy S (Cup save) object: 0x5f6ed0 -> 0x6befd0, the calendar unit appended (mov edx, 0x5f6ed0)",
+   "asm": "mov edx, 0x5f6ed0"
+  },
+  {
+   "va": "0x1412e665f",
+   "old": "d06e5f00",
+   "new": "d0ef6b00",
+   "why": "copy S (Cup save) object: 0x5f6ed0 -> 0x6befd0, the calendar unit appended (mov dword ptr [rbx + 0x180], 0x5f6ed0)",
+   "asm": "mov dword ptr [rbx + 0x180], 0x5f6ed0"
+  },
+  {
+   "va": "0x141409d07",
+   "old": "806e5f00",
+   "new": "80ef6b00",
+   "why": "copy S (Cup save) file payload for the nine cup types: 0x5f6e80 -> 0x6bef80, so the appended calendar unit is written and read back (mov r8d, 0x5f6e80)",
+   "asm": "mov r8d, 0x5f6e80"
   }
  ],
  "mlcopy": {
@@ -25167,6 +25335,10 @@
     "va": "0x141526d6c",
     "why": "0x258-byte match-side team record, not a day"
    }
-  ]
+  ],
+  "copy_b_unit": "0xee53c0",
+  "copy_b_size": "0x18e2f90",
+  "copy_s_unit": "0x5f6ed0",
+  "copy_s_size": "0x6befd0"
  }
 }
