@@ -14,6 +14,18 @@ once, and your 0.2.2 career keeps working.
 
 ## Fixed
 
+- **Install mods: a world zip's scoreboards and kits of other packs were gone right after the
+  install, and a league package's kits with them.** Install mods ends with Switch on, which
+  writes the world's own kit and scoreboard map lines and takes every line of Mod Studio's out
+  first. The lines a world zip brings for the scoreboards and menu themes of a modpack
+  (`<world>\_packs`) and for kits borrowed from other packs (`<world>\_kits`) end in the same
+  tag, so they went out with the rest: a modpack installed from its zip played with the game's
+  own scoreboards, and the clubs of the game that had dropped into its leagues wore the wrong
+  kit. The world's own package kits and scoreboards went the same way when their source folder
+  is on the PC the world was built on (`no folder ..., skipped`). Now Switch on keeps the lines
+  a world carries and the lines whose copy is already under the world, and Export the world
+  carries them along again from such a PC. The Modpack's scoreboards show after Install mods.
+  Thanks Vran, Mob, ELBastos.
 - **A world could be built with clubs that have no players; picking one crashed the game.** The
   placeholder squads are handed out in club-id order and stop at the player table's cap (61905
   with the modules installed) without a word in the Build log; a world past the cap -- 1212 new
@@ -80,6 +92,16 @@ once, and your 0.2.2 career keeps working.
   `data_s2526b`, so the newest tables were covered by older ones and the version label said
   `data_s2526d`. They are now layered the way the game does it; unpack the tables again
   (Tools, or the next Build does it). Thanks to everyone on the 2.2 update.
+- **Second season: the Europa League had no round of 16, and its league phase table was empty
+  from February on.** After the July teardown the February play-off is outside the season, and
+  the game's start of it opened a new season on the Europa League -- dated by February's year,
+  so one season early -- and every look at the league phase table from then on found that empty
+  season: the play-off was played, but the round of 16 was never drawn and Competition Info
+  showed an empty League Phase. The draw (since 0.2.3, 13 October) already took the fuller table
+  of the two seasons; now the play-off and its ties are given the league phase's season year
+  before they start, as in a first season, so no second season is opened at all. Needs Install
+  the modules; a career that has already passed February of its second season keeps the table
+  it has, the next season is right.
 - **A February play-off with 7 ties instead of 8 (14 clubs), a qualifying round with 6.** A
   world with more than 300 competition regulations -- the 0.2.1 Modpack has 334 -- lost its
   highest regulation ids with the 0.2.1 modules: the game counts its regulations again after

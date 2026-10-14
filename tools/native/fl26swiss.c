@@ -1210,6 +1210,29 @@ static int po_start(int ci, void* started)
   logf("fl26swiss: %s play-off -- ranks 9-24 of reg %u into reg %u (%u clubs), UEFA bracket drawn; day %d",
        c->name, (unsigned)c->row, (unsigned)c->po, r2 ? rec_count(r2) : 0, d);
   g_po_day[ci] = ad;
+  /* In a second season the play-off is outside the season when February comes: the July
+   * teardown put its +0x2fc back to 0xffff and the August fill left it alone (the rollover had
+   * filled its first tie).  The game's start (0x141590420) then opens a NEW season sub-record
+   * dated by today's year -- 2027 in February 2027 -- on the Europa League's header, and every
+   * table lookup for the league phase (1029) and the round of 16 (6) lands in that empty record
+   * (2026-10-13, slot 3, day 71: "reg 1029 has no table", R16 never drawn).  So the league
+   * phase's season year is set on the play-off and its ties first, as fl26join does for a league
+   * that enters without its table; the start then joins the running season, as in a first
+   * season, where the world's creation had given every regulation the year. */
+  {
+    uint16_t yr = ph ? *(uint16_t*)(ph + 0x2fc) : 0xffff;
+    unsigned char* po = get_rec(c->po);
+    if (yr != 0xffff && po && *(uint16_t*)(po + 0x2fc) == 0xffff) {
+      int nt = 0;
+      *(uint16_t*)(po + 0x2fc) = yr;
+      for (int k = 0; k < 8; k++) {
+        unsigned char* tr = get_rec(tie_id(c, k));
+        if (tr && *(uint16_t*)(tr + 0x2fc) == 0xffff) { *(uint16_t*)(tr + 0x2fc) = yr; nt++; }
+      }
+      logf("fl26swiss: %s play-off reg %u was outside the season (+0x2fc 0xffff); season %u of reg %u set on it and %d tie(s) before the start, so the game does not open a %u season from today's date",
+           c->name, (unsigned)c->po, (unsigned)yr, (unsigned)c->row, nt, (unsigned)yr + 1);
+    }
+  }
   start_stage(started, c->po);
   return 1;
 }

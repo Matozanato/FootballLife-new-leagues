@@ -120,7 +120,9 @@ def main():
             assert km.strip() == '72001, "%s\\L One\\Club A"   %s L One/0 made' % (WORLD, tag), km
         # a club of the world wearing another pack's kit (SPFL26's Other Europe, a modpack): it goes too
         put(os.path.join(a, "livecpk", WORLD, "leaguebuilder-plan.json"),
-            '{"leagues": [{"name": "L One", "teams": [72001, 1586, 72003, 100]}]}')
+            '{"world": "%s", "leagues": [{"name": "L One", "rid": 263, "teams": [72001, 1586, 72003, 100], '
+            '"club_names": ["Club A", "Salzburg", "C", "D"], "kit_folders": ["X:\\\\built-there\\\\A", "", "", ""], '
+            '"scoreboard": "X:\\\\built-there\\\\L One"}]}' % WORLD)
         with open(os.path.join(a, "content", "kit-server", "map.txt"), "a", encoding="utf-8") as fh:
             fh.write('1586, "Other Europe\\Salzburg"\n1586, "Old\\Salzburg"\n72003, "Gone\\Nowhere"\n')
         put(os.path.join(a, "content", "kit-server", "Other Europe", "Salzburg", "p1", "s.ftex"), "s")
@@ -174,6 +176,28 @@ def main():
         assert "76, %s\\_packs\\Modpack\\HNL" % WORLD in sm, sm
         assert os.path.isfile(os.path.join(h, "content", "scoreboard-server", WORLD, "_packs", "Modpack", "HNL", "board.dds"))
         assert os.path.isfile(os.path.join(h, "content", "menu-server", WORLD, "_packs", "Modpack", "HNL", "theme.dds"))
+        # Install mods ends with Switch on, which writes the world's own kit and scoreboard lines
+        # (lbservers.write) and took every line with our tag out -- the _packs lines too (Vran,
+        # 14.10.: no scoreboards with the modpack).  They stay now, and an export from this PC
+        # carries them with their folders.
+        import json as J
+        import lbservers as LS
+        with open(os.path.join(h, "livecpk", WORLD, "leaguebuilder-plan.json"), encoding="utf-8") as fh:
+            plan = J.load(fh)
+        LS.write(plan, h, log=lambda *_: None, root=os.path.join(h, "livecpk", WORLD))
+        sm = open(os.path.join(h, "content", "scoreboard-server", "map_competitions.txt"), encoding="utf-8").read()
+        assert "76, %s\\_packs\\Modpack\\HNL" % WORLD in sm and "268, %s\\_packs\\Modpack\\Cup" % WORLD in sm, sm
+        km = open(os.path.join(h, "content", "kit-server", "map.txt"), encoding="utf-8").read()
+        assert '1586, "%s\\_kits\\Other Europe\\Salzburg"' % WORLD in km, km
+        zr = os.path.join(tmp, WORLD + "-again.zip")
+        info = I.export_world(h, WORLD, zr)
+        assert info["scoreboards"] == 3 and info["kits"] == 3, info
+        with zipfile.ZipFile(zr) as z:
+            names = set(z.namelist())
+            assert "SiderAddons/content/scoreboard-server/%s/_packs/Modpack/HNL/board.dds" % WORLD in names, names
+            assert "SiderAddons/content/kit-server/%s/_kits/Other Europe/Salzburg/p1/s.ftex" % WORLD in names, names
+            sm2 = z.read("SiderAddons/content/scoreboard-server/map_competitions.txt").decode().splitlines()
+            assert "76, %s\\_packs\\Modpack\\HNL   # SuperSport HNL %s scoreboard of Modpack\\HNL" % (WORLD, tag) in sm2, sm2
         I.uninstall(Game(h), ini, rec)
         hm = os.path.join(h, "content", "scoreboard-server", "map_competitions.txt")
         assert not os.path.exists(hm) or WORLD not in open(hm, encoding="utf-8").read()   # the whole map was ours

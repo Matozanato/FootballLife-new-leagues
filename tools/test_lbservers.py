@@ -75,6 +75,43 @@ def main():
         ok("empty world: ours out, own line back on",
            lines(os.path.join(b, S.KITS, "map.txt")) == ['901, "Old\\Kit"', '5, "Keep"'])
 
+        # lines Install mods put in from the world's own zip -- a kit or a scoreboard of another
+        # pack the world carries under <world>\_kits, <world>\_packs -- end in our tag too, but
+        # Switch on (run at the end of Install mods) must not take them out (Vran, 14.10.)
+        ck = '1586, "My world\\_kits\\Other\\Salzburg"   %s kit of Other\\Salzburg' % S.TAG
+        cb = "76, My world\\_packs\\Modpack\\HNL   # SuperSport HNL %s scoreboard of Modpack\\HNL" % S.TAG
+        put(os.path.join(b, S.KITS, "map.txt"), '901, "Old\\Kit"\n%s\n77, "Elsewhere\\X"   %s stale\n' % (ck, S.TAG))
+        put(os.path.join(b, S.BOARDS, "map_competitions.txt"), "%s\n300, Other world\\HNL   %s HNL\n" % (cb, S.TAG))
+        S.write(pb, b, log=lambda *_: None)
+        km = lines(os.path.join(b, S.KITS, "map.txt"))
+        bm = lines(os.path.join(b, S.BOARDS, "map_competitions.txt"))
+        ok("a kit the world carries from another pack stays at Switch on", ck in km)
+        ok("a scoreboard the world carries from another pack stays at Switch on", cb in bm)
+        ok("a line of ours that is not the world's is still taken out",
+           not any("Elsewhere" in l for l in km) and not any("Other world" in l for l in bm))
+        ok("carried: Build's own lines still written", any(l.startswith('902, "My world\\HNL\\Hajduk"') for l in km))
+        S.write({"world": "My world", "leagues": []}, b, log=lambda *_: None)
+        ok("empty world: the carried lines stay too",
+           ck in lines(os.path.join(b, S.KITS, "map.txt")) and cb in lines(os.path.join(b, S.BOARDS, "map_competitions.txt")))
+        ok("carried: a line of another world's tag is not one", not S.carried(ck, "Other world") and S.carried(ck, "My world")
+           and S.carried(cb.replace("\\", "/"), "My world"))
+        # a world installed from its zip on another PC: the plan's kit and scoreboard sources are
+        # folders of the PC it was built on, the copies under <world> came in the zip -- the
+        # lines stay (Switch on at the end of Install mods dropped them as "no folder, skipped")
+        pz = {"world": "My world", "leagues": [dict(L, teams=[901, 902, 903], rid=410, kit_folders=[r"X:\gone\Dinamo", r"X:\gone\Hajduk", ""],
+                                                     scoreboard=r"X:\gone\HNL", club_names=["Dinamo", "Hajduk", "Rijeka"])]}
+        put(os.path.join(b, S.BOARDS, "My world", "HNL", "bg.dds"), "x")
+        shutil.rmtree(os.path.join(b, S.KITS, "My world", "HNL", "Hajduk"))
+        log = []
+        ok("zip-installed world: kits whose copy is under the world stay, a missing one is skipped",
+           S.write(pz, b, log=log.append) == (1, 1) and any("HNL/1: no folder" in l for l in log))
+        km = lines(os.path.join(b, S.KITS, "map.txt"))
+        ok("zip-installed world: the kit line and the scoreboard line are there",
+           any(l.startswith('901, "My world\\HNL\\Dinamo"') for l in km)
+           and any(l.startswith("410, My world\\HNL") for l in lines(os.path.join(b, S.BOARDS, "map_competitions.txt"))))
+        put(os.path.join(b, S.KITS, "map.txt"), '901, "Old\\Kit"\n5, "Keep"\n')
+        put(os.path.join(b, S.BOARDS, "map_competitions.txt"), "")
+
         # kits made for new clubs with colours or a crest of their own (kitmaker)
         from PIL import Image
         w = os.path.join(tmp, "world")

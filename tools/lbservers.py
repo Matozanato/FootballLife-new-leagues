@@ -178,14 +178,29 @@ def _copy(src, dst):
         shutil.copytree(src, dst)
 
 
-def _map(path, mine, log, what):
-    """our lines (key, text) into a map file: earlier ones of ours out, clashing ones of yours off"""
+def carried(l, world):
+    """a line Install mods put in from the world's own zip: a kit or a scoreboard of another pack
+    the world carries under <world>\\_kits or <world>\\_packs (installer.export_world).  It ends
+    in our tag like a line Build wrote, but Build did not write it and must not take it out:
+    Switch on, run at the end of Install mods, wiped every modpack scoreboard that way (Vran,
+    14.10.: "no scoreboards with the modpack")"""
+    m = LINE.match(l[:-len(OFF)] if l.endswith(OFF) else l)
+    if not m:
+        return False
+    f = m.group(3).strip().lower().replace("/", "\\")
+    w = safe(world).lower() + "\\"
+    return f.startswith((w + "_kits\\", w + "_packs\\"))
+
+
+def _map(path, mine, log, what, world=""):
+    """our lines (key, text) into a map file: earlier ones of ours out, clashing ones of yours
+    off; a line the world carries from another pack (carried) stays"""
     lines, nl, bom, enc = lbstadiums.read(path)
     if not mine and not any(TAG in l or l.endswith(OFF) for l in lines):
         return 0
     rows = []
     for l in lines:
-        if TAG in l:
+        if TAG in l and not (world and carried(l, world)):
             continue
         if l.endswith(OFF):
             l = re.sub(r"^(\s*)#\s*", r"\1", l[:-len(OFF)], count=1)
@@ -213,13 +228,15 @@ def _map(path, mine, log, what):
     return len(mine)
 
 
-def _yours(sider, klib):
+def _yours(sider, klib, world=""):
     """team ids that have a kit line of your own in map.txt (one Build did not write), switched on
     or switched off by us, whose folder is in the library: a line to a kit that is not installed
-    gives the club nothing, so ours goes in for it (22 clubs of the modpack world, 13.10.)"""
+    gives the club nothing, so ours goes in for it (22 clubs of the modpack world, 13.10.).  A
+    kit the world carries from another pack (carried) counts as one of yours: no kit is made
+    over it"""
     out = set()
     for l in lbstadiums.read(os.path.join(sider, klib, "map.txt"))[0]:
-        if TAG in l:
+        if TAG in l and not (world and carried(l, world)):
             continue
         m = LINE.match(l[:-len(OFF)] if l.endswith(OFF) else l)
         if m and (not m.group(1) or l.endswith(OFF)) and m.group(3).strip() \
@@ -239,7 +256,7 @@ def write(pl, sider, log=print, root=None):
     # a club with a kit line of your own keeps that kit: no kit made for it, and none of a league
     # package either (pepponeee98, 14.10.: his Serie C lines were switched off at every Build for
     # the package's kits, which went into a folder of the world again each time)
-    yours = _yours(sider, klib) if (make or kits) else set()
+    yours = _yours(sider, klib, world) if (make or kits) else set()
     kept = sorted({x[0] for x in kits if x[0] in yours} | {x[0] for x in make if x[0] in yours})
     kits = [x for x in kits if x[0] not in yours]
     make = [x for x in make if x[0] not in yours]
@@ -256,9 +273,6 @@ def write(pl, sider, log=print, root=None):
             continue
         mine = []
         for key, name, src in items:
-            if not os.path.isdir(src):
-                log("  %s of %s: no folder %s, skipped" % (what, name, src))
-                continue
             if what == "kits":
                 league, _s, k = name.rpartition("/")
                 club = [p for p in pl["leagues"] if p["name"] == league][0]
@@ -268,7 +282,13 @@ def write(pl, sider, log=print, root=None):
             else:
                 rel = "%s\\%s" % (world, safe(name))
                 text = "%d, %s   %s %s" % (key, rel, TAG, name)
-            _copy(src, os.path.join(root, rel))
+            if os.path.isdir(src):
+                _copy(src, os.path.join(root, rel))
+            elif not os.path.isdir(os.path.join(root, rel)):
+                log("  %s of %s: no folder %s, skipped" % (what, name, src))
+                continue
+            # else: the source is on the PC the world was built on, and the world's zip brought
+            # the copy under <world>: the line stays (Install mods, whose Switch on dropped it)
             mine.append((key, text))
         if what == "kits" and make:
             numbers = numbers_kit(root, world)
@@ -285,7 +305,7 @@ def write(pl, sider, log=print, root=None):
                 mine.append((tid, '%d, "%s"   %s %s/%d made' % (tid, rel, TAG, league, k)))
             log("kits made from colours and crests: %d (%d new or changed)%s" % (
                 len(make), new, "" if numbers else "; no kit in the library lends back numbers, so the game's own are used"))
-        done.append(_map(os.path.join(root, file), mine, log, what))
+        done.append(_map(os.path.join(root, file), mine, log, what, world))
     return tuple(done)
 
 

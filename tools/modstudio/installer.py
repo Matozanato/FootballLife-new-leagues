@@ -284,6 +284,7 @@ def export_world(sider_dir, world, out, log=lambda t: None):
         for s, here, lines, lent in extra:
             z.writestr("SiderAddons/content/%s/%s" % (s.folder, s.maps[0].file), b"\r\n".join(lines) + b"\r\n")
             done, written = set(), set()
+            fresh = tuple(d.lower().replace("\\", "/") + "/" for _s, d in lent)
             for src, dst in [(os.path.join(here, world), world)] + lent:
                 if dst.lower() in done or not os.path.isdir(src):
                     continue
@@ -293,8 +294,10 @@ def export_world(sider_dir, world, out, log=lambda t: None):
                     for f in sorted(fn):
                         p = os.path.join(dp, f)
                         rel = os.path.relpath(p, src).replace(os.sep, "/")
-                        if dst == world and rel.lower().startswith((BORROWED.lower() + "/", PACKS.lower() + "/")):
-                            continue              # an older copy of borrowed kits / packs: the fresh one goes
+                        if dst == world and (world + "/" + rel).lower().startswith(fresh):
+                            continue              # an older copy of a borrowed kit / pack: the fresh one goes
+                        # a kit or pack the world carries and nothing lends afresh (a world
+                        # installed from a zip, exported again) goes as it is, with its lines
                         name = "SiderAddons/content/%s/%s/%s" % (s.folder, dst.replace("\\", "/"), rel)
                         if name.lower() in written:
                             continue              # a pack folder inside another one already written
