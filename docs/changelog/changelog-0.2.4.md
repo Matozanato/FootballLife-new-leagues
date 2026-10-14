@@ -243,6 +243,12 @@ once, and your 0.2.2 career keeps working.
   Build now runs in a process of its own, and the window stays free while it works.
 - **Pages were cut off with Windows display scaling at 125 % or 150 %, or in a small window**:
   the buttons were squeezed to a line. Every page now scrolls when it is taller than the window.
+- **Pages opened slowly on a big world, and the window stopped every 4 seconds.** On the Modpack
+  Home took 4 s to open, Leagues 4.5 s and Clubs 1.4 s: each visit read the built world's plan
+  again (about 1 s each time) and made every crest picture again. Both are now kept until the
+  file changes: Leagues and Clubs open in about 0.1 s, Home in 0.2 s after the first time. The
+  check whether the game is running (every 4 s) took 0.3 s with the window waiting; it now asks
+  Windows directly, in a few milliseconds.
 
 ## Read this first
 

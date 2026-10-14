@@ -24,6 +24,7 @@ from .. import servers as S
 from .. import newlife as N
 from .. import access
 from .. import apart
+from .. import filecache
 from ..i18n import _, tr
 from ..backups import snapshot
 from ..ui import Fold, Page, section, hint, row, ask, error, info, run_job, helpmark, helped, can_write, denied_box
@@ -94,10 +95,26 @@ UEFA_PRESET = ("Top flight: 1st UCL qualifying, 2nd UEL, 3rd UECL",
                TOP_FLIGHT)
 
 
+_PIXMAPS = {}
+
+
 def pixmap(path, size, kit=None):
-    """a small picture of `path`; with no path, the shield a NewLife club's shirt (`kit`) gives"""
+    """a small picture of `path`; with no path, the shield a NewLife club's shirt (`kit`) gives.
+    0.2.4: kept while the file stays the same (the Leagues page made 114 crests again on every
+    visit: 1.6 s of the 4.5 s it took to open on the Modpack)"""
     if not path and not kit:
         return None
+    key = (path, filecache.stamp(path), size) if path else (repr(kit), size)
+    if key in _PIXMAPS:
+        return _PIXMAPS[key]
+    pm = _pixmap(path, size, kit)
+    if len(_PIXMAPS) > 4000:
+        _PIXMAPS.clear()
+    _PIXMAPS[key] = pm
+    return pm
+
+
+def _pixmap(path, size, kit):
     try:
         if path:
             import lbassets
@@ -127,8 +144,7 @@ def built_plan(g, world):
     if not world or not g.ok():
         return None
     try:
-        with open(os.path.join(g.livecpk_dir, world, "leaguebuilder-plan.json"), encoding="utf-8") as f:
-            return json.load(f)
+        return filecache.json_file(os.path.join(g.livecpk_dir, world, "leaguebuilder-plan.json"))
     except (OSError, ValueError):
         return None
 

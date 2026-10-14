@@ -214,13 +214,18 @@ def short_squads(d):
     not start (B28: a Modpack world whose last 80 clubs got no placeholder squad)"""
     try:
         import lbplayers
-        with open(os.path.join(d, "leaguebuilder-plan.json"), encoding="utf-8") as f:
-            plan = json.load(f)
+        from . import filecache
+        path = os.path.join(d, "leaguebuilder-plan.json")
+        plan = filecache.json_file(path)
         tids = [t for p in plan.get("leagues") or [] for k, t in enumerate(p.get("teams") or [])
                 if str(k) not in (p.get("game_clubs") or {})]
         if not tids:
             return {}
-        return lbplayers.short_squads(os.path.join(d, "common", "etc", "pesdb"), tids)
+        db = os.path.join(d, "common", "etc", "pesdb")
+        # 0.2.4: worked out again only when the world changes (Home took 4 s to open on the Modpack)
+        return filecache.by_files("short_squads", [path] + [os.path.join(db, f) for f in
+                                                            ("PlayerAssignment.bin", "Player.bin", "Team.bin")],
+                                  lambda: lbplayers.short_squads(db, tids))
     except (ImportError, OSError, ValueError, TypeError, AttributeError):
         return {}
 
@@ -347,8 +352,8 @@ def world_problems(game, ini, recipe=None):
             on = bool(recipe.get("uecl", True))
         else:
             try:
-                with open(os.path.join(d, "leaguebuilder-plan.json"), encoding="utf-8") as f:
-                    on = bool(json.load(f).get("uecl"))
+                from . import filecache
+                on = bool(filecache.json_file(os.path.join(d, "leaguebuilder-plan.json")).get("uecl"))
             except (OSError, ValueError):
                 on = False
         if not on:
@@ -488,9 +493,10 @@ def ready_check(game, world):
         out.append(("warn", _("The face pack is missing: the new players will all have the same face. "
                               "Home > Install now")))
     try:                                   # home stadiums: of the maker's stadium pack
-        import json, lbstadiums
-        with open(os.path.join(d, "leaguebuilder-plan.json"), encoding="utf-8") as f:
-            n, have = lbstadiums.coverage(json.load(f), game.sider_dir)
+        import lbstadiums
+        from . import filecache
+        n, have = lbstadiums.coverage(filecache.json_file(os.path.join(d, "leaguebuilder-plan.json")),
+                                      game.sider_dir)
     except Exception:
         n = have = 0
     if n and have == n:

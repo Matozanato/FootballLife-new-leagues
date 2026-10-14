@@ -201,7 +201,8 @@ class Overview(Page):
         changed = True
         if os.path.exists(kept):
             try:
-                old = json.load(open(kept, encoding="utf-8"))
+                from .. import filecache
+                old = filecache.json_file(kept)
                 changed = json.dumps(old.get("leagues"), sort_keys=True) != json.dumps(r.get("leagues"), sort_keys=True) \
                     or json.dumps(old.get("edits"), sort_keys=True) != json.dumps(r.get("edits"), sort_keys=True)
             except (OSError, ValueError):

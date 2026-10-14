@@ -122,6 +122,9 @@ class Game:
     @staticmethod
     def running():
         """(game running, sider running)"""
+        names = _process_names()
+        if names is not None:
+            return any(n.lower() in names for n in EXE_NAMES), "sider.exe" in names
         try:
             out = subprocess.run(["tasklist", "/fo", "csv", "/nh"], capture_output=True, text=True,
                                  creationflags=0x08000000).stdout.lower()
@@ -187,3 +190,41 @@ def guess_folders():
         if f.lower() not in [x.lower() for x in out]:
             out.append(f)
     return out
+
+
+def _process_names():
+    """the lower-case names of the running programs, from Windows' process list (a few ms) --
+    0.2.4: tasklist took 0.3 s, and the window asks every 4 s: the window stopped for it each
+    time (exe test 15.10., "not fluid"); None where this does not work"""
+    if os.name != "nt":
+        return None
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        class Entry(ctypes.Structure):
+            _fields_ = [("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD),
+                        ("th32ProcessID", wintypes.DWORD), ("th32DefaultHeapID", ctypes.c_size_t),
+                        ("th32ModuleID", wintypes.DWORD), ("cntThreads", wintypes.DWORD),
+                        ("th32ParentProcessID", wintypes.DWORD), ("pcPriClassBase", ctypes.c_long),
+                        ("dwFlags", wintypes.DWORD), ("szExeFile", ctypes.c_wchar * 260)]
+        k = ctypes.WinDLL("kernel32", use_last_error=True)
+        k.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+        k.Process32FirstW.argtypes = k.Process32NextW.argtypes = [wintypes.HANDLE, ctypes.POINTER(Entry)]
+        k.CloseHandle.argtypes = [wintypes.HANDLE]
+        snap = k.CreateToolhelp32Snapshot(2, 0)                 # TH32CS_SNAPPROCESS
+        if not snap or snap == wintypes.HANDLE(-1).value:
+            return None
+        try:
+            e = Entry()
+            e.dwSize = ctypes.sizeof(Entry)
+            names = set()
+            ok = k.Process32FirstW(snap, ctypes.byref(e))
+            while ok:
+                names.add(e.szExeFile.lower())
+                ok = k.Process32NextW(snap, ctypes.byref(e))
+            return names
+        finally:
+            k.CloseHandle(snap)
+    except Exception:
+        return None
