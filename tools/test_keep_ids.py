@@ -4,9 +4,10 @@ The world's own players keep the ids the last Build gave them (lbplayers._keep_i
 a face linked to a new player by his id was lost when a change elsewhere (a league added above)
 handed the placeholder ids out in another order.
 
-A team id under two club keys (a NewLife club listed twice) or a stale ids file stopped Build
-with a KeyError in _renumber (Discord, maur0, 0.2.3): a player is moved once, every copy of him
-in `first` follows, and every id stays unique.
+A team id under two club keys (a NewLife club listed twice: maur0's recipe had four, in two
+leagues or twice in one) or a stale ids file stopped Build with a KeyError in _renumber
+(Discord, 0.2.3, on the third Build): a player is moved once, every copy of him in `first`
+follows, and every id stays unique.
 """
 import os, sys
 

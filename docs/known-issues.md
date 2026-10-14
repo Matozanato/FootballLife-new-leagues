@@ -500,8 +500,10 @@ calendar.
   gets -- was moved once and then looked up again under the id he no longer had; the other place
   also kept a temporary id, which the ids file then recorded, so the Build after next stopped.
   A player is now moved once, every place that lists him follows, and a stale or damaged ids
-  file is skipped where it no longer fits. Checked without the game (test_keep_ids reproduces the
-  KeyError on 0.2.3 and passes now). Until the update: delete
+  file is skipped where it no longer fits. Checked without the game: maur0's recipe (four NewLife
+  clubs each in two leagues, or twice in one) built three times in a row stops the 0.2.3 code on
+  the third Build with his KeyError and builds three times with the fix; test_keep_ids reproduces
+  it too. Until the update: delete
   `<game folder>\SiderAddons\livecpk\<world>\fl26playerids.json` before every Build. The world's
   own players then get their ids in the old order again, so a face given to one of them by his id
   (in Edit mode or a face pack) can end up on another player; faces and ids set in the recipe stay.
