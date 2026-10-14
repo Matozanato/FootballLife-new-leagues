@@ -257,7 +257,7 @@ def database_problems(game, ini, world, name, d):
         if mod.startswith("_FL26") or not any(os.path.exists(os.path.join(db, f)) for f in DB_TABLES):
             continue
         if e.index < world.index:
-            out.append(("err", "League Builder",
+            out.append(("err", "Your world in the game",
                         _("%s sits above your world %s in sider.ini and has its own database tables, which hide "
                           "the world's: empty league tables, the new cups missing. Build the world from %s's "
                           "tables (Settings > Use another tables folder...) and keep the world above it")
@@ -270,7 +270,7 @@ def database_problems(game, ini, world, name, d):
             mine = club_names(os.path.join(d, "common", "etc", "pesdb"))
         off = [t for t, n in theirs.items() if mine.get(t) != n]
         if len(off) > max(10, len(theirs) // 50):
-            out.append(("err", "League Builder",
+            out.append(("err", "Your world in the game",
                         _("%s was built from other tables than %s's (%d of its clubs are missing or named "
                           "differently in the world), so the world hides that database's leagues and clubs. "
                           "Point Settings > Use another tables folder... at %s's common\\etc\\pesdb and build "
@@ -309,12 +309,12 @@ def world_problems(game, ini, recipe=None):
             calendar = set()
         stuck = old_confed_tops(d, leagues, calendar)
         if stuck:
-            out.append(("err", "League Builder",
+            out.append(("err", "Your world in the game",
                         _("%s: %s was built before Mod Studio 0.1.4, so from the second season on the "
                           "divisions of that country have no clubs and no matches: build the world "
                           "again and start a new career") % (name, ", ".join(stuck)), "Build"))
         if ids and not any(u[0] in ids for u in uefa):
-            out.append(("warn", "League Builder",
+            out.append(("warn", "Your world in the game",
                         _("%s: your leagues send nobody to Europe (no European places in the world file)") % name,
                         "NewLeagues"))
         try:
@@ -331,14 +331,14 @@ def world_problems(game, ini, recipe=None):
                           "(a play-off of 16 shows 7 ties). Install the modules (Mod Studio 0.2.2 or "
                           "later) and start a new career") % (name, len(have), counted), "Modules"))
         if any(r in have for r in OLD_GROUPS):
-            out.append(("err", "League Builder",
+            out.append(("err", "Your world in the game",
                         _("%s: the Champions League and Europa League are still in groups of four, "
                           "which fl26swiss.dll cannot run (a world built with the Conference League "
                           "off in Mod Studio 0.1.3 or earlier): build the world again") % name, "Build"))
         out += database_problems(game, ini, e, name, d)
         short = short_squads(d)
         if short:
-            out.append(("err", "League Builder",
+            out.append(("err", "Your world in the game",
                         _("%s: %d club(s) have fewer than 18 players (ids %s): the game crashes when one is "
                           "picked and Become a Legend does not start. Build the world again")
                         % (name, len(short), ", ".join(str(t) for t in sorted(short)[:8])
@@ -355,7 +355,7 @@ def world_problems(game, ini, recipe=None):
             continue
         missing = [r for r in UECL_REGS if r not in have]
         if missing:
-            out.append(("err", "League Builder",
+            out.append(("err", "Your world in the game",
                         _("%s: the Conference League is on, but its tables are missing (regulation %s): "
                           "build the world again") % (name, ", ".join(map(str, missing))), "Build"))
     return out

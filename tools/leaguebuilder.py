@@ -4866,8 +4866,8 @@ def dll_message(problems, dst):
                                      "it" if len(changed) == 1 else "them"))
     text.append("Add the SiderAddons folder (%s) as an exclusion in your antivirus (Windows Security: Virus & "
                 "threat protection > Manage settings > Exclusions > Add or remove exclusions > Add an exclusion "
-                "> Folder), then press Install the modules again (League Builder > Build > 0. Install the "
-                "modules)." % os.path.dirname(os.path.normpath(dst)))
+                "> Folder), then press Install the modules again (Home > Install now, or Build your world > "
+                "Step by step > 0. Install the modules)." % os.path.dirname(os.path.normpath(dst)))
     return " ".join(text)
 
 
