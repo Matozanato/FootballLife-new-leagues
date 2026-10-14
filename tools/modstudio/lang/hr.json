@@ -1480,7 +1480,9 @@
   "Your world: %s": "Tvoj svijet: %s",
   "%d leagues, %d clubs": "%d liga, %d klubova",
   "File: Mod Studio's copy from the last Build (%s)": "Datoteka: kopija Mod Studija od zadnjeg Builda (%s)",
-  "File: not saved yet": "Datoteka: još nije spremljeno"
+  "File: not saved yet": "Datoteka: još nije spremljeno",
+  "Add leagues": "Dodaj lige",
+  "A world of your own: New world, then add its leagues under Edit your world. Build and install puts it in the game.": "Vlastiti svijet: New world, pa dodaj lige pod Edit your world. Build and install ga stavlja u igru."
  },
  "log": [
   [

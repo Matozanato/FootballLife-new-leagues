@@ -1480,7 +1480,9 @@
   "Your world: %s": "Tu mundo: %s",
   "%d leagues, %d clubs": "%d ligas, %d clubes",
   "File: Mod Studio's copy from the last Build (%s)": "Archivo: la copia de Mod Studio del último Build (%s)",
-  "File: not saved yet": "Archivo: aún sin guardar"
+  "File: not saved yet": "Archivo: aún sin guardar",
+  "Add leagues": "Añadir ligas",
+  "A world of your own: New world, then add its leagues under Edit your world. Build and install puts it in the game.": "Un mundo propio: New world, y añade sus ligas en Edit your world. Build and install lo pone en el juego."
  },
  "log": [
   [

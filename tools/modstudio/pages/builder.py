@@ -3664,6 +3664,18 @@ class Build(BuilderPage):
         self.what.setTextInteractionFlags(Qt.TextSelectableByMouse)
         self.what.setStyleSheet("font-size: 11pt;")
         self.outer.addWidget(self.what)
+        # 0.2.4: where a world of your own starts (exe test 14.10.: the page built the open world
+        # and said nothing of how to make one)
+        start = QHBoxLayout()
+        for text, fn in (("New world", self.new_world), ("Open a world...", lambda: self.app.page("NewLeagues").open_recipe()),
+                         ("Add leagues", lambda: self.app.open_page("Leagues"))):
+            b = QPushButton(_(text))
+            b.clicked.connect(fn)
+            start.addWidget(b)
+            self.steps.append(b)
+        start.addWidget(hint(_("A world of your own: New world, then add its leagues under Edit your world. "
+                               "Build and install puts it in the game.")), 1)
+        self.outer.addLayout(start)
         one = QHBoxLayout()
         self.b_all = QPushButton(_("Build and install"))
         self.b_all.setObjectName("primary")
@@ -3954,6 +3966,13 @@ class Build(BuilderPage):
         if ready:
             bits.insert(0, _("%s is a ready world (installed from a zip): no Build needed, press Play") % ", ".join(ready))
         self.state.setText("   ·   ".join(bits))
+
+    def new_world(self):
+        """an empty world, then the Leagues page to add its leagues"""
+        was = self.project.recipe
+        self.app.page("NewLeagues").new_recipe()
+        if self.project.recipe is not was:
+            self.app.open_page("Leagues")
 
     def file_text(self, w):
         """where the open world is kept: its own file, or the copy the last Build kept"""
