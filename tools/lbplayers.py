@@ -790,17 +790,26 @@ def _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_to
     Build, prev_names {club: {player key: name}}; a key whose player now has another name keeps
     nothing. A new club's squad (first) is renumbered here, in place; returns {(club, "+n"): id}
     for the players added with "add", taken when they are made."""
-    if not prev:
+    if not isinstance(prev, dict) or not prev:
         return {}
+    if not isinstance(prev_names, dict):
+        prev_names = {}
     taken = set()                                      # ids a change sets itself: never handed out
     for c in changes.values():
         for ch in list((c.get("edits") or {}).values()) + list(c.get("add") or []):
             if str(ch.get("id", "")).strip().isdigit():
                 taken.add(int(ch["id"]))
+    # pin: {player id now: the id he takes}. A player is pinned once: one team id under two club
+    # keys (a NewLife club listed twice) lists the same players twice, and a second pin of a
+    # player already moved stopped Build with a KeyError (Discord, maur0, 0.2.3)
     pin, later, wanted = {}, {}, set()
     for club, keys in prev.items():
+        if not isinstance(keys, dict):
+            continue
         c = changes.get(club) or {}
-        for key, want in (keys or {}).items():
+        names = prev_names.get(club)
+        names = names if isinstance(names, dict) else {}
+        for key, want in keys.items():
             try:
                 want = int(want)
             except (TypeError, ValueError):
@@ -816,38 +825,42 @@ def _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_to
                     continue
             elif not (key.isdigit() and club in first and int(key) < len(first[club])) or str(ch.get("id", "")).strip():
                 continue
-            was = ((prev_names or {}).get(club) or {}).get(key) or ""
+            was = names.get(key) or ""
             if was and ch.get("name") and ch["name"] != was:
                 continue
-            wanted.add(want)
             if key.startswith("+"):
                 later[(club, key)] = want
             else:
-                pin[(club, int(key))] = want
+                pid = first[club][int(key)]
+                if pid not in index or pid in pin:     # not in Player.bin, or pinned already
+                    continue
+                pin[pid] = want
+            wanted.add(want)
     # every player in the way moves to a free id first: those pinned, and whoever holds an id
     # someone is pinned to; then the pinned ones take theirs
-    pinned = {first[club][n] for club, n in pin}
-    moving = pinned | {pid for pid in wanted if pid in index}
+    moving = set(pin) | {pid for pid in wanted if pid in index}
+    if not moving:
+        return later
     # the first free ids above the game's own, not max + 1: a player moved out of the way and
     # not pinned himself keeps this id, and the engine packs a player id into 18 bits (PID_MAX);
     # max + 1 left 500 players of the Modpack world at 279513..289512 (14.10.2026)
     busy = set(index) | wanted | taken
     spare = game_top + 1
-    temp = {}
+    moved = {}                                         # player id before -> after
     for pid in sorted(moving):
         while spare in busy:
             spare += 1
         if spare > PID_MAX:
             raise Error("no free player id left below %d (the game packs a player id into 18 bits)" % (PID_MAX + 1))
-        temp[pid] = spare
+        moved[pid] = spare
         _renumber(players, assigns, index, pid, spare)
         busy.add(spare)
         spare += 1
-    for club in first:
-        first[club] = [temp.get(pid, pid) for pid in first[club]]
-    for (club, n), want in pin.items():
-        _renumber(players, assigns, index, first[club][n], want)
-        first[club][n] = want
+    for pid, want in pin.items():
+        _renumber(players, assigns, index, moved[pid], want)
+        moved[pid] = want
+    for club in first:                                 # every copy of a player follows him
+        first[club] = [moved.get(pid, pid) for pid in first[club]]
     return later
 
 

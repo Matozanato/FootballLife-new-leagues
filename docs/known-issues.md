@@ -514,6 +514,20 @@ calendar.
   the game count (test_regs_recount). To confirm in the game: Install the modules, new career on
   the Modpack world, sider.log says "16 under its ties" for every August round and play-off, and
   the February Play-offs page lists 8 ties.
+- 2026-10-14 (next update, Discord, thanks maur0): **Build stopped with `KeyError` in
+  `lbplayers.py` (`_renumber`) on a world built before.** Build gives the world's own players
+  the ids the last Build gave them (#126, kept in `fl26playerids.json` in the world folder). A
+  player listed at two places -- one team id under two club keys, as a NewLife club listed twice
+  gets -- was moved once and then looked up again under the id he no longer had; the other place
+  also kept a temporary id, which the ids file then recorded, so the Build after next stopped.
+  A player is now moved once, every place that lists him follows, and a stale or damaged ids
+  file is skipped where it no longer fits. Checked without the game: maur0's recipe (four NewLife
+  clubs each in two leagues, or twice in one) built three times in a row stops the 0.2.3 code on
+  the third Build with his KeyError and builds three times with the fix; test_keep_ids reproduces
+  it too. Until the update: delete
+  `<game folder>\SiderAddons\livecpk\<world>\fl26playerids.json` before every Build. The world's
+  own players then get their ids in the old order again, so a face given to one of them by his id
+  (in Edit mode or a face pack) can end up on another player; faces and ids set in the recipe stay.
 - 2026-10-14 (next update, Discord, thanks Vicentico): **NewLife Database: "Bring the game's leagues
   to this season" left out the Brasileirão Série B, as if the game had no Série B.** The game
   ships it (20 clubs), but its line-up is years old: only 6 of the 20 play in the release's 2026
