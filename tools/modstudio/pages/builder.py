@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox, 
                                QTableWidget, QTableWidgetItem, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
                                QFileDialog, QButtonGroup, QHeaderView, QAbstractItemView,
                                QMessageBox, QScrollArea, QApplication, QCompleter, QToolButton, QMenu,
-                               QColorDialog)
+                               QColorDialog, QGridLayout, QSizePolicy)
 
 import leaguebuilder as B
 import lbplayers
@@ -3635,7 +3635,8 @@ class Build(BuilderPage):
                            % (theme.WARN_BG, theme.WARN_FG))
         self.outer.addWidget(note)
         self.steps = []
-        bar = QHBoxLayout()
+        # 0.2.4: three to a row, so no button is cut off at the window's usual 1080 width (exe test)
+        bar = QGridLayout()
         for text, fn, kind in (("0. Install the modules", self.do_install, None),
                                ("1. Check the plan", self.do_plan, None),
                                ("2. Build the world", self.do_build, None),
@@ -3645,15 +3646,14 @@ class Build(BuilderPage):
             if kind:
                 b.setObjectName(kind)
             b.clicked.connect(fn)
-            bar.addWidget(b)
+            bar.addWidget(b, len(self.steps) // 3, len(self.steps) % 3)
             self.steps.append(b)
-        bar.addStretch(1)
         b = QPushButton(_("Export the world..."))
         b.setToolTip(_("One .zip of the built world for another PC: the world folder, its world file with the "
-                       "players who get a generated face, and a read-me. The other PC installs it on Install "
-                       "mods and needs Mod Studio's modules (the face pack)."))
+                       "players who get a generated face, and a read-me. The other PC installs it on Import "
+                       "your world and needs Mod Studio's modules (the face pack)."))
         b.clicked.connect(self.do_export)
-        bar.addWidget(b)
+        bar.addWidget(b, 1, 2)
         self.steps.append(b)
         one = QHBoxLayout()
         self.b_all = QPushButton(_("Build and install"))
@@ -3705,12 +3705,14 @@ class Build(BuilderPage):
         self.opts.body.addWidget(sa, 10)
         self.outer.addWidget(self.opts)
         self.stepfold = Fold("Step by step, and Export the world", app, "build_steps")
-        self.stepfold.body.addWidget(hint(_("What Build and install does, one step at a time (the ? next to "
-                                            "the title says what each step does). Export the world makes one "
-                                            ".zip of your world for other people.")))
+        # a wrapped hint above the buttons made the layout cut off their second row: it is the tooltip
+        self.stepfold.head.setToolTip(_("What Build and install does, one step at a time (the ? next to "
+                                        "the title says what each step does). Export the world makes one "
+                                        ".zip of your world for other people."))
         barw = QWidget()
         bar.setContentsMargins(0, 0, 0, 0)
         barw.setLayout(bar)
+        barw.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)   # the second row is not squeezed
         self.stepfold.body.addWidget(barw)
         self.outer.addWidget(self.stepfold)
         self.uecl = QCheckBox(_("Include the Conference League"))
@@ -4227,7 +4229,7 @@ class Build(BuilderPage):
         if not can_write(self, self.app.game):
             return
         if ask(self, "Install the modules",
-               _("Copy the league builder's modules into %s and load them from sider.ini? "
+               _("Copy Mod Studio's modules into %s and load them from sider.ini? "
                  "Files it replaces are kept in a before-builder folder next to them.") % self.app.game.modules_dir):
             def go(log):
                 snapshot(self.app.game.ini_path, "Install the modules", self.app.game.sider_dir)
