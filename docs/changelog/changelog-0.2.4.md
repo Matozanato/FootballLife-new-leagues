@@ -29,6 +29,14 @@ once, and your 0.2.2 career keeps working.
   `data_s2526b`, so the newest tables were covered by older ones and the version label said
   `data_s2526d`. They are now layered the way the game does it; unpack the tables again
   (Tools, or the next Build does it). Thanks to everyone on the 2.2 update.
+- **A February play-off with 7 ties instead of 8 (14 clubs), a qualifying round with 6.** A
+  world with more than 300 competition regulations -- the 0.2.1 Modpack has 334 -- lost its
+  highest regulation ids with the 0.2.1 modules: the game counts its regulations again after
+  every load and looked at the first 300 only, so the last ties of the European rounds (and of
+  the Libertadores and AFC groups) never got matches. `fl26regs600.lua`, installed since 0.2.2,
+  makes the game count all of them. New: **Checks** now says so when a world has more
+  regulations than the modules switched on let the game count, and points at Install the
+  modules (a new career is needed). Thanks Micarodvzla22.
 - **New clubs: the crest picked in the club dialog did not show in the table** until another
   league was chosen (the pick was saved; only the row was stale). GitHub #140, thanks B2Y26Arabia.
 - **Cup mode: a saved cup (World Cup, Euro...) could not be loaded.** With the modules the
