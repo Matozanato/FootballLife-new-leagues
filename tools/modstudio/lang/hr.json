@@ -1474,7 +1474,9 @@
   "Cups, super cups and the continental competitions of the game, and the continental cups Mod Studio makes. Leagues are renamed on Game's leagues and clubs. Empty name: the game's own.": "Kupovi, superkupovi i kontinentalna natjecanja iz igre, i kontinentalni kupovi koje radi Mod Studio. Lige se preimenuju na stranici Game's leagues and clubs. Prazno ime: ono iz igre.",
   "Share leagues: make a package of your leagues for other people, or add somebody's package to your world. Added leagues show up on every page of Edit your world; Build and install puts them in the game.": "Dijeli lige: napravi paket svojih liga za druge ili dodaj nečiji paket u svoj svijet. Dodane lige vide se na svim stranicama Uredi svoj svijet; Izgradi i instaliraj stavlja ih u igru.",
   "Mod Studio's modules go off: worlds of yours may stop working.": "Gase se moduli Mod Studija: tvoji svjetovi možda prestanu raditi.",
-  "Copy Mod Studio's modules into %s and load them from sider.ini? Files it replaces are kept in a before-builder folder next to them.": "Kopirati module Mod Studija u %s i učitati ih iz sider.ini? Datoteke koje zamijene čuvaju se u mapi before-builder pokraj njih."
+  "Copy Mod Studio's modules into %s and load them from sider.ini? Files it replaces are kept in a before-builder folder next to them.": "Kopirati module Mod Studija u %s i učitati ih iz sider.ini? Datoteke koje zamijene čuvaju se u mapi before-builder pokraj njih.",
+  "In the game now": "U igri sada",
+  "Columns": "Stupci"
  },
  "log": [
   [

@@ -1475,7 +1475,9 @@
   "Cups, super cups and the continental competitions of the game, and the continental cups Mod Studio makes. Leagues are renamed on Game's leagues and clubs. Empty name: the game's own.": "Copas, supercopas e as competições continentais do jogo, e as copas continentais que o Mod Studio cria. Os campeonatos são renomeados em Campeonatos e clubes do jogo. Nome vazio: o do próprio jogo.",
   "Share leagues: make a package of your leagues for other people, or add somebody's package to your world. Added leagues show up on every page of Edit your world; Build and install puts them in the game.": "Compartilhe campeonatos: faça um pacote dos seus campeonatos para outras pessoas ou adicione o pacote de alguém ao seu mundo. Os campeonatos adicionados aparecem em todas as páginas de Edite seu mundo; Construir e instalar os coloca no jogo.",
   "Mod Studio's modules go off: worlds of yours may stop working.": "Módulos do Mod Studio vão ser desativados: seus mundos podem parar de funcionar.",
-  "Copy Mod Studio's modules into %s and load them from sider.ini? Files it replaces are kept in a before-builder folder next to them.": "Copiar os módulos do Mod Studio para %s e carregá-los pelo sider.ini? Os arquivos que forem substituídos ficam guardados numa pasta before-builder ao lado deles."
+  "Copy Mod Studio's modules into %s and load them from sider.ini? Files it replaces are kept in a before-builder folder next to them.": "Copiar os módulos do Mod Studio para %s e carregá-los pelo sider.ini? Os arquivos que forem substituídos ficam guardados numa pasta before-builder ao lado deles.",
+  "In the game now": "No jogo agora",
+  "Columns": "Colunas"
  },
  "log": [
   [

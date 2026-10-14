@@ -48,12 +48,12 @@ class Players(BuilderPage):
         pick = QHBoxLayout()
         pick.addWidget(QLabel(_("League")))
         self.lg = QComboBox()
-        self.lg.setMinimumWidth(240)
+        self.lg.setMinimumWidth(170)       # 0.2.4: the row fits the window's usual 1080 width
         self.lg.currentIndexChanged.connect(self.fill_clubs)
         pick.addWidget(self.lg)
         pick.addWidget(QLabel(_("Club")))
         self.cl = QComboBox()
-        self.cl.setMinimumWidth(240)
+        self.cl.setMinimumWidth(190)
         self.cl.currentIndexChanged.connect(self.club_picked)
         pick.addWidget(self.cl)
         pick.addWidget(QLabel(_("Club ID")))
@@ -63,7 +63,8 @@ class Players(BuilderPage):
         pick.addWidget(self.club_id)
         self.find = QLineEdit()
         self.find.setPlaceholderText(_("Find a club..."))
-        self.find.setFixedWidth(220)
+        self.find.setMinimumWidth(120)
+        self.find.setMaximumWidth(220)
         self.completer = QCompleter()
         self.completer.setCaseSensitivity(Qt.CaseInsensitive)
         self.completer.setFilterMode(Qt.MatchContains)
@@ -108,7 +109,6 @@ class Players(BuilderPage):
         self.b_undo_all = QPushButton(_("Undo all changes of this club"))
         self.b_undo_all.setObjectName("danger")
         self.b_undo_all.clicked.connect(self.undo_club)
-        lv.addWidget(row(self.b_up, self.b_down, self.b_add, self.b_remove, stretch=True))
         self.b_sign = QPushButton(_("Sign players..."))
         self.b_sign.clicked.connect(self.sign_players)
         self.b_transfer = QPushButton(_("Transfer to..."))
@@ -119,7 +119,15 @@ class Players(BuilderPage):
         self.b_portrait.setToolTip(_("A picture of the club's manager (PNG or JPG, made 256 x 256 at Build); "
                                      "the game shows it in Edit mode and the Master League"))
         self.b_portrait.clicked.connect(self.coach_portrait)
-        lv.addWidget(row(self.b_sign, self.b_transfer, self.b_portrait, "stretch", self.b_undo_all, stretch=False))
+        # three to a row: four in one were cut off at the window's usual 1080 width (exe test)
+        grid = QGridLayout()
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setSpacing(6)
+        for i, b in enumerate((self.b_up, self.b_down, self.b_add, self.b_remove, self.b_sign, self.b_transfer,
+                               self.b_portrait)):
+            grid.addWidget(b, i // 3, i % 3)
+        grid.addWidget(self.b_undo_all, 2, 1, 1, 2)
+        lv.addLayout(grid)
         self.foot = hint("")
         lv.addWidget(self.foot)
         from ..pitch import Pitch
@@ -165,6 +173,8 @@ class Players(BuilderPage):
 
         basic = QWidget()
         f = QFormLayout(basic)
+        # a row too wide for the panel (face, portrait at 1080 width) puts its field under the label
+        f.setRowWrapPolicy(QFormLayout.WrapLongRows)
         f.setLabelAlignment(Qt.AlignRight)
         self._add(f, "name", QLineEdit(), "Name")
         self._add(f, "id", QLineEdit(), "Player ID")
