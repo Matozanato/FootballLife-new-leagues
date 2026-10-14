@@ -185,7 +185,7 @@ All of it, folder by folder: [docs/README.md](docs/README.md).
 
 **Everything else in your game folder**
 
-- **Install mods** by dropping them on the window (zip, 7z, folder, .lua, .cpk): it says what
+- **Import your world** takes a modpack or any other mod dropped on the window (zip, 7z, folder, .lua, .cpk): it says what
   each part is and where it goes, merges content-server map files into yours, and every mod it
   installs can be removed again.
 - **Content servers** (stadiums, kits, balls, commentary, music, scoreboards, menus ...) with

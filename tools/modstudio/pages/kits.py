@@ -136,8 +136,8 @@ def _dialog_class():
                 "Untick a wrong match before OK. The kits are copied into the kit-server library and get a line "
                 "in map.txt; press Save on the Kits page to write it. A club that already has a line keeps it "
                 "unless \"Replace kits already set\" is ticked.\n\n"
-                "The kits of a new League Builder club go by the team ID Build gave it, so Build the world "
-                "first and keep it switched on.")
+                "The kits of a new club of your world go by the team ID Build gave it, so Build and install "
+                "first.")
 
         def __init__(self, view):
             super().__init__(view, "Import kits")
@@ -166,7 +166,7 @@ def _dialog_class():
             self.form.addRow(_("Folder"), row(self.folder, pick, stretch=False))
             self.only = QComboBox()
             self.only.addItem(_("All clubs"), None)
-            self.only.addItem(_("The new clubs of the live world"), "world")
+            self.only.addItem(_("The new clubs of the world in the game"), "world")
             self.only.currentIndexChanged.connect(lambda *_a: self.fill())
             self.form.addRow(_("Match to"), self.only)
             self.replace = QCheckBox(_("Replace kits already set"))
@@ -284,6 +284,7 @@ def _dialog_class():
 
 class Kits(ServerPage):
     title = "Kits"
+    hint = "Which kits the clubs wear in matches, and the badges of each competition."
     server = "kits"
 
     def __init__(self, app):

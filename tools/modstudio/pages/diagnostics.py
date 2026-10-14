@@ -18,7 +18,7 @@ COLOURS = {"err": theme.DANGER, "warn": theme.WARN, "ok": theme.GOOD}
 class Diagnostics(Page):
     title = "Diagnostics"
     hint = ("Checks of the whole setup: content folders, module order, the content-server maps, the "
-            "errors Sider wrote to sider.log in the last game, and the League Builder world.")
+            "errors Sider wrote to sider.log in the last game, and your world in the game.")
 
     def __init__(self, app):
         super().__init__(app)
@@ -54,7 +54,7 @@ class Diagnostics(Page):
         self.world = QPlainTextEdit()
         self.world.setObjectName("log")
         self.world.setReadOnly(True)
-        self.tabs.addTab(self.world, _("League Builder world"))
+        self.tabs.addTab(self.world, _("Your world in the game"))
         self.outer.addWidget(self.tabs, 1)
         self.rows = []
 
@@ -75,7 +75,7 @@ class Diagnostics(Page):
                 import leaguebuilder as B
                 missing = B.modules_missing(g.folder)
                 if missing:
-                    world.write(_("League Builder modules not in sider.ini: %s") % ", ".join(missing) + "\n")
+                    world.write(_("Mod Studio's modules not in sider.ini: %s") % ", ".join(missing) + "\n")
                 B.check(g.folder, log=lambda t: world.write(t + "\n"))
             except Exception as e:
                 world.write(str(e) + "\n")

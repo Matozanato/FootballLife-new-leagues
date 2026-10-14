@@ -24,7 +24,7 @@ NEW = "+"                          # key prefix of a player added to a game club
 class Players(BuilderPage):
     title = "Players"
     hint = ("The squad of a club: names, shirt numbers, the starting eleven (the first eleven by squad "
-            "order), positions, abilities and skills. Works for the new clubs of the recipe and for the "
+            "order), positions, abilities and skills. Works for the new clubs of your world and for the "
             "game's clubs; the changes are written into your world when you Build. Players can move to "
             "another club (Transfer to), and a national team calls up whom you pick.")
 
@@ -36,12 +36,14 @@ class Players(BuilderPage):
         self._filling = False
         self.action("Best eleven", self.best_eleven, tip="Put the strongest player for each place of the "
                     "club's formation at the top of the squad order")
-        self.action("Squad level...", self.squad_level, tip="Raise or lower every ability of the whole squad")
-        self.action("Import a squad from a table...", self.import_table,
-                    tip="Any CSV of players -- typed by hand, off a website, from Football Manager or an EA FC "
-                        "database -- becomes this club's squad")
-        self.action("Import CSV...", self.import_csv)
-        self.action("Export CSV...", self.export_csv)
+        # 0.2.4: one button in sight, the rest in More (the poll: too many buttons at the top)
+        self.more([("Squad level...", self.squad_level, "Raise or lower every ability of the whole squad"),
+                   ("Import a squad from a table...", self.import_table,
+                    "Any CSV of players -- typed by hand, off a website, from Football Manager or an EA FC "
+                    "database -- becomes this club's squad"),
+                   None,
+                   ("Import CSV...", self.import_csv),
+                   ("Export CSV...", self.export_csv)])
 
         pick = QHBoxLayout()
         pick.addWidget(QLabel(_("League")))

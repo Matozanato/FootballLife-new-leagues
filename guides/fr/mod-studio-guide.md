@@ -41,18 +41,19 @@ La fenêtre est en anglais. **Settings → Language → Français** la passe en 
 1. **Réglages → Dossier du jeu** : appuyez sur **Parcourir...**, choisissez le dossier qui contient
    `FL_2026.exe`, puis **Utiliser ce dossier**. La ligne en dessous indique si `SiderAddons\sider.ini` a été trouvé. Sider peut avoir un
    autre nom ou être un niveau plus bas (`sider\patch 1` ...) ; s'il y en a plusieurs, **Settings → Sider folder** choisit celui avec lequel le programme travaille.
-2. Si vous voulez de nouvelles ligues ou des modifications de joueurs : **Réglages → Extraire les
-   tables du jeu**. Le programme lit les clubs, ligues et joueurs du jeu dans un dossier de
-   travail (quelques secondes). À refaire seulement après une mise à jour du jeu ;
-   Build la remarque (0.1.9) et propose d'abord une nouvelle extraction. Il le faut une fois
-   sur chaque PC (un paquet ou un nouveau monde le demande et propose d'ouvrir les Réglages).
+2. Les tables du jeu : Mod Studio les extrait tout seul la première fois (il lit les clubs, ligues
+   et joueurs du jeu dans un dossier de travail, quelques secondes). Après une mise à jour du jeu,
+   Build la remarque (0.1.9) et propose d'abord une nouvelle extraction ; **Réglages → Extraire les
+   tables du jeu** le fait à la main.
    **Utiliser un autre dossier de tables** sert pour votre propre base, comme un dossier `pesdb`
    dans livecpk : extrayez d'abord les tables du jeu, puis choisissez ce dossier. Ses fichiers passent
    par-dessus ceux du jeu, qui fournissent tout ce qu'il n'a pas. Un mod de base qui déplace les
    ligues du jeu (UML 2026 et autres) convient : chaque ligue du jeu prend le pays de la plupart de
    ses clubs, et NewLife Database ne compte un club comme celui du jeu que si ces tables l'ont (0.2.4).
-3. Ouvrez **Home** (la première page). Elle montre le monde actif et votre configuration, et liste
-   les problèmes ; **Open** à côté d'un problème mène à la page qui le corrige. Home a aussi
+3. Ouvrez **Home** (la première page). Elle montre le monde qui est dans le jeu (**DANS LE JEU
+   MAINTENANT**) et votre configuration, et liste les problèmes ; **Open** à côté d'un problème mène
+   à la page qui le corrige. Quand les modules de Mod Studio manquent ou sont plus anciens,
+   **Installer maintenant** les installe. Home a aussi
    **Construire et installer** (toute la Construction en un clic), **Seulement les coupes
    d'Europe...**, **Ouvrir ses ligues** et **Changer de monde...**.
 
@@ -69,7 +70,7 @@ la place : décompressez le zip vous-même, ou déplacez le programme dans un do
 **Carrières d'avant la 0.2.0.** La 0.2.0 permet 792 matchs par jour du calendrier au lieu de 280, ce qui change les tables avec lesquelles une carrière est sauvegardée : **une carrière sauvegardée avec une version plus ancienne ne se charge pas** (elle reste sur l'écran de chargement). Commencez une nouvelle carrière après la mise à jour. Vos mondes, projets et données Edit ne changent pas.
 
 **0.2.1** corrige le plantage à la création d'une carrière Master League ou Be a Legend : installez
-les modules une fois (la Construction le fait, ou **Construction → 0. Installer les modules**) ;
+les modules une fois (**Construire et installer** le fait, ou **Home → Installer maintenant**) ;
 sider.log indique alors `3502 patches`. Les mondes et carrières faits avec la 0.2.0 restent tels quels.
 
 **Jouer.** Le bouton **▶ Jouer** en haut à droite (ou **Jeu → Lancer le jeu**) lance le jeu et
@@ -85,50 +86,62 @@ cherche le dossier à côté de `FL_2026.exe` qui contient un `sider.ini` ; s'il
 
 ## 3. Les pages
 
-La liste à gauche commence par **Home**, puis trois groupes.
+La liste à gauche commence par **Home**, puis trois groupes, et **Réglages** en bas. **Contenu du
+jeu** et **Outils** sont repliés au départ.
 
 | Groupe | Pages |
 |---|---|
-| **League Builder** | Ligues, Nouveaux clubs, Joueurs, NewLife Database, Paquets de ligues, Construction |
-| **Contenu du jeu** | Maillots, Stades, Ballons, Commentaires, Musique, Autre contenu |
-| **Gérer** | Installer des mods, Modules Lua, Dossiers de contenu, Profils, Points de restauration, Diagnostic, Réglages |
+| **Votre monde** | Construire votre monde (onglets Build, Paquets de ligues), Importer votre monde, Modifier votre monde (onglets Ligues, Clubs, Joueurs, Maillots, Stades), NewLife Database |
+| **Contenu du jeu** | Ballons, Commentaires, Musique, Autre contenu |
+| **Outils** | Modules Lua, Dossiers de contenu, Profils, Points de restauration, Diagnostic |
 
-**Ligues** liste toutes les ligues par continent, celles du jeu et les vôtres (filtres **All**,
+**Ligues** (Modifier votre monde) liste toutes les ligues par continent, celles du jeu et les vôtres (filtres **All**,
 **Ours**, **Changed**, et un champ de recherche). Choisissez-en une : une ligue à vous a **Modifier
 la ligue...**, **Ajouter une division inférieure**, **Clubs et noms**, **Joueurs** et **Remove** ;
 une ligue du jeu a son nom, son logo et ses clubs (section 8, « Les ligues du jeu »). **Add league**
 en crée une nouvelle. **Plus ▾** contient **Tournois de pré-saison**, **Coupes des pays du jeu**,
 **Places européennes des ligues du jeu**, **Classement UEFA**, **Places sud-américaines**, **Noms
-des compétitions** et **Nom du monde et recette...**. Ce dernier ouvre la page avec le nom du monde
+des compétitions** et **Nom du monde et fichier...**. Ce dernier ouvre la page avec le nom du monde
 et la liste de vos ligues (les anciens guides l'appellent *Nouvelles ligues*), avec quelques boutons
 de plus : **Clubs européens de la première saison**, **Ordre des championnats** et **Saisons des
 championnats du jeu**.
 
-## 4. Installer des mods
+## 4. Importer votre monde
 
-Déposez un mod téléchargé sur **Installer des mods** (`.zip`, `.7z`, un dossier, `.lua`, `.cpk`
+Déposez un pack téléchargé sur **Importer votre monde** (`.zip`, `.7z`, un dossier, `.lua`, `.cpk`
 ou `.fl26pack`), ou utilisez **Choisir un fichier...** / **Choisir un dossier...**.
 
-Le programme regarde à l'intérieur et liste chaque partie : ce que c'est et où elle ira.
+Le programme regarde à l'intérieur et dit en une ligne ce que c'est : une version plus récente d'un
+monde que vous avez, un monde prêt à jouer, un paquet de ligues ou un mod, avec les ligues qu'il
+contient. Puis un seul bouton, **Installer** (**Installer le monde** pour un monde). Une version
+plus récente d'un monde que vous avez remplace l'ancienne : l'ancienne est retirée d'abord, vos
+sauvegardes ne sont pas touchées, et vous commencez une nouvelle Master League avec la nouvelle.
+Le monde installé est mis dans le jeu avec les modules de Mod Studio, puis Mod Studio affiche
+**✓ Prêt à jouer : appuyez sur Play et lancez une nouvelle Master League** et une liste de
+vérification finale (ou **Presque prêt** et ce qu'il faut corriger).
+
+Les parties, et où va chacune, sont sous le pli **Plus d'options : quelles parties, nom, ordre des
+dossiers de contenu, lignes des map** :
 
 | Partie | Ce qui se passe |
 |---|---|
 | Dossier de contenu (livecpk) | Copié dans `SiderAddons\livecpk\<nom>` et ajouté à `sider.ini`. |
-| Fichiers de serveur de contenu | Copiés dans le dossier `content` du serveur. Son **fichier de correspondance est fusionné avec le vôtre** : vos lignes restent et les nouvelles lignes du mod sont ajoutées. Pour un club que vous avez déjà, le choix à côté d'**Installer** décide : *utiliser celles du mod*, ou *garder les miennes, ajouter celles du mod après*. |
+| Fichiers de serveur de contenu | Copiés dans le dossier `content` du serveur. Son **fichier de correspondance est fusionné avec le vôtre** : vos lignes restent et les nouvelles lignes du mod sont ajoutées. Pour un club que vous avez déjà, le choix sous **Plus d'options** décide : *utiliser celles du mod*, ou *garder les miennes, ajouter celles du mod après*. |
 | Module Lua | Copié dans `SiderAddons\modules` et activé à la bonne place dans l'ordre. |
 | .cpk compressé | Extrait dans un dossier de contenu à l'installation. |
-| Paquet de ligues | Ajouté à votre recette du League Builder (section 9). |
+| Paquet de ligues | Ajouté à votre monde (section 9). Un `.fl26pack` déposé ici y entre, et **Construire et installer** démarre tout seul. |
 | DLL | **Non installée.** Une DLL s'exécute avec les droits du jeu ; n'en installez une qu'à la main, et seulement depuis une source de confiance. |
 
-Donnez un nom au mod, choisissez si les nouveaux dossiers de contenu vont en haut (ils
-l'emportent) ou en bas, cochez ce que vous voulez et appuyez sur **Installer**. La liste en
-dessous montre chaque mod installé avec le programme. **Retirer le mod** supprime les fichiers
-qu'il a ajoutés et remet en place ceux qu'il a remplacés.
+Dans le même pli, vous pouvez décocher une partie dont vous ne voulez pas (les maillots, par
+exemple, pour installer un monde sans maillots), donner un nom au mod, et choisir si les nouveaux
+dossiers de contenu vont en haut (ils l'emportent) ou en bas. **In the game now** liste chaque pack
+installé avec le programme. **Retirer** supprime les fichiers qu'il a ajoutés et remet en place
+ceux qu'il a remplacés.
 
 ## 5. Dossiers de contenu et modules Lua
 
 **Dossiers de contenu** liste les lignes `cpk.root` de `sider.ini` ; les mondes du League Builder
-(`_FL26...`) s'affichent quand vous cochez **Afficher les mondes du League Builder**, et **Seulement
+(`_FL26...`) s'affichent quand vous cochez **Afficher les mondes (_FL26...)**, et **Seulement
 les activés** masque le reste. Sider cherche un fichier de haut en bas, donc quand deux dossiers ont
 le même fichier, celui qui est plus haut dans la liste l'emporte.
 
@@ -145,8 +158,8 @@ le même fichier, celui qui est plus haut dans la liste l'emporte.
 bon ordre des modules courants (les serveurs de contenu après les modules qu'ils utilisent) et le
 signale quand un module est mal placé. Certains modules ont besoin d'un réglage de Sider (par
 exemple Goal Song Server a besoin de `match-stats.enabled = 1`) ; le programme dit lequel. Les
-modules `fl26...` de Mod Studio sont masqués tant que vous ne décochez pas **Masquer les modules du
-League Builder** ; **Ajouter un module...** ajoute un module que vous avez.
+modules `fl26...` de Mod Studio sont masqués tant que vous ne décochez pas **Masquer les modules de
+Mod Studio (fl26...)** ; **Ajouter un module...** ajoute un module que vous avez.
 
 Les modules du League Builder gardent l'ordre dans lequel ils ont été installés.
 
@@ -154,7 +167,7 @@ Depuis 0.2.0 les douze petites protections contre les plantages arrivent en deux
 
 **Désactiver les regens** (0.2.0) : `fl26regen` donne aux regens de nouveaux noms, un nouveau
 potentiel et un visage du pack de visages des regens. Pour jouer sans lui, décochez **Masquer
-les modules du League Builder (fl26...)** pour voir les nôtres, décochez `fl26regen` et appuyez
+les modules de Mod Studio (fl26...)** pour voir les nôtres, décochez `fl26regen` et appuyez
 sur **Appliquer**. Mod Studio le note dans `modules\fl26-off.txt` dans le dossier de Sider : la
 **Construction**, **Installer les modules** et le changement de monde le laissent désactivé au
 lieu de le réactiver, comme ils le font pour tous les autres modules. Le jeu fait alors ses
@@ -197,7 +210,7 @@ le numéro de la compétition (174) ne sert jamais. Le sélecteur de compétitio
 compétition une fois de plus en **(toutes les phases : N)** : choisissez-la et une ligne est écrite par
 phase (0.1.9). Une ligne avec le numéro d'une compétition est signalée comme problème.
 
-**Importer des maillots...** (0.1.8, sur la page *Kits*) : des maillots pour beaucoup de clubs d'un coup. Choisissez un dossier de maillots kit-server prêts -- un dossier par club, avec `p1`, `p2`, `g1` ... et `order.ini`, nommé d'après le club (`Dinamo Zagreb`) ou son ID d'équipe (`2215`). **Associer à** choisit *Tous les clubs* ou *Les nouveaux clubs du monde actif*. Les associations à 60 % ou plus sont cochées ; vérifiez celles qui ne le sont pas et la colonne *Correspondance* avant **OK** (un dossier sans association affiche « aucun club trouvé »). Les maillots sont copiés dans la bibliothèque de kit-server (`Ligue\Club`, comme le dossier les avait) et chaque club reçoit une ligne dans `map.txt` ; **Save** l'écrit. Un club qui a déjà une ligne la garde, sauf si **Remplacer les maillots déjà définis** est coché. Les maillots d'un nouveau club du League Builder suivent l'ID que Build lui a donné : faites d'abord Build du monde et laissez-le activé. Le dossier d'un club peut aussi contenir de simples images de maillots (0.2.0) : `p1.png`, `p2.png` ... pour les maillots et `g1.png` pour le gardien (2048 x 2048 de préférence ; `.jpg` et `.dds` marchent aussi). Mod Studio en fait des maillots kit-server ; les numéros de dos, les numéros de short et la police du nom sont des textures à part, ils viennent donc d'un maillot déjà dans la bibliothèque, choisi dans **Numéros et noms de** (il commence sur le premier maillot de la bibliothèque qui en a ; *aucun* : le jeu garde ceux du club). Les couleurs de `config.txt` sont lues sur l'image. La conversion des images est de Xxspedd, tirée de son outil de maillots. Mod Studio ne dessine pas de maillots : les images viennent de vous ou d'un créateur de maillots.
+**Importer des maillots...** (0.1.8, sur la page *Kits*) : des maillots pour beaucoup de clubs d'un coup. Choisissez un dossier de maillots kit-server prêts -- un dossier par club, avec `p1`, `p2`, `g1` ... et `order.ini`, nommé d'après le club (`Dinamo Zagreb`) ou son ID d'équipe (`2215`). **Associer à** choisit *Tous les clubs* ou *Les nouveaux clubs du monde du jeu*. Les associations à 60 % ou plus sont cochées ; vérifiez celles qui ne le sont pas et la colonne *Correspondance* avant **OK** (un dossier sans association affiche « aucun club trouvé »). Les maillots sont copiés dans la bibliothèque de kit-server (`Ligue\Club`, comme le dossier les avait) et chaque club reçoit une ligne dans `map.txt` ; **Save** l'écrit. Un club qui a déjà une ligne la garde, sauf si **Remplacer les maillots déjà définis** est coché. Les maillots d'un nouveau club du League Builder suivent l'ID que Build lui a donné : faites d'abord Build du monde et laissez-le dans le jeu. Le dossier d'un club peut aussi contenir de simples images de maillots (0.2.0) : `p1.png`, `p2.png` ... pour les maillots et `g1.png` pour le gardien (2048 x 2048 de préférence ; `.jpg` et `.dds` marchent aussi). Mod Studio en fait des maillots kit-server ; les numéros de dos, les numéros de short et la police du nom sont des textures à part, ils viennent donc d'un maillot déjà dans la bibliothèque, choisi dans **Numéros et noms de** (il commence sur le premier maillot de la bibliothèque qui en a ; *aucun* : le jeu garde ceux du club). Les couleurs de `config.txt` sont lues sur l'image. La conversion des images est de Xxspedd, tirée de son outil de maillots. Mod Studio ne dessine pas de maillots : les images viennent de vous ou d'un créateur de maillots.
 
 ## 7. Profils
 
@@ -213,10 +226,10 @@ un pour la Master League, un pour le jeu en ligne, un pour les tests :
 ## 8. League Builder : nouvelles ligues, nouveaux clubs et joueurs
 
 Le League Builder ajoute de nouvelles ligues au jeu et modifie celles du jeu. Ce qu'il crée est un
-**monde** : un dossier de contenu nommé `_FL26...` que le jeu lit tant qu'il est activé.
+**monde** : un dossier de contenu nommé `_FL26...` que le jeu lit tant qu'il est dans le jeu.
 
 **Remove** (Ligues) supprime la ligue sélectionnée avec ses clubs. Pour en supprimer plusieurs d'un
-coup, ouvrez **Plus → Nom du monde et recette...**, sélectionnez-les avec Ctrl+clic, Maj+clic ou
+coup, ouvrez **Plus → Nom du monde et fichier...**, sélectionnez-les avec Ctrl+clic, Maj+clic ou
 Ctrl+A, puis **Remove** ou la touche Suppr.
 
 **Ligues → Add league**
@@ -240,7 +253,7 @@ Ctrl+A, puis **Remove** ou la touche Suppr.
 | **Exhibition uniquement -- pas en Ligue des Masters** | Pour le Kick Off et les matchs amicaux : une ligue historique, des légendes, etc. Ses clubs ne jouent jamais de saison de Ligue des Masters, donc la ligue reste seule : pas de division au-dessus ni au-dessous, pas de places européennes, pas de coupes. Elle apparaît quand même dans la liste des équipes de la Ligue des Masters ; choisissez votre club dans une autre ligue. |
 | **Formation** | Comment les clubs de la ligue se placent. Choisissez une des formations des clubs du jeu (4-2-3-1, 4-1-2-3, 4-3-3, 5-3-2 ... ; la liste indique combien de clubs du jeu la jouent) : chaque nouveau club reçoit une copie de la tactique d'un club du jeu avec cette formation, et son meilleur onze est aligné en conséquence à la construction. Vide : celle du jeu, un 4-2-3-1 fixe. Un club peut avoir la sienne (**Modifier le club**). |
 
-Le **Nom du monde** (Ligues → Plus → **Nom du monde et recette...**) doit commencer par `_FL26`. Cette page liste aussi vos ligues : après la **Construction**, sa
+Le **Nom du monde** (Ligues → Plus → **Nom du monde et fichier...**) doit commencer par `_FL26`. Cette page liste aussi vos ligues : après la **Construction**, sa
 colonne **ID de la ligue** montre l'id de compétition de chaque ligue dans le jeu, celui que porte
 son fichier de logo. La colonne **#** est la place de la ligue dans l'ordre (**Monter** / **Descendre**),
 et **Select Team** dit où le dernier Build l'a mise : *oui*, *à la place de* l'un des groupes du jeu, ou
@@ -283,34 +296,34 @@ ou en Sudamericana.
 
 **Noms des compétitions** (Ligues → Plus) : un nouveau nom et un logo pour les coupes, supercoupes et compétitions continentales du jeu -- la FA Cup, la Ligue des champions, la Libertadores ... -- et pour les coupes continentales que le monde construit (CAF Champions League, Coupe de la Confédération, AFC Champions League Two, Copa Sudamericana, CONCACAF Champions Cup, OFC Champions League, AFC Challenge League, Supercoupe de la CAF). Toutes les phases de la compétition prennent le nom. Vide : celui du jeu. Les ligues du jeu se renomment dans *Ligues* (choisissez une ligue du jeu).
 
-**Ordre des championnats** (Ligues → Plus → Nom du monde et recette..., 0.2.0) : l'ordre des pays dans le Select Team de la Ligue des Masters et dans la liste des équipes Kick Off / Edit. *Par continent* est l'ordre du jeu (Europe, Amériques, Asie, puis Afrique, chacun de A à Z). *Tous les pays de A à Z* les met tous dans une seule suite alphabétique, et *Mon propre ordre* vous laisse les placer comme vous voulez (glisser, ou Up / Down). Les championnats d'un pays restent ensemble, première division d'abord, et les compétitions de clubs, les groupes "Other" et Classic Teams viennent après les pays. L'Allemagne, les USA et le Japon sont dans les groupes "Other" du Select Team, ils ne bougent donc que dans Kick Off. Relancez ensuite le Build du monde.
+**Ordre des championnats** (Ligues → Plus → Nom du monde et fichier..., 0.2.0) : l'ordre des pays dans le Select Team de la Ligue des Masters et dans la liste des équipes Kick Off / Edit. *Par continent* est l'ordre du jeu (Europe, Amériques, Asie, puis Afrique, chacun de A à Z). *Tous les pays de A à Z* les met tous dans une seule suite alphabétique, et *Mon propre ordre* vous laisse les placer comme vous voulez (glisser, ou Up / Down). Les championnats d'un pays restent ensemble, première division d'abord, et les compétitions de clubs, les groupes "Other" et Classic Teams viennent après les pays. L'Allemagne, les USA et le Japon sont dans les groupes "Other" du Select Team, ils ne bougent donc que dans Kick Off. Relancez ensuite le Build du monde.
 
-**Saisons des championnats du jeu** (Ligues → Plus → Nom du monde et recette..., 0.2.0, expérimental) : le Japon, la Chine, le Brésil, le Chili et l'Arabie saoudite jouent de février à décembre dans le jeu. Cochez-en un et ses championnats jouent d'août à mai comme l'Europe : la saison commence en août, les montées et descentes ont lieu en été, ses coupes passent aux dates d'août à mai et ses places continentales viennent du classement terminé en mai. Une division à vous sous l'un de ces championnats le suit. La Colombie et les USA jouent Apertura et Clausura et ne peuvent pas changer. Relancez le Build du monde et commencez une nouvelle carrière.
+**Saisons des championnats du jeu** (Ligues → Plus → Nom du monde et fichier..., 0.2.0, expérimental) : le Japon, la Chine, le Brésil, le Chili et l'Arabie saoudite jouent de février à décembre dans le jeu. Cochez-en un et ses championnats jouent d'août à mai comme l'Europe : la saison commence en août, les montées et descentes ont lieu en été, ses coupes passent aux dates d'août à mai et ses places continentales viennent du classement terminé en mai. Une division à vous sous l'un de ces championnats le suit. La Colombie et les USA jouent Apertura et Clausura et ne peuvent pas changer. Relancez le Build du monde et commencez une nouvelle carrière.
 
-**Clubs européens de la première saison** (Ligues → Plus → Nom du monde et recette..., 0.1.8) :
+**Clubs européens de la première saison** (Ligues → Plus → Nom du monde et fichier..., 0.1.8) :
 choisissez à la main les clubs de la phase de ligue de la Ligue des champions, de la Ligue Europa et
 de la Ligue Europa Conférence pour la première saison d'une nouvelle carrière. Vos clubs entrent
 d'abord et le jeu complète le reste ; à partir de la deuxième saison, les places européennes
 décident.
 
-**Nouveaux clubs** : choisissez la ligue, puis **Modifier le club** (nom, nom court, écusson), ou
+**Clubs** (un onglet de Modifier votre monde) : choisissez la ligue, puis **Modifier le club** (nom, nom court, écusson), ou
 **Plus ▾ → Paste names...** / **Load names from file...** (le même menu a **Insérer un club**,
 **Retirer le club**, **Nouveau club ici**, **Déplacer vers une autre ligue...** et **Importer des
 écussons...**). Un nom vide devient
 `<ligue> 01`, `<ligue> 02` ... ; un club sans écusson reçoit un écusson numéroté. Les maillots sont
 empruntés aux clubs du jeu. Un tel maillot est sous licence, et le mode Edit refuse de le modifier
-("You cannot edit this strip") : cochez **Maillots modifiables dans le jeu** sur la page Construire
+("You cannot edit this strip") : cochez **Maillots modifiables dans le jeu** sur l'onglet Build (Options du monde)
 et les nouveaux clubs n'en empruntent aucun ; chacun porte un maillot simple que Edit > Teams >
 Strip modifie comme celui de n'importe quel club, Paste Image compris.
-Avec Kit Server installé, **Créer les maillots des nouveaux clubs** (page Construire, activé sauf si
+Avec Kit Server installé, **Créer les maillots des nouveaux clubs** (onglet Build, Options du monde, activé sauf si
 vous le décochez, 0.2.1) crée pour chaque nouveau club domicile, extérieur, troisième et gardien dans
 les couleurs de son maillot (celles de NewLife, ou de l'écusson à défaut), avec l'écusson sur la
-poitrine et le short, pour des ligues entières d'un coup à l'activation du monde. Un écusson ajouté
+poitrine et le short, pour des ligues entières d'un coup quand le monde entre dans le jeu. Un écusson ajouté
 plus tard (Importer des écussons) passe sur les maillots à l'activation suivante. Un club qui a son
 propre maillot Kit Server, ou seulement l'écusson numéroté, n'en reçoit pas.
 Les noms gardent leurs accents (FK Željezničar) ; le nom court de trois lettres n'en a pas, comme
-dans le jeu, donc Č, Ž, Đ y deviennent C, Z, D. Après la **Construction**, la colonne **ID du
-club** montre l'id de chaque club dans le jeu.
+dans le jeu, donc Č, Ž, Đ y deviennent C, Z, D. Après la **Construction**, la souris sur le nom
+d'un club montre son id dans le jeu (**ID de l'équipe**).
 
 **Entraîneur** : dans **Modifier le club** d'un nouveau club, vous pouvez nommer son entraîneur. Vide : un nom inventé à partir des joueurs du pays du club (un club croate reçoit un nom comme `Tomislav Krovinović` ; le même à chaque Build), ou un nom numéroté (`FL M0001` ...) pour un pays dont le jeu a peu de joueurs. **Photo de l'entraîneur** en dessous lui donne un portrait (comme **Portrait de l'entraîneur...** sur la page Joueurs) ; *Ligues* (une ligue du jeu) > **Modifier le club** l'a aussi pour les clubs du jeu.
 
@@ -320,7 +333,7 @@ des nouveaux clubs** les utilise.
 
 **Formation** : dans **Modifier le club** d'un nouveau club, vous pouvez lui donner sa propre formation ; *Comme la ligue* garde celle de la ligue. Le terrain sous la liste montre la place de chacun.
 
-**Stade à domicile** (0.1.7) : dans **Modifier le club**, un stade de la bibliothèque de Stadium Server pour le club ; l'emplacement et le nom sont remplis depuis le dossier, changez le nom si vous voulez. Il est écrit dans le `map_teams.txt` de Stadium Server quand le monde est activé (et quand le monde actif est reconstruit), donc l'id d'un nouveau club n'a jamais à être cherché. Une ligne à vous pour le même club est désactivée en attendant, et réactivée quand le club n'a plus de stade ici. *Ligues* (une ligue du jeu) > **Modifier le club** l'a aussi pour les clubs du jeu. Stadium Server doit être installé (page *Stades*), ou le module de stades propre à SPFL26 (`common\stadiums.lua` avec son dossier `content\stadiums`) : depuis 0.1.8, Mod Studio y écrit quand Stadium Server n'est pas installé.
+**Stade à domicile** (0.1.7) : dans **Modifier le club**, un stade de la bibliothèque de Stadium Server pour le club ; l'emplacement et le nom sont remplis depuis le dossier, changez le nom si vous voulez. Il est écrit dans le `map_teams.txt` de Stadium Server quand le monde entre dans le jeu (et quand le monde du jeu est reconstruit), donc l'id d'un nouveau club n'a jamais à être cherché. Une ligne à vous pour le même club est désactivée en attendant, et réactivée quand le club n'a plus de stade ici. *Ligues* (une ligue du jeu) > **Modifier le club** l'a aussi pour les clubs du jeu. Stadium Server doit être installé (page *Stades*), ou le module de stades propre à SPFL26 (`common\stadiums.lua` avec son dossier `content\stadiums`) : depuis 0.1.8, Mod Studio y écrit quand Stadium Server n'est pas installé.
 
 **Clubs que le jeu a déjà.** Une place d'une nouvelle ligue peut accueillir un des clubs du jeu au
 lieu d'un nouveau : sélectionnez la place, puis **Club du jeu...**, et cherchez par nom ou ID de
@@ -345,17 +358,17 @@ changement des clubs d'une ligue demande une **nouvelle carrière**.
 
 **Les ligues du jeu** (choisissez-en une dans *Ligues*) : un nouveau nom ou logo, puis **Keep league changes** (**Undo league changes** revient en arrière) ; **Modifier le club** pour l'écusson, le nom, le portrait de l'entraîneur et le stade d'un club.
 
-**Importer des écussons...** (0.1.8, *Nouveaux clubs* → Plus) : des écussons pour beaucoup de clubs d'un coup. Choisissez un dossier d'images ; chacune est associée à un club par le nom du fichier -- le nom du club (`Alianza Lima.png`, `alianza_lima_r_l.png`) ou son ID d'équipe (`2287.png`, le `e_2287_r.png` des packs d'écussons). La liste montre chaque association cochée ; décochez une mauvaise avant **OK**. Un club qui a déjà un écusson le garde, sauf si **Remplacer les écussons déjà définis** est coché. Les images restent dans ce dossier et Build les lit là, gardez-le donc. (L'association par nom est une idée du script d'écussons de Xxspedd.)
+**Importer des écussons...** (0.1.8, *Clubs* → Plus ; pour les ligues du jeu, *Ligues* → Plus) : des écussons pour beaucoup de clubs d'un coup. Choisissez un dossier d'images ; chacune est associée à un club par le nom du fichier -- le nom du club (`Alianza Lima.png`, `alianza_lima_r_l.png`) ou son ID d'équipe (`2287.png`, le `e_2287_r.png` des packs d'écussons). La liste montre chaque association cochée ; décochez une mauvaise avant **OK**. Un club qui a déjà un écusson le garde, sauf si **Remplacer les écussons déjà définis** est coché. Les images restent dans ce dossier et Build les lit là, gardez-le donc. (L'association par nom est une idée du script d'écussons de Xxspedd.)
 
-**Échanger de ligue avec un club...** (0.1.7) : deux clubs des ligues du jeu échangent leurs places -- un promu contre un relégué, un club de la ligue d'un pays contre un club d'un autre. Chacun prend les places de l'autre dans la ligue, les coupes et les compétitions européennes, donc chaque ligue du jeu garde son nombre de clubs. Un club qui joue dans une nouvelle ligue de la recette ne peut pas aussi être échangé. **Annuler les changements du club** retire l'échange. Puis **Construire** à nouveau et commencez une nouvelle carrière.
+**Échanger de ligue avec un club...** (0.1.7, *Ligues*, une ligue du jeu → Plus) : deux clubs des ligues du jeu échangent leurs places -- un promu contre un relégué, un club de la ligue d'un pays contre un club d'un autre. Chacun prend les places de l'autre dans la ligue, les coupes et les compétitions européennes, donc chaque ligue du jeu garde son nombre de clubs. Un club qui joue dans une nouvelle ligue de votre monde ne peut pas aussi être échangé. **Annuler les changements du club** retire l'échange. Puis **Construire** à nouveau et commencez une nouvelle carrière.
 
 > **Fichier Edit.** Si le dossier de sauvegarde du jeu contient un fichier Edit (`EDIT00000000`),
 > il remplace les noms des clubs. Déplacez-le ailleurs pour voir vos noms.
 
 ### Joueurs
 
-**Joueurs** modifie l'effectif de n'importe quel club : les nouveaux clubs de la recette et ceux du
-jeu. Choisissez un club (ou appuyez sur **Joueurs** dans Nouveaux clubs), puis un joueur :
+**Joueurs** modifie l'effectif de n'importe quel club : les nouveaux clubs de votre monde et ceux du
+jeu. Choisissez un club (ou **Plus → Joueurs** dans Clubs), puis un joueur :
 
 - **nom**, **numéro de maillot**, **poste** et les postes où il peut jouer (A = naturel,
   B = peut y jouer), pied fort, taille, poids, âge, nationalité, style de jeu ;
@@ -381,14 +394,14 @@ jeu. Choisissez un club (ou appuyez sur **Joueurs** dans Nouveaux clubs), puis u
   joueurs, ceux recrutés pour lui compris ; les clubs du jeu n'ont pas de minimum ;
 - **Meilleur onze** place le joueur le plus fort à chaque poste (un joueur qui peut y jouer
   mais est enregistré à un autre poste compte 6 de moins, et reste pour son poste quand
-  celui-ci resterait vide) ; **Niveau de l'effectif...**
+  celui-ci resterait vide) ; **Niveau de l'effectif...** (dans **Plus**)
   monte ou baisse chaque capacité de tout l'effectif ;
 - **Terrain** (nouveaux clubs) : le onze de départ dans la formation du club. Glissez un joueur de
   la liste sur un poste, ou glissez un poste sur un autre pour échanger les deux ; un clic sur un
   poste sélectionne le joueur qui s'y trouve ;
-- **Exporter en CSV... / Importer un CSV...** : modifiez un effectif dans un tableur. Exportez
+- **Exporter en CSV... / Importer un CSV...** (dans **Plus**) : modifiez un effectif dans un tableur. Exportez
   d'abord, changez les cellules, puis réimportez les mêmes colonnes.
-- **Importer un effectif depuis un tableau...** : n'importe quel tableau de joueurs devient
+- **Importer un effectif depuis un tableau...** (dans **Plus**) : n'importe quel tableau de joueurs devient
   l'effectif du club -- tapé à la main, une liste copiée d'un site, un export de Football
   Manager ou d'EA FC. Les colonnes sont reconnues par leur nom (nom, poste, âge ou date de
   naissance, nationalité, taille, pied, numéro, note générale et toutes les notes) et
@@ -459,19 +472,20 @@ dossier contenant plus d'un visage est refusé : choisissez le visage que vous v
 
 **Gardez le Team.bin du monde.** Il est dans le dossier du monde et contient les clubs et les barrages du monde. Le remplacer par le Team.bin du jeu les fait disparaître, et les compositions ont l'air réparées seulement parce que les clubs n'y sont plus (GitHub #75). Construisez plutôt le monde à nouveau.
 
-**Construire et installer** (page Construction, et sur Home) fait 0, 2 et 3 ci-dessous en un clic,
+**Construire et installer** (Construire votre monde, et sur Home) fait 0, 2 et 3 ci-dessous en un clic,
 puis montre ce qu'il reste à faire : une fenêtre **Build terminé** qui peut aussi **Mettre la
-sauvegarde Edit de côté** et **Fermer le jeu**. Ou étape par étape, sur la page **Construction** :
+sauvegarde Edit de côté** et **Fermer le jeu**. Ou étape par étape, sous **Étape par étape, et
+Exporter le monde** dans l'onglet **Build** :
 
 0. **Installer les modules** — une fois, puis à nouveau après une nouvelle version du programme.
    Les fichiers remplacés sont conservés dans `SiderAddons\modules\before-builder-1\`.
 1. **Vérifier le plan** — ce qui sera créé ; rien n'est écrit.
 2. **Construire le monde**.
-3. **L'activer** — en fait le monde actif dans `sider.ini`.
+3. **L'activer** — le met dans le jeu (le monde actif dans `sider.ini`).
 4. Lancez le jeu, revenez et appuyez sur **Après un lancement : vérifier**. Le programme lit
    `sider.log` et dit, module par module, si le monde a été pris en compte.
 
-**Inclure la Ligue Europa Conférence** (sur la page Construction, activé par défaut) construit
+**Inclure la Ligue Europa Conférence** (onglet Build, sous Options du monde, activé par défaut) construit
 aussi la Ligue Europa Conférence : une phase de ligue à 36 clubs et un barrage en février, comme
 les deux autres. La Ligue des champions et la Ligue Europa reçoivent leur phase de ligue à 36 et
 leur barrage de février dans tous les cas. Désactivé : pas de Ligue Europa Conférence. (Mod Studio
@@ -533,24 +547,25 @@ et les pays d'Afrique et d'Océanie (le jeu n'a pas de section pour eux) après 
 > Libertadores, ses qualifications ou l'AFC Champions League n'entre pas dans leur tirage. Une
 > coupe CAF ou OFC avec moins de 4 places prend d'abord les places
 > de la coupe CAF suivante (avec deux et deux, la Ligue des champions CAF a les quatre), puis
-> les positions suivantes de vos ligues. **Supercoupe de la CAF** (page Construire, cochée par
+> les positions suivantes de vos ligues. **Supercoupe de la CAF** (onglet Build, Options du monde, cochée par
 > défaut) fait se rencontrer les vainqueurs des deux coupes CAF en un match fin juillet, à partir
 > de la deuxième saison de la carrière.
 
-> **Les sauvegardes appartiennent à un monde.** Une carrière sauvegardée avec un monde activé a
+> **Les sauvegardes appartiennent à un monde.** Une carrière sauvegardée avec un monde dans le jeu a
 > besoin de ce même monde pour se charger.
 
-**Fichier → Enregistrer la recette** enregistre tout dans un fichier `.json` ; **Ouvrir une
-recette** le recharge. **Construction** garde aussi une copie de la recette dans
-`%APPDATA%\FL26ModStudio\recipes\<monde>.json`, et Mod Studio rouvre la dernière recette au
-démarrage : le fermer sans enregistrer ne perd rien de ce qui a été construit.
+**Votre monde s'enregistre tout seul** un instant après chaque changement (la barre du bas dit
+**Votre monde est enregistré**) : dans son propre fichier `.json` s'il en a un, sinon dans
+`%APPDATA%\FL26ModStudio\recipes\<monde>.json`, et Mod Studio le rouvre au démarrage.
+**Fichier → Enregistrer votre monde sous...** en enregistre une copie sous un autre nom,
+**Fichier → Ouvrir un monde...** en rouvre un et **Fichier → Nouveau monde** en commence un vide.
 
-**Construire seulement les coupes d'Europe...** (page Construction ; *Seulement les coupes d'Europe...* sur Home) construit un monde avec
+**Construire seulement les coupes d'Europe...** (onglet Build, Options du monde ; *Seulement les coupes d'Europe...* sur Home) construit un monde avec
 seulement la nouvelle Ligue des champions et la Ligue Europa -- phase de ligue à 36 et barrages de
 février -- et la Ligue Europa Conférence quand **Inclure la Ligue Europa Conférence** est coché. Pas de
-nouvelles ligues ; les clubs et ligues du jeu restent tels quels et ta recette ne change pas. Il
-demande un nom de monde (`_FL26Euro` par défaut), le construit et propose de l'activer. Un seul
-monde peut être activé, il remplace donc un monde avec de nouvelles ligues : un monde avec de
+nouvelles ligues ; les clubs et ligues du jeu restent tels quels et votre monde ne change pas. Il
+demande un nom de monde (`_FL26Euro` par défaut), le construit et propose de le mettre dans le jeu.
+Un seul monde peut être dans le jeu, il remplace donc un monde avec de nouvelles ligues : un monde avec de
 nouvelles ligues a déjà le nouveau format.
 
 > **Ligues d'exhibition et Master League.** Une ligue cochée *Exhibition uniquement* ne joue jamais
@@ -584,28 +599,28 @@ plusieurs), plus *Free agents*, chacune de moins de 10 Mo. Ne téléchargez que 
 
 1. Mettez les parties téléchargées dans un même dossier. Ne les décompressez pas : Mod Studio
    lit les zip tels quels. (Ce sont des zip LZMA : 7-Zip les ouvre, le lecteur de zip de Windows non.)
-2. **League Builder > NewLife Database > Ouvrir la NewLife Database...** et choisissez ce dossier.
+2. **NewLife Database > Ouvrir la NewLife Database...** et choisissez ce dossier.
    La liste montre toutes les ligues de ces parties : pays, clubs, clubs que le jeu a déjà
    (*Dans le jeu*), joueurs et niveau. Cliquez sur une ligue pour voir ses clubs. Un clic sur
    l'en-tête d'une colonne (Ligue, Pays, Clubs, Joueurs, Niveau) trie selon elle, un second
    clic inverse l'ordre (0.2.0) ; la liste s'ouvre triée par pays.
 3. Sélectionnez une ou plusieurs ligues (Ctrl ou Maj pour plusieurs) et appuyez sur **Ajouter à
-   la recette**. Chacune devient une nouvelle ligue avec ses clubs et leurs effectifs, première
+   votre monde**. Chacune devient une nouvelle ligue avec ses clubs et leurs effectifs, première
    division de son pays. Changez sa division, son format, ses places européennes et le reste dans
    *Ligues*, comme pour toute autre ligue.
-4. **Build**, activez le monde et commencez une nouvelle carrière (section 8.2).
+4. **Construire et installer**, puis commencez une nouvelle carrière (section 8.2).
 
 - **Votre propre composition** (0.1.7) : décochez un club dans la liste de droite pour le
   laisser de côté, et **Ajouter un club d'une autre ligue...** amène des clubs de n'importe
   quelle ligue de la base -- la première division de cette saison est celle de l'an dernier avec
   deux promus, par exemple. La ligne de la ligue porte un `*`. Un club ne peut être que dans une
-  ligue de la recette.
-- Une ligue prend de 10 à 24 clubs, ses nouveaux clubs et ceux du jeu ensemble ; les autres sont en gris. Une ligue que le jeu a déjà (la Premier League, le Championship ...) est grisée aussi (0.1.9) : elle est déjà dans le jeu, amenez-la à la saison NewLife avec **Amener les ligues du jeu à cette saison...** plus bas. La ligne du bas compte les nouveaux
-  clubs de la recette par rapport aux 793 qu'un monde accepte.
+  ligue de votre monde.
+- Une ligue prend de 10 à 24 clubs, ses nouveaux clubs et ceux du jeu ensemble ; les autres sont en gris. Une ligue que le jeu a déjà (la Premier League, le Championship ...) est grisée aussi (0.1.9) : elle est déjà dans le jeu, amenez-la à la saison NewLife avec **Plus → Amener les ligues du jeu à cette saison...** plus bas. La ligne du bas compte les nouveaux
+  clubs de votre monde par rapport aux 793 qu'un monde accepte.
 - Les clubs que le jeu a déjà entrent dans la nouvelle ligue comme clubs du jeu (section 8),
   à ses dernières places, avec leur nom, écusson, maillots et joueurs. Celui qui joue aussi une
   compétition du jeu (Bâle et Young Boys jouent la Ligue Europa) a besoin du club qui prend sa
-  place là-bas : *Nouveaux clubs*, choisissez-le, **Club du jeu**. Jusque-là, Build dit lesquels.
+  place là-bas : *Clubs*, choisissez-le, **Plus → Club du jeu...**. Jusque-là, Build dit lesquels.
   Un club dont la seule compétition du jeu est continentale (Ludogorets en qualifications de la
   Ligue des champions) continue de la jouer seul (0.1.9).
 - Un joueur que le jeu a déjà (le même joueur sous le même nom, par exemple Urbański au Górnik
@@ -614,14 +629,14 @@ plusieurs), plus *Free agents*, chacune de moins de 10 Mo. Ne téléchargez que 
   reste où il est si son ancien club passait sous 18 joueurs ou si une ligue précédente l'a déjà ;
   il est alors laissé hors du club NewLife, sans copie (0.1.8).
 - Un club NewLife reçoit un ID de monde à lui (0.1.8), dans le bloc que le jeu lit pour les
-  clubs, après les ID que le constructeur donne aux siens. La colonne **ID du club** de la page
-  Clubs nouveaux le montre, et le `map.txt` du Kit Server est bâti dessus. Un monde fait avant
+  clubs, après les ID que le constructeur donne aux siens. La souris sur son nom dans *Clubs* le
+  montre (**ID de l'équipe**), et le `map.txt` du Kit Server est bâti dessus. Un monde fait avant
   0.1.8 doit être reconstruit et la carrière recommencée pour que les maillots suivent. Depuis
-  0.1.8, un club garde l'ID de son premier Build (la recette s'en souvient) : retirer, ajouter ou
+  0.1.8, un club garde l'ID de son premier Build (votre monde s'en souvient) : retirer, ajouter ou
   mettre à jour une autre ligue ne le déplace plus.
 - **Une version plus récente de NewLife** (0.1.8) : mettez ses parties dans un dossier (sans
   les mélanger avec les anciennes), **Ouvrir la NewLife Database...** sur ce dossier et appuyez sur
-  **Mettre mes ligues à jour vers cette version**. Chaque ligue ajoutée depuis une version plus
+  **Plus → Mettre mes ligues à jour vers cette version**. Chaque ligue ajoutée depuis une version plus
   ancienne est listée avec ce qui change (*16 clubs maintenant, 18 dans NewLife 1.3 (5 nouveaux,
   3 absents)*) et une case **Garder mes clubs** : cochée, la ligue garde ses clubs ; décochée,
   elle reçoit les clubs qu'elle a dans la nouvelle version. Dans les deux cas, les effectifs
@@ -630,7 +645,7 @@ plusieurs), plus *Free agents*, chacune de moins de 10 Mo. Ne téléchargez que 
   choisi, et vos propres clubs mis dans la ligue restent. Les changements de joueurs faits dans
   *Joueurs* pour ces clubs sont remplacés. Ensuite Build et nouvelle carrière.
 - **Les ligues du jeu dans la saison NewLife** (0.1.8) : avec une NewLife Database ouverte,
-  appuyez sur **Amener les ligues du jeu à cette saison...**. Chaque ligue du jeu que la version
+  appuyez sur **Plus → Amener les ligues du jeu à cette saison...**. Chaque ligue du jeu que la version
   contient est listée avec ce qui lui arrive, chacune avec une case. Un club promu ou relégué entre
   deux ligues du jeu échange sa place avec un club qui va dans l'autre sens (Burnley en
   Championship, Coventry en Premier League), comme *Échanger de ligue avec un club...*. Un club
@@ -640,23 +655,23 @@ plusieurs), plus *Free agents*, chacune de moins de 10 Mo. Ne téléchargez que 
   leur ancien club, ceux qu'il n'a pas sont ajoutés, les autres partent libres. Les ligues gardent
   leur nombre de clubs, leur format et leurs coupes. Les clubs que vous avez déjà changés à la main
   (un échange, un nom, un club d'une nouvelle ligue, des changements de joueurs) restent tels quels.
-  Le refaire avec une version plus récente remplace ce qu'a fait l'ancienne ; **Annuler les ligues
-  du jeu** retire tout. Build et nouvelle carrière.
+  Le refaire avec une version plus récente remplace ce qu'a fait l'ancienne ; **Plus → Annuler les
+  ligues du jeu** retire tout. Build et nouvelle carrière.
 - Un club NewLife reçoit un écusson en forme de blason à ses couleurs et le maillot du jeu aux
   couleurs les plus proches, jusqu'à ce que vous lui donniez les vôtres (**Modifier le club**).
 
 ## 9. Paquets de ligues : partager une ligue entière
 
 Un moddeur crée une ligue une fois — clubs, noms, écussons, logos, effectifs, visages — et
-partage **un seul fichier `.fl26pack`**. N'importe qui l'ajoute à sa propre recette et construit.
+partage **un seul fichier `.fl26pack`**. N'importe qui l'ajoute à son propre monde et construit.
 
-**Créer un paquet** (Paquets de ligues → **Créer un paquet...**, ou Fichier → Créer un paquet de
-ligues) :
+**Créer un paquet** (Construire votre monde → Paquets de ligues → **Créer un paquet...**, ou
+Fichier → Créer un paquet de ligues) :
 
 1. Nom, auteur, version et une courte description.
 2. Cochez les ligues à inclure (**Tout cocher** / **Tout décocher** au-dessus de la liste). Une
    ligue placée sous une autre nouvelle ligue doit l'accompagner.
-   Un paquet que la recette a déjà (le même nom) est remplacé par la nouvelle version (0.1.7) :
+   Un paquet que votre monde a déjà (le même nom) est remplacé par la nouvelle version (0.1.7) :
    les ligues, clubs et changements de joueurs de l'ancien sortent, ceux du nouveau entrent.
 3. Si vous le voulez, **aussi mes modifications des ligues, clubs et joueurs du jeu**.
 4. **Ce qui va dedans** (0.1.8) : tout est coché ; décochez ce que vous ne voulez pas partager --
@@ -672,8 +687,9 @@ ligues) :
    ligue et un tableau de score environ 7 Mo : un tel paquet dépasse souvent la limite de 10 Mo de
    Discord, partagez-le par un service cloud (Google Drive, Dropbox, MEGA ...) ; le programme le signale.
 
-**Ajouter un paquet** (Paquets de ligues → **Ajouter un paquet...**, Fichier → Ajouter un paquet
-de ligues, ou déposez-le sur Installer des mods) :
+**Ajouter un paquet** (Construire votre monde → Paquets de ligues → **Ajouter un paquet...**,
+Fichier → Ajouter un paquet de ligues, ou déposez-le sur **Importer votre monde**, où **Construire
+et installer** démarre alors tout seul) :
 
 1. Le programme montre ce qu'il contient et vous demande. Un paquet de plusieurs ligues les liste,
    toutes cochées : décochez celles que vous ne voulez pas (0.2.1). Une ligue placée sous une autre
@@ -683,11 +699,11 @@ de ligues, ou déposez-le sur Installer des mods) :
 2. Une ligue dont vous avez déjà le nom : le programme demande, et l'ajoute sous la forme `Nom (Paquet)` (si vous refusez, rien n'est ajouté).
    Un paquet fait sans effectifs va sur cette ligue : ses blasons et entraîneurs vont aux clubs du
    même nom, vos joueurs restent et le programme dit combien de clubs il a trouvés.
-3. **Enregistrer la recette**, puis **Construction**.
+3. **Construire et installer**.
 
 Les id sont attribués quand chaque personne construit, d'après ce que son propre jeu contient :
-un paquet fonctionne donc à côté d'autres paquets et de vos propres ligues. **Retirer de la
-recette** retire à nouveau un paquet, y compris les modifications qu'il a faites aux clubs du jeu.
+un paquet fonctionne donc à côté d'autres paquets et de vos propres ligues. **Retirer de votre
+monde** retire à nouveau un paquet, y compris les modifications qu'il a faites aux clubs du jeu.
 
 Une ligue placée sous une ligue du jeu fonctionne pour tous ceux qui ont la même version du jeu.
 
@@ -695,13 +711,19 @@ Une ligue placée sous une ligue du jeu fonctionne pour tous ceux qui ont la mê
 
 **Diagnostic — Lancer les vérifications** examine toute la configuration : dossiers de contenu
 activés mais manquants, modules mal placés ou activés deux fois, lignes de correspondance qui ne
-pointent vers rien, mondes du League Builder (un seul devrait être activé), et le dernier
+pointent vers rien, **Votre monde dans le jeu** (un seul monde devrait y être), et le dernier
 `sider.log`. **Copier un rapport** met tout dans le presse-papiers, à coller dans un message de
 forum ou un rapport de bug.
 
 **Points de restauration** : chaque fichier que le programme a modifié, avec la copie d'avant.
 **Restaurer cette copie** le remet en place. Les copies sont dans
 `SiderAddons\ModStudio\backups`. **Nettoyer...** supprime les anciennes.
+
+**Remettre Sider comme avant Mod Studio...** (Points de restauration, et le menu **Jeu**) remet tout
+comme avant : il remet chaque fichier que Mod Studio a modifié tel qu'il était au départ
+(`sider.ini`, CommonLib, les fichiers de correspondance) et retire ce qu'il a apporté (ses modules,
+le pack de visages, les mondes et mods installés avec lui). Rien n'est supprimé : tout est gardé dans
+`SiderAddons\ModStudio\reset-<heure>`, et **Annuler la dernière remise** le remet en place.
 
 ## 11. Quand quelque chose ne va pas
 

@@ -25,7 +25,7 @@ from .. import newlife as N
 from .. import access
 from ..i18n import _, tr
 from ..backups import snapshot
-from ..ui import Page, section, hint, row, ask, error, info, run_job, helpmark, helped, can_write, denied_box
+from ..ui import Fold, Page, section, hint, row, ask, error, info, run_job, helpmark, helped, can_write, denied_box
 
 EURO_WORLD = "_FL26Euro"
 
@@ -1292,9 +1292,9 @@ class GameClubDialog(Dialog):
         for t, n, s in self.used if want else []:
             if want not in (n or "").lower() and want not in (s or "").lower() and want != str(t):
                 continue
-            it = QTreeWidgetItem([n, s, str(t), _("already in this recipe: %s") % self.taken[t]])
+            it = QTreeWidgetItem([n, s, str(t), _("already in your world: %s") % self.taken[t]])
             it.setFlags(it.flags() & ~(Qt.ItemIsSelectable | Qt.ItemIsEnabled))
-            it.setToolTip(3, _("Take it out of that place first (New clubs: New club here), then pick it here."))
+            it.setToolTip(3, _("Take it out of that place first (Clubs: New club here), then pick it here."))
             self.tree.addTopLevelItem(it)
         if pick:
             self.tree.setCurrentItem(pick)
@@ -1500,7 +1500,7 @@ class CompetitionIdsDialog(Dialog):
         worlds = project.world_tables()
         db = worlds[0] if worlds else project.base
         self.rows = B.competition_ids(db, project.base)
-        where = (_("the world switched on (%s)") % project.live_worlds()[0]) if worlds else _("the game's tables")
+        where = (_("the world in the game (%s)") % project.live_worlds()[0]) if worlds else _("the game's tables")
         self.v.insertWidget(0, hint(_("Every league and cup in %s. Competition ID is what scoreboards, kits and "
                                       "the competition maps of Sider ask for; regulation IDs are the ones in "
                                       "sider.log and the world file. New = made by this world.") % where))
@@ -1556,7 +1556,7 @@ class CompetitionNamesDialog(Dialog):
         if r.get("caf_super_cup_logo") and "0" not in self.logos:
             self.logos["0"] = r["caf_super_cup_logo"]
         self.v.insertWidget(0, hint(_("Cups, super cups and the continental competitions of the game, and the "
-                                      "continental cups the League Builder makes. Leagues are renamed on Game's "
+                                      "continental cups Mod Studio makes. Leagues are renamed on Game's "
                                       "leagues and clubs. Empty name: the game's own.")))
         body = QHBoxLayout()
         self.list = QListWidget()
@@ -2179,8 +2179,8 @@ class BuilderPage(Page):
     def need_tables(self, offer=False):
         """True when there are no game tables; offer: also ask to open Settings (an action that needs them)"""
         if self.project.base is None:
-            self.say(_("The League Builder needs the game's tables: Settings > Unpack the game's tables "
-                       "(once, and again after a game update)."), "warn")
+            self.say(_("The game's tables are not unpacked yet. Mod Studio does it by itself when it starts; "
+                       "you can also do it in Settings > Unpack the game's tables."), "warn")
             if offer and ask(self, "Game tables", _(
                     "Mod Studio has no game tables on this PC yet (the game's list of clubs, leagues and "
                     "players). It needs them once on every PC, and again after a game update.\n\n"
@@ -2198,7 +2198,7 @@ class BuilderPage(Page):
 class NewLeagues(BuilderPage):
     title = "New leagues"
     hint = ("Leagues to add to the game. Each gets its clubs at once, with full squads and a manager; "
-            "name them on the New clubs page, change their players on the Players page, then Build.")
+            "name them on the Clubs page, change their players on the Players page, then Build.")
     help = ("What the buttons do:\n"
             "- Add league: a new league; its clubs are made for you.\n"
             "- Add lower tier: a league one division below the selected one, with promotion and relegation "
@@ -2348,7 +2348,7 @@ class NewLeagues(BuilderPage):
             self.tree.setCurrentItem(self.tree.topLevelItem(cur))
         clubs = sum(B.new_club_count(L) for L in r["leagues"])
         self.foot.setText(_("%d new leagues, %d new clubs.") % (len(r["leagues"]), clubs)
-                          + ("   " + _("Recipe: %s") % self.project.path if self.project.path else ""))
+                          + ("   " + _("Saved in: %s") % self.project.path if self.project.path else ""))
 
     def selected(self):
         it = self.tree.currentItem()
@@ -2552,16 +2552,16 @@ class NewLeagues(BuilderPage):
 
     # ---- recipe files (File menu) ----
     def open_recipe(self):
-        if self.project.dirty and not ask(self, "Open recipe...", _("Unsaved changes are lost. Open anyway?")):
+        if self.project.dirty and not ask(self, "Open a world...", _("Unsaved changes are lost. Open anyway?")):
             return
-        p, _f = QFileDialog.getOpenFileName(self, _("Open recipe..."), self.app.settings.get("recipes", ""),
-                                            _("Recipe") + " (*.json)")
+        p, _f = QFileDialog.getOpenFileName(self, _("Open a world..."), self.app.settings.get("recipes", ""),
+                                            _("Mod Studio world") + " (*.json)")
         if not p:
             return
         try:
             self.project.open(p)
         except (B.BuildError, ValueError, OSError) as e:
-            error(self, "Open recipe...", str(e))
+            error(self, "Open a world...", str(e))
             return
         self.app.settings["recipes"] = os.path.dirname(p)
         self.app.settings["last_recipe"] = p
@@ -2572,18 +2572,18 @@ class NewLeagues(BuilderPage):
         p = self.project.path
         if ask_name or not p:
             p, _f = QFileDialog.getSaveFileName(
-                self, _("Save recipe as..."),
+                self, _("Save your world as..."),
                 os.path.join(self.app.settings.get("recipes", ""), self.project.recipe["world"] + ".json"),
-                _("Recipe") + " (*.json)")
+                _("Mod Studio world") + " (*.json)")
             if not p:
                 return
         self.project.save(p)
         self.app.settings["recipes"] = os.path.dirname(p)
         self.app.settings["last_recipe"] = p
-        self.app.status(_("Recipe saved: %s") % p)
+        self.app.status(_("Your world is saved in %s") % p)
 
     def new_recipe(self):
-        if self.project.dirty and not ask(self, "New", _("Start a new recipe? Unsaved changes are lost.")):
+        if self.project.dirty and not ask(self, "New world", _("Start a new world? Unsaved changes are lost.")):
             return
         self.project.new()
 
@@ -2609,25 +2609,16 @@ class NewClubs(BuilderPage):
     def __init__(self, app):
         super().__init__(app)
         self.action("Edit club", self.edit, "primary")
-        self.action("Players", self.players, tip="Change this club's squad")
-        self.action("Club of the game...", self.game_club,
-                    tip="Put a club the game already has in this place, instead of a new club")
-        self.action("NewLife club...", self.newlife_club,
-                    tip="Put clubs of the NewLife Database in this place and the ones after it")
-        more = QToolButton()
-        more.setText(_("More") + "  ▾")
-        more.setPopupMode(QToolButton.InstantPopup)
-        m = QMenu(more)
-        for it in (("New club here", self.new_here), ("Insert club", lambda: self.shift(1)),
+        # 0.2.4: one button in sight, the rest in More
+        self.more([("Players", self.players, "Change this club's squad"),
+                   ("Club of the game...", self.game_club,
+                    "Put a club the game already has in this place, instead of a new club"),
+                   ("NewLife club...", self.newlife_club,
+                    "Put clubs of the NewLife Database in this place and the ones after it"), None,
+                   ("New club here", self.new_here), ("Insert club", lambda: self.shift(1)),
                    ("Remove club", lambda: self.shift(-1)), ("Move to another league...", self.move_club), None,
                    ("Paste names...", self.paste), ("Load names from file...", self.load_file),
-                   ("Import crests...", lambda: import_crests(self))):
-            if it is None:
-                m.addSeparator()
-            else:
-                m.addAction(_(it[0])).triggered.connect(lambda _c=False, f=it[1]: f())
-        more.setMenu(m)
-        self.actions.addWidget(more)
+                   ("Import crests...", lambda: import_crests(self))])
         top = QHBoxLayout()
         top.addWidget(QLabel(_("League")))
         self.combo = QComboBox()
@@ -2644,6 +2635,9 @@ class NewClubs(BuilderPage):
         self.tree.headerItem().setToolTip(3, _("The club's id in the game, from the last Build"))
         for c, w in enumerate((40, 320, 90, 80, 260)):
             self.tree.setColumnWidth(c, w)
+        # 0.2.4: the id and the crest's file name are for modders: in the name's tooltip, not in sight
+        self.tree.setColumnHidden(3, True)
+        self.tree.setColumnHidden(4, True)
         self.tree.itemDoubleClicked.connect(lambda *a: self.edit())
         self.outer.addWidget(self.tree, 1)
         self.project.changed.connect(self.refresh)
@@ -2731,6 +2725,7 @@ class NewClubs(BuilderPage):
                                   os.path.basename(crests[k]) if crests[k] else "", str(n) if n else ""])
             if not names[k]:
                 it.setForeground(1, QBrush(QColor(theme.SUBTLE)))
+            it.setToolTip(1, _("Team ID: %s") % it.text(3) + ("   " + _("Crest: %s") % it.text(4) if it.text(4) else ""))
             kits = L.get("club_kits") or []
             pm = pixmap(crests[k], 28, kits[k] if k < len(kits) else None)
             if pm:
@@ -2900,7 +2895,7 @@ class NewClubs(BuilderPage):
             return
         others = [x["name"] for x in self.project.recipe["leagues"] if x is not L]
         if not others:
-            QMessageBox.information(self, _("New clubs"), _("The recipe has no other new league."))
+            QMessageBox.information(self, _("New clubs"), _("Your world has no other new league."))
             return
         d = Dialog(self, "Move to another league")
         to = QComboBox()
@@ -3304,6 +3299,9 @@ class GameLeagues(BuilderPage):
         self.tree.setHeaderLabels([_("Club id"), _("Name"), _("Short name"), _("Crest"), _("Changed")])
         for c, w in enumerate((70, 260, 80, 180, 80)):
             self.tree.setColumnWidth(c, w)
+        # 0.2.4: the club id and the crest's file name in the name's tooltip, not in sight
+        self.tree.setColumnHidden(0, True)
+        self.tree.setColumnHidden(3, True)
         self.tree.itemDoubleClicked.connect(lambda *a: self.edit_club())
         rv.addWidget(self.tree, 1)
         b1 = QPushButton(_("Edit club"))
@@ -3318,7 +3316,18 @@ class GameLeagues(BuilderPage):
         b5 = QPushButton(_("Import crests..."))
         b5.setToolTip(_("Crests for many clubs at once, from a folder of pictures named after the clubs"))
         b5.clicked.connect(lambda: import_crests(self))
-        rv.addWidget(row(b1, b2, b4, b3, b5))
+        # 0.2.4: Edit club and Players in sight, the rest in More
+        more = QToolButton()
+        more.setText(_("More") + "  ▾")
+        more.setPopupMode(QToolButton.InstantPopup)
+        m = QMenu(more)
+        m.setToolTipsVisible(True)
+        for b in (b4, b3, b5):
+            act = m.addAction(b.text())
+            act.setToolTip(b.toolTip())
+            act.triggered.connect(lambda _c=False, b=b: b.click())
+        more.setMenu(m)
+        rv.addWidget(row(b1, b2, more))
         split.addWidget(right)
         split.setSizes([300, 900])
         self.outer.addWidget(split, 1)
@@ -3402,6 +3411,7 @@ class GameLeagues(BuilderPage):
                 os.path.basename(e["crest"]) if e.get("crest") else "", ", ".join(marks)]
         for c, v in enumerate(vals):
             it.setText(c, v)
+        it.setToolTip(1, _("Team ID: %s") % tid + ("   " + _("Crest: %s") % vals[3] if vals[3] else ""))
         pm = pixmap(e.get("crest"), 24)
         it.setIcon(1, pm if pm else QPixmap())
 
@@ -3472,7 +3482,7 @@ class GameLeagues(BuilderPage):
                 if g.get("swap") not in (None, "") and not isinstance(g["swap"], dict):
                     busy.add(int(g["swap"]))
         if tid in busy:
-            error(self, "Swap leagues", _("This club already plays in a new league of the recipe."))
+            error(self, "Swap leagues", _("This club already plays in a new league of your world."))
             return
         d = SwapDialog(self, self.project, tid, busy)
         if not (d.finish() and d.picked is not None):
@@ -3511,7 +3521,7 @@ class AfterBuild(QDialog):
         steps = [("ok", _("World built"), info["world"]),
                  ("ok", _("Leagues and clubs"), _("%d leagues · %d new clubs") % (info["leagues"], info["clubs"])),
                  ("ok", _("Modules installed and switched on"), _("version %s") % VERSION),
-                 ("ok", _("Switched on in sider.ini"), _("the live world"))]
+                 ("ok", _("In the game"), _("switched on in sider.ini"))]
         steps.append(("warn", _("The game is running with the old world: restart it to play the new one"), "")
                      if running else ("ok", _("Start the game to play it"), ""))
         import time
@@ -3595,15 +3605,14 @@ class AfterBuild(QDialog):
             self.accept()
 
 
-FOR_MODDERS = ("For modders. Build your world makes a world of your own: your leagues, clubs and players, "
-               "from your recipe. To play a ready modpack you do not need it: Import your world, then Play.")
+FOR_MODDERS = ("For modders. Build your world makes a world of your own from your leagues, clubs and players. "
+               "To play a ready modpack you do not need it: Import your world, then Play.")
 
 
 class Build(BuilderPage):
     title = "Build"
-    hint = ("Turn the recipe into a world: 1. check the plan, 2. build it into SiderAddons\\livecpk, "
-            "3. switch it on in sider.ini, then start the game and 4. check sider.log. "
-            "The builder's modules are installed once (0), and again after a new version of the program.")
+    hint = ("Make a world of your own from your leagues and put it in the game. Build and install does all "
+            "of it in one go; the steps one at a time and Export the world are under Step by step.")
     help = ("The steps, in order:\n"
             "0. Install the modules: puts Mod Studio's modules into sider. Once, and again after every new "
             "version of Mod Studio.\n"
@@ -3654,9 +3663,8 @@ class Build(BuilderPage):
         self.b_all.clicked.connect(self.build_all)
         self.steps.append(self.b_all)
         one.addWidget(self.b_all)
-        one.addWidget(hint(_("All in one: the modules, the world, switching it on. Or step by step:")), 1)
+        one.addWidget(hint(_("Puts Mod Studio's modules in, builds your world and switches it on in the game.")), 1)
         self.outer.addLayout(one)
-        self.outer.addLayout(bar)
         cards = QHBoxLayout()
         cards.setSpacing(14)
         euc = FitCard()
@@ -3691,7 +3699,20 @@ class Build(BuilderPage):
         sa.setWidget(holder)
         sa.setStyleSheet("QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; }")
         self.cards_area, self.cards_holder = sa, holder
-        self.outer.addWidget(sa, 10)
+        # 0.2.4: the one button in sight; the world's options and the single steps one click away
+        self.opts = Fold("World options: European cups, country cups, kits and faces of the new clubs",
+                         app, "build_opts")
+        self.opts.body.addWidget(sa, 10)
+        self.outer.addWidget(self.opts)
+        self.stepfold = Fold("Step by step, and Export the world", app, "build_steps")
+        self.stepfold.body.addWidget(hint(_("What Build and install does, one step at a time (the ? next to "
+                                            "the title says what each step does). Export the world makes one "
+                                            ".zip of your world for other people.")))
+        barw = QWidget()
+        bar.setContentsMargins(0, 0, 0, 0)
+        barw.setLayout(bar)
+        self.stepfold.body.addWidget(barw)
+        self.outer.addWidget(self.stepfold)
         self.uecl = QCheckBox(_("Include the Conference League"))
         self.uecl.setToolTip(_("A league phase of 36 clubs and a February play-off, like the Champions League "
                                "and the Europa League"))
@@ -3763,13 +3784,13 @@ class Build(BuilderPage):
         self.b_euro = QPushButton(_("Build only the European cups..."))
         self.b_euro.setToolTip(_("A world with nothing but the new Champions League and Europa League (league "
                                  "phase of 36 and play-off) and, when ticked above, the Conference League: "
-                                 "no new leagues, the game's clubs and leagues as they are. Your recipe is "
+                                 "no new leagues, the game's clubs and leagues as they are. Your own world is "
                                  "not changed."))
         self.b_euro.clicked.connect(self.do_europe_only)
         eu.addWidget(noted(self.b_euro, helpmark(
             "A world with nothing but the new Champions League and Europa League (league "
             "phase of 36 and play-off) and, when ticked above, the Conference League: "
-            "no new leagues, the game's clubs and leagues as they are. Your recipe is "
+            "no new leagues, the game's clubs and leagues as they are. Your own world is "
             "not changed."), hint(_("a world with just the new European format and the game's own leagues and "
                                          "clubs: no new leagues"))))
         cl.addStretch(1)
@@ -3873,9 +3894,9 @@ class Build(BuilderPage):
         w = ", ".join(ready)
         info(self, "Build", _("%s is on: a ready world, installed from a zip. It is built already: press "
                               "Play and start a new Master League.\n\nBuild makes the world of your own "
-                              "recipe and would switch %s off. To build your own leagues, switch your own "
-                              "world on first (Home > Switch world...), or remove the ready one (Install mods > "
-                              "Remove the mod).") % (w, w))
+                              "leagues and would switch %s off. To build your own leagues, switch your own "
+                              "world on first (Home > Switch world...), or remove the ready one (Import your world > "
+                              "Remove).") % (w, w))
         return True
 
     def refresh(self):
@@ -3912,7 +3933,7 @@ class Build(BuilderPage):
         ready = self.ready_live()
         for b in self.steps[1:4] + [self.b_all]:          # plan, build, switch on, Build and install
             b.setEnabled(not ready)
-            b.setToolTip(_("Off: %s is a ready world from Install mods. It is built already.") % ", ".join(ready)
+            b.setToolTip(_("Off: %s is a ready world from Import your world. It is built already.") % ", ".join(ready)
                          if ready else "")
         if ready:
             bits.insert(0, _("%s is a ready world (installed from a zip): no Build needed, press Play") % ", ".join(ready))
@@ -3965,7 +3986,7 @@ class Build(BuilderPage):
             error(self, title, _("the world name must start with _FL26"))
             return
         if name == self.project.recipe.get("world"):
-            error(self, title, _("%s is the world of the recipe you are editing: pick another name.") % name)
+            error(self, title, _("%s is the world you are editing: pick another name.") % name)
             return
         if not can_write(self, self.app.game):
             return
@@ -3997,9 +4018,9 @@ class Build(BuilderPage):
                           "and start a new Master League career.") % name)
 
         def switch():
-            if ask(self, title, _("Make %s the live world in sider.ini?") % name):
+            if ask(self, title, _("Put %s in the game (switch it on in sider.ini)?") % name):
                 def on(log):
-                    snapshot(self.app.game.ini_path, "League Builder: switch on " + name, self.app.game.sider_dir)
+                    snapshot(self.app.game.ini_path, "Your world: switch on " + name, self.app.game.sider_dir)
                     B.switch_on(name, self.app.game.folder, log=log)
                     self.project.drop_names()
                     log("\n" + _("Start the game, then 4. check."))
@@ -4119,7 +4140,7 @@ class Build(BuilderPage):
             # a copy of what is built, opened again at the next start (Project.keep_copy)
             kept = self.project.keep_copy()
             self.app.settings["last_recipe"] = kept
-            self.app.status(_("Recipe saved: %s") % kept)
+            self.app.status(_("Your world is saved in %s") % kept)
         except OSError:
             pass
 
@@ -4157,7 +4178,7 @@ class Build(BuilderPage):
         game = self.app.game.folder
         w = pl["world"]
         replace = os.path.exists(os.path.join(self.app.game.livecpk_dir, w))
-        if not ask(self, "Build and install", _("Build %s and make it the live world? Mod Studio's modules are "
+        if not ask(self, "Build and install", _("Build %s and put it in the game? Mod Studio's modules are "
                                                 "installed too; sider.ini is backed up first.") % w):
             return
         base = self.project.base
@@ -4171,7 +4192,7 @@ class Build(BuilderPage):
                 "clubs": sum(B.new_club_count(L) for L in self.project.recipe["leagues"])}
 
         def go(log):
-            snapshot(self.app.game.ini_path, "League Builder: build and install " + w, self.app.game.sider_dir)
+            snapshot(self.app.game.ini_path, "Build and install " + w, self.app.game.sider_dir)
             log(_("installing the modules ..."))
             B.install_modules(game, log=log)
             log(B.describe(pl))
@@ -4193,9 +4214,9 @@ class Build(BuilderPage):
         w = self.project.recipe.get("world", "").strip()
         if not can_write(self, self.app.game):
             return
-        if ask(self, "Switch on", _("Make %s the live world in sider.ini?") % w):
+        if ask(self, "Switch on", _("Put %s in the game (switch it on in sider.ini)?") % w):
             def go(log):
-                snapshot(self.app.game.ini_path, "League Builder: switch on " + w, self.app.game.sider_dir)
+                snapshot(self.app.game.ini_path, "Your world: switch on " + w, self.app.game.sider_dir)
                 B.switch_on(w, self.app.game.folder, log=log)
                 self.project.drop_names()
                 log("\n" + _("Start the game, then 4. check."))
@@ -4209,7 +4230,7 @@ class Build(BuilderPage):
                _("Copy the league builder's modules into %s and load them from sider.ini? "
                  "Files it replaces are kept in a before-builder folder next to them.") % self.app.game.modules_dir):
             def go(log):
-                snapshot(self.app.game.ini_path, "League Builder: install the modules", self.app.game.sider_dir)
+                snapshot(self.app.game.ini_path, "Install the modules", self.app.game.sider_dir)
                 B.install_modules(self.app.game.folder, log=log)
                 log("\n" + _("Done. This is needed once, and again after a new version of the program."))
             self.run(go)

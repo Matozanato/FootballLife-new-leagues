@@ -190,13 +190,14 @@ class AddDialog(QDialog):
 class Packages(BuilderPage):
     title = "League packages"
     hint = ("Share leagues: make a package of your leagues for other people, or add somebody's package to "
-            "your recipe. Added leagues show up on every League Builder page; Build puts them in the game.")
+            "your world. Added leagues show up on every page of Edit your world; Build and install puts them in the "
+            "game.")
 
     def __init__(self, app):
         super().__init__(app)
         self.action("Add a package...", self.add_pack, "primary")
         self.action("Make a package...", self.make_pack)
-        self.action("Remove from the recipe", self.remove_pack, "danger")
+        self.action("Remove from your world", self.remove_pack, "danger")
         split = QSplitter(Qt.Horizontal)
         self.tree = QTreeWidget()
         self.tree.setRootIsDecorated(False)
@@ -236,8 +237,8 @@ class Packages(BuilderPage):
             it.setData(0, Qt.UserRole, tag)
             self.tree.addTopLevelItem(it)
         n = self.tree.topLevelItemCount()
-        self.foot.setText(_("%d package(s) in this recipe.") % n if n else
-                          _("No packages in this recipe yet. Add a .fl26pack file, or drop one on Install a mod."))
+        self.foot.setText(_("%d package(s) in your world.") % n if n else
+                          _("No league packages in your world yet. Add a .fl26pack file here or on Import your world."))
         if n:
             self.tree.setCurrentItem(self.tree.topLevelItem(0))
         else:
@@ -296,11 +297,11 @@ class Packages(BuilderPage):
         same = lambda n: (n or "").strip().casefold() == (man.get("name") or "").strip().casefold()
         old = [(t, p) for t, p in K.packs(self.project.recipe).items() if same(p.get("name"))]
         if old:
-            text += ["", _("The recipe already has %s. Replace it with this version? Its leagues, clubs and "
+            text += ["", _("Your world already has %s. Replace it with this version? Its leagues, clubs and "
                            "player changes go out and the new ones come in.")
                      % ", ".join("%s %s" % (p.get("name") or t, p.get("version") or "") for t, p in old)]
         else:
-            text += ["", _("Add it to the recipe?")]
+            text += ["", _("Add it to your world?")]
         parts = [p for p in K.PARTS if p in (man.get("parts") or K.PARTS)]
         if man.get("players") is False:
             parts = [p for p in parts if p not in ("squads", "faces")]
@@ -325,7 +326,7 @@ class Packages(BuilderPage):
             clash = []                        # it goes onto those leagues (lbpackage.overlay)
         if clash:
             if not ask(self, "Add a league package",
-                       _("The recipe already has a league called %s. Add the package's with its name after it, "
+                       _("Your world already has a league called %s. Add the package's with its name after it, "
                          "e.g. \"%s (%s)\"?") % (", ".join(clash), clash[0], man.get("name"))):
                 return
             have = {L["name"] for L in self.project.recipe.get("leagues", [])}
@@ -344,18 +345,19 @@ class Packages(BuilderPage):
             error(self, "League packages", str(e))
             return
         self.project.touch()
-        msg = _("Added %s. Save the recipe, then Build to put the leagues in the game.") % man.get("name")
+        msg = _("Added %s. Build and install puts its leagues in the game.") % man.get("name")
         if brought:
             msg += " " + _("Also added, as the leagues you picked sit below them: %s.") % ", ".join(brought)
         matched = (self.project.recipe.get("packs") or {}).get(tag, {}).get("matched") or {}
         if matched:
             msg += " " + "; ".join(_("%s: %d of %d clubs found by name") % (n, h, t) for n, (h, t) in matched.items())
         self.say(msg, "ok")
+        return True
 
     def make_pack(self):
         r = self.project.recipe
         if not r.get("leagues") and not r.get("edits") and not r.get("players"):
-            error(self, "Make a league package", _("The recipe has no leagues yet."))
+            error(self, "Make a league package", _("Your world has no leagues yet."))
             return
         d = MakeDialog(self, r, self.app.settings.get("last_pack", {}))
         if d.exec() != QDialog.Accepted:
@@ -401,7 +403,7 @@ class Packages(BuilderPage):
             return
         tag = it.data(0, Qt.UserRole)
         p = K.packs(self.project.recipe).get(tag) or {}
-        if not ask(self, "League packages", _("Take %s out of the recipe: its leagues %s and the changes it "
+        if not ask(self, "League packages", _("Take %s out of your world: its leagues %s and the changes it "
                                               "brought? Build again afterwards.") %
                    (p.get("name") or tag, ", ".join(p.get("leagues") or []))):
             return

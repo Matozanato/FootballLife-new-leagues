@@ -89,8 +89,8 @@ def page_groups():
 NAV = [
     ("", False, [("Overview", "Home", ["Overview"])]),
     ("YOUR WORLD", False, [
-        ("BuildWorld", "Build your world", ["Build"]),
-        ("ImportWorld", "Import your world", ["Install", "Packages"]),
+        ("BuildWorld", "Build your world", ["Build", "Packages"]),
+        ("ImportWorld", "Import your world", ["Install"]),
         ("EditWorld", "Edit your world", ["Leagues", "NewClubs", "Players", "Kits", "Stadiums"]),
         ("NewLife", "NewLife Database", ["NewLife"]),
     ]),
@@ -98,7 +98,7 @@ NAV = [
     ("TOOLS", True, [(n, None, [n]) for n in ("Modules", "Roots", "Profiles", "Restore", "Diagnostics")]),
     ("SETTINGS", False, [("Settings", None, ["Settings"])]),
 ]
-TAB_TITLE = {"Install": "A world or a mod (.zip)", "Packages": "A league package (.fl26pack)",
+TAB_TITLE = {"Build": "Build", "Packages": "League packages",
              "NewClubs": "Clubs"}
 OPEN_FOR = {"NewLeagues": "EditWorld"}     # a page not in the bar: the section that stays lit
 
@@ -148,15 +148,15 @@ class Main(QMainWindow):
             if os.path.exists(kept):
                 try:
                     self.project.open(kept, copy=True)
-                    self._start_note = _("Opened the recipe of %s, the world switched on in the game "
+                    self._start_note = _("Opened %s, the world in the game "
                                          "(the last one open was %s).") % (live[0], was)
                 except Exception:
                     pass
             from modstudio import installer as _I
             if not self._start_note and not _I.ready_world(self.game, live[0]):
                 # a ready world has no recipe to open, and Build is off for it: nothing to tell
-                self._start_note = _("The world switched on in the game is %s, but the recipe open is %s. "
-                                     "Open the recipe of %s before you Build.") % (live[0], was, live[0])
+                self._start_note = _("The world in the game is %s, but Mod Studio has %s open. "
+                                     "Open %s (File > Open a world...) before you Build.") % (live[0], was, live[0])
         self.bus.game_changed.connect(self.project.load_tables)
         self.setWindowTitle("FL26 Mod Studio")
         self.resize(*self.settings.get("size", [1360, 820]))
@@ -189,12 +189,13 @@ class Main(QMainWindow):
         self.status_saved = QPushButton("")
         self.status_saved.setFlat(True)
         self.status_saved.setCursor(Qt.PointingHandCursor)
-        self.status_saved.clicked.connect(lambda: self.page("NewLeagues").save_recipe())
+        self.status_saved.clicked.connect(lambda: self.project.autosave())
         sb.addPermanentWidget(self.status_saved)
         sb.addPermanentWidget(QLabel("v" + VERSION))
         self.setStatusBar(sb)
         self.project.changed.connect(self.show_saved)
-        QShortcut(QKeySequence.Save, self, lambda: self.page("NewLeagues").save_recipe())
+        self.project.saved.connect(self.show_saved)
+        QShortcut(QKeySequence.Save, self, lambda: self.project.autosave())
         self.show_saved()
         self._blink = QTimer(self, interval=550, timeout=self._blink_step)
         self._busy = 0
@@ -216,6 +217,23 @@ class Main(QMainWindow):
         self.open_page(self.settings.get("page") if self.settings.get("page") in self.pages else first)
         if self._start_note:
             self.status(self._start_note)
+        # 0.2.4: the game's tables are unpacked by themselves the first time (and after the game
+        # folder changes), no Settings step to know about
+        QTimer.singleShot(1200, self.auto_tables)
+        self.bus.game_changed.connect(lambda: QTimer.singleShot(500, self.auto_tables))
+
+    def auto_tables(self):
+        """unpack the game's tables when there are none yet and no tables folder of your own was
+        chosen (Settings has the button for doing it again after a game update)"""
+        p = self.project
+        if p.base is not None or not self.game.ok() or self.settings.get("tables"):
+            return
+        s = self.pages.get("Settings")
+        if s is None or not s.unpack_btn.isEnabled():
+            return
+        self.status(_("First start: Mod Studio unpacks the game's tables (its clubs, leagues and players). "
+                      "It takes a minute or two."))
+        s.unpack()
 
     # ---- chrome ----
     def _menu_button(self, text, items):
@@ -241,10 +259,9 @@ class Main(QMainWindow):
         h.setContentsMargins(6, 4, 8, 4)
         h.setSpacing(2)
         h.addWidget(self._menu_button("File", [
-            ("New recipe", lambda: self.page("NewLeagues").new_recipe()),
-            ("Open recipe...", lambda: self.page("NewLeagues").open_recipe()),
-            ("Save recipe", lambda: self.page("NewLeagues").save_recipe()),
-            ("Save recipe as...", lambda: self.page("NewLeagues").save_recipe(True)),
+            ("New world", lambda: self.page("NewLeagues").new_recipe()),
+            ("Open a world...", lambda: self.page("NewLeagues").open_recipe()),
+            ("Save your world as...", lambda: self.page("NewLeagues").save_recipe(True)),
             ("Changes in this world...", self.show_changes),
             None,
             ("Add a league package...", lambda: (self.open_page("Packages"), self.page("Packages").add_pack())),
@@ -484,13 +501,11 @@ class Main(QMainWindow):
     def show_saved(self):
         p = self.project
         if p.dirty:
-            self.status_saved.setText("● " + _("Not saved yet: click to save (Ctrl+S)"))
+            self.status_saved.setText("● " + _("Saving..."))
             self.status_saved.setStyleSheet("color: %s;" % theme.ACCENT)
-            self.status_saved.setToolTip(_("The recipe is the file with all your choices for the world: leagues, "
-                                           "clubs, players, options. Your edits already count (Build uses them); "
-                                           "saving keeps them for the next time Mod Studio starts"))
+            self.status_saved.setToolTip(_("Mod Studio saves your world by itself a moment after each change"))
         else:
-            self.status_saved.setText(("✓ " + _("Recipe saved")) if p.path else "")
+            self.status_saved.setText("✓ " + _("Your world is saved"))
             self.status_saved.setStyleSheet("")
             self.status_saved.setToolTip(p.path or "")
         self.status_saved.setVisible(bool(self.status_saved.text()))
@@ -517,7 +532,7 @@ class Main(QMainWindow):
             self.h_game.setText(_("No game folder yet: Game ▾ Choose the game folder"))
         prof = self.settings.get("profile")
         live = self.project.live_worlds() if g.ok() else []
-        bits = ([_("Live world: %s") % ", ".join(live)] if live else []) + ([_("Profile: %s") % prof] if prof else [])
+        bits = ([_("In the game: %s") % ", ".join(live)] if live else []) + ([_("Profile: %s") % prof] if prof else [])
         self.h_profile.setText("     ".join(bits))
 
     def update_running(self):
@@ -704,7 +719,7 @@ class Main(QMainWindow):
         # in the open recipe)
         if self.project.dirty:
             box = QMessageBox(QMessageBox.Question, _("Unsaved changes"),
-                              _("The recipe has changes that are not saved yet. Save them before closing?"),
+                              _("Your world has changes that are not saved yet. Save them before closing?"),
                               QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel, self)
             box.setDefaultButton(QMessageBox.Save)
             r = box.exec()

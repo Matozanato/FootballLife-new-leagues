@@ -47,7 +47,7 @@ class Overview(Page):
         top.setSpacing(18)
         txt = QVBoxLayout()
         txt.setSpacing(6)
-        self.l_eyebrow = _label("● " + _("LIVE IN THE GAME NOW"), "eyebrow")
+        self.l_eyebrow = _label("● " + _("IN THE GAME NOW"), "eyebrow")
         self.l_world = _label("", "bigtitle")
         self.l_detail = _label("", "subtle")
         for w in (self.l_eyebrow, self.l_world, self.l_detail):
@@ -177,7 +177,7 @@ class Overview(Page):
             w = live[0]
             mine = r.get("world") == w
             names = [L["name"] for L in r["leagues"]] if mine else []
-            self.l_eyebrow.setText("● " + _("LIVE IN THE GAME NOW"))
+            self.l_eyebrow.setText("● " + _("IN THE GAME NOW"))
             self.l_world.setText(" · ".join(names[:4]) + (" …" if len(names) > 4 else "") if names else w)
             built = os.path.join(g.livecpk_dir, w)
             when = time.strftime("%d.%m. %H:%M", time.localtime(os.path.getmtime(built))) if os.path.isdir(built) else "?"
@@ -186,16 +186,16 @@ class Overview(Page):
                 from leaguebuilder import new_club_count
                 bits.append(_("%d leagues · %d new clubs") % (len(names), sum(new_club_count(L) for L in r["leagues"])))
             bits.append(_("built %s") % when)
-            bits.append(_("matches the open recipe") if mine else _("the open recipe is %s") % r.get("world"))
+            bits.append(_("the world open in Mod Studio") if mine else _("Mod Studio has %s open") % r.get("world"))
             if len(live) > 1:
-                bits.append(_("%d worlds are switched on; only one should be") % len(live))
+                bits.append(_("%d worlds are in the game; only one should be") % len(live))
             self.l_detail.setText(" · ".join(bits))
-            self.b_open.setText(_("Open its leagues") if mine else _("Open its recipe..."))
+            self.b_open.setText(_("Open its leagues") if mine else _("Open that world..."))
         else:
             self.b_open.setText(_("Open its leagues"))
             self.l_eyebrow.setText(_("NO LEAGUE BUILDER WORLD IN THE GAME"))
             self.l_world.setText(r.get("world", ""))
-            self.l_detail.setText(_("Build and install puts this recipe in the game."))
+            self.l_detail.setText(_("Build and install puts this world in the game."))
 
         kept = os.path.join(P.copies_dir(), r.get("world", "") + ".json")
         changed = True
@@ -219,8 +219,8 @@ class Overview(Page):
             self.l_changes_detail.setText(_("Add a league or change one of the game's on the Leagues page."))
         elif changed or r.get("world") not in live:
             self.l_changes.setText(_("Changes not in the game yet"))
-            self.l_changes_detail.setText(_("Build and install puts the recipe in the game: modules, world, "
-                                            "switched on."))
+            self.l_changes_detail.setText(_("Build and install puts your world in the game: Mod Studio's modules, "
+                                            "the world, switched on."))
         else:
             self.l_changes.setText(_("The game has the latest build"))
             self.l_changes_detail.setText(_("Build again after you change a league, a club or a player."))
@@ -240,7 +240,7 @@ class Overview(Page):
                 rows.insert(0, line + (None, None if line[0] == "ok" else
                                        (_("Install now"), lambda: modfix.install_now(self) and self.refresh())))
         if g.ok() and os.path.isdir(g.sider_dir):
-            rows.append(("ok", _("Mods installed here"), str(len(installer.records(g.sider_dir))), None))
+            rows.append(("ok", _("Packs installed here"), str(len(installer.records(g.sider_dir))), None))
             hist = backups.history(g.sider_dir)
         else:
             hist = []

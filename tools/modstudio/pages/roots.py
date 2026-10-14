@@ -58,7 +58,7 @@ class Roots(Page):
         self.search = QLineEdit()
         self.search.setPlaceholderText(_("Find a folder..."))
         self.search.textChanged.connect(self.filter)
-        self.show_worlds = QCheckBox(_("Show League Builder worlds (_FL26...)"))
+        self.show_worlds = QCheckBox(_("Show the worlds (_FL26...)"))
         self.show_worlds.toggled.connect(self.filter)
         self.only_on = QCheckBox(_("Only switched on"))
         self.only_on.toggled.connect(self.filter)

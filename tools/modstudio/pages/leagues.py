@@ -101,7 +101,7 @@ class Leagues(BuilderPage):
             "to change it on the right.")
     help = ("The list on the left has all the leagues by continent.\n"
             "- game: a league the game has; you can rename it, give it a logo and change its clubs.\n"
-            "- ours: a league your recipe adds; Edit league changes its clubs, format and division.\n"
+            "- ours: a league your world adds; Edit league changes its clubs, format and division.\n"
             "- changed: a league of the game you changed.\n\n"
             "Drag a league up or down to put the leagues of a continent in order.\n"
             "The More menu has the cups, European places, UEFA ranking and competition names.\n"
@@ -120,7 +120,7 @@ class Leagues(BuilderPage):
                             ("Competition names", "competition_names"), ("Competition IDs", "competition_ids")):
             m.addAction(_(label)).triggered.connect(lambda _c=False, n=name: getattr(self.nl(), n)())
         m.addSeparator()
-        m.addAction(_("World name and recipe...")).triggered.connect(lambda: self.app.open_page("NewLeagues"))
+        m.addAction(_("World name and file...")).triggered.connect(lambda: self.app.open_page("NewLeagues"))
         more.setMenu(m)
         self.actions.addWidget(more)
 

@@ -50,6 +50,30 @@ class Page(QWidget):
         self.actions.addWidget(b)
         return b
 
+    def more(self, items):
+        """0.2.4: the page's other buttons in one "More" menu next to its main ones;
+        items = [(English text, slot, tip or None) or None for a separator]"""
+        from PySide6.QtWidgets import QMenu
+        t = QToolButton()
+        t.setText(_("More") + "  \u25be")
+        t.setPopupMode(QToolButton.InstantPopup)
+        m = QMenu(t)
+        m.setToolTipsVisible(True)
+        t.acts = []                # the menu's actions in order (setEnabled works on them as on a button)
+        for it in items:
+            if it is None:
+                m.addSeparator()
+                continue
+            text, slot, tip = (tuple(it) + (None,))[:3]
+            act = m.addAction(_(text))
+            if tip:
+                act.setToolTip(_(tip))
+            act.triggered.connect(lambda _c=False, f=slot: f())
+            t.acts.append(act)
+        t.setMenu(m)
+        self.actions.addWidget(t)
+        return t
+
     def say(self, text, kind="warn"):
         """a banner under the title: kind warn / err / ok; empty text hides it"""
         if not text:
@@ -97,6 +121,42 @@ def helpmark(text, title=None):
 def helped(widget, text, title=None):
     """widget and its "?" side by side, for a form row or a layout"""
     return row(widget, helpmark(text, title))
+
+
+class Fold(QWidget):
+    """a "More options" line that opens what is behind it (0.2.4: every page shows its one main
+    thing; everything else is still there, one click away). fold.body is the layout to fill;
+    key: the open/closed state is kept per window in app.settings["folds"]"""
+
+    def __init__(self, text, app=None, key=None, open_=False):
+        super().__init__()
+        self.app, self.key, self.text = app, key, _(text)
+        v = QVBoxLayout(self)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(6)
+        self.head = QPushButton()
+        self.head.setObjectName("fold")
+        self.head.setCursor(Qt.PointingHandCursor)
+        self.head.clicked.connect(lambda: self.set_open(not self.inner.isVisible(), True))
+        v.addWidget(self.head)
+        self.inner = QFrame()
+        self.inner.setObjectName("foldbody")
+        self.body = QVBoxLayout(self.inner)
+        self.body.setContentsMargins(12, 8, 12, 10)
+        self.body.setSpacing(8)
+        v.addWidget(self.inner, 1)
+        saved = (app.settings.get("folds") or {}).get(key) if app is not None and key else None
+        self.set_open(open_ if saved is None else saved)
+
+    def set_open(self, on, save=False):
+        self.inner.setVisible(bool(on))
+        self.head.setText(("\u25be  " if on else "\u25b8  ") + self.text)
+        if save and self.app is not None and self.key:
+            self.app.settings.setdefault("folds", {})[self.key] = bool(on)
+            try:
+                self.app.save_settings()
+            except Exception:
+                pass
 
 
 def section(text):

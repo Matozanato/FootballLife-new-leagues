@@ -4,4 +4,5 @@ from .content import ServerPage
 
 class Commentary(ServerPage):
     title = "Commentary"
+    hint = "Which language the commentary speaks, for each club and each competition."
     server = "commentary"

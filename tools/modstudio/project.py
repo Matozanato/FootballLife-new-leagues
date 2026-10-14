@@ -19,6 +19,7 @@ def blank():
 
 class Project(QObject):
     changed = Signal()          # the recipe changed (any page)
+    saved = Signal()            # it was saved by itself (autosave)
     tables_changed = Signal()   # tables loaded or unloaded
 
     def __init__(self, app):
@@ -234,6 +235,37 @@ class Project(QObject):
     def touch(self):
         self.dirty = True
         self.changed.emit()
+        self._autosave_soon()
+
+    def _autosave_soon(self):
+        """0.2.4: your world keeps itself (no Save recipe to remember): a change is saved a moment
+        after the last one"""
+        from PySide6.QtCore import QCoreApplication, QTimer
+        if QCoreApplication.instance() is None or getattr(self.app, "settings", None) is None:
+            return
+        if getattr(self, "_timer", None) is None:
+            self._timer = QTimer(self)
+            self._timer.setSingleShot(True)
+            self._timer.setInterval(1500)
+            self._timer.timeout.connect(self.autosave)
+        self._timer.start()
+
+    def autosave(self):
+        """into the world's own file when it has one, else into the copy the next start opens
+        (recipes\\<world>.json, keep_copy); a write that fails leaves it marked not saved, and
+        closing asks as before"""
+        if not self.dirty:
+            return
+        try:
+            if self.path:
+                self._write(self.path)
+            else:
+                self.app.settings["last_recipe"] = self.keep_copy()
+                self.app.save_settings()
+        except (OSError, KeyError, TypeError):
+            return
+        self.dirty = False
+        self.saved.emit()
 
     def edits(self, kind):
         return self.recipe.setdefault("edits", {}).setdefault(kind, {})

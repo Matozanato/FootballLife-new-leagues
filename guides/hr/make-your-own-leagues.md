@@ -17,11 +17,13 @@ hrvatski: gore **Language** → Hrvatski.)
 
 Tri riječi koje ćeš stalno sretati:
 
-- **Recept**: tvoj popis liga i sve što si za njih postavio. Mijenjaš ga na stranicama
-  **LEAGUE BUILDER**. To je samo plan: ništa ne stiže u igru dok ne stisneš **Build**.
-- **Svijet**: ono što Build napravi od recepta, mapa čije ime počinje s `_FL26`
-  (`_FL26MyWorld` ako ga ne promijeniš). Igra ga čita dok je uključen.
-- **Build**: gumb koji od recepta napravi svijet i stavi ga u igru.
+- **Tvoj svijet** (your world): tvoj popis liga i sve što si za njih postavio. Mijenjaš ga na
+  stranicama pod **YOUR WORLD** lijevo, a sam se spremi trenutak nakon svake promjene. To je samo
+  plan: ništa ne stiže u igru dok ne stisneš **Build**.
+- **Mapa svijeta**: ono što Build napravi od tvog svijeta, mapa čije ime počinje s `_FL26`
+  (`_FL26MyWorld` ako ga ne promijeniš). Igra je čita dok je svijet u igri (gore piše
+  `In the game: _FL26MyWorld`).
+- **Build**: gumb koji od tvog svijeta napravi tu mapu i stavi je u igru.
 
 **Sadržaj**
 
@@ -30,13 +32,13 @@ Tri riječi koje ćeš stalno sretati:
 - [Korak 2. Otvori je na stranici NewLife Database](#korak-2-otvori-je-na-stranici-newlife-database)
 - [Korak 3. Izaberi lige](#korak-3-izaberi-lige)
 - [Korak 4. Izaberi klubove lige](#korak-4-izaberi-klubove-lige)
-- [Korak 5. Dodaj u recept](#korak-5-dodaj-u-recept)
+- [Korak 5. Dodaj u svoj svijet](#korak-5-dodaj-u-svoj-svijet)
 - [Korak 6. Stranica Leagues: sve postavke lige](#korak-6-stranica-leagues-sve-postavke-lige)
 - [Korak 7. Primjer: država s dva ranga](#korak-7-primjer-država-s-dva-ranga)
-- [Korak 8. Stranica New clubs: imena, grbovi, dresovi, klubovi iz igre](#korak-8-stranica-new-clubs-imena-grbovi-dresovi-klubovi-iz-igre)
+- [Korak 8. Kartica Clubs: imena, grbovi, dresovi, klubovi iz igre](#korak-8-kartica-clubs-imena-grbovi-dresovi-klubovi-iz-igre)
 - [Korak 9. Stranica Players](#korak-9-stranica-players)
 - [Korak 10. Granice koje zaustave Build](#korak-10-granice-koje-zaustave-build)
-- [Korak 11. Spremi recept](#korak-11-spremi-recept)
+- [Korak 11. Tvoj svijet se sam sprema](#korak-11-tvoj-svijet-se-sam-sprema)
 - [Korak 12. Build](#korak-12-build)
 - [Korak 13. Igraj: NOVA Master Liga, pa provjera](#korak-13-igraj-nova-master-liga-pa-provjera)
 - [Korak 14. Kad kasnije nešto mijenjaš](#korak-14-kad-kasnije-nešto-mijenjaš)
@@ -47,13 +49,12 @@ Tri riječi koje ćeš stalno sretati:
 
 ## Prije početka: postavljanje jednom
 
-Prvo jednom odradi korake 1 do 5 drugog vodiča:
+Prvo jednom odradi korake 1 do 3 drugog vodiča:
 [ugasi igru](install-a-pack.md#korak-1-ugasi-igru),
-[skini Mod Studio](install-a-pack.md#korak-2-skini-mod-studio),
-[reci mu gdje ti je igra](install-a-pack.md#korak-3-reci-mu-gdje-ti-je-igra),
-[raspakiraj tablice igre](install-a-pack.md#korak-4-raspakiraj-tablice-igre) i
-[instaliraj module Mod Studija](install-a-pack.md#korak-5-instaliraj-module-mod-studija).
-Onda se vrati ovamo.
+[skini Mod Studio](install-a-pack.md#korak-2-skini-mod-studio) i
+[reci mu gdje ti je igra](install-a-pack.md#korak-3-reci-mu-gdje-ti-je-igra).
+Onda se vrati ovamo. Mod Studio sam raspakira tablice igre, a **Build and install** (Korak 12)
+stavi njegove module.
 
 Drži igru ugašenu cijelo vrijeme dok radiš u Mod Studiju.
 
@@ -76,7 +77,7 @@ verzije u jednoj mapi.
 
 ## Korak 2. Otvori je na stranici NewLife Database
 
-1. Lijevo, pod **LEAGUE BUILDER**: klikni **NewLife Database**.
+1. Lijevo, pod **YOUR WORLD**: klikni **NewLife Database**.
 2. Klikni **Open NewLife Database...** gore.
 3. Izaberi mapu iz Koraka 1 (mapu, ne zip u njoj) i potvrdi.
 4. Pričekaj par sekundi dok čita.
@@ -107,13 +108,13 @@ država sadrži ono što upišeš. Upiši recimo `brazil` ili `liga`. Isprazni o
   zajedno. Ova ih ima manje ili više. Još je možeš popraviti u Koraku 4 (dodaj klubove ili ih
   ostavi vani) dok ne stane.
 - `the game's own league: Bring the game's leagues to this season`: igra već ima ovu ligu
-  (Premier League, Championship ...). Ne dodaje se drugi put. Gumb
-  **Bring the game's leagues to this season...** gore umjesto toga daje ligama same igre klubove i
+  (Premier League, Championship ...). Ne dodaje se drugi put.
+  **More ▾ → Bring the game's leagues to this season...** gore umjesto toga daje ligama same igre klubove i
   kadrove ove NewLife sezone; vidi
   [8.4 u cijelom vodiču](mod-studio-guide.md#84-newlife-database-pravi-klubovi-i-igrači).
 
-Ako stranica kaže da Mod Studio nema tablica igre i ponudi da otvori Settings: klikni **Yes** i
-napravi [Raspakiraj tablice igre](install-a-pack.md#korak-4-raspakiraj-tablice-igre).
+Ako stranica kaže da Mod Studio nema tablica igre i ponudi da otvori Settings: klikni **Yes**, pa
+tamo **Unpack the game's tables**.
 
 ## Korak 3. Izaberi lige
 
@@ -122,15 +123,15 @@ napravi [Raspakiraj tablice igre](install-a-pack.md#korak-4-raspakiraj-tablice-i
    zadnju da uzmeš sve između.)
 
 **Trebaš vidjeti:** dolje na stranici red poput
-`New clubs in the recipe: 0 of the 793 the game takes.  Selected: 18 more.`
+`New clubs in your world: 0 of the 793 the game takes.  Selected: 18 more.`
 
-- **Prvi** broj je koliko novih klubova tvoj recept već ima.
+- **Prvi** broj je koliko novih klubova tvoj svijet već ima.
 - **Drugi** je koliko novih klubova ukupno stane u igru. Mod Studio ga izračuna iz tablica tvoje
   igre, pa na drugoj verziji igre može biti malo drukčiji.
 - **Selected** je koliko bi novih klubova dodale lige koje si izabrao.
 
-Ako recept i odabir zajedno prelaze ono što igra prima, **Add to the recipe** ostaje siv: izaberi
-manje liga.
+Ako tvoj svijet i odabir zajedno prelaze ono što igra prima, **Add to your world** ostaje siv:
+izaberi manje liga.
 
 ## Korak 4. Izaberi klubove lige
 
@@ -155,31 +156,31 @@ koja sad ima 10 do 24 kluba postane normalna.
 
 Klub može igrati samo u jednoj ligi. Ako ga dodaš u dvije, Mod Studio te zaustavi u Koraku 5.
 
-## Korak 5. Dodaj u recept
+## Korak 5. Dodaj u svoj svijet
 
-S označenom ligom ili ligama klikni **Add to the recipe** gore.
+S označenom ligom ili ligama klikni **Add to your world** gore.
 
 **Trebaš vidjeti:** zeleni red ispod naslova stranice. Što koji red znači:
 
 | Zeleni red | Što znači |
 |---|---|
-| `Added: <leagues>. Change them on Leagues, New clubs and Players, then Build.` | Lige su u tvom receptu, svaka kao prvi rang svoje države, svi sa svima dvaput. U igri još nema ništa. |
-| `<clubs> also play in a competition of the game: on New clubs pick each one and use Club of the game to choose the club that takes its place there.` | Ovi klubovi tvoje nove lige su klubovi koje igra već ima, a igraju i negdje u igri (liga, kup, Europska liga ...). Klub igra samo u jednoj ligi, pa njegovo staro mjesto treba drugi klub. Taj klub biraš u [Koraku 8](#klubovi-koje-igra-već-ima). Dok to ne napraviš, Build staje s greškom koja imenuje klub. |
+| `Added: <leagues>. Change them on Leagues, Clubs and Players, then Build.` | Lige su u tvom svijetu, svaka kao prvi rang svoje države, svi sa svima dvaput. U igri još nema ništa. |
+| `<clubs> also play in a competition of the game: on Clubs pick each one and use Club of the game to choose the club that takes its place there.` | Ovi klubovi tvoje nove lige su klubovi koje igra već ima, a igraju i negdje u igri (liga, kup, Europska liga ...). Klub igra samo u jednoj ligi, pa njegovo staro mjesto treba drugi klub. Taj klub biraš u [Koraku 8](#klubovi-koje-igra-već-ima). Dok to ne napraviš, Build staje s greškom koja imenuje klub. |
 | `<n> players stay at their game club (their club would have too few players).` | Igrači koje igra već ima inače prelaze u NewLife klub. Ovi ostaju, da njihov stari klub zadrži barem 18 igrača. Ništa ne trebaš raditi. |
 | `<n> players are not added: another league already has them.` | Liga koju si dodao ranije već je uzela te igrače. Ništa ne trebaš raditi. |
 
 Ako prozor s greškom kaže `<club> would play in two leagues (<league> and <league>).`, makni
 kvačicu tom klubu u jednoj od dvije lige (Korak 4) i probaj opet.
 
-Želiš lige s drugih kontinenata? Označi i njih i opet klikni **Add to the recipe**. Svaki klik
+Želiš lige s drugih kontinenata? Označi i njih i opet klikni **Add to your world**. Svaki klik
 dodaje; nikad ne miče ono što je već tamo.
 
 ---
 
 ## Korak 6. Stranica Leagues: sve postavke lige
 
-1. Lijevo: klikni **Leagues**.
-2. Iznad popisa klikni **Ours**: popis pokazuje samo lige tvog recepta. (**All** pokazuje sve
+1. Lijevo: **Edit your world**, kartica **Leagues**.
+2. Iznad popisa klikni **Ours**: popis pokazuje samo lige tvog svijeta. (**All** pokazuje sve
    lige, i one iz igre; **Changed** lige iz igre koje si promijenio.) Lige su složene po
    kontinentima.
 3. Klikni svoju ligu.
@@ -233,12 +234,12 @@ i [8.2](mod-studio-guide.md#82-izgradi-uključi-igraj).
 **More ▾** (gore na stranici Leagues) ima alate za cijeli svijet: **Pre-season cups**,
 **Cups of the game's countries**, **European places of the game's leagues**, **UEFA ranking**,
 **South American places**, **Competition names** (nova imena i logotipi za kupove i kontinentalna
-natjecanja) i **World name and recipe...** (ime mape svijeta; mora počinjati s `_FL26`). Za prvi
+natjecanja) i **World name and file...** (ime mape svijeta; mora počinjati s `_FL26`). Za prvi
 svijet ne trebaš nijedan od njih.
 
 **Liga bez NewLife klubova.** **Add league** gore na stranici Leagues otvori isti prozor
 **League** za ligu napravljenu od nule: daj joj **Name**, **Country** i broj **Clubs**, a Build
-napravi klubove s punim kadrovima i trenerom. Imena im daješ na **New clubs** (Korak 8), gdje
+napravi klubove s punim kadrovima i trenerom. Imena im daješ na kartici **Clubs** (Korak 8), gdje
 **NewLife club...** u nju može staviti i prave klubove.
 
 ## Korak 7. Primjer: država s dva ranga
@@ -246,8 +247,8 @@ napravi klubove s punim kadrovima i trenerom. Imena im daješ na **New clubs** (
 Recimo da tvoji NewLife dijelovi imaju prvu i drugu ligu jedne države, ovdje nazvane *First
 League* i *Second League*. Želiš ulazak i ispadanje između njih.
 
-1. **NewLife Database**: označi *First League* i klikni **Add to the recipe**. (Prvo onu gornju.)
-2. Označi *Second League* i klikni **Add to the recipe**.
+1. **NewLife Database**: označi *First League* i klikni **Add to your world**. (Prvo onu gornju.)
+2. Označi *Second League* i klikni **Add to your world**.
 
    **Trebaš vidjeti:** zeleni red `Added:` svaki put. Obje su sad prvi rang iste države, što još
    nije ono što želiš.
@@ -283,13 +284,14 @@ igre u **Division** (one s brojem u zagradi). Tada s njom igra ulazak i ispadanj
 
 ---
 
-## Korak 8. Stranica New clubs: imena, grbovi, dresovi, klubovi iz igre
+## Korak 8. Kartica Clubs: imena, grbovi, dresovi, klubovi iz igre
 
-1. Lijevo: klikni **New clubs** (ili **Clubs and names** na stranici Leagues).
+1. Lijevo: **Edit your world**, kartica **Clubs** (ili **Clubs and names** na kartici Leagues).
 2. Gore, **League**: izaberi jednu od svojih liga.
 
-**Trebaš vidjeti:** njene klubove sa stupcima **#**, **Name**, **Short name**, **Team ID**
-(`at Build` do prvog Builda), **Crest** i **Players changed**. NewLife klubovi već imaju imena,
+**Trebaš vidjeti:** njene klubove sa stupcima **#**, **Name**, **Short name** i **Players
+changed**; miš iznad imena pokaže njegov **Team ID** (`at Build` do prvog Builda) i datoteku
+grba. NewLife klubovi već imaju imena,
 kratka imena i grbove. Klub bez imena pokazuje `<league> 01`, `<league> 02` ... sivo.
 
 ### Ime, grb, dresovi, trener
@@ -313,8 +315,8 @@ kratka imena i grbove. Klub bez imena pokazuje `<league> 01`, `<league> 02` ... 
 
 **Trebaš vidjeti:** novo ime i grb na popisu.
 
-**Dresovi.** Novi klub posudi dres kluba iz igre u svojim bojama. Dvije opcije na stranici
-**Build** to mijenjaju: **Make kits for the new clubs** (zadano uključeno, treba instaliran Kit
+**Dresovi.** Novi klub posudi dres kluba iz igre u svojim bojama. Dvije opcije na kartici
+**Build**, pod **World options**, to mijenjaju: **Make kits for the new clubs** (zadano uključeno, treba instaliran Kit
 Server: svaki novi klub dobije domaći, gostujući, treći i golmanski dres napravljen u svojim
 bojama, sa svojim grbom) i **Kits you can edit in the game** (svaki novi klub nosi jednostavan
 dres koji možeš mijenjati u Edit modu igre).
@@ -327,8 +329,8 @@ league...**.
 
 ### Klubovi koje igra već ima
 
-NewLife liga može uključivati klubove koje igra već ima. Na popisu se vide s imenom iz igre,
-svojim **Team ID** i `(the game's)` pod **Crest**. Ako je zeleni red u Koraku 5 rekao da *also
+NewLife liga može uključivati klubove koje igra već ima. Na popisu se vide s imenom iz igre (miš
+iznad pokaže njihov **Team ID**). Ako je zeleni red u Koraku 5 rekao da *also
 play in a competition of the game* (igraju i u natjecanju igre), napravi ovo za **svaki** od njih:
 
 1. Klikni klub na popisu.
@@ -360,7 +362,8 @@ ručno dobije prave klubove.
 NewLife klubovi dolaze s punim kadrovima, pa ovu stranicu ne moraš dirati. Tu je ako želiš
 promijeniti kadar.
 
-1. Lijevo: klikni **Players** (ili označi klub na New clubs i klikni **Players**).
+1. Lijevo: **Edit your world**, kartica **Players** (ili označi klub na kartici **Clubs** i klikni
+   **More ▾ → Players**).
 2. Gore izaberi **League** i **Club**. (Ili upiši u *Find a club...*.)
 
 **Trebaš vidjeti:** kadar sa stupcima **Order**, **No.**, **Name**, **Pos**, **Age**,
@@ -383,8 +386,8 @@ Sve na ovoj stranici je u [Igrači u cijelom vodiču](mod-studio-guide.md#igrač
 
 | Granica | Gdje je vidiš |
 |---|---|
-| Novih klubova ukupno: broj u redu `New clubs in the recipe: X of the Y the game takes.` | Stranica NewLife Database: **Add to the recipe** ostaje siv. Build: `error: <n> new clubs, but the game has room for <m> more (a full squad each)`. |
-| 10 do 24 kluba u ligi | NewLife Database: siva liga, `a league takes 10 to 24 clubs`. New clubs: `A league has 10 to 24 clubs.` |
+| Novih klubova ukupno: broj u redu `New clubs in your world: X of the Y the game takes.` | Stranica NewLife Database: **Add to your world** ostaje siv. Build: `error: <n> new clubs, but the game has room for <m> more (a full squad each)`. |
+| 10 do 24 kluba u ligi | NewLife Database: siva liga, `a league takes 10 to 24 clubs`. Kartica Clubs: `A league has 10 to 24 clubs.` |
 | Novih liga po svijetu (39 u našim testovima) | Build: `error: <n> leagues, but the game has room for <m> ...` |
 | Jedna liga ispod jedne lige | Popis **Division**: sivo. Build: `... are all under ...; the game follows one link down from a league ...` |
 | Rangovi do 7. | Build: `error: <league>: division 8 -- the rank field stops at 7`. |
@@ -394,62 +397,61 @@ Sve na ovoj stranici je u [Igrači u cijelom vodiču](mod-studio-guide.md#igrač
 
 Svi brojevi: [8.3 Granice](mod-studio-guide.md#83-granice).
 
-## Korak 11. Spremi recept
+## Korak 11. Tvoj svijet se sam sprema
 
-1. Gore: **File → Save recipe**.
-2. Prvi put se otvori prozor **Save recipe as...**. Predloži ime svijeta, npr.
-   `_FL26MyWorld.json`. Izaberi mapu koju ćeš opet naći (npr.
-   `Documents\FL26 Mod Studio\recipes`) i klikni **Save**.
+Ništa ne spremaš ručno: Mod Studio spremi tvoj svijet trenutak nakon svake promjene.
 
-**Trebaš vidjeti:** dolje u prozoru `Recipe saved: <file>`.
+**Trebaš vidjeti:** dolje u prozoru **Your world is saved**.
 
-Nakon toga **File → Save recipe** sprema u istu datoteku bez pitanja. **File → Save recipe
-as...** spremi kopiju pod drugim imenom. **File → Open recipe...** opet otvori spremljeni recept
-(upozori ako imaš nespremljenih promjena). **File → New recipe** počne prazan.
+**File → Save your world as...** spremi kopiju pod drugim imenom, u mapu koju izabereš (npr.
+`Documents\FL26 Mod Studio`): tu datoteku možeš naći i kopirati. **File → Open a world...** opet
+otvori spremljeni. **File → New world** počne prazan.
 
-Build i sam čuva kopiju recepta, a Mod Studio pri pokretanju otvara zadnji recept, pa ono što si
-izgradio nikad ne propada. Svejedno spremi: tvoja vlastita datoteka je ona koju možeš naći i
-kopirati.
+Mod Studio pri pokretanju opet otvori tvoj svijet, pa ono što si napravio nikad ne propada.
 
 ## Korak 12. Build
 
-1. Lijevo: klikni **Build**.
+1. Lijevo: **Build your world**, kartica **Build**.
 
-**Trebaš vidjeti:** veliki plavi gumb **Build and install**, red **0. Install the
-modules**, **1. Check the plan**, **2. Build the world**, **3. Switch it on**, **4. After a
-start: check** i **Export the world...**, dvije kartice (**European cups** i **New clubs**) s
-opcijama, red poput `World _FL26MyWorld: not built yet · builder modules: installed`, i okvir za
-log dolje.
+**Trebaš vidjeti:** veliki plavi gumb **Build and install** i ispod njega dva sklopiva dijela:
+**World options: European cups, country cups, kits and faces of the new clubs** (dvije kartice,
+**European cups** i **New clubs**, s opcijama) i **Step by step, and Export the world** (red
+**0. Install the modules**, **1. Check the plan**, **2. Build the world**, **3. Switch it on**,
+**4. After a start: check** i **Export the world...**). Pa red poput
+`World _FL26MyWorld: not built yet · builder modules: installed`, i okvir za log dolje.
 
-2. Prvo klikni **1. Check the plan**. Ne mijenja ništa; samo čita tvoj recept.
+2. Otvori **Step by step, and Export the world** i prvo klikni **1. Check the plan**. Ne mijenja
+   ništa; samo čita tvoj svijet.
 
 **Trebaš vidjeti:** u okviru red `world _FL26MyWorld: 2 new leagues, ...` i red za svaku ligu s
 njenim klubovima, rangom i formatom (`18 clubs x2` je 18 klubova, svi sa svima dvaput;
 `division 2  below ... (3 up/down)` je drugi rang), i njen `European places:`. Red koji počinje
 s `error:` kaže što prvo popraviti; vidi tablicu na kraju.
 
-3. Klikni **Build and install**. Pita `Build _FL26MyWorld and make it the live world? ...`:
+3. Klikni **Build and install**. Pita `Build _FL26MyWorld and put it in the game? ...`:
    klikni **Yes**.
 
    Ako su tablice igre starije od igre, prvo pita da ih opet raspakira: klikni **Yes** (oko
    minute).
 
-   To odjednom instalira module, napravi svijet i upali ga. Traje od par sekundi do par minuta.
+   To odjednom stavi module Mod Studija, izgradi tvoj svijet i stavi ga u igru. Traje od par
+   sekundi do par minuta.
 
 **Trebaš vidjeti:** prozor **Build finished** s kvačicom na svakom redu: **World built**,
 **Leagues and clubs** (`2 leagues · 36 new clubs`), **Modules installed and switched on**,
-**Switched on in sider.ini** i **Start the game to play it**. Pod **Before you play**:
+**In the game** i **Start the game to play it**. Pod **Before you play**:
 `Start a new Master League career: a career saved before keeps the old world.` Klikni **Done**.
 
 Ako kaže **An Edit save from before this Build is in the game's save folder**: klikni **Move
 the Edit save aside**. Stari Edit save skriva nova imena i kadrove.
 
-**Korak po korak umjesto velikog gumba** (isti rezultat):
+**Korak po korak umjesto velikog gumba** (isti rezultat, pod **Step by step, and Export the
+world**):
 
 1. **1. Check the plan**: kao gore.
 2. **2. Build the world**: izgradi ga. Ako svijet postoji, pita `... exists. Build it again?`:
    **Yes**. Log završi s `Next: 3. Switch it on, then start the game.`
-3. **3. Switch it on**: pita `Make _FL26MyWorld the live world in sider.ini?`: **Yes**. Log
+3. **3. Switch it on**: pita `Put _FL26MyWorld in the game (switch it on in sider.ini)?`: **Yes**. Log
    završi s `Start the game, then 4. check.`
 
 **Što znače redovi u logu:**
@@ -457,15 +459,15 @@ the Edit save aside**. Stari Edit save skriva nova imena i kadrove.
 | Red | Značenje |
 |---|---|
 | `installing the modules ...`, `modules: ... copied, ... already there` | Moduli Mod Studija se stavljaju na mjesto. |
-| `world ...: N new leagues, changes to ... of the game's leagues and ... of its clubs` | Sažetak tvog recepta. |
+| `world ...: N new leagues, changes to ... of the game's leagues and ... of its clubs` | Sažetak tvog svijeta. |
 | `<league>  reg ...  comp ...  division 1  18 clubs x2` | Jedna liga: njeni ID-evi u igri, rang i format. |
 | `European places: 1st Champions League qualifying, ...` | Kamo idu njeni najbolji klubovi. |
 | `no European places: the new leagues send nobody to Europe` | Upozorenje, ne greška: postavi **Europe** na prvom rangu ako to želiš. |
 | `building ...` | Svijet se zapisuje. |
-| `livecpk: _FL26MyWorld (... files), sider.ini loads it` | Svijet je uključen. |
+| `livecpk: _FL26MyWorld (... files), sider.ini loads it` | Svijet je u igri. |
 | `error: ...` | Build je stao i ništa se u igri nije promijenilo. Popravi što kaže (tablica na kraju) i opet Build. |
 
-Opcije na karticama (**Include the Conference League**, **Country cup draw**, **Make kits
+Opcije pod **World options** (**Include the Conference League**, **Country cup draw**, **Make kits
 for the new clubs** ...) objašnjene su u [8.2](mod-studio-guide.md#82-izgradi-uključi-igraj).
 Zadane postavke su u redu.
 
@@ -480,7 +482,8 @@ Zadane postavke su u redu.
 Onda neka Mod Studio provjeri je li igra preuzela svijet:
 
 1. Ugasi igru (ili je barem jednom pokreni do glavnog izbornika).
-2. U Mod Studiju: **Build** → **4. After a start: check**.
+2. U Mod Studiju: **Build your world** → **Step by step, and Export the world** → **4. After a
+   start: check**.
 
 **Trebaš vidjeti:** za svaki modul red koji kaže koliko je liga pročitao iz datoteke svijeta, a na
 kraju `the world works as built`. Red `not loaded` ili `did NOT read the world file`, i na kraju
@@ -489,18 +492,18 @@ kraju `the world works as built`. Red `not loaded` ili `did NOT read the world f
 ## Korak 14. Kad kasnije nešto mijenjaš
 
 1. Ugasi igru.
-2. Otvori Mod Studio. Sam otvori tvoj zadnji recept (ili **File → Open recipe...**).
-3. Promijeni što želiš na **NewLife Database**, **Leagues**, **New clubs** ili **Players**.
-4. **File → Save recipe**.
-5. **Build** → **Build and install** → **Yes**.
+2. Otvori Mod Studio. Sam otvori tvoj svijet (ili **File → Open a world...**).
+3. Promijeni što želiš na **NewLife Database**, ili na **Edit your world**: **Leagues**,
+   **Clubs** ili **Players**. Sam se spremi.
+4. **Build your world** → **Build and install** → **Yes**.
 
 **Treba li ti nova karijera?** Da: pokreni novu Master Ligu nakon svake promjene koju izgradiš.
 Karijera kad počne uzme vlastitu kopiju liga, klubova i kadrova, pa karijera u kojoj već jesi
 zadržava stare. A karijera spremljena s jednim svijetom treba isti taj svijet da se učita, pa
-drži svijet uključen dok je igraš.
+drži svijet u igri dok je igraš.
 
 **Novija verzija NewLifea.** Stavi njene dijelove u novu mapu, **Open NewLife Database...** na
-toj mapi, pa klikni **Update my leagues to this version**. Svaka liga zadržava ime, rang, format,
+toj mapi, pa **More ▾ → Update my leagues to this version**. Svaka liga zadržava ime, rang, format,
 europska mjesta i kupove; klubovi i kadrovi dolaze iz nove verzije (kvačica **Keep my clubs**
 zadržava tvoj vlastiti sastav klubova). Opet Build i pokreni novu karijeru.
 [Više](mod-studio-guide.md#84-newlife-database-pravi-klubovi-i-igrači).
@@ -514,14 +517,14 @@ Postoje dva načina. Izaberi jedan:
 
 | | Paket liga (`.fl26pack`) | Izvezeni svijet (`.zip`) |
 |---|---|---|
-| Što sadrži | Tvoje lige kao recept: klubovi, imena, grbovi, logotipi, kadrovi, lica, a ako želiš i dresovi i scoreboardi. | Svijet točno onakav kakvog si izgradio. |
-| Druga osoba | Doda ga u svoj recept i izgradi, pa radi uz njene vlastite lige i druge pakete. | Instalira ga i igra. Ništa se ne gradi, ali zamijeni bilo koji drugi svijet koji ima uključen. |
+| Što sadrži | Tvoje lige, spremne za dodavanje u drugi svijet: klubovi, imena, grbovi, logotipi, kadrovi, lica, a ako želiš i dresovi i scoreboardi. | Svijet točno onakav kakvog si izgradio. |
+| Druga osoba | Doda ga u svoj svijet i izgradi, pa radi uz njene vlastite lige i druge pakete. | Instalira ga i igra. Ništa se ne gradi, ali zamijeni bilo koji drugi svijet koji ima u igri. |
 | Kako ga instalira | [Način C iz Instaliraj gotov paket](install-a-pack.md#način-c-paket-liga-fl26pack) | [Način A iz Instaliraj gotov paket](install-a-pack.md#način-a-gotov-svijet-jedan-zip) |
 
 ### Paket liga
 
-1. Lijevo: **League packages** → **Make a package...** (ili gore: **File → Make a league
-   package...**).
+1. Lijevo: **Build your world**, kartica **League packages** → **Make a package...** (ili gore:
+   **File → Make a league package...**).
 
 **Trebaš vidjeti:** prozor **Make a league package**.
 
@@ -548,7 +551,8 @@ Više: [9. Paketi liga](mod-studio-guide.md#9-paketi-liga-podijeli-cijelu-ligu).
 ### Cijeli svijet (zip)
 
 1. Prvo Build (Korak 12). Svijet mora biti izgrađen.
-2. Lijevo: **Build** → **Export the world...**.
+2. Lijevo: **Build your world** → **Step by step, and Export the world** → **Export the
+   world...**.
 3. Otvori se prozor za spremanje s imenom svijeta kao imenom datoteke (`_FL26MyWorld.zip`), prvi
    put u tvojoj korisničkoj mapi (nakon toga u mapi koju si zadnju koristio). Izaberi mapu i klikni
    **Save**.
@@ -556,8 +560,8 @@ Više: [9. Paketi liga](mod-studio-guide.md#9-paketi-liga-podijeli-cijelu-ligu).
 **Trebaš vidjeti:** nakon trenutka `Saved <file>` i koliko novih igrača dobije generirano lice.
 Zip sadrži mapu svijeta, njegovu datoteku svijeta i upute (read-me).
 
-Osoba koja ga instalira treba module Mod Studija s paketom lica (**Build → 0. Install
-the modules**); bez njih svaki novi igrač izgleda isto. Upute u zipu to kažu.
+Osoba koja ga instalira treba module Mod Studija s paketom lica; instalacija zipa na **Import
+your world** ih stavi. Bez njih svaki novi igrač izgleda isto. Upute u zipu to kažu.
 
 Više: [9.1 Export the world](../en/mod-studio-guide.md#91-export-the-world-a-built-world-for-another-pc)
 (na engleskom).
@@ -576,7 +580,7 @@ logu Builda iza `error:`. `<...>` stoji umjesto imena ili broja.
 | `<file> is not a NewLife part (...) -- download it again` | Preuzimanje se pokvarilo. Skini taj dio ponovno. |
 | Siva liga, `a league takes 10 to 24 clubs` | Dodaj klubove ili ih ostavi vani (Korak 4) dok nema 10 do 24. |
 | Siva liga, `the game's own league: Bring the game's leagues to this season` | Igra je već ima. Koristi **Bring the game's leagues to this season...**. |
-| **Add to the recipe** ostaje siv | Nije označeno ništa što se može dodati, ili bi odabir prešao granicu novih klubova (red na dnu). |
+| **Add to your world** ostaje siv | Nije označeno ništa što se može dodati, ili bi odabir prešao granicu novih klubova (red na dnu). |
 | `<club> would play in two leagues (<league> and <league>).` | Makni kvačicu klubu u jednoj od njih. |
 | `<league> has no country the game knows.` | Ova liga se ne može dodati. |
 | `A league needs a name and a country.` / `Pick the country from the list.` | U **Edit league...** upiši **Name** i izaberi **Country** s popisa umjesto da ga cijelog upisuješ. |
@@ -587,18 +591,18 @@ logu Builda iza `error:`. `<...>` stoji umjesto imena ili broja.
 | `Clubs, times and groups must be numbers.` | Pod **splits in two** upiši skupine kao brojeve, npr. `6/6`. |
 | `A league playing February to December has no split, Apertura/Clausura, national cup or league cup yet.` | Postavi **Season** na **August to May**, ili makni podjelu, Aperturu/Clausuru ili kupove. |
 | `This division plays February to December with the league above it, and a league playing February to December has no split or Apertura/Clausura yet.` | Daj ovom rangu **everyone plays everyone**. |
-| `Clubs in no league are all new clubs: take the clubs of the game out first (Edit club).` | Liga ima klubove iz igre. Na **New clubs** označi svaki i koristi **More ▾ → New club here**, pa opet postavi **Clubs in no league**. |
+| `Clubs in no league are all new clubs: take the clubs of the game out first (Edit club).` | Liga ima klubove iz igre. Na kartici **Clubs** označi svaki i koristi **More ▾ → New club here**, pa opet postavi **Clubs in no league**. |
 | `<league> is below this league; clubs in no league have none.` (ili `an exhibition league has none.`) | Druga liga ima ovu kao svoj **Division**. Prvo promijeni tu ligu. |
-| `A league has 10 to 24 clubs.` (New clubs) | Insert club / Remove club bi ostavio ligu izvan 10 do 24. |
+| `A league has 10 to 24 clubs.` (kartica Clubs) | Insert club / Remove club bi ostavio ligu izvan 10 do 24. |
 | `Open the NewLife Database on the NewLife page first.` | **NewLife club...** treba NewLife mapu: otvori je jednom na **NewLife Database**. |
 | `Pick the club that takes its place.` / `Give the new club a name.` / `A club cannot take its own place.` | U **Club of the game** izaberi klub zamjenu, ili upiši ime za novi. |
 | `error: no game tables -- Settings > Unpack the game's tables` | **Settings → Unpack the game's tables**. |
 | `error: no game folder -- Game > Choose the game folder` | **Game → Choose the game folder...**. |
-| `error: the world name must start with _FL26` | **Leagues → More ▾ → World name and recipe...**: ime koje počinje s `_FL26`. |
-| `error: nothing to build: add a league or change one of the game's ...` | Recept je prazan. Dodaj lige (Koraci 3 do 5). |
+| `error: the world name must start with _FL26` | **Leagues → More ▾ → World name and file...**: ime koje počinje s `_FL26`. |
+| `error: nothing to build: add a league or change one of the game's ...` | Tvoj svijet je prazan. Dodaj lige (Koraci 3 do 5). |
 | `error: <league>, club <n>: <club> plays in <...> -- pick the club that takes its place there` | Napravi [Klubovi koje igra već ima](#klubovi-koje-igra-već-ima) za taj klub. |
 | `error: <league>, club <n>: the new club taking <club>'s place needs a name` | Isti prozor: upiši ime pored **Its place goes to a new club, named:**. |
-| `error: <club> is in <league> and in <league>: a club plays in one league` | Izbaci klub iz jedne lige (**New club here** na New clubs, ili mu makni kvačicu prije dodavanja). |
+| `error: <club> is in <league> and in <league>: a club plays in one league` | Izbaci klub iz jedne lige (**New club here** na kartici Clubs, ili mu makni kvačicu prije dodavanja). |
 | `error: <n> new clubs, but the game has room for <m> more (a full squad each)` | Previše novih klubova. Makni ligu, ili klubove. |
 | `error: <n> leagues, but the game has room for <m> ...` | Previše novih liga. Makni neke. |
 | `error: <league> has <n> leagues below it; the game follows one link` / `... are all under ...` | Samo jedna liga može biti ispod lige. Promijeni **Division** ostalima. |
@@ -606,12 +610,12 @@ logu Builda iza `error:`. `<...>` stoji umjesto imena ili broja.
 | `error: at most 2 split leagues for now ...` / `... only one league of a country can be split or Apertura/Clausura` | Daj ostalim ligama **everyone plays everyone**. |
 | `The game's tables Mod Studio uses are older than the game: ... Unpack them again first?` | Klikni **Yes**. |
 | `<world> is not built yet: 2. Build the world first.` (Export the world) | Prvo Build, pa izvezi. |
-| `Give the package a name.` / `Tick at least one league.` / `The recipe has no leagues yet.` | U **Make a league package** upiši **Name** i označi ligu; recept prvo treba lige. |
-| Nema novih liga na Select Team | Pokreni **novu** Master Ligu. Onda **Build → 4. After a start: check**. |
+| `Give the package a name.` / `Tick at least one league.` / `Your world has no leagues yet.` | U **Make a league package** upiši **Name** i označi ligu; tvoj svijet prvo treba lige. |
+| Nema novih liga na Select Team | Pokreni **novu** Master Ligu. Onda **4. After a start: check** (Korak 13). |
 | `sider.log is older than the world switched on -- start the game to the main menu, then check again` | Pokreni igru do glavnog izbornika, ugasi je, opet provjeri. |
-| `<module> not loaded` / `did NOT read the world file` | **Build → 0. Install the modules**, pa **3. Switch it on**, opet pokreni igru i opet provjeri. I dalje ne valja: pitaj na Discordu. |
+| `<module> not loaded` / `did NOT read the world file` | **Build your world → Step by step, and Export the world → 0. Install the modules**, pa **3. Switch it on**, opet pokreni igru i opet provjeri. I dalje ne valja: pitaj na Discordu. |
 | Imena klubova su ona iz igre, ne tvoja | Skriva ih stari Edit save: **Move the Edit save aside** u prozoru **Build finished**, ili makni `EDIT00000000` iz mape sa spremanjima igre. |
-| Svi novi igrači imaju isto lice | **Build → 0. Install the modules** (donosi paket lica), pa opet pokreni igru. |
+| Svi novi igrači imaju isto lice | **Home → Install now** (kad Home kaže da moduli fale ili su stariji), ili **Build your world → Step by step, and Export the world → 0. Install the modules**: donosi paket lica. Pa opet pokreni igru. |
 
 **Kad tražiš pomoć:** na [Discordu](https://discord.gg/StQqtk3G3M) pošalji sliku onoga što vidiš,
 tekst loga Builda i svoj `sider.log` (**Game → Open sider.log**).

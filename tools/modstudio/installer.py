@@ -46,7 +46,7 @@ PACKS = "_packs"                         # content\<server>\<world>\_packs: othe
 PACK_OF = {"scoreboards": "scoreboard", "menus": "menu"}   # ... of the world's competitions a world zip carries
 WORLD_README = "READ ME - FL26 world.txt"
 WORLD_INFO = "fl26worldpack.json"
-WORLD_NOTE = "a League Builder world: it is switched on, its world file goes to modules\\fl26world.txt"
+WORLD_NOTE = "a ready world: it goes in the game, its world file goes to modules\\fl26world.txt"
 
 
 def world_name(path):
@@ -191,7 +191,7 @@ def face_pack_missing(sider_dir):
 
 README = """FL26 world: {world}
 
-Install it with FL26 Mod Studio: Install mods > drop this zip > Install. Mod Studio copies
+Install it with FL26 Mod Studio: Import your world > drop this zip > Install. Mod Studio copies
 SiderAddons\\livecpk\\{world}, puts its world file (fl26world.txt) in SiderAddons\\modules
 and switches the world on.
 
@@ -203,7 +203,7 @@ fl26world.txt in SiderAddons\\modules, every new player looks the same.
 
 Kits ({kits} clubs), scoreboards ({boards} competitions) and menu themes ({menus} competitions),
 when the world has them, are in SiderAddons\\content (Kit Server, Scoreboard Server, Menu
-Server): Install mods adds their map lines. Scoreboards and themes of another pack that this
+Server): Install adds their map lines. Scoreboards and themes of another pack that this
 world's competitions use (a modpack's) are under <world>\\_packs. The themes show only with
 the Menu Server module on in sider.ini (lua.module = "MenuServer.lua").
 

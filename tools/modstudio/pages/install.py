@@ -5,17 +5,17 @@ import os, shutil, tempfile
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (QComboBox, QFileDialog, QFrame, QLabel, QLineEdit, QPushButton,
-                               QSplitter, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
+                               QTreeWidget, QTreeWidgetItem, QVBoxLayout)
 
 from .. import installer as I, theme
 from ..i18n import _
 from ..roots import human
-from ..ui import Page, section, hint, row, ask, error, info, run_job, can_write, denied
+from ..ui import Page, Fold, section, hint, row, ask, error, info, run_job, can_write, denied
 
 ROW = Qt.UserRole
 KIND = {"root": "Content folder (livecpk)", "content": "Content server files", "module": "Lua module",
         "cpk": "Packed .cpk (unpacked on install)", "pack": "League package", "dll": "DLL (not installed)",
-        "world": "League Builder world (switched on)"}
+        "world": "Ready world (goes in the game)"}
 NO_FACES = ("Mod Studio's modules with the face pack are not installed: the new players of this world "
             "will all look the same until you install them (Home > Install now).")
 
@@ -26,12 +26,13 @@ class Drop(QFrame):
         self.page = page
         self.setObjectName("card")
         self.setAcceptDrops(True)
-        self.setMinimumHeight(96)
+        self.setMinimumHeight(110)
         v = QVBoxLayout(self)
-        t = QLabel(_("Drop a mod here"))
+        t = QLabel(_("Drop the pack here"))
         t.setObjectName("cardvalue")
         t.setAlignment(Qt.AlignCenter)
-        s = QLabel(_(".zip  ·  .7z  ·  a folder  ·  .lua  ·  .cpk  ·  .fl26pack"))
+        s = QLabel(_("a modpack or world (.zip), a league package (.fl26pack), any other mod (.7z, a folder, "
+                     ".lua, .cpk)"))
         s.setObjectName("cardlabel")
         s.setAlignment(Qt.AlignCenter)
         v.addWidget(t)
@@ -53,32 +54,48 @@ class Drop(QFrame):
 
 
 class Install(Page):
-    title = "Install mods"
-    hint = ("Drop a downloaded mod here. The program looks inside, says what each part is and where "
-            "it goes, and installs only what you tick. Map files of the content servers are merged "
-            "into yours instead of replacing them. Every mod installed here can be removed again.")
+    title = "Import your world"
+    hint = ("Put a pack you downloaded into the game. Mod Studio looks inside, says what it is and installs "
+            "it; a newer version of a pack you have replaces the older one. Everything installed here can be "
+            "removed again.")
 
     def __init__(self, app):
         super().__init__(app)
         self.work = None
         self.parts = []
         self.src = None
-        split = QSplitter(Qt.Vertical)
-        top = QWidget()
-        tv = QVBoxLayout(top)
-        tv.setContentsMargins(0, 0, 0, 0)
-        tv.addWidget(Drop(self))
+        self.outer.addWidget(Drop(self))
+        # what the pack is, in plain words, and the one button
+        self.result = QFrame()
+        self.result.setObjectName("card")
+        rv = QVBoxLayout(self.result)
         self.what = QLabel("")
-        self.what.setObjectName("title")
-        tv.addWidget(self.what)
+        self.what.setObjectName("cardvalue")
+        self.what.setWordWrap(True)
+        rv.addWidget(self.what)
+        self.summary = hint("")
+        rv.addWidget(self.summary)
+        self.go = QPushButton(_("Install"))
+        self.go.setObjectName("primary")
+        self.go.setStyleSheet("font-size: 11pt; font-weight: bold; padding: 8px 26px; border-radius: 8px;")
+        self.go.clicked.connect(self.install)
+        self.go.setEnabled(False)
+        rv.addWidget(row("stretch", self.go, stretch=False))
+        self.result.hide()
+        self.outer.addWidget(self.result)
+        # all the choices, folded
+        self.more = Fold("More options: which parts, name, order of the content folders, map lines", app, "install_more")
+        self.more.body.addWidget(hint(_("Untick a part you do not want, for example the kits. Double-click a "
+                                        "content folder's name to rename it.")))
         self.tree = QTreeWidget()
         self.tree.setRootIsDecorated(False)
         self.tree.setAlternatingRowColors(True)
         self.tree.setHeaderLabels([_("Install"), _("What it is"), _("Name"), _("Files"), _("Size"), _("Note")])
         for c, w in enumerate((60, 230, 240, 60, 80)):
             self.tree.setColumnWidth(c, w)
+        self.tree.setMinimumHeight(160)
         self.tree.itemDoubleClicked.connect(self.rename)
-        tv.addWidget(self.tree, 1)
+        self.more.body.addWidget(self.tree, 1)
         self.name = QLineEdit()
         self.name.setPlaceholderText(_("name of the mod (it is listed under this name)"))
         self.where = QComboBox()
@@ -87,30 +104,23 @@ class Install(Page):
         self.lines = QComboBox()
         self.lines.addItem(_("Map lines for a club already mapped: use the mod's"), True)
         self.lines.addItem(_("Map lines for a club already mapped: keep mine, add the mod's after"), False)
-        self.go = QPushButton(_("Install"))
-        self.go.setObjectName("primary")
-        self.go.clicked.connect(self.install)
-        self.go.setEnabled(False)
-        tv.addWidget(row(QLabel(_("Name")), self.name, self.where, self.lines, "stretch", self.go, stretch=False))
-        split.addWidget(top)
-        bottom = QWidget()
-        bv = QVBoxLayout(bottom)
-        bv.setContentsMargins(0, 6, 0, 0)
-        bv.addWidget(section("Installed with FL26 Mod Studio"))
+        self.more.body.addWidget(row(QLabel(_("Name")), self.name))
+        self.more.body.addWidget(row(self.where, self.lines))
+        self.more.hide()
+        self.outer.addWidget(self.more)
+        # what is in the game
+        self.outer.addWidget(section("In the game now"))
         self.done = QTreeWidget()
         self.done.setRootIsDecorated(False)
         self.done.setAlternatingRowColors(True)
-        self.done.setHeaderLabels([_("Mod"), _("Installed"), _("What it added")])
-        self.done.setColumnWidth(0, 260)
-        self.done.setColumnWidth(1, 140)
-        bv.addWidget(self.done, 1)
-        rm = QPushButton(_("Remove the mod"))
+        self.done.setHeaderLabels([_("Pack"), _("Installed")])
+        self.done.setColumnWidth(0, 420)
+        self.outer.addWidget(self.done, 1)
+        rm = QPushButton(_("Remove"))
         rm.setObjectName("danger")
         rm.clicked.connect(self.uninstall)
-        bv.addWidget(row(rm))
-        split.addWidget(bottom)
-        split.setSizes([520, 240])
-        self.outer.addWidget(split, 1)
+        self.packs_line = hint("")
+        self.outer.addWidget(row(rm, self.packs_line))
         app.bus.game_changed.connect(self.refresh)
         app.bus.content_changed.connect(self.refresh)
 
@@ -133,7 +143,10 @@ class Install(Page):
 
     def look(self, path):
         if not self.app.game.ok():
-            error(self, "Install mods", _("Choose the game folder first (Game ▾)."))
+            error(self, "Import your world", _("Choose the game folder first (Game ▾)."))
+            return
+        if path.lower().endswith(".fl26pack"):
+            self.add_league_pack(path)
             return
         self.cleanup()
         self.src = path
@@ -143,6 +156,8 @@ class Install(Page):
         self.what.setText(_("Looking inside %s ...") % os.path.basename(path))
         self.tree.clear()
         self.go.setEnabled(False)
+        self.summary.setText("")
+        self.result.show()
         self.app.busy(True, _("Looking inside the mod"))
 
         sider_dir = self.app.game.sider_dir
@@ -160,8 +175,9 @@ class Install(Page):
     def failed(self, tb):
         self.app.busy(False)
         self.what.setText("")
+        self.result.hide()
         msg = tb.strip().splitlines()[-1]
-        error(self, "Install mods", _("Could not read the mod:") + "\n\n" + msg.split(":", 1)[-1].strip())
+        error(self, "Import your world", _("Could not read the mod:") + "\n\n" + msg.split(":", 1)[-1].strip())
 
     def looked(self, parts):
         self.app.busy(False)
@@ -169,11 +185,14 @@ class Install(Page):
         self.tree.clear()
         if not parts:
             self.what.setText(_("Nothing this program can install was found in %s.") % os.path.basename(self.src))
+            self.more.hide()
             return
+        self.more.show()
         roots = [p for p in parts if p.kind == "root"]
         if len(roots) == 1 and roots[0].name.lower() in ("faces", "kits", "boots", "balls", "mod", "livecpk", "files"):
             roots[0].name = I.safe(self.name.text())
-        self.what.setText(_("%s holds %d part(s):") % (os.path.basename(self.src), len(parts)))
+        self.what.setText(self.headline(parts))
+        self.summary.setText(self.plain(parts))
         for p in parts:
             it = QTreeWidgetItem(["", _(KIND.get(p.kind, p.kind)), p.name, str(p.files), human(p.size),
                                   "  ".join([_(w) for w in p.warnings] + ([_(p.note)] if p.note else []))])
@@ -197,13 +216,70 @@ class Install(Page):
             self.lines.setCurrentIndex(0)
         self.go.setText(_("Install the world") if world else _("Install"))
         self.go.setEnabled(len(packs) < len(parts))
-        if packs and ask(self, "Install mods", _("%s holds %d league package(s). A league package goes into the "
-                                                 "League Builder recipe and into the game when you Build. "
-                                                 "Add it to the recipe now?") % (os.path.basename(self.src), len(packs))):
+        if packs and ask(self, "Import your world", _("%s holds %d league package(s). A league package goes into "
+                                                 "your world, and into the game when you Build. "
+                                                 "Add it to your world now?") % (os.path.basename(self.src), len(packs))):
             for p in packs:
                 self.app.page("Packages").add_pack(p.src)
             if len(packs) == len(parts):
                 self.app.open_page("Packages")
+
+    def headline(self, parts):
+        """what the pack is, in one line"""
+        worlds = [p for p in parts if p.kind == "world"]
+        base = os.path.basename(self.src.rstrip("\\/"))
+        if worlds:
+            w = worlds[0].name
+            if I.installed_as(self.app.game.sider_dir, w) or I.ready_world(self.app.game, w):
+                return _("%s: a newer version of the world %s you have") % (base, w)
+            return _("%s: a ready world to play (%s)") % (base, w)
+        if all(p.kind == "pack" for p in parts):
+            return _("%s: a league package") % base
+        return _("%s: a mod") % base
+
+    def plain(self, parts):
+        """what is inside and what happens on Install, in plain words"""
+        out = []
+        worlds = [p for p in parts if p.kind == "world"]
+        for p in worlds:
+            try:
+                import fl26world
+                n = len(fl26world.read_world(p.world_file)[1])
+                out.append(_("%d leagues with their clubs, players and faces") % n)
+            except Exception:
+                pass
+            if I.installed_as(self.app.game.sider_dir, p.name) or I.ready_world(self.app.game, p.name):
+                out.append(_("The older version is taken out first, nothing of it stays behind. Your saves are "
+                             "not touched; start a new Master League with this one."))
+        counts = {}
+        for p in parts:
+            if p.kind != "world":
+                label = _(KIND.get(p.kind, p.kind)).split(" (")[0]
+                counts[label] = counts.get(label, 0) + 1
+        if counts:
+            out.append(_("Also inside: %s") % ", ".join("%s%s" % ("%d \u00d7 " % n if n > 1 else "", k)
+                                                      for k, n in sorted(counts.items())))
+        if worlds:
+            out.append(_("Install puts it in the game and switches it on, with Mod Studio's modules. No Build needed."))
+        warn = sorted({_(w) for p in parts for w in p.warnings})
+        if warn:
+            out.append("! " + "  ".join(warn))
+        return "\n".join(out)
+
+    def add_league_pack(self, path):
+        """a .fl26pack: its own window chooses the leagues and the parts; then Build puts it in the game"""
+        packs = self.app.page("Packages")
+        if packs.add_pack(path):
+            self.what.setText(_("%s: a league package") % os.path.basename(path))
+            self.summary.setText(_("Its leagues are in your world now. Build and install puts them in the game."))
+            self.result.show()
+            self.go.setEnabled(False)
+            self.more.hide()
+            self.refresh()
+            build = self.app.page("Build")
+            if hasattr(build, "build_all"):
+                self.app.open_page("Build")
+                build.build_all()
 
     def rename(self, it, col):
         p = it.data(0, ROW)
@@ -226,25 +302,25 @@ class Install(Page):
         if not chosen:
             return
         g, s = self.app.game.running()
-        if g and not ask(self, "Install mods", _("The game is running. Files it has open may not be replaced. "
+        if g and not ask(self, "Import your world", _("The game is running. Files it has open may not be replaced. "
                                                  "Install anyway?")):
             return
         name = self.name.text().strip() or "mod"
         sd = self.app.game.sider_dir
         older = [p.name for p in chosen if p.kind == "world"
                  and (I.installed_as(sd, p.name) or I.ready_world(self.app.game, p.name))]
-        if older and not ask(self, "Install mods", _("%s is installed already (an older version). It is taken out "
+        if older and not ask(self, "Import your world", _("%s is installed already (an older version). It is taken out "
                                                      "first, then this one goes in. Your saves are not touched; "
                                                      "start a new Master League with the new version.\n\n"
                                                      "Replace it?") % ", ".join(older)):
             return
         replaced = {r["name"].lower() for w in older for r in I.installed_as(sd, w)}
         if name.lower() not in replaced and any(r["name"].lower() == name.lower() for r in I.records(self.app.game.sider_dir)) and \
-                not ask(self, "Install mods", _("A mod called %s is installed already. Install this one as well?") % name):
+                not ask(self, "Import your world", _("A mod called %s is installed already. Install this one as well?") % name):
             return
         ini = self.app.ini()
         if ini is None:
-            error(self, "Install mods", _("There is no sider.ini in SiderAddons."))
+            error(self, "Import your world", _("There is no sider.ini in SiderAddons."))
             return
         if not can_write(self, self.app.game):        # a game under Program Files (B14)
             return
@@ -265,7 +341,9 @@ class Install(Page):
             self.app.bus.content_changed.emit()
             self.cleanup()
             self.tree.clear()
+            self.more.hide()
             self.what.setText(_("%s is installed.") % name)
+            self.summary.setText("")
             self.say(_("%s is installed: %d file(s) added, %d replaced (the old ones are kept).")
                      % (name, len(rec["created"]), len(rec["replaced"])), "ok")
             if rec.get("world"):
@@ -276,7 +354,7 @@ class Install(Page):
             self.go.setEnabled(True)
             if denied(self, tb):
                 return
-            error(self, "Install mods", _("The install stopped:") + "\n\n" + tb.strip().splitlines()[-1] +
+            error(self, "Import your world", _("The install stopped:") + "\n\n" + tb.strip().splitlines()[-1] +
                   "\n\n" + _("What was done so far is in Restore points."))
         run_job(job, done, failed)
 
@@ -291,14 +369,14 @@ class Install(Page):
         modules = True
         log = []
         try:
-            snapshot(game.ini_path, "Install mods: switch on " + w, game.sider_dir)
+            snapshot(game.ini_path, "Import your world: switch on " + w, game.sider_dir)
             if modules:
                 B.install_modules(game.folder, log=log.append)
             B.switch_on(w, game.folder, log=log.append)
         except Exception as e:                            # BuildError, a missing module pack
             if denied(self, e):
                 return
-            error(self, "Install mods", _("%s is installed, but switching it on stopped:") % w + "\n\n" + str(e)
+            error(self, "Import your world", _("%s is installed, but switching it on stopped:") % w + "\n\n" + str(e)
                   + "\n\n" + _("On Home press Install now, then Switch world... and pick this world."))
             return
         finally:
@@ -318,6 +396,7 @@ class Install(Page):
             error(self, _("Almost ready"), _("Fix these, then the world is ready to play:") + "\n\n" + text)
         else:
             self.say(_("%s is ready to play. Press Play and start a new Master League.") % w, "ok")
+            self.what.setText(_("\u2713 Ready to play: press Play and start a new Master League"))
             info(self, _("Ready to play"), text + "\n\n" +
                  _("Press Play and start a NEW Master League (an old career does not get the new leagues). "
                    "No Build needed."))
@@ -331,10 +410,20 @@ class Install(Page):
             t = r.get("time", "")
             when = "%s.%s.%s %s:%s" % (t[6:8], t[4:6], t[0:4], t[9:11], t[11:13]) if len(t) >= 13 else t
             what = ", ".join("%s %s" % (_(KIND.get(k, k)).split(" (")[0].lower(), n) for k, n in r.get("parts", []))
-            it = QTreeWidgetItem([r["name"], when, what])
+            it = QTreeWidgetItem([r["name"], when])
             it.setData(0, ROW, r)
-            it.setToolTip(2, "\n".join(r.get("created", [])[:40]))
+            it.setToolTip(0, what)
+            it.setToolTip(1, what)
             self.done.addTopLevelItem(it)
+        self.packs_line.setText(self.packs_text())
+
+    def packs_text(self):
+        try:
+            import lbpackage as K
+            n = len(K.packs(self.app.page("Packages").project.recipe))
+        except Exception:
+            return ""
+        return (_("League packages in your world: %d (Build your world > League packages)") % n) if n else ""
 
     def uninstall(self):
         it = self.done.currentItem()

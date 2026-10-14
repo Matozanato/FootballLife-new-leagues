@@ -14,8 +14,8 @@ vidiš nešto drugo nego što korak kaže, stani tu i idi na [Ako nešto ne valj
 Vodič piše engleske nazive gumba, kako ih Mod Studio pokazuje. (Prozor možeš prebaciti na
 hrvatski: gore **Language** → Hrvatski.)
 
-Koraci 1 do 5 su isti za sve i radiš ih jednom. Gotov svijet (način A) treba samo korake 1 do 3:
-njegova instalacija sama donese module. Onda izaberi način koji odgovara datoteci koju si dobio:
+Koraci 1 do 3 su isti za sve i radiš ih jednom. Onda izaberi način koji odgovara datoteci koju
+si dobio:
 
 - **Način A: gotov svijet**, kao jedan `.zip` (modpack, svijet od prijatelja). Najbrže: ništa se
   ne gradi.
@@ -24,7 +24,7 @@ njegova instalacija sama donese module. Onda izaberi način koji odgovara datote
 
 Nitko ti nije ništa dao, a želiš sam izabrati prave lige (iz NewLife baze) ili napraviti svoje?
 To je drugi vodič: [Napravi svoje lige i pakete](make-your-own-leagues.md). Prvo ovdje odradi
-korake 1 do 5.
+korake 1 do 3.
 
 ---
 
@@ -46,8 +46,9 @@ Pogledaj traku dolje: nema prozora Football Lifea, nema launchera.
 4. Otvori tu mapu i dvaput klikni `FL26ModStudio.exe`.
 
 **Trebaš vidjeti:** tamni prozor. Gore: **File, Game, Profiles, Language, Help, Credits** i
-zeleni gumb **Play** desno. Lijevo: **Home**, pa skupine **LEAGUE BUILDER**, **GAME CONTENT**
-i **MANAGE**.
+zeleni gumb **Play** desno. Lijevo: **Home**, pa **YOUR WORLD** (**Build your world**, **Import
+your world**, **Edit your world**, **NewLife Database**), **GAME CONTENT**, **TOOLS** i, skroz
+dolje, **Settings**.
 
 Ako Windows kaže "Windows protected your PC": klikni **More info** → **Run anyway**.
 
@@ -55,7 +56,7 @@ Prozor na drugom jeziku? Gore **Language** → Hrvatski, Español ili Français.
 
 ## Korak 3. Reci mu gdje ti je igra
 
-1. Lijevo, skroz dolje pod **MANAGE**: klikni **Settings**.
+1. Lijevo, skroz dolje: klikni **Settings**.
 2. Pored mape igre klikni **Browse...**.
 3. Izaberi mapu u kojoj je `FL_2026.exe` (npr. `C:\Football Life 2026`). Ne `SiderAddons`, ne
    neku podmapu: baš mapu u kojoj je `FL_2026.exe`.
@@ -65,25 +66,11 @@ Prozor na drugom jeziku? Gore **Language** → Hrvatski, Español ili Français.
 
 (Isto je i gore: **Game → Choose the game folder...**.)
 
-## Korak 4. Raspakiraj tablice igre
-
-I dalje na **Settings**: klikni **Unpack the game's tables**. Pričekaj par sekundi.
-
-**Trebaš vidjeti:** red koji kaže da su tablice raspakirane.
-
-To se radi jednom. Ponovno samo nakon updatea igre; Mod Studio to sam primijeti i pita.
-
-Ako preskočiš ovaj korak, Build kasnije javi `error: no game tables -- Settings > Unpack the game's tables`.
-
-## Korak 5. Instaliraj module Mod Studija
-
-1. Lijevo, pod **LEAGUE BUILDER**: klikni **Build**.
-2. Klikni **0. Install the modules**. Pita da ih kopira: klikni **Yes**.
-
-**Trebaš vidjeti:** u okviru dolje popis instaliranih modula.
-
-Nove lige rade samo s tim modulima. U njima je i paket lica koji novim igračima daje lica.
-To se radi jednom, i ponovno nakon svake nove verzije Mod Studija.
+Više ništa ne treba postavljati. Kad zna gdje ti je igra, Mod Studio sam raspakira tablice igre
+(njen popis klubova, liga i igrača), samo prvi put. Moduli Mod Studija uđu s **Install the
+world** (način A) ili s **Build and install** (način C). Nove lige rade samo s tim modulima, a u
+njima je i paket lica koji novim igračima daje lica. Ako **Home** ikad kaže da fale ili da su
+stariji, klikni tamo **Install now**.
 
 Sad izaberi način koji odgovara tvojoj datoteci.
 
@@ -95,20 +82,29 @@ Za kad ti je netko dao svijet kao zip (modpack, izvezeni svijet).
 
 **A1.** Ne raspakiravaj ga sam.
 
-**A2.** Lijevo, pod **MANAGE**: klikni **Install mods**.
+**A2.** Lijevo, pod **YOUR WORLD**: klikni **Import your world**.
 
 **A3.** Klikni **Choose a file...** i izaberi zip. (Ili ga samo povuci mišem na tu stranicu.)
 
-**A4. Trebaš vidjeti:** popis što je unutra, npr. svijet (`_FL26Modpack` ili slično, označen kao
-League Builder world), dresovi i scoreboardi. Sve je označeno kvačicom. Tako i ostavi.
+**A4. Trebaš vidjeti:** jedan red koji kaže što je to, npr. `a ready world to play
+(_FL26Modpack)`, ili `a newer version of the world _FL26Modpack you have` kad imaš stariju
+verziju, a ispod koliko je liga unutra. Dijelovi (svijet, dresovi, scoreboardi ...) su pod
+**More options: which parts, name, order of the content folders, map lines**, svi označeni
+kvačicom. Tako i ostavi. (Da ga instaliraš bez dresova, tamo makni kvačicu dresovima.)
 
 **A5.** Klikni **Install the world**. Ako je starija verzija istog svijeta već instalirana (raniji
-Modpack), pita da je zamijeni: **Yes**. Stara se prvo makne, pa ništa od nje ne ostaje. Pričekaj
-dok ne kaže da je gotovo. Mod Studio instalira svoje module (ove verzije), kopira svijet, stavi
-njegovu datoteku svijeta gdje je moduli čitaju i upali svijet.
+Modpack), pita da je zamijeni: **Yes**. Stara se prvo makne, pa ništa od nje ne ostaje; tvoja
+spremanja se ne diraju. Pričekaj dok ne kaže da je gotovo. Mod Studio instalira svoje module (ove
+verzije), kopira svijet, stavi njegovu datoteku svijeta gdje je moduli čitaju i stavi svijet u
+igru.
 
-Gotov svijet ne treba Build: već je napravljen. Dok je upaljen, koraci Builda su ugašeni (0.2.4).
-Za svoje lige kasnije prvo upali svoj svijet (**Home → Switch world...**). Idi na [Korak 6](#korak-6-pokreni-igru).
+**Trebaš vidjeti:** `✓ Ready to play: press Play and start a new Master League` i prozor
+**Ready to play** s popisom kvačica (svijet, moduli, paket lica ...). Ako umjesto toga kaže
+**Almost ready**, nabroji što treba popraviti.
+
+Gotov svijet ne treba Build: već je napravljen. Dok je u igri, koraci Builda su ugašeni (0.2.4).
+Za svoje lige kasnije prvo stavi svoj svijet u igru (**Home → Switch world...**). Idi na
+[Korak 4](#korak-4-pokreni-igru).
 
 ---
 
@@ -121,7 +117,7 @@ poljem objašnjenim: [Napravi svoje lige i pakete](make-your-own-leagues.md).
 
 ## Način C: paket liga (.fl26pack)
 
-**C1.** Lijevo, pod **LEAGUE BUILDER**: klikni **League packages**.
+**C1.** Lijevo, pod **YOUR WORLD**: klikni **Build your world**, pa karticu **League packages**.
 
 **C2.** Klikni **Add a package...** i izaberi `.fl26pack` datoteku. (Ili gore: **File → Add a
 league package...**.)
@@ -133,27 +129,31 @@ autor, pa njegove lige, svaka označena kvačicom. Paket s više liga iznad popi
 
 Ako paket ima ligu s imenom koje već imaš, pita da je doda pod novim imenom: klikni **Yes**.
 
-**Trebaš vidjeti:** zeleni red ispod naslova stranice: "Added ... Save the recipe, then Build to
-put the leagues in the game."
+**Trebaš vidjeti:** zeleni red ispod naslova stranice: "Added ... Build and install puts its
+leagues in the game."
 
-**C4.** Gore: **File → Save recipe**. Prvi put se otvori prozor za spremanje: daj datoteci ime i
-klikni **Save**. (Recept je tvoj popis liga. Spremi ga da ga kasnije možeš mijenjati.)
+Ništa ne trebaš spremati: tvoj svijet se sam spremi trenutak nakon svake promjene (dolje piše
+**Your world is saved**).
 
-**C5.** Lijevo: **Build** → veliki plavi **Build and install** → **Yes**.
+**C4.** Kartica **Build** (pored **League packages**) → veliki plavi **Build and install** → **Yes**.
 
-To odjednom instalira module, napravi svijet i upali ga. Traje od par sekundi do par minuta.
+To odjednom stavi module Mod Studija, izgradi tvoj svijet i stavi ga u igru. Traje od par sekundi
+do par minuta.
+
+(Ako `.fl26pack` ispustiš na **Import your world**, dogodi se isto: nakon prozora iz C3 paket uđe
+u tvoj svijet i **Build and install** krene sam.)
 
 **Trebaš vidjeti:** prozor **Build finished** s kvačicama (World built, Leagues and clubs,
-Modules installed and switched on, Switched on in sider.ini). Klikni **Done**. U okviru dolje na
-stranici Build nema reda koji počinje s `error:`.
+Modules installed and switched on, In the game). Klikni **Done**. U okviru dolje na stranici
+Build nema reda koji počinje s `error:`.
 
 ---
 
-## Korak 6. Pokreni igru
+## Korak 4. Pokreni igru
 
 Klikni zeleni **Play** gore desno (ili **Game → Start the game**). Pričekaj izbornik igre.
 
-## Korak 7. Pokreni NOVU Master Ligu
+## Korak 5. Pokreni NOVU Master Ligu
 
 1. **Master League** → **New game** (ne Continue: stara karijera ne dobije nove lige).
 2. Na **Select Team** listaj: nove lige su na popisu, pod svojim državama.
@@ -161,10 +161,11 @@ Klikni zeleni **Play** gore desno (ili **Game → Start the game**). Pričekaj i
 
 Nove lige su i u **Kick Off** → League, i u **Database → Competition Info**.
 
-## Korak 8. Neka Mod Studio provjeri je li uspjelo
+## Korak 6. Neka Mod Studio provjeri je li uspjelo
 
 1. Ugasi igru.
-2. U Mod Studiju: **Build** → **4. After a start: check**.
+2. U Mod Studiju: **Build your world** → **Step by step, and Export the world** → **4. After a
+   start: check**.
 
 **Trebaš vidjeti:** za svaki modul red koji kaže koliko je liga pročitao iz svijeta, a na kraju
 `the world works as built`. Red koji kaže `not loaded` ili `did NOT read the world file`, i zadnji
@@ -176,13 +177,13 @@ red `something is wrong -- see the lines above`, kažu ti što ne valja.
 
 | Što vidiš | Što napraviti |
 |---|---|
-| `error: no game tables -- Settings > Unpack the game's tables` | Napravi [Korak 4](#korak-4-raspakiraj-tablice-igre). |
-| Nema novih liga na Select Team | Jesi li pokrenuo **novu** Master Ligu? Onda **Build → 4. After a start: check**. Ako u logu piše `world file -- 0 leagues`, recept je bio prazan: opet dodaj paket (Način C) i opet Build. |
-| Svijet je napravljen s `0 leagues, 0 clubs` | Isto: recept nije imao liga. Prvo dodaj lige, pa Build. |
+| `error: no game tables -- Settings > Unpack the game's tables` | **Settings → Unpack the game's tables**. |
+| Nema novih liga na Select Team | Jesi li pokrenuo **novu** Master Ligu? Onda **4. After a start: check** ([Korak 6](#korak-6-neka-mod-studio-provjeri-je-li-uspjelo)). Ako u logu piše `world file -- 0 leagues`, tvoj svijet je bio prazan: opet dodaj paket (Način C) i opet Build. |
+| Svijet je napravljen s `0 leagues, 0 clubs` | Isto: tvoj svijet nije imao liga. Prvo dodaj lige, pa Build. |
 | `sider.log is older than the world switched on -- start the game to the main menu, then check again` | Provjera je pokrenuta prije nego si pokrenuo igru. Pokreni je do glavnog izbornika, ugasi je i opet stisni **4. After a start: check**. |
-| Svi novi igrači imaju isto lice | **Build → 0. Install the modules** (donosi paket lica), pa opet pokreni igru. |
+| Svi novi igrači imaju isto lice | **Home → Install now** (kad Home kaže da moduli fale ili su stariji), ili **Build your world → Step by step, and Export the world → 0. Install the modules**: donosi paket lica. Pa opet pokreni igru. |
 | Igra se ruši pri pokretanju | Pokreni je još jednom preko launchera (pad u prvih 10 sekundi se događa i bez modova). Ako se i dalje ruši: **Game → Start the game without mods (safe mode)...** i pitaj na Discordu. |
-| Hoćeš sve vratiti kako je bilo | **MANAGE → Install mods → Remove the mod** za instalirani svijet; **MANAGE → Restore points** vraća svaku datoteku koju je Mod Studio promijenio. |
+| Hoćeš sve vratiti kako je bilo | **Import your world** → označi ga pod **In the game now** → **Remove** vadi instalirani svijet. **TOOLS → Restore points → Put Sider back as before Mod Studio...** (i u izborniku **Game**) vraća svaku datoteku koju je Mod Studio promijenio i vadi ono što je donio. Ništa se ne briše: čuva se u `SiderAddons\ModStudio\reset-<time>`, a **Undo the last reset** to vraća. |
 
 **Kad tražiš pomoć:** na [Discordu](https://discord.gg/StQqtk3G3M) pošalji sliku onoga što vidiš i
 svoj `sider.log` (**Game → Open sider.log**, ili `SiderAddons\sider.log` u mapi igre).

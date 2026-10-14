@@ -44,6 +44,26 @@ once, and your 0.2.2 career keeps working.
   region folder, Mod Studio now finds it by its name; a stadium you do not have is left out (the
   club plays where the game puts it), and the final check says how many clubs have theirs.
 
+- **Your world saves itself.** There is no Save recipe any more: a change is saved a moment
+  after you make it, and the bottom bar says **Your world is saved**. File has New world, Open a
+  world... and Save your world as... (a copy under another name). The word "recipe" is gone from
+  the program: it is **your world** everywhere, and "live" or "switched on" is **in the game**.
+- **Import your world, simpler.** Drop a pack (or Choose a file...) and the page says in one line
+  what it is: a newer version of a world you have, a ready world, a league package or a mod, with
+  the leagues inside. One **Install** button does the rest. The choices are still there, under
+  **More options**: which parts (leave the kits out, say), the name, the order of the content
+  folders and the map lines. A league package (.fl26pack) dropped here goes into your world and
+  Build and install starts. **In the game now** lists what is installed, with **Remove**.
+- **One main button per page.** Build your world shows **Build and install**; the world's
+  options and the single steps with Export the world fold away under **World options** and
+  **Step by step**, and stay open or closed as you left them. League packages is a tab of Build
+  your world. Players, Clubs, the clubs of a league and NewLife Database keep their main button
+  and put the others under **More**; the team id and the crest's file name moved into the
+  club's tooltip.
+- **The game's tables unpack themselves.** The first time Mod Studio finds the game, it unpacks
+  the game's clubs, leagues and players by itself (a minute or two) and says so
+  in the bottom bar. **Settings > Unpack the game's tables** is still there for after a game update.
+
 ## Fixed
 
 - **Some clubs of the game lost a player to a new copy of him when NewLife refreshed them.** The

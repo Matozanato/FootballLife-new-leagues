@@ -18,7 +18,7 @@ class WorldChangesDialog(QDialog):
         self.setWindowTitle(_("Changes in this world"))
         self.resize(820, 600)
         v = QVBoxLayout(self)
-        note = QLabel(_("Everything this recipe changes in the game. Pick one or more lines and press "
+        note = QLabel(_("Everything your world changes in the game. Pick one or more lines and press "
                         "Undo to take them back; the new leagues themselves are removed on the New "
                         "leagues page. Build again afterwards."))
         note.setWordWrap(True)
@@ -135,7 +135,7 @@ class WorldChangesDialog(QDialog):
                 g.setToolTip(0, _("%d of them come from the NewLife Database; the NewLife page takes "
                                   "all of those back at once") % nl)
         self.tree.expandAll() if total < 80 else None
-        self.count.setText(_("%d changes") % total if total else _("This recipe changes nothing in the "
+        self.count.setText(_("%d changes") % total if total else _("Your world changes nothing in the "
                                                                   "game's own clubs and leagues yet."))
         self.picked()
 
@@ -150,7 +150,7 @@ class WorldChangesDialog(QDialog):
         if not refs:
             return
         if QMessageBox.question(self, _("Changes in this world"),
-                                _("Take back %d change(s)? Save the recipe and Build again to see it "
+                                _("Take back %d change(s)? Build and install again to see it "
                                   "in the game.") % len(refs)) != QMessageBox.Yes:
             return
         r = self.project.recipe

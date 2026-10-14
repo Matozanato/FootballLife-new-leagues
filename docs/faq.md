@@ -10,9 +10,11 @@ Just a question, not a bug? Ask on [Discord](https://discord.gg/StQqtk3G3M).
 
 ### I updated Mod Studio. What do I do now?
 
-Every update can change the modules and the world's tables. After updating, go to
-**League Builder > Build** and press **0. Install the modules**, then **2. Build the world**
-again. Then start a **new Master League career**: a career started before the build was made
+Every update can change the modules and the world's tables. After updating, open **Home**: if
+it has a red line about Mod Studio's modules, press **Install now**. Then on **Build your world**
+press **Build and install** again. If you play a ready modpack, drop the new modpack zip on
+**Import your world** instead: Mod Studio sees it is a newer version of the world you have and
+puts it in place of the old one. Then start a **new Master League career**: a career started before the build was made
 with the old world and does not pick up everything that changed.
 
 Download the whole zip from the
@@ -203,7 +205,7 @@ are required"*, the phases were not played, and a playoff could come at the wron
 
 From the NewLife Database (since 0.1.5.5): a separate download on the NewLife channel of our
 [Discord](https://discord.gg/StQqtk3G3M), in parts per continent. Put the parts in one folder,
-open it on **League Builder > NewLife Database**, pick leagues and press **Add to the recipe**:
+open it on **League Builder > NewLife Database**, pick leagues and press **Add to your world**:
 each becomes a new league with its real clubs and squads. See section 8.4 of the
 [Mod Studio guide](../guides/en/mod-studio-guide.md), and step by step:
 [Make your own leagues and packs](../guides/en/make-your-own-leagues.md).
@@ -347,7 +349,8 @@ has to be built again; **Checks** points it out.
 Before 0.1.4 the leagues lived only in the open recipe until **File → Save recipe**. Since 0.1.4
 every **Build** also keeps a copy in `%APPDATA%\FL26ModStudio\recipes\<world>.json`, and Mod
 Studio opens the last recipe again when it starts. The world an older version built stays in the
-game and keeps working; only its recipe has to be entered again to change it.
+game and keeps working; only its recipe has to be entered again to change it. Since 0.2.4 there
+is no saving at all: your world saves itself a moment after each change.
 
 ### A retired star came back as a 16-year-old with the same name and face
 
@@ -362,7 +365,7 @@ gives each the same name and face back. It works in new and in running careers.
 
 ### Can I switch the regens off?
 
-Yes, since 0.2.0. On **Lua modules** untick **Hide the League Builder's own modules (fl26...)**
+Yes, since 0.2.0. On **Lua modules** untick **Hide Mod Studio's own modules (fl26...)**
 so ours show, untick `fl26regen` and press **Apply**. Mod Studio writes that down in
 `modules\fl26-off.txt` in the Sider folder, so **Build**, **Install the modules** and switching
 worlds leave it off instead of turning it back on, as they do with every other module. The
@@ -425,7 +428,7 @@ squad for that rule and forgets the players you signed for it, so it can refuse 
 list shows 30 or more. Build itself counts the signings. Until the fix, remove one of the signed
 players instead (that always works), or leave the extra player in.
 
-### Install mods (or Build, or Switch on) says "Windows does not let Mod Studio write in ..."
+### Import your world (or Build and install) says "Windows does not let Mod Studio write in ..."
 
 The game is installed under `C:\Program Files` or `C:\Program Files (x86)`. Windows lets only a
 program run as administrator change files there, so Mod Studio cannot copy mods, modules or a
@@ -435,7 +438,7 @@ world into the game's `SiderAddons` folder or edit `sider.ini`. Before 0.2.4 thi
 1. **Run Mod Studio as administrator.** The message has a **Restart as administrator** button
    (Windows asks first), or right-click `FL26ModStudio.exe` > *Run as administrator*. Run as
    administrator, Mod Studio cannot take a file dragged from Explorer: use **Choose a file...**
-   on Install mods instead.
+   on Import your world instead.
 2. **Move the game out of Program Files**, for example to `C:\Games\Football Life 2026`
    (copy the whole folder, start the game once from there), then choose the new folder in
    **Settings > Game folder**. This is the better fix: nothing needs administrator rights then.
@@ -461,7 +464,7 @@ names the missing file, and **Home** and **Diagnostics** say it as long as one i
    *Virus & threat protection > Manage settings > Exclusions > Add or remove exclusions > Add an
    exclusion > Folder*, and pick `...\Football Life 2026\SiderAddons`. Other antivirus programs
    have the same thing under "exceptions" or "exclusions".
-2. Press **League Builder > Build > 0. Install the modules** again (or restore the files from
+2. Press **Install now** on **Home** again (or restore the files from
    the antivirus' quarantine).
 3. Start a new Master League career if the old one was made without the DLLs.
 

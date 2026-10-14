@@ -242,6 +242,7 @@ class Soundtrack(QWidget):
 
 class Music(ServerPage):
     title = "Music"
+    hint = "The song after a goal of each club, and the music of the menus."
     server = "goalsongs"
 
     def extra_tabs(self):

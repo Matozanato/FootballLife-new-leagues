@@ -474,9 +474,9 @@ def ready_check(game, world):
     except Exception:
         live = False
     if on and live:
-        out.append(("ok", _("It is the world switched on in the game")))
+        out.append(("ok", _("It is the world in the game")))
     else:
-        out.append(("err", _("It is not switched on: Home > Switch world..., pick %s") % world))
+        out.append(("err", _("It is not in the game: Home > Switch world..., pick %s") % world))
     state = modules_state(game)
     if state is not None:
         if modules_ok(state):

@@ -68,6 +68,9 @@ QPushButton#primary { background: #2563C9; color: white; border-color: #2563C9; 
 QPushButton#primary:hover { background: #3D8BFD; border-color: #3D8BFD; }
 QPushButton#big { font-size: 11pt; font-weight: bold; padding: 10px 26px; border-radius: 8px; }
 QPushButton#danger { color: %(DANGER)s; }
+QPushButton#fold { text-align: left; background: transparent; border: none; color: %(ACCENT)s; font-weight: 600; padding: 4px 2px; }
+QPushButton#fold:hover { color: white; }
+QFrame#foldbody { background: %(PANEL)s; border: 1px solid %(BORDER)s; border-radius: 8px; }
 QPushButton#primary:disabled, QPushButton#danger:disabled { color: #6A6A6A; background: %(PANEL)s; border-color: %(BORDER)s; }
 QPushButton#tab { background: %(PANEL2)s; border: 1px solid %(BORDER)s; padding: 5px 16px; border-radius: 6px; }
 QPushButton#tab:checked { background: #2563C9; color: white; border-color: #2563C9; }

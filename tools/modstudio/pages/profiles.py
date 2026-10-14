@@ -150,9 +150,9 @@ class Profiles(Page):
                     lines.append("   " + _("... and %d more") % (len(vals) - 15))
         warn = []
         if any("_FL26" in short(v) for v in ch["off"] + ch["on"]):
-            warn.append(_("This changes the live League Builder world."))
+            warn.append(_("This changes the world in the game."))
         if any(short(v).lower().startswith("fl26") and v.lower().endswith(".lua") for v in ch["off"]):
-            warn.append(_("League Builder modules go off: worlds of yours may stop working."))
+            warn.append(_("Mod Studio's modules go off: worlds of yours may stop working."))
         text = _("Switch to %s?") % p["name"] + "\n\n" + "\n".join(lines)
         if warn:
             text += "\n\n" + "\n".join(warn)

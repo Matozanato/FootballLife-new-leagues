@@ -822,7 +822,7 @@ def game_league_plan(recipe, rel, info):
                               "its %d clubs" % (len(new) - len(down), len(ts)))
         hand = [t for t in ts if t in used]
         if hand:
-            p["notes"].append("%d club(s) the recipe already changes by hand are left as they are" % len(hand))
+            p["notes"].append("%d club(s) your world already changes by hand are left as they are" % len(hand))
         p["clubs"] = [t for t in ts if target.get(t) == cid and t not in used] + [y for _x, y in p["swaps"]]
         out.append(p)
     return out

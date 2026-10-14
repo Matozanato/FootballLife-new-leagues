@@ -173,19 +173,20 @@ class NewLife(BuilderPage):
         self.room = None
         self.custom = {}          # (country, league) -> {"off": {club ids left out}, "extra": [club ids]}
         self.action("Open NewLife Database...", self.open_dir)
-        self.b_add = self.action("Add to the recipe", self.add, "primary",
+        self.b_add = self.action("Add to your world", self.add, "primary",
                                  tip="Each selected league becomes a new league with its clubs and players")
-        self.b_update = self.action("Update my leagues to this version", self.update,
-                                    tip="Leagues you added from another NewLife version get this version's clubs "
-                                        "and players; their division, format, European places and cups stay")
-        self.b_update.setEnabled(False)
-        self.b_game = self.action("Bring the game's leagues to this season...", self.game_leagues,
-                                  tip="The game's own leagues get the clubs that went up and down and the squads "
-                                      "they have in this NewLife season")
-        self.b_game.setEnabled(False)
-        self.b_undo = self.action("Undo the game's leagues", self.undo_game,
-                                  tip="Takes back what Bring the game's leagues to this season did")
-        self.b_undo.setEnabled(False)
+        # 0.2.4: two buttons in sight (the long ones did not fit and were cut), the rest in More
+        more = self.more([("Update my leagues to this version", self.update,
+                           "Leagues you added from another NewLife version get this version's clubs "
+                           "and players; their division, format, European places and cups stay"),
+                          ("Bring the game's leagues to this season...", self.game_leagues,
+                           "The game's own leagues get the clubs that went up and down and the squads "
+                           "they have in this NewLife season"),
+                          ("Undo the game's leagues", self.undo_game,
+                           "Takes back what Bring the game's leagues to this season did")])
+        self.b_update, self.b_game, self.b_undo = more.acts
+        for a in more.acts:
+            a.setEnabled(False)
         self.where = hint(_("No NewLife Database opened."))
         self.outer.addWidget(self.where)
         self.search = QLineEdit()
@@ -423,7 +424,7 @@ class NewLife(BuilderPage):
         used = sum(B.new_club_count(L) for L in self.project.recipe["leagues"])
         sel = sum(len(E["clubs"]) for E in self.addable(info)) if self.rows else 0
         room = self.room if self.room is not None else 0
-        text = _("New clubs in the recipe: %d of the %d the game takes.") % (used, room)
+        text = _("New clubs in your world: %d of the %d the game takes.") % (used, room)
         if sel:
             text += "  " + _("Selected: %d more.") % sel
         old = N.outdated(self.project.recipe, self.rel) if self.rel else []
@@ -473,7 +474,7 @@ class NewLife(BuilderPage):
         seen = {}
         for E in sel:
             for i in E["clubs"]:
-                where = "the recipe" if i in used else seen.get(i)
+                where = _("your world") if i in used else seen.get(i)
                 if where:
                     error(self, "NewLife Database", _("%s would play in two leagues (%s and %s).")
                           % (self.rel.clubs[i]["name"], where, E["name"]))
@@ -494,9 +495,9 @@ class NewLife(BuilderPage):
                          if B.game_club_where(info, e["id"])]
         if names:
             self.project.touch()
-            text = _("Added: %s. Change them on Leagues, New clubs and Players, then Build.") % ", ".join(names)
+            text = _("Added: %s. Change them on Leagues, Clubs and Players, then Build.") % ", ".join(names)
             if swap:
-                text += "\n" + _("%s also play in a competition of the game: on New clubs pick each one and use "
+                text += "\n" + _("%s also play in a competition of the game: on Clubs pick each one and use "
                                  "Club of the game to choose the club that takes its place there.") % ", ".join(swap)
             if stayed:
                 text += "\n" + _("%d players stay at their game club (their club would have too few players).") % stayed

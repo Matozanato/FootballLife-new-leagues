@@ -15,7 +15,7 @@ from ..ui import Page, section, hint, row, ask, error, info, run_job, can_write,
 
 class Settings(Page):
     title = "Settings"
-    hint = "Where the game is, which language the program speaks, and the game's tables the League Builder reads."
+    hint = "Where the game is, which language the program speaks, and the game's tables Mod Studio reads."
 
     def __init__(self, app):
         super().__init__(app)
@@ -46,9 +46,10 @@ class Settings(Page):
             self.lang.addItem(name, code)
         self.lang.currentIndexChanged.connect(self.set_lang)
         form.addRow(_("Language"), row(self.lang))
-        form.addRow(section("League Builder"), QLabel(""))
+        form.addRow(section("The game's tables"), QLabel(""))
         form.addRow("", hint(_("Mod Studio needs the game's tables (its list of clubs, leagues and players) once "
-                               "on every PC, and again after a game update. Click Unpack the game's tables. To build "
+                               "on every PC: it unpacks them by itself the first time. After a game update click Unpack the game's "
+                               "tables again. To build "
                                "on a database of your own (a pesdb folder in livecpk), unpack the game's tables "
                                "first, then pick that folder with Use another tables folder: its files go over the "
                                "game's, which give whatever it does not have.")))

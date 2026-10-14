@@ -39,7 +39,7 @@ class Modules(Page):
         self.search = QLineEdit()
         self.search.setPlaceholderText(_("Find a module..."))
         self.search.textChanged.connect(self.filter)
-        self.hide_core = QCheckBox(_("Hide the League Builder's own modules (fl26...)"))
+        self.hide_core = QCheckBox(_("Hide Mod Studio's own modules (fl26...)"))
         self.hide_core.setChecked(True)
         self.hide_core.toggled.connect(self.filter)
         bar.addWidget(self.search, 1)

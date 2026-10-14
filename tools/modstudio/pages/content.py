@@ -617,16 +617,18 @@ class SettingsTab(QWidget):
 class ServerView(QWidget):
     """a content server: status line, a tab per map file, the library, the settings"""
 
-    def __init__(self, app, key, extra_tabs=()):
+    def __init__(self, app, key, extra_tabs=(), about=True):
         super().__init__()
         self.app, self.server = app, S.BY_KEY[key]
         self._lib = None
         v = QVBoxLayout(self)
         v.setContentsMargins(0, 0, 0, 0)
-        if self.server.about:
-            v.addWidget(hint(_(self.server.about)))
+        # 0.2.4: a page with its own one-line hint keeps the server's details in the status tooltip
+        self.about = _(self.server.about) if self.server.about else ""
+        if self.about and about:
+            v.addWidget(hint(self.about))
         self.status = QLabel("")
-        self.switch_btn = QPushButton(_("Switch the module on"))
+        self.switch_btn = QPushButton(_("Switch it on"))
         self.switch_btn.clicked.connect(self.switch_on)
         self.save_btn = QPushButton(_("Save"))
         self.save_btn.setObjectName("primary")
@@ -720,14 +722,16 @@ class ServerView(QWidget):
             self.loaded = True
         e, on = self.module_state()
         exists = os.path.exists(os.path.join(self.app.game.modules_dir, self.module()))
+        # 0.2.4: the line says it in a player's words; the module's file name is in its tooltip
         if on:
-            txt, col = _("%s is on.") % self.module(), theme.GOOD
+            txt, col = _("In the game: the game uses what is set here."), theme.GOOD
         elif e is not None:
-            txt, col = _("%s is switched off in sider.ini: the game does not use these maps.") % self.module(), theme.WARN
+            txt, col = _("Switched off: the game does not use what is set here."), theme.WARN
         elif exists:
-            txt, col = _("%s is not in sider.ini: the game does not use these maps.") % self.module(), theme.WARN
+            txt, col = _("Not switched on yet: the game does not use what is set here."), theme.WARN
         else:
-            txt, col = _("%s is not in the modules folder.") % self.module(), theme.WARN
+            txt, col = _("Not installed: its module %s is missing.") % self.module(), theme.WARN
+        self.status.setToolTip((self.about + "\n\n" if self.about else "") + _("Module: %s") % self.module())
         n = len(self.library_items()) if self.server.library and self.tabs.currentWidget() is self.lib_tab else None
         self.status.setText(txt + (("   " + _("%d items in the library") % n) if n is not None else ""))
         self.status.setStyleSheet("color: %s;" % col)
@@ -775,7 +779,7 @@ class ServerPage(Page):
 
     def __init__(self, app):
         super().__init__(app)
-        self.view = ServerView(app, self.server, self.extra_tabs())
+        self.view = ServerView(app, self.server, self.extra_tabs(), about=not self.hint)
         self.outer.addWidget(self.view, 1)
         app.bus.game_changed.connect(lambda: self.view.refresh(force=True))
         app.bus.ini_changed.connect(lambda: self.view.refresh())

@@ -19,11 +19,13 @@ lo que dice un paso, para ahí y mira en
 
 Tres palabras que vas a ver todo el rato:
 
-- **Receta**: tu lista de ligas y todo lo que ajustas para ellas. La cambias en las páginas de
-  **LEAGUE BUILDER**. Es solo un plan: nada llega al juego hasta que pulsas **Build**.
-- **Mundo**: lo que Build hace con la receta, una carpeta cuyo nombre empieza por `_FL26`
-  (`_FL26MyWorld` si no lo cambias). El juego lo lee mientras está activado.
-- **Build**: el botón que convierte la receta en un mundo y lo mete en el juego.
+- **Tu mundo** (*your world*): tu lista de ligas y todo lo que ajustas para ellas. Lo cambias en
+  las páginas de **YOUR WORLD** (*TU MUNDO*) de la barra de la izquierda, y se guarda solo un
+  momento después de cada cambio. Es solo un plan: nada llega al juego hasta que pulsas **Build**.
+- **Carpeta del mundo**: lo que Build hace con tu mundo, una carpeta cuyo nombre empieza por
+  `_FL26` (`_FL26MyWorld` si no lo cambias). El juego la lee mientras está en el juego (la barra
+  de arriba dice `In the game: _FL26MyWorld`, *En el juego*).
+- **Build**: el botón que convierte tu mundo en esa carpeta y la mete en el juego.
 
 **Contenido**
 
@@ -32,13 +34,13 @@ Tres palabras que vas a ver todo el rato:
 - [Paso 2. Ábrela en la página NewLife Database](#paso-2-ábrela-en-la-página-newlife-database)
 - [Paso 3. Elige tus ligas](#paso-3-elige-tus-ligas)
 - [Paso 4. Elige los clubes de una liga](#paso-4-elige-los-clubes-de-una-liga)
-- [Paso 5. Añadir a la receta](#paso-5-añadir-a-la-receta)
+- [Paso 5. Agregar a tu mundo](#paso-5-agregar-a-tu-mundo)
 - [Paso 6. La página Leagues: cada ajuste de una liga](#paso-6-la-página-leagues-cada-ajuste-de-una-liga)
 - [Paso 7. Ejemplo: un país con dos divisiones](#paso-7-ejemplo-un-país-con-dos-divisiones)
-- [Paso 8. La página New clubs: nombres, escudos, equipaciones, clubes del juego](#paso-8-la-página-new-clubs-nombres-escudos-equipaciones-clubes-del-juego)
+- [Paso 8. La pestaña Clubs: nombres, escudos, equipaciones, clubes del juego](#paso-8-la-pestaña-clubs-nombres-escudos-equipaciones-clubes-del-juego)
 - [Paso 9. La página Players](#paso-9-la-página-players)
 - [Paso 10. Límites que detienen el Build](#paso-10-límites-que-detienen-el-build)
-- [Paso 11. Guarda la receta](#paso-11-guarda-la-receta)
+- [Paso 11. Tu mundo se guarda solo](#paso-11-tu-mundo-se-guarda-solo)
 - [Paso 12. Build](#paso-12-build)
 - [Paso 13. Juega: una Liga Máster NUEVA y luego la comprobación](#paso-13-juega-una-liga-máster-nueva-y-luego-la-comprobación)
 - [Paso 14. Cambiar algo más tarde](#paso-14-cambiar-algo-más-tarde)
@@ -49,13 +51,12 @@ Tres palabras que vas a ver todo el rato:
 
 ## Antes de empezar: la preparación de una sola vez
 
-Haz primero, una vez, los pasos 1 a 5 de la otra guía:
+Haz primero, una vez, los pasos 1 a 3 de la otra guía:
 [cierra el juego](install-a-pack.md#paso-1-cierra-el-juego),
-[descarga Mod Studio](install-a-pack.md#paso-2-descarga-mod-studio),
-[dile dónde está tu juego](install-a-pack.md#paso-3-dile-dónde-está-tu-juego),
-[desempaqueta las tablas del juego](install-a-pack.md#paso-4-desempaqueta-las-tablas-del-juego) e
-[instala los módulos de Mod Studio](install-a-pack.md#paso-5-instala-los-módulos-de-mod-studio).
-Luego vuelve aquí.
+[descarga Mod Studio](install-a-pack.md#paso-2-descarga-mod-studio) y
+[dile dónde está tu juego](install-a-pack.md#paso-3-dile-dónde-está-tu-juego).
+Luego vuelve aquí. Mod Studio desempaqueta solo las tablas del juego, y **Build and install**
+(*Construir e instalar*, Paso 12) pone sus módulos.
 
 Mantén el juego cerrado todo el tiempo que trabajes en Mod Studio.
 
@@ -80,7 +81,7 @@ mezcles dos versiones en una carpeta.
 
 ## Paso 2. Ábrela en la página NewLife Database
 
-1. Barra de la izquierda, en **LEAGUE BUILDER**: pulsa **NewLife Database**.
+1. Barra de la izquierda, en **YOUR WORLD**: pulsa **NewLife Database**.
 2. Pulsa **Open NewLife Database...** (*Abrir NewLife Database...*) arriba.
 3. Elige la carpeta del Paso 1 (la carpeta, no un zip de dentro) y confirma.
 4. Espera unos segundos mientras la lee.
@@ -114,16 +115,14 @@ dice por qué:
   del juego juntos. Esta tiene menos o más. Aún puedes arreglarlo en el Paso 4 (añadir o dejar
   fuera clubes) hasta que encaje.
 - `the game's own league: Bring the game's leagues to this season`: el juego ya tiene esta liga
-  (la Premier League, la Championship ...). No se añade una segunda vez. El botón
-  **Bring the game's leagues to this season...** (*Llevar las ligas del juego a esta
-  temporada...*) de arriba da en su lugar a las ligas del propio juego los clubes y las
+  (la Premier League, la Championship ...). No se añade una segunda vez.
+  **More ▾ → Bring the game's leagues to this season...** (*Más → Llevar las ligas del juego a
+  esta temporada...*) de arriba da en su lugar a las ligas del propio juego los clubes y las
   plantillas de esta temporada de NewLife; ver
   [8.4 en la guía completa](mod-studio-guide.md#84-newlife-database-clubes-y-jugadores-reales).
 
 Si la página dice que Mod Studio no tiene tablas del juego y ofrece abrir Settings: pulsa
-**Yes** y haz
-[Unpack the game's tables](install-a-pack.md#paso-4-desempaqueta-las-tablas-del-juego)
-(*Desempaquetar las tablas del juego*).
+**Yes** y luego, allí, **Unpack the game's tables** (*Desempaquetar las tablas del juego*).
 
 ## Paso 3. Elige tus ligas
 
@@ -132,15 +131,15 @@ Si la página dice que Mod Studio no tiene tablas del juego y ofrece abrir Setti
    y pulsa la última para tomar todo lo que hay entre ellas.)
 
 **Deberías ver:** abajo de la página una línea como
-`New clubs in the recipe: 0 of the 793 the game takes.  Selected: 18 more.`
+`New clubs in your world: 0 of the 793 the game takes.  Selected: 18 more.`
 
-- El **primer** número es cuántos clubes nuevos tiene ya tu receta.
+- El **primer** número es cuántos clubes nuevos tiene ya tu mundo.
 - El **segundo** es cuántos clubes nuevos caben en el juego en total. Mod Studio lo calcula a
   partir de las tablas de tu juego, así que puede ser un poco distinto en otra versión del juego.
 - **Selected** es cuántos clubes nuevos añadirían las ligas que elegiste.
 
-Si la receta y la selección juntas pasan de lo que admite el juego, **Add to the recipe**
-(*Añadir a la receta*) se queda en gris: elige menos ligas.
+Si tu mundo y la selección juntos pasan de lo que admite el juego, **Add to your world**
+(*Agregar a tu mundo*) se queda en gris: elige menos ligas.
 
 ## Paso 4. Elige los clubes de una liga
 
@@ -167,31 +166,31 @@ cambió. Una liga gris que ahora tiene de 10 a 24 clubes pasa a normal.
 
 Un club solo puede jugar en una liga. Si lo añades a dos, Mod Studio te para en el Paso 5.
 
-## Paso 5. Añadir a la receta
+## Paso 5. Agregar a tu mundo
 
-Con tu liga o tus ligas seleccionadas, pulsa **Add to the recipe** arriba.
+Con tu liga o tus ligas seleccionadas, pulsa **Add to your world** arriba.
 
 **Deberías ver:** una línea verde bajo el título de la página. Qué significa cada línea:
 
 | Línea verde | Qué significa |
 |---|---|
-| `Added: <leagues>. Change them on Leagues, New clubs and Players, then Build.` | Las ligas están en tu receta, cada una como primera división de su país, todos contra todos dos veces. Todavía no hay nada en el juego. |
-| `<clubs> also play in a competition of the game: on New clubs pick each one and use Club of the game to choose the club that takes its place there.` | Estos clubes de tu liga nueva son clubes que el juego ya tiene, y también juegan en algún sitio del juego (una liga, una copa, la Europa League ...). Un club juega en una sola liga, así que su sitio antiguo necesita otro club. Ese club lo eliges en el [Paso 8](#clubes-que-el-juego-ya-tiene). Hasta que lo hagas, Build se para con un error que nombra el club. |
+| `Added: <leagues>. Change them on Leagues, Clubs and Players, then Build.` (*Añadido: ... Cámbialos en Ligas, Clubes y Jugadores, y luego construye.*) | Las ligas están en tu mundo, cada una como primera división de su país, todos contra todos dos veces. Todavía no hay nada en el juego. |
+| `<clubs> also play in a competition of the game: on Clubs pick each one and use Club of the game to choose the club that takes its place there.` | Estos clubes de tu liga nueva son clubes que el juego ya tiene, y también juegan en algún sitio del juego (una liga, una copa, la Europa League ...). Un club juega en una sola liga, así que su sitio antiguo necesita otro club. Ese club lo eliges en el [Paso 8](#clubes-que-el-juego-ya-tiene). Hasta que lo hagas, Build se para con un error que nombra el club. |
 | `<n> players stay at their game club (their club would have too few players).` | Los jugadores que el juego ya tiene normalmente pasan al club de NewLife. Estos se quedan, para que su club antiguo conserve al menos 18 jugadores. No hay que hacer nada. |
 | `<n> players are not added: another league already has them.` | Una liga que añadiste antes ya se quedó con estos jugadores. No hay que hacer nada. |
 
 Si una ventana de error dice `<club> would play in two leagues (<league> and <league>).`,
 desmarca ese club en una de las dos ligas (Paso 4) y vuelve a intentarlo.
 
-¿Quieres ligas de otros continentes? Selecciónalas también y pulsa **Add to the recipe** otra
+¿Quieres ligas de otros continentes? Selecciónalas también y pulsa **Add to your world** otra
 vez. Cada clic añade; nunca quita lo que ya hay.
 
 ---
 
 ## Paso 6. La página Leagues: cada ajuste de una liga
 
-1. Barra de la izquierda: pulsa **Leagues** (*Ligas*).
-2. Encima de la lista, pulsa **Ours**: la lista muestra solo las ligas de tu receta. (**All**
+1. Barra de la izquierda: **Edit your world** (*Edita tu mundo*), pestaña **Leagues** (*Ligas*).
+2. Encima de la lista, pulsa **Ours**: la lista muestra solo las ligas de tu mundo. (**All**
    muestra todas las ligas, también las del juego; **Changed**, las ligas del juego que
    cambiaste.) Las ligas están agrupadas por continente.
 3. Pulsa tu liga.
@@ -250,14 +249,14 @@ y [8.2](mod-studio-guide.md#82-construir-activar-jugar).
 países del juego*), **European places of the game's leagues** (*Plazas europeas de las ligas del
 juego*), **UEFA ranking** (*Ranking UEFA*), **South American places** (*Plazas sudamericanas*),
 **Competition names** (*Nombres de las competiciones*) (nombres y logos nuevos para copas y
-competiciones continentales) y **World name and recipe...** (*Nombre del mundo y receta...*) (el
+competiciones continentales) y **World name and file...** (*Nombre del mundo y archivo...*) (el
 nombre de la carpeta del mundo; debe empezar por `_FL26`). No necesitas ninguna de ellas para un
 primer mundo.
 
 **Una liga sin clubes de NewLife.** **Add league** arriba de la página Leagues abre la misma
 ventana **League** para una liga hecha desde cero: dale un **Name**, un **Country** y un número
 de **Clubs**, y Build crea los clubes con plantillas completas y un entrenador. Les pones nombre
-en **New clubs** (Paso 8), donde **NewLife club...** (*Club NewLife...*) también puede meter
+en la pestaña **Clubs** (*Clubes*, Paso 8), donde **NewLife club...** (*Club NewLife...*) también puede meter
 clubes reales en ella.
 
 ## Paso 7. Ejemplo: un país con dos divisiones
@@ -265,9 +264,9 @@ clubes reales en ella.
 Supón que tus partes de NewLife tienen la primera y la segunda división de un país, aquí
 llamadas *First League* y *Second League*. Quieres ascensos y descensos entre ellas.
 
-1. **NewLife Database**: selecciona *First League* y pulsa **Add to the recipe**. (La de arriba
+1. **NewLife Database**: selecciona *First League* y pulsa **Add to your world**. (La de arriba
    primero.)
-2. Selecciona *Second League* y pulsa **Add to the recipe**.
+2. Selecciona *Second League* y pulsa **Add to your world**.
 
    **Deberías ver:** la línea verde `Added:` cada vez. Las dos son ahora primeras divisiones del
    mismo país, que todavía no es lo que quieres.
@@ -306,14 +305,15 @@ ventana **League** con el país, los clubes, el formato y la división ya rellen
 
 ---
 
-## Paso 8. La página New clubs: nombres, escudos, equipaciones, clubes del juego
+## Paso 8. La pestaña Clubs: nombres, escudos, equipaciones, clubes del juego
 
-1. Barra de la izquierda: pulsa **New clubs** (o **Clubs and names** en la página Leagues).
+1. Barra de la izquierda: **Edit your world**, pestaña **Clubs** (*Clubes*) (o **Clubs and names**
+   en la pestaña Leagues).
 2. Arriba, **League**: elige una de tus ligas.
 
-**Deberías ver:** sus clubes con las columnas **#**, **Name**, **Short name**, **Team ID** (*ID
-del club*) (`at Build` hasta el primer Build), **Crest** y **Players changed** (*Jugadores
-cambiados*). Los clubes de NewLife ya tienen sus nombres, nombres cortos y escudos. Un club sin
+**Deberías ver:** sus clubes con las columnas **#**, **Name**, **Short name** y **Players
+changed** (*Jugadores cambiados*); pon el ratón sobre un nombre para ver su **Team ID** (*ID del
+club*) (`at Build` hasta el primer Build) y el archivo de su escudo. Los clubes de NewLife ya tienen sus nombres, nombres cortos y escudos. Un club sin
 nombre muestra `<league> 01`, `<league> 02` ... en gris.
 
 ### Nombre, escudo, equipaciones, entrenador
@@ -338,7 +338,7 @@ nombre muestra `<league> 01`, `<league> 02` ... en gris.
 **Deberías ver:** el nombre y el escudo nuevos en la lista.
 
 **Equipaciones.** Un club nuevo toma prestada una equipación de un club del juego en sus colores.
-Dos opciones de la página **Build** cambian eso: **Make kits for the new clubs** (*Crear
+Dos opciones de la pestaña **Build**, en **World options** (*Opciones del mundo*), cambian eso: **Make kits for the new clubs** (*Crear
 equipaciones para los clubes nuevos*) (activada por defecto, necesita Kit Server instalado: cada
 club nuevo recibe equipaciones local, visitante, tercera y de portero hechas en sus colores, con
 su escudo) y **Kits you can edit in the game** (*Equipaciones que puedes editar en el juego*)
@@ -354,7 +354,7 @@ imágenes, emparejadas con los clubes por el nombre de archivo). También tiene 
 ### Clubes que el juego ya tiene
 
 Una liga de NewLife puede incluir clubes que el juego ya tiene. Salen en la lista con el nombre
-del juego, su **Team ID** y `(the game's)` en **Crest**. Si la línea verde del Paso 5 decía que
+del juego (el ratón encima muestra su **Team ID**). Si la línea verde del Paso 5 decía que
 *también juegan en una competición del juego* (*also play in a competition of the game*), haz
 esto para **cada** uno de ellos:
 
@@ -390,8 +390,8 @@ liga que hiciste a mano recibe clubes reales.
 Los clubes de NewLife vienen con plantillas completas, así que no tienes que tocar esta página.
 Está ahí por si quieres cambiar una plantilla.
 
-1. Barra de la izquierda: pulsa **Players** (o selecciona un club en New clubs y pulsa
-   **Players**).
+1. Barra de la izquierda: **Edit your world**, pestaña **Players** (*Jugadores*) (o selecciona un
+   club en la pestaña **Clubs** y pulsa **More ▾ → Players**).
 2. Arriba, elige la **League** y el **Club**. (O escribe en *Find a club...* (*Buscar un
    club...*).)
 
@@ -419,8 +419,8 @@ Todo lo de esta página está en [Jugadores en la guía completa](mod-studio-gui
 
 | Límite | Dónde lo ves |
 |---|---|
-| Clubes nuevos en total: el número de la línea `New clubs in the recipe: X of the Y the game takes.` | Página NewLife Database: **Add to the recipe** se queda en gris. Build: `error: <n> new clubs, but the game has room for <m> more (a full squad each)`. |
-| De 10 a 24 clubes en una liga | NewLife Database: liga gris, `a league takes 10 to 24 clubs`. New clubs: `A league has 10 to 24 clubs.` |
+| Clubes nuevos en total: el número de la línea `New clubs in your world: X of the Y the game takes.` | Página NewLife Database: **Add to your world** se queda en gris. Build: `error: <n> new clubs, but the game has room for <m> more (a full squad each)`. |
+| De 10 a 24 clubes en una liga | NewLife Database: liga gris, `a league takes 10 to 24 clubs`. Pestaña Clubs: `A league has 10 to 24 clubs.` |
 | Ligas nuevas por mundo (39 en nuestras pruebas) | Build: `error: <n> leagues, but the game has room for <m> ...` |
 | Una liga bajo una liga | Lista **Division**: gris. Build: `... are all under ...; the game follows one link down from a league ...` |
 | Divisiones hasta la 7.ª | Build: `error: <league>: division 8 -- the rank field stops at 7`. |
@@ -430,36 +430,35 @@ Todo lo de esta página está en [Jugadores en la guía completa](mod-studio-gui
 
 Todos los números: [8.3 Límites](mod-studio-guide.md#83-límites).
 
-## Paso 11. Guarda la receta
+## Paso 11. Tu mundo se guarda solo
 
-1. Barra de arriba: **File → Save recipe** (*Archivo → Save recipe*).
-2. La primera vez se abre una ventana **Save recipe as...**. Propone el nombre del mundo, por
-   ejemplo `_FL26MyWorld.json`. Elige una carpeta que vuelvas a encontrar (por ejemplo
-   `Documents\FL26 Mod Studio\recipes`) y pulsa **Save** (*Guardar*).
+No hay que guardar nada a mano: Mod Studio guarda tu mundo un momento después de cada cambio.
 
-**Deberías ver:** abajo de la ventana, `Recipe saved: <file>`.
+**Deberías ver:** abajo de la ventana, **Your world is saved** (*Tu mundo está guardado*).
 
-Después de eso, **File → Save recipe** guarda en el mismo archivo sin preguntar. **File → Save
-recipe as...** guarda una copia con otro nombre. **File → Open recipe...** vuelve a abrir una
-receta guardada (avisa si tienes cambios sin guardar). **File → New recipe** (*Archivo → Receta
-nueva*) empieza una vacía.
+**File → Save your world as...** (*Archivo → Guardar tu mundo como...*) guarda una copia con otro
+nombre, en la carpeta que elijas (por ejemplo `Documents\FL26 Mod Studio`): ese archivo lo puedes
+encontrar y copiar. **File → Open a world...** (*Archivo → Abrir un mundo...*) vuelve a abrir uno
+guardado. **File → New world** (*Archivo → Mundo nuevo*) empieza uno vacío.
 
-Build también guarda por su cuenta una copia de la receta, y Mod Studio abre la última receta al
-arrancar, así que lo que construiste nunca se pierde. Guarda de todos modos: tu propio archivo es
-el que puedes encontrar y copiar.
+Mod Studio vuelve a abrir tu mundo al arrancar, así que lo que hiciste nunca se pierde.
 
 ## Paso 12. Build
 
-1. Barra de la izquierda: pulsa **Build**.
+1. Barra de la izquierda: **Build your world** (*Construye tu mundo*), pestaña **Build**.
 
-**Deberías ver:** el botón azul grande **Build and install** (*Construir e instalar*), la fila
-**0. Install the modules**, **1. Check the plan**, **2. Build the world**, **3. Switch it on**,
-**4. After a start: check** y **Export the world...** (*Exportar el mundo...*), dos tarjetas
-(**European cups** (*Copas europeas*) y **New clubs**) con opciones, una línea como
+**Deberías ver:** el botón azul grande **Build and install** (*Construir e instalar*) y dos
+desplegables debajo: **World options: European cups, country cups, kits and faces of the new
+clubs** (*Opciones del mundo: copas europeas, copas nacionales, camisetas y caras de los clubes
+nuevos*; dos tarjetas, **European cups** (*Copas europeas*) y **New clubs**, con opciones) y
+**Step by step, and Export the world** (*Paso a paso, y Exportar el mundo*; la fila **0. Install
+the modules**, **1. Check the plan**, **2. Build the world**, **3. Switch it on**, **4. After a
+start: check** y **Export the world...** (*Exportar el mundo...*)). Luego una línea como
 `World _FL26MyWorld: not built yet · builder modules: installed`, y un cuadro para el registro
 abajo.
 
-2. Pulsa primero **1. Check the plan**. No cambia nada; solo lee tu receta.
+2. Abre **Step by step, and Export the world** y pulsa primero **1. Check the plan**. No cambia
+   nada; solo lee tu mundo.
 
 **Deberías ver:** en el cuadro, una línea `world _FL26MyWorld: 2 new leagues, ...` y una línea
 por liga con sus clubes, división y formato (`18 clubs x2` son 18 clubes, todos contra todos dos
@@ -467,19 +466,19 @@ veces; `division 2  below ... (3 up/down)` es una segunda división), y sus
 `European places:`. Una línea que empieza por `error:` dice qué arreglar primero; mira la tabla
 del final.
 
-3. Pulsa **Build and install**. Pregunta `Build _FL26MyWorld and make it the live world? ...`:
+3. Pulsa **Build and install**. Pregunta `Build _FL26MyWorld and put it in the game? ...`:
    pulsa **Yes**.
 
    Si las tablas del juego son más antiguas que el juego, pregunta primero si las desempaqueta
    otra vez: pulsa **Yes** (un minuto, más o menos).
 
-   Instala los módulos, construye el mundo y lo activa, todo de una vez. Tarda de unos segundos
-   a unos minutos.
+   Pone los módulos de Mod Studio, construye tu mundo y lo pone en el juego, todo de una vez.
+   Tarda de unos segundos a unos minutos.
 
 **Deberías ver:** una ventana **Build finished** (*Construcción terminada*) con una marca en cada
 línea: **World built** (*Mundo construido*), **Leagues and clubs** (*Ligas y clubes*)
 (`2 leagues · 36 new clubs`), **Modules installed and switched on** (*Módulos instalados y
-activados*), **Switched on in sider.ini** (*Activado en sider.ini*) y **Start the game to play
+activados*), **In the game** (*En el juego*) y **Start the game to play
 it** (*Inicia el juego para jugarlo*). En **Before you play** (*Antes de jugar*):
 `Start a new Master League career: a career saved before keeps the old world.` Pulsa **Done**
 (*Hecho*).
@@ -488,12 +487,13 @@ Si dice **An Edit save from before this Build is in the game's save folder**: pu
 the Edit save aside** (*Apartar el guardado de Edit*). Un guardado de Edit antiguo esconde los
 nombres y las plantillas nuevos.
 
-**Paso a paso en lugar del botón grande** (el mismo resultado):
+**Paso a paso en lugar del botón grande** (el mismo resultado, en **Step by step, and Export the
+world**):
 
 1. **1. Check the plan**: como arriba.
 2. **2. Build the world**: lo construye. Si el mundo existe, pregunta `... exists. Build it again?`:
    **Yes**. El registro termina con `Next: 3. Switch it on, then start the game.`
-3. **3. Switch it on**: pregunta `Make _FL26MyWorld the live world in sider.ini?`: **Yes**. El
+3. **3. Switch it on**: pregunta `Put _FL26MyWorld in the game (switch it on in sider.ini)?`: **Yes**. El
    registro termina con `Start the game, then 4. check.`
 
 **Qué significan las líneas del registro:**
@@ -501,15 +501,15 @@ nombres y las plantillas nuevos.
 | Línea | Significado |
 |---|---|
 | `installing the modules ...`, `modules: ... copied, ... already there` | Se ponen en su sitio los módulos de Mod Studio. |
-| `world ...: N new leagues, changes to ... of the game's leagues and ... of its clubs` | El resumen de tu receta. |
+| `world ...: N new leagues, changes to ... of the game's leagues and ... of its clubs` | El resumen de tu mundo. |
 | `<league>  reg ...  comp ...  division 1  18 clubs x2` | Una liga: sus ids en el juego, su división y su formato. |
 | `European places: 1st Champions League qualifying, ...` | Adónde van sus mejores clubes. |
 | `no European places: the new leagues send nobody to Europe` | Un aviso, no un error: ajusta **Europe** en una primera división si lo quieres. |
 | `building ...` | Se está escribiendo el mundo. |
-| `livecpk: _FL26MyWorld (... files), sider.ini loads it` | El mundo está activado. |
+| `livecpk: _FL26MyWorld (... files), sider.ini loads it` | El mundo está en el juego. |
 | `error: ...` | Build se paró y no cambió nada en el juego. Arregla lo que dice (tabla del final) y vuelve a construir. |
 
-Las opciones de las tarjetas (**Include the Conference League** (*Incluir la Liga
+Las opciones de **World options** (**Include the Conference League** (*Incluir la Liga
 Conferencia*), **Country cup draw** (*Sorteo de la copa nacional*), **Make kits for the new
 clubs** ...) se explican en [8.2](mod-studio-guide.md#82-construir-activar-jugar). Los valores
 por defecto están bien.
@@ -526,7 +526,8 @@ por defecto están bien.
 Luego deja que Mod Studio compruebe que el juego tomó el mundo:
 
 1. Cierra el juego (o al menos inícialo una vez hasta el menú principal).
-2. En Mod Studio: **Build** → **4. After a start: check**.
+2. En Mod Studio: **Build your world** → **Step by step, and Export the world** → **4. After a
+   start: check**.
 
 **Deberías ver:** una línea por módulo que dice cuántas ligas leyó del archivo de mundo, y al
 final `the world works as built`. Una línea `not loaded` o `did NOT read the world file`, y al
@@ -536,20 +537,20 @@ del final.
 ## Paso 14. Cambiar algo más tarde
 
 1. Cierra el juego.
-2. Abre Mod Studio. Abre tu última receta por sí solo (o **File → Open recipe...**).
-3. Cambia lo que quieras en **NewLife Database**, **Leagues**, **New clubs** o **Players**.
-4. **File → Save recipe**.
-5. **Build** → **Build and install** → **Yes**.
+2. Abre Mod Studio. Abre tu mundo por sí solo (o **File → Open a world...**).
+3. Cambia lo que quieras en **NewLife Database**, o en **Edit your world**: **Leagues**,
+   **Clubs** o **Players**. Se guarda solo.
+4. **Build your world** → **Build and install** → **Yes**.
 
 **¿Necesitas una carrera nueva?** Sí: empieza una Liga Máster nueva después de cada cambio que
 construyas. Una carrera toma su propia copia de las ligas, los clubes y las plantillas cuando
 empieza, así que una carrera en la que ya estás conserva los antiguos. Y una carrera guardada con
-un mundo necesita ese mismo mundo para cargarse, así que mantén el mundo activado mientras la
+un mundo necesita ese mismo mundo para cargarse, así que mantén el mundo en el juego mientras la
 juegas.
 
 **Una versión más nueva de NewLife.** Pon sus partes en una carpeta nueva, abre esa carpeta con
-**Open NewLife Database...** y luego pulsa **Update my leagues to this version** (*Actualizar
-mis ligas a esta versión*). Cada liga conserva su nombre, división, formato, plazas europeas y
+**Open NewLife Database...** y luego **More ▾ → Update my leagues to this version** (*Más →
+Actualizar mis ligas a esta versión*). Cada liga conserva su nombre, división, formato, plazas europeas y
 copas; los clubes y las plantillas vienen de la versión nueva (la casilla **Keep my clubs**
 (*Mantener mis clubes*) conserva tu propia composición). Vuelve a construir y empieza una
 carrera nueva.
@@ -564,15 +565,15 @@ Hay dos maneras. Elige una:
 
 | | Paquete de ligas (`.fl26pack`) | Mundo exportado (`.zip`) |
 |---|---|---|
-| Qué lleva | Tus ligas como receta: clubes, nombres, escudos, logos, plantillas, caras y, si quieres, equipaciones y marcadores. | El mundo exactamente como lo construiste. |
-| La otra persona | Lo añade a su propia receta y construye, así que funciona junto a sus propias ligas y otros paquetes. | Lo instala y juega. No hay nada que construir, pero sustituye a cualquier otro mundo que tenga activado. |
+| Qué lleva | Tus ligas, listas para añadir a otro mundo: clubes, nombres, escudos, logos, plantillas, caras y, si quieres, equipaciones y marcadores. | El mundo exactamente como lo construiste. |
+| La otra persona | Lo añade a su propio mundo y construye, así que funciona junto a sus propias ligas y otros paquetes. | Lo instala y juega. No hay nada que construir, pero sustituye a cualquier otro mundo que tenga en el juego. |
 | Cómo lo instala | [Camino C de Instalar un paquete listo](install-a-pack.md#camino-c-un-paquete-de-ligas-fl26pack) | [Camino A de Instalar un paquete listo](install-a-pack.md#camino-a-un-mundo-listo-un-zip) |
 
 ### Un paquete de ligas
 
-1. Barra de la izquierda: **League packages** (*Paquetes de ligas*) → **Make a package...**
-   (*Crear un paquete...*) (o barra de arriba: **File → Make a league package...** (*Archivo →
-   Crear un paquete de ligas...*)).
+1. Barra de la izquierda: **Build your world**, pestaña **League packages** (*Paquetes de ligas*)
+   → **Make a package...** (*Crear un paquete...*) (o barra de arriba: **File → Make a league
+   package...** (*Archivo → Crear un paquete de ligas...*)).
 
 **Deberías ver:** una ventana **Make a league package** (*Crear un paquete de ligas*).
 
@@ -603,7 +604,8 @@ Más: [9. Paquetes de ligas](mod-studio-guide.md#9-paquetes-de-ligas-comparte-un
 ### Un mundo entero (zip)
 
 1. Construye primero (Paso 12). El mundo tiene que estar construido.
-2. Barra de la izquierda: **Build** → **Export the world...**.
+2. Barra de la izquierda: **Build your world** → **Step by step, and Export the world** →
+   **Export the world...**.
 3. Se abre una ventana para guardar con el nombre del mundo como nombre de archivo
    (`_FL26MyWorld.zip`), en tu carpeta de usuario la primera vez (después, en la última carpeta
    que usaste). Elige una carpeta y pulsa **Save**.
@@ -611,8 +613,9 @@ Más: [9. Paquetes de ligas](mod-studio-guide.md#9-paquetes-de-ligas-comparte-un
 **Deberías ver:** al cabo de un momento, `Saved <file>` y cuántos jugadores nuevos reciben una
 cara generada. El zip lleva la carpeta del mundo, su archivo de mundo y un léeme.
 
-Quien lo instala necesita los módulos de Mod Studio con el paquete de caras (**Build → 0. Install
-the modules**); sin ellos todos los jugadores nuevos se ven iguales. El léeme del zip lo dice.
+Quien lo instala necesita los módulos de Mod Studio con el paquete de caras; al instalar el zip
+en **Import your world** (*Importa tu mundo*) se ponen. Sin ellos todos los jugadores nuevos se
+ven iguales. El léeme del zip lo dice.
 
 Más: [9.1 Export the world](../en/mod-studio-guide.md#91-export-the-world-a-built-world-for-another-pc)
 (en inglés).
@@ -631,7 +634,7 @@ página, o en el registro de Build después de `error:`. `<...>` representa un n
 | `<file> is not a NewLife part (...) -- download it again` | La descarga se estropeó. Vuelve a descargar esa parte. |
 | Una liga gris, `a league takes 10 to 24 clubs` | Añade o deja fuera clubes (Paso 4) hasta que tenga de 10 a 24. |
 | Una liga gris, `the game's own league: Bring the game's leagues to this season` | El juego ya la tiene. Usa **Bring the game's leagues to this season...**. |
-| **Add to the recipe** se queda en gris | No hay nada añadible seleccionado, o la selección pasaría el límite de clubes nuevos (la línea de abajo). |
+| **Add to your world** se queda en gris | No hay nada añadible seleccionado, o la selección pasaría el límite de clubes nuevos (la línea de abajo). |
 | `<club> would play in two leagues (<league> and <league>).` | Desmarca el club en una de ellas. |
 | `<league> has no country the game knows.` | Esta liga no se puede añadir. |
 | `A league needs a name and a country.` / `Pick the country from the list.` | En **Edit league...**, rellena **Name** y elige el **Country** de la lista en lugar de escribirlo entero. |
@@ -642,18 +645,18 @@ página, o en el registro de Build después de `error:`. `<...>` representa un n
 | `Clubs, times and groups must be numbers.` | En **splits in two**, escribe los grupos como números, por ejemplo `6/6`. |
 | `A league playing February to December has no split, Apertura/Clausura, national cup or league cup yet.` | Pon **Season** en **August to May**, o quita la división en grupos, el Apertura/Clausura o las copas. |
 | `This division plays February to December with the league above it, and a league playing February to December has no split or Apertura/Clausura yet.` | Dale a esta división **everyone plays everyone**. |
-| `Clubs in no league are all new clubs: take the clubs of the game out first (Edit club).` | La liga tiene clubes del juego. En **New clubs** selecciona cada uno y usa **More ▾ → New club here**, luego vuelve a ajustar **Clubs in no league**. |
+| `Clubs in no league are all new clubs: take the clubs of the game out first (Edit club).` | La liga tiene clubes del juego. En la pestaña **Clubs** selecciona cada uno y usa **More ▾ → New club here**, luego vuelve a ajustar **Clubs in no league**. |
 | `<league> is below this league; clubs in no league have none.` (o `an exhibition league has none.`) | Otra liga tiene esta como su **Division**. Cambia primero esa liga. |
-| `A league has 10 to 24 clubs.` (New clubs) | Insert club / Remove club dejaría la liga fuera de 10 a 24. |
+| `A league has 10 to 24 clubs.` (pestaña Clubs) | Insert club / Remove club dejaría la liga fuera de 10 a 24. |
 | `Open the NewLife Database on the NewLife page first.` | **NewLife club...** necesita la carpeta de NewLife: ábrela una vez en **NewLife Database**. |
 | `Pick the club that takes its place.` / `Give the new club a name.` / `A club cannot take its own place.` | En **Club of the game**, elige un club sustituto, o escribe un nombre para el nuevo. |
 | `error: no game tables -- Settings > Unpack the game's tables` | **Settings → Unpack the game's tables** (*Ajustes → Desempaquetar las tablas del juego*). |
 | `error: no game folder -- Game > Choose the game folder` | **Game → Choose the game folder...** (*Juego → Elegir la carpeta del juego...*). |
-| `error: the world name must start with _FL26` | **Leagues → More ▾ → World name and recipe...**: un nombre que empiece por `_FL26`. |
-| `error: nothing to build: add a league or change one of the game's ...` | La receta está vacía. Añade ligas (pasos 3 a 5). |
+| `error: the world name must start with _FL26` | **Leagues → More ▾ → World name and file...**: un nombre que empiece por `_FL26`. |
+| `error: nothing to build: add a league or change one of the game's ...` | Tu mundo está vacío. Añade ligas (pasos 3 a 5). |
 | `error: <league>, club <n>: <club> plays in <...> -- pick the club that takes its place there` | Haz [Clubes que el juego ya tiene](#clubes-que-el-juego-ya-tiene) para ese club. |
 | `error: <league>, club <n>: the new club taking <club>'s place needs a name` | La misma ventana: escribe un nombre junto a **Its place goes to a new club, named:**. |
-| `error: <club> is in <league> and in <league>: a club plays in one league` | Saca el club de una liga (**New club here** en New clubs, o desmárcalo antes de añadir). |
+| `error: <club> is in <league> and in <league>: a club plays in one league` | Saca el club de una liga (**New club here** en la pestaña Clubs, o desmárcalo antes de añadir). |
 | `error: <n> new clubs, but the game has room for <m> more (a full squad each)` | Demasiados clubes nuevos. Quita una liga, o clubes. |
 | `error: <n> leagues, but the game has room for <m> ...` | Demasiadas ligas nuevas. Quita algunas. |
 | `error: <league> has <n> leagues below it; the game follows one link` / `... are all under ...` | Solo puede haber una liga bajo una liga. Cambia la **Division** de las demás. |
@@ -661,12 +664,12 @@ página, o en el registro de Build después de `error:`. `<...>` representa un n
 | `error: at most 2 split leagues for now ...` / `... only one league of a country can be split or Apertura/Clausura` | Dale a las demás ligas **everyone plays everyone**. |
 | `The game's tables Mod Studio uses are older than the game: ... Unpack them again first?` | Pulsa **Yes**. |
 | `<world> is not built yet: 2. Build the world first.` (Export the world) | Construye primero, luego exporta. |
-| `Give the package a name.` / `Tick at least one league.` / `The recipe has no leagues yet.` | En **Make a league package**, rellena **Name** y marca una liga; antes la receta necesita ligas. |
-| No hay ligas nuevas en Select Team | Empieza una Liga Máster **nueva**. Luego **Build → 4. After a start: check**. |
+| `Give the package a name.` / `Tick at least one league.` / `Your world has no leagues yet.` | En **Make a league package**, rellena **Name** y marca una liga; antes tu mundo necesita ligas. |
+| No hay ligas nuevas en Select Team | Empieza una Liga Máster **nueva**. Luego **4. After a start: check** (Paso 13). |
 | `sider.log is older than the world switched on -- start the game to the main menu, then check again` | Inicia el juego hasta su menú principal, ciérralo y vuelve a comprobar. |
-| `<module> not loaded` / `did NOT read the world file` | **Build → 0. Install the modules**, luego **3. Switch it on**, vuelve a iniciar el juego y vuelve a comprobar. Si sigue mal: pregunta en Discord. |
+| `<module> not loaded` / `did NOT read the world file` | **Build your world → Step by step, and Export the world → 0. Install the modules**, luego **3. Switch it on**, vuelve a iniciar el juego y vuelve a comprobar. Si sigue mal: pregunta en Discord. |
 | Los nombres de los clubes son los del juego, no los tuyos | Un guardado de Edit antiguo los esconde: **Move the Edit save aside** en la ventana **Build finished**, o saca `EDIT00000000` de la carpeta de guardado del juego. |
-| Todos los jugadores nuevos tienen la misma cara | **Build → 0. Install the modules** (trae el paquete de caras) y vuelve a iniciar el juego. |
+| Todos los jugadores nuevos tienen la misma cara | **Home → Install now** (*Inicio → Instalar ahora*, cuando Home dice que los módulos faltan o son antiguos), o **Build your world → Step by step, and Export the world → 0. Install the modules**: trae el paquete de caras. Luego vuelve a iniciar el juego. |
 
 **Para pedir ayuda:** en el [Discord](https://discord.gg/StQqtk3G3M), manda una captura de lo que
 ves, el texto del registro de Build y tu `sider.log` (**Game → Open sider.log** (*Juego → Abrir
