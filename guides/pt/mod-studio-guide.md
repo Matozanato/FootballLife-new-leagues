@@ -659,6 +659,12 @@ aperte **Export the world...** na página Build (depois de **2. Build the world*
 - `SiderAddons\livecpk\<world>\...`: a pasta inteira do mundo, com o **arquivo do mundo**
   `fl26world.txt`. As linhas `newfaces` / `faceapp` nesse arquivo listam os jogadores novos que ganham um
   rosto gerado. Sem elas todo jogador novo fica com a mesma cara.
+- `SiderAddons\content\kit-server\<world>\...` e `...\scoreboard-server\<world>\...`: os
+  **uniformes** e **placares** do mundo, cada um com um `map.txt` / `map_competitions.txt` só com as
+  linhas deste mundo. Uniformes de outro pacote que os clubes do mundo usam vão junto em `<world>\_kits\`;
+  placares e temas de menu de outro pacote (um modpack) para as competições do mundo vão junto em
+  `<world>\_packs\` (scoreboard-server e menu-server). Os temas só aparecem com o módulo Menu Server
+  ligado no `sider.ini` de quem recebe (`lua.module = "MenuServer.lua"`).
 - `READ ME - FL26 world.txt` e `fl26worldpack.json`: o que quem recebe precisa.
 
 **Quem recebe precisa dos módulos do Mod Studio com o pacote de rostos** (`modules\fl26regen_faces.bin`):

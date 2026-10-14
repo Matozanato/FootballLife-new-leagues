@@ -3,6 +3,15 @@
 0.2.4 is a bug-fix update (in progress). Nothing new to learn: Install the modules, Build
 once, and your 0.2.2 career keeps working.
 
+## Changed
+
+- **Export the world takes the scoreboards and menu themes of other packs along.** When the
+  switched-on map lines of the Scoreboard Server or Menu Server on your PC give the world's
+  competitions (its leagues, cups, super cups, confederation cups) a board or a theme from another
+  pack, a modpack's, the zip carries those folders under `<world>\_packs` with their map lines, as
+  it already did for kits. The receiver needs nothing else; the themes show with the Menu Server
+  module on in `sider.ini`. Guide 9.1.
+
 ## Fixed
 
 - **Cup mode: a saved cup (World Cup, Euro...) could not be loaded.** With the modules the

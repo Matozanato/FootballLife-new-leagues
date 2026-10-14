@@ -7,7 +7,8 @@ them every new player looks the same (08.10., the modpack world).
 Export the world -> zip -> Install mods on another Sider folder: the world folder lands under its
 own name, the world file lands in modules, removing the mod puts the old world file back.  A
 SiderAddons copy whose world folder lost its world file takes the one in its modules folder.
-The world's kits and scoreboards (content\\<server>\\<world> and their map lines) go along.
+The world's kits and scoreboards (content\\<server>\\<world> and their map lines) go along, and so
+do the scoreboards and menu themes another pack gives the world's competitions (<world>\\_packs).
 """
 import os, shutil, sys, tempfile, zipfile
 
@@ -137,6 +138,45 @@ def main():
             assert not any("_FL26Other" in n for n in names), names
             assert "SiderAddons/content/scoreboard-server/%s/L One/board.dds" % WORLD in names
             assert "Kits (3 clubs)" in z.read(I.WORLD_README).decode()
+        # ---- scoreboards and menu themes another pack gives the world's competitions (a modpack's) ----
+        put(os.path.join(a, "livecpk", WORLD, I.WORLD_FILE),
+            TEXT + "league 76 cid=136 cup=268 name=HNL\nccup 286 ko=287 name=CAF\n")
+        assert I.world_competitions(os.path.join(a, "livecpk", WORLD, I.WORLD_FILE)) == {1, 76, 136, 268, 286, 287}
+        put(os.path.join(a, "content", "scoreboard-server", "map_competitions.txt"),
+            "263, %s\\L One   %s L One\n76, Modpack\\HNL   # SuperSport HNL\n268, Modpack\\Cup\n"
+            "99, Modpack\\Other\n#287, Modpack\\Off\n287, Modpack\\Gone\n" % (WORLD, tag))
+        put(os.path.join(a, "content", "scoreboard-server", "Modpack", "HNL", "board.dds"), "h")
+        put(os.path.join(a, "content", "scoreboard-server", "Modpack", "Cup", "c.dds"), "c")
+        put(os.path.join(a, "content", "scoreboard-server", "Modpack", "Off", "o.dds"), "o")
+        put(os.path.join(a, "content", "menu-server", "map_competitions.txt"),
+            '76, "Modpack\\HNL"   # themes\n136, "Modpack\\HNL"\n')
+        put(os.path.join(a, "content", "menu-server", "Modpack", "HNL", "theme.dds"), "t")
+        zq = os.path.join(tmp, WORLD + "-packs.zip")
+        info = I.export_world(a, WORLD, zq)
+        assert info["scoreboards"] == 3 and info["scoreboards_borrowed"] == 2, info     # 263 ours, 76, 268 lent
+        assert info["menus"] == 2 and info["menus_borrowed"] == 2, info                 # both lines, one folder
+        with zipfile.ZipFile(zq) as z:
+            names = set(z.namelist())
+            sm = z.read("SiderAddons/content/scoreboard-server/map_competitions.txt").decode().splitlines()
+            assert "76, %s\\_packs\\Modpack\\HNL   # SuperSport HNL %s scoreboard of Modpack\\HNL" % (WORLD, tag) in sm, sm
+            assert "268, %s\\_packs\\Modpack\\Cup   %s scoreboard of Modpack\\Cup" % (WORLD, tag) in sm, sm
+            assert not any(l.startswith(("99,", "287,", "#")) for l in sm), sm
+            mm = z.read("SiderAddons/content/menu-server/map_competitions.txt").decode().splitlines()
+            assert '76, "%s\\_packs\\Modpack\\HNL"   # themes %s menu of Modpack\\HNL' % (WORLD, tag) in mm, mm
+            assert "SiderAddons/content/scoreboard-server/%s/_packs/Modpack/HNL/board.dds" % WORLD in names, names
+            assert "SiderAddons/content/scoreboard-server/%s/_packs/Modpack/Cup/c.dds" % WORLD in names
+            assert not any("Modpack/Off" in n or "Modpack/Other" in n for n in names), names
+            assert sum(1 for n in names if n.endswith("theme.dds")) == 1, names
+            assert "menu themes (2 competitions)" in z.read(I.WORLD_README).decode()
+        h = sider(os.path.join(tmp, "h"))
+        rec, ini = install(h, zq)
+        sm = open(os.path.join(h, "content", "scoreboard-server", "map_competitions.txt"), encoding="utf-8").read()
+        assert "76, %s\\_packs\\Modpack\\HNL" % WORLD in sm, sm
+        assert os.path.isfile(os.path.join(h, "content", "scoreboard-server", WORLD, "_packs", "Modpack", "HNL", "board.dds"))
+        assert os.path.isfile(os.path.join(h, "content", "menu-server", WORLD, "_packs", "Modpack", "HNL", "theme.dds"))
+        I.uninstall(Game(h), ini, rec)
+        hm = os.path.join(h, "content", "scoreboard-server", "map_competitions.txt")
+        assert not os.path.exists(hm) or WORLD not in open(hm, encoding="utf-8").read()   # the whole map was ours
         # another PC with a kit line of its own for the same club: ours replaces it, removal brings it back
         f = sider(os.path.join(tmp, "f"))
         own = '72001, "Mine\\Old"\n'

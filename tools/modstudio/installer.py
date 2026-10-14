@@ -40,8 +40,10 @@ EXTRA_SERVERS = {"soundtrack-server", "turf-loader", "ui-colors", "fans-server",
 WORLD_FILE = "fl26world.txt"             # the world file of a League Builder world
 FACE_PACK = "fl26regen_faces.bin"        # Mod Studio's face pack; Install the modules puts it in modules
 OUR_LINE = "# FL26 Mod Studio:"          # the end of a map line Build wrote (lbstadiums.TAG)
-WORLD_SERVERS = ("kits", "scoreboards")  # what Build writes under content\<server>\<world>
+WORLD_SERVERS = ("kits", "scoreboards", "menus")   # content\<server>\<world>: Build writes kits and scoreboards
 BORROWED = "_kits"                       # content\kit-server\<world>\_kits: other packs' kits a world zip carries
+PACKS = "_packs"                         # content\<server>\<world>\_packs: other packs' scoreboards / menu themes
+PACK_OF = {"scoreboards": "scoreboard", "menus": "menu"}   # ... of the world's competitions a world zip carries
 WORLD_README = "READ ME - FL26 world.txt"
 WORLD_INFO = "fl26worldpack.json"
 WORLD_NOTE = "a League Builder world: it is switched on, its world file goes to modules\\fl26world.txt"
@@ -99,6 +101,53 @@ def world_lines(path, world):
     return out
 
 
+def world_competitions(path):
+    """the competition ids a world file names: each league's id (what the competition maps of
+    the Scoreboard and Menu Servers key a league by) and its competition id, its cup and super
+    cup, the confederation cups and their knock-out stages"""
+    ids = set()
+    try:
+        with open(path, encoding="utf-8", errors="replace") as f:
+            for line in f:
+                w = line.split()
+                if w[:1] in (["league"], ["ccup"]) and len(w) > 1 and w[1].isdigit():
+                    ids.add(int(w[1]))
+                    for t in w[2:]:
+                        k, _s, v = t.partition("=")
+                        if k in ("cid", "cup", "scup", "ko") and v.isdigit():
+                            ids.add(int(v))
+    except OSError:
+        pass
+    return ids
+
+
+def pack_lines(path, world, comps):
+    """the switched-on lines of a competition map (Scoreboard Server, Menu Server) for the
+    world's competitions `comps` that point outside <world>\\ -- what another pack (a modpack's
+    boards and themes) gives them: [(competition id, folder, quoted, comment)], every line, in
+    the map's order (a competition listed twice is picked at random)"""
+    try:
+        with open(path, "rb") as f:
+            raw = f.read()
+    except OSError:
+        return []
+    if raw.startswith(b"\xef\xbb\xbf"):
+        raw = raw[3:]
+    out = []
+    for l in raw.decode("utf-8", "replace").split("\n"):
+        s = l.strip()
+        if not s or s.startswith("#") or OUR_LINE in s:
+            continue
+        m = re.match(r'(\d+)\s*,\s*("?)([^#"]+?)\2\s*(#.*)?$', s)
+        if not m or int(m.group(1)) not in comps:
+            continue
+        folder = m.group(3).strip().strip("\\/")
+        if not folder or folder.lower().startswith((world + "\\").lower()):
+            continue
+        out.append((int(m.group(1)), folder, bool(m.group(2)), (m.group(4) or "").strip()))
+    return out
+
+
 def borrowed_kits(path, world, teams, have):
     """the world's clubs whose kit comes from a line of another pack (SPFL26's own folders, a
     modpack ...): [(team id, kit folder as in the map)], one per club, the first line in
@@ -152,13 +201,16 @@ Install them once: League Builder > Build > 0. Install the modules (or Build and
 the newfaces / faceapp lines of fl26world.txt. Without the modules, or without
 fl26world.txt in SiderAddons\\modules, every new player looks the same.
 
-Kits ({kits} clubs) and scoreboards ({boards} leagues), when the world has them, are in
-SiderAddons\\content (Kit Server, Scoreboard Server): Install mods adds their map lines.
+Kits ({kits} clubs), scoreboards ({boards} competitions) and menu themes ({menus} competitions),
+when the world has them, are in SiderAddons\\content (Kit Server, Scoreboard Server, Menu
+Server): Install mods adds their map lines. Scoreboards and themes of another pack that this
+world's competitions use (a modpack's) are under <world>\\_packs. The themes show only with
+the Menu Server module on in sider.ini (lua.module = "MenuServer.lua").
 
 By hand: copy SiderAddons into the game folder, copy livecpk\\{world}\\fl26world.txt to
 SiderAddons\\modules\\fl26world.txt, and put  cpk.root = ".\\livecpk\\{world}"  in
 sider.ini above the other roots (with any other _FL26 world switched off). For the kits and
-scoreboards add the lines of the zip's map.txt / map_competitions.txt to your own.
+scoreboards and themes add the lines of the zip's map.txt / map_competitions.txt to your own.
 """
 
 
@@ -175,7 +227,10 @@ def export_world(sider_dir, world, out, log=lambda t: None):
     The world's kits and scoreboards go too: Build puts them in content\<server>\<world> (Kit
     Server, Scoreboard Server) with a map line each.  The zip has them as
     SiderAddons\content\<server>\<world>\... next to a map file of only those lines, which
-    Install mods merges into the receiver's map (and takes out again on removal).
+    Install mods merges into the receiver's map (and takes out again on removal).  What the
+    world uses of other packs goes along the same way: the kits its clubs wear (<world>\_kits)
+    and the scoreboards and menu themes the switched-on map lines give its competitions, a
+    modpack's boards and themes (<world>\_packs, see world_competitions / pack_lines).
     Returns the info written to fl26worldpack.json."""
     root = os.path.join(sider_dir, "livecpk", world)
     wf = os.path.join(root, WORLD_FILE)
@@ -190,30 +245,37 @@ def export_world(sider_dir, world, out, log=lambda t: None):
             "world_file": "SiderAddons/livecpk/%s/%s" % (world, WORLD_FILE),
             "needs": ["FL26 Mod Studio modules with the face pack (%s): League Builder > Build > "
                       "0. Install the modules" % FACE_PACK]}
+    comps = world_competitions(use)
     content = os.path.join(sider_dir, "content")
-    extra = []                            # (server, its folder here, our map lines of this world)
+    extra = []                            # (server, its folder here, our map lines of this world, lent folders)
     for key in WORLD_SERVERS:
         s = S.BY_KEY[key]
         here = os.path.join(content, s.folder_in(content))
-        lines = world_lines(os.path.join(here, s.maps[0].file), world)
-        if not os.path.isdir(os.path.join(here, world)):
-            lines = []
-        lent = []                         # kits of other packs the world's clubs wear: they go too
-        if key == "kits":
+        mp = os.path.join(here, s.maps[0].file)
+        lines = world_lines(mp, world) if os.path.isdir(os.path.join(here, world)) else []
+        lent = []                         # what the world uses of other packs, (folder here, folder in the zip): it goes too
+        if key == "kits":                 # kits of other packs the world's clubs wear
             have = [int(l.split(b",", 1)[0]) for l in lines if l.split(b",", 1)[0].strip().isdigit()]
-            for tid, folder in borrowed_kits(os.path.join(here, s.maps[0].file), world,
-                                             world_teams(root), have):
+            for tid, folder in borrowed_kits(mp, world, world_teams(root), have):
                 if os.path.isdir(os.path.join(here, folder)):
                     lent.append((os.path.join(here, folder), "%s\\%s\\%s" % (world, BORROWED, folder)))
                     lines.append(('%d, "%s\\%s\\%s"   %s kit of %s' % (
                         tid, world, BORROWED, folder, OUR_LINE, folder)).encode("utf-8"))
+        else:                             # scoreboards / menu themes other packs give the world's competitions
+            for cid, folder, quoted, note in pack_lines(mp, world, comps):
+                if os.path.isdir(os.path.join(here, folder)):
+                    dst = "%s\\%s\\%s" % (world, PACKS, folder)
+                    lent.append((os.path.join(here, folder), dst))
+                    lines.append(('%d, %s   %s%s %s of %s' % (
+                        cid, '"%s"' % dst if quoted else dst, note + " " if note else "", OUR_LINE,
+                        PACK_OF[key], folder)).encode("utf-8"))
         if lines:
             extra.append((s, here, lines, lent))
         info[key] = len(lines)
         if lent:
-            info["kits_borrowed"] = len(lent)
+            info[key + "_borrowed"] = len(lent)
     text = README.format(world=world, pack=FACE_PACK, faces=faces, kits=info["kits"],
-                         boards=info["scoreboards"]).replace("\n", "\r\n")
+                         boards=info["scoreboards"], menus=info["menus"]).replace("\n", "\r\n")
     part = out + ".part"
     n = 0
     with zipfile.ZipFile(part, "w", zipfile.ZIP_DEFLATED) as z:
@@ -221,7 +283,7 @@ def export_world(sider_dir, world, out, log=lambda t: None):
         z.writestr(WORLD_INFO, json.dumps(info, indent=1, ensure_ascii=False))
         for s, here, lines, lent in extra:
             z.writestr("SiderAddons/content/%s/%s" % (s.folder, s.maps[0].file), b"\r\n".join(lines) + b"\r\n")
-            done = set()
+            done, written = set(), set()
             for src, dst in [(os.path.join(here, world), world)] + lent:
                 if dst.lower() in done or not os.path.isdir(src):
                     continue
@@ -231,9 +293,13 @@ def export_world(sider_dir, world, out, log=lambda t: None):
                     for f in sorted(fn):
                         p = os.path.join(dp, f)
                         rel = os.path.relpath(p, src).replace(os.sep, "/")
-                        if dst == world and rel.lower().startswith(BORROWED.lower() + "/"):
-                            continue              # an older copy of borrowed kits: the fresh one goes
-                        z.write(p, "SiderAddons/content/%s/%s/%s" % (s.folder, dst.replace("\\", "/"), rel))
+                        if dst == world and rel.lower().startswith((BORROWED.lower() + "/", PACKS.lower() + "/")):
+                            continue              # an older copy of borrowed kits / packs: the fresh one goes
+                        name = "SiderAddons/content/%s/%s/%s" % (s.folder, dst.replace("\\", "/"), rel)
+                        if name.lower() in written:
+                            continue              # a pack folder inside another one already written
+                        written.add(name.lower())
+                        z.write(p, name)
                         n += 1
             log("%s: %d map line(s) from %s%s" % (s.title, len(lines), here,
                 ", %d of them kits of other packs" % len(lent) if lent else ""))
@@ -249,8 +315,8 @@ def export_world(sider_dir, world, out, log=lambda t: None):
                 if n % 2000 == 0:
                     log("%d files ..." % n)
     os.replace(part, out)
-    log("wrote %s: %d files, %d players with generated faces, %d kits, %d scoreboards"
-        % (out, n, faces, info["kits"], info["scoreboards"]))
+    log("wrote %s: %d files, %d players with generated faces, %d kits, %d scoreboards, %d menu themes"
+        % (out, n, faces, info["kits"], info["scoreboards"], info["menus"]))
     return info
 
 

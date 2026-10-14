@@ -668,6 +668,12 @@ press **Export the world...** on the Build page (after **2. Build the world**). 
   receiver's game loads (`content\kits` for SPFL26's own one). A club of the world that wears
   a kit from another pack on your PC (SPFL26's Other Europe, a modpack) takes a copy of that kit
   along, in `<world>\_kits\`, so the receiver does not need that pack.
+- `SiderAddons\content\scoreboard-server\<world>\_packs\...` and
+  `...\menu-server\<world>\_packs\...`: the **scoreboards and menu themes of other packs** that
+  the switched-on map lines on your PC give the world's competitions (a modpack's boards and
+  themes for its leagues, cups and super cups). They come with their map lines, pointed at
+  `<world>\_packs\`, so the receiver does not need that pack either. The themes show only when
+  the Menu Server module is on in the receiver's `sider.ini` (`lua.module = "MenuServer.lua"`).
 - `READ ME - FL26 world.txt` and `fl26worldpack.json`: what the receiver needs.
 
 **The receiver needs Mod Studio's modules with the face pack** (`modules\fl26regen_faces.bin`):
