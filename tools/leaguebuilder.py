@@ -493,6 +493,13 @@ class BuildError(Exception):
     pass
 
 
+def squads_cut(said):
+    """(clubs given a squad, new clubs) when mkplayers' output says the player cap left it room
+    for only some of the new clubs; None when every club got one"""
+    m = re.search(r"so (\d+) of the (\d+) new clubs get squads", said or "")
+    return (int(m.group(1)), int(m.group(2))) if m else None
+
+
 def call(mod, args):
     """run a tool's main() in this process (so the frozen .exe needs no Python), return its output"""
     old, buf = sys.argv, io.StringIO()
@@ -3430,7 +3437,16 @@ def build(pl, base, game, replace=False, log=print):
         import mkplayers
         have = len(pesdb.wesys_unpack(open(os.path.join(base, "Player.bin"), "rb").read())) // 312
         per = squad_size(have, made)
-        call(mkplayers, ["--base", base, "--out", tmp, "--per", per, "--cap", PLAYER_CAP])
+        said = call(mkplayers, ["--base", base, "--out", tmp, "--per", per, "--cap", PLAYER_CAP])
+        cut = squads_cut(said)
+        if cut:
+            # mkplayers fills the clubs in id order and stops at the cap without a word of its
+            # own in the log; the clubs after it had no players at all (B28, the Modpack: 80 of
+            # 1212 clubs). A Build that ran past plan's clubs_room (a wrapper, a bigger SQUAD)
+            # stops here instead of writing a world the game crashes in
+            raise BuildError("%d new clubs, but the player table (%d) has room for squads of %d for %d of them: "
+                             "fewer clubs or smaller squads, else the last %d clubs have no players and the game "
+                             "crashes when one is picked" % (cut[1], PLAYER_CAP, per, cut[0], cut[1] - cut[0]))
         log("  squads of %d for %d clubs" % (per, made) + ("" if per == SQUAD else
             " (%d new clubs: %d players each would pass the %d player records)" % (made, SQUAD, PLAYER_CAP)))
     import lbplayers
@@ -3448,6 +3464,17 @@ def build(pl, base, game, replace=False, log=print):
     if os.path.exists(os.path.join(db, "Player.bin")):   # a world of cups only keeps the game's players
         lbplayers.sign_keepers(db, log)
         lbplayers.line_up(db, base, recipe_ordered(filled, clubs), log)
+        # every new club can field a side, whatever left it short (B28): the game crashes when a
+        # club with no players is picked, and Become a Legend does not start
+        short = lbplayers.short_squads(db, new_of)
+        if short:
+            names = {tid: "%s (%s)" % (club_name(p, k), p["name"]) for p in clubs["leagues"]
+                     for k, tid in enumerate(p.get("teams") or []) if tid in short}
+            raise BuildError("%d club(s) with fewer than %d players -- the game crashes when one is picked:\n  "
+                             % (len(short), lbplayers.MIN_SQUAD)
+                             + "\n  ".join("%s, id %d: %d" % (names.get(t, "club"), t, n)
+                                           for t, n in sorted(short.items())[:20])
+                             + ("\n  ... and %d more" % (len(short) - 20) if len(short) > 20 else ""))
     if ids:                                            # for Mod Studio's Players page and its CSV
         with open(os.path.join(tmp, PLAYER_IDS), "w", encoding="utf-8") as f:
             json.dump({"world": pl["world"], "clubs": ids, "names": id_names(filled, ids)}, f, indent=1, sort_keys=True)

@@ -14,6 +14,15 @@ once, and your 0.2.2 career keeps working.
 
 ## Fixed
 
+- **A world could be built with clubs that have no players; picking one crashed the game.** The
+  placeholder squads are handed out in club-id order and stop at the player table's cap (61905
+  with the modules installed) without a word in the Build log; a world past the cap -- 1212 new
+  clubs with squads of 30 -- got its last 80 clubs with no players at all, and the Build log said
+  only `no player 0, skipped` for each of their squad edits. In the game such a club crashes
+  when picked, and Become a Legend does not start. Build now stops when the placeholder squads
+  do not reach every club, saying how many fit, and stops at the end if any new club has fewer
+  than 18 players; Mod Studio's checks say so about a world that is already built (build it again).
+  The Build page's own count of the room (Checks) was already right for a Build inside Mod Studio.
 - **A database mod that moves the game's leagues (UML 2026 v3) got the wrong countries and the
   wrong NewLife leagues.** With Settings on the mod's tables (**Use another tables folder**),
   Mod Studio still took a game league's country from its slot: UML's Ligue 1, in the Russian
