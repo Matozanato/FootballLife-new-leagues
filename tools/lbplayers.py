@@ -51,8 +51,7 @@ import playeredit as E
 
 P_REC, P_ID = E.P_REC, E.P_ID
 A_REC = E.A_REC
-SQUAD = 22            # places of a new club: leaguebuilder.SQUAD, which Build sets here (22 since 0.2.2,
-                      # the lim2400 layout); 30 here with 22 built left places 23-30 "skipped" (14.10.2026)
+SQUAD = 30            # places of a new club: leaguebuilder.SQUAD, which Build sets here (run3: the Modpack's)
 MIN_SQUAD = 18        # a new club may lose players down to this: eleven and seven on the bench
 FIELDS = list(E.FIELDS)
 CLUB_MAX = 40         # the most players a shipped club has
@@ -1022,7 +1021,7 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
                     later.setdefault(club, {})[key] = ch   # a player who joins: once he is there
                     continue
                 if not club.isdigit() and key.isdigit() and int(key) >= len(where):
-                    beyond.append(int(key))          # a place past the squad Build made (a 0.2.2/0.2.3 recipe)
+                    beyond.append(int(key))          # a place past the squad Build made (squad_size, or 0.2.2/0.2.3's 22)
                     continue
                 log("  players of %s: no player %s, skipped" % (club, key))
                 continue

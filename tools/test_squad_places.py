@@ -1,6 +1,6 @@
-"""python test_squad_places.py -- a new club's places are the squad Build makes (pepponeee98,
-14.10.2026: Build made 22 since 0.2.2 while NewLife and Players still lined up 30, and places
-23-30 came out as "no player N, skipped")"""
+"""python test_squad_places.py -- a new club gets 30 players again, and its places are the squad
+Build makes (pepponeee98, 14.10.2026: 0.2.2/0.2.3 built 22 while NewLife and Players lined up 30,
+and places 23-30 came out as "no player N, skipped"; 22 had never been agreed)"""
 import os
 import re
 import sys
@@ -29,7 +29,10 @@ def row(pos, level):
 
 
 def main():
-    ok("the Players page and NewLife take the squad Build makes", P.SQUAD == B.SQUAD == 22)
+    ok("the Players page and NewLife take the squad Build makes, 30", P.SQUAD == B.SQUAD == 30)
+    ok("a world of the shipped tables gets 30 a club", B.squad_size(27927, 1100) == 30)
+    ok("only when 30 each would pass the player records, fewer", B.squad_size(27927, 1400) == (61905 - 27927) // 1400)
+    ok("never below 22", B.squad_size(27927, 5000) == B.SQUAD_FIT == 22)
     src = open(os.path.join(HERE, "leaguebuilder.py"), encoding="utf-8").read()
     sites = re.findall(r"(?m)^( +)import lbplayers\n(.*)\n", src)
     ok("every Build step hands its squad size on (run3's 30 for the Modpack too)",

@@ -247,7 +247,9 @@ OTHERS_NAMES = {2: "Other European", 6: "Other Latin American", 3: "Other Asia-O
                 7: "Other Africa", 1: "Classic Teams"}
 REGION_FIRST, REGION_LAST = 29, M.REGION_MAX
 CID_FROM = 130
-SQUAD, PLAYER_CAP = 22, 61905            # 0.2.2: the lim2400 layout (--player-cap 61905); 30 a squad up to 0.2.1
+SQUAD, PLAYER_CAP = 30, 61905            # a new club's squad, and the player records of the lim2400 layout
+SQUAD_FIT = 22                           # only a world with more new clubs than 30 each leave room for takes
+                                         # fewer, down to this (0.2.2/0.2.3 gave every world 22: not agreed, 14.10.2026)
 TEAM_CAP = 2400                          # clubs in all, shipped ones included (1536 up to 0.2.1)
 MAX_SPLITS = 2                           # split seasons tested so far: two at a time (191..196)
 # national cups to copy, by the clubs the game puts in them: the top division alone, or the top
@@ -1293,10 +1295,17 @@ def home_supercup(regrow, region_of_cid, region):
 
 def clubs_room(base):
     """how many new clubs fit: the club table stops at TEAM_CAP (the wall a 1536th club met,
-    fl26-800-klubova-igra), and every new club takes SQUAD of the PLAYER_CAP player records
-    the installed patch set allows -- with the shipped tables both come to 793"""
+    fl26-800-klubova-igra), and every new club takes at least SQUAD_FIT of the PLAYER_CAP player
+    records the installed patch set allows (SQUAD while they last, squad_size)"""
     n = lambda f, rec: len(pesdb.wesys_unpack(open(os.path.join(base, f), "rb").read())) // rec
-    return min(TEAM_CAP - n("Team.bin", W.T_REC), (PLAYER_CAP - n("Player.bin", 312)) // SQUAD)
+    return min(TEAM_CAP - n("Team.bin", W.T_REC), (PLAYER_CAP - n("Player.bin", 312)) // SQUAD_FIT)
+
+
+def squad_size(have, made):
+    """the squad each of `made` new clubs gets when the tables hold `have` players: SQUAD, unless
+    the player records left run out first -- then as many as they give each, down to SQUAD_FIT
+    (clubs_room refuses a world below that)"""
+    return max(SQUAD_FIT, min(SQUAD, (PLAYER_CAP - have) // max(made, 1)))
 
 
 def august_countries(recipe):
@@ -3360,8 +3369,11 @@ def build(pl, base, game, replace=False, log=print):
 
     if made:
         import mkplayers
-        call(mkplayers, ["--base", base, "--out", tmp, "--per", SQUAD, "--cap", PLAYER_CAP])
-        log("  squads of %d for %d clubs" % (SQUAD, made))
+        have = len(pesdb.wesys_unpack(open(os.path.join(base, "Player.bin"), "rb").read())) // 312
+        per = squad_size(have, made)
+        call(mkplayers, ["--base", base, "--out", tmp, "--per", per, "--cap", PLAYER_CAP])
+        log("  squads of %d for %d clubs" % (per, made) + ("" if per == SQUAD else
+            " (%d new clubs: %d players each would pass the %d player records)" % (made, SQUAD, PLAYER_CAP)))
     import lbplayers
     lbplayers.SQUAD = SQUAD                # a new club's places: the squads Build makes
     faces, ids, portraits = [], {}, []
