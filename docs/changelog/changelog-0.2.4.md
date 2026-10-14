@@ -14,6 +14,16 @@ once, and your 0.2.2 career keeps working.
 
 ## Fixed
 
+- **A league with a place in the game's Copa Libertadores played the day before or after it.**
+  Nacional (Uruguay) had a league round on 22 September and the Libertadores quarter-final on
+  the 23rd. The fixture module now asks the game for the Libertadores days (qualifying round,
+  group stage, knockout) when the first league is dated and keeps such a league two days clear
+  of them, as it does of a continental cup of ours. Thanks antonimus.
+- **A calendar-year league played the day after its own cup.** The cup's days (the `dates ...
+  days=` line of a January-December country) were kept clear only when the league was spaced
+  the old way, not by the real-calendar scheduler: the Copa AUF Uruguay's second round on 18
+  April, the league on the 19th. Both schedulers keep a day clear of them now, two on the
+  first try, like the cup days of every other country. Thanks antonimus.
 - **FL26 update 2.2 (`data_s25262b.cpk`): Mod Studio read its tables before the older ones.**
   The game's files were taken in alphabetical order, which puts `data_s25262b` before
   `data_s2526b`, so the newest tables were covered by older ones and the version label said
