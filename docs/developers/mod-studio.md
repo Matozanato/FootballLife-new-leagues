@@ -264,7 +264,7 @@ and `tools/lbplayers.py`):
   of the game with that shape (`tools/mktactics.py`).
 - Under `"players"`, per club: `"join"` (players who come to the club and keep their record: a
   transfer to a club, a call-up to a national team), `"id"` (a new player's own id, up to
-  399999) and `"coach_portrait"` (a picture Build writes to
+  262143 -- the game packs a player id into 18 bits) and `"coach_portrait"` (a picture Build writes to
   `common/render/symbol/coach/coach_<coach id>.png`, 256 x 256), and `"stadium"`
   (`{"folder": "Region\Stadium", "slot": "009", "name": ...}`, a folder of Stadium Server's
   library: Switch on writes it to `content/stadium-server/map_teams.txt` with the club's built

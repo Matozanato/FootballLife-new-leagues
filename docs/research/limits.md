@@ -179,6 +179,26 @@ season loaded and posting the output would genuinely help.**
 
 It attaches no debugger (this exe kills itself under one), reads only, and writes nothing.
 
+## Player ids stop at 262143 (2026-10-14)
+
+The engine packs a player id into 18 bits: the handle it keeps is `id << 14 | n`, in 32 bits.
+A world with a player whose id is 262144 or more boots and plays an exhibition match, but a new
+Master League crashes while it is being created: the season set-up (`0x140f32470`) walks every
+club's players, asks the player table for each one (`0x1414bc9a0`) and dereferences the answer
+at `0x140f325a4`; for an id above 18 bits the lookup returns nothing (Event Viewer: fault offset
+`0xf325a4`, exception `0xc0000005`).
+
+Measured on the Modpack world: the build of 13.10. (highest player id 220246) creates a season,
+the builds of 14.10. 08:43 (262868, 725 players over the line) and 10:53 (288301, 1878 players)
+crash every time, and the same world with the 13.10. player table creates one again. Neither
+the caps set nor the Swiss module had anything to do with it (both were A/B-tested).
+
+Mod Studio's Build (`tools/lbplayers.py`) therefore gives a new player the first free id above
+the game's own (179672) instead of max + 1 -- a world that is rebuilt over and over would
+otherwise drift upwards with every Build, as this one did (220246 -> 245820 -> 262868 -> 288301)
+-- and refuses to build past 262143. The game's own 27,927 players leave room for some 234,000
+new ones below the line. The team id has the same 18-bit handle; our clubs stay far below it.
+
 ## Rulebook ids above 175
 
 They work. A league on an id above 175 generates, schedules and plays a full Master League

@@ -273,7 +273,8 @@ League logo** on the *Build* page. Build the world again after you change one.
 For your **new** clubs and players, yes, since 0.1.4: **Club ID** next to the club and **Player
 ID** on the player's Basics tab. Use it when a kit, crest or face pack was made for a certain id.
 A new club's id is from the first one after the game's clubs (71578) up to 81919; a new player's
-is above the game's highest, up to 399999. The game's own clubs and players keep their ids: its
+is the first free one above the game's highest, up to 262143 (the game packs a player id
+into 18 bits; a higher id crashes the game when a Master League is created). The game's own clubs and players keep their ids: its
 kits, faces and your saves are tied to them.
 
 ### Can I edit a national team, or move a player to another club?

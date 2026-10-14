@@ -68,7 +68,7 @@ UTF-8, with a header row, one player per row:
 
 | column | meaning |
 |---|---|
-| `newlife_id` | the player's id in the release. For a player the game has, this is usually the game's player id. Other players are numbered from 400000 up (`blocks.players`) |
+| `newlife_id` | the player's id in the release. For a player the game has, this is usually the game's player id. Other players are numbered from 400000 up (`blocks.players`); that is the release's own key -- at Build the game gets a free id below 262144, the most the game's 18-bit player id holds |
 | `game_id` | the game's player id when the game has him, else empty |
 | `name` | the player's name |
 | `birth_date` | the birth date (not used by Build; `Age` is) |
