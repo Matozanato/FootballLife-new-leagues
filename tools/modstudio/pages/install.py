@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (QComboBox, QFileDialog, QFrame, QLabel, QLineEdit
 from .. import installer as I, theme
 from ..i18n import _
 from ..roots import human
-from ..ui import Page, section, hint, row, ask, error, info, run_job
+from ..ui import Page, section, hint, row, ask, error, info, run_job, can_write, denied
 
 ROW = Qt.UserRole
 KIND = {"root": "Content folder (livecpk)", "content": "Content server files", "module": "Lua module",
@@ -229,6 +229,8 @@ class Install(Page):
         if ini is None:
             error(self, "Install mods", _("There is no sider.ini in SiderAddons."))
             return
+        if not can_write(self, self.app.game):        # a game under Program Files (B14)
+            return
         self.app.busy(True, _("Installing %s") % name)
         self.go.setEnabled(False)
         log = []
@@ -253,6 +255,8 @@ class Install(Page):
         def failed(tb):
             self.app.busy(False)
             self.go.setEnabled(True)
+            if denied(self, tb):
+                return
             error(self, "Install mods", _("The install stopped:") + "\n\n" + tb.strip().splitlines()[-1] +
                   "\n\n" + _("What was done so far is in Restore points."))
         run_job(job, done, failed)
@@ -275,6 +279,8 @@ class Install(Page):
                 B.install_modules(game.folder, log=log.append)
             B.switch_on(w, game.folder, log=log.append)
         except Exception as e:                            # BuildError, a missing module pack
+            if denied(self, e):
+                return
             error(self, "Install mods", _("%s is installed, but switching it on stopped:") % w + "\n\n" + str(e)
                   + "\n\n" + _("Open League Builder > Build and press 0. Install the modules, then 3. Switch it on."))
             return
@@ -308,7 +314,7 @@ class Install(Page):
                                              "come back, and its sider.ini and map lines are taken out.") % rec["name"]):
             return
         ini = self.app.ini()
-        if ini is None:
+        if ini is None or not can_write(self, self.app.game):
             return
         notes = I.uninstall(self.app.game, ini, rec)
         self.app.save_ini(ini, "removed %s" % rec["name"])

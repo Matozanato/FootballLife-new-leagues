@@ -157,6 +157,56 @@ def error(parent, title, text):
     QMessageBox.critical(parent, _(title), text)
 
 
+def denied_box(parent, path, game_folder=None, title="Windows refused the write"):
+    """Windows did not let Mod Studio write in the game folder (B14: a game under Program Files):
+    what to do, and a button that starts Mod Studio again as administrator"""
+    from . import access
+    from PySide6.QtWidgets import QApplication
+    # the main window (it has the game), not a dialog the box may sit on
+    app = next((w for w in QApplication.topLevelWidgets() if hasattr(w, "game") and hasattr(w, "bus")), None)
+    if game_folder is None:
+        game_folder = getattr(getattr(app, "game", None), "folder", None)
+    box = QMessageBox(QMessageBox.Warning, _(title), access.message(path, game_folder), QMessageBox.NoButton,
+                      parent)
+    again = None
+    if not access.is_admin():
+        again = box.addButton(_("Restart as administrator"), QMessageBox.AcceptRole)
+    box.addButton(QMessageBox.Close)
+    box.exec()
+    if again is not None and box.clickedButton() is again:
+        if access.restart_as_admin():
+            if app is not None:
+                app.close()
+        else:
+            QMessageBox.warning(parent, _(title), _("Mod Studio could not start itself as administrator. "
+                                                    "Close it, right-click FL26ModStudio.exe and choose "
+                                                    "Run as administrator."))
+
+
+def denied(parent, err, game_folder=None):
+    """when `err` (an exception or a traceback's text) is Windows refusing a write, show
+    denied_box and return True; else False (the caller says what went wrong as before)"""
+    from . import access
+    path = access.denied_path(err)
+    if path is None:
+        return False
+    denied_box(parent, path, game_folder)
+    return True
+
+
+def can_write(parent, game):
+    """before a write into the game folder: True when Windows lets Mod Studio write there, else
+    denied_box and False"""
+    from . import access
+    if not game or not game.folder:
+        return True
+    d = access.blocked(game)
+    if d is None:
+        return True
+    denied_box(parent, d, game.folder)
+    return False
+
+
 def pick_file(parent, title, filt, start=""):
     p, _f = QFileDialog.getOpenFileName(parent, _(title), start, filt)
     return p

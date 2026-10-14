@@ -24,6 +24,7 @@ def quick(game, ini, recipe=None):
     out = []
     for p in game.problems():
         out.append(("err", "Game", p, "Settings"))
+    out += write_problems(game)
     if ini is None:
         return out
     roots = ini.entries("cpk.root")
@@ -47,8 +48,84 @@ def quick(game, ini, recipe=None):
         on = mods.get(module.lower())
         if on and not s.installed(game.content_dir):
             out.append(("err", s.title, _("%s is on but there is no content\\%s folder") % (module, folder), None))
+    out += dll_problems(game, ini)
     out += world_problems(game, ini, recipe)
     out += exe_problems(game)
+    return out
+
+
+def write_problems(game):
+    """the game folder Windows does not let Mod Studio write in (B14: a game under Program Files)"""
+    from . import access
+    d = access.blocked(game) if game.folder and os.path.isdir(game.folder) else None
+    if d is None:
+        return []
+    return [("err", "Game", _("Windows does not let Mod Studio write in %s, so it cannot install, build or "
+                              "switch anything on there. Restart Mod Studio as administrator (right-click "
+                              "FL26ModStudio.exe > Run as administrator), or move the game out of Program "
+                              "Files and choose the new folder in Settings.") % d, "Settings")]
+
+
+def _pack_modules():
+    """the modules folder of the pack this Mod Studio installs, None when there is none"""
+    try:
+        import leaguebuilder
+        return os.path.join(leaguebuilder.pack_dir(), "modules")
+    except Exception:
+        return None
+
+
+def _same_file(a, b):
+    try:
+        with open(a, "rb") as x, open(b, "rb") as y:
+            return x.read() == y.read()
+    except OSError:
+        return False
+
+
+def dll_problems(game, ini):
+    """the DLLs our switched-on modules load that are not in SiderAddons\\modules (B15: an
+    antivirus quarantined them right after Install modules, and the game silently lacked the
+    new leagues' draws and cups). A DLL is compared with the pack's only when its module's .lua
+    is the pack's too (the same version installed): then other bytes mean a damaged copy."""
+    try:
+        import leaguebuilder as B
+    except ImportError:
+        return []
+    mdir = game.modules_dir
+    if not os.path.isdir(mdir):
+        return []
+    pack = None
+    gone, changed = [], []
+    for e in ini.entries("lua.module"):
+        if not e.enabled or MOD.kind_of(e.value) != "core":
+            continue
+        lua = MOD.path_of(e.value, mdir)
+        if not lua or not os.path.isfile(lua):
+            continue
+        names = B.dll_names(lua)
+        if not names:
+            continue
+        src = None
+        if pack is None:
+            pack = _pack_modules() or ""
+        if pack and _same_file(lua, os.path.join(pack, os.path.basename(lua))):
+            src = pack
+        for f, why in B.check_dlls(mdir, names, src):
+            (changed if why == "changed" else gone).append((f, os.path.basename(lua)))
+    out = []
+    for f, lua in gone:
+        out.append(("err", "Lua modules",
+                    _("%s is missing from %s (or Windows will not open it), but %s, which is switched on, needs "
+                      "it: an antivirus probably removed it. Add the SiderAddons folder as an exclusion in your "
+                      "antivirus, then League Builder > Build > 0. Install the modules again.") % (f, mdir, lua),
+                    "Build"))
+    for f, lua in changed:
+        out.append(("warn", "Lua modules",
+                    _("%s in %s is not the one Mod Studio installs with %s (empty or different): an "
+                      "antivirus may have changed it. Add the SiderAddons folder as an exclusion in your "
+                      "antivirus, then League Builder > Build > 0. Install the modules again.") % (f, mdir, lua),
+                    "Build"))
     return out
 
 
