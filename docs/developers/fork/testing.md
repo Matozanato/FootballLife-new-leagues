@@ -27,6 +27,7 @@ exe. See `tools/flpaths.py`.
 | `test_game_supercups.py` | tables | a super cup added to a game league (`game_cups`) is a two-club cup in the league's region, dated at the end of January in a February-December country, and its `gsuper` line names the league and the cup that fill it; fl26joindll and fl26swiss read that line; a division's line (a new J2 under the J.League, `scup=97`) never gives fl26swiss a calendar super cup's league (runs the Lua block when `lupa` is installed) |
 | `test_febdec_cups.py` | tables | a February-December new league's national cup and super cup are accepted, a league cup refused, their `dates` lines take the calendar prototypes, and Build's summary puts the super cup at the end of January |
 | `test_febdec_division.py` | tables | a division under a game league that plays February-December (Colombia) plays that season, so Build refuses a split or Apertura/Clausura on it |
+| `test_finished_cap.py` | tables | the player cap is for the finished world: a world over it only halfway through Build (placeholders a club's own squad replaces go at the end) is built with squads of 30; one over it when done is built again with smaller squads; one too big even at 22 a club is refused |
 | `test_import_csv.py` | | Import CSV: a row naming a game player of another club makes him join |
 | `test_keep_added.py` | | pictures put by hand into the world folder survive a Build (`keep_added`) |
 | `test_keep_continent.py` | | a drag on the Leagues page keeps each continent's Select Team places |

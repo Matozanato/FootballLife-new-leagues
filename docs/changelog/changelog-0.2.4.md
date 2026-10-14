@@ -66,6 +66,12 @@ once, and your 0.2.2 career keeps working.
 
 ## Fixed
 
+- **A big world stopped with "the player table is full" although it fits.** The game takes
+  61905 players, and Build counted while it worked: the placeholder players a club's own squad
+  replaces are taken out only at the end, so a world of 1212 new clubs (the Modpack, 60488
+  players when built) stopped halfway. Build now checks the finished world. New clubs get squads
+  of 30 when your world names its players; when the finished world is still too big, Build
+  says by how much and builds again with smaller squads (never below 22).
 - **Some clubs of the game lost a player to a new copy of him when NewLife refreshed them.** The
   name check that keeps a player's game id read "Yıldız" (the Turkish dotless i) and "Yildiz" as
   two names, and "Yann Aurel Bisseck" and "Yann Bisseck" too. Such a player got a new id, so the

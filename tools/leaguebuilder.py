@@ -222,7 +222,7 @@ leagues' European places. on() makes it the live world: the one active _FL26
 cpk.root in sider.ini (siderroot.py) and the world file copied to modules\. check() reads
 sider.log after a start and says, module by module, whether the world file was taken.
 """
-import contextlib, glob, io, json, os, re, shutil, struct, sys
+import contextlib, copy, glob, io, json, os, re, shutil, struct, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -3433,33 +3433,58 @@ def build(pl, base, game, replace=False, log=print):
     with contextlib.redirect_stdout(io.StringIO()):
         M.write_tables(tmp, comp, regs, ents)
 
-    if made:
-        import mkplayers
-        have = len(pesdb.wesys_unpack(open(os.path.join(base, "Player.bin"), "rb").read())) // 312
-        per = squad_size(have, made)
-        said = call(mkplayers, ["--base", base, "--out", tmp, "--per", per, "--cap", PLAYER_CAP])
-        cut = squads_cut(said)
-        if cut:
-            # mkplayers fills the clubs in id order and stops at the cap without a word of its
-            # own in the log; the clubs after it had no players at all (B28, the Modpack: 80 of
-            # 1212 clubs). A Build that ran past plan's clubs_room (a wrapper, a bigger SQUAD)
-            # stops here instead of writing a world the game crashes in
-            raise BuildError("%d new clubs, but the player table (%d) has room for squads of %d for %d of them: "
-                             "fewer clubs or smaller squads, else the last %d clubs have no players and the game "
-                             "crashes when one is picked" % (cut[1], PLAYER_CAP, per, cut[0], cut[1] - cut[0]))
-        log("  squads of %d for %d clubs" % (per, made) + ("" if per == SQUAD else
-            " (%d new clubs: %d players each would pass the %d player records)" % (made, SQUAD, PLAYER_CAP)))
     import lbplayers
     lbplayers.SQUAD = SQUAD                # a new club's places: the squads Build makes
-    faces, ids, portraits = [], {}, []
     try:
         filled = dict(clubs, players=lbplayers.fill_newlife(clubs, base, log))   # the plan kept as it was
         filled["players"] = lbplayers.fill_tiers(filled, base, log)
-        last = last_build_ids(game, pl["world"])
-        lbplayers.apply(filled, base, db, PLAYER_CAP, log, faces, lineups=lineups, ids=ids, portraits=portraits,
-                        prev=last.get("clubs"), prev_names=last.get("names"))
     except lbplayers.Error as e:
         raise BuildError(str(e))
+    last = last_build_ids(game, pl["world"])
+    have = len(pesdb.wesys_unpack(open(os.path.join(base, "Player.bin"), "rb").read())) // 312
+    # 0.2.4: the placeholder squads and the recipe's players go in with room to spare, and only the
+    # finished table has to fit PLAYER_CAP: the placeholders a NewLife squad replaced are deleted
+    # at the end of apply, so a world of 1212 new clubs (the Modpack, 60488 players when done)
+    # passed the cap halfway and stopped (exe test 14.10.). When the finished table does not fit,
+    # the squads get smaller by what is over, and the players go in again.
+    per = squad_size(have, made) if made else 0
+    per = SQUAD if made and filled.get("players") else per
+    for attempt in range(4):
+        if made:
+            import mkplayers
+            for n in ("Player.bin", "PlayerAssignment.bin"):
+                if os.path.exists(os.path.join(db, n)):
+                    os.remove(os.path.join(db, n))
+            said = call(mkplayers, ["--base", base, "--out", tmp, "--per", per, "--cap", have + made * per])
+            cut = squads_cut(said)
+            if cut:
+                # mkplayers fills the clubs in id order and stops at the cap without a word of its
+                # own in the log; the clubs after it had no players at all (B28, the Modpack: 80 of
+                # 1212 clubs): stop here instead of writing a world the game crashes in
+                raise BuildError("%d new clubs, but the player table (%d) has room for squads of %d for %d of "
+                                 "them: fewer clubs or smaller squads, else the last %d clubs have no players and "
+                                 "the game crashes when one is picked"
+                                 % (cut[1], PLAYER_CAP, per, cut[0], cut[1] - cut[0]))
+            log("  squads of %d for %d clubs" % (per, made) + ("" if per == SQUAD else
+                " (%d new clubs: %d players each would pass the %d player records)" % (made, SQUAD, PLAYER_CAP)))
+        faces, ids, portraits = [], {}, []
+        try:
+            lbplayers.apply(copy.deepcopy(filled), base, db, PLAYER_CAP + made * SQUAD, log, faces,
+                            lineups=lineups, ids=ids, portraits=portraits,
+                            prev=last.get("clubs"), prev_names=last.get("names"))
+        except lbplayers.Error as e:
+            raise BuildError(str(e))
+        pb = os.path.join(db, "Player.bin")
+        n = len(pesdb.wesys_unpack(open(pb, "rb").read())) // 312 if os.path.exists(pb) else have
+        if n <= PLAYER_CAP:
+            break
+        less = -(-(n - PLAYER_CAP) // max(made, 1))
+        if not made or per - less < SQUAD_FIT or attempt == 3:
+            raise BuildError("the player table is full: the world has %d players, the game takes %d -- fewer "
+                             "clubs or smaller squads" % (n, PLAYER_CAP))
+        log("  the finished world has %d players, %d more than the game takes: squads of %d instead"
+            % (n, n - PLAYER_CAP, per - less))
+        per -= less
     fans = club_money(new_of, pl, db, log)
     if os.path.exists(os.path.join(db, "Player.bin")):   # a world of cups only keeps the game's players
         lbplayers.sign_keepers(db, log)
