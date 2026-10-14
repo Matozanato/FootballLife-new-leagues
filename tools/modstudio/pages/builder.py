@@ -2565,7 +2565,9 @@ class NewLeagues(BuilderPage):
             return
         self.app.settings["recipes"] = os.path.dirname(p)
         self.app.settings["last_recipe"] = p
-        self.app.open_page("NewLeagues")
+        # 0.2.4: an opened world is usually built next -- Build your world, not its name and file
+        # (exe test 14.10.: Open a world landed on Edit your world, and Build was two clicks away)
+        self.app.open_page("Build")
 
     def save_recipe(self, ask_name=False):
         self.set_world()
