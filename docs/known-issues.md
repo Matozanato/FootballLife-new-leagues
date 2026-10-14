@@ -32,8 +32,8 @@ numbers are in [limits.md](research/limits.md).
 ### Measured and working
 
 - **A Master League career in a new league, or with a club of the game**: the season
-  generates, every league gets its fixtures, the Team Sheet shows a real squad (22 players a
-  new club since 0.2.2, 30 before) and the hub shows the standings. On 2026-09-29 a career with a club of the game, in
+  generates, every league gets its fixtures, the Team Sheet shows a real squad (30 players a
+  new club; 0.2.2 and 0.2.3 gave 22) and the hub shows the standings. On 2026-09-29 a career with a club of the game, in
   a world with two new South American leagues, played 338 days in one unattended run.
 - **Saving and loading**: the club, the squad, the manager, the standings and the fixtures all
   come back, also from a save made after a full season.

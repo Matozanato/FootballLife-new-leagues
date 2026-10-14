@@ -84,7 +84,7 @@ Values are checked at Build, like any `players` edit in a recipe ([recipe-keys.m
   `in_game` = 0. Its `in_game` clubs stay where the game has them. They can be brought into the
   league as clubs of the game (`game_clubs`). Within a country, leagues are sorted by
   strength, the mean `overall` of their best players.
-- **Squads.** A club gets its best `SQUAD` = 30 players, with at most three goalkeepers
+- **Squads.** A club gets its best `SQUAD` = 30 players (the squad Build makes; 0.2.2 and 0.2.3 built 22 and left the rest out), with at most three goalkeepers
   (`Release.squad`).
   - Ranking uses `lbplayers.overall`, a mean of the abilities each position leans on.
   - A club the release has fewer than 18 players for (`MIN_SQUAD`) keeps placeholder

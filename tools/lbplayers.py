@@ -51,7 +51,7 @@ import playeredit as E
 
 P_REC, P_ID = E.P_REC, E.P_ID
 A_REC = E.A_REC
-SQUAD = 30
+SQUAD = 30            # places of a new club: leaguebuilder.SQUAD, which Build sets here (run3: the Modpack's)
 MIN_SQUAD = 18        # a new club may lose players down to this: eleven and seven on the bench
 FIELDS = list(E.FIELDS)
 CLUB_MAX = 40         # the most players a shipped club has
@@ -1034,10 +1034,14 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
             _write(players, assigns, index[pid], ao, ch)
             _media(faces, portraits, pid, ch)
             added += 1
+        beyond = []
         for key, ch in (c.get("edits") or {}).items():
             if key not in where:
                 if key in (c.get("join") or []):
                     later.setdefault(club, {})[key] = ch   # a player who joins: once he is there
+                    continue
+                if not club.isdigit() and key.isdigit() and int(key) >= len(where):
+                    beyond.append(int(key))          # a place past the squad Build made (squad_size, or 0.2.2/0.2.3's 22)
                     continue
                 log("  players of %s: no player %s, skipped" % (club, key))
                 continue
@@ -1048,6 +1052,9 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
             _write(players, assigns, index[pid], ao, ch)
             _media(faces, portraits, pid, ch)
             changed += 1
+        if beyond:
+            log("  NOTE: players of %s: a new club takes %d players, %d more in the recipe (places %d-%d) "
+                "left out" % (club, len(where), len(beyond), min(beyond) + 1, max(beyond) + 1))
 
     # the players who join a club or a national team
     kinds = teams(base)
