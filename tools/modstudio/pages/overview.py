@@ -193,7 +193,7 @@ class Overview(Page):
             self.b_open.setText(_("Open its leagues") if mine else _("Open that world..."))
         else:
             self.b_open.setText(_("Open its leagues"))
-            self.l_eyebrow.setText(_("NO LEAGUE BUILDER WORLD IN THE GAME"))
+            self.l_eyebrow.setText(_("NO WORLD OF YOURS IN THE GAME"))
             self.l_world.setText(r.get("world", ""))
             self.l_detail.setText(_("Build and install puts this world in the game."))
 

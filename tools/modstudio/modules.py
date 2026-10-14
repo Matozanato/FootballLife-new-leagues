@@ -102,7 +102,7 @@ def describe(value, modules_dir=None):
     b = base(value)
     k = kind_of(value)
     if k == "core":
-        return k, "League Builder / FL26 research module (keep the order it was installed in)"
+        return k, "Mod Studio / FL26 research module (keep the order it was installed in)"
     if b in KNOWN:
         return k, KNOWN[b]
     p = path_of(value, modules_dir)

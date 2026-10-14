@@ -1097,7 +1097,7 @@ class ClubDialog(Dialog):
     help = ("The name, short name and crest of one club, and its home stadium when Stadium Server is "
             "installed. A new club also gets its manager, the manager's picture and its formation; a club of "
             "the game keeps its own.\n\n"
-            "Changes reach the game after Build, while the world is switched on.")
+            "Changes reach the game after Build and install.")
 
     def __init__(self, parent, name, short, crest, was=None, coach=None, formation=None, formations=(),
                  league_formation="", portrait=None, stadium=None, stadium_lib=None, tid=None, kits=None):
@@ -3245,7 +3245,7 @@ def import_crests(page):
 class GameLeagues(BuilderPage):
     title = "Game's leagues and clubs"
     hint = ("The leagues and clubs the game already has: new names, logos and crests. Changes are written "
-            "into your world, so they show while the world is switched on. A saved Edit file (EDIT00000000) "
+            "into your world, so they show while the world is in the game. A saved Edit file (EDIT00000000) "
             "in the game's save folder overrides club names: move it away to see them.")
     help = ("Pick a league of the game on the left. Then:\n"
             "- give the league a new name or logo and press Keep league changes;\n"
@@ -3930,8 +3930,8 @@ class Build(BuilderPage):
         missing = B.modules_missing(g.folder) if g.ok() else []
         bits = [_("World %s: %s") % (w, _("built") if built else _("not built yet"))]
         if g.ok():
-            bits.append(_("builder modules: %s") % (_("installed") if not missing else
-                                                     _("%d missing, press 0") % len(missing)))
+            bits.append(_("Mod Studio's modules: %s") % (_("installed") if not missing else
+                                                     _("%d missing: Home > Install now") % len(missing)))
         ready = self.ready_live()
         for b in self.steps[1:4] + [self.b_all]:          # plan, build, switch on, Build and install
             b.setEnabled(not ready)
@@ -3978,7 +3978,7 @@ class Build(BuilderPage):
         uecl = self.uecl.isChecked()
         name, ok = QInputDialog.getText(
             self, title, _("A world with the new Champions League and Europa League%s and the game's own "
-                           "leagues and clubs. Only one world can be switched on, so this is instead of "
+                           "leagues and clubs. Only one world can be in the game, so this is instead of "
                            "a world with new leagues.\n\nName of the world:")
             % (_(" and the Conference League") if uecl else ""), text=EURO_WORLD)
         name = (name or "").strip()
