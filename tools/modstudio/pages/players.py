@@ -667,8 +667,8 @@ class Players(BuilderPage):
                 m["shirt"] = str(next(n for n in range(1, 100) if str(n) not in taken))
                 taken.add(m["shirt"])
         if self.club and not self.club.isdigit() and not any("order" in ch for ch in ed.values()):
-            auto = P.best_eleven([dict(m, player=k) for k, m, ch, g in out if not g],    # what Build will do
-                                 self.lineup())
+            live = [dict(m, player=k) for k, m, ch, g in out if not g]
+            auto = P.best_eleven(live, self.lineup(live))                        # what Build will do
             for k, m, ch, g in out:
                 m["order"] = auto.get(k, m.get("order", ""))
         out.sort(key=lambda x: (x[3], int(x[1].get("order") or 0) if str(x[1].get("order", "")).isdigit() else 99))
@@ -732,13 +732,32 @@ class Players(BuilderPage):
         self.draw_pitch()
 
     # ---- the formation (new clubs) ----
-    def places(self):
-        """a new club's formation places (None: the engine's 4-2-3-1)"""
-        return self.project.club_places(self.club) if self.club and not self.club.isdigit() else None
+    def places(self, live=None):
+        """a new club's formation places: its own, its league's, or the one Build picks from its
+        squad (auto_formation); None: the engine's 4-2-3-1"""
+        if not self.club or self.club.isdigit():
+            return None
+        p = self.project.club_places(self.club)
+        if p is None:
+            e = self.auto_formation(live)
+            p = e["places"] if e else None
+        return p
 
-    def lineup(self):
+    def auto_formation(self, live=None):
+        """0.2.4: the formation Build picks for a new club with none of its own, from its squad
+        (lbplayers.pick_formation; live: the squad's rows, else the view's); None when it has
+        one, or when its order is set here (Build keeps the 4-2-3-1 for that)"""
+        if not self.club or self.club.isdigit() or self.project.club_places(self.club) is not None:
+            return None
+        if any("order" in ch for ch in (self.changes().get("edits") or {}).values()):
+            return None
+        if live is None:
+            live = [dict(m, player=k) for k, m, ch, g in self.view() if not g]
+        return P.pick_formation(live, self.project.formations())
+
+    def lineup(self, live=None):
         import mktactics
-        p = self.places()
+        p = self.places(live)
         return mktactics.roles(p) if p else None
 
     def draw_pitch(self):
@@ -746,8 +765,10 @@ class Players(BuilderPage):
         self.pitch.setVisible(new_club)
         if not new_club:
             return
-        names, mark = {}, None
+        names, mark, live = {}, None, []
         for k, m, ch, gone in self.view():
+            if not gone:
+                live.append(dict(m, player=k))
             o = str(m.get("order", ""))
             if gone or not o.isdigit() or int(o) > 10:
                 continue
@@ -755,7 +776,7 @@ class Players(BuilderPage):
             names[int(o)] = nm if len(nm) <= 18 else nm[:17] + "."
             if k == self.cur:
                 mark = int(o)
-        self.pitch.show_places(self.places(), names, mark)
+        self.pitch.show_places(self.places(live), names, mark)
 
     def pick_place(self, place):
         """a click on a place selects the player standing there"""
@@ -1067,6 +1088,7 @@ class Players(BuilderPage):
 
     def set_orders(self, orders):
         """orders: {key: order text}; keys of added players too"""
+        auto = self.auto_formation()           # the formation shown, which the order is made for
         c = self.changes(True)
         ed = c.setdefault("edits", {})
         for key, o in orders.items():
@@ -1081,6 +1103,16 @@ class Players(BuilderPage):
                 ch["order"] = o
             if not ch:
                 ed.pop(key, None)
+        if auto is not None and any("order" in ch for ch in ed.values()):
+            # 0.2.4: Build keeps a 4-2-3-1 for a squad ordered here, so the formation picked from
+            # the squad, which this order is made for, becomes the club's own
+            lg, _s, k = self.club.rpartition("/")
+            L = self.project.league(lg)
+            if L is not None and k.isdigit():
+                forms = list(L.get("club_formations") or [])
+                forms += [""] * (int(k) + 1 - len(forms))
+                forms[int(k)] = auto["label"]
+                L["club_formations"] = forms
         self.project.dirty = True
         self.fill_squad()
 
@@ -1097,7 +1129,7 @@ class Players(BuilderPage):
         if not self.rows:
             return
         live = [dict(m, player=k) for k, m, ch, gone in self.view() if not gone]
-        self.set_orders(P.best_eleven(live, self.lineup()))
+        self.set_orders(P.best_eleven(live, self.lineup(live)))
         self.say(_("The strongest eleven for the club's formation now head the squad order."), "ok")
 
     def squad_level(self):

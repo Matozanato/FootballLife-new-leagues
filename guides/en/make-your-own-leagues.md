@@ -217,7 +217,7 @@ and **Cancel** changes nothing.
 | **Super cup (champion v cup winner)** | One match in late July. Needs **National cup** ticked. |
 | **League cup** | Top division only. A second knockout cup, like England's Carabao Cup: this league and the one below, up to 44 clubs. The box is its name; empty = the league's name + League Cup. |
 | **Cup logos** | A picture each for the **Cup**, the **Super cup**, the **League cup** and the **Playoffs**. Empty: an emblem with the cup's initials. |
-| **Formation** | How the league's clubs line up. Pick one from the list, or leave it empty for the game's default 4-2-3-1. A single club can have its own (Step 8). |
+| **Formation** | How the league's clubs line up. Pick one from the list, or leave it empty and Build picks the one each club's squad fits best. A single club can have its own (Step 8). |
 | **Europe** | Top division only: which table position goes to which continental competition. The button that starts with **Top flight:** fills the usual places for the country's continent (for Europe: `Top flight: 1st UCL qualifying, 2nd UEL, 3rd UECL`). **Add place** adds a row: pick the **League position** (below 1 it reads **Cup winner**) and the **Competition**. The **✕** on a row removes it, **Clear** removes all. Leave it empty for a second division. |
 
 5. Click **OK**.

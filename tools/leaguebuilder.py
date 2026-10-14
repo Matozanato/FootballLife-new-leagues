@@ -124,7 +124,9 @@ which league sits above -- and nothing about ids:
               "4-1-2-3 (<club name>)" ...) or the id of a club of the game; the clubs get a copy
               of that club's tactics (mktactics.py) and their best eleven follows its places.
               "club_formations" gives single clubs another one ("" = the league's). Without
-              either the engine lines a club up in its fixed 4-2-3-1 (lbplayers.LINEUP)
+              either Build picks the formation the club's squad fits best (0.2.4,
+              lbplayers.pick_formation); a club whose squad order the recipe sets keeps the
+              engine's fixed 4-2-3-1 (lbplayers.LINEUP)
   game_seasons  (the recipe, not a league) EXPERIMENTAL, a list of the game's countries that play
               February to December -- Brazil, Chile, China, Japan, Saudi Arabia -- to play
               August to May instead (GAME_SEASONS): `season <region> 0`, the leagues dated on
@@ -3421,12 +3423,13 @@ def build(pl, base, game, replace=False, log=print):
         add, st = mkcoaches.add_coaches(coaches, bytes(raw), top_id + 1, names=named, pool=pool)
         open(os.path.join(db, "Coach.bin"), "wb").write(pesdb.wesys_pack(coaches + add, craw[:3]))
         log("  %d managers" % st["added"])
-    lineups = {}
+    lineups, donors = {}, {}
     wanted = club_formations(clubs)
     if wanted:
         import mktactics
         donors = {t: formation_club(base, f) for t, f in wanted.items()}
-        shown = mktactics.write(base, db, donors)
+        trows, tforms, _h = mktactics.read(base)
+        shown = mktactics.add(trows, tforms, donors)[2]      # written once the squads are known
         lineups = {t: mktactics.roles(places) for t, places in shown.items()}
         log("  formations for %d clubs" % len(shown))
     club_order(pl, ents, regs, raw, top_id, log)
@@ -3467,11 +3470,12 @@ def build(pl, base, game, replace=False, log=print):
                                  % (cut[1], PLAYER_CAP, per, cut[0], cut[1] - cut[0]))
             log("  squads of %d for %d clubs" % (per, made) + ("" if per == SQUAD else
                 " (%d new clubs: %d players each would pass the %d player records)" % (made, SQUAD, PLAYER_CAP)))
-        faces, ids, portraits = [], {}, []
+        faces, ids, portraits, picked = [], {}, [], {}
         try:
             lbplayers.apply(copy.deepcopy(filled), base, db, PLAYER_CAP + made * SQUAD, log, faces,
                             lineups=lineups, ids=ids, portraits=portraits,
-                            prev=last.get("clubs"), prev_names=last.get("names"))
+                            prev=last.get("clubs"), prev_names=last.get("names"),
+                            formations=formations(base), picked=picked)
         except lbplayers.Error as e:
             raise BuildError(str(e))
         pb = os.path.join(db, "Player.bin")
@@ -3485,6 +3489,17 @@ def build(pl, base, game, replace=False, log=print):
         log("  the finished world has %d players, %d more than the game takes: squads of %d instead"
             % (n, n - PLAYER_CAP, per - less))
         per -= less
+    # 0.2.4: the tactics go in once the squads are known: a new club with no formation in the
+    # recipe gets the one its squad fits (lbplayers.pick_formation), not the engine's fixed
+    # 4-2-3-1 -- every club of the Modpack played 4-2-3-1. The recipe's formations stand.
+    if donors or picked:
+        import mktactics
+        mktactics.write(base, db, {**donors, **{t: e["club"] for t, e in picked.items()}})
+    if picked:
+        import collections
+        used = collections.Counter(e["label"] for e in picked.values())
+        log("  formations picked for %d clubs from their squads (%s)"
+            % (len(picked), ", ".join("%s: %d" % fc for fc in sorted(used.items(), key=lambda kv: (-kv[1], kv[0])))))
     fans = club_money(new_of, pl, db, log)
     if os.path.exists(os.path.join(db, "Player.bin")):   # a world of cups only keeps the game's players
         lbplayers.sign_keepers(db, log)

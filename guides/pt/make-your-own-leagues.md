@@ -226,7 +226,7 @@ obrigatório: os padrões funcionam, e **Cancel** não muda nada.
 | **Super cup (champion v cup winner)** | Um jogo no fim de julho. Precisa de **National cup** marcado. |
 | **League cup** | Só primeira divisão. Uma segunda copa mata-mata, como a Carabao Cup da Inglaterra: esta liga e a de baixo, até 44 clubes. A caixa é o nome dela; vazio = o nome da liga + League Cup. |
 | **Cup logos** | Uma imagem para cada: a **Cup**, a **Super cup**, a **League cup** e os **Playoffs**. Vazio: um emblema com as iniciais da copa. |
-| **Formation** | Como os clubes da liga entram em campo. Escolha uma da lista, ou deixe vazio para o 4-2-3-1 padrão do jogo. Um clube sozinho pode ter a própria (Passo 8). |
+| **Formation** | Como os clubes da liga entram em campo. Escolha uma da lista, ou deixe vazio e o Build escolhe a que melhor se encaixa no plantel de cada clube. Um clube sozinho pode ter a própria (Passo 8). |
 | **Europe** | Só primeira divisão: qual posição da tabela vai para qual competição continental. O botão que começa com **Top flight:** preenche as vagas de sempre do continente do país (para a Europa: `Top flight: 1st UCL qualifying, 2nd UEL, 3rd UECL`). **Add place** adiciona uma linha: escolha a **League position** (abaixo de 1 fica **Cup winner**) e a **Competition**. O **✕** numa linha tira ela, **Clear** tira todas. Deixe vazio para uma segunda divisão. |
 
 5. Clique em **OK**.

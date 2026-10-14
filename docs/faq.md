@@ -323,6 +323,11 @@ game with that formation, its best eleven lined up for it. **Edit club** gives a
 its own. On the *Players* page a new club's first eleven is drawn on a pitch: select a player,
 click a place, and he goes there. Build again and start a new career to see it.
 
+Since 0.2.4 a new club with no formation set (for it or its league) no longer plays the
+game's fixed 4-2-3-1: Build gives it the formation, of those the game's clubs play, that gives
+most of its best players their own position, and lines its best eleven up in it. The *Players*
+page shows that formation; when you change the club's order there, the club keeps it.
+
 ### How do I give my new club a home stadium?
 
 Since 0.1.7: **Edit club** > **Home stadium**, pick a stadium of Stadium Server. Mod Studio writes the
@@ -720,9 +725,9 @@ then takes every value on the line, so fill in as many columns as you like. He g
 player id, the shirt number you gave (or the first free one), and the last place in the squad.
 
 **The starting eleven is the first eleven of the squad order.** The formation gives them
-their places in a fixed order. For the new clubs' default 4-2-3-1 that is order 0 to 10 =
-GK, CB, CB, RB, LB, DMF, DMF, RMF, LMF, AMF, CF (a club given another formation in Mod Studio
-has that formation's order; `python tools/mktactics.py --base <tables> --list` prints them). To change who starts, change the `order`
+their places in a fixed order. For the engine's 4-2-3-1, which a new club with no formation keeps once its `order` is set, that is order 0 to 10 =
+GK, CB, CB, RB, LB, DMF, DMF, RMF, LMF, AMF, CF (a club given another formation in Mod Studio,
+or one Build picks from its squad, has that formation's order; `python tools/mktactics.py --base <tables> --list` prints them). To change who starts, change the `order`
 column (every player of a club needs a different number). If a goalkeeper sits at order 1
 he will start at centre back, which is what a squad written in any other order looks like.
 

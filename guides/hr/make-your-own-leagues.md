@@ -217,7 +217,7 @@ mijenja.
 | **Super cup (champion v cup winner)** | Jedna utakmica krajem srpnja. Treba označen **National cup**. |
 | **League cup** | Samo prvi rang. Drugi kup na ispadanje, kao engleski Carabao Cup: ova liga i ona ispod, do 44 kluba. Okvir je njegovo ime; prazno = ime lige + League Cup. |
 | **Cup logos** | Po slika za **Cup**, **Super cup**, **League cup** i **Playoffs**. Prazno: amblem s inicijalima kupa. |
-| **Formation** | Kako se klubovi lige postavljaju. Izaberi jednu s popisa, ili ostavi prazno za zadanu 4-2-3-1 iz igre. Pojedini klub može imati svoju (Korak 8). |
+| **Formation** | Kako se klubovi lige postavljaju. Izaberi jednu s popisa, ili ostavi prazno i Build izabere onu koja najbolje odgovara momčadi svakog kluba. Pojedini klub može imati svoju (Korak 8). |
 | **Europe** | Samo prvi rang: koje mjesto u tablici ide u koje kontinentalno natjecanje. Gumb koji počinje s **Top flight:** upiše uobičajena mjesta za kontinent države (za Europu: `Top flight: 1st UCL qualifying, 2nd UEL, 3rd UECL`). **Add place** doda red: izaberi **League position** (ispod 1 glasi **Cup winner**) i **Competition**. **✕** na redu ga makne, **Clear** makne sve. Za drugi rang ostavi prazno. |
 
 5. Klikni **OK**.

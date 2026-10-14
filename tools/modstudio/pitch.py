@@ -257,7 +257,7 @@ class Pitch(QWidget):
 
 class FormationPick(QWidget):
     """a formation list over a pitch that shows it. first: the label of the no-choice entry
-    (the engine's 4-2-3-1, or the league's formation for a club)"""
+    (0.2.4: Build picks each club's from its squad; for a club, the league's formation)"""
 
     def __init__(self, formations, current="", first=None, first_places=None, parent=None):
         super().__init__(parent)
@@ -266,7 +266,7 @@ class FormationPick(QWidget):
         v = QVBoxLayout(self)
         v.setContentsMargins(0, 0, 0, 0)
         self.combo = QComboBox()
-        self.combo.addItem(first or _("The game's default (4-2-3-1)"), "")
+        self.combo.addItem(first or _("Picked from each club's squad"), "")
         for e in formations:
             self.combo.addItem("%s   (%s)" % (e["label"], _("%d clubs") % e["clubs"]), e["label"])
         cur = str(current or "")

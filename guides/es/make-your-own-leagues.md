@@ -229,7 +229,7 @@ los valores por defecto funcionan, y **Cancel** no cambia nada.
 | **Super cup (champion v cup winner)** (*Supercopa (campeón contra ganador de copa)*) | Un partido a finales de julio. Necesita **National cup** marcado. |
 | **League cup** (*Copa de la liga*) | Solo primera división. Una segunda copa eliminatoria, como la Carabao Cup de Inglaterra: esta liga y la de abajo, hasta 44 clubes. El cuadro es su nombre; vacío = el nombre de la liga + League Cup. |
 | **Cup logos** (*Logos de las copas*) | Una imagen para cada una: la **Cup**, la **Super cup** (*Supercopa*), la **League cup** y los **Playoffs**. Vacío: un emblema con las iniciales de la copa. |
-| **Formation** (*Formación*) | Cómo forman los clubes de la liga. Elige una de la lista, o déjalo vacío para el 4-2-3-1 por defecto del juego. Un club puede tener la suya (Paso 8). |
+| **Formation** (*Formación*) | Cómo forman los clubes de la liga. Elige una de la lista, o déjalo vacío y Build elige la que mejor encaja con la plantilla de cada club. Un club puede tener la suya (Paso 8). |
 | **Europe** | Solo primera división: qué puesto de la tabla va a qué competición continental. El botón que empieza por **Top flight:** rellena las plazas habituales del continente del país (para Europa: `Top flight: 1st UCL qualifying, 2nd UEL, 3rd UECL` (*Primera división: 1.º fase previa UCL, 2.º UEL, 3.º UECL*)). **Add place** (*Añadir plaza*) añade una fila: elige el **League position** (*Puesto en la liga*) (por debajo de 1 dice **Cup winner** (*Campeón de copa*)) y la **Competition** (*Competición*). La **✕** de una fila la quita, **Clear** las quita todas. Déjalo vacío para una segunda división. |
 
 5. Pulsa **OK**.

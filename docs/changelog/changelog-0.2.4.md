@@ -71,6 +71,15 @@ once, and your 0.2.2 career keeps working.
   the game's clubs, leagues and players by itself (a minute or two) and says so
   in the bottom bar. **Settings > Unpack the game's tables** is still there for after a game update.
 
+- **New clubs play a formation that fits their squad.** A new club with no formation of its own
+  (none set for it or for its league) played the game's fixed 4-2-3-1 whatever its players, so
+  every club of the Modpack lined up the same way. Build now gives each such club the formation,
+  of those the game's clubs play, that gives most of its best players their own position: two
+  strong strikers play two up front, good wingers three forwards, three centre backs three or
+  five at the back. Its best eleven goes into that formation, and the Build log says which
+  formations were picked. A formation you set stays. The Players page shows the formation picked
+  for the club; when you change its order there, the club keeps that formation. Build again.
+
 ## Fixed
 
 - **A big world stopped with "the player table is full" although it fits.** The game takes

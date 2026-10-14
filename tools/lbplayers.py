@@ -406,6 +406,94 @@ def best_eleven(rows, lineup=None):
     return {r["player"]: str(n) for n, r in enumerate(pick + left)}
 
 
+# 0.2.4: a new club with no formation of its own got the engine's fixed 4-2-3-1 whatever its
+# squad (the Modpack: 1212 clubs, every one 4-2-3-1). Build now picks one of the game's
+# formations (leaguebuilder.formations) for it from its squad: pick_formation.
+PICK_FROM = 14      # the outfield players a formation is picked for: the best eleven and three more
+PLAYABLE = 0.4      # a place filled by a player who can also play there (rated 1) counts this much
+PICK_STRENGTH = 0.25  # the best of them counts this much more than the weakest
+PICK_MARGIN = 0.5   # a formation this close to the best fit loses to a more common one
+PICK_USED = 5       # only shapes this many clubs of the game play: one club's is its coach's idea
+ROLES_OUT = ["CB", "LB", "RB", "DMF", "CMF", "LMF", "RMF", "AMF", "LWF", "RWF", "SS", "CF"]
+
+
+def formation_fit(players, roles):
+    """how well players [(weight, {role: 1 natural / PLAYABLE / 0})] fill the outfield places
+    of roles (the role of each place): every place takes the player who adds most to it, best
+    first, then a place left empty is filled by moving a player over when someone else takes
+    his place (a CB who is also a DMF moves up when a free CB can take his). Returns the total."""
+    left = collections.Counter(r for r in roles if r != "GK")
+    pairs = sorted(((-w * f, i, r) for i, (w, fits) in enumerate(players) for r, f in fits.items() if f > 0))
+    at = {}                                     # player -> role he plays
+    for _v, i, r in pairs:
+        if i not in at and left[r] > 0:
+            at[i] = r
+            left[r] -= 1
+
+    def val(i, r):
+        w, fits = players[i]
+        return w * fits.get(r, 0)
+    for _round in range(len(roles)):
+        best = None
+        for r in [r for r in left if left[r] > 0]:
+            for i, q in at.items():              # i moves from q to r, someone free takes q
+                if val(i, r) <= 0:
+                    continue
+                for j in range(len(players)):
+                    if j in at:
+                        continue
+                    gain = val(i, r) + val(j, q) - val(i, q)
+                    if gain > 1e-9 and (best is None or gain > best[0]):
+                        best = (gain, i, j, q, r)
+        if best is None:
+            break
+        _g, i, j, q, r = best
+        at[i], at[j] = r, q
+        left[r] -= 1
+    return sum(val(i, r) for i, r in at.items())
+
+
+def pick_formation(rows, formations):
+    """the formation of `formations` ([{label, places}], most used first: leaguebuilder.
+    formations) that the squad rows fit best: its best PICK_FROM outfield players, each counted
+    by his strength (1 for the weakest of them to 1 + PICK_STRENGTH for the best, by overall
+    at his registered position), where his registered position or a position he is rated 2 at
+    is a natural place (counts whole) and one he is rated 1 at a place he can play (PLAYABLE).
+    So the formation that gives most of them a natural place wins, the stronger ones first; a
+    shape fewer than PICK_USED clubs of the game play is not taken, and one within PICK_MARGIN
+    of the best total that more clubs of the game use wins over it. Returns the entry, or None
+    with no formations or no outfield players."""
+    formations = [e for e in formations or () if e.get("clubs", PICK_USED) >= PICK_USED]
+    if not formations:
+        return None
+    out = []
+    for n, r in enumerate(rows):
+        reg = r.get("Registered Position")
+        if reg and reg != "GK":
+            out.append((-overall(r), n, r))
+    out = [r for _o, _n, r in sorted(out)[:PICK_FROM]]
+    if not out:
+        return None
+    ovs = [overall(r) for r in out]
+    lo, hi = min(ovs), max(ovs)
+    players = []
+    for r, o in zip(out, ovs):
+        fits = {}
+        for role in ROLES_OUT:
+            v = str(r.get(role, "") or "")
+            if role == r.get("Registered Position"):
+                fits[role] = 1.0
+            elif v == "2":                      # as good, but his own position goes first
+                fits[role] = 1.0 - 1e-6
+            elif v == "1":
+                fits[role] = PLAYABLE
+        players.append((1 + PICK_STRENGTH * (o - lo) / max(1, hi - lo), fits))
+    import mktactics
+    scores = [formation_fit(players, mktactics.roles(e["places"])) for e in formations]
+    top = max(scores)
+    return next(e for e, s in zip(formations, scores) if s >= top - PICK_MARGIN)
+
+
 def lineup_problems(rows, lineup=None):
     """what is wrong with a squad's first eleven (rows in squad order) for the formation
     lineup (the role of each place 0-10, or the default 4-2-3-1): ["gk"] for a goalkeeper
@@ -896,13 +984,15 @@ def _renumber(players, assigns, index, old, pid):
 
 
 def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, portraits=None,
-          prev=None, prev_names=None):
+          prev=None, prev_names=None, formations=None, picked=None):
     r"""write the recipe's player changes into the world's tables in db (the world's
     common\etc\pesdb; Player.bin and PlayerAssignment.bin come from base when the world has
     none of its own yet).  pl is the plan: its leagues carry the team ids they were given.
     faces, a list, gets (player id, face folder) for every change with a "face", portraits
     (player id, picture) for every one with a "portrait". lineups:
     {new club id: the role of each place 0-10} for the clubs with a formation of their own.
+    formations (leaguebuilder.formations): a new club without one gets the one its squad fits
+    (pick_formation) and its best eleven for it; picked, a dict, gets {club id: that entry}.
     ids, a dict, gets {club: {player key: player id}} the way Mod Studio's Players page keys them:
     a new club's players by their place in its squad ("0", "1" ...), and a player added to any
     club as "+0", "+1" ... in the order of its "add" list."""
@@ -1160,7 +1250,18 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
             for n in FIELDS:
                 r[n] = E.show(n, E.getf(rec, n))
             rows.append(r)
-        for ao, o in best_eleven(rows, (lineups or {}).get(tid)).items():
+        lu = (lineups or {}).get(tid)
+        if lu is None and rows and formations:
+            # 0.2.4: a club with no formation of its own plays the one its squad fits, not the
+            # engine's 4-2-3-1 (Build writes its tactics: picked); one whose order the recipe
+            # sets (above) keeps the 4-2-3-1 the order was made for
+            e = pick_formation(rows, formations)
+            if e is not None:
+                import mktactics
+                lu = mktactics.roles(e["places"])
+                if picked is not None:
+                    picked[tid] = e
+        for ao, o in best_eleven(rows, lu).items():
             ao = int(ao)
             pack = u32(assigns, ao + E.A_PACK) & ~E.ORDER_MASK | int(o) << E.ORDER_SHIFT
             assigns[ao + E.A_PACK:ao + E.A_PACK + 4] = pack.to_bytes(4, "little")

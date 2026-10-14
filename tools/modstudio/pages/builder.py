@@ -1139,7 +1139,7 @@ class ClubDialog(Dialog):
         if formation is not None:          # a new club: its formation, or the league's
             from ..pitch import FormationPick, places_of
             first = (_("As the league (%s)") % league_formation if league_formation
-                     else _("As the league (the game's default 4-2-3-1)"))
+                     else _("As the league (picked from the club's squad)"))
             self.formation = FormationPick(formations, formation, first, places_of(formations, league_formation))
             self.form.addRow(_("Formation"), self.formation)
         self.kits, self.kits_value = None, kits
