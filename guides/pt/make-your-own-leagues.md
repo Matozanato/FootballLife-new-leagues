@@ -198,6 +198,7 @@ novo. Cada clique adiciona; ele nunca tira o que já está lá.
 até o primeiro Build), depois os escudos dos clubes dela. Embaixo, os botões **Edit league...**,
 **Add lower tier**, **Clubs and names**, **Players** e **Remove**.
 
+A lista vai por países, e as ligas de cada país de cima para baixo (Bundesliga, 2. Bundesliga, 3. Liga).
 Você pode arrastar uma liga para cima ou para baixo na lista para pôr as ligas de um continente
 em ordem.
 

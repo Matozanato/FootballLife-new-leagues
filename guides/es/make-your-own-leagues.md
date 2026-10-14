@@ -201,6 +201,7 @@ la liga*) (`not built yet` hasta el primer Build), y luego los escudos de sus cl
 botones **Edit league...** (*Editar liga...*), **Add lower tier** (*Añadir división inferior*),
 **Clubs and names** (*Clubes y nombres*), **Players** y **Remove**.
 
+La lista va por países, y las ligas de cada país de arriba abajo (Bundesliga, 2. Bundesliga, 3. Liga).
 Puedes arrastrar una liga hacia arriba o hacia abajo en la lista para ordenar las ligas de un
 continente.
 

@@ -190,6 +190,7 @@ click adds; it never removes what is there.
 until the first Build), then the crests of its clubs. Under them the buttons **Edit league...**,
 **Add lower tier**, **Clubs and names**, **Players** and **Remove**.
 
+The list goes by country, each country's divisions from the top down (Bundesliga, 2. Bundesliga, 3. Liga).
 You can drag a league up or down in the list to put the leagues of a continent in order.
 
 4. Click **Edit league...**.

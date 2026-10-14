@@ -223,6 +223,7 @@ class Leagues(BuilderPage):
         split.setStretchFactor(1, 1)
         self.outer.addWidget(split, 1)
         self.project.changed.connect(self.fill)
+        self._countries = (None, {})        # (tables, {game league's regulation id: country}) for natural
 
     def nl(self):
         """the New leagues page, whose tools the More menu and the buttons use"""
@@ -254,8 +255,33 @@ class Leagues(BuilderPage):
         for i, L in enumerate(P.recipe["leagues"]):
             out.append(("o" + L["name"], P.confeds.get(L.get("country", ""), 0), L["name"], "ours", i))
         order = {k: n for n, k in enumerate(P.recipe.get("league_order") or [])}
+        if not order:
+            # 0.2.4: nothing dragged yet -- by country, each country's divisions from the top down,
+            # the game's and yours together (exe test 14.10.: the Modpack listed the game's leagues
+            # first and its own in the order they were added, the Bundesliga far from the 2.
+            # Bundesliga and the 3. Liga)
+            return sorted(out, key=self.natural)
         late = len(order)
         return sorted(out, key=lambda x: order.get(x[0], late))     # stable: unknown keep theirs
+
+    def natural(self, e):
+        """(country, division, name) of an entry: the list's order before any drag"""
+        import unicodedata
+        P = self.project
+        if self._countries[0] is not P.base:
+            import leaguebuilder as B
+            try:
+                self._countries = (P.base, B.game_league_countries(P.base, P.game_lgs) if P.base else {})
+            except Exception:           # tables that do not read: the game's leagues by name only
+                self._countries = (P.base, {})
+        _k, _c, name, kind, payload = e
+        if kind == "ours":
+            L = P.recipe["leagues"][payload]
+            country, tier = L.get("country", ""), tier_of(P, L.get("above"))
+        else:
+            country, tier = self._countries[1].get(payload[0], ""), P.parent_tiers.get(payload[0])
+        fold = lambda t: unicodedata.normalize("NFKD", t or "").encode("ascii", "ignore").decode().casefold()
+        return (fold(country) or "~", tier or 99, fold(name))
 
     def fill(self):
         q = self.search.text().strip().lower()

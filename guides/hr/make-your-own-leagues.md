@@ -190,6 +190,7 @@ dodaje; nikad ne miče ono što je već tamo.
 grbove njenih klubova. Ispod njih gumbe **Edit league...**, **Add lower tier**, **Clubs and
 names**, **Players** i **Remove**.
 
+Popis ide po državama, a lige svake države odozgo prema dolje (Bundesliga, 2. Bundesliga, 3. Liga).
 Ligu možeš povući gore ili dolje po popisu da složiš lige jednog kontinenta.
 
 4. Klikni **Edit league...**.

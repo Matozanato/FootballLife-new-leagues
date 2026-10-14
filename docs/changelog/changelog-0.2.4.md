@@ -54,6 +54,9 @@ once, and your 0.2.2 career keeps working.
   **More options**: which parts (leave the kits out, say), the name, the order of the content
   folders and the map lines. A league package (.fl26pack) dropped here goes into your world and
   Build and install starts. **In the game now** lists what is installed, with **Remove**.
+- **The leagues list goes by country, each country's divisions from the top down.** The game's
+  leagues and yours stand together (Bundesliga, 2. Bundesliga, 3. Liga), until you drag one;
+  then the list keeps your order as before. A world's order of leagues for Build is not changed.
 - **Open a world takes you to Build your world**, where **Build and install** is, instead of the
   world's name and file under Edit your world. Above the button the page says which world it
   builds: its name, how many leagues and clubs, and the file it is kept in.
