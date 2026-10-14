@@ -13682,3 +13682,39 @@ and without recoding a league.
 
 Not yet read: which of 8 and 9 is handed the list, and when in the season (the Libertadores
 follows the calendar year in this world); how many pool clubs a field normally carries.
+
+## The game's continental days, read from the exe (2026-10-14, 0.2.4)
+
+The calendar switch of the date builder gives each continental regulation a fixed array of
+days (day of the year, 1 January = 0). Read from `FL_2026.exe` (md5
+`529ef38fbbadc38193881de0f847afb2`) with `tools/caltab.py`:
+
+| Competition | Reg | Case | Array | Days |
+|---|---|---|---|---|
+| Club World Cup | 1 | 0 | `0x14298dea0` | 348, 349, 351, 352 |
+| Copa Libertadores, qualifying | 8 | 3 | `0x14298e0f8` | 34, 41 |
+| Copa Libertadores, groups | 9 | 3 | `0x14298e0b0` | 62, 76, 83, 104, 118, 139 |
+| Copa Libertadores, knockout | 10 | 3 | `0x14298e030` | 163, 223, 258, 265, 296, 303, 324, 331 |
+| AFC Champions League, groups | 15 | 4 | `0x14298e170` | 55, 62, 76, 97, 111, 125 |
+| AFC Champions League, knockout | 16 | 4 | `0x14298e110` | 139, 146, 237, 258, 272, 293, 310, 324 |
+
+fl26swiss moves the AFC days to their midweek (`midweek()`): 310 becomes 308 and 324 becomes
+322, the rest stay. That matches the Korean world's log (`reg 15 ... 0 of 6 moved, days
+55..125`, `reg 16 ... 2 of 8 moved, days 139..322`).
+
+**Order matters.** The AFC Champions League is dated on day 0 (1 January), after every
+August-May league has been dated at the build (day 216) or the July rollover. So a day noted
+only as the game dates the competition comes too late for most leagues. fl26swiss therefore
+seeds these days at the start (`gc_seed`), and `cont_note` adds any further day the game gives
+a regulation when it dates it. That day is logged and is kept clear by the leagues dated after
+it.
+
+**Who keeps clear.** These are the leagues with a place in the world's access list (LIB, LIBQ,
+AFCL, and UCL/UCLQ/LIB/AFCL for the Club World Cup), including through a cup winner's place
+(the cup's divisions in the cup draw, or `alt`). The game's own rights leagues count too:
+29, 30, 67, 166 and 167 for the Libertadores, and 52, 120 and 162 for the AFC Champions League
+(rights table above).
+
+`busy_set()` is the one list of a league's busy days. `busy_days()` (old calendars) and
+`rcal_cost()` (real calendars) both read it, each with its own distances. The native test is
+`tools/native/test_rcal_days.c`, run by `tools/test_rcal_days.py`.

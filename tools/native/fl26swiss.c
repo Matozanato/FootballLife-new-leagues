@@ -634,6 +634,7 @@ static const int KO_ORDER[KO_N] = { 0, 15, 7, 8, 3, 12, 4, 11, 1, 14, 6, 9, 2, 1
 static int cwc_world(void);
 static char cwc_setcl(uint64_t id, u32vec* list, uint64_t flag);
 static void cwc_game_champions(u32vec* list);
+static void cont_note(uint16_t id, void* vec);
 static uint32_t canon_club(uint32_t h);
 static const char* club_note(uint32_t h, char* buf, size_t cap);
 typedef struct split_s split_t;
@@ -1041,8 +1042,14 @@ static int uecl_ko(void* started)
 typedef void* (*winner_fn)(uint32_t* out, uint64_t id);
 typedef char (*freetab_fn)(void* self, uint64_t id);
 static int g_po_enabled = 1;
+#ifdef FL26_RCAL_TEST
+int rcal_test_today(void);
+#endif
 static int today(void)
 {
+#ifdef FL26_RCAL_TEST
+  return rcal_test_today();
+#endif
   unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
   unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
   return blk ? *(uint16_t*)(blk + TODAY_OFF) : -1;
@@ -1093,8 +1100,10 @@ static int log_season(void) { int a = abs_day(); return a < 0 ? -1 : (a + 184) /
  * day counter has none. */
 static const uint16_t MONTH0[13] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365 };
 static int g_test_year = 0;
+static int g_sy_force = 0;      /* uefa_days_of: a calendar-year league's other season */
 static int season_year(void)
 {
+  if (g_sy_force) return g_sy_force;
   if (g_test_year) return g_test_year;
   /* asked for every day of every calendar built: read again only when the clock has moved */
   static uint64_t at = 0; static int was = 0;
@@ -3015,6 +3024,7 @@ static uint64_t cwc_dates(uint16_t id, uint64_t reg, void* vec)
     size_t k = i * want / have;
     r[i].day = ko ? CWC_KO_DAYS[k] : CWC_GROUP_DAYS[k];
   }
+  cont_note(CWC_REG, vec);                         /* reg 1's days, for the leagues that feed it */
   if (!(said & bit))
     logf("fl26swiss: Club World Cup -- reg %u dated: %s days %u..%u (%u records)", (unsigned)id,
          ko ? "knockout" : "groups", r[0].day, r[have - 1].day, (unsigned)have);
@@ -5253,59 +5263,185 @@ static const cupd_t* cupd_of(uint16_t id)
   for (int i = 0; i < g_ncupd; i++) if (g_cupd[i].reg == id) return &g_cupd[i];
   return 0;
 }
-static int access_league(uint16_t id)
-{
-  for (size_t i = 0; i < g_naccess; i++) if (g_access[i].rank && g_access[i].reg == id) return 1;
-  return 0;
-}
-/* ---- the game's own Copa Libertadores days (0.2.4) ----
+/* ---- the game's own continental competitions (0.2.4) ----
  * A league of ours that sends clubs to the game's Libertadores (access LIB / LIBQ: the
  * qualifying round reg 8, the group stage reg 9, the knockout reg 10) kept no day clear of
  * them: Nacional played the Liga AUF Uruguaya on 22 September and a Libertadores quarter-final
- * the day after (antonimus, 2026-10-14). The game dates those three through the same stub as
- * everything else, before the leagues of ours (they join on the season's first registration
- * day), so the stub keeps their days as they go by (lib_note) and a league with such a place
- * then stays two days clear of each of them, as it does of a continental cup of ours.
- * Asking the game for them from inside a league's call, with a vector of our own, crashed the
- * season build twice at 0x140f325a4 (2026-10-14), so they are only ever noted in passing. */
-#define LIB_MAX_DAYS 64
-static uint32_t g_libday[LIB_MAX_DAYS]; static int g_nlibday = 0;
-static int lib_league(uint16_t id)
-{
-  for (size_t i = 0; i < g_naccess; i++)
-    if ((g_access[i].comp == LIB || g_access[i].comp == LIBQ) &&
-        (g_access[i].reg == id || (!g_access[i].rank && g_access[i].alt == id))) return 1;
-  return 0;
-}
-/* the dates the game just gave one of its Libertadores regulations (8, 9, 10, or a group /
-   tie row of theirs, id + 1024 n): kept, each day once */
-static void lib_note(uint16_t id, void* vec)
+ * the day after (antonimus, 2026-10-14). That fix (d31a0c1) knew the Libertadores alone; the
+ * game's AFC Champions League (groups reg 15, knockout reg 16, access AFCL) and its Club World
+ * Cup (reg 1) were as unseen. Each of the four now has its days:
+ *   - the days the exe ships for it, from the date switch at 0x14157f810 (case 0: reg 1, case 3:
+ *     regs 8, 9, 10, case 4: regs 15, 16; read from FL_2026.exe with tools/caltab.py's Image on
+ *     2026-10-14), the AFC's on the midweek date_handler moves them to (afc_reg). A league is
+ *     often dated before the competition is: the AFC Champions League gets its clubs and dates on
+ *     1 January (sider.log: reg 15, then a calendar-year league of ours, then reg 16), long after
+ *     every August-May league of a new career, so days noted in passing alone came too late;
+ *   - whatever other day the game gives one of them as it goes by (cont_note, through the same
+ *     stub as everything else), logged when it is not among the shipped ones.
+ * Nothing here asks the game: asking from inside a league's call (lib_fetch) was dropped on
+ * 2026-10-14 after the season-build crash at 0x140f325a4, later traced to player ids of 262144
+ * and up.
+ * A league keeps clear of a competition (gc_feeds) when a club of it can be there: a place of its
+ * own on the access list, or its cup winner's (the place's alt league, the cup's divisions),
+ * or, for the game's own leagues, the game's rights table (research-findings, "how the
+ * Libertadores and the AFC CL find their clubs": Brazil, Argentina, Chile and region 23 to the
+ * Libertadores, China, Japan and 162 to the AFC). Two days clear, as of a continental cup of
+ * ours. The Club World Cup takes the champions of the Champions League, the Libertadores, the
+ * AFC Champions League and the champions' cups of ours, so a league with a place in one of those
+ * keeps a day clear of its four December days: one club a season, and the game's own big-league
+ * calendar leaves that week open (case 5: 345, then 356). */
+enum { GC_CWC = 0, GC_LIBQ, GC_LIB, GC_AFC, GC_N };
+static const char* const GC_NAME[GC_N] = { "Club World Cup", "Libertadores qualifying", "Libertadores", "AFC Champions League" };
+#define GC_MAX_DAYS 64
+static uint16_t g_gcday[GC_N][GC_MAX_DAYS]; static int g_ngcday[GC_N];
+/* which of them a regulation, or a group / tie row of one (id + 1024 n), is: -1 none */
+static int gc_of(uint16_t id)
 {
   uint16_t b = id > 1024 ? (uint16_t)(id & 0x3ff) : id;
-  if (b < 8 || b > 10 || !vec) return;
-  if (!cont_any(LIB) && !cont_any(LIBQ)) return;   /* no league of ours sends clubs there */
+  return b == 1 ? GC_CWC : b == 8 ? GC_LIBQ : b == 9 || b == 10 ? GC_LIB : b == 15 || b == 16 ? GC_AFC : -1;
+}
+static int gc_add(int g, uint32_t d)
+{
+  if (d >= 365) return 0;
+  for (int j = 0; j < g_ngcday[g]; j++) if (g_gcday[g][j] == d) return 0;
+  if (g_ngcday[g] >= GC_MAX_DAYS) return 0;
+  g_gcday[g][g_ngcday[g]++] = (uint16_t)d;
+  return 1;
+}
+static uint32_t midweek(uint32_t d);
+static void gc_seed(void)
+{
+  static int done = 0;
+  if (done) return;
+  done = 1;
+  /* the shipped arrays: 0x14298dea0 (reg 1), 0x14298e0f8 (8), 0x14298e0b0 (9), 0x14298e030 (10),
+     0x14298e170 (15), 0x14298e110 (16) */
+  static const uint16_t CWC_[] = { 348, 349, 351, 352 }, LIBQ_[] = { 34, 41 },
+    LIB_[] = { 62, 76, 83, 104, 118, 139, 163, 223, 258, 265, 296, 303, 324, 331 },
+    AFC_[] = { 55, 62, 76, 97, 111, 125, 139, 146, 237, 258, 272, 293, 310, 324 };
+  for (size_t i = 0; i < sizeof CWC_ / sizeof CWC_[0]; i++) gc_add(GC_CWC, CWC_[i]);
+  for (size_t i = 0; i < sizeof LIBQ_ / sizeof LIBQ_[0]; i++) gc_add(GC_LIBQ, LIBQ_[i]);
+  for (size_t i = 0; i < sizeof LIB_ / sizeof LIB_[0]; i++) gc_add(GC_LIB, LIB_[i]);
+  for (size_t i = 0; i < sizeof AFC_ / sizeof AFC_[0]; i++) gc_add(GC_AFC, midweek(AFC_[i]));
+}
+/* the dates the game just gave one of them: kept, each day once; said once a season per
+   regulation, and again whenever a day was not known yet */
+static void cont_note(uint16_t id, void* vec)
+{
+  int g = gc_of(id);
+  if (g < 0 || !vec) return;
+  gc_seed();
   vec_t* v = (vec_t*)vec;
   size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
   const date_t* r = (const date_t*)v->b;
-  char buf[LIB_MAX_DAYS * 5 + 1]; size_t bl = 0; buf[0] = 0;
+  char buf[GC_MAX_DAYS * 5 + 1]; size_t bl = 0; buf[0] = 0;
   int fresh = 0;
-  for (size_t i = 0; i < have && i < 64; i++) {
-    uint32_t d = r[i].day; int dup = 0;
-    if (d >= 365) continue;
-    for (int j = 0; j < g_nlibday; j++) if (g_libday[j] == d) dup = 1;
-    if (!dup && g_nlibday < LIB_MAX_DAYS) { g_libday[g_nlibday++] = d; fresh++; }
-    if (bl + 6 < sizeof buf) bl += (size_t)snprintf(buf + bl, sizeof buf - bl, "%s%u", bl ? " " : "", d);
+  for (size_t i = 0; i < have && i < GC_MAX_DAYS; i++) {
+    fresh += gc_add(g, r[i].day);
+    if (bl + 6 < sizeof buf) bl += (size_t)snprintf(buf + bl, sizeof buf - bl, "%s%u", bl ? " " : "", r[i].day);
   }
-  if (fresh)
-    logf("fl26swiss: the game's reg %u (Libertadores) plays %u date(s): %s -- a league with a place in it keeps two days clear",
-         (unsigned)id, (unsigned)have, buf);
+  static uint16_t said[32]; static int nsaid = 0; int seen = 0;
+  SAID_RESET(nsaid);
+  for (int k = 0; k < nsaid; k++) if (said[k] == id) seen = 1;
+  if (!seen && id < 1024 && nsaid < 32) said[nsaid++] = id;
+  else if (!fresh) return;
+  if (have)
+    logf("fl26swiss: the game's reg %u (%s) plays %u date(s): %s -- %d not among its shipped days; a league with a place in it keeps clear",
+         (unsigned)id, GC_NAME[g], (unsigned)have, buf, fresh);
 }
-/* a calendar-year league whose country's cup is dated like the national cups (`dates <cup>
-   like=23`, with or without explicit days): see cal_cup_league below the date lines */
-static int cal_cup_league(uint16_t id);
+/* a division of the cup whose draw lists them (a cupdraw line's tiers) */
+static int cupdraw_has(uint16_t cup, uint16_t id)
+{
+  for (int k = 0; k < g_ncd; k++)
+    if (g_cd[k].reg == cup) for (int t = 0; t < g_cd[k].ntier; t++) if (g_cd[k].tier[t] == id) return 1;
+  return 0;
+}
+/* a place of the access list can go to a club of league id: a position of its own, or its cup's
+   winner (a division of the cup, or the alt league's next club when the winner has a place) */
+static int place_for(const access_t* a, uint16_t id)
+{
+  if (a->rank) return a->reg == id;
+  return a->alt == id || cupdraw_has(a->reg, id);
+}
+static int feeds_comp(uint16_t id, int comp)
+{
+  for (size_t i = 0; i < g_naccess; i++) if (g_access[i].comp == comp && place_for(&g_access[i], id)) return 1;
+  return 0;
+}
+/* the game's own leagues its rights table sends to the Libertadores and the AFC Champions League */
+static int game_rights(uint16_t id, int g)
+{
+  static const uint16_t LIBR[] = { 29, 30, 67, 166, 167 }, AFCR[] = { 52, 120, 162 };
+  const uint16_t* t = g == GC_AFC ? AFCR : LIBR;
+  size_t n = g == GC_AFC ? sizeof AFCR / sizeof AFCR[0] : sizeof LIBR / sizeof LIBR[0];
+  for (size_t i = 0; i < n; i++) if (t[i] == id) return 1;
+  return 0;
+}
+static int ccup_feeds(int k, uint16_t id);
+static int gc_feeds(uint16_t id, int g)
+{
+  switch (g) {
+  case GC_LIBQ: return feeds_comp(id, LIBQ);
+  case GC_LIB:  return feeds_comp(id, LIB) || feeds_comp(id, LIBQ) || game_rights(id, GC_LIB);
+  case GC_AFC:  return feeds_comp(id, AFCL) || game_rights(id, GC_AFC);
+  case GC_CWC:
+    if (feeds_comp(id, UCL) || feeds_comp(id, UCLQ) || gc_feeds(id, GC_LIB) || gc_feeds(id, GC_AFC)) return 1;
+    for (int k = 0; k < g_nccup; k++)                 /* the champions' cups of ours (CAF ...) */
+      if (!g_ccup[k].national && !ccup_tier(&g_ccup[k]) && ccup_feeds(k, id)) return 1;
+    return 0;
+  }
+  return 0;
+}
+/* a club of league id can play in Europe: a place of its own, or its cup's (above), or the rcal
+   line says so. UEFA's competitions only: a league with a Libertadores or AFC place was taken for
+   a European one by the real calendars and kept clear of the Champions League's days for nothing */
+static int rcal_eu(uint16_t id);
+static int uefa_feeds(uint16_t id)
+{
+  if (rcal_eu(id)) return 1;
+  for (size_t i = 0; i < g_naccess; i++) {
+    int c = g_access[i].comp;
+    if ((c == UCL || c == UEL || c == UECL || c == UCLQ || c == UELQ || c == UECLQ) && place_for(&g_access[i], id)) return 1;
+  }
+  return 0;
+}
+/* ---- every day a league's clubs may play on besides the league (0.2.4) ----
+ * One list for both schedulers -- rest_dates (busy_days) and the real calendars (rcal_cost) --
+ * so that neither knows a day the other does not: busy_days alone knew a calendar-year cup's
+ * days, and the Copa AUF Uruguay's second round was played the day before a league round
+ * (d31a0c1). Each day comes with its kind, and each scheduler lets the kinds go at its own
+ * levels (busy_days, rcal_cost). */
+enum {
+  BZ_CONT,     /* a continental cup it feeds (ours or the game's), a pre-season cup it plays */
+  BZ_CWC,      /* the game's Club World Cup */
+  BZ_EURO,     /* a league phase, knockout or February play-off day of ours */
+  BZ_QUAL,     /* an August qualifying round or play-off */
+  BZ_NATCUP,   /* an August-May league's national cups (calendar case 6, natcup_day) */
+  BZ_CALCUP,   /* a calendar-year league's cup (`dates <cup> like=23`) */
+  BZ_CUPD,     /* its country's cups (cupdays) */
+  BZ_LCUP      /* its league cup of ours and the cup's pre-round */
+};
+typedef struct { uint16_t day; uint8_t kind; } busy_t;
+#define BUSY_MAX 1024
+static int busy_set(uint16_t id, busy_t* out);
+/* the days of a calendar-year league's cup, dated like the national cups (`dates <cup> like=23`,
+   with or without explicit days): see cal_cup_days below the date lines */
+static int cal_cup_days(uint16_t id, uint32_t* out, int cap);
 static int ccup_of_league(int k, uint16_t id)
 {
   for (int e = 0; e < g_ccup[k].n && e < CCUP_MAX_ENTRY; e++) if (g_ccup[k].ereg[e] == id) return 1;
+  return 0;
+}
+/* a continental cup of ours can take a club of league id: a position of its own, or a cup winner's
+   place (the cup's divisions, or the alt league's next club when the winner has a place) --
+   ccup_of_league knew the positions only */
+static int ccup_feeds(int k, uint16_t id)
+{
+  const ccup_t* c = &g_ccup[k];
+  for (int e = 0; e < c->n && e < CCUP_MAX_ENTRY; e++) {
+    if (c->ereg[e] == id) return 1;
+    if (!c->erank[e] && (c->ealt[e] == id || cupdraw_has(c->ereg[e], id))) return 1;
+  }
   return 0;
 }
 /* a pre-season cup that invites a club of league id: its days are that league's as well -- the
@@ -5344,68 +5480,32 @@ static void block(uint8_t* bad, uint32_t d, int buf)
   int p = (int)rpos(d);
   for (int k = -(buf - 1); k <= buf - 1; k++) if (p + k >= 0 && p + k < 365) bad[p + k] = 1;
 }
-/* the days a league's clubs may play on besides the league: level 0 all of them, 1 without
-   the league cup, 2 without the national cups either, 3 not its country's cup days either. A calendar-year league (g_org 0) has
-   no European season and its own country's cups, so only its continental cups count. */
+/* the days a league's clubs may play on besides the league (busy_set), closed in bad (rest
+   positions): level 0 all of them, 1 without the league cup, 2 without the national cups either,
+   3 not its country's cup days either. The continental days -- ours, the game's, the European
+   ones of a league with a European place, in either kind of season -- at every level. */
 static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
 {
+  static busy_t z[BUSY_MAX];
   memset(bad, 0, 365);
-  for (int k = 0; k < g_nccup; k++)                 /* CAF / AFC / CONMEBOL cups it feeds */
-    if (!g_ccup[k].national && ccup_of_league(k, id)) {
-      if (g_ccup[k].groups) for (int i = 0; i < 6; i++) block(bad, ccup_day(&g_ccup[k], 0, i), buf);
-      for (int i = 0; i < (g_ccup[k].nd ? g_ccup[k].nd : 7) && i < CCUP_MAX_DAYS; i++) block(bad, ccup_day(&g_ccup[k], 1, i), buf);
-    }
-  /* a pre-season cup (invited clubs): its few July days at every level and in every kind of
-     season, for the host's league and each invited club's -- any world's cup, not one */
-  for (int k = 0; k < g_nccup; k++)
-    if (g_ccup[k].national && g_ccup[k].nc && (ccup_of_league(k, id) || ccup_invites(k, id)))
-      for (int i = 0; i < g_ccup[k].nd && i < CCUP_MAX_DAYS; i++) block(bad, g_ccup[k].days[i], buf);
-  /* the game's own Libertadores, for a league with a place in it */
-  if (g_nlibday > 0 && lib_league(id)) for (int i = 0; i < g_nlibday; i++) block(bad, g_libday[i], buf);
-  /* its country's cups, a day clear (rest_dates' last level lets them go) */
-  const cupd_t* cd = level < 3 ? cupd_of(id) : 0;
-  if (cd) for (int i = 0; i < cd->n; i++) block(bad, cd->d[i], 2);
-  /* Calendar-year leagues do not use UEFA dates, but may now have
-     their own national cup and league cup. */
-  /* only a league that sends clubs to Europe keeps clear of its days: a second division blocked
-     by them as well had one day left between a midweek round and a European week, and every
-     league of a big world met on it (2026-10-08, the modpack: day 65 asked 403 matches of 280) */
-  if (g_org == 182 && access_league(id)) {
-    for (int i = 0; i < FL26_SWISS36_MATCHDAYS; i++) block(bad, swiss_day(i), buf);
-    for (int i = 0; i < FL26_SWISS6_MATCHDAYS; i++) block(bad, eday(UECL_DAYS[i]), buf);
-    for (int c = 0; c < 3; c++) {
-      for (int i = 0; i < 7; i++) block(bad, eday(KO_DAYS[c][i]), buf);
-      /* the qualifying rounds three days clear at every level (a league round two days from
-         one is a club's two matches in three days) */
-      for (int i = 0; i < 2; i++) { block(bad, qr_day(c, i), buf < 3 ? 3 : buf); block(bad, eday(CUPS[c].days[i]), buf); }
-    }
-  }
+  int n = busy_set(id, z);
   /* a national cup round two days from a league round, not three: with three, the one day left
      between New Year's round and the cup's (day 3), and between early February's and the cup's
      (day 38), took every league of a big world -- 330 matches asked of 280 (2026-10-08) */
-  if (level < 2) {
-    if (g_org == 182) {
-      for (int i = 0; i < 12; i++)
-        block(bad, natcup_day(i), buf > 2 ? buf - 1 : buf);
-    } else if (g_calendar_natcup_ndays) {
-      for (int i = 0; i < g_calendar_natcup_ndays; i++)
-        block(bad, g_calendar_natcup_days[i], buf > 2 ? buf - 1 : buf);
-    } else if (g_calendar_natcup_shift) {
-      for (int i = 0; i < 12; i++)
-        block(bad, (NATCUP_DAYS[i] + g_calendar_natcup_shift) % 365u,
-              buf > 2 ? buf - 1 : buf);
-    } else if (cal_cup_league(id)) {               /* its cup on the national cups' days as natcup_fix moves them */
-      for (int i = 0; i < 12; i++)
-        block(bad, natcup_day(i), buf > 2 ? buf - 1 : buf);
+  int cup = buf > 2 ? buf - 1 : buf;
+  for (int i = 0; i < n; i++) {
+    uint32_t d = z[i].day;
+    switch (z[i].kind) {
+    case BZ_CONT: case BZ_EURO: block(bad, d, buf); break;
+    case BZ_CWC: block(bad, d, 2); break;
+    /* the qualifying rounds three days clear at every level (a league round two days from one
+       is a club's two matches in three days) */
+    case BZ_QUAL: block(bad, d, buf < 3 ? 3 : buf); break;
+    case BZ_CUPD: if (level < 3) block(bad, d, 2); break;       /* a day clear */
+    case BZ_NATCUP: case BZ_CALCUP: if (level < 2) block(bad, d, cup); break;
+    case BZ_LCUP: if (level < 1) block(bad, d, buf); break;
     }
   }
-  if (level < 1)
-    for (int k = 0; k < g_nccup; k++) {
-      if (!g_ccup[k].national || g_ccup[k].nc || !ccup_of_league(k, id)) continue;
-      for (int i = 0; i < g_ccup[k].nd && i < CCUP_MAX_DAYS; i++) block(bad, g_ccup[k].days[i], buf);
-      for (int li = 0; li < g_nlpre; li++)
-        if (g_lpre[li].ko == g_ccup[k].ko) { block(bad, g_lpre[li].days[0], buf); block(bad, g_lpre[li].days[1], buf); }
-    }
 }
 /* the n rounds on free days at least `gap` apart, the least moved in all; -1 when there is no
    such calendar between the first and the last day. `jit` (0..2) is where a round would rather
@@ -5578,18 +5678,11 @@ static const rcal_t* rcal_of(uint16_t id)
   for (int i = 0; i < g_nrcal; i++) if (g_rcal[i].reg == id) return &g_rcal[i];
   return 0;
 }
-/* a club of league id can play in Europe: a place of its own, or its country's cup's, whose
-   divisions the world's cup draw lists */
-static int euro_league(uint16_t id, const rcal_t* c)
+/* the rcal line names the league one whose clubs play in Europe (its last field) */
+static int rcal_eu(uint16_t id)
 {
-  if ((c && c->eu) || access_league(id)) return 1;
-  for (size_t i = 0; i < g_naccess; i++) {
-    if (g_access[i].rank) continue;
-    for (int k = 0; k < g_ncd; k++)
-      if (g_cd[k].reg == g_access[i].reg)
-        for (int t = 0; t < g_cd[k].ntier; t++) if (g_cd[k].tier[t] == id) return 1;
-  }
-  return 0;
+  const rcal_t* c = rcal_of(id);
+  return c && c->eu;
 }
 /* every day a European competition of ours plays: the league phases and the knockouts
    (quals 0), or the August qualifying rounds and play-offs (quals 1) */
@@ -5610,6 +5703,73 @@ static int uefa_days(uint32_t* out, int cap, int quals)
 #undef UD
   return n;
 }
+/* every European day of ours as a league of this kind of season meets it: an August-May league
+   its season's (uefa_days); a calendar-year league (g_org 0) the spring of the European season
+   that ends in its year and the summer and autumn of the one that starts in it -- a Norwegian
+   club in the August qualifying rounds or the autumn league phase plays them in the middle of its
+   own season. Their weekdays are each season's own (eday, qr_day), so each half is taken with
+   its own season's year: a calendar-year league is dated in January, when the game's season year
+   is still the one before (g_sy_force). */
+static int uefa_days_of(uint32_t* out, int cap, int quals)
+{
+  int sy = season_year();
+  if (g_org != 0 || !sy) return uefa_days(out, cap, quals);
+  int t = today(), y = t >= 0 && t < 175 ? sy + 1 : sy;      /* the calendar year it plays */
+  uint32_t tmp[96]; int n = 0;
+  for (int half = 0; half < 2; half++) {
+    g_sy_force = half ? y : y - 1;
+    int m = uefa_days(tmp, 96, quals);
+    for (int i = 0; i < m && n < cap; i++) if ((tmp[i] >= 181) == half) out[n++] = tmp[i];
+  }
+  g_sy_force = 0;
+  return n;
+}
+static int busy_set(uint16_t id, busy_t* out)
+{
+  static uint8_t seen[365];                            /* a bit per kind: each day of a kind once */
+  int n = 0;
+  memset(seen, 0, sizeof seen);
+#define BZ(d, k) do { uint32_t d_ = (d); if (d_ < 365 && !(seen[d_] >> (k) & 1) && n < BUSY_MAX) { \
+    seen[d_] |= (uint8_t)(1 << (k)); out[n].day = (uint16_t)d_; out[n].kind = (uint8_t)(k); n++; } } while (0)
+  for (int k = 0; k < g_nccup; k++) {
+    const ccup_t* x = &g_ccup[k];
+    if (!x->national && ccup_feeds(k, id)) {           /* a continental cup of ours it feeds */
+      if (x->groups) for (int i = 0; i < 6; i++) BZ(ccup_day(x, 0, i), BZ_CONT);
+      for (int i = 0; i < (x->nd ? x->nd : 7) && i < CCUP_MAX_DAYS; i++) BZ(ccup_day(x, 1, i), BZ_CONT);
+    } else if (x->national && x->nc && (ccup_of_league(k, id) || ccup_invites(k, id))) {
+      /* a pre-season cup (invited clubs): its few July days, for the host's league and each
+         invited club's -- any world's cup, not one */
+      for (int i = 0; i < x->nd && i < CCUP_MAX_DAYS; i++) BZ(x->days[i], BZ_CONT);
+    } else if (x->national && !x->nc && ccup_of_league(k, id)) {   /* its league cup */
+      for (int i = 0; i < x->nd && i < CCUP_MAX_DAYS; i++) BZ(x->days[i], BZ_LCUP);
+      for (int li = 0; li < g_nlpre; li++)
+        if (g_lpre[li].ko == x->ko) { BZ(g_lpre[li].days[0], BZ_LCUP); BZ(g_lpre[li].days[1], BZ_LCUP); }
+    }
+  }
+  gc_seed();                                           /* the game's continental competitions */
+  for (int g = 0; g < GC_N; g++)
+    if (g_ngcday[g] && gc_feeds(id, g))
+      for (int i = 0; i < g_ngcday[g]; i++) BZ(g_gcday[g][i], g == GC_CWC ? BZ_CWC : BZ_CONT);
+  /* the European days, for a league that sends clubs to Europe only: a second division blocked
+     by them as well had one day left between a midweek round and a European week, and every
+     league of a big world met on it (2026-10-08, the modpack: day 65 asked 403 matches of 280) */
+  if (uefa_feeds(id)) {
+    uint32_t ud[96]; int nu = uefa_days_of(ud, 96, 0);
+    for (int i = 0; i < nu; i++) BZ(ud[i], BZ_EURO);
+    nu = uefa_days_of(ud, 96, 1);
+    for (int i = 0; i < nu; i++) BZ(ud[i], BZ_QUAL);
+  }
+  const cupd_t* cd = cupd_of(id);                      /* its country's cups */
+  if (cd) for (int i = 0; i < cd->n; i++) BZ(cd->d[i], BZ_CUPD);
+  if (g_org == 182) {                                  /* an August-May league's country's */
+    for (int i = 0; i < 12; i++) BZ(natcup_day(i), BZ_NATCUP);
+  } else {                                             /* a calendar-year league's own cup */
+    uint32_t cc[MAX_DATE_DAYS + 12]; int nc = cal_cup_days(id, cc, MAX_DATE_DAYS + 12);
+    for (int i = 0; i < nc; i++) BZ(cc[i], BZ_CALCUP);
+  }
+#undef BZ
+  return n;
+}
 /* the cost of a round on each day (rpos, g_org): -1 never; `strict` 0 lets the cups go */
 static void rcal_cost(uint16_t id, const rcal_t* c, int strict, int euhard, int32_t* pen)
 {
@@ -5626,53 +5786,30 @@ static void rcal_cost(uint16_t id, const rcal_t* c, int strict, int euhard, int3
 #define RNEAR(d, hard, soft) do { if ((d) < 365) { int q_ = (int)rpos(d); \
     for (int k_ = -(soft); k_ <= (soft); k_++) { int p_ = q_ + k_; if (p_ < 0 || p_ >= 365 || pen[p_] < 0) continue; \
       if (abs(k_) <= (hard)) pen[p_] = -1; else pen[p_] += 10; } } } while (0)
-  if (euro_league(id, c)) {
-    /* Two full days between a European match and a league round (0.2.0): Tuesday's after
-       Saturday's, Sunday's after Thursday's. Only the last level (one day between matches)
-       lets a league phase or knockout day come within two days. */
-    uint32_t ud[96]; int nu = uefa_days(ud, 96, 0);
-    for (int i = 0; i < nu; i++) RNEAR(ud[i], euhard, 2);
-    /* The August qualifying rounds and play-offs are midweek (qr_day) and leave a weekend day
-       three days clear in every week, so they are closed two days either side at every level:
-       a club in a qualifier never plays the league within two days of it (2026-10-08: Dinamo,
-       Wednesday's second leg and Thursday's league round). Until 0.2.0 only their own day was
-       closed -- they fell on weekends then. */
-    nu = uefa_days(ud, 96, 1);
-    for (int i = 0; i < nu; i++) RNEAR(ud[i], 2, 2);
-  }
-  for (int k = 0; k < g_nccup; k++) {
-    const ccup_t* x = &g_ccup[k];
-    if (!x->national && ccup_of_league(k, id)) {      /* a continental cup it feeds */
-      if (x->groups) for (int i = 0; i < 6; i++) RNEAR(ccup_day(x, 0, i), 2, 2);
-      for (int i = 0; i < (x->nd ? x->nd : 7) && i < CCUP_MAX_DAYS; i++) RNEAR(ccup_day(x, 1, i), 2, 2);
-    } else if (x->national && x->nc && (ccup_of_league(k, id) || ccup_invites(k, id))) {
-      for (int i = 0; i < x->nd && i < CCUP_MAX_DAYS; i++) RNEAR(x->days[i], 2, 2);   /* pre-season */
-    } else if (strict && x->national && !x->nc && ccup_of_league(k, id)) {          /* its league cup */
-      for (int i = 0; i < x->nd && i < CCUP_MAX_DAYS; i++) RNEAR(x->days[i], 1, 2);
-      for (int li = 0; li < g_nlpre; li++)
-        if (g_lpre[li].ko == x->ko) { RNEAR(g_lpre[li].days[0], 1, 2); RNEAR(g_lpre[li].days[1], 1, 2); }
+  /* the same days busy_days knows (busy_set), each kind as hard here:
+     - a continental cup (ours, the game's Libertadores and AFC Champions League) and a pre-season
+       cup: two days clear;
+     - the Club World Cup: a day clear, two days a cost;
+     - Two full days between a European match and a league round (0.2.0): Tuesday's after
+       Saturday's, Sunday's after Thursday's. Only the last level (one day between matches) lets a
+       league phase or knockout day come within two days. The August qualifying rounds and
+       play-offs are midweek (qr_day) and leave a weekend day three days clear in every week, so
+       they are closed two days either side at every level: a club in a qualifier never plays the
+       league within two days of it (2026-10-08: Dinamo, Wednesday's second leg and Thursday's
+       league round). Until 0.2.0 only their own day was closed -- they fell on weekends then.
+     - its country's cups (cupdays) and a calendar-year league's cup: a day clear at every level,
+       two when strict; the August-May national cups and its league cup only when strict. */
+  static busy_t z[BUSY_MAX];
+  int nz = busy_set(id, z);
+  for (int i = 0; i < nz; i++) {
+    uint32_t d = z[i].day;
+    switch (z[i].kind) {
+    case BZ_CONT: case BZ_QUAL: RNEAR(d, 2, 2); break;
+    case BZ_CWC: RNEAR(d, 1, 2); break;
+    case BZ_EURO: RNEAR(d, euhard, 2); break;
+    case BZ_CUPD: case BZ_CALCUP: RNEAR(d, 1, strict ? 2 : 1); break;
+    case BZ_NATCUP: case BZ_LCUP: if (strict) RNEAR(d, 1, 2); break;
     }
-  }
-  /* the game's own Libertadores: a league with a place in it two days clear, like a cup of ours */
-  if (g_nlibday > 0 && lib_league(id)) for (int i = 0; i < g_nlibday; i++) RNEAR(g_libday[i], 2, 2);
-  /* its country's cups (cupdays), a day clear at every level, two when strict */
-  const cupd_t* cd = cupd_of(id);
-  if (cd) for (int i = 0; i < cd->n; i++) RNEAR(cd->d[i], 1, strict ? 2 : 1);
-  /* the national cups: an August-May league's country plays them (a calendar-year one has none
-     of these days) */
-  if (strict && g_org == 182) for (int i = 0; i < 12; i++) RNEAR(natcup_day(i), 1, 2);
-  /* a calendar-year league's cup -- on its explicit days (`dates <cup> like=23 days=...`), on
-     the national cups' days shifted, or on them as natcup_fix moves them -- a day clear at every
-     level, two when strict, as cupdays above. It had none here (busy_days alone knew them), and
-     the Copa AUF Uruguay's second round was played the day before a league round (antonimus,
-     2026-10-14). */
-  if (g_org == 0) {
-    if (g_calendar_natcup_ndays)
-      for (int i = 0; i < g_calendar_natcup_ndays; i++) RNEAR(g_calendar_natcup_days[i], 1, strict ? 2 : 1);
-    else if (g_calendar_natcup_shift)
-      for (int i = 0; i < 12; i++) RNEAR((NATCUP_DAYS[i] + g_calendar_natcup_shift) % 365u, 1, strict ? 2 : 1);
-    else if (cal_cup_league(id))
-      for (int i = 0; i < 12; i++) RNEAR(natcup_day(i), 1, strict ? 2 : 1);
   }
 #undef RNEAR
 }
@@ -6924,19 +7061,6 @@ static uint64_t split_dates(uint16_t id, uint64_t reg, void* vec, int part, cons
  * the world file's `dates <ours> like=<shipped>` lines (fl26_swiss_datelike). */
 #define MAX_DATELIKE 32
 static uint16_t g_dlike[MAX_DATELIKE][2]; static int g_ndlike = 0;
-/* a league of a country whose cup (a cupdraw line's tiers name the league) is dated like the
-   national cups, the calendar-year way (`dates <cup> like=23`) */
-static int cal_cup_league(uint16_t id)
-{
-  for (int k = 0; k < g_ncd; k++) {
-    int mine = 0;
-    for (int t = 0; t < g_cd[k].ntier; t++) if (g_cd[k].tier[t] == id) mine = 1;
-    if (!mine) continue;
-    for (int i = 0; i < g_ndlike; i++)
-      if (g_dlike[i][0] == g_cd[k].reg && g_dlike[i][1] == CALENDAR_NATCUP_LIKE) return 1;
-  }
-  return 0;
-}
 
 /* Optional day shift for `dates <ours> like=<shipped> shift=<days>`.
    Kept separate from datelike so old world files keep their old behaviour. */
@@ -6965,6 +7089,33 @@ static const datedays_t* date_days_for(uint16_t id)
   for (int i = 0; i < g_nddays; i++)
     if (g_ddays[i].id == id) return &g_ddays[i];
   return 0;
+}
+/* the days a calendar-year league's own cup plays (busy_set): the cup a cupdraw line names it a
+   division of, dated like the national cups -- on its explicit days, the national cups' days
+   shifted, or those as natcup_fix moves them. One world-wide set until 0.2.4 (the last `dates`
+   line's), for every calendar-year league, whatever its country. A league no cupdraw line names
+   (a world with `cupdraw off`) keeps that set. */
+static int cal_cup_days(uint16_t id, uint32_t* out, int cap)
+{
+  int n = 0;
+  for (int k = 0; k < g_ncd; k++) {
+    int mine = 0;
+    for (int t = 0; t < g_cd[k].ntier; t++) if (g_cd[k].tier[t] == id) mine = 1;
+    if (!mine) continue;
+    for (int i = 0; i < g_ndlike; i++) {
+      if (g_dlike[i][0] != g_cd[k].reg || g_dlike[i][1] != CALENDAR_NATCUP_LIKE) continue;
+      const datedays_t* dd = date_days_for(g_cd[k].reg);
+      uint16_t sh = date_shift_for(g_cd[k].reg);
+      if (dd) for (int j = 0; j < dd->n && n < cap; j++) out[n++] = dd->day[j];
+      else for (int j = 0; j < 12 && n < cap; j++) out[n++] = sh ? (NATCUP_DAYS[j] + sh) % 365u : natcup_day(j);
+      return n;
+    }
+  }
+  if (g_calendar_natcup_ndays)
+    for (int j = 0; j < g_calendar_natcup_ndays && n < cap; j++) out[n++] = g_calendar_natcup_days[j];
+  else if (g_calendar_natcup_shift)
+    for (int j = 0; j < 12 && n < cap; j++) out[n++] = (NATCUP_DAYS[j] + g_calendar_natcup_shift) % 365u;
+  return n;
 }
 
 static int calendar_natcup_round_slot(uint32_t round)
@@ -7222,6 +7373,7 @@ uint64_t date_handler(uint64_t reg, void* vec)
       uint32_t d = midweek(r[i].day);
       if (d != r[i].day) { r[i].day = d; moved++; }
     }
+    cont_note(id, vec);                            /* its days, for the leagues that feed it */
     static unsigned char said[2];
     if (have && !said[id == AFC_KO]++)
       logf("fl26swiss: reg %u -- AFC Champions League %s: %d of %u date(s) moved to midweek, days %u..%u",
@@ -7314,7 +7466,7 @@ uint64_t date_handler(uint64_t reg, void* vec)
   }
   if (vec && !ours(id)) {                           /* a league of the game's own */
     uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)(reg, vec);
-    lib_note(id, vec);                              /* ... or the Libertadores: its days kept */
+    cont_note(id, vec);                             /* ... or a continental one: its days kept */
     if (natcup_fix(id, vec)) return rv;             /* ... or a national cup (case 6) */
     vec_t* v = (vec_t*)vec;
     size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;

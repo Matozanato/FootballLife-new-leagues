@@ -143,9 +143,10 @@ numbers are in [limits.md](research/limits.md).
   champions of the continental cups a world builds (CAF, AFC) go into it in place of an entrant
   of their confederation. The Champions League and Europa League play their last December
   matchday on 8-9 December and the Conference League cannot have a Club World Cup club, so
-  those never clash. Not checked: a new league plays the big leagues' calendar moved by 0-6
-  days, so one of its rounds can fall on a Club World Cup day; only its champion in the Club
-  World Cup could then have two matches on one day. Report it on GitHub if you see it. The
+  those never clash. Since 0.2.4 a league that can send a club to the Club World Cup (a
+  Champions League, Libertadores or AFC Champions League place, or a champions' cup of ours)
+  keeps a league round a day clear of its days (348-352 in the game's year). Not checked in
+  the game yet. The
   2025 format (32 clubs in June and July, every four years) is not in Mod Studio.
 - **Clubs in no league (Mod Studio 0.1.8): squads are strong.** Checked in the game: a club
   put alone in *Other European teams* shows in Select Team under that group with its crest

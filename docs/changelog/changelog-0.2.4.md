@@ -14,16 +14,34 @@ once, and your 0.2.2 career keeps working.
 
 ## Fixed
 
-- **A league with a place in the game's Copa Libertadores played the day before or after it.**
-  Nacional (Uruguay) had a league round on 22 September and the Libertadores quarter-final on
-  the 23rd. The fixture module now asks the game for the Libertadores days (qualifying round,
-  group stage, knockout) when the first league is dated and keeps such a league two days clear
-  of them, as it does of a continental cup of ours. Thanks antonimus.
+- **A league with a place in a continental competition of the game played the day before or
+  after it, on every continent.** Nacional (Uruguay) had a league round on 22 September and the
+  Libertadores quarter-final on the 23rd. The fixture module now knows the days of the game's
+  own continental competitions in advance: the Copa Libertadores (qualifying round, group stage,
+  knockout), the AFC Champions League (group stage and knockout) and the Club World Cup. A league
+  that can send a club to one of them (its places in the world's access list, its country's cup
+  winner's place, or the game's own South American and Asian leagues) keeps two days clear of the
+  Libertadores and AFC Champions League days and a day clear of the Club World Cup's. A day the
+  game gives one of them that is not among the known ones is noted in `sider.log` (`the game's
+  reg ... plays N date(s)`) and kept clear by every league dated after it. Thanks antonimus.
+- **A January-December league with a European place (Norway, Sweden, Finland, Ireland...) played
+  the day before or after a European match.** Only August-May leagues were kept clear of the
+  European days by the older scheduler, and the real-calendar scheduler used the wrong season's
+  weekdays for the autumn of a league dated in January. Now both keep such a league two days
+  clear of the August qualifying rounds of its own year, and clear of the autumn league phase
+  and the spring knockouts, each on its own season's weekdays. A league with only a
+  Libertadores or AFC place no longer loses the European days for nothing.
+- **Both fixture schedulers now read one list of busy days per league** (continental cups of
+  ours and of the game, pre-season cups, league cup, European days, national and calendar
+  cups), so a day one of them keeps clear is a day the other keeps clear too. A continental cup
+  of ours that takes a club through its cup winner (`alt=` places) is now kept clear by that
+  league as well.
 - **A calendar-year league played the day after its own cup.** The cup's days (the `dates ...
   days=` line of a January-December country) were kept clear only when the league was spaced
   the old way, not by the real-calendar scheduler: the Copa AUF Uruguay's second round on 18
   April, the league on the 19th. Both schedulers keep a day clear of them now, two on the
-  first try, like the cup days of every other country. Thanks antonimus.
+  first try, like the cup days of every other country. Each January-December country now
+  keeps clear of its own cup's days, not of the one world-wide list. Thanks antonimus.
 - **FL26 update 2.2 (`data_s25262b.cpk`): Mod Studio read its tables before the older ones.**
   The game's files were taken in alphabetical order, which puts `data_s25262b` before
   `data_s2526b`, so the newest tables were covered by older ones and the version label said
