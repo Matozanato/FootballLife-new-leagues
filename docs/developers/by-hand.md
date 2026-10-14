@@ -325,10 +325,10 @@ and at the end `6 leagues, 120 clubs added; 863 clubs in all`.
 ### B3. Give every club a squad
 
 ```powershell
-python tools\mkplayers.py --base C:\fl26\pesdb\common\etc\pesdb --out "C:\Football Life 2026\SiderAddons\livecpk\_FL26World" --per 30 --cap 61905
+python tools\mkplayers.py --base C:\fl26\pesdb\common\etc\pesdb --out "C:\Football Life 2026\SiderAddons\livecpk\_FL26World" --per 22 --cap 61905
 ```
 
-**You should see** at the end `120 clubs given 30 players each; ... players in all (cap 61905)`.
+**You should see** at the end `120 clubs given 22 players each; ... players in all (cap 61905)`.
 
 `--cap 61905` is not optional: it is the size of the player table with the mod installed.
 
@@ -465,7 +465,7 @@ Japanese one) and the regulation column `11, 49, 60, 61, 62, 74, 76` (for seven 
 Then B3 (squads) and B4 (switch it on) with `_FL26Asia` instead of `_FL26World`:
 
 ```powershell
-python tools\mkplayers.py --base C:\fl26\pesdb\common\etc\pesdb --out "C:\Football Life 2026\SiderAddons\livecpk\_FL26Asia" --per 30 --cap 61905
+python tools\mkplayers.py --base C:\fl26\pesdb\common\etc\pesdb --out "C:\Football Life 2026\SiderAddons\livecpk\_FL26Asia" --per 22 --cap 61905
 $env:FL26_DIR = "C:\Football Life 2026"
 python tools\siderroot.py _FL26Asia
 ```

@@ -664,6 +664,7 @@ def has_edits(r):
     reads."""
     e = r.get("edits") or {}
     import lbplayers
+    lbplayers.SQUAD = SQUAD                # a new club's places: the squads Build makes
     return bool(e.get("leagues") or e.get("clubs") or e.get("competitions") or e.get("swaps")) \
         or lbplayers.has_players(r) \
         or bool(r.get("game_cups") or r.get("game_europe") or r.get("uefa_seed")
@@ -1688,6 +1689,7 @@ def plan(recipe, base, prev=None):
     for p in out + others:
         p["newlife_tid"] = nlt
     import lbplayers
+    lbplayers.SQUAD = SQUAD                # a new club's places: the squads Build makes
     bad = lbplayers.check(full)
     if bad:
         raise BuildError("player changes:\n  " + "\n  ".join(bad[:20]))
@@ -3001,6 +3003,7 @@ def recipe_ordered(filled, clubs):
 def club_strength(rows):
     """the mean rough overall of a squad's best eleven (0 for no squad)"""
     import lbplayers
+    lbplayers.SQUAD = SQUAD                # a new club's places: the squads Build makes
     best = sorted((lbplayers.overall(r) for r in rows), reverse=True)[:11]
     return sum(best) / len(best) if best else 0.0
 
@@ -3024,6 +3027,7 @@ def club_money(new_of, pl, db, log=print):
     """sets the money of the new clubs (new_of: {id: league or group}) in db's Team.bin by their
     squads and divisions; returns the world's "fans" lines for fl26clubs"""
     import lbplayers
+    lbplayers.SQUAD = SQUAD                # a new club's places: the squads Build makes
     if not new_of:
         return []
     path = os.path.join(db, "Team.bin")
@@ -3359,6 +3363,7 @@ def build(pl, base, game, replace=False, log=print):
         call(mkplayers, ["--base", base, "--out", tmp, "--per", SQUAD, "--cap", PLAYER_CAP])
         log("  squads of %d for %d clubs" % (SQUAD, made))
     import lbplayers
+    lbplayers.SQUAD = SQUAD                # a new club's places: the squads Build makes
     faces, ids, portraits = [], {}, []
     try:
         filled = dict(clubs, players=lbplayers.fill_newlife(clubs, base, log))   # the plan kept as it was
