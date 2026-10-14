@@ -4608,11 +4608,90 @@ def ensure_modules(game, order, want, log=print):
     return done + gone
 
 
-def install_modules(game, log=print):
+DLL_REF = re.compile(r'"([A-Za-z0-9_]+\.dll)"')    # how our Lua names its DLL: "fl26swiss.dll"
+AV_WINERRORS = (225, 226)                 # ERROR_VIRUS_INFECTED, ERROR_VIRUS_DELETED
+
+
+def dll_names(lua_path):
+    """the DLLs a module's Lua loads from the modules folder (the quoted names in its text)"""
+    try:
+        with open(lua_path, encoding="utf-8", errors="replace") as f:
+            return sorted(set(DLL_REF.findall(f.read())))
+    except OSError:
+        return []
+
+
+def check_dlls(dst, names, src=None):
+    """the DLLs of the modules folder `dst` that are not there as they should be, as
+    [(dll, why)]: why is "missing", "blocked" (Windows refuses to open it -- an antivirus holds
+    or quarantines it) or "changed" (empty, or not the bytes of src's copy when `src`, the pack's
+    modules folder, has one).
+
+    B15 (bikolunar42, 13.10.): an antivirus took fl26swiss.dll, fl26join.dll ... out of
+    SiderAddons\\modules right after Install modules; the .lua files stayed, sider.log said
+    LoadLibraryA failed (error 126), and Mod Studio said nothing."""
+    import hashlib
+    out = []
+    for f in names:
+        p = os.path.join(dst, f)
+        if not os.path.isfile(p):
+            out.append((f, "missing"))
+            continue
+        try:
+            with open(p, "rb") as h:
+                data = h.read()
+        except OSError:
+            out.append((f, "blocked"))
+            continue
+        ref = os.path.join(src, f) if src else None
+        if not data:
+            out.append((f, "changed"))
+        elif ref and os.path.isfile(ref):
+            try:
+                with open(ref, "rb") as h:
+                    want = h.read()
+            except OSError:
+                continue
+            if len(want) != len(data) or hashlib.sha256(want).digest() != hashlib.sha256(data).digest():
+                out.append((f, "changed"))
+    return out
+
+
+def dll_message(problems, dst):
+    """what check_dlls found, in plain words: which files, that an antivirus probably took them,
+    and what to do"""
+    gone = [f for f, why in problems if why != "changed"]
+    changed = [f for f, why in problems if why == "changed"]
+    text = []
+    if gone:
+        one = len(gone) == 1
+        text.append("%s %s missing from %s (or Windows will not open %s) right after the install. An antivirus "
+                    "(Windows Security, Avast ...) has probably removed or quarantined %s. Without %s the game "
+                    "starts, but the parts of the new leagues %s run are silently missing (European draws, "
+                    "new players, cups)." % (", ".join(gone), "is" if one else "are", dst,
+                                             "it" if one else "them", "it" if one else "them",
+                                             "it" if one else "them", "it" if one else "they"))
+    if changed:
+        text.append("%s in %s %s not the file Mod Studio installed (empty or different): an antivirus may have "
+                    "changed %s." % (", ".join(changed), dst, "is" if len(changed) == 1 else "are",
+                                     "it" if len(changed) == 1 else "them"))
+    text.append("Add the SiderAddons folder (%s) as an exclusion in your antivirus (Windows Security: Virus & "
+                "threat protection > Manage settings > Exclusions > Add or remove exclusions > Add an exclusion "
+                "> Folder), then press Install the modules again (League Builder > Build > 0. Install the "
+                "modules)." % os.path.dirname(os.path.normpath(dst)))
+    return " ".join(text)
+
+
+def install_modules(game, log=print, settle=2.0):
     """put the pack's modules in the Sider folder's modules and load them from sider.ini.
 
     Every file it would replace is copied first into modules\\before-builder-<n>\\, and
-    sider.ini into sider.ini.before-builder, so the install can be undone by hand."""
+    sider.ini into sider.ini.before-builder, so the install can be undone by hand.
+
+    At the end every DLL of the pack must be in modules as it was shipped (check_dlls): an
+    antivirus that takes one away a moment after the copy (B15) stops the install with a
+    BuildError that names the file and says what to do. `settle`: seconds to give the
+    antivirus first."""
     pack = pack_dir()
     order = open(os.path.join(pack, "modules.txt"), encoding="utf-8").read().split()
     ini, _ = ini_lines(game)
@@ -4638,7 +4717,12 @@ def install_modules(game, log=print):
                     keep = os.path.join(dst, "before-builder-%d" % n)
                     os.makedirs(keep)
                 shutil.copy2(b, os.path.join(keep, f))
-            shutil.copy2(os.path.join(src, f), b)
+            try:
+                shutil.copy2(os.path.join(src, f), b)
+            except OSError as e:
+                if getattr(e, "winerror", None) in AV_WINERRORS:     # Windows: "the file contains a virus"
+                    raise BuildError(dll_message([(f, "blocked")], dst))
+                raise
         log("modules: %d copied, %d already there%s" % (len(changed), same,
             ("; the old ones are in " + keep) if keep else ""))
     else:
@@ -4659,6 +4743,17 @@ def install_modules(game, log=print):
     roots = os.path.join(pack, "livecpk")
     for r in sorted(os.listdir(roots)) if os.path.isdir(roots) else []:
         install_root(game, os.path.join(roots, r), log)
+    dlls = sorted(f for f in os.listdir(src) if f.lower().endswith(".dll"))
+    if dlls:
+        if settle:
+            import time
+            time.sleep(settle)                 # an antivirus scans a new file a moment after it is written
+        bad = check_dlls(dst, dlls, src)
+        if bad:
+            msg = dll_message(bad, dst)
+            log("modules: " + msg)
+            raise BuildError(msg)
+        log("modules: all %d DLLs in place" % len(dlls))
     return changed
 
 
@@ -4802,6 +4897,14 @@ def check(game, log=print):
         if m:
             log("  %-14s refused the game's exe: %s" % (m.group(1), l.split("] ", 1)[-1].strip()))
             ok = False
+    # a DLL an antivirus took away (B15): the Lua loads, LoadLibraryA fails with error 126
+    mdir = os.path.join(siderdir.find(game), "modules")
+    names = sorted({d for m in READERS + ["fl26regen", "fl26edit", "fl26walk", "fl26compcache"]
+                    for d in dll_names(os.path.join(mdir, m + ".lua"))})
+    bad_dlls = check_dlls(mdir, names)
+    if bad_dlls:
+        log("  " + dll_message(bad_dlls, mdir))
+        ok = False
     for m in READERS:
         mine = [l for l in text if l.startswith("[%s.lua]" % m)]
         took = [l for l in mine if "world file --" in l]

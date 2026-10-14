@@ -630,6 +630,28 @@ class Main(QMainWindow):
         save_settings(self.settings, self._seen)
 
 
+def denied_hook(previous):
+    """sys.excepthook for the window's own clicks (Switch on, a sider.ini edit, Remove the mod):
+    Windows refusing a write in the game folder gets the box that says what to do (B14: a game
+    under Program Files, a raw PermissionError traceback before); anything else goes on as before"""
+    showing = []
+
+    def hook(kind, err, tb):
+        from modstudio import access
+        if isinstance(err, Exception) and access.is_denied(err) and not showing:
+            showing.append(1)
+            try:
+                from modstudio.ui import denied_box
+                denied_box(QApplication.activeWindow(), access.denied_path(err) or "")
+            except Exception:
+                previous(kind, err, tb)
+            finally:
+                showing.clear()
+            return
+        previous(kind, err, tb)
+    return hook
+
+
 def main():
     if sys.platform == "win32":
         try:
@@ -649,7 +671,9 @@ def main():
         from PySide6.QtCore import QLockFile
         os.makedirs(APPDIR, exist_ok=True)
         lock = QLockFile(os.path.join(APPDIR, "running.lock"))
-        if not lock.tryLock(200):
+        # --elevated: started by Restart as administrator (access.restart_as_admin) while the
+        # one that started it closes
+        if not lock.tryLock(30000 if "--elevated" in sys.argv else 200):
             i18n.set_language(load_settings().get("lang", "en"))
             QMessageBox.information(None, "FL26 Mod Studio",
                                     _("FL26 Mod Studio is already open. Look for its window on the taskbar."))
@@ -661,6 +685,7 @@ def main():
         faulthandler.enable(open(os.path.join(APPDIR, "crash.log"), "w", encoding="utf-8"))
     except Exception:
         pass
+    sys.excepthook = denied_hook(sys.excepthook)
     w = Main()
     theme.dark_title_bar(w)
     w.show()

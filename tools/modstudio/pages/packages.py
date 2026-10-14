@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox, QFileDialog
 
 import lbpackage as K
 from ..i18n import _
-from ..ui import hint, row, ask, error, info, section, run_job
+from ..ui import hint, row, ask, error, info, section, run_job, denied
 from .builder import BuilderPage
 
 FILTER = "League packages (*.fl26pack);;All files (*.*)"
@@ -391,7 +391,8 @@ class Packages(BuilderPage):
 
         def failed(tb):
             self.app.busy(False)
-            error(self, "Make a league package", tb.strip().splitlines()[-1])
+            if not denied(self, tb):
+                error(self, "Make a league package", tb.strip().splitlines()[-1])
         run_job(job, done, failed)
 
     def remove_pack(self):

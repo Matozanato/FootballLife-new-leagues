@@ -23,6 +23,7 @@ exe. See `tools/flpaths.py`.
 | `test_country_order.py` | | League order (0.2.0) follows the recipe's `country_order` and never `league_order` (the Leagues page's drag order) |
 | `test_crestmatch.py` | | the crest file name matcher |
 | `test_cup_draw.py` | | `cup_draw` becomes the `cupdraw` line; `seeded` unless the recipe says otherwise; any other value is refused |
+| `test_dll_check.py` | | Install the modules stops, naming the file, when an antivirus takes or empties a DLL right after the copy; Home / Diagnostics (`checks.dll_problems`) and *4. Check* say the same while a switched-on module's DLL is missing |
 | `test_febdec_division.py` | tables | a division under a game league that plays February-December (Colombia) plays that season, so Build refuses a split or Apertura/Clausura on it |
 | `test_import_csv.py` | | Import CSV: a row naming a game player of another club makes him join |
 | `test_keep_added.py` | | pictures put by hand into the world folder survive a Build (`keep_added`) |
@@ -40,6 +41,7 @@ exe. See `tools/flpaths.py`.
 | `test_retired_modules.py` | | `ensure_modules` switches a bundled module off only when its bundle is loaded too |
 | `test_shift_newlife.py` | | Remove club / Insert club move the league's NewLife ids with the places |
 | `test_squadimport.py` | | the table import reads the game's player id and the fields |
+| `test_write_access.py` | | a game folder Windows does not let Mod Studio write in (a deny-write entry made with `icacls`, as under Program Files) is found before a write, a refused write is told from other errors, and the message says what to do (run as administrator, or move the game) |
 
 ```
 python tools/test_cup_draw.py

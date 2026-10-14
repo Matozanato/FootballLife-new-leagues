@@ -50,6 +50,19 @@ once, and your 0.2.2 career keeps working.
   (30-man new clubs). The transfer of a player the club no longer has is skipped with a note in
   the log. Thanks diwwanmago.
 
+- **A game under `Program Files`: Install mods, Install the modules, Build and Switch on stopped
+  with a raw `PermissionError [WinError 5]`.** Windows lets only a program run as administrator
+  change files there. Mod Studio now tries the game folder when you choose it and before it
+  writes there, and says plainly what to do: run it as administrator (the message has a
+  **Restart as administrator** button) or move the game out of Program Files. Home shows the
+  same as long as the folder is not writable. FAQ. Thanks Konkubent.
+- **An antivirus quarantined our DLLs (`fl26swiss.dll`, `fl26join.dll` ...) right after Install
+  the modules, and Mod Studio said nothing**: the game started without the European draws and
+  the new cups. Install the modules now checks every DLL it copied (there, and the bytes it
+  shipped) and stops with a message that names the file and says to add `SiderAddons` as an
+  exclusion in the antivirus and install again; Home, Diagnostics and *4. Check* say the same
+  while a DLL a switched-on module needs is missing. FAQ. Thanks bikolunar42.
+
 ## Read this first
 
 - Everything in [0.2.2](changelog-0.2.2.md) still applies. Your 0.2.2 / 0.2.3 career keeps

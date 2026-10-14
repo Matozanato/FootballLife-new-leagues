@@ -431,6 +431,14 @@ calendar.
 
 ## Things that are by design and will bite you
 
+- **A game under Program Files needs Mod Studio run as administrator.** Windows lets only an
+  administrator change files there. Since 0.2.4 Mod Studio says so (with a *Restart as
+  administrator* button) instead of stopping with a `PermissionError`; moving the game out of
+  Program Files is the better fix. See the [FAQ](faq.md).
+- **An antivirus can quarantine our DLLs** (`fl26swiss.dll`, `fl26join.dll` ...) right after
+  Install the modules. Since 0.2.4 Install the modules, Home and Diagnostics name the missing
+  file; add `SiderAddons` as an exclusion and install again. See the [FAQ](faq.md).
+
 - **From the second season on, our leagues start in July; the game's own leagues still start
   in August.** At the July rollover the builder's leagues are dated again, and a league that
   ends early enough gets its first rounds in July (2026-10-05: first round on 25 July instead

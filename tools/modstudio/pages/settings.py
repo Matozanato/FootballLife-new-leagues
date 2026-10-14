@@ -10,7 +10,7 @@ import siderdir
 
 from ..game import Game, guess_folders
 from ..i18n import _
-from ..ui import Page, section, hint, row, ask, error, info, run_job
+from ..ui import Page, section, hint, row, ask, error, info, run_job, can_write, denied
 
 
 class Settings(Page):
@@ -133,6 +133,8 @@ class Settings(Page):
             return
         self.app.set_game(d)
         self.refresh()
+        if self.app.game.ok():
+            can_write(self, self.app.game)      # a game under Program Files: say so now (B14)
 
     def set_sider(self):
         name = self.sider.currentData()
@@ -170,6 +172,9 @@ class Settings(Page):
         def failed(tb):
             self.app.busy(False)
             self.unpack_btn.setEnabled(True)
+            if denied(self, tb):
+                self.log.appendPlainText(tb.strip().splitlines()[-1])
+                return
             self.log.appendPlainText(tb)
         run_job(job, done, failed, progress=lambda t: self.log.appendPlainText(i18n.tr(str(t))))
 

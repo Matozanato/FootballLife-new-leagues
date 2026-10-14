@@ -421,6 +421,46 @@ squad for that rule and forgets the players you signed for it, so it can refuse 
 list shows 30 or more. Build itself counts the signings. Until the fix, remove one of the signed
 players instead (that always works), or leave the extra player in.
 
+### Install mods (or Build, or Switch on) says "Windows does not let Mod Studio write in ..."
+
+The game is installed under `C:\Program Files` or `C:\Program Files (x86)`. Windows lets only a
+program run as administrator change files there, so Mod Studio cannot copy mods, modules or a
+world into the game's `SiderAddons` folder or edit `sider.ini`. Before 0.2.4 this showed up as a
+`PermissionError [WinError 5] Access is denied` error. Do one of these:
+
+1. **Run Mod Studio as administrator.** The message has a **Restart as administrator** button
+   (Windows asks first), or right-click `FL26ModStudio.exe` > *Run as administrator*. Run as
+   administrator, Mod Studio cannot take a file dragged from Explorer: use **Choose a file...**
+   on Install mods instead.
+2. **Move the game out of Program Files**, for example to `C:\Games\Football Life 2026`
+   (copy the whole folder, start the game once from there), then choose the new folder in
+   **Settings > Game folder**. This is the better fix: nothing needs administrator rights then.
+
+The Home page shows the same message as long as the game folder is not writable. If Mod Studio
+already runs as administrator and still says it, the folder or a file in it is read-only, or
+another program (the game, an antivirus) holds it.
+
+### An antivirus removed fl26swiss.dll (or another of Mod Studio's DLLs)
+
+Some of Mod Studio's modules are a `.lua` file with a `.dll` next to it in
+`SiderAddons\modules`: `fl26swiss.dll`, `fl26join.dll`, `fl26chain.dll`, `fl26clubs.dll`,
+`fl26regen.dll`, `fl26edit.dll`, `fl26walk.dll`, `fl26compcache.dll`. They change the game in
+memory, which some antivirus programs (Windows Security included) mistake for malware: they
+quarantine the DLL a moment after it is copied. The `.lua` stays, so the game starts, but the
+parts the DLL runs are silently missing: no European draws, empty league phases, no regens,
+cups not played. In `sider.log` it reads `LoadLibraryA failed (err 126)`.
+
+Since 0.2.4 **Install the modules** checks every DLL after the copy and stops with a message that
+names the missing file, and **Home** and **Diagnostics** say it as long as one is missing. To fix it:
+
+1. Add the `SiderAddons` folder of the game as an exclusion in your antivirus. Windows Security:
+   *Virus & threat protection > Manage settings > Exclusions > Add or remove exclusions > Add an
+   exclusion > Folder*, and pick `...\Football Life 2026\SiderAddons`. Other antivirus programs
+   have the same thing under "exceptions" or "exclusions".
+2. Press **League Builder > Build > 0. Install the modules** again (or restore the files from
+   the antivirus' quarantine).
+3. Start a new Master League career if the old one was made without the DLLs.
+
 ### What should I send when something is wrong?
 
 1. In Mod Studio: **Tools > Diagnostics > Copy a report**, and paste it into the issue.

@@ -22,9 +22,10 @@ import uefakey
 from .. import theme
 from .. import servers as S
 from .. import newlife as N
+from .. import access
 from ..i18n import _, tr
 from ..backups import snapshot
-from ..ui import Page, section, hint, row, ask, error, info, run_job, helpmark, helped
+from ..ui import Page, section, hint, row, ask, error, info, run_job, helpmark, helped, can_write, denied_box
 
 EURO_WORLD = "_FL26Euro"
 
@@ -3918,6 +3919,8 @@ class Build(BuilderPage):
         if name == self.project.recipe.get("world"):
             error(self, title, _("%s is the world of the recipe you are editing: pick another name.") % name)
             return
+        if not can_write(self, self.app.game):
+            return
         out = os.path.join(self.app.game.livecpk_dir, name)
         replace = os.path.exists(out)
         if replace and not ask(self, title, _("%s exists. Build it again?") % name):
@@ -3961,11 +3964,17 @@ class Build(BuilderPage):
         if not background:
             try:
                 what(self.say)
-            except B.BuildError as e:
-                self.say(_("error: %s") % tr(str(e)))
-            except Exception:
-                import traceback
-                self.say(_("unexpected error:") + "\n" + traceback.format_exc())
+            except Exception as e:
+                path = access.denied_path(e)
+                if path is not None:                  # a game under Program Files (B14)
+                    self.say(_("stopped: Windows does not let Mod Studio write in %s")
+                             % (path or self.app.game.folder))
+                    denied_box(self, path)
+                elif isinstance(e, B.BuildError):
+                    self.say(_("error: %s") % tr(str(e)))
+                else:
+                    import traceback
+                    self.say(_("unexpected error:") + "\n" + traceback.format_exc())
             self.refresh()
             return
         for b in self.steps:
@@ -3987,10 +3996,19 @@ class Build(BuilderPage):
             try:
                 what(lambda t: progress(t))
             except B.BuildError as e:
+                if access.is_denied(e):
+                    raise                         # to failed: the box that says what to do
                 return _("error: %s") % tr(str(e))
             return None
-        run_job(job, done=lambda r: finish(err=r), failed=lambda tb: finish(err=_("unexpected error:") + "\n" + tb),
-                progress=self.say)
+
+        def failed(tb):
+            path = access.denied_path(tb)
+            if path is None:
+                finish(err=_("unexpected error:") + "\n" + tb)
+                return
+            finish(err=_("stopped: Windows does not let Mod Studio write in %s") % (path or self.app.game.folder))
+            denied_box(self, path)
+        run_job(job, done=lambda r: finish(err=r), failed=failed, progress=self.say)
 
     def do_plan(self):
         def go(log):
@@ -4035,6 +4053,8 @@ class Build(BuilderPage):
             self.out.clear()
             self.say(_("error: %s") % tr(str(e)))
             return
+        if not can_write(self, self.app.game):       # a game under Program Files (B14)
+            return
         game = self.app.game.folder
         out = os.path.join(self.app.game.livecpk_dir, pl["world"])
         replace = False
@@ -4078,6 +4098,8 @@ class Build(BuilderPage):
             self.out.clear()
             self.say(_("error: %s") % tr(str(e)))
             return
+        if not can_write(self, self.app.game):
+            return
         game = self.app.game.folder
         w = pl["world"]
         replace = os.path.exists(os.path.join(self.app.game.livecpk_dir, w))
@@ -4113,6 +4135,8 @@ class Build(BuilderPage):
 
     def do_on(self):
         w = self.project.recipe.get("world", "").strip()
+        if not can_write(self, self.app.game):
+            return
         if ask(self, "Switch on", _("Make %s the live world in sider.ini?") % w):
             def go(log):
                 snapshot(self.app.game.ini_path, "League Builder: switch on " + w, self.app.game.sider_dir)
@@ -4123,6 +4147,8 @@ class Build(BuilderPage):
             self.app.bus.ini_changed.emit()
 
     def do_install(self):
+        if not can_write(self, self.app.game):
+            return
         if ask(self, "Install the modules",
                _("Copy the league builder's modules into %s and load them from sider.ini? "
                  "Files it replaces are kept in a before-builder folder next to them.") % self.app.game.modules_dir):
