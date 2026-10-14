@@ -45,6 +45,8 @@ QPushButton#navitem { text-align: left; background: transparent; border: none; b
                       padding: 7px 12px; margin: 0 8px; }
 QPushButton#navitem:hover { background: %(PANEL2)s; }
 QPushButton#navitem:checked { background: %(SELECTION)s; color: white; font-weight: 600; }
+QPushButton#navgroup { text-align: left; background: transparent; border: none; color: #6F7986; font-size: 8pt; font-weight: bold; padding: 14px 14px 4px 14px; letter-spacing: 1px; }
+QPushButton#navgroup:hover { color: #C9CED6; }
 
 /* page header */
 QLabel#pagetitle { font-size: 13pt; font-weight: bold; }

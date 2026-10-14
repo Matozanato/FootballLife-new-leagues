@@ -4657,6 +4657,42 @@ def retired_modules():
         return {}
 
 
+OURS_HEAD = "; ---- FL26 Mod Studio: its modules, in the order they load. Mod Studio keeps this block ----"
+OURS_END = "; ---- end of the FL26 Mod Studio modules ----"
+
+
+def group_ours(lines):
+    """put the lua.module lines of Mod Studio's modules (fl26..., on or off) together, between
+    OURS_HEAD and OURS_END, where the first of them is (0.2.4: "group our modules in sider so it
+    is easier to read"). Their order among themselves and every other line's stay as they were;
+    only another module that sat between two of ours ends up after the block. Changes `lines` in
+    place; True when it moved anything."""
+    def ours(l):
+        m = module_of(l)[0]
+        if m:
+            return "\\" not in m.replace("/", "\\") and m.startswith("fl26")
+        # a note someone left in front of one of ours: "; off 25.09. lua.module = "fl26probe.lua""
+        t = l.strip()
+        return t.startswith((";", "#")) and re.search(r'lua\.module\s*=\s*"fl26', t) is not None
+    marks = {OURS_HEAD, OURS_END}
+    idx = [i for i, l in enumerate(lines) if ours(l)]
+    if not idx:
+        return False
+    block = [lines[i] for i in idx]
+    first = idx[0]
+    # blank lines among ours go: they would pile up under the block
+    gaps = {i for i in range(idx[0], idx[-1]) if not lines[i].strip()}
+    rest = [(i, l) for i, l in enumerate(lines)
+            if i not in set(idx) and i not in gaps and l.strip() not in marks]
+    at = sum(1 for i, _l in rest if i < first)
+    new = [l for _i, l in rest]
+    new[at:at] = [OURS_HEAD] + block + [OURS_END]
+    if new == lines:
+        return False
+    lines[:] = new
+    return True
+
+
 def ensure_modules(game, order, want, log=print):
     """make every module in `want` a live lua.module line of sider.ini, in `order`'s order.
 
@@ -4734,6 +4770,9 @@ def ensure_modules(game, order, want, log=print):
         lines.insert(ours_at[0], lines.pop(caps_at[0]))
         done.append("%s moved first" % order[0])
         log("sider.ini: %s moved before the other modules of ours -- it has to load first" % order[0])
+    if group_ours(lines):
+        done.append("grouped")
+        log("sider.ini: the modules of Mod Studio are together now, in one block of their own")
     ext = [i for i, l in enumerate(lines) if l.strip().lstrip(";#").strip().startswith("luajit.ext.enabled")]
     if not ext or lines[ext[0]].replace(" ", "") != "luajit.ext.enabled=1":
         if ext:
@@ -4752,7 +4791,7 @@ def ensure_modules(game, order, want, log=print):
     if done or gone:
         shutil.copy2(ini, ini + ".before-builder") if not os.path.exists(ini + ".before-builder") else None
         open(ini, "w", encoding="utf-8", newline="\r\n").write("\n".join(lines) + "\n")
-        on = [m for m in done if not m.endswith(" moved first")]
+        on = [m for m in done if not m.endswith(" moved first") and m != "grouped"]
         if on:
             log("sider.ini: switched on %s" % ", ".join(on))
     return done + gone

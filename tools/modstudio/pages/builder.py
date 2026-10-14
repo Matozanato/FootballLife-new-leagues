@@ -3595,6 +3595,10 @@ class AfterBuild(QDialog):
             self.accept()
 
 
+FOR_MODDERS = ("For modders. Build your world makes a world of your own: your leagues, clubs and players, "
+               "from your recipe. To play a ready modpack you do not need it: Import your world, then Play.")
+
+
 class Build(BuilderPage):
     title = "Build"
     hint = ("Turn the recipe into a world: 1. check the plan, 2. build it into SiderAddons\\livecpk, "
@@ -3614,6 +3618,13 @@ class Build(BuilderPage):
 
     def __init__(self, app):
         super().__init__(app)
+        # 0.2.4: Build is for modders; a player with a ready modpack never needs it (beta testers
+        # pressed Build and install on an installed Modpack, 14.10.)
+        note = QLabel(_(FOR_MODDERS))
+        note.setWordWrap(True)
+        note.setStyleSheet("background: %s; color: %s; border-radius: 6px; padding: 8px 12px;"
+                           % (theme.WARN_BG, theme.WARN_FG))
+        self.outer.addWidget(note)
         self.steps = []
         bar = QHBoxLayout()
         for text, fn, kind in (("0. Install the modules", self.do_install, None),
@@ -4234,7 +4245,7 @@ class Build(BuilderPage):
             info(self, "Export the world",
                  _("Saved %s\n\n%d new players get a generated face (the newfaces / faceapp lines of the world "
                    "file in the zip). Whoever installs it needs Mod Studio's modules with the face pack "
-                   "(League Builder > Build > 0. Install the modules); without them every new player looks "
+                   "(Home > Install now); without them every new player looks "
                    "the same. The zip has a read-me that says so.") % (out, got.get("face_players", 0))
                  + _("\n\nIn the same zip: the kits of %d clubs (Kit Server) and the scoreboards of %d leagues "
                      "(Scoreboard Server).") % (got.get("kits", 0), got.get("scoreboards", 0)))

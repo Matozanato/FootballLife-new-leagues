@@ -118,13 +118,13 @@ def dll_problems(game, ini):
         out.append(("err", "Lua modules",
                     _("%s is missing from %s (or Windows will not open it), but %s, which is switched on, needs "
                       "it: an antivirus probably removed it. Add the SiderAddons folder as an exclusion in your "
-                      "antivirus, then League Builder > Build > 0. Install the modules again.") % (f, mdir, lua),
+                      "antivirus, then Home > Install now again.") % (f, mdir, lua),
                     "Build"))
     for f, lua in changed:
         out.append(("warn", "Lua modules",
                     _("%s in %s is not the one Mod Studio installs with %s (empty or different): an "
                       "antivirus may have changed it. Add the SiderAddons folder as an exclusion in your "
-                      "antivirus, then League Builder > Build > 0. Install the modules again.") % (f, mdir, lua),
+                      "antivirus, then Home > Install now again.") % (f, mdir, lua),
                     "Build"))
     return out
 
@@ -400,4 +400,117 @@ def log_problems(game, tail=4000):
 def full(game, ini, recipe=None):
     out = quick(game, ini, recipe)
     out += map_problems(game)
+    return out
+
+
+def modules_state(game):
+    """Mod Studio's own modules on this PC, for the one line Home and Lua modules show (0.2.4:
+    people could not tell whether they had them, or the right version):
+        {"missing": [...], "changed": [...], "off": [...], "left_off": [...], "total": n}
+    missing  a file of the pack not in the modules folder of SiderAddons (or a face pack folder not in livecpk)
+    changed  one there that is not the pack's: an older version, or damaged
+    off      a module of the pack sider.ini does not load
+    left_off an optional one the player switched off on purpose (not a problem)
+    None when there is no pack or no Sider folder to compare with."""
+    try:
+        import leaguebuilder as B
+        pack = B.pack_dir()
+        order = open(os.path.join(pack, "modules.txt"), encoding="utf-8").read().split()
+        _ini, lines = B.ini_lines(game.folder)
+    except Exception:
+        return None
+    mdir, src = game.modules_dir, os.path.join(pack, "modules")
+    if not os.path.isdir(mdir) or not os.path.isdir(src):
+        return None
+    out = {"missing": [], "changed": [], "off": [], "left_off": [], "total": len(order)}
+    for f in sorted(os.listdir(src)):
+        a, b = os.path.join(src, f), os.path.join(mdir, f)
+        if not os.path.isfile(a):
+            continue
+        if not os.path.isfile(b):
+            out["missing"].append(f)
+        elif not _same_file(a, b):
+            out["changed"].append(f)
+    roots = os.path.join(pack, "livecpk")
+    for r in sorted(os.listdir(roots)) if os.path.isdir(roots) else []:
+        if not os.path.isdir(os.path.join(game.livecpk_dir, r)):
+            out["missing"].append(r)
+    live = set()
+    for l in lines:
+        m, on = B.module_of(l)
+        if m and on:
+            live.add(m.replace("/", "\\").rpartition("\\")[2])
+    chosen_off = B.modules_off(mdir)
+    for m in order:
+        if m not in live:
+            out["left_off" if m in chosen_off else "off"].append(m)
+    return out
+
+
+def modules_ok(state):
+    return bool(state) and not (state["missing"] or state["changed"] or state["off"])
+
+
+def ready_check(game, world):
+    """the final check after a ready world is installed (0.2.4, a tester: "one complete modpack
+    install reliably from start to finish, with an automatic final check"): every thing the game
+    needs to play it, as (level, text) -- "ok", "err" (it will not play as it should) or "warn".
+    The content servers checked are the ones the world brought map lines or a folder for."""
+    out = []
+    d = os.path.join(game.livecpk_dir, world)
+    if not os.path.isfile(os.path.join(d, "fl26world.txt")):
+        return [("err", _("%s is not in SiderAddons\\livecpk: install the zip again") % world)]
+    out.append(("ok", _("The world %s is installed") % world))
+    try:
+        from .siderini import SiderIni
+        ini = SiderIni.load(game.ini_path)
+    except Exception:
+        return out + [("err", _("sider.ini could not be read"))]
+    on = [e for e in ini.entries("cpk.root") if e.enabled
+          and os.path.basename(os.path.normpath(root_path(game.sider_dir, e.value))) == world]
+    try:
+        import leaguebuilder as B
+        live = B.is_live(world, game.folder)
+    except Exception:
+        live = False
+    if on and live:
+        out.append(("ok", _("It is the world switched on in the game")))
+    else:
+        out.append(("err", _("It is not switched on: Home > Switch world..., pick %s") % world))
+    state = modules_state(game)
+    if state is not None:
+        if modules_ok(state):
+            out.append(("ok", _("Mod Studio's modules are installed, up to date and switched on")))
+        else:
+            out.append(("err", _("Mod Studio's modules are not all in place: Home > Install now")))
+    from . import installer as I
+    if I.face_pack_missing(game.sider_dir):
+        out.append(("warn", _("The face pack is missing: the new players will all have the same face. "
+                              "Home > Install now")))
+    live_mods = {os.path.basename(e.value.replace("/", "\\").strip('"')).lower()
+                 for e in ini.entries("lua.module") if e.enabled}
+    for srv in S.SERVERS:
+        folder, module = srv.pick(game.content_dir)
+        base = os.path.join(game.content_dir, folder)
+        uses = os.path.isdir(os.path.join(base, world))
+        for m in srv.maps:
+            try:
+                with open(os.path.join(base, m.file), encoding="utf-8-sig", errors="replace") as f:
+                    uses = uses or any(world in ln for ln in f)
+            except OSError:
+                pass
+        if not uses:
+            continue
+        optional = srv.key == "menus"         # the themes are a nice-to-have: the game plays without
+        if not os.path.isfile(os.path.join(game.modules_dir, module)):
+            out.append(("warn" if optional else "err",
+                        _("%s: the world brings them, but %s is not in SiderAddons\\modules. It comes with "
+                          "your Sider pack (SPFL26); put it in, then switch it on in Tools > Lua modules")
+                        % (_(srv.title), module)))
+        elif module.lower() not in live_mods:
+            out.append(("warn" if optional else "err",
+                        _("%s: the world brings them, but %s is switched off: Tools > Lua modules, tick it, "
+                          "Apply") % (_(srv.title), module)))
+        else:
+            out.append(("ok", _("%s: %s is on and has the world's lines") % (_(srv.title), module)))
     return out

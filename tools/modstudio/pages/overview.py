@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QScrollArea,
                                QVBoxLayout, QWidget)
 
-from .. import backups, checks, installer
+from .. import backups, checks, installer, modfix
 from ..i18n import _
 from ..ui import Page
 
@@ -134,7 +134,7 @@ class Overview(Page):
             elif it.layout():
                 Overview._clear(it.layout())
 
-    def _row(self, layout, left, text, right="", page=None, last=False):
+    def _row(self, layout, left, text, right="", page=None, last=False, action=None):
         w = QWidget()
         h = QHBoxLayout(w)
         h.setContentsMargins(0, 7, 0, 7)
@@ -147,7 +147,13 @@ class Overview(Page):
             m.setFixedWidth(84)
         h.addWidget(m, 0, Qt.AlignTop)
         h.addWidget(_label(text), 1)
-        if page and page in self.app.pages:
+        if action:
+            b = QPushButton(action[0])
+            b.setObjectName("primary")
+            b.setStyleSheet("padding: 2px 10px; min-height: 14px;")
+            b.clicked.connect(action[1])
+            h.addWidget(b, 0, Qt.AlignTop)
+        elif page and page in self.app.pages:
             b = QPushButton(_("Open"))
             b.setStyleSheet("padding: 2px 10px; min-height: 14px;")
             b.clicked.connect(lambda _c=False, p=page: self.app.open_page(p))
@@ -227,15 +233,26 @@ class Overview(Page):
             mods = ini.entries("lua.module")
             rows.append(("ok", _("Content folders on"), "%d / %d" % (sum(e.enabled for e in roots), len(roots)), None))
             rows.append(("ok", _("Lua modules on"), "%d / %d" % (sum(e.enabled for e in mods), len(mods)), None))
+            # 0.2.4: whether Mod Studio's own modules are there, current and on, with the button
+            # that puts them right (they were behind League Builder > Build > 0. Install the modules)
+            line = modfix.summary(checks.modules_state(g))
+            if line:
+                rows.insert(0, line + (None, None if line[0] == "ok" else
+                                       (_("Install now"), lambda: modfix.install_now(self) and self.refresh())))
         if g.ok() and os.path.isdir(g.sider_dir):
             rows.append(("ok", _("Mods installed here"), str(len(installer.records(g.sider_dir))), None))
             hist = backups.history(g.sider_dir)
         else:
             hist = []
+        mods_bad = bool(rows) and rows[0][0] == "err" and len(rows[0]) > 4
         for level, area, text, page in checks.quick(g, ini, r):
+            if mods_bad and area == "Lua modules" and page == "Build":
+                continue            # a DLL missing or changed: the modules line above says it, with its button
             rows.append((level, "%s: %s" % (_(area), _(text)), "", page))
-        for n, (level, text, right, page) in enumerate(rows):
-            self._row(self.health_rows, level, text, right, page, n == len(rows) - 1)
+        for n, row in enumerate(rows):
+            level, text, right, page = row[:4]
+            self._row(self.health_rows, level, text, right, page, n == len(rows) - 1,
+                      row[4] if len(row) > 4 else None)
 
         self._clear(self.recent_rows)
         for n, h in enumerate(hist[:6]):

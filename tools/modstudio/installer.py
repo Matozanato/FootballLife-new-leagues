@@ -196,7 +196,7 @@ SiderAddons\\livecpk\\{world}, puts its world file (fl26world.txt) in SiderAddon
 and switches the world on.
 
 REQUIRED: FL26 Mod Studio's modules with the face pack (SiderAddons\\modules\\{pack}).
-Install them once: League Builder > Build > 0. Install the modules (or Build and install).
+Install them once: Home > Install now (or Build and install).
 {faces} new players of this world get a generated face from that pack: they are listed on
 the newfaces / faceapp lines of fl26world.txt. Without the modules, or without
 fl26world.txt in SiderAddons\\modules, every new player looks the same.
@@ -243,8 +243,8 @@ def export_world(sider_dir, world, out, log=lambda t: None):
     faces = face_players(use)
     info = {"format": "fl26world", "format_version": 1, "world": world, "face_players": faces,
             "world_file": "SiderAddons/livecpk/%s/%s" % (world, WORLD_FILE),
-            "needs": ["FL26 Mod Studio modules with the face pack (%s): League Builder > Build > "
-                      "0. Install the modules" % FACE_PACK]}
+            "needs": ["FL26 Mod Studio modules with the face pack (%s): Home > Install now"
+                      % FACE_PACK]}
     comps = world_competitions(use)
     content = os.path.join(sider_dir, "content")
     extra = []                            # (server, its folder here, our map lines of this world, lent folders)

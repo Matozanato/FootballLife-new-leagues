@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QBrush
 from PySide6.QtWidgets import (QCheckBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSplitter,
                                QTreeWidgetItem, QVBoxLayout, QWidget, QPlainTextEdit, QMenu)
-from .. import theme, modules as M
+from .. import theme, checks, modfix, modules as M
 from ..i18n import _
 from ..siderini import norm
 from ..ui import Page, section, hint, ask, pick_file, row
@@ -23,6 +23,17 @@ class Modules(Page):
         self.ini, self.dirty = None, False
         self.btn_apply = self.action("Apply", self.apply, "primary", "Write the changes to sider.ini")
         self.btn_discard = self.action("Discard", self.load, tip="Forget the changes")
+
+        # 0.2.4: Mod Studio's own modules in one line, with the button that installs or updates them
+        ours = QHBoxLayout()
+        self.ours = QLabel("")
+        self.ours.setWordWrap(True)
+        self.b_ours = QPushButton(_("Install now"))
+        self.b_ours.setObjectName("primary")
+        self.b_ours.clicked.connect(lambda: modfix.install_now(self) and self.load())
+        ours.addWidget(self.ours, 1)
+        ours.addWidget(self.b_ours)
+        self.outer.addLayout(ours)
 
         bar = QHBoxLayout()
         self.search = QLineEdit()
@@ -90,6 +101,12 @@ class Modules(Page):
         self.ini = self.app.ini()
         self.dirty = False
         self.fill()
+        line = modfix.summary(checks.modules_state(self.app.game)) if self.app.game.ok() else None
+        self.ours.setVisible(bool(line))
+        self.b_ours.setVisible(bool(line) and line[0] != "ok")
+        if line:
+            self.ours.setText(("✓  " if line[0] == "ok" else "✗  ") + line[1])
+            self.ours.setStyleSheet("color: %s; font-weight: 600;" % (theme.GOOD if line[0] == "ok" else theme.DANGER))
 
     def entries(self):
         return self.ini.entries(self.KEY) if self.ini else []

@@ -83,6 +83,26 @@ def page_groups():
     ]
 
 
+# 0.2.4: the left bar by what a player wants to do ("it is so crowded, that is not humane", 14.10.).
+# (caption, folds, [(key, title, [pages])]): a section of one page shows it as it is, one of more
+# shows its pages as tabs, the first one open. GAME CONTENT and TOOLS start folded.
+NAV = [
+    ("", False, [("Overview", "Home", ["Overview"])]),
+    ("YOUR WORLD", False, [
+        ("BuildWorld", "Build your world", ["Build"]),
+        ("ImportWorld", "Import your world", ["Install", "Packages"]),
+        ("EditWorld", "Edit your world", ["Leagues", "NewClubs", "Players", "Kits", "Stadiums"]),
+        ("NewLife", "NewLife Database", ["NewLife"]),
+    ]),
+    ("GAME CONTENT", True, [(n, None, [n]) for n in ("Balls", "Commentary", "Music", "Servers")]),
+    ("TOOLS", True, [(n, None, [n]) for n in ("Modules", "Roots", "Profiles", "Restore", "Diagnostics")]),
+    ("SETTINGS", False, [("Settings", None, ["Settings"])]),
+]
+TAB_TITLE = {"Install": "A world or a mod (.zip)", "Packages": "A league package (.fl26pack)",
+             "NewClubs": "Clubs"}
+OPEN_FOR = {"NewLeagues": "EditWorld"}     # a page not in the bar: the section that stays lit
+
+
 class Main(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -132,7 +152,9 @@ class Main(QMainWindow):
                                          "(the last one open was %s).") % (live[0], was)
                 except Exception:
                     pass
-            if not self._start_note:
+            from modstudio import installer as _I
+            if not self._start_note and not _I.ready_world(self.game, live[0]):
+                # a ready world has no recipe to open, and Build is off for it: nothing to tell
                 self._start_note = _("The world switched on in the game is %s, but the recipe open is %s. "
                                      "Open the recipe of %s before you Build.") % (live[0], was, live[0])
         self.bus.game_changed.connect(self.project.load_tables)
@@ -183,8 +205,8 @@ class Main(QMainWindow):
             for cls in classes:
                 p = cls(self)
                 self.pages[cls.__name__] = p
-                self.stack.addWidget(p)
                 first = first or cls.__name__
+        self._sections()
         self.bus.game_changed.connect(self.update_header)
         self.bus.ini_changed.connect(self.update_header)
         self.update_header()
@@ -288,6 +310,7 @@ class Main(QMainWindow):
         return w
 
     def _nav(self):
+        """the left bar from NAV: a button per section, a folding group behind its caption"""
         outer = QScrollArea()
         outer.setWidgetResizable(True)
         outer.setFixedWidth(220)
@@ -299,26 +322,88 @@ class Main(QMainWindow):
         v.setContentsMargins(0, 0, 0, 8)
         v.setSpacing(0)
         self.nav_group = QButtonGroup(self)
-        self.nav_buttons = {}
+        self.nav_buttons, self.nav_group_of, self.nav_folds, self.nav_heads = {}, {}, {}, {}
+        titles = {cls.__name__: cls.title for _c, group in page_groups() for cls in group}
         v.addSpacing(10)
-        for caption, classes in page_groups():
-            if caption is None:
-                continue
-            if caption:
+        for caption, folds, sections in NAV:
+            box = QWidget()
+            bv = QVBoxLayout(box)
+            bv.setContentsMargins(0, 0, 0, 0)
+            bv.setSpacing(0)
+            if caption and folds:
+                head = QPushButton("")
+                head.setObjectName("navgroup")
+                head.setCursor(Qt.PointingHandCursor)
+                head.clicked.connect(lambda _c=False, g=caption: self.fold(g, not self.nav_open(g)))
+                v.addWidget(head)
+                self.nav_heads[caption] = head
+                self.nav_folds[caption] = box
+            elif caption:
                 c = QLabel(_(caption))
                 c.setObjectName("navcaption")
                 v.addWidget(c)
-            for cls in classes:
-                b = QPushButton(_(cls.title))
+            for key, title, names in sections:
+                b = QPushButton(_(title or titles[names[0]]))
                 b.setObjectName("navitem")
                 b.setCheckable(True)
-                b.clicked.connect(lambda _c=False, n=cls.__name__: self.open_page(n))
+                b.clicked.connect(lambda _c=False, n=names[0]: self.open_page(n))
                 self.nav_group.addButton(b)
-                self.nav_buttons[cls.__name__] = b
-                v.addWidget(b)
+                self.nav_buttons[key] = b
+                if folds:
+                    self.nav_group_of[key] = caption
+                bv.addWidget(b)
+            v.addWidget(box)
+        for g in self.nav_folds:
+            self.fold(g, self.nav_open(g), save=False)
         v.addStretch(1)
         outer.setWidget(w)
         return outer
+
+    def nav_open(self, group):
+        return group in (self.settings.get("nav_open") or [])
+
+    def fold(self, group, on, save=True):
+        """open (on) or fold a group of the left bar; kept for the next start"""
+        now = [g for g in (self.settings.get("nav_open") or []) if g != group] + ([group] if on else [])
+        self.settings["nav_open"] = now
+        self.nav_folds[group].setVisible(bool(on))
+        self.nav_heads[group].setText(("\u25be  " if on else "\u25b8  ") + _(group))
+        if save:
+            self.save_settings()
+
+    def _sections(self):
+        """the stack: a section of one page is the page, one of more holds its pages as tabs"""
+        from PySide6.QtWidgets import QTabWidget
+        self.section_of, self.section_tabs = {}, {}
+        placed = set()
+        for _caption, _folds, sections in NAV:
+            for key, _title, names in sections:
+                for n in names:
+                    self.section_of[n] = key
+                if len(names) == 1:
+                    self.stack.addWidget(self.pages[names[0]])
+                    placed.add(names[0])
+                    continue
+                holder = QWidget()
+                holder.setObjectName("page")
+                holder.setAttribute(Qt.WA_StyledBackground, True)
+                hv = QVBoxLayout(holder)
+                hv.setContentsMargins(12, 10, 12, 0)
+                hv.setSpacing(0)
+                tabs = QTabWidget()
+                tabs.setObjectName("sectiontabs")
+                tabs.setDocumentMode(True)
+                for n in names:
+                    tabs.addTab(self.pages[n], _(TAB_TITLE.get(n) or self.pages[n].title))
+                    placed.add(n)
+                tabs.currentChanged.connect(lambda _i, t=tabs: self.open_page(
+                    next(k for k, p in self.pages.items() if p is t.currentWidget())))
+                hv.addWidget(tabs)
+                self.section_tabs[key] = tabs
+                self.stack.addWidget(holder)
+        for n, p in self.pages.items():
+            if n not in placed:
+                self.stack.addWidget(p)
 
     # ---- pages ----
     def page(self, name):
@@ -326,9 +411,21 @@ class Main(QMainWindow):
 
     def open_page(self, name):
         p = self.pages[name]
-        self.stack.setCurrentWidget(p)
-        b = self.nav_buttons.get(name) or self.nav_buttons.get("Leagues")
+        key = self.section_of.get(name) or OPEN_FOR.get(name)
+        tabs = self.section_tabs.get(key) if name in self.section_of else None
+        if tabs is not None:
+            self.stack.setCurrentWidget(tabs.parentWidget())
+            if tabs.currentWidget() is not p:
+                tabs.blockSignals(True)
+                tabs.setCurrentWidget(p)
+                tabs.blockSignals(False)
+        else:
+            self.stack.setCurrentWidget(p)
+        b = self.nav_buttons.get(key)
         if b:
+            group = self.nav_group_of.get(key)
+            if group and not self.nav_open(group):
+                self.fold(group, True)
             b.setChecked(True)
         self.settings["page"] = name
         try:

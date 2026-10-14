@@ -17,7 +17,7 @@ KIND = {"root": "Content folder (livecpk)", "content": "Content server files", "
         "cpk": "Packed .cpk (unpacked on install)", "pack": "League package", "dll": "DLL (not installed)",
         "world": "League Builder world (switched on)"}
 NO_FACES = ("Mod Studio's modules with the face pack are not installed: the new players of this world "
-            "will all look the same until you install them (League Builder > Build > 0. Install the modules).")
+            "will all look the same until you install them (Home > Install now).")
 
 
 class Drop(QFrame):
@@ -299,14 +299,28 @@ class Install(Page):
             if denied(self, e):
                 return
             error(self, "Install mods", _("%s is installed, but switching it on stopped:") % w + "\n\n" + str(e)
-                  + "\n\n" + _("Open League Builder > Build and press 0. Install the modules, then 3. Switch it on."))
+                  + "\n\n" + _("On Home press Install now, then Switch world... and pick this world."))
             return
         finally:
             self.app.bus.ini_changed.emit()
-        if rec.get("face_players") and I.face_pack_missing(game.sider_dir):
-            info(self, "Install mods", _(NO_FACES))
+        self.final_check(w)
+
+    def final_check(self, w):
+        """0.2.4: after a ready world, check all it needs and say Ready to play, or what to fix"""
+        from .. import checks
+        rows = checks.ready_check(self.app.game, w)
+        bad = [t for lv, t in rows if lv == "err"]
+        warn = [t for lv, t in rows if lv == "warn"]
+        good = [t for lv, t in rows if lv == "ok"]
+        text = "\n".join(["\u2713  " + t for t in good] + ["!  " + t for t in warn] + ["\u2717  " + t for t in bad])
+        if bad:
+            self.say(_("%s is installed, but not ready to play yet: see what to fix.") % w, "err")
+            error(self, _("Almost ready"), _("Fix these, then the world is ready to play:") + "\n\n" + text)
         else:
-            self.say(_("%s is the live world. Start the game and a new Master League career.") % w, "ok")
+            self.say(_("%s is ready to play. Press Play and start a new Master League.") % w, "ok")
+            info(self, _("Ready to play"), text + "\n\n" +
+                 _("Press Play and start a NEW Master League (an old career does not get the new leagues). "
+                   "No Build needed."))
 
     # ---- installed ----
     def refresh(self):
