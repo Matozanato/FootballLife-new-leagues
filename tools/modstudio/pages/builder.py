@@ -2837,6 +2837,11 @@ class NewClubs(BuilderPage):
             return
         used = {int(i) for x in self.project.recipe["leagues"] for i in (x.get("newlife") or {}).get("clubs") or []
                 if str(i).isdigit()}
+        try:
+            game = B.game_info(self.project.base)
+        except OSError:
+            game = None
+        rel.use_tables(game)              # "in the game" by the tables in use, a database mod's too
         skip = used | {cid for cid, c in rel.clubs.items() if c.get("in_game") == "1"}
         d = ClubPickDialog(self, rel, skip)
         if not d.finish() or not d.picked:
@@ -2846,10 +2851,6 @@ class NewClubs(BuilderPage):
             error(self, "NewLife club", _("%d clubs picked, but %s has only %d places from club %d on. Insert "
                                           "clubs first (More > Insert club).") % (len(d.picked), L["name"], room, k + 1))
             return
-        try:
-            game = B.game_info(self.project.base)
-        except OSError:
-            game = None
         put = elsewhere = 0
         try:
             for j, cid in enumerate(d.picked):

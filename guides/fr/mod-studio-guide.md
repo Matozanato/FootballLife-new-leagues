@@ -48,7 +48,9 @@ La fenêtre est en anglais. **Settings → Language → Français** la passe en 
    sur chaque PC (un paquet ou un nouveau monde le demande et propose d'ouvrir les Réglages).
    **Utiliser un autre dossier de tables** sert pour votre propre base, comme un dossier `pesdb`
    dans livecpk : extrayez d'abord les tables du jeu, puis choisissez ce dossier. Ses fichiers passent
-   par-dessus ceux du jeu, qui fournissent tout ce qu'il n'a pas.
+   par-dessus ceux du jeu, qui fournissent tout ce qu'il n'a pas. Un mod de base qui déplace les
+   ligues du jeu (UML 2026 et autres) convient : chaque ligue du jeu prend le pays de la plupart de
+   ses clubs, et NewLife Database ne compte un club comme celui du jeu que si ces tables l'ont (0.2.4).
 3. Ouvrez **Home** (la première page). Elle montre le monde actif et votre configuration, et liste
    les problèmes ; **Open** à côté d'un problème mène à la page qui le corrige. Home a aussi
    **Construire et installer** (toute la Construction en un clic), **Seulement les coupes

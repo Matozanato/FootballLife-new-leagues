@@ -44,6 +44,9 @@ Prozor je na engleskom. **Settings → Language → Hrvatski** ga prebaci na hrv
    PC-u (paket ili novi svijet to traže i ponude otvoriti Postavke). **Koristi drugu mapu s
    tablicama** služi za vlastitu bazu, npr. `pesdb` mapu u livecpk: prvo raspakiraj tablice igre,
    zatim odaberi tu mapu. Njezine datoteke idu preko igrinih, a igrine daju sve što ona nema.
+   Mod baze koji premješta igrine lige na tuđa mjesta (UML 2026 i slični) radi: svaka liga igre
+   dobije zemlju većine svojih klubova, a NewLife Database klub smatra igrinim samo kad ga te
+   tablice imaju (0.2.4).
 3. Otvori **Home** (prva stranica). Pokazuje živi svijet i tvoju postavu te popis problema;
    **Open** pokraj problema vodi na stranicu koja ga rješava. Home ima i **Izgradi i instaliraj**
    (cijela Izgradnja jednim klikom), **Samo europski kupovi...**, **Otvori njegove lige** i

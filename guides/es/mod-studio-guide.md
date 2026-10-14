@@ -47,7 +47,9 @@ La ventana está en inglés. **Settings → Language → Español** la pasa a es
    cada PC (un paquete o un mundo nuevo lo piden y ofrecen abrir Ajustes). **Usar otra carpeta
    de tablas** sirve para una base de datos propia, como una carpeta `pesdb` en livecpk: desempaqueta
    primero las tablas del juego y luego elige esa carpeta. Sus archivos van encima de los del juego,
-   que ponen lo que a ella le falte.
+   que ponen lo que a ella le falte. Un mod de base de datos que cambia de sitio las ligas del juego
+   (UML 2026 y similares) funciona: cada liga del juego toma el país de la mayoría de sus clubes, y
+   NewLife Database solo cuenta un club como del juego cuando estas tablas lo tienen (0.2.4).
 3. Abre **Home** (la primera página). Muestra el mundo activo y tu configuración, y una lista de
    problemas; **Open** junto a un problema va a la página que lo arregla. Home también tiene
    **Construir e instalar** (todo Construir en un solo clic), **Solo las copas europeas...**,

@@ -235,6 +235,9 @@ class NewLife(BuilderPage):
         folder = self.app.settings.get("newlife")
         if self.rel is None and folder and os.path.isdir(folder):
             self.load(folder)
+        elif self.rel is not None and self.rel.tables != (self.info() or {}).get("base", self.rel.tables):
+            self.read_rows()              # other tables since (Settings): which clubs the game has
+            self.fill()
         self.count()
 
     def info(self):
@@ -261,8 +264,7 @@ class NewLife(BuilderPage):
             if rel.parts:
                 text += "\n" + _("Parts: %s") % ", ".join(rel.parts)
             self.where.setText(text)
-            names = dict((i, n) for n, i in B.country_ids(self.project.base)) if self.project.base else {}
-            self.rows = rel.leagues(lambda c: names.get(int(c), "").split(" (")[0])
+            self.read_rows()
             self.custom = {}
             self.fill()
 
@@ -272,6 +274,12 @@ class NewLife(BuilderPage):
             error(self, "NewLife Database", tb.strip().splitlines()[-1])
 
         run_job(lambda progress: N.Release(folder), done, failed)
+
+    def read_rows(self):
+        """the release's leagues, their clubs "in game" by the tables in use (a database mod's
+        own, from Settings: Yanis 14.10., UML 2026 v3), not by the plain game"""
+        names = dict((i, n) for n, i in B.country_ids(self.project.base)) if self.project.base else {}
+        self.rows = self.rel.leagues(lambda c: names.get(int(c), "").split(" (")[0], self.info())
 
     def fill(self):
         q = self.search.text().strip().lower()
