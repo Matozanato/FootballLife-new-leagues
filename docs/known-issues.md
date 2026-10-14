@@ -541,6 +541,15 @@ calendar.
   of January, after the season. Checked without the game (Build through Mod Studio: Chile, Brazil
   and Scotland each get a two-club cup in their country, Chile and Brazil dated day 30). Needs
   Build again. Not yet checked in the game.
+  2026-10-14, same fix, second half: in a February-December country that alone was not enough.
+  The season the game builds at New Year takes only the game's own cups, so a new league's super
+  cup is added to it by the season module (from its league line), and a game league, which has
+  no such line, was left out: dated in January, never played. Build now writes a `gsuper` line
+  for it, the season module adds it to the New Year season, and the cup module fills it with the
+  champion and the cup winner of the season just ended (the runner-up when the champion won
+  both). Needs Install mods and Build again, then a new career; a world with no new league of its
+  own does not start the season module, so there the January super cup is still not played
+  (Build says so).
 - 2026-10-06 (Mod Studio 0.1.9, Discord): **the first round of a new country's national cup paired
   only clubs of the same division.** A cup is drawn in the order its clubs are written (1 v 2, 3
   v 4 ...), and both Build and the cup module (fl26chain, which refills a two-division cup at

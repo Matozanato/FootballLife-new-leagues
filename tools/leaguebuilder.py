@@ -169,8 +169,10 @@ which league sits above -- and nothing about ids:
               Greece, the USA): the same two-club copy of SUPER_CUP_LIKE a new league's super
               cup is (game_super_cups), which the game fills itself; dated as SUPER_CUP_LIKE
               (July), in a February-December country at the end of January after the season
-              (CALENDAR_SUPER_DATE_LIKE). 0.2.3 built it on the FA Cup's row, and the game
-              filled that with every club of the country (Vicentico 13.10.)
+              (CALENDAR_SUPER_DATE_LIKE), where the world file's gsuper line puts it into the
+              New Year season (fl26joindll) and has the champion and the cup winner of the
+              season just ended fill it (fl26swiss). 0.2.3 built it on the FA Cup's row, and
+              the game filled that with every club of the country (Vicentico 13.10.)
   edits.competitions  (the recipe) new names and emblems for the game's competitions that are
               not leagues -- cups, super cups, the Champions League, the Libertadores ...:
               {"<competition id>": {"name": ..., "logo": ...}}; every regulation of that
@@ -2255,9 +2257,16 @@ def game_cups(recipe, regrow, region_of_cid, base, out):
             # fills a format-2 cup of a region from its leagues, so the Supercopa de Chile and Rei
             # came out a 16- and 26-club bracket, drawn in July from the table of a February-
             # December league still running and never played right (Vicentico 13.10.)
+            # league, cup, region and conf go to the world file's gsuper line (gsuper_lines): in a
+            # February-December country the season the game builds at New Year takes only the
+            # shipped cups, so fl26joindll adds ours to it (with its confederation), and
+            # fl26swiss fills it with the champion and the cup winner of the season just ended
+            # -- what a new league's scup= gives its own super cup. Without them the Supercopa
+            # de Chile and Rei were dated in January but never entered a season (Vicentico 13.10.)
             supers.append({"name": (c.get("super_name") or "").strip() or league + " Super Cup",
                            "code": "FL_G%03d_SCUP" % rid, "logo": c.get("super_logo") or None,
                            "league": rid, "league_cid": g[M.R_CID], "region": region,
+                           "cup": home_cup(regrow, region_of_cid, region) or 0, "conf": conf or 0,
                            "calendar": region in CALENDAR_REGIONS and region not in moved_regions})
     return res, supers
 
@@ -2862,6 +2871,11 @@ def describe(pl):
         lines.append("  %s: super cup, the champion v the cup winner, %s" % (
             s["name"], "at the end of January (February-December season)" if s["calendar"]
             else "its date follows %s" % SUPER_CUP_LIKE))
+        if s["calendar"] and not pl["leagues"]:
+            # fl26joindll puts it into the New Year season only when it installs, and it does not
+            # install for a world without a league of its own
+            lines.append("  NOTE: %s is played only in a world with at least one new league "
+                         "(the season module does not start without one)" % s["name"])
     return "\n".join(lines)
 
 
@@ -3492,7 +3506,7 @@ def build(pl, base, game, replace=False, log=print):
         log("  European places: %d of the new leagues, %d in all"
             % (sum(1 for e in own_places(pl) if e[2] in fl26world.UEFA_LINE), len(uefa)))
     fl26world.write_world(os.path.join(tmp, MARK), pl["world"], leagues, split_lines, uefa, uecl,
-                          ccups + dates_lines(pl, db) + season_lines(pl, db) + july_lines(pl, base)
+                          ccups + dates_lines(pl, db) + gsuper_lines(pl) + season_lines(pl, db) + july_lines(pl, base)
                           + rcal_lines(pl, base, confed) + cupdays_lines(pl, base, db, log) + first_lines(pl)
                           + order_lines(pl, base, confed)
                           + kickorder_lines(pl, base, confed)
@@ -3873,6 +3887,18 @@ def dates_lines(pl, db):
                 " days=%s" % ",".join(map(str, CALENDAR_SUPER_DATE_DAYS)) if s["calendar"] else ""))
 
     return out
+
+
+def gsuper_lines(pl):
+    """world file lines `gsuper <reg> league=<reg> cup=<reg> region=<r> conf=<c>`: the super
+    cups Build gave the game's leagues (game_super_cups), with the league whose champion and the
+    cup whose winner play it. A new league's super cup is named on its league line (scup=); a
+    game league has no line, so this is how fl26joindll puts a February-December country's one
+    into the season the game builds at New Year, and fl26swiss fills it (cup=0: the region has
+    no cup, the game fills it)"""
+    return ["gsuper %d league=%d cup=%d region=%d conf=%d" % (s["reg"], s["league"], s.get("cup") or 0,
+                                                              s["region"], s.get("conf") or 0)
+            for s in pl.get("game_supers") or [] if s.get("reg")]
 
 
 def season_lines(pl, db):

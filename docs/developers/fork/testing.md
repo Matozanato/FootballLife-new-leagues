@@ -23,6 +23,7 @@ exe. See `tools/flpaths.py`.
 | `test_country_order.py` | | League order (0.2.0) follows the recipe's `country_order` and never `league_order` (the Leagues page's drag order) |
 | `test_crestmatch.py` | | the crest file name matcher |
 | `test_cup_draw.py` | | `cup_draw` becomes the `cupdraw` line; `seeded` unless the recipe says otherwise; any other value is refused |
+| `test_game_supercups.py` | tables | a super cup added to a game league (`game_cups`) is a two-club cup in the league's region, dated at the end of January in a February-December country, and its `gsuper` line names the league and the cup that fill it; fl26joindll and fl26swiss read that line |
 | `test_febdec_division.py` | tables | a division under a game league that plays February-December (Colombia) plays that season, so Build refuses a split or Apertura/Clausura on it |
 | `test_import_csv.py` | | Import CSV: a row naming a game player of another club makes him join |
 | `test_keep_added.py` | | pictures put by hand into the world folder survive a Build (`keep_added`) |

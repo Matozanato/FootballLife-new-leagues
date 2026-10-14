@@ -330,6 +330,27 @@ local function world_seasons(ctx)
   return out
 end
 
+-- `gsuper <reg> league=<reg> cup=<reg> region=<r> conf=<c>` lines of the world file: the super
+-- cups Build gave leagues of the game (tools/leaguebuilder.py gsuper_lines), which have no league
+-- line to carry them as scup=
+local function world_gsupers(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  local out = {}
+  if not f then return out end
+  for line in f:lines() do
+    local id, rest = line:match("^%s*gsuper%s+(%d+)(.*)$")
+    if id then
+      local G = { id = tonumber(id) }
+      for k, v in rest:gmatch("(%a+)=(%-?%d+)") do G[k] = tonumber(v) end
+      out[#out + 1] = G
+    end
+  end
+  f:close()
+  return out
+end
+
 -- The game's own leagues of a calendar-year region a `season <region> 0` line moves to
 -- August-May: they are dated on the European league calendar (fl26_swiss_european). Only the
 -- leagues: the region's cups take `dates <cup> like=<European cup>` lines. Experimental.
@@ -700,6 +721,16 @@ function m.init(ctx)
             scups[#scups + 1] = { L.scup, L.id, L.cup1 }
             scseen[L.scup] = true
           end
+        end
+      end
+      -- a February-December league of the game's super cup (Supercopa de Chile, Rei): its
+      -- league's champion v its region's cup winner of the season just ended, as a new league's
+      for _, G in ipairs(world_gsupers(ctx)) do
+        local r = G.region
+        local c = r ~= nil and (seasons[r] ~= nil and seasons[r] == 1 or seasons[r] == nil and CAL_REGIONS[r] == true)
+        if c and G.league and G.league > 0 and G.cup and G.cup > 0 and not scseen[G.id] then
+          scups[#scups + 1] = { G.id, G.league, G.cup }
+          scseen[G.id] = true
         end
       end
       local pc = ffi.C.GetProcAddress(h, "fl26_swiss_calendar_year")

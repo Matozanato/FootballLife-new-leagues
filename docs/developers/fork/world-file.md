@@ -37,6 +37,7 @@ tables (`python tools/fl26world.py --root <world>`), but it only knows `league`,
 | `lpre` | `lpre 227 cup=226 fill=226 days=246,249 entry=...` | `leaguebuilder.continental` (`mkeuropo.prerounds`) | fl26swiss (`fl26_swiss_lpre`) |
 | `confed` | `confed <flag>:<code>,...` | `leaguebuilder.confed_line` | fl26swiss (`fl26_swiss_confed`) |
 | `dates` | `dates 203 like=23` | `leaguebuilder.dates_lines` | fl26swiss (`fl26_swiss_datelike`) |
+| `gsuper` | `gsuper 255 league=67 cup=68 region=18 conf=4` | `leaguebuilder.gsuper_lines` | fl26joindll -> fl26join.dll (`fl26_join_builder_extra`, `_builder_conf`), fl26swiss (`fl26_swiss_calendar_supercups`) |
 | `season` | `season 39 1` | `leaguebuilder.season_lines` | fl26joindll -> fl26join.dll (`fl26_join_season_types`), fl26swiss |
 | `july` | `july 49 205` | `leaguebuilder.july_lines` | fl26swiss (`fl26_swiss_july`) |
 | `rcal` | `rcal 76 211 142 354 21 96 16` | `leaguebuilder.rcal_lines` (`tools/realcal.py`) | fl26swiss (`fl26_swiss_rcal`) |
@@ -82,6 +83,16 @@ are handed out in. This page doesn't repeat that.
   drawn but never dated. fl26swiss asks the game for the dates of the cup it was copied from
   instead. Build also writes these lines for the cups of a game country moved to August-May
   (`game_seasons`).
+- **`gsuper <reg> league=<reg> cup=<reg> region=<r> conf=<c>`**: a super cup Build gave a league
+  of the game (`game_cups` with `super_cup`). A new league names its super cup on its own line
+  (`scup=`); a game league has no line, so this one carries the same facts. In a
+  February-December region (the shipped ones, or a `season <region> 1` line) fl26joindll adds
+  the cup to the season the game builds at New Year, whose list holds only the shipped cups,
+  and gives it the region's confederation (`conf`, the Competition.bin code). fl26swiss then
+  fills it with the champion of `league` and the winner of `cup` (the league's runner-up when
+  the champion won both); `cup=0` means the region has no cup and the game fills it. In an
+  August-May region the line changes nothing. Without it (0.2.4 before this fix) the Supercopa
+  de Chile and Rei were dated at the end of January but never entered a season.
 - **`july <reg> <day>`**: some leagues kick off before the big ones. For such a league,
   fl26swiss brings its rounds before New Year forward by whole weeks, the first one onto that day.
   This applies from the second season on, because a new career starts on 4 August.

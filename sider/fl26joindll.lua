@@ -99,8 +99,16 @@ local function read_world(ctx)
   local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
   local f = io.open(path, "r")
   if not f then return nil end
-  local leagues, regular, groups, seasons = {}, {}, {}, {}
+  local leagues, regular, groups, seasons, gsupers = {}, {}, {}, {}, {}
   for line in f:lines() do
+    -- `gsuper <reg> league= cup= region= conf=`: a super cup Build gave a league of the game,
+    -- which has no league line of its own to carry it as scup=
+    local gs, grest = line:match("^%s*gsuper%s+(%d+)(.*)$")
+    if gs then
+      local G = { id = tonumber(gs) }
+      for k, v in grest:gmatch("(%a+)=(%-?%d+)") do G[k] = tonumber(v) end
+      gsupers[#gsupers + 1] = G
+    end
     -- `season <region> <type>`: the region's season type, 0 August-May, 1 January-December
     local sr, st = line:match("^%s*season%s+(%d+)%s+(%d+)")
     if sr then seasons[tonumber(sr)] = tonumber(st) end
@@ -121,7 +129,7 @@ local function read_world(ctx)
     end
   end
   f:close()
-  return leagues, regular, groups, seasons
+  return leagues, regular, groups, seasons, gsupers
 end
 
 -- Shipped regions whose season is the calendar year (season type 1 in the exe's region table
@@ -217,7 +225,7 @@ function m.init(ctx)
   dll_stats = ffi.cast("fl26_join_stats_t", ps)
   logbuf, statbuf = ffi.new("char[4096]"), ffi.new("uint32_t[8]")
 
-  local world, regular, groups, seasons = read_world(ctx)
+  local world, regular, groups, seasons, gsupers = read_world(ctx)
   SEASONS = seasons or {}
 
   BUILDER_EXTRA = {}
@@ -240,6 +248,17 @@ function m.init(ctx)
         local rc = RUNTIME_CONF[L.conf]
         if rc ~= nil then BUILDER_CONF[#BUILDER_CONF + 1] = { L.scup, rc } end
         seen[L.scup] = true
+      end
+    end
+    -- the super cup of a February-December league of the game (Supercopa de Chile, Rei): the
+    -- builder's New Year list holds only the shipped cups, so it joins the season the same way
+    -- (without it, it was dated in January and never played, Vicentico 13.10.)
+    for _, G in ipairs(gsupers or {}) do
+      if cal_region(G.region) and G.id > 175 and not seen[G.id] then
+        BUILDER_EXTRA[#BUILDER_EXTRA + 1] = G.id
+        local rc = RUNTIME_CONF[G.conf]
+        if rc ~= nil then BUILDER_CONF[#BUILDER_CONF + 1] = { G.id, rc } end
+        seen[G.id] = true
       end
     end
   end

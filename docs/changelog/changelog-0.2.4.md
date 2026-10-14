@@ -41,8 +41,9 @@ once, and your 0.2.2 career keeps working.
   rows of the standings when scrolling.** Thanks Vicentico.
 - **Super cups of the game's own leagues** (New leagues > cups of the game's countries) came
   out as a 16-club knockout; they are now a two-club super cup (champion v cup winner), and in
-  a February-December country it is played at the end of January. Needs Build again. Thanks
-  Vicentico.
+  a February-December country (the Supercopa de Chile, the Supercopa Rei) it is played at the
+  end of January, between the champion and the cup winner of the season just ended. Needs
+  Install mods and Build again, then a new career. Thanks Vicentico.
 - **NewLife Database: "Bring the game's leagues to this season" skipped the Brasileirão Série B**
   (the game's Série B keeps only 6 of its 20 clubs in the 2026 line-up, and a league with fewer
   than half of its clubs left did not count as the game's own). Thanks Vicentico.
