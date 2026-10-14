@@ -135,9 +135,13 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
   entrants spill into its own qualifying ahead of the shipped qualifying places. The recipe's `game_europe` drops the shipped places of the named game leagues (`replace` in
   `fl26world.uefa_places`) and lists its own under the regulation the access list uses (the
   split leagues' phase: Scotland 134, Belgium 155, Denmark 147).
-- `game_cups` in the recipe: fl26swiss home cups (`ccup`) for the game's own top divisions,
-  the same as a new country's league cup and super cup; codes `FL_G<reg>_LCUP` and
-  `FL_G<reg>_SCUP`.
+- `game_cups` in the recipe: for the game's own top divisions a league cup, a fl26swiss home
+  cup (`ccup`, code `FL_G<reg>_LCUP`) like a new country's, and a super cup built like a new
+  league's (`game_super_cups`: mkcup copy of `SUPER_CUP_LIKE`, two clubs, the league's region,
+  code `FL_G<reg>_SCUP`). Its `dates` line puts it at the end of January in a
+  February-December country (`CALENDAR_SUPER_DATE_LIKE`), and its `gsuper` line makes
+  fl26joindll add it to the New Year season and fl26swiss fill it with the champion and the
+  cup winner (see [world-file.md](fork/world-file.md)).
 - Single-match league cup (0.2.0, `leaguebuilder.league_ko_cup`): the top division and the one
   below, cut to the largest bracket size up to 44 (`LEAGUE_KO_SIZES`). mkccup copies the
   knockout row from reg 23 (the FA Cup: format 2, one match a round) with its bracket set to

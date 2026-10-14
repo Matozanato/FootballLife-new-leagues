@@ -2099,7 +2099,8 @@ class GameCupsDialog(Dialog):
                                       "Premier League and the Championship), one match a round from late "
                                       "August to mid-March (a calendar-year league: September to December), drawn at random; the league's own clubs get the "
                                       "byes and start in the second round. A super cup -- the "
-                                      "champion v the cup winner in late July -- only where the game has none. "
+                                      "champion v the cup winner in late July (a calendar-year league: at the end "
+                                      "of January) -- only where the game has none. "
                                       "Empty name = the league's name and League Cup / Super Cup; "
                                       "no logo = an emblem with the cup's initials.")))
         self.table = QTableWidget(len(self.tops), 7)
