@@ -14,6 +14,11 @@ once, and your 0.2.2 career keeps working.
 
 ## Fixed
 
+- **Build stopped with `KeyError` (in `lbplayers.py`) on a world built before.** A player
+  listed at two places (a NewLife club listed twice) was given his id from the last Build twice.
+  He now takes it once, and a stale ids file no longer stops Build. With 0.2.3, delete
+  `fl26playerids.json` in the world's folder (`SiderAddons\livecpk\<world>`) before each Build.
+  Thanks maur0.
 - **A league with a place in the game's Copa Libertadores played the day before or after it.**
   Nacional (Uruguay) had a league round on 22 September and the Libertadores quarter-final on
   the 23rd. The fixture module now asks the game for the Libertadores days (qualifying round,
