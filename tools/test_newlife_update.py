@@ -31,6 +31,8 @@ def main(old_dir, new_dir):
     x["club_coaches"] = ["Coach %d" % k for k in range(x["clubs"])]
     x["club_crests"] = [None] * x["clubs"]
     x["club_crests"][0] = r"C:\my\crest.png"
+    # a league package's kit folder per club (lbservers): it stays with its club, not its place
+    x["kit_folders"] = ["kit of %s" % i for i in x["newlife"]["clubs"]]
     r["players"][P.new_key(name, 0)]["stadium"] = {"id": 7}
     eds = r["players"][P.new_key(name, 0)]["edits"]
     faced = {}                                      # #111: faces linked on the Players page stay
@@ -65,6 +67,9 @@ def main(old_dir, new_dir):
     for k in range(len(z["newlife"]["clubs"])):
         assert r["players"][P.new_key(name, k)]["edits"], "a squad for every club"
     assert not any(key.startswith(name + "/") and int(key.rpartition("/")[2]) >= z["clubs"] for key in r["players"])
+    old_ids = {str(i) for i in before["leagues"][1]["newlife"]["clubs"]}
+    kits = (list(z.get("kit_folders") or []) + [""] * z["clubs"])[:len(z["newlife"]["clubs"])]
+    assert kits == ["kit of %s" % i if str(i) in old_ids else "" for i in z["newlife"]["clubs"]], kits
     assert N.outdated(r, new) == []
     old_names = set(before["leagues"][1]["club_names"])
     print("%s: %d -> %d clubs, %d new, %d gone; notes: %s" % (
@@ -102,6 +107,19 @@ def main(old_dir, new_dir):
     assert z4["club_names"][m] == "My Own FC", z4["club_names"]
     assert r4["players"][P.new_key(x4["name"], m)] == {"edits": {"0": {"name": "Mine"}}}
     assert z4["game_clubs"] == [{"at": m + 1, "id": 2525, "replace": 77}], z4["game_clubs"]
+    # a league package's kit folders stay with their clubs when the release's line-up moves them
+    # (pepponeee98, 14.10.: they stayed by place, so clubs wore the next club's kit)
+    r5 = {"world": "_FL26T", "leagues": [], "edits": {}, "players": {}}
+    N.add_league(r5, old, dict(L, clubs=L["clubs"][1:]))
+    x5 = r5["leagues"][0]
+    x5["kit_folders"] = ["kit of %s" % i for i in x5["newlife"]["clubs"]]
+    had = {str(i) for i in x5["newlife"]["clubs"]}
+    N.update_league(r5, new, x5, rows_n, keep=False)
+    z5 = r5["leagues"][0]
+    ids = [str(i) for i in z5["newlife"]["clubs"]]
+    assert set(ids) - had, "the release brings back the club left out"
+    kits = (list(z5.get("kit_folders") or []) + [""] * len(ids))[:len(ids)]
+    assert kits == ["kit of %s" % i if i in had else "" for i in ids], kits
     print("all passed")
 
 

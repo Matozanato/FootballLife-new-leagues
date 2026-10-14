@@ -39,7 +39,8 @@ exe. See `tools/flpaths.py`.
 | `test_newlife_game.py` | NewLife folder, tables | *Bring the game's leagues to this season*: clubs that went up/down swap, a club that left the game's world hands its place to the release's, squads come from the release, hand edits stay, undo takes back exactly what it did |
 | `test_newlife_pins.py` | folder with a `Team.bin` | a NewLife club keeps its world id when a league before it changes or goes (`newlife_ids`) |
 | `test_newlife_put.py` | NewLife folder, folder with a `Team.bin` | NewLife clubs put into a hand-made league (#83): name, kits, id and squad at that place |
-| `test_newlife_update.py` | two NewLife folders (older, newer) | *Update my leagues to this version* takes the newer clubs and squads and keeps the league's own settings |
+| `test_newlife_update.py` | two NewLife folders (older, newer) | *Update my leagues to this version* takes the newer clubs and squads and keeps the league's own settings (and a package's kit folders with their clubs) |
+| `test_own_kit_line.py` | | a kit line of your own in Kit Server's `map.txt` wins over a league package's kit and a made one (no line or folder of ours, a line an older Build switched off comes back on); package kit folders move with their club on Remove / Insert / Move club |
 | `test_pack_guard.py` | | the release guard (`mszip.check_pack`): a known crash site, a `fl26caps.lua` that is not the generated set or not the game's stops the zip; other modules that differ from the game's are listed |
 | `test_retired_modules.py` | | `ensure_modules` switches a bundled module off only when its bundle is loaded too |
 | `test_shift_newlife.py` | | Remove club / Insert club move the league's NewLife ids with the places |

@@ -15,8 +15,10 @@ world is switched on, the way lbstadiums does the home stadiums:
 
   - every line written before (it ends with "# FL26 Mod Studio: ...") goes, whatever world it
     was for, so only the live world has lines of ours;
-  - a line of your own for a club or league that now gets one of ours is switched off (a # in
-    front and OFF at its end), and back on when it no longer gets ours.
+  - a club with a kit line of your own (switched on, or switched off by us) to a folder that is
+    in the library gets no kit of ours, neither a package's nor a made one, and that line is on;
+  - any other line of your own for a club or league that now gets one of ours is switched off (a
+    # in front and OFF at its end), and back on when it no longer gets ours.
 
 The scoreboard line is keyed by the league's regulation id, as the FL26 Modpack's are.
 Without Kit Server or Scoreboard Server nothing is written for it.
@@ -211,6 +213,21 @@ def _map(path, mine, log, what):
     return len(mine)
 
 
+def _yours(sider, klib):
+    """team ids that have a kit line of your own in map.txt (one Build did not write), switched on
+    or switched off by us, whose folder is in the library: a line to a kit that is not installed
+    gives the club nothing, so ours goes in for it (22 clubs of the modpack world, 13.10.)"""
+    out = set()
+    for l in lbstadiums.read(os.path.join(sider, klib, "map.txt"))[0]:
+        if TAG in l:
+            continue
+        m = LINE.match(l[:-len(OFF)] if l.endswith(OFF) else l)
+        if m and (not m.group(1) or l.endswith(OFF)) and m.group(3).strip() \
+                and os.path.isdir(os.path.join(sider, klib, m.group(3).strip())):
+            out.add(int(m.group(2)))
+    return out
+
+
 def write(pl, sider, log=print, root=None):
     """the plan's kits and scoreboards into Kit Server and Scoreboard Server, and a kit made for
     every other new club with colours or a crest (root: the world's folder, for the crests);
@@ -219,19 +236,15 @@ def write(pl, sider, log=print, root=None):
     world = safe(pl.get("world") or "FL26 world")
     klib, blib = libs(sider)
     make = to_make(pl, root) if root and os.path.isdir(os.path.join(sider, klib)) else []
-    if make:                                 # a club with a kit line of your own keeps that kit
-        lines = lbstadiums.read(os.path.join(sider, klib, "map.txt"))[0]
-        yours = set()
-        for l in lines:
-            if TAG in l:
-                continue
-            m = LINE.match(l[:-len(OFF)] if l.endswith(OFF) else l)
-            # ... when its folder is there: a line to a kit that is not installed gives the club
-            # nothing, so it gets a made one (22 clubs of the modpack world, 13.10.)
-            if m and (not m.group(1) or l.endswith(OFF)) and m.group(3).strip() \
-                    and os.path.isdir(os.path.join(sider, klib, m.group(3).strip())):
-                yours.add(int(m.group(2)))
-        make = [x for x in make if x[0] not in yours]
+    # a club with a kit line of your own keeps that kit: no kit made for it, and none of a league
+    # package either (pepponeee98, 14.10.: his Serie C lines were switched off at every Build for
+    # the package's kits, which went into a folder of the world again each time)
+    yours = _yours(sider, klib) if (make or kits) else set()
+    kept = sorted({x[0] for x in kits if x[0] in yours} | {x[0] for x in make if x[0] in yours})
+    kits = [x for x in kits if x[0] not in yours]
+    make = [x for x in make if x[0] not in yours]
+    if kept:
+        log("kits: %d club(s) keep a kit line of your own (%s)" % (len(kept), ", ".join(map(str, kept))))
     done = []
     for lib, file, items, what in ((klib, "map.txt", kits, "kits"),
                                    (blib, "map_competitions.txt", boards, "scoreboards")):

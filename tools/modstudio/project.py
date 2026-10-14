@@ -286,8 +286,11 @@ class Project(QObject):
                 L.pop("game_clubs")
 
     # the lists that hold one value per club of a new league, and what an empty place holds
+    # (a league package's Kit Server folders too: they stayed by place, so after Remove club the
+    # clubs below wore the next club's kit -- pepponeee98's Serie C, 14.10.)
     PLACE_LISTS = (("club_names", ""), ("club_abbrs", ""), ("club_crests", None), ("club_coaches", ""),
-                   ("club_formations", ""), ("club_ids", ""), ("club_kits", ""), ("club_away_kits", ""))
+                   ("club_formations", ""), ("club_ids", ""), ("club_kits", ""), ("club_away_kits", ""),
+                   ("kit_folders", ""))
 
     def move_club(self, name, k, dst):
         """move the new club at place k of league `name` to the end of league `dst`, with its name,
