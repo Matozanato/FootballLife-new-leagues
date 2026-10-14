@@ -493,6 +493,16 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-14 (next update, Discord, thanks Vicentico): **NewLife Database: "Bring the game's leagues
+  to this season" left out the Brasileirão Série B, as if the game had no Série B.** The game
+  ships it (20 clubs), but its line-up is years old: only 6 of the 20 play in the release's 2026
+  Série B (3 more came down from Série A), and a release league counted as a game league only
+  when it held at least half of the game league's clubs. A league that holds a quarter of them
+  now counts too when the two are each other's best match (no other release league holds more
+  of the game league's clubs, no other game league holds more of the release league's). Checked
+  without the game (NewLife 1.5b1: the plan lists 26 game leagues instead of 25; Série B keeps 9
+  squads, swaps 3 clubs with Série A and replaces 11; test_newlife_game passes). Until the
+  update, do not add Série B as a new league from the NewLife list: you would get two Série B.
 - 2026-10-14 (next update, Discord, thanks Vicentico): **Cup mode: a saved World Cup (or any
   cup) could not be loaded -- the game loaded for a minute or two and closed** (0xc0000409 in
   ucrtbase, with the modules; without them the same save loaded in three seconds). The game keeps

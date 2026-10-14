@@ -664,6 +664,10 @@ def update_league(recipe, rel, x, rows, info=None, keep=None):
 # it takes back exactly that and nothing a person set by hand.
 
 MATCH = 0.5          # a release league is a game league when it holds this share of its clubs
+MATCH_LOW = 0.25     # ... or this share, when the two are each other's best match: the game's
+                     # Brasileirao Serie B keeps only 6 of its 20 clubs in the release's Serie B
+                     # (the game's line-up is years old), and "Bring the game's leagues" left it
+                     # out, as if the game had no Serie B (Vicentico, 14.10.)
 
 
 def _game_entry(info, at, tid):
@@ -680,13 +684,20 @@ def _game_targets(rel, info):
     in}) for the game's leagues the release has"""
     rows = rel.leagues(str)
     match, target = {}, {}
-    for _r, cid, _n, ts in B.game_leagues(info["base"]):
-        if cid in info["friendly_cids"]:
-            continue
-        ts = set(ts)
+    leagues = [(cid, set(ts)) for _r, cid, _n, ts in B.game_leagues(info["base"]) if cid not in info["friendly_cids"]]
+    for cid, ts in leagues:
         best = max(rows, key=lambda L: len(ts & {int(x) for x in L["in_game"]}), default=None)
-        if best is not None and len(ts & {int(x) for x in best["in_game"]}) >= MATCH * len(ts):
+        if best is None:
+            continue
+        n = len(ts & {int(x) for x in best["in_game"]})
+        if n >= MATCH * len(ts):
             match[cid] = best
+        elif n >= max(MATCH_LOW * len(ts), 3):
+            # the release league's clubs of the game sit in this game league more than in any
+            # other, and no other game league holds more of them: the two are the same league
+            have = {int(x) for x in best["in_game"]}
+            if all(len(have & ts2) <= n for cid2, ts2 in leagues if cid2 != cid):
+                match[cid] = best
     for cid, L in match.items():
         for t in L["in_game"]:
             target[int(t)] = cid

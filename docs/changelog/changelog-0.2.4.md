@@ -17,6 +17,9 @@ once, and your 0.2.2 career keeps working.
   out as a 16-club knockout; they are now a two-club super cup (champion v cup winner), and in
   a February-December country it is played at the end of January. Needs Build again. Thanks
   Vicentico.
+- **NewLife Database: "Bring the game's leagues to this season" skipped the Brasileirão Série B**
+  (the game's Série B keeps only 6 of its 20 clubs in the 2026 line-up, and a league with fewer
+  than half of its clubs left did not count as the game's own). Thanks Vicentico.
 - **Build stopped with "players of <club>: no player <n>"** on a recipe written with 0.2.1
   (30-man new clubs). The transfer of a player the club no longer has is skipped with a note in
   the log. Thanks diwwanmago.
