@@ -22,6 +22,28 @@ once, and your 0.2.2 career keeps working.
   explain what to do instead: press Play, or switch your own world on first. A world installed
   from a zip and built again on this PC counts as your own from then on.
 
+- **The left bar is by what you want to do.** Home; then YOUR WORLD with **Build your world**
+  (for modders, it says so at the top), **Import your world** (a world zip or a mod, and a league
+  package), **Edit your world** (leagues, clubs, players, kits, stadiums as tabs) and **NewLife
+  Database**; GAME CONTENT and TOOLS fold away; Settings at the bottom.
+- **Modules in one line, fixed in one click.** Home and Lua modules say whether Mod Studio's
+  modules are installed, up to date and switched on; when not, **Install now** puts them right.
+  In `sider.ini` Mod Studio's module lines now stand together in one block of their own, with a
+  heading, so the rest of the file is easy to read.
+- **A final check after a world is installed.** Installing a ready world ends with **Ready to
+  play** and a list of ticks (the world, switched on, the modules, the face pack, the content
+  servers the world uses, the home stadiums), or **Almost ready** with what to fix.
+- **Put Sider back as before Mod Studio, in one click.** Tools > Restore points (and Game >
+  Put Sider back as before Mod Studio...) puts back every file Mod Studio changed as it was first
+  (sider.ini, CommonLib, the map files) and takes out what it brought in: its modules, the face
+  pack, the worlds and the mods installed with it. Nothing is deleted: all of it is kept in
+  `SiderAddons\ModStudio\reset-<time>`, and **Undo the last reset** puts it back. Clean up in
+  Restore points now always keeps the oldest copy of a file, the one from before Mod Studio.
+- **Home stadiums of a world from another PC.** A modpack names its clubs' stadiums by the
+  folders of its maker's stadium pack. When your stadium pack keeps a stadium under another
+  region folder, Mod Studio now finds it by its name; a stadium you do not have is left out (the
+  club plays where the game puts it), and the final check says how many clubs have theirs.
+
 ## Fixed
 
 - **Some clubs of the game lost a player to a new copy of him when NewLife refreshed them.** The

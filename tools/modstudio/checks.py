@@ -487,6 +487,17 @@ def ready_check(game, world):
     if I.face_pack_missing(game.sider_dir):
         out.append(("warn", _("The face pack is missing: the new players will all have the same face. "
                               "Home > Install now")))
+    try:                                   # home stadiums: of the maker's stadium pack
+        import json, lbstadiums
+        with open(os.path.join(d, "leaguebuilder-plan.json"), encoding="utf-8") as f:
+            n, have = lbstadiums.coverage(json.load(f), game.sider_dir)
+    except Exception:
+        n = have = 0
+    if n and have == n:
+        out.append(("ok", _("Home stadiums: all %d clubs have theirs") % n))
+    elif n:
+        out.append(("warn", _("Home stadiums: %d of %d clubs have theirs. Your stadium pack does not have the "
+                              "other %d, so those clubs play at the stadium the game gives them") % (have, n, n - have)))
     live_mods = {os.path.basename(e.value.replace("/", "\\").strip('"')).lower()
                  for e in ini.entries("lua.module") if e.enabled}
     for srv in S.SERVERS:

@@ -39,6 +39,38 @@ def stadium_slot(folder):
     return max(seen, key=seen.get) if seen else ""
 
 
+def find(lib, folder):
+    """the folder of the stadium in this PC's library: as the world names it, else a folder of the
+    same name under another region (a stadium pack moves stadiums between its region folders
+    from one version to the next); None when the player does not have that stadium -- the club
+    then plays where the game puts it, as without Mod Studio (0.2.4: a modpack's 502 home
+    stadiums are of the maker's stadium pack, a player may have another one)"""
+    folder = folder.strip().strip("\\/")
+    if folder and os.path.isdir(os.path.join(lib, folder)):
+        return folder
+    base = os.path.basename(folder.replace("/", "\\")).lower()
+    if not base or not os.path.isdir(lib):
+        return None
+    for region in sorted(os.listdir(lib)):
+        d = os.path.join(lib, region)
+        if not os.path.isdir(d):
+            continue
+        for n in os.listdir(d):
+            if n.lower() == base and os.path.isdir(os.path.join(d, n)):
+                return region + "\\" + n
+    return None
+
+
+def coverage(pl, sider):
+    """(clubs with a home stadium, how many of them this PC has the stadium for)"""
+    lib = library(sider)
+    want = wanted(pl)
+    if not lib:
+        return len(want), 0
+    return len(want), sum(1 for _c, st in want.values()
+                          if not problem(st) and find(lib, str(st.get("folder") or "")))
+
+
 def problem(st):
     """why a club's stadium entry cannot be written, or None"""
     if not str(st.get("folder") or "").strip():
@@ -117,8 +149,13 @@ def write(pl, sider, log=print):
     for tid, (club, st) in sorted(want.items()):
         bad = problem(st)
         folder = str(st.get("folder") or "").strip().strip("\\/")
-        if not bad and not os.path.isdir(os.path.join(lib, folder)):
-            bad = "no folder %s in the stadium-server library" % folder
+        if not bad:
+            found = find(lib, folder)
+            if found is None:
+                bad = "no folder %s in the stadium-server library" % folder
+            elif found != folder:
+                log("  home stadium of club %d (%s): %s is at %s in this library" % (tid, club, folder, found))
+                folder = found
         if bad:
             log("  home stadium of club %d (%s): %s, skipped" % (tid, club, bad))
             continue

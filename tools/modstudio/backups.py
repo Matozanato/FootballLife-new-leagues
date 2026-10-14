@@ -2,7 +2,8 @@
 
 Copies live next to the game in SiderAddons\\ModStudio\\backups, one folder per day, with an
 index (backups.json) that says what each copy was, when, and why.  Nothing is ever deleted
-automatically except by keep(): the oldest copies of one file beyond the newest `n`.
+automatically except by keep(): the older copies of one file beyond the newest `n`, but
+never the oldest one (Put Sider back as before Mod Studio needs it).
 """
 import json, os, shutil, time
 
@@ -86,7 +87,7 @@ def restore(sider_dir, row):
 
 def keep(sider_dir, rel, n=50):
     rows = history(sider_dir, rel)
-    gone = rows[n:]
+    gone = rows[n:-1]          # the oldest copy stays: it is the file as it was before Mod Studio
     for r in gone:
         try:
             os.remove(os.path.join(sider_dir, r["copy"]))

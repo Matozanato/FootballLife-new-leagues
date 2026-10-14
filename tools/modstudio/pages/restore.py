@@ -2,13 +2,13 @@
 import difflib, os
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QComboBox, QPlainTextEdit, QPushButton, QSplitter, QTreeWidget,
+from PySide6.QtWidgets import (QComboBox, QFrame, QLabel, QPlainTextEdit, QPushButton, QSplitter, QTreeWidget,
                                QTreeWidgetItem, QVBoxLayout, QWidget)
 
-from .. import backups
+from .. import backups, factory
 from ..i18n import _
 from ..roots import human
-from ..ui import Page, section, hint, row, ask, error
+from ..ui import Page, section, hint, row, ask, error, info, run_job, can_write, denied
 
 ROW = Qt.UserRole
 TEXT_EXT = (".ini", ".txt", ".csv", ".lua", ".json", ".cfg")
@@ -31,6 +31,23 @@ class Restore(Page):
         self.actions.insertWidget(1, self.only)
         self.action("Put this copy back", self.restore, "primary")
         self.action("Clean up...", self.clean)
+        # 0.2.4: all of Sider back as it was before Mod Studio, in one go, and that undone again
+        card = QFrame()
+        card.setObjectName("card")
+        cv = QVBoxLayout(card)
+        t = QLabel(_("Sider as it was before Mod Studio"))
+        t.setObjectName("cardvalue")
+        cv.addWidget(t)
+        cv.addWidget(hint(_("One click puts back every file Mod Studio changed and takes out what it brought in "
+                            "(its modules, the face pack, the worlds, the mods installed here). Nothing is "
+                            "deleted: it is all kept, and Undo puts it back. Your saves are not touched.")))
+        self.b_reset = QPushButton(_("Put Sider back as before Mod Studio..."))
+        self.b_reset.setObjectName("danger")
+        self.b_reset.clicked.connect(self.reset_sider)
+        self.b_undo = QPushButton(_("Undo the last reset"))
+        self.b_undo.clicked.connect(self.undo_reset)
+        cv.addWidget(row(self.b_reset, self.b_undo, "stretch", stretch=False))
+        self.outer.addWidget(card)
         split = QSplitter(Qt.Horizontal)
         self.tree = QTreeWidget()
         self.tree.setRootIsDecorated(False)
@@ -61,6 +78,9 @@ class Restore(Page):
         return self.app.game.sider_dir
 
     def refresh(self):
+        ok = bool(self.app.game.ok()) and os.path.isdir(self.sd())
+        self.b_reset.setEnabled(ok)
+        self.b_undo.setVisible(ok and bool(factory.resets(self.sd())))
         if not os.path.isdir(self.sd()):
             self.tree.clear()
             return
@@ -138,4 +158,73 @@ class Restore(Page):
             return
         n = sum(backups.keep(self.sd(), f, 20) for f in files)
         self.say(_("%d old copies deleted.") % n, "ok")
+        self.refresh()
+
+    # ---- Sider as before Mod Studio ----
+    def reset_sider(self):
+        game = self.app.game
+        if not game.ok() or not os.path.isdir(self.sd()):
+            return
+        if game.running()[0]:
+            error(self, "Restore points", _("Close the game first."))
+            return
+        try:
+            p = factory.plan(game)
+        except Exception as e:
+            error(self, "Restore points", str(e))
+            return
+        if not p["back"] and not p["out"]:
+            info(self, "Restore points", _("Sider is as it was before Mod Studio already: nothing to put back."))
+            return
+        what = [_("%d file(s) Mod Studio changed go back as they were (sider.ini among them)") % len(p["back"])
+                if p["back"] else "",
+                _("Worlds taken out: %s") % ", ".join(p["worlds"]) if p["worlds"] else "",
+                _("Mods installed with Mod Studio taken out: %s") % ", ".join(p["mods"]) if p["mods"] else "",
+                _("Mod Studio's modules and the face pack taken out")]
+        if not ask(self, "Put Sider back as before Mod Studio",
+                   _("Put Sider back as it was before Mod Studio?") + "\n\n" +
+                   "\n".join("\u2022 " + w for w in what if w) + "\n\n" +
+                   _("Nothing is deleted: all of it is kept in SiderAddons\\ModStudio, and Undo the last reset "
+                     "puts it back. Your saves are not touched. A Master League started with the new leagues "
+                     "will not load without them.")):
+            return
+        if not can_write(self, game):
+            return
+        self.app.busy(True, _("Putting Sider back as before Mod Studio"))
+
+        def done(folder):
+            self.app.busy(False)
+            self.app.bus.ini_changed.emit()
+            self.app.bus.content_changed.emit()
+            self.app.bus.game_changed.emit()
+            self.say(_("Sider is back as it was before Mod Studio. All of it is kept in %s.") % folder, "ok")
+            self.refresh()
+
+        def failed(tb):
+            self.app.busy(False)
+            if denied(self, tb):
+                return
+            error(self, "Restore points", _("It stopped:") + "\n\n" + tb.strip().splitlines()[-1] + "\n\n" +
+                  _("What was done so far can be put back with Undo the last reset."))
+            self.refresh()
+        run_job(lambda progress: factory.reset(game), done, failed)
+
+    def undo_reset(self):
+        folders = factory.resets(self.sd())
+        if not folders:
+            return
+        if self.app.game.running()[0]:
+            error(self, "Restore points", _("Close the game first."))
+            return
+        if not ask(self, "Undo the last reset", _("Put Sider back as it was just before the last reset?")):
+            return
+        try:
+            factory.undo(self.sd(), folders[0])
+        except Exception as e:
+            error(self, "Restore points", str(e))
+            return
+        self.app.bus.ini_changed.emit()
+        self.app.bus.content_changed.emit()
+        self.app.bus.game_changed.emit()
+        self.say(_("Sider is back as it was before the reset."), "ok")
         self.refresh()

@@ -258,7 +258,10 @@ class Main(QMainWindow):
             ("Open sider.log", lambda: self._open(self.game.log_path)),
             None,
             ("Start the game", self.play),
-            ("Start the game without mods (safe mode)...", lambda: self.page("Profiles").safe_mode())]))
+            ("Start the game without mods (safe mode)...", lambda: self.page("Profiles").safe_mode()),
+            None,
+            ("Put Sider back as before Mod Studio...",
+             lambda: (self.open_page("Restore"), self.page("Restore").reset_sider()))]))
         h.addWidget(self._menu_button("Profiles", [
             ("Manage profiles", lambda: self.open_page("Profiles")),
             ("Save the current setup as a profile...", lambda: self.page("Profiles").save_new())]))
