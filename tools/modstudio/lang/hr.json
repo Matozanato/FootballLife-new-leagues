@@ -1476,7 +1476,11 @@
   "The leagues and clubs the game already has: new names, logos and crests. Changes are written into your world, so they show while the world is in the game. A saved Edit file (EDIT00000000) in the game's save folder overrides club names: move it away to see them.": "Lige i klubovi koje igra već ima: nova imena, logoi i grbovi. Promjene idu u tvoj svijet, pa se vide dok je svijet u igri. Spremljeni Edit (EDIT00000000) u mapi sa saveovima igre gazi imena klubova: makni ga da ih vidiš.",
   "A world with the new Champions League and Europa League%s and the game's own leagues and clubs. Only one world can be in the game, so this is instead of a world with new leagues.\n\nName of the world:": "Svijet s novom Ligom prvaka i Europskom ligom%s te vlastitim ligama i klubovima igre. U igri može biti samo jedan svijet, pa je ovo umjesto svijeta s novim ligama.\n\nIme svijeta:",
   "NO WORLD OF YOURS IN THE GAME": "U IGRI NEMA TVOG SVIJETA",
-  "Mod Studio / FL26 research module (keep the order it was installed in)": "Modul Mod Studija / FL26 (ostavi redoslijed kako je instaliran)"
+  "Mod Studio / FL26 research module (keep the order it was installed in)": "Modul Mod Studija / FL26 (ostavi redoslijed kako je instaliran)",
+  "Your world: %s": "Tvoj svijet: %s",
+  "%d leagues, %d clubs": "%d liga, %d klubova",
+  "File: Mod Studio's copy from the last Build (%s)": "Datoteka: kopija Mod Studija od zadnjeg Builda (%s)",
+  "File: not saved yet": "Datoteka: još nije spremljeno"
  },
  "log": [
   [

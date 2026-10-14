@@ -55,7 +55,8 @@ once, and your 0.2.2 career keeps working.
   folders and the map lines. A league package (.fl26pack) dropped here goes into your world and
   Build and install starts. **In the game now** lists what is installed, with **Remove**.
 - **Open a world takes you to Build your world**, where **Build and install** is, instead of the
-  world's name and file under Edit your world.
+  world's name and file under Edit your world. Above the button the page says which world it
+  builds: its name, how many leagues and clubs, and the file it is kept in.
 - **One main button per page.** Build your world shows **Build and install**; the world's
   options and the single steps with Export the world fold away under **World options** and
   **Step by step**, and stay open or closed as you left them. League packages is a tab of Build

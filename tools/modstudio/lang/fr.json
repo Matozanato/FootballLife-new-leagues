@@ -1476,7 +1476,11 @@
   "The leagues and clubs the game already has: new names, logos and crests. Changes are written into your world, so they show while the world is in the game. A saved Edit file (EDIT00000000) in the game's save folder overrides club names: move it away to see them.": "Les ligues et clubs que le jeu a déjà : nouveaux noms, logos et écussons. Les modifications sont écrites dans votre monde, elles sont donc visibles tant que le monde est dans le jeu. Un fichier Edit enregistré (EDIT00000000) dans le dossier de sauvegarde du jeu remplace les noms des clubs : déplacez-le pour les voir.",
   "A world with the new Champions League and Europa League%s and the game's own leagues and clubs. Only one world can be in the game, so this is instead of a world with new leagues.\n\nName of the world:": "Un monde avec la nouvelle Ligue des champions et la Ligue Europa%s et les ligues et clubs du jeu. Un seul monde peut être dans le jeu, celui-ci remplace donc un monde avec de nouvelles ligues.\n\nNom du monde :",
   "NO WORLD OF YOURS IN THE GAME": "AUCUN DE VOS MONDES DANS LE JEU",
-  "Mod Studio / FL26 research module (keep the order it was installed in)": "Module Mod Studio / FL26 (gardez l'ordre d'installation)"
+  "Mod Studio / FL26 research module (keep the order it was installed in)": "Module Mod Studio / FL26 (gardez l'ordre d'installation)",
+  "Your world: %s": "Votre monde : %s",
+  "%d leagues, %d clubs": "%d championnats, %d clubs",
+  "File: Mod Studio's copy from the last Build (%s)": "Fichier : la copie de Mod Studio du dernier Build (%s)",
+  "File: not saved yet": "Fichier : pas encore enregistré"
  },
  "log": [
   [

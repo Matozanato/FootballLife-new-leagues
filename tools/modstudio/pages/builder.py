@@ -2,7 +2,7 @@
 
 Every page edits app.project.recipe (modstudio/project.py); leaguebuilder.py does the work.
 """
-import csv, io, json, os
+import csv, html, io, json, os
 
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QPixmap, QImage, QColor, QBrush, QKeySequence, QShortcut
@@ -3657,6 +3657,13 @@ class Build(BuilderPage):
         b.clicked.connect(self.do_export)
         bar.addWidget(b, 1, 2)
         self.steps.append(b)
+        # 0.2.4: which world Build and install makes, right above the button (exe test 14.10.: the
+        # page did not say which world was open, only a small "World ...: built" under the steps)
+        self.what = QLabel()
+        self.what.setWordWrap(True)
+        self.what.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.what.setStyleSheet("font-size: 11pt;")
+        self.outer.addWidget(self.what)
         one = QHBoxLayout()
         self.b_all = QPushButton(_("Build and install"))
         self.b_all.setObjectName("primary")
@@ -3934,6 +3941,11 @@ class Build(BuilderPage):
         if g.ok():
             bits.append(_("Mod Studio's modules: %s") % (_("installed") if not missing else
                                                      _("%d missing: Home > Install now") % len(missing)))
+        r = self.project.recipe
+        self.what.setText("<b>%s</b>" % html.escape(_("Your world: %s") % w) + "&nbsp;&nbsp;&nbsp;"
+                          + html.escape(_("%d leagues, %d clubs") % (len(r.get("leagues") or []),
+                                        sum(int(L.get("clubs") or 0) for L in r.get("leagues") or [])))
+                          + "<br>" + html.escape(self.file_text(w)))
         ready = self.ready_live()
         for b in self.steps[1:4] + [self.b_all]:          # plan, build, switch on, Build and install
             b.setEnabled(not ready)
@@ -3942,6 +3954,15 @@ class Build(BuilderPage):
         if ready:
             bits.insert(0, _("%s is a ready world (installed from a zip): no Build needed, press Play") % ", ".join(ready))
         self.state.setText("   ·   ".join(bits))
+
+    def file_text(self, w):
+        """where the open world is kept: its own file, or the copy the last Build kept"""
+        if self.project.path:
+            return _("File: %s") % self.project.path
+        kept = os.path.join(self.project.copies_dir(), w + ".json")
+        if os.path.exists(kept):
+            return _("File: Mod Studio's copy from the last Build (%s)") % kept
+        return _("File: not saved yet")
 
     def say(self, text, kind=None):
         if kind is not None:
