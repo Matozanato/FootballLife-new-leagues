@@ -20,7 +20,7 @@ class WorldClubs(QWidget):
     """the home stadiums of a ready world's clubs (one from Import your world, not built on this PC):
 
       - the game's stadium of each new club (Team.bin +0x3C, lbgamestadiums): Game stadiums
-        automatically picks one of the game's for every club, as Build does since 0.2.4, or one
+        automatically picks one of the game's for every club, as Build does since 0.2.5, or one
         is chosen by hand; Save writes the world's Team.bin;
       - a stadium of the player's stadium pack over it (map_teams.txt, lbstadiums), picked by hand
         or found by name.

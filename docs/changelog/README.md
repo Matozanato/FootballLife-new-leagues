@@ -2,6 +2,8 @@
 
 What each release of FL26 Mod Studio brought. The full notes of the latest releases:
 
+- [0.2.5](changelog-0.2.5.md) (being prepared): the clubs' home stadiums -- new clubs play at the
+  game's own stadiums, and a world you imported gets them in Stadiums > Your world's clubs.
 - [0.2.4](changelog-0.2.4.md) (in progress): bug fixes -- a saved cup loads again in Cup mode, the
   League Two arrows, super cups of the game's leagues, a 0.2.1 recipe's missing players.
 - [0.2.3](changelog-0.2.3.md) (2026-10-13): a quick fix for 0.2.2 -- Mod Studio no longer closes

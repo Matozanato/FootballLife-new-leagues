@@ -1,7 +1,7 @@
-r"""The game's own stadiums for the new clubs (0.2.4).
+r"""The game's own stadiums for the new clubs (0.2.5).
 
 A club's home stadium is a byte of its Team.bin record (+0x3C, a Stadium.bin id; +0x3D is 0).
-Build clones every new club from the game's last club (Selangor FC), so until 0.2.4 all of
+Build clones every new club from the game's last club (Selangor FC), so until 0.2.5 all of
 them -- the modpack's 1212 -- played at Stadio Nazionale (54). Now each new club gets one of
 the game's fictional stadiums, picked by:
 

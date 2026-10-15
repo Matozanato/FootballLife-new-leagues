@@ -1,4 +1,4 @@
-r"""python test_game_stadiums.py -> the game's own stadiums for the new clubs (0.2.4): the pick a
+r"""python test_game_stadiums.py -> the game's own stadiums for the new clubs (0.2.5): the pick a
 league gets (its size, its look, variety, the same every time), a club's stadium chosen by hand,
 Team.bin +0x3C written and read back, and a ready world's picks (Stadiums > Your world's clubs)
 kept in livecpk\<world>\fl26stadiums.json"""

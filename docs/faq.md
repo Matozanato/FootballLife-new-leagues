@@ -335,7 +335,7 @@ line in Stadium Server's `map_teams.txt` with the club's id when you switch the 
 have to look the id up. Before 0.1.7: the *Stadiums* page, **Home stadiums**, add a line; the club
 list there has the new clubs of a built world.
 
-Without a line of Stadium Server the club plays at a stadium of the game. Since 0.2.4 Build
+Without a line of Stadium Server the club plays at a stadium of the game. Since 0.2.5 Build
 gives every new club one of the game's stadiums by its league's tier and country (before, all of
 them played at Stadio Nazionale); **Edit club** > **Game stadium** picks another one. For a world
 you imported (the Modpack): **Stadiums** > **Your world's clubs**, **Game stadiums automatically**

@@ -3340,7 +3340,7 @@ def build(pl, base, game, replace=False, log=print):
             short = abbr(club_name(p, k), used_abbr)
         r[W.T_ABBR:W.T_ABBR + W.T_ABBR_LEN] = short.ljust(W.T_ABBR_LEN, bytes(1).decode()).encode("ascii")
         # its home stadium: one of the game's (lbgamestadiums), not Selangor FC's Stadio Nazionale
-        # for all of them (0.2.4)
+        # for all of them (0.2.5)
         sids = stadium_picks(p)
         if k < len(sids):
             r[G.T_STADIUM], r[G.T_STADIUM + 1] = sids[k], 0

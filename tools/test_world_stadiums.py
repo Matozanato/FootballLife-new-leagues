@@ -1,6 +1,6 @@
 r"""python test_world_stadiums.py -> the home stadiums of a ready world: picked by hand or found
 automatically in the player's stadium pack, kept in livecpk\<world>\fl26stadiums.json, written to
-map_teams.txt in place of the world's (0.2.4)"""
+map_teams.txt in place of the world's (0.2.5)"""
 import os, sys, tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

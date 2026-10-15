@@ -16,7 +16,7 @@ A ready world (one from Import your world) is not built here, so its stadiums ar
 Stadiums page, Your world's clubs, and kept in livecpk\<world>\fl26stadiums.json by team id: an
 entry there takes the place of the plan's, null keeps the club at the stadium the game gives it.
 Find automatically proposes stadiums of this PC's library by name (suggest) for the clubs whose
-stadium the library does not have under the plan's folder (0.2.4).
+stadium the library does not have under the plan's folder (0.2.5).
 
 Without Stadium Server (SiderAddons\content\stadium-server) the lines go to SPFL26's own stadium
 module, common\stadiums.lua, which reads the same files from content\stadiums (JamesNotLike,
