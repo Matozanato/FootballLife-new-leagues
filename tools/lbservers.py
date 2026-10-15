@@ -192,15 +192,34 @@ def carried(l, world):
     return f.startswith((w + "_kits\\", w + "_packs\\"))
 
 
+def carrier(l):
+    """the world (lower case) whose zip put this line in (carried), or None: switching another
+    world on took such a line out for good, and switching the modpack back on did not bring its
+    86 scoreboards back (night test 15.10.) -- now it stays, switched off, until its world is on"""
+    if TAG not in l:
+        return None
+    m = LINE.match(l[:-len(OFF)] if l.endswith(OFF) else l)
+    if not m:
+        return None
+    parts = m.group(3).strip().lower().replace("/", "\\").split("\\")
+    return parts[0] if len(parts) > 2 and parts[1] in ("_kits", "_packs") else None
+
+
 def _map(path, mine, log, what, world="", sider=None):
     """our lines (key, text) into a map file: earlier ones of ours out, clashing ones of yours
-    off; a line the world carries from another pack (carried) stays"""
+    off; a line a world zip carries from another pack (carrier) stays: on while its world is on,
+    switched off (#) while another one is"""
     lines, nl, bom, enc = lbstadiums.read(path)
     if not mine and not any(TAG in l or l.endswith(OFF) for l in lines):
         return 0
     rows = []
     for l in lines:
-        if TAG in l and not (world and carried(l, world)):
+        w0 = carrier(l)
+        if w0 is not None:                     # another pack's line a world zip brought: on with its world
+            l = re.sub(r"^(\s*)#\s*", r"\1", l[:-len(OFF)] if l.endswith(OFF) else l, count=1)
+            rows.append(l if world and w0 == safe(world).lower() else "#" + l)
+            continue
+        if TAG in l:
             continue
         if l.endswith(OFF):
             l = re.sub(r"^(\s*)#\s*", r"\1", l[:-len(OFF)], count=1)

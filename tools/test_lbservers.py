@@ -100,6 +100,22 @@ def main():
            ck in lines(os.path.join(b, S.KITS, "map.txt")) and cb in lines(os.path.join(b, S.BOARDS, "map_competitions.txt")))
         ok("carried: a line of another world's tag is not one", not S.carried(ck, "Other world") and S.carried(ck, "My world")
            and S.carried(cb.replace("\\", "/"), "My world"))
+        # another world switched on and then this one again: the zip's lines wait switched off and
+        # come back (night test 15.10.: the modpack's 86 scoreboards were gone after a switch)
+        S.write({"world": "Other world", "leagues": []}, b, log=lambda *_: None)
+        km = lines(os.path.join(b, S.KITS, "map.txt"))
+        bm = lines(os.path.join(b, S.BOARDS, "map_competitions.txt"))
+        ok("another world on: the zip's lines are kept, switched off", "#" + ck in km and "#" + cb in bm
+           and ck not in km and cb not in bm)
+        ok("carrier: the world a line came with", S.carrier("#" + cb) == "my world" and S.carrier(ck) == "my world"
+           and S.carrier('901, "Old\\Kit"') is None)
+        S.write({"world": "Other world", "leagues": []}, b, log=lambda *_: None)
+        ok("another world on twice: still one switched-off copy",
+           lines(os.path.join(b, S.BOARDS, "map_competitions.txt")).count("#" + cb) == 1)
+        S.write({"world": "My world", "leagues": []}, b, log=lambda *_: None)
+        ok("its world back on: the zip's lines are on again",
+           ck in lines(os.path.join(b, S.KITS, "map.txt")) and cb in lines(os.path.join(b, S.BOARDS, "map_competitions.txt"))
+           and "#" + cb not in lines(os.path.join(b, S.BOARDS, "map_competitions.txt")))
         # a world installed from its zip on another PC: the plan's kit and scoreboard sources are
         # folders of the PC it was built on, the copies under <world> came in the zip -- the
         # lines stay (Switch on at the end of Install mods dropped them as "no folder, skipped")
