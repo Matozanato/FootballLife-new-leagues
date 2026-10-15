@@ -3412,6 +3412,13 @@ def build(pl, base, game, replace=False, log=print):
         log("  %-26s %d club(s) in no league, %s %s" % (p["name"], len(p["teams"]),
                                                        OTHERS_NAMES[p["others"]], id_spans(p["teams"])))
     clubs = dict(pl, leagues=pl["leagues"] + others)    # every new club, for what goes by club
+    if added and pl.get("game_stadiums") is not False:
+        used = {}
+        for r in added:
+            used[r[G.T_STADIUM]] = used.get(r[G.T_STADIUM], 0) + 1
+        log("  game stadiums: %d new club(s) at %d of the game's stadiums (%s)" % (
+            len(added), len(used), ", ".join("%s %d" % (G.name(s), n)
+                                             for s, n in sorted(used.items(), key=lambda x: -x[1])[:5])))
 
     # the new clubs go in in id order, as the shipped ones are
     for r in sorted(added, key=lambda r: int.from_bytes(r[W.T_ID:W.T_ID + 4], "little")):
