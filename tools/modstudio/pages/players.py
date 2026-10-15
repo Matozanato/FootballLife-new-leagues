@@ -685,7 +685,7 @@ class Players(BuilderPage):
                                   m.get("Age", ""), str(P.overall(m)), m.get("Stronger Foot", "")[:1],
                                   self.state.get(key) or
                                   (_("leaves") if gone else (_("new") if key.startswith(NEW) else
-                                                             (_("%d fields") % len(ch) if ch else ""))),
+                                                             (_("%d fields") % P.fields_set(ch) if P.fields_set(ch) else ""))),
                                   self.player_id(key, ch)])
             it.setData(0, Qt.UserRole, key)
             if str(m.get("order", "")).isdigit() and int(m["order"]) < 11 and not gone:
@@ -1045,7 +1045,7 @@ class Players(BuilderPage):
                 m.get("Registered Position", ""), m.get("Age", ""), str(P.overall(m)),
                 m.get("Stronger Foot", "")[:1],
                 self.state.get(key) or
-                (_("new") if key.startswith(NEW) else (_("%d fields") % len(ch) if ch else ""))]
+                (_("new") if key.startswith(NEW) else (_("%d fields") % P.fields_set(ch) if P.fields_set(ch) else ""))]
         for c, t in enumerate(vals):
             it.setText(c, t)
         self.i_title.setText(m.get("name") or _("(numbered name)"))

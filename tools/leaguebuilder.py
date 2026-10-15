@@ -1208,6 +1208,69 @@ def id_names(plan, ids):
     return out
 
 
+def id_people(plan, ids):
+    """{club: {player key: {"nl": NewLife id, "born": birth date}}} for the keys in ids whose
+    change says who the player is (a NewLife squad's): the next Build finds him by it, wherever
+    his place in the squad is then (lbplayers._keep_ids)"""
+    out = {}
+    for club, keys in ids.items():
+        c = (plan.get("players") or {}).get(club) or {}
+        adds = c.get("add") or []
+        for key in keys:
+            if key.startswith("+") and key[1:].isdigit():
+                ch = adds[int(key[1:])] if int(key[1:]) < len(adds) else {}
+            else:
+                ch = (c.get("edits") or {}).get(key) or {}
+            p = {k: str(ch[f]).strip() for k, f in (("nl", "newlife_id"), ("born", "birth_date"))
+                 if str(ch.get(f, "")).strip()}
+            if p:
+                out.setdefault(club, {})[key] = p
+    return out
+
+
+def club_newlife(plan):
+    """{new club key: its NewLife club id} of the plan's leagues"""
+    out = {}
+    for p in plan.get("leagues") or []:
+        nl = (p.get("newlife") or {}).get("clubs") or []
+        for k in range(len(p.get("teams") or [])):
+            if k < len(nl) and str(nl[k] or "").strip() not in ("", "0"):
+                out["%s/%d" % (p["name"], k)] = str(nl[k]).strip()
+    return out
+
+
+def follow_clubs(last, now):
+    """the last Build's ids file (last_build_ids) with its new clubs under their keys now: a
+    NewLife club whose place in its league changed (a club before it left) is found by its
+    NewLife id; one that left the world goes under a key no club has, so its players' ids are
+    nobody else's. now: club_newlife of this Build's plan. A file of an older Build (no
+    "club_nl") is taken as it is."""
+    import collections
+    was = last.get("club_nl")
+    if not isinstance(was, dict) or not was:
+        return last
+    count = lambda d: collections.Counter(d.values())
+    cw, cn = count(was), count(now)
+    key_now = {v: k for k, v in now.items() if cn[v] == 1}
+    out = dict(last)
+    for part in ("clubs", "names", "people"):
+        src = last.get(part)
+        if not isinstance(src, dict):
+            continue
+        moved = {}
+        for club, v in src.items():
+            nl = was.get(club)
+            if nl is None or cw[nl] != 1:
+                to = club                              # a club of the game, or listed twice: as it is
+            elif nl in key_now:
+                to = key_now[nl]
+            else:
+                to = "gone:" + club                    # left the world
+            moved.setdefault(to, v)
+        out[part] = moved
+    return out
+
+
 def country_ids(base):
     """[(name, Country.bin id)] sorted by name: a player's Nationality is this id (measured: 146
     Brazil, 144 Argentina, 236 Spain on the game's own players). A name the table has twice
@@ -3444,7 +3507,11 @@ def build(pl, base, game, replace=False, log=print):
         filled["players"] = lbplayers.fill_tiers(filled, base, log)
     except lbplayers.Error as e:
         raise BuildError(str(e))
-    last = last_build_ids(game, pl["world"])
+    last = follow_clubs(last_build_ids(game, pl["world"]), club_newlife(clubs))
+    try:
+        retired = {int(x) for x in last.get("retired") or [] if lbplayers.PID_MAX >= int(x) > 0}
+    except (TypeError, ValueError):
+        retired = set()
     have = len(pesdb.wesys_unpack(open(os.path.join(base, "Player.bin"), "rb").read())) // 312
     # 0.2.4: the placeholder squads and the recipe's players go in with room to spare, and only the
     # finished table has to fit PLAYER_CAP: the placeholders a NewLife squad replaced are deleted
@@ -3472,12 +3539,14 @@ def build(pl, base, game, replace=False, log=print):
             log("  squads of %d for %d clubs" % (per, made) + ("" if per == SQUAD else
                 " (%d new clubs: %d players each would pass the %d player records)" % (made, SQUAD, PLAYER_CAP)))
         faces, ids, portraits, picked = [], {}, [], {}
+        gone = set(retired)                            # apply adds the ids of the players who left
         log("  players: writing them into the tables")
         try:
             lbplayers.apply(copy.deepcopy(filled), base, db, PLAYER_CAP + made * SQUAD, log, faces,
                             lineups=lineups, ids=ids, portraits=portraits,
                             prev=last.get("clubs"), prev_names=last.get("names"),
-                            formations=formations(base), picked=picked)
+                            formations=formations(base), picked=picked,
+                            prev_people=last.get("people"), retired=gone)
         except lbplayers.Error as e:
             raise BuildError(str(e))
         pb = os.path.join(db, "Player.bin")
@@ -3519,7 +3588,13 @@ def build(pl, base, game, replace=False, log=print):
                              + ("\n  ... and %d more" % (len(short) - 20) if len(short) > 20 else ""))
     if ids:                                            # for Mod Studio's Players page and its CSV
         with open(os.path.join(tmp, PLAYER_IDS), "w", encoding="utf-8") as f:
-            json.dump({"world": pl["world"], "clubs": ids, "names": id_names(filled, ids)}, f, indent=1, sort_keys=True)
+            # "people" and "club_nl" say who each player and club is, "retired" the ids of the
+            # players no longer in the world: the next Build keeps every id with its own player
+            # and gives none of a player who left to somebody else (0.2.4)
+            now = club_newlife(clubs)
+            json.dump({"world": pl["world"], "clubs": ids, "names": id_names(filled, ids),
+                       "people": id_people(filled, ids), "club_nl": {k: v for k, v in now.items() if k in ids},
+                       "retired": sorted(gone)}, f, indent=1, sort_keys=True)
     if faces:
         import lbfaces
         for n, (pid, folder) in enumerate(faces):

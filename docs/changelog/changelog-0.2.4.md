@@ -179,6 +179,18 @@ once, and your 0.2.2 career keeps working.
   He now takes it once, and a stale ids file no longer stops Build. With 0.2.3, delete
   `fl26playerids.json` in the world's folder (`SiderAddons\livecpk\<world>`) before each Build.
   Thanks maur0.
+- **After a Build again, players showed up as somebody else in an old career.** Build kept the
+  id of each of the world's own players by his place in the squad. When a newer NewLife took a
+  doubled player out of a squad (B52), everybody after him moved up a place and the ids went with
+  the places: in a test rebuild of the Modpack, 1395 players kept their club and name but got
+  another id, and 1826 ids belonged to another player than before. Build now finds each player by
+  who he is first (his NewLife id, else his name and birth date, else his name when nobody else
+  at the club has it) and only then by his place, and a player who changed clubs keeps his id
+  too. The id of a player who left the world is not given to anyone else; only when no other id
+  under the game's limit is free is one used again, and the Build log says so. The ids file
+  (`fl26playerids.json`) now also says who each player is. A NewLife squad added or updated with
+  0.2.4 carries each player's NewLife id and birth date; a squad added before is matched by name
+  and place.
 - **A league with a place in a continental competition of the game played the day before or
   after it, on every continent.** Nacional (Uruguay) had a league round on 22 September and the
   Libertadores quarter-final on the 23rd. The fixture module now knows the days of the game's

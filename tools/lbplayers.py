@@ -693,6 +693,9 @@ def check_edit(ch):
         elif k == "id":
             if not (v.isdigit() and 1 <= int(v) <= PID_MAX):
                 err.append("player id %r is not 1-%d" % (v, PID_MAX))
+        elif k in ("newlife_id", "birth_date"):        # who he is (IDENT): Build keeps his id by it
+            if len(v) > 32:
+                err.append("%s %r is too long" % (k, v))
         elif k != "like":
             err.append("unknown field %r" % k)
     return err
@@ -892,69 +895,209 @@ def face_app_lines(faces, per=64):
     return ["faceapp " + " ".join(pairs[k:k + per]) for k in range(0, len(pairs), per)]
 
 
-def _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_top):
+IDENT = ("newlife_id", "birth_date")    # who a player of a NewLife squad is (players.csv of the
+                                        # release): Build keeps his id by them, not by his place
+
+
+def fields_set(ch):
+    """how many fields a player's change sets: IDENT only says who he is"""
+    return len([k for k in ch if k not in IDENT])
+
+
+def _who(name, nl, born):
+    """(NewLife id, name as letters, birth date, name as written) of a player, "" where unknown"""
+    return (str(nl or "").strip(), _letters(str(name or "")), str(born or "").strip(), str(name or "").strip())
+
+
+def _same_one(a, b):
+    """two players' (_who) are not told apart: no NewLife id and no birth date that differ"""
+    return not (a[0] and b[0] and a[0] != b[0]) and not (a[2] and b[2] and a[2] != b[2])
+
+
+def _pair(old, new, how):
+    """pairs a club's players of the last Build with its players now, by who they are: old
+    {key: _who}, new {key: _who}; matched keys leave both dicts. Returns {new key: old key};
+    how (a Counter) counts the pairs by what found them"""
+    out = {}
+
+    def by(field, need):
+        o, n = collections.defaultdict(list), collections.defaultdict(list)
+        for k, w in old.items():
+            if need(w):
+                o[field(w)].append(k)
+        for k, w in new.items():
+            if need(w):
+                n[field(w)].append(k)
+        return o, n
+
+    stages = (("newlife id", lambda w: w[0], lambda w: w[0]),
+              ("name and birth date", lambda w: (w[1], w[2]), lambda w: w[1] and w[2]),
+              # the name as written before the name without accents: "Baher El Mohamady" and
+              # "Baher Elmohamady", two players of one club in the Modpack, are one in letters
+              ("name", lambda w: w[3], lambda w: w[3]),
+              ("name", lambda w: w[1], lambda w: w[1]))
+    for label, field, need in stages:
+        o, n = by(field, need)
+        for f, oks in o.items():
+            nks = n.get(f) or []
+            # one player of that name (id ...) on each side: a name twice in the club says
+            # nothing about which is which, the place decides below
+            if len(oks) == 1 and len(nks) == 1 and _same_one(old[oks[0]], new[nks[0]]):
+                out[nks[0]] = oks[0]
+                del old[oks[0]], new[nks[0]]
+                how[label] += 1
+    for k in [k for k in new if k in old]:             # the place, for whoever is still left
+        a, b = old[k], new[k]
+        named = a[1] or b[1]
+        if (a[1] == b[1] or (not a[1] and k.startswith("+"))) and _same_one(a, b) and (named or not (a[0] or b[0])):
+            # the same name (or none: a placeholder of a new club); an added player the last
+            # Build named nothing is taken to be the same one, as before
+            out[k] = k
+            del old[k], new[k]
+            how["place"] += 1
+    return out
+
+
+def _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_top, prev_people=None,
+              retired=None, log=None):
     """the ids the last Build gave the world's own players stay theirs (GitHub #126): a face linked
     to a new player by his id -- in the game's Edit mode or a face pack -- was lost when a change
     elsewhere handed the ids out in another order. prev: {club: {player key: id}} of the last
-    Build, prev_names {club: {player key: name}}; a key whose player now has another name keeps
-    nothing. A new club's squad (first) is renumbered here, in place; returns {(club, "+n"): id}
-    for the players added with "add", taken when they are made."""
+    Build, prev_names {club: {player key: name}}, prev_people {club: {player key: {"nl": NewLife
+    id, "born": birth date}}}. A new club's squad (first) is renumbered here, in place; returns
+    {(club, "+n"): id} for the players added with "add", taken when they are made.
+
+    0.2.4: a player is found by who he is before his place -- his NewLife id, else his name and
+    birth date, else his name when nobody else at the club has it -- and only the players left
+    over by the place. A squad of NewLife 1.5b4 lost a doubled player (B52), everybody after him
+    moved up one place, and the ids went with the places to other people: 1396 players of the
+    Modpack r7 took another id, and 1826 ids of r6 were somebody else's (15.10.2026). An old
+    career showed them as the wrong people.
+
+    retired, a set: ids of players no longer in the world (the ids file keeps them). The ids of
+    the last Build's players who are gone now go in; none of them is given to anyone else, as
+    long as an id below PID_MAX is free -- when none is, one is, and the log says so."""
+    log = log or (lambda *_a: None)
+    if retired is None:
+        retired = set()
     if not isinstance(prev, dict) or not prev:
         return {}
     if not isinstance(prev_names, dict):
         prev_names = {}
+    if not isinstance(prev_people, dict):
+        prev_people = {}
     taken = set()                                      # ids a change sets itself: never handed out
     for c in changes.values():
         for ch in list((c.get("edits") or {}).values()) + list(c.get("add") or []):
             if str(ch.get("id", "")).strip().isdigit():
                 taken.add(int(ch["id"]))
+
+    def valid(want):
+        try:
+            want = int(want)
+        except (TypeError, ValueError):
+            return None
+        return want if game_top < want <= PID_MAX else None
+
+    # who each player was at the last Build, and who each is now
+    old_of, new_of, ids_of = {}, {}, {}
+    for club, keys in prev.items():
+        if not isinstance(keys, dict):
+            continue
+        names = prev_names.get(club)
+        names = names if isinstance(names, dict) else {}
+        people = prev_people.get(club)
+        people = people if isinstance(people, dict) else {}
+        o = {}
+        for key, want in keys.items():
+            want = valid(want)
+            if want is None or want in taken:
+                continue
+            p = people.get(key)
+            p = p if isinstance(p, dict) else {}
+            o[key] = _who(names.get(key), p.get("nl"), p.get("born"))
+            ids_of[(club, key)] = want
+        old_of[club] = o
+    for club, c in changes.items():
+        n = {}
+        gone = set(c.get("remove") or [])
+        if club in first:
+            for k in range(len(first[club])):
+                key = str(k)
+                ch = (c.get("edits") or {}).get(key) or {}
+                if key in gone or str(ch.get("id", "")).strip():
+                    continue
+                n[key] = _who(ch.get("name"), ch.get("newlife_id"), ch.get("birth_date"))
+        for k, ch in enumerate(c.get("add") or []):
+            if not str(ch.get("id", "")).strip():
+                n["+%d" % k] = _who(ch.get("name"), ch.get("newlife_id"), ch.get("birth_date"))
+        new_of[club] = n
+    for club in first:                                 # a new club the recipe changes nothing of
+        if club not in new_of:
+            new_of[club] = {str(k): _who("", "", "") for k in range(len(first[club]))}
+
+    how = collections.Counter()
+    pairs = []                                         # (club now, key now, the id he keeps)
+    for club, o in old_of.items():
+        if club in new_of:
+            for nk, ok_ in _pair(o, new_of[club], how).items():
+                pairs.append((club, nk, ids_of[(club, ok_)]))
+    # a player who went to another club of the world: by his NewLife id, or his name and birth
+    # date, both the only ones in the world
+    left_old = {(club, k): w for club, o in old_of.items() for k, w in o.items()}
+    left_new = {(club, k): w for club, n in new_of.items() for k, w in n.items()}
+    for label, field, need in (("newlife id, at another club", lambda w: w[0], lambda w: w[0]),
+                               ("name and birth date, at another club", lambda w: (w[1], w[2]),
+                                lambda w: w[1] and w[2])):
+        o, n = collections.defaultdict(list), collections.defaultdict(list)
+        for k, w in left_old.items():
+            if need(w):
+                o[field(w)].append(k)
+        for k, w in left_new.items():
+            if need(w):
+                n[field(w)].append(k)
+        for f, oks in o.items():
+            nks = n.get(f) or []
+            if len(oks) == 1 and len(nks) == 1 and _same_one(left_old[oks[0]], left_new[nks[0]]):
+                pairs.append((nks[0][0], nks[0][1], ids_of[oks[0]]))
+                del left_old[oks[0]], left_new[nks[0]]
+                how[label] += 1
+
     # pin: {player id now: the id he takes}. A player is pinned once: one team id under two club
     # keys (a NewLife club listed twice) lists the same players twice, and a second pin of a
     # player already moved stopped Build with a KeyError (Discord, maur0, 0.2.3)
     pin, later, wanted = {}, {}, set()
-    for club, keys in prev.items():
-        if not isinstance(keys, dict):
+    for club, key, want in pairs:
+        if want in wanted:
             continue
-        c = changes.get(club) or {}
-        names = prev_names.get(club)
-        names = names if isinstance(names, dict) else {}
-        for key, want in keys.items():
-            try:
-                want = int(want)
-            except (TypeError, ValueError):
+        if key.startswith("+"):
+            later[(club, key)] = want
+        else:
+            pid = first[club][int(key)]
+            if pid not in index or pid in pin:         # not in Player.bin, or pinned already
                 continue
-            if want <= game_top or want > PID_MAX or want in taken or want in wanted:
-                continue
-            ch = (c.get("edits") or {}).get(key) or {}
-            if key.startswith("+") and key[1:].isdigit():
-                n = int(key[1:])
-                adds = c.get("add") or []
-                ch = adds[n] if n < len(adds) else None
-                if ch is None or str(ch.get("id", "")).strip():
-                    continue
-            elif not (key.isdigit() and club in first and int(key) < len(first[club])) or str(ch.get("id", "")).strip():
-                continue
-            was = names.get(key) or ""
-            if was and ch.get("name") and ch["name"] != was:
-                continue
-            if key.startswith("+"):
-                later[(club, key)] = want
-            else:
-                pid = first[club][int(key)]
-                if pid not in index or pid in pin:     # not in Player.bin, or pinned already
-                    continue
-                pin[pid] = want
-            wanted.add(want)
-    # every player in the way moves to a free id first: those pinned, and whoever holds an id
-    # someone is pinned to; then the pinned ones take theirs
-    moving = set(pin) | {pid for pid in wanted if pid in index}
+            pin[pid] = want
+        wanted.add(want)
+    # the ids of the players who are gone: nobody else gets them
+    gone = {want for want in ids_of.values() if want not in wanted}
+    retired |= gone
+    retired -= wanted | taken
+    if prev:
+        kept = sum(how.values())
+        log("  player ids: %d players keep the id of the last Build (%s); %d ids of players no longer "
+            "in the world are not given to anyone else" % (
+                kept, ", ".join("%d by %s" % (n, k) for k, n in how.most_common()) or "none", len(retired)))
+    # every player in the way moves to a free id first: those pinned, whoever holds an id
+    # someone is pinned to, and whoever holds the id of a player who is gone; then the pinned
+    # ones take theirs
+    moving = set(pin) | {pid for pid in wanted if pid in index} | {pid for pid in retired if pid in index}
     if not moving:
         return later
     # the first free ids above the game's own, not max + 1: a player moved out of the way and
     # not pinned himself keeps this id, and the engine packs a player id into 18 bits (PID_MAX);
     # max + 1 left 500 players of the Modpack world at 279513..289512 (14.10.2026)
     busy = set(index) | wanted | taken
-    spare = game_top + 1
+    free = FreeIds(game_top, busy, retired, log)
     moved = {}                                         # player id before -> after
     # 0.2.4: where each player's assignments are, found once -- _renumber looked through every
     # assignment for every player it moved, and a rebuilt Modpack moves thousands (the Modpack's
@@ -963,20 +1106,48 @@ def _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_to
     for i in range(len(assigns) // A_REC):
         where[u32(assigns, i * A_REC + E.A_PID)].append(i * A_REC)
     for pid in sorted(moving):
-        while spare in busy:
-            spare += 1
-        if spare > PID_MAX:
-            raise Error("no free player id left below %d (the game packs a player id into 18 bits)" % (PID_MAX + 1))
+        spare = free.take()
         moved[pid] = spare
         _renumber(players, assigns, index, pid, spare, where)
-        busy.add(spare)
-        spare += 1
     for pid, want in pin.items():
         _renumber(players, assigns, index, moved[pid], want, where)
         moved[pid] = want
+    # a player moved out of the way who is not pinned and gets dropped later frees his id again
     for club in first:                                 # every copy of a player follows him
         first[club] = [moved.get(pid, pid) for pid in first[club]]
     return later
+
+
+class FreeIds:
+    """the world's free player ids, lowest first above the game's own: not one in `busy` (it
+    grows with every id handed out) nor one in `retired` (the ids of players no longer in the
+    world). Only when no other id below PID_MAX is left is a retired id given again, with a
+    NOTE in the log: a career started on an earlier Build shows that player as somebody else."""
+
+    def __init__(self, game_top, busy, retired, log=None):
+        self.next, self.busy, self.retired = game_top + 1, busy, retired
+        self.log = log or (lambda *_a: None)
+        self.reused = []
+
+    def take(self):
+        while self.next in self.busy or self.next in self.retired:
+            self.next += 1
+        if self.next <= PID_MAX:
+            pid = self.next
+            self.next += 1
+        else:
+            left = sorted(self.retired - self.busy)
+            if not left:
+                raise Error("no free player id left below %d (the game packs a player id into 18 bits)"
+                            % (PID_MAX + 1))
+            pid = left[0]
+            self.retired.discard(pid)
+            self.reused.append(pid)
+            self.log("  NOTE: no free player id left below %d: id %d, of a player no longer in the world, "
+                     "is given to another player -- a career started before this Build shows him as "
+                     "that player" % (PID_MAX + 1, pid))
+        self.busy.add(pid)
+        return pid
 
 
 def _renumber(players, assigns, index, old, pid, where=None):
@@ -995,7 +1166,7 @@ def _renumber(players, assigns, index, old, pid, where=None):
 
 
 def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, portraits=None,
-          prev=None, prev_names=None, formations=None, picked=None):
+          prev=None, prev_names=None, formations=None, picked=None, prev_people=None, retired=None):
     r"""write the recipe's player changes into the world's tables in db (the world's
     common\etc\pesdb; Player.bin and PlayerAssignment.bin come from base when the world has
     none of its own yet).  pl is the plan: its leagues carry the team ids they were given.
@@ -1006,8 +1177,13 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
     (pick_formation) and its best eleven for it; picked, a dict, gets {club id: that entry}.
     ids, a dict, gets {club: {player key: player id}} the way Mod Studio's Players page keys them:
     a new club's players by their place in its squad ("0", "1" ...), and a player added to any
-    club as "+0", "+1" ... in the order of its "add" list."""
+    club as "+0", "+1" ... in the order of its "add" list. prev, prev_names, prev_people: the
+    last Build's ids file (_keep_ids); retired, a set: the ids of players no longer in the world,
+    in and out -- none is handed out while another id is free, and the ids of the last Build's
+    players who are gone now go in."""
     changes = pl.get("players") or {}
+    if retired is None:
+        retired = set()
     tids = {}
     for p in pl["leagues"]:
         game = {int(k) for k in (p.get("game_clubs") or {})}
@@ -1031,7 +1207,8 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
     # a new club's squad as mkplayers left it: place n in it is the recipe's key "n"
     first = {key: [pid for _o, pid, _a in squad_of(tid)] for key, tid in tids.items()}
     added_ids = {}                                     # club -> [id of each "add" entry]
-    reserved = _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_top)
+    reserved = _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_top,
+                         prev_people=prev_people, retired=retired, log=log)
 
     # the recipe keys a new club by its league's name as Mod Studio wrote it, the plan by the
     # name Build uses (stripped): a stray space or a change of case left a whole NewLife club
@@ -1145,12 +1322,16 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
                 pid = again                            # the id the last Build gave him (#126)
             else:
                 pid = next_pid
-                while pid in index or pid in reserved_ids:
+                while pid in index or pid in reserved_ids or pid in retired:   # not a gone player's id
                     pid += 1
                 if pid > PID_MAX:
-                    raise Error("players of %s: no free player id left below %d (the game packs a "
-                                "player id into 18 bits)" % (club, PID_MAX + 1))
-                next_pid = pid + 1                     # only a handed-out id moves the cursor: a kept
+                    try:
+                        pid = FreeIds(PID_MAX, set(index) | reserved_ids, retired, log).take()
+                    except Error:
+                        raise Error("players of %s: no free player id left below %d (the game packs a "
+                                    "player id into 18 bits)" % (club, PID_MAX + 1))
+                else:
+                    next_pid = pid + 1                 # only a handed-out id moves the cursor: a kept
                                                        # or chosen one near the top would skip every gap
             added_ids.setdefault(club, []).append(pid)
             rec[P_ID:P_ID + 4] = pid.to_bytes(4, "little")
@@ -1341,6 +1522,7 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
                       key=lambda r: u32(r, P_ID))
         players = players[:shipped_n] + b"".join(recs)
     _check_orders(assigns)
+    retired -= set(index)                              # an id in use again (the recipe's own) is nobody's old one
     if ids is not None:
         for key, pids in first.items():
             gone = set((changes.get(key) or {}).get("remove") or [])

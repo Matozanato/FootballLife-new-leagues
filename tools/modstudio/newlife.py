@@ -181,6 +181,13 @@ class Release:
         return sorted(out[:P.SQUAD], key=lambda r: -P.overall(r))
 
 
+def who(r):
+    """who a player of the release is, for his change in the recipe: his NewLife id and birth
+    date (players.csv). Build keeps a player's id by them when a squad changes (a doubled player
+    taken out moved everybody after him a place up, and the ids went with the places: B52, 0.2.4)"""
+    return {f: str(r[f]).strip() for f in P.IDENT if str(r.get(f) or "").strip()}
+
+
 def same_club(info, tid, c):
     """whether team tid of the tables in use (info = leaguebuilder.game_info) is NewLife club c
     (a clubs.csv row): a club, not a national team, of the release's country, or failing that
@@ -399,6 +406,7 @@ def _club_players(rel, i, mover, proto, league_ovr):
         for f in P.FIELDS:
             if r.get(f, "") != "":
                 ch[f] = r[f]
+        ch.update(who(r))
         how, g, other = mover(r)
         if how == "move":
             del ch["name"]                    # the game's spelling stays
@@ -536,7 +544,7 @@ def lineup(rel, x, rows, keep=None):
     return by_key[k], E
 
 
-RELEASE_FIELDS = set(P.FIELDS) | {"name"}     # what a squad from the release sets: the rest is by hand
+RELEASE_FIELDS = set(P.FIELDS) | {"name"} | set(P.IDENT)   # what a squad from the release sets: the rest is by hand
 
 
 def _keep_by_hand(c, mine):
@@ -975,6 +983,7 @@ def _game_squads(recipe, rel, info, squads):
         keep, join, add, ed = [], [], [], {}
         for r in rel.squad(c):
             ch = {f: r[f] for f in P.FIELDS if r.get(f, "") != ""}
+            ch.update(who(r))
             o = P.overall(r)
             if o and level(o) != o:
                 ch.update(P.at_level(r, level(o)))
