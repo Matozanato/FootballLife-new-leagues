@@ -31,6 +31,8 @@ def main(folder, base):
     assert P.check(r) == [], P.check(r)[:5]
     assert r["players"][str(hand)] == before["players"][str(hand)], "a club changed by hand stays"
     assert r["edits"]["clubs"]["101"]["name"] == "Mine" or "101" in r["newlife_game"]["replaced"]
+    # B57: every place given to another club carries its shirt, so Build draws its shield
+    assert all("kit" in w for w in r["newlife_game"]["replaced"].values())
     for k, c in r["players"].items():
         if c.get("newlife_game"):
             assert not set(c.get("join") or []) & set(c.get("remove") or []), k

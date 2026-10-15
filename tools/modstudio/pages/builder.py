@@ -2365,7 +2365,7 @@ class NewLeagues(BuilderPage):
                 it.setToolTip(10, _("The order changed since the last Build: Build again to see where it goes."))
             if b.get("rid") is not None:
                 it.setToolTip(1, _("competition %s, regulation %s") % (b.get("cid"), b["rid"]))
-            elif plan:
+            elif plan and not L.get("others"):
                 it.setToolTip(1, _("Added or renamed since the last Build: press Build to put it in the game."))
             pm = pixmap(L.get("logo"), 28)
             if pm:
@@ -2629,7 +2629,8 @@ class NewClubs(BuilderPage):
             "new club. If it plays somewhere in the game, you pick who takes its old place there.\n"
             "- NewLife club...: put clubs of the NewLife Database, with their squads, in this place and the "
             "places after it (open the NewLife Database on the NewLife page first).\n"
-            "- New club here: undo that; the place gets a new club again.\n"
+            "- New club here: undo Club of the game; the place gets a new club again. Only on a place a club "
+            "of the game took (a new club's place is one already).\n"
             "- Insert club / Remove club: a new club before the selected one, or the selected one out. The "
             "league gets one club more or one less.\n"
             "- Move to another league...: the club goes to another of your new leagues, with its name, crest, "
@@ -2640,12 +2641,14 @@ class NewClubs(BuilderPage):
         super().__init__(app)
         self.action("Edit club", self.edit, "primary")
         # 0.2.4: one button in sight, the rest in More
-        self.more([("Players", self.players, "Change this club's squad"),
+        self.more_btn = self.more([("Players", self.players, "Change this club's squad"),
                    ("Club of the game...", self.game_club,
                     "Put a club the game already has in this place, instead of a new club"),
                    ("NewLife club...", self.newlife_club,
                     "Put clubs of the NewLife Database in this place and the ones after it"), None,
-                   ("New club here", self.new_here), ("Insert club", lambda: self.shift(1)),
+                   ("New club here", self.new_here,
+                    "Undo Club of the game: the place a club of the game took gets a new club again"),
+                   ("Insert club", lambda: self.shift(1)),
                    ("Remove club", lambda: self.shift(-1)), ("Move to another league...", self.move_club), None,
                    ("Paste names...", self.paste), ("Load names from file...", self.load_file),
                    ("Import crests...", lambda: import_crests(self))])
@@ -2669,6 +2672,7 @@ class NewClubs(BuilderPage):
         self.tree.setColumnHidden(3, True)
         self.tree.setColumnHidden(4, True)
         self.tree.itemDoubleClicked.connect(lambda *a: self.edit())
+        self.tree.currentItemChanged.connect(lambda *a: self.can_new_here())
         self.outer.addWidget(self.tree, 1)
         self.project.changed.connect(self.refresh)
 
@@ -2734,6 +2738,7 @@ class NewClubs(BuilderPage):
         cur = self.tree.currentItem()
         cur = cur.data(0, Qt.UserRole) if cur else None
         self.tree.clear()
+        self.can_new_here()
         L = self.league()
         if not L:
             return
@@ -2776,7 +2781,8 @@ class NewClubs(BuilderPage):
         ed = self.project.edits("clubs").get(str(tid), {})       # Edit club: a new name, crest ...
         n = len((pl.get(str(tid)) or {}).get("edits") or {})
         it = QTreeWidgetItem([str(k + 1), ed.get("name") or name, ed.get("abbr") or short, str(tid),
-                              _("(new crest)") if ed.get("crest") else _("(the game's)"), str(n) if n else ""])
+                              _("(new crest)") if ed.get("crest") or "kit" in ed else _("(the game's)"),
+                              str(n) if n else ""])
         sw = e.get("swap")
         if isinstance(sw, dict):
             tip = _("A club of the game. A new club, %s, takes its place in the game.") % sw.get("name", "")
@@ -2789,7 +2795,7 @@ class NewClubs(BuilderPage):
         for c in range(6):
             it.setToolTip(c, tip)
         it.setForeground(4, QBrush(QColor(theme.SUBTLE)))
-        pm = pixmap(ed.get("crest"), 28)
+        pm = pixmap(ed.get("crest"), 28, ed.get("kit") or None)
         if pm:
             it.setIcon(1, pm)
         it.setData(0, Qt.UserRole, k)
@@ -2869,6 +2875,7 @@ class NewClubs(BuilderPage):
         except OSError:
             game = None
         rel.use_tables(game)              # "in the game" by the tables in use, a database mod's too
+        rel.use_recipe(self.project.recipe)   # B56: a NewLife club that is the game's is a club of the game
         skip = used | {cid for cid, c in rel.clubs.items() if c.get("in_game") == "1"}
         d = ClubPickDialog(self, rel, skip)
         if not d.finish() or not d.picked:
@@ -2893,9 +2900,22 @@ class NewClubs(BuilderPage):
             text += " " + _("%d of their players stay out: another of your leagues has them.") % elsewhere
         self.say(text + " " + _("Build again and start a new career."), "ok")
 
+    def can_new_here(self):
+        """New club here only on a place a club of the game holds (B58: on a new club's place it did
+        nothing, without a word)"""
+        L, k = self.league(), self.current()
+        act = next((a for a in getattr(self.more_btn, "acts", []) if a.text() == _("New club here")), None)
+        if act is not None:
+            act.setEnabled(bool(L) and k is not None and k in self.game_places(L))
+
     def new_here(self):
         L, k = self.league(), self.current()
-        if not L or k is None or k not in self.game_places(L):
+        if not L or k is None:
+            self.say(_("Select a club first."), "warn")
+            return
+        if k not in self.game_places(L):
+            self.say(_("Club %d of %s is a new club already. New club here only undoes Club of the game: it "
+                       "gives a place a club of the game took back to a new club.") % (k + 1, L["name"]), "warn")
             return
         L["game_clubs"] = [e for e in L["game_clubs"] if int(e.get("at", -1)) != k]
         if not L["game_clubs"]:
@@ -3096,7 +3116,7 @@ def edit_game_club(page, tid):
     of the game on New clubs). True when something was kept."""
     project = page.project
     n, a = project.game_cl[tid]
-    e = project.edits("clubs").get(str(tid), {})
+    e = old = project.edits("clubs").get(str(tid), {})
     d = ClubDialog(page, e.get("name") or n, e.get("abbr") or a, e.get("crest"), was=(n, a),
                    portrait=coach_portrait(project, str(tid)), stadium=club_stadium(project, str(tid)),
                    stadium_lib=stadium_lib(page.app), tid=tid)
@@ -3112,6 +3132,8 @@ def edit_game_club(page, tid):
         e["abbr"] = short
     if crest:
         e["crest"] = crest
+    if "kit" in old:                     # a place NewLife gave another club (B57): its shield stays
+        e["kit"] = old["kit"]
     if e:
         project.edits("clubs")[str(tid)] = e
     else:
@@ -3442,7 +3464,7 @@ class GameLeagues(BuilderPage):
         for c, v in enumerate(vals):
             it.setText(c, v)
         it.setToolTip(1, _("Team ID: %s") % tid + ("   " + _("Crest: %s") % vals[3] if vals[3] else ""))
-        pm = pixmap(e.get("crest"), 24)
+        pm = pixmap(e.get("crest"), 24, e.get("kit") or None)
         it.setIcon(1, pm if pm else QPixmap())
 
     def keep_league(self):

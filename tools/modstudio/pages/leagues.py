@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QHBoxLayout, QLa
 from ..i18n import _
 from ..ui import hint, row
 from .. import theme
-from .builder import BuilderPage, GameLeagues, fmt_text, europe_text, tier_of, pixmap
+from .builder import BuilderPage, GameLeagues, fmt_text, europe_text, tier_of, pixmap, others_labels
 
 CONTINENTS = ((2, "Europe"), (3, "Asia"), (4, "South America"), (5, "Africa"),
               (6, "North and Central America"), (7, "Oceania"), (0, "Other"))
@@ -181,6 +181,7 @@ class Leagues(BuilderPage):
         f = QFormLayout()
         f.setHorizontalSpacing(18)
         f.setVerticalSpacing(8)
+        self.o_form = f
         self.o_rows = {}
         for key in ("Country", "Clubs", "Format", "Division", "Up / down", "Europe", "League ID"):
             lab = QLabel("")
@@ -196,6 +197,7 @@ class Leagues(BuilderPage):
         b_edit.setObjectName("primary")
         b_edit.clicked.connect(lambda: self.on_ours("edit"))
         b_low = QPushButton(_("Add lower tier"))
+        self.o_low = b_low
         b_low.clicked.connect(lambda: self.on_ours("add_lower"))
         b_clubs = QPushButton(_("Clubs and names"))
         b_clubs.clicked.connect(lambda: self.app.open_page("NewClubs"))
@@ -418,8 +420,16 @@ class Leagues(BuilderPage):
                 "Europe": europe_text(L) or "—",
                 "League ID": str(b["cid"]) if b.get("cid") is not None else
                 (_("not built yet") if plan else "—")}
+        # B54: a group of clubs in no league (plan["others"], e.g. Other Africa teams) never gets a
+        # competition, so no league id, format or division: say what it is instead of "not built yet"
+        others = L.get("others")
+        if others:
+            vals["League ID"] = _("no league (%s)") % others_labels().get(others, others)
         for k, v in vals.items():
             self.o_rows[k].setText(v)
+        for k in ("Format", "Division", "Up / down", "Europe"):
+            self.o_form.setRowVisible(self.o_rows[k], not others)
+        self.o_low.setEnabled(not others)
         pm = pixmap(L.get("logo"), 60)
         self.o_logo.setPixmap(pm if pm else QPixmap())
         self.o_logo.setVisible(bool(pm))
@@ -445,7 +455,7 @@ class Leagues(BuilderPage):
                 tid = int(game[k]["id"])
                 ed = P.edits("clubs").get(str(tid), {})
                 gname, gshort = P.game_cl.get(tid, (str(tid), ""))
-                path, kit = ed.get("crest"), None
+                path, kit = ed.get("crest"), ed.get("kit") or None
                 name, abbr = ed.get("name") or gname, ed.get("abbr") or gshort
             cell = QLabel()
             cell.setAlignment(Qt.AlignHCenter | Qt.AlignTop)

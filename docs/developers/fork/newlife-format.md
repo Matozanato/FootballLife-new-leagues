@@ -61,6 +61,7 @@ UTF-8, with a header row:
 | `country` | `Country.bin` id of the club's country |
 | `league` | the league's name. `country` + `league` together make one league on the NewLife page. A club with no league is in no league list |
 | `home_kit`, `away_kit` | shirt words, `"<pattern> #rrggbb #rrggbb #rrggbb"` (for example `plain #cd1018 #cd1018 #080808`), the same form as a recipe's `club_kits` |
+| `game_id` | 1.5b5 on, optional. On a club with a NewLife id that is a club of the game after all, the game's team id (`98493` Avaí Futebol Clube is the game's `2452` Avaí FC). Mod Studio then takes the club as that club of the game, under the game's id: it stays in its place, *Bring the game's leagues to this season* gives it the release's squad, and no other club gets its place. The NewLife id stays the club's. It counts only when the tables in use have that club (the same club, as for `in_game`) and the world does not have the NewLife id as a new club already; a world that does keeps it as a new club. Empty or missing: the club is what `in_game` says |
 
 ## `players.csv`
 
