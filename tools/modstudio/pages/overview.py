@@ -521,12 +521,9 @@ class Overview(Page):
         self.problem.show()
 
     def switch_world(self):
-        """Content folders with the League Builder worlds shown: they are what a world switch picks
-        from, and the page hides them by default"""
-        self.app.open_page("Roots")
-        r = self.app.pages.get("Roots")
-        if r is not None and hasattr(r, "show_worlds"):
-            r.show_worlds.setChecked(True)
+        """My world: every world on disk is a card there, and Put in the game switches to it
+        (until variant A, 15.10.: Content folders with the worlds shown)"""
+        self.app.open_my_world()
 
     def open_live(self):
         live = self.app.project.live_worlds()

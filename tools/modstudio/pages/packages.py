@@ -190,7 +190,7 @@ class AddDialog(QDialog):
 class Packages(BuilderPage):
     title = "League packages"
     hint = ("Share leagues: make a package of your leagues for other people, or add somebody's package to "
-            "your world. Added leagues show up on every tab of Build and edit your world; Build and install puts them "
+            "your world. Added leagues show up on every tab of My world; Build and install puts them "
             "in the game.")
 
     def __init__(self, app):
@@ -266,7 +266,9 @@ class Packages(BuilderPage):
         self.about.setPlainText("\n".join(lines))
 
     # ---- actions ----
-    def add_pack(self, path=None):
+    def add_pack(self, path=None, leagues=None):
+        """add the .fl26pack at path to the open world; leagues: the ones ticked in My world's
+        + Add... (its own window then is not shown, every part is taken)"""
         if self.need_tables(True):
             return
         if not path:
@@ -305,19 +307,23 @@ class Packages(BuilderPage):
         parts = [p for p in K.PARTS if p in (man.get("parts") or K.PARTS)]
         if man.get("players") is False:
             parts = [p for p in parts if p not in ("squads", "faces")]
-        dlg = AddDialog(self, text, man.get("leagues", []), parts)
-        if dlg.exec() != QDialog.Accepted:
-            return
+        if leagues is None:
+            dlg = AddDialog(self, text, man.get("leagues", []), parts)
+            if dlg.exec() != QDialog.Accepted:
+                return
+            picked, picked_parts = dlg.picked(), dlg.picked_parts()
+        else:
+            picked, picked_parts = list(leagues) if len(man.get("leagues", [])) > 1 else None, None
         try:
             man, piece, folder = K.unpack(path, store())
         except K.Error as e:
             error(self, "League packages", str(e))
             return
         brought = []
-        if dlg.picked() is not None:
-            piece, brought = K.only(piece, dlg.picked())
-        if dlg.picked_parts() is not None:
-            piece = K.parts_only(piece, dlg.picked_parts())
+        if picked is not None:
+            piece, brought = K.only(piece, picked)
+        if picked_parts is not None:
+            piece = K.parts_only(piece, picked_parts)
         tag = K.tag_of(man)
         rename = {}
         going = {n for _t, p in old for n in p.get("leagues") or []}      # replaced, not clashing

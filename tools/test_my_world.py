@@ -1,0 +1,193 @@
+r"""python tools/test_my_world.py
+
+0.2.4 (mato 15.10., variant A): one section, My world, in place of Build and edit your world,
+Import your world and NewLife Database.
+  - the bar has five numbered items: Home, My world, Game content, Tools, Settings; Build, Import
+    your world and NewLife Database still open (inside My world, with no tab lit);
+  - My world shows a card for each world on disk: the one in the game green (IN THE GAME NOW)
+    with Export / Rename / Delete, Delete refused for it; another world has Put in the game, and
+    pressing it switches that world on in sider.ini and turns its card green;
+  - + Add... tells a league package (.fl26pack, with its leagues to tick), a world zip and the
+    NewLife Database folder apart.
+
+The whole window in this process (QT_QPA_PLATFORM=offscreen), a fake game folder and APPDATA in
+a temp folder. No game.
+"""
+import json, os, shutil, sys, tempfile, time, zipfile
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+os.environ.pop("FL26_DIR", None)
+T = tempfile.mkdtemp(prefix="myworld-")
+os.environ["APPDATA"] = os.path.join(T, "appdata")      # before modstudio.app reads it (APPDIR)
+
+from test_world_manage import make_game, put
+
+N = 0
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+
+def ok(name, cond):
+    global N
+    assert cond, name
+    N += 1
+    print("ok %d - %s" % (N, name))
+
+
+def settle(qa, secs=1.0):
+    t0 = time.time()
+    while time.time() - t0 < secs:
+        qa.processEvents()
+        time.sleep(0.02)
+
+
+def main():
+    try:
+        run()
+    finally:
+        shutil.rmtree(T, ignore_errors=True)
+    print("test_my_world: ok (%d)" % N)
+
+
+def run():
+    from PySide6.QtWidgets import QApplication, QPushButton
+    from PySide6.QtGui import QColor
+    qa = QApplication.instance() or QApplication([])
+    from modstudio import app as A, theme, worlds as WL
+    from modstudio.pages import myworld as M, builder as PB, install as PI
+    PI.error = lambda *a, **k: None          # Import your world: "choose the game folder first"
+    PB.ask = lambda *a, **k: False           # "unpack the game's tables?" (NewLife, no tables here): no
+    theme.apply(qa)
+    game = make_game(T)
+    ms = os.path.join(os.environ["APPDATA"], "FL26ModStudio")
+    os.makedirs(os.path.join(ms, "tables"))
+    for x in ("_FL26Live", "_FL26Old"):         # Build's copies of their recipes (Project.copies_dir)
+        put(os.path.join(ms, "recipes", x + ".json"), json.dumps({"world": x, "leagues": []}))
+    with open(os.path.join(ms, "settings.json"), "w", encoding="utf-8") as f:
+        json.dump({"game": game.folder, "tables": os.path.join(ms, "tables"), "check_updates": False}, f)
+    ok("the window's settings are in the temp APPDATA", A.APPDIR == ms)
+    w = A.Main()
+    w.resize(1400, 860)
+    w.show()
+    settle(qa, 0.5)
+
+    # ---- the bar
+    texts = [b.text() for b in w.nav_group.buttons()]
+    ok("the bar: five numbered items, %s" % texts,
+       texts == ["1. Home", "2. My world", "3. Game content  ▾", "4. Tools  ▾", "5. Settings"])
+    ok("no Build and edit your world / Import your world / NewLife Database in the bar",
+       not any(k in w.nav_buttons for k in ("Build", "Import", "NewLife")))
+    for name in ("Build", "Install", "NewLife", "Packages", "NewLeagues"):
+        w.open_page(name)
+        qa.processEvents()
+        sec = w.my_world
+        ok("%s still opens, inside My world, with no tab lit" % name,
+           w.stack.currentWidget() is sec and sec.tabs.currentWidget() is w.holder_of[name]
+           and not any(b.isChecked() for b in sec.tab_btn.values())
+           and w.nav_buttons["World"].isChecked())
+    w.open_page("Leagues")
+    qa.processEvents()
+    ok("Leagues is the lit tab of My world", w.my_world.tab_btn["Leagues"].isChecked())
+    ok("the tabs: Leagues, Clubs, Players, Kits, Stadiums and Cups",
+       [b.text() for b in w.my_world.tab_btn.values()] + [w.my_world.cups.text()]
+       == ["Leagues", "Clubs", "Players", "Kits", "Stadiums", "Cups"])
+    settle(qa, 1.0)
+
+    # ---- the cards
+    sec = w.my_world
+    cards = {c.world: c for c in sec.cards}
+    ok("a card for each world on disk, the live one first: %s" % list(cards),
+       list(cards) == ["_FL26Live", "_FL26Old"])
+    ok("the world in the game is the open one", w.project.recipe.get("world") == "_FL26Live")
+    live = cards["_FL26Live"]
+    ok("the live card: worldlive, IN THE GAME NOW", live.objectName() == "worldlive"
+       and "IN THE GAME NOW" in live.eyebrow.text())
+    ok("the live card is 420 x 120", (live.width(), live.height()) == (M.CARD_W, M.CARD_H))
+    pic = live.grab().toImage()
+    ok("its border is the theme's green", QColor(pic.pixel(0, pic.height() // 2)).name().lower()
+       == QColor(theme.GOOD).name().lower())
+    ok("its background is the live green", QColor(pic.pixel(pic.width() // 2, 4)).name().lower()
+       == QColor(theme.LIVE_BG).name().lower())
+    btns = [b.text() for b in live.findChildren(QPushButton)]
+    ok("the live card has Export / Rename / Delete: %s" % btns,
+       all(t in btns for t in ("⇪ Export...", "Rename", "Delete")) and live.go is None)
+    ok("Delete is refused for the world in the game", not live.delete.isEnabled()
+       and "in the game now" in live.delete.toolTip())
+    old = cards["_FL26Old"]
+    ok("the other world: worldcard, NOT IN THE GAME, Put in the game",
+       old.objectName() == "worldcard" and old.eyebrow.text() == "NOT IN THE GAME"
+       and old.go.text().endswith("Put in the game") and old.delete.isEnabled())
+    ok("+ New world after the cards", sec.new_world.text() == "+ New world")
+    ok("the counters: competitions and new countries", "/ 255" in sec.c_comps.text()
+       and "/ 99" in sec.c_regions.text())
+    ok("the Master League note and Build and install in the header",
+       "Master League" in sec.note.text() and sec.build.text() == "Build and install")
+
+    # ---- Put in the game: the switch, then the cards again
+    PB.ask = lambda *a, **k: True
+    old.go.click()
+    settle(qa, 0.5)
+    ok("Put in the game switched _FL26Old on in sider.ini, _FL26Live off", WL.live(game) == ["_FL26Old"])
+    ok("its recipe is the open one now (the tabs change it)", w.project.recipe.get("world") == "_FL26Old")
+    cards = {c.world: c for c in sec.cards}
+    ok("the cards follow: _FL26Old green and first", sec.cards[0].world == "_FL26Old"
+       and cards["_FL26Old"].objectName() == "worldlive" and cards["_FL26Live"].objectName() == "worldcard"
+       and cards["_FL26Live"].go is not None)
+
+    # ---- + Add...
+    pk = os.path.join(T, "SerieCD.fl26pack")
+    with zipfile.ZipFile(pk, "w") as z:
+        z.writestr("manifest.json", json.dumps({
+            "format": "fl26pack", "format_version": 1, "name": "Serie C+D", "version": "1",
+            "leagues": [{"name": "Serie C", "country": "Italy", "clubs": 20},
+                        {"name": "Serie D", "country": "Italy", "clubs": 18}]}))
+    wz = os.path.join(T, "FL26-Modpack.zip")
+    with zipfile.ZipFile(wz, "w") as z:
+        z.writestr("SiderAddons/livecpk/_FL26Modpack/fl26world.txt", "world _FL26Modpack\n")
+    nl = os.path.join(T, "NewLife 1.5")
+    for f in ("players.csv", "clubs.csv", "newlife.json"):
+        put(os.path.join(nl, "NewLife-1.5", f), "x")
+    nz = os.path.join(T, "nl15-whole.zip")
+    with zipfile.ZipFile(nz, "w") as z:
+        for f in ("players.csv", "clubs.csv", "newlife.json"):
+            z.writestr(f, "x")
+    other = os.path.join(T, "ball.zip")
+    with zipfile.ZipFile(other, "w") as z:
+        z.writestr("ball/config.txt", "x")
+    ok("kind_of: .fl26pack", M.kind_of(pk) == ("pack", pk))
+    ok("kind_of: world zip", M.kind_of(wz) == ("world", wz))
+    ok("kind_of: NewLife folder (one level deeper too)", M.kind_of(nl) == ("newlife", nl))
+    ok("kind_of: NewLife in one zip", M.kind_of(nz)[0] == "newlife-zip")
+    ok("kind_of: any other zip goes to Import your world", M.kind_of(other) == ("mod", other))
+    ok("kind_of: not there", M.kind_of(os.path.join(T, "nope.zip"))[0] == "")
+    d = M.AddDialog(sec, sec.card_title())
+    ok("the window: Add to <world>", d.windowTitle() == "Add to _FL26Old")
+    ok("Add is off until something is picked", not d.add.isEnabled())
+    d.pick(pk)
+    ok("a package: Found: league package, 2 leagues, 38 clubs: %s" % d.found.text(),
+       d.kind == "pack" and 'league package "Serie C+D" (2 leagues, 38 clubs)' in d.found.text())
+    ok("its leagues to tick, all ticked", d.picked() == ["Serie C", "Serie D"])
+    ok("Add on", d.add.isEnabled())
+    d.pick(wz)
+    ok("a world zip: Found: a world zip", d.kind == "world" and "world zip" in d.found.text()
+       and d.ticks.count() == 0 and d.add.isEnabled())
+    d.pick(nl)
+    ok("the NewLife folder: Found: NewLife Database", d.kind == "newlife" and "NewLife Database" in d.found.text())
+    d.pick(nz)
+    ok("NewLife in one zip: unpack it first, Add off", d.kind == "" and not d.add.isEnabled()
+       and "unpack" in d.found.text())
+    d.pick(other)
+    ok("anything else: Import your world looks inside", d.kind == "mod" and d.add.isEnabled())
+    d.pick(wz)
+    d.go()
+    qa.processEvents()
+    ok("Add with a world zip opens Import your world inside My world",
+       w.stack.currentWidget() is sec and sec.tabs.currentWidget() is w.holder_of["Install"])
+    d.deleteLater()
+    w.close()
+    qa.processEvents()
+
+
+if __name__ == "__main__":
+    main()

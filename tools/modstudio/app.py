@@ -89,21 +89,20 @@ def page_groups():
 # shows its pages as tabs, the first one open. GAME CONTENT and TOOLS start folded.
 NAV = [
     ("", False, [("Overview", "Home", ["Overview"])]),
-    ("YOUR WORLD", False, [
-        # 0.2.4: one section, Build a tab next to what it builds (exe test 15.10.: "no sense editing
-        # in one tab and building in another"); the bar above the tabs has Build and install
-        ("World", "Build and edit your world", ["Build", "Leagues", "NewClubs", "Players", "Kits", "Stadiums",
-                                                "Packages"]),
-        ("ImportWorld", "Import your world", ["Install"]),
-        ("NewLife", "NewLife Database", ["NewLife"]),
-    ]),
+    # 0.2.4, variant A of the mockups (mato 15.10.): one section, My world, for Build and edit your
+    # world, Import your world and NewLife Database -- the worlds on disk as cards, Build and
+    # install above them, the pages that change the open world as tabs (pages/myworld.py)
+    ("MY WORLD", False, [("World", "My world", ["Leagues", "NewClubs", "Players", "Kits", "Stadiums"])]),
     ("GAME CONTENT", True, [(n, None, [n]) for n in ("Balls", "Commentary", "Music", "Servers")]),
     ("TOOLS", True, [(n, None, [n]) for n in ("Modules", "Roots", "Profiles", "Restore", "Diagnostics")]),
     ("SETTINGS", False, [("Settings", None, ["Settings"])]),
 ]
 TAB_TITLE = {"Build": "Build", "Packages": "League packages",
              "NewClubs": "Clubs"}
-OPEN_FOR = {"NewLeagues": "World"}     # a page not in the bar: the section that stays lit
+# a page not in the bar: the section that stays lit. My world shows its own under the cards with
+# no tab lit (More: Build details, League packages, Import a world zip, NewLife Database)
+OPEN_FOR = {"NewLeagues": "World", "Build": "World", "Packages": "World", "Install": "World",
+            "NewLife": "World"}
 
 
 def file_version(path):
@@ -154,36 +153,7 @@ class Main(QMainWindow):
                 self.project.new()
         # 0.1.8: the live world first. A tester's last recipe was an older world than the one
         # switched on in sider.ini, and the next Build would have replaced the live one with it
-        self._start_note = ""
-        live = self.project.live_worlds()
-        if live and self.project.recipe.get("world") not in live:
-            kept = os.path.join(self.project.copies_dir(), live[0] + ".json")
-            was = self.project.recipe.get("world")
-            if not os.path.exists(kept) and self.project.base:
-                # no copy of its recipe (built before Build kept one, or elsewhere): read the
-                # recipe back from the plan the world carries (leaguebuilder.recipe_from_plan)
-                try:
-                    import leaguebuilder
-                    plan = os.path.join(self.game.livecpk_dir, live[0], "leaguebuilder-plan.json")
-                    with open(plan, encoding="utf-8") as f:
-                        rec = leaguebuilder.recipe_from_plan(json.load(f), self.project.base)
-                    os.makedirs(self.project.copies_dir(), exist_ok=True)
-                    with open(kept, "w", encoding="utf-8") as f:
-                        json.dump(rec, f, indent=1, ensure_ascii=False)
-                except Exception:
-                    pass
-            if os.path.exists(kept):
-                try:
-                    self.project.open(kept, copy=True)
-                    self._start_note = _("Opened %s, the world in the game "
-                                         "(the last one open was %s).") % (live[0], was)
-                except Exception:
-                    pass
-            from modstudio import installer as _I
-            if not self._start_note and not _I.ready_world(self.game, live[0]):
-                # a ready world has no recipe to open, and Build is off for it: nothing to tell
-                self._start_note = _("The world in the game is %s, but Mod Studio has %s open. "
-                                     "Open %s (File > Open a world...) before you Build.") % (live[0], was, live[0])
+        self._start_note = self.open_live_world()
         self.bus.game_changed.connect(self.project.load_tables)
         self.setWindowTitle("FL26 Mod Studio")
         self.resize(*self.settings.get("size", [1360, 820]))
@@ -254,6 +224,44 @@ class Main(QMainWindow):
         # folder changes), no Settings step to know about
         QTimer.singleShot(1200, self.auto_tables)
         self.bus.game_changed.connect(lambda: QTimer.singleShot(500, self.auto_tables))
+
+    def open_live_world(self):
+        """open the recipe of the world in the game when another one is open (at a start, and after
+        My world's Put in the game); what to tell, or "" """
+        live = self.project.live_worlds()
+        if not live or self.project.recipe.get("world") in live:
+            return ""
+        note = ""
+        kept = os.path.join(self.project.copies_dir(), live[0] + ".json")
+        was = self.project.recipe.get("world")
+        if not os.path.exists(kept) and self.project.base:
+            # no copy of its recipe (built before Build kept one, or elsewhere): read the
+            # recipe back from the plan the world carries (leaguebuilder.recipe_from_plan)
+            try:
+                import leaguebuilder
+                plan = os.path.join(self.game.livecpk_dir, live[0], "leaguebuilder-plan.json")
+                with open(plan, encoding="utf-8") as f:
+                    rec = leaguebuilder.recipe_from_plan(json.load(f), self.project.base)
+                os.makedirs(self.project.copies_dir(), exist_ok=True)
+                with open(kept, "w", encoding="utf-8") as f:
+                    json.dump(rec, f, indent=1, ensure_ascii=False)
+            except Exception:
+                pass
+        if os.path.exists(kept):
+            try:
+                self.project.autosave()            # the world open now keeps its changes
+                self.project.open(kept, copy=True)
+                self.settings["last_recipe"] = kept
+                note = _("Opened %s, the world in the game "
+                         "(the last one open was %s).") % (live[0], was)
+            except Exception:
+                pass
+        from modstudio import installer as _I
+        if not note and not _I.ready_world(self.game, live[0]):
+            # a ready world has no recipe to open, and Build is off for it: nothing to tell
+            note = _("The world in the game is %s, but Mod Studio has %s open. "
+                     "Open %s (File > Open a world...) before you Build.") % (live[0], was, live[0])
+        return note
 
     def auto_tables(self):
         """unpack the game's tables when there are none yet and no tables folder of your own was
@@ -466,10 +474,23 @@ class Main(QMainWindow):
             self.holder_of[name] = sa
             return sa
         placed = set()
+        self.section_holder = {}
         for _caption, _folds, sections in NAV:
             for key, _title, names in sections:
                 for n in names:
                     self.section_of[n] = key
+                if key == "World":
+                    # My world: header, world cards, its pages as tabs (pages/myworld.py)
+                    from modstudio.pages.myworld import MyWorld
+                    inside = [n for n, k in OPEN_FOR.items() if k == key and n in self.pages]
+                    self.my_world = MyWorld(self, [(n, held(n)) for n in names], [(n, held(n)) for n in inside])
+                    for n in names + inside:
+                        self.section_of[n] = key
+                        placed.add(n)
+                    self.section_tabs[key] = self.my_world.tabs
+                    self.section_holder[key] = self.my_world
+                    self.stack.addWidget(self.my_world)
+                    continue
                 if len(names) == 1:
                     self.stack.addWidget(held(names[0]))
                     placed.add(names[0])
@@ -488,65 +509,30 @@ class Main(QMainWindow):
                     placed.add(n)
                 tabs.currentChanged.connect(lambda _i, t=tabs: self.open_page(
                     next(k for k, h in self.holder_of.items() if h is t.currentWidget())))
-                if key == "World":
-                    hv.addWidget(self._world_bar(holder))
                 hv.addWidget(tabs)
                 self.section_tabs[key] = tabs
+                self.section_holder[key] = holder
                 self.stack.addWidget(holder)
         for n, p in self.pages.items():
             if n not in placed:
                 self.stack.addWidget(held(n))
 
-    def _world_bar(self, holder):
-        """above the tabs of Build and edit your world: the open world and Build and install, on
-        every tab; while it builds, the time so far and the step it is at"""
-        from PySide6.QtWidgets import QFrame
-        bar = QFrame()
-        bar.setObjectName("card")
-        h = QHBoxLayout(bar)
-        h.setContentsMargins(14, 8, 10, 8)
-        h.setSpacing(12)
-        self.wb_name = QLabel()
-        self.wb_name.setTextFormat(Qt.RichText)
-        h.addWidget(self.wb_name)
-        self.wb_state = QLabel()
-        self.wb_state.setStyleSheet("color: %s;" % theme.ACCENT)
-        h.addWidget(self.wb_state, 1)
-        self.wb_build = QPushButton(_("Build and install"))
-        self.wb_build.setObjectName("primary")
-        self.wb_build.setToolTip(_("Installs the modules, builds the world, switches it on and says what is left"))
-        self.wb_build.clicked.connect(self._world_build)
-        h.addWidget(self.wb_build)
-        self._wb_holder = holder
-        t = QTimer(self, interval=1500, timeout=lambda: holder.isVisible() and self.update_world_bar())
-        t.start()
-        wrap = QWidget()
-        v = QVBoxLayout(wrap)
-        v.setContentsMargins(0, 0, 0, 8)
-        v.addWidget(bar)
-        return wrap
-
     def _world_build(self):
+        """My world's Build and install: the Build page's own (its log is Build details)"""
         self.open_page("Build")
         self.page("Build").build_all()
 
     def update_world_bar(self, progress=None):
-        """the world bar now: progress is the build's time and step ("" when it is over)"""
-        if not hasattr(self, "wb_name"):
-            return
-        import html
-        r = self.project.recipe
-        n = len(r.get("leagues") or [])
-        clubs = sum(int(L.get("clubs") or 0) for L in r.get("leagues") or [])
-        self.wb_name.setText("<b>%s</b>&nbsp;&nbsp;&nbsp;%s" % (
-            html.escape(_("Your world: %s") % (r.get("world") or "")), html.escape(_("%d leagues, %d clubs") % (n, clubs))))
-        if progress is not None:
-            self.wb_state.setText(progress)
-        b = self.pages.get("Build")
-        if b is not None and hasattr(b, "b_all"):
-            self.wb_build.setEnabled(b.b_all.isEnabled())
-            self.wb_build.setToolTip(b.b_all.toolTip() or _("Installs the modules, builds the world, switches it "
-                                                            "on and says what is left"))
+        """My world's header now: progress is the build's time and step ("" when it is over)"""
+        if hasattr(self, "my_world"):
+            self.my_world.update_bar(progress)
+
+    def open_my_world(self):
+        """My world on the tab that was open last (Leagues the first time)"""
+        tabs = self.my_world.tabs
+        name = next((n for n, h in self.holder_of.items() if h is tabs.currentWidget() and h in tabs.buttons),
+                    "Leagues")
+        self.open_page(name)
 
     # ---- pages ----
     def page(self, name):
@@ -557,7 +543,7 @@ class Main(QMainWindow):
         key = self.section_of.get(name) or OPEN_FOR.get(name)
         tabs = self.section_tabs.get(key) if name in self.section_of else None
         if tabs is not None:
-            self.stack.setCurrentWidget(tabs.parentWidget())
+            self.stack.setCurrentWidget(self.section_holder[key])
             if tabs.currentWidget() is not self.holder_of[name]:
                 tabs.blockSignals(True)
                 tabs.setCurrentWidget(self.holder_of[name])
@@ -573,7 +559,7 @@ class Main(QMainWindow):
             self._head_text(head)
         self.settings["page"] = name
         if key == "World":
-            self.update_world_bar()
+            self.my_world.shown()
         try:
             p.shown()
         except Exception as e:
@@ -1055,6 +1041,24 @@ def main():
                 for _i in range(6):              # layouts settle one level per pass
                     app.processEvents()
                 w.grab().save(os.path.join(out, name + ".png"))
+            # My world's + Add... over the window, as it opens
+            from modstudio.pages.myworld import AddDialog
+            w.open_page("Leagues")
+            d = AddDialog(w.my_world, w.my_world.card_title())
+            if os.environ.get("FL26_SHOT_ADD"):          # a file to pick in it
+                d.pick(os.environ["FL26_SHOT_ADD"])
+            d.show()
+            for _i in range(8):
+                app.processEvents()
+            shot = w.grab()
+            from PySide6.QtGui import QPainter, QColor
+            p = QPainter(shot)
+            p.fillRect(shot.rect(), QColor(0, 0, 0, 176))
+            pic = d.grab()
+            p.drawPixmap((shot.width() - pic.width()) // 2, 170, pic)
+            p.end()
+            shot.save(os.path.join(out, "MyWorld-Add.png"))
+            d.close()
             app.quit()
         QTimer.singleShot(1500, shoot)
     elif w.settings.get("check_updates", True):

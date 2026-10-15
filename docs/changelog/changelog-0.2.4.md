@@ -23,14 +23,11 @@ once, and your 0.2.2 career keeps working.
   explain what to do instead: press Play, or switch your own world on first. A world installed
   from a zip and built again on this PC counts as your own from then on.
 
-- **The left bar is by what you want to do.** Home; then YOUR WORLD with **Build and edit your
-  world** (for modders, it says so at the top), **Import your world** (a world zip or a mod, and
-  a league package) and **NewLife Database**; GAME CONTENT and TOOLS fold away; Settings at the
-  bottom.
-- **Build and edit in one place.** Build and edit your world has the tabs Build, Leagues, Clubs,
-  Players, Kits, Stadiums and League packages, so you build right next to what you changed. Above
-  the tabs, on every tab, a bar shows the open world's name, how many leagues and clubs it has,
-  and **Build and install**.
+- **My world: one place for your worlds.** The bar across the top has five items: 1. Home, 2. My world, 3. Game content, 4. Tools, 5. Settings. My world takes the place of Build and edit your world, Import your world and NewLife Database:
+  - at the top, how many competitions the world in the game has (the game has room for 255) and how many new countries (room for 99), a reminder that changes need a new Master League, and **Build and install** (the same Build as before, with its restore point first);
+  - a card for each world on disk. The one in the game is green (**IN THE GAME NOW**, **From zip** for a ready world); the others have **Put in the game**, which switches that world on in sider.ini, switches the other one off (it stays on disk) and opens it. Every card has **Export...**, **Rename** and **Delete**; the world in the game cannot be deleted. **+ New world** starts an empty one;
+  - the tabs Leagues, Clubs, Players, Kits, Stadiums and Cups (pre-season cups, cups of the game's countries, competition names), and **+ Add...**: one window for a world zip (Modpack), a league package (.fl26pack) and the NewLife Database. It says what it found; for a league package it lists the leagues to tick and the competitions after adding;
+  - **More** has Build details, League packages, Import a world zip, NewLife Database and Content folders.
 - **You see how far Build is.** The Build tab, the bar above the tabs and the bottom bar show the
   time Build has taken so far and the step it is at (`Building... 3:12 · squads: filling them`),
   instead of only a blinking "Building...".

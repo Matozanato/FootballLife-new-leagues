@@ -51,6 +51,8 @@ The left bar comes from `page_groups()` in `app.py`:
 | MANAGE | Install, Modules, Content folders, Profiles, Restore, Diagnostics, Settings | `install.py`, `modules.py`, `roots.py`, `profiles.py`, `restore.py`, `diagnostics.py`, `settings.py` | mods, `lua.module` lines, `cpk.root` lines, setups, restore points, checks + `sider.log`, game folder / language / tables |
 | (not in the bar) | New leagues (`NewLeagues`) | `builder.py` | reached from other pages |
 
+The bar itself is `NAV` in `app.py` (0.2.4: Home, My world, Game content, Tools, Settings). **My world** is `myworld.py` (`MyWorld`): a header (competitions n / 255, new countries n / 99, Build and install), a card for each world on disk (`world_rows`; Put in the game = Build's `do_on(world)`, Export = `do_export(world)`, Rename / Delete = Content folders' `rename_world` / `delete_world`), the tabs Leagues, Clubs, Players, Kits, Stadiums and Cups, and **+ Add...** (`AddDialog`, `kind_of`: a `.fl26pack`, a world zip or the NewLife Database). Build, Packages, Install, NewLife and NewLeagues are pages of My world with no tab (`OPEN_FOR`), reached from More, + Add... and `open_page`.
+
 `builder.py` is the biggest file. It also holds the dialogs the League Builder pages share:
 `LeagueDialog`, `ClubDialog`, `GameClubDialog`, `EuropeTable`, `PreseasonDialog`,
 `CompetitionNamesDialog`, `GameEuropeDialog`, `EuropeFirstDialog`, `GameCupsDialog`,

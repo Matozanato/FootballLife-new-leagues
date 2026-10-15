@@ -155,10 +155,10 @@ class Roots(Page):
         rv.addWidget(row(b_del))
         # 0.2.4 (mato 15.10.): a world is renamed or deleted here, safely -- see worlds.py
         self.b_wren = QPushButton(_("Rename world..."))
-        self.b_wren.clicked.connect(self.rename_world)
+        self.b_wren.clicked.connect(lambda: self.rename_world())
         self.b_wdel = QPushButton(_("Delete world..."))
         self.b_wdel.setObjectName("danger")
-        self.b_wdel.clicked.connect(self.delete_world)
+        self.b_wdel.clicked.connect(lambda: self.delete_world())
         rv.addWidget(row(self.b_wren, self.b_wdel))
         self.b_wren.hide()
         self.b_wdel.hide()
@@ -494,15 +494,15 @@ class Roots(Page):
         m.addAction(_("Remove from the list"), self.remove_line)
         if self.world_of(self._entry(it)):
             m.addSeparator()
-            m.addAction(_("Rename world..."), self.rename_world)
-            m.addAction(_("Delete world..."), self.delete_world)
+            m.addAction(_("Rename world..."), lambda: self.rename_world())
+            m.addAction(_("Delete world..."), lambda: self.delete_world())
         m.exec(self.tree.viewport().mapToGlobal(pos))
 
     # ---- worlds: rename, delete (0.2.4, mato 15.10.) ----
-    def _world_ready(self, title):
-        """the selected row's world, when it can be changed now: game closed, no ticks waiting"""
-        e = self._current()
-        w = self.world_of(e)
+    def _world_ready(self, title, w=None):
+        """the selected row's world (or w, a card of My world), when it can be changed now: game
+        closed, no ticks waiting"""
+        w = w or self.world_of(self._current())
         if not w:
             return None
         if not os.path.isdir(os.path.join(self.app.game.livecpk_dir, w)):
@@ -520,9 +520,10 @@ class Roots(Page):
             return None
         return w
 
-    def delete_world(self):
+    def delete_world(self, world=None):
+        """world: the one of a card of My world, else the selected row's; True when it is deleted"""
         title = "Delete world"
-        w = self._world_ready(title)
+        w = self._world_ready(title, world)
         if not w:
             return
         if w in WL.live(self.app.game):
@@ -564,11 +565,13 @@ class Roots(Page):
         self.after_world_change()
         self.say(_("%s is deleted. It is kept in %s: Restore points > Put this copy back brings it back.")
                  % (w, folder), "ok")
+        return True
 
-    def rename_world(self):
+    def rename_world(self, world=None):
+        """world: the one of a card of My world, else the selected row's; the new name when done"""
         from PySide6.QtWidgets import QInputDialog
         title = "Rename world"
-        w = self._world_ready(title)
+        w = self._world_ready(title, world)
         if not w:
             return
         new, ok = QInputDialog.getText(self, _(title), _("New name for %s (it must start with _FL26; "
@@ -601,6 +604,7 @@ class Roots(Page):
         rename_recipe(self.app, w, new)
         self.after_world_change()
         self.say(_("%s is now %s.") % (w, new), "ok")
+        return new
 
     def after_world_change(self):
         self.app.bus.ini_changed.emit()

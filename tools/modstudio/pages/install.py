@@ -400,7 +400,7 @@ class Install(Page):
             if denied(self, e):
                 return
             error(self, "Import your world", _("%s is installed, but switching it on stopped:") % w + "\n\n" + str(e)
-                  + "\n\n" + _("On Home press Install now, then Switch world... and pick this world."))
+                  + "\n\n" + _("On Home press Install now, then in My world press Put in the game on this world."))
             return
         finally:
             self.app.bus.ini_changed.emit()
@@ -459,7 +459,7 @@ class Install(Page):
             n = len(K.packs(self.app.page("Packages").project.recipe))
         except Exception:
             return ""
-        return (_("League packages in your world: %d (Build and edit your world > League packages)") % n) if n else ""
+        return (_("League packages in your world: %d (My world > More > League packages)") % n) if n else ""
 
     def uninstall(self):
         it = self.done.currentItem()

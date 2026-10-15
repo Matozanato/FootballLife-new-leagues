@@ -29,6 +29,11 @@ BAR = "#0C1015"          # top bar, sections and status bar
 PLAY = ORANGE
 PRIMARY = "#1F5FAE"      # the main button of a page
 BLUE_BG, BLUE_BORDER = "#122033", "#244A75"
+# My world (variant A of the mockups, 15.10.): its blue buttons, the live world's card, the dashed card
+BLUE = "#1F7CD7"
+LIVE_BG = "#13221B"
+DASH = "#2C3542"
+GO_FG = "#0B1A12"        # text on a green button
 # tables (jibibi, 15.10.: "there isn't enough contrast in each table"): rows that alternate clearly,
 # a header on its own band, lines between the rows, the chosen row in blue with an edge
 ROW, ROW_ALT = "#141921", "#1A212C"
@@ -247,6 +252,34 @@ QLabel#srctag { font-family: %(HEAD_STACK)s; font-weight: 600; font-size: 8pt; p
 QLabel#srctag[state="zip"] { color: %(ACCENT)s; background: %(BLUE_BG)s; border-color: %(BLUE_BORDER)s; }
 QLabel#srctag[state="built"] { color: %(GOOD)s; background: %(OK_BG)s; border-color: #1F5A40; }
 QLabel#cardnote { font-family: %(SANS_STACK)s; font-size: 9pt; color: %(SUBTLE)s; }
+
+/* My world: the worlds as cards, the tabs under them, + Add... */
+QFrame#worldcard { background: %(PANEL)s; border: 1px solid %(BORDER)s; }
+QFrame#worldlive { background: %(LIVE_BG)s; border: 2px solid %(GOOD)s; }
+QLabel#worldname { font-family: %(HEAD_STACK)s; font-weight: 600; font-size: 12pt; }
+QLabel#worldeyebrow { font-family: %(HEAD_STACK)s; font-weight: 600; font-size: 7pt; color: %(SUBTLE)s; }
+QLabel#worldeyebrow[state="live"] { color: %(GOOD)s; }
+QLabel#counter { font-size: 9pt; }
+QLabel#mlnote { font-size: 9pt; color: %(WARN_FG)s; }
+QPushButton#blue { background: %(BLUE)s; color: white; border-color: %(BLUE)s; font-weight: 600; }
+QPushButton#blue:hover { background: #2A8BE8; border-color: %(ACCENT)s; }
+QPushButton#blue:pressed { background: #1867B4; }
+QPushButton#go { background: %(GOOD)s; color: %(GO_FG)s; border-color: %(GOOD)s; font-weight: 600; padding: 7px 14px; }
+QPushButton#go:hover { background: #5BE0A4; border-color: #5BE0A4; }
+QPushButton#blue:disabled, QPushButton#go:disabled { color: %(DIM)s; background: %(PANEL)s; border-color: %(BORDER)s; }
+QPushButton#newworld { background: transparent; border: 2px dashed %(DASH)s; color: %(SUBTLE)s; font-weight: 600; }
+QPushButton#newworld:hover { border-color: %(ACCENT)s; color: %(TEXT)s; background: transparent; }
+QWidget#subtabs { border-bottom: 1px solid %(BORDER)s; }
+QPushButton#subtab, QToolButton#subtab { font-family: %(SANS_STACK)s; font-size: 9pt; font-weight: 600; color: #C9CFD7;
+                     background: transparent; border: none; border-bottom: 2px solid transparent; border-radius: 0;
+                     padding: 8px 15px 7px 15px; margin: 0; min-height: 0; }
+QPushButton#subtab:hover, QToolButton#subtab:hover { color: white; background: %(PANEL)s; }
+QPushButton#subtab:checked { color: %(ORANGE)s; border-bottom: 2px solid %(ORANGE)s; background: transparent; }
+QDialog#adddialog { background: %(PANEL)s; border: 1px solid %(BORDER)s; }
+QFrame#dropzone { background: transparent; border: 2px dashed %(BLUE)s; }
+QFrame#dropzone[hot="true"] { border-color: %(ORANGE)s; background: %(WARN_BG)s; }
+QLabel#found { font-weight: 600; color: %(GOOD)s; }
+QLabel#found[state="err"] { color: %(DANGER)s; }
 """
 
 
@@ -270,6 +303,7 @@ def qss():
                         DIM=DIM, ACCENT=ACCENT, ORANGE=ORANGE, SELECTION=SELECTION, DANGER=DANGER, GOOD=GOOD,
                         WARN_BG=WARN_BG, WARN_FG=WARN_FG, ERROR_BG=ERROR_BG, OK_BG=OK_BG, BAR=BAR, PLAY=PLAY,
                         PRIMARY=PRIMARY, BLUE_BG=BLUE_BG, BLUE_BORDER=BLUE_BORDER,
+                        BLUE=BLUE, LIVE_BG=LIVE_BG, DASH=DASH, GO_FG=GO_FG,
                         ROW=ROW, ROW_ALT=ROW_ALT, HEAD_BG=HEAD_BG, HEAD_FG=HEAD_FG, HEAD_LINE=HEAD_LINE,
                         ROW_LINE=ROW_LINE, ROW_SEL=ROW_SEL, ROW_HOVER=ROW_HOVER,
                         ASSETS=os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets").replace("\\", "/"),

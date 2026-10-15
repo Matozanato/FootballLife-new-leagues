@@ -3635,8 +3635,8 @@ class AfterBuild(QDialog):
             self.accept()
 
 
-FOR_MODDERS = ("For modders. Build and edit your world makes a world of your own from your leagues, clubs and players. "
-               "To play a ready modpack you do not need it: Import your world, then Play.")
+FOR_MODDERS = ("For modders. Build and install makes a world of your own from your leagues, clubs and players. "
+               "To play a ready modpack you do not need it: My world > + Add... its zip, then Play.")
 
 
 class Build(BuilderPage):
@@ -3944,9 +3944,9 @@ class Build(BuilderPage):
         w = ", ".join(ready)
         info(self, "Build", _("%s is on: a ready world, installed from a zip. It is built already: press "
                               "Play and start a new Master League.\n\nBuild makes the world of your own "
-                              "leagues and would switch %s off. To build your own leagues, switch your own "
-                              "world on first (Home > Switch world...), or remove the ready one (Import your world > "
-                              "Remove).") % (w, w))
+                              "leagues and would switch %s off. To build your own leagues, put your own "
+                              "world in the game first (My world > Put in the game), or remove the ready one "
+                              "(My world > More > Import a world zip > Remove).") % (w, w))
         return True
 
     def refresh(self):
@@ -3981,7 +3981,7 @@ class Build(BuilderPage):
             bits.append(_("Mod Studio's modules: %s") % (_("installed") if not missing else
                                                      _("%d missing: Home > Install now") % len(missing)))
         r = self.project.recipe
-        # the world's name and size are in the bar above the tabs (0.2.4: Build and edit your world)
+        # the world's name and size are on its card in My world, above the tabs
         self.what.setText(html.escape(self.file_text(w), quote=False))
         ready = self.ready_live()
         for b in self.steps[1:4] + [self.b_all]:          # plan, build, switch on, Build and install
@@ -4300,13 +4300,21 @@ class Build(BuilderPage):
             AfterBuild(self, info).exec()
         self.run(go, background=True, done=done)
 
-    def do_on(self):
-        if self.ready_blocks():
+    def do_on(self, world=None):
+        """3. Switch it on: the open world; world, a world on disk (My world's Put in the game), may
+        be another one -- a ready world from a zip too, so the ready world in the game does not
+        stop it. True when it ran"""
+        world = world if isinstance(world, str) else None       # clicked() hands in a bool
+        if not world and self.ready_blocks():
             return
-        w = self.project.recipe.get("world", "").strip()
+        w = world or self.project.recipe.get("world", "").strip()
         if not can_write(self, self.app.game):
             return
-        if ask(self, "Switch on", _("Put %s in the game (switch it on in sider.ini)?") % w):
+        text = _("Put %s in the game (switch it on in sider.ini)?") % w
+        out = [x for x in self.project.live_worlds() if x != w] if world else []
+        if out:
+            text += "\n\n" + _("%s goes out of the game; it stays on disk and in My world.") % ", ".join(out)
+        if ask(self, "Switch on", text):
             def go(log):
                 snapshot(self.app.game.ini_path, "Your world: switch on " + w, self.app.game.sider_dir)
                 B.switch_on(w, self.app.game.folder, log=log)
@@ -4314,6 +4322,7 @@ class Build(BuilderPage):
                 log("\n" + _("Start the game, then 4. check."))
             self.run(go)
             self.app.bus.ini_changed.emit()
+            return True
 
     def do_install(self):
         if not can_write(self, self.app.game):
@@ -4331,12 +4340,14 @@ class Build(BuilderPage):
     def do_check(self):
         self.run(lambda log: B.check(self.app.game.folder, log=log))
 
-    def do_export(self):
+    def do_export(self, world=None):
         """the built world as one zip for another PC (installer.export_world): its folder, its
         world file (the newfaces / faceapp lines of the players who get a generated face) and a
-        read-me that says Mod Studio's modules with the face pack are needed"""
+        read-me that says Mod Studio's modules with the face pack are needed. world: a world on
+        disk (a card of My world), else the open one"""
         from .. import installer as I
-        w = self.project.recipe.get("world", "").strip()
+        world = world if isinstance(world, str) else None       # clicked() hands in a bool
+        w = world or self.project.recipe.get("world", "").strip()
         sd = self.app.game.sider_dir
         if not w or not os.path.isfile(os.path.join(sd, "livecpk", w, I.WORLD_FILE)):
             error(self, "Export the world", _("%s is not built yet: 2. Build the world first.") % (w or "?"))
