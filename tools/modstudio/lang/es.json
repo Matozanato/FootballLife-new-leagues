@@ -1314,7 +1314,6 @@
   "The world %s is installed": "El mundo %s está instalado",
   "sider.ini could not be read": "No se pudo leer sider.ini",
   "Mod Studio's modules are installed, up to date and switched on": "Los módulos de Mod Studio están instalados, al día y activados",
-  "Mod Studio's modules are not all in place: Home > Install now": "Los módulos de Mod Studio no están todos en su sitio: Home > Instalar ahora",
   "The face pack is missing: the new players will all have the same face. Home > Install now": "Falta el paquete de caras: todos los jugadores nuevos tendrán la misma cara. Home > Instalar ahora",
   "%s: the world brings them, but %s is not in SiderAddons\\modules. It comes with your Sider pack (SPFL26); put it in, then switch it on in Tools > Lua modules": "%s: el mundo los trae, pero %s no está en SiderAddons\\modules. Viene con tu paquete de Sider (SPFL26); ponlo y actívalo en Herramientas > Módulos Lua",
   "%s: the world brings them, but %s is switched off: Tools > Lua modules, tick it, Apply": "%s: el mundo los trae, pero %s está desactivado: Herramientas > Módulos Lua, márcalo, Apply",
@@ -1483,7 +1482,11 @@
   "File: not saved yet": "Archivo: aún sin guardar",
   "Add leagues": "Añadir ligas",
   "A world of your own: New world, then add its leagues on the Leagues tab. Build and install puts it in the game.": "Un mundo propio: New world, y añade sus ligas en la pestaña Leagues. Build and install lo pone en el juego.",
-  "%s is installed, but not ready to play yet: <a href=\"fix\">see what to fix</a>.": "%s está instalado, pero aún no está listo para jugar: <a href=\"fix\">mira qué arreglar</a>."
+  "%s is installed, but not ready to play yet: <a href=\"fix\">see what to fix</a>.": "%s está instalado, pero aún no está listo para jugar: <a href=\"fix\">mira qué arreglar</a>.",
+  "Mod Studio's modules are not all in place (%s): Home > Install now": "Los módulos de Mod Studio no están todos en su sitio (%s): Home > Instalar ahora",
+  "missing": "faltan",
+  "older or damaged": "antiguos o dañados",
+  "switched off": "desactivados"
  },
  "log": [
   [

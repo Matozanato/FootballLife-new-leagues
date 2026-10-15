@@ -487,7 +487,13 @@ def ready_check(game, world):
         if modules_ok(state):
             out.append(("ok", _("Mod Studio's modules are installed, up to date and switched on")))
         else:
-            out.append(("err", _("Mod Studio's modules are not all in place: Home > Install now")))
+            # which ones: a tester saw "not all in place" and could not tell what (Novarama, 15.10.)
+            which = []
+            for key, label in (("missing", "missing"), ("changed", "older or damaged"), ("off", "switched off")):
+                if state[key]:
+                    which.append("%s: %s" % (_(label), ", ".join(state[key])))
+            out.append(("err", _("Mod Studio's modules are not all in place (%s): Home > Install now")
+                        % "; ".join(which)))
     from . import installer as I
     if I.face_pack_missing(game.sider_dir):
         out.append(("warn", _("The face pack is missing: the new players will all have the same face. "

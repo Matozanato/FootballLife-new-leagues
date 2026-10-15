@@ -1314,7 +1314,6 @@
   "The world %s is installed": "Le monde %s est installé",
   "sider.ini could not be read": "sider.ini n'a pas pu être lu",
   "Mod Studio's modules are installed, up to date and switched on": "Les modules de Mod Studio sont installés, à jour et activés",
-  "Mod Studio's modules are not all in place: Home > Install now": "Les modules de Mod Studio ne sont pas tous en place : Home > Installer maintenant",
   "The face pack is missing: the new players will all have the same face. Home > Install now": "Le pack de visages manque : tous les nouveaux joueurs auront le même visage. Home > Installer maintenant",
   "%s: the world brings them, but %s is not in SiderAddons\\modules. It comes with your Sider pack (SPFL26); put it in, then switch it on in Tools > Lua modules": "%s : le monde les apporte, mais %s n'est pas dans SiderAddons\\modules. Il vient avec votre pack Sider (SPFL26) ; ajoutez-le puis activez-le dans Outils > Modules Lua",
   "%s: the world brings them, but %s is switched off: Tools > Lua modules, tick it, Apply": "%s : le monde les apporte, mais %s est désactivé : Outils > Modules Lua, cochez-le, Apply",
@@ -1483,7 +1482,11 @@
   "File: not saved yet": "Fichier : pas encore enregistré",
   "Add leagues": "Ajouter des championnats",
   "A world of your own: New world, then add its leagues on the Leagues tab. Build and install puts it in the game.": "Votre propre monde : New world, puis ajoutez ses championnats dans l'onglet Leagues. Build and install le met dans le jeu.",
-  "%s is installed, but not ready to play yet: <a href=\"fix\">see what to fix</a>.": "%s est installé, mais pas encore prêt à jouer : <a href=\"fix\">voyez quoi corriger</a>."
+  "%s is installed, but not ready to play yet: <a href=\"fix\">see what to fix</a>.": "%s est installé, mais pas encore prêt à jouer : <a href=\"fix\">voyez quoi corriger</a>.",
+  "Mod Studio's modules are not all in place (%s): Home > Install now": "Les modules de Mod Studio ne sont pas tous en place (%s) : Home > Installer maintenant",
+  "missing": "manquants",
+  "older or damaged": "anciens ou abîmés",
+  "switched off": "désactivés"
  },
  "log": [
   [

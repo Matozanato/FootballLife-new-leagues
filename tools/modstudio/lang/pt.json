@@ -1314,7 +1314,6 @@
   "The world %s is installed": "O mundo %s está instalado",
   "sider.ini could not be read": "Não foi possível ler o sider.ini",
   "Mod Studio's modules are installed, up to date and switched on": "Os módulos do Mod Studio estão instalados, atualizados e ligados",
-  "Mod Studio's modules are not all in place: Home > Install now": "Os módulos do Mod Studio não estão todos no lugar: Home > Instalar agora",
   "The face pack is missing: the new players will all have the same face. Home > Install now": "Falta o pacote de rostos: todos os jogadores novos terão o mesmo rosto. Home > Instalar agora",
   "%s: the world brings them, but %s is not in SiderAddons\\modules. It comes with your Sider pack (SPFL26); put it in, then switch it on in Tools > Lua modules": "%s: o mundo traz, mas %s não está em SiderAddons\\modules. Ele vem com o seu pacote do Sider (SPFL26); coloque-o e ligue em Ferramentas > Módulos Lua",
   "%s: the world brings them, but %s is switched off: Tools > Lua modules, tick it, Apply": "%s: o mundo traz, mas %s está desligado: Ferramentas > Módulos Lua, marque, Apply",
@@ -1484,7 +1483,11 @@
   "File: not saved yet": "Arquivo: ainda não salvo",
   "Add leagues": "Adicionar ligas",
   "A world of your own: New world, then add its leagues on the Leagues tab. Build and install puts it in the game.": "Um mundo seu: New world, e adicione as ligas na aba Leagues. Build and install o coloca no jogo.",
-  "%s is installed, but not ready to play yet: <a href=\"fix\">see what to fix</a>.": "%s está instalado, mas ainda não está pronto para jogar: <a href=\"fix\">veja o que corrigir</a>."
+  "%s is installed, but not ready to play yet: <a href=\"fix\">see what to fix</a>.": "%s está instalado, mas ainda não está pronto para jogar: <a href=\"fix\">veja o que corrigir</a>.",
+  "Mod Studio's modules are not all in place (%s): Home > Install now": "Os módulos do Mod Studio não estão todos no lugar (%s): Home > Instalar agora",
+  "missing": "faltando",
+  "older or damaged": "antigos ou danificados",
+  "switched off": "desligados"
  },
  "log": [
   [

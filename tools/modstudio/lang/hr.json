@@ -1314,7 +1314,6 @@
   "The world %s is installed": "Svijet %s je instaliran",
   "sider.ini could not be read": "sider.ini se ne može pročitati",
   "Mod Studio's modules are installed, up to date and switched on": "Moduli Mod Studija su instalirani, najnoviji i upaljeni",
-  "Mod Studio's modules are not all in place: Home > Install now": "Moduli Mod Studija nisu svi na mjestu: Home > Instaliraj sada",
   "The face pack is missing: the new players will all have the same face. Home > Install now": "Nema paketa lica: svi novi igrači imat će isto lice. Home > Instaliraj sada",
   "%s: the world brings them, but %s is not in SiderAddons\\modules. It comes with your Sider pack (SPFL26); put it in, then switch it on in Tools > Lua modules": "%s: svijet ih donosi, ali %s nije u SiderAddons\\modules. Dolazi s tvojim Sider paketom (SPFL26); stavi ga unutra pa ga upali u Alati > Lua moduli",
   "%s: the world brings them, but %s is switched off: Tools > Lua modules, tick it, Apply": "%s: svijet ih donosi, ali %s je ugašen: Alati > Lua moduli, označi ga, Apply",
@@ -1483,7 +1482,11 @@
   "File: not saved yet": "Datoteka: još nije spremljeno",
   "Add leagues": "Dodaj lige",
   "A world of your own: New world, then add its leagues on the Leagues tab. Build and install puts it in the game.": "Vlastiti svijet: New world, pa dodaj lige na kartici Leagues. Build and install ga stavlja u igru.",
-  "%s is installed, but not ready to play yet: <a href=\"fix\">see what to fix</a>.": "%s je instaliran, ali još nije spreman za igru: <a href=\"fix\">pogledaj što popraviti</a>."
+  "%s is installed, but not ready to play yet: <a href=\"fix\">see what to fix</a>.": "%s je instaliran, ali još nije spreman za igru: <a href=\"fix\">pogledaj što popraviti</a>.",
+  "Mod Studio's modules are not all in place (%s): Home > Install now": "Moduli Mod Studija nisu svi na mjestu (%s): Home > Instaliraj sada",
+  "missing": "nedostaju",
+  "older or damaged": "stariji ili oštećeni",
+  "switched off": "isključeni"
  },
  "log": [
   [
