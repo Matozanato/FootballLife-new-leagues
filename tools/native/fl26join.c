@@ -554,10 +554,19 @@ int door_pre(uint64_t id, uint64_t ret)
   if (!ours(cid) || ret != g_base + BLD_RET_RVA) return 0;
   /* A calendar-year league of ours never enters with the July builder: its rounds start in
    * February, and New Year would close it before the first one. It joins on day 41. */
-  if (calyr(cid)) {
+  if (calyr(cid) && g_euro_build) {
     g_stat[6]++;
     logf("door(%u) refused by us: a January-December league, it joins on day 41", cid);
     return 1;
+  }
+  /* The January builder is another matter: it admits the shipped calendar-year leagues
+   * (Brazil 29, Colombia 168/169 ...) at creation, and ours belongs with them. Refused there, a
+   * career started in a January-December league of ours showed no fixture until day 41, while
+   * the same career in the Brasileirao had its fixtures on day 1 (2026-10-03). A second entry
+   * on day 41 is kept out by join_pre: the door's YES is remembered and the league has rounds. */
+  if (calyr(cid)) {
+    logf("door(%u): a January-December league, let in by the January builder like the shipped ones", cid);
+    return 0;
   }
   /* All of the above holds for a calendar-year world only. Since fl26augseason a career in
    * one of our leagues builds an August world: the builder admits every European league at

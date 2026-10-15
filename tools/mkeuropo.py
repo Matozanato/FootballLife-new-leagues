@@ -185,6 +185,153 @@ def prerounds(base, out, rounds, log=print):
                                                   for r, _c, n, t in rounds))
 
 
+UEL_KO = 6                                # the Europa League knockout: a cup of two plays its final alone
+
+
+LIB_CID = 5                               # the Copa Libertadores: a CONMEBOL competition row to copy
+
+
+def prerounds1(base, out, rounds, log=print):
+    """add pre-rounds of one match a tie -- (master, [tie ids], competition, name, code) -- to the
+    tables in <base> and write the competition tables to <out>, as prerounds() does. A play-off's
+    tie (reg 2's replicas) is two legs whatever its days, so here each tie is a row of its own, a
+    copy of the Europa League knockout cut to two clubs -- the Recopa's and the CAF Super Cup's
+    shape, one match, the final -- and the master, a copy of reg 2's alone, only lists the clubs
+    (fl26swiss lpre1).
+
+    The pre-round is a competition of its own (a copy of the Libertadores' row, code <code>), not
+    a phase of the cup it feeds: the game keeps at most twenty table references per competition
+    and season (0x1415902d0 looks for a free one among 0x14 and writes nothing when they are
+    taken), and the cup's master, knockout and the stage's master and sixteen ties came to
+    nineteen -- its group A took the twentieth, groups B to H had no table and the page showed A
+    alone (2026-10-04)."""
+    comp, regs, ents = (M.load(base, n) for n in
+                        ("Competition.bin", "CompetitionRegulation.bin", "CompetitionEntry.bin"))
+    rows = [bytearray(regs[i * M.REG:(i + 1) * M.REG]) for i in range(len(regs) // M.REG)]
+    used = {rid(r) for r in rows}
+    master = [r for r in _template(rows) if r[R_GROUP] == 255][0]
+    ko = [r for r in rows if rid(r) == UEL_KO]
+    if len(ko) != 1:
+        raise SystemExit("no Europa League knockout (reg %d) to copy" % UEL_KO)
+    crows = [comp[i:i + M.COMP] for i in range(0, len(comp), M.COMP)]
+    lib = [c for c in crows if c[M.CID_OFF] == LIB_CID]
+    if len(lib) != 1:
+        raise SystemExit("no Copa Libertadores competition (%d) to copy" % LIB_CID)
+    used_cid = {c[M.CID_OFF] for c in crows}
+    added, comp_added = bytearray(), bytearray()
+    for new, ties, cid, name, code in rounds:
+        if cid in used_cid:
+            raise SystemExit("competition %d is taken" % cid)
+        c = bytearray(lib[0])
+        c[M.CID_OFF] = cid
+        M.put(c, M.CODE_OFF, code, M.COMP - M.CODE_OFF)
+        comp_added += c
+        used_cid.add(cid)
+        taken = used & ({new} | set(ties))
+        if taken or len(set(ties)) != len(ties):
+            raise SystemExit("ids %s are taken" % sorted(taken or ties))
+        m = bytearray(master)
+        m[M.R_ID:M.R_ID + 2] = new.to_bytes(2, "little")
+        m[M.R_CID] = cid
+        m[M.R_TEAMS] = (m[M.R_TEAMS] & ~0x3f) | 2 * len(ties)
+        out_rows = [m]
+        for t in ties:
+            k = bytearray(ko[0])
+            k[M.R_BELOW:M.R_BELOW + 2] = bytes(2)
+            k[M.R_ID:M.R_ID + 2] = t.to_bytes(2, "little")
+            k[M.R_CID] = cid
+            k[M.R_TEAMS] = (k[M.R_TEAMS] & ~0x3f) | 2
+            out_rows.append(k)
+        for g in out_rows:
+            for s in range(M.NAME_SLOTS):
+                M.put(g, M.R_NAME + s * M.NAME_SLOT, name, M.NAME_SLOT)
+            added += g
+        used |= {new} | set(ties)
+    with contextlib.redirect_stdout(io.StringIO()):
+        M.write_tables(out, comp + comp_added, regs + added, ents)
+    log("  one-match pre-rounds: %s" % ", ".join("%d (%s, competition %d, %d ties %d..%d)" % (r, n, c, len(t), t[0], t[-1])
+                                                 for r, t, c, n, _code in rounds))
+
+
+LEGS_OFF, LEGS_SHIFT = 0x10, 9            # dword +0x10 bits 9-11: the legs mode (0 = every round one match)
+
+
+LIB_QUAL = 8                              # the Libertadores' qualifying round: master and four replicas
+MAX_SINGLE = 16                           # replicas a one-match play-off is given here
+
+
+def prerounds_single(base, out, cid, code, name, rounds, log=print, one_match=True, region=None):
+    """the pre-Libertadores model with one match a tie: each of rounds -- (regulation, ties 1..16)
+    -- a copy of the Libertadores' qualifying round (reg 8, its master and first replica as the
+    pattern) with one replica per tie, the master holding 2 x ties clubs, and the legs mode (dword
+    +0x10 bits 9-11, which the setter 0x1414c9ed0 puts in the runtime +0x300 bits 29-31) set to 0
+    on every row, so the knockout builder (0x1413f49f0, predicate 0x14151d1e0) makes one match a
+    tie (kind 2) instead of two legs. Byte +0x10 (the replicas a master has) is the ties.
+
+    One play-off of sixteen, not two of eight: the competition's page shows one play-off's ties
+    (2026-10-04, the second eight were played but not listed). They sit in a competition of their
+    own, cid, a copy of the Libertadores' row with code <code>: the game keeps at most twenty
+    table references per competition and season (0x1415902d0) -- seventeen here. Keep <name>
+    short: a long one ran over into the next live record and the page read "icatória".
+
+    one_match=False keeps the qualifying round's own legs mode (two legs): the Libertadores
+    qualifying phases 1 and 2 (2026-10-05), rounds of 3 and 8 ties in one competition.
+
+    region: the competition row's region instead of the Libertadores' (1). Region 0 is in no
+    category of Competition Info (the exe's list is 1..28, fl26catlist adds 29..63) and no
+    competition of the game has it: the competition plays, the Database does not list it."""
+    comp, regs, ents = (M.load(base, n) for n in
+                        ("Competition.bin", "CompetitionRegulation.bin", "CompetitionEntry.bin"))
+    rows = [bytearray(regs[i * M.REG:(i + 1) * M.REG]) for i in range(len(regs) // M.REG)]
+    used = {rid(r) for r in rows}
+    tm = [r for r in rows if rid(r) == LIB_QUAL]
+    tr = [r for r in rows if rid(r) == LIB_QUAL + STEP]
+    if len(tm) != 1 or len(tr) != 1 or tr[0][R_GROUP] != 0:
+        raise SystemExit("no Libertadores qualifying round (reg %d and %d) to copy" % (LIB_QUAL, LIB_QUAL + STEP))
+    crows = [comp[i:i + M.COMP] for i in range(0, len(comp), M.COMP)]
+    lib = [c for c in crows if c[M.CID_OFF] == LIB_CID]
+    if len(lib) != 1:
+        raise SystemExit("no Copa Libertadores competition (%d) to copy" % LIB_CID)
+    if cid in {c[M.CID_OFF] for c in crows}:
+        raise SystemExit("competition %d is taken" % cid)
+    if sum(1 + t for _r, t in rounds) > 20:
+        raise SystemExit("%d regulations -- a competition holds twenty tables" % sum(1 + t for _r, t in rounds))
+    if len(name.encode("utf-8")) > 24:
+        raise SystemExit("%r: a name of 24 bytes at most" % name)
+    c = bytearray(lib[0])
+    c[M.CID_OFF] = cid
+    M.put(c, M.CODE_OFF, code, M.COMP - M.CODE_OFF)
+    if region is not None:
+        c[M.REGION_OFF] = M.enc_region(region)
+    added = bytearray()
+    for new, ties in rounds:
+        if not 1 <= ties <= MAX_SINGLE:
+            raise SystemExit("%s: a play-off of %d ties -- 1 to %d" % (name, ties, MAX_SINGLE))
+        ids = {new + g * STEP for g in range(ties + 1)}
+        if used & ids or new + ties * STEP > 0xffff:
+            raise SystemExit("ids %s are taken" % sorted(used & ids))
+        for g in [255] + list(range(ties)):
+            r = bytearray(tm[0] if g == 255 else tr[0])
+            r[M.R_ID:M.R_ID + 2] = (new if g == 255 else new + (g + 1) * STEP).to_bytes(2, "little")
+            if g != 255:
+                r[R_BACK:R_BACK + 2] = new.to_bytes(2, "little")
+                r[R_GROUP] = g
+            r[M.R_CID] = cid
+            for k in range(M.NAME_SLOTS):
+                M.put(r, M.R_NAME + k * M.NAME_SLOT, name, M.NAME_SLOT)
+            r[M.R_TEAMS] = (r[M.R_TEAMS] & ~0x3f) | 2 * ties
+            r[LEGS_OFF] = ties                                  # byte +0x10: the replicas
+            if one_match:
+                d = int.from_bytes(r[LEGS_OFF:LEGS_OFF + 4], "little") & ~(7 << LEGS_SHIFT)
+                r[LEGS_OFF:LEGS_OFF + 4] = d.to_bytes(4, "little")
+            added += r
+        used |= ids
+    with contextlib.redirect_stdout(io.StringIO()):
+        M.write_tables(out, comp + bytes(c), regs + added, ents)
+    log("  %s play-off: competition %d (%s), %s" % ("one-match" if one_match else "two-leg", cid, code, ", ".join(
+        "%d (%d ties)" % r for r in rounds)))
+
+
 def build(base, out, log=print, uecl=True):
     """add both play-offs (uecl=False: the Europa League's alone) to the tables in <base> and
     write the three competition tables to the world <out> (in place when <base> is <out>'s own

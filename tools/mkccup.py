@@ -196,8 +196,8 @@ def main():
 
         clubs = []
         for r, p in cup["entry"]:
-            if p < 1:                   # a cup's winner: nobody to write before it is played
-                continue
+            if p < 1 or p == 255:       # a cup's winner, a qualifying round's loser (fl26swiss
+                continue                # QUAL_LOSER): nobody to write before it is played
             lst = [t for _o, t in sorted(listed.get(cid_of_reg[r], []))]
             pick = [t for t in lst[p - 1:] + lst if t not in clubs]
             if pick:
