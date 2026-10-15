@@ -113,6 +113,10 @@ once, and your 0.2.2 career keeps working.
   world had used up every free competition id and a league still had a super cup to make. It
   now stops with the same message as a cup does: no free competition or regulation ids left
   for that super cup, so you know to switch some cups or super cups off.
+- **League order, First-season European clubs and Seasons of the game's leagues were gone from the
+  leagues page.** The new look left them out of its **More** menu; they are back there (League order
+  puts the countries of Select Team and Kick Off in your order).
+
 - **A big world stopped with "the player table is full" although it fits.** The game takes
   61905 players, and Build counted while it worked: the placeholder players a club's own squad
   replaces are taken out only at the end, so a world of 1212 new clubs (the Modpack, 60488

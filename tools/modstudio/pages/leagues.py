@@ -116,8 +116,13 @@ class Leagues(BuilderPage):
         m = QMenu(more)
         for label, name in (("Pre-season cups", "preseason"), ("Cups of the game's countries", "game_cups"),
                             ("European places of the game's leagues", "game_europe"),
+                            ("First-season European clubs", "europe_first"),
                             ("UEFA ranking", "uefa_rank"), ("South American places", "samerica"),
-                            ("Competition names", "competition_names"), ("Competition IDs", "competition_ids")):
+                            ("Competition names", "competition_names"), ("Competition IDs", "competition_ids"),
+                            # the order of the countries in Select Team; the 0.1.8 look left it and the
+                            # two below out of this menu (Discord, laracroft7826 15.10.: "it was in the old one")
+                            ("League order", "league_order"),
+                            ("Seasons of the game's leagues", "game_seasons")):
             m.addAction(_(label)).triggered.connect(lambda _c=False, n=name: getattr(self.nl(), n)())
         m.addSeparator()
         m.addAction(_("World name and file...")).triggered.connect(lambda: self.app.open_page("NewLeagues"))
