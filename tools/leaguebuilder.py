@@ -753,37 +753,59 @@ def game_others(base, leagues):
     return sorted(nat), sorted(other)
 
 
+# the recipe's own keys that plan() reads in another form, or not at all (the UEFA ranking, the
+# order of the League list, NewLife's bookkeeping, what came from which league package): the plan
+# keeps them as the recipe had them ("settings"), so recipe_from_plan gives them back exactly and a
+# world made editable again builds the same (0.2.4, editing a ready world)
+RECIPE_SETTINGS = ("game_europe", "uefa_seed", "uefa_rank", "europe_first", "game_cups", "preseason_cups",
+                   "ccup_names", "ccup_logos", "caf_super_cup", "caf_super_cup_logo", "cup_draw",
+                   "country_order", "game_seasons", "saudi_august", "newlife_ids", "newlife_game",
+                   "league_order", "packs")
+
+
 def recipe_from_plan(pl, base):
     """the recipe a built world was made from, read back from its leaguebuilder-plan.json: for a
-    world whose recipe was never saved (Mod Studio opens the live world, 0.1.8). The plan holds
-    everything the recipe said about the leagues; the ids it adds (rid, cid, slot, teams ...) are
-    left out, so the next Build gives them again."""
+    world whose recipe was never saved (Mod Studio opens the live world, 0.1.8), or a ready world
+    from a zip made editable (0.2.4). The plan holds everything the recipe said about the leagues;
+    the ids it adds (rid, cid, slot, teams ...) are left out: built over that same plan (the world
+    folder's leaguebuilder-plan.json, prev_pins) the leagues and clubs get them back. NewLife
+    clubs keep theirs through newlife_ids, rebuilt from the plan's newlife_tid."""
     import mkflags
     cty = mkflags.countries(mkflags.table("Country", [base]))
     name_of_rid = {L["rid"]: L["name"] for L in pl.get("leagues") or []}
     out = []
     for L in (pl.get("leagues") or []) + (pl.get("others") or []):
         en = (cty.get(L.get("country")) or ("", None))[0]
-        r = {"name": L["name"], "country": mkflags.title(en) if en else "", "clubs": L["clubs"]}
+        country = mkflags.title(en) if en else ""
+        if en and mkflags.by_name(cty, country) != L["country"]:
+            # a name two countries share: one only this country has, or the league would take
+            # another flag id, and with it another region (plan: the pin wants the same country)
+            country = next((n for n in sorted(cty[L["country"]][1]) if mkflags.by_name(cty, n) == L["country"]),
+                           country)
+        r = {"name": L["name"], "country": country, "clubs": L["clubs"]}
         if L.get("others"):
             r["others"] = next(k for k, v in OTHERS.items() if v == L["others"])
         else:
             r["legs"], r["exchange"] = L.get("legs", 2), L.get("exchange", 3)
-        for k in ("logo", "flag", "formation"):
+        for k in ("logo", "flag", "formation", "scoreboard"):
             if L.get(k):
                 r[k] = L[k]
         for k in ("club_names", "club_crests", "club_abbrs", "club_coaches", "club_formations",
-                  "club_kits", "club_away_kits"):
-            if any(L.get(k) or []):
+                  "club_kits", "club_away_kits", "kit_folders"):
+            if L.get(k):                # as the recipe had it, a list of blanks too
                 r[k] = list(L[k])
         if any(x is not None for x in L.get("club_ids") or []):
             r["club_ids"] = ["" if x is None else str(x) for x in L["club_ids"]]
-        if (L.get("newlife") or {}).get("clubs"):
-            r["newlife"] = {"clubs": list(L["newlife"]["clubs"])}
+        nl = L.get("newlife") or {}
+        if nl.get("clubs") or any(k != "clubs" for k in nl):
+            # the release's version and league key go with the clubs (the NewLife page updates by them)
+            r["newlife"] = dict(copy.deepcopy(nl), clubs=list(nl.get("clubs") or []))
         if L.get("europe"):
             r["europe"] = [list(e) for e in L["europe"]]
         if L.get("exhibition"):
             r["exhibition"] = True
+        if L.get("real_calendar") is not None:          # false (the old calendar) counts too
+            r["real_calendar"] = copy.deepcopy(L["real_calendar"])
         gc = []
         for at, e in sorted((L.get("game_clubs") or {}).items(), key=lambda x: int(x[0])):
             g = {"at": int(at), "id": e["id"]}
@@ -797,6 +819,9 @@ def recipe_from_plan(pl, base):
         up = L.get("above")
         if up is not None:
             r["above"] = name_of_rid.get(up, up)
+        if L.get("cup_top_only") or (L.get("tier") == 2 and up is not None and up not in name_of_rid
+                                     and L.get("cup") and "cup_all" not in L):
+            r["cup_top_only"] = True        # (an older plan says so only by the cup_all it has not)
         oc = L.get("own_cup")
         if oc and L.get("above") is None:
             r["cup"] = True
@@ -816,19 +841,183 @@ def recipe_from_plan(pl, base):
                 r["league_cup_logo"] = lc["logo"]
         if L.get("calendar"):
             r["season"] = "calendar"
-        if L.get("split"):
-            r["split"] = L["split"]
+        ap = L.get("apertura")
+        if ap:
+            # plan() writes Apertura/Clausura as a split of one group: given back as a split, it
+            # was refused ("split groups [n] must be 2 or 3 counts")
+            r["apertura"] = {"playoff": int(ap.get("playoff", PLAYOFF_SIZES[0]))}
+            if ap.get("logo"):
+                r["playoff_logo"] = ap["logo"]
+        elif L.get("split"):
+            r["split"] = {k: copy.deepcopy(v) for k, v in L["split"].items() if k in ("legs", "groups", "group_legs")}
         out.append(r)
     rec = {"world": pl["world"], "leagues": out, "edits": pl.get("edits") or {},
            "players": pl.get("players") or {}}
     for k in ("uecl", "uecl_logo", "uecl_name", "editable_kits", "game_seasons", "cafsc"):
-        if pl.get(k) not in (None, "", False) or k == "uecl":
+        if pl.get(k) or k == "uecl":       # (an empty game_seasons is no setting)
             rec[k] = pl.get(k)
     if pl.get("make_kits") is False:
         rec["make_kits"] = False
     if pl.get("pack_faces") is False:
         rec["pack_faces"] = False
+    st = pl.get("settings")
+    if isinstance(st, dict):
+        rec.update({k: copy.deepcopy(st[k]) for k in RECIPE_SETTINGS if k in st})
+    else:
+        rec.update(settings_from_plan(pl, base))
+    # every NewLife club keeps the world id it was built with, whatever is added or taken out
+    # in front of it (newlife_tids); a pin of a club no longer in the world stays as it was
+    nlt = next((p["newlife_tid"] for p in (pl.get("leagues") or []) + (pl.get("others") or [])
+                if p.get("newlife_tid")), None) or {}
+    if nlt:
+        pins = dict(rec.get("newlife_ids") or {})
+        pins.update({str(k): int(v) for k, v in nlt.items()})
+        rec["newlife_ids"] = pins
     return rec
+
+
+def game_access_regs(base):
+    """{the regulation the access list names (access_reg): the top division of the game it stands for}"""
+    comp, regs = M.load(base, "Competition.bin"), M.load(base, "CompetitionRegulation.bin")
+    regrow = {u16(regs[i * M.REG:], M.R_ID): regs[i * M.REG:(i + 1) * M.REG] for i in range(len(regs) // M.REG)}
+    region_of_cid = {comp[i * M.COMP + M.CID_OFF]: M.dec_region(comp[i * M.COMP + M.REGION_OFF])
+                     for i in range(len(comp) // M.COMP)}
+    out = {}
+    for r, _c, _n, _t in game_leagues(base):
+        if r in regrow and M.get_tier(regrow[r]) == 1:
+            out.setdefault(access_reg(r, regrow, region_of_cid), r)
+    return out
+
+
+def settings_from_plan(pl, base):
+    """RECIPE_SETTINGS of a plan from before plan() kept them (0.2.4 and older, the FL26 Modpack
+    r6), read back from what plan() made of them. Not in such a plan, so lost: uefa_rank,
+    league_order, packs and newlife_game (Build never read them), and newlife_ids pins of clubs
+    no longer in the world, and the order of game_cups (a league cup and a super cup are kept
+    apart). A game league's place in a continental cup of ours that is also a place the cup fills
+    itself from (fl26world.CCUPS) is found by the field's order (ccup_given); one that the order
+    does not tell is lost."""
+    out = {}
+    name_of = {p["rid"]: p["name"] for p in pl.get("leagues") or []}
+
+    def club(ref):
+        if isinstance(ref, (list, tuple)):
+            return "%s/%d" % (name_of[ref[0]], ref[1])
+        return int(ref)
+    first = {key: [club(x) for x in refs] for (key, _t), refs in zip(EUROPE_FIRST, pl.get("europe_first") or [])
+             if refs}
+    if first:
+        out["europe_first"] = first
+    if pl.get("cup_draw") and pl["cup_draw"] != CUP_DRAWS[0]:
+        out["cup_draw"] = pl["cup_draw"]
+    if pl.get("country_order"):
+        out["country_order"] = copy.deepcopy(pl["country_order"])
+    cups = pl.get("ccups") or []
+    numbers = {c.get("number") for c in cups}
+    if {CAF_CL, CAF_CC} <= numbers and 0 not in numbers:
+        out["caf_super_cup"] = False
+    default = {c: n for c, n, _code, _conf, _fill in fl26world.CCUPS}
+    default[0] = caf_super_cup({})["name"]
+    names = {str(c["number"]): c["name"] for c in cups if c.get("number") in default
+             and c.get("name") and c["name"] != default[c["number"]]}
+    logos = {str(c["number"]): c["logo"] for c in cups if c.get("number") in default and c.get("logo")}
+    if names:
+        out["ccup_names"] = names
+    if logos:
+        out["ccup_logos"] = logos
+    pre = [c for c in pl.get("home_cups") or [] if c.get("kind") == "preseason"]
+    if pre:
+        out["preseason_cups"] = [dict({"name": c["name"], "clubs": [club(x) for x in c.get("refs") or []]},
+                                      **({"logo": c["logo"]} if c.get("logo") else {})) for c in pre]
+    # game_cups: the league cups (home_cups, FL_G<rid>_LCUP) and super cups (game_supers), in
+    # the order both lists had them
+    lcup = [(int(c["code"][4:7]), c) for c in pl.get("home_cups") or []
+            if c.get("kind") == "league" and re.fullmatch(r"FL_G\d{3}_LCUP", str(c.get("code") or ""))]
+    scup = [(int(c["league"]), c) for c in pl.get("game_supers") or []]
+    order, a, b = [], [r for r, _c in lcup], [r for r, _c in scup]
+    while a or b:
+        if a and b and a[0] == b[0]:
+            order.append(a.pop(0))
+            b.pop(0)
+        elif a and a[0] not in b:
+            order.append(a.pop(0))
+        else:
+            order.append(b.pop(0))
+    lc, sc = dict(lcup), dict(scup)
+    gcups = []
+    for r in order:
+        g = {"league": r, "league_cup": r in lc, "super_cup": r in sc}
+        if r in lc:
+            g["name"] = lc[r]["name"]
+            if lc[r].get("logo"):
+                g["logo"] = lc[r]["logo"]
+        if r in sc:
+            g["super_name"] = sc[r]["name"]
+            if sc[r].get("logo"):
+                g["super_logo"] = sc[r]["logo"]
+        gcups.append(g)
+    if gcups:
+        out["game_cups"] = gcups
+    ge, seed = {}, []
+    if pl.get("game_europe") or pl.get("uefa_seed") or any(c.get("number") in default for c in cups):
+        top = game_access_regs(base)
+        for a, pos, comp, alt in pl.get("game_europe") or []:
+            rid = top.get(alt or a)
+            if rid is not None:
+                ge.setdefault(str(rid), []).append([CUP_WINNER if alt else int(pos), int(comp)])
+        # a game league's places in our continental cups: the cup's entries of leagues not ours.
+        # One the cup does not take by itself is one; one it also fills itself from (CCUPS) is
+        # told by the order: ccup_plan puts the places it was given before the ones it fills, so
+        # the fewest such entries that give the cup's field back are the ones it was given
+        tops = set(top.values())
+        ours = [(p["rid"], pos, comp, 0) for p in pl.get("leagues") or [] for pos, comp in p.get("europe") or []]
+        for c in cups:
+            n = c.get("number")
+            fill = next((set(map(tuple, f)) for c2, _n, _code, _conf, f in fl26world.CCUPS if c2 == n), None)
+            if fill is None:
+                continue
+            given, maybe = [], []
+            for e in map(tuple, c.get("entry") or []):
+                lg = entry_league(e)
+                if e[0] == "ko" or lg in name_of or lg not in tops:
+                    continue
+                (maybe if e in fill else given).append(e)
+            if maybe:
+                given += ccup_given(n, c.get("entry") or [], ours, given, maybe)
+            for e in given:
+                ge.setdefault(str(entry_league(e)), []).append([CUP_WINNER if e[0] == "cup" else int(e[1]), int(n)])
+        for lg, pos, comp in pl.get("uefa_seed") or []:
+            if lg in name_of:
+                seed.append([name_of[lg], int(pos), int(comp)])
+            elif lg in top:
+                seed.append(["g%d" % top[lg], int(pos), int(comp)])
+    if ge:
+        out["game_europe"] = ge
+    if seed:
+        out["uefa_seed"] = seed
+    return out
+
+
+def ccup_given(n, field, ours, given, maybe, tries=20000):
+    """settings_from_plan: which of a continental cup's entries that are also places it fills
+    itself from (maybe) were game_europe places too -- the fewest that, with the world's own
+    places (ours) and the game's places it surely was given, make ccup_plan build cup n with
+    this field; [] when none does within `tries` (that place is then lost)"""
+    import itertools
+    want = [list(e) for e in field]
+    as_place = lambda e: (e[1], CUP_WINNER, n, 0) if e[0] == "cup" else (e[0], e[1], n, 0)
+    mine = [x for x in ours if x[2] == n]
+    for k in range(len(maybe) + 1):
+        for sub in itertools.combinations(maybe, k):
+            tries -= 1
+            if tries < 0:
+                return []
+            # game_europe's places go after the world's own, a league at a time (game_europe)
+            own = mine + sorted((as_place(e) for e in list(given) + list(sub)), key=lambda x: str(x[0]))
+            cup = next((c for c in ccup_plan(own)[0] if c["number"] == n), None)
+            if cup and [list(e) for e in cup["entry"]] == want:
+                return list(sub)
+    return []
 
 
 def club_countries(base):
@@ -1495,7 +1684,8 @@ def plan(recipe, base, prev=None):
     if not all(names) or len(set(n.lower() for n in names)) != len(names):
         raise BuildError("every league needs a name, and no two the same")
     # clubs in no league go their own way from here: no regulation, no competition, no region
-    others = others_plan([L for L in recipe["leagues"] if L.get("others")], base, cty)
+    others = others_plan([L for L in recipe["leagues"] if L.get("others")], base, cty,
+                         prev_pins({"leagues": (prev or {}).get("others")}))
     full = recipe
     recipe = dict(recipe, leagues=[L for L in recipe["leagues"] if not L.get("others")])
     leagues = recipe["leagues"]
@@ -1628,8 +1818,7 @@ def plan(recipe, base, prev=None):
                           for x in (L.get("club_ids") or [])][:n],     # ids of the recipe's own
              "club_kits": list(L.get("club_kits") or []),     # shirt words (shieldcrest) for crests
              "club_away_kits": list(L.get("club_away_kits") or []),   # and for picking kits (mkkits)
-             "newlife": {"clubs": [int(i) if str(i or "").strip().isdigit() else None   # None: a club of its
-                                    for i in (L.get("newlife") or {}).get("clubs") or []]},   # own (Dale pack)
+             "newlife": newlife_of(L),
              "kit_folders": list(L.get("kit_folders") or []),     # Kit Server folders and the
              "scoreboard": L.get("scoreboard") or None,           # Scoreboard Server one (lbservers)
              "exchange": int(3 if L.get("exchange") is None else L["exchange"]),   # null in an old package
@@ -1694,6 +1883,8 @@ def plan(recipe, base, prev=None):
                     if p["cup"] and not L.get("cup_top_only"):
                         top = entries_of(base, pr[M.R_CID])
                         p["cup_all"] = top + n if cup_takes_both(p["cup"], top + n) else 0
+                    if p["cup"] and L.get("cup_top_only"):
+                        p["cup_top_only"] = True       # for recipe_from_plan
             if p["tier"] > 7:
                 raise BuildError("%s: division %d -- the rank field stops at 7" % (name, p["tier"]))
         else:
@@ -1880,7 +2071,9 @@ def plan(recipe, base, prev=None):
             "country_order": recipe.get("country_order") or None,
             "cup_draw": cup_draw(recipe),
             # the cups' ids of the last Build, {key: {cid, reg, ...}}: build() gives each its own back
-            "prev_cup_ids": dict((prev or {}).get("cup_ids") or {})}
+            "prev_cup_ids": dict((prev or {}).get("cup_ids") or {}),
+            # the recipe's keys kept as they were, for recipe_from_plan (RECIPE_SETTINGS)
+            "settings": {k: copy.deepcopy(full[k]) for k in RECIPE_SETTINGS if k in full}}
 
 
 CUP_DRAWS = ("seeded", "random", "off")
@@ -1897,9 +2090,20 @@ def cup_draw(recipe):
     return v
 
 
-def others_plan(groups, base, cty):
+def newlife_of(L):
+    """a league's "newlife" as the plan keeps it: the clubs' NewLife ids (None: a club of its own,
+    Dale pack) and, as the recipe had them, the release's version and league key, which only the
+    NewLife page reads (recipe_from_plan gives them back)"""
+    nl = L.get("newlife") if isinstance(L.get("newlife"), dict) else {}
+    out = {"clubs": [int(i) if str(i or "").strip().isdigit() else None for i in nl.get("clubs") or []]}
+    out.update({k: copy.deepcopy(v) for k, v in nl.items() if k != "clubs"})
+    return out
+
+
+def others_plan(groups, base, cty, pins=None):
     """the plan of the recipe's clubs in no league (the "others" key): what plan() makes of a
-    league, less everything that belongs to a competition"""
+    league, less everything that belongs to a competition. `pins`: prev_pins of the last
+    Build's groups, whose new clubs keep their team ids as a league's do (prev_teams)"""
     import mkflags
     out = []
     for L in groups:
@@ -1932,9 +2136,13 @@ def others_plan(groups, base, cty):
                           for x in (L.get("club_ids") or [])][:n],
              "club_kits": list(L.get("club_kits") or []),
              "club_away_kits": list(L.get("club_away_kits") or []),
-             "newlife": {"clubs": [int(i) if str(i or "").strip().isdigit() else None   # None: a club of its
-                                    for i in (L.get("newlife") or {}).get("clubs") or []]},   # own (Dale pack)
+             "newlife": newlife_of(L),
              "game_clubs": {}}
+        q = (pins or {}).get(name.lower()) or {}
+        if q.get("teams"):
+            # a league removed in front of the group moved its clubs' ids (0.2.4, editing a world)
+            p["prev_teams"] = [t if isinstance(t, int) else None for t in q["teams"]]
+            p["prev_names"] = [str(x or "").strip().lower() for x in (q.get("club_names") or [])]
         if len(p["club_names"]) > n:
             raise BuildError("%s: %d club names for %d clubs" % (name, len(p["club_names"]), n))
         for f in [p["formation"]] + p["club_formations"]:
@@ -3312,7 +3520,7 @@ def build(pl, base, game, replace=False, log=print):
     nl_ids = {t for p in pl["leagues"] + others for t in (p.get("newlife_tid") or {}).values()}
     # a new club's id from the last Build (plan: prev_teams): kept when it is still free, and no
     # other new club counts up into one (audit 12.10.: a league added in front moved them all)
-    pins_all = {t for p in pl["leagues"] for t in (p.get("prev_teams") or [])
+    pins_all = {t for p in pl["leagues"] + others for t in (p.get("prev_teams") or [])
                 if t and top_id < t <= CLUB_ID_MAX and t not in nl_ids and t not in mine}
 
     def pinned_tid(p, k):
@@ -3767,7 +3975,7 @@ def build(pl, base, game, replace=False, log=print):
                           + ["cupdraw %s" % pl.get("cup_draw", "seeded")],
                           qlines)
     pl.pop("prev_cup_ids", None)      # this Build's own are in cup_ids; the old ones must not pile up
-    for p in pl["leagues"]:
+    for p in pl["leagues"] + (pl.get("others") or []):
         p.pop("prev_teams", None), p.pop("prev_names", None)
     json.dump(pl, open(os.path.join(tmp, "leaguebuilder-plan.json"), "w", encoding="utf-8"), indent=1)
 

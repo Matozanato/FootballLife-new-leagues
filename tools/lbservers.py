@@ -231,10 +231,45 @@ def carrier(l):
     return parts[0] if len(parts) > 2 and parts[1] in ("_kits", "_packs") else None
 
 
-def _map(path, mine, log, what, world="", sider=None):
+def _key(l):
+    """the team or competition id a map line is keyed by, or None"""
+    m = LINE.match(l[:-len(OFF)] if l.endswith(OFF) else l)
+    return int(m.group(2)) if m else None
+
+
+def world_ids(pl, root=None):
+    """(team ids, competition ids) of the world as built: the clubs of its leagues and its clubs in
+    no league (the plan's teams), and every id its world file in root names for a competition --
+    a league's own, its cid=, cup= and scup=, a ccup line's and its ko= -- the ids a line the world
+    carries from another pack is keyed by (installer.borrowed_kits / world_competitions).  (None,
+    None) when there is no built world (root and its world file) to read: then nothing is taken"""
+    teams = {int(t) for p in (pl.get("leagues") or []) + (pl.get("others") or [])
+             for t in p.get("teams") or [] if str(t).isdigit()}
+    comps = None
+    if root:
+        try:
+            with open(os.path.join(root, "fl26world.txt"), encoding="utf-8", errors="replace") as f:
+                comps = set()
+                for line in f:
+                    w = line.split()
+                    if w[:1] in (["league"], ["ccup"]) and len(w) > 1 and w[1].isdigit():
+                        comps.add(int(w[1]))
+                        for t in w[2:]:
+                            k, _s, v = t.partition("=")
+                            if k in ("cid", "cup", "scup", "ko") and v.isdigit():
+                                comps.add(int(v))
+        except OSError:
+            comps = None
+    return (None, None) if comps is None else (teams, comps)
+
+
+def _map(path, mine, log, what, world="", sider=None, keep=None):
     """our lines (key, text) into a map file: earlier ones of ours out, clashing ones of yours
     off; a line a world zip carries from another pack (carrier) stays: on while its world is on,
-    switched off (#) while another one is"""
+    switched off (#) while another one is.  While its own world goes on, such a line stays only
+    while its key is still one of the world's (keep: None = every one): a league or club taken
+    out of the world takes its carried line with it, else it would give its scoreboard or kit to
+    whatever league or club a later Build hands that free id (editing a ready world)"""
     lines, nl, bom, enc = lbstadiums.read(path)
     if not mine and not any(TAG in l or l.endswith(OFF) for l in lines):
         return 0
@@ -242,8 +277,11 @@ def _map(path, mine, log, what, world="", sider=None):
     for l in lines:
         w0 = carrier(l)
         if w0 is not None:                     # another pack's line a world zip brought: on with its world
+            mine_w = bool(world) and w0 == safe(world).lower()
+            if mine_w and keep is not None and _key(l) not in keep:
+                continue                       # its league or club is no longer in the world
             l = re.sub(r"^(\s*)#\s*", r"\1", l[:-len(OFF)] if l.endswith(OFF) else l, count=1)
-            rows.append(l if world and w0 == safe(world).lower() else "#" + l)
+            rows.append(l if mine_w else "#" + l)
             continue
         if TAG in l:
             continue
@@ -295,6 +333,7 @@ def write(pl, sider, log=print, root=None):
     (kits, scoreboards) written"""
     kits, boards = wanted(pl)
     world = safe(pl.get("world") or "FL26 world")
+    teams, comps = world_ids(pl, root)
     klib, blib = libs(sider)
     make = to_make(pl, root) if root and os.path.isdir(os.path.join(sider, klib)) else []
     # B104: a world that came ready from a zip brought its made kits along, drawn on the PC it was
@@ -356,7 +395,8 @@ def write(pl, sider, log=print, root=None):
                 mine.append((tid, '%d, "%s"   %s %s/%d made' % (tid, rel, TAG, league, k)))
             log("kits made from colours and crests: %d (%d new or changed)%s" % (
                 len(make), new, "" if numbers else "; no kit in the library lends back numbers, so the game's own are used"))
-        done.append(_map(os.path.join(root, file), mine, log, what, world, sider))
+        done.append(_map(os.path.join(root, file), mine, log, what, world, sider,
+                         teams if what == "kits" else comps))
     menus(sider, world, log)
     return tuple(done)
 
