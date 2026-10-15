@@ -510,6 +510,12 @@ def ready_check(game, world):
                               "other %d, so those clubs play at the stadium the game gives them") % (have, n, n - have)))
     live_mods = {os.path.basename(e.value.replace("/", "\\").strip('"')).lower()
                  for e in ini.entries("lua.module") if e.enabled}
+    # where sider.ini has a module: SPFL26's own kits.lua and scoreboards.lua sit in modules\common
+    # (B44, vmican 15.10.: "kits.lua is not in SiderAddons\modules" while common\kits.lua was on)
+    at = {}
+    for e in ini.entries("lua.module"):
+        v = e.value.replace("/", "\\").strip('"')
+        at.setdefault(os.path.basename(v).lower(), []).append(v)
     for srv in S.SERVERS:
         folder, module = srv.pick(game.content_dir)
         base = os.path.join(game.content_dir, folder)
@@ -523,7 +529,8 @@ def ready_check(game, world):
         if not uses:
             continue
         optional = srv.key == "menus"         # the themes are a nice-to-have: the game plays without
-        if not os.path.isfile(os.path.join(game.modules_dir, module)):
+        if not any(os.path.isfile(os.path.join(game.modules_dir, v))
+                   for v in at.get(module.lower(), []) + [module]):
             out.append(("warn" if optional else "err",
                         _("%s: the world brings them, but %s is not in SiderAddons\\modules. It comes with "
                           "your Sider pack (SPFL26); put it in, then switch it on in Tools > Lua modules")

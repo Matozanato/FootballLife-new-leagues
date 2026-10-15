@@ -97,6 +97,7 @@ once, and your 0.2.2 career keeps working.
 
 ## Fixed
 
+- **The final check after Import your world said kits.lua (and scoreboards.lua) is not in SiderAddons\modules** on a game that loads SPFL26's own Kit Server and Scoreboard Server: those are in modules\common, and the check only looked in modules. It now looks where sider.ini has them. (Thanks vmican)
 - **Import kits with the game under Program Files stopped with a bare "[WinError 5] Access is denied".** Import kits now checks first that Mod Studio may write into the game folder, and Import kits, a content server's Save, putting a restore point back and Move the Edit save aside show the same box as Build when Windows refuses the write: run Mod Studio as administrator (the box has a button for it) or move the game out of Program Files. (Thanks ZéDosCães21)
 - **Dragging a file onto Import your world did nothing when Mod Studio runs as administrator.** Windows blocks drag and drop into a program started as administrator; the drop area now says so and points to Choose a file... and Choose a folder.... (Thanks quicksite)
 - A scoreboard or menu pack made for another world now lands on the right league: Import your world puts each competition line on the competition its name says in your world (the FL26 Modpack scoreboard zips carry the ids of the full modpack, so League Two went on another league and the game kept its own scoreboard), reads the zips' `map line.txt` too, and says which league your world has not. (Thanks quicksite)

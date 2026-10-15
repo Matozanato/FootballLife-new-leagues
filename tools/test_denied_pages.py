@@ -1,4 +1,4 @@
-"""python tools/test_denied_pages.py
+r"""python tools/test_denied_pages.py
 
 B43 (ZeDosCaes21, 15.10.): with the game under C:\Program Files (x86), Import kits on the Kits
 page stopped with a raw "[WinError 5] Acesso negado: '...\content\kits\1o divisao'" box, the
