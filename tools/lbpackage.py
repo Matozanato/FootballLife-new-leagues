@@ -23,7 +23,7 @@ Paths in recipe.json are relative to the package.  add() unpacks a package into 
 folder, makes its paths full again and puts its leagues into a recipe, remembering under
 "packs" what came from which package so remove() can take exactly that out again.
 """
-import argparse, json, os, re, shutil, stat, sys, zipfile
+import argparse, json, os, re, shutil, stat, sys, unicodedata, zipfile
 
 import lbfaces
 
@@ -447,6 +447,56 @@ def parts_only(piece, parts):
     return out
 
 
+def _fold(text):
+    """a name compared without case, accents or extra spaces"""
+    text = unicodedata.normalize("NFKD", str(text or ""))
+    return " ".join("".join(ch for ch in text if not unicodedata.combining(ch)).casefold().split())
+
+
+def added_key(ch):
+    """who an "add" entry is: the id it asks for, else its name and birth date (the age when the
+    entry has no birth date), so one player added by the recipe and by a package is one player"""
+    pid = str(ch.get("id", "")).strip()
+    if pid.isdigit():
+        return ("id", pid)
+    born = next((str(ch[k]).strip() for k in ("Birth date", "born", "Age") if str(ch.get(k, "")).strip()), "")
+    return ("name", _fold(ch.get("name")), born)
+
+
+def merge_club(old, c):
+    """a package's changes c to a club of the game onto the recipe's own (old, changed in place).
+    edits: the package's win; add: a player both add is added once, the package's entry over the
+    recipe's in its place (B55: added twice, a squad of 63); join: the package's come too (B55:
+    they were lost); remove: both; a manager portrait or stadium of the package's wins"""
+    old.setdefault("edits", {}).update(c.get("edits") or {})
+    adds = list(old.get("add") or [])
+    at = {added_key(ch): n for n, ch in enumerate(adds)}
+    for ch in c.get("add") or []:
+        k = added_key(ch)
+        if k in at:
+            adds[at[k]] = dict(adds[at[k]], **ch)
+        else:
+            at[k] = len(adds)
+            adds.append(ch)
+    if adds:
+        old["add"] = adds
+    join = list(old.get("join") or [])
+    seen = {str(r) for r in join}
+    for r in c.get("join") or []:
+        if str(r) not in seen:
+            seen.add(str(r))
+            join.append(r)
+    if join:
+        old["join"] = join
+    remove = sorted(set(old.get("remove") or []) | set(c.get("remove") or []))
+    if remove:
+        old["remove"] = remove
+    for k in ("coach_portrait", "stadium"):
+        if c.get(k):
+            old[k] = c[k]
+    return old
+
+
 def add(recipe, man, piece, folder, rename=None):
     """put a package's piece into recipe (changed in place).  rename maps a clashing league
     name to the one it gets here.  A package added again (same tag) replaces itself.  A
@@ -484,9 +534,7 @@ def add(recipe, man, piece, folder, rename=None):
             # a club of the game the recipe already changes: the package's changes go on top
             old = pl[key]
             got.setdefault("before", {})[key] = json.loads(json.dumps(old))
-            old.setdefault("edits", {}).update(c.get("edits") or {})
-            old["add"] = (old.get("add") or []) + list(c.get("add") or [])
-            old["remove"] = sorted(set(old.get("remove") or []) | set(c.get("remove") or []))
+            merge_club(old, c)
             got["players"].append(key)
             continue
         pl[key] = c
