@@ -436,9 +436,14 @@ SPLIT_LINE = [226, 233, 240, 257, 261, 268, 275, 296, 300, 303, 310, 321, 324, 3
 SPLIT_SKIP = 3
 SPLIT_MAX_ROUNDS = 46                    # a split's rounds, both phases: the Championship's calendar
 # fl26swiss.c CCUP_GROUP_DAYS + CCUP_KO_DAYS: the champions' cups on Tuesdays, the cups below
-# them on the Wednesdays of the same weeks (#70)
-CCUP_DAYS = [327, 334, 26, 33, 40, 47, 75, 82, 96, 103, 117, 124, 138,
-             328, 335, 27, 34, 41, 48, 76, 83, 97, 104, 118, 125, 139]
+# them on the Wednesdays of the same weeks (#70). Since B35 (0.2.4) three tables -- a cup whose
+# leagues reach the game's Libertadores or AFC Champions League plays in the weeks that one
+# leaves free -- and the league here does not say which, so all three
+CCUP_DAYS = sorted({327, 334, 26, 33, 40, 47, 75, 82, 96, 103, 117, 124, 138,          # CR_NONE
+                    328, 335, 27, 34, 41, 48, 76, 83, 97, 104, 118, 125, 139,
+                    19, 54, 68, 89, 110, 131, 145,                                    # CR_LIB
+                    20, 55, 69, 90, 111, 132, 146,
+                    12, 13})                                                          # CR_AFC
 PLAYOFF_SIZES = (8, 4)
 SHARED_SLOT_REG = 49                     # shares Select Team slot 49 with the Copa Libertadores (177)
 SEASON_TURN = 182                        # the season's July turn: day-of-year order starts here

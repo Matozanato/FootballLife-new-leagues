@@ -232,6 +232,20 @@ once, and your 0.2.2 career keeps working.
   cups), so a day one of them keeps clear is a day the other keeps clear too. A continental cup
   of ours that takes a club through its cup winner (`alt=` places) is now kept clear by that
   league as well.
+- **Our continental cups played on the same day as the game's own, or the day before.** The
+  Copa Sudamericana's group stage was on the days of the Libertadores qualifying round (4 and
+  11 February) and its knockout on the Libertadores group days, and the Tuesday cups (AFC
+  Champions League Two) were the day before the AFC Champions League's Wednesdays -- and the
+  same club can be in both, because the game fills its January-December cups on 1 January,
+  months after ours were filled. A cup of ours whose leagues can send a club to one of the
+  game's cups now plays in the weeks that cup leaves free, at least a day apart from every one
+  of its days, on the same weekdays and with the same number of rounds. Copa Sudamericana:
+  groups 25 November, 2 December, 21 and 28 January, 18 and 25 February; knockout 11 March,
+  1, 8 and 22 April, 6 and 13 May, final 27 May. AFC Champions League Two and AFC Challenge
+  League: groups 25 November, 2 December, 14, 21 and 28 January, 4 February; knockout 18
+  February (round of 16 only), 11 and 25 March, 1, 15 and 29 April, final 13 May (the
+  Tuesday cup a day earlier each time). The CAF, CONCACAF and OFC cups keep their days.
+  `sider.log` names the days each cup takes (`cup ... its leagues reach ...`).
 - **A calendar-year league played the day after its own cup.** The cup's days (the `dates ...
   days=` line of a January-December country) were kept clear only when the league was spaced
   the old way, not by the real-calendar scheduler: the Copa AUF Uruguay's second round on 18

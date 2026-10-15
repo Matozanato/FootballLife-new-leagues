@@ -3117,6 +3117,8 @@ typedef struct { uint16_t reg, ko, groups, n; uint16_t ereg[CCUP_MAX_ENTRY]; uin
                  uint16_t fill, national, nd, nc; uint16_t days[CCUP_MAX_DAYS]; uint32_t clubs[CCUP_MAX_ENTRY];
                  int filled_year;
                  uint16_t like;      /* 0.2.0: the shipped domestic cup whose shape and dates it takes, 0 = none */
+                 uint8_t region;     /* 0.2.4 (B35): 1 + its CR_ day table, 0 = not worked out (ccup_region) */
+                 unsigned rgen;      /* g_ccup_gen it was worked out under */
                } ccup_t;
 static ccup_t g_ccup[MAX_CCUP]; static int g_nccup = 0;
 /* fl26_swiss_ccup_like's records, read by fl26_swiss_ccup (called after it): knockout -> shipped cup */
@@ -3141,9 +3143,54 @@ static unsigned g_ccup_done[MAX_CCUP];
    days clear of either (rest_dates), where a Thursday would leave it no day of the week at all.
    Weekdays on the big leagues' grid (case 5: Saturday is 261, so a Tuesday is d % 7 == 5).
    Groups late November to mid February, the knockout mid March to the final in mid May (the
-   first pair is spare for a knockout of eight). They were the Mondays and Sundays. */
-static const uint32_t CCUP_GROUP_DAYS[2][6] = { { 327, 334, 26, 33, 40, 47 }, { 328, 335, 27, 34, 41, 48 } };
-static const uint32_t CCUP_KO_DAYS[2][7] = { { 75, 82, 96, 103, 117, 124, 138 }, { 76, 83, 97, 104, 118, 125, 139 } };
+   first pair is spare for a knockout of eight). They were the Mondays and Sundays.
+
+   B35 (0.2.4, a tester's memory probe of a Master League): the game's own continental cups play
+   midweek too, on their own weeks, and our cups sat on them -- the Copa Sudamericana's groups on
+   the Libertadores qualifying days 34 and 41, its knockout on the Libertadores group days 76, 83,
+   104, 118, 139, and the Tuesday cups (AFC Champions League Two) the day before the AFC Champions
+   League's Wednesdays. The same club can be in both: our cups run August to May and are filled
+   at the end of August (ccup_taken, #37), the game's calendar-year cups are filled on 1 January
+   from that winter's tables. So a cup whose leagues can send a club to one of the game's cups
+   (ccup_region: gc_feeds of its entries' leagues, the same test the league schedulers use) plays
+   in the weeks the game leaves free: every day at least one free day from every day the exe
+   ships for that competition (gc_seed: LIB_ + LIBQ_, AFC_ on its midweek), and from the Club
+   World Cup's December days -- tools/native/test_rcal_days.c checks the tables against gc_seed's
+   lists. Same weekdays (Tuesday the champions' cup, Wednesday the one below, same weeks), same
+   number of days, groups November to February, the knockout from mid February or March, at least
+   two weeks after the last group day (the knockout is filled when the groups are over,
+   ccup_progress), and the final before 2 June (the Club World Cup of ours, CWC_GROUP_DAYS, starts
+   on day 153):
+     CR_LIB  the Libertadores' weeks free (34, 41 qualifying; 62, 76, 83, 104, 118, 139 groups):
+             groups 25 Nov, 2 Dec, 21 Jan, 28 Jan, 18 Feb, 25 Feb; knockout 11 Mar / 1 Apr,
+             8 / 22 Apr, 6 / 13 May, final 27 May (the Conference League's final day);
+     CR_AFC  the AFC Champions League's weeks free (55, 62, 76, 97, 111, 125, 139, 146): from 18
+             February it leaves only six free Wednesdays before June, so the January groups come a
+             fortnight earlier (14 January to 4 February) and the knockout's spare pair -- the
+             round of 16, played only by a knockout of sixteen -- opens on 18 February:
+             groups 25 Nov, 2 Dec, 14, 21, 28 Jan, 4 Feb; knockout 18 Feb / 11 Mar, 25 Mar /
+             1 Apr, 15 / 29 Apr, final 13 May;
+     CR_NONE no competition of the game in its region (the CAF, CONCACAF and OFC cups): as before.
+   (Dates for the Wednesdays, the Tuesdays a day earlier.) A cup whose leagues reach both the
+   Libertadores and the AFC Champions League has no table clear of both (the two leave three free
+   Wednesdays from March to May): it takes CR_LIB, logged. */
+enum { CR_NONE = 0, CR_LIB, CR_AFC, CR_N };
+static const char* const CR_NAME[CR_N] = { "the days of before", "the Libertadores' weeks free",
+                                           "the AFC Champions League's weeks free" };
+static const uint32_t CCUP_GROUP_DAYS[CR_N][2][6] = {
+  { { 327, 334, 26, 33, 40, 47 }, { 328, 335, 27, 34, 41, 48 } },
+  { { 327, 334, 19, 26, 47, 54 }, { 328, 335, 20, 27, 48, 55 } },
+  { { 327, 334, 12, 19, 26, 33 }, { 328, 335, 13, 20, 27, 34 } },
+};
+static const uint32_t CCUP_KO_DAYS[CR_N][2][7] = {
+  { { 75, 82, 96, 103, 117, 124, 138 }, { 76, 83, 97, 104, 118, 125, 139 } },
+  { { 68, 89, 96, 110, 124, 131, 145 }, { 69, 90, 97, 111, 125, 132, 146 } },
+  { { 47, 68, 82, 89, 103, 117, 131 }, { 48, 69, 83, 90, 104, 118, 132 } },
+};
+/* bumped by every setter a cup's region depends on (the cups, their alt= leagues, the access list,
+   the cup draws), so ccup_region works it out again */
+static unsigned g_ccup_gen = 1;
+static int ccup_region(ccup_t* c);
 
 static uint16_t ccup_rep(const ccup_t* c, int g) { return (uint16_t)(c->reg + 1024 * (g + 1)); }
 /* 0: a champions' cup (Tuesdays), 1: the cup below (Wednesdays) */
@@ -3161,7 +3208,8 @@ static uint32_t ccup_day(const ccup_t* c, int ko, int j)
 {
   if (ko && c->like && !ccup_like_ok(c)) return LCUP_OLD_DAYS[j < 7 ? j : 6];
   if (ko && c->nd) return c->days[j < c->nd ? j : c->nd - 1];
-  return ko ? CCUP_KO_DAYS[ccup_tier(c)][j] : CCUP_GROUP_DAYS[ccup_tier(c)][j];
+  int cr = ccup_region((ccup_t*)c);
+  return ko ? CCUP_KO_DAYS[cr][ccup_tier(c)][j] : CCUP_GROUP_DAYS[cr][ccup_tier(c)][j];
 }
 static int ccup_world(const ccup_t* c)
 {
@@ -3200,6 +3248,7 @@ __declspec(dllexport) int fl26_swiss_ccup(const uint16_t* v, int n)
   /* per cup: reg, ko, groups, entries, then (reg, position) per entry */
   if ((!v && n) || n < 0) return -1;
   g_nccup = 0;
+  g_ccup_gen++;
   size_t p = 0;
   for (int i = 0; i < n && g_nccup < MAX_CCUP; i++) {
     ccup_t* c = &g_ccup[g_nccup];
@@ -3297,6 +3346,7 @@ __declspec(dllexport) int fl26_swiss_ccup_alt(const uint16_t* v, int n)
     }
     c->ealt[e] = league & 0x3ff;
     c->efrom[e] = (uint8_t)(league >> 10);
+    g_ccup_gen++;
     got++;
   }
   if (got) logf("fl26swiss: %d cup winner place(s) with a league to fall back on", got);
@@ -4206,6 +4256,7 @@ static int g_ncd;
 __declspec(dllexport) int fl26_swiss_cupdraw(const uint16_t* v, int n)
 {
   g_ncd = 0;
+  g_ccup_gen++;
   for (int i = 0, q = 0; i < n && g_ncd < CD_MAX; i++) {
     cupdraw_t* c = &g_cd[g_ncd];
     c->reg = v[q]; c->mode = v[q + 1]; c->ntier = v[q + 2]; q += 3;
@@ -4461,6 +4512,7 @@ __declspec(dllexport) void fl26_swiss_ko_tick(void)
 __declspec(dllexport) int fl26_swiss_access(const uint16_t* v, int n)
 {
   int k = 0;
+  g_ccup_gen++;
   for (int i = 0; v && i < n && k < ACCESS_MAX; i++) {
     const uint16_t* e = v + 4 * i;
     if (!e[0] || (e[2] > AFCL && (e[2] < UCLQ || e[2] > UECLQ)) || e[1] > FINAL_MAX) continue;
@@ -5414,6 +5466,30 @@ static int gc_feeds(uint16_t id, int g)
     return 0;
   }
   return 0;
+}
+/* B35: which day table a cup of ours plays on (CCUP_GROUP_DAYS, CCUP_KO_DAYS): the weeks of the
+   game's continental competition its leagues can send a club to as well -- each entry's league
+   (a cup winner's entry: its alt league) as gc_feeds sees it, the access list and the game's
+   rights table. Worked out once per g_ccup_gen: the league schedulers ask for the days often. */
+static int ccup_region(ccup_t* c)
+{
+  if (c->region && c->rgen == g_ccup_gen) return c->region - 1;
+  int lib = 0, afc = 0;
+  for (int e = 0; e < c->n && e < CCUP_MAX_ENTRY; e++) {
+    uint16_t lg = c->erank[e] ? c->ereg[e] : c->ealt[e];
+    if (!lg) continue;
+    lib |= gc_feeds(lg, GC_LIB);                       /* the qualifying round's leagues too */
+    afc |= gc_feeds(lg, GC_AFC);
+  }
+  int cr = lib ? CR_LIB : afc ? CR_AFC : CR_NONE;
+  c->region = (uint8_t)(cr + 1); c->rgen = g_ccup_gen;
+  logf("fl26swiss: cup %u -- its leagues reach%s%s%s%s: %s", (unsigned)c->reg, lib ? " the Libertadores" : "",
+       lib && afc ? " and" : "", afc ? " the AFC Champions League" : "", lib || afc ? "" : " no competition of the game",
+       CR_NAME[cr]);
+  if (lib && afc)
+    logf("fl26swiss: cup %u -- no table is clear of both; the AFC Champions League's days are not kept clear",
+         (unsigned)c->reg);
+  return cr;
 }
 /* a club of league id can play in Europe: a place of its own, or its cup's (above), or the rcal
    line says so. UEFA's competitions only: a league with a Libertadores or AFC place was taken for
