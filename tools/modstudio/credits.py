@@ -101,6 +101,7 @@ EVERYONE = [
      "code for the calendar patch set: the event icons back (#135) and another calendar day size "
      "with patchset.py --calendar-ids (#136), 0.2.2"),
     ("Julio (juliorivera10)", "Discord", "a Spanish foot column that made every imported player right-footed"),
+    ("Uncle Lanscilo (lanscilo)", "Discord", "help for other players in #support: adding leagues, reading Build logs"),
 ]
 
 # the people who supported the project on Ko-fi (ko-fi.com/mata28), first first; the README's
