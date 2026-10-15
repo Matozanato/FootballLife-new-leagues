@@ -2,7 +2,7 @@
 import os
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import (QComboBox, QFileDialog, QFormLayout, QLabel, QLineEdit, QPlainTextEdit,
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFormLayout, QLabel, QLineEdit, QPlainTextEdit,
                                QPushButton, QWidget)
 
 from .. import i18n
@@ -46,6 +46,17 @@ class Settings(Page):
             self.lang.addItem(name, code)
         self.lang.currentIndexChanged.connect(self.set_lang)
         form.addRow(_("Language"), row(self.lang))
+        # 0.2.4 (mato 15.10.): the save folder goes with the world in the game (saves.py)
+        form.addRow(section("Master League careers"), QLabel(""))
+        self.per_world = QCheckBox(_("Each world keeps its own careers (the save folder is switched with the world)"))
+        self.per_world.toggled.connect(self.set_per_world)
+        form.addRow("", self.per_world)
+        from .. import saves
+        form.addRow("", hint(_("A career is made for one world: in another world its leagues and clubs are not "
+                               "there. When this is on and you switch the world in the game, Mod Studio renames "
+                               "the game's save folder: the careers of the world going out are kept in "
+                               "save_<world>, and those of the world coming in come back. Your game settings go "
+                               "with you. Nothing is deleted. Folder: %s") % saves.root()))
         form.addRow(section("The game's tables"), QLabel(""))
         form.addRow("", hint(_("Mod Studio needs the game's tables (its list of clubs, leagues and players) once "
                                "on every PC: it unpacks them by itself the first time. After a game update click Unpack the game's "
@@ -111,6 +122,10 @@ class Settings(Page):
         self.lang.blockSignals(True)
         self.lang.setCurrentIndex(max(0, self.lang.findData(self.app.settings.get("lang", "en"))))
         self.lang.blockSignals(False)
+        from .. import saves
+        self.per_world.blockSignals(True)
+        self.per_world.setChecked(saves.enabled(self.app.settings))
+        self.per_world.blockSignals(False)
         p = getattr(self.app, "project", None)
         if p is not None and p.base:
             n = len(p.game_cl)
@@ -147,6 +162,15 @@ class Settings(Page):
         code = self.lang.currentData()
         if code and code != self.app.settings.get("lang", "en"):
             self.app.set_language(code)
+
+    def set_per_world(self, on):
+        from .. import saves
+        self.app.settings[saves.SETTING] = bool(on)
+        if on:
+            # from now on save holds the careers of the world in the game, whatever it held while
+            # this was off
+            saves.forget_owner()
+        self.app.save_settings()
 
     def unpack(self):
         p = getattr(self.app, "project", None)

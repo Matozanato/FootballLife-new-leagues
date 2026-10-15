@@ -43,6 +43,8 @@ def child(game, recipe):
         def exec(self):
             seen["shown"] = True
     PB.AfterBuild = After
+    from modstudio import saves as SV
+    SV.game_running = lambda: False                    # the save folder is a fake one (FL26_SAVE_ROOT)
     w = A.Main()
     import flpaths
     print("Mod Studio %s, game %s" % (VERSION, w.game.folder))
@@ -73,6 +75,12 @@ def child(game, recipe):
     ini = open(w.game.ini_path, encoding="utf-8", errors="replace").read()
     assert "livecpk\\%s" % world in ini, "the world is not switched on in sider.ini"
     print("ok %s built, its world file in modules, switched on in sider.ini" % world)
+    kr = os.environ["FL26_SAVE_ROOT"]
+    assert open(os.path.join(kr, "save_no-world", "ML00000000"), "rb").read() == b"a career before", (
+        "the save folder did not go aside with the switch: %s" % os.listdir(kr))
+    assert os.listdir(os.path.join(kr, "save")) == ["SYSTEM00000000"], os.listdir(os.path.join(kr, "save"))
+    assert any("Master League careers" in n for n in seen["info"].get("notes", [])), "no first-time note"
+    print("ok the save folder went with the switch (save_no-world), the first-time note in the after-build window")
 
 
 def main():
@@ -109,8 +117,14 @@ def main():
     json.dump({"game": game, "last_recipe": rc}, open(os.path.join(msdir, "settings.json"), "w", encoding="utf-8"))
 
     env = {k: v for k, v in os.environ.items() if k not in ("FL26_DIR", "FL26_EXE", "FL26_SIDER")}
+    konami = os.path.join(tmp, "KONAMI", "2026")      # never the PC's own save folder
+    os.makedirs(os.path.join(konami, "save"))
+    with open(os.path.join(konami, "save", "ML00000000"), "wb") as f:
+        f.write(b"a career before")
+    with open(os.path.join(konami, "save", "SYSTEM00000000"), "wb") as f:
+        f.write(b"options")
     env.update(APPDATA=appdata, PYTHONUSERBASE=site.USER_BASE, QT_QPA_PLATFORM="offscreen",
-               PYTHONIOENCODING="utf-8")
+               PYTHONIOENCODING="utf-8", FL26_SAVE_ROOT=konami)
     try:
         r = subprocess.run([sys.executable, os.path.abspath(__file__), "--child", game, rc], env=env)
     finally:

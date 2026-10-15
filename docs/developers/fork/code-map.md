@@ -24,6 +24,7 @@ line.
 | `profiles.py` | named setups (which roots and modules are on, in which order) |
 | `backups.py` | restore points: a copy of every file before the program changes it, in `SiderAddons\ModStudio\backups` (Build and Switch on through `before_change`, 0.2.4) |
 | `worlds.py` | the worlds in `livecpk`: the one in the game (`live`), Delete world into `ModStudio\backups\worlds\<world>` and back (`delete` / `restore`), Rename world (`rename`) |
+| `saves.py` | each world its own Master League careers: the game's `save` folder swapped with `save_<world>` at every world switch (`swap_saves`, `Switch`; the pages call `ui.save_switch` first), `rename_saves` for Rename world, the first copy in `ModStudio\backups\saves` (0.2.4) |
 | `checks.py` | health checks as `(level, area, text, page)` rows for Overview and Diagnostics |
 | `newlife.py` | a NewLife release as leagues to pick, and the recipe entries for one-click leagues, updates and the game's own leagues (see [newlife-format.md](newlife-format.md)) |
 | `updater.py` | looks at the GitHub releases of `REPO`, tag `modstudio-<version>`, downloads the zip, checks its sha256, swaps the program folder |

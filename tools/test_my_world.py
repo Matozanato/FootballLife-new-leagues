@@ -21,6 +21,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.pop("FL26_DIR", None)
 T = tempfile.mkdtemp(prefix="myworld-")
 os.environ["APPDATA"] = os.path.join(T, "appdata")      # before modstudio.app reads it (APPDIR)
+os.environ["FL26_SAVE_ROOT"] = os.path.join(T, "konami")  # Put in the game switches the save folder: a fake one
 
 from test_world_manage import make_game, put
 
@@ -58,6 +59,11 @@ def run():
     from modstudio.pages import myworld as M, builder as PB, install as PI
     PI.error = lambda *a, **k: None          # Import your world: "choose the game folder first"
     PB.ask = lambda *a, **k: False           # "unpack the game's tables?" (NewLife, no tables here): no
+    from modstudio import saves as SV, ui as U
+    SV.game_running = lambda: False          # the fake save folder: whatever runs on this PC
+    notes = []
+    U.info = lambda parent, title, text: notes.append(text)
+    put(os.path.join(os.environ["FL26_SAVE_ROOT"], "save", "ML00000000"), b"career of _FL26Live")
     theme.apply(qa)
     game = make_game(T)
     ms = os.path.join(os.environ["APPDATA"], "FL26ModStudio")
@@ -130,6 +136,17 @@ def run():
     settle(qa, 0.5)
     ok("Put in the game switched _FL26Old on in sider.ini, _FL26Live off", WL.live(game) == ["_FL26Old"])
     ok("its recipe is the open one now (the tabs change it)", w.project.recipe.get("world") == "_FL26Old")
+    kr = os.environ["FL26_SAVE_ROOT"]
+    ok("Put in the game switched the save folder: _FL26Live's career in save__FL26Live, save is _FL26Old's",
+       open(os.path.join(kr, "save__FL26Live", "ML00000000"), "rb").read() == b"career of _FL26Live"
+       and os.path.isdir(os.path.join(kr, "save")) and not os.listdir(os.path.join(kr, "save")))
+    ok("the first time the player is told where the careers are", len(notes) == 1 and "save__FL26Live" in notes[0])
+    st = w.page("Settings")
+    st.refresh()
+    ok("Settings: Each world keeps its own careers, on", st.per_world.isChecked())
+    st.per_world.setChecked(False)
+    ok("Settings: unticked, the setting is off", w.settings.get(SV.SETTING) is False)
+    st.per_world.setChecked(True)
     cards = {c.world: c for c in sec.cards}
     ok("the cards follow: _FL26Old green and first", sec.cards[0].world == "_FL26Old"
        and cards["_FL26Old"].objectName() == "worldlive" and cards["_FL26Live"].objectName() == "worldcard"

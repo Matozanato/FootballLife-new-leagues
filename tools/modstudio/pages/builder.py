@@ -28,6 +28,7 @@ from .. import filecache
 from ..i18n import _, tr
 from ..backups import snapshot
 from ..ui import Fold, Page, section, hint, row, ask, error, info, run_job, helpmark, helped, can_write, denied_box, denied
+from ..ui import save_switch, save_note
 
 EURO_WORLD = "_FL26Euro"
 
@@ -4088,14 +4089,23 @@ class Build(BuilderPage):
                           "and start a new Master League career.") % name)
 
         def switch():
-            if ask(self, title, _("Put %s in the game (switch it on in sider.ini)?") % name):
+            # the save folder goes with the world (mato 15.10.): refused here, before the question,
+            # when it cannot (the game running, a save_<world> name taken)
+            sw = save_switch(self, self.app, name, title=title)
+            if sw is None:
+                return
+            text = _("Put %s in the game (switch it on in sider.ini)?") % name
+            if sw.ask_text():
+                text += "\n\n" + sw.ask_text()
+            if ask(self, title, text):
                 def on(log):
                     snapshot(self.app.game.ini_path, "Your world: switch on " + name, self.app.game.sider_dir)
-                    B.switch_on(name, self.app.game.folder, log=log)
+                    self.switch_with_saves(sw, name, log)
                     self.project.drop_names()
                     log("\n" + _("Start the game, then 4. check."))
                 self.run(on)
                 self.app.bus.ini_changed.emit()
+                save_note(self, sw)
         self.run(go, background=True, done=switch)
 
     def run(self, what, background=False, done=None):
@@ -4270,8 +4280,14 @@ class Build(BuilderPage):
         game = self.app.game.folder
         w = pl["world"]
         replace = os.path.exists(os.path.join(self.app.game.livecpk_dir, w))
-        if not ask(self, "Build and install", _("Build %s and put it in the game? Mod Studio's modules are "
-                                                "installed too; sider.ini is backed up first.") % w):
+        sw = save_switch(self, self.app, w, title="Build and install")
+        if sw is None:
+            return
+        text = _("Build %s and put it in the game? Mod Studio's modules are installed too; sider.ini is "
+                 "backed up first.") % w
+        if sw.ask_text():
+            text += "\n\n" + sw.ask_text()
+        if not ask(self, "Build and install", text):
             return
         base = self.project.base
         try:
@@ -4290,10 +4306,10 @@ class Build(BuilderPage):
             log(B.describe(pl))
             log(_("building ..."))
             apart.build(pl, base, game, replace, log)
-            B.switch_on(w, game, log=log)
+            self.switch_with_saves(sw, w, log)
             self.project.drop_names()
             info["secs"] = int(time.time() - info["t0"])
-            info["notes"] = [n for n in (database_note(self.project), exhibition_note(pl)) if n]
+            info["notes"] = [n for n in (sw.note(), database_note(self.project), exhibition_note(pl)) if n]
 
         def done():
             self.app.bus.ini_changed.emit()
@@ -4310,19 +4326,42 @@ class Build(BuilderPage):
         w = world or self.project.recipe.get("world", "").strip()
         if not can_write(self, self.app.game):
             return
+        sw = save_switch(self, self.app, w)
+        if sw is None:
+            return
         text = _("Put %s in the game (switch it on in sider.ini)?") % w
         out = [x for x in self.project.live_worlds() if x != w] if world else []
         if out:
             text += "\n\n" + _("%s goes out of the game; it stays on disk and in My world.") % ", ".join(out)
+        if sw.ask_text():
+            text += "\n\n" + sw.ask_text()
         if ask(self, "Switch on", text):
             def go(log):
                 snapshot(self.app.game.ini_path, "Your world: switch on " + w, self.app.game.sider_dir)
-                B.switch_on(w, self.app.game.folder, log=log)
+                self.switch_with_saves(sw, w, log)
                 self.project.drop_names()
                 log("\n" + _("Start the game, then 4. check."))
             self.run(go)
             self.app.bus.ini_changed.emit()
+            save_note(self, sw)
             return True
+
+    def switch_with_saves(self, sw, w, log):
+        """Switch on `w`, its save folder first (saves.Switch: the careers of the world going out
+        aside, its own in, mato 15.10.); when the switch stops, the save folders go back as they were"""
+        from .. import saves
+        try:
+            sw.go(log)
+        except saves.SaveError as e:
+            raise B.BuildError(str(e))
+        try:
+            B.switch_on(w, self.app.game.folder, log=log)
+        except BaseException:
+            try:
+                sw.undo(log)
+            except Exception as e:                    # said; the switch's own error goes on up
+                log(_("the save folder could not be put back: %s") % e)
+            raise
 
     def do_install(self):
         if not can_write(self, self.app.game):

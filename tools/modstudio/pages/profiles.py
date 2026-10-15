@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (QFileDialog, QInputDialog, QLabel, QPlainTextEdit
 
 from .. import profiles as PR
 from ..i18n import _
-from ..ui import Page, section, hint, ask, error, info
+from ..ui import Page, section, hint, ask, error, info, save_switch, save_note
 
 
 def when(stamp):
@@ -163,7 +163,27 @@ class Profiles(Page):
                                              "Switch anyway?")):
             return
         notes = PR.apply(ini, p, self.sd(), self.app.game.modules_dir)
-        self.app.save_ini(ini, "profile %s" % p["name"])
+        # the world in the game changes: the save folder goes with it (mato 15.10., saves.Switch);
+        # refused with nothing written when it cannot be switched now
+        from .. import saves
+        on = saves.worlds_on(self.app.game, ini)
+        sw = save_switch(self, self.app, on[0] if on else None, title="Profiles")
+        if sw is None:
+            return
+        try:
+            sw.go()
+        except saves.SaveError as e:
+            error(self, "Profiles", str(e))
+            return
+        try:
+            self.app.save_ini(ini, "profile %s" % p["name"])
+        except BaseException:
+            try:
+                sw.undo()
+            except Exception:
+                pass
+            raise
+        save_note(self, sw)
         self.app.settings["profile"] = p["name"]
         self.app.update_header()
         self.refresh()

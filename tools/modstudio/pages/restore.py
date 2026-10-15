@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QComboBox, QFrame, QLabel, QPlainTextEdit, QPushButton, QSplitter, QTreeWidget,
                                QTreeWidgetItem, QVBoxLayout, QWidget)
 
-from .. import backups, factory, worlds as WL
+from .. import backups, factory, saves as SV, worlds as WL
 from ..i18n import _
 from ..roots import human
 from ..ui import Page, section, hint, row, ask, error, info, run_job, can_write, denied
@@ -108,8 +108,15 @@ class Restore(Page):
         if only in (None, WORLDS):
             for folder, inf in WL.backups_of(self.sd()):
                 rows.append((inf.get("time", ""), {"world_backup": folder, "info": inf}))
+            # the copy of the game's save folder taken before the first world switch (saves.py)
+            for folder, inf in SV.backups_of(self.sd()):
+                rows.append((inf.get("time", ""), {"saves_backup": folder, "info": inf}))
         for t, r in sorted(rows, key=lambda x: x[0], reverse=True):
-            if "world_backup" in r:
+            if "saves_backup" in r:
+                it = QTreeWidgetItem([when(t), SV.ACTIVE + "  (" + _("Master League saves") + ")",
+                                      _("the save folder before the first world switch"),
+                                      human(WL.size_of(r["saves_backup"]))])
+            elif "world_backup" in r:
                 inf = r["info"]
                 if inf.get("kind") == "renamed":
                     what = _("world renamed to %s") % inf.get("new", "")
@@ -139,6 +146,9 @@ class Restore(Page):
             return
         if "world_backup" in r:
             self.diff.setPlainText(self.world_text(r))
+            return
+        if "saves_backup" in r:
+            self.diff.setPlainText(self.saves_text(r))
             return
         now = os.path.join(self.sd(), r["file"])
         old = os.path.join(self.sd(), r["copy"])
@@ -171,6 +181,14 @@ class Restore(Page):
                       r["world_backup"]]
         return "\n".join(lines)
 
+    def saves_text(self, r):
+        inf = r["info"]
+        return "\n".join([
+            _("Your Master League save folder as it was before the first world switch:"), "",
+            "  " + os.path.join(r["saves_backup"], SV.ACTIVE), "",
+            _("It was copied from %s. Mod Studio does not put it back by itself: close the game, then copy "
+              "the files you want from this copy into the save folder.") % inf.get("from", "")])
+
     def restore_world(self, r):
         inf = r["info"]
         if self.app.game.running()[0] or self.app.game.running()[1]:
@@ -194,6 +212,13 @@ class Restore(Page):
         if inf.get("kind") == "renamed":
             from .roots import rename_recipe
             rename_recipe(self.app, inf.get("new", ""), w)
+            from .. import saves                       # its careers kept aside get the name back too
+            if saves.enabled(self.app.settings):
+                try:
+                    saves.rename_saves(inf.get("new", ""), w)
+                except (saves.SaveError, OSError) as e:
+                    error(self, "Restore points", _("%s is back, but its Master League careers stay in %s:")
+                          % (w, saves.name_of(inf.get("new", ""))) + "\n\n" + str(e))
         self.app.bus.ini_changed.emit()
         self.app.bus.content_changed.emit()
         self.say(_("%s is back.") % w, "ok")
@@ -205,6 +230,14 @@ class Restore(Page):
             return
         if "world_backup" in r:
             self.restore_world(r)
+            return
+        if "saves_backup" in r:
+            # careers are the player's: shown, never written over by Mod Studio
+            info(self, "Restore points", self.saves_text(r))
+            try:
+                os.startfile(r["saves_backup"])
+            except OSError:
+                pass
             return
         g, s = self.app.game.running()
         if not ask(self, "Restore points", _("Put back %s as it was on %s? The file as it is now is kept as a "

@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QHBoxLayout, QLabel
 from .. import theme, roots as R, worlds as WL
 from ..i18n import _
 from ..siderini import norm, root_path
-from ..ui import Page, section, hint, ask, run_job, pick_dir, row, error, can_write, denied
+from ..ui import Page, section, hint, ask, run_job, pick_dir, row, error, can_write, denied, save_switch, save_note
 
 WORLD_PREFIX = "_fl26"
 
@@ -433,9 +433,32 @@ class Roots(Page):
     def apply(self):
         if not self.dirty:
             return
-        self.app.save_ini(self.ini, "content folders changed")
+        # another world ticked on (or the world unticked): the save folder goes with it (mato 15.10.;
+        # saves.Switch), refused with nothing written when it cannot be switched now
+        from .. import saves
+        on = saves.worlds_on(self.app.game, self.ini)
+        sw = save_switch(self, self.app, on[0] if on else None, title="Content folders")
+        if sw is None:
+            return
+        if sw.needed() and not ask(self, "Content folders", _("The world in the game changes.") + "\n\n" +
+                                   sw.ask_text()):
+            return
+        try:
+            sw.go()
+        except saves.SaveError as e:
+            error(self, "Content folders", str(e))
+            return
+        try:
+            self.app.save_ini(self.ini, "content folders changed")
+        except BaseException:
+            try:
+                sw.undo()
+            except Exception:
+                pass
+            raise
         self.dirty = False
         self.load()
+        save_note(self, sw)
 
     # ---- inspector ----
     def _current(self):
@@ -541,6 +564,11 @@ class Roots(Page):
                   "it back. Mod Studio keeps the last %d copies of each world.") % (where, WL.KEEP) + "\n\n" +
                 _("Your leagues stay in Mod Studio (your saved world file is not deleted), so you can "
                   "build it again."))
+        from .. import saves
+        if saves.enabled(self.app.settings) or os.path.isdir(saves.folder_of(w)):
+            # careers are the player's: Delete world never touches them (mato 15.10.)
+            text += "\n\n" + _("Its Master League careers stay in %s (in %s): Mod Studio does not delete "
+                                "them.") % (saves.name_of(w), saves.root())
         if named:
             text += "\n\n" + _("Mod Studio's modules still read this world. After it is deleted the game "
                                 "has no world of yours until you switch one on (Build and install, or "
@@ -580,6 +608,10 @@ class Roots(Page):
         if not ok or not new or new == w:
             return
         why = WL.check_name(self.app.game, new, w)
+        from .. import saves
+        on = saves.enabled(self.app.settings)
+        if not why and on:
+            why = saves.check_rename(w, new)          # its careers kept aside go with the name
         if why:
             error(self, title, _(why))
             return
@@ -590,7 +622,10 @@ class Roots(Page):
                    _("A career you play with it keeps working: the game never sees the world's name, only "
                      "the files in it, and they do not change.") + "\n\n" +
                    _("The small files it changes are kept first in Restore points; Put this copy back "
-                     "renames it back.")):
+                     "renames it back.") +
+                   ("\n\n" + _("Its Master League careers kept in %s are renamed to %s.") % (
+                       saves.name_of(w), saves.name_of(new))
+                    if on and os.path.isdir(saves.folder_of(w)) else "")):
             return
         try:
             WL.rename(self.app.game, w, new)
@@ -602,8 +637,16 @@ class Roots(Page):
                 error(self, title, _("It stopped, nothing was renamed:") + "\n\n" + str(e))
             return
         rename_recipe(self.app, w, new)
+        moved = None
+        if on:
+            try:
+                moved = saves.rename_saves(w, new)
+            except (saves.SaveError, OSError) as e:
+                error(self, title, _("%s is now %s, but its Master League careers stay in %s:") % (
+                    w, new, saves.name_of(w)) + "\n\n" + str(e))
         self.after_world_change()
-        self.say(_("%s is now %s.") % (w, new), "ok")
+        self.say(_("%s is now %s.") % (w, new) + ("  " + _("Its careers: %s.") % os.path.basename(moved)
+                                                   if moved else ""), "ok")
         return new
 
     def after_world_change(self):

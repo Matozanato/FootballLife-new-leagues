@@ -389,6 +389,27 @@ def can_write(parent, game):
     return False
 
 
+def save_switch(parent, app, new, old=..., title="Switch on"):
+    """the save folder half of a world switch to `new` (saves.Switch): None, after saying why, when
+    it cannot be done now (the game running, a save_<world> name taken) -- the page then does not
+    switch either. old: the world in the game before, when the page knows it better than sider.ini
+    does now (Import your world writes the new world's line before it switches; None: no world)"""
+    from . import saves
+    sw = saves.Switch(app.settings, app.game, new, saves.AUTO if old is ... else old)
+    why = sw.problem()
+    if why:
+        error(parent, title, why)
+        return None
+    return sw
+
+
+def save_note(parent, sw):
+    """the first swap ever: say once, in plain words, where the careers went"""
+    text = sw.note() if sw is not None else ""
+    if text:
+        info(parent, "Master League careers", text)
+
+
 def pick_file(parent, title, filt, start=""):
     p, _f = QFileDialog.getOpenFileName(parent, _(title), start, filt)
     return p

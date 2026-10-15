@@ -7,10 +7,10 @@ from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (QComboBox, QFileDialog, QFrame, QLabel, QLineEdit, QPushButton,
                                QTreeWidget, QTreeWidgetItem, QVBoxLayout)
 
-from .. import installer as I, theme
+from .. import installer as I, saves, theme
 from ..i18n import _
 from ..roots import human
-from ..ui import Page, Fold, section, hint, row, ask, error, info, run_job, can_write, denied
+from ..ui import Page, Fold, section, hint, row, ask, error, info, run_job, can_write, denied, save_switch, save_note
 
 ROW = Qt.UserRole
 KIND = {"root": "Content folder (livecpk)", "content": "Content server files", "module": "Lua module",
@@ -335,6 +335,15 @@ class Install(Page):
             return
         if not can_write(self, self.app.game):        # a game under Program Files (B14)
             return
+        # a world goes in switched on, and its save folder with it (mato 15.10.): the world in the
+        # game now, before the install writes the new one's line, and refused here when the save
+        # folder cannot be switched (the game running, a save_<world> name taken)
+        self.save_sw = None
+        new = next((p.name for p in chosen if p.kind == "world"), None)
+        if new:
+            self.save_sw = save_switch(self, self.app, new, saves.in_game(self.app.game), title="Import your world")
+            if self.save_sw is None:
+                return
         self.app.busy(True, _("Installing %s") % name)
         self.go.setEnabled(False)
         log = []
@@ -391,12 +400,25 @@ class Install(Page):
         w, game = rec["world"], self.app.game
         modules = True
         log = []
+        sw = getattr(self, "save_sw", None)
+        if sw is None or sw.new != w:
+            sw = saves.Switch(self.app.settings, game, w)
         try:
             snapshot(game.ini_path, "Import your world: switch on " + w, game.sider_dir)
             if modules:
                 B.install_modules(game.folder, log=log.append)
-            B.switch_on(w, game.folder, log=log.append)
-        except Exception as e:                            # BuildError, a missing module pack
+            # the careers of the world going out aside, this one's in; back as they were when the
+            # switch stops
+            sw.go(log.append)
+            try:
+                B.switch_on(w, game.folder, log=log.append)
+            except BaseException:
+                try:
+                    sw.undo(log.append)
+                except Exception:
+                    pass
+                raise
+        except Exception as e:                            # BuildError, SaveError, a missing module pack
             if denied(self, e):
                 return
             error(self, "Import your world", _("%s is installed, but switching it on stopped:") % w + "\n\n" + str(e)
@@ -404,6 +426,7 @@ class Install(Page):
             return
         finally:
             self.app.bus.ini_changed.emit()
+        save_note(self, sw)
         self.final_check(w)
 
     def final_check(self, w):
