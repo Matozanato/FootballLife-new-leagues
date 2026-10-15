@@ -2776,7 +2776,8 @@ class NewClubs(BuilderPage):
         ed = self.project.edits("clubs").get(str(tid), {})       # Edit club: a new name, crest ...
         n = len((pl.get(str(tid)) or {}).get("edits") or {})
         it = QTreeWidgetItem([str(k + 1), ed.get("name") or name, ed.get("abbr") or short, str(tid),
-                              _("(new crest)") if ed.get("crest") else _("(the game's)"), str(n) if n else ""])
+                              _("(new crest)") if ed.get("crest") or "kit" in ed else _("(the game's)"),
+                              str(n) if n else ""])
         sw = e.get("swap")
         if isinstance(sw, dict):
             tip = _("A club of the game. A new club, %s, takes its place in the game.") % sw.get("name", "")
@@ -2789,7 +2790,7 @@ class NewClubs(BuilderPage):
         for c in range(6):
             it.setToolTip(c, tip)
         it.setForeground(4, QBrush(QColor(theme.SUBTLE)))
-        pm = pixmap(ed.get("crest"), 28)
+        pm = pixmap(ed.get("crest"), 28, ed.get("kit") or None)
         if pm:
             it.setIcon(1, pm)
         it.setData(0, Qt.UserRole, k)
@@ -3096,7 +3097,7 @@ def edit_game_club(page, tid):
     of the game on New clubs). True when something was kept."""
     project = page.project
     n, a = project.game_cl[tid]
-    e = project.edits("clubs").get(str(tid), {})
+    e = old = project.edits("clubs").get(str(tid), {})
     d = ClubDialog(page, e.get("name") or n, e.get("abbr") or a, e.get("crest"), was=(n, a),
                    portrait=coach_portrait(project, str(tid)), stadium=club_stadium(project, str(tid)),
                    stadium_lib=stadium_lib(page.app), tid=tid)
@@ -3112,6 +3113,8 @@ def edit_game_club(page, tid):
         e["abbr"] = short
     if crest:
         e["crest"] = crest
+    if "kit" in old:                     # a place NewLife gave another club (B57): its shield stays
+        e["kit"] = old["kit"]
     if e:
         project.edits("clubs")[str(tid)] = e
     else:
@@ -3442,7 +3445,7 @@ class GameLeagues(BuilderPage):
         for c, v in enumerate(vals):
             it.setText(c, v)
         it.setToolTip(1, _("Team ID: %s") % tid + ("   " + _("Crest: %s") % vals[3] if vals[3] else ""))
-        pm = pixmap(e.get("crest"), 24)
+        pm = pixmap(e.get("crest"), 24, e.get("kit") or None)
         it.setIcon(1, pm if pm else QPixmap())
 
     def keep_league(self):

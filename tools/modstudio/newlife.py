@@ -891,6 +891,11 @@ def refresh_game_leagues(recipe, rel, info, cids):
             crest = rel.crest(c)
             if crest:
                 was["crest"] = crest
+            # B57: the club's shirt too, so the place gets the shield a new club gets when the
+            # release has no crest picture for it (or the picture is not on this PC); without it
+            # the place kept the crest of the game's club that went down. "" draws the badge
+            # with the club's initials: the place is never left with the old club's crest
+            was["kit"] = rel.clubs[c].get("home_kit") or ""
             clubs.setdefault(str(t), {}).update(was)
             rec["replaced"][str(t)] = was
             squads[t] = c

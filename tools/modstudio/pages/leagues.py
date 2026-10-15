@@ -455,7 +455,7 @@ class Leagues(BuilderPage):
                 tid = int(game[k]["id"])
                 ed = P.edits("clubs").get(str(tid), {})
                 gname, gshort = P.game_cl.get(tid, (str(tid), ""))
-                path, kit = ed.get("crest"), None
+                path, kit = ed.get("crest"), ed.get("kit") or None
                 name, abbr = ed.get("name") or gname, ed.get("abbr") or gshort
             cell = QLabel()
             cell.setAlignment(Qt.AlignHCenter | Qt.AlignTop)

@@ -4482,9 +4482,12 @@ def pictures(pl, root, base, log=print, game=None):
                                  have_picture(v["logo"], v.get("name") or "competition %s" % cid, log,
                                               "logo", "drawn emblem"))
     for tid, v in (e.get("clubs") or {}).items():
-        if v.get("crest"):
-            lbassets.club_crest(root, int(tid), "",
-                                have_picture(v["crest"], v.get("name") or tid, log))
+        # "kit": a place of the game's NewLife gave another club (refresh_game_leagues, B57); with
+        # no crest picture it gets that club's shield (or badge), as a new club does, never the
+        # crest of the club that left. The club keeps its id
+        if v.get("crest") or "kit" in v:
+            pic = have_picture(v["crest"], v.get("name") or tid, log) if v.get("crest") else None
+            lbassets.club_crest(root, int(tid), v.get("abbr") or v.get("name") or "", pic, v.get("kit") or None)
     cups = cup_emblems(pl)
     for cid, name, logo in cups:
         lbassets.league_logo(root, cid, name, have_picture(logo, name, log, "logo", "drawn emblem"))
