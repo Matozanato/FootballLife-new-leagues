@@ -1305,15 +1305,35 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
             if order != n:
                 pack = u32(assigns, ao + E.A_PACK) & ~E.ORDER_MASK | n << E.ORDER_SHIFT
                 assigns[ao + E.A_PACK:ao + E.A_PACK + 4] = pack.to_bytes(4, "little")
+    # a squad past what the game holds keeps its first ones: the last to come (joins, adds) are
+    # left out with a note naming the club, not a stop. 0.2.4 beta stopped the Build on "players
+    # of 130: 42 players -- a club has at most 40", and the club was the same one twice in the
+    # world (B46, vmican 15.10.: "no se sabe ni cual es el club")
+    cut = set()
     for club, c in changes.items():
         tid = club_tid(club)
-        if tid is None or not (c.get("join") or c.get("add")):
+        if tid is None or tid in cut or not (c.get("join") or c.get("add")):
             continue
         national = kinds.get(tid, (False, 0))[0]
-        n, most = len(squad_of(tid)), NATIONAL_MAX if national else CLUB_MAX
-        if n > most:
-            raise Error("players of %s: %d players -- a %s has at most %d" % (
-                club, n, "national team" if national else "club", most))
+        sq, most = squad_of(tid), NATIONAL_MAX if national else CLUB_MAX
+        if len(sq) <= most:
+            continue
+        cut.add(tid)
+        out = sq[most:]
+        gone = {ao for _o, _p, ao in out}
+        assigns = b"".join(assigns[i * A_REC:(i + 1) * A_REC] for i in range(len(assigns) // A_REC)
+                           if i * A_REC not in gone)
+        assigns = bytearray(assigns)
+        for n, (order, pid, ao) in enumerate(squad_of(tid)):
+            if order != n:
+                pack = u32(assigns, ao + E.A_PACK) & ~E.ORDER_MASK | n << E.ORDER_SHIFT
+                assigns[ao + E.A_PACK:ao + E.A_PACK + 4] = pack.to_bytes(4, "little")
+        homes = club_homes(pl, tid)
+        log("  NOTE: players of %s: %d players, a %s has at most %d -- the last %d to come are left "
+            "out (%s)%s" % (club_label(pl, base, db, tid, club), len(sq), "national team" if national else "club",
+                            most, len(out), ", ".join(str(pid) for _o, pid, _a in out),
+                            "; the club is in your world %d times (%s): keep it in one league"
+                            % (len(homes), ", ".join(homes)) if len(homes) > 1 else ""))
     if len(players) > shipped_n:
         # Player.bin is in id order, as the game ships it; an id of the recipe's own can land
         # anywhere above the game's, so the world's part is put back in order
@@ -1339,6 +1359,39 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
     if lined:
         log("  best eleven picked for %d new clubs" % lined)
     return changed + added + removed + joined
+
+
+def club_homes(pl, tid):
+    """the leagues of the plan a team id plays in: more than one is the same club twice"""
+    return [p["name"] for p in pl.get("leagues") or [] for t in p.get("teams") or [] if t == tid]
+
+
+def club_label(pl, base, db, tid, club):
+    """'<club name> (<league>, id <tid>)' for a note: the recipe's key alone ("130") said nothing"""
+    name = None
+    for p in pl.get("leagues") or []:
+        teams = p.get("teams") or []
+        if tid in teams:
+            k = teams.index(tid)
+            names = p.get("club_names") or []
+            if k < len(names) and str(names[k]).strip():
+                name = str(names[k]).strip()
+            break
+    if name is None:
+        import mkworld as W
+        for src in (db, base):
+            try:
+                raw = load(src, "Team.bin")
+            except (Error, OSError, ValueError, AssertionError):    # the world has no Team.bin of its own yet
+                continue
+            for o in range(0, len(raw) - W.T_REC + 1, W.T_REC):
+                if u32(raw, o + W.T_ID) == tid:
+                    name = bytes(raw[o + W.T_NAME:o + W.T_NAME + W.T_NAME_LEN]).split(b"\0")[0].decode("utf-8", "replace")
+                    break
+            if name:
+                break
+    homes = club_homes(pl, tid)
+    return "%s (%s, id %d)" % (name or club, homes[0] if homes else "a league of the game", tid)
 
 
 def _write(players, assigns, po, ao, ch):

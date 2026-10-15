@@ -97,6 +97,7 @@ once, and your 0.2.2 career keeps working.
 
 ## Fixed
 
+- **Build stopped on "players of 130: 42 players -- a club has at most 40"**, with only a number to go on. A club past 40 players (a national team past 26) after the transfers now keeps its first 40 and Build goes on; the Build log names the club, its league and its id, says which players were left out, and when the club is in your world twice (the usual cause) names both leagues, so you know which one to take it out of. (Thanks vmican)
 - **The final check after Import your world said kits.lua (and scoreboards.lua) is not in SiderAddons\modules** on a game that loads SPFL26's own Kit Server and Scoreboard Server: those are in modules\common, and the check only looked in modules. It now looks where sider.ini has them. (Thanks vmican)
 - **Import kits with the game under Program Files stopped with a bare "[WinError 5] Access is denied".** Import kits now checks first that Mod Studio may write into the game folder, and Import kits, a content server's Save, putting a restore point back and Move the Edit save aside show the same box as Build when Windows refuses the write: run Mod Studio as administrator (the box has a button for it) or move the game out of Program Files. (Thanks ZéDosCães21)
 - **Dragging a file onto Import your world did nothing when Mod Studio runs as administrator.** Windows blocks drag and drop into a program started as administrator; the drop area now says so and points to Choose a file... and Choose a folder.... (Thanks quicksite)
