@@ -42,6 +42,17 @@ class Drop(QFrame):
         b2 = QPushButton(_("Choose a folder..."))
         b2.clicked.connect(page.pick_folder)
         v.addWidget(row("stretch", b1, b2, "stretch", stretch=False))
+        # B39 (quicksite): Windows does not let Explorer drop files on a program that runs as
+        # administrator (Restart as administrator, a game under Program Files); dropping did nothing
+        from .. import access
+        if access.is_admin():
+            n = QLabel(_("Mod Studio runs as administrator, so Windows blocks drag and drop here: "
+                         "use Choose a file... or Choose a folder..."))
+            n.setObjectName("cardlabel")
+            n.setStyleSheet("color: %s;" % theme.WARN)
+            n.setWordWrap(True)
+            n.setAlignment(Qt.AlignCenter)
+            v.addWidget(n)
 
     def dragEnterEvent(self, e):
         if e.mimeData().hasUrls():
@@ -77,7 +88,7 @@ class Install(Page):
         rv.addWidget(self.summary)
         self.go = QPushButton(_("Install"))
         self.go.setObjectName("primary")
-        self.go.setStyleSheet("font-size: 11pt; font-weight: bold; padding: 8px 26px; border-radius: 8px;")
+        self.go.setStyleSheet("font-size: 10pt; font-weight: bold; padding: 8px 24px;")
         self.go.clicked.connect(self.install)
         self.go.setEnabled(False)
         rv.addWidget(row("stretch", self.go, stretch=False))

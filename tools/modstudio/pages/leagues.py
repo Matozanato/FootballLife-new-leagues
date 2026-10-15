@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QBrush, QColor, QPixmap
 from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QHBoxLayout, QLabel, QLineEdit, QMenu,
                                QPushButton, QSplitter, QStackedWidget, QToolButton, QTreeWidget,
-                               QTreeWidgetItem, QVBoxLayout, QWidget, QFormLayout, QGridLayout)
+                               QTreeWidgetItem, QVBoxLayout, QWidget, QFormLayout, QGridLayout, QScrollArea)
 
 from ..i18n import _
 from ..ui import hint, row
@@ -201,7 +201,15 @@ class Leagues(BuilderPage):
         b_rm.clicked.connect(lambda: self.on_ours("remove"))
         ov.addWidget(row(b_edit, b_low, b_clubs, b_pl, "stretch", b_rm))
         ov.addStretch(1)
-        self.right.addWidget(ours)
+        # 0.2.4: in a scroll area of its own: at 1280x720 the rows (wrapped labels) were squeezed
+        # into each other; now they keep their height and the panel scrolls
+        o_sa = QScrollArea()
+        o_sa.setWidgetResizable(True)
+        o_sa.setFrameShape(QScrollArea.NoFrame)
+        o_sa.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        o_sa.setStyleSheet("QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; }")
+        o_sa.setWidget(ours)
+        self.right.addWidget(o_sa)
         # a league of the game: the game's leagues panel, without its own list
         self.game = GameLeagues(app)
         self.game.list.parentWidget().hide()
@@ -294,7 +302,7 @@ class Leagues(BuilderPage):
         for code, cname in CONTINENTS:
             h = QTreeWidgetItem([_(cname).upper(), ""])
             h.setFlags(Qt.ItemIsEnabled | Qt.ItemIsDropEnabled)
-            h.setForeground(0, QBrush(QColor("#6F7986")))
+            h.setForeground(0, QBrush(QColor(theme.SUBTLE)))
             fnt = h.font(0)
             fnt.setBold(True)
             fnt.setPointSizeF(fnt.pointSizeF() * 0.85)

@@ -2264,6 +2264,16 @@ class NewLeagues(BuilderPage):
                     "Kick Off list: by continent as the game has it, A-Z, or your own")
         self.action("Seasons of the game's leagues", self.game_seasons, tip="Experimental: the game's "
                     "February-December leagues (Japan, China, Brazil, Chile, Saudi Arabia) August to May")
+        # 0.2.4: thirteen buttons do not fit next to the title; they go under it and wrap
+        from ..ui import FlowLayout
+        flow_w = QWidget()
+        flow = FlowLayout(flow_w)
+        buttons = [self.actions.itemAt(i).widget() for i in range(self.actions.count())]
+        for w in buttons:
+            if isinstance(w, QPushButton):
+                self.actions.removeWidget(w)
+                flow.addWidget(w)
+        self.outer.insertWidget(1, flow_w)
         top = QHBoxLayout()
         top.addWidget(QLabel(_("World name")))
         self.world = QLineEdit()
@@ -3650,8 +3660,7 @@ class Build(BuilderPage):
         # pressed Build and install on an installed Modpack, 14.10.)
         note = QLabel(_(FOR_MODDERS))
         note.setWordWrap(True)
-        note.setStyleSheet("background: %s; color: %s; border-radius: 6px; padding: 8px 12px;"
-                           % (theme.WARN_BG, theme.WARN_FG))
+        note.setObjectName("banner_warn")
         self.outer.addWidget(note)
         self.steps = []
         # 0.2.4: three to a row, so no button is cut off at the window's usual 1080 width (exe test)
@@ -3696,7 +3705,7 @@ class Build(BuilderPage):
         one = QHBoxLayout()
         self.b_all = QPushButton(_("Build and install"))
         self.b_all.setObjectName("primary")
-        self.b_all.setStyleSheet("font-size: 11pt; font-weight: bold; padding: 10px 26px; border-radius: 8px;")
+        self.b_all.setStyleSheet("font-size: 10pt; font-weight: bold; padding: 9px 24px;")
         self.b_all.setToolTip(_("Installs the modules, builds the world, switches it on and says what is left"))
         self.b_all.clicked.connect(self.build_all)
         self.steps.append(self.b_all)
@@ -3972,7 +3981,7 @@ class Build(BuilderPage):
                                                      _("%d missing: Home > Install now") % len(missing)))
         r = self.project.recipe
         # the world's name and size are in the bar above the tabs (0.2.4: Build and edit your world)
-        self.what.setText(html.escape(self.file_text(w)))
+        self.what.setText(html.escape(self.file_text(w), quote=False))
         ready = self.ready_live()
         for b in self.steps[1:4] + [self.b_all]:          # plan, build, switch on, Build and install
             b.setEnabled(not ready)

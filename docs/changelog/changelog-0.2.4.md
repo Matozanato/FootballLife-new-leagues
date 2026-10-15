@@ -5,6 +5,7 @@ once, and your 0.2.2 career keeps working.
 
 ## Changed
 
+- **A new look.** A dark, calmer window: the state of the game in boxes across the top (game folder, Sider, world, modules, leagues, pack), numbered sections, Home's ready check as a table with a red bar that names the problem and the button that puts it right, and a status bar at the bottom, in Windows' own font. Tables read better: rows that alternate, a header on its own band, the chosen row in blue (Thanks jibibi). Nothing moved: the same pages, buttons and steps.
 - **Export the world takes the scoreboards and menu themes of other packs along.** When the
   switched-on map lines of the Scoreboard Server or Menu Server on your PC give the world's
   competitions (its leagues, cups, super cups, confederation cups) a board or a theme from another
@@ -96,6 +97,7 @@ once, and your 0.2.2 career keeps working.
 
 ## Fixed
 
+- **Dragging a file onto Import your world did nothing when Mod Studio runs as administrator.** Windows blocks drag and drop into a program started as administrator; the drop area now says so and points to Choose a file... and Choose a folder.... (Thanks quicksite)
 - A scoreboard or menu pack made for another world now lands on the right league: Import your world puts each competition line on the competition its name says in your world (the FL26 Modpack scoreboard zips carry the ids of the full modpack, so League Two went on another league and the game kept its own scoreboard), reads the zips' `map line.txt` too, and says which league your world has not. (Thanks quicksite)
 - **Home said "Mod Studio's modules need installing: 2 missing" for ever.** Mod Studio updated over
   an older version kept the old pack's single modules that a bundle has since replaced, and Install

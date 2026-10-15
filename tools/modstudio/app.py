@@ -1,10 +1,10 @@
 r"""python -m modstudio.app   -> the FL26 Mod Studio window
 
-    top bar      File / Game / Profiles / Language / Help menus, Play
-    header       the game folder, the active profile, whether the game is running
-    left         the sections (pages/*.py), grouped
+    top bar      the name, File / Game / Profiles / Language / Help menus, ready or not, Start the game
+    state boxes  the game folder, Sider, the world in the game, the modules, its leagues, the pack
+    sections     numbered across the top (pages/*.py); Game content and Tools open a menu
     centre       the open section
-    status bar   what the program is doing
+    status bar   ready or the problem, what the program is doing, whether the world is saved
 
 Settings (game folder, language, window size) live in %APPDATA%\FL26ModStudio\settings.json.
 """
@@ -16,14 +16,15 @@ if os.path.dirname(HERE) not in sys.path:
 
 from PySide6.QtCore import Qt, QTimer, Signal, QObject
 from PySide6.QtGui import QAction, QIcon, QKeySequence, QShortcut
-from PySide6.QtWidgets import (QApplication, QButtonGroup, QDialog, QHBoxLayout, QLabel, QMainWindow,
-                               QMenu, QPushButton, QScrollArea, QStackedWidget, QStatusBar, QTextBrowser,
-                               QToolButton, QVBoxLayout, QWidget, QMessageBox)
+from PySide6.QtWidgets import (QApplication, QButtonGroup, QDialog, QFrame, QHBoxLayout, QLabel, QMainWindow,
+                               QMenu, QPushButton, QScrollArea, QSizePolicy, QStackedWidget, QStatusBar,
+                               QTextBrowser, QToolButton, QVBoxLayout, QWidget, QMessageBox)
 
 from modstudio import VERSION, theme, i18n
 from modstudio.i18n import _
 from modstudio.game import Game, guess_folders
 from modstudio.siderini import SiderIni
+from modstudio.ui import Stat
 import siderdir
 
 APPDIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "FL26ModStudio")
@@ -105,6 +106,30 @@ TAB_TITLE = {"Build": "Build", "Packages": "League packages",
 OPEN_FOR = {"NewLeagues": "World"}     # a page not in the bar: the section that stays lit
 
 
+def file_version(path):
+    """the version a Windows exe carries ("7.3.3"), "" when it has none or this is not Windows"""
+    try:
+        import ctypes
+        from ctypes import wintypes
+        v = ctypes.windll.version
+        size = v.GetFileVersionInfoSizeW(path, None)
+        if not size:
+            return ""
+        buf = ctypes.create_string_buffer(size)
+        if not v.GetFileVersionInfoW(path, 0, size, buf):
+            return ""
+        p, n = ctypes.c_void_p(), wintypes.UINT()
+        if not v.VerQueryValueW(buf, "\\", ctypes.byref(p), ctypes.byref(n)) or n.value < 52:
+            return ""
+        ms, ls = ctypes.cast(p, ctypes.POINTER(wintypes.DWORD * 13)).contents[2:4]
+        parts = [ms >> 16, ms & 0xFFFF, ls >> 16, ls & 0xFFFF]
+        while len(parts) > 2 and parts[-1] == 0:
+            parts.pop()
+        return ".".join(str(x) for x in parts)
+    except Exception:
+        return ""
+
+
 class Main(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -173,27 +198,32 @@ class Main(QMainWindow):
         v.setSpacing(0)
         v.addWidget(self._topbar())
         v.addWidget(self._header())
-        body = QHBoxLayout()
-        body.setSpacing(0)
         self.stack = QStackedWidget()
-        body.addWidget(self._nav())
-        body.addWidget(self.stack, 1)
-        v.addLayout(body, 1)
+        v.addWidget(self._nav())
+        v.addWidget(self.stack, 1)
         self.setCentralWidget(root)
 
         sb = QStatusBar()
+        sb.setSizeGripEnabled(False)
+        # left: ready, or the problem by name (the same as the box at the top)
+        self.status_state = QLabel("")
+        self.status_state.setObjectName("sbstate")
+        sb.addWidget(self.status_state)
         self.status_left = QLabel(_("Ready"))
-        self.status_busy = QLabel("")
         sb.addWidget(self.status_left, 1)
+        self.status_busy = QLabel("")
         sb.addPermanentWidget(self.status_busy)
         # edits of clubs, players and leagues go into the recipe at once; this says whether the
         # recipe file has them yet (poll, 11.10.: people looked for an Apply button)
         self.status_saved = QPushButton("")
+        self.status_saved.setObjectName("statusbtn")
         self.status_saved.setFlat(True)
         self.status_saved.setCursor(Qt.PointingHandCursor)
         self.status_saved.clicked.connect(lambda: self.project.autosave())
         sb.addPermanentWidget(self.status_saved)
-        sb.addPermanentWidget(QLabel("v" + VERSION))
+        self.status_points = QLabel("")
+        sb.addPermanentWidget(self.status_points)
+        sb.addPermanentWidget(QLabel("MOD STUDIO " + VERSION))
         self.setStatusBar(sb)
         self.project.changed.connect(self.show_saved)
         self.project.saved.connect(self.show_saved)
@@ -212,6 +242,7 @@ class Main(QMainWindow):
         self._sections()
         self.bus.game_changed.connect(self.update_header)
         self.bus.ini_changed.connect(self.update_header)
+        self.bus.content_changed.connect(self.update_header)
         self.update_header()
         self._run_timer = QTimer(self, interval=4000, timeout=self.update_running)
         self._run_timer.start()
@@ -256,10 +287,23 @@ class Main(QMainWindow):
 
     def _topbar(self):
         w = QWidget()
-        w.setObjectName("topbar")
+        w.setObjectName("menubar")
+        w.setAttribute(Qt.WA_StyledBackground, True)
         h = QHBoxLayout(w)
-        h.setContentsMargins(6, 4, 8, 4)
+        h.setContentsMargins(14, 6, 12, 2)
         h.setSpacing(2)
+        mark = QLabel(">_")
+        mark.setObjectName("brandmark")
+        h.addWidget(mark)
+        h.addSpacing(8)
+        self.h_title = QLabel("FL26 // MOD STUDIO")
+        self.h_title.setObjectName("brand")
+        h.addWidget(self.h_title)
+        h.addSpacing(10)
+        ver = QLabel(VERSION)
+        ver.setObjectName("version")
+        h.addWidget(ver, 0, Qt.AlignVCenter)
+        h.addSpacing(18)
         h.addWidget(self._menu_button("File", [
             ("New world", lambda: self.page("NewLeagues").new_recipe()),
             ("Open a world...", lambda: self.page("NewLeagues").open_recipe()),
@@ -304,10 +348,15 @@ class Main(QMainWindow):
         h.addWidget(cb)
         h.addStretch(1)
         self.run_label = QLabel("")
-        self.run_label.setObjectName("subtle")
+        self.run_label.setObjectName("running")
         h.addWidget(self.run_label)
         h.addSpacing(10)
-        self.play_btn = QPushButton(_("▶  Play"))
+        # ready or not, in so many words, next to the button that starts the game (the design of 15.10.)
+        self.h_ready = QLabel("")
+        self.h_ready.setObjectName("pill")
+        h.addWidget(self.h_ready)
+        h.addSpacing(8)
+        self.play_btn = QPushButton(_("Start the game"))
         self.play_btn.setObjectName("play")
         self.play_btn.setToolTip(_("Start the game with the current setup (as the desktop shortcut does)"))
         self.play_btn.clicked.connect(self.play)
@@ -315,83 +364,89 @@ class Main(QMainWindow):
         return w
 
     def _header(self):
+        """the state boxes under the name: what is in the game now, each with its number, red with
+        the problem's name when something is wrong (B37: say WHAT is missing, not only "2 missing")"""
         w = QWidget()
-        w.setObjectName("header")
+        w.setObjectName("topbar")
+        w.setAttribute(Qt.WA_StyledBackground, True)
         h = QHBoxLayout(w)
-        h.setContentsMargins(12, 5, 12, 5)
-        self.h_title = QLabel("FL26 Mod Studio")
-        self.h_title.setObjectName("title")
-        self.h_game = QLabel("")
-        self.h_game.setObjectName("subtle")
+        h.setContentsMargins(14, 2, 14, 6)
+        h.setSpacing(8)
+        self.stats = {}
+        for key, cap, stretch, page in (("game", "GAME FOLDER", 3, "Settings"), ("sider", "SIDER", 2, "Settings"),
+                                        ("world", "ACTIVE WORLD", 2, "Roots"), ("modules", "MODULES", 2, "Modules"),
+                                        ("leagues", "LEAGUES", 1, "Leagues"), ("pack", "PACK", 3, "Install")):
+            s = Stat(_(cap), lambda p=page: self.open_page(p))
+            self.stats[key] = s
+            h.addWidget(s, stretch)
+        # kept for the code that wrote here before
+        self.h_game = self.stats["game"].val
         self.h_profile = QLabel("")
-        self.h_profile.setObjectName("subtle")
-        h.addWidget(self.h_title)
-        h.addSpacing(14)
-        h.addWidget(self.h_game, 1)
-        h.addWidget(self.h_profile)
         return w
 
     def _nav(self):
-        """the left bar from NAV: a button per section, a folding group behind its caption"""
-        outer = QScrollArea()
-        outer.setWidgetResizable(True)
-        outer.setFixedWidth(220)
-        outer.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        outer.setFrameShape(QScrollArea.NoFrame)
+        """the sections from NAV, numbered across the top; a group that folded in the old left bar
+        (Game content, Tools) is one button with its pages in a menu"""
         w = QWidget()
         w.setObjectName("nav")
-        v = QVBoxLayout(w)
-        v.setContentsMargins(0, 0, 0, 8)
-        v.setSpacing(0)
+        w.setAttribute(Qt.WA_StyledBackground, True)
+        h = QHBoxLayout(w)
+        h.setContentsMargins(10, 0, 10, 0)
+        h.setSpacing(2)
         self.nav_group = QButtonGroup(self)
         self.nav_buttons, self.nav_group_of, self.nav_folds, self.nav_heads = {}, {}, {}, {}
+        self.nav_titles = {}
         titles = {cls.__name__: cls.title for _c, group in page_groups() for cls in group}
-        v.addSpacing(10)
+        n = 0
         for caption, folds, sections in NAV:
-            box = QWidget()
-            bv = QVBoxLayout(box)
-            bv.setContentsMargins(0, 0, 0, 0)
-            bv.setSpacing(0)
             if caption and folds:
-                head = QPushButton("")
-                head.setObjectName("navgroup")
-                head.setCursor(Qt.PointingHandCursor)
-                head.clicked.connect(lambda _c=False, g=caption: self.fold(g, not self.nav_open(g)))
-                v.addWidget(head)
-                self.nav_heads[caption] = head
-                self.nav_folds[caption] = box
-            elif caption:
-                c = QLabel(_(caption))
-                c.setObjectName("navcaption")
-                v.addWidget(c)
-            for key, title, names in sections:
-                b = QPushButton(_(title or titles[names[0]]))
+                n += 1
+                b = QToolButton()
                 b.setObjectName("navitem")
                 b.setCheckable(True)
-                b.clicked.connect(lambda _c=False, n=names[0]: self.open_page(n))
+                b.setPopupMode(QToolButton.InstantPopup)
+                b.setCursor(Qt.PointingHandCursor)
+                theme.caps(b)
+                m = QMenu(b)
+                for key, title, names in sections:
+                    t = _(title or titles[names[0]])
+                    m.addAction(t).triggered.connect(lambda _c=False, p=names[0]: self.open_page(p))
+                    self.nav_buttons[key] = b
+                    self.nav_group_of[key] = caption
+                    self.nav_titles[key] = t
+                b.setMenu(m)
+                b.number, b.caption = n, _(caption.capitalize())
+                b.setText("%d. %s  ▾" % (n, b.caption))
+                b.setAccessibleName(b.caption)
+                self.nav_heads[caption] = b
+                self.nav_group.addButton(b)
+                h.addWidget(b)
+                continue
+            for key, title, names in sections:
+                n += 1
+                t = _(title or titles[names[0]])
+                b = QPushButton("%d. %s" % (n, t))
+                b.setObjectName("navitem")
+                # what Windows reads out (and a test clicks) is the name without its number
+                b.setAccessibleName(t)
+                b.setCheckable(True)
+                b.setCursor(Qt.PointingHandCursor)
+                theme.caps(b)
+                b.clicked.connect(lambda _c=False, p=names[0]: self.open_page(p))
                 self.nav_group.addButton(b)
                 self.nav_buttons[key] = b
-                if folds:
-                    self.nav_group_of[key] = caption
-                bv.addWidget(b)
-            v.addWidget(box)
-        for g in self.nav_folds:
-            self.fold(g, self.nav_open(g), save=False)
-        v.addStretch(1)
-        outer.setWidget(w)
-        return outer
+                self.nav_titles[key] = t
+                h.addWidget(b)
+        h.addStretch(1)
+        return w
 
     def nav_open(self, group):
         return group in (self.settings.get("nav_open") or [])
 
     def fold(self, group, on, save=True):
-        """open (on) or fold a group of the left bar; kept for the next start"""
-        now = [g for g in (self.settings.get("nav_open") or []) if g != group] + ([group] if on else [])
-        self.settings["nav_open"] = now
-        self.nav_folds[group].setVisible(bool(on))
-        self.nav_heads[group].setText(("\u25be  " if on else "\u25b8  ") + _(group))
-        if save:
-            self.save_settings()
+        """the old left bar opened and folded its groups; the sections across the top have a menu
+        for them instead, so there is nothing to fold (kept for callers)"""
+        return
 
     def _sections(self):
         """the stack: a section of one page is the page, one of more holds its pages as tabs"""
@@ -511,10 +566,11 @@ class Main(QMainWindow):
             self.stack.setCurrentWidget(self.holder_of[name])
         b = self.nav_buttons.get(key)
         if b:
-            group = self.nav_group_of.get(key)
-            if group and not self.nav_open(group):
-                self.fold(group, True)
             b.setChecked(True)
+        # a group's button says which of its pages is open ("6. Tools: Lua modules")
+        for head in self.nav_heads.values():
+            head.sub = self.nav_titles.get(key) if b is head else None
+            self._head_text(head)
         self.settings["page"] = name
         if key == "World":
             self.update_world_bar()
@@ -594,16 +650,107 @@ class Main(QMainWindow):
         self.status_busy.setProperty("b", not self.status_busy.property("b"))
         self.status_busy.setStyleSheet("color: %s;" % c)
 
-    def update_header(self):
-        g = self.game
-        if g.ok():
-            self.h_game.setText("%s   %s" % (g.folder, ("·  " + g.version()) if g.version() else ""))
-        else:
-            self.h_game.setText(_("No game folder yet: Game ▾ Choose the game folder"))
+    def update_header(self, problems=None):
+        """the state boxes, ready or not and the status bar's first words, from what is on disk now.
+        problems: the red lines of Home's ready check, by name (Home passes them each time it looks;
+        they count until something changes while Home is not open)"""
+        from modstudio import checks, installer, backups
+        home = self.pages.get("Overview") if hasattr(self, "pages") else None
+        if problems is not None:
+            self._home_problems = list(problems)
+        elif home is None or not home.isVisible():
+            self._home_problems = []
+        g, st = self.game, self.stats
         prof = self.settings.get("profile")
+        bad = []
+        if g.folder:
+            st["game"].set(g.folder, "" if g.ok() else "err",
+                           "\n".join(x for x in (g.folder, g.version(), (_("Profile: %s") % prof) if prof else "") if x))
+        else:
+            st["game"].set(_("not chosen"), "err", _("Game > Choose the game folder"))
+        if not g.ok():
+            bad.append(_("no game folder") if not g.folder else "; ".join(_(p) for p in g.problems()))
+        # Sider: its folder and version (sider.exe's own number)
+        exe = os.path.join(g.sider_dir, "sider.exe") if g.folder else ""
+        if g.ok() and os.path.isfile(exe) and os.path.isfile(g.ini_path):
+            ver = file_version(exe)
+            st["sider"].set(("%s OK" % ver) if ver else "OK", "ok",
+                            "%s\n%s" % (g.sider_dir, _("Sider %s") % ver if ver else ""))
+        elif g.ok():
+            st["sider"].set(_("not found"), "err", _("No Sider folder with sider.exe and sider.ini in the game folder"))
+            bad.append(_("Sider is not in the game folder"))
+        else:
+            st["sider"].set("—", "", "")
         live = self.project.live_worlds() if g.ok() else []
-        bits = ([_("In the game: %s") % ", ".join(live)] if live else []) + ([_("Profile: %s") % prof] if prof else [])
-        self.h_profile.setText("     ".join(bits))
+        if len(live) > 1:
+            st["world"].set(", ".join(live), "err", _("%d worlds are in the game; only one should be") % len(live))
+            bad.append(_("%d worlds are switched on; only one should be") % len(live))
+        elif live:
+            st["world"].set(live[0], "info", _("The world switched on in the game"))
+        else:
+            st["world"].set(_("none"), "", _("No world of yours is switched on in the game"))
+        # Mod Studio's modules: the count, or the files that are not right, by name
+        state = checks.modules_state(g) if g.ok() else None
+        if state and checks.modules_ok(state):
+            n = state["total"]
+            st["modules"].set("%d / %d ON" % (n - len(state["left_off"]), n), "ok",
+                              _("Mod Studio's modules: installed, up to date and switched on"))
+        elif state:
+            names = state["missing"] + state["changed"] + state["off"]
+            if state["missing"]:
+                v = _("%d missing") % len(state["missing"])
+            elif state["changed"]:
+                v = _("%d older") % len(state["changed"])
+            else:
+                v = _("%d off") % len(state["off"])
+            what = []
+            if state["missing"]:
+                what.append(_("missing: %s") % ", ".join(state["missing"]))
+            if state["changed"]:
+                what.append(_("older or damaged: %s") % ", ".join(state["changed"]))
+            if state["off"]:
+                what.append(_("switched off: %s") % ", ".join(state["off"]))
+            st["modules"].set(v, "err", "\n".join(what))
+            bad.append(_("Mod Studio's modules: %s") % "; ".join(what) if names else v)
+        else:
+            st["modules"].set("—", "", "")
+        r = self.project.recipe
+        if live and r.get("world") in live:
+            st["leagues"].set(str(len(r.get("leagues") or [])), "", _("Leagues in %s") % r.get("world"))
+        else:
+            st["leagues"].set("—", "", _("Open the world in the game to see its leagues"))
+        recs = installer.records(g.sider_dir) if g.ok() else []
+        if recs:
+            last = max(recs, key=lambda x: x.get("time", ""))
+            st["pack"].set(last.get("name", "?"), "", _("%d packs installed here; the last one: %s")
+                           % (len(recs), last.get("name", "?")))
+        else:
+            st["pack"].set("—", "", _("No pack installed with Import your world"))
+        try:
+            pts = len(backups.history(g.sider_dir)) if g.ok() else 0
+        except Exception:
+            pts = 0
+        self.status_points.setText(_("RESTORE POINTS: %d") % pts if pts else "")
+        problems = bad + [p for p in self._home_problems if p not in bad]
+        if problems:
+            self.h_ready.setText("■ " + _("NOT READY"))
+            state_ = "err"
+            first = problems[0]
+            self.status_state.setText("● " + (first if len(first) <= 60 else first[:57] + "..."))
+        elif not live:
+            self.h_ready.setText("■ " + _("NO WORLD YET"))
+            state_ = "warn"
+            self.status_state.setText("● " + _("No world switched on yet"))
+        else:
+            self.h_ready.setText("■ " + _("READY TO PLAY"))
+            state_ = "ok"
+            self.status_state.setText("● " + _("SYSTEM READY"))
+        tip = "\n".join("• " + p for p in problems) if problems else ""
+        for w in (self.h_ready, self.status_state):
+            w.setProperty("state", state_)
+            w.setToolTip(tip)
+            theme.repolish(w)
+        self.h_profile.setText(_("Profile: %s") % prof if prof else "")
 
     def update_running(self):
         g, s = Game.running()
@@ -783,6 +930,25 @@ class Main(QMainWindow):
         progress(0)
         run_job(lambda pr: updater.download(info, pr), done, failed, progress)
 
+    def _head_text(self, head):
+        sub = getattr(head, "sub", None) if not getattr(self, "_compact", False) else None
+        head.setText("%d. %s%s  ▾" % (head.number, head.caption, (": " + sub) if sub else ""))
+
+    def resizeEvent(self, e):
+        """0.2.4: a narrow window (under 1260 px, down to the 1080 the window keeps) gets a tighter
+        bar: no name next to >_, tighter sections, a group's button without its page's name"""
+        super().resizeEvent(e)
+        compact = self.width() < 1260
+        if compact == getattr(self, "_compact", False) or not hasattr(self, "nav_heads"):
+            return
+        self._compact = compact
+        self.h_title.setVisible(not compact)
+        pad = "padding: 8px 6px 6px 6px;" if compact else ""
+        for b in set(self.nav_buttons.values()) | set(self.nav_heads.values()):
+            b.setStyleSheet(pad)
+        for head in self.nav_heads.values():
+            self._head_text(head)
+
     def closeEvent(self, e):
         # changes made since the last Save recipe or Build were lost without a word when Mod
         # Studio closed (the poll, Bon Kirk 11.10.: "an Apply button" -- OK only keeps a change
@@ -876,6 +1042,8 @@ def main():
     sys.excepthook = denied_hook(sys.excepthook)
     w = Main()
     theme.dark_title_bar(w)
+    if os.environ.get("FL26_SHOT_SIZE"):          # --shot at a given window size ("1280x720")
+        w.resize(*(int(x) for x in os.environ["FL26_SHOT_SIZE"].split("x")))
     w.show()
     if "--shot" in sys.argv:                     # a picture of each page, for the guide
         out = sys.argv[sys.argv.index("--shot") + 1]
@@ -884,7 +1052,8 @@ def main():
         def shoot():
             for name in w.pages:
                 w.open_page(name)
-                app.processEvents()
+                for _i in range(6):              # layouts settle one level per pass
+                    app.processEvents()
                 w.grab().save(os.path.join(out, name + ".png"))
             app.quit()
         QTimer.singleShot(1500, shoot)

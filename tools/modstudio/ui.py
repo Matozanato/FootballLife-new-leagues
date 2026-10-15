@@ -1,9 +1,124 @@
 """small building blocks every page uses: headers, banners, cards, a background runner"""
 import traceback
-from PySide6.QtCore import Qt, QObject, QRunnable, QThreadPool, Signal
+from PySide6.QtCore import Qt, QObject, QPoint, QRect, QRunnable, QSize, QThreadPool, Signal
 from PySide6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QMessageBox, QPushButton,
-                               QVBoxLayout, QWidget, QSizePolicy, QFileDialog, QToolButton)
+                               QVBoxLayout, QWidget, QSizePolicy, QFileDialog, QToolButton, QLayout)
 from .i18n import _
+from . import theme
+
+
+class FlowLayout(QLayout):
+    """widgets in a row that goes on in the next line when the window is too narrow for them all
+    (0.2.4: a page with many buttons ran out of the window at 1280 px)"""
+
+    def __init__(self, parent=None, spacing=6):
+        super().__init__(parent)
+        self._items = []
+        self._gap = spacing
+        self.setContentsMargins(0, 0, 0, 0)
+
+    def addItem(self, item):
+        self._items.append(item)
+
+    def count(self):
+        return len(self._items)
+
+    def itemAt(self, i):
+        return self._items[i] if 0 <= i < len(self._items) else None
+
+    def takeAt(self, i):
+        return self._items.pop(i) if 0 <= i < len(self._items) else None
+
+    def expandingDirections(self):
+        return Qt.Orientations(0)
+
+    def hasHeightForWidth(self):
+        return True
+
+    def heightForWidth(self, w):
+        return self._place(QRect(0, 0, w, 0), False)
+
+    def setGeometry(self, rect):
+        super().setGeometry(rect)
+        self._place(rect, True)
+
+    def sizeHint(self):
+        return self.minimumSize()
+
+    def minimumSize(self):
+        size = QSize()
+        for it in self._items:
+            size = size.expandedTo(it.minimumSize())
+        m = self.contentsMargins()
+        return size + QSize(m.left() + m.right(), m.top() + m.bottom())
+
+    def _place(self, rect, move):
+        m = self.contentsMargins()
+        r = rect.adjusted(m.left(), m.top(), -m.right(), -m.bottom())
+        x, y, line = r.x(), r.y(), 0
+        for it in self._items:
+            if it.widget() is not None and it.widget().isHidden():
+                continue
+            hint = it.sizeHint()
+            if x + hint.width() > r.right() + 1 and line > 0:
+                x, y, line = r.x(), y + line + self._gap, 0
+            if move:
+                it.setGeometry(QRect(QPoint(x, y), hint))
+            x += hint.width() + self._gap
+            line = max(line, hint.height())
+        return y + line - rect.y() + m.bottom()
+
+
+class Stat(QFrame):
+    """one state box of the top bar: a small caption, a value in its colour (state ok / err /
+    info), the full text in its tip; a click opens the page where it is put right"""
+
+    def __init__(self, caption, open_=None):
+        super().__init__()
+        self.setObjectName("stat")
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.open_ = open_
+        if open_:
+            self.setCursor(Qt.PointingHandCursor)
+        v = QVBoxLayout(self)
+        v.setContentsMargins(10, 3, 10, 4)
+        v.setSpacing(1)
+        self.cap = QLabel(caption)
+        self.cap.setObjectName("statcap")
+        theme.caps(self.cap)
+        self.val = QLabel("")
+        self.val.setObjectName("statval")
+        self.val.setMinimumWidth(40)
+        self.val.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        v.addWidget(self.cap)
+        v.addWidget(self.val)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setMinimumWidth(70)
+        self._full = ""
+
+    def set(self, text, state="", tip=""):
+        self._full = text or ""
+        self.val.setProperty("state", state)
+        self.setProperty("state", state)
+        self.setToolTip(tip or text or "")
+        theme.repolish(self.val)
+        theme.repolish(self)
+        self._elide()
+
+    def text(self):
+        return self._full
+
+    def _elide(self):
+        w = max(30, self.val.width())
+        self.val.setText(self.val.fontMetrics().elidedText(self._full, Qt.ElideMiddle, w))
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._elide()
+
+    def mouseReleaseEvent(self, e):
+        if self.open_ and e.button() == Qt.LeftButton:
+            self.open_()
 
 
 class Page(QWidget):
@@ -24,6 +139,7 @@ class Page(QWidget):
         head = QHBoxLayout()
         t = QLabel(_(self.title))
         t.setObjectName("pagetitle")
+        theme.caps(t)
         head.addWidget(t)
         if self.help:
             head.addWidget(helpmark(self.help, self.title))
