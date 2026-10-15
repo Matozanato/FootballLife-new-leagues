@@ -2365,7 +2365,7 @@ class NewLeagues(BuilderPage):
                 it.setToolTip(10, _("The order changed since the last Build: Build again to see where it goes."))
             if b.get("rid") is not None:
                 it.setToolTip(1, _("competition %s, regulation %s") % (b.get("cid"), b["rid"]))
-            elif plan:
+            elif plan and not L.get("others"):
                 it.setToolTip(1, _("Added or renamed since the last Build: press Build to put it in the game."))
             pm = pixmap(L.get("logo"), 28)
             if pm:

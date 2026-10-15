@@ -1486,7 +1486,8 @@
   "Mod Studio's modules are not all in place (%s): Home > Install now": "Les modules de Mod Studio ne sont pas tous en place (%s) : Home > Installer maintenant",
   "missing": "manquants",
   "older or damaged": "anciens ou abîmés",
-  "switched off": "désactivés"
+  "switched off": "désactivés",
+  "no league (%s)": "sans championnat (%s)"
  },
  "log": [
   [

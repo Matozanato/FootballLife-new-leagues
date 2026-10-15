@@ -1606,7 +1606,8 @@
   "starts with its own (none yet)": "počinje sa svojima (još nema nijedne)",
   "the game without a world": "igra bez svijeta",
   "the save folder before the first world switch": "mapa saveova prije prve zamjene svijeta",
-  "the save folder could not be put back: %s": "mapa saveova nije se mogla vratiti: %s"
+  "the save folder could not be put back: %s": "mapa saveova nije se mogla vratiti: %s",
+  "no league (%s)": "bez lige (%s)"
  },
  "log": [
   [
