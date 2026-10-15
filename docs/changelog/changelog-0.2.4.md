@@ -28,7 +28,9 @@ once, and your 0.2.2 career keeps working.
   already; Build would have replaced it with the open recipe. The Build steps are greyed out with
   a note, Home says **Ready to play**, and Build, Plan, Switch on and Only the European cups
   explain what to do instead: press Play, or switch your own world on first. A world installed
-  from a zip and built again on this PC counts as your own from then on.
+  from a zip and built again on this PC counts as your own from then on. Another world (NewLife, a
+  new world) can still be built while the ready one is on: Build asks first, says it switches the
+  ready world off, and Put in the game on its card brings it back with its careers.
 
 - **My world: one place for your worlds.** The bar across the top has five items: 1. Home, 2. My world, 3. Game content, 4. Tools, 5. Settings. My world takes the place of Build and edit your world, Import your world and NewLife Database:
   - at the top, how many competitions the world in the game has (the game has room for 255) and how many new countries (room for 99), a reminder that changes need a new Master League, and **Build and install** (the same Build as before, with its restore point first);

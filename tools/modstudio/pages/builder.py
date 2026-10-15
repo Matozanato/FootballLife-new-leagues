@@ -4057,13 +4057,27 @@ class Build(BuilderPage):
         except Exception:
             return []
 
-    def ready_blocks(self):
+    def ready_blocks(self, asks=True):
         """Build is not for a ready world: say what to do instead (beta testers pressed Build after
-        installing the Modpack and lost it); True when the step must not run"""
+        installing the Modpack and lost it); True when the step must not run.
+        B60: only the ready world itself is blocked. Another world (NewLife, a new world) may be
+        built while a ready world is on: that switches the ready one off, and Put in the game on its
+        card brings it back with its careers (each world keeps its own save folder), so the user is
+        asked instead of sent round through another world first. asks=False: the step switches
+        nothing (the plan), so it just runs."""
         ready = self.ready_live()
         if not ready:
             return False
         w = ", ".join(ready)
+        mine = self.project.recipe.get("world", "").strip()
+        if mine not in ready:
+            if not asks:
+                return False
+            return not ask(self, "Build", _(
+                "%s is in the game now: a ready world, installed from a zip.\n\nBuilding %s puts %s in "
+                "the game instead and switches %s off. Nothing of it is deleted: it stays in My world, "
+                "and Put in the game on its card brings it back, with its own Master League careers.\n\n"
+                "Build %s?") % (w, mine, mine, w, mine))
         info(self, "Build", _("%s is on: a ready world, installed from a zip. It is built already: press "
                               "Play and start a new Master League.\n\nBuild makes the world of your own "
                               "leagues and would switch %s off. To build your own leagues, put your own "
@@ -4105,7 +4119,8 @@ class Build(BuilderPage):
         r = self.project.recipe
         # the world's name and size are on its card in My world, above the tabs
         self.what.setText(html.escape(self.file_text(w), quote=False))
-        ready = self.ready_live()
+        mine = r.get("world", "").strip()
+        ready = [x for x in self.ready_live() if x == mine]      # B60: only the ready world itself
         for b in self.steps[1:4] + [self.b_all]:          # plan, build, switch on, Build and install
             b.setEnabled(not ready)
             b.setToolTip(_("Off: %s is a ready world from Import your world. It is built already.") % ", ".join(ready)
@@ -4303,7 +4318,7 @@ class Build(BuilderPage):
         run_job(job, done=lambda r: finish(err=r), failed=failed, progress=said)
 
     def do_plan(self):
-        if self.ready_blocks():
+        if self.ready_blocks(asks=False):
             return
         def go(log):
             pl = self.plan()
