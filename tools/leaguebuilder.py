@@ -5040,7 +5040,7 @@ def switch_on(world, game, log=print):
         built = None
     if built is not None:
         import lbstadiums, lbservers
-        lbstadiums.write(built, siderdir.find(game), log)
+        lbstadiums.write(built, siderdir.find(game), log, lbstadiums.load_edits(root))
         lbservers.write(built, siderdir.find(game), log, root)
     mods = os.path.join(root, "modules")
     for f in sorted(os.listdir(mods)) if os.path.isdir(mods) else []:

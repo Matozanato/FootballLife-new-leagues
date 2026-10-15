@@ -330,10 +330,19 @@ class Install(Page):
         where, repl = self.where.currentData(), self.lines.currentData()
 
         def job(progress):
+            import lbstadiums
+            picked = {}                           # Stadiums > Your world's clubs: the picks stay with a new version
             for w in older:                       # the older version out first, not copied over
+                picked[w] = lbstadiums.load_edits(os.path.join(self.app.game.livecpk_dir, w))
                 I.replace_world(self.app.game, ini, w, log=log.append)
             inst = I.Installer(self.app.game, ini, name, log=log.append, replace_lines=repl)
-            return inst.run(self.parts, where)
+            rec = inst.run(self.parts, where)
+            for w, edits in picked.items():
+                root = os.path.join(self.app.game.livecpk_dir, w)
+                if edits and os.path.isdir(root) and not os.path.exists(os.path.join(root, lbstadiums.EDITS)):
+                    lbstadiums.save_edits(root, edits)
+                    log.append("%s: the %d home stadium(s) you picked are kept" % (w, len(edits)))
+            return rec
 
         def done(rec):
             self.app.busy(False)
