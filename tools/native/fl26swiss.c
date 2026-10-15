@@ -5686,9 +5686,10 @@ static int respace(date_t* r, uint32_t n, const uint8_t* bad, int gap, int jit)
  * so weekdays and the order stay and the gaps only grow. Only at the July rollover (day 181):
  * a new career is built on day 216, and a round before that would never be played (GitHub #27).
  * Measured 2026-10-05 (run16): our leagues are dated at the rollover and their July rounds are
- * played and stay in the table through the day-216 build. The game's own leagues are not dated
- * again at the rollover -- they keep the dates their career was made with, on day 216 -- so a
- * `july` line for one of them changes nothing; it starts as the game dates it. */
+ * played and stay in the table through the day-216 build. The game's own leagues go through it too
+ * (sider.log of players: "reg 22 -- starts in July: first round day 219, was 233"), so a league
+ * whose country's super cup the game plays before its first round starts no earlier than a week
+ * after that cup (B36). */
 #define MAX_JULY 256
 static uint16_t g_july[MAX_JULY][2]; static int g_njuly = 0;
 __declspec(dllexport) int fl26_swiss_july(const uint16_t* v, int n)
@@ -5713,6 +5714,23 @@ static void july_start(uint16_t id, date_t* r, uint32_t n, int seen)
   }
   uint32_t f = season_pos(r[0].day), w = season_pos(want), ny = 183;   /* New Year's position */
   if (r[0].day >= 365 || w >= f || f >= ny) return;
+  /* a cup of its country the game plays before the first round stays before it, a week clear:
+     the Supertaça on 13 and 16 August, Liga Portugal's first round on 22 August -- brought
+     forward to 8 August it came after the super cup (Hugo Freixo, B36). The same for the
+     Netherlands, Turkey, Russia, Belgium and France: those keep the game's start */
+  const cupd_t* c = cupd_of(id);
+  uint32_t lim = w;
+  for (int j = 0; c && j < c->n; j++) {
+    uint32_t q = season_pos(c->d[j]);
+    if (q >= w && q < f && q + 7 > lim) lim = q + 7;
+  }
+  if (lim > w) {
+    if (!seen) logf("fl26swiss: reg %u -- a cup of its country plays on day %u before its first round (day %u): "
+                    "starts no earlier than a week after it", (unsigned)id, (unsigned)((lim - 7 + 182) % 365),
+                    (unsigned)r[0].day);
+    w = lim;
+    if (w >= f || (f - w) / 7 == 0) return;
+  }
   uint32_t weeks = (f - w) / 7, first = r[0].day;
   for (uint32_t i = 0; i < n; i++) {
     uint32_t p = season_pos(r[i].day);

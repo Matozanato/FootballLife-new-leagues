@@ -142,6 +142,13 @@ once, and your 0.2.2 career keeps working.
   leagues page.** The new look left them out of its **More** menu; they are back there (League order
   puts the countries of Select Team and Kick Off in your order).
 
+- **Portugal's Supertaça was played after the first league round.** The modules bring a
+  league of a country that really kicks off early forward to its July or early August start, the
+  game's own leagues too, but the game's super cups stay on their dates: Liga Portugal started
+  on 8 August and the Supertaça (13 and 16 August) came after it. The same hit the Netherlands,
+  Turkey, Russia, Belgium and France. A league now starts no earlier than a week after a cup its
+  country plays before its first round, so those leagues start where the game starts them, after
+  their super cup. Needs Install the modules and Build again; a new career. Thanks Hugo Freixo.
 - **A big world stopped with "the player table is full" although it fits.** The game takes
   61905 players, and Build counted while it worked: the placeholder players a club's own squad
   replaces are taken out only at the end, so a world of 1212 new clubs (the Modpack, 60488

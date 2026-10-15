@@ -455,6 +455,32 @@ int main(void)
     }
   }
 
+  /* a July start does not bring a league's first round before its country's super cup (B36):
+     Liga Portugal (22) on 22 August, the Supertaça on 13 and 16 August, `july 22 219` */
+  printf("\nJuly start and the game's super cup (B36)\n");
+  {
+    uint16_t jl[4] = { 22, 219, 23, 219 };
+    fl26_swiss_july(jl, 2);
+    static uint16_t cd[100];
+    cd[0] = 22; cd[1] = 2; cd[2] = 224; cd[3] = 227;              /* Portugal: its super cup */
+    cd[50] = 23; cd[51] = 1; cd[52] = 300;                         /* another: a cup in October */
+    fl26_swiss_cupdays(cd, 2);
+    date_t a[6], b[6];
+    for (int i = 0; i < 6; i++) {
+      a[i].day = b[i].day = 233 + 7 * (uint32_t)i;
+      a[i].round = b[i].round = (uint32_t)i;
+      a[i].kind = b[i].kind = 0;
+    }
+    g_today_test = 181;
+    july_start(22, a, 6, 0);
+    july_start(23, b, 6, 0);
+    expect(a[0].day == 233, "Liga Portugal keeps its first round a week after the Supertaca (233, not 219)");
+    expect(b[0].day == 219, "a league with no cup before its first round still starts in July (219)");
+    fl26_swiss_july(0, 0);
+    fl26_swiss_cupdays(0, 0);
+    g_today_test = 0;
+  }
+
   printf(fails ? "\n%d check(s) FAILED\n" : "\nall checks passed\n", fails);
   return fails ? 1 : 0;
 }
