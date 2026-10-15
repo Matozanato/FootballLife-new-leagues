@@ -38,12 +38,14 @@ once, and your 0.2.2 career keeps working.
   (`lbplayers.py`), and a rebuilt Modpack moves thousands. It now finds each player's places
   once.
 - **Modules in one line, fixed in one click.** Home and Lua modules say whether Mod Studio's
-  modules are installed, up to date and switched on; when not, **Install now** puts them right.
+  modules are installed, up to date and switched on; when not, **Install now** puts them right,
+  and the line names the modules that are missing, older or switched off.
   In `sider.ini` Mod Studio's module lines now stand together in one block of their own, with a
   heading, so the rest of the file is easy to read.
 - **A final check after a world is installed.** Installing a ready world ends with **Ready to
   play** and a list of ticks (the world, switched on, the modules, the face pack, the content
-  servers the world uses, the home stadiums), or **Almost ready** with what to fix.
+  servers the world uses, the home stadiums), or **Almost ready** with what to fix: the red
+  line under the install is a link (*see what to fix*) that shows the list again.
 - **Put Sider back as before Mod Studio, in one click.** Tools > Restore points (and Game >
   Put Sider back as before Mod Studio...) puts back every file Mod Studio changed as it was first
   (sider.ini, CommonLib, the map files) and takes out what it brought in: its modules, the face
@@ -98,7 +100,6 @@ once, and your 0.2.2 career keeps working.
   an older version kept the old pack's single modules that a bundle has since replaced, and Install
   now copied them in only to move them out again. Those are now left out, and the updater replaces
   the module pack whole. Nothing was wrong in the game. (Thanks Novarama)
-
 - **Build stopped with `IndexError: list index out of range` (in national_cups)** when the
   world had used up every free competition id and a league still had a super cup to make. It
   now stops with the same message as a cup does: no free competition or regulation ids left
