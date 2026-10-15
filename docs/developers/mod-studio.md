@@ -14,7 +14,7 @@ league package format.
 | `SiderAddons\livecpk\<folder>` | Content folders it installs; League Builder worlds (`_FL26...`). |
 | `SiderAddons\modules` | Lua modules it installs; the League Builder's modules. |
 | `SiderAddons\content\<server>` | Content server files and their map files. |
-| `SiderAddons\ModStudio\` | `backups\` (a copy of every file before it is changed, one folder per day, with an index), `profiles\`, `installed.json` (what each installed mod added and replaced). |
+| `SiderAddons\ModStudio\` | `backups\` (a copy of every file before it is changed, one folder per day, with an index; Build, Switch on and Install the modules keep theirs here too since 0.2.4, none next to the files), `backups\worlds\<world>\<date> deleted` or `renamed` (a world taken out or renamed in Content folders, the newest 3 per world), `profiles\`, `installed.json` (what each installed mod added and replaced). |
 | `%APPDATA%\FL26ModStudio` | The program's settings, the unpacked game tables, and the store of added league packages. |
 
 The game's own files (`download\*.cpk`, the exe) are only read.
@@ -36,7 +36,8 @@ the program has exited (both processes of the one-file .exe), then starts it aga
 | `roots.py`, `modules.py` | Content folders and modules: what is in them, the known module order, settings a module needs. |
 | `servers.py`, `mapfile.py` | The content servers: where their content and map files are, the columns of each map, a map file read and written as rows. |
 | `installer.py` | Looks inside a mod, says what each part is, installs it, merges map files, records what it did so it can be removed. |
-| `backups.py`, `profiles.py` | Restore points and profiles. |
+| `backups.py`, `profiles.py` | Restore points and profiles. `backups.before_change` is the copy Build and Switch on take before they change a file (the first one marked `before`, for Put Sider back). |
+| `worlds.py` | The League Builder worlds in `livecpk`: which one is in the game (`live`, the green row in Content folders), Delete world into `ModStudio\backups\worlds` and back (`delete`, `restore`), Rename world everywhere the name is written (`rename`). No Qt. |
 | `checks.py` | The checks behind Overview and Diagnostics. |
 | `updater.py` | Help → Check for updates: the newest `modstudio-<version>` release, download, checksum, the swap after the program exits. |
 | `credits.py` | The Credits window next to Help: everyone who helped. A new name goes here and into the README's credits together. |
@@ -57,8 +58,8 @@ fl26resultsguard, fl26ctlguard, fl26kitguard). Each part runs in its own functio
 locals and log lines, and the bundle's init calls the parts' inits in order. Sider's Lua has no
 `pcall`, so a part whose init raises an error stops the parts after it; the oldest, most tried
 guards come first. The pack's `retired.txt` names the single modules; install switches their
-`lua.module` lines off and moves their files to `modules\before-builder-<n>`, so a fix is never
-applied twice.
+`lua.module` lines off and keeps their files as restore points in `SiderAddons\ModStudio\backups`
+(until 0.2.4 in `modules\before-builder-<n>`), so a fix is never applied twice.
 
 Every line kind, with the code that writes it and the modules that read it, is listed in
 [fork/world-file.md](fork/world-file.md); the kinds below are the ones that need the most

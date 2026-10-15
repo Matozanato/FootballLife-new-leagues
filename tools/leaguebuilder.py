@@ -4646,6 +4646,15 @@ def pack_dir():
     raise BuildError("the module pack is missing (a folder called pack next to the program)")
 
 
+def keep_before(path, reason, sider=None, keep_n=30):
+    """a copy of `path` before Build, Install the modules or Switch on changes it: a restore point
+    in SiderAddons\\ModStudio\\backups (Restore points shows it, Put Sider back as before Mod Studio
+    takes the first one). Until 0.2.4 it was <file>.before-builder / <file>.prev next to the file
+    and modules\\before-builder-<n>\\ (mato 15.10.: no more copies next to the files)"""
+    from modstudio import backups
+    return backups.before_change(path, reason, sider, keep_n)
+
+
 def ini_lines(game):
     ini = os.path.join(siderdir.find(game), "sider.ini")
     if not os.path.exists(ini):
@@ -4833,7 +4842,7 @@ def ensure_modules(game, order, want, log=print):
             % (len(fixed), ", ".join(fixed)))
         done += [m for m in fixed if m not in done]
     if done or gone:
-        shutil.copy2(ini, ini + ".before-builder") if not os.path.exists(ini + ".before-builder") else None
+        keep_before(ini, "Mod Studio's modules switched on", os.path.dirname(ini))
         open(ini, "w", encoding="utf-8", newline="\r\n").write("\n".join(lines) + "\n")
         on = [m for m in done if not m.endswith(" moved first") and m != "grouped"]
         if on:
@@ -4928,8 +4937,9 @@ def shipped_files(src):
 def install_modules(game, log=print, settle=2.0):
     """put the pack's modules in the Sider folder's modules and load them from sider.ini.
 
-    Every file it would replace is copied first into modules\\before-builder-<n>\\, and
-    sider.ini into sider.ini.before-builder, so the install can be undone by hand.
+    Every file it would replace, and sider.ini, is kept first as a restore point (keep_before;
+    until 0.2.4 in modules\\before-builder-<n>\\ and sider.ini.before-builder), so the install
+    can be undone on Restore points.
 
     At the end every DLL of the pack must be in modules as it was shipped (check_dlls): an
     antivirus that takes one away a moment after the copy (B15) stops the install with a
@@ -4942,7 +4952,8 @@ def install_modules(game, log=print, settle=2.0):
     if not os.path.isdir(dst):
         raise BuildError("no %s -- is Sider installed in this game folder?" % dst)
     src = os.path.join(pack, "modules")
-    changed, same, keep = [], 0, None
+    changed, same, kept = [], 0, 0
+    sider = os.path.dirname(dst)
     for f in shipped_files(src):
         a, b = os.path.join(src, f), os.path.join(dst, f)
         if os.path.exists(b) and open(a, "rb").read() == open(b, "rb").read():
@@ -4953,13 +4964,10 @@ def install_modules(game, log=print, settle=2.0):
         for f in changed:
             b = os.path.join(dst, f)
             if os.path.exists(b):
-                if not keep:
-                    n = 1
-                    while os.path.exists(os.path.join(dst, "before-builder-%d" % n)):
-                        n += 1
-                    keep = os.path.join(dst, "before-builder-%d" % n)
-                    os.makedirs(keep)
-                shutil.copy2(b, os.path.join(keep, f))
+                # a restore point, not modules\before-builder-<n>\ (mato 15.10.); a module's newest
+                # 3 copies and its first: the face pack is big
+                keep_before(b, "Install the modules: replaced by Mod Studio's", sider, keep_n=3)
+                kept += 1
             try:
                 shutil.copy2(os.path.join(src, f), b)
             except OSError as e:
@@ -4967,20 +4975,17 @@ def install_modules(game, log=print, settle=2.0):
                     raise BuildError(dll_message([(f, "blocked")], dst))
                 raise
         log("modules: %d copied, %d already there%s" % (len(changed), same,
-            ("; the old ones are in " + keep) if keep else ""))
+            ("; the %d old one(s) are in Restore points" % kept) if kept else ""))
     else:
         log("modules: all %d already there" % same)
     old = [m for m in retired_modules() if os.path.exists(os.path.join(dst, m + ".lua"))]
     if old:
-        # the single files a bundle replaced go with the other old copies
-        n = 1
-        while os.path.exists(os.path.join(dst, "before-builder-%d" % n)):
-            n += 1
-        keep = keep or os.path.join(dst, "before-builder-%d" % n)
-        os.makedirs(keep, exist_ok=True)
+        # the single files a bundle replaced go out of modules; Restore points keeps them
         for m in old:
-            shutil.move(os.path.join(dst, m + ".lua"), os.path.join(keep, m + ".lua"))
-        log("modules: %s now ship bundled; the single files are in %s" % (", ".join(old), keep))
+            p = os.path.join(dst, m + ".lua")
+            keep_before(p, "Install the modules: %s now ships bundled" % m, sider, keep_n=3)
+            os.remove(p)
+        log("modules: %s now ship bundled; the single files are in Restore points" % ", ".join(old))
     have = {f[:-4] for f in os.listdir(dst) if f.endswith(".lua")}
     ensure_modules(game, order, [m for m in order if m in have], log)
     roots = os.path.join(pack, "livecpk")
@@ -5023,7 +5028,7 @@ def install_root(game, src, log=print):
         roots = [i for i, l in enumerate(lines) if l.strip().startswith("cpk.root")]
         mods = [i for i, l in enumerate(lines) if module_of(l)[0]]
         lines.insert(roots[0] if roots else (mods[0] if mods else len(lines)), want)
-    shutil.copy2(ini, ini + ".before-builder") if not os.path.exists(ini + ".before-builder") else None
+    keep_before(ini, "Install the modules: livecpk\\%s loaded" % name, os.path.dirname(ini))
     open(ini, "w", encoding="utf-8", newline="\r\n").write("\n".join(lines) + "\n")
     log("livecpk: %s (%d files), sider.ini loads it" % (name, n))
 
@@ -5041,8 +5046,7 @@ def switch_on(world, game, log=print):
         raise BuildError("no %s -- is Sider installed in this game folder?" % siderroot.INI)
     log(call(siderroot, [world]).strip())
     dst = os.path.join(siderdir.find(game), "modules", MARK)
-    if os.path.exists(dst):
-        shutil.copy2(dst, dst + ".prev")
+    keep_before(dst, "Switch on %s: the world file" % world, siderdir.find(game))    # was fl26world.txt.prev
     shutil.copy2(wf, dst)
     log("world file -> %s" % dst)
     try:                                               # Edit club > Home stadium (Stadium Server)
@@ -5057,8 +5061,8 @@ def switch_on(world, game, log=print):
     mods = os.path.join(root, "modules")
     for f in sorted(os.listdir(mods)) if os.path.isdir(mods) else []:
         dst = os.path.join(siderdir.find(game), "modules", f)
-        if os.path.exists(dst) and not os.path.exists(dst + ".before-builder"):
-            shutil.copy2(dst, dst + ".before-builder")
+        if os.path.exists(dst) and open(dst, "rb").read() != open(os.path.join(mods, f), "rb").read():
+            keep_before(dst, "Switch on %s: its own module" % world, siderdir.find(game), keep_n=5)
         shutil.copy2(os.path.join(mods, f), dst)
         log("%s -> %s" % (f, dst))
     if os.path.isdir(mods):
@@ -5100,8 +5104,7 @@ def commonlib_leagues(game, world, wf, log=print):
                     % (", ".join(map(str, cids)), COMMONLIB_TAG, world, "\r" if nl == "\r\n" else ""))
     new = text[:m.start(1)] + "\n".join(body) + text[m.end(1):]
     if new != text:
-        if not os.path.exists(path + ".before-builder"):
-            shutil.copy2(path, path + ".before-builder")
+        keep_before(path, "Switch on %s: its leagues in the Kick Off list" % world, siderdir.find(game))
         open(path, "w", encoding="utf-8", newline="").write(new)
     log("CommonLib: %d league(s) of %s in the Kick Off league list" % (len(cids), world))
 

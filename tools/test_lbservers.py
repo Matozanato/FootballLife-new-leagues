@@ -66,7 +66,12 @@ def main():
         ok("kit folder copied", os.path.isfile(os.path.join(b, S.KITS, "My world", "HNL", "Dinamo", "p1", "config.txt")))
         bm = lines(os.path.join(b, S.BOARDS, "map_competitions.txt"))
         ok("scoreboard line with the new regulation id", any(l.startswith("410, My world\\HNL") for l in bm))
-        ok("backup of the map made", os.path.isfile(os.path.join(b, S.KITS, "map.txt.before-builder")))
+        # a restore point in ModStudio\backups, nothing next to the map (mato 15.10.)
+        from modstudio import backups
+        ok("backup of the map made as a restore point", any(
+            r["file"].lower() == os.path.join(S.KITS, "map.txt").lower() for r in backups.load(b)))
+        ok("no copies next to the map", not [f for f in os.listdir(os.path.join(b, S.KITS))
+                                              if f.endswith((".before-builder", ".prev"))])
 
         S.write(pb, b, log=lambda *_: None)
         ok("second run changes nothing", lines(os.path.join(b, S.KITS, "map.txt")) == km)

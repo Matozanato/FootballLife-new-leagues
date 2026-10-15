@@ -22,7 +22,8 @@ line.
 | `servers.py`, `mapfile.py` | Sider content servers (kits, stadiums, balls, commentary, music ...): their folders, map files and columns |
 | `installer.py` | installs a `.zip` / `.7z` / folder / `.lua` / `.cpk` mod: splits it into parts and puts each where Sider wants it |
 | `profiles.py` | named setups (which roots and modules are on, in which order) |
-| `backups.py` | restore points: a copy of every file before the program changes it, in `SiderAddons\ModStudio\backups` |
+| `backups.py` | restore points: a copy of every file before the program changes it, in `SiderAddons\ModStudio\backups` (Build and Switch on through `before_change`, 0.2.4) |
+| `worlds.py` | the worlds in `livecpk`: the one in the game (`live`), Delete world into `ModStudio\backups\worlds\<world>` and back (`delete` / `restore`), Rename world (`rename`) |
 | `checks.py` | health checks as `(level, area, text, page)` rows for Overview and Diagnostics |
 | `newlife.py` | a NewLife release as leagues to pick, and the recipe entries for one-click leagues, updates and the game's own leagues (see [newlife-format.md](newlife-format.md)) |
 | `updater.py` | looks at the GitHub releases of `REPO`, tag `modstudio-<version>`, downloads the zip, checks its sha256, swaps the program folder |
@@ -99,7 +100,8 @@ The left bar comes from `page_groups()` in `app.py`:
    is made beforehand by `lbpack.py` (it copies `sider/*.lua`, bundles the guards, compiles
    the DLLs with zig and adds the regen face pack if there is one). `pack_dir()` finds it
    as `pack` next to the program, inside the frozen program, or as `out/lbpack` in a
-   checkout. Every file it replaces is kept first in `modules\before-builder-<n>\`.
+   checkout. Every file it replaces is kept first as a restore point in
+   `SiderAddons\ModStudio\backups` (`keep_before`; until 0.2.4 in `modules\before-builder-<n>\`).
    `ensure_modules` writes the `lua.module` lines of `sider.ini` in the order of the pack's
    `modules.txt`, and switches off the modules a bundle replaced (`retired.txt`).
 5. `B.build(pl, base, game, replace)` builds the world in `livecpk\<world>.building`, then

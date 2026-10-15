@@ -4320,7 +4320,7 @@ class Build(BuilderPage):
             return
         if ask(self, "Install the modules",
                _("Copy Mod Studio's modules into %s and load them from sider.ini? "
-                 "Files it replaces are kept in a before-builder folder next to them.") % self.app.game.modules_dir):
+                 "Files it replaces are kept in Restore points.") % self.app.game.modules_dir):
             def go(log):
                 snapshot(self.app.game.ini_path, "Install the modules", self.app.game.sider_dir)
                 B.install_modules(self.app.game.folder, log=log)

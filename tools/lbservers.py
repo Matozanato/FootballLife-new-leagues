@@ -192,7 +192,7 @@ def carried(l, world):
     return f.startswith((w + "_kits\\", w + "_packs\\"))
 
 
-def _map(path, mine, log, what, world=""):
+def _map(path, mine, log, what, world="", sider=None):
     """our lines (key, text) into a map file: earlier ones of ours out, clashing ones of yours
     off; a line the world carries from another pack (carried) stays"""
     lines, nl, bom, enc = lbstadiums.read(path)
@@ -216,10 +216,9 @@ def _map(path, mine, log, what, world=""):
     while out and not out[-1].strip():
         out.pop()
     out += [t for _k, t in mine]
-    if os.path.exists(path):
-        if not os.path.exists(path + ".before-builder"):
-            shutil.copy2(path, path + ".before-builder")
-        shutil.copy2(path, path + ".prev")
+    # a restore point in SiderAddons\ModStudio\backups, no map.txt.before-builder / .prev next to
+    # the map any more (mato 15.10.)
+    lbstadiums.keep_before(path, "Switch on: %s map" % what, sider)
     data = (nl.join(out) + nl).encode(enc, "replace")
     with open(path + ".tmp", "wb") as f:
         f.write((b"\xef\xbb\xbf" if bom else b"") + data)
@@ -305,7 +304,7 @@ def write(pl, sider, log=print, root=None):
                 mine.append((tid, '%d, "%s"   %s %s/%d made' % (tid, rel, TAG, league, k)))
             log("kits made from colours and crests: %d (%d new or changed)%s" % (
                 len(make), new, "" if numbers else "; no kit in the library lends back numbers, so the game's own are used"))
-        done.append(_map(os.path.join(root, file), mine, log, what, world))
+        done.append(_map(os.path.join(root, file), mine, log, what, world, sider))
     return tuple(done)
 
 

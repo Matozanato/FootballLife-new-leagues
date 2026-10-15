@@ -1,16 +1,60 @@
 """Content folders: the cpk.root lines -- switch on/off, reorder, see what wins"""
 import os, shutil
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QBrush
+from PySide6.QtGui import QColor, QBrush, QFont
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QHBoxLayout, QLabel, QLineEdit,
                                QPushButton, QSplitter, QTreeWidget, QTreeWidgetItem, QVBoxLayout,
-                               QWidget, QHeaderView, QMenu)
-from .. import theme, roots as R
+                               QWidget, QHeaderView, QMenu, QStyledItemDelegate)
+from .. import theme, roots as R, worlds as WL
 from ..i18n import _
 from ..siderini import norm, root_path
-from ..ui import Page, section, hint, ask, run_job, pick_dir, row
+from ..ui import Page, section, hint, ask, run_job, pick_dir, row, error, can_write, denied
 
 WORLD_PREFIX = "_fl26"
+
+
+def rename_recipe(app, old, new):
+    """the world's name in Mod Studio itself, after a world is renamed (or renamed back from Restore
+    points): the open world's, the copy Build keeps of it (recipes\\<world>.json) and the setting
+    that opens it at the next start"""
+    P, st = app.project, app.settings
+    was = os.path.join(P.copies_dir(), old + ".json")
+    kept = WL.rename_recipe_copy(P.copies_dir(), old, new)
+    if kept and os.path.normcase(os.path.abspath(st.get("last_recipe") or "")) == os.path.normcase(was):
+        st["last_recipe"] = kept
+    if P.recipe.get("world") == old:
+        # the open world is that world: its name changes too. Saved only when nothing else waits
+        # to be saved (Save recipe stays the player's for his own changes)
+        was_dirty = P.dirty
+        P.recipe["world"] = new
+        try:
+            if P.path and not was_dirty:
+                P.save()
+            elif not P.path:
+                st["last_recipe"] = P.keep_copy()
+                P.changed.emit()
+            else:
+                P.touch()
+        except OSError:
+            P.touch()
+    P.drop_names()
+    try:
+        app.save_settings()
+    except Exception:
+        pass
+
+
+class RowColour(QStyledItemDelegate):
+    """paints a row's own background (setBackground) under its text. The theme's style sheet styles
+    the list's rows (QTreeView::item) and Qt then leaves the item's background out: the live world
+    was set green and looked like every other row (test_world_manage, 15.10.). Selection and
+    hover are drawn over it as before"""
+
+    def paint(self, painter, option, index):
+        b = index.data(Qt.BackgroundRole)
+        if isinstance(b, QBrush) and b.style() != Qt.NoBrush:
+            painter.fillRect(option.rect, b)
+        super().paint(painter, option, index)
 
 
 class OrderTree(QTreeWidget):
@@ -74,6 +118,7 @@ class Roots(Page):
 
         split = QSplitter(Qt.Horizontal)
         self.tree = OrderTree(self.dropped)
+        self.tree.setItemDelegate(RowColour(self.tree))
         self.tree.setHeaderLabels([_("On"), "#", _("Folder"), _("What it changes"), _("Files"),
                                    _("Size"), _("Overrides"), _("Note")])
         self.tree.itemChanged.connect(self.ticked)
@@ -108,6 +153,15 @@ class Roots(Page):
         b_del.clicked.connect(self.delete_folder)
         rv.addWidget(row(b_open, b_rm))
         rv.addWidget(row(b_del))
+        # 0.2.4 (mato 15.10.): a world is renamed or deleted here, safely -- see worlds.py
+        self.b_wren = QPushButton(_("Rename world..."))
+        self.b_wren.clicked.connect(self.rename_world)
+        self.b_wdel = QPushButton(_("Delete world..."))
+        self.b_wdel.setObjectName("danger")
+        self.b_wdel.clicked.connect(self.delete_world)
+        rv.addWidget(row(self.b_wren, self.b_wdel))
+        self.b_wren.hide()
+        self.b_wdel.hide()
         rv.addSpacing(8)
         rv.addWidget(section("Overrides"))
         self.i_conf = QTreeWidget()
@@ -184,6 +238,9 @@ class Roots(Page):
             wins[c.winner] = wins.get(c.winner, 0) + 1
             for l in c.losers:
                 loses[l] = loses.get(l, 0) + 1
+        # the world in the game now, as sider.ini on disk has it (not the ticks not applied yet):
+        # its row is green with a label (mato 15.10.: "clearly marked green", not a line of text)
+        self.live = set(WL.live(self.app.game)) if self.app.game.ok() else set()
         for n, e in enumerate(self.entries()):
             k = norm(e.value)
             info = self.idx.get(k)
@@ -213,6 +270,8 @@ class Roots(Page):
             if not e.enabled:
                 for c in range(1, 8):
                     it.setForeground(c, QBrush(QColor(theme.SUBTLE)))
+            if self.is_live(e):
+                self.mark_live(it, e)
             self.tree.addTopLevelItem(it)
         self._loading = False
         self.filter()
@@ -220,6 +279,38 @@ class Roots(Page):
         self.foot.setText(_("%d folders listed, %d switched on, %d files overridden by a folder above.")
                           % (len(self.entries()), on, len(self.conf)))
         self.mark()
+
+    def world_of(self, e):
+        """the world (_FL26... folder in livecpk) a line loads, or None"""
+        if e is None:
+            return None
+        p = root_path(self.app.game.sider_dir, e.value)
+        name = os.path.basename(p)
+        if WL.is_world(name) and os.path.normcase(os.path.dirname(p)) == os.path.normcase(
+                os.path.normpath(self.app.game.livecpk_dir)):
+            return name
+        return None
+
+    def is_live(self, e):
+        return self.world_of(e) in self.live
+
+    def mark_live(self, it, e):
+        """the live world's row: green all across, its name in bold, IN THE GAME NOW in the Note
+        column (the theme's ok colours, the ones of Home's green card)"""
+        bg, fg = QBrush(QColor(theme.OK_BG)), QBrush(QColor(theme.GOOD))
+        for c in range(self.tree.columnCount()):
+            it.setBackground(c, bg)
+        f = QFont(it.font(2))
+        f.setBold(True)
+        it.setFont(2, f)
+        it.setFont(7, f)
+        for c in (1, 2, 7):
+            it.setForeground(c, fg)
+        it.setText(7, "\u25cf " + _("IN THE GAME NOW") + ("  \u00b7  " + e.note if e.note else ""))
+        tip = _("This is the world the game uses now.")
+        for c in range(self.tree.columnCount()):
+            it.setToolTip(c, tip)
+        it.setData(0, Qt.UserRole + 1, "live")
 
     def filter(self):
         q = self.search.text().strip().lower()
@@ -322,6 +413,10 @@ class Roots(Page):
         p = root_path(self.app.game.sider_dir, e.value)
         if not os.path.isdir(p):
             return
+        if self.world_of(e):
+            # a world is never deleted for good from here: Delete world keeps it (mato 15.10.)
+            self.delete_world()
+            return
         if not p.lower().startswith(self.app.game.sider_dir.lower()):
             self.say(_("Only folders inside SiderAddons can be deleted from here."), "err")
             return
@@ -347,6 +442,9 @@ class Roots(Page):
     def inspect(self):
         e = self._current()
         self.i_conf.clear()
+        w = self.world_of(e)
+        self.b_wren.setVisible(bool(w))
+        self.b_wdel.setVisible(bool(w))
         if not e:
             self.i_name.setText("")
             self.i_path.setText("")
@@ -391,4 +489,118 @@ class Roots(Page):
         m.addAction(_("Move to bottom"), lambda: self.shift(10000))
         m.addSeparator()
         m.addAction(_("Remove from the list"), self.remove_line)
+        if self.world_of(self._entry(it)):
+            m.addSeparator()
+            m.addAction(_("Rename world..."), self.rename_world)
+            m.addAction(_("Delete world..."), self.delete_world)
         m.exec(self.tree.viewport().mapToGlobal(pos))
+
+    # ---- worlds: rename, delete (0.2.4, mato 15.10.) ----
+    def _world_ready(self, title):
+        """the selected row's world, when it can be changed now: game closed, no ticks waiting"""
+        e = self._current()
+        w = self.world_of(e)
+        if not w:
+            return None
+        if not os.path.isdir(os.path.join(self.app.game.livecpk_dir, w)):
+            error(self, title, _("The folder of %s is not on disk.") % w)
+            return None
+        g, s = self.app.game.running()
+        if g or s:
+            error(self, title, _("Close the game first: it has the world's files open."))
+            return None
+        if self.dirty:
+            error(self, title, _("You have changes in this list that are not written yet: press Apply or "
+                                 "Discard first."))
+            return None
+        if not can_write(self, self.app.game):
+            return None
+        return w
+
+    def delete_world(self):
+        title = "Delete world"
+        w = self._world_ready(title)
+        if not w:
+            return
+        if w in WL.live(self.app.game):
+            # the safe way: the world in the game is never taken out from under it (worlds.delete)
+            error(self, title, _("%s is the world in the game now (the green one).\n\nSwitch another world on "
+                                 "first (tick it here, untick this one, press Apply), or just untick this "
+                                 "one and press Apply. Then you can delete it.") % w)
+            return
+        named = WL.in_modules(self.app.game) == w
+        where = os.path.join(os.path.basename(self.app.game.sider_dir), "ModStudio", "backups", "worlds", w)
+        text = (_("Delete the world %s?") % w + "\n\n" +
+                _("It goes out of the game: its folder, its kits and scoreboards, and its lines in sider.ini "
+                  "and in the kit and scoreboard lists.") + "\n\n" +
+                _("Nothing is lost: it is all kept in %s, and Restore points > Put this copy back brings "
+                  "it back. Mod Studio keeps the last %d copies of each world.") % (where, WL.KEEP) + "\n\n" +
+                _("Your leagues stay in Mod Studio (your saved world file is not deleted), so you can "
+                  "build it again."))
+        if named:
+            text += "\n\n" + _("Mod Studio's modules still read this world. After it is deleted the game "
+                                "has no world of yours until you switch one on (Build and install, or "
+                                "Import your world).")
+        if not ask(self, title, text):
+            return
+        self.app.busy(True, _("Deleting %s ...") % w)
+        try:
+            folder, _info = WL.delete(self.app.game, w)
+        except WL.WorldError as e:
+            self.app.busy(False)
+            error(self, title, str(e))
+            return
+        except OSError as e:
+            self.app.busy(False)
+            if not denied(self, e):
+                error(self, title, _("It stopped:") + "\n\n" + str(e) + "\n\n" +
+                      _("What was done so far can be put back from Restore points."))
+            self.after_world_change()
+            return
+        self.app.busy(False)
+        self.after_world_change()
+        self.say(_("%s is deleted. It is kept in %s: Restore points > Put this copy back brings it back.")
+                 % (w, folder), "ok")
+
+    def rename_world(self):
+        from PySide6.QtWidgets import QInputDialog
+        title = "Rename world"
+        w = self._world_ready(title)
+        if not w:
+            return
+        new, ok = QInputDialog.getText(self, _(title), _("New name for %s (it must start with _FL26; "
+                                                          "letters, digits, - and _ only):") % w, text=w)
+        new = (new or "").strip()
+        if not ok or not new or new == w:
+            return
+        why = WL.check_name(self.app.game, new, w)
+        if why:
+            error(self, title, _(why))
+            return
+        if not ask(self, title, _("Rename %s to %s?") % (w, new) + "\n\n" +
+                   _("Everything that points at the world is changed with it: its line in sider.ini (same "
+                     "place, on or off as now), its kits and scoreboards and their lines, its world file, "
+                     "and your leagues in Mod Studio.") + "\n\n" +
+                   _("A career you play with it keeps working: the game never sees the world's name, only "
+                     "the files in it, and they do not change.") + "\n\n" +
+                   _("The small files it changes are kept first in Restore points; Put this copy back "
+                     "renames it back.")):
+            return
+        try:
+            WL.rename(self.app.game, w, new)
+        except WL.WorldError as e:
+            error(self, title, str(e))
+            return
+        except OSError as e:
+            if not denied(self, e):
+                error(self, title, _("It stopped, nothing was renamed:") + "\n\n" + str(e))
+            return
+        rename_recipe(self.app, w, new)
+        self.after_world_change()
+        self.say(_("%s is now %s.") % (w, new), "ok")
+
+    def after_world_change(self):
+        self.app.bus.ini_changed.emit()
+        self.app.bus.content_changed.emit()
+        self.idx = {}
+        self.rescan()

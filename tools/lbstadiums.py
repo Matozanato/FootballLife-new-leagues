@@ -115,6 +115,20 @@ def read(path):
     return text.splitlines(), "\r\n" if "\r\n" in text or not text else "\n", bom, enc
 
 
+def keep_before(path, reason, sider=None):
+    """a map about to be written, kept as a restore point in SiderAddons\\ModStudio\\backups (Restore
+    points shows it; the first copy is what Put Sider back as before Mod Studio puts back). Until
+    0.2.4 it was <map>.before-builder and <map>.prev next to the map (mato 15.10.: "from now on"
+    not next to the files)"""
+    if not os.path.isfile(path):
+        return None
+    try:
+        from modstudio import backups
+    except ImportError:                    # the CLI without the modstudio package beside it
+        return None
+    return backups.before_change(path, reason, sider)
+
+
 def library(sider):
     """the stadium library the game reads: Stadium Server's, else SPFL26's own, None for neither"""
     for f in (FOLDER, OWN):
@@ -172,10 +186,7 @@ def write(pl, sider, log=print):
     while lines and not lines[-1].strip():
         lines.pop()
     lines += [l for _t, l in mine]
-    if os.path.exists(path):
-        if not os.path.exists(path + ".before-builder"):
-            shutil.copy2(path, path + ".before-builder")
-        shutil.copy2(path, path + ".prev")
+    keep_before(path, "Switch on: home stadiums map", sider)
     data = (nl.join(lines) + nl).encode(enc, "replace")
     with open(path + ".tmp", "wb") as f:
         f.write((codecs.BOM_UTF8 if bom else b"") + data)

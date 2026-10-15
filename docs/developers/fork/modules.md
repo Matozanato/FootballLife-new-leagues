@@ -30,8 +30,8 @@ fl26catlist, fl26swiss, fl26augseason, fl26lateguards, fl26seasonend
   bundle's `init` calls the parts' `init` in order. Sider's Lua has **no `pcall`**: a part
   whose `init` raises an error stops the parts after it. That is why the oldest, most tried
   guards go first. The pack's `retired.txt` lists the single modules a bundle replaced.
-  Build switches their old `lua.module` lines off and keeps the files in
-  `modules\before-builder-<n>\`.
+  Build switches their old `lua.module` lines off and keeps the files as restore points in
+  `SiderAddons\ModStudio\backups` (until 0.2.4 in `modules\before-builder-<n>\`).
 - **Per world.** `fl26regions` and `fl26regnames` are not in the pack. They name the regions
   and competitions of one world, so Build writes them into the world folder
   (`region_modules`: `mkregioncats.py`, `mkregnames.py`, `mkcatflags.py`), and *Switch it on*

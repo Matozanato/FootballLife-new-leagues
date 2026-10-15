@@ -48,8 +48,9 @@ def _save(sider_dir, rows):
     os.replace(p + ".tmp", p)
 
 
-def snapshot(path, reason="", sider_dir=None):
-    """copy `path` into the backups folder; returns the copy's path"""
+def snapshot(path, reason="", sider_dir=None, before=False):
+    """copy `path` into the backups folder; returns the copy's path. before: the file was there
+    before Mod Studio's Build first changed it (what a <file>.before-builder next to it said)"""
     sd = sider_dir or _dir_of(path)
     stamp = time.strftime("%Y%m%d-%H%M%S")
     day = os.path.join(home(sd), "backups", stamp[:8])
@@ -63,9 +64,31 @@ def snapshot(path, reason="", sider_dir=None):
         dst = os.path.join(day, "%s.%s-%d" % (base, stamp[9:], n))
     shutil.copy2(path, dst)
     rows = load(sd)
-    rows.append({"file": rel, "copy": os.path.relpath(dst, sd), "time": stamp,
-                 "reason": reason, "size": os.path.getsize(dst)})
+    row = {"file": rel, "copy": os.path.relpath(dst, sd), "time": stamp,
+           "reason": reason, "size": os.path.getsize(dst)}
+    if before:
+        row["before"] = True
+    rows.append(row)
     _save(sd, rows)
+    return dst
+
+
+def before_change(path, reason, sider_dir=None, keep_n=30):
+    """a restore point of `path` before Build or Switch on changes it. Until 0.2.4 these were
+    copies next to the file -- map.txt.before-builder (the first one) and map.txt.prev (the last
+    one), sider.ini.before-builder, modules\\before-builder-<n>\\ -- and players found them all
+    over their content folders (mato 15.10.: "from now on" in SiderAddons\\ModStudio\\backups,
+    where Restore points shows them). The first copy is marked `before`, as the .before-builder
+    one was: Put Sider back as before Mod Studio puts that one back (factory.originals). Of one
+    file the newest `keep_n` copies stay, and the first; None when there is no file yet"""
+    if not os.path.isfile(path):
+        return None
+    sd = sider_dir or _dir_of(path)
+    rel = os.path.relpath(os.path.abspath(path), sd).lower()
+    first = not os.path.exists(path + ".before-builder") and not any(
+        r.get("before") and r["file"].lower() == rel for r in load(sd))
+    dst = snapshot(path, reason, sd, before=first)
+    keep(sd, os.path.relpath(os.path.abspath(path), sd), keep_n)
     return dst
 
 
@@ -88,6 +111,7 @@ def restore(sider_dir, row):
 def keep(sider_dir, rel, n=50):
     rows = history(sider_dir, rel)
     gone = rows[n:-1]          # the oldest copy stays: it is the file as it was before Mod Studio
+    gone = [r for r in gone if not r.get("before")]     # and so does the one marked as that (before_change)
     for r in gone:
         try:
             os.remove(os.path.join(sider_dir, r["copy"]))

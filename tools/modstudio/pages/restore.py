@@ -5,12 +5,13 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QComboBox, QFrame, QLabel, QPlainTextEdit, QPushButton, QSplitter, QTreeWidget,
                                QTreeWidgetItem, QVBoxLayout, QWidget)
 
-from .. import backups, factory
+from .. import backups, factory, worlds as WL
 from ..i18n import _
 from ..roots import human
 from ..ui import Page, section, hint, row, ask, error, info, run_job, can_write, denied
 
 ROW = Qt.UserRole
+WORLDS = "<worlds>"           # the "only" choice that lists the world backups (Content folders > Delete / Rename world)
 TEXT_EXT = (".ini", ".txt", ".csv", ".lua", ".json", ".cfg")
 
 
@@ -89,6 +90,8 @@ class Restore(Page):
         self.only.blockSignals(True)
         self.only.clear()
         self.only.addItem(_("All files"), None)
+        if WL.backups_of(self.sd()):
+            self.only.addItem(_("Worlds deleted or renamed"), WORLDS)
         for f in files:
             self.only.addItem(f, f)
         i = self.only.findData(cur)
@@ -98,8 +101,28 @@ class Restore(Page):
 
     def fill(self):
         self.tree.clear()
-        for r in backups.history(self.sd(), self.only.currentData()):
-            it = QTreeWidgetItem([when(r["time"]), r["file"], r.get("reason", ""), human(r.get("size", 0))])
+        only = self.only.currentData()
+        rows = [] if only == WORLDS else [(r["time"], r) for r in backups.history(self.sd(), only)]
+        # a world deleted or renamed in Content folders is one row: Put this copy back brings all of
+        # it back (mato 15.10.)
+        if only in (None, WORLDS):
+            for folder, inf in WL.backups_of(self.sd()):
+                rows.append((inf.get("time", ""), {"world_backup": folder, "info": inf}))
+        for t, r in sorted(rows, key=lambda x: x[0], reverse=True):
+            if "world_backup" in r:
+                inf = r["info"]
+                if inf.get("kind") == "renamed":
+                    what = _("world renamed to %s") % inf.get("new", "")
+                    size = ""
+                else:
+                    what = _("world deleted (all of it is in this copy)")
+                    size = human(WL.size_of(os.path.join(r["world_backup"], "files")))
+                it = QTreeWidgetItem([when(t), "livecpk\\" + inf.get("world", ""), what, size])
+                f = it.font(1)
+                f.setBold(True)
+                it.setFont(1, f)
+            else:
+                it = QTreeWidgetItem([when(r["time"]), r["file"], r.get("reason", ""), human(r.get("size", 0))])
             it.setData(0, ROW, r)
             self.tree.addTopLevelItem(it)
         if self.tree.topLevelItemCount():
@@ -113,6 +136,9 @@ class Restore(Page):
         r = self.current()
         if not r:
             self.diff.clear()
+            return
+        if "world_backup" in r:
+            self.diff.setPlainText(self.world_text(r))
             return
         now = os.path.join(self.sd(), r["file"])
         old = os.path.join(self.sd(), r["copy"])
@@ -129,9 +155,56 @@ class Restore(Page):
         d = list(difflib.unified_diff(a, b, "copy", "now", n=2, lineterm=""))
         self.diff.setPlainText("\n".join(d[2:]) if d else _("The file is the same as this copy."))
 
+    def world_text(self, r):
+        inf = r["info"]
+        if inf.get("kind") == "renamed":
+            lines = [_("%s was renamed to %s.") % (inf["world"], inf.get("new", "")), "",
+                     _("Put this copy back renames it back to %s, everywhere the name is written.") % inf["world"],
+                     "", _("Files the rename changed:")] + ["  " + t for t in inf.get("texts", [])]
+        else:
+            lines = [_("%s was deleted. All of it is kept in this copy:") % inf["world"], ""]
+            lines += ["  " + m for m in inf.get("moved", [])]
+            lines += ["  " + _("%s: %d line(s)") % (t["file"], len(t.get("removed", []))) for t in inf.get("texts", [])]
+            if inf.get("records"):
+                lines.append("  " + _("its records of Import your world"))
+            lines += ["", _("Put this copy back brings it back as it was (switched off if it was off)."), "",
+                      r["world_backup"]]
+        return "\n".join(lines)
+
+    def restore_world(self, r):
+        inf = r["info"]
+        if self.app.game.running()[0] or self.app.game.running()[1]:
+            error(self, "Restore points", _("Close the game first."))
+            return
+        if inf.get("kind") == "renamed":
+            q = _("Rename %s back to %s?") % (inf.get("new", ""), inf["world"])
+        else:
+            q = _("Put the world %s back as it was on %s?") % (inf["world"], when(inf.get("time", "")))
+        if not ask(self, "Restore points", q) or not can_write(self, self.app.game):
+            return
+        try:
+            w = WL.restore(self.app.game, r["world_backup"])
+        except WL.WorldError as e:
+            error(self, "Restore points", str(e))
+            return
+        except OSError as e:
+            if not denied(self, e):
+                error(self, "Restore points", str(e))
+            return
+        if inf.get("kind") == "renamed":
+            from .roots import rename_recipe
+            rename_recipe(self.app, inf.get("new", ""), w)
+        self.app.bus.ini_changed.emit()
+        self.app.bus.content_changed.emit()
+        self.say(_("%s is back.") % w, "ok")
+        self.refresh()
+
     def restore(self):
         r = self.current()
         if not r:
+            return
+        if "world_backup" in r:
+            self.restore_world(r)
             return
         g, s = self.app.game.running()
         if not ask(self, "Restore points", _("Put back %s as it was on %s? The file as it is now is kept as a "

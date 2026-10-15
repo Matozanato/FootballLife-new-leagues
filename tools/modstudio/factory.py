@@ -2,7 +2,9 @@
 must be able to put Sider back to how it was before Mod Studio with one click").
 
 Every file Mod Studio changed goes back to the oldest copy it kept of it: a restore point
-(SiderAddons\\ModStudio\\backups), a <file>.before-builder next to it, or modules\\before-builder-<n>.
+(SiderAddons\\ModStudio\\backups; since 0.2.4 Build keeps its copies there too, the first one
+marked "before"), or on an older install a <file>.before-builder next to it, or
+modules\\before-builder-<n>.
 What Mod Studio brought in (its modules, the face pack, the worlds, the mods installed with
 it) is taken out. Nothing is deleted: all of it, and every file as it was just before, is
 moved into SiderAddons\\ModStudio\\reset-<time>, with a list (reset.json) that undo() follows
@@ -60,7 +62,9 @@ def originals(sd):
             continue
         c = os.path.join(sd, r["copy"])
         if os.path.isfile(c):
-            offer(r["file"], _stamp_epoch(r.get("time", "")), c)
+            # a copy Build takes now instead of a .before-builder next to the file (backups.before_change,
+            # mato 15.10.) says the same: the file was there before Mod Studio changed it
+            offer(r["file"], _stamp_epoch(r.get("time", "")), c, bool(r.get("before")))
     for top, dirs, files in _walk(sd):
         for f in files:
             if f.endswith(BB):
