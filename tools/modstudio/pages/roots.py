@@ -1,6 +1,6 @@
 """Content folders: the cpk.root lines -- switch on/off, reorder, see what wins"""
 import os, shutil
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QBrush, QFont
 from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QHBoxLayout, QLabel, QLineEdit,
                                QPushButton, QSplitter, QTreeWidget, QTreeWidgetItem, QVBoxLayout,
@@ -340,7 +340,10 @@ class Roots(Page):
         if e:
             self.ini.set_enabled(e, it.checkState(0) == Qt.Checked)
             self.dirty = True
-            self.fill()
+            # not now: Qt is still inside the ticked row's setData, and fill() clears the list,
+            # so the row is gone under it -- Mod Studio closed with Qt6Widgets.dll c0000005
+            # (Discord, vmican 15.10.)
+            QTimer.singleShot(0, self.fill)
 
     def _entry(self, it):
         idx = it.data(2, Qt.UserRole)

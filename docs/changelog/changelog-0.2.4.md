@@ -113,6 +113,10 @@ once, and your 0.2.2 career keeps working.
   world had used up every free competition id and a league still had a super cup to make. It
   now stops with the same message as a cup does: no free competition or regulation ids left
   for that super cup, so you know to switch some cups or super cups off.
+- **Mod Studio closed (Qt6Widgets.dll, c0000005) when a module was ticked on or off in Lua modules**,
+  or a folder in Content folders. The list was filled again while Qt was still busy with the ticked
+  row; it is now filled a moment later, as NewLife's club list already was (#120). (Thanks vmican)
+
 - **League order, First-season European clubs and Seasons of the game's leagues were gone from the
   leagues page.** The new look left them out of its **More** menu; they are back there (League order
   puts the countries of Select Team and Kick Off in your order).

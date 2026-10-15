@@ -1,6 +1,6 @@
 """Lua modules: the lua.module lines -- switch on/off, reorder, and the order rules"""
 import os
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QBrush
 from PySide6.QtWidgets import (QCheckBox, QHBoxLayout, QLabel, QLineEdit, QPushButton, QSplitter,
                                QTreeWidgetItem, QVBoxLayout, QWidget, QPlainTextEdit, QMenu)
@@ -172,7 +172,10 @@ class Modules(Page):
         if e:
             self.ini.set_enabled(e, it.checkState(0) == Qt.Checked)
             self.dirty = True
-            self.fill()
+            # not now: Qt is still inside the ticked row's setData, and fill() clears the list,
+            # so the row is gone under it -- Mod Studio closed with Qt6Widgets.dll c0000005
+            # (Discord, vmican 15.10.)
+            QTimer.singleShot(0, self.fill)
 
     def dropped(self):
         self.ini.reorder(self.KEY, [self.tree.topLevelItem(i).text(2) for i in range(self.tree.topLevelItemCount())])
