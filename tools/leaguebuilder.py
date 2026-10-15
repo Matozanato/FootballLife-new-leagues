@@ -4243,6 +4243,8 @@ def national_cups(pl, root, db, log=print):
         pl.setdefault("cup_ids", {})["cup:" + p["name"]] = {"cid": c["cid"], "reg": c["reg"]}
         if c.get("super"):
             cids, regs = pinned_ids(pl, db, "super:" + p["name"])
+            if not cids or not regs:
+                raise BuildError("no free competition or regulation ids left for %s" % c["super"])
             pl["cup_ids"]["super:" + p["name"]] = {"cid": cids[0], "reg": regs[0]}
             c["super_cid"], c["super_reg"] = cids[0], regs[0]
             call(mkcup, ["--base", db, "--out", root, "--teams", ",".join(map(str, p["teams"][:2])),
