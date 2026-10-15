@@ -141,11 +141,13 @@ def install(zip_path, dst=None, restart=True):
                      % (tool("tasklist.exe"), p, tool("find.exe"), p, tool("ping.exe")))
     lines += ['%s "%s" "%s" /E /R:5 /W:1 /NP /NJH > "%s" 2>&1' % (tool("robocopy.exe"), src, dst, log),
               'if errorlevel 8 (echo The update could not be copied into "%s". >> "%s" & exit /b 1)' % (dst, log)]
-    if os.path.isdir(os.path.join(src, "_internal")):
-        # the program's own libraries: exactly the new ones, nothing left over from the old
-        lines += ['%s "%s" "%s" /MIR /R:5 /W:1 /NP /NJH >> "%s" 2>&1'
-                  % (tool("robocopy.exe"), os.path.join(src, "_internal"), os.path.join(dst, "_internal"), log),
-                  'if errorlevel 8 (echo The update could not be copied into "%s". >> "%s" & exit /b 1)' % (dst, log)]
+    # the program's own libraries and the module pack: exactly the new ones, nothing left over
+    # from the old (B37: an old pack's retired modules made Home say "2 missing" for ever)
+    for sub in ("_internal", "pack"):
+        if os.path.isdir(os.path.join(src, sub)):
+            lines += ['%s "%s" "%s" /MIR /R:5 /W:1 /NP /NJH >> "%s" 2>&1'
+                      % (tool("robocopy.exe"), os.path.join(src, sub), os.path.join(dst, sub), log),
+                      'if errorlevel 8 (echo The update could not be copied into "%s". >> "%s" & exit /b 1)' % (dst, log)]
     lines += [
               'start "" "%s"' % os.path.join(dst, EXE) if restart else 'rem no restart',
               'rmdir /s /q "%s"' % os.path.dirname(zip_path)]

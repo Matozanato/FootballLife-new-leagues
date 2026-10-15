@@ -94,6 +94,11 @@ once, and your 0.2.2 career keeps working.
 
 ## Fixed
 
+- **Home said "Mod Studio's modules need installing: 2 missing" for ever.** Mod Studio updated over
+  an older version kept the old pack's single modules that a bundle has since replaced, and Install
+  now copied them in only to move them out again. Those are now left out, and the updater replaces
+  the module pack whole. Nothing was wrong in the game. (Thanks Novarama)
+
 - **A big world stopped with "the player table is full" although it fits.** The game takes
   61905 players, and Build counted while it worked: the placeholder players a club's own squad
   replaces are taken out only at the end, so a world of 1212 new clubs (the Modpack, 60488

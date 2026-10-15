@@ -428,10 +428,8 @@ def modules_state(game):
     if not os.path.isdir(mdir) or not os.path.isdir(src):
         return None
     out = {"missing": [], "changed": [], "off": [], "left_off": [], "total": len(order)}
-    for f in sorted(os.listdir(src)):
+    for f in B.shipped_files(src):
         a, b = os.path.join(src, f), os.path.join(mdir, f)
-        if not os.path.isfile(a):
-            continue
         if not os.path.isfile(b):
             out["missing"].append(f)
         elif not _same_file(a, b):

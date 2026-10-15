@@ -4913,6 +4913,16 @@ def dll_message(problems, dst):
     return " ".join(text)
 
 
+def shipped_files(src):
+    """the files of the pack's modules folder to install. A module a bundle replaced is left out:
+    an update unpacked over an older Mod Studio (the updater, or a zip into the same folder) keeps
+    the old pack's single files, and each install copied them in only to move them out again --
+    Home said "2 modules missing" for ever (B37, a tester's 0.2.4 beta, 15.10.)"""
+    gone = retired_modules()
+    return [f for f in sorted(os.listdir(src))
+            if os.path.isfile(os.path.join(src, f)) and not (f.endswith(".lua") and f[:-4] in gone)]
+
+
 def install_modules(game, log=print, settle=2.0):
     """put the pack's modules in the Sider folder's modules and load them from sider.ini.
 
@@ -4931,7 +4941,7 @@ def install_modules(game, log=print, settle=2.0):
         raise BuildError("no %s -- is Sider installed in this game folder?" % dst)
     src = os.path.join(pack, "modules")
     changed, same, keep = [], 0, None
-    for f in sorted(os.listdir(src)):
+    for f in shipped_files(src):
         a, b = os.path.join(src, f), os.path.join(dst, f)
         if os.path.exists(b) and open(a, "rb").read() == open(b, "rb").read():
             same += 1
