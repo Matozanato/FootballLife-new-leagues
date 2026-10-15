@@ -113,6 +113,10 @@ once, and your 0.2.2 career keeps working.
   world had used up every free competition id and a league still had a super cup to make. It
   now stops with the same message as a cup does: no free competition or regulation ids left
   for that super cup, so you know to switch some cups or super cups off.
+- **Select Team: a Swiss league of yours sat glued to Greece.** Mod Studio knew the game's Greek league
+  by its old PES name, Switzerland, so a Swiss league you add sorted with it in every order and League order
+  listed no Greece. It is Greece now; a League order of your own made before needs setting again. (Thanks LaraCroft)
+
 - **Mod Studio closed (Qt6Widgets.dll, c0000005) when a module was ticked on or off in Lua modules**,
   or a folder in Content folders. The list was filled again while Qt was still busy with the ticked
   row; it is now filled a moment later, as NewLife's club list already was (#120). (Thanks vmican)

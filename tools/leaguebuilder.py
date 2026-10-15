@@ -3841,7 +3841,7 @@ SHIPPED_REGIONS = [                       # (region, name, confederation); None 
     (1, None, 0), (26, None, 0),
     (8, "Belgium", 2), (12, "Denmark", 2), (2, "England", 2), (3, "France", 2), (5, "Italy", 2),
     (7, "Netherlands", 2), (6, "Portugal", 2), (9, "Russia", 2), (15, "Scotland", 2),
-    (4, "Spain", 2), (10, "Switzerland", 2), (27, "Turkey", 2), (22, None, 2),
+    (4, "Spain", 2), (10, "Greece", 2), (27, "Turkey", 2), (22, None, 2),
     (17, "Argentina", 4), (16, "Brazil", 4), (18, "Chile", 4), (19, "Colombia", 4), (23, None, 4),
     (21, "China", 3), (28, "Saudi Arabia", 3), (24, None, 3),
     (25, None, 9),
@@ -3862,10 +3862,12 @@ CONTINENT = {2: 2, 3: 3, 4: 4, 6: 4, 7: 3, 5: 5}   # confederation -> block: CON
 # The game's league slots in the Kick Off list (SHIPPED_SLOT's) and their countries; Germany,
 # the USA and Japan have no region of their own in Select Team (they sit in the "other" groups),
 # so they move only in Kick Off. Saudi Arabia has Thailand's old region 28 (Discord, LaraCroft).
+# Region 10 / slot 94 is Greece in FL26 (Switzerland in PES 2021): named Switzerland, a Swiss league
+# of ours sorted with it and Select Team showed the two glued together (Discord, LaraCroft 15.10.)
 SLOT_COUNTRY = {7: "England", 50: "England", 8: "France", 52: "France", 9: "Italy", 53: "Italy",
                 10: "Netherlands", 11: "Spain", 51: "Spain", 12: "Portugal", 13: "Brazil", 122: "Brazil",
                 14: "Argentina", 15: "Chile", 16: "Germany", 17: "Usa", 18: "Japan", 88: "Belgium",
-                91: "Russia", 94: "Switzerland", 96: "Turkey", 99: "Colombia", 102: "China",
+                91: "Russia", 94: "Greece", 96: "Turkey", 99: "Colombia", 102: "China",
                 105: "Denmark", 114: "Scotland", 119: "Saudi Arabia"}
 OTHER_CONFED = {"Germany": 2, "Usa": 6, "Japan": 3}
 
