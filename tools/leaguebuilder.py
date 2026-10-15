@@ -3285,6 +3285,18 @@ def build(pl, base, game, replace=False, log=print):
                     log("  %s (in no competition of the game) moves to %s" % (info["clubs"][tid][0], p["name"]))
 
     new_of = {}                                        # every new club's id: its league (or group)
+    import lbgamestadiums as G
+    picked_stadiums = {}
+
+    def stadium_picks(p):
+        """[game stadium id] of league (or group) p's clubs; [] when the recipe keeps the old way"""
+        if pl.get("game_stadiums") is False:
+            return []
+        if id(p) not in picked_stadiums:
+            n = int(p.get("clubs") or len(p.get("teams") or []) or 0)
+            picked_stadiums[id(p)] = p["game_stadiums"] = G.league(
+                n, p.get("tier") or 1, p.get("country"), confed, G.fixed_of(pl, p))
+        return picked_stadiums[id(p)]
 
     def new_club(p, k):
         """a new club's Team.bin record, the k-th of league (or group) p: [record, id, abbr]"""
@@ -3327,6 +3339,11 @@ def build(pl, base, game, replace=False, log=print):
         else:
             short = abbr(club_name(p, k), used_abbr)
         r[W.T_ABBR:W.T_ABBR + W.T_ABBR_LEN] = short.ljust(W.T_ABBR_LEN, bytes(1).decode()).encode("ascii")
+        # its home stadium: one of the game's (lbgamestadiums), not Selangor FC's Stadio Nazionale
+        # for all of them (0.2.4)
+        sids = stadium_picks(p)
+        if k < len(sids):
+            r[G.T_STADIUM], r[G.T_STADIUM + 1] = sids[k], 0
         added.append(r)
         made += 1
         return r, tid, r[W.T_ABBR:W.T_ABBR + W.T_ABBR_LEN].split(bytes(1))[0].decode("ascii")

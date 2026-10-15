@@ -333,15 +333,32 @@ class Install(Page):
             import lbstadiums
             picked = {}                           # Stadiums > Your world's clubs: the picks stay with a new version
             for w in older:                       # the older version out first, not copied over
-                picked[w] = lbstadiums.load_edits(os.path.join(self.app.game.livecpk_dir, w))
+                old = os.path.join(self.app.game.livecpk_dir, w)
+                picked[w] = (lbstadiums.load_edits(old), lbstadiums.load_game(old))
                 I.replace_world(self.app.game, ini, w, log=log.append)
             inst = I.Installer(self.app.game, ini, name, log=log.append, replace_lines=repl)
             rec = inst.run(self.parts, where)
-            for w, edits in picked.items():
+            for w, (edits, game) in picked.items():
                 root = os.path.join(self.app.game.livecpk_dir, w)
-                if edits and os.path.isdir(root) and not os.path.exists(os.path.join(root, lbstadiums.EDITS)):
+                if not os.path.isdir(root) or os.path.exists(os.path.join(root, lbstadiums.EDITS)):
+                    continue
+                if edits:
                     lbstadiums.save_edits(root, edits)
                     log.append("%s: the %d home stadium(s) you picked are kept" % (w, len(edits)))
+                hand, auto_on = game
+                if hand or auto_on:
+                    import json, lbgamestadiums
+                    lbstadiums.save_game(root, hand, auto_on)
+                    db = os.path.join(root, "common", "etc", "pesdb")
+                    try:
+                        with open(os.path.join(root, "leaguebuilder-plan.json"), encoding="utf-8") as f:
+                            picks = lbgamestadiums.world_picks(
+                                json.load(f), lbgamestadiums.confed_of(db, getattr(self.app.project, "base", None)),
+                                hand, auto_on)
+                        n = lbgamestadiums.write_team_bin(os.path.join(db, "Team.bin"), picks)
+                        log.append("%s: the game stadiums you gave the clubs are kept (%d changed)" % (w, n))
+                    except (OSError, ValueError) as e:
+                        log.append("%s: the game stadiums you gave the clubs could not be put back: %s" % (w, e))
             return rec
 
         def done(rec):

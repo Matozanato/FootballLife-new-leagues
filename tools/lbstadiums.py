@@ -116,33 +116,58 @@ def wanted(pl, edits=None):
     return out
 
 
-def load_edits(root):
-    """{team id: stadium entry, or None for the game's stadium} picked for the world in
-    livecpk\\<world> (root); {} when none were"""
+def _edits_file(root):
     try:
         with open(os.path.join(root, EDITS), encoding="utf-8") as f:
             data = json.load(f)
     except (OSError, ValueError):
         return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _save_file(root, section, value):
+    """one section of fl26stadiums.json (clubs: stadium pack, game: the game's stadiums), the other
+    kept; no file when both are empty"""
+    path = os.path.join(root, EDITS)
+    data = _edits_file(root)
+    data.update({"format": "fl26stadiums", "format_version": 1})
+    data[section] = value
+    if not data.get("clubs") and not data.get("game") and not data.get("game_auto"):
+        if os.path.exists(path):
+            os.remove(path)
+        return
+    with open(path + ".tmp", "w", encoding="utf-8", newline="\n") as f:
+        json.dump(data, f, ensure_ascii=False, indent=1)
+    os.replace(path + ".tmp", path)
+
+
+def load_edits(root):
+    """{team id: stadium entry, or None for the game's stadium} picked for the world in
+    livecpk\\<world> (root); {} when none were"""
     out = {}
-    for k, st in ((data.get("clubs") or {}) if isinstance(data, dict) else {}).items():
+    for k, st in (_edits_file(root).get("clubs") or {}).items():
         if str(k).isdigit() and (st is None or isinstance(st, dict)):
             out[int(k)] = dict(st) if st else None
     return out
 
 
 def save_edits(root, edits):
-    """the stadiums picked for a ready world into livecpk\\<world>\\fl26stadiums.json (none: no file)"""
-    path = os.path.join(root, EDITS)
-    if not edits:
-        if os.path.exists(path):
-            os.remove(path)
-        return
-    data = {"format": "fl26stadiums", "format_version": 1,
-            "clubs": {str(t): edits[t] for t in sorted(edits)}}
-    with open(path + ".tmp", "w", encoding="utf-8", newline="\n") as f:
-        json.dump(data, f, ensure_ascii=False, indent=1)
-    os.replace(path + ".tmp", path)
+    """the stadium pack's stadiums picked for a ready world into livecpk\\<world>\\fl26stadiums.json"""
+    _save_file(root, "clubs", {str(t): edits[t] for t in sorted(edits)})
+
+
+def load_game(root):
+    """({team id: game stadium id} chosen by hand, Game stadiums automatically pressed) for a ready
+    world on the Stadiums page: Team.bin holds the stadiums, this is kept so a new version of the
+    world gets them too"""
+    data = _edits_file(root)
+    hand = {int(k): int(v) for k, v in (data.get("game") or {}).items() if str(k).isdigit() and isinstance(v, int)}
+    return hand, bool(data.get("game_auto"))
+
+
+def save_game(root, hand, auto):
+    _save_file(root, "game_auto", bool(auto))
+    _save_file(root, "game", {str(t): int(hand[t]) for t in sorted(hand)})
 
 
 def clubs(pl):
