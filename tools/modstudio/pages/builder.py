@@ -27,7 +27,7 @@ from .. import apart
 from .. import filecache
 from ..i18n import _, tr
 from ..backups import snapshot
-from ..ui import Fold, Page, section, hint, row, ask, error, info, run_job, helpmark, helped, can_write, denied_box
+from ..ui import Fold, Page, section, hint, row, ask, error, info, run_job, helpmark, helped, can_write, denied_box, denied
 
 EURO_WORLD = "_FL26Euro"
 
@@ -3618,7 +3618,8 @@ class AfterBuild(QDialog):
         try:
             name = G.edit_aside(self.world)
         except OSError as e:
-            error(self, "Move the Edit save aside", str(e))
+            if not denied(self, e):                   # a game under Program Files (B43)
+                error(self, "Move the Edit save aside", str(e))
             return
         self.b_edit.setEnabled(False)
         info(self, "Move the Edit save aside",

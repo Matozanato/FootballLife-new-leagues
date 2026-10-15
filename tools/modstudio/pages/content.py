@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QCompleter, QDialog, QDialo
 from .. import servers as S, theme
 from ..i18n import _
 from ..mapfile import Row
-from ..ui import Page, section, hint, row, ask, error, info
+from ..ui import Page, section, hint, row, ask, error, info, denied
 
 ROW = Qt.UserRole
 
@@ -762,7 +762,8 @@ class ServerView(QWidget):
             if self.settings_tab:
                 self.settings_tab.save()
         except OSError as e:
-            error(self, "Save", _("Could not save: %s") % e)
+            if not denied(self, e):                   # a game under Program Files (B43)
+                error(self, "Save", _("Could not save: %s") % e)
             return
         self.app.status(_("%s saved") % _(self.server.title) + ("  — " + _("restart the game to use it") if g else ""))
         self.app.bus.content_changed.emit()

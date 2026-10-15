@@ -141,7 +141,8 @@ class Restore(Page):
         try:
             backups.restore(self.sd(), r)
         except OSError as e:
-            error(self, "Restore points", str(e))
+            if not denied(self, e):                   # a game under Program Files (B43)
+                error(self, "Restore points", str(e))
             return
         if r["file"].lower() == "sider.ini":
             self.app.bus.ini_changed.emit()

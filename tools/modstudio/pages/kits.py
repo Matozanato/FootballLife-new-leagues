@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QCheckBox, QComboBox, QFileDialog, QLineEdit, QPus
 from .. import servers as S, theme
 from ..i18n import _
 from ..mapfile import Row
-from ..ui import hint, row, error
+from ..ui import hint, row, error, denied, can_write
 from .content import ServerPage, project
 
 
@@ -272,7 +272,9 @@ def _dialog_class():
                         mf.add(Row([str(tid), rel], quoted=[1]), after=self.tab.last_like(Row([str(tid)])))
                     n += 1
             except (OSError, ValueError, ImportError) as e:
-                error(self, "Import kits", _("Could not copy the kits: %s") % e)
+                # a game under Program Files (B43, ZeDosCaes21 15.10.): what to do, not a raw WinError 5
+                if not denied(self, e):
+                    error(self, "Import kits", _("Could not copy the kits: %s") % e)
             if n:
                 self.view._lib = None
                 self.tab.changed()
@@ -297,6 +299,8 @@ class Kits(ServerPage):
         if not v.server.installed(v.content_dir()):
             error(self, "Import kits", _("There is no %s folder in SiderAddons\\content: this server is not "
                                          "installed.") % v.server.folder)
+            return
+        if not can_write(self, self.app.game):       # before the matching, not after it (B43)
             return
         if not v.loaded:
             v.refresh(force=True)
