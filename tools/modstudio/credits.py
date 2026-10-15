@@ -105,7 +105,7 @@ EVERYONE = [
 
 # the people who supported the project on Ko-fi (ko-fi.com/mata28), first first; the README's
 # "Supporters" lists the same names
-SUPPORTERS = ["Thunder105", "GutGut", "LaraCroft", "Pierro1912", "David.BDJ", "Facemaker Jacobson"]
+SUPPORTERS = ["Thunder105", "GutGut", "LaraCroft", "Pierro1912", "David.BDJ", "Facemaker Jacobson", "Cristian B."]
 # a special thank you, above the list
 SPECIAL = "Ultimate Master League (UML)"
 
