@@ -236,8 +236,11 @@ class NewLife(BuilderPage):
         folder = self.app.settings.get("newlife")
         if self.rel is None and folder and os.path.isdir(folder):
             self.load(folder)
-        elif self.rel is not None and self.rel.tables != (self.info() or {}).get("base", self.rel.tables):
-            self.read_rows()              # other tables since (Settings): which clubs the game has
+        elif self.rel is not None and (self.rel.tables != (self.info() or {}).get("base", self.rel.tables)
+                                       or self.rel.use_recipe(self.project.recipe)):
+            # other tables since (Settings): which clubs the game has; or another world, or one
+            # that took a NewLife club the game has (B56) in or out of a league of its own
+            self.read_rows()
             self.fill()
         self.count()
 
@@ -280,6 +283,7 @@ class NewLife(BuilderPage):
         """the release's leagues, their clubs "in game" by the tables in use (a database mod's
         own, from Settings: Yanis 14.10., UML 2026 v3), not by the plain game"""
         names = dict((i, n) for n, i in B.country_ids(self.project.base)) if self.project.base else {}
+        self.rel.use_recipe(self.project.recipe)     # B56: a twin the world has as a new club stays one
         self.rows = self.rel.leagues(lambda c: names.get(int(c), "").split(" (")[0], self.info())
 
     def fill(self):

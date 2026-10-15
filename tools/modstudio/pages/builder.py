@@ -2875,6 +2875,7 @@ class NewClubs(BuilderPage):
         except OSError:
             game = None
         rel.use_tables(game)              # "in the game" by the tables in use, a database mod's too
+        rel.use_recipe(self.project.recipe)   # B56: a NewLife club that is the game's is a club of the game
         skip = used | {cid for cid, c in rel.clubs.items() if c.get("in_game") == "1"}
         d = ClubPickDialog(self, rel, skip)
         if not d.finish() or not d.picked:

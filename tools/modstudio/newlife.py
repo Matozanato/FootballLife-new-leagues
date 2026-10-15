@@ -76,6 +76,12 @@ class Release:
         self.meta, self.parts = None, []
         self.clubs, self.squads = {}, {}
         self.crests, self.logos = {}, {}          # club id / (country, league) -> read() of the png
+        # B56: a NewLife club that is a club of the game after all (clubs.csv game_id, 1.5b5 on):
+        # NewLife id -> the game's team id. While it counts as the game's it is in clubs and squads
+        # under the game's id, a club of the game like any other (see _settle)
+        self.twins, self._twin_rows = {}, {}
+        self._twin_off = set()                    # twins the tables in use have not got (use_tables)
+        self.held = set()                         # twins the world has as new clubs already (use_recipe)
         versions = set()
         for label, opener, pics, read in _sources(where):
             with opener("newlife.json") as f:
@@ -102,6 +108,63 @@ class Release:
         if len(versions) > 1:
             raise Error("the parts in this folder are of different versions (%s): keep one version's parts "
                         "only" % ", ".join(sorted(versions)))
+        self._find_twins()
+        self._settle()
+
+    def _find_twins(self):
+        """the clubs clubs.csv's game_id says are the game's (B56: 1.0 made Avai Futebol Clube a new
+        club, 98493; the game has it, Avai FC 2452). A release without the column has none, and
+        reads as it always did. Left out: a game id the release has as a club of its own, and one
+        two clubs claim"""
+        cand = {}
+        for cid, c in self.clubs.items():
+            g = str(c.get("game_id") or "").strip()
+            if g.isdigit() and str(int(g)) != cid and str(int(g)) not in self.clubs and c.get("in_game") != "1":
+                cand[cid] = str(int(g))
+        claims = collections.Counter(cand.values())
+        self.twins = {n: g for n, g in cand.items() if claims[g] == 1}
+        self._twin_rows = {n: self.clubs[n] for n in self.twins}
+
+    def _settle(self):
+        """put every twin where it belongs now: under the game's id, a club of the game ("in_game"
+        1, "twin" its NewLife id), unless the tables in use have not got that club (use_tables) or
+        the world already has the twin as a new club (use_recipe) -- then under its NewLife id, a
+        new club, as a release without game_id has it"""
+        for n, g in self.twins.items():
+            on = n not in self._twin_off and n not in self.held
+            if on and n in self.clubs:
+                del self.clubs[n]
+                self.clubs[g] = dict(self._twin_rows[n], in_game="1", twin=n)
+                if n in self.squads:
+                    self.squads[g] = self.squads.pop(n)
+            elif not on and (self.clubs.get(g) or {}).get("twin") == n:
+                del self.clubs[g]
+                self.clubs[n] = self._twin_rows[n]
+                if g in self.squads:
+                    self.squads[n] = self.squads.pop(g)
+
+    def now(self, cid):
+        """the id release club cid goes by now: a twin is in clubs under its NewLife id or under the
+        game's (_settle), and a league picked before the world changed may hold the other one"""
+        cid = str(cid)
+        if cid in self.clubs:
+            return cid
+        if cid in self.twins and self.twins[cid] in self.clubs:
+            return self.twins[cid]
+        return next((n for n, g in self.twins.items() if g == cid and n in self.clubs), cid)
+
+    def use_recipe(self, recipe):
+        """a twin the world already has as a new club (its NewLife id in a league's newlife clubs:
+        added from a release before 1.5b5, or put in by hand) stays a new club in that world, its id
+        as it was, and the game's club does not come in beside it (B56). True when that changed a
+        twin's id, so leagues() read before are out of date"""
+        placed = {str(i) for x in (recipe or {}).get("leagues") or [] for i in (x.get("newlife") or {}).get("clubs") or []}
+        held = {n for n in self.twins if n in placed}
+        if held == self.held:
+            return False
+        self.held = held
+        self._settle()
+        return True
 
     def _unpack(self, sub, name, read):
         d = os.path.join(CACHE, "".join(ch if ch.isalnum() or ch in "._-" else "_"
@@ -145,7 +208,11 @@ class Release:
         if self.tables == tag:
             return
         self.tables = tag
+        self._twin_off = {n for n, g in self.twins.items() if not same_club(info, int(g), self._twin_rows[n])}
+        self._settle()
         for cid, c in self.clubs.items():
+            if c.get("twin"):
+                continue                          # a twin's answer is _settle's
             was = c.setdefault("release_in_game", c.get("in_game", ""))
             if was == "1":
                 c["in_game"] = "1" if cid.isdigit() and same_club(info, int(cid), c) else "0"
@@ -201,6 +268,8 @@ def regroup(rel, L):
     the tables in use have not got goes with the new clubs. A club rel does not know stays
     where it is."""
     both = list(L.get("clubs") or []) + list(L.get("in_game") or [])
+    if getattr(rel, "twins", None):                 # B56: a twin by the id it goes by now
+        both = [rel.now(i) for i in both]
     game = lambda i: rel.clubs[i].get("in_game") == "1" if i in rel.clubs else i in (L.get("in_game") or [])
     return dict(L, clubs=sorted(i for i in both if not game(i)), in_game=sorted(i for i in both if game(i)))
 
@@ -280,6 +349,8 @@ def add_league(recipe, rel, L, legs=2, info=None, custom=False, name=None, more=
     players left out because another league has them)."""
     if info is not None:
         rel.use_tables(info)
+        L = regroup(rel, L)
+    elif rel.twins:
         L = regroup(rel, L)
     game = game_clubs(L, info)
     if not B.CLUBS_MIN <= len(L["clubs"]) + len(game) + more <= B.CLUBS_MAX:
@@ -440,6 +511,9 @@ def put_club(recipe, rel, x, k, cid, info=None):
     NewLife clubs into the empty places of a league made by hand). Returns (players kept at
     their game club, players left out because another league has them)."""
     rel.use_tables(info)
+    rel.use_recipe(recipe)
+    if cid not in rel.clubs and cid in rel.twins:
+        raise Error("%s is a club of the game: use Club of the game for it" % rel._twin_rows[cid]["name"])
     c = rel.clubs[cid]
     n = int(x.get("clubs") or 0)
     if not 0 <= k < n:
@@ -567,6 +641,7 @@ def update_league(recipe, rel, x, rows, info=None, keep=None):
     Returns (the league's name, players left at their game club, players another league has,
     [notes])."""
     rel.use_tables(info)
+    rel.use_recipe(recipe)
     nl = x["newlife"]
     name, idx = x["name"], recipe["leagues"].index(x)
     old_n = int(x.get("clubs") or 0)
@@ -788,7 +863,10 @@ def _hand_clubs(recipe):
 def game_league_plan(recipe, rel, info):
     """[{cid, name, release, swaps: [(team id, team id it swaps with)], replace: [(team id,
     release club id)], clubs: [team id], notes: [...]}], one per game league the release has:
-    what refresh_game_leagues does to it (clubs: the team ids that get the release's squad)"""
+    what refresh_game_leagues does to it (clubs: the team ids that get the release's squad).
+    A club of the game the release has under a NewLife id (clubs.csv game_id, B56) is that club of
+    the game here: it stays in its place, gets its squad and is not taken for a club gone down"""
+    rel.use_recipe(recipe)
     match, target = _game_targets(rel, info)
     league_of = {}
     for _r, c, _n, ts in B.game_leagues(info["base"]):
@@ -812,7 +890,8 @@ def game_league_plan(recipe, rel, info):
              "swaps": [], "replace": [], "clubs": [], "notes": []}
         p["swaps"] = [(t, swaps[t]) for t in ts if t in swaps]
         down = [t for t in ts if target.get(t) != cid and t not in swaps and t not in used]
-        new = [c for c in L["clubs"] if c in rel.clubs]
+        # a twin the world has as a new club already (use_recipe) does not take a place here too
+        new = [c for c in L["clubs"] if c in rel.clubs and c not in rel.held]
         p["replace"] = list(zip(down, new))
         if len(down) > len(new):
             p["notes"].append("%d club(s) the release has elsewhere stay: no club comes up in their place"
