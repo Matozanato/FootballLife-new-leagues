@@ -328,11 +328,19 @@ class Install(Page):
         self.go.setEnabled(False)
         log = []
         where, repl = self.where.currentData(), self.lines.currentData()
+        # a scoreboard / menu pack's lines go to the competitions of the world in the game; a
+        # world zip brings its own world, whose lines are already right
+        comps = None
+        if not any(p.kind == "world" and p.install for p in self.parts):
+            try:
+                comps = self.app.project.names()[1]
+            except Exception:
+                comps = None
 
         def job(progress):
             for w in older:                       # the older version out first, not copied over
                 I.replace_world(self.app.game, ini, w, log=log.append)
-            inst = I.Installer(self.app.game, ini, name, log=log.append, replace_lines=repl)
+            inst = I.Installer(self.app.game, ini, name, log=log.append, replace_lines=repl, comps=comps)
             return inst.run(self.parts, where)
 
         def done(rec):
@@ -346,6 +354,10 @@ class Install(Page):
             self.summary.setText("")
             self.say(_("%s is installed: %d file(s) added, %d replaced (the old ones are kept).")
                      % (name, len(rec["created"]), len(rec["replaced"])), "ok")
+            if rec.get("unmatched"):
+                self.say(_("%s is installed, but this world has no competition called %s: pick the "
+                           "competition yourself on Game content > Servers (Library > Use it for...).")
+                         % (name, ", ".join(rec["unmatched"])), "warn")
             if rec.get("world"):
                 self.world_on(rec)
 

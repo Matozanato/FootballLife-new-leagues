@@ -32,6 +32,7 @@ from .siderini import norm
 
 GAME_DIRS = {"common", "asset", "download", "ui", "sound", "movie"}
 SERVER_DIRS = {s.folder.lower(): s for s in S.SERVERS}
+MAP_LINE = "map line.txt"
 EXTRA_SERVERS = {"soundtrack-server", "turf-loader", "ui-colors", "fans-server", "ballboys_server",
                  "bibserver", "entrance", "stadium_tunnel", "stadium_banner", "stadium_board",
                  "stadium_cornerflag", "tournament_anth_tunnel", "whistle_ref", "custom-exhibition-match"}
@@ -329,6 +330,7 @@ class Part:
     def __init__(self, kind, src, name, server=None, note=""):
         self.kind, self.src, self.name, self.server, self.note = kind, src, name, server, note
         self.world_file = None            # a world: its fl26world.txt
+        self.map_line = None              # content: a loose "map line.txt" for its competition map
         self.install = True
         self.warnings = []
         self.size = 0
@@ -496,8 +498,15 @@ def detect(top, label="mod"):
         base = os.path.basename(d).lower()
         s = s or SERVER_DIRS.get(base)
         folder = s.folder if s else os.path.basename(d)
-        parts.append(Part("content", d, folder, server=s.key if s else None,
-                          note="" if s else "copied as it is (no map files to merge)"))
+        p = Part("content", d, folder, server=s.key if s else None,
+                 note="" if s else "copied as it is (no map files to merge)")
+        # a loose "map line.txt" beside the server folder (the scoreboard zips posted on Discord)
+        for where in (d, os.path.dirname(d)):
+            real = lower_names(where).get(MAP_LINE)
+            if s and real and not any(m.file.lower() in lower_names(d) for m in s.maps):
+                p.map_line = os.path.join(where, real)
+                break
+        parts.append(p)
 
     if os.path.isfile(top):
         visit(os.path.dirname(top), 0)
@@ -545,9 +554,13 @@ def _save(sider_dir, rows):
 class Installer:
     """install the chosen parts of one mod; `rec` is what removal needs"""
 
-    def __init__(self, game, ini, name, log=lambda t: None, replace_lines=True):
+    def __init__(self, game, ini, name, log=lambda t: None, replace_lines=True, comps=None):
+        """comps: {tournament id: name} of the world in the game. With it a competition line of a
+        scoreboard / menu pack goes to the competition its comment names: a pack made for another
+        world keys the same league by another id (quicksite, League Two on 182 = Guatemala here)"""
         self.game, self.ini, self.name, self.log = game, ini, name, log
         self.replace_lines = replace_lines
+        self.comps = comps
         self.rec = {"name": name, "time": time.strftime("%Y%m%d-%H%M%S"), "created": [], "replaced": [],
                     "ini": [], "map_added": {}, "map_removed": {}, "parts": []}
         self.sd = game.sider_dir
@@ -668,10 +681,41 @@ class Installer:
                 src = os.path.join(p.src, real) if real else None
             if src and os.path.exists(src):
                 self.merge_map(m, src, os.path.join(dst, m.file))
+        if p.map_line and s:
+            m = next((m for m in s.maps if m.cols and m.cols[0].kind == "comp"), None)
+            if m is not None:
+                self.merge_map(m, p.map_line, os.path.join(dst, m.file))
+
+    def match_comps(self, m, theirs):
+        """put each competition line on the competition its comment names, in the world in the game"""
+        if not self.comps or not m.cols or m.cols[0].kind != "comp":
+            return False
+        by_name = {}
+        for rid, n in self.comps.items():
+            by_name.setdefault(" ".join(str(n).lower().split()), []).append(rid)
+        moved = False
+        for r in theirs.rows():
+            if not (r.enabled and r.fields and r.fields[0].strip().isdigit() and r.comment):
+                continue
+            name = " ".join(r.comment.split("#")[0].lower().split())
+            ids = by_name.get(name)
+            rid = int(r.fields[0])
+            if not ids:
+                self.rec.setdefault("unmatched", []).append(r.comment.split("#")[0].strip())
+                self.log("  no competition called \"%s\" in this world: line %d kept as it is; "
+                         "pick the competition on Game content > Servers (Library > Use it for...)"
+                         % (r.comment.split("#")[0].strip(), rid))
+            elif rid not in ids:
+                self.log("  %s is %d in this world (the pack said %d)" % (r.comment.split("#")[0].strip(), min(ids), rid))
+                r.fields[0] = str(min(ids))
+                r.touch()
+                moved = True
+        return moved
 
     def merge_map(self, m, src, dst):
         theirs = MapFile(src, width=m.width, sep=m.sep, quote=m.quote)
-        if not os.path.exists(dst):
+        moved = self.match_comps(m, theirs)
+        if not os.path.exists(dst) and not moved and os.path.basename(src).lower() == m.file.lower():
             self.copy_file(src, dst)
             return
         mine = MapFile(dst, width=m.width, sep=m.sep, quote=m.quote)

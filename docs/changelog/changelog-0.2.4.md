@@ -96,6 +96,7 @@ once, and your 0.2.2 career keeps working.
 
 ## Fixed
 
+- A scoreboard or menu pack made for another world now lands on the right league: Import your world puts each competition line on the competition its name says in your world (the FL26 Modpack scoreboard zips carry the ids of the full modpack, so League Two went on another league and the game kept its own scoreboard), reads the zips' `map line.txt` too, and says which league your world has not. (Thanks quicksite)
 - **Home said "Mod Studio's modules need installing: 2 missing" for ever.** Mod Studio updated over
   an older version kept the old pack's single modules that a bundle has since replaced, and Install
   now copied them in only to move them out again. Those are now left out, and the updater replaces
