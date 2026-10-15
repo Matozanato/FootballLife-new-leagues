@@ -245,7 +245,10 @@ once, and your 0.2.2 career keeps working.
   League: groups 25 November, 2 December, 14, 21 and 28 January, 4 February; knockout 18
   February (round of 16 only), 11 and 25 March, 1, 15 and 29 April, final 13 May (the
   Tuesday cup a day earlier each time). The CAF, CONCACAF and OFC cups keep their days.
-  `sider.log` names the days each cup takes (`cup ... its leagues reach ...`).
+  `sider.log` names the days each cup takes (`cup ... its leagues reach ...`). A career that
+  is already past the group stage's days of before (the AFC Champions League Two's groups end
+  on 17 February there) plays this season's knockout on the days of before too, never on a day
+  already gone; from the next season the new days.
 - **A calendar-year league played the day after its own cup.** The cup's days (the `dates ...
   days=` line of a January-December country) were kept clear only when the league was spaced
   the old way, not by the real-calendar scheduler: the Copa AUF Uruguay's second round on 18

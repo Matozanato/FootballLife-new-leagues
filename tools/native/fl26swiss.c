@@ -4017,6 +4017,32 @@ static uint64_t ccup_like_dates(int k, uint16_t id, uint64_t reg, void* vec)
   return rv;
 }
 
+/* B35: the knockout's day table, chosen once a season when the knockout is dated (the day after
+   its groups are over, ccup_progress; a straight knockout on its fill day). A career whose groups
+   were dated on the days of before 0.2.4 -- a closed-beta career in its first season -- ends them
+   later than the table of its region begins its knockout (the AFC Champions League Two: groups
+   to Tuesday 17 February, CR_AFC's round of 16 from that same Tuesday), so a knockout whose
+   first day (j0) is not after today takes the days of before (CR_NONE) for that season instead
+   of a first leg dated in the past. Kept for the season, so a second dating of the same knockout
+   cannot change its days. -1: the cup has days of its own (ccup_day). */
+static int g_ko_cr[MAX_CCUP], g_ko_cr_year[MAX_CCUP];
+static int ccup_ko_table(int k, size_t j0)
+{
+  ccup_t* c = &g_ccup[k];
+  if (c->nd || c->like) return -1;
+  int y = season_year() + 1;                           /* 0: never chosen */
+  if (g_ko_cr_year[k] == y) return g_ko_cr[k];
+  int cr = ccup_region(c), t = today();
+  uint32_t d0 = CCUP_KO_DAYS[cr][ccup_tier(c)][j0 < 7 ? j0 : 6];
+  uint32_t p0 = d0 >= 182 ? d0 - 182 : d0 + 183, pt = t >= 182 ? (uint32_t)t - 182 : (uint32_t)t + 183;
+  if (cr != CR_NONE && t >= 0 && t < 365 && p0 <= pt) {
+    logf("fl26swiss: cup %u -- knockout dated on day %d, after its first day %u in %s: its groups were "
+         "dated on the days of before, so this season's knockout keeps them", (unsigned)c->ko, t, d0, CR_NAME[cr]);
+    cr = CR_NONE;
+  }
+  g_ko_cr[k] = cr; g_ko_cr_year[k] = y;
+  return cr;
+}
 static uint64_t ccup_dates(int k, int ko, uint16_t id, uint64_t reg, void* vec)
 {
   if (ccup_like_ok(&g_ccup[k])) return ccup_like_dates(k, id, reg, vec);
@@ -4039,9 +4065,10 @@ static uint64_t ccup_dates(int k, int ko, uint16_t id, uint64_t reg, void* vec)
       logf("fl26swiss: cup reg %u borrowed record %u: day %u round %u kind %u", (unsigned)id, (unsigned)i,
            r[i].day, r[i].round, r[i].kind);
   /* a knockout of eight is handed the round-of-16 pair first; the last record is the final */
+  int kcr = ko ? ccup_ko_table(k, have == 1 ? want - 1 : want - have) : -1;
   for (size_t i = 0; i < have; i++) {
     size_t j = ko ? (i + 1 == have ? want - 1 : i + (want - have)) : i * want / have;
-    r[i].day = ccup_day(cc, ko, (int)j);
+    r[i].day = kcr >= 0 ? CCUP_KO_DAYS[kcr][ccup_tier(cc)][j] : ccup_day(cc, ko, (int)j);
   }
   if (!(said[k] & bit))
     logf("fl26swiss: cup reg %u dated: %s days %u..%u (%u records)", (unsigned)id, ko ? "knockout" : "groups",

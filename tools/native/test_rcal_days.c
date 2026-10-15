@@ -389,6 +389,27 @@ int main(void)
       int r3 = ccup_region(&g_ccup[1]);
       expect(r1 == CR_LIB && r2 == CR_NONE && r3 == CR_LIB, "a cup's table follows the access list it is read with");
     }
+    {
+      /* a closed-beta career: its AFC Champions League Two groups dated on the days of before
+         end on Tuesday 47 and the knockout is dated the day after -- CR_AFC's round of 16 opens
+         on 47, so that season keeps the days of before; a new career dates it after day 33 */
+      g_ko_cr_year[2] = 0; g_today_test = 48;
+      int old = ccup_ko_table(2, 0);
+      g_today_test = 70;                               /* dated again later that season: kept */
+      int again = ccup_ko_table(2, 0);
+      g_ko_cr_year[2] = 0; g_today_test = 34;
+      int fresh = ccup_ko_table(2, 0);
+      g_ko_cr_year[2] = 0; g_today_test = 48;
+      int ko8 = ccup_ko_table(2, 2);                   /* a knockout of eight starts on day 82 */
+      g_ko_cr_year[2] = 0; g_today_test = 238;
+      int august = ccup_ko_table(2, 0);                /* a straight knockout, filled in August */
+      g_ko_cr_year[2] = 0;
+      expect(old == CR_NONE && again == CR_NONE && fresh == CR_AFC && ko8 == CR_AFC && august == CR_AFC,
+             "a knockout never dated before today: groups on the days of before keep the knockout's of before");
+      g_ko_cr_year[0] = 0; g_today_test = 48;
+      expect(ccup_ko_table(0, 0) == CR_NONE, "a cup of CR_NONE keeps its days whenever it is dated");
+      g_ko_cr_year[0] = 0;
+    }
     uint32_t cd[16];
     int nc1 = ccup_days_of(1, cd);
     {
