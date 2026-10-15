@@ -1308,7 +1308,6 @@
   "Mod Studio's modules are installed and switched on. Start the game again to use them.": "Moduli Mod Studija su instalirani i upaljeni. Pokreni igru ponovno da ih koristi.",
   "Almost ready": "Skoro spremno",
   "Fix these, then the world is ready to play:": "Popravi ovo i svijet je spreman za igru:",
-  "%s is installed, but not ready to play yet: see what to fix.": "%s je instaliran, ali još nije spreman za igru: pogledaj što popraviti.",
   "%s is ready to play. Press Play and start a new Master League.": "%s je spreman za igru. Stisni Play i pokreni novu Master League.",
   "Press Play and start a NEW Master League (an old career does not get the new leagues). No Build needed.": "Stisni Play i pokreni NOVU Master League (stara karijera ne dobiva nove lige). Build ne treba.",
   "%s is not in SiderAddons\\livecpk: install the zip again": "%s nije u SiderAddons\\livecpk: instaliraj zip ponovno",
@@ -1483,7 +1482,8 @@
   "File: Mod Studio's copy from the last Build (%s)": "Datoteka: kopija Mod Studija od zadnjeg Builda (%s)",
   "File: not saved yet": "Datoteka: još nije spremljeno",
   "Add leagues": "Dodaj lige",
-  "A world of your own: New world, then add its leagues on the Leagues tab. Build and install puts it in the game.": "Vlastiti svijet: New world, pa dodaj lige na kartici Leagues. Build and install ga stavlja u igru."
+  "A world of your own: New world, then add its leagues on the Leagues tab. Build and install puts it in the game.": "Vlastiti svijet: New world, pa dodaj lige na kartici Leagues. Build and install ga stavlja u igru.",
+  "%s is installed, but not ready to play yet: <a href=\"fix\">see what to fix</a>.": "%s je instaliran, ali još nije spreman za igru: <a href=\"fix\">pogledaj što popraviti</a>."
  },
  "log": [
   [

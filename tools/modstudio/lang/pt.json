@@ -1308,7 +1308,6 @@
   "Mod Studio's modules are installed and switched on. Start the game again to use them.": "Os módulos do Mod Studio estão instalados e ligados. Inicie o jogo de novo para usá-los.",
   "Almost ready": "Quase pronto",
   "Fix these, then the world is ready to play:": "Corrija isto e o mundo estará pronto para jogar:",
-  "%s is installed, but not ready to play yet: see what to fix.": "%s está instalado, mas ainda não está pronto para jogar: veja o que corrigir.",
   "%s is ready to play. Press Play and start a new Master League.": "%s está pronto para jogar. Aperte Play e comece uma nova Master League.",
   "Press Play and start a NEW Master League (an old career does not get the new leagues). No Build needed.": "Aperte Play e comece uma NOVA Master League (uma carreira antiga não recebe as ligas novas). Não precisa de Build.",
   "%s is not in SiderAddons\\livecpk: install the zip again": "%s não está em SiderAddons\\livecpk: instale o zip de novo",
@@ -1484,7 +1483,8 @@
   "File: Mod Studio's copy from the last Build (%s)": "Arquivo: a cópia do Mod Studio do último Build (%s)",
   "File: not saved yet": "Arquivo: ainda não salvo",
   "Add leagues": "Adicionar ligas",
-  "A world of your own: New world, then add its leagues on the Leagues tab. Build and install puts it in the game.": "Um mundo seu: New world, e adicione as ligas na aba Leagues. Build and install o coloca no jogo."
+  "A world of your own: New world, then add its leagues on the Leagues tab. Build and install puts it in the game.": "Um mundo seu: New world, e adicione as ligas na aba Leagues. Build and install o coloca no jogo.",
+  "%s is installed, but not ready to play yet: <a href=\"fix\">see what to fix</a>.": "%s está instalado, mas ainda não está pronto para jogar: <a href=\"fix\">veja o que corrigir</a>."
  },
  "log": [
   [

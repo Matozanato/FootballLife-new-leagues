@@ -38,6 +38,7 @@ class Page(QWidget):
         self.banner = QLabel()
         self.banner.setWordWrap(True)
         self.banner.hide()
+        self.banner.linkActivated.connect(self.banner_link)
         self.outer.addWidget(self.banner)
 
     def action(self, text, slot, kind=None, tip=None):
@@ -84,6 +85,11 @@ class Page(QWidget):
         self.banner.style().unpolish(self.banner)
         self.banner.style().polish(self.banner)
         self.banner.show()
+
+    def banner_link(self, href):
+        """a link in the banner: page:<name> opens that page; a page answers its own links"""
+        if href.startswith("page:"):
+            self.app.open_page(href[5:])
 
     def refresh(self):
         pass

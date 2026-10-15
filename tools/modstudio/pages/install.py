@@ -392,14 +392,27 @@ class Install(Page):
         good = [t for lv, t in rows if lv == "ok"]
         text = "\n".join(["\u2713  " + t for t in good] + ["!  " + t for t in warn] + ["\u2717  " + t for t in bad])
         if bad:
-            self.say(_("%s is installed, but not ready to play yet: see what to fix.") % w, "err")
-            error(self, _("Almost ready"), _("Fix these, then the world is ready to play:") + "\n\n" + text)
+            # the banner stays after the box is closed: its link shows the list again (Novarama,
+            # beta 15.10.: "see what to fix -- where?")
+            self.fix_text = text
+            self.say(_('%s is installed, but not ready to play yet: <a href="fix">see what to fix</a>.') % w, "err")
+            self.show_fix()
         else:
             self.say(_("%s is ready to play. Press Play and start a new Master League.") % w, "ok")
             self.what.setText(_("\u2713 Ready to play: press Play and start a new Master League"))
             info(self, _("Ready to play"), text + "\n\n" +
                  _("Press Play and start a NEW Master League (an old career does not get the new leagues). "
                    "No Build needed."))
+
+    def show_fix(self):
+        error(self, _("Almost ready"), _("Fix these, then the world is ready to play:") + "\n\n" +
+              getattr(self, "fix_text", ""))
+
+    def banner_link(self, href):
+        if href == "fix" and getattr(self, "fix_text", ""):
+            self.show_fix()
+        else:
+            super().banner_link(href)
 
     # ---- installed ----
     def refresh(self):
