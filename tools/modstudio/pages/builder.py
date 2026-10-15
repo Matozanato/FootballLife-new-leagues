@@ -215,11 +215,12 @@ def noted(*widgets):
 
 
 class PictureField(QWidget):
-    """a picture file: a preview, Pick and Clear"""
+    """a picture file: a preview, Pick and Clear. compact: one line for a table cell -- the buttons
+    side by side and an empty preview that says what it means in its tooltip"""
 
-    def __init__(self, value=None, size=72, empty="(made for you)"):
+    def __init__(self, value=None, size=72, empty="(made for you)", compact=False):
         super().__init__()
-        self.path, self.size, self.empty = value or None, size, empty
+        self.path, self.size, self.empty, self.compact = value or None, size, empty, compact
         self.changed = None                   # called after Pick or Clear
         h = QHBoxLayout(self)
         h.setContentsMargins(0, 0, 0, 0)
@@ -228,14 +229,17 @@ class PictureField(QWidget):
         self.view.setAlignment(Qt.AlignCenter)
         self.view.setStyleSheet("border: 1px solid %s; background: %s;" % (theme.BORDER, theme.PANEL))
         h.addWidget(self.view)
-        v = QVBoxLayout()
+        v = QHBoxLayout() if compact else QVBoxLayout()
         b1 = QPushButton(_("Pick picture..."))
         b1.clicked.connect(self.pick)
         b2 = QPushButton(_("Clear"))
         b2.clicked.connect(self.clear)
-        v.addWidget(b1)
-        v.addWidget(b2)
-        v.addStretch(1)
+        for b in (b1, b2):
+            if compact:
+                b.setMinimumWidth(b.sizeHint().width() + 8)
+            v.addWidget(b)
+        if not compact:
+            v.addStretch(1)
         h.addLayout(v)
         h.addStretch(1)
         self.show_it()
@@ -260,9 +264,10 @@ class PictureField(QWidget):
             self.view.setPixmap(pm)
         else:
             self.view.setPixmap(QPixmap())
-            self.view.setText(_(self.empty) if not self.path else
-                              _("(not readable)") if os.path.exists(self.path) else _("(file moved or deleted)"))
-            self.view.setToolTip(self.path or "")
+            say = (_(self.empty) if not self.path else
+                   _("(not readable)") if os.path.exists(self.path) else _("(file moved or deleted)"))
+            self.view.setText("" if self.compact else say)
+            self.view.setToolTip(self.path or say if self.compact else self.path or "")
             self.view.setWordWrap(True)
 
 
@@ -2137,7 +2142,8 @@ class GameCupsDialog(Dialog):
             sc.setChecked(bool(c.get("super_cup")) and not has_super)
             ln.setPlaceholderText(name + " League Cup")
             sn.setPlaceholderText(_("the game has one") if has_super else name + " Super Cup")
-            lg, sg = PictureField(c.get("logo"), 32), PictureField(c.get("super_logo"), 32)
+            lg = PictureField(c.get("logo"), 32, compact=True)
+            sg = PictureField(c.get("super_logo"), 32, compact=True)
             sc.setEnabled(not has_super)
             sn.setEnabled(not has_super)
             sg.setEnabled(not has_super)
@@ -2146,9 +2152,14 @@ class GameCupsDialog(Dialog):
             self.table.setRowHeight(i, 52)
             self.rows.append((rid, lc, ln, lg, sc, sn, sg))
         self.table.resizeColumnsToContents()
-        self.table.setColumnWidth(2, 200)
-        self.table.setColumnWidth(5, 200)
-        self.table.setMinimumSize(1000, 420)
+        pic = PictureField(None, 32, compact=True).sizeHint().width() + 12
+        for col, w in ((2, 220), (5, 220), (3, pic), (6, pic)):
+            self.table.setColumnWidth(col, w)
+        self.table.horizontalHeader().setStretchLastSection(True)
+        # wide enough for every column without a sideways scroll bar, as far as the screen allows
+        need = sum(self.table.columnWidth(i) for i in range(self.table.columnCount())) + 40
+        scr = self.screen().availableGeometry() if self.screen() else None
+        self.table.setMinimumSize(min(need, int(scr.width() * 0.9)) if scr else need, 420)
         self.v.insertWidget(1, self.table, 1)
         self.scroll.hide()
         self.cups = []
@@ -2166,6 +2177,86 @@ class GameCupsDialog(Dialog):
                 if f.path:
                     c[key] = f.path
             self.cups.append(c)
+        self.accept()
+
+
+class OurCupsDialog(Dialog):
+    """the cups of the world's own leagues in one table -- the national cup, the super cup and the
+    league cup of every top division (no league above it, not an exhibition league, not the clubs
+    in no league): the same recipe fields Edit league writes"""
+
+    def __init__(self, parent, project):
+        super().__init__(parent, "Cups of our countries")
+        self.leagues = [L for L in project.recipe.get("leagues") or []
+                        if L.get("above") in (None, "") and not L.get("exhibition") and not L.get("others")]
+        self.v.insertWidget(0, hint(_("The cups of your own leagues in one place: for each top division its "
+                                      "national cup (the league and the division below it), the super cup "
+                                      "(champion v cup winner, it needs the national cup) and a league cup. "
+                                      "The same as Edit league. Empty name = the league's name and Cup / "
+                                      "Super Cup / League Cup; no logo = an emblem with the cup's initials.")))
+        heads = [_("League"), _("National cup"), _("Name"), _("Logo"), _("Super cup"), _("Name"), _("Logo"),
+                 _("League cup"), _("Name"), _("Logo")]
+        self.table = QTableWidget(len(self.leagues), len(heads))
+        self.table.setHorizontalHeaderLabels(heads)
+        self.table.verticalHeader().hide()
+        self.rows = []
+        for i, L in enumerate(self.leagues):
+            item = QTableWidgetItem(L.get("name", ""))
+            item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+            self.table.setItem(i, 0, item)
+            name = L.get("name", "")
+            cells = []
+            for key, ph in (("cup", " Cup"), ("supercup", " Super Cup"), ("league_cup", " League Cup")):
+                on = QCheckBox()
+                on.setChecked(bool(L.get(key)))
+                nm = QLineEdit(L.get(key + "_name", ""))
+                nm.setPlaceholderText(name + ph)
+                lg = PictureField(L.get(key + "_logo"), 32, compact=True)
+                cells += [on, nm, lg]
+            cup, scup, lcup = cells[0], cells[3], cells[6]
+
+            def follow(_on=False, cup=cup, scup=scup):
+                scup.setEnabled(cup.isChecked())
+            cup.toggled.connect(follow)
+            follow()
+            if L.get("season") == "calendar":
+                lcup.setChecked(bool(L.get("league_cup")))
+                lcup.setEnabled(bool(L.get("league_cup")))
+                lcup.setToolTip(_("A league playing February to December has no split, Apertura/Clausura or league cup yet."))
+            for col, w in enumerate(cells, 1):
+                self.table.setCellWidget(i, col, w)
+            self.table.setRowHeight(i, 52)
+            self.rows.append((L, cells))
+        self.table.resizeColumnsToContents()
+        pic = PictureField(None, 32, compact=True).sizeHint().width() + 12
+        for col in (2, 5, 8):
+            self.table.setColumnWidth(col, 200)
+        for col in (3, 6, 9):
+            self.table.setColumnWidth(col, pic)
+        self.table.horizontalHeader().setStretchLastSection(True)
+        need = sum(self.table.columnWidth(i) for i in range(self.table.columnCount())) + 40
+        scr = self.screen().availableGeometry() if self.screen() else None
+        self.table.setMinimumSize(min(need, int(scr.width() * 0.9)) if scr else need, 420)
+        self.v.insertWidget(1, self.table, 1)
+        self.scroll.hide()
+
+    def ok(self):
+        for L, cells in self.rows:
+            for n, key in enumerate(("cup", "supercup", "league_cup")):
+                on, nm, lg = cells[3 * n:3 * n + 3]
+                keep = on.isChecked() and (key != "supercup" or cells[0].isChecked())
+                if keep:
+                    L[key] = True
+                else:
+                    L.pop(key, None)
+                if nm.text().strip():
+                    L[key + "_name"] = nm.text().strip()
+                else:
+                    L.pop(key + "_name", None)
+                if lg.path:
+                    L[key + "_logo"] = lg.path
+                else:
+                    L.pop(key + "_logo", None)
         self.accept()
 
 
@@ -2567,6 +2658,14 @@ class NewLeagues(BuilderPage):
                 self.project.recipe["game_cups"] = d.cups
             else:
                 self.project.recipe.pop("game_cups", None)
+            self.project.touch()
+
+    def our_cups(self):
+        if not any(L.get("above") in (None, "") and not L.get("exhibition") and not L.get("others")
+                   for L in self.project.recipe.get("leagues") or []):
+            self.say(_("Your world has no league of its own at the top of a country yet."))
+            return
+        if OurCupsDialog(self, self.project).finish():
             self.project.touch()
 
     def move(self, d):

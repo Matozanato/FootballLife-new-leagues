@@ -32,7 +32,7 @@ KINDS = "world zip (Modpack) · .fl26pack (league package) · NewLife Database (
 
 # ---- what the cards and the header say -------------------------------------------------------
 def world_rows(app):
-    """the cards, in order: the world in the game first, then the others on disk A-Z, then the open
+    """the cards, in order: the world in the game first, then the others on disk newest first, then the open
     world when it is not built yet. Each a dict: world, title (a ready world's pack name), live,
     built, zipped (from Import your world), open (the world the tabs change), when (built),
     exportable, and leagues / clubs when the open recipe says them"""
@@ -41,7 +41,12 @@ def world_rows(app):
     disk = WL.worlds(g) if ok else []
     live = WL.live(g) if ok else []
     open_w = str(P.recipe.get("world") or "").strip()
-    names = sorted(disk, key=lambda w: (w not in live, w.lower()))
+    def age(w):
+        try:
+            return -os.path.getmtime(os.path.join(g.livecpk_dir, w))
+        except OSError:
+            return 0
+    names = sorted(disk, key=lambda w: (w not in live, age(w), w.lower()))
     if open_w and open_w.lower() not in {w.lower() for w in disk}:
         names.append(open_w)
     rows = []
@@ -167,6 +172,18 @@ class SubTabs(QStackedWidget):
     def sync(self):
         for h, b in self.buttons.items():
             b.setChecked(h is self.currentWidget())
+
+
+class WheelRow(QScrollArea):
+    """the row of world cards: the mouse wheel moves it left and right (it has no up and down)"""
+    def wheelEvent(self, e):
+        d = e.angleDelta()
+        step = d.y() or d.x()
+        if not step:
+            return super().wheelEvent(e)
+        bar = self.horizontalScrollBar()
+        bar.setValue(bar.value() - step)
+        e.accept()
 
 
 class WorldCard(QFrame):
@@ -549,7 +566,7 @@ class MyWorld(QWidget):
         return w
 
     def _cards(self):
-        sa = QScrollArea()
+        sa = WheelRow()
         sa.setWidgetResizable(True)
         sa.setFrameShape(QScrollArea.NoFrame)
         sa.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -594,7 +611,7 @@ class MyWorld(QWidget):
         cups.setPopupMode(QToolButton.InstantPopup)
         cups.setCursor(Qt.PointingHandCursor)
         m = QMenu(cups)
-        for label, name in (("Pre-season cups", "preseason"), ("Cups of the game's countries", "game_cups"),
+        for label, name in (("Pre-season cups", "preseason"), ("Cups of our countries", "our_cups"), ("Cups of the game's countries", "game_cups"),
                             ("Competition names", "competition_names")):
             m.addAction(_(label)).triggered.connect(lambda _c=False, n=name: getattr(self.app.page("NewLeagues"), n)())
         cups.setMenu(m)

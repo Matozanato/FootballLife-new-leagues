@@ -5,6 +5,13 @@ once, and your 0.2.2 career keeps working.
 
 ## Changed
 
+- **Cups of our countries.** My world > Cups has a new window with the cups of your own leagues in
+  one table: for each top division its national cup, super cup and league cup, with the name and
+  the logo -- the same fields as Edit league, without opening every league.
+- **My world's cards.** The mouse wheel moves the row of worlds left and right, and after the
+  world in the game come the newest ones, not A-Z. The logos in Cups of the game's countries fit
+  their cells: Pick picture... and Clear side by side, the window as wide as the screen allows.
+
 - **A new look.** A dark, calmer window: the state of the game in boxes across the top (game folder, Sider, world, modules, leagues, pack), numbered sections, Home's ready check as a table with a red bar that names the problem and the button that puts it right, and a status bar at the bottom, in Windows' own font. Tables read better: rows that alternate, a header on its own band, the chosen row in blue (Thanks jibibi). Nothing moved: the same pages, buttons and steps.
 - **Export the world takes the scoreboards and menu themes of other packs along.** When the
   switched-on map lines of the Scoreboard Server or Menu Server on your PC give the world's
