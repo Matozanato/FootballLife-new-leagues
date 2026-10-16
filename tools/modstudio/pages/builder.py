@@ -3258,7 +3258,9 @@ def edit_game_club(page, tid):
         project.edits("clubs")[str(tid)] = e
     else:
         project.edits("clubs").pop(str(tid), None)
-    project.dirty = True
+    # GitHub #140: only marked unsaved, the crest of a club of the game ("Other clubs (no
+    # league)") never reached the world's file: 0.2.4 keeps the world on touch() alone
+    project.touch()
     return True
 
 
@@ -3623,16 +3625,24 @@ class GameLeagues(BuilderPage):
         tid, it = self.selected_tid()
         if tid is None:
             return
-        if edit_game_club(self, tid):
-            self.club_row(it, tid)
+        if edit_game_club(self, tid):        # the world changed: the page is filled again
+            self.select_club(tid)
 
     def undo_club(self):
-        for it in self.tree.selectedItems():
-            tid = it.data(0, Qt.UserRole)
+        tids = [it.data(0, Qt.UserRole) for it in self.tree.selectedItems()]
+        for tid in tids:
             self.project.edits("clubs").pop(str(tid), None)
             self.drop_swap(tid)
-            self.club_row(it, tid)
-        self.project.dirty = True
+        if tids:
+            self.project.touch()                 # kept in the world's file (#140), the rows again
+            self.select_club(tids[0])
+
+    def select_club(self, tid):
+        for i in range(self.tree.topLevelItemCount()):
+            it = self.tree.topLevelItem(i)
+            if it.data(0, Qt.UserRole) == tid:
+                self.tree.setCurrentItem(it)
+                return
 
     def drop_swap(self, tid):
         e = self.project.recipe.setdefault("edits", {})
