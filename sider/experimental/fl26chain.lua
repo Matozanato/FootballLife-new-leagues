@@ -109,7 +109,7 @@ end
 -- all. A world's own national cup comes as cup=, cuptop=, cuplow= (0 = no league below) and
 -- cupall=1 on its top league's line.
 local function from_world(world)
-  local chains, protect, cups, scups = {}, {}, {}, {}
+  local chains, protect, cups, scups, lcups = {}, {}, {}, {}, {}
   for _, L in ipairs(world) do
     protect[#protect + 1] = L.id
     -- A league below a split one (GitHub #79/#81, Egypt 2026-10-06): the game's mover writes
@@ -125,11 +125,23 @@ local function from_world(world)
     elseif L.cup and L.above then
       cups[#cups + 1] = { L.cup, L.above, L.id, L.cupall == 1, L.cupn }
     end
+    -- lcup= is the league's own league cup (a single-match knockout, the world's ccup like=): the
+    -- game fills it from the region's lowest league id, not its entry list (Erax 2026-10-15: 22
+    -- clubs of the second division in a cup of 32 -> Fixtures crashed, #74). Both leagues, top
+    -- first, lcupn in all.
+    if L.lcup and L.lcupn then
+      lcups[#lcups + 1] = { L.lcup, L.id, L.lcuplow or 0, true, L.lcupn }
+    end
     -- below a shipped second division the clubs put back come from the top flight (cuptop=)
     if L.scup and L.above then scups[#scups + 1] = { L.scup, L.cuptop or L.above, L.id } end
   end
+  -- the league cups after every national cup: fl26chain.dll keeps MAX_CUPS (16) and drops the
+  -- rest, so a world with more keeps the national cups it kept before the league cups came
+  for _, c in ipairs(lcups) do cups[#cups + 1] = c end
   return chains, protect, cups, scups
 end
+
+local MAX_CUPS = 16                                  -- fl26chain.c MAX_CUPS
 
 local CAVE_VA, CAVE_PAGE, CAVE_LEN = 0x14252e900, 0x14252e000, 0x108
 local PAGE_EXECUTE_READWRITE = 0x40
@@ -200,6 +212,10 @@ function m.init(ctx)
   local world, CUPS, SCUPS = read_world(ctx), {}, {}
   if world then
     CHAINS, PROTECT, CUPS, SCUPS = from_world(world)
+    for i = #CUPS, MAX_CUPS + 1, -1 do
+      log(string.format("fl26chain: cup %d -- more than %d cups in the world, left to the game", CUPS[i][1], MAX_CUPS))
+      CUPS[i] = nil
+    end
     log(string.format("fl26chain: world file -- %d leagues, %d chain pair(s) the game skips", #PROTECT, #CHAINS))
   end
   cfg = ffi.new("fl26_chain_cfg_t[?]", math.max(#CHAINS, 1))

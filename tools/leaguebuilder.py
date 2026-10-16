@@ -3729,6 +3729,19 @@ def build(pl, base, game, replace=False, log=print):
             # only its own 20 into the cup of 32
             L["cup"], L["cuptop"], L["cuplow"], L["cupall"] = c["reg"], p["rid"], below["rid"] if below else 0, 1
             L["cupn"] = c["clubs"]
+        # The league cup (league_ko_cup) the same way: the game fills it like a national cup, from
+        # the region's league with the lowest regulation id and the one linked below it, not from
+        # its entry list. Erax 2026-10-15: Liga Nacional (reg 11, 22 clubs) is the lower id, so the
+        # cup of 32 (20 + 12) held the 22 of the second division alone, and Competition Info ->
+        # the cup -> Fixtures crashed on a field the bracket screen has no layout for (#74, 22).
+        # fl26chain writes the top division and the first clubs below it instead, lcupn in all.
+        lc = next((h for h in hc if h.get("code") == "FL_%03d_LCUP" % p["rid"] and h.get("ko")), None)
+        if lc:
+            L["lcup"], L["lcuplow"], L["lcupn"] = lc["ko"], below["rid"] if below else 0, len(lc["entry"])
+    # fl26chain.dll keeps 16 cups to their leagues; fl26chain.lua sends the national cups first
+    for c in fl26world.chain_cups(leagues)[fl26world.MAX_CHAIN_CUPS:]:
+        log("  warning: cup %d -- more than %d national and league cups in the world, the game "
+            "fills it itself (Competition Info -> Fixtures may not draw it)" % (c[0], fl26world.MAX_CHAIN_CUPS))
     uefa, over = fl26world.uefa_places(all_places(pl),
                                        pl.get("game_replace") or [], bool(pl.get("uecl")))
     names = dict(fl26world.COMPETITIONS)
