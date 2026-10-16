@@ -1109,6 +1109,25 @@ def exchange_entries(ents, a, b):
     return na, nb
 
 
+def clear_league_pools(raw, ents, cids):
+    """the "Other ..." nibble (T_POOL) cleared on every club of Team.bin `raw` with a place in
+    one of the competitions `cids` (the world's leagues); returns the ids it cleared. The game
+    files a club into an "Other ..." group by that nibble at boot, whatever the competitions say
+    (#60), so a club of the game renamed into another (edits.clubs, NewLife's replaced places)
+    or swapped into a league (edits.swaps) from a place filed in Otros latinoamericanos showed
+    up in its league and in the Others list as well (B65, Estudiantes de Rio Cuarto)"""
+    row = {int.from_bytes(raw[o + W.T_ID:o + W.T_ID + 4], "little"): o
+           for o in range(0, len(raw) - len(raw) % W.T_REC, W.T_REC)}
+    out = []
+    for i in range(len(ents) // M.ENT):
+        o = i * M.ENT
+        t = int.from_bytes(ents[o + M.E_TEAM:o + M.E_TEAM + 4], "little")
+        if ents[o + M.E_CID] in cids and t in row and raw[row[t] + T_POOL] & 0xf0:
+            raw[row[t] + T_POOL] &= 0x0f
+            out.append(t)
+    return out
+
+
 def swap_entries(ents, old, new, skip=()):
     """every CompetitionEntry row of team `old` given to team `new`, but those of the
     competitions in skip; returns how many"""
@@ -3471,6 +3490,14 @@ def build(pl, base, game, replace=False, log=print):
             log("  %s (%s) and %s (%s) swap leagues: %d and %d place(s)"
                 % (info["clubs"].get(a, (a,))[0], info["league_of"].get(a, "?"),
                    info["clubs"].get(b, (b,))[0], info["league_of"].get(b, "?"), na, nb))
+    # B65: a club with a league place is in no "Other ..." group, however it got there -- moved
+    # (game_places, above), renamed or swapped by the edits, or a place the tables filed there
+    gl = game_leagues(base)
+    cids = {c for _r, c, _n, _t in gl} - friendly_cids(gl) | {p["cid"] for p in pl["leagues"]}
+    cleared = [t for t in clear_league_pools(raw, ents, cids) if t not in nopool]
+    if cleared:
+        nopool += cleared
+        log("  %d club(s) with a league place out of the game's other-clubs groups" % len(cleared))
     open(os.path.join(db, "Team.bin"), "wb").write(pesdb.wesys_pack(bytes(raw)))
     cpath = os.path.join(base, "Coach.bin")
     if os.path.exists(cpath):

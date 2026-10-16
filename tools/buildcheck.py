@@ -11,10 +11,12 @@ already has); exits 1 on any FAIL.
   3. every team id in CompetitionEntry.bin exists in Team.bin, but FAIL only on the ids the
      world introduces; an id the base misses too is INFO;
   4. a club whose league differs from the base has a clear "Other ..." nibble (Team.bin +0x4f
-     high half == 0, T_POOL in leaguebuilder.py);
+     high half == 0, T_POOL in leaguebuilder.py); so has every club with a place in a league
+     (pre-season tournaments aside) that is not the base's own club there as it was: a club
+     renamed or swapped into a league (B65). One the base already ships so is INFO;
   5. record counts, base vs world, for every table both have (information only).
 
-Checks 1 and 3 are base-relative: they fail only on what the world introduces over the base,
+Checks 1, 3 and 4 are base-relative: they fail only on what the world introduces over the base,
 never on a condition the shipped base already has (so a normal world passes offline).
 """
 import os, sys
@@ -64,6 +66,21 @@ def league_of(regs, ents):
         if rid is not None:
             out.setdefault(tid_of(e[M.E_TEAM:M.E_TEAM + 4]), rid)
     return out
+
+
+def league_places(regs, ents):
+    """{team id: competition id} of the clubs with a place in a league, as
+    leaguebuilder.game_leagues counts leagues (no split phase), the pre-season tournaments
+    (leaguebuilder.friendly_cids) left out"""
+    W = LB.fl26world
+    cids = {g[M.R_CID] for g in rows(regs, M.REG)
+            if g[M.R_TYPE] in (4, SPLIT_TOTAL) and W.fmt(g) not in (W.F_REGULAR,) + W.F_GROUPS}
+    teams = {}
+    for e in rows(ents, M.ENT):
+        if e[M.E_CID] in cids:
+            teams.setdefault(e[M.E_CID], []).append(tid_of(e[M.E_TEAM:M.E_TEAM + 4]))
+    friendly = LB.friendly_cids([(None, c, None, ts) for c, ts in teams.items()])
+    return {t: c for c, ts in sorted(teams.items()) if c not in friendly for t in ts}
 
 
 def entry_ids(ents):
@@ -182,14 +199,34 @@ def main():
         elif r[pool] & 0xf0:
             bad.append("club %d: T_POOL byte 0x%02x, high nibble should be 0 (league %s -> %s)"
                        % (t, r[pool], bl.get(t), wl.get(t)))
+    # B65: a club renamed or swapped into a league keeps its id (and a swap may keep the league
+    # id too): every club with a league place and a nibble fails, but the base's own club there
+    # as the base ships it (same name, same league, a nibble too) is only INFO
+    base_rec = {team_id(r): r for r in rows(base_team, T_REC)} if base_team else {}
+    bp = league_places(base_regs, base_ents) if base_regs is not None else {}
+    name = slice(LB.W.T_NAME, LB.W.T_NAME + LB.W.T_NAME_LEN)
+    shipped = []
+    for t, c in sorted(league_places(regs, ents).items()):
+        r = rec_of.get(t)
+        if r is None or not r[pool] & 0xf0 or wl.get(t) != bl.get(t):
+            continue                        # none, clear, or a moved club already counted above
+        b = base_rec.get(t)
+        if b is not None and bp.get(t) == c and b[pool] & 0xf0 and bytes(b[name]) == bytes(r[name]):
+            shipped.append(t)
+        else:
+            bad.append("club %d: T_POOL byte 0x%02x, high nibble should be 0 (a place in league %s,"
+                       " renamed or swapped in)" % (t, r[pool], wl.get(t)))
     if bad:
         fails += 1
-        print("FAIL check 4 (T_POOL of clubs that changed league): %d club(s)" % len(bad))
+        print("FAIL check 4 (T_POOL of clubs that changed league or play in one): %d club(s)" % len(bad))
         for b in bad[:40]:
             print("     " + b)
     else:
         moved = sum(1 for t in set(wl) | set(bl) if wl.get(t) != bl.get(t))
         print("PASS check 4: %d club(s) changed league, all with a clear T_POOL nibble" % moved)
+    if shipped:
+        print("INFO check 4: %d club(s) with a league place and an \"Other\" nibble, as the base"
+              " ships them: %s" % (len(shipped), shipped[:40]))
 
     # ---- check 5: record counts (information) ----
     print("INFO check 5 (record counts, base vs world):")

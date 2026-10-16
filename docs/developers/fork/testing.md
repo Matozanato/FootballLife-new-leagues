@@ -48,6 +48,7 @@ exe. See `tools/flpaths.py`.
 | `test_newlife_update.py` | two NewLife folders (older, newer) | *Update my leagues to this version* takes the newer clubs and squads and keeps the league's own settings (and a package's kit folders with their clubs) |
 | `test_own_kit_line.py` | | a kit line of your own in Kit Server's `map.txt` wins over a league package's kit and a made one (no line or folder of ours, a line an older Build switched off comes back on); package kit folders move with their club on Remove / Insert / Move club |
 | `test_pack_guard.py` | | the release guard (`mszip.check_pack`): a known crash site, a `fl26caps.lua` that is not the generated set or not the game's stops the zip; other modules that differ from the game's are listed |
+| `test_pool_nibble_edits.py` | | B65: a club renamed (`edits.clubs`) or swapped (`edits.swaps`) into a league leaves the "Other ..." group (`clear_league_pools`), a club in a pre-season tournament only or in no competition stays; `buildcheck.py` check 4 fails on such a club and not on what the base ships (synthetic tables) |
 | `test_retired_modules.py` | | `ensure_modules` switches a bundled module off only when its bundle is loaded too |
 | `test_shift_newlife.py` | | Remove club / Insert club move the league's NewLife ids with the places |
 | `test_squadimport.py` | | the table import reads the game's player id and the fields |
@@ -132,10 +133,12 @@ It runs five checks:
    fills, or a gap byte set that the base keeps zero, is a FAIL.
 2. No two regulations share an id.
 3. Every team in `CompetitionEntry.bin` exists in `Team.bin`.
-4. A club whose league changed has its "Other ..." group bits cleared (`Team.bin` +0x4f).
+4. A club whose league changed has its "Other ..." group bits cleared (`Team.bin` +0x4f), and
+   so has every club with a place in a league (pre-season tournaments aside): a club renamed or
+   swapped into one (B65). The base's own club there, as the base ships it, is INFO.
 5. Record counts compared with the base (information only).
 
-Checks 1 and 3 count only what the world introduces, so a normal world passes.
+Checks 1, 3 and 4 count only what the world introduces, so a normal world passes.
 
 ## `langcheck.py`: translations
 
