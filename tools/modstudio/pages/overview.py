@@ -288,7 +288,13 @@ class Overview(Page):
         while layout.count():
             it = layout.takeAt(0)
             if it.widget():
-                it.widget().deleteLater()
+                # B83 (David 16.10.): a refresh while a message box is open (Install the modules)
+                # runs in that box's event loop, where deleteLater waits until the box closes, so
+                # the old rows stayed painted under the new ones; take them off the screen now
+                w = it.widget()
+                w.hide()
+                w.setParent(None)
+                w.deleteLater()
             elif it.layout():
                 Overview._clear(it.layout())
 

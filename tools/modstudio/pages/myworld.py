@@ -450,6 +450,8 @@ class AddDialog(QDialog):
         while self.ticks.count():
             w = self.ticks.takeAt(0).widget()
             if w is not None:
+                w.hide()
+                w.setParent(None)
                 w.deleteLater()
         self.ticks_box.hide()
         self.after.hide()
@@ -802,6 +804,9 @@ class MyWorld(QWidget):
         while self.row.count():
             it = self.row.takeAt(0)
             if it.widget() is not None:
+                # B83: off the screen at once, deleteLater can wait for a message box to close
+                it.widget().hide()
+                it.widget().setParent(None)
                 it.widget().deleteLater()
         self.cards = []
         for x in rows:

@@ -520,6 +520,8 @@ class Leagues(BuilderPage):
         while self.o_crests.count():
             w = self.o_crests.takeAt(0).widget()
             if w:
+                w.hide()
+                w.setParent(None)
                 w.deleteLater()
         P = self.project
         crests = list(L.get("club_crests") or [])
