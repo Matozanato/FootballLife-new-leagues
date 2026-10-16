@@ -216,6 +216,16 @@ writing the tables itself. The loaders drain `<dll>_log` and `<dll>_stats` into 
   two season slots of every header (`[owner+0x78]`, stride 0xb4, slots at +4 / +0x5c, table
   indices at +8; the table array offset is read from the lea at 0x14158df91) and takes the
   fullest table of that regulation.
+- **Kept tables on disk** (`state_store` / `state_sync`, 0.2.4, B49): the final tables and cup
+  winners kept at a season's end (`g_final`, `g_cupwin`) are written to
+  `Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\2026\save\fl26swiss-state.bin`, 176-byte
+  records after an 8-byte magic `FL26SST1`: the user's club (0x1414bb650), the game's date
+  (year * 365 + day: the day at `TODAY_OFF`, the year 8 bytes after it), the regulation, kind
+  (0 table, 1 cup winner), the clubs and an FNV-1a check. When the game's date and `abs_day`
+  stop moving together (a start, a load), memory is put on the new footing and the user's club's
+  newest record of each regulation dated today or before is read back. No hook: written from
+  `teardown_pre` and `apclau_keep`, read from `final_of`, `cupwin_of`, `any_final_kept`.
+  `test_state_keep.c` (`tools/test_state_keep.py`) checks it offline.
 - **Status:**
   - 2 / 12 / 22 = code not as expected at 0x1413f3e00 / 0x14157f810 / 0x1413f3c30;
   - 3 = `VirtualAlloc`, 4 = `VirtualProtect`;

@@ -1396,6 +1396,10 @@ static const char* COMP_NAME[3] = { "Champions League", "Europa League", "Confer
 typedef struct { uint16_t reg; int day; uint32_t club; } cupwin_t;
 static cupwin_t g_cupwin[32]; static int g_ncupwin = 0;
 
+/* B49: what is kept is read back from the save folder after a restart or a load (state_sync) */
+static void state_sync(void);
+static int g_st_read_back = 0;
+
 /* the winner of a competition as the game's own rights code sees it, or 0 */
 static uint32_t winner_now(uint16_t reg)
 {
@@ -1407,12 +1411,14 @@ static uint32_t winner_now(uint16_t reg)
 }
 static cupwin_t* cupwin_of(uint16_t reg)
 {
+  state_sync();
   for (int i = 0; i < g_ncupwin; i++) if (g_cupwin[i].reg == reg) return &g_cupwin[i];
   return 0;
 }
 
 static final_t* final_of(uint16_t reg)
 {
+  state_sync();
   for (int i = 0; i < g_nfinal; i++) if (g_final[i].reg == reg) return &g_final[i];
   return 0;
 }
@@ -1636,6 +1642,7 @@ typedef struct { uint16_t reg; uint8_t rank; } how_t;
 static how_t g_how[3][FIELD];
 static int any_final_kept(void)
 {
+  state_sync();
   int d = abs_day();
   for (int i = 0; i < g_nfinal; i++) if (d >= g_final[i].day && d - g_final[i].day < 120) return 1;
   return 0;
@@ -1942,8 +1949,10 @@ static int access_build(int q, int mask)
   /* A career built in this session takes the list in its first European summer. A January
      league's career has a final table of its own by then (2026-10-05: CSL, kept on day 176), so
      the final tables do not tell the first summer from a later one there: the day of the first
-     use does -- every build within 120 days of it is the same summer. */
-  int first_summer = g_new_career && (g_first_day < 0 || abs_day() - g_first_day < 120);
+     use does -- every build within 120 days of it is the same summer. A save of a later summer
+     loaded on days 210-240 can look like a career built in this session; last season's tables
+     read back from the save folder (state_sync, B49) say it is not. */
+  int first_summer = g_new_career && !g_st_read_back && (g_first_day < 0 || abs_day() - g_first_day < 120);
   if (g_nfirst[0] + g_nfirst[1] + g_nfirst[2] && first_summer) {
     int missing = 0, twice = 0, over = 0;
     if (g_first_day < 0) g_first_day = abs_day();
@@ -7759,6 +7768,235 @@ static int hook(unsigned char* target, const unsigned char* sig, int n, void* ha
    which still ends in the original.  fl26chain.dll holds set_clubs 0x141522b50 and loads first. */
 static int g_chained = 0;
 
+/* ---- B49: the kept tables and cup winners outlive the game session ----
+ *
+ * The final tables (g_final) and cup winners (g_cupwin) kept at the July teardown, at New Year
+ * and for an Apertura + Clausura league lived in memory alone. A game quit between the teardown
+ * (about 1 July) and the August draws, or a save of those weeks loaded (a load is another
+ * timeline in abs_day, so whatever was kept before it is two years old), and the season's
+ * continental places went by squad strength (seed_of) instead of last season's tables:
+ * bythezl19's Cyprus and Bosnia had "8 from tables, 124 from first-season order" after a save of
+ * day 207 was loaded (B49); a continental super cup of ours took its cup winners from the game
+ * again (B51).
+ *
+ * Every keep is now written to fl26swiss-state.bin in the game's save folder (Mod Studio
+ * switches that folder with the world, so each world has its own), one record per table or
+ * winner: the club the user manages, the game's date (year * 365 + day, the same on every
+ * timeline), the regulation and the clubs. Whenever the game's date and abs_day stop moving
+ * together, or the user's club changes -- a game started, a save loaded -- what memory keeps is
+ * put on the new footing (and left out when it is dated after today: a later save's), then the
+ * records of the user's club dated today or before, and less than STATE_AGE days before, are
+ * read back, each regulation's newest, at the abs_day that date is now: every window that asks
+ * "kept this summer" sees them as if they had never left memory. A record dated after today
+ * belongs to a later save of the career and is not taken (a new career is built on day 216 or
+ * 0, before any keep of its club); a career with another club never sees them. A keep in
+ * memory as recent as the file's stays. Nothing of the game is hooked for this: the file is
+ * written from teardown_pre and apclau_keep, read from final_of, cupwin_of and any_final_kept. */
+#define STATE_FILE "fl26swiss-state.bin"
+#define STATE_AGE  400      /* past every window a keep is asked in (CONT_KEEP 330 the longest) */
+static const char STATE_MAGIC[8] = { 'F', 'L', '2', '6', 'S', 'S', 'T', '1' };
+typedef struct {
+  uint32_t user;                 /* the user's club when it was written */
+  int32_t gdate;                 /* the game's date of the keep: year * 365 + day */
+  uint16_t reg;
+  uint8_t kind, n;               /* kind 0 a final table (n clubs), 1 a cup winner (n 1) */
+  uint32_t club[FINAL_MAX];
+  uint32_t check;
+} state_rec_t;
+static int g_st_off = -0x7fffffff, g_st_day = -0x7fffffff, g_st_busy = 0;
+static uint32_t g_st_user = 0;
+#if defined(FL26_RCAL_TEST) && !defined(FL26_STATE_TEST)
+#define STATE_OFF                /* the calendar harness: no game, no save folder */
+#endif
+#ifdef FL26_STATE_TEST
+int state_test_date(void);
+uint32_t state_test_user(void);
+const char* state_test_path(void);
+#endif
+/* the game's date, year * 365 + day (the two fields season_year reads), or -1 */
+static int game_date(void)
+{
+#ifdef FL26_STATE_TEST
+  return state_test_date();
+#else
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!blk) return -1;
+  int t = *(uint16_t*)(blk + TODAY_OFF), y = *(uint16_t*)(blk + TODAY_OFF + 8);
+  return t >= 365 || y < 1990 || y > 2200 ? -1 : y * 365 + t;
+#endif
+}
+static uint32_t state_user(void)
+{
+#ifdef FL26_STATE_TEST
+  return state_test_user();
+#else
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  return user_club(o ? *(void**)(o + 0x48) : 0);
+#endif
+}
+/* <Documents>\KONAMI\eFootball PES 2021 SEASON UPDATE\2026\save\fl26swiss-state.bin, beside
+   fl26edit's side file; shell32 is asked at run time, so the DLL still imports kernel32 alone */
+static const char* state_path(void)
+{
+#ifdef FL26_STATE_TEST
+  return state_test_path();
+#else
+  static char path[MAX_PATH + 96]; static int tried = 0;
+  if (tried) return path[0] ? path : 0;
+  tried = 1;
+  typedef HRESULT (WINAPI *folder_fn)(HWND, int, HANDLE, DWORD, LPSTR);
+  HMODULE sh = LoadLibraryA("shell32.dll");
+  folder_fn f = sh ? (folder_fn)(uintptr_t)GetProcAddress(sh, "SHGetFolderPathA") : 0;
+  char docs[MAX_PATH];
+  if (!f || f(0, 5 /* CSIDL_PERSONAL */, 0, 0, docs) != 0) {
+    logf("fl26swiss: state -- no Documents folder; kept tables live in memory only");
+    return 0;
+  }
+  snprintf(path, sizeof path, "%s\\KONAMI\\eFootball PES 2021 SEASON UPDATE\\2026\\save\\" STATE_FILE, docs);
+  return path;
+#endif
+}
+static uint32_t state_check(const state_rec_t* r)
+{
+  const unsigned char* p = (const unsigned char*)r;
+  uint32_t h = 2166136261u;
+  for (size_t i = 0; i < sizeof *r - sizeof r->check; i++) { h ^= p[i]; h *= 16777619u; }
+  return h;
+}
+/* the file, read past its magic (written first into a new or empty file); 0 when it cannot be
+   opened or is not ours */
+static HANDLE state_open(const char* p, int write)
+{
+  HANDLE h = CreateFileA(p, GENERIC_READ | (write ? GENERIC_WRITE : 0), FILE_SHARE_READ, 0,
+                         write ? OPEN_ALWAYS : OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+  if (h == INVALID_HANDLE_VALUE) return 0;
+  char m[8]; DWORD got = 0;
+  if (ReadFile(h, m, 8, &got, 0) && got == 8 && !memcmp(m, STATE_MAGIC, 8)) return h;
+  LARGE_INTEGER size, zero; zero.QuadPart = 0;
+  DWORD put = 0;
+  if (write && got < 8 && GetFileSizeEx(h, &size) && size.QuadPart < 8 &&
+      SetFilePointerEx(h, zero, 0, FILE_BEGIN) && SetEndOfFile(h) &&
+      WriteFile(h, STATE_MAGIC, 8, &put, 0) && put == 8) return h;
+  CloseHandle(h);
+  return 0;
+}
+/* write what memory keeps and the file has not yet: this timeline's keeps (STATE_AGE) */
+static void state_store(void)
+{
+#ifndef STATE_OFF
+  int gn = game_date(), an = abs_day();
+  if (gn < 0 || an < 0) return;
+  static state_rec_t want[64 + 32];
+  int nw = 0, have[64 + 32] = { 0 };
+  uint32_t u = state_user();
+  for (int i = 0; i < g_nfinal + g_ncupwin; i++) {
+    int fin = i < g_nfinal, age = an - (fin ? g_final[i].day : g_cupwin[i - g_nfinal].day);
+    unsigned n = fin ? g_final[i].n : 1;
+    if (age < 0 || age > STATE_AGE || !n || n > FINAL_MAX) continue;
+    state_rec_t* r = &want[nw++];
+    memset(r, 0, sizeof *r);
+    r->user = u; r->gdate = gn - age; r->kind = (uint8_t)!fin; r->n = (uint8_t)n;
+    r->reg = fin ? g_final[i].reg : g_cupwin[i - g_nfinal].reg;
+    if (fin) memcpy(r->club, g_final[i].club, n * sizeof(uint32_t));
+    else r->club[0] = g_cupwin[i - g_nfinal].club;
+    r->check = state_check(r);
+  }
+  if (!nw) return;
+  const char* p = state_path();
+  HANDLE h = p ? state_open(p, 1) : 0;
+  if (!h) {
+    if (p) logf("fl26swiss: state -- cannot write %s (error %lu); kept tables live in memory only", p, GetLastError());
+    return;
+  }
+  state_rec_t r; DWORD got = 0;
+  LARGE_INTEGER end; end.QuadPart = 8;
+  while (ReadFile(h, &r, sizeof r, &got, 0) && got == sizeof r) {
+    end.QuadPart += sizeof r;
+    for (int k = 0; k < nw; k++) if (!have[k] && !memcmp(&r, &want[k], sizeof r)) have[k] = 1;
+  }
+  int put = 0, ok = SetFilePointerEx(h, end, 0, FILE_BEGIN) && SetEndOfFile(h);   /* a torn record off */
+  for (int k = 0; k < nw && ok; k++) {
+    if (have[k]) continue;
+    DWORD w = 0;
+    ok = WriteFile(h, &want[k], sizeof want[k], &w, 0) && w == sizeof want[k];
+    put += ok;
+  }
+  CloseHandle(h);
+  if (put || !ok)
+    logf("fl26swiss: state -- %d keep(s) written for club %08x on day %d%s", put, u, today(), ok ? "" : " (write failed)");
+#endif
+}
+/* read the user's career back when the game's date and abs_day no longer move together */
+static void state_sync(void)
+{
+#ifndef STATE_OFF
+  if (g_st_busy) return;
+  int gn = game_date();
+  if (gn < 0) return;
+  int an = abs_day();
+  if (an < 0 || (gn - an == g_st_off && an == g_st_day && g_st_user)) return;   /* no club yet: ask again */
+  uint32_t u = state_user();
+  if (gn - an == g_st_off && u == g_st_user) { g_st_day = an; return; }
+  /* what memory keeps, put on today's footing: kept while the game's date was abs_day + the
+     old offset; a keep dated after today is a later save's, left out (abs_day can take a save
+     of a year before, near the same day, for days going on) */
+  int old = g_st_off, off = gn - an, later = 0;
+  if (old != -0x7fffffff && old != off) {
+    for (int i = 0; i < g_nfinal; ) {
+      if (g_final[i].day + old > gn) { g_final[i] = g_final[--g_nfinal]; later++; continue; }
+      g_final[i].day += old - off; i++;
+    }
+    for (int i = 0; i < g_ncupwin; ) {
+      if (g_cupwin[i].day + old > gn) { g_cupwin[i] = g_cupwin[--g_ncupwin]; later++; continue; }
+      g_cupwin[i].day += old - off; i++;
+    }
+    if (later) logf("fl26swiss: state -- %d keep(s) of a later date left out: a save of an earlier day loaded", later);
+  }
+  g_st_off = off; g_st_day = an; g_st_user = u; g_st_read_back = 0;
+  const char* p = state_path();
+  HANDLE h = p ? state_open(p, 0) : 0;
+  if (!h) return;
+  static state_rec_t best[64 + 32];
+  int nb = 0;
+  state_rec_t r; DWORD got = 0;
+  while (ReadFile(h, &r, sizeof r, &got, 0) && got == sizeof r) {
+    if (r.check != state_check(&r) || r.user != u || r.gdate > gn || gn - r.gdate > STATE_AGE ||
+        r.kind > 1 || !r.n || r.n > FINAL_MAX || (r.kind && r.n != 1)) continue;
+    int k = 0;
+    while (k < nb && (best[k].kind != r.kind || best[k].reg != r.reg)) k++;
+    if (k == nb) { if (nb >= 64 + 32) continue; nb++; }
+    else if (r.gdate < best[k].gdate) continue;
+    best[k] = r;                                   /* the newest; of one day, the last written */
+  }
+  CloseHandle(h);
+  int nf = 0, nc = 0;
+  g_st_busy = 1;
+  for (int k = 0; k < nb; k++) {
+    int day = an - (gn - best[k].gdate);
+    if (!best[k].kind) {
+      final_t* f = final_of(best[k].reg);
+      if (f && f->day >= day) continue;
+      if (!f) { if (g_nfinal >= 64) continue; f = &g_final[g_nfinal++]; }
+      f->reg = best[k].reg; f->n = best[k].n; f->day = day;
+      memcpy(f->club, best[k].club, sizeof f->club);
+      nf++;
+      if (an - day < 120) g_st_read_back = 1;      /* last season's: not a career's first summer */
+    } else {
+      cupwin_t* w = cupwin_of(best[k].reg);
+      if (w && w->day >= day) continue;
+      if (!w) { if (g_ncupwin >= 32) continue; w = &g_cupwin[g_ncupwin++]; }
+      w->reg = best[k].reg; w->day = day; w->club = best[k].club[0];
+      nc++;
+    }
+  }
+  g_st_busy = 0;
+  if (nf || nc)
+    logf("fl26swiss: state -- %d final table(s) and %d cup winner(s) of club %08x's career read back on day %d (%s)",
+         nf, nc, u, today(), STATE_FILE);
+#endif
+}
+
 /* ---- Apertura + Clausura: the season's table ----
  *
  * The final table the July teardown keeps for a league (access_capture) is the one the game
@@ -7790,6 +8028,7 @@ static void apclau_keep(void)
     logf("fl26swiss: reg %u -- Apertura + Clausura table from %d matches kept as the final table: "
          "%08x %d pts, %08x %d pts ... last %08x %d pts", (unsigned)s->total, played,
          t.club[0], g_ctab_pts[0], t.club[1], g_ctab_pts[1], t.club[n - 1], g_ctab_pts[2]);
+    state_store();
   }
 }
 
@@ -8061,6 +8300,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   access_capture();
   ccup_keep_tables(in->b, n);
   ccup_keep_winners();
+  state_store();
   for (int j = 0; j < n; j++) {
     uint16_t id = in->b[j];
     if (id == 2) euro = 1;

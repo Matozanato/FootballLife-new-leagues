@@ -142,6 +142,17 @@ once, and your 0.2.2 career keeps working.
   leagues page.** The new look left them out of its **More** menu; they are back there (League order
   puts the countries of Select Team and Kick Off in your order).
 
+- **A save loaded in the summer, or the game quit between 1 July and the August draws, sent the
+  wrong clubs to Europe.** The final tables (and cup winners) the modules keep at the end of a
+  season for the next season's continental places lived only while the game ran. After a restart,
+  or a save of those weeks loaded, the places of your leagues went by squad strength instead of
+  last season's table (Cyprus and Bosnia: 8 places from the tables, 124 by squad strength), and a
+  continental super cup of ours could take its winners from the game again. The modules now
+  write what they keep to `fl26swiss-state.bin` in the game's save folder (it moves with the
+  world like your careers) and read it back when a save is loaded or the game starts again:
+  the tables of your career, of the season just finished, never those of a later save or of a
+  career with another club. Needs Install the modules; a career already past 1 July without them
+  gets its tables from the next season's end. Thanks bythezl19.
 - **Portugal's Supertaça was played after the first league round.** The modules bring a
   league of a country that really kicks off early forward to its July or early August start, the
   game's own leagues too, but the game's super cups stay on their dates: Liga Portugal started
@@ -255,7 +266,7 @@ once, and your 0.2.2 career keeps working.
   `sider.log` names the days each cup takes (`cup ... its leagues reach ...`). A career that
   is already past the group stage's days of before (the AFC Champions League Two's groups end
   on 17 February there) plays this season's knockout on the days of before too, never on a day
-  already gone; from the next season the new days.
+  already gone; from the next season the new days. Thanks DavidBDJ.
 - **A calendar-year league played the day after its own cup.** The cup's days (the `dates ...
   days=` line of a January-December country) were kept clear only when the league was spaced
   the old way, not by the real-calendar scheduler: the Copa AUF Uruguay's second round on 18

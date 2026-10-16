@@ -37,7 +37,10 @@ all six is in [docs/developers/fork/modules.md](../../docs/developers/fork/modul
   one other): `fl26swiss_draw.h` reshuffles each pot, with the countries the loader passes in
   `fl26_swiss_nations`, and `swissdraw_test.c` checks that search offline on random fields
   (`zig cc -O2 -o swissdraw_test.exe swissdraw_test.c`). About 3,700 lines.
-  It writes no file; its log goes to `sider.log` through the loader.
+  Its log goes to `sider.log` through the loader. The one file it writes is
+  `fl26swiss-state.bin` in the game's save folder: the final tables and cup winners it keeps at
+  a season's end, read back after a restart or a load (0.2.4, B49; `test_state_keep.c` checks
+  it offline).
 
 None has third-party code or any network access.
 
