@@ -66,6 +66,39 @@ def league_logo(root, cid, name, picture=None):
         im.save(os.path.join(d, "emb_%04d%s.png" % (cid, suf)))
 
 
+def copy_emblem(root, src, dst, game=None, log=print):
+    """competition `dst` gets the emblem of competition `src`: the world's own (written by
+    league_logo already), else the game's, read from its packs when `game` is given. A technical
+    competition of ours shows its parent's emblem this way (the Libertadores qualifying phases the
+    Libertadores', 5). 1 when written."""
+    import glob, re, shutil, tempfile
+    d = os.path.join(root, *EMBLEM_DIR)
+    own = glob.glob(os.path.join(d, "emb_%04d*" % src))
+    if not own and game:
+        import cpkread
+        want = "emblemLc/emb_%04d" % src
+        tmp = tempfile.mkdtemp(prefix="fl26emb")
+        for pack in sorted(glob.glob(os.path.join(game, "download", "*.cpk"))
+                           + glob.glob(os.path.join(game, "Data", "*.cpk"))):
+            try:
+                if not any(want in n.replace(chr(92), "/") for n in cpkread.names(pack)):
+                    continue
+                cpkread.extract(pack, tmp, [want])
+            except Exception:
+                continue
+            own = glob.glob(os.path.join(tmp, "**", "emb_%04d*" % src), recursive=True)
+            if own:
+                break
+    if not own:
+        log("  no emblem of competition %d to give %d; it keeps none" % (src, dst))
+        return 0
+    os.makedirs(d, exist_ok=True)
+    for f in own:
+        name = os.path.basename(f)
+        shutil.copyfile(f, os.path.join(d, re.sub(r"^emb_%04d" % src, "emb_%04d" % dst, name)))
+    return 1
+
+
 def club_crest(root, tid, label, picture=None, kit=None):
     """write the three crest sizes of team `tid`: the picture given, else a shield in the colours
     of the club's shirt (`kit`, shieldcrest's words), else the numbered placeholder"""

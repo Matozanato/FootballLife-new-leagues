@@ -148,10 +148,19 @@ which league sits above -- and nothing about ids:
               the game, as preseason_cups. Each list goes in first, the automatic choice fills
               the rest; from the second season the places decide again. fl26swiss.dll, the world
               file's `first <0|1|2> <team id> ...` lines
-  game_europe (the recipe, not a league) the European places of leagues of the game, in place of
+  game_europe (the recipe, not a league) the continental places of leagues of the game, in place of
               the shipped ones: {"<regulation id of a top division of the game>": [[position,
-              competition], ...]}, competitions as europe above (UEFA and Libertadores ones). An
-              empty list sends the league nobody; a league not named keeps the shipped places
+              competition], ...]}, competitions as europe above plus the logical modern CONMEBOL
+              targets 16 Libertadores F1, 17 F2 and 19 Sudamericana first stage. Target 18 (F3)
+              is internal/reserved: modern F3 is always filled by the eight F2 winners.
+              Any South American Libertadores/Sudamericana edit opts into the full modern CONMEBOL package;
+              there are no automatic per-source defaults, and Build validates only the global totals
+  conmebol_associations (the recipe, not a league) dynamic places for a CONMEBOL association,
+              still in the normal two-field schema: {"Bolivia": [[1,3],[2,3],[3,17],[4,16],
+              [5,19],...]}. The first number is an association rank, never a team id. If this world
+              has that country's top division, the ranks resolve through its table; otherwise
+              fl26swiss ranks the country's real Other Latin American clubs at runtime. Missing
+              ranks stay unresolved and never take another association's berth
   uefa_rank   (the recipe, not a league) the UEFA key's ranking (tools/uefakey.py, Mod Studio's
               UEFA ranking dialog): ["g<regulation of the game>" or a new league's name, ...],
               strongest first. Applying it writes "europe", "game_europe" and "uefa_seed";
@@ -180,6 +189,14 @@ which league sits above -- and nothing about ids:
               entries are the cups' winners (<knockout>:0, fl26swiss.dll). Nobody has won
               either cup in a new career's first season, so it is first played in the second.
               false: none. "caf_super_cup_logo" is its picture
+  samerica_super_cup  (the recipe, not a league) true, the default: a world that builds
+              the modern Copa Sudamericana also gets the Recopa Sudamericana, one match in late
+              February between the previous Libertadores and Sudamericana winners. Both winners
+              are retained at the calendar-year rollover by fl26swiss.dll. A new career has no
+              previous-season winners, so its first Recopa is normally left unplayed; optional
+              "samerica_super_cup_first": [libertadores_team_id, sudamericana_team_id] supplies
+              those two clubs without hard-coding them in the builder. false: no Recopa.
+              "samerica_super_cup_logo" is its picture
   make_kits   (the recipe) false: no kit is made. Otherwise, with Kit Server installed, every new
               club without a Kit Server folder of its own gets a kit made when the world is switched
               on (lbservers, kitmaker): home, away, third and goalkeeper in its shirt colours
@@ -305,6 +322,17 @@ CALENDAR_CUP_DATE_DAYS = (65, 107, 149, 191, 233, 275, 317)
 CALENDAR_SUPER_DATE_LIKE = "JAPAN_SUPER_CUP"
 CALENDAR_SUPER_DATE_DAYS = (30,)
 LIBQ_ROOM = 6                             # Libertadores qualifying: 8 places, fl26swiss keeps 2 of the game's
+# Modern CONMEBOL Libertadores qualifying.
+# F1: 6 clubs -> 3 winners
+# F2: 13 domestic clubs + 3 F1 winners -> 8 winners
+# F3: the game's native Libertadores qualifying regulation 8 -> 4 winners.
+LIBQ_NAME, LIBQ_CODE = "Pre-Libertadores", "FL_LIBQ"
+# The real calendar (CONMEBOL 2026 base dates, Wednesdays): F1 4/11 Feb, F2 18/25 Feb, the native F3
+# 4/11 Mar (fl26swiss moves reg 8/9/10 to the real days in a modern CONMEBOL world). F2 is filled
+# the day after F1's second leg.
+LIBQ_P1 = {"fill": 2, "days": [34, 41]}
+LIBQ_P2 = {"fill": 42, "days": [48, 55]}
+LIB_QUAL = 8
 LIB_ROOM = 8                              # Libertadores group stage: the pool clubs (73) ours replace, 8 (GitHub #127)
 SEASONS = ("august", "calendar")           # a new country's season: August-May, February-December
 # the shipped regions whose season is the calendar year, type 1 in the exe's region table
@@ -380,6 +408,26 @@ PRESEASON_DAYS = [186, 189, 192, 195, 198, 201, 205]
 # the last, the final, on 26 July -- after the pre-season cups, before the new season is built
 CAF_SUPER_DAYS = [187, 190, 193, 196, 199, 202, 207]
 CAF_CL, CAF_CC = 6, 7                    # fl26world.CCUPS numbers of the two cups it takes
+SUDAM = 9                                # fl26world.CCUPS number of Copa Sudamericana
+# the national first stage: Tuesday 3 Mar (real 2026: 3-5 Mar). Filled after the Libertadores F2 (42), as
+# #146 had it (F2 on 14, this on 36): a club the Libertadores takes first is skipped here -- filled before
+# it, three first-stage winners also had a Libertadores place and the groups never started (2026-10-15)
+SAM_FIRST_FILL, SAM_FIRST_DAY = 45, 61
+SAM_GROUP_FILL = 70                      # groups drawn after the first stage and the Libertadores F3 (its four
+                                         # losers come in): F3's second leg is Wednesday 11 Mar (69)
+SAM_FIRST_TIES = 16                      # 32 clubs -> 16 national one-match ties
+SAM_FIRST_NAME, SAM_FIRST_CODE = "Copa Sudamericana", "FL_SUDA1"
+SAM_LIB_LOSERS = 4
+LIB_QUAL, QUAL_LOSER = 8, 255
+LIBERTADORES_KO = 10                      # native Libertadores final/knockout regulation
+SAM_SUPER_FILL = 42                       # fill after both previous-year winners are retained
+SAM_SUPER_DAYS = (49, 50, 51, 52, 53, 54, 55)  # field of two uses the last: 24 February
+# Modern Sudamericana post-group play-off: 8 group runners-up v 8 Libertadores
+# group thirds, two legs. Its eight winners join the eight Suda group winners
+# in the round of 16.
+SPO_NAME, SPO_CODE = "Copa Sudamericana", "FL_SUDAPO"
+SPO_FILL, SPO_DAYS = 148, (202, 209)    # real 2026: 22/29 Jul; filled when both group stages are done (147)
+LIB_GROUPS = 9
 LEAGUE_CUP_SIZES = (16, 8, 4)
 # A league cup's clubs past its 16, 8 or 4 play a pre-round first: the last 2x places of the
 # field, the strongest v the weakest, home and away; the x winners take the knockout's last x
@@ -652,12 +700,13 @@ def has_edits(r):
     import lbplayers
     return bool(e.get("leagues") or e.get("clubs") or e.get("competitions") or e.get("swaps")) \
         or lbplayers.has_players(r) \
-        or bool(r.get("game_cups") or r.get("game_europe") or r.get("uefa_seed")
+        or bool(r.get("game_cups") or r.get("game_europe") or r.get("conmebol_associations") or r.get("uefa_seed")
                 or r.get("preseason_cups") or r.get("ccup_names") or r.get("ccup_logos")
                 or any((r.get("europe_first") or {}).values())
                 or r.get("uecl_name") or r.get("uecl_logo") or r.get("caf_super_cup_logo")
+                or r.get("samerica_super_cup_logo") or r.get("samerica_super_cup_first")
                 or r.get("saudi_august") or r.get("game_seasons") or r.get("editable_kits") or r.get("country_order")) \
-        or r.get("uecl") is False or r.get("caf_super_cup") is False
+        or r.get("uecl") is False or r.get("caf_super_cup") is False or r.get("samerica_super_cup") is False
 
 
 # ---- what the game already has: its leagues and clubs, for the edit tab ----
@@ -793,6 +842,8 @@ def recipe_from_plan(pl, base):
         out.append(r)
     rec = {"world": pl["world"], "leagues": out, "edits": pl.get("edits") or {},
            "players": pl.get("players") or {}}
+    if pl.get("conmebol_associations_recipe"):
+        rec["conmebol_associations"] = pl["conmebol_associations_recipe"]
     for k in ("uecl", "uecl_logo", "uecl_name", "editable_kits", "game_seasons", "cafsc"):
         if pl.get(k) not in (None, "", False) or k == "uecl":
             rec[k] = pl.get(k)
@@ -1677,10 +1728,49 @@ def plan(recipe, base, prev=None):
     bad = lbplayers.check(full)
     if bad:
         raise BuildError("player changes:\n  " + "\n  ".join(bad[:20]))
-    ge, gr, gn, gcc = game_europe(recipe, regrow, region_of_cid, base)
+    # CONMEBOL is opt-in as one complete package. If the recipe never touches
+    # South American continental access, keep FL26's vanilla Libertadores and do
+    # not build Sudamericana/Recopa or the modern qualifying phases.
+    access_recipe = modern_libertadores_recipe(recipe, base)
+    modern_conmebol = access_recipe.get("_modern_libertadores_access") == "custom"
+
+    ge, gr, gn, gcc = game_europe(access_recipe, regrow, region_of_cid, base)
+    gstaged = game_stage_places(access_recipe, regrow, region_of_cid, base)
+    aaccess, accup, astaged, arows, arecipe = conmebol_association_places(
+        access_recipe, base, out
+    )
+    conmebol_stages = own_stage_places({"leagues": out}) + gstaged + astaged
+    continental_places = (
+        [(p["rid"], pos, comp, 0)
+         for p in out for pos, comp in p["europe"]]
+        + gcc + accup
+    )
+
+    if modern_conmebol:
+        reject_legacy_libq_with_modern(access_recipe, out, conmebol_stages)
+        validate_modern_conmebol_access(
+            out, ge, aaccess, conmebol_stages, continental_places
+        )
+        libq = libq_plan(conmebol_stages)
+        suda_first = sudamericana_first_plan(
+            conmebol_stages, continental_places
+        )
+    else:
+        libq = None
+        suda_first = None
     room = {p["rid"]: p["clubs"] for p in out}
     room.update({r: entries_of(base, regrow[r][M.R_CID]) for r, _p, _c, _a in gcc})
-    cups, notes = ccup_plan([(p["rid"], pos, comp, 0) for p in out for pos, comp in p["europe"]] + gcc, room)
+    room.update({row["source"]: row["capacity"] for row in arows})
+    cups, notes = ccup_plan(continental_places, room)
+    if suda_first and not any(c["number"] == SUDAM for c in cups):
+        raise BuildError("modern Sudamericana first stage needs the Copa Sudamericana group cup")
+    if suda_first:
+        # Modern Sudamericana runs on CONMEBOL's February-December calendar.
+        # fl26swiss reads cal=1 and borrows the native Libertadores dates, fills
+        # the groups immediately after the one-match first stage, and closes it
+        # at the calendar-year teardown rather than in July.
+        sud = next(c for c in cups if c["number"] == SUDAM)
+        sud["opts"] = {"fill": SAM_GROUP_FILL, "national": 0, "days": [], "cal": 1}
     for c in cups:            # a game league's cup winner: its national cup is the game's (#95)
         c["winners"] = [[e[1], home_cup(regrow, region_of_cid, region_of_cid.get(regrow[e[1]][M.R_CID]))]
                         for e in c["entry"] if e[0] == "cup" and e[1] in regrow
@@ -1691,6 +1781,8 @@ def plan(recipe, base, prev=None):
     home += [preseason_cup(c, k, by_name) for k, c in enumerate(recipe.get("preseason_cups") or [])]
     if recipe.get("caf_super_cup", True) and {CAF_CL, CAF_CC} <= {c["number"] for c in cups}:
         cups.append(caf_super_cup(recipe))
+    if recipe.get("samerica_super_cup", True) and SUDAM in {c["number"] for c in cups}:
+        cups.append(samerica_super_cup(recipe))
     for c in cups:
         k = str(c["number"])
         c["name"] = ((recipe.get("ccup_names") or {}).get(k) or "").strip() or c["name"]
@@ -1711,6 +1803,12 @@ def plan(recipe, base, prev=None):
             "uecl_logo": recipe.get("uecl_logo") or None,
             "uecl_name": (recipe.get("uecl_name") or "").strip() or None,
             "game_europe": ge, "game_replace": gr, "game_names": gn,
+            "association_access": aaccess,
+            "conmebol_associations": arows, "conmebol_associations_recipe": arecipe,
+            "conmebol_stages": conmebol_stages,
+            "libq": libq,
+            "modern_libertadores_access": access_recipe.get("_modern_libertadores_access"),
+            "suda_first": suda_first,
             "uefa_seed": uefa_seed(recipe, out, regrow, region_of_cid),
             "ccups": cups, "ccup_notes": notes, "home_cups": home,
             "europe_first": europe_first(recipe, by_name),
@@ -2022,43 +2120,372 @@ def access_reg(rid, regrow, region_of_cid):
                  and region_of_cid.get(regrow[r][M.R_CID]) == reg), rid)
 
 
+# Synthetic access source for a CONMEBOL association with no playable domestic league
+# in this world. Real regulation ids and their replicas stay below 0x8000; the
+# low nine bits carry Country.bin's id.
+ASSOC_SOURCE = 0x8000
+ASSOC_COUNTRY_MASK = 0x01ff
+FINAL_ASSOC_RANK = 40
+
+def recipe_has_modern_conmebol(recipe):
+    """Whether this recipe explicitly opts into the modern CONMEBOL package.
+
+    An untouched world keeps FL26's vanilla Libertadores and does not create
+    Sudamericana/Recopa. Custom mode starts when:
+      * a new league assigns any Libertadores/Sudamericana target;
+      * one of the game's shipped South American leagues is overridden in
+        game_europe (even with an empty list); or
+      * a dynamic CONMEBOL association source is configured.
+    """
+    targets = {3, 4, 9} | set(fl26world.CONMEBOL_STAGE_IDS)
+
+    for L in recipe.get("leagues") or []:
+        for e in L.get("europe") or []:
+            try:
+                if int(e[1]) in targets:
+                    return True
+            except (TypeError, ValueError, IndexError):
+                continue
+
+    shipped_sa = {r for r, _lib, _libq in fl26world.SAM_GAME}
+    for key in (recipe.get("game_europe") or {}):
+        try:
+            rid = int(key)
+        except (TypeError, ValueError):
+            continue
+        if rid in shipped_sa:
+            return True
+
+    return bool(recipe.get("conmebol_associations"))
+
+
+def modern_libertadores_recipe(recipe, base):
+    """Return the effective South-American access recipe.
+
+    Vanilla mode leaves FL26's Libertadores untouched.
+    Custom mode replaces all shipped South-American domestic access first,
+    then uses only the places explicitly configured by the user. This prevents
+    hidden vanilla Libertadores/qualifying berths from surviving beside the
+    modern allocation.
+    """
+    out = dict(recipe)
+    custom = recipe_has_modern_conmebol(recipe)
+    out["_modern_libertadores_access"] = "custom" if custom else "vanilla"
+
+    if custom:
+        raw_game = recipe.get("game_europe") or {}
+        game = {str(k): [list(e) for e in (v or [])]
+                for k, v in raw_game.items()}
+        available = {r for r, _n, _clubs, _shipped in game_europe_tops(base)}
+
+        # Empty game_europe means: replace the game's shipped access with none.
+        # Explicit user rows remain untouched.
+        for rid, _lib, _libq in fl26world.SAM_GAME:
+            if rid not in available:
+                continue
+            key = next((k for k in game if str(k) == str(rid)), str(rid))
+            game.setdefault(key, [])
+
+        out["game_europe"] = game
+
+    return out
+
+
+def validate_modern_conmebol_access(leagues, game_access, association_access, stages, continental_places):
+    """Require the complete modern package by GLOBAL totals, not country quotas."""
+    counts = {
+        3: 0,
+        fl26world.LIB_F1: 0,
+        fl26world.LIB_F2: 0,
+        fl26world.LIB_F3: 0,
+        9: 0,
+        fl26world.SUD_FIRST: 0,
+    }
+
+    for p in leagues:
+        for e in p.get("europe") or []:
+            try:
+                comp = int(e[1])
+            except (TypeError, ValueError, IndexError):
+                continue
+            if comp == 3:
+                counts[3] += 1
+
+    # Shipped leagues / synthetic associations feed native Libertadores through
+    # the normal access list.
+    for row in list(game_access) + list(association_access):
+        try:
+            comp = int(row[2])
+        except (TypeError, ValueError, IndexError):
+            continue
+        if comp == 3:
+            counts[3] += 1
+
+    # Every direct Sudamericana place (new league, shipped league or synthetic
+    # association) is normalized into continental_places / ccup_plan input.
+    for row in continental_places:
+        try:
+            comp = int(row[2])
+        except (TypeError, ValueError, IndexError):
+            continue
+        if comp == 9:
+            counts[9] += 1
+
+    for row in stages:
+        try:
+            comp = int(row[2])
+        except (TypeError, ValueError, IndexError):
+            continue
+        if comp in (fl26world.LIB_F1, fl26world.LIB_F2,
+                    fl26world.LIB_F3, fl26world.SUD_FIRST):
+            counts[comp] += 1
+
+    expected = (
+        (3, 26, "Libertadores groups"),
+        (fl26world.LIB_F2, 13, "Libertadores Fase 2"),
+        (fl26world.LIB_F1, 6, "Libertadores Fase 1"),
+        (fl26world.LIB_F3, 0, "Libertadores Fase 3 direct"),
+        (9, 12, "Copa Sudamericana groups"),
+        (fl26world.SUD_FIRST, 32, "Copa Sudamericana Fase 1"),
+    )
+    bad = [(label, counts[comp], want)
+           for comp, want, label in expected if counts[comp] != want]
+    if bad:
+        detail = "; ".join("%s %d/%d" % (label, got, want)
+                           for label, got, want in bad)
+        raise BuildError(
+            "modern CONMEBOL setup is incomplete: %s. "
+            "Once Libertadores or Sudamericana access is customized, the complete "
+            "global allocation is required. Places may be distributed among South "
+            "American sources however you want." % detail
+        )
+
+    return counts
+
+
+def assoc_source(country):
+    country = int(country)
+    if not 0 < country <= ASSOC_COUNTRY_MASK:
+        raise BuildError("CONMEBOL association: country id %d is outside 1..%d" %
+                         (country, ASSOC_COUNTRY_MASK))
+    return ASSOC_SOURCE | country
+
+
+def association_club_capacity(base, country):
+    """Number of playable real clubs Team.bin exposes for one Country.bin id.
+
+    This is only a capability check. fl26swiss ranks the available association
+    clubs dynamically at runtime; the recipe never contains team ids.
+    """
+    info = game_info(base)
+    raw = pesdb.wesys_unpack(open(os.path.join(base, "Team.bin"), "rb").read())
+    n = 0
+    for o in range(0, len(raw), W.T_REC):
+        r = raw[o:o + W.T_REC]
+        tid = int.from_bytes(r[W.T_ID:W.T_ID + 4], "little")
+        own = (int.from_bytes(r[T_COUNTRY:T_COUNTRY + 2], "little") >> 2) & 0x1ff
+        if own != country or tid in info["national"]:
+            continue
+        name = (info["clubs"].get(tid) or ("", ""))[0]
+        if not name or special_team(name) or info["squads"].get(tid, 0) < MIN_GAME_SQUAD:
+            continue
+        n += 1
+    return n
+
+
+def conmebol_association_places(recipe, base, leagues):
+    """Normalize recipe-level CONMEBOL association access.
+
+    Format stays the normal two-field place schema: {country: [[rank, target], ...]}.
+    `target` may be Libertadores (3), Sudamericana groups (9), or one of the logical
+    modern stage ids 16..19. If this world has that country's top league, its real
+    regulation becomes the source; otherwise 0x8000|country is resolved dynamically
+    by fl26swiss. A missing rank stays unresolved and never steals another association's berth.
+    """
+    raw = recipe.get("conmebol_associations") or {}
+    if not raw:
+        return [], [], [], [], {}
+    if not isinstance(raw, dict):
+        raise BuildError("conmebol_associations must be an object: country -> places")
+
+    ids = country_ids(base)
+    by_label = {str(n).strip().lower(): i for n, i in ids}
+    conf = confederations(base)
+    game_tops = game_top_division_countries(base)
+    tops = {}
+    for p in leagues:
+        if p.get("above"):
+            continue
+        tops.setdefault(p.get("country"), []).append(p)
+
+    access, ccup, staged, rows, normalized = [], [], [], [], {}
+    allowed = {3, 9} | set(fl26world.CONMEBOL_STAGE_IDS)
+
+    for key, places in sorted(raw.items(), key=lambda kv: str(kv[0]).lower()):
+        if str(key).strip().isdigit():
+            country = int(str(key).strip())
+            name = next((n for n, i in ids if i == country), str(country))
+        else:
+            label = str(key).strip().lower()
+            if label not in by_label:
+                raise BuildError("CONMEBOL association %r is not a country in Country.bin" % (key,))
+            country = by_label[label]
+            name = next(n for n, i in ids if i == country)
+
+        if conf.get(country) != 4:
+            raise BuildError("CONMEBOL association %s (country %d) is not CONMEBOL" % (name, country))
+        if not isinstance(places, (list, tuple)):
+            raise BuildError("CONMEBOL association %s: places must be a list" % name)
+
+        leagues_here = tops.get(country) or []
+        if not leagues_here and country in game_tops:
+            gr, gn = game_tops[country]
+            raise BuildError("CONMEBOL association %s already has the game's top division %s (reg %d); "
+                             "set that league's Own places instead" % (name, gn, gr))
+        if len(leagues_here) > 1:
+            raise BuildError("CONMEBOL association %s has more than one top division in this world (%s)" %
+                             (name, ", ".join(p["name"] for p in leagues_here)))
+        if leagues_here:
+            source = leagues_here[0]["rid"]
+            capacity = leagues_here[0]["clubs"]
+            how = "league %s (reg %d)" % (leagues_here[0]["name"], source)
+        else:
+            source = assoc_source(country)
+            capacity = association_club_capacity(base, country)
+            how = "association clubs in Team.bin"
+
+        seen, norm, unresolved = set(), [], 0
+        for e in places:
+            try:
+                if len(e) != 2:
+                    raise ValueError
+                rank, comp = int(e[0]), int(e[1])
+            except (TypeError, ValueError, IndexError):
+                raise BuildError("CONMEBOL association %s: %r is not [rank, competition]" % (name, e))
+            if not 1 <= rank <= FINAL_ASSOC_RANK:
+                raise BuildError("CONMEBOL association %s: rank %d is outside 1..%d" %
+                                 (name, rank, FINAL_ASSOC_RANK))
+            if rank in seen:
+                raise BuildError("CONMEBOL association %s: rank %d is listed twice" % (name, rank))
+            if comp not in allowed:
+                raise BuildError("CONMEBOL association %s: competition %d is not a modern Libertadores/Sudamericana target" %
+                                 (name, comp))
+            seen.add(rank)
+            norm.append([rank, comp])
+            unresolved += rank > capacity
+
+            if comp == 3:
+                access.append((source, rank, 3, 0))
+            elif comp == 9:
+                ccup.append((source, rank, 9, 0))
+            else:
+                staged.append((source, rank, comp, conmebol_stage(comp), 0))
+
+        normalized[name] = norm
+        rows.append({"name": name, "country": country, "source": source, "capacity": capacity,
+                     "requested": len(norm), "max_rank": max(seen) if seen else 0,
+                     "unresolved": unresolved, "how": how})
+
+    return access, ccup, staged, rows, normalized
+
+
 def game_europe(recipe, regrow, region_of_cid, base):
-    """the recipe's game_europe: (regulation, position, competition, 0) places for leagues of the
-    game, the regulations whose shipped places they replace, their names, and the places in the
-    League Builder's continental cups (competitions 6..9, 13..15), which go to ccup_plan"""
+    """The recipe's game_europe.
+
+    Logical modern-CONMEBOL targets are consumed before the normal access list:
+      LIB_F1 / LIB_F2 -> custom qualifying phases
+      LIB_F3          -> native Libertadores qualifying (competition target 4)
+      SUD_FIRST       -> Sudamericana national first stage
+
+    The function keeps the existing four-value return contract:
+    (normal access, shipped regulations replaced, names, League-Builder cups).
+    """
     ge = recipe.get("game_europe") or {}
+
     if not ge:
         return [], [], {}, []
+
     tops = {r: n for r, _c, n, _t in game_leagues(base)}
     ccups = {c: n for c, n, _code, _conf, _fill in fl26world.CCUPS}
+    logical = set(fl26world.CONMEBOL_STAGE_IDS)
+
     places, replace, names, cc = [], [], {}, []
+
     for key, europe in sorted(ge.items(), key=lambda kv: str(kv[0])):
         try:
             rid = int(key)
         except (TypeError, ValueError):
             raise BuildError("European places: %r is not a league of the game" % (key,))
+
         if rid not in tops or M.get_tier(regrow[rid]) != 1:
-            raise BuildError("European places: regulation %d is not a top division of the game" % rid)
+            raise BuildError(
+                "European places: regulation %d is not a top division of the game" % rid
+            )
+
         clubs = entries_of(base, regrow[rid][M.R_CID])
-        cup = home_cup(regrow, region_of_cid, region_of_cid.get(regrow[rid][M.R_CID]))
+        cup = home_cup(
+            regrow,
+            region_of_cid,
+            region_of_cid.get(regrow[rid][M.R_CID])
+        )
+
         bad = europe_problems(clubs, europe or [], cup is not None)
-        bad += ["competition %d is not one a league's place can lead to" % int(e[1])
-                for e in europe or [] if str(e[1]).isdigit()
-                and int(e[1]) not in fl26world.UEFA_LINE and int(e[1]) not in ccups]
+
+        bad += [
+            "competition %d is not one a league's place can lead to" % int(e[1])
+            for e in europe or []
+            if str(e[1]).isdigit()
+            and int(e[1]) not in fl26world.UEFA_LINE
+            and int(e[1]) not in ccups
+            and int(e[1]) not in logical
+        ]
+
         if bad:
-            raise BuildError("European places of %s: %s" % (tops[rid], "; ".join(bad)))
-        # a place in a continental cup of the League Builder's (AFC Champions League Two, Copa
-        # Sudamericana ...) joins that cup with the new leagues' places; the shipped places of
-        # the league stay as they are (B2Y, #86: Saudi Pro League places in the ACL Two)
-        cc += [(rid, int(pos), int(comp), 0) for pos, comp in europe or [] if int(comp) in ccups]
-        europe = [e for e in europe or [] if int(e[1]) not in ccups]
-        if not europe:
-            continue
-        r = access_reg(rid, regrow, region_of_cid)
-        replace.append(r)
-        names[str(r)] = tops[rid]
-        places += [(cup, 0, int(comp), r) if int(pos) == CUP_WINNER else (r, int(pos), int(comp), 0)
-                   for pos, comp in europe]
+            raise BuildError(
+                "European places of %s: %s"
+                % (tops[rid], "; ".join(bad))
+            )
+
+        source = access_reg(rid, regrow, region_of_cid)
+        normal = []
+        access_touched = False
+
+        for pos, comp in europe or []:
+            pos, comp = int(pos), int(comp)
+
+            if comp == fl26world.SUD_FIRST:
+                # Kept only in game_stage_places().
+                continue
+
+            if comp in (fl26world.LIB_F1, fl26world.LIB_F2):
+                # These replace the shipped continental allocation but do not
+                # enter native Libertadores qualifying directly.
+                access_touched = True
+                continue
+
+            if comp == fl26world.LIB_F3:
+                access_touched = True
+                normal.append((pos, 4))
+                continue
+
+            if comp in ccups:
+                cc.append((rid, pos, comp, 0))
+                continue
+
+            access_touched = True
+            normal.append((pos, comp))
+
+        if access_touched:
+            replace.append(source)
+            names[str(source)] = tops[rid]
+
+            places += [
+                (cup, 0, comp, source)
+                if pos == CUP_WINNER
+                else (source, pos, comp, 0)
+                for pos, comp in normal
+            ]
+
     return places, replace, names, cc
 
 
@@ -2082,7 +2509,8 @@ def all_places(pl):
     """the world's European places, the new leagues' and game_europe's, as uefa_places takes them:
     in uefa_seed's order where the plan has one (a place's league: its regulation, or for a cup
     winner's place the league in alt), the rest after it as they come"""
-    places = own_places(pl) + [tuple(e) for e in pl.get("game_europe") or []]
+    places = (own_places(pl) + [tuple(e) for e in pl.get("game_europe") or []]
+              + [tuple(e) for e in pl.get("association_access") or []])
     order = {tuple(s): k for k, s in enumerate(pl.get("uefa_seed") or [])}
     if not order:
         return places
@@ -2105,6 +2533,37 @@ def game_europe_tops(base):
         a = access_reg(r, regrow, region_of_cid)
         out.append((r, n, entries_of(base, c),
                     sorted([e[1], e[2]] for e in fl26world.SHIPPED_ACCESS if e[0] == a)))
+    return out
+
+
+def game_top_division_countries(base):
+    """{Country.bin id: (regulation, league name)} for the game's playable top divisions.
+
+    Used by Mod Studio's CONMEBOL association editor: an association that already has a
+    playable top division must be configured through that league, not through the synthetic
+    0x8000|country source.
+    """
+    regs = M.load(base, "CompetitionRegulation.bin")
+    regrow = {u16(regs[i * M.REG:], M.R_ID): regs[i * M.REG:(i + 1) * M.REG]
+              for i in range(len(regs) // M.REG)}
+    raw = pesdb.wesys_unpack(open(os.path.join(base, "Team.bin"), "rb").read())
+    country = {}
+    for o in range(0, len(raw), W.T_REC):
+        r = raw[o:o + W.T_REC]
+        tid = int.from_bytes(r[W.T_ID:W.T_ID + 4], "little")
+        country[tid] = (int.from_bytes(r[T_COUNTRY:T_COUNTRY + 2], "little") >> 2) & 0x1ff
+    out = {}
+    for rid, _cid, name, teams in game_leagues(base):
+        if rid not in regrow or M.get_tier(regrow[rid]) != 1:
+            continue
+        seen = {}
+        for tid in teams:
+            c = country.get(tid, 0)
+            if c:
+                seen[c] = seen.get(c, 0) + 1
+        if seen:
+            c = max(seen, key=seen.get)
+            out[c] = (rid, name)
     return out
 
 
@@ -2412,6 +2871,27 @@ def caf_super_cup(recipe):
             "opts": {"fill": PRESEASON_FILL, "national": 1, "days": CAF_SUPER_DAYS}}
 
 
+def samerica_super_cup(recipe):
+    """The Recopa Sudamericana: previous Libertadores winner v previous Sudamericana winner.
+
+    The Libertadores is native (regulation 10); Sudamericana is one of our cups and is resolved
+    by continental() after its knockout id is known.  number=-1 is deliberately outside
+    fl26world.CCUPS so it cannot collide with the Sudamericana/CAF lookups.
+    """
+    opts = {"fill": SAM_SUPER_FILL, "national": 1, "days": list(SAM_SUPER_DAYS), "cal": 1}
+    first = recipe.get("samerica_super_cup_first")
+    if first:
+        if (not isinstance(first, (list, tuple)) or len(first) != 2
+                or not all(str(t).isdigit() and 0 < int(t) < 65536 for t in first)):
+            raise BuildError("samerica_super_cup_first: %r -- two team ids of the game" % (first,))
+        if int(first[0]) == int(first[1]):
+            raise BuildError("samerica_super_cup_first: the two clubs must be different")
+        opts["first"] = [int(first[0]), int(first[1])]
+    return {"number": -1, "name": "Recopa Sudamericana", "code": "FL_SAMRC", "conf": 4, "groups": 0,
+            "kind": "super", "logo": recipe.get("samerica_super_cup_logo") or None,
+            "entry": [(LIBERTADORES_KO, 0), ("ko", SUDAM)], "opts": opts}
+
+
 def cup_rounds(n):
     """the round ids a knockout of n clubs plays: the first is 0x2e, the ones after it count up
     to the quarter-final, which is 0x33 (then 0x34, 0x35) -- a field of eight or fewer starts on
@@ -2600,6 +3080,118 @@ def ccup_plan(own, clubs=None):
 CUP_WINNER = 0           # a European place's position 0: the country's cup winner
 
 
+def conmebol_stage(comp):
+    """The internal stage name of a logical CONMEBOL access target, or None."""
+    q = fl26world.CONMEBOL_STAGE_TARGETS.get(int(comp))
+    return q[2] if q else None
+
+
+def conmebol_native_target(comp):
+    """The old/native target a logical CONMEBOL destination ultimately feeds."""
+    q = fl26world.CONMEBOL_STAGE_TARGETS.get(int(comp))
+    return q[1] if q else int(comp)
+
+
+def own_stage_places(pl):
+    """Logical CONMEBOL stage places of new leagues.
+
+    A normal row is (league, position, target, stage, 0). A cup-winner row keeps
+    the same two-field recipe but becomes (cup regulation, 0, target, stage, league):
+    the last value is the same-source fallback when there is no eligible cup winner.
+    """
+    out = []
+    for p in pl["leagues"]:
+        for pos, comp in p.get("europe") or []:
+            pos, comp = int(pos), int(comp)
+            if comp not in fl26world.CONMEBOL_STAGE_IDS:
+                continue
+            if pos == CUP_WINNER:
+                # A new national cup gets its real regulation id only during Build,
+                # in national_cups(). Keep the league regulation as a logical
+                # placeholder here so Check/plan can count the place already.
+                out.append((p["rid"], CUP_WINNER, comp, conmebol_stage(comp), p["rid"]))
+            else:
+                out.append((p["rid"], pos, comp, conmebol_stage(comp), 0))
+    return out
+
+
+def resolve_new_league_stage_cup_winners(pl):
+    # Resolve plan-time cup-winner placeholders after national_cups().
+    cups = {
+        int(p["rid"]): int((p.get("own_cup") or {}).get("reg") or 0)
+        for p in pl.get("leagues") or []
+    }
+
+    def resolve(e):
+        reg, rank, fallback = int(e[0]), int(e[1]), int(e[2] or 0)
+        if rank == CUP_WINNER and fallback and reg == fallback:
+            cup = cups.get(fallback, 0)
+            if not cup:
+                raise BuildError(
+                    "modern CONMEBOL: cup-winner place for league regulation %d, "
+                    "but its national cup was not built" % fallback
+                )
+            return (cup, rank, fallback)
+        return (reg, rank, fallback)
+
+    q = pl.get("libq")
+    if q:
+        for key in ("phase1", "phase2"):
+            q[key] = [resolve(e) for e in q.get(key) or []]
+
+    q = pl.get("suda_first")
+    if q:
+        q["ties"] = [
+            [resolve(e) for e in tie]
+            for tie in q.get("ties") or []
+        ]
+
+    stages = []
+    for e in pl.get("conmebol_stages") or []:
+        reg, rank, comp, stage, fallback = e
+        reg, rank, fallback = resolve((reg, rank, fallback))
+        stages.append((reg, rank, comp, stage, fallback))
+    if stages:
+        pl["conmebol_stages"] = stages
+
+
+def game_stage_places(recipe, regrow, region_of_cid, base):
+    """Logical CONMEBOL stage places belonging to leagues of the game.
+
+    Cup-winner rows carry the national cup as their source and the league as their
+    same-source cascade fallback; ordinary rows use the league source directly.
+    """
+    ge = recipe.get("game_europe") or {}
+    out = []
+    tops = {r: n for r, _c, n, _t in game_leagues(base)}
+
+    for key, europe in sorted(ge.items(), key=lambda kv: str(kv[0])):
+        try:
+            rid = int(key)
+        except (TypeError, ValueError):
+            continue
+
+        if rid not in tops or rid not in regrow:
+            continue
+
+        source = access_reg(rid, regrow, region_of_cid)
+        cup = home_cup(regrow, region_of_cid, region_of_cid.get(regrow[rid][M.R_CID]))
+
+        for e in europe or []:
+            try:
+                pos, comp = int(e[0]), int(e[1])
+            except (TypeError, ValueError, IndexError):
+                continue
+
+            if comp in fl26world.CONMEBOL_STAGE_IDS:
+                if pos == CUP_WINNER and cup:
+                    out.append((cup, 0, comp, conmebol_stage(comp), source))
+                elif pos != CUP_WINNER:
+                    out.append((source, pos, comp, conmebol_stage(comp), 0))
+
+    return out
+
+
 def europe_problems(clubs, europe, cup=True):
     """what is wrong with a league's European places ([[position, competition], ...]): each a
     position of the league's own, 1..clubs, none twice, and a competition fl26swiss knows.
@@ -2630,11 +3222,30 @@ def europe_problems(clubs, europe, cup=True):
 
 
 def own_places(pl):
-    """(regulation, position, competition, alt) for the new leagues' European places; a cup
-    winner's place is (the national cup's regulation, 0, competition, the league) -- the
-    regulation is known once national_cups() has made the cup, 0 before"""
-    return [((p.get("own_cup") or {}).get("reg", 0), 0, comp, p["rid"]) if pos == CUP_WINNER
-            else (p["rid"], pos, comp, 0) for p in pl["leagues"] for pos, comp in p.get("europe") or []]
+    """Normal continental access places of the new leagues.
+
+    F1/F2 and Sudamericana first-stage places are consumed by the modern
+    CONMEBOL stage machinery and must not also enter a native competition.
+    F3 is translated to the game's normal Libertadores qualifying target (4).
+    """
+    out = []
+
+    for p in pl["leagues"]:
+        for pos, comp in p.get("europe") or []:
+            pos, comp = int(pos), int(comp)
+
+            if comp in (fl26world.LIB_F1, fl26world.LIB_F2, fl26world.SUD_FIRST):
+                continue
+
+            comp = conmebol_native_target(comp)
+
+            out.append(
+                ((p.get("own_cup") or {}).get("reg", 0), 0, comp, p["rid"])
+                if pos == CUP_WINNER
+                else (p["rid"], pos, comp, 0)
+            )
+
+    return out
 
 
 def order_by_parents(leagues):
@@ -2794,16 +3405,19 @@ def describe(pl):
                                                      pl.get("game_replace") or [], bool(pl.get("uecl")))[1].items()):
         lines.append("  NOTE: %s has %d places listed for %d clubs; the last %d get none"
                      % (names[c], n, room, n - room))
-    libq = sum(1 for e in own_places(pl) if e[2] == 4)
-    if libq > LIBQ_ROOM:
-        # fl26swiss gives the new leagues all but two of the round's eight places (GitHub #66)
-        lines.append("  NOTE: Libertadores qualifying has %d places listed, the round takes %d of them; "
-                     "the leagues listed last get none" % (libq, LIBQ_ROOM))
-    lib = sum(1 for e in own_places(pl) if e[2] == 3)
-    if lib > LIB_ROOM:
-        # the game fills the group stage itself and leaves ours only its pool clubs' places
-        lines.append("  NOTE: Copa Libertadores has %d direct places listed, the game leaves %d for new leagues; "
-                     "the leagues listed last get none (give the rest qualifying places)" % (lib, LIB_ROOM))
+    if pl.get("modern_libertadores_access") != "custom":
+        libq = sum(1 for e in own_places(pl) if e[2] == 4)
+        if libq > LIBQ_ROOM:
+            # Legacy Libertadores mode: fl26swiss gives new leagues all but two
+            # of the native qualifying round's eight places.
+            lines.append("  NOTE: Libertadores qualifying has %d places listed, the round takes %d of them; "
+                         "the leagues listed last get none" % (libq, LIBQ_ROOM))
+        lib = sum(1 for e in own_places(pl) if e[2] == 3)
+        if lib > LIB_ROOM:
+            # Legacy Libertadores mode: the native field leaves only the old
+            # pool-club replacement room to added leagues.
+            lines.append("  NOTE: Copa Libertadores has %d direct places listed, the game leaves %d for new leagues; "
+                         "the leagues listed last get none (give the rest qualifying places)" % (lib, LIB_ROOM))
     for p in pl["leagues"]:
         if p.get("cup"):
             lines.append("  %s: the country's cup (regulation %d) %s" % (
@@ -2825,18 +3439,36 @@ def describe(pl):
                              % (c["super"], SUPER_CUP_LIKE))
     for cup in pl.get("ccups") or []:
         if cup.get("kind") == "super":
-            lines.append("  %s: the winners of the CAF Champions League and the Confederation Cup, one "
-                         "match in late July (first played in a career's second season)" % cup["name"])
+            if cup.get("code") == "FL_SAMRC":
+                lines.append("  %s: the previous Libertadores and Sudamericana winners, one "
+                             "match in late February (normally first played in a career's second season)"
+                             % cup["name"])
+            else:
+                lines.append("  %s: the winners of the CAF Champions League and the Confederation Cup, one "
+                             "match in late July (first played in a career's second season)" % cup["name"])
             continue
         lines.append("  %s: %d clubs, %s" % (cup["name"], len(cup["entry"]),
                                              "%d groups of four, then a knockout of %d"
                                              % (cup["groups"], 2 * cup["groups"]) if cup["groups"]
                                              else "a knockout"))
+    if pl.get("conmebol_associations"):
+        lines.append("  CONMEBOL association sources (no team ids in the recipe):")
+        for a in pl["conmebol_associations"]:
+            lines.append("    %s: %d place(s), ranks through %d; %d eligible club(s) from %s%s" % (
+                a["name"], a["requested"], a["max_rank"], a["capacity"], a["how"],
+                " -- %d requested place(s) unresolved" % a["unresolved"] if a["unresolved"] else ""))
+            if a["unresolved"]:
+                lines.append("      NOTE: missing ranks stay empty; they are not filled by another CONMEBOL association")
     for note in pl.get("ccup_notes") or []:
         lines.append("  NOTE: " + note)
-    own = own_places(pl)
-    if any(c["number"] == 9 for c in pl.get("ccups") or []) or any(e[2] in (3, 4, 9) for e in own):
-        lines += samerica_lines(own, {p["rid"]: p["name"] for p in pl["leagues"]}, pl.get("ccups") or [])
+    own = own_places(pl) + [tuple(e) for e in pl.get("association_access") or []]
+    if (pl.get("modern_libertadores_access") != "custom"
+            and (any(c["number"] == 9 for c in pl.get("ccups") or [])
+                 or any(e[2] in (3, 4, 9) for e in own))):
+        sam_names = {p["rid"]: p["name"] for p in pl["leagues"]}
+        for a in pl.get("conmebol_associations") or []:
+            sam_names[a["source"]] = "%s (association)" % a["name"]
+        lines += samerica_lines(own, sam_names, pl.get("ccups") or [])
     for cup in pl.get("home_cups") or []:
         what = {"league": "league cup", "playoff": "playoff, filled on day %d" % cup["opts"]["fill"],
                 "super": "super cup in late July"}
@@ -3393,19 +4025,25 @@ def build(pl, base, game, replace=False, log=print):
     rounds = qual_rounds(pl)
     uecl, qlines = europe(tmp, db, log, bool(pl.get("uecl")), pl.get("uecl_name"), rounds)
     national_cups(pl, tmp, db, log)
+    resolve_new_league_stage_cup_winners(pl)
     hc = home_cups(pl, confed)
     own_cup = {p["rid"]: (p.get("own_cup") or {}).get("reg") for p in pl["leagues"]}
     for c in pl.get("ccups") or []:
         c["winners"] = list(c.get("winners") or []) + [[r, own_cup[r]] for r in
                                                        {e[1] for e in c["entry"] if e[0] == "cup"} if own_cup.get(r)]
+    prepare_sudamericana_first(pl, tmp, db, log)
     ccups = continental((pl.get("ccups") or []) + hc, tmp, db, log, alt_from(pl), pl.get("prev_cup_ids"))
+    ccups += sudamericana_first_line(pl)
+    ccups += sudamericana_playoffs(pl, tmp, db, log)
+    ccups += libertadores_qualifying(pl, tmp, db, log)
     for c in (pl.get("ccups") or []) + hc:
         pl.setdefault("cup_ids", {})["ccup:" + (c.get("code") or c["name"])] = {
             f: c[f] for f in ("cid", "reg", "ko", "pre_reg") if isinstance(c.get(f), int)}
     # the confed line also tells fl26swiss which of our clubs the board sends to the AFC
     # Champions League or the Libertadores instead of the Champions League (GitHub #43), so a
     # world with a league outside UEFA gets it even with no continental cup
-    if confed and (pl.get("ccups") or any(confed.get(p["country"], 2) != 2 for p in pl["leagues"])):
+    if confed and (pl.get("ccups") or pl.get("association_access") or pl.get("conmebol_stages")
+                   or any(confed.get(p["country"], 2) != 2 for p in pl["leagues"])):
         ccups.append(confed_line(confed))
     for c, h in zip(hc, pl.get("home_cups") or []):
         h["cid"] = c["cid"]                            # for its emblem (pictures)
@@ -3587,6 +4225,328 @@ def is_live(world, game):
     except (OSError, BuildError):
         return False
 
+
+
+def sudamericana_first_plan(stages, continental_places):
+    """Plan the modern Sudamericana national first stage from logical SUD_FIRST places.
+
+    Exactly 32 clubs enter, paired inside their domestic source. A staged cup-winner
+    row is (cup, 0, ..., alt=league); it is grouped with that league and seeded as the
+    strongest domestic place. The 12 direct group places use ccup_entry(), so cup-winner
+    destinations keep the same fallback semantics as every other continental cup.
+    """
+    first = [(r, pos, alt) for r, pos, comp, _stage, alt in stages
+             if comp == fl26world.SUD_FIRST]
+    if not first:
+        return None
+    if len(first) != 2 * SAM_FIRST_TIES:
+        raise BuildError("modern Sudamericana first stage: %d clubs -- exactly 32 required" % len(first))
+    if len(set(first)) != len(first):
+        raise BuildError("modern Sudamericana first stage: the same domestic place is listed twice")
+
+    by_source = {}
+    for reg, pos, alt in first:
+        source = alt if pos == CUP_WINNER and alt else reg
+        by_source.setdefault(source, []).append((reg, pos, alt))
+
+    # No country/source quota is imposed. Pair inside a source while possible,
+    # then pair one leftover from odd-sized sources across sources.
+    ties, leftovers = [], []
+    for source in sorted(by_source):
+        entries = sorted(by_source[source], key=lambda e: (e[1], e[0]))
+        while len(entries) >= 2:
+            ties.append([entries.pop(), entries.pop(0)])
+        if entries:
+            leftovers.append(entries[0])
+
+    if len(leftovers) % 2:
+        raise BuildError(
+            "modern Sudamericana first stage: internal pairing error -- "
+            "%d unpaired club(s)" % len(leftovers)
+        )
+    for i in range(0, len(leftovers), 2):
+        ties.append([leftovers[i + 1], leftovers[i]])
+
+    if len(ties) != SAM_FIRST_TIES:
+        raise BuildError("modern Sudamericana first stage: %d ties -- exactly 16 required" % len(ties))
+
+    direct_raw = [(r, pos, alt) for r, pos, comp, alt in continental_places if comp == SUDAM]
+    if len(direct_raw) != 12:
+        raise BuildError("modern Sudamericana groups: %d direct clubs -- exactly 12 required" % len(direct_raw))
+    if len(set(direct_raw)) != len(direct_raw):
+        raise BuildError("modern Sudamericana groups: the same direct domestic place is listed twice")
+    first_key = {(alt if pos == CUP_WINNER and alt else r, pos) for r, pos, alt in first}
+    direct_key = {(alt if pos == CUP_WINNER and alt else r, pos) for r, pos, alt in direct_raw}
+    if first_key & direct_key:
+        raise BuildError("modern Sudamericana: a domestic place is both direct to groups and in the first stage")
+    direct = [ccup_entry(r, pos, alt) for r, pos, alt in direct_raw]
+    return {"ties": ties, "direct": direct}
+
+
+def prepare_sudamericana_first(pl, root, db, log=print):
+    """Build the internal 16-tie one-match competition and replace Suda's group
+    entry list with 12 direct + 4 Libertadores-F3 losers + 16 first-stage winners.
+    Returns the master regulation id, or None when the modern first stage is off.
+    """
+    q = pl.get("suda_first")
+    if not q:
+        return None
+    sud = next((c for c in pl.get("ccups") or [] if c.get("number") == SUDAM), None)
+    if not sud:
+        raise BuildError("modern Sudamericana first stage: Copa Sudamericana was not planned")
+    import mkeuropo
+    cids, free = free_comp_ids(db)
+    if not cids or not free:
+        raise BuildError("no free competition or regulation id left for the Sudamericana first stage")
+    cid, master = cids[0], free[0]
+    try:
+        # Keep the technical helper in continental region 1: region 0 prevents
+        # all of its regulation replicas from becoming live at runtime. Its
+        # neutral file confederation keeps it out of League Info's CONMEBOL icons;
+        # fl26swiss hides the helper itself from Competition Info.
+        mkeuropo.prerounds_single(db, root, cid, SAM_FIRST_CODE, SAM_FIRST_NAME,
+                                  [(master, SAM_FIRST_TIES)], log=log, one_match=True,
+                                  region=1, confederation=0)
+    except SystemExit as e:
+        raise BuildError("Sudamericana first stage: %s" % e)
+    sud["groups"] = 8
+    sud["entry"] = (list(q["direct"]) + [(LIB_QUAL, QUAL_LOSER)] * SAM_LIB_LOSERS
+                    + [(master + 1024 * (k + 1), 0) for k in range(SAM_FIRST_TIES)])
+    q["cid"], q["reg"] = cid, master
+    log("  Sudamericana first stage: competition %d reg %d, 32 clubs / 16 one-match ties -> groups"
+        % (cid, master))
+    return master
+
+
+def lpre_entry_text(entries):
+    """(entry text, optional alt text) for lpre world lines.
+
+    An entry may be (source, rank) or (source, rank, fallback_source). The latter is
+    used only for a cup-winner slot: alt stores 1-based entry index, fallback source,
+    and first fallback rank.
+    """
+    words, alt = [], []
+    for i, e in enumerate(entries, 1):
+        reg, rank = int(e[0]), int(e[1])
+        fallback = int(e[2]) if len(e) > 2 and e[2] else 0
+        words.append("%d:%d" % (reg, rank))
+        if rank == CUP_WINNER and fallback:
+            alt.append("%d:%d:1" % (i, fallback))
+    return ",".join(words), (" alt=" + ",".join(alt)) if alt else ""
+
+
+def sudamericana_first_line(pl):
+    q = pl.get("suda_first")
+    if not q or not q.get("reg"):
+        return []
+    sud = next((c for c in pl.get("ccups") or [] if c.get("number") == SUDAM), None)
+    if not sud or not sud.get("ko"):
+        raise BuildError("Sudamericana first stage: group cup has no knockout regulation")
+    entries = [e for tie in q["ties"] for e in tie]
+    entry, alt = lpre_entry_text(entries)
+    return ["lpre %d cup=%d fill=%d days=%d,%d entry=%s single=1%s" % (
+        q["reg"], sud["ko"], SAM_FIRST_FILL, SAM_FIRST_DAY, SAM_FIRST_DAY, entry, alt)]
+
+
+def sudamericana_playoffs(pl, root, db, log=print):
+    """Build the modern Sudamericana post-group play-off.
+
+    Tie k: Libertadores group (H..A) third v Sudamericana group (A..H)
+    runner-up. The runtime waits until both group stages are complete, fills the
+    eight two-leg ties, then builds the round of 16 from the eight Suda group
+    winners plus these eight play-off winners.
+    """
+    sud = next((c for c in pl.get("ccups") or [] if c.get("number") == SUDAM), None)
+    if not sud or not pl.get("suda_first") or not sud.get("ko") or sud.get("groups") != 8:
+        return []
+    import mkeuropo
+    cids, free = free_comp_ids(db)
+    if not cids or not free:
+        raise BuildError("no free competition or regulation id left for the Sudamericana play-off")
+    cid, master = cids[0], free[0]
+    try:
+        # Same runtime/presentation split as the first stage: live in region 1,
+        # neutral to League Info, and hidden as a standalone Competition Info item.
+        mkeuropo.prerounds_single(db, root, cid, SPO_CODE, SPO_NAME,
+                                  [(master, 8)], log=log, one_match=False,
+                                  region=1, confederation=0)
+    except SystemExit as e:
+        raise BuildError("Sudamericana play-off: %s" % e)
+
+    pl["spo_cid"] = cid                  # pictures(): the Sudamericana's emblem for it
+    entry = []
+    for k in range(8):
+        entry += [(LIB_GROUPS + 1024 * (8 - k), 3),
+                  (sud["reg"] + 1024 * (k + 1), 2)]
+
+    log("  %s: competition %d reg %d, 8 two-leg ties on days %d/%d; "
+        "Suda runners-up v Libertadores thirds -> round of 16 reg %d"
+        % (SPO_NAME, cid, master, SPO_DAYS[0], SPO_DAYS[1], sud["ko"]))
+    return ["lpre %d cup=%d fill=%d days=%d,%d entry=%s poko=1" % (
+        master, sud["ko"], SPO_FILL, SPO_DAYS[0], SPO_DAYS[1],
+        ",".join("%d:%d" % e for e in entry))]
+
+
+def reject_legacy_libq_with_modern(recipe, leagues, stages):
+    """Do not mix native/legacy Libertadores qualifying with modern F1/F2.
+
+    Competition 4 is the game's generic/native Libertadores qualifying target.
+    In a modern world F1 and F2 feed that native round as F3, so a domestic
+    place sent directly to competition 4 would bypass F1/F2 and corrupt the
+    intended 6 -> 3, 13 + 3 -> 8, 8 -> 4 chain.
+
+    In custom CONMEBOL mode, competition 4 is not a domestic destination:
+    Fase 3 is filled only by the eight Fase-2 winners. Vanilla worlds never call
+    this guard and keep the game's original Libertadores untouched.
+    """
+    where = []
+
+    for p in leagues:
+        for e in p.get("europe") or []:
+            try:
+                comp = int(e[1])
+            except (TypeError, ValueError, IndexError):
+                continue
+            if comp == 4:
+                where.append(p.get("name") or "a new league")
+                break
+
+    for rid, places in (recipe.get("game_europe") or {}).items():
+        for e in places or []:
+            try:
+                comp = int(e[1])
+            except (TypeError, ValueError, IndexError):
+                continue
+            if comp == 4:
+                where.append("game regulation %s" % rid)
+                break
+
+    if not where:
+        return
+
+    raise BuildError(
+        "modern Libertadores qualifying is enabled, but the legacy "
+        "'Libertadores qualifying' destination is also assigned (%s). "
+        "Remove the legacy destination and use Phase 1 / Phase 2 instead; "
+        "Phase 3 is filled automatically by the eight Phase-2 winners."
+        % ", ".join(where)
+    )
+
+
+def libq_plan(stages):
+    """Return the modern Libertadores F1/F2 access plan.
+
+    Entries keep an optional fifth-field fallback from the staged access tuple. For a
+    cup-winner destination this means (cup regulation, 0, league source), so runtime can
+    cascade to the next eligible club of the same domestic source. F3 itself has no direct
+    domestic entrants in the modern format.
+    """
+    f1 = [(r, pos, alt) for r, pos, comp, _stage, alt in stages
+          if comp == fl26world.LIB_F1]
+    f2 = [(r, pos, alt) for r, pos, comp, _stage, alt in stages
+          if comp == fl26world.LIB_F2]
+    f3 = [(r, pos, alt) for r, pos, comp, _stage, alt in stages
+          if comp == fl26world.LIB_F3]
+
+    modern = bool(f1 or f2)
+    if not modern:
+        return None
+
+    if len(f1) != 6:
+        raise BuildError("modern Libertadores qualifying: phase 1 has %d clubs -- exactly 6 required" % len(f1))
+    if len(f2) != 13:
+        raise BuildError("modern Libertadores qualifying: phase 2 has %d domestic clubs plus 3 phase-1 winners -- exactly 13 domestic clubs required" % len(f2))
+    if f3:
+        raise BuildError("modern Libertadores qualifying: phase 3 has %d direct domestic club(s), but its 8 places must all be the winners of phase 2" % len(f3))
+
+    keys = [(alt if pos == CUP_WINNER and alt else r, pos) for r, pos, alt in f1 + f2]
+    if len(set(keys)) != len(keys):
+        raise BuildError("modern Libertadores qualifying: the same domestic place is listed in more than one qualifying phase")
+
+    return {"phase1": f1, "phase2": f2}
+
+
+def libertadores_qualifying(pl, root, db, log=print):
+    """Build Libertadores F1 and F2 and return their world-file lpre lines.
+
+    Both phases live in one auxiliary competition copied from native
+    Libertadores qualifying. F2 receives F1's three winners and its eight
+    winners feed native Libertadores regulation 8 (F3).
+    """
+    q = pl.get("libq")
+    if not q:
+        return []
+
+    import mkeuropo
+
+    cids, free = free_comp_ids(db)
+    if not cids or len(free) < 2:
+        raise BuildError(
+            "no free competition or regulation ids left for "
+            "the Libertadores qualifying phases"
+        )
+
+    cid, m1, m2 = cids[0], free[0], free[1]
+    q["cid"] = cid                       # pictures(): the Libertadores' emblem for it
+
+    # F1 = 3 ties; F2 = 8 ties.
+    try:
+        mkeuropo.prerounds_single(
+            db,
+            root,
+            cid,
+            LIBQ_CODE,
+            LIBQ_NAME,
+            [(m1, 3), (m2, 8)],
+            log=log,
+            one_match=False,
+        )
+    except SystemExit as e:
+        raise BuildError("Libertadores qualifying: %s" % e)
+
+    # F2 gets its 13 domestic entrants plus the three F1 winners.
+    # First v last gives those three F1 winners to the first three listed
+    # F2 entrants, following the previously validated implementation.
+    full = list(q["phase2"]) + [
+        (m1 + 1024 * (k + 1), 0, 0) for k in range(3)
+    ]
+
+    if len(full) != 16:
+        raise BuildError(
+            "Libertadores qualifying: phase 2 resolved to %d clubs, not 16"
+            % len(full)
+        )
+
+    pairs = []
+    for k in range(8):
+        pairs += [full[15 - k], full[k]]
+
+    e1, a1 = lpre_entry_text(q["phase1"])
+    e2, a2 = lpre_entry_text(pairs)
+
+    lines = [
+        "lpre %d cup=0 fill=%d days=%d,%d entry=%s po=1%s"
+        % (m1, LIBQ_P1["fill"], LIBQ_P1["days"][0], LIBQ_P1["days"][1], e1, a1),
+        "lpre %d cup=0 fill=%d days=%d,%d entry=%s po=1 feed=8%s"
+        % (m2, LIBQ_P2["fill"], LIBQ_P2["days"][0], LIBQ_P2["days"][1], e2, a2),
+    ]
+
+    log(
+        "  Libertadores qualifying: F1 competition %d reg %d "
+        "(3 ties, days %d/%d), F2 reg %d "
+        "(13 domestic + 3 F1 winners, days %d/%d) -> native F3 reg 8"
+        % (
+            cid,
+            m1,
+            LIBQ_P1["days"][0],
+            LIBQ_P1["days"][1],
+            m2,
+            LIBQ_P2["days"][0],
+            LIBQ_P2["days"][1],
+        )
+    )
+
+    return lines
 
 def qual_rounds(pl):
     """the August qualifying rounds the world gets (fl26world.pick_rounds): as many as the European
@@ -4173,6 +5133,10 @@ def ccup_options(line, cup):
         words.append("clubs=" + ",".join(map(str, o["clubs"])))
     if o.get("like"):                                  # 0.2.0: a single-match league cup
         words += ["like=%d" % o["like"], "draw=%s" % (o.get("draw") or "byes")]
+    if o.get("cal"):
+        words.append("cal=1")                              # South American February-December calendar
+    if o.get("first"):
+        words.append("first=" + ",".join(map(str, o["first"])))
     head, sep, name = line.partition(" name=")
     return "%s %s%s%s" % (head, " ".join(words), sep, name)
 
@@ -4238,6 +5202,15 @@ def pictures(pl, root, base, log=print, game=None):
     cups = cup_emblems(pl)
     for cid, name, logo in cups:
         lbassets.league_logo(root, cid, name, have_picture(logo, name, log, "logo", "drawn emblem"))
+    # the modern CONMEBOL's technical competitions show their parent's emblem in the stage titles:
+    # the Libertadores qualifying phases the Libertadores' (the game's, 5), the Sudamericana first
+    # stage and play-off the Sudamericana's (2026-10-15: on id 145 they showed the Nations League's)
+    sud = next((c for c in pl.get("ccups") or [] if c.get("number") == SUDAM and c.get("cid")), None)
+    for dst, src in (((pl.get("libq") or {}).get("cid"), 5),
+                     ((pl.get("suda_first") or {}).get("cid"), sud and sud["cid"]),
+                     (pl.get("spo_cid"), sud and sud["cid"])):
+        if dst and src and lbassets.copy_emblem(root, src, dst, game, log):
+            log("  competition %d shows the emblem of %d" % (dst, src))
     log("  %d league logos, %d cup logos, %d club crests%s" % (
         len(pl["leagues"]), len(cups), sum(len(p["teams"]) - len(game_places(p))
                                            for p in pl["leagues"] + (pl.get("others") or [])),
@@ -4417,7 +5390,7 @@ def module_of(line):
 
 
 # Modules of ours a player may switch off for good (Gu, 2026-10-07: "can the regen system be
-# disabled completely?"). Unticking one on the Lua modules page lists it in modulesl26-off.txt,
+# disabled completely?"). Unticking one on the Lua modules page lists it in modules\fl26-off.txt,
 # and Build / Install / switching worlds then leave its line switched off instead of turning it
 # back on as they do every other module of the pack.
 OPTIONAL_MODULES = ("fl26regen",)

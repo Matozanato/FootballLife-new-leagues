@@ -34,7 +34,9 @@ Trampolines sit after fl26superguard (0x14252ee20..0x14252ee3c).
 local m = {}
 
 local patches = {
-  {va=0x14252ee40, old="0000000000000000000000000000000000000000000000", new="448b014183f803740b4183f8057405e9ec7204ff31c0c3", why="region-group trampoline for the season end: regions 3 (France) and 5 (Italy) -> group 0, everything else through 0x141576140"},
+  -- Keep R8 intact here: under Win64 it carries the third argument of the original
+  -- region->group call. Use volatile R10D as scratch before tail-jumping to it.
+  {va=0x14252ee40, old="0000000000000000000000000000000000000000000000", new="448b114183fa03740b4183fa057405e9ec7204ff31c0c3", why="region-group trampoline for the season end: regions 3 (France) and 5 (Italy) -> group 0, everything else through 0x141576140"},
   {va=0x14252ee60, old="0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", new="803d8900000000755c0fb70be8df1806ff84c0742e488b05946f1d01488b48480fb713e878c1f8fe0fb71366391075350fb7487e6683f9ff742be8b11806ff84c07522488d53024c8b45e84929d04889d9ff15b10e000048836de802488b45e8e99c6fe3fe488b45e8e98f6fe3fe", why="season guard: when fl26join.dll has set the byte at 0x14252eef0 every league goes on to its season-end split; without the DLL a league is erased from the list when it, or the league below it (+0x7e), has no season table"},
   {va=0x141365d7f, old="e8bc032100", new="e8bc901c01", why="the filter's region->group call -> the trampoline at 0x14252ee40"},
   {va=0x141365e48, old="0fb70be800a92200400fb6f684c00f44f7488b45e8", new="e913901c0190909090909090909090909090909090", why="the filter's season-object check -> the guard at 0x14252ee60"},
