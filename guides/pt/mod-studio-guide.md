@@ -684,9 +684,9 @@ que o mundo foi montado). Ele salva um
 - `SiderAddons\content\kit-server\<world>\...` e `...\scoreboard-server\<world>\...`: os
   **uniformes** e **placares** do mundo, cada um com um `map.txt` / `map_competitions.txt` só com as
   linhas deste mundo. Uniformes de outro pacote que os clubes do mundo usam vão junto em `<world>\_kits\`;
-  placares e temas de menu de outro pacote (um modpack) para as competições do mundo vão junto em
-  `<world>\_packs\` (scoreboard-server e menu-server). Os temas só aparecem com o módulo Menu Server
-  ligado no `sider.ini` de quem recebe (`lua.module = "MenuServer.lua"`).
+  placares de outro pacote (um modpack) para as competições do mundo vão junto em
+  `<world>\_packs\` (scoreboard-server). Temas de menu não fazem parte do zip de um mundo (B88):
+  os menus do próprio jogo continuam, mesmo com o tema de um pacote ligado no seu PC.
 - `READ ME - FL26 world.txt` e `fl26worldpack.json`: o que quem recebe precisa.
 
 **Quem recebe precisa dos módulos do Mod Studio com o pacote de rostos** (`modules\fl26regen_faces.bin`):
