@@ -26,17 +26,31 @@ OFF = "  # (switched off by FL26 Mod Studio)"
 LINE = re.compile(r"^\s*(#\s*)?(\d+)\s*,")
 
 
+def _ids(d, pat):
+    try:
+        return sorted({m.group(1) for n in os.listdir(d) for m in [re.fullmatch(pat, n, re.I)] if m})
+    except OSError:
+        return []
+
+
 def stadium_slot(folder):
-    """the stadium slot a stadium folder was made for (its AddOn folders are named by it)"""
+    r"""the stadium slot a stadium folder was made for: the slot of its picture
+    (common\render\thumbnail\stadium\stNNN.dds -- Stadium Server shows that one, and a pack's own
+    map uses that slot), else its AddOn folders, else its one model folder (Asset\model\bg\stNNN).
+    A stadium of the game ("Konami" or "common" in the pack) has no model in its folder, only
+    lighting and nets for the game's own stadium NNN: served under another slot it is dark
+    (Discord, Erax, 0.2.4: Estadio del Tauro st055 written as 009)"""
+    pic = _ids(os.path.join(folder, "common", "render", "thumbnail", "stadium"), r"st(\d{3})\.dds")
+    if len(pic) == 1:
+        return pic[0]
     seen = {}
     for sub in ("fog", "Light", "Cutscene", "Large_hexagonal_net"):
-        try:
-            for n in os.listdir(os.path.join(folder, "AddOn", sub)):
-                if re.fullmatch(r"\d{3}", n):
-                    seen[n] = seen.get(n, 0) + 1
-        except OSError:
-            pass
-    return max(seen, key=seen.get) if seen else ""
+        for n in _ids(os.path.join(folder, "AddOn", sub), r"(\d{3})"):
+            seen[n] = seen.get(n, 0) + 1
+    if seen:
+        return max(seen, key=seen.get)
+    model = _ids(os.path.join(folder, "Asset", "model", "bg"), r"st(\d{3})")
+    return model[0] if len(model) == 1 else ""
 
 
 def find(lib, folder):
@@ -173,7 +187,17 @@ def write(pl, sider, log=print):
         if bad:
             log("  home stadium of club %d (%s): %s, skipped" % (tid, club, bad))
             continue
-        slot = str(st.get("slot") or "").strip() or stadium_slot(os.path.join(lib, folder)) or "009"
+        # the slot of the folder on this PC first: the recipe's was read from the maker's folder
+        # (or not at all), and a wrong one makes the stadium dark
+        own = stadium_slot(os.path.join(lib, folder))
+        slot = own or str(st.get("slot") or "").strip()
+        if not slot:
+            # nothing in the folder names its stadium: Stadium Server's usual slot, said in the log
+            slot = "009"
+            log("  home stadium of club %d (%s): %s names no stadium slot (no stNNN picture, AddOn or "
+                "model folder), served as 009" % (tid, club, folder))
+        if own and str(st.get("slot") or "").strip() and int(own) != int(st["slot"]):
+            log("  home stadium of club %d (%s): %s is stadium %s, not %s" % (tid, club, folder, own, st["slot"]))
         name = str(st.get("name") or "").strip() or os.path.basename(folder)
         mine.append((tid, "%d, %03d, %s, %s   %s %s" % (tid, int(slot), name, folder, TAG, club)))
     taken = {tid for tid, _l in mine}

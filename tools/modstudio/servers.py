@@ -157,16 +157,10 @@ def ball_id(folder):
 
 
 def stadium_id(folder):
-    """the stadium slot a stadium folder was made for (its AddOn folders are named by it)"""
-    seen = {}
-    for sub in ("fog", "Light", "Cutscene", "Large_hexagonal_net"):
-        try:
-            for n in os.listdir(os.path.join(folder, "AddOn", sub)):
-                if re.fullmatch(r"\d{3}", n):
-                    seen[n] = seen.get(n, 0) + 1
-        except OSError:
-            pass
-    return max(seen, key=seen.get) if seen else ""
+    r"""the stadium slot a stadium folder was made for: its picture's stNNN first (a stadium of the
+    game has only lighting in its folder and is dark under another slot), see lbstadiums.stadium_slot"""
+    import lbstadiums
+    return lbstadiums.stadium_slot(folder)
 
 
 def preview(folder):
