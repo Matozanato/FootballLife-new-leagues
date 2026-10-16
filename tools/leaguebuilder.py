@@ -3228,10 +3228,16 @@ CLUB_PREFIX = {"fc", "afc", "ac", "as", "sc", "cd", "ca", "cf", "sl", "sv", "vfb
 
 
 def club_sort_key(name):
+    """a club's place A-Z: without the words it is filed without, and with its letters folded as
+    ascii_letters folds them (Đakovo under D, Šibenik under S, Ørsted under O): the code points
+    put Đ, Š and Ž after Z (HNK Đakovo Croatia came after Vukovar). Only the order of the entries
+    changes, never an id"""
+    import unicodedata
     words = name.replace(".", " ").split()
     while len(words) > 1 and words[0].casefold() in CLUB_PREFIX:
         words = words[1:]
-    return " ".join(words).casefold()
+    txt = unicodedata.normalize("NFKD", "".join(FOLD.get(c, c) for c in " ".join(words)))
+    return "".join(c for c in txt if not unicodedata.combining(c)).casefold()
 
 
 def club_order(pl, ents, regs, raw, top_id, log=print):
