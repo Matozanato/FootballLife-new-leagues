@@ -82,6 +82,7 @@ class Release:
         self.twins, self._twin_rows = {}, {}
         self._twin_off = set()                    # twins the tables in use have not got (use_tables)
         self.held = set()                         # twins the world has as new clubs already (use_recipe)
+        self.gone = set()                         # game clubs whose place the world gave away (use_recipe)
         versions = set()
         for label, opener, pics, read in _sources(where):
             with opener("newlife.json") as f:
@@ -131,7 +132,7 @@ class Release:
         the world already has the twin as a new club (use_recipe) -- then under its NewLife id, a
         new club, as a release without game_id has it"""
         for n, g in self.twins.items():
-            on = n not in self._twin_off and n not in self.held
+            on = n not in self._twin_off and n not in self.held and g not in self.gone
             if on and n in self.clubs:
                 del self.clubs[n]
                 self.clubs[g] = dict(self._twin_rows[n], in_game="1", twin=n)
@@ -160,11 +161,31 @@ class Release:
         twin's id, so leagues() read before are out of date"""
         placed = {str(i) for x in (recipe or {}).get("leagues") or [] for i in (x.get("newlife") or {}).get("clubs") or []}
         held = {n for n in self.twins if n in placed}
-        if held == self.held:
+        gone = {str(t) for t in (((recipe or {}).get("newlife_game") or {}).get("replaced") or {})}
+        if held == self.held and gone == self.gone:
             return False
-        self.held = held
+        self._unmark()
+        self.held, self.gone = held, gone
         self._settle()
+        self._mark()
         return True
+
+    def _mark(self):
+        """B79: a club of the game whose place in the game the world gave to another club (Bring
+        the game's leagues to this season: newlife_game "replaced", Huesca's to Tenerife) is not
+        in the game any more: a league of ours takes it as a new club. Before, Update my leagues
+        left such clubs out (the Modpack's Primera Federacion went from 20 clubs to 17) or put
+        them in as clubs of the game, at the place another club has now"""
+        for cid in self.gone:
+            c = self.clubs.get(cid)
+            if c is not None and c.get("in_game") == "1" and not c.get("twin"):
+                c["gone_in_game"] = "1"
+                c["in_game"] = "0"
+
+    def _unmark(self):
+        for c in self.clubs.values():
+            if "gone_in_game" in c:
+                c["in_game"] = c.pop("gone_in_game")
 
     def _unpack(self, sub, name, read):
         d = os.path.join(CACHE, "".join(ch if ch.isalnum() or ch in "._-" else "_"
@@ -208,6 +229,7 @@ class Release:
         if self.tables == tag:
             return
         self.tables = tag
+        self._unmark()
         self._twin_off = {n for n, g in self.twins.items() if not same_club(info, int(g), self._twin_rows[n])}
         self._settle()
         for cid, c in self.clubs.items():
@@ -216,6 +238,7 @@ class Release:
             was = c.setdefault("release_in_game", c.get("in_game", ""))
             if was == "1":
                 c["in_game"] = "1" if cid.isdigit() and same_club(info, int(cid), c) else "0"
+        self._mark()
 
     def leagues(self, country_of, info=None):
         """[{name, country, clubs: [club id], in_game: [club id], players, strength}] --
@@ -874,7 +897,16 @@ def game_league_plan(recipe, rel, info):
     what refresh_game_leagues does to it (clubs: the team ids that get the release's squad).
     A club of the game the release has under a NewLife id (clubs.csv game_id, B56) is that club of
     the game here: it stays in its place, gets its squad and is not taken for a club gone down"""
-    rel.use_recipe(recipe)
+    # B79: made as refresh_game_leagues makes it, after what an earlier refresh did is undone (a
+    # club whose place that refresh gave away counts as the game's again); rel then as it was
+    rel.use_recipe(dict(recipe, newlife_game=None))
+    try:
+        return _game_league_plan(recipe, rel, info)
+    finally:
+        rel.use_recipe(recipe)
+
+
+def _game_league_plan(recipe, rel, info):
     match, target = _game_targets(rel, info)
     league_of = {}
     for _r, c, _n, ts in B.game_leagues(info["base"]):
@@ -1005,6 +1037,7 @@ def refresh_game_leagues(recipe, rel, info, cids):
     pl = recipe.get("players") or {}
     rec["clubs"] = sorted(int(t) for t in squads if (pl.get(str(t)) or {}).get("newlife_game"))
     recipe["newlife_game"] = rec
+    rel.use_recipe(recipe)                         # B79: the clubs whose place went are new clubs now
     n.update(swaps=len(rec["swaps"]), replaced=len(rec["replaced"]), clubs=len(rec["clubs"]))
     return n
 

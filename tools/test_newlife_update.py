@@ -120,6 +120,33 @@ def main(old_dir, new_dir):
     assert set(ids) - had, "the release brings back the club left out"
     kits = (list(z5.get("kit_folders") or []) + [""] * len(ids))[:len(ids)]
     assert kits == ["kit of %s" % i if i in had else "" for i in ids], kits
+    # B79: a club of the game whose place in the game another club took (newlife_game
+    # "replaced") and which the person put in a league as a new club stays in it (16.10.: the
+    # Modpack's Primera Federacion lost 3 such clubs, its Serie C 4) ...
+    gone = next(i for i in sorted(new.clubs) if new.clubs[i].get("in_game") == "1" and i in old.clubs
+                and not new.clubs[i].get("twin") and i not in L["clubs"] + L["in_game"])
+    r6 = {"world": "_FL26T", "leagues": [], "edits": {}, "players": {},
+          "newlife_game": {"version": old.meta["version"], "swaps": [], "clubs": [],
+                           "replaced": {gone: {"name": "Another club", "abbr": "ANO"}}}}
+    old.use_recipe(r6)                              # as the page has it: the club is a new club
+    N.add_league(r6, old, dict(L, clubs=L["clubs"][:-1] + [gone]), custom=True)
+    n6 = r6["leagues"][0]["clubs"]
+    assert gone in [str(i) for i in r6["leagues"][0]["newlife"]["clubs"]]
+    N.update_league(r6, new, r6["leagues"][0], rows_n)
+    have = [str(i) for i in r6["leagues"][0]["newlife"]["clubs"]]
+    assert gone in have and r6["leagues"][0]["clubs"] == n6, (gone, have)
+    assert int(gone) not in [e["id"] for e in r6["leagues"][0].get("game_clubs") or []]
+    # ... and a league the release lines up with that club of the game takes it as a new club,
+    # not as the club of the game at a place another club has now
+    new.use_recipe({"leagues": []})
+    Lg = next(x for x in new.leagues(cty) if x["in_game"])
+    t = Lg["in_game"][0]
+    new.use_recipe({"leagues": [], "newlife_game": {"replaced": {t: {"name": "Another club"}}}})
+    Lg2 = next(x for x in new.leagues(cty) if x["key"] == Lg["key"])
+    assert t in Lg2["clubs"] and t not in Lg2["in_game"], (t, Lg2["clubs"], Lg2["in_game"])
+    new.use_recipe({"leagues": []})
+    assert new.clubs[t]["in_game"] == "1", "undone with the record"
+    print("a club whose game place was taken stays a new club: %s, %s" % (new.clubs[gone]["name"], new.clubs[t]["name"]))
     print("all passed")
 
 

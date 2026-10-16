@@ -544,6 +544,8 @@ class NewLife(BuilderPage):
                        "club that came up, %d squads (%d players join from other clubs, %d new, %d leave). Build "
                        "again and start a new career.") % (rel.version, 2 * n["swaps"], n["replaced"], n["clubs"],
                                                           n["join"], n["add"], n["remove"]), "ok")
+            self.read_rows()                     # B79: a club whose place went is a new club now
+            self.fill()
             self.count()
 
         def failed(tb):
@@ -556,4 +558,7 @@ class NewLife(BuilderPage):
         if N.undo_game_leagues(self.project.recipe):
             self.project.touch()
             self.say(_("The game's leagues are back as the game has them."), "ok")
+            if self.rel:                         # B79: its clubs are the game's again
+                self.read_rows()
+                self.fill()
         self.count()
