@@ -215,7 +215,7 @@ fl26world.txt in SiderAddons\\modules, every new player looks the same.
 Kits ({kits} clubs), scoreboards ({boards} competitions) and menu themes ({menus} competitions),
 when the world has them, are in SiderAddons\\content (Kit Server, Scoreboard Server, Menu
 Server): Install adds their map lines. Scoreboards and themes of another pack that this
-world's competitions use (a modpack's) are under <world>\_packs. A world zip normally carries
+world's competitions use (a modpack's) are under <world>\\_packs. A world zip normally carries
 no menu themes: the game's own menus stay. Themes show only with the Menu Server module on in
 sider.ini (lua.module = "MenuServer.lua").
 
