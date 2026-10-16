@@ -4161,7 +4161,9 @@ class Build(BuilderPage):
             b.setToolTip(_("Off: %s is a ready world from Import your world. It is built already.") % ", ".join(ready)
                          if ready else "")
         if ready:
-            bits.insert(0, _("%s is a ready world (installed from a zip): no Build needed, press Play") % ", ".join(ready))
+            bits.insert(0, _("%s came from a zip and is built already: no Build needed. To play it, press Activate "
+                             "on its card, then Start the game. Changes made on the tabs do not reach a zip world "
+                             "yet.") % ", ".join(ready))
         self.state.setText("   ·   ".join(bits))
         self.app.update_world_bar()
 

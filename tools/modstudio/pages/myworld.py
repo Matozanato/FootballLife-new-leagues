@@ -570,12 +570,11 @@ class MyWorld(QWidget):
         self.note.setObjectName("mlnote")
         self.note.setToolTip(_("A career saved before keeps the world it started with: after Build and install "
                                "or Activate, start a new Master League."))
-        self.build = QPushButton(_("Build and install"))
-        self.build.setObjectName("blue")
-        self.build.setStyleSheet("padding: 8px 18px; font-size: 9pt;")
-        self.build.setToolTip(_("Installs the modules, builds the world, switches it on and says what is left"))
-        self.build.clicked.connect(self.app._world_build)
-        for x in (self.c_comps, self.c_regions, self.note, self.build):
+        # one Build and install button only, on the Build tab (mato 16.10.: three of them on one screen
+        # and testers pressed the wrong one); here the open world's state in a few words
+        self.world_state = QLabel()
+        self.world_state.setObjectName("cardnote")
+        for x in (self.c_comps, self.c_regions, self.note, self.world_state):
             h.addWidget(x, 0, Qt.AlignVCenter)
         self.set_counter(self.c_comps, "Competitions", None, CID_MAX)
         self.set_counter(self.c_regions, "New countries", None, NEW_COUNTRIES)
@@ -669,20 +668,24 @@ class MyWorld(QWidget):
         if self._progress:
             self.note.setText(self._progress)
             self.note.setStyleSheet("color: %s;" % theme.ACCENT)
+        elif getattr(self, "_open_zipped", False):
+            # the open world came from a zip: the tabs change its recipe, but no Build puts that in
+            # the game yet (0.2.5: apply the change in place) -- said here, over every tab
+            self.note.setText("⚠ " + _("a world from a zip: changes made here do not reach the game yet"))
+            self.note.setStyleSheet("")
         else:
             self.note.setText("⚠ " + _("changes need a new Master League"))
             self.note.setStyleSheet("")
 
     def update_bar(self, progress=None):
-        """the Build button as the Build page's; progress: the build's time and step, "" when over"""
+        """the world's state as the Build page says it; progress: the build's time and step, "" when over"""
         if progress is not None:
             self._progress = progress
             self.update_note()
         b = self.app.pages.get("Build")
-        if b is not None and hasattr(b, "b_all"):
-            self.build.setEnabled(b.b_all.isEnabled())
-            self.build.setToolTip(b.b_all.toolTip() or _("Installs the modules, builds the world, switches it "
-                                                        "on and says what is left"))
+        if b is not None and hasattr(b, "state"):
+            self.world_state.setText(b.state.text().split("   ·   ")[0])
+            self.world_state.setToolTip(b.state.text().replace("   ·   ", "\n"))
 
     def later(self, *_a):
         self._stale = True
@@ -719,6 +722,8 @@ class MyWorld(QWidget):
         r = self.app.project.recipe
         self._seen = (id(r), r.get("world"), len(r.get("leagues") or []))
         rows = world_rows(self.app)
+        self._open_zipped = any(x["open"] and x["zipped"] for x in rows)
+        self.update_note()
         while self.row.count():
             it = self.row.takeAt(0)
             if it.widget() is not None:

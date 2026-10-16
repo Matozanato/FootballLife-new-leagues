@@ -1787,7 +1787,9 @@
   "Switching %s on": "Uključujem %s",
   "Taking out the older %s": "Vadim stariji %s",
   "On Home press Install now, then in My world press Activate on this world.": "Na Home pritisni Instaliraj sada, pa u Moj svijet pritisni Aktiviraj na ovom svijetu.",
-  "A career saved before keeps the world it started with: after Build and install or Activate, start a new Master League.": "Karijera spremljena prije zadržava svijet s kojim je počela: nakon Izgradi i instaliraj ili Aktiviraj pokreni novu Master League."
+  "A career saved before keeps the world it started with: after Build and install or Activate, start a new Master League.": "Karijera spremljena prije zadržava svijet s kojim je počela: nakon Izgradi i instaliraj ili Aktiviraj pokreni novu Master League.",
+  "a world from a zip: changes made here do not reach the game yet": "svijet iz zipa: izmjene odavde još ne stižu u igru",
+  "%s came from a zip and is built already: no Build needed. To play it, press Activate on its card, then Start the game. Changes made on the tabs do not reach a zip world yet.": "%s je došao iz zipa i već je izgrađen: Build ne treba. Za igranje pritisni Aktiviraj na njegovoj kartici pa Pokreni igru. Izmjene s tabova još ne stižu u svijet iz zipa."
  },
  "log": [
   [

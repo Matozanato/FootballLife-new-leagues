@@ -1786,7 +1786,9 @@
   "Switching %s on": "Activation de %s",
   "Taking out the older %s": "Retrait de l'ancien %s",
   "On Home press Install now, then in My world press Activate on this world.": "Sur Accueil, appuyez sur Installer maintenant, puis dans Mon monde sur Activer pour ce monde.",
-  "A career saved before keeps the world it started with: after Build and install or Activate, start a new Master League.": "Une carrière sauvegardée avant garde le monde avec lequel elle a commencé : après Construire et installer ou Activer, lancez une nouvelle Master League."
+  "A career saved before keeps the world it started with: after Build and install or Activate, start a new Master League.": "Une carrière sauvegardée avant garde le monde avec lequel elle a commencé : après Construire et installer ou Activer, lancez une nouvelle Master League.",
+  "a world from a zip: changes made here do not reach the game yet": "un monde venu d'un zip : les modifications faites ici n'atteignent pas encore le jeu",
+  "%s came from a zip and is built already: no Build needed. To play it, press Activate on its card, then Start the game. Changes made on the tabs do not reach a zip world yet.": "%s vient d'un zip et est déjà construit : pas de Build nécessaire. Pour y jouer, appuyez sur Activer sur sa carte, puis Lancer le jeu. Les modifications faites dans les onglets n'atteignent pas encore un monde venu d'un zip."
  },
  "log": [
   [

@@ -86,20 +86,23 @@ def run():
        texts == ["1. Home", "2. My world", "3. Game content  ▾", "4. Tools  ▾", "5. Settings"])
     ok("no Build and edit your world / Import your world / NewLife Database in the bar",
        not any(k in w.nav_buttons for k in ("Build", "Import", "NewLife")))
+    # B82 (16.10.): Build is the first tab of My world; the others still open inside it with no tab lit
     for name in ("Build", "Install", "NewLife", "Packages", "NewLeagues"):
         w.open_page(name)
         qa.processEvents()
         sec = w.my_world
-        ok("%s still opens, inside My world, with no tab lit" % name,
+        lit = [n for n, b in sec.tab_btn.items() if b.isChecked()]
+        ok("%s still opens, inside My world, %s" % (name, "as the lit Build tab" if name == "Build" else "with no tab lit"),
            w.stack.currentWidget() is sec and sec.tabs.currentWidget() is w.holder_of[name]
-           and not any(b.isChecked() for b in sec.tab_btn.values())
+           and lit == (["Build"] if name == "Build" else [])
            and w.nav_buttons["World"].isChecked())
+    ok("B82: Build is the first tab", list(sec.tab_btn) [0] == "Build")
     w.open_page("Leagues")
     qa.processEvents()
     ok("Leagues is the lit tab of My world", w.my_world.tab_btn["Leagues"].isChecked())
-    ok("the tabs: Leagues, Clubs, Players, Kits, Stadiums and Cups",
+    ok("the tabs: Build (B82), Leagues, Clubs, Players, Kits, Stadiums and Cups",
        [b.text() for b in w.my_world.tab_btn.values()] + [w.my_world.cups.text()]
-       == ["Leagues", "Clubs", "Players", "Kits", "Stadiums", "Cups"])
+       == ["Build", "Leagues", "Clubs", "Players", "Kits", "Stadiums", "Cups"])
     # ---- B70: Cups stayed lit on the page opened after one of its windows (Build details)
     from PySide6.QtCore import Qt, QPoint
     from PySide6.QtGui import QCursor
@@ -114,8 +117,8 @@ def run():
     cups.setAttribute(Qt.WA_UnderMouse, True)
     w.open_page("Build")
     qa.processEvents()
-    ok("B70: More > Build details: Cups is not lit", not cups.underMouse()
-       and not any(b.isChecked() for b in w.my_world.tab_btn.values()))
+    ok("B70: the Build tab: Cups is not lit", not cups.underMouse()
+       and [n for n, b in w.my_world.tab_btn.items() if b.isChecked()] == ["Build"])
     w.open_page("Leagues")
     settle(qa, 1.0)
 
@@ -135,19 +138,20 @@ def run():
     ok("its background is the live green", QColor(pic.pixel(pic.width() // 2, 4)).name().lower()
        == QColor(theme.LIVE_BG).name().lower())
     btns = [b.text() for b in live.findChildren(QPushButton)]
-    ok("the live card has Export / Rename / Delete: %s" % btns,
-       all(t in btns for t in ("⇪ Export...", "Rename", "Delete")) and live.go is None)
+    ok("the live card has Active (off) / Export / Rename / Delete: %s" % btns,
+       all(t in btns for t in ("⇪ Export...", "Rename", "Delete")) and live.go.text().endswith("Active")
+       and not live.go.isEnabled())
     ok("Delete is refused for the world in the game", not live.delete.isEnabled()
        and "in the game now" in live.delete.toolTip())
     old = cards["_FL26Old"]
-    ok("the other world: worldcard, NOT IN THE GAME, Put in the game",
+    ok("the other world: worldcard, NOT IN THE GAME, Activate",
        old.objectName() == "worldcard" and old.eyebrow.text() == "NOT IN THE GAME"
-       and old.go.text().endswith("Put in the game") and old.delete.isEnabled())
+       and old.go.text().endswith("Activate") and old.go.isEnabled() and old.delete.isEnabled())
     ok("+ New world after the cards", sec.new_world.text() == "+ New world")
     ok("the counters: competitions and new countries", "/ 255" in sec.c_comps.text()
        and "/ 99" in sec.c_regions.text())
-    ok("the Master League note and Build and install in the header",
-       "Master League" in sec.note.text() and sec.build.text() == "Build and install")
+    ok("the Master League note in the header; one Build and install button only, on the Build tab (B82)",
+       "Master League" in sec.note.text() and not hasattr(sec, "build") and hasattr(sec, "world_state"))
 
     # ---- Put in the game: the switch, then the cards again
     PB.ask = lambda *a, **k: True
@@ -169,7 +173,7 @@ def run():
     cards = {c.world: c for c in sec.cards}
     ok("the cards follow: _FL26Old green and first", sec.cards[0].world == "_FL26Old"
        and cards["_FL26Old"].objectName() == "worldlive" and cards["_FL26Live"].objectName() == "worldcard"
-       and cards["_FL26Live"].go is not None)
+       and cards["_FL26Live"].go.isEnabled() and not cards["_FL26Old"].go.isEnabled())
 
     # ---- Rename on a card: in the background, the cards wait meanwhile (B66) and keep their order (B75)
     from modstudio.pages import roots as RP
