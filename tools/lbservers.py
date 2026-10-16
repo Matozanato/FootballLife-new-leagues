@@ -37,6 +37,7 @@ KITS = os.path.join("content", "kit-server")
 SPFL_KITS = os.path.join("content", "kits")       # SPFL26's own Kit Server, common\kits.lua
 BOARDS = os.path.join("content", "scoreboard-server")
 SPFL_BOARDS = os.path.join("content", "scoreboards")   # and its common\scoreboards.lua
+MENUS = os.path.join("content", "menu-server")       # Menu Server: no Build writes it, world zips bring lines
 TAG = lbstadiums.TAG
 OFF = lbstadiums.OFF
 LINE = re.compile(r"^\s*(#\s*)?(\d+)\s*,\s*\"?([^\"#]*)")
@@ -324,7 +325,40 @@ def write(pl, sider, log=print, root=None):
             log("kits made from colours and crests: %d (%d new or changed)%s" % (
                 len(make), new, "" if numbers else "; no kit in the library lends back numbers, so the game's own are used"))
         done.append(_map(os.path.join(root, file), mine, log, what, world, sider))
+    menus(sider, world, log)
     return tuple(done)
+
+
+def menus(sider, world, log=print):
+    r"""the menu themes world zips brought (content\menu-server\map_competitions.txt, lines
+    "<world>\..." with our tag): on while their world is in the game, switched off (#) while
+    another one is. Switch on handled kits and scoreboards only, so the Modpack's menus stayed on
+    under every other world (B72, our test 16.10.: 88 eu1 and the r7 lines live under
+    _FL26MyWorld). Lines of your own are not touched; returns the lines changed"""
+    path = os.path.join(sider, MENUS, "map_competitions.txt")
+    lines, nl, bom, enc = lbstadiums.read(path)
+    live = os.path.join(sider, "livecpk")
+    want = safe(world).lower() if world else ""
+    out, changed = [], 0
+    for l in lines:
+        body = l[:-len(OFF)] if l.endswith(OFF) else l
+        m = LINE.match(body) if TAG in l else None
+        w0 = m.group(3).strip().replace("/", "\\").split("\\")[0] if m else ""
+        if not w0 or not w0.lower().startswith("_fl26") or not os.path.isdir(os.path.join(live, w0)):
+            out.append(l)
+            continue
+        body = re.sub(r"^(\s*)#\s*", r"\1", body, count=1)
+        new = body if w0.lower() == want else "#" + body
+        changed += new != l
+        out.append(new)
+    if changed:
+        lbstadiums.keep_before(path, "Switch on: menus map", sider)
+        data = (nl.join(out) + nl).encode(enc, "replace")
+        with open(path + ".tmp", "wb") as f:
+            f.write((b"\xef\xbb\xbf" if bom else b"") + data)
+        os.replace(path + ".tmp", path)
+        log("menus: %d line(s) of world zips switched %s" % (changed, "with %s" % world if world else "off"))
+    return changed
 
 
 def _read_map(path):

@@ -206,6 +206,30 @@ def main():
            any(l.startswith("430, My world\\HNL") for l in lines(os.path.join(d, S.SPFL_BOARDS, "map_competitions.txt"))))
         put(os.path.join(d, "sider.ini"), 'lua.module = "common\\kits.lua"\nlua.module = "kserv.lua"\n')
         ok("kserv.lua loaded too: kit-server", S.libs(d) == (S.KITS, S.BOARDS))
+        # B72: the menu themes world zips bring go on and off with their world (Switch on handled
+        # kits and scoreboards only: 88 eu1 menu lines stayed live under another world, 16.10.)
+        e = os.path.join(tmp, "e")
+        for wn in ("_FL26A", "_FL26B", "_FL26Mine"):
+            os.makedirs(os.path.join(e, "livecpk", wn))
+        mp = os.path.join(e, S.MENUS, "map_competitions.txt")
+        a1 = "26, _FL26A\_packs\Coupe de France   # Menus for the Coupe de France # FL26 Mod Studio: menu of Coupe de France"
+        b1 = "165, _FL26B\_packs\Saudi League   # FL26 Mod Studio: menu of Saudi League"
+        own = "116, RPL                             # Menus for the RPL"
+        gone = "77, _FL26Gone\_packs\X   # FL26 Mod Studio: menu of X"
+        put(mp, "\n".join([own, "# a comment of yours", a1, b1, gone]) + "\n")
+        n = S.menus(e, "_FL26A", log=lambda *_: None)
+        ml = lines(mp)
+        ok("menus: the world's own zip lines on, another world's off", a1 in ml and "#" + b1 in ml and n == 1)
+        ok("menus: your own lines and a world no longer on disk untouched",
+           own in ml and "# a comment of yours" in ml and gone in ml)
+        S.menus(e, "_FL26Mine", log=lambda *_: None)
+        ml = lines(mp)
+        ok("menus: a world without menus switches both zips' lines off", "#" + a1 in ml and "#" + b1 in ml and own in ml)
+        S.menus(e, "_FL26B", log=lambda *_: None)
+        ml = lines(mp)
+        ok("menus: and back on with their world", "#" + a1 in ml and b1 in ml)
+        ok("menus: nothing to change, nothing written", S.menus(e, "_FL26B", log=lambda *_: None) == 0)
+        ok("menus: no menu-server, nothing happens", S.menus(os.path.join(tmp, "none"), "_FL26A", log=lambda *_: None) == 0)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("%d cases passed" % N)
