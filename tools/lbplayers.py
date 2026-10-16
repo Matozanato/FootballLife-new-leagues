@@ -1307,6 +1307,16 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
                 drop.add(where[key][1])
                 touched.add(tid)
                 removed += 1
+        # B67: a player NewLife has at a club, left out of that club's squad, whom this club had
+        # no room to keep (newlife._game_squads): he leaves as a free agent, and the log says so
+        for key, at in sorted((c.get("newlife_left") or {}).items()):
+            if key in where:
+                o = index.get(where[key][0])
+                log("  NOTE: players of %s: %s (%s) leaves as a free agent -- NewLife has him at %s but not "
+                    "among its best %d, and this club has no room to keep him (%d at most)"
+                    % (club_label(pl, base, db, tid, club), key,
+                       E.cstr(players[o + E.P_NAME:o + E.P_NAME + E.P_NAME_LEN]) if o is not None else "?",
+                       at, SQUAD, CLUB_MAX))
         for ch in c.get("add") or []:
             like = str(ch.get("like", ""))
             srcpid = int(like) if like.isdigit() and int(like) in index else (sq[0][1] if sq else None)

@@ -943,7 +943,7 @@ def undo_game_leagues(recipe):
     for t in r["clubs"]:
         c = pl.get(str(t))
         if c and c.pop("newlife_game", None):
-            for k in ("edits", "join", "add", "remove"):
+            for k in ("edits", "join", "add", "remove", "newlife_left"):
                 c.pop(k, None)
             if not c:
                 pl.pop(str(t))
@@ -1062,6 +1062,19 @@ def _game_squads(recipe, rel, info, squads):
     n = collections.Counter()
     plan = {}
     level = game_scale(rel, db, squads.values())
+    # B67: a player of the game the release has at a club but left out of its squad (rel.squad
+    # keeps the best P.SQUAD: Barcelona of NewLife 1.4 had 60, its B team in it, and Joao Cancelo
+    # was 42nd) stays at the club he has: taken away from it, nobody took him and he was a free
+    # agent while the world said Barcelona (antoniodias_pt 16.10.)
+    mine = {pid for t in squads for _o, pid, _s, _x in db.by_club.get(t, []) if pid in db.index}
+    cut = {}                                       # game id -> (rating in the release, release club)
+    for c, rows in sorted(rel.squads.items()):
+        ours = [(int(g), r) for g, r in ((str(r.get("game_id", "")).strip(), r) for r in rows)
+                if g.isdigit() and int(g) in mine]
+        top = {id(r) for r in rel.squad(c)} if ours else ()
+        for g, r in ours:
+            if id(r) not in top and P.same_name(r["name"], db.name(g)):
+                cut[str(g)] = (P.overall(r), c)
     for t, c in sorted(squads.items()):
         have = [pid for _o, pid, _s, _x in db.by_club.get(t, []) if pid in db.index]
         keep, join, add, ed = [], [], [], {}
@@ -1100,10 +1113,20 @@ def _game_squads(recipe, rel, info, squads):
     joining = {g for x in plan.values() for g in x[2]}
     for t, (have, keep, join, add, ed) in plan.items():
         out = sum(1 for p in have if str(p) in joining)          # signed by another club
-        gone = [p for p in have if p not in keep and str(p) not in joining]
+        left = [p for p in have if p not in keep and str(p) not in joining]
+        spare = [p for p in left if str(p) in cut and str(p) not in taken]     # B67: they stay
+        gone = [p for p in left if p not in spare]
         gone = gone[:max(len(have) - out + len(join) + len(add) - P.MIN_SQUAD, 0)]   # a short squad keeps some
-        stays = len(have) - out - len(gone)
+        stays = len(have) - out - len(gone) - len(spare)
         add = add[:max(P.CLUB_MAX - stays - len(join), 0)]
+        # the release's squad first; who it left out stays while the club has room (P.CLUB_MAX),
+        # the best of them first, and the rest go as before -- named, so the Build log says it
+        room = max(P.CLUB_MAX - stays - len(join) - len(add), 0)
+        spare.sort(key=lambda p: -cut[str(p)][0])
+        gone += spare[room:]
+        full = {str(p): (rel.clubs.get(cut[str(p)][1]) or {}).get("name") or cut[str(p)][1] for p in spare[room:]}
+        n["kept"] += len(spare[:room])
+        n["no_room"] += len(full)
         like = str(keep[0] if keep else have[0]) if have else ""
         c = pl.setdefault(str(t), {})
         if ed:
@@ -1114,6 +1137,8 @@ def _game_squads(recipe, rel, info, squads):
             c["add"] = [dict(ch, like=like) if like else ch for ch in add]
         if gone:
             c["remove"] = [str(p) for p in gone]
+        if full:
+            c["newlife_left"] = full               # B67: Build's log names them (lbplayers.apply)
         if ed or join or add or gone:
             c["newlife_game"] = True
         elif not c:
