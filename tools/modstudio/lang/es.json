@@ -1777,7 +1777,16 @@
   "%d new club": "%d club nuevo",
   "%s: %d line(s) that %s added point at files that are not there: its install did not finish. Install that zip again.": "%s: %d línea(s) que añadió %s apuntan a archivos que no están: su instalación no terminó. Instala ese zip otra vez.",
   "%s: %d line(s) of the world %s point at files that are not there: its install did not finish. Install the world's zip again.": "%s: %d línea(s) del mundo %s apuntan a archivos que no están: su instalación no terminó. Instala otra vez el zip del mundo.",
-  "%s: %d line(s) of the world %s point at files that are not there. Build it again.": "%s: %d línea(s) del mundo %s apuntan a archivos que no están. Constrúyelo otra vez."
+  "%s: %d line(s) of the world %s point at files that are not there. Build it again.": "%s: %d línea(s) del mundo %s apuntan a archivos que no están. Constrúyelo otra vez.",
+  "Build": "Construcción",
+  "Activate": "Activar",
+  "Active": "Activo",
+  "This is the world in the game now": "Este es el mundo que está ahora en el juego",
+  "Looking inside %s": "Mirando dentro de %s",
+  "Switching %s on": "Activando %s",
+  "Taking out the older %s": "Quitando el %s anterior",
+  "On Home press Install now, then in My world press Activate on this world.": "En Inicio pulsa Instalar ahora y luego, en Mi mundo, pulsa Activar en este mundo.",
+  "A career saved before keeps the world it started with: after Build and install or Activate, start a new Master League.": "Una carrera guardada antes conserva el mundo con el que empezó: después de Construir e instalar o Activar, empieza una Master League nueva."
  },
  "log": [
   [

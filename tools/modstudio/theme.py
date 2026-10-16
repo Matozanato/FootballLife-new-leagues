@@ -267,6 +267,7 @@ QPushButton#blue:pressed { background: #1867B4; }
 QPushButton#go { background: %(GOOD)s; color: %(GO_FG)s; border-color: %(GOOD)s; font-weight: 600; padding: 7px 14px; }
 QPushButton#go:hover { background: #5BE0A4; border-color: #5BE0A4; }
 QPushButton#blue:disabled, QPushButton#go:disabled { color: %(DIM)s; background: %(PANEL)s; border-color: %(BORDER)s; }
+QPushButton#go[state="live"]:disabled { color: %(GOOD)s; background: transparent; border-color: %(GOOD)s; }
 QPushButton#newworld { background: transparent; border: 2px dashed %(DASH)s; color: %(SUBTLE)s; font-weight: 600; }
 QPushButton#newworld:hover { border-color: %(ACCENT)s; color: %(TEXT)s; background: transparent; }
 QWidget#subtabs { border-bottom: 1px solid %(BORDER)s; }

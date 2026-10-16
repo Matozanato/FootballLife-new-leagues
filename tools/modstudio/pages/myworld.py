@@ -167,8 +167,8 @@ def unstick(b):
 
 
 class SubTabs(QStackedWidget):
-    """the pages of My world, one at a time, under a row of tab buttons; Build details, League
-    packages, Import a world zip and NewLife Database have no tab (More, + Add...): none is lit"""
+    """the pages of My world, one at a time, under a row of tab buttons; League packages, Import a
+    world zip and NewLife Database have no tab (More, + Add...): none is lit"""
 
     def __init__(self):
         super().__init__()
@@ -196,7 +196,7 @@ class WheelRow(QScrollArea):
 
 
 class WorldCard(QFrame):
-    """one world: IN THE GAME NOW on green, or Put in the game; Export, Rename, Delete"""
+    """one world: IN THE GAME NOW on green; Active / Activate, Export, Rename, Delete"""
 
     def __init__(self, sec, r):
         super().__init__()
@@ -236,20 +236,28 @@ class WorldCard(QFrame):
         self.info.setObjectName("cardnote")
         txt.addWidget(self.info)
         top.addLayout(txt, 1)
-        self.go = None
-        if not r["live"] and r["built"]:
-            self.go = QPushButton("▶  " + _("Put in the game"))
-            self.go.setObjectName("go")
-            self.go.setCursor(Qt.PointingHandCursor)
-            self.go.setToolTip(_("Switch this world on in sider.ini (the one in the game now goes out; it stays "
-                                 "on disk). Start a new Master League with it."))
-            self.go.clicked.connect(lambda: sec.put_in_game(self.world))
-            top.addWidget(self.go, 0, Qt.AlignTop)
         v.addLayout(top)
         v.addStretch(1)
         bot = QHBoxLayout()
         bot.setSpacing(6)
         bot.addStretch(1)
+        # every card says it: Active (green, the world in the game now) or Activate -- testers of the
+        # 0.2.4 beta did not know which world was on (mato 16.10.)
+        self.go = QPushButton(("● " + _("Active")) if r["live"] else ("▶  " + _("Activate")))
+        self.go.setObjectName("go")
+        self.go.setProperty("state", "live" if r["live"] else "")
+        if r["live"]:
+            self.go.setEnabled(False)
+            self.go.setToolTip(_("This is the world in the game now"))
+        elif r["built"]:
+            self.go.setCursor(Qt.PointingHandCursor)
+            self.go.setToolTip(_("Switch this world on in sider.ini (the one in the game now goes out; it stays "
+                                 "on disk). Start a new Master League with it."))
+            self.go.clicked.connect(lambda: sec.put_in_game(self.world))
+        else:
+            self.go.setEnabled(False)
+            self.go.setToolTip(_("Not built yet: Build and install first"))
+        bot.addWidget(self.go)
         self.export = QPushButton("⇪ " + _("Export..."))
         self.export.setObjectName("blue")
         self.export.clicked.connect(lambda: sec.export(self.world))
@@ -281,7 +289,7 @@ class WorldCard(QFrame):
         self.set_title()
 
     def set_title(self):
-        room = CARD_W - 40 - (self.go.sizeHint().width() + 8 if self.go else 0) - (90 if self.r["zipped"] else 0)
+        room = CARD_W - 40 - (90 if self.r["zipped"] else 0)
         self.name.setText(self.name.fontMetrics().elidedText(self.r["title"], Qt.ElideRight, max(80, room)))
 
     def set_info(self, summ):
@@ -561,7 +569,7 @@ class MyWorld(QWidget):
         self.note = QLabel()
         self.note.setObjectName("mlnote")
         self.note.setToolTip(_("A career saved before keeps the world it started with: after Build and install "
-                               "or Put in the game, start a new Master League."))
+                               "or Activate, start a new Master League."))
         self.build = QPushButton(_("Build and install"))
         self.build.setObjectName("blue")
         self.build.setStyleSheet("padding: 8px 18px; font-size: 9pt;")
@@ -636,7 +644,7 @@ class MyWorld(QWidget):
         more.setText(_("More") + "  ▾")
         more.setPopupMode(QToolButton.InstantPopup)
         mm = QMenu(more)
-        for label, page in (("Build details", "Build"), ("League packages", "Packages"),
+        for label, page in (("League packages", "Packages"),
                             ("Import a world zip", "Install"), ("NewLife Database", "NewLife")):
             mm.addAction(_(label)).triggered.connect(lambda _c=False, p=page: self.app.open_page(p))
         mm.addSeparator()

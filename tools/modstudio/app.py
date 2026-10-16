@@ -92,7 +92,9 @@ NAV = [
     # 0.2.4, variant A of the mockups (mato 15.10.): one section, My world, for Build and edit your
     # world, Import your world and NewLife Database -- the worlds on disk as cards, Build and
     # install above them, the pages that change the open world as tabs (pages/myworld.py)
-    ("MY WORLD", False, [("World", "My world", ["Leagues", "NewClubs", "Players", "Kits", "Stadiums"])]),
+    # 0.2.4 beta (B82, mato 16.10.): Build is the first tab, the section's home -- testers lost the
+    # Build page when it sat under More
+    ("MY WORLD", False, [("World", "My world", ["Build", "Leagues", "NewClubs", "Players", "Kits", "Stadiums"])]),
     ("GAME CONTENT", True, [(n, None, [n]) for n in ("Balls", "Commentary", "Music", "Servers")]),
     ("TOOLS", True, [(n, None, [n]) for n in ("Modules", "Roots", "Profiles", "Restore", "Diagnostics")]),
     ("SETTINGS", False, [("Settings", None, ["Settings"])]),
@@ -100,8 +102,8 @@ NAV = [
 TAB_TITLE = {"Build": "Build", "Packages": "League packages",
              "NewClubs": "Clubs"}
 # a page not in the bar: the section that stays lit. My world shows its own under the cards with
-# no tab lit (More: Build details, League packages, Import a world zip, NewLife Database)
-OPEN_FOR = {"NewLeagues": "World", "Build": "World", "Packages": "World", "Install": "World",
+# no tab lit (More: League packages, Import a world zip, NewLife Database)
+OPEN_FOR = {"NewLeagues": "World", "Packages": "World", "Install": "World",
             "NewLife": "World"}
 
 

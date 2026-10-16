@@ -1778,7 +1778,16 @@
   "%d new club": "%d novi klub",
   "%s: %d line(s) that %s added point at files that are not there: its install did not finish. Install that zip again.": "%s: %d redak/redaka koje je dodao %s vode na datoteke kojih nema: instalacija nije završila. Instaliraj taj zip ponovno.",
   "%s: %d line(s) of the world %s point at files that are not there: its install did not finish. Install the world's zip again.": "%s: %d redak/redaka svijeta %s vode na datoteke kojih nema: instalacija nije završila. Instaliraj zip svijeta ponovno.",
-  "%s: %d line(s) of the world %s point at files that are not there. Build it again.": "%s: %d redak/redaka svijeta %s vode na datoteke kojih nema. Izgradi ga ponovno."
+  "%s: %d line(s) of the world %s point at files that are not there. Build it again.": "%s: %d redak/redaka svijeta %s vode na datoteke kojih nema. Izgradi ga ponovno.",
+  "Build": "Gradnja",
+  "Activate": "Aktiviraj",
+  "Active": "Aktivan",
+  "This is the world in the game now": "Ovo je svijet koji je sada u igri",
+  "Looking inside %s": "Gledam u %s",
+  "Switching %s on": "Uključujem %s",
+  "Taking out the older %s": "Vadim stariji %s",
+  "On Home press Install now, then in My world press Activate on this world.": "Na Home pritisni Instaliraj sada, pa u Moj svijet pritisni Aktiviraj na ovom svijetu.",
+  "A career saved before keeps the world it started with: after Build and install or Activate, start a new Master League.": "Karijera spremljena prije zadržava svijet s kojim je počela: nakon Izgradi i instaliraj ili Aktiviraj pokreni novu Master League."
  },
  "log": [
   [

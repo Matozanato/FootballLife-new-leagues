@@ -20,6 +20,11 @@ NO_FACES = ("Mod Studio's modules with the face pack are not installed: the new 
             "will all look the same until you install them (Home > Install now).")
 
 
+def gb(n):
+    """bytes as "2.1 GB" / "640 MB" """
+    return "%.1f GB" % (n / 1e9) if n >= 1e9 else "%d MB" % (n / 1e6)
+
+
 class Drop(QFrame):
     def __init__(self, page):
         super().__init__()
@@ -174,7 +179,7 @@ class Install(Page):
         sider_dir, game = self.app.game.sider_dir, self.app.game
 
         def job(progress):
-            top = I.unpack(path, self.work)
+            top = I.unpack(path, self.work, progress=lambda d, n, b: progress((d, n, b)))
             parts = I.detect(top, label)
             for p in parts:
                 if p.kind == "world" and I.face_players(p.world_file) and I.face_pack_missing(sider_dir):
@@ -186,7 +191,42 @@ class Install(Page):
                     p.warnings.insert(0, I.world_there(p.name))
             return parts
 
-        run_job(job, self.looked, self.failed)
+        clock = self.ticking(_("Looking inside %s") % os.path.basename(path))
+
+        def unpacked(d, n, b):
+            clock.step("%d / %d %s · %s" % (d, n, _("files"), gb(b)))
+
+        def looked(parts):
+            clock.stop()
+            self.looked(parts)
+
+        def failed(tb):
+            clock.stop()
+            self.failed(tb)
+        run_job(job, looked, failed, progress=lambda t: unpacked(*t))
+
+    def ticking(self, what):
+        """B84: a line that counts the seconds, and the step the worker is at, in the status bar and
+        on the page, like Build's -- "Installing X 1:23 · 512 / 4 000 files · 2.1 GB". Without it a
+        4 GB Modpack looked hung (Vicentico, beta 16.10.)"""
+        from PySide6.QtCore import QTimer
+        import time as _time
+        t0, last = _time.monotonic(), [""]
+        clock = QTimer(self)
+
+        def text():
+            m, sec = divmod(int(_time.monotonic() - t0), 60)
+            return "%s %d:%02d" % (what, m, sec) + ("   ·   " + last[0] if last[0] else "")
+
+        def tick():
+            t = text()
+            self.app.status_busy.setText("● " + t)
+            self.what.setText(t)
+        clock.timeout.connect(tick)
+        clock.start(1000)
+        clock.step = lambda s: (last.__setitem__(0, s), tick())
+        tick()
+        return clock
 
     def failed(self, tb):
         self.app.busy(False)
@@ -362,13 +402,18 @@ class Install(Page):
             except Exception:
                 comps = None
 
+        clock = self.ticking(_("Installing %s") % name)
+
         def job(progress):
             for w in older:                       # the older version out first, not copied over
+                progress(_("Taking out the older %s") % w)
                 I.replace_world(self.app.game, ini, w, log=log.append)
-            inst = I.Installer(self.app.game, ini, name, log=log.append, replace_lines=repl, comps=comps)
+            inst = I.Installer(self.app.game, ini, name, log=log.append, replace_lines=repl, comps=comps,
+                               progress=lambda d, n, b: progress("%d / %d %s · %s" % (d, n, _("files"), gb(b))))
             return inst.run(self.parts, where)
 
         def done(rec):
+            clock.stop()
             self.app.busy(False)
             self.app.save_ini(ini, "installed %s" % name)
             self.app.bus.content_changed.emit()
@@ -387,6 +432,7 @@ class Install(Page):
                 self.world_on(rec)
 
         def failed(tb):
+            clock.stop()
             self.app.busy(False)
             self.go.setEnabled(True)
             if denied(self, tb):
@@ -395,13 +441,14 @@ class Install(Page):
             why = re.sub(r"^(?:\w+\.)*\w*(?:Error|Exception|WorldThere): ", "", tb.strip().splitlines()[-1])
             error(self, "Import your world", _("The install stopped:") + "\n\n" + why +
                   "\n\n" + _("What was done so far is in Restore points."))
-        run_job(job, done, failed)
+        run_job(job, done, failed, progress=clock.step)
 
     def world_on(self, rec):
         """a League Builder world was installed: install this version's modules (the face pack the
         new players' faces come from is one of them), then switch the world on as Build's Switch
         on does (sider.ini, the world file in modules, the world's own modules). Always: modules
-        of an older Mod Studio, face pack and all, left a new world on the old ones without a word"""
+        of an older Mod Studio, face pack and all, left a new world on the old ones without a word.
+        B84: in a worker, with the clock -- on the GUI thread the copy of the modules froze the window"""
         import leaguebuilder as B
         from ..backups import snapshot
         w, game = rec["world"], self.app.game
@@ -410,31 +457,47 @@ class Install(Page):
         sw = getattr(self, "save_sw", None)
         if sw is None or sw.new != w:
             sw = saves.Switch(self.app.settings, game, w)
-        try:
+        self.app.busy(True, _("Switching %s on") % w)
+        clock = self.ticking(_("Switching %s on") % w)
+
+        def job(progress):
+            def say(t):
+                log.append(t)
+                line = str(t).strip().splitlines()
+                if line:
+                    progress(line[-1][:90])
             snapshot(game.ini_path, "Import your world: switch on " + w, game.sider_dir)
             if modules:
-                B.install_modules(game.folder, log=log.append)
+                B.install_modules(game.folder, log=say)
             # the careers of the world going out aside, this one's in; back as they were when the
             # switch stops
-            sw.go(log.append)
+            sw.go(say)
             try:
-                B.switch_on(w, game.folder, log=log.append)
+                B.switch_on(w, game.folder, log=say)
             except BaseException:
                 try:
-                    sw.undo(log.append)
+                    sw.undo(say)
                 except Exception:
                     pass
                 raise
-        except Exception as e:                            # BuildError, SaveError, a missing module pack
-            if denied(self, e):
-                return
-            error(self, "Import your world", _("%s is installed, but switching it on stopped:") % w + "\n\n" + str(e)
-                  + "\n\n" + _("On Home press Install now, then in My world press Put in the game on this world."))
-            return
-        finally:
+
+        def over(_r=None):
+            clock.stop()
+            self.app.busy(False)
             self.app.bus.ini_changed.emit()
-        save_note(self, sw)
-        self.final_check(w)
+            save_note(self, sw)
+            self.final_check(w)
+
+        def failed(tb):                                   # BuildError, SaveError, a missing module pack
+            clock.stop()
+            self.app.busy(False)
+            self.app.bus.ini_changed.emit()
+            if denied(self, tb):
+                return
+            why = re.sub(r"^(?:\w+\.)*\w*(?:Error|Exception): ", "", tb.strip().splitlines()[-1])
+            error(self, "Import your world", _("%s is installed, but switching it on stopped:") % w + "\n\n" + why
+                  + "\n\n" + _("On Home press Install now, then in My world press Activate on this world."))
+        run_job(job, over, failed, progress=clock.step)
 
     def final_check(self, w):
         """0.2.4: after a ready world, check all it needs and say Ready to play, or what to fix"""

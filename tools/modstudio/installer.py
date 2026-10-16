@@ -23,7 +23,7 @@ Everything done is written to SiderAddons\ModStudio\installed.json, one record p
 files created, files replaced (with the restore point that holds the old one), sider.ini lines
 added and map lines added or taken out.  Removing a mod undoes exactly that.
 """
-import json, os, re, shutil, tempfile, time, zipfile
+import filecmp, json, os, re, shutil, tempfile, time, zipfile
 
 from . import servers as S
 from .backups import home, snapshot
@@ -365,18 +365,28 @@ def safe(name):
     return re.sub(r'[<>:"/\\|?*]+', "_", name).strip(" .") or "mod"
 
 
-def unpack(src, work):
-    """a folder to look at: the folder itself, or `src` unpacked into `work`"""
+def unpack(src, work, progress=None):
+    """a folder to look at: the folder itself, or `src` unpacked into `work`; progress(done, total,
+    bytes) now and then while a zip comes out (B84: a 4 GB Modpack took minutes with no word)"""
     low = src.lower()
     if os.path.isdir(src):
         return src
     if low.endswith(".zip"):
         with zipfile.ZipFile(src) as z:
-            for m in z.infolist():
+            members = z.infolist()
+            for m in members:
                 target = os.path.normpath(os.path.join(work, m.filename))
                 if not target.startswith(os.path.normpath(work)):
                     raise ValueError("unsafe path in the zip: %s" % m.filename)
-            z.extractall(work)
+            done = size = 0
+            last = 0.0
+            for m in members:
+                z.extract(m, work)
+                done += 1
+                size += m.file_size
+                if progress and (time.monotonic() - last > 0.3 or done == len(members)):
+                    last = time.monotonic()
+                    progress(done, len(members), size)
         return work
     if low.endswith(".7z"):
         try:
@@ -575,11 +585,15 @@ def _save(sider_dir, rows):
 class Installer:
     """install the chosen parts of one mod; `rec` is what removal needs"""
 
-    def __init__(self, game, ini, name, log=lambda t: None, replace_lines=True, comps=None):
+    def __init__(self, game, ini, name, log=lambda t: None, replace_lines=True, comps=None, progress=None):
         """comps: {tournament id: name} of the world in the game. With it a competition line of a
         scoreboard / menu pack goes to the competition its comment names: a pack made for another
-        world keys the same league by another id (quicksite, League Two on 182 = Guatemala here)"""
+        world keys the same league by another id (quicksite, League Two on 182 = Guatemala here).
+        progress(files done, files in all, bytes done): now and then while the files go in (B84)"""
         self.game, self.ini, self.name, self.log = game, ini, name, log
+        self.progress = progress
+        self.n_files = self.n_bytes = self.total = 0
+        self._told = 0.0
         self.replace_lines = replace_lines
         self.comps = comps
         self.rec = {"name": name, "time": time.strftime("%Y%m%d-%H%M%S"), "created": [], "replaced": [],
@@ -590,9 +604,35 @@ class Installer:
     def rel(self, p):
         return os.path.relpath(p, self.sd)
 
+    def _count(self, parts):
+        """the files the chosen parts bring, for the counter"""
+        n = 0
+        for p in parts:
+            if not p.install:
+                continue
+            if os.path.isdir(p.src):
+                for _dp, _dn, fn in os.walk(p.src):
+                    n += len(fn)
+            else:
+                n += 1
+        return n
+
+    def _tick(self, final=False):
+        if self.progress and (final or time.monotonic() - self._told > 0.3):
+            self._told = time.monotonic()
+            self.progress(self.n_files, self.total, self.n_bytes)
+
     def copy_file(self, src, dst):
+        self.n_files += 1
+        try:
+            self.n_bytes += os.path.getsize(src)
+        except OSError:
+            pass
+        self._tick()
         if os.path.exists(dst):
-            if os.path.getsize(dst) == os.path.getsize(src) and open(dst, "rb").read() == open(src, "rb").read():
+            # the same file already there: compared in pieces (whole 1 GB files in memory, twice,
+            # stalled the PC -- B84)
+            if os.path.getsize(dst) == os.path.getsize(src) and filecmp.cmp(src, dst, shallow=False):
                 return
             b = snapshot(dst, "replaced by %s" % self.name, self.sd)
             self.rec["replaced"].append([self.rel(dst), self.rel(b)])
@@ -611,12 +651,15 @@ class Installer:
                 self.copy_file(s, os.path.join(dst, r))
 
     def run(self, parts, root_where="top"):
+        self.total = self._count(parts)
+        self._tick(final=True)
         for p in parts:
             if not p.install:
                 continue
             self.log("%s: %s" % (p.kind, p.name))
             getattr(self, "do_" + p.kind)(p, root_where)
             self.rec["parts"].append([p.kind, p.name])
+        self._tick(final=True)
         # B29 (ELBastos): a big zip takes minutes to copy, and an install stopped half way (Mod
         # Studio closed while it "hung") left the map lines of the parts done so far pointing at
         # folders of parts never copied. The lines go in only once every file is there.
