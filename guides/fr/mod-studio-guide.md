@@ -53,9 +53,9 @@ La fenêtre est en anglais. **Settings → Language → Français** la passe en 
 3. Ouvrez **Home** (la première page). Elle montre le monde qui est dans le jeu (**DANS LE JEU
    MAINTENANT**) et votre configuration, et liste les problèmes ; **Open** à côté d'un problème mène
    à la page qui le corrige. Quand les modules de Mod Studio manquent ou sont plus anciens,
-   **Installer maintenant** les installe. Home a aussi
-   **Construire et installer** (toute la Construction en un clic), **Seulement les coupes
-   d'Europe...**, **Ouvrir ses ligues** et **Changer de monde...**.
+   **Installer maintenant** les installe. La carte des changements de Home a un bouton
+   **Aller à Build** qui ouvre l'onglet Build, et Home a aussi **Seulement les
+   coupes d'Europe...**, **Ouvrir ses ligues** et **Changer de monde...**.
 
 **Mises à jour.** Quelques secondes après le démarrage, le programme demande à GitHub si une
 nouvelle version de FL26 Mod Studio est sortie, et ne le signale que s'il y en a une.
@@ -472,9 +472,10 @@ dossier contenant plus d'un visage est refusé : choisissez le visage que vous v
 
 **Gardez le Team.bin du monde.** Il est dans le dossier du monde et contient les clubs et les barrages du monde. Le remplacer par le Team.bin du jeu les fait disparaître, et les compositions ont l'air réparées seulement parce que les clubs n'y sont plus (GitHub #75). Construisez plutôt le monde à nouveau.
 
-**Construire et installer** (Construire votre monde, et sur Home) fait 0, 2 et 3 ci-dessous en un clic,
+**Construire et installer**, dans l'onglet **Build**, fait 0, 2 et 3 ci-dessous en un clic,
 puis montre ce qu'il reste à faire : une fenêtre **Build terminé** qui peut aussi **Mettre la
-sauvegarde Edit de côté** et **Fermer le jeu**. Ou étape par étape, sous **Étape par étape, et
+sauvegarde Edit de côté** et **Fermer le jeu**. La carte des changements de Home a à la place un
+bouton **Aller à Build**. Ou étape par étape, sous **Étape par étape, et
 Exporter le monde** dans l'onglet **Build** :
 
 0. **Installer les modules** — une fois, puis à nouveau après une nouvelle version du programme.
@@ -484,6 +485,11 @@ Exporter le monde** dans l'onglet **Build** :
 3. **L'activer** — le met dans le jeu (le monde actif dans `sider.ini`).
 4. Lancez le jeu, revenez et appuyez sur **Après un lancement : vérifier**. Le programme lit
    `sider.log` et dit, module par module, si le monde a été pris en compte.
+
+Sur Construire votre monde, le bouton vert **Activer** sur la carte d'un autre monde fait l'étape 3,
+**L'activer**, pour ce monde (et change le dossier de sauvegarde) ; le monde qui est dans le jeu
+affiche à la place un **● Actif** désactivé. Démarrez une nouvelle Master League après avoir
+activé un autre monde.
 
 **Inclure la Ligue Europa Conférence** (onglet Build, sous Options du monde, activé par défaut) construit
 aussi la Ligue Europa Conférence : une phase de ligue à 36 clubs et un barrage en février, comme
@@ -564,7 +570,7 @@ et les pays d'Afrique et d'Océanie (le jeu n'a pas de section pour eux) après 
 seulement la nouvelle Ligue des champions et la Ligue Europa -- phase de ligue à 36 et barrages de
 février -- et la Ligue Europa Conférence quand **Inclure la Ligue Europa Conférence** est coché. Pas de
 nouvelles ligues ; les clubs et ligues du jeu restent tels quels et votre monde ne change pas. Il
-demande un nom de monde (`_FL26Euro` par défaut), le construit et propose de le mettre dans le jeu.
+demande un nom de monde (`_FL26Euro` par défaut), le construit et propose de l'activer.
 Un seul monde peut être dans le jeu, il remplace donc un monde avec de nouvelles ligues : un monde avec de
 nouvelles ligues a déjà le nouveau format.
 

@@ -427,7 +427,7 @@ cups** and **New clubs**, with options) and **Step by step, and Export the world
 **4. After a start: check** and **Export the world...**). Then a line like
 `World _FL26MyWorld: not built yet · builder modules: installed`, and a box for the log at the
 bottom. Above the tabs, on every tab, a bar shows your world's name, its number of leagues and
-clubs, and a **Build and install** button; while the world builds, it shows the time so far and
+clubs, and its state in words; while the world builds, it shows the time so far and
 the step it is at (`Building... 3:12 · squads: filling them`).
 
 2. Open **Step by step, and Export the world** and click **1. Check the plan** first. It changes
@@ -507,7 +507,7 @@ table at the end.
 2. Open Mod Studio. It opens your world by itself (or **File → Open a world...**).
 3. Change what you want on **NewLife Database**, or on **Build and edit your world**: tab
    **Leagues**, **Clubs** or **Players**. It saves itself.
-4. **Build and install** (in the bar above the tabs, or on the tab **Build**) → **Yes**.
+4. **Build and install** (tab **Build**) → **Yes**.
 
 **Do you need a new career?** Yes: start a new Master League after every change you build.
 A career takes its own copy of the leagues, clubs and squads when it starts, so a career you are

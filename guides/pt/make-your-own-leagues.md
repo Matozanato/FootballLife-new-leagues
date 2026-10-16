@@ -442,7 +442,7 @@ fileira **0. Install the modules**, **1. Check the plan**, **2. Build the world*
 it on**, **4. After a start: check** e **Export the world...**). Depois uma linha como
 `World _FL26MyWorld: not built yet · builder modules: installed`, e uma caixa para o log embaixo.
 Acima das abas, em todas elas, uma barra mostra o nome do seu mundo, quantas ligas e clubes
-ele tem e um botão **Build and install**; enquanto o mundo é montado, ela mostra o tempo
+ele tem e o estado dele em palavras; enquanto o mundo é montado, ela mostra o tempo
 decorrido e a etapa em que está (`Building... 3:12 · squads: filling them`).
 
 2. Abra **Step by step, and Export the world** e clique primeiro em **1. Check the plan**. Ele
@@ -523,7 +523,7 @@ tabela no fim.
 2. Abra o Mod Studio. Ele abre o seu mundo sozinho (ou **File → Open a world...**).
 3. Mude o que quiser em **NewLife Database**, ou em **Build and edit your world**: aba
    **Leagues**, **Clubs** ou **Players**. Ele se salva sozinho.
-4. **Build and install** (na barra acima das abas, ou na aba **Build**) → **Yes**.
+4. **Build and install** (aba **Build**) → **Yes**.
 
 **Você precisa de uma carreira nova?** Sim: comece uma Master League nova depois de cada mudança
 que você monta. Uma carreira pega a própria cópia das ligas, clubes e elencos quando começa,

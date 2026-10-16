@@ -177,10 +177,13 @@ class Overview(Page):
         t2.addWidget(self.l_changes)
         t2.addWidget(self.l_changes_detail)
         h.addLayout(t2, 1)
-        self.b_build = QPushButton(_("Build and install"))
+        # one Build and install button in the program, on My world's Build tab (B82, mato 16.10.):
+        # Home only takes you there
+        self.b_build = QPushButton(_("Go to Build"))
         self.b_build.setObjectName("primary")
         self.b_build.setStyleSheet("padding: 9px 22px;")
-        self.b_build.clicked.connect(self.build)
+        self.b_build.setToolTip(_("Opens My world > Build, where Build and install is"))
+        self.b_build.clicked.connect(lambda: self.app.open_page("Build"))
         self.b_eu = b_eu = QPushButton(_("Only the European cups..."))
         b_eu.setToolTip(_("A world with just the new Champions League, Europa League and Conference League "
                           "and the game's own leagues: no new leagues"))
@@ -414,7 +417,7 @@ class Overview(Page):
             # 0.2.4: a world installed from a zip is built already; Build would switch it off
             self.l_changes.setText(_("Ready to play"))
             self.l_changes_detail.setText(_("%s is a ready world, installed from a zip: nothing to build. "
-                                            "Press Play and start a new Master League.") % ready[0])
+                                            "Press Start the game and start a new Master League.") % ready[0])
         elif not r["leagues"] and not r.get("edits"):
             self.l_changes.setText(_("Nothing to build yet"))
             self.l_changes_detail.setText(_("Add a league or change one of the game's on the Leagues page."))

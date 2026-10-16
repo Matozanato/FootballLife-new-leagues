@@ -13,12 +13,12 @@ once, and your 0.2.2 career keeps working.
   their cells: Pick picture... and Clear side by side, the window as wide as the screen allows.
 
 - **A new look.** A dark, calmer window: the state of the game in boxes across the top (game folder, Sider, world, modules, leagues, pack), numbered sections, Home's ready check as a table with a red bar that names the problem and the button that puts it right, and a status bar at the bottom, in Windows' own font. Tables read better: rows that alternate, a header on its own band, the chosen row in blue (Thanks jibibi). Nothing moved: the same pages, buttons and steps.
-- **Export the world takes the scoreboards and menu themes of other packs along.** When the
-  switched-on map lines of the Scoreboard Server or Menu Server on your PC give the world's
-  competitions (its leagues, cups, super cups, confederation cups) a board or a theme from another
-  pack, a modpack's, the zip carries those folders under `<world>\_packs` with their map lines, as
-  it already did for kits. The receiver needs nothing else; the themes show with the Menu Server
-  module on in `sider.ini`. Guide 9.1.
+- **Export the world takes the scoreboards of other packs along, and no menu themes.** When the
+  switched-on map lines of the Scoreboard Server on your PC give the world's competitions (its
+  leagues, cups, super cups, confederation cups) a board from another pack, a modpack's, the zip
+  carries those folders under `<world>\_packs` with their map lines, as it already did for kits.
+  Menu themes stay out of a world zip: the Modpack's themes became the background of every menu
+  on the players' PCs and looked broken, so the menus stay the game's own (B88).
 - **A ready world installs in one click, and a newer version replaces the older one.** Install
   mods shows **Install the world** for a world zip and hides the options a ready world does not
   need. If the same world is installed already (an earlier Modpack), it asks once and takes the

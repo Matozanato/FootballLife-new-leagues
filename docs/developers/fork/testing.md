@@ -73,7 +73,7 @@ set and the game sits where the tools expect it. A player's PC is not like that,
 went out with two Build bugs that only showed there: Mod Studio closed during Build (an error
 inside the worker thread), and Build stopped with "FL_2026.exe not found at C:\Football Life
 2026" when the game was anywhere else (OneDrive, another drive). This test runs the Build
-page's *Build and install* offscreen with:
+tab's *Build and install* offscreen with:
 
 - the game in a temporary folder with a space and a letter outside ASCII in its path
   (`Football Life Ž test\Juego`), never `C:\Football Life 2026`;

@@ -41,7 +41,7 @@ The left bar comes from `page_groups()` in `app.py`:
 
 | group | page (class) | file | what it edits |
 |---|---|---|---|
-| | Overview | `overview.py` | the live world, what changed since it was built, one button to build and install it, health checks (`checks.quick`) |
+| | Overview | `overview.py` | the live world, what changed since it was built, a Go to Build button that opens the Build tab, health checks (`checks.quick`) |
 | LEAGUE BUILDER | Leagues | `leagues.py` | every league, the game's and the recipe's, by continent; opens the league window or the game-league panel |
 | | New clubs (`NewClubs`) | `builder.py` | the clubs of the recipe's leagues, a club window each (name, crest, kits, manager, stadium) |
 | | Players | `players.py` (+ `playerpick.py`, `tableimport.py`) | one club's squad, every field of every player; sign/call up, transfer, CSV import |
@@ -52,7 +52,7 @@ The left bar comes from `page_groups()` in `app.py`:
 | MANAGE | Install, Modules, Content folders, Profiles, Restore, Diagnostics, Settings | `install.py`, `modules.py`, `roots.py`, `profiles.py`, `restore.py`, `diagnostics.py`, `settings.py` | mods, `lua.module` lines, `cpk.root` lines, setups, restore points, checks + `sider.log`, game folder / language / tables |
 | (not in the bar) | New leagues (`NewLeagues`) | `builder.py` | reached from other pages |
 
-The bar itself is `NAV` in `app.py` (0.2.4: Home, My world, Game content, Tools, Settings). **My world** is `myworld.py` (`MyWorld`): a header (competitions n / 255, new countries n / 99, Build and install), a card for each world on disk (`world_rows`; Put in the game = Build's `do_on(world)`, Export = `do_export(world)`, Rename / Delete = Content folders' `rename_world` / `delete_world`), the tabs Leagues, Clubs, Players, Kits, Stadiums and Cups, and **+ Add...** (`AddDialog`, `kind_of`: a `.fl26pack`, a world zip or the NewLife Database). Build, Packages, Install, NewLife and NewLeagues are pages of My world with no tab (`OPEN_FOR`), reached from More, + Add... and `open_page`.
+The bar itself is `NAV` in `app.py` (0.2.4: Home, My world, Game content, Tools, Settings). **My world** is `myworld.py` (`MyWorld`): a header (competitions n / 255, new countries n / 99, the open world's state in words), a card for each world on disk (`world_rows`; Activate = Build's `do_on(world)`, Export = `do_export(world)`, Rename / Delete = Content folders' `rename_world` / `delete_world`), the tabs Build, Leagues, Clubs, Players, Kits, Stadiums and Cups, and **+ Add...** (`AddDialog`, `kind_of`: a `.fl26pack`, a world zip or the NewLife Database). Packages, Install, NewLife and NewLeagues are pages of My world with no tab (`OPEN_FOR`), reached from More, + Add... and `open_page`.
 
 `builder.py` is the biggest file. It also holds the dialogs the League Builder pages share:
 `LeagueDialog`, `ClubDialog`, `GameClubDialog`, `EuropeTable`, `PreseasonDialog`,
@@ -90,7 +90,7 @@ The bar itself is `NAV` in `app.py` (0.2.4: Home, My world, Game content, Tools,
 
 ## What happens when someone presses Build
 
-*Build and install* on the Build page (`pages/builder.py`, class `Build`, `build_all`) does this:
+*Build and install* on the Build tab (`pages/builder.py`, class `Build`, `build_all`) does this:
 
 1. `B.plan(recipe, base)` validates the recipe and decides regulation ids, competition ids,
    regions, tiers, team ids, cups and European places. Any problem is a `BuildError`

@@ -37,7 +37,15 @@ def ui_strings():
         with open(path, encoding="utf-8") as f:
             tree = ast.parse(f.read(), path)
         for node in ast.walk(tree):
-            if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name) or node.func.id != "_":
+            if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Name):
+                continue
+            if node.func.id in ("ask", "info", "error", "denied_box") and len(node.args) >= 2:
+                # ui.ask(parent, "Title", text) translates its title itself: the literal counts as a UI string
+                a = node.args[1]
+                if isinstance(a, ast.Constant) and isinstance(a.value, str):
+                    seen.add(a.value)
+                continue
+            if node.func.id != "_":
                 continue
             a = node.args[0] if len(node.args) == 1 else None
             if isinstance(a, ast.Constant) and isinstance(a.value, str):

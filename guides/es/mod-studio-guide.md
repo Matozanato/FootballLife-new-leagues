@@ -52,9 +52,9 @@ La ventana está en inglés. **Settings → Language → Español** la pasa a es
 3. Abre **Home** (la primera página). Muestra el mundo del juego (**EN EL JUEGO AHORA**) y tu
    configuración, y una lista de problemas; **Open** junto a un problema va a la página que lo
    arregla. Cuando los módulos de Mod Studio faltan o son antiguos, **Instalar ahora** los pone.
-   Home también tiene
-   **Construir e instalar** (todo Construir en un solo clic), **Solo las copas europeas...**,
-   **Abrir sus ligas** y **Cambiar de mundo...**.
+   La tarjeta de cambios de Home tiene un botón **Ir a Construir** que abre la pestaña
+   Construir, y Home también tiene **Solo las copas europeas...**, **Abrir sus ligas** y
+   **Cambiar de mundo...**.
 
 **Actualizaciones.** Unos segundos después de arrancar, el programa pregunta a GitHub si ha salido
 un FL26 Mod Studio más nuevo, y solo avisa cuando lo hay. **Descargar e instalar** baja el nuevo
@@ -455,12 +455,13 @@ rechaza: elige la cara concreta que quieres.
 
 **Conserva el Team.bin del mundo.** Está en la carpeta del mundo y guarda los clubes y los play-offs del mundo. Si lo cambias por el Team.bin del juego, desaparecen, y las alineaciones parecen arregladas solo porque ya no están los clubes (GitHub #75). Mejor vuelve a construir el mundo.
 
-**Construir e instalar** (Construye y edita tu mundo, y en Home) hace 0, 2 y 3 de abajo en un solo clic, y luego
+**Construir e instalar**, en la pestaña **Construir**, hace 0, 2 y 3 de abajo en un solo clic, y luego
 muestra lo que queda por hacer: una ventana **Construcción terminada** que también puede **Apartar el
-guardado de Edit** y **Cerrar el juego**. En Construye y edita tu mundo el botón está también en la
-barra encima de las pestañas, en todas, junto al nombre del mundo abierto y sus ligas y clubes;
-mientras el mundo se construye, esa barra y la barra de abajo muestran el tiempo que lleva y el paso
-en el que está (`Construyendo... 3:12 · squads: filling them`). O paso a paso, en **Paso a paso, y Exportar el mundo** de
+guardado de Edit** y **Cerrar el juego**. La tarjeta de cambios de Home tiene en su lugar un botón
+**Ir a Construir**. La barra encima de las pestañas, junto al nombre del mundo abierto y sus
+ligas y clubes, muestra el estado del mundo abierto en palabras; mientras el mundo se construye,
+esa barra y la barra de abajo muestran el tiempo que lleva y el paso en el que está
+(`Construyendo... 3:12 · squads: filling them`). O paso a paso, en **Paso a paso, y Exportar el mundo** de
 la pestaña **Construir**:
 
 0. **Instalar los módulos** — una vez, y de nuevo tras una versión nueva del programa. Los
@@ -470,6 +471,10 @@ la pestaña **Construir**:
 3. **Activarlo** — lo pone en el juego (el mundo activo en `sider.ini`).
 4. Inicia el juego, vuelve y pulsa **Tras iniciar: comprobar**. Lee `sider.log` y dice, módulo a
    módulo, si el mundo se ha cargado.
+
+En Construye y edita tu mundo, el botón verde **Activar** en la tarjeta de otro mundo hace el paso 3,
+**Activarlo**, para ese mundo (y cambia la carpeta de guardado); el mundo que está en el juego muestra
+en su lugar un **● Activo** desactivado. Empieza una Master League nueva tras activar un mundo distinto.
 
 **Incluir la Liga Conferencia** (pestaña Construir, en Opciones del mundo, activado por defecto) construye también
 la Liga Conferencia: una fase de liga de 36 clubes y un play-off en febrero, como las otras dos.
@@ -546,7 +551,7 @@ mundo...** recupera uno y **Archivo → Mundo nuevo** empieza uno vacío.
 **Construir solo las copas europeas...** (pestaña Construir, Opciones del mundo; *Solo las copas europeas...* en Home) construye un mundo solo con la nueva
 Champions League y Europa League -- fase liga de 36 y el play-off de febrero -- y la Liga Conferencia cuando **Incluir la Liga Conferencia** está marcado. Sin ligas nuevas; los clubes y ligas
 del juego quedan como están y tu mundo no cambia. Pide un nombre de mundo (`_FL26Euro` por
-defecto), lo construye y ofrece ponerlo en el juego. Solo puede estar un mundo en el juego, así que sustituye a
+defecto), lo construye y ofrece activarlo. Solo puede estar un mundo en el juego, así que sustituye a
 un mundo con ligas nuevas: un mundo con ligas nuevas ya tiene el formato nuevo.
 
 > **Ligas de exhibición y Master League.** Una liga marcada *Solo exhibición* nunca juega una

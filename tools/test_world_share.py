@@ -155,7 +155,14 @@ def main():
         put(os.path.join(a, "content", "menu-server", "Modpack", "Twice", "theme.dds"), "t")
         put(os.path.join(a, "content", "menu-server", "Modpack", "HNL", "theme.dds"), "t")
         zq = os.path.join(tmp, WORLD + "-packs.zip")
-        info = I.export_world(a, WORLD, zq)
+        # B88: a world zip carries no menu themes unless asked (the Modpack's themes stayed on every menu)
+        z0 = os.path.join(tmp, WORLD + "-nomenus.zip")
+        info0 = I.export_world(a, WORLD, z0)
+        assert info0["menus"] == 0 and "menus_borrowed" not in info0, info0
+        with zipfile.ZipFile(z0) as z:
+            assert not any("menu-server" in n for n in z.namelist()), [n for n in z.namelist() if "menu" in n]
+            assert "menu themes (0 competitions)" in z.read(I.WORLD_README).decode()
+        info = I.export_world(a, WORLD, zq, menus=True)
         assert info["scoreboards"] == 3 and info["scoreboards_borrowed"] == 2, info     # 263 ours, 76, 268 lent
         assert info["menus"] == 1 and info["menus_borrowed"] == 1, info                 # B73: 76 once, no cid 136
         with zipfile.ZipFile(zq) as z:
@@ -199,7 +206,7 @@ def main():
             fh.write("136, %s\\_packs\\Modpack\\HNL   %s menu of Modpack\\HNL\n"
                      "76, %s\\_packs\\Modpack\\HNL   %s menu of Modpack\\HNL\n" % (WORLD, tag, WORLD, tag))
         zr = os.path.join(tmp, WORLD + "-again.zip")
-        info = I.export_world(h, WORLD, zr)
+        info = I.export_world(h, WORLD, zr, menus=True)
         with zipfile.ZipFile(zr) as z:
             mm2 = z.read("SiderAddons/content/menu-server/map_competitions.txt").decode().splitlines()
             assert len(mm2) == 1 and mm2[0].startswith("76,"), mm2

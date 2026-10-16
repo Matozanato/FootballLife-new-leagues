@@ -215,8 +215,9 @@ fl26world.txt in SiderAddons\\modules, every new player looks the same.
 Kits ({kits} clubs), scoreboards ({boards} competitions) and menu themes ({menus} competitions),
 when the world has them, are in SiderAddons\\content (Kit Server, Scoreboard Server, Menu
 Server): Install adds their map lines. Scoreboards and themes of another pack that this
-world's competitions use (a modpack's) are under <world>\\_packs. The themes show only with
-the Menu Server module on in sider.ini (lua.module = "MenuServer.lua").
+world's competitions use (a modpack's) are under <world>\_packs. A world zip normally carries
+no menu themes: the game's own menus stay. Themes show only with the Menu Server module on in
+sider.ini (lua.module = "MenuServer.lua").
 
 By hand: copy SiderAddons into the game folder, copy livecpk\\{world}\\fl26world.txt to
 SiderAddons\\modules\\fl26world.txt, and put  cpk.root = ".\\livecpk\\{world}"  in
@@ -225,7 +226,7 @@ scoreboards and themes add the lines of the zip's map.txt / map_competitions.txt
 """
 
 
-def export_world(sider_dir, world, out, log=lambda t: None):
+def export_world(sider_dir, world, out, log=lambda t: None, menus=False):
     r"""zip the built world SiderAddons\livecpk\<world> for another PC, laid out as
     SiderAddons\livecpk\<world>\... so Install mods (or a copy by hand) puts it in place.
 
@@ -242,6 +243,8 @@ def export_world(sider_dir, world, out, log=lambda t: None):
     world uses of other packs goes along the same way: the kits its clubs wear (<world>\_kits)
     and the scoreboards and menu themes the switched-on map lines give its competitions, a
     modpack's boards and themes (<world>\_packs, see world_competitions / pack_lines).
+    Menu themes go only with menus=True (B88, mato 16.10.2026: the Modpack's themes stayed as the
+    background of every menu on the players' PCs and looked broken; the menus stay the game's own).
     Returns the info written to fl26worldpack.json."""
     root = os.path.join(sider_dir, "livecpk", world)
     wf = os.path.join(root, WORLD_FILE)
@@ -259,7 +262,10 @@ def export_world(sider_dir, world, out, log=lambda t: None):
     comps = world_competitions(use)
     content = os.path.join(sider_dir, "content")
     extra = []                            # (server, its folder here, our map lines of this world, lent folders)
+    info["menus"] = 0
     for key in WORLD_SERVERS:
+        if key == "menus" and not menus:
+            continue
         s = S.BY_KEY[key]
         here = os.path.join(content, s.folder_in(content))
         mp = os.path.join(here, s.maps[0].file)

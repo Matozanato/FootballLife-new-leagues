@@ -459,7 +459,7 @@ the modules**, **1. Check the plan**, **2. Build the world**, **3. Switch it on*
 start: check** y **Export the world...** (*Exportar el mundo...*)). Luego una línea como
 `World _FL26MyWorld: not built yet · builder modules: installed`, y un cuadro para el registro
 abajo. Encima de las pestañas, en todas, una barra muestra el nombre de tu mundo, cuántas ligas
-y clubes tiene y un botón **Build and install**; mientras el mundo se construye, muestra el
+y clubes tiene y su estado en palabras; mientras el mundo se construye, muestra el
 tiempo que lleva y el paso en el que está (`Building... 3:12 · squads: filling them`).
 
 2. Abre **Step by step, and Export the world** y pulsa primero **1. Check the plan**. No cambia
@@ -545,7 +545,7 @@ del final.
 2. Abre Mod Studio. Abre tu mundo por sí solo (o **File → Open a world...**).
 3. Cambia lo que quieras en **NewLife Database**, o en **Build and edit your world**: pestaña
    **Leagues**, **Clubs** o **Players**. Se guarda solo.
-4. **Build and install** (en la barra encima de las pestañas, o en la pestaña **Build**) →
+4. **Build and install** (pestaña **Build**) →
    **Yes**.
 
 **¿Necesitas una carrera nueva?** Sí: empieza una Liga Máster nueva después de cada cambio que

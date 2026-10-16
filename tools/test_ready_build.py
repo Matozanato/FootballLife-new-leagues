@@ -82,7 +82,7 @@ def run():
     ok("Build of another world: Yes runs it", b.ready_blocks() is False)
     q = asked[-1][2] if asked else ""
     ok("... the question names the ready world, the world built and the way back: %r" % q[:80],
-       "_FL26Live" in q and "_FL26MyWorld" in q and "Put in the game" in q and "careers" in q)
+       "_FL26Live" in q and "_FL26MyWorld" in q and "Activate" in q and "careers" in q)
     ok("... and no note", not infos)
     PB.ask = lambda *a, **k: False
     ok("Build of another world: No stops it", b.ready_blocks() is True)

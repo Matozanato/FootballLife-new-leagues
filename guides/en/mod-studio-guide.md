@@ -49,9 +49,9 @@ The window is in English. **Settings → Language** switches it to Croatian (Hrv
    Database counts a club as one of the game's only when these tables have it (0.2.4).
 3. Open **Home** (the first page). It shows the world in the game (**IN THE GAME NOW**) and your
    setup and lists problems; **Open** next to a problem goes to the page that fixes it. When Mod
-   Studio's modules are missing or older, **Install now** puts them in. Home also has **Build and install**
-   (all of Build in one press), **Only the European cups...**, **Open its leagues** and
-   **Switch world...**.
+   Studio's modules are missing or older, **Install now** puts them in. Home's changes card has a
+   **Go to Build** button that opens the Build tab, and Home also has **Only the European
+   cups...**, **Open its leagues** and **Switch world...**.
 
 **Updates.** A few seconds after it starts, the program asks GitHub whether a newer FL26 Mod
 Studio is out, and says so only when there is one. **Download and install** fetches the new zip,
@@ -88,7 +88,7 @@ The list on the left starts with **Home**, then three groups, and **Settings** a
 
 | Group | Pages |
 |---|---|
-| **Your world** | Build and edit your world (tabs Build, Leagues, Clubs, Players, Kits, Stadiums, League packages), Import your world, NewLife Database |
+| **Your world** | Build and edit your world (tabs Build, Leagues, Clubs, Players, Kits, Stadiums, Cups), Import your world, NewLife Database |
 | **Game content** | Balls, Commentary, Music, Other content |
 | **Tools** | Lua modules, Content folders, Profiles, Restore points, Diagnostics |
 
@@ -439,11 +439,12 @@ one face you mean.
 
 **Keep the world's own Team.bin.** It is in the world folder and holds the world's clubs and its play-offs. Replacing it with the game's own Team.bin drops both, and the line-ups only look fixed because the world's clubs are gone (GitHub #75). Build the world again instead.
 
-**Build and install** (Build and edit your world, and on Home) does 0, 2 and 3 below in one press, then shows what
+**Build and install**, on the **Build** tab, does 0, 2 and 3 below in one press, then shows what
 is left to do: a **Build finished** window that can also **Move the Edit save aside** and **Close the
-game**. On Build and edit your world it is also in the bar above the tabs, on every tab, next to the
-open world's name and its number of leagues and clubs; while the world builds, that bar and the bottom bar
-show the time so far and the step it is at (`Building... 3:12 · squads: filling them`). Or step by step, under **Step by step, and Export the world** on the **Build** tab:
+game**. Home's changes card has a **Go to Build** button instead. The bar above the tabs, next to the
+open world's name and its number of leagues and clubs, shows the open world's state in words; while the
+world builds, that bar and the bottom bar show the time so far and the step it is at (`Building... 3:12 ·
+squads: filling them`). Or step by step, under **Step by step, and Export the world** on the **Build** tab:
 
 0. **Install the modules** — once, and again after a new version of the program. Files it
    replaces are kept in `SiderAddons\modules\before-builder-1\`.
@@ -452,6 +453,10 @@ show the time so far and the step it is at (`Building... 3:12 · squads: filling
 3. **Switch it on** — puts it in the game (the active world in `sider.ini`).
 4. Start the game, come back and press **After a start: check**. It reads `sider.log` and says,
    module by module, whether the world was taken.
+
+On Build and edit your world, the green **Activate** button on another world's card does step 3,
+**Switch it on**, for that world (and swaps the save folder in); the world in the game shows a
+disabled **● Active** instead of Activate. Start a new Master League after activating a different world.
 
 **Include the Conference League** (Build tab, under World options, on by default) also builds the
 Conference League: a league phase of 36 clubs and a February play-off, like the other two. The
@@ -532,7 +537,7 @@ brings one back and **File → New world** starts an empty one.
 Champions League and Europa League -- league phase of 36 and the February play-off -- and the
 Conference League when **Include the Conference League** is ticked. No new leagues; the game's
 clubs and leagues stay as they are, and your world is not changed. It asks for a world name
-(`_FL26Euro` by default), builds it and offers to put it in the game. Only one world can be in the game, so it
+(`_FL26Euro` by default), builds it and offers to activate it. Only one world can be in the game, so it
 is instead of a world with new leagues: a world with new leagues already has the new format.
 
 > **Exhibition leagues and Master League.** A league ticked *Exhibition only* never plays a
@@ -690,12 +695,11 @@ the world is built). It saves one
   receiver's game loads (`content\kits` for SPFL26's own one). A club of the world that wears
   a kit from another pack on your PC (SPFL26's Other Europe, a modpack) takes a copy of that kit
   along, in `<world>\_kits\`, so the receiver does not need that pack.
-- `SiderAddons\content\scoreboard-server\<world>\_packs\...` and
-  `...\menu-server\<world>\_packs\...`: the **scoreboards and menu themes of other packs** that
-  the switched-on map lines on your PC give the world's competitions (a modpack's boards and
-  themes for its leagues, cups and super cups). They come with their map lines, pointed at
-  `<world>\_packs\`, so the receiver does not need that pack either. The themes show only when
-  the Menu Server module is on in the receiver's `sider.ini` (`lua.module = "MenuServer.lua"`).
+- `SiderAddons\content\scoreboard-server\<world>\_packs\...`: the **scoreboards of other packs**
+  that the switched-on map lines on your PC give the world's competitions (a modpack's boards
+  for its leagues, cups and super cups). They come with their map lines, pointed at
+  `<world>\_packs\`, so the receiver does not need that pack either. Menu themes are not part of
+  a world zip (B88): the game's own menus stay, even when a pack's theme is switched on on your PC.
 - `READ ME - FL26 world.txt` and `fl26worldpack.json`: what the receiver needs.
 
 **The receiver needs Mod Studio's modules with the face pack** (`modules\fl26regen_faces.bin`):

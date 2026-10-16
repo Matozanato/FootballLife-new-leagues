@@ -520,7 +520,7 @@ def ready_check(game, world):
     if on and live:
         out.append(("ok", _("It is the world in the game")))
     else:
-        out.append(("err", _("It is not in the game: My world > Put in the game on %s") % world))
+        out.append(("err", _("It is not in the game: My world > Activate on %s") % world))
     state = modules_state(game)
     if state is not None:
         if modules_ok(state):

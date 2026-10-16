@@ -49,9 +49,9 @@ Prozor je na engleskom. **Settings → Language → Hrvatski** ga prebaci na hrv
    tablice imaju (0.2.4).
 3. Otvori **Home** (prva stranica). Pokazuje svijet u igri (**U IGRI SADA**) i tvoju postavu te
    popis problema; **Open** pokraj problema vodi na stranicu koja ga rješava. Kad moduli Mod
-   Studija fale ili su stariji, **Instaliraj sada** ih postavi. Home ima i **Izgradi i instaliraj**
-   (cijela Izgradnja jednim klikom), **Samo europski kupovi...**, **Otvori njegove lige** i
-   **Promijeni svijet...**.
+   Studija fale ili su stariji, **Instaliraj sada** ih postavi. Kartica promjena na Home ima gumb
+   **Idi na Gradnju** koji otvori karticu Build, a Home ima i **Samo europski kupovi...**,
+   **Otvori njegove lige** i **Promijeni svijet...**.
 
 **Ažuriranja.** Par sekundi nakon pokretanja program pita GitHub je li izašao noviji FL26 Mod
 Studio i javi se samo ako jest. **Skini i instaliraj** skine novi zip, provjeri ga prema
@@ -422,11 +422,12 @@ svejedno vidi. Mapa s više faca unutra se odbija: odaberi točno onu jednu koju
 
 **Zadrži vlastiti Team.bin svijeta.** On je u mapi svijeta i drži klubove i doigravanja svijeta. Zamijeniš li ga Team.bin-om iz igre, i jedno i drugo nestane, a sastavi izgledaju popravljeni samo zato što klubova više nema (GitHub #75). Radije svijet sagradi ponovno.
 
-**Izgradi i instaliraj** (Izgradi i uredi svoj svijet, i na Home) napravi 0, 2 i 3 odozdo jednim klikom, pa
+**Izgradi i instaliraj**, na kartici **Build**, napravi 0, 2 i 3 odozdo jednim klikom, pa
 pokaže što je ostalo: prozor **Build gotov** koji može i **Makni Edit save u stranu** i **Zatvori
-igru**. Na Izgradi i uredi svoj svijet gumb je i u traci iznad kartica, na svakoj kartici, uz ime
-otvorenog svijeta i broj liga i klubova; dok se svijet gradi, ta traka i donja traka pokazuju koliko
-traje i na kojem je koraku (`Gradim... 3:12 · squads: filling them`). Ili korak po korak, pod **Korak po korak i Izvezi svijet** na kartici **Build**:
+igru**. Kartica promjena na Home ima umjesto toga gumb **Idi na Gradnju**. Traka iznad kartica, uz
+ime otvorenog svijeta i broj liga i klubova, pokazuje stanje otvorenog svijeta riječima; dok se
+svijet gradi, ta traka i donja traka pokazuju koliko traje i na kojem je koraku
+(`Gradim... 3:12 · squads: filling them`). Ili korak po korak, pod **Korak po korak i Izvezi svijet** na kartici **Build**:
 
 0. **Postavi module** — jednom, i opet nakon nove verzije programa. Datoteke koje zamijeni
    čuvaju se u `SiderAddons\modules\before-builder-1\`.
@@ -435,6 +436,10 @@ traje i na kojem je koraku (`Gradim... 3:12 · squads: filling them`). Ili korak
 3. **Uključi ga** — stavi ga u igru (aktivni svijet u `sider.ini`).
 4. Pokreni igru, vrati se i stisni **Nakon pokretanja: provjeri**. Pročita `sider.log` i kaže,
    modul po modul, je li svijet preuzet.
+
+Na Izgradi i uredi svoj svijet zeleni gumb **Aktiviraj** na kartici drugog svijeta napravi korak 3,
+**Uključi ga**, za taj svijet (i zamijeni mapu save-a); svijet koji je u igri umjesto toga pokazuje
+neaktivan **● Aktivan**. Pokreni novu Master League nakon što aktiviraš drugi svijet.
 
 **Uključi Konferencijsku ligu** (kartica Build, pod Opcijama svijeta, zadano uključeno) izgradi i
 Konferencijsku ligu: ligašku fazu od 36 klubova i veljačko doigravanje, kao kod druga dva
@@ -505,7 +510,7 @@ svijet...** vraća neki svijet, a **Datoteka → Novi svijet** počinje prazan.
 prvaka i Europskom ligom -- ligaška faza od 36 i veljačko doigravanje -- te Konferencijskom ligom
 kad je označeno **Uključi Konferencijsku ligu**. Bez novih liga; klubovi i lige igre ostaju kakvi
 jesu, a tvoj svijet se ne mijenja. Pita za ime svijeta (zadano `_FL26Euro`), izgradi ga i ponudi
-da ga stavi u igru. U igri može biti samo jedan svijet, pa je ovo umjesto svijeta s novim ligama:
+da ga aktivira. U igri može biti samo jedan svijet, pa je ovo umjesto svijeta s novim ligama:
 svijet s novim ligama već ima novi format.
 
 > **Egzibicijske lige i Master liga.** Liga označena kao *Samo za egzibiciju* nikad ne igra sezonu

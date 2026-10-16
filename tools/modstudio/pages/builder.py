@@ -4111,12 +4111,12 @@ class Build(BuilderPage):
             return not ask(self, "Build", _(
                 "%s is in the game now: a ready world, installed from a zip.\n\nBuilding %s puts %s in "
                 "the game instead and switches %s off. Nothing of it is deleted: it stays in My world, "
-                "and Put in the game on its card brings it back, with its own Master League careers.\n\n"
+                "and Activate on its card brings it back, with its own Master League careers.\n\n"
                 "Build %s?") % (w, mine, mine, w, mine))
         info(self, "Build", _("%s is on: a ready world, installed from a zip. It is built already: press "
-                              "Play and start a new Master League.\n\nBuild makes the world of your own "
+                              "Start the game and start a new Master League.\n\nBuild makes the world of your own "
                               "leagues and would switch %s off. To build your own leagues, put your own "
-                              "world in the game first (My world > Put in the game), or remove the ready one "
+                              "world in the game first (My world > Activate), or remove the ready one "
                               "(My world > More > Import a world zip > Remove).") % (w, w))
         return True
 

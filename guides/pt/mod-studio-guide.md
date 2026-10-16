@@ -49,9 +49,9 @@ A janela começa em inglês. **Settings → Language** troca para português (Po
    do jogo quando essas tabelas o têm (0.2.4).
 3. Abra **Home** (a primeira página). Ela mostra o mundo que está no jogo (**IN THE GAME NOW**) e sua
    configuração e lista os problemas; **Open** ao lado de um problema leva à página que resolve. Quando os
-   módulos do Mod Studio estão faltando ou são mais antigos, **Install now** coloca eles. A Home também tem **Build and install**
-   (todo o Build com um clique), **Only the European cups...**, **Open its leagues** e
-   **Switch world...**.
+   módulos do Mod Studio estão faltando ou são mais antigos, **Install now** coloca eles. O cartão de
+   mudanças da Home tem um botão **Go to Build** que abre a aba Build, e a Home também tem
+   **Only the European cups...**, **Open its leagues** e **Switch world...**.
 
 **Atualizações.** Alguns segundos depois de abrir, o programa pergunta ao GitHub se saiu um FL26 Mod
 Studio mais novo, e só avisa quando existe um. **Download and install** baixa o zip novo,
@@ -88,7 +88,7 @@ A lista à esquerda começa com **Home**, depois vêm três grupos, e **Settings
 
 | Grupo | Páginas |
 |---|---|
-| **Your world** | Build and edit your world (abas Build, Leagues, Clubs, Players, Kits, Stadiums, League packages), Import your world, NewLife Database |
+| **Your world** | Build and edit your world (abas Build, Leagues, Clubs, Players, Kits, Stadiums, Cups), Import your world, NewLife Database |
 | **Game content** | Balls, Commentary, Music, Other content |
 | **Tools** | Lua modules, Content folders, Profiles, Restore points, Diagnostics |
 
@@ -435,11 +435,12 @@ rosto que você quer.
 
 **Mantenha o Team.bin do próprio mundo.** Ele fica na pasta do mundo e guarda os clubes do mundo e os play-offs dele. Trocar ele pelo Team.bin do próprio jogo apaga os dois, e as escalações só parecem consertadas porque os clubes do mundo sumiram (GitHub #75). Faça o Build do mundo de novo no lugar.
 
-**Build and install** (Build and edit your world, e na Home) faz o 0, o 2 e o 3 abaixo com um clique, depois mostra o que
+**Build and install**, na aba **Build**, faz o 0, o 2 e o 3 abaixo com um clique, depois mostra o que
 falta fazer: uma janela **Build finished** que também pode **Move the Edit save aside** e **Close the
-game**. Em Build and edit your world ele também fica na barra acima das abas, em todas elas, ao lado do
-nome do mundo aberto e do número de ligas e clubes; enquanto o mundo é montado, essa barra e a barra de
-baixo mostram o tempo decorrido e a etapa em que está (`Building... 3:12 · squads: filling them`). Ou passo a passo, em **Step by step, and Export the world** na aba **Build**:
+game**. O cartão de mudanças da Home tem no lugar um botão **Go to Build**. A barra acima das
+abas, ao lado do nome do mundo aberto e do número de ligas e clubes, mostra o estado do mundo aberto
+em palavras; enquanto o mundo é montado, essa barra e a barra de baixo mostram o tempo decorrido e a
+etapa em que está (`Building... 3:12 · squads: filling them`). Ou passo a passo, em **Step by step, and Export the world** na aba **Build**:
 
 0. **Install the modules** — uma vez, e de novo depois de uma versão nova do programa. Os arquivos que ele
    substitui ficam guardados em `SiderAddons\modules\before-builder-1\`.
@@ -448,6 +449,10 @@ baixo mostram o tempo decorrido e a etapa em que está (`Building... 3:12 · squ
 3. **Switch it on** — coloca ele no jogo (o mundo ativo no `sider.ini`).
 4. Inicie o jogo, volte e aperte **After a start: check**. Ele lê o `sider.log` e diz,
    módulo por módulo, se o mundo foi carregado.
+
+No Build and edit your world, o botão verde **Activate** no cartão de outro mundo faz o passo 3,
+**Switch it on**, para aquele mundo (e troca a pasta de save); o mundo que está no jogo mostra em
+vez disso um **● Active** desativado. Comece uma Master League nova depois de ativar um mundo diferente.
 
 **Include the Conference League** (aba Build, em World options, ligado por padrão) também monta a
 Conference League: uma fase de liga de 36 clubes e um play-off em fevereiro, como as outras duas. A
@@ -528,7 +533,7 @@ um de volta e **File → New world** começa um vazio.
 Champions League e a Europa League -- fase de liga de 36 e o play-off de fevereiro -- e a
 Conference League quando **Include the Conference League** está marcado. Sem ligas novas; os clubes e ligas
 do jogo ficam como estão, e o seu mundo não muda. Ele pede um nome de mundo
-(`_FL26Euro` por padrão), monta e oferece colocar ele no jogo. Só um mundo pode estar no jogo, então ele
+(`_FL26Euro` por padrão), monta e oferece ativá-lo. Só um mundo pode estar no jogo, então ele
 substitui um mundo com ligas novas: um mundo com ligas novas já tem o formato novo.
 
 > **Ligas de exibição e Master League.** Uma liga marcada como *Exhibition only* nunca joga uma

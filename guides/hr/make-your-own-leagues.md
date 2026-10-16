@@ -421,8 +421,8 @@ Mod Studio pri pokretanju opet otvori tvoj svijet, pa ono što si napravio nikad
 **0. Install the modules**, **1. Check the plan**, **2. Build the world**, **3. Switch it on**,
 **4. After a start: check** i **Export the world...**). Pa red poput
 `World _FL26MyWorld: not built yet · builder modules: installed`, i okvir za log dolje. Iznad
-kartica, na svakoj kartici, traka pokazuje ime tvog svijeta, koliko ima liga i klubova i gumb
-**Build and install**; dok se svijet gradi, pokazuje koliko traje i na kojem je koraku
+kartica, na svakoj kartici, traka pokazuje ime tvog svijeta, koliko ima liga i klubova i njegovo
+stanje riječima; dok se svijet gradi, pokazuje koliko traje i na kojem je koraku
 (`Building... 3:12 · squads: filling them`).
 
 2. Otvori **Step by step, and Export the world** i prvo klikni **1. Check the plan**. Ne mijenja
@@ -500,7 +500,7 @@ kraju `the world works as built`. Red `not loaded` ili `did NOT read the world f
 2. Otvori Mod Studio. Sam otvori tvoj svijet (ili **File → Open a world...**).
 3. Promijeni što želiš na **NewLife Database**, ili na **Build and edit your world**: kartica
    **Leagues**, **Clubs** ili **Players**. Sam se spremi.
-4. **Build and install** (u traci iznad kartica, ili na kartici **Build**) → **Yes**.
+4. **Build and install** (na kartici **Build**) → **Yes**.
 
 **Treba li ti nova karijera?** Da: pokreni novu Master Ligu nakon svake promjene koju izgradiš.
 Karijera kad počne uzme vlastitu kopiju liga, klubova i kadrova, pa karijera u kojoj već jesi
