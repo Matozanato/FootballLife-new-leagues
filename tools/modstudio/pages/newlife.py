@@ -474,11 +474,19 @@ class NewLife(BuilderPage):
         sel = self.addable(info)
         if not sel or not self.rel:
             return
-        used = {str(i) for x in self.project.recipe["leagues"] for i in (x.get("newlife") or {}).get("clubs") or []}
+        # B62: say where in the world the club is, under the name it has there (a renamed club keeps its
+        # NewLife link, so "your world" alone sent people looking for a club they could not find)
+        used = {}
+        for x in self.project.recipe["leagues"]:
+            names = list(x.get("club_names") or [])
+            for k, i in enumerate((x.get("newlife") or {}).get("clubs") or []):
+                if i:
+                    n = names[k] if k < len(names) and names[k] else ""
+                    used[str(i)] = "%s, %s" % (_("your world"), x.get("name", "")) + (": %s" % n if n else "")
         seen = {}
         for E in sel:
             for i in E["clubs"]:
-                where = _("your world") if i in used else seen.get(i)
+                where = used.get(i) or seen.get(i)
                 if where:
                     error(self, "NewLife Database", _("%s would play in two leagues (%s and %s).")
                           % (self.rel.clubs[i]["name"], where, E["name"]))
