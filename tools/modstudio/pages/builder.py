@@ -3201,6 +3201,25 @@ class SwapDialog(Dialog):
         self.accept()
 
 
+def squad_size(project, tid):
+    """B69: the players club `tid` of the game has after the recipe's player changes -- its squad
+    in the tables, less the ones removed or signed by another club, plus the ones added and the
+    ones it signs (as the Players page shows it); None when the tables' squads are not read"""
+    sq = project.squads()
+    if sq is None:
+        return None
+    pl = project.players()
+    c = pl.get(str(tid)) or {}
+    nat = set(project.game_nat)
+    out = {str(x) for x in c.get("remove") or []}
+    if int(tid) not in nat:               # a call-up does not take a player from his club
+        for club, o in pl.items():
+            if club != str(tid) and not (club.isdigit() and int(club) in nat):
+                out |= {str(r) for r in o.get("join") or []}
+    have = [str(pid) for _o, pid, _s, _x in sq.by_club.get(int(tid), []) if pid in sq.index]
+    return sum(1 for p in have if p not in out) + len(c.get("add") or []) + len(c.get("join") or [])
+
+
 def swap_of(project, tid):
     """the club tid trades leagues with, or None"""
     for a, b in (project.recipe.get("edits") or {}).get("swaps") or []:
@@ -3555,8 +3574,12 @@ class GameLeagues(BuilderPage):
         n, a = self.project.game_cl[tid]
         e = self.project.edits("clubs").get(str(tid), {})
         np = self.project.players().get(str(tid)) or {}
-        k = len(np.get("edits") or {}) + len(np.get("add") or []) + len(np.get("remove") or [])
-        marks = ([_("name/crest")] if e else []) + ([_("%d players") % k] if k else [])
+        # B69: the squad as it will be, not the number of changes (a signed player was counted
+        # twice, in join and in edits: Kortrijk "51 players" with 30 in the world)
+        k = any(np.get(x) for x in ("edits", "add", "remove", "join"))
+        size = squad_size(self.project, tid) if k else None
+        marks = ([_("name/crest")] if e else []) + ([_("%d players") % size if size is not None
+                                                     else _("squad changed")] if k else [])
         sw = swap_of(self.project, tid)
         if sw is not None:
             marks.append(_("swaps with %s") % self.project.game_cl.get(sw, (str(sw),))[0])

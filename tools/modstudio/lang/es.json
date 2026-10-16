@@ -1769,7 +1769,8 @@
   "This backup was put back already.": "Esta copia ya se restauró.",
   "%s is not in livecpk any more: nothing to rename back.": "%s ya no está en livecpk: no hay nada que devolver a su nombre anterior.",
   "A world called %s is in livecpk already: rename or delete that one first.": "Ya hay un mundo llamado %s en livecpk: renómbralo o bórralo primero.",
-  "%s is there again: move it away first.": "%s vuelve a estar ahí: muévelo a otro sitio primero."
+  "%s is there again: move it away first.": "%s vuelve a estar ahí: muévelo a otro sitio primero.",
+  "squad changed": "plantilla cambiada"
  },
  "log": [
   [
