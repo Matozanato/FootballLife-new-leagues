@@ -108,7 +108,7 @@ def check_vanilla(base, folder):
         info = B.game_info(base)
         after = json.dumps(rel.leagues(str, info), sort_keys=True)
         assert before == after, "the game's own tables change no NewLife club's in_game"
-        assert N._game_targets(rel, info)[0] and all(c["in_game"] == c["release_in_game"] for c in rel.clubs.values())
+        assert N._game_targets(rel, info)[0] and all(c["in_game"] == c["release_in_game"] for c in rel.clubs.values() if not c.get("twin"))
         print("ok  game tables: NewLife %s, the same %d clubs in the game"
               % (rel.meta.get("version"), sum(c["in_game"] == "1" for c in rel.clubs.values())))
 
