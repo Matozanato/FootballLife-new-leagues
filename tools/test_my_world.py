@@ -7,6 +7,7 @@ Import your world and NewLife Database.
   - My world shows a card for each world on disk: the one in the game green (IN THE GAME NOW)
     with Export / Rename / Delete, Delete refused for it; another world has Put in the game, and
     pressing it switches that world on in sider.ini and turns its card green;
+  - Cups does not stay lit after one of its windows (B70);
   - a card says "1 league · 1 new club", not "1 leagues" (B70);
   - + Add... tells a league package (.fl26pack, with its leagues to tick), a world zip and the
     NewLife Database folder apart.
@@ -99,6 +100,23 @@ def run():
     ok("the tabs: Leagues, Clubs, Players, Kits, Stadiums and Cups",
        [b.text() for b in w.my_world.tab_btn.values()] + [w.my_world.cups.text()]
        == ["Leagues", "Clubs", "Players", "Kits", "Stadiums", "Cups"])
+    # ---- B70: Cups stayed lit on the page opened after one of its windows (Build details)
+    from PySide6.QtCore import Qt, QPoint
+    from PySide6.QtGui import QCursor
+    cups = w.my_world.cups
+    QCursor.setPos(w.mapToGlobal(QPoint(w.width() - 2, w.height() - 2)))   # the mouse is not on Cups
+    opened = []
+    w.page("NewLeagues").preseason = lambda: opened.append("preseason")
+    cups.setAttribute(Qt.WA_UnderMouse, True)          # what the window left behind
+    cups.menu().actions()[0].trigger()
+    ok("B70: Cups > Pre-season cups opens its window and Cups lets go of its lit look",
+       opened == ["preseason"] and not cups.underMouse())
+    cups.setAttribute(Qt.WA_UnderMouse, True)
+    w.open_page("Build")
+    qa.processEvents()
+    ok("B70: More > Build details: Cups is not lit", not cups.underMouse()
+       and not any(b.isChecked() for b in w.my_world.tab_btn.values()))
+    w.open_page("Leagues")
     settle(qa, 1.0)
 
     # ---- the cards

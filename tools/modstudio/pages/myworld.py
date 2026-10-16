@@ -15,6 +15,7 @@ rename_world, delete_world; League packages: add_pack; Import your world: look; 
 import fnmatch, json, os, time, zipfile
 
 from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import (QCheckBox, QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel, QMenu,
                                QPushButton, QScrollArea, QStackedWidget, QToolButton, QVBoxLayout, QWidget)
 
@@ -156,6 +157,15 @@ def kind_of(path):
 
 
 # ---- the widgets -----------------------------------------------------------------------------
+def unstick(b):
+    """B70: a menu button (Cups) whose menu item opened a window kept the look of the mouse over
+    it -- the window took the mouse, the button never heard it leave -- so Cups stayed lit on the
+    page opened next (Build details). Unless the mouse is on it, it is not under the mouse."""
+    if b.underMouse() and not b.rect().contains(b.mapFromGlobal(QCursor.pos())):
+        b.setAttribute(Qt.WA_UnderMouse, False)
+        b.update()
+
+
 class SubTabs(QStackedWidget):
     """the pages of My world, one at a time, under a row of tab buttons; Build details, League
     packages, Import a world zip and NewLife Database have no tab (More, + Add...): none is lit"""
@@ -612,7 +622,7 @@ class MyWorld(QWidget):
         m = QMenu(cups)
         for label, name in (("Pre-season cups", "preseason"), ("Cups of our countries", "our_cups"), ("Cups of the game's countries", "game_cups"),
                             ("Competition names", "competition_names")):
-            m.addAction(_(label)).triggered.connect(lambda _c=False, n=name: getattr(self.app.page("NewLeagues"), n)())
+            m.addAction(_(label)).triggered.connect(lambda _c=False, n=name: self.cup_window(n))
         cups.setMenu(m)
         self.cups = cups
         h.addWidget(cups, 0, Qt.AlignBottom)
@@ -685,6 +695,15 @@ class MyWorld(QWidget):
         if self._stale:
             self.refresh()
         self.update_bar()
+        for b in (self.cups, self.more):
+            unstick(b)
+
+    def cup_window(self, name):
+        """a window of Leagues > More from Cups; the button lets go of its lit look after it"""
+        try:
+            getattr(self.app.page("NewLeagues"), name)()
+        finally:
+            unstick(self.cups)
 
     def refresh(self):
         """the cards and the counts, from what is on disk now"""
