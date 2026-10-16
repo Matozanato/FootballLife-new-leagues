@@ -59,8 +59,29 @@ import mkleague as M
 
 FORMAT = "# fl26world 1"
 KEYS = ("cid", "region", "country", "conf", "slot", "tier", "above", "promote", "demote", "clubs", "legs",
-        "cup", "exhibition", "scup", "kickoff", "cupall", "cuptop", "cuplow", "cupn")
+        "cup", "exhibition", "scup", "kickoff", "cupall", "cuptop", "cuplow", "cupn",
+        "lcup", "lcuplow", "lcupn")
 NO_SLOT = 123
+
+# fl26chain.dll keeps this many cups to their leagues (fl26chain.c MAX_CUPS) and drops the rest;
+# fl26chain.lua sends the national cups first and the league cups (lcup=) after them
+MAX_CHAIN_CUPS = 16
+
+
+def chain_cups(leagues):
+    """[(cup, top league, league below, both, cap)] fl26chain.lua's from_world makes of these
+    league lines, in its order: the national cups (cup=), then the league cups (lcup=); only
+    the first MAX_CHAIN_CUPS reach the DLL"""
+    cups, lcups = [], []
+    has = lambda L, *ks: all(L.get(k) is not None for k in ks)     # Lua: 0 is true, nil is not
+    for L in leagues:
+        if has(L, "cup", "cuptop", "cuplow"):
+            cups.append((L["cup"], L["cuptop"], L["cuplow"], L.get("cupall") != 0, L.get("cupn")))
+        elif has(L, "cup", "above"):
+            cups.append((L["cup"], L["above"], L["id"], L.get("cupall") == 1, L.get("cupn")))
+        if has(L, "lcup", "lcupn"):
+            lcups.append((L["lcup"], L["id"], L.get("lcuplow") or 0, True, L["lcupn"]))
+    return cups + lcups
 
 # The Select Team slot each regulation id mkworld hands out ends up on, in the exe's competition
 # parameter table: the ones fl26comptab places (appended rows, and 49/74/100 moved, 76 reshaped)
