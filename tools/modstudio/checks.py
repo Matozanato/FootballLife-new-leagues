@@ -139,20 +139,29 @@ def exe_problems(game):
         return []
     key = (game.log_path, st.st_mtime, st.st_size)
     if key not in _refused:
-        mods = []
+        mods, caps = [], False
         try:
             with open(game.log_path, encoding="utf-8", errors="replace") as f:
                 for l in f:
                     m = REFUSED.match(l)
                     if m and m.group(1) not in mods:
                         mods.append(m.group(1))
+                    caps = caps or l.startswith("[fl26caps.lua]")
         except OSError:
             pass
         _refused.clear()
-        _refused[key] = mods
-    mods = _refused[key]
+        _refused[key] = (mods, caps and "fl26caps.lua" not in mods)
+    mods, caps_took = _refused[key]
     if not mods:
         return []
+    if caps_took:
+        # fl26caps checks thousands of the exe's bytes: when it took them, the exe is the one the
+        # modules know, and the others refused bytes another line of ours had patched first -- an
+        # old module still on, one twice, or ours out of order (B80, Yanis 16.10.)
+        return [("err", "Game", _("%s refused bytes another module had already changed in the last game "
+                                  "(ABORTED in sider.log), while fl26caps took the game's FL_2026.exe: "
+                                  "sider.ini loads an old module of ours, one twice, or ours out of order. "
+                                  "Home > Install now puts the lines right.") % ", ".join(mods), "Build")]
     return [("err", "Game", _("%s refused the game's FL_2026.exe in the last game (ABORTED in sider.log): it is "
                               "not the Steam build the modules know, or another mod changed it. New leagues then "
                               "hide the game's leagues in Select Team and the game crashes there. Use the Steam "

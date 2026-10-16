@@ -4872,6 +4872,20 @@ def group_ours(lines):
     return True
 
 
+def stale_line(base, order, have):
+    """the module of `order` (loaded) that `base` is an old form of, or None:
+    fl26caps.<set> (patchset.py keeps every set under its own name) beside fl26caps, or another
+    count of a numbered one (fl26slots128 beside fl26slots250, fl26regs300 beside fl26regs600).
+    Both on, the second refuses the bytes the first patched (B80)."""
+    if base in order or not base.startswith("fl26"):
+        return None
+    head = base.split(".", 1)[0]
+    if head != base:
+        return head if head in order and head in have else None
+    m = re.match(r"^(fl26[a-z]+)(\d+)$", base)
+    return next((x for x in order if m and re.match(r"^%s\d+$" % m.group(1), x) and x in have), None)
+
+
 def ensure_modules(game, order, want, log=print):
     """make every module in `want` a live lua.module line of sider.ini, in `order`'s order.
 
@@ -4893,7 +4907,7 @@ def ensure_modules(game, order, want, log=print):
     # fix would be applied twice and the second time refuse the already patched bytes
     # only when the bundle is loaded too: Switch on hands in the world's modules alone, and turned
     # the guards off with no fl26guards line in the file (07.10., the modpack world)
-    retired, gone = retired_modules(), []
+    retired, gone, instead = retired_modules(), [], {}
     have = set(want) | {module_of(l)[0].replace("/", "\\").rpartition("\\")[2]
                         for l in lines if module_of(l)[0] and module_of(l)[1]}
     for i, l in enumerate(lines):
@@ -4902,6 +4916,14 @@ def ensure_modules(game, order, want, log=print):
         if live and base in retired and retired[base] in have:
             lines[i] = ";" + l.strip()
             gone.append(m)
+            instead[m] = retired[base]
+        elif live and m == base and stale_line(base, order, have):
+            # B80 (Yanis, 16.10.): an old caps set's own name (fl26caps.<set>.lua, patchset.py) and
+            # an older slots count (fl26slots128 beside fl26slots250) stayed on from a hand install;
+            # each refused the bytes the shipped one had patched, and the diagnostics blamed the exe
+            lines[i] = ";" + l.strip()
+            gone.append(m)
+            instead[m] = stale_line(base, order, have)
     fixed, plain = [], {module_of(l)[0] for l in lines}
     for i, l in enumerate(lines):
         m, live = module_of(l)
@@ -4939,16 +4961,28 @@ def ensure_modules(game, order, want, log=print):
             where = {x: ((i + 1 if i >= at else i), lv) for x, (i, lv) in where.items()}
         where[m] = (lines.index('lua.module = "%s.lua"' % m), True)
         done.append(m)
-    # fl26caps first: the others check the bytes it moves. A file where it came after fl26swiss
-    # (Yanis, 09.10.: MISMATCH at 0x14154358f, caps aborted) kept that order, since nothing
-    # else moves -- the caps line alone goes up to the first live module of ours.
-    live = [(i, module_of(l)[0]) for i, l in enumerate(lines) if module_of(l)[1]]
-    ours_at = [i for i, m in live if m.replace("/", "\\").rpartition("\\")[2] in order]
-    caps_at = [i for i, m in live if m == order[0]]
-    if caps_at and ours_at and caps_at[0] > ours_at[0]:
-        lines.insert(ours_at[0], lines.pop(caps_at[0]))
-        done.append("%s moved first" % order[0])
-        log("sider.ini: %s moved before the other modules of ours -- it has to load first" % order[0])
+    # ours in `order`'s order: fl26caps first, the others check the bytes it moves (Yanis, 09.10.:
+    # after fl26swiss, MISMATCH at 0x14154358f, caps aborted), and each one after the modules whose
+    # bytes it expects (B80, 16.10.: slot7 before slots250, deeprank before rank, joindll after
+    # swiss -- an alphabetical hand install). Our lines trade places; every other line stays.
+    seen, ours_at = set(), []
+    for i, l in enumerate(lines):
+        m, lv = module_of(l)
+        if lv and m in order:
+            if m in seen:      # the same module twice: the second refuses what the first patched
+                lines[i] = ";" + l.strip()
+                gone.append(m)
+                instead[m] = "its first line"
+                continue
+            seen.add(m)
+            ours_at.append(i)
+    now = [lines[i] for i in ours_at]
+    want_order = sorted(now, key=lambda l: order.index(module_of(l)[0]))
+    if want_order != now:
+        for i, l in zip(ours_at, want_order):
+            lines[i] = l
+        done.append("ordered")
+        log("sider.ini: the modules of Mod Studio are in their load order again (%s first)" % order[0])
     if group_ours(lines):
         done.append("grouped")
         log("sider.ini: the modules of Mod Studio are together now, in one block of their own")
@@ -4962,7 +4996,7 @@ def ensure_modules(game, order, want, log=print):
         done.append("luajit.ext.enabled")
     if gone:
         log("sider.ini: switched off %s -- %s has them now" % (", ".join(gone), ", ".join(
-            sorted({retired[g.replace("/", "\\").rpartition("\\")[2]] for g in gone}))))
+            sorted(set(instead.values())))))
     if fixed:
         log("sider.ini: %d module(s) were loaded from a before-builder folder, now from modules: %s"
             % (len(fixed), ", ".join(fixed)))
@@ -4970,7 +5004,7 @@ def ensure_modules(game, order, want, log=print):
     if done or gone:
         keep_before(ini, "Mod Studio's modules switched on", os.path.dirname(ini))
         open(ini, "w", encoding="utf-8", newline="\r\n").write("\n".join(lines) + "\n")
-        on = [m for m in done if not m.endswith(" moved first") and m != "grouped"]
+        on = [m for m in done if m not in ("ordered", "grouped")]
         if on:
             log("sider.ini: switched on %s" % ", ".join(on))
     return done + gone
@@ -5264,11 +5298,19 @@ def check(game, log=print):
     ok = True
     # a module that refused the game's exe (GitHub #62: fl26caps ABORTED on another exe while the
     # rest added the leagues, and the check said all was well)
+    # -- unless fl26caps took the exe: then the others refused bytes another line of ours had
+    # patched first, an old module or one twice or out of order (B80), and Install now mends it
+    caps = [l for l in text if l.startswith("[fl26caps.lua]")]
+    caps_took = bool(caps) and not any(re.search(r"\bABORTED\b", l) for l in caps)
     for l in text:
         m = re.match(r"^\[([\w.-]+)\.lua\] .*\bABORTED\b", l)
         if m:
-            log("  %-14s refused the game's exe: %s" % (m.group(1), l.split("] ", 1)[-1].strip()))
+            log("  %-14s %s: %s" % (m.group(1), "refused bytes another module had changed" if caps_took
+                                    else "refused the game's exe", l.split("] ", 1)[-1].strip()))
             ok = False
+    if caps_took and not ok:
+        log("  fl26caps took the exe: sider.ini loads an old module of ours, one twice, or ours out of "
+            "order -- Install now puts the lines right")
     # a DLL an antivirus took away (B15): the Lua loads, LoadLibraryA fails with error 126
     mdir = os.path.join(siderdir.find(game), "modules")
     names = sorted({d for m in READERS + ["fl26regen", "fl26edit", "fl26walk", "fl26compcache"]
