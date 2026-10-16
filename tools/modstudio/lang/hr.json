@@ -1778,7 +1778,9 @@
   "%d new club": "%d novi klub",
   "%s: %d line(s) that %s added point at files that are not there: its install did not finish. Install that zip again.": "%s: %d redak/redaka koje je dodao %s vode na datoteke kojih nema: instalacija nije završila. Instaliraj taj zip ponovno.",
   "%s: %d line(s) of the world %s point at files that are not there: its install did not finish. Install the world's zip again.": "%s: %d redak/redaka svijeta %s vode na datoteke kojih nema: instalacija nije završila. Instaliraj zip svijeta ponovno.",
-  "%s: %d line(s) of the world %s point at files that are not there. Build it again.": "%s: %d redak/redaka svijeta %s vode na datoteke kojih nema. Izgradi ga ponovno."
+  "%s: %d line(s) of the world %s point at files that are not there. Build it again.": "%s: %d redak/redaka svijeta %s vode na datoteke kojih nema. Izgradi ga ponovno.",
+  "Back": "Natrag",
+  "Forward": "Naprijed"
  },
  "log": [
   [

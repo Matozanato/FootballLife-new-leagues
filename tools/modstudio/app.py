@@ -404,8 +404,26 @@ class Main(QMainWindow):
         h.setContentsMargins(10, 0, 10, 0)
         h.setSpacing(2)
         self.nav_group = QButtonGroup(self)
+        self.nav_history, self.nav_at = [], -1
         self.nav_buttons, self.nav_group_of, self.nav_folds, self.nav_heads = {}, {}, {}, {}
         self.nav_titles = {}
+        # 0.2.5: back and forward through the pages you had open, as in a browser (Vicentico 16.10.:
+        # could not find his way back to Build details). Alt+Left/Right and the mouse's side
+        # buttons do the same; only whole pages are remembered, not what was picked on them.
+        self.nav_back, self.nav_fwd = QToolButton(), QToolButton()
+        for b, text, tip, go, keys in ((self.nav_back, "◀", _("Back"), self.go_back, (QKeySequence.Back, "Alt+Left")),
+                                       (self.nav_fwd, "▶", _("Forward"), self.go_forward, (QKeySequence.Forward, "Alt+Right"))):
+            b.setObjectName("navitem")
+            b.setText(text)
+            b.setToolTip(tip)
+            b.setAccessibleName(tip)
+            b.setCursor(Qt.PointingHandCursor)
+            b.setEnabled(False)
+            b.clicked.connect(go)
+            for k in keys:
+                QShortcut(QKeySequence(k), self, go)
+            h.addWidget(b)
+        h.addSpacing(8)
         titles = {cls.__name__: cls.title for _c, group in page_groups() for cls in group}
         n = 0
         for caption, folds, sections in NAV:
@@ -541,6 +559,14 @@ class Main(QMainWindow):
         return self.pages[name]
 
     def open_page(self, name):
+        if not getattr(self, "_nav_jump", False) and name in self.pages:
+            hist = self.nav_history
+            if not hist or hist[self.nav_at] != name:
+                del hist[self.nav_at + 1:]
+                hist.append(name)
+                del hist[:-50]
+                self.nav_at = len(hist) - 1
+            self._nav_arrows()
         p = self.pages[name]
         key = self.section_of.get(name) or OPEN_FOR.get(name)
         tabs = self.section_tabs.get(key) if name in self.section_of else None
@@ -566,6 +592,29 @@ class Main(QMainWindow):
             p.shown()
         except Exception as e:
             p.say(_("This section could not be shown: %s") % e, "err")
+
+    def _nav_arrows(self):
+        self.nav_back.setEnabled(self.nav_at > 0)
+        self.nav_fwd.setEnabled(self.nav_at < len(self.nav_history) - 1)
+
+    def _nav_go(self, step):
+        """open the page `step` places away in the history without adding to it"""
+        at = self.nav_at + step
+        if not 0 <= at < len(self.nav_history):
+            return
+        self.nav_at = at
+        self._nav_jump = True
+        try:
+            self.open_page(self.nav_history[at])
+        finally:
+            self._nav_jump = False
+        self._nav_arrows()
+
+    def go_back(self):
+        self._nav_go(-1)
+
+    def go_forward(self):
+        self._nav_go(1)
 
     # ---- shared state ----
     def ini(self):
