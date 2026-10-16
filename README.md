@@ -36,6 +36,7 @@ who covered a big part of what the project costs
 <td align="center">⭐<br><b>Pierro1912</b></td>
 <td align="center">⭐<br><b>David.BDJ</b></td>
 <td align="center">⭐<br><b>Facemaker Jacobson</b></td>
+<td align="center">⭐<br><b>Cristian B.</b></td>
 </tr>
 </table>
 
@@ -285,7 +286,9 @@ worst bugs here were found only because vmardonesdev played further than anyone 
   ([#124](https://github.com/Matozanato/FootballLife-new-leagues/issues/124)).
 - Code, too: [#139](https://github.com/Matozanato/FootballLife-new-leagues/pull/139) gives a
   February-December league its national cup and super cup (`fl26swiss`, `fl26join`, the League
-  Builder and a test of its own), in 0.2.2.
+  Builder and a test of its own), in 0.2.2. And
+  [#146](https://github.com/Matozanato/FootballLife-new-leagues/pull/146), with nissindiaz: the modern CONMEBOL cups (Libertadores qualifying in
+  phases, the pre-Sudamericana, the Recopa and the Sudamericana play-off), going into 0.2.5.
 - The night 0.2.2 came out: the traceback that showed why Build stopped for everyone whose game
   is not in `C:\Football Life 2026`, sent the moment it happened, and the fix tested and
   confirmed within minutes, so 0.2.3 could go out for everyone the same evening.
@@ -524,11 +527,15 @@ and other Latin American worlds and writes up every bug with screenshots:
 - **Hector** (Discord): crests and logos for the NewLife Database.
 - **LaraCroft** (Discord): asked for BATE Borisov on its own, which became 0.1.8's
   **Clubs in no league**, and for the clubs of a league listed A-Z; found the game's clubs
-  showing up in two Dutch leagues at once.
+  showing up in two Dutch leagues at once. In the 0.2.4 beta: Switzerland stuck to Greece again in
+  Select Team, a Player editor rating that came out lower in the game, and the wish to open an
+  installed world in Mod Studio.
 - **Xxspedd** (Discord): shared his own crest, kit, squad and rating scripts; the idea of
   matching a folder of crests to clubs by name (0.1.8's Import crests) is his, and he pointed
   out the missing third kit. 0.2.0's kits made from plain pictures (**Import kits** with
   `p1.png`, `g1.png` ...) use his png -> ftex conversion, from his kit tool, given to Mod Studio.
+  In the 0.2.4 beta: seven Serie B clubs of the game that NewLife did not pair, and the old crest
+  that stayed on a replaced club.
 
 - **DavidBDJ** ([DavidBDJ](https://github.com/DavidBDJ)): the UEFA league phase as one scrolling
   table in Competition Info (the game's league standings page for the 36 clubs instead of four
@@ -536,16 +543,21 @@ and other Latin American worlds and writes up every bug with screenshots:
   and logs from two seasons in Austria
   ([#128](https://github.com/Matozanato/FootballLife-new-leagues/issues/128),
   [#129](https://github.com/Matozanato/FootballLife-new-leagues/issues/129)): the kits of new
-  clubs that went to a folder the Kit Server does not read, and the European qualifiers.
+  clubs that went to a folder the Kit Server does not read, and the European qualifiers. In the
+  0.2.4 beta: the main menu background stuck on a league, 183 players all named "Tahj" in the
+  modpack, and the first full report on NewLife 1.5.
 - **B2Y26Arabia** ([B2Y26Arabia](https://github.com/B2Y26Arabia)): found the Kick Off > Cup
   crash with the Champions League of 36
   ([#100](https://github.com/Matozanato/FootballLife-new-leagues/issues/100)), plus new leagues
-  missing in Edit mode and the skin colour of linked faces.
+  missing in Edit mode and the skin colour of linked faces; a club crest that was not saved
+  ([#140](https://github.com/Matozanato/FootballLife-new-leagues/issues/140)) and a group of clubs with no league that stayed "not built yet"
+  ([#144](https://github.com/Matozanato/FootballLife-new-leagues/issues/144)).
 - **rickydicky4444** and **MIQABARI**: the UECL gameweeks shown wrong in the calendar
   ([#75](https://github.com/Matozanato/FootballLife-new-leagues/issues/75)) and a Master League
   creation crash ([#123](https://github.com/Matozanato/FootballLife-new-leagues/issues/123)).
 - **rwee** (Discord): the Champions League's January matchday landing on a league day in leagues
-  of 18 and 20, a full world recipe to reproduce with, and the squad limit regression of 0.1.8.
+  of 18 and 20, a full world recipe to reproduce with, and the squad limit regression of 0.1.8;
+  two full seasons of a 60-league world, cup by cup.
 - **Risto** (Discord): club by club corrections for the FL26 Modpack's smaller countries
   (Armenia, Moldova, the Faroe Islands ...) and the duplicate players in NewLife.
 - **Yanis** (Discord): `fl26caps` below the other modules in sider.ini, which led to Switch on
@@ -566,11 +578,50 @@ and other Latin American worlds and writes up every bug with screenshots:
   a day's events and five unwind words the survey missed, so the calendar shows its event icons
   again) and `patchset.py --calendar-ids N` for another calendar day size, with the module
   constants it needs ([#136](https://github.com/Matozanato/FootballLife-new-leagues/pull/136)),
-  both in 0.2.2; and the Copa do Nordeste with the South American cups on the way.
+  both in 0.2.2; the Copa do Nordeste and, with vmardonesdev, the modern South American cups
+  ([#146](https://github.com/Matozanato/FootballLife-new-leagues/pull/146), going into 0.2.5); and Master League removing clubs it took for
+  duplicates.
 - **Julio** (juliorivera10, Discord): players imported with a Spanish foot column all came out
   right-footed; Import players reads "Pie", "Zurdo", "Diestro" ... since 0.2.2.
 - **Uncle Lanscilo** (lanscilo, Discord): help for other players in #support, adding leagues
-  and reading their Build logs with them.
+  and reading their Build logs with them; Sparta gone from the list after a club swap, and a
+  club NewLife put in two leagues.
+- **vmican** (Discord): a long run of 0.2.4 beta reports: Build stopping on a club of more than
+  40 players and the crash after it, a package adding a game club twice, Install on a nearly full
+  C:, the final check after Import your world, and "New club here" doing nothing; and the
+  requests for a warning when a club is already in another league and a tick to leave a league
+  out.
+- **GiorgiM** (Discord): a Georgian world that crashed in its second season, with the saves and
+  logs that led to a super cup with no clubs in it.
+- **bythezl19** (Discord): the second season's European places given by squad strength instead
+  of the table, and the Europa League qualifiers skipped, with logs.
+- **quicksite** (Discord): a zip that could not be dropped on the window, and a modpack
+  scoreboard that never showed.
+- **fjchivvdub** (Discord): Serbian clubs in Argentinian kits, and a Master League with Partizan
+  stuck after the last cutscene.
+- **ZeDosCaes21** (Discord): Import kits with the game under Program Files, which ended in a raw
+  "access denied".
+- **ELBastos** (Discord): the modpack's kits not loading, and an Install of a big zip cut short.
+- **Konkubent**, **beni_93** and **jojofiaz** (Discord): modpack clubs in the wrong kits, from a
+  world that had lost its kit data.
+- **Tysonche35** (Discord): the Serbian Superliga club by club, and African clubs without
+  players that crashed the club select.
+- **diwwanmago** (Discord): a modpack crash on a new Master League, followed to the end.
+- **bikolunar42** (Discord): a UEFA league phase that was never drawn, down to old module lines
+  in sider.ini, and the event icons gone from Advance time.
+- **lmazot** (Discord): Mod Studio closing during Build (since 0.2.3 it writes `crash.log`),
+  and the Dutch and national team matches that were skipped.
+- **Erax** (Discord): an invented league of two divisions whose league cup broke, a stadium left
+  dark, and the Best Player in Europe award going to the wrong player.
+- **juanjose6124** (Discord): a duplicated club in the beta, with the Build logs to check it.
+- **antoniodias_pt** (Discord): João Cancelo a free agent in the game while Mod Studio had him
+  at Barcelona, the case behind NewLife keeping the players of a club outside its top 30.
+- **bruce_wayne** (avro_constantine, Discord): Build stopping on a club of more than 40, and a
+  crash at 99% while saving a new Master League.
+- **Sasukidas** (Discord): an empty Copa Sudamericana in the first season.
+- **diablofumao** (Discord): an exhibition with modpack clubs that never started, with logs.
+- **gxldemorci** (Discord): a best eleven of only defenders after a faces update.
+- **General Kreutaa** (Discord): the scoreboard of another country's league in the modpack.
 
 Reports are welcome from anyone: open an
 [issue](https://github.com/Matozanato/FootballLife-new-leagues/issues) with what you
@@ -641,7 +692,7 @@ the African leagues' League Info panel, more competitions and formats). If you w
 along: **[ko-fi.com/mata28](https://ko-fi.com/mata28)**. Testing and good bug reports help just
 as much — see the [testing guide](docs/developers/testing-guide.md).
 
-Thank you to everyone who has: **Thunder105**, **GutGut**, **LaraCroft**, **Pierro1912**, **David.BDJ** and **Facemaker Jacobson**. Supporters are listed at
+Thank you to everyone who has: **Thunder105**, **GutGut**, **LaraCroft**, **Pierro1912**, **David.BDJ**, **Facemaker Jacobson** and **Cristian B.** Supporters are listed at
 the top of this page.
 
 ## Licence and credits
@@ -657,7 +708,7 @@ Contributors, and what each of them did, are listed in
 [The people who made this better](#the-people-who-made-this-better) near the top: above all
 **vmardonesdev** and **Alikhaled_727**, **vector360** and **jibibi**, and **Stagnant09**, **pioup38**, **bobzera**,
 **spursfan07**, **Amir**, **victormican**, **Alby17**, **jyanj083-dotcom**, **Gabyyy2008**, **alexfe87**,
-**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9**, **Xxspedd**, **n1ne**, **LaraCroft**, **AlexRufolo**, **DavidBDJ**, **B2Y26Arabia**, **rwee**, **Risto**, **Yanis**, **LumpierTheGunner**, **Bon Kirk**, **wishfulshot**, **beny609o**, **Nickdaw**, **the_pelado**, **capital030**, **novarama** (moderator), **rickydicky4444**, **MIQABARI**, **nissindiaz**, **Julio** and **Uncle Lanscilo**.
+**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9**, **Xxspedd**, **n1ne**, **LaraCroft**, **AlexRufolo**, **DavidBDJ**, **B2Y26Arabia**, **rwee**, **Risto**, **Yanis**, **LumpierTheGunner**, **Bon Kirk**, **wishfulshot**, **beny609o**, **Nickdaw**, **the_pelado**, **capital030**, **novarama** (moderator), **rickydicky4444**, **MIQABARI**, **nissindiaz**, **Julio**, **Uncle Lanscilo**, **vmican**, **GiorgiM**, **bythezl19**, **quicksite**, **fjchivvdub**, **ZeDosCaes21**, **ELBastos**, **Konkubent**, **beni_93**, **jojofiaz**, **Tysonche35**, **diwwanmago**, **bikolunar42**, **lmazot**, **Erax**, **juanjose6124**, **antoniodias_pt**, **bruce_wayne**, **Sasukidas**, **diablofumao**, **gxldemorci** and **General Kreutaa**.
 
 The licence asks nothing of you. I do: **if you use these findings, addresses, patch sets
 or tools in a mod, credit this work and link back** — see
