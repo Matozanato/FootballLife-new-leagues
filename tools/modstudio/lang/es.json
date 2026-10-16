@@ -1773,7 +1773,10 @@
   "squad changed": "plantilla cambiada",
   "squad changed": "plantilla cambiada",
   "%d league": "%d liga",
-  "%d new club": "%d club nuevo"
+  "%d new club": "%d club nuevo",
+  "%s: %d line(s) that %s added point at files that are not there: its install did not finish. Install that zip again.": "%s: %d línea(s) que añadió %s apuntan a archivos que no están: su instalación no terminó. Instala ese zip otra vez.",
+  "%s: %d line(s) of the world %s point at files that are not there: its install did not finish. Install the world's zip again.": "%s: %d línea(s) del mundo %s apuntan a archivos que no están: su instalación no terminó. Instala otra vez el zip del mundo.",
+  "%s: %d line(s) of the world %s point at files that are not there. Build it again.": "%s: %d línea(s) del mundo %s apuntan a archivos que no están. Constrúyelo otra vez."
  },
  "log": [
   [

@@ -585,6 +585,7 @@ class Installer:
         self.rec = {"name": name, "time": time.strftime("%Y%m%d-%H%M%S"), "created": [], "replaced": [],
                     "ini": [], "map_added": {}, "map_removed": {}, "parts": []}
         self.sd = game.sider_dir
+        self.merges = []                  # (map, its file in the mod, the game's map file): after the copies
 
     def rel(self, p):
         return os.path.relpath(p, self.sd)
@@ -616,6 +617,12 @@ class Installer:
             self.log("%s: %s" % (p.kind, p.name))
             getattr(self, "do_" + p.kind)(p, root_where)
             self.rec["parts"].append([p.kind, p.name])
+        # B29 (ELBastos): a big zip takes minutes to copy, and an install stopped half way (Mod
+        # Studio closed while it "hung") left the map lines of the parts done so far pointing at
+        # folders of parts never copied. The lines go in only once every file is there.
+        for m, src, dst in self.merges:
+            self.merge_map(m, src, dst)
+        self.merges = []
         rows = records(self.sd)
         rows.append(self.rec)
         _save(self.sd, rows)
@@ -700,11 +707,11 @@ class Installer:
                 real = lower_names(p.src).get(low)
                 src = os.path.join(p.src, real) if real else None
             if src and os.path.exists(src):
-                self.merge_map(m, src, os.path.join(dst, m.file))
+                self.merges.append((m, src, os.path.join(dst, m.file)))
         if p.map_line and s:
             m = next((m for m in s.maps if m.cols and m.cols[0].kind == "comp"), None)
             if m is not None:
-                self.merge_map(m, p.map_line, os.path.join(dst, m.file))
+                self.merges.append((m, p.map_line, os.path.join(dst, m.file)))
 
     def match_comps(self, m, theirs):
         """put each competition line on the competition its comment names, in the world in the game"""

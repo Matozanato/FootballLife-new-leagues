@@ -366,8 +366,15 @@ def world_problems(game, ini, recipe=None):
     return out
 
 
+ADDED = re.compile(r"^#\s*-+\s*added by FL26 Mod Studio:\s*(.*?)\s*-*\s*$")   # installer.merge_map's heading
+OURS = "FL26 Mod Studio:"                  # the end of a line Build or a world zip wrote (installer.OUR_LINE)
+
+
 def map_problems(game):
-    """content-server map lines that point at a folder or file that is not in the library"""
+    """content-server map lines that point at a folder or file that is not in the library; the
+    lines a zip brought (Install mods' "added by" heading, or a world's own lines) are counted
+    apart, per zip or world: an install that stopped half way leaves those (B29)"""
+    from . import installer
     out = []
     for s in S.SERVERS:
         if not s.library or not s.installed(game.content_dir):
@@ -378,14 +385,39 @@ def map_problems(game):
             items = [i for i, c in enumerate(m.cols) if c.kind == "item"]
             bad = 0
             first = None
-            for r in mf.rows():
+            pack, of_pack, of_world = None, {}, {}
+            for r in mf.items:
+                if not hasattr(r, "fields"):
+                    h = ADDED.match(r.strip())
+                    if h:
+                        pack = h.group(1)
+                    continue
                 if not r.enabled:
                     continue
-                for i in items:
-                    v = r.fields[i] if i < len(r.fields) else ""
-                    if v and S.norm_item(v) not in lib:
-                        bad += 1
-                        first = first or v
+                miss = [v for v in (r.fields[i] if i < len(r.fields) else "" for i in items)
+                        if v and S.norm_item(v) not in lib]
+                if not miss:
+                    continue
+                world = miss[0].replace("/", "\\").split("\\")[0] if OURS in r.comment else ""
+                if pack:
+                    of_pack[pack] = of_pack.get(pack, 0) + 1
+                elif world.startswith("_FL26"):
+                    of_world[world] = of_world.get(world, 0) + 1
+                else:
+                    bad += len(miss)
+                    first = first or miss[0]
+            for name, n in of_pack.items():
+                out.append(("err", s.title, _("%s: %d line(s) that %s added point at files that are not there: "
+                                              "its install did not finish. Install that zip again.")
+                            % (m.file, n, name), "Install"))
+            for world, n in of_world.items():
+                if installer.ready_world(game, world):
+                    out.append(("err", s.title, _("%s: %d line(s) of the world %s point at files that are not "
+                                                  "there: its install did not finish. Install the world's zip again.")
+                                % (m.file, n, world), "Install"))
+                else:
+                    out.append(("err", s.title, _("%s: %d line(s) of the world %s point at files that are not "
+                                                  "there. Build it again.") % (m.file, n, world), "Build"))
             if bad:
                 out.append(("warn", s.title, _("%s: %d line(s) point at items that are not in the library (e.g. %s)")
                             % (m.file, bad, first), PAGE_OF.get(s.key, "Servers")))
