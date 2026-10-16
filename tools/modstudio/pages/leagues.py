@@ -5,12 +5,15 @@ from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QBrush, QColor, QPixmap
 from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QHBoxLayout, QLabel, QLineEdit, QMenu,
                                QPushButton, QSplitter, QStackedWidget, QToolButton, QTreeWidget,
-                               QTreeWidgetItem, QVBoxLayout, QWidget, QFormLayout, QGridLayout, QScrollArea)
+                               QTreeWidgetItem, QVBoxLayout, QWidget, QFormLayout, QGridLayout, QScrollArea,
+                               QTableWidget, QTableWidgetItem)
+import fl26world
 
 from ..i18n import _
 from ..ui import hint, row
 from .. import theme
-from .builder import BuilderPage, GameLeagues, fmt_text, europe_text, tier_of, pixmap, others_labels
+from .builder import (BuilderPage, GameLeagues, fmt_text, europe_text, tier_of, pixmap, others_labels,
+                      built_plan, built_league, select_team_text)
 
 CONTINENTS = ((2, "Europe"), (3, "Asia"), (4, "South America"), (5, "Africa"),
               (6, "North and Central America"), (7, "Oceania"), (0, "Other"))
@@ -160,7 +163,14 @@ class Leagues(BuilderPage):
         self.tree.moved.connect(lambda: QTimer.singleShot(0, self.fill))
         lv.addWidget(self.tree, 1)
         self.count = hint("")
-        lv.addWidget(self.count)
+        # B93 (vmican, 16.10.): the 0.2.3 table of places is back -- the order and where the last
+        # Build put each league in Select Team -- behind a button next to the counter
+        self.b_places = QPushButton(_("Places in Select Team"))
+        self.b_places.setCheckable(True)
+        self.b_places.setToolTip(_("The order of your leagues and where the last Build put each one in "
+                                   "Select Team. * = the order changed since: Build again to see where it goes."))
+        self.b_places.toggled.connect(lambda *_a: self.show_current())
+        lv.addWidget(row(self.count, "stretch", self.b_places))
         split.addWidget(left)
 
         self.right = QStackedWidget()
@@ -233,6 +243,19 @@ class Leagues(BuilderPage):
         self.empty = hint(_("Pick a league on the left."))
         self.empty.setAlignment(Qt.AlignCenter)
         self.right.addWidget(self.empty)
+        # the places table (B93)
+        self.places = QTableWidget(0, 6)
+        self.places.setHorizontalHeaderLabels(["#", _("League"), _("Country"), _("Division"), _("Select Team"),
+                                               _("League ID")])
+        self.places.horizontalHeaderItem(0).setToolTip(_("The league's place in the order: the first ones get a "
+                                                         "place in Select Team"))
+        self.places.horizontalHeaderItem(4).setToolTip(_("Where the last Build put the league in Select Team"))
+        self.places.verticalHeader().hide()
+        self.places.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.places.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.places.setAlternatingRowColors(True)
+        self.places.horizontalHeader().setStretchLastSection(True)
+        self.right.addWidget(self.places)
         split.addWidget(self.right)
         split.setSizes([340, 900])
         split.setStretchFactor(1, 1)
@@ -354,11 +377,58 @@ class Leagues(BuilderPage):
         if pick:
             self.tree.setCurrentItem(pick)
         self.show_current()
-        ours = len(self.project.recipe["leagues"])
-        for (b, text), n in zip(self.chips, (total, kinds.get("ours", 0), kinds.get("changed", 0))):
+        # B93 (vmican, 16.10.): a group of clubs in no league ("Other Europe") is not a league --
+        # it is counted apart, and the leagues with a place in Select Team are counted too
+        r = self.project.recipe
+        groups = sum(1 for L in r["leagues"] if L.get("others"))
+        ours = len(r["leagues"]) - groups
+        total -= groups
+        for (b, text), n in zip(self.chips, (total, ours, kinds.get("changed", 0))):
             b.setText("%s  %d" % (text, n))
-        self.count.setText(_("%d leagues: %d of the game, %d of yours.") % (total, total - ours, ours)
-                           if shown == total else _("%d of %d leagues shown.") % (shown, total))
+        text = (_("%d leagues: %d of the game, %d of yours.") % (total, total - ours, ours)
+                if shown == total + groups else _("%d of %d leagues shown.") % (shown, total + groups))
+        if groups:
+            text += "  " + _("%d groups of clubs in no league.") % groups
+        plan = built_plan(self.app.game, r.get("world"))
+        if plan:
+            placed = sum(1 for p in plan.get("leagues") or [] if not p.get("others")
+                         and p.get("slot") not in (None, fl26world.NO_SLOT))
+            text += "  " + _("%d of yours with a place in Select Team.") % placed
+        self.count.setText(text)
+        self.fill_places(plan)
+
+    def fill_places(self, plan):
+        """the places table: the order and where the last Build put each league in Select Team
+        (the 0.2.3 New leagues columns # and Select Team, asked back by vmican, B93)"""
+        r = self.project.recipe
+        names = dict(self.project.parents)
+        order = [L["name"] for L in r["leagues"] if not L.get("others")]
+        was = [p.get("name") for p in (plan or {}).get("leagues") or []]
+        rows = sorted(r["leagues"], key=lambda L: (bool(L.get("others")), order.index(L["name"]) if L["name"] in order else 0))
+        self.places.setRowCount(len(rows))
+        for n, L in enumerate(rows):
+            up = L.get("above")
+            div = _("top") if up in (None, "") else _("below %s") % (names.get(up, up) if isinstance(up, int) else up)
+            t = tier_of(self.project, up)
+            if t:
+                div = "%d  (%s)" % (t, div)
+            b = built_league(self.app.game, r.get("world"), L["name"], plan or {})
+            cid = str(b["cid"]) if b.get("cid") is not None else (_("not built yet") if plan else "")
+            if L.get("others"):
+                num, seen, div, cid = "", _("no league (%s)") % others_labels().get(L["others"], L["others"]), "", ""
+            else:
+                num, seen = str(order.index(L["name"]) + 1), select_team_text(L, b, plan)
+                if seen and b and L["name"] in was and was.index(L["name"]) != order.index(L["name"]):
+                    seen += "  *"
+            for c, v in enumerate((num, L["name"], L.get("country", ""), div, seen, cid)):
+                it = QTableWidgetItem(v)
+                if c == 0:
+                    it.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                self.places.setItem(n, c, it)
+            pm = pixmap(L.get("logo"), 20)
+            if pm:
+                self.places.item(n, 1).setIcon(pm)
+        self.places.resizeColumnsToContents()
 
     def save_order(self):
         """the order on screen into the recipe: league_order for the list, and the recipe's
@@ -384,6 +454,9 @@ class Leagues(BuilderPage):
         return it.data(0, ROLE) if it else None
 
     def show_current(self):
+        if self.b_places.isChecked():
+            self.right.setCurrentWidget(self.places)
+            return
         e = self.current()
         if not e:
             self.right.setCurrentWidget(self.empty)
@@ -403,7 +476,7 @@ class Leagues(BuilderPage):
             self.right.setCurrentWidget(g)
 
     def show_ours(self, i):
-        from .builder import built_plan, built_league
+        from .builder import built_plan, built_league, world_dir, world_crest, world_logo
         P = self.project
         r = P.recipe
         L = r["leagues"][i]
@@ -430,13 +503,18 @@ class Leagues(BuilderPage):
         for k in ("Format", "Division", "Up / down", "Europe"):
             self.o_form.setRowVisible(self.o_rows[k], not others)
         self.o_low.setEnabled(not others)
-        pm = pixmap(L.get("logo"), 60)
+        # B89: a world installed from a zip carries no source pictures (the recipe's paths are the
+        # author's); the built world folder has every crest and logo, so fall back to those
+        wdir = world_dir(self.app.game, r.get("world"))
+        pm = pixmap(L.get("logo"), 60) or pixmap(world_logo(wdir, b.get("cid")), 60)
         self.o_logo.setPixmap(pm if pm else QPixmap())
         self.o_logo.setVisible(bool(pm))
-        self.show_crests(L)
+        self.show_crests(L, b, wdir)
 
-    def show_crests(self, L):
-        """the league's clubs, crest over short name, five to a row"""
+    def show_crests(self, L, b=None, wdir=""):
+        """the league's clubs, crest over short name, five to a row; `b` the built league (its team
+        ids) and `wdir` the world folder, for the crests the build wrote (B89: zip worlds)"""
+        teams = list((b or {}).get("teams") or [])
         while self.o_crests.count():
             w = self.o_crests.takeAt(0).widget()
             if w:
@@ -461,6 +539,9 @@ class Leagues(BuilderPage):
             cell.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
             cell.setFixedWidth(64)
             pm = pixmap(path, 44, kit)
+            if not pm:
+                tid = int(game[k]["id"]) if k in game else (teams[k] if k < len(teams) else None)
+                pm = pixmap(world_crest(wdir, tid), 44)
             if pm:
                 cell.setPixmap(pm)
             else:

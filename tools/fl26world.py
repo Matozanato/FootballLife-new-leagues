@@ -19,6 +19,9 @@ What comes from where:
   cid, region, tier, clubs, legs, name   the world's Competition / CompetitionRegulation rows
   above                                  the league whose relegation link (+0x00) names this one,
                                          shipped or ours (Ligue 2 is above France D3)
+  splittotal                             under a shipped split season (Jupiler Pro League): the
+                                         season's total row, which the game's season end runs on;
+                                         fl26chain moves the clubs over it, fl26comptab counts it
   promote / demote                       3 over a link, 0 where there is none -- the counts every
                                          world so far has used
   slot                                   the Select Team slot the regulation id has in the exe
@@ -58,7 +61,7 @@ import pesdb
 import mkleague as M
 
 FORMAT = "# fl26world 1"
-KEYS = ("cid", "region", "country", "conf", "slot", "tier", "above", "promote", "demote", "clubs", "legs",
+KEYS = ("cid", "region", "country", "conf", "slot", "tier", "above", "splittotal", "promote", "demote", "clubs", "legs",
         "cup", "exhibition", "scup", "kickoff", "cupall", "cuptop", "cuplow", "cupn",
         "lcup", "lcuplow", "lcupn")
 NO_SLOT = 123
@@ -516,6 +519,18 @@ def from_tables(root, base, countries_file=None):
             L["slot"] = DEFAULT_SLOT[i]
         leagues.append(L)
     leagues.sort(key=lambda L: L["id"])
+    # B92 (Belgium, 2026-10-16): a league of ours under the regular phase of a SHIPPED split
+    # season (Challenger Pro League under 155, the Jupiler Pro League's regular phase) names
+    # that season's total as splittotal=. The game's season end runs on the total (115), whose
+    # relegation link stays empty, so fl26chain moves the clubs itself, as for a split of ours,
+    # and fl26comptab raises the total's relegation count too (the League Info panel).
+    byid = {rid(g): g for g in rows}
+    for L in leagues:
+        up = byid.get(L.get("above"))
+        if L.get("above") in shipped and up is not None and up[M.R_TYPE] == 4 and fmt(up) == F_REGULAR:
+            tot = next((rid(h) for h in rows if h[M.R_TYPE] == SPLIT_TOTAL and h[M.R_CID] == up[M.R_CID]), None)
+            if tot is not None:
+                L["splittotal"] = tot
     splits = []
     for L in leagues:
         ph = sorted(phases.get(L["cid"], []))

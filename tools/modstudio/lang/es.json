@@ -1791,7 +1791,12 @@
   "Go to Build": "Ir a Construcción",
   "Opens My world > Build, where Build and install is": "Abre Mi mundo > Construcción, donde está Construir e instalar",
   "%s is a ready world, installed from a zip: nothing to build. Press Start the game and start a new Master League.": "%s es un mundo listo, instalado desde un zip: nada que construir. Pulsa Iniciar el juego y empieza una nueva Master League.",
-  "It is not in the game: My world > Activate on %s": "No está en el juego: Mi mundo > Activar en %s"
+  "It is not in the game: My world > Activate on %s": "No está en el juego: Mi mundo > Activar en %s",
+  "%d groups of clubs in no league.": "%d grupos de clubes sin liga.",
+  "%d of yours with a place in Select Team.": "%d de las tuyas con un lugar en Select Team.",
+  "Places in Select Team": "Lugares en Select Team",
+  "The league's place in the order: the first ones get a place in Select Team": "El lugar de la liga en el orden: las primeras consiguen un lugar en Select Team",
+  "The order of your leagues and where the last Build put each one in Select Team. * = the order changed since: Build again to see where it goes.": "El orden de tus ligas y dónde puso cada una el último Build en Select Team. * = el orden cambió desde entonces: vuelve a hacer Build para ver adónde va."
  },
  "log": [
   [

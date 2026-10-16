@@ -245,6 +245,10 @@ local function apply_world(world)
     if L.above and not inworld[L.above] then
       SHIPPED_DEMOTE[L.above] = math.max(SHIPPED_DEMOTE[L.above] or 0, L.promote or 3)
     end
+    -- under a shipped split season the League Info panel keys on the season's total (B92)
+    if L.splittotal and not inworld[L.splittotal] then
+      SHIPPED_DEMOTE[L.splittotal] = math.max(SHIPPED_DEMOTE[L.splittotal] or 0, L.promote or 3)
+    end
     if L.country then ID_COUNTRY[L.id] = L.country end
   end
 end

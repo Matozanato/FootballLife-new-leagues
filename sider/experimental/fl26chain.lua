@@ -119,6 +119,12 @@ local function from_world(world)
       local n = L.promote or 3
       -- the split's regular phase rides along: it plays the season the total's list decides
       chains[#chains + 1] = { L.above, L.id, n, n, L.splitabove or 0 }
+    elseif L.above and L.splittotal then
+      -- under the regular phase of a SHIPPED split season (Belgian Challenger Pro League under
+      -- the Jupiler Pro League, 2026-10-16): the game's season end runs on the total, whose
+      -- relegation link is empty, so the pair goes to the DLL over the total, the phase along
+      local n = L.promote or 3
+      chains[#chains + 1] = { L.splittotal, L.id, n, n, L.above }
     end
     if L.cup and L.cuptop and L.cuplow then
       cups[#cups + 1] = { L.cup, L.cuptop, L.cuplow, L.cupall ~= 0, L.cupn }

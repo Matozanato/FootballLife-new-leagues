@@ -140,6 +140,28 @@ def europe_text(L):
                      for pos, comp in sorted(L.get("europe") or [], key=lambda e: (int(e[0]) == B.CUP_WINNER, e[0])))
 
 
+def world_dir(g, world):
+    """the world's folder in livecpk; "" without a game or a world"""
+    return os.path.join(g.livecpk_dir, world) if world and g.ok() else ""
+
+
+def world_crest(wdir, tid):
+    """the crest the build wrote for team `tid` in the world folder, or None (B89: a world from a
+    zip has no source pictures, only these)"""
+    if not wdir or tid is None:
+        return None
+    p = os.path.join(wdir, "common", "render", "symbol", "flag", "e_%06d_r.png" % int(tid))
+    return p if os.path.isfile(p) else None
+
+
+def world_logo(wdir, cid):
+    """the league logo the build wrote for competition `cid`, or None"""
+    if not wdir or cid is None:
+        return None
+    p = os.path.join(wdir, "common", "render", "symbol", "emblemLc", "emb_%04d_l.png" % int(cid))
+    return p if os.path.isfile(p) else None
+
+
 def built_plan(g, world):
     """the world folder's leaguebuilder-plan.json, what the last Build made; None before the first"""
     if not world or not g.ok():
