@@ -327,8 +327,11 @@ LIBQ_ROOM = 6                             # Libertadores qualifying: 8 places, f
 # F2: 13 domestic clubs + 3 F1 winners -> 8 winners
 # F3: the game's native Libertadores qualifying regulation 8 -> 4 winners.
 LIBQ_NAME, LIBQ_CODE = "Pre-Libertadores", "FL_LIBQ"
-LIBQ_P1 = {"fill": 2, "days": [6, 13]}
-LIBQ_P2 = {"fill": 14, "days": [20, 27]}
+# The real calendar (CONMEBOL 2026 base dates, Wednesdays): F1 4/11 Feb, F2 18/25 Feb, the native F3
+# 4/11 Mar (fl26swiss moves reg 8/9/10 to the real days in a modern CONMEBOL world). F2 is filled
+# the day after F1's second leg.
+LIBQ_P1 = {"fill": 2, "days": [34, 41]}
+LIBQ_P2 = {"fill": 42, "days": [48, 55]}
 LIB_QUAL = 8
 LIB_ROOM = 8                              # Libertadores group stage: the pool clubs (73) ours replace, 8 (GitHub #127)
 SEASONS = ("august", "calendar")           # a new country's season: August-May, February-December
@@ -406,8 +409,12 @@ PRESEASON_DAYS = [186, 189, 192, 195, 198, 201, 205]
 CAF_SUPER_DAYS = [187, 190, 193, 196, 199, 202, 207]
 CAF_CL, CAF_CC = 6, 7                    # fl26world.CCUPS numbers of the two cups it takes
 SUDAM = 9                                # fl26world.CCUPS number of Copa Sudamericana
-SAM_FIRST_FILL, SAM_FIRST_DAY = 36, 44
-SAM_GROUP_FILL = 49                      # draw groups just after the national first stage
+# the national first stage: Tuesday 3 Mar (real 2026: 3-5 Mar). Filled after the Libertadores F2 (42), as
+# #146 had it (F2 on 14, this on 36): a club the Libertadores takes first is skipped here -- filled before
+# it, three first-stage winners also had a Libertadores place and the groups never started (2026-10-15)
+SAM_FIRST_FILL, SAM_FIRST_DAY = 45, 61
+SAM_GROUP_FILL = 70                      # groups drawn after the first stage and the Libertadores F3 (its four
+                                         # losers come in): F3's second leg is Wednesday 11 Mar (69)
 SAM_FIRST_TIES = 16                      # 32 clubs -> 16 national one-match ties
 SAM_FIRST_NAME, SAM_FIRST_CODE = "Copa Sudamericana", "FL_SUDA1"
 SAM_LIB_LOSERS = 4
@@ -419,7 +426,7 @@ SAM_SUPER_DAYS = (49, 50, 51, 52, 53, 54, 55)  # field of two uses the last: 24 
 # group thirds, two legs. Its eight winners join the eight Suda group winners
 # in the round of 16.
 SPO_NAME, SPO_CODE = "Copa Sudamericana", "FL_SUDAPO"
-SPO_FILL, SPO_DAYS = 140, (146, 153)
+SPO_FILL, SPO_DAYS = 148, (202, 209)    # real 2026: 22/29 Jul; filled when both group stages are done (147)
 LIB_GROUPS = 9
 LEAGUE_CUP_SIZES = (16, 8, 4)
 # A league cup's clubs past its 16, 8 or 4 play a pre-round first: the last 2x places of the
@@ -4366,6 +4373,7 @@ def sudamericana_playoffs(pl, root, db, log=print):
     except SystemExit as e:
         raise BuildError("Sudamericana play-off: %s" % e)
 
+    pl["spo_cid"] = cid                  # pictures(): the Sudamericana's emblem for it
     entry = []
     for k in range(8):
         entry += [(LIB_GROUPS + 1024 * (8 - k), 3),
@@ -4479,6 +4487,7 @@ def libertadores_qualifying(pl, root, db, log=print):
         )
 
     cid, m1, m2 = cids[0], free[0], free[1]
+    q["cid"] = cid                       # pictures(): the Libertadores' emblem for it
 
     # F1 = 3 ties; F2 = 8 ties.
     try:
@@ -5193,6 +5202,15 @@ def pictures(pl, root, base, log=print, game=None):
     cups = cup_emblems(pl)
     for cid, name, logo in cups:
         lbassets.league_logo(root, cid, name, have_picture(logo, name, log, "logo", "drawn emblem"))
+    # the modern CONMEBOL's technical competitions show their parent's emblem in the stage titles:
+    # the Libertadores qualifying phases the Libertadores' (the game's, 5), the Sudamericana first
+    # stage and play-off the Sudamericana's (2026-10-15: on id 145 they showed the Nations League's)
+    sud = next((c for c in pl.get("ccups") or [] if c.get("number") == SUDAM and c.get("cid")), None)
+    for dst, src in (((pl.get("libq") or {}).get("cid"), 5),
+                     ((pl.get("suda_first") or {}).get("cid"), sud and sud["cid"]),
+                     (pl.get("spo_cid"), sud and sud["cid"])):
+        if dst and src and lbassets.copy_emblem(root, src, dst, game, log):
+            log("  competition %d shows the emblem of %d" % (dst, src))
     log("  %d league logos, %d cup logos, %d club crests%s" % (
         len(pl["leagues"]), len(cups), sum(len(p["teams"]) - len(game_places(p))
                                            for p in pl["leagues"] + (pl.get("others") or [])),

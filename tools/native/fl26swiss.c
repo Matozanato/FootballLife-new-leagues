@@ -512,6 +512,11 @@ static int lib_path_has(uint32_t c);
 static uint32_t knockout_runner_now(uint16_t reg);
 static unsigned lib9_titleholders(uint32_t holder[2]);
 static int modern_conmebol(void);
+static void libr_remap(date_t* r, size_t have, uint16_t src, int sud);   /* the CONMEBOL real calendar */
+static void libr_legs(uint16_t id);
+static void libr_legs_mode(uint16_t id, unsigned mode);
+static uint32_t cday(uint32_t d);
+static int lib_f3_day(void);
 static void lib9_clean(u32vec* list);
 static void lib9_holders(u32vec* list);
 static void cont_swap(uint16_t id, u32vec* list, const char* where);
@@ -3894,6 +3899,11 @@ static int lib_path_has_except(uint32_t c, int skip)
     uint32_t cl[2 * LPRE_MAX];
     unsigned n = lpre_clubs(l, cl);
     if (has_club(cl, n, c)) return 1;
+    /* drawn already: its clubs are the ones in it. The ranks are read again only before the draw --
+       read later, a league that had started named another club (the 4th on day 70 was not the 4th
+       of day 2), and a Sudamericana first-stage winner was refused as "in the Libertadores"
+       (2026-10-15: the group stage never started) */
+    if (n) continue;
 
     for (unsigned j = 0; j < 2u * l->ties; j++) {
       if (!l->erank[j]) continue;
@@ -3963,7 +3973,7 @@ static void lib9_clean(u32vec* list)
 
   int any = 0;
   for (int i = 0; i < g_nlpre && !any; i++) any = g_lpre[i].alias;
-  if (!any || today() >= 34) return;
+  if (!any || today() >= lib_f3_day()) return;
 
   unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
   void* blk = o ? *(void**)(o + 0x48) : 0;
@@ -4181,7 +4191,7 @@ static void lib8_swap(int i)
   lpre_t* l = &g_lpre[i];
   int d = today();
 
-  if (!l->feed8 || l->ties != 8 || d <= l->days[1] || d >= 34)
+  if (!l->feed8 || l->ties != 8 || d <= l->days[1] || d >= lib_f3_day())
     return;
 
   uint32_t win[LPRE_TIES];
@@ -5037,10 +5047,28 @@ static uint64_t ccup_dates(int k, int ko, uint16_t id, uint64_t reg, void* vec)
      the normal borrowed calendar instead. */
   int keep = cc->cal && (!ko || !cc->nd);
   uint16_t src = ko ? (keep ? R_LIBKO : R_UCLKO) : R_LIBGROUP;
+  /* the real calendar: the knockout's final is one match (legs mode 1) -- reg 10's, which the game
+     reads to shape these records, and the cup's own, which its tie builder reads */
+  if (keep && ko && modern_conmebol()) { libr_legs(R_LIBKO); libr_legs(cc->ko); }
   uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | src, vec);
   vec_t* v = (vec_t*)vec;
   size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
   date_t* r = (date_t*)v->b;
+  if (keep && modern_conmebol()) libr_remap(r, have, src, 1);
+  /* the Recopa (a two-club cup on the South American calendar): two legs, as the real one --
+     Wednesdays 18 and 25 Feb (48/55), the final's round 0x35 first and second leg, its row two-legged */
+  if (ko && cc->cal && !cc->groups && cc->n == 2 && modern_conmebol() && have >= 2) {
+    libr_legs_mode(cc->ko, 2);
+    r[0].day = cday(48); r[0].round = 0x35; r[0].kind = 0;
+    r[1].day = cday(55); r[1].round = 0x35; r[1].kind = 1;
+    v->e = v->b + 2 * sizeof(date_t);
+    static int said_recopa;
+    if (!said_recopa++) {
+      char a[32], b[32];
+      logf("fl26swiss: cup reg %u -- the Recopa in two legs, %s and %s", (unsigned)id, dstr(r[0].day, a, sizeof a), dstr(r[1].day, b, sizeof b));
+    }
+    return rv;
+  }
   size_t want = ko ? ((cc->nd && !cc->like) ? cc->nd : 7) : 6;   /* like here: an old row, the old days */
   static unsigned said[MAX_CCUP];
   unsigned bit = ko ? 1 : 2;
@@ -5848,7 +5876,7 @@ static int libq_f3_ready(void);
 static int libq_redirect_live(void)
 {
   int d = today();
-  if (d < 0 || d >= 34) return 0;
+  if (d < 0 || d >= lib_f3_day()) return 0;
 
   for (int i = 0; i < g_nlpre; i++)
     if (g_lpre[i].alias && g_lpre[i].feed8)
@@ -6295,7 +6323,7 @@ static int libq_page_phases(uint16_t* order)
     n++;
   }
 
-  if (n && (libq_f3_ready() || d >= 34))
+  if (n && (libq_f3_ready() || d >= lib_f3_day()))
     order[n++] = CONM_LIBQ_REG;
 
   return n;
@@ -9053,6 +9081,100 @@ static uint32_t midweek(uint32_t d)
   return (uint32_t)(((int)d + 365 + to[d % 7]) % 365);
 }
 
+/* ---- the CONMEBOL cups on their real calendar (2026, CONMEBOL's base dates) ----
+ * The game dates the Libertadores from fixed tables (0x141583980, lab/rea/funcoes): F3 (reg 8)
+ * 34/41, groups (reg 9) 62..139, knockout (reg 10) 163..331 with a two-leg final. In a modern
+ * CONMEBOL world (modern_conmebol) they are moved to the real ones, the Libertadores on
+ * Wednesdays and the Sudamericana (cal=1, ccup_dates) on the Thursdays of the same weeks:
+ *   F3 4/11 Mar (62/69); groups 8, 15, 29 Apr, 6, 20, 27 May (97 ... 146);
+ *   round of 16 12/19 Aug, quarter-finals 9/16 Sep, semi-finals 21/28 Oct, final Sat 28 Nov (331),
+ *   one match (legs mode 1: 0x14157f790 makes the final and third place one match, and the tie
+ *   builder's one-match test reads the same field, +0x300 bits 29-31);
+ *   Sudamericana: groups a day later, round of 16 13/20 Aug, quarter-finals 10/17 Sep, semi-finals
+ *   15/22 Oct, final Sat 21 Nov (324).
+ * Nothing moves the season events: the Libertadores still opens and closes on day 0 and fills its
+ * groups when F3 ends (0x141345990). A day is the 2026 frame's, put on the same weekday of the
+ * competition's own calendar year (cday). The F1/F2, the Sudamericana first stage and play-off
+ * days are the world file's (leaguebuilder LIBQ_P1/P2, SAM_FIRST_DAY, SPO_DAYS). */
+static const uint16_t LIBR_F3[2] = { 62, 69 };
+static const uint16_t LIBR_GROUP[2][6] = { { 97, 104, 118, 125, 139, 146 }, { 98, 105, 119, 126, 140, 147 } };
+static int libr_ko(int sud, uint32_t round, uint32_t kind)
+{
+  int second = kind == 1;
+  switch (round) {
+  case 0x2e: return sud ? (second ? 231 : 224) : (second ? 230 : 223);
+  case 0x33: return sud ? (second ? 259 : 252) : (second ? 258 : 251);
+  case 0x34: return sud ? (second ? 294 : 287) : (second ? 300 : 293);
+  case 0x35: case 0x36: return sud ? 324 : 331;
+  }
+  return -1;
+}
+/* the calendar year these cups are in: the game date's year (they open and close on day 0) */
+static int libr_year(void)
+{
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  int y = blk ? *(uint16_t*)(blk + TODAY_OFF + 8) : 0;
+  return y < 1990 || y > 2200 ? 0 : y;
+}
+/* a day of the 2026 frame on the same weekday of that calendar year, moved by up to three days */
+static uint32_t cday(uint32_t d)
+{
+  int y = libr_year(), m = 1;
+  if (!y || d >= 365) return d;
+  while (m < 12 && d >= MONTH0[m]) m++;
+  int s = ((int)((d + 3) % 7) - dow(y, m, (int)(d - MONTH0[m - 1]) + 1) + 7) % 7;
+  if (s > 3) s -= 7;
+  return (uint32_t)(((int)d + s + 365) % 365);
+}
+static int lib_f3_day(void) { return modern_conmebol() ? (int)cday(LIBR_F3[0]) : 34; }
+/* +0x300 bits 29-31: 0 every round one match, 1 the final (and third place) one match, other: two legs */
+static void libr_legs_mode(uint16_t id, unsigned mode)
+{
+  unsigned char* r = get_rec(id);
+  if (!r) return;
+  uint32_t* f = (uint32_t*)(r + 0x300);
+  if (((*f >> 29) & 7) == mode) return;
+  logf("fl26swiss: reg %u -- legs mode %u -> %u (the real calendar)", (unsigned)id, (*f >> 29) & 7, mode);
+  *f = (*f & 0x1fffffffu) | (mode << 29);
+}
+static void libr_legs(uint16_t id) { libr_legs_mode(id, 1); }
+/* the records the game gave reg 8, 9 (and its replicas) or 10, on the real days */
+static void libr_remap(date_t* r, size_t have, uint16_t src, int sud)
+{
+  unsigned kind = src & 0x3ff;
+  for (size_t i = 0; r && i < have; i++) {
+    int d = -1;
+    if (kind == 8) d = LIBR_F3[r[i].kind == 1];
+    else if (kind == 9) d = r[i].round < 6 ? LIBR_GROUP[sud][r[i].round] : -1;
+    else if (kind == 10) d = libr_ko(sud, r[i].round, r[i].kind);
+    if (d >= 0) r[i].day = cday((uint32_t)d);
+  }
+  static int said[2][3]; int k = kind == 8 ? 0 : kind == 9 ? 1 : 2;
+  if (have && !said[sud][k]++) {
+    char a[32], b[32];
+    logf("fl26swiss: %s reg %u -- the real calendar: %u record(s), %s .. %s", sud ? "Sudamericana as" : "Libertadores",
+         (unsigned)src, (unsigned)have, dstr(r[0].day, a, sizeof a), dstr(r[have - 1].day, b, sizeof b));
+  }
+}
+static int libr_reg(uint16_t id)
+{
+  unsigned low = id & 0x3ff;
+  return (low == 8 && id <= 0x1008) || (low == 9 && id <= 0x2009) || id == 10;
+}
+static uint64_t libr_dates(uint16_t id, uint64_t reg, void* vec)
+{
+  if (id == 10) libr_legs(10);
+  uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)(reg, vec);
+  vec_t* v = (vec_t*)vec;
+  size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+  static int asked[3];
+  int k = (id & 0x3ff) == 8 ? 0 : (id & 0x3ff) == 9 ? 1 : 2;
+  if (asked[k]++ < 2) logf("fl26swiss: reg %u -- dates asked on day %d, %u record(s) from the game", (unsigned)id, today(), (unsigned)have);
+  libr_remap((date_t*)v->b, have, id, 0);
+  return rv;
+}
+
 uint64_t date_handler(uint64_t reg, void* vec)
 {
   uint16_t id = (uint16_t)reg;
@@ -9062,6 +9184,7 @@ uint64_t date_handler(uint64_t reg, void* vec)
     /* a career in a January league (China, Japan, ...) is built on day 0: measured 2026-10-05 */
     if ((t >= BUILD_DAY && t <= 240) || t == 0) { g_new_career = 1; logf("fl26swiss: a new career, built on day %d", t); }
   }
+  if (vec && libr_reg(id) && modern_conmebol()) return libr_dates(id, reg, vec);
   if (vec && g_ndlike) {
     for (int i = 0; i < g_ndlike; i++) if (g_dlike[i][0] == id) return datelike_dates(id, reg, vec);
   }

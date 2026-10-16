@@ -53,10 +53,17 @@ CID_COSMETIC_LOW = (50, 51, 52, 53, 54, 55, 57, 58, 64)
 LOW_CIDS = os.environ.get("FL26_LOW_CIDS") == "1"
 
 
+# Competition ids with no row in Competition.bin that the game still ships an emblem for
+# (common/render/symbol/emblemLc in dt15_x64.cpk, read 2026-10-15): 145 is the UEFA Nations
+# League's. A competition of ours on one showed that emblem (the Libertadores qualifying phases did),
+# and drawing ours over it would change the Nations League's everywhere, so they are never handed out.
+EMBLEM_ONLY_CIDS = {145}
+
+
 def cid_pool(cid_from=130):
     """competition ids in the order they are handed out: cid_from..255 (the safe low ones after
-    them only with FL26_LOW_CIDS=1, research)"""
-    return ([c for c in range(cid_from, CID_MAX + 1)]
+    them only with FL26_LOW_CIDS=1, research), less those the game has an emblem of its own for"""
+    return ([c for c in range(cid_from, CID_MAX + 1) if c not in EMBLEM_ONLY_CIDS]
             + ([c for c in CID_SAFE_LOW + CID_COSMETIC_LOW if c < cid_from] if LOW_CIDS else []))
 
 # Regulation ids that are free in the tables but not free in the game: a league built on one
