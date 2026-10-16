@@ -289,7 +289,9 @@ class Main(QMainWindow):
             else:
                 label, slot = it[0], it[1]
                 a = m.addAction(label if it[2:3] == [True] else _(label))
-                a.triggered.connect(slot)
+                # triggered(checked) would land in a slot's first default argument (the Language
+                # items' code, which became False and left the program in English)
+                a.triggered.connect(lambda _c=False, f=slot: f())
         b.setMenu(m)
         return b
 
@@ -774,7 +776,8 @@ class Main(QMainWindow):
                                 "The language changes when the program is started again.\n"
                                 "Jezik se mijenja kad se program ponovno pokrene.\n"
                                 "El idioma cambia al volver a abrir el programa.\n"
-                                "La langue change au prochain démarrage du programme.")
+                                "La langue change au prochain démarrage du programme.\n"
+                                "O idioma muda quando o programa for aberto de novo.")
 
     def guide(self):
         code = i18n.CODE
