@@ -14,7 +14,8 @@ FEATURED = [
      "places of the game's leagues, the calendar events lost after 0.2.0 and the July leagues "
      "that never reach the hub; and code: the national cup and super cup of February-December "
      "leagues (#139, 0.2.2); and the night 0.2.2 came out, the traceback of the Build "
-     "that stopped outside the default game folder, with the fix confirmed within minutes (0.2.3)"),
+     "that stopped outside the default game folder, with the fix confirmed within minutes (0.2.3); "
+     "the modern CONMEBOL cups with nissindiaz (#146, 0.2.5)"),
     ("Alikhaled_727", "Evo-Web, Mohamed_248 on GitHub",
      "the leagues outside Europe: Saudi Arabia, Egypt, Morocco, Asia and Africa, the CAF cups, "
      "the AFC Champions League Two and the league cup pre-round"),
@@ -75,17 +76,22 @@ EVERYONE = [
     ("Hector", "Discord", "crests and logos for the NewLife Database"),
     ("Xxspedd", "Discord",
      "kits made from plain pictures (his png -> ftex conversion, 0.2.0), and the idea of matching a "
-     "folder of crests to clubs by name"),
-    ("LaraCroft", "Discord", "Clubs in no league, clubs listed A-Z, the same club in two Dutch leagues"),
+     "folder of crests to clubs by name; Serie B clubs NewLife did not pair, and old crests on "
+     "replaced clubs"),
+    ("LaraCroft", "Discord", "Clubs in no league, clubs listed A-Z, the same club in two Dutch leagues, "
+     "Switzerland stuck to Greece and a Player editor rating lower in the game"),
     ("AlexRufolo", "GitHub, Discord",
      "First-season European clubs, clubs listed A-Z and the Korean league that never started"),
     ("DavidBDJ", "GitHub",
      "the UEFA league phase as one scrolling table in Competition Info (his code, 0.2.2), and full "
-     "test reports from Austria: kits of new clubs and the European qualifiers"),
-    ("B2Y26Arabia", "GitHub", "the Kick Off > Cup crash, Edit mode and the skin colour of linked faces"),
+     "test reports from Austria: kits of new clubs and the European qualifiers; a main menu "
+     "background stuck on a league and 183 players named Tahj"),
+    ("B2Y26Arabia", "GitHub", "the Kick Off > Cup crash, Edit mode and the skin colour of linked faces, "
+     "a crest not saved (#140) and a group with no league (#144)"),
     ("rickydicky4444", "GitHub", "the UECL gameweeks in the calendar"),
     ("MIQABARI", "GitHub", "a Master League creation crash"),
-    ("rwee", "Discord", "the Champions League's January matchday, a full world recipe and the squad limit"),
+    ("rwee", "Discord", "the Champions League's January matchday, a full world recipe, the squad limit "
+     "and two seasons of a 60-league world"),
     ("Risto", "Discord", "the modpack's smaller countries club by club, and NewLife duplicates"),
     ("Yanis", "Discord", "fl26caps below the other modules in sider.ini"),
     ("LumpierTheGunner", "Discord", "the Kit Server crash with editable kits and the competition id page"),
@@ -99,8 +105,51 @@ EVERYONE = [
      "a developer's look at Mod Studio: the poll's most thorough answer, NewLife's missing crests and refresh"),
     ("nissindiaz", "GitHub",
      "code for the calendar patch set: the event icons back (#135) and another calendar day size "
-     "with patchset.py --calendar-ids (#136), 0.2.2"),
+     "with patchset.py --calendar-ids (#136), 0.2.2; the modern South American cups with "
+     "vmardonesdev (#146, 0.2.5) and Master League removing clubs it took for duplicates"),
     ("Julio (juliorivera10)", "Discord", "a Spanish foot column that made every imported player right-footed"),
+    ("Uncle Lanscilo (lanscilo)", "Discord",
+     "help for other players in #support: adding leagues, reading Build logs; Sparta lost after a swap"),
+    ("vmican", "Discord",
+     "the 0.2.4 beta: clubs over 40 stopping Build, a game club added twice, Install on a full C:, New club here"),
+    ("GiorgiM", "Discord",
+     "a Georgian second-season crash, down to a super cup with no clubs"),
+    ("bythezl19", "Discord",
+     "second-season European places by squad strength, and skipped qualifiers"),
+    ("quicksite", "Discord",
+     "drag and drop of a zip, and a modpack scoreboard that never showed"),
+    ("fjchivvdub", "Discord",
+     "Serbian clubs in the wrong kits, and a Master League stuck after the cutscene"),
+    ("ZeDosCaes21", "Discord",
+     "Import kits under Program Files"),
+    ("ELBastos", "Discord",
+     "modpack kits not loading, and a big Install cut short"),
+    ("Konkubent, beni_93, jojofiaz", "Discord",
+     "modpack clubs in the wrong kits"),
+    ("Tysonche35", "Discord",
+     "the Serbian Superliga club by club, and African clubs without players"),
+    ("diwwanmago", "Discord",
+     "a modpack crash on a new Master League"),
+    ("bikolunar42", "Discord",
+     "a UEFA league phase never drawn, and lost event icons"),
+    ("lmazot", "Discord",
+     "Mod Studio closing during Build, and skipped national team matches"),
+    ("Erax", "Discord",
+     "a two-division invented league and its league cup, a dark stadium, a wrong award"),
+    ("juanjose6124", "Discord",
+     "a duplicated club in the beta"),
+    ("antoniodias_pt", "Discord",
+     "Cancelo a free agent, the case behind NewLife keeping players outside a club's top 30"),
+    ("bruce_wayne (avro_constantine)", "Discord",
+     "clubs over 40 in Build and a crash while saving a new Master League"),
+    ("Sasukidas", "Discord",
+     "an empty Copa Sudamericana in the first season"),
+    ("diablofumao", "Discord",
+     "an exhibition with modpack clubs that never started"),
+    ("gxldemorci", "Discord",
+     "a best eleven of only defenders"),
+    ("General Kreutaa", "Discord",
+     "another league's scoreboard in the modpack"),
 ]
 
 # the people who supported the project on Ko-fi (ko-fi.com/mata28), first first; the README's
