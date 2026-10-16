@@ -1779,7 +1779,13 @@
   "%s: %d line(s) of the world %s point at files that are not there: its install did not finish. Install the world's zip again.": "%s: %d línea(s) del mundo %s apuntan a archivos que no están: su instalación no terminó. Instala otra vez el zip del mundo.",
   "%s: %d line(s) of the world %s point at files that are not there. Build it again.": "%s: %d línea(s) del mundo %s apuntan a archivos que no están. Constrúyelo otra vez.",
   "Back": "Atrás",
-  "Forward": "Adelante"
+  "Forward": "Adelante",
+  "Undo": "Deshacer",
+  "Redo": "Rehacer",
+  "Take back the last change to your world (Ctrl+Z)": "Deshace el último cambio de tu mundo (Ctrl+Z)",
+  "Do the taken-back change again (Ctrl+Y)": "Vuelve a hacer el cambio deshecho (Ctrl+Y)",
+  "Change taken back": "Cambio deshecho",
+  "Change done again": "Cambio rehecho"
  },
  "log": [
   [

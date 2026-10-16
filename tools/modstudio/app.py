@@ -185,6 +185,20 @@ class Main(QMainWindow):
         sb.addPermanentWidget(self.status_busy)
         # edits of clubs, players and leagues go into the recipe at once; this says whether the
         # recipe file has them yet (poll, 11.10.: people looked for an Apply button)
+        # 0.2.5: Undo / Redo of the last change to your world (mato 16.10.), Ctrl+Z / Ctrl+Y when
+        # no text box has the keys
+        self.status_undo, self.status_redo = QPushButton("\u21b6 " + _("Undo")), QPushButton("\u21b7 " + _("Redo"))
+        for b, tip, go, key in ((self.status_undo, _("Take back the last change to your world (Ctrl+Z)"), self.undo, "Ctrl+Z"),
+                                (self.status_redo, _("Do the taken-back change again (Ctrl+Y)"), self.redo, "Ctrl+Y")):
+            b.setObjectName("statusbtn")
+            b.setFlat(True)
+            b.setCursor(Qt.PointingHandCursor)
+            b.setToolTip(tip)
+            b.setAccessibleName(tip)
+            b.setEnabled(False)
+            b.clicked.connect(go)
+            QShortcut(QKeySequence(key), self, go)
+            sb.addPermanentWidget(b)
         self.status_saved = QPushButton("")
         self.status_saved.setObjectName("statusbtn")
         self.status_saved.setFlat(True)
@@ -661,8 +675,37 @@ class Main(QMainWindow):
         from modstudio.pages.changes import WorldChangesDialog
         WorldChangesDialog(self, self.project).exec()
 
+    def _text_box_took(self, redo):
+        """a text box with the focus keeps Ctrl+Z / Ctrl+Y for its own text"""
+        from PySide6.QtWidgets import QLineEdit, QPlainTextEdit, QTextEdit
+        w = QApplication.focusWidget()
+        if isinstance(w, QLineEdit):
+            if w.isRedoAvailable() if redo else w.isUndoAvailable():
+                (w.redo if redo else w.undo)()
+                return True
+        elif isinstance(w, (QTextEdit, QPlainTextEdit)):
+            (w.redo if redo else w.undo)()
+            return True
+        return False
+
+    def undo(self):
+        if self._text_box_took(False):
+            return
+        if self.project.undo():
+            self.status(_("Change taken back"))
+            self.show_saved()
+
+    def redo(self):
+        if self._text_box_took(True):
+            return
+        if self.project.redo():
+            self.status(_("Change done again"))
+            self.show_saved()
+
     def show_saved(self):
         p = self.project
+        self.status_undo.setEnabled(p.can_undo())
+        self.status_redo.setEnabled(p.can_redo())
         if p.dirty:
             self.status_saved.setText("● " + _("Saving..."))
             self.status_saved.setStyleSheet("color: %s;" % theme.ACCENT)

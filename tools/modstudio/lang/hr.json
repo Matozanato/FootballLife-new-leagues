@@ -1780,7 +1780,13 @@
   "%s: %d line(s) of the world %s point at files that are not there: its install did not finish. Install the world's zip again.": "%s: %d redak/redaka svijeta %s vode na datoteke kojih nema: instalacija nije završila. Instaliraj zip svijeta ponovno.",
   "%s: %d line(s) of the world %s point at files that are not there. Build it again.": "%s: %d redak/redaka svijeta %s vode na datoteke kojih nema. Izgradi ga ponovno.",
   "Back": "Natrag",
-  "Forward": "Naprijed"
+  "Forward": "Naprijed",
+  "Undo": "Poništi",
+  "Redo": "Ponovi",
+  "Take back the last change to your world (Ctrl+Z)": "Vrati zadnju izmjenu tvog svijeta (Ctrl+Z)",
+  "Do the taken-back change again (Ctrl+Y)": "Ponovi vraćenu izmjenu (Ctrl+Y)",
+  "Change taken back": "Izmjena vraćena",
+  "Change done again": "Izmjena ponovljena"
  },
  "log": [
   [
