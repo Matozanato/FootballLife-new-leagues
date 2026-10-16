@@ -52,6 +52,7 @@ exe. See `tools/flpaths.py`.
 | `test_retired_modules.py` | | `ensure_modules` switches a bundled module off only when its bundle is loaded too |
 | `test_shift_newlife.py` | | Remove club / Insert club move the league's NewLife ids with the places |
 | `test_squadimport.py` | | the table import reads the game's player id and the fields |
+| `test_ui_language.py` | `es`, `fr`, `pt` or `hr` (none: all four) | the whole window in that language (offscreen, a fake game): every page and tab, the menus and the state boxes show no text that is an English text of the translation catalogue left untranslated (as it is, or filled in with a name or number), and no English sentence missing from the catalogue; the builder's South American places and UEFA ranking lines come out translated by the `log` rules (and stay English on the command line); the world-name, move-club and world-in-the-way messages are translated |
 | `test_write_access.py` | | a game folder Windows does not let Mod Studio write in (a deny-write entry made with `icacls`, as under Program Files) is found before a write, a refused write is told from other errors, and the message says what to do (run as administrator, or move the game) |
 
 ```

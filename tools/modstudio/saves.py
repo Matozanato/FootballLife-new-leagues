@@ -249,7 +249,7 @@ def swap_saves(old, new, sider_dir=None, r=None, running=None, log=None, first_c
     log(_("Master League saves: %s -> %s, %s -> save%s") % (
         ACTIVE, name_of(old) if moved and moved[0][1] == out else "-",
         name_of(new) if not made else _("a new empty folder"),
-        ("; settings copied: " + ", ".join(shared)) if shared else ""))
+        (_("; settings copied: ") + ", ".join(shared)) if shared else ""))
     return {"old": old, "new": new, "out": out if moved and moved[0][1] == out else None,
             "fresh": made, "first": first, "backup": copy, "shared": shared, "root": r}
 

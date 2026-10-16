@@ -1,6 +1,6 @@
 """Install: drop a mod (zip, 7z, folder, .lua, .cpk), see what is in it, install it; and the
 list of mods installed with the program, each one removable"""
-import os, shutil, tempfile
+import os, re, shutil, tempfile
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush, QColor
@@ -171,7 +171,7 @@ class Install(Page):
         self.result.show()
         self.app.busy(True, _("Looking inside the mod"))
 
-        sider_dir = self.app.game.sider_dir
+        sider_dir, game = self.app.game.sider_dir, self.app.game
 
         def job(progress):
             top = I.unpack(path, self.work)
@@ -179,6 +179,11 @@ class Install(Page):
             for p in parts:
                 if p.kind == "world" and I.face_players(p.world_file) and I.face_pack_missing(sider_dir):
                     p.warnings.append(NO_FACES)
+                # B74: a world of the same name built on this PC: Install would stop on it, so say
+                # it now and leave that part out (translated and filled in already)
+                p.blocked = p.kind == "world" and I.world_in_the_way(game, p.name)
+                if p.blocked:
+                    p.warnings.insert(0, I.world_there(p.name))
             return parts
 
         run_job(job, self.looked, self.failed)
@@ -213,7 +218,7 @@ class Install(Page):
             it.setToolTip(2, p.src)
             if p.warnings:
                 it.setForeground(5, QBrush(QColor(theme.WARN)))
-            if p.kind in ("pack", "dll"):
+            if p.kind in ("pack", "dll") or getattr(p, "blocked", False):
                 it.setCheckState(0, Qt.Unchecked)
                 it.setFlags(it.flags() & ~Qt.ItemIsUserCheckable)
             self.tree.addTopLevelItem(it)
@@ -226,7 +231,7 @@ class Install(Page):
             self.where.setCurrentIndex(0)
             self.lines.setCurrentIndex(0)
         self.go.setText(_("Install the world") if world else _("Install"))
-        self.go.setEnabled(len(packs) < len(parts))
+        self.go.setEnabled(any(p.kind != "pack" and not getattr(p, "blocked", False) for p in parts))
         if packs and ask(self, "Import your world", _("%s holds %d league package(s). A league package goes into "
                                                  "your world, and into the game when you Build. "
                                                  "Add it to your world now?") % (os.path.basename(self.src), len(packs))):
@@ -386,7 +391,9 @@ class Install(Page):
             self.go.setEnabled(True)
             if denied(self, tb):
                 return
-            error(self, "Import your world", _("The install stopped:") + "\n\n" + tb.strip().splitlines()[-1] +
+            # the error's own words, without "ValueError:" and the like in front (B74)
+            why = re.sub(r"^(?:\w+\.)*\w*(?:Error|Exception|WorldThere): ", "", tb.strip().splitlines()[-1])
+            error(self, "Import your world", _("The install stopped:") + "\n\n" + why +
                   "\n\n" + _("What was done so far is in Restore points."))
         run_job(job, done, failed)
 

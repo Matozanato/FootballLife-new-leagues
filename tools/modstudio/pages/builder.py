@@ -1954,9 +1954,9 @@ class UefaRankDialog(Dialog):
         on, off = self.leagues()
         tiers = {}
         _places, _seed, notes = uefakey.assign(on, tiers)
-        lines = uefakey.table(on, tiers)
+        lines = [tr(l) for l in uefakey.table(on, tiers)]          # English in uefakey: "log" rules
         lines += ["", _("Not ranked, no European place: %s") % ", ".join(c["name"] for c in off)] if off else []
-        lines += [""] + notes if notes else []
+        lines += [""] + [tr(n) for n in notes] if notes else []
         self.view.setPlainText("\n".join(lines))
 
     def ok(self):
@@ -2092,7 +2092,9 @@ class SouthAmericaDialog(Dialog):
                                       "Mod Studio, your leagues' places first, then the game's leagues in turn.")))
         view = QPlainTextEdit()
         view.setReadOnly(True)
-        view.setPlainText("\n".join(l[4:] for l in B.samerica_lines(own, names, cups)[1:]))
+        # the builder's lines are English (the command line prints them); the language file's
+        # "log" rules put them in the user's language, as the Build log's
+        view.setPlainText("\n".join(tr(l)[4:] for l in B.samerica_lines(own, names, cups)[1:]))
         self.v.insertWidget(1, view, 1)
         self.scroll.hide()
         self.setMinimumSize(820, 360)

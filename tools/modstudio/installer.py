@@ -623,8 +623,7 @@ class Installer:
         for livecpk\\<world>), and its world file into modules, where the modules read it"""
         dst = os.path.join(self.game.livecpk_dir, p.name)
         if os.path.exists(dst) and not os.path.exists(os.path.join(dst, ".modstudio")):
-            raise ValueError("a world called %s is in livecpk already (built on this PC?): remove or "
-                             "rename that folder first" % p.name)
+            raise WorldThere(world_there(p.name))
         self.copy_tree(p.src, dst)
         own = os.path.join(dst, WORLD_FILE)
         if p.world_file and not os.path.exists(own):
@@ -743,6 +742,27 @@ class Installer:
         self.rec["map_added"].setdefault(k, []).extend(added + ["# ---- added by FL26 Mod Studio: %s ----" % self.name])
         self.rec["map_removed"].setdefault(k, []).extend(removed)
         self.log("  %s: %d line(s) added, %d replaced" % (m.file, len(added), len(removed)))
+
+
+# B74: a world zip whose world has the name of one built on this PC. The message is shown as it
+# is (no "ValueError:"), in the user's language; the Import panel says it before Install too
+def world_there(world):
+    from .i18n import _
+    return _("A world called %s is in the game already, built on this PC. Rename that world on its card "
+             "in My world (or delete it there), then install this one again.") % world
+
+
+class WorldThere(ValueError):
+    """do_world: livecpk\\<world> is there and not from Install mods (the text is translated)"""
+
+
+def world_in_the_way(game, world):
+    """True when installing the ready world `world` would stop at do_world: livecpk\\<world> is
+    there, Install mods did not put it there (no .modstudio) and no install record brings it in
+    (replace_world would take that one out first)"""
+    d = os.path.join(game.livecpk_dir, world)
+    return (bool(world) and os.path.isdir(d) and not os.path.exists(os.path.join(d, ".modstudio"))
+            and not installed_as(game.sider_dir, world))
 
 
 def ready_world(game, world):

@@ -328,6 +328,7 @@ class Project(QObject):
         """move the new club at place k of league `name` to the end of league `dst`, with its name,
         short name, crest, manager, formation, id, kits, NewLife id, player changes and every
         reference to it (pre-season cups, packs, players who join from it). None, or why not."""
+        from modstudio.i18n import _
         A, D = self.league(name), self.league(dst)
         if not A or not D or A is D:
             return "Pick another league."
@@ -336,8 +337,8 @@ class Project(QObject):
         nA, nD = int(A.get("clubs", 0)), int(D.get("clubs", 0))
         if not 0 <= k < nA:
             return "No such club."
-        if nA - 1 < B.CLUBS_MIN or nD + 1 > B.CLUBS_MAX:
-            return "A league takes %d to %d clubs." % (B.CLUBS_MIN, B.CLUBS_MAX)
+        if nA - 1 < B.CLUBS_MIN or nD + 1 > B.CLUBS_MAX:       # translated, then filled in (the page's _(bad) finds no key)
+            return _("A league takes %d to %d clubs.") % (B.CLUBS_MIN, B.CLUBS_MAX)
         vals = {key: (list(A.get(key) or []) + [empty] * nA)[k] for key, empty in self.PLACE_LISTS}
         nl_a = list((A.get("newlife") or {}).get("clubs") or [])
         nl_id = nl_a.pop(k) if k < len(nl_a) else None
@@ -359,7 +360,7 @@ class Project(QObject):
         for p in (self.recipe.get("packs") or {}).values():
             p["players"] = [MOVING if x == src else x for x in p.get("players") or []]
         if not self.shift_places(name, k, -1) or not self.shift_places(dst, nD, 1):
-            return "A league takes %d to %d clubs." % (B.CLUBS_MIN, B.CLUBS_MAX)
+            return _("A league takes %d to %d clubs.") % (B.CLUBS_MIN, B.CLUBS_MAX)
         for key, empty in self.PLACE_LISTS:
             if vals[key] != empty:
                 lst = list(D.get(key) or [])

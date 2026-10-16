@@ -662,7 +662,7 @@ class Main(QMainWindow):
         exe = os.path.join(g.sider_dir, "sider.exe") if g.folder else ""
         if g.ok() and os.path.isfile(exe) and os.path.isfile(g.ini_path):
             ver = file_version(exe)
-            st["sider"].set(("%s OK" % ver) if ver else "OK", "ok",
+            st["sider"].set((_("%s OK") % ver) if ver else _("OK"), "ok",
                             "%s\n%s" % (g.sider_dir, _("Sider %s") % ver if ver else ""))
         elif g.ok():
             st["sider"].set(_("not found"), "err", _("No Sider folder with sider.exe and sider.ini in the game folder"))
@@ -681,7 +681,7 @@ class Main(QMainWindow):
         state = checks.modules_state(g) if g.ok() else None
         if state and checks.modules_ok(state):
             n = state["total"]
-            st["modules"].set("%d / %d ON" % (n - len(state["left_off"]), n), "ok",
+            st["modules"].set(_("%d / %d ON") % (n - len(state["left_off"]), n), "ok",
                               _("Mod Studio's modules: installed, up to date and switched on"))
         elif state:
             names = state["missing"] + state["changed"] + state["off"]
