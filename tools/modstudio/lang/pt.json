@@ -1772,7 +1772,6 @@
   "A world called %s is in livecpk already: rename or delete that one first.": "Já existe um mundo chamado %s em livecpk: renomeie-o ou apague-o primeiro.",
   "%s is there again: move it away first.": "%s está lá outra vez: mova-o para outro lugar primeiro.",
   "squad changed": "plantel alterado",
-  "squad changed": "plantel alterado",
   "%d league": "%d campeonato",
   "%d new club": "%d clube novo",
   "%s: %d line(s) that %s added point at files that are not there: its install did not finish. Install that zip again.": "%s: %d linha(s) que %s acrescentou apontam para arquivos que não existem: a instalação não terminou. Instale esse zip de novo.",

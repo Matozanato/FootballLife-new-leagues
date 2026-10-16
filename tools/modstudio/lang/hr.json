@@ -1773,7 +1773,6 @@
   "A world called %s is in livecpk already: rename or delete that one first.": "Svijet imena %s već je u livecpk: najprije ga preimenuj ili obriši.",
   "%s is there again: move it away first.": "%s je opet ondje: najprije ga premjesti drugamo.",
   "squad changed": "kadar promijenjen",
-  "squad changed": "kadar promijenjen",
   "%d league": "%d liga",
   "%d new club": "%d novi klub",
   "%s: %d line(s) that %s added point at files that are not there: its install did not finish. Install that zip again.": "%s: %d redak/redaka koje je dodao %s vode na datoteke kojih nema: instalacija nije završila. Instaliraj taj zip ponovno.",
