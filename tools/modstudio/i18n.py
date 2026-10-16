@@ -33,11 +33,37 @@ def _dirs():
     return out
 
 
+_QT = []
+_QT_FILE = {"pt": "qtbase_pt_BR"}
+
+
+def _qt_buttons():
+    """0.2.4: the buttons Qt draws itself (Yes / No of a question, OK / Cancel of a name box)
+    stayed English in every language; Qt's own translations ship with PySide6"""
+    try:
+        from PySide6.QtCore import QCoreApplication, QLibraryInfo, QTranslator
+    except ImportError:
+        return
+    app = QCoreApplication.instance()
+    if app is None:
+        return
+    for t in _QT:
+        app.removeTranslator(t)
+    del _QT[:]
+    if CODE == "en":
+        return
+    t = QTranslator()
+    if t.load(_QT_FILE.get(CODE, "qtbase_" + CODE), QLibraryInfo.path(QLibraryInfo.TranslationsPath)):
+        app.installTranslator(t)
+        _QT.append(t)
+
+
 def set_language(code):
     global CODE
     CODE = code or "en"
     TEXT.clear()
     del RULES[:]
+    _qt_buttons()
     if CODE == "en":
         return
     for d in reversed(_dirs()):              # the builder's file first, ours on top of it
