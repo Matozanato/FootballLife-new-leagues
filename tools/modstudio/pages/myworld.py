@@ -108,10 +108,10 @@ def competitions(project):
 def info_text(r):
     """the dim line of a card: only what is known"""
     bits = [r["world"]] if r["title"] != r["world"] else []
-    if r.get("leagues") is not None:
-        bits.append(_("%d leagues") % r["leagues"])
+    if r.get("leagues") is not None:        # B70: "1 leagues"
+        bits.append(_("%d league") % 1 if r["leagues"] == 1 else _("%d leagues") % r["leagues"])
     if r.get("clubs") is not None:
-        bits.append(_("%d new clubs") % r["clubs"])
+        bits.append(_("%d new club") % 1 if r["clubs"] == 1 else _("%d new clubs") % r["clubs"])
     bits.append(_("built %s") % r["when"] if r["built"] and r["when"] else "" if r["built"] else _("not built yet"))
     if r["open"] and not r["live"]:
         bits.append(_("open here"))          # the tabs below change this one

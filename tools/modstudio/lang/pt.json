@@ -1771,7 +1771,10 @@
   "%s is not in livecpk any more: nothing to rename back.": "%s já não está em livecpk: não há nada para voltar ao nome anterior.",
   "A world called %s is in livecpk already: rename or delete that one first.": "Já existe um mundo chamado %s em livecpk: renomeie-o ou apague-o primeiro.",
   "%s is there again: move it away first.": "%s está lá outra vez: mova-o para outro lugar primeiro.",
-  "squad changed": "plantel alterado"
+  "squad changed": "plantel alterado",
+  "squad changed": "plantel alterado",
+  "%d league": "%d campeonato",
+  "%d new club": "%d clube novo"
  },
  "log": [
   [

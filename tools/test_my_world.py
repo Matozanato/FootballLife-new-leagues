@@ -7,6 +7,7 @@ Import your world and NewLife Database.
   - My world shows a card for each world on disk: the one in the game green (IN THE GAME NOW)
     with Export / Rename / Delete, Delete refused for it; another world has Put in the game, and
     pressing it switches that world on in sider.ini and turns its card green;
+  - a card says "1 league · 1 new club", not "1 leagues" (B70);
   - + Add... tells a league package (.fl26pack, with its leagues to tick), a world zip and the
     NewLife Database folder apart.
 
@@ -198,6 +199,10 @@ def run():
     ok("kind_of: NewLife in one zip", M.kind_of(nz)[0] == "newlife-zip")
     ok("kind_of: any other zip goes to Import your world", M.kind_of(other) == ("mod", other))
     ok("kind_of: not there", M.kind_of(os.path.join(T, "nope.zip"))[0] == "")
+    card = {"world": "_FL26X", "title": "_FL26X", "built": True, "when": "", "open": False, "live": False}
+    ok("B70: a card says 1 league · 1 new club, not 1 leagues · 1 new clubs: %s"
+       % M.info_text(dict(card, leagues=1, clubs=1)), M.info_text(dict(card, leagues=1, clubs=1)) == "1 league · 1 new club")
+    ok("and 2 leagues · 0 new clubs", M.info_text(dict(card, leagues=2, clubs=0)) == "2 leagues · 0 new clubs")
     d = M.AddDialog(sec, sec.card_title())
     ok("the window: Add to <world>", d.windowTitle() == "Add to _FL26Old")
     ok("Add is off until something is picked", not d.add.isEnabled())

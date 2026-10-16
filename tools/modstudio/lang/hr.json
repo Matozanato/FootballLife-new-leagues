@@ -1772,7 +1772,10 @@
   "%s is not in livecpk any more: nothing to rename back.": "%s više nije u livecpk: nema se što vratiti na staro ime.",
   "A world called %s is in livecpk already: rename or delete that one first.": "Svijet imena %s već je u livecpk: najprije ga preimenuj ili obriši.",
   "%s is there again: move it away first.": "%s je opet ondje: najprije ga premjesti drugamo.",
-  "squad changed": "kadar promijenjen"
+  "squad changed": "kadar promijenjen",
+  "squad changed": "kadar promijenjen",
+  "%d league": "%d liga",
+  "%d new club": "%d novi klub"
  },
  "log": [
   [
