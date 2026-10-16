@@ -143,7 +143,7 @@ def main():
         # ---- scoreboards and menu themes another pack gives the world's competitions (a modpack's) ----
         put(os.path.join(a, "livecpk", WORLD, I.WORLD_FILE),
             TEXT + "league 76 cid=136 cup=268 name=HNL\nccup 286 ko=287 name=CAF\n")
-        assert I.world_competitions(os.path.join(a, "livecpk", WORLD, I.WORLD_FILE)) == {1, 76, 136, 268, 286, 287}
+        assert I.world_competitions(os.path.join(a, "livecpk", WORLD, I.WORLD_FILE)) == {1, 76, 268, 286, 287}   # B73: not the cid 136
         put(os.path.join(a, "content", "scoreboard-server", "map_competitions.txt"),
             "263, %s\\L One   %s L One\n76, Modpack\\HNL   # SuperSport HNL\n268, Modpack\\Cup\n"
             "99, Modpack\\Other\n#287, Modpack\\Off\n287, Modpack\\Gone\n" % (WORLD, tag))
@@ -151,12 +151,13 @@ def main():
         put(os.path.join(a, "content", "scoreboard-server", "Modpack", "Cup", "c.dds"), "c")
         put(os.path.join(a, "content", "scoreboard-server", "Modpack", "Off", "o.dds"), "o")
         put(os.path.join(a, "content", "menu-server", "map_competitions.txt"),
-            '76, "Modpack\\HNL"   # themes\n136, "Modpack\\HNL"\n')
+            '76, "Modpack\\HNL"   # themes\n136, "Modpack\\HNL"\n76, "Modpack\\Twice"\n')   # B73: 136 = the cid, 76 twice
+        put(os.path.join(a, "content", "menu-server", "Modpack", "Twice", "theme.dds"), "t")
         put(os.path.join(a, "content", "menu-server", "Modpack", "HNL", "theme.dds"), "t")
         zq = os.path.join(tmp, WORLD + "-packs.zip")
         info = I.export_world(a, WORLD, zq)
         assert info["scoreboards"] == 3 and info["scoreboards_borrowed"] == 2, info     # 263 ours, 76, 268 lent
-        assert info["menus"] == 2 and info["menus_borrowed"] == 2, info                 # both lines, one folder
+        assert info["menus"] == 1 and info["menus_borrowed"] == 1, info                 # B73: 76 once, no cid 136
         with zipfile.ZipFile(zq) as z:
             names = set(z.namelist())
             sm = z.read("SiderAddons/content/scoreboard-server/map_competitions.txt").decode().splitlines()
@@ -165,11 +166,13 @@ def main():
             assert not any(l.startswith(("99,", "287,", "#")) for l in sm), sm
             mm = z.read("SiderAddons/content/menu-server/map_competitions.txt").decode().splitlines()
             assert '76, "%s\\_packs\\Modpack\\HNL"   # themes %s menu of Modpack\\HNL' % (WORLD, tag) in mm, mm
+            assert len(mm) == 1, mm                                                    # B73: no 136, no second 76
+            assert not any("Twice" in n for n in names), names
             assert "SiderAddons/content/scoreboard-server/%s/_packs/Modpack/HNL/board.dds" % WORLD in names, names
             assert "SiderAddons/content/scoreboard-server/%s/_packs/Modpack/Cup/c.dds" % WORLD in names
             assert not any("Modpack/Off" in n or "Modpack/Other" in n for n in names), names
             assert sum(1 for n in names if n.endswith("theme.dds")) == 1, names
-            assert "menu themes (2 competitions)" in z.read(I.WORLD_README).decode()
+            assert "menu themes (1 competition" in z.read(I.WORLD_README).decode()   # B73: was 2 (the cid)
         h = sider(os.path.join(tmp, "h"))
         rec, ini = install(h, zq)
         sm = open(os.path.join(h, "content", "scoreboard-server", "map_competitions.txt"), encoding="utf-8").read()
@@ -189,8 +192,17 @@ def main():
         assert "76, %s\\_packs\\Modpack\\HNL" % WORLD in sm and "268, %s\\_packs\\Modpack\\Cup" % WORLD in sm, sm
         km = open(os.path.join(h, "content", "kit-server", "map.txt"), encoding="utf-8").read()
         assert '1586, "%s\\_kits\\Other Europe\\Salzburg"' % WORLD in km, km
+        # B73: lines an older zip of this world brought in on an id the world has not (a cid), or a second
+        # menu on one id, do not go out again
+        hmm = os.path.join(h, "content", "menu-server", "map_competitions.txt")
+        with open(hmm, "a", encoding="utf-8") as fh:
+            fh.write("136, %s\\_packs\\Modpack\\HNL   %s menu of Modpack\\HNL\n"
+                     "76, %s\\_packs\\Modpack\\HNL   %s menu of Modpack\\HNL\n" % (WORLD, tag, WORLD, tag))
         zr = os.path.join(tmp, WORLD + "-again.zip")
         info = I.export_world(h, WORLD, zr)
+        with zipfile.ZipFile(zr) as z:
+            mm2 = z.read("SiderAddons/content/menu-server/map_competitions.txt").decode().splitlines()
+            assert len(mm2) == 1 and mm2[0].startswith("76,"), mm2
         assert info["scoreboards"] == 3 and info["kits"] == 3, info
         with zipfile.ZipFile(zr) as z:
             names = set(z.namelist())

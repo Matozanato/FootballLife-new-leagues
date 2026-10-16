@@ -107,6 +107,7 @@ once, and your 0.2.2 career keeps working.
 
 ## Fixed
 
+- **A world zip could bring other competitions' menus and scoreboards, and two menus on one competition.** Export the world also took the lines of the competition ids its leagues use inside the game (cid), which are other competitions' numbers to the Menu and Scoreboard Servers (r7 brought the SPFL, Jupiler, Liga Betplay ... menus, and two on one id, where the Menu Server picks one at random). Export now takes only the ids the maps go by, and one menu per competition.
 - **NewLife: Bring the game's leagues to this season** no longer turns players into free agents when the release has them at a club but outside its best 30 (Joao Cancelo at Barcelona): they stay at the club they had, as long as it has room for them (40 at most), and Build's log names anyone it had no room for (B67). Thanks antoniodias_pt
 - **Renaming a big world froze Mod Studio for minutes** (a world of 1146 clubs: the window stopped responding for 13 minutes before it said "is now ..."). The rename now runs in the background with "Renaming ..." in the bottom bar and on the world's card, the world cards wait until it is done, and the big files are no longer read and written whole again just to change one name, so it takes seconds.
 - **After a rename the world cards changed order, so the same Rename button opened a different world.** A renamed world now keeps its place among the cards (and its "built" time); renaming does not make it the newest world.

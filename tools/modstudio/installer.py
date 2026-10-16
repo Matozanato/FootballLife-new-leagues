@@ -103,9 +103,11 @@ def world_lines(path, world):
 
 
 def world_competitions(path):
-    """the competition ids a world file names: each league's id (what the competition maps of
-    the Scoreboard and Menu Servers key a league by) and its competition id, its cup and super
-    cup, the confederation cups and their knock-out stages"""
+    """the tournament ids a world file names, what the competition maps of the Scoreboard and
+    Menu Servers key a competition by: each league's id, its cup and super cup, the
+    confederation cups and their knock-out stages.  Not the leagues' cid: the maps do not key
+    by it, and a cid is another competition's tournament id (B73, 16.10.: r7's cids 133-169
+    carried the SPFL, Jupiler, Liga Betplay ... menus, and id 165 twice)"""
     ids = set()
     try:
         with open(path, encoding="utf-8", errors="replace") as f:
@@ -115,11 +117,19 @@ def world_competitions(path):
                     ids.add(int(w[1]))
                     for t in w[2:]:
                         k, _s, v = t.partition("=")
-                        if k in ("cid", "cup", "scup", "ko") and v.isdigit():
+                        if k in ("cup", "scup", "ko") and v.isdigit():
                             ids.add(int(v))
     except OSError:
         pass
     return ids
+
+
+def _line_id(line):
+    """the competition id a map line (bytes or str) begins with, or None"""
+    if isinstance(line, bytes):
+        line = line.decode("utf-8", "replace")
+    head = line.split(",", 1)[0].strip()
+    return int(head) if head.isdigit() else None
 
 
 def pack_lines(path, world, comps):
@@ -254,6 +264,12 @@ def export_world(sider_dir, world, out, log=lambda t: None):
         here = os.path.join(content, s.folder_in(content))
         mp = os.path.join(here, s.maps[0].file)
         lines = world_lines(mp, world) if os.path.isdir(os.path.join(here, world)) else []
+        if key != "kits":                 # B73: another pack's line an older zip of this world brought in (<world>\_packs)
+            packs = ("%s\\%s\\" % (world, PACKS)).lower().encode()   # on an id the world has not: it stays out
+            lines = [l for l in lines if packs not in l.lower() or _line_id(l) in comps]
+        if key == "menus":                # B73: one menu per competition, the first line (Menu Server picks one of two at random)
+            seen = set()
+            lines = [l for l in lines if not (_line_id(l) in seen or seen.add(_line_id(l)))]
         lent = []                         # what the world uses of other packs, (folder here, folder in the zip): it goes too
         if key == "kits":                 # kits of other packs the world's clubs wear
             have = [int(l.split(b",", 1)[0]) for l in lines if l.split(b",", 1)[0].strip().isdigit()]
@@ -263,8 +279,13 @@ def export_world(sider_dir, world, out, log=lambda t: None):
                     lines.append(('%d, "%s\\%s\\%s"   %s kit of %s' % (
                         tid, world, BORROWED, folder, OUR_LINE, folder)).encode("utf-8"))
         else:                             # scoreboards / menu themes other packs give the world's competitions
+            one = {_line_id(l) for l in lines} if key == "menus" else set()
             for cid, folder, quoted, note in pack_lines(mp, world, comps):
+                if cid in one:                # B73: one menu per competition (Menu Server picks one of two at random)
+                    continue
                 if os.path.isdir(os.path.join(here, folder)):
+                    if key == "menus":
+                        one.add(cid)
                     dst = "%s\\%s\\%s" % (world, PACKS, folder)
                     lent.append((os.path.join(here, folder), dst))
                     lines.append(('%d, %s   %s%s %s of %s' % (
