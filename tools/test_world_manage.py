@@ -331,6 +331,16 @@ def rename(t):
 
 
 # ---- the pages ------------------------------------------------------------------------------------
+def wait_rename(qa, page, secs=120):
+    """Rename world runs in the background (B66): the window's events until it is over"""
+    t0 = time.time()
+    while getattr(page, "renaming", None) and time.time() - t0 < secs:
+        qa.processEvents()
+        time.sleep(0.01)
+    qa.processEvents()
+    assert not getattr(page, "renaming", None), "the rename did not end in %d s" % secs
+
+
 class FakeProject:
     def __init__(self, d, world):
         self.d, self.recipe, self.path, self.dirty = d, {"world": world, "leagues": []}, None, False
@@ -472,6 +482,7 @@ def pages(t):
     page.tree.setCurrentItem(row("_FL26Live"))
     asked.clear()
     page.rename_world()
+    wait_rename(qa, page)                     # it runs in the background (B66)
     ok("Rename world: tells the player a career keeps working", asked and "career" in asked[-1])
     ok("Rename world: the world is there under its new name, still green",
        row("_FL26Renamed") is not None and row("_FL26Renamed").data(0, Qt.UserRole + 1) == "live")

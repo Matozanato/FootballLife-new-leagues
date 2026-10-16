@@ -1759,7 +1759,19 @@
   "world zip (Modpack) · .fl26pack (league package) · NewLife Database (folder or zips)": "zip svijeta (Modpack) · .fl26pack (paket liga) · NewLife Database (mapa ili zipovi)",
   "Setup": "Postavljanje",
   "it replaces the game's database (common\\etc\\pesdb): leagues, clubs and players. It will fight with a League Builder world; keep it below it.": "zamjenjuje bazu igre (common\\etc\\pesdb): lige, klubove i igrače. Sudarat će se sa svijetom iz League Buildera; drži ga ispod njega.",
-  "a .dll runs with the game's rights: it is not installed automatically. Copy it yourself only if you trust where it comes from.": ".dll radi s pravima igre: ne instalira se sam. Kopiraj ga sam samo ako vjeruješ izvoru."
+  "a .dll runs with the game's rights: it is not installed automatically. Copy it yourself only if you trust where it comes from.": ".dll radi s pravima igre: ne instalira se sam. Kopiraj ga sam samo ako vjeruješ izvoru.",
+  "%s OK": "%s OK",
+  "%d / %d ON": "%d/%d UKLJUČ.",
+  "; settings copied: ": "; kopirane postavke: ",
+  "The name is too long (at most %d characters).": "Ime je predugo (najviše %d znakova).",
+  "There is a world called %s already.": "Svijet imena %s već postoji.",
+  "content\\%s\\%s is there already: a world of that name was here before.": "content\\%s\\%s već postoji: ovdje je prije bio svijet tog imena.",
+  "A world called %s is in the game already, built on this PC. Rename that world on its card in My world (or delete it there), then install this one again.": "Svijet imena %s već je u igri, izgrađen na ovom računalu. Preimenuj taj svijet na njegovoj kartici u Moj svijet (ili ga ondje obriši), pa ponovno instaliraj ovaj.",
+  "Renaming %s...": "Preimenujem %s...",
+  "This backup was put back already.": "Ova je kopija već vraćena.",
+  "%s is not in livecpk any more: nothing to rename back.": "%s više nije u livecpk: nema se što vratiti na staro ime.",
+  "A world called %s is in livecpk already: rename or delete that one first.": "Svijet imena %s već je u livecpk: najprije ga preimenuj ili obriši.",
+  "%s is there again: move it away first.": "%s je opet ondje: najprije ga premjesti drugamo."
  },
  "log": [
   [
@@ -1929,6 +1941,118 @@
   [
    "^(\\d+) club\\(s\\) the recipe already changes by hand are left as they are$",
    "\\1 klub(ova) koje recept već mijenja ručno ostaje kakvi jesu"
+  ],
+  [
+   "^  South American places \\(Copa Libertadores, its qualifying round, Copa Sudamericana\\):$",
+   "  Južnoamerička mjesta (Copa Libertadores, njezino pretkolo, Copa Sudamericana):"
+  ],
+  [
+   ", a league of the game: Libertadores ",
+   ", liga igre: Libertadores "
+  ],
+  [
+   " and the (Copa .+?) winner(?=;|$)",
+   " i pobjednik \\1"
+  ],
+  [
+   "; qualifying the (Copa .+?) winner(?=;|$)",
+   "; pretkolo: pobjednik \\1"
+  ],
+  [
+   "the winners of the two playoffs \\(I and II\\)",
+   "pobjednici dvaju turnira (I. i II.)"
+  ],
+  [
+   "; Copa Sudamericana (\\d+) clubs from (\\d+)(?:st|nd|rd|th) down$",
+   "; Copa Sudamericana: klubova \\1, od \\2. mjesta naniže"
+  ],
+  [
+   "; Copa Sudamericana: none$",
+   "; Copa Sudamericana: nijedan"
+  ],
+  [
+   "; no Copa Sudamericana in this world$",
+   "; u ovom svijetu nema Copa Sudamericane"
+  ],
+  [
+   "(?<=[:;] )qualifying (?=\\d|cup winner)",
+   "pretkolo "
+  ],
+  [
+   "\\bcup winner(?=,|;|$)",
+   "pobjednik kupa"
+  ],
+  [
+   "(?<![\\w.])(\\d+)(?:st|nd|rd|th)(?=[-,;]|$| (?:and|y|et|e|i) )",
+   "\\1."
+  ],
+  [
+   "^    the world's qualifying places take those of the game's leagues: of the league with the most clubs in the round, its lowest place first; two stay the game's$",
+   "    pretkolska mjesta svijeta uzimaju mjesta liga igre: od lige s najviše klubova u tom kolu, prvo njezino najniže mjesto; dva ostaju igri"
+  ],
+  [
+   "^    a Sudamericana club that already plays the Libertadores or its qualifying gives way to the next one of its league$",
+   "    klub iz Sudamericane koji već igra Libertadores ili njezino pretkolo ustupa mjesto sljedećem iz svoje lige"
+  ],
+  [
+   "(?:(?<=L )|(?<=round )|(?<=, ))cup(?=,|;|$)",
+   "kup"
+  ],
+  [
+   "(?<=: |; )CL 3rd qual\\. round(?= )",
+   "LP 3. pretkolo"
+  ],
+  [
+   "(?<=: |; )CL 2nd qual\\. round(?= )",
+   "LP 2. pretkolo"
+  ],
+  [
+   "(?<=: |; )EL 2nd qual\\. round(?= )",
+   "EL 2. pretkolo"
+  ],
+  [
+   "(?<=: |; )ECL 2nd qual\\. round(?= )",
+   "KL 2. pretkolo"
+  ],
+  [
+   "(?<=: |; )CL play-off(?= )",
+   "LP doigravanje"
+  ],
+  [
+   "(?<=: |; )CL(?= )",
+   "LP"
+  ],
+  [
+   "(?<=: |; )ECL(?= )",
+   "KL"
+  ],
+  [
+   "(?<=: )no place$",
+   "bez mjesta"
+  ],
+  [
+   "^(.+): rank (\\d+) -- the key has places for (\\d+) leagues, so no European place$",
+   "\\1: \\2. mjesto -- ključ daje mjesta samo prvima \\3, pa nema europskog mjesta"
+  ],
+  [
+   "^(.+): (\\d+) places for (\\d+) clubs -- the last (\\d+) listed \\(the lowest ranks\\) get none$",
+   "\\1: mjesta \\2, klubova \\3 -- zadnjih \\4 na popisu (najniži rangovi) ostaje bez mjesta"
+  ],
+  [
+   "^(.+): (\\d+) place\\(s\\) left over -- the leagues have no more clubs$",
+   "\\1: \\2 mjesta viška -- lige nemaju više klubova"
+  ],
+  [
+   "^(.+): no club left for a (.+) place$",
+   "\\1: nema više kluba za mjesto: \\2"
+  ],
+  [
+   "(Europska liga|Konferencijska liga) qualifying\\b",
+   "\\1, pretkola"
+  ],
+  [
+   "Liga prvaka play-off\\b",
+   "doigravanje Lige prvaka"
   ]
  ]
 }

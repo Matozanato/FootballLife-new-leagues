@@ -152,6 +152,26 @@ def run():
        and cards["_FL26Old"].objectName() == "worldlive" and cards["_FL26Live"].objectName() == "worldcard"
        and cards["_FL26Live"].go is not None)
 
+    # ---- Rename on a card: in the background, the cards wait meanwhile (B66) and keep their order (B75)
+    from modstudio.pages import roots as RP
+    from PySide6 import QtWidgets
+    RP.ask = lambda *a, **k: True
+    QtWidgets.QInputDialog.getText = staticmethod(lambda *a, **k: ("_FL26Live2", True))
+    before = [c.world for c in sec.cards]
+    sec.rename("_FL26Live")
+    ok("Rename on a card: the cards wait (buttons off), the card says Renaming _FL26Live...",
+       sec._renaming == "_FL26Live" and all(not c.rename.isEnabled() and not c.export.isEnabled() for c in sec.cards)
+       and any(c.world == "_FL26Live" and c.info.text() == "Renaming _FL26Live..." for c in sec.cards))
+    t0 = time.time()
+    while sec._renaming and time.time() - t0 < 60:
+        qa.processEvents()
+        time.sleep(0.02)
+    settle(qa, 0.5)
+    after = [c.world for c in sec.cards]
+    ok("Rename on a card: done, the renamed card in the same place: %s -> %s" % (before, after),
+       not sec._renaming and after == [x.replace("_FL26Live", "_FL26Live2") for x in before]
+       and all(c.rename.isEnabled() for c in sec.cards))
+
     # ---- + Add...
     pk = os.path.join(T, "SerieCD.fl26pack")
     with zipfile.ZipFile(pk, "w") as z:

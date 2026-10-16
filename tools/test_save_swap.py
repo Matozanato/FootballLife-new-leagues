@@ -344,6 +344,8 @@ def pages():
     QtWidgets.QInputDialog.getText = staticmethod(lambda *a, **k: ("_FL26Renamed", True))
     asked.clear()
     page.rename_world("_FL26Live")
+    from test_world_manage import wait_rename
+    wait_rename(qa, page)                     # it runs in the background (B66)
     ok("Rename world: the question says its careers are renamed",
        asked and "save__FL26Live" in asked[-1] and "save__FL26Renamed" in asked[-1])
     ok("Rename world: save__FL26Live -> save__FL26Renamed byte for byte",

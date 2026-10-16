@@ -13,13 +13,15 @@ from ..ui import Page, section, hint, ask, run_job, pick_dir, row, error, can_wr
 WORLD_PREFIX = "_fl26"
 
 
-def rename_recipe(app, old, new):
+def rename_recipe(app, old, new, kept=...):
     """the world's name in Mod Studio itself, after a world is renamed (or renamed back from Restore
     points): the open world's, the copy Build keeps of it (recipes\\<world>.json) and the setting
-    that opens it at the next start"""
+    that opens it at the next start. kept: what WL.rename_recipe_copy gave when Rename world did it
+    already in the background (B66)"""
     P, st = app.project, app.settings
     was = os.path.join(P.copies_dir(), old + ".json")
-    kept = WL.rename_recipe_copy(P.copies_dir(), old, new)
+    if kept is ...:
+        kept = WL.rename_recipe_copy(P.copies_dir(), old, new)
     if kept and os.path.normcase(os.path.abspath(st.get("last_recipe") or "")) == os.path.normcase(was):
         st["last_recipe"] = kept
     if P.recipe.get("world") == old:
@@ -27,11 +29,18 @@ def rename_recipe(app, old, new):
         # to be saved (Save recipe stays the player's for his own changes)
         was_dirty = P.dirty
         P.recipe["world"] = new
+        same = lambda a, b: bool(a and b) and os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
         try:
+            # B66: written again, a 126 MB recipe froze the window for seconds. A recipe with nothing
+            # waiting to be saved is its file as it is: only its "world" line changes
             if P.path and not was_dirty:
-                P.save()
+                if WL.recipe_world(P.path, P.path, old, new):
+                    P.changed.emit()
+                else:
+                    P.save()
             elif not P.path:
-                st["last_recipe"] = P.keep_copy()
+                if not (kept and not was_dirty and same(st.get("last_recipe"), kept)):
+                    st["last_recipe"] = P.keep_copy()
                 P.changed.emit()
             else:
                 P.touch()
@@ -525,6 +534,9 @@ class Roots(Page):
     def _world_ready(self, title, w=None):
         """the selected row's world (or w, a card of My world), when it can be changed now: game
         closed, no ticks waiting"""
+        if getattr(self, "renaming", None):              # one rename at a time, nothing else meanwhile (B66)
+            error(self, title, _("Renaming %s...") % self.renaming)
+            return None
         w = w or self.world_of(self._current())
         if not w:
             return None
@@ -595,8 +607,11 @@ class Roots(Page):
                  % (w, folder), "ok")
         return True
 
-    def rename_world(self, world=None):
-        """world: the one of a card of My world, else the selected row's; the new name when done"""
+    def rename_world(self, world=None, done=None):
+        """world: the one of a card of My world, else the selected row's. The work runs in the
+        background (B66: a big world froze the window for minutes): True when it started, and
+        done(new name, or None when it stopped) is called on the window's thread when it is over;
+        None when it did not start (asked no, a name refused)"""
         from PySide6.QtWidgets import QInputDialog
         title = "Rename world"
         w = self._world_ready(title, world)
@@ -627,27 +642,74 @@ class Roots(Page):
                        saves.name_of(w), saves.name_of(new))
                     if on and os.path.isdir(saves.folder_of(w)) else "")):
             return
-        try:
-            WL.rename(self.app.game, w, new)
-        except WL.WorldError as e:
-            error(self, title, str(e))
-            return
-        except OSError as e:
-            if not denied(self, e):
-                error(self, title, _("It stopped, nothing was renamed:") + "\n\n" + str(e))
-            return
-        rename_recipe(self.app, w, new)
-        moved = None
-        if on:
+        # the files in the background, the window keeps answering (B66: a world of 1146 clubs has a
+        # 128 MB plan and a 126 MB recipe; the window stopped responding for 13 minutes)
+        game, copies = self.app.game, self.app.project.copies_dir()
+
+        def job(progress):
             try:
-                moved = saves.rename_saves(w, new)
-            except (saves.SaveError, OSError) as e:
+                WL.rename(game, w, new)
+            except WL.WorldError as e:
+                return "refused", e
+            except OSError as e:
+                return "stopped", e
+            try:
+                kept = WL.rename_recipe_copy(copies, w, new)
+            except (OSError, ValueError):
+                kept = None
+            moved = err = None
+            if on:
+                try:
+                    moved = saves.rename_saves(w, new)
+                except (saves.SaveError, OSError) as e:
+                    err = e
+            return "ok", (kept, moved, err)
+
+        def over(result):
+            self.renaming = None
+            self.b_wren.setEnabled(True)
+            self.b_wdel.setEnabled(True)
+            self.app.busy(False)
+            how, what = result
+            if how != "ok":
+                if how == "refused":
+                    error(self, title, str(what))
+                elif not denied(self, what):
+                    error(self, title, _("It stopped, nothing was renamed:") + "\n\n" + str(what))
+                if done:
+                    done(None)
+                return
+            kept, moved, err = what
+            from .. import filecache
+            filecache.forget_under(os.path.join(game.livecpk_dir, w))     # its old name is not read again
+            rename_recipe(self.app, w, new, kept)
+            if err is not None:
                 error(self, title, _("%s is now %s, but its Master League careers stay in %s:") % (
-                    w, new, saves.name_of(w)) + "\n\n" + str(e))
-        self.after_world_change()
-        self.say(_("%s is now %s.") % (w, new) + ("  " + _("Its careers: %s.") % os.path.basename(moved)
-                                                   if moved else ""), "ok")
-        return new
+                    w, new, saves.name_of(w)) + "\n\n" + str(err))
+            self.after_world_change()
+            self.say(_("%s is now %s.") % (w, new) + ("  " + _("Its careers: %s.") % os.path.basename(moved)
+                                                       if moved else ""), "ok")
+            if done:
+                done(new)
+
+        def failed(tb):
+            self.renaming = None
+            self.b_wren.setEnabled(True)
+            self.b_wdel.setEnabled(True)
+            self.app.busy(False)
+            if not denied(self, tb):
+                error(self, title, _("It stopped:") + "\n\n" + tb.strip().splitlines()[-1] + "\n\n" +
+                      _("What was done so far can be put back from Restore points."))
+            self.after_world_change()
+            if done:
+                done(None)
+
+        self.renaming = w
+        self.b_wren.setEnabled(False)
+        self.b_wdel.setEnabled(False)
+        self.app.busy(True, _("Renaming %s...") % w)
+        run_job(job, over, failed)
+        return True
 
     def after_world_change(self):
         self.app.bus.ini_changed.emit()

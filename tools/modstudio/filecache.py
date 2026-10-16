@@ -37,3 +37,13 @@ def by_files(name, paths, make):
     value = make()
     _KEPT[(name, tuple(paths))] = (key, value)
     return value
+
+
+def forget_under(folder):
+    """drop what is kept of the files in `folder` (B66: a world renamed is read again under its new
+    name, and its old 128 MB plan stayed in memory next to the new one)"""
+    top = os.path.normcase(os.path.join(os.path.abspath(folder), ""))
+    for k in list(_KEPT):
+        paths = k[1] if isinstance(k[1], tuple) else (k[1],)
+        if any(isinstance(p, str) and os.path.normcase(os.path.abspath(p)).startswith(top) for p in paths):
+            _KEPT.pop(k, None)

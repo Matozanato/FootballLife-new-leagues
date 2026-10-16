@@ -1757,7 +1757,19 @@
   "world zip (Modpack) · .fl26pack (league package) · NewLife Database (folder or zips)": "zip de monde (Modpack) · .fl26pack (paquet de ligues) · NewLife Database (dossier ou zips)",
   "Setup": "Configuration",
   "it replaces the game's database (common\\etc\\pesdb): leagues, clubs and players. It will fight with a League Builder world; keep it below it.": "il remplace la base de données du jeu (common\\etc\\pesdb) : ligues, clubs et joueurs. Il entrera en conflit avec un monde League Builder ; gardez-le en dessous.",
-  "a .dll runs with the game's rights: it is not installed automatically. Copy it yourself only if you trust where it comes from.": "un .dll s'exécute avec les droits du jeu : il n'est pas installé automatiquement. Copiez-le vous-même seulement si vous avez confiance en sa provenance."
+  "a .dll runs with the game's rights: it is not installed automatically. Copy it yourself only if you trust where it comes from.": "un .dll s'exécute avec les droits du jeu : il n'est pas installé automatiquement. Copiez-le vous-même seulement si vous avez confiance en sa provenance.",
+  "%s OK": "%s OK",
+  "%d / %d ON": "%d/%d ACTIFS",
+  "; settings copied: ": "; réglages copiés : ",
+  "The name is too long (at most %d characters).": "Le nom est trop long (%d caractères au plus).",
+  "There is a world called %s already.": "Il y a déjà un monde appelé %s.",
+  "content\\%s\\%s is there already: a world of that name was here before.": "content\\%s\\%s existe déjà : un monde de ce nom était ici avant.",
+  "A world called %s is in the game already, built on this PC. Rename that world on its card in My world (or delete it there), then install this one again.": "Un monde appelé %s est déjà dans le jeu, construit sur ce PC. Renommez ce monde sur sa carte dans Mon monde (ou supprimez-le là), puis installez celui-ci de nouveau.",
+  "Renaming %s...": "Renommage de %s...",
+  "This backup was put back already.": "Cette copie a déjà été restaurée.",
+  "%s is not in livecpk any more: nothing to rename back.": "%s n'est plus dans livecpk : il n'y a rien à renommer en sens inverse.",
+  "A world called %s is in livecpk already: rename or delete that one first.": "Un monde appelé %s est déjà dans livecpk : renommez-le ou supprimez-le d'abord.",
+  "%s is there again: move it away first.": "%s est de nouveau là : déplacez-le ailleurs d'abord."
  },
  "log": [
   [
@@ -1927,6 +1939,126 @@
   [
    "^(\\d+) club\\(s\\) the recipe already changes by hand are left as they are$",
    "\\1 club(s) que la recette change déjà à la main restent tels quels"
+  ],
+  [
+   "^  South American places \\(Copa Libertadores, its qualifying round, Copa Sudamericana\\):$",
+   "  Places sud-américaines (Copa Libertadores, son tour de qualification, Copa Sudamericana) :"
+  ],
+  [
+   ", a league of the game: Libertadores ",
+   ", ligue du jeu : Libertadores "
+  ],
+  [
+   " and the (Copa .+?) winner(?=;|$)",
+   " et le vainqueur de la \\1"
+  ],
+  [
+   "; qualifying the (Copa .+?) winner(?=;|$)",
+   "; qualifications : le vainqueur de la \\1"
+  ],
+  [
+   "the winners of the two playoffs \\(I and II\\)",
+   "les vainqueurs des deux tournois (I et II)"
+  ],
+  [
+   "; Copa Sudamericana (\\d+) clubs from (\\d+)(?:st|nd|rd|th) down$",
+   "; Copa Sudamericana : \\1 clubs à partir de la place \\2"
+  ],
+  [
+   "; Copa Sudamericana: none$",
+   "; Copa Sudamericana : aucun"
+  ],
+  [
+   "; no Copa Sudamericana in this world$",
+   "; pas de Copa Sudamericana dans ce monde"
+  ],
+  [
+   "(?<=[:;] )qualifying (?=\\d|cup winner)",
+   "qualifications "
+  ],
+  [
+   "\\bcup winner(?=,|;|$)",
+   "vainqueur de la coupe"
+  ],
+  [
+   "(?<![\\w.])1st(?=[-,;]|$| (?:and|et) )",
+   "1er"
+  ],
+  [
+   "(?<![\\w.])(\\d+)(?:st|nd|rd|th)(?=[-,;]|$| (?:and|y|et|e|i) )",
+   "\\1e"
+  ],
+  [
+   "^    the world's qualifying places take those of the game's leagues: of the league with the most clubs in the round, its lowest place first; two stay the game's$",
+   "    les places de qualification du monde prennent celles des ligues du jeu : de la ligue qui a le plus de clubs dans le tour, sa place la plus basse d'abord ; deux restent au jeu"
+  ],
+  [
+   "^    a Sudamericana club that already plays the Libertadores or its qualifying gives way to the next one of its league$",
+   "    un club de la Sudamericana qui joue déjà la Libertadores ou ses qualifications laisse sa place au suivant de sa ligue"
+  ],
+  [
+   "(?:(?<=L )|(?<=round )|(?<=, ))cup(?=,|;|$)",
+   "coupe"
+  ],
+  [
+   "(?<=: |; )CL 3rd qual\\. round(?= )",
+   "LdC 3e tour qualif."
+  ],
+  [
+   "(?<=: |; )CL 2nd qual\\. round(?= )",
+   "LdC 2e tour qualif."
+  ],
+  [
+   "(?<=: |; )EL 2nd qual\\. round(?= )",
+   "LE 2e tour qualif."
+  ],
+  [
+   "(?<=: |; )ECL 2nd qual\\. round(?= )",
+   "LEC 2e tour qualif."
+  ],
+  [
+   "(?<=: |; )CL play-off(?= )",
+   "LdC barrage"
+  ],
+  [
+   "(?<=: |; )CL(?= )",
+   "LdC"
+  ],
+  [
+   "(?<=: |; )EL(?= )",
+   "LE"
+  ],
+  [
+   "(?<=: |; )ECL(?= )",
+   "LEC"
+  ],
+  [
+   "(?<=: )no place$",
+   "aucune place"
+  ],
+  [
+   "^(.+): rank (\\d+) -- the key has places for (\\d+) leagues, so no European place$",
+   "\\1 : rang \\2 -- la clé a des places pour \\3 ligues, donc pas de place européenne"
+  ],
+  [
+   "^(.+): (\\d+) places for (\\d+) clubs -- the last (\\d+) listed \\(the lowest ranks\\) get none$",
+   "\\1 : \\2 places pour \\3 clubs -- les \\4 derniers de la liste (les rangs les plus bas) n'en ont pas"
+  ],
+  [
+   "^(.+): (\\d+) place\\(s\\) left over -- the leagues have no more clubs$",
+   "\\1 : \\2 place(s) en trop -- les ligues n'ont plus de clubs"
+  ],
+  [
+   "^(.+): no club left for a (.+) place$",
+   "\\1 : plus aucun club pour une place en \\2"
+  ],
+  [
+   "(Ligue Europa Conférence|Ligue Europa) qualifying\\b",
+   "\\1 (qualifications)"
+  ],
+  [
+   "Ligue des champions play-off\\b",
+   "barrage de la Ligue des champions"
   ]
  ]
 }

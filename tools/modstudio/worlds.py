@@ -99,22 +99,24 @@ def in_modules(game):
 def check_name(game, new, old=None):
     """why `new` cannot be a world's name, or "" (Build finds a world by "_FL26" at the start,
     the world file's "world" line ends at a space, and a map line cannot hold a quote, a comma or
-    a #: letters, digits, - and _ only)"""
+    a #: letters, digits, - and _ only). In the user's language: a text with a name or number in
+    it is translated before it is filled in (the page's _(why) cannot find it afterwards)"""
+    from .i18n import _
     new = (new or "").strip()
     if not new.startswith("_FL26"):
-        return "The world name must start with _FL26."
+        return _("The world name must start with _FL26.")
     if not NAME_OK.match(new):
-        return "After _FL26 use only letters, digits, - and _ (no spaces)."
+        return _("After _FL26 use only letters, digits, - and _ (no spaces).")
     if len(new) > NAME_MAX:
-        return "The name is too long (at most %d characters)." % NAME_MAX
+        return _("The name is too long (at most %d characters).") % NAME_MAX
     if old is not None and new.lower() == old.lower():
-        return "That is the name it has now."
+        return _("That is the name it has now.")
     if os.path.exists(os.path.join(game.livecpk_dir, new)) or any(
             n.lower() == new.lower() for n in worlds(game)):
-        return "There is a world called %s already." % new
+        return _("There is a world called %s already.") % new
     for lib in _libs(game):
         if os.path.exists(os.path.join(game.content_dir, lib, new)):
-            return "content\\%s\\%s is there already: a world of that name was here before." % (lib, new)
+            return _("content\\%s\\%s is there already: a world of that name was here before.") % (lib, new)
     return ""
 
 
@@ -160,6 +162,11 @@ def _read(path):
 
 
 def _write(path, lines, enc, bom):
+    if isinstance(lines, bytes):                  # the whole file as it is to be (rename's json files)
+        with open(path + ".tmp", "wb") as f:
+            f.write(lines)
+        os.replace(path + ".tmp", path)
+        return
     data = "".join(lines).encode(enc)
     with open(path + ".tmp", "wb") as f:
         f.write((codecs.BOM_UTF8 if bom else b"") + data)
@@ -441,14 +448,16 @@ def _drop_lines(path, ref, added, back, stadiums, keep):
 # ---- put back --------------------------------------------------------------------------------------
 def restore(game, folder, log=lambda t: None):
     """put a world backup back: a deleted world comes back as it was (switched off when it was
-    off), a rename is undone by renaming back. Returns the world's name"""
+    off), a rename is undone by renaming back. Returns the world's name. Its WorldError texts are
+    in the user's language, translated before they are filled in (as check_name's)"""
+    from .i18n import _
     info = _load_info(folder)
     if info.get("restored"):
-        raise WorldError("This backup was put back already.")
+        raise WorldError(_("This backup was put back already."))
     if info["kind"] == "renamed":
         old, new = info["world"], info["new"]
         if not os.path.isdir(os.path.join(game.livecpk_dir, new)):
-            raise WorldError("%s is not in livecpk any more: nothing to rename back." % new)
+            raise WorldError(_("%s is not in livecpk any more: nothing to rename back.") % new)
         why = check_name(game, old, new)
         if why:
             raise WorldError(why)
@@ -458,14 +467,14 @@ def restore(game, folder, log=lambda t: None):
         return old
     sd, world = game.sider_dir, info["world"]
     if os.path.exists(os.path.join(game.livecpk_dir, world)):
-        raise WorldError("A world called %s is in livecpk already: rename or delete that one first." % world)
+        raise WorldError(_("A world called %s is in livecpk already: rename or delete that one first.") % world)
     taken = os.path.join(game.modules_dir, I.WORLD_FILE)
     # another world was switched on since: its world file stays, and the lines Switch on wrote for
     # it with it; this one comes back switched off (Switch on writes its own again)
     other = info.get("file_named") and os.path.exists(taken)
     for rel in info["moved"]:
         if os.path.exists(os.path.join(sd, rel)) and not (other and _same(rel, os.path.join("modules", I.WORLD_FILE))):
-            raise WorldError("%s is there again: move it away first." % rel)
+            raise WorldError(_("%s is there again: move it away first.") % rel)
     for rel in info["moved"]:
         src, dst = os.path.join(folder, "files", rel), os.path.join(sd, rel)
         if other and _same(rel, os.path.join("modules", I.WORLD_FILE)):
@@ -511,12 +520,26 @@ def restore(game, folder, log=lambda t: None):
 # ---- rename ----------------------------------------------------------------------------------------
 def _swap(rel, old, new):
     """a path with its <old> folder named <new>"""
+    if old.lower() not in rel.lower():           # most of a big install record's 50000 paths (B66)
+        return rel
     parts = re.split(r"([\\/])", rel)
     return "".join(new if p.lower() == old.lower() else p for p in parts)
 
 
 def _swap_lines(lines, ref, new):
     return [ref.sub(lambda m: m.group(1) + new, l) for l in lines]
+
+
+def _only_with(needle, fn, case=True):
+    """fn(lines) for the lines that hold `needle`, the others as they are (B66: a big world's
+    leaguebuilder-plan.json is 128 MB, 5 million lines, and a regex on every line took seconds;
+    only a line with the old name in it can change)"""
+    def run(lines):
+        if case:
+            return [fn([l])[0] if needle in l else l for l in lines]
+        low = needle.lower()
+        return [fn([l])[0] if low in l.lower() else l for l in lines]
+    return run
 
 
 def rename(game, old, new, log=lambda t: None):
@@ -560,18 +583,28 @@ def rename(game, old, new, log=lambda t: None):
 
     text("sider.ini", "sider.ini", ini_fix)
     for rel in _maps(game):
-        text(rel, rel, lambda ls: _swap_lines(ls, ref, new))
+        text(rel, rel, _only_with(old, lambda ls: _swap_lines(ls, ref, new), case=False))
     wl = re.compile(r"^(\s*world\s+)" + re.escape(old) + r"(?=\s|$)")
+    world_line = _only_with(old, lambda ls: [wl.sub(lambda m: m.group(1) + new, l) for l in ls])
     for f in (I.WORLD_FILE, ):
-        text(os.path.join("livecpk", new, f), os.path.join("livecpk", old, f),
-             lambda ls: [wl.sub(lambda m: m.group(1) + new, l) for l in ls], False)
-    jw = re.compile(r'("world"\s*:\s*")' + re.escape(old) + '"')
+        text(os.path.join("livecpk", new, f), os.path.join("livecpk", old, f), world_line, False)
+    # the two json files as bytes, not lines (B66: the plan of a world of 1146 clubs is 128 MB, five
+    # million lines; split into lines it took seconds and half a GB). json.dump never breaks a line
+    # between a key and its value, so this is the same edit, byte for byte, as line by line
+    jw = re.compile(rb'("world"[ \t]*:[ \t]*")' + re.escape(old.encode("utf-8")) + rb'"')
     for f in ("leaguebuilder-plan.json", "fl26playerids.json"):
-        text(os.path.join("livecpk", new, f), os.path.join("livecpk", old, f),
-             lambda ls: [jw.sub(lambda m: m.group(1) + new + '"', l) for l in ls], False)
+        p = os.path.join(sd, "livecpk", old, f)
+        if not os.path.isfile(p):
+            continue
+        with open(p, "rb") as fh:
+            raw = fh.read()
+        out, n = jw.subn(lambda m: m.group(1) + new.encode("utf-8") + b'"', raw)
+        del raw
+        if n:
+            edits.append((os.path.join("livecpk", new, f), os.path.join("livecpk", old, f), out, None, None, False))
     if in_modules(game) == old:
         mf = os.path.join("modules", I.WORLD_FILE)
-        text(mf, mf, lambda ls: [wl.sub(lambda m: m.group(1) + new, l) for l in ls])
+        text(mf, mf, world_line)
     cl = os.path.join("modules", "lib", "CommonLib.lua")
     ct = re.compile(re.escape(COMMONLIB_TAG + " " + old) + r"(?= )")
     text(cl, cl, lambda ls: [ct.sub(COMMONLIB_TAG + " " + new, l) for l in ls])
@@ -616,6 +649,10 @@ def rename(game, old, new, log=lambda t: None):
     # content folders; one that will not move puts the others back
     moved = []
     try:
+        was = os.stat(src)              # its time stays (B75: My world orders the cards by it, newest first)
+    except OSError:
+        was = None
+    try:
         for lib in [None] + _libs(game):
             a = src if lib is None else os.path.join(game.content_dir, lib, old)
             b = os.path.join(game.livecpk_dir, new) if lib is None else os.path.join(game.content_dir, lib, new)
@@ -642,9 +679,41 @@ def rename(game, old, new, log=lambda t: None):
         with open(f + ".tmp", "w", encoding="utf-8") as fh:
             json.dump(p, fh, indent=1, ensure_ascii=False)
         os.replace(f + ".tmp", f)
+    if was is not None:
+        # writing its files changed the folder's time: a renamed world is not a newer one (B75: its
+        # card jumped to the front and the next card's Rename opened another world)
+        try:
+            os.utime(os.path.join(game.livecpk_dir, new), ns=(was.st_atime_ns, was.st_mtime_ns))
+        except OSError:
+            pass
     _save_info(folder, info)
     prune(sd, old, but=folder)
     return folder, info
+
+
+def recipe_world(src, dst, old, new):
+    """a recipe file (src) written to dst with its "world" key `new` in place of `old`, the rest
+    byte for byte; False (nothing written) when it is not a file Project._write wrote.
+
+    B66: a big world's recipe is 126 MB; json.load and json.dump of it for one key took seconds of
+    a frozen window and 1.5 GB. Project._write writes it with indent=1, so a line with one space in
+    front is a key of the recipe itself (a deeper one has two or more, and a JSON string has no
+    line break in it): that one line changes"""
+    try:
+        with open(src, "rb") as f:
+            raw = f.read()
+    except OSError:
+        return False
+    at = b'\n "world": ' + json.dumps(old).encode("utf-8")
+    i = raw.find(at)
+    if i < 0 or raw.find(at, i + 1) >= 0 or raw[i + len(at):i + len(at) + 1] not in (b",", b"\r", b"\n", b""):
+        return False
+    with open(dst + ".tmp", "wb") as f:
+        f.write(raw[:i])
+        f.write(b'\n "world": ' + json.dumps(new).encode("utf-8"))
+        f.write(memoryview(raw)[i + len(at):])
+    os.replace(dst + ".tmp", dst)
+    return True
 
 
 def rename_recipe_copy(copies_dir, old, new):
@@ -653,6 +722,9 @@ def rename_recipe_copy(copies_dir, old, new):
     a, b = os.path.join(copies_dir, old + ".json"), os.path.join(copies_dir, new + ".json")
     if not os.path.isfile(a) or os.path.exists(b):
         return None
+    if recipe_world(a, b, old, new):
+        os.remove(a)
+        return b
     with open(a, encoding="utf-8") as f:
         r = json.load(f)
     if r.get("world") == old:

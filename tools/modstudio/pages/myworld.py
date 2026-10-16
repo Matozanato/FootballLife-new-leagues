@@ -78,8 +78,7 @@ def plan_summary(game, world):
 
     def make():
         try:
-            with open(path, encoding="utf-8") as f:
-                pl = json.load(f)
+            pl = filecache.json_file(path)      # the one Leagues reads too (B66: not a second 128 MB copy)
         except (OSError, ValueError):
             return None
         leagues = pl.get("leagues") or []
@@ -711,6 +710,8 @@ class MyWorld(QWidget):
         self.new_world = nw
         self.row.addWidget(nw)
         self.row.addStretch(1)
+        if getattr(self, "_renaming", None):
+            self.hold_cards()                         # a rename still runs (B66)
         self.set_counter(self.c_comps, "Competitions", competitions(self.app.project), CID_MAX)
         live = [x["world"] for x in rows if x["live"]]
         if not live:
@@ -759,10 +760,27 @@ class MyWorld(QWidget):
         if not any(c.world == w and c.r["built"] for c in self.cards):
             self.app.open_page("NewLeagues")         # not built: the name is the open world's own
             return
-        new = self.app.page("Roots").rename_world(w)
-        if new:
-            self.app.status(_("%s is now %s.") % (w, new))
-        self.refresh()
+        # B66: the rename runs in the background; the cards wait (their buttons off) until it is over
+        def over(new):
+            self._renaming = None
+            if new:
+                self.app.status(_("%s is now %s.") % (w, new))
+            self.refresh()
+        self._renaming = w
+        self.hold_cards()
+        if not self.app.page("Roots").rename_world(w, done=over):
+            self._renaming = None
+            self.hold_cards()
+
+    def hold_cards(self):
+        """while a world is renamed: every card's buttons off, the card being renamed says so"""
+        w = getattr(self, "_renaming", None)
+        for c in self.cards:
+            c.setEnabled(not w)
+            if w and c.world == w:
+                c.info.setText(_("Renaming %s...") % w)
+            elif not w:
+                c.info.setText(info_text(c.r))
 
     def delete(self, w):
         if self.app.page("Roots").delete_world(w):
