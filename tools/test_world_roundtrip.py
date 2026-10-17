@@ -316,7 +316,9 @@ def same_world(B, game, a, b, label):
        sorted(ta) == sorted(tb) and not bad)
     wa, wb = world_lines(game, a), world_lines(game, b)
     ok("%s: fl26world.txt the same but for its world line (%d lines)" % (label, len(wa)), wa == wb)
-    keep = ("leaguebuilder-plan.json", "fl26world.txt", "fl26playerids.json", "leaguebuilder-files.txt")
+    # leaguebuilder-input.json: the record of what Build was given (incremental Build), the world's name in it
+    keep = ("leaguebuilder-plan.json", "fl26world.txt", "fl26playerids.json", "leaguebuilder-files.txt",
+            "leaguebuilder-input.json")
     fa = {os.path.relpath(os.path.join(d, f), world_dir(game, a)) for d, _s, fs in os.walk(world_dir(game, a)) for f in fs}
     fb = {os.path.relpath(os.path.join(d, f), world_dir(game, b)) for d, _s, fs in os.walk(world_dir(game, b)) for f in fs}
     same = all(filecmp.cmp(os.path.join(world_dir(game, a), f), os.path.join(world_dir(game, b), f), shallow=False)
