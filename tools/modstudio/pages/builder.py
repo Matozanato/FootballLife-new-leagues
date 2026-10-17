@@ -2571,7 +2571,9 @@ class NewLeagues(BuilderPage):
         names = [leagues[i]["name"] for i in rows]
         q = (_("Remove %s, with its clubs and their player changes?") % names[0] if len(names) == 1 else
              _("Remove these %d leagues, with their clubs and their player changes?") % len(names)
-             + "\n\n" + "\n".join(names))
+             + "\n\n" + "\n".join(names[:12])
+             # 86 names made the box 1594 px tall, Yes and No below the screen (test_dialogs_fit, 17.10.)
+             + ("\n" + _("... and %d more") % (len(names) - 12) if len(names) > 12 else ""))
         if ask(self, "Remove", q):
             for i in reversed(rows):
                 del leagues[i]
