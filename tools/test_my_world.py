@@ -315,6 +315,14 @@ def run():
     qa.processEvents()
     ok("Add with a world zip opens Import your world inside My world",
        w.stack.currentWidget() is sec and sec.tabs.currentWidget() is w.holder_of["Install"])
+    # jibibi 17.10.: the NewLife Database took him twenty minutes to find under More
+    ok("NewLife Database has its own button by + Add...: %r" % sec.newlife_btn.text(),
+       sec.newlife_btn.isVisible() and sec.newlife_btn.text() == "NewLife Database")
+    opened, real = [], w.open_page
+    w.open_page = lambda name: opened.append(name)    # the page itself is test 6's (with no tables here it sends on to Settings)
+    sec.newlife_btn.click()
+    w.open_page = real
+    ok("the button opens the NewLife page, as More > NewLife Database does: %s" % opened, opened == ["NewLife"])
     d.deleteLater()
 
     # the row of world cards folds away and stays folded (Xxspedd, 17.10.)

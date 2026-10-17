@@ -697,6 +697,15 @@ class MyWorld(QWidget):
         mm.addAction(_("Content folders")).triggered.connect(self.content_folders)
         more.setMenu(mm)
         self.more = more
+        # jibibi 17.10.: twenty minutes to find the NewLife Database under More -- its own button
+        self.newlife_btn = QPushButton(_("NewLife Database"))
+        self.newlife_btn.setObjectName("go")
+        self.newlife_btn.setStyleSheet("padding: 6px 16px;")
+        self.newlife_btn.setToolTip(_("The NewLife Database: real squads of today for your world's leagues and the "
+                                      "game's own (for modders; to play a ready Modpack you do not need it)"))
+        self.newlife_btn.clicked.connect(lambda: self.app.open_page("NewLife"))
+        h.addWidget(self.newlife_btn, 0, Qt.AlignVCenter)
+        h.addSpacing(4)
         h.addWidget(self.add_btn, 0, Qt.AlignVCenter)
         h.addSpacing(4)
         h.addWidget(more, 0, Qt.AlignVCenter)
