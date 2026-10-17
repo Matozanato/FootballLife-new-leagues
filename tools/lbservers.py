@@ -134,16 +134,41 @@ def numbers_kit(lib, ours):
     return None
 
 
-def _made(tid, words, away, crest, dst, numbers, log):
-    """the kit folder dst made from words and crest, unless it was made from the same ones"""
-    import hashlib, kitmaker, kitpics, tempfile
-    h = hashlib.md5()
-    for x in (words, away or "", numbers or "", os.path.getsize(kitmaker.MASK)):
-        h.update(str(x).encode("utf-8") + b"\0")
-    h.update(open(crest, "rb").read())
+def _stamps(words, away, crest, numbers, lib=None):
+    """the kitmaker.txt stamps that count as "made from these": the first is the one written now,
+    with the numbers kit by its folder inside the kit library. B104: the stamp had the numbers
+    kit's whole path, so on every other PC (and on this one with the other slash) every made kit
+    of a world was drawn again at its first Switch on -- 728 for the Modpack, many minutes with
+    the window not answering. The others are the stamps written before, with this PC's path."""
+    import hashlib, kitmaker
+    rel = numbers or ""
+    if numbers and lib:
+        try:
+            rel = os.path.relpath(numbers, lib).replace(os.sep, "/")
+        except ValueError:                    # on another drive: the path as it is
+            rel = numbers
+    pic = open(crest, "rb").read()
+    out = []
+    for n in [rel] + ([numbers, numbers.replace("/", os.sep), numbers.replace(os.sep, "/")] if numbers else [""]):
+        h = hashlib.md5()
+        for x in (words, away or "", n or "", os.path.getsize(kitmaker.MASK)):
+            h.update(str(x).encode("utf-8") + b"\0")
+        h.update(pic)
+        if h.hexdigest() not in out:
+            out.append(h.hexdigest())
+    return out
+
+
+def _made(tid, words, away, crest, dst, numbers, log, lib=None, ready=False):
+    """the kit folder dst made from words and crest, unless it was made from the same ones.
+    ready: the world came ready from a zip (Install mods) with its made kits in it -- a kit
+    folder with a stamp is kept as it came, whatever PC drew it (B104)"""
+    import kitmaker, kitpics, tempfile
+    stamps = _stamps(words, away, crest, numbers, lib)
     stamp = os.path.join(dst, "kitmaker.txt")
     try:
-        if open(stamp, encoding="utf-8").read().strip() == h.hexdigest():
+        had = open(stamp, encoding="utf-8").read().strip()
+        if had in stamps or (ready and had):
             return False
     except OSError:
         pass
@@ -156,7 +181,7 @@ def _made(tid, words, away, crest, dst, numbers, log):
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     with open(stamp, "w", encoding="utf-8") as f:
-        f.write(h.hexdigest() + "\n")
+        f.write(stamps[0] + "\n")
     return True
 
 
@@ -272,6 +297,9 @@ def write(pl, sider, log=print, root=None):
     world = safe(pl.get("world") or "FL26 world")
     klib, blib = libs(sider)
     make = to_make(pl, root) if root and os.path.isdir(os.path.join(sider, klib)) else []
+    # B104: a world that came ready from a zip brought its made kits along, drawn on the PC it was
+    # built on -- they are kept, not drawn again
+    ready = bool(root) and os.path.exists(os.path.join(root, ".modstudio"))
     # a club with a kit line of your own keeps that kit: no kit made for it, and none of a league
     # package either (pepponeee98, 14.10.: his Serie C lines were switched off at every Build for
     # the package's kits, which went into a folder of the world again each time)
@@ -317,10 +345,14 @@ def write(pl, sider, log=print, root=None):
                       if (p.get("name") or "Other clubs") == league][0].get("club_names") or []
                 rel = "%s\\%s\\%s" % (world, safe(league), safe(cn[k] if k < len(cn) and cn[k] else "club %d" % k))
                 try:
-                    new += _made(tid, words, away, crest, os.path.join(root, rel), numbers, log)
+                    drawn = _made(tid, words, away, crest, os.path.join(root, rel), numbers, log,
+                                  lib=root, ready=ready)
                 except Exception as e:               # one bad crest picture must not stop the Build
                     log("  kit of %s: not made (%s)" % (rel, e))
                     continue
+                new += drawn
+                if drawn and new % 50 == 0:          # B104: a long drawing says how far it is
+                    log("kits drawn from colours and crests: %d so far (of at most %d)" % (new, len(make)))
                 mine.append((tid, '%d, "%s"   %s %s/%d made' % (tid, rel, TAG, league, k)))
             log("kits made from colours and crests: %d (%d new or changed)%s" % (
                 len(make), new, "" if numbers else "; no kit in the library lends back numbers, so the game's own are used"))
