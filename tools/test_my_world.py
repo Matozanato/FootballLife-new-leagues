@@ -198,6 +198,35 @@ def run():
        and cards["_FL26Old"].objectName() == "worldlive" and cards["_FL26Live"].objectName() == "worldcard"
        and cards["_FL26Live"].go.isEnabled() and not cards["_FL26Old"].go.isEnabled())
 
+    # ---- B116 (jibibi 17.10.): two worlds on in sider.ini (edited by hand) -- the live cards offer
+    # Keep only this one (they all said Active with the button off: no way back to one world)
+    ini = game.ini_path
+    lines = open(ini, encoding="utf-8").read().splitlines()
+    lines = [l.lstrip(";# " + chr(9)) if "cpk.root" in l and "_FL26Live" in l else l for l in lines]
+    open(ini, "w", encoding="utf-8").write(chr(10).join(lines) + chr(10))
+    sec.refresh()
+    cards = {c.world: c for c in sec.cards}
+    ok("B116: two worlds on, both cards green with Keep only this one (on): %s"
+       % [(c.world, c.go.text(), c.go.isEnabled()) for c in sec.cards],
+       sorted(WL.live(game)) == ["_FL26Live", "_FL26Old"]
+       and all(cards[x].objectName() == "worldlive" and cards[x].go.text().endswith("Keep only this one")
+               and cards[x].go.isEnabled() for x in ("_FL26Live", "_FL26Old")))
+    boxes.clear()
+    cards["_FL26Old"].go.click()
+    t0 = time.time()
+    while sec._switching and time.time() - t0 < 60:
+        qa.processEvents()
+        time.sleep(0.02)
+    settle(qa, 0.5)
+    cards = {c.world: c for c in sec.cards}
+    ok("B116: Keep only this one left _FL26Old alone in the game, its card Active (off) again: %s / %s"
+       % (WL.live(game), boxes),
+       WL.live(game) == ["_FL26Old"] and cards["_FL26Old"].go.text().endswith("Active")
+       and not cards["_FL26Old"].go.isEnabled() and cards["_FL26Live"].go.text().endswith("Activate")
+       and len(boxes) == 1 and boxes[0][0] == "info")
+    ok("B116: the save folder stayed _FL26Old's (no swap to itself)",
+       os.path.isfile(os.path.join(kr, "save__FL26Live", "ML00000000")) and not os.listdir(os.path.join(kr, "save")))
+
     # ---- Rename on a card: in the background, the cards wait meanwhile (B66) and keep their order (B75)
     from modstudio.pages import roots as RP
     from PySide6 import QtWidgets

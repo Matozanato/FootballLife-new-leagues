@@ -217,9 +217,17 @@ class Settings(Page):
                 error(self, "Settings", _("That folder has only part of the tables, as a database in livecpk "
                                           "usually does. Click Unpack the game's tables first, then pick the "
                                           "folder again: its files go over the game's tables."))
-            else:
+            elif "no tables" in why:
                 error(self, "Settings", _("No tables in that folder: pick the pesdb folder with Team.bin, "
                                           "Player.bin ..."))
+            elif "not a game table" in why:
+                # B117 (jibibi 17.10.): his Team.bin and Player.bin were there, changed by his own tool,
+                # and the box said there were no tables at all
+                error(self, "Settings", _("The tables in that folder cannot be read: one of the .bin files is "
+                                          "not in the game's own format (changed by another tool?). Use the "
+                                          "game's tables or a patch's original pesdb folder."))
+            else:
+                error(self, "Settings", _("The tables in that folder cannot be read: %s") % why)
         elif p.overlay:
             info(self, "Settings", _("Tables loaded: %d clubs, %d leagues. %d files come from your folder, "
                                      "the rest from the game's tables.") % (len(p.game_cl), len(p.game_lgs), p.overlay))

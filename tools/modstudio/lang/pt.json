@@ -1817,7 +1817,11 @@
   "the world before a Build": "o mundo antes de um Build",
   "the world before a newer zip or Remove the mod took it out": "o mundo antes de um zip mais novo ou Remove the mod o retirar",
   "the world from a zip before it was made editable": "o mundo de um zip antes de ser tornado editável",
-  "%s is not in the game: the log on this page says why.": "%s não está no jogo: o registo desta página diz porquê."
+  "%s is not in the game: the log on this page says why.": "%s não está no jogo: o registo desta página diz porquê.",
+  "Keep only this one": "Manter só este",
+  "More than one world is switched on in sider.ini; only one should be. This one stays in the game, the others go out (they stay on disk).": "Há mais de um mundo ativado no sider.ini; só devia haver um. Este fica no jogo, os outros saem (ficam no disco).",
+  "The tables in that folder cannot be read: one of the .bin files is not in the game's own format (changed by another tool?). Use the game's tables or a patch's original pesdb folder.": "As tabelas dessa pasta não podem ser lidas: um dos ficheiros .bin não está no formato do jogo (alterado por outra ferramenta?). Usa as tabelas do jogo ou a pasta pesdb original de um patch.",
+  "The tables in that folder cannot be read: %s": "As tabelas dessa pasta não podem ser lidas: %s"
  },
  "log": [
   [

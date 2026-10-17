@@ -1817,7 +1817,11 @@
   "the world before a Build": "svijet prije Builda",
   "the world before a newer zip or Remove the mod took it out": "svijet prije nego što ga je novi zip ili Remove the mod uklonio",
   "the world from a zip before it was made editable": "svijet iz zipa prije nego što je omogućeno uređivanje",
-  "%s is not in the game: the log on this page says why.": "%s nije u igri: zapis na ovoj stranici kaže zašto."
+  "%s is not in the game: the log on this page says why.": "%s nije u igri: zapis na ovoj stranici kaže zašto.",
+  "Keep only this one": "Ostavi samo ovaj",
+  "More than one world is switched on in sider.ini; only one should be. This one stays in the game, the others go out (they stay on disk).": "U sider.ini je uključeno više svjetova, a treba biti samo jedan. Ovaj ostaje u igri, ostali izlaze (ostaju na disku).",
+  "The tables in that folder cannot be read: one of the .bin files is not in the game's own format (changed by another tool?). Use the game's tables or a patch's original pesdb folder.": "Tablice u toj mapi ne mogu se pročitati: jedna od .bin datoteka nije u formatu igre (promijenio ju je neki drugi alat?). Koristi tablice igre ili originalnu pesdb mapu patcha.",
+  "The tables in that folder cannot be read: %s": "Tablice u toj mapi ne mogu se pročitati: %s"
  },
  "log": [
   [

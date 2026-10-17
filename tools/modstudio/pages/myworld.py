@@ -61,7 +61,8 @@ def world_rows(app):
             when = time.strftime("%d.%m. %H:%M", time.localtime(os.path.getmtime(d))) if built else ""
         except OSError:
             when = ""
-        r = {"world": w, "title": pack or w, "live": w in live, "built": built, "zipped": zipped,
+        r = {"world": w, "title": pack or w, "live": w in live, "many": len(live) > 1, "built": built,
+             "zipped": zipped,
              "open": w == open_w, "when": when,
              "exportable": built and os.path.isfile(os.path.join(d, I.WORLD_FILE))}
         if r["open"]:                    # Home's numbers of the open world
@@ -246,7 +247,15 @@ class WorldCard(QFrame):
         self.go = QPushButton(("● " + _("Active")) if r["live"] else ("▶  " + _("Activate")))
         self.go.setObjectName("go")
         self.go.setProperty("state", "live" if r["live"] else "")
-        if r["live"]:
+        if r["live"] and r.get("many"):
+            # B116 (jibibi 17.10.): two worlds switched on (sider.ini edited by hand) -- every live
+            # card said Active with its button off, so My world had no way back to one world
+            self.go.setText("▶  " + _("Keep only this one"))
+            self.go.setCursor(Qt.PointingHandCursor)
+            self.go.setToolTip(_("More than one world is switched on in sider.ini; only one should be. "
+                                 "This one stays in the game, the others go out (they stay on disk)."))
+            self.go.clicked.connect(lambda: sec.put_in_game(self.world))
+        elif r["live"]:
             self.go.setEnabled(False)
             self.go.setToolTip(_("This is the world in the game now"))
         elif r["built"]:
