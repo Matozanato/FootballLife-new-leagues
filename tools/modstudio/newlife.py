@@ -449,7 +449,7 @@ def _movers(recipe, info):
         g = str(r.get("game_id", "")).strip()
         if db is None or not g.isdigit() or int(g) not in db.index:
             return "copy", None, False
-        if not P.same_name(r["name"], db.name(int(g))):
+        if not P.same_player(r["name"], db.name(int(g))):
             return "copy", None, False        # another database: that id is somebody else
         if g in taken:
             return "keep", g, True            # an earlier league already has him
@@ -1049,12 +1049,17 @@ def game_scale(rel, db, clubs):
     Jabo9 07.10.: the release's top end ran 2 to 4 above the game's (Mbappe 96 to the game's 92),
     so a game league brought to the season had its stars rated above every other club's.
     By rank, not the game's mean at each rating of ours (08.10.): a mean pulls the best players
-    towards the middle, and the Premier League came out a point under the game's own"""
+    towards the middle, and the Premier League came out a point under the game's own.
+    A release whose newlife.json says "scale": "game" (NewLife 1.5b7 on) is rated on the game's
+    scale already, the game's own players too, every league the same way: no remap then -- a
+    second one bent only the leagues of the game and put them off the rest of the world again"""
+    if (getattr(rel, "meta", None) or {}).get("scale") == "game":
+        return lambda o: o
     ours, game = [], []
     for c in set(clubs):
         for r in rel.squad(c):
             g = str(r.get("game_id", "")).strip()
-            if g.isdigit() and int(g) in db.index and P.same_name(r["name"], db.name(int(g))):
+            if g.isdigit() and int(g) in db.index and P.same_player(r["name"], db.name(int(g))):
                 a, b = P.overall(r), P.overall(db.row(int(g)))
                 if a and b:
                     ours.append(a)
@@ -1106,7 +1111,7 @@ def _game_squads(recipe, rel, info, squads):
                 if g.isdigit() and int(g) in mine]
         top = {id(r) for r in rel.squad(c)} if ours else ()
         for g, r in ours:
-            if id(r) not in top and P.same_name(r["name"], db.name(g)):
+            if id(r) not in top and P.same_player(r["name"], db.name(g)):
                 cut[str(g)] = (P.overall(r), c)
     for t, c in sorted(squads.items()):
         have = [pid for _o, pid, _s, _x in db.by_club.get(t, []) if pid in db.index]
@@ -1125,7 +1130,7 @@ def _game_squads(recipe, rel, info, squads):
                 g = str(one[0]) if len(one) == 1 else ""
                 if g:
                     r = dict(r, name=db.name(one[0]))
-            if g.isdigit() and int(g) in db.index and P.same_name(r["name"], db.name(int(g))):
+            if g.isdigit() and int(g) in db.index and P.same_player(r["name"], db.name(int(g))):
                 if int(g) in have:
                     keep.append(int(g))
                     ed[g] = ch
