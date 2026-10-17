@@ -256,6 +256,21 @@ def run():
        d.kind == "pack" and 'league package "Serie C+D" (2 leagues, 38 clubs)' in d.found.text())
     ok("its leagues to tick, all ticked", d.picked() == ["Serie C", "Serie D"])
     ok("Add on", d.add.isEnabled())
+    big = os.path.join(T, "Modpack86.fl26pack")
+    with zipfile.ZipFile(big, "w") as z:
+        z.writestr("manifest.json", json.dumps({
+            "format": "fl26pack", "format_version": 1, "name": "FL26 Modpack leagues", "version": "0.2.2",
+            "leagues": [{"name": "League %d" % i, "country": "Land", "clubs": 16} for i in range(86)]}))
+    d.pick(big)
+    d.show()
+    settle(qa, 0.3)
+    avail = d.screen().availableGeometry().height()
+    ok("86 leagues (David, 17.10.): the window fits the screen (%d of %d), the leagues scroll, Add is shown"
+       % (d.frameGeometry().height(), avail),
+       len(d.picked()) == 86 and d.frameGeometry().height() <= avail
+       and d.ticks_box.verticalScrollBar().maximum() > 0 and d.add.isVisible())
+    d.hide()
+    d.pick(pk)
     d.pick(wz)
     ok("a world zip: Found: a world zip", d.kind == "world" and "world zip" in d.found.text()
        and d.ticks.count() == 0 and d.add.isEnabled())

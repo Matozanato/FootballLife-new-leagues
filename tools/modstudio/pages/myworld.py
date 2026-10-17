@@ -15,7 +15,7 @@ rename_world, delete_world; League packages: add_pack; Import your world: look; 
 import fnmatch, json, os, time, zipfile
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QCursor
+from PySide6.QtGui import QCursor, QGuiApplication
 from PySide6.QtWidgets import (QCheckBox, QDialog, QFileDialog, QFrame, QHBoxLayout, QLabel, QMenu,
                                QPushButton, QScrollArea, QStackedWidget, QToolButton, QVBoxLayout, QWidget)
 
@@ -370,12 +370,21 @@ class AddDialog(QDialog):
         self.found.setWordWrap(True)
         self.found.hide()
         v.addWidget(self.found)
-        self.ticks_box = QWidget()
-        self.ticks = QVBoxLayout(self.ticks_box)
+        box = QWidget()
+        self.ticks = QVBoxLayout(box)
         self.ticks.setContentsMargins(0, 0, 0, 0)
         self.ticks.setSpacing(6)
+        # a package's leagues scroll: the Modpack's 86 pushed Add and Cancel below the screen (David, 17.10.)
+        self.ticks_box = QScrollArea()
+        self.ticks_box.setWidgetResizable(True)
+        self.ticks_box.setFrameShape(QScrollArea.NoFrame)
+        self.ticks_box.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.ticks_box.setStyleSheet("QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; }")
+        self.ticks_box.setWidget(box)
+        scr = self.screen() or QGuiApplication.primaryScreen()
+        self.ticks_box.setMaximumHeight(int((scr.availableGeometry().height() if scr else 900) * 0.45))
         self.ticks_box.hide()
-        v.addWidget(self.ticks_box)
+        v.addWidget(self.ticks_box, 1)
         self.after = QLabel("")
         self.after.setObjectName("cardnote")
         self.after.setWordWrap(True)
