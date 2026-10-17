@@ -57,6 +57,21 @@ def main(base):
     r = ids(B.plan({"world": "_TestPins", "leagues": [renamed, b, c]}, base, first))
     ok("a renamed league is a new league (its old ids are not taken by another)",
        r["Pin Bosnia"] == one["Pin Bosnia"])
+
+    # Mod Studio's Edit league... records the names before (project.rename_league: built_as)
+    named = dict(a, name="Pin Albania Renamed", built_as=["Pin Albania"])
+    r = ids(B.plan({"world": "_TestPins", "leagues": [new, named, b, c]}, base, first))
+    ok("renamed in Mod Studio (built_as): the league keeps its cid, rid and region",
+       r["Pin Albania Renamed"] == one["Pin Albania"] and r["Pin Bosnia"] == one["Pin Bosnia"])
+    twice = dict(a, name="Pin Albania Third", built_as=["Pin Albania", "Pin Albania Renamed"])
+    after = B.plan({"world": "_TestPins", "leagues": [named, b, c]}, base, first)
+    r = ids(B.plan({"world": "_TestPins", "leagues": [twice, b, c]}, base, after))
+    ok("renamed again after a Build under the new name: the ids of that Build",
+       r["Pin Albania Third"] == ids(after)["Pin Albania Renamed"] == one["Pin Albania"])
+    back = league("Pin Albania", "Albania", 10)
+    r = ids(B.plan({"world": "_TestPins", "leagues": [named, back, b, c]}, base, first))
+    ok("an old name another league has now: that league's own, not the renamed one's",
+       r["Pin Albania"] == one["Pin Albania"] and r["Pin Albania Renamed"][0] != one["Pin Albania"][0])
     print("1..%d" % N)
 
 

@@ -174,11 +174,16 @@ def built_plan(g, world):
 
 def built_league(g, world, name, built=None):
     """what the last Build gave a league: its ids (cid, rid) and its clubs' team ids (teams);
-    {} before the first Build, and for a league added or renamed since"""
+    {} before the first Build, and for a league added since. `name` may be the league itself: one
+    renamed since is found under a name it had (built_as, as leaguebuilder.plan finds it)"""
+    was = []
+    if isinstance(name, dict):
+        name, was = name.get("name"), list(name.get("built_as") or [])
     built = built if built is not None else built_plan(g, world)
-    for p in (built or {}).get("leagues") or []:
-        if p.get("name") == name:
-            return p
+    ps = {p.get("name"): p for p in (built or {}).get("leagues") or [] if isinstance(p, dict)}
+    for n in [name] + was[::-1]:
+        if n in ps:
+            return ps[n]
     return {}
 
 
@@ -2461,7 +2466,7 @@ class NewLeagues(BuilderPage):
             if t:
                 div = "%d  (%s)" % (t, div)
             n = sum(len((pl.get("%s/%d" % (L["name"], k)) or {}).get("edits") or {}) for k in range(L.get("clubs", 0)))
-            b = built_league(self.app.game, r.get("world"), L["name"], plan or {})
+            b = built_league(self.app.game, r.get("world"), L, plan or {})
             # A league the last Build did not make has no id yet, and is not in the game either
             # (Amir, 2026-09-28: a second division added after the build, blank id, "the game
             # reads only the first league"). Say so rather than leave the cell empty.
@@ -2832,7 +2837,7 @@ class NewClubs(BuilderPage):
     def built_ids(self, L):
         """the team ids a build gave this league's clubs, or []: ids are handed out at Build,
         after the game's own clubs"""
-        got = list(built_league(self.app.game, self.project.recipe.get("world"), L["name"]).get("teams") or [])
+        got = list(built_league(self.app.game, self.project.recipe.get("world"), L).get("teams") or [])
         if got:
             return got
         return self.plan_ids(L)

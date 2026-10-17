@@ -852,6 +852,10 @@ class MyWorld(QWidget):
             self.app.bus.ini_changed.emit()
             self.app.bus.content_changed.emit()
             self.refresh()
+            try:
+                self.app.page("Build").refresh()  # its Build buttons were off for the ready world
+            except Exception:
+                pass
             info(self, title, _("%s can be changed now. When your changes are done, Build it, then start a "
                                 "new Master League.\n\nThe copy of it as it came: Restore points.") % w)
 

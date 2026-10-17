@@ -280,6 +280,9 @@ class Project(QObject):
         """keep everything that names a league by name pointing at it"""
         if old == new:
             return
+        me = self.league(new)
+        if me is not None:      # the last Build's ids follow it there (leaguebuilder.plan, built_as)
+            me["built_as"] = [x for x in me.get("built_as") or [] if x not in (old, new)] + [old]
         for L in self.recipe["leagues"]:
             if L.get("above") == old:
                 L["above"] = new

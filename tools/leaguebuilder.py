@@ -1690,6 +1690,16 @@ def plan(recipe, base, prev=None):
     recipe = dict(recipe, leagues=[L for L in recipe["leagues"] if not L.get("others")])
     leagues = recipe["leagues"]
     names = [L.get("name", "").strip() for L in leagues]
+    # a league renamed since the last Build keeps that Build's ids: built_as holds its names before
+    # (project.rename_league), newest last; an old name a league of the recipe has now is its own
+    taken, used = {n.lower() for n in names}, set()
+    for L, nm in zip(leagues, names):
+        for was in reversed([str(x).strip().lower() for x in L.get("built_as") or []]):
+            if nm.lower() in pins:
+                break
+            if was in pins and was not in taken and was not in used:
+                pins[nm.lower()] = pins[was]
+                used.add(was)
 
     # mkworld's order (the free list, 145 moved to 190), keeping only ids with a slot
     free = []

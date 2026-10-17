@@ -412,7 +412,7 @@ class Leagues(BuilderPage):
             t = tier_of(self.project, up)
             if t:
                 div = "%d  (%s)" % (t, div)
-            b = built_league(self.app.game, r.get("world"), L["name"], plan or {})
+            b = built_league(self.app.game, r.get("world"), L, plan or {})
             cid = str(b["cid"]) if b.get("cid") is not None else (_("not built yet") if plan else "")
             if L.get("others"):
                 num, seen, div, cid = "", _("no league (%s)") % others_labels().get(L["others"], L["others"]), "", ""
@@ -485,7 +485,7 @@ class Leagues(BuilderPage):
         div = _("top") if up in (None, "") else _("below %s") % (names.get(up, up) if isinstance(up, int) else up)
         t = tier_of(P, up)
         plan = built_plan(self.app.game, r.get("world"))
-        b = built_league(self.app.game, r.get("world"), L["name"], plan or {})
+        b = built_league(self.app.game, r.get("world"), L, plan or {})
         self.o_name.setText(L["name"])
         vals = {"Country": L.get("country", ""), "Clubs": str(L.get("clubs", "")), "Format": fmt_text(L),
                 "Division": ("%d  (%s)" % (t, div)) if t else div,
