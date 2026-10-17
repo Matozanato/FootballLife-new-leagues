@@ -52,7 +52,19 @@ def build(base, game, world, cap):
     return n, "\n".join(str(s) for s in said)
 
 
+def sizing():
+    # 17.10. (Vicentico, the Modpack): 1805 over with 1211 new clubs took off 2 a club, but the
+    # clubs whose squads were shorter gave nothing up -- 30, 28, 26 and 25: four passes of 60000
+    # players. What is over now comes off the squads the pass made.
+    ok("even squads: what is over, spread", B.smaller_squads([30] * 20, 90, 30) == 25)
+    ok("short squads give nothing up", B.smaller_squads([30] * 10 + [20] * 10, 50, 30) == 25)
+    ok("one short of a step is the next step", B.smaller_squads([30] * 10, 11, 30) == 28)
+    ok("nothing frees enough: None", B.smaller_squads([30] * 2, 100, 30) is None)
+    ok("never below SQUAD_FIT", B.smaller_squads([30] * 10, 80, 30) == B.SQUAD_FIT)
+
+
 def main(base):
+    sizing()
     have = count(os.path.join(base, "Player.bin"))
     game = tempfile.mkdtemp(prefix="fl26-cap-")
     real = B.PLAYER_CAP

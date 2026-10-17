@@ -1623,6 +1623,16 @@ def clubs_room(base):
     return min(TEAM_CAP - n("Team.bin", W.T_REC), (PLAYER_CAP - n("Player.bin", 312)) // SQUAD_FIT)
 
 
+def smaller_squads(counts, over, per):
+    """the largest squad below per that frees `over` player records, each new club keeping
+    min(its squad, the new size); None when even SQUAD_FIT does not"""
+    counts = list(counts)
+    for p in range(per - 1, SQUAD_FIT - 1, -1):
+        if sum(max(0, c - p) for c in counts) >= over:
+            return p
+    return None
+
+
 def squad_size(have, made):
     """the squad each of `made` new clubs gets when the tables hold `have` players: SQUAD, unless
     the player records left run out first -- then as many as they give each, down to SQUAD_FIT
@@ -3818,13 +3828,17 @@ def build(pl, base, game, replace=False, log=print):
         n = len(pesdb.wesys_unpack(open(pb, "rb").read())) // 312 if os.path.exists(pb) else have
         if n <= PLAYER_CAP:
             break
-        less = -(-(n - PLAYER_CAP) // max(made, 1))
-        if not made or per - less < SQUAD_FIT or attempt == 3:
+        # 17.10. (Vicentico, the Modpack: 4 passes of ~60000 players, 20+ min): what is over is taken
+        # off the squads the pass made, not spread over every new club -- a club whose squad is
+        # shorter than per gives nothing up, so (over / clubs) came short and the next pass was
+        # over again. Each new club keeps min(its squad, the new size): one more pass, as a rule.
+        nxt = smaller_squads(lbplayers.squad_counts(db, new_of).values(), n - PLAYER_CAP, per) if made else None
+        if nxt is None or attempt == 3:
             raise BuildError("the player table is full: the world has %d players, the game takes %d -- fewer "
                              "clubs or smaller squads" % (n, PLAYER_CAP))
         log("  the finished world has %d players, %d more than the game takes: squads of %d instead"
-            % (n, n - PLAYER_CAP, per - less))
-        per -= less
+            % (n, n - PLAYER_CAP, nxt))
+        per = nxt
     # 0.2.4: the tactics go in once the squads are known: a new club with no formation in the
     # recipe gets the one its squad fits (lbplayers.pick_formation), not the engine's fixed
     # 4-2-3-1 -- every club of the Modpack played 4-2-3-1. The recipe's formations stand.

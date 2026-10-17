@@ -627,6 +627,13 @@ def sign_keepers(db, log=print):
     return signed
 
 
+def squad_counts(db, tids):
+    """{team id: players} of the clubs in `tids`, by db's PlayerAssignment.bin"""
+    assigns = load(db, "PlayerAssignment.bin")
+    count = collections.Counter(u32(assigns, i * A_REC + E.A_TID) for i in range(len(assigns) // A_REC))
+    return {tid: count.get(tid, 0) for tid in tids}
+
+
 def short_squads(db, tids, least=MIN_SQUAD):
     """{team id: players} of the clubs in `tids` with fewer than `least` players in db's
     PlayerAssignment.bin -- a club with none crashes the game when it is picked, and Become
