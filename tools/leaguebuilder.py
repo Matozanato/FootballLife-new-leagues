@@ -3979,12 +3979,13 @@ def build(pl, base, game, replace=False, log=print):
         p.pop("prev_teams", None), p.pop("prev_names", None)
     json.dump(pl, open(os.path.join(tmp, "leaguebuilder-plan.json"), "w", encoding="utf-8"), indent=1)
 
-    pictures(pl, tmp, base, log, game)
+    gone = set()                          # pictures whose source is not on this PC (have_picture)
+    pictures(pl, tmp, base, log, game, gone)
     region_modules(pl, tmp, game, log)
 
     write_manifest(tmp)                   # before keep_added: what this Build wrote, not what it kept
     if os.path.exists(out):
-        keep_added(out, tmp, log)
+        keep_added(out, tmp, log, gone)
         shutil.rmtree(out)
     os.rename(tmp, out)
     log("built %s: %d leagues, %d clubs" % (out, len(pl["leagues"]), made))
@@ -4028,12 +4029,17 @@ def write_manifest(root):
         f.write("\n".join(lines) + "\n")
 
 
-def keep_added(old, new, log=print):
+EDITED = ".modstudio-edited"              # modstudio.worlds.EDITED
+
+
+def keep_added(old, new, log=print, gone=()):
     """carry into the new build the pictures someone put in the old world folder by hand (a crest
     in common/render/symbol/flag, Xxspedd 04.10.): a Build replaces the whole folder.
     - a file the last Build did not write, and this one does not either: copied over
     - a picture the last Build wrote and someone replaced: theirs stays, as long as this Build
       writes the same picture as the last one (a crest set in the recipe since then wins)
+    - gone: the files of a picture whose source is not on this PC (a ready world from a zip, built
+      again here): the world's own stay, byte for byte, not a drawn badge (B85)
     A world built before the manifest existed keeps only the pictures this Build does not write."""
     ours = {}
     try:
@@ -4049,7 +4055,7 @@ def keep_added(old, new, log=print):
     kept = []
     # .modstudio marks a world installed from a zip (installer.ready_world): once built on this PC
     # it is not one any more, and kept it would switch Build off for the world just built (0.2.4)
-    for rel in sorted(built_files(old) - {MANIFEST, ".modstudio"}):
+    for rel in sorted(built_files(old) - {MANIFEST, ".modstudio", EDITED}):
         src, dst = os.path.join(old, rel), os.path.join(new, rel)
         if rel not in made:
             if (rel not in ours) if known else picture(rel):
@@ -4061,6 +4067,16 @@ def keep_added(old, new, log=print):
         dst = os.path.join(new, rel)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         shutil.copy2(os.path.join(old, rel), dst)
+    theirs = [rel for rel in sorted(gone) if rel not in kept and os.path.isfile(os.path.join(old, rel))]
+    # a world from a zip made editable stays one (worlds.make_editable): every Build of it backs it up
+    theirs += [EDITED] if os.path.isfile(os.path.join(old, EDITED)) else []
+    for rel in theirs:
+        dst = os.path.join(new, rel)
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copy2(os.path.join(old, rel), dst)
+    if [r for r in theirs if r != EDITED]:
+        log("  kept %d picture file(s) of the world whose source is not on this PC"
+            % len([r for r in theirs if r != EDITED]))
     if kept:
         log("  kept %d file(s) you added to the world folder (%s%s); Import crests puts them in the recipe"
             % (len(kept), ", ".join(kept[:3]), " ..." if len(kept) > 3 else ""))
@@ -4756,31 +4772,61 @@ def ccup_options(line, cup):
     return "%s %s%s%s" % (head, " ".join(words), sep, name)
 
 
-def have_picture(path, name, log, what="crest", instead="drawn badge"):
+def have_picture(path, name, log, what="crest", instead="drawn badge", gone=None, rels=()):
     """the picture file at `path` when there is one, else None and one line of the log.
 
     A recipe made on another PC keeps that PC's picture paths, so the file may not be here any
     more.  A picture that is gone is treated as the recipe's empty field: the club gets the
     drawn badge with its initials (or the shield of its shirt), the league, cup or competition
     the drawn emblem, the country no flag of ours.  Build stopped with a FileNotFoundError in
-    lbassets.square() before (0.2.1)."""
+    lbassets.square() before (0.2.1).
+    gone: the world-folder files (rels) this picture makes go in it, so that Build keeps the ones
+    the world has already (keep_added): a ready world from a zip holds the author's crests and
+    logos, and built again on this PC they came out as drawn badges (B85)."""
     if not path or os.path.isfile(path):
         return path
-    log("  %s picture not found, %s instead: %s (%s)" % (what, instead, name, path))
+    if gone is not None and rels:
+        gone.update(rels)
+        log("  %s picture not on this PC, the world's own kept if it has one: %s (%s)" % (what, name, path))
+    else:
+        log("  %s picture not found, %s instead: %s (%s)" % (what, instead, name, path))
     return None
 
 
-def pictures(pl, root, base, log=print, game=None):
-    """league logos, club crests and kits for the new leagues (tools/lbassets.py)"""
+def logo_files(cid):
+    """the world-folder files (rel, with /) of competition cid's emblem (lbassets.league_logo)"""
+    import mkemblems
+    return ["common/render/symbol/emblemLc/emb_%04d%s.png" % (cid, suf) for suf, _px in mkemblems.VARIANTS]
+
+
+def crest_files(tid):
+    """... of team tid's crest (lbassets.club_crest)"""
+    import mkcrests
+    return ["common/render/symbol/flag/e_%06d%s.png" % (tid, suf) for suf, _px in mkcrests.FLAG_SIZES]
+
+
+def flag_files(fid):
+    """... of country flag fid (lbassets.country_flag)"""
+    import lbassets
+    if not isinstance(fid, int):             # a plan names its country by Country.bin id; else no file
+        return []
+    return ["common/render/symbol/flag/flag_%03d%s.png" % (fid, suf) for suf, _px in lbassets.FLAG_SIZES]
+
+
+def pictures(pl, root, base, log=print, game=None, gone=None):
+    """league logos, club crests and kits for the new leagues (tools/lbassets.py); gone (a set):
+    the files of every picture whose source is not on this PC go in it (have_picture)"""
     import lbassets
     flags, done = {}, set()
     for p in pl["leagues"] + (pl.get("others") or []):
         if not p.get("others"):              # clubs in no league: no competition, no logo
             lbassets.league_logo(root, p["cid"], p["name"],
-                                 have_picture(p.get("logo"), p["name"], log, "logo", "drawn emblem"))
+                                 have_picture(p.get("logo"), p["name"], log, "logo", "drawn emblem",
+                                              gone, logo_files(p["cid"])))
         if p.get("flag") and p["country"] not in done:
             done.add(p["country"])
-            flag = have_picture(p["flag"], p["name"], log, "flag", "the game's flag kept")
+            flag = have_picture(p["flag"], p["name"], log, "flag", "the game's flag kept",
+                                gone, flag_files(p["country"]))
             if flag:                         # no flag picture: the game's own flag stays
                 flags[p["country"]] = flag
                 lbassets.country_flag(root, p["country"], flag)
@@ -4790,7 +4836,7 @@ def pictures(pl, root, base, log=print, game=None):
             if k in gp:                      # a club of the game keeps its crest
                 continue
             pic = crests[k] if k < len(crests) else None
-            pic = have_picture(pic, club_name(p, k), log)
+            pic = have_picture(pic, club_name(p, k), log, gone=gone, rels=crest_files(tid))
             lbassets.club_crest(root, tid, p["abbrs"][k], pic, kits[k] if k < len(kits) else None)
         for g in gp.values():                # a new club taking a game club's place: a badge
             if isinstance(g.get("swap"), dict) and g.get("swap_id"):
@@ -4804,22 +4850,24 @@ def pictures(pl, root, base, log=print, game=None):
             if int(rid) in cid_of:
                 lbassets.league_logo(root, cid_of[int(rid)], v.get("name") or "",
                                      have_picture(v["logo"], v.get("name") or "league %s" % rid, log,
-                                                  "logo", "drawn emblem"))
+                                                  "logo", "drawn emblem", gone, logo_files(cid_of[int(rid)])))
     for cid, v in (e.get("competitions") or {}).items():
         if v.get("logo"):
             lbassets.league_logo(root, int(cid), v.get("name") or "",
                                  have_picture(v["logo"], v.get("name") or "competition %s" % cid, log,
-                                              "logo", "drawn emblem"))
+                                              "logo", "drawn emblem", gone, logo_files(int(cid))))
     for tid, v in (e.get("clubs") or {}).items():
         # "kit": a place of the game's NewLife gave another club (refresh_game_leagues, B57); with
         # no crest picture it gets that club's shield (or badge), as a new club does, never the
         # crest of the club that left. The club keeps its id
         if v.get("crest") or "kit" in v:
-            pic = have_picture(v["crest"], v.get("name") or tid, log) if v.get("crest") else None
+            pic = have_picture(v["crest"], v.get("name") or tid, log, gone=gone,
+                               rels=crest_files(int(tid))) if v.get("crest") else None
             lbassets.club_crest(root, int(tid), v.get("abbr") or v.get("name") or "", pic, v.get("kit") or None)
     cups = cup_emblems(pl)
     for cid, name, logo in cups:
-        lbassets.league_logo(root, cid, name, have_picture(logo, name, log, "logo", "drawn emblem"))
+        lbassets.league_logo(root, cid, name, have_picture(logo, name, log, "logo", "drawn emblem",
+                                                           gone, logo_files(cid)))
     log("  %d league logos, %d cup logos, %d club crests%s" % (
         len(pl["leagues"]), len(cups), sum(len(p["teams"]) - len(game_places(p))
                                            for p in pl["leagues"] + (pl.get("others") or [])),

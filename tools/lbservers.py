@@ -327,6 +327,42 @@ def _yours(sider, klib, world=""):
     return out
 
 
+def made_rel(pl, world, league, k):
+    """the kit library folder (world\\league\\club) of the kit made for place k of league"""
+    cn = [p for p in (pl.get("leagues") or []) + (pl.get("others") or [])
+          if (p.get("name") or "Other clubs") == league][0].get("club_names") or []
+    return "%s\\%s\\%s" % (world, safe(league), safe(cn[k] if k < len(cn) and cn[k] else "club %d" % k))
+
+
+def restamp(pl, sider, root, log=print):
+    """a ready world from a zip made editable on this PC (installer.make_editable): its made kits
+    were drawn on the PC that built it, and their kitmaker.txt holds that PC's stamp. Each made
+    kit folder with a stamp gets the stamp of this PC for the colours and crest of the world as it
+    came, so the Switch on after a Build keeps it (as it did while the world was ready, B104) and a
+    club whose colours or crest are changed since gets its kit drawn again. Returns how many
+    stamps were written."""
+    klib, _blib = libs(sider)
+    lib = os.path.join(sider, klib)
+    if not os.path.isdir(lib):
+        return 0
+    world = safe(pl.get("world") or "FL26 world")
+    numbers = numbers_kit(lib, world)
+    n = 0
+    for tid, league, k, words, away, crest in to_make(pl, root):
+        stamp = os.path.join(lib, made_rel(pl, world, league, k), "kitmaker.txt")
+        try:
+            had = open(stamp, encoding="utf-8").read().strip()
+        except OSError:
+            continue
+        mine = _stamps(words, away, crest, numbers, lib)[0]
+        if had and had != mine:
+            with open(stamp, "w", encoding="utf-8") as f:
+                f.write(mine + "\n")
+            n += 1
+    log("kits made from colours and crests: %d stamped as made on this PC" % n)
+    return n
+
+
 def write(pl, sider, log=print, root=None):
     """the plan's kits and scoreboards into Kit Server and Scoreboard Server, and a kit made for
     every other new club with colours or a crest (root: the world's folder, for the crests);
@@ -380,9 +416,7 @@ def write(pl, sider, log=print, root=None):
             numbers = numbers_kit(root, world)
             new = 0
             for tid, league, k, words, away, crest in make:
-                cn = [p for p in (pl.get("leagues") or []) + (pl.get("others") or [])
-                      if (p.get("name") or "Other clubs") == league][0].get("club_names") or []
-                rel = "%s\\%s\\%s" % (world, safe(league), safe(cn[k] if k < len(cn) and cn[k] else "club %d" % k))
+                rel = made_rel(pl, world, league, k)
                 try:
                     drawn = _made(tid, words, away, crest, os.path.join(root, rel), numbers, log,
                                   lib=root, ready=ready)

@@ -4139,7 +4139,8 @@ class Build(BuilderPage):
                               "Start the game and start a new Master League.\n\nBuild makes the world of your own "
                               "leagues and would switch %s off. To build your own leagues, put your own "
                               "world in the game first (My world > Activate), or remove the ready one "
-                              "(My world > More > Import a world zip > Remove).") % (w, w))
+                              "(My world > More > Import a world zip > Remove).") % (w, w)
+             + "\n\n" + _("To change %s itself: My world > Make it editable...") % w)
         return True
 
     def refresh(self):

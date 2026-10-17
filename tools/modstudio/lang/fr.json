@@ -1802,7 +1802,20 @@
   "Untick all": "Tout décocher",
   "Worlds": "Mondes",
   "Show the world cards": "Afficher les cartes des mondes",
-  "Hide the world cards to make room": "Masquer les cartes des mondes pour faire de la place"
+  "Hide the world cards to make room": "Masquer les cartes des mondes pour faire de la place",
+  "%s came ready in a zip. Make it a world you can change and Build?\n\nIt stays where it is, under its own name. All of it is copied first: Restore points > Put this copy back makes it the ready world again.\n\nAfter a Build of it, start a new Master League.": "%s est arrivé prêt dans un zip. En faire un monde que tu peux modifier et construire (Build) ?\n\nIl reste où il est, sous son propre nom. Il est d'abord copié en entier : Restore points > Put this copy back le remet en monde prêt.\n\nAprès un Build, commence une nouvelle Master League.",
+  "%s can be changed now. When your changes are done, Build it, then start a new Master League.\n\nThe copy of it as it came: Restore points.": "%s peut maintenant être modifié. Quand tes modifications sont faites, fais Build, puis commence une nouvelle Master League.\n\nLa copie tel qu'il est arrivé : Restore points.",
+  "A copy of all of %s: %s.": "Une copie complète de %s : %s.",
+  "Build is off for a world that came ready in a zip. This makes it a world you can change and Build, in place and under its own name; all of it is copied first (Restore points).": "Build est désactivé pour un monde arrivé prêt dans un zip. Ceci en fait un monde que tu peux modifier et construire, sur place et sous son propre nom ; il est d'abord copié en entier (Restore points).",
+  "It stopped, the world was not changed:": "Arrêté, le monde n'a pas été modifié :",
+  "Make it editable": "Le rendre modifiable",
+  "Make it editable...": "Le rendre modifiable...",
+  "Put this copy back makes the world what it was then. Its folders now are not deleted: they go into this copy's folder (replaced).": "Put this copy back remet le monde tel qu'il était alors. Ses dossiers actuels ne sont pas supprimés : ils vont dans le dossier de cette copie (replaced).",
+  "This copy is not complete (%s is missing): it cannot be put back.": "Cette copie n'est pas complète (%s manque) : elle ne peut pas être remise.",
+  "To change %s itself: My world > Make it editable...": "Pour modifier %s lui-même : My world > Le rendre modifiable...",
+  "the world before a Build": "le monde avant un Build",
+  "the world before a newer zip or Remove the mod took it out": "le monde avant qu'un zip plus récent ou Remove the mod ne le retire",
+  "the world from a zip before it was made editable": "le monde d'un zip avant qu'il soit rendu modifiable"
  },
  "log": [
   [

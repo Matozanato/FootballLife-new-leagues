@@ -30,8 +30,16 @@ class ChildError(Exception):
 
 def build(pl, base, game, replace, log):
     """leaguebuilder.build(pl, base, game, replace, log=log) in a new process; log lines and the
-    exception (BuildError, a refused write ...) come back as if it ran here"""
+    exception (BuildError, a refused write ...) come back as if it ran here.
+    A world from a zip made editable on this PC (worlds.make_editable) goes into a world backup
+    first, all of it (Restore points > Put this copy back): it is someone else's world, and a
+    Build changes it in place"""
     import siderdir
+    from . import worlds
+    from .game import Game
+    g = Game(game)
+    if replace and worlds.edited_world(g, pl.get("world")):
+        log("a copy of %s before this Build: %s" % (pl["world"], worlds.backup(g, pl["world"], "built")))
     ctx = multiprocessing.get_context("spawn")
     here, there = ctx.Pipe(duplex=False)
     p = ctx.Process(target=_child, args=(there, siderdir.PREFERRED, (pl, base, game, replace)), daemon=True)

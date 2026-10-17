@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (QCheckBox, QDialog, QFileDialog, QFrame, QHBoxLay
 import leaguebuilder as B
 from .. import filecache, installer as I, theme, worlds as WL
 from ..i18n import _
-from ..ui import error, run_job
+from ..ui import ask, can_write, denied, error, info, run_job
 
 PLAN = "leaguebuilder-plan.json"
 CID_MAX = B.W.CID_MAX                                  # competitions the game has room for (255)
@@ -582,7 +582,15 @@ class MyWorld(QWidget):
         # and testers pressed the wrong one); here the open world's state in a few words
         self.world_state = QLabel()
         self.world_state.setObjectName("cardnote")
-        for x in (self.c_comps, self.c_regions, self.note, self.world_state):
+        # B85 (mato 17.10.): a ready world from a zip is changed in place, under its own name
+        self.b_edit = QPushButton(_("Make it editable..."))
+        self.b_edit.setObjectName("blue")
+        self.b_edit.setToolTip(_("Build is off for a world that came ready in a zip. This makes it a world you "
+                                 "can change and Build, in place and under its own name; all of it is "
+                                 "copied first (Restore points)."))
+        self.b_edit.clicked.connect(self.make_editable)
+        self.b_edit.hide()
+        for x in (self.c_comps, self.c_regions, self.note, self.b_edit, self.world_state):
             h.addWidget(x, 0, Qt.AlignVCenter)
         self.set_counter(self.c_comps, "Competitions", None, CID_MAX)
         self.set_counter(self.c_regions, "New countries", None, NEW_COUNTRIES)
@@ -686,6 +694,8 @@ class MyWorld(QWidget):
                          "—" if n is None else n, limit))
 
     def update_note(self):
+        if hasattr(self, "b_edit"):
+            self.b_edit.setVisible(bool(getattr(self, "_open_zipped", False)) and not self._progress)
         if self._progress:
             self.note.setText(self._progress)
             self.note.setStyleSheet("color: %s;" % theme.ACCENT)
@@ -786,6 +796,72 @@ class MyWorld(QWidget):
         run_job(lambda progress: {w: plan_summary(g, w) for w in want}, done, lambda tb: None)
 
     # ---- the buttons ----
+    def make_editable(self):
+        """B85: the open world, a ready world from a zip, becomes one Build may change -- in place,
+        under its own name (worlds.make_editable: all of it into a world backup first). Its recipe
+        is read again from the plan it carries; a copy of the recipe open before stays next to it
+        (<world>.json.before-edit)"""
+        title = _("Make it editable")
+        g, project = self.app.game, self.app.project
+        w = project.recipe.get("world") or ""
+        if not I.ready_world(g, w):
+            return
+        run_g, run_s = g.running()
+        if run_g or run_s:
+            error(self, title, _("Close the game first: it has the world's files open."))
+            return
+        if project.base is None:
+            error(self, title, _("no game tables -- Settings > Unpack the game's tables"))
+            return
+        if not ask(self, title, _(
+                "%s came ready in a zip. Make it a world you can change and Build?\n\n"
+                "It stays where it is, under its own name. All of it is copied first: Restore points > "
+                "Put this copy back makes it the ready world again.\n\n"
+                "After a Build of it, start a new Master League.") % w):
+            return
+        if not can_write(self, g):
+            return
+        try:
+            project.autosave()                    # the recipe open now keeps its changes
+        except Exception:
+            pass
+        copies, base = project.copies_dir(), project.base
+
+        def job(progress):
+            folder = WL.make_editable(g, w)
+            with open(os.path.join(g.livecpk_dir, w, "leaguebuilder-plan.json"), encoding="utf-8") as f:
+                rec = B.recipe_from_plan(json.load(f), base)
+            os.makedirs(copies, exist_ok=True)
+            kept = os.path.join(copies, w + ".json")
+            if os.path.exists(kept):
+                os.replace(kept, kept + ".before-edit")
+            with open(kept + ".tmp", "w", encoding="utf-8") as f:
+                json.dump(rec, f, indent=1, ensure_ascii=False)
+            os.replace(kept + ".tmp", kept)
+            return folder, kept
+
+        def done(r):
+            self.app.busy(False)
+            filecache.forget_under(os.path.join(g.livecpk_dir, w))
+            folder, kept = r
+            try:
+                project.open(kept, copy=True)
+                self.app.settings["last_recipe"] = kept
+            except Exception as e:
+                error(self, title, str(e))
+            self.app.bus.ini_changed.emit()
+            self.app.bus.content_changed.emit()
+            self.refresh()
+            info(self, title, _("%s can be changed now. When your changes are done, Build it, then start a "
+                                "new Master League.\n\nThe copy of it as it came: Restore points.") % w)
+
+        def failed(tb):
+            self.app.busy(False)
+            if not denied(self, tb):
+                error(self, title, _("It stopped, the world was not changed:") + "\n\n" + str(tb).strip().splitlines()[-1])
+        self.app.busy(True)
+        run_job(job, done, failed)
+
     def card_title(self):
         """the name + Add... adds to: the open world's card title (a ready world's pack name)"""
         w = self.app.project.recipe.get("world") or ""

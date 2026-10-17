@@ -5,6 +5,8 @@ be put back, rename one (0.2.4, mato 15.10.).
     delete(game, world)     everything of the world goes into a backup folder, nothing is deleted
     rename(game, old, new)  every place the name is written changes with it
     backups_of(sider_dir)   the world backups Restore points lists; restore() puts one back
+    make_editable(game, w)  a ready world from a zip becomes one Build may change, in place (B85)
+    backup(game, w, kind)   a copy of all of a world (before it is made editable, before a Build of it)
 
 A world's backups are kept in SiderAddons\ModStudio\backups\worlds\<world>\<YYYY-MM-DD HH-MM>
 deleted (or renamed), one folder each, with world.json saying what was done. Of one world the
@@ -285,6 +287,117 @@ def size_of(folder):
     return n
 
 
+# ---- a copy of a world (editing a ready world) ------------------------------------------------------
+EDITED = ".modstudio-edited"               # a ready world from a zip, made editable on this PC
+
+
+def edited_world(game, world):
+    """True when livecpk\\<world> came from a zip and was made editable here (make_editable)"""
+    return bool(world) and os.path.exists(os.path.join(game.livecpk_dir, world, EDITED))
+
+
+def backup(game, world, kind="edited", log=lambda t: None):
+    """a copy of all of `world` into a world backup, the world staying where it is: its folder, its
+    folders in the content servers' libraries, and the map files, sider.ini and modules\\fl26world.txt
+    as they are (before\\). kind: "edited" (make_editable), "built" (before a Build of an edited
+    world), "updated" (before Remove the mod or a newer zip takes it out). Restore points'
+    Put this copy back (restore) makes the world what it was. Returns the
+    backup folder; of one world the newest KEEP backups stay (prune)"""
+    sd = game.sider_dir
+    if not is_world(world) or not os.path.isdir(os.path.join(game.livecpk_dir, world)):
+        raise WorldError("There is no world %s in %s." % (world, game.livecpk_dir))
+    folder = _new_backup(sd, world, kind)
+    info = {"kind": kind, "world": world, "time": time.strftime("%Y%m%d-%H%M%S"), "t": time.time(),
+            "copied": [], "texts": []}
+    _save_info(folder, info)
+    try:
+        rels = [os.path.join("livecpk", world)]
+        rels += [os.path.join("content", lib, world) for lib in _libs(game)
+                 if os.path.isdir(os.path.join(game.content_dir, lib, world))]
+        for rel in rels:
+            shutil.copytree(os.path.join(sd, rel), os.path.join(folder, "files", rel))
+            info["copied"].append(rel)
+            _save_info(folder, info)
+            log("copied into the backup: %s" % rel)
+        for rel in _maps(game) + ["sider.ini", os.path.join("modules", I.WORLD_FILE)]:
+            if os.path.isfile(os.path.join(sd, rel)):
+                _keep_text(sd, folder, rel)
+                info["texts"].append(rel)
+        _save_info(folder, info)
+    except BaseException:
+        shutil.rmtree(folder, ignore_errors=True)      # half a copy is no backup
+        raise
+    prune(sd, world, but=folder)
+    return folder
+
+
+def make_editable(game, world, log=lambda t: None):
+    """B85: a ready world from a zip (installer.ready_world) becomes a world of this PC that Build
+    may change -- in place, under its own name (mato 15.10.: no copy, which lost the scoreboards the
+    zip carries at the next switch). First all of it goes into a backup (Put this copy back makes it
+    the ready world again); then the kits made for its clubs on the PC that built it are stamped as
+    made here (lbservers.restamp: a Build keeps them, and a club whose colours change gets its kit
+    drawn again); then its .modstudio mark becomes .modstudio-edited. Returns the backup folder."""
+    root = os.path.join(game.livecpk_dir, world)
+    if not I.ready_world(game, world):
+        raise WorldError("%s is not a ready world from a zip." % world)
+    with open(os.path.join(root, "leaguebuilder-plan.json"), encoding="utf-8") as f:
+        plan = json.load(f)
+    folder = backup(game, world, "edited", log)
+    import lbservers
+    lbservers.restamp(plan, game.sider_dir, root, log)
+    os.replace(os.path.join(root, ".modstudio"), os.path.join(root, EDITED))
+    log("%s: made editable (the backup: %s)" % (world, folder))
+    return folder
+
+
+def _put_copy_back(game, folder, info, log):
+    """restore() of a backup taken by backup(): the world's folders as they were (the ones there now
+    go into the backup's replaced\\, nothing is deleted), and the map lines the world carries from
+    other packs (a zip's _kits / _packs) that a Build since took out come back: on when the world is
+    in the game, else switched off (its next Switch on turns them on). The game must be closed
+    (Restore points checks that)"""
+    from .i18n import _
+    sd, world = game.sider_dir, info["world"]
+    on = world in live(game)
+    for rel in info["copied"]:
+        if not os.path.isdir(os.path.join(folder, "files", rel)):
+            raise WorldError(_("This copy is not complete (%s is missing): it cannot be put back.") % rel)
+    for rel in info["copied"]:
+        now, old = os.path.join(sd, rel), os.path.join(folder, "files", rel)
+        if os.path.exists(now):
+            aside = os.path.join(folder, "replaced", rel)
+            if os.path.exists(aside):
+                shutil.rmtree(aside)
+            os.makedirs(os.path.dirname(aside), exist_ok=True)
+            shutil.move(now, aside)
+        os.makedirs(os.path.dirname(now), exist_ok=True)
+        shutil.copytree(old, now)
+        log("put back: %s" % rel)
+    import lbservers
+    me = lbservers.safe(world).lower()
+    for rel in info.get("texts", []):
+        before, p = os.path.join(folder, "before", rel), os.path.join(sd, rel)
+        if not rel.lower().endswith(".txt") or not os.path.isfile(before) or not os.path.isfile(p):
+            continue
+        theirs = [l for l in _read(before)[0] if lbservers.carrier(_body(l)) == me]
+        if not theirs:
+            continue
+        lines, enc, bom = _read(p)
+        have = {re.sub(r"^\s*#\s*", "", _body(l)) for l in lines}
+        back = [l for l in theirs if re.sub(r"^\s*#\s*", "", _body(l)) not in have]
+        if back:
+            backups.snapshot(p, "world %s put back" % world, sd)
+            if lines and not lines[-1].endswith(("\n", "\r")):
+                lines[-1] += _nl(lines)
+            lines += [("" if on else "#") + re.sub(r"^\s*#\s*", "", _body(l)) + _nl(lines) for l in back]
+            _write(p, lines, enc, bom)
+            log("%s: %d line(s) of %s back%s" % (rel, len(back), world, "" if on else ", switched off"))
+    info["restored"] = time.strftime("%Y%m%d-%H%M%S")
+    _save_info(folder, info)
+    return world
+
+
 # ---- delete ----------------------------------------------------------------------------------------
 def delete(game, world, log=lambda t: None):
     """take `world` out of the game into a backup folder; returns (folder, info).
@@ -454,6 +567,8 @@ def restore(game, folder, log=lambda t: None):
     info = _load_info(folder)
     if info.get("restored"):
         raise WorldError(_("This backup was put back already."))
+    if info["kind"] in ("edited", "built", "updated"):
+        return _put_copy_back(game, folder, info, log)
     if info["kind"] == "renamed":
         old, new = info["world"], info["new"]
         if not os.path.isdir(os.path.join(game.livecpk_dir, new)):

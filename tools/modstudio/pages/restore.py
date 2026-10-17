@@ -15,6 +15,18 @@ WORLDS = "<worlds>"           # the "only" choice that lists the world backups (
 TEXT_EXT = (".ini", ".txt", ".csv", ".lua", ".json", ".cfg")
 
 
+# world backups that keep a world where it is (worlds.backup)
+def copy_what(kind):
+    """what the row of such a backup says, or None for another kind"""
+    if kind == "edited":
+        return _("the world from a zip before it was made editable")
+    if kind == "built":
+        return _("the world before a Build")
+    if kind == "updated":
+        return _("the world before a newer zip or Remove the mod took it out")
+    return None
+
+
 def when(t):
     return "%s.%s.%s %s:%s:%s" % (t[6:8], t[4:6], t[0:4], t[9:11], t[11:13], t[13:15]) if len(t) >= 15 else t
 
@@ -121,6 +133,9 @@ class Restore(Page):
                 if inf.get("kind") == "renamed":
                     what = _("world renamed to %s") % inf.get("new", "")
                     size = ""
+                elif copy_what(inf.get("kind")):
+                    what = copy_what(inf["kind"])
+                    size = human(WL.size_of(os.path.join(r["world_backup"], "files")))
                 else:
                     what = _("world deleted (all of it is in this copy)")
                     size = human(WL.size_of(os.path.join(r["world_backup"], "files")))
@@ -171,6 +186,11 @@ class Restore(Page):
             lines = [_("%s was renamed to %s.") % (inf["world"], inf.get("new", "")), "",
                      _("Put this copy back renames it back to %s, everywhere the name is written.") % inf["world"],
                      "", _("Files the rename changed:")] + ["  " + t for t in inf.get("texts", [])]
+        elif copy_what(inf.get("kind")):
+            lines = [_("A copy of all of %s: %s.") % (inf["world"], copy_what(inf["kind"])), ""]
+            lines += ["  " + m for m in inf.get("copied", [])]
+            lines += ["", _("Put this copy back makes the world what it was then. Its folders now are not "
+                            "deleted: they go into this copy's folder (replaced)."), "", r["world_backup"]]
         else:
             lines = [_("%s was deleted. All of it is kept in this copy:") % inf["world"], ""]
             lines += ["  " + m for m in inf.get("moved", [])]

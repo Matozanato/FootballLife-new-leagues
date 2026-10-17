@@ -339,7 +339,7 @@ def export_world(sider_dir, world, out, log=lambda t: None, menus=False):
             for f in sorted(fn):
                 p = os.path.join(dp, f)
                 rel = os.path.relpath(p, root).replace(os.sep, "/")
-                if rel == ".modstudio":
+                if rel in (".modstudio", ".modstudio-edited"):
                     continue
                 z.write(use if rel == WORLD_FILE else p, "SiderAddons/livecpk/%s/%s" % (world, rel))
                 n += 1
@@ -865,18 +865,39 @@ def replace_world(game, ini, world, log=lambda t: None):
     d = os.path.join(game.livecpk_dir, world)
     marked = os.path.exists(os.path.join(d, ".modstudio"))
     notes = []
+    keep_edited(game, [world], log)
     for rec in reversed(olds):
         log("removing the older %s (%s)" % (world, rec.get("name")))
-        notes += uninstall(game, ini, rec, log=log)
+        notes += uninstall(game, ini, rec, log=log, kept=True)
     if (olds or marked) and os.path.isdir(d):
         shutil.rmtree(d)
         log("livecpk\\%s: what was left of the older one deleted" % world)
     return notes
 
 
-def uninstall(game, ini, rec, log=lambda t: None):
-    """undo one record; returns notes about what could not be undone"""
+def keep_edited(game, worlds_in, log=lambda t: None):
+    """a ready world made editable on this PC (worlds.make_editable) is the user's work now:
+    before Remove the mod or a newer zip of it takes it out, all of it goes into a world backup
+    (Restore points > Put this copy back)"""
+    from . import worlds
+    for w in worlds_in:
+        if worlds.edited_world(game, w):
+            log("a copy of %s (made editable on this PC) before it is taken out: %s"
+                % (w, worlds.backup(game, w, "updated")))
+
+
+def worlds_of(rec):
+    """the ready worlds an install record brought in"""
+    return [w for w in [rec.get("world")] + [p[1] for p in (rec.get("parts") or [])
+                                             if isinstance(p, (list, tuple)) and len(p) > 1 and p[0] == "world"] if w]
+
+
+def uninstall(game, ini, rec, log=lambda t: None, kept=False):
+    """undo one record; returns notes about what could not be undone. kept: keep_edited ran
+    already (replace_world)"""
     sd, notes = game.sider_dir, []
+    if not kept:
+        keep_edited(game, worlds_of(rec), log)
     # map lines first (the files are still there)
     for rel, lines in rec.get("map_added", {}).items():
         p = os.path.join(sd, rel)
