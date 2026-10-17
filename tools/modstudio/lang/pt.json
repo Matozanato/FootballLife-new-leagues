@@ -1823,7 +1823,8 @@
   "The tables in that folder cannot be read: one of the .bin files is not in the game's own format (changed by another tool?). Use the game's tables or a patch's original pesdb folder.": "As tabelas dessa pasta não podem ser lidas: um dos ficheiros .bin não está no formato do jogo (alterado por outra ferramenta?). Usa as tabelas do jogo ou a pasta pesdb original de um patch.",
   "The tables in that folder cannot be read: %s": "As tabelas dessa pasta não podem ser lidas: %s",
   "The NewLife Database: real squads of today for your world's leagues and the game's own (for modders; to play a ready Modpack you do not need it)": "NewLife Database: plantéis reais de hoje para as ligas do teu mundo e as do jogo (para modders; para jogar um Modpack pronto não precisas dela)",
-  "Your world %s is built with Plain kits to change in Edit mode: Kit Server does not dress its new clubs, so these kits are not worn by them. Untick it on the Build page and Build again.": "O teu mundo %s foi construído com «Uniformes simples para o modo Edição»: o Kit Server não veste os seus clubes novos, por isso não usam estes uniformes. Desmarca-o na página Construção e constrói de novo."
+  "Your world %s is built with Plain kits to change in Edit mode: Kit Server does not dress its new clubs, so these kits are not worn by them. Untick it on the Build page and Build again.": "O teu mundo %s foi construído com «Uniformes simples para o modo Edição»: o Kit Server não veste os seus clubes novos, por isso não usam estes uniformes. Desmarca-o na página Construção e constrói de novo.",
+  "Experimental: the split and Apertura and Clausura work, but still have more bugs than everyone plays everyone, the fully tested format. Report what you find.": "Experimental: a divisão em dois grupos e Apertura e Clausura funcionam, mas ainda têm mais bugs do que todos contra todos, o formato totalmente testado. Reporta o que encontrares."
  },
  "log": [
   [

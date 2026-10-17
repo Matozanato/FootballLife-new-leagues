@@ -5,6 +5,7 @@ once, and your 0.2.2 career keeps working.
 
 ## Changed
 
+- **Split and Apertura and Clausura are marked experimental.** The league window says so under the formats: they work, but still have more open bugs than everyone plays everyone, the fully tested format. Keep reporting what you find. (Thanks Vicentico)
 - **Cups of our countries.** My world > Cups has a new window with the cups of your own leagues in
   one table: for each top division its national cup, super cup and league cup, with the name and
   the logo -- the same fields as Edit league, without opening every league.

@@ -592,6 +592,11 @@ class LeagueDialog(Dialog):
         self.form.addRow("", hint(_("two tournaments a season, September to early January and January to May, "
                                     "everyone meeting once in each and starting from zero points; the whole "
                                     "season's table decides promotion and relegation. 18 clubs at most")))
+        # 0.2.4 (Vicentico, mato 18.10.): the two formats with the most open reports say so
+        exp = hint(_("Experimental: the split and Apertura and Clausura work, but still have more bugs than "
+                     "everyone plays everyone, the fully tested format. Report what you find."))
+        exp.setStyleSheet("color: %s" % theme.WARN)
+        self.form.addRow("", exp)
 
         self.above = QComboBox()
         self.above.addItem(_("(top division)"), None)

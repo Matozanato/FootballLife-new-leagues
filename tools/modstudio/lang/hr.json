@@ -1823,7 +1823,8 @@
   "The tables in that folder cannot be read: one of the .bin files is not in the game's own format (changed by another tool?). Use the game's tables or a patch's original pesdb folder.": "Tablice u toj mapi ne mogu se pročitati: jedna od .bin datoteka nije u formatu igre (promijenio ju je neki drugi alat?). Koristi tablice igre ili originalnu pesdb mapu patcha.",
   "The tables in that folder cannot be read: %s": "Tablice u toj mapi ne mogu se pročitati: %s",
   "The NewLife Database: real squads of today for your world's leagues and the game's own (for modders; to play a ready Modpack you do not need it)": "NewLife Database: današnji pravi sastavi za lige tvog svijeta i igrine lige (za modere; za igranje gotovog Modpacka ne treba ti)",
-  "Your world %s is built with Plain kits to change in Edit mode: Kit Server does not dress its new clubs, so these kits are not worn by them. Untick it on the Build page and Build again.": "Tvoj svijet %s je izgrađen s opcijom „Obični dresovi za Edit mod”: Kit Server ne oblači njegove nove klubove, pa oni ne nose ove dresove. Isključi je na stranici Gradnja i ponovi gradnju."
+  "Your world %s is built with Plain kits to change in Edit mode: Kit Server does not dress its new clubs, so these kits are not worn by them. Untick it on the Build page and Build again.": "Tvoj svijet %s je izgrađen s opcijom „Obični dresovi za Edit mod”: Kit Server ne oblači njegove nove klubove, pa oni ne nose ove dresove. Isključi je na stranici Gradnja i ponovi gradnju.",
+  "Experimental: the split and Apertura and Clausura work, but still have more bugs than everyone plays everyone, the fully tested format. Report what you find.": "Eksperimentalno: škotska podjela te Apertura i Clausura rade, ali još imaju više bugova od formata svatko sa svakim, koji je potpuno testiran. Javi što nađeš."
  },
  "log": [
   [
