@@ -487,9 +487,21 @@ class Install(Page):
 
         def over(_r=None):
             clock.stop()
-            self.app.busy(False)
             self.app.bus.ini_changed.emit()
             save_note(self, sw)
+            # B123 (Vicentico, 17.10.): the installed world's recipe opens as after Put in the game --
+            # the tabs (Leagues and the rest) kept showing the world in the game before the zip until
+            # Mod Studio was started again. Read in the background: the Modpack's is 132 MB
+            run_job(lambda _progress: self.app.live_recipe(), done=opened, failed=lambda _tb: opened(None))
+
+        def opened(found):
+            self.app.busy(False)
+            if found and self.app.open_live_world(found):
+                self.app.bus.content_changed.emit()
+                try:
+                    self.app.page("Build").refresh()
+                except Exception:
+                    pass
             self.final_check(w)
 
         def failed(tb):                                   # BuildError, SaveError, a missing module pack

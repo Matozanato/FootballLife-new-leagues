@@ -334,6 +334,29 @@ def run():
     sec.fold.click()
     qa.processEvents()
     ok("and opens them again", not sec.cards_area.isHidden() and w.settings.get("cards_folded") is False)
+
+    # ---- B123 (Vicentico, 17.10.): after Import your world switched a zip's world on, Leagues and the
+    # other tabs still showed the world in the game before it until Mod Studio started again
+    live_now = WL.live(game)[0]
+    other = next(c.world for c in sec.cards if c.world != live_now)
+    ok("B123: before, the open recipe is the world in the game (%s)" % live_now, w.project.recipe.get("world") == live_now)
+    ip = w.page("Install")
+    checked = []
+    ip.final_check = lambda world: checked.append(world)
+    ip.world_on({"world": other})
+    t0 = time.time()
+    while not checked and time.time() - t0 < 60:
+        qa.processEvents()
+        time.sleep(0.02)
+    settle(qa, 0.3)
+    ok("B123: the switch ran to its end check", checked == [other])
+    ok("B123: %s is in the game" % other, WL.live(game) == [other])
+    ok("B123: its recipe is the open one now, not %s's (the tabs show its leagues)" % live_now,
+       w.project.recipe.get("world") == other)
+    bp = w.page("Build")
+    bp.refresh()
+    ok("B123: the Build page says %s: %r" % (other, bp.state.text()),
+       ("World %s:" % other) in bp.state.text() and live_now not in bp.what.text() + bp.state.text())
     w.close()
     qa.processEvents()
 
