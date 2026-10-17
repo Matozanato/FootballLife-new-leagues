@@ -514,6 +514,7 @@ class Leagues(BuilderPage):
     def show_crests(self, L, b=None, wdir=""):
         """the league's clubs, crest over short name, five to a row; `b` the built league (its team
         ids) and `wdir` the world folder, for the crests the build wrote (B89: zip worlds)"""
+        from .builder import world_crest      # B103: was imported in show_ours only -> NameError here
         teams = list((b or {}).get("teams") or [])
         while self.o_crests.count():
             w = self.o_crests.takeAt(0).widget()
