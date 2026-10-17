@@ -557,6 +557,14 @@ class MyWorld(QWidget):
         t = theme.caps(QLabel(_("My world")))
         t.setObjectName("pagetitle")
         h.addWidget(t)
+        # Xxspedd (17.10., beta): the row of world cards takes a lot of room -- it folds away and
+        # stays folded across starts; the world in the game is still named in the header above
+        self.fold = QToolButton()
+        self.fold.setObjectName("fold")
+        self.fold.setCursor(Qt.PointingHandCursor)
+        self.fold.setAutoRaise(True)
+        self.fold.clicked.connect(lambda: self.fold_cards(not self.cards_area.isHidden()))
+        h.addWidget(self.fold, 0, Qt.AlignVCenter)
         h.addStretch(1)
         self.c_comps = QLabel()
         self.c_comps.setObjectName("counter")
@@ -596,7 +604,20 @@ class MyWorld(QWidget):
         sa.setWidget(inner)
         sa.setFixedHeight(CARD_H + 4 + 12)          # the cards, and a scroll bar when there are many
         self.cards_area = sa
+        self.fold_cards(bool(self.app.settings.get("cards_folded")), keep=False)
         return sa
+
+    def fold_cards(self, folded, keep=True):
+        """hide (folded) or show the row of world cards; keep: remember it in the settings"""
+        self.cards_area.setHidden(folded)
+        self.fold.setText(("▸  " if folded else "▾  ") + _("Worlds"))
+        self.fold.setToolTip(_("Show the world cards") if folded else _("Hide the world cards to make room"))
+        if keep:
+            self.app.settings["cards_folded"] = folded
+            try:
+                self.app.save_settings()
+            except Exception:
+                pass
 
     def _tabrow(self, tabs):
         wrap = QWidget()

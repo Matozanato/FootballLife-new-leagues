@@ -1800,7 +1800,10 @@
   "The order of your leagues and where the last Build put each one in Select Team. * = the order changed since: Build again to see where it goes.": "A ordem das tuas ligas e onde o último Build pôs cada uma em Select Team. * = a ordem mudou desde então: faz Build outra vez para ver para onde vai.",
   "Tick all shown": "Marcar todos os mostrados",
   "Ticks every club the list shows now: search a league first to add its clubs": "Marca todos os clubes que a lista mostra agora: procura primeiro uma liga para adicionar os seus clubes",
-  "Untick all": "Desmarcar todos"
+  "Untick all": "Desmarcar todos",
+  "Worlds": "Mundos",
+  "Show the world cards": "Mostrar os cartões dos mundos",
+  "Hide the world cards to make room": "Esconder os cartões dos mundos para ter mais espaço"
  },
  "log": [
   [

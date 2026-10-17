@@ -253,6 +253,16 @@ def run():
     ok("Add with a world zip opens Import your world inside My world",
        w.stack.currentWidget() is sec and sec.tabs.currentWidget() is w.holder_of["Install"])
     d.deleteLater()
+
+    # the row of world cards folds away and stays folded (Xxspedd, 17.10.)
+    ok("the world cards show at first", not sec.cards_area.isHidden() and "▾" in sec.fold.text())
+    sec.fold.click()
+    qa.processEvents()
+    ok("Worlds folds them away, and the settings keep it",
+       sec.cards_area.isHidden() and "▸" in sec.fold.text() and w.settings.get("cards_folded") is True)
+    sec.fold.click()
+    qa.processEvents()
+    ok("and opens them again", not sec.cards_area.isHidden() and w.settings.get("cards_folded") is False)
     w.close()
     qa.processEvents()
 

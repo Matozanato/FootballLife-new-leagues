@@ -1800,7 +1800,10 @@
   "The order of your leagues and where the last Build put each one in Select Team. * = the order changed since: Build again to see where it goes.": "Redoslijed tvojih liga i gdje je zadnji Build stavio svaku u Select Team. * = redoslijed se otad promijenio: pokreni Build ponovno da vidiš kamo ide.",
   "Tick all shown": "Označi sve prikazane",
   "Ticks every club the list shows now: search a league first to add its clubs": "Označi sve klubove koje popis sada prikazuje: prvo potraži ligu da dodaš njezine klubove",
-  "Untick all": "Odznači sve"
+  "Untick all": "Odznači sve",
+  "Worlds": "Svjetovi",
+  "Show the world cards": "Prikaži kartice svjetova",
+  "Hide the world cards to make room": "Sakrij kartice svjetova da bude više mjesta"
  },
  "log": [
   [

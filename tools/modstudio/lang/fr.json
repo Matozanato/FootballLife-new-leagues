@@ -1799,7 +1799,10 @@
   "The order of your leagues and where the last Build put each one in Select Team. * = the order changed since: Build again to see where it goes.": "L'ordre de vos ligues et où le dernier Build a mis chacune dans Select Team. * = l'ordre a changé depuis : relancez Build pour voir où elle va.",
   "Tick all shown": "Cocher tous ceux affichés",
   "Ticks every club the list shows now: search a league first to add its clubs": "Coche tous les clubs que la liste affiche maintenant : cherche d'abord une ligue pour ajouter ses clubs",
-  "Untick all": "Tout décocher"
+  "Untick all": "Tout décocher",
+  "Worlds": "Mondes",
+  "Show the world cards": "Afficher les cartes des mondes",
+  "Hide the world cards to make room": "Masquer les cartes des mondes pour faire de la place"
  },
  "log": [
   [
