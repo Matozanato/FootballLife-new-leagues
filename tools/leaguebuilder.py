@@ -224,7 +224,7 @@ leagues' European places. on() makes it the live world: the one active _FL26
 cpk.root in sider.ini (siderroot.py) and the world file copied to modules\. check() reads
 sider.log after a start and says, module by module, whether the world file was taken.
 """
-import contextlib, copy, glob, io, json, os, re, shutil, struct, sys
+import contextlib, copy, glob, io, json, os, re, shutil, struct, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -3519,6 +3519,14 @@ def build(pl, base, game, replace=False, log=print):
         if not os.path.exists(os.path.join(out, MARK)):
             raise BuildError("%s was not made by the league builder (no %s) -- left alone" % (out, MARK))
     tmp = out + ".building"
+    laps, clock = [], [time.time()]
+
+    def lap(what):
+        # 17.10.: where a Build's minutes go (a tester waited 20+ min to swap one cup's picture)
+        now = time.time()
+        laps.append("%s %d s" % (what, round(now - clock[0])))
+        clock[0] = now
+
     if os.path.exists(tmp):
         shutil.rmtree(tmp)
     db = os.path.join(tmp, "common", "etc", "pesdb")
@@ -3773,6 +3781,7 @@ def build(pl, base, game, replace=False, log=print):
     club_order(pl, ents, regs, raw, top_id, log)
     with contextlib.redirect_stdout(io.StringIO()):
         M.write_tables(tmp, comp, regs, ents)
+    lap("clubs and tables")
 
     import lbplayers
     lbplayers.SQUAD = SQUAD                # a new club's places: the squads Build makes
@@ -3782,6 +3791,7 @@ def build(pl, base, game, replace=False, log=print):
         filled["players"] = lbplayers.fill_tiers(filled, base, log)
     except lbplayers.Error as e:
         raise BuildError(str(e))
+    lap("squads")
     last = follow_clubs(last_build_ids(game, pl["world"]), club_newlife(clubs))
     try:
         retired = {int(x) for x in last.get("retired") or [] if lbplayers.PID_MAX >= int(x) > 0}
@@ -3874,6 +3884,7 @@ def build(pl, base, game, replace=False, log=print):
             json.dump({"world": pl["world"], "clubs": ids, "names": id_names(filled, ids),
                        "people": id_people(filled, ids), "club_nl": {k: v for k, v in now.items() if k in ids},
                        "retired": sorted(gone)}, f, indent=1, sort_keys=True)
+    lap("players")
     if faces:
         import lbfaces
         for n, (pid, folder) in enumerate(faces):
@@ -3905,6 +3916,7 @@ def build(pl, base, game, replace=False, log=print):
                     raise BuildError("mksplit gave %d no Apertura and Clausura:\n%s" % (cup["league"], said))
                 cup["entry"] = [(ph[cup["phase"]], pos) for _r, pos in cup["entry"]]
 
+    lap("faces")
     rounds = qual_rounds(pl)
     uecl, qlines = europe(tmp, db, log, bool(pl.get("uecl")), pl.get("uecl_name"), rounds)
     national_cups(pl, tmp, db, log)
@@ -4036,8 +4048,10 @@ def build(pl, base, game, replace=False, log=print):
         p.pop("prev_teams", None), p.pop("prev_names", None)
     json.dump(pl, open(os.path.join(tmp, "leaguebuilder-plan.json"), "w", encoding="utf-8"), indent=1)
 
+    lap("cups and the world file")
     gone = set()                          # pictures whose source is not on this PC (have_picture)
     pictures(pl, tmp, base, log, game, gone)
+    lap("pictures and kits")
     region_modules(pl, tmp, game, log)
 
     write_manifest(tmp)                   # before keep_added: what this Build wrote, not what it kept
@@ -4045,7 +4059,9 @@ def build(pl, base, game, replace=False, log=print):
         keep_added(out, tmp, log, gone)
         shutil.rmtree(out)
     os.rename(tmp, out)
+    lap("regions and the swap")
     log("built %s: %d leagues, %d clubs" % (out, len(pl["leagues"]), made))
+    log("  time: " + ", ".join(laps))
     if is_live(pl["world"], game):
         # GitHub #69: the modules read SiderAddons/modules/fl26world.txt, a copy Switch on makes.
         # A world built again while it was already on kept the old copy, and a change (February
