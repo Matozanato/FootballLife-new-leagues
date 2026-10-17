@@ -4886,23 +4886,25 @@ def flag_files(fid):
     return ["common/render/symbol/flag/flag_%03d%s.png" % (fid, suf) for suf, _px in lbassets.FLAG_SIZES]
 
 
-def pictures(pl, root, base, log=print, game=None, gone=None):
-    """league logos, club crests and kits for the new leagues (tools/lbassets.py); gone (a set):
-    the files of every picture whose source is not on this PC go in it (have_picture)"""
-    import lbassets
-    flags, done = {}, set()
+def picture_jobs(pl, base, log=print, gone=None):
+    """the pictures of the plan, in the order Build draws them: [(lbassets function, its
+    arguments after the world folder, the world-folder files it writes)], and the country flags
+    {country: picture}. A later job may write a file an earlier one wrote: the order stands."""
+    jobs, flags, done = [], {}, set()
+
+    def job(fn, rels, *args):
+        jobs.append((fn, args, list(rels)))
     for p in pl["leagues"] + (pl.get("others") or []):
         if not p.get("others"):              # clubs in no league: no competition, no logo
-            lbassets.league_logo(root, p["cid"], p["name"],
-                                 have_picture(p.get("logo"), p["name"], log, "logo", "drawn emblem",
-                                              gone, logo_files(p["cid"])))
+            job("league_logo", logo_files(p["cid"]), p["cid"], p["name"],
+                have_picture(p.get("logo"), p["name"], log, "logo", "drawn emblem", gone, logo_files(p["cid"])))
         if p.get("flag") and p["country"] not in done:
             done.add(p["country"])
             flag = have_picture(p["flag"], p["name"], log, "flag", "the game's flag kept",
                                 gone, flag_files(p["country"]))
             if flag:                         # no flag picture: the game's own flag stays
                 flags[p["country"]] = flag
-                lbassets.country_flag(root, p["country"], flag)
+                job("country_flag", flag_files(p["country"]), p["country"], flag)
         crests, kits = p.get("club_crests") or [], p.get("club_kits") or []
         gp = game_places(p)
         for k, tid in enumerate(p["teams"]):
@@ -4910,10 +4912,10 @@ def pictures(pl, root, base, log=print, game=None, gone=None):
                 continue
             pic = crests[k] if k < len(crests) else None
             pic = have_picture(pic, club_name(p, k), log, gone=gone, rels=crest_files(tid))
-            lbassets.club_crest(root, tid, p["abbrs"][k], pic, kits[k] if k < len(kits) else None)
+            job("club_crest", crest_files(tid), tid, p["abbrs"][k], pic, kits[k] if k < len(kits) else None)
         for g in gp.values():                # a new club taking a game club's place: a badge
             if isinstance(g.get("swap"), dict) and g.get("swap_id"):
-                lbassets.club_crest(root, g["swap_id"], g.get("swap_abbr") or "", None)
+                job("club_crest", crest_files(g["swap_id"]), g["swap_id"], g.get("swap_abbr") or "", None)
     e = pl.get("edits") or {}
     cid_of = {}
     for rid, v in game_league_edits(pl).items():
@@ -4921,14 +4923,14 @@ def pictures(pl, root, base, log=print, game=None, gone=None):
             if not cid_of:
                 cid_of = {r: c for r, c, _, _ in game_leagues(base)}
             if int(rid) in cid_of:
-                lbassets.league_logo(root, cid_of[int(rid)], v.get("name") or "",
-                                     have_picture(v["logo"], v.get("name") or "league %s" % rid, log,
-                                                  "logo", "drawn emblem", gone, logo_files(cid_of[int(rid)])))
+                job("league_logo", logo_files(cid_of[int(rid)]), cid_of[int(rid)], v.get("name") or "",
+                    have_picture(v["logo"], v.get("name") or "league %s" % rid, log,
+                                 "logo", "drawn emblem", gone, logo_files(cid_of[int(rid)])))
     for cid, v in (e.get("competitions") or {}).items():
         if v.get("logo"):
-            lbassets.league_logo(root, int(cid), v.get("name") or "",
-                                 have_picture(v["logo"], v.get("name") or "competition %s" % cid, log,
-                                              "logo", "drawn emblem", gone, logo_files(int(cid))))
+            job("league_logo", logo_files(int(cid)), int(cid), v.get("name") or "",
+                have_picture(v["logo"], v.get("name") or "competition %s" % cid, log,
+                             "logo", "drawn emblem", gone, logo_files(int(cid))))
     for tid, v in (e.get("clubs") or {}).items():
         # "kit": a place of the game's NewLife gave another club (refresh_game_leagues, B57); with
         # no crest picture it gets that club's shield (or badge), as a new club does, never the
@@ -4936,11 +4938,25 @@ def pictures(pl, root, base, log=print, game=None, gone=None):
         if v.get("crest") or "kit" in v:
             pic = have_picture(v["crest"], v.get("name") or tid, log, gone=gone,
                                rels=crest_files(int(tid))) if v.get("crest") else None
-            lbassets.club_crest(root, int(tid), v.get("abbr") or v.get("name") or "", pic, v.get("kit") or None)
+            job("club_crest", crest_files(int(tid)), int(tid), v.get("abbr") or v.get("name") or "", pic,
+                v.get("kit") or None)
     cups = cup_emblems(pl)
     for cid, name, logo in cups:
-        lbassets.league_logo(root, cid, name, have_picture(logo, name, log, "logo", "drawn emblem",
-                                                           gone, logo_files(cid)))
+        job("league_logo", logo_files(cid), cid, name, have_picture(logo, name, log, "logo", "drawn emblem",
+                                                                    gone, logo_files(cid)))
+    return jobs, flags, len(cups)
+
+
+def pictures(pl, root, base, log=print, game=None, gone=None):
+    """league logos, club crests and kits for the new leagues (tools/lbassets.py); gone (a set):
+    the files of every picture whose source is not on this PC go in it (have_picture). The
+    pictures are drawn from picture_jobs, which the Build also records (an edit of pictures alone
+    redraws just those, pictures_only)."""
+    import lbassets
+    jobs, flags, ncups = picture_jobs(pl, base, log, gone)
+    for fn, args, _rels in jobs:
+        getattr(lbassets, fn)(root, *args)
+    cups = range(ncups)
     log("  %d league logos, %d cup logos, %d club crests%s" % (
         len(pl["leagues"]), len(cups), sum(len(p["teams"]) - len(game_places(p))
                                            for p in pl["leagues"] + (pl.get("others") or [])),
