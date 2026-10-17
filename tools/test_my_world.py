@@ -159,8 +159,23 @@ def run():
 
     # ---- Put in the game: the switch, then the cards again
     PB.ask = lambda *a, **k: True
+    boxes = []
+    M.info = lambda parent, title, text: boxes.append(("info", text))
+    M.error = lambda parent, title, text: boxes.append(("error", text))
     old.go.click()
+    # B104 (David, 17.10.): the switch runs in the background, the cards wait meanwhile, a box says the end
+    ok("Put in the game: the cards wait (buttons off), the card says Switching _FL26Old on",
+       sec._switching == "_FL26Old" and all(not c.isEnabled() for c in sec.cards)
+       and any(c.world == "_FL26Old" and c.info.text() == "Switching _FL26Old on" for c in sec.cards))
+    t0 = time.time()
+    while sec._switching and time.time() - t0 < 60:
+        qa.processEvents()
+        time.sleep(0.02)
     settle(qa, 0.5)
+    ok("Put in the game: over, the cards back on, a box says %s" % boxes,
+       not sec._switching and all(c.isEnabled() for c in sec.cards)
+       and len(boxes) == 1 and boxes[0][0] == "info"
+       and boxes[0][1].startswith("_FL26Old is in the game now. Start a new Master League with it."))
     ok("Put in the game switched _FL26Old on in sider.ini, _FL26Live off", WL.live(game) == ["_FL26Old"])
     ok("its recipe is the open one now (the tabs change it)", w.project.recipe.get("world") == "_FL26Old")
     kr = os.environ["FL26_SAVE_ROOT"]

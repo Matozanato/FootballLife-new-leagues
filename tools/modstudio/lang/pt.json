@@ -1816,7 +1816,8 @@
   "To change %s itself: My world > Make it editable...": "Para alterar o próprio %s: My world > Torná-lo editável...",
   "the world before a Build": "o mundo antes de um Build",
   "the world before a newer zip or Remove the mod took it out": "o mundo antes de um zip mais novo ou Remove the mod o retirar",
-  "the world from a zip before it was made editable": "o mundo de um zip antes de ser tornado editável"
+  "the world from a zip before it was made editable": "o mundo de um zip antes de ser tornado editável",
+  "%s is not in the game: the log on this page says why.": "%s não está no jogo: o registo desta página diz porquê."
  },
  "log": [
   [

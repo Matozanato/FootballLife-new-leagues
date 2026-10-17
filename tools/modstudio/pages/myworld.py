@@ -773,8 +773,8 @@ class MyWorld(QWidget):
         self.new_world = nw
         self.row.addWidget(nw)
         self.row.addStretch(1)
-        if getattr(self, "_renaming", None):
-            self.hold_cards()                         # a rename still runs (B66)
+        if getattr(self, "_renaming", None) or getattr(self, "_switching", None):
+            self.hold_cards()                         # a rename or a switch still runs (B66, B104)
         self.set_counter(self.c_comps, "Competitions", competitions(self.app.project), CID_MAX)
         live = [x["world"] for x in rows if x["live"]]
         if not live:
@@ -876,15 +876,27 @@ class MyWorld(QWidget):
 
     def put_in_game(self, w):
         """Put in the game: the Build page's 3. Switch it on, for this world; then the world's
-        recipe opens as at a start (the tabs change the world in the game)"""
-        if not self.app.page("Build").do_on(w):
-            return
-        if WL.live(self.app.game) != [w]:
+        recipe opens as at a start (the tabs change the world in the game). B104 (David, 17.10.): the
+        switch runs in the background with every card's buttons off -- on the GUI thread the window
+        froze for a minute and the clicks made meanwhile landed on the cards in their new order,
+        switching the old world back on -- and a box says at the end how it went"""
+        def over(ok):
+            self._switching = None
+            if ok and WL.live(self.app.game) == [w]:
+                note = self.app.open_live_world()
+                text = _("%s is in the game now. Start a new Master League with it.") % w
+                self.app.status(note or text)
+                self.refresh()
+                info(self, "Switch on", text + ("\n\n" + note if note else ""))
+                return
+            self.refresh()
             self.app.open_page("Build")              # its log says why
-            return
-        note = self.app.open_live_world()
-        self.app.status(note or _("%s is in the game now. Start a new Master League with it.") % w)
-        self.refresh()
+            error(self, "Switch on", _("%s is not in the game: the log on this page says why.") % w)
+        self._switching = w
+        self.hold_cards()
+        if not self.app.page("Build").do_on(w, done=over):
+            self._switching = None
+            self.hold_cards()
 
     def export(self, w):
         self.app.page("Build").do_export(w)
@@ -906,12 +918,14 @@ class MyWorld(QWidget):
             self.hold_cards()
 
     def hold_cards(self):
-        """while a world is renamed: every card's buttons off, the card being renamed says so"""
-        w = getattr(self, "_renaming", None)
+        """while a world is renamed or switched on: every card's buttons off, the card it is about
+        says so"""
+        r = getattr(self, "_renaming", None)
+        w = r or getattr(self, "_switching", None)
         for c in self.cards:
             c.setEnabled(not w)
             if w and c.world == w:
-                c.info.setText(_("Renaming %s...") % w)
+                c.info.setText((_("Renaming %s...") if r else _("Switching %s on")) % w)
             elif not w:
                 c.info.setText(info_text(c.r))
 

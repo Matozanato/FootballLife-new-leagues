@@ -4309,7 +4309,9 @@ class Build(BuilderPage):
                 save_note(self, sw)
         self.run(go, background=True, done=switch)
 
-    def run(self, what, background=False, done=None):
+    def run(self, what, background=False, done=None, after=None):
+        """what(log) on the GUI thread, or with background in a worker with the clock; done() when it
+        went through, after(ok) at the end either way (in the background)"""
         self.out.clear()
         if not background:
             try:
@@ -4363,6 +4365,8 @@ class Build(BuilderPage):
             self.app.bus.content_changed.emit()
             if done and not err:
                 done()
+            if after:
+                after(not err)
 
         def job(progress):
             try:
@@ -4517,10 +4521,12 @@ class Build(BuilderPage):
             AfterBuild(self, info).exec()
         self.run(go, background=True, done=done)
 
-    def do_on(self, world=None):
+    def do_on(self, world=None, done=None):
         """3. Switch it on: the open world; world, a world on disk (My world's Put in the game), may
         be another one -- a ready world from a zip too, so the ready world in the game does not
-        stop it. True when it ran"""
+        stop it. True when it started; done(ok) when it is over. B104 (David, 17.10.): in a worker
+        with the clock -- on the GUI thread a switch that drew a world's kits froze the window for a
+        minute, and the clicks made meanwhile landed after it on the cards in their new order"""
         world = world if isinstance(world, str) else None       # clicked() hands in a bool
         if not world and self.ready_blocks():
             return
@@ -4542,9 +4548,14 @@ class Build(BuilderPage):
                 self.switch_with_saves(sw, w, log)
                 self.project.drop_names()
                 log("\n" + _("Start the game, then 4. check."))
-            self.run(go)
-            self.app.bus.ini_changed.emit()
-            save_note(self, sw)
+
+            def over(ok):
+                self.app.bus.ini_changed.emit()
+                if ok:
+                    save_note(self, sw)
+                if done:
+                    done(ok)
+            self.run(go, background=True, after=over)
             return True
 
     def switch_with_saves(self, sw, w, log):
