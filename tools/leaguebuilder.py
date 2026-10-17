@@ -3520,6 +3520,11 @@ def build(pl, base, game, replace=False, log=print):
             raise BuildError("%s was not made by the league builder (no %s) -- left alone" % (out, MARK))
     tmp = out + ".building"
     laps, clock = [], [time.time()]
+    key = input_key(pl, base, game)
+    if replace and os.path.exists(out) and pictures_only(pl, base, game, out, key, log):
+        if is_live(pl["world"], game):
+            switch_on(pl["world"], game, log)
+        return out
 
     def lap(what):
         # 17.10.: where a Build's minutes go (a tester waited 20+ min to swap one cup's picture)
@@ -4054,6 +4059,7 @@ def build(pl, base, game, replace=False, log=print):
     lap("pictures and kits")
     region_modules(pl, tmp, game, log)
 
+    write_input(tmp, key, pl, base)       # an edit of pictures alone next time draws just those
     write_manifest(tmp)                   # before keep_added: what this Build wrote, not what it kept
     if os.path.exists(out):
         keep_added(out, tmp, log, gone)
@@ -4100,6 +4106,189 @@ def write_manifest(root):
         lines.append(rel + ("\t" + file_hash(os.path.join(root, rel)) if picture(rel) else ""))
     with open(os.path.join(root, MANIFEST), "w", encoding="utf-8", newline="\n") as f:
         f.write("\n".join(lines) + "\n")
+
+
+INPUT = "leaguebuilder-input.json"        # what the last Build was made from (pictures_only)
+INPUT_FORMAT = 1                          # raised when the same input builds a different world
+PIC_ARG = {"league_logo": 2, "club_crest": 2, "country_flag": 1}   # picture_jobs: the picture's place
+
+
+def code_stamp():
+    """the Build's code: the release's version in Mod Studio's exe, the sources when run from them"""
+    try:
+        from modstudio import VERSION
+    except ImportError:
+        VERSION = "?"
+    if getattr(sys, "frozen", False):
+        return VERSION
+    import hashlib
+    h = hashlib.sha1(VERSION.encode())
+    here = os.path.dirname(os.path.abspath(__file__))
+    for f in sorted(os.listdir(here)):
+        if f.endswith(".py"):
+            with open(os.path.join(here, f), "rb") as fh:
+                h.update(f.encode() + fh.read())
+    return h.hexdigest()
+
+
+PIC_EXT = (".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".dds", ".tga")
+
+
+def is_picture(v):
+    """a value of a plan that names a picture (a logo, crest or flag): a path to an image file"""
+    return isinstance(v, str) and v.lower().endswith(PIC_EXT)
+
+
+def input_key(pl, base, game):
+    """one hash of everything a Build reads but the pictures: the plan before Build with each
+    picture as "<pic>" and without the ids of the last Build (prev_*: they come from the world
+    being built again, which they give back), the game's tables, its exe, the other mods'
+    UniformParameter.bin and the Build's code"""
+    import hashlib
+    h = hashlib.sha1()
+
+    def strip(v):
+        if isinstance(v, dict):
+            return {k: strip(x) for k, x in v.items() if k not in ("prev_teams", "prev_names", "prev_cup_ids")}
+        if isinstance(v, (list, tuple)):
+            return [strip(x) for x in v]
+        return "<pic>" if is_picture(v) else v
+
+    def feed_file(path, whole=True):
+        try:
+            with open(path, "rb") as f:
+                if whole:
+                    h.update(f.read())
+                else:                     # the exe: its size and three slices of it
+                    n = os.fstat(f.fileno()).st_size
+                    h.update(str(n).encode())
+                    for at in (0, n // 2, max(0, n - (1 << 20))):
+                        f.seek(at)
+                        h.update(f.read(1 << 20))
+        except OSError:
+            h.update(b"-")
+    h.update(json.dumps([INPUT_FORMAT, code_stamp(), strip(pl)], sort_keys=True, default=str).encode())
+    for f in sorted(os.listdir(base)):
+        if os.path.isfile(os.path.join(base, f)):
+            h.update(f.encode())
+            feed_file(os.path.join(base, f))
+    t = tables_root(base)
+    if t:
+        feed_file(os.path.join(t, UNIPAR.replace("/", os.sep)))
+    feed_file(flpaths.EXE, whole=False)
+    for u in other_uniforms(game):
+        h.update(u.encode())
+        feed_file(u)
+    return h.hexdigest()
+
+
+def job_signature(job):
+    """a picture job (picture_jobs) with its picture's content in place of its path"""
+    fn, args, rels = job
+    a = list(args)
+    i = PIC_ARG[fn]
+    if a[i]:
+        a[i] = "sha1:" + file_hash(a[i])
+    return json.loads(json.dumps([fn, a, list(rels)], default=str))
+
+
+def write_input(root, key, pl, base):
+    """the record pictures_only reads: the key of the plan Build was given, and the picture jobs
+    of the plan it made (picture_jobs needs the clubs' ids). None written when a picture's source
+    is not on this PC: the world keeps its own there (keep_added), which a job does not draw"""
+    gone = set()
+    jobs, _flags, _n = picture_jobs(pl, base, lambda *a: None, gone)
+    if gone:
+        return
+    with open(os.path.join(root, INPUT), "w", encoding="utf-8", newline="\n") as f:
+        json.dump({"format": INPUT_FORMAT, "key": key, "jobs": [job_signature(j) for j in jobs]}, f)
+
+
+def carry_pictures(src, dst):
+    """the pictures of plan src into dst, the plan the last Build wrote, place by place"""
+    if isinstance(src, dict) and isinstance(dst, dict):
+        for k, v in src.items():
+            if k in dst:
+                if is_picture(v) or is_picture(dst[k]):
+                    dst[k] = v
+                else:
+                    carry_pictures(v, dst[k])
+    elif isinstance(src, list) and isinstance(dst, list) and len(src) == len(dst):
+        for i, v in enumerate(src):
+            if is_picture(v) or is_picture(dst[i]):
+                dst[i] = v
+            else:
+                carry_pictures(v, dst[i])
+
+
+def pictures_only(pl, base, game, out, key, log=print):
+    """17.10. (Vicentico: 20 minutes to give one cup a new name and logo): when nothing has changed
+    since the world's last Build but pictures (logos, crests, flags), draws only those again, in
+    the world folder, and returns True; False when a full Build is needed. A picture someone put
+    in the world by hand stays while the Build draws the same one there as the last time
+    (keep_added's rule)."""
+    import lbassets
+    try:
+        with open(os.path.join(out, INPUT), encoding="utf-8") as f:
+            last = json.load(f)
+        with open(os.path.join(out, "leaguebuilder-plan.json"), encoding="utf-8") as f:
+            built = json.load(f)
+    except (OSError, ValueError):
+        return False
+    if last.get("format") != INPUT_FORMAT or last.get("key") != key:
+        return False
+    carry_pictures(pl, built)              # the same plan but for its pictures: the last Build's ids
+    gone = set()
+    jobs, _flags, _n = picture_jobs(built, base, lambda *a: None, gone)
+    if gone:
+        return False
+    sigs = [job_signature(j) for j in jobs]
+    old = last.get("jobs") or []
+    if len(old) != len(sigs) or any(o[0] != n[0] or o[2] != n[2] for o, n in zip(old, sigs)):
+        return False
+    changed = [j for o, n, j in zip(old, sigs, jobs) if o != n]
+    touched = {r for j in changed for r in j[2]}
+    ours = {}
+    try:
+        with open(os.path.join(out, MANIFEST), encoding="utf-8") as f:
+            for line in f:
+                rel, _t, h = line.rstrip("\n").partition("\t")
+                if rel:
+                    ours[rel] = h
+    except OSError:
+        return False
+    if not touched <= set(ours):
+        return False
+    work = out + ".pictures"
+    if os.path.exists(work):
+        shutil.rmtree(work)
+    kept = 0
+    try:
+        for fn, args, rels in jobs:          # in order: a later job may draw over an earlier one
+            if touched & set(rels):
+                getattr(lbassets, fn)(work, *args)
+        if any(not os.path.isfile(os.path.join(work, r)) for r in touched):
+            return False
+        for rel in sorted(touched):
+            src, dst = os.path.join(work, rel), os.path.join(out, rel)
+            h = file_hash(src)
+            if os.path.exists(dst) and file_hash(dst) != ours[rel] and h == ours[rel]:
+                kept += 1                    # replaced by hand, and this Build draws the same as the last
+                continue
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            os.replace(src, dst)
+            ours[rel] = h
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    json.dump(built, open(os.path.join(out, "leaguebuilder-plan.json"), "w", encoding="utf-8"), indent=1)
+    with open(os.path.join(out, MANIFEST), "w", encoding="utf-8", newline="\n") as f:
+        f.write("\n".join(r + ("\t" + h if h else "") for r, h in sorted(ours.items())) + "\n")
+    write_input(out, key, built, base)
+    if os.path.exists(os.path.join(out, ".modstudio")):
+        os.remove(os.path.join(out, ".modstudio"))
+    log("only pictures changed since the last Build: %d drawn again (%d files)%s, the rest of %s left as it was"
+        % (len(changed), len(touched), ", %d kept as put in by hand" % kept if kept else "", out))
+    return True
 
 
 EDITED = ".modstudio-edited"              # modstudio.worlds.EDITED

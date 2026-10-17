@@ -45,6 +45,15 @@ once, and your 0.2.2 career keeps working.
   through every squad place of the world again for each player it gave another id
   (`lbplayers.py`), and a rebuilt Modpack moves thousands. It now finds each player's places
   once.
+- **A new logo or crest no longer rebuilds the whole world.** When only pictures changed since the
+  last Build (a league's or cup's logo, a club's crest, a country's flag), Build draws just those
+  again and leaves the rest of the world as it is: seconds instead of minutes on the Modpack. Any
+  other change (a name, a club, a player) is still a full Build. A world from a zip is built in
+  full once on your PC; after that its picture edits are quick too. (Thanks Vicentico)
+- **A world over the game's player limit is built in at most two passes.** Build worked out the
+  smaller squads from the number of new clubs, and clubs with short squads gave nothing up, so
+  the Modpack went through four passes of 60,000 players. It now takes off what is over from the
+  squads the first pass made. The Build log says where the time went, step by step.
 - **Modules in one line, fixed in one click.** Home and Lua modules say whether Mod Studio's
   modules are installed, up to date and switched on; when not, **Install now** puts them right,
   and the line names the modules that are missing, older or switched off.
