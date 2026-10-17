@@ -307,5 +307,22 @@ class Kits(ServerPage):
         d = _dialog_class()(v)
         if d.finish() and d.result:
             n, kept = d.result
+            plain = plain_world(self.app)
             self.say(_("%d clubs got kits: press Save to write map.txt.") % n
-                     + ("  " + _("%d clubs kept the kits they had.") % kept if kept else ""), "ok" if n else "warn")
+                     + ("  " + _("%d clubs kept the kits they had.") % kept if kept else "")
+                     + ("  " + _("Your world %s is built with Plain kits to change in Edit mode: Kit Server does "
+                                 "not dress its new clubs, so these kits are not worn by them. Untick it on the "
+                                 "Build page and Build again.") % plain if n and plain else ""),
+                     "warn" if not n or plain else "ok")
+
+
+def plain_world(app):
+    """B120: the name of the world in the game when it is the open one and is built with Plain kits
+    (editable_kits), else None. Kit Server leaves its new clubs undressed, imported kits or not."""
+    p = project(app)
+    try:
+        if p and p.recipe.get("editable_kits") and p.recipe.get("world") in p.live_worlds():
+            return p.recipe["world"]
+    except (OSError, ValueError, AttributeError):
+        pass
+    return None

@@ -5184,6 +5184,12 @@ def pictures(pl, root, base, log=print, game=None, gone=None):
             raise BuildError("kits: %s" % buf.getvalue())
         log("  kits: plain, editable in Edit > Teams > Strip -- " + next(
             (l.strip() for l in buf.getvalue().splitlines() if l.startswith("wrote") and "kit" in l), "written"))
+        dressed = plain_but_dressed(pl, ours, game)
+        if dressed:
+            log("  WARNING: %d new clubs have Kit Server kits (%s), but Plain kits to change in Edit mode is "
+                "on: Kit Server does not dress a club with a plain kit, so those kits are not worn. To wear "
+                "them, untick Plain kits on the Build page and Build again (B120)"
+                % (len(dressed), ", ".join(map(str, dressed[:8])) + (" ..." if len(dressed) > 8 else "")))
         return
     colours = {}                    # NewLife clubs: the shipped kit nearest their own colours
     for p in pl["leagues"] + (pl.get("others") or []):
@@ -5205,6 +5211,39 @@ def pictures(pl, root, base, log=print, game=None, gone=None):
     if rc:
         raise BuildError("kits: %s" % buf.getvalue())
     log("  kits: " + next((l.strip() for l in buf.getvalue().splitlines() if l.startswith("wrote") and "kit" in l), "written"))
+
+
+def kit_server_clubs(game):
+    """the team ids Kit Server's map.txt gives a kit folder (lines switched on), in the folder the
+    game's sider reads: content\\kit-server, or SPFL26's content\\kits"""
+    try:
+        sider = siderdir.find(game) if game else None
+    except (OSError, ValueError):
+        sider = None
+    out = set()
+    for d in ("kit-server", "kits"):
+        try:
+            text = open(os.path.join(sider, "content", d, "map.txt"), encoding="utf-8-sig", errors="replace").read()
+        except (OSError, TypeError):
+            continue
+        for l in text.splitlines():
+            m = re.match(r"\s*(\d+)\s*,", l)
+            if m:
+                out.add(int(m.group(1)))
+    return out
+
+
+def plain_but_dressed(pl, ours, game):
+    """B120: the new clubs (ids ours) that have Kit Server kits -- a kit folder in the recipe or a
+    line in Kit Server's map.txt (Import kits) -- in a world built with editable_kits. Kit Server
+    leaves a club with a plain (unlicensed) kit undressed ("the team is unlicensed. Disabling
+    kits"), so a player who imported kits saw none of them and was told nothing (ZeDosCaes 17.10.)"""
+    have = kit_server_clubs(game)
+    for p in pl["leagues"] + (pl.get("others") or []):
+        for k, f in enumerate(p.get("kit_folders") or []):
+            if f and k < len(p["teams"]):
+                have.add(p["teams"][k])
+    return sorted(t for t in set(ours) if t in have)
 
 
 def other_uniforms(game):

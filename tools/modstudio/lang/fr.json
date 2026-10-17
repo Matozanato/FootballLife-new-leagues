@@ -1821,7 +1821,8 @@
   "More than one world is switched on in sider.ini; only one should be. This one stays in the game, the others go out (they stay on disk).": "Plus d'un monde est activé dans sider.ini ; il ne devrait y en avoir qu'un. Celui-ci reste dans le jeu, les autres sortent (ils restent sur le disque).",
   "The tables in that folder cannot be read: one of the .bin files is not in the game's own format (changed by another tool?). Use the game's tables or a patch's original pesdb folder.": "Les tables de ce dossier ne peuvent pas être lues : un des fichiers .bin n'est pas au format du jeu (modifié par un autre outil ?). Utilisez les tables du jeu ou le dossier pesdb d'origine d'un patch.",
   "The tables in that folder cannot be read: %s": "Les tables de ce dossier ne peuvent pas être lues : %s",
-  "The NewLife Database: real squads of today for your world's leagues and the game's own (for modders; to play a ready Modpack you do not need it)": "NewLife Database : les vrais effectifs d'aujourd'hui pour les ligues de ton monde et celles du jeu (pour les moddeurs ; pour jouer un Modpack prêt, tu n'en as pas besoin)"
+  "The NewLife Database: real squads of today for your world's leagues and the game's own (for modders; to play a ready Modpack you do not need it)": "NewLife Database : les vrais effectifs d'aujourd'hui pour les ligues de ton monde et celles du jeu (pour les moddeurs ; pour jouer un Modpack prêt, tu n'en as pas besoin)",
+  "Your world %s is built with Plain kits to change in Edit mode: Kit Server does not dress its new clubs, so these kits are not worn by them. Untick it on the Build page and Build again.": "Ton monde %s est construit avec « Maillots simples pour le mode Édition » : Kit Server n'habille pas ses nouveaux clubs, ils ne portent donc pas ces maillots. Décoche-le sur la page Construction et reconstruis."
  },
  "log": [
   [
