@@ -1,0 +1,7 @@
+# checkratings.py rule A: players the world wrote that may be rated 90 or more (the estimate
+# checkratings.py prints), because they are world-class. One player id per line, # and the name.
+# Add a player only when he really is among the best in the world at his position -- never to
+# make a failing world pass.
+#
+# seeded 2026-10-17 from Modpack r10 (_FL26M2400S), the one player of it at 90+:
+63474  # Alisson Becker, GK, Liverpool FC (90)
