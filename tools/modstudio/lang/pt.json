@@ -1797,7 +1797,10 @@
   "%d of yours with a place in Select Team.": "%d das tuas com lugar em Select Team.",
   "Places in Select Team": "Lugares em Select Team",
   "The league's place in the order: the first ones get a place in Select Team": "O lugar da liga na ordem: as primeiras recebem lugar em Select Team",
-  "The order of your leagues and where the last Build put each one in Select Team. * = the order changed since: Build again to see where it goes.": "A ordem das tuas ligas e onde o último Build pôs cada uma em Select Team. * = a ordem mudou desde então: faz Build outra vez para ver para onde vai."
+  "The order of your leagues and where the last Build put each one in Select Team. * = the order changed since: Build again to see where it goes.": "A ordem das tuas ligas e onde o último Build pôs cada uma em Select Team. * = a ordem mudou desde então: faz Build outra vez para ver para onde vai.",
+  "Tick all shown": "Marcar todos os mostrados",
+  "Ticks every club the list shows now: search a league first to add its clubs": "Marca todos os clubes que a lista mostra agora: procura primeiro uma liga para adicionar os seus clubes",
+  "Untick all": "Desmarcar todos"
  },
  "log": [
   [

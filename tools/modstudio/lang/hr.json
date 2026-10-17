@@ -1797,7 +1797,10 @@
   "%d of yours with a place in Select Team.": "%d tvojih ima mjesto u Select Teamu.",
   "Places in Select Team": "Mjesta u Select Teamu",
   "The league's place in the order: the first ones get a place in Select Team": "Mjesto lige u redoslijedu: prve dobivaju mjesto u Select Teamu",
-  "The order of your leagues and where the last Build put each one in Select Team. * = the order changed since: Build again to see where it goes.": "Redoslijed tvojih liga i gdje je zadnji Build stavio svaku u Select Team. * = redoslijed se otad promijenio: pokreni Build ponovno da vidiš kamo ide."
+  "The order of your leagues and where the last Build put each one in Select Team. * = the order changed since: Build again to see where it goes.": "Redoslijed tvojih liga i gdje je zadnji Build stavio svaku u Select Team. * = redoslijed se otad promijenio: pokreni Build ponovno da vidiš kamo ide.",
+  "Tick all shown": "Označi sve prikazane",
+  "Ticks every club the list shows now: search a league first to add its clubs": "Označi sve klubove koje popis sada prikazuje: prvo potraži ligu da dodaš njezine klubove",
+  "Untick all": "Odznači sve"
  },
  "log": [
   [

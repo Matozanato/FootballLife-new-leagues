@@ -2,8 +2,9 @@
 import copy, os
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QLabel, QLineEdit, QListWidget, QListWidgetItem,
-                               QPushButton, QSplitter, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QHBoxLayout, QLabel, QLineEdit, QListWidget,
+                               QListWidgetItem, QPushButton, QSplitter, QTreeWidget, QTreeWidgetItem, QVBoxLayout,
+                               QWidget)
 
 import leaguebuilder as B
 from .. import newlife as N
@@ -32,8 +33,21 @@ class ClubPickDialog(Dialog):
         self.all = sorted(((c["name"], c.get("league", ""), cid) for cid, c in rel.clubs.items()
                            if cid not in skip and c.get("league")), key=lambda x: (x[0].lower(), x[1]))
         self.list.itemChanged.connect(self.toggled)
+        # vmican (16.10., beta): tick a whole search at once -- e.g. search a league, tick all
+        row = QWidget()
+        h = QHBoxLayout(row)
+        h.setContentsMargins(0, 0, 0, 0)
+        self.b_all = QPushButton(_("Tick all shown"))
+        self.b_all.setToolTip(_("Ticks every club the list shows now: search a league first to add its clubs"))
+        self.b_all.clicked.connect(lambda: self.tick_shown(True))
+        self.b_none = QPushButton(_("Untick all"))
+        self.b_none.clicked.connect(lambda: self.tick_shown(False))
+        h.addWidget(self.b_all)
+        h.addWidget(self.b_none)
+        h.addStretch(1)
+        self.v.insertWidget(3, row)
         self.n = QLabel("")
-        self.v.insertWidget(3, self.n)
+        self.v.insertWidget(4, self.n)
         self.picked = []
         self.checked = set()
         self.fill()
@@ -56,6 +70,7 @@ class ClubPickDialog(Dialog):
             if self.list.count() >= 500 and not q:
                 break
         self.list.blockSignals(False)
+        self.b_all.setEnabled(bool(q))          # not 500 clubs of any league at once
         self.count()
 
     def toggled(self, it):
@@ -64,6 +79,19 @@ class ClubPickDialog(Dialog):
             self.checked.add(cid)
         else:
             self.checked.discard(cid)
+        self.count()
+
+    def tick_shown(self, on):
+        """tick (on) every club the list shows now, or untick every club, shown or not"""
+        if not on:
+            self.checked.clear()
+        self.list.blockSignals(True)
+        for i in range(self.list.count()):
+            it = self.list.item(i)
+            if on:
+                self.checked.add(it.data(Qt.UserRole))
+            it.setCheckState(Qt.Checked if on else Qt.Unchecked)
+        self.list.blockSignals(False)
         self.count()
 
     def count(self):
