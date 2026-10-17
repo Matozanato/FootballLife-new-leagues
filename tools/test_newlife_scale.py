@@ -90,9 +90,23 @@ def mover(base):
     ok(what == "copy", "another man under that id is still a copy")
 
 
+def skills():
+    """ZZ 17.10.: a release with every skill at 0 (NewLife up to 1.5b6) leaves the game's skills"""
+    r = {"name": "Lionel Messi", "Speed": "80"}
+    r.update({s: "0" for s in NL.SKILLS})
+    ch = NL.release_fields(r)
+    ok(ch.get("Speed") == "80" and not set(NL.SKILLS) & set(ch),
+       "all skills 0: no skill written over the game's player (%d skill fields)" % len(set(NL.SKILLS) & set(ch)))
+    r["Heading (skill)"] = "1"
+    ch = NL.release_fields(r)
+    ok(ch.get("Heading (skill)") == "1" and ch.get("Rabona") == "0",
+       "a release with skills (1.5b7) sets all 48 as it has them")
+
+
 if __name__ == "__main__":
     names()
     scale()
+    skills()
     base = sys.argv[1] if len(sys.argv) > 1 else r"C:\work\fl26base\ex_merged\common\etc\pesdb"
     if os.path.isdir(base):
         mover(base)

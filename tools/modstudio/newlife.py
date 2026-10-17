@@ -489,6 +489,20 @@ def stand_in_name(rel, i, n):
     return name
 
 
+SKILLS = [n for n, _b in P.E.SKILLS]
+
+
+def release_fields(r):
+    """the release's values of P.FIELDS for a player row. A row with no skill at all leaves the
+    skills alone: NewLife up to 1.5b6 has all 48 at 0, and written as they were they took every
+    skill from the game's own players (ZZ 17.10.: Messi with none in a NewLife world)"""
+    ch = {f: r[f] for f in P.FIELDS if r.get(f, "") != ""}
+    if all(str(ch.get(s, "0")).strip() in ("0", "") for s in SKILLS):
+        for s in SKILLS:
+            ch.pop(s, None)
+    return ch
+
+
 def _club_players(rel, i, mover, proto, league_ovr):
     """(the recipe's players entry for NewLife club i, players kept at their game club, players
     left out because another league has them): its squad from the release, see add_league"""
@@ -497,9 +511,7 @@ def _club_players(rel, i, mover, proto, league_ovr):
     stayed = elsewhere = 0
     for r in sq:
         ch = {"name": r["name"]}              # no order: Build picks the best eleven
-        for f in P.FIELDS:
-            if r.get(f, "") != "":
-                ch[f] = r[f]
+        ch.update(release_fields(r))
         ch.update(who(r))
         how, g, other = mover(r)
         if how == "move":
@@ -1117,7 +1129,7 @@ def _game_squads(recipe, rel, info, squads):
         have = [pid for _o, pid, _s, _x in db.by_club.get(t, []) if pid in db.index]
         keep, join, add, ed = [], [], [], {}
         for r in rel.squad(c):
-            ch = {f: r[f] for f in P.FIELDS if r.get(f, "") != ""}
+            ch = release_fields(r)
             ch.update(who(r))
             o = P.overall(r)
             if o and level(o) != o:
