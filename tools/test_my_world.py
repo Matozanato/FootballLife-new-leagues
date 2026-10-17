@@ -63,6 +63,10 @@ def run():
     PB.ask = lambda *a, **k: False           # "unpack the game's tables?" (NewLife, no tables here): no
     from modstudio import saves as SV, ui as U
     SV.game_running = lambda: False          # the fake save folder: whatever runs on this PC
+    from modstudio import game as G
+    G.Game.running = staticmethod(lambda: (False, False))   # rename/delete: the real game may run on this PC
+    from modstudio.pages import roots as RPm
+    RPm.error = lambda parent, title, text: (_ for _ in ()).throw(AssertionError("error box: %s: %s" % (title, text)))
     notes = []
     U.info = lambda parent, title, text: notes.append(text)
     put(os.path.join(os.environ["FL26_SAVE_ROOT"], "save", "ML00000000"), b"career of _FL26Live")
