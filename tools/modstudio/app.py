@@ -227,15 +227,16 @@ class Main(QMainWindow):
         QTimer.singleShot(1200, self.auto_tables)
         self.bus.game_changed.connect(lambda: QTimer.singleShot(500, self.auto_tables))
 
-    def open_live_world(self):
-        """open the recipe of the world in the game when another one is open (at a start, and after
-        My world's Put in the game); what to tell, or "" """
+    def live_recipe(self):
+        """the file part of open_live_world, with no window work so it can run off the window's
+        thread: (the world in the game, its recipe copy, the recipe read or None), or None when
+        there is nothing to open. On the Modpack it is most of the 9 s the window stood still after
+        a switch (coldstart, 17.10.): reading its 132 MB recipe back from the plan, writing the copy,
+        reading it, and making the 86 league logos small"""
         live = self.project.live_worlds()
         if not live or self.project.recipe.get("world") in live:
-            return ""
-        note = ""
+            return None
         kept = os.path.join(self.project.copies_dir(), live[0] + ".json")
-        was = self.project.recipe.get("world")
         if not os.path.exists(kept) and self.project.base:
             # no copy of its recipe (built before Build kept one, or elsewhere): read the
             # recipe back from the plan the world carries (leaguebuilder.recipe_from_plan)
@@ -245,24 +246,50 @@ class Main(QMainWindow):
                 with open(plan, encoding="utf-8") as f:
                     rec = leaguebuilder.recipe_from_plan(json.load(f), self.project.base)
                 os.makedirs(self.project.copies_dir(), exist_ok=True)
+                text = json.dumps(rec, indent=1, ensure_ascii=False)   # not dump(): see Project._write
                 with open(kept, "w", encoding="utf-8") as f:
-                    json.dump(rec, f, indent=1, ensure_ascii=False)
+                    f.write(text)
             except Exception:
                 pass
+        rec = None
         if os.path.exists(kept):
             try:
+                with open(kept, encoding="utf-8") as f:
+                    rec = json.load(f)
+                from modstudio.pages import builder as _PB
+                _PB.warm([L.get("logo") for L in rec.get("leagues") or []], (20, 28))
+            except Exception:
+                pass
+        return live[0], kept, rec
+
+    def open_live_world(self, found=False):
+        """open the recipe of the world in the game when another one is open (at a start, and after
+        My world's Put in the game); what to tell, or "". found: what live_recipe() gave, when it
+        ran in the background already"""
+        if found is False:
+            found = self.live_recipe()
+        if not found:
+            return ""
+        world, kept, rec = found
+        live = self.project.live_worlds()
+        if not live or live[0] != world or self.project.recipe.get("world") in live:
+            return ""
+        note = ""
+        was = self.project.recipe.get("world")
+        if rec is not None:
+            try:
                 self.project.autosave()            # the world open now keeps its changes
-                self.project.open(kept, copy=True)
+                self.project.adopt(rec, kept, copy=True)
                 self.settings["last_recipe"] = kept
                 note = _("Opened %s, the world in the game "
-                         "(the last one open was %s).") % (live[0], was)
+                         "(the last one open was %s).") % (world, was)
             except Exception:
                 pass
         from modstudio import installer as _I
-        if not note and not _I.ready_world(self.game, live[0]):
+        if not note and not _I.ready_world(self.game, world):
             # a ready world has no recipe to open, and Build is off for it: nothing to tell
             note = _("The world in the game is %s, but Mod Studio has %s open. "
-                     "Open %s (File > Open a world...) before you Build.") % (live[0], was, live[0])
+                     "Open %s (File > Open a world...) before you Build.") % (world, was, world)
         return note
 
     def auto_tables(self):

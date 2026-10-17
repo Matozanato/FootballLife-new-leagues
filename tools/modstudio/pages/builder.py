@@ -115,8 +115,36 @@ def pixmap(path, size, kit=None):
     return pm
 
 
+_PNG = {}           # (path, stamp, size): the small picture as PNG, made ahead by warm()
+
+
+def warm(paths, sizes):
+    """make the small pictures of `paths` ahead, off the window's thread (PIL only; the QPixmap is
+    made on the window's thread from the PNG): the Modpack's 86 league logos took 1.5 s of a
+    switch with the window standing still (coldstart, 17.10.)"""
+    import lbassets
+    for path in paths:
+        if not path or not os.path.isfile(path):
+            continue
+        for size in sizes:
+            key = (path, filecache.stamp(path), size)
+            if key in _PNG or (key in _PIXMAPS and _PIXMAPS[key] is not None):
+                continue
+            try:
+                buf = io.BytesIO()
+                lbassets.preview(path, size).save(buf, "PNG")
+                _PNG[key] = buf.getvalue()
+            except Exception:
+                pass
+
+
 def _pixmap(path, size, kit):
     try:
+        ready = _PNG.pop((path, filecache.stamp(path), size), None) if path else None
+        if ready:
+            pm = QPixmap()
+            pm.loadFromData(ready, "PNG")
+            return pm
         if path:
             import lbassets
             im = lbassets.preview(path, size)

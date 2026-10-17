@@ -890,25 +890,33 @@ class MyWorld(QWidget):
         froze for a minute and the clicks made meanwhile landed on the cards in their new order,
         switching the old world back on -- and a box says at the end how it went"""
         def over(ok):
-            self._switching = None
             if ok and WL.live(self.app.game) == [w]:
-                note = self.app.open_live_world()
-                text = _("%s is in the game now. Start a new Master League with it.") % w
-                self.app.status(note or text)
-                self.refresh()
-                if note:
-                    # another world's recipe is open now: the tabs and the Build page under the
-                    # cards showed the old one's file and "built" (exe test 17.10.)
-                    self.app.bus.content_changed.emit()
-                    try:
-                        self.app.page("Build").refresh()
-                    except Exception:
-                        pass
-                info(self, "Switch on", text + ("\n\n" + note if note else ""))
+                # its recipe is read in the background, the cards stay held meanwhile: on the GUI
+                # thread the Modpack's (132 MB) stood the window still for 9-11 s (coldstart, 17.10.)
+                run_job(lambda _progress: self.app.live_recipe(), done=opened,
+                        failed=lambda _tb: opened(False))
                 return
+            self._switching = None
             self.refresh()
             self.app.open_page("Build")              # its log says why
             error(self, "Switch on", _("%s is not in the game: the log on this page says why.") % w)
+
+        def opened(found):
+            self._switching = None
+            note = self.app.open_live_world(found)
+            text = _("%s is in the game now. Start a new Master League with it.") % w
+            self.app.status(note or text)
+            self.refresh()
+            if note:
+                # another world's recipe is open now: the tabs and the Build page under the
+                # cards showed the old one's file and "built" (exe test 17.10.)
+                self.app.bus.content_changed.emit()
+                try:
+                    self.app.page("Build").refresh()
+                except Exception:
+                    pass
+            info(self, "Switch on", text + ("\n\n" + note if note else ""))
+
         self._switching = w
         self.hold_cards()
         if not self.app.page("Build").do_on(w, done=over):

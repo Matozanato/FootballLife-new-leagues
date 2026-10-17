@@ -154,7 +154,11 @@ class Install(Page):
 
     def cleanup(self):
         if self.work and os.path.isdir(self.work):
-            shutil.rmtree(self.work, ignore_errors=True)
+            # off the window's thread: the Modpack's unpacked zip took 9 s to delete and the window
+            # stopped answering (coldstart, 17.10.); each look has a mkdtemp of its own
+            import threading
+            threading.Thread(target=shutil.rmtree, args=(self.work,), kwargs={"ignore_errors": True},
+                             daemon=True).start()
         self.work = None
 
     def look(self, path):

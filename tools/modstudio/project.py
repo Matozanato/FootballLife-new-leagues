@@ -466,7 +466,11 @@ class Project(QObject):
 
     def open(self, path, copy=False):
         """load a recipe; copy=True for the copy Build keeps (keep_copy): Save then asks for a name"""
-        r = json.load(open(path, encoding="utf-8"))
+        self.adopt(json.load(open(path, encoding="utf-8")), path, copy)
+
+    def adopt(self, r, path, copy=False):
+        """a recipe read already becomes the open one: open() without the reading, for a recipe read
+        off the window's thread (the Modpack's is 132 MB, 1.4 s of json.load)"""
         if not str(r.get("world", "")).startswith("_FL26"):
             raise B.BuildError("the world name must start with _FL26")
         r.setdefault("leagues", [])
@@ -501,6 +505,9 @@ class Project(QObject):
         clean["players"] = {k: v for k, v in (clean.get("players") or {}).items()
                             if v.get("edits") or v.get("add") or v.get("remove") or v.get("join")
                             or v.get("coach_portrait") or v.get("stadium")}
+        # dumps, not dump: dump() streams through the pure-Python encoder, 2.6 s on the Modpack's
+        # 132 MB recipe against 0.9 s (the window stood still on a switch, coldstart 17.10.)
+        text = json.dumps(clean, indent=1, ensure_ascii=False)
         with open(path + ".tmp", "w", encoding="utf-8") as f:
-            json.dump(clean, f, indent=1, ensure_ascii=False)
+            f.write(text)
         os.replace(path + ".tmp", path)
