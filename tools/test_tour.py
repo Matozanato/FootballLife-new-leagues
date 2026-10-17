@@ -1,0 +1,174 @@
+"""python tools/test_tour.py [en|es|fr|pt|hr]      (no language: all five, one after the other)
+
+The quick tour of 0.2.4 (tour.py): at the first start the window shows, one step at a time, where
+things are now. This test opens the whole window (QT_QPA_PLATFORM=offscreen, a fake game folder and
+APPDATA in a temp folder, no game) and walks the tour:
+
+  - due() until the tour is finished or skipped in this version, not after;
+  - every step after the first points at a widget that is there and visible;
+  - at the smallest size of the window, at its first size and at 1920x1032 the card of every step
+    is inside the window, shows all of its text and does not cover the widget it talks about;
+  - Back, Next and Done; Done and Skip the tour write "tour" in settings.json, the card and the
+    frame are gone, and Help > Quick tour shows it again (once, not twice over itself).
+"""
+import json, os, shutil, sys, tempfile, time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+ENV0 = dict(os.environ)
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+os.environ.pop("FL26_DIR", None)
+T = tempfile.mkdtemp(prefix="tour-")
+os.environ["APPDATA"] = os.path.join(T, "appdata")      # before modstudio.app reads it (APPDIR)
+os.environ["FL26_SAVE_ROOT"] = os.path.join(T, "konami")
+
+from test_world_manage import make_game, put
+
+LANG = sys.argv[1] if len(sys.argv) > 1 else "en"
+assert LANG in ("en", "es", "fr", "pt", "hr"), "usage: test_tour.py [en|es|fr|pt|hr]"
+N = 0
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+
+def ok(name, cond):
+    global N
+    assert cond, name
+    N += 1
+    print("ok %d - %s" % (N, name))
+
+
+def settle(qa, secs=0.2):
+    from PySide6.QtCore import QEvent
+    t0 = time.time()
+    while time.time() - t0 < secs:
+        qa.processEvents()
+        qa.sendPostedEvents(None, QEvent.DeferredDelete.value)     # deleteLater, as the event loop does
+        time.sleep(0.02)
+
+
+def saved(ms):
+    with open(os.path.join(ms, "settings.json"), encoding="utf-8") as f:
+        return json.load(f)
+
+
+def run():
+    from PySide6.QtCore import QPoint, QRect
+    from PySide6.QtWidgets import QApplication, QWidget
+    qa = QApplication.instance() or QApplication([])
+    from modstudio import app as A, theme, tour as TR, i18n
+    from modstudio import saves as SV, ui as U
+    SV.game_running = lambda: False
+    U.info = lambda *a, **k: None
+    theme.apply(qa)
+    game = make_game(T)
+    ms = os.path.join(os.environ["APPDATA"], "FL26ModStudio")
+    os.makedirs(os.path.join(ms, "tables"))
+    put(os.path.join(ms, "recipes", "_FL26Live.json"), json.dumps({"world": "_FL26Live", "leagues": []}))
+    with open(os.path.join(ms, "settings.json"), "w", encoding="utf-8") as f:
+        json.dump({"game": game.folder, "tables": os.path.join(ms, "tables"), "check_updates": False,
+                   "lang": LANG}, f)
+
+    ok("due with no tour seen", TR.due({}))
+    ok("due after the tour of an older version", TR.due({"tour": "0.2.3"}))
+    ok("not due after this version's", not TR.due({"tour": TR.TOUR}))
+
+    w = A.Main()
+    ok("the window speaks %s" % LANG, i18n.CODE == LANG or LANG == "en")
+    ok("not due in a new APPDATA", TR.due(w.settings))
+    w.resize(1360, 820)
+    w.show()
+    settle(qa, 0.5)
+
+    w.start_tour()
+    settle(qa)
+    t = w._tour
+    ok("the tour starts", t is not None and t.card.isVisible() and t.i == 0)
+    first = t
+    w.start_tour()
+    ok("a second start while it runs is not a second tour", w._tour is first)
+    n = len(t.steps)
+    ok("ten steps", n == 10)
+    for i, (title, text, target) in enumerate(t.steps[1:], 2):
+        ok("step %d (%s) points at a widget" % (i, title), target is not None)
+    if LANG != "en":
+        ok("the steps are in %s" % LANG, t.steps[0][0] != "Welcome to Mod Studio 0.2.4"
+           and t.skip.text() != "Skip the tour")
+
+    def check(size):
+        w.resize(*size)
+        settle(qa, 0.3)
+        W, H = w.width(), w.height()
+        for i in range(n):
+            t.show_step(i)
+            settle(qa, 0.05)
+            c = t.card.geometry()
+            name = "%dx%d step %d" % (W, H, i + 1)
+            ok(name + ": the card is inside the window %s" % [c.x(), c.y(), c.width(), c.height()],
+               c.left() >= 0 and c.top() >= 0 and c.right() < W and c.bottom() < H)
+            need = t.text.heightForWidth(t.text.width()) if t.text.width() > 0 else 0
+            ok(name + ": all of the text shows (%d of %d px)" % (t.text.height(), need), t.text.height() >= need)
+            ok(name + ": the buttons show", t.next.isVisible() and t.skip.isVisible()
+               and t.next.geometry().bottom() <= t.card.height())
+            tg = t.target()
+            if i == 0:
+                ok(name + ": no frame on the welcome", not t.frame.isVisible())
+            else:
+                ok(name + ": the frame shows", tg is not None and t.frame.isVisible())
+                r = QRect(tg.mapTo(w, QPoint(0, 0)), tg.size())
+                ok(name + ": the card does not cover what it talks about", not c.intersects(r))
+                ok(name + ": the frame is around it", t.frame.geometry().contains(r))
+    for size in ((1080, 640), (1360, 820), (1920, 1032)):
+        check(size)
+
+    t.show_step(0)
+    ok("Back is off on the first step", not t.back.isEnabled())
+    t.forward()
+    ok("Next goes on", t.i == 1 and t.back.isEnabled())
+    t.back.click()
+    ok("Back goes back", t.i == 0)
+    t.show_step(n - 1)
+    ok("the last step says Done", t.next.text() == i18n._("Done"))
+    ok("not saved before the end", saved(ms).get("tour") is None)
+    t.next.click()
+    settle(qa)
+    ok("Done: seen in settings.json", saved(ms).get("tour") == TR.TOUR and not TR.due(w.settings))
+    ok("Done: the tour is gone", w._tour is None and not w.findChildren(QWidget, "tourcard"))
+
+    help_menu = w.help_btn.menu()
+    quick = [a for a in help_menu.actions() if a.text() == i18n._("Quick tour")]
+    ok("Help has Quick tour", len(quick) == 1)
+    quick[0].trigger()
+    settle(qa)
+    ok("Help > Quick tour shows it again", w._tour is not None and w._tour.card.isVisible() and w._tour.i == 0)
+    w._tour.forward()
+    w._tour.forward()
+    w._tour.skip.click()
+    settle(qa)
+    ok("Skip the tour closes it", w._tour is None and not w.findChildren(QWidget, "tourcard")
+       and not w.findChildren(QWidget, "tourframe"))
+    ok("... and it stays seen", saved(ms).get("tour") == TR.TOUR)
+    w.resize(1400, 900)
+    settle(qa)
+    ok("the window still resizes after the tour", w.width() == 1400)
+    w.close()
+    i18n.set_language("en")
+
+
+def main():
+    if len(sys.argv) < 2:
+        shutil.rmtree(T, ignore_errors=True)
+        import subprocess
+        bad = [c for c in ("en", "es", "fr", "pt", "hr")
+               if subprocess.call([sys.executable, os.path.abspath(__file__), c], env=ENV0) != 0]
+        assert not bad, "test_tour failed for: %s" % ", ".join(bad)
+        print("test_tour: ok (en, es, fr, pt, hr)")
+        return
+    try:
+        run()
+    finally:
+        shutil.rmtree(T, ignore_errors=True)
+    print("test_tour: ok (%d)" % N)
+
+
+if __name__ == "__main__":
+    main()

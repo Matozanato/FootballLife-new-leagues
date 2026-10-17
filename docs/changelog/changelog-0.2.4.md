@@ -5,6 +5,10 @@ once, and your 0.2.2 career keeps working.
 
 ## Changed
 
+- **A quick tour at the first start.** The window has a new look and things moved, so the first start of
+  0.2.4 shows where everything is now, one place at a time: the language, the boxes of what is in the
+  game, Start the game, then 1. Home to 5. Settings and Help. Ten steps, nothing is changed while it
+  runs; Skip the tour closes it, and Help > Quick tour shows it again.
 - **Split and Apertura and Clausura are marked experimental.** The league window says so under the formats: they work, but still have more open bugs than everyone plays everyone, the fully tested format. Keep reporting what you find. (Thanks Vicentico)
 - **Cups of our countries.** My world > Cups has a new window with the cups of your own leagues in
   one table: for each top division its national cup, super cup and league cup, with the name and

@@ -367,12 +367,15 @@ class Main(QMainWindow):
         h.addWidget(self._menu_button("Profiles", [
             ("Manage profiles", lambda: self.open_page("Profiles")),
             ("Save the current setup as a profile...", lambda: self.page("Profiles").save_new())]))
-        h.addWidget(self._menu_button("Language", [(name, (lambda c=code: self.set_language(c)), True)
-                                                   for code, name in i18n.LANGUAGES]))
+        self.lang_btn = self._menu_button("Language", [(name, (lambda c=code: self.set_language(c)), True)
+                                                       for code, name in i18n.LANGUAGES])
+        h.addWidget(self.lang_btn)
         hb = self._menu_button("Help", [
             ("User guide", self.guide),
+            ("Quick tour", self.start_tour),
             ("Check for updates...", self.check_updates),
             ("About FL26 Mod Studio", self.about)])
+        self.help_btn = hb
         auto = QAction(_("Check for updates at start"), hb.menu())
         auto.setCheckable(True)
         auto.setChecked(self.settings.get("check_updates", True))
@@ -808,6 +811,13 @@ class Main(QMainWindow):
                                 "La langue change au prochain démarrage du programme.\n"
                                 "O idioma muda quando o programa for aberto de novo.")
 
+    def start_tour(self):
+        """the quick tour of where things are (modstudio/tour.py); one at a time"""
+        from modstudio import tour
+        if getattr(self, "_tour", None) is not None:
+            return
+        self._tour = tour.Tour(self, done=lambda: setattr(self, "_tour", None)).start()
+
     def guide(self):
         code = i18n.CODE
         names = (["README.%s.html" % code] if code != "en" else []) + ["README.html"]
@@ -1093,8 +1103,14 @@ def main():
             d.close()
             app.quit()
         QTimer.singleShot(1500, shoot)
-    elif w.settings.get("check_updates", True):
-        QTimer.singleShot(3000, lambda: w.check_updates(quiet=True))
+    else:
+        # 0.2.4: the first start of a version with a new look shows where things are now
+        # (FL26_NO_TOUR=1: the exe tests that click through the window)
+        from modstudio import tour
+        if tour.due(w.settings) and not os.environ.get("FL26_NO_TOUR"):
+            QTimer.singleShot(1500, w.start_tour)
+        if w.settings.get("check_updates", True):
+            QTimer.singleShot(3000, lambda: w.check_updates(quiet=True))
     sys.exit(app.exec())
 
 
