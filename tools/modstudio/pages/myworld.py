@@ -887,6 +887,14 @@ class MyWorld(QWidget):
                 text = _("%s is in the game now. Start a new Master League with it.") % w
                 self.app.status(note or text)
                 self.refresh()
+                if note:
+                    # another world's recipe is open now: the tabs and the Build page under the
+                    # cards showed the old one's file and "built" (exe test 17.10.)
+                    self.app.bus.content_changed.emit()
+                    try:
+                        self.app.page("Build").refresh()
+                    except Exception:
+                        pass
                 info(self, "Switch on", text + ("\n\n" + note if note else ""))
                 return
             self.refresh()

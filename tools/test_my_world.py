@@ -178,6 +178,10 @@ def run():
        and boxes[0][1].startswith("_FL26Old is in the game now. Start a new Master League with it."))
     ok("Put in the game switched _FL26Old on in sider.ini, _FL26Live off", WL.live(game) == ["_FL26Old"])
     ok("its recipe is the open one now (the tabs change it)", w.project.recipe.get("world") == "_FL26Old")
+    bp = w.page("Build")
+    ok("the Build page under the cards is _FL26Old's now, not _FL26Live's: %r / %r"
+       % (bp.what.text(), bp.state.text()),
+       "World _FL26Old:" in bp.state.text() and "_FL26Live" not in bp.what.text() + bp.state.text())
     kr = os.environ["FL26_SAVE_ROOT"]
     ok("Put in the game switched the save folder: _FL26Live's career in save__FL26Live, save is _FL26Old's",
        open(os.path.join(kr, "save__FL26Live", "ML00000000"), "rb").read() == b"career of _FL26Live"
