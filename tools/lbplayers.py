@@ -181,6 +181,24 @@ def same_name(a, b):
             and all(w in full[1:-1] for w in short[1:-1]))
 
 
+def same_player(a, b):
+    """the release names this game player by his id (NewLife's game_id) and the two names fit: as
+    same_name, or a name of one word that is a word of the other ("Alisson" / "Alisson Becker",
+    "Gabriel" / "Gabriel Magalhaes", B111), or the same surname with the same first letter
+    ("Kostas Tsimikas" / "Konstantinos Tsimikas", "Ebere Eze" / "Eberechi Eze"). Only for an id
+    the release gives: by the name alone a word in common proves nothing."""
+    if same_name(a, b):
+        return True
+    wa, wb = [_letters(w) for w in _words(a)], [_letters(w) for w in _words(b)]
+    wa, wb = [w for w in wa if w], [w for w in wb if w]
+    if not wa or not wb:
+        return False
+    if len(wa) == 1 or len(wb) == 1:
+        one, other = (wa, wb) if len(wa) == 1 else (wb, wa)
+        return len(one[0]) >= 3 and one[0] in other
+    return wa[-1] == wb[-1] and len(wa[-1]) >= 3 and wa[0][:1] == wb[0][:1]
+
+
 class Squads:
     """the players of a set of tables (the game's, or a built world's)"""
 
