@@ -82,7 +82,17 @@ def offline():
                                                           "cuptop": 17, "cuplow": 81}]
     ok("old cup lines unchanged", fl26world.chain_cups(old) == [(55, 81, 180, False, None), (23, 17, 81, True, None)])
 
-    for name, L in (("Zelia", zelia), ("one league", one), ("12 countries", many), ("old lines", old)):
+    # B122 (Jabo9 17.10.): the Carabao Cup of the game's Premier League (17) on our League One's
+    # line (reg 11, under the Championship 79), next to the FA Cup's cup=/cuptop=/cuplow=
+    eng = [{"id": 11, "tier": 3, "clubs": 24, "above": 79, "cup": 23, "cuptop": 17, "cuplow": 79,
+            "lcup": 266, "lcuptop": 17, "lcuplow": 79, "lcupn": 44},
+           {"id": 49, "tier": 4, "clubs": 24, "above": 11}]
+    ok("fl26world writes lcuptop", "lcuptop" in fl26world.KEYS)
+    ok("chain_cups: a game league's league cup is the game's top league and the one below",
+       fl26world.chain_cups(eng) == [(23, 17, 79, True, None), (266, 17, 79, True, 44)])
+
+    for name, L in (("Zelia", zelia), ("one league", one), ("12 countries", many), ("old lines", old),
+                    ("England", eng)):
         got = lua_from_world(L)
         if got is None:
             print("skip - Lua from_world (pip install lupa to run it)")
@@ -123,10 +133,43 @@ def built(base):
         shutil.rmtree(game, ignore_errors=True)
 
 
+def built_game(base):
+    """B122: the Premier League's league cup (game_cups) with League One and Two of ours under the
+    Championship -- the cup's line names the Premier League and the Championship, not ours"""
+    import leaguebuilder as B
+    recipe = {"world": "_FL26LcupGame", "game_cups": [{"league": 17, "league_cup": True, "name": "Carabao Cup"}],
+              "leagues": [
+                  {"name": "Test League One", "country": "England", "clubs": 24, "legs": 2, "exchange": 3, "above": 79},
+                  {"name": "Test League Two", "country": "England", "clubs": 24, "legs": 2, "exchange": 4,
+                   "above": "Test League One"}]}
+    game = tempfile.mkdtemp(prefix="fl26-lcupg-")
+    try:
+        for d in ("livecpk", "modules", "content"):
+            os.makedirs(os.path.join(game, "SiderAddons", d))
+        with open(os.path.join(game, "SiderAddons", "sider.ini"), "w") as f:
+            f.write("[sider]\n")
+        said = []
+        pl = B.plan(recipe, base)
+        B.build(pl, base, game, False, log=lambda t: said.append(str(t)))
+        path = os.path.join(game, "SiderAddons", "livecpk", "_FL26LcupGame", "fl26world.txt")
+        _name, leagues = fl26world.read_world(path)
+        ccups = {int(m.group(1)): m.group(2).count(":") for m in
+                 re.finditer(r"^ccup (\d+) .*?entry=(\S+)", open(path, encoding="utf-8").read(), re.M)}
+        got = [c for c in fl26world.chain_cups(leagues) if c[0] in ccups]
+        ok("the Carabao Cup goes to fl26chain once (%s)" % got, len(got) == 1)
+        ok("its top league is the Premier League, the one below the Championship", got and got[0][1:3] == (17, 79))
+        ok("its field is the cup's (%s), a size the bracket screen draws" % (got and got[0][4]),
+           got and got[0][4] == ccups[got[0][0]] and got[0][4] in B.LEAGUE_KO_SIZES)
+        ok("no league of ours is under 17 in it", not any(L.get("lcuptop") and L["lcuptop"] != 17 for L in leagues))
+    finally:
+        shutil.rmtree(game, ignore_errors=True)
+
+
 if __name__ == "__main__":
     offline()
     if len(sys.argv) > 1:
         built(sys.argv[1])
+        built_game(sys.argv[1])
     else:
         print("skip - the build (give the folder with the game's tables)")
     print("all passed (%d)" % N)

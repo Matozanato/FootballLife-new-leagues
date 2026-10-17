@@ -63,7 +63,7 @@ import mkleague as M
 FORMAT = "# fl26world 1"
 KEYS = ("cid", "region", "country", "conf", "slot", "tier", "above", "splittotal", "promote", "demote", "clubs", "legs",
         "cup", "exhibition", "scup", "kickoff", "cupall", "cuptop", "cuplow", "cupn",
-        "lcup", "lcuplow", "lcupn")
+        "lcup", "lcuplow", "lcupn", "lcuptop")
 NO_SLOT = 123
 
 # fl26chain.dll keeps this many cups to their leagues (fl26chain.c MAX_CUPS) and drops the rest;
@@ -83,7 +83,7 @@ def chain_cups(leagues):
         elif has(L, "cup", "above"):
             cups.append((L["cup"], L["above"], L["id"], L.get("cupall") == 1, L.get("cupn")))
         if has(L, "lcup", "lcupn"):
-            lcups.append((L["lcup"], L["id"], L.get("lcuplow") or 0, True, L["lcupn"]))
+            lcups.append((L["lcup"], L.get("lcuptop") or L["id"], L.get("lcuplow") or 0, True, L["lcupn"]))
     return cups + lcups
 
 # The Select Team slot each regulation id mkworld hands out ends up on, in the exe's competition

@@ -3976,6 +3976,25 @@ def build(pl, base, game, replace=False, log=print):
         lc = next((h for h in hc if h.get("code") == "FL_%03d_LCUP" % p["rid"] and h.get("ko")), None)
         if lc:
             L["lcup"], L["lcuplow"], L["lcupn"] = lc["ko"], below["rid"] if below else 0, len(lc["entry"])
+    # A league cup of a league of the game (game_cups, FL_G<rid>_LCUP) the same way (B122, Jabo9
+    # 17.10.): our League One under the Championship got reg 11, England's lowest, so the game
+    # filled the Carabao Cup with League One and Two. The game's league has no line of its own,
+    # so the cup rides on a line of ours with no lcup= yet, one of its country first; lcuptop=
+    # names the game's league.
+    free = [L for L in leagues if L["id"] in mine and L.get("lcup") is None]
+    for h in hc:
+        code = h.get("code") or ""
+        if not (code.startswith("FL_G") and code.endswith("_LCUP") and code[4:-5].isdigit()) or not h.get("ko"):
+            continue
+        top = int(code[4:-5])
+        if not free:
+            log("  warning: %s -- no league line of the world left to carry it, the game fills it "
+                "itself (from the country's lowest league id)" % h["name"])
+            continue
+        L = next((L for L in free if L.get("region") == h.get("region")), free[0])
+        free.remove(L)
+        L["lcup"], L["lcuptop"], L["lcupn"] = h["ko"], top, len(h["entry"])
+        L["lcuplow"] = next((r for r, _p in h["entry"] if r != top), 0)
     # fl26chain.dll keeps 16 cups to their leagues; fl26chain.lua sends the national cups first
     for c in fl26world.chain_cups(leagues)[fl26world.MAX_CHAIN_CUPS:]:
         log("  warning: cup %d -- more than %d national and league cups in the world, the game "

@@ -134,9 +134,10 @@ local function from_world(world)
     -- lcup= is the league's own league cup (a single-match knockout, the world's ccup like=): the
     -- game fills it from the region's lowest league id, not its entry list (Erax 2026-10-15: 22
     -- clubs of the second division in a cup of 32 -> Fixtures crashed, #74). Both leagues, top
-    -- first, lcupn in all.
+    -- first, lcupn in all. lcuptop= names the top league when it is the game's (a league cup of a
+    -- league of the game on a line of ours, B122: our League One, reg 11, took the Carabao Cup)
     if L.lcup and L.lcupn then
-      lcups[#lcups + 1] = { L.lcup, L.id, L.lcuplow or 0, true, L.lcupn }
+      lcups[#lcups + 1] = { L.lcup, L.lcuptop or L.id, L.lcuplow or 0, true, L.lcupn }
     end
     -- below a shipped second division the clubs put back come from the top flight (cuptop=)
     if L.scup and L.above then scups[#scups + 1] = { L.scup, L.cuptop or L.above, L.id } end
