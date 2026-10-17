@@ -72,6 +72,20 @@ def main(base):
     r = ids(B.plan({"world": "_TestPins", "leagues": [named, back, b, c]}, base, first))
     ok("an old name another league has now: that league's own, not the renamed one's",
        r["Pin Albania"] == one["Pin Albania"] and r["Pin Albania Renamed"][0] != one["Pin Albania"][0])
+
+    # the national cup and super cup are keyed by the league's name: build() gives each its ids of
+    # the last Build back from prev_cup_ids (17.10.: renamed in the exe, the cups got 254/255 for 222/223)
+    cups = dict(first, cup_ids={"cup:Pin Albania": {"cid": 222, "reg": 300},
+                                "super:Pin Albania": {"cid": 223, "reg": 301},
+                                "cup:Pin Bosnia": {"cid": 224, "reg": 302}})
+    want = B.plan({"world": "_TestPins", "leagues": [named, b, c]}, base, cups)["prev_cup_ids"]
+    ok("renamed (built_as): its cup and super cup keep their ids under the name now",
+       want.get("cup:Pin Albania Renamed") == {"cid": 222, "reg": 300}
+       and want.get("super:Pin Albania Renamed") == {"cid": 223, "reg": 301}
+       and "cup:Pin Albania" not in want and want.get("cup:Pin Bosnia") == {"cid": 224, "reg": 302})
+    want = B.plan({"world": "_TestPins", "leagues": [named, back, b, c]}, base, cups)["prev_cup_ids"]
+    ok("an old name another league has now: the cups' ids stay that league's",
+       want.get("cup:Pin Albania") == {"cid": 222, "reg": 300} and "cup:Pin Albania Renamed" not in want)
     print("1..%d" % N)
 
 

@@ -1692,7 +1692,7 @@ def plan(recipe, base, prev=None):
     names = [L.get("name", "").strip() for L in leagues]
     # a league renamed since the last Build keeps that Build's ids: built_as holds its names before
     # (project.rename_league), newest last; an old name a league of the recipe has now is its own
-    taken, used = {n.lower() for n in names}, set()
+    taken, used, renamed = {n.lower() for n in names}, set(), {}
     for L, nm in zip(leagues, names):
         for was in reversed([str(x).strip().lower() for x in L.get("built_as") or []]):
             if nm.lower() in pins:
@@ -1700,6 +1700,7 @@ def plan(recipe, base, prev=None):
             if was in pins and was not in taken and was not in used:
                 pins[nm.lower()] = pins[was]
                 used.add(was)
+                renamed[nm] = was
 
     # mkworld's order (the free list, 145 moved to 190), keeping only ids with a slot
     free = []
@@ -2081,9 +2082,22 @@ def plan(recipe, base, prev=None):
             "country_order": recipe.get("country_order") or None,
             "cup_draw": cup_draw(recipe),
             # the cups' ids of the last Build, {key: {cid, reg, ...}}: build() gives each its own back
-            "prev_cup_ids": dict((prev or {}).get("cup_ids") or {}),
+            "prev_cup_ids": renamed_cups((prev or {}).get("cup_ids") or {}, renamed),
             # the recipe's keys kept as they were, for recipe_from_plan (RECIPE_SETTINGS)
             "settings": {k: copy.deepcopy(full[k]) for k in RECIPE_SETTINGS if k in full}}
+
+
+def renamed_cups(ids, renamed):
+    """the cups' ids of the last Build (plan's cup_ids), with a renamed league's national cup and
+    super cup under its name now: they are keyed by the league's name ("cup:<name>"), and a
+    career holds their ids as it holds the league's (built_as, plan above)"""
+    out = dict(ids)
+    for nm, was in renamed.items():
+        for kind in ("cup", "super"):
+            old = next((k for k in ids if k.lower() == "%s:%s" % (kind, was)), None)
+            if old and "%s:%s" % (kind, nm) not in out:
+                out["%s:%s" % (kind, nm)] = out.pop(old)
+    return out
 
 
 CUP_DRAWS = ("seeded", "random", "off")
