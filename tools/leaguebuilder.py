@@ -5927,6 +5927,26 @@ def modules_missing(game):
 
 # ---- check: did the modules take the world file? ----
 
+# what our modules wrote (fl26caps: [i/n] 0x.. old -> new) and where one found other bytes (MISMATCH)
+_WROTE = re.compile(r"^\[[\w.-]+\.lua\] [\w ]+: \[\d+/\d+\] 0x([0-9a-fA-F]+) [0-9a-fA-F]+ -> ([0-9a-fA-F]+)")
+_MISMATCH = re.compile(r"^\[([\w.-]+\.lua)\] [\w ]+: MISMATCH at 0x([0-9a-fA-F]+): found \S+, expected ([0-9a-fA-F]+)")
+
+
+def refused_in_exe(lines, mods):
+    """of the modules that refused (ABORTED), the ones whose every MISMATCH is at bytes no module of
+    ours wrote in that game: FL_2026.exe itself is changed there -- another mod's fix at that spot,
+    which Install now cannot mend (B145, Schmiddi 18.10.: fl26nullguard9 next to a crash fix's jump)"""
+    wrote, missed = [], {}
+    for l in lines:
+        m = _WROTE.match(l)
+        if m:
+            wrote.append((int(m.group(1), 16), len(m.group(2)) // 2))
+        m = _MISMATCH.match(l)
+        if m:
+            missed.setdefault(m.group(1), []).append((int(m.group(2), 16), len(m.group(3)) // 2))
+    return [mod for mod in mods if missed.get(mod) and not any(
+        a < b + bn and b < a + an for a, an in missed[mod] for b, bn in wrote)]
+
 def check(game, log=print):
     path = os.path.join(siderdir.find(game), "sider.log")
     wf = os.path.join(siderdir.find(game), "modules", MARK)
@@ -5946,9 +5966,15 @@ def check(game, log=print):
     # patched first, an old module or one twice or out of order (B80), and Install now mends it
     caps = [l for l in text if l.startswith("[fl26caps.lua]")]
     caps_took = bool(caps) and not any(re.search(r"\bABORTED\b", l) for l in caps)
+    aborted = [m.group(1) + ".lua" for m in (re.match(r"^\[([\w.-]+)\.lua\] .*\bABORTED\b", l) for l in text) if m]
+    in_exe = refused_in_exe(text, aborted) if caps_took else []
     for l in text:
         m = re.match(r"^\[([\w.-]+)\.lua\] .*\bABORTED\b", l)
-        if m:
+        if m and m.group(1) + ".lua" in in_exe:
+            # the rest is in; only that fix is off where the exe has another mod's change (B145)
+            log("  %-14s found FL_2026.exe already changed at its spot by another mod, that fix is off: %s"
+                % (m.group(1), l.split("] ", 1)[-1].strip()))
+        elif m:
             log("  %-14s %s: %s" % (m.group(1), "refused bytes another module had changed" if caps_took
                                     else "refused the game's exe", l.split("] ", 1)[-1].strip()))
             ok = False

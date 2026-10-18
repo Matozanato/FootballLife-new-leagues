@@ -26,3 +26,7 @@ it is released; until then this page only collects what is done and tested.
 - **Rename world and Build's tab (B142).** After Rename world, the tab under Build still showed the old
   name, and when the open world was the copy Build keeps, saving wrote it under the old name again.
   Both follow the new name now.
+- **"Refused bytes ... Install now" when another mod had changed the exe (B145).** When the game's
+  FL_2026.exe already had another mod's fix at the spot of one of our small crash guards, Mod Studio
+  said to press Install now, which cannot help. It now says the exe has another mod's change there,
+  that one guard is off and the rest is in, as a warning. (Thanks Schmiddi)

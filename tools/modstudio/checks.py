@@ -139,7 +139,8 @@ def exe_problems(game):
         return []
     key = (game.log_path, st.st_mtime, st.st_size)
     if key not in _refused:
-        mods, caps = [], False
+        import leaguebuilder as B
+        mods, caps, lines = [], False, []
         try:
             with open(game.log_path, encoding="utf-8", errors="replace") as f:
                 for l in f:
@@ -147,21 +148,33 @@ def exe_problems(game):
                     if m and m.group(1) not in mods:
                         mods.append(m.group(1))
                     caps = caps or l.startswith("[fl26caps.lua]")
+                    lines.append(l)
         except OSError:
             pass
+        in_exe = B.refused_in_exe(lines, mods)
         _refused.clear()
-        _refused[key] = (mods, caps and "fl26caps.lua" not in mods)
-    mods, caps_took = _refused[key]
+        _refused[key] = (mods, caps and "fl26caps.lua" not in mods, in_exe)
+    mods, caps_took, in_exe = _refused[key]
     if not mods:
         return []
     if caps_took:
+        out = []
+        if in_exe:
+            out.append(("warn", "Game", _("%s found the game's FL_2026.exe already changed at its spot by "
+                                          "another mod (ABORTED in sider.log), so that one fix of ours is off; "
+                                          "the rest of Mod Studio's modules are in. Nothing to do unless the "
+                                          "game crashes; then use the Steam FL_2026.exe "
+                                          "(docs/developers/by-hand.md, step A6).") % ", ".join(in_exe), "Settings"))
+        mods = [mod for mod in mods if mod not in in_exe]
+        if not mods:
+            return out
         # fl26caps checks thousands of the exe's bytes: when it took them, the exe is the one the
         # modules know, and the others refused bytes another line of ours had patched first -- an
         # old module still on, one twice, or ours out of order (B80, Yanis 16.10.)
         return [("err", "Game", _("%s refused bytes another module had already changed in the last game "
                                   "(ABORTED in sider.log), while fl26caps took the game's FL_2026.exe: "
                                   "sider.ini loads an old module of ours, one twice, or ours out of order. "
-                                  "Home > Install now puts the lines right.") % ", ".join(mods), "Build")]
+                                  "Home > Install now puts the lines right.") % ", ".join(mods), "Build")] + out
     return [("err", "Game", _("%s refused the game's FL_2026.exe in the last game (ABORTED in sider.log): it is "
                               "not the Steam build the modules know, or another mod changed it. New leagues then "
                               "hide the game's leagues in Select Team and the game crashes there. Use the Steam "
