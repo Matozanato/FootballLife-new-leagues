@@ -58,6 +58,11 @@ numbers are in [limits.md](research/limits.md).
 
 ### Known problems
 
+- **Kits drawn before 0.2.4 have the shorts crest sideways** (2026-10-18, B138, thanks Dolokhov).
+  The kits Mod Studio draws from a club's colours and crest put the shorts crest on upright, but
+  the shorts lie on their side in the kit picture. 0.2.4 turns it; kits drawn before are kept as
+  they are. To draw them again: delete the `kitmaker.txt` files in
+  `SiderAddons\content\kit-server\<your world>` and press **Build and install**.
 - **The game crashes now and then inside its own protected code** (fault offsets `0x84ed4c0`,
   `0x131cc313`, `0x18ecc042`) while a scene is being set up: generating a season, loading a
   match, a season rollover. **They are the game's own:** on 2026-09-25/26, with none of our

@@ -653,6 +653,7 @@ the Build log after `error:`. `<...>` stands for a name or number.
 | `<module> not loaded` / `did NOT read the world file` | **2. My world → Build → Step by step, and Export the world → 0. Install the modules**, then **3. Switch it on**, start the game again and check again. Still wrong: ask on Discord. |
 | Club names are the game's, not yours | An old Edit save hides them: **Move the Edit save aside** in the **Build finished** window, or move `EDIT00000000` out of the game's save folder. |
 | The goalkeeper is the captain of every new club | The world was built before 0.2.4. Build it again and start a new career. |
+| The crest on the shorts of a drawn kit stands sideways | The kit was drawn before 0.2.4. Delete the `kitmaker.txt` files in `SiderAddons\content\kit-server\<your world>` and press **Build and install** again: the kits are drawn again with the crest the right way. |
 | All new players have the same face | **1. Home → Install now** (when Home says the modules are missing or older), or **2. My world → Build → Step by step, and Export the world → 0. Install the modules**: it brings the face pack. Then start the game again. |
 
 **Asking for help:** on the [Discord](https://discord.gg/StQqtk3G3M), send a screenshot of what

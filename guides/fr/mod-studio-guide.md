@@ -1088,6 +1088,7 @@ carrières (le dossier de sauvegarde change avec le monde)**, section 3.1), **Le
 | La nouvelle ligue n'est pas dans Select Team | Commencez une *nouvelle* carrière ; les anciennes carrières gardent leurs anciennes ligues. |
 | Mes carrières ont disparu après un changement de monde | Elles sont dans `save_<monde>` à côté du dossier de sauvegarde : activez de nouveau ce monde (section 3.1). |
 | Le gardien est le capitaine de chaque nouveau club | Le monde a été construit avant la 0.2.4 : reconstruisez-le et commencez une nouvelle carrière. |
+| L'écusson sur le short d'un maillot dessiné est de travers | Le maillot a été dessiné avant la 0.2.4. Supprimez les fichiers `kitmaker.txt` dans `SiderAddons\content\kit-server\<votre monde>` et appuyez de nouveau sur **Construire et installer** : les maillots sont redessinés avec l'écusson dans le bon sens. |
 | Les noms des clubs sont ceux du jeu | Un fichier Edit les remplace (section 8). |
 | *vos ligues n'envoient personne en Europe* | Ligues → choisissez la première division → **Modifier la ligue...** → Europe (le bouton **Première division** remplit les trois places habituelles), puis reconstruisez. |
 | *la Ligue Europa Conférence est activée, mais ses tables sont manquantes* | Reconstruisez le monde : il a été construit avant cette option, ou avec l'option désactivée. |

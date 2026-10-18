@@ -959,6 +959,7 @@ mapu s tablicama...**, poglavlje 2) i **Otvori mapu s postavkama programa**.
 | Nove lige nema u Select Teamu | Započni *novu* karijeru; stare karijere zadrže stare lige. |
 | Moje karijere su nestale nakon promjene svijeta | U `save_<svijet>` su, pored mape saveova: opet aktiviraj taj svijet (odjeljak 3.1). |
 | Golman je kapetan svakog novog kluba | Svijet je izgrađen prije 0.2.4: izgradi ga opet i pokreni novu karijeru. |
+| Grb na hlačicama nacrtanog dresa stoji bočno | Dres je nacrtan prije 0.2.4. Obriši datoteke `kitmaker.txt` u `SiderAddons\content\kit-server\<tvoj svijet>` i opet stisni **Izgradi i instaliraj**: dresovi se nacrtaju ponovno, s ispravno okrenutim grbom. |
 | Imena klubova su igrina | Edit datoteka ima prednost (poglavlje 8). |
 | *tvoje lige nikoga ne šalju u Europu* | Lige → odaberi prvi rang → **Uredi ligu...** → Europa (gumb **Prva liga** upiše uobičajena tri), pa opet izgradi. |
 | *Konferencijska liga je uključena, ali njezinih tablica nema* | Opet izgradi svijet: izgrađen je prije te opcije, ili s njom isključenom. |

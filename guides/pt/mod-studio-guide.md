@@ -1173,6 +1173,7 @@ configurações do programa**.
 | A liga nova não está no Select Team | Comece uma carreira *nova*; carreiras antigas mantêm as ligas antigas. |
 | As minhas carreiras sumiram depois de trocar de mundo | Elas estão em `save_<mundo>` ao lado da pasta de saves: ative esse mundo de novo (seção 3.1). |
 | O goleiro é o capitão de todos os clubes novos | O mundo foi construído antes da 0.2.4: construa de novo e comece uma carreira nova. |
+| O escudo no calção de um uniforme desenhado aparece de lado | O uniforme foi desenhado antes da 0.2.4. Apague os arquivos `kitmaker.txt` em `SiderAddons\content\kit-server\<seu mundo>` e aperte **Construir e instalar** de novo: os uniformes são desenhados de novo com o escudo na posição certa. |
 | Os nomes dos clubes são os do jogo | Um arquivo do Edit passa por cima deles (seção 8). |
 | *seus campeonatos não mandam ninguém para a Europa* | Campeonatos → escolha a primeira divisão → **Editar campeonato...** → Europa (o botão **Primeira divisão** preenche as três de costume), depois construa de novo. |
 | *a Conference League está ativada, mas faltam as tabelas dela* | Construa o mundo de novo: ele foi construído antes da opção, ou com ela desligada. |

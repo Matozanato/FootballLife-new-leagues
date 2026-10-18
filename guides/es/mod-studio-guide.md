@@ -1046,6 +1046,7 @@ la carpeta de ajustes del programa**.
 | La liga nueva no está en Select Team | Empieza una carrera *nueva*; las carreras antiguas mantienen sus ligas antiguas. |
 | Mis carreras desaparecieron al cambiar de mundo | Están en `save_<mundo>` junto a la carpeta de partidas: activa otra vez ese mundo (sección 3.1). |
 | El portero es el capitán de todos los clubes nuevos | El mundo se construyó antes de la 0.2.4: vuelve a construirlo y empieza una carrera nueva. |
+| El escudo del pantalón de una equipación dibujada sale de lado | La equipación se dibujó antes de la 0.2.4. Borra los archivos `kitmaker.txt` de `SiderAddons\content\kit-server\<tu mundo>` y vuelve a pulsar **Construir e instalar**: las equipaciones se dibujan de nuevo con el escudo bien puesto. |
 | Los nombres de los clubes son los del juego | Un archivo Edit los anula (sección 8). |
 | *tus ligas no mandan a nadie a Europa* | Ligas → elige la primera división → **Editar liga...** → Europa (el botón **Primera división** rellena las tres habituales), y luego vuelve a construir. |
 | *la Liga Conferencia está activada, pero faltan sus tablas* | Vuelve a construir el mundo: se construyó antes de esa opción, o con ella desactivada. |

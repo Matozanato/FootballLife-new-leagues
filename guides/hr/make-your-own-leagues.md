@@ -640,6 +640,7 @@ logu Builda iza `error:`. `<...>` stoji za ime ili broj.
 | `<module> not loaded` / `did NOT read the world file` | **2. Moj svijet → Gradnja → Korak po korak i Izvezi svijet → 0. Postavi module**, pa **3. Uključi ga**, opet pokreni igru i opet provjeri. I dalje ne valja: pitaj na Discordu. |
 | Imena klubova su igrina, ne tvoja | Stari Edit save ih skriva: **Makni Edit save u stranu** u prozoru **Build gotov**, ili makni `EDIT00000000` iz igrine mape sa saveovima. |
 | Golman je kapetan svakog novog kluba | Svijet je izgrađen prije 0.2.4. Izgradi ga opet i pokreni novu karijeru. |
+| Grb na hlačicama nacrtanog dresa stoji bočno | Dres je nacrtan prije 0.2.4. Obriši datoteke `kitmaker.txt` u `SiderAddons\content\kit-server\<tvoj svijet>` i opet stisni **Izgradi i instaliraj**: dresovi se nacrtaju ponovno, s ispravno okrenutim grbom. |
 | Svi novi igrači imaju isto lice | **1. Početna → Instaliraj sada** (kad Početna kaže da moduli fale ili su stariji), ili **2. Moj svijet → Gradnja → Korak po korak i Izvezi svijet → 0. Postavi module**: donosi paket lica. Pa opet pokreni igru. |
 
 **Kad tražiš pomoć:** na [Discordu](https://discord.gg/StQqtk3G3M) pošalji sliku onoga što vidiš,

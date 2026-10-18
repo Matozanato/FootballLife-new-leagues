@@ -681,6 +681,7 @@ página, o en el registro de Build después de `error:`. `<...>` es un nombre o 
 | `<module> not loaded` / `did NOT read the world file` | **2. Mi mundo → Construcción → Paso a paso, y Exportar el mundo → 0. Instalar los módulos**, luego **3. Activarlo**, vuelve a iniciar el juego y vuelve a comprobar. ¿Sigue mal? Pregunta en Discord. |
 | Los nombres de los clubes son los del juego, no los tuyos | Una partida Edit antigua los oculta: **Apartar el guardado de Edit** en la ventana **Construcción terminada**, o saca `EDIT00000000` de la carpeta de partidas del juego. |
 | El portero es el capitán de todos los clubes nuevos | El mundo se construyó antes de la 0.2.4. Vuelve a construirlo y empieza una carrera nueva. |
+| El escudo del pantalón de una equipación dibujada sale de lado | La equipación se dibujó antes de la 0.2.4. Borra los archivos `kitmaker.txt` de `SiderAddons\content\kit-server\<tu mundo>` y vuelve a pulsar **Construir e instalar**: las equipaciones se dibujan de nuevo con el escudo bien puesto. |
 | Todos los jugadores nuevos tienen la misma cara | **1. Inicio → Instalar ahora** (cuando Inicio dice que los módulos faltan o son antiguos), o **2. Mi mundo → Construcción → Paso a paso, y Exportar el mundo → 0. Instalar los módulos**: trae el paquete de caras. Luego vuelve a iniciar el juego. |
 
 **Para pedir ayuda:** en el [Discord](https://discord.gg/StQqtk3G3M), manda una captura de lo que

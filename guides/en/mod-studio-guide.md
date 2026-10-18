@@ -989,6 +989,7 @@ switched with the world)**, section 3.1), **The game's tables** (**Unpack the ga
 | The new league is not in Select Team | Start a *new* career; old careers keep their old leagues. |
 | My careers are gone after I switched worlds | They are in `save_<world>` next to the save folder: activate that world again (section 3.1). |
 | The goalkeeper is the captain of every new club | The world was built before 0.2.4: Build it again and start a new career. |
+| The crest on the shorts of a drawn kit stands sideways | The kit was drawn before 0.2.4. Delete the `kitmaker.txt` files in `SiderAddons\content\kit-server\<your world>` and press **Build and install** again: the kits are drawn again with the crest the right way. |
 | Club names are the game's | An Edit file overrides them (section 8). |
 | *your leagues send nobody to Europe* | Leagues → pick the top division → **Edit league...** → Europe (the **Top flight** button fills the usual three), then Build again. |
 | *the Conference League is on, but its tables are missing* | Build the world again: it was built before the option, or with it off. |

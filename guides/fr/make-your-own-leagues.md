@@ -684,6 +684,7 @@ d'une page, ou dans le journal du Build après `erreur :`. `<...>` remplace un n
 | `<module> not loaded` / `did NOT read the world file` | **2. Mon monde → Construction → Étape par étape, et Exporter le monde → 0. Installer les modules**, puis **3. L'activer**, relancez le jeu et vérifiez de nouveau. Toujours faux : demandez sur Discord. |
 | Les noms des clubs sont ceux du jeu, pas les vôtres | Une ancienne sauvegarde Edit les cache : **Mettre la sauvegarde Edit de côté** dans la fenêtre **Build terminé**, ou sortez `EDIT00000000` du dossier de sauvegarde du jeu. |
 | Le gardien est le capitaine de chaque nouveau club | Le monde a été construit avant la 0.2.4. Reconstruisez-le et commencez une nouvelle carrière. |
+| L'écusson sur le short d'un maillot dessiné est de travers | Le maillot a été dessiné avant la 0.2.4. Supprimez les fichiers `kitmaker.txt` dans `SiderAddons\content\kit-server\<votre monde>` et appuyez de nouveau sur **Construire et installer** : les maillots sont redessinés avec l'écusson dans le bon sens. |
 | Tous les nouveaux joueurs ont le même visage | **1. Accueil → Installer maintenant** (quand Accueil dit que les modules manquent ou sont plus anciens), ou **2. Mon monde → Construction → Étape par étape, et Exporter le monde → 0. Installer les modules** : il apporte le pack de visages. Puis relancez le jeu. |
 
 **Demander de l'aide :** sur le [Discord](https://discord.gg/StQqtk3G3M), envoyez une capture
