@@ -381,7 +381,9 @@ class Main(QMainWindow):
         auto.setCheckable(True)
         auto.setChecked(self.settings.get("check_updates", True))
         auto.toggled.connect(self.set_auto_updates)
-        hb.menu().insertAction(hb.menu().actions()[2], auto)
+        # just above Check for updates... (found by its text: the items above it are not always the same)
+        upd = [a for a in hb.menu().actions() if a.text() == _("Check for updates...")]
+        hb.menu().insertAction(upd[0], auto) if upd else hb.menu().addAction(auto)
         h.addWidget(hb)
         cb = QToolButton()
         cb.setObjectName("menu")

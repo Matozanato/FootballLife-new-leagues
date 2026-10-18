@@ -161,6 +161,11 @@ def run():
         json.dump(d, f)
     mp = [a for a in help_menu.actions() if a.text() == i18n._("Install a Modpack, step by step")]
     ok("Help has Install a Modpack, step by step", len(mp) == 1)
+    names = [a.text() for a in help_menu.actions()]
+    ok("Help in order: User guide, Quick tour, Install a Modpack, Check for updates at start, Check for updates..., About %s" % names,
+       names[:6] == [i18n._(x) for x in ("User guide", "Quick tour", "Install a Modpack, step by step",
+                                          "Check for updates at start", "Check for updates...",
+                                          "About FL26 Mod Studio")])
     w.open_page("Overview")
     settle(qa)
     mp[0].trigger()
