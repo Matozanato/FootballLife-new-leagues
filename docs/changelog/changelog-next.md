@@ -20,3 +20,6 @@ it is released; until then this page only collects what is done and tested.
   deleted and only `<world>.building` was left; the next try said it "has no fl26world.txt". Build
   now moves the old world aside first and puts it back if the new one cannot go in, and says what to
   close. A `.building` folder is never switched on as a world. (Thanks Tysonche35)
+- **The world card's league count (B141).** The card of the open world counted a group of clubs in no
+  league (the Europack's Croatian clubs) as a league: 81 while open, 80 once another world was open.
+  It is 80 both ways now.

@@ -66,7 +66,9 @@ def world_rows(app):
              "open": w == open_w, "when": when,
              "exportable": built and os.path.isfile(os.path.join(d, I.WORLD_FILE))}
         if r["open"]:                    # Home's numbers of the open world
-            r["leagues"] = len(P.recipe.get("leagues") or [])
+            # a group of clubs in no league is no league: plan_summary counts it apart too (B141:
+            # the card said 81 while the world was open, 80 once it was not)
+            r["leagues"] = sum(1 for L in P.recipe.get("leagues") or [] if not L.get("others"))
             r["clubs"] = sum(B.new_club_count(L) for L in P.recipe.get("leagues") or [])
         rows.append(r)
     return rows

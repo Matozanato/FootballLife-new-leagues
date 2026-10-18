@@ -122,6 +122,13 @@ def pages(t):
     order = [r["world"] for r in M.world_rows(app)]
     ok("My world's order: the live world, then the newest first: %s" % order,
        order == ["_FL26Live", "_FL26Third", "_FL26Old"])
+    # B141: a group of clubs in no league is no league on the open world's card either
+    app.project.recipe["leagues"] = [{"name": "A", "clubs": 10}, {"name": "B", "clubs": 12},
+                                     {"name": "Croatian clubs (no league)", "clubs": 3, "others": 1}]
+    row = next(r for r in M.world_rows(app) if r["open"])
+    ok("the open world's card: 2 leagues (the group in no league apart), %d clubs" % row["clubs"],
+       row["leagues"] == 2 and row["clubs"] == 25)
+    app.project.recipe["leagues"] = []
 
     QtWidgets.QInputDialog.getText = staticmethod(lambda *a, **k: ("_FL26Older", True))
     beats, last = [], [time.perf_counter()]
