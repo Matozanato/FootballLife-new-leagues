@@ -160,6 +160,21 @@ def kind_of(path):
 
 
 # ---- the widgets -----------------------------------------------------------------------------
+def carry_added(before, rec):
+    """B146 (Tysonche35 18.10.): leagues added to a ready world from a zip before Make it editable
+    went with the recipe read again from its plan. The ones of `before` (the recipe open till then)
+    that the plan does not have go on at the end of `rec`; their names"""
+    have = {L.get("name") for L in rec.get("leagues") or []}
+    out = []
+    for L in (before or {}).get("leagues") or []:
+        if L.get("others") or not L.get("name") or L.get("name") in have:
+            continue
+        rec.setdefault("leagues", []).append(L)
+        have.add(L["name"])
+        out.append(L["name"])
+    return out
+
+
 def unstick(b):
     """B70: a menu button (Cups) whose menu item opened a window kept the look of the mouse over
     it -- the window took the mouse, the button never heard it leave -- so Cups stayed lit on the
@@ -857,11 +872,14 @@ class MyWorld(QWidget):
         except Exception:
             pass
         copies, base = project.copies_dir(), project.base
+        before = json.loads(json.dumps(project.recipe)) if project.recipe.get("world") == w else {}
+        carried = []
 
         def job(progress):
             folder = WL.make_editable(g, w)
             with open(os.path.join(g.livecpk_dir, w, "leaguebuilder-plan.json"), encoding="utf-8") as f:
                 rec = B.recipe_from_plan(json.load(f), base)
+            carried[:] = carry_added(before, rec)
             os.makedirs(copies, exist_ok=True)
             kept = os.path.join(copies, w + ".json")
             if os.path.exists(kept):
@@ -887,8 +905,11 @@ class MyWorld(QWidget):
                 self.app.page("Build").refresh()  # its Build buttons were off for the ready world
             except Exception:
                 pass
-            info(self, title, _("%s can be changed now. When your changes are done, Build it, then start a "
-                                "new Master League.\n\nThe copy of it as it came: Restore points.") % w)
+            said = _("%s can be changed now. When your changes are done, Build it, then start a "
+                     "new Master League.\n\nThe copy of it as it came: Restore points.") % w
+            if carried:
+                said += "\n\n" + _("Kept the leagues you added before: %s.") % ", ".join(carried)
+            info(self, title, said)
 
         def failed(tb):
             self.app.busy(False)

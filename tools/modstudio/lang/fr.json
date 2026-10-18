@@ -1871,7 +1871,8 @@
   "Changed your mind?": "Vous avez changé d'avis ?",
   "4. Tools > Restore points has the Modpack as it came: Put this copy back makes it the ready world again. Stuck? Help > User guide, or ask on our Discord, FL Mod Studio.": "4. Outils > Points de restauration contient le Modpack tel qu'il est venu : Restaurer cette copie en refait le monde prêt. Bloqué ? Aide > Guide d'utilisation, ou demandez sur notre Discord, FL Mod Studio.",
   "Show me how to edit a Modpack": "Montrez-moi comment modifier un Modpack",
-  "%s found the game's FL_2026.exe already changed at its spot by another mod (ABORTED in sider.log), so that one fix of ours is off; the rest of Mod Studio's modules are in. Nothing to do unless the game crashes; then use the Steam FL_2026.exe (docs/developers/by-hand.md, step A6).": "%s a trouvé le FL_2026.exe du jeu déjà modifié à son emplacement par un autre mod (ABORTED dans sider.log), donc ce correctif est désactivé ; les autres modules de Mod Studio fonctionnent. Rien à faire sauf si le jeu plante ; utilisez alors le FL_2026.exe de Steam (docs/developers/by-hand.md, étape A6)."
+  "%s found the game's FL_2026.exe already changed at its spot by another mod (ABORTED in sider.log), so that one fix of ours is off; the rest of Mod Studio's modules are in. Nothing to do unless the game crashes; then use the Steam FL_2026.exe (docs/developers/by-hand.md, step A6).": "%s a trouvé le FL_2026.exe du jeu déjà modifié à son emplacement par un autre mod (ABORTED dans sider.log), donc ce correctif est désactivé ; les autres modules de Mod Studio fonctionnent. Rien à faire sauf si le jeu plante ; utilisez alors le FL_2026.exe de Steam (docs/developers/by-hand.md, étape A6).",
+  "Kept the leagues you added before: %s.": "Les ligues ajoutées avant sont gardées : %s."
  },
  "log": [
   [

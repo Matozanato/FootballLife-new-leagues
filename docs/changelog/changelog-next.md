@@ -39,3 +39,7 @@ it is released; until then this page only collects what is done and tested.
   position, so a club whose keeper had moved on gave its 1 to a defender or a striker. Keepers now take
   a free keeper's number (1, 12, 13 ...) and everyone else another one. The Players page shows the same
   number Build will give. (Thanks jibibi)
+- **Leagues added to a zip world were gone after Make it editable (B146).** Making a ready world
+  editable read its recipe back from what the world was built with, so leagues you had already added
+  to it (Add a league, a package) were dropped. They now stay, at the end of the list, and the message
+  after Make it editable names them. (Thanks Tysonche35)
