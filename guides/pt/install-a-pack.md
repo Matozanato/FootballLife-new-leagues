@@ -111,8 +111,7 @@ então nada dela fica para trás; os seus saves não são mexidos. Espere até d
 Mod Studio instala os módulos (os desta versão), copia o mundo, coloca o arquivo do mundo onde os
 módulos leem ele, e coloca o mundo no jogo.
 
-**Você deve ver:** `✓ Pronto para jogar: aperte Play e comece uma Master League nova` (Play quer
-dizer o botão **Iniciar o jogo**), e uma janela **Pronto para jogar** com uma lista de marcas (o
+**Você deve ver:** `✓ Pronto para jogar: aperte Iniciar o jogo e comece uma Master League nova`, e uma janela **Pronto para jogar** com uma lista de marcas (o
 mundo, os módulos, o pacote de rostos ...). Se ela disser **Quase pronto**, ela lista o que
 corrigir.
 

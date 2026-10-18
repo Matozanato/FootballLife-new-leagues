@@ -112,8 +112,8 @@ L'ancienne est retirée d'abord, pour que rien n'en reste ; vos sauvegardes ne s
 Attendez qu'il dise que c'est fini. Mod Studio installe ses modules (ceux de cette version), copie
 le monde, met son fichier de monde là où les modules le lisent, et met le monde dans le jeu.
 
-**Vous devez voir :** `✓ Prêt à jouer : appuyez sur Play et lancez une nouvelle Master League`
-(Play veut dire le bouton **Lancer le jeu**), et une fenêtre **Prêt à jouer** avec une liste de
+**Vous devez voir :** `✓ Prêt à jouer : appuyez sur Lancer le jeu et lancez une nouvelle Master League`
+, et une fenêtre **Prêt à jouer** avec une liste de
 coches (le monde, les modules, le pack de visages ...). Si elle dit **Presque prêt** à la place,
 elle liste ce qu'il faut corriger.
 

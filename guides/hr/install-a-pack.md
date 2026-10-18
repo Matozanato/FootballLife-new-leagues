@@ -105,8 +105,7 @@ tvoja spremanja se ne diraju. Pričekaj dok ne kaže da je gotovo. Mod Studio in
 module (ove verzije), kopira svijet, stavi njegovu datoteku svijeta gdje je moduli čitaju i
 stavi svijet u igru.
 
-**Trebaš vidjeti:** `✓ Spremno za igru: pritisni Play i pokreni novu Master League` (Play je
-gumb **Pokreni igru**) i prozor **Spremno za igru** s popisom kvačica (svijet, moduli, paket
+**Trebaš vidjeti:** `✓ Spremno za igru: pritisni Pokreni igru, pa započni novu Master League` i prozor **Spremno za igru** s popisom kvačica (svijet, moduli, paket
 lica ...). Ako umjesto toga kaže **Skoro spremno**, nabroji što treba popraviti.
 
 U **2. Moj svijet** svijet sad ima zelenu karticu na kojoj piše **● U IGRI SADA**, s oznakom

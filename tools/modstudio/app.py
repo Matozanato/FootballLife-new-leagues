@@ -791,7 +791,7 @@ class Main(QMainWindow):
             return
         warn = self.page("Modules").order_problems() if "Modules" in self.pages else []
         if warn and not QMessageBox.question(
-                self, _("Play"), _("There are problems with the module order:") + "\n\n" +
+                self, _("Start the game"), _("There are problems with the module order:") + "\n\n" +
                 "\n".join("• " + w for w in warn[:6]) + "\n\n" + _("Start anyway?")) == QMessageBox.Yes:
             return
         how = self.game.start()

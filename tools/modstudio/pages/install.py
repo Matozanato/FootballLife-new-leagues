@@ -530,10 +530,10 @@ class Install(Page):
             self.say(_('%s is installed, but not ready to play yet: <a href="fix">see what to fix</a>.') % w, "err")
             self.show_fix()
         else:
-            self.say(_("%s is ready to play. Press Play and start a new Master League.") % w, "ok")
-            self.what.setText(_("\u2713 Ready to play: press Play and start a new Master League"))
+            self.say(_("%s is ready to play. Press Start the game and start a new Master League.") % w, "ok")
+            self.what.setText(_("\u2713 Ready to play: press Start the game and start a new Master League"))
             info(self, _("Ready to play"), text + "\n\n" +
-                 _("Press Play and start a NEW Master League (an old career does not get the new leagues). "
+                 _("Press Start the game and start a NEW Master League (an old career does not get the new leagues). "
                    "No Build needed."))
 
     def show_fix(self):

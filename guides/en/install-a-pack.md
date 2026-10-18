@@ -107,8 +107,7 @@ nothing of it stays behind; your saves are not touched. Wait until it says it is
 installs its modules (the ones of this version), copies the world, puts its world file where the
 modules read it, and puts the world in the game.
 
-**You should see:** `✓ Ready to play: press Play and start a new Master League` (Play means the
-**Start the game** button), and a window **Ready to play** with a list of ticks (the world, the
+**You should see:** `✓ Ready to play: press Start the game and start a new Master League`, and a window **Ready to play** with a list of ticks (the world, the
 modules, the face pack ...). If it says **Almost ready** instead, it lists what to fix.
 
 In **2. My world** the world now has a green card that says **● IN THE GAME NOW**, with the tag

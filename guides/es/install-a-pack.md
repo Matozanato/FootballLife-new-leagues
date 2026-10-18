@@ -112,8 +112,7 @@ queda nada de ella; tus partidas guardadas no se tocan. Espera hasta que diga qu
 Mod Studio instala sus módulos (los de esta versión), copia el mundo, pone su archivo de mundo
 donde lo leen los módulos y pone el mundo en el juego.
 
-**Deberías ver:** `✓ Listo para jugar: pulsa Play y empieza una Master League nueva` (Play es el
-botón **Iniciar el juego**) y una ventana **Listo para jugar** con una lista de marcas (el mundo,
+**Deberías ver:** `✓ Listo para jugar: pulsa Iniciar el juego y empieza una Master League nueva` y una ventana **Listo para jugar** con una lista de marcas (el mundo,
 los módulos, el paquete de caras ...). Si en cambio dice **Casi listo**, te dice qué arreglar.
 
 En **2. Mi mundo** el mundo tiene ahora una tarjeta verde que dice **● EN EL JUEGO AHORA**, con la

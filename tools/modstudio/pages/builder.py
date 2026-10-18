@@ -3861,7 +3861,7 @@ class AfterBuild(QDialog):
 
 
 FOR_MODDERS = ("For modders. Build and install makes a world of your own from your leagues, clubs and players. "
-               "To play a ready modpack you do not need it: My world > + Add... its zip, then Play.")
+               "To play a ready modpack you do not need it: My world > + Add... its zip, then Start the game.")
 
 
 class Build(BuilderPage):
