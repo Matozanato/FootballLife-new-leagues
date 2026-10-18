@@ -1,8 +1,9 @@
 r"""python test_unipar_data.py -- Unpack the game's tables takes the kits file (UniformParameter.bin)
 from the game's Data\*.cpk when download\ has none, the download's one still over it, and tables
 unpacked by 0.2.4 without that file count as stale (B153: FL26 1.0 without the game's updates,
-Build drew no kit: "the game's UniformParameter.bin was not unpacked"). The archives are faked:
-cpkread.names and cpkread.extract are replaced, nothing of the game is read."""
+Build drew no kit: "the game's UniformParameter.bin was not unpacked"). With your own tables over
+the game's (Settings > Use another tables folder) Build finds the kits file beside them (B143).
+The archives are faked: cpkread.names and cpkread.extract are replaced, nothing of the game is read."""
 import json, os, shutil, sys, tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -97,6 +98,34 @@ def main():
         rec = json.load(open(os.path.join(out, B.UNPACKED), encoding="utf-8"))
         ok("no kits file anywhere: recorded as not found", rec.get(B.UNIPAR_SEEN) == [0, 0])
         ok("and not stale after that unpack", B.tables_stale(game, out) is None)
+
+        # B143: your own tables (only Team.bin) over the game's unpacked ones
+        from modstudio import project
+        tables = os.path.join(root, "tables")
+        for rel, data in ((TEAM, b"game team"), ("common/etc/pesdb/CompetitionRegulation.bin", b"reg"),
+                          (B.UNIPAR, b"game kits")):
+            f = os.path.join(tables, rel.replace("/", os.sep))
+            os.makedirs(os.path.dirname(f), exist_ok=True)
+            open(f, "wb").write(data)
+        ok("the game's unpacked tables: their kits file is found",
+           B.kits_file(os.path.join(tables, "common", "etc", "pesdb")) is not None)
+        P = project.Project.__new__(project.Project)
+        P.tables_dir = lambda: tables
+        mine = os.path.join(root, "mine", "pesdb")
+        os.makedirs(mine)
+        open(os.path.join(mine, "Team.bin"), "wb").write(b"my team")
+        base = P._tables_of(os.path.join(root, "mine"))
+        k = B.kits_file(base)
+        ok("your own tables over the game's: Build finds the game's kits file beside them (%s)" % base,
+           k is not None and open(k, "rb").read() == b"game kits"
+           and open(os.path.join(base, "Team.bin"), "rb").read() == b"my team")
+        f = os.path.join(root, "mine", B.UNIPAR.replace("/", os.sep))
+        os.makedirs(os.path.dirname(f))
+        open(f, "wb").write(b"my kits, longer")
+        k = B.kits_file(P._tables_of(os.path.join(root, "mine")))
+        ok("a tables folder with a kits file of its own: that one", open(k, "rb").read() == b"my kits, longer")
+        ok("no kits file anywhere: None (Build says to unpack)",
+           B.kits_file(os.path.join(root, "gnone", "download")) is None)
     finally:
         cpkread.names, cpkread.extract = keep
         shutil.rmtree(root, ignore_errors=True)

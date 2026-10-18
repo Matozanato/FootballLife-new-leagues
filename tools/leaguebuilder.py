@@ -676,6 +676,23 @@ def tables_root(base):
     return os.sep.join(parts[:-3]) if parts[-3:] == ["common", "etc", "pesdb"] else None
 
 
+def kits_file(base):
+    """the game's UniformParameter.bin for the tables in <base>, or None: in the unpack folder that
+    holds them, else in a folder above <base> -- your own tables over the game's (Settings > Use
+    another tables folder) sit in ...-with-your-database\pesdb with the game's kits file beside
+    it (B143: there Build drew no kit at all)"""
+    d = os.path.normpath(base)
+    for _up in range(4):
+        f = os.path.join(d, UNIPAR.replace("/", os.sep))
+        if os.path.isfile(f):
+            return f
+        up = os.path.dirname(d)
+        if up == d:
+            break
+        d = up
+    return None
+
+
 def load_recipe(path):
     r = json.load(open(path, encoding="utf-8"))
     if not r.get("world", "").startswith("_FL26"):
@@ -4199,9 +4216,9 @@ def input_key(pl, base, game):
         if os.path.isfile(os.path.join(base, f)):
             h.update(f.encode())
             feed_file(os.path.join(base, f))
-    t = tables_root(base)
-    if t:
-        feed_file(os.path.join(t, UNIPAR.replace("/", os.sep)))
+    k = kits_file(base)
+    if k:
+        feed_file(k)
     feed_file(flpaths.EXE, whole=False)
     for u in other_uniforms(game):
         h.update(u.encode())
@@ -5180,9 +5197,8 @@ def pictures(pl, root, base, log=print, game=None, gone=None):
     if not any(p["teams"] for p in pl["leagues"] + (pl.get("others") or [])):
         return
     plain = bool(pl.get("editable_kits"))
-    t = tables_root(base)
-    unipar = os.path.join(t, UNIPAR.replace("/", os.sep)) if t else None
-    if not unipar or not os.path.exists(unipar):
+    unipar = kits_file(base)
+    if not unipar:
         log("  no kits: the game's UniformParameter.bin was not unpacked (Unpack from game)")
         return
     import mkkits

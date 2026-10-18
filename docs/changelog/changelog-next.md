@@ -11,3 +11,7 @@ it is released; until then this page only collects what is done and tested.
   game's tables read just download\. It now takes it from Data too (the updates' own list still goes
   over it). Tables an older Mod Studio unpacked without it: Build asks once to unpack them again.
   (Thanks ZeDosCaes21)
+- **Kits with your own tables (B143).** With Settings > Use another tables folder (a database mod
+  or tables edited in another editor) over the game's, Build drew no kit at all and said to unpack
+  the game's tables, which did not help. The game's kits file now goes beside your tables (or the
+  one your folder has itself), and Build finds it.

@@ -74,6 +74,17 @@ class Project(QObject):
             b = os.stat(dst) if os.path.exists(dst) else None
             if b is None or b.st_size != a.st_size or int(b.st_mtime) != int(a.st_mtime):
                 shutil.copy2(src, dst)
+        # the game's kits file beside them: Build draws the new clubs' kits from it (B143: with
+        # your own tables it found none and drew no kit)
+        rel = B.UNIPAR.replace("/", os.sep)
+        src = B.kits_file(d) or os.path.join(self.tables_dir(), rel)
+        dst = os.path.join(os.path.dirname(out), rel)
+        if os.path.isfile(src):
+            a = os.stat(src)
+            b = os.stat(dst) if os.path.exists(dst) else None
+            if b is None or b.st_size != a.st_size or int(b.st_mtime) != int(a.st_mtime):
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copy2(src, dst)
         self.overlay = len(mine)
         return out
 
