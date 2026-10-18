@@ -1560,6 +1560,34 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
             pack = u32(assigns, ao + E.A_PACK) & ~E.ORDER_MASK | int(o) << E.ORDER_SHIFT
             assigns[ao + E.A_PACK:ao + E.A_PACK + 4] = pack.to_bytes(4, "little")
         lined += 1 if rows else 0
+    # B157 (jibibi 18.10.): a place keeps the shirt number of the squad Build cloned for the club,
+    # whoever the recipe puts there, so a NewLife centre forward got the 1 at Bourg-en-Bresse.
+    # The 1 goes to the club's first keeper, who swaps numbers with whoever wore it; a club whose
+    # recipe gives its own numbers keeps them
+    shirts = 0
+    for club, c in changes.items():
+        tid = club_tid(club)
+        eds = c.get("edits") or {}
+        if tid is None or not eds or any(str(ch.get("shirt", "") or "").strip() for ch in eds.values()):
+            continue
+        sq = [(pid, ao) for _o, pid, ao in squad_of(tid) if ao not in drop and pid in index]
+        keepers = [ao for pid, ao in sq
+                   if E.getf(players[index[pid]:index[pid] + P_REC], "Registered Position") == 0]
+        if not keepers:
+            continue
+        gk = keepers[0]
+        one = next((ao for _p, ao in sq if E.shirt_of(u32(assigns, ao + E.A_PACK)) == 1), None)
+        if one == gk:
+            continue
+        mine = E.shirt_of(u32(assigns, gk + E.A_PACK))
+        if one is not None:
+            pack = E.with_shirt(u32(assigns, one + E.A_PACK), mine)
+            assigns[one + E.A_PACK:one + E.A_PACK + 4] = pack.to_bytes(4, "little")
+        pack = E.with_shirt(u32(assigns, gk + E.A_PACK), 1)
+        assigns[gk + E.A_PACK:gk + E.A_PACK + 4] = pack.to_bytes(4, "little")
+        shirts += 1
+    if shirts:
+        log("  players: %d clubs' first keeper given the 1" % shirts)
     if drop:
         keep = bytearray()
         for i in range(len(assigns) // A_REC):

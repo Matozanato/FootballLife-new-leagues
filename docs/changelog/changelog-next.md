@@ -43,3 +43,8 @@ it is released; until then this page only collects what is done and tested.
   editable read its recipe back from what the world was built with, so leagues you had already added
   to it (Add a league, a package) were dropped. They now stay, at the end of the list, and the message
   after Make it editable names them. (Thanks Tysonche35)
+- **A new club's number 1 worn by a forward (B157).** The players a recipe (NewLife) puts into a new
+  club's squad took the shirt numbers of the squad Build first made for the club, whatever their
+  position, so at Bourg-en-Bresse a centre forward wore the 1. Now the club's first keeper wears the
+  1 and swaps numbers with whoever had it; a recipe that gives its own numbers keeps them.
+  (Thanks jibibi)

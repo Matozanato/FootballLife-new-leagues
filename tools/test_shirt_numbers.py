@@ -91,4 +91,49 @@ try:
 finally:
     shutil.rmtree(tmp, ignore_errors=True)
 
+
+# B157 (jibibi 18.10., Bourg-en-Bresse): a new club's places keep the numbers of the squad Build
+# cloned for it, whoever the recipe puts there -- a NewLife centre forward got the 1. Now the 1
+# goes to the first keeper, who swaps numbers with whoever wore it.
+def b157(edits):
+    base, db = tempfile.mkdtemp(prefix="fl26-b157b-"), tempfile.mkdtemp(prefix="fl26-b157d-")
+    try:
+        team = bytearray(W.T_REC)
+        team[W.T_ID:W.T_ID + 4] = (200).to_bytes(4, "little")
+        write(base, "Team.bin", team)
+        players, assigns = bytearray(), bytearray()
+        for n, pos in enumerate(["GK", "CB", "CB", "CMF", "CF", "GK"]):     # the cloned squad, 1..6
+            players += player(3000 + n, "Clone Player%d" % n, pos)
+            a = bytearray(L.A_REC)
+            for off, v in ((E.A_EID, n + 1), (E.A_PID, 3000 + n), (E.A_TID, 200),
+                           (E.A_PACK, E.with_shirt(n << E.ORDER_SHIFT, n + 1))):
+                a[off:off + 4] = v.to_bytes(4, "little")
+            assigns += a
+        write(base, "Player.bin", players)
+        write(base, "PlayerAssignment.bin", assigns)
+        pl = {"leagues": [{"name": "Liga N", "teams": [200], "club_names": ["Bourg"]}],
+              "players": {"Liga N/0": {"edits": edits}}}
+        log = []
+        L.apply(pl, base, db, 10 ** 6, log=log.append)
+        sq = L.Squads(db)
+        return {pid: (shirt, E.POSITIONS[E.getf(sq.players[sq.index[pid]:sq.index[pid] + L.P_REC],
+                                                "Registered Position")])
+                for _o, pid, shirt, _a in sq.by_club[200]}, log
+    finally:
+        shutil.rmtree(base, ignore_errors=True)
+        shutil.rmtree(db, ignore_errors=True)
+
+
+got, log = b157({"0": {"Registered Position": "CF"}, "1": {"Registered Position": "GK"},
+                 "5": {"Registered Position": "CB"}})
+ok("B157: the keeper the recipe put at place 1 wears the 1 (%s)" % got, got[3001] == (1, "GK"))
+ok("B157: the forward at the 1's place takes the keeper's old number", got[3000] == (2, "CF"))
+ok("B157: the others keep theirs", [got[p][0] for p in (3002, 3003, 3004, 3005)] == [3, 4, 5, 6])
+ok("B157: the log says it", any("given the 1" in l for l in log))
+got, log = b157({"0": {"Registered Position": "CF", "shirt": "9"}, "1": {"Registered Position": "GK"}})
+ok("B157: a recipe that gives numbers keeps them", got[3000][0] == 9 and got[3001][0] == 2)
+got, log = b157({"3": {"Registered Position": "AMF"}})
+ok("B157: the keeper already wears the 1: nothing changes",
+   [got[p][0] for p in range(3000, 3006)] == [1, 2, 3, 4, 5, 6] and not any("given the 1" in l for l in log))
+
 print("test_shirt_numbers: ok (%d)" % N)
