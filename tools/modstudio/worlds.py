@@ -52,7 +52,8 @@ def _same(a, b):
 
 
 def is_world(name):
-    return name.lower().startswith("_fl26")
+    # <world>.building is a Build's work folder, left behind when a Build stops on an error: no world
+    return name.lower().startswith("_fl26") and not name.lower().endswith(".building")
 
 
 def worlds(game):

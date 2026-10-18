@@ -76,6 +76,9 @@ def run():
     os.makedirs(os.path.join(ms, "tables"))
     for x in ("_FL26Live", "_FL26Old"):         # Build's copies of their recipes (Project.copies_dir)
         put(os.path.join(ms, "recipes", x + ".json"), json.dumps({"world": x, "leagues": []}))
+    # a Build stopped on an error leaves its work folder <world>.building behind (French UI test 18.10.:
+    # it showed as one more world card, with Activate on it)
+    put(os.path.join(game.livecpk_dir, "_FL26Live.building", "common", "etc", "pesdb", "Team.bin"), b"half")
     with open(os.path.join(ms, "settings.json"), "w", encoding="utf-8") as f:
         json.dump({"game": game.folder, "tables": os.path.join(ms, "tables"), "check_updates": False}, f)
     ok("the window's settings are in the temp APPDATA", A.APPDIR == ms)
@@ -129,7 +132,7 @@ def run():
     # ---- the cards
     sec = w.my_world
     cards = {c.world: c for c in sec.cards}
-    ok("a card for each world on disk, the live one first: %s" % list(cards),
+    ok("a card for each world on disk, the live one first, none for a Build's work folder: %s" % list(cards),
        list(cards) == ["_FL26Live", "_FL26Old"])
     ok("the world in the game is the open one", w.project.recipe.get("world") == "_FL26Live")
     live = cards["_FL26Live"]
