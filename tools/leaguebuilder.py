@@ -5277,6 +5277,7 @@ def pictures(pl, root, base, log=print, game=None, gone=None):
         cj = os.path.join(root, "kit-colours.json.tmp")
         json.dump(colours, open(cj, "w", encoding="utf-8"))
         args += ["--colours", cj]
+    t = unipar[:len(unipar) - len(UNIPAR)].rstrip(os.sep)   # the unpack folder the kits file is in
     if os.path.exists(os.path.join(t, KIT_TEXTURES)):
         args += ["--textures", os.path.join(t, KIT_TEXTURES)]
     buf = io.StringIO()
