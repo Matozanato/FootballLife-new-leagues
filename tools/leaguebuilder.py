@@ -4471,6 +4471,15 @@ def europe(root, db, log=print, uecl=True, name=None, rounds=()):
     return clubs, qlines
 
 
+def out_of_ids(what):
+    """the world has every competition the game takes: say what to take out (B154, Tysonche35
+    18.10.: a league added to the Europack, and the testers then deleted the world's folder by hand)"""
+    return BuildError("no free competition or regulation ids left for %s -- the world has all the "
+                      "competitions the game takes (255). Untick the national or super cups of countries "
+                      "you don't play (My world > Cups > Cups of our countries / of the game's countries) "
+                      "or take out a league, then Build again" % what)
+
+
 def pinned_ids(pl, db, key):
     """free_comp_ids for the cup `key`: its ids of the last Build first when they are still free
     (pl["prev_cup_ids"]), and no other cup's old ids (audit 12.10.: a league added in front gave
@@ -4905,7 +4914,7 @@ def national_cups(pl, root, db, log=print):
             continue
         cids, regs = pinned_ids(pl, db, "cup:" + p["name"])
         if not cids or not regs:
-            raise BuildError("no free competition or regulation ids left for %s" % c["name"])
+            raise out_of_ids(c["name"])
         teams = list(p["teams"])
         if not c["keep_top"] and c["below"]:
             teams += next(q["teams"] for q in pl["leagues"] if q["rid"] == c["below"])
@@ -4921,7 +4930,7 @@ def national_cups(pl, root, db, log=print):
         if c.get("super"):
             cids, regs = pinned_ids(pl, db, "super:" + p["name"])
             if not cids or not regs:
-                raise BuildError("no free competition or regulation ids left for %s" % c["super"])
+                raise out_of_ids(c["super"])
             pl["cup_ids"]["super:" + p["name"]] = {"cid": cids[0], "reg": regs[0]}
             c["super_cid"], c["super_reg"] = cids[0], regs[0]
             call(mkcup, ["--base", db, "--out", root, "--teams", ",".join(map(str, p["teams"][:2])),
@@ -4946,7 +4955,7 @@ def game_super_cups(pl, root, db, log=print):
             raise BuildError("%s: league %d has %d clubs in the tables" % (s["name"], s["league"], len(teams)))
         cids, regs = pinned_ids(pl, db, "gsuper:" + s["code"])
         if not cids or not regs:
-            raise BuildError("no free competition or regulation ids left for %s" % s["name"])
+            raise out_of_ids(s["name"])
         s["cid"], s["reg"] = cids[0], regs[0]
         call(mkcup, ["--base", db, "--out", root, "--teams", ",".join(map(str, teams)),
                      "--cid", s["cid"], "--reg", s["reg"], "--region", s["region"], "--name", s["name"],
@@ -4979,12 +4988,12 @@ def continental(cups, root, db, log=print, start=None, want=None):
             (used_c if field == "cid" else used_r).add(v)
             return v
         if not pool:
-            raise BuildError("no free competition or regulation ids left for the continental cups")
+            raise out_of_ids("the continental cups")
         return pool.pop(0)
     pres = [c for c in cups if (c.get("opts") or {}).get("pre")]
     keep = sum(1 for c in cups if (c.get("opts") or {}).get("reserve"))
     if len(all_c) < len(cups) or len(all_r) < sum(2 if c["groups"] else 1 for c in cups) + len(pres) + keep:
-        raise BuildError("no free competition or regulation ids left for the continental cups")
+        raise out_of_ids("the continental cups")
     args = ["--base", db, "--out", root]
     rounds = []
     for cup in cups:

@@ -155,6 +155,7 @@
   ["refused the game's exe$", "a refusé l'exe du jeu"],
   ["^unpacked by an older Mod Studio, before the game's update archives were read$", "extraites par un ancien Mod Studio, avant la lecture des archives de mise à jour du jeu"],
   ["^unpacked without the game's kits file \\(UniformParameter\\.bin\\)$", "extraites sans le fichier des maillots du jeu (UniformParameter.bin)"],
+  ["no free competition or regulation ids left for (.+) -- the world has all the competitions the game takes \\(255\\)\\. Untick the national or super cups of countries you don't play \\(My world > Cups > Cups of our countries / of the game's countries\\) or take out a league, then Build again$", "plus d'ids de compétition libres pour \\1 -- le monde a toutes les compétitions que le jeu accepte (255). Décochez les coupes nationales ou supercoupes des pays que vous ne jouez pas (Mon monde > Coupes > Coupes de nos pays / Coupes des pays du jeu) ou retirez une ligue, puis refaites Build"],
   ["^the game was updated since \\((.+)\\)$", "le jeu a été mis à jour depuis (\\1)"],
   [" \\(or tick 'It keeps its places in continental competitions' in Club of the game\\)$", " (ou coche 'Garde ses places dans les compétitions continentales' dans Club du jeu)"],
   [", not all (\\d+) of the two divisions: the cup screens draw only some field sizes$", ", pas les \\1 des deux divisions : les écrans de coupe ne dessinent que certaines tailles"],

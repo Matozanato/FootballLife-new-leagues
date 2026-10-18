@@ -30,3 +30,7 @@ it is released; until then this page only collects what is done and tested.
   FL_2026.exe already had another mod's fix at the spot of one of our small crash guards, Mod Studio
   said to press Install now, which cannot help. It now says the exe has another mod's change there,
   that one guard is off and the rest is in, as a warning. (Thanks Schmiddi)
+- **"No free competition ids left" now says what to do (B154).** A league added to a world that already
+  has all 255 competitions the game takes (the Europack is at 220) stopped Build with only that line.
+  It now says the world is full and to untick national or super cups of countries you don't play
+  (My world > Cups) or take out a league. (Thanks Tysonche35)
