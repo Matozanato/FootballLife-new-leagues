@@ -1873,7 +1873,8 @@
   "4. Tools > Restore points has the Modpack as it came: Put this copy back makes it the ready world again. Stuck? Help > User guide, or ask on our Discord, FL Mod Studio.": "4. Alati > Točke vraćanja ima Modpack kakav je došao: Vrati ovu kopiju opet ga čini gotovim svijetom. Zapelo je? Pomoć > Upute, ili pitaj na našem Discordu, FL Mod Studio.",
   "Show me how to edit a Modpack": "Pokaži mi kako urediti Modpack",
   "%s found the game's FL_2026.exe already changed at its spot by another mod (ABORTED in sider.log), so that one fix of ours is off; the rest of Mod Studio's modules are in. Nothing to do unless the game crashes; then use the Steam FL_2026.exe (docs/developers/by-hand.md, step A6).": "%s je našao igrin FL_2026.exe već promijenjen na svom mjestu od drugog moda (ABORTED u sider.logu), pa je taj jedan naš popravak isključen; ostali moduli Mod Studija rade. Ne treba ništa raditi osim ako se igra ruši; tada koristi Steam FL_2026.exe (docs/developers/by-hand.md, korak A6).",
-  "Kept the leagues you added before: %s.": "Zadržane su lige koje si dodao prije: %s."
+  "Kept the leagues you added before: %s.": "Zadržane su lige koje si dodao prije: %s.",
+  "Your Edit data (EDIT00000000) goes with the careers too: it stays with %s.": "Tvoji Edit podaci (EDIT00000000) idu zajedno s karijerama: ostaju uz %s."
  },
  "log": [
   [

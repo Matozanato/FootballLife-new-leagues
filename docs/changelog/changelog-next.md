@@ -53,3 +53,8 @@ it is released; until then this page only collects what is done and tested.
   be made into a package. A picture or kit folder not on your PC is now taken from the world as it is
   in the game (the league's emblem, the club's crest, the club's Kit Server kits), and what is in
   neither is left out with a line in the log; Build draws a badge for it. (Thanks Biancopr)
+- **Your Edit seemed gone after Build of a new world (B155).** Since 0.2.4 each world keeps its own
+  save folder, and the Edit data (EDIT00000000) goes with it, so a new world starts with no Edit;
+  the note said only "careers". The note now says the Edit data goes with them too. To keep one Edit
+  for every world: Settings > untick **Each world keeps its own careers**, then copy EDIT00000000
+  from `save_<your old world>` into `save`. (Thanks pepponeee98)

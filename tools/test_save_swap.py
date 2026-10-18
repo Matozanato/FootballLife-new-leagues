@@ -224,6 +224,8 @@ def switch():
     ok("the first-time note in plain words: kept in save__FL26Live, _FL26Old starts with its own, Settings",
        "Your careers of _FL26Live are kept in save__FL26Live" in note and "_FL26Old starts with its own" in note
        and "Settings" in note and "backups" in note)
+    ok("B155: the note says the Edit data goes with the careers",
+       "Edit data (EDIT00000000) goes with the careers too: it stays with _FL26Live" in note)
     ok("the copy of the first swap is in this game's ModStudio\\backups\\saves",
        len(SV.backups_of(game.sider_dir)) == 1)
     sw.undo()

@@ -373,6 +373,10 @@ class Switch:
             text = _("Each world now keeps its own Master League careers. Your careers of %s are kept in %s "
                      "(in %s); %s gets its own careers back from %s.") % (
                 label(res["old"]), name_of(res["old"]), res["root"], label(res["new"]), name_of(res["new"]))
+        # B155 (pepponeee98 18.10.): the Edit data goes with the careers, and a world starting with
+        # an empty save has none -- said nowhere, so an Edit made for every world looked lost
+        text += "\n\n" + _("Your Edit data (EDIT00000000) goes with the careers too: it stays with %s.") % (
+            label(res["old"]))
         if res.get("backup"):
             text += "\n\n" + _("A copy of your save folder as it was is in %s.") % res["backup"]
         return text + "\n\n" + _("You can turn this off in Settings.")
