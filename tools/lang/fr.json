@@ -154,6 +154,7 @@
   ["^sider.log is older than the world switched on.*$", "sider.log est plus ancien que le monde activé -- lance le jeu jusqu'au menu principal puis vérifie à nouveau"],
   ["refused the game's exe$", "a refusé l'exe du jeu"],
   ["^unpacked by an older Mod Studio, before the game's update archives were read$", "extraites par un ancien Mod Studio, avant la lecture des archives de mise à jour du jeu"],
+  ["^unpacked without the game's kits file \\(UniformParameter\\.bin\\)$", "extraites sans le fichier des maillots du jeu (UniformParameter.bin)"],
   ["^the game was updated since \\((.+)\\)$", "le jeu a été mis à jour depuis (\\1)"],
   [" \\(or tick 'It keeps its places in continental competitions' in Club of the game\\)$", " (ou coche 'Garde ses places dans les compétitions continentales' dans Club du jeu)"],
   [", not all (\\d+) of the two divisions: the cup screens draw only some field sizes$", ", pas les \\1 des deux divisions : les écrans de coupe ne dessinent que certaines tailles"],

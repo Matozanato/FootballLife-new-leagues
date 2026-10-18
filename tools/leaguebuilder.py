@@ -599,6 +599,19 @@ def unpack_tables(game, out, log=print):
     # the update's tables ("National selection 2.2") go over the ones above, as the game layers
     # them: an edit file made for the updated database matches what we unpack then (#75, #63)
     cpks += sorted(glob.glob(os.path.join(game, "download", "data_extra*.cpk")))
+    data = sorted(glob.glob(os.path.join(game, "Data", "*.cpk")))
+    toc = {}
+    for c in data + cpks:
+        try:
+            toc[c] = cpkread.names(c)
+        except (OSError, ValueError, KeyError):
+            toc[c] = []
+    # the kits file of the game as it came (Data\*.cpk) under the download's: FL26 1.0 without
+    # the game's updates has none in download\, and Build then drew no kit (B153)
+    for c in data:
+        if UNIPAR in toc[c]:
+            cpkread.extract(c, out, [UNIPAR])
+            log("  %-20s the kits file (UniformParameter.bin)" % os.path.basename(c))
     for c in cpks:
         n = cpkread.extract(c, out, ["common/etc/pesdb/", UNIPAR])
         log("  %-20s %d tables" % (os.path.basename(c), n))
@@ -608,20 +621,20 @@ def unpack_tables(game, out, log=print):
     # the kit textures the game has: a kit lent without its texture shows as a blank one
     import re
     tex = set()
-    for c in glob.glob(os.path.join(game, "Data", "*.cpk")) + cpks:
-        try:
-            tex |= {m for n in cpkread.names(c) for m in re.findall(r"(u\d{4,5}[a-z]\d)\.ftex", n)}
-        except (OSError, ValueError, KeyError):
-            pass
+    for c in data + cpks:
+        tex |= {m for n in toc[c] for m in re.findall(r"(u\d{4,5}[a-z]\d)\.ftex", n)}
     with open(os.path.join(out, KIT_TEXTURES), "w") as f:
         f.write("".join("%s.ftex\n" % t for t in sorted(tex)))
     log("  %d kit textures" % len(tex))
+    rec = _table_cpks(game)
+    rec[UNIPAR_SEEN] = [int(os.path.exists(os.path.join(out, UNIPAR.replace("/", os.sep)))), 0]
     with open(os.path.join(out, UNPACKED), "w", encoding="utf-8") as f:
-        json.dump(_table_cpks(game), f, indent=1)
+        json.dump(rec, f, indent=1)
     return base
 
 
 UNPACKED = "fl26-unpacked.json"        # the archives an unpack read: {file name: [size, mtime]}
+UNIPAR_SEEN = "UniformParameter.bin"   # in UNPACKED: [1, 0] when that unpack found the kits file (B153)
 
 
 def _table_cpks(game):
@@ -647,6 +660,9 @@ def tables_stale(game, out):
     except (OSError, ValueError):
         return ("unpacked by an older Mod Studio, before the game's update archives were read"
                 if any(k.startswith("data_extra") for k in now) else None)
+    if UNIPAR_SEEN not in was and not os.path.exists(os.path.join(out, UNIPAR.replace("/", os.sep))):
+        # unpacked by 0.2.4 or older from FL26 1.0 without the game's updates: no kits file (B153)
+        return "unpacked without the game's kits file (UniformParameter.bin)"
     new = [k for k in now if k not in was]
     changed = [k for k in now if k in was and list(was[k]) != now[k]]
     if new or changed:

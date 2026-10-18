@@ -154,6 +154,7 @@
   ["^sider.log is older than the world switched on.*$", "sider.log je stariji od uključenog svijeta -- pokreni igru do glavnog izbornika pa provjeri opet"],
   ["refused the game's exe$", "odbio je exe igre"],
   ["^unpacked by an older Mod Studio, before the game's update archives were read$", "raspakirao ih je stariji Mod Studio, prije nego je čitao arhive updatea igre"],
+  ["^unpacked without the game's kits file \\(UniformParameter\\.bin\\)$", "raspakirane su bez datoteke dresova igre (UniformParameter.bin)"],
   ["^the game was updated since \\((.+)\\)$", "igra je od tada ažurirana (\\1)"],
   [" \\(or tick 'It keeps its places in continental competitions' in Club of the game\\)$", " (ili označi 'Zadržava mjesta u kontinentalnim natjecanjima' u Klubu igre)"],
   [", not all (\\d+) of the two divisions: the cup screens draw only some field sizes$", ", ne svih \\1 iz oba ranga: ekrani kupa crtaju samo neke veličine"],
