@@ -431,6 +431,15 @@ def write(pl, sider, log=print, root=None):
                 len(make), new, "" if numbers else "; no kit in the library lends back numbers, so the game's own are used"))
         done.append(_map(os.path.join(root, file), mine, log, what, world, sider,
                          teams if what == "kits" else comps))
+    # B129: the other folder's map too (content\kits or content\kit-server, the one not picked
+    # above): Install mods may have merged a world zip's lines there (servers.Server.pick decides
+    # its folder its own way), and those lines of ours stayed on for the next world's clubs
+    for lib, other, file, what in ((klib, (KITS, SPFL_KITS), "map.txt", "kits"),
+                                   (blib, (BOARDS, SPFL_BOARDS), "map_competitions.txt", "scoreboards")):
+        for o in other:
+            path = os.path.join(sider, o, file)
+            if o != lib and os.path.isfile(path):
+                _map(path, [], log, what + " (" + o + ")", world, sider, teams if what == "kits" else comps)
     menus(sider, world, log)
     return tuple(done)
 

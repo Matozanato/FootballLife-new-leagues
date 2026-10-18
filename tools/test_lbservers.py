@@ -230,6 +230,31 @@ def main():
         ok("menus: and back on with their world", "#" + a1 in ml and b1 in ml)
         ok("menus: nothing to change, nothing written", S.menus(e, "_FL26B", log=lambda *_: None) == 0)
         ok("menus: no menu-server, nothing happens", S.menus(os.path.join(tmp, "none"), "_FL26A", log=lambda *_: None) == 0)
+
+        # B129 (laracroft7826, 18.10.): sider.ini loads SPFL26's kits.lua but only content\kit-server is
+        # there (or no kit module and only content\kits): Install mods merged the Modpack's lines into the
+        # folder it picks, the switch wrote to the other one, and the Modpack's lines stayed on for the
+        # clubs of the world switched on after it
+        BS = chr(92)
+        old = ['71653, "_FL26M2400S%sBulgarian First League%sSlavia Sofia"   %s Bulgarian First League/0' % (BS, BS, S.TAG),
+               '71655, "_FL26M2400S%s2. Bundesliga%s1. FC Kaiserslautern"   %s 2. Bundesliga/1' % (BS, BS, S.TAG)]
+        mine_ = '71654, "England%sForest Green"' % BS
+        new = {"world": "_FL26MyWorld", "leagues": [{"name": "National League", "teams": [71653, 71654, 71655],
+                                                     "club_names": ["FC Halifax Town", "Forest Green Rovers", "Gateshead"]}]}
+        for name, mods, lib in (("kits.lua, only kit-server", ["common" + BS + "kits.lua"], S.KITS),
+                                ("no kit module, only content kits", [], S.SPFL_KITS),
+                                ("kserv.lua, only content kits", ["kserv.lua"], S.SPFL_KITS)):
+            g = os.path.join(tmp, "b129-" + str(len(name)), "SiderAddons")
+            put(os.path.join(g, "sider.ini"), "".join('lua.module = "%s"' % m + chr(10) for m in mods))
+            mp9 = os.path.join(g, lib, "map.txt")
+            put(mp9, chr(10).join([mine_, "# ---- added by FL26 Mod Studio: _FL26M2400S.zip ----"] + old) + chr(10))
+            ok("B129 %s: the switch picks the other folder" % name, S.libs(g)[0] != lib)
+            S.write(new, g, log=lambda *_: None)
+            ml = lines(mp9)
+            ok("B129 %s: the other world's lines are gone" % name, not any("_FL26M2400S" + BS in l for l in ml))
+            ok("B129 %s: your own line stays on" % name, mine_ in ml)
+            ok("B129 %s: a second switch changes nothing" % name, S.write(new, g, log=lambda *_: None) == (0, 0)
+               and lines(mp9) == ml)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("%d cases passed" % N)
