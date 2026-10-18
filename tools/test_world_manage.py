@@ -328,6 +328,17 @@ def rename(t):
     got = WL.rename_recipe_copy(rd, "_FL26Live", "_FL26New")
     ok("recipe copy renamed with its world key", got == os.path.join(rd, "_FL26New.json")
        and json.load(open(got))["world"] == "_FL26New" and not os.path.exists(os.path.join(rd, "_FL26Live.json")))
+    # B142: the open world is that copy -- after Rename it is the file under the new name (Build's
+    # tab said the old one, and saving wrote the old name's file again)
+    from modstudio.pages import roots as RP
+    P = FakeProject(rd, "_FL26New")
+    P.path = got
+    app = types.SimpleNamespace(project=P, settings={"last_recipe": got}, save_settings=QUIET)
+    kept = WL.rename_recipe_copy(rd, "_FL26New", "_FL26Third")
+    RP.rename_recipe(app, "_FL26New", "_FL26Third", kept)
+    ok("B142: the open copy is the renamed file, nothing written under the old name",
+       P.path == kept == os.path.join(rd, "_FL26Third.json") and P.recipe["world"] == "_FL26Third"
+       and app.settings["last_recipe"] == kept and not os.path.exists(got) and not P.dirty)
 
 
 # ---- the pages ------------------------------------------------------------------------------------

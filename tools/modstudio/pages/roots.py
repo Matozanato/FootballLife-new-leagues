@@ -30,10 +30,18 @@ def rename_recipe(app, old, new, kept=...):
         was_dirty = P.dirty
         P.recipe["world"] = new
         same = lambda a, b: bool(a and b) and os.path.normcase(os.path.abspath(a)) == os.path.normcase(os.path.abspath(b))
+        copy = bool(kept and same(P.path, was))
+        if copy:
+            # B142: the open world was Build's copy, renamed above with its "world" line: the file
+            # under the new name is the open one now (the old path is gone; Build said it still,
+            # and saving it wrote the old name's file again)
+            P.path = kept
         try:
             # B66: written again, a 126 MB recipe froze the window for seconds. A recipe with nothing
             # waiting to be saved is its file as it is: only its "world" line changes
-            if P.path and not was_dirty:
+            if copy and not was_dirty:
+                P.changed.emit()
+            elif P.path and not was_dirty:
                 if WL.recipe_world(P.path, P.path, old, new):
                     P.changed.emit()
                 else:
@@ -687,6 +695,9 @@ class Roots(Page):
                 error(self, title, _("%s is now %s, but its Master League careers stay in %s:") % (
                     w, new, saves.name_of(w)) + "\n\n" + str(err))
             self.after_world_change()
+            pages = getattr(self.app, "pages", None) or {}
+            if "Build" in pages:
+                pages["Build"].refresh()        # B142: the tab under the cards said the old name
             self.say(_("%s is now %s.") % (w, new) + ("  " + _("Its careers: %s.") % os.path.basename(moved)
                                                        if moved else ""), "ok")
             if done:

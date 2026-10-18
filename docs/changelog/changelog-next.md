@@ -23,3 +23,6 @@ it is released; until then this page only collects what is done and tested.
 - **The world card's league count (B141).** The card of the open world counted a group of clubs in no
   league (the Europack's Croatian clubs) as a league: 81 while open, 80 once another world was open.
   It is 80 both ways now.
+- **Rename world and Build's tab (B142).** After Rename world, the tab under Build still showed the old
+  name, and when the open world was the copy Build keeps, saving wrote it under the old name again.
+  Both follow the new name now.
