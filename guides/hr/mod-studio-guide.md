@@ -40,7 +40,9 @@ Prozor je na engleskom. **Jezik (Language)** na gornjoj traci (ili **Postavke �
 jedno mjesto, s narančastim okvirom oko onoga o čemu govori: jezik, kućice s onim što je u igri,
 **Pokreni igru**, pa **1. Početna** do **5. Postavke** i **Pomoć**. Deset koraka. Dok traje, ništa
 se ne mijenja. **Dalje** i **Natrag** idu kroz nju, **Preskoči turu** je zatvori, a **Pomoć →
-Kratka tura** je opet pokaže kad god želiš.
+Kratka tura** je opet pokaže kad god želiš. Na zadnjoj kartici je **Pokaži mi kako instalirati
+Modpack**: druga kartica koja te vodi kroz instalaciju Modpacka (zipa svijeta), klik po klik (i u
+**Pomoć → Instaliraj Modpack, korak po korak**).
 
 1. **5. Postavke → Mapa igre**: stisni **Pregledaj...**, odaberi mapu u kojoj je `FL_2026.exe`,
    pa **Koristi ovu mapu**. Redak ispod kaže što je nađeno, npr. `Nađeno: FL_2026.exe, Sider u
@@ -120,7 +122,8 @@ Na vrhu prozora, slijeva nadesno:
 ovom svijetu...** (sve što tvoj svijet mijenja u igri na jednom popisu; odaberi retke i stisni
 **Poništi odabrane izmjene** da ih vratiš), **Dodaj paket liga...** i **Napravi paket liga...**.
 **Igra** otvara mapu igre, Sider mapu, `sider.ini` i `sider.log` i pokreće igru. **Pomoć** ima
-**Upute**, **Kratka tura**, **Provjeri ažuriranja...** i **O programu FL26 Mod Studio**.
+**Upute**, **Kratka tura**, **Instaliraj Modpack, korak po korak**, **Provjeri ažuriranja...** i
+**O programu FL26 Mod Studio**.
 
 ### 3.1 Moj svijet
 

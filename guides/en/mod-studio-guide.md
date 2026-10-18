@@ -40,7 +40,9 @@ The new language shows the next time you start Mod Studio.
 now, one place at a time, with an orange frame around the thing it talks about: the language,
 the boxes of what is in the game, **Start the game**, then **1. Home** to **5. Settings** and
 **Help**. Ten steps. Nothing is changed while it runs. **Next** and **Back** move through it,
-**Skip the tour** closes it, and **Help → Quick tour** shows it again at any time.
+**Skip the tour** closes it, and **Help → Quick tour** shows it again at any time. Its last card
+has **Show me how to install a Modpack**: a second card that walks you through installing a Modpack
+(a world zip), click by click (also **Help → Install a Modpack, step by step**).
 
 1. **5. Settings → Game folder**: press **Browse...**, pick the folder that holds `FL_2026.exe`,
    then **Use this folder**. The line under it says what was found, e.g. `Found: FL_2026.exe,
@@ -124,8 +126,8 @@ At the top of the window, from left to right:
 world...** (everything your world changes in the game in one list; pick lines and press **Undo
 the picked changes** to take them back), **Add a league package...** and **Make a league
 package...**. **Game** opens the game folder, the Sider folder, `sider.ini` and `sider.log`, and
-starts the game. **Help** has **User guide**, **Quick tour**, **Check for updates...** and
-**About FL26 Mod Studio**.
+starts the game. **Help** has **User guide**, **Quick tour**, **Install a Modpack, step by
+step**, **Check for updates...** and **About FL26 Mod Studio**.
 
 ### 3.1 My world
 

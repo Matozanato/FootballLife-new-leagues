@@ -51,6 +51,10 @@ The first time, a small card shows you around the window in ten steps (the quick
 with **Next**, or close it with **Skip the tour**. It changes nothing. **Help → Quick tour**
 shows it again.
 
+Got a Modpack? On the tour's last card, **Show me how to install a Modpack** starts a second card
+that walks you through Way A below, one click at a time, with the orange frame on what to click.
+It is also in **Help → Install a Modpack, step by step**.
+
 If Windows says "Windows protected your PC": click **More info** → **Run anyway**.
 
 Want the window in another language? Top bar → **Language** → Hrvatski, Español, Português or
@@ -83,6 +87,7 @@ Now pick the way that matches your file.
 ## Way A: a ready world (one .zip)
 
 Use this when someone gave you a world as a zip (a modpack, an exported world).
+Mod Studio shows these steps in its window too: **Help → Install a Modpack, step by step**.
 
 **A1.** Do not unzip it yourself.
 

@@ -45,7 +45,9 @@ tout se trouve maintenant, un endroit à la fois, avec un cadre orange autour de
 parle : la langue, les cases de ce qui est dans le jeu, **Lancer le jeu**, puis de **1. Accueil**
 à **5. Réglages** et **Aide**. Dix étapes. Rien ne change pendant la visite. **Suivant** et
 **Retour** avancent et reculent, **Passer la visite** la ferme, et **Aide → Visite rapide** la
-remontre à tout moment.
+remontre à tout moment. Sa dernière carte a **Montrez-moi comment installer un Modpack** : une
+deuxième carte qui vous guide pour installer un Modpack (un zip de monde), clic par clic (aussi dans
+**Aide → Installer un Modpack, étape par étape**).
 
 1. **5. Réglages → Dossier du jeu** : appuyez sur **Parcourir...**, choisissez le dossier qui
    contient `FL_2026.exe`, puis **Utiliser ce dossier**. La ligne en dessous dit ce qui a été
@@ -135,8 +137,8 @@ sous...**, **Modifications de ce monde...** (tout ce que votre monde change dans
 seule liste ; choisissez des lignes et appuyez sur **Annuler les modifications choisies** pour
 les retirer), **Ajouter un paquet de ligues...** et **Créer un paquet de ligues...**. **Jeu**
 ouvre le dossier du jeu, le dossier de Sider, `sider.ini` et `sider.log`, et lance le jeu.
-**Aide** contient **Guide d'utilisation**, **Visite rapide**, **Rechercher des mises à jour...**
-et **À propos de FL26 Mod Studio**.
+**Aide** contient **Guide d'utilisation**, **Visite rapide**, **Installer un Modpack, étape par
+étape**, **Rechercher des mises à jour...** et **À propos de FL26 Mod Studio**.
 
 ### 3.1 Mon monde
 

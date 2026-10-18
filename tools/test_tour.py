@@ -9,7 +9,11 @@ APPDATA in a temp folder, no game) and walks the tour:
   - at the smallest size of the window, at its first size and at 1920x1032 the card of every step
     is inside the window, shows all of its text and does not cover the widget it talks about;
   - Back, Next and Done; Done and Skip the tour write "tour" in settings.json, the card and the
-    frame are gone, and Help > Quick tour shows it again (once, not twice over itself).
+    frame are gone, and Help > Quick tour shows it again (once, not twice over itself);
+  - Install a Modpack, step by step (Help, and the button on the last card of the quick tour): seven
+    steps, the frame on 2. My world, + Add... (My world opened for it) and Start the game, the card
+    inside the window with all of its text at the smallest and the largest size, Close and Done end
+    it, and it does not count as the quick tour seen.
 """
 import json, os, shutil, sys, tempfile, time
 
@@ -147,6 +151,89 @@ def run():
     ok("Skip the tour closes it", w._tour is None and not w.findChildren(QWidget, "tourcard")
        and not w.findChildren(QWidget, "tourframe"))
     ok("... and it stays seen", saved(ms).get("tour") == TR.TOUR)
+
+    # Install a Modpack, step by step (mato 18.10.)
+    w.settings.pop("tour", None)          # (save_settings keeps what the file has: out of the file too)
+    w._seen.pop("tour", None)
+    d = saved(ms)
+    d.pop("tour", None)
+    with open(os.path.join(ms, "settings.json"), "w", encoding="utf-8") as f:
+        json.dump(d, f)
+    mp = [a for a in help_menu.actions() if a.text() == i18n._("Install a Modpack, step by step")]
+    ok("Help has Install a Modpack, step by step", len(mp) == 1)
+    w.open_page("Overview")
+    settle(qa)
+    mp[0].trigger()
+    settle(qa)
+    g = w._tour
+    ok("the Modpack guide starts", g is not None and g.guide == "modpack" and g.card.isVisible() and g.i == 0)
+    w.start_tour()
+    ok("the quick tour does not start over it", w._tour is g)
+    ok("seven steps", len(g.steps) == 7)
+    ok("its first button is Close", g.skip.text() == i18n._("Close"))
+    if LANG != "en":
+        ok("the Modpack guide is in %s" % LANG, g.steps[0][0] != "Install a Modpack, step by step")
+    points = {1: "2. My world", 2: "+ Add...", 5: "Start the game", 6: "2. My world"}
+    for size in ((1080, 640), (1920, 1032)):
+        w.resize(*size)
+        w.open_page("Overview")
+        settle(qa, 0.3)
+        W, H = w.width(), w.height()
+        for i in range(len(g.steps)):
+            g.show_step(i)
+            settle(qa, 0.05)
+            c = g.card.geometry()
+            name = "Modpack guide %dx%d step %d" % (W, H, i + 1)
+            ok(name + ": the card is inside the window %s" % [c.x(), c.y(), c.width(), c.height()],
+               c.left() >= 0 and c.top() >= 0 and c.right() < W and c.bottom() < H)
+            need = g.text.heightForWidth(g.text.width()) if g.text.width() > 0 else 0
+            ok(name + ": all of the text shows (%d of %d px)" % (g.text.height(), need), g.text.height() >= need)
+            ok(name + ": the buttons show", g.next.isVisible() and g.skip.isVisible()
+               and g.next.geometry().bottom() <= g.card.height())
+            tg = g.target()
+            if i in points:
+                ok(name + ": the frame is on %s" % points[i], tg is not None and g.frame.isVisible())
+                r = QRect(tg.mapTo(w, QPoint(0, 0)), tg.size())
+                ok(name + ": the card does not cover it", not c.intersects(r))
+                ok(name + ": the frame is around it", g.frame.geometry().contains(r))
+            else:
+                ok(name + ": no frame, the card in the middle", tg is None and not g.frame.isVisible())
+            if i == 2:
+                ok(name + ": My world is open, the frame on its + Add...",
+                   w.my_world.isVisible() and tg is w.my_world.add_btn)
+    ok("the Modpack guide's last step says Done", g.next.text() == i18n._("Done"))
+    ok("... and offers nothing more", not g.then.isVisible())
+    g.next.click()
+    settle(qa)
+    ok("Done closes the Modpack guide", w._tour is None and not w.findChildren(QWidget, "tourcard")
+       and not w.findChildren(QWidget, "tourframe"))
+    ok("... and it is not the quick tour seen", saved(ms).get("tour") is None)
+    mp[0].trigger()
+    settle(qa)
+    w._tour.skip.click()
+    settle(qa)
+    ok("Close closes it too", w._tour is None and not w.findChildren(QWidget, "tourcard"))
+
+    w.resize(1080, 640)
+    settle(qa, 0.3)
+    w.start_tour()
+    settle(qa)
+    t = w._tour
+    ok("the quick tour's first card does not offer the Modpack guide", not t.then.isVisible())
+    t.show_step(len(t.steps) - 1)
+    settle(qa, 0.05)
+    c = t.card.geometry()
+    ok("its last card offers it", t.then.isVisible() and t.then.text() == i18n._("Show me how to install a Modpack"))
+    ok("... inside the card and the window", t.then.geometry().bottom() <= t.card.height()
+       and c.bottom() < w.height() and c.top() >= 0)
+    t.then.click()
+    settle(qa)
+    ok("the button ends the quick tour (seen) and starts the Modpack guide",
+       w._tour is not None and w._tour.guide == "modpack" and w._tour.i == 0
+       and saved(ms).get("tour") == TR.TOUR and len(w.findChildren(QWidget, "tourcard")) == 1)
+    w._tour.skip.click()
+    settle(qa)
+    ok("... which closes as well", w._tour is None and not w.findChildren(QWidget, "tourcard"))
     w.resize(1400, 900)
     settle(qa)
     ok("the window still resizes after the tour", w.width() == 1400)

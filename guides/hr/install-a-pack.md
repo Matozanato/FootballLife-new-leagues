@@ -50,6 +50,10 @@ sad u igri (**MAPA IGRE**, **SIDER**, **AKTIVNI SVIJET** ...), pa dijelovi **1. 
 Prvi put te mala kartica provede kroz prozor u deset koraka (kratka tura). Čitaj je s **Dalje**
 ili je zatvori s **Preskoči turu**. Ništa ne mijenja. **Pomoć → Kratka tura** je opet pokaže.
 
+Imaš Modpack? Na zadnjoj kartici ture **Pokaži mi kako instalirati Modpack** otvori drugu karticu
+koja te vodi kroz Način A ispod, klik po klik, s narančastim okvirom na onome što treba kliknuti.
+Ima je i u **Pomoć → Instaliraj Modpack, korak po korak**.
+
 Ako Windows kaže "Windows protected your PC": klikni **More info** → **Run anyway**.
 
 Želiš prozor na drugom jeziku? Gore **Jezik (Language)** → Hrvatski, Español, Português ili Français, pa
@@ -81,6 +85,7 @@ Sad izaberi način koji odgovara tvojoj datoteci.
 ## Način A: gotov svijet (jedan .zip)
 
 Za kad ti je netko dao svijet kao zip (modpack, izvezeni svijet).
+Mod Studio ove korake pokaže i u svom prozoru: **Pomoć → Instaliraj Modpack, korak po korak**.
 
 **A1.** Ne raspakiravaj ga sam.
 

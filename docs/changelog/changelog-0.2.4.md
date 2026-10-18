@@ -9,6 +9,10 @@ once, and your 0.2.2 career keeps working.
   0.2.4 shows where everything is now, one place at a time: the language, the boxes of what is in the
   game, Start the game, then 1. Home to 5. Settings and Help. Ten steps, nothing is changed while it
   runs; Skip the tour closes it, and Help > Quick tour shows it again.
+- **Install a Modpack, step by step.** The same card walks you through putting a Modpack (a world
+  zip) in the game: 2. My world, + Add..., the zip, Install the world, then Start the game and a new
+  Master League, with the orange frame on what to click. It is on the last card of the quick tour
+  (Show me how to install a Modpack) and in Help > Install a Modpack, step by step.
 - **Split and Apertura and Clausura are marked experimental.** The league window says so under the formats: they work, but still have more open bugs than everyone plays everyone, the fully tested format. Keep reporting what you find. (Thanks Vicentico)
 - **Cups of our countries.** My world > Cups has a new window with the cups of your own leagues in
   one table: for each top division its national cup, super cup and league cup, with the name and

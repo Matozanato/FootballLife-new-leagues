@@ -1841,12 +1841,25 @@
   "Lua modules, Content folders (which worlds and mods are on), profiles, Restore points (every copy Mod Studio made, to put back) and Diagnostics (when something does not work: it reads sider.log).": "Lua moduli, Mape sadržaja (koji su svjetovi i modovi uključeni), profili, Točke vraćanja (svaka kopija koju je Mod Studio napravio, za vraćanje) i Dijagnostika (kad nešto ne radi: čita sider.log).",
   "5. Settings": "5. Postavke",
   "The game folder, the game's tables and the other options.": "Mapa igre, tablice igre i ostale opcije.",
-  "The user guide, updates and this tour again. Questions and bugs: our Discord, FL Mod Studio. Have fun!": "Upute, ažuriranja i ponovno ova tura. Pitanja i bugovi: naš Discord, FL Mod Studio. Zabavi se!",
   "Skip the tour": "Preskoči turu",
   "Back": "Natrag",
   "Next": "Dalje",
   "Step %d of %d": "Korak %d od %d",
-  "Quick tour": "Kratka tura"
+  "Quick tour": "Kratka tura",
+  "Install a Modpack, step by step": "Instaliraj Modpack, korak po korak",
+  "A Modpack is a ready world in one zip: leagues, clubs, players, kits and scoreboards. Close the game first, and do not unpack the zip. The orange frame shows where to click: you click, this card does not.": "Modpack je gotov svijet u jednom zipu: lige, klubovi, igrači, dresovi i semafori. Prvo zatvori igru i nemoj raspakirati zip. Narančasti okvir pokazuje gdje kliknuti: klikaš ti, ova kartica ne.",
+  "Open My world": "Otvori Moj svijet",
+  "Click 2. My world. Your worlds are there, as cards.": "Klikni 2. Moj svijet. Tamo su tvoji svjetovi, kao kartice.",
+  "+ Add...": "+ Dodaj...",
+  "Click + Add..., then Choose a file... and pick the Modpack zip (or drag the zip onto that window). A green line says Found: a world zip. Click Add.": "Klikni + Dodaj..., pa Odaberi datoteku... i izaberi zip Modpacka (ili ga povuci na taj prozor). Zelena crta kaže Pronađeno: zip svijeta. Klikni Dodaj.",
+  "Wait while it looks inside": "Pričekaj dok gleda u zip",
+  "The page Import your world opens and looks inside the zip. A big Modpack takes a minute or two. Then it says what it is (a ready world to play) and how many leagues it has.": "Otvori se stranica Uvezi svijet i gleda što je u zipu. Za veliki Modpack treba minuta ili dvije. Onda kaže što je to (gotov svijet za igru) i koliko liga ima.",
+  "Click Install the world. If an older Modpack is installed, it asks to replace it: Yes (your saves are not touched). Mod Studio copies the world, puts its modules in the game and switches the world on: no Build needed. Wait for the window Ready to play.": "Klikni Instaliraj svijet. Ako je instaliran stariji Modpack, pita smije li ga zamijeniti: Da (tvoje spremljene igre ostaju). Mod Studio kopira svijet, stavi svoje module u igru i uključi svijet: Build ne treba. Pričekaj prozor Spremno za igru.",
+  "Click Start the game and start a NEW Master League: an old career does not get the new leagues.": "Klikni Pokreni igru, pa započni NOVU Master League: stara karijera ne dobiva nove lige.",
+  "Another world later": "Drugi svijet poslije",
+  "Every world is a card in 2. My world; the green one is in the game. Activate on another card puts that one in the game, and each world keeps its own careers. Stuck? Help > User guide, or ask on our Discord, FL Mod Studio.": "Svaki svijet je kartica u 2. Moj svijet; zelena je ona u igri. Aktiviraj na drugoj kartici stavlja tu u igru, a svaki svijet čuva svoje karijere. Zapelo je? Pomoć > Upute ili pitaj na našem Discordu, FL Mod Studio.",
+  "Show me how to install a Modpack": "Pokaži mi kako instalirati Modpack",
+  "The user guide, updates, this tour again and Install a Modpack, step by step. Questions and bugs: our Discord, FL Mod Studio. Have fun!": "Upute, ažuriranja, ponovno ova tura i Instaliraj Modpack, korak po korak. Pitanja i bugovi: naš Discord, FL Mod Studio. Zabavi se!"
  },
  "log": [
   [

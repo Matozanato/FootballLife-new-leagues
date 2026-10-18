@@ -1840,12 +1840,25 @@
   "Lua modules, Content folders (which worlds and mods are on), profiles, Restore points (every copy Mod Studio made, to put back) and Diagnostics (when something does not work: it reads sider.log).": "Módulos Lua, Carpetas de contenido (qué mundos y mods están activos), perfiles, Puntos de restauración (cada copia que hizo Mod Studio, para volver atrás) y Diagnóstico (cuando algo no funciona: lee sider.log).",
   "5. Settings": "5. Ajustes",
   "The game folder, the game's tables and the other options.": "La carpeta del juego, las tablas del juego y las demás opciones.",
-  "The user guide, updates and this tour again. Questions and bugs: our Discord, FL Mod Studio. Have fun!": "La guía de uso, las actualizaciones y este recorrido otra vez. Preguntas y fallos: nuestro Discord, FL Mod Studio. ¡Que lo disfrutes!",
   "Skip the tour": "Saltar el recorrido",
   "Back": "Atrás",
   "Next": "Siguiente",
   "Step %d of %d": "Paso %d de %d",
-  "Quick tour": "Recorrido rápido"
+  "Quick tour": "Recorrido rápido",
+  "Install a Modpack, step by step": "Instalar un Modpack, paso a paso",
+  "A Modpack is a ready world in one zip: leagues, clubs, players, kits and scoreboards. Close the game first, and do not unpack the zip. The orange frame shows where to click: you click, this card does not.": "Un Modpack es un mundo listo en un zip: ligas, clubes, jugadores, equipaciones y marcadores. Cierra primero el juego y no descomprimas el zip. El marco naranja muestra dónde hacer clic: haces clic tú, esta tarjeta no.",
+  "Open My world": "Abre Mi mundo",
+  "Click 2. My world. Your worlds are there, as cards.": "Haz clic en 2. Mi mundo. Ahí están tus mundos, como tarjetas.",
+  "+ Add...": "+ Añadir...",
+  "Click + Add..., then Choose a file... and pick the Modpack zip (or drag the zip onto that window). A green line says Found: a world zip. Click Add.": "Haz clic en + Añadir..., luego en Elegir un archivo... y elige el zip del Modpack (o arrastra el zip a esa ventana). Una línea verde dice Encontrado: un zip de mundo. Haz clic en Añadir.",
+  "Wait while it looks inside": "Espera mientras mira dentro",
+  "The page Import your world opens and looks inside the zip. A big Modpack takes a minute or two. Then it says what it is (a ready world to play) and how many leagues it has.": "Se abre la página Importa tu mundo y mira dentro del zip. Un Modpack grande tarda un minuto o dos. Luego dice qué es (un mundo listo para jugar) y cuántas ligas tiene.",
+  "Click Install the world. If an older Modpack is installed, it asks to replace it: Yes (your saves are not touched). Mod Studio copies the world, puts its modules in the game and switches the world on: no Build needed. Wait for the window Ready to play.": "Haz clic en Instalar el mundo. Si hay un Modpack más antiguo instalado, pregunta si lo reemplaza: Sí (tus partidas guardadas no se tocan). Mod Studio copia el mundo, pone sus módulos en el juego y activa el mundo: no hace falta Build. Espera la ventana Listo para jugar.",
+  "Click Start the game and start a NEW Master League: an old career does not get the new leagues.": "Haz clic en Iniciar el juego y empieza una NUEVA Master League: una carrera antigua no recibe las ligas nuevas.",
+  "Another world later": "Otro mundo más tarde",
+  "Every world is a card in 2. My world; the green one is in the game. Activate on another card puts that one in the game, and each world keeps its own careers. Stuck? Help > User guide, or ask on our Discord, FL Mod Studio.": "Cada mundo es una tarjeta en 2. Mi mundo; la verde es la que está en el juego. Activar en otra tarjeta pone esa en el juego, y cada mundo guarda sus propias carreras. ¿Atascado? Ayuda > Guía de uso, o pregunta en nuestro Discord, FL Mod Studio.",
+  "Show me how to install a Modpack": "Muéstrame cómo instalar un Modpack",
+  "The user guide, updates, this tour again and Install a Modpack, step by step. Questions and bugs: our Discord, FL Mod Studio. Have fun!": "La guía de uso, las actualizaciones, este recorrido otra vez e Instalar un Modpack, paso a paso. Preguntas y fallos: nuestro Discord, FL Mod Studio. ¡Que lo disfrutes!"
  },
  "log": [
   [

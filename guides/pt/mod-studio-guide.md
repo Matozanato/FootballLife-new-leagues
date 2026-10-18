@@ -45,7 +45,10 @@ você abrir o Mod Studio. Este guia usa os nomes que o programa mostra em portug
 agora, um lugar por vez, com uma moldura laranja em volta do que ele está explicando: o idioma, as
 caixas do que está no jogo, **Iniciar o jogo**, depois de **1. Início** até **5. Configurações**
 e **Ajuda**. Dez passos. Nada é mudado enquanto ele roda. **Próximo** e **Voltar** andam por ele,
-**Pular o tour** fecha, e **Ajuda → Tour rápido** mostra ele de novo a qualquer hora.
+**Pular o tour** fecha, e **Ajuda → Tour rápido** mostra ele de novo a qualquer hora. O último
+cartão tem **Me mostre como instalar um Modpack**: um segundo cartão que leva você pela instalação de
+um Modpack (um zip de mundo), clique por clique (também em **Ajuda → Instalar um Modpack, passo a
+passo**).
 
 1. **5. Configurações → Pasta do jogo**: aperte **Procurar...**, escolha a pasta que tem o
    `FL_2026.exe`, depois **Usar esta pasta**. A linha embaixo diz o que foi encontrado, por
@@ -138,7 +141,8 @@ neste mundo...** (tudo o que o seu mundo muda no jogo numa lista só; escolha li
 **Desfazer as mudanças escolhidas** para voltar atrás nelas), **Adicionar um pacote de
 campeonatos...** e **Criar um pacote de campeonatos...**. **Jogo** abre a pasta do jogo, a pasta
 do Sider, o `sider.ini` e o `sider.log`, e inicia o jogo. **Ajuda** tem **Guia de uso**, **Tour
-rápido**, **Procurar atualizações...** e **Sobre o FL26 Mod Studio**.
+rápido**, **Instalar um Modpack, passo a passo**, **Procurar atualizações...** e **Sobre o FL26 Mod
+Studio**.
 
 ### 3.1 Meu mundo
 

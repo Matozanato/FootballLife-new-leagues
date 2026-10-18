@@ -54,6 +54,11 @@ La première fois, une petite carte vous fait visiter la fenêtre en dix étapes
 Lisez-la avec **Suivant**, ou fermez-la avec **Passer la visite**. Elle ne change rien.
 **Aide → Visite rapide** la remontre.
 
+Vous avez un Modpack ? Sur la dernière carte de la visite, **Montrez-moi comment installer un
+Modpack** ouvre une deuxième carte qui vous guide dans la Voie A ci-dessous, clic par clic, avec le
+cadre orange sur ce qu'il faut cliquer. Elle est aussi dans **Aide → Installer un Modpack, étape
+par étape**.
+
 Si Windows dit « Windows a protégé votre ordinateur » (Windows protected your PC) : cliquez sur
 **Informations complémentaires** (More info) → **Exécuter quand même** (Run anyway).
 
@@ -87,6 +92,7 @@ Choisissez maintenant la voie qui correspond à votre fichier.
 ## Voie A : un monde prêt (un seul .zip)
 
 Utilisez-la quand quelqu'un vous a donné un monde sous forme de zip (un modpack, un monde exporté).
+Mod Studio montre aussi ces étapes dans sa fenêtre : **Aide → Installer un Modpack, étape par étape**.
 
 **A1.** Ne le décompressez pas vous-même.
 

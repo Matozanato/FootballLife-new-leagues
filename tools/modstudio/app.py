@@ -373,6 +373,7 @@ class Main(QMainWindow):
         hb = self._menu_button("Help", [
             ("User guide", self.guide),
             ("Quick tour", self.start_tour),
+            ("Install a Modpack, step by step", self.start_modpack_guide),
             ("Check for updates...", self.check_updates),
             ("About FL26 Mod Studio", self.about)])
         self.help_btn = hb
@@ -816,7 +817,15 @@ class Main(QMainWindow):
         from modstudio import tour
         if getattr(self, "_tour", None) is not None:
             return
-        self._tour = tour.Tour(self, done=lambda: setattr(self, "_tour", None)).start()
+        self._tour = tour.Tour(self, done=lambda: setattr(self, "_tour", None),
+                               follow=(_("Show me how to install a Modpack"), self.start_modpack_guide)).start()
+
+    def start_modpack_guide(self):
+        """Help > Install a Modpack, step by step: the tour's card, every click in order (tour.modpack_steps)"""
+        from modstudio import tour
+        if getattr(self, "_tour", None) is not None:
+            return
+        self._tour = tour.Tour(self, done=lambda: setattr(self, "_tour", None), guide="modpack").start()
 
     def guide(self):
         code = i18n.CODE

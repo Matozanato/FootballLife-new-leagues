@@ -53,6 +53,10 @@ Na primeira vez, um pequeno cartão mostra a janela em dez passos (o tour rápid
 **Próximo**, ou feche com **Pular o tour**. Ele não muda nada. **Ajuda → Tour rápido** mostra
 ele de novo.
 
+Tem um Modpack? No último cartão do tour, **Me mostre como instalar um Modpack** abre um segundo
+cartão que leva você pelo Caminho A abaixo, clique por clique, com a moldura laranja no que clicar.
+Ele também está em **Ajuda → Instalar um Modpack, passo a passo**.
+
 Se o Windows disser "O Windows protegeu o computador": clique em **Mais informações** →
 **Executar assim mesmo**.
 
@@ -87,6 +91,7 @@ Agora escolha o caminho que combina com o seu arquivo.
 ## Caminho A: um mundo pronto (um .zip)
 
 Use este quando alguém te passou um mundo como zip (um modpack, um mundo exportado).
+O Mod Studio mostra estes passos na janela dele também: **Ajuda → Instalar um Modpack, passo a passo**.
 
 **A1.** Não descompacte você mesmo.
 

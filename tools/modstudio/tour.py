@@ -4,7 +4,12 @@ time (mato 18.10.: "kod prvog pokretanja 0.2.4 pojavi wizard koji objasni gdje s
 A card with the step's words and Back / Next / Skip floats over the main window next to the thing it
 talks about, which gets an orange frame. Nothing is opened, clicked or changed: the window works as
 usual under it, and an update box or the first unpack of the game's tables goes on beside it.
-Finished or skipped, it is not shown again (settings "tour"); Help > Quick tour shows it again."""
+Finished or skipped, it is not shown again (settings "tour"); Help > Quick tour shows it again.
+
+The same card walks a player through putting a Modpack in the game (modpack_steps; mato 18.10.: "jel
+ima wizard upute kak ubaciti modpack, step by step? To usto treba"): Help > Install a Modpack, step
+by step, or the button on the last card of the quick tour. It opens 2. My world so the frame can show
++ Add..., and clicks nothing."""
 from PySide6.QtCore import QEvent, QObject, QPoint, QRect, Qt
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
@@ -51,18 +56,60 @@ def steps(app):
         (_("5. Settings"),
          _("The game folder, the game's tables and the other options."), nb.get("Settings")),
         (_("Help"),
-         _("The user guide, updates and this tour again. Questions and bugs: our Discord, FL Mod Studio. "
-           "Have fun!"), getattr(app, "help_btn", None)),
+         _("The user guide, updates, this tour again and Install a Modpack, step by step. Questions and "
+           "bugs: our Discord, FL Mod Studio. Have fun!"), getattr(app, "help_btn", None)),
+    ]
+
+
+def _my_world(app):
+    """2. My world open (the tab that was open stays), for the step that points into it"""
+    mw = getattr(app, "my_world", None)
+    if mw is not None and not mw.isVisible():
+        app.open_page("Build")
+
+
+def modpack_steps(app):
+    """putting a Modpack (a world zip) in the game, every click in order; the same words as Way A of
+    guides/*/install-a-pack.md. A step's widget can be a function: found when the step shows, after
+    its opener (the fourth item) ran"""
+    nb = getattr(app, "nav_buttons", {})
+    return [
+        (_("Install a Modpack, step by step"),
+         _("A Modpack is a ready world in one zip: leagues, clubs, players, kits and scoreboards. Close the "
+           "game first, and do not unpack the zip. The orange frame shows where to click: you click, this "
+           "card does not."), None),
+        (_("Open My world"),
+         _("Click 2. My world. Your worlds are there, as cards."), nb.get("World")),
+        (_("+ Add..."),
+         _("Click + Add..., then Choose a file... and pick the Modpack zip (or drag the zip onto that "
+           "window). A green line says Found: a world zip. Click Add."),
+         lambda: getattr(getattr(app, "my_world", None), "add_btn", None), _my_world),
+        (_("Wait while it looks inside"),
+         _("The page Import your world opens and looks inside the zip. A big Modpack takes a minute or two. "
+           "Then it says what it is (a ready world to play) and how many leagues it has."), None),
+        (_("Install the world"),
+         _("Click Install the world. If an older Modpack is installed, it asks to replace it: Yes (your "
+           "saves are not touched). Mod Studio copies the world, puts its modules in the game and switches "
+           "the world on: no Build needed. Wait for the window Ready to play."), None),
+        (_("Start the game"),
+         _("Click Start the game and start a NEW Master League: an old career does not get the new "
+           "leagues."), getattr(app, "play_btn", None)),
+        (_("Another world later"),
+         _("Every world is a card in 2. My world; the green one is in the game. Activate on another card "
+           "puts that one in the game, and each world keeps its own careers. Stuck? Help > User guide, or "
+           "ask on our Discord, FL Mod Studio."), nb.get("World")),
     ]
 
 
 class Tour(QObject):
-    """the card and the frame over `app`, the main window; closes itself when finished or skipped"""
+    """the card and the frame over `app`, the main window; closes itself when finished or skipped.
+    `guide` is "tour" (the quick tour, remembered in settings when seen) or "modpack"; `follow` is
+    (label, function): a button on the last card that ends this one and starts that"""
 
-    def __init__(self, app, done=None):
+    def __init__(self, app, done=None, guide="tour", follow=None):
         super().__init__(app)
-        self.app, self.done, self.i = app, done, 0
-        self.steps = steps(app)
+        self.app, self.done, self.i, self.guide, self.follow = app, done, 0, guide, follow
+        self.steps = modpack_steps(app) if guide == "modpack" else steps(app)
         self.frame = QFrame(app)
         self.frame.setObjectName("tourframe")
         self.frame.setAttribute(Qt.WA_TransparentForMouseEvents, True)
@@ -92,8 +139,12 @@ class Tour(QObject):
             v.addWidget(w)
         h = QHBoxLayout()
         h.setSpacing(6)
-        self.skip = QPushButton(_("Skip the tour"))
-        self.skip.clicked.connect(self.finish)
+        self.skip = QPushButton(_("Skip the tour") if guide == "tour" else _("Close"))
+        self.skip.clicked.connect(lambda: self.finish())
+        self.then = QPushButton(follow[0] if follow else "")
+        self.then.setObjectName("blue")
+        self.then.clicked.connect(lambda: self.finish(then=True))
+        self.then.hide()
         self.back = QPushButton(_("Back"))
         self.back.clicked.connect(lambda: self.show_step(self.i - 1))
         self.next = QPushButton()
@@ -105,6 +156,7 @@ class Tour(QObject):
         h.addWidget(self.back)
         h.addWidget(self.next)
         v.addLayout(h)
+        v.addWidget(self.then, 0, Qt.AlignRight)
         app.installEventFilter(self)
 
     def start(self):
@@ -125,18 +177,27 @@ class Tour(QObject):
     def target(self):
         w = self.steps[self.i][2]
         try:
+            if w is not None and not isinstance(w, QWidget):
+                w = w()
             return w if w is not None and w.isVisible() else None
         except RuntimeError:               # deleted
             return None
 
     def show_step(self, i):
         self.i = max(0, min(i, len(self.steps) - 1))
-        title, text, _w = self.steps[self.i]
+        title, text = self.steps[self.i][:2]
+        if len(self.steps[self.i]) > 3:
+            try:
+                self.steps[self.i][3](self.app)        # opens what the step points into
+            except Exception:
+                pass
         self.count.setText(_("Step %d of %d") % (self.i + 1, len(self.steps)))
         self.title.setText(title)
         self.text.setText(text)
         self.back.setEnabled(self.i > 0)
-        self.next.setText(_("Done") if self.i + 1 == len(self.steps) else _("Next"))
+        last = self.i + 1 == len(self.steps)
+        self.next.setText(_("Done") if last else _("Next"))
+        self.then.setVisible(bool(self.follow) and last)
         self.card.show()
         self.place()
         self.next.setFocus()
@@ -168,20 +229,24 @@ class Tour(QObject):
         self.card.setGeometry(QRect(x, y, cw, ch))
         self.card.raise_()
 
-    def finish(self):
-        """seen: not shown at the next start (Help > Quick tour still shows it)"""
+    def finish(self, then=False):
+        """seen: not shown at the next start (Help > Quick tour still shows it); `then`: the
+        follow button was pressed, its guide starts once this one is gone"""
         self.app.removeEventFilter(self)
         self.frame.hide()
         self.card.hide()
         self.frame.deleteLater()
         self.card.deleteLater()
-        try:
-            self.app.settings["tour"] = TOUR
-            self.app.save_settings()
-        except Exception:
-            pass
+        if self.guide == "tour":
+            try:
+                self.app.settings["tour"] = TOUR
+                self.app.save_settings()
+            except Exception:
+                pass
         if self.done:
             self.done()
+        if then and self.follow:
+            self.follow[1]()
         self.deleteLater()
 
 
