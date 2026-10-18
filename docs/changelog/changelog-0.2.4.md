@@ -1,7 +1,9 @@
 # What's new in Mod Studio 0.2.4
 
-0.2.4 is a bug-fix update (in progress). Nothing new to learn: Install the modules, Build
-once, and your 0.2.2 career keeps working.
+0.2.4 (2026-10-18) gives Mod Studio a new look: worlds you switch with one click, ready Modpacks
+installed straight from their zip, a quick tour and step-by-step guides in Help, and many fixes.
+Mod Studio is still in development: something can break. Tell us on Discord and we fix it.
+Install the modules, Build once, and your 0.2.2 career keeps working.
 
 ## Changed
 

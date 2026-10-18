@@ -59,12 +59,11 @@ CPKs: it all goes in through Sider modules and data files, and comes out again.
 > (you were given a world, a modpack or a `.fl26pack`) · [make your own leagues and packs](guides/en/make-your-own-leagues.md)
 > (you pick the leagues). Other languages: [guides/](guides/README.md)
 >
-> **0.2.0 is the last release with new features.** From here on: bug fixes, about once a week.
-> **0.2.3** (same evening) fixes Mod Studio closing or stopping during Build: [changelog-0.2.3](docs/changelog/changelog-0.2.3.md).
->
-> **0.2.2** is the big fix update with raised limits (2,400 clubs, up to 97 new leagues).
-> Careers saved before 0.2.2 do not load: start a new one after Build. What changed:
-> [changelog-0.2.2](docs/changelog/changelog-0.2.2.md) · every version: [changelog](docs/changelog/README.md).
+> **0.2.4** is out: a new look, worlds you switch with one click, ready Modpacks installed
+> straight from their zip, a quick tour and step-by-step guides in *Help*. Your 0.2.2 / 0.2.3 career
+> keeps working. Mod Studio is **still in development**: something can break; tell us on Discord
+> and we fix it. What changed: [changelog-0.2.4](docs/changelog/changelog-0.2.4.md) · every version:
+> [changelog](docs/changelog/README.md).
 >
 > **Discord:** [FL Mod Studio](https://discord.gg/StQqtk3G3M): questions, help, new versions, and new
 > GitHub issues posted there as they come in. Bugs still go to a GitHub issue.
