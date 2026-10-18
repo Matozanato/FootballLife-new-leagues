@@ -287,6 +287,8 @@ def run():
                 r = QRect(tg.mapTo(w, QPoint(0, 0)), tg.size())
                 ok(name + ": the card does not cover it", not c.intersects(r))
                 ok(name + ": the frame is around it", e.frame.geometry().contains(r))
+                ok(name + ": what it points at is in sight %s" % [r.top(), r.bottom()],
+                   r.top() >= 0 and r.bottom() < H)
             else:
                 ok(name + ": no frame, the card in the middle", tg is None and not e.frame.isVisible())
             if i == 2:

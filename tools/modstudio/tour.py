@@ -14,7 +14,7 @@ da ce ljudi to htjeti") changes a Modpack already in the game: Make it editable.
 Build and install, a new Master League, and Restore points to have it back as it came: Help > Edit a
 Modpack, step by step, or the button on the last card of the Modpack guide."""
 from PySide6.QtCore import QEvent, QObject, QPoint, QRect, Qt
-from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QScrollArea, QVBoxLayout, QWidget
 
 from . import theme
 from .i18n import _
@@ -263,6 +263,14 @@ class Tour(QObject):
             self.card.setGeometry(QRect(max(0, (W - cw) // 2), max(0, (H - ch) // 3), cw, ch))
             self.card.raise_()
             return
+        # a page taller than the window sits in a scroll area: scroll the widget into sight first,
+        # or the frame and card point below the window's edge (Build and install on a small
+        # window in French, the edit guide's step 5)
+        p = t.parentWidget()
+        while p is not None and p is not self.app:
+            if isinstance(p, QScrollArea) and p.widget() is not None and p.widget().isAncestorOf(t):
+                p.ensureWidgetVisible(t, 8, 8)
+            p = p.parentWidget()
         tl = t.mapTo(self.app, QPoint(0, 0))
         r = QRect(tl, t.size()).adjusted(-4, -4, 4, 4)
         self.frame.setGeometry(r)
