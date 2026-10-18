@@ -793,7 +793,9 @@ class MyWorld(QWidget):
             self.row.addWidget(c)
         nw = QPushButton("+ " + _("New world"))
         nw.setObjectName("newworld")
-        nw.setFixedSize(NEW_W, CARD_H)
+        # as wide as its words need: "+ Nouveau monde" did not fit the 140 px that "+ New world" does
+        # (French UI test 18.10.)
+        nw.setFixedSize(max(NEW_W, nw.sizeHint().width() + 8), CARD_H)
         nw.setCursor(Qt.PointingHandCursor)
         nw.setToolTip(_("An empty world of your own (File > New world), then add its leagues"))
         nw.clicked.connect(lambda: self.app.page("Build").new_world())

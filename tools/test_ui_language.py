@@ -196,6 +196,13 @@ def texts_of(root):
 def run():
     from PySide6.QtWidgets import QApplication, QMenu, QTabWidget
     qa = QApplication.instance() or QApplication([])
+    # offscreen has no fonts of its own on Windows (text 2.35x wider, test_dialogs_fit): the fonts the
+    # theme asks for, so the widths below are the ones the exe shows
+    from PySide6.QtGui import QFontDatabase
+    fdir = os.path.join(os.environ.get("WINDIR", "C:/Windows"), "Fonts")
+    for n in ("SegUIVar.ttf", "segoeui.ttf", "segoeuib.ttf", "segoeuii.ttf", "seguisb.ttf", "consola.ttf"):
+        if os.path.exists(os.path.join(fdir, n)):
+            QFontDatabase.addApplicationFont(os.path.join(fdir, n))
     from modstudio import app as A, theme, i18n
     from modstudio.pages import builder as PB, install as PI
     PI.error = lambda *a, **k: None
@@ -237,6 +244,45 @@ def run():
         settle(qa, 0.1)
         for kind, text in texts_of(w):
             judge.look("My world / " + n, kind, text)
+    # what the French UI test through the exe (18.10.) found cut short at 1920 x 1080, where the Spanish
+    # words fit: "+ NOUVEAU MONDI" on My world, the tables' "ACTI" / "EMPLAC" columns, "DERNIÈRES
+    # MODIFICATION" on Home. Each must show its whole text, in every language
+    from PySide6.QtWidgets import QHeaderView, QLabel, QStyle, QStyleOptionButton, QTreeWidget
+    w.resize(1920, 1032)
+    w.open_page("Build")
+    settle(qa, 0.2)
+    nw = w.my_world.new_world
+    opt = QStyleOptionButton()
+    nw.initStyleOption(opt)
+    room = nw.style().subElementRect(QStyle.SE_PushButtonContents, opt, nw).width()
+    need = nw.fontMetrics().horizontalAdvance(nw.text())
+    ok("%r shows all of its text (%d of %d px)" % (nw.text(), need, room), need <= room)
+    heads = {i18n._("On"), i18n._("Slot")}
+    seen = 0
+    for name in names + [n for n in w.my_world.tab_btn if n not in names]:
+        w.open_page(name)
+        settle(qa, 0.1)
+        for tr in w.findChildren(QTreeWidget):
+            if not tr.isVisible():
+                continue
+            hh, item = tr.header(), tr.headerItem()
+            for c in range(tr.columnCount()):
+                if item.text(c) in heads and not tr.isColumnHidden(c):
+                    seen += 1
+                    need = hh.fontMetrics().horizontalAdvance(item.text(c)) +                         2 * hh.style().pixelMetric(QStyle.PM_HeaderMargin, None, hh)
+                    ok("%s: the column %r shows all of its name (%d of %d px)"
+                       % (name, item.text(c), need, hh.sectionSize(c)), need <= hh.sectionSize(c))
+    # Kits and Stadiums show their table only with a server module, which the fake game has not: Slot is
+    # seen in the UI test through the exe
+    ok("the column On was seen (%d)" % seen, seen >= 4)
+    w.open_page("Overview")
+    settle(qa, 0.2)
+    last = [l for l in w.stack.currentWidget().findChildren(QLabel) if l.text() == i18n._("Last changes")]
+    need = last[0].fontMetrics().horizontalAdvance(last[0].text()) if last else 0
+    ok("Home: %r shows all of its text (%d of %d px)" % (last and last[0].text(), need, last and last[0].width()),
+       last and need <= last[0].width())
+    w.resize(1360, 820)
+    settle(qa, 0.2)
     # the state boxes when all is well (the fake game has neither): Sider with its version, the
     # modules all on ("%s OK" and "%d / %d ON" were filled in with no _( ))
     from modstudio import checks
