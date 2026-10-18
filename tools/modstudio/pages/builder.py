@@ -2831,8 +2831,8 @@ class NewClubs(BuilderPage):
         self.tree.headerItem().setToolTip(3, _("The club's id in the game, from the last Build"))
         for c, w in enumerate((40, 320, 90, 80, 260)):
             self.tree.setColumnWidth(c, w)
-        # 0.2.4: the id and the crest's file name are for modders: in the name's tooltip, not in sight
-        self.tree.setColumnHidden(3, True)
+        # the crest's file name is for modders (in the name's tooltip); the Team ID stays in sight,
+        # people map kits and edits by it (0.2.4 hid it too, testers asked where the ids went)
         self.tree.setColumnHidden(4, True)
         self.tree.itemDoubleClicked.connect(lambda *a: self.edit())
         self.tree.currentItemChanged.connect(lambda *a: self.can_new_here())
@@ -3541,8 +3541,7 @@ class GameLeagues(BuilderPage):
         self.tree.setHeaderLabels([_("Club id"), _("Name"), _("Short name"), _("Crest"), _("Changed")])
         for c, w in enumerate((70, 260, 80, 180, 80)):
             self.tree.setColumnWidth(c, w)
-        # 0.2.4: the club id and the crest's file name in the name's tooltip, not in sight
-        self.tree.setColumnHidden(0, True)
+        # the crest's file name in the name's tooltip; the club id stays in sight (as on New clubs)
         self.tree.setColumnHidden(3, True)
         self.tree.itemDoubleClicked.connect(lambda *a: self.edit_club())
         rv.addWidget(self.tree, 1)
