@@ -205,7 +205,7 @@ def main():
         ok("SPFL26's own Scoreboard Server: line in content\\scoreboards",
            any(l.startswith("430, My world\\HNL") for l in lines(os.path.join(d, S.SPFL_BOARDS, "map_competitions.txt"))))
         put(os.path.join(d, "sider.ini"), 'lua.module = "common\\kits.lua"\nlua.module = "kserv.lua"\n')
-        ok("kserv.lua loaded too: kit-server", S.libs(d) == (S.KITS, S.BOARDS))
+        ok("kserv.lua loaded too: kit-server", S.libs(d)[0] == S.KITS)
         # B72: the menu themes world zips bring go on and off with their world (Switch on handled
         # kits and scoreboards only: 88 eu1 menu lines stayed live under another world, 16.10.)
         e = os.path.join(tmp, "e")
@@ -248,13 +248,29 @@ def main():
             put(os.path.join(g, "sider.ini"), "".join('lua.module = "%s"' % m + chr(10) for m in mods))
             mp9 = os.path.join(g, lib, "map.txt")
             put(mp9, chr(10).join([mine_, "# ---- added by FL26 Mod Studio: _FL26M2400S.zip ----"] + old) + chr(10))
-            ok("B129 %s: the switch picks the other folder" % name, S.libs(g)[0] != lib)
+            # B158: the switch now writes where Install mods merged (servers.Server.pick)
+            ok("B158 %s: the switch picks the folder Install merged into" % name, S.libs(g)[0] == lib)
             S.write(new, g, log=lambda *_: None)
             ml = lines(mp9)
             ok("B129 %s: the other world's lines are gone" % name, not any("_FL26M2400S" + BS in l for l in ml))
             ok("B129 %s: your own line stays on" % name, mine_ in ml)
             ok("B129 %s: a second switch changes nothing" % name, S.write(new, g, log=lambda *_: None) == (0, 0)
                and lines(mp9) == ml)
+        # B158 (jibibi 19.10.): common\kits.lua on, no content\kits: Install merged eu4's kit lines into
+        # kit-server\map.txt and the Switch on of eu4 itself took every one out again
+        g = os.path.join(tmp, "b158", "SiderAddons")
+        put(os.path.join(g, "sider.ini"), 'lua.module = "common' + BS + 'kits.lua"' + chr(10))
+        eu = {"world": "_FL26M2400E", "leagues": [{"name": "Liga", "teams": [71599], "club_names": ["AF Elbasani"],
+                                                   "kit_folders": [os.path.join(tmp, "pc-that-built-it", "k")]}]}
+        os.makedirs(os.path.join(g, S.KITS, "_FL26M2400E", "Liga", "AF Elbasani", "p1"))
+        zl = '71599, "_FL26M2400E%sLiga%sAF Elbasani"   %s Liga/0' % (BS, BS, S.TAG)
+        mp8 = os.path.join(g, S.KITS, "map.txt")
+        put(mp8, chr(10).join([mine_, "# ---- added by FL26 Mod Studio: FL26-Modpack-Europe-eu4 ----", zl]) + chr(10))
+        ok("B158: kits.lua on, only kit-server: kit-server", S.libs(g)[0] == S.KITS)
+        S.write(eu, g, log=lambda *_: None)
+        ok("B158: the world's kit line stays after its Switch on", zl in lines(mp8))
+        ok("B158: your own line stays too", mine_ in lines(mp8))
+        ok("B158: no content kits folder made", not os.path.exists(os.path.join(g, S.SPFL_KITS)))
         # B130 (laracroft7826, 18.10.): kserv.lua stops at its start without content\kit-server\map_comp.txt
         g = os.path.join(tmp, "b130", "SiderAddons")
         put(os.path.join(g, "sider.ini"), 'lua.module = "kserv.lua"' + chr(10))

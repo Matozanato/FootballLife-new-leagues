@@ -58,3 +58,8 @@ it is released; until then this page only collects what is done and tested.
   the note said only "careers". The note now says the Edit data goes with them too. To keep one Edit
   for every world: Settings > untick **Each world keeps its own careers**, then copy EDIT00000000
   from `save_<your old world>` into `save`. (Thanks pepponeee98)
+- **A Modpack/Europack world lost all its kits at Switch on with SPFL26's kits.lua (B158).** With
+  `common\kits.lua` on in sider.ini and no `content\kits` folder, Install mods merged the world's kit
+  lines into `content\kit-server\map.txt`, and switching the world on looked for the kits in
+  `content\kits`, found none and took every one of those lines out again (only the "added by" header
+  stayed). Switch on now picks the kit and scoreboard folders the way Install mods does. (Thanks jibibi)

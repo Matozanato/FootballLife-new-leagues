@@ -58,12 +58,27 @@ def _live_modules(sider):
     return mods
 
 
+def _pick(sider, mods, ours, theirs, our_mod, their_mod, files):
+    """ours or SPFL26's folder, as Install mods picks it (modstudio.servers.Server.pick)"""
+    there = os.path.join(sider, theirs)
+    if os.path.isdir(there) and their_mod in mods and our_mod not in mods:
+        return theirs
+    if not os.path.isdir(os.path.join(sider, ours)) and any(
+            os.path.isfile(os.path.join(there, f)) for f in files):
+        return theirs
+    return ours
+
+
 def libs(sider):
     r"""(kits folder, scoreboards folder) the game reads: SPFL26's own when sider.ini loads its
-    module and not ours, else content\kit-server and content\scoreboard-server"""
+    module and not ours and the folder is there, else content\kit-server and
+    content\scoreboard-server -- the folders Install mods merges a world zip's lines into.  B158
+    (jibibi 19.10.): common\kits.lua on, no content\kits: Install put eu4's 1138 kit lines into
+    kit-server\map.txt, and its Switch on took them all out again, writing for content\kits"""
     mods = _live_modules(sider)
-    return (SPFL_KITS if "kits" in mods and "kserv" not in mods else KITS,
-            SPFL_BOARDS if "scoreboards" in mods and "scoreboardserver" not in mods else BOARDS)
+    return (_pick(sider, mods, KITS, SPFL_KITS, "kserv", "kits", ("map.txt", "config.txt")),
+            _pick(sider, mods, BOARDS, SPFL_BOARDS, "scoreboardserver", "scoreboards",
+                  ("map_competitions.txt", "config.ini")))
 
 
 def safe(name):
