@@ -1,14 +1,13 @@
 # Instalar un paquete listo: cada clic, en orden
 
-> [English](../en/install-a-pack.md) · [hrvatski](../hr/install-a-pack.md) · **español** · [português](../pt/install-a-pack.md)
+> [English](../en/install-a-pack.md) · [hrvatski](../hr/install-a-pack.md) · **español** · [português](../pt/install-a-pack.md) · [français](../fr/install-a-pack.md)
 
 > La otra guía paso a paso: [Crear tus propias ligas y paquetes](make-your-own-leagues.md)
 > · cada página explicada: [mod-studio-guide.md](mod-studio-guide.md)
 > · preguntas: [faq.md](../../docs/faq.md) (en inglés) · ayuda: [Discord](https://discord.gg/StQqtk3G3M)
 
-Esta guía escribe los nombres de los botones en inglés, tal como salen en la ventana, con el nombre
-español entre paréntesis la primera vez. La ventana se puede pasar a español con
-**Language** (*Idioma*) → Español.
+Esta guía usa los nombres de los botones en español. La ventana arranca en inglés: pásala a
+español con **Idioma (Language)** → Español (Paso 2). Hasta entonces los botones salen en inglés.
 
 Esta página es para quien nunca ha abierto Mod Studio y ha recibido algo listo para jugar: un
 mundo, un modpack o un paquete de ligas. No explica cómo funciona nada. Solo dice qué pulsar, en
@@ -38,45 +37,49 @@ cuando arranca el juego. Mira la barra de tareas: ninguna ventana de Football Li
 ## Paso 2. Descarga Mod Studio
 
 1. Abre la [última versión](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest).
-2. En **Assets**, pulsa `FL26ModStudio-<version>.zip` (por ejemplo `FL26ModStudio-0.2.1.zip`).
-3. Clic derecho en el zip descargado → **Extract All...** → elige una carpeta, por ejemplo
-   `Documents\FL26 Mod Studio` → **Extract**.
+2. En **Assets**, pulsa `FL26ModStudio-<version>.zip` (por ejemplo `FL26ModStudio-0.2.4.zip`).
+3. Clic derecho en el zip descargado → **Extraer todo...** → elige una carpeta, por ejemplo
+   `Documents\FL26 Mod Studio` → **Extraer**.
 
    No ejecutes el programa desde dentro del zip. No saques `FL26ModStudio.exe` de su carpeta:
    las carpetas `_internal` y `pack` que tiene al lado deben quedarse con él.
 
 4. Abre esa carpeta y haz doble clic en `FL26ModStudio.exe`.
 
-**Deberías ver:** una ventana oscura. Arriba: **File, Game, Profiles, Language, Help, Credits**
-(*Archivo, Juego, Perfiles, Idioma, Ayuda, Créditos*) y un botón verde **Play** (*Jugar*) a la
-derecha. A la izquierda: **Home** (*Inicio*), luego **YOUR WORLD** (*TU MUNDO*: **Build and
-edit your world** (*Construye y edita tu mundo*), **Import your world** (*Importa tu mundo*),
-**NewLife Database**), **GAME CONTENT** (*CONTENIDO DEL JUEGO*), **TOOLS** (*HERRAMIENTAS*) y,
-abajo del todo, **Settings** (*Ajustes*).
+**Deberías ver:** una ventana oscura. Arriba: los menús **Archivo, Juego, Perfiles, Idioma
+(Language), Ayuda**, el botón **Créditos** y un botón verde **Iniciar el juego** a la derecha.
+Debajo, recuadros con lo que hay ahora en el juego (**CARPETA DEL JUEGO**, **SIDER**, **MUNDO
+ACTIVO** ...), y luego las secciones **1. Inicio**, **2. Mi mundo**, **3. Contenido del juego**,
+**4. Herramientas** y **5. Ajustes**.
 
-Si Windows dice "Windows protected your PC": pulsa **More info** → **Run anyway**.
+La primera vez, una tarjeta pequeña te enseña la ventana en diez pasos (el recorrido rápido).
+Léela con **Siguiente**, o ciérrala con **Saltar el recorrido**. No cambia nada. **Ayuda →
+Recorrido rápido** la vuelve a mostrar.
 
-¿Quieres la ventana en otro idioma? Barra de arriba → **Language** → Hrvatski, Español o Français.
+Si Windows dice "Windows protegió su PC": pulsa **Más información** → **Ejecutar de todas formas**.
+
+¿Quieres la ventana en otro idioma? Barra de arriba → **Idioma (Language)** → Hrvatski, Español,
+Português o Français, y luego vuelve a abrir Mod Studio.
 
 ## Paso 3. Dile dónde está tu juego
 
-1. Barra de la izquierda, abajo del todo: pulsa **Settings** (*Ajustes*).
-2. Junto a la carpeta del juego, pulsa **Browse...** (*Examinar...*).
-3. Elige la carpeta que contiene `FL_2026.exe` (por ejemplo `C:\Football Life 2026`). No
+1. Pulsa **5. Ajustes**.
+2. Junto a la carpeta del juego, pulsa **Examinar...**.
+3. Elige la carpeta que contiene `FL_2026.exe` (por ejemplo `D:\Games\Football Life 2026`). No
    `SiderAddons`, no una subcarpeta: la carpeta que tiene `FL_2026.exe` dentro.
-4. Pulsa **Use this folder** (*Usar esta carpeta*).
+4. Pulsa **Usar esta carpeta**.
 
-**Deberías ver:** debajo de la carpeta, una línea que dice que se encontró `SiderAddons\sider.ini`.
+**Deberías ver:** debajo de la carpeta, una línea que empieza por `Encontrado: FL_2026.exe` y
+nombra la carpeta de Sider y `sider.ini`.
 
-(Lo mismo está en la barra de arriba: **Game → Choose the game folder...**
-(*Juego → Elegir la carpeta del juego...*).)
+(Lo mismo está en la barra de arriba: **Juego → Elegir la carpeta del juego...**.)
 
 No hay nada más que preparar. En cuanto sabe dónde está tu juego, Mod Studio desempaqueta él
-solo las tablas del juego (su lista de clubes, ligas y jugadores), solo la primera vez. Los
-módulos de Mod Studio entran con **Install the world** (*Instalar el mundo*, camino A) o con
-**Build and install** (*Construir e instalar*, camino C). Las ligas nuevas solo funcionan con
-estos módulos, y traen el paquete de caras que da su cara a los jugadores nuevos. Si **Home**
-dice alguna vez que faltan o son antiguos, pulsa allí **Install now** (*Instalar ahora*).
+solo las tablas del juego (su lista de clubes, ligas y jugadores), solo la primera vez. Tarda uno
+o dos minutos. Los módulos de Mod Studio entran con **Instalar el mundo** (Camino A) o con
+**Construir e instalar** (Camino C). Las ligas nuevas solo funcionan con estos módulos, y traen
+el paquete de caras que da su cara a los jugadores nuevos. Si **1. Inicio** dice alguna vez que
+faltan o son antiguos, pulsa allí **Instalar ahora**.
 
 Ahora elige el camino que corresponde a tu archivo.
 
@@ -88,34 +91,37 @@ Ahora elige el camino que corresponde a tu archivo.
 
 **A1.** No lo descomprimas tú.
 
-**A2.** Barra de la izquierda, en **YOUR WORLD**: pulsa **Import your world** (*Importa tu mundo*).
+**A2.** Pulsa **2. Mi mundo** y luego **+ Añadir...** (a la derecha, junto a las pestañas).
 
-**A3.** Pulsa **Choose a file...** (*Elegir un archivo...*) y elige el zip. (O arrastra el zip a
-esa página.)
+**A3.** Pulsa **Elegir un archivo...** y elige el zip. (O arrastra el zip a esa ventana.)
+Una línea verde empieza por `Encontrado: un zip de mundo`. Pulsa **Añadir**: se abre la página
+**Importa tu mundo** con el zip.
 
-**A4. Deberías ver:** una línea que dice qué es, por ejemplo `a ready world to play
-(_FL26Modpack)` (*un mundo listo para jugar*), o `a newer version of the world _FL26Modpack you
-have` (*una versión más nueva del mundo que ya tienes*) si tienes una anterior, y debajo cuántas
-ligas trae. Las partes (el mundo, equipaciones, marcadores ...) están bajo **More options: which
-parts, name, order of the content folders, map lines** (*Más opciones: qué partes, nombre, orden
-de las carpetas de contenido, líneas de los map*), todas marcadas. Déjalas así. (Para instalarlo
-sin las equipaciones, desmárcalas ahí.)
+(Otros dos caminos a la misma página: **1. Inicio → Importar un zip de mundo**, o **2. Mi mundo →
+Más ▾ → Importar un zip de mundo**, y luego elige el zip.)
 
-**A5.** Pulsa **Install the world** (*Instalar el mundo*). Si ya hay instalada una versión anterior
-del mismo mundo (un Modpack anterior), pregunta si la reemplaza: di **Yes**. La anterior se quita
-primero, así no queda nada de ella; tus partidas guardadas no se tocan. Espera hasta que diga que
-ha terminado. Mod Studio instala sus módulos (los de esta versión), copia el mundo, pone su
-archivo de mundo donde lo leen los módulos y pone el mundo en el juego.
+**A4. Deberías ver:** una línea que dice qué es, por ejemplo `un mundo listo para jugar
+(_FL26Modpack)`, o `una versión más nueva del mundo _FL26Modpack que tienes` si tienes una
+anterior, y debajo cuántas ligas trae. Las partes (el mundo, equipaciones, marcadores ...) están
+bajo **Más opciones: qué partes, nombre, orden de las carpetas de contenido, líneas de los map**,
+todas marcadas. Déjalas así. (Para instalarlo sin las equipaciones, desmárcalas ahí.)
 
-**Deberías ver:** `✓ Ready to play: press Play and start a new Master League` (*Listo para jugar:
-pulsa Play y empieza una Master League nueva*) y una ventana **Ready to play** (*Listo para
-jugar*) con una lista de marcas (el mundo, los módulos, el paquete de caras ...). Si en cambio dice
-**Almost ready** (*Casi listo*), te dice qué arreglar.
+**A5.** Pulsa **Instalar el mundo**. Si ya hay instalada una versión anterior del mismo mundo (un
+Modpack anterior), pregunta si la reemplaza: di **Sí**. La anterior se quita primero, así no
+queda nada de ella; tus partidas guardadas no se tocan. Espera hasta que diga que ha terminado.
+Mod Studio instala sus módulos (los de esta versión), copia el mundo, pone su archivo de mundo
+donde lo leen los módulos y pone el mundo en el juego.
+
+**Deberías ver:** `✓ Listo para jugar: pulsa Play y empieza una Master League nueva` (Play es el
+botón **Iniciar el juego**) y una ventana **Listo para jugar** con una lista de marcas (el mundo,
+los módulos, el paquete de caras ...). Si en cambio dice **Casi listo**, te dice qué arreglar.
+
+En **2. Mi mundo** el mundo tiene ahora una tarjeta verde que dice **● EN EL JUEGO AHORA**, con la
+etiqueta **Desde zip**.
 
 Un mundo listo no necesita Build: ya está construido. Mientras está en el juego, los pasos de
-Build están apagados (0.2.4). Para construir ligas propias más tarde, pon primero tu propio mundo
-en el juego (**Home → Switch world...** (*Inicio → Cambiar de mundo...*)). Ve al
-[Paso 4](#paso-4-inicia-el-juego).
+Build están desactivados. Para construir ligas propias más tarde, pon primero tu propio mundo en
+el juego (**Activar** en su tarjeta en **2. Mi mundo**). Ve al [Paso 4](#paso-4-inicia-el-juego).
 
 ---
 
@@ -129,48 +135,49 @@ campo explicado:
 
 ## Camino C: un paquete de ligas (.fl26pack)
 
-**C1.** Barra de la izquierda, en **YOUR WORLD**: pulsa **Build and edit your world** (*Construye
-y edita tu mundo*) y luego la pestaña **League packages** (*Paquetes de ligas*).
+**C1.** Pulsa **2. Mi mundo** y luego **+ Añadir...** (a la derecha, junto a las pestañas).
 
-**C2.** Pulsa **Add a package...** (*Añadir un paquete...*) y elige el archivo `.fl26pack`. (O
-barra de arriba: **File → Add a league package...** (*Archivo → Añadir un paquete de ligas...*).)
+**C2.** Pulsa **Elegir un archivo...** y elige el archivo `.fl26pack`. (O arrástralo a esa
+ventana.)
 
-**C3. Deberías ver:** una ventana **Add a league package** (*Añadir un paquete de ligas*) con lo
-que hay dentro: su nombre, versión y autor, y luego sus ligas, cada una marcada. Un paquete con
-varias ligas tiene **Select all** (*Seleccionar todo*) / **Select none** (*No seleccionar
-ninguno*) encima de la lista: desmarca una liga que no quieras. En **What to take** (*Qué tomar*)
-puedes desmarcar partes (por ejemplo **Scoreboards ...** (*Marcadores*)). Si no estás seguro,
-deja todo marcado. Pulsa **OK**.
+**C3. Deberías ver:** una línea verde `Encontrado: paquete de ligas "..."` con cuántas ligas y
+clubes tiene, y sus ligas en una lista, cada una marcada. Desmarca una liga que no quieras. Debajo
+de la lista: cuántas competiciones tendrá tu mundo (el juego tiene sitio para 255), y que nada
+llega al juego hasta **Construir e instalar**. Pulsa **Añadir**.
+
+(Los otros caminos: **2. Mi mundo → Más ▾ → Paquetes de ligas → Añadir un paquete...**, o
+**Archivo → Añadir un paquete de ligas...**. Esos muestran una ventana **Añadir un paquete de
+ligas**: ahí también puedes desmarcar partes en **Qué tomar**, por ejemplo los marcadores. Si no
+estás seguro, deja todo marcado y pulsa **Aceptar**.)
 
 Si el paquete tiene una liga con un nombre que ya tienes, pregunta si la añade con un nombre
-nuevo: pulsa **Yes**.
+nuevo: pulsa **Sí**.
 
-**Deberías ver:** una línea verde bajo el título de la página: "Added ... Build and install puts
-its leagues in the game." (*Agregado ... Construir e instalar pone sus ligas en el juego.*)
+**Deberías ver:** la pestaña **Ligas**, con las ligas del paquete en la lista, y abajo en la
+ventana: "Agregado ... Construir e instalar pone sus ligas en el juego."
 
 No hay nada que guardar: tu mundo se guarda solo un momento después de cada cambio (la barra de
-abajo dice **Your world is saved**, *Tu mundo está guardado*).
+abajo dice **Tu mundo está guardado**).
 
-**C4.** Pestaña **Build** (junto a **League packages**) → el botón azul grande **Build and
-install** (*Construir e instalar*) → **Yes**.
+**C4.** Pestaña **Construcción** (la primera pestaña de **2. Mi mundo**) → el botón grande
+**Construir e instalar** → **Sí**.
 
 Pone los módulos de Mod Studio, construye tu mundo y lo pone en el juego, todo de una vez. Tarda
-de unos segundos a unos minutos.
+de unos segundos a unos minutos; la barra de abajo muestra cuánto lleva.
 
-(Soltar el `.fl26pack` en **Import your world** hace lo mismo: después de la ventana de C3 el
-paquete entra en tu mundo y **Build and install** empieza solo.)
+(Soltar el `.fl26pack` en **Importa tu mundo** hace lo mismo: después de la ventana **Añadir un
+paquete de ligas** el paquete entra en tu mundo y **Construir e instalar** empieza solo.)
 
-**Deberías ver:** una ventana **Build finished** (*Construcción terminada*) con marcas (World
-built, Leagues and clubs, Modules installed and switched on, In the game). Pulsa **Done**
-(*Hecho*). En el cuadro de abajo de la página Build no hay ninguna línea que empiece por
-`error:`.
+**Deberías ver:** una ventana **Construcción terminada** con marcas (Mundo construido, Ligas y
+clubes, Módulos instalados y activados, En el juego). Pulsa **Hecho**. En el cuadro de abajo de
+la pestaña Construcción no hay ninguna línea que empiece por `error:`.
 
 ---
 
 ## Paso 4. Inicia el juego
 
-Pulsa el botón verde **Play** arriba a la derecha (o **Game → Start the game** (*Juego → Iniciar
-el juego*)). Espera al menú del juego.
+Pulsa el botón verde **Iniciar el juego** arriba a la derecha (o **Juego → Iniciar el juego**).
+Espera al menú del juego.
 
 ## Paso 5. Empieza una Liga Máster NUEVA
 
@@ -180,11 +187,15 @@ el juego*)). Espera al menú del juego.
 
 Las ligas nuevas también están en **Kick Off** → League, y en **Database → Competition Info**.
 
+Cada mundo guarda sus propias carreras. Cuando pones otro mundo en el juego, Mod Studio aparta tus
+carreras con el mundo al que pertenecen, y las devuelve cuando ese mundo vuelve a estar en el
+juego. No se borra nada.
+
 ## Paso 6. Deja que Mod Studio compruebe que funcionó
 
 1. Cierra el juego.
-2. En Mod Studio: **Build and edit your world** → pestaña **Build** → **Step by step, and Export
-   the world** (*Paso a paso, y Exportar el mundo*) → **4. After a start: check**.
+2. En Mod Studio: **2. Mi mundo** → pestaña **Construcción** → **Paso a paso, y Exportar el
+   mundo** → **4. Tras iniciar: comprobar**.
 
 **Deberías ver:** una línea por módulo que dice cuántas ligas leyó del mundo, y al final
 `the world works as built`. Una línea que dice `not loaded` o `did NOT read the world file`, y la
@@ -196,14 +207,15 @@ Las ligas nuevas también están en **Kick Off** → League, y en **Database →
 
 | Lo que ves | Qué hacer |
 |---|---|
-| `error: no game tables -- Settings > Unpack the game's tables` | **Settings → Unpack the game's tables** (*Ajustes → Desempaquetar las tablas del juego*). |
-| No hay ligas nuevas en Select Team | ¿Empezaste una Liga Máster **nueva**? Luego **4. After a start: check** ([Paso 6](#paso-6-deja-que-mod-studio-compruebe-que-funcionó)). Si su registro dice `world file -- 0 leagues`, tu mundo estaba vacío: vuelve a añadir el paquete (Camino C) y vuelve a construir. |
-| El mundo dice que se construyó con `0 leagues, 0 clubs` | Lo mismo: tu mundo no tenía ligas. Añade algunas primero y luego Build. |
-| `sider.log is older than the world switched on -- start the game to the main menu, then check again` | La comprobación se hizo antes de iniciar el juego. Inícialo hasta el menú principal, ciérralo y vuelve a pulsar **4. After a start: check**. |
-| Todos los jugadores nuevos tienen la misma cara | **Home → Install now** (*Inicio → Instalar ahora*, cuando Home dice que los módulos faltan o son antiguos), o **Build and edit your world → Build → Step by step, and Export the world → 0. Install the modules**: trae el paquete de caras. Luego vuelve a iniciar el juego. |
-| El juego se cierra al arrancar | Inícialo otra vez por el launcher (un cierre en los primeros 10 segundos también pasa sin mods). Si sigue cerrándose: **Game → Start the game without mods (safe mode)...** (*Juego → Iniciar el juego sin mods (modo seguro)...*) y pregunta en Discord. |
-| Quieres todo como estaba | **Import your world** → selecciónalo en **In the game now** (*En el juego ahora*) → **Remove** (*Quitar*) saca un mundo instalado. **TOOLS → Restore points → Put Sider back as before Mod Studio...** (*HERRAMIENTAS → Puntos de restauración → Devolver Sider a antes de Mod Studio...*, también en el menú **Game**) devuelve cada archivo que Mod Studio cambió y quita lo que trajo. No se borra nada: queda guardado en `SiderAddons\ModStudio\reset-<time>`, y **Undo the last reset** (*Deshacer el último reinicio*) lo vuelve a poner. |
+| `error: no hay tablas del juego -- Ajustes > Desempaquetar las tablas del juego` | **5. Ajustes → Desempaquetar las tablas del juego**. |
+| No hay ligas nuevas en Select Team | ¿Empezaste una Liga Máster **nueva**? Luego **4. Tras iniciar: comprobar** ([Paso 6](#paso-6-deja-que-mod-studio-compruebe-que-funcionó)). Si su registro dice `world file -- 0 leagues`, tu mundo estaba vacío: vuelve a añadir el paquete (Camino C) y vuelve a construir. |
+| El mundo dice que se construyó con `0 leagues, 0 clubs` | Lo mismo: tu mundo no tenía ligas. Añade algunas primero y luego construye. |
+| `sider.log is older than the world switched on -- start the game to the main menu, then check again` | La comprobación se hizo antes de iniciar el juego. Inícialo hasta el menú principal, ciérralo y vuelve a pulsar **4. Tras iniciar: comprobar**. |
+| **Construir e instalar** está en gris | Hay abierto un mundo listo de un zip (Camino A). No necesita Build. Para construir tus propias ligas, pulsa antes **Activar** en la tarjeta de tu propio mundo en **2. Mi mundo**. |
+| Mi carrera antigua ha desaparecido | Se guarda con el mundo en el que se hizo. Pulsa **Activar** en la tarjeta de ese mundo en **2. Mi mundo** y vuelve. |
+| Todos los jugadores nuevos tienen la misma cara | **1. Inicio → Instalar ahora** (cuando Inicio dice que los módulos faltan o son antiguos), o **2. Mi mundo → Construcción → Paso a paso, y Exportar el mundo → 0. Instalar los módulos**: trae el paquete de caras. Luego vuelve a iniciar el juego. |
+| El juego se cierra al arrancar | Inícialo otra vez por el launcher (un cierre en los primeros 10 segundos también pasa sin mods). Si sigue cerrándose: **Juego → Iniciar el juego sin mods (modo seguro)...** y pregunta en Discord. |
+| Quieres todo como estaba | **Importa tu mundo** (**2. Mi mundo → Más ▾ → Importar un zip de mundo**) → selecciónalo en **En el juego ahora** → **Quitar** saca un mundo instalado. **4. Herramientas → Puntos de restauración → Devolver Sider a antes de Mod Studio...** (también en el menú **Juego**) devuelve cada archivo que Mod Studio cambió y quita lo que trajo. No se borra nada: queda guardado en `SiderAddons\ModStudio\reset-<time>`, y **Deshacer el último reinicio** lo vuelve a poner. |
 
 **Para pedir ayuda:** en el [Discord](https://discord.gg/StQqtk3G3M), manda una captura de lo que
-ves y tu `sider.log` (**Game → Open sider.log** (*Juego → Abrir sider.log*), o
-`SiderAddons\sider.log` en la carpeta del juego).
+ves y tu `sider.log` (**Juego → Abrir sider.log**, o `SiderAddons\sider.log` en la carpeta del juego).
