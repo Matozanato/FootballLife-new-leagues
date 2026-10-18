@@ -15,3 +15,8 @@ it is released; until then this page only collects what is done and tested.
   or tables edited in another editor) over the game's, Build drew no kit at all and said to unpack
   the game's tables, which did not help. The game's kits file now goes beside your tables (or the
   one your folder has itself), and Build finds it.
+- **A world lost to its unfinished Build folder (B150).** When the last step of Build could not put the
+  new world in place (a file of it open in the game or a folder window), the old world was already
+  deleted and only `<world>.building` was left; the next try said it "has no fl26world.txt". Build
+  now moves the old world aside first and puts it back if the new one cannot go in, and says what to
+  close. A `.building` folder is never switched on as a world. (Thanks Tysonche35)

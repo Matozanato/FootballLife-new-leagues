@@ -679,7 +679,7 @@ def tables_root(base):
 def kits_file(base):
     """the game's UniformParameter.bin for the tables in <base>, or None: in the unpack folder that
     holds them, else in a folder above <base> -- your own tables over the game's (Settings > Use
-    another tables folder) sit in ...-with-your-database\pesdb with the game's kits file beside
+    another tables folder) sit in ...-with-your-database/pesdb with the game's kits file beside
     it (B143: there Build drew no kit at all)"""
     d = os.path.normpath(base)
     for _up in range(4):
@@ -4107,8 +4107,7 @@ def build(pl, base, game, replace=False, log=print):
     write_manifest(tmp)                   # before keep_added: what this Build wrote, not what it kept
     if os.path.exists(out):
         keep_added(out, tmp, log, gone)
-        shutil.rmtree(out)
-    os.rename(tmp, out)
+    swap_in(tmp, out)
     lap("regions and the swap")
     log("built %s: %d leagues, %d clubs" % (out, len(pl["leagues"]), made))
     log("  time: " + ", ".join(laps))
@@ -4119,6 +4118,31 @@ def build(pl, base, game, replace=False, log=print):
         log("%s is the live world: switching it on again, so the game reads what was just built" % pl["world"])
         switch_on(pl["world"], game, log)
     return out
+
+
+def swap_in(tmp, out):
+    """the world just built (<out>.building) in the place of the old one. The old one is moved
+    aside first and deleted only once the new one is in: until 0.2.4 it was deleted first, and a
+    rename that failed then (a file of the world open in another program) left no world, only its
+    .building folder (B150)"""
+    old = out + ".old"
+    if os.path.exists(old):
+        shutil.rmtree(old)
+    if os.path.exists(out):
+        try:
+            os.rename(out, old)
+        except OSError as e:
+            raise BuildError("%s could not be replaced (%s) -- close what has a file of it open "
+                             "(the game, a folder window) and Build again" % (out, e.strerror or e))
+    try:
+        os.rename(tmp, out)
+    except OSError as e:
+        if os.path.exists(old):
+            os.rename(old, out)
+        raise BuildError("%s could not be put in place (%s) -- close what has a file of it open "
+                         "(the game, a folder window) and Build again" % (out, e.strerror or e))
+    if os.path.exists(old):
+        shutil.rmtree(old, ignore_errors=True)
 
 
 MANIFEST = "leaguebuilder-files.txt"      # the files a Build wrote: path, and a hash for pictures
@@ -5814,6 +5838,10 @@ def install_root(game, src, log=print):
 def switch_on(world, game, log=print):
     root = os.path.join(siderdir.find(game), "livecpk", world)
     wf = os.path.join(root, MARK)
+    if world.lower().endswith((".building", ".old")):
+        # B150: a Build's unfinished work folder is no world to switch on
+        raise BuildError("%s is what a Build left unfinished, not a world -- Build %s again"
+                         % (root, world.rsplit(".", 1)[0]))
     if not os.path.exists(wf):
         raise BuildError("%s has no %s -- not a league builder world" % (root, MARK))
     import siderroot

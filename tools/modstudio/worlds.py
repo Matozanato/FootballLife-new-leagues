@@ -52,8 +52,9 @@ def _same(a, b):
 
 
 def is_world(name):
-    # <world>.building is a Build's work folder, left behind when a Build stops on an error: no world
-    return name.lower().startswith("_fl26") and not name.lower().endswith(".building")
+    # <world>.building is a Build's work folder, left behind when a Build stops on an error, and
+    # <world>.old the world it replaces, for the moment of the swap (B150): no world
+    return name.lower().startswith("_fl26") and not name.lower().endswith((".building", ".old"))
 
 
 def worlds(game):
