@@ -664,7 +664,11 @@ class Players(BuilderPage):
         taken = {str(m.get("shirt", "")).strip() for k, m, ch, g in out if not g}
         for k, m, ch, g in out:
             if not g and not str(m.get("shirt", "")).strip():
-                m["shirt"] = str(next(n for n in range(1, 100) if str(n) not in taken))
+                keeper = str(m.get("Registered Position", "")).strip().upper() == "GK"
+                free = [n for n in range(1, 100) if str(n) not in taken]
+                good = [n for n in free if (n in E.KEEPER_SHIRTS) == keeper]     # Build's rule (jibibi 18.10.)
+                pick = ([n for n in E.KEEPER_SHIRTS if n in good] if keeper else good) or free
+                m["shirt"] = str(pick[0])
                 taken.add(m["shirt"])
         if self.club and not self.club.isdigit() and not any("order" in ch for ch in ed.values()):
             live = [dict(m, player=k) for k, m, ch, g in out if not g]

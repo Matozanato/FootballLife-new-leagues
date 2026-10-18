@@ -131,10 +131,20 @@ def with_shirt(pack, n):
     return pack & ~SHIRT_MASK | (n - 1)
 
 
-def free_shirt(packs):
-    """the lowest shirt number no pack in `packs` has"""
+KEEPER_SHIRTS = (1, 12, 13, 25, 31, 99)     # the numbers keepers wear
+
+
+def free_shirt(packs, keeper=None):
+    """the lowest shirt number no pack in `packs` has; a keeper (keeper=True) takes a free keeper's
+    number first, anyone else (keeper=False) one of those only when nothing else is free (jibibi
+    18.10.: an outfield newcomer got the number 1 the club's keeper had left)"""
     taken = {shirt_of(p) for p in packs}
-    return next(n for n in range(1, 100) if n not in taken)
+    free = [n for n in range(1, 100) if n not in taken]
+    if keeper is True:
+        return next((n for n in KEEPER_SHIRTS if n in free), free[0])
+    if keeper is False:
+        return next((n for n in free if n not in KEEPER_SHIRTS), free[0])
+    return free[0]
 COLUMNS = META[:5] + list(FIELDS)
 
 
@@ -363,7 +373,8 @@ def main():
             players += rec
             squad = [u32(assigns, i * A_REC + A_PACK) for i in range(len(assigns) // A_REC)
                      if u32(assigns, i * A_REC + A_TID) == club]
-            shirt = nums.get("shirt") or free_shirt(squad)
+            pos = vals.get("Registered Position") if isinstance(vals, dict) else None
+            shirt = nums.get("shirt") or free_shirt(squad, (pos if pos is not None else getf(rec, "Registered Position")) == 0)
             order = max(((p & ORDER_MASK) >> ORDER_SHIFT for p in squad), default=-1) + 1
             e = bytearray(A_REC)
             e[A_EID:A_EID + 4] = eid.to_bytes(4, "little")

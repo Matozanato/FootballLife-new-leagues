@@ -34,3 +34,8 @@ it is released; until then this page only collects what is done and tested.
   has all 255 competitions the game takes (the Europack is at 220) stopped Build with only that line.
   It now says the world is full and to untick national or super cups of countries you don't play
   (My world > Cups) or take out a league. (Thanks Tysonche35)
+- **Outfield players with the number 1 (B156).** A player Build adds to a squad (a free agent for a club
+  short of keepers or players, a transfer, a new player) got the lowest free shirt number whatever his
+  position, so a club whose keeper had moved on gave its 1 to a defender or a striker. Keepers now take
+  a free keeper's number (1, 12, 13 ...) and everyone else another one. The Players page shows the same
+  number Build will give. (Thanks jibibi)

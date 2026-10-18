@@ -609,7 +609,7 @@ def sign_keepers(db, log=print):
                 break
             best = min(fit, key=lambda g: (abs(g[1] - want) + (0 if 19 <= g[2] <= 34 else 4), g[0]))
             pool.remove(best)
-            shirt = E.free_shirt(packs)
+            shirt = E.free_shirt(packs, keeper=k == "GK")
             pack = E.with_shirt(order << E.ORDER_SHIFT, shirt)
             e = bytearray(A_REC)
             for off, x in ((E.A_EID, eid), (E.A_PID, best[0]), (E.A_TID, tid), (E.A_PACK, pack)):
@@ -1436,7 +1436,9 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
             rec[P_ID:P_ID + 4] = pid.to_bytes(4, "little")
             index[pid] = len(players)
             players += rec
-            shirt = E.free_shirt(u32(assigns, ao + E.A_PACK) for _o, _p, ao in sq if ao not in drop)
+            pos = str(ch.get("Registered Position") or "").strip().upper()
+            keeper = pos == "GK" if pos else E.getf(rec, "Registered Position") == 0
+            shirt = E.free_shirt((u32(assigns, ao + E.A_PACK) for _o, _p, ao in sq if ao not in drop), keeper)
             order = max((o for o, _p, _a in sq), default=-1) + 1
             e = bytearray(A_REC)
             for off, v in ((E.A_EID, eid), (E.A_PID, pid), (E.A_TID, tid),
@@ -1493,7 +1495,8 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
                 log("  players of %s: player %d is already there" % (club, pid))
                 continue
             sq = squad_of(tid)
-            shirt = E.free_shirt(u32(assigns, ao + E.A_PACK) for _o, _p, ao in sq if ao not in drop)
+            keeper = pid in index and E.getf(players[index[pid]:index[pid] + P_REC], "Registered Position") == 0
+            shirt = E.free_shirt((u32(assigns, ao + E.A_PACK) for _o, _p, ao in sq if ao not in drop), keeper)
             order = max((o for o, _p, ao in sq if ao not in drop), default=-1) + 1
             pack = E.with_shirt(order << E.ORDER_SHIFT, shirt)     # no role flags: a newcomer
             mine = [ao for ao, t in rows if kinds.get(t, (False, 0))[0] == national]
