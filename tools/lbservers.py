@@ -371,6 +371,17 @@ def write(pl, sider, log=print, root=None):
     world = safe(pl.get("world") or "FL26 world")
     teams, comps = world_ids(pl, root)
     klib, blib = libs(sider)
+    # B130: kserv.lua, when sider.ini loads it, stops at its start when content\kit-server has no
+    # map_comp.txt, and the game then shows no kit of Kit Server at all (laracroft7826, 18.10.: his
+    # kit-server folder held map.txt alone) -- an empty one is put there, as Kit Server's own
+    # download has it
+    comp = os.path.join(sider, KITS, "map_comp.txt")
+    if "kserv" in _live_modules(sider) and os.path.isdir(os.path.dirname(comp)) and not os.path.exists(comp):
+        try:
+            open(comp, "w").close()
+            log("kits: content\\kit-server had no map_comp.txt, which kserv.lua needs -- an empty one made")
+        except OSError:
+            pass
     make = to_make(pl, root) if root and os.path.isdir(os.path.join(sider, klib)) else []
     # B104: a world that came ready from a zip brought its made kits along, drawn on the PC it was
     # built on -- they are kept, not drawn again
