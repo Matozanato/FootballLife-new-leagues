@@ -1859,7 +1859,19 @@
   "Another world later": "Outro mundo depois",
   "Every world is a card in 2. My world; the green one is in the game. Activate on another card puts that one in the game, and each world keeps its own careers. Stuck? Help > User guide, or ask on our Discord, FL Mod Studio.": "Cada mundo é um cartão em 2. Meu mundo; o verde é o que está no jogo. Ativar em outro cartão coloca esse no jogo, e cada mundo guarda as próprias carreiras. Travou? Ajuda > Guia de uso, ou pergunte no nosso Discord, FL Mod Studio.",
   "Show me how to install a Modpack": "Me mostre como instalar um Modpack",
-  "The user guide, updates, this tour again and Install a Modpack, step by step. Questions and bugs: our Discord, FL Mod Studio. Have fun!": "O guia de uso, as atualizações, este tour de novo e Instalar um Modpack, passo a passo. Dúvidas e bugs: nosso Discord, FL Mod Studio. Divirta-se!"
+  "The user guide, updates, this tour again and Install a Modpack, step by step. Questions and bugs: our Discord, FL Mod Studio. Have fun!": "O guia de uso, as atualizações, este tour de novo e Instalar um Modpack, passo a passo. Dúvidas e bugs: nosso Discord, FL Mod Studio. Divirta-se!",
+  "Edit a Modpack, step by step": "Editar um Modpack, passo a passo",
+  "A Modpack you installed can be changed: leagues out or in, clubs, players, kits, stadiums. It is changed where it is, under its own name, and all of it is copied first. Close the game first. The orange frame shows where to click: you click, this card does not.": "Um Modpack instalado pode ser mudado: tirar ou pôr campeonatos, clubes, jogadores, uniformes, estádios. Ele é mudado onde está, com o próprio nome, e tudo é copiado antes. Feche o jogo primeiro. A moldura laranja mostra onde clicar: quem clica é você, não este cartão.",
+  "The Modpack in the game": "O Modpack no jogo",
+  "Click 2. My world. The Modpack's card must be green (in the game): if it is not, click Activate on its card.": "Clique em 2. Meu mundo. O cartão do Modpack tem de estar verde (no jogo): se não estiver, clique em Ativar no cartão dele.",
+  "Click Make it editable... at the top of My world (it shows only for a world that came in a zip) and say Yes. Mod Studio copies all of it first; then the world is one you can change.": "Clique em Torná-lo editável... no topo de Meu mundo (só aparece para um mundo que veio num zip) e diga Sim. O Mod Studio primeiro copia tudo; depois é um mundo que você pode mudar.",
+  "Change it": "Mude-o",
+  "Make your changes in these tabs: Leagues (take a league out, add one, change one), Clubs, Players, Kits, Stadiums. Nothing reaches the game yet.": "Faça suas mudanças nestas abas: Campeonatos (tire um campeonato, adicione um, mude um), Clubes, Jogadores, Uniformes, Estádios. Nada chega ao jogo ainda.",
+  "On the Build tab click Build and install. A big Modpack takes a few minutes; wait until it says it is done. Only then do your changes reach the game.": "Na aba Construção clique em Construir e instalar. Um Modpack grande leva alguns minutos; espere até dizer que terminou. Só então suas mudanças chegam ao jogo.",
+  "Click Start the game and start a NEW Master League: a career saved before keeps the world it started with.": "Clique em Iniciar o jogo e comece uma NOVA Master League: uma carreira salva antes mantém o mundo com que começou.",
+  "Changed your mind?": "Mudou de ideia?",
+  "4. Tools > Restore points has the Modpack as it came: Put this copy back makes it the ready world again. Stuck? Help > User guide, or ask on our Discord, FL Mod Studio.": "4. Ferramentas > Pontos de restauração tem o Modpack como veio: Restaurar esta cópia faz dele de novo o mundo pronto. Travou? Ajuda > Guia de uso, ou pergunte no nosso Discord, FL Mod Studio.",
+  "Show me how to edit a Modpack": "Me mostre como editar um Modpack"
  },
  "log": [
   [

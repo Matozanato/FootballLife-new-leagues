@@ -88,6 +88,8 @@ Now pick the way that matches your file.
 
 Use this when someone gave you a world as a zip (a modpack, an exported world).
 Mod Studio shows these steps in its window too: **Help → Install a Modpack, step by step**.
+To change a Modpack later (a league out or in, clubs, players, kits): **Help → Edit a Modpack,
+step by step**.
 
 **A1.** Do not unzip it yourself.
 

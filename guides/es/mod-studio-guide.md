@@ -135,7 +135,7 @@ Arriba en la ventana, de izquierda a derecha:
 líneas y pulsa **Deshacer los cambios elegidos** para quitarlas), **Añadir un paquete de
 ligas...** y **Crear un paquete de ligas...**. **Juego** abre la carpeta del juego, la carpeta de
 Sider, `sider.ini` y `sider.log`, e inicia el juego. **Ayuda** tiene **Guía de uso**, **Recorrido
-rápido**, **Instalar un Modpack, paso a paso**, **Buscar actualizaciones...** y **Acerca de FL26 Mod
+rápido**, **Instalar un Modpack, paso a paso**, **Editar un Modpack, paso a paso**, **Buscar actualizaciones...** y **Acerca de FL26 Mod
 Studio**.
 
 ### 3.1 Mi mundo
@@ -186,6 +186,7 @@ países**, **Copas de los países del juego** y **Nombres de las competiciones**
 para él (sección 8.2). Para cambiarlo igualmente, **Hacerlo editable...**, arriba en Mi mundo, lo
 convierte en un mundo tuyo, en el mismo sitio y con su propio nombre. Antes se copia entero a
 **Puntos de restauración**. Después de construirlo, empieza una Master League nueva.
+**Ayuda → Editar un Modpack, paso a paso** lo enseña clic a clic.
 
 **Cada mundo guarda sus propias carreras de Master League** (0.2.4). Una carrera está hecha para un
 mundo: en otro mundo sus ligas y clubes no existen. Por eso, cada vez que cambia el mundo del

@@ -13,6 +13,10 @@ once, and your 0.2.2 career keeps working.
   zip) in the game: 2. My world, + Add..., the zip, Install the world, then Start the game and a new
   Master League, with the orange frame on what to click. It is on the last card of the quick tour
   (Show me how to install a Modpack) and in Help > Install a Modpack, step by step.
+- **Edit a Modpack, step by step.** For a Modpack already in the game: 2. My world, Make it
+  editable... (all of it is copied first), the Leagues, Clubs, Players, Kits and Stadiums tabs,
+  Build and install, a new Master League, and 4. Tools > Restore points to have it back as it came.
+  It is in Help > Edit a Modpack, step by step, and on the last card of the Modpack guide.
 - **Split and Apertura and Clausura are marked experimental.** The league window says so under the formats: they work, but still have more open bugs than everyone plays everyone, the fully tested format. Keep reporting what you find. (Thanks Vicentico)
 - **Cups of our countries.** My world > Cups has a new window with the cups of your own leagues in
   one table: for each top division its national cup, super cup and league cup, with the name and

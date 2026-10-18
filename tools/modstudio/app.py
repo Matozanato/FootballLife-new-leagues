@@ -374,6 +374,7 @@ class Main(QMainWindow):
             ("User guide", self.guide),
             ("Quick tour", self.start_tour),
             ("Install a Modpack, step by step", self.start_modpack_guide),
+            ("Edit a Modpack, step by step", self.start_edit_guide),
             ("Check for updates...", self.check_updates),
             ("About FL26 Mod Studio", self.about)])
         self.help_btn = hb
@@ -827,7 +828,15 @@ class Main(QMainWindow):
         from modstudio import tour
         if getattr(self, "_tour", None) is not None:
             return
-        self._tour = tour.Tour(self, done=lambda: setattr(self, "_tour", None), guide="modpack").start()
+        self._tour = tour.Tour(self, done=lambda: setattr(self, "_tour", None), guide="modpack",
+                               follow=(_("Show me how to edit a Modpack"), self.start_edit_guide)).start()
+
+    def start_edit_guide(self):
+        """Help > Edit a Modpack, step by step: Make it editable..., the tabs, Build and install (tour.edit_steps)"""
+        from modstudio import tour
+        if getattr(self, "_tour", None) is not None:
+            return
+        self._tour = tour.Tour(self, done=lambda: setattr(self, "_tour", None), guide="edit").start()
 
     def guide(self):
         code = i18n.CODE

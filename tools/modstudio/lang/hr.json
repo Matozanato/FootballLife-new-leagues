@@ -1859,7 +1859,19 @@
   "Another world later": "Drugi svijet poslije",
   "Every world is a card in 2. My world; the green one is in the game. Activate on another card puts that one in the game, and each world keeps its own careers. Stuck? Help > User guide, or ask on our Discord, FL Mod Studio.": "Svaki svijet je kartica u 2. Moj svijet; zelena je ona u igri. Aktiviraj na drugoj kartici stavlja tu u igru, a svaki svijet čuva svoje karijere. Zapelo je? Pomoć > Upute ili pitaj na našem Discordu, FL Mod Studio.",
   "Show me how to install a Modpack": "Pokaži mi kako instalirati Modpack",
-  "The user guide, updates, this tour again and Install a Modpack, step by step. Questions and bugs: our Discord, FL Mod Studio. Have fun!": "Upute, ažuriranja, ponovno ova tura i Instaliraj Modpack, korak po korak. Pitanja i bugovi: naš Discord, FL Mod Studio. Zabavi se!"
+  "The user guide, updates, this tour again and Install a Modpack, step by step. Questions and bugs: our Discord, FL Mod Studio. Have fun!": "Upute, ažuriranja, ponovno ova tura i Instaliraj Modpack, korak po korak. Pitanja i bugovi: naš Discord, FL Mod Studio. Zabavi se!",
+  "Edit a Modpack, step by step": "Uredi Modpack, korak po korak",
+  "A Modpack you installed can be changed: leagues out or in, clubs, players, kits, stadiums. It is changed where it is, under its own name, and all of it is copied first. Close the game first. The orange frame shows where to click: you click, this card does not.": "Instalirani Modpack može se mijenjati: lige van ili unutra, klubovi, igrači, dresovi, stadioni. Mijenja se tamo gdje jest, pod svojim imenom, a prije toga se sav kopira. Prvo zatvori igru. Narančasti okvir pokazuje gdje kliknuti: klikaš ti, ova kartica ne.",
+  "The Modpack in the game": "Modpack u igri",
+  "Click 2. My world. The Modpack's card must be green (in the game): if it is not, click Activate on its card.": "Klikni 2. Moj svijet. Kartica Modpacka mora biti zelena (u igri): ako nije, klikni Aktiviraj na njegovoj kartici.",
+  "Click Make it editable... at the top of My world (it shows only for a world that came in a zip) and say Yes. Mod Studio copies all of it first; then the world is one you can change.": "Klikni Omogući uređivanje... na vrhu stranice Moj svijet (vidi se samo za svijet koji je došao u zipu) i reci Da. Mod Studio prvo sve kopira; onda je to svijet koji možeš mijenjati.",
+  "Change it": "Promijeni ga",
+  "Make your changes in these tabs: Leagues (take a league out, add one, change one), Clubs, Players, Kits, Stadiums. Nothing reaches the game yet.": "Promjene radiš na ovim karticama: Lige (makni ligu, dodaj je, promijeni je), Klubovi, Igrači, Dresovi, Stadioni. U igru još ništa ne ide.",
+  "On the Build tab click Build and install. A big Modpack takes a few minutes; wait until it says it is done. Only then do your changes reach the game.": "Na kartici Gradnja klikni Izgradi i instaliraj. Veliki Modpack traje nekoliko minuta; pričekaj da kaže da je gotovo. Tek tada tvoje promjene stižu u igru.",
+  "Click Start the game and start a NEW Master League: a career saved before keeps the world it started with.": "Klikni Pokreni igru, pa započni NOVU Master League: karijera spremljena prije zadržava svijet s kojim je počela.",
+  "Changed your mind?": "Predomislio si se?",
+  "4. Tools > Restore points has the Modpack as it came: Put this copy back makes it the ready world again. Stuck? Help > User guide, or ask on our Discord, FL Mod Studio.": "4. Alati > Točke vraćanja ima Modpack kakav je došao: Vrati ovu kopiju opet ga čini gotovim svijetom. Zapelo je? Pomoć > Upute, ili pitaj na našem Discordu, FL Mod Studio.",
+  "Show me how to edit a Modpack": "Pokaži mi kako urediti Modpack"
  },
  "log": [
   [

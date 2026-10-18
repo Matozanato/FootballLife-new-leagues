@@ -93,6 +93,8 @@ Choisissez maintenant la voie qui correspond à votre fichier.
 
 Utilisez-la quand quelqu'un vous a donné un monde sous forme de zip (un modpack, un monde exporté).
 Mod Studio montre aussi ces étapes dans sa fenêtre : **Aide → Installer un Modpack, étape par étape**.
+Pour modifier un Modpack plus tard (retirer ou ajouter une ligue, clubs, joueurs, maillots) :
+**Aide → Modifier un Modpack, étape par étape**.
 
 **A1.** Ne le décompressez pas vous-même.
 

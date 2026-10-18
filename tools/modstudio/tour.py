@@ -9,7 +9,10 @@ Finished or skipped, it is not shown again (settings "tour"); Help > Quick tour 
 The same card walks a player through putting a Modpack in the game (modpack_steps; mato 18.10.: "jel
 ima wizard upute kak ubaciti modpack, step by step? To usto treba"): Help > Install a Modpack, step
 by step, or the button on the last card of the quick tour. It opens 2. My world so the frame can show
-+ Add..., and clicks nothing."""
++ Add..., and clicks nothing. A third (edit_steps; mato 18.10.: "wizard i za uredjivanje packova, znas
+da ce ljudi to htjeti") changes a Modpack already in the game: Make it editable... (B85), the tabs,
+Build and install, a new Master League, and Restore points to have it back as it came: Help > Edit a
+Modpack, step by step, or the button on the last card of the Modpack guide."""
 from PySide6.QtCore import QEvent, QObject, QPoint, QRect, Qt
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
@@ -101,15 +104,58 @@ def modpack_steps(app):
     ]
 
 
+def _build_tab(app):
+    """the Build tab of 2. My world, where Build and install is"""
+    b = getattr(app, "pages", {}).get("Build")
+    if b is None or not b.isVisible():
+        app.open_page("Build")
+
+
+def edit_steps(app):
+    """changing a Modpack (a ready world from a zip) that is in the game, every click in order: the
+    B85 way (myworld.MyWorld.make_editable), then Build and install"""
+    nb, nh = getattr(app, "nav_buttons", {}), getattr(app, "nav_heads", {})
+
+    def mw(name):
+        return lambda: getattr(getattr(app, "my_world", None), name, None)
+    return [
+        (_("Edit a Modpack, step by step"),
+         _("A Modpack you installed can be changed: leagues out or in, clubs, players, kits, stadiums. It is "
+           "changed where it is, under its own name, and all of it is copied first. Close the game first. "
+           "The orange frame shows where to click: you click, this card does not."), None),
+        (_("The Modpack in the game"),
+         _("Click 2. My world. The Modpack's card must be green (in the game): if it is not, click Activate "
+           "on its card."), nb.get("World")),
+        (_("Make it editable..."),
+         _("Click Make it editable... at the top of My world (it shows only for a world that came in a zip) "
+           "and say Yes. Mod Studio copies all of it first; then the world is one you can change."),
+         mw("b_edit"), _my_world),
+        (_("Change it"),
+         _("Make your changes in these tabs: Leagues (take a league out, add one, change one), Clubs, "
+           "Players, Kits, Stadiums. Nothing reaches the game yet."),
+         lambda: (getattr(getattr(app, "my_world", None), "tab_btn", None) or {}).get("Leagues"), _my_world),
+        (_("Build and install"),
+         _("On the Build tab click Build and install. A big Modpack takes a few minutes; wait until it says "
+           "it is done. Only then do your changes reach the game."),
+         lambda: getattr(getattr(app, "pages", {}).get("Build"), "b_all", None), _build_tab),
+        (_("Start the game"),
+         _("Click Start the game and start a NEW Master League: a career saved before keeps the world it "
+           "started with."), getattr(app, "play_btn", None)),
+        (_("Changed your mind?"),
+         _("4. Tools > Restore points has the Modpack as it came: Put this copy back makes it the ready world "
+           "again. Stuck? Help > User guide, or ask on our Discord, FL Mod Studio."), nh.get("TOOLS")),
+    ]
+
+
 class Tour(QObject):
     """the card and the frame over `app`, the main window; closes itself when finished or skipped.
-    `guide` is "tour" (the quick tour, remembered in settings when seen) or "modpack"; `follow` is
-    (label, function): a button on the last card that ends this one and starts that"""
+    `guide` is "tour" (the quick tour, remembered in settings when seen), "modpack" or "edit";
+    `follow` is (label, function): a button on the last card that ends this one and starts that"""
 
     def __init__(self, app, done=None, guide="tour", follow=None):
         super().__init__(app)
         self.app, self.done, self.i, self.guide, self.follow = app, done, 0, guide, follow
-        self.steps = modpack_steps(app) if guide == "modpack" else steps(app)
+        self.steps = {"modpack": modpack_steps, "edit": edit_steps}.get(guide, steps)(app)
         self.frame = QFrame(app)
         self.frame.setObjectName("tourframe")
         self.frame.setAttribute(Qt.WA_TransparentForMouseEvents, True)

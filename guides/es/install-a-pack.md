@@ -93,6 +93,8 @@ Ahora elige el camino que corresponde a tu archivo.
 
 Úsalo cuando alguien te dio un mundo como zip (un modpack, un mundo exportado).
 Mod Studio también te enseña estos pasos en su ventana: **Ayuda → Instalar un Modpack, paso a paso**.
+Para cambiar un Modpack después (quitar o poner una liga, clubes, jugadores, equipaciones):
+**Ayuda → Editar un Modpack, paso a paso**.
 
 **A1.** No lo descomprimas tú.
 

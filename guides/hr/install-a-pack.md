@@ -86,6 +86,8 @@ Sad izaberi način koji odgovara tvojoj datoteci.
 
 Za kad ti je netko dao svijet kao zip (modpack, izvezeni svijet).
 Mod Studio ove korake pokaže i u svom prozoru: **Pomoć → Instaliraj Modpack, korak po korak**.
+Za kasnije mijenjanje Modpacka (liga van ili unutra, klubovi, igrači, dresovi): **Pomoć → Uredi
+Modpack, korak po korak**.
 
 **A1.** Ne raspakiravaj ga sam.
 

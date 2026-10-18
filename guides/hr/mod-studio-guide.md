@@ -122,7 +122,7 @@ Na vrhu prozora, slijeva nadesno:
 ovom svijetu...** (sve što tvoj svijet mijenja u igri na jednom popisu; odaberi retke i stisni
 **Poništi odabrane izmjene** da ih vratiš), **Dodaj paket liga...** i **Napravi paket liga...**.
 **Igra** otvara mapu igre, Sider mapu, `sider.ini` i `sider.log` i pokreće igru. **Pomoć** ima
-**Upute**, **Kratka tura**, **Instaliraj Modpack, korak po korak**, **Provjeri ažuriranja...** i
+**Upute**, **Kratka tura**, **Instaliraj Modpack, korak po korak**, **Uredi Modpack, korak po korak**, **Provjeri ažuriranja...** i
 **O programu FL26 Mod Studio**.
 
 ### 3.1 Moj svijet
@@ -172,6 +172,7 @@ država iz igre** i **Imena natjecanja**. Desno:
 8.2). Da ga ipak promijeniš, **Omogući uređivanje...** na vrhu Moj svijet ga pretvori u tvoj
 vlastiti svijet, na istom mjestu i pod njegovim imenom. Prvo se cijeli kopira u **Točke
 vraćanja**. Nakon što ga izgradiš, pokreni novu Master Ligu.
+**Pomoć → Uredi Modpack, korak po korak** to pokaže klik po klik.
 
 **Svaki svijet ima svoje karijere u Master ligi** (0.2.4). Karijera je napravljena za jedan
 svijet: u drugom svijetu njenih liga i klubova nema. Zato svaki put kad se svijet u igri

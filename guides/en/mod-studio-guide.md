@@ -127,7 +127,7 @@ world...** (everything your world changes in the game in one list; pick lines an
 the picked changes** to take them back), **Add a league package...** and **Make a league
 package...**. **Game** opens the game folder, the Sider folder, `sider.ini` and `sider.log`, and
 starts the game. **Help** has **User guide**, **Quick tour**, **Install a Modpack, step by
-step**, **Check for updates...** and **About FL26 Mod Studio**.
+step**, **Edit a Modpack, step by step**, **Check for updates...** and **About FL26 Mod Studio**.
 
 ### 3.1 My world
 
@@ -176,7 +176,8 @@ and **Competition names**. On the right:
 **A world from a zip** (a Modpack) is built already, so **Build** is switched off for it
 (section 8.2). To change it anyway, **Make it editable...** at the top of My world turns it into
 a world of your own, in place and under its own name. All of it is copied to **Restore points**
-first. After you Build it, start a new Master League.
+first. After you Build it, start a new Master League. **Help → Edit a Modpack, step by step**
+shows it click by click.
 
 **Each world keeps its own Master League careers** (0.2.4). A career is made for one world: in
 another world its leagues and clubs are not there. So every time the world in the game changes
