@@ -31,6 +31,10 @@ BACK_HEM, FRONT_TOP, FRONT_HEM = 0, 1180, 1805
 CHEST = (1178, 1180)                     # the crest's centre: the wearer's left chest
 CREST = 112                              # 175 looked twice too big on the shirt (in game, 07.10.)
 SHORTS_CREST = ((125, 1690), 62)
+# the shorts lie on their side in the texture, the hem at the outer edge: on the left leg the
+# shorts' top points right, so the crest is turned a quarter clockwise there (B138; kit makers'
+# templates turn the logo on the right leg a quarter the other way, its top pointing left)
+SHORTS_TURN = Image.Transpose.ROTATE_270
 PATTERNS = ("plain", "stripes", "hoops", "halves", "sleeves", "centre", "band")
 # colours a third or a goalkeeper's kit is picked from: the one furthest from the club's other kits
 PALETTE = ("#ffffff", "#101010", "#f5d000", "#8a8f96", "#14285a", "#c8102e", "#1d8f3a", "#ff7a00",
@@ -117,9 +121,10 @@ def paste_crest(img, crest):
         return
     # cut the empty border and scale to the size both ways, so a small crest is as big as a big one
     c0 = cr.crop(cr.getchannel("A").point(lambda v: 255 if v > 8 else 0).getbbox() or (0, 0) + cr.size)
-    for (x, y), size in ((CHEST, CREST), SHORTS_CREST):
-        k = size / max(c0.size)
-        c = c0.resize((max(1, round(c0.width * k)), max(1, round(c0.height * k))), Image.LANCZOS)
+    for ((x, y), size), turn in (((CHEST, CREST), None), (SHORTS_CREST, SHORTS_TURN)):
+        c1 = c0.transpose(turn) if turn is not None else c0
+        k = size / max(c1.size)
+        c = c1.resize((max(1, round(c1.width * k)), max(1, round(c1.height * k))), Image.LANCZOS)
         img.paste(c, (x - c.width // 2, y - c.height // 2), c)
 
 

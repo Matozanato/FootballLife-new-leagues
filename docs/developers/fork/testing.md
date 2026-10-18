@@ -37,6 +37,7 @@ exe. See `tools/flpaths.py`.
 | `test_keep_continental.py` | tables | a game club moved into a new league can keep its continental places (#84, `keep`); with a swap, the other club gets only the league and cup rows |
 | `test_keep_ids.py` | | the world's own players keep the ids of the last Build (#126); a player listed twice moves once, a stale ids file is skipped |
 | `test_keep_ids_people.py` | | a rebuilt world keeps each player's id with the player, not his squad place: a doubled player taken out (B52) moves nobody else's id; NewLife id, name and birth date, a unique name, then the place; the id of a player who left goes to nobody (until no other id is free, with a NOTE) |
+| `test_kit_crest.py` | | `kitmaker.py`: the chest crest of a drawn kit stands upright and the shorts crest is turned a quarter clockwise, as the shorts lie in the kit texture (B138; needs Pillow) |
 | `test_kitpics.py` | | `kitpics.py`: a Kit Server club folder from kit pictures; the picture branch of the Kits page (needs Pillow) |
 | `test_kits_import.py` | | the kit-import helpers of `pages/kits.py` (works without PySide6: the helpers are pulled out of the source) |
 | `test_lbpack.py` | | the two bundles contain every part in order, and the wrapper calls nothing Sider's Lua lacks (no `pcall`) |
