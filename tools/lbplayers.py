@@ -634,6 +634,70 @@ def squad_counts(db, tids):
     return {tid: count.get(tid, 0) for tid in tids}
 
 
+# the six role flags of an assignment (bits 16-21 of its pack, playeredit.ORDER_MASK): the captain
+# and the set-piece takers. Only a few of the game's clubs carry them; with none the game made the
+# first in the squad order -- always the goalkeeper -- captain of every club Build wrote (mato 18.10.).
+# The bit of each role as the game's Game Plan > Player Settings shows it (Al Kuwait test career,
+# 18.10.: bit 0 right corners ... bit 5 captain); its "FK Taker 2" has no flag of its own
+ROLE_SHIFT = 16
+ROLES = ["right corners", "short free kicks", "left corners", "long free kicks", "penalties", "captain"]
+
+
+def _num(r, n):
+    v = r.get(n, "")
+    return int(v) if str(v).isdigit() else 0
+
+
+ROLE_KEYS = {
+    "captain": lambda r: (_num(r, "Captaincy"), overall(r) + min(_num(r, "Age"), 33)),
+    "penalties": lambda r: (_num(r, "Penalty Specialist"), _num(r, "Finishing") + _num(r, "Place Kicking")),
+    "long free kicks": lambda r: (0, _num(r, "Place Kicking") * 2 + _num(r, "Kicking Power")),
+    "short free kicks": lambda r: (0, _num(r, "Place Kicking") * 2 + _num(r, "Curl")),
+    "left corners": lambda r: (0, _num(r, "Place Kicking") + _num(r, "Curl") + _num(r, "Lofted Pass")),
+    "right corners": lambda r: (0, _num(r, "Place Kicking") + _num(r, "Curl") + _num(r, "Lofted Pass")),
+}
+
+
+def pick_roles(rows):
+    """{role: the row that takes it} for a squad in order: from the first eleven, outfield players
+    (a keeper only when there is no one else): the captain is the one with Captaincy, else the
+    strongest and most experienced; the takers the best kickers for each set piece"""
+    xi = [r for r in rows if _num(r, "order") < 11] or list(rows)
+    out = [r for r in xi if r.get("Registered Position") != "GK"] or xi
+    return {role: max(out, key=lambda r: (ROLE_KEYS[role](r), -_num(r, "order"))) for role in ROLES} if out else {}
+
+
+def set_roles(db, tids=None, log=print):
+    """gives every club of tids (None: every club and national team in db) whose squad carries no
+    role flag at all a captain and set-piece takers (pick_roles); a club with any flag keeps its
+    own. Returns {team id: {role: player id}}."""
+    sq = Squads(db)
+    if tids is None:
+        tids = list(sq.by_club)
+    assigns = sq.assigns
+    done = {}
+    for tid in sorted(tids):
+        v = sq.by_club.get(tid) or []
+        if not v or any(u32(assigns, o + E.A_PACK) >> ROLE_SHIFT for _ord, _p, _s, o in v):
+            continue
+        rows, at = [], {}
+        for order, pid, shirt, o in v:
+            if pid in sq.index:
+                rows.append(sq.row(pid, shirt, order))
+                at[pid] = o
+        got = pick_roles(rows)
+        for k, role in enumerate(ROLES):
+            if role in got:
+                o = at[int(got[role]["player"])]
+                pack = u32(assigns, o + E.A_PACK) | 1 << (ROLE_SHIFT + k)
+                assigns[o + E.A_PACK:o + E.A_PACK + 4] = pack.to_bytes(4, "little")
+        done[tid] = {role: int(r["player"]) for role, r in got.items()}
+    if done:
+        open(os.path.join(db, "PlayerAssignment.bin"), "wb").write(pesdb.wesys_pack(bytes(assigns)))
+        log("  a captain and set-piece takers for %d clubs that had none" % len(done))
+    return done
+
+
 def short_squads(db, tids, least=MIN_SQUAD):
     """{team id: players} of the clubs in `tids` with fewer than `least` players in db's
     PlayerAssignment.bin -- a club with none crashes the game when it is picked, and Become

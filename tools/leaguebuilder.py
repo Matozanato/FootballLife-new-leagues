@@ -3876,6 +3876,10 @@ def build(pl, base, game, replace=False, log=print):
     if os.path.exists(os.path.join(db, "Player.bin")):   # a world of cups only keeps the game's players
         lbplayers.sign_keepers(db, log)
         lbplayers.line_up(db, base, recipe_ordered(filled, clubs), log)
+        # a captain and set-piece takers for every club and national team with none: the game made
+        # the goalkeeper, first in the squad order, captain of each (mato 18.10.: new clubs and the
+        # game's clubs Build wrote squads for alike); a club with its own flags keeps them
+        lbplayers.set_roles(db, None, log)
         # every new club can field a side, whatever left it short (B28): the game crashes when a
         # club with no players is picked, and Become a Legend does not start
         short = lbplayers.short_squads(db, new_of)
