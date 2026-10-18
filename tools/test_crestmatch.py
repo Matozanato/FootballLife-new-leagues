@@ -76,6 +76,11 @@ check(match([], []), [], "nothing at all")
 check(score(["real", "madrid"], ["real"]), 0.7, "containment score")
 check(score(words("fc"), words("fc")), 0.0, "filler words leave nothing to score")
 check(score(["abc"], ["abcdef"]), 0.0, "containment needs 4 letters")
+check(score(words("Mali"), words("poland_bruk-bet-termalica-nieciecza.png", True)), 0.0,
+      "containment starts and ends with a word: no Mali in Termalica")
+check(score(words("Port FC"), words("Sporting Cristal.png", True)), 0.0, "no Port in Sporting")
+check(score(words("Manchester United"), words("manchesterunited.png", True)), 0.7,
+      "a name run together still contains the club")
 
 # 13. a file named by its team id
 check(file_id("12345.png"), 12345, "id file")

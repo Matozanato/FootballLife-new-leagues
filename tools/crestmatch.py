@@ -10,8 +10,9 @@ The idea comes from Xxspedd's escudos.py (FL Mod Studio Discord).
 How it scores: both sides are reduced to words (accents folded, lower case, letters and digits
 only, filler words dropped; a file also loses the crest pack's size suffix _r, _r_l, _r_ll).
 The score is the Jaccard overlap of the two word sets, or 0.7 when one joined-up name contains
-the other with at least 4 letters in the shorter one -- a file called "Real Madrid" is worth
-0.7 against "Real Madrid Castilla" and 1.0 against "Real Madrid".
+the other with at least 4 letters in the shorter one, from the start of a word to the end of one
+-- a file called "Real Madrid" is worth 0.7 against "Real Madrid Castilla" and 1.0 against "Real
+Madrid", but "Mali" is nothing against "Bruk-Bet Termalica".
 
 The assignment is greedy over the best scores first: a file and a club are each used at most
 once, nothing under 0.4 is accepted, everything else comes back as (file, None, 0.0).
@@ -74,11 +75,27 @@ def score(file_words, club_words):
     a, b = set(file_words), set(club_words)
     j = len(a & b) / float(len(a | b))
     ja, jb = "".join(file_words), "".join(club_words)
-    short = ja if len(ja) <= len(jb) else jb
-    long_ = jb if short is ja else ja
-    if len(short) >= SHORTEST_CONTAINS and short in long_:
+    short, long_words = (ja, club_words) if len(ja) <= len(jb) else (jb, file_words)
+    if len(short) >= SHORTEST_CONTAINS and _contains(long_words, short):
         return max(j, CONTAINS_SCORE)
     return j
+
+
+def _contains(long_words, short):
+    """short is in the joined long name from the start of one of its words to the end of one: "mali"
+    is not in "bruk bet termalica" and "port" not in "sport" (Import crests 18.10.)"""
+    starts, ends, at = set(), set(), 0
+    for w in long_words:
+        starts.add(at)
+        at += len(w)
+        ends.add(at)
+    long_ = "".join(long_words)
+    i = long_.find(short)
+    while i >= 0:
+        if i in starts and i + len(short) in ends:
+            return True
+        i = long_.find(short, i + 1)
+    return False
 
 
 def match(files, clubs):

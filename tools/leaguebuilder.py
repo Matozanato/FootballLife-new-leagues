@@ -734,6 +734,13 @@ def game_clubs(base):
 
 
 T_NATIONAL = 0x53                           # top bit set on the 144 national teams, never on a club
+
+
+def national_teams(base):
+    """the team ids of Team.bin's national teams"""
+    raw = pesdb.wesys_unpack(open(os.path.join(base, "Team.bin"), "rb").read())
+    return {int.from_bytes(raw[o + W.T_ID:o + W.T_ID + 4], "little")
+            for o in range(0, len(raw), W.T_REC) if raw[o + T_NATIONAL] & 0x80}
 T_COUNTRY = 0x46                            # the country: 9 bits from bit 2 (lbplayers.T_COUNTRY, clubnation.py)
 T_POOL = 0x4f                               # high nibble: the game's "Other ..." group the club is filed in at
                                             # boot (2 Other European, 6 Other Latin American, 7 Africa, 0 none)

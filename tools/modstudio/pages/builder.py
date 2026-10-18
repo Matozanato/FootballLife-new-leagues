@@ -3348,6 +3348,12 @@ class CrestImportDialog(Dialog):
         self.cm = crestmatch
         self.project = project
         self.clubs = []                 # (name, key): key ("game", tid) or ("new", league, place)
+        # a national team takes a picture by its team ID only: by name "poland_1-liga.png" went to
+        # Poland (Vicentico, 18.10.)
+        try:
+            self.national = B.national_teams(project.base) if project.base else set()
+        except (OSError, ValueError):
+            self.national = set()
         for tid, (n, _s) in sorted(project.game_cl.items()):
             self.clubs.append((n, ("game", tid)))
         for L in project.recipe["leagues"]:
@@ -3413,7 +3419,7 @@ class CrestImportDialog(Dialog):
             else:
                 rest.append(f)
         taken = {found[f][0][1] for f in found}
-        left = [c for c in clubs if c[1] not in taken]
+        left = [c for c in clubs if c[1] not in taken and not (c[1][0] == "game" and c[1][1] in self.national)]
         for f, j, sc in self.cm.match(rest, [(n, i) for i, (n, _k) in enumerate(left)]):
             if j is not None:
                 found[f] = (left[j], sc)
