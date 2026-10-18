@@ -48,3 +48,8 @@ it is released; until then this page only collects what is done and tested.
   position, so at Bourg-en-Bresse a centre forward wore the 1. Now the club's first keeper wears the
   1 and swaps numbers with whoever had it; a recipe that gives its own numbers keeps them.
   (Thanks jibibi)
+- **Make a league package stopped on a world from a zip (B148).** "picture ... is missing" with a
+  path of the PC that built the world (D:\dev\...), so no league of a Modpack or Europack world could
+  be made into a package. A picture or kit folder not on your PC is now taken from the world as it is
+  in the game (the league's emblem, the club's crest, the club's Kit Server kits), and what is in
+  neither is left out with a line in the log; Build draws a badge for it. (Thanks Biancopr)

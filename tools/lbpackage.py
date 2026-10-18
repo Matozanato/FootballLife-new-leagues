@@ -81,6 +81,10 @@ def tag_of(manifest):
 
 # ---- export ----
 
+# the 512 px picture Build wrote into the world: a league's emblem (cid), a club's crest (team id)
+EMBLEM = os.path.join("common", "render", "symbol", "emblemLc", "emb_%04d_ll.png")
+CREST = os.path.join("common", "render", "symbol", "flag", "e_%06d_r_ll.png")
+
 # what a package can carry besides the leagues themselves; Make a package ticks them all
 PARTS = ("squads", "faces", "crests", "managers", "kits", "kitfiles", "scoreboards", "stadiums")
 
@@ -112,18 +116,19 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
     squads = "squads" in parts
     if not str(meta.get("name", "")).strip():
         raise Error("the package needs a name")
-    if sider and ({"kitfiles", "scoreboards"} & parts):
-        import lbservers
+    built, wdir = None, None
+    if sider and recipe.get("world"):
+        wdir = os.path.join(sider, "livecpk", recipe["world"])
         try:
-            with open(os.path.join(sider, "livecpk", recipe.get("world") or "", "leaguebuilder-plan.json"),
-                      encoding="utf-8") as f:
+            with open(os.path.join(wdir, "leaguebuilder-plan.json"), encoding="utf-8") as f:
                 built = json.load(f)
         except (OSError, ValueError):
             built = None
-        if built:
-            recipe = json.loads(json.dumps(recipe))
-            nk, nb = lbservers.collect(recipe, built, sider, leagues)
-            log("from the game: %d club kits, %d scoreboards" % (nk, nb))
+    if built and ({"kitfiles", "scoreboards"} & parts):
+        import lbservers
+        recipe = json.loads(json.dumps(recipe))
+        nk, nb = lbservers.collect(recipe, built, sider, leagues)
+        log("from the game: %d club kits, %d scoreboards" % (nk, nb))
     have = {L["name"]: L for L in recipe.get("leagues", [])}
     names = list(have) if leagues is None else list(leagues)
     missing = [n for n in names if n not in have]
@@ -142,11 +147,20 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
     os.makedirs(tmp)
     used = {}
 
-    def asset(path):
+    def asset(path, alt=None):
+        """B148 (Biancopr 18.10.): a world from a zip (Make it editable) keeps the picture paths of
+        the PC that built it, so Make a league package stopped on "picture ... is missing". A picture
+        not on this PC is taken from the world as it was built (alt) when there is one there, else
+        left out: Build then draws the badge or emblem, as it does for a missing picture"""
         if not path:
             return path
         if not os.path.isfile(path):
-            raise Error("picture %s is missing" % path)
+            if alt and os.path.isfile(alt):
+                log("  picture not on this PC, the world's own taken: %s" % path)
+                path = alt
+            else:
+                log("  picture not on this PC, left out (Build draws one): %s" % path)
+                return ""
         base = re.sub(r"[^A-Za-z0-9._-]+", "_", os.path.basename(path))
         stem, ext = os.path.splitext(base)
         name, k = base, 1
@@ -165,8 +179,9 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
     def folder(path, kind):
         if not path:
             return path
-        if not os.path.isdir(path):
-            raise Error("folder %s is missing" % path)
+        if not os.path.isdir(path):                   # B148: not on this PC and not in the game
+            log("  folder not on this PC, left out: %s" % path)
+            return ""
         rel = "%s/%d" % (kind, nfold[kind])
         nfold[kind] += 1
         copytree(path, os.path.join(tmp, kind, str(nfold[kind] - 1)))
@@ -196,6 +211,12 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
                 c.pop("join")
         return c
 
+    # the world as built: its leagues by name, for the pictures it holds (asset's alt)
+    was = {L.get("name"): L for L in ((built or {}).get("leagues") or []) + ((built or {}).get("others") or [])}
+
+    def world_file(pattern, n):
+        return os.path.join(wdir, pattern % n) if wdir and isinstance(n, int) else None
+
     out_r = {"leagues": [], "players": {}, "edits": {}}
     for n in names:
         L = json.loads(json.dumps(have[n]))
@@ -204,11 +225,14 @@ def export(recipe, out, meta, leagues=None, edits=False, log=print, players=True
             if part not in parts:
                 for k in keys:
                     L.pop(k, None)
+        B = was.get(n) or {}
         for k in LEAGUE_PICTURES:
             if L.get(k):
-                L[k] = asset(L[k])
+                L[k] = asset(L[k], world_file(EMBLEM, B.get("cid")) if k == "logo" else None)
         if L.get("club_crests"):
-            L["club_crests"] = [asset(p) if p else p for p in L["club_crests"]]
+            tids = B.get("teams") or []
+            L["club_crests"] = [asset(p, world_file(CREST, tids[i] if i < len(tids) else None)) if p else p
+                                for i, p in enumerate(L["club_crests"])]
         if L.get("kit_folders"):
             L["kit_folders"] = [folder(p, "kitserver") if p else "" for p in L["kit_folders"]]
         if L.get("scoreboard"):

@@ -512,16 +512,21 @@ def collect(recipe, pl, sider, names=None):
         if not p or (names is not None and L["name"] not in names):
             continue
         teams = p.get("teams") or []
-        if not any(L.get("kit_folders") or []) and teams:
+        own = list(L.get("kit_folders") or [])
+        # B148: a world from a zip has the folders of the PC that built it; one not on this PC
+        # counts as none
+        if teams and (not any(own) or not all(os.path.isdir(f) for f in own if f)):
             fs = []
-            for tid in teams:
+            for k, tid in enumerate(teams):
+                if k < len(own) and own[k] and os.path.isdir(own[k]):
+                    fs.append(own[k])
+                    continue
                 rel = kmap.get(int(tid)) if tid is not None else None
                 d = os.path.join(sider, klib, rel) if rel else ""
                 fs.append(d if d and is_kit_folder(d) else "")
-            if any(fs):
-                L["kit_folders"] = fs
-                nk += sum(1 for f in fs if f)
-        if not L.get("scoreboard") and p.get("rid") is not None:
+                nk += 1 if fs[-1] else 0
+            L["kit_folders"] = fs
+        if not (L.get("scoreboard") and os.path.isdir(L["scoreboard"])) and p.get("rid") is not None:
             rel = bmap.get(int(p["rid"]))
             d = os.path.join(sider, blib, rel) if rel else ""
             if d and os.path.isdir(d):
