@@ -38,6 +38,31 @@ def _live_modules(ini):
     return out
 
 
+# a Kit or Scoreboard Server's own root line: local kroot = ".\\content\\kit-server\\"
+ROOT_LINE = re.compile(r'^\s*local\s+\w*root\s*=\s*"\.?[\\/]*content[\\/]+([^"\\/]+)', re.M)
+
+
+def module_reads(ini, base):
+    r"""the content folder (lower case) the live module `base` of a sider.ini reads, from the root
+    line in the module itself, or None.  B165 (NedimMM 19.10.): his common\kits.lua read
+    content\kit-server, not content\kits as SPFL26's own does, so none of the kits Mod Studio
+    wrote into content\kits reached the game"""
+    try:
+        with open(ini, encoding="utf-8-sig", errors="replace") as f:
+            for l in f:
+                s = l.strip()
+                if s.startswith("lua.module") and "=" in s:
+                    rel = s.split("=", 1)[1].split(";")[0].strip().strip('"')
+                    if _base(rel) == base:
+                        with open(os.path.join(os.path.dirname(ini), "modules", rel),
+                                  encoding="utf-8", errors="replace") as m:
+                            hit = ROOT_LINE.search(m.read())
+                        return hit.group(1).lower() if hit else None
+    except OSError:
+        pass
+    return None
+
+
 class Col:
     def __init__(self, title, kind="text", tip="", default=""):
         self.title, self.kind, self.tip, self.default = title, kind, tip, default
@@ -67,7 +92,15 @@ class Server:
     def pick(self, content_dir):
         r"""(folder, module) in use: ours, or the alias when only the alias is there or when
         sider.ini loads the alias's module and not ours (GitHub #129: SPFL26's own kits.lua reads
-        content\kits, though a kit-server folder may be there too)"""
+        content\kits, though a kit-server folder may be there too).  First what the one module
+        sider.ini loads says it reads itself (B165: a common\kits.lua that reads content\kit-server)"""
+        if self.alias and content_dir:
+            ini = os.path.join(os.path.dirname(os.path.normpath(content_dir)), "sider.ini")
+            live = [m for m in (self.alias[1], self.module) if _base(m) in _live_modules(ini)]
+            reads = module_reads(ini, _base(live[0])) if len(live) == 1 else None
+            for folder in (self.alias[0], self.folder):
+                if reads == folder.lower() and os.path.isdir(os.path.join(content_dir, folder)):
+                    return folder, live[0]
         if self.alias and content_dir and os.path.isdir(os.path.join(content_dir, self.alias[0])):
             mods = _live_modules(os.path.join(os.path.dirname(os.path.normpath(content_dir)), "sider.ini"))
             if _base(self.alias[1]) in mods and _base(self.module) not in mods:

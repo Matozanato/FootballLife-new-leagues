@@ -58,8 +58,37 @@ def _live_modules(sider):
     return mods
 
 
+ROOT_LINE = re.compile(r'^\s*local\s+\w*root\s*=\s*"\.?[\\/]*content[\\/]+([^"\\/]+)', re.M)
+
+
+def _reads(sider, base):
+    r"""the content folder (lower case) the live module base reads, from its own root line
+    (local kroot = ".\\content\\kit-server\\"), or None (modstudio.servers.module_reads)"""
+    try:
+        with open(os.path.join(sider, "sider.ini"), encoding="utf-8-sig", errors="replace") as f:
+            for l in f:
+                s = l.strip()
+                if s.startswith("lua.module") and "=" in s:
+                    rel = s.split("=", 1)[1].split(";")[0].strip().strip('"')
+                    n = os.path.basename(rel.replace("\\", "/")).lower()
+                    if (n[:-4] if n.endswith(".lua") else n) == base:
+                        with open(os.path.join(sider, "modules", rel), encoding="utf-8", errors="replace") as m:
+                            hit = ROOT_LINE.search(m.read())
+                        return hit.group(1).lower() if hit else None
+    except OSError:
+        pass
+    return None
+
+
 def _pick(sider, mods, ours, theirs, our_mod, their_mod, files):
-    """ours or SPFL26's folder, as Install mods picks it (modstudio.servers.Server.pick)"""
+    """ours or SPFL26's folder, as Install mods picks it (modstudio.servers.Server.pick): first
+    the one the module sider.ini loads says it reads (B165, NedimMM 19.10.: a common\\kits.lua
+    that reads content\\kit-server; the kits written into content\\kits never reached the game)"""
+    live = [m for m in (their_mod, our_mod) if m in mods]
+    reads = _reads(sider, live[0]) if len(live) == 1 else None
+    for d in (theirs, ours):
+        if reads == os.path.basename(d).lower() and os.path.isdir(os.path.join(sider, d)):
+            return d
     there = os.path.join(sider, theirs)
     if os.path.isdir(there) and their_mod in mods and our_mod not in mods:
         return theirs

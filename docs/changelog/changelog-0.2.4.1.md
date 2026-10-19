@@ -129,6 +129,11 @@ working: Build them once with 0.2.4.1, and careers carry on.
   players (90 leagues) stopped Build with only that line, and the game kept the world of the last
   Build, so a league taken out seemed to stay. It now says the world has too many players: take out
   a league or two (Leagues > Remove) and Build again. (Thanks vmican)
+- **No kit from Mod Studio in the game with a kits.lua that reads content\kit-server (B165).** Mod
+  Studio took for granted that `common\kits.lua` reads `content\kits`, as SPFL26's own does. One that
+  reads `content\kit-server` saw none of the kits Build, Switch on or the Kits page wrote: only the
+  few lines already in kit-server reached the game. Mod Studio now reads the folder from the Kit and
+  Scoreboard Server module itself. (Thanks NedimMM)
 
 ## Also new
 

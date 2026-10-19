@@ -300,6 +300,31 @@ def main():
         os.makedirs(os.path.join(g, S.SPFL_KITS))
         S.write(new, g, log=lambda *_: None)
         ok("B130: no kit-server folder, none made", not os.path.exists(os.path.join(g, S.KITS)))
+        # B165 (NedimMM 19.10.): his common\kits.lua read content\kit-server; Mod Studio wrote the
+        # kits into content\kits (kits.lua on, both folders there) and the game saw none of them
+        from modstudio import servers as MS
+        g = os.path.join(tmp, "b165", "SiderAddons")
+        put(os.path.join(g, "sider.ini"), 'lua.module = "common' + BS + 'kits.lua"' + chr(10)
+            + 'lua.module = "common' + BS + 'scoreboards.lua"' + chr(10))
+        root = lambda d: 'local m = {}' + chr(10) + 'local kroot = ".' + BS * 2 + "content" + BS * 2 + d + BS * 2 + '"' + chr(10)
+        put(os.path.join(g, "modules", "common", "kits.lua"), root("kit-server"))
+        put(os.path.join(g, "modules", "common", "scoreboards.lua"),
+            'local sbroot = ".' + BS * 2 + "content" + BS * 2 + 'scoreboards"' + chr(10))
+        for d in (S.KITS, S.SPFL_KITS, S.BOARDS, S.SPFL_BOARDS):
+            os.makedirs(os.path.join(g, d), exist_ok=True)
+        ok("B165: kits.lua that reads kit-server: kit-server", S.libs(g) == (S.KITS, S.SPFL_BOARDS))
+        kits = [s for s in MS.SERVERS if s.key == "kits"][0]
+        ok("B165: the Kits page picks it too, with the module that is on",
+           kits.pick(os.path.join(g, "content")) == ("kit-server", "kits.lua"))
+        put(os.path.join(g, "modules", "common", "kits.lua"), root("kits"))
+        ok("B165: SPFL26's own kits.lua: content kits as before", S.libs(g)[0] == S.SPFL_KITS
+           and kits.pick(os.path.join(g, "content")) == ("kits", "kits.lua"))
+        shutil.rmtree(os.path.join(g, S.SPFL_KITS))
+        put(os.path.join(g, "modules", "common", "kits.lua"), root("kits"))
+        ok("B165: it reads a folder that is not there: the old rule (B158)", S.libs(g)[0] == S.KITS)
+        os.remove(os.path.join(g, "modules", "common", "kits.lua"))
+        os.makedirs(os.path.join(g, S.SPFL_KITS))
+        ok("B165: no module file: the old rule", S.libs(g)[0] == S.SPFL_KITS)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("%d cases passed" % N)
