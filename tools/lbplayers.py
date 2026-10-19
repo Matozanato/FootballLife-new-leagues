@@ -56,6 +56,10 @@ MIN_SQUAD = 18        # a new club may lose players down to this: eleven and sev
 FIELDS = list(E.FIELDS)
 CLUB_MAX = 40         # the most players a shipped club has
 NATIONAL_MAX = 26     # the most a shipped national team has
+# what to do when the ids run out (B161, vmican 19.10.: a world of 90 leagues stopped Build with
+# only this, and the game kept the world of the last Build, so "Remove does nothing")
+FULL = (" -- the world has too many players. Take out a league or two (Leagues > Remove), then Build "
+        "again")
 PID_MAX = 262143      # a player id Mod Studio hands out stays below this: the engine packs a
                       # player id into 18 bits (handle = id << 14 | n), and a world with a player
                       # id of 262144 or more crashes when a new Master League is created
@@ -1228,7 +1232,7 @@ class FreeIds:
             left = sorted(self.retired - self.busy)
             if not left:
                 raise Error("no free player id left below %d (the game packs a player id into 18 bits)"
-                            % (PID_MAX + 1))
+                            % (PID_MAX + 1) + FULL)
             pid = left[0]
             self.retired.discard(pid)
             self.reused.append(pid)
@@ -1428,7 +1432,7 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
                         pid = FreeIds(PID_MAX, set(index) | reserved_ids, retired, log).take()
                     except Error:
                         raise Error("players of %s: no free player id left below %d (the game packs a "
-                                    "player id into 18 bits)" % (club, PID_MAX + 1))
+                                    "player id into 18 bits)" % (club, PID_MAX + 1) + FULL)
                 else:
                     next_pid = pid + 1                 # only a handed-out id moves the cursor: a kept
                                                        # or chosen one near the top would skip every gap

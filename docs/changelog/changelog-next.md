@@ -118,6 +118,10 @@ it is released; until then this page only collects what is done and tested.
   league", not "1 groups", and the bottom bar says "Switching ... on" or "Exporting ..." while
   it does that, not "Building...". Column names cut short in those languages ("DOSSIERS ACT" on
   Profiles, "VALORACIÓN" on Players) now show whole.
+- **"No free player id left below 262144" now says what to do (B161).** A world with too many
+  players (90 leagues) stopped Build with only that line, and the game kept the world of the last
+  Build, so a league taken out seemed to stay. It now says the world has too many players: take out
+  a league or two (Leagues > Remove) and Build again. (Thanks vmican)
 
 ## Also new
 

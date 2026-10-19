@@ -245,8 +245,10 @@ def main():
     try:
         free.take()
         ok("none left at all: Build stops", False)
-    except L.Error:
+    except L.Error as e:
         ok("none left at all: Build stops", True)
+        # B161 (vmican, 90 leagues): and says what to do, not only that the ids ran out
+        ok("... and says to take out a league", "Take out a league" in str(e) and "too many players" in str(e))
     print("%d cases passed" % N)
 
 
