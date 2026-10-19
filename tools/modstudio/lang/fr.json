@@ -1873,7 +1873,13 @@
   "Show me how to edit a Modpack": "Montrez-moi comment modifier un Modpack",
   "%s found the game's FL_2026.exe already changed at its spot by another mod (ABORTED in sider.log), so that one fix of ours is off; the rest of Mod Studio's modules are in. Nothing to do unless the game crashes; then use the Steam FL_2026.exe (docs/developers/by-hand.md, step A6).": "%s a trouvé le FL_2026.exe du jeu déjà modifié à son emplacement par un autre mod (ABORTED dans sider.log), donc ce correctif est désactivé ; les autres modules de Mod Studio fonctionnent. Rien à faire sauf si le jeu plante ; utilisez alors le FL_2026.exe de Steam (docs/developers/by-hand.md, étape A6).",
   "Kept the leagues you added before: %s.": "Les ligues ajoutées avant sont gardées : %s.",
-  "Your Edit data (EDIT00000000) goes with the careers too: it stays with %s.": "Vos données Edit (EDIT00000000) suivent aussi les carrières : elles restent avec %s."
+  "Your Edit data (EDIT00000000) goes with the careers too: it stays with %s.": "Vos données Edit (EDIT00000000) suivent aussi les carrières : elles restent avec %s.",
+  "It takes %s on the disk until you delete that copy for good (Restore points > Delete this copy for good).": "Il occupe %s sur le disque tant que cette copie n'est pas supprimée définitivement (Points de restauration > Supprimer cette copie définitivement).",
+  "To free %s on the disk: Restore points > Delete this copy for good.": "Pour libérer %s sur le disque : Points de restauration > Supprimer cette copie définitivement.",
+  "Delete this copy for good...": "Supprimer cette copie définitivement...",
+  "Pick a deleted or copied world in the list: only those copies are deleted here (Clean up... is for the copies of files).": "Choisissez dans la liste un monde supprimé ou copié : seules ces copies sont supprimées ici (Nettoyer... sert aux copies de fichiers).",
+  "Delete this copy of %s for good?\n\nIt frees %s on the disk and can not be put back any more.": "Supprimer définitivement cette copie de %s ?\n\nCela libère %s sur le disque et elle ne pourra plus être remise.",
+  "The copy of %s is deleted: %s freed.": "La copie de %s est supprimée : %s libérés."
  },
  "log": [
   [

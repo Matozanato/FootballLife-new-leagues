@@ -261,6 +261,28 @@ def delete_restore(t):
     WL.restore(game, f, QUIET)
     ok("put back after 5 deletes: still byte for byte", diff(tree(sd), before2) == [])
 
+    # B131 (Vicentico 18.10.: 6 GB of deleted worlds): Delete this copy for good frees the disk
+    size = WL.world_size(game, "_FL26Old")
+    ok("world_size: its livecpk and content folders", size > 0
+       and size == sum(WL.size_of(os.path.join(sd, r)) for r in (
+           os.path.join("livecpk", "_FL26Old"), os.path.join("content", "kit-server", "_FL26Old"),
+           os.path.join("content", "scoreboard-server", "_FL26Old"))))
+    f, _i = WL.delete(game, "_FL26Old", QUIET)
+    others = [x for x, _j in WL.backups_of(sd) if x != f]
+    ok("discard: frees about the world's size", WL.discard(sd, f) >= size)
+    ok("discard: the copy is gone and not listed, the other copies stay",
+       not os.path.exists(f) and f not in [x for x, _j in WL.backups_of(sd)]
+       and all(os.path.isdir(x) for x in others))
+    for bad in (os.path.join(sd, "livecpk", "_FL26Live"), os.path.join(sd, "ModStudio", "backups"),
+                os.path.join(sd, "ModStudio", "backups", "worlds")):
+        try:
+            WL.discard(sd, bad)
+            refused = False
+        except WL.WorldError:
+            refused = True
+        ok("discard: refuses a folder that is no world backup (%s)" % os.path.relpath(bad, sd),
+           refused and os.path.isdir(bad))
+
 
 # ---- rename -------------------------------------------------------------------------------------
 def rename(t):

@@ -289,6 +289,34 @@ def size_of(folder):
     return n
 
 
+def world_size(game, world):
+    """the bytes Delete world moves into its backup: livecpk/<world> and its content folders"""
+    n = size_of(os.path.join(game.livecpk_dir, world))
+    return n + sum(size_of(os.path.join(game.content_dir, lib, world)) for lib in _libs(game)
+                   if os.path.isdir(os.path.join(game.content_dir, lib, world)))
+
+
+def discard(sider_dir, folder):
+    """B131 (Vicentico 18.10.: 6 GB of deleted worlds he could not find): a world backup deleted for
+    good, to free the disk. Only a folder of worlds_home with its world.json; returns the bytes freed"""
+    home = os.path.normcase(os.path.abspath(worlds_home(sider_dir)))
+    f = os.path.abspath(folder)
+    if (os.path.normcase(os.path.dirname(os.path.dirname(f))) != home
+            or not os.path.isfile(os.path.join(f, INFO))):
+        raise WorldError("%s is not a world backup of Mod Studio." % folder)
+    n = size_of(f)
+
+    def unlock(fn, path, _exc):            # a read-only file stops rmtree
+        os.chmod(path, 0o666)
+        fn(path)
+    shutil.rmtree(f, onerror=unlock)
+    try:
+        os.rmdir(os.path.dirname(f))       # the world's folder of backups, when that was its last
+    except OSError:
+        pass
+    return n
+
+
 # ---- a copy of a world (editing a ready world) ------------------------------------------------------
 EDITED = ".modstudio-edited"               # a ready world from a zip, made editable on this PC
 

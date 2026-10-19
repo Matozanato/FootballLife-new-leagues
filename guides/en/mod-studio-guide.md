@@ -149,8 +149,9 @@ newest ones; the mouse wheel moves the row left and right.
   other world stays on disk with its own careers. Start a new Master League after it.
 - Every card has **Export...** (one `.zip` of the world for another PC, section 9.1),
   **Rename** and **Delete**. **Delete** takes the world out of the game and off the disk, but
-  keeps all of it in **Restore points** (section 5). The world in the game cannot be deleted:
-  activate another world first.
+  keeps all of it in **Restore points** (section 5), so it still takes its space on the disk until
+  you remove that copy there with **Delete this copy for good...**. The world in the game cannot be
+  deleted: activate another world first.
 - **+ New world** at the end starts an empty world of your own (the same as **File → New
   world**); then add its leagues on **Leagues**.
 
@@ -967,6 +968,8 @@ puts it all in the clipboard to paste in a forum post or a bug report.
 **Put this copy back** restores it. Copies live in `SiderAddons\ModStudio\backups`. **Clean
 up...** removes old ones, and always keeps the oldest copy of a file (the one from before Mod
 Studio). Deleted and renamed worlds and the copy of your save folder are listed here too.
+**Delete this copy for good...** removes the copy of a deleted or copied world for good and frees
+its space (it asks first and says how much); after it, that world can not be put back.
 
 **Put Sider back as before Mod Studio...** (Restore points, and the **Game** menu) gets everything
 back: it puts back every file Mod Studio changed as it was first (`sider.ini`, CommonLib, the map

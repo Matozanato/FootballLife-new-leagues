@@ -1874,7 +1874,13 @@
   "Show me how to edit a Modpack": "Me mostre como editar um Modpack",
   "%s found the game's FL_2026.exe already changed at its spot by another mod (ABORTED in sider.log), so that one fix of ours is off; the rest of Mod Studio's modules are in. Nothing to do unless the game crashes; then use the Steam FL_2026.exe (docs/developers/by-hand.md, step A6).": "%s encontrou o FL_2026.exe do jogo já alterado no seu lugar por outro mod (ABORTED no sider.log), por isso essa correção nossa fica desligada; o resto dos módulos do Mod Studio funciona. Não é preciso fazer nada a menos que o jogo feche; nesse caso usa o FL_2026.exe da Steam (docs/developers/by-hand.md, passo A6).",
   "Kept the leagues you added before: %s.": "Os campeonatos que você adicionou antes continuam: %s.",
-  "Your Edit data (EDIT00000000) goes with the careers too: it stays with %s.": "Seus dados de Edit (EDIT00000000) também vão com as carreiras: ficam com %s."
+  "Your Edit data (EDIT00000000) goes with the careers too: it stays with %s.": "Seus dados de Edit (EDIT00000000) também vão com as carreiras: ficam com %s.",
+  "It takes %s on the disk until you delete that copy for good (Restore points > Delete this copy for good).": "Ocupa %s no disco até apagares essa cópia de vez (Pontos de restauração > Apagar esta cópia de vez).",
+  "To free %s on the disk: Restore points > Delete this copy for good.": "Para libertar %s no disco: Pontos de restauração > Apagar esta cópia de vez.",
+  "Delete this copy for good...": "Apagar esta cópia de vez...",
+  "Pick a deleted or copied world in the list: only those copies are deleted here (Clean up... is for the copies of files).": "Escolhe na lista um mundo apagado ou copiado: aqui só se apagam essas cópias (Limpar... é para as cópias de ficheiros).",
+  "Delete this copy of %s for good?\n\nIt frees %s on the disk and can not be put back any more.": "Apagar esta cópia de %s de vez?\n\nLiberta %s no disco e já não pode ser reposta.",
+  "The copy of %s is deleted: %s freed.": "A cópia de %s foi apagada: %s libertados."
  },
  "log": [
   [

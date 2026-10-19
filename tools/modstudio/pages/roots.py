@@ -576,12 +576,16 @@ class Roots(Page):
                                  "one and press Apply. Then you can delete it.") % w)
             return
         named = WL.in_modules(self.app.game) == w
+        size = R.human(WL.world_size(self.app.game, w))
         where = os.path.join(os.path.basename(self.app.game.sider_dir), "ModStudio", "backups", "worlds", w)
         text = (_("Delete the world %s?") % w + "\n\n" +
                 _("It goes out of the game: its folder, its kits and scoreboards, and its lines in sider.ini "
                   "and in the kit and scoreboard lists.") + "\n\n" +
                 _("Nothing is lost: it is all kept in %s, and Restore points > Put this copy back brings "
-                  "it back. Mod Studio keeps the last %d copies of each world.") % (where, WL.KEEP) + "\n\n" +
+                  "it back. Mod Studio keeps the last %d copies of each world.") % (where, WL.KEEP) + " " +
+                # B131: the space stays taken until that copy goes too
+                _("It takes %s on the disk until you delete that copy for good (Restore points > Delete this "
+                  "copy for good).") % size + "\n\n" +
                 _("Your leagues stay in Mod Studio (your saved world file is not deleted), so you can "
                   "build it again."))
         from .. import saves
@@ -612,7 +616,8 @@ class Roots(Page):
         self.app.busy(False)
         self.after_world_change()
         self.say(_("%s is deleted. It is kept in %s: Restore points > Put this copy back brings it back.")
-                 % (w, folder), "ok")
+                 % (w, folder) + " " + _("To free %s on the disk: Restore points > Delete this copy for good.")
+                 % size, "ok")
         return True
 
     def rename_world(self, world=None, done=None):

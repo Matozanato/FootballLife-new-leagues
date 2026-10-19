@@ -69,3 +69,9 @@ it is released; until then this page only collects what is done and tested.
   cup, and adding a league stopped too. A world built with such ids now keeps them and the others of
   that kind, and a league taken out gives its cup and super cup ids back. Every other league and cup
   keeps the ids it had, so careers carry on. (Thanks AHMED and Tysonche35)
+
+- **Deleted worlds kept taking the disk (B131).** Delete world moves the world into a copy under
+  Restore points so it can come back, and that copy kept its gigabytes with no way to free them from
+  Mod Studio. Restore points now has Delete this copy for good... for a deleted or copied world
+  (it asks first and says how much it frees), and Delete world says how big the world is and where to
+  free that space. (Thanks Vicentico)

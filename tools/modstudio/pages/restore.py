@@ -44,6 +44,7 @@ class Restore(Page):
         self.actions.insertWidget(1, self.only)
         self.action("Put this copy back", self.restore, "primary")
         self.action("Clean up...", self.clean)
+        self.action("Delete this copy for good...", self.discard, "danger")
         # 0.2.4: all of Sider back as it was before Mod Studio, in one go, and that undone again
         card = QFrame()
         card.setObjectName("card")
@@ -275,6 +276,28 @@ class Restore(Page):
         else:
             self.app.bus.content_changed.emit()
         self.say(_("%s is back as it was on %s.") % (r["file"], when(r["time"])), "ok")
+        self.refresh()
+
+    def discard(self):
+        """B131: a deleted (or copied) world's backup out for good, to free the disk"""
+        r = self.current()
+        if not r or "world_backup" not in r:
+            info(self, "Restore points", _("Pick a deleted or copied world in the list: only those copies are "
+                                           "deleted here (Clean up... is for the copies of files)."))
+            return
+        inf = r["info"]
+        size = human(WL.size_of(r["world_backup"]))
+        if not ask(self, "Restore points", _("Delete this copy of %s for good?\n\nIt frees %s on the disk and can "
+                                             "not be put back any more.") % (inf.get("world", ""), size)):
+            return
+        try:
+            WL.discard(self.sd(), r["world_backup"])
+        except (WL.WorldError, OSError) as e:
+            if not isinstance(e, OSError) or not denied(self, e):
+                error(self, "Restore points", str(e))
+            self.refresh()
+            return
+        self.say(_("The copy of %s is deleted: %s freed.") % (inf.get("world", ""), size), "ok")
         self.refresh()
 
     def clean(self):

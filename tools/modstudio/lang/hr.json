@@ -1874,7 +1874,13 @@
   "Show me how to edit a Modpack": "Pokaži mi kako urediti Modpack",
   "%s found the game's FL_2026.exe already changed at its spot by another mod (ABORTED in sider.log), so that one fix of ours is off; the rest of Mod Studio's modules are in. Nothing to do unless the game crashes; then use the Steam FL_2026.exe (docs/developers/by-hand.md, step A6).": "%s je našao igrin FL_2026.exe već promijenjen na svom mjestu od drugog moda (ABORTED u sider.logu), pa je taj jedan naš popravak isključen; ostali moduli Mod Studija rade. Ne treba ništa raditi osim ako se igra ruši; tada koristi Steam FL_2026.exe (docs/developers/by-hand.md, korak A6).",
   "Kept the leagues you added before: %s.": "Zadržane su lige koje si dodao prije: %s.",
-  "Your Edit data (EDIT00000000) goes with the careers too: it stays with %s.": "Tvoji Edit podaci (EDIT00000000) idu zajedno s karijerama: ostaju uz %s."
+  "Your Edit data (EDIT00000000) goes with the careers too: it stays with %s.": "Tvoji Edit podaci (EDIT00000000) idu zajedno s karijerama: ostaju uz %s.",
+  "It takes %s on the disk until you delete that copy for good (Restore points > Delete this copy for good).": "Zauzima %s na disku dok tu kopiju ne obrišeš zauvijek (Točke vraćanja > Obriši ovu kopiju zauvijek).",
+  "To free %s on the disk: Restore points > Delete this copy for good.": "Da oslobodiš %s na disku: Točke vraćanja > Obriši ovu kopiju zauvijek.",
+  "Delete this copy for good...": "Obriši ovu kopiju zauvijek...",
+  "Pick a deleted or copied world in the list: only those copies are deleted here (Clean up... is for the copies of files).": "Odaberi obrisani ili kopirani svijet na popisu: ovdje se brišu samo te kopije (Počisti... je za kopije datoteka).",
+  "Delete this copy of %s for good?\n\nIt frees %s on the disk and can not be put back any more.": "Obrisati ovu kopiju svijeta %s zauvijek?\n\nOslobađa %s na disku i više se ne može vratiti.",
+  "The copy of %s is deleted: %s freed.": "Kopija svijeta %s je obrisana: oslobođeno %s."
  },
  "log": [
   [
