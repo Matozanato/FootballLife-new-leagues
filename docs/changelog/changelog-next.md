@@ -107,6 +107,11 @@ it is released; until then this page only collects what is done and tested.
   `MenuServer.lua` on in sider.ini and no `content\menu-server\map_competitions.txt` (a world zip
   without menu themes, or the line switched on by hand), the module stopped as it loaded. Switch on
   now puts an empty one there, as it does for Kit Server's map_comp.txt. (Thanks David)
+- **The same club on both sides of a Champions League round-of-16 tie (B121).** In a later season the
+  game could give the winner of an earlier season's play-off tie for a February one, so a club of the
+  top eight (Lyon) also came in as a play-off winner: Lyon v Lyon. A winner that is not one of the
+  tie's two clubs is now taken from the tie's own table (else the seeded club), and the log says so.
+  (Thanks Micarodvzla22)
 
 ## Also new
 
