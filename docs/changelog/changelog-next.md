@@ -85,6 +85,12 @@ it is released; until then this page only collects what is done and tested.
   it is a suggestion at 50 %, unticked. "F.C.",
   "Football Club", "Sporting Club" and NewLife's "(GHA)" no longer stand in the way of the same name.
   (Thanks David)
+- **The game's Club World Cup with an empty semi-final (B149).** The game takes its African club
+  from Other Clubs (Africa), where it files only Wydad Casablanca. A world with Morocco's league (the
+  Modpack) takes Wydad out of that group, so the cup got three clubs for four places: the South
+  American champion went straight to the final and there was no third-place match. The fourth
+  place now goes to the CAF champion of your world when it has the CAF Champions League, else to
+  Wydad from its league. (Thanks Micarodvzla22)
 
 ## Also new
 

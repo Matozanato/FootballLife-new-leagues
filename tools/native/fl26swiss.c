@@ -633,7 +633,7 @@ static const int KO_ORDER[KO_N] = { 0, 15, 7, 8, 3, 12, 4, 11, 1, 14, 6, 9, 2, 1
 
 static int cwc_world(void);
 static char cwc_setcl(uint64_t id, u32vec* list, uint64_t flag);
-static void cwc_game_champions(u32vec* list);
+static u32vec* cwc_game_champions(u32vec* list);
 static void cont_note(uint16_t id, void* vec);
 static uint32_t canon_club(uint32_t h);
 static const char* club_note(uint32_t h, char* buf, size_t cap);
@@ -710,7 +710,7 @@ char setcl_handler(uint64_t id, u32vec* list, uint64_t flag)
     }
   }
   if (r == 1 && cwc_world()) return cwc_setcl(id, list, flag);
-  if (r == 1 && list && list->b && list->e > list->b) cwc_game_champions(list);
+  if (r == 1 && list && list->b && list->e > list->b) list = cwc_game_champions(list);
   if (is_playoff(r)) { char ok; if (q_setcl(r, id, flag, &ok)) return ok; }
   /* A group of one of our splits is handed the regular phase's table rows by 0x141343d70, which
      starts it straight after (0x141343af0: set_clubs, then 0x141590420): the values are put
@@ -2837,7 +2837,13 @@ static uint32_t cwc_club(uint16_t reg, int rank, const char** how)
  * last entrant. The field the game offered is logged once a season, club, slot and country.
  * 0.2.0: the world file's confed line gives every country's confederation (fl26_swiss_confed),
  * and a champion takes the place of the first entrant of its own confederation -- the
- * CONCACAF champion an American club's, not an African one's; without the line, as before. */
+ * CONCACAF champion an American club's, not an African one's; without the line, as before.
+ * B149: the game's African entrant is the one club it files in Other Clubs (Africa), Wydad
+ * Casablanca (9030). A world with Morocco's league takes it out of that group, the game then
+ * offers 3 clubs for 4 places and the South American champion goes straight to the final with
+ * an empty semi-final. The missing place is filled here: our CAF champion when there is one,
+ * else Wydad from its league. */
+#define CWC_AFRICA 9030u
 #define MAX_CCUP_FWD 16  /* MAX_CCUP, defined with the continental cups below */
 static int ccup_champions(uint32_t* out, int max, uint16_t* cup);
 static int caf_country(int f) { return (f >= 44 && f <= 95) || f == 98 || f == 312; }
@@ -2862,13 +2868,39 @@ static int team_country(void* blk, uint32_t club)
   unsigned char* t = blk ? ((teamget_fn)(uintptr_t)(g_base + TEAMGET_RVA))(blk, club) : 0;
   return t && *(uint32_t*)t >> 14 == club >> 14 ? *(uint16_t*)(t + 0x418) & 0x1ff : -1;
 }
-static void cwc_game_champions(u32vec* list)
+static u32vec* cwc_game_champions(u32vec* list)
 {
   uint32_t cw[MAX_CCUP_FWD]; uint16_t cc[MAX_CCUP_FWD];
   int nw = ccup_champions(cw, MAX_CCUP_FWD, cc);
   size_t n = (size_t)(list->e - list->b);
   unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
   void* blk = o ? *(void**)(o + 0x48) : 0;
+  unsigned char* rec = get_rec(1);
+  static uint32_t full[8];
+  static u32vec fv;
+  if (blk && rec && n + 1 == rec_count(rec) && n < 8) {
+    uint32_t add = 0;
+    const char* how = "";
+    for (int k = 0; k < nw && !add; k++)
+      if (!has_club(list->b, n, cw[k]) && (g_confed_n ? confed_of(team_country(blk, cw[k])) : 5) == 5) {
+        add = cw[k]; how = "our CAF champion";
+      }
+    if (!add) {
+      unsigned char* t = ((teamget_fn)(uintptr_t)(g_base + TEAMGET_RVA))(blk, (uint64_t)CWC_AFRICA << 14);
+      if (t && *(uint32_t*)t >> 14 == CWC_AFRICA && !has_club(list->b, n, *(uint32_t*)t)) {
+        add = *(uint32_t*)t; how = "Wydad Casablanca, from its league";
+      }
+    }
+    if (add) {
+      for (size_t i = 0; i < n; i++) full[i] = list->b[i];
+      full[n] = add;
+      fv.b = full; fv.e = fv.c = full + n + 1;
+      logf("fl26swiss: Club World Cup (the game's) -- %u club(s) offered for %u places; %08x added (%s)",
+           (unsigned)n, (unsigned)rec_count(rec), add, how);
+      list = &fv;
+      n++;
+    }
+  }
   static int said_year = -1;
   int y = abs_day() / 365;
   if (said_year != y && blk) {
@@ -2882,7 +2914,7 @@ static void cwc_game_champions(u32vec* list)
            ok ? *(uint16_t*)(t + 0x418) & 0x1ff : -1);
     }
   }
-  if (!blk) return;
+  if (!blk) return list;
   for (int k = 0; k < nw; k++) {
     if (has_club(list->b, n, cw[k])) continue;
     int want = g_confed_n ? confed_of(team_country(blk, cw[k])) : 5;
@@ -2898,6 +2930,7 @@ static void cwc_game_champions(u32vec* list)
          list->b[at], how);
     list->b[at] = cw[k];
   }
+  return list;
 }
 
 static uint32_t g_cwc[CWC_N];
