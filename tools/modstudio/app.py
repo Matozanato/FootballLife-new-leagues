@@ -853,9 +853,14 @@ class Main(QMainWindow):
         self.save_settings()
         box = QMessageBox(self)
         box.setWindowTitle(_("Support FL26 Mod Studio"))
-        box.setText(_("FL26 Mod Studio is free and donating is never required, but a small donation "
-                      "on Ko-fi makes it easier for us to keep the project maintained and updated. "
-                      "Thank you!"))
+        # the link itself in the box too, not only behind the button (mato 19.10.)
+        import html
+        box.setTextFormat(Qt.RichText)
+        box.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        box.setText(html.escape(_("FL26 Mod Studio is free and donating is never required, but a small donation "
+                                  "on Ko-fi makes it easier for us to keep the project maintained and updated. "
+                                  "Thank you!"))
+                    + '<br><br><a href="%s">%s</a>' % (self.KOFI, self.KOFI.split("//", 1)[1]))
         kofi = box.addButton(_("Support on Ko-fi"), QMessageBox.AcceptRole)
         box.addButton(_("Not now"), QMessageBox.RejectRole)
         box.setDefaultButton(kofi)
