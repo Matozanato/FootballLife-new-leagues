@@ -45,18 +45,21 @@ def slowest_look(busy):
 
 def main(base):
     sys.setswitchinterval(0.005)          # Python's own: what the 0.2.4 exe test froze with
-    game = tempfile.mkdtemp(prefix="fl26-apart-")
+    # each world in a game folder of its own: in one folder the second would take the first's
+    # player ids (twin_build_ids, B155b) and say so in a log line the first has not
+    game, game2 = tempfile.mkdtemp(prefix="fl26-apart-"), tempfile.mkdtemp(prefix="fl26-apart2-")
     try:
-        for d in ("livecpk", "modules", "content"):
-            os.makedirs(os.path.join(game, "SiderAddons", d))
-        with open(os.path.join(game, "SiderAddons", "sider.ini"), "w") as f:
-            f.write("[sider]\n")
+        for g in (game, game2):
+            for d in ("livecpk", "modules", "content"):
+                os.makedirs(os.path.join(g, "SiderAddons", d))
+            with open(os.path.join(g, "SiderAddons", "sider.ini"), "w") as f:
+                f.write("[sider]\n")
         here_log, there_log = [], []
         here = slowest_look(lambda: B.build(B.plan(recipe("_FL26Here"), base), base, game, False,
                                             log=lambda t: here_log.append(str(t))))
-        there = slowest_look(lambda: apart.build(B.plan(recipe("_FL26There"), base), base, game, False,
+        there = slowest_look(lambda: apart.build(B.plan(recipe("_FL26There"), base), base, game2, False,
                                                  there_log.append))
-        a, b = tables(game, "_FL26Here"), tables(game, "_FL26There")
+        a, b = tables(game, "_FL26Here"), tables(game2, "_FL26There")
         ok("the same tables built apart (%d files)" % len(a), sorted(a) == sorted(b)
            and all(a[f] == b[f] for f in a))
         ok("the log comes back line by line (%d lines)" % len(there_log), len(there_log) == len(here_log) > 5)
@@ -73,6 +76,7 @@ def main(base):
             ok("a BuildError comes back as one (got %r)" % e, False)
     finally:
         shutil.rmtree(game, ignore_errors=True)
+        shutil.rmtree(game2, ignore_errors=True)
     print("1..%d" % N)
 
 
