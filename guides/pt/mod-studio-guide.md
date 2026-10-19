@@ -656,7 +656,7 @@ escudos para muitos clubes de uma vez. Escolha uma pasta de imagens; cada uma é
 pelo nome do arquivo -- o nome do clube (`Alianza Lima.png`, `alianza_lima_r_l.png`) ou o ID do
 clube (`2287.png`, o `e_2287_r.png` dos packs de escudos). Um nome só combina com palavras inteiras,
 e uma seleção só pega uma imagem pelo ID do clube (0.2.4; antes, "termalica" podia ir para o Mali).
-A lista mostra cada ligação com uma marca; desmarque uma errada antes de **OK**. Um clube que já
+A lista mostra cada ligação com uma marca; desmarque uma errada antes de **OK**. **Ligar a** também pode ser uma liga do seu mundo: só os clubes dela são ligados, e uma pasta com o nome de uma liga do seu mundo (`Torneo DIMAYOR II`) escolhe ela sozinha, então um clube de mesmo nome em outra liga não recebe nada. Um clube que já
 tem escudo mantém ele, a não ser que **Substituir escudos já definidos** esteja marcado. As imagens
 ficam nessa pasta e a construção lê elas dali, então guarde a pasta. (Ligar pelo nome é uma ideia
 do script de escudos do Xxspedd.)
