@@ -58,6 +58,11 @@ it is released; until then this page only collects what is done and tested.
   the note said only "careers". The note now says the Edit data goes with them too. To keep one Edit
   for every world: Settings > untick **Each world keeps its own careers**, then copy EDIT00000000
   from `save_<your old world>` into `save`. (Thanks pepponeee98)
+- **The same world built under a new name gave its players other ids (B155b).** 0.2.4 gives a new
+  club 30 players, not 22, so a recipe of 0.2.3 built as a new world numbered the new clubs' players
+  afresh, and an Edit or a career of the old world showed other people. Build keeps a world's ids only
+  for the same world; a world built for the first time now takes the ids of the world of the same
+  leagues on your PC, and the log says which one. (Thanks pepponeee98)
 - **A Modpack/Europack world lost all its kits at Switch on with SPFL26's kits.lua (B158).** With
   `common\kits.lua` on in sider.ini and no `content\kits` folder, Install mods merged the world's kit
   lines into `content\kit-server\map.txt`, and switching the world on looked for the kits in

@@ -1440,6 +1440,54 @@ def last_build_ids(game, world):
         return {}
 
 
+TWIN_SHARE = 0.9      # twin_build_ids: the share of new clubs two worlds must have in common
+
+
+def twin_build_ids(game, world, plan, log=None):
+    """the ids file of another world built from the same leagues, for a world built for the first
+    time ({} when there is none): B155b, pepponeee98 19.10.2026. His Edit (EDIT00000000) went with
+    a world of 0.2.3; 0.2.4 makes 30 players a new club, not 22, so the same recipe built under a
+    new name numbered the new clubs' players afresh -- 6 of 4625 kept their id -- and the Edit
+    showed other people. Only the world's own file (last_build_ids) was read. Now a world with no
+    file of its own takes the file of the world whose new clubs are this plan's: nearly all of
+    its clubs are new clubs of this plan, and it has nearly all of the plan's clubs the recipe
+    gives players (TWIN_SHARE; a file of 0.2.3 lists only those, 229 of pepponeee98's 262), with
+    the same NewLife clubs where both files say; the most alike first."""
+    log = log or (lambda *_a: None)
+    mine = {"%s/%d" % (p["name"], k) for p in plan.get("leagues") or [] for k in range(len(p.get("teams") or []))}
+    if not mine:
+        return {}
+    told = mine & set(plan.get("players") or {}) or mine        # the clubs a recipe gives players
+    now = club_newlife(plan)
+    root = os.path.join(siderdir.find(game), "livecpk")
+    best = None
+    try:
+        names = sorted(os.listdir(root))
+    except OSError:
+        return {}
+    for w in names:
+        if w == world or w.lower().endswith((".building", ".old")):
+            continue
+        got = last_build_ids(game, w)
+        theirs = {k for k in got.get("clubs") or {} if "/" in k}
+        both = told & theirs
+        if not theirs or len(mine & theirs) < TWIN_SHARE * len(theirs) or len(both) < TWIN_SHARE * len(told):
+            continue
+        was = got.get("club_nl") if isinstance(got.get("club_nl"), dict) else {}
+        said = [k for k in both if k in was and k in now]
+        if said and sum(was[k] == now[k] for k in said) < TWIN_SHARE * len(said):
+            continue
+        score = (len(both), os.path.getmtime(os.path.join(root, w, PLAYER_IDS)))
+        if best is None or score > best[0]:
+            best = (score, w, got)
+    if not best:
+        return {}
+    log("  player ids: %s has none of its own yet, so it keeps those of %s, built from the same leagues "
+        "(%d of %d new clubs): an Edit or a career of %s shows the same players" % (world, best[1], best[0][0],
+                                                                                  len(told), best[1]))
+    return best[2]
+
+
 def id_names(plan, ids):
     """{club: {player key: name}} for the keys in ids whose change names the player: the next
     Build keeps a key's id only for the same player"""
@@ -3870,7 +3918,8 @@ def build(pl, base, game, replace=False, log=print):
     except lbplayers.Error as e:
         raise BuildError(str(e))
     lap("squads")
-    last = follow_clubs(last_build_ids(game, pl["world"]), club_newlife(clubs))
+    last = last_build_ids(game, pl["world"]) or twin_build_ids(game, pl["world"], clubs, log)
+    last = follow_clubs(last, club_newlife(clubs))
     try:
         retired = {int(x) for x in last.get("retired") or [] if lbplayers.PID_MAX >= int(x) > 0}
     except (TypeError, ValueError):
