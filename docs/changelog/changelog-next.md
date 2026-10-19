@@ -103,6 +103,10 @@ it is released; until then this page only collects what is done and tested.
   leagues the cup takes its places from, and the log names it. Also, worlds of more than 64 leagues
   kept last season's final table for only the first 64 (Vietnam, Jordan, Kuwait, Bahrain and Oman
   then sent the clubs on top of the live table); now 256. (Thanks bruce_wayne)
+- **Menu Server stopped at the game's start with a world that has no menus (B112).** With
+  `MenuServer.lua` on in sider.ini and no `content\menu-server\map_competitions.txt` (a world zip
+  without menu themes, or the line switched on by hand), the module stopped as it loaded. Switch on
+  now puts an empty one there, as it does for Kit Server's map_comp.txt. (Thanks David)
 
 ## Also new
 

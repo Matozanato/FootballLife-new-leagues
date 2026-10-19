@@ -230,6 +230,20 @@ def main():
         ok("menus: and back on with their world", "#" + a1 in ml and b1 in ml)
         ok("menus: nothing to change, nothing written", S.menus(e, "_FL26B", log=lambda *_: None) == 0)
         ok("menus: no menu-server, nothing happens", S.menus(os.path.join(tmp, "none"), "_FL26A", log=lambda *_: None) == 0)
+        ok("menus: and no folder made without MenuServer.lua", not os.path.exists(os.path.join(tmp, "none")))
+        # B112 (David.BDJ, 17.10.): MenuServer.lua on and no map_competitions.txt -- it stops at its start
+        g = os.path.join(tmp, "b112", "SiderAddons")
+        put(os.path.join(g, "sider.ini"), 'lua.module = "MenuServer.lua"' + chr(10))
+        mp2 = os.path.join(g, S.MENUS, "map_competitions.txt")
+        S.menus(g, "_FL26A", log=lambda *_: None)
+        ok("B112: an empty map_competitions.txt is made", os.path.isfile(mp2) and os.path.getsize(mp2) == 0)
+        put(mp2, "26, Coupe" + chr(10))
+        S.menus(g, "_FL26A", log=lambda *_: None)
+        ok("B112: one that is there stays as it is", lines(mp2) == ["26, Coupe"])
+        g = os.path.join(tmp, "b112-off", "SiderAddons")
+        put(os.path.join(g, "sider.ini"), '; lua.module = "MenuServer.lua"' + chr(10))
+        S.menus(g, "_FL26A", log=lambda *_: None)
+        ok("B112: MenuServer.lua switched off, nothing made", not os.path.exists(os.path.join(g, S.MENUS)))
 
         # B129 (laracroft7826, 18.10.): sider.ini loads SPFL26's kits.lua but only content\kit-server is
         # there (or no kit module and only content\kits): Install mods merged the Modpack's lines into the

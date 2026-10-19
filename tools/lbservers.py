@@ -477,6 +477,17 @@ def menus(sider, world, log=print):
     under every other world (B72, our test 16.10.: 88 eu1 and the r7 lines live under
     _FL26MyWorld). Lines of your own are not touched; returns the lines changed"""
     path = os.path.join(sider, MENUS, "map_competitions.txt")
+    # B112 (David.BDJ, 17.10.): MenuServer.lua, when sider.ini loads it, stops at its start when
+    # content\menu-server has no map_competitions.txt (a world zip with no menus, a clean install
+    # with the line switched on by hand) -- an empty one is put there, as for kserv.lua (B130)
+    if "menuserver" in _live_modules(sider) and not os.path.exists(path):
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            open(path, "w").close()
+            log("menus: content\\menu-server had no map_competitions.txt, which MenuServer.lua needs -- "
+                "an empty one made")
+        except OSError:
+            pass
     lines, nl, bom, enc = lbstadiums.read(path)
     live = os.path.join(sider, "livecpk")
     want = safe(world).lower() if world else ""
