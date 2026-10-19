@@ -53,11 +53,11 @@ CID_COSMETIC_LOW = (50, 51, 52, 53, 54, 55, 57, 58, 64)
 LOW_CIDS = os.environ.get("FL26_LOW_CIDS") == "1"
 
 
-def cid_pool(cid_from=130):
+def cid_pool(cid_from=130, low=False):
     """competition ids in the order they are handed out: cid_from..255 (the safe low ones after
-    them only with FL26_LOW_CIDS=1, research)"""
+    them only with FL26_LOW_CIDS=1, research, or `low`: a world built with them, B159)"""
     return ([c for c in range(cid_from, CID_MAX + 1)]
-            + ([c for c in CID_SAFE_LOW + CID_COSMETIC_LOW if c < cid_from] if LOW_CIDS else []))
+            + ([c for c in CID_SAFE_LOW + CID_COSMETIC_LOW if c < cid_from] if LOW_CIDS or low else []))
 
 # Regulation ids that are free in the tables but not free in the game: a league built on one
 # of these shows Libertadores and Asian clubs in its table, so the exe knows them.  14, 32 and

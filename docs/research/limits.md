@@ -137,7 +137,9 @@ on slots from 124 up.
 - **Competition ids below 130**: `mkworld.cid_pool()` hands out 130..255 first and then the
   28 low ids the exe never names (`CID_SAFE_LOW`), then nine that only change the match
   presentation. 6, 7, 48, 65, 91 and 92 are never used (continental competitions, prize
-  multiplier, cup round names).
+  multiplier, cup round names). The low ones only with `FL26_LOW_CIDS=1`, or for a world whose
+  last Build already has one (`leaguebuilder.low_cids`, B159: the Europack and the Modpack were
+  built that way, and Make it editable must be able to build them again).
 - **Competition ids above 255**: designed, not built. Each of Competition, CompetitionEntry
   and CompetitionRegulation has one spare byte (+7, +0xb, +0x910) that can hold the high
   byte, and five loader hooks would read it; the game keeps the id as a 32-bit number after

@@ -1766,14 +1766,16 @@ def plan(recipe, base, prev=None):
                          % (len(leagues), len(free)))
     # a league built before keeps its competition id; the others take the first free ones
     cid_of, taken_cid = {}, set()
-    pool = [c for c in W.cid_pool(CID_FROM) if c not in used_cid and c != UECL_CID]
+    low = low_cids(prev)
+    pool = [c for c in W.cid_pool(CID_FROM, low) if c not in used_cid and c != UECL_CID]
     for i, nm in enumerate(names):
         c = (pins.get(nm.lower()) or {}).get("cid")
         if isinstance(c, int) and c in pool and c not in taken_cid:
             cid_of[i] = c
             taken_cid.add(c)
     # nor a cup's id of the last Build: build() gives the cup its own back (pinned_ids)
-    cup_cids = {w.get("cid") for w in ((prev or {}).get("cup_ids") or {}).values() if isinstance(w, dict)}
+    prev_cups = kept_cups(renamed_cups((prev or {}).get("cup_ids") or {}, renamed), names)
+    cup_cids = {w.get("cid") for w in prev_cups.values() if isinstance(w, dict)}
     rest = iter(c for c in pool if c not in taken_cid and c not in cup_cids)
     for i in range(len(leagues)):
         if i not in cid_of:
@@ -2132,9 +2134,39 @@ def plan(recipe, base, prev=None):
             "country_order": recipe.get("country_order") or None,
             "cup_draw": cup_draw(recipe),
             # the cups' ids of the last Build, {key: {cid, reg, ...}}: build() gives each its own back
-            "prev_cup_ids": renamed_cups((prev or {}).get("cup_ids") or {}, renamed),
+            "prev_cup_ids": kept_cups(prev_cups, names, [s["code"] for s in gsupers]),
+            # B159: a world built with competition ids under 130 (eu4, r12) goes on with them
+            "low_cids": low,
             # the recipe's keys kept as they were, for recipe_from_plan (RECIPE_SETTINGS)
             "settings": {k: copy.deepcopy(full[k]) for k in RECIPE_SETTINGS if k in full}}
+
+
+def low_cids(prev):
+    """B159 (AHMED, Tysonche35 19.10.): the last Build gave a league or a cup a competition id
+    under CID_FROM (eu4 and r12 were built with FL26_LOW_CIDS=1). Such a world keeps the low ids
+    in its pool: without them its own cups found no id ("no free competition ids left", or out
+    of ids for a cup) on a Build with nothing changed"""
+    p = prev or {}
+    cids = [L.get("cid") for L in (p.get("leagues") or []) + (p.get("others") or []) if isinstance(L, dict)]
+    cids += [w.get("cid") for w in (p.get("cup_ids") or {}).values() if isinstance(w, dict)]
+    return any(isinstance(c, int) and c < CID_FROM for c in cids)
+
+
+def kept_cups(ids, names, codes=None):
+    """the cups' ids of the last Build (renamed_cups) less those of cups the recipe has no more:
+    a league taken out held its national and super cup's ids for good (B159), and they are the
+    ones a world near 255 competitions needs. `codes`: the game super cups still there, None
+    keeps them all"""
+    have = {n.lower() for n in names}
+    out = {}
+    for k, w in ids.items():
+        kind, _, name = k.partition(":")
+        if kind in ("cup", "super") and name.lower() not in have:
+            continue
+        if kind == "gsuper" and codes is not None and name not in codes:
+            continue
+        out[k] = w
+    return out
 
 
 def renamed_cups(ids, renamed):
@@ -3975,7 +4007,8 @@ def build(pl, base, game, replace=False, log=print):
     for c in pl.get("ccups") or []:
         c["winners"] = list(c.get("winners") or []) + [[r, own_cup[r]] for r in
                                                        {e[1] for e in c["entry"] if e[0] == "cup"} if own_cup.get(r)]
-    ccups = continental((pl.get("ccups") or []) + hc, tmp, db, log, alt_from(pl), pl.get("prev_cup_ids"))
+    ccups = continental((pl.get("ccups") or []) + hc, tmp, db, log, alt_from(pl), pl.get("prev_cup_ids"),
+                        pl.get("low_cids"))
     for c in (pl.get("ccups") or []) + hc:
         pl.setdefault("cup_ids", {})["ccup:" + (c.get("code") or c["name"])] = {
             f: c[f] for f in ("cid", "reg", "ko", "pre_reg") if isinstance(c.get(f), int)}
@@ -4485,7 +4518,7 @@ def pinned_ids(pl, db, key):
     (pl["prev_cup_ids"]), and no other cup's old ids (audit 12.10.: a league added in front gave
     every cup after it new ids, and a career holds them)"""
     want = pl.get("prev_cup_ids") or {}
-    cids, regs = free_comp_ids(db)
+    cids, regs = free_comp_ids(db, low=pl.get("low_cids"))
     mine = want.get(key) or {}
     others_c = {w.get("cid") for k, w in want.items() if k != key}
     others_r = {v for k, w in want.items() if k != key for f, v in w.items() if f != "cid"}
@@ -4495,15 +4528,15 @@ def pinned_ids(pl, db, key):
             r0 + [r for r in regs if r not in others_r and r not in r0])
 
 
-def free_comp_ids(db, reserved=()):
+def free_comp_ids(db, reserved=(), low=False):
     """competition ids and regulation ids (from CCUP_REG_FROM) nothing in the world's tables in
-    <db> uses, nor anything kept for later"""
+    <db> uses, nor anything kept for later; `low`: with the ids under 130 (low_cids)"""
     comp, regs = M.load(db, "Competition.bin"), M.load(db, "CompetitionRegulation.bin")
     used_cid = {comp[i + M.CID_OFF] for i in range(0, len(comp), M.COMP)}
     used_reg = {u16(regs[i:], M.R_ID) & 0x3ff for i in range(0, len(regs), M.REG)}
     taken = (used_reg | CCUP_KEEP | W.BAD_REG | set(W.MOVED_REG.values()) | set(fl26world.DEFAULT_SLOT)
              | set(fl26world.NO_SLOT_IDS) | set(reserved))
-    return ([c for c in W.cid_pool(CID_FROM) if c not in used_cid and c != UECL_CID],
+    return ([c for c in W.cid_pool(CID_FROM, low) if c not in used_cid and c != UECL_CID],
             [r for r in range(CCUP_REG_FROM, 1024) if r not in taken])
 
 
@@ -4967,7 +5000,7 @@ def game_super_cups(pl, root, db, log=print):
                if s["calendar"] else ""))
 
 
-def continental(cups, root, db, log=print, start=None, want=None):
+def continental(cups, root, db, log=print, start=None, want=None, low=False):
     """build the planned continental cups (ccup_plan) with mkccup.py into the world's tables in
     <db>, with ids nothing in them uses -- a cup's own of the last Build first (want, the plan's
     prev_cup_ids); returns the world file's ccup lines"""
@@ -4975,7 +5008,7 @@ def continental(cups, root, db, log=print, start=None, want=None):
         return []
     import mkccup
     want = want or {}
-    all_c, all_r = free_comp_ids(db)
+    all_c, all_r = free_comp_ids(db, low=low)
     pin_c = {w.get("cid") for w in want.values()}
     pin_r = {v for w in want.values() for f, v in w.items() if f != "cid"}
     cids = [c for c in all_c if c not in pin_c]

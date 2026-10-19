@@ -63,3 +63,9 @@ it is released; until then this page only collects what is done and tested.
   lines into `content\kit-server\map.txt`, and switching the world on looked for the kits in
   `content\kits`, found none and took every one of those lines out again (only the "added by" header
   stayed). Switch on now picks the kit and scoreboard folders the way Install mods does. (Thanks jibibi)
+- **Europack and Modpack worlds made editable stopped Build for their own cups (B159).** These worlds
+  were built with some competition ids under 130 (Malta's cup, Egypt's), and Build on this PC only
+  hands out 130..255: a Build with nothing changed stopped with "no free competition ids left" for a
+  cup, and adding a league stopped too. A world built with such ids now keeps them and the others of
+  that kind, and a league taken out gives its cup and super cup ids back. Every other league and cup
+  keeps the ids it had, so careers carry on. (Thanks AHMED and Tysonche35)

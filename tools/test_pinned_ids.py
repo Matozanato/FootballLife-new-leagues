@@ -86,6 +86,26 @@ def main(base):
     want = B.plan({"world": "_TestPins", "leagues": [named, back, b, c]}, base, cups)["prev_cup_ids"]
     ok("an old name another league has now: the cups' ids stay that league's",
        want.get("cup:Pin Albania") == {"cid": 222, "reg": 300} and "cup:Pin Albania Renamed" not in want)
+
+    # B159 (AHMED, Tysonche35 19.10.): Europack eu4 and r12 were built with ids under 130 (Malta's
+    # cup 25, Egypt's 58); a Build of eu4 with nothing changed stopped for the Malta cup, and the
+    # national and super cups of a league taken out held their ids for good
+    want = B.plan({"world": "_TestPins", "leagues": [b, c]}, base, cups)["prev_cup_ids"]
+    ok("a league taken out: its cup and super cup ids are free again, the others' kept",
+       "cup:Pin Albania" not in want and "super:Pin Albania" not in want
+       and want.get("cup:Pin Bosnia") == {"cid": 224, "reg": 302})
+    ok("a world of ids from 130 stays there", first.get("low_cids") is False
+       and all(v[0] >= B.CID_FROM for v in one.values()))
+    lows = dict(first, leagues=[dict(p, cid=25) if p["name"] == "Pin Albania" else p for p in first["leagues"]],
+                cup_ids={"cup:Pin Bosnia": {"cid": 58, "reg": 302}})
+    pl = B.plan({"world": "_TestPins", "leagues": [a, b, c]}, base, lows)
+    ok("a world built with low ids (eu4): the league keeps 25", ids(pl)["Pin Albania"][0] == 25
+       and pl["low_cids"] is True)
+    cids, _regs = B.pinned_ids(pl, base, "cup:Pin Bosnia")
+    ok("its cup gets 58 back", cids[0] == 58)
+    ok("and the low ids are in the pool after 130..255", 26 in cids
+       and cids.index(26) > max(i for i, x in enumerate(cids) if x >= B.CID_FROM))
+    ok("a world without them: no low id", not any(x < B.CID_FROM for x in B.pinned_ids(first, base, "cup:X")[0]))
     print("1..%d" % N)
 
 
