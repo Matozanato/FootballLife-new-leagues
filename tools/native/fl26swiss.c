@@ -2844,6 +2844,8 @@ static uint32_t cwc_club(uint16_t reg, int rank, const char** how)
  * an empty semi-final. The missing place is filled here: our CAF champion when there is one,
  * else Wydad from its league. */
 #define CWC_AFRICA 9030u
+/* the team lookup reads a handle's lower 14 bits as the club's row in the team array, so a bare id finds row 0: canon_club gives it Wydad's own row */
+#define CWC_GAME_N 4u      /* the game's own cup: four clubs, whatever reg 1 still holds from last time */
 #define MAX_CCUP_FWD 16  /* MAX_CCUP, defined with the continental cups below */
 static int ccup_champions(uint32_t* out, int max, uint16_t* cup);
 static int caf_country(int f) { return (f >= 44 && f <= 95) || f == 98 || f == 312; }
@@ -2875,10 +2877,9 @@ static u32vec* cwc_game_champions(u32vec* list)
   size_t n = (size_t)(list->e - list->b);
   unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
   void* blk = o ? *(void**)(o + 0x48) : 0;
-  unsigned char* rec = get_rec(1);
-  static uint32_t full[8];
+  static uint32_t full[CWC_GAME_N];
   static u32vec fv;
-  if (blk && rec && n + 1 == rec_count(rec) && n < 8) {
+  if (blk && n + 1 == CWC_GAME_N) {
     uint32_t add = 0;
     const char* how = "";
     for (int k = 0; k < nw && !add; k++)
@@ -2886,7 +2887,7 @@ static u32vec* cwc_game_champions(u32vec* list)
         add = cw[k]; how = "our CAF champion";
       }
     if (!add) {
-      unsigned char* t = ((teamget_fn)(uintptr_t)(g_base + TEAMGET_RVA))(blk, (uint64_t)CWC_AFRICA << 14);
+      unsigned char* t = ((teamget_fn)(uintptr_t)(g_base + TEAMGET_RVA))(blk, canon_club((uint32_t)CWC_AFRICA << 14));
       if (t && *(uint32_t*)t >> 14 == CWC_AFRICA && !has_club(list->b, n, *(uint32_t*)t)) {
         add = *(uint32_t*)t; how = "Wydad Casablanca, from its league";
       }
@@ -2896,10 +2897,12 @@ static u32vec* cwc_game_champions(u32vec* list)
       full[n] = add;
       fv.b = full; fv.e = fv.c = full + n + 1;
       logf("fl26swiss: Club World Cup (the game's) -- %u club(s) offered for %u places; %08x added (%s)",
-           (unsigned)n, (unsigned)rec_count(rec), add, how);
+           (unsigned)n, CWC_GAME_N, add, how);
       list = &fv;
       n++;
-    }
+    } else
+      logf("fl26swiss: Club World Cup (the game's) -- %u club(s) offered for %u places; no CAF champion of ours and no Wydad (%08x) to add",
+           (unsigned)n, CWC_GAME_N, canon_club((uint32_t)CWC_AFRICA << 14));
   }
   static int said_year = -1;
   int y = abs_day() / 365;
