@@ -388,7 +388,8 @@ class Leagues(BuilderPage):
         text = (_("%d leagues: %d of the game, %d of yours.") % (total, total - ours, ours)
                 if shown == total + groups else _("%d of %d leagues shown.") % (shown, total + groups))
         if groups:
-            text += "  " + _("%d groups of clubs in no league.") % groups
+            text += "  " + (_("%d group of clubs in no league.") if groups == 1 else
+                            _("%d groups of clubs in no league.")) % groups
         plan = built_plan(self.app.game, r.get("world"))
         if plan:
             placed = sum(1 for p in plan.get("leagues") or [] if not p.get("others")

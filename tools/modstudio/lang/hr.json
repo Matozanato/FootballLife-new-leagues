@@ -1794,6 +1794,7 @@
   "%s is a ready world, installed from a zip: nothing to build. Press Start the game and start a new Master League.": "%s je gotov svijet, instaliran iz zipa: ništa se ne gradi. Stisni Pokreni igru, pa započni novu Master League.",
   "It is not in the game: My world > Activate on %s": "Nije u igri: Moj svijet > Aktiviraj na %s",
   "%d groups of clubs in no league.": "%d grupa klubova bez lige.",
+  "%d group of clubs in no league.": "%d grupa klubova bez lige.",
   "%d of yours with a place in Select Team.": "%d tvojih ima mjesto u Select Teamu.",
   "Places in Select Team": "Mjesta u Select Teamu",
   "The league's place in the order: the first ones get a place in Select Team": "Mjesto lige u redoslijedu: prve dobivaju mjesto u Select Teamu",

@@ -1794,6 +1794,7 @@
   "%s is a ready world, installed from a zip: nothing to build. Press Start the game and start a new Master League.": "%s é um mundo pronto, instalado de um zip: nada a construir. Carrega em Iniciar o jogo e começa uma nova Master League.",
   "It is not in the game: My world > Activate on %s": "Não está no jogo: O meu mundo > Ativar em %s",
   "%d groups of clubs in no league.": "%d grupos de clubes sem liga.",
+  "%d group of clubs in no league.": "%d grupo de clubes sem liga.",
   "%d of yours with a place in Select Team.": "%d das tuas com lugar em Select Team.",
   "Places in Select Team": "Lugares em Select Team",
   "The league's place in the order: the first ones get a place in Select Team": "O lugar da liga na ordem: as primeiras recebem lugar em Select Team",
