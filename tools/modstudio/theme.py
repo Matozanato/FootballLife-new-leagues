@@ -330,6 +330,23 @@ def repolish(widget):
 _CAPS = None
 
 
+def fit_heads(header):
+    """a column head as wide as its text at least (B134, UI test in French 18.10.: "DOSSIERS ACT",
+    "MODULES ACT", "ID DU B" -- the widths a page sets fit the English words); once, when the head is
+    first shown, so a column the user narrows stays so. A column that sizes itself (to its contents,
+    stretched) or the last one, which fills the rest, is left as it is"""
+    from PySide6.QtWidgets import QHeaderView
+    n = header.count()
+    for c in range(n):
+        if header.isSectionHidden(c) or header.sectionResizeMode(c) != QHeaderView.Interactive:
+            continue
+        if c == n - 1 and header.stretchLastSection():
+            continue
+        want = header.sectionSizeHint(c)
+        if want > header.sectionSize(c):
+            header.resizeSection(c, want)
+
+
 def _caps_filter():
     from PySide6.QtCore import QObject, QEvent
     from PySide6.QtWidgets import (QAbstractButton, QHeaderView, QTabBar, QCheckBox, QRadioButton, QTreeView,
@@ -337,6 +354,10 @@ def _caps_filter():
 
     class Caps(QObject):
         def eventFilter(self, obj, ev):
+            if ev.type() == QEvent.Show and isinstance(obj, QHeaderView) and not obj.property("_fit"):
+                obj.setProperty("_fit", True)
+                fit_heads(obj)
+                return False
             if ev.type() != QEvent.Polish:
                 return False
             # every table and tree: rows that alternate (jibibi, 15.10.: not enough contrast)

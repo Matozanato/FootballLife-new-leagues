@@ -116,7 +116,8 @@ it is released; until then this page only collects what is done and tested.
   Reason column of Restore points stayed English ("Switch on: kits map"); it is now said in the
   language of the window, older restore points too. The Leagues page says "1 group of clubs in no
   league", not "1 groups", and the bottom bar says "Switching ... on" or "Exporting ..." while
-  it does that, not "Building...".
+  it does that, not "Building...". Column names cut short in those languages ("DOSSIERS ACT" on
+  Profiles, "VALORACIÓN" on Players) now show whole.
 
 ## Also new
 

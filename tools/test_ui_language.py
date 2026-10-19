@@ -267,8 +267,12 @@ def run():
                 continue
             hh, item = tr.header(), tr.headerItem()
             for c in range(tr.columnCount()):
-                if item.text(c) in heads and not tr.isColumnHidden(c):
-                    seen += 1
+                # every column of a set width, not only On and Slot (B134 after 0.2.4: "DOSSIERS ACT",
+                # "MODULES ACT" on Profiles, "ID DU B" on Balls); the last one fills the rest
+                fixed = (hh.sectionResizeMode(c) == QHeaderView.Interactive
+                         and not (c == tr.columnCount() - 1 and hh.stretchLastSection()))
+                if item.text(c).strip() and (item.text(c) in heads or fixed) and not tr.isColumnHidden(c):
+                    seen += item.text(c) in heads
                     need = hh.fontMetrics().horizontalAdvance(item.text(c)) +                         2 * hh.style().pixelMetric(QStyle.PM_HeaderMargin, None, hh)
                     ok("%s: the column %r shows all of its name (%d of %d px)"
                        % (name, item.text(c), need, hh.sectionSize(c)), need <= hh.sectionSize(c))
