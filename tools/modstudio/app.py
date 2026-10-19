@@ -392,6 +392,14 @@ class Main(QMainWindow):
         cb.setToolTip(_("Everyone who helped make Mod Studio"))
         cb.clicked.connect(self.credits)
         h.addWidget(cb)
+        # mato 19.10.: the Ko-fi link always in sight, next to Credits (the name is Ko-fi's own, not translated)
+        kb = QToolButton()
+        kb.setObjectName("menu")
+        kb.setText("♥ Ko-fi")
+        kb.setToolTip(_("Support FL26 Mod Studio"))
+        kb.clicked.connect(self.open_kofi)
+        self.kofi_btn = kb
+        h.addWidget(kb)
         h.addStretch(1)
         self.run_label = QLabel("")
         self.run_label.setObjectName("running")
@@ -824,6 +832,12 @@ class Main(QMainWindow):
                                follow=(_("Show me how to install a Modpack"), self.start_modpack_guide)).start()
 
     KOFI = "https://ko-fi.com/mata28"
+
+    def open_kofi(self):
+        """the Ko-fi button next to Credits: the page in the browser"""
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+        QDesktopServices.openUrl(QUrl(self.KOFI))
 
     def ask_support(self):
         """mato 19.10.: the first start of a version reminds, in two lines, that Ko-fi is there.

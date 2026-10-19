@@ -90,3 +90,4 @@ it is released; until then this page only collects what is done and tested.
 
 - **A short Ko-fi reminder at the first start of a new version.** Once per version, after the quick
   tour: donating is never required, Not now closes it and it does not come back until the next version.
+- **A Ko-fi button at the top, next to Credits**: it opens the Ko-fi page in the browser.
