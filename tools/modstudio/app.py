@@ -1093,8 +1093,30 @@ def denied_hook(previous):
             finally:
                 showing.clear()
             return
+        keep_error(kind, err, tb)
         previous(kind, err, tb)
     return hook
+
+
+def keep_error(kind, err, tb):
+    """an error in a click goes to errors.log next to settings.json: the exe has no console, so a
+    button that failed did nothing and said nothing (B161, vmican 19.10.: Remove and Edit league,
+    no box, no crash.log). The newest last; the file is cut back when it passes 1 MB"""
+    try:
+        import traceback, time
+        os.makedirs(APPDIR, exist_ok=True)
+        p = os.path.join(APPDIR, "errors.log")
+        if os.path.exists(p) and os.path.getsize(p) > 1 << 20:
+            with open(p, "rb") as f:
+                f.seek(-(256 << 10), 2)
+                tail = f.read()
+            with open(p, "wb") as f:
+                f.write(tail)
+        with open(p, "a", encoding="utf-8") as f:
+            f.write("---- %s  Mod Studio %s\n%s" % (time.strftime("%Y-%m-%d %H:%M:%S"), VERSION,
+                                                     "".join(traceback.format_exception(kind, err, tb))))
+    except Exception:
+        pass
 
 
 def main():

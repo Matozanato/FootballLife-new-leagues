@@ -2508,7 +2508,10 @@ class NewLeagues(BuilderPage):
             if L.get("others"):              # clubs in no league: no competition, no id, no division
                 cid, div, fmt = "", _("no league"), others_labels().get(L["others"], L["others"])
             num, seen = ("", others_labels().get(L["others"], L["others"])) if L.get("others") else                 (str(order.index(L["name"]) + 1), select_team_text(L, b, plan))
-            if seen and b and was.index(L["name"]) != order.index(L["name"]):
+            # B161 (vmican 19.10.): a league renamed since the last Build is found under the name it
+            # was built as (b), not under its new one -- was.index(new name) raised here, and with it
+            # Remove, Edit and Add lower tier on the Leagues page did nothing for every league
+            if seen and b and b.get("name") in was and was.index(b["name"]) != order.index(L["name"]):
                 seen += "  *"                 # the order changed since: the next Build may move it
             it = QTreeWidgetItem([L["name"], cid,
                                   L.get("country", ""), str(L.get("clubs", "")), fmt, div,

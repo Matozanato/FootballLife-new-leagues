@@ -129,6 +129,11 @@ working: Build them once with 0.2.4.1, and careers carry on.
   players (90 leagues) stopped Build with only that line, and the game kept the world of the last
   Build, so a league taken out seemed to stay. It now says the world has too many players: take out
   a league or two (Leagues > Remove) and Build again. (Thanks vmican)
+- **Remove, Edit and Add lower tier did nothing on the Leagues page after a rename (B161).** Once a
+  league of the world had been renamed since the last Build, the list of new leagues stopped half
+  way, and with it these three buttons did nothing for every league, with no message. They work
+  again. An error in a click like this one is now also written to `errors.log` in Mod Studio's
+  settings folder (`%APPDATA%\FL26ModStudio`), so a report can carry it. (Thanks vmican)
 - **No kit from Mod Studio in the game with a kits.lua that reads content\kit-server (B165).** Mod
   Studio took for granted that `common\kits.lua` reads `content\kits`, as SPFL26's own does. One that
   reads `content\kit-server` saw none of the kits Build, Switch on or the Kits page wrote: only the
