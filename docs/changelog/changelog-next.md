@@ -77,10 +77,12 @@ it is released; until then this page only collects what is done and tested.
   free that space. (Thanks Vicentico)
 - **Import crests ticked the wrong club (B139).** A picture whose name only held a club's name (or the
   other way round) was ticked at 70 %: "United Sport FC" of the UAE took nine African "X United"
-  crests, Rangers took "rangers-kinshasa", LA Galaxy "ts-galaxy". Such a match is now only a
-  suggestion at 50 %, unticked. A club of the country the folder is named after (`Africa/Ghana/...`,
-  or a league of the world) or the file name starts with (football-logos.cc's
-  `poland_cracovia_...`) now goes first, and a club of another country is never ticked. "F.C.",
+  crests, Rangers took "rangers-kinshasa", LA Galaxy "ts-galaxy". The country of the pictures now
+  counts: the one the folder is named after (`Africa/Ghana/...`, or a league of the world) or the
+  file name starts with (football-logos.cc's `poland_cracovia_...`). A club of that country goes
+  first, and a club of another country is never ticked. A name only inside the other is ticked (65 %)
+  only when it is the one club of that country it fits ("mostaganem" for ES Mostaganem); otherwise
+  it is a suggestion at 50 %, unticked. "F.C.",
   "Football Club", "Sporting Club" and NewLife's "(GHA)" no longer stand in the way of the same name.
   (Thanks David)
 

@@ -7,8 +7,9 @@ Poland and "poland_bruk-bet-termalica-nieciecza..." to Mali ("mali" inside "term
 the other only from the start of a word to the end of one.
 
 B139 (David's Africa crests, 18.10.): "United Sport FC" (UAE) took nine "X United" crests and
-Rangers "rangers-kinshasa", ticked. Now one name inside the other is never ticked, and a club of
-the folder's country goes first; one of another country is never ticked.
+Rangers "rangers-kinshasa", ticked. Now one name inside the other is ticked only for the one
+club of the folder's country it fits, a club of the folder's country goes first, and one of
+another country is never ticked.
 
 The dialog in this process (QT_QPA_PLATFORM=offscreen), a stand-in project with no tables. No game.
 """
@@ -45,7 +46,7 @@ def b139():
     from modstudio.pages import builder as PB
     cty = {"United Arab Emirates": 230, "Scotland": 231, "Usa": 232, "Netherlands": 233, "South Africa": 234}
     PB.B.country_ids = lambda base: sorted(cty.items())
-    PB.B.club_countries = lambda base: {1: 230, 2: 231, 3: 232, 4: 233, 5: 234}
+    PB.B.club_countries = lambda base: {1: 230, 2: 231, 3: 232, 4: 233, 5: 234, 6: 234, 7: 234, 8: 234}
     PB.B.game_league_countries = lambda base, leagues=None: {}
     PB.B.national_teams = lambda base: set()
     project = types.SimpleNamespace(
@@ -53,11 +54,12 @@ def b139():
         recipe={"leagues": [{"name": "Betway Premiership", "country": "South Africa", "clubs": 2,
                              "club_names": ["Kaizer Chiefs", "TS Galaxy Football Club"]}]},
         game_cl={1: ("United Sport FC", "USF"), 2: ("Rangers", "RAN"), 3: ("LA Galaxy", "LAG"),
-                 4: ("Vitesse Arnhem", "VIT"), 5: ("Orlando Pirates", "ORL")},
+                 4: ("Vitesse Arnhem", "VIT"), 5: ("Orlando Pirates", "ORL"), 6: ("Mamelodi Sundowns", "MSU"),
+                 7: ("Golden Arrows", "GAR"), 8: ("Royal Arrows", "RAR")},
         edits=lambda what: {}, league=lambda name: None)
     d = PB.CrestImportDialog(None, project)
     d.files = ["chippa-united.webp", "doma-united.webp", "rangers-kinshasa.webp", "ts-galaxy.webp",
-               "vitesse.webp", "kaizer-chiefs.webp", "orlando-pirates.webp"]
+               "vitesse.webp", "kaizer-chiefs.webp", "orlando-pirates.webp", "sundowns.webp", "arrows.webp"]
     d.folder.setText(os.path.join("C:" + os.sep, "crests", "Africa", "South Africa", "betway-premiership"))
     d.fill()
     got = ticked(d)
@@ -69,6 +71,8 @@ def b139():
     ok("vitesse: no tick for Vitesse Arnhem", not got.get("vitesse.webp", (0, False))[1])
     ok("a new club of the folder's country, ticked", got.get("kaizer-chiefs.webp") == (("Betway Premiership", 0), True))
     ok("a game club of the folder's country, ticked", got.get("orlando-pirates.webp") == (5, True))
+    ok("inside the only club of the folder's country: ticked", got.get("sundowns.webp") == (6, True))
+    ok("inside two clubs of the folder's country: not ticked", got.get("arrows.webp", (0, True))[1] is False)
     d.files = ["Vitesse Arnhem.png", "Rangers.png"]
     d.fill()
     ok("an exact name of another country: shown, not ticked", ticked(d) == {"Vitesse Arnhem.png": (4, False),

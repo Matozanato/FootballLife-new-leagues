@@ -134,7 +134,7 @@ check((got[1], got[2] < TICK), (8, True), "Zambia's folder is no tick for Kenya'
 check(one("san-pedro.webp", [("Deportivo San Pedro", 9, "Guatemala"), ("Football Club San Pédro", 10, "Côte D'ivoire")],
           "Côte D'ivoire"), ("san-pedro.webp", 10, 1.0), "the same country wins an equal score")
 check(one("vitesse.webp", [("Vitesse", 11, "Netherlands"), ("Vitesse Bobo", 12, "Burkina Faso")], "Burkina Faso"),
-      ("vitesse.webp", 12, 0.5), "the same country wins a better score, unticked")
+      ("vitesse.webp", 12, 0.65), "the same country wins a better score")
 check(one("vitesse.webp", [("Vitesse", 11, "Netherlands"), ("Vitesse Bobo", 12, None)], "Burkina Faso"),
       ("vitesse.webp", 12, 0.5), "a club of no known country before one of another")
 check(one("Vitesse.png", [("Vitesse", 11, "Netherlands")]), ("Vitesse.png", 11, 1.0),
@@ -144,7 +144,25 @@ check(one("Vitesse.png", [("Vitesse", 11, None)], "Burkina Faso"), ("Vitesse.png
 check(one("Kaizer Chiefs.png", [("Kaizer Chiefs", 13, "south africa")], "South Africa"),
       ("Kaizer Chiefs.png", 13, 1.0), "countries compared by their letters")
 
-# 17. the country of a folder: a country's name, the innermost first, then a league's
+# 17. one name inside the other ticks only for the one club of the file's own country it fits
+check(one("mostaganem.webp", [("ES Mostaganem", 14, "Algeria")], "Algeria"),
+      ("mostaganem.webp", 14, 0.65), "the only club of its country: ticked")
+check(one("mostaganem.webp", [("ES Mostaganem", 14, "Algeria"), ("Mostaganem City", 15, "France")], "Algeria"),
+      ("mostaganem.webp", 14, 0.65), "a club of another country does not count")
+got = one("mostaganem.webp", [("ES Mostaganem", 14, "Algeria"), ("WA Mostaganem", 15, "Algeria")], "Algeria")
+check((got[1], got[2]), (14, 0.5), "two clubs of its country: none ticked")
+check(one("mostaganem.webp", [("ES Mostaganem", 14, "Algeria")]), ("mostaganem.webp", 14, 0.5),
+      "no country for the file: no tick")
+check(one("mostaganem.webp", [("ES Mostaganem", 14, None)], "Algeria"), ("mostaganem.webp", 14, 0.5),
+      "no country for the club: no tick")
+check(one("mostaganem.webp", [("ES Mostaganem", 14, "Tunisia")], "Algeria"), ("mostaganem.webp", 14, 0.5),
+      "a club of another country: no tick")
+check(one("chippa-united.webp", [("United Sport FC", 1, "United Arab Emirates")], "South Africa")[2], 0.5,
+      "United Sport FC is no tick for South Africa's chippa-united")
+got = match(["mostaganem.webp", "es-mostaganem.webp"], [("ES Mostaganem", 14, "Algeria")], "Algeria")
+check(got, [("mostaganem.webp", None, 0.0), ("es-mostaganem.webp", 14, 1.0)], "the exact name wins the club")
+
+# 18. the country of a folder: a country's name, the innermost first, then a league's
 LEAGUES = {key("Betway Premiership"): "South Africa", key("Premier League"): None}
 check(folder_country(r"D:\crests\Africa\Algeria\ligue-1-mobilis", {key("Algeria"): "Algeria"}), "Algeria",
       "the folder above the league's")

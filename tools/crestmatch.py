@@ -17,7 +17,9 @@ suggestion, never ticked, and "Mali" is nothing against "Bruk-Bet Termalica".
 
 Countries (B139): a file is of the country its folder names (where) or its name starts with
 ("poland_cracovia_1500x1500.football-logos.cc.png"). A club of that country is taken before any
-other, whatever their scores, and a club of another country is never worth a tick.
+other, whatever their scores, and a club of another country is never worth a tick. One name inside
+the other is worth a tick (0.65) only when the club is of the file's country and the only club of
+it the file's name is inside or holds; two such clubs, or a country unknown, stay at 0.5.
 
 The assignment is greedy over the best scores first: a file and a club are each used at most
 once, nothing under 0.4 is accepted, everything else comes back as (file, None, 0.0).
@@ -28,6 +30,7 @@ import unicodedata
 MIN_SCORE = 0.4
 TICK = 0.6                                # this good or better: ticked in Import crests / Import kits
 CONTAINS_SCORE = 0.5                      # one name inside the other: a suggestion, under TICK (B139)
+HOME_CONTAINS = 0.65                      # ... the only such club of the file's own country: ticked
 SHORTEST_CONTAINS = 4                     # letters needed before "one name contains the other" counts
 FOLDER_DEPTH = 3                          # how many of a folder's last names may name its country
 
@@ -129,19 +132,24 @@ def folder_country(path, *names):
 def score(file_words, club_words):
     """1.0 for the same name, CONTAINS_SCORE when one contains the other, else the Jaccard word
     overlap"""
+    return _score(file_words, club_words)[0]
+
+
+def _score(file_words, club_words):
+    """(score, True when it is one name inside the other)"""
     if not file_words or not club_words:
-        return 0.0
+        return 0.0, False
     ja, jb = "".join(file_words), "".join(club_words)
     if ja == jb:
-        return 1.0                        # the same name, run together or not ("manchesterunited")
+        return 1.0, False                 # the same name, run together or not ("manchesterunited")
     a, b = set(file_words), set(club_words)
     j = len(a & b) / float(len(a | b))
     short, long_words = (ja, club_words) if len(ja) <= len(jb) else (jb, file_words)
     if len(short) >= SHORTEST_CONTAINS and (a < b or b < a or _contains(long_words, short)):
-        # never a tick: "United Sport FC" took nine "X United" crests, Rangers "rangers-kinshasa",
-        # LA Galaxy "ts-galaxy" (B139)
-        return CONTAINS_SCORE
-    return j
+        # no tick on its own: "United Sport FC" took nine "X United" crests, Rangers
+        # "rangers-kinshasa", LA Galaxy "ts-galaxy" (B139)
+        return CONTAINS_SCORE, True
+    return j, False
 
 
 def _contains(long_words, short):
@@ -173,12 +181,18 @@ def match(files, clubs, where=None, countries=None):
     cc = [key(c[2] or "") if len(c) > 2 else "" for c in clubs]
     cand = []
     for i, a in enumerate(fw):
+        inside = []                       # the clubs of the file's own country one name is inside
         for j, b in enumerate(cw):
-            s = score(a, b)
+            s, part = _score(a, b)
             if s >= MIN_SCORE:
                 # 2 the file's own country, 1 a country unknown on either side, 0 another (B139)
                 home = 1 if not fc[i] or not cc[j] else 2 if fc[i] == cc[j] else 0
                 cand.append((home, s, i, j))
+                if home == 2 and part:
+                    inside.append(len(cand) - 1)
+        if len(inside) == 1:              # the only one of its country: "mostaganem" is ES Mostaganem
+            home, s, i, j = cand[inside[0]]
+            cand[inside[0]] = (home, HOME_CONTAINS, i, j)
     cand.sort(key=lambda t: (-t[0], -t[1], t[2], t[3]))   # own country, best first; ties by file, club
     out = [(f, None, 0.0) for f in files]
     used_f, used_c = set(), set()
