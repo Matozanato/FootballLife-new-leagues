@@ -1390,7 +1390,20 @@ static size_t g_naccess = NACCESS;
 static int g_access_cfg = 0;
 #define FINAL_MAX 40
 typedef struct { uint16_t reg; uint16_t n; int day; uint32_t club[FINAL_MAX]; } final_t;
-static final_t g_final[64]; static int g_nfinal = 0;
+/* 64 until B160: a world of 86 leagues filled it by day 176, and the leagues kept after that
+   (Vietnam, Jordan, Kuwait, Bahrain, Oman) sent their clubs by the live table */
+#define FINAL_N 256
+static final_t g_final[FINAL_N]; static int g_nfinal = 0;
+static final_t* final_new(uint16_t reg)
+{
+  static int told = 0;
+  if (g_nfinal >= FINAL_N) {
+    if (!told) logf("fl26swiss: no room for more final tables (%d kept); reg %u and the leagues after it go by the live table", FINAL_N, (unsigned)reg);
+    told = 1;
+    return 0;
+  }
+  return &g_final[g_nfinal++];
+}
 static const char* COMP_NAME[3] = { "Champions League", "Europa League", "Conference League" };
 
 typedef struct { uint16_t reg; int day; uint32_t club; } cupwin_t;
@@ -1449,7 +1462,7 @@ static int keep_final(uint16_t reg, int d, int ad)
      and, as said above, never holds a final table; and a table in exactly the league's list
      order is one nobody has played. */
   if ((d >= BUILD_DAY && d < NEWYEAR_FROM) || unplayed(rec, t, rows)) return -1;
-  if (!f) { if (g_nfinal >= 64) return 0; f = &g_final[g_nfinal++]; f->reg = reg; }
+  if (!f) { if (!(f = final_new(reg))) return 0; f->reg = reg; }
   f->n = (uint16_t)rows; f->day = ad;
   for (uint32_t k = 0; k < rows; k++) f->club[k] = *(uint32_t*)(t + k * 20);
   return 1;
@@ -3699,6 +3712,38 @@ static int ccup_fill_one(int k, void* started)
          (unsigned)c->reg, (unsigned)unplayed_phase);
     g_ccup_nf[k] = 0;
     return 0;
+  }
+  /* B160: in a second season the game's own AFC Champions League takes most of J1, the clubs
+     passed over as ccup_taken, and the AFC Champions League Two found 28 of its 32 and was never
+     played at all. A place no club is left for goes to the next club of the leagues the cup takes
+     its places from, the last of them first (the leagues that fill it up) -- one rank of each in
+     turn -- before the cup is given up. */
+  if (n < cn && !c->nc && !c->national) {
+    uint16_t lg[CCUP_MAX_ENTRY]; int top[CCUP_MAX_ENTRY], nl = 0;
+    for (int i = (int)cn - 1; i >= 0; i--) {
+      if (!c->erank[i]) continue;
+      int j = 0;
+      while (j < nl && lg[j] != c->ereg[i]) j++;
+      if (j == nl) { lg[nl] = c->ereg[i]; top[nl++] = 0; }
+      if (c->erank[i] > top[j]) top[j] = c->erank[i];
+    }
+    int more = 1;
+    for (int r = 1; n < cn && more && r <= FINAL_MAX; r++) {
+      more = 0;
+      for (int j = 0; j < nl && n < cn; j++) {
+        const char* how = "";
+        if (top[j] + r > FINAL_MAX) continue;
+        uint32_t club = ccup_club(c, lg[j], top[j] + r, &how);
+        if (!club) continue;
+        more = 1;
+        if (!(club >> 14) || ccup_cont(how) || ccup_taken(club) || lpre_has(c->ko, club)) continue;
+        club = canon_club(club);
+        if (has_club(g_ccup_field[k], n, club)) continue;
+        g_ccup_field[k][n++] = club; g_ccup_nf[k] = n;
+        logf("fl26swiss:   cup %u entry %2u: reg %u position %d -> %08x (%s; in place of a club taken elsewhere)",
+             (unsigned)c->reg, n, (unsigned)lg[j], top[j] + r, club, how);
+      }
+    }
   }
   if (n != cn) {
     logf("fl26swiss: cup %u -- only %u of %u clubs found; not started", (unsigned)c->reg, n, cn);
@@ -7700,7 +7745,7 @@ static void apclau_keep(void)
     final_t t;
     int played, n = count_table(regs, 2, &t, &played);
     if (n < 4 || played < n * (n - 1)) continue;
-    if (!f) { if (g_nfinal >= 64) continue; f = &g_final[g_nfinal++]; }
+    if (!f && !(f = final_new(s->total))) continue;
     *f = t; f->reg = s->total; f->day = d;
     logf("fl26swiss: reg %u -- Apertura + Clausura table from %d matches kept as the final table: "
          "%08x %d pts, %08x %d pts ... last %08x %d pts", (unsigned)s->total, played,

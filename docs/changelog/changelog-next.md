@@ -96,6 +96,13 @@ it is released; until then this page only collects what is done and tested.
   American champion went straight to the final and there was no third-place match. The fourth
   place now goes to the CAF champion of your world when it has the CAF Champions League, else to
   Wydad from its league. (Thanks Micarodvzla22)
+- **The AFC Champions League Two was empty from the second season (B160).** From the second season
+  the game puts most of the J1 League into its own AFC Champions League, and a club already in a
+  continental cup is passed over, so the Modpack's AFC Champions League Two found 28 clubs for 32
+  places and was not played at all. A place no club is left for now goes to the next club of the
+  leagues the cup takes its places from, and the log names it. Also, worlds of more than 64 leagues
+  kept last season's final table for only the first 64 (Vietnam, Jordan, Kuwait, Bahrain and Oman
+  then sent the clubs on top of the live table); now 256. (Thanks bruce_wayne)
 
 ## Also new
 
