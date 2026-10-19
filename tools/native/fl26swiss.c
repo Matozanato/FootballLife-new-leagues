@@ -1237,6 +1237,32 @@ static int po_start(int ci, void* started)
   return 1;
 }
 
+/* who won play-off tie k: the game's winner read, but only when it is one of the tie's two clubs.
+ * B121 (2026-10-17, fourth season of a Modpack career): the read gave Olympique Lyonnais, who had
+ * finished in the top eight and played no February tie -- a winner of an earlier season's tie
+ * under the same id -- and the round of 16 had Lyon v Lyon. A read that is not one of the tie's
+ * clubs goes to the tie's own table (its leader, when it holds exactly the tie's two clubs; the
+ * tie is over when this is asked, and the table orders them by points, then goal difference, the
+ * aggregate), else, as lpre_winner and q_result do, to the seeded club, the tie's second.
+ * 0: the tie has no clubs. */
+static uint32_t po_tie_winner(const cup_t* c, int k)
+{
+  uint16_t id = tie_id(c, k);
+  unsigned char* r = get_rec(id);
+  if (!r || rec_count(r) != 2) return 0;
+  uint32_t a = rec_clubs(r)[0], b = rec_clubs(r)[1], w = 0;
+  ((winner_fn)(uintptr_t)(g_base + WINNER_RVA))(&w, id);
+  if ((w >> 14) && (same_club(w, a) || same_club(w, b))) return same_club(w, a) ? a : b;
+  unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(id);
+  uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0, top = rows == 2 ? *(uint32_t*)t : 0, two = rows == 2 ? *(uint32_t*)(t + 20) : 0;
+  int by_table = rows == 2 &&
+                 ((same_club(top, a) && same_club(two, b)) || (same_club(top, b) && same_club(two, a)));
+  uint32_t got = by_table ? (same_club(top, a) ? a : b) : b;
+  logf("fl26swiss: %s play-off tie %d -- the winner read (%08x) is neither of its clubs (%08x, %08x); %08x goes through (%s)",
+       c->name, k, w, a, b, got, by_table ? "the tie's table" : "the seeded club");
+  return got;
+}
+
 static int po_finish(int ci, void* started)
 {
   const cup_t* c = &CUPS[ci];
@@ -1250,8 +1276,7 @@ static int po_finish(int ci, void* started)
   static uint32_t list[16]; int bad = 0;
   uint32_t w[8];
   for (int k = 0; k < 8; k++) {
-    w[k] = 0;
-    ((winner_fn)(uintptr_t)(g_base + WINNER_RVA))(&w[k], tie_id(c, k));
+    w[k] = po_tie_winner(c, k);
     if (!(w[k] >> 14)) bad++;
   }
   if (bad) {
