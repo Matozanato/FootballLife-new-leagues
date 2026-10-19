@@ -509,8 +509,9 @@ Odaberi klub (ili **Više → Igrači** na Klubovi), pa igrača:
 - **Ime**, **broj na dresu**, **pozicija** i pozicije na kojima može igrati (A = prirodna,
   B = može igrati), jača noga, visina, težina, dob, nacionalnost, stil igre;
 - sve **sposobnosti** i **vještine** (imena su ona iz igre);
-- **Ocjena**: ocjena s popisa, od sposobnosti na koje se pozicija oslanja. Promjena pomiče
-  svaku sposobnost igrača za isti iznos. Igrač novog kluba nema ime dok ga Build ne numerira
+- **Ocjena**: ocjena koju pokazuje igra, izračunata kao u igri iz sposobnosti, s težinama za
+  svaku poziciju (najviše bod-dva razlike). Promjena pomiče svaku sposobnost igrača za isti iznos,
+  a nekoliko najvažnijih za njegovu poziciju za jedan više, pa ocjena bude baš upisani broj. Igrač novog kluba nema ime dok ga Build ne numerira
   (FL P00001 ...); upiši ime u **Ime** da dobije tvoje; od 0.2.0 takav kadar počinje na razini
   svog ranga (oko 72 u prvoj ligi, do 57 od petog ranga naniže);
 - **Lice**: **Odaberi...** mapu s licem (odjeljak 8.1). **Makni** vraća lice iz igre. Novi igrač

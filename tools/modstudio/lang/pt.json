@@ -233,6 +233,7 @@
   "Europa League": "Europa League",
   "Europe": "Europa",
   "European places: %s": "Vagas europeias: %s",
+  "Abilities moved by %+d, and the %d that count most for the rating by %+d.": "Habilidades alteradas em %+d, e as %d que mais contam para o overall em %+d.",
   "Every ability moved by %+d.": "Cada habilidade foi alterada em %+d.",
   "Every folder listed in sider.ini as a cpk.root. Sider looks a file up from the top down and takes the first folder that has it, so a folder higher in the list wins. Tick to switch a folder on, drag to reorder, then Apply.": "Cada pasta listada no sider.ini como cpk.root. O Sider procura um arquivo de cima para baixo e usa a primeira pasta que o tem, então a pasta mais acima na lista ganha. Marque para ativar uma pasta, arraste para mudar a ordem e depois Aplicar.",
   "Every line needs all seven fields; empty ones stay empty.": "Cada linha precisa dos sete campos; os vazios ficam vazios.",

@@ -679,8 +679,10 @@ e os do próprio jogo. Escolha um clube (ou **Mais → Jogadores** em Clubes), d
 - **Nome**, **número da camisa**, **posição** e as posições em que ele pode jogar (A = natural,
   B = consegue jogar ali), pé preferido, altura, peso, idade, nacionalidade, estilo de jogo;
 - todas as **habilidades** e **habilidades especiais** (os nomes são os do próprio jogo);
-- **Overall**: o overall da lista, feito das habilidades em que a posição se apoia. Mudar ele move
-  todas as habilidades do jogador pelo mesmo tanto. Um jogador de um clube novo não tem nome até a
+- **Overall**: o overall que o jogo mostra, calculado como no jogo a partir das habilidades, com
+  pesos próprios para cada posição (no máximo um ou dois pontos de diferença). Mudar ele move todas
+  as habilidades do jogador pelo mesmo tanto e as poucas que mais contam para a posição dele uma a
+  mais, para cair no número digitado. Um jogador de um clube novo não tem nome até a
   construção numerar ele (FL P00001 ...); digite um em **Nome** para dar o seu; desde a 0.2.0 um
   elenco desses começa no nível da divisão dele (cerca de 72 numa primeira divisão, descendo até
   57 da quinta divisão para baixo);

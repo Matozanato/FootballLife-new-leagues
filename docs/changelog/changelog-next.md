@@ -74,6 +74,13 @@ it is released; until then this page only collects what is done and tested.
   cup, and adding a league stopped too. A world built with such ids now keeps them and the others of
   that kind, and a league taken out gives its cup and super cup ids back. Every other league and cup
   keeps the ids it had, so careers carry on. (Thanks AHMED and Tysonche35)
+- **The Players page's rating was not the game's (B53).** Mod Studio showed the mean of a few
+  abilities, and the game works its rating out with weights of its own for each position: a
+  keeper whose GK abilities average 70 showed 70 and was a 64 in the game. The list, the Rating box
+  and Squad level now use the game's own reckoning (fitted to 2500 players of the game: the same
+  number for six in ten, never more than two off). The Rating box and Squad level land on the
+  number you ask for: every ability moves by the same amount and the few that count most for the
+  rating by one more. Build still levels squads as before. (Thanks LaraCroft)
 
 - **Deleted worlds kept taking the disk (B131).** Delete world moves the world into a copy under
   Restore points so it can come back, and that copy kept its gigabytes with no way to free them from

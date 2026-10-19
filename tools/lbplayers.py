@@ -48,6 +48,7 @@ import collections, csv, os
 
 import pesdb
 import playeredit as E
+from lbrating import move, rating, shift_to, shifted   # what Mod Studio shows (B53)
 
 P_REC, P_ID = E.P_REC, E.P_ID
 A_REC = E.A_REC
@@ -126,7 +127,8 @@ RATED = {"GK": ["GK Awareness", "GK Catching", "GK Clearing", "GK Reflexes", "GK
 
 
 def overall(row):
-    """a rough overall rating, the mean of the abilities the position leans on"""
+    """a rough overall rating, the mean of the abilities the position leans on: Build's own
+    yardstick for squads.  The rating the game shows is rating() (lbrating.py, B53)"""
     pos = row.get("Registered Position", "CF")
     if pos == "GK":
         names = RATED["GK"]
