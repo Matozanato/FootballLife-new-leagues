@@ -1,5 +1,5 @@
 """Restore points: every file the program changed, as it was before each change"""
-import difflib, os
+import difflib, os, re
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QComboBox, QFrame, QLabel, QPlainTextEdit, QPushButton, QSplitter, QTreeWidget,
@@ -25,6 +25,62 @@ def copy_what(kind):
     if kind == "updated":
         return _("the world before a newer zip or Remove the mod took it out")
     return None
+
+
+def _reasons():
+    """the reasons a restore point is kept with (backups.snapshot), English as the index keeps them,
+    and as this language says them: B134 (UI test in French, 18.10.) found them all in English"""
+    return [
+        ("Switch on: kits map", _("Switch on: kits map")),
+        ("Switch on: scoreboards map", _("Switch on: scoreboards map")),
+        ("Switch on: menus map", _("Switch on: menus map")),
+        ("Switch on: home stadiums map", _("Switch on: home stadiums map")),
+        ("Switch on: %s map", _("Switch on: %s map")),
+        ("Switch on %s: the world file", _("Switch on %s: the world file")),
+        ("Switch on %s: its own module", _("Switch on %s: its own module")),
+        ("Switch on %s: its leagues in the Kick Off list", _("Switch on %s: its leagues in the Kick Off list")),
+        ("Your world: switch on %s", _("Your world: switch on %s")),
+        ("Import your world: switch on %s", _("Import your world: switch on %s")),
+        ("Build and install %s", _("Build and install %s")),
+        ("Mod Studio's modules switched on", _("Mod Studio's modules switched on")),
+        ("Install the modules", _("Install the modules")),
+        ("Install the modules: replaced by Mod Studio's", _("Install the modules: replaced by Mod Studio's")),
+        ("Install the modules: %s now ships bundled", _("Install the modules: %s now ships bundled")),
+        ("Install the modules: livecpk\\%s loaded", _("Install the modules: livecpk\\%s loaded")),
+        ("world %s renamed to %s", _("world %s renamed to %s")),
+        ("world %s deleted: its lines taken out", _("world %s deleted: its lines taken out")),
+        ("world %s deleted", _("world %s deleted")),
+        ("world %s put back", _("world %s put back")),
+        ("before restoring %s", _("before restoring %s")),
+        ("deleted content folder %s", _("deleted content folder %s")),
+        ("content folders changed", _("content folders changed")),
+        ("modules changed", _("modules changed")),
+        ("settings changed", _("settings changed")),
+        ("map edited", _("map edited")),
+        ("soundtrack counts", _("soundtrack counts")),
+        ("replaced by %s", _("replaced by %s")),
+        ("merge from %s", _("merge from %s")),
+        ("installed %s", _("installed %s")),
+        ("removing %s", _("removing %s")),
+        ("removed %s", _("removed %s")),
+        ("profile %s", _("profile %s")),
+    ]
+
+
+def reason_text(reason):
+    """a restore point's reason in the language of the window (an unknown one as it is)"""
+    for en, said in _reasons():
+        if "%s" not in en:
+            if reason == en:
+                return said
+            continue
+        m = re.fullmatch("(.+?)".join(re.escape(t) for t in en.split("%s")), reason or "", re.S)
+        if m:
+            try:
+                return said % m.groups()
+            except (TypeError, ValueError):
+                return reason
+    return reason or ""
 
 
 def when(t):
@@ -145,7 +201,8 @@ class Restore(Page):
                 f.setBold(True)
                 it.setFont(1, f)
             else:
-                it = QTreeWidgetItem([when(r["time"]), r["file"], r.get("reason", ""), human(r.get("size", 0))])
+                it = QTreeWidgetItem([when(r["time"]), r["file"], reason_text(r.get("reason", "")),
+                                      human(r.get("size", 0))])
             it.setData(0, ROW, r)
             self.tree.addTopLevelItem(it)
         if self.tree.topLevelItemCount():

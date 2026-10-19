@@ -112,6 +112,10 @@ it is released; until then this page only collects what is done and tested.
   top eight (Lyon) also came in as a play-off winner: Lyon v Lyon. A winner that is not one of the
   tie's two clubs is now taken from the tie's own table (else the seeded club), and the log says so.
   (Thanks Micarodvzla22)
+- **Restore points in your language (B134).** In Spanish, French, Portuguese and Croatian the
+  Reason column of Restore points stayed English ("Switch on: kits map"); it is now said in the
+  language of the window, older restore points too. The Leagues page says "1 group of clubs in no
+  league", not "1 groups".
 
 ## Also new
 
