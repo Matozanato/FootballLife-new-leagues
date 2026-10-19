@@ -121,10 +121,13 @@ def main():
     # earlier belief that they did not came from the Select Team list, which is a different
     # question.  BAD_REG is still avoided: those are the ids the game reassigns as phases of
     # somebody else's competition.
-    autocid = [c for c in W.cid_pool() if c not in used_cid][0]
-    autoreg = W.free_ids(used_reg | W.BAD_REG, W.REG_MAX, 1, 186)[0]
-    cid, reg = M.add_league(comp, regs, ents,
-                            int(get("--cid", str(autocid))), int(get("--reg", str(autoreg))),
+    # the first free ones only when none is given (B159: the Build hands its own, an id under 130
+    # included, and with 130..255 all used the free list was empty -- an IndexError before --cid)
+    cid = get("--cid", None)
+    cid = int(cid) if cid is not None else [c for c in W.cid_pool() if c not in used_cid][0]
+    reg = get("--reg", None)
+    reg = int(reg) if reg is not None else W.free_ids(used_reg | W.BAD_REG, W.REG_MAX, 1, 186)[0]
+    cid, reg = M.add_league(comp, regs, ents, cid, reg,
                             M.enc_region(int(get("--region", "2"))), get("--name", "FL Test Cup"),
                             get("--code", "FL_TEST_CUP"), teams, like)
     # add_league sized the count from the entry list, which is right for a league; a cup's

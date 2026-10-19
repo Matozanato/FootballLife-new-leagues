@@ -177,7 +177,8 @@ def main():
 
     used_cid = {comp[i * M.COMP + M.CID_OFF] for i in range(len(comp) // M.COMP)}
     used_reg = {rid_of(regs[i * M.REG:(i + 1) * M.REG]) for i in range(len(regs) // M.REG)}
-    cid = int(get("--cid", str([c for c in W.cid_pool() if c not in used_cid][0])))
+    cid = get("--cid", None)            # the first free one only when none is given (B159, as mkcup)
+    cid = int(cid) if cid is not None else [c for c in W.cid_pool() if c not in used_cid][0]
     if cid in used_cid:
         raise SystemExit("competition id %d is taken" % cid)
     newmasters = W.free_ids(used_reg | W.BAD_REG, W.REG_MAX, len(plan), 186)
