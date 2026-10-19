@@ -577,8 +577,10 @@ un joueur :
 - **Nom**, **numéro de maillot**, **poste** et les postes où il peut jouer (A = naturel,
   B = peut y jouer), pied fort, taille, poids, âge, nationalité, style de jeu ;
 - toutes les **capacités** et **compétences** (les noms sont ceux du jeu) ;
-- **Note** : la note de la liste, faite des capacités sur lesquelles le poste s'appuie. La
-  changer déplace chaque capacité du joueur d'autant. Un joueur d'un nouveau club n'a pas de
+- **Note** : la note que montre le jeu, calculée comme dans le jeu à partir des capacités, avec
+  des poids propres à chaque poste (un ou deux points d'écart au plus). La changer déplace chaque
+  capacité du joueur d'autant, et les quelques-unes qui comptent le plus pour son poste d'un de
+  plus, pour tomber sur le nombre tapé. Un joueur d'un nouveau club n'a pas de
   nom tant que le Build ne le numérote pas (FL P00001 ...) ; tapez-en un dans **Nom** pour lui
   donner le vôtre ; depuis 0.2.0 cet effectif part du niveau de sa division (environ 72 en
   première division, jusqu'à 57 à partir de la cinquième) ;

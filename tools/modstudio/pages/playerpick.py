@@ -39,7 +39,7 @@ def candidates(project):
                 m.update(ed.get(r["player"], {}))
                 m["player"] = P.new_ref(L["name"], k, int(r["player"]))
                 m["name"] = m.get("name") or _("(numbered name)")
-                m["rating"] = P.overall(m)
+                m["rating"] = P.rating(m)
                 m["where"] = "%s  (%s)" % (club, L["name"])
                 out.append(m)
     return out

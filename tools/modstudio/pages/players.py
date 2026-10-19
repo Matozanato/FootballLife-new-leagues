@@ -686,7 +686,7 @@ class Players(BuilderPage):
         for key, m, ch, gone in self.view():
             name = m.get("name") or (_("(numbered name)") if new_club else "")
             it = QTreeWidgetItem([m.get("order", ""), m.get("shirt", ""), name, m.get("Registered Position", ""),
-                                  m.get("Age", ""), str(P.overall(m)), m.get("Stronger Foot", "")[:1],
+                                  m.get("Age", ""), str(P.rating(m)), m.get("Stronger Foot", "")[:1],
                                   self.state.get(key) or
                                   (_("leaves") if gone else (_("new") if key.startswith(NEW) else
                                                              (_("%d fields") % P.fields_set(ch) if P.fields_set(ch) else ""))),
@@ -776,7 +776,7 @@ class Players(BuilderPage):
             o = str(m.get("order", ""))
             if gone or not o.isdigit() or int(o) > 10:
                 continue
-            nm = m.get("name") or (m.get("Registered Position", "") + " " + str(P.overall(m)))
+            nm = m.get("name") or (m.get("Registered Position", "") + " " + str(P.rating(m)))
             names[int(o)] = nm if len(nm) <= 18 else nm[:17] + "."
             if k == self.cur:
                 mark = int(o)
@@ -867,7 +867,7 @@ class Players(BuilderPage):
         # a new club's player has no name until Build numbers him (FL P00001 ...): say so in the box
         self.ed["name"].setPlaceholderText(_("numbered at Build (FL P00001 ...) until you type a name")
                                            if not self.club.isdigit() else "")
-        self.rating.setValue(P.overall(m))
+        self.rating.setValue(P.rating(m))
         self.b_undo.setEnabled(bool(ch) and not key.startswith(NEW))
         self.show_face_note(m.get("face", ""))
         self._filling = False
@@ -1046,7 +1046,7 @@ class Players(BuilderPage):
             return
         key, m, ch, gone = v
         vals = [m.get("order", ""), m.get("shirt", ""), m.get("name") or _("(numbered name)"),
-                m.get("Registered Position", ""), m.get("Age", ""), str(P.overall(m)),
+                m.get("Registered Position", ""), m.get("Age", ""), str(P.rating(m)),
                 m.get("Stronger Foot", "")[:1],
                 self.state.get(key) or
                 (_("new") if key.startswith(NEW) else (_("%d fields") % P.fields_set(ch) if P.fields_set(ch) else ""))]
@@ -1054,22 +1054,17 @@ class Players(BuilderPage):
             it.setText(c, t)
         self.i_title.setText(m.get("name") or _("(numbered name)"))
         self.rating.blockSignals(True)
-        self.rating.setValue(P.overall(m))
+        self.rating.setValue(P.rating(m))
         self.rating.blockSignals(False)
 
     def set_rating(self, want):
-        """the player's rating: every ability moves by the same amount, as Squad level does for a
-        whole squad; abilities stuck at 40 or 99 hold it back, so it goes again until it lands"""
+        """the player's rating as the game shows it (B53): every ability moves by the same
+        amount, as Squad level does for a whole squad, the amount that lands on it"""
         v = self.current_view()
         if self._filling or not v or not self.club:
             return
         m = dict(v[1])
-        for _t in range(5):
-            d = want - P.overall(m)
-            if not d:
-                break
-            for n, _b in E.ABILITIES:
-                m[n] = str(max(40, min(99, int(m.get(n) or 40) + d)))
+        m.update(P.shifted(m, P.shift_to([m], want)))
         self._filling = True
         for n, _b in E.ABILITIES:
             self._set(n, m[n])
@@ -1140,19 +1135,20 @@ class Players(BuilderPage):
         if not self.rows:
             return
         live = [(k, m) for k, m, ch, gone in self.view() if not gone]
-        now = round(sum(P.overall(m) for k, m in live) / len(live))
+        now = round(sum(P.rating(m) for k, m in live) / len(live))
         want, ok = QInputDialog.getInt(self, _("Squad level..."),
                                        _("The squad's average rating is %d. Make it:") % now, now, 40, 99)
         if not ok or want == now:
             return
-        d = want - now
+        # the game's ratings do not move one for one with the abilities (B53): the move that
+        # brings the average to `want`
+        t = P.shift_to([m for k, m in live], want)
         c = self.changes(True)
         ed = c.setdefault("edits", {})
         for k, m in live:
             orig = self.original(k)
             target = c["add"][int(k[1:])] if k.startswith(NEW) else ed.setdefault(k, {})
-            for n, _b in E.ABILITIES:
-                v = max(40, min(99, int(m.get(n) or 40) + d))
+            for n, v in P.shifted(m, t).items():
                 if not k.startswith(NEW) and str(v) == str(orig.get(n, "")):
                     target.pop(n, None)
                 else:
@@ -1161,7 +1157,12 @@ class Players(BuilderPage):
                 ed.pop(k, None)
         self.project.dirty = True
         self.fill_squad()
-        self.say(_("Every ability moved by %+d.") % d, "ok")
+        d, top, e = P.move(t)
+        if top:
+            self.say(_("Abilities moved by %+d, and the %d that count most for the rating by %+d.")
+                     % (d, top, d + e), "ok")
+        else:
+            self.say(_("Every ability moved by %+d.") % d, "ok")
 
     def add_player(self):
         if not self.club or not self.club.isdigit() or not self.cur:

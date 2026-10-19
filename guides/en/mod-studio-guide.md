@@ -525,8 +525,10 @@ Pick a club (or **More → Players** on Clubs), then a player:
 - **Name**, **shirt number**, **position** and the positions they can play (A = natural,
   B = can play there), stronger foot, height, weight, age, nationality, playing style;
 - all **abilities** and **skills** (the names are the game's own);
-- **Rating**: the rating of the list, made of the abilities the position leans on. Changing
-  it moves every ability of the player by the same amount. A player of a new club has no
+- **Rating**: the rating the game shows, worked out the game's way from the abilities, with
+  weights of its own for each position (a point or two off at most). Changing it moves every
+  ability of the player by the same amount and the few that count most for his position by one
+  more, so it lands on the number you type. A player of a new club has no
   name until the Build numbers him (FL P00001 ...); type one in **Name** to give him yours;
   since 0.2.0 such a squad starts at its division's level (about 72 in a top flight down to 57
   from the fifth division);

@@ -555,8 +555,10 @@ propio juego. Elige un club (o **Más → Jugadores** en Clubes) y luego un juga
 - **Nombre**, **dorsal**, **posición** y las posiciones en las que puede jugar (A = natural,
   B = puede jugar ahí), pie hábil, altura, peso, edad, nacionalidad, estilo de juego;
 - todas las **capacidades** y **habilidades** (los nombres son los del propio juego);
-- **Valoración**: la valoración de la lista, hecha de las capacidades en las que se apoya la
-  posición. Al cambiarla, cada capacidad del jugador se mueve lo mismo. Un jugador de un club
+- **Valoración**: la valoración que muestra el juego, calculada como en el juego a partir de las
+  capacidades, con pesos propios para cada posición (como mucho uno o dos puntos de diferencia).
+  Al cambiarla, cada capacidad del jugador se mueve lo mismo y las pocas que más cuentan para su
+  posición uno más, así queda justo el número que escribes. Un jugador de un club
   nuevo no tiene nombre hasta que Build le da uno con número (FL P00001 ...); escribe uno en
   **Nombre** para darle el tuyo; desde 0.2.0 esa plantilla empieza al nivel de su división (unos
   72 en primera, hasta 57 de la quinta división hacia abajo);
