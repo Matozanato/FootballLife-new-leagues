@@ -83,17 +83,25 @@ def run():
     names = [b.text().replace("&", "") for b in box.buttons()]
     ok("its buttons in %s: %s" % (LANG, names),
        sorted(names) == sorted([i18n._("Support on Ko-fi"), i18n._("Not now")]))
-    ok("its text in %s, short" % LANG,
-       box.text() == i18n._("FL26 Mod Studio is free and donating is never required, but a small "
-                            "donation on Ko-fi makes it easier for us to keep the project maintained "
-                            "and updated. Thank you!")
-       and len(box.text()) < 220)
+    import html, re
+    msg = html.escape(i18n._("FL26 Mod Studio is free and donating is never required, but a small "
+                             "donation on Ko-fi makes it easier for us to keep the project maintained "
+                             "and updated. Thank you!"))
+    shown = re.sub(r"<[^>]+>", " ", box.text())
+    ok("its text in %s, short, with the Ko-fi link" % LANG,
+       box.text().startswith(msg) and len(shown) < 240
+       and '<a href="https://ko-fi.com/mata28">ko-fi.com/mata28</a>' in box.text())
     if os.environ.get("FL26_SHOT"):
         box.grab().save(os.path.join(os.environ["FL26_SHOT"], "k_support_%s.png" % LANG))
     ok("settings.json remembers it for %s" % VERSION, saved().get("support") == VERSION)
     [b for b in box.buttons() if b.text().replace("&", "") == i18n._("Not now")][0].click()
     settle(qa)
     ok("Not now: closed, nothing opened", not box.isVisible() and opened == [])
+    w.kofi_btn.click()
+    settle(qa)
+    ok("the Ko-fi button next to Credits opens ko-fi.com/mata28",
+       opened == ["https://ko-fi.com/mata28"])
+    del opened[:]
     w.close()
 
     w = start({"support": VERSION})
