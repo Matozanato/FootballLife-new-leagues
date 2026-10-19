@@ -115,7 +115,8 @@ it is released; until then this page only collects what is done and tested.
 - **Restore points in your language (B134).** In Spanish, French, Portuguese and Croatian the
   Reason column of Restore points stayed English ("Switch on: kits map"); it is now said in the
   language of the window, older restore points too. The Leagues page says "1 group of clubs in no
-  league", not "1 groups".
+  league", not "1 groups", and the bottom bar says "Switching ... on" or "Exporting ..." while
+  it does that, not "Building...".
 
 ## Also new
 

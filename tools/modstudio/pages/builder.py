@@ -4406,9 +4406,10 @@ class Build(BuilderPage):
                 save_note(self, sw)
         self.run(go, background=True, done=switch)
 
-    def run(self, what, background=False, done=None, after=None):
+    def run(self, what, background=False, done=None, after=None, busy=None):
         """what(log) on the GUI thread, or with background in a worker with the clock; done() when it
-        went through, after(ok) at the end either way (in the background)"""
+        went through, after(ok) at the end either way (in the background); busy: what the bottom bar
+        says meanwhile (B134: a switch on and an Export said "Building..." too)"""
         self.out.clear()
         if not background:
             try:
@@ -4428,7 +4429,8 @@ class Build(BuilderPage):
             return
         for b in self.steps:
             b.setEnabled(False)
-        self.app.busy(True, _("Building..."))
+        busy = busy or _("Building...")
+        self.app.busy(True, busy)
         # 0.2.4: the time so far and the step it is at, in the bottom bar and above the log (exe
         # test 15.10.: a big world builds for 20 minutes with only "Building..." blinking)
         import time
@@ -4437,7 +4439,7 @@ class Build(BuilderPage):
 
         def tick():
             m, sec = divmod(int(time.monotonic() - t0), 60)
-            text = "%s %d:%02d" % (_("Building..."), m, sec) + ("   ·   " + last[0] if last[0] else "")
+            text = "%s %d:%02d" % (busy, m, sec) + ("   ·   " + last[0] if last[0] else "")
             self.app.status_busy.setText("● " + text)
             self.state.setText(text)
             self.app.update_world_bar(text)
@@ -4652,7 +4654,7 @@ class Build(BuilderPage):
                     save_note(self, sw)
                 if done:
                     done(ok)
-            self.run(go, background=True, after=over)
+            self.run(go, background=True, after=over, busy=_("Switching %s on") % w)
             return True
 
     def switch_with_saves(self, sw, w, log):
@@ -4721,4 +4723,4 @@ class Build(BuilderPage):
                    "the same. The zip has a read-me that says so.") % (out, got.get("face_players", 0))
                  + _("\n\nIn the same zip: the kits of %d clubs (Kit Server) and the scoreboards of %d leagues "
                      "(Scoreboard Server).") % (got.get("kits", 0), got.get("scoreboards", 0)))
-        self.run(go, background=True, done=done)
+        self.run(go, background=True, done=done, busy=_("Exporting %s...") % w)
