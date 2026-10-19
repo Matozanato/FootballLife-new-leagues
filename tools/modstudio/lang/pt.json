@@ -1880,7 +1880,11 @@
   "Delete this copy for good...": "Apagar esta cópia de vez...",
   "Pick a deleted or copied world in the list: only those copies are deleted here (Clean up... is for the copies of files).": "Escolhe na lista um mundo apagado ou copiado: aqui só se apagam essas cópias (Limpar... é para as cópias de ficheiros).",
   "Delete this copy of %s for good?\n\nIt frees %s on the disk and can not be put back any more.": "Apagar esta cópia de %s de vez?\n\nLiberta %s no disco e já não pode ser reposta.",
-  "The copy of %s is deleted: %s freed.": "A cópia de %s foi apagada: %s libertados."
+  "The copy of %s is deleted: %s freed.": "A cópia de %s foi apagada: %s libertados.",
+  "Support FL26 Mod Studio": "Apoie o FL26 Mod Studio",
+  "Support on Ko-fi": "Apoiar no Ko-fi",
+  "Not now": "Agora não",
+  "FL26 Mod Studio is free and donating is never required, but a small donation on Ko-fi makes it easier for us to keep the project maintained and updated. Thank you!": "O FL26 Mod Studio é grátis e doar não é obrigatório, mas uma pequena doação no Ko-fi nos ajuda a manter e atualizar o projeto. Valeu!"
  },
  "log": [
   [

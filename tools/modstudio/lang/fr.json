@@ -1879,7 +1879,11 @@
   "Delete this copy for good...": "Supprimer cette copie définitivement...",
   "Pick a deleted or copied world in the list: only those copies are deleted here (Clean up... is for the copies of files).": "Choisissez dans la liste un monde supprimé ou copié : seules ces copies sont supprimées ici (Nettoyer... sert aux copies de fichiers).",
   "Delete this copy of %s for good?\n\nIt frees %s on the disk and can not be put back any more.": "Supprimer définitivement cette copie de %s ?\n\nCela libère %s sur le disque et elle ne pourra plus être remise.",
-  "The copy of %s is deleted: %s freed.": "La copie de %s est supprimée : %s libérés."
+  "The copy of %s is deleted: %s freed.": "La copie de %s est supprimée : %s libérés.",
+  "Support FL26 Mod Studio": "Soutenir FL26 Mod Studio",
+  "Support on Ko-fi": "Soutenir sur Ko-fi",
+  "Not now": "Pas maintenant",
+  "FL26 Mod Studio is free and donating is never required, but a small donation on Ko-fi makes it easier for us to keep the project maintained and updated. Thank you!": "FL26 Mod Studio est gratuit et faire un don n'est pas obligatoire, mais un petit don sur Ko-fi nous aide à maintenir et mettre à jour le projet. Merci !"
  },
  "log": [
   [

@@ -75,3 +75,8 @@ it is released; until then this page only collects what is done and tested.
   Mod Studio. Restore points now has Delete this copy for good... for a deleted or copied world
   (it asks first and says how much it frees), and Delete world says how big the world is and where to
   free that space. (Thanks Vicentico)
+
+## Also new
+
+- **A short Ko-fi reminder at the first start of a new version.** Once per version, after the quick
+  tour: donating is never required, Not now closes it and it does not come back until the next version.

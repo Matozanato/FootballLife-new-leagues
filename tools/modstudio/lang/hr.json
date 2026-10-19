@@ -1880,7 +1880,11 @@
   "Delete this copy for good...": "Obriši ovu kopiju zauvijek...",
   "Pick a deleted or copied world in the list: only those copies are deleted here (Clean up... is for the copies of files).": "Odaberi obrisani ili kopirani svijet na popisu: ovdje se brišu samo te kopije (Počisti... je za kopije datoteka).",
   "Delete this copy of %s for good?\n\nIt frees %s on the disk and can not be put back any more.": "Obrisati ovu kopiju svijeta %s zauvijek?\n\nOslobađa %s na disku i više se ne može vratiti.",
-  "The copy of %s is deleted: %s freed.": "Kopija svijeta %s je obrisana: oslobođeno %s."
+  "The copy of %s is deleted: %s freed.": "Kopija svijeta %s je obrisana: oslobođeno %s.",
+  "Support FL26 Mod Studio": "Podrži FL26 Mod Studio",
+  "Support on Ko-fi": "Podrži na Ko-fiju",
+  "Not now": "Ne sada",
+  "FL26 Mod Studio is free and donating is never required, but a small donation on Ko-fi makes it easier for us to keep the project maintained and updated. Thank you!": "FL26 Mod Studio je besplatan i donacija nije obavezna, ali mala donacija na Ko-fiju olakšava nam održavanje i ažuriranje projekta. Hvala!"
  },
  "log": [
   [

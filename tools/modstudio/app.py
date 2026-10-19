@@ -823,6 +823,33 @@ class Main(QMainWindow):
         self._tour = tour.Tour(self, done=lambda: setattr(self, "_tour", None),
                                follow=(_("Show me how to install a Modpack"), self.start_modpack_guide)).start()
 
+    KOFI = "https://ko-fi.com/mata28"
+
+    def ask_support(self):
+        """mato 19.10.: the first start of a version reminds, in two lines, that Ko-fi is there.
+        Once per version (settings "support"); after the quick tour, never over it"""
+        if self.settings.get("support") == VERSION:
+            return
+        if getattr(self, "_tour", None) is not None:
+            QTimer.singleShot(2000, self.ask_support)
+            return
+        from PySide6.QtCore import QUrl
+        from PySide6.QtGui import QDesktopServices
+        self.settings["support"] = VERSION
+        self.save_settings()
+        box = QMessageBox(self)
+        box.setWindowTitle(_("Support FL26 Mod Studio"))
+        box.setText(_("FL26 Mod Studio is free and donating is never required, but a small donation "
+                      "on Ko-fi makes it easier for us to keep the project maintained and updated. "
+                      "Thank you!"))
+        kofi = box.addButton(_("Support on Ko-fi"), QMessageBox.AcceptRole)
+        box.addButton(_("Not now"), QMessageBox.RejectRole)
+        box.setDefaultButton(kofi)
+        box.finished.connect(lambda _r: box.clickedButton() is kofi
+                             and QDesktopServices.openUrl(QUrl(self.KOFI)))
+        box.open()
+        self._support = box
+
     def start_modpack_guide(self):
         """Help > Install a Modpack, step by step: the tour's card, every click in order (tour.modpack_steps)"""
         from modstudio import tour
@@ -1129,6 +1156,8 @@ def main():
         from modstudio import tour
         if tour.due(w.settings) and not os.environ.get("FL26_NO_TOUR"):
             QTimer.singleShot(1500, w.start_tour)
+        if not os.environ.get("FL26_NO_TOUR"):
+            QTimer.singleShot(2500, w.ask_support)
         if w.settings.get("check_updates", True):
             QTimer.singleShot(3000, lambda: w.check_updates(quiet=True))
     sys.exit(app.exec())
