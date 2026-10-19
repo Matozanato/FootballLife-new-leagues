@@ -3354,14 +3354,37 @@ class CrestImportDialog(Dialog):
             self.national = B.national_teams(project.base) if project.base else set()
         except (OSError, ValueError):
             self.national = set()
+        # B139: every club's country, and the countries and leagues a folder may be named after,
+        # so a picture goes to a club of its folder's country first: "United Sport FC" (UAE) took
+        # nine African "X United" crests
+        key = crestmatch.key
+        self.country = {}                 # club key -> country
+        self.lands = {key(n): n for n in project.countries}
+        self.lands.update({key(a): n for a, n in B.COUNTRY_ALIASES.items() if n in project.countries})
+        self.leagues = {}                 # key(league name) -> country, None when two countries share it
+
+        def league(name, country):
+            k = key(name)
+            self.leagues[k] = country if self.leagues.get(k, country) == country else None
+        try:
+            if project.base:
+                names = dict((fid, n) for n, fid in B.country_ids(project.base))
+                self.country = {("game", t): names.get(c) for t, c in B.club_countries(project.base).items()}
+                lc = B.game_league_countries(project.base, project.game_lgs)
+                for rid, _cid, n, _t in project.game_lgs:
+                    league(n, lc.get(rid))
+        except (OSError, ValueError, SystemExit):
+            pass
         for tid, (n, _s) in sorted(project.game_cl.items()):
             self.clubs.append((n, ("game", tid)))
         for L in project.recipe["leagues"]:
+            league(L["name"], L.get("country"))
             gp = {int(e.get("at", -1)) for e in L.get("game_clubs") or []}
             names = {"name": L["name"], "club_names": list(L.get("club_names") or [])}
             for k in range(int(L.get("clubs", 0))):
                 if k not in gp:
                     self.clubs.append((B.club_name(names, k), ("new", L["name"], k)))
+                    self.country[("new", L["name"], k)] = L.get("country")
         self.form.addRow(hint(_("Each picture of the folder is matched to a club by its file name: the club's "
                                 "name or its team ID. Untick a wrong match.")))
         self.folder = QLineEdit()
@@ -3420,7 +3443,10 @@ class CrestImportDialog(Dialog):
                 rest.append(f)
         taken = {found[f][0][1] for f in found}
         left = [c for c in clubs if c[1] not in taken and not (c[1][0] == "game" and c[1][1] in self.national)]
-        for f, j, sc in self.cm.match(rest, [(n, i) for i, (n, _k) in enumerate(left)]):
+        # B139: a club of the folder's (or the file name's) country first, none of another ticked
+        where = self.cm.folder_country(self.folder.text(), self.lands, self.leagues)
+        for f, j, sc in self.cm.match(rest, [(n, i, self.country.get(k)) for i, (n, k) in enumerate(left)],
+                                      where, self.lands):
             if j is not None:
                 found[f] = (left[j], sc)
         return found
@@ -3439,7 +3465,7 @@ class CrestImportDialog(Dialog):
                 it.setText(2, str(key[1]) if key[0] == "game" else "")
                 it.setText(3, "%d %%" % round(sc * 100))
                 it.setData(0, Qt.UserRole, list(key))
-                it.setCheckState(0, Qt.Checked if sc >= 0.6 else Qt.Unchecked)
+                it.setCheckState(0, Qt.Checked if sc >= self.cm.TICK else Qt.Unchecked)
             else:
                 it.setText(1, _("no club found"))
                 it.setForeground(1, QBrush(QColor(theme.SUBTLE)))

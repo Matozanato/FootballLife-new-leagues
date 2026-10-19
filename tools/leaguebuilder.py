@@ -1390,6 +1390,7 @@ COUNTRY_ALIASES = {
     "DR Congo": "Congo Dr", "Ivory Coast": "Côte D'ivoire", "Taiwan": "Chinese Taipei",
     "United States": "Usa", "Czechia": "Czech Republic", "Cape Verde": "Cabo Verde",
     "Brunei": "Brunei Darussalam", "East Timor": "Timor-leste", "Swaziland": "Eswatini",
+    "Democratic Republic of the Congo": "Congo Dr", "Central African Republic": "Central African Rep.",
 }
 
 

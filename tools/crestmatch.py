@@ -1,18 +1,23 @@
 """Match crest pictures to clubs by name -- a pure function, no UI and no file writing.
 
-    match(files, clubs) -> [(file, club_id or None, score 0..1)]
+    match(files, clubs, where=None, countries=None) -> [(file, club_id or None, score 0..1)]
 
 files: picture file names ("CD Universidad Cesar Vallejo.png", "alianza_lima_r_l.png").
-clubs: [(club_name, club_id), ...].
+clubs: [(club_name, club_id), ...] or [(club_name, club_id, country), ...].
 
 The idea comes from Xxspedd's escudos.py (FL Mod Studio Discord).
 
 How it scores: both sides are reduced to words (accents folded, lower case, letters and digits
-only, filler words dropped; a file also loses the crest pack's size suffix _r, _r_l, _r_ll).
-The score is the Jaccard overlap of the two word sets, or 0.7 when one joined-up name contains
-the other with at least 4 letters in the shorter one, from the start of a word to the end of one
--- a file called "Real Madrid" is worth 0.7 against "Real Madrid Castilla" and 1.0 against "Real
-Madrid", but "Mali" is nothing against "Bruk-Bet Termalica".
+only, filler words dropped; a file also loses the crest pack's size suffix _r, _r_l, _r_ll and
+football-logos.cc's "_1500x1500.football-logos.cc"). The same name, run together or not, is 1.0;
+otherwise the score is the Jaccard overlap of the two word sets, or 0.5 when one name contains
+the other (its words, or its joined-up letters with at least 4 of them, from the start of a word
+to the end of one). 0.5 is under TICK: "Real Madrid" against "Real Madrid Castilla" is shown as a
+suggestion, never ticked, and "Mali" is nothing against "Bruk-Bet Termalica".
+
+Countries (B139): a file is of the country its folder names (where) or its name starts with
+("poland_cracovia_1500x1500.football-logos.cc.png"). A club of that country is taken before any
+other, whatever their scores, and a club of another country is never worth a tick.
 
 The assignment is greedy over the best scores first: a file and a club are each used at most
 once, nothing under 0.4 is accepted, everything else comes back as (file, None, 0.0).
@@ -21,15 +26,19 @@ import re
 import unicodedata
 
 MIN_SCORE = 0.4
-CONTAINS_SCORE = 0.7
+TICK = 0.6                                # this good or better: ticked in Import crests / Import kits
+CONTAINS_SCORE = 0.5                      # one name inside the other: a suggestion, under TICK (B139)
 SHORTEST_CONTAINS = 4                     # letters needed before "one name contains the other" counts
+FOLDER_DEPTH = 3                          # how many of a folder's last names may name its country
 
 FILLER = frozenset((
     "fc", "cf", "cd", "csd", "ca", "ac", "sc", "sd", "ud", "ad", "afc", "club", "the",
     "de", "del", "la", "las", "el", "los", "atletico", "atletica", "deportivo", "deportiva",
     "futbol", "futebol", "balompie", "sport", "sports",
 ))
+PHRASES = (("football", "club"), ("sporting", "club"), ("athletic", "club"))  # filler as two words only
 SIZES = ("_r_ll", "_r_l", "_r")           # the crest packs' size suffixes, longest first
+SITES = (".football-logos.cc",)           # a download site's tag at the end of the name
 
 
 def _fold(text):
@@ -39,19 +48,46 @@ def _fold(text):
     return re.findall(r"[a-z0-9]+", t)
 
 
+def key(text):
+    """a name as one run of letters and digits, to compare countries and folders by:
+    "Côte D'ivoire" and "cote-divoire" are both cotedivoire"""
+    return "".join(_fold(text))
+
+
 def words(text, is_file=False):
-    """the words a name is matched by; a file name also loses the extension and its size tag"""
+    """the words a name is matched by; a file name also loses the extension, its size tag and
+    a site's tag ("_1500x1500.football-logos.cc")"""
     t = text
     if is_file:
         stem, dot, ext = t.rpartition(".")
         if dot and 0 < len(ext) <= 5 and ext.isalnum():
             t = stem
         low = t.lower()
+        for s in SITES:
+            if low.endswith(s):
+                t = t[: -len(s)]
+                low = t.lower()
+                break
         for s in SIZES:
             if low.endswith(s):
                 t = t[: -len(s)]
                 break
-    return [w for w in _fold(t) if w not in FILLER]
+    t = re.sub(r"\s*\([A-Za-z]{2,3}\)\s*$", "", t)        # NewLife's country tag: "Dreams FC (GHA)"
+    out, run = [], []
+    for w in _fold(t) + [""]:
+        if len(w) == 1 and w.isalpha():                     # "F.C." and "S.C." are fc and sc
+            run.append(w)
+            continue
+        out += ["".join(run)] if len(run) > 1 else run
+        run = []
+        if w:
+            out.append(w)
+    out = [w for w in out if not (is_file and re.fullmatch(r"\d+x\d+", w))]
+    for a, b in PHRASES:                                    # "Pyramids Football Club" is pyramids (B139)
+        while any(out[i:i + 2] == [a, b] for i in range(len(out) - 1)):
+            i = next(i for i in range(len(out) - 1) if out[i:i + 2] == [a, b])
+            del out[i:i + 2]
+    return [w for w in out if w not in FILLER]
 
 
 def file_id(name):
@@ -68,16 +104,43 @@ def file_id(name):
     return int(low) if low.isdigit() else None
 
 
+def file_country(name, countries):
+    """(country, the rest of the name) when a file name starts with a country and "_", as
+    football-logos.cc names them ("poland_cracovia_1500x1500..."); (None, name) otherwise.
+    countries: {key(name): country}"""
+    head, sep, rest = name.partition("_")
+    c = countries.get(key(head)) if sep and countries else None
+    return (c, rest) if c and words(rest, True) else (None, name)
+
+
+def folder_country(path, *names):
+    """the country a folder of crests is of: the first of its last FOLDER_DEPTH names, from the
+    innermost out, found in names ({key(name): country}, the countries before the leagues) --
+    "Africa/Algeria/ligue-1-mobilis" is Algeria; None when none is"""
+    parts = [p for p in re.split(r"[\\/]+", path or "") if p][-FOLDER_DEPTH:]
+    parts = [key(p[:-4] if p.lower().endswith(".zip") else p) for p in reversed(parts)]
+    for by in names:
+        for p in parts:
+            if by.get(p):
+                return by[p]
+    return None
+
+
 def score(file_words, club_words):
-    """Jaccard word overlap, or CONTAINS_SCORE when one joined name contains the other"""
+    """1.0 for the same name, CONTAINS_SCORE when one contains the other, else the Jaccard word
+    overlap"""
     if not file_words or not club_words:
         return 0.0
+    ja, jb = "".join(file_words), "".join(club_words)
+    if ja == jb:
+        return 1.0                        # the same name, run together or not ("manchesterunited")
     a, b = set(file_words), set(club_words)
     j = len(a & b) / float(len(a | b))
-    ja, jb = "".join(file_words), "".join(club_words)
     short, long_words = (ja, club_words) if len(ja) <= len(jb) else (jb, file_words)
-    if len(short) >= SHORTEST_CONTAINS and _contains(long_words, short):
-        return max(j, CONTAINS_SCORE)
+    if len(short) >= SHORTEST_CONTAINS and (a < b or b < a or _contains(long_words, short)):
+        # never a tick: "United Sport FC" took nine "X United" crests, Rangers "rangers-kinshasa",
+        # LA Galaxy "ts-galaxy" (B139)
+        return CONTAINS_SCORE
     return j
 
 
@@ -98,23 +161,31 @@ def _contains(long_words, short):
     return False
 
 
-def match(files, clubs):
-    """-> [(file, club_id or None, score)] in the order the files came in"""
-    fw = [words(f, is_file=True) for f in files]
-    cw = [words(n) for n, _id in clubs]
+def match(files, clubs, where=None, countries=None):
+    """-> [(file, club_id or None, score)] in the order the files came in. where: the country of
+    all the files (folder_country), countries: {key(name): country} for file_country"""
+    fc, fw = [], []
+    for f in files:
+        c, rest = file_country(f, countries)
+        fc.append(key(c or where or ""))
+        fw.append(words(rest, is_file=True))
+    cw = [words(c[0]) for c in clubs]
+    cc = [key(c[2] or "") if len(c) > 2 else "" for c in clubs]
     cand = []
     for i, a in enumerate(fw):
         for j, b in enumerate(cw):
             s = score(a, b)
             if s >= MIN_SCORE:
-                cand.append((s, i, j))
-    cand.sort(key=lambda t: (-t[0], t[1], t[2]))          # best first; ties by file, then club
+                # 2 the file's own country, 1 a country unknown on either side, 0 another (B139)
+                home = 1 if not fc[i] or not cc[j] else 2 if fc[i] == cc[j] else 0
+                cand.append((home, s, i, j))
+    cand.sort(key=lambda t: (-t[0], -t[1], t[2], t[3]))   # own country, best first; ties by file, club
     out = [(f, None, 0.0) for f in files]
     used_f, used_c = set(), set()
-    for s, i, j in cand:
+    for home, s, i, j in cand:
         if i in used_f or j in used_c:
             continue
         used_f.add(i)
         used_c.add(j)
-        out[i] = (files[i], clubs[j][1], round(s, 3))
+        out[i] = (files[i], clubs[j][1], round(s if home else min(s, CONTAINS_SCORE), 3))
     return out

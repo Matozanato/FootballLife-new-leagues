@@ -238,7 +238,7 @@ def _dialog_class():
                     it.setText(2, str(tid))
                     it.setText(3, "%d %%" % round(sc * 100))
                     it.setData(1, Qt.UserRole, tid)
-                    it.setCheckState(0, Qt.Checked if sc >= 0.6 else Qt.Unchecked)
+                    it.setCheckState(0, Qt.Checked if sc >= self.cm.TICK else Qt.Unchecked)
                 else:
                     it.setText(1, _("no club found"))
                     it.setForeground(1, QBrush(QColor(theme.SUBTLE)))

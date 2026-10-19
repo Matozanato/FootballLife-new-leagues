@@ -75,6 +75,14 @@ it is released; until then this page only collects what is done and tested.
   Mod Studio. Restore points now has Delete this copy for good... for a deleted or copied world
   (it asks first and says how much it frees), and Delete world says how big the world is and where to
   free that space. (Thanks Vicentico)
+- **Import crests ticked the wrong club (B139).** A picture whose name only held a club's name (or the
+  other way round) was ticked at 70 %: "United Sport FC" of the UAE took nine African "X United"
+  crests, Rangers took "rangers-kinshasa", LA Galaxy "ts-galaxy". Such a match is now only a
+  suggestion at 50 %, unticked. A club of the country the folder is named after (`Africa/Ghana/...`,
+  or a league of the world) or the file name starts with (football-logos.cc's
+  `poland_cracovia_...`) now goes first, and a club of another country is never ticked. "F.C.",
+  "Football Club", "Sporting Club" and NewLife's "(GHA)" no longer stand in the way of the same name.
+  (Thanks David)
 
 ## Also new
 
