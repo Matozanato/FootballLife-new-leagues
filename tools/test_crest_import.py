@@ -11,6 +11,10 @@ Rangers "rangers-kinshasa", ticked. Now one name inside the other is ticked only
 club of the folder's country it fits, a club of the folder's country goes first, and one of
 another country is never ticked.
 
+B144 (Xxspedd, 18.10.): a folder of Colombian crests gave "Leones FC.png" to the Leones FC of
+Ecuador and "Tigres FC.png" to Bolivia's Tigres FC. Now Match to also has every league of the
+world, and a folder named after a league picks that league by itself: only its clubs are matched.
+
 The dialog in this process (QT_QPA_PLATFORM=offscreen), a stand-in project with no tables. No game.
 """
 import os, sys, types
@@ -83,6 +87,37 @@ def b139():
        ticked(d) == {"Vitesse Arnhem.png": (4, True), "Rangers.png": (2, True)})
 
 
+def b144():
+    from modstudio.pages import builder as PB
+    PB.B.country_ids = lambda base: []
+    PB.B.club_countries = lambda base: {}
+    PB.B.game_league_countries = lambda base, leagues=None: {}
+    PB.B.national_teams = lambda base: set()
+    leagues = [{"name": "Torneo DIMAYOR II", "country": "Colombia", "clubs": 3,
+                "club_names": ["Leones FC", "Atletico Huila", "Real Cartagena"],
+                "game_clubs": [{"at": 2, "id": 7}]},
+               {"name": "LigaPro Serie A", "country": "Ecuador", "clubs": 2, "club_names": ["Leones FC", "Tigres FC"]}]
+    project = types.SimpleNamespace(
+        base="tables", countries=[], game_lgs=[], recipe={"leagues": leagues},
+        game_cl={7: ("Real Cartagena", "RCA"), 8: ("Tigres FC", "TIG")},
+        edits=lambda what: {}, league=lambda name: next((L for L in leagues if L["name"] == name), None))
+    d = PB.CrestImportDialog(None, project)
+    ok("Match to lists every league of the world",
+       [d.only.itemText(i) for i in range(3, d.only.count())] == ["Torneo DIMAYOR II", "LigaPro Serie A"])
+    path = os.path.join("C:" + os.sep, "crests", "Torneo DIMAYOR II")
+    ok("a folder named after a league picks it", d.folder_league(path) == 3)
+    ok("a folder named after no league picks nothing", d.folder_league(os.path.join("C:" + os.sep, "crests")) is None)
+    d.folder.setText(path)
+    d.files = ["Leones FC.png", "Tigres FC.png", "Real Cartagena.png"]
+    d.only.setCurrentIndex(d.folder_league(path))
+    got = ticked(d)
+    ok("Leones FC goes to the Leones FC of the folder's league", got.get("Leones FC.png") == (("Torneo DIMAYOR II", 0), True))
+    ok("Tigres FC of another league is not matched", "Tigres FC.png" not in got)
+    ok("a club of the game in the league is matched", got.get("Real Cartagena.png") == (7, True))
+    d.only.setCurrentIndex(0)
+    ok("All clubs still finds Tigres FC", "Tigres FC.png" in ticked(d))
+
+
 def main():
     QApplication.instance() or QApplication([])
     from modstudio.pages import builder as PB
@@ -109,6 +144,7 @@ def main():
     d.fill()
     ok("football-logos.cc's Cracovia is ticked", ticked(d) == {d.files[0]: (4800, True)})
     b139()
+    b144()
     print("test_crest_import: ok (%d)" % N)
 
 

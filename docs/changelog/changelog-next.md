@@ -88,6 +88,10 @@ it is released; until then this page only collects what is done and tested.
 
 ## Also new
 
+- **Import crests: one league's clubs only (B144).** A folder of Colombian crests gave "Leones FC" to
+  the Leones FC of Ecuador and "Tigres FC" to Bolivia's. **Match to** now lists every league of the
+  world too: pick one and only its clubs are matched. A folder named after a league of the world
+  (`Torneo DIMAYOR II`) picks that league by itself. Thanks Xxspedd.
 - **A short Ko-fi reminder at the first start of a new version.** Once per version, after the quick
   tour, with the link to the Ko-fi page: donating is never required, Not now closes it and it does not
   come back until the next version.

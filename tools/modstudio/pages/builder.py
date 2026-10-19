@@ -2,7 +2,7 @@
 
 Every page edits app.project.recipe (modstudio/project.py); leaguebuilder.py does the work.
 """
-import csv, html, io, json, os
+import csv, html, io, json, os, re
 
 from PySide6.QtCore import Qt, QSize, QTimer
 from PySide6.QtGui import QPixmap, QImage, QColor, QBrush, QKeySequence, QShortcut
@@ -3396,6 +3396,10 @@ class CrestImportDialog(Dialog):
         self.only.addItem(_("All clubs"), None)
         self.only.addItem(_("The new leagues' clubs"), "new")
         self.only.addItem(_("The game's clubs"), "game")
+        # B144: the clubs of one league only, so "Leones FC.png" of a Colombian folder does not go to
+        # the Leones FC of Ecuador; picked by itself when the folder has the league's name
+        for L in project.recipe["leagues"]:
+            self.only.addItem(L["name"], ("league", L["name"]))
         self.only.currentIndexChanged.connect(lambda *_a: self.fill())
         self.form.addRow(_("Match to"), self.only)
         self.replace = QCheckBox(_("Replace crests already set"))
@@ -3420,7 +3424,27 @@ class CrestImportDialog(Dialog):
             return
         self.folder.setText(os.path.normpath(d))
         self.files = sorted(f for f in os.listdir(d) if f.lower().endswith(PICTURE_EXT))
-        self.fill()
+        i = self.folder_league(d)
+        if i is not None and i != self.only.currentIndex():
+            self.only.setCurrentIndex(i)          # fills
+        else:
+            self.fill()
+
+    def folder_league(self, path):
+        """the Match to row of the league a folder is named after (its own name or one of the two
+        above it, as for the folder's country), None when none is"""
+        key = self.cm.key
+        parts = [p for p in re.split(r"[\\/]+", path or "") if p][-self.cm.FOLDER_DEPTH:]
+        parts = [key(p[:-4] if p.lower().endswith(".zip") else p) for p in reversed(parts)]
+        rows = {}
+        for i in range(self.only.count()):
+            d = self.only.itemData(i)
+            if isinstance(d, tuple) and d[0] == "league":
+                rows.setdefault(key(d[1]), i)
+        for p in parts:
+            if p in rows:
+                return rows[p]
+        return None
 
     def has_crest(self, key):
         if key[0] == "game":
@@ -3432,7 +3456,14 @@ class CrestImportDialog(Dialog):
     def matches(self):
         """{file: ((club name, key), score)} for the clubs the Match to box allows"""
         want = self.only.currentData()
-        clubs = [c for c in self.clubs if want is None or c[1][0] == want]
+        if isinstance(want, tuple):
+            L = self.project.league(want[1]) or {}
+            gc = L.get("game_clubs") or []
+            ids = {int(e["id"]) for e in (gc.values() if isinstance(gc, dict) else gc) if "id" in e}
+            clubs = [c for c in self.clubs if (c[1][0] == "new" and c[1][1] == want[1])
+                     or (c[1][0] == "game" and c[1][1] in ids)]
+        else:
+            clubs = [c for c in self.clubs if want is None or c[1][0] == want]
         by_id = {c[1][1]: c for c in clubs if c[1][0] == "game"}
         found, rest = {}, []
         for f in self.files:
