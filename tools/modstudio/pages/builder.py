@@ -3569,7 +3569,8 @@ class CrestImportDialog(Dialog):
         left = [c for c in clubs if c[1] not in taken and not (c[1][0] == "game" and c[1][1] in self.national)]
         # B139: a club of the folder's (or the file name's) country first, none of another ticked
         where = self.cm.folder_country(self.folder.text(), self.lands, self.leagues)
-        for f, j, sc in self.cm.match(rest, [(n, i, self.country.get(k)) for i, (n, k) in enumerate(left)],
+        for f, j, sc in self.cm.match(rest, [(n, i, self.country.get(k), k[0] == "game")
+                                             for i, (n, k) in enumerate(left)],
                                       where, self.lands):
             if j is not None:
                 found[f] = (left[j], sc)

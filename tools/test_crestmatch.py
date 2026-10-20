@@ -173,4 +173,63 @@ check(folder_country("C:/Kenya/a/b/c", CTY, LEAGUES), None, "only the last three
 check(folder_country("C:/x/premier-league", CTY, LEAGUES), None, "a league name two countries share")
 check(folder_country("", CTY), None, "no folder")
 
+# 19. B170 (David's final Logos.zip): never ticked over a game club's real crest by its name inside
+# the file's, never a reserve side's picture for a first team, Atletico is not Deportivo
+GAME = True
+for f, club, land in (("fc-united-of-manchester.png", "Manchester United", "England"),
+                      ("portuguesa-de-sao-paulo.webp", "São Paulo FC", "Brazil"),
+                      ("seoul-e-land-fc.webp", "FC Seoul", "Korea Republic"),
+                      ("cove-rangers.webp", "Rangers FC", "Scotland"),
+                      ("fc-stade-lausanne-ouchy.webp", "Lausanne-Sport", "Switzerland")):
+    got = one(f, [(club, 1, land, GAME)], land)
+    check((got[1], got[2]), (1, 0.5), "a game club inside %s: a suggestion only" % f)
+got = one("cove-rangers.webp", [("Rangers FC", 1, "Scotland")], "Scotland")
+check(got[2], 0.65, "the same for a new league's club: ticked, as before")
+check(one("galatasaray.webp", [("Galatasaray SK", 2, "Turkey", GAME)], "Turkey"),
+      ("galatasaray.webp", 2, 0.65), "the file inside a game club's name still ticks")
+check(one("Rangers FC.png", [("Rangers FC", 1, "Scotland", GAME)], "Scotland"), ("Rangers FC.png", 1, 1.0),
+      "a game club's exact name still ticks")
+for f, club in (("alaves-b.webp", "Deportivo Alavés"), ("fc-augsburg-ii.webp", "FC Augsburg"),
+                ("hannover-96-ii.webp", "Hannover 96"), ("atletico-de-madrid-c.webp", "Atlético Madrid"),
+                ("valencia-mestalla.webp", "Valencia"), ("osasuna-promesas.webp", "Osasuna"),
+                ("atalanta-u23.webp", "Atalanta"), ("juventus-next-gen.webp", "Juventus"),
+                ("legia-ii-warszawa.webp", "Legia Warszawa"), ("betis-deportivo.webp", "Real Betis"),
+                ("barcelona-atletic.webp", "Barcelona"), ("sevilla-atletico.webp", "Sevilla")):
+    got = one(f, [(club, 3, "Spain")], "Spain")
+    check((got[1], got[2]), (3, 0.5), "%s is a reserve side, not %s" % (f, club))
+check(one("sevilla-atletico.webp", [("Sevilla", 3, "Spain"), ("Sevilla Atlético", 4, "Spain")], "Spain"),
+      ("sevilla-atletico.webp", 4, 1.0), "Sevilla Atletico before Sevilla")
+check(one("hannover-96-ii.webp", [("Hannover 96", 3, "Germany"), ("Hannover 96 II", 4, "Germany")], "Germany"),
+      ("hannover-96-ii.webp", 4, 1.0), "the reserve side has its own picture")
+check(one("sturm-graz-ii.webp", [("SK Sturm Graz", 3, "Austria", GAME), ("Sportklub Sturm Graz II", 4, "Austria")],
+          "Austria"), ("sturm-graz-ii.webp", 4, 0.65), "a held first team does not make the reserve side's doubtful")
+check(one("willem-ii-tilburg.webp", [("Willem II", 5, "Netherlands")], "Netherlands"),
+      ("willem-ii-tilburg.webp", 5, 0.65), "II of the club's own name is no reserve side")
+check(one("petro-atletico.webp", [("Petro Luanda", 6, "Angola")], "Angola"), ("petro-atletico.webp", 6, 0.65),
+      "Atletico at the end is a B side in Spain only")
+got = one("atletico-de-cali-f-c.webp", [("Deportivo Cali", 7, "Colombia", GAME),
+                                        ("América de Cali", 8, "Colombia", GAME)], "Colombia")
+check(got[2] < TICK, True, "Atletico Cali is neither Deportivo Cali nor, because of it, America de Cali")
+check(one("atletico-de-cali-f-c.webp", [("Deportivo Cali", 7, "Colombia"), ("Atlético de Cali F.C.", 9, "Colombia")],
+          "Colombia"), ("atletico-de-cali-f-c.webp", 9, 1.0), "Atletico de Cali is its own club")
+check(one("tigre.webp", [("Club Atlético Tigre", 10, "Argentina", GAME)], "Argentina"), ("tigre.webp", 10, 1.0),
+      "Atletico on the club's side only is still filler")
+check(one("kiyovu-sports.webp", [("Kiyovu Sport", 11, "Rwanda")], "Rwanda"), ("kiyovu-sports.webp", 11, 1.0),
+      "Sport and Sports are the same")
+check(one("sportivo-belgrano.webp", [("Club Atlético Belgrano", 12, "Argentina")], "Argentina")[2], 0.5,
+      "Sportivo is not Atletico")
+check(one("la-roda.png", [("C.D. Roda", 13, "Spain"), ("La Roda", 14, "Spain")], "Spain"), ("la-roda.png", 14, 1.0),
+      "a tie goes to the club its filler words match")
+check(one("club-lujan.webp", [("Luján Sport Club", 15, "Argentina"), ("Club Luján", 16, "Argentina")], "Argentina"),
+      ("club-lujan.webp", 16, 1.0), "... Club Lujan, not Lujan Sport Club")
+check(one("newell-s-old-boys.webp", [("Tráfico's Old Boys", 17, "Argentina")], "Argentina")[2] < TICK, True,
+      "Newell's Old Boys is not Trafico's Old Boys")
+check(one("newell-s-old-boys.webp", [("Newell's Old Boys", 18, "Argentina")], "Argentina"),
+      ("newell-s-old-boys.webp", 18, 1.0), "Newell's is Newell's")
+check(one("nouakchott-king-s.webp", [("Nouakchott Kings", 19, "Mauritania")], "Mauritania"),
+      ("nouakchott-king-s.webp", 19, 1.0), "king-s is Kings")
+check(one("brighton-and-hove-albion.webp", [("Brighton & Hove Albion", 20, "England", GAME)], "England"),
+      ("brighton-and-hove-albion.webp", 20, 1.0), "and is &")
+check(words("s-fa.webp", True), ["s", "fa"], "a lone first s stays")
+
 print("all %d checks passed" % N)

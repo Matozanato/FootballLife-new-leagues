@@ -1962,7 +1962,8 @@
   "%s moves here from %s, club %d. That place becomes a new club (give it a club there again), and who takes its places in the game's competitions stays as it was.": "%s se seli ovamo iz lige %s, klub %d. To mjesto postaje novi klub (tamo opet stavi klub), a tko zauzima njegova mjesta u natjecanjima igre ostaje isto.",
   "%s moved here from %s, club %d: that place is a new club now. Give it a club there (NewLife club..., Club of the game...), then Build again and start a new career.": "%s je preseljen ovamo iz lige %s, klub %d: to mjesto je sada novi klub. Stavi tamo klub (NewLife klub..., Klub iz igre...), zatim ponovno izgradi i započni novu karijeru.",
   "a club of the game: Club of the game... puts it here": "klub iz igre: Klub iz igre... ga stavlja ovamo",
-  "The game has this club, with its team ID: in Clubs, Club of the game... puts it in this place, and moves it from another league of your world.": "Igra ima ovaj klub, s njegovim ID-em momčadi: u Klubovima ga Klub iz igre... stavlja na ovo mjesto i seli iz druge lige tvog svijeta."
+  "The game has this club, with its team ID: in Clubs, Club of the game... puts it in this place, and moves it from another league of your world.": "Igra ima ovaj klub, s njegovim ID-em momčadi: u Klubovima ga Klub iz igre... stavlja na ovo mjesto i seli iz druge lige tvog svijeta.",
+  "The world in the game is not from a pack. %d packs installed here; the last one: %s": "Svijet u igri nije iz paketa. Ovdje instalirano paketa: %d; zadnji: %s"
  },
  "log": [
   [

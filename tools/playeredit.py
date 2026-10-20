@@ -157,8 +157,9 @@ def cstr(b):
 
 
 def _slot(s):
-    """s as one zero-padded name slot, cut on a whole UTF-8 letter"""
-    b = s.encode("utf-8")[:P_NAME_LEN - 1]
+    """s as one zero-padded name slot, cut on a whole UTF-8 letter, in letters the game's
+    fonts have (pesdb.game_text, B173)"""
+    b = pesdb.game_text(s).encode("utf-8")[:P_NAME_LEN - 1]
     return b.decode("utf-8", "ignore").encode("utf-8").ljust(P_NAME_LEN, b"\x00")
 
 
@@ -171,7 +172,7 @@ def name_slots(name):
     is the whole name as a family-first country's, and 431 such Croats were enough to give
     every Croatian regen a first name on his back.
     """
-    name = name.strip()
+    name = pesdb.game_text(name.strip())      # Mammadov, MAMMADOV on the shirt (B173)
     shirt = (name.split(" ", 1)[1] if " " in name else name).upper()
     return _slot(name) + _slot(shirt) * 2 + _slot(name)
 

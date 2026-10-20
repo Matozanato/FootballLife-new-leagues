@@ -92,7 +92,26 @@ come with it instead.
   new club then, into this one, with who takes its places in the game. **NewLife club...** lists the
   release's clubs the game has too, greyed, and says that Club of the game puts them in; it also no
   longer lists the clubs a league of yours has already. (Thanks vmican)
-
+- **Import crests no longer ticks wrong crests over the game's own clubs (B170).** With a big
+  crest folder (David's Logos) about 75 pictures were ticked onto clubs of the game because the
+  club's name was inside the picture's: "fc-united-of-manchester" went to Manchester United,
+  "cove-rangers" to Rangers FC, "portuguesa-de-sao-paulo" to Sao Paulo FC, and most B sides
+  ("alaves-b", "fc-augsburg-ii", "valencia-mestalla") to their first team. Such a match is now
+  only a suggestion (50 %, not ticked) for a club of the game, a reserve or youth side's picture
+  (B, II, U23, Reserves, Promesas, Sevilla Atletico ...) is never ticked for a first team, and
+  Atletico, Deportivo, Sport tell clubs apart when both names have them ("atletico-de-cali" is
+  not Deportivo Cali). "galatasaray.png" for Galatasaray SK still ticks. (Thanks David)
+- **Names with letters the game cannot draw (B173).** The game's fonts have no small ə, so the
+  Azeri Premier League (Şəfa, Məmmədov) showed boxes, and the same went for Romanian ș and ț
+  and Vietnamese letters such as ơ, ư, ạ. Build now writes such a letter into the game's tables
+  as one the fonts have: ə as a (Mammadov, as UEFA spells it), ș ț as ş ţ, a Vietnamese letter
+  with the accents the fonts have (Nguyễn -> Nguyên); invisible marks some names carry go. Club,
+  league, player and coach names; Mod Studio keeps the names as they were. Build the world again
+  to get it. (Thanks LaraCroft)
+- **The header's PACK box follows the world in the game (B168).** After Activate of another
+  world you installed (the Modpack r12 after eu4), PACK still named the zip installed last while
+  ACTIVE WORLD was right. It now names the pack the active world came from; for a world built
+  on your PC it names the last pack that brought no world (scoreboards, kits), or nothing.
 
 ## Read this first
 
