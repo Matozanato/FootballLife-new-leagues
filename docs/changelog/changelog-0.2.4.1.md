@@ -1,7 +1,11 @@
 # What's new in Mod Studio 0.2.4.1
 
-0.2.4.1 (beta, 2026-10-20) fixes what you reported since 0.2.4 (2026-10-18). Worlds of 0.2.4 keep
+0.2.4.1 (2026-10-20) fixes what you reported since 0.2.4 (2026-10-18). Worlds of 0.2.4 keep
 working: Build them once with 0.2.4.1, and careers carry on.
+
+**You don't have to update.** If 0.2.4 works for you and none of the fixes below is something you
+are waiting for, stay on it. 0.2.4.1 was tested in the closed beta, but problems are still
+possible; if you hit one, tell us on Discord.
 
 ## Fixed
 
@@ -119,11 +123,6 @@ working: Build them once with 0.2.4.1, and careers carry on.
   top eight (Lyon) also came in as a play-off winner: Lyon v Lyon. A winner that is not one of the
   tie's two clubs is now taken from the tie's own table (else the seeded club), and the log says so.
   (Thanks Micarodvzla22)
-- **The CAF and AFC cups had no knockout from the second season (B172).** On a world with group cups
-  of its own (the Worldpack: CAF Champions League, AFC Champions League Two ...), the game opens a
-  cup's next season early, and from the second season the groups' tables were read from that new,
-  empty season: the knockout was never drawn and the cup stopped after its groups. The tables are
-  now read from the season the groups were played in.
 - **The game closed on Group stage of the AFC Champions League Two (B171).** Database >
   Competition Info > a group cup of the world > Group stage, from the new year to the next draw
   (the group tables of the season gone), took the game down. Until the groups are drawn again the
@@ -159,3 +158,10 @@ working: Build them once with 0.2.4.1, and careers carry on.
   tour, with the link to the Ko-fi page: donating is never required, Not now closes it and it does not
   come back until the next version.
 - **A Ko-fi button at the top, next to Credits**: it opens the Ko-fi page in the browser.
+
+## Not fixed yet
+
+- **The CAF and AFC cups have no knockout from the second season (B172).** On a world with group
+  cups of its own (the Worldpack: CAF Champions League, AFC Champions League Two ...), the cup stops
+  after its groups from the second season of a career: the knockout is never drawn. The first season
+  is fine. This was already so in 0.2.4; 0.2.4.1 does not make it worse, and we are on it.
