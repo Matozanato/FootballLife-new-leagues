@@ -36,6 +36,13 @@ come with it instead.
   (B, II, U23, Reserves, Promesas, Sevilla Atletico ...) is never ticked for a first team, and
   Atletico, Deportivo, Sport tell clubs apart when both names have them ("atletico-de-cali" is
   not Deportivo Cali). "galatasaray.png" for Galatasaray SK still ticks. (Thanks David)
+- **Names with letters the game cannot draw (B173).** The game's fonts have no small ə, so the
+  Azeri Premier League (Şəfa, Məmmədov) showed boxes, and the same went for Romanian ș and ț
+  and Vietnamese letters such as ơ, ư, ạ. Build now writes such a letter into the game's tables
+  as one the fonts have: ə as a (Mammadov, as UEFA spells it), ș ț as ş ţ, a Vietnamese letter
+  with the accents the fonts have (Nguyễn -> Nguyên); invisible marks some names carry go. Club,
+  league, player and coach names; Mod Studio keeps the names as they were. Build the world again
+  to get it. (Thanks LaraCroft)
 
 ## Read this first
 

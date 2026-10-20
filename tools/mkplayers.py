@@ -59,7 +59,8 @@ def load(d, n):
 
 
 def put(b, off, s, n):
-    v = s.encode("utf-8")[:n - 1]
+    v = pesdb.game_text(s).encode("utf-8")[:n - 1]
+    v = v.decode("utf-8", "ignore").encode("utf-8")
     b[off:off + n] = v + b"\0" * (n - len(v))
 
 

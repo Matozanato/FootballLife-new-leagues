@@ -92,9 +92,60 @@ def reg_rows(raw=None):
                         hdr=r[0xc:0x14].hex(" "), names=names, name=names[0]))
     return out
 
+
+# --- names the game can draw (B173) ---
+# The letters U+00A0..U+20FF the game's fonts have, all four of them (pes, match, LPsm, plname
+# _fnt.bin of dt11_x64.cpk; a glyph's code is its UTF-8 bytes): Latin-1 and Latin Extended-A
+# whole, of Extended-B only Ə, ƒ and pinyin's ǎ ǐ ǒ ǔ ǖ ǘ ǚ ǜ, basic Greek and Cyrillic, some
+# punctuation. Anything else in there is drawn as a box: Azerbaijani ə, Romanian ș ț, Vietnamese
+# ơ ư ạ ế. Above U+20FF (Chinese, Japanese, Korean ...) nothing is changed.
+FONT_RANGES = ((0x00A1, 0x017F), (0x018F, 0x018F), (0x0192, 0x0192), (0x01CE, 0x01CE), (0x01D0, 0x01D0),
+               (0x01D2, 0x01D2), (0x01D4, 0x01D4), (0x01D6, 0x01D6), (0x01D8, 0x01D8), (0x01DA, 0x01DA),
+               (0x01DC, 0x01DC), (0x02C6, 0x02C7), (0x02D9, 0x02D9), (0x02DC, 0x02DC), (0x0384, 0x0386),
+               (0x0388, 0x038A), (0x038C, 0x038C), (0x038E, 0x03A1), (0x03A3, 0x03CE), (0x0401, 0x040C),
+               (0x040E, 0x044F), (0x0451, 0x045C), (0x045E, 0x045F), (0x0490, 0x0491), (0x2010, 0x2010),
+               (0x2013, 0x2016), (0x2018, 0x201A), (0x201C, 0x201E), (0x2020, 0x2022), (0x2025, 0x2026),
+               (0x2030, 0x2030), (0x2032, 0x2033), (0x2039, 0x203B), (0x203E, 0x203E), (0x20AC, 0x20AC))
+# a letter the fonts lack written as one they have, before taking accents off: ə as UEFA spells
+# it (Məmmədov -> Mammadov), Romanian's comma below as the cedilla the fonts have (ș -> ş)
+FONT_SPELL = {"\u0259": "a", "\u0218": "\u015e", "\u0219": "\u015f", "\u021a": "\u0162", "\u021b": "\u0163",
+              "\u01e7": "\u011f", "\u01e6": "\u011e", "\u04e7": "\u00f6", "\u04e6": "\u00d6", "\u04d9": "a",
+              "\u04d8": "\u018f", "\u00a0": " "}
+
+
+def font_has(ch):
+    c = ord(ch)
+    if c < 0xA0 or c > 0x20FF:
+        return c >= 0x20 or c in (9, 10, 13)
+    return any(a <= c <= b for a, b in FONT_RANGES)
+
+
+def game_text(s):
+    """s as the game can draw it (B173): a letter its fonts lack becomes one they have (FONT_SPELL,
+    or the same letter with fewer accents: ế -> ê, ứ -> ú, ạ -> a), invisible marks go; Mod Studio keeps
+    the name as it was, only the game's tables get this"""
+    if not s or s.isascii():
+        return s
+    import itertools, unicodedata
+    out = []
+    for ch in unicodedata.normalize("NFC", s):
+        ch = FONT_SPELL.get(ch, ch)
+        if font_has(ch):
+            out.append(ch)
+            continue
+        if unicodedata.category(ch) in ("Mn", "Me", "Cf", "Cc"):
+            continue                                  # a loose accent, a right-to-left mark
+        d = unicodedata.normalize("NFD", ch)
+        like = [t for k in range(len(d) - 1, -1, -1) for marks in itertools.combinations(d[1:], k)
+                for t in [unicodedata.normalize("NFC", d[0] + "".join(marks))] if len(t) == 1 and font_has(t)]
+        out.append(like[0] if like else ch)           # the most accents kept; none like it: as it was
+    return "".join(out)
+
+
 def reg_set_name(r, name):
     """Write name into all 20 language slots of a regulation row (bytearray)."""
-    b = name.encode("utf-8")[:114]
+    b = game_text(name).encode("utf-8")[:114]
+    b = b.decode("utf-8", "ignore").encode("utf-8")       # never half a letter
     for k in range(20):
         o = 0x14 + k * 115
         r[o:o+115] = b + bytes(115 - len(b))

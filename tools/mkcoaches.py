@@ -110,8 +110,8 @@ def add_coaches(coaches, teams, min_id=FIRST_NEW_ID, fmt="FL M%04d", names=None,
         new_ids.add(cid)
         r = bytearray(tpl)
         r[C_ID:C_ID + 4] = cid.to_bytes(4, "little")
-        nm = ((names or {}).get(u32(rec, T_ID)) or made_up_name(pool, club_country(rec), u32(rec, T_ID))
-              or (fmt % clubs if "%" in fmt else fmt)).encode("utf-8")[:C_NAME_LEN - 1]
+        nm = pesdb.game_text((names or {}).get(u32(rec, T_ID)) or made_up_name(pool, club_country(rec), u32(rec, T_ID))
+                             or (fmt % clubs if "%" in fmt else fmt)).encode("utf-8")[:C_NAME_LEN - 1]
         nm = nm.decode("utf-8", "ignore").encode("utf-8")      # not cut inside a letter
         nm += bytes(C_NAME_LEN - len(nm))
         r[C_NAME1:C_NAME1 + C_NAME_LEN] = nm
