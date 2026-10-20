@@ -1947,7 +1947,14 @@
   "a real club's": "d'un vrai club",
   "the club's own (a club of the game)": "le sien (un club du jeu)",
   "the stadium of the game the club plays at; a home stadium of your stadium pack above, when it has one, is shown in its place": "le stade du jeu où le club joue ; un stade à domicile de votre pack de stades ci-dessus, quand il en a un, est affiché à sa place",
-  "Your world's clubs": "Clubs de votre monde"
+  "Your world's clubs": "Clubs de votre monde",
+  "Forward": "Suivant",
+  "Undo": "Annuler",
+  "Redo": "Rétablir",
+  "Take back the last change to your world (Ctrl+Z)": "Annule la dernière modification de ton monde (Ctrl+Z)",
+  "Do the taken-back change again (Ctrl+Y)": "Rétablit la modification annulée (Ctrl+Y)",
+  "Change taken back": "Modification annulée",
+  "Change done again": "Modification rétablie"
  },
  "log": [
   [

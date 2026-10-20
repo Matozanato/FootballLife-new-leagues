@@ -187,6 +187,20 @@ class Main(QMainWindow):
         sb.addPermanentWidget(self.status_busy)
         # edits of clubs, players and leagues go into the recipe at once; this says whether the
         # recipe file has them yet (poll, 11.10.: people looked for an Apply button)
+        # 0.2.5: Undo / Redo of the last change to your world (mato 16.10.), Ctrl+Z / Ctrl+Y when
+        # no text box has the keys
+        self.status_undo, self.status_redo = QPushButton("\u21b6 " + _("Undo")), QPushButton("\u21b7 " + _("Redo"))
+        for b, tip, go, key in ((self.status_undo, _("Take back the last change to your world (Ctrl+Z)"), self.undo, "Ctrl+Z"),
+                                (self.status_redo, _("Do the taken-back change again (Ctrl+Y)"), self.redo, "Ctrl+Y")):
+            b.setObjectName("statusbtn")
+            b.setFlat(True)
+            b.setCursor(Qt.PointingHandCursor)
+            b.setToolTip(tip)
+            b.setAccessibleName(tip)
+            b.setEnabled(False)
+            b.clicked.connect(go)
+            QShortcut(QKeySequence(key), self, go)
+            sb.addPermanentWidget(b)
         self.status_saved = QPushButton("")
         self.status_saved.setObjectName("statusbtn")
         self.status_saved.setFlat(True)
@@ -448,8 +462,26 @@ class Main(QMainWindow):
         h.setContentsMargins(10, 0, 10, 0)
         h.setSpacing(2)
         self.nav_group = QButtonGroup(self)
+        self.nav_history, self.nav_at = [], -1
         self.nav_buttons, self.nav_group_of, self.nav_folds, self.nav_heads = {}, {}, {}, {}
         self.nav_titles = {}
+        # 0.2.5: back and forward through the pages you had open, as in a browser (Vicentico 16.10.:
+        # could not find his way back to Build details). Alt+Left/Right and the mouse's side
+        # buttons do the same; only whole pages are remembered, not what was picked on them.
+        self.nav_back, self.nav_fwd = QToolButton(), QToolButton()
+        for b, text, tip, go, keys in ((self.nav_back, "◀", _("Back"), self.go_back, (QKeySequence.Back, "Alt+Left")),
+                                       (self.nav_fwd, "▶", _("Forward"), self.go_forward, (QKeySequence.Forward, "Alt+Right"))):
+            b.setObjectName("navitem")
+            b.setText(text)
+            b.setToolTip(tip)
+            b.setAccessibleName(tip)
+            b.setCursor(Qt.PointingHandCursor)
+            b.setEnabled(False)
+            b.clicked.connect(go)
+            for k in keys:
+                QShortcut(QKeySequence(k), self, go)
+            h.addWidget(b)
+        h.addSpacing(8)
         titles = {cls.__name__: cls.title for _c, group in page_groups() for cls in group}
         n = 0
         for caption, folds, sections in NAV:
@@ -585,6 +617,14 @@ class Main(QMainWindow):
         return self.pages[name]
 
     def open_page(self, name):
+        if not getattr(self, "_nav_jump", False) and name in self.pages:
+            hist = self.nav_history
+            if not hist or hist[self.nav_at] != name:
+                del hist[self.nav_at + 1:]
+                hist.append(name)
+                del hist[:-50]
+                self.nav_at = len(hist) - 1
+            self._nav_arrows()
         p = self.pages[name]
         key = self.section_of.get(name) or OPEN_FOR.get(name)
         tabs = self.section_tabs.get(key) if name in self.section_of else None
@@ -610,6 +650,29 @@ class Main(QMainWindow):
             p.shown()
         except Exception as e:
             p.say(_("This section could not be shown: %s") % e, "err")
+
+    def _nav_arrows(self):
+        self.nav_back.setEnabled(self.nav_at > 0)
+        self.nav_fwd.setEnabled(self.nav_at < len(self.nav_history) - 1)
+
+    def _nav_go(self, step):
+        """open the page `step` places away in the history without adding to it"""
+        at = self.nav_at + step
+        if not 0 <= at < len(self.nav_history):
+            return
+        self.nav_at = at
+        self._nav_jump = True
+        try:
+            self.open_page(self.nav_history[at])
+        finally:
+            self._nav_jump = False
+        self._nav_arrows()
+
+    def go_back(self):
+        self._nav_go(-1)
+
+    def go_forward(self):
+        self._nav_go(1)
 
     # ---- shared state ----
     def ini(self):
@@ -656,8 +719,37 @@ class Main(QMainWindow):
         from modstudio.pages.changes import WorldChangesDialog
         WorldChangesDialog(self, self.project).exec()
 
+    def _text_box_took(self, redo):
+        """a text box with the focus keeps Ctrl+Z / Ctrl+Y for its own text"""
+        from PySide6.QtWidgets import QLineEdit, QPlainTextEdit, QTextEdit
+        w = QApplication.focusWidget()
+        if isinstance(w, QLineEdit):
+            if w.isRedoAvailable() if redo else w.isUndoAvailable():
+                (w.redo if redo else w.undo)()
+                return True
+        elif isinstance(w, (QTextEdit, QPlainTextEdit)):
+            (w.redo if redo else w.undo)()
+            return True
+        return False
+
+    def undo(self):
+        if self._text_box_took(False):
+            return
+        if self.project.undo():
+            self.status(_("Change taken back"))
+            self.show_saved()
+
+    def redo(self):
+        if self._text_box_took(True):
+            return
+        if self.project.redo():
+            self.status(_("Change done again"))
+            self.show_saved()
+
     def show_saved(self):
         p = self.project
+        self.status_undo.setEnabled(p.can_undo())
+        self.status_redo.setEnabled(p.can_redo())
         if p.dirty:
             self.status_saved.setText("● " + _("Saving..."))
             self.status_saved.setStyleSheet("color: %s;" % theme.ACCENT)

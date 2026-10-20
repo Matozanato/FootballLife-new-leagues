@@ -1948,7 +1948,14 @@
   "a real club's": "stvarnog kluba",
   "the club's own (a club of the game)": "klupski vlastiti (klub iz igre)",
   "the stadium of the game the club plays at; a home stadium of your stadium pack above, when it has one, is shown in its place": "igrin stadion na kojem klub igra; domaći stadion iz tvog paketa stadiona gore, kad ga ima, prikazuje se umjesto njega",
-  "Your world's clubs": "Klubovi tvog svijeta"
+  "Your world's clubs": "Klubovi tvog svijeta",
+  "Forward": "Naprijed",
+  "Undo": "Poništi",
+  "Redo": "Ponovi",
+  "Take back the last change to your world (Ctrl+Z)": "Vrati zadnju izmjenu tvog svijeta (Ctrl+Z)",
+  "Do the taken-back change again (Ctrl+Y)": "Ponovi vraćenu izmjenu (Ctrl+Y)",
+  "Change taken back": "Izmjena vraćena",
+  "Change done again": "Izmjena ponovljena"
  },
  "log": [
   [

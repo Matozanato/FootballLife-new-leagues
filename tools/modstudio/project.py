@@ -4,7 +4,7 @@ The recipe is the same JSON leaguebuilder.py builds from.  The tables are the ga
 Team/Competition/Player tables, unpacked once from the person's game into
 %APPDATA%\\FL26ModStudio\\tables (Settings > Unpack the game's tables).
 """
-import json, os, shutil, zlib
+import copy, json, os, shutil, time, zlib
 
 from PySide6.QtCore import QObject, Signal
 
@@ -28,6 +28,9 @@ class Project(QObject):
         self.recipe = blank()
         self.path = None
         self.dirty = False
+        # 0.2.5: Undo and Redo of the whole world (mato 16.10.): a copy of the recipe before each
+        # change, up to 30 back; touches within a third of a second are one step
+        self._undo, self._redo, self._snap, self._snap_at = [], [], copy.deepcopy(self.recipe), 0.0
         self.base = None
         self.overlay = 0            # files of the chosen tables folder laid over the game's (0: a full set)
         self.tables_error = ""
@@ -244,9 +247,55 @@ class Project(QObject):
 
     # ---- recipe ----
     def touch(self):
+        self._remember()
         self.dirty = True
         self.changed.emit()
         self._autosave_soon()
+
+    # ---- undo ----
+    def _remember(self):
+        """keep the recipe as it was before this change (one step for touches close together)"""
+        if self.recipe == self._snap:
+            return
+        now = time.monotonic()
+        if now - self._snap_at > 0.3:
+            self._undo.append(self._snap)
+            del self._undo[:-30]
+        self._redo.clear()
+        self._snap, self._snap_at = copy.deepcopy(self.recipe), now
+
+    def _forget(self):
+        self._undo, self._redo, self._snap, self._snap_at = [], [], copy.deepcopy(self.recipe), 0.0
+
+    def can_undo(self):
+        return bool(self._undo)
+
+    def can_redo(self):
+        return bool(self._redo)
+
+    def _restore(self, state):
+        """the recipe becomes `state` in place: the pages keep their references to the dict"""
+        self.recipe.clear()
+        self.recipe.update(copy.deepcopy(state))
+        self._snap, self._snap_at = copy.deepcopy(state), 0.0
+        self.dirty = True
+        self.changed.emit()
+        self._autosave_soon()
+
+    def undo(self):
+        """back one change; True when there was one"""
+        if not self._undo:
+            return False
+        self._redo.append(copy.deepcopy(self.recipe))
+        self._restore(self._undo.pop())
+        return True
+
+    def redo(self):
+        if not self._redo:
+            return False
+        self._undo.append(copy.deepcopy(self.recipe))
+        self._restore(self._redo.pop())
+        return True
 
     def _autosave_soon(self):
         """0.2.4: your world keeps itself (no Save recipe to remember): a change is saved a moment
@@ -473,6 +522,7 @@ class Project(QObject):
 
     def new(self):
         self.recipe, self.path, self.dirty = blank(), None, False
+        self._forget()
         self.changed.emit()
 
     def open(self, path, copy=False):
@@ -488,6 +538,7 @@ class Project(QObject):
         r.setdefault("edits", {})
         r.setdefault("players", {})
         self.recipe, self.path, self.dirty = r, None if copy else path, False
+        self._forget()
         self.changed.emit()
 
     def save(self, path=None):
