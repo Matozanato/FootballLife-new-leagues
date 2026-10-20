@@ -61,7 +61,8 @@ with tempfile.TemporaryDirectory() as t:
     assert "5002, 031, Levadia Municipal Stadium, Greece\\Levadia Municipal Stadium   %s Super League/1" % S.TAG in lines
     assert "5001, 009, Jan Breydelstadion (Club Brugge), Belgium\\Jan Breydelstadion (Club Brugge)   %s Super League/0" \
         % S.TAG in lines, lines
-    assert "5003, 027, Monumental, Argentina\\El Monumental - River   %s Super League/2" % S.TAG in lines
+    # the slot comes from the stadium's own folder (8b18fd0, Erax: 009 here), not from the pick's "027"
+    assert "5003, 009, Monumental, Argentina\\El Monumental - River   %s Super League/2" % S.TAG in lines
     assert not any(l.startswith(("5006,", "5005,")) for l in lines)       # the game's stadium; Tirana's off
     # ---- back to the world's: no file, the plan's lines again ----
     S.save_edits(root, {})
