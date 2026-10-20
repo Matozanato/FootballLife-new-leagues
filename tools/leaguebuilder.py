@@ -495,6 +495,78 @@ class BuildError(Exception):
     pass
 
 
+class PlanProblems(BuildError):
+    """every problem plan() found, at once (jibibi, vmican 19.10.: Build stopped at the first one,
+    and the next came only after it was put right): problems is [(text, where)], where says what
+    to open for it -- {"league": name, "place": k}, {"league": name}, {"club": team id},
+    {"players": recipe key} or {}"""
+
+    def __init__(self, problems):
+        self.problems = list(problems)
+        if len(self.problems) == 1:
+            text = self.problems[0][0]
+        else:
+            text = "%d problems:\n  " % len(self.problems) + "\n  ".join(t for t, _w in self.problems)
+        super().__init__(text)
+
+
+class _Below(BuildError):
+    """a league under one that has a problem already: left out, not reported again"""
+
+
+def club_label(info, tid):
+    """a club of the game as Build's messages name it: its name and its team id, both (mato
+    21.10.: the ids stay visible everywhere)"""
+    name = (info["clubs"].get(tid) or ("",))[0]
+    return "%s (%d)" % (name, tid) if name else "club %d" % tid
+
+
+def problem_where(text, leagues):
+    """what a problem's text is about, for Go there: a league of the recipe and a place in it
+    ("Liga 2, club 4: ..."), a league ("Liga 2: ..."), the players of a club ("players of 101",
+    "players of Liga 2/3"), or {}"""
+    m = re.match(r"(?:players|manager|home stadium) of (.+?)(?::|, (?:new )?player)", text)
+    if m:
+        return {"players": m.group(1)}
+    for nm in sorted(leagues, key=len, reverse=True):
+        if text.startswith(nm + ", club "):
+            m = re.match(r"\d+", text[len(nm) + 7:])
+            if m:
+                return {"league": nm, "place": int(m.group(0)) - 1}
+        if text.startswith(nm + ":") or text.startswith(nm + " "):
+            return {"league": nm}
+    m = re.search(r"\((\d+)\)", text)            # a club of the game, "Fortaleza (1712)"
+    if m:
+        return {"club": int(m.group(1))}
+    return {}
+
+
+def _problem(errs, names, text):
+    errs.append((text, problem_where(text, names)))
+
+
+def stale_swaps(recipe, base):
+    """the recipe's swaps (edits.swaps) that the game's tables have made out of date: the two
+    clubs play in the same league there now (jibibi 19.10.: Fortaleza and Remo, swapped in a
+    world made before, are both in the game's Serie A of the update). Build leaves them out and
+    says so instead of stopping. [(pair, note)]"""
+    pairs = (recipe.get("edits") or {}).get("swaps") or []
+    if not pairs:
+        return []
+    info = game_info(base)
+    out = []
+    for pair in pairs:
+        try:
+            a, b = (int(x) for x in pair)
+        except (TypeError, ValueError):
+            continue
+        lg = info["league_of"].get(a)
+        if a != b and lg is not None and lg == info["league_of"].get(b):
+            out.append((pair, "the swap of %s and %s is left out: the game's tables have both in the same league "
+                              "now (remove it on Leagues to stop this note)" % (club_label(info, a), club_label(info, b))))
+    return out
+
+
 def squads_cut(said):
     """(clubs given a squad, new clubs) when mkplayers' output says the player cap left it room
     for only some of the new clubs; None when every club got one"""
@@ -1309,16 +1381,17 @@ def swap_problems(recipe, base):
         except (TypeError, ValueError):
             err.append("swap %r: two team ids" % (pair,))
             continue
+        ab = "%s <-> %s" % (club_label(info, a), club_label(info, b))
         for t in (a, b):
             if t not in info["league_of"]:
-                err.append("swap %d <-> %d: club %d plays in no league of the game" % (a, b, t))
+                err.append("swap %s: %s plays in no league of the game" % (ab, club_label(info, t)))
             if t in seen:
-                err.append("club %d is in two swaps" % t)
+                err.append("%s is in two swaps" % club_label(info, t))
             if t in taken:
-                err.append("club %d plays in a new league of the recipe; it cannot also swap" % t)
+                err.append("%s plays in a new league of the recipe; it cannot also swap" % club_label(info, t))
             seen.add(t)
         if a == b or (a in info["league_of"] and info["league_of"].get(a) == info["league_of"].get(b)):
-            err.append("swap %d <-> %d: the two clubs play in the same league" % (a, b))
+            err.append("swap %s: the two clubs play in the same league" % ab)
     return err
 
 
@@ -1906,184 +1979,195 @@ def plan(recipe, base, prev=None):
                 and REGION_FIRST <= q["region"] <= REGION_LAST and q["region"] not in used_region):
             used_region.add(q["region"])
             country_region[fid] = q["region"]
+    errs, failed = [], set()        # every problem at once (jibibi 19.10.), the leagues that had one
     for k, i in enumerate(order):
         L = leagues[i]
         name = names[i]
-        n, legs = int(L.get("clubs", 0)), int(L.get("legs", 2))
-        if not CLUBS_MIN <= n <= CLUBS_MAX:
-            raise BuildError("%s: %d clubs -- a league has %d..%d" % (name, n, CLUBS_MIN, CLUBS_MAX))
-        if not 1 <= legs <= LEGS_MAX:
-            raise BuildError("%s: clubs meet 1..%d times, not %d" % (name, LEGS_MAX, legs))
-        fid = mkflags.by_name(cty, L.get("country", ""))
-        if fid is None:
-            raise BuildError("%s: no country called %r in Country.bin" % (name, L.get("country")))
-        p = {"name": name, "country": fid, "clubs": n, "legs": legs, "rid": rid_of[i], "cid": cid_of[i],
-             "slot": fl26world.DEFAULT_SLOT.get(rid_of[i], fl26world.NO_SLOT), "club_names": list(L.get("club_names") or []),
-             "exhibition": bool(L.get("exhibition")),
-             "logo": L.get("logo") or None, "flag": L.get("flag") or None,
-             "club_crests": list(L.get("club_crests") or []),
-             "club_abbrs": list(L.get("club_abbrs") or []),
-             "club_coaches": list(L.get("club_coaches") or []),     # managers' names, "" = made up (mkcoaches)
-             "formation": str(L.get("formation") or "").strip(),
-             "club_formations": [str(x or "").strip() for x in (L.get("club_formations") or [])],
-             "club_ids": [int(x) if str(x or "").strip().isdigit() else None
-                          for x in (L.get("club_ids") or [])][:n],     # ids of the recipe's own
-             "club_kits": list(L.get("club_kits") or []),     # shirt words (shieldcrest) for crests
-             "club_away_kits": list(L.get("club_away_kits") or []),   # and for picking kits (mkkits)
-             "newlife": newlife_of(L),
-             "kit_folders": list(L.get("kit_folders") or []),     # Kit Server folders and the
-             "scoreboard": L.get("scoreboard") or None,           # Scoreboard Server one (lbservers)
-             "exchange": int(3 if L.get("exchange") is None else L["exchange"]),   # null in an old package
-             "above": None, "tier": 1,
-             "real_calendar": L.get("real_calendar"),     # realcal.py: dates, or false for none
-             "europe": [[int(a), int(b)] for a, b in (L.get("europe") or [])]}
-        q = pins.get(name.lower()) or {}
-        if q.get("teams"):
-            # the team ids the last Build gave this league's places, and the names they had:
-            # build() gives a new club its old id back (pinned_tid)
-            p["prev_teams"] = [t if isinstance(t, int) else None for t in q["teams"]]
-            p["prev_names"] = [str(x or "").strip().lower() for x in (q.get("club_names") or [])]
-        for f in [p["formation"]] + p["club_formations"]:
-            if f and formation_club(base, f) is None:
-                raise BuildError("%s: no formation %r (the Formation list has them)" % (name, f))
-        bad = europe_problems(n, L.get("europe") or [], bool(L.get("cup")))
-        if bad:
-            raise BuildError("%s: European places: %s" % (name, "; ".join(bad)))
-        gc = {}
-        for e in L.get("game_clubs") or []:
-            try:
-                at, tid = int(e.get("at", -1)), int(e.get("id", 0))
-            except (TypeError, ValueError, AttributeError):
-                raise BuildError("%s: a club of the game is written wrong: %r" % (name, e))
-            if not 0 <= at < n:
-                raise BuildError("%s: a club of the game at place %d, but the league has %d clubs"
-                                 % (name, at + 1, n))
-            if at in gc:
-                raise BuildError("%s: two clubs of the game at place %d" % (name, at + 1))
-            gc[at] = {"id": tid, "swap": e.get("swap"), "keep": bool(e.get("keep"))}
-        p["game_clubs"] = gc
-        if len(p["club_names"]) > n:
-            raise BuildError("%s: %d club names for %d clubs" % (name, len(p["club_names"]), n))
-        up = L.get("above")
-        if up not in (None, ""):
-            if isinstance(up, str) and not up.isdigit():
-                parent = by_name.get(up.strip().lower())
-                if parent is None:
-                    raise BuildError("%s: no league called %r above it" % (name, up))
-                p["above"], p["tier"], p["region"] = parent["rid"], parent["tier"] + 1, parent["region"]
-                p["follows_calendar"] = bool(parent.get("calendar") or parent.get("follows_calendar"))
-            else:
-                pr = regrow.get(int(up))
-                if pr is None or pr[M.R_TYPE] != 4:
-                    raise BuildError("%s: regulation %s is not a shipped league" % (name, up))
-                if u16(pr, M.R_BELOW) in regrow:
-                    raise BuildError("%s: regulation %s already has a league below it (%d)"
-                                     % (name, up, u16(pr, M.R_BELOW)))
-                p["above"], p["tier"] = int(up), M.get_tier(pr) + 1
-                p["region"] = region_of_cid[pr[M.R_CID]]
-                p["follows_calendar"] = p["region"] in CALENDAR_REGIONS and not pl_saudi_august(recipe, p["region"])
-                if p["tier"] >= 3:
-                    p["cupfield"] = cup_field_of_region(regrow, region_of_cid, p["region"], int(up))
-                    # the super cup is filled the same way, from the region's lowest regulation
-                    # id: League One 01 played the Community Shield against Liverpool in the
-                    # first July (2026-10-01). fl26chain swaps such a club out, as for #29.
-                    if p["cupfield"]:
-                        p["scup"] = home_supercup(regrow, region_of_cid, p["region"])
-                if p["tier"] == 2:
-                    p["cup"] = home_cup(regrow, region_of_cid, p["region"])
-                    p["scup"] = home_supercup(regrow, region_of_cid, p["region"])
-                    if p["cup"] and not L.get("cup_top_only"):
-                        top = entries_of(base, pr[M.R_CID])
-                        p["cup_all"] = top + n if cup_takes_both(p["cup"], top + n) else 0
-                    if p["cup"] and L.get("cup_top_only"):
-                        p["cup_top_only"] = True       # for recipe_from_plan
-            if p["tier"] > 7:
-                raise BuildError("%s: division %d -- the rank field stops at 7" % (name, p["tier"]))
-        else:
-            key = fid
-            if key not in country_region:
-                reg = next((r for r in range(REGION_FIRST, REGION_LAST + 1) if r not in used_region), None)
-                if reg is None:
-                    raise BuildError("no free region left for %s" % L.get("country"))
-                used_region.add(reg)
-                country_region[key] = reg
-            p["region"] = country_region[key]
-            if L.get("cup"):
-                p["own_cup"] = {"name": (L.get("cup_name") or "").strip() or name + " Cup",
-                                "logo": L.get("cup_logo") or None}
-                if L.get("supercup"):
-                    p["own_cup"]["super"] = (L.get("supercup_name") or "").strip() or name + " Super Cup"
-                    p["own_cup"]["super_logo"] = L.get("supercup_logo") or None
-            elif L.get("supercup"):
-                raise BuildError("%s: a super cup comes with the national cup (cup: true)" % name)
-            if L.get("league_cup"):
-                p["league_cup"] = {"name": (L.get("league_cup_name") or "").strip() or name + " League Cup",
-                                   "logo": L.get("league_cup_logo") or None}
-            season = str(L.get("season") or SEASONS[0]).strip().lower()
-            if season not in SEASONS:
-                raise BuildError("%s: the season is %s, not %r" % (name, " or ".join(SEASONS), L.get("season")))
-            if season == "calendar":
-                if p["exhibition"]:
-                    raise BuildError("%s: an exhibition league plays no season" % name)
-                p["calendar"] = True
-        if L.get("season") and str(L.get("season")).strip().lower() != SEASONS[0] and p["above"]:
-            raise BuildError("%s: the season belongs to the country's top division; the divisions "
-                             "below it follow it" % name)
-        if L.get("league_cup") and p["above"]:
-            raise BuildError("%s: a league cup belongs to a country's top division" % name)
-        if p["exhibition"]:
-            bad = [w for w, on in (("the division above it", p["above"]), ("the European places", p["europe"]),
-                                   ("the national cup", L.get("cup")), ("the league cup", L.get("league_cup")),
-                                   ("the split", L.get("split")), ("the Apertura/Clausura", L.get("apertura"))) if on]
+        try:
+            n, legs = int(L.get("clubs", 0)), int(L.get("legs", 2))
+            if not CLUBS_MIN <= n <= CLUBS_MAX:
+                raise BuildError("%s: %d clubs -- a league has %d..%d" % (name, n, CLUBS_MIN, CLUBS_MAX))
+            if not 1 <= legs <= LEGS_MAX:
+                raise BuildError("%s: clubs meet 1..%d times, not %d" % (name, LEGS_MAX, legs))
+            fid = mkflags.by_name(cty, L.get("country", ""))
+            if fid is None:
+                raise BuildError("%s: no country called %r in Country.bin" % (name, L.get("country")))
+            p = {"name": name, "country": fid, "clubs": n, "legs": legs, "rid": rid_of[i], "cid": cid_of[i],
+                 "slot": fl26world.DEFAULT_SLOT.get(rid_of[i], fl26world.NO_SLOT), "club_names": list(L.get("club_names") or []),
+                 "exhibition": bool(L.get("exhibition")),
+                 "logo": L.get("logo") or None, "flag": L.get("flag") or None,
+                 "club_crests": list(L.get("club_crests") or []),
+                 "club_abbrs": list(L.get("club_abbrs") or []),
+                 "club_coaches": list(L.get("club_coaches") or []),     # managers' names, "" = made up (mkcoaches)
+                 "formation": str(L.get("formation") or "").strip(),
+                 "club_formations": [str(x or "").strip() for x in (L.get("club_formations") or [])],
+                 "club_ids": [int(x) if str(x or "").strip().isdigit() else None
+                              for x in (L.get("club_ids") or [])][:n],     # ids of the recipe's own
+                 "club_kits": list(L.get("club_kits") or []),     # shirt words (shieldcrest) for crests
+                 "club_away_kits": list(L.get("club_away_kits") or []),   # and for picking kits (mkkits)
+                 "newlife": newlife_of(L),
+                 "kit_folders": list(L.get("kit_folders") or []),     # Kit Server folders and the
+                 "scoreboard": L.get("scoreboard") or None,           # Scoreboard Server one (lbservers)
+                 "exchange": int(3 if L.get("exchange") is None else L["exchange"]),   # null in an old package
+                 "above": None, "tier": 1,
+                 "real_calendar": L.get("real_calendar"),     # realcal.py: dates, or false for none
+                 "europe": [[int(a), int(b)] for a, b in (L.get("europe") or [])]}
+            q = pins.get(name.lower()) or {}
+            if q.get("teams"):
+                # the team ids the last Build gave this league's places, and the names they had:
+                # build() gives a new club its old id back (pinned_tid)
+                p["prev_teams"] = [t if isinstance(t, int) else None for t in q["teams"]]
+                p["prev_names"] = [str(x or "").strip().lower() for x in (q.get("club_names") or [])]
+            for f in [p["formation"]] + p["club_formations"]:
+                if f and formation_club(base, f) is None:
+                    raise BuildError("%s: no formation %r (the Formation list has them)" % (name, f))
+            bad = europe_problems(n, L.get("europe") or [], bool(L.get("cup")))
             if bad:
-                raise BuildError("%s: an exhibition league stands alone -- take off %s" % (name, ", ".join(bad)))
-        sp = L.get("split")
-        if sp:
-            groups = [int(x) for x in sp.get("groups", [])]
-            if len(groups) < 2 or len(groups) > 3 or sum(groups) != n:
-                raise BuildError("%s: split groups %s must be 2 or 3 counts adding up to %d" % (name, groups, n))
-            p["split"] = {"legs": int(sp.get("legs", legs)), "groups": groups,
-                          "group_legs": int(sp.get("group_legs", 1))}
-            # fl26swiss dates the whole split on one line: the regular phase and the longest
-            # group back to back, up to 38 rounds on the Premier League's calendar and up to 46
-            # on the Championship's (split_dates, LONG_CAL_REG). Past that it dates nothing and
-            # the league never plays (#54: 16 clubs twice, then 6 / 10 twice = 30 + 18 = 48).
-            t = (p["split"]["legs"] * rounds_of(n)
-                 + p["split"]["group_legs"] * max(rounds_of(g) for g in groups))
-            if t > SPLIT_MAX_ROUNDS:
-                raise BuildError("%s: the split is %d rounds (%d before the split, %d after), a season has "
-                                 "%d dates at most -- fewer clubs in the biggest group, or its groups "
-                                 "once instead of twice" % (name, t, p["split"]["legs"] * rounds_of(n),
-                                                            t - p["split"]["legs"] * rounds_of(n),
-                                                            SPLIT_MAX_ROUNDS))
-        ap = L.get("apertura")
-        if ap:
+                raise BuildError("%s: European places: %s" % (name, "; ".join(bad)))
+            gc = {}
+            for e in L.get("game_clubs") or []:
+                try:
+                    at, tid = int(e.get("at", -1)), int(e.get("id", 0))
+                except (TypeError, ValueError, AttributeError):
+                    raise BuildError("%s: a club of the game is written wrong: %r" % (name, e))
+                if not 0 <= at < n:
+                    raise BuildError("%s: a club of the game at place %d, but the league has %d clubs"
+                                     % (name, at + 1, n))
+                if at in gc:
+                    raise BuildError("%s: two clubs of the game at place %d" % (name, at + 1))
+                gc[at] = {"id": tid, "swap": e.get("swap"), "keep": bool(e.get("keep"))}
+            p["game_clubs"] = gc
+            if len(p["club_names"]) > n:
+                raise BuildError("%s: %d club names for %d clubs" % (name, len(p["club_names"]), n))
+            up = L.get("above")
+            if up not in (None, ""):
+                if isinstance(up, str) and not up.isdigit():
+                    parent = by_name.get(up.strip().lower())
+                    if parent is None:
+                        if up.strip().lower() in failed:      # its problem is listed already
+                            raise _Below(name)
+                        raise BuildError("%s: no league called %r above it" % (name, up))
+                    p["above"], p["tier"], p["region"] = parent["rid"], parent["tier"] + 1, parent["region"]
+                    p["follows_calendar"] = bool(parent.get("calendar") or parent.get("follows_calendar"))
+                else:
+                    pr = regrow.get(int(up))
+                    if pr is None or pr[M.R_TYPE] != 4:
+                        raise BuildError("%s: regulation %s is not a shipped league" % (name, up))
+                    if u16(pr, M.R_BELOW) in regrow:
+                        raise BuildError("%s: regulation %s already has a league below it (%d)"
+                                         % (name, up, u16(pr, M.R_BELOW)))
+                    p["above"], p["tier"] = int(up), M.get_tier(pr) + 1
+                    p["region"] = region_of_cid[pr[M.R_CID]]
+                    p["follows_calendar"] = p["region"] in CALENDAR_REGIONS and not pl_saudi_august(recipe, p["region"])
+                    if p["tier"] >= 3:
+                        p["cupfield"] = cup_field_of_region(regrow, region_of_cid, p["region"], int(up))
+                        # the super cup is filled the same way, from the region's lowest regulation
+                        # id: League One 01 played the Community Shield against Liverpool in the
+                        # first July (2026-10-01). fl26chain swaps such a club out, as for #29.
+                        if p["cupfield"]:
+                            p["scup"] = home_supercup(regrow, region_of_cid, p["region"])
+                    if p["tier"] == 2:
+                        p["cup"] = home_cup(regrow, region_of_cid, p["region"])
+                        p["scup"] = home_supercup(regrow, region_of_cid, p["region"])
+                        if p["cup"] and not L.get("cup_top_only"):
+                            top = entries_of(base, pr[M.R_CID])
+                            p["cup_all"] = top + n if cup_takes_both(p["cup"], top + n) else 0
+                        if p["cup"] and L.get("cup_top_only"):
+                            p["cup_top_only"] = True       # for recipe_from_plan
+                if p["tier"] > 7:
+                    raise BuildError("%s: division %d -- the rank field stops at 7" % (name, p["tier"]))
+            else:
+                key = fid
+                if key not in country_region:
+                    reg = next((r for r in range(REGION_FIRST, REGION_LAST + 1) if r not in used_region), None)
+                    if reg is None:
+                        raise BuildError("no free region left for %s" % L.get("country"))
+                    used_region.add(reg)
+                    country_region[key] = reg
+                p["region"] = country_region[key]
+                if L.get("cup"):
+                    p["own_cup"] = {"name": (L.get("cup_name") or "").strip() or name + " Cup",
+                                    "logo": L.get("cup_logo") or None}
+                    if L.get("supercup"):
+                        p["own_cup"]["super"] = (L.get("supercup_name") or "").strip() or name + " Super Cup"
+                        p["own_cup"]["super_logo"] = L.get("supercup_logo") or None
+                elif L.get("supercup"):
+                    raise BuildError("%s: a super cup comes with the national cup (cup: true)" % name)
+                if L.get("league_cup"):
+                    p["league_cup"] = {"name": (L.get("league_cup_name") or "").strip() or name + " League Cup",
+                                       "logo": L.get("league_cup_logo") or None}
+                season = str(L.get("season") or SEASONS[0]).strip().lower()
+                if season not in SEASONS:
+                    raise BuildError("%s: the season is %s, not %r" % (name, " or ".join(SEASONS), L.get("season")))
+                if season == "calendar":
+                    if p["exhibition"]:
+                        raise BuildError("%s: an exhibition league plays no season" % name)
+                    p["calendar"] = True
+            if L.get("season") and str(L.get("season")).strip().lower() != SEASONS[0] and p["above"]:
+                raise BuildError("%s: the season belongs to the country's top division; the divisions "
+                                 "below it follow it" % name)
+            if L.get("league_cup") and p["above"]:
+                raise BuildError("%s: a league cup belongs to a country's top division" % name)
+            if p["exhibition"]:
+                bad = [w for w, on in (("the division above it", p["above"]), ("the European places", p["europe"]),
+                                       ("the national cup", L.get("cup")), ("the league cup", L.get("league_cup")),
+                                       ("the split", L.get("split")), ("the Apertura/Clausura", L.get("apertura"))) if on]
+                if bad:
+                    raise BuildError("%s: an exhibition league stands alone -- take off %s" % (name, ", ".join(bad)))
+            sp = L.get("split")
             if sp:
-                raise BuildError("%s: a league is split or Apertura/Clausura, not both" % name)
-            try:
-                po = int((ap if isinstance(ap, dict) else {}).get("playoff", PLAYOFF_SIZES[0]))
-            except (TypeError, ValueError):
-                raise BuildError("%s: the playoff is 8, 4 or 0 clubs" % name)
-            if po not in (0,) + PLAYOFF_SIZES:
-                raise BuildError("%s: the playoff is 8, 4 or 0 clubs, not %d" % (name, po))
-            if 2 * rounds_of(n) > len(SPLIT_LINE) - SPLIT_SKIP:
-                raise BuildError("%s: Apertura and Clausura of %d rounds each need %d dates, a season has %d"
-                                 " -- 18 clubs at most" % (name, rounds_of(n), 2 * rounds_of(n),
-                                                           len(SPLIT_LINE) - SPLIT_SKIP))
-            p["split"] = {"legs": 1, "groups": [n], "group_legs": 1, "apertura": True}
-            p["apertura"] = {"playoff": po, "logo": L.get("playoff_logo") or None}
+                groups = [int(x) for x in sp.get("groups", [])]
+                if len(groups) < 2 or len(groups) > 3 or sum(groups) != n:
+                    raise BuildError("%s: split groups %s must be 2 or 3 counts adding up to %d" % (name, groups, n))
+                p["split"] = {"legs": int(sp.get("legs", legs)), "groups": groups,
+                              "group_legs": int(sp.get("group_legs", 1))}
+                # fl26swiss dates the whole split on one line: the regular phase and the longest
+                # group back to back, up to 38 rounds on the Premier League's calendar and up to 46
+                # on the Championship's (split_dates, LONG_CAL_REG). Past that it dates nothing and
+                # the league never plays (#54: 16 clubs twice, then 6 / 10 twice = 30 + 18 = 48).
+                t = (p["split"]["legs"] * rounds_of(n)
+                     + p["split"]["group_legs"] * max(rounds_of(g) for g in groups))
+                if t > SPLIT_MAX_ROUNDS:
+                    raise BuildError("%s: the split is %d rounds (%d before the split, %d after), a season has "
+                                     "%d dates at most -- fewer clubs in the biggest group, or its groups "
+                                     "once instead of twice" % (name, t, p["split"]["legs"] * rounds_of(n),
+                                                                t - p["split"]["legs"] * rounds_of(n),
+                                                                SPLIT_MAX_ROUNDS))
+            ap = L.get("apertura")
+            if ap:
+                if sp:
+                    raise BuildError("%s: a league is split or Apertura/Clausura, not both" % name)
+                try:
+                    po = int((ap if isinstance(ap, dict) else {}).get("playoff", PLAYOFF_SIZES[0]))
+                except (TypeError, ValueError):
+                    raise BuildError("%s: the playoff is 8, 4 or 0 clubs" % name)
+                if po not in (0,) + PLAYOFF_SIZES:
+                    raise BuildError("%s: the playoff is 8, 4 or 0 clubs, not %d" % (name, po))
+                if 2 * rounds_of(n) > len(SPLIT_LINE) - SPLIT_SKIP:
+                    raise BuildError("%s: Apertura and Clausura of %d rounds each need %d dates, a season has %d"
+                                     " -- 18 clubs at most" % (name, rounds_of(n), 2 * rounds_of(n),
+                                                               len(SPLIT_LINE) - SPLIT_SKIP))
+                p["split"] = {"legs": 1, "groups": [n], "group_legs": 1, "apertura": True}
+                p["apertura"] = {"playoff": po, "logo": L.get("playoff_logo") or None}
+        except _Below:
+            failed.add(name.lower())
+            continue
+        except BuildError as e:
+            _problem(errs, names, str(e))
+            failed.add(name.lower())
+            continue
         by_name[name.lower()] = p
         out.append(p)
-    game_club_checks(out, base)
+    game_club_checks(out, base, errs)
     if sum(1 for p in out if p.get("split")) > MAX_SPLITS:
-        raise BuildError("at most %d split leagues for now (the phase ids tested are 191..196)" % MAX_SPLITS)
+        _problem(errs, names, "at most %d split leagues for now (the phase ids tested are 191..196)" % MAX_SPLITS)
     for p in out:
         # the points carry goes by the country's competition key, not by league (fl26swiss.c
         # split_keys): a Scottish split there would make the Clausura carry its points too
         q = next((q for q in out if p.get("apertura") and q.get("split") and not q.get("apertura")
                   and q["region"] == p["region"]), None)
         if q:
-            raise BuildError("%s and %s: a country has Apertura/Clausura or a split that keeps its"
+            _problem(errs, names, "%s and %s: a country has Apertura/Clausura or a split that keeps its"
                              " points, not both" % (p["name"], q["name"]))
     for p in out:
         # the game finds a split's phases by the country's competition key too (0x1414ce270
@@ -2092,7 +2176,7 @@ def plan(recipe, base, prev=None):
         q = next((q for q in out if q is not p and p.get("split") and q.get("split")
                   and q["region"] == p["region"]), None)
         if q:
-            raise BuildError("%s and %s: only one league of a country can be split or Apertura/Clausura"
+            _problem(errs, names, "%s and %s: only one league of a country can be split or Apertura/Clausura"
                              " for now -- with two, the game mixes up their phases and neither plays"
                              % (p["name"], q["name"]))
     for p in out:
@@ -2105,14 +2189,14 @@ def plan(recipe, base, prev=None):
                              ("Apertura/Clausura (%s)" % q["name"], q.get("apertura")),
                              ("the league cup", q.get("league_cup"))) if on]
         if bad:
-            raise BuildError("%s: a country playing February to December cannot have %s yet -- take it off"
+            _problem(errs, names, "%s: a country playing February to December cannot have %s yet -- take it off"
                              % (p["name"], ", ".join(bad)))
     for p in out:
         below = [q for q in out if q["above"] == p["rid"]]
         if below and p["exhibition"]:
-            raise BuildError("%s: an exhibition league has no league below it (%s)" % (p["name"], below[0]["name"]))
+            _problem(errs, names, "%s: an exhibition league has no league below it (%s)" % (p["name"], below[0]["name"]))
         if len(below) > 1:
-            raise BuildError("%s has %d leagues below it; the game follows one link"
+            _problem(errs, names, "%s has %d leagues below it; the game follows one link"
                              % (p["name"], len(below)))
     # the same under a league of the game (GitHub #98: three Serie C groups under Serie B put the
     # same relegated clubs into all three and lost the promoted ones)
@@ -2121,23 +2205,37 @@ def plan(recipe, base, prev=None):
     for g in sorted({p["above"] for p in out if p["above"] and p["above"] not in ours}):
         below = [p["name"] for p in out if p["above"] == g]
         if len(below) > 1:
-            raise BuildError("%s are all under %s; the game follows one link down from a league, so only "
+            _problem(errs, names, "%s are all under %s; the game follows one link down from a league, so only "
                              "one of them can be under it -- groups of one division are not possible yet"
                              % (", ".join(below), gname.get(g, "regulation %d" % g)))
     for p in out:
         if p.get("own_cup"):
             national_cup(p, next((q for q in out if q["above"] == p["rid"]), None))
-    bad = club_id_problems(out + others, base)
-    if bad:
-        raise BuildError("club ids:\n  " + "\n  ".join(bad[:20]))
+    for t in club_id_problems(out + others, base):
+        _problem(errs, names, t)
     nlt, free_ids = newlife_tids(full.get("leagues") or [], base, full.get("newlife_ids"))   # #90 / #88
     for p in out + others:
         p["newlife_tid"] = nlt
     import lbplayers
     lbplayers.SQUAD = SQUAD                # a new club's places: the squads Build makes
-    bad = lbplayers.check(full)
-    if bad:
-        raise BuildError("player changes:\n  " + "\n  ".join(bad[:20]))
+    for t in lbplayers.check(full):
+        _problem(errs, names, t)
+    # a swap the game's tables made out of date is left out with a note (jibibi: Fortaleza and
+    # Remo in the same league now); the others are checked
+    stale = stale_swaps(recipe, base)
+    if stale:
+        gone = [pr for pr, _n in stale]
+        ed = dict(recipe.get("edits") or {})
+        ed["swaps"] = [pr for pr in ed.get("swaps") or [] if pr not in gone]
+        if not ed["swaps"]:
+            ed.pop("swaps")
+        recipe = dict(recipe, edits=ed)
+    for t in swap_problems(recipe, base):
+        _problem(errs, names, "clubs that swap leagues: " + t)
+    for t in competition_problems(recipe.get("edits") or {}, base):
+        _problem(errs, names, "competition names: " + t)
+    if errs:
+        raise PlanProblems(errs)
     ge, gr, gn, gcc = game_europe(recipe, regrow, region_of_cid, base)
     room = {p["rid"]: p["clubs"] for p in out}
     room.update({r: entries_of(base, regrow[r][M.R_CID]) for r, _p, _c, _a in gcc})
@@ -2159,17 +2257,12 @@ def plan(recipe, base, prev=None):
         c["logo"] = (recipe.get("ccup_logos") or {}).get(k) or c.get("logo")
         if "|" in c["name"]:
             raise BuildError("%s: a name cannot have a | in it" % c["name"])
-    bad = swap_problems(recipe, base)
-    if bad:
-        raise BuildError("clubs that swap leagues:\n  " + "\n  ".join(bad))
-    bad = competition_problems(recipe.get("edits") or {}, base)
-    if bad:
-        raise BuildError("competition names:\n  " + "\n  ".join(bad))
     if len(cups) + len(home) > MAX_CCUP:
         raise BuildError("%d continental, league and pre-season cups -- fl26swiss.dll takes %d"
                          % (len(cups) + len(home), MAX_CCUP))
     return {"world": recipe["world"], "leagues": out, "others": others, "edits": recipe.get("edits") or {},
             "free_ids": free_ids, "players": recipe.get("players") or {}, "uecl": bool(recipe.get("uecl", True)),
+            "skipped": [t for _pr, t in stale],         # what Build leaves out, with why
             "uecl_logo": recipe.get("uecl_logo") or None,
             "uecl_name": (recipe.get("uecl_name") or "").strip() or None,
             "game_europe": ge, "game_replace": gr, "game_names": gn,
@@ -2307,60 +2400,78 @@ def others_plan(groups, base, cty, pins=None):
     return out
 
 
-def game_club_checks(out, base):
+def game_club_checks(out, base, errs=None):
     """the clubs of the game the leagues of plan `out` take (game_places): each usable, each in
     one place only, and each that plays anywhere in the game (a league, a cup, a continental
     competition) with a club to take its place there -- one in no competition at all, or a new
     one ({"name": ...}), so every competition keeps its number of clubs. Normalises "swap" to
-    None, a team id or {"name": ...}."""
+    None, a team id or {"name": ...}. errs: a list to add the problems to (with where they
+    are, see plan), not raised"""
     if not any(p.get("game_clubs") for p in out):
         return
     info = game_info(base)
+    names = [p["name"] for p in out]
+
+    def bad_(text):
+        if errs is None:
+            raise BuildError(text)
+        _problem(errs, names, text)
     used = {}
     for p in out:
         for at, g in sorted(p["game_clubs"].items()):
             tid = g["id"]
             bad = game_club_problem(info, tid)
             if bad:
-                raise BuildError("%s, club %d: %s" % (p["name"], at + 1, bad))
+                bad_("%s, club %d: %s" % (p["name"], at + 1, bad))
+                g["bad"] = True
+                continue
             if tid in used:
-                raise BuildError("%s is in %s and in %s: a club plays in one league"
-                                 % (info["clubs"][tid][0], used[tid], p["name"]))
+                bad_("%s, club %d: %s is in %s and in %s: a club plays in one league"
+                     % (p["name"], at + 1, club_label(info, tid), used[tid], p["name"]))
+                continue
             used[tid] = p["name"]
     for p in out:
         for at, g in sorted(p["game_clubs"].items()):
+            if g.pop("bad", False):
+                continue
             tid, sw = g["id"], g.get("swap")
-            name = info["clubs"][tid][0]
+            name = club_label(info, tid)
             where = game_club_where(info, tid, g.get("keep"))
             if not where:
                 g["swap"] = None                     # nothing to hand over
                 continue
             if sw in (None, "", {}, 0):
                 cont = not game_club_where(info, tid, True)
-                raise BuildError("%s, club %d: %s plays in %s -- pick the club that takes its place there%s"
+                bad_("%s, club %d: %s plays in %s -- pick the club that takes its place there%s"
                                  % (p["name"], at + 1, name, ", ".join(where),
                                     " (or tick 'It keeps its places in continental competitions' in Club of "
                                     "the game)" if cont else ""))
+                continue
             if isinstance(sw, dict):
                 nm = str(sw.get("name") or "").strip()
                 if not nm:
-                    raise BuildError("%s, club %d: the new club taking %s's place needs a name"
+                    bad_("%s, club %d: the new club taking %s's place needs a name"
                                      % (p["name"], at + 1, name))
+                    continue
                 g["swap"] = {"name": nm}
                 continue
             try:
                 sid = int(sw)
             except (TypeError, ValueError):
-                raise BuildError("%s, club %d: %r is not a club of the game" % (p["name"], at + 1, sw))
+                bad_("%s, club %d: %r is not a club of the game" % (p["name"], at + 1, sw))
+                continue
             bad = game_club_problem(info, sid)
             if bad:
-                raise BuildError("%s, club %d: the club taking %s's place: %s" % (p["name"], at + 1, name, bad))
+                bad_("%s, club %d: the club taking %s's place: %s" % (p["name"], at + 1, name, bad))
+                continue
             if info["entries"].get(sid):
-                raise BuildError("%s, club %d: %s already plays in %s; the club taking %s's place must be one"
+                bad_("%s, club %d: %s already plays in %s; the club taking %s's place must be one"
                                  " that plays in nothing" % (p["name"], at + 1, info["clubs"][sid][0],
                                                             ", ".join(game_club_where(info, sid)), name))
+                continue
             if sid in used:
-                raise BuildError("%s is used twice (%s)" % (info["clubs"][sid][0], used[sid]))
+                bad_("%s is used twice (%s)" % (info["clubs"][sid][0], used[sid]))
+                continue
             used[sid] = "%s, in %s's place" % (p["name"], name)
             g["swap"] = sid
 
@@ -3250,6 +3361,8 @@ def describe(pl):
                      % (pl["free_ids"], CLUB_ID_MAX - pl["free_ids"] + 1, CLUB_ID_MAX))
     for a, b in e.get("swaps") or []:
         lines.append("  clubs %s and %s swap leagues" % (a, b))
+    for t in pl.get("skipped") or []:
+        lines.append("  note: " + t)
     for cid, v in sorted((e.get("competitions") or {}).items(), key=lambda kv: int(kv[0])):
         lines.append("  competition %s: %s%s" % (cid, v.get("name") or "(its own name)",
                                                  ", own logo" if v.get("logo") else ""))

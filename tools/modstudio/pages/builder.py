@@ -3040,6 +3040,16 @@ class NewClubs(BuilderPage):
         it = self.tree.currentItem()
         return it.data(0, Qt.UserRole) if it else None
 
+    def select_place(self, k):
+        """the club at place k of the league shown (Build's Go there)"""
+        for i in range(self.tree.topLevelItemCount()):
+            it = self.tree.topLevelItem(i)
+            if it.data(0, Qt.UserRole) == k:
+                self.tree.setCurrentItem(it)
+                self.tree.scrollToItem(it)
+                return True
+        return False
+
     def taken(self, skip):
         """{team id: where the recipe already uses it} for the clubs of the game in a place or
         taking one, but the one at place `skip` of the league shown"""
@@ -4221,6 +4231,33 @@ class Build(BuilderPage):
         cl.addStretch(1)
         self.state = hint("")
         self.outer.addWidget(self.state)
+        # Build simplifications (jibibi, vmican 19.10.): every problem of the plan in one list, each
+        # with where it is and Go there, instead of the first one in the log and the next after it
+        self.prob_box = QWidget()
+        pv = QVBoxLayout(self.prob_box)
+        pv.setContentsMargins(0, 0, 0, 0)
+        ph = QHBoxLayout()
+        self.prob_title = QLabel("")
+        self.prob_title.setWordWrap(True)
+        self.prob_title.setObjectName("banner_warn")
+        self.b_go = QPushButton(_("Go there"))
+        self.b_go.setToolTip(_("Opens the page of the problem picked, at its league, club or players"))
+        self.b_go.clicked.connect(self.go_there)
+        ph.addWidget(self.prob_title, 1)
+        ph.addWidget(self.b_go)
+        pv.addLayout(ph)
+        self.problems = QTreeWidget()
+        self.problems.setRootIsDecorated(False)
+        self.problems.setAlternatingRowColors(True)
+        self.problems.setHeaderLabels([_("Where"), _("Problem")])
+        self.problems.setColumnWidth(0, 260)
+        self.problems.setMaximumHeight(180)
+        self.problems.itemDoubleClicked.connect(lambda *_a: self.go_there())
+        self.problems.currentItemChanged.connect(
+            lambda it, _o: self.b_go.setEnabled(bool(it and it.data(0, Qt.UserRole))))
+        pv.addWidget(self.problems)
+        self.prob_box.hide()
+        self.outer.addWidget(self.prob_box)
         self.out = QPlainTextEdit()
         self.out.setObjectName("log")
         self.out.setReadOnly(True)
@@ -4466,6 +4503,7 @@ class Build(BuilderPage):
         except B.BuildError as e:
             self.out.clear()
             self.say(_("error: %s") % tr(str(e)))
+            self.show_problems(e)
             return
         game, base = self.app.game.folder, self.project.base
 
@@ -4500,11 +4538,77 @@ class Build(BuilderPage):
                 save_note(self, sw)
         self.run(go, background=True, done=switch)
 
+    def where_text(self, w):
+        """a problem's place as the list shows it: the league and club, the club of the game by name
+        and team id, both (mato 21.10.: the ids stay visible)"""
+        game = self.project.game_cl or {}
+        label = lambda t: "%s (%d)" % (game[t][0], t) if t in game else str(t)
+        if "players" in w:
+            k = str(w["players"])
+            if k.isdigit():
+                return _("players of %s") % label(int(k))
+            lg, _s, n = k.rpartition("/")
+            return _("players of %s") % (_("%s, club %d") % (lg, int(n) + 1) if n.isdigit() else k)
+        if "place" in w:
+            return _("%s, club %d") % (w["league"], w["place"] + 1)
+        if "league" in w:
+            return w["league"]
+        if "club" in w:
+            return label(w["club"])
+        return ""
+
+    def show_problems(self, err=None):
+        """the plan's problems (leaguebuilder.PlanProblems) in the list above the log; None or
+        another error: the list goes"""
+        self.problems.clear()
+        probs = getattr(err, "problems", None)
+        if not probs:
+            self.prob_box.hide()
+            return
+        for text, w in probs:
+            it = QTreeWidgetItem([self.where_text(w), tr(text)])
+            it.setData(0, Qt.UserRole, w or None)
+            it.setToolTip(1, tr(text))
+            self.problems.addTopLevelItem(it)
+        self.prob_title.setText(_("%d problems to put right before Build. Go there (or a double-click) opens the "
+                                  "page of the one picked; then Check the plan again.") % len(probs)
+                                if len(probs) > 1 else
+                                _("1 problem to put right before Build. Go there (or a double-click) opens its "
+                                  "page; then Check the plan again."))
+        self.problems.setCurrentItem(self.problems.topLevelItem(0))
+        self.b_go.setEnabled(bool(probs[0][1]))
+        self.prob_box.show()
+
+    def go_there(self):
+        it = self.problems.currentItem()
+        w = it.data(0, Qt.UserRole) if it else None
+        if not w:
+            return
+        if "players" in w:
+            self.app.open_page("Players")
+            self.app.page("Players").show_club(str(w["players"]))
+        elif "league" in w:
+            if "place" in w:
+                self.app.open_page("NewClubs")
+                nc = self.app.page("NewClubs")
+                nc.combo.setCurrentText(w["league"])
+                nc.show_clubs()
+                nc.select_place(w["place"])
+            else:
+                self.app.open_page("Leagues")
+                self.app.page("Leagues").show_key("o" + w["league"])
+        elif "club" in w:
+            self.app.open_page("Leagues")
+            if not self.app.page("Leagues").show_game_club(int(w["club"])):
+                self.app.open_page("Players")
+                self.app.page("Players").show_club(str(w["club"]))
+
     def run(self, what, background=False, done=None, after=None, busy=None):
         """what(log) on the GUI thread, or with background in a worker with the clock; done() when it
         went through, after(ok) at the end either way (in the background); busy: what the bottom bar
         says meanwhile (B134: a switch on and an Export said "Building..." too)"""
         self.out.clear()
+        self.show_problems(None)
         if not background:
             try:
                 what(self.say)
@@ -4516,6 +4620,7 @@ class Build(BuilderPage):
                     denied_box(self, path)
                 elif isinstance(e, B.BuildError):
                     self.say(_("error: %s") % tr(str(e)))
+                    self.show_problems(e)
                 else:
                     import traceback
                     self.say(_("unexpected error:") + "\n" + traceback.format_exc())
@@ -4625,6 +4730,7 @@ class Build(BuilderPage):
         except B.BuildError as e:
             self.out.clear()
             self.say(_("error: %s") % tr(str(e)))
+            self.show_problems(e)
             return
         if not can_write(self, self.app.game):       # a game under Program Files (B14)
             return
@@ -4672,6 +4778,7 @@ class Build(BuilderPage):
         except B.BuildError as e:
             self.out.clear()
             self.say(_("error: %s") % tr(str(e)))
+            self.show_problems(e)
             return
         if not can_write(self, self.app.game):
             return

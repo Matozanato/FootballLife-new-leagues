@@ -454,6 +454,30 @@ class Leagues(BuilderPage):
         it = self.tree.currentItem()
         return it.data(0, ROLE) if it else None
 
+    def show_key(self, key):
+        """pick the league of entries() key ("o<name>", "g<competition id>"); True when it is there
+        (Build's Go there)"""
+        if not self.tree.topLevelItemCount():
+            self.fill()
+        for i in range(self.tree.topLevelItemCount()):
+            h = self.tree.topLevelItem(i)
+            for it in [h] + [h.child(j) for j in range(h.childCount())]:
+                e = it.data(0, ROLE)
+                if e and e[0] == key:
+                    self.tree.setCurrentItem(it)
+                    self.tree.scrollToItem(it)
+                    return True
+        return False
+
+    def show_game_club(self, tid):
+        """pick the game's league club tid plays in and the club in it; False when it plays in none"""
+        for _rid, cid, _n, teams in self.project.game_lgs:
+            if tid in teams and self.show_key("g%d" % cid):
+                self.show_current()
+                self.game.select_club(tid)
+                return True
+        return False
+
     def show_current(self):
         if self.b_places.isChecked():
             self.right.setCurrentWidget(self.places)

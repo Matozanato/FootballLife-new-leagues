@@ -33,6 +33,9 @@ exe. See `tools/flpaths.py`.
 | `test_build_apart.py` | tables | Build runs in a process of its own: the same tables as built in the window's process, the log lines and a BuildError come back, and the window's thread is not held up while it builds |
 | `test_filecache.py` | | a file read on every page visit (the built world's plan) is read again only when it changes; a changed or removed file is never served from before |
 | `test_header_pack.py` | | the header's PACK box names the pack of the world in the game, not the last zip installed (B168): after Activate of another installed world, its own pack; a world built on this PC, the newest pack that brought no world, or none |
+| `test_plan_problems.py` | tables | `plan()` raises every problem at once (`PlanProblems`), each with where it is (league and place, league, club of the game, a club's players); a league under one with a problem is not listed again; a swap of two clubs the tables have in one league now is left out with a note; a club of the game is named with its team id |
+| `test_build_problems.py` | tables | the Build page lists the plan's problems above the log with where they are, and Go there opens Clubs at the league and place, Leagues at the league or at the game's league of a club; a plan with no problem hides the list |
+| `test_move_game_club.py` | tables | B95: Club of the game moves a club of the game from another place of the world (its old place a new club, its swap along), a club that only takes another's place stays greyed; NewLife club... lists the release's clubs the game has, greyed, and leaves out those a league has already |
 | `test_import_csv.py` | | Import CSV: a row naming a game player of another club makes him join |
 | `test_keep_added.py` | | pictures put by hand into the world folder survive a Build (`keep_added`) |
 | `test_keep_continent.py` | | a drag on the Leagues page keeps each continent's Select Team places |

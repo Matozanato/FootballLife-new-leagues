@@ -1962,7 +1962,13 @@
   "%s moved here from %s, club %d: that place is a new club now. Give it a club there (NewLife club..., Club of the game...), then Build again and start a new career.": "%s se movió aquí desde %s, club %d: ese puesto ahora es un club nuevo. Ponle un club allí (Club NewLife..., Club del juego...), luego vuelve a construir y empieza una carrera nueva.",
   "a club of the game: Club of the game... puts it here": "un club del juego: Club del juego... lo pone aquí",
   "The game has this club, with its team ID: in Clubs, Club of the game... puts it in this place, and moves it from another league of your world.": "El juego tiene este club, con su ID de equipo: en Clubes, Club del juego... lo pone en este puesto y lo mueve desde otra liga de tu mundo.",
-  "The world in the game is not from a pack. %d packs installed here; the last one: %s": "El mundo del juego no viene de un pack. %d packs instalados aquí; el último: %s"
+  "The world in the game is not from a pack. %d packs installed here; the last one: %s": "El mundo del juego no viene de un pack. %d packs instalados aquí; el último: %s",
+  "%d problems to put right before Build. Go there (or a double-click) opens the page of the one picked; then Check the plan again.": "%d problemas que arreglar antes de Build. Ir allí (o un doble clic) abre la página del elegido; luego vuelve a Comprobar el plan.",
+  "1 problem to put right before Build. Go there (or a double-click) opens its page; then Check the plan again.": "1 problema que arreglar antes de Build. Ir allí (o un doble clic) abre su página; luego vuelve a Comprobar el plan.",
+  "Go there": "Ir allí",
+  "Opens the page of the problem picked, at its league, club or players": "Abre la página del problema elegido, en su liga, club o jugadores",
+  "Problem": "Problema",
+  "players of %s": "jugadores de %s"
  },
  "log": [
   [

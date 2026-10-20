@@ -28,6 +28,14 @@ come with it instead.
 - **Back and Forward through the pages, as in a browser.** Two arrows at the left of the section
   bar, Alt+Left / Alt+Right and the mouse's side buttons take you back to the pages you had open
   (up to 50). (Thanks Vicentico)
+- **Build lists every problem at once, each with Go there.** Check the plan, Build the world and
+  Build and install stopped at the first problem, and the next showed only after it was put right.
+  They now list them all above the log, each with where it is (the league and club, a club of the
+  game by its name and team ID), and **Go there** (or a double-click) opens its page: Clubs at the
+  league and club, Leagues at the league or at the game's league of a club of the game, Players
+  at a club's players. A swap of two clubs of the game that the game's tables have in the same
+  league now is left out with a note instead of stopping Build. Messages about a club of the game
+  now give its name and its team ID together. (Thanks jibibi, vmican)
 - **Undo and Redo of the last change to your world.** Two buttons in the bottom bar next to "Your
   world is saved", and Ctrl+Z / Ctrl+Y when no text box is in use: up to 30 steps back. New world
   or Open starts again with none.
