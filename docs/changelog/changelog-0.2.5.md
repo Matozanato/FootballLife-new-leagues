@@ -81,6 +81,11 @@ come with it instead.
   is left. The League window (Clubs in no league: Other European teams) and Build's log now say so;
   for small clubs choose **Classic Teams** instead. A world made before keeps its clubs where they
   are until you change the group and Build again. (Thanks ¥$)
+- **"Plays in Ligue 2" after Bring the game's leagues and a new Ligue 3 (B137).** The game's Ligue 2
+  has more places than this season's, so the clubs the season has elsewhere keep their places
+  there (Bring has no club to put in), and a NewLife league of yours that has them too stops
+  Build. The Bring window now names those clubs and says what to do: in that league use **Club
+  of the game** and give it a new club in its place, or leave it out. (Thanks jibibi)
 
 
 ## Read this first

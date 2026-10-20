@@ -1955,7 +1955,8 @@
   "Do the taken-back change again (Ctrl+Y)": "Vuelve a hacer el cambio deshecho (Ctrl+Y)",
   "Change taken back": "Cambio deshecho",
   "Change done again": "Cambio rehecho",
-  "Cup mode can put these clubs in the Champions League: it fills the last places from Other European teams. For small clubs, choose Classic Teams.": "El modo Copa puede meter estos clubes en la Champions League: llena las últimas plazas con Other European teams. Para clubes pequeños, elige Classic Teams."
+  "Cup mode can put these clubs in the Champions League: it fills the last places from Other European teams. For small clubs, choose Classic Teams.": "El modo Copa puede meter estos clubes en la Champions League: llena las últimas plazas con Other European teams. Para clubes pequeños, elige Classic Teams.",
+  "%s stays in %s: the game's league has more places than this season's. A NewLife league that has it too (Ligue 3 after Ligue 2) cannot take it: there, use Club of the game and give it a new club in its place, or leave it out.": "%s se queda en %s: la liga del juego tiene más plazas que la de esta temporada. Una liga de NewLife que también lo tenga (la Ligue 3 después de la Ligue 2) no puede llevarlo: allí usa Club del juego y pon un club nuevo en su lugar, o déjalo fuera."
  },
  "log": [
   [

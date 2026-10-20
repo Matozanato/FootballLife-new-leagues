@@ -21,6 +21,9 @@ def main(folder, base):
     for p in plan:
         n = len(next(ts for _r, c, _n, ts in B.game_leagues(base) if c == p["cid"]))
         assert len(p["clubs"]) + len(p["replace"]) <= n, p["name"]
+        # B137: the clubs kept for the places the season lacks are named, none of them given away
+        assert not set(p["stay"]) & {a for a, _b in p["replace"]}, p["name"]
+        assert bool(p["stay"]) == any("stay: no club comes up" in x for x in p["notes"]), p["name"]
     hand = next(t for p in plan for t in p["clubs"])
     r = {"leagues": [], "players": {str(hand): {"remove": [str(P.Squads(base).by_club[hand][0][1])]}},
          "edits": {"clubs": {"101": {"name": "Mine"}}}}

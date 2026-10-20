@@ -945,6 +945,10 @@ def _game_league_plan(recipe, rel, info):
         # a twin the world has as a new club already (use_recipe) does not take a place here too
         new = [c for c in L["clubs"] if c in rel.clubs and c not in rel.held]
         p["replace"] = list(zip(down, new))
+        # B137: the clubs that stay for the places this season's league lacks (the game's Ligue 2
+        # has 20, the real one 18), by name in the window: a NewLife league that has them too
+        # stops Build with "plays in"
+        p["stay"] = down[len(new):]
         if len(down) > len(new):
             p["notes"].append("%d club(s) the release has elsewhere stay: no club comes up in their place"
                               % (len(down) - len(new)))

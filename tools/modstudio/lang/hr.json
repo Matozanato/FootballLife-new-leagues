@@ -1956,7 +1956,8 @@
   "Do the taken-back change again (Ctrl+Y)": "Ponovi vraćenu izmjenu (Ctrl+Y)",
   "Change taken back": "Izmjena vraćena",
   "Change done again": "Izmjena ponovljena",
-  "Cup mode can put these clubs in the Champions League: it fills the last places from Other European teams. For small clubs, choose Classic Teams.": "Cup mode može ove klubove staviti u Ligu prvaka: zadnja mjesta popunjava iz Other European teams. Za male klubove odaberi Classic Teams."
+  "Cup mode can put these clubs in the Champions League: it fills the last places from Other European teams. For small clubs, choose Classic Teams.": "Cup mode može ove klubove staviti u Ligu prvaka: zadnja mjesta popunjava iz Other European teams. Za male klubove odaberi Classic Teams.",
+  "%s stays in %s: the game's league has more places than this season's. A NewLife league that has it too (Ligue 3 after Ligue 2) cannot take it: there, use Club of the game and give it a new club in its place, or leave it out.": "%s ostaje u ligi %s: liga u igri ima više mjesta nego ova sezona. NewLife liga koja ga isto ima (Ligue 3 nakon Ligue 2) ne može ga uzeti: tamo upotrijebi Klub iz igre i na njegovo mjesto stavi novi klub, ili ga izostavi."
  },
  "log": [
   [

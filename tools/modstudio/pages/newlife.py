@@ -172,6 +172,11 @@ class GameLeaguesDialog(Dialog):
             lines += [_("%s goes to %s's league") % (name(a), name(b)) for a, b in p["swaps"]]
             lines += [_("%s becomes %s") % (name(t), rel.clubs[c]["name"]) for t, c in p["replace"]]
             lines += [tr(n) for n in p["notes"]]
+            for t in p.get("stay") or []:            # B137
+                lines.append(_("%s stays in %s: the game's league has more places than this season's. A NewLife "
+                               "league that has it too (Ligue 3 after Ligue 2) cannot take it: there, use Club "
+                               "of the game and give it a new club in its place, or leave it out.")
+                             % (name(t), p["name"]))
             text = QLabel("\n".join(lines))
             text.setWordWrap(True)
             w = QWidget()
