@@ -1969,7 +1969,16 @@
   "Go there": "Idi tamo",
   "Opens the page of the problem picked, at its league, club or players": "Otvara stranicu odabranog problema, na njegovoj ligi, klubu ili igračima",
   "Problem": "Problem",
-  "players of %s": "igrači kluba %s"
+  "players of %s": "igrači kluba %s",
+  "%s has no files.": "%s nema datoteka.",
+  "(not in these tables)": "(nije u ovim tablicama)",
+  "No trophy of its own": "Bez vlastitog pehara",
+  "Pair a trophy folder of your own with a competition: Build copies it into the world and FL26's Entrance.lua shows that trophy in the competition's matches and its final. The folder is laid out as FL26's content\\Entrance ones (the files at its top or in a phase folder, the final's in Final; they replace the AFC Champions League trophy's files). A competition with no folder keeps what it had.": "Upari vlastitu mapu pehara s natjecanjem: Build je kopira u svijet, a FL26-ov Entrance.lua pokazuje taj pehar na utakmicama natjecanja i u finalu. Mapa je složena kao FL26-ove u content\\Entrance (datoteke na vrhu ili u mapi faze, za finale u Final; zamjenjuju datoteke pehara AFC Lige prvaka). Natjecanje bez mape ostaje kakvo je bilo.",
+  "Pick a trophy folder...": "Odaberi mapu pehara...",
+  "The world's new cups are listed after its first Build.": "Novi kupovi svijeta pojave se nakon njegovog prvog Builda.",
+  "Trophies": "Pehari",
+  "Trophy folder": "Mapa pehara",
+  "A trophy folder of your own for a competition: FL26's Entrance.lua shows it in the game": "Vlastita mapa pehara za natjecanje: FL26-ov Entrance.lua ga pokazuje u igri"
  },
  "log": [
   [
@@ -2291,6 +2300,34 @@
   [
    "(?m)^  note: ",
    "  napomena: "
+  ],
+  [
+   "(?m)^(\\s*)trophies: competition (\\d+): no trophy folder (.+)$",
+   "\\1pehari: natjecanje \\2: nema mape pehara \\3"
+  ],
+  [
+   "(?m)^(\\s*)trophies: competition (\\d+): the trophy folder (.+) has no files$",
+   "\\1pehari: natjecanje \\2: mapa pehara \\3 nema datoteka"
+  ],
+  [
+   "^  trophies: (\\d+) competition\\(s\\) with a trophy of their own \\(Entrance\\.lua shows them once the world is switched on\\)$",
+   "  pehari: \\1 natjecanje/a s vlastitim peharom (Entrance.lua ih pokazuje kad se svijet uključi)"
+  ],
+  [
+   "^  warning: trophy of competition (\\d+) -- the world has no such competition, left out$",
+   "  upozorenje: pehar natjecanja \\1 -- svijet nema to natjecanje, izostavljen"
+  ],
+  [
+   "^Entrance\\.lua: (\\d+) trophy\\(ies\\) of (\\S+)$",
+   "Entrance.lua: \\1 pehar(a) svijeta \\2"
+  ],
+  [
+   "^Entrance\\.lua: the trophies of another world taken out$",
+   "Entrance.lua: maknuti pehari drugog svijeta"
+  ],
+  [
+   "^NOTE: (\\d+) trophy\\(ies\\) of (\\S+) -- the game has no FL26 Entrance\\.lua in modules, so they are not shown$",
+   "NAPOMENA: \\1 pehar(a) svijeta \\2 -- igra nema FL26 Entrance.lua u modules, pa se ne pokazuju"
   ]
  ]
 }

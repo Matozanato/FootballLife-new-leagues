@@ -39,6 +39,16 @@ come with it instead.
 - **Undo and Redo of the last change to your world.** Two buttons in the bottom bar next to "Your
   world is saved", and Ctrl+Z / Ctrl+Y when no text box is in use: up to 30 steps back. New world
   or Open starts again with none.
+- **Trophies of your own for a competition.** Leagues > More > Trophies (and Cups > Trophies on My
+  world) lists every competition with its competition and regulation IDs; pick a trophy folder for
+  one and Build copies it into the world. When the world is switched on, FL26's own Entrance.lua
+  shows that trophy in the competition's matches and in its final, for the world's new leagues and
+  cups and for the game's competitions alike. The folder is laid out like FL26's
+  `SiderAddons\content\Entrance` folders (the files at the top or in a phase folder, the final's in
+  `Final`; they replace the AFC Champions League trophy's files). A competition with no folder
+  paired keeps what it had: no competition borrows another's trophy. Switch on writes one marked
+  block at the top of Entrance.lua and replaces it every time; nothing else in the file is touched.
+  Without FL26's Entrance.lua in `modules` the Build log says the trophies are not shown.
 
 ## Fixed
 

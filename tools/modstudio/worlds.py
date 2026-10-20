@@ -753,6 +753,11 @@ def rename(game, old, new, log=lambda t: None):
     cl = os.path.join("modules", "lib", "CommonLib.lua")
     ct = re.compile(re.escape(COMMONLIB_TAG + " " + old) + r"(?= )")
     text(cl, cl, lambda ls: [ct.sub(COMMONLIB_TAG + " " + new, l) for l in ls])
+    import lbtrophies                                 # the world's trophies in FL26's Entrance.lua
+    ent = lbtrophies.module_path(sd)
+    if ent:
+        el = os.path.relpath(ent, sd)
+        text(el, el, lambda ls: lbtrophies.rename_lines(ls, old, new))
 
     # what Mod Studio keeps of its own: the install records and the profiles
     rows = I.records(sd)

@@ -121,7 +121,8 @@ class Leagues(BuilderPage):
                             ("European places of the game's leagues", "game_europe"),
                             ("First-season European clubs", "europe_first"),
                             ("UEFA ranking", "uefa_rank"), ("South American places", "samerica"),
-                            ("Competition names", "competition_names"), ("Competition IDs", "competition_ids"),
+                            ("Competition names", "competition_names"), ("Trophies", "trophies"),
+                            ("Competition IDs", "competition_ids"),
                             # the order of the countries in Select Team; the 0.1.8 look left it and the
                             # two below out of this menu (Discord, laracroft7826 15.10.: "it was in the old one")
                             ("League order", "league_order"),

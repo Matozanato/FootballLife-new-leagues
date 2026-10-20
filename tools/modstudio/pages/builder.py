@@ -1797,6 +1797,90 @@ class CompetitionNamesDialog(Dialog):
         self.accept()
 
 
+class TrophiesDialog(Dialog):
+    """a trophy folder of your own for a competition (recipe trophies, lbtrophies; mato 21.10.):
+    FL26's Entrance.lua shows it in the game. A competition with none keeps what it had"""
+
+    def __init__(self, parent, project, world_db=None):
+        super().__init__(parent, "Trophies")
+        self.trophies = {str(k): v for k, v in (project.recipe.get("trophies") or {}).items()}
+        db = world_db if world_db and os.path.exists(os.path.join(world_db, "CompetitionRegulation.bin")) \
+            else project.base
+        self.rows = B.competition_ids(db, project.base)
+        self.v.insertWidget(0, hint(_(
+            "Pair a trophy folder of your own with a competition: Build copies it into the world and FL26's "
+            "Entrance.lua shows that trophy in the competition's matches and its final. The folder is laid out "
+            "as FL26's content\\Entrance ones (the files at its top or in a phase folder, the final's in "
+            "Final; they replace the AFC Champions League trophy's files). A competition with no folder keeps "
+            "what it had.")
+            + ("" if db != project.base else "  " + _("The world's new cups are listed after its first Build."))))
+        self.find = QLineEdit()
+        self.find.setPlaceholderText(_("Find..."))
+        self.find.textChanged.connect(self.fill)
+        self.v.insertWidget(1, self.find)
+        self.table = QTreeWidget()
+        self.table.setHeaderLabels([_("Name"), _("Kind"), _("Competition ID"), _("Regulation IDs"), _("Trophy folder")])
+        self.table.setRootIsDecorated(False)
+        self.table.setSortingEnabled(True)
+        self.table.itemDoubleClicked.connect(lambda *_a: self.pick())
+        self.v.insertWidget(2, self.table, 1)
+        self.b_pick = QPushButton(_("Pick a trophy folder..."))
+        self.b_pick.clicked.connect(self.pick)
+        self.b_clear = QPushButton(_("No trophy of its own"))
+        self.b_clear.clicked.connect(self.clear)
+        self.v.insertWidget(3, row(self.b_pick, self.b_clear, "stretch"))
+        self.scroll.hide()
+        self.fill()
+        self.table.sortByColumn(2, Qt.AscendingOrder)
+        for c in range(4):
+            self.table.resizeColumnToContents(c)
+        self.setMinimumSize(860, 540)
+
+    def fill(self):
+        want = self.find.text().strip().casefold()
+        cur = self.current()
+        self.table.clear()
+        known = set()
+        for cid, regs, name, kind, new in self.rows:
+            known.add(str(cid))
+            line = [name, _(kind), str(cid), ", ".join(map(str, regs)), self.trophies.get(str(cid), "")]
+            if want and want not in " ".join(line).casefold():
+                continue
+            it = _IdItem(line)
+            it.setData(0, Qt.UserRole, str(cid))
+            self.table.addTopLevelItem(it)
+            if str(cid) == cur:
+                self.table.setCurrentItem(it)
+        for cid, folder in sorted(self.trophies.items()):
+            if cid not in known:                     # paired before, not in these tables (yet)
+                it = _IdItem([_("(not in these tables)"), "", cid, "", folder])
+                it.setData(0, Qt.UserRole, cid)
+                self.table.addTopLevelItem(it)
+
+    def current(self):
+        it = self.table.currentItem() if hasattr(self, "table") else None
+        return it.data(0, Qt.UserRole) if it else None
+
+    def pick(self):
+        cid = self.current()
+        if cid is None:
+            return
+        d = QFileDialog.getExistingDirectory(self, _("Pick a trophy folder..."), self.trophies.get(cid, ""))
+        if not d:
+            return
+        import lbtrophies
+        if not lbtrophies.files_in(d):
+            error(self, "Trophies", _("%s has no files.") % d)
+            return
+        self.trophies[cid] = os.path.normpath(d)
+        self.fill()
+
+    def clear(self):
+        cid = self.current()
+        if cid is not None and self.trophies.pop(cid, None) is not None:
+            self.fill()
+
+
 class GameEuropeDialog(Dialog):
     """the recipe's game_europe: the European places of the game's own top divisions, in place of
     the shipped ones"""
@@ -2483,6 +2567,8 @@ class NewLeagues(BuilderPage):
                     "league, the game's and yours, go to the Libertadores, its qualifying and the Sudamericana")
         self.action("Competition names", self.competition_names, tip="New names and logos for the cups and "
                     "continental competitions of the game, and for the continental cups the world builds")
+        self.action("Trophies", self.trophies, tip="A trophy folder of your own for a competition: FL26's "
+                    "Entrance.lua shows it in the game")
         self.action("League order", self.league_order, tip="The order of the countries in Select Team and the "
                     "Kick Off list: by continent as the game has it, A-Z, or your own")
         self.action("Seasons of the game's leagues", self.game_seasons, tip="Experimental: the game's "
@@ -2725,6 +2811,19 @@ class NewLeagues(BuilderPage):
             r.pop("caf_super_cup_logo", None)
             if d.logos.get("0"):
                 r["caf_super_cup_logo"] = d.logos["0"]
+            self.project.touch()
+
+    def trophies(self):
+        if self.need_tables(True):
+            return
+        world = self.project.recipe.get("world") or ""
+        db = os.path.join(self.app.game.sider_dir, "livecpk", world, "common", "etc", "pesdb") if world else None
+        d = TrophiesDialog(self, self.project, db)
+        if d.finish():
+            if d.trophies:
+                self.project.recipe["trophies"] = d.trophies
+            else:
+                self.project.recipe.pop("trophies", None)
             self.project.touch()
 
     def game_europe(self):

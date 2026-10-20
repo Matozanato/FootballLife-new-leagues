@@ -694,7 +694,7 @@ class MyWorld(QWidget):
         cups.setCursor(Qt.PointingHandCursor)
         m = QMenu(cups)
         for label, name in (("Pre-season cups", "preseason"), ("Cups of our countries", "our_cups"), ("Cups of the game's countries", "game_cups"),
-                            ("Competition names", "competition_names")):
+                            ("Competition names", "competition_names"), ("Trophies", "trophies")):
             m.addAction(_(label)).triggered.connect(lambda _c=False, n=name: self.cup_window(n))
         cups.setMenu(m)
         self.cups = cups

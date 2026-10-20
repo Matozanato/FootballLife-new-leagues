@@ -1968,7 +1968,16 @@
   "Go there": "Ir allí",
   "Opens the page of the problem picked, at its league, club or players": "Abre la página del problema elegido, en su liga, club o jugadores",
   "Problem": "Problema",
-  "players of %s": "jugadores de %s"
+  "players of %s": "jugadores de %s",
+  "%s has no files.": "%s no tiene archivos.",
+  "(not in these tables)": "(no está en estas tablas)",
+  "No trophy of its own": "Sin trofeo propio",
+  "Pair a trophy folder of your own with a competition: Build copies it into the world and FL26's Entrance.lua shows that trophy in the competition's matches and its final. The folder is laid out as FL26's content\\Entrance ones (the files at its top or in a phase folder, the final's in Final; they replace the AFC Champions League trophy's files). A competition with no folder keeps what it had.": "Empareja una carpeta de trofeo tuya con una competición: Build la copia al mundo y el Entrance.lua de FL26 muestra ese trofeo en los partidos de la competición y en su final. La carpeta va como las de content\\Entrance de FL26 (los archivos arriba o en una carpeta de fase, los de la final en Final; reemplazan los archivos del trofeo de la AFC Champions League). Una competición sin carpeta se queda como estaba.",
+  "Pick a trophy folder...": "Elegir carpeta de trofeo...",
+  "The world's new cups are listed after its first Build.": "Las copas nuevas del mundo salen después de su primer Build.",
+  "Trophies": "Trofeos",
+  "Trophy folder": "Carpeta del trofeo",
+  "A trophy folder of your own for a competition: FL26's Entrance.lua shows it in the game": "Una carpeta de trofeo tuya para una competición: el Entrance.lua de FL26 lo muestra en el juego"
  },
  "log": [
   [
@@ -2294,6 +2303,34 @@
   [
    "(?m)^  note: ",
    "  nota: "
+  ],
+  [
+   "(?m)^(\\s*)trophies: competition (\\d+): no trophy folder (.+)$",
+   "\\1trofeos: competición \\2: no hay carpeta de trofeo \\3"
+  ],
+  [
+   "(?m)^(\\s*)trophies: competition (\\d+): the trophy folder (.+) has no files$",
+   "\\1trofeos: competición \\2: la carpeta de trofeo \\3 no tiene archivos"
+  ],
+  [
+   "^  trophies: (\\d+) competition\\(s\\) with a trophy of their own \\(Entrance\\.lua shows them once the world is switched on\\)$",
+   "  trofeos: \\1 competición(es) con trofeo propio (Entrance.lua los muestra cuando el mundo esté activado)"
+  ],
+  [
+   "^  warning: trophy of competition (\\d+) -- the world has no such competition, left out$",
+   "  aviso: trofeo de la competición \\1 -- el mundo no tiene esa competición, se omite"
+  ],
+  [
+   "^Entrance\\.lua: (\\d+) trophy\\(ies\\) of (\\S+)$",
+   "Entrance.lua: \\1 trofeo(s) de \\2"
+  ],
+  [
+   "^Entrance\\.lua: the trophies of another world taken out$",
+   "Entrance.lua: quitados los trofeos de otro mundo"
+  ],
+  [
+   "^NOTE: (\\d+) trophy\\(ies\\) of (\\S+) -- the game has no FL26 Entrance\\.lua in modules, so they are not shown$",
+   "NOTA: \\1 trofeo(s) de \\2 -- el juego no tiene el Entrance.lua de FL26 en modules, así que no se muestran"
   ]
  ]
 }

@@ -968,6 +968,10 @@ def recipe_from_plan(pl, base):
     for k in ("uecl", "uecl_logo", "uecl_name", "editable_kits", "game_seasons", "cafsc"):
         if pl.get(k) or k == "uecl":       # (an empty game_seasons is no setting)
             rec[k] = pl.get(k)
+    # a trophy folder on another PC (a world from a zip) is not one this Build can copy
+    trophies = {c: f for c, f in (pl.get("trophies") or {}).items() if f and os.path.isdir(f)}
+    if trophies:
+        rec["trophies"] = trophies
     if pl.get("make_kits") is False:
         rec["make_kits"] = False
     if pl.get("pack_faces") is False:
@@ -2234,6 +2238,9 @@ def plan(recipe, base, prev=None):
         _problem(errs, names, "clubs that swap leagues: " + t)
     for t in competition_problems(recipe.get("edits") or {}, base):
         _problem(errs, names, "competition names: " + t)
+    import lbtrophies
+    for t in lbtrophies.problems(recipe):
+        _problem(errs, names, "trophies: " + t)
     if errs:
         raise PlanProblems(errs)
     ge, gr, gn, gcc = game_europe(recipe, regrow, region_of_cid, base)
@@ -2263,6 +2270,7 @@ def plan(recipe, base, prev=None):
     return {"world": recipe["world"], "leagues": out, "others": others, "edits": recipe.get("edits") or {},
             "free_ids": free_ids, "players": recipe.get("players") or {}, "uecl": bool(recipe.get("uecl", True)),
             "skipped": [t for _pr, t in stale],         # what Build leaves out, with why
+            "trophies": dict(recipe.get("trophies") or {}),     # Leagues > More > Trophies (lbtrophies)
             "uecl_logo": recipe.get("uecl_logo") or None,
             "uecl_name": (recipe.get("uecl_name") or "").strip() or None,
             "game_europe": ge, "game_replace": gr, "game_names": gn,
@@ -4329,6 +4337,8 @@ def build(pl, base, game, replace=False, log=print):
     lap("pictures and kits")
     region_modules(pl, tmp, game, log)
 
+    import lbtrophies
+    lbtrophies.build(pl, tmp, db, log)
     write_input(tmp, key, pl, base)       # an edit of pictures alone next time draws just those
     write_manifest(tmp)                   # before keep_added: what this Build wrote, not what it kept
     if os.path.exists(out):
@@ -4462,6 +4472,8 @@ def input_key(pl, base, game):
         except OSError:
             h.update(b"-")
     h.update(json.dumps([INPUT_FORMAT, code_stamp(), strip(pl)], sort_keys=True, default=str).encode())
+    import lbtrophies                     # a file put in a trophy folder is a new Build too
+    h.update(json.dumps(lbtrophies.signature(pl)).encode())
     for f in sorted(os.listdir(base)):
         if os.path.isfile(os.path.join(base, f)):
             h.update(f.encode())
@@ -6174,6 +6186,8 @@ def switch_on(world, game, log=print):
     # B177: another world's fl26regions / fl26regnames name that world's competitions and countries
     stale_world_modules(game, set(lbpack.PER_WORLD) - set(world_modules(game, world)), world, log)
     commonlib_leagues(game, world, wf, log)
+    import lbtrophies                    # Leagues > More > Trophies: FL26's Entrance.lua shows them
+    lbtrophies.switch_on(siderdir.find(game), world, root, log, keep_before)
     missing = modules_missing(game)
     if missing:
         log("NOTE: sider.ini does not load %s -- those parts of the world will not work"
