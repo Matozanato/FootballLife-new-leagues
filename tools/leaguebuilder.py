@@ -4534,6 +4534,33 @@ def is_live(world, game):
         return False
 
 
+def live_world(game):
+    """the world the modules read now (the world line of modules/fl26world.txt), or None"""
+    try:
+        with open(os.path.join(siderdir.find(game), "modules", MARK), encoding="utf-8", errors="replace") as f:
+            for line in f:
+                w = line.split()
+                if w[:1] == ["world"]:
+                    return w[1] if len(w) > 1 else None
+    except (OSError, BuildError):
+        pass
+    return None
+
+
+def world_modules(game, world=None):
+    """{module: its file} of the modules a world brings in livecpk\\<world>\\modules (fl26regions and
+    fl26regnames, lbpack.PER_WORLD: they name its own competitions and countries, so they are made
+    at its Build and not shipped in the pack); world None: the live one. {} when it has none"""
+    world = world or live_world(game)
+    if not world:
+        return {}
+    try:
+        d = os.path.join(siderdir.find(game), "livecpk", world, "modules")
+        return {f[:-4].lower(): os.path.join(d, f) for f in sorted(os.listdir(d)) if f.lower().endswith(".lua")}
+    except (OSError, BuildError):
+        return {}
+
+
 def qual_rounds(pl):
     """the August qualifying rounds the world gets (fl26world.pick_rounds): as many as the European
     places it lists fill -- the play-offs alone with the game's own places"""
@@ -5767,6 +5794,29 @@ def ensure_modules(game, order, want, log=print):
     return done + gone
 
 
+def stale_world_modules(game, names, world, log=print):
+    """switch off (;) the live lua.module lines of `names`: modules another world brought
+    (fl26regions, fl26regnames) that the world `world` being switched on has none of -- they patch
+    the exe with the other world's competition and country names. Its own Switch on puts them back
+    on. Returns the modules switched off."""
+    if not names:
+        return []
+    ini, lines = ini_lines(game)
+    gone = []
+    for i, l in enumerate(lines):
+        m, live = module_of(l)
+        base = m.replace("/", "\\").rpartition("\\")[2] if m else None
+        if live and base in names:
+            lines[i] = ";" + l.strip()
+            gone.append(base)
+    if gone:
+        keep_before(ini, "Switch on %s: another world's modules switched off" % world, os.path.dirname(ini))
+        open(ini, "w", encoding="utf-8", newline="\r\n").write("\n".join(lines) + "\n")
+        log("sider.ini: switched off %s -- %s brings none, they were another world's"
+            % (", ".join(sorted(set(gone))), world))
+    return gone
+
+
 DLL_REF = re.compile(r'"([A-Za-z0-9_]+\.dll)"')    # how our Lua names its DLL: "fl26swiss.dll"
 AV_WINERRORS = (225, 226)                 # ERROR_VIRUS_INFECTED, ERROR_VIRUS_DELETED
 
@@ -5903,8 +5953,21 @@ def install_modules(game, log=print, settle=2.0):
             keep_before(p, "Install the modules: %s now ships bundled" % m, sider, keep_n=3)
             os.remove(p)
         log("modules: %s now ship bundled; the single files are in Restore points" % ", ".join(old))
+    # B177 (Vran 20.10.): the modules a world brings (fl26regions, fl26regnames) are not in the pack;
+    # Home said they were switched off and Install now passed them by. The live world's come from
+    # its folder, as its Switch on puts them; one no world in the game brings is not switched on
+    per = world_modules(game)
+    for m, a in sorted(per.items()):
+        b = os.path.join(dst, m + ".lua")
+        if os.path.exists(b) and open(a, "rb").read() == open(b, "rb").read():
+            continue
+        if os.path.exists(b):
+            keep_before(b, "Install the modules: the world's own", sider, keep_n=5)
+        shutil.copy2(a, b)
+        log("modules: %s.lua of the world in the game (%s) put in" % (m, live_world(game)))
+    shipped = {f[:-4] for f in shipped_files(src) if f.endswith(".lua")}
     have = {f[:-4] for f in os.listdir(dst) if f.endswith(".lua")}
-    ensure_modules(game, order, [m for m in order if m in have], log)
+    ensure_modules(game, order, [m for m in order if m in have and (m in shipped or m in per)], log)
     roots = os.path.join(pack, "livecpk")
     for r in sorted(os.listdir(roots)) if os.path.isdir(roots) else []:
         install_root(game, os.path.join(roots, r), log)
@@ -5986,9 +6049,11 @@ def switch_on(world, game, log=print):
             keep_before(dst, "Switch on %s: its own module" % world, siderdir.find(game), keep_n=5)
         shutil.copy2(os.path.join(mods, f), dst)
         log("%s -> %s" % (f, dst))
+    import lbpack
     if os.path.isdir(mods):
-        import lbpack
         ensure_modules(game, lbpack.ORDER, [f[:-4] for f in os.listdir(mods) if f.endswith(".lua")], log)
+    # B177: another world's fl26regions / fl26regnames name that world's competitions and countries
+    stale_world_modules(game, set(lbpack.PER_WORLD) - set(world_modules(game, world)), world, log)
     commonlib_leagues(game, world, wf, log)
     missing = modules_missing(game)
     if missing:

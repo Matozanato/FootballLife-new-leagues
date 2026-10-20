@@ -25,6 +25,31 @@ come with it instead.
   picked is kept in `fl26stadiums.json` in the world's folder and comes back when you install a
   newer version of the same world. Start a new Master League after saving.
 
+## Fixed
+
+- **Clubs that took a game club's place wore the kit of the club that left (B176).** NewLife's
+  "Bring the game's leagues to this season" gives the place of a club that went down to the club
+  that came up, and the club keeps the game's team id. The kit for that id stayed the old club's:
+  in the Europack, Schalke 04, SC Paderborn and SV Elversberg played the Bundesliga in Heidenheim's,
+  St. Pauli's and Wolfsburg's kits (your kit pack's line for the id, or the game's own kit). Such a
+  club now gets a kit drawn from its colours and crest, as a new club does, in
+  `content\kit-server\<world>\Clubs of the game`, and the kit pack's line for the id is switched off
+  while the world is in the game (back on with any other world). A line of your own whose folder
+  names the club (`Modpack\Game leagues\FC Schalke 04`) is kept. A world you already have gets
+  them at its next Build or Switch it on (the Europack draws 49 kits once, about half a minute).
+  (Thanks quicksite, NedimMM)
+- **A kit you changed by hand went back to Mod Studio's (B166).** A kit put into a club's kit
+  folder of the world by hand (through Sider, or by copying the files in) was replaced at the next
+  Build or Switch it on: by the league package's kit when a file's size differed, or by the drawn
+  kit when the club's colours, the crest or the kit that lends the numbers changed. Mod Studio now
+  notes what it put in each folder and leaves a folder whose files you changed alone, and says so in
+  the log. To get Mod Studio's kit back, delete the folder and Build. (Thanks LaraCroft)
+- **Home said "switched off: fl26regions, fl26regnames" and Install now did not help (B177).**
+  Those two modules come with a world (they name its competitions and countries), not with Mod
+  Studio's module pack, so Install now passed them by. Home now counts them only when the world in
+  the game has them, and Install now puts that world's copies in and switches them on. Switching on
+  a world that has none switches another world's off. (Thanks Vran)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.

@@ -4,6 +4,17 @@ Honest list, as of 2026-09-28. Addresses are given so that a fault offset in you
 Viewer can be matched against them: the offset is the address minus `0x140000000`
 (so `0x1414c674d` shows up as exception offset `0x14c674d`).
 
+## Open in Mod Studio 0.2.4 (2026-10-20)
+
+- **Outside a match a new club can show another club's kit** (B175: in Become a Legend, after a
+  transfer to Alcorcón the player's Basic information showed him in Club América's kit, and clubs
+  of other leagues looked wrong too, until the game was restarted). A new club's kit has two parts:
+  the kit Kit Server (`kserv.lua`) puts on it -- the drawn one, or your kit pack's -- and, below it,
+  a kit of the game Build lends it so that it never plays in a blank one, the game's kit nearest its
+  colours (the Europack's Alcorcón: Club América's, yellow and blue). Kit Server dresses a club when
+  the game sets up its match or Edit mode, not on every menu screen; there the lent kit can show.
+  Restarting the game brought the right kit back for the player who reported it. Not fixed yet.
+
 ## Open in Mod Studio 0.2.1 (2026-10-10)
 
 - **A league package made from NewLife, with some clubs added by hand, stops Check the plan**
