@@ -25,6 +25,18 @@ come with it instead.
   picked is kept in `fl26stadiums.json` in the world's folder and comes back when you install a
   newer version of the same world. Start a new Master League after saving.
 
+## Fixed
+
+- **Import crests no longer ticks wrong crests over the game's own clubs (B170).** With a big
+  crest folder (David's Logos) about 75 pictures were ticked onto clubs of the game because the
+  club's name was inside the picture's: "fc-united-of-manchester" went to Manchester United,
+  "cove-rangers" to Rangers FC, "portuguesa-de-sao-paulo" to Sao Paulo FC, and most B sides
+  ("alaves-b", "fc-augsburg-ii", "valencia-mestalla") to their first team. Such a match is now
+  only a suggestion (50 %, not ticked) for a club of the game, a reserve or youth side's picture
+  (B, II, U23, Reserves, Promesas, Sevilla Atletico ...) is never ticked for a first team, and
+  Atletico, Deportivo, Sport tell clubs apart when both names have them ("atletico-de-cali" is
+  not Deportivo Cali). "galatasaray.png" for Galatasaray SK still ticks. (Thanks David)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.

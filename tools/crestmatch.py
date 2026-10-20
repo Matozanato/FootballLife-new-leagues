@@ -21,6 +21,18 @@ other, whatever their scores, and a club of another country is never worth a tic
 the other is worth a tick (0.65) only when the club is of the file's country and the only club of
 it the file's name is inside or holds; two such clubs, or a country unknown, stay at 0.5.
 
+Never ticked, at most a 0.5 suggestion (B170, David's final Logos.zip ticked ~75 wrong crests over
+the game's own):
+- a club of the game (clubs' fourth field True) whose name is inside the file's: the club already
+  has its real crest, and "fc-united-of-manchester" is not Manchester United, "cove-rangers" not
+  Rangers FC, "portuguesa-de-sao-paulo" not Sao Paulo FC. The other way round ("galatasaray" for
+  Galatasaray SK) still ticks;
+- a reserve or youth side's picture for a club that is not one: the file has B, C, II, U23,
+  Reserves, Castilla, Mestalla, Promesas... ("alaves-b", "hannover-96-ii") or ends in Atletico,
+  Atletic or Deportivo ("sevilla-atletico", "betis-deportivo") and the club's name has not;
+- Atletico, Deportivo, Sport... are filler, but not when both names have such words and none the
+  same: "atletico-de-cali" is not Deportivo Cali.
+
 The assignment is greedy over the best scores first: a file and a club are each used at most
 once, nothing under 0.4 is accepted, everything else comes back as (file, None, 0.0).
 """
@@ -37,8 +49,19 @@ FOLDER_DEPTH = 3                          # how many of a folder's last names ma
 FILLER = frozenset((
     "fc", "cf", "cd", "csd", "ca", "ac", "sc", "sd", "ud", "ad", "afc", "club", "the",
     "de", "del", "la", "las", "el", "los", "atletico", "atletica", "deportivo", "deportiva",
-    "futbol", "futebol", "balompie", "sport", "sports",
+    "futbol", "futebol", "balompie", "sport", "sports", "and",
 ))
+# filler, but telling two clubs apart when both names have them (B170): Atletico Cali, Deportivo Cali
+SIDE_WORDS = {"atletico": "atletico", "atletica": "atletico", "atletic": "atletico",
+              "deportivo": "deportivo", "deportiva": "deportivo", "sport": "sport", "sports": "sport",
+              "sporting": "sporting", "sportivo": "sportivo"}
+# a reserve or youth side (B170): "alaves-b", "fc-augsburg-ii", "valencia-mestalla", "atalanta-u23"
+RESERVE = frozenset((
+    "b", "c", "ii", "iii", "reserve", "reserves", "res", "juniors", "jong", "primavera", "nextgen",
+    "castilla", "mestalla", "promesas", "ilicitano", "vetusta",
+))
+RESERVE_END = frozenset(("atletico", "atletic", "deportivo"))   # Spain's B sides: Sevilla Atletico
+B_SUFFIX_LANDS = ("", "spain")            # ... not Petro Atletico (Angola) nor Olimpia Deportivo
 PHRASES = (("football", "club"), ("sporting", "club"), ("athletic", "club"))  # filler as two words only
 SIZES = ("_r_ll", "_r_l", "_r")           # the crest packs' size suffixes, longest first
 SITES = (".football-logos.cc",)           # a download site's tag at the end of the name
@@ -57,9 +80,9 @@ def key(text):
     return "".join(_fold(text))
 
 
-def words(text, is_file=False):
+def words(text, is_file=False, keep=False):
     """the words a name is matched by; a file name also loses the extension, its size tag and
-    a site's tag ("_1500x1500.football-logos.cc")"""
+    a site's tag ("_1500x1500.football-logos.cc"). keep: with the filler words"""
     t = text
     if is_file:
         stem, dot, ext = t.rpartition(".")
@@ -86,11 +109,14 @@ def words(text, is_file=False):
         if w:
             out.append(w)
     out = [w for w in out if not (is_file and re.fullmatch(r"\d+x\d+", w))]
+    for i in range(len(out) - 1, 0, -1):                    # "newell-s" is newells (B170): not
+        if out[i] == "s" and len(out[i - 1]) > 1:           # Trafico's Old Boys by "s old boys"
+            out[i - 1] += out.pop(i)
     for a, b in PHRASES:                                    # "Pyramids Football Club" is pyramids (B139)
         while any(out[i:i + 2] == [a, b] for i in range(len(out) - 1)):
             i = next(i for i in range(len(out) - 1) if out[i:i + 2] == [a, b])
             del out[i:i + 2]
-    return [w for w in out if w not in FILLER]
+    return out if keep else [w for w in out if w not in FILLER]
 
 
 def file_id(name):
@@ -169,34 +195,72 @@ def _contains(long_words, short):
     return False
 
 
+def other_side(file_full, club_full, b_suffix=True):
+    """True when a file (its words with the filler, words(keep=True)) is not of the club's side
+    although the names match (B170): a reserve or youth side's picture for a club that is not one
+    ("alaves-b", "sevilla-atletico" for Sevilla), or Atletico against Deportivo ("atletico-de-cali"
+    for Deportivo Cali). b_suffix: a name ending in Atletico or Deportivo is a B side (Spain's)"""
+    have = set(club_full)
+    extra = [w for w in file_full if w not in have]
+    if any(w in RESERVE or re.fullmatch(r"(u|sub)\d\d", w) for w in extra):
+        return True
+    if "next" in extra and "gen" in extra:                    # "juventus-next-gen"
+        return True
+    if b_suffix and len(file_full) > 1 and file_full[-1] in RESERVE_END and file_full[-1] not in have:
+        return True
+    a = {SIDE_WORDS[w] for w in file_full if w in SIDE_WORDS}
+    b = {SIDE_WORDS[w] for w in club_full if w in SIDE_WORDS}
+    return bool(a and b and not a & b)
+
+
+def _filler(full):
+    """the filler words of a name, words(keep=True), Atletica as Atletico and so on"""
+    return {SIDE_WORDS.get(w, w) for w in full if w in FILLER or w in SIDE_WORDS}
+
+
 def match(files, clubs, where=None, countries=None):
     """-> [(file, club_id or None, score)] in the order the files came in. where: the country of
-    all the files (folder_country), countries: {key(name): country} for file_country"""
-    fc, fw = [], []
+    all the files (folder_country), countries: {key(name): country} for file_country. clubs:
+    (name, id), (name, id, country) or (name, id, country, of the game): a club of the game has
+    its own crest, and one inside a file's name is never ticked (B170)"""
+    fc, fw, ff = [], [], []
     for f in files:
         c, rest = file_country(f, countries)
         fc.append(key(c or where or ""))
         fw.append(words(rest, is_file=True))
+        ff.append(words(rest, is_file=True, keep=True))
     cw = [words(c[0]) for c in clubs]
+    cf = [words(c[0], keep=True) for c in clubs]
     cc = [key(c[2] or "") if len(c) > 2 else "" for c in clubs]
+    cg = [bool(c[3]) if len(c) > 3 else False for c in clubs]
     cand = []
     for i, a in enumerate(fw):
         inside = []                       # the clubs of the file's own country one name is inside
         for j, b in enumerate(cw):
             s, part = _score(a, b)
             if s >= MIN_SCORE:
+                # B170: never a tick for another side's picture, nor for a club of the game whose
+                # name is inside the file's ("cove-rangers" is not Rangers FC)
+                held = (other_side(ff[i], cf[j], fc[i] in B_SUFFIX_LANDS)
+                        or (part and cg[j] and len("".join(b)) < len("".join(a))))
+                same = s == 1.0
+                if held:
+                    s = min(s, CONTAINS_SCORE)
                 # 2 the file's own country, 1 a country unknown on either side, 0 another (B139)
                 home = 1 if not fc[i] or not cc[j] else 2 if fc[i] == cc[j] else 0
-                cand.append((home, s, i, j))
-                if home == 2 and part:
-                    inside.append(len(cand) - 1)
-        if len(inside) == 1:              # the only one of its country: "mostaganem" is ES Mostaganem
-            home, s, i, j = cand[inside[0]]
-            cand[inside[0]] = (home, HOME_CONTAINS, i, j)
-    cand.sort(key=lambda t: (-t[0], -t[1], t[2], t[3]))   # own country, best first; ties by file, club
+                # a tie goes to the club its filler words match too: "sevilla-atletico" is Sevilla
+                # Atletico before Sevilla, "la-roda" La Roda before CD Roda
+                x, y = _filler(ff[i]), _filler(cf[j])
+                cand.append((home, s, len(x & y) / float(len(x | y)) if x | y else 1.0, i, j))
+                if home == 2 and (part or held and same):   # "atletico-de-cali" is not America de
+                    inside.append((len(cand) - 1, held))       # Cali when Deportivo Cali is held
+        if len(inside) == 1 and not inside[0][1]:   # the only one of its country: "mostaganem" is ES Mostaganem
+            home, s, full, i, j = cand[inside[0][0]]
+            cand[inside[0][0]] = (home, HOME_CONTAINS, full, i, j)
+    cand.sort(key=lambda t: (-t[0], -t[1], -t[2], t[3], t[4]))   # own country, best first; ties by file, club
     out = [(f, None, 0.0) for f in files]
     used_f, used_c = set(), set()
-    for home, s, i, j in cand:
+    for home, s, _full, i, j in cand:
         if i in used_f or j in used_c:
             continue
         used_f.add(i)
