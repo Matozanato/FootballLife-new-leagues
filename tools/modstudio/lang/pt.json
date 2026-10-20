@@ -1955,7 +1955,8 @@
   "Take back the last change to your world (Ctrl+Z)": "Anula a última alteração do teu mundo (Ctrl+Z)",
   "Do the taken-back change again (Ctrl+Y)": "Refaz a alteração anulada (Ctrl+Y)",
   "Change taken back": "Alteração anulada",
-  "Change done again": "Alteração refeita"
+  "Change done again": "Alteração refeita",
+  "Cup mode can put these clubs in the Champions League: it fills the last places from Other European teams. For small clubs, choose Classic Teams.": "O modo Taça pode pôr estes clubes na Liga dos Campeões: preenche as últimas vagas com Other European teams. Para clubes pequenos, escolha Classic Teams."
  },
  "log": [
   [
@@ -2225,6 +2226,10 @@
   [
    "(Europa League|Conference League) qualifying\\b",
    "\\1 (fase preliminar)"
+  ],
+  [
+   "^  NOTE: Cup mode can put these clubs in the Champions League \\(it fills the last places from Other European teams\\); for small clubs choose Classic Teams$",
+   "  ATENÇÃO: o modo Taça pode pôr estes clubes na Liga dos Campeões (preenche as últimas vagas com Other European teams); para clubes pequenos escolha Classic Teams"
   ]
  ]
 }

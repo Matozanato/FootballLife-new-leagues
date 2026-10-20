@@ -3875,6 +3875,12 @@ def build(pl, base, game, replace=False, log=print):
             p["abbrs"].append(short)
         log("  %-26s %d club(s) in no league, %s %s" % (p["name"], len(p["teams"]),
                                                        OTHERS_NAMES[p["others"]], id_spans(p["teams"])))
+        if p["others"] == OTHERS["europe"]:
+            # B167 (19.10.2026): Cup mode filled the Champions League's last places from Other
+            # European teams, and with the game's own such clubs moved into leagues, three Croatian
+            # village clubs of a "no league" group were all that was left there
+            log("  NOTE: Cup mode can put these clubs in the Champions League (it fills the last places "
+                "from Other European teams); for small clubs choose Classic Teams")
     clubs = dict(pl, leagues=pl["leagues"] + others)    # every new club, for what goes by club
     if added and pl.get("game_stadiums") is not False:
         used = {}

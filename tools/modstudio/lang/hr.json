@@ -1955,7 +1955,8 @@
   "Take back the last change to your world (Ctrl+Z)": "Vrati zadnju izmjenu tvog svijeta (Ctrl+Z)",
   "Do the taken-back change again (Ctrl+Y)": "Ponovi vraćenu izmjenu (Ctrl+Y)",
   "Change taken back": "Izmjena vraćena",
-  "Change done again": "Izmjena ponovljena"
+  "Change done again": "Izmjena ponovljena",
+  "Cup mode can put these clubs in the Champions League: it fills the last places from Other European teams. For small clubs, choose Classic Teams.": "Cup mode može ove klubove staviti u Ligu prvaka: zadnja mjesta popunjava iz Other European teams. Za male klubove odaberi Classic Teams."
  },
  "log": [
   [
@@ -2237,6 +2238,10 @@
   [
    "Liga prvaka play-off\\b",
    "doigravanje Lige prvaka"
+  ],
+  [
+   "^  NOTE: Cup mode can put these clubs in the Champions League \\(it fills the last places from Other European teams\\); for small clubs choose Classic Teams$",
+   "  PAZI: Cup mode može ove klubove staviti u Ligu prvaka (zadnja mjesta popunjava iz Other European teams); za male klubove odaberi Classic Teams"
   ]
  ]
 }
