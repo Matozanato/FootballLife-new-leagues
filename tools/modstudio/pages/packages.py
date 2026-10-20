@@ -5,8 +5,8 @@ import os
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (QCheckBox, QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
-                               QLineEdit, QListWidget, QListWidgetItem, QPlainTextEdit, QPushButton,
-                               QSplitter, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
+                               QFrame, QLineEdit, QListWidget, QListWidgetItem, QPlainTextEdit, QPushButton,
+                               QScrollArea, QSplitter, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget)
 
 import lbpackage as K
 from ..i18n import _
@@ -37,7 +37,10 @@ class MakeDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(_("Make a league package"))
         self.setMinimumWidth(560)
-        v = QVBoxLayout(self)
+        outer = QVBoxLayout(self)
+        body = QWidget()                # everything but the buttons scrolls: on a small or scaled screen
+        v = QVBoxLayout(body)           # the window was taller than the screen and Save was cut off
+        v.setContentsMargins(0, 0, 0, 0)
         v.addWidget(hint(_("Everything a person needs to add these leagues to their game: the leagues, club "
                            "names, logos and crests, player changes and faces. Ids are given out when they "
                            "build, so it works next to whatever else they have.")))
@@ -68,6 +71,7 @@ class MakeDialog(QDialog):
             if L.get("pack"):
                 it.setToolTip(_("came from the package %s") % L["pack"])
             self.leagues.addItem(it)
+        self.leagues.setMinimumHeight(110)
         v.addWidget(self.leagues, 1)
         e = recipe.get("edits") or {}
         n = len(e.get("leagues") or {}) + len(e.get("clubs") or {}) + \
@@ -90,11 +94,19 @@ class MakeDialog(QDialog):
                            "Drive, Dropbox, MEGA ...), or untick them, or make one package per league.")))
         v.addWidget(hint(_("A league below another league must go with it. A league placed below one of the "
                            "game's leagues works for everybody with the same game version.")))
+        sc = QScrollArea()
+        sc.setWidgetResizable(True)
+        sc.setFrameShape(QFrame.NoFrame)
+        sc.setWidget(body)
+        outer.addWidget(sc, 1)
         bb = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         bb.button(QDialogButtonBox.Ok).setText(_("Save the package..."))
         bb.accepted.connect(self.check)
         bb.rejected.connect(self.reject)
-        v.addWidget(bb)
+        outer.addWidget(bb)
+        scr = parent.screen() if parent is not None else None
+        room = scr.availableGeometry().height() - 80 if scr is not None else 800
+        self.resize(max(560, body.sizeHint().width() + 40), min(body.sizeHint().height() + 90, room))
 
     def tick(self, state):
         for i in range(self.leagues.count()):
