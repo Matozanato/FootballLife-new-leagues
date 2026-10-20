@@ -523,7 +523,21 @@ class Project(QObject):
     def new(self):
         self.recipe, self.path, self.dirty = blank(), None, False
         self._forget()
+        self._remember(None)
         self.changed.emit()
+
+    def _remember(self, path):
+        """B107: the next start opens the world open now. New world and Open left last_recipe on the
+        world before, so a world deleted and replaced by a new, untouched one came back at the next
+        start"""
+        st = getattr(self.app, "settings", None)
+        if not isinstance(st, dict) or st.get("last_recipe") == path:
+            return
+        st["last_recipe"] = path
+        try:
+            self.app.save_settings()
+        except (AttributeError, OSError):
+            pass
 
     def open(self, path, copy=False):
         """load a recipe; copy=True for the copy Build keeps (keep_copy): Save then asks for a name"""
@@ -539,6 +553,7 @@ class Project(QObject):
         r.setdefault("players", {})
         self.recipe, self.path, self.dirty = r, None if copy else path, False
         self._forget()
+        self._remember(path)
         self.changed.emit()
 
     def save(self, path=None):

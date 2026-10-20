@@ -38,6 +38,9 @@ come with it instead.
   after Install the modules), the list of last changes was drawn on top of the old one until you
   went to another page. The same in the world cards, the pack ticks and the league crests. (Thanks
   David)
+- **A deleted world came back at the next start (B107).** After Delete world and New world (left as
+  it was), Mod Studio opened the deleted world again when it started, because New world and Open did
+  not change which world the next start opens. It now opens the one you had open. (Thanks jibibi)
 
 ## Read this first
 
