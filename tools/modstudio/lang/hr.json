@@ -2255,6 +2255,42 @@
   [
    "^  NOTE: Cup mode can put these clubs in the Champions League \\(it fills the last places from Other European teams\\); for small clubs choose Classic Teams$",
    "  PAZI: Cup mode može ove klubove staviti u Ligu prvaka (zadnja mjesta popunjava iz Other European teams); za male klubove odaberi Classic Teams"
+  ],
+  [
+   "(?m)^(\\d+) problems:$",
+   "\\1 problema:"
+  ],
+  [
+   "(?m)^(\\s*)clubs that swap leagues: ",
+   "\\1klubovi koji mijenjaju ligu: "
+  ],
+  [
+   "(?m)^(\\s*)competition names: ",
+   "\\1imena natjecanja: "
+  ],
+  [
+   "(?m)(.+) is in two swaps$",
+   "\\1 je u dvije zamjene"
+  ],
+  [
+   "(?m)(.+) plays in a new league of the recipe; it cannot also swap$",
+   "\\1 igra u novoj ligi svijeta; ne može i mijenjati ligu"
+  ],
+  [
+   "(?m)swap (.+): the two clubs play in the same league$",
+   "zamjena \\1: oba kluba igraju u istoj ligi"
+  ],
+  [
+   "(?m)swap (.+): (.+) plays in no league of the game$",
+   "zamjena \\1: \\2 ne igra ni u jednoj ligi igre"
+  ],
+  [
+   "(?m)the swap of (.+) and (.+) is left out: the game's tables have both in the same league now \\(remove it on Leagues to stop this note\\)$",
+   "zamjena klubova \\1 i \\2 je izostavljena: u tablicama igre oba su sada u istoj ligi (makni je na stranici Lige da ova napomena nestane)"
+  ],
+  [
+   "(?m)^  note: ",
+   "  napomena: "
   ]
  ]
 }

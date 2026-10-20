@@ -2262,6 +2262,42 @@
   [
    "^  NOTE: Cup mode can put these clubs in the Champions League \\(it fills the last places from Other European teams\\); for small clubs choose Classic Teams$",
    "  ATTENTION : le mode Coupe peut mettre ces clubs en Ligue des champions (il remplit les dernières places avec Other European teams) ; pour de petits clubs, choisissez Classic Teams"
+  ],
+  [
+   "(?m)^(\\d+) problems:$",
+   "\\1 problèmes :"
+  ],
+  [
+   "(?m)^(\\s*)clubs that swap leagues: ",
+   "\\1clubs qui échangent de ligue : "
+  ],
+  [
+   "(?m)^(\\s*)competition names: ",
+   "\\1noms des compétitions : "
+  ],
+  [
+   "(?m)(.+) is in two swaps$",
+   "\\1 est dans deux échanges"
+  ],
+  [
+   "(?m)(.+) plays in a new league of the recipe; it cannot also swap$",
+   "\\1 joue dans une nouvelle ligue du monde ; il ne peut pas aussi être échangé"
+  ],
+  [
+   "(?m)swap (.+): the two clubs play in the same league$",
+   "échange \\1 : les deux clubs jouent dans la même ligue"
+  ],
+  [
+   "(?m)swap (.+): (.+) plays in no league of the game$",
+   "échange \\1 : \\2 ne joue dans aucune ligue du jeu"
+  ],
+  [
+   "(?m)the swap of (.+) and (.+) is left out: the game's tables have both in the same league now \\(remove it on Leagues to stop this note\\)$",
+   "l'échange de \\1 et \\2 est laissé de côté : les tables du jeu ont maintenant les deux dans la même ligue (retirez-le dans Ligues pour ne plus voir cette note)"
+  ],
+  [
+   "(?m)^  note: ",
+   "  note : "
   ]
  ]
 }
