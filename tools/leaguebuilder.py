@@ -3749,6 +3749,18 @@ def build(pl, base, game, replace=False, log=print):
                     log("  %s (in no competition of the game) moves to %s" % (info["clubs"][tid][0], p["name"]))
 
     new_of = {}                                        # every new club's id: its league (or group)
+    import lbgamestadiums as G
+    picked_stadiums = {}
+
+    def stadium_picks(p):
+        """[game stadium id] of league (or group) p's clubs; [] when the recipe keeps the old way"""
+        if pl.get("game_stadiums") is False:
+            return []
+        if id(p) not in picked_stadiums:
+            n = int(p.get("clubs") or len(p.get("teams") or []) or 0)
+            picked_stadiums[id(p)] = p["game_stadiums"] = G.league(
+                n, p.get("tier") or 1, p.get("country"), confed, G.fixed_of(pl, p))
+        return picked_stadiums[id(p)]
 
     def new_club(p, k):
         """a new club's Team.bin record, the k-th of league (or group) p: [record, id, abbr]"""
@@ -3791,6 +3803,11 @@ def build(pl, base, game, replace=False, log=print):
         else:
             short = abbr(club_name(p, k), used_abbr)
         r[W.T_ABBR:W.T_ABBR + W.T_ABBR_LEN] = short.ljust(W.T_ABBR_LEN, bytes(1).decode()).encode("ascii")
+        # its home stadium: one of the game's (lbgamestadiums), not Selangor FC's Stadio Nazionale
+        # for all of them (0.2.5)
+        sids = stadium_picks(p)
+        if k < len(sids):
+            r[G.T_STADIUM], r[G.T_STADIUM + 1] = sids[k], 0
         added.append(r)
         made += 1
         return r, tid, r[W.T_ABBR:W.T_ABBR + W.T_ABBR_LEN].split(bytes(1))[0].decode("ascii")
@@ -3859,6 +3876,13 @@ def build(pl, base, game, replace=False, log=print):
         log("  %-26s %d club(s) in no league, %s %s" % (p["name"], len(p["teams"]),
                                                        OTHERS_NAMES[p["others"]], id_spans(p["teams"])))
     clubs = dict(pl, leagues=pl["leagues"] + others)    # every new club, for what goes by club
+    if added and pl.get("game_stadiums") is not False:
+        used = {}
+        for r in added:
+            used[r[G.T_STADIUM]] = used.get(r[G.T_STADIUM], 0) + 1
+        log("  game stadiums: %d new club(s) at %d of the game's stadiums (%s)" % (
+            len(added), len(used), ", ".join("%s %d" % (G.name(s), n)
+                                             for s, n in sorted(used.items(), key=lambda x: -x[1])[:5])))
 
     # the new clubs go in in id order, as the shipped ones are
     for r in sorted(added, key=lambda r: int.from_bytes(r[W.T_ID:W.T_ID + 4], "little")):
@@ -5953,7 +5977,7 @@ def switch_on(world, game, log=print):
         built = None
     if built is not None:
         import lbstadiums, lbservers
-        lbstadiums.write(built, siderdir.find(game), log)
+        lbstadiums.write(built, siderdir.find(game), log, lbstadiums.load_edits(root))
         lbservers.write(built, siderdir.find(game), log, root)
     mods = os.path.join(root, "modules")
     for f in sorted(os.listdir(mods)) if os.path.isdir(mods) else []:

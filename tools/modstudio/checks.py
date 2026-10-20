@@ -554,14 +554,15 @@ def ready_check(game, world):
         import lbstadiums
         from . import filecache
         n, have = lbstadiums.coverage(filecache.json_file(os.path.join(d, "leaguebuilder-plan.json")),
-                                      game.sider_dir)
+                                      game.sider_dir, lbstadiums.load_edits(d))
     except Exception:
         n = have = 0
     if n and have == n:
         out.append(("ok", _("Home stadiums: all %d clubs have theirs") % n))
     elif n:
         out.append(("warn", _("Home stadiums: %d of %d clubs have theirs. Your stadium pack does not have the "
-                              "other %d, so those clubs play at the stadium the game gives them") % (have, n, n - have)))
+                              "other %d, so those clubs play at the stadium the game gives them. Stadiums > Your "
+                              "world's clubs finds them in your pack or lets you pick others") % (have, n, n - have)))
     live_mods = {os.path.basename(e.value.replace("/", "\\").strip('"')).lower()
                  for e in ini.entries("lua.module") if e.enabled}
     # where sider.ini has a module: SPFL26's own kits.lua and scoreboards.lua sit in modules\common

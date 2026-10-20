@@ -964,6 +964,36 @@ def set_club_stadium(project, key, st):
             pl.pop(key)
 
 
+def club_game_stadium(project, key):
+    """a new club's game stadium picked by hand (players[key]["game_stadium"]), 0 for automatic"""
+    return int((project.players().get(key) or {}).get("game_stadium") or 0)
+
+
+def set_club_game_stadium(project, key, sid):
+    pl = project.players()
+    if sid:
+        pl.setdefault(key, {})["game_stadium"] = int(sid)
+    elif key in pl:
+        pl[key].pop("game_stadium", None)
+        if not pl[key]:
+            pl.pop(key)
+
+
+def game_stadium_box(sid):
+    """Automatic, then the game's stadiums by name (fictional first, then the real ones)"""
+    import lbgamestadiums as G
+    box = QComboBox()
+    box.addItem(_("Automatic (Build picks one of the game's)"), 0)
+    for i in sorted(G.FICTIONAL, key=lambda i: G.FICTIONAL[i][0]):
+        box.addItem("%s (%s)" % (G.FICTIONAL[i][0], "{:,}".format(G.FICTIONAL[i][1]).replace(",", ".")), i)
+    for i in sorted(G.REAL, key=lambda i: G.REAL[i][0]):
+        box.addItem("%s (%s) - %s" % (G.REAL[i][0], "{:,}".format(G.REAL[i][1]).replace(",", "."),
+                                      _("a real club's")), i)
+    at = box.findData(int(sid or 0))
+    box.setCurrentIndex(at if at >= 0 else 0)
+    return box
+
+
 def pack_stadium_of(lib, tid):
     """(name, folder) the stadium pack's map_teams.txt gives team tid now, None when none"""
     if not lib or tid is None:
@@ -1183,7 +1213,8 @@ class ClubDialog(Dialog):
             "Changes reach the game after Build and install.")
 
     def __init__(self, parent, name, short, crest, was=None, coach=None, formation=None, formations=(),
-                 league_formation="", portrait=None, stadium=None, stadium_lib=None, tid=None, kits=None):
+                 league_formation="", portrait=None, stadium=None, stadium_lib=None, tid=None, kits=None,
+                 game_stadium=None):
         super().__init__(parent, "Club")
         self.name = QLineEdit(name or "")
         self.name.setMinimumWidth(280)
@@ -1203,6 +1234,12 @@ class ClubDialog(Dialog):
             self.form.addRow("", hint(_("%d stadiums in your stadium pack; the choice is written to its "
                                         "map_teams.txt at Build") % len(S.library(stadium_lib, "folder")) if stadium_lib else
                                       _("install Stadium Server (Stadiums page) to give the club a home stadium")))
+        self.game_stadium, self.game_stadium_value = None, game_stadium
+        if game_stadium is not None:       # a new club: its stadium of the game (Team.bin, lbgamestadiums)
+            self.game_stadium = game_stadium_box(game_stadium)
+            self.form.addRow(_("Game stadium"), self.game_stadium)
+            self.form.addRow("", hint(_("the stadium of the game the club plays at; a home stadium of your "
+                                        "stadium pack above, when it has one, is shown in its place")))
         self.coach = None
         if coach is not None:              # a new club: its manager's name
             self.coach = QLineEdit(coach)
@@ -1249,6 +1286,8 @@ class ClubDialog(Dialog):
                 error(self, "Club", str(e))
                 return
         self.result = (self.name.text().strip(), B.short_name(short), self.crest.path)
+        if self.game_stadium is not None:
+            self.game_stadium_value = self.game_stadium.currentData() or 0
         if self.coach is not None:
             self.coach_name = self.coach.text().strip()
         if self.portrait is not None:
@@ -3148,12 +3187,14 @@ class NewClubs(BuilderPage):
         d = ClubDialog(self, names[k], abbrs[k], crests[k], coach=coaches[k], formation=forms[k],
                        formations=self.project.formations(), league_formation=L.get("formation", ""),
                        portrait=coach_portrait(self.project, key), stadium=club_stadium(self.project, key),
-                       stadium_lib=stadium_lib(self.app), kits=self.kit_words(L, k))
+                       stadium_lib=stadium_lib(self.app), kits=self.kit_words(L, k),
+                       game_stadium=club_game_stadium(self.project, key))
         if d.finish() and d.result:
             names[k], abbrs[k], crests[k] = d.result
             self.set_kit_words(L, k, d.kits_value)
             set_coach_portrait(self.project, key, d.portrait_path)
             set_club_stadium(self.project, key, d.stadium_value)
+            set_club_game_stadium(self.project, key, d.game_stadium_value)
             coaches[k] = d.coach_name or ""
             if any(coaches):
                 L["club_coaches"] = coaches
