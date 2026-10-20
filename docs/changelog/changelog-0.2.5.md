@@ -25,6 +25,20 @@ come with it instead.
   picked is kept in `fl26stadiums.json` in the world's folder and comes back when you install a
   newer version of the same world. Start a new Master League after saving.
 
+- **Back and Forward through the pages, as in a browser.** Two arrows at the left of the section
+  bar, Alt+Left / Alt+Right and the mouse's side buttons take you back to the pages you had open
+  (up to 50). (Thanks Vicentico)
+- **Undo and Redo of the last change to your world.** Two buttons in the bottom bar next to "Your
+  world is saved", and Ctrl+Z / Ctrl+Y when no text box is in use: up to 30 steps back. New world
+  or Open starts again with none.
+
+## Fixed
+
+- **Home > Last changes: rows painted over each other (B83).** While a message box was open (the one
+  after Install the modules), the list of last changes was drawn on top of the old one until you
+  went to another page. The same in the world cards, the pack ticks and the league crests. (Thanks
+  David)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
