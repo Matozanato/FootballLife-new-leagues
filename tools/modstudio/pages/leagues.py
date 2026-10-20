@@ -546,6 +546,12 @@ class Leagues(BuilderPage):
             if not pm:
                 tid = int(game[k]["id"]) if k in game else (teams[k] if k < len(teams) else None)
                 pm = pixmap(world_crest(wdir, tid), 44)
+                if not pm and k in game:          # B108: a club of the game keeps the game's crest
+                    from .. import gamecrest
+                    try:
+                        pm = pixmap(gamecrest.crest(self.app.game, tid), 44)
+                    except Exception:
+                        pm = None
             if pm:
                 cell.setPixmap(pm)
             else:

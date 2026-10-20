@@ -41,6 +41,10 @@ come with it instead.
 - **A deleted world came back at the next start (B107).** After Delete world and New world (left as
   it was), Mod Studio opened the deleted world again when it started, because New world and Open did
   not change which world the next start opens. It now opens the one you had open. (Thanks jibibi)
+- **A dash instead of the crest of a club of the game in your league (B108).** On the Leagues page
+  the game's own clubs in a league of yours (Zamora and Deportivo Táchira in the Liga FUTVE) had no
+  crest: the world holds only the crests Build drew. Mod Studio now shows the crest the game shows:
+  from a crest pack switched on in sider.ini, else from the game's own files. (Thanks David)
 - **Clubs that took a game club's place wore the kit of the club that left (B176).** NewLife's
   "Bring the game's leagues to this season" gives the place of a club that went down to the club
   that came up, and the club keeps the game's team id. The kit for that id stayed the old club's:
