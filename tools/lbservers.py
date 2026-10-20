@@ -133,10 +133,30 @@ def wanted(pl):
     return kits, boards
 
 
+GAME = "Clubs of the game"          # the made kits of game clubs whose place went to another club
+
+
+def replaced_clubs(pl):
+    """{team id: (name, home words, own crest)} of the clubs of the game whose place the world gave
+    another club (NewLife's "Bring the game's leagues to this season": edits.clubs with "kit",
+    newlife.refresh_game_leagues, B57). The id stays the game's, so the game's kit for it -- and a
+    kit pack's Kit Server line for it (5009, "Bundesliga\\Heidenheim") -- is the kit of the club
+    that left: B176 (quicksite, NedimMM 20.10.), Europack eu4's Schalke 04 (5009), SC Paderborn
+    (4139) and SV Elversberg (232) in the Bundesliga wore Heidenheim's, St. Pauli's and
+    Wolfsburg's kits. Such a club gets a kit made from its colours and crest, as a new club does"""
+    out = {}
+    for tid, v in ((pl.get("edits") or {}).get("clubs") or {}).items():
+        if isinstance(v, dict) and "kit" in v and str(tid).isdigit():
+            out[int(tid)] = (v.get("name") or "", v.get("kit") or "", bool(v.get("crest")))
+    return out
+
+
 def to_make(pl, root):
     """[(team id, league, place, home words, away words, crest picture)] of the new clubs that get a
     kit made (kitmaker): no Kit Server folder of their own, a shirt in words or a crest picture of
-    their own.  A club of the game keeps its kits; "make_kits": false makes none."""
+    their own.  A club of the game keeps its kits -- unless the world gave its place to another
+    club (replaced_clubs): that club's kit is made under GAME, its place the team id.
+    "make_kits": false makes none."""
     import kitmaker
     if pl.get("make_kits") is False:
         return []
@@ -160,6 +180,17 @@ def to_make(pl, root):
                     continue
             out.append((int(tid), p.get("name") or "Other clubs", k, words,
                         kitmaker.words(away[k] if k < len(away) else ""), crest))
+    have = {x[0] for x in out}
+    for tid, (_name, kit, own) in sorted(replaced_clubs(pl).items()):
+        crest = os.path.join(root, "common", "render", "symbol", "flag", "e_%06d_r_ll.png" % tid)
+        words = kitmaker.words(kit)
+        if tid in have or not os.path.isfile(crest) or not (words or own):
+            continue                          # no colours and a badge of initials: the game's kit stays
+        if not words:
+            words = kitmaker.crest_kit(crest)
+            if not words:
+                continue
+        out.append((tid, GAME, tid, words, None, crest))
     return out
 
 
@@ -214,6 +245,13 @@ def _made(tid, words, away, crest, dst, numbers, log, lib=None, ready=False):
         had = open(stamp, encoding="utf-8").read().strip()
         if had in stamps or (ready and had):
             return False
+        # B166: a made kit whose files were changed after it was drawn (a kit put in its folder by
+        # hand) is the player's: never drawn over
+        made = int(os.path.getmtime(stamp))
+        if had and any(t > made + SLACK for _s, t in _files(dst).values()):
+            log("  kit of %s: its files were changed by you, kept (delete the folder to have it drawn "
+                "again)" % dst)
+            return False
     except OSError:
         pass
     tmp = tempfile.mkdtemp(prefix="fl26kit")
@@ -229,23 +267,71 @@ def _made(tid, words, away, crest, dst, numbers, log, lib=None, ready=False):
     return True
 
 
-def _copy(src, dst):
-    """src's files into dst (dst made again only when they differ: a size or a time)"""
-    same = os.path.isdir(dst)
-    if same:
-        for d, _s, files in os.walk(src):
-            for f in files:
-                a = os.path.join(d, f)
-                b = os.path.join(dst, os.path.relpath(a, src))
-                if not os.path.exists(b) or os.path.getsize(a) != os.path.getsize(b):
-                    same = False
-                    break
-            if not same:
-                break
-    if not same:
-        if os.path.isdir(dst):
-            shutil.rmtree(dst)
-        shutil.copytree(src, dst)
+COPIED = "modstudio-copy.txt"       # in a copied kit folder: what Mod Studio put there, file by file
+SLACK = 30                          # seconds: a file this much newer than ours was changed after
+
+
+def _files(d):
+    """{path inside d: (size, whole seconds of its time)} of d's files, our own notes left out"""
+    out = {}
+    for x, _s, files in os.walk(d):
+        for f in files:
+            p = os.path.join(x, f)
+            r = os.path.relpath(p, d).replace(os.sep, "/")
+            if r not in (COPIED, "kitmaker.txt"):
+                st = os.stat(p)
+                out[r] = (st.st_size, int(st.st_mtime))
+    return out
+
+
+def _changed(have, was):
+    """True when the files have differ from the files was (what Mod Studio put there): one more,
+    one gone, another size or a time more than SLACK apart"""
+    return set(have) != set(was) or any(
+        have[r][0] != was[r][0] or abs(have[r][1] - was[r][1]) > SLACK for r in have)
+
+
+def _copy(src, dst, log=None):
+    """src's files into dst: dst made again only when they differ (a size), and only when dst is
+    still what Mod Studio copied there. B166 (LaraCroft 19.10.): SV Ried's kit, changed by hand in
+    its folder of the world, was put back to the package's at the next Build / Switch on (a size
+    differed: rmtree + copytree). Now a copy leaves COPIED in dst, and a folder whose files are no
+    longer those is the player's and stays; a copy from before COPIED counts as changed when one
+    of its files is newer than the package's (a copy keeps the package's times).
+    Returns "same", "copied" or "kept"."""
+    if os.path.isdir(dst):
+        want, have = _files(src), _files(dst)
+        if all(r in have and have[r][0] == want[r][0] for r in want):
+            return "same"
+        was = None
+        try:
+            with open(os.path.join(dst, COPIED), encoding="utf-8") as f:
+                was = {}
+                for l in f:
+                    r, _t, rest = l.rstrip("\n").partition("\t")
+                    size, _t, t = rest.partition("\t")
+                    if r and size.isdigit() and t.lstrip("-").isdigit():
+                        was[r] = (int(size), int(t))
+        except OSError:
+            pass
+        if was is not None:
+            mine = _changed(have, was)
+        else:
+            mine = any(r not in want or have[r][1] > want[r][1] + SLACK for r in have)
+        if mine:
+            if log:
+                log("  kit folder %s: changed by you, kept (the package's kit is not copied over it; "
+                    "delete the folder to have it again)" % dst)
+            return "kept"
+        shutil.rmtree(dst)
+    shutil.copytree(src, dst)
+    try:
+        with open(os.path.join(dst, COPIED), "w", encoding="utf-8") as f:
+            for r, (size, t) in sorted(_files(dst).items()):
+                f.write("%s\t%d\t%d\n" % (r, size, t))
+    except OSError:
+        pass
+    return "copied"
 
 
 def carried(l, world):
@@ -354,25 +440,54 @@ def _map(path, mine, log, what, world="", sider=None, keep=None):
     return len(mine)
 
 
-def _yours(sider, klib, world=""):
+# words of a club's name that do not tell which club it is
+GENERIC = set("""fc sc sv cf ac as afc cd ud sd fk nk hnk kf ks fks sk bk ik if ff vfl vfb tsg bsc rb
+    club clube clubul klub kulubu calcio football futbol futebol fussball sport sports sporting
+    sportif spor esporte esportes sportverein verein borussia united city town county athletic
+    athletico atletico atletica atletico real deportivo deportiva deportes union olympique
+    olympic racing inter dynamo dinamo lokomotiv spartak rapid stade wanderers rovers albion
+    universidad universitario estudiantes independiente nacional academica associacao
+    asociacion sociedad san santa saint the and de del la des der los las""".split())
+
+
+def name_words(name):
+    """the words of a club's (or a kit folder's) name that tell the club: lower case, no accents"""
+    import unicodedata
+    s = unicodedata.normalize("NFKD", str(name)).encode("ascii", "ignore").decode().lower()
+    return {w for w in re.split(r"[^a-z0-9]+", s) if len(w) > 2 and not w.isdigit() and w not in GENERIC}
+
+
+def _yours(sider, klib, world="", names=None):
     """team ids that have a kit line of your own in map.txt (one Build did not write), switched on
     or switched off by us, whose folder is in the library: a line to a kit that is not installed
     gives the club nothing, so ours goes in for it (22 clubs of the modpack world, 13.10.).  A
     kit the world carries from another pack (carried) counts as one of yours: no kit is made
-    over it"""
+    over it.  names {team id: name}: the clubs of the game whose place the world gave another
+    club (replaced_clubs) -- a line for one of them counts only when its folder names that club.
+    A kit pack's line for the id is the kit of the club that left (B176: 5009,
+    "Bundesliga\\Heidenheim" under Schalke 04), and is switched off for ours while the world is on"""
     out = set()
+    names = names or {}
     for l in lbstadiums.read(os.path.join(sider, klib, "map.txt"))[0]:
         if TAG in l and not (world and carried(l, world)):
             continue
         m = LINE.match(l[:-len(OFF)] if l.endswith(OFF) else l)
         if m and (not m.group(1) or l.endswith(OFF)) and m.group(3).strip() \
                 and os.path.isdir(os.path.join(sider, klib, m.group(3).strip())):
-            out.add(int(m.group(2)))
+            tid = int(m.group(2))
+            folder = m.group(3).strip().replace("/", "\\").rstrip("\\").rsplit("\\", 1)[-1]
+            if tid in names and not name_words(names[tid]) & name_words(folder):
+                continue
+            out.add(tid)
     return out
 
 
 def made_rel(pl, world, league, k):
-    """the kit library folder (world\\league\\club) of the kit made for place k of league"""
+    """the kit library folder (world\\league\\club) of the kit made for place k of league; for
+    GAME, k is the club's team id"""
+    if league == GAME:
+        name = (replaced_clubs(pl).get(k) or ("",))[0]
+        return "%s\\%s\\%s" % (world, safe(GAME), safe(name or "club %d" % k))
     cn = [p for p in (pl.get("leagues") or []) + (pl.get("others") or [])
           if (p.get("name") or "Other clubs") == league][0].get("club_names") or []
     return "%s\\%s\\%s" % (world, safe(league), safe(cn[k] if k < len(cn) and cn[k] else "club %d" % k))
@@ -433,7 +548,8 @@ def write(pl, sider, log=print, root=None):
     # a club with a kit line of your own keeps that kit: no kit made for it, and none of a league
     # package either (pepponeee98, 14.10.: his Serie C lines were switched off at every Build for
     # the package's kits, which went into a folder of the world again each time)
-    yours = _yours(sider, klib, world) if (make or kits) else set()
+    yours = _yours(sider, klib, world, {t: v[0] for t, v in replaced_clubs(pl).items()}) \
+        if (make or kits) else set()
     kept = sorted({x[0] for x in kits if x[0] in yours} | {x[0] for x in make if x[0] in yours})
     kits = [x for x in kits if x[0] not in yours]
     make = [x for x in make if x[0] not in yours]
@@ -460,7 +576,7 @@ def write(pl, sider, log=print, root=None):
                 rel = "%s\\%s" % (world, safe(name))
                 text = "%d, %s   %s %s" % (key, rel, TAG, name)
             if os.path.isdir(src):
-                _copy(src, os.path.join(root, rel))
+                _copy(src, os.path.join(root, rel), log)
             elif not os.path.isdir(os.path.join(root, rel)):
                 log("  %s of %s: no folder %s, skipped" % (what, name, src))
                 continue

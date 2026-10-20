@@ -481,9 +481,17 @@ def modules_state(game):
     mdir, src = game.modules_dir, os.path.join(pack, "modules")
     if not os.path.isdir(mdir) or not os.path.isdir(src):
         return None
+    files = B.shipped_files(src)
+    # B177 (Vran 20.10.): the modules a world brings (fl26regions, fl26regnames: in the load order,
+    # not in the pack) count only when the world in the game has them, against its copies -- Home
+    # said "switched off" with no world that needs them, and Install now had nothing to put in
+    brought = B.world_modules(game.folder)
+    per_world = {m for m in order if m + ".lua" not in files}
+    order = [m for m in order if m not in per_world or m in brought]
     out = {"missing": [], "changed": [], "off": [], "left_off": [], "total": len(order)}
-    for f in B.shipped_files(src):
-        a, b = os.path.join(src, f), os.path.join(mdir, f)
+    for f in files + [m + ".lua" for m in order if m in per_world]:
+        a = brought[f[:-4]] if f[:-4] in per_world else os.path.join(src, f)
+        b = os.path.join(mdir, f)
         if not os.path.isfile(b):
             out["missing"].append(f)
         elif not _same_file(a, b):
