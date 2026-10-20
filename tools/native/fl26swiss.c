@@ -461,6 +461,12 @@ static int has_club(const uint32_t* a, size_t n, uint32_t c)
   for (size_t i = 0; i < n; i++) if (same_club(a[i], c)) return 1;
   return 0;
 }
+/* a table (20-byte rows, the club first) whose every row is a club of want */
+static int table_of_clubs(const unsigned char* t, unsigned rows, const uint32_t* want, unsigned nwant)
+{
+  for (unsigned k = 0; k < rows; k++) if (!has_club(want, nwant, *(const uint32_t*)(t + k * 20))) return 0;
+  return 1;
+}
 /* the Champions League clubs taken from the Europa League list, so the Europa League can drop them */
 static uint32_t g_moved[FIELD]; static unsigned g_nmoved = 0;
 /* the Europa League's direct entrants cut to make room, first in line for the Conference League */
@@ -581,7 +587,11 @@ unsigned char* g_tramp_setcl = 0;
  * every header the same way and takes that id's table with the most rows (24..48).  The offset
  * of the table array and so the number of headers come from the live lea at 0x14158df91
  * (fl26hdr255 moves the array behind 255 headers). */
-static unsigned char* season_table(uint16_t reg, unsigned* year_out)
+static int table_of_clubs(const unsigned char* t, unsigned rows, const uint32_t* want, unsigned nwant);
+/* the same walk for any table: rows in lo..hi and, given want, only clubs of want (a group's
+   table of an earlier season holds other clubs: B169, 20.10.) */
+static unsigned char* season_table_x(uint16_t reg, unsigned lo, unsigned hi, const uint32_t* want, unsigned nwant,
+                                     unsigned* year_out)
 {
   unsigned char* lea = (unsigned char*)(uintptr_t)(g_base + 0x158df91);
   if (lea[0] != 0x49 || lea[1] != 0x8d || lea[2] != 0x82) return 0;
@@ -603,11 +613,17 @@ static unsigned char* season_table(uint16_t reg, unsigned* year_out)
         unsigned char* e = s + arr + (size_t)ix * 0x187c;
         if (*(uint16_t*)e != reg) continue;
         unsigned rows = *(uint32_t*)(e + 0x318 + 0x3c0);
-        if (rows >= 24 && rows <= 48 && rows > brows) { best = e + 0x318; brows = rows; byear = *(uint16_t*)(e + 2); }
+        if (rows >= lo && rows <= hi && rows > brows && (!want || table_of_clubs(e + 0x318, rows, want, nwant))) {
+          best = e + 0x318; brows = rows; byear = *(uint16_t*)(e + 2);
+        }
       }
     }
   if (year_out) *year_out = byear;
   return best;
+}
+static unsigned char* season_table(uint16_t reg, unsigned* year_out)
+{
+  return season_table_x(reg, 24, 48, 0, 0, year_out);
 }
 /* the league phase's table: the game's, or, when that is short, the one season_table finds */
 static unsigned char* lp_table(uint16_t row)
@@ -3996,6 +4012,24 @@ static void ccup_fill_ahead(uint16_t src, const char* why, void* started)
   }
 }
 
+/* Group g's table: the game's, or, when the cup's next season is open already and that one is
+ * empty, the table of the season the group was played in -- the one holding only the group's
+ * clubs (season_table_x).  Seen 20.10. in a Worldpack career, second season: on day 47 every group
+ * of the CAF and AFC cups read 0 rows, so no knockout was drawn; 0 when there is none. */
+static unsigned char* ccup_group_table(const ccup_t* c, int g)
+{
+  uint16_t id = ccup_rep(c, g);
+  unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(id);
+  uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
+  if (rows >= 2 && rows <= 8) return t;
+  unsigned char* rec = get_rec(id);
+  unsigned n = rec ? rec_count(rec) : 0, yr = 0;
+  if (n < 2) return 0;
+  unsigned char* t2 = season_table_x(id, n, n, rec_clubs(rec), n, &yr);
+  if (t2) logf("fl26swiss: cup %u -- group %c: the latest season's table has %u rows; season %u's table (%u rows) is used",
+               (unsigned)c->reg, 'A' + g, (unsigned)rows, yr, (unsigned)n);
+  return t2;
+}
 static int ccup_progress(int k, uint16_t r, void* started)
 {
   const ccup_t* c = &g_ccup[k];
@@ -4013,7 +4047,7 @@ static int ccup_progress(int k, uint16_t r, void* started)
     /* first half: group 2j's winner v group 2j+1's runner-up; second half the other way round */
     int half = i >= c->groups, j = (i % c->groups) / 2, away = i & 1;
     int g = 2 * j + (half ? !away : away), place = away;
-    unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(ccup_rep(c, g));
+    unsigned char* t = ccup_group_table(c, g);
     uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
     if (rows < 2 || rows > 8) {
       logf("fl26swiss: cup %u -- group %c has a table of %u rows; knockout not filled", (unsigned)c->reg,
@@ -4865,6 +4899,30 @@ static uint64_t phkind_core(uint32_t* comp, uint64_t kind, uintptr_t ra)
       return r | 0xffff;
     }
     return r;
+  }
+  /* The group stage of a cup of the world file (AFC Champions League Two, CAF ...): its page reads
+     each group's table from the cup's latest season, and once that season is open (from the new
+     year, 20.10.: Worldpack, second season, April) or the July teardown has emptied the groups, a
+     group with clubs and no table -- or none at all -- takes the game down on Group stage
+     (ucrtbase fail-fast 0xc0000409, twice).  Left out, as the Knockout Phase item is, until every
+     group's table holds its clubs again: from the next draw. */
+  if (comp && (ra == g_base + MENU_GRP_RA || ra == g_base + MENU_GRP2_RA) && (uint16_t)r != 0xffff) {
+    for (int k = 0; k < g_nccup; k++) {
+      const ccup_t* c = &g_ccup[k];
+      if (!c->groups || (uint16_t)r != c->reg) continue;
+      for (int g = 0; g < c->groups; g++) {
+        uint16_t id = ccup_rep(c, g);
+        unsigned char* rec = get_rec(id);
+        unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(id);
+        unsigned n = rec ? rec_count(rec) : 0, rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
+        if (n >= 2 && rows == n) continue;
+        static int said_grp = 0;
+        if (said_grp++ < 8)
+          logf("fl26swiss: Competition Info -- Group stage of cup %u greyed: group %c has %u clubs, a table of %u rows",
+               (unsigned)c->reg, 'A' + g, n, rows);
+        return r | 0xffff;
+      }
+    }
   }
   /* Page type 0 is the grouped phase -- for our Europa and Conference League, the play-off
      for places 9-24.  The menu asks for it twice (0x14151f78c: the item, 0x14151fc11: whether

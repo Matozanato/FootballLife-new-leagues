@@ -119,6 +119,15 @@ working: Build them once with 0.2.4.1, and careers carry on.
   top eight (Lyon) also came in as a play-off winner: Lyon v Lyon. A winner that is not one of the
   tie's two clubs is now taken from the tie's own table (else the seeded club), and the log says so.
   (Thanks Micarodvzla22)
+- **The CAF and AFC cups had no knockout from the second season (B172).** On a world with group cups
+  of its own (the Worldpack: CAF Champions League, AFC Champions League Two ...), the game opens a
+  cup's next season early, and from the second season the groups' tables were read from that new,
+  empty season: the knockout was never drawn and the cup stopped after its groups. The tables are
+  now read from the season the groups were played in.
+- **The game closed on Group stage of the AFC Champions League Two (B171).** Database >
+  Competition Info > a group cup of the world > Group stage, from the new year to the next draw
+  (the group tables of the season gone), took the game down. Until the groups are drawn again the
+  item is greyed, as Knockout Phase is before its round.
 - **Restore points in your language (B134).** In Spanish, French, Portuguese and Croatian the
   Reason column of Restore points stayed English ("Switch on: kits map"); it is now said in the
   language of the window, older restore points too. The Leagues page says "1 group of clubs in no
