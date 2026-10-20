@@ -523,10 +523,10 @@ class Project(QObject):
     def new(self):
         self.recipe, self.path, self.dirty = blank(), None, False
         self._forget()
-        self._remember(None)
+        self._open_next(None)
         self.changed.emit()
 
-    def _remember(self, path):
+    def _open_next(self, path):
         """B107: the next start opens the world open now. New world and Open left last_recipe on the
         world before, so a world deleted and replaced by a new, untouched one came back at the next
         start"""
@@ -553,7 +553,7 @@ class Project(QObject):
         r.setdefault("players", {})
         self.recipe, self.path, self.dirty = r, None if copy else path, False
         self._forget()
-        self._remember(path)
+        self._open_next(path)
         self.changed.emit()
 
     def save(self, path=None):

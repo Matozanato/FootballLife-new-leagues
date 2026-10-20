@@ -51,6 +51,26 @@ def main():
     P2.new()
     P2.open(other)
     ok("a Project with no app works", P2.recipe.get("world") == "_FL26Other")
+    # Undo / Redo (0.2.5) next to it: B107's helper first took the name of the undo step's one
+    # and broke every change (touch)
+    import time
+    U = Project(None)
+    U.open(other)
+    for n in (1, 2, 3):
+        U.recipe["n"] = n
+        U.touch()
+        time.sleep(0.35)               # touches within a third of a second are one step
+    ok("three changes, three steps back", U.can_undo() and not U.can_redo())
+    U.undo()
+    U.undo()
+    ok("undo twice: the first change", U.recipe.get("n") == 1 and U.can_redo())
+    U.redo()
+    ok("redo: the second", U.recipe.get("n") == 2)
+    U.recipe["n"] = 9
+    U.touch()
+    ok("a change after undo cuts redo", not U.can_redo() and U.recipe.get("n") == 9)
+    U.new()
+    ok("New world forgets the steps", not U.can_undo() and not U.can_redo())
     print("ALL OK" if not N else "%d FAILED" % N)
     return N
 
