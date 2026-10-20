@@ -25,6 +25,11 @@ come with it instead.
   picked is kept in `fl26stadiums.json` in the world's folder and comes back when you install a
   newer version of the same world. Start a new Master League after saving.
 
+## Fixed
+
+- **The hub's Next showed a cup tie your club was not in** (Carabao Cup: Chelsea - Tottenham while Liverpool had been drawn against Brentford, as the news and Competition Info said). The hub reads its own list of your club's days, which the game fills when it makes the matches; when Mod Studio's cup draw (seeded, random or byes) or the European bracket order then gave the matches other clubs, that list kept the old pairing. The modules now ask the game to make the list again the next day, as the game does after a change of club. A season you already play is put right the next day after loading it. (Thanks pokuuuu.)
+- **Clubs in no league in Other European teams turned up in the Champions League of Cup mode** (NK Hajduk Brezje, NK Jadran Stefanec ... among its clubs). Cup mode fills the last places of the Champions League from the game's Other European teams, and in a world whose leagues take the game's own such clubs (Dynamo Kyiv, Shakhtar ...), the clubs you put there are all that is left. The League window (Clubs in no league: Other European teams) and Build's log now say so; for small clubs choose **Classic Teams** instead. A world made before keeps its clubs where they are until you change the group and Build again. (Thanks ¥$)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.

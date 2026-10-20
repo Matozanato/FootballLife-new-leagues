@@ -1954,7 +1954,8 @@
   "Take back the last change to your world (Ctrl+Z)": "Deshace el último cambio de tu mundo (Ctrl+Z)",
   "Do the taken-back change again (Ctrl+Y)": "Vuelve a hacer el cambio deshecho (Ctrl+Y)",
   "Change taken back": "Cambio deshecho",
-  "Change done again": "Cambio rehecho"
+  "Change done again": "Cambio rehecho",
+  "Cup mode can put these clubs in the Champions League: it fills the last places from Other European teams. For small clubs, choose Classic Teams.": "El modo Copa puede meter estos clubes en la Champions League: llena las últimas plazas con Other European teams. Para clubes pequeños, elige Classic Teams."
  },
  "log": [
   [
@@ -2240,6 +2241,10 @@
   [
    "Liga de Campeones play-off\\b",
    "play-off de la Liga de Campeones"
+  ],
+  [
+   "^  NOTE: Cup mode can put these clubs in the Champions League \\(it fills the last places from Other European teams\\); for small clubs choose Classic Teams$",
+   "  OJO: el modo Copa puede meter estos clubes en la Champions League (llena las últimas plazas con Other European teams); para clubes pequeños elige Classic Teams"
   ]
  ]
 }

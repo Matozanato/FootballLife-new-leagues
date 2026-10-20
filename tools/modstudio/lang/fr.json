@@ -1954,7 +1954,8 @@
   "Take back the last change to your world (Ctrl+Z)": "Annule la dernière modification de ton monde (Ctrl+Z)",
   "Do the taken-back change again (Ctrl+Y)": "Rétablit la modification annulée (Ctrl+Y)",
   "Change taken back": "Modification annulée",
-  "Change done again": "Modification rétablie"
+  "Change done again": "Modification rétablie",
+  "Cup mode can put these clubs in the Champions League: it fills the last places from Other European teams. For small clubs, choose Classic Teams.": "Le mode Coupe peut mettre ces clubs en Ligue des champions : il remplit les dernières places avec Other European teams. Pour de petits clubs, choisissez Classic Teams."
  },
  "log": [
   [
@@ -2244,6 +2245,10 @@
   [
    "Ligue des champions play-off\\b",
    "barrage de la Ligue des champions"
+  ],
+  [
+   "^  NOTE: Cup mode can put these clubs in the Champions League \\(it fills the last places from Other European teams\\); for small clubs choose Classic Teams$",
+   "  ATTENTION : le mode Coupe peut mettre ces clubs en Ligue des champions (il remplit les dernières places avec Other European teams) ; pour de petits clubs, choisissez Classic Teams"
   ]
  ]
 }

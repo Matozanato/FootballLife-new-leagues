@@ -558,6 +558,11 @@ class LeagueDialog(Dialog):
             "like any new club; the name above is only how Mod Studio lists them.")))
         self.form.addRow("", hint(_("one club or a few without a league: they go in the game's Other ... teams, "
                                     "next to its own clubs that play in no league; 1 to %d clubs") % B.OTHERS_MAX))
+        # B167: Cup mode fills the Champions League's last places from Other European teams
+        self.others_cupmode = hint(_("Cup mode can put these clubs in the Champions League: it fills the "
+                                     "last places from Other European teams. For small clubs, choose "
+                                     "Classic Teams."))
+        self.form.addRow("", self.others_cupmode)
 
         sp = L.get("split") or {}
         self.rr = QRadioButton(_("everyone plays everyone, times:"))
@@ -767,6 +772,7 @@ class LeagueDialog(Dialog):
         loose = self.is_others()
         if loose:
             self.exhibition.setChecked(False)
+        self.form.setRowVisible(self.others_cupmode, self.others.currentData() == "europe")
         for w in (self.exhibition, self.rr, self.legs, self.slegs, self.groups, self.glegs, self.exchange,
                   self.logo, self.cup_name, self.supercup_name, self.lcup_name, self.cup_logo, self.supercup_logo,
                   self.lcup_logo, self.po_logo):
