@@ -4255,6 +4255,35 @@ static unsigned char* ko_match(uint16_t id)
 static uint32_t* ko_slot(unsigned char* rnd, int s) { return (uint32_t*)(rnd + 4 + 32 * s); }
 static int ko_slots(unsigned char* rnd) { return rnd ? (int)(*(uint32_t*)(rnd + 0x204) & 0xff) : 0; }
 
+/* ---- the hub's "Next" after a draw of ours (B162) ----
+ *
+ * The hub's fixture strip does not read the rounds or the match records: it reads the user's day
+ * schedule, one entry per day ({match id, competition, round, kind, team}) at block+0x19115f0 for
+ * controller 0 (fl26ctlguard.lua has the layout). The game files every scheduled match there as
+ * it makes it, so when cup_draw or ko_bracket hand the clubs of made matches out again, the table
+ * keeps the old pairing: in game (pokuuuu., Carabao Cup) "Next" showed Chelsea - Tottenham while
+ * the user's club, Liverpool, had been drawn against Brentford, as the news and Competition Info
+ * said. The day loop rebuilds that table from the match records whenever its owner handle
+ * (block+0x19115f4) is not the user's club (block+0x1798ab0); writing -1 there asks for that, the
+ * next day -- the same request fl26ctlguard makes after a club change. Only asked while the table
+ * is the user's own: anything else is a mode with no career, or a rebuild already on its way. */
+#define SCHED_OWNER_OFF (TODAY_OFF + 0x10)
+#define USER_CLUB_OFF   0x1798ab0
+static void sched_rebuild(const char* why)
+{
+#ifdef FL26_RCAL_TEST
+  (void)why; return;
+#endif
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!blk) return;
+  uint32_t user = *(uint32_t*)(blk + USER_CLUB_OFF);
+  uint32_t* owner = (uint32_t*)(blk + SCHED_OWNER_OFF);
+  if (user == 0 || user == 0xffffffffu || *owner != user) return;
+  *owner = 0xffffffffu;
+  logf("fl26swiss: the user's day schedule is built again tomorrow (%s)", why);
+}
+
 /* one round of one regulation: 1 = reordered, 0 = nothing to do, -1 = not ready */
 static int ko_bracket(uint16_t reg, uint32_t kind, const char* name)
 {
@@ -4312,6 +4341,7 @@ static int ko_bracket(uint16_t reg, uint32_t kind, const char* name)
   }
   logf("fl26swiss: %s %s put back in bracket order (%d club(s) moved); day %d", name,
        kind == 0x33 ? "quarter-finals" : "semi-finals", moved, today());
+  sched_rebuild("European bracket order");
   return 1;
 }
 
@@ -4437,7 +4467,9 @@ static int cup_draw(cupdraw_t* c)
       for (int l = 0; l < 2; l++) {               /* a tie already played: the cup is under way */
         if (ids[l] == 0xffff) continue;
         unsigned char* m = ko_match(ids[l]);
-        if (m && (m[7] & 0x40)) { c->done_key = ckey; return -1; }
+        if (m && (m[7] & 0x40)) {                 /* a save of before 0.2.5 kept the old days */
+          c->done_key = ckey; sched_rebuild("cup under way"); return -1;
+        }
       }
       for (int side = 0; side < 2; side++) {
         if (!(side ? k1 : k0) || np >= CD_CLUBS) continue;
@@ -4475,7 +4507,8 @@ static int cup_draw(cupdraw_t* c)
       else if (tier[k] < min_home) min_home = tier[k];
     }
     if (worst_single > best_pair || max_away > min_home) ok = 0;
-    if (ok) { c->done_key = ckey; return -1; }
+    /* a season loaded again: its day schedule may still be the one saved before 0.2.5 */
+    if (ok) { c->done_key = ckey; sched_rebuild("cup already drawn"); return -1; }
   }
   /* the same draw every time for the same cup and season */
   cd_rng = 0x9e3779b9u ^ ((uint32_t)c->reg << 16) ^ (uint32_t)pl[0].legs[0] * 2654435761u ^ (uint32_t)((abs_day() + 183) / 365);
@@ -4558,6 +4591,7 @@ static int cup_draw(cupdraw_t* c)
       logf("fl26swiss:   cup %d round %#x tie: %06x v %06x", c->reg, kinds[pl[k].round], want[k] & KO_TBD,
            want[k + 1] & KO_TBD);
   }
+  sched_rebuild("cup draw");
   c->done_key = ckey;
   return 1;
 }
@@ -4585,10 +4619,14 @@ __declspec(dllexport) void fl26_swiss_ko_tick(void)
   if (d < 60 || d > 150) return;
   static const uint16_t KO_REGS[3] = { 4, 6, UECL_KO };
   static const char* KO_NAME[3] = { "Champions League", "Europa League", "Conference League" };
+  static unsigned char loaded[3][2];             /* once a session: a save of before 0.2.5 */
   for (int i = 0; i < 3; i++) {
     if (!get_rec(KO_REGS[i])) continue;
-    ko_bracket(KO_REGS[i], 0x33, KO_NAME[i]);
-    ko_bracket(KO_REGS[i], 0x34, KO_NAME[i]);
+    for (int k = 0; k < 2; k++)
+      if (ko_bracket(KO_REGS[i], 0x33 + k, KO_NAME[i]) == 0 && !loaded[i][k]) {
+        loaded[i][k] = 1;
+        sched_rebuild("European bracket already in order");
+      }
   }
 }
 
