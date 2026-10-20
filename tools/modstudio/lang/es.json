@@ -1956,7 +1956,12 @@
   "Change taken back": "Cambio deshecho",
   "Change done again": "Cambio rehecho",
   "Cup mode can put these clubs in the Champions League: it fills the last places from Other European teams. For small clubs, choose Classic Teams.": "El modo Copa puede meter estos clubes en la Champions League: llena las últimas plazas con Other European teams. Para clubes pequeños, elige Classic Teams.",
-  "%s stays in %s: the game's league has more places than this season's. A NewLife league that has it too (Ligue 3 after Ligue 2) cannot take it: there, use Club of the game and give it a new club in its place, or leave it out.": "%s se queda en %s: la liga del juego tiene más plazas que la de esta temporada. Una liga de NewLife que también lo tenga (la Ligue 3 después de la Ligue 2) no puede llevarlo: allí usa Club del juego y pon un club nuevo en su lugar, o déjalo fuera."
+  "%s stays in %s: the game's league has more places than this season's. A NewLife league that has it too (Ligue 3 after Ligue 2) cannot take it: there, use Club of the game and give it a new club in its place, or leave it out.": "%s se queda en %s: la liga del juego tiene más plazas que la de esta temporada. Una liga de NewLife que también lo tenga (la Ligue 3 después de la Ligue 2) no puede llevarlo: allí usa Club del juego y pon un club nuevo en su lugar, o déjalo fuera.",
+  "in your world: %s -- it moves here": "en tu mundo: %s -- se mueve aquí",
+  "%s moves here from %s, club %d. That place becomes a new club (give it a club there again), and who takes its places in the game's competitions stays as it was.": "%s se mueve aquí desde %s, club %d. Ese puesto pasa a ser un club nuevo (vuelve a ponerle un club allí), y quien ocupa sus plazas en las competiciones del juego sigue igual.",
+  "%s moved here from %s, club %d: that place is a new club now. Give it a club there (NewLife club..., Club of the game...), then Build again and start a new career.": "%s se movió aquí desde %s, club %d: ese puesto ahora es un club nuevo. Ponle un club allí (Club NewLife..., Club del juego...), luego vuelve a construir y empieza una carrera nueva.",
+  "a club of the game: Club of the game... puts it here": "un club del juego: Club del juego... lo pone aquí",
+  "The game has this club, with its team ID: in Clubs, Club of the game... puts it in this place, and moves it from another league of your world.": "El juego tiene este club, con su ID de equipo: en Clubes, Club del juego... lo pone en este puesto y lo mueve desde otra liga de tu mundo."
  },
  "log": [
   [

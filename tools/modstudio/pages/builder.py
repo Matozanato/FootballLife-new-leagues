@@ -1321,10 +1321,14 @@ class GameClubDialog(Dialog):
             "- a new club with a name you type; Build makes it for you.\n\n"
             "A club that plays in nothing just moves: there is no old place to fill.")
 
-    def __init__(self, parent, project, taken, cur=None):
+    def __init__(self, parent, project, taken, cur=None, movable=None):
         super().__init__(parent, "Club of the game")
         self.info = B.game_info(project.base)
         cur = cur or {}
+        # B95 (vmican 17.10.): a club of the game in another place of the world (Envigado in the
+        # NewLife Colombian Second Division) is picked too and moves here: {team id: (league,
+        # place, its entry)}. Greyed out with "take it out first" it looked as if it did not exist
+        self.movable = dict(movable or {})
         # a club the recipe already uses is listed greyed with where (astyleUZ 04.10.: Sparta
         # Prague, already in his league, just did not turn up and looked impossible to pick)
         self.taken = dict(taken) if isinstance(taken, dict) else {t: "" for t in taken}
@@ -1420,9 +1424,15 @@ class GameClubDialog(Dialog):
         for t, n, s in self.used if want else []:
             if want not in (n or "").lower() and want not in (s or "").lower() and want != str(t):
                 continue
-            it = QTreeWidgetItem([n, s, str(t), _("already in your world: %s") % self.taken[t]])
-            it.setFlags(it.flags() & ~(Qt.ItemIsSelectable | Qt.ItemIsEnabled))
-            it.setToolTip(3, _("Take it out of that place first (Clubs: New club here), then pick it here."))
+            if t in self.movable:
+                it = QTreeWidgetItem([n, s, str(t), _("in your world: %s -- it moves here") % self.taken[t]])
+                it.setData(0, Qt.UserRole, t)
+                if t == keep:
+                    pick = it
+            else:
+                it = QTreeWidgetItem([n, s, str(t), _("already in your world: %s") % self.taken[t]])
+                it.setFlags(it.flags() & ~(Qt.ItemIsSelectable | Qt.ItemIsEnabled))
+                it.setToolTip(3, _("Take it out of that place first (Clubs: New club here), then pick it here."))
             self.tree.addTopLevelItem(it)
         if pick:
             self.tree.setCurrentItem(pick)
@@ -1435,6 +1445,15 @@ class GameClubDialog(Dialog):
 
     def show_swap(self):
         t = self.chosen()
+        if t in self.movable:
+            ML, at, _e = self.movable[t]
+            self.keep.setVisible(False)
+            self.where.setText(_("%s moves here from %s, club %d. That place becomes a new club (give it a club "
+                                 "there again), and who takes its places in the game's competitions stays as "
+                                 "it was.") % (self.info["clubs"][t][0], ML["name"], at + 1))
+            for w in (self.rb_game, self.m_game, self.swap_club, self.rb_new, self.m_new, self.swap_name):
+                w.setVisible(False)
+            return
         cont = t is not None and bool(set(self.info["entries"].get(t) or []) & B.CONTINENTAL_CIDS)
         self.keep.setVisible(cont)
         where = B.game_club_where(self.info, t, cont and self.keep.isChecked()) if t is not None else []
@@ -1455,6 +1474,11 @@ class GameClubDialog(Dialog):
         t = self.chosen()
         if t is None:
             error(self, "Club of the game", _("Pick a club."))
+            return
+        if t in self.movable:                  # B95: it takes its old entry's swap and keep along
+            _ML, _at, e = self.movable[t]
+            self.result = {"id": t, "swap": e.get("swap"), "keep": bool(e.get("keep")), "move": self.movable[t]}
+            self.accept()
             return
         swap = None
         keep = self.keep.isVisible() and self.keep.isChecked()
@@ -3031,6 +3055,14 @@ class NewClubs(BuilderPage):
                     out[int(e["swap"])] = _("takes %s's place") % names.get(int(e["id"]), e["id"])
         return out
 
+    def movable(self, skip):
+        """B95: {team id: (league, place, entry)} for the clubs of the game in a place of the world
+        (not the one at place `skip` of the league shown), which Club of the game moves here; a club
+        that only takes another's place (swap) is not one of them"""
+        cur = self.league()
+        return {int(e["id"]): (L, int(e.get("at", 0)), e) for L in self.project.recipe["leagues"]
+                for e in L.get("game_clubs") or [] if not (L is cur and int(e.get("at", -1)) == skip)}
+
     def game_club(self):
         L, k = self.league(), self.current()
         if not L or k is None:
@@ -3042,8 +3074,14 @@ class NewClubs(BuilderPage):
         if self.project.base is None:
             self.need_tables()
             return
-        d = GameClubDialog(self, self.project, self.taken(k), self.game_places(L).get(k))
+        d = GameClubDialog(self, self.project, self.taken(k), self.game_places(L).get(k), self.movable(k))
         if d.finish() and d.result:
+            mv = d.result.get("move")
+            if mv:                              # B95: out of its old place first
+                ML, _at, old = mv
+                ML["game_clubs"] = [x for x in ML.get("game_clubs") or [] if x is not old]
+                if not ML["game_clubs"]:
+                    ML.pop("game_clubs")
             e = {"at": k, "id": d.result["id"]}
             if d.result["swap"] is not None:
                 e["swap"] = d.result["swap"]
@@ -3052,6 +3090,11 @@ class NewClubs(BuilderPage):
             gc = [x for x in L.get("game_clubs") or [] if int(x.get("at", -1)) != k]
             L["game_clubs"] = sorted(gc + [e], key=lambda x: int(x["at"]))
             self.project.touch()
+            if mv:
+                self.say(_("%s moved here from %s, club %d: that place is a new club now. Give it a club "
+                           "there (NewLife club..., Club of the game...), then Build again and start a new "
+                           "career.") % (self.project.game_cl.get(e["id"], (str(e["id"]),))[0], mv[0]["name"],
+                                         mv[1] + 1), "ok")
 
     def newlife_club(self):
         """NewLife Database clubs into this place and the ones after it (#83): a league made by
@@ -3079,7 +3122,7 @@ class NewClubs(BuilderPage):
             run_job(lambda progress: N.Release(folder), done=done,
                     failed=lambda tb: (self.app.busy(False), error(self, "NewLife club", tb.strip().splitlines()[-1])))
             return
-        used = {int(i) for x in self.project.recipe["leagues"] for i in (x.get("newlife") or {}).get("clubs") or []
+        used = {str(int(i)) for x in self.project.recipe["leagues"] for i in (x.get("newlife") or {}).get("clubs") or []
                 if str(i).isdigit()}
         try:
             game = B.game_info(self.project.base)
@@ -3087,8 +3130,8 @@ class NewClubs(BuilderPage):
             game = None
         rel.use_tables(game)              # "in the game" by the tables in use, a database mod's too
         rel.use_recipe(self.project.recipe)   # B56: a NewLife club that is the game's is a club of the game
-        skip = used | {cid for cid, c in rel.clubs.items() if c.get("in_game") == "1"}
-        d = ClubPickDialog(self, rel, skip)
+        game = {cid for cid, c in rel.clubs.items() if c.get("in_game") == "1"}
+        d = ClubPickDialog(self, rel, used | game, game)
         if not d.finish() or not d.picked:
             return
         room = int(L["clubs"]) - k

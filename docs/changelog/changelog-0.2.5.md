@@ -86,6 +86,12 @@ come with it instead.
   there (Bring has no club to put in), and a NewLife league of yours that has them too stops
   Build. The Bring window now names those clubs and says what to do: in that league use **Club
   of the game** and give it a new club in its place, or leave it out. (Thanks jibibi)
+- **A club of the game in one of your leagues could not be put in another (B95)** (Envigado and
+  Unión Magdalena, in NewLife's Colombian Second Division: "as if they did not exist"). **Club of the
+  game...** now finds it (search its name or team ID) and moves it: out of its old place, which is a
+  new club then, into this one, with who takes its places in the game. **NewLife club...** lists the
+  release's clubs the game has too, greyed, and says that Club of the game puts them in; it also no
+  longer lists the clubs a league of yours has already. (Thanks vmican)
 
 
 ## Read this first

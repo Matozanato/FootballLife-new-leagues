@@ -20,7 +20,7 @@ def key(L):
 class ClubPickDialog(Dialog):
     """clubs of the release to add to a league: a search over every club, with its league"""
 
-    def __init__(self, parent, rel, skip):
+    def __init__(self, parent, rel, skip, game=()):
         super().__init__(parent, "Add a club from another league")
         self.v.insertWidget(0, QLabel(_("Search a club or a league; tick one or more.")))
         self.search = QLineEdit()
@@ -32,6 +32,10 @@ class ClubPickDialog(Dialog):
         self.scroll.hide()
         self.all = sorted(((c["name"], c.get("league", ""), cid) for cid, c in rel.clubs.items()
                            if cid not in skip and c.get("league")), key=lambda x: (x[0].lower(), x[1]))
+        # B95 (vmican 17.10.): the release's clubs the game has (Envigado, its twin) are found too,
+        # greyed with the way in, not missing as if they did not exist
+        self.game = sorted(((rel.clubs[cid]["name"], rel.clubs[cid].get("league", ""), cid) for cid in game
+                            if cid in rel.clubs), key=lambda x: (x[0].lower(), x[1]))
         self.list.itemChanged.connect(self.toggled)
         # vmican (16.10., beta): tick a whole search at once -- e.g. search a league, tick all
         row = QWidget()
@@ -69,6 +73,14 @@ class ClubPickDialog(Dialog):
             self.list.addItem(it)
             if self.list.count() >= 500 and not q:
                 break
+        for name, league, cid in self.game if q else []:
+            if q not in name.lower() and q not in league.lower():
+                continue
+            it = QListWidgetItem("%s  (%s)  -- %s" % (name, league, _("a club of the game: Club of the game... puts it here")))
+            it.setFlags(it.flags() & ~(Qt.ItemIsSelectable | Qt.ItemIsEnabled))
+            it.setToolTip(_("The game has this club, with its team ID: in Clubs, Club of the game... puts it in this "
+                            "place, and moves it from another league of your world."))
+            self.list.addItem(it)
         self.list.blockSignals(False)
         self.b_all.setEnabled(bool(q))          # not 500 clubs of any league at once
         self.count()
@@ -88,6 +100,8 @@ class ClubPickDialog(Dialog):
         self.list.blockSignals(True)
         for i in range(self.list.count()):
             it = self.list.item(i)
+            if it.data(Qt.UserRole) is None:         # a club of the game, greyed (B95)
+                continue
             if on:
                 self.checked.add(it.data(Qt.UserRole))
             it.setCheckState(Qt.Checked if on else Qt.Unchecked)
