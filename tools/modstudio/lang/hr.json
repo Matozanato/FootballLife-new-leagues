@@ -1955,7 +1955,8 @@
   "Take back the last change to your world (Ctrl+Z)": "Vrati zadnju izmjenu tvog svijeta (Ctrl+Z)",
   "Do the taken-back change again (Ctrl+Y)": "Ponovi vraćenu izmjenu (Ctrl+Y)",
   "Change taken back": "Izmjena vraćena",
-  "Change done again": "Izmjena ponovljena"
+  "Change done again": "Izmjena ponovljena",
+  "The world in the game is not from a pack. %d packs installed here; the last one: %s": "Svijet u igri nije iz paketa. Ovdje instalirano paketa: %d; zadnji: %s"
  },
  "log": [
   [

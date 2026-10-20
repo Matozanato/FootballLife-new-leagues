@@ -1954,7 +1954,8 @@
   "Take back the last change to your world (Ctrl+Z)": "Deshace el último cambio de tu mundo (Ctrl+Z)",
   "Do the taken-back change again (Ctrl+Y)": "Vuelve a hacer el cambio deshecho (Ctrl+Y)",
   "Change taken back": "Cambio deshecho",
-  "Change done again": "Cambio rehecho"
+  "Change done again": "Cambio rehecho",
+  "The world in the game is not from a pack. %d packs installed here; the last one: %s": "El mundo del juego no viene de un pack. %d packs instalados aquí; el último: %s"
  },
  "log": [
   [

@@ -844,10 +844,14 @@ class Main(QMainWindow):
         else:
             st["leagues"].set("—", "", _("Open the world in the game to see its leagues"))
         recs = installer.records(g.sider_dir) if g.ok() else []
-        if recs:
-            last = max(recs, key=lambda x: x.get("time", ""))
-            st["pack"].set(last.get("name", "?"), "", _("%d packs installed here; the last one: %s")
-                           % (len(recs), last.get("name", "?")))
+        shown = installer.header_pack(recs, live)       # the active world's pack (B168)
+        last = max(recs, key=lambda x: x.get("time", "")).get("name", "?") if recs else ""
+        if shown:
+            st["pack"].set(shown.get("name", "?"), "", _("%d packs installed here; the last one: %s")
+                           % (len(recs), last))
+        elif recs:
+            st["pack"].set("—", "", _("The world in the game is not from a pack. %d packs installed here; "
+                                      "the last one: %s") % (len(recs), last))
         else:
             st["pack"].set("—", "", _("No pack installed with Import your world"))
         try:

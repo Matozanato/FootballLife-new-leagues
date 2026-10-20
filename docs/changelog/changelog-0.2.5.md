@@ -43,6 +43,10 @@ come with it instead.
   with the accents the fonts have (Nguyễn -> Nguyên); invisible marks some names carry go. Club,
   league, player and coach names; Mod Studio keeps the names as they were. Build the world again
   to get it. (Thanks LaraCroft)
+- **The header's PACK box follows the world in the game (B168).** After Activate of another
+  world you installed (the Modpack r12 after eu4), PACK still named the zip installed last while
+  ACTIVE WORLD was right. It now names the pack the active world came from; for a world built
+  on your PC it names the last pack that brought no world (scoreboards, kits), or nothing.
 
 ## Read this first
 

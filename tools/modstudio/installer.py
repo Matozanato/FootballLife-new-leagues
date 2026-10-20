@@ -892,6 +892,19 @@ def worlds_of(rec):
                                              if isinstance(p, (list, tuple)) and len(p) > 1 and p[0] == "world"] if w]
 
 
+def header_pack(recs, live):
+    """the install record the header's PACK box names (B168): the newest that brought in the world
+    switched on in the game (live: its names), else the newest that brought in no world (a
+    scoreboard or kit pack); None when neither is there -- after Activate of r12 the box said
+    the eu4 zip installed last, while ACTIVE WORLD was right"""
+    by_time = sorted(recs, key=lambda r: r.get("time", ""), reverse=True)
+    for want in (lambda w: bool(set(w) & set(live)), lambda w: not w):
+        for r in by_time:
+            if want(worlds_of(r)):
+                return r
+    return None
+
+
 def uninstall(game, ini, rec, log=lambda t: None, kept=False):
     """undo one record; returns notes about what could not be undone. kept: keep_edited ran
     already (replace_world)"""

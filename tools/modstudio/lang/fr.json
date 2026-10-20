@@ -1954,7 +1954,8 @@
   "Take back the last change to your world (Ctrl+Z)": "Annule la dernière modification de ton monde (Ctrl+Z)",
   "Do the taken-back change again (Ctrl+Y)": "Rétablit la modification annulée (Ctrl+Y)",
   "Change taken back": "Modification annulée",
-  "Change done again": "Modification rétablie"
+  "Change done again": "Modification rétablie",
+  "The world in the game is not from a pack. %d packs installed here; the last one: %s": "Le monde du jeu ne vient pas d'un pack. %d packs installés ici ; le dernier : %s"
  },
  "log": [
   [
