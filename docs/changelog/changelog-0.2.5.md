@@ -176,6 +176,13 @@ come with it instead.
   When two seasons of the league phase both had 36 rows, the older table could be read; the
   latest season's is now taken.
 
+- **A national team or club of the game went missing next to a new club (B63).** The game takes
+  two clubs whose ids differ only in bits 14-16 as the same club, and a few of its lists keep only
+  the first: the third new club of every world (id 71580) was Nam Dinh's twin, the tenth (71587)
+  Brunei's, then Timor-Leste, Botswana and Wrexham. Build now steps round those 24 ids for a club
+  that gets a new id; a club keeps the id it had at an earlier Build, so careers and kit or face
+  packs of a world you built before still find it. (Thanks Nissin)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
