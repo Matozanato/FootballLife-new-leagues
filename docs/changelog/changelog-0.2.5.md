@@ -166,6 +166,16 @@ come with it instead.
   on 17 February there) plays this season's knockout on the days of before too, never on a day
   already gone; from the next season the new days. Thanks DavidBDJ.
 
+- **The African and Asian cups had no knockout from the second season (B172).** The CAF and AFC
+  cups of a world (the Modpack's five) kept last season's clubs after the summer, and a cup that
+  still held clubs counted as drawn: its groups were never drawn again, stayed out of the new
+  season and had no table ("group A has a table of 0 rows"), so the knockout was never filled.
+  A cup is now drawn anew once a season when neither it nor its groups are in the season, its
+  old groups emptied first, and its groups get the season's tables the way the game makes them.
+- **The Champions League's round of 16 not drawn after two seasons with full tables (B169).**
+  When two seasons of the league phase both had 36 rows, the older table could be read; the
+  latest season's is now taken.
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
