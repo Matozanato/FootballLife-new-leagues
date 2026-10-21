@@ -5024,6 +5024,7 @@ def build(pl, base, game, replace=False, log=print):
     pictures(pl, tmp, base, log, game, gone)
     lap("pictures and kits")
     region_modules(pl, tmp, game, log)
+    mp_column(tmp, game, log)
 
     import lbtrophies
     lbtrophies.build(pl, tmp, db, log)
@@ -6655,6 +6656,22 @@ def cup_emblems(pl):
     if pl.get("uecl"):
         out.append((UECL_CID, "UECL", pl.get("uecl_logo")))
     return out
+
+
+def mp_column(root, game, log=print):
+    """the standings tables with an MP column (matches played) between Points and W, the A column
+    kept: the world's copy of rankingTeam.bin (tools/mkmpcol.py), which fl26swiss.dll fills. A
+    layout it does not know (another mod's) is left as it is, and the tables stay the game's."""
+    import mkmpcol
+    try:
+        out = call(mkmpcol, ["--root", root, "--game", game])
+    except BuildError as e:
+        log("  no MP column: %s" % str(e).strip().splitlines()[0])
+        return
+    if out.startswith("left as it is"):
+        log("  no MP column: %s" % out.strip().splitlines()[0])
+    else:
+        log("  standings with an MP column")
 
 
 def region_modules(pl, root, game, log=print):
