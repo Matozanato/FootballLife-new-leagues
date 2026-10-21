@@ -112,14 +112,24 @@ def message(path, game_folder=None):
     if in_program_files(game_folder or path):
         text += " " + _("The game is installed under Program Files, which only a program run as "
                         "administrator may change.")
-    text += "\n\n" + _("Do one of these:\n"
-                       "  1. Restart Mod Studio as administrator (right-click FL26ModStudio.exe > Run "
-                       "as administrator), or\n"
-                       "  2. move the game out of Program Files (for example to C:\\Games\\Football Life "
-                       "2026) and choose the new folder in Settings.")
     if is_admin():
-        text += "\n\n" + _("Mod Studio already runs as administrator: the folder or a file in it is "
-                           "read-only, or another program (an antivirus, the game) holds it.")
+        # AHMED 22.10.: already administrator, the game in D:\SPFL26 -- "run as administrator" and
+        # "move it out of Program Files" were nothing he could do
+        text += "\n\n" + _("Mod Studio already runs as administrator, so something else holds the folder:\n"
+                           "  1. close the game and Sider (Task Manager > Details: no FL_2026.exe left),\n"
+                           "  2. an antivirus: Windows Security > Virus & threat protection > Ransomware "
+                           "protection > Controlled folder access -- allow FL26ModStudio.exe, or\n"
+                           "  3. right-click the folder > Properties: untick Read-only.")
+    elif in_program_files(game_folder or path):
+        text += "\n\n" + _("Do one of these:\n"
+                           "  1. Restart Mod Studio as administrator (right-click FL26ModStudio.exe > Run "
+                           "as administrator), or\n"
+                           "  2. move the game out of Program Files (for example to C:\\Games\\Football Life "
+                           "2026) and choose the new folder in Settings.")
+    else:
+        text += "\n\n" + _("Restart Mod Studio as administrator (right-click FL26ModStudio.exe > Run as "
+                           "administrator). If it still says this: the folder or a file in it is read-only, "
+                           "or another program (an antivirus, the game) holds it.")
     return text
 
 

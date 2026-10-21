@@ -137,11 +137,25 @@ def main():
         game_pf = os.path.join(pf, "Football Life 2026")
         ok("Program Files is recognised", A.in_program_files(game_pf))
         ok("D:\\Games is not", not A.in_program_files(r"D:\Games\Football Life 2026"))
-        msg = A.message(os.path.join(game_pf, "SiderAddons"), game_pf)
-        ok("the message names the folder", os.path.join(game_pf, "SiderAddons") in msg)
-        ok("the message says administrator and moving the game",
-           "administrator" in msg and "move the game out of Program Files" in msg)
-        ok("no traceback words in it", "Traceback" not in msg and "WinError" not in msg)
+        was_admin = A.is_admin
+        try:
+            A.is_admin = lambda: False
+            msg = A.message(os.path.join(game_pf, "SiderAddons"), game_pf)
+            ok("the message names the folder", os.path.join(game_pf, "SiderAddons") in msg)
+            ok("the message says administrator and moving the game",
+               "administrator" in msg and "move the game out of Program Files" in msg)
+            ok("no traceback words in it", "Traceback" not in msg and "WinError" not in msg)
+            # AHMED 22.10.: the game outside Program Files, or Mod Studio already administrator
+            msg = A.message(r"D:\SPFL26", r"D:\SPFL26")
+            ok("outside Program Files: no moving the game, read-only / antivirus named",
+               "move the game" not in msg and "Run as administrator" in msg and "read-only" in msg)
+            A.is_admin = lambda: True
+            msg = A.message(r"D:\SPFL26", r"D:\SPFL26")
+            ok("already administrator: game, Controlled folder access and Read-only, no Run as administrator",
+               "Controlled folder access" in msg and "Read-only" in msg and "FL_2026.exe" in msg
+               and "Run as administrator" not in msg and "move the game" not in msg)
+        finally:
+            A.is_admin = was_admin
         exe, args = A.relaunch_command()
         ok("restart: the same program, marked --elevated once",
            exe == sys.executable and args.count("--elevated") == 1)
