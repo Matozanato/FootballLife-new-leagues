@@ -11001,6 +11001,80 @@ static void u10_install(void) {
  logf("UEFA10 install=%d selection-offset=%x; exact UEFA 36-team tables only",status,(unsigned)u10_selection_offset);
 }
 
+/* ---- MP: a matches-played column in the standings (mato 2026-10-21: its own column, A stays) ----
+ *
+ * The standings page (cpk_dat/common/menu/general/rankingTeam.bin) has seven number cells a row
+ * -- Pts W D L F A GD -- filled by 0x140aee0c0 (screen, row widget, idx) from the competition's
+ * table (0x141579b90, 0x14 bytes a row). The row's byte +0x0f is the matches played; nothing in
+ * the game shows it. Mod Studio's copy of the layout (tools/mkmp.py) adds a cell num_MatchesPlayed
+ * after Pts and a header title_MatchesPlayed and moves the seven along; this fills them, after
+ * the game's own fill. Without that layout the lookups find nothing and nothing is written. */
+#define MPFILL_RVA  0xaee0c0u
+#define MPNUM_RVA   0xe493a0u   /* setNumber(widget, int64) */
+#define MPTXT_RVA   0xe48bf0u   /* setText(widget, std::string*, u8, u8) */
+#define MPROOT_RVA  0xe3d4f0u   /* root(screen, 0) */
+typedef uint64_t (*mpfill_fn)(void*, void*, uint64_t, uint64_t);
+typedef void (*mpnum_fn)(void*, int64_t);
+typedef void (*mptxt_fn)(void*, void*, uint64_t, uint64_t);
+typedef void* (*mproot_fn)(void*, uint64_t);
+typedef void* (*mpchild_fn)(void*, const char*);
+static unsigned char* g_tramp_mpfill;
+static int g_mp_cells, g_mp_said, g_mp_way;
+static void* mp_child(void* widget, const char* name)
+{
+  if (!widget) return 0;
+  unsigned char* finder = (unsigned char*)widget + 0x98;
+  void** vt = *(void***)finder;
+  return vt ? ((mpchild_fn)vt[1])(finder, name) : 0;
+}
+static uint64_t mp_fill(void* screen, void* roww, uint64_t idx, uint64_t r9)
+{
+  uint64_t ret = ((mpfill_fn)(uintptr_t)g_tramp_mpfill)(screen, roww, idx, r9);
+  if (!screen || !roww) return ret;
+  unsigned i = (unsigned)idx;
+  unsigned char* tab = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(*(uint16_t*)((unsigned char*)screen + 0xa8));
+  if (!tab) return ret;
+  unsigned char* row = i < 0x30 ? tab + i * 0x14 : tab;
+  void* w = mp_child(roww, "num_MatchesPlayed");
+  if (!w) {
+    if (!g_mp_said++) logf("fl26swiss: MP -- this standings layout has no num_MatchesPlayed cell (game's own layout); nothing added");
+    return ret;
+  }
+  ((mpnum_fn)(uintptr_t)(g_base + MPNUM_RVA))(w, (int64_t)row[0x0f]);
+  if (g_mp_cells++ < 3) logf("fl26swiss: MP -- reg %u row %u: %u played", (unsigned)*(uint16_t*)((unsigned char*)screen + 0xa8), i, (unsigned)row[0x0f]);
+  /* the header: listHeader's titles are found only when the layout's AS3 registers them, which
+     a new one is not (in listHeader or on the page: the page's finder never had it, 2026-10-21),
+     so the layout gives every row a title_MatchesPlayed cell over its MP number, a row
+     higher; "MP" goes into the top row's (choice_0, whatever line of the table it shows) and
+     nothing into the others' */
+  void* lab = mp_child(roww, "title_MatchesPlayed");
+  if (lab) {
+    void* root = ((mproot_fn)(uintptr_t)(g_base + MPROOT_RVA))(screen, 0);
+    int top = root && mp_child(root, "choice_0") == roww;
+    struct { char buf[16]; uint64_t size, cap; } str;              /* MSVC std::string, short form */
+    memset(&str, 0, sizeof str); str.cap = 15;
+    if (top) { memcpy(str.buf, "MP", 3); str.size = 2; }
+    {   /* the header's colour: a text cell's FontColor (its properties at +0x98, +0x0c; read by
+           the text's init 0x140e494f0 from the layout's __setProp) is set only for the cells the
+           AS3 knows, so the new one would draw in the rows' dark grey; take title_Points'
+           (white, 4 on 2026-10-21) */
+      void* tp = root ? mp_child(root, "title_Points") : 0;
+      uint32_t* hp = tp ? *(uint32_t**)((unsigned char*)tp + 0x98) : 0;
+      uint32_t* lp = *(uint32_t**)((unsigned char*)lab + 0x98);
+      if (hp && lp) lp[3] = hp[3];
+    }
+    ((mptxt_fn)(uintptr_t)(g_base + MPTXT_RVA))(lab, &str, 0, 0);
+    if (top && !g_mp_way) { g_mp_way = 1; logf("fl26swiss: MP -- header in the top row's cell"); }
+  }
+  return ret;
+}
+static void mp_install(void)
+{
+  static const unsigned char sig[17] = { 0x40,0x55, 0x56, 0x57, 0x48,0x83,0xec,0x60, 0x48,0xc7,0x44,0x24,0x28,0xfe,0xff,0xff,0xff };
+  int st = hook((unsigned char*)(uintptr_t)(g_base + MPFILL_RVA), sig, sizeof sig, (void*)mp_fill, &g_tramp_mpfill);
+  logf("fl26swiss: MP column hook %s (%d)", st ? "NOT installed" : "live", st);
+}
+
 /* 0 ok; 2 signature mismatch; 3 VirtualAlloc failed; 4 VirtualProtect failed; 9 bad config;
    +10 for the date hook, +20 for the group hook */
 __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* regs, int nregs)
@@ -11204,6 +11278,7 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
            g_tramp_cimenu ? " -- menu hooked, choice not: extra items open the native item's page" : "");
   }
   u10_install();
+  mp_install();
   if (!cupsel_install(exe_base))
     logf("fl26swiss: Cup mode list live (no league phase of 36 in Kick Off > Cup)");
   else

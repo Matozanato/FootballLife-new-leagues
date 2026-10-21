@@ -5,6 +5,14 @@ come with it instead.
 
 ## Added
 
+- **MP (matches played) in the standings tables.** A league's table and the League Phase of the
+  UEFA cups now have an MP column between Points and W; W, D, L, F, A and GD stay as they were
+  and move a little closer together. The number is the game's own count of the club's matches
+  (MP = W + D + L), filled by `fl26swiss`. Build writes the world's copy of the standings layout
+  (`common/menu/general/rankingTeam.bin`, tools/mkmpcol.py) from the game's own; a world built
+  before needs one Build, and a mod's own standings layout is left as it is (the table then stays
+  the game's). Checked in the game: the Conference League's League Phase and the Belgian
+  Challenger Pro League, with the club highlight and the promotion arrows in place.
 - **New clubs play at the game's own stadiums, many of them, not all at Stadio Nazionale.** A
   new club was a copy of the game's last club, so every one of them -- the Modpack's 1212 --
   had its home at Stadio Nazionale unless your stadium pack gave it another. Build now gives
