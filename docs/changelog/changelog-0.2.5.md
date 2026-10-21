@@ -222,6 +222,17 @@ come with it instead.
   that gets a new id; a club keeps the id it had at an earlier Build, so careers and kit or face
   packs of a world you built before still find it. (Thanks Nissin)
 
+- **Make it editable (and restoring or deleting a world backup) stopped on a long file path (B189).** A pack with a
+  deep folder (Spain's "Supercopa de España" kits, a long club name) has files whose full path is
+  longer than 260 characters, and Windows refuses those unless long paths are switched on: the
+  backup that Make it editable makes first stopped half-way. Mod Studio now copies and removes
+  world folders with long paths itself, whatever that Windows setting says. (Thanks SladeBR)
+- **"Windows does not let Mod Studio write" said what you could not do.** It told everyone to run
+  Mod Studio as administrator and move the game out of Program Files, even when Mod Studio was
+  already administrator and the game was in D:\Games. It now says only what applies: out of
+  Program Files, run as administrator; already administrator, close the game and Sider, allow
+  FL26ModStudio.exe in Controlled folder access, or untick Read-only. (Thanks AHMED)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
