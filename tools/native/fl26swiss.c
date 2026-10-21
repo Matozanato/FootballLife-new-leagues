@@ -584,7 +584,7 @@ unsigned char* g_tramp_setcl = 0;
  * held 2025 / 2026 -- so reg 1029 read the new season's empty table: 0 rows, the play-off's end
  * found "no table" and the round of 16 was never drawn.  The 2026 table was intact (36 rows).
  * So when the latest season's table of a league-phase row is short, this walks both slots of
- * every header the same way and takes that id's table with the most rows (24..48).  The offset
+ * every header the same way and takes that id's table of the latest season with 24..48 rows.  The offset
  * of the table array and so the number of headers come from the live lea at 0x14158df91
  * (fl26hdr255 moves the array behind 255 headers). */
 static int table_of_clubs(const unsigned char* t, unsigned rows, const uint32_t* want, unsigned nwant);
@@ -613,8 +613,12 @@ static unsigned char* season_table_x(uint16_t reg, unsigned lo, unsigned hi, con
         unsigned char* e = s + arr + (size_t)ix * 0x187c;
         if (*(uint16_t*)e != reg) continue;
         unsigned rows = *(uint32_t*)(e + 0x318 + 0x3c0);
-        if (rows >= lo && rows <= hi && rows > brows && (!want || table_of_clubs(e + 0x318, rows, want, nwant))) {
-          best = e + 0x318; brows = rows; byear = *(uint16_t*)(e + 2);
+        unsigned yr = *(uint16_t*)(e + 2);
+        /* the latest season of those, then the most rows: two full seasons of one id were both
+           36 rows and the first found, maybe the older, won (B169) */
+        if (rows >= lo && rows <= hi && (yr > byear || (yr == byear && rows > brows))
+            && (!want || table_of_clubs(e + 0x318, rows, want, nwant))) {
+          best = e + 0x318; brows = rows; byear = yr;
         }
       }
     }
