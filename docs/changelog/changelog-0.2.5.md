@@ -130,6 +130,41 @@ come with it instead.
   world you installed (the Modpack r12 after eu4), PACK still named the zip installed last while
   ACTIVE WORLD was right. It now names the pack the active world came from; for a world built
   on your PC it names the last pack that brought no world (scoreboards, kits), or nothing.
+- **A save loaded in the summer, or the game quit between 1 July and the August draws, sent the
+  wrong clubs to Europe.** The final tables (and cup winners) the modules keep at the end of a
+  season for the next season's continental places lived only while the game ran. After a restart,
+  or a save of those weeks loaded, the places of your leagues went by squad strength instead of
+  last season's table (Cyprus and Bosnia: 8 places from the tables, 124 by squad strength), and a
+  continental super cup of ours could take its winners from the game again. The modules now
+  write what they keep to `fl26swiss-state.bin` in the game's save folder (it moves with the
+  world like your careers) and read it back when a save is loaded or the game starts again:
+  the tables of your career, of the season just finished, never those of a later save or of a
+  career with another club. Needs Install the modules; a career already past 1 July without them
+  gets its tables from the next season's end. Thanks bythezl19.
+- **Portugal's Supertaça was played after the first league round.** The modules bring a
+  league of a country that really kicks off early forward to its July or early August start, the
+  game's own leagues too, but the game's super cups stay on their dates: Liga Portugal started
+  on 8 August and the Supertaça (13 and 16 August) came after it. The same hit the Netherlands,
+  Turkey, Russia, Belgium and France. A league now starts no earlier than a week after a cup its
+  country plays before its first round, so those leagues start where the game starts them, after
+  their super cup. Needs Install the modules and Build again; a new career. Thanks Hugo Freixo.
+- **Our continental cups played on the same day as the game's own, or the day before.** The
+  Copa Sudamericana's group stage was on the days of the Libertadores qualifying round (4 and
+  11 February) and its knockout on the Libertadores group days, and the Tuesday cups (AFC
+  Champions League Two) were the day before the AFC Champions League's Wednesdays -- and the
+  same club can be in both, because the game fills its January-December cups on 1 January,
+  months after ours were filled. A cup of ours whose leagues can send a club to one of the
+  game's cups now plays in the weeks that cup leaves free, at least a day apart from every one
+  of its days, on the same weekdays and with the same number of rounds. Copa Sudamericana:
+  groups 25 November, 2 December, 21 and 28 January, 18 and 25 February; knockout 11 March,
+  1, 8 and 22 April, 6 and 13 May, final 27 May. AFC Champions League Two and AFC Challenge
+  League: groups 25 November, 2 December, 14, 21 and 28 January, 4 February; knockout 18
+  February (round of 16 only), 11 and 25 March, 1, 15 and 29 April, final 13 May (the
+  Tuesday cup a day earlier each time). The CAF, CONCACAF and OFC cups keep their days.
+  `sider.log` names the days each cup takes (`cup ... its leagues reach ...`). A career that
+  is already past the group stage's days of before (the AFC Champions League Two's groups end
+  on 17 February there) plays this season's knockout on the days of before too, never on a day
+  already gone; from the next season the new days. Thanks DavidBDJ.
 
 ## Read this first
 

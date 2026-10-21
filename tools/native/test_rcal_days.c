@@ -20,7 +20,11 @@
        the autumn league phase and the spring knockout days, dated in January and in August;
      - a league fed to a continental cup of ours only through its cup winner (ccup_feeds);
      - the Club World Cup's days for a league with a Champions League place;
-     - both schedulers know the same days (busy_set is the one list). */
+     - both schedulers know the same days (busy_set is the one list);
+     - B35: our continental cups a day clear of the game's ones of their region -- every day of
+       every table (CCUP_GROUP_DAYS, CCUP_KO_DAYS) against gc_seed's lists, the table each cup
+       takes (ccup_region), and Uruguay and Korea, which feed one of the game's cups and one of
+       ours, still fit their seasons clear of both. */
 #define FL26_RCAL_TEST
 #include "fl26swiss.c"
 #include <stdio.h>
@@ -106,6 +110,46 @@ static int euro_season(int sy, int quals, uint32_t* out)
   g_test_year = sy;
   int n = uefa_days(out, 96, quals);
   g_test_year = keep;
+  return n;
+}
+
+/* B35: one table (region cr, tier t) against the game's days it must keep a day clear of; its
+   shape kept: Tuesdays (tier 0) or Wednesdays (tier 1) on the big leagues' grid, the two tiers in
+   the same weeks, the groups in season order and November to February, the knockout in order, two
+   weeks or more after the last group day, the final before the Club World Cup of ours (day 153) */
+static void ccup_table_check(int cr, int t, const uint32_t* avoid, int na, const char* what)
+{
+  uint32_t all[13]; int n = 0;
+  for (int i = 0; i < 6; i++) all[n++] = CCUP_GROUP_DAYS[cr][t][i];
+  for (int i = 0; i < 7; i++) all[n++] = CCUP_KO_DAYS[cr][t][i];
+  int clear = 1, wk = 1, ord = 1, pair = 1;
+  uint32_t a = 0, b = 0;
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < na; j++) if (cdist(all[i], avoid[j]) < 2) { clear = 0; a = all[i]; b = avoid[j]; }
+    if ((int)(all[i] % 7) != (t ? 6 : 5)) wk = 0;
+    if (i && i != 6 && season_ord((int)all[i]) <= season_ord((int)all[i - 1])) ord = 0;
+  }
+  for (int i = 0; i < 6; i++) if (CCUP_GROUP_DAYS[cr][0][i] + 1 != CCUP_GROUP_DAYS[cr][1][i]) pair = 0;
+  for (int i = 0; i < 7; i++) if (CCUP_KO_DAYS[cr][0][i] + 1 != CCUP_KO_DAYS[cr][1][i]) pair = 0;
+  int g0 = season_ord((int)all[0]), g5 = season_ord((int)all[5]), k0 = season_ord((int)all[6]), fin = season_ord((int)all[12]);
+  char line[256];
+  snprintf(line, sizeof line, "%s, tier %d: a day or more clear of %d game day(s)%s", what, t, na,
+           clear ? "" : " -- NOT");
+  if (!clear) printf("    day %u next to the game's day %u\n", a, b);
+  expect(clear, line);
+  snprintf(line, sizeof line, "%s, tier %d: on %s, the tiers in the same weeks, the days in order", what, t,
+           t ? "Wednesdays" : "Tuesdays");
+  expect(wk && pair && ord, line);
+  snprintf(line, sizeof line, "%s, tier %d: groups days %u..%u, knockout %u..%u (two weeks after the groups, final before day 152)",
+           what, t, all[0], all[5], all[6], all[12]);
+  expect(g0 >= season_ord(305) && g5 <= season_ord(59) && k0 - g5 >= 14 && fin <= season_ord(151), line);
+}
+/* the days of cup k a league sees (busy_set's way): a straight knockout (groups 0) plays no group day */
+static int ccup_days_of(int k, uint32_t* out)
+{
+  int n = 0;
+  if (g_ccup[k].groups) for (int i = 0; i < 6; i++) out[n++] = ccup_day(&g_ccup[k], 0, i);
+  for (int i = 0; i < 7; i++) out[n++] = ccup_day(&g_ccup[k], 1, i);
   return n;
 }
 
@@ -293,6 +337,148 @@ int main(void)
       g_org = 182;
     }
     expect(ok, "every day next to a busy day is closed by busy_days (level 0) and by rcal_cost (strict)");
+  }
+
+  printf("B35: our continental cups clear of the game's ones (Copa Sudamericana, AFC Champions League Two)\n");
+  {
+    uint32_t libr[128], afcr[128], none[8]; int nl = 0, na = 0;
+    for (int i = 0; i < nlib; i++) libr[nl++] = lib[i];
+    for (int i = 0; i < nlibq; i++) libr[nl++] = libq[i];
+    for (int i = 0; i < ncwc; i++) { libr[nl++] = cwc[i]; afcr[na++] = cwc[i]; }
+    for (int i = 0; i < nafc; i++) afcr[na++] = afc[i];   /* gc_seed's on their midweek, and cont_note's */
+    {
+      /* the tester's finding, in the tables of before (CR_NONE): the Sudamericana on the
+         Libertadores qualifying and group days, the Tuesdays a day before the AFC's */
+      int hit = 0;
+      for (int i = 0; i < 6; i++) for (int j = 0; j < nl; j++) hit += CCUP_GROUP_DAYS[CR_NONE][1][i] == libr[j];
+      for (int i = 0; i < 7; i++) for (int j = 0; j < nl; j++) hit += CCUP_KO_DAYS[CR_NONE][1][i] == libr[j];
+      expect(hit >= 7, "the days of before put the Wednesday cup on 7 Libertadores days (the B35 finding)");
+    }
+    for (int t = 0; t < 2; t++) {
+      ccup_table_check(CR_LIB, t, libr, nl, "CR_LIB (Libertadores, its qualifying round, the Club World Cup)");
+      ccup_table_check(CR_AFC, t, afcr, na, "CR_AFC (AFC Champions League on its midweek, the Club World Cup)");
+      ccup_table_check(CR_NONE, t, none, 0, "CR_NONE (as before)");
+    }
+    /* leaguebuilder's CCUP_DAYS lists all three tables: tools/test_rcal_days.py compares them */
+
+    /* cup 1: a Copa Sudamericana -- Uruguay (300, Libertadores places) 3rd and 4th, and a league
+       with none (340); cup 2: an AFC Champions League Two -- Korea's (310) champion (Tuesdays) and
+       Saudi Arabia's second (311); cup 0 (league 340's cup winner) reaches none of the game's */
+    g_nccup = 3;
+    memset(&g_ccup[1], 0, sizeof g_ccup[1]);
+    g_ccup[1].reg = 510; g_ccup[1].ko = 511; g_ccup[1].groups = 1; g_ccup[1].n = 4;
+    g_ccup[1].ereg[0] = 300; g_ccup[1].erank[0] = 3; g_ccup[1].ereg[1] = 300; g_ccup[1].erank[1] = 4;
+    g_ccup[1].ereg[2] = 340; g_ccup[1].erank[2] = 2; g_ccup[1].ereg[3] = 340; g_ccup[1].erank[3] = 3;
+    memset(&g_ccup[2], 0, sizeof g_ccup[2]);
+    g_ccup[2].reg = 520; g_ccup[2].ko = 521; g_ccup[2].groups = 1; g_ccup[2].n = 4;
+    g_ccup[2].ereg[0] = 310; g_ccup[2].erank[0] = 1; g_ccup[2].ereg[1] = 311; g_ccup[2].erank[1] = 2;
+    g_ccup[2].ereg[2] = 340; g_ccup[2].erank[2] = 4; g_ccup[2].ereg[3] = 311; g_ccup[2].erank[3] = 3;
+    expect(ccup_region(&g_ccup[0]) == CR_NONE && ccup_tier(&g_ccup[0]) == 1, "cup 500 (no league of the game's cups): the days of before");
+    expect(ccup_region(&g_ccup[1]) == CR_LIB && ccup_tier(&g_ccup[1]) == 1, "cup 510 (Uruguay's places): Wednesdays, the Libertadores' weeks free");
+    expect(ccup_region(&g_ccup[2]) == CR_AFC && ccup_tier(&g_ccup[2]) == 0, "cup 520 (Korea's champion): Tuesdays, the AFC Champions League's weeks free");
+    {
+      /* an access list loaded after the cups: worked out again (g_ccup_gen) */
+      static const uint16_t ACC2[][4] = { { 300, 1, LIB, 0 }, { 310, 1, AFCL, 0 } };
+      fl26_swiss_access(&ACC2[0][0], 2);
+      int r1 = ccup_region(&g_ccup[1]);
+      fl26_swiss_access(&ACC[0][0], (int)(sizeof ACC / sizeof ACC[0]));
+      static const uint16_t ACC3[][4] = { { 310, 1, AFCL, 0 } };
+      fl26_swiss_access(&ACC3[0][0], 1);
+      int r2 = ccup_region(&g_ccup[1]);
+      fl26_swiss_access(&ACC[0][0], (int)(sizeof ACC / sizeof ACC[0]));
+      int r3 = ccup_region(&g_ccup[1]);
+      expect(r1 == CR_LIB && r2 == CR_NONE && r3 == CR_LIB, "a cup's table follows the access list it is read with");
+    }
+    {
+      /* a closed-beta career: its AFC Champions League Two groups dated on the days of before
+         end on Tuesday 47 and the knockout is dated the day after -- CR_AFC's round of 16 opens
+         on 47, so that season keeps the days of before; a new career dates it after day 33 */
+      g_ko_cr_year[2] = 0; g_today_test = 48;
+      int old = ccup_ko_table(2, 0);
+      g_today_test = 70;                               /* dated again later that season: kept */
+      int again = ccup_ko_table(2, 0);
+      g_ko_cr_year[2] = 0; g_today_test = 34;
+      int fresh = ccup_ko_table(2, 0);
+      g_ko_cr_year[2] = 0; g_today_test = 48;
+      int ko8 = ccup_ko_table(2, 2);                   /* a knockout of eight starts on day 82 */
+      g_ko_cr_year[2] = 0; g_today_test = 238;
+      int august = ccup_ko_table(2, 0);                /* a straight knockout, filled in August */
+      g_ko_cr_year[2] = 0;
+      expect(old == CR_NONE && again == CR_NONE && fresh == CR_AFC && ko8 == CR_AFC && august == CR_AFC,
+             "a knockout never dated before today: groups on the days of before keep the knockout's of before");
+      g_ko_cr_year[0] = 0; g_today_test = 48;
+      expect(ccup_ko_table(0, 0) == CR_NONE, "a cup of CR_NONE keeps its days whenever it is dated");
+      g_ko_cr_year[0] = 0;
+    }
+    uint32_t cd[16];
+    int nc1 = ccup_days_of(1, cd);
+    {
+      date_t cr[16];
+      for (int i = 0; i < nc1; i++) { cr[i].day = cd[i]; cr[i].round = (uint32_t)i; cr[i].kind = 0; }
+      clear_of("cup 510 (Sudamericana) against the Libertadores (regs 9, 10), a day clear", cr, nc1, lib, nlib, 2);
+      clear_of("cup 510 (Sudamericana) against the Libertadores qualifying (reg 8), a day clear", cr, nc1, libq, nlibq, 2);
+      int nc2 = ccup_days_of(2, cd);
+      for (int i = 0; i < nc2; i++) { cr[i].day = cd[i]; cr[i].round = (uint32_t)i; cr[i].kind = 0; }
+      clear_of("cup 520 (AFC Champions League Two) against the AFC Champions League, a day clear", cr, nc2, afcr + ncwc, na - ncwc, 2);
+    }
+    /* the leagues that feed both still fit, clear of both by two days */
+    uint32_t both[160]; int nb = 0;
+    for (int i = 0; i < nlib; i++) both[nb++] = lib[i];
+    for (int i = 0; i < nlibq; i++) both[nb++] = libq[i];
+    nb += ccup_days_of(1, both + nb);
+    rcal_case("Uruguay with cup 510", 300, 30, 0, r);
+    in_order_check("Uruguay with cup 510", r, 30);
+    clear_of("Uruguay: the Libertadores and cup 510, two days clear", r, 30, both, nb, 3);
+    nb = 0;
+    for (int i = 0; i < nafc; i++) both[nb++] = afc[i];
+    nb += ccup_days_of(2, both + nb);
+    rcal_case("Korea with cup 520", 310, 33, 0, r);
+    in_order_check("Korea with cup 520", r, 33);
+    clear_of("Korea: the AFC Champions League and cup 520, two days clear", r, 33, both, nb, 3);
+    rcal_case("Saudi Arabia with cup 520", 311, 30, 216, r);
+    in_order_check("Saudi Arabia with cup 520", r, 30);
+    clear_of("Saudi Arabia: the AFC Champions League and cup 520, two days clear", r, 30, both, nb, 3);
+    {
+      static const uint32_t CASE5[38] = { 233, 240, 261, 265, 268, 275, 296, 300, 303, 310, 321, 324, 331, 335, 338, 345,
+                                          356, 359, 363, 2, 13, 16, 20, 23, 31, 34, 37, 51, 58, 65, 72, 79, 100, 107, 114,
+                                          121, 128, 142 };
+      g_ccup[2].ereg[3] = 312;                         /* Saudi Arabia, no rcal line: rest_dates */
+      g_ccup_gen++;
+      nb = 0;
+      for (int i = 0; i < nafc; i++) both[nb++] = afc[i];
+      nb += ccup_days_of(2, both + nb);
+      for (int i = 0; i < 38; i++) { r[i].day = CASE5[i]; r[i].round = (uint32_t)i; r[i].kind = 0; }
+      g_today_test = 216;
+      rest_dates(312, r, 38);
+      in_order_check("Saudi Arabia, old calendar, with cup 520 (rest_dates)", r, 38);
+      clear_of("Saudi Arabia (rest_dates): the AFC Champions League and cup 520, two days clear", r, 38, both, nb, 3);
+    }
+  }
+
+  /* a July start does not bring a league's first round before its country's super cup (B36):
+     Liga Portugal (22) on 22 August, the Supertaça on 13 and 16 August, `july 22 219` */
+  printf("\nJuly start and the game's super cup (B36)\n");
+  {
+    uint16_t jl[4] = { 22, 219, 23, 219 };
+    fl26_swiss_july(jl, 2);
+    static uint16_t cd[100];
+    cd[0] = 22; cd[1] = 2; cd[2] = 224; cd[3] = 227;              /* Portugal: its super cup */
+    cd[50] = 23; cd[51] = 1; cd[52] = 300;                         /* another: a cup in October */
+    fl26_swiss_cupdays(cd, 2);
+    date_t a[6], b[6];
+    for (int i = 0; i < 6; i++) {
+      a[i].day = b[i].day = 233 + 7 * (uint32_t)i;
+      a[i].round = b[i].round = (uint32_t)i;
+      a[i].kind = b[i].kind = 0;
+    }
+    g_today_test = 181;
+    july_start(22, a, 6, 0);
+    july_start(23, b, 6, 0);
+    expect(a[0].day == 233, "Liga Portugal keeps its first round a week after the Supertaca (233, not 219)");
+    expect(b[0].day == 219, "a league with no cup before its first round still starts in July (219)");
+    fl26_swiss_july(0, 0);
+    fl26_swiss_cupdays(0, 0);
+    g_today_test = 0;
   }
 
   printf(fails ? "\n%d check(s) FAILED\n" : "\nall checks passed\n", fails);

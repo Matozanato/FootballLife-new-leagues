@@ -1450,6 +1450,10 @@ static const char* COMP_NAME[3] = { "Champions League", "Europa League", "Confer
 typedef struct { uint16_t reg; int day; uint32_t club; } cupwin_t;
 static cupwin_t g_cupwin[32]; static int g_ncupwin = 0;
 
+/* B49: what is kept is read back from the save folder after a restart or a load (state_sync) */
+static void state_sync(void);
+static int g_st_read_back = 0;
+
 /* the winner of a competition as the game's own rights code sees it, or 0 */
 static uint32_t winner_now(uint16_t reg)
 {
@@ -1461,12 +1465,14 @@ static uint32_t winner_now(uint16_t reg)
 }
 static cupwin_t* cupwin_of(uint16_t reg)
 {
+  state_sync();
   for (int i = 0; i < g_ncupwin; i++) if (g_cupwin[i].reg == reg) return &g_cupwin[i];
   return 0;
 }
 
 static final_t* final_of(uint16_t reg)
 {
+  state_sync();
   for (int i = 0; i < g_nfinal; i++) if (g_final[i].reg == reg) return &g_final[i];
   return 0;
 }
@@ -1690,6 +1696,7 @@ typedef struct { uint16_t reg; uint8_t rank; } how_t;
 static how_t g_how[3][FIELD];
 static int any_final_kept(void)
 {
+  state_sync();
   int d = abs_day();
   for (int i = 0; i < g_nfinal; i++) if (d >= g_final[i].day && d - g_final[i].day < 120) return 1;
   return 0;
@@ -1996,8 +2003,10 @@ static int access_build(int q, int mask)
   /* A career built in this session takes the list in its first European summer. A January
      league's career has a final table of its own by then (2026-10-05: CSL, kept on day 176), so
      the final tables do not tell the first summer from a later one there: the day of the first
-     use does -- every build within 120 days of it is the same summer. */
-  int first_summer = g_new_career && (g_first_day < 0 || abs_day() - g_first_day < 120);
+     use does -- every build within 120 days of it is the same summer. A save of a later summer
+     loaded on days 210-240 can look like a career built in this session; last season's tables
+     read back from the save folder (state_sync, B49) say it is not. */
+  int first_summer = g_new_career && !g_st_read_back && (g_first_day < 0 || abs_day() - g_first_day < 120);
   if (g_nfirst[0] + g_nfirst[1] + g_nfirst[2] && first_summer) {
     int missing = 0, twice = 0, over = 0;
     if (g_first_day < 0) g_first_day = abs_day();
@@ -3207,6 +3216,8 @@ typedef struct { uint16_t reg, ko, groups, n; uint16_t ereg[CCUP_MAX_ENTRY]; uin
                  uint16_t fill, national, nd, nc; uint16_t days[CCUP_MAX_DAYS]; uint32_t clubs[CCUP_MAX_ENTRY];
                  int filled_year;
                  uint16_t like;      /* 0.2.0: the shipped domestic cup whose shape and dates it takes, 0 = none */
+                 uint8_t region;     /* 0.2.4 (B35): 1 + its CR_ day table, 0 = not worked out (ccup_region) */
+                 unsigned rgen;      /* g_ccup_gen it was worked out under */
                } ccup_t;
 static ccup_t g_ccup[MAX_CCUP]; static int g_nccup = 0;
 /* fl26_swiss_ccup_like's records, read by fl26_swiss_ccup (called after it): knockout -> shipped cup */
@@ -3231,9 +3242,54 @@ static unsigned g_ccup_done[MAX_CCUP];
    days clear of either (rest_dates), where a Thursday would leave it no day of the week at all.
    Weekdays on the big leagues' grid (case 5: Saturday is 261, so a Tuesday is d % 7 == 5).
    Groups late November to mid February, the knockout mid March to the final in mid May (the
-   first pair is spare for a knockout of eight). They were the Mondays and Sundays. */
-static const uint32_t CCUP_GROUP_DAYS[2][6] = { { 327, 334, 26, 33, 40, 47 }, { 328, 335, 27, 34, 41, 48 } };
-static const uint32_t CCUP_KO_DAYS[2][7] = { { 75, 82, 96, 103, 117, 124, 138 }, { 76, 83, 97, 104, 118, 125, 139 } };
+   first pair is spare for a knockout of eight). They were the Mondays and Sundays.
+
+   B35 (0.2.4, a tester's memory probe of a Master League): the game's own continental cups play
+   midweek too, on their own weeks, and our cups sat on them -- the Copa Sudamericana's groups on
+   the Libertadores qualifying days 34 and 41, its knockout on the Libertadores group days 76, 83,
+   104, 118, 139, and the Tuesday cups (AFC Champions League Two) the day before the AFC Champions
+   League's Wednesdays. The same club can be in both: our cups run August to May and are filled
+   at the end of August (ccup_taken, #37), the game's calendar-year cups are filled on 1 January
+   from that winter's tables. So a cup whose leagues can send a club to one of the game's cups
+   (ccup_region: gc_feeds of its entries' leagues, the same test the league schedulers use) plays
+   in the weeks the game leaves free: every day at least one free day from every day the exe
+   ships for that competition (gc_seed: LIB_ + LIBQ_, AFC_ on its midweek), and from the Club
+   World Cup's December days -- tools/native/test_rcal_days.c checks the tables against gc_seed's
+   lists. Same weekdays (Tuesday the champions' cup, Wednesday the one below, same weeks), same
+   number of days, groups November to February, the knockout from mid February or March, at least
+   two weeks after the last group day (the knockout is filled when the groups are over,
+   ccup_progress), and the final before 2 June (the Club World Cup of ours, CWC_GROUP_DAYS, starts
+   on day 153):
+     CR_LIB  the Libertadores' weeks free (34, 41 qualifying; 62, 76, 83, 104, 118, 139 groups):
+             groups 25 Nov, 2 Dec, 21 Jan, 28 Jan, 18 Feb, 25 Feb; knockout 11 Mar / 1 Apr,
+             8 / 22 Apr, 6 / 13 May, final 27 May (the Conference League's final day);
+     CR_AFC  the AFC Champions League's weeks free (55, 62, 76, 97, 111, 125, 139, 146): from 18
+             February it leaves only six free Wednesdays before June, so the January groups come a
+             fortnight earlier (14 January to 4 February) and the knockout's spare pair -- the
+             round of 16, played only by a knockout of sixteen -- opens on 18 February:
+             groups 25 Nov, 2 Dec, 14, 21, 28 Jan, 4 Feb; knockout 18 Feb / 11 Mar, 25 Mar /
+             1 Apr, 15 / 29 Apr, final 13 May;
+     CR_NONE no competition of the game in its region (the CAF, CONCACAF and OFC cups): as before.
+   (Dates for the Wednesdays, the Tuesdays a day earlier.) A cup whose leagues reach both the
+   Libertadores and the AFC Champions League has no table clear of both (the two leave three free
+   Wednesdays from March to May): it takes CR_LIB, logged. */
+enum { CR_NONE = 0, CR_LIB, CR_AFC, CR_N };
+static const char* const CR_NAME[CR_N] = { "the days of before", "the Libertadores' weeks free",
+                                           "the AFC Champions League's weeks free" };
+static const uint32_t CCUP_GROUP_DAYS[CR_N][2][6] = {
+  { { 327, 334, 26, 33, 40, 47 }, { 328, 335, 27, 34, 41, 48 } },
+  { { 327, 334, 19, 26, 47, 54 }, { 328, 335, 20, 27, 48, 55 } },
+  { { 327, 334, 12, 19, 26, 33 }, { 328, 335, 13, 20, 27, 34 } },
+};
+static const uint32_t CCUP_KO_DAYS[CR_N][2][7] = {
+  { { 75, 82, 96, 103, 117, 124, 138 }, { 76, 83, 97, 104, 118, 125, 139 } },
+  { { 68, 89, 96, 110, 124, 131, 145 }, { 69, 90, 97, 111, 125, 132, 146 } },
+  { { 47, 68, 82, 89, 103, 117, 131 }, { 48, 69, 83, 90, 104, 118, 132 } },
+};
+/* bumped by every setter a cup's region depends on (the cups, their alt= leagues, the access list,
+   the cup draws), so ccup_region works it out again */
+static unsigned g_ccup_gen = 1;
+static int ccup_region(ccup_t* c);
 
 static uint16_t ccup_rep(const ccup_t* c, int g) { return (uint16_t)(c->reg + 1024 * (g + 1)); }
 /* 0: a champions' cup (Tuesdays), 1: the cup below (Wednesdays) */
@@ -3251,7 +3307,8 @@ static uint32_t ccup_day(const ccup_t* c, int ko, int j)
 {
   if (ko && c->like && !ccup_like_ok(c)) return LCUP_OLD_DAYS[j < 7 ? j : 6];
   if (ko && c->nd) return c->days[j < c->nd ? j : c->nd - 1];
-  return ko ? CCUP_KO_DAYS[ccup_tier(c)][j] : CCUP_GROUP_DAYS[ccup_tier(c)][j];
+  int cr = ccup_region((ccup_t*)c);
+  return ko ? CCUP_KO_DAYS[cr][ccup_tier(c)][j] : CCUP_GROUP_DAYS[cr][ccup_tier(c)][j];
 }
 static int ccup_world(const ccup_t* c)
 {
@@ -3290,6 +3347,7 @@ __declspec(dllexport) int fl26_swiss_ccup(const uint16_t* v, int n)
   /* per cup: reg, ko, groups, entries, then (reg, position) per entry */
   if ((!v && n) || n < 0) return -1;
   g_nccup = 0;
+  g_ccup_gen++;
   size_t p = 0;
   for (int i = 0; i < n && g_nccup < MAX_CCUP; i++) {
     ccup_t* c = &g_ccup[g_nccup];
@@ -3387,6 +3445,7 @@ __declspec(dllexport) int fl26_swiss_ccup_alt(const uint16_t* v, int n)
     }
     c->ealt[e] = league & 0x3ff;
     c->efrom[e] = (uint8_t)(league >> 10);
+    g_ccup_gen++;
     got++;
   }
   if (got) logf("fl26swiss: %d cup winner place(s) with a league to fall back on", got);
@@ -4107,6 +4166,32 @@ static uint64_t ccup_like_dates(int k, uint16_t id, uint64_t reg, void* vec)
   return rv;
 }
 
+/* B35: the knockout's day table, chosen once a season when the knockout is dated (the day after
+   its groups are over, ccup_progress; a straight knockout on its fill day). A career whose groups
+   were dated on the days of before 0.2.4 -- a closed-beta career in its first season -- ends them
+   later than the table of its region begins its knockout (the AFC Champions League Two: groups
+   to Tuesday 17 February, CR_AFC's round of 16 from that same Tuesday), so a knockout whose
+   first day (j0) is not after today takes the days of before (CR_NONE) for that season instead
+   of a first leg dated in the past. Kept for the season, so a second dating of the same knockout
+   cannot change its days. -1: the cup has days of its own (ccup_day). */
+static int g_ko_cr[MAX_CCUP], g_ko_cr_year[MAX_CCUP];
+static int ccup_ko_table(int k, size_t j0)
+{
+  ccup_t* c = &g_ccup[k];
+  if (c->nd || c->like) return -1;
+  int y = season_year() + 1;                           /* 0: never chosen */
+  if (g_ko_cr_year[k] == y) return g_ko_cr[k];
+  int cr = ccup_region(c), t = today();
+  uint32_t d0 = CCUP_KO_DAYS[cr][ccup_tier(c)][j0 < 7 ? j0 : 6];
+  uint32_t p0 = d0 >= 182 ? d0 - 182 : d0 + 183, pt = t >= 182 ? (uint32_t)t - 182 : (uint32_t)t + 183;
+  if (cr != CR_NONE && t >= 0 && t < 365 && p0 <= pt) {
+    logf("fl26swiss: cup %u -- knockout dated on day %d, after its first day %u in %s: its groups were "
+         "dated on the days of before, so this season's knockout keeps them", (unsigned)c->ko, t, d0, CR_NAME[cr]);
+    cr = CR_NONE;
+  }
+  g_ko_cr[k] = cr; g_ko_cr_year[k] = y;
+  return cr;
+}
 static uint64_t ccup_dates(int k, int ko, uint16_t id, uint64_t reg, void* vec)
 {
   if (ccup_like_ok(&g_ccup[k])) return ccup_like_dates(k, id, reg, vec);
@@ -4129,9 +4214,10 @@ static uint64_t ccup_dates(int k, int ko, uint16_t id, uint64_t reg, void* vec)
       logf("fl26swiss: cup reg %u borrowed record %u: day %u round %u kind %u", (unsigned)id, (unsigned)i,
            r[i].day, r[i].round, r[i].kind);
   /* a knockout of eight is handed the round-of-16 pair first; the last record is the final */
+  int kcr = ko ? ccup_ko_table(k, have == 1 ? want - 1 : want - have) : -1;
   for (size_t i = 0; i < have; i++) {
     size_t j = ko ? (i + 1 == have ? want - 1 : i + (want - have)) : i * want / have;
-    r[i].day = ccup_day(cc, ko, (int)j);
+    r[i].day = kcr >= 0 ? CCUP_KO_DAYS[kcr][ccup_tier(cc)][j] : ccup_day(cc, ko, (int)j);
   }
   if (!(said[k] & bit))
     logf("fl26swiss: cup reg %u dated: %s days %u..%u (%u records)", (unsigned)id, ko ? "knockout" : "groups",
@@ -4376,6 +4462,7 @@ static int g_ncd;
 __declspec(dllexport) int fl26_swiss_cupdraw(const uint16_t* v, int n)
 {
   g_ncd = 0;
+  g_ccup_gen++;
   for (int i = 0, q = 0; i < n && g_ncd < CD_MAX; i++) {
     cupdraw_t* c = &g_cd[g_ncd];
     c->reg = v[q]; c->mode = v[q + 1]; c->ntier = v[q + 2]; q += 3;
@@ -4639,6 +4726,7 @@ __declspec(dllexport) void fl26_swiss_ko_tick(void)
 __declspec(dllexport) int fl26_swiss_access(const uint16_t* v, int n)
 {
   int k = 0;
+  g_ccup_gen++;
   for (int i = 0; v && i < n && k < ACCESS_MAX; i++) {
     const uint16_t* e = v + 4 * i;
     if (!e[0] || (e[2] > AFCL && (e[2] < UCLQ || e[2] > UECLQ)) || e[1] > FINAL_MAX) continue;
@@ -5617,6 +5705,30 @@ static int gc_feeds(uint16_t id, int g)
   }
   return 0;
 }
+/* B35: which day table a cup of ours plays on (CCUP_GROUP_DAYS, CCUP_KO_DAYS): the weeks of the
+   game's continental competition its leagues can send a club to as well -- each entry's league
+   (a cup winner's entry: its alt league) as gc_feeds sees it, the access list and the game's
+   rights table. Worked out once per g_ccup_gen: the league schedulers ask for the days often. */
+static int ccup_region(ccup_t* c)
+{
+  if (c->region && c->rgen == g_ccup_gen) return c->region - 1;
+  int lib = 0, afc = 0;
+  for (int e = 0; e < c->n && e < CCUP_MAX_ENTRY; e++) {
+    uint16_t lg = c->erank[e] ? c->ereg[e] : c->ealt[e];
+    if (!lg) continue;
+    lib |= gc_feeds(lg, GC_LIB);                       /* the qualifying round's leagues too */
+    afc |= gc_feeds(lg, GC_AFC);
+  }
+  int cr = lib ? CR_LIB : afc ? CR_AFC : CR_NONE;
+  c->region = (uint8_t)(cr + 1); c->rgen = g_ccup_gen;
+  logf("fl26swiss: cup %u -- its leagues reach%s%s%s%s: %s", (unsigned)c->reg, lib ? " the Libertadores" : "",
+       lib && afc ? " and" : "", afc ? " the AFC Champions League" : "", lib || afc ? "" : " no competition of the game",
+       CR_NAME[cr]);
+  if (lib && afc)
+    logf("fl26swiss: cup %u -- no table is clear of both; the AFC Champions League's days are not kept clear",
+         (unsigned)c->reg);
+  return cr;
+}
 /* a club of league id can play in Europe: a place of its own, or its cup's (above), or the rcal
    line says so. UEFA's competitions only: a league with a Libertadores or AFC place was taken for
    a European one by the real calendars and kept clear of the Champions League's days for nothing */
@@ -5785,9 +5897,10 @@ static int respace(date_t* r, uint32_t n, const uint8_t* bad, int gap, int jit)
  * so weekdays and the order stay and the gaps only grow. Only at the July rollover (day 181):
  * a new career is built on day 216, and a round before that would never be played (GitHub #27).
  * Measured 2026-10-05 (run16): our leagues are dated at the rollover and their July rounds are
- * played and stay in the table through the day-216 build. The game's own leagues are not dated
- * again at the rollover -- they keep the dates their career was made with, on day 216 -- so a
- * `july` line for one of them changes nothing; it starts as the game dates it. */
+ * played and stay in the table through the day-216 build. The game's own leagues go through it too
+ * (sider.log of players: "reg 22 -- starts in July: first round day 219, was 233"), so a league
+ * whose country's super cup the game plays before its first round starts no earlier than a week
+ * after that cup (B36). */
 #define MAX_JULY 256
 static uint16_t g_july[MAX_JULY][2]; static int g_njuly = 0;
 __declspec(dllexport) int fl26_swiss_july(const uint16_t* v, int n)
@@ -5812,6 +5925,23 @@ static void july_start(uint16_t id, date_t* r, uint32_t n, int seen)
   }
   uint32_t f = season_pos(r[0].day), w = season_pos(want), ny = 183;   /* New Year's position */
   if (r[0].day >= 365 || w >= f || f >= ny) return;
+  /* a cup of its country the game plays before the first round stays before it, a week clear:
+     the Supertaça on 13 and 16 August, Liga Portugal's first round on 22 August -- brought
+     forward to 8 August it came after the super cup (Hugo Freixo, B36). The same for the
+     Netherlands, Turkey, Russia, Belgium and France: those keep the game's start */
+  const cupd_t* c = cupd_of(id);
+  uint32_t lim = w;
+  for (int j = 0; c && j < c->n; j++) {
+    uint32_t q = season_pos(c->d[j]);
+    if (q >= w && q < f && q + 7 > lim) lim = q + 7;
+  }
+  if (lim > w) {
+    if (!seen) logf("fl26swiss: reg %u -- a cup of its country plays on day %u before its first round (day %u): "
+                    "starts no earlier than a week after it", (unsigned)id, (unsigned)((lim - 7 + 182) % 365),
+                    (unsigned)r[0].day);
+    w = lim;
+    if (w >= f || (f - w) / 7 == 0) return;
+  }
   uint32_t weeks = (f - w) / 7, first = r[0].day;
   for (uint32_t i = 0; i < n; i++) {
     uint32_t p = season_pos(r[i].day);
@@ -7840,6 +7970,235 @@ static int hook(unsigned char* target, const unsigned char* sig, int n, void* ha
    which still ends in the original.  fl26chain.dll holds set_clubs 0x141522b50 and loads first. */
 static int g_chained = 0;
 
+/* ---- B49: the kept tables and cup winners outlive the game session ----
+ *
+ * The final tables (g_final) and cup winners (g_cupwin) kept at the July teardown, at New Year
+ * and for an Apertura + Clausura league lived in memory alone. A game quit between the teardown
+ * (about 1 July) and the August draws, or a save of those weeks loaded (a load is another
+ * timeline in abs_day, so whatever was kept before it is two years old), and the season's
+ * continental places went by squad strength (seed_of) instead of last season's tables:
+ * bythezl19's Cyprus and Bosnia had "8 from tables, 124 from first-season order" after a save of
+ * day 207 was loaded (B49); a continental super cup of ours took its cup winners from the game
+ * again (B51).
+ *
+ * Every keep is now written to fl26swiss-state.bin in the game's save folder (Mod Studio
+ * switches that folder with the world, so each world has its own), one record per table or
+ * winner: the club the user manages, the game's date (year * 365 + day, the same on every
+ * timeline), the regulation and the clubs. Whenever the game's date and abs_day stop moving
+ * together, or the user's club changes -- a game started, a save loaded -- what memory keeps is
+ * put on the new footing (and left out when it is dated after today: a later save's), then the
+ * records of the user's club dated today or before, and less than STATE_AGE days before, are
+ * read back, each regulation's newest, at the abs_day that date is now: every window that asks
+ * "kept this summer" sees them as if they had never left memory. A record dated after today
+ * belongs to a later save of the career and is not taken (a new career is built on day 216 or
+ * 0, before any keep of its club); a career with another club never sees them. A keep in
+ * memory as recent as the file's stays. Nothing of the game is hooked for this: the file is
+ * written from teardown_pre and apclau_keep, read from final_of, cupwin_of and any_final_kept. */
+#define STATE_FILE "fl26swiss-state.bin"
+#define STATE_AGE  400      /* past every window a keep is asked in (CONT_KEEP 330 the longest) */
+static const char STATE_MAGIC[8] = { 'F', 'L', '2', '6', 'S', 'S', 'T', '1' };
+typedef struct {
+  uint32_t user;                 /* the user's club when it was written */
+  int32_t gdate;                 /* the game's date of the keep: year * 365 + day */
+  uint16_t reg;
+  uint8_t kind, n;               /* kind 0 a final table (n clubs), 1 a cup winner (n 1) */
+  uint32_t club[FINAL_MAX];
+  uint32_t check;
+} state_rec_t;
+static int g_st_off = -0x7fffffff, g_st_day = -0x7fffffff, g_st_busy = 0;
+static uint32_t g_st_user = 0;
+#if defined(FL26_RCAL_TEST) && !defined(FL26_STATE_TEST)
+#define STATE_OFF                /* the calendar harness: no game, no save folder */
+#endif
+#ifdef FL26_STATE_TEST
+int state_test_date(void);
+uint32_t state_test_user(void);
+const char* state_test_path(void);
+#endif
+/* the game's date, year * 365 + day (the two fields season_year reads), or -1 */
+static int game_date(void)
+{
+#ifdef FL26_STATE_TEST
+  return state_test_date();
+#else
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!blk) return -1;
+  int t = *(uint16_t*)(blk + TODAY_OFF), y = *(uint16_t*)(blk + TODAY_OFF + 8);
+  return t >= 365 || y < 1990 || y > 2200 ? -1 : y * 365 + t;
+#endif
+}
+static uint32_t state_user(void)
+{
+#ifdef FL26_STATE_TEST
+  return state_test_user();
+#else
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  return user_club(o ? *(void**)(o + 0x48) : 0);
+#endif
+}
+/* <Documents>\KONAMI\eFootball PES 2021 SEASON UPDATE\2026\save\fl26swiss-state.bin, beside
+   fl26edit's side file; shell32 is asked at run time, so the DLL still imports kernel32 alone */
+static const char* state_path(void)
+{
+#ifdef FL26_STATE_TEST
+  return state_test_path();
+#else
+  static char path[MAX_PATH + 96]; static int tried = 0;
+  if (tried) return path[0] ? path : 0;
+  tried = 1;
+  typedef HRESULT (WINAPI *folder_fn)(HWND, int, HANDLE, DWORD, LPSTR);
+  HMODULE sh = LoadLibraryA("shell32.dll");
+  folder_fn f = sh ? (folder_fn)(uintptr_t)GetProcAddress(sh, "SHGetFolderPathA") : 0;
+  char docs[MAX_PATH];
+  if (!f || f(0, 5 /* CSIDL_PERSONAL */, 0, 0, docs) != 0) {
+    logf("fl26swiss: state -- no Documents folder; kept tables live in memory only");
+    return 0;
+  }
+  snprintf(path, sizeof path, "%s\\KONAMI\\eFootball PES 2021 SEASON UPDATE\\2026\\save\\" STATE_FILE, docs);
+  return path;
+#endif
+}
+static uint32_t state_check(const state_rec_t* r)
+{
+  const unsigned char* p = (const unsigned char*)r;
+  uint32_t h = 2166136261u;
+  for (size_t i = 0; i < sizeof *r - sizeof r->check; i++) { h ^= p[i]; h *= 16777619u; }
+  return h;
+}
+/* the file, read past its magic (written first into a new or empty file); 0 when it cannot be
+   opened or is not ours */
+static HANDLE state_open(const char* p, int write)
+{
+  HANDLE h = CreateFileA(p, GENERIC_READ | (write ? GENERIC_WRITE : 0), FILE_SHARE_READ, 0,
+                         write ? OPEN_ALWAYS : OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+  if (h == INVALID_HANDLE_VALUE) return 0;
+  char m[8]; DWORD got = 0;
+  if (ReadFile(h, m, 8, &got, 0) && got == 8 && !memcmp(m, STATE_MAGIC, 8)) return h;
+  LARGE_INTEGER size, zero; zero.QuadPart = 0;
+  DWORD put = 0;
+  if (write && got < 8 && GetFileSizeEx(h, &size) && size.QuadPart < 8 &&
+      SetFilePointerEx(h, zero, 0, FILE_BEGIN) && SetEndOfFile(h) &&
+      WriteFile(h, STATE_MAGIC, 8, &put, 0) && put == 8) return h;
+  CloseHandle(h);
+  return 0;
+}
+/* write what memory keeps and the file has not yet: this timeline's keeps (STATE_AGE) */
+static void state_store(void)
+{
+#ifndef STATE_OFF
+  int gn = game_date(), an = abs_day();
+  if (gn < 0 || an < 0) return;
+  static state_rec_t want[64 + 32];
+  int nw = 0, have[64 + 32] = { 0 };
+  uint32_t u = state_user();
+  for (int i = 0; i < g_nfinal + g_ncupwin; i++) {
+    int fin = i < g_nfinal, age = an - (fin ? g_final[i].day : g_cupwin[i - g_nfinal].day);
+    unsigned n = fin ? g_final[i].n : 1;
+    if (age < 0 || age > STATE_AGE || !n || n > FINAL_MAX) continue;
+    state_rec_t* r = &want[nw++];
+    memset(r, 0, sizeof *r);
+    r->user = u; r->gdate = gn - age; r->kind = (uint8_t)!fin; r->n = (uint8_t)n;
+    r->reg = fin ? g_final[i].reg : g_cupwin[i - g_nfinal].reg;
+    if (fin) memcpy(r->club, g_final[i].club, n * sizeof(uint32_t));
+    else r->club[0] = g_cupwin[i - g_nfinal].club;
+    r->check = state_check(r);
+  }
+  if (!nw) return;
+  const char* p = state_path();
+  HANDLE h = p ? state_open(p, 1) : 0;
+  if (!h) {
+    if (p) logf("fl26swiss: state -- cannot write %s (error %lu); kept tables live in memory only", p, GetLastError());
+    return;
+  }
+  state_rec_t r; DWORD got = 0;
+  LARGE_INTEGER end; end.QuadPart = 8;
+  while (ReadFile(h, &r, sizeof r, &got, 0) && got == sizeof r) {
+    end.QuadPart += sizeof r;
+    for (int k = 0; k < nw; k++) if (!have[k] && !memcmp(&r, &want[k], sizeof r)) have[k] = 1;
+  }
+  int put = 0, ok = SetFilePointerEx(h, end, 0, FILE_BEGIN) && SetEndOfFile(h);   /* a torn record off */
+  for (int k = 0; k < nw && ok; k++) {
+    if (have[k]) continue;
+    DWORD w = 0;
+    ok = WriteFile(h, &want[k], sizeof want[k], &w, 0) && w == sizeof want[k];
+    put += ok;
+  }
+  CloseHandle(h);
+  if (put || !ok)
+    logf("fl26swiss: state -- %d keep(s) written for club %08x on day %d%s", put, u, today(), ok ? "" : " (write failed)");
+#endif
+}
+/* read the user's career back when the game's date and abs_day no longer move together */
+static void state_sync(void)
+{
+#ifndef STATE_OFF
+  if (g_st_busy) return;
+  int gn = game_date();
+  if (gn < 0) return;
+  int an = abs_day();
+  if (an < 0 || (gn - an == g_st_off && an == g_st_day && g_st_user)) return;   /* no club yet: ask again */
+  uint32_t u = state_user();
+  if (gn - an == g_st_off && u == g_st_user) { g_st_day = an; return; }
+  /* what memory keeps, put on today's footing: kept while the game's date was abs_day + the
+     old offset; a keep dated after today is a later save's, left out (abs_day can take a save
+     of a year before, near the same day, for days going on) */
+  int old = g_st_off, off = gn - an, later = 0;
+  if (old != -0x7fffffff && old != off) {
+    for (int i = 0; i < g_nfinal; ) {
+      if (g_final[i].day + old > gn) { g_final[i] = g_final[--g_nfinal]; later++; continue; }
+      g_final[i].day += old - off; i++;
+    }
+    for (int i = 0; i < g_ncupwin; ) {
+      if (g_cupwin[i].day + old > gn) { g_cupwin[i] = g_cupwin[--g_ncupwin]; later++; continue; }
+      g_cupwin[i].day += old - off; i++;
+    }
+    if (later) logf("fl26swiss: state -- %d keep(s) of a later date left out: a save of an earlier day loaded", later);
+  }
+  g_st_off = off; g_st_day = an; g_st_user = u; g_st_read_back = 0;
+  const char* p = state_path();
+  HANDLE h = p ? state_open(p, 0) : 0;
+  if (!h) return;
+  static state_rec_t best[64 + 32];
+  int nb = 0;
+  state_rec_t r; DWORD got = 0;
+  while (ReadFile(h, &r, sizeof r, &got, 0) && got == sizeof r) {
+    if (r.check != state_check(&r) || r.user != u || r.gdate > gn || gn - r.gdate > STATE_AGE ||
+        r.kind > 1 || !r.n || r.n > FINAL_MAX || (r.kind && r.n != 1)) continue;
+    int k = 0;
+    while (k < nb && (best[k].kind != r.kind || best[k].reg != r.reg)) k++;
+    if (k == nb) { if (nb >= 64 + 32) continue; nb++; }
+    else if (r.gdate < best[k].gdate) continue;
+    best[k] = r;                                   /* the newest; of one day, the last written */
+  }
+  CloseHandle(h);
+  int nf = 0, nc = 0;
+  g_st_busy = 1;
+  for (int k = 0; k < nb; k++) {
+    int day = an - (gn - best[k].gdate);
+    if (!best[k].kind) {
+      final_t* f = final_of(best[k].reg);
+      if (f && f->day >= day) continue;
+      if (!f) { if (g_nfinal >= 64) continue; f = &g_final[g_nfinal++]; }
+      f->reg = best[k].reg; f->n = best[k].n; f->day = day;
+      memcpy(f->club, best[k].club, sizeof f->club);
+      nf++;
+      if (an - day < 120) g_st_read_back = 1;      /* last season's: not a career's first summer */
+    } else {
+      cupwin_t* w = cupwin_of(best[k].reg);
+      if (w && w->day >= day) continue;
+      if (!w) { if (g_ncupwin >= 32) continue; w = &g_cupwin[g_ncupwin++]; }
+      w->reg = best[k].reg; w->day = day; w->club = best[k].club[0];
+      nc++;
+    }
+  }
+  g_st_busy = 0;
+  if (nf || nc)
+    logf("fl26swiss: state -- %d final table(s) and %d cup winner(s) of club %08x's career read back on day %d (%s)",
+         nf, nc, u, today(), STATE_FILE);
+#endif
+}
+
 /* ---- Apertura + Clausura: the season's table ----
  *
  * The final table the July teardown keeps for a league (access_capture) is the one the game
@@ -7871,6 +8230,7 @@ static void apclau_keep(void)
     logf("fl26swiss: reg %u -- Apertura + Clausura table from %d matches kept as the final table: "
          "%08x %d pts, %08x %d pts ... last %08x %d pts", (unsigned)s->total, played,
          t.club[0], g_ctab_pts[0], t.club[1], g_ctab_pts[1], t.club[n - 1], g_ctab_pts[2]);
+    state_store();
   }
 }
 
@@ -8142,6 +8502,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   access_capture();
   ccup_keep_tables(in->b, n);
   ccup_keep_winners();
+  state_store();
   for (int j = 0; j < n; j++) {
     uint16_t id = in->b[j];
     if (id == 2) euro = 1;
