@@ -131,6 +131,16 @@ come with it instead.
   ACTIVE WORLD was right. It now names the pack the active world came from; for a world built
   on your PC it names the last pack that brought no world (scoreboards, kits), or nothing.
 
+- **The African and Asian cups had no knockout from the second season (B172).** The CAF and AFC
+  cups of a world (the Modpack's five) were drawn in the second summer, but their groups never
+  got a table of the new season: "group A has a table of 0 rows" and the knockout was never
+  filled. When a cup's groups enter no season, the season's tables are now made for them the
+  way the game makes them. A career that already missed a knockout under 0.2.4 starts the
+  next one right.
+- **The Champions League's round of 16 not drawn after two seasons with full tables (B169).**
+  When two seasons of the league phase both had 36 rows, the older table could be read; the
+  latest season's is now taken.
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.

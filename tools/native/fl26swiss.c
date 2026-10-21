@@ -3675,6 +3675,68 @@ static uint32_t ccup_club(const ccup_t* c, uint16_t reg, int rank, const char** 
 }
 static int ccup_cont(const char* how) { return !strcmp(how, "in the Libertadores / AFC list"); }
 
+/* ---- a cup's groups that enter the new season without a table (B172) ----
+ *
+ * Handed to register_all, a group row goes through the door and enter_season 0x14158f420,
+ * which gives the season its tables: it reads the row's season year (+0x2fc; anything but
+ * 0xffff is refused at once), works out the year from the first match date and looks for a
+ * sub-record of that year in the competition's header entry -- a new one is built
+ * (0x14158f9b0 -> 0x14158fd90, a table for every row of the competition and the year written
+ * to each +0x2fc), one already there is rebuilt only for ids 0x67 and 0x3a. In a world's first
+ * season that works. In the second (r12, 2026-10-20, all five cups of the Modpack) the groups
+ * were drawn and registered, kept +0x2fc 0xffff, and no header slot held a table of theirs but
+ * last season's: on day 47 "group A has a table of 0 rows" and the knockout was never filled.
+ * So when a group is still at 0xffff after register_all, its competition's sub-record of this
+ * season is built the way fl26join builds one for a league of ours (reg_post): a slot of this
+ * year is cleared (0x14158f870), then 0x14158f9b0 with flag 0. Nothing happens to a cup whose
+ * groups did enter. */
+#define CS_KEYOF_RVA    0x15451a0   /* (u32* out, u16 id): the header key of a competition     */
+#define CS_TABBASE_IMM  0x158df94   /* u32 immediate: where the tables start (hdr patches move it) */
+#define CS_SUBRESET_RVA 0x158f870   /* (u8* subrecord): clear its tables                        */
+#define CS_SUBFILL_RVA  0x158f9b0   /* (u8* entry, u16 year, u8 flag): build the year's tables  */
+typedef void (*cs_keyof_fn)(uint32_t* out, uint64_t id);
+typedef void (*cs_subreset_fn)(unsigned char* sub);
+typedef void (*cs_subfill_fn)(unsigned char* entry, uint64_t year, uint64_t flag);
+static void ccup_season_fix(uint16_t master, const uint16_t* reps, int n)
+{
+  int out = 0;
+  for (int g = 0; g < n; g++) {
+    unsigned char* rg = get_rec(reps[g]);
+    if (rg && *(uint16_t*)(rg + 0x2fc) == 0xffff) out++;
+  }
+  if (!out) return;
+  int year = season_year();
+  uint32_t tabbase = *(const uint32_t*)(uintptr_t)(g_base + CS_TABBASE_IMM);
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* std = o ? *(unsigned char**)(o + 0x78) : 0;
+  uint32_t key = 0xffffffff;
+  if (year) ((cs_keyof_fn)(uintptr_t)(g_base + CS_KEYOF_RVA))(&key, master);
+  unsigned char* e = 0;
+  if (std && key != 0xffffffff && tabbase >= 0x4650 && tabbase <= 0x10000 && tabbase % 0xb4 == 0)
+    for (uint32_t k = 0; k < tabbase / 0xb4 && !e; k++)
+      if (*(const uint32_t*)(std + (size_t)k * 0xb4) == key) e = std + (size_t)k * 0xb4;
+  if (!e) {
+    logf("fl26swiss: cup %u -- %d of %d group(s) entered no season, and its header entry was not found (year %d, key %08x)",
+         (unsigned)master, out, n, year, key);
+    return;
+  }
+  int cleared = 0;
+  for (int h = 0; h < 2; h++) {
+    unsigned char* s = e + 4 + h * 0x58;
+    if (*(const uint32_t*)s != 0xffffffff && *(const uint16_t*)(s + 4) == year) {
+      ((cs_subreset_fn)(uintptr_t)(g_base + CS_SUBRESET_RVA))(s);
+      cleared = 1;
+    }
+  }
+  ((cs_subfill_fn)(uintptr_t)(g_base + CS_SUBFILL_RVA))(e, (uint64_t)year, 0);
+  int in = 0;
+  for (int g = 0; g < n; g++) {
+    unsigned char* rg = get_rec(reps[g]);
+    if (rg && *(uint16_t*)(rg + 0x2fc) == (uint16_t)year) in++;
+  }
+  logf("fl26swiss: cup %u -- %d of %d group(s) entered no season; season %d built for them%s: %d of %d now in it",
+       (unsigned)master, out, n, year, cleared ? " (its old slot of that year cleared)" : "", in, n);
+}
 static int ccup_fill_one(int k, void* started)
 {
   const ccup_t* c = &g_ccup[k];
@@ -3860,6 +3922,7 @@ static int ccup_fill_one(int k, void* started)
   run_flush();
   logf("fl26swiss: cup %u -- groups %u..%u handed to register_all", (unsigned)c->reg, (unsigned)reps[0],
        (unsigned)reps[c->groups - 1]);
+  ccup_season_fix(c->reg, reps, c->groups);
   g_ccup_done[k] = 0;
   return 0;
 }
