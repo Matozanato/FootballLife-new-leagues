@@ -132,10 +132,11 @@ come with it instead.
   on your PC it names the last pack that brought no world (scoreboards, kits), or nothing.
 
 - **The African and Asian cups had no knockout from the second season (B172).** The CAF and AFC
-  cups of a world (the Modpack's five) were drawn in the second summer, but their groups never
-  got a table of the new season: "group A has a table of 0 rows" and the knockout was never
-  filled. When a cup's groups enter no season, the season's tables are now made for them the
-  way the game makes them.
+  cups of a world (the Modpack's five) kept last season's clubs after the summer, and a cup that
+  still held clubs counted as drawn: its groups were never drawn again, stayed out of the new
+  season and had no table ("group A has a table of 0 rows"), so the knockout was never filled.
+  A cup is now drawn anew once a season when neither it nor its groups are in the season, its
+  old groups emptied first, and its groups get the season's tables the way the game makes them.
 - **The Champions League's round of 16 not drawn after two seasons with full tables (B169).**
   When two seasons of the league phase both had 36 rows, the older table could be read; the
   latest season's is now taken.

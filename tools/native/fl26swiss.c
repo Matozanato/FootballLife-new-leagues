@@ -3228,6 +3228,7 @@ static int like_size_ok(unsigned n)
 }
 static uint32_t g_ccup_field[MAX_CCUP][CCUP_MAX_ENTRY]; static unsigned g_ccup_nf[MAX_CCUP];
 static unsigned g_ccup_done[MAX_CCUP];
+static int g_ccup_anew_year[MAX_CCUP];     /* B172: the season a group cup was last filled anew */
 /* Midweek, the way UEFA plays (GitHub #70): a cup the league champions go to (the CAF Champions
    League) on the Tuesdays, the one below it -- no entry at position 1: the Confederation Cup,
    the AFC Champions League Two, the Sudamericana -- on the Wednesdays of the same weeks, as the
@@ -3743,9 +3744,29 @@ static int ccup_fill_one(int k, void* started)
   unsigned char* rec = get_rec(c->reg);
   if (!ccup_world(c)) { logf("fl26swiss: cup %u -- its rows are not all in this world; left alone", (unsigned)c->reg); return 0; }
   unsigned held = rec_count(rec);
+  int anew = 0;
   if (c->groups && (held || rec_count(get_rec(ccup_rep(c, 0))))) {
-    logf("fl26swiss: cup %u already holds %u clubs; not filled again", (unsigned)c->reg, held);
-    return 0;
+    /* B172: the July teardown takes a group cup out of its season (+0x2fc 0xffff) but leaves last
+       season's clubs in its lists, and "any club = filled" then never filled it again: from the
+       second season its groups entered no season and day 47 drew no knockout (r12, third season,
+       day 257: cups 286..296 "already hold" 16/32 clubs, every group out of season). Filled means
+       filled this season: the cup or a group in a season. Anything else is filled anew, once a
+       season, so a cup whose groups still do not get in is not drawn over and over. */
+    int live = rec && *(const uint16_t*)(rec + 0x2fc) != 0xffff;
+    for (int g = 0; g < c->groups && !live; g++) {
+      unsigned char* rg = get_rec(ccup_rep(c, g));
+      live = rg && *(const uint16_t*)(rg + 0x2fc) != 0xffff;
+    }
+    int year = (abs_day() + 183) / 365;
+    if (live || g_ccup_anew_year[k] == year) {
+      logf("fl26swiss: cup %u already holds %u clubs%s; not filled again", (unsigned)c->reg, held,
+           live ? " in this season" : " (filled anew once this season)");
+      return 0;
+    }
+    g_ccup_anew_year[k] = year;
+    anew = 1;
+    logf("fl26swiss: cup %u still holds %u club(s) of an earlier season, its groups in no season -- filled anew",
+         (unsigned)c->reg, held);
   }
   unsigned n = 0, gaps = 0, cn = ccup_size(c);
   uint16_t unplayed_phase = 0;
@@ -3903,6 +3924,11 @@ static int ccup_fill_one(int k, void* started)
     }
     return 1;
   }
+  if (anew)                                         /* last season's groups, emptied before the draw */
+    for (int g = 0; g < c->groups; g++) {
+      u32vec e = { g_ccup_field[k], g_ccup_field[k], g_ccup_field[k] };
+      ((setcl_fn)(uintptr_t)(g_base + SETCL_RVA))(ccup_rep(c, g), &e, 1);
+    }
   u32vec v = { g_ccup_field[k], g_ccup_field[k] + n, g_ccup_field[k] + n };
   ((setcl_fn)(uintptr_t)(g_base + SETCL_RVA))(c->reg, &v, 1);
   run_flush();
