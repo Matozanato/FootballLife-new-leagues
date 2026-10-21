@@ -135,8 +135,7 @@ come with it instead.
   cups of a world (the Modpack's five) were drawn in the second summer, but their groups never
   got a table of the new season: "group A has a table of 0 rows" and the knockout was never
   filled. When a cup's groups enter no season, the season's tables are now made for them the
-  way the game makes them. A career that already missed a knockout under 0.2.4 starts the
-  next one right.
+  way the game makes them.
 - **The Champions League's round of 16 not drawn after two seasons with full tables (B169).**
   When two seasons of the league phase both had 36 rows, the older table could be read; the
   latest season's is now taken.
