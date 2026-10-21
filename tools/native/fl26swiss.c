@@ -4788,6 +4788,57 @@ static int ccup_cont(const char* how) { return !strcmp(how, "in the Libertadores
 typedef void (*cs_keyof_fn)(uint32_t* out, uint64_t id);
 typedef void (*cs_subreset_fn)(unsigned char* sub);
 typedef void (*cs_subfill_fn)(unsigned char* entry, uint64_t year, uint64_t flag);
+/* ---- the table pool (B172, fourth season) ----
+ *
+ * Every table of every season lives in one pool of 600 ([owner+0x78] + the table base, 0x187c
+ * each; free = id and year 0xffff, 0x14158f350 takes the first free one). A season's slot holds
+ * at most 20 table indices, but 0x14158fd90 gives a table to every row of the competition: the
+ * Champions League, Europa League and Conference League have 30 rows each, so every season 30
+ * tables were taken that no slot holds -- unreachable (a table is only ever found through a
+ * slot: 0x14158ded0 -> 0x14158df30) and never freed. r12, fourth season (2026-10-21): 0 of 600
+ * free, 55 of them such tables of 2025 and 2026, and no cup group got a table on day 255: all
+ * five cups "entered no season" again. So a table of an earlier season that no slot holds is
+ * freed the way 0x14158f870 frees a slot's tables: before a cup's groups are registered and at
+ * every July teardown. A table of this season is left alone. */
+#define CS_TABN 600
+typedef void (*cs_tabclr_fn)(unsigned char* t);
+static const uint32_t CS_TABCLR_RVA[5] = { 0x14ff000, 0x14ff070, 0x14ff010, 0x14fefa0, 0x14ff090 };
+static int table_pool_reap(const char* when)
+{
+  static uint8_t held[CS_TABN];
+  int year = season_year();
+  uint32_t tabbase = *(const uint32_t*)(uintptr_t)(g_base + CS_TABBASE_IMM);
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* std = o ? *(unsigned char**)(o + 0x78) : 0;
+  if (!std || year < 1990 || tabbase < 0x4650 || tabbase > 0x10000 || tabbase % 0xb4) return -1;
+  memset(held, 0, sizeof held);
+  for (uint32_t h = 0; h < tabbase / 0xb4; h++)
+    for (int k = 0; k < 2; k++) {
+      const unsigned char* sl = std + (size_t)h * 0xb4 + 4 + k * 0x58;
+      for (int i = 0; i < 20; i++) {
+        int32_t ix = *(const int32_t*)(sl + 8 + 4 * i);
+        if (ix == -1) break;
+        if (ix >= 0 && ix < CS_TABN) held[ix] = 1;
+      }
+    }
+  int nfree = 0, freed = 0, lo = 0xffff, hi = 0;
+  for (int i = 0; i < CS_TABN; i++) {
+    unsigned char* t = std + tabbase + (size_t)i * 0x187c;
+    uint16_t id = *(uint16_t*)t, yr = *(uint16_t*)(t + 2);
+    if (id == 0xffff && yr == 0xffff) { nfree++; continue; }
+    if (held[i] || yr < 1990 || yr >= year) continue;
+    *(uint32_t*)t = 0xffffffff;
+    for (int f = 0; f < 5; f++) ((cs_tabclr_fn)(uintptr_t)(g_base + CS_TABCLR_RVA[f]))(t);
+    *(uint64_t*)(t + 0x1874) = 0xffffffffffffffffull;
+    freed++; nfree++;
+    if (yr < lo) lo = yr;
+    if (yr > hi) hi = yr;
+  }
+  if (freed)
+    logf("fl26swiss: table pool (%s) -- %d table(s) of seasons %d..%d held by no season freed; %d of %d free",
+         when, freed, lo, hi, nfree, CS_TABN);
+  return nfree;
+}
 static void ccup_season_fix(uint16_t master, const uint16_t* reps, int n)
 {
   int out = 0;
@@ -5083,6 +5134,7 @@ static int ccup_fill_one(int k, void* started)
   }
   logf("fl26swiss: cup %u -- day %d: %u clubs drawn, groups%s", (unsigned)c->reg, today(), rec_count(rec), line);
   struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { reps, reps + c->groups, reps + c->groups };
+  table_pool_reap("cup draw");
   ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
   run_flush();
   logf("fl26swiss: cup %u -- groups %u..%u handed to register_all", (unsigned)c->reg, (unsigned)reps[0],
@@ -10570,6 +10622,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   if (n + 24 > 512) return in;
   access_capture();
   ccup_keep_tables(in->b, n);
+  table_pool_reap("July teardown");
   ccup_keep_winners(0);
   ccup_keep_winners(1);
   state_store();

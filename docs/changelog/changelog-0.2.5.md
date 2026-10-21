@@ -188,6 +188,11 @@ come with it instead.
   season and had no table ("group A has a table of 0 rows"), so the knockout was never filled.
   A cup is now drawn anew once a season when neither it nor its groups are in the season, its
   old groups emptied first, and its groups get the season's tables the way the game makes them.
+  From the fourth season the game had no table left to give them: it keeps every table of every
+  season in one pool of 600, and the Champions League, Europa League and Conference League took 30
+  tables each season that no season holds and that were never given back (r12, fourth season: 0
+  free, 55 of them such tables of earlier seasons). A table of an earlier season that no season
+  holds is now freed, before a cup's groups are drawn and at every summer rollover.
 - **The Champions League's round of 16 not drawn after two seasons with full tables (B169).**
   When two seasons of the league phase both had 36 rows, the older table could be read; the
   latest season's is now taken.
