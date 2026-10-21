@@ -149,6 +149,7 @@ local function from_world(world)
 end
 
 local MAX_CUPS = 16                                  -- fl26chain.c MAX_CUPS
+local MAX_CHAINS = 32                               -- fl26chain.c MAX_CHAINS (8 before B186)
 
 local CAVE_VA, CAVE_PAGE, CAVE_LEN = 0x14252e900, 0x14252e000, 0x108
 local PAGE_EXECUTE_READWRITE = 0x40
@@ -222,6 +223,12 @@ function m.init(ctx)
     for i = #CUPS, MAX_CUPS + 1, -1 do
       log(string.format("fl26chain: cup %d -- more than %d cups in the world, left to the game", CUPS[i][1], MAX_CUPS))
       CUPS[i] = nil
+    end
+    -- more pairs than the DLL takes refused them all (status 9) and left every chain and the
+    -- empty-list guard out (B186, Europack eu4: 10 pairs, 8 taken): keep the first ones
+    for i = #CHAINS, MAX_CHAINS + 1, -1 do
+      log(string.format("fl26chain: chain %d -> %d -- more than %d chain pairs in the world, left to the game", CHAINS[i][1], CHAINS[i][2], MAX_CHAINS))
+      CHAINS[i] = nil
     end
     log(string.format("fl26chain: world file -- %d leagues, %d chain pair(s) the game skips", #PROTECT, #CHAINS))
   end
