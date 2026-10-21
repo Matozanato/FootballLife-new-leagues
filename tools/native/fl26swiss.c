@@ -3876,7 +3876,8 @@ __declspec(dllexport) int fl26_swiss_ccup_first(const uint16_t* v, int n)
 typedef struct { uint16_t reg, ko, fill, ties; uint16_t days[2]; uint16_t ereg[2 * LPRE_MAX];
                  uint8_t erank[2 * LPRE_MAX]; uint16_t ealt[2 * LPRE_MAX]; uint8_t efrom[2 * LPRE_MAX];
                  int filled_year; uint32_t club[2 * LPRE_MAX]; unsigned nclub;
-                 uint8_t single, alias, feed8, poko; int ko_year; } lpre_t;
+                 uint8_t single, alias, feed8, poko; int ko_year;
+                 uint32_t gwin[8]; int gwin_year; } lpre_t;
 static lpre_t g_lpre[MAX_LPRE]; static int g_nlpre = 0;
 
 static int modern_conmebol(void)
@@ -3943,7 +3944,7 @@ __declspec(dllexport) int fl26_swiss_lpre(const uint16_t* v, int n)
     lpre_t* l = &g_lpre[g_nlpre++];
     memset(l, 0, sizeof *l);
     l->reg = reg; l->ko = ko; l->fill = fill; l->days[0] = d1; l->days[1] = d2;
-    l->ties = (uint16_t)(ne / 2); l->filled_year = -1; l->ko_year = -1;
+    l->ties = (uint16_t)(ne / 2); l->filled_year = -1; l->ko_year = -1; l->gwin_year = -1;
     for (unsigned j = 0; j < ne; j++) { l->ereg[j] = e[2 * j]; l->erank[j] = (uint8_t)e[2 * j + 1]; }
     int fed = 0;
     for (unsigned j = 0; k >= 0 && j < g_ccup[k].n; j++) {
@@ -4571,6 +4572,31 @@ static int libq_alias_stage(uint16_t id)
 #define POKO_PHFIN 0x1546c70     /* 0x141546c70(id): phase finished */
 typedef char (*pokofin_fn)(uint64_t id);
 
+/* B185: the Sudamericana group tables are empty by the time the play-off's second leg is
+   played (day 153 of the CONMEBOL test season, 21.10.: "group A has a table of 0 rows" on every
+   day after it, no round of 16, no winner). The eight group winners are kept with the play-off's
+   own fill, while the tables still hold them; poko_ko takes them from here first. */
+static void poko_keep_winners(lpre_t* l)
+{
+  const ccup_t* c = lpre_cup(l);
+  l->gwin_year = -1;
+  if (!c || c->groups != 8) return;
+  for (int j = 0; j < 8; j++) {
+    const char* how = "";
+    uint32_t w = cwc_club(ccup_rep(c, j), 1, &how);
+    if (w >> 14) w = canon_club(w);
+    if (!(w >> 14)) {
+      logf("fl26swiss: cup %u -- group %c winner not readable at the play-off fill; not kept",
+           (unsigned)c->reg, 'A' + j);
+      return;
+    }
+    l->gwin[j] = w;
+  }
+  l->gwin_year = lpre_year();
+  logf("fl26swiss: cup %u -- the 8 group winners kept for the round of 16 (A %08x ... H %08x)",
+       (unsigned)c->reg, l->gwin[0], l->gwin[7]);
+}
+
 /* on the days from its fill day to the eve of its first leg, once a season: the clubs, the ties,
    the master started and registered -- q_fill's steps */
 static void lpre_fill(int i)
@@ -4673,6 +4699,7 @@ static void lpre_fill(int i)
   }
   run_flush();
   l->nclub = n;
+  if (l->poko) poko_keep_winners(l);
   start_stage(0, l->reg);
   uint16_t id = l->reg;
   struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { &id, &id + 1, &id + 1 };
@@ -4714,14 +4741,29 @@ static void poko_ko(int i, void* started)
 
   static uint32_t buf[16];
   for (int j = 0; j < 8; j++) {
-    unsigned char* tab = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(ccup_rep(c, j));
-    uint32_t rows = tab ? *(uint32_t*)(tab + 0x3c0) : 0;
-    if (rows < 2 || rows > 8) {
-      logf("fl26swiss: cup %u -- group %c has a table of %u rows; round of 16 not filled",
-           (unsigned)c->reg, 'A' + j, (unsigned)rows);
-      return;
+    /* the winners kept at the play-off fill (B185), else the live table, else the table
+       counted from the group's played matches (a save loaded after the fill) */
+    uint32_t w = l->gwin_year == year ? l->gwin[j] : 0;
+    if (!(w >> 14)) {
+      unsigned char* tab = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(ccup_rep(c, j));
+      uint32_t rows = tab ? *(uint32_t*)(tab + 0x3c0) : 0;
+      if (rows >= 2 && rows <= 8) w = *(uint32_t*)tab;
+      else {
+        static final_t ft;
+        uint16_t rep = ccup_rep(c, j);
+        int played = 0, n = count_table(&rep, 1, &ft, &played);
+        if (n >= 4 && played >= n) {
+          w = ft.club[0];
+          logf("fl26swiss: cup %u -- group %c table empty; winner %08x counted from %d played match(es)",
+               (unsigned)c->reg, 'A' + j, w, played);
+        } else {
+          logf("fl26swiss: cup %u -- group %c has a table of %u rows and %d played match(es); round of 16 not filled",
+               (unsigned)c->reg, 'A' + j, (unsigned)rows, played);
+          return;
+        }
+      }
     }
-    buf[2 * j] = *(uint32_t*)tab;
+    buf[2 * j] = w;
     buf[2 * j + 1] = win[(j + 4) % 8];
   }
 
