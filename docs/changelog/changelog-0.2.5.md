@@ -193,6 +193,16 @@ come with it instead.
   tables each season that no season holds and that were never given back (r12, fourth season: 0
   free, 55 of them such tables of earlier seasons). A table of an earlier season that no season
   holds is now freed, before a cup's groups are drawn and at every summer rollover.
+- **The game crashed at a quarter-final of the CONCACAF Champions Cup in a later season (B181).**
+  A cup that is a knockout only (the CONCACAF Champions Cup, the OFC Champions League) and the
+  Conference League's knockout kept last season's rounds: the new season's matches got the new
+  clubs, but each tie still named last season's two clubs, so the game found few of the round of
+  16's winners and played a quarter-final with no club in it (r12, fourth season, 7 April). Every
+  tie still to be played now names the clubs of its match; a career already in that state is put
+  right when it is loaded, as long as the round has not been played yet.
+- **The Conference League not played in a later season (B118).** Its league phase kept last
+  season's 36 clubs after the summer and counted as filled; it is now filled anew once a season
+  when it is in no season.
 - **The Champions League's round of 16 not drawn after two seasons with full tables (B169).**
   When two seasons of the league phase both had 36 rows, the older table could be read; the
   latest season's is now taken.

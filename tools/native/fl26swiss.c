@@ -989,11 +989,35 @@ static int in_rec(uint16_t id, uint32_t c)
 
 static uint32_t g_acc[3][FIELD]; static unsigned g_nacc[3];
 static int g_access_on;
+static int abs_day(void);
 static int uecl_fill(void* started)
 {
   unsigned char* rec = get_rec(UECL_REG);
   if (!rec || !get_rec(UECL_ROW)) { logf("fl26swiss: no Conference League in this world (reg %u)", UECL_REG); return 0; }
-  if (rec_count(get_rec(UECL_ROW))) { logf("fl26swiss: row %u already holds %u clubs; Conference League not filled again", UECL_ROW, rec_count(get_rec(UECL_ROW))); return 0; }
+  /* B118: the July teardown takes the row out of its season (+0x2fc 0xffff) but leaves last
+     season's 36 clubs in it, and "any club = filled" then never filled it again: r12, fourth
+     season (2026-10-21), "row 1210 already holds 36 clubs" on the draw day, so the Conference
+     League never started and its table stayed empty (Micarodvzla, 17.10.). Filled means filled
+     this season: the row in a season, or filled already this season. Anything else is filled
+     anew, its old clubs emptied first. */
+  static int filled_year = -1;
+  int year = (abs_day() + 183) / 365;
+  unsigned char* row0 = get_rec(UECL_ROW);
+  if (rec_count(row0)) {
+    int live = *(const uint16_t*)(row0 + 0x2fc) != 0xffff;
+    if (live || filled_year == year) {
+      logf("fl26swiss: row %u already holds %u clubs%s; Conference League not filled again", UECL_ROW,
+           rec_count(row0), live ? " in this season" : " (filled once this season)");
+      return 0;
+    }
+    logf("fl26swiss: row %u still holds %u club(s) of an earlier season and is in no season -- filled anew",
+         UECL_ROW, rec_count(row0));
+    static uint32_t none[1];
+    u32vec e = { none, none, none };
+    ((setcl_fn)(uintptr_t)(g_base + SETCL_RVA))(UECL_ROW, &e, 1);
+    run_flush();
+  }
+  filled_year = year;
   static uint32_t buf[48]; unsigned n = 0, own = 0, spill = 0, loader = 0;
   uint32_t cand[160]; unsigned nc = 0;
   if (g_access_on && g_nacc[2] == FIELD) {       /* the access list decided it */
@@ -1034,11 +1058,24 @@ pick:
   return 1;
 }
 
+#define FREETAB_RVA 0x1363040   /* (this, u16 id): free a regulation's tie tables -- the July teardown's own step */
+typedef char (*freetab_fn)(void* self, uint64_t id);
 static int uecl_ko(void* started)
 {
   unsigned char* ko = get_rec(UECL_KO);
   if (!ko) return 0;
-  if (rec_count(ko)) return 0;
+  /* B181: last season's sixteen stay in the list through the July teardown (as row 1210's do, B118),
+     and with them its rounds: filled anew once a season when it is in no season, its rounds freed
+     first, as the teardown frees the game's own */
+  static int filled_year = -1;
+  int year = (abs_day() + 183) / 365;
+  if (rec_count(ko)) {
+    if (*(const uint16_t*)(ko + 0x2fc) != 0xffff || filled_year == year) return 0;
+    logf("fl26swiss: reg %u still holds %u club(s) of an earlier season and is in no season -- filled anew",
+         UECL_KO, rec_count(ko));
+  }
+  filled_year = year;
+  ((freetab_fn)(uintptr_t)(g_base + FREETAB_RVA))(0, UECL_KO);
   uint32_t one = 1; u32vec v = { &one, &one + 1, &one + 1 };   /* replaced by the knockout hook */
   ((setcl_fn)(uintptr_t)(g_base + SETCL_RVA))(UECL_KO, &v, 1);
   run_flush();
@@ -1072,10 +1109,8 @@ static int uecl_ko(void* started)
 #define TODAY_OFF  0x19115e4
 #endif
 #define WINNER_RVA 0x151b2e0
-#define FREETAB_RVA 0x1363040   /* (this, u16 id): free a regulation's tie tables -- the July teardown's own step */
 #define PO_MONTHS_BEFORE 180                 /* any day below this is the second half of a season */
 typedef void* (*winner_fn)(uint32_t* out, uint64_t id);
-typedef char (*freetab_fn)(void* self, uint64_t id);
 static int g_po_enabled = 1;
 #ifdef FL26_RCAL_TEST
 int rcal_test_today(void);
@@ -4879,6 +4914,7 @@ static void ccup_season_fix(uint16_t master, const uint16_t* reps, int n)
   logf("fl26swiss: cup %u -- %d of %d group(s) entered no season; season %d built for them%s: %d of %d now in it",
        (unsigned)master, out, n, year, cleared ? " (its old slot of that year cleared)" : "", in, n);
 }
+static int ko_sync(uint16_t reg, const char* why);
 static int ccup_fill_one(int k, void* started)
 {
   const ccup_t* c = &g_ccup[k];
@@ -5069,6 +5105,9 @@ static int ccup_fill_one(int k, void* started)
       logf("fl26swiss: cup %u still holds %u club(s) of an earlier season (%08x ...) -- filled anew",
            (unsigned)c->reg, held, rec_clubs(rec)[0]);
     }
+    /* B181: its rounds of last season too -- the schedule builder reuses a round it finds, and
+       register_all then gives only the match records this season's clubs */
+    ((freetab_fn)(uintptr_t)(g_base + FREETAB_RVA))(0, c->ko);
     u32vec v = { g_ccup_field[k], g_ccup_field[k] + n, g_ccup_field[k] + n };
     ((setcl_fn)(uintptr_t)(g_base + SETCL_RVA))(c->ko, &v, 1);
     run_flush();
@@ -5090,6 +5129,7 @@ static int ccup_fill_one(int k, void* started)
       logf("fl26swiss: cup %u -- knockout registered, %d match record(s)", (unsigned)c->ko,
            ccup_matches(c->ko));
     }
+    ko_sync(c->ko, "filled");
     return 1;
   }
   if (anew)                                         /* last season's groups, emptied before the draw */
@@ -5720,6 +5760,45 @@ static int ko_bracket(uint16_t reg, uint32_t kind, const char* name)
   return 1;
 }
 
+/* B181: a knockout's rounds name their clubs twice -- in the round's slot (+0, +4) and in its
+   match records (+0x14 home, +0x18 away of the first leg) -- and the game finds a tie's winner
+   by the slot's two clubs. The July teardown hands a native cup's rounds back, so the next draw
+   builds them anew; a cup of the world file filled on its fill day (the CONCACAF Champions Cup,
+   the OFC Champions League) and the Conference League's knockout keep last season's rounds, and
+   register_all then writes this season's clubs into the match records only. r12, fourth season:
+   reg 294's round of 16 was played by this season's clubs while its slots still held the last
+   season's, the game found 2 of the 8 winners, and the quarter-final of 7 April with no club in
+   it took the game down (0x141333485, day 96). So every slot whose first leg is still to be
+   played is given the clubs of that match; a round not drawn yet gets the match's "no club". */
+static int ko_sync(uint16_t reg, const char* why)
+{
+  int fixed = 0, rounds = 0;
+  unsigned char* rec = get_rec(reg);
+  if (!rec || !rec_count(rec) || *(const uint16_t*)(rec + 0x2fc) == 0xffff) return 0;   /* empty, or in no season */
+  for (uint32_t kind = 0x20; kind < 0x40; kind++) {
+    unsigned char* rnd = ko_round(reg, kind);
+    int n = ko_slots(rnd);
+    if (n < 1 || n > 16) continue;
+    rounds++;
+    for (int s = 0; s < n; s++) {
+      uint32_t* sl = ko_slot(rnd, s);
+      unsigned char* m = ko_match(*(uint16_t*)(sl + 2));
+      if (!m || (m[7] & 0x40)) continue;            /* no first leg, or played */
+      uint32_t h = *(uint32_t*)(m + 0x14), a = *(uint32_t*)(m + 0x18);
+      if (sl[0] == h && sl[1] == a) continue;
+      if (fixed < 4)
+        logf("fl26swiss:   reg %u round %#x tie %d: slot %08x v %08x, its first leg %08x v %08x", (unsigned)reg,
+             (unsigned)kind, s, sl[0], sl[1], h, a);
+      sl[0] = h; sl[1] = a;
+      fixed++;
+    }
+  }
+  if (fixed)
+    logf("fl26swiss: reg %u -- %d knockout slot(s) of %d round(s) held another season's clubs; given their "
+         "matches' clubs (%s, day %d)", (unsigned)reg, fixed, rounds, why, today());
+  return fixed;
+}
+
 /* ---- a country cup's draw: seeds meet unseeded clubs ----
  *
  * The game fills a cup's bracket strictly in the order of its entry list, top to bottom, and the
@@ -5992,6 +6071,16 @@ __declspec(dllexport) void fl26_swiss_ko_tick(void)
   lpre_fill_days();
   ccup_fill_days();
   cupdraw_tick();
+  {
+    static ULONGLONG last;                        /* fixfind walks the table: every few seconds */
+    ULONGLONG now = GetTickCount64();
+    if (now - last >= 3000) {
+      last = now;
+      for (int k = 0; k < g_nccup; k++)
+        if (g_ccup[k].ko) ko_sync(g_ccup[k].ko, "day loop");
+      ko_sync(UECL_KO, "day loop");
+    }
+  }
   if (d < 60 || d > 150) return;
   static const uint16_t KO_REGS[3] = { 4, 6, UECL_KO };
   static const char* KO_NAME[3] = { "Champions League", "Europa League", "Conference League" };
@@ -10126,6 +10215,10 @@ typedef struct {
   uint32_t club[FINAL_MAX];
   uint32_t check;
 } state_rec_t;
+/* every final table and cup winner memory can hold: state_store took 64 + 32 from before g_final
+   grew to FINAL_N, and in a fourth season (2026-10-21, r12, ~110 keeps) want[] ran over the
+   globals after it -- UEFA10's, so Competition Info's League Phase called address 0 */
+#define STATE_MAXREC (FINAL_N + 32)
 static int g_st_off = -0x7fffffff, g_st_day = -0x7fffffff, g_st_busy = 0;
 static uint32_t g_st_user = 0;
 #if defined(FL26_RCAL_TEST) && !defined(FL26_STATE_TEST)
@@ -10210,13 +10303,15 @@ static void state_store(void)
 #ifndef STATE_OFF
   int gn = game_date(), an = abs_day();
   if (gn < 0 || an < 0) return;
-  static state_rec_t want[64 + 32];
-  int nw = 0, have[64 + 32] = { 0 };
+  static state_rec_t want[STATE_MAXREC];
+  static int have[STATE_MAXREC];
+  int nw = 0;
+  memset(have, 0, sizeof have);
   uint32_t u = state_user();
   for (int i = 0; i < g_nfinal + g_ncupwin; i++) {
     int fin = i < g_nfinal, age = an - (fin ? g_final[i].day : g_cupwin[i - g_nfinal].day);
     unsigned n = fin ? g_final[i].n : 1;
-    if (age < 0 || age > STATE_AGE || !n || n > FINAL_MAX) continue;
+    if (age < 0 || age > STATE_AGE || !n || n > FINAL_MAX || nw >= STATE_MAXREC) continue;
     state_rec_t* r = &want[nw++];
     memset(r, 0, sizeof *r);
     r->user = u; r->gdate = gn - age; r->kind = (uint8_t)!fin; r->n = (uint8_t)n;
@@ -10280,7 +10375,7 @@ static void state_sync(void)
   const char* p = state_path();
   HANDLE h = p ? state_open(p, 0) : 0;
   if (!h) return;
-  static state_rec_t best[64 + 32];
+  static state_rec_t best[STATE_MAXREC];
   int nb = 0;
   state_rec_t r; DWORD got = 0;
   while (ReadFile(h, &r, sizeof r, &got, 0) && got == sizeof r) {
@@ -10288,7 +10383,7 @@ static void state_sync(void)
         r.kind > 1 || !r.n || r.n > FINAL_MAX || (r.kind && r.n != 1)) continue;
     int k = 0;
     while (k < nb && (best[k].kind != r.kind || best[k].reg != r.reg)) k++;
-    if (k == nb) { if (nb >= 64 + 32) continue; nb++; }
+    if (k == nb) { if (nb >= STATE_MAXREC) continue; nb++; }
     else if (r.gdate < best[k].gdate) continue;
     best[k] = r;                                   /* the newest; of one day, the last written */
   }
@@ -10300,7 +10395,7 @@ static void state_sync(void)
     if (!best[k].kind) {
       final_t* f = final_of(best[k].reg);
       if (f && f->day >= day) continue;
-      if (!f) { if (g_nfinal >= 64) continue; f = &g_final[g_nfinal++]; }
+      if (!f) { if (g_nfinal >= FINAL_N) continue; f = &g_final[g_nfinal++]; }
       f->reg = best[k].reg; f->n = best[k].n; f->day = day;
       memcpy(f->club, best[k].club, sizeof f->club);
       nf++;

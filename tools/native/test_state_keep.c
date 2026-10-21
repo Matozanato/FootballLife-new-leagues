@@ -200,6 +200,25 @@ int main(void)
     expect(places_from_table(CYP, 130, 4, 120), "the replayed season's table is the newest of 2027");
   }
 
+  printf("\nMore keeps than the old 64 + 32 (a fourth season, 2026-10-21)\n");
+  {
+    restart();
+    DeleteFileA(g_path_test);
+    go(2030, 182);
+    for (int i = 0; i < 200; i++) keep_table((uint16_t)(400 + i), 1000 + i * 4, 4);
+    for (int i = 0; i < 30; i++) keep_winner((uint16_t)(700 + i), CLUB(5000 + i));
+    state_store();
+    expect(file_size() == 8 + 230L * (long)sizeof(state_rec_t), "all 230 keeps written");
+    restart();
+    go(2030, 201);
+    int all = 1;
+    for (int i = 0; i < 200; i++) { final_t* f = final_of((uint16_t)(400 + i)); if (!f || f->club[0] != CLUB(1000 + i * 4)) all = 0; }
+    expect(all && g_nfinal == 200, "all 200 tables read back");
+    int wins = 1;
+    for (int i = 0; i < 30; i++) { cupwin_t* w = cupwin_of((uint16_t)(700 + i)); if (!w || w->club != CLUB(5000 + i)) wins = 0; }
+    expect(wins && g_ncupwin == 30, "all 30 cup winners read back");
+  }
+
   DeleteFileA(g_path_test);
   printf(fails ? "\n%d check(s) FAILED\n" : "\nall checks passed\n", fails);
   return fails ? 1 : 0;
