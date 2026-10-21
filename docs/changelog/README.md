@@ -2,6 +2,8 @@
 
 What each release of FL26 Mod Studio brought. The full notes of the latest releases:
 
+- [0.2.4.2](changelog-0.2.4.2.md) (2026-10-21): a quick fix -- promotion and relegation below the
+  second division in the Europack eu4 and other big worlds.
 - [0.2.4.1](changelog-0.2.4.1.md) (2026-10-20): fixes of what you reported since 0.2.4 (kits, Make it
   editable, Import crests, the Players page's rating, the AFC Champions League Two ...). No need to
   update if 0.2.4 works for you.

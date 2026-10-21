@@ -63,6 +63,7 @@ CPKs: it all goes in through Sider modules and data files, and comes out again.
 > straight from their zip, a quick tour and step-by-step guides in *Help*. Your 0.2.2 / 0.2.3 career
 > keeps working. Mod Studio is **still in development**: something can break; tell us on Discord
 > and we fix it. What changed: [changelog-0.2.4](docs/changelog/changelog-0.2.4.md) ·
+> **0.2.4.2** (2026-10-21, quick fix: promotion below the second division in the Europack eu4 and other big worlds): [changelog-0.2.4.2](docs/changelog/changelog-0.2.4.2.md) ·
 > **0.2.4.1** (2026-10-20, fixes, no need to update if 0.2.4 works for you): [changelog-0.2.4.1](docs/changelog/changelog-0.2.4.1.md) · every version:
 > [changelog](docs/changelog/README.md).
 >
