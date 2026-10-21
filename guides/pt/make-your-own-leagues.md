@@ -254,7 +254,7 @@ e [8.2](mod-studio-guide.md#82-construir-ativar-jogar).
 **Mais ▾** (no topo da aba Campeonatos) tem as ferramentas para o mundo todo: **Torneios de
 pré-temporada**, **Taças dos nossos países** (as copas de todas as suas ligas numa tabela),
 **Copas dos países do jogo**, **Vagas continentais dos campeonatos do jogo**, **Clubes europeus
-da primeira temporada**, **Ranking da UEFA**, **Vagas sul-americanas**, **Nomes das
+da primeira temporada**, **Ranking da UEFA**, **Vagas sul-americanas** (com a caixa **Competições modernas da CONMEBOL**, 0.2.5), **Países da CONMEBOL sem liga**, **Nomes das
 competições** (nomes e logos novos para copas e competições continentais), **IDs das
 competições**, **Ordem dos campeonatos**, **Temporadas dos campeonatos do jogo** e **Nome do
 mundo e arquivo...** (o nome da pasta do mundo; tem que começar com `_FL26`). Você não precisa de

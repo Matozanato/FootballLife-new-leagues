@@ -219,7 +219,7 @@ tem o nome, o logo e os clubes dela (seção 8, "As ligas do jogo"). **Adicionar
 uma nova. **Lugares em Select Team** mostra onde a última construção colocou cada uma das suas
 ligas. **Mais ▾** tem **Torneios de pré-temporada**, **Taças dos nossos países**, **Copas dos
 países do jogo**, **Vagas continentais dos campeonatos do jogo**, **Clubes europeus da primeira
-temporada**, **Ranking da UEFA**, **Vagas sul-americanas**, **Nomes das competições**, **IDs das
+temporada**, **Ranking da UEFA**, **Vagas sul-americanas** (com a caixa **Competições modernas da CONMEBOL**, 0.2.5), **Países da CONMEBOL sem liga** (com as competições modernas), **Nomes das competições**, **IDs das
 competições**, **Ordem dos campeonatos**, **Temporadas dos campeonatos do jogo** e **Nome do
 mundo e arquivo...**. Este último abre a página com o nome do mundo e a lista das suas ligas
 (guias mais antigos chamam ela de *Campeonatos novos*).
@@ -503,7 +503,7 @@ mais forte para a fase mais próxima da fase de liga. Depois você ainda pode mu
 qualquer liga (*Europa* na liga, *Vagas continentais dos campeonatos do jogo*): a construção usa as
 vagas, não o ranking.
 
-**Vagas sul-americanas** (Campeonatos → Mais, 0.1.7, só leitura): para cada liga sul-americana, as
+**Vagas sul-americanas** (Campeonatos → Mais, 0.1.7): para cada liga sul-americana, as
 quatro do jogo e as suas, quais posições vão para a Copa Libertadores, a fase preliminar dela e a
 Copa Sul-Americana. As vagas da Libertadores do jogo são as dele (Brasil do 1.º ao 4.º e o campeão
 da Copa do Brasil, fase preliminar 5.º e 6.º, e assim por diante -- as mesmas que o Competition Info
@@ -512,6 +512,19 @@ liga do jogo manda para ela com as suas vagas incluídas: as suas ligas primeiro
 Argentina, Chile e Colômbia, um clube cada, alternando até 32. Um clube que já está na Libertadores
 ou na fase preliminar dela dá lugar ao próximo da liga dele. **1. Conferir o plano** mostra a mesma
 lista sempre que o mundo tem uma vaga na Libertadores ou na Sul-Americana.
+
+**Competições modernas da CONMEBOL** (uma caixa em **Vagas sul-americanas**, 0.2.5; vmardonesdev e
+nissindiaz, #146): a qualificação da Libertadores em três fases (fase 1: 6 clubes, fase 2: 13 clubes
+e os três vencedores da fase 1, fase 3: os oito vencedores da fase 2), uma Copa Sul-Americana com
+uma primeira fase de 32 clubes e um play-off depois dos grupos, e a Recopa Sul-Americana em
+fevereiro. Ativada, a janela Liga oferece **Libertadores, fase 1**, **fase 2** e **Copa
+Sudamericana, primeira fase** (e não mais a fase preliminar), as ligas sul-americanas do jogo só têm
+as vagas que você der em **Vagas continentais dos campeonatos do jogo**, e **Países da CONMEBOL sem
+liga** dá vagas aos clubes de um país sem liga no seu mundo. A janela conta as vagas contra o total
+de que o Build precisa (26 vagas nos grupos da Libertadores, 13 na fase 2, 6 na fase 1, 12 nos
+grupos da Sul-Americana, 32 na primeira fase). Desativada, o padrão, um mundo constrói as
+competições clássicas exatamente como antes; desativar tira só as vagas que as modernas têm, depois
+de perguntar.
 
 **Nomes das competições** (Campeonatos → Mais, ou Meu mundo → Copas): um nome e um logo novos para
 as copas, supercopas e competições continentais do jogo -- a FA Cup, a Champions League, a

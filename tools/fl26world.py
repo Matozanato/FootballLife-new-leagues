@@ -155,6 +155,21 @@ UCLQ, UELQ, UECLQ, PLAYOFF = 10, 11, 12, 16
 # each play-off: (the competition its winners join, the one its losers drop to or None)
 PLAYOFFS = {UCLQ: (0, 1), UELQ: (1, 2), UECLQ: (2, None)}
 UEFA_LINE = {c for c, _n in COMPETITIONS}        # the ones a uefa line carries
+
+# Logical Mod Studio access targets for the modern CONMEBOL stages.
+# These are NOT competition ids from the game and deliberately are not
+# part of UEFA_LINE. League Builder consumes them before fl26world.txt
+# is written.
+LIB_F1, LIB_F2, LIB_F3, SUD_FIRST = 16, 17, 18, 19
+
+# logical id -> (UI name, legacy/native target, internal stage)
+CONMEBOL_STAGE_TARGETS = {
+    LIB_F1: ("Libertadores - Phase 1", 4, "phase1"),
+    LIB_F2: ("Libertadores - Phase 2", 4, "phase2"),
+    LIB_F3: ("Libertadores - Phase 3", 4, "phase3"),
+    SUD_FIRST: ("Copa Sudamericana - First stage", 9, "first"),
+}
+CONMEBOL_STAGE_IDS = set(CONMEBOL_STAGE_TARGETS)
 # In front of a play-off a world can have a third (stage 1) and a second qualifying round (stage
 # 2), sixteen clubs each (`qround <competition> <round> <regulation>` lines, fl26swiss.dll's August
 # qualifying rounds). A round's winners go to the next round of its competition; its losers drop
@@ -263,6 +278,7 @@ CCUPS = [
 ]
 CCUP_KNOCKOUT = {13}              # cups that play no groups: a knockout of 16 (or 8, 4) from the start
 COMPETITIONS += [(c, n) for c, n, _code, _conf, _fill in CCUPS]
+COMPETITIONS += [(c, v[0]) for c, v in CONMEBOL_STAGE_TARGETS.items()]
 # The shipped leagues that fill the cups above, by regulation (for Check the plan).
 FILL_NAMES = {_BRA: "Brasileirão Série A (Brazil)", _ARG: "Liga Profesional (Argentina)",
               _CHI: "Liga de Primera (Chile)", _COL: "Liga BetPlay (Colombia)", _J1: "J1 League (Japan)",

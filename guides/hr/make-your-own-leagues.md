@@ -237,7 +237,7 @@ i [8.2](mod-studio-guide.md#82-izgradi-uključi-igraj).
 **Više ▾** (na vrhu kartice Lige) ima alate za cijeli svijet: **Predsezonski turniri**, **Kupovi
 naših država** (kupovi svih tvojih liga u jednoj tablici), **Kupovi država iz igre**, **Europska
 mjesta liga iz igre**, **Europski klubovi prve sezone**, **UEFA poredak**, **Južnoamerička
-mjesta**, **Imena natjecanja** (nova imena i logotipi za kupove i kontinentalna natjecanja),
+mjesta** (s kućicom **Moderna natjecanja CONMEBOL-a**, 0.2.5), **Zemlje CONMEBOL-a bez lige**, **Imena natjecanja** (nova imena i logotipi za kupove i kontinentalna natjecanja),
 **ID-evi natjecanja**, **Poredak liga**, **Sezone liga iz igre** i **Ime svijeta i datoteka...**
 (ime mape svijeta; mora počinjati s `_FL26`). Za prvi svijet ne trebaš nijedan od njih. Prozori
 kupova su i pod **Kupovi ▾**, pored kartica.

@@ -242,7 +242,8 @@ and [8.2](mod-studio-guide.md#82-build-switch-on-play).
 **More ▾** (top of the Leagues tab) has the tools for the whole world: **Pre-season cups**,
 **Cups of our countries** (the cups of all your leagues in one table), **Cups of the game's
 countries**, **European places of the game's leagues**, **First-season European clubs**, **UEFA
-ranking**, **South American places**, **Competition names** (new names and logos for cups and
+ranking**, **South American places** (with the **Modern CONMEBOL competitions** switch), **CONMEBOL
+countries without a league**, **Competition names** (new names and logos for cups and
 continental competitions), **Competition IDs**, **League order**, **Seasons of the game's
 leagues** and **World name and file...** (the world's folder name; it must start with `_FL26`).
 You do not need any of them for a first world. The cup windows are also under **Cups ▾**, next

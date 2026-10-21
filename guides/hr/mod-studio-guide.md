@@ -198,7 +198,7 @@ Odaberi jednu: tvoja liga ima **Uredi ligu...**, **Dodaj nižu ligu**, **Klubovi
 igre"). **Dodaj ligu** napravi novu. **Mjesta u Select Teamu** pokazuje kamo je zadnji Build
 stavio svaku tvoju ligu. **Više ▾** ima **Predsezonski turniri**, **Kupovi naših država**,
 **Kupovi država iz igre**, **Europska mjesta liga iz igre**, **Europski klubovi prve sezone**,
-**UEFA poredak**, **Južnoamerička mjesta**, **Imena natjecanja**, **ID-evi natjecanja**, **Poredak
+**UEFA poredak**, **Južnoamerička mjesta** (s kućicom **Moderna natjecanja CONMEBOL-a**, 0.2.5), **Zemlje CONMEBOL-a bez lige** (uz moderna natjecanja), **Imena natjecanja**, **ID-evi natjecanja**, **Poredak
 liga**, **Sezone liga iz igre** i **Ime svijeta i datoteka...**. Ovo zadnje otvara stranicu s
 imenom svijeta i popisom tvojih liga (starije upute je zovu *Nove lige*).
 
@@ -411,7 +411,7 @@ pretkolu, kojeg Mod Studio nema). Mjesta u kvalifikacijama idu u kola redom klju
 država u kolo najbliže ligaškoj fazi. Poslije i dalje možeš ručno promijeniti mjesta svake lige
 (*Europa* na ligi, *Europska mjesta liga iz igre*): Build uzima mjesta, ne poredak.
 
-**Južnoamerička mjesta** (Lige → Više, 0.1.7, samo za čitanje): za svaku južnoameričku ligu,
+**Južnoamerička mjesta** (Lige → Više, 0.1.7): za svaku južnoameričku ligu,
 četiri iz igre i tvoje, koja mjesta idu u Copa Libertadores, njene kvalifikacije i Copa
 Sudamericanu. Mjesta u Libertadoresu za lige iz igre su igrina (Brazil 1.-4. i pobjednik Copa do
 Brasil, kvalifikacije 5.-6. i tako dalje -- isto što pokazuje igrin Competition Info); Copa
@@ -420,6 +420,18 @@ kad su tvoja mjesta unutra: prvo tvoje lige, pa Brazil, Argentina, Čile i Kolum
 jedan klub dok ih ne bude 32. Klub koji je već u Libertadoresu ili njegovim kvalifikacijama
 ustupa mjesto sljedećem iz svoje lige. **Provjeri plan** ispiše isti popis kad god svijet ima
 mjesto u Libertadoresu ili Sudamericani.
+
+**Moderna natjecanja CONMEBOL-a** (kućica u **Južnoamerička mjesta**, 0.2.5; vmardonesdev i
+nissindiaz, #146): kvalifikacije za Libertadores u tri faze (1. faza: 6 klubova, 2. faza: 13 klubova
+i tri pobjednika 1. faze, 3. faza: osam pobjednika 2. faze), Copa Sudamericana s prvom fazom od 32
+kluba i doigravanjem nakon skupina, i Recopa Sudamericana u veljači. Kad je uključeno, prozor Liga
+nudi **Libertadores, 1. faza**, **2. faza** i **Copa Sudamericana, prva faza** (a više ne
+kvalifikacijsko kolo), južnoameričke lige iz igre imaju samo mjesta koja im daš u **Europska mjesta
+liga iz igre**, a **Zemlje CONMEBOL-a bez lige** daju mjesta klubovima zemlje koja u tvom svijetu
+nema ligu. Prozor broji mjesta prema broju koji Build traži (26 mjesta u skupinama Libertadoresa, 13
+u 2. fazi, 6 u 1. fazi, 12 u skupinama Sudamericane, 32 u njenoj prvoj fazi). Isključeno, što je
+zadano, svijet gradi klasična natjecanja točno kao prije; isključivanje uklanja samo mjesta koja
+imaju moderna natjecanja, nakon pitanja.
 
 **Imena natjecanja** (Lige → Više, ili Moj svijet → Kupovi): novo ime i logo za kupove, superkupove i kontinentalna natjecanja iz igre -- FA Cup, Ligu prvaka, Libertadores ... -- i za kontinentalne kupove koje svijet gradi (CAF Liga prvaka, Konfederacijski kup, AFC Liga prvaka Two, Copa Sudamericana, CONCACAF Champions Cup, OFC Liga prvaka, AFC Challenge League, CAF Superkup). Ime dobiju sve faze natjecanja. Prazno: ono iz igre. Lige iz igre preimenuju se na *Lige* (odaberi ligu iz igre).
 

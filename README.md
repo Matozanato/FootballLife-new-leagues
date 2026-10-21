@@ -287,7 +287,8 @@ worst bugs here were found only because vmardonesdev played further than anyone 
   February-December league its national cup and super cup (`fl26swiss`, `fl26join`, the League
   Builder and a test of its own), in 0.2.2. And
   [#146](https://github.com/Matozanato/FootballLife-new-leagues/pull/146), with nissindiaz: the modern CONMEBOL cups (Libertadores qualifying in
-  phases, the pre-Sudamericana, the Recopa and the Sudamericana play-off), going into 0.2.5.
+  phases, the pre-Sudamericana, the Recopa and the Sudamericana play-off), in 0.2.5 (South American
+  places > Modern CONMEBOL competitions).
 - The night 0.2.2 came out: the traceback that showed why Build stopped for everyone whose game
   is not in `C:\Football Life 2026`, sent the moment it happened, and the fix tested and
   confirmed within minutes, so 0.2.3 could go out for everyone the same evening.
@@ -578,7 +579,7 @@ and other Latin American worlds and writes up every bug with screenshots:
   again) and `patchset.py --calendar-ids N` for another calendar day size, with the module
   constants it needs ([#136](https://github.com/Matozanato/FootballLife-new-leagues/pull/136)),
   both in 0.2.2; the Copa do Nordeste and, with vmardonesdev, the modern South American cups
-  ([#146](https://github.com/Matozanato/FootballLife-new-leagues/pull/146), going into 0.2.5); and Master League removing clubs it took for
+  ([#146](https://github.com/Matozanato/FootballLife-new-leagues/pull/146), in 0.2.5); and Master League removing clubs it took for
   duplicates.
 - **Julio** (juliorivera10, Discord): players imported with a Spanish foot column all came out
   right-footed; Import players reads "Pie", "Zurdo", "Diestro" ... since 0.2.2.

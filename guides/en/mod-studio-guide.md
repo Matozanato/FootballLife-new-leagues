@@ -205,7 +205,10 @@ names**, **Players** and **Remove**; a league of the game gets its name, logo an
 8, "The game's leagues"). **Add league** makes a new one. **Places in Select Team** shows where
 the last Build put each of your leagues. **More ▾** has **Pre-season cups**, **Cups of our
 countries**, **Cups of the game's countries**, **European places of the game's leagues**,
-**First-season European clubs**, **UEFA ranking**, **South American places**, **Competition
+**First-season European clubs**, **UEFA ranking**, **South American places** (who goes to the
+Libertadores and the Copa Sudamericana; its **Modern CONMEBOL competitions** box adds the
+Libertadores phases, the Sudamericana's first stage and play-off and the Recopa, 0.2.5), **CONMEBOL
+countries without a league** (with the modern competitions), **Competition
 names**, **Competition IDs**, **League order**, **Seasons of the game's leagues** and **World
 name and file...**. That last one opens the page with the world's name and the list of your
 leagues (older guides call it *New leagues*).
@@ -424,7 +427,7 @@ country to the round nearest the league phase. Afterwards you can still change a
 places by hand (*Europe* on the league, *European places of the game's leagues*): Build takes
 the places, not the ranking.
 
-**South American places** (Leagues → More, 0.1.7, read only): for every South American league, the
+**South American places** (Leagues → More, 0.1.7): for every South American league, the
 game's four and yours, which positions go to the Copa Libertadores, its qualifying round and the
 Copa Sudamericana. The game's Libertadores places are its own (Brazil 1st-4th and the Copa do
 Brasil winner, qualifying 5th-6th, and so on -- the same the game's Competition Info shows); the
@@ -433,6 +436,19 @@ sends to it with your places in: your leagues first, then Brazil, Argentina, Chi
 one club each in turn until 32. A club already in the Libertadores or its qualifying gives way to
 the next one of its league. **Check the plan** prints the same list whenever the world has a
 Libertadores or Sudamericana place.
+
+**Modern CONMEBOL competitions** (a box in **South American places**, 0.2.5; vmardonesdev and
+nissindiaz, #146): the Libertadores' qualifying in three phases (phase 1: 6 clubs, phase 2: 13 clubs
+and the three phase-1 winners, phase 3: the eight phase-2 winners), a Copa Sudamericana with a first
+stage of 32 clubs and a play-off after the groups, and the Recopa Sudamericana in February. With it
+on, the League window lists **Libertadores phase 1**, **phase 2** and **Copa Sudamericana first
+stage** (and no longer the qualifying round), the game's South American leagues have only the places
+you give them in **European places of the game's leagues**, and **CONMEBOL countries without a
+league** gives places to the clubs of a country with no league in your world. The window counts the
+places against the field Build needs (26 Libertadores group places, 13 in phase 2, 6 in phase 1, 12
+Sudamericana group places, 32 in its first stage). Off, the default, a world builds the classic
+competitions exactly as before; switching it off takes out only the places the modern ones have,
+after asking.
 
 **Competition names** (Leagues → More, or My world → Cups): a new name and logo for the game's cups, super cups and continental competitions -- the FA Cup, the Champions League, the Libertadores ... -- and for the continental cups the world builds (CAF Champions League, Confederation Cup, AFC Champions League Two, Copa Sudamericana, CONCACAF Champions Cup, OFC Champions League, AFC Challenge League, CAF Super Cup). Every stage of a competition takes the name. Empty: the game's own. The game's leagues are renamed on *Leagues* (pick a league of the game).
 
