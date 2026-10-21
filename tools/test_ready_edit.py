@@ -6,6 +6,7 @@ with a small world marked .modstudio, then
   3. worlds.backup "built" + restore: the world as it was, the folder there before in replaced\\,
      carried map lines a Build took out back (on when the world is in the game, else off)
   4. installer.keep_edited: a backup "updated" before Remove the mod / a newer zip
+  5. B189: a backup whose paths are past 260 characters, put back and deleted
 Nothing outside a temp folder is written."""
 import json, os, shutil, sys, tempfile
 
@@ -109,7 +110,23 @@ try:
     I.keep_edited(g, ["_FL26NotEdited"])
     check(len(WL.backups_of(sd)) <= n + 1, "no backup of a world that is not edited")
     check(I.worlds_of({"world": "A", "parts": [["world", "B"], ["root", "C"]]}) == ["A", "B"], "worlds_of")
+
+    # 5. B189 (SladeBR 21.10.): a file of the world whose backup path is past 260 characters (a pack's
+    # scoreboard with the game in Program Files); Windows stops there unless long paths are on
+    deep = os.path.join(sd, "content", "kit-server", W, "_packs", "Spain", "Supercopa de Espana" + "x" * 60,
+                        "DirectTV", "common", "menu", "general", "matchMenuIcon_tex", "matchMenuIcon_usePlayerSelect.bin")
+    write(WL.long_path(deep), b"DEEP", "wb")
+    b4 = WL.backup(g, W, "built")
+    copy = os.path.join(b4, "files", os.path.relpath(deep, sd))
+    check(len(copy) > 260, "the backup path is past MAX_PATH (%d)" % len(copy))
+    check(os.path.isfile(WL.long_path(copy)), "the deep file is in the backup")
+    write(WL.long_path(deep), b"CHANGED", "wb")
+    check(WL.restore(g, b4) == W, "restore of a backup with a deep file")
+    check(open(WL.long_path(deep), "rb").read() == b"DEEP", "the deep file put back")
+    check(WL.size_of(b4) > 0, "size_of counts a backup with a deep file")
+    WL.discard(sd, b4)
+    check(not os.path.exists(WL.long_path(b4)), "discard deletes a backup with a deep file")
 finally:
-    shutil.rmtree(tmp, ignore_errors=True)
+    shutil.rmtree(WL.long_path(tmp), ignore_errors=True)
 print("FAILED: %d" % len(fails) if fails else "all ok")
 sys.exit(1 if fails else 0)

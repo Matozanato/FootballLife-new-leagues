@@ -253,7 +253,7 @@ def prune(sider_dir, world, keep=KEEP, but=None):
         keep -= 1
     gone = dirs[max(keep, 0):]
     for d in gone:
-        shutil.rmtree(os.path.join(base, d), ignore_errors=True)
+        shutil.rmtree(long_path(os.path.join(base, d)), ignore_errors=True)
     return gone
 
 
@@ -278,9 +278,24 @@ def backups_of(sider_dir):
     return sorted(out, key=lambda x: x[1].get("time", ""), reverse=True)
 
 
+def long_path(p):
+    r"""B189 (SladeBR 21.10.): p as a Windows path past MAX_PATH. A world backup goes under
+    SiderAddons\ModStudio\backups\worlds\<world>\<time> edited\files\..., and with the game in
+    Program Files a scoreboard of a pack there is 275 characters: Windows stops at 260 unless long
+    paths are on, and Make it editable said it could not find the path. \\?\ lifts the limit"""
+    if os.name != "nt":
+        return p
+    p = os.path.abspath(p)
+    if p.startswith('\\\\?\\'):
+        return p
+    if p.startswith('\\\\'):
+        return '\\\\?\\UNC\\' + p[2:]
+    return '\\\\?\\' + p
+
+
 def size_of(folder):
     n = 0
-    for dp, _dn, fn in os.walk(folder):
+    for dp, _dn, fn in os.walk(long_path(folder)):
         for f in fn:
             try:
                 n += os.path.getsize(os.path.join(dp, f))
@@ -309,7 +324,7 @@ def discard(sider_dir, folder):
     def unlock(fn, path, _exc):            # a read-only file stops rmtree
         os.chmod(path, 0o666)
         fn(path)
-    shutil.rmtree(f, onerror=unlock)
+    shutil.rmtree(long_path(f), onerror=unlock)
     try:
         os.rmdir(os.path.dirname(f))       # the world's folder of backups, when that was its last
     except OSError:
@@ -345,7 +360,7 @@ def backup(game, world, kind="edited", log=lambda t: None):
         rels += [os.path.join("content", lib, world) for lib in _libs(game)
                  if os.path.isdir(os.path.join(game.content_dir, lib, world))]
         for rel in rels:
-            shutil.copytree(os.path.join(sd, rel), os.path.join(folder, "files", rel))
+            shutil.copytree(long_path(os.path.join(sd, rel)), long_path(os.path.join(folder, "files", rel)))
             info["copied"].append(rel)
             _save_info(folder, info)
             log("copied into the backup: %s" % rel)
@@ -355,7 +370,7 @@ def backup(game, world, kind="edited", log=lambda t: None):
                 info["texts"].append(rel)
         _save_info(folder, info)
     except BaseException:
-        shutil.rmtree(folder, ignore_errors=True)      # half a copy is no backup
+        shutil.rmtree(long_path(folder), ignore_errors=True)      # half a copy is no backup
         raise
     prune(sd, world, but=folder)
     return folder
@@ -398,11 +413,11 @@ def _put_copy_back(game, folder, info, log):
         if os.path.exists(now):
             aside = os.path.join(folder, "replaced", rel)
             if os.path.exists(aside):
-                shutil.rmtree(aside)
+                shutil.rmtree(long_path(aside))
             os.makedirs(os.path.dirname(aside), exist_ok=True)
             shutil.move(now, aside)
         os.makedirs(os.path.dirname(now), exist_ok=True)
-        shutil.copytree(old, now)
+        shutil.copytree(long_path(old), long_path(now))
         log("put back: %s" % rel)
     import lbservers
     me = lbservers.safe(world).lower()
