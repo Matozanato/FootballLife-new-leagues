@@ -480,6 +480,17 @@ KIT_TEXTURES = "kit-textures.txt"
 # whose kits the engine names <id-65536>_ACL_ (mkkits.kit_key) -- the block the builder's own
 # clubs count up in, and new clubs are added at the end of Team.bin in id order
 CLUB_ID_MAX = 81919
+# the game takes a club as the same club when its id & 0x23fff is (0x1414bdb20: bits 14-16 dropped),
+# and the lists of 0x1412659c0 keep only the first of two such: the builder's 71580 was Nam Dinh's
+# 6044, 71587 Brunei's 6051 (B63, Nissin 16.10.).  The game's own ids never meet so; a new club's
+# id steps round the ones that would (ID_MASK_CLASH), an id it had at an earlier Build stays
+ID_MASK = 0x23fff
+
+
+def id_mask_clash(have):
+    """the ids of the new-club block whose id & ID_MASK is a game club's: a new club never gets one"""
+    seen = {t & ID_MASK for t in have}
+    return {t for t in range(max(have) + 1 if have else 1, CLUB_ID_MAX + 1) if t & ID_MASK in seen}
 # a club from the NewLife Database (the league's "newlife": {"clubs": [id, ...]}, which Mod
 # Studio's NewLife page writes) keeps its NewLife id, one id in every mod that uses the database;
 # kits for them are named <id & 0x23fff>_SDN_ (mkkits.kit_key)
@@ -2496,6 +2507,7 @@ def newlife_tids(leagues, base, pins=None):
     raw = pesdb.wesys_unpack(open(os.path.join(base, "Team.bin"), "rb").read())
     have = {int.from_bytes(raw[o + W.T_ID:o + W.T_ID + 4], "little") for o in range(0, len(raw), W.T_REC)}
     taken = set(have)
+    clash = id_mask_clash(have)
     rows = []
     for L in leagues:
         n = int(L.get("clubs") or 0)
@@ -2522,7 +2534,7 @@ def newlife_tids(leagues, base, pins=None):
 
     def take():
         nonlocal nxt
-        while nxt in taken:
+        while nxt in taken or nxt in clash:
             nxt += 1
         if nxt > CLUB_ID_MAX:
             raise BuildError("no team ids left up to %d: the new-club block %d..%d is full"
@@ -3785,6 +3797,7 @@ def build(pl, base, game, replace=False, log=print):
     nteam = len(raw) // W.T_REC
     have = {int.from_bytes(raw[i * W.T_REC + W.T_ID:i * W.T_REC + W.T_ID + 4], "little") for i in range(nteam)}
     top_id = max(have)
+    clash = id_mask_clash(have)                 # B63: ids the game would take for a game club's
     top_alt = max(int.from_bytes(raw[i * W.T_REC + W.T_ALT:i * W.T_REC + W.T_ALT + 4], "little") for i in range(nteam))
     proto = raw[(nteam - 1) * W.T_REC:nteam * W.T_REC]
     made, own, used_abbr, added = 0, 0, set(), []
@@ -3827,7 +3840,7 @@ def build(pl, base, game, replace=False, log=print):
                     r = bytearray(proto)
                     sid = top_id + 1 + own
                     own += 1
-                    while sid in have or sid in nl_ids:
+                    while sid in have or sid in nl_ids or sid in clash:
                         sid = top_id + 1 + own
                         own += 1
                     if sid > CLUB_ID_MAX:
@@ -3903,7 +3916,7 @@ def build(pl, base, game, replace=False, log=print):
         else:
             tid = top_id + 1 + own
             own += 1
-            while tid in have or tid in nl_ids or tid in pins_all:    # a NewLife club's pinned id may sit lower
+            while tid in have or tid in nl_ids or tid in pins_all or tid in clash:    # a NewLife club's pinned id may sit lower
                 tid = top_id + 1 + own
                 own += 1
             if tid > CLUB_ID_MAX:
