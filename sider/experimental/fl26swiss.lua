@@ -148,11 +148,26 @@ local function read_world(ctx)
     local lr, lrest = line:match("^%s*lpre%s+(%d+)(.*)$")
     if lr then
       local L = { tonumber(lr), tonumber(lrest:match("cup=(%d+)") or 0), tonumber(lrest:match("fill=(%d+)") or 0), {}, {} }
+      L.alt = {}
       for d in (lrest:match("days=([%d,]+)") or ""):gmatch("%d+") do L[4][#L[4] + 1] = tonumber(d) end
       for er, ep in (lrest:match("entry=([%d:,]+)") or ""):gmatch("(%d+):(%d+)") do
         L[5][#L[5] + 1] = { tonumber(er), tonumber(ep) }
       end
-      if L[2] > 0 and #L[4] == 2 and #L[5] >= 2 then lpres[#lpres + 1] = L end
+      -- Optional same-source fallback for a cup-winner pre-stage entry:
+      -- alt=<1-based entry index>:<league/association source>:<first rank>,...
+      for ai, ar, af in (lrest:match("alt=([%d:,]+)") or ""):gmatch("(%d+):(%d+):(%d+)") do
+        L.alt[#L.alt + 1] = { tonumber(ai), tonumber(ar), tonumber(af) }
+      end
+      -- cup=0 with po=1: a Libertadores qualifying phase.
+      -- feed=8: this phase's winners replace the clubs in native reg 8 (phase 3).
+      -- poko=1: the modern Sudamericana post-group play-off; its winners feed the round of 16.
+      L.flags = (lrest:match("%spo=1") and 1 or 0)
+              + (lrest:match("%sfeed=8") and 2 or 0)
+              + (lrest:match("%spoko=1") and 4 or 0)
+      L.single = lrest:match("%ssingle=1") ~= nil
+      if (L[2] > 0 or L.flags > 0) and #L[4] == 2 and #L[5] >= 2 then
+        lpres[#lpres + 1] = L
+      end
     end
     local qc, qn, qr = line:match("^%s*qround%s+(%d+)%s+(%d+)%s+(%d+)")
     if qc then qrounds[#qrounds + 1] = { tonumber(qc), tonumber(qn), tonumber(qr) } end
@@ -203,6 +218,15 @@ local function read_world(ctx)
       -- like=<shipped cup>: a single-match league cup (0.2.0); draw=: its cup draw
       c.like = tonumber(crest:match("%slike=(%d+)") or "")
       if c.like then c.draw = DRAWMODE[crest:match("%sdraw=(%a+)") or "byes"] or 3 end
+      -- cal=1: a CONMEBOL cup on the South American February-December calendar.
+      -- Strip the trailing name first so a competition name cannot accidentally match it.
+      c.cal = (crest:gsub("%sname=.*$", "")):match("%scal=1") ~= nil
+      -- first=<team>,...: fallback clubs for entries whose previous-season winner does not exist
+      -- yet (the first season's Recopa). From season two the retained winners take precedence.
+      c.first = {}
+      for t in ((crest:gsub("%sname=.*$", "")):match("%sfirst=([%d,]+)") or ""):gmatch("%d+") do
+        c.first[#c.first + 1] = tonumber(t)
+      end
       if c[2] > 0 then ccups[#ccups + 1] = c end   -- groups=0: a straight knockout
     end
     -- confed <flag>:<code>,...: each country's confederation, so a continental champion of
@@ -459,6 +483,93 @@ function m.init(ctx)
           end
         end
       end
+      local function load_lpres()
+        if not lpres or #lpres == 0 then return end
+
+        local pl = ffi.C.GetProcAddress(h, "fl26_swiss_lpre")
+        if pl == nil then
+          log("fl26swiss: this fl26swiss.dll plays no pre-rounds (fl26_swiss_lpre); the world file's are not played")
+          return
+        end
+
+        local llen = 0
+        for _, L in ipairs(lpres) do
+          llen = llen + 6 + 2 * #L[5]
+        end
+
+        local lbuf, q = ffi.new("uint16_t[?]", llen), 0
+        for _, L in ipairs(lpres) do
+          lbuf[q], lbuf[q + 1], lbuf[q + 2], lbuf[q + 3], lbuf[q + 4], lbuf[q + 5] =
+            L[1], L[2], L[3], L[4][1], L[4][2], #L[5]
+          q = q + 6
+          for _, e in ipairs(L[5]) do
+            lbuf[q], lbuf[q + 1] = e[1], e[2]
+            q = q + 2
+          end
+        end
+
+        local m = tonumber(ffi.cast("fl26_swiss_access_t", pl)(lbuf, #lpres))
+        log(string.format("fl26swiss: world file -- %d pre-round(s), %d taken", #lpres, m))
+
+        local nalt = 0
+        for _, L in ipairs(lpres) do nalt = nalt + #(L.alt or {}) end
+        if nalt > 0 then
+          local pa = ffi.C.GetProcAddress(h, "fl26_swiss_lpre_alt")
+          if pa == nil then
+            log("fl26swiss: this fl26swiss.dll has no fl26_swiss_lpre_alt -- pre-stage cup-winner fallbacks stay empty")
+          else
+            local abuf, q = ffi.new("uint16_t[?]", 4 * nalt), 0
+            for _, L in ipairs(lpres) do
+              for _, a in ipairs(L.alt or {}) do
+                abuf[q], abuf[q + 1], abuf[q + 2], abuf[q + 3] = L[1], a[1], a[2], a[3]
+                q = q + 4
+              end
+            end
+            local k = tonumber(ffi.cast("fl26_swiss_access_t", pa)(abuf, nalt))
+            log(string.format("fl26swiss: world file -- %d pre-round cup-winner fallback(s), %d matched", nalt, k))
+          end
+        end
+
+        local single = {}
+        for _, L in ipairs(lpres) do
+          if L.single then single[#single + 1] = L[1] end
+        end
+        if #single > 0 then
+          local ps = ffi.C.GetProcAddress(h, "fl26_swiss_lpre_single")
+          if ps == nil then
+            log("fl26swiss: this fl26swiss.dll has no fl26_swiss_lpre_single -- single=1 pre-rounds are not played correctly")
+          else
+            local sbuf = ffi.new("uint16_t[?]", #single)
+            for i, v in ipairs(single) do sbuf[i - 1] = v end
+            local k = tonumber(ffi.cast("fl26_swiss_access_t", ps)(sbuf, #single))
+            log(string.format("fl26swiss: world file -- %d one-match pre-round(s), %d matched", #single, k))
+          end
+        end
+
+        local flagged = {}
+        for _, L in ipairs(lpres) do
+          if (L.flags or 0) > 0 then
+            flagged[#flagged + 1] = L
+          end
+        end
+
+        if #flagged > 0 then
+          local pf = ffi.C.GetProcAddress(h, "fl26_swiss_lpre_flags")
+          if pf == nil then
+            log("fl26swiss: this fl26swiss.dll has no fl26_swiss_lpre_flags -- Libertadores qualifying phases are not played correctly")
+          else
+            local fbuf = ffi.new("uint16_t[?]", 2 * #flagged)
+            for i, L in ipairs(flagged) do
+              fbuf[2 * i - 2], fbuf[2 * i - 1] = L[1], L.flags
+            end
+            local k = tonumber(ffi.cast("fl26_swiss_access_t", pf)(fbuf, #flagged))
+            log(string.format(
+              "fl26swiss: world file -- %d flagged pre-round(s), %d matched",
+              #flagged, k))
+          end
+        end
+      end
+
       if #ccups > 0 then
         -- the single-match league cups first: fl26_swiss_ccup takes their fields by these
         local nlike = 0
@@ -512,6 +623,49 @@ function m.init(ctx)
               log(string.format("fl26swiss: world file -- options for %d cup(s), %d matched", nopt, m))
             end
           end
+          -- CONMEBOL cups on the South American calendar, after their normal options
+          -- (the fill day is one of those options).
+          local cal = {}
+          for _, c in ipairs(ccups) do if c.cal then cal[#cal + 1] = c[2] end end
+          if #cal > 0 then
+            local pk = ffi.C.GetProcAddress(h, "fl26_swiss_ccup_cal")
+            if pk == nil then
+              log("fl26swiss: this fl26swiss.dll has no fl26_swiss_ccup_cal -- cal=1 cups run on UEFA's year")
+            else
+              local kbuf = ffi.new("uint16_t[?]", #cal)
+              for i, v in ipairs(cal) do kbuf[i - 1] = v end
+              local m = tonumber(ffi.cast("fl26_swiss_access_t", pk)(kbuf, #cal))
+              log(string.format("fl26swiss: world file -- %d cup(s) on the South American calendar, %d matched", #cal, m))
+            end
+          end
+
+          -- Optional first-season fallbacks, primarily the Recopa: one team id for each
+          -- winner entry. They are used only when the entry has no retained/live winner.
+          local fc, flen = 0, 0
+          for _, c in ipairs(ccups) do
+            if c.first and #c.first > 0 then
+              fc = fc + 1
+              flen = flen + 2 + #c.first
+            end
+          end
+          if fc > 0 then
+            local pf = ffi.C.GetProcAddress(h, "fl26_swiss_ccup_first")
+            if pf == nil then
+              log("fl26swiss: this fl26swiss.dll has no fl26_swiss_ccup_first -- first-season cup fallbacks are ignored")
+            else
+              local fbuf, q = ffi.new("uint16_t[?]", flen), 0
+              for _, c in ipairs(ccups) do
+                if c.first and #c.first > 0 then
+                  fbuf[q], fbuf[q + 1] = c[2], #c.first
+                  q = q + 2
+                  for _, t in ipairs(c.first) do fbuf[q] = t; q = q + 1 end
+                end
+              end
+              local m = tonumber(ffi.cast("fl26_swiss_access_t", pf)(fbuf, fc))
+              log(string.format("fl26swiss: world file -- %d cup(s) with first-season fallbacks, %d matched", fc, m))
+            end
+          end
+
           local alen = 0
           for _, c in ipairs(ccups) do alen = alen + (c.alt and #c.alt or 0) end
           if alen > 0 then
@@ -527,25 +681,12 @@ function m.init(ctx)
               log(string.format("fl26swiss: world file -- %d cup winner place(s), %d taken", alen, m))
             end
           end
-          -- the league cups' pre-rounds, after the cups their winners go on to
-          if lpres and #lpres > 0 then
-            local pl = ffi.C.GetProcAddress(h, "fl26_swiss_lpre")
-            if pl == nil then
-              log("fl26swiss: this fl26swiss.dll plays no league cup pre-rounds (fl26_swiss_lpre); those league cups will not start")
-            else
-              local llen = 0
-              for _, L in ipairs(lpres) do llen = llen + 6 + 2 * #L[5] end
-              local lbuf, q = ffi.new("uint16_t[?]", llen), 0
-              for _, L in ipairs(lpres) do
-                lbuf[q], lbuf[q + 1], lbuf[q + 2], lbuf[q + 3], lbuf[q + 4], lbuf[q + 5] = L[1], L[2], L[3], L[4][1], L[4][2], #L[5]
-                q = q + 6
-                for _, e in ipairs(L[5]) do lbuf[q], lbuf[q + 1] = e[1], e[2]; q = q + 2 end
-              end
-              local m = tonumber(ffi.cast("fl26_swiss_access_t", pl)(lbuf, #lpres))
-              log(string.format("fl26swiss: world file -- %d league cup pre-round(s), %d taken", #lpres, m))
-            end
-          end
+          -- pre-rounds that feed this world's cups, plus Libertadores F1/F2
+          load_lpres()
         end
+      end
+      if #ccups == 0 then
+        load_lpres()
       end
       -- each country's confederation: the Club World Cup (with continental cups of ours) and the
       -- board objective of a club of ours outside UEFA (GitHub #43, any world)

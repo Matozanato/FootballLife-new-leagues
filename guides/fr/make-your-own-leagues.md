@@ -254,7 +254,7 @@ et [8.2](mod-studio-guide.md#82-construire-activer-jouer).
 **Plus ▾** (en haut de l'onglet Ligues) contient les outils pour tout le monde : **Tournois de
 pré-saison**, **Coupes de nos pays** (les coupes de toutes vos ligues dans un seul tableau),
 **Coupes des pays du jeu**, **Places européennes des ligues du jeu**, **Clubs européens de la
-première saison**, **Classement UEFA**, **Places sud-américaines**, **Noms des compétitions**
+première saison**, **Classement UEFA**, **Places sud-américaines** (avec la case **Compétitions modernes de la CONMEBOL**, 0.2.5), **Pays de la CONMEBOL sans championnat**, **Noms des compétitions**
 (nouveaux noms et logos pour les coupes et les compétitions continentales), **IDs des
 compétitions**, **Ordre des championnats**, **Saisons des championnats du jeu** et **Nom du monde
 et fichier...** (le nom du dossier du monde ; il doit commencer par `_FL26`). Vous n'avez besoin

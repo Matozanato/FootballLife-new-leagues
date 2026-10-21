@@ -24,6 +24,22 @@ come with it instead.
   stadium**. Save writes the world (a copy of the old `Team.bin` stays next to it). What you
   picked is kept in `fl26stadiums.json` in the world's folder and comes back when you install a
   newer version of the same world. Start a new Master League after saving.
+- **The modern CONMEBOL competitions, if you want them** (vmardonesdev and nissindiaz,
+  [#146](https://github.com/Matozanato/FootballLife-new-leagues/pull/146)). **South American
+  places > Modern CONMEBOL competitions** switches on the Copa Libertadores' qualifying in three
+  phases (phase 1: 6 clubs, phase 2: 13 clubs and the phase-1 winners, phase 3: the eight
+  phase-2 winners), a Copa Sudamericana with a first stage of 32 clubs and a play-off after the
+  groups (its runners-up against the Libertadores' third-placed clubs), and the Recopa
+  Sudamericana in February between the two winners (from a career's second season). Your
+  leagues and the game's South American leagues then get places in **Libertadores phase 1**,
+  **phase 2** and **Copa Sudamericana first stage**, and **CONMEBOL countries without a league**
+  gives places to the clubs of Bolivia, Peru ... when the country has no league in your world.
+  The window counts the places against the field Build needs: 26 Libertadores group places, 13
+  in phase 2, 6 in phase 1, 12 Sudamericana group places and 32 in its first stage.
+  Left off, nothing changes: a world with Libertadores, qualifying or Copa Sudamericana places
+  builds exactly as before, ids and all. Switching it off again takes out only the places the
+  modern competitions have, after asking. Start a new Master League after a Build that switches
+  it on or off.
 
 - **Back and Forward through the pages, as in a browser.** Two arrows at the left of the section
   bar, Alt+Left / Alt+Right and the mouse's side buttons take you back to the pages you had open

@@ -65,7 +65,8 @@ ALL_CLUBS = -1
 # the European competitions a league place can lead to (fl26world.COMPETITIONS), short names for
 # the league list
 SHORT = {0: "UCL", 1: "UEL", 2: "UECL", 3: "LIB", 4: "LIB-Q", 5: "AFC", 6: "CAF CL", 7: "CAF CC",
-         8: "AFC CL2", 9: "SUD", 10: "UCL-Q", 11: "UEL-Q", 12: "UECL-Q", 13: "CONCACAF", 14: "OFC CL", 15: "AFC CHL"}
+         8: "AFC CL2", 9: "SUD", 10: "UCL-Q", 11: "UEL-Q", 12: "UECL-Q", 13: "CONCACAF", 14: "OFC CL", 15: "AFC CHL",
+         16: "LIB-F1", 17: "LIB-F2", 18: "LIB-F3", 19: "SUD-1"}
 TOP_FLIGHT = [[1, 10], [2, 1], [3, 2]]     # the preset: 1st UCL qualifying, 2nd UEL, 3rd UECL
 # the preset by the country's confederation (Country.bin): Asia to the AFC Champions League and
 # Champions League Two, South America to the Libertadores and the Sudamericana, Africa to the CAF
@@ -326,17 +327,72 @@ class PictureField(QWidget):
             self.view.setWordWrap(True)
 
 
+def modern_conmebol(project):
+    """whether the project's world has the modern CONMEBOL competitions (South American places >
+    Modern CONMEBOL competitions, leaguebuilder.recipe_has_modern_conmebol)"""
+    try:
+        return B.recipe_has_modern_conmebol(project.recipe)
+    except B.BuildError:
+        return False
+
+
+def continental_place_choices(items, modern=False):
+    """the competitions a place can lead to, in the order the list shows them. Classic (a world
+    without the modern CONMEBOL competitions, every world before 0.2.5): fl26world.COMPETITIONS
+    as they were, Libertadores qualifying included. Modern (PR #146): phase 2 and phase 1 under
+    the Libertadores, the first stage under the Sudamericana; Libertadores qualifying and phase 3
+    are left out, phase 3 takes the eight phase-2 winners and no league's place"""
+    items = [(int(c), name) for c, name in items]
+    if not modern:
+        return [(c, name) for c, name in items if c not in fl26world.CONMEBOL_STAGE_IDS]
+    by_id = {c: (c, name) for c, name in items}
+    hidden = {4, fl26world.LIB_F3}
+    child = {fl26world.LIB_F1, fl26world.LIB_F2, fl26world.SUD_FIRST}
+    labels = {
+        fl26world.LIB_F2: "Libertadores phase 2",
+        fl26world.LIB_F1: "Libertadores phase 1",
+        fl26world.SUD_FIRST: "Copa Sudamericana first stage",
+    }
+    out, seen = [], set()
+
+    def add(c, name=None):
+        if c in seen or c in hidden or c not in by_id:
+            return
+        out.append((c, labels.get(c, name if name is not None else by_id[c][1])))
+        seen.add(c)
+
+    for c, name in items:
+        if c in hidden or c in child:
+            continue
+        add(c, name)
+        if c == 3:
+            add(fl26world.LIB_F2)
+            add(fl26world.LIB_F1)
+        elif c == 9:
+            add(fl26world.SUD_FIRST)
+
+    # Filtered lists used by the CONMEBOL association editor may omit the parent rows.
+    for c in (fl26world.LIB_F2, fl26world.LIB_F1, fl26world.SUD_FIRST):
+        add(c)
+    return out
+
+
 class EuropeTable(QWidget):
     """a league's European places: league position -> competition, one row each, with a button
     that removes the row. tall: the table takes the height it is given (a dialog of its own)"""
 
-    def __init__(self, places, clubs, tall=False):
+    def __init__(self, places, clubs, tall=False, competitions=None, cup_winner=True,
+                 position_label="League position", modern=False):
         super().__init__()
         self.clubs = clubs
+        self.modern = modern
+        self.competitions = continental_place_choices(competitions or fl26world.COMPETITIONS, modern)
+        self.cup_winner = bool(cup_winner)
+        self.position_label = position_label
         v = QVBoxLayout(self)
         v.setContentsMargins(0, 0, 0, 0)
         self.table = QTableWidget(0, 3)
-        self.table.setHorizontalHeaderLabels([_("League position"), _("Competition"), ""])
+        self.table.setHorizontalHeaderLabels([_(self.position_label), _("Competition"), ""])
         hh = self.table.horizontalHeader()
         hh.setSectionResizeMode(0, QHeaderView.Fixed)
         hh.setSectionResizeMode(1, QHeaderView.Stretch)
@@ -368,16 +424,28 @@ class EuropeTable(QWidget):
         r = self.table.rowCount()
         self.table.insertRow(r)
         sp = QSpinBox()
-        sp.setRange(B.CUP_WINNER, max(self.clubs, 1))
-        sp.setSpecialValueText(_("Cup winner"))
-        sp.setToolTip(_("The league position, or Cup winner (below 1): the winner of the country's cup. "
-                        "When the winner already has a European place through the league, the place "
-                        "goes to the league's next club."))
-        sp.setValue(min(max(int(pos), B.CUP_WINNER), max(self.clubs, 1)))
+        low = B.CUP_WINNER if self.cup_winner else 1
+        sp.setRange(low, max(self.clubs, 1))
+        if self.cup_winner:
+            sp.setSpecialValueText(_("Cup winner"))
+            sp.setToolTip(_("The league position, or Cup winner (below 1): the winner of the country's cup. "
+                            "When the winner already has a continental place, the place cascades to the "
+                            "next eligible club of the same domestic source."))
+        else:
+            sp.setToolTip(_("The association rank used as a dynamic domestic source; it is not a team ID."))
+        sp.setValue(min(max(int(pos), low), max(self.clubs, 1)))
         cb = QComboBox()
-        for c, name in fl26world.COMPETITIONS:
+        for c, name in self.competitions:
             cb.addItem(_(name), c)
-        cb.setCurrentIndex(max(0, cb.findData(int(comp))))
+        i = cb.findData(int(comp))
+        if i < 0:
+            # a place the list does not offer (Libertadores qualifying with the modern CONMEBOL
+            # competitions on) is shown as it is, so OK keeps it: it became the first entry, a
+            # Champions League place, without a word (review of #146). Build says what is wrong
+            name = dict(fl26world.COMPETITIONS).get(int(comp))
+            cb.addItem(_(name) if name else _("Competition %d") % int(comp), int(comp))
+            i = cb.count() - 1
+        cb.setCurrentIndex(i)
         x = QPushButton("✕")
         x.setToolTip(_("Remove this place"))
         x.setFixedWidth(34)
@@ -417,10 +485,13 @@ class EuropeTable(QWidget):
             self.table.cellWidget(r, 0).setMaximum(max(n, 1))
 
     def set_confed(self, conf):
-        """the country changed: the preset follows its confederation"""
+        """the country changed: the preset follows its confederation. The modern CONMEBOL
+        competitions are set place by place: a South American league then has no preset (the
+        classic one sends 4th to Libertadores qualifying, which they do not have)"""
         label, tip, self.preset_places = PRESETS.get(conf, UEFA_PRESET)
         self.preset.setText(_(label))
         self.preset.setToolTip(_(tip))
+        self.preset.setVisible(not (self.modern and conf == 4))
 
     def set_top(self, top):
         self.preset.setEnabled(top)
@@ -713,7 +784,7 @@ class LeagueDialog(Dialog):
         self.form.addRow(_("Formation"), self.formation)
         self.form.addRow("", hint(_("how the league's clubs line up: a copy of the tactics of a club of the "
                                     "game with that formation; a club can have its own (Edit club)")))
-        self.europe = EuropeTable(L.get("europe"), self.clubs.value())
+        self.europe = EuropeTable(L.get("europe"), self.clubs.value(), modern=modern_conmebol(project))
         self.form.addRow(_("Europe"), self.europe)
         self.form.addRow("", hint(_("league position -> European competition, for a top division; "
                                     "leave it empty for lower tiers")))
@@ -879,7 +950,7 @@ class LeagueDialog(Dialog):
             if not L["game_clubs"]:
                 L.pop("game_clubs")
         places = self.europe.places()
-        bad = B.europe_problems(L["clubs"], places)
+        bad = B.europe_problems(L["clubs"], places, bool(L.get("cup")))
         if bad:
             error(self, "League", _("European places: %s") % "; ".join(tr(b) for b in bad))
             return
@@ -1694,7 +1765,8 @@ class CompetitionNamesDialog(Dialog):
     and for the continental cups the world builds (ccup_names, ccup_logos)"""
 
     OURS = [("6", "CAF Champions League"), ("7", "CAF Confederation Cup"), ("8", "AFC Champions League Two"),
-            ("9", "Copa Sudamericana"), ("13", "CONCACAF Champions Cup"), ("14", "OFC Champions League"),
+            ("9", "Copa Sudamericana"), ("-1", "Recopa Sudamericana"),
+            ("13", "CONCACAF Champions Cup"), ("14", "OFC Champions League"),
             ("15", "AFC Challenge League"), ("0", "CAF Super Cup")]
 
     def __init__(self, parent, project):
@@ -1707,6 +1779,8 @@ class CompetitionNamesDialog(Dialog):
         self.logos = dict(r.get("ccup_logos") or {})
         if r.get("caf_super_cup_logo") and "0" not in self.logos:
             self.logos["0"] = r["caf_super_cup_logo"]
+        if r.get("samerica_super_cup_logo") and "-1" not in self.logos:
+            self.logos["-1"] = r["samerica_super_cup_logo"]
         self.v.insertWidget(0, hint(_("Cups, super cups and the continental competitions of the game, and the "
                                       "continental cups Mod Studio makes. Leagues are renamed on Game's "
                                       "leagues and clubs. Empty name: the game's own.")))
@@ -1888,6 +1962,7 @@ class GameEuropeDialog(Dialog):
     def __init__(self, parent, project):
         super().__init__(parent, "European places of the game's leagues")
         self.tops = B.game_europe_tops(project.base)
+        self.modern = modern_conmebol(project)
         self.places = {}
         for k, v in (project.recipe.get("game_europe") or {}).items():
             if str(k).isdigit():
@@ -1910,7 +1985,7 @@ class GameEuropeDialog(Dialog):
         right.addWidget(self.own)
         self.l_whose = hint("")
         right.addWidget(self.l_whose)
-        self.table = EuropeTable([], 20, tall=True)
+        self.table = EuropeTable([], 20, tall=True, modern=self.modern)
         self.table.preset.hide()
         right.addWidget(self.table, 1)
         body.addLayout(right, 1)
@@ -1934,9 +2009,14 @@ class GameEuropeDialog(Dialog):
             self.l_whose.setText(_("Your places: they replace the game's for this league."))
             return
         sam = {r: (lib, libq) for r, lib, libq in fl26world.SAM_GAME}
-        if not shipped and rid in sam:
-            # the game keeps a South American league's Libertadores places in the exe, not in the
-            # European access list the table shows, so the table is empty for them (Vicentico12)
+        if not shipped and rid in sam and self.modern:
+            # the modern CONMEBOL competitions take the game's Libertadores places away
+            # (leaguebuilder.modern_libertadores_recipe)
+            self.l_whose.setText(_("With the modern CONMEBOL competitions on, this league has no Libertadores "
+                                   "places of the game's. Tick the box above to give it its places."))
+        elif not shipped and rid in sam:
+            # The game keeps a South American league's vanilla Libertadores places in the exe,
+            # not in the access list shown here. They stay untouched until the user opts in.
             self.l_whose.setText(_("The game gives this league its Libertadores places itself: group stage %s, "
                                    "qualifying round %s. They are not in this table. Tick the box above to set "
                                    "your own.") % sam[rid])
@@ -2286,43 +2366,278 @@ class GameSeasonsDialog(Dialog):
         self.accept()
 
 
+class ConmebolAssociationsDialog(Dialog):
+    """Dynamic CONMEBOL sources for countries that have no playable top division in this world.
+
+    The recipe remains {country: [[rank, competition], ...]}; a rank is resolved to a real club
+    at runtime, never to a team id stored by Mod Studio.
+    """
+
+    def __init__(self, parent, project):
+        super().__init__(parent, "CONMEBOL countries without a league")
+        ids = B.country_ids(project.base)
+        conf = B.confederations(project.base)
+        game = B.game_top_division_countries(project.base)
+        ours = {L.get("country") for L in project.recipe.get("leagues") or []
+                if L.get("above") in (None, "") and not L.get("others") and not L.get("exhibition")}
+        self.names = {i: n for n, i in ids}
+        self.assocs = []
+        for name, country in ids:
+            if conf.get(country) != 4 or country in game or name in ours:
+                continue
+            try:
+                capacity = B.association_club_capacity(project.base, country)
+            except (OSError, ValueError):
+                capacity = 0
+            self.assocs.append((country, name, capacity))
+        self.assocs.sort(key=lambda x: x[1].lower())
+
+        by_name = {n.lower(): i for n, i in ids}
+        self.places = {}
+        for key, rows in (project.recipe.get("conmebol_associations") or {}).items():
+            country = int(key) if str(key).strip().isdigit() else by_name.get(str(key).strip().lower())
+            if country in {a[0] for a in self.assocs}:
+                self.places[country] = [list(e) for e in (rows or [])]
+
+        self.v.insertWidget(0, hint(_(
+            "Places for South American countries that have no league in this world: the country's clubs of "
+            "Other Latin American teams, ranked when the season starts. They count with the leagues' places "
+            "towards the field the modern CONMEBOL competitions need; no country has to have any. A rank the "
+            "country has no club for stays empty, it is not given to another country.")))
+        body = QHBoxLayout()
+        self.list = QListWidget()
+        self.list.setFixedWidth(320)
+        for _country, name, capacity in self.assocs:
+            self.list.addItem("%s  (%s)" % (name, _("%d clubs") % capacity))
+        body.addWidget(self.list)
+        right = QVBoxLayout()
+        self.l_name = QLabel("")
+        self.l_name.setObjectName("cardtitle")
+        right.addWidget(self.l_name)
+        self.own = QCheckBox(_("Own places for this association"))
+        self.own.toggled.connect(self.toggle)
+        right.addWidget(self.own)
+        self.l_whose = hint("")
+        right.addWidget(self.l_whose)
+        allowed_ids = {3, 9} | set(fl26world.CONMEBOL_STAGE_IDS)
+        allowed = [(c, n) for c, n in fl26world.COMPETITIONS if c in allowed_ids]
+        self.table = EuropeTable([], B.FINAL_ASSOC_RANK, tall=True, competitions=allowed,
+                                 cup_winner=False, position_label="Association rank", modern=True)
+        self.table.preset.hide()
+        right.addWidget(self.table, 1)
+        body.addLayout(right, 1)
+        self.v.insertLayout(1, body, 1)
+        self.scroll.hide()
+        self.cur = -1
+        self.list.currentRowChanged.connect(self.show_assoc)
+        if self.assocs:
+            self.list.setCurrentRow(0)
+        else:
+            self.own.setEnabled(False)
+            self.table.setEnabled(False)
+            self.l_whose.setText(_("Every South American country has a league in this world."))
+        self.marks()
+        self.setMinimumSize(980, 640)
+
+    def marks(self):
+        for n, (country, name, capacity) in enumerate(self.assocs):
+            it = self.list.item(n)
+            it.setText(("●  " if country in self.places else "    ") +
+                       "%s  (%s)" % (name, _("%d clubs") % capacity))
+            it.setForeground(QBrush(QColor(theme.ACCENT if country in self.places else theme.TEXT)))
+
+    def keep(self):
+        if 0 <= self.cur < len(self.assocs) and self.own.isChecked():
+            self.places[self.assocs[self.cur][0]] = self.table.places()
+
+    def show_assoc(self, i):
+        self.keep()
+        self.cur = i
+        if not 0 <= i < len(self.assocs):
+            return
+        country, name, capacity = self.assocs[i]
+        self.l_name.setText(name)
+        mine = country in self.places
+        self.own.blockSignals(True)
+        self.own.setChecked(mine)
+        self.own.blockSignals(False)
+        self.table.set_places(self.places[country] if mine else [])
+        self.table.setEnabled(mine)
+        self.l_whose.setText(_("This country has %d clubs of the game that can play. A rank past them stays "
+                               "empty.") % capacity)
+
+    def toggle(self, on):
+        if not 0 <= self.cur < len(self.assocs):
+            return
+        country, _name, _capacity = self.assocs[self.cur]
+        if on:
+            self.places[country] = self.table.places()
+        else:
+            self.places.pop(country, None)
+            self.table.set_places([])
+        self.table.setEnabled(on)
+        self.marks()
+
+    def ok(self):
+        self.keep()
+        self.result = {self.names[c]: p for c, p in sorted(self.places.items(), key=lambda kv: self.names[kv[0]].lower())
+                       if p}
+        self.accept()
+
+
 class SouthAmericaDialog(Dialog):
-    """read only (GitHub #71): every South American league's Libertadores, qualifying and Copa
-    Sudamericana places -- the game's leagues and the world's own -- as Check the plan lists them"""
+    """GitHub #71: every South American league's Libertadores, qualifying and Copa Sudamericana
+    places, the game's leagues and the world's own, as Check the plan lists them; and the switch
+    for the modern CONMEBOL competitions (PR #146, vmardonesdev): Libertadores qualifying in three
+    phases, a Copa Sudamericana with a first stage and a play-off, the Recopa Sudamericana. Off, a
+    world builds the classic competitions exactly as before 0.2.5 (review of #146: a world with
+    Libertadores places became a modern one Build refused). A place only the modern ones have
+    keeps them on; switching them off takes such places out, after asking"""
+    help = ("Modern CONMEBOL competitions off (every world before 0.2.5): the game's Copa Libertadores "
+            "with its qualifying round, and a Copa Sudamericana of 32 clubs in eight groups when leagues have "
+            "places in it. The list shows who goes where.\n\n"
+            "On: Libertadores qualifying in three phases (phase 1: 6 clubs, phase 2: 13 clubs and the three "
+            "phase-1 winners, phase 3: the eight phase-2 winners), a Copa Sudamericana with a first stage of "
+            "32 clubs and a play-off after the groups, and the Recopa Sudamericana in February. The game's "
+            "South American leagues then have no Libertadores places of their own: give them theirs in "
+            "European places of the game's leagues. Build wants the whole field: 26 Libertadores group places, "
+            "13 in phase 2, 6 in phase 1, 12 Sudamericana group places and 32 in its first stage, from any "
+            "South American leagues you like.\n\n"
+            "Switching them off takes out the places only they have; Libertadores, qualifying and Sudamericana "
+            "places stay.")
 
     def __init__(self, parent, project):
         super().__init__(parent, "South American places")
+        self.project = project
+        self.v.insertWidget(0, hint(_("Which positions go to the Copa Libertadores, its qualifying round and the "
+                                      "Copa Sudamericana, for the game's South American leagues and yours. The "
+                                      "game's Libertadores places are its own; the Copa Sudamericana is built by "
+                                      "Mod Studio, your leagues' places first, then the game's leagues in turn.")))
+        self.modern = QCheckBox(_("Modern CONMEBOL competitions"))
+        self.modern.setToolTip(_("Libertadores qualifying in three phases, a Copa Sudamericana with a first stage "
+                                 "and a play-off, and the Recopa Sudamericana. Off: the classic competitions, "
+                                 "as every world before 0.2.5 has them"))
+        self.modern.setChecked(modern_conmebol(project))
+        self.modern.toggled.connect(self.show_places)
+        self.v.insertWidget(1, self.modern)
+        self.view = QPlainTextEdit()
+        self.view.setReadOnly(True)
+        self.v.insertWidget(2, self.view, 1)
+        self.scroll.hide()
+        self.show_places()
+        self.setMinimumSize(900, 500)
+
+    def show_places(self, _on=None):
+        self.view.setPlainText("\n".join(self.modern_lines() if self.modern.isChecked() else self.classic_lines()))
+
+    def classic_lines(self):
         own, names, clubs = [], {}, {}
-        for L in project.recipe["leagues"]:
+        for L in self.project.recipe["leagues"]:
             n = L.get("name") or "?"
             names[n], clubs[n] = n, L.get("clubs") or 0
             for pos, comp in L.get("europe") or []:
                 own.append(("", 0, comp, n) if pos == B.CUP_WINNER else (n, pos, comp, 0))
         cups, _notes = B.ccup_plan(own, clubs)
-        self.v.insertWidget(0, hint(_("Which positions go to the Copa Libertadores, its qualifying round and the "
-                                      "Copa Sudamericana, for the game's South American leagues and yours. The "
-                                      "game's Libertadores places are its own; the Copa Sudamericana is built by "
-                                      "Mod Studio, your leagues' places first, then the game's leagues in turn.")))
-        view = QPlainTextEdit()
-        view.setReadOnly(True)
         # the builder's lines are English (the command line prints them); the language file's
         # "log" rules put them in the user's language, as the Build log's
-        view.setPlainText("\n".join(tr(l)[4:] for l in B.samerica_lines(own, names, cups)[1:]))
-        self.v.insertWidget(1, view, 1)
-        self.scroll.hide()
-        self.setMinimumSize(820, 360)
+        return [tr(l)[4:] for l in B.samerica_lines(own, names, cups)[1:]]
 
-    def finish(self):
-        bb = QDialogButtonBox(QDialogButtonBox.Close)
-        bb.button(QDialogButtonBox.Close).setText(_("Close"))
-        bb.rejected.connect(self.reject)
-        self.add_buttons(bb)
+    def modern_lines(self):
+        """the places of the modern competitions, counted against the field Build wants"""
+        project = self.project
+        recipe = dict(project.recipe, conmebol=B.CONMEBOL_MODERN)
         try:
-            theme.dark_title_bar(self)
-        except Exception:
-            pass
-        self.exec()
-        return False
+            effective = B.modern_libertadores_recipe(recipe, project.base)
+            gtops = {rid: name for rid, name, _clubs, _shipped in B.game_europe_tops(project.base)}
+        except (OSError, ValueError, B.BuildError):
+            effective, gtops = recipe, {}
+        names = dict(continental_place_choices(fl26world.COMPETITIONS, True))
+        modern_ids = {3, 9, fl26world.LIB_F1, fl26world.LIB_F2, fl26world.LIB_F3, fl26world.SUD_FIRST}
+        rows = []
+
+        def add(source, pos, comp, kind="position"):
+            try:
+                pos, comp = int(pos), int(comp)
+            except (TypeError, ValueError):
+                return
+            if comp in modern_ids or comp == 4:
+                rows.append((source, pos, comp, kind))
+
+        for L in recipe.get("leagues") or []:
+            if project.confeds.get(L.get("country")) != 4:
+                continue
+            for pos, comp in L.get("europe") or []:
+                add(L.get("name") or "?", pos, comp)
+        for key, places in (effective.get("game_europe") or {}).items():
+            if not str(key).isdigit():
+                continue
+            source = gtops.get(int(key), _("regulation %d") % int(key))
+            for pos, comp in places or []:
+                add(source, pos, comp)
+        for country, places in (effective.get("conmebol_associations") or {}).items():
+            for pos, comp in places or []:
+                add(_("%s (country without a league)") % country, pos, comp, "rank")
+
+        counts = {c: 0 for c in (3, fl26world.LIB_F1, fl26world.LIB_F2, fl26world.LIB_F3, 9, fl26world.SUD_FIRST)}
+        legacy = 0
+        for _source, _pos, comp, _kind in rows:
+            if comp in counts:
+                counts[comp] += 1
+            elif comp == 4:
+                legacy += 1
+        expected = (
+            (3, 26, _("Libertadores groups")),
+            (fl26world.LIB_F2, 13, _("Libertadores phase 2")),
+            (fl26world.LIB_F1, 6, _("Libertadores phase 1")),
+            (fl26world.LIB_F3, 0, _("Libertadores phase 3 (only the phase-2 winners)")),
+            (9, 12, _("Copa Sudamericana groups")),
+            (fl26world.SUD_FIRST, 32, _("Copa Sudamericana first stage")),
+        )
+        complete = not legacy and all(counts[c] == want for c, want, _label in expected)
+        lines = [_("The field is complete: Build can make the modern competitions.") if complete
+                 else _("The field is not complete yet: Build refuses the world until it is."), "",
+                 _("Places, of the ones the modern competitions need:")]
+        for comp, want, label in expected:
+            got = counts[comp]
+            lines.append("  %s: %d / %d  %s" % (label, got, want, _("OK") if got == want else _("CHECK")))
+        if legacy:
+            lines += ["", _("Places in Libertadores qualifying: %d  CHECK") % legacy,
+                      _("The modern competitions have no such round: use phase 1 or phase 2 instead.")]
+        lines += ["", _("Filled by the competitions themselves, not by places:"),
+                  "  " + _("Libertadores phase 2 winners -> phase 3"),
+                  "  " + _("Libertadores phase 3 winners -> Libertadores groups"),
+                  "  " + _("Libertadores phase 3 losers -> Sudamericana groups"),
+                  "  " + _("Libertadores and Sudamericana winners -> the Recopa Sudamericana")]
+        if rows:
+            lines += ["", _("Places:")]
+            by_source = {}
+            for source, pos, comp, kind in rows:
+                by_source.setdefault(source, []).append((pos, comp, kind))
+            for source in sorted(by_source, key=str.lower):
+                lines.append(source + ":")
+                for pos, comp, kind in sorted(by_source[source], key=lambda e: (e[0] == B.CUP_WINNER, e[0], e[1])):
+                    where = (_("cup winner") if pos == B.CUP_WINNER and kind == "position" else
+                             _("rank %d") % pos if kind == "rank" else _("position %d") % pos)
+                    label = _(names.get(comp) or dict(fl26world.COMPETITIONS).get(comp) or str(comp))
+                    lines.append("  %s -> %s" % (where, label))
+        return lines
+
+    def ok(self):
+        r = self.project.recipe
+        on = self.modern.isChecked()
+        if on and r.get("conmebol") != B.CONMEBOL_MODERN:
+            r["conmebol"] = B.CONMEBOL_MODERN
+            self.project.touch()
+        elif not on and modern_conmebol(self.project):
+            gone = B.modern_conmebol_places(r)
+            if gone and not ask(self, "South American places", _(
+                    "Switching the modern CONMEBOL competitions off takes out the %d places only they have "
+                    "(Libertadores phase 1 and 2, Sudamericana first stage, countries without a league). "
+                    "Libertadores, qualifying and Copa Sudamericana places stay. Go on?") % len(gone)):
+                return
+            B.drop_modern_conmebol(r)
+            self.project.touch()
+        self.accept()
 
 
 class GameCupsDialog(Dialog):
@@ -2538,7 +2853,11 @@ class NewLeagues(BuilderPage):
             "League in a new career's first season.\n"
             "- UEFA ranking: put the European countries in order and every league gets its European places by "
             "UEFA's rules.\n"
-            "- South American places: shows who goes to the Libertadores and the Copa Sudamericana.\n"
+            "- South American places: shows who goes to the Libertadores and the Copa Sudamericana, and "
+            "switches the modern CONMEBOL competitions on or off (Libertadores phases, Sudamericana first "
+            "stage, Recopa).\n"
+            "- CONMEBOL countries without a league: with the modern competitions, places for South American "
+            "countries that have no league in the world.\n"
             "- Competition names: new names and logos for cups and continental competitions.\n"
             "- League order: the order of the countries in Select Team and Kick Off -- by continent, A-Z "
             "or your own.\n"
@@ -2564,7 +2883,11 @@ class NewLeagues(BuilderPage):
         self.action("UEFA ranking", self.uefa_rank, tip="Put the European countries in order and every league "
                     "gets its European places by UEFA's key")
         self.action("South American places", self.samerica, tip="Which positions of every South American "
-                    "league, the game's and yours, go to the Libertadores, its qualifying and the Sudamericana")
+                    "league, the game's and yours, go to the Libertadores, its qualifying and the Sudamericana; "
+                    "and the modern CONMEBOL competitions on or off")
+        self.action("CONMEBOL countries without a league", self.conmebol_associations,
+                    tip="With the modern CONMEBOL competitions: places for South American countries that have no "
+                    "league in this world")
         self.action("Competition names", self.competition_names, tip="New names and logos for the cups and "
                     "continental competitions of the game, and for the continental cups the world builds")
         self.action("Trophies", self.trophies, tip="A trophy folder of your own for a competition: FL26's "
@@ -2858,8 +3181,25 @@ class NewLeagues(BuilderPage):
             self.say(_("UEFA ranking applied: every ranked league has its European places. Check the plan shows "
                        "them."), "ok")
 
+    def conmebol_associations(self):
+        if self.need_tables(True):
+            return
+        if not modern_conmebol(self.project):
+            info(self, "CONMEBOL countries without a league",
+                 _("These places belong to the modern CONMEBOL competitions: switch them on in South American "
+                   "places first."))
+            return
+        d = ConmebolAssociationsDialog(self, self.project)
+        if d.finish():
+            if d.result:
+                self.project.recipe["conmebol_associations"] = d.result
+            else:
+                self.project.recipe.pop("conmebol_associations", None)
+            self.project.touch()
+
     def samerica(self):
-        SouthAmericaDialog(self, self.project).finish()
+        if SouthAmericaDialog(self, self.project).finish():
+            self.refresh()
 
     def league_order(self):
         if self.need_tables(True):
