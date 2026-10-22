@@ -172,9 +172,7 @@ class Install(Page):
         try:
             work = I.work_dir(path, self.app.game.sider_dir)
         except (OSError, ValueError) as e:
-            error(self, "Import your world", _("Could not read the mod:") + "
-
-" + str(e))
+            error(self, "Import your world", _("Could not read the mod:") + "\n\n" + str(e))
             return
         self.src = path
         self.work = work
