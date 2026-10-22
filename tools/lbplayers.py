@@ -392,6 +392,57 @@ LINEUP = ["GK", "CB", "CB", "RB", "LB", "DMF", "DMF", "RMF", "LMF", "AMF", "CF"]
 
 SECOND_POS = 6   # a player at a position he can also play (rating 1) counts with this much off
 
+# ismael 22.10.: a new club kept the shirt numbers of the squad Build cloned for it, place by
+# place, so a striker wore 1 and a keeper 10. Now the eleven wear the numbers of their places
+# (the keeper 1, the full backs 2 and 3, the centre backs 4 and 5, the striker 9 ...), most
+# particular place first, and the rest of the squad the usual numbers of their line
+ROLE_SHIRTS = {"GK": (1,), "RB": (2,), "LB": (3,), "CF": (9, 10, 11, 7), "AMF": (10, 8, 7, 11),
+               "DMF": (6, 8, 5, 4), "CB": (4, 5, 3, 2, 6), "CMF": (8, 6, 10, 14), "RWF": (7, 11, 10),
+               "LWF": (11, 7, 10), "RMF": (7, 11, 8), "LMF": (11, 7, 10), "SS": (10, 9, 11, 7)}
+ROLE_FIRST = ["GK", "RB", "LB", "CF", "AMF", "DMF", "CB", "CMF", "RWF", "LWF", "RMF", "LMF", "SS"]
+LINE_OF = {"GK": "GK", "CB": "DEF", "LB": "DEF", "RB": "DEF", "DMF": "MID", "CMF": "MID", "LMF": "MID",
+           "RMF": "MID", "AMF": "MID", "LWF": "FWD", "RWF": "FWD", "SS": "FWD", "CF": "FWD"}
+LINE_SHIRTS = {"GK": (1, 13, 12, 25, 31, 99, 30, 40),
+               "DEF": (2, 3, 4, 5, 15, 22, 23, 24, 26, 28, 32, 33, 34, 35, 36, 38),
+               "MID": (6, 8, 10, 14, 16, 18, 20, 21, 27, 37, 39, 42, 44),
+               "FWD": (9, 7, 11, 17, 19, 21, 27, 29, 39, 45, 47, 49)}
+
+
+def position_shirts(squad, lineup=None):
+    """{key: shirt number} for a squad [(key, squad order, registered position)]: the players at
+    orders 0-10 take the numbers of their places in the formation (lineup, the role of each
+    place; the 4-2-3-1 by default), the others the usual numbers of their position's line, in
+    squad order; each number once, a keeper's numbers to outfield players only when nothing
+    else is free"""
+    places = list(lineup or LINEUP)
+    taken, out = set(), {}
+
+    def give(key, wants, keeper):
+        n = next((x for x in wants if x not in taken), None)
+        if n is None:
+            free = [x for x in range(1, 100) if x not in taken]
+            n = (free[0] if keeper else next((x for x in free if x not in E.KEEPER_SHIRTS), free[0]))
+        taken.add(n)
+        out[key] = n
+    rows = sorted(squad, key=lambda r: r[1])
+    eleven = [(k, places[n], pos) for n, (k, _o, pos) in enumerate(rows[:len(places)])]
+    bench = rows[len(places):]
+    for role in ROLE_FIRST:
+        for k, place, pos in eleven:
+            if place == role:
+                # a keeper wears a keeper's number wherever a short squad puts him, an outfielder
+                # in goal (a squad with no keeper) one of his line's
+                if pos == "GK":
+                    give(k, LINE_SHIRTS["GK"], True)
+                else:
+                    give(k, ROLE_SHIRTS[role] if role != "GK" else LINE_SHIRTS[LINE_OF.get(pos, "MID")], False)
+    for k, place, pos in eleven:              # a place of no known role
+        if k not in out:
+            give(k, LINE_SHIRTS[LINE_OF.get(pos, "MID")], pos == "GK")
+    for k, _o, pos in bench:
+        give(k, LINE_SHIRTS[LINE_OF.get(pos, "MID")], pos == "GK")
+    return out
+
 
 def best_eleven(rows, lineup=None):
     """{player: new order} that puts the strongest player for each place of the formation at
@@ -1537,6 +1588,7 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
     # a new club starts with the prototype's squad order, which is sorted by position and
     # plays centre backs out wide; unless the recipe orders it, give it its best eleven
     lined = 0
+    lu_of = {}                                         # club id -> the roles its eleven play
     for key, tid in tids.items():
         eds = (changes.get(key) or {}).get("edits") or {}
         if any("order" in ch for ch in eds.values()):
@@ -1561,11 +1613,31 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
                 lu = mktactics.roles(e["places"])
                 if picked is not None:
                     picked[tid] = e
+        lu_of[tid] = lu
         for ao, o in best_eleven(rows, lu).items():
             ao = int(ao)
             pack = u32(assigns, ao + E.A_PACK) & ~E.ORDER_MASK | int(o) << E.ORDER_SHIFT
             assigns[ao + E.A_PACK:ao + E.A_PACK + 4] = pack.to_bytes(4, "little")
         lined += 1 if rows else 0
+    # ismael 22.10.: a new club's numbers by position (position_shirts), unless its recipe gives
+    # numbers of its own
+    numbered = 0
+    for key, tid in tids.items():
+        eds = (changes.get(key) or {}).get("edits") or {}
+        if any(str(ch.get("shirt", "") or "").strip() for ch in eds.values()):
+            continue
+        sq = [(ao, order, E.show("Registered Position",
+                                 E.getf(players[index[pid]:index[pid] + P_REC], "Registered Position")))
+              for order, pid, ao in squad_of(tid) if ao not in drop and pid in index]
+        if not sq:
+            continue
+        lu = lu_of.get(tid) or (lineups or {}).get(tid)
+        for ao, n in position_shirts(sq, lu).items():
+            pack = E.with_shirt(u32(assigns, ao + E.A_PACK), n)
+            assigns[ao + E.A_PACK:ao + E.A_PACK + 4] = pack.to_bytes(4, "little")
+        numbered += 1
+    if numbered:
+        log("  players: %d new clubs numbered by position" % numbered)
     # B157 (jibibi 18.10.): a place keeps the shirt number of the squad Build cloned for the club,
     # whoever the recipe puts there, so a NewLife centre forward got the 1 at Bourg-en-Bresse.
     # The 1 goes to the club's first keeper, who swaps numbers with whoever wore it; a club whose
