@@ -221,8 +221,8 @@ come with it instead.
   phase's and the play-off's goals and assists too, also after the game's own rewrite. (Thanks
   Micarodvzla22)
 - **A UEFA play-off drawn again in spring (B192).** In a later season a play-off already played
-  in February could be drawn a second time between March and June, which left that season's
-  cups unfinished. A play-off is no longer drawn after its second leg.
+  in February could be drawn a second time between March and June. A play-off is no longer
+  drawn after its second leg.
 
 - **A national team or club of the game went missing next to a new club (B63).** The game takes
   two clubs whose ids differ only in bits 14-16 as the same club, and a few of its lists keep only
