@@ -1000,8 +1000,12 @@ class Players(BuilderPage):
         orig = self.original(self.cur)
         if key == "name" and not val and not self.club.isdigit():
             val = ""
+        rebased = None
         if self.cur.startswith(NEW):
             a = self.changes(True).setdefault("add", [])[int(self.cur[1:])]
+            if key == "Registered Position" and val != a.get(key, orig.get(key)):
+                v0 = self.current_view()
+                rebased = P.new_position(a, val, self.rows, P.rating(v0[1]) if v0 else None)
             a[key] = val
         else:
             ed = self.changes(True).setdefault("edits", {})
@@ -1014,6 +1018,10 @@ class Players(BuilderPage):
                 p = E.POSITIONS.index(val) if val in E.POSITIONS else None
                 if p is not None and ch.get(val, orig.get(val)) != "2":
                     ch[val] = "2"             # a new position is a natural one, as playeredit does
+                if p is not None and P.keeper_side(orig.get(key), val):
+                    for q in E.POSITIONS:     # over the keeper line: none of the old side's (B201)
+                        if P.keeper_side(q, val) and str(orig.get(q, "0")) != "0":
+                            ch[q] = "0"
             if not ch:
                 ed.pop(self.cur, None)
         err = P.check_edit({key: val}) if val != "" else []
@@ -1025,6 +1033,12 @@ class Players(BuilderPage):
         self._mark(key, val != str(orig.get(key, "")))
         if key in ("name", "shirt", "order", "Registered Position", "Age", "Stronger Foot") or key in E.FIELDS:
             self.update_row()
+        if key == "Registered Position" and self.cur.startswith(NEW):
+            self.fill_squad()                 # his positions (and abilities) changed with it
+            self.inspect()
+            if rebased:
+                self.say(_("Abilities taken from %s (%s), at the same rating.")
+                         % (rebased.get("name") or rebased["player"], rebased.get("Registered Position", "")), "ok")
 
     def id_problem(self, val):
         """why a player id cannot be taken, or None"""

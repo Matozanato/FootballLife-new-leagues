@@ -99,7 +99,7 @@ class World:
         old = bytes(rec)
         for n, v in vals.items():
             E.setf(rec, n, v)
-        E.natural(rec, old)
+        E.natural(rec, old, given=set(vals))
         if name != self.name(pid):
             rec[E.P_NAME:E.P_NAME + E.P_NAME_LEN * E.P_NAME_SLOTS] = E.name_slots(name)
         if rec != self.players[o:o + E.P_REC]:
