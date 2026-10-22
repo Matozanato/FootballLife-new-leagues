@@ -184,8 +184,11 @@ static int reg_list(uint16_t id, uint32_t* out)
  * built for 18 and 16: a 38-club DFB-Pokal was left with three undated first-round matches and
  * no round of 16. So when a cup's new list holds clubs of our league, the cup gets the top
  * league's clubs instead -- the field the shipped game gives it. The triples come from the world
- * file (`cup=` on the league line, written by the League Builder). */
-#define MAX_CUPS 16
+ * file (`cup=` on the league line, written by the League Builder).
+ * 16 until 0.2.5: the Europack eu5 has 18 cups and the Modpack more, and the ones past 16 were
+ * left to the game, which filled the Greek Cup (124) with both Greek leagues, 30 clubs, played
+ * the first round and never the second (B178, monkusgigus 2026-10-20; eu5, day 298 of 2026). */
+#define MAX_CUPS 128
 /* GitHub #32: `cupall=1` on the league line (bit 15 of the cup id here) is the other way round --
  * the cup takes both leagues, in turn (top, low, top ...) so the first round, which pairs 1 v 2,
  * is top flight against the league below, as the real DFB-Pokal draws it. The League

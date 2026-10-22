@@ -312,6 +312,14 @@ come with it instead.
   (no more 99 in a CF's skills to reach his rating). Build and the Player Editor do the same for a
   player moved over that line. (Thanks JoJofiaz)
 
+- **A national cup of a big world stopped after its first round (B178).** Mod Studio keeps a
+  country's cup to the clubs the game gives it when a league of yours sits below the top one, but
+  it took only 16 such cups. In a world with more (the Europack has 18, the Modpack more), the
+  rest were left to the game, which filled the Greek Cup with both Greek leagues, 30 clubs, played
+  the first round and never the second: the next match showed in the calendar and was skipped.
+  Up to 128 cups are now kept. Takes effect from the next season's cup draw in a career already
+  started. (Thanks monkusgigus)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.

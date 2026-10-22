@@ -142,13 +142,13 @@ local function from_world(world)
     -- below a shipped second division the clubs put back come from the top flight (cuptop=)
     if L.scup and L.above then scups[#scups + 1] = { L.scup, L.cuptop or L.above, L.id } end
   end
-  -- the league cups after every national cup: fl26chain.dll keeps MAX_CUPS (16) and drops the
+  -- the league cups after every national cup: fl26chain.dll keeps MAX_CUPS (128) and drops the
   -- rest, so a world with more keeps the national cups it kept before the league cups came
   for _, c in ipairs(lcups) do cups[#cups + 1] = c end
   return chains, protect, cups, scups
 end
 
-local MAX_CUPS = 16                                  -- fl26chain.c MAX_CUPS
+local MAX_CUPS = 128                                 -- fl26chain.c MAX_CUPS (16 before B178)
 local MAX_CHAINS = 32                               -- fl26chain.c MAX_CHAINS (8 before B186)
 
 local CAVE_VA, CAVE_PAGE, CAVE_LEN = 0x14252e900, 0x14252e000, 0x108
