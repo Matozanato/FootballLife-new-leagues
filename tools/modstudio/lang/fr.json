@@ -2023,7 +2023,8 @@
   "Only the game's own players": "Seulement les joueurs du jeu",
   "The clubs that keep their place get only the transfers between the game's players and the new ratings: no new players, nobody let go. Clubs that came up still get their whole squad.": "Les clubs qui gardent leur place reçoivent seulement les transferts entre joueurs du jeu et les nouvelles notes : aucun nouveau joueur, personne ne part. Les clubs promus reçoivent quand même tout leur effectif.",
   "Tick it if Bring gives you the same player twice.": "Cochez-la si Amener vous donne le même joueur deux fois.",
-  "%d players of this season the game does not have were left out.": "%d joueurs de cette saison que le jeu n'a pas ont été laissés de côté."
+  "%d players of this season the game does not have were left out.": "%d joueurs de cette saison que le jeu n'a pas ont été laissés de côté.",
+  "An Edit save from before this install is in the game's save folder. Made for an older version of the world, it can stop a new Master League in the season or leave a club without its players, and it hides the new squads in Exhibition and Edit mode.": "Une sauvegarde Edit antérieure à cette installation est dans le dossier des sauvegardes du jeu. Faite pour une version plus ancienne du monde, elle peut arrêter une nouvelle Master League en pleine saison ou laisser un club sans ses joueurs, et elle cache les nouveaux effectifs en Exhibition et en mode Edit."
  },
  "log": [
   [

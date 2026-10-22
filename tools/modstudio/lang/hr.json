@@ -2024,7 +2024,8 @@
   "Only the game's own players": "Samo igrini igrači",
   "The clubs that keep their place get only the transfers between the game's players and the new ratings: no new players, nobody let go. Clubs that came up still get their whole squad.": "Klubovi koji zadrže mjesto dobiju samo transfere između igrinih igrača i nove ocjene: nijedan novi igrač, nitko ne odlazi. Klubovi koji su ušli i dalje dobiju cijelu momčad.",
   "Tick it if Bring gives you the same player twice.": "Označi ako ti Bring da istog igrača dvaput.",
-  "%d players of this season the game does not have were left out.": "%d igrača ove sezone kojih igra nema je izostavljeno."
+  "%d players of this season the game does not have were left out.": "%d igrača ove sezone kojih igra nema je izostavljeno.",
+  "An Edit save from before this install is in the game's save folder. Made for an older version of the world, it can stop a new Master League in the season or leave a club without its players, and it hides the new squads in Exhibition and Edit mode.": "U mapi saveova igre je Edit save od prije ove instalacije. Napravljen je za stariju verziju svijeta: nova Master League s njim može stati usred sezone ili klub ostane bez svojih igrača, a u Exhibitionu i Edit modu skriva nove momčadi."
  },
  "log": [
   [

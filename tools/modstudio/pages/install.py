@@ -398,6 +398,8 @@ class Install(Page):
             self.save_sw = save_switch(self, self.app, new, saves.in_game(self.app.game), title="Import your world")
             if self.save_sw is None:
                 return
+        import time
+        self.t_install = time.time()               # an Edit save older than this is the old world's (B197)
         self.app.busy(True, _("Installing %s") % name)
         self.go.setEnabled(False)
         log = []
@@ -566,6 +568,32 @@ class Install(Page):
             info(self, _("Ready to play"), text + "\n\n" +
                  _("Press Start the game and start a NEW Master League (an old career does not get the new leagues). "
                    "No Build needed."))
+        self.edit_check(w)
+
+    def edit_check(self, w):
+        """B197 (22.10.): the world's save folder still has the Edit save of its older version. Its
+        squads list players this version no longer has: a new Master League on it crashed in the
+        season (0x141321d00) or played with a team that lost every match. Build's box says so after
+        a Build; a world zip said nothing"""
+        from .. import game as G
+        since = getattr(self, "t_install", None)
+        if not since or not G.old_edit(since - 5):
+            return
+        if not ask(self, "Move the Edit save aside",
+                   _("An Edit save from before this install is in the game's save folder. Made for an older "
+                     "version of the world, it can stop a new Master League in the season or leave a club "
+                     "without its players, and it hides the new squads in Exhibition and Edit mode.") + "\n\n" +
+                   _("Move the Edit save aside") + "?"):
+            return
+        try:
+            name = G.edit_aside(w)
+        except OSError as e:
+            if not denied(self, e):                   # a game under Program Files (B43)
+                error(self, "Move the Edit save aside", str(e))
+            return
+        info(self, "Move the Edit save aside",
+             _("The Edit save is now %s, in the same folder. The game makes a new one; to get the old one "
+               "back, rename it to EDIT00000000.") % name)
 
     def show_fix(self):
         error(self, _("Almost ready"), _("Fix these, then the world is ready to play:") + "\n\n" +
