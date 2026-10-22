@@ -169,8 +169,15 @@ class Install(Page):
             self.add_league_pack(path)
             return
         self.cleanup()
+        try:
+            work = I.work_dir(path, self.app.game.sider_dir)
+        except (OSError, ValueError) as e:
+            error(self, "Import your world", _("Could not read the mod:") + "
+
+" + str(e))
+            return
         self.src = path
-        self.work = tempfile.mkdtemp(prefix="fl26ms_")
+        self.work = work
         label = os.path.splitext(os.path.basename(path.rstrip("\\/")))[0]
         self.name.setText(label)
         self.what.setText(_("Looking inside %s ...") % os.path.basename(path))

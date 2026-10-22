@@ -242,6 +242,12 @@ come with it instead.
   Program Files, run as administrator; already administrator, close the game and Sider, allow
   FL26ModStudio.exe in Controlled folder access, or untick Read-only. (Thanks AHMED)
 
+- **Install of a big world zip stopped half-way on a full C: (B41).** Import your world unpacked
+  every zip into the Windows temp folder on C:, and the Modpack takes 7 GB unpacked, even with the
+  game on D:. When C: has no room for it, Mod Studio now unpacks beside the game (the disk Install
+  copies to anyway), and when neither disk has room it says how much is needed before it starts.
+  (Thanks vmican)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.

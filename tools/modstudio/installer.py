@@ -410,6 +410,54 @@ def unpack(src, work, progress=None):
     raise ValueError("not a mod this program knows: %s" % os.path.basename(src))
 
 
+GB = 1 << 30
+ROOM = GB // 2          # bytes left free on a disk after an unpack
+
+
+def unpacked_size(src):
+    """bytes `src` takes unpacked: a zip's or 7z's files, a single file's own size; 0 for a folder
+    or what cannot be read (unpack says why)"""
+    low = src.lower()
+    try:
+        if os.path.isdir(src):
+            return 0
+        if low.endswith(".zip"):
+            with zipfile.ZipFile(src) as z:
+                return sum(m.file_size for m in z.infolist())
+        if low.endswith(".7z"):
+            import py7zr
+            with py7zr.SevenZipFile(src, "r") as z:
+                return sum(f.uncompressed or 0 for f in z.list())
+        return os.path.getsize(src)
+    except Exception:
+        return 0
+
+
+def free(d):
+    try:
+        return shutil.disk_usage(d).free
+    except OSError:
+        return 0
+
+
+def work_dir(src, near):
+    """B41 (vmican, 15.10.): where to unpack `src`. %TEMP% as always while its disk has room; the
+    Modpack is 7 GB unpacked and on a full C: the unpack stopped half-way, the game on D: did not
+    help. Then a folder beside the game instead (`near`, the Sider folder: the disk Install copies to
+    anyway). Neither with room: ValueError naming what it needs."""
+    need = unpacked_size(src)
+    tmp = tempfile.gettempdir()
+    if not need or free(tmp) >= need + ROOM:
+        return tempfile.mkdtemp(prefix="fl26ms_")
+    if near and os.path.isdir(near) and free(near) >= need + ROOM:
+        here = os.path.join(near, "_fl26ms_unpack")
+        os.makedirs(here, exist_ok=True)
+        return tempfile.mkdtemp(prefix="fl26ms_", dir=here)
+    raise ValueError("not enough free space: %.1f GB unpacked, %.1f GB free on %s, %.1f GB beside the game"
+                     % (need / GB, free(tmp) / GB, os.path.splitdrive(tmp)[0] or tmp,
+                        free(near) / GB if near else 0))
+
+
 def lower_names(d):
     try:
         return {n.lower(): n for n in os.listdir(d)}

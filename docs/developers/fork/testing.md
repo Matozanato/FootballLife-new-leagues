@@ -21,6 +21,7 @@ exe. See `tools/flpaths.py`.
 | test | arguments | what it proves |
 |---|---|---|
 | `test_auto_formation.py` | tables | a new club with no formation in the recipe gets the one its squad fits (`lbplayers.pick_formation`): two strikers play two up front, wingers three forwards, three centre backs three or five at the back; in a built world the clubs of one league play different formations with their best eleven in them, and a club's or league's formation from the recipe stands |
+| `test_install_space.py` | none | B41: a zip unpacks in %TEMP% while its disk has room, else in a folder beside the game, else a message naming the sizes before anything is unpacked |
 | `test_country_order.py` | | League order (0.2.0) follows the recipe's `country_order` and never `league_order` (the Leagues page's drag order) |
 | `test_crestmatch.py` | | the crest file name matcher |
 | `test_cup_draw.py` | | `cup_draw` becomes the `cupdraw` line; `seeded` unless the recipe says otherwise; any other value is refused |
