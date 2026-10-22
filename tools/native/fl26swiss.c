@@ -1426,6 +1426,100 @@ static int po_start(int ci, void* started)
  * tie is over when this is asked, and the table orders them by points, then goal difference, the
  * aggregate), else, as lpre_winner and q_result do, to the seeded club, the tie's second.
  * 0: the tie has no clubs. */
+/* does dst already hold src's first ten rows, each with at least src's tally? (an empty src: yes)
+   Not the leader alone: run 6 (22.10., day 362) had the game refill the Conference League
+   play-off's list with 13 rows of its own, and the league phase's leader was among them with
+   the same 4 goals. Ten rows of the league phase are never pushed out of a merged list of 40. */
+static int lb_has(const unsigned char* dst, const unsigned char* src)
+{
+  unsigned nd = *(const uint32_t*)(dst + 0x320), ns = *(const uint32_t*)(src + 0x320);
+  if (nd > LB_ROWS) nd = LB_ROWS;
+  if (ns > 10) ns = 10;
+  for (unsigned k = 0; k < ns; k++) {
+    const lb_row_t* s = (const lb_row_t*)src + k;
+    unsigned i = 0;
+    while (i < nd && ((const lb_row_t*)dst)[i].player != s->player) i++;
+    if (i == nd || ((const lb_row_t*)dst)[i].n < s->n) return 0;
+  }
+  return 1;
+}
+/* B114 (runs 5-7, 22.10.): the game builds a stage's lists again from its own player tallies of
+   that regulation -- 0x140fbd900 (this, u16 reg, players) clears both (0x140fbb090) and fills them --
+   every few days (run 7: days 15, 29, 37, 54, 58, 65), so what lb_carry put there lasts until the
+   next build: by day 65 the second season's round of 16 held 29 rows of its own and none of the
+   league phase's ten best. (Goals of a match go in one at a time, 0x140fbca80, which is why the
+   first season's round of 16 still had its carried rows on day 75.) So right after every build of
+   a play-off or knockout list that runs this season, and on the day loop as well, a list without
+   the league phase's ten best gets back what came before it: the play-off's lists for the
+   knockout, then the league phase's. The play-off's own lists also hold August's qualifying
+   play-off under the same regulation. */
+static int from_league(const cup_t* c, uint16_t stage)
+{
+  unsigned char* r = get_rec(stage);
+  unsigned char* lg = get_rec(c->league);
+  if (!r || !lg || rec_count(r) != 16) return 0;
+  const uint32_t* rc = rec_clubs(r); const uint32_t* lc = rec_clubs(lg);
+  unsigned nl = rec_count(lg);
+  for (unsigned i = 0; i < 16; i++) {
+    unsigned j = 0;
+    while (j < nl && !same_club(rc[i], lc[j])) j++;
+    if (j == nl) return 0;
+  }
+  return 1;
+}
+/* the play-off runs from December to two weeks past its second leg, the knockout from the
+   play-off's first leg to the end of June; both only with all their clubs from the league phase */
+static int po_running(const cup_t* c, int d)
+{
+  return d >= 0 && (d >= 335 || d <= (int)c->days[1] + 14) && from_league(c, c->po);
+}
+static int ko_running(const cup_t* c, int d)
+{
+  return d >= (int)c->days[0] && d <= 180 && from_league(c, c->ko);
+}
+static void lb_fix(const cup_t* c, uint16_t stage, int d, const char* why)
+{
+  unsigned yt = 0, yl = 0, yp = 0;
+  unsigned char* t = stage_table(stage, 0, &yt);
+  unsigned char* l = stage_table(c->league, 0, &yl);
+  if (!t || !l || yt != yl) return;
+  unsigned char* p = stage == c->ko ? stage_table(c->po, yt, &yp) : 0;
+  if (p && yp != yt) p = 0;
+  unsigned n[2] = { 0, 0 }; int fixed = 0;
+  for (int k = 0; k < 2; k++) {
+    unsigned off = k ? LB_ASSISTS : LB_GOALS;
+    n[k] = *(uint32_t*)(t + off + 0x320);
+    if (lb_has(t + off, l + off)) continue;
+    if (p) n[k] = lb_add(t + off, p + off);
+    if (!lb_has(t + off, l + off)) n[k] = lb_add(t + off, l + off);
+    fixed = 1;
+  }
+  if (fixed)
+    logf("fl26swiss: %s scorers -- reg %u (season %u) without the league phase's; %s and the league phase's added again (%s, day %d): %u goal rows, %u assist rows",
+         c->name, (unsigned)stage, yt, p ? "the play-off's" : "nothing before it", why, d, n[0], n[1]);
+}
+static void lb_keep(const cup_t* c, int d)
+{
+  if (po_running(c, d)) lb_fix(c, c->po, d, "day loop");
+  if (ko_running(c, d)) lb_fix(c, c->ko, d, "day loop");
+}
+#define LBBUILD_RVA 0xfbd900   /* (this, u16 reg, players): a stage's goal and assist lists built anew */
+static const unsigned char SIG_LBBUILD[14] = {
+  0x48, 0x89, 0x4c, 0x24, 0x08, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56 };
+unsigned char* g_tramp_lbbuild = 0;
+typedef uint64_t (*lbbuild_fn)(void*, uint64_t, void*, uint64_t);
+uint64_t lbbuild_handler(void* self, uint64_t reg, void* players, uint64_t a4)
+{
+  uint64_t r = ((lbbuild_fn)(uintptr_t)g_tramp_lbbuild)(self, reg, players, a4);
+  int d = today();
+  for (int i = 0; i < 3; i++) {
+    const cup_t* c = &CUPS[i];
+    if ((uint16_t)reg == c->po && po_running(c, d)) lb_fix(c, c->po, d, "after the game's build");
+    else if ((uint16_t)reg == c->ko && ko_running(c, d)) lb_fix(c, c->ko, d, "after the game's build");
+  }
+  return r;
+}
+
 static uint32_t po_tie_winner(const cup_t* c, int k)
 {
   uint16_t id = tie_id(c, k);
@@ -1483,6 +1577,7 @@ static int po_finish(int ci, void* started)
   unsigned char* ko = get_rec(c->ko);
   logf("fl26swiss: %s play-off over -- reg %u now %u clubs", c->name, (unsigned)c->ko, ko ? rec_count(ko) : 0);
   if (ko && rec_count(ko)) {
+    lb_keep(c, today());
     if (start_stage(started, c->ko)) lb_carry(c->name, c->po, c->ko);
     return 1;
   }
@@ -6237,6 +6332,7 @@ __declspec(dllexport) void fl26_swiss_ko_tick(void)
       for (int k = 0; k < g_nccup; k++)
         if (g_ccup[k].ko) ko_sync(g_ccup[k].ko, "day loop");
       ko_sync(UECL_KO, "day loop");
+      for (int i = 0; i < 3; i++) lb_keep(&CUPS[i], d);
     }
   }
   if (d < 60 || d > 150) return;
@@ -11385,6 +11481,10 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
       logf("fl26swiss: technical Libertadores qualifying competition hide NOT installed (%d)",
            lr);
   }
+  if (!hook((unsigned char*)(uintptr_t)(exe_base + LBBUILD_RVA), SIG_LBBUILD, 14, (void*)lbbuild_handler, &g_tramp_lbbuild))
+    logf("fl26swiss: cup scorers kept through the game's list builds (@%llx)", (unsigned long long)(exe_base + LBBUILD_RVA));
+  else
+    logf("fl26swiss: cup scorers hook NOT installed (signature)");
   if (!memcmp((void*)(uintptr_t)(exe_base + STAND_RVA), SIG_STAND, 15) &&
       !hook((unsigned char*)(uintptr_t)(exe_base + STAND_RVA), SIG_STAND, 15, (void*)stand_handler, &g_tramp_stand))
     logf("fl26swiss: standings row guard live (@%llx)", (unsigned long long)(exe_base + STAND_RVA));
