@@ -1,5 +1,6 @@
 {
  "text": {
+  "Abilities taken from %s (%s), at the same rating.": "Capacités reprises de %s (%s), à la même note.",
   "a top division of a new country: February to December plays like Brazil, Japan or Saudi Arabia, clubs going up and down at New Year; the divisions below it follow it. Not with a split, Apertura/Clausura or a league cup yet": "première division d'un nouveau pays : février à décembre joue comme le Brésil, le Japon ou l'Arabie saoudite, les clubs montent et descendent au Nouvel An ; les divisions en dessous la suivent. Pas encore avec phase finale, Apertura/Clausura ni coupe de la ligue",
   "The game gives this league no places in this table. Tick the box above to give it some.": "Le jeu ne donne à cette ligue aucune place dans ce tableau. Coche la case ci-dessus pour lui en donner.",
   "The game gives this league its Libertadores places itself: group stage %s, qualifying round %s. They are not in this table. Tick the box above to set your own.": "Le jeu donne lui-même à cette ligue ses places en Libertadores : phase de groupes %s, tour préliminaire %s. Elles ne sont pas dans ce tableau. Coche la case ci-dessus pour mettre les tiennes.",

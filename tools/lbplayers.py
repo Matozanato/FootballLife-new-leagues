@@ -293,6 +293,45 @@ def at_level(row, want):
     return {n: str(max(40, min(99, int(row.get(n) or 40) + d))) for n, _b in E.ABILITIES}
 
 
+def keeper_side(a, b):
+    """True when positions a and b are on either side of the goalkeeper line"""
+    return (a == "GK") != (b == "GK")
+
+
+def new_position(a, pos, rows, want):
+    """a new player (a recipe "add" entry, a copy of the club's player a["like"]) given the
+    registered position pos: rated 2 (natural) there, and 0 at every position over the keeper line
+    from it.  When pos is over that line from the player he is a copy of, he becomes a copy of a
+    player of that kind from rows (the club's players; pos itself first, the rating nearest
+    `want` next) brought to the rating `want`, his own ability and position changes dropped.
+    B201/B202 (JoJofiaz 22.10.): a new player copied from a midfielder and made a keeper kept
+    the midfielder's natural positions; one copied from a keeper and made a CF kept the keeper's
+    abilities, and the Rating box took them to 99.  Returns the row he is now a copy of, or None."""
+    if pos not in E.POSITIONS:
+        return None
+    like = next((r for r in rows if r.get("player") == str(a.get("like"))), None)
+    src = None
+    if like is not None and keeper_side(like.get("Registered Position"), pos):
+        kind = [r for r in rows if r.get("player") and not keeper_side(r.get("Registered Position"), pos)]
+        if kind:
+            src = min(kind, key=lambda r: (r.get("Registered Position") != pos,
+                                           abs(rating(r) - want) if want else 0))
+            for n, _b in E.ABILITIES:
+                a.pop(n, None)
+            for p in E.POSITIONS:
+                a.pop(p, None)
+            a["like"] = src["player"]
+            if want:
+                m = dict(src)
+                m.update({k: v for k, v in a.items() if k != "like"})
+                a.update(shifted(m, shift_to([m], want)))
+    a[pos] = "2"
+    for p in E.POSITIONS:
+        if keeper_side(p, pos):
+            a[p] = "0"
+    return src
+
+
 def fill_newlife(pl, base, log=print):
     """pl's "players" with the prototype players who stay at a NewLife club brought to its level
     (fill_level), for recipes whose leagues were added before Mod Studio did it itself (Risto
@@ -1791,7 +1830,7 @@ def _write(players, assigns, po, ao, ch):
         v = str(v).strip()
         if n in E.FIELDS and v != "":
             E.setf(rec, n, E.parse(n, v))
-    E.natural(rec, old)
+    E.natural(rec, old, given={n for n, v in ch.items() if str(v).strip() != ""})
     name = str(ch.get("name", "")).strip()
     if name:
         rec[E.P_NAME:E.P_NAME + E.P_NAME_LEN * E.P_NAME_SLOTS] = E.name_slots(name)

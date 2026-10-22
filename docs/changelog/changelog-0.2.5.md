@@ -305,6 +305,13 @@ come with it instead.
   line in effect, and the warning names the line that is not used. Stadiums, balls and goal songs,
   whose servers pick one of several lines, are left as they were. (Thanks JoJofiaz)
 
+- **A new player made a keeper kept a midfielder's positions, and one copied from a keeper kept
+  keeper abilities (B201, B202).** A new player is a copy of the player you had selected. Given a
+  position over the goalkeeper line from that player, he now becomes a copy of a player of that
+  kind from the same club, at the rating he had, and plays none of the other side's positions
+  (no more 99 in a CF's skills to reach his rating). Build and the Player Editor do the same for a
+  player moved over that line. (Thanks JoJofiaz)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
