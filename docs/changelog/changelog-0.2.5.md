@@ -214,6 +214,15 @@ come with it instead.
 - **The Champions League's round of 16 not drawn after two seasons with full tables (B169).**
   When two seasons of the league phase both had 36 rows, the older table could be read; the
   latest season's is now taken.
+- **The UEFA cups' Goal and Assist Ranking started again at the play-off (B114).** After the
+  league phase, the play-off and the knockout of the Champions League, Europa League and
+  Conference League showed only the goals of their own matches, and the game wrote its own list
+  again every few days. The ranking of a running play-off or knockout now keeps the league
+  phase's and the play-off's goals and assists too, also after the game's own rewrite. (Thanks
+  Micarodvzla22)
+- **A UEFA play-off drawn again in spring (B192).** In a later season a play-off already played
+  in February could be drawn a second time between March and June, which left that season's
+  cups unfinished. A play-off is no longer drawn after its second leg.
 
 - **A national team or club of the game went missing next to a new club (B63).** The game takes
   two clubs whose ids differ only in bits 14-16 as the same club, and a few of its lists keep only
