@@ -75,6 +75,14 @@ come with it instead.
   paired keeps what it had: no competition borrows another's trophy. Switch on writes one marked
   block at the top of Entrance.lua and replaces it every time; nothing else in the file is touched.
   Without FL26's Entrance.lua in `modules` the Build log says the trophies are not shown.
+- **A new club's shirt numbers follow the positions (Thanks ismael).** A new club's players wore
+  the numbers of the squad Build cloned for it, so a centre back could wear 9 and a winger 2. Build
+  now numbers the whole squad by position: the first eleven the way a club does (keeper 1, right
+  back 2, left back 3, centre backs 4 and 5, the holding midfielder 6, the striker 9, the wingers
+  7 and 11, the playmaker 10), the rest with their line's numbers (a defender 15, 22, 23 ..., a
+  forward 17, 19, 21 ...), keepers always a keeper's number (1, 13, 12, 25 ...). Numbers a recipe or
+  a NewLife pack gives stay as they are; the clubs of the game keep theirs. Checked on the Europe
+  pack: 1139 new clubs, no number twice, no outfielder in 1, 12 or 13.
 
 ## Fixed
 
