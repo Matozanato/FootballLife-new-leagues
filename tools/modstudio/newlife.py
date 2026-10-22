@@ -1002,8 +1002,31 @@ def undo_game_leagues(recipe):
 def refresh_game_leagues(recipe, rel, info, cids):
     """bring the game's leagues cids (competition ids, from game_league_plan) to the release's
     season (see above); what an earlier refresh did goes first. Returns counts {"swaps",
-    "replaced", "clubs", "join", "add", "remove", "stayed"}."""
+    "replaced", "clubs", "join", "add", "remove", "stayed", "hand_lost"}.
+    B196: what the person changed on a place an earlier refresh gave another club (a crest of
+    their own) does not make that place theirs: undone, it was left with only that change, the
+    plan then skipped the place as changed by hand, and the game's old club came back under the
+    other club's crest (the Worldpack's 44 crests of B126). The change is kept aside, the place
+    planned as the game's, and the change put back when the same club comes into it again."""
+    prev = _refresh_record(recipe)["replaced"]
+    edc = (recipe.get("edits") or {}).get("clubs") or {}
+    aside = {}                                    # team id -> (the club it held, what the person set)
+    for t, was in prev.items():
+        e = edc.get(str(t)) or {}
+        own = {k: v for k, v in e.items() if was.get(k) != v}
+        if own and was.get("name"):
+            aside[t] = (was["name"], own)
     undo_game_leagues(recipe)
+    edc = (recipe.get("edits") or {}).get("clubs") or {}
+    for t, (_n, own) in aside.items():
+        e = edc.get(str(t)) or {}
+        for k, v in own.items():
+            if e.get(k) == v:
+                e.pop(k)
+        if str(t) in edc and not e:
+            edc.pop(str(t))
+    if "clubs" in (recipe.get("edits") or {}) and not recipe["edits"]["clubs"]:
+        recipe["edits"].pop("clubs")
     plan = [p for p in game_league_plan(recipe, rel, info) if p["cid"] in set(cids)]
     ed = recipe.setdefault("edits", {})
     rec = {"version": str(rel.meta.get("version", "")), "swaps": [], "replaced": {}, "clubs": []}
@@ -1034,6 +1057,14 @@ def refresh_game_leagues(recipe, rel, info, cids):
             clubs.setdefault(str(t), {}).update(was)
             rec["replaced"][str(t)] = was
             squads[t] = c
+            held, own = aside.pop(t, (None, None))
+            if own and held == was["name"]:
+                clubs[str(t)].update(own)         # B196: the same club again, the person's change with it
+            elif own:
+                aside[t] = (held, own)
+    # a change kept aside whose club does not come back into its place: it was that club's, not
+    # the place's; it goes, and the count says so
+    lost = len(aside)
     if not clubs:
         ed.pop("clubs")
     if not ed:
@@ -1054,7 +1085,7 @@ def refresh_game_leagues(recipe, rel, info, cids):
     rec["clubs"] = sorted(int(t) for t in squads if (pl.get(str(t)) or {}).get("newlife_game"))
     recipe["newlife_game"] = rec
     rel.use_recipe(recipe)                         # B79: the clubs whose place went are new clubs now
-    n.update(swaps=len(rec["swaps"]), replaced=len(rec["replaced"]), clubs=len(rec["clubs"]))
+    n.update(swaps=len(rec["swaps"]), replaced=len(rec["replaced"]), clubs=len(rec["clubs"]), hand_lost=lost)
     return n
 
 
