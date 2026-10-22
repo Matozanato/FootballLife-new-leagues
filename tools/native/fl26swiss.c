@@ -599,6 +599,13 @@ unsigned char* g_tramp_setcl = 0;
  * of the table array and so the number of headers come from the live lea at 0x14158df91
  * (fl26hdr255 moves the array behind 255 headers). */
 static int table_of_clubs(const unsigned char* t, unsigned rows, const uint32_t* want, unsigned nwant);
+/* the pool's tables: 600 from the table base on, but fl26hdr255 moves the base behind 255
+   headers and the member after the pool stays at 0x39a8f0, so it holds 595 there */
+static unsigned pool_tables(uint32_t arr)
+{
+  unsigned n = arr < 0x39a8f0 ? (0x39a8f0 - arr) / 0x187c : 0;
+  return n > 600 ? 600 : n;
+}
 /* the same walk for any table: rows in lo..hi and, given want, only clubs of want (a group's
    table of an earlier season holds other clubs: B169, 20.10.) */
 static unsigned char* season_table_x(uint16_t reg, unsigned lo, unsigned hi, const uint32_t* want, unsigned nwant,
@@ -607,7 +614,7 @@ static unsigned char* season_table_x(uint16_t reg, unsigned lo, unsigned hi, con
   unsigned char* lea = (unsigned char*)(uintptr_t)(g_base + 0x158df91);
   if (lea[0] != 0x49 || lea[1] != 0x8d || lea[2] != 0x82) return 0;
   uint32_t arr; memcpy(&arr, lea + 3, 4);
-  unsigned nh = arr / 0xb4;
+  unsigned nh = arr / 0xb4, nt = pool_tables(arr);
   if (arr % 0xb4 || nh < 100 || nh > 255) return 0;
   unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
   unsigned char* s = o ? *(unsigned char**)(o + 0x78) : 0;
@@ -620,7 +627,7 @@ static unsigned char* season_table_x(uint16_t reg, unsigned lo, unsigned hi, con
       for (int i = 0; i < 20; i++) {
         int32_t ix = *(int32_t*)(slot + 8 + 4 * i);
         if (ix == -1) break;
-        if (ix < 0 || ix >= 600) continue;
+        if (ix < 0 || (unsigned)ix >= nt) continue;
         unsigned char* e = s + arr + (size_t)ix * 0x187c;
         if (*(uint16_t*)e != reg) continue;
         unsigned rows = *(uint32_t*)(e + 0x318 + 0x3c0);
@@ -656,6 +663,96 @@ static unsigned char* lp_table(uint16_t row)
          (unsigned)row, rows, yr, *(uint32_t*)(t2 + 0x3c0));
   }
   return t2;
+}
+/* ---- a cup's top scorers across its stages (B114, Micarodvzla 17.10.) ----
+ *
+ * Every stage of a competition has a table of its own in the pool, and each keeps its own goal
+ * and assist lists: +0xad8 and +0xe04, 40 rows of 0x14 {u32, u32 player, u32 club, u32 rank,
+ * u32 tally}, the count at +0x320 (cap 40 at +0x324). The Goal Ranking shows the stage running
+ * now, so when fl26swiss started the February play-off and the March round of 16 the list was
+ * empty again: on 16/3 the Europa League showed 2 goals at the top, while the league phase's
+ * list (reg 5) held 7. Run on 22.10. over 17-21/3: the round of 16's goals went to reg 4 and
+ * 6 alone. So when fl26swiss starts the next stage, the list of the stage before is its start:
+ * tallies by player, sorted, ranked (1 + the players with more), the first 40 kept. */
+#define LB_GOALS   0xad8
+#define LB_ASSISTS 0xe04
+#define LB_ROWS    40
+/* the latest stage table of reg a season's slot holds: of `most` or before, any when most is 0 */
+static unsigned char* stage_table(uint16_t reg, unsigned most, unsigned* year_out)
+{
+  unsigned char* lea = (unsigned char*)(uintptr_t)(g_base + 0x158df91);
+  if (lea[0] != 0x49 || lea[1] != 0x8d || lea[2] != 0x82) return 0;
+  uint32_t arr; memcpy(&arr, lea + 3, 4);
+  unsigned nh = arr / 0xb4, nt = pool_tables(arr);
+  if (arr % 0xb4 || nh < 100 || nh > 255) return 0;
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* s = o ? *(unsigned char**)(o + 0x78) : 0;
+  if (!s) return 0;
+  unsigned char* best = 0; unsigned byear = 0;
+  for (unsigned h = 0; h < nh; h++)
+    for (int k = 0; k < 2; k++) {
+      unsigned char* slot = s + h * 0xb4 + 4 + k * 0x58;
+      if (*(uint32_t*)slot == 0xffffffffu || *(uint16_t*)(slot + 4) == 0xffff) continue;
+      for (int i = 0; i < 20; i++) {
+        int32_t ix = *(int32_t*)(slot + 8 + 4 * i);
+        if (ix == -1) break;
+        if (ix < 0 || (unsigned)ix >= nt) continue;
+        unsigned char* e = s + arr + (size_t)ix * 0x187c;
+        unsigned yr = *(uint16_t*)(e + 2);
+        if (*(uint16_t*)e != reg || yr == 0xffff || (most && yr > most)) continue;
+        if (!best || yr > byear) { best = e; byear = yr; }
+      }
+    }
+  if (year_out) *year_out = byear;
+  return best;
+}
+typedef struct { uint32_t a, player, club, rank, n; } lb_row_t;
+/* src's list added into dst's: the rows dst ends with */
+static unsigned lb_add(unsigned char* dst, const unsigned char* src)
+{
+  lb_row_t all[2 * LB_ROWS];
+  unsigned nd = *(uint32_t*)(dst + 0x320), ns = *(const uint32_t*)(src + 0x320), n = 0;
+  if (nd > LB_ROWS) nd = LB_ROWS;
+  if (ns > LB_ROWS) ns = LB_ROWS;
+  memcpy(all, dst, nd * sizeof(lb_row_t));
+  n = nd;
+  for (unsigned i = 0; i < ns; i++) {
+    lb_row_t r; memcpy(&r, src + i * sizeof(lb_row_t), sizeof r);
+    unsigned j = 0;
+    while (j < n && all[j].player != r.player) j++;
+    if (j < n) all[j].n += r.n;
+    else all[n++] = r;
+  }
+  for (unsigned i = 1; i < n; i++) {                /* stable: of equal tallies dst's come first */
+    lb_row_t r = all[i]; unsigned j = i;
+    while (j && all[j - 1].n < r.n) { all[j] = all[j - 1]; j--; }
+    all[j] = r;
+  }
+  if (n > LB_ROWS) n = LB_ROWS;
+  for (unsigned i = 0; i < n; i++) all[i].rank = i && all[i].n == all[i - 1].n ? all[i - 1].rank : i + 1;
+  memcpy(dst, all, n * sizeof(lb_row_t));
+  *(uint32_t*)(dst + 0x320) = n;
+  return n;
+}
+/* right after the start of stage `to`: its lists become those of stage `from` (the stage before it
+   in the same season, or the season before when `to` opened a new year). They are set, not added
+   to: no match of the new stage has been played yet, and a February play-off that joins the
+   running season (po_start) finds the table of August's qualifying play-off, goals and all. */
+static void lb_carry(const char* name, uint16_t from, uint16_t to)
+{
+  unsigned yt = 0, yf = 0;
+  unsigned char* t = stage_table(to, 0, &yt);
+  unsigned char* f = t ? stage_table(from, yt, &yf) : 0;
+  if (!t || !f || yt - yf > 1) {
+    logf("fl26swiss: %s scorers -- reg %u's table %s (season %u), reg %u's %s (season %u); nothing carried",
+         name, (unsigned)to, t ? "found" : "not found", yt, (unsigned)from, f ? "found" : "not found", yf);
+    return;
+  }
+  *(uint32_t*)(t + LB_GOALS + 0x320) = 0;
+  *(uint32_t*)(t + LB_ASSISTS + 0x320) = 0;
+  unsigned g = lb_add(t + LB_GOALS, f + LB_GOALS), a = lb_add(t + LB_ASSISTS, f + LB_ASSISTS);
+  logf("fl26swiss: %s scorers carried from reg %u (season %u) into reg %u (season %u): %u goal rows, %u assist rows",
+       name, (unsigned)from, yf, (unsigned)to, yt, g, a);
 }
 static uint16_t ko_row(uint16_t id) { return id == 4 ? 1027 : id == 6 ? 1029 : id == UECL_KO ? UECL_ROW : 0xffff; }
 /* list positions -> table ranks (0-based).  If the knockout pairs neighbours, the ties are
@@ -835,11 +932,12 @@ unsigned char* g_tramp_prog = 0;
 static uint32_t g_uecl_list[48]; static unsigned g_uecl_n = 0;   /* from the loader */
 static unsigned char g_prog_seen[1024];
 
-static void start_stage(void* started, uint16_t id)
+static char start_stage(void* started, uint16_t id)
 {
   if (started) ((push16_fn)(uintptr_t)(g_base + PUSH16_RVA))(started, &id);
   char ok = ((start_fn)(uintptr_t)(g_base + START_RVA))(id);
   logf("fl26swiss: reg %u started (0x141590420 -> %d)", (unsigned)id, (int)ok);
+  return ok;
 }
 
 /* A club in a regulation's list is not the team id: it is the club's slot in the team array in
@@ -1246,6 +1344,19 @@ static int po_start(int ci, void* started)
     logf("fl26swiss: %s play-off already drawn on day %d; not drawn again", c->name, d);
     return 1;
   }
+  /* B192 (22.10.): the game asks for the league phase's progression again after every knockout
+     round (run 13: reg 5 on days 83, 104, 118 and 139), and only the 60 days above kept the
+     play-off from being drawn again -- a save loaded in March has no memory of the February
+     draw, and on day 83 the Europa League play-off was drawn and started anew over its played
+     ties while the round of 16 ran (and the Champions League's on day 153 in run 13). A draw
+     comes when the league phase ends, before the first leg; two weeks past the second leg's
+     day there is none to make this season. */
+  if (d > (int)c->days[1] + 14 && d < 300) {
+    logf("fl26swiss: %s play-off -- day %d is past its second leg (day %u); not drawn again",
+         c->name, d, (unsigned)c->days[1]);
+    g_po_day[ci] = ad;
+    return 1;
+  }
   unsigned char* ph = get_rec(c->row);
   unsigned char* t = ph && rec_count(ph) >= 24 ? lp_table(c->row) : 0;
   uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
@@ -1303,7 +1414,7 @@ static int po_start(int ci, void* started)
            c->name, (unsigned)c->po, (unsigned)yr, (unsigned)c->row, nt, (unsigned)yr + 1);
     }
   }
-  start_stage(started, c->po);
+  if (start_stage(started, c->po)) lb_carry(c->name, c->league, c->po);
   return 1;
 }
 
@@ -1371,7 +1482,10 @@ static int po_finish(int ci, void* started)
   run_flush();
   unsigned char* ko = get_rec(c->ko);
   logf("fl26swiss: %s play-off over -- reg %u now %u clubs", c->name, (unsigned)c->ko, ko ? rec_count(ko) : 0);
-  if (ko && rec_count(ko)) { start_stage(started, c->ko); return 1; }
+  if (ko && rec_count(ko)) {
+    if (start_stage(started, c->ko)) lb_carry(c->name, c->po, c->ko);
+    return 1;
+  }
   return 0;
 }
 
@@ -4888,6 +5002,8 @@ static int table_pool_reap(const char* when)
   unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
   unsigned char* std = o ? *(unsigned char**)(o + 0x78) : 0;
   if (!std || year < 1990 || tabbase < 0x4650 || tabbase > 0x10000 || tabbase % 0xb4) return -1;
+  /* 595 behind fl26hdr255's headers: 600 from there read past the pool into the members after it */
+  int ntab = (int)pool_tables(tabbase);
   memset(held, 0, sizeof held);
   for (uint32_t h = 0; h < tabbase / 0xb4; h++)
     for (int k = 0; k < 2; k++) {
@@ -4895,11 +5011,11 @@ static int table_pool_reap(const char* when)
       for (int i = 0; i < 20; i++) {
         int32_t ix = *(const int32_t*)(sl + 8 + 4 * i);
         if (ix == -1) break;
-        if (ix >= 0 && ix < CS_TABN) held[ix] = 1;
+        if (ix >= 0 && ix < ntab) held[ix] = 1;
       }
     }
   int nfree = 0, freed = 0, lo = 0xffff, hi = 0;
-  for (int i = 0; i < CS_TABN; i++) {
+  for (int i = 0; i < ntab; i++) {
     unsigned char* t = std + tabbase + (size_t)i * 0x187c;
     uint16_t id = *(uint16_t*)t, yr = *(uint16_t*)(t + 2);
     if (id == 0xffff && yr == 0xffff) { nfree++; continue; }
@@ -4913,7 +5029,7 @@ static int table_pool_reap(const char* when)
   }
   if (freed)
     logf("fl26swiss: table pool (%s) -- %d table(s) of seasons %d..%d held by no season freed; %d of %d free",
-         when, freed, lo, hi, nfree, CS_TABN);
+         when, freed, lo, hi, nfree, ntab);
   return nfree;
 }
 static void ccup_season_fix(uint16_t master, const uint16_t* reps, int n)
