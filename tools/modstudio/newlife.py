@@ -999,10 +999,14 @@ def undo_game_leagues(recipe):
     return True
 
 
-def refresh_game_leagues(recipe, rel, info, cids):
+def refresh_game_leagues(recipe, rel, info, cids, new_players=True):
     """bring the game's leagues cids (competition ids, from game_league_plan) to the release's
     season (see above); what an earlier refresh did goes first. Returns counts {"swaps",
-    "replaced", "clubs", "join", "add", "remove", "stayed"}."""
+    "replaced", "clubs", "join", "add", "remove", "stayed"}.
+    new_players=False (Aleperfe87 22.10.): a club of the game that keeps its place gets only the
+    players the game has -- transfers between clubs and the release's ratings -- no new player
+    and nobody let go, so a player the release names otherwise (Zambo Anguissa / Anguissa) is
+    not made twice. A club that came up into a place still gets its whole squad."""
     undo_game_leagues(recipe)
     plan = [p for p in game_league_plan(recipe, rel, info) if p["cid"] in set(cids)]
     ed = recipe.setdefault("edits", {})
@@ -1047,7 +1051,9 @@ def refresh_game_leagues(recipe, rel, info, cids):
         c = pl.get(str(t))
         if c and c.get("newlife_game"):
             pl.pop(str(t))
-    n = _game_squads(recipe, rel, info, squads)
+    n = _game_squads(recipe, rel, info, squads, new_players)
+    if not new_players:
+        rec["game_players_only"] = True
     # only the clubs this refresh gave a squad: a club of the game in a NewLife league carries
     # newlife_game too (add_league), and belongs to its league, not to this record
     pl = recipe.get("players") or {}
@@ -1106,8 +1112,9 @@ def game_scale(rel, db, clubs):
     return level
 
 
-def _game_squads(recipe, rel, info, squads):
-    """the release's squad (rel.squad) for each game club, squads: {team id: release club id}"""
+def _game_squads(recipe, rel, info, squads, new_players=True):
+    """the release's squad (rel.squad) for each game club, squads: {team id: release club id};
+    new_players=False: see refresh_game_leagues"""
     db = P.Squads(info["base"])
     national = info.get("national") or set()
     pl = recipe.setdefault("players", {})
@@ -1168,19 +1175,28 @@ def _game_squads(recipe, rel, info, squads):
     for t, (have, keep, join, add, ed) in plan.items():
         out = sum(1 for p in have if str(p) in joining)          # signed by another club
         left = [p for p in have if p not in keep and str(p) not in joining]
-        spare = [p for p in left if str(p) in cut and str(p) not in taken]     # B67: they stay
-        gone = [p for p in left if p not in spare]
-        gone = gone[:max(len(have) - out + len(join) + len(add) - P.MIN_SQUAD, 0)]   # a short squad keeps some
-        stays = len(have) - out - len(gone) - len(spare)
-        add = add[:max(P.CLUB_MAX - stays - len(join), 0)]
-        # the release's squad first; who it left out stays while the club has room (P.CLUB_MAX),
-        # the best of them first, and the rest go as before -- named, so the Build log says it
-        room = max(P.CLUB_MAX - stays - len(join) - len(add), 0)
-        spare.sort(key=lambda p: -cut[str(p)][0])
-        gone += spare[room:]
-        full = {str(p): (rel.clubs.get(cut[str(p)][1]) or {}).get("name") or cut[str(p)][1] for p in spare[room:]}
-        n["kept"] += len(spare[:room])
-        n["no_room"] += len(full)
+        if not new_players and squads[t] == str(t):
+            # the game's players only: who the release does not name stays, the weakest of them
+            # make room when the joins fill the squad past P.CLUB_MAX
+            n["skipped"] += len(add)
+            over = max(len(have) - out + len(join) - P.CLUB_MAX, 0)
+            left.sort(key=lambda p: P.overall(db.row(p)) or 0)
+            add, gone, full = [], left[:over], {}
+        else:
+            spare = [p for p in left if str(p) in cut and str(p) not in taken]     # B67: they stay
+            gone = [p for p in left if p not in spare]
+            gone = gone[:max(len(have) - out + len(join) + len(add) - P.MIN_SQUAD, 0)]   # a short squad keeps some
+            stays = len(have) - out - len(gone) - len(spare)
+            add = add[:max(P.CLUB_MAX - stays - len(join), 0)]
+            # the release's squad first; who it left out stays while the club has room (P.CLUB_MAX),
+            # the best of them first, and the rest go as before -- named, so the Build log says it
+            room = max(P.CLUB_MAX - stays - len(join) - len(add), 0)
+            spare.sort(key=lambda p: -cut[str(p)][0])
+            gone += spare[room:]
+            full = {str(p): (rel.clubs.get(cut[str(p)][1]) or {}).get("name") or cut[str(p)][1]
+                    for p in spare[room:]}
+            n["kept"] += len(spare[:room])
+            n["no_room"] += len(full)
         like = str(keep[0] if keep else have[0]) if have else ""
         c = pl.setdefault(str(t), {})
         if ed:

@@ -2019,7 +2019,11 @@
   "With the modern CONMEBOL competitions on, this league has no Libertadores places of the game's. Tick the box above to give it its places.": "Con las competiciones modernas de la CONMEBOL activadas, esta liga no tiene las plazas de Libertadores del juego. Marca la casilla de arriba para darle sus plazas.",
   "regulation %d": "reglamento %d",
   "Association rank": "Puesto en el país",
-  "Recopa Sudamericana": "Recopa Sudamericana"
+  "Recopa Sudamericana": "Recopa Sudamericana",
+  "Only the game's own players": "Solo los jugadores del juego",
+  "The clubs that keep their place get only the transfers between the game's players and the new ratings: no new players, nobody let go. Clubs that came up still get their whole squad.": "Los clubes que mantienen su plaza reciben solo los traspasos entre jugadores del juego y las nuevas valoraciones: ningún jugador nuevo y nadie se va. Los clubes que subieron reciben igualmente toda su plantilla.",
+  "Tick it if Bring gives you the same player twice.": "Márcalo si Traer te deja el mismo jugador dos veces.",
+  "%d players of this season the game does not have were left out.": "%d jugadores de esta temporada que el juego no tiene se quedaron fuera."
  },
  "log": [
   [

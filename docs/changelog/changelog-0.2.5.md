@@ -73,6 +73,13 @@ come with it instead.
   paired keeps what it had: no competition borrows another's trophy. Switch on writes one marked
   block at the top of Entrance.lua and replaces it every time; nothing else in the file is touched.
   Without FL26's Entrance.lua in `modules` the Build log says the trophies are not shown.
+- **Bring the game's leagues to this season: Only the game's own players.** A new tick box at
+  the bottom of the window. With it, a club of the game that keeps its place gets only the
+  transfers between the game's players and the season's ratings: no new players and nobody let
+  go. A player NewLife names differently from the game (Zambo Anguissa / Anguissa, Pote / Pedro
+  Gonçalves) is then no longer made a second time while the game's own one becomes a free agent.
+  A club that came up into a place still gets its whole squad. With NewLife 1.5b7 and every
+  league ticked: 873 new players instead of 4082. (Thanks Aleperfe87)
 
 ## Fixed
 

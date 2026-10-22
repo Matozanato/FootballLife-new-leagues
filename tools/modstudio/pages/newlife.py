@@ -200,10 +200,19 @@ class GameLeaguesDialog(Dialog):
             h.addWidget(text)
             self.form.addRow(w)
             self.boxes.append((p["cid"], box))
-        self.cids = []
+        # Aleperfe87 22.10.: the release names some of the game's players otherwise, and Bring made
+        # them twice (a new copy at the club, the game's own one a free agent)
+        self.only = QCheckBox(_("Only the game's own players"))
+        self.only.setToolTip(_("The clubs that keep their place get only the transfers between the game's "
+                               "players and the new ratings: no new players, nobody let go. Clubs that came up "
+                               "still get their whole squad."))
+        self.form.addRow(self.only)
+        self.form.addRow(hint(_("Tick it if Bring gives you the same player twice.")))
+        self.cids, self.new_players = [], True
 
     def ok(self):
         self.cids = [c for c, box in self.boxes if box.isChecked()]
+        self.new_players = not self.only.isChecked()
         self.accept()
 
 
@@ -590,7 +599,9 @@ class NewLife(BuilderPage):
             self.say(_("The game's leagues now have the %s season: %d clubs swap leagues, %d take the name of the "
                        "club that came up, %d squads (%d players join from other clubs, %d new, %d leave). Build "
                        "again and start a new career.") % (rel.version, 2 * n["swaps"], n["replaced"], n["clubs"],
-                                                          n["join"], n["add"], n["remove"]), "ok")
+                                                          n["join"], n["add"], n["remove"])
+                     + ("\n" + _("%d players of this season the game does not have were left out.") % n["skipped"]
+                        if n.get("skipped") else ""), "ok")
             self.read_rows()                     # B79: a club whose place went is a new club now
             self.fill()
             self.count()
@@ -599,7 +610,7 @@ class NewLife(BuilderPage):
             self.app.busy(False)
             error(self, "NewLife Database", tb.strip().splitlines()[-1])
 
-        run_job(lambda progress: N.refresh_game_leagues(work, rel, info, d.cids), done, failed)
+        run_job(lambda progress: N.refresh_game_leagues(work, rel, info, d.cids, d.new_players), done, failed)
 
     def undo_game(self):
         if N.undo_game_leagues(self.project.recipe):

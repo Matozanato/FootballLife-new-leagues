@@ -2020,7 +2020,11 @@
   "With the modern CONMEBOL competitions on, this league has no Libertadores places of the game's. Tick the box above to give it its places.": "S uključenim modernim natjecanjima CONMEBOL-a ova liga nema mjesta u Libertadoresu koja daje igra. Označi kućicu gore da joj daš njezina mjesta.",
   "regulation %d": "pravilnik %d",
   "Association rank": "Rang u zemlji",
-  "Recopa Sudamericana": "Recopa Sudamericana"
+  "Recopa Sudamericana": "Recopa Sudamericana",
+  "Only the game's own players": "Samo igrini igrači",
+  "The clubs that keep their place get only the transfers between the game's players and the new ratings: no new players, nobody let go. Clubs that came up still get their whole squad.": "Klubovi koji zadrže mjesto dobiju samo transfere između igrinih igrača i nove ocjene: nijedan novi igrač, nitko ne odlazi. Klubovi koji su ušli i dalje dobiju cijelu momčad.",
+  "Tick it if Bring gives you the same player twice.": "Označi ako ti Bring da istog igrača dvaput.",
+  "%d players of this season the game does not have were left out.": "%d igrača ove sezone kojih igra nema je izostavljeno."
  },
  "log": [
   [
