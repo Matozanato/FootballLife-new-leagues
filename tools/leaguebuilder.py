@@ -6034,7 +6034,7 @@ def dates_lines(pl, db):
         like = like_reg(db, CALENDAR_SUPER_DATE_LIKE if s["calendar"] else SUPER_CUP_LIKE) if s.get("reg") else None
         if like:
             out.append("dates %d like=%d" % (s["reg"], like) + (
-                " days=%s" % ",".join(map(str, CALENDAR_SUPER_DATE_DAYS)) if s["calendar"] else ""))
+                " days=%s" % ",".join(map(str, super_days(s))) if s["calendar"] else ""))
 
     return out
 
@@ -6181,7 +6181,7 @@ def cupdays_lines(pl, base, db, log=print):
     for s in pl.get("game_supers") or []:              # a game league's new super cup
         like = like_reg(db, SUPER_CUP_LIKE)
         cup_days.setdefault(s["region"], set()).update(
-            set(CALENDAR_SUPER_DATE_DAYS) if s["calendar"] else days_of(like) if like else set())
+            set(super_days(s)) if s["calendar"] else days_of(like) if like else set())
     leagues = dict(game)
     for p in pl["leagues"]:
         if p.get("rid") and p.get("region") is not None and not p.get("exhibition"):
@@ -6240,6 +6240,47 @@ def national_cups(pl, root, db, log=print):
                 % (c["super"], cids[0], regs[0], SUPER_CUP_LIKE))
 
 
+CALENDAR_SUPER_TRY = (30, 27, 24, 21, 18)  # the end of January, then a few days earlier at a time
+CALENDAR_SUPER_GAP = 3                      # days clear of the country's own cup either side
+
+
+def calendar_super_day(region, db, log=print):
+    """B198 (antonimus, 22.10.): a February-December game league's new super cup was always on
+    day 30 (31 January), and Copa Chile plays its second round on days 30-31: the champion played
+    the super cup and a cup leg on two days running. The first day of CALENDAR_SUPER_TRY with no
+    cup of the region's (the dates the exe ships, as cupdays_lines reads them) closer than
+    CALENDAR_SUPER_GAP days; day 30 when the exe cannot be read"""
+    try:
+        import caltab
+        img = caltab.Image()
+        cs, idc = caltab.cases(img), caltab.id_case(img)
+    except (Exception, SystemExit) as e:
+        log("  NOTE: the game's cup dates could not be read (%s); super cup on day %d"
+            % (e, CALENDAR_SUPER_DATE_DAYS[0]))
+        return CALENDAR_SUPER_DATE_DAYS[0]
+    comp, regs = M.load(db, "Competition.bin"), M.load(db, "CompetitionRegulation.bin")
+    region_of_cid = {comp[i * M.COMP + M.CID_OFF]: M.dec_region(comp[i * M.COMP + M.REGION_OFF])
+                     for i in range(len(comp) // M.COMP)}
+    taken = set()
+    for i in range(len(regs) // M.REG):
+        g = regs[i * M.REG:(i + 1) * M.REG]
+        rid = u16(g, M.R_ID)
+        if g[M.R_TYPE] != 3 or region_of_cid.get(g[M.R_CID]) != region or not rid or rid > caltab.LAST_ID:
+            continue
+        c = idc.get(rid)
+        if c is not None and c != caltab.CASE_EMPTY and c in cs:
+            taken.update(cs[c][2])
+    for d in CALENDAR_SUPER_TRY:
+        if all(abs(d - t) >= CALENDAR_SUPER_GAP for t in taken):
+            return d
+    return CALENDAR_SUPER_DATE_DAYS[0]
+
+
+def super_days(s):
+    """the day(s) a game league's calendar-year super cup is dated on"""
+    return (s["day"],) if s.get("day") else CALENDAR_SUPER_DATE_DAYS
+
+
 def game_super_cups(pl, root, db, log=print):
     """the super cups of the game's leagues (game_supers) into the world's tables, one mkcup.py
     each, the way national_cups() makes a new league's: a copy of SUPER_CUP_LIKE in the league's
@@ -6261,9 +6302,11 @@ def game_super_cups(pl, root, db, log=print):
                      "--cid", s["cid"], "--reg", s["reg"], "--region", s["region"], "--name", s["name"],
                      "--code", s["code"], "--like", SUPER_CUP_LIKE, "--bracket", 2])
         pl.setdefault("cup_ids", {})["gsuper:" + s["code"]] = {"cid": s["cid"], "reg": s["reg"]}
+        if s["calendar"]:
+            s["day"] = calendar_super_day(s["region"], db, log)
         log("  %s: competition %d, regulation %d (copied from %s%s)"
             % (s["name"], s["cid"], s["reg"], SUPER_CUP_LIKE,
-               ", dated as %s, day %s" % (CALENDAR_SUPER_DATE_LIKE, ",".join(map(str, CALENDAR_SUPER_DATE_DAYS)))
+               ", dated as %s, day %s" % (CALENDAR_SUPER_DATE_LIKE, ",".join(map(str, super_days(s))))
                if s["calendar"] else ""))
 
 
