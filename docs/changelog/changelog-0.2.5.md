@@ -298,6 +298,13 @@ come with it instead.
   and gets your crest back; a change made for a club that no longer comes into that place goes
   with it.
 
+- **A kit line added for a club on the Kits page left the club's old line on (B203).** A club of
+  a pack (the Modpack's Arezzo, Pisa ...) then had two lines in `map.txt`, and Mod Studio said the
+  first one counts, though Kit Server uses the last one. Adding or changing a club's line now
+  switches its other lines off (#), **Import kits** with **Replace kits already set** replaces the
+  line in effect, and the warning names the line that is not used. Stadiums, balls and goal songs,
+  whose servers pick one of several lines, are left as they were. (Thanks JoJofiaz)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
