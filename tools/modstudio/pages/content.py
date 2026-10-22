@@ -286,10 +286,18 @@ class MapTab(QWidget):
             if p is not None and p.base is not None and not p.comp_name(n) and len(p.comp_stages(n)) > 1:
                 out.append(_("%d is a competition, but the game asks by its stages (%s): pick it again "
                              "as \"all stages\"") % (n, ", ".join(map(str, p.comp_stages(n)))))
-        if self.m.key == "team" and r.enabled and r.fields:
-            if r.fields[0] in seen:
-                out.append(_("this club is listed more than once; the first line counts"))
-            seen.add(r.fields[0])
+        # seen: {club: its last line switched on}; the server keeps a club's last line (B203,
+        # JoJofiaz 22.10.: kserv's map[tid] = path line by line -- "the first line counts" was wrong)
+        if self.m.key == "team" and not self.m.many and r.enabled and r.fields and seen.get(r.fields[0]) not in (None, r):
+            out.append(_("this club has a later line, and only the last one counts: this line is not used"))
+        return out
+
+    def last_lines(self):
+        """{club: its last line switched on} of a team map"""
+        out = {}
+        for r in self.mf.rows():
+            if r.enabled and r.fields:
+                out[r.fields[0]] = r
         return out
 
     def fill(self):
@@ -299,7 +307,7 @@ class MapTab(QWidget):
         self.tree.clear()
         want = self.find.text().strip().lower()
         libset = self.view.library_set()
-        seen, shown, total, bad_n = set(), 0, 0, 0
+        seen, shown, total, bad_n = self.last_lines(), 0, 0, 0
         warn = QBrush(QColor(theme.WARN))
         off = QBrush(QColor(theme.SUBTLE))
         for r in self.mf.rows():
@@ -347,9 +355,25 @@ class MapTab(QWidget):
             for vals in expand(self.app, d.vals):
                 r = Row(vals, d.comment.text().strip(), d.enabled.isChecked(),
                         quoted=[i for i in self.m.quote])
+                if r.enabled:
+                    self.switch_off_others(r)
                 self.mf.add(r, after=after or self.last_like(r))
                 after = r
             self.changed()
+
+    def switch_off_others(self, r):
+        """a club's new line on a map whose server keeps one line per club: its other lines are
+        switched off (#), so the new one counts wherever it goes (B203, JoJofiaz 22.10.: a kit
+        added for a club of the modpack left the pack's line on, two lines for one club)"""
+        if self.m.key != "team" or self.m.many or not r.fields:
+            return 0
+        n = 0
+        for x in self.mf.rows():
+            if x is not r and x.enabled and x.fields and x.fields[0] == r.fields[0]:
+                x.enabled = False
+                x.touch()
+                n += 1
+        return n
 
     def last_like(self, r):
         """new lines go after the last line of the same club / competition, else at the end"""
@@ -370,6 +394,8 @@ class MapTab(QWidget):
             r.comment = d.comment.text().strip()
             r.enabled = d.enabled.isChecked()
             r.touch()
+            if r.enabled:
+                self.switch_off_others(r)
             after = r
             for vals in lines[1:]:
                 x = Row(vals, r.comment, r.enabled, quoted=[i for i in self.m.quote])

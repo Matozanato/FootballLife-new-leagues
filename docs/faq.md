@@ -412,6 +412,11 @@ the library": `map.txt` sends the club to a folder (such as `Premier League\Newc
 not in Kit Server's kits folder, so the game has nothing to show. The **Library** tab lists the
 folders that are really there. Point the line at one of them, or select it and press **Remove**.
 
+A club with two lines switched on wears the kit of the **last** one: Kit Server reads `map.txt`
+from top to bottom and each line for the club replaces the one before. Mod Studio marks the
+earlier line ("only the last one counts"), and adding or changing a club's line switches its other
+lines off.
+
 ### The stadium is completely black
 
 Not a Build problem: Stadium Server's `map_teams.txt` sends the home club to a stadium folder

@@ -744,7 +744,7 @@
   "the name shown in the game": "le nom affiché dans le jeu",
   "the stadium slot the folder was made for (often 009)": "l'emplacement de stade pour lequel le dossier a été fait (souvent 009)",
   "the tunnel scenes": "les scènes du tunnel",
-  "this club is listed more than once; the first line counts": "ce club apparaît plusieurs fois ; la première ligne compte",
+  "this club has a later line, and only the last one counts: this line is not used": "ce club a une ligne plus bas et seule la dernière compte : cette ligne n'est pas utilisée",
   "three letters or digits; Č, Ž, Đ ... become C, Z, D (the game's short names have no marks); empty = made from the name": "trois lettres ou chiffres ; Č, Ž, Đ, É ... deviennent C, Z, D, E (les noms courts du jeu n'ont pas d'accents) ; vide = tiré du nom",
   "tournament anthem in the tunnel": "hymne du tournoi dans le tunnel",
   "tournament_anth_tunnel needs match-stats.enabled = 1 in sider.ini": "tournament_anth_tunnel a besoin de match-stats.enabled = 1 dans sider.ini",

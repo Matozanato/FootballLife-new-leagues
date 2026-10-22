@@ -744,7 +744,7 @@
   "the name shown in the game": "ime koje se vidi u igri",
   "the stadium slot the folder was made for (often 009)": "mjesto stadiona za koje je mapa napravljena (često 009)",
   "the tunnel scenes": "scene u tunelu",
-  "this club is listed more than once; the first line counts": "ovaj klub je naveden više puta; vrijedi prvi redak",
+  "this club has a later line, and only the last one counts: this line is not used": "ovaj klub ima redak niže, a vrijedi samo zadnji: ovaj redak se ne koristi",
   "three letters or digits; Č, Ž, Đ ... become C, Z, D (the game's short names have no marks); empty = made from the name": "tri slova ili znamenke; Č, Ž, Đ ... postaju C, Z, D (kratice u igri nemaju kvačica); prazno = složi se iz imena",
   "tournament anthem in the tunnel": "himna natjecanja u tunelu",
   "tournament_anth_tunnel needs match-stats.enabled = 1 in sider.ini": "tournament_anth_tunnel treba match-stats.enabled = 1 u sider.ini",
