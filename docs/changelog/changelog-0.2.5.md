@@ -290,6 +290,14 @@ come with it instead.
   ten of them dark. They now have a group of their own with the pack's light faces. (Thanks
   pepponeee98)
 
+- **Bring the game's leagues to this season a second time gave places back to the game's old clubs
+  (B196).** A crest you set on a club that Bring had put in a game club's place (Bolton, Lanerossi
+  Vicenza, JEF United Chiba ...) made Mod Studio treat that place as yours the next time you
+  brought the leagues to a newer NewLife: the place was skipped and the game's old club came back
+  under the new club's crest. Your change is now kept aside, the place goes to the same club again
+  and gets your crest back; a change made for a club that no longer comes into that place goes
+  with it.
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
