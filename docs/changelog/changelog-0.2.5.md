@@ -52,6 +52,7 @@ come with it instead.
 - **Back and Forward through the pages, as in a browser.** Two arrows at the left of the section
   bar, Alt+Left / Alt+Right and the mouse's side buttons take you back to the pages you had open
   (up to 50). (Thanks Vicentico)
+
 - **Build lists every problem at once, each with Go there.** Check the plan, Build the world and
   Build and install stopped at the first problem, and the next showed only after it was put right.
   They now list them all above the log, each with where it is (the league and club, a club of the
@@ -60,6 +61,7 @@ come with it instead.
   at a club's players. A swap of two clubs of the game that the game's tables have in the same
   league now is left out with a note instead of stopping Build. Messages about a club of the game
   now give its name and its team ID together. (Thanks jibibi, vmican)
+
 - **Undo and Redo of the last change to your world.** Two buttons in the bottom bar next to "Your
   world is saved", and Ctrl+Z / Ctrl+Y when no text box is in use: up to 30 steps back. New world
   or Open starts again with none.
@@ -80,13 +82,16 @@ come with it instead.
   after Install the modules), the list of last changes was drawn on top of the old one until you
   went to another page. The same in the world cards, the pack ticks and the league crests. (Thanks
   David)
+
 - **A deleted world came back at the next start (B107).** After Delete world and New world (left as
   it was), Mod Studio opened the deleted world again when it started, because New world and Open did
   not change which world the next start opens. It now opens the one you had open. (Thanks jibibi)
+
 - **A dash instead of the crest of a club of the game in your league (B108).** On the Leagues page
   the game's own clubs in a league of yours (Zamora and Deportivo Táchira in the Liga FUTVE) had no
   crest: the world holds only the crests Build drew. Mod Studio now shows the crest the game shows:
   from a crest pack switched on in sider.ini, else from the game's own files. (Thanks David)
+
 - **Clubs that took a game club's place wore the kit of the club that left (B176).** NewLife's
   "Bring the game's leagues to this season" gives the place of a club that went down to the club
   that came up, and the club keeps the game's team id. The kit for that id stayed the old club's:
@@ -98,17 +103,20 @@ come with it instead.
   names the club (`Modpack\Game leagues\FC Schalke 04`) is kept. A world you already have gets
   them at its next Build or Switch it on (the Europack draws 49 kits once, about half a minute).
   (Thanks quicksite, NedimMM)
+
 - **A kit you changed by hand went back to Mod Studio's (B166).** A kit put into a club's kit
   folder of the world by hand (through Sider, or by copying the files in) was replaced at the next
   Build or Switch it on: by the league package's kit when a file's size differed, or by the drawn
   kit when the club's colours, the crest or the kit that lends the numbers changed. Mod Studio now
   notes what it put in each folder and leaves a folder whose files you changed alone, and says so in
   the log. To get Mod Studio's kit back, delete the folder and Build. (Thanks LaraCroft)
+
 - **Home said "switched off: fl26regions, fl26regnames" and Install now did not help (B177).**
   Those two modules come with a world (they name its competitions and countries), not with Mod
   Studio's module pack, so Install now passed them by. Home now counts them only when the world in
   the game has them, and Install now puts that world's copies in and switches them on. Switching on
   a world that has none switches another world's off. (Thanks Vran)
+
 - **The hub's Next showed a cup tie your club was not in (B162)** (Carabao Cup: Chelsea - Tottenham
   while Liverpool had been drawn against Brentford, as the news and Competition Info said). The hub
   reads its own list of your club's days, which the game fills when it makes the matches; when Mod
@@ -116,6 +124,7 @@ come with it instead.
   other clubs, that list kept the old pairing. The modules now ask the game to make the list again
   the next day, as the game does after a change of club. A season you already play is put right the
   next day after loading it. (Thanks pokuuuu.)
+
 - **Clubs in no league in Other European teams turned up in the Champions League of Cup mode
   (B167)** (NK Hajduk Brezje, NK Jadran Stefanec ... among its clubs). Cup mode fills the last
   places of the Champions League from the game's Other European teams, and in a world whose leagues
@@ -123,17 +132,20 @@ come with it instead.
   is left. The League window (Clubs in no league: Other European teams) and Build's log now say so;
   for small clubs choose **Classic Teams** instead. A world made before keeps its clubs where they
   are until you change the group and Build again. (Thanks ¥$)
+
 - **"Plays in Ligue 2" after Bring the game's leagues and a new Ligue 3 (B137).** The game's Ligue 2
   has more places than this season's, so the clubs the season has elsewhere keep their places
   there (Bring has no club to put in), and a NewLife league of yours that has them too stops
   Build. The Bring window now names those clubs and says what to do: in that league use **Club
   of the game** and give it a new club in its place, or leave it out. (Thanks jibibi)
+
 - **A club of the game in one of your leagues could not be put in another (B95)** (Envigado and
   Unión Magdalena, in NewLife's Colombian Second Division: "as if they did not exist"). **Club of the
   game...** now finds it (search its name or team ID) and moves it: out of its old place, which is a
   new club then, into this one, with who takes its places in the game. **NewLife club...** lists the
   release's clubs the game has too, greyed, and says that Club of the game puts them in; it also no
   longer lists the clubs a league of yours has already. (Thanks vmican)
+
 - **Import crests no longer ticks wrong crests over the game's own clubs (B170).** With a big
   crest folder (David's Logos) about 75 pictures were ticked onto clubs of the game because the
   club's name was inside the picture's: "fc-united-of-manchester" went to Manchester United,
@@ -143,6 +155,7 @@ come with it instead.
   (B, II, U23, Reserves, Promesas, Sevilla Atletico ...) is never ticked for a first team, and
   Atletico, Deportivo, Sport tell clubs apart when both names have them ("atletico-de-cali" is
   not Deportivo Cali). "galatasaray.png" for Galatasaray SK still ticks. (Thanks David)
+
 - **Names with letters the game cannot draw (B173).** The game's fonts have no small ə, so the
   Azeri Premier League (Şəfa, Məmmədov) showed boxes, and the same went for Romanian ș and ț
   and Vietnamese letters such as ơ, ư, ạ. Build now writes such a letter into the game's tables
@@ -150,6 +163,7 @@ come with it instead.
   with the accents the fonts have (Nguyễn -> Nguyên); invisible marks some names carry go. Club,
   league, player and coach names; Mod Studio keeps the names as they were. Build the world again
   to get it. (Thanks LaraCroft)
+
 - **The header's PACK box follows the world in the game (B168).** After Activate of another
   world you installed (the Modpack r12 after eu4), PACK still named the zip installed last while
   ACTIVE WORLD was right. It now names the pack the active world came from; for a world built
@@ -220,6 +234,7 @@ come with it instead.
   again every few days. The ranking of a running play-off or knockout now keeps the league
   phase's and the play-off's goals and assists too, also after the game's own rewrite. (Thanks
   Micarodvzla22)
+
 - **A UEFA play-off drawn again in spring (B192).** In a later season a play-off already played
   in February could be drawn a second time between March and June. A play-off is no longer
   drawn after its second leg.
@@ -236,6 +251,7 @@ come with it instead.
   longer than 260 characters, and Windows refuses those unless long paths are switched on: the
   backup that Make it editable makes first stopped half-way. Mod Studio now copies and removes
   world folders with long paths itself, whatever that Windows setting says. (Thanks SladeBR)
+
 - **"Windows does not let Mod Studio write" said what you could not do.** It told everyone to run
   Mod Studio as administrator and move the game out of Program Files, even when Mod Studio was
   already administrator and the game was in D:\Games. It now says only what applies: out of
@@ -252,6 +268,12 @@ come with it instead.
   game on D:. When C: has no room for it, Mod Studio now unpacks beside the game (the disk Install
   copies to anyway), and when neither disk has room it says how much is needed before it starts.
   (Thanks vmican)
+
+- **Generated players of Sweden, Norway, Finland and the other Nordic nations were mostly
+  dark-skinned (B183).** A regen or a new player gets one of the face pack's faces of his part of
+  the world, and the Nordic nations shared theirs with England, Germany and the Netherlands, six of
+  ten of them dark. They now have a group of their own with the pack's light faces. (Thanks
+  pepponeee98)
 
 ## Read this first
 
