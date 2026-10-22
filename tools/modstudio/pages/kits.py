@@ -258,7 +258,8 @@ def _dialog_class():
                     have = [r for r in mf.rows() if r.enabled and r.fields and r.fields[0].strip() == str(tid)]
                     # a line whose kit folder is not in the library dresses nobody: replace it
                     # anyway (beny 10.10.: 92 clubs kept such lines and the import "did nothing")
-                    gone = have and not os.path.isdir(os.path.join(lib, (have[0].fields[1:2] or [""])[0].strip().strip('"')))
+                    # kit-server dresses the club from its last line (B203): that is the one checked and replaced
+                    gone = have and not os.path.isdir(os.path.join(lib, (have[-1].fields[1:2] or [""])[0].strip().strip('"')))
                     if have and not gone and not self.replace.isChecked():
                         kept += 1
                         continue
@@ -266,8 +267,9 @@ def _dialog_class():
                     rel = place(src, lib, library_path(self.folder.text(), src), tid,
                                 self.numbers.currentData())
                     if have:
-                        have[0].fields[1:2] = [rel]
-                        have[0].touch()
+                        have[-1].fields[1:2] = [rel]
+                        have[-1].touch()
+                        self.tab.switch_off_others(have[-1])
                     else:
                         mf.add(Row([str(tid), rel], quoted=[1]), after=self.tab.last_like(Row([str(tid)])))
                     n += 1

@@ -161,8 +161,9 @@ def pack_lines(path, world, comps):
 
 def borrowed_kits(path, world, teams, have):
     """the world's clubs whose kit comes from a line of another pack (SPFL26's own folders, a
-    modpack ...): [(team id, kit folder as in the map)], one per club, the first line in
-    effect.  `have`: the team ids Build already gave a kit of ours."""
+    modpack ...): [(team id, kit folder as in the map)], one per club, the line in effect: the
+    last one (kserv keeps a club's last line, B203).  `have`: the team ids Build already gave a
+    kit of ours."""
     try:
         with open(path, "rb") as f:
             raw = f.read()
@@ -177,7 +178,7 @@ def borrowed_kits(path, world, teams, have):
         if not s or s.startswith("#") or OUR_LINE in s:
             continue
         m = re.match(r'(\d+)\s*,\s*"([^"]+)"', s)
-        if m and int(m.group(1)) in want and int(m.group(1)) not in out \
+        if m and int(m.group(1)) in want \
                 and not m.group(2).lower().startswith((world + "\\").lower()):
             out[int(m.group(1))] = m.group(2).strip()
     return sorted(out.items())
