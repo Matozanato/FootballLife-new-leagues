@@ -858,7 +858,10 @@ under 10 MB. Download only the parts you want.
   club leave. A player NewLife still has at this club stays, as long as the club has room (40
   at most; 0.2.4); the Build log names anyone it had no room for. Ratings are put on the game's
   scale, measured on the players both have, so a star lands where the game rates him (0.2.0;
-  before, the top end ran 2 to 4 higher). The leagues keep their number of
+  before, the top end ran 2 to 4 higher). Tick **Only the game's own players** at the bottom
+  (0.2.5) when Bring gives you the same player twice (NewLife names a few of the game's players
+  differently): the clubs that keep their place then get only the transfers and the ratings, no
+  new players, and nobody leaves; clubs that came up still get their whole squad. The leagues keep their number of
   clubs, their format and their cups. Clubs you already changed by hand (a swap, a rename, a
   club of a new league, player changes) stay as they are. Doing it again with a newer version
   replaces what the older one did; **More → Undo the game's leagues** takes it all back. Build and start
