@@ -49,10 +49,10 @@ def offline():
     # the cap is the DLL's
     c = open(CHAIN_C, encoding="utf-8").read()
     lua = open(CHAIN_LUA, encoding="utf-8").read()
-    ok("MAX_CUPS 16 in fl26chain.c, fl26chain.lua and fl26world",
-       re.search(r"#define MAX_CUPS (\d+)", c).group(1) == "16"
-       and re.search(r"^local MAX_CUPS = (\d+)", lua, re.M).group(1) == "16"
-       and fl26world.MAX_CHAIN_CUPS == 16)
+    ok("MAX_CUPS 128 in fl26chain.c, fl26chain.lua and fl26world (B178)",
+       re.search(r"#define MAX_CUPS (\d+)", c).group(1) == "128"
+       and re.search(r"^local MAX_CUPS = (\d+)", lua, re.M).group(1) == "128"
+       and fl26world.MAX_CHAIN_CUPS == 128)
     ok("fl26chain.lua leaves the cups past MAX_CUPS to the game, with a log line",
        re.search(r"for i = #CUPS, MAX_CUPS \+ 1, -1 do\s+log\(.*?\)\s+CUPS\[i\] = nil", lua, re.S) is not None)
     ok("fl26world writes lcup, lcuplow, lcupn", {"lcup", "lcuplow", "lcupn"} <= set(fl26world.KEYS))
@@ -67,15 +67,15 @@ def offline():
     ok("a league cup of one league: lcuplow=0", fl26world.chain_cups(one) == [(270, 60, 0, True, 16)])
     ok("no lcupn, no league cup", fl26world.chain_cups([{"id": 60, "lcup": 270}]) == [])
 
-    # 12 countries with both cups: the league cups go after all 12 national cups, the last 8
-    # are past the DLL's 16
+    # 70 countries with both cups: the league cups go after all 70 national cups, the last 12
+    # are past the DLL's 128 (16 before B178: eu5's Greek Cup, the 18th, was left to the game)
     many = []
-    for k in range(12):
+    for k in range(70):
         many += [{"id": 100 + k, "tier": 1, "clubs": 18, "cup": 200 + k, "cuptop": 100 + k, "cuplow": 0,
-                  "cupall": 1, "cupn": 18, "lcup": 220 + k, "lcuplow": 0, "lcupn": 18}]
+                  "cupall": 1, "cupn": 18, "lcup": 400 + k, "lcuplow": 0, "lcupn": 18}]
     got = fl26world.chain_cups(many)
-    ok("national cups first, league cups after", [c[0] for c in got] == list(range(200, 212)) + list(range(220, 232)))
-    ok("the first 16 keep every national cup", {c[0] for c in got[:16]} >= set(range(200, 212)))
+    ok("national cups first, league cups after", [c[0] for c in got] == list(range(200, 270)) + list(range(400, 470)))
+    ok("the first 128 keep every national cup", {c[0] for c in got[:fl26world.MAX_CHAIN_CUPS]} >= set(range(200, 270)))
 
     # the old lines read as before
     old = [{"id": 180, "tier": 2, "above": 81, "cup": 55}, {"id": 181, "tier": 3, "above": 180, "cup": 23,
@@ -91,7 +91,7 @@ def offline():
     ok("chain_cups: a game league's league cup is the game's top league and the one below",
        fl26world.chain_cups(eng) == [(23, 17, 79, True, None), (266, 17, 79, True, 44)])
 
-    for name, L in (("Zelia", zelia), ("one league", one), ("12 countries", many), ("old lines", old),
+    for name, L in (("Zelia", zelia), ("one league", one), ("70 countries", many), ("old lines", old),
                     ("England", eng)):
         got = lua_from_world(L)
         if got is None:

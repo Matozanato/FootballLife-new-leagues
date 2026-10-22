@@ -68,7 +68,7 @@ NO_SLOT = 123
 
 # fl26chain.dll keeps this many cups to their leagues (fl26chain.c MAX_CUPS) and drops the rest;
 # fl26chain.lua sends the national cups first and the league cups (lcup=) after them
-MAX_CHAIN_CUPS = 16
+MAX_CHAIN_CUPS = 128                # 16 until B178: eu5's 18th cup, the Greek Cup, played one round
 
 
 def chain_cups(leagues):
