@@ -88,12 +88,26 @@ def main(base):
         # 3. the dates: end of January after a February-December season, else the European super cup's
         dates = B.dates_lines(pl, db)
         cal_like, eu_like = B.like_reg(db, B.CALENDAR_SUPER_DATE_LIKE), B.like_reg(db, B.SUPER_CUP_LIKE)
-        days = ",".join(map(str, B.CALENDAR_SUPER_DATE_DAYS))
         for s in pl["game_supers"]:
+            days = ",".join(map(str, B.super_days(s)))
             want = ("dates %d like=%d days=%s" % (s["reg"], cal_like, days) if s["calendar"]
                     else "dates %d like=%d" % (s["reg"], eu_like))
             assert want in dates, "%s: %r not in %r" % (s["name"], want, dates)
-        assert all(int(d) <= 45 for d in days.split(",")), days       # January / early February
+            assert not s["calendar"] or all(int(d) <= 45 for d in days.split(",")), days   # January / early February
+        # B198 (antonimus, 22.10.): Copa Chile's second round is on days 30-31; the super cup kept
+        # off it (the exe's dates: without the game at hand the old day 30 stays)
+        chile = sup[CHILE]
+        try:
+            import caltab
+            caltab.Image()
+            have_exe = True
+        except (Exception, SystemExit):
+            have_exe = False
+        if have_exe:
+            assert chile.get("day") and chile["day"] != 30, chile
+            print("B198: Chile's super cup on day %d, clear of Copa Chile" % chile["day"])
+        else:
+            print("B198: no game exe here, the super cup day check skipped")
         print("dates:", [d for d in dates])
 
         # 4. the gsuper lines: what puts a February-December one into the New Year season
