@@ -83,6 +83,13 @@ come with it instead.
   forward 17, 19, 21 ...), keepers always a keeper's number (1, 13, 12, 25 ...). Numbers a recipe or
   a NewLife pack gives stay as they are; the clubs of the game keep theirs. Checked on the Europe
   pack: 1139 new clubs, no number twice, no outfielder in 1, 12 or 13.
+- **Bring the game's leagues to this season: Only the game's own players.** A new tick box at
+  the bottom of the window. With it, a club of the game that keeps its place gets only the
+  transfers between the game's players and the season's ratings: no new players and nobody let
+  go. A player NewLife names differently from the game (Zambo Anguissa / Anguissa, Pote / Pedro
+  Gonçalves) is then no longer made a second time while the game's own one becomes a free agent.
+  A club that came up into a place still gets its whole squad. With NewLife 1.5b7 and every
+  league ticked: 873 new players instead of 4082. (Thanks Aleperfe87)
 
 ## Fixed
 
