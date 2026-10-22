@@ -701,6 +701,23 @@ def formation_club(base, want):
     return None
 
 
+def known_formations(p, base, name):
+    """B105: a formation these tables do not have (a league from a pack made over other tables)
+    stops nothing: it goes, and the clubs play the one their squad fits ("Picked from each club's
+    squad"). Returns the notes for the log."""
+    notes = []
+    if p["formation"] and formation_club(base, p["formation"]) is None:
+        notes.append("%s: no formation %r in these tables -- each club plays the one its squad fits"
+                     % (name, p["formation"]))
+        p["formation"] = ""
+    for i, f in enumerate(p["club_formations"]):
+        if f and formation_club(base, f) is None:
+            notes.append("%s: club %d's formation %r is not in these tables -- it plays the one its squad fits"
+                         % (name, i + 1, f))
+            p["club_formations"][i] = ""
+    return notes
+
+
 def club_formations(pl):
     """{new club id: formation} of the clubs that have one"""
     out = {}
@@ -1933,6 +1950,7 @@ def plan(recipe, base, prev=None):
     # clubs in no league go their own way from here: no regulation, no competition, no region
     others = others_plan([L for L in recipe["leagues"] if L.get("others")], base, cty,
                          prev_pins({"leagues": (prev or {}).get("others")}))
+    fnotes = [t for p in others for t in p.pop("formation_notes", [])]
     full = recipe
     recipe = dict(recipe, leagues=[L for L in recipe["leagues"] if not L.get("others")])
     leagues = recipe["leagues"]
@@ -2093,9 +2111,7 @@ def plan(recipe, base, prev=None):
                 # build() gives a new club its old id back (pinned_tid)
                 p["prev_teams"] = [t if isinstance(t, int) else None for t in q["teams"]]
                 p["prev_names"] = [str(x or "").strip().lower() for x in (q.get("club_names") or [])]
-            for f in [p["formation"]] + p["club_formations"]:
-                if f and formation_club(base, f) is None:
-                    raise BuildError("%s: no formation %r (the Formation list has them)" % (name, f))
+            fnotes += known_formations(p, base, name)
             bad = europe_problems(n, L.get("europe") or [], bool(L.get("cup")))
             if bad:
                 raise BuildError("%s: European places: %s" % (name, "; ".join(bad)))
@@ -2381,7 +2397,7 @@ def plan(recipe, base, prev=None):
                          % (len(cups) + len(home), MAX_CCUP))
     return {"world": recipe["world"], "leagues": out, "others": others, "edits": recipe.get("edits") or {},
             "free_ids": free_ids, "players": recipe.get("players") or {}, "uecl": bool(recipe.get("uecl", True)),
-            "skipped": [t for _pr, t in stale],         # what Build leaves out, with why
+            "skipped": [t for _pr, t in stale] + fnotes,        # what Build leaves out, with why
             "trophies": dict(recipe.get("trophies") or {}),     # Leagues > More > Trophies (lbtrophies)
             "uecl_logo": recipe.get("uecl_logo") or None,
             "uecl_name": (recipe.get("uecl_name") or "").strip() or None,
@@ -2519,9 +2535,7 @@ def others_plan(groups, base, cty, pins=None):
             p["prev_names"] = [str(x or "").strip().lower() for x in (q.get("club_names") or [])]
         if len(p["club_names"]) > n:
             raise BuildError("%s: %d club names for %d clubs" % (name, len(p["club_names"]), n))
-        for f in [p["formation"]] + p["club_formations"]:
-            if f and formation_club(base, f) is None:
-                raise BuildError("%s: no formation %r (the Formation list has them)" % (name, f))
+        p["formation_notes"] = known_formations(p, base, name)
         out.append(p)
     return out
 

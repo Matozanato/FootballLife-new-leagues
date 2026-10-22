@@ -242,6 +242,11 @@ come with it instead.
   Program Files, run as administrator; already administrator, close the game and Sider, allow
   FL26ModStudio.exe in Controlled folder access, or untick Read-only. (Thanks AHMED)
 
+- **Build stopped on "no formation '161' (the Formation list has them)" (B105).** A league from a
+  pack made over other tables can name a formation your tables do not have. Build now goes on: the
+  league's clubs play the formation their squad fits (as "Picked from each club's squad") and the
+  log names the league and the formation. (Thanks Dee Jay and Micarodvzla22)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
