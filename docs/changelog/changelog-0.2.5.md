@@ -242,6 +242,12 @@ come with it instead.
   Program Files, run as administrator; already administrator, close the game and Sider, allow
   FL26ModStudio.exe in Controlled folder access, or untick Read-only. (Thanks AHMED)
 
+- **Generated players of Sweden, Norway, Finland and the other Nordic nations were mostly
+  dark-skinned (B183).** A regen or a new player gets one of the face pack's faces of his part of
+  the world, and the Nordic nations shared theirs with England, Germany and the Netherlands, six of
+  ten of them dark. They now have a group of their own with the pack's light faces. (Thanks
+  pepponeee98)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
