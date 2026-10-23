@@ -372,7 +372,10 @@ come with it instead.
   > League Phase crashed (ucrtbase 0xc0000409). From the July rollover on, a season that finished
   last year is now given back too, and not only when fewer than 120 tables are free, but also when
   fewer are free than the finished seasons hold (the new seasons need about as many). The season
-  under way is kept, and a world with tables to spare is left as it is.
+  under way is kept, and a world with tables to spare is left as it is. A competition whose new
+  season was already built short at the rollover (the Champions League got 3 of its 20 tables) is
+  built again as soon as the tables are back. If a league phase is still drawn with no table, the
+  Group stage item is greyed out instead of crashing the game.
 
 - **A new Master League crashed mid-season (FL_2026.exe+0x1321d00) when the world's save folder held
   an Edit save of an older version of the world (B197).** That Edit save names players in its
