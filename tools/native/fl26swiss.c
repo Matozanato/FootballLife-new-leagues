@@ -6955,6 +6955,27 @@ static int native_group_stage(uint16_t r)
     if (r == g_ccup[k].reg || r == g_ccup[k].ko) return 0;
   return get_rec((uint16_t)(r + 1024)) != 0;
 }
+/* B219: the Libertadores qualifying phase the item shows -- native F3 (reg 8) or an F1/F2 alias --
+   holds clubs: its first tie has two */
+static int libq_item_live(uint16_t q)
+{
+  if (q == CONM_LIBQ_REG) {
+    unsigned char* t = find_rec((uint16_t)(CONM_LIBQ_REG + 1024));
+    return t && rec_count(t) == 2;
+  }
+  int tk = -1, li = lpre_of(q, &tk);
+  if (li < 0 || tk >= 0 || !g_lpre[li].alias) return 0;
+  unsigned char* t = find_rec(lpre_tie(&g_lpre[li], 0));
+  return t && rec_count(t) == 2;
+}
+/* B219: one of the Libertadores qualifying phases (native F3, F1/F2 aliases) holds clubs */
+static int libq_any_live(void)
+{
+  if (libq_item_live(CONM_LIBQ_REG)) return 1;
+  for (int li = 0; li < g_nlpre; li++)
+    if (g_lpre[li].alias && libq_item_live(g_lpre[li].reg)) return 1;
+  return 0;
+}
 static uint64_t phkind_core(uint32_t* comp, uint64_t kind, uintptr_t ra);
 uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
 {
@@ -9641,6 +9662,23 @@ uint64_t ci_menu_handler(ci_vec_t* v, uint32_t* comp, uint64_t flag)
   g_ci_pick = 0xffff;
   if (v == g_ci_vec) { g_ci_vec = 0; g_ci_n = 0; }
   if (!v || !comp || !v->b || v->e < v->b || !g_tramp_txtget) return r;
+  /* B219 (antonimus 23.10.): the Libertadores' qualifying item ("Qualifying Round") went grey once
+     its phases were played and stayed grey all season. Its F1/F2/F3 are filled by this module,
+     not by the game's draw, and the menu (no phase-kind call for this item) greys it on a mark the
+     draw would have set. While one of its phases holds clubs it is enabled; it opens the same
+     page, which asks for the phase itself (PAGE_GRP_RA). */
+  if (*comp == CONM_LIB_CID && libq_any_live()) {
+    int n = (int)(v->e - v->b), lit = 0;
+    for (int k = 0; k < n; k++)
+      if (!v->b[k].en && v->b[k].size == 7 && !memcmp(v->b[k].buf, "playoff", 7)) { v->b[k].en = 1; lit++; }
+    static int said_libq = 0;
+    if (said_libq++ < 6) {
+      char items[160]; int o = 0;
+      for (int k = 0; k < n && k < 10 && o < 140; k++)
+        o += snprintf(items + o, sizeof items - o, " %u/%u/%.7s", v->b[k].type, v->b[k].en, v->b[k].size < 16 ? v->b[k].buf : "-");
+      logf("fl26swiss: Competition Info -- Libertadores menu, %d qualifying item(s) enabled:%s", lit, items);
+    }
+  }
 
 
   int ci = ci_of_comp(*comp);
@@ -9673,7 +9711,39 @@ uint64_t ci_menu_handler(ci_vec_t* v, uint32_t* comp, uint64_t flag)
     int gp = -1;
     for (int k = 0; k < n; k++)
       if (v->b[k].type == 2) { gp = k; break; }
-    if (gp < 0) return r;
+    /* B219 (antonimus 23.10.): no Group stage item yet -- B205 leaves it out until the groups are
+       drawn (day 49), and the first stage is played before that (day 44): the first stage then
+       went missing from the menu exactly while it was on. It goes at the top, where it stands
+       once the groups are drawn; the post-group play-off waits for the Group stage item. */
+    if (gp < 0) {
+      ci_item_t only;
+      memset(&only, 0, sizeof only);
+      only.type = 0;
+      only.en = today() >= g_lpre[fi].fill ? 1 : 0;
+      only.text = SUD1_TEXT;
+      memcpy(only.buf, "playoff", 8);
+      only.size = 7;
+      only.cap = 15;
+      ((cipush_fn)(uintptr_t)(g_base + CIPUSH_RVA))(v, &only);
+      int m1 = (int)(v->e - v->b);
+      if (m1 != n + 1) {
+        logf("fl26swiss: Competition Info -- Sudamericana first-stage item not added (vector %d -> %d)", n, m1);
+        return r;
+      }
+      ci_item_t top = v->b[m1 - 1];
+      memmove(v->b + 1, v->b, (size_t)(m1 - 1) * sizeof(ci_item_t));
+      v->b[0] = top;
+      g_sud1_reg = g_lpre[fi].reg;
+      g_ci_reg[0] = g_lpre[fi].reg;
+      for (int k = 1; k < m1; k++) g_ci_reg[k] = 0xffff;
+      g_ci_n = m1;
+      g_ci_vec = v;
+      g_ci_comp = *comp;
+      if (g_ci_menu_n++ < 12)
+        logf("fl26swiss: Competition Info -- Sudamericana first stage reg %u at item 0 (%s), no Group stage item yet",
+             (unsigned)g_lpre[fi].reg, only.en ? "enabled" : "grey until drawn");
+      return r;
+    }
 
     uint16_t first_reg = g_lpre[fi].reg;
     uint16_t post_reg = g_lpre[pi].reg;
