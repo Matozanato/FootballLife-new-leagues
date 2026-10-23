@@ -339,16 +339,15 @@ come with it instead.
   there and writes nothing to errors.log. (Thanks evannoteven)
 
 - **No tables for the calendar-year leagues and no Libertadores or AFC Champions League groups from
-  the third season of a big
-  world (B211).** The game keeps every table of every season in one pool of 595, and a world of 86
-  leagues (the World Modpack) filled it with two seasons. On 1 January of the third season the
-  leagues and cups played in a calendar year (the MLS, Brazil, Argentina, Japan, the Libertadores,
-  the AFC Champions League and more, 41 in all) got no table, and the two cups drew
-  their groups with nowhere to play them, so their knockouts had no club. When fewer than 120 tables
-  are free, the tables of a season two years old (2027/28 in 2029) are now given back from 17
-  December, the way the game frees them itself in July. The season under way is kept, and a world
-  with tables to spare is left as it is. A career already in its third season gets the tables back
-  from the next January.
+  the third season of a big world (B211).** The game keeps every table of every season in one pool
+  of 595, and a world of 86 leagues (the World Modpack) filled it with two seasons. On 1 January of
+  the third season the leagues and cups played in a calendar year (the MLS, Brazil, Argentina,
+  Japan, the Libertadores, the AFC Champions League and more, 41 in all) got no table, and the two
+  cups drew their groups with nowhere to play them, so their knockouts had no club. When fewer than
+  120 tables are free, the tables of a season two years old (2027/28 in 2029) are now given back
+  from 17 December, the way the game frees them itself in July. The season under way is kept, and a
+  world with tables to spare is left as it is. A career already in its third season gets the tables
+  back from the next January.
 
 ## Read this first
 
