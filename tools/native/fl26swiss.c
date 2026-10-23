@@ -3127,8 +3127,11 @@ static void cont_swap(uint16_t id, u32vec* list, const char* where)
   /* B204 (World Modpack, a tester's second season): the game files the Libertadores on 1 January,
      Inter Miami by the MLS's places, and it was in the CONCACAF Champions Cup of the world's
      (filled in August, from the same league) as well -- two continental cups in the same months.
-     The world's cups keep their club: in the Libertadores it gives way to a CONMEBOL club no cup
-     holds (conmebol_fallback), the same one in every list of that season. */
+     The world's cups keep their club: in the Libertadores a club from outside CONMEBOL gives way
+     to a CONMEBOL club no cup holds (conmebol_fallback), the same one in every list of that season.
+     A CONMEBOL club stays: the World Modpack's Copa Sudamericana runs August to May, and the first
+     build of this (2028 of r13) took six Brazilian and Argentinian clubs out of the Libertadores
+     for it. */
   if ((comp == LIB || comp == LIBQ) && g_confed_n) {
     static uint32_t held[1536];
     unsigned nh = world_cup_clubs(held, 1024);
@@ -3136,7 +3139,7 @@ static void cont_swap(uint16_t id, u32vec* list, const char* where)
     if (ad - g_libdup_day > 120 || ad < g_libdup_day) g_nlibdup = 0;
     for (size_t i = 0; i < n && nh; i++) {
       uint32_t old = list->b[i];
-      if (!has_club(held, nh, old)) continue;
+      if (!has_club(held, nh, old) || confed_of(team_country(blk, old)) == 4) continue;
       g_libdup_day = ad;
       uint32_t to = 0;
       for (unsigned q = 0; q < g_nlibdup && !to; q++)
@@ -3160,13 +3163,13 @@ static void cont_swap(uint16_t id, u32vec* list, const char* where)
         }
       }
       if (!to) {
-        logf("fl26swiss: %s reg %u (%s) -- day %d: %08x is in a cup of the world's too; no CONMEBOL club to put in, left",
-             CONT_NAME[k], (unsigned)id, where, today(), old);
+        logf("fl26swiss: %s reg %u (%s) -- day %d: %08x (confederation %d) is in a cup of the world's too; no CONMEBOL club to put in, left",
+             CONT_NAME[k], (unsigned)id, where, today(), old, confed_of(team_country(blk, old)));
         continue;
       }
       list->b[i] = to;
-      logf("fl26swiss: %s reg %u (%s) -- day %d: %08x is in a cup of the world's too; CONMEBOL %08x in its place",
-           CONT_NAME[k], (unsigned)id, where, today(), old, to);
+      logf("fl26swiss: %s reg %u (%s) -- day %d: %08x (confederation %d) is in a cup of the world's too; CONMEBOL %08x in its place",
+           CONT_NAME[k], (unsigned)id, where, today(), old, confed_of(team_country(blk, old)), to);
     }
   }
 

@@ -329,8 +329,9 @@ come with it instead.
 - **The same club played the Copa Libertadores and a continental cup of the world file in the
   same months (B204).** The game files the Libertadores on 1 January, the MLS's places included,
   and Inter Miami was already in the CONCACAF Champions Cup filled in August from the same
-  league. A club that a cup of the world file already holds now keeps that cup, and its
-  Libertadores place goes to a CONMEBOL club no continental cup holds. (Thanks Micarodvzla22)
+  league. A club from outside CONMEBOL that a cup of the world file already holds now keeps
+  that cup, and its Libertadores place goes to a CONMEBOL club no continental cup holds.
+  (Thanks Micarodvzla22)
 
 ## Read this first
 
