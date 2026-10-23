@@ -180,7 +180,7 @@ def scenario(B, base, src):
     os.makedirs(board)
     open(os.path.join(board, "board.txt"), "w").write("board")
     nl = list(range(B.NEWLIFE_TEAMS[0] + 7, B.NEWLIFE_TEAMS[0] + 7 + 10))
-    return {"world": "_FL26RtA", "make_kits": False, "leagues": [
+    return {"world": "_FL26RtA", "make_kits": False, "replaced_kits": False, "leagues": [
         {"name": "RT Albania", "country": "Albania", "clubs": 12, "legs": 2, "cup": True, "cup_name": "RT Cup",
          "supercup": True, "supercup_name": "RT Super", "europe": [[1, 0], [2, 1]],
          "club_names": ["Tirana RT", "Vllaznia RT", "", "Partizani RT"],

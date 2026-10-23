@@ -217,6 +217,9 @@ which league sits above -- and nothing about ids:
               club without a Kit Server folder of its own gets a kit made when the world is switched
               on (lbservers, kitmaker): home, away, third and goalkeeper in its shirt colours
               (club_kits / club_away_kits, NewLife's), or its crest's, with its crest on the chest.
+  replaced_kits  (the recipe) false: a club of the game whose place the world gave another club
+              (NewLife's "Bring the game's leagues to this season") gets no kit made in the new
+              club's colours; the game's kit, or a kit pack's line for its id, stays (B176).
   pack_faces  (the recipe) false: the world's new players get no face of the regen face pack (no
               newfaces lines), so the look the game gives them, or one set in the game's Edit mode,
               stays (Jabo9, 11.10.: Edit-mode looks covered by pack faces in Master League).
@@ -1062,6 +1065,8 @@ def recipe_from_plan(pl, base):
         rec["trophies"] = trophies
     if pl.get("make_kits") is False:
         rec["make_kits"] = False
+    if pl.get("replaced_kits") is False:
+        rec["replaced_kits"] = False
     if pl.get("pack_faces") is False:
         rec["pack_faces"] = False
     st = pl.get("settings")
@@ -2414,6 +2419,7 @@ def plan(recipe, base, prev=None):
             "game_seasons": august_countries(recipe),
             "editable_kits": bool(recipe.get("editable_kits")),
             "make_kits": recipe.get("make_kits", True) is not False,
+            "replaced_kits": recipe.get("replaced_kits", True) is not False,
             "pack_faces": recipe.get("pack_faces", True) is not False,
             "country_order": recipe.get("country_order") or None,
             "cup_draw": cup_draw(recipe),

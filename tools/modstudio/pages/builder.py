@@ -4633,6 +4633,14 @@ class Build(BuilderPage):
         cl.addWidget(noted(self.mkits, helpmark(tip), hint(_("a whole league's kits at once, with the crest on the "
                                                              "chest; off = the new clubs keep the kit borrowed "
                                                              "from the game"))))
+        self.rkits = QCheckBox(_("Kits made for clubs in a game club's place"))
+        tip = ("On: a club that took the place of a club of the game (NewLife's Bring the game's leagues to this "
+               "season) gets kits made in its own colours, as a new club does. Off: it keeps the kit of the game "
+               "or of your kit pack for that place, which can be the kit of the club that left.")
+        self.rkits.setToolTip(_(tip))
+        self.rkits.toggled.connect(self.set_rkits)
+        cl.addWidget(noted(self.rkits, helpmark(tip), hint(_("off = the kit of the club that left stays; "
+                                                             "takes effect when the world is switched on"))))
         self.ekits = QCheckBox(_("Plain kits to change in Edit mode"))
         self.ekits.setToolTip(_("On: the new clubs get no kit borrowed from a club of the game. A borrowed kit is "
                                 "a licensed one, and the game's Edit mode refuses it (\"You cannot edit this "
@@ -4647,6 +4655,8 @@ class Build(BuilderPage):
             hint(_("instead of the kits above: with this on, Kit Server does not dress the new "
                    "clubs, so the made kits are switched off"))))
         self.ekits.toggled.connect(lambda on: self.mkits.setEnabled(not on))
+        self.ekits.toggled.connect(lambda on: self.rkits.setEnabled(not on and self.mkits.isChecked()))
+        self.mkits.toggled.connect(lambda on: self.rkits.setEnabled(on and not self.ekits.isChecked()))
         self.pfaces = QCheckBox(_("Faces from the regen face pack for new players"))
         tip = ("On: every new player without a face of his own gets a face of the regen face pack by his "
                "nationality. Off: new players keep the look the game gives them, or the one you set in the "
@@ -4757,6 +4767,14 @@ class Build(BuilderPage):
                 self.project.recipe["make_kits"] = False
             self.project.touch()
 
+    def set_rkits(self, on):
+        if (self.project.recipe.get("replaced_kits") is not False) != on:
+            if on:
+                self.project.recipe.pop("replaced_kits", None)
+            else:
+                self.project.recipe["replaced_kits"] = False
+            self.project.touch()
+
     def set_uecl_name(self):
         v = self.uecl_name.text().strip()
         if v != (self.project.recipe.get("uecl_name") or ""):
@@ -4834,6 +4852,10 @@ class Build(BuilderPage):
         self.mkits.setChecked(self.project.recipe.get("make_kits") is not False)
         self.mkits.blockSignals(False)
         self.mkits.setEnabled(not self.ekits.isChecked())
+        self.rkits.blockSignals(True)
+        self.rkits.setChecked(self.project.recipe.get("replaced_kits") is not False)
+        self.rkits.blockSignals(False)
+        self.rkits.setEnabled(self.mkits.isChecked() and not self.ekits.isChecked())
         self.pfaces.blockSignals(True)
         self.pfaces.setChecked(self.project.recipe.get("pack_faces") is not False)
         self.pfaces.blockSignals(False)

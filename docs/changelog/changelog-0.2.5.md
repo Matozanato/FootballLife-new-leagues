@@ -117,7 +117,9 @@ come with it instead.
   while the world is in the game (back on with any other world). A line of your own whose folder
   names the club (`Modpack\Game leagues\FC Schalke 04`) is kept. A world you already have gets
   them at its next Build or Switch it on (the Europack draws 49 kits once, about half a minute).
-  (Thanks quicksite, NedimMM)
+  World options > **Kits made for clubs in a game club's place** (on by default) switches this
+  off: the game's kit, or your kit pack's line for the id, stays. (Thanks quicksite, NedimMM;
+  the switch: Vicentico12)
 
 - **A kit you changed by hand went back to Mod Studio's (B166).** A kit put into a club's kit
   folder of the world by hand (through Sider, or by copying the files in) was replaced at the next

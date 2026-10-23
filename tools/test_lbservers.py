@@ -369,6 +369,14 @@ def main():
         ok("B176: lines for clubs the world did not give away untouched", pack[2] in km and pack[3] in km)
         S.write({"world": "_FL26MyWorld", "leagues": []}, g, log=lambda *_: None, root=wr)
         ok("B176: another world on: the pack's lines are back as they were", lines(mp6) == pack)
+        # Vicentico12 23.10.: "replaced_kits": false -- no kit made for them, the pack's lines stay
+        off = dict(eu4, replaced_kits=False)
+        ok("replaced_kits off: no kit made for a club in a game club's place", S.to_make(off, wr) == [])
+        S.write(eu4, g, log=lambda *_: None, root=wr)
+        S.write(off, g, log=lambda *_: None, root=wr)
+        ok("replaced_kits off after on: the pack's Heidenheim line is back, no made line for 5009",
+           lines(mp6) == pack)
+        S.write({"world": "_FL26MyWorld", "leagues": []}, g, log=lambda *_: None, root=wr)
 
         # B166 (LaraCroft 19.10.): a kit changed by hand in its folder of the world went back to the
         # package's (or the drawn one) at the next Build / Switch on

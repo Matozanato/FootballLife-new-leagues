@@ -143,8 +143,12 @@ def replaced_clubs(pl):
     kit pack's Kit Server line for it (5009, "Bundesliga\\Heidenheim") -- is the kit of the club
     that left: B176 (quicksite, NedimMM 20.10.), Europack eu4's Schalke 04 (5009), SC Paderborn
     (4139) and SV Elversberg (232) in the Bundesliga wore Heidenheim's, St. Pauli's and
-    Wolfsburg's kits. Such a club gets a kit made from its colours and crest, as a new club does"""
+    Wolfsburg's kits. Such a club gets a kit made from its colours and crest, as a new club does.
+    "replaced_kits": false (Vicentico12 23.10.) leaves them none: the game's kit, or the kit pack's
+    line for the id, stays"""
     out = {}
+    if pl.get("replaced_kits") is False:
+        return out
     for tid, v in ((pl.get("edits") or {}).get("clubs") or {}).items():
         if isinstance(v, dict) and "kit" in v and str(tid).isdigit():
             out[int(tid)] = (v.get("name") or "", v.get("kit") or "", bool(v.get("crest")))
