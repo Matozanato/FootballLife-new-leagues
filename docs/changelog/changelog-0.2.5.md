@@ -107,6 +107,13 @@ come with it instead.
 
 ## Fixed
 
+- **A club wore another club's crest in some competitions (B199).** A world zip carries the
+  scoreboards other packs give its competitions, and a scoreboard can bring crests of its own, by
+  team id. The World Modpack's Community Shield board had Leicester City's crest for the id whose
+  place the world gives Bolton Wanderers, so in those matches Bolton showed Leicester's crest.
+  Make a world zip now leaves out a pack's crest for any club whose crest the world draws itself.
+  (Thanks JamesNotLike)
+
 - **Home > Last changes: rows painted over each other (B83).** While a message box was open (the one
   after Install the modules), the list of last changes was drawn on top of the old one until you
   went to another page. The same in the world cards, the pack ticks and the league crests. (Thanks
