@@ -118,13 +118,14 @@ def main():
         with zipfile.ZipFile(zk) as z:
             km = z.read("SiderAddons/content/kit-server/map.txt").decode()
             assert km.strip() == '72001, "%s\\L One\\Club A"   %s L One/0 made' % (WORLD, tag), km
-        # a club of the world wearing another pack's kit (SPFL26's Other Europe, a modpack): it goes too
+        # a club of the world wearing another pack's kit (SPFL26's Other Europe, a modpack): it goes too;
+        # of a club's two lines the last is in effect, as in Kit Server (B203)
         put(os.path.join(a, "livecpk", WORLD, "leaguebuilder-plan.json"),
             '{"world": "%s", "leagues": [{"name": "L One", "rid": 263, "teams": [72001, 1586, 72003, 100], '
             '"club_names": ["Club A", "Salzburg", "C", "D"], "kit_folders": ["X:\\\\built-there\\\\A", "", "", ""], '
             '"scoreboard": "X:\\\\built-there\\\\L One"}]}' % WORLD)
         with open(os.path.join(a, "content", "kit-server", "map.txt"), "a", encoding="utf-8") as fh:
-            fh.write('1586, "Other Europe\\Salzburg"\n1586, "Old\\Salzburg"\n72003, "Gone\\Nowhere"\n')
+            fh.write('1586, "Old\\Salzburg"\n1586, "Other Europe\\Salzburg"\n72003, "Gone\\Nowhere"\n')
         put(os.path.join(a, "content", "kit-server", "Other Europe", "Salzburg", "p1", "s.ftex"), "s")
         put(os.path.join(a, "content", "kit-server", "Mine", "Club", "p1", "m.ftex"), "m")
         info = I.export_world(a, WORLD, zk)
