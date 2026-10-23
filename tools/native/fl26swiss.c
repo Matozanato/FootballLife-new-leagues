@@ -11434,27 +11434,21 @@ static void u10_install(void) {
  * Micarodvzla 23.10. (second season, Europa League only) and r13 on 12/6/2030: the Europa League
  * and the Conference League hold an empty table of next season (2030, 0 rows) beside the played
  * one (2029, 36 rows), opened early like the one lp_table works around for the play-off; the
- * Champions League had no 2030 table yet and showed its league phase.  The pages read the table
- * of the latest season through 0x141579b90, a 5-byte `jmp 0x14158b6f0` thunk followed by int3
- * up to the next thunk at +0x10.  The thunk becomes `jmp [rip+0]; dq handler` (14 bytes); the
- * handler calls 0x14158b6f0 itself and, only for the five calls of the standings pages (league
- * page aedd37 / aee0f5 / aee4fa, group page af591e / af63db) and only for 1027 / 1029 / 1210 with
- * fewer than 24 rows, answers with season_table's -- the latest season of that id with 24..48
- * rows.  Once next season's draw fills its table, that one has 36 rows and is shown as before. */
+ * Champions League had no 2030 table yet and showed its league phase.  The standings pages read
+ * the table of the latest season through 0x141579b90 (a `jmp 0x14158b6f0` thunk).  Only the five
+ * calls of those pages -- league page aedd37 / aee0f5 / aee4fa, group page af591e / af63db, all
+ * in UI controllers (vtable slots at 0x1426844e0, 0x142685f58, 0x142686210 and the row fill of
+ * 0x140aeda10) -- are turned to a jump of ours next to the exe; the game's other calls of the
+ * thunk are not touched.  For 1027 / 1029 / 1210 with fewer than 24 rows it answers with
+ * season_table's -- the latest season of that id with 24..48 rows; once next season's draw
+ * fills its table, that one has 36 rows and is shown as before. */
 #define LPPAGE_THUNK 0x1579b90
-typedef unsigned char* (*tabraw_fn)(uint64_t id);
-static tabraw_fn g_tabraw;
-static uintptr_t g_lppage_ret[5];
 static unsigned char* lppage_table(uint64_t id)
 {
-  unsigned char* t = g_tabraw(id);
+  unsigned char* t = ((table_fn)(uintptr_t)(g_base + LPPAGE_THUNK))(id);
   uint16_t r = (uint16_t)id;
   if (r != 1027 && r != 1029 && r != UECL_ROW) return t;
   if (t && *(uint32_t*)(t + 0x3c0) >= 24) return t;
-  uintptr_t ra = (uintptr_t)__builtin_return_address(0);
-  int i = 0;
-  while (i < 5 && g_lppage_ret[i] != ra) i++;
-  if (i == 5) return t;
   unsigned yr = 0;
   unsigned char* t2 = season_table(r, &yr);
   if (!t2) return t;
@@ -11467,28 +11461,29 @@ static unsigned char* lppage_table(uint64_t id)
   }
   return t2;
 }
-static void lppage_install(void)
+static void lppage_install(uint64_t exe_base)
 {
   static const uint32_t CALLS[5] = { 0xaedd37, 0xaee0f5, 0xaee4fa, 0xaf591e, 0xaf63db };
-  unsigned char* th = (unsigned char*)(uintptr_t)(g_base + LPPAGE_THUNK);
-  if (th[0] != 0xe9) { logf("fl26swiss: League Phase page fallback NOT installed (thunk)"); return; }
-  for (int i = 5; i < 16; i++)
-    if (th[i] != 0xcc) { logf("fl26swiss: League Phase page fallback NOT installed (thunk padding)"); return; }
   for (int i = 0; i < 5; i++) {
-    unsigned char* c = (unsigned char*)(uintptr_t)(g_base + CALLS[i]);
-    if (c[0] != 0xe8 || c + 5 + *(int32_t*)(c + 1) != th) {
-      logf("fl26swiss: League Phase page fallback NOT installed (call %d)", i);
+    unsigned char* c = (unsigned char*)(uintptr_t)(exe_base + CALLS[i]);
+    if (c[0] != 0xe8 || (uint64_t)(uintptr_t)(c + 5) + *(int32_t*)(c + 1) != exe_base + LPPAGE_THUNK) {
+      logf("fl26swiss: League Phase page fallback NOT installed (call %d is not the one expected)", i);
       return;
     }
-    g_lppage_ret[i] = (uintptr_t)(c + 5);
   }
-  g_tabraw = (tabraw_fn)(uintptr_t)(th + 5 + *(int32_t*)(th + 1));
-  DWORD old;
-  if (!VirtualProtect(th, 14, PAGE_EXECUTE_READWRITE, &old)) return;
-  th[0] = 0xFF; th[1] = 0x25; *(uint32_t*)(th + 2) = 0; *(uint64_t*)(th + 6) = (uint64_t)(uintptr_t)lppage_table;
-  VirtualProtect(th, 14, old, &old);
-  FlushInstructionCache(GetCurrentProcess(), th, 14);
-  logf("fl26swiss: League Phase page fallback live (table@%llx)", (unsigned long long)(uintptr_t)g_tabraw);
+  unsigned char* t = near_alloc(exe_base);
+  if (!t) { logf("fl26swiss: League Phase page fallback NOT installed (no page in reach)"); return; }
+  t[0] = 0xFF; t[1] = 0x25; *(uint32_t*)(t + 2) = 0; *(uint64_t*)(t + 6) = (uint64_t)(uintptr_t)lppage_table;
+  FlushInstructionCache(GetCurrentProcess(), t, 14);
+  for (int i = 0; i < 5; i++) {
+    unsigned char* c = (unsigned char*)(uintptr_t)(exe_base + CALLS[i]);
+    DWORD old;
+    if (!VirtualProtect(c, 5, PAGE_EXECUTE_READWRITE, &old)) return;
+    *(int32_t*)(c + 1) = (int32_t)((int64_t)(uintptr_t)t - (int64_t)(uintptr_t)(c + 5));
+    VirtualProtect(c, 5, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), c, 5);
+  }
+  logf("fl26swiss: League Phase page fallback live (5 page calls)");
 }
 
 /* ---- MP: a matches-played column in the standings (mato 2026-10-21: its own column, A stays) ----
@@ -11775,7 +11770,7 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
            g_tramp_cimenu ? " -- menu hooked, choice not: extra items open the native item's page" : "");
   }
   u10_install();
-  lppage_install();
+  lppage_install(exe_base);
   mp_install();
   if (!cupsel_install(exe_base))
     logf("fl26swiss: Cup mode list live (no league phase of 36 in Kick Off > Cup)");
