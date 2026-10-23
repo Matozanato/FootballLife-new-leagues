@@ -149,6 +149,10 @@ def main():
             "263, %s\\L One   %s L One\n76, Modpack\\HNL   # SuperSport HNL\n268, Modpack\\Cup\n"
             "99, Modpack\\Other\n#287, Modpack\\Off\n287, Modpack\\Gone\n" % (WORLD, tag))
         put(os.path.join(a, "content", "scoreboard-server", "Modpack", "HNL", "board.dds"), "h")
+        # B199: the pack's crest of a club whose crest the world draws (204) stays out, another goes
+        put(os.path.join(a, "livecpk", WORLD, "common", "render", "symbol", "flag", "e_000204_r_l.png"), "w")
+        for f in ("e_000204_r_b.png", "e_000999_r_b.png"):
+            put(os.path.join(a, "content", "scoreboard-server", "Modpack", "HNL", "common", "render", "symbol", "flag", f), "p")
         put(os.path.join(a, "content", "scoreboard-server", "Modpack", "Cup", "c.dds"), "c")
         put(os.path.join(a, "content", "scoreboard-server", "Modpack", "Off", "o.dds"), "o")
         put(os.path.join(a, "content", "menu-server", "map_competitions.txt"),
@@ -178,6 +182,9 @@ def main():
             assert not any("Twice" in n for n in names), names
             assert "SiderAddons/content/scoreboard-server/%s/_packs/Modpack/HNL/board.dds" % WORLD in names, names
             assert "SiderAddons/content/scoreboard-server/%s/_packs/Modpack/Cup/c.dds" % WORLD in names
+            pc = "SiderAddons/content/scoreboard-server/%s/_packs/Modpack/HNL/common/render/symbol/flag/" % WORLD
+            assert pc + "e_000999_r_b.png" in names and pc + "e_000204_r_b.png" not in names, names   # B199
+            assert "SiderAddons/livecpk/%s/common/render/symbol/flag/e_000204_r_l.png" % WORLD in names
             assert not any("Modpack/Off" in n or "Modpack/Other" in n for n in names), names
             assert sum(1 for n in names if n.endswith("theme.dds")) == 1, names
             assert "menu themes (1 competition" in z.read(I.WORLD_README).decode()   # B73: was 2 (the cid)

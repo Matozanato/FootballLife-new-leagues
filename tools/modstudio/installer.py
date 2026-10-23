@@ -227,6 +227,26 @@ scoreboards and themes add the lines of the zip's map.txt / map_competitions.txt
 """
 
 
+# B199 (JamesNotLike, 22.10.): a scoreboard pack can carry crests of its own, by team id
+# (common/render/symbol/flag/e_000204_r_b.png ...). The World Modpack's Community Shield board
+# had Leicester's crest for 204, the id whose place the world gives Bolton Wanderers, and in the
+# matches with that board Bolton wore Leicester's crest. A crest the world draws itself (its own
+# file for the id in livecpk/<world>/common/render/symbol) wins: the pack's is left out.
+CREST_FILE = re.compile(r"(?:^|/)common/render/symbol/(?:flag|emblemLc)/(?:e_(\d{6})_|emb_(\d{4,6})_)[^/]*$", re.I)
+
+
+def own_crests(root):
+    """the team ids whose crest the world at root draws itself"""
+    ids = set()
+    for sub in ("flag", "emblemLc"):
+        d = os.path.join(root, "common", "render", "symbol", sub)
+        for f in os.listdir(d) if os.path.isdir(d) else []:
+            m = CREST_FILE.search("common/render/symbol/%s/%s" % (sub, f))
+            if m:
+                ids.add(int(m.group(1) or m.group(2)))
+    return ids
+
+
 def export_world(sider_dir, world, out, log=lambda t: None, menus=False):
     r"""zip the built world SiderAddons\livecpk\<world> for another PC, laid out as
     SiderAddons\livecpk\<world>\... so Install mods (or a copy by hand) puts it in place.
@@ -307,6 +327,7 @@ def export_world(sider_dir, world, out, log=lambda t: None, menus=False):
                          boards=info["scoreboards"], menus=info["menus"]).replace("\n", "\r\n")
     part = out + ".part"
     n = 0
+    own, crests = own_crests(root), 0
     with zipfile.ZipFile(part, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr(WORLD_README, text)
         z.writestr(WORLD_INFO, json.dumps(info, indent=1, ensure_ascii=False))
@@ -330,11 +351,17 @@ def export_world(sider_dir, world, out, log=lambda t: None, menus=False):
                         name = "SiderAddons/content/%s/%s/%s" % (s.folder, dst.replace("\\", "/"), rel)
                         if name.lower() in written:
                             continue              # a pack folder inside another one already written
+                        m = CREST_FILE.search(rel) if dst != world else None
+                        if m and int(m.group(1) or m.group(2)) in own:
+                            crests += 1           # B199: the world draws this club's crest itself
+                            continue
                         written.add(name.lower())
                         z.write(p, name)
                         n += 1
             log("%s: %d map line(s) from %s%s" % (s.title, len(lines), here,
                 ", %d of them kits of other packs" % len(lent) if lent else ""))
+        if crests:
+            log("%d crest file(s) of other packs left out: the world draws those clubs' crests itself" % crests)
         for dp, dn, fn in os.walk(root):
             dn.sort()
             for f in sorted(fn):
