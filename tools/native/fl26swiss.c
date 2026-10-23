@@ -3544,6 +3544,18 @@ static u32vec* cwc_game_champions(u32vec* list)
     }
   }
   if (!blk) return list;
+  /* B200 (Micarodvzla 23.10., r13 day 332 of 2030): with no entrant of its confederation a
+     champion took the last place, whoever held it -- the CAF champion added above, then the
+     CONCACAF champion put there one step before, and in his world the Libertadores winner. The
+     places of our champions, of the clubs added above and of the European and South American
+     entrants (confederations 2 and 4) are kept; the last other entrant gives way, else the
+     champion stays out. */
+  uint8_t keep[CWC_GAME_N + 8] = { 0 };
+  for (size_t i = 0; i < n && i < sizeof keep; i++) {
+    int cf = g_confed_n ? confed_of(team_country(blk, list->b[i])) : 0;
+    keep[i] = list == &fv && i == n - 1 ? 1 : cf == 2 || cf == 4;
+    for (int j = 0; j < nw; j++) if (list->b[i] == cw[j]) keep[i] = 1;
+  }
   for (int k = 0; k < nw; k++) {
     if (has_club(list->b, n, cw[k])) continue;
     int want = g_confed_n ? confed_of(team_country(blk, cw[k])) : 5;
@@ -3554,10 +3566,19 @@ static u32vec* cwc_game_champions(u32vec* list)
       if (!mine && want && confed_of(team_country(blk, list->b[i])) == want) at = i;
     }
     const char* how = want == 5 ? "an African entrant" : "an entrant of its confederation";
-    if (at == n) { at = n - 1; how = "the last entrant, none of its confederation offered"; }
+    if (at == n) {
+      for (size_t i = n; i-- > 0 && at == n; ) if (i >= sizeof keep || !keep[i]) at = i;
+      how = "the last entrant not kept, none of its confederation offered";
+    }
+    if (at == n) {
+      logf("fl26swiss: Club World Cup (the game's) -- winner of cup %u %08x stays out: no entrant of its confederation and every place kept",
+           (unsigned)cc[k], cw[k]);
+      continue;
+    }
     logf("fl26swiss: Club World Cup (the game's) -- winner of cup %u %08x in place of %08x (%s)", (unsigned)cc[k], cw[k],
          list->b[at], how);
     list->b[at] = cw[k];
+    if (at < sizeof keep) keep[at] = 1;
   }
   return list;
 }

@@ -367,6 +367,13 @@ come with it instead.
   still being played. While next season's table is empty, the page now shows the league phase that
   was played; after the draw it shows the new one. (Thanks Micarodvzla22)
 
+- **The Libertadores champion missing from the Club World Cup (B200).** When the game offered no
+  entrant of a champion's confederation (the CONCACAF or OFC champion), our champion took the place
+  of the last entrant on the list, and that could be another champion we had just put in: the
+  Libertadores winner, the CAF champion. A champion now takes only the place of an entrant that is
+  not a confederation champion, and the clubs of UEFA and CONMEBOL keep theirs. (Thanks
+  Micarodvzla22)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
