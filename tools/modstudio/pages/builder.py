@@ -45,6 +45,16 @@ def database_note(project):
              "game tables to its common\\etc\\pesdb folder and build again.") % (", ".join(mods), ", ".join(mods))
 
 
+def kits_note(project, game):
+    """B218: a warning when the world's new clubs get no kit: no kits file beside the tables, none
+    unpacked from the game and no mod that has one"""
+    if not any(B.new_club_count(L) for L in project.recipe["leagues"]) or B.kits_for(project.base, game):
+        return ""
+    return _("CAREFUL: no kits file (UniformParameter.bin) was found beside your tables, unpacked from the game "
+             "or in another mod, so the new clubs have no kit and the game calls them unlicensed. Unpack the "
+             "game's tables (Settings) and build again.")
+
+
 # the game's groups of clubs in no league (leaguebuilder.OTHERS), as Select Team names them
 def others_labels():
     return {"europe": _("Other European teams"), "latam": _("Other Latin American teams"),
@@ -5275,7 +5285,8 @@ class Build(BuilderPage):
             self.switch_with_saves(sw, w, log)
             self.project.drop_names()
             info["secs"] = int(time.time() - info["t0"])
-            info["notes"] = [n for n in (sw.note(), database_note(self.project), exhibition_note(pl)) if n]
+            info["notes"] = [n for n in (sw.note(), database_note(self.project), exhibition_note(pl),
+                                                kits_note(self.project, game)) if n]
 
         def done():
             self.app.bus.ini_changed.emit()

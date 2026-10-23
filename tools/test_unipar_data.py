@@ -126,6 +126,37 @@ def main():
         ok("a tables folder with a kits file of its own: that one", open(k, "rb").read() == b"my kits, longer")
         ok("no kits file anywhere: None (Build says to unpack)",
            B.kits_file(os.path.join(root, "gnone", "download")) is None)
+
+        # B218 (Aleperfe87 23.10.): a whole database mod in livecpk as the tables: read where it is,
+        # no kits file beside it; Build falls back on the game's unpacked one, else on a mod's
+        game = os.path.join(root, "g218")
+        live = os.path.join(game, "SiderAddons", "livecpk")
+        db = os.path.join(live, "UML_Database", "common", "etc", "pesdb")
+        os.makedirs(db)
+        for n in ("Team.bin", "CompetitionRegulation.bin"):
+            open(os.path.join(db, n), "wb").write(b"uml")
+        f = os.path.join(live, "UML_Kits", B.UNIPAR.replace("/", os.sep))
+        os.makedirs(os.path.dirname(f))
+        open(f, "wb").write(b"uml kits")
+        open(os.path.join(game, "SiderAddons", "sider.ini"), "w").write(
+            '[sider]\ncpk.root = "livecpk\\UML_Kits"\ncpk.root = "livecpk\\UML_Database"\n')
+        base = P._tables_of(os.path.join(live, "UML_Database"))
+        ok("a whole database mod: its own folder is the tables", os.path.samefile(base, db))
+        ok("and it has no kits file beside it", B.kits_file(base) is None)
+        keep_fb = list(B.KITS_FALLBACK)
+        try:
+            B.KITS_FALLBACK[:] = [os.path.join(tables, B.UNIPAR.replace("/", os.sep))]
+            k = B.kits_for(base, game)
+            ok("Build draws on the game's unpacked kits file", k and open(k, "rb").read() == b"game kits")
+            B.KITS_FALLBACK[:] = [os.path.join(root, "nothing", B.UNIPAR.replace("/", os.sep))]
+            k = B.kits_for(base, game)
+            ok("none unpacked: on the kits file of the mod sider.ini serves (%s)" % k,
+               k and open(k, "rb").read() == b"uml kits")
+            ok("no game folder and nothing unpacked: None (Build warns)", B.kits_for(base, None) is None)
+            ok("kits beside the tables still come first",
+               open(B.kits_for(os.path.join(tables, "common", "etc", "pesdb"), game), "rb").read() == b"game kits")
+        finally:
+            B.KITS_FALLBACK[:] = keep_fb
     finally:
         cpkread.names, cpkread.extract = keep
         shutil.rmtree(root, ignore_errors=True)

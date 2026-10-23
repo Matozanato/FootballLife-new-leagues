@@ -1,5 +1,6 @@
 {
  "text": {
+  "CAREFUL: no kits file (UniformParameter.bin) was found beside your tables, unpacked from the game or in another mod, so the new clubs have no kit and the game calls them unlicensed. Unpack the game's tables (Settings) and build again.": "ATTENTION : aucun fichier de maillots (UniformParameter.bin) n'a été trouvé à côté de vos tables, extrait du jeu ou dans un autre mod : les nouveaux clubs n'ont pas de maillot et le jeu les considère sans licence. Extrayez les tables du jeu (Paramètres) et relancez Build.",
   "Abilities taken from %s (%s), at the same rating.": "Capacités reprises de %s (%s), à la même note.",
   "a top division of a new country: February to December plays like Brazil, Japan or Saudi Arabia, clubs going up and down at New Year; the divisions below it follow it. Not with a split, Apertura/Clausura or a league cup yet": "première division d'un nouveau pays : février à décembre joue comme le Brésil, le Japon ou l'Arabie saoudite, les clubs montent et descendent au Nouvel An ; les divisions en dessous la suivent. Pas encore avec phase finale, Apertura/Clausura ni coupe de la ligue",
   "The game gives this league no places in this table. Tick the box above to give it some.": "Le jeu ne donne à cette ligue aucune place dans ce tableau. Coche la case ci-dessus pour lui en donner.",
