@@ -326,6 +326,12 @@ come with it instead.
   As for the cups of a world file (0.2.4.1), the Group stage item is left out while a group has no
   table, instead of crashing. (Thanks Micarodvzla22)
 
+- **The same club played the Copa Libertadores and a continental cup of the world file in the
+  same months (B204).** The game files the Libertadores on 1 January, the MLS's places included,
+  and Inter Miami was already in the CONCACAF Champions Cup filled in August from the same
+  league. A club that a cup of the world file already holds now keeps that cup, and its
+  Libertadores place goes to a CONMEBOL club no continental cup holds. (Thanks Micarodvzla22)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.

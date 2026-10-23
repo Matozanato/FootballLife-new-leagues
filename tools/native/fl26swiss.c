@@ -521,6 +521,7 @@ static int modern_conmebol(void);
 static void lib9_clean(u32vec* list);
 static void lib9_holders(u32vec* list);
 static void cont_swap(uint16_t id, u32vec* list, const char* where);
+static unsigned world_cup_clubs(uint32_t* out, unsigned cap);
 static int cont_comp(uint16_t id);
 static int today(void);
 void gdraw_handler(uint64_t id, u32vec* list, uint64_t flag)
@@ -2912,6 +2913,11 @@ static uint32_t g_mfrom[3][CONT_MAX], g_mto[3][CONT_MAX]; static unsigned g_nmap
 static uint32_t g_libq_sanitize_from[CONT_MAX], g_libq_sanitize_to[CONT_MAX];
 static unsigned g_nlibq_sanitize = 0;
 static int g_libq_sanitize_day = -100000;
+/* B204: a Libertadores club that is in a cup of the world's own already, and the club that took
+   its place -- the same pair for every list of that season (the field, its groups, the draw) */
+static uint32_t g_libdup_from[CONT_MAX], g_libdup_to[CONT_MAX];
+static unsigned g_nlibdup = 0;
+static int g_libdup_day = -100000;
 /* The club of ours that pool club c gives way to in competition k, or 0 to leave it. A club
  * already mapped keeps its partner; otherwise the next place of ours that is neither given
  * nor already in the list `have` takes it. For a group (id + 1024 * n) a place of ours that the
@@ -3116,6 +3122,52 @@ static void cont_swap(uint16_t id, u32vec* list, const char* where)
     if (changed)
       logf("fl26swiss: Libertadores qualifying child reg %u -- %u parent replacement(s) propagated",
            (unsigned)id, changed);
+  }
+
+  /* B204 (World Modpack, a tester's second season): the game files the Libertadores on 1 January,
+     Inter Miami by the MLS's places, and it was in the CONCACAF Champions Cup of the world's
+     (filled in August, from the same league) as well -- two continental cups in the same months.
+     The world's cups keep their club: in the Libertadores it gives way to a CONMEBOL club no cup
+     holds (conmebol_fallback), the same one in every list of that season. */
+  if ((comp == LIB || comp == LIBQ) && g_confed_n) {
+    static uint32_t held[1536];
+    unsigned nh = world_cup_clubs(held, 1024);
+    int ad = abs_day();
+    if (ad - g_libdup_day > 120 || ad < g_libdup_day) g_nlibdup = 0;
+    for (size_t i = 0; i < n && nh; i++) {
+      uint32_t old = list->b[i];
+      if (!has_club(held, nh, old)) continue;
+      g_libdup_day = ad;
+      uint32_t to = 0;
+      for (unsigned q = 0; q < g_nlibdup && !to; q++)
+        if (same_club(g_libdup_from[q], old)) to = g_libdup_to[q];
+      if (to && has_club(list->b, n, to)) to = 0;
+      if (!to && id < 1024) {
+        /* not one of this list, nor of a cup of the world's, nor of the game's other Libertadores list */
+        unsigned nt = nh;
+        for (size_t j = 0; j < n && nt < sizeof held / sizeof held[0]; j++) held[nt++] = list->b[j];
+        static const uint16_t LIBS[] = { 9, 8 };
+        for (unsigned r = 0; r < 2; r++) {
+          unsigned char* rec = get_rec(LIBS[r]);
+          unsigned rc = rec ? rec_count(rec) : 0;
+          for (unsigned j = 0; j < rc && nt < sizeof held / sizeof held[0]; j++) held[nt++] = rec_clubs(rec)[j];
+        }
+        to = conmebol_fallback(blk, held, nt);
+        if (to) {
+          unsigned q;
+          for (q = 0; q < g_nlibdup; q++) if (same_club(g_libdup_from[q], old)) { g_libdup_to[q] = to; break; }
+          if (q == g_nlibdup && g_nlibdup < CONT_MAX) { g_libdup_from[q] = old; g_libdup_to[q] = to; g_nlibdup++; }
+        }
+      }
+      if (!to) {
+        logf("fl26swiss: %s reg %u (%s) -- day %d: %08x is in a cup of the world's too; no CONMEBOL club to put in, left",
+             CONT_NAME[k], (unsigned)id, where, today(), old);
+        continue;
+      }
+      list->b[i] = to;
+      logf("fl26swiss: %s reg %u (%s) -- day %d: %08x is in a cup of the world's too; CONMEBOL %08x in its place",
+           CONT_NAME[k], (unsigned)id, where, today(), old, to);
+    }
   }
 
   if (!cont_any(comp)) return;
@@ -3855,6 +3907,32 @@ static int ccup_taken(uint32_t c)
     if (rec && has_club(rec_clubs(rec), rec_count(rec), c)) return 1;
   }
   return 0;
+}
+/* B204: the clubs of the world's continental cups that play August to May (not a league cup, not
+   a February-December one, which is filled in January next to the Libertadores and keeps last
+   season's clubs until then): the field as filled, and what their records hold */
+static unsigned world_cup_clubs(uint32_t* out, unsigned cap)
+{
+  unsigned n = 0;
+  for (int k = 0; k < g_nccup; k++) {
+    const ccup_t* c = &g_ccup[k];
+    if (c->national || c->cal) continue;
+    for (unsigned i = 0; i < g_ccup_nf[k] && n < cap; i++)
+      if (!has_club(out, n, g_ccup_field[k][i])) out[n++] = g_ccup_field[k][i];
+    uint16_t regs[2 + CCUP_MAX_GROUPS]; int nr = 0;
+    regs[nr++] = c->reg;
+    if (c->ko && c->ko != c->reg) regs[nr++] = c->ko;
+    for (int g = 0; g < c->groups && g < CCUP_MAX_GROUPS; g++) regs[nr++] = ccup_rep(c, g);
+    for (int r = 0; r < nr; r++) {
+      unsigned char* rec = get_rec(regs[r]);
+      unsigned rc = rec ? rec_count(rec) : 0;
+      for (unsigned i = 0; i < rc && n < cap; i++) {
+        uint32_t x = rec_clubs(rec)[i];
+        if ((x >> 14) && (x >> 14) != 0x3ffff && !has_club(out, n, x)) out[n++] = x;
+      }
+    }
+  }
+  return n;
 }
 
 __declspec(dllexport) int fl26_swiss_ccup(const uint16_t* v, int n)
