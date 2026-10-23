@@ -349,6 +349,12 @@ come with it instead.
   world with tables to spare is left as it is. A career already in its third season gets the tables
   back from the next January.
 
+- **Competition Info > Europa League or Conference League > League Phase showed "Group A" with no
+  clubs (B206).** The page shows the table of the competition's latest season, and the game opens
+  next season's empty table for those two cups months before the draw, while the knockouts are
+  still being played. While next season's table is empty, the page now shows the league phase that
+  was played; after the draw it shows the new one. (Thanks Micarodvzla22)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
