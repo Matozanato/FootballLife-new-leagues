@@ -218,6 +218,7 @@ static cell_t* cell_at(void* ctx, uint32_t leg, uint32_t i, uint32_t j)
 /* The replacement for 0x1413f3e00. MS x64 ABI: rcx = ctx, dx = regulation id, r8b = flag. */
 static int spread_leagues(const uint32_t* clubs, int n, const fl26_pair_t* table, int npairs, int pot,
                           uint8_t* perm, uint16_t id);
+static void lb_clear_phase(uint16_t row);
 char gen_handler(void* ctx, uint64_t reg, uint64_t flag)
 {
   g_stat[0]++;
@@ -296,6 +297,7 @@ char gen_handler(void* ctx, uint64_t reg, uint64_t flag)
   logf("fl26swiss: reg %u -- league phase written: %u clubs, %d matches, %d matchdays%s",
        (unsigned)id, (unsigned)nclubs, npairs - rejected - skipped, nmd,
        *legs > 1 ? " (regulation has more than one leg; only the first is used)" : "");
+  lb_clear_phase(id);
   return 1;
 }
 
@@ -1332,6 +1334,32 @@ static const cup_t CUPS[3] = {
   { 5,        1029,     UEL_PO,  6,       { 49, 56 }, "Europa League" },       /* 19/26 Feb */
   { UECL_REG, UECL_ROW, UECL_PO, UECL_KO, { 49, 56 }, "Conference League" },
 };
+/* B193: a league phase starts with empty goal and assist lists. Its table is a pool table used
+   before, and the game does not clear the lists it held: on 6/10/2029 the Conference League's
+   league phase listed the Champions League's last round of 16 scorers. Only when the phase's
+   table of that season is there and none of its matches is played (a draw asked again later
+   keeps what was scored). */
+static void lb_clear_phase(uint16_t row)
+{
+  for (int i = 0; i < 3; i++) {
+    const cup_t* c = &CUPS[i];
+    if (c->row != row) continue;
+    unsigned yl = 0, yr = 0;
+    unsigned char* l = stage_table(c->league, 0, &yl);
+    unsigned char* t = l ? stage_table(row, yl, &yr) : 0;
+    if (!t || yr != yl) return;
+    unsigned rows = *(uint32_t*)(t + 0x318 + 0x3c0), played = 0;
+    if (rows > 48) rows = 48;
+    for (unsigned j = 0; j < rows; j++) played += t[0x318 + 0x14 * j + 0x0f];
+    unsigned g = *(uint32_t*)(l + LB_GOALS + 0x320), a = *(uint32_t*)(l + LB_ASSISTS + 0x320);
+    if (played || (!g && !a)) return;
+    *(uint32_t*)(l + LB_GOALS + 0x320) = 0;
+    *(uint32_t*)(l + LB_ASSISTS + 0x320) = 0;
+    logf("fl26swiss: %s scorers -- reg %u (season %u) held %u goal and %u assist rows of an older table; cleared at the draw",
+         c->name, (unsigned)c->league, yl, g, a);
+    return;
+  }
+}
 static int g_po_day[3] = { -100000, -100000, -100000 };   /* abs_day() each play-off was last started */
 static uint16_t tie_id(const cup_t* c, int k) { return (uint16_t)(c->po + 1024 * (k + 1)); }
 static int po_available(const cup_t* c) { return get_rec(c->po) && get_rec(tie_id(c, 7)); }

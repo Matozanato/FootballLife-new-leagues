@@ -279,6 +279,12 @@ come with it instead.
   phase's and the play-off's goals and assists too, also after the game's own rewrite. (Thanks
   Micarodvzla22)
 
+- **A new league phase's Goal Ranking listed scorers of another competition (B193).** From the
+  second season the table a league phase gets was used before, and its goal and assist lists
+  were not emptied: the Conference League's league phase listed the Champions League's last
+  round of 16 scorers. The lists of a league phase are now emptied at its draw, before any
+  match is played.
+
 - **A UEFA play-off drawn again in spring (B192).** In a later season a play-off already played
   in February could be drawn a second time between March and June. A play-off is no longer
   drawn after its second leg.
