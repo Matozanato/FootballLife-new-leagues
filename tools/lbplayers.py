@@ -48,7 +48,7 @@ import collections, csv, os, re
 
 import pesdb
 import playeredit as E
-from lbrating import move, rating, shift_to, shifted   # what Mod Studio shows (B53)
+from lbrating import WEIGHTS, move, rating, shift_to, shifted   # what Mod Studio shows (B53)
 
 P_REC, P_ID = E.P_REC, E.P_ID
 A_REC = E.A_REC
@@ -236,16 +236,18 @@ class Squads:
         """[{player, name, Nationality, Registered Position, Age, rating, clubs}] of every player,
         for finding one (the Players page's Sign / Call up list); read once, a few seconds"""
         if getattr(self, "_summary", None) is None:
+            # rated like the Players page (rating(), the game's number): the mean of the five
+            # GK abilities made Ter Stegen a 91 here and an 85 in the game (cwrti, 23.10.)
             need = {"Nationality", "Registered Position", "Age"}
-            for pos in ("GK", "CB", "DMF", "CF"):
-                need |= set(RATED[pos])
+            for _c, w in WEIGHTS.values():
+                need |= set(w)
             out = []
             for pid, o in self.index.items():
                 rec = self.players[o:o + P_REC]
                 r = {n: E.show(n, E.getf(rec, n)) for n in need}
                 r["player"] = str(pid)
                 r["name"] = E.cstr(rec[E.P_NAME:E.P_NAME + E.P_NAME_LEN])
-                r["rating"] = overall(r)
+                r["rating"] = rating(r)
                 r["clubs"] = list(self.clubs_of.get(pid, []))
                 out.append(r)
             self._summary = out
