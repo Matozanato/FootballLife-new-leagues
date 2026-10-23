@@ -18,7 +18,10 @@
        2026 (another timeline in abs_day) season 1's again;
      - a career with another club, and a new career built on day 216 of 2025, read nothing;
      - a torn record at the end of the file (a crash while writing) is cut off at the next write;
-     - a keep already in the file is not written again. */
+     - a keep already in the file is not written again;
+     - B209: a career built and the game quit before its first August draw is still new after a
+       restart (the first-season list is used); a year on it is not, nor another club's career;
+       a January league's career keeps its first summer although it kept tables of its own. */
 #define FL26_RCAL_TEST
 #define FL26_STATE_TEST
 #include "fl26swiss.c"
@@ -74,6 +77,7 @@ static void restart(void)
   memset(g_cupwin, 0, sizeof g_cupwin); g_ncupwin = 0;
   g_year_off = 0; g_last_day = -1; g_timeline = 0;
   g_new_career = 0; g_day_ticked = 0; g_first_day = -1;
+  g_built_gdate = -1; g_built_stored = 0;
   g_st_off = g_st_day = -0x7fffffff; g_st_user = 0; g_st_busy = 0; g_st_read_back = 0;
 }
 /* rank 1..n of reg as the access list reads it; 1 when every place came from the kept table and
@@ -217,6 +221,54 @@ int main(void)
     int wins = 1;
     for (int i = 0; i < 30; i++) { cupwin_t* w = cupwin_of((uint16_t)(700 + i)); if (!w || w->club != CLUB(5000 + i)) wins = 0; }
     expect(wins && g_ncupwin == 30, "all 30 cup winners read back");
+  }
+
+  printf("\nB209: a career built, the game quit before the August draw (Jabo9, 23.10.)\n");
+  {
+    restart();
+    DeleteFileA(g_path_test);
+    g_user_test = USER_A;
+    go(2025, 216);
+    g_new_career = 1; g_built_gdate = state_test_date(); g_built_stored = 0;   /* date_handler */
+    any_final_kept();
+    expect(!g_st_read_back, "built on day 216 of 2025: nothing read back");
+    state_store();
+    expect(g_built_stored && file_size() == 8 + (long)sizeof(state_rec_t), "the career's build date written");
+    state_store();
+    expect(file_size() == 8 + (long)sizeof(state_rec_t), "... once");
+    restart();
+    go(2025, 222);
+    any_final_kept();
+    expect(g_new_career && !g_st_read_back && g_built_gdate == 2025 * 365 + 216,
+           "the save of day 222 loaded after a restart: still a new career, first summer on");
+    restart();
+    go(2026, 216);
+    any_final_kept();
+    expect(!g_new_career, "a save of the next summer (2026): not a new career");
+    restart();
+    g_user_test = USER_B;
+    go(2025, 222);
+    any_final_kept();
+    expect(!g_new_career, "another club's career on the same day: not taken for it");
+
+    restart();
+    DeleteFileA(g_path_test);
+    g_user_test = USER_A;
+    go(2026, 0);                                     /* a January league's career (CSL) */
+    g_new_career = 1; g_built_gdate = state_test_date(); g_built_stored = 0;
+    state_store();
+    go(2026, 150); go(2026, 181);
+    keep_table(CYP, 100, 10);                        /* its own July teardown */
+    state_store();
+    restart();
+    go(2026, 220);
+    any_final_kept();
+    expect(g_new_career && !g_st_read_back, "a January career loaded on day 220: first summer on despite its July tables");
+    expect(places_from_table(CYP, 100, 4, 120), "... and the tables are read back all the same");
+    restart();
+    go(2027, 220);
+    any_final_kept();
+    expect(!g_new_career, "the same career a year on: not new");
   }
 
   DeleteFileA(g_path_test);

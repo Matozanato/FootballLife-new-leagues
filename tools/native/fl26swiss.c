@@ -1241,6 +1241,10 @@ static int po_season_half(void) { int d = today(); return d >= 0 && d < PO_MONTH
  * and the new career is told apart again (g_new_career, g_day_ticked). */
 static int g_year_off = 0, g_last_day = -1, g_timeline = 0;
 static int g_new_career = 0, g_day_ticked = 0, g_first_day = -1;
+/* B209: the game's date the career was built on, and whether the state file has it yet: a game
+   quit between building a career and its first August draw forgot it was new, and the
+   first-season list was left out (Jabo9, 23.10.) */
+static int g_built_gdate = -1, g_built_stored = 0;
 static int abs_day(void)
 {
   int d = today();
@@ -1250,6 +1254,7 @@ static int abs_day(void)
     else {
       g_year_off += 730; g_timeline++;
       g_new_career = 0; g_day_ticked = 0; g_first_day = -1;
+      g_built_gdate = -1; g_built_stored = 0;
     }
   }
   else if (g_last_day >= 0 && d > g_last_day + 182 && g_year_off >= 365) g_year_off -= 365;
@@ -10422,6 +10427,7 @@ static uint32_t midweek(uint32_t d)
   return (uint32_t)(((int)d + 365 + to[d % 7]) % 365);
 }
 
+static int game_date(void);
 uint64_t date_handler(uint64_t reg, void* vec)
 {
   uint16_t id = (uint16_t)reg;
@@ -10429,7 +10435,10 @@ uint64_t date_handler(uint64_t reg, void* vec)
   if (vec && !g_new_career && !g_day_ticked) {    /* a career built in this session (day 216), */
     int t = today();                               /* before its first day has gone by */
     /* a career in a January league (China, Japan, ...) is built on day 0: measured 2026-10-05 */
-    if ((t >= BUILD_DAY && t <= 240) || t == 0) { g_new_career = 1; logf("fl26swiss: a new career, built on day %d", t); }
+    if ((t >= BUILD_DAY && t <= 240) || t == 0) {
+      g_new_career = 1; g_built_gdate = game_date(); g_built_stored = 0;
+      logf("fl26swiss: a new career, built on day %d", t);
+    }
   }
   if (vec && g_ndlike) {
     for (int i = 0; i < g_ndlike; i++) if (g_dlike[i][0] == id) return datelike_dates(id, reg, vec);
@@ -10757,14 +10766,17 @@ typedef struct {
   uint32_t user;                 /* the user's club when it was written */
   int32_t gdate;                 /* the game's date of the keep: year * 365 + day */
   uint16_t reg;
-  uint8_t kind, n;               /* kind 0 a final table (n clubs), 1 a cup winner (n 1) */
+  uint8_t kind, n;               /* kind 0 a final table (n clubs), 1 a cup winner (n 1),
+                                    2 the career built on gdate (B209; reg 0, n 1, the club) */
   uint32_t club[FINAL_MAX];
   uint32_t check;
 } state_rec_t;
 /* every final table and cup winner memory can hold: state_store took 64 + 32 from before g_final
    grew to FINAL_N, and in a fourth season (2026-10-21, r12, ~110 keeps) want[] ran over the
    globals after it -- UEFA10's, so Competition Info's League Phase called address 0 */
-#define STATE_MAXREC (FINAL_N + 32)
+#define STATE_MAXREC (FINAL_N + 32 + 1)
+#define STATE_BUILT 2
+#define BUILT_SUMMER 300    /* built to its first August draw: day 216 or, a January league's, day 0 */
 static int g_st_off = -0x7fffffff, g_st_day = -0x7fffffff, g_st_busy = 0;
 static uint32_t g_st_user = 0;
 #if defined(FL26_RCAL_TEST) && !defined(FL26_STATE_TEST)
@@ -10866,6 +10878,12 @@ static void state_store(void)
     else r->club[0] = g_cupwin[i - g_nfinal].club;
     r->check = state_check(r);
   }
+  if (g_new_career && g_built_gdate >= 0 && u && nw < STATE_MAXREC) {
+    state_rec_t* r = &want[nw++];
+    memset(r, 0, sizeof *r);
+    r->user = u; r->gdate = g_built_gdate; r->kind = STATE_BUILT; r->n = 1; r->club[0] = u;
+    r->check = state_check(r);
+  }
   if (!nw) return;
   const char* p = state_path();
   HANDLE h = p ? state_open(p, 1) : 0;
@@ -10887,6 +10905,7 @@ static void state_store(void)
     put += ok;
   }
   CloseHandle(h);
+  if (ok && g_new_career && g_built_gdate >= 0 && u) g_built_stored = 1;
   if (put || !ok)
     logf("fl26swiss: state -- %d keep(s) written for club %08x on day %d%s", put, u, today(), ok ? "" : " (write failed)");
 #endif
@@ -10926,7 +10945,7 @@ static void state_sync(void)
   state_rec_t r; DWORD got = 0;
   while (ReadFile(h, &r, sizeof r, &got, 0) && got == sizeof r) {
     if (r.check != state_check(&r) || r.user != u || r.gdate > gn || gn - r.gdate > STATE_AGE ||
-        r.kind > 1 || !r.n || r.n > FINAL_MAX || (r.kind && r.n != 1)) continue;
+        r.kind > STATE_BUILT || !r.n || r.n > FINAL_MAX || (r.kind && r.n != 1)) continue;
     int k = 0;
     while (k < nb && (best[k].kind != r.kind || best[k].reg != r.reg)) k++;
     if (k == nb) { if (nb >= STATE_MAXREC) continue; nb++; }
@@ -10934,10 +10953,20 @@ static void state_sync(void)
     best[k] = r;                                   /* the newest; of one day, the last written */
   }
   CloseHandle(h);
-  int nf = 0, nc = 0;
+  int nf = 0, nc = 0, built = -1;
+  /* B209: a career of this club built less than BUILT_SUMMER days ago is in its first summer,
+     whether or not the game was quit since: it is new again, and the tables it kept itself (a
+     January league's, by July) do not make it a later season's */
+  for (int k = 0; k < nb; k++)
+    if (best[k].kind == STATE_BUILT && gn - best[k].gdate < BUILT_SUMMER) built = best[k].gdate;
+  if (built >= 0 && !g_new_career) {
+    g_new_career = 1; g_built_gdate = built; g_built_stored = 1; g_first_day = -1;
+    logf("fl26swiss: state -- club %08x's career was built %d day(s) ago: still its first summer", u, gn - built);
+  }
   g_st_busy = 1;
   for (int k = 0; k < nb; k++) {
     int day = an - (gn - best[k].gdate);
+    if (best[k].kind == STATE_BUILT) continue;
     if (!best[k].kind) {
       final_t* f = final_of(best[k].reg);
       if (f && f->day >= day) continue;
@@ -10945,7 +10974,8 @@ static void state_sync(void)
       f->reg = best[k].reg; f->n = best[k].n; f->day = day;
       memcpy(f->club, best[k].club, sizeof f->club);
       nf++;
-      if (an - day < 120) g_st_read_back = 1;      /* last season's: not a career's first summer */
+      if (an - day < 120 && !(built >= 0 && best[k].gdate >= built))
+        g_st_read_back = 1;                        /* last season's: not a career's first summer */
     } else {
       cupwin_t* w = cupwin_of(best[k].reg);
       if (w && w->day >= day) continue;
@@ -11236,6 +11266,10 @@ char daychk_handler(void* ctx)
   calendar_scup_fill_days();
   for (int p = NQR - 1; p >= 0; p--) q_fill(p);
   cal_dedupe();
+  if (g_new_career && !g_built_stored && g_built_gdate >= 0) {    /* B209: once, a club known */
+    any_final_kept();                              /* a save of a later summer: not new (state_sync) */
+    if (g_st_read_back) g_built_stored = 1; else state_store();
+  }
   return r;
 }
 
