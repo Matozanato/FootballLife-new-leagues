@@ -5210,12 +5210,14 @@ static int table_pool_reap(const char* when)
 }
 /* B211 (r13, third season, 23.10.): a world of 86 leagues fills the pool with its two seasons a
  * slot each -- 223 tables of 2027/28 and 303 of 2028/29, 10 free -- and on 1 January the
- * calendar-year competitions start again: the Libertadores and the AFC Champions League drew their
- * groups on day 41 with no table to give them, played no group match, and their knockouts got 0
+ * calendar-year competitions start again: 41 of them (the MLS, Brazil, Argentina, Japan, the
+ * Libertadores, the AFC Champions League ...) got a 2029 slot with no table at all, so the two cups
+ * drew their groups on day 41 with no table, played no group match, and their knockouts got 0
  * clubs on days 125 and 139. A European league keeps last season's slot until the July rollover
  * frees it (0x14158f870); with fewer than POOL_LOW tables free, a slot two calendar years old
- * (2027/28 in 2029) is freed now, by that same function. The season just played and the one under
- * way are never touched, and a world with tables to spare is left as the game has it. */
+ * (2027/28 in 2029) is freed by that same function, from 17 December on, before the game makes the
+ * new year's tables. The season under way is never touched, and a world with tables to spare is
+ * left as the game has it. */
 #define POOL_LOW 120
 #define SLOTFREE_RVA 0x158f870
 typedef void (*slotfree_fn)(unsigned char* slot);
@@ -5231,8 +5233,9 @@ static void table_pool_old_slots(const char* when)
   unsigned char* std = o ? *(unsigned char**)(o + 0x78) : 0;
   unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
   if (!std || !blk) return;
-  int y = *(uint16_t*)(blk + TODAY_OFF + 8);
-  if (y < 1990 || y > 2200) return;
+  int t = *(uint16_t*)(blk + TODAY_OFF), y = *(uint16_t*)(blk + TODAY_OFF + 8);
+  if (y < 1990 || y > 2200 || t >= 365) return;
+  if (t >= 350) y++;          /* from 17 December: the new year's tables are made on 1 January */
   int ntab = (int)pool_tables(tabbase), nfree = 0;
   for (int i = 0; i < ntab; i++)
     if (*(uint32_t*)(std + tabbase + (size_t)i * 0x187c) == 0xffffffffu) nfree++;
