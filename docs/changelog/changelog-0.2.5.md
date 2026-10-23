@@ -333,6 +333,11 @@ come with it instead.
   that cup, and its Libertadores place goes to a CONMEBOL club no continental cup holds.
   (Thanks Micarodvzla22)
 
+- **The log filled with "creationflags is only supported on Windows platforms" (B210).** Mod Studio
+  run from its source on a Mac (the game under CrossOver) asked Windows every few seconds whether
+  the game was running, with a command a Mac has not got. It now takes the answer "not running"
+  there and writes nothing to errors.log. (Thanks evannoteven)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
