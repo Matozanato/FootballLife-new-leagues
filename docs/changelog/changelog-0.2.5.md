@@ -365,6 +365,15 @@ come with it instead.
   world with tables to spare is left as it is. A career already in its third season gets the tables
   back from the next January.
 
+- **The Champions League's league phase had no table from the third season of a big world, and its
+  League Phase page crashed the game (B212).** After the July rollover the new European seasons
+  took the last free tables of the pool, and the B211 fix gave back only seasons two years old
+  until 17 December, so the Champions League was drawn in August with no table and Competition Info
+  > League Phase crashed (ucrtbase 0xc0000409). From the July rollover on, a season that finished
+  last year is now given back too, and not only when fewer than 120 tables are free, but also when
+  fewer are free than the finished seasons hold (the new seasons need about as many). The season
+  under way is kept, and a world with tables to spare is left as it is.
+
 - **A new Master League crashed mid-season (FL_2026.exe+0x1321d00) when the world's save folder held
   an Edit save of an older version of the world (B197).** That Edit save names players in its
   squads that the new version no longer has, and the game read the missing player without
