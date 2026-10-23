@@ -5208,6 +5208,58 @@ static int table_pool_reap(const char* when)
          when, freed, lo, hi, nfree, ntab);
   return nfree;
 }
+/* B211 (r13, third season, 23.10.): a world of 86 leagues fills the pool with its two seasons a
+ * slot each -- 223 tables of 2027/28 and 303 of 2028/29, 10 free -- and on 1 January the
+ * calendar-year competitions start again: 41 of them (the MLS, Brazil, Argentina, Japan, the
+ * Libertadores, the AFC Champions League ...) got a 2029 slot with no table at all, so the two cups
+ * drew their groups on day 41 with no table, played no group match, and their knockouts got 0
+ * clubs on days 125 and 139. A European league keeps last season's slot until the July rollover
+ * frees it (0x14158f870); with fewer than POOL_LOW tables free, a slot two calendar years old
+ * (2027/28 in 2029) is freed by that same function, from 17 December on, before the game makes the
+ * new year's tables -- only when the competition's other slot holds a later season. The season under way is never touched, and a world with tables to spare is
+ * left as the game has it. */
+#define POOL_LOW 120
+#define SLOTFREE_RVA 0x158f870
+typedef void (*slotfree_fn)(unsigned char* slot);
+static void table_pool_old_slots(const char* when)
+{
+  static const unsigned char SIG[8] = { 0x48, 0x89, 0x74, 0x24, 0x20, 0x41, 0x54, 0x41 };
+  unsigned char* f = (unsigned char*)(uintptr_t)(g_base + SLOTFREE_RVA);
+  uint32_t tabbase = *(const uint32_t*)(uintptr_t)(g_base + CS_TABBASE_IMM);
+  /* the function frees through its own lea r14+imm: it must name the same table base */
+  if (memcmp(f, SIG, sizeof SIG) || *(const uint32_t*)(f + 0x73) != tabbase) return;
+  if (tabbase < 0x4650 || tabbase > 0x10000 || tabbase % 0xb4) return;
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* std = o ? *(unsigned char**)(o + 0x78) : 0;
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!std || !blk) return;
+  int t = *(uint16_t*)(blk + TODAY_OFF), y = *(uint16_t*)(blk + TODAY_OFF + 8);
+  if (y < 1990 || y > 2200 || t >= 365) return;
+  if (t >= 350) y++;          /* from 17 December: the new year's tables are made on 1 January */
+  int ntab = (int)pool_tables(tabbase), nfree = 0;
+  for (int i = 0; i < ntab; i++)
+    if (*(uint32_t*)(std + tabbase + (size_t)i * 0x187c) == 0xffffffffu) nfree++;
+  if (nfree >= POOL_LOW) return;
+  int slots = 0, freed = 0, lo = 0xffff, hi = 0;
+  for (uint32_t h = 0; h < tabbase / 0xb4; h++)
+    for (int k = 0; k < 2; k++) {
+      unsigned char* sl = std + (size_t)h * 0xb4 + 4 + k * 0x58;
+      unsigned char* other = std + (size_t)h * 0xb4 + 4 + (1 - k) * 0x58;
+      int w = *(uint16_t*)(sl + 4), w2 = *(uint16_t*)(other + 4);
+      if (*(uint32_t*)sl == 0xffffffffu || w == 0xffff || w < 1990 || w > y - 2) continue;
+      /* only the older of two seasons: a competition with one slot (a cup of a few years) keeps it */
+      if (*(uint32_t*)other == 0xffffffffu || w2 == 0xffff || w2 <= w) continue;
+      for (int i = 0; i < 20 && *(int32_t*)(sl + 8 + 4 * i) != -1; i++)
+        if (*(int32_t*)(sl + 8 + 4 * i) >= 0 && *(int32_t*)(sl + 8 + 4 * i) < ntab) freed++;
+      ((slotfree_fn)(uintptr_t)(g_base + SLOTFREE_RVA))(sl);
+      slots++;
+      if (w < lo) lo = w;
+      if (w > hi) hi = w;
+    }
+  if (slots)
+    logf("fl26swiss: table pool (%s, %d) -- %d of %d free: %d slot(s) of seasons %d..%d freed, %d table(s); %d free now",
+         when, y, nfree, ntab, slots, lo, hi, freed, nfree + freed);
+}
 static void ccup_season_fix(uint16_t master, const uint16_t* reps, int n)
 {
   int out = 0;
@@ -11047,6 +11099,7 @@ static void calendar_scup_fill_days(void)
 
 char daychk_handler(void* ctx)
 {
+  table_pool_old_slots("day");        /* B211: before the game's day, which may draw a cup's groups */
   char r = ((daychk_fn)(uintptr_t)g_tramp_daychk)(ctx);
   if (g_td_fresh) { g_td_fresh = 0; ccup_fill_ahead(0, "the July teardown", 0); }
   static int last = -1, seen, tl = 0;
