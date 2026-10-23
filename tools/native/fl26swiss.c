@@ -5216,7 +5216,7 @@ static int table_pool_reap(const char* when)
  * clubs on days 125 and 139. A European league keeps last season's slot until the July rollover
  * frees it (0x14158f870); with fewer than POOL_LOW tables free, a slot two calendar years old
  * (2027/28 in 2029) is freed by that same function, from 17 December on, before the game makes the
- * new year's tables. The season under way is never touched, and a world with tables to spare is
+ * new year's tables -- only when the competition's other slot holds a later season. The season under way is never touched, and a world with tables to spare is
  * left as the game has it. */
 #define POOL_LOW 120
 #define SLOTFREE_RVA 0x158f870
@@ -5244,8 +5244,11 @@ static void table_pool_old_slots(const char* when)
   for (uint32_t h = 0; h < tabbase / 0xb4; h++)
     for (int k = 0; k < 2; k++) {
       unsigned char* sl = std + (size_t)h * 0xb4 + 4 + k * 0x58;
-      int w = *(uint16_t*)(sl + 4);
+      unsigned char* other = std + (size_t)h * 0xb4 + 4 + (1 - k) * 0x58;
+      int w = *(uint16_t*)(sl + 4), w2 = *(uint16_t*)(other + 4);
       if (*(uint32_t*)sl == 0xffffffffu || w == 0xffff || w < 1990 || w > y - 2) continue;
+      /* only the older of two seasons: a competition with one slot (a cup of a few years) keeps it */
+      if (*(uint32_t*)other == 0xffffffffu || w2 == 0xffff || w2 <= w) continue;
       for (int i = 0; i < 20 && *(int32_t*)(sl + 8 + 4 * i) != -1; i++)
         if (*(int32_t*)(sl + 8 + 4 * i) >= 0 && *(int32_t*)(sl + 8 + 4 * i) < ntab) freed++;
       ((slotfree_fn)(uintptr_t)(g_base + SLOTFREE_RVA))(sl);
