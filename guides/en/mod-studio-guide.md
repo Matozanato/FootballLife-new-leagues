@@ -477,6 +477,10 @@ next switch-on. A club with a Kit Server kit of its own, or only a numbered badg
 A kit line of your own in `map.txt` (one you set on the *Kits* tab, to a kit that is in the
 library) always wins: Build makes no kit for that club, puts no package kit on it and leaves your
 line switched on (0.2.4; 0.2.3 switched it off for a league package's kit at every Build).
+A club that took the place of a club of the game (NewLife's *Bring the game's leagues to this
+season*) gets kits made the same way, under the world's *Clubs of the game* (0.2.5); untick
+**Kits made for clubs in a game club's place** (Build tab, World options) and it keeps the game's
+kit, or your kit pack's, for that place.
 Names keep their letters (FK Željezničar); the three-letter short name has none, as in the game,
 so Č, Ž, Đ become C, Z, D there. A league's A-Z order in the game files Đakovo under D and
 Šibenik under S (0.2.4). After **Build**, the mouse over a club's name shows its id in
