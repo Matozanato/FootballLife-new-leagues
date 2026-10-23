@@ -151,6 +151,15 @@ def classic_world(base, game):
     sud = next(c for c in pl["ccups"] if c["number"] == B.SUDAM)
     ok("classic: the Copa Sudamericana is the classic cup (8 groups of 4, no February-December dates)",
        sud["groups"] == 8 and not (sud.get("opts") or {}).get("cal"))
+    # the World Modpack (mato 23.10.): sudamericana_calendar puts the classic cup on February-December
+    pc = B.plan(dict(classic(), sudamericana_calendar=True), base)
+    sc = next(c for c in pc["ccups"] if c["number"] == B.SUDAM)
+    ok("classic with sudamericana_calendar: the same cup, filled in February on the Libertadores' days",
+       sc["groups"] == 8 and sc["entry"] == sud["entry"]
+       and sc.get("opts") == {"fill": B.SAM_GROUP_FILL, "national": 0, "days": [], "cal": 1}
+       and not pc["suda_first"] and "FL_SAMRC" not in [c.get("code") for c in pc["ccups"]])
+    ok("and read back from the plan it keeps the setting",
+       B.recipe_from_plan(pc, base).get("sudamericana_calendar") is True)
     built, text = build(base, game, r)
     ok("classic: Build makes the world (the Modpack r7 was refused)", True)
     ok("classic: no helper competition ids", not any(k.startswith("conmebol:") for k in built["cup_ids"]))
