@@ -2385,6 +2385,38 @@
   [
    "^NOTE: (\\d+) trophy\\(ies\\) of (\\S+) -- the game has no FL26 Entrance\\.lua in modules, so they are not shown$",
    "NAPOMENA: \\1 pehar(a) svijeta \\2 -- igra nema FL26 Entrance.lua u modules, pa se ne pokazuju"
+  ],
+  [
+   "^line (\\d+): ",
+   "redak \\1: "
+  ],
+  [
+   " -- no club of that name in the world$",
+   " -- u svijetu nema kluba tog imena"
+  ],
+  [
+   " -- (\\d+) clubs of that name$",
+   " -- \\1 kluba tog imena"
+  ],
+  [
+   " -- no player of that name$",
+   " -- nema igrača tog imena"
+  ],
+  [
+   " -- (\\d+) players of that name; a from column tells them apart$",
+   " -- \\1 igrača tog imena; stupac from ih razlikuje"
+  ],
+  [
+   " -- already on line (\\d+); that line counts$",
+   " -- već u retku \\1; vrijedi taj redak"
+  ],
+  [
+   "^the file is empty$",
+   "datoteka je prazna"
+  ],
+  [
+   "^the first line needs a column player \\(or name\\) and a column to \\(or club\\); it has: ",
+   "prvi redak treba stupac player (ili name) i stupac to (ili club); ima: "
   ]
  ]
 }
