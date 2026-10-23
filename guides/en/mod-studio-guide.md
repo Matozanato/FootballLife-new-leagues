@@ -596,6 +596,24 @@ The club list also has **National teams** and **Other clubs (no league)**: the t
   transfer off. A club has at most 40 players. If a club ends up with more than 40 (a national
   team more than 26), Build keeps its first 40 and goes on, and the Build log names the club and
   the players left out; when the club is in your world twice, it names both leagues.
+- **Import transfers...** (in **More**): many transfers at once, for the whole world, from a CSV
+  (commas, semicolons or tabs). The first line names the columns:
+
+  ```
+  player,to,from
+  Kylian Mbappé,Real Madrid CF,
+  Lucas Hernández,Real Madrid CF,Paris Saint-Germain
+  12345,71590,
+  ```
+
+  `player` is his name (accents and capitals do not matter; "K. Mbappé" finds Kylian Mbappé)
+  or his Player ID; `to` is the club he joins, by its name in your world (with or without FC,
+  CF and such) or its Club ID; `from` (his club now) is only needed when two players share a
+  name. `name` and `club` / `new club` work as column names too. Each line is a Transfer to...;
+  a line to the club he is at calls off a transfer he had. A line that fits no player or no
+  club, or two of them, is left out and the message lists it; a player on two lines moves by
+  the first. Make the table by hand, in a spreadsheet, or with a tool off a website such as
+  Transfermarkt: Mod Studio reads only the file.
 - **Call up players...** (a national team: pick *National teams* in the league list): the list
   opens on the team's country. The players join the national squad **and stay at their clubs**,
   as in the game. **Remove from club** drops a player from the national squad (not from his

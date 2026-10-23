@@ -44,7 +44,7 @@ common/render/symbol/coach/coach_<coach id>.png, 256 pixels square (1001 of them
 A club names its manager in Team.bin +0x00, so the picture goes under the id of the club's
 manager in the world: the shipped one for a game club, the one mkcoaches added for a new club.
 """
-import collections, csv, os
+import collections, csv, os, re
 
 import pesdb
 import playeredit as E
@@ -1911,3 +1911,101 @@ def import_csv(path, rows, elsewhere=None):
     if elsewhere is None:
         return out, err
     return out, err, joins
+
+
+# ---- Import transfers: a CSV of the whole world, player -> new club (jibibi 23.10.) ----
+
+TRANSFER_PLAYER = ("player", "player_id", "name", "player name")
+TRANSFER_TO = ("to", "club", "to_club", "to club", "new club", "new_club")
+TRANSFER_FROM = ("from", "from_club", "from club", "old club", "old_club")
+# words a club's name has in one list and not in another (Paris Saint-Germain FC / Paris Saint-Germain)
+CLUB_WORDS = {"fc", "cf", "ac", "afc", "sc", "sv", "fk", "sk", "cd", "ca", "cs", "club", "de", "the", "1"}
+
+
+def _norm(text):
+    """a name to compare: no accents, lower case, letters and digits in single spaces"""
+    import unicodedata
+    s = unicodedata.normalize("NFKD", str(text)).encode("ascii", "ignore").decode().lower()
+    return " ".join(re.split(r"[^a-z0-9]+", s)).strip()
+
+
+def _club_norm(text):
+    return " ".join(w for w in _norm(text).split() if w not in CLUB_WORDS) or _norm(text)
+
+
+def import_transfers(path, players, clubs):
+    """([(player ref, club key, line)], [problem]) from a CSV of transfers: one line a player,
+    columns player (his id, or his name), to (the club he joins: its name in the world or a game
+    team id) and, to tell two players of one name apart, from (his club now). Names are compared
+    without accents and case; a club's name also without FC, CF, SC and such. players:
+    [{"player": ref, "name": ..., "home": [club keys]}] of the whole world; clubs: [(name, club
+    key)]. A line that names no one, or two, is a problem, not a guess."""
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        sample = f.read(4096)
+        f.seek(0)
+        try:
+            dialect = csv.Sniffer().sniff(sample, delimiters=",;\t")
+        except csv.Error:
+            dialect = csv.excel
+        lines = list(csv.reader(f, dialect))
+    if not lines:
+        return [], ["the file is empty"]
+    head = [_norm(c).replace(" ", "_") for c in lines[0]]
+    col = lambda names: next((i for i, h in enumerate(head) if h in {n.replace(" ", "_") for n in names}), None)
+    cp, ct, cf = col(TRANSFER_PLAYER), col(TRANSFER_TO), col(TRANSFER_FROM)
+    if cp is None or ct is None:
+        raise Error("the first line needs a column player (or name) and a column to (or club); it has: %s"
+                    % (", ".join(c for c in lines[0] if c) or "nothing"))
+    by_ref = {str(p["player"]): p for p in players}
+    by_name = collections.defaultdict(list)
+    for p in players:
+        by_name[_norm(p.get("name") or "")].append(p)
+    by_short = collections.defaultdict(list)          # "k mbappe" for Kylian Mbappe and K. Mbappe
+    for p in players:
+        w = _norm(p.get("name") or "").split()
+        if len(w) >= 2:
+            by_short[w[0][0] + " " + w[-1]].append(p)
+    club_key = {str(k) for _n, k in clubs}
+    club_names = collections.defaultdict(set)
+    for n, k in clubs:
+        club_names[_norm(n)].add(k)
+        club_names[_club_norm(n)].add(k)
+
+    def club_of(text):
+        t = text.strip()
+        if t.isdigit():
+            return ({t} if t in club_key else set())
+        return club_names.get(_norm(t)) or club_names.get(_club_norm(t)) or set()
+
+    moves, err, seen = [], [], {}
+    for n, line in enumerate(lines[1:], 2):
+        cell = lambda i: line[i].strip() if i is not None and i < len(line) else ""
+        who, to, frm = cell(cp), cell(ct), cell(cf)
+        if not who and not to:
+            continue
+        dest = club_of(to)
+        if len(dest) != 1:
+            err.append("line %d: %s -- %s" % (n, to or "?", "no club of that name in the world" if not dest
+                                              else "%d clubs of that name" % len(dest)))
+            continue
+        if who.isdigit() and who in by_ref:
+            found = [by_ref[who]]
+        else:
+            found = by_name.get(_norm(who)) or []
+            if not found:
+                w = _norm(who).split()
+                found = by_short.get(w[0][0] + " " + w[-1], []) if len(w) >= 2 else []
+            if len(found) > 1 and frm:
+                home = club_of(frm)
+                found = [p for p in found if home & set(p.get("home") or [])] or found
+        if len(found) != 1:
+            err.append("line %d: %s -- %s" % (n, who or "?", "no player of that name" if not found else
+                                              "%d players of that name; a from column tells them apart" % len(found)))
+            continue
+        ref = str(found[0]["player"])
+        if ref in seen:
+            err.append("line %d: %s -- already on line %d; that line counts" % (n, who, seen[ref]))
+            continue
+        seen[ref] = n
+        moves.append((ref, next(iter(dest)), n))
+    return moves, err

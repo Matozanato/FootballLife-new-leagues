@@ -43,7 +43,11 @@ class Players(BuilderPage):
                     "database -- becomes this club's squad"),
                    None,
                    ("Import CSV...", self.import_csv),
-                   ("Export CSV...", self.export_csv)])
+                   ("Export CSV...", self.export_csv),
+                   None,
+                   ("Import transfers...", self.import_transfers,
+                    "A CSV of transfers (player, to, and from if two players share a name) moves every "
+                    "player of it to his new club at Build")])
 
         pick = QHBoxLayout()
         pick.addWidget(QLabel(_("League")))
@@ -1417,6 +1421,81 @@ class Players(BuilderPage):
         if joins:
             text += "\n" + _("%d players of other clubs join this one.") % len(joins)
         info(self, "Import CSV...", text)
+
+    def import_transfers(self):
+        """a CSV of transfers for the whole world (jibibi 23.10.; mato: the player makes the table,
+        off Transfermarkt or anywhere, Mod Studio reads it): each line's player joins its club as
+        Transfer to... does it"""
+        from .playerpick import candidates
+        title = _("Import transfers...")
+        if self.project.squads() is None:
+            return
+        p, _f = QFileDialog.getOpenFileName(self, title, self.app.settings.get("transfers_dir", ""),
+                                            "CSV (*.csv *.txt);;" + _("All files") + " (*.*)")
+        if not p:
+            return
+        self.app.settings["transfers_dir"] = os.path.dirname(p)
+        players = []
+        for r in candidates(self.project):
+            ref = str(r["player"])
+            src, _n = P.split_ref(ref)
+            home = [src] if src is not None else [str(t) for t in r.get("clubs") or []
+                                                  if not self.is_national(str(t))]
+            players.append({"player": ref, "name": r.get("name") or "", "home": home})
+        clubs = []
+        for L in self.project.recipe["leagues"]:
+            for k, n in enumerate(self.new_names(L)):
+                clubs.append((n, P.new_key(L["name"], k)))
+        teams = {t for r, c, n, ts in self.project.game_lgs for t in ts} | set(self.project.game_other)
+        for tid in sorted(teams):
+            if tid in self.project.game_cl:
+                clubs.append((self.game_name(tid), str(tid)))
+        try:
+            got, err = P.import_transfers(p, players, clubs)
+        except (P.Error, OSError, ValueError, UnicodeDecodeError) as e:
+            error(self, title, str(e) + "\n\n" + _("The first line names the columns: player (his name or id), "
+                                                  "to (the club he joins) and, if you like, from (his club now)."))
+            return
+        if not got:
+            error(self, title, _("Nothing imported:") + "\n\n" + "\n".join(err[:20]))
+            return
+        pl = self.project.players()
+        moved = stay = 0
+        for ref, dest, _line in got:
+            for club, cc in pl.items():                 # one club at a time
+                if not self.is_national(club) and ref in [str(r) for r in cc.get("join") or []]:
+                    cc["join"] = [r for r in cc["join"] if str(r) != ref]
+            if dest != self.home_of(ref):
+                pl.setdefault(dest, {}).setdefault("join", []).append(ref)
+                moved += 1
+            else:
+                stay += 1
+        for cc in pl.values():
+            if "join" in cc and not cc["join"]:
+                cc.pop("join")
+        full = []                                        # Build leaves out the last to come (B46)
+        moves, sq = self.moves(), self.project.squads()
+        for dest in sorted({d for _r, d, _l in got}):
+            c = pl.get(dest) or {}
+            n = len(sq.by_club.get(int(dest), [])) if dest.isdigit() else len(sq.proto())
+            n += len(c.get("join") or []) - len(c.get("remove") or [])
+            n -= sum(1 for r, d in moves.items() if d != dest and self.home_of(r) == dest)
+            if n > P.CLUB_MAX:
+                full.append("%s: %d" % (self.club_label(dest), n))
+        self.project.dirty = True
+        if self.club:
+            self.fill_squad()
+        text = _("%d players move to their new clubs at Build.") % moved
+        if stay:
+            text += "\n" + _("%d are at that club already (a transfer of theirs was called off).") % stay
+        if full:
+            text += "\n\n" + (_("More than %d players at these clubs: Build leaves out the last ones to come.")
+                              % P.CLUB_MAX) + "\n" + "\n".join(full[:15])
+        if err:
+            text += "\n\n" + _("%d lines left out:") % len(err) + "\n" + "\n".join(err[:20])
+            if len(err) > 20:
+                text += "\n..."
+        info(self, title, text)
 
     def import_table(self):
         """a squad from any table of players (squadimport.py). A row with the game's id of a player
