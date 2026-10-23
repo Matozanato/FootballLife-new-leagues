@@ -128,7 +128,7 @@ class Game:
         try:
             out = subprocess.run(["tasklist", "/fo", "csv", "/nh"], capture_output=True, text=True,
                                  creationflags=0x08000000).stdout.lower()
-        except OSError:
+        except (OSError, ValueError):       # B210: tasklist and creationflags are Windows only (Mac, Crossover)
             return False, False
         return any(('"%s"' % n.lower()) in out for n in EXE_NAMES), '"sider.exe"' in out
 
