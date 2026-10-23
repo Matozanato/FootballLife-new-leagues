@@ -213,12 +213,48 @@ def numbers_kit(lib, ours):
     return None
 
 
+LIGHT, DARK, LOOK = 0.6, 0.05, 40      # B214: numbers this light / this dark; kits looked at at most
+
+
+def numbers_kits(lib, ours):
+    """B214: the kits of the library to lend numbers from, [] when none has them: numbers_kit's
+    first, then the first by name whose numbers are light and the first whose are dark (when the
+    first's are not already), so every drawn kit finds numbers that stand out from its shirt.
+    One walk of the library, as numbers_kit's (a Switch on is timed, B104)"""
+    import kitpics
+    out, want, seen = [], {"light", "dark"}, 0
+    for d, subs, files in sorted(os.walk(lib)):
+        rel = os.path.relpath(d, lib)
+        if rel.split(os.sep)[0] == ours:
+            subs[:] = []
+            continue
+        if os.path.basename(d).lower() != "p1":
+            continue
+        names = [f.lower() for f in files]
+        if not all(any(n.endswith(s + ".ftex") for n in names) for s in ("_back", "_leg", "_name")):
+            continue
+        if not out:
+            out.append(os.path.dirname(d))
+        if not want or seen >= LOOK:
+            break
+        seen += 1
+        c = kitpics.ink(d)
+        lum = kitpics._lum(c) if c else None
+        kind = None if lum is None else "light" if lum >= LIGHT else "dark" if lum <= DARK else None
+        if kind in want:
+            want.discard(kind)
+            if os.path.dirname(d) not in out:
+                out.append(os.path.dirname(d))
+    return out
+
+
 # B213 (Dolokhov, 23.10.): how the kits are drawn. 0.2.4 turned the shorts crest a quarter (B138),
 # but a kit is drawn again only when its stamp changes, and the stamp held the colours and the
 # crest alone: every kit drawn before kept its crest lying on its side. The drawing is in the
 # stamp now; a Build draws a kit of an older drawing again, a Switch on keeps it (B104: every kit
 # of a world drawn at a Switch on is minutes with the window not answering).
-DRAWING = 2
+# 3 (B214): the numbers picked for each kit from a few numbers kits (numbers_kits)
+DRAWING = 3
 
 
 def _stamps(words, away, crest, numbers, lib=None, drawing=DRAWING):
@@ -227,17 +263,27 @@ def _stamps(words, away, crest, numbers, lib=None, drawing=DRAWING):
     kit's whole path, so on every other PC (and on this one with the other slash) every made kit
     of a world was drawn again at its first Switch on -- 728 for the Modpack, many minutes with
     the window not answering. The others are the stamps written before, with this PC's path.
-    drawing 1: the stamps of the drawing before B213, which did not name it."""
+    drawing 1: the stamps of the drawing before B213, which did not name it. numbers: a folder,
+    or numbers_kits' list -- drawing 3 names them all, the drawings before it the first (B214)."""
     import hashlib, kitmaker
-    rel = numbers or ""
-    if numbers and lib:
-        try:
-            rel = os.path.relpath(numbers, lib).replace(os.sep, "/")
-        except ValueError:                    # on another drive: the path as it is
-            rel = numbers
+
+    def inside(k):
+        if k and lib:
+            try:
+                return os.path.relpath(k, lib).replace(os.sep, "/")
+            except ValueError:                # on another drive: the path as it is
+                pass
+        return k or ""
+    if isinstance(numbers, (list, tuple)) and drawing >= 3:
+        names = ["|".join(inside(k) for k in numbers)]
+    else:
+        if isinstance(numbers, (list, tuple)):
+            numbers = numbers[0] if numbers else None
+        names = [inside(numbers)] + ([numbers, numbers.replace("/", os.sep), numbers.replace(os.sep, "/")]
+                                     if numbers else [""])
     pic = open(crest, "rb").read()
     out = []
-    for n in [rel] + ([numbers, numbers.replace("/", os.sep), numbers.replace(os.sep, "/")] if numbers else [""]):
+    for n in names:
         h = hashlib.md5()
         for x in (words, away or "", n or "", os.path.getsize(kitmaker.MASK)) + \
                  (("drawing %d" % drawing,) if drawing > 1 else ()):
@@ -260,7 +306,8 @@ def _made(tid, words, away, crest, dst, numbers, log, lib=None, ready=False, red
         had = open(stamp, encoding="utf-8").read().strip()
         if had in stamps or (ready and had):
             return False
-        if had and not redraw and had in _stamps(words, away, crest, numbers, lib, drawing=1):
+        if had and not redraw and any(had in _stamps(words, away, crest, numbers, lib, drawing=d)
+                                      for d in range(1, DRAWING)):
             return False
         # B166: a made kit whose files were changed after it was drawn (a kit put in its folder by
         # hand) is the player's: never drawn over
@@ -522,7 +569,7 @@ def restamp(pl, sider, root, log=print):
     if not os.path.isdir(lib):
         return 0
     world = safe(pl.get("world") or "FL26 world")
-    numbers = numbers_kit(lib, world)
+    numbers = numbers_kits(lib, world)
     n = 0
     for tid, league, k, words, away, crest in to_make(pl, root):
         stamp = os.path.join(lib, made_rel(pl, world, league, k), "kitmaker.txt")
@@ -601,7 +648,7 @@ def write(pl, sider, log=print, root=None, redraw=False):
             # the copy under <world>: the line stays (Install mods, whose Switch on dropped it)
             mine.append((key, text))
         if what == "kits" and make:
-            numbers = numbers_kit(root, world)
+            numbers = numbers_kits(root, world)
             new = 0
             for tid, league, k, words, away, crest in make:
                 rel = made_rel(pl, world, league, k)
