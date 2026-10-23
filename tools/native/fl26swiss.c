@@ -11386,7 +11386,7 @@ static uint64_t u10_factory(uint64_t a,uint64_t b,uint64_t c) {
    selected=*(uint16_t*)(block+u10_selection_offset+4);
    row=u10_reg(comp,selected);
  }
- unsigned char* table=row?u10_table(row):0;
+ unsigned char* table=row?lp_table(row):0;     /* B206: the season with clubs, not next season's empty one */
  unsigned count=table?*(uint32_t*)(table+0x3c0):0;
  if(!row || count!=36) {
    if(u10_logs++<80)logf("UEFA10 original comp=%u selected=%u row=%u count=%u",comp,selected,row,count);
@@ -11429,6 +11429,63 @@ static void u10_install(void) {
  logf("UEFA10 install=%d selection-offset=%x; exact UEFA 36-team tables only",status,(unsigned)u10_selection_offset);
 }
 
+/* ---- B206: Competition Info's League Phase showed "Group A" with no clubs ----
+ *
+ * Micarodvzla 23.10. (second season, Europa League only) and r13 on 12/6/2030: the Europa League
+ * and the Conference League hold an empty table of next season (2030, 0 rows) beside the played
+ * one (2029, 36 rows), opened early like the one lp_table works around for the play-off; the
+ * Champions League had no 2030 table yet and showed its league phase.  The standings pages read
+ * the table of the latest season through 0x141579b90 (a `jmp 0x14158b6f0` thunk).  Only the five
+ * calls of those pages -- league page aedd37 / aee0f5 / aee4fa, group page af591e / af63db, all
+ * in UI controllers (vtable slots at 0x1426844e0, 0x142685f58, 0x142686210 and the row fill of
+ * 0x140aeda10) -- are turned to a jump of ours next to the exe; the game's other calls of the
+ * thunk are not touched.  For 1027 / 1029 / 1210 with fewer than 24 rows it answers with
+ * season_table's -- the latest season of that id with 24..48 rows; once next season's draw
+ * fills its table, that one has 36 rows and is shown as before. */
+#define LPPAGE_THUNK 0x1579b90
+static unsigned char* lppage_table(uint64_t id)
+{
+  unsigned char* t = ((table_fn)(uintptr_t)(g_base + LPPAGE_THUNK))(id);
+  uint16_t r = (uint16_t)id;
+  if (r != 1027 && r != 1029 && r != UECL_ROW) return t;
+  if (t && *(uint32_t*)(t + 0x3c0) >= 24) return t;
+  unsigned yr = 0;
+  unsigned char* t2 = season_table(r, &yr);
+  if (!t2) return t;
+  static uint16_t said[3];
+  int k = r == 1027 ? 0 : r == 1029 ? 1 : 2;
+  if (said[k] != (uint16_t)yr) {
+    said[k] = (uint16_t)yr;
+    logf("fl26swiss: League Phase page, reg %u -- the latest season's table has %u rows; season %u's (%u rows) is shown",
+         (unsigned)r, t ? *(uint32_t*)(t + 0x3c0) : 0, yr, *(uint32_t*)(t2 + 0x3c0));
+  }
+  return t2;
+}
+static void lppage_install(uint64_t exe_base)
+{
+  static const uint32_t CALLS[5] = { 0xaedd37, 0xaee0f5, 0xaee4fa, 0xaf591e, 0xaf63db };
+  for (int i = 0; i < 5; i++) {
+    unsigned char* c = (unsigned char*)(uintptr_t)(exe_base + CALLS[i]);
+    if (c[0] != 0xe8 || (uint64_t)(uintptr_t)(c + 5) + *(int32_t*)(c + 1) != exe_base + LPPAGE_THUNK) {
+      logf("fl26swiss: League Phase page fallback NOT installed (call %d is not the one expected)", i);
+      return;
+    }
+  }
+  unsigned char* t = near_alloc(exe_base);
+  if (!t) { logf("fl26swiss: League Phase page fallback NOT installed (no page in reach)"); return; }
+  t[0] = 0xFF; t[1] = 0x25; *(uint32_t*)(t + 2) = 0; *(uint64_t*)(t + 6) = (uint64_t)(uintptr_t)lppage_table;
+  FlushInstructionCache(GetCurrentProcess(), t, 14);
+  for (int i = 0; i < 5; i++) {
+    unsigned char* c = (unsigned char*)(uintptr_t)(exe_base + CALLS[i]);
+    DWORD old;
+    if (!VirtualProtect(c, 5, PAGE_EXECUTE_READWRITE, &old)) return;
+    *(int32_t*)(c + 1) = (int32_t)((int64_t)(uintptr_t)t - (int64_t)(uintptr_t)(c + 5));
+    VirtualProtect(c, 5, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), c, 5);
+  }
+  logf("fl26swiss: League Phase page fallback live (5 page calls)");
+}
+
 /* ---- MP: a matches-played column in the standings (mato 2026-10-21: its own column, A stays) ----
  *
  * The standings page (cpk_dat/common/menu/general/rankingTeam.bin) has seven number cells a row
@@ -11460,7 +11517,10 @@ static uint64_t mp_fill(void* screen, void* roww, uint64_t idx, uint64_t r9)
   uint64_t ret = ((mpfill_fn)(uintptr_t)g_tramp_mpfill)(screen, roww, idx, r9);
   if (!screen || !roww) return ret;
   unsigned i = (unsigned)idx;
-  unsigned char* tab = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(*(uint16_t*)((unsigned char*)screen + 0xa8));
+  uint16_t reg = *(uint16_t*)((unsigned char*)screen + 0xa8);
+  /* the league phases: the table the page shows (B206), not next season's empty one */
+  unsigned char* tab = reg == 1027 || reg == 1029 || reg == UECL_ROW ? lp_table(reg)
+                     : ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(reg);
   if (!tab) return ret;
   unsigned char* row = i < 0x30 ? tab + i * 0x14 : tab;
   void* w = mp_child(roww, "num_MatchesPlayed");
@@ -11710,6 +11770,7 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
            g_tramp_cimenu ? " -- menu hooked, choice not: extra items open the native item's page" : "");
   }
   u10_install();
+  lppage_install(exe_base);
   mp_install();
   if (!cupsel_install(exe_base))
     logf("fl26swiss: Cup mode list live (no league phase of 36 in Kick Off > Cup)");

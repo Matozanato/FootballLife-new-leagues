@@ -349,6 +349,24 @@ come with it instead.
   world with tables to spare is left as it is. A career already in its third season gets the tables
   back from the next January.
 
+- **A new Master League crashed mid-season (FL_2026.exe+0x1321d00) when the world's save folder held
+  an Edit save of an older version of the world (B197).** That Edit save names players in its
+  squads that the new version no longer has, and the game read the missing player without
+  checking. fl26nullguard12 (in fl26guards) now skips such a player. Install a world zip also
+  offers, after Ready to play, to move an Edit save from before the install aside, the way Build
+  already did.
+
+- **The Supercopa de Chile was played on the day of Copa Chile's second round (B198).** A super cup
+  Build adds to a February-December league of the game was always on 31 January. It now takes a
+  day at the end of January at least three days from the country's own cups (28 January for
+  Chile). (Thanks antonimus)
+
+- **Competition Info > Europa League or Conference League > League Phase showed "Group A" with no
+  clubs (B206).** The page shows the table of the competition's latest season, and the game opens
+  next season's empty table for those two cups months before the draw, while the knockouts are
+  still being played. While next season's table is empty, the page now shows the league phase that
+  was played; after the draw it shows the new one. (Thanks Micarodvzla22)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
