@@ -5240,6 +5240,7 @@ static int table_pool_reap(const char* when)
  * new year's tables -- only when the competition's other slot holds a later season. The season under way is never touched, and a world with tables to spare is
  * left as the game has it. */
 #define POOL_LOW 120
+#define SECOND_HALF 181     /* 1 July: the July rollover's day */
 #define SLOTFREE_RVA 0x158f870
 typedef void (*slotfree_fn)(unsigned char* slot);
 static void table_pool_old_slots(const char* when)
@@ -5256,30 +5257,90 @@ static void table_pool_old_slots(const char* when)
   if (!std || !blk) return;
   int t = *(uint16_t*)(blk + TODAY_OFF), y = *(uint16_t*)(blk + TODAY_OFF + 8);
   if (y < 1990 || y > 2200 || t >= 365) return;
-  if (t >= 350) y++;          /* from 17 December: the new year's tables are made on 1 January */
+  /* B212 (r13, third season, 23.10.): the last season finished is two years back only until the
+   * July rollover; from then on -- the European season of last year ended in May, the calendar
+   * year's competitions play this year's -- it is last year's.  With y - 2 all year, the pool ran
+   * dry on day 216 of 2031 (the new European seasons) and stayed at 0 until 17 December: the
+   * Champions League's league phase was drawn on no table, and its page took the game down. */
+  int last = t >= SECOND_HALF ? y - 1 : y - 2;
   int ntab = (int)pool_tables(tabbase), nfree = 0;
   for (int i = 0; i < ntab; i++)
     if (*(uint32_t*)(std + tabbase + (size_t)i * 0x187c) == 0xffffffffu) nfree++;
-  if (nfree >= POOL_LOW) return;
+  /* B212, second look (d362 -> 2031 day 264): the season is built at the July rollover with last
+   * season's slots still there -- 146 tables free after the reap, and the Champions League's slot
+   * of 2031 got 3 tables (2, 3, 4) where the Europa League's got 20: the pool ran dry half-way.
+   * Freed the next morning, the 2030 slots gave 278 tables back, but nothing builds a slot again,
+   * and the league phase (1027) never had a table.  So a slot the game built short -- fewer
+   * tables than the same competition's slot of the season before -- is built again here, right
+   * after the old one is freed, while its season cannot have begun yet: from the July rollover to
+   * day BUILD_DAY, and in the first days of January for the calendar year. */
+  int early = (t >= SECOND_HALF && t < BUILD_DAY) || t < 20;
+  enum { SHORT_MAX = 64 };
+  unsigned char* shorts[SHORT_MAX]; int nshort = 0, want = 0;
+  /* the older of two slots (the competition's other slot holds a later season) of a season
+   * finished: what may go.  A competition with one slot (a cup of a few years) keeps it. */
   int slots = 0, freed = 0, lo = 0xffff, hi = 0;
-  for (uint32_t h = 0; h < tabbase / 0xb4; h++)
-    for (int k = 0; k < 2; k++) {
-      unsigned char* sl = std + (size_t)h * 0xb4 + 4 + k * 0x58;
-      unsigned char* other = std + (size_t)h * 0xb4 + 4 + (1 - k) * 0x58;
-      int w = *(uint16_t*)(sl + 4), w2 = *(uint16_t*)(other + 4);
-      if (*(uint32_t*)sl == 0xffffffffu || w == 0xffff || w < 1990 || w > y - 2) continue;
-      /* only the older of two seasons: a competition with one slot (a cup of a few years) keeps it */
-      if (*(uint32_t*)other == 0xffffffffu || w2 == 0xffff || w2 <= w) continue;
-      for (int i = 0; i < 20 && *(int32_t*)(sl + 8 + 4 * i) != -1; i++)
-        if (*(int32_t*)(sl + 8 + 4 * i) >= 0 && *(int32_t*)(sl + 8 + 4 * i) < ntab) freed++;
-      ((slotfree_fn)(uintptr_t)(g_base + SLOTFREE_RVA))(sl);
-      slots++;
-      if (w < lo) lo = w;
-      if (w > hi) hi = w;
+  for (int pass = 0; pass < 2; pass++) {
+    if (pass == 1) {
+      /* the new seasons coming need about as many tables as the finished ones hold: with fewer
+         free than that (or under POOL_LOW), they go; a world with tables to spare is left as is */
+      if (!nshort && nfree >= POOL_LOW && nfree >= freed) return;
+      freed = 0;
     }
+    for (uint32_t h = 0; h < tabbase / 0xb4; h++)
+      for (int k = 0; k < 2; k++) {
+        unsigned char* sl = std + (size_t)h * 0xb4 + 4 + k * 0x58;
+        unsigned char* other = std + (size_t)h * 0xb4 + 4 + (1 - k) * 0x58;
+        int w = *(uint16_t*)(sl + 4), w2 = *(uint16_t*)(other + 4);
+        if (*(uint32_t*)sl == 0xffffffffu || w == 0xffff || w < 1990 || w > last) continue;
+        if (*(uint32_t*)other == 0xffffffffu || w2 == 0xffff || w2 <= w) continue;
+        int n = 0, n2 = 0;
+        for (int i = 0; i < 20 && *(int32_t*)(sl + 8 + 4 * i) != -1; i++)
+          if (*(int32_t*)(sl + 8 + 4 * i) >= 0 && *(int32_t*)(sl + 8 + 4 * i) < ntab) n++;
+        for (int i = 0; i < 20 && *(int32_t*)(other + 8 + 4 * i) != -1; i++)
+          if (*(int32_t*)(other + 8 + 4 * i) >= 0 && *(int32_t*)(other + 8 + 4 * i) < ntab) n2++;
+        freed += n;
+        if (pass == 0) {
+          if (early && w2 >= y && n2 < n && nshort < SHORT_MAX) {
+            shorts[nshort++] = std + (size_t)h * 0xb4;
+            want += n - n2;
+          }
+          continue;
+        }
+        ((slotfree_fn)(uintptr_t)(g_base + SLOTFREE_RVA))(sl);
+        slots++;
+        if (w < lo) lo = w;
+        if (w > hi) hi = w;
+      }
+  }
   if (slots)
     logf("fl26swiss: table pool (%s, %d) -- %d of %d free: %d slot(s) of seasons %d..%d freed, %d table(s); %d free now",
          when, y, nfree, ntab, slots, lo, hi, freed, nfree + freed);
+  if (!nshort) return;
+  int rebuilt = 0, before = 0, after = 0;
+  for (int s = 0; s < nshort; s++) {
+    unsigned char* e = shorts[s];
+    for (int k = 0; k < 2; k++) {
+      unsigned char* sl = e + 4 + k * 0x58;
+      uint32_t key = *(uint32_t*)sl;
+      int w = *(uint16_t*)(sl + 4), had = 0, now = 0;
+      if (key == 0xffffffffu || w == 0xffff || w < y) continue;
+      for (int i = 0; i < 20 && *(int32_t*)(sl + 8 + 4 * i) != -1; i++) had++;
+      ((slotfree_fn)(uintptr_t)(g_base + SLOTFREE_RVA))(sl);
+      ((cs_subfill_fn)(uintptr_t)(g_base + CS_SUBFILL_RVA))(e, (uint64_t)w, 0);
+      for (int k2 = 0; k2 < 2; k2++) {
+        unsigned char* s2 = e + 4 + k2 * 0x58;
+        if (*(uint32_t*)s2 == 0xffffffffu || *(uint16_t*)(s2 + 4) != w) continue;
+        for (int i = 0; i < 20 && *(int32_t*)(s2 + 8 + 4 * i) != -1; i++) now++;
+      }
+      logf("fl26swiss: table pool -- competition %08x: season %d built short at the rollover (%d table(s)), built again: %d",
+           key, w, had, now);
+      rebuilt++; before += had; after += now;
+      break;
+    }
+  }
+  logf("fl26swiss: table pool (%s, %d) -- %d slot(s) built short (%d table(s) missing) built again: %d table(s) before, %d now",
+       when, y, rebuilt, want, before, after);
 }
 static void ccup_season_fix(uint16_t master, const uint16_t* reps, int n)
 {
@@ -7188,6 +7249,15 @@ uint64_t gstage_handler(uint32_t* comp)
       unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(c->row);
       uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
       if (rows >= 24 && rows <= 48) on = 1;
+    } else if (on) {
+      /* B212: drawn, but the season was built with the pool dry and the league phase never got
+         a table -- its page reads one that is not there and takes the game down. Grey then. */
+      unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(c->row);
+      if (!t || *(uint32_t*)(t + 0x3c0) < 2) {
+        static int said_none = 0;
+        if (said_none++ < 3) logf("fl26swiss: %s Group stage item greyed: the league phase has no table", c->name);
+        on = 0;
+      }
     }
     if ((r & 0xff) != on && g_gstage_n++ < 8)
       logf("fl26swiss: %s Group stage item %s (league phase %u)", c->name, on ? "enabled" : "disabled",
