@@ -320,6 +320,12 @@ come with it instead.
   Up to 128 cups are now kept. Takes effect from the next season's cup draw in a career already
   started. (Thanks monkusgigus)
 
+- **Competition Info > Copa Libertadores or AFC Champions League > Group stage crashed the game
+  from the new year (B205).** The page reads each group's table from the cup's latest season, and
+  from January that season is already open and holds no tables while the groups are being played.
+  As for the cups of a world file (0.2.4.1), the Group stage item is left out while a group has no
+  table, instead of crashing. (Thanks Micarodvzla22)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
