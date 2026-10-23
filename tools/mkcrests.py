@@ -81,6 +81,15 @@ def crest(cid, label, size):
 
 # club-emblem size ladder (measured from shipped flag/e_*_r*.png): _r 128, _r_l 256, _r_ll 512
 FLAG_SIZES = [("_r", 128), ("_r_l", 256), ("_r_ll", 512)]
+# a club of the game may ship its crest only as a light and a dark version (1600 Spezia: _r_w and _r_b,
+# no _r): the game then never reads _r, so a world that gives that id another crest writes these too
+GAME_VARIANTS = [(v + suf, px) for v in ("_r_w", "_r_b") for suf, px in (("", 128), ("_l", 256), ("_ll", 512))]
+
+
+def flag_sizes(tid):
+    """the crest files (suffix, px) team tid's crest is written as: a club of the game's also gets
+    the light and dark versions (B221, JoJofiaz 23.10.: Lanerossi Vicenza on 1600 kept Spezia's crest)"""
+    return FLAG_SIZES + (GAME_VARIANTS if tid < FIRST_OURS else [])
 
 
 def main():

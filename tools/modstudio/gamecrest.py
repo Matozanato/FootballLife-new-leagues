@@ -7,7 +7,8 @@ so it is read once."""
 import glob, os, re, threading
 
 FLAG = "common/render/symbol/flag/"
-NAMES = ("e_%06d_r_l.png", "e_%06d_r.png", "e_%06d_f_l.png", "e_%06d_f.png")   # licensed, then the game's own
+# licensed, its light version (a club with only light and dark ones: 1600 Spezia, B221), then the game's own
+NAMES = ("e_%06d_r_l.png", "e_%06d_r.png", "e_%06d_r_w_l.png", "e_%06d_r_w.png", "e_%06d_f_l.png", "e_%06d_f.png")
 CACHE = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "FL26ModStudio", "cache", "crests")
 _toc, _lock = {}, threading.Lock()
 

@@ -76,7 +76,7 @@ def club_crest(root, tid, label, picture=None, kit=None):
         master = shieldcrest.shield(kit, label or str(tid), 512)
     if master is None:
         master = mkcrests.crest(tid, label or str(tid), 512)
-    for suf, px in mkcrests.FLAG_SIZES:
+    for suf, px in mkcrests.flag_sizes(tid):
         im = master if px == 512 else master.resize((px, px), Image.LANCZOS)
         im.save(os.path.join(d, "e_%06d%s.png" % (tid, suf)))
 
