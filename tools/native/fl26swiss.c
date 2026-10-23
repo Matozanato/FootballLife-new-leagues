@@ -6305,11 +6305,17 @@ static int ko_sync(uint16_t reg, const char* why)
    slot whose two clubs and its unplayed first leg's two clubs are all real clubs and not the same
    pair (either way round) -- a round not drawn yet, a "winner of tie n" and the game's own home
    and away order are left alone -- and only in the record the game itself finds for that
-   regulation and kind (fixfind), never a leftover. */
+   regulation and kind (fixfind), never a leftover. A real club has the top four bits clear: a
+   slot of 0x4....... is the game's "n-th of that league" (a play-off's or a cup's entry: 4671 of
+   the 8000 slots of a second season, reg 11 0x45ec0001...), which the first test took for a club
+   and gave 154 slots of league play-offs (reg 112...) clubs of matches not theirs. And the first
+   leg must be that round's own match (+4 regulation, +6 kind): a round of the season to come
+   still names match ids the season since gave other competitions (reg 161 in May: 770e, a
+   Libertadores match). */
 #define RT_OFF  0x447ed20
 #define RT_REC  0x208
 #define RT_N    0x1f40
-static int real_club(uint32_t v) { return v != 0xffffffffu && (v & KO_TBD) != KO_TBD && (v >> 14); }
+static int real_club(uint32_t v) { return !(v >> 28) && (v & KO_TBD) != KO_TBD && (v >> 14); }
 static int ko_sync_all(const char* why)
 {
   unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
@@ -6328,6 +6334,7 @@ static int ko_sync_all(const char* why)
       if (!real_club(sl[0]) || !real_club(sl[1])) continue;
       unsigned char* m = ko_match(*(uint16_t*)(sl + 2));
       if (!m || (m[7] & 0x40)) continue;            /* no first leg, or played */
+      if (*(uint16_t*)(m + 4) != reg || m[6] != kind) continue;   /* another competition's match */
       uint32_t h = *(uint32_t*)(m + 0x14), a = *(uint32_t*)(m + 0x18);
       if (!real_club(h) || !real_club(a)) continue;
       if ((same_club(sl[0], h) && same_club(sl[1], a)) || (same_club(sl[0], a) && same_club(sl[1], h))) continue;
