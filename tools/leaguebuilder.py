@@ -4477,7 +4477,7 @@ def build(pl, base, game, replace=False, log=print):
     key = input_key(pl, base, game)
     if replace and os.path.exists(out) and pictures_only(pl, base, game, out, key, log):
         if is_live(pl["world"], game):
-            switch_on(pl["world"], game, log)
+            switch_on(pl["world"], game, log, redraw=True)
         return out
 
     def lap(what):
@@ -5072,7 +5072,7 @@ def build(pl, base, game, replace=False, log=print):
         # A world built again while it was already on kept the old copy, and a change (February
         # to December) never reached the game until Switch on was pressed once more.
         log("%s is the live world: switching it on again, so the game reads what was just built" % pl["world"])
-        switch_on(pl["world"], game, log)
+        switch_on(pl["world"], game, log, redraw=True)
     return out
 
 
@@ -7261,7 +7261,7 @@ def install_root(game, src, log=print):
 
 # ---- on: the live world ----
 
-def switch_on(world, game, log=print):
+def switch_on(world, game, log=print, redraw=False):
     root = os.path.join(siderdir.find(game), "livecpk", world)
     wf = os.path.join(root, MARK)
     if world.lower().endswith((".building", ".old")):
@@ -7287,7 +7287,7 @@ def switch_on(world, game, log=print):
     if built is not None:
         import lbstadiums, lbservers
         lbstadiums.write(built, siderdir.find(game), log, lbstadiums.load_edits(root))
-        lbservers.write(built, siderdir.find(game), log, root)
+        lbservers.write(built, siderdir.find(game), log, root, redraw=redraw)
     mods = os.path.join(root, "modules")
     for f in sorted(os.listdir(mods)) if os.path.isdir(mods) else []:
         dst = os.path.join(siderdir.find(game), "modules", f)

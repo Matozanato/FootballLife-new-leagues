@@ -142,6 +142,12 @@ come with it instead.
   notes what it put in each folder and leaves a folder whose files you changed alone, and says so in
   the log. To get Mod Studio's kit back, delete the folder and Build. (Thanks LaraCroft)
 
+- **The shorts crest still lay on its side after the update (B213).** 0.2.4 turned the crest on
+  the shorts of the kits Mod Studio draws, but a kit was drawn again only when the club's colours
+  or crest changed, so every kit drawn before kept the old shorts. The next Build now draws such
+  kits once more (a Switch on leaves them, so switching worlds stays quick; a world that came
+  ready from a zip keeps the kits it brought). (Thanks Dolokhov)
+
 - **Home said "switched off: fl26regions, fl26regnames" and Install now did not help (B177).**
   Those two modules come with a world (they name its competitions and countries), not with Mod
   Studio's module pack, so Install now passed them by. Home now counts them only when the world in

@@ -4991,7 +4991,7 @@ class Build(BuilderPage):
             if ask(self, title, text):
                 def on(log):
                     snapshot(self.app.game.ini_path, "Your world: switch on " + name, self.app.game.sider_dir)
-                    self.switch_with_saves(sw, name, log)
+                    self.switch_with_saves(sw, name, log, redraw=True)     # right after a Build (B213)
                     self.project.drop_names()
                     log("\n" + _("Start the game, then 4. check."))
                 self.run(on)
@@ -5319,7 +5319,7 @@ class Build(BuilderPage):
             self.run(go, background=True, after=over, busy=_("Switching %s on") % w)
             return True
 
-    def switch_with_saves(self, sw, w, log):
+    def switch_with_saves(self, sw, w, log, redraw=False):
         """Switch on `w`, its save folder first (saves.Switch: the careers of the world going out
         aside, its own in, mato 15.10.); when the switch stops, the save folders go back as they were"""
         from .. import saves
@@ -5328,7 +5328,7 @@ class Build(BuilderPage):
         except saves.SaveError as e:
             raise B.BuildError(str(e))
         try:
-            B.switch_on(w, self.app.game.folder, log=log)
+            B.switch_on(w, self.app.game.folder, log=log, redraw=redraw)
         except BaseException:
             try:
                 sw.undo(log)

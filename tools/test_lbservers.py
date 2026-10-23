@@ -169,6 +169,25 @@ def main():
         log = []
         S.write(pm, b, log=log.append, root=w)
         ok("a changed crest makes that kit again", any("(1 new or changed)" in l for l in log))
+        # B213: a kit of the drawing before (no drawing in its stamp, the shorts crest on its side)
+        # is kept at a Switch on and drawn again at a Build
+        lib = os.path.join(b, S.KITS)
+        m911 = [m for m in S.to_make(pm, w) if m[0] == 911][0]
+        older = S._stamps(m911[3], m911[4], m911[5], S.numbers_kit(lib, "My world"), lib, drawing=1)[0]
+        ok("the drawing is in the stamp", older not in S._stamps(m911[3], m911[4], m911[5],
+                                                                 S.numbers_kit(lib, "My world"), lib))
+        put(os.path.join(red, "kitmaker.txt"), older + "\n")
+        log = []
+        S.write(pm, b, log=log.append, root=w)
+        ok("a kit of the drawing before: kept at a Switch on", any("(0 new or changed)" in l for l in log)
+           and open(os.path.join(red, "kitmaker.txt"), encoding="utf-8").read().strip() == older)
+        log = []
+        S.write(pm, b, log=log.append, root=w, redraw=True)
+        ok("a kit of the drawing before: drawn again at a Build", any("(1 new or changed)" in l for l in log)
+           and open(os.path.join(red, "kitmaker.txt"), encoding="utf-8").read().strip() != older)
+        log = []
+        S.write(pm, b, log=log.append, root=w, redraw=True)
+        ok("a Build after it draws nothing", any("(0 new or changed)" in l for l in log))
         with open(os.path.join(b, S.KITS, "map.txt"), "a", encoding="utf-8") as f:
             f.write('912, "Mine\\Blue"\n911, "Gone\\Red"\n')
         os.makedirs(os.path.join(b, S.KITS, "Mine", "Blue"))

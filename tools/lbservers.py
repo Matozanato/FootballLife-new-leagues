@@ -213,12 +213,21 @@ def numbers_kit(lib, ours):
     return None
 
 
-def _stamps(words, away, crest, numbers, lib=None):
+# B213 (Dolokhov, 23.10.): how the kits are drawn. 0.2.4 turned the shorts crest a quarter (B138),
+# but a kit is drawn again only when its stamp changes, and the stamp held the colours and the
+# crest alone: every kit drawn before kept its crest lying on its side. The drawing is in the
+# stamp now; a Build draws a kit of an older drawing again, a Switch on keeps it (B104: every kit
+# of a world drawn at a Switch on is minutes with the window not answering).
+DRAWING = 2
+
+
+def _stamps(words, away, crest, numbers, lib=None, drawing=DRAWING):
     """the kitmaker.txt stamps that count as "made from these": the first is the one written now,
     with the numbers kit by its folder inside the kit library. B104: the stamp had the numbers
     kit's whole path, so on every other PC (and on this one with the other slash) every made kit
     of a world was drawn again at its first Switch on -- 728 for the Modpack, many minutes with
-    the window not answering. The others are the stamps written before, with this PC's path."""
+    the window not answering. The others are the stamps written before, with this PC's path.
+    drawing 1: the stamps of the drawing before B213, which did not name it."""
     import hashlib, kitmaker
     rel = numbers or ""
     if numbers and lib:
@@ -230,7 +239,8 @@ def _stamps(words, away, crest, numbers, lib=None):
     out = []
     for n in [rel] + ([numbers, numbers.replace("/", os.sep), numbers.replace(os.sep, "/")] if numbers else [""]):
         h = hashlib.md5()
-        for x in (words, away or "", n or "", os.path.getsize(kitmaker.MASK)):
+        for x in (words, away or "", n or "", os.path.getsize(kitmaker.MASK)) + \
+                 (("drawing %d" % drawing,) if drawing > 1 else ()):
             h.update(str(x).encode("utf-8") + b"\0")
         h.update(pic)
         if h.hexdigest() not in out:
@@ -238,16 +248,19 @@ def _stamps(words, away, crest, numbers, lib=None):
     return out
 
 
-def _made(tid, words, away, crest, dst, numbers, log, lib=None, ready=False):
+def _made(tid, words, away, crest, dst, numbers, log, lib=None, ready=False, redraw=False):
     """the kit folder dst made from words and crest, unless it was made from the same ones.
     ready: the world came ready from a zip (Install mods) with its made kits in it -- a kit
-    folder with a stamp is kept as it came, whatever PC drew it (B104)"""
+    folder with a stamp is kept as it came, whatever PC drew it (B104). redraw (a Build): a kit
+    of an older drawing is drawn again; at a Switch on it is kept (B213)"""
     import kitmaker, kitpics, tempfile
     stamps = _stamps(words, away, crest, numbers, lib)
     stamp = os.path.join(dst, "kitmaker.txt")
     try:
         had = open(stamp, encoding="utf-8").read().strip()
         if had in stamps or (ready and had):
+            return False
+        if had and not redraw and had in _stamps(words, away, crest, numbers, lib, drawing=1):
             return False
         # B166: a made kit whose files were changed after it was drawn (a kit put in its folder by
         # hand) is the player's: never drawn over
@@ -526,10 +539,10 @@ def restamp(pl, sider, root, log=print):
     return n
 
 
-def write(pl, sider, log=print, root=None):
+def write(pl, sider, log=print, root=None, redraw=False):
     """the plan's kits and scoreboards into Kit Server and Scoreboard Server, and a kit made for
     every other new club with colours or a crest (root: the world's folder, for the crests);
-    (kits, scoreboards) written"""
+    (kits, scoreboards) written. redraw: a Build's, kits of an older drawing drawn again (B213)"""
     kits, boards = wanted(pl)
     world = safe(pl.get("world") or "FL26 world")
     teams, comps = world_ids(pl, root)
@@ -594,7 +607,7 @@ def write(pl, sider, log=print, root=None):
                 rel = made_rel(pl, world, league, k)
                 try:
                     drawn = _made(tid, words, away, crest, os.path.join(root, rel), numbers, log,
-                                  lib=root, ready=ready)
+                                  lib=root, ready=ready, redraw=redraw)
                 except Exception as e:               # one bad crest picture must not stop the Build
                     log("  kit of %s: not made (%s)" % (rel, e))
                     continue
