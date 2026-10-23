@@ -91,6 +91,12 @@ come with it instead.
   A club that came up into a place still gets its whole squad. With NewLife 1.5b7 and every
   league ticked: 873 new players instead of 4082. (Thanks Aleperfe87)
 
+- **The classic Copa Sudamericana can play February to December.** A recipe setting,
+  `"sudamericana_calendar": true`, puts it on the Libertadores' days and fills it in February from
+  the same final tables, so a Brazilian or Argentine club in the Libertadores is no longer drawn
+  into a Sudamericana played August to May at the same time. The World Modpack has it on; a world
+  without it keeps the cup as it was.
+
 ## Fixed
 
 - **Home > Last changes: rows painted over each other (B83).** While a message box was open (the one

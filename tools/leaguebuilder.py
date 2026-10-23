@@ -166,6 +166,10 @@ which league sits above -- and nothing about ids:
               unless game_europe gives them their own, and Build wants the whole field: 26
               Libertadores group places, 13 phase 2, 6 phase 1, 12 Sudamericana group places and
               32 first stage, spread over the South American leagues however you like
+  sudamericana_calendar (the recipe, not a league) true: the classic Copa Sudamericana (without
+              "conmebol") plays February to December on the Libertadores' days, filled in February
+              from the same tables as the Libertadores (other places of them), instead of August
+              to May
   conmebol_associations (the recipe, not a league) dynamic places for a CONMEBOL association,
               still in the normal two-field schema: {"Bolivia": [[1,3],[2,3],[3,17],[4,16],
               [5,19],...]}. The first number is an association rank, never a team id. If this world
@@ -958,7 +962,7 @@ RECIPE_SETTINGS = ("game_europe", "uefa_seed", "uefa_rank", "europe_first", "gam
                    "ccup_names", "ccup_logos", "caf_super_cup", "caf_super_cup_logo", "cup_draw",
                    "country_order", "game_seasons", "saudi_august", "newlife_ids", "newlife_game",
                    "league_order", "packs", "conmebol", "conmebol_associations", "samerica_super_cup",
-                   "samerica_super_cup_logo", "samerica_super_cup_first")
+                   "samerica_super_cup_logo", "samerica_super_cup_first", "sudamericana_calendar")
 
 
 def recipe_from_plan(pl, base):
@@ -2371,6 +2375,13 @@ def plan(recipe, base, prev=None):
         # fl26swiss reads cal=1 and borrows the native Libertadores dates, fills
         # the groups immediately after the one-match first stage, and closes it
         # at the calendar-year teardown rather than in July.
+        sud = next(c for c in cups if c["number"] == SUDAM)
+        sud["opts"] = {"fill": SAM_GROUP_FILL, "national": 0, "days": [], "cal": 1}
+    elif recipe.get("sudamericana_calendar") and any(c["number"] == SUDAM for c in cups):
+        # the classic Copa Sudamericana on the same calendar (the World Modpack, mato 23.10.): it
+        # played August to May, so a Brazilian or Argentine club in the Libertadores (February to
+        # November) could be drawn into it as well. Filled in February from the tables the
+        # Libertadores is filled from, it takes the clubs after the Libertadores' places
         sud = next(c for c in cups if c["number"] == SUDAM)
         sud["opts"] = {"fill": SAM_GROUP_FILL, "national": 0, "days": [], "cal": 1}
     for c in cups:            # a game league's cup winner: its national cup is the game's (#95)
