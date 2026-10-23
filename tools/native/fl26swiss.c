@@ -6701,6 +6701,17 @@ static int q_rolling(uint16_t r)
   }
   return -1;
 }
+/* a group stage of the game's own (the Libertadores 9, the AFC Champions League 15): a regulation
+   with a group 1024 above it that is none of our league phases' nor of the world's cups */
+static int native_group_stage(uint16_t r)
+{
+  if (r >= 1024) return 0;
+  for (int ci = 0; ci < 3; ci++)
+    if (r == CUPS[ci].league || r == CUPS[ci].row || r == CUPS[ci].po || r == CUPS[ci].ko) return 0;
+  for (int k = 0; k < g_nccup; k++)
+    if (r == g_ccup[k].reg || r == g_ccup[k].ko) return 0;
+  return get_rec((uint16_t)(r + 1024)) != 0;
+}
 static uint64_t phkind_core(uint32_t* comp, uint64_t kind, uintptr_t ra);
 uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
 {
@@ -6796,6 +6807,35 @@ static uint64_t phkind_core(uint32_t* comp, uint64_t kind, uintptr_t ra)
                (unsigned)c->reg, 'A' + g, n, rows);
         return r | 0xffff;
       }
+    }
+  }
+  /* B205 (Micarodvzla, 23.10.; the same day in game, r13, second season, day 72): the game's own
+     group stages -- the Libertadores (reg 9), the AFC Champions League (reg 15) -- take the game
+     down on Group stage the same way (ucrtbase fail-fast 0xc0000409).  Their groups are
+     reg + 1024 * (g + 1) as a world cup's are; a group whose table, as the page reads it, holds
+     fewer than two rows leaves the item out until the next draw.  Our league phases (CUPS) and the
+     world's cups (above) have their own answers. */
+  if (comp && (ra == g_base + MENU_GRP_RA || ra == g_base + MENU_GRP2_RA) && (uint16_t)r != 0xffff
+      && native_group_stage((uint16_t)r)) {
+    uint16_t reg = (uint16_t)r;
+    for (int g = 0; g < 16; g++) {
+      uint16_t id = (uint16_t)(reg + 1024 * (g + 1));
+      unsigned char* rec = get_rec(id);
+      if (!rec) break;
+      unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(id);
+      unsigned rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
+      static int said_native = 0;
+      if (said_native < 40) {
+        said_native++;
+        logf("fl26swiss: Competition Info -- comp %u Group stage, reg %u group %c: %u clubs, a table of %u rows (%s)",
+             *comp, (unsigned)reg, 'A' + g, rec_count(rec), rows, t ? "found" : "none");
+      }
+      if (rows >= 2) continue;
+      static int said_ngrp = 0;
+      if (said_ngrp++ < 8)
+        logf("fl26swiss: Competition Info -- Group stage of reg %u greyed: group %c has a table of %u rows",
+             (unsigned)reg, 'A' + g, rows);
+      return r | 0xffff;
     }
   }
   /* Page type 0 is the grouped phase -- for our Europa and Conference League, the play-off
