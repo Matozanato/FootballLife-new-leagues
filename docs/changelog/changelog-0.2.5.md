@@ -90,6 +90,14 @@ come with it instead.
   Gonçalves) is then no longer made a second time while the game's own one becomes a free agent.
   A club that came up into a place still gets its whole squad. With NewLife 1.5b7 and every
   league ticked: 873 new players instead of 4082. (Thanks Aleperfe87)
+- **Players > More > Import transfers...: a whole transfer window from one CSV.** One line a
+  player: `player` (his name or id), `to` (the club he joins: its name in your world, with or
+  without FC and such, or its team ID) and, when two players share a name, `from` (his club
+  now). Commas, semicolons or tabs; accents and capitals do not matter. Each player moves as
+  with Transfer to..., your new clubs included, and the message lists every line it could not
+  place (no such player, two clubs of that name) instead of guessing. Make the table any way you
+  like -- by hand, or with a tool off Transfermarkt; Mod Studio itself reads no website.
+  (Thanks jibibi)
 
 ## Fixed
 
