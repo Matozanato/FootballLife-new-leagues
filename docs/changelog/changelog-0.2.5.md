@@ -338,6 +338,15 @@ come with it instead.
   the game was running, with a command a Mac has not got. It now takes the answer "not running"
   there and writes nothing to errors.log. (Thanks evannoteven)
 
+- **The Copa Libertadores and the AFC Champions League played no group match from the third season
+  of a big world (B211).** The game keeps every table of every season in one pool of 595, and a
+  world of 86 leagues (the World Modpack) filled it with two seasons (10 free in June): in the
+  new year the two cups drew their groups with no table to give them, played no group match, and their
+  knockouts had no club. When fewer than 120 tables are free, the tables of a season two years old
+  (2027/28 in 2029) are now given back on 1 January instead of in July, the way the game frees them
+  itself. The season just played and the one under way are kept, and a world with tables to spare is
+  left as it is.
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
