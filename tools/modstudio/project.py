@@ -252,6 +252,14 @@ class Project(QObject):
         self.changed.emit()
         self._autosave_soon()
 
+    def mark(self):
+        """a change the page shows by itself (Players): kept and saved like touch(), without the
+        changed signal that fills the pages again. Players set dirty alone, so nothing saved it
+        and closing asked about changes while the status bar said the world was saved"""
+        self._remember()
+        self.dirty = True
+        self._autosave_soon()
+
     # ---- undo ----
     def _remember(self):
         """keep the recipe as it was before this change (one step for touches close together)"""
