@@ -429,6 +429,12 @@ come with it instead.
   written to the save folder's `fl26swiss-state.bin` with the season's other keeps, so a career
   saved and continued after a restart still takes the list in its first summer. (Thanks Jabo9)
 
+- **Mod Studio crashed at every start after Open a world... was given a world's
+  leaguebuilder-plan.json (B224).** That file, in the folder of every built world, is the plan
+  Build made, not a world file, and the next start opened it again and crashed counting its clubs.
+  Opening it now opens the world it was built from, the way My world does for a world in the game;
+  Save asks for a name, so the plan in the world's folder is never written over. (Thanks ferraz j.)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
