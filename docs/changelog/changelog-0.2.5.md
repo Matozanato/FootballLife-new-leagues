@@ -435,6 +435,13 @@ come with it instead.
   Opening it now opens the world it was built from, the way My world does for a world in the game;
   Save asks for a name, so the plan in the world's folder is never written over. (Thanks ferraz j.)
 
+- **A Master League crashed in December (FL_2026.exe+0x135a384) when the game picked the clubs of
+  next year's pre-season friendly cup (B223).** The pick takes clubs from a list of candidates
+  until the cup is full and never checked that the list had run out; with too few candidates it
+  read below the list. Seen three times out of three from one World Modpack career, day 346-348.
+  fl26nullguard13 (in fl26guards) now stops the pick when the candidates are used up, and the
+  game then fills or skips the cup the way it already does when a list is short.
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.

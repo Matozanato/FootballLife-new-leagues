@@ -51,7 +51,7 @@ ORDER = [
 BUNDLES = {
     "fl26guards": ["fl26nullguard", "fl26nullguard2", "fl26nullguard4", "fl26nullguard5",
                    "fl26nullguard7", "fl26nullguard8", "fl26nullguard9", "fl26nullguard10",
-                   "fl26nullguard11", "fl26nullguard12"],
+                   "fl26nullguard11", "fl26nullguard12", "fl26nullguard13"],
     "fl26lateguards": ["fl26superguard", "fl26resultsguard", "fl26ctlguard", "fl26kitguard"],
 }
 # modules a shipped one replaced, not bundled into it: an old install still has their line, the
