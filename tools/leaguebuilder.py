@@ -6526,7 +6526,7 @@ def logo_files(cid):
 def crest_files(tid):
     """... of team tid's crest (lbassets.club_crest)"""
     import mkcrests
-    return ["common/render/symbol/flag/e_%06d%s.png" % (tid, suf) for suf, _px in mkcrests.FLAG_SIZES]
+    return ["common/render/symbol/flag/e_%06d%s.png" % (tid, suf) for suf, _px in mkcrests.flag_sizes(tid)]
 
 
 def flag_files(fid):

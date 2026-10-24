@@ -12,6 +12,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import leaguebuilder as B
 import lbassets
+import mkcrests
 
 N = 0
 
@@ -57,8 +58,9 @@ def main():
         ok("a crest picture wins over the shirt",
            all(same(os.path.join(cr, "e_005139_r%s.png" % s), os.path.join(nc, "e_005139_r%s.png" % s)) for s in sizes))
         ok("a club only renamed keeps the game's crest", not os.path.exists(os.path.join(cr, "e_001936_r.png")))
+        # a club of the game: also its light and dark versions (B221)
         ok("each under its own team id", sorted(os.listdir(cr)) == sorted(
-            "e_%06d_r%s.png" % (t, s) for t in (2452, 2468, 5139) for s in sizes))
+            "e_%06d%s.png" % (t, s) for t in (2452, 2468, 5139) for s, _px in mkcrests.flag_sizes(t)))
         print("replaced shield: ok")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
