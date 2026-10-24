@@ -421,6 +421,13 @@ come with it instead.
   not a confederation champion, and the clubs of UEFA and CONMEBOL keep theirs. (Thanks
   Micarodvzla22)
 
+- **A Master League crashed in December (FL_2026.exe+0x135a384) when the game picked the clubs of
+  next year's pre-season friendly cup (B223).** The pick takes clubs from a list of candidates
+  until the cup is full and never checked that the list had run out; with too few candidates it
+  read below the list. Seen three times out of three from one World Modpack career, day 346-348.
+  fl26nullguard13 (in fl26guards) now stops the pick when the candidates are used up, and the
+  game then fills or skips the cup the way it already does when a list is short.
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
