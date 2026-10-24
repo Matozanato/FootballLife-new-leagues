@@ -28,9 +28,9 @@ Modes (the default is "all"):
             READ): FL_2026.exe, download\data_s2526*.cpk + data_extra*.cpk (for the first-start
             table unpack), SiderAddons with a sider.ini from before Mod Studio
             (sider_ini_backups, lines with "fl26" dropped), the modules without ours, every
-            content server's map files without our lines, the one kit the kit library lends
-            numbers from; an empty --apdata with settings.json = {"game": <copy>} only (without
-            it Mod Studio guesses the game folder from the registry: E:\instalacija here); a
+            content server's map files without our lines, the kits the kit library lends
+            numbers from (B214: the first, a light and a dark one); an empty --apdata with
+            settings.json = {"game": <copy>} only (without it Mod Studio guesses the game folder from the registry: E:\instalacija here); a
             save folder of its own (FL26_SAVE_ROOT) -- never Documents\KONAMI.
   run       must run in the interactive session (session 1): starts the exe with APPDATA =
             --apdata, FL26_SAVE_ROOT = the copy's, FL26_DIR/EXE/SIDER unset; waits for the
@@ -143,11 +143,39 @@ def numbers_kit_src(lib):
             subs[:] = [s for s in subs if not (s.lower().startswith("_fl26") or s.lower() == "modpack")]
         if os.path.basename(d).lower() == "p1":
             p1s.append((d, files))
+    kits = numbers_kits_src(lib, p1s, 1)
+    return kits[0] if kits else None
+
+
+def numbers_kits_src(lib, p1s=None, most=None):
+    """B214: the kits the library lends numbers from, as lbservers.numbers_kits picks them (the
+    first, a light and a dark one), on the library without our folders"""
+    import kitpics, lbservers
+    if p1s is None:
+        p1s = []
+        for d, subs, files in os.walk(lib):
+            if os.path.normcase(d) == os.path.normcase(lib):
+                subs[:] = [s for s in subs if not (s.lower().startswith("_fl26") or s.lower() == "modpack")]
+            if os.path.basename(d).lower() == "p1":
+                p1s.append((d, files))
+    out, want, seen = [], {"light", "dark"}, 0
     for d, files in sorted(p1s):
         names = [f.lower() for f in files]
-        if all(any(n.endswith(s + ".ftex") for n in names) for s in ("_back", "_leg", "_name")):
-            return os.path.dirname(d)
-    return None
+        if not all(any(n.endswith(s + ".ftex") for n in names) for s in ("_back", "_leg", "_name")):
+            continue
+        if not out:
+            out.append(os.path.dirname(d))
+        if most == 1 or not want or seen >= lbservers.LOOK:
+            break
+        seen += 1
+        c = kitpics.ink(d)
+        lum = kitpics._lum(c) if c else None
+        kind = None if lum is None else "light" if lum >= lbservers.LIGHT else "dark" if lum <= lbservers.DARK else None
+        if kind in want:
+            want.discard(kind)
+            if os.path.dirname(d) not in out:
+                out.append(os.path.dirname(d))
+    return out
 
 
 class Plan:
@@ -270,9 +298,9 @@ def prepare(cfg, dry=False, reset=False):
                 pl.copy(p, os.path.join(sider, "content", s, f))
     pl.mkdir(os.path.join(sider, "livecpk"))
     lib = os.path.join(content, "kit-server")
-    kit = numbers_kit_src(lib) if os.path.isdir(lib) else None
-    if kit:
-        pl.copytree(kit, os.path.join(sider, "content", "kit-server", os.path.relpath(kit, lib)))
+    kits = numbers_kits_src(lib) if os.path.isdir(lib) else []
+    for k in kits:
+        pl.copytree(k, os.path.join(sider, "content", "kit-server", os.path.relpath(k, lib)))
     # -- the player's own save folder (FL26_SAVE_ROOT), never Documents\KONAMI
     save = os.path.join(cfg["save_root"], "save")
     if cfg.get("saves_from"):
@@ -286,8 +314,8 @@ def prepare(cfg, dry=False, reset=False):
     pl.mkdir(cfg["shots"])
     pl.mkdir(os.path.join(root, "results"))
     say("%s %d files, %s into %s (%d lines of ours left out; sider.ini from %s; %d Sider roots as empty "
-        "folders; numbers kit %s)" % ("would copy" if dry else "copied", pl.n, gb(pl.bytes), root, pl.dropped,
-                                      ini_src, roots, os.path.relpath(kit, lib) if kit else "none"))
+        "folders; numbers kits %s)" % ("would copy" if dry else "copied", pl.n, gb(pl.bytes), root, pl.dropped,
+                                       ini_src, roots, ", ".join(os.path.relpath(k, lib) for k in kits) or "none"))
     if cfg.get("make_other"):
         out = os.path.join(root, "other-%s.zip" % cfg["make_other"])
         if dry:

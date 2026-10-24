@@ -188,6 +188,16 @@ def main():
         log = []
         S.write(pm, b, log=log.append, root=w, redraw=True)
         ok("a Build after it draws nothing", any("(0 new or changed)" in l for l in log))
+        # B214: a kit of drawing 2 (one numbers kit for all) the same way
+        two = S._stamps(m911[3], m911[4], m911[5], S.numbers_kits(lib, "My world"), lib, drawing=2)[0]
+        put(os.path.join(red, "kitmaker.txt"), two + "\n")
+        log = []
+        S.write(pm, b, log=log.append, root=w)
+        ok("a kit of drawing 2: kept at a Switch on", any("(0 new or changed)" in l for l in log))
+        log = []
+        S.write(pm, b, log=log.append, root=w, redraw=True)
+        ok("a kit of drawing 2: drawn again at a Build", any("(1 new or changed)" in l for l in log)
+           and open(os.path.join(red, "kitmaker.txt"), encoding="utf-8").read().strip() != two)
         with open(os.path.join(b, S.KITS, "map.txt"), "a", encoding="utf-8") as f:
             f.write('912, "Mine\\Blue"\n911, "Gone\\Red"\n')
         os.makedirs(os.path.join(b, S.KITS, "Mine", "Blue"))

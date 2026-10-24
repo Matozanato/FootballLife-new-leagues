@@ -95,6 +95,49 @@ def main():
            "Collar=7   ; 1 to 130" in cfg and "KitFile=u72001p1\n" in cfg and "_srm" not in cfg
            and "BackNumbersFile=u72001p1_back" in cfg and "ShirtColor1=#c81414" in cfg)
 
+        # B214: numbers that stand out from the shirt. Three library kits with real number
+        # textures: dark blue (the first by name, as Aarhus), grey, white
+        def numbers_kit(name, colour):
+            d = os.path.join(t, "lib14", "League", name, "p1")
+            os.makedirs(d)
+            open(os.path.join(d, "config.txt"), "w").write("BackNumbersFile=x_back\n")
+            im = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
+            ImageDraw.Draw(im).rectangle((40, 40, 200, 200), fill=colour + (255,))
+            png = os.path.join(t, name + ".png")
+            im.save(png)
+            f = K.dds_to_ftex(K.dds_bytes(png))
+            for s in K.NUMBER_FILES:
+                open(os.path.join(d, "u1p1%s.ftex" % s), "wb").write(f + name.encode())
+            return os.path.dirname(d)
+        dark = numbers_kit("A Dark", (8, 32, 60))
+        grey = numbers_kit("B Grey", (90, 90, 90))
+        light = numbers_kit("C Light", (250, 250, 250))
+        c = K.ink(os.path.join(dark, "p1"))
+        ok("ftex_image/ink: the colour of the numbers read back off the .ftex",
+           c is not None and all(abs(a - b) <= 8 for a, b in zip(c, (8, 32, 60))))
+        ok("ink: a file that is not an .ftex is None", K.ink(os.path.join(lend, "p1")) is None)
+        ok("contrast: black on white 21, a colour on itself 1",
+           round(K.contrast("#000000", "#ffffff")) == 21 and K.contrast((9, 9, 9), "#090909") == 1)
+        ok("pick_numbers: a dark shirt gets the light numbers",
+           K.pick_numbers([dark, light], "p1", "#08203c") == light)
+        ok("pick_numbers: a light shirt keeps the first ones",
+           K.pick_numbers([dark, light], "p1", "#e3e3e3") == dark)
+        ok("pick_numbers: one kit, a folder or none",
+           K.pick_numbers([dark], "p1", "#08203c") == dark and K.pick_numbers(dark, "p2", "#000000") == dark
+           and K.pick_numbers([], "p1", "#000000") is None)
+        navy = os.path.join(t, "pics", "Navy")
+        os.makedirs(navy)
+        picture(os.path.join(navy, "p1.png"), (8, 32, 60))
+        out14 = os.path.join(t, "out", "Navy")
+        K.make_kit(K.pictures(navy), 72005, out14, [dark, light])
+        ok("make_kit: a navy shirt wears the white numbers",
+           open(os.path.join(out14, "p1", "u72005p1_back.ftex"), "rb").read().endswith(b"C Light"))
+        import lbservers
+        lib14 = os.path.join(t, "lib14")
+        ok("numbers_kits: the first by name, then a light and a dark one (the first is dark already)",
+           lbservers.numbers_kits(lib14, "Ours") == [dark, light])
+        ok("numbers_kits: an empty library lends none", lbservers.numbers_kits(os.path.join(t, "pics"), "x") == [])
+
         bare = os.path.join(t, "out", "Bare")
         K.make_kit({"p1": pics["p1"]}, 72002, bare)
         cfg = open(os.path.join(bare, "p1", "config.txt")).read()

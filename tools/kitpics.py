@@ -160,6 +160,85 @@ def colours(path, n=3):
     return out[:n]
 
 
+# B214 (Dolokhov, 23.10.): one kit of the library lent its numbers to every drawn kit, and its
+# numbers have a colour of their own (the first by name, Aarhus, dark blue): on a dark shirt they
+# were not there. A few kits with numbers of different colours are lent now, and each drawn kit
+# takes the numbers that stand out from its shirt.
+FTEX_DDS = {4: (b"DXT5", None), 5: (b"DXT3", None), 6: (b"DXT5", None), 11: (b"DX10", 98)}   # 98: BC7
+CLEAR = 3.0                 # a contrast the first numbers kit keeps its place with (WCAG: large text)
+_INKS = {}
+
+
+def ftex_image(path):
+    """the picture of an .ftex (its first mip) as an RGBA Pillow image: the chunks put back
+    together, behind a DDS header Pillow reads (DXT5, DXT3, BC7)"""
+    from PIL import Image
+    b = open(path, "rb").read()
+    fmt, w, h, _mips = struct.unpack_from("<HHHH", b, 8)
+    off, _size, _c, _i, _f, n = struct.unpack_from("<IIIBBH", b, 0x40)
+    data = b""
+    for k in range(n):
+        cs, us, o = struct.unpack_from("<HHI", b, off + 8 * k)
+        part = b[off + o:off + o + cs]
+        data += zlib.decompress(part) if cs != us else part
+    if fmt not in FTEX_DDS:
+        raise ValueError("ftex format %d" % fmt)
+    four, dxgi = FTEX_DDS[fmt]
+    pf = struct.pack("<II4s5I", 32, 4, four, 0, 0, 0, 0, 0)
+    head = struct.pack("<4s7I", b"DDS ", 124, 0x81007, h, w, len(data), 0, 1) + b"\0" * 44 + pf \
+        + struct.pack("<5I", 0x1000, 0, 0, 0, 0)
+    if dxgi:
+        head += struct.pack("<5I", dxgi, 3, 0, 1, 0)
+    return Image.open(io.BytesIO(head + data)).convert("RGBA")
+
+
+def ink(src):
+    """the colour (r, g, b) of the back numbers in the kit folder src (a p1 or g1): the mean of
+    their solid pixels; None when there are none or the file cannot be read"""
+    if src in _INKS:
+        return _INKS[src]
+    out = None
+    try:
+        f = next((f for f in os.listdir(src) if f.lower().endswith("_back.ftex")), None)
+        if f:
+            im = ftex_image(os.path.join(src, f))
+            im.thumbnail((512, 512))
+            px = [p for p in im.getdata() if p[3] > 200]
+            if px:
+                out = tuple(round(sum(p[i] for p in px) / len(px)) for i in range(3))
+    except (OSError, ValueError, struct.error, zlib.error):
+        out = None
+    _INKS[src] = out
+    return out
+
+
+def _lum(c):
+    def ch(v):
+        v /= 255.0
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+    return 0.2126 * ch(c[0]) + 0.7152 * ch(c[1]) + 0.0722 * ch(c[2])
+
+
+def contrast(a, b):
+    """WCAG contrast of two colours (r, g, b) or #rrggbb: 1 (the same) to 21 (black on white)"""
+    a, b = [tuple(int(c[i:i + 2], 16) for i in (1, 3, 5)) if isinstance(c, str) else c for c in (a, b)]
+    la, lb = sorted((_lum(a), _lum(b)), reverse=True)
+    return (la + 0.05) / (lb + 0.05)
+
+
+def pick_numbers(kits, var, shirt):
+    """of the numbers kits `kits` (folders, the first the usual one), the one whose numbers for
+    variant var stand out from the colour shirt: the first while its contrast is CLEAR, else
+    the one with the most"""
+    kits = [k for k in ([kits] if isinstance(kits, str) else kits or []) if numbers_source(k, var)]
+    if len(kits) < 2:
+        return kits[0] if kits else None
+    seen = [(contrast(c, shirt) if c else 0.0, k) for k in kits for c in [ink(numbers_source(k, var))]]
+    if seen[0][0] >= CLEAR:
+        return kits[0]
+    return max(seen, key=lambda s: s[0])[1]
+
+
 def numbers_source(kit, var):
     """the folder of `kit` to take a kit's number files and config from: its own variant if it
     has it, else its p1 (outfield) or g1 (goalkeeper), else any with a config"""
@@ -205,7 +284,8 @@ def config_text(src_dir, name, cols, numbers):
 
 def make_kit(pics, team_id, dst, numbers_kit=None):
     """write the kit-server folder dst for the pictures {var: path} of club team_id; -> the
-    variants written. numbers_kit: a library kit folder to take number files and config from"""
+    variants written. numbers_kit: a library kit folder to take number files and config from, or
+    a list of them, each variant taking the one whose numbers stand out from it (B214)"""
     os.makedirs(dst, exist_ok=True)
     done = []
     for var in sorted(pics, key=lambda v: (v[0] == "g", v)):
@@ -215,7 +295,8 @@ def make_kit(pics, team_id, dst, numbers_kit=None):
         path = pics[var]
         dds = open(path, "rb").read() if path.lower().endswith(".dds") else dds_bytes(path)
         open(os.path.join(vdir, name + ".ftex"), "wb").write(dds_to_ftex(dds))
-        src = numbers_source(numbers_kit, var)
+        cols = colours(path)
+        src = numbers_source(pick_numbers(numbers_kit, var, cols[0]), var)
         have = []
         if src:
             ftex = {f.lower(): f for f in os.listdir(src) if f.lower().endswith(".ftex")}
@@ -225,7 +306,7 @@ def make_kit(pics, team_id, dst, numbers_kit=None):
                     shutil.copy2(os.path.join(src, f), os.path.join(vdir, name + suf + ".ftex"))
                     have.append(suf)
         open(os.path.join(vdir, "config.txt"), "w", encoding="utf-8", newline="\r\n").write(
-            config_text(src, name, colours(path), len(have) == len(NUMBER_FILES)))
+            config_text(src, name, cols, len(have) == len(NUMBER_FILES)))
         done.append(var)
     shirts = [v for v in done if v.startswith("p")]
     gks = [v for v in done if v.startswith("g")]
