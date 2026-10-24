@@ -6302,6 +6302,64 @@ static int ko_sync(uint16_t reg, const char* why)
   return fixed;
 }
 
+/* B217: the same stale slots in the game's own knockouts. johnnythief's Europack career, second
+   season: Colombia's Apertura play-off (reg 160, Liga BetPlay DIMAYOR I Playoffs, May) had its
+   quarter-final slots still on the 2026 clubs while the 2027 clubs played the matches; the game
+   found 1 of the 4 winners, the semi-finals went on with no club and the second legs of 27 May
+   took the game down (0x141333485, as B181). The Clausura play-off (reg 161, December) held the
+   2026 clubs as well. So every knockout round of the round table (0x447ed20, 0x208 a record,
+   below 0x1f40 as 0x141579ee0 reads it) is looked at, but more narrowly than ko_sync: only a
+   slot whose two clubs and its unplayed first leg's two clubs are all real clubs and not the same
+   pair (either way round) -- a round not drawn yet, a "winner of tie n" and the game's own home
+   and away order are left alone -- and only in the record the game itself finds for that
+   regulation and kind (fixfind), never a leftover. A real club has the top four bits clear: a
+   slot of 0x4....... is the game's "n-th of that league" (a play-off's or a cup's entry: 4671 of
+   the 8000 slots of a second season, reg 11 0x45ec0001...), which the first test took for a club
+   and gave 154 slots of league play-offs (reg 112...) clubs of matches not theirs. And the first
+   leg must be that round's own match (+4 regulation, +6 kind): a round of the season to come
+   still names match ids the season since gave other competitions (reg 161 in May: 770e, a
+   Libertadores match). */
+#define RT_OFF  0x447ed20
+#define RT_REC  0x208
+#define RT_N    0x1f40
+static int real_club(uint32_t v) { return !(v >> 28) && (v & KO_TBD) != KO_TBD && (v >> 14); }
+static int ko_sync_all(const char* why)
+{
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!blk) return 0;
+  int fixed = 0;
+  for (uint32_t i = 0; i < RT_N; i++) {
+    unsigned char* rnd = blk + RT_OFF + (size_t)i * RT_REC;
+    uint16_t reg = *(uint16_t*)rnd;
+    uint32_t kind = *(uint32_t*)(rnd + 0x204) >> 26;
+    int n = ko_slots(rnd);
+    if (reg == 0 || reg == 0xffff || kind < 0x20 || n < 1 || n > 16) continue;
+    int here = 0;
+    for (int s = 0; s < n; s++) {
+      uint32_t* sl = ko_slot(rnd, s);
+      if (!real_club(sl[0]) || !real_club(sl[1])) continue;
+      unsigned char* m = ko_match(*(uint16_t*)(sl + 2));
+      if (!m || (m[7] & 0x40)) continue;            /* no first leg, or played */
+      if (*(uint16_t*)(m + 4) != reg || m[6] != kind) continue;   /* another competition's match */
+      uint32_t h = *(uint32_t*)(m + 0x14), a = *(uint32_t*)(m + 0x18);
+      if (!real_club(h) || !real_club(a)) continue;
+      if ((same_club(sl[0], h) && same_club(sl[1], a)) || (same_club(sl[0], a) && same_club(sl[1], h))) continue;
+      if (!here && ko_round(reg, kind) != rnd) break;   /* not the round the game uses */
+      here = 1;
+      if (fixed < 8)
+        logf("fl26swiss:   reg %u round %#x tie %d: slot %08x v %08x, its first leg %08x v %08x", (unsigned)reg,
+             (unsigned)kind, s, sl[0], sl[1], h, a);
+      sl[0] = h; sl[1] = a;
+      fixed++;
+    }
+  }
+  if (fixed)
+    logf("fl26swiss: %d knockout slot(s) of the game's competitions held another season's clubs; given "
+         "their matches' clubs (%s, day %d)", fixed, why, today());
+  return fixed;
+}
+
 /* ---- a country cup's draw: seeds meet unseeded clubs ----
  *
  * The game fills a cup's bracket strictly in the order of its entry list, top to bottom, and the
@@ -6582,6 +6640,7 @@ __declspec(dllexport) void fl26_swiss_ko_tick(void)
       for (int k = 0; k < g_nccup; k++)
         if (g_ccup[k].ko) ko_sync(g_ccup[k].ko, "day loop");
       ko_sync(UECL_KO, "day loop");
+      ko_sync_all("day loop");
       for (int i = 0; i < 3; i++) lb_keep(&CUPS[i], d);
     }
   }
