@@ -83,6 +83,7 @@ def main(base):
     ok("Check the plan says it", "and the first %d of this league: 48 clubs" % (48 - p["cup_two"]) in said)
     ok("plan: the Coupe de France (%d) is the cup of the region" % COUPE, p.get("cupfield") and p["cupfield"][0] == COUPE)
     ok("plan: National joins it, 48 clubs (%s)" % p.get("cup_join"), p.get("cup_join") == 48)
+    ok("Ligue 1 18 + Ligue 2 20 (its 21st entry is no club of the league): 38", p.get("cup_two") == 38)
     line = next(L for L in leagues if L["id"] == p["rid"])
     ok("its line: cup=, cuptop=, cuplow= the game's (%s)" % {k: line.get(k) for k in ("cup", "cuptop", "cuplow")},
        (line.get("cup"), line.get("cuptop"), line.get("cuplow"), line.get("cupall")) == (COUPE, LIGUE1, LIGUE2, 1))
