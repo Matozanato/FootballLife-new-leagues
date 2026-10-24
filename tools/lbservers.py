@@ -586,6 +586,45 @@ def restamp(pl, sider, root, log=print):
     return n
 
 
+# B227 (antonimus, 24.10.): the Libertadores' phases 1 and 2 of a modern CONMEBOL world are a
+# competition of their own (leaguebuilder.libq, "Pre-Libertadores"), so the Scoreboard Server,
+# keyed by regulation id, gave their matches no board where the game's qualifying round has one.
+# They wear the board your map gives that round (regulation 8): a phase's regulation and its ties'
+# (reg + 1024 * k, mkeuropo.prerounds_single), each a line of ours, gone with the next Switch on.
+LIBQ_KEY, LIBQ_PARENT = "conmebol:FL_LIBQ", 8
+LIBQ_TIES = (("reg", 3), ("reg2", 8))          # leaguebuilder.libq: [(m1, 3), (m2, 8)]
+
+
+def helper_boards(pl, path, taken=()):
+    """[(regulation id, map line)] giving the Pre-Libertadores' regulations the folders the map at
+    path gives the game's Libertadores qualifying round -- every one of them, the server picks one
+    of a competition's boards at random -- or [] when the world has no such phases or the map no
+    line for that round; a regulation a line of yours (or taken) keys already is left out"""
+    ids = (pl.get("cup_ids") or {}).get(LIBQ_KEY) or {}
+    if not ids or not os.path.isfile(path):
+        return []
+    boards, have = [], set()                       # the round's folders; keys of your own lines
+    for l in lbstadiums.read(path)[0]:
+        m = LINE.match(l)
+        if not m or m.group(1) or TAG in l:
+            continue
+        have.add(int(m.group(2)))
+        f = m.group(3).strip()
+        if int(m.group(2)) == LIBQ_PARENT and f and f not in boards:
+            boards.append(f)
+    out = []
+    for field, ties in LIBQ_TIES if boards else ():
+        reg = ids.get(field)
+        if not isinstance(reg, int):
+            continue
+        for k in range(ties + 1):
+            key = reg + 1024 * k
+            if key not in taken and key not in have:
+                out += [(key, "%d, %s   %s Pre-Libertadores (as %d)" % (key, f, TAG, LIBQ_PARENT))
+                        for f in boards]
+    return out
+
+
 def write(pl, sider, log=print, root=None, redraw=False):
     """the plan's kits and scoreboards into Kit Server and Scoreboard Server, and a kit made for
     every other new club with colours or a crest (root: the world's folder, for the crests);
@@ -664,6 +703,8 @@ def write(pl, sider, log=print, root=None, redraw=False):
                 mine.append((tid, '%d, "%s"   %s %s/%d made' % (tid, rel, TAG, league, k)))
             log("kits made from colours and crests: %d (%d new or changed)%s" % (
                 len(make), new, "" if numbers else "; no kit in the library lends back numbers, so the game's own are used"))
+        if what == "scoreboards":
+            mine += helper_boards(pl, os.path.join(root, file), {k for k, _t in mine})
         done.append(_map(os.path.join(root, file), mine, log, what, world, sider,
                          teams if what == "kits" else comps))
     # B129: the other folder's map too (content\kits or content\kit-server, the one not picked
