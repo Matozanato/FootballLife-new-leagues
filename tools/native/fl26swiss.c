@@ -6360,6 +6360,103 @@ static int ko_sync_all(const char* why)
   return fixed;
 }
 
+/* B187: ko_sync_all mends a round before it is played; a career of 0.2.4 may have played it
+   already. Ibiss K.B.'s Europack Become a Legend career, 19 May 2029: reg 160's quarter-finals
+   (13/16 May) were played by the 2029 clubs while their slots held older ones, the game found 1
+   of the 4 winners, and the semi-finals of 23/27 May stood with no club (0xffffffff) -- the
+   game went down past Skip Match (0x141333485, FL26 2.2). So a played tie whose slot is not its
+   first leg's pair (both real clubs, the round's own match, the round the game uses) gets the
+   leg's clubs, its winner is worked out from the legs (goals +0x1c/+0x1f, extra time
+   +0x1d/+0x20, penalties +0x1e/+0x21; level after penalties too = away goals, else left alone)
+   and written where the next tie (slot +0x10: reg | kind << 16 | tie << 22, which names its two
+   sources at +0x18/+0x1c) still has no club: its slot and its unplayed legs. */
+static int ko_goals(const unsigned char* m, int side) { return m[0x1c + 3 * side] + m[0x1d + 3 * side]; }
+static int ko_winner(const uint32_t* sl, uint32_t* w)
+{
+  const uint16_t* ids = (const uint16_t*)(sl + 2);
+  unsigned char* m1 = ko_match(ids[0]);
+  if (!m1 || !(m1[7] & 0x40)) return 0;
+  uint32_t h = *(uint32_t*)(m1 + 0x14), a = *(uint32_t*)(m1 + 0x18);
+  int gh = ko_goals(m1, 0), ga = ko_goals(m1, 1), ph = m1[0x1e], pa = m1[0x21], awh = 0, awa = ga;
+  if (ids[1] != 0xffff) {
+    unsigned char* m2 = ko_match(ids[1]);
+    if (!m2 || !(m2[7] & 0x40)) return 0;           /* second leg still to come */
+    if (!same_club(*(uint32_t*)(m2 + 0x14), a) || !same_club(*(uint32_t*)(m2 + 0x18), h)) return 0;
+    gh += ko_goals(m2, 1); ga += ko_goals(m2, 0);
+    awh = ko_goals(m2, 1);
+    ph = m2[0x21]; pa = m2[0x1e];
+  }
+  if (gh == ga) { gh = ph; ga = pa; }
+  if (gh == ga && ids[1] != 0xffff) { gh = awh; ga = awa; }
+  if (gh == ga) return 0;
+  *w = gh > ga ? h : a;
+  return 1;
+}
+static int ko_put(unsigned char* m, int side, uint32_t w)
+{
+  uint32_t* f = (uint32_t*)(m + 0x14 + 4 * side);
+  if (*f != 0xffffffffu) return 0;
+  *f = w;
+  return 1;
+}
+static int ko_heal_played(const char* why)
+{
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!blk) return 0;
+  int healed = 0;
+  for (uint32_t i = 0; i < RT_N; i++) {
+    unsigned char* rnd = blk + RT_OFF + (size_t)i * RT_REC;
+    uint16_t reg = *(uint16_t*)rnd;
+    uint32_t kind = *(uint32_t*)(rnd + 0x204) >> 26;
+    int n = ko_slots(rnd);
+    if (reg == 0 || reg == 0xffff || kind < 0x20 || n < 1 || n > 16) continue;
+    int here = 0;
+    for (int s = 0; s < n; s++) {
+      uint32_t* sl = ko_slot(rnd, s);
+      if (!real_club(sl[0]) || !real_club(sl[1])) continue;
+      unsigned char* m = ko_match(*(uint16_t*)(sl + 2));
+      if (!m || !(m[7] & 0x40)) continue;           /* not played: ko_sync_all's */
+      if (*(uint16_t*)(m + 4) != reg || m[6] != kind) continue;
+      uint32_t h = *(uint32_t*)(m + 0x14), a = *(uint32_t*)(m + 0x18);
+      if (!real_club(h) || !real_club(a)) continue;
+      if ((same_club(sl[0], h) && same_club(sl[1], a)) || (same_club(sl[0], a) && same_club(sl[1], h))) continue;
+      if (!here && ko_round(reg, kind) != rnd) break;
+      here = 1;
+      uint32_t w;
+      if (!ko_winner(sl, &w)) continue;
+      uint32_t next = sl[4];
+      if ((next & 0xffff) != reg) continue;          /* a final: nothing comes after it */
+      unsigned char* rnd2 = ko_round(reg, (next >> 16) & 0x3f);
+      int t = (int)(next >> 22);
+      if (t >= ko_slots(rnd2)) continue;
+      uint32_t* ns = ko_slot(rnd2, t);
+      int side = ns[6] == sl[3] ? 0 : ns[7] == sl[3] ? 1 : -1;
+      if (side < 0) continue;
+      uint16_t* nid = (uint16_t*)(ns + 2);
+      unsigned char* n1 = ko_match(nid[0]);
+      unsigned char* n2 = ko_match(nid[1]);
+      if (!n1 || (n1[7] & 0x40) || *(uint16_t*)(n1 + 4) != reg) continue;   /* the next tie is under way */
+      uint32_t f = *(uint32_t*)(n1 + 0x14 + 4 * side);
+      if (f != 0xffffffffu && !same_club(f, w)) continue;   /* someone is there already */
+      int put = ko_put(n1, side, w);
+      if (n2 && !(n2[7] & 0x40)) put += ko_put(n2, 1 - side, w);
+      logf("fl26swiss:   reg %u round %#x tie %d (played): slot %08x v %08x, its first leg %08x v %08x; "
+           "winner %08x to round %#x tie %d (%s, %d leg(s) given it)", (unsigned)reg, (unsigned)kind, s,
+           sl[0], sl[1], h, a, w, (unsigned)((next >> 16) & 0x3f), t, side ? "away" : "home", put);
+      sl[0] = h; sl[1] = a;
+      ns[side] = w;
+      healed++;
+    }
+  }
+  if (healed) {
+    logf("fl26swiss: %d played knockout tie(s) had another season's clubs in their slot; winners put "
+         "through (%s, day %d)", healed, why, today());
+    sched_rebuild("played knockout healed");
+  }
+  return healed;
+}
+
 /* ---- a country cup's draw: seeds meet unseeded clubs ----
  *
  * The game fills a cup's bracket strictly in the order of its entry list, top to bottom, and the
@@ -6640,6 +6737,7 @@ __declspec(dllexport) void fl26_swiss_ko_tick(void)
       for (int k = 0; k < g_nccup; k++)
         if (g_ccup[k].ko) ko_sync(g_ccup[k].ko, "day loop");
       ko_sync(UECL_KO, "day loop");
+      ko_heal_played("day loop");
       ko_sync_all("day loop");
       for (int i = 0; i < 3; i++) lb_keep(&CUPS[i], d);
     }
