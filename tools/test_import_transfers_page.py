@@ -84,6 +84,23 @@ def main(base):
         ok("one message: 3 move, 1 already there, 1 line left out", len(said) == 1 and said[0][0] == "info"
            and said[0][1].startswith("3 ") and "1 are at that club" in said[0][1] and "1 lines left out" in said[0][1])
         print("#", said[0][1].replace("\n", " | "))
+
+        # in another language the lines left out and the header error read in it too
+        from modstudio import i18n
+        i18n.set_language("es")
+        del said[:]
+        with open(csvp, "w", encoding="utf-8", newline="") as f:
+            f.write("player;to\nNobody At All;%d\n" % club_a)
+        page.import_transfers()
+        ok("es: a line left out reads in Spanish", len(said) == 1
+           and "línea 2: Nobody At All -- ningún jugador con ese nombre" in said[0][1])
+        del said[:]
+        with open(csvp, "w", encoding="utf-8", newline="") as f:
+            f.write("who;where\nx;y\n")
+        page.import_transfers()
+        ok("es: the header error reads in Spanish", len(said) == 1 and said[0][0] == "error"
+           and said[0][1].startswith("la primera línea necesita una columna player"))
+        i18n.set_language("en")
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("1..%d" % N)

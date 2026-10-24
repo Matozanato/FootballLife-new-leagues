@@ -13,7 +13,7 @@ import lbplayers as P
 import leaguebuilder as B
 import playeredit as E
 from .. import theme
-from ..i18n import _
+from ..i18n import _, tr
 from ..ui import hint, row, ask, error, info, section
 from .builder import BuilderPage
 
@@ -1453,11 +1453,11 @@ class Players(BuilderPage):
         try:
             got, err = P.import_transfers(p, players, clubs)
         except (P.Error, OSError, ValueError, UnicodeDecodeError) as e:
-            error(self, title, str(e) + "\n\n" + _("The first line names the columns: player (his name or id), "
+            error(self, title, tr(str(e)) + "\n\n" + _("The first line names the columns: player (his name or id), "
                                                   "to (the club he joins) and, if you like, from (his club now)."))
             return
         if not got:
-            error(self, title, _("Nothing imported:") + "\n\n" + "\n".join(err[:20]))
+            error(self, title, _("Nothing imported:") + "\n\n" + "\n".join(tr(x) for x in err[:20]))
             return
         pl = self.project.players()
         moved = stay = 0
@@ -1492,7 +1492,7 @@ class Players(BuilderPage):
             text += "\n\n" + (_("More than %d players at these clubs: Build leaves out the last ones to come.")
                               % P.CLUB_MAX) + "\n" + "\n".join(full[:15])
         if err:
-            text += "\n\n" + _("%d lines left out:") % len(err) + "\n" + "\n".join(err[:20])
+            text += "\n\n" + _("%d lines left out:") % len(err) + "\n" + "\n".join(tr(x) for x in err[:20])
             if len(err) > 20:
                 text += "\n..."
         info(self, title, text)

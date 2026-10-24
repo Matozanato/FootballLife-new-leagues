@@ -2393,6 +2393,38 @@
   [
    "^NOTE: (\\d+) trophy\\(ies\\) of (\\S+) -- the game has no FL26 Entrance\\.lua in modules, so they are not shown$",
    "NOTE : \\1 trophée(s) de \\2 -- le jeu n'a pas l'Entrance.lua de FL26 dans modules, ils ne sont donc pas montrés"
+  ],
+  [
+   "^line (\\d+): ",
+   "ligne \\1 : "
+  ],
+  [
+   " -- no club of that name in the world$",
+   " -- aucun club de ce nom dans le monde"
+  ],
+  [
+   " -- (\\d+) clubs of that name$",
+   " -- \\1 clubs de ce nom"
+  ],
+  [
+   " -- no player of that name$",
+   " -- aucun joueur de ce nom"
+  ],
+  [
+   " -- (\\d+) players of that name; a from column tells them apart$",
+   " -- \\1 joueurs de ce nom ; une colonne from les distingue"
+  ],
+  [
+   " -- already on line (\\d+); that line counts$",
+   " -- déjà à la ligne \\1 ; c'est elle qui compte"
+  ],
+  [
+   "^the file is empty$",
+   "le fichier est vide"
+  ],
+  [
+   "^the first line needs a column player \\(or name\\) and a column to \\(or club\\); it has: ",
+   "la première ligne doit avoir une colonne player (ou name) et une colonne to (ou club) ; elle a : "
   ]
  ]
 }
