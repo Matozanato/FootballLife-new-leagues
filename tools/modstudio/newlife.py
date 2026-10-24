@@ -278,6 +278,70 @@ def who(r):
     return {f: str(r[f]).strip() for f in P.IDENT if str(r.get(f) or "").strip()}
 
 
+def _num(x):
+    try:
+        return int(str(x).strip())
+    except ValueError:
+        return None
+
+
+def _full_name(a, b):
+    """P.same_name, with a first name in full on both sides the same one: the global look-up
+    below has no club to narrow it down: "Lucas Ribeiro" is not "Luan Ribeiro" there"""
+    if not P.same_name(a, b):
+        return False
+    wa, wb = [P._letters(w) for w in P._words(a)], [P._letters(w) for w in P._words(b)]
+    return not (len(wa) >= 2 and len(wb) >= 2 and min(len(wa[0]), len(wb[0])) > 1
+                and wa[0] != wb[0] and sorted(wa) != sorted(wb))
+
+
+_GAME_IDS = {}
+
+
+def game_twin(rel, db):
+    """twin(row) -> the game's id (text) of the player a release row is when the release gives
+    none, or "". B102 (David 17.10., JamesNotLike 19.10., Cala79 24.10.): NewLife 1.5b8 names no
+    game id for some 1100 players the game has -- Elliot Anderson at Manchester City, the game's
+    at Nottingham Forest -- and each became a new player beside the game's, who lost his club and
+    was a free agent: 447 such pairs in one world. The same player: the same full name, an age a
+    year apart at most (the release's season and the game's), a height 3 cm apart at most, on
+    the same side of the goalkeeper line; one player of the game and one row of the release so,
+    and nobody the release names by his id. A name and nothing else is too little."""
+    key = (id(rel), hash(bytes(db.players)))           # one release and one set of tables: read once
+    if key in _GAME_IDS and _GAME_IDS[key][0] is rel:
+        return _GAME_IDS[key][1]
+    rows = [r for v in rel.squads.values() for r in v]
+    named = {str(_num(r.get("game_id"))) for r in rows if _num(r.get("game_id")) is not None}
+    by_surname = collections.defaultdict(list)
+    for pid in db.index:
+        w = P._words(db.name(pid))
+        if w and str(pid) not in named:
+            by_surname[P._letters(w[-1])].append(pid)
+    show = lambda pid, f: P.E.show(f, P.E.getf(db.players[db.index[pid]:db.index[pid] + P.P_REC], f))
+    field = lambda pid, f: _num(show(pid, f))
+    found = {}
+    for r in rows:
+        g = _num(r.get("game_id"))
+        if g is not None and g in db.index and P.same_player(r["name"], db.name(g)):
+            continue
+        w = P._words(r.get("name") or "")
+        age, cm = _num(r.get("Age")), _num(r.get("Height (cm)"))
+        if not w or age is None or cm is None:
+            continue
+        hit = [p for p in by_surname.get(P._letters(w[-1]), ())
+               if _full_name(r["name"], db.name(p))
+               and field(p, "Age") is not None and abs(field(p, "Age") - age) <= 1
+               and field(p, "Height (cm)") is not None and abs(field(p, "Height (cm)") - cm) <= 3
+               and not P.keeper_side(r.get("Registered Position") or "", show(p, "Registered Position"))]
+        if len(hit) == 1:
+            found[id(r)] = str(hit[0])
+    twice = collections.Counter(found.values())
+    found = {k: g for k, g in found.items() if twice[g] == 1}
+    _GAME_IDS.clear()
+    _GAME_IDS[key] = (rel, lambda r: found.get(id(r), ""))
+    return _GAME_IDS[key][1]
+
+
 def same_club(info, tid, c):
     """whether team tid of the tables in use (info = leaguebuilder.game_info) is NewLife club c
     (a clubs.csv row): a club, not a national team, of the release's country, or failing that
@@ -412,7 +476,7 @@ def add_league(recipe, rel, L, legs=2, info=None, custom=False, name=None, more=
     if game:
         recipe["leagues"][-1]["game_clubs"] = [_game_entry(info, len(clubs) + j, t) for j, t in enumerate(game)]
     pl = recipe.setdefault("players", {})
-    mover, db = _movers(recipe, info)
+    mover, db = _movers(recipe, info, rel)
     proto = db.proto() if db is not None else []
     league_ovr = [P.overall(r) for i in clubs for r in rel.squad(i)]
     stayed = elsewhere = 0
@@ -429,11 +493,12 @@ def add_league(recipe, rel, L, legs=2, info=None, custom=False, name=None, more=
     return name, stayed, elsewhere
 
 
-def _movers(recipe, info):
+def _movers(recipe, info, rel=None):
     """(mover, the game's squads or None) for the players of NewLife clubs put in the recipe:
     mover(row) says what happens to the player of a release row (see add_league)"""
     pl = recipe.setdefault("players", {})
     db = P.Squads(info["base"]) if info and info.get("base") else None
+    twin = game_twin(rel, db) if rel is not None and db is not None else (lambda r: "")
     national = (info or {}).get("national") or set()
     taken = {str(r) for c in pl.values() for r in c.get("join") or []}   # moved by an earlier league
     leaving = collections.Counter()
@@ -447,6 +512,8 @@ def _movers(recipe, info):
         clubs, which is the thing the move exists to prevent. The third value says whether a
         kept player is somebody another league already has."""
         g = str(r.get("game_id", "")).strip()
+        if db is not None and not (g.isdigit() and int(g) in db.index and P.same_player(r["name"], db.name(int(g)))):
+            g = twin(r)                       # B102: the release has no id for him, the game has him
         if db is None or not g.isdigit() or int(g) not in db.index:
             return "copy", None, False
         if not P.same_player(r["name"], db.name(int(g))):
@@ -588,7 +655,7 @@ def put_club(recipe, rel, x, k, cid, info=None):
     else:
         x.pop("game_clubs", None)
     pl = recipe.setdefault("players", {})
-    mover, db = _movers(recipe, info)
+    mover, db = _movers(recipe, info, rel)
     proto = db.proto() if db is not None else []
     mates = [j for j, y in rel.clubs.items() if y.get("league") and y.get("league") == c.get("league")]
     league_ovr = [P.overall(r) for j in mates for r in rel.squad(j)]
@@ -1154,6 +1221,7 @@ def _game_squads(recipe, rel, info, squads, new_players=True):
     n = collections.Counter()
     plan = {}
     level = game_scale(rel, db, squads.values())
+    twin = game_twin(rel, db)
     # B67: a player of the game the release has at a club but left out of its squad (rel.squad
     # keeps the best P.SQUAD: Barcelona of NewLife 1.4 had 60, its B team in it, and Joao Cancelo
     # was 42nd) stays at the club he has: taken away from it, nobody took him and he was a free
@@ -1184,6 +1252,8 @@ def _game_squads(recipe, rel, info, squads, new_players=True):
                 g = str(one[0]) if len(one) == 1 else ""
                 if g:
                     r = dict(r, name=db.name(one[0]))
+            if not (g.isdigit() and int(g) in db.index and P.same_player(r["name"], db.name(int(g)))):
+                g = twin(r) or g                  # B102: at another club of the game, or at none
             if g.isdigit() and int(g) in db.index and P.same_player(r["name"], db.name(int(g))):
                 if int(g) in have:
                     keep.append(int(g))
