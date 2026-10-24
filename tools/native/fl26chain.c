@@ -203,7 +203,7 @@ static int reg_list(uint16_t id, uint32_t* out)
  * game fills a domestic cup from the leagues, not from the entries. So the cup is written with
  * the top league's clubs and the first clubs of the one below, `max` in all (0 = no cap). */
 /* B228: `cupthird=` on a cupall line names a new third division whose first clubs join the two
- * shipped ones, up to cupn -- the Coupe de France of Ligue 1, Ligue 2 and the first 12 of
+ * shipped ones, up to cupn -- the Coupe de France of Ligue 1, Ligue 2 and the first 9 of
  * National, 48 (jibibi 2026-10-24); the League Builder raised the cup's bracket to that field. */
 typedef struct { uint16_t cup, top, low, all, max, third; } cup_t;
 static cup_t    g_cup[MAX_CUPS]; static int g_ncup = 0;

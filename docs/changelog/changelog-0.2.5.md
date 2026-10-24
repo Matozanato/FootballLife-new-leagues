@@ -8,7 +8,7 @@ come with it instead.
 - **A third division can play the country's cup (the Coupe de France of the lower leagues).**
   For a new league right under one of the game's second divisions, like National under Ligue 2,
   **Edit league > Its best clubs play the country's cup too** puts its first clubs into the
-  game's cup next to the two divisions it already has: Ligue 1 18 + Ligue 2 20 + the first 10 of
+  game's cup next to the two divisions it already has: Ligue 1 18 + Ligue 2 21 + the first 9 of
   National = 48, as the real Coupe de France takes the lower leagues (jibibi). 48 is the most the
   game's cup list holds; with fewer clubs below, the cup takes 44, 40 or 36, the fields the cup
   screens draw. Build raises the cup's bracket to that field and `fl26chain` fills it. Off by
