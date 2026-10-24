@@ -786,7 +786,7 @@
   "Unsaved changes": "Cambios sin guardar",
   "Competition IDs": "IDs de competiciones",
   "the game's tables": "las tablas del juego",
-  "Every league and cup in %s. Competition ID is what scoreboards, kits and the competition maps of Sider ask for; regulation IDs are the ones in sider.log and the world file. New = made by this world.": "Todas las ligas y copas de %s. El ID de competición es el que piden los marcadores, las equipaciones y los mapas de competiciones de Sider; los IDs de reglamento son los de sider.log y del archivo del mundo. Nueva = creada por este mundo.",
+  "Every league and cup in %s. Regulation IDs are what scoreboards, kits and the competition maps of Sider ask for (sider.log calls them tournament_id), one for each stage; Competition ID is the game's own number for the competition. New = made by this world.": "Todas las ligas y copas de %s. Los IDs de reglamento son los que piden los marcadores, las equipaciones y los mapas de competiciones de Sider (sider.log los llama tournament_id), uno por cada fase; el ID de competición es el número propio del juego para la competición. Nueva = creada por este mundo.",
   "Find...": "Buscar...",
   "Kind": "Tipo",
   "Competition ID": "ID de competición",

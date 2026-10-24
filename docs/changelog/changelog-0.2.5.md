@@ -469,6 +469,12 @@ come with it instead.
   the keeper/outfield side match, one of each; he moves to his NewLife club instead. Bring the
   game's leagues makes about 190 fewer copies with 1.5b8. (Thanks David.BDJ, JamesNotLike, Cala79)
 
+- **Leagues > More > Competition IDs pointed scoreboards at the wrong column (B225).** Its note said
+  scoreboards, kits and Sider's competition maps go by the Competition ID; they go by the regulation
+  ids (sider.log's tournament_id: Liga FPD is competition 179, regulation 113, and the game asks for
+  113). The pickers in Other content already listed regulation ids; the note now says so too.
+  (Thanks Shawn)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.

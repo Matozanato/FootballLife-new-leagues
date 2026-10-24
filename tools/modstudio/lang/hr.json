@@ -786,7 +786,7 @@
   "Unsaved changes": "Nespremljene promjene",
   "Competition IDs": "ID-evi natjecanja",
   "the game's tables": "tablicama igre",
-  "Every league and cup in %s. Competition ID is what scoreboards, kits and the competition maps of Sider ask for; regulation IDs are the ones in sider.log and the world file. New = made by this world.": "Sve lige i kupovi u %s. ID natjecanja traže semafori, dresovi i Siderove mape natjecanja; ID-evi pravilnika su oni iz sider.loga i datoteke svijeta. Novo = napravio ovaj svijet.",
+  "Every league and cup in %s. Regulation IDs are what scoreboards, kits and the competition maps of Sider ask for (sider.log calls them tournament_id), one for each stage; Competition ID is the game's own number for the competition. New = made by this world.": "Sve lige i kupovi u %s. ID-eve pravilnika traže semafori, dresovi i Siderove mape natjecanja (sider.log ih zove tournament_id), jedan za svaku fazu; ID natjecanja je igrin vlastiti broj natjecanja. Novo = napravio ovaj svijet.",
   "Find...": "Traži...",
   "Kind": "Vrsta",
   "Competition ID": "ID natjecanja",
