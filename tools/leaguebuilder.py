@@ -968,6 +968,13 @@ RECIPE_SETTINGS = ("game_europe", "uefa_seed", "uefa_rank", "europe_first", "gam
                    "samerica_super_cup_logo", "samerica_super_cup_first", "sudamericana_calendar")
 
 
+def is_plan(r):
+    """whether a json read as a recipe is a built world's leaguebuilder-plan.json: the plan has
+    the ids Build gave (free_ids, and a rid for every league), a recipe never does"""
+    return isinstance(r.get("free_ids"), int) or any(
+        isinstance(L, dict) and "rid" in L for L in r.get("leagues") or [])
+
+
 def recipe_from_plan(pl, base):
     """the recipe a built world was made from, read back from its leaguebuilder-plan.json: for a
     world whose recipe was never saved (Mod Studio opens the live world, 0.1.8), or a ready world
@@ -1393,6 +1400,8 @@ def new_club_count(L):
     """the clubs a build makes for recipe league L: its places less the clubs of the game, plus
     one for every club of the game whose place in the game a new club takes"""
     gc = L.get("game_clubs") or []
+    if isinstance(gc, dict):                # a plan's league keeps them by place (game_places)
+        gc = list(gc.values())
     return int(L.get("clubs", 0) or 0) - len(gc) + sum(1 for e in gc if isinstance(e.get("swap"), dict))
 
 

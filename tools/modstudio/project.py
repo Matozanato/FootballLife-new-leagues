@@ -548,6 +548,15 @@ class Project(QObject):
         off the window's thread (the Modpack's is 132 MB, 1.4 s of json.load)"""
         if not str(r.get("world", "")).startswith("_FL26"):
             raise B.BuildError("the world name must start with _FL26")
+        if B.is_plan(r):
+            # B224: a world's leaguebuilder-plan.json opened as a world (a tester took the one in
+            # a downloaded world's folder, and every start then crashed counting its clubs). The
+            # recipe it was built from, read back as My world does; Save asks for a name, so the
+            # world's own plan is never written over
+            if not self.base:
+                raise B.BuildError("this is the plan of a built world, not a world file: "
+                                   "put the world in the game and open it in My world")
+            r, copy = B.recipe_from_plan(r, self.base), True
         r.setdefault("leagues", [])
         r.setdefault("edits", {})
         r.setdefault("players", {})
