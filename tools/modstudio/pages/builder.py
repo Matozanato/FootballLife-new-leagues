@@ -766,6 +766,12 @@ class LeagueDialog(Dialog):
         self.form.addRow("", row(helped(self.supercup, "One match shortly before the season: the league champion against the "
                                         "cup winner. It needs the national cup."), self.supercup_name))
         self.cup.toggled.connect(lambda on: self.supercup.setEnabled(on and self.cup.isEnabled()))
+        self.cup_join = QCheckBox(_("Its best clubs play the country's cup too"))
+        self.cup_join.setChecked(bool(L.get("cup_join")))
+        self.form.addRow("", helped(self.cup_join,
+            "For a third division under the game's second one, like National under Ligue 2: the game's cup "
+            "takes its two divisions and the first clubs of this league, up to 48 clubs in all, as the real "
+            "Coupe de France takes the lower leagues. Start a new career after the Build."))
         self.form.addRow("", hint(_("a top division of a new country: a national cup for it and the division "
                                     "below, any number of clubs (byes when the field is not 16, 32 ...)")))
         self.lcup = QCheckBox(_("League cup"))
@@ -808,6 +814,8 @@ class LeagueDialog(Dialog):
         self.above.currentIndexChanged.connect(
             lambda _i: self.supercup.setEnabled(self.cup.isEnabled() and self.cup.isChecked()))
         self.supercup.setEnabled(self.cup.isEnabled() and self.cup.isChecked())
+        self.above.currentIndexChanged.connect(lambda _i: self.cup_join.setEnabled(self.joins_cup()))
+        self.cup_join.setEnabled(self.joins_cup())
         self.above.currentIndexChanged.connect(lambda _i: self.season_follows())
         self.europe.set_confed(project.confeds.get(self.country_name()))
         self.country.currentTextChanged.connect(
@@ -914,6 +922,10 @@ class LeagueDialog(Dialog):
             L["supercup_name"] = self.supercup_name.text().strip()
         else:
             L.pop("supercup_name", None)
+        if self.cup_join.isChecked() and self.joins_cup():
+            L["cup_join"] = True
+        else:
+            L.pop("cup_join", None)
         if self.lcup.isChecked() and self.above.currentData() is None:
             L["league_cup"] = True
         else:
@@ -1006,6 +1018,11 @@ class LeagueDialog(Dialog):
             L.pop("others", None)
         self.accept()
 
+
+    def joins_cup(self):
+        """B228: division 3 right under one of the game's leagues, whose cup it can join"""
+        a = self.above.currentData()
+        return isinstance(a, int) and tier_of(self.project, a) == 3
 
     def show_tier(self):
         t = tier_of(self.project, self.above.currentData())

@@ -202,7 +202,10 @@ static int reg_list(uint16_t id, uint32_t* out)
  * both leagues with 22 clubs crashed it, and the cup's own entry list does not help -- the
  * game fills a domestic cup from the leagues, not from the entries. So the cup is written with
  * the top league's clubs and the first clubs of the one below, `max` in all (0 = no cap). */
-typedef struct { uint16_t cup, top, low, all, max; } cup_t;
+/* B228: `cupthird=` on a cupall line names a new third division whose first clubs join the two
+ * shipped ones, up to cupn -- the Coupe de France of Ligue 1, Ligue 2 and the first 12 of
+ * National, 48 (jibibi 2026-10-24); the League Builder raised the cup's bracket to that field. */
+typedef struct { uint16_t cup, top, low, all, max, third; } cup_t;
 static cup_t    g_cup[MAX_CUPS]; static int g_ncup = 0;
 static uint64_t g_cup_flag[MAX_CUPS]; static int g_cup_seen[MAX_CUPS];
 
@@ -222,7 +225,13 @@ static int cup_fix(cup_t* c, const uint32_t* list, int n, uint64_t flag, const c
   if (c->all) {
     if (nt + nl > 2 * MAX_CLUBS) return 0;
     memcpy(top + nt, low, nl * sizeof low[0]);
-    int m = nt + nl;
+    int m = nt + nl, n3 = 0;
+    if (c->third) {                                  /* B228: then the third division's first clubs */
+      uint32_t th[MAX_CLUBS];
+      int k3 = reg_list(c->third, th);
+      for (int i = 0; i < k3 && m < 2 * MAX_CLUBS; i++) top[m++] = th[i];
+      n3 = k3 > 0 ? k3 : 0;
+    }
     if (c->max && m > c->max) m = c->max;           /* #74: a field the bracket screen draws */
     /* the order of the list is the first-round draw (1 v 2, 3 v 4 ...): the two leagues in
        turn, so a first round is top flight against the league below, not the top league among
@@ -238,8 +247,13 @@ static int cup_fix(cup_t* c, const uint32_t* list, int n, uint64_t flag, const c
     int was = g_reentrant; g_reentrant = 1;
     ((set_fn)(uintptr_t)g_tramp_set)(c->cup, &v, flag);
     g_reentrant = was;
-    logf("cup %u: %d clubs (%s) -- given %u's %d and %u's %d clubs", c->cup, n, when, c->top,
-         nt < m ? nt : m, c->low, m > nt ? m - nt : 0);
+    if (c->third)
+      logf("cup %u: %d clubs (%s) -- given %u's %d, %u's %d and %u's first %d clubs", c->cup, n, when, c->top,
+           nt < m ? nt : m, c->low, m > nt + nl ? nl : (m > nt ? m - nt : 0), c->third,
+           m > nt + nl ? (m - nt - nl < n3 ? m - nt - nl : n3) : 0);
+    else
+      logf("cup %u: %d clubs (%s) -- given %u's %d and %u's %d clubs", c->cup, n, when, c->top,
+           nt < m ? nt : m, c->low, m > nt ? m - nt : 0);
     return 1;
   }
   if (c->max && nt > c->max) nt = c->max;
@@ -743,7 +757,7 @@ __declspec(dllexport) int fl26_chain_cups(const uint16_t* triples, int n)
   if (n > MAX_CUPS) n = MAX_CUPS;
   for (int i = 0; i < n; i++) {
     g_cup[i].cup = triples[3*i] & ~CUP_ALL; g_cup[i].all = (triples[3*i] & CUP_ALL) != 0;
-    g_cup[i].top = triples[3*i+1]; g_cup[i].low = triples[3*i+2]; g_cup[i].max = 0;
+    g_cup[i].top = triples[3*i+1]; g_cup[i].low = triples[3*i+2]; g_cup[i].max = 0; g_cup[i].third = 0;
     logf("fl26chain: cup %u -- %s", g_cup[i].cup, g_cup[i].all ? "both leagues (cupall)" : "the top league only");
   }
   g_ncup = n;
@@ -761,6 +775,20 @@ __declspec(dllexport) int fl26_chain_cupsize(const uint16_t* pairs, int n)
       if (g_cup[i].cup == pairs[2*k]) {
         g_cup[i].max = pairs[2*k+1]; set++;
         logf("fl26chain: cup %u -- at most %u clubs", g_cup[i].cup, g_cup[i].max);
+      }
+  return set;
+}
+
+/* B228: n pairs {cup, third division}, for cupall cups fl26_chain_cups already named */
+__declspec(dllexport) int fl26_chain_cupthird(const uint16_t* pairs, int n)
+{
+  if (!pairs || n < 0) return 0;
+  int set = 0;
+  for (int k = 0; k < n; k++)
+    for (int i = 0; i < g_ncup; i++)
+      if (g_cup[i].cup == pairs[2*k] && g_cup[i].all) {
+        g_cup[i].third = pairs[2*k+1]; set++;
+        logf("fl26chain: cup %u -- also the first clubs of %u", g_cup[i].cup, g_cup[i].third);
       }
   return set;
 }

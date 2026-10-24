@@ -127,7 +127,9 @@ local function from_world(world)
       chains[#chains + 1] = { L.splittotal, L.id, n, n, L.above }
     end
     if L.cup and L.cuptop and L.cuplow then
-      cups[#cups + 1] = { L.cup, L.cuptop, L.cuplow, L.cupall ~= 0, L.cupn }
+      -- cupthird= (B228): the first clubs of this league, a new third division, join the two
+      -- shipped ones in the cup, cupn in all (the Coupe de France of L1, L2 and National, 48)
+      cups[#cups + 1] = { L.cup, L.cuptop, L.cuplow, L.cupall ~= 0, L.cupn, L.cupthird }
     elseif L.cup and L.above then
       cups[#cups + 1] = { L.cup, L.above, L.id, L.cupall == 1, L.cupn }
     end
@@ -195,6 +197,7 @@ function m.init(ctx)
     typedef int  (*fl26_chain_protect_t)(const uint16_t*, int);
     typedef int  (*fl26_chain_cups_t)(const uint16_t*, int);
     typedef int  (*fl26_chain_cupsize_t)(const uint16_t*, int);
+    typedef int  (*fl26_chain_cupthird_t)(const uint16_t*, int);
     typedef int  (*fl26_chain_apclau_t)(const uint16_t*, int);
   ]])
 
@@ -275,6 +278,21 @@ function m.init(ctx)
             ffi.cast("fl26_chain_cupsize_t", pz)(z, #sized)
           else
             log("fl26chain: this fl26chain.dll cannot cap a cup's field (no fl26_chain_cupsize) -- rebuild it")
+          end
+        end
+        local third = {}
+        for _, c in ipairs(CUPS) do if c[6] and c[6] > 0 then third[#third + 1] = c end end
+        if #third > 0 then
+          local p3 = ffi.C.GetProcAddress(h, "fl26_chain_cupthird")
+          if p3 ~= nil then
+            local z = ffi.new("uint16_t[?]", 2 * #third)
+            for i, c in ipairs(third) do
+              z[2 * i - 2], z[2 * i - 1] = c[1], c[6]
+              log(string.format("fl26chain: live -- cup %d also takes the first clubs of %d", c[1], c[6]))
+            end
+            ffi.cast("fl26_chain_cupthird_t", p3)(z, #third)
+          else
+            log("fl26chain: this fl26chain.dll cannot put a third division in a cup (no fl26_chain_cupthird) -- rebuild it")
           end
         end
       else
