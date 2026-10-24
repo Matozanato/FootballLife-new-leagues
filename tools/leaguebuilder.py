@@ -855,6 +855,27 @@ def kits_file(base):
     return None
 
 
+# kits files to fall back on when the tables folder has none beside it: Mod Studio puts the
+# game's unpacked one here (APPDIR	ables)
+KITS_FALLBACK = []
+
+
+def kits_for(base, game):
+    """the kits file Build draws the new clubs' kits from: the one beside the tables (kits_file),
+    else the game's unpacked one, else the one of the mod sider.ini serves first. B218
+    (Aleperfe87 23.10.): with a whole database mod in livecpk as the tables folder there was
+    none beside it, and the world got no kits file, so its new clubs were "unlicensed" and
+    wore no kit"""
+    k = kits_file(base)
+    if k:
+        return k
+    for f in KITS_FALLBACK:
+        if os.path.isfile(f):
+            return f
+    over = other_uniforms(game)
+    return over[-1] if over else None
+
+
 def load_recipe(path):
     r = json.load(open(path, encoding="utf-8"))
     if not r.get("world", "").startswith("_FL26"):
@@ -5198,7 +5219,7 @@ def input_key(pl, base, game):
         if os.path.isfile(os.path.join(base, f)):
             h.update(f.encode())
             feed_file(os.path.join(base, f))
-    k = kits_file(base)
+    k = kits_for(base, game)
     if k:
         feed_file(k)
     feed_file(flpaths.EXE, whole=False)
@@ -6594,10 +6615,13 @@ def pictures(pl, root, base, log=print, game=None, gone=None):
     if not any(p["teams"] for p in pl["leagues"] + (pl.get("others") or [])):
         return
     plain = bool(pl.get("editable_kits"))
-    unipar = kits_file(base)
+    unipar = kits_for(base, game)
     if not unipar:
-        log("  no kits: the game's UniformParameter.bin was not unpacked (Unpack from game)")
+        log("  WARNING: no kits file (UniformParameter.bin) beside the tables, none unpacked from the game and "
+            "no mod that has one: the new clubs get no kit (Unpack from game, then Build again)")
         return
+    if unipar != kits_file(base):
+        log("  kits drawn on %s (the tables folder has no UniformParameter.bin beside it)" % unipar)
     import mkkits
     ours = []                       # the clubs this Build made: their ids depend on the database (#54)
     for p in pl["leagues"] + (pl.get("others") or []):

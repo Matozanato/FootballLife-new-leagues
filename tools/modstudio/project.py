@@ -93,6 +93,8 @@ class Project(QObject):
 
     def load_tables(self, where=None):
         where = where or self.app.settings.get("tables") or None
+        # B218: a whole database mod as the tables has no kits file beside it; the game's unpacked one then
+        B.KITS_FALLBACK[:] = [os.path.join(self.tables_dir(), B.UNIPAR.replace("/", os.sep))]
         self.overlay, self.tables_error = 0, ""
         try:
             self.base = B.base_dir(self._tables_of(where)) if where else B.base_dir(self._default_tables())

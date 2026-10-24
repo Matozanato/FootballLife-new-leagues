@@ -1,5 +1,6 @@
 {
  "text": {
+  "CAREFUL: no kits file (UniformParameter.bin) was found beside your tables, unpacked from the game or in another mod, so the new clubs have no kit and the game calls them unlicensed. Unpack the game's tables (Settings) and build again.": "PAZI: uz tvoje tablice, među raspakiranima iz igre ni u drugom modu nema datoteke dresova (UniformParameter.bin), pa novi klubovi nemaju dres i igra ih smatra nelicenciranima. Raspakiraj tablice igre (Settings) i ponovno pokreni Build.",
   "Abilities taken from %s (%s), at the same rating.": "Sposobnosti preuzete od %s (%s), uz istu ocjenu.",
   "a top division of a new country: February to December plays like Brazil, Japan or Saudi Arabia, clubs going up and down at New Year; the divisions below it follow it. Not with a split, Apertura/Clausura or a league cup yet": "prva liga nove zemlje: veljača do prosinca igra kao Brazil, Japan ili Saudijska Arabija, klubovi idu gore i dolje na Novu godinu; lige ispod nje je prate. Još ne s podjelom, Apertura/Clausura ni ligaškim kupom",
   "The game gives this league no places in this table. Tick the box above to give it some.": "Igra ovoj ligi ne daje mjesta u ovoj tablici. Označi kvačicu iznad da joj ih daš.",
