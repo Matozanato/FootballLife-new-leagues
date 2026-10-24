@@ -352,6 +352,7 @@ LIBQ_ROOM = 6                             # Libertadores qualifying: 8 places, f
 # F2: 13 domestic clubs + 3 F1 winners -> 8 winners
 # F3: the game's native Libertadores qualifying regulation 8 -> 4 winners.
 LIBQ_NAME, LIBQ_CODE = "Pre-Libertadores", "FL_LIBQ"
+GAME_LIBERTADORES = 5          # the game's Copa Libertadores (Competition.bin): its emblem is emb_0005
 LIBQ_P1 = {"fill": 2, "days": [6, 13]}
 # B227 (antonimus, 24.10.): phase 2 was on 20 and 27, two of the days the exe ships for Copa Chile and
 # Copa do Brasil (16 20 23 27 31 37 44 ..., cupdays_lines), so a Chilean club in it had both on one day.
@@ -5169,7 +5170,8 @@ def write_manifest(root):
 
 INPUT = "leaguebuilder-input.json"        # what the last Build was made from (pictures_only)
 INPUT_FORMAT = 1                          # raised when the same input builds a different world
-PIC_ARG = {"league_logo": 2, "club_crest": 2, "country_flag": 1}   # picture_jobs: the picture's place
+PIC_ARG = {"league_logo": 2, "club_crest": 2, "country_flag": 1,   # picture_jobs: the picture's place
+           "game_emblem": None}                                     # (none: the game's own, by competition)
 
 
 def code_stamp():
@@ -5248,7 +5250,7 @@ def job_signature(job):
     fn, args, rels = job
     a = list(args)
     i = PIC_ARG[fn]
-    if a[i]:
+    if i is not None and a[i]:
         a[i] = "sha1:" + file_hash(a[i])
     return json.loads(json.dumps([fn, a, list(rels)], default=str))
 
@@ -6606,7 +6608,13 @@ def picture_jobs(pl, base, log=print, gone=None):
             job("club_crest", crest_files(int(tid)), int(tid), v.get("abbr") or v.get("name") or "", pic,
                 v.get("kit") or None)
     cups = cup_emblems(pl)
+    libq = ((pl.get("cup_ids") or {}).get("conmebol:" + LIBQ_CODE) or {}).get("cid")
     for cid, name, logo in cups:
+        if cid == libq and not logo:
+            # the Pre-Libertadores: the game's own Copa Libertadores emblem from the person's install
+            # (antonimus 24.10.: a drawn placeholder beside the real Libertadores; mato: "do it")
+            job("game_emblem", logo_files(cid), cid, name, GAME_LIBERTADORES)
+            continue
         job("league_logo", logo_files(cid), cid, name, have_picture(logo, name, log, "logo", "drawn emblem",
                                                                     gone, logo_files(cid)))
     return jobs, flags, len(cups)

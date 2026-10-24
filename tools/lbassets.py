@@ -15,9 +15,11 @@ A picture the user gives is fitted into a transparent square (never stretched); 
 club whose shirt is known (NewLife) gets a shield in its colours (tools/shieldcrest.py), any
 other the placeholder the tools draw from the id.
 """
-import os
+import glob, io, os, re, shutil, struct, tempfile
 from PIL import Image
 
+import cpkread
+import flpaths
 import mkemblems
 import mkcrests
 import shieldcrest
@@ -63,6 +65,76 @@ def league_logo(root, cid, name, picture=None):
             im = master if px == 512 else master.resize((px, px), Image.LANCZOS)
         else:
             im = mkemblems.emblem(cid, mkemblems.initials(name, "", cid), mkemblems.tier(name), px, mode)
+        im.save(os.path.join(d, "emb_%04d%s.png" % (cid, suf)))
+
+
+_GAME_EMBLEMS = {}
+
+
+def game_emblem_files(source):
+    """{variant suffix: PNG bytes} of competition `source`'s emblem as the game shows it, from the
+    person's own install: a mod's livecpk root first, in sider.ini's order (not a world of ours),
+    then the game's Data\\*.cpk; {} when neither has one. Read once per Build."""
+    key = (flpaths.GAME_DIR, source)
+    if key in _GAME_EMBLEMS:
+        return _GAME_EMBLEMS[key]
+    stem = "emb_%04d" % source
+    found = {}
+    roots = []
+    try:
+        for l in open(flpaths.SIDER_INI, encoding="utf-8", errors="replace"):
+            m = re.match(r'\s*cpk\.root\s*=\s*"([^"]+)"', l)
+            if m:
+                d = m.group(1)
+                roots.append(os.path.normpath(d if os.path.isabs(d) else os.path.join(flpaths.SIDER_DIR, d)))
+    except OSError:
+        pass
+    for d in roots:
+        if os.path.exists(os.path.join(d, "leaguebuilder-plan.json")):
+            continue
+        for f in sorted(glob.glob(os.path.join(d, *EMBLEM_DIR, stem + "*.png"))):
+            found[os.path.basename(f)[len(stem):-4]] = open(f, "rb").read()
+        if found:
+            break
+    if not found:
+        for cpk in sorted(glob.glob(os.path.join(flpaths.GAME_DIR, "Data", "*.cpk")), reverse=True):
+            try:
+                if not any("emblemLc/" + stem in n for n in cpkread.names(cpk)):
+                    continue
+                tmp = tempfile.mkdtemp(prefix="fl26emb-")
+                try:
+                    cpkread.extract(cpk, tmp, ["emblemLc/" + stem])
+                    for f in glob.glob(os.path.join(tmp, *EMBLEM_DIR, stem + "*.png")):
+                        found[os.path.basename(f)[len(stem):-4]] = open(f, "rb").read()
+                finally:
+                    shutil.rmtree(tmp, ignore_errors=True)
+            except (OSError, ValueError, struct.error):
+                continue
+            if found:
+                break
+    _GAME_EMBLEMS[key] = found
+    return found
+
+
+def game_emblem(root, cid, name, source):
+    """write the six emblem variants of competition `cid` as the game's own emblem of competition
+    `source`, taken from the person's install (game_emblem_files): the Pre-Libertadores wears the
+    Copa Libertadores' (antonimus 24.10., mato: "do it"). A variant the game has not got is made
+    from its nearest one, the light background's first, as league_logo does with a picture. No
+    emblem in the install: drawn, as before."""
+    files = game_emblem_files(source)
+    if not files:
+        return league_logo(root, cid, name)
+    d = os.path.join(root, *EMBLEM_DIR)
+    os.makedirs(d, exist_ok=True)
+    for suf, px in mkemblems.VARIANTS:
+        size = "_ll" if px == 512 else "_l"
+        pick = next((s for s in (suf, "_b" + size, size, "_w" + size) if s in files), None)
+        if pick is None:
+            pick = sorted(files)[0]
+        im = Image.open(io.BytesIO(files[pick])).convert("RGBA")
+        if im.size != (px, px):
+            im = im.resize((px, px), Image.LANCZOS)
         im.save(os.path.join(d, "emb_%04d%s.png" % (cid, suf)))
 
 
