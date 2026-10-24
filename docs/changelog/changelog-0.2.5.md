@@ -442,6 +442,33 @@ come with it instead.
   fl26nullguard13 (in fl26guards) now stops the pick when the candidates are used up, and the
   game then fills or skips the cup the way it already does when a list is short.
 
+- **A crash past Skip Match in the quarter-finals of a cup whose round was played before its
+  slots were mended (B187).** A 0.2.4 career could play such a round with another season's clubs
+  in its slots; the game then found only some of the winners, the semi-finals had no club and
+  FL26 2.2 crashed. The round's winners are now worked out from the legs (goals, extra time,
+  penalties, away goals) and put through. (Thanks Ibiss K.B.)
+
+- **The national team you manage stopped stopping the hub (B20).** Every day the team of
+  controller 0 was handed back to the computer except your club, so the national team's
+  friendlies and qualifiers went by without you. Your national team now stays yours, and a save
+  that lost it gets it back once when it is loaded. (Thanks Vicentico12)
+
+- **Modern CONMEBOL: the Pre-Libertadores (B227).** Its phase 2 was on two days the game gives
+  Copa Chile and Copa do Brasil, so a Chilean club had two matches on one day: it is on 18 and 25
+  January now, and the Sudamericana's national first stage moves from 44 to 40 for the same
+  reason. Before phase 2 was played the game's own entry list could put one of its clubs into the
+  Libertadores' third qualifying round as well (Católica against Millonarios in the calendar);
+  such a club is now kept out until phase 2's winners go in. The Pre-Libertadores matches wear the
+  Libertadores' scoreboards, and its emblem is the game's own Copa Libertadores emblem, taken from
+  your install at Build. Needs a fresh Build of the world. (Thanks antonimus)
+
+- **NewLife: the same player twice, the game's one a free agent (B102).** NewLife 1.5b8 gives no
+  game id for some 1100 players the game has (Elliot Anderson at Manchester City, the game's at
+  Nottingham Forest), and each became a new player while the game's lost his club. A player with
+  no id is now the game's when the full name, the age (a year either way), the height (3 cm) and
+  the keeper/outfield side match, one of each; he moves to his NewLife club instead. Bring the
+  game's leagues makes about 190 fewer copies with 1.5b8. (Thanks David.BDJ, JamesNotLike, Cala79)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
