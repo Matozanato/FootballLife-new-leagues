@@ -1142,7 +1142,10 @@ class Main(QMainWindow):
     def closeEvent(self, e):
         # changes made since the last Save recipe or Build were lost without a word when Mod
         # Studio closed (the poll, Bon Kirk 11.10.: "an Apply button" -- OK only keeps a change
-        # in the open recipe)
+        # in the open recipe). 0.2.5: a change of the last moment is saved like any other, the
+        # autosave just did not come round yet; only a write that fails still asks
+        if self.project.dirty:
+            self.project.autosave()
         if self.project.dirty:
             box = QMessageBox(QMessageBox.Question, _("Unsaved changes"),
                               _("Your world has changes that are not saved yet. Save them before closing?"),

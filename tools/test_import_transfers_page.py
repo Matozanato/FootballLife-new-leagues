@@ -80,7 +80,7 @@ def main(base):
            and str(a2) not in join(str(club_a)))
         ok("one club at a time: each player in one join list", all(
             sum(r in join(k) for k in pl) == 1 for r in (str(a1), str(b1), newref)))
-        ok("the world is marked changed", p.dirty)
+        ok("the world is marked changed and its autosave on the way", p.dirty and p._timer.isActive())
         ok("one message: 3 move, 1 already there, 1 line left out", len(said) == 1 and said[0][0] == "info"
            and said[0][1].startswith("3 ") and "1 are at that club" in said[0][1] and "1 lines left out" in said[0][1])
         print("#", said[0][1].replace("\n", " | "))
