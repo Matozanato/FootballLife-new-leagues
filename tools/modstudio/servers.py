@@ -146,8 +146,10 @@ def is_leaf(path):
     return bool(names & MARKERS) or "config.txt" in names or "order.ini" in names
 
 
-def library(root, kind="folder", depth=3):
-    """relative paths of the items under `root`: folders (kind folder) or .mp3 files (kind mp3)"""
+def library(root, kind="folder", depth=6):
+    """relative paths of the items under `root`: folders (kind folder) or .mp3 files (kind mp3).
+    depth 6: a world's scoreboards sit five folders down (_FL26M2400S/_packs/England/FA Cup/BBC);
+    at 3 every one of them was "not found in the library" and its line turned yellow (SladeBR, 23.10.)"""
     out = []
     root = os.path.normpath(root)
 
