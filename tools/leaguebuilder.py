@@ -6751,6 +6751,16 @@ def cup_emblems(pl):
     for c in (pl.get("ccups") or []) + (pl.get("home_cups") or []) + (pl.get("game_supers") or []):
         if c.get("cid"):
             out.append((c["cid"], c["name"], c.get("logo")))
+    # the modern CONMEBOL helper cups (helper_ids) wear the emblem of the cup they are a round of:
+    # with none of their own, the Sudamericana's first stage showed no emblem in the fixtures (B220,
+    # antonimus 23.10.)
+    sud = next((c for c in pl.get("ccups") or [] if c.get("number") == SUDAM), {})
+    for code, name, logo in ((SAM_FIRST_CODE, sud.get("name") or SAM_FIRST_NAME, sud.get("logo")),
+                             (SPO_CODE, sud.get("name") or SPO_NAME, sud.get("logo")),
+                             (LIBQ_CODE, "Copa Libertadores", None)):
+        h = (pl.get("cup_ids") or {}).get("conmebol:" + code) or {}
+        if h.get("cid"):
+            out.append((h["cid"], name, logo))
     if pl.get("uecl"):
         out.append((UECL_CID, "UECL", pl.get("uecl_logo")))
     return out
