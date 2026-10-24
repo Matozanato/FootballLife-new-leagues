@@ -6720,6 +6720,38 @@ static void cupdraw_tick(void)
     if (get_rec(g_cd[i].reg)) cup_draw(&g_cd[i]);
 }
 
+/* ---- the user's national team on the user's controller (B20) ----
+ *
+ * A manager who takes a national job runs that team too: block+0x1798ab4 holds its handle (-1
+ * when there is none) and the game puts it at controller 0, so its friendlies and qualifiers go
+ * into the user's day schedule and the hub stops for them. Up to 0.2.5 fl26ctlguard handed every
+ * team at 0 except the club back to the computer, the national team included, every day: the
+ * hub skipped the internationals (Vicentico, Spain, 2/9 and 5/9 2026 never offered) and a save
+ * made since keeps the national team at 0xff. fl26ctlguard now leaves it alone; this gives such a
+ * save its national team back, once, in a Master League career only (the user's club exists and
+ * is itself at 0, as fl26ctlguard checks), and asks for the day schedule again. */
+#define USER_NT_OFF 0x1798ab4
+#define CTL_OFF     0x41d
+static void nt_keep_user(void)
+{
+  uint32_t n;
+  unsigned char* a = team_array(&n);
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!a || !blk) return;
+  uint32_t user = *(const uint32_t*)(blk + USER_CLUB_OFF), nt = *(const uint32_t*)(blk + USER_NT_OFF);
+  if (!(user >> 14) || user == 0xffffffffu || !(nt >> 14) || nt == 0xffffffffu || nt == user) return;
+  uint32_t ur = user & 0x3fff, nr = nt & 0x3fff;
+  if (ur >= n || nr >= n || team_at(a, ur) != user || team_at(a, nr) != nt) return;
+  if (a[(size_t)ur * TEAM_STRIDE + CTL_OFF] != 0) return;
+  unsigned char* ctl = a + (size_t)nr * TEAM_STRIDE + CTL_OFF;
+  if (*ctl != 0xff) return;
+  *ctl = 0;
+  logf("fl26swiss: the user's national team %08x (%s) was at the computer's controller; back on the user's (B20), day %d",
+       nt, (const char*)(a + (size_t)nr * TEAM_STRIDE + 4), today());
+  sched_rebuild("the user's national team back on the user's controller");
+}
+
 /* called by the loader every few dozen file opens; cheap outside spring */
 __declspec(dllexport) void fl26_swiss_ko_tick(void)
 {
@@ -6739,6 +6771,7 @@ __declspec(dllexport) void fl26_swiss_ko_tick(void)
       ko_sync(UECL_KO, "day loop");
       ko_heal_played("day loop");
       ko_sync_all("day loop");
+      nt_keep_user();
       for (int i = 0; i < 3; i++) lb_keep(&CUPS[i], d);
     }
   }
