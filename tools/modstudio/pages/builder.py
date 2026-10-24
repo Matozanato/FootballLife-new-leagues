@@ -1734,9 +1734,10 @@ class CompetitionIdsDialog(Dialog):
         db = worlds[0] if worlds else project.base
         self.rows = B.competition_ids(db, project.base)
         where = (_("the world in the game (%s)") % project.live_worlds()[0]) if worlds else _("the game's tables")
-        self.v.insertWidget(0, hint(_("Every league and cup in %s. Competition ID is what scoreboards, kits and "
-                                      "the competition maps of Sider ask for; regulation IDs are the ones in "
-                                      "sider.log and the world file. New = made by this world.") % where))
+        self.v.insertWidget(0, hint(_("Every league and cup in %s. Regulation IDs are what scoreboards, kits and "
+                                      "the competition maps of Sider ask for (sider.log calls them tournament_id), "
+                                      "one for each stage; Competition ID is the game's own number for the "
+                                      "competition. New = made by this world.") % where))
         self.find = QLineEdit()
         self.find.setPlaceholderText(_("Find..."))
         self.find.textChanged.connect(self.fill)

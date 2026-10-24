@@ -442,6 +442,12 @@ come with it instead.
   fl26nullguard13 (in fl26guards) now stops the pick when the candidates are used up, and the
   game then fills or skips the cup the way it already does when a list is short.
 
+- **Leagues > More > Competition IDs pointed scoreboards at the wrong column (B225).** Its note said
+  scoreboards, kits and Sider's competition maps go by the Competition ID; they go by the regulation
+  ids (sider.log's tournament_id: Liga FPD is competition 179, regulation 113, and the game asks for
+  113). The pickers in Other content already listed regulation ids; the note now says so too.
+  (Thanks Shawn)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
