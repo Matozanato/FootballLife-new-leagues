@@ -2363,8 +2363,10 @@ static int q_summer(void);
    same league. q: 0 no qualifying (36 direct entrants each), 1 also the rounds' new entrants (g_q),
    2 the rounds' clubs are known (g_q) and are not placed again. mask: the rounds on (bit i); a
    competition's places past its direct entrants go to its own rounds when it has them */
+static void career_mark(const char* where);
 static int access_build(int q, int mask)
 {
+  career_mark("the access list");
   uint32_t used[3 * FIELD + NQR * Q_N + 8]; unsigned nused = 0; int tables = 0, orders = 0, gaps = 0, listed = 0, held = 0;
   int on[NQR]; unsigned room[NQR];
   for (int i = 0; i < NQR; i++) { on[i] = q && (mask >> i & 1); room[i] = on[i] ? q_room(mask, i) : 0; }
@@ -10428,18 +10430,27 @@ static uint32_t midweek(uint32_t d)
 }
 
 static int game_date(void);
+/* A career built in this session, before its first day has gone by. A career in a January league
+   (China, Japan, ...) is built on day 0: measured 2026-10-05. B209: an August-May career is built
+   at the July rollover, on day 181 (24.10., a new ML in _FL26EuropePackv001 and Jabo9's log), and
+   the rollover's set_clubs builds the summer's access list before any date is asked for: taken
+   from 210 and from date_handler only, no such career was ever new and the first-season list was
+   always left out. A save of a later summer loaded on these days looks the same; its tables read
+   back from the save folder say it is not (state_sync). */
+static void career_mark(const char* where)
+{
+  abs_day();                                       /* a day gone back: another career (abs_day) */
+  if (g_new_career || g_day_ticked) return;
+  int t = today();
+  if ((t >= SECOND_HALF && t <= 240) || t == 0) {
+    g_new_career = 1; g_built_gdate = game_date(); g_built_stored = 0;
+    logf("fl26swiss: a new career, built on day %d (%s)", t, where);
+  }
+}
 uint64_t date_handler(uint64_t reg, void* vec)
 {
   uint16_t id = (uint16_t)reg;
-  if (vec) abs_day();                              /* a day gone back: another career (abs_day) */
-  if (vec && !g_new_career && !g_day_ticked) {    /* a career built in this session (day 216), */
-    int t = today();                               /* before its first day has gone by */
-    /* a career in a January league (China, Japan, ...) is built on day 0: measured 2026-10-05 */
-    if ((t >= BUILD_DAY && t <= 240) || t == 0) {
-      g_new_career = 1; g_built_gdate = game_date(); g_built_stored = 0;
-      logf("fl26swiss: a new career, built on day %d", t);
-    }
-  }
+  if (vec) career_mark("its dates");
   if (vec && g_ndlike) {
     for (int i = 0; i < g_ndlike; i++) if (g_dlike[i][0] == id) return datelike_dates(id, reg, vec);
   }

@@ -421,12 +421,13 @@ come with it instead.
   not a confederation champion, and the clubs of UEFA and CONMEBOL keep theirs. (Thanks
   Micarodvzla22)
 
-- **First-season European clubs were left out when the game was quit before the draw (B209).**
-  The list only counted for a career built in the same game session, so a new career that was
-  saved, quit and continued later got the clubs by squad strength instead (sider.log: "not a
-  career built in this session"). The day a career is built is now written to the save folder's
-  `fl26swiss-state.bin` with the season's other keeps, so a career still in its first summer
-  takes the list after a restart too. (Thanks Jabo9)
+- **First-season European clubs were left out of every new August-May career (B209).** A new
+  career of a league that plays August to May is built on 1 July, and the list only counted for a
+  career built from late July on, so it was always left out and the clubs came by squad strength instead
+  (sider.log: "not a career built in this session"). A career built from 1 July counts now, and the
+  summer's qualifying rounds already leave the listed clubs out. The day a career is built is also
+  written to the save folder's `fl26swiss-state.bin` with the season's other keeps, so a career
+  saved and continued after a restart still takes the list in its first summer. (Thanks Jabo9)
 
 ## Read this first
 
