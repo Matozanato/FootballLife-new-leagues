@@ -353,7 +353,10 @@ LIBQ_ROOM = 6                             # Libertadores qualifying: 8 places, f
 # F3: the game's native Libertadores qualifying regulation 8 -> 4 winners.
 LIBQ_NAME, LIBQ_CODE = "Pre-Libertadores", "FL_LIBQ"
 LIBQ_P1 = {"fill": 2, "days": [6, 13]}
-LIBQ_P2 = {"fill": 14, "days": [20, 27]}
+# B227 (antonimus, 24.10.): phase 2 was on 20 and 27, two of the days the exe ships for Copa Chile and
+# Copa do Brasil (16 20 23 27 31 37 44 ..., cupdays_lines), so a Chilean club in it had both on one day.
+# 18 and 25 are two days from each of them; 6 and 13 come before the cups start.
+LIBQ_P2 = {"fill": 14, "days": [18, 25]}
 LIB_QUAL = 8
 LIB_ROOM = 8                              # Libertadores group stage: the pool clubs (73) ours replace, 8 (GitHub #127)
 SEASONS = ("august", "calendar")           # a new country's season: August-May, February-December
@@ -431,7 +434,9 @@ PRESEASON_DAYS = [186, 189, 192, 195, 198, 201, 205]
 CAF_SUPER_DAYS = [187, 190, 193, 196, 199, 202, 207]
 CAF_CL, CAF_CC = 6, 7                    # fl26world.CCUPS numbers of the two cups it takes
 SUDAM = 9                                # fl26world.CCUPS number of Copa Sudamericana
-SAM_FIRST_FILL, SAM_FIRST_DAY = 36, 44
+# the national first stage: 40, not 44 -- 44 is a Copa Chile / Copa do Brasil day too (B227); 40 is three
+# days from 37 and four from 44, and not the Libertadores phase 3 day 41
+SAM_FIRST_FILL, SAM_FIRST_DAY = 36, 40
 SAM_GROUP_FILL = 49                      # draw groups just after the national first stage
 SAM_FIRST_TIES = 16                      # 32 clubs -> 16 national one-match ties
 SAM_FIRST_NAME, SAM_FIRST_CODE = "Copa Sudamericana", "FL_SUDA1"

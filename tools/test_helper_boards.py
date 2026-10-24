@@ -20,6 +20,8 @@ def ok(name, cond):
 GAME = ["# scoreboard-to-competition map",
         "8, CONMEBOL\\Copa Libertadores\\ESPN              # playoff",
         "1032, CONMEBOL\\Copa Libertadores\\ESPN           # playoff",
+        "8, CONMEBOL\\Copa Libertadores\\FOX               # playoff",
+        "# 8, CONMEBOL\\Copa Libertadores\\Off             # playoff",
         "9, CONMEBOL\\Copa Libertadores\\ESPN              # group stage",
         "17, EPL\\Default"]
 PL = {"world": "_FL26Conmebol", "leagues": [],
@@ -42,18 +44,21 @@ def main():
 
         want = sorted([902 + 1024 * k for k in range(4)] + [903 + 1024 * k for k in range(9)])
         got = S.helper_boards(PL, path)
-        ok("phase 1 and its 3 ties, phase 2 and its 8 ties: 13 lines", sorted(k for k, _t in got) == want)
-        ok("each wears the qualifying round's board",
-           all("CONMEBOL\\Copa Libertadores\\ESPN" in t and S.TAG in t for _k, t in got))
+        ok("phase 1 and its 3 ties, phase 2 and its 8 ties: 13 regulations", sorted({k for k, _t in got}) == want)
+        ok("each wears the qualifying round's boards, both of them, not the one switched off",
+           len(got) == 26 and all(S.TAG in t for _k, t in got) and
+           sorted(t.split(",")[1].split("#")[0].strip() for k, t in got if k == 902) ==
+           ["CONMEBOL\\Copa Libertadores\\ESPN", "CONMEBOL\\Copa Libertadores\\FOX"])
 
         S.write(PL, sider, log=lambda *a: None)
         k1 = keys(path)
         ok("Switch on writes them into the map", all(k in k1 for k in want))
-        ok("the game's own lines stay as they were", all(k1.get(int(g.split(",")[0])) == g for g in GAME[1:]))
+        ok("the game's own lines stay as they were",
+           all(g in open(path, encoding="utf-8-sig").read().splitlines() for g in GAME))
         S.write(PL, sider, log=lambda *a: None)
         k2 = keys(path)
-        ok("a second Switch on: the same lines, once each", k2 == k1 and
-           sum(1 for l in open(path, encoding="utf-8-sig") if l.startswith("902,")) == 1)
+        ok("a second Switch on: the same lines, each once", k2 == k1 and
+           sum(1 for l in open(path, encoding="utf-8-sig") if l.startswith("902,")) == 2)
 
         S.write({"world": "_FL26Other", "leagues": []}, sider, log=lambda *a: None)
         ok("another world on: they are gone", not any(k in keys(path) for k in want))

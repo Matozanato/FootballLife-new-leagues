@@ -517,6 +517,7 @@ static int confed_of(int f);
 static int team_country(void* blk, uint32_t club);
 static uint32_t conmebol_fallback(void* blk, const uint32_t* taken, unsigned nt);
 static int lib_path_has(uint32_t c);
+static int libq_f3_ready(void);
 static uint32_t knockout_runner_now(uint16_t reg);
 static unsigned lib9_titleholders(uint32_t holder[2]);
 static int modern_conmebol(void);
@@ -3088,20 +3089,26 @@ static void cont_swap(uint16_t id, u32vec* list, const char* where)
     uint32_t holder[2] = { 0, 0 };
     if (comp == LIBQ) lib9_titleholders(holder);
 
+    /* B227 (antonimus, 24.10.): the game's own places put a club of phase 1 or 2 in the native
+       phase 3 as well (Universidad Catolica, Chile's), so before phase 2 was played its calendar
+       had phase 3 against Millonarios. Until lib8_swap gives phase 3 the phase 2 winners, a club
+       of the path is a place reserved like the rest. */
+    int path = comp == LIBQ && today() >= 0 && today() < 34 && !libq_f3_ready();
     for (size_t i = 0; i < n; i++) {
       uint32_t old = list->b[i];
       int cf = confed_of(team_country(blk, old));
       int reserved = comp == LIBQ &&
           (has_club(g_cont[0], g_ncont[0], old) ||
            (holder[0] && same_club(old, holder[0])) ||
-           (holder[1] && same_club(old, holder[1])));
+           (holder[1] && same_club(old, holder[1])) ||
+           (path && lib_path_has(old)));
 
       if (cf == 4 && !reserved) continue;
 
       uint32_t to = conmebol_fallback(blk, list->b, (unsigned)n);
       if (!to) {
         if (reserved)
-          logf("fl26swiss: Libertadores qualifying reg %u -- reserved direct/titleholder %08x has no safe CONMEBOL replacement",
+          logf("fl26swiss: Libertadores qualifying reg %u -- reserved direct/titleholder/F1-F2 %08x has no safe CONMEBOL replacement",
                (unsigned)id, old);
         else
           logf("fl26swiss: %s reg %u -- NON-CONMEBOL %08x (confederation %d) has no CONMEBOL replacement",
@@ -3125,7 +3132,7 @@ static void cont_swap(uint16_t id, u32vec* list, const char* where)
       }
 
       if (reserved)
-        logf("fl26swiss: Libertadores qualifying reg %u -- reserved direct/titleholder %08x replaced by CONMEBOL %08x",
+        logf("fl26swiss: Libertadores qualifying reg %u -- reserved direct/titleholder/F1-F2 %08x replaced by CONMEBOL %08x",
              (unsigned)id, old, to);
       else
         logf("fl26swiss: %s reg %u -- NON-CONMEBOL %08x (confederation %d) replaced by CONMEBOL %08x",

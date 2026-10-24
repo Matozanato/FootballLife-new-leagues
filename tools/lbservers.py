@@ -596,27 +596,32 @@ LIBQ_TIES = (("reg", 3), ("reg2", 8))          # leaguebuilder.libq: [(m1, 3), (
 
 
 def helper_boards(pl, path, taken=()):
-    """[(regulation id, map line)] giving the Pre-Libertadores' regulations the folder the map at
-    path gives the game's Libertadores qualifying round, or [] when the world has no such phases,
-    the map no line for that round, or a line of yours or ours keys one of them already"""
+    """[(regulation id, map line)] giving the Pre-Libertadores' regulations the folders the map at
+    path gives the game's Libertadores qualifying round -- every one of them, the server picks one
+    of a competition's boards at random -- or [] when the world has no such phases or the map no
+    line for that round; a regulation a line of yours (or taken) keys already is left out"""
     ids = (pl.get("cup_ids") or {}).get(LIBQ_KEY) or {}
-    board = _read_map(path).get(LIBQ_PARENT) if ids and os.path.isfile(path) else None
-    if not board:
+    if not ids or not os.path.isfile(path):
         return []
-    have = set()                                   # keys of your own lines in effect, not ours
+    boards, have = [], set()                       # the round's folders; keys of your own lines
     for l in lbstadiums.read(path)[0]:
         m = LINE.match(l)
-        if m and not m.group(1) and TAG not in l:
-            have.add(int(m.group(2)))
+        if not m or m.group(1) or TAG in l:
+            continue
+        have.add(int(m.group(2)))
+        f = m.group(3).strip()
+        if int(m.group(2)) == LIBQ_PARENT and f and f not in boards:
+            boards.append(f)
     out = []
-    for field, ties in LIBQ_TIES:
+    for field, ties in LIBQ_TIES if boards else ():
         reg = ids.get(field)
         if not isinstance(reg, int):
             continue
         for k in range(ties + 1):
             key = reg + 1024 * k
             if key not in taken and key not in have:
-                out.append((key, "%d, %s   %s Pre-Libertadores (as %d)" % (key, board, TAG, LIBQ_PARENT)))
+                out += [(key, "%d, %s   %s Pre-Libertadores (as %d)" % (key, f, TAG, LIBQ_PARENT))
+                        for f in boards]
     return out
 
 
