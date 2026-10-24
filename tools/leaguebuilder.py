@@ -322,6 +322,14 @@ NATIONAL_CUPS_TWO = {44: ("ENGLAND_D1_CUP", 44)}
 BRACKET_SIZES = set(range(2, 17)) | {18, 20, 24, 28, 30, 32}
 NATIONAL_CUP_ANY = ("ENGLAND_D1_CUP", 44)
 NATIONAL_CUP_MAX = 44                    # the FA Cup's 44: no shipped cup has a bigger field
+# A shipped cup of the game's two divisions topped up from a new third division under them, as
+# the real Coupe de France takes the lower leagues (B228, jibibi 24.10., mato: "mozemo sloziti"):
+# Ligue 1 18 + Ligue 2 18 + the first 12 of National = 48. 48 is the most a regulation's club
+# list holds (fl26chain MAX_CLUBS). A field past 32 is played on a bracket of 64, 64 - n clubs
+# with a bye, and the shipped fields past 32 -- the Coupe de France's 36 and 40, the FA Cup's
+# 44 -- leave 28, 24 and 20, bye layouts 0x140b33340 has; Copa Peru's 35 (29) crashed after its
+# first round (#95). 48 leaves 16. Only when the third division's line asks (cup_join).
+CUP_JOIN_SIZES = (48, 44, 40, 36)
 # The round ids each shipped domestic cup's calendar dates (tools/caltab.py, 2026-09-29), for a
 # second division of ours under a shipped top flight (GitHub #32): the country's cup then takes
 # both divisions, as the real DFB-Pokal does, when its calendar dates every round of that field
@@ -1061,6 +1069,8 @@ def recipe_from_plan(pl, base):
         if L.get("cup_top_only") or (L.get("tier") == 2 and up is not None and up not in name_of_rid
                                      and L.get("cup") and "cup_all" not in L):
             r["cup_top_only"] = True        # (an older plan says so only by the cup_all it has not)
+        if "cup_join" in L:
+            r["cup_join"] = True
         oc = L.get("own_cup")
         if oc and L.get("above") is None:
             r["cup"] = True
@@ -2202,6 +2212,11 @@ def plan(recipe, base, prev=None):
                         # first July (2026-10-01). fl26chain swaps such a club out, as for #29.
                         if p["cupfield"]:
                             p["scup"] = home_supercup(regrow, region_of_cid, p["region"])
+                        f = p["cupfield"]
+                        if f and L.get("cup_join") and p["tier"] == 3 and f[2] == int(up):
+                            two = entries_of(base, regrow[f[1]][M.R_CID]) + entries_of(base, pr[M.R_CID])
+                            p["cup_join"] = cup_join_field(f[0], two, n)
+                            p["cup_two"] = two
                     if p["tier"] == 2:
                         p["cup"] = home_cup(regrow, region_of_cid, p["region"])
                         p["scup"] = home_supercup(regrow, region_of_cid, p["region"])
@@ -3671,6 +3686,14 @@ def cup_takes_both(cup, n):
         and (n == NATIONAL_CUP_MAX or n in BRACKET_SIZES)
 
 
+def cup_join_field(cup, two, third):
+    """the field of shipped cup `cup` with its two divisions (`two` clubs) and the first clubs of
+    a third division below them (`third` clubs): the largest of CUP_JOIN_SIZES past `two` that
+    the third fills and the cup's calendar dates every round of, 0 for none (B228)"""
+    dated = CUP_DATED.get(cup)
+    return next((n for n in CUP_JOIN_SIZES if dated and two < n <= two + third and cup_rounds(n) <= dated), 0)
+
+
 def national_cup(p, below):
     """pick the shipped cup to copy for league p's national cup (p["own_cup"]), with the league
     below it (or None). The game fills the cup with both divisions, and so does this: a shipped
@@ -4188,8 +4211,14 @@ def describe(pl):
                 else "keeps the top division's clubs only"))
         f = p.get("cupfield")
         if f:
-            lines.append("  %s: the country's cup (regulation %d) keeps the game's divisions %d and %d"
-                         % (p["name"], f[0], f[1], f[2]))
+            lines.append("  %s: the country's cup (regulation %d) keeps the game's divisions %d and %d%s"
+                         % (p["name"], f[0], f[1], f[2],
+                            ", and the first %d of this league: %d clubs" % (p["cup_join"] - p["cup_two"], p["cup_join"])
+                            if p.get("cup_join") else ""))
+            if "cup_join" in p and not p["cup_join"]:
+                lines.append("  NOTE: %s: its clubs cannot join the country's cup -- the game's two divisions "
+                             "and this league do not make a field of %s clubs"
+                             % (p["name"], ", ".join(str(k) for k in sorted(CUP_JOIN_SIZES))))
         c = p.get("own_cup")
         if c:
             total = p["clubs"] + sum(q["clubs"] for q in pl["leagues"] if c.get("below") and q.get("rid") == c["below"])
@@ -4719,6 +4748,11 @@ def build(pl, base, game, replace=False, log=print):
             # first round's byes, as 22 on 44 did (#74)
             co = rows[p["cup"]] * M.REG + M.R_TEAMS
             regs[co] = (regs[co] & 0xc0) | p["cup_all"]
+        if p.get("cup_join"):
+            # the same for a shipped cup topped up from this division (B228): the Coupe de
+            # France's own 36 (bracket 18) would leave the clubs past it with no round to play
+            co = rows[p["cupfield"][0]] * M.REG + M.R_TEAMS
+            regs[co] = (regs[co] & 0xc0) | p["cup_join"]
         if p["above"]:
             po = rows[p["above"]] * M.REG
             # the child takes its parent's calendar shape, as deepen.py does, then its own
@@ -5011,8 +5045,13 @@ def build(pl, base, game, replace=False, log=print):
         if p.get("scup"):
             L["scup"] = p["scup"]
         f = p.get("cupfield")
-        if f and not any(q.get("cupfield") == f for q in pl["leagues"][:pl["leagues"].index(p)]):
+        # one line per cup: the division that joins it (B228) if there is one, else the first
+        same = [q for q in pl["leagues"] if f and q.get("cupfield") == f]
+        if f and p is next((q for q in same if q.get("cup_join")), same[0]):
             L["cup"], L["cuptop"], L["cuplow"], L["cupall"] = f[0], f[1], f[2], 1
+            if p.get("cup_join"):
+                # fl26chain: the two divisions and the first clubs of this one, cupn in all
+                L["cupthird"], L["cupn"] = p["rid"], p["cup_join"]
         up = mine.get(p["above"]) if p["above"] else None
         if up and up.get("own_cup", {}).get("keep_top"):
             L["cup"] = up["own_cup"]["reg"]            # fl26chain keeps the cup to the top league
