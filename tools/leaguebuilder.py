@@ -324,7 +324,7 @@ NATIONAL_CUP_ANY = ("ENGLAND_D1_CUP", 44)
 NATIONAL_CUP_MAX = 44                    # the FA Cup's 44: no shipped cup has a bigger field
 # A shipped cup of the game's two divisions topped up from a new third division under them, as
 # the real Coupe de France takes the lower leagues (B228, jibibi 24.10., mato: "mozemo sloziti"):
-# Ligue 1 18 + Ligue 2 18 + the first 12 of National = 48. 48 is the most a regulation's club
+# Ligue 1 18 + Ligue 2 21 + the first 9 of National = 48. 48 is the most a regulation's club
 # list holds (fl26chain MAX_CLUBS). A field past 32 is played on a bracket of 64, 64 - n clubs
 # with a bye, and the shipped fields past 32 -- the Coupe de France's 36 and 40, the FA Cup's
 # 44 -- leave 28, 24 and 20, bye layouts 0x140b33340 has; Copa Peru's 35 (29) crashed after its
@@ -2208,10 +2208,10 @@ def plan(recipe, base, prev=None):
                             p["scup"] = home_supercup(regrow, region_of_cid, p["region"])
                         f = p["cupfield"]
                         if f and L.get("cup_join") and p["tier"] == 3 and f[2] == int(up):
-                            # the clubs each plays with: its entries, or its regulation's count when
-                            # that is fewer (Ligue 2: 21 entries, 20 clubs; Bundesliga: 20 v 18 the other way)
-                            plays = lambda g: min(entries_of(base, g[M.R_CID]), g[M.R_TEAMS] & 0x3f)
-                            two = plays(regrow[f[1]]) + plays(pr)
+                            # the clubs each plays with are its entries, not its regulation's count:
+                            # the game's Ligue 2 has 21 entries on a regulation of 20 and plays with 21
+                            # (B228 in the game, 24.10.), and fl26chain.dll counts the league's list
+                            two = entries_of(base, regrow[f[1]][M.R_CID]) + entries_of(base, pr[M.R_CID])
                             p["cup_join"] = cup_join_field(f[0], two, n)
                             p["cup_two"] = two
                     if p["tier"] == 2:
