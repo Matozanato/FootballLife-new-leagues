@@ -5729,14 +5729,16 @@ def libq_plan(stages):
 # penalties -- no away goals -- in the Libertadores qualifying phases, its play-off (8) and
 # knockout (10) and the Copa Sudamericana. The game's Libertadores rows have away goals on, extra
 # time off and penalties on (CompetitionRegulation +0x10 bits 24, 25 and 27,
-# docs/research/research-findings.md) and our phases are copies of regulation 8, so clearing bit
-# 24 is the whole rule. A world without the modern competitions keeps the game's rows.
-AWAY_GOALS = 1 << 24
+# docs/research/research-findings.md) and our phases are copies of regulation 8; the Copa
+# Sudamericana's knockout, from the continental cups' template, has extra time on. Both bits are
+# cleared, so every one of them ends as the Libertadores' does. The Recopa (one match) keeps its
+# extra time. A world without the modern competitions keeps the game's rows.
+AWAY_GOALS, EXTRA_TIME = 1 << 24, 1 << 25
 
 
 def modern_conmebol_no_away_goals(pl, db, log=print):
-    """Clear the away goals rule on every regulation of the modern CONMEBOL competitions in the
-    world's tables in <db>; returns how many rows had it."""
+    """Clear the away goals rule and extra time on every regulation of the modern CONMEBOL
+    competitions in the world's tables in <db>; returns how many rows had either."""
     if not (pl.get("libq") or pl.get("suda_first")):
         return 0
     cids = {M.SHIPPED_CID["COPA_LIBERTADORES"]}
@@ -5753,13 +5755,13 @@ def modern_conmebol_no_away_goals(pl, db, log=print):
         if regs[i + M.R_CID] not in cids:
             continue
         rules = int.from_bytes(regs[i + 0x10:i + 0x14], "little")
-        if rules & AWAY_GOALS:
-            regs[i + 0x10:i + 0x14] = (rules & ~AWAY_GOALS).to_bytes(4, "little")
+        if rules & (AWAY_GOALS | EXTRA_TIME):
+            regs[i + 0x10:i + 0x14] = (rules & ~(AWAY_GOALS | EXTRA_TIME)).to_bytes(4, "little")
             n += 1
     if n:
         with open(os.path.join(db, "CompetitionRegulation.bin"), "wb") as f:
             f.write(pesdb.wesys_pack(bytes(regs)))
-    log("  modern CONMEBOL: no away goals in %d regulation row(s) of competitions %s"
+    log("  modern CONMEBOL: no away goals or extra time in %d regulation row(s) of competitions %s"
         % (n, ", ".join(str(c) for c in sorted(cids))))
     return n
 

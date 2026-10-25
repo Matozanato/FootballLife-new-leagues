@@ -197,9 +197,12 @@ def modern_world(base, game):
     ok("modern: no away goals in the Libertadores, its phases or the Copa Sudamericana (%d rows, %s)"
        % (len(rows), sorted({reg & 0x3ff for reg, _c, w in rows if w & B.AWAY_GOALS})),
        len({cid for _r, cid, _w in rows}) == len(conm) and not any(w & B.AWAY_GOALS for _r, _c, w in rows))
-    ok("modern: and the Libertadores play-off, knockout and both phases still end in penalties",
-       all(w >> 27 & 1 for reg, cid, w in rows if cid in {5, ids1["conmebol:" + B.LIBQ_CODE]["cid"]}
-           and (cid != 5 or reg & 0x3ff in (8, 10))))
+    groups = {9, ids1["ccup:FL_SUDAM"]["reg"]}
+    ko = [w for reg, _c, w in rows if reg & 0x3ff not in groups]
+    ok("modern: and every tie of them (%d rows) goes straight to penalties: no extra time, penalties on"
+       % len(ko), ko and all(not w & B.EXTRA_TIME and w >> 27 & 1 for w in ko))
+    rc = [w for _r, cid, w in rules(game, r["world"]) if cid == ids1["ccup:FL_SAMRC"]["cid"]]
+    ok("modern: the Recopa (one match) keeps its extra time", rc and all(w & B.EXTRA_TIME for w in rc))
     other = [w for reg, cid, w in rules(game, r["world"]) if cid == 8 and reg & 0x3ff == 16]
     ok("modern: another confederation's knockout keeps its away goals (AFC Champions League 16)",
        other and all(w & B.AWAY_GOALS for w in other))

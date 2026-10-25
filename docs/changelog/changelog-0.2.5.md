@@ -497,8 +497,9 @@ come with it instead.
   two-legged tie level on aggregate by away goals, and the modern phases were copies of them.
   CONMEBOL dropped the rule: in a world with the modern competitions every tie of the
   Libertadores (phases 1-3, round of 16 to semi-finals) and the Copa Sudamericana (play-off,
-  knockout) level on aggregate now goes straight to penalties. A world without them keeps the
-  game's rule. Build the world again. (Thanks antonimus.)
+  knockout) level on aggregate now goes straight to penalties; the Sudamericana's knockout had
+  extra time first, the Libertadores' never had. The Recopa (one match) keeps its extra time. A
+  world without them keeps the game's rules. Build the world again. (Thanks antonimus.)
 
 - **Modern CONMEBOL: the wrong clubs from the Pre-Libertadores' phase 3 in the groups (B240).**
   Phase 2's winners were handed to phase 3 the day after its second leg, before every tie of that
