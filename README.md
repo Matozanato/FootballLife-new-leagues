@@ -622,6 +622,7 @@ and other Latin American worlds and writes up every bug with screenshots:
 - **diablofumao** (Discord): an exhibition with modpack clubs that never started, with logs.
 - **gxldemorci** (Discord): a best eleven of only defenders after a faces update.
 - **General Kreutaa** (Discord): the scoreboard of another country's league in the modpack.
+- **monkusgigus** (Discord): the national team you manage left without its friendlies and EURO matches, and the league title won on the last day with no celebration.
 
 Reports are welcome from anyone: open an
 [issue](https://github.com/Matozanato/FootballLife-new-leagues/issues) with what you
@@ -708,7 +709,7 @@ Contributors, and what each of them did, are listed in
 [The people who made this better](#the-people-who-made-this-better) near the top: above all
 **vmardonesdev** and **Alikhaled_727**, **vector360** and **jibibi**, and **Stagnant09**, **pioup38**, **bobzera**,
 **spursfan07**, **Amir**, **victormican**, **Alby17**, **jyanj083-dotcom**, **Gabyyy2008**, **alexfe87**,
-**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9**, **Xxspedd**, **n1ne**, **LaraCroft**, **AlexRufolo**, **DavidBDJ**, **B2Y26Arabia**, **rwee**, **Risto**, **Yanis**, **LumpierTheGunner**, **Bon Kirk**, **wishfulshot**, **beny609o**, **Nickdaw**, **the_pelado**, **capital030**, **novarama** (moderator), **rickydicky4444**, **MIQABARI**, **nissindiaz**, **Julio**, **Uncle Lanscilo**, **vmican**, **GiorgiM**, **bythezl19**, **quicksite**, **fjchivvdub**, **ZeDosCaes21**, **ELBastos**, **Konkubent**, **beni_93**, **jojofiaz**, **Tysonche35**, **diwwanmago**, **bikolunar42**, **lmazot**, **Erax**, **juanjose6124**, **antoniodias_pt**, **bruce_wayne**, **Sasukidas**, **diablofumao**, **gxldemorci** and **General Kreutaa**.
+**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9**, **Xxspedd**, **n1ne**, **LaraCroft**, **AlexRufolo**, **DavidBDJ**, **B2Y26Arabia**, **rwee**, **Risto**, **Yanis**, **LumpierTheGunner**, **Bon Kirk**, **wishfulshot**, **beny609o**, **Nickdaw**, **the_pelado**, **capital030**, **novarama** (moderator), **rickydicky4444**, **MIQABARI**, **nissindiaz**, **Julio**, **Uncle Lanscilo**, **vmican**, **GiorgiM**, **bythezl19**, **quicksite**, **fjchivvdub**, **ZeDosCaes21**, **ELBastos**, **Konkubent**, **beni_93**, **jojofiaz**, **Tysonche35**, **diwwanmago**, **bikolunar42**, **lmazot**, **Erax**, **juanjose6124**, **antoniodias_pt**, **bruce_wayne**, **Sasukidas**, **diablofumao**, **gxldemorci**, **General Kreutaa** and **monkusgigus**.
 
 The licence asks nothing of you. I do: **if you use these findings, addresses, patch sets
 or tools in a mod, credit this work and link back** — see
