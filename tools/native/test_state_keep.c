@@ -21,7 +21,10 @@
      - a keep already in the file is not written again;
      - B209: a career built and the game quit before its first August draw is still new after a
        restart (the first-season list is used); a year on it is not, nor another club's career;
-       a January league's career keeps its first summer although it kept tables of its own. */
+       a January league's career keeps its first summer although it kept tables of its own;
+     - B240: a league's squad-strength order worked out on day 0 is the one a save of day 30
+       loaded after a restart sees (not worked out again from changed squads); not another
+       club's career, and nothing is written before the career has a club. */
 #define FL26_RCAL_TEST
 #define FL26_STATE_TEST
 #include "fl26swiss.c"
@@ -75,6 +78,7 @@ static void restart(void)
 {
   memset(g_final, 0, sizeof g_final); g_nfinal = 0;
   memset(g_cupwin, 0, sizeof g_cupwin); g_ncupwin = 0;
+  memset(g_seed, 0, sizeof g_seed); g_nseed = 0;
   g_year_off = 0; g_last_day = -1; g_timeline = 0;
   g_new_career = 0; g_day_ticked = 0; g_first_day = -1;
   g_built_gdate = -1; g_built_stored = 0;
@@ -269,6 +273,44 @@ int main(void)
     go(2027, 220);
     any_final_kept();
     expect(!g_new_career, "the same career a year on: not new");
+  }
+
+  printf("\nB240: a first season's squad-strength order outlives the session (antonimus, 25.10.)\n");
+  {
+    restart();
+    DeleteFileA(g_path_test);
+    g_user_test = USER_A;
+    go(2026, 0);
+    final_t* f = &g_seed[g_nseed++];
+    f->reg = 61; f->n = 4; f->day = abs_day();
+    for (int k = 0; k < 4; k++) f->club[k] = CLUB(600 + k);
+    state_store();
+    expect(file_size() == 8 + (long)sizeof(state_rec_t), "day 0: Ecuador's order written");
+    state_store();
+    expect(file_size() == 8 + (long)sizeof(state_rec_t), "... once");
+    restart();
+    go(2026, 30);
+    state_sync();
+    final_t* s = 0;
+    for (int i = 0; i < g_nseed; i++) if (g_seed[i].reg == 61) s = &g_seed[i];
+    expect(s && s->n == 4 && s->club[0] == CLUB(600) && s->club[1] == CLUB(601) && s->club[3] == CLUB(603),
+           "the save of day 30 loaded after a restart: the day-0 order, not worked out again");
+    expect(s && abs_day() - s->day == 30, "... dated day 0, inside seed_of's summer (120 days)");
+    expect(!g_nfinal && !g_ncupwin && !g_st_read_back, "... and no final table or cup winner made of it");
+    restart();
+    g_user_test = USER_B;
+    go(2026, 30);
+    state_sync();
+    expect(!g_nseed, "another club's career: not read back");
+    restart();
+    DeleteFileA(g_path_test);
+    g_user_test = 0;
+    go(2026, 0);
+    f = &g_seed[g_nseed++];
+    f->reg = 61; f->n = 4; f->day = abs_day();
+    for (int k = 0; k < 4; k++) f->club[k] = CLUB(600 + k);
+    state_store();
+    expect(file_size() <= 8, "no club yet: nothing written");
   }
 
   DeleteFileA(g_path_test);

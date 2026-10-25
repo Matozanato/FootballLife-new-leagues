@@ -1752,6 +1752,7 @@ static cupwin_t g_cupwin[32]; static int g_ncupwin = 0;
 
 /* B49: what is kept is read back from the save folder after a restart or a load (state_sync) */
 static void state_sync(void);
+static void state_store(void);
 static int g_st_read_back = 0;
 
 /* the winner of a competition as the game's own rights code sees it, or 0 */
@@ -2000,6 +2001,7 @@ static int assoc_country(uint16_t source) { return source & ASSOC_COUNTRY_MASK; 
 static final_t* assoc_seed(uint16_t source)
 {
   if (!assoc_source(source)) return 0;
+  state_sync();
   int d = abs_day();
   final_t* f = 0;
   for (int i = 0; i < g_nseed; i++) if (g_seed[i].reg == source) f = &g_seed[i];
@@ -2043,6 +2045,7 @@ static final_t* assoc_seed(uint16_t source)
   }
   logf("fl26swiss: CONMEBOL association source %u (country %d) -- %u club(s), %d strength(s) read%s",
        (unsigned)source, country, n, known, known ? "" : "; stable team-array order stands");
+  if (known) state_store();
   for (unsigned i = 0; i < n && i < 8; i++)
     logf("fl26swiss:   association country %d rank %u -> %08x%s%d.%d", country, i + 1, f->club[i],
          str[i] ? " strength " : " strength unreadable ", str[i] / 10, str[i] % 10);
@@ -2053,6 +2056,7 @@ static final_t* assoc_seed(uint16_t source)
 static final_t* seed_of(uint16_t reg)
 {
   if (assoc_source(reg)) return assoc_seed(reg);
+  state_sync();
   int d = abs_day();
   final_t* f = 0;
   for (int i = 0; i < g_nseed; i++) if (g_seed[i].reg == reg) f = &g_seed[i];
@@ -2078,6 +2082,7 @@ static final_t* seed_of(uint16_t reg)
   }
   f->n = known ? (uint16_t)n : 0;
   if (!known) { logf("fl26swiss: first season -- reg %u: no squad could be read; list order stands", (unsigned)reg); return 0; }
+  state_store();
   if (n < 3) return f;
   logf("fl26swiss: first season -- reg %u by squad strength (%d of %u read): %08x %d.%d, %08x %d.%d, %08x %d.%d ... last %08x %d.%d",
        (unsigned)reg, known, n, f->club[0], str[0] / 10, str[0] % 10, f->club[1], str[1] / 10, str[1] % 10,
@@ -11232,15 +11237,23 @@ typedef struct {
   int32_t gdate;                 /* the game's date of the keep: year * 365 + day */
   uint16_t reg;
   uint8_t kind, n;               /* kind 0 a final table (n clubs), 1 a cup winner (n 1),
-                                    2 the career built on gdate (B209; reg 0, n 1, the club) */
+                                    2 the career built on gdate (B209; reg 0, n 1, the club),
+                                    3 a league by squad strength (seed_of / assoc_seed, n clubs) */
   uint32_t club[FINAL_MAX];
   uint32_t check;
 } state_rec_t;
 /* every final table and cup winner memory can hold: state_store took 64 + 32 from before g_final
    grew to FINAL_N, and in a fourth season (2026-10-21, r12, ~110 keeps) want[] ran over the
    globals after it -- UEFA10's, so Competition Info's League Phase called address 0 */
-#define STATE_MAXREC (FINAL_N + 32 + 1)
+#define STATE_MAXREC (FINAL_N + 32 + 1 + 64)
 #define STATE_BUILT 2
+/* B240 (antonimus 25.10.): a first season's places go by squad strength, worked out once and kept
+   for the summer -- in memory. A save loaded weeks later worked it out again from squads that had
+   changed since (two Ecuadorian clubs at 77.5 and 77.8 swapped), and the Libertadores groups'
+   fill on day 41 put in the club now second, LDU Quito, which had played and lost the
+   Pre-Libertadores, in place of the one the season had started with. The order is kept in the
+   file too, and read back with the rest. Older DLLs pass these records over (kind > 2). */
+#define STATE_SEED 3
 #define BUILT_SUMMER 300    /* built to its first August draw: day 216 or, a January league's, day 0 */
 static int g_st_off = -0x7fffffff, g_st_day = -0x7fffffff, g_st_busy = 0;
 static uint32_t g_st_user = 0;
@@ -11343,6 +11356,17 @@ static void state_store(void)
     else r->club[0] = g_cupwin[i - g_nfinal].club;
     r->check = state_check(r);
   }
+  for (int i = 0; i < g_nseed && u; i++) {          /* no club yet: no career to read it back */
+    int age = an - g_seed[i].day;
+    unsigned n = g_seed[i].n;
+    if (age < 0 || age > STATE_AGE || !n || n > FINAL_MAX || nw >= STATE_MAXREC) continue;
+    state_rec_t* r = &want[nw++];
+    memset(r, 0, sizeof *r);
+    r->user = u; r->gdate = gn - age; r->kind = STATE_SEED; r->n = (uint8_t)n;
+    r->reg = g_seed[i].reg;
+    memcpy(r->club, g_seed[i].club, n * sizeof(uint32_t));
+    r->check = state_check(r);
+  }
   if (g_new_career && g_built_gdate >= 0 && u && nw < STATE_MAXREC) {
     state_rec_t* r = &want[nw++];
     memset(r, 0, sizeof *r);
@@ -11399,6 +11423,10 @@ static void state_sync(void)
       if (g_cupwin[i].day + old > gn) { g_cupwin[i] = g_cupwin[--g_ncupwin]; later++; continue; }
       g_cupwin[i].day += old - off; i++;
     }
+    for (int i = 0; i < g_nseed; ) {
+      if (g_seed[i].day + old > gn) { g_seed[i] = g_seed[--g_nseed]; later++; continue; }
+      g_seed[i].day += old - off; i++;
+    }
     if (later) logf("fl26swiss: state -- %d keep(s) of a later date left out: a save of an earlier day loaded", later);
   }
   g_st_off = off; g_st_day = an; g_st_user = u; g_st_read_back = 0;
@@ -11410,7 +11438,8 @@ static void state_sync(void)
   state_rec_t r; DWORD got = 0;
   while (ReadFile(h, &r, sizeof r, &got, 0) && got == sizeof r) {
     if (r.check != state_check(&r) || r.user != u || r.gdate > gn || gn - r.gdate > STATE_AGE ||
-        r.kind > STATE_BUILT || !r.n || r.n > FINAL_MAX || (r.kind && r.n != 1)) continue;
+        r.kind > STATE_SEED || !r.n || r.n > FINAL_MAX ||
+        ((r.kind == 1 || r.kind == STATE_BUILT) && r.n != 1)) continue;
     int k = 0;
     while (k < nb && (best[k].kind != r.kind || best[k].reg != r.reg)) k++;
     if (k == nb) { if (nb >= STATE_MAXREC) continue; nb++; }
@@ -11418,7 +11447,7 @@ static void state_sync(void)
     best[k] = r;                                   /* the newest; of one day, the last written */
   }
   CloseHandle(h);
-  int nf = 0, nc = 0, built = -1;
+  int nf = 0, nc = 0, ns = 0, built = -1;
   /* B209: a career of this club built less than BUILT_SUMMER days ago is in its first summer,
      whether or not the game was quit since: it is new again, and the tables it kept itself (a
      January league's, by July) do not make it a later season's */
@@ -11432,6 +11461,17 @@ static void state_sync(void)
   for (int k = 0; k < nb; k++) {
     int day = an - (gn - best[k].gdate);
     if (best[k].kind == STATE_BUILT) continue;
+    if (best[k].kind == STATE_SEED) {
+      final_t* f = 0;
+      for (int i = 0; i < g_nseed; i++) if (g_seed[i].reg == best[k].reg) f = &g_seed[i];
+      if (f && f->day >= day) continue;
+      if (!f) { if (g_nseed >= 64) continue; f = &g_seed[g_nseed++]; }
+      memset(f, 0, sizeof *f);
+      f->reg = best[k].reg; f->n = best[k].n; f->day = day;
+      memcpy(f->club, best[k].club, best[k].n * sizeof(uint32_t));
+      ns++;
+      continue;
+    }
     if (!best[k].kind) {
       final_t* f = final_of(best[k].reg);
       if (f && f->day >= day) continue;
@@ -11450,9 +11490,9 @@ static void state_sync(void)
     }
   }
   g_st_busy = 0;
-  if (nf || nc)
-    logf("fl26swiss: state -- %d final table(s) and %d cup winner(s) of club %08x's career read back on day %d (%s)",
-         nf, nc, u, today(), STATE_FILE);
+  if (nf || nc || ns)
+    logf("fl26swiss: state -- %d final table(s), %d cup winner(s) and %d squad-strength order(s) of club %08x's career read back on day %d (%s)",
+         nf, nc, ns, u, today(), STATE_FILE);
 #endif
 }
 
