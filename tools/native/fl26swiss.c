@@ -4682,11 +4682,51 @@ static int lpre_decided(const lpre_t* l, uint32_t* win)
 #define CONM_MATCH_STRIDE   0x254
 #define CONM_RNDREC_RVA     0x1579bd0
 
+/* The match records of one regulation: how many, and how many not played yet
+   (-1: the match table is not where it was looked for). */
+static int libq_records(uint16_t reg, int* unplayed)
+{
+  const unsigned char* bs = (const unsigned char*)(uintptr_t)(g_base + CONM_MATCH_BASE);
+  const unsigned char* cs = (const unsigned char*)(uintptr_t)(g_base + CONM_MATCH_CAP);
+
+  if (bs[0] != 0x48 || bs[1] != 0x8d || bs[2] != 0x88 ||
+      cs[0] != 0x81 || cs[1] != 0xff)
+    return -1;
+
+  uint32_t base = *(const uint32_t*)(bs + 3);
+  uint32_t cap  = *(const uint32_t*)(cs + 2);
+
+  void** owner = *(void***)(uintptr_t)(g_base + CONM_OWNER_RVA);
+  unsigned char* blk = owner ? (unsigned char*)owner[0x48 / 8] : 0;
+
+  if (!blk || !cap || cap > 200000) return -1;
+
+  int n = 0;
+  *unplayed = 0;
+  for (uint32_t i = 0; i < cap; i++) {
+    unsigned char* m = blk + base + (size_t)i * CONM_MATCH_STRIDE;
+    if (*(uint16_t*)m == 0xffff || *(uint16_t*)(m + 4) != reg) continue;
+    n++;
+    if (!(m[7] & 0x40)) (*unplayed)++;
+  }
+  return n;
+}
+
 /* All ties must have actually produced a winner. We deliberately do not use the
-   "better placed" fallback for the F2 -> F3 hand-over. */
+   "better placed" fallback for the F2 -> F3 hand-over.
+   B240 (antonimus 25.10.): nor the game's winner of a tie whose second leg is
+   still to come -- before it is played that is whoever leads after the first
+   leg. F2's legs fell on day 25 and the hand-over ran on day 26 before that
+   day's matches: a tie leader went into F3, then the real winner on a later
+   pass, and the groups were drawn from a mix of the two. Every match record of
+   every F2 tie must be played first. */
 static int libq_decided(const lpre_t* l, uint32_t* win)
 {
   if (lpre_matches(l) <= 0) return 0;
+  for (int k = 0; k < l->ties; k++) {
+    int unplayed = 0, n = libq_records(lpre_tie(l, k), &unplayed);
+    if (n <= 0 || unplayed) return 0;
+  }
   for (int k = 0; k < l->ties; k++) {
     const char* how = "";
     win[k] = lpre_winner(lpre_tie(l, k), &how);
@@ -4695,9 +4735,18 @@ static int libq_decided(const lpre_t* l, uint32_t* win)
   return 1;
 }
 
+/* The clubs each native F3 tie was last given, this session: a hand-over run
+   again (the game puts the tie lists back to their day-0 clubs) finds the match
+   records holding these, not the day-0 pair, and must still reach them. */
+static uint32_t g_lib8_last[4][2];
+
 /* Change clubs in unplayed match records belonging to one native F3 tie.
-   Played records are never rewritten. */
+   Played records are never rewritten. a/b are the tie's clubs now, pa/pb the
+   ones this session gave it last (0: none). A record still holding a club that
+   is neither (a save made after the B240 swap) is put right from its other
+   side: that one is na or nb, so this one is the other. */
 static int libq_match_swap(uint16_t reg, uint32_t a, uint32_t b,
+                           uint32_t pa, uint32_t pb,
                            uint32_t na, uint32_t nb, int* played)
 {
   const unsigned char* bs = (const unsigned char*)(uintptr_t)(g_base + CONM_MATCH_BASE);
@@ -4725,10 +4774,22 @@ static int libq_match_swap(uint16_t reg, uint32_t a, uint32_t b,
       continue;
     }
 
+    uint32_t* c = (uint32_t*)(m + 0x14);
     for (int side = 0; side < 2; side++) {
-      uint32_t* c = (uint32_t*)(m + 0x14 + 4 * side);
-      if (same_club(*c, a)) *c = na;
-      else if (same_club(*c, b)) *c = nb;
+      if (same_club(c[side], na) || same_club(c[side], nb)) continue;
+      if (same_club(c[side], a)) c[side] = na;
+      else if (same_club(c[side], b)) c[side] = nb;
+      else if (pa && same_club(c[side], pa)) c[side] = na;
+      else if (pb && same_club(c[side], pb)) c[side] = nb;
+    }
+    for (int side = 0; side < 2; side++) {
+      uint32_t o = c[!side];
+      if (same_club(c[side], na) || same_club(c[side], nb)) continue;
+      if (same_club(o, na)) c[side] = nb;
+      else if (same_club(o, nb)) c[side] = na;
+      else
+        logf("fl26swiss: Libertadores phase 3 -- tie %u: a match holds %08x v %08x, "
+             "neither an F2 winner; left alone", (unsigned)reg, c[0], c[1]);
     }
     n++;
   }
@@ -4780,8 +4841,13 @@ static void lib8_swap(int i)
   lpre_t* l = &g_lpre[i];
   int d = today();
 
-  if (!l->feed8 || l->ties != 8 || d <= l->days[1] || d >= 34)
+  if (!l->feed8 || l->ties != 8) return;
+  if (d <= l->days[1]) {
+    /* another career, or this one loaded from before the hand-over */
+    memset(g_lib8_last, 0, sizeof g_lib8_last);
     return;
+  }
+  if (d >= 34) return;
 
   uint32_t win[LPRE_TIES];
   if (!libq_decided(l, win)) return;
@@ -4802,6 +4868,7 @@ static void lib8_swap(int i)
   int done = 0, played = 0, changed = 0;
   uint32_t all[LPRE_TIES];
   uint32_t old8[LPRE_TIES];
+  uint32_t prev8[LPRE_TIES];
 
   for (int k = 0; k < 4; k++) {
     uint16_t tid =
@@ -4819,7 +4886,8 @@ static void lib8_swap(int i)
     uint32_t na = win[2 * k];
     uint32_t nb = win[2 * k + 1];
 
-    int r = libq_match_swap(tid, a, b, na, nb, &played);
+    int r = libq_match_swap(tid, a, b, g_lib8_last[k][0], g_lib8_last[k][1],
+                            na, nb, &played);
     if (r < 0) {
       logf("fl26swiss: Libertadores phase 3 -- match table signature changed; F3 not swapped");
       return;
@@ -4850,6 +4918,10 @@ static void lib8_swap(int i)
     all[2 * k + 1] = nb;
     old8[2 * k] = a;
     old8[2 * k + 1] = b;
+    prev8[2 * k] = g_lib8_last[k][0];
+    prev8[2 * k + 1] = g_lib8_last[k][1];
+    g_lib8_last[k][0] = na;
+    g_lib8_last[k][1] = nb;
 
     changed += r;
     done++;
@@ -4862,17 +4934,33 @@ static void lib8_swap(int i)
     u32vec v = { all, all + 8, all + 8 };
     ((setclr_fn)(uintptr_t)g_tramp_setcl)(CONM_LIBQ_REG, &v, 1);
 
-    /* Same protection for the native reg-8 master list. */
+    /* Same protection for the native reg-8 master list: every F3 club in it
+       (the ties' clubs before, or what this session gave them last) that is
+       not one of the eight gets one of the eight it lacks. Not by
+       old -> new pairs: the day-0 field and the F2 winners can share a club
+       (antonimus 25.10.: 01e240a5 day-0 in tie 4104, an F2 winner for tie
+       3080), and a pair would then put one winner in twice and drop that
+       one. */
     unsigned char* master = get_rec(CONM_LIBQ_REG);
     unsigned count = master ? rec_count(master) : 0;
 
-    for (unsigned i2 = 0; i2 < count && i2 < 64; i2++)
-      for (int j = 0; j < 8; j++)
-        if (same_club(rec_clubs(master)[i2], old8[j]) &&
-            !same_club(old8[j], all[j])) {
-          rec_clubs(master)[i2] = all[j];
+    for (unsigned i2 = 0; i2 < count && i2 < 64; i2++) {
+      uint32_t* c = &rec_clubs(master)[i2];
+      int j = 0;
+      while (j < 8 && !same_club(*c, all[j])) j++;
+      if (j < 8) continue;
+      for (j = 0; j < 8; j++)
+        if (same_club(*c, old8[j]) || (prev8[j] && same_club(*c, prev8[j]))) break;
+      if (j >= 8) continue;
+      for (j = 0; j < 8; j++) {
+        unsigned i3 = 0;
+        while (i3 < count && i3 < 64 && !same_club(rec_clubs(master)[i3], all[j])) i3++;
+        if (i3 >= count || i3 >= 64) {
+          *c = all[j];
           break;
         }
+      }
+    }
   }
 
   run_flush();

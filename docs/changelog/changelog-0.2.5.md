@@ -493,6 +493,15 @@ come with it instead.
   every club already in the Libertadores groups and take the next one of the same league. The
   Sudamericana play-off (the Libertadores' third-placed clubs) is left as it was. (Thanks antonimus)
 
+- **Modern CONMEBOL: the wrong clubs from the Pre-Libertadores' phase 3 in the groups (B240).**
+  Phase 2's winners were handed to phase 3 the day after its second leg, before every tie of that
+  day was played, so a club leading a tie went in, and the real winner on a later pass the same
+  day. The game had put phase 3's lists back to their 1 January clubs by then, so the later pass
+  rewrote the lists but not the matches the first one had changed: the matches were played by one
+  pair and the winner and loser taken from another (Melgar beat Emelec, Emelec went into the
+  groups). Phase 3 now gets the winners only once every phase 2 match is played, and a hand-over
+  run again finds the clubs of the last one in the matches too. (Thanks antonimus)
+
 - **NewLife: the same player twice, the game's one a free agent (B102).** NewLife 1.5b8 gives no
   game id for some 1100 players the game has (Elliot Anderson at Manchester City, the game's at
   Nottingham Forest), and each became a new player while the game's lost his club. A player with
