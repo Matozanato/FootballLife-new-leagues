@@ -5,6 +5,14 @@ come with it instead.
 
 ## Added
 
+- **Leagues of up to 28 clubs, with all their rounds.** A league can now have 10 to 28 clubs
+  (it was 24). The game's longest league calendar has 46 dates, enough for 24 clubs; a league
+  of 26 or 28 clubs needs 50 or 54 rounds and used to play only the first 46 of them.
+  `fl26swiss` now adds the missing dates to that league's calendar, spread between the first
+  and the last date of the season (midweek rounds between the weekends), so every club plays
+  every other club home and away. 30 clubs are not there yet: in the game a league of 30 left
+  one of its 58 rounds unplayed. Asked by mato for a 30-club league.
+
 - **A third division can play the country's cup (the Coupe de France of the lower leagues).**
   For a new league right under one of the game's second divisions, like National under Ligue 2,
   **Edit league > Its best clubs play the country's cup too** puts its first clubs into the

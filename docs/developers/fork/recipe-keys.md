@@ -56,7 +56,7 @@ Rules that hold for every key:
 | `country` | `Country.bin` name | flag, Competition Info name, region | `country=`, `conf=` |
 | `flag` | picture | replaces the game's flag of that country while the world is on | pictures |
 | `logo` | picture | the league's emblem | pictures |
-| `clubs` | 10..24 | league size | `clubs=` |
+| `clubs` | 10..28 | league size | `clubs=` |
 | `legs` | 1..4 | how often each pair meets | `legs=` |
 | `above` | league name or a shipped reg id | the league one division up | `above=`, `tier=` |
 | `exchange` | number, default 3 | clubs going up and down between the two | `promote=`, `demote=` |

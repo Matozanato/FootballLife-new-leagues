@@ -273,7 +273,9 @@ import flpaths
 GAME = os.environ.get("FL26_DIR", r"C:\Football Life 2026")
 R_ABOVE = 0x04
 LEGS_SHIFT, LEGS_MASK = 12, 7
-CLUBS_MIN, CLUBS_MAX, LEGS_MAX = 10, 24, 4
+# 28 at most: 26 and 28 played every round once fl26swiss adds dates (more_dates); with 30 the
+# game left the 55th round off the calendar (L30 test, 25.10.)
+CLUBS_MIN, CLUBS_MAX, LEGS_MAX = 10, 28, 4
 # "others": the game's groups of clubs in no league, by the nibble at T_POOL of a club's record
 # (Team.bin: 1 Classic Teams, 2 Other European, 3 Other Asia-Oceania, 6 Other Latin American,
 # 7 Other Africa; 5 holds the three "ML Default" clubs). The Discord request of 2026-10-06:

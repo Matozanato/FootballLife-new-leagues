@@ -36,6 +36,15 @@ int rcal_test_invites(int k, uint16_t id) { (void)k; (void)id; return 0; }
 int rcal_test_recday(uint16_t id) { (void)id; return -1; }
 
 static int fails = 0;
+/* the game's push_back of a calendar vector (0x141586640), for more_dates */
+static vec_t test_vec;
+static void test_push(vec_t* v, const date_t* d)
+{
+  size_t n = (size_t)(v->e - v->b) / sizeof(date_t);
+  unsigned char* b = realloc(v->b, (n + 1) * sizeof(date_t));
+  memcpy(b + n * sizeof(date_t), d, sizeof(date_t));
+  v->b = b; v->e = v->c = b + (n + 1) * sizeof(date_t);
+}
 static int cdist(uint32_t a, uint32_t b)
 {
   int d = abs((int)a - (int)b);
@@ -481,6 +490,42 @@ int main(void)
     g_today_test = 0;
   }
 
-  printf(fails ? "\n%d check(s) FAILED\n" : "\nall checks passed\n", fails);
+  printf("\nA league of 30 clubs: the 46-date calendar stretched to 58 (more_dates, mato 25.10.)\n");
+  {
+    /* the game's push_back stood in for by test_push, reached the way the DLL reaches the game's */
+    g_base = (uint64_t)(uintptr_t)test_push - PUSHDATE_RVA;
+    g_pushdate_ok = 1;
+    test_vec.b = malloc(46 * sizeof(date_t));
+    test_vec.e = test_vec.c = test_vec.b + 46 * sizeof(date_t);
+    date_t* s = (date_t*)test_vec.b;
+    for (uint32_t i = 0; i < 46; i++) {              /* Saturdays from 8 August, a week apart, over New Year */
+      s[i].day = (219 + 7 * i) % 365;
+      s[i].round = i;
+      s[i].kind = FL26_DATE_KIND_LEAGUE;
+    }
+    size_t got = more_dates(11, &test_vec, 46, 58, 0);
+    date_t* r = (date_t*)test_vec.b;
+    expect(got == 58 && (size_t)(test_vec.e - test_vec.b) == 58 * sizeof(date_t), "58 dates, the vector grown by push_back");
+    int order = 1, rounds = 1, kinds = 1, apart = 1;
+    for (uint32_t i = 0; i < 58; i++) {
+      rounds &= r[i].round == i;
+      kinds &= r[i].kind == FL26_DATE_KIND_LEAGUE;
+      if (i) {
+        uint32_t g = (r[i].day + 365 - r[i - 1].day) % 365;
+        order &= g > 0 && g < 30;
+        apart &= g >= 3;
+      }
+    }
+    expect(r[0].day == 219 && r[57].day == (219 + 7 * 45) % 365, "the first and the last date stay (219, 169)");
+    expect(order, "in date order across New Year, none on the same day");
+    expect(apart, "three days apart at least before any spacing");
+    expect(rounds && kinds, "rounds 0..57, all league dates");
+    g_pushdate_ok = 0;
+    expect(more_dates(11, &test_vec, 58, 60, 0) == 58, "without the game's push_back the calendar is left as it was");
+    free(test_vec.b);
+    g_base = 0;
+  }
+
+  printf(fails ?"\n%d check(s) FAILED\n" : "\nall checks passed\n", fails);
   return fails ? 1 : 0;
 }
