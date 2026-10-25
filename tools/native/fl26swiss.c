@@ -4498,6 +4498,24 @@ static int lib_reserved_except(uint32_t c, int skip_lpre)
 }
 static int lib_reserved(uint32_t c) { return lib_reserved_except(c, -1); }
 
+/* A club the game has already drawn into this season's Libertadores groups (reg 9). The day-0
+   filler there (lib9_clean) is on none of our paths, so only the groups know it; a Sudamericana
+   or qualifying source passes it by (B231: Albion FC played both group stages). An empty place
+   (no team id) is never a match. */
+static int lib9_has(uint32_t c)
+{
+  unsigned char* g = get_rec(R_LIBGROUP);
+  unsigned m = g ? rec_count(g) : 0;
+  c = canon_club(c);
+  if (!(c >> 14)) return 0;
+  for (unsigned i = 0; i < m && i < 64; i++) {
+    uint32_t a = rec_clubs(g)[i];
+    if ((a >> 14) && same_club(canon_club(a), c)) return 1;
+  }
+  return 0;
+}
+static int lib_taken(uint32_t c) { return lib_reserved(c) || lib9_has(c); }
+
 /* Last-resort replacement for a native Libertadores entry. Stay inside
  * CONMEBOL, prefer the Latin-American pool, and never consume a club already
  * reserved by the Libertadores group stage or qualifying path. Sudamericana
@@ -5000,7 +5018,7 @@ static void lpre_fill(int i)
         how = "cup winner";
         if (club) club = canon_club(club);
         if (club && (has_club(l->club, n, club) ||
-                     ((lib_stage || suda_first) && lib_reserved_except(club, i))))
+                     ((lib_stage || suda_first) && (lib_reserved_except(club, i) || (!l->poko && lib9_has(club))))))
           club = 0;
         if (!club && l->ealt[j]) {
           for (int rank = l->efrom[j] ? l->efrom[j] : 1; rank <= FINAL_MAX; rank++) {
@@ -5008,7 +5026,7 @@ static void lpre_fill(int i)
             if (!club) break;
             if (club >> 14) club = canon_club(club);
             if (!(club >> 14) || has_club(l->club, n, club)) { club = 0; continue; }
-            if ((lib_stage || suda_first) && lib_reserved_except(club, i)) { club = 0; continue; }
+            if ((lib_stage || suda_first) && (lib_reserved_except(club, i) || (!l->poko && lib9_has(club)))) { club = 0; continue; }
             logf("fl26swiss: pre-round %u -- cup winner from reg %u unavailable; same-source fallback %u position %d -> %08x",
                  (unsigned)l->reg, (unsigned)l->ereg[j], (unsigned)l->ealt[j], rank, club);
             break;
@@ -5021,7 +5039,7 @@ static void lpre_fill(int i)
         if (!club) break;
         if (club >> 14) club = canon_club(club);
         if (!(club >> 14) || has_club(l->club, n, club)) { club = 0; continue; }
-        if ((lib_stage || suda_first) && lib_reserved_except(club, i)) {
+        if ((lib_stage || suda_first) && (lib_reserved_except(club, i) || (!l->poko && lib9_has(club)))) {
           logf("fl26swiss: pre-round %u -- source %u position %d -> %08x skipped; already reserved for Libertadores",
                (unsigned)l->reg, (unsigned)l->ereg[j], rank, club);
           club = 0;
@@ -5488,7 +5506,7 @@ static int ccup_fill_one(int k, void* started)
       if (lpre_of(c->ereg[i], &tk) >= 0) club = lpre_winner(c->ereg[i], &how);
       else { club = c->cal ? cal_cup_winner(c->ereg[i]) : cup_winner(c->ereg[i]); how = "cup winner"; }
       if (club && has_club(g_ccup_field[k], n, club)) club = 0;
-      if (club && suda && lib_reserved(canon_club(club))) {
+      if (club && suda && lib_taken(canon_club(club))) {
         logf("fl26swiss:   Sudamericana entry: cup/pre-round winner %08x already has a Libertadores place; using same-source fallback if available",
              canon_club(club));
         club = 0;
@@ -5498,7 +5516,7 @@ static int ccup_fill_one(int k, void* started)
         for (int rank = c->efrom[i] ? c->efrom[i] : 1; rank <= FINAL_MAX; rank++) {
           uint32_t a = ccup_club(c, c->ealt[i], rank, &how);
           if (!a) break;
-          if (suda && (a >> 14) && lib_reserved(canon_club(a))) {
+          if (suda && (a >> 14) && lib_taken(canon_club(a))) {
             logf("fl26swiss:   Sudamericana entry: source %u fallback position %d -> %08x skipped; already in Libertadores",
                  (unsigned)c->ealt[i], rank, canon_club(a));
             continue;
@@ -5521,7 +5539,7 @@ static int ccup_fill_one(int k, void* started)
     for (int rank = c->erank[i]; rank <= FINAL_MAX; rank++) {
       club = ccup_club(c, c->ereg[i], rank, &how);
       if (!club) break;
-      if (suda && (club >> 14) && lib_reserved(canon_club(club))) {
+      if (suda && (club >> 14) && lib_taken(canon_club(club))) {
         logf("fl26swiss:   Sudamericana entry: source %u position %d -> %08x skipped; already in Libertadores",
              (unsigned)c->ereg[i], rank, canon_club(club));
         club = 0;

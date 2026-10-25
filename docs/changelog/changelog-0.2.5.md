@@ -470,6 +470,14 @@ come with it instead.
   Libertadores' scoreboards, and its emblem is the game's own Copa Libertadores emblem, taken from
   your install at Build. Needs a fresh Build of the world. (Thanks antonimus)
 
+- **Modern CONMEBOL: one club in the Libertadores and the Sudamericana groups (B231).** On 1
+  January the game's own Libertadores group list can hold a club kept for the Pre-Libertadores, and
+  B227 puts a spare CONMEBOL club in its place (in antonimus' career Albion FC of Uruguay). That
+  spare club was on no list of ours, so the Sudamericana's first stage took it again as Uruguay's
+  7th, and it played both group stages. The Pre-Libertadores and Sudamericana entries now pass over
+  every club already in the Libertadores groups and take the next one of the same league. The
+  Sudamericana play-off (the Libertadores' third-placed clubs) is left as it was. (Thanks antonimus)
+
 - **NewLife: the same player twice, the game's one a free agent (B102).** NewLife 1.5b8 gives no
   game id for some 1100 players the game has (Elliot Anderson at Manchester City, the game's at
   Nottingham Forest), and each became a new player while the game's lost his club. A player with
