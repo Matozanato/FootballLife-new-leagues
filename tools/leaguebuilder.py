@@ -5300,14 +5300,15 @@ def job_signature(job):
 
 def write_input(root, key, pl, base):
     """the record pictures_only reads: the key of the plan Build was given, and the picture jobs
-    of the plan it made (picture_jobs needs the clubs' ids). None written when a picture's source
-    is not on this PC: the world keeps its own there (keep_added), which a job does not draw"""
+    of the plan it made (picture_jobs needs the clubs' ids). "gone": the files of the pictures whose
+    source is not on this PC: the world keeps its own there (keep_added), which a job does not draw.
+    B239 (jibibi 25.10.): the Modpack's recipe holds logo paths of the PC it was made on, and with
+    no record at all every Build of it was a full one (10 minutes for one new crest)"""
     gone = set()
     jobs, _flags, _n = picture_jobs(pl, base, lambda *a: None, gone)
-    if gone:
-        return
     with open(os.path.join(root, INPUT), "w", encoding="utf-8", newline="\n") as f:
-        json.dump({"format": INPUT_FORMAT, "key": key, "jobs": [job_signature(j) for j in jobs]}, f)
+        json.dump({"format": INPUT_FORMAT, "key": key, "jobs": [job_signature(j) for j in jobs],
+                   "gone": sorted(gone)}, f)
 
 
 def carry_pictures(src, dst):
@@ -5346,14 +5347,16 @@ def pictures_only(pl, base, game, out, key, log=print):
     carry_pictures(pl, built)              # the same plan but for its pictures: the last Build's ids
     gone = set()
     jobs, _flags, _n = picture_jobs(built, base, lambda *a: None, gone)
-    if gone:
-        return False
+    if sorted(gone) != (last.get("gone") or []):
+        return False                       # a picture went missing or came back: keep_added decides
     sigs = [job_signature(j) for j in jobs]
     old = last.get("jobs") or []
     if len(old) != len(sigs) or any(o[0] != n[0] or o[2] != n[2] for o, n in zip(old, sigs)):
         return False
     changed = [j for o, n, j in zip(old, sigs, jobs) if o != n]
     touched = {r for j in changed for r in j[2]}
+    if touched & gone:
+        return False
     ours = {}
     try:
         with open(os.path.join(out, MANIFEST), encoding="utf-8") as f:

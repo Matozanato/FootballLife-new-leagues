@@ -121,6 +121,24 @@ def main(base):
         said = build(base, fast, recipe(p4, ("Renamed FC",) + ("",) * 9))
         ok("a picture not on this PC: a full Build", "only pictures changed" not in said)
 
+        # B239 (jibibi 25.10.): a recipe made on another PC (the Modpack's logo paths) -- once built
+        # here, a crest changed draws just that crest and the world keeps its own logo
+        logo_rels = B.logo_files(json.load(open(os.path.join(world(fast), "leaguebuilder-plan.json"),
+                                                encoding="utf-8"))["leagues"][0]["cid"])
+        logos = {r: B.file_hash(os.path.join(world(fast), r)) for r in logo_rels
+                 if os.path.isfile(os.path.join(world(fast), r))}
+        said = build(base, fast, recipe(p4, ("Renamed FC",) + ("",) * 9))
+        ok("B239: built again with the picture still not on this PC: nothing drawn",
+           "only pictures changed since the last Build: 0 drawn" in said)
+        p4b = dict(p4, c0=png(os.path.join(pics_dir, "c0c.png"), (200, 0, 200, 255)))
+        said = build(base, fast, recipe(p4b, ("Renamed FC",) + ("",) * 9))
+        ok("B239: a crest changed beside a logo not on this PC: only the crest drawn",
+           "only pictures changed since the last Build: 1 drawn again" in said)
+        ok("B239: ... and the world's own logo stays (%d files)" % len(logos),
+           logos and all(B.file_hash(os.path.join(world(fast), r)) == h for r, h in logos.items()))
+        said = build(base, fast, recipe(p3, ("Renamed FC",) + ("",) * 9))
+        ok("B239: the logo back on this PC: a full Build (keep_added decides)", "only pictures changed" not in said)
+
         # a picture added where there was none: what the plan holds changes -- a full Build
         p5 = dict(p3)
         r5 = recipe(p5, ("Renamed FC",) + ("",) * 9)

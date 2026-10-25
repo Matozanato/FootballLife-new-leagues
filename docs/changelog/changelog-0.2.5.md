@@ -124,6 +124,14 @@ come with it instead.
   keeps its own one-match rounds on the days of the August-May cup it is dated like (only its final
   was on the calendar before). (Thanks mohamed)
 
+- **Every Build of the World Modpack took the full ten minutes, even for one new logo (B239).**
+  A Build after an edit of pictures alone (a logo or crest swapped) draws only those again, in
+  seconds. A world made on another PC, like the Modpack, has logos whose picture files are not on
+  your PC; the world keeps its own there, but that switched the quick Build off for good. Now the
+  quick Build works beside them: it leaves those logos as the world has them and draws only what
+  you changed. Giving a crest to a club that had none, and the first Build after an update, are
+  still full Builds. (Thanks jibibi)
+
 - **A club wore another club's crest in some competitions (B199).** A world zip carries the
   scoreboards other packs give its competitions, and a scoreboard can bring crests of its own, by
   team id. The World Modpack's Community Shield board had Leicester City's crest for the id whose
