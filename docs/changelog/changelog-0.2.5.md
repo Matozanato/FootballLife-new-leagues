@@ -462,8 +462,8 @@ come with it instead.
   that lost it gets it back once when it is loaded. (Thanks Vicentico12)
 
 - **Modern CONMEBOL: the Pre-Libertadores (B227).** Its phase 2 was on two days the game gives
-  Copa Chile and Copa do Brasil, so a Chilean club had two matches on one day: it is on 18 and 25
-  January now, and the Sudamericana's national first stage moves from 44 to 40 for the same
+  Copa Chile and Copa do Brasil, so a Chilean club had two matches on one day: it is on 19 and 26
+  January now, and the Sudamericana's national first stage moves from 14 to 10 February for the same
   reason. Before phase 2 was played the game's own entry list could put one of its clubs into the
   Libertadores' third qualifying round as well (Católica against Millonarios in the calendar);
   such a club is now kept out until phase 2's winners go in. The Pre-Libertadores matches wear the
