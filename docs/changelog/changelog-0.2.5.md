@@ -483,6 +483,13 @@ come with it instead.
   113). The pickers in Other content already listed regulation ids; the note now says so too.
   (Thanks Shawn)
 
+- **A second career in one run of the game: January-December leagues played no season (B232).**
+  The part that lets those leagues into their season kept its memory of the first career, so in a
+  second new career started without restarting the game (or another save loaded) Uruguay,
+  Paraguay, Peru, Ecuador and the Chilean second division were taken for "already in a season"
+  and never started: an empty calendar in March. A new career or another save now starts that
+  memory over, as a restart of the game did. (Thanks antonimus)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.

@@ -209,6 +209,8 @@ static int g_cal_midseason = 0;
 /* Closed this season (reset by the July list): the New Year list closes every calendar-year
    league of ours that no region list has closed yet, and none is closed twice. */
 static uint8_t g_cal_shut[256];
+/* The three above belong to one career, not to the run of the game: see timeline_check. */
+static void timeline_check(const char* where, int newyear);
 /* A season in progress has its rounds: the phase count at +0x300 bits 19-24 and the first
    fixture index at +0x88. A calendar-year league of ours closed at New Year has neither, but it
    does have what the other test goes by: apply (0x141522b50) flags it again the moment it
@@ -260,6 +262,7 @@ static int live_rounds(uint16_t id, const unsigned char* rec)
 vec16_t* join_pre(vec16_t* in)
 {
   g_stat[0]++;
+  timeline_check("register_all", 0);
   log_tables();
   int n = 0;
   if (in && in->b && in->e >= in->b) {
@@ -550,7 +553,7 @@ static void canon_listed(uint16_t cid)
 int door_pre(uint64_t id, uint64_t ret)
 {
   uint16_t cid = (uint16_t)id;
-  if (ours(cid)) { canon_listed(cid); count_listed(cid); }
+  if (ours(cid)) { timeline_check("door", 0); canon_listed(cid); count_listed(cid); }
   if (!ours(cid) || ret != g_base + BLD_RET_RVA) return 0;
   /* A calendar-year league of ours never enters with the July builder: its rounds start in
    * February, and New Year would close it before the first one. It joins on day 41. */
@@ -1058,6 +1061,45 @@ static void ensure_tables(const vec16_t* in)
 typedef void (*subreset_fn)(unsigned char* sub);
 typedef void (*subfill_fn)(unsigned char* entry, uint64_t year, uint64_t flag);
 
+/* ---- another career in the same run ----
+ *
+ * g_door_yes, g_cal_shut and g_cal_midseason are one career's memory, and only the July list
+ * clears them. A second career built in the same run of the game -- or another save loaded --
+ * inherited them: antonimus 2026-10-25, two new careers in a calendar-year world in one run.
+ * The first one's New Year marked 11 49 60 61 62 74 closed and its day-0 register_all let
+ * them in; the second one's New Year then passed over them ("closed this season"), so the old
+ * door YES held, and every register_all after took them for "already in a season"
+ * ("appended 4 -> 5 (6 of ours already in a season)"): Uruguay, Paraguay, Peru, Ecuador and the
+ * Chilean second division played no season at all. Another timeline is told by the game date:
+ * it goes back, or leaps further on than any two of our hooks are ever apart; or a New Year
+ * list comes in a year that has had one already. The memory is then what a fresh run has. */
+static int g_seen_date = -1, g_ny_year = -1;
+static int game_date(void)
+{
+  void** owner = *(void***)(uintptr_t)(g_base + OWNER_RVA);
+  const unsigned char* blk = owner ? (const unsigned char*)owner[0x48 / 8] : 0;
+  if (!blk) return -1;
+  int t = *(const uint16_t*)(blk + TODAY_OFF - 8), y = *(const uint16_t*)(blk + TODAY_OFF);
+  return t >= 365 || y < 1990 || y > 2200 ? -1 : y * 365 + t;
+}
+static void timeline_check(const char* where, int newyear)
+{
+  int d = g_base ? game_date() : -1;
+  if (d < 0) return;
+  /* a year and more: a career's July list alone is a year apart, and July clears all three anyway */
+  int y = d / 365, other = g_seen_date >= 0 && (d < g_seen_date || d > g_seen_date + 400);
+  if (newyear && g_ny_year >= 0 && y <= g_ny_year) other = 1;
+  if (other) {
+    memset(g_door_yes, 0, sizeof g_door_yes);
+    memset(g_cal_shut, 0, sizeof g_cal_shut);
+    g_cal_midseason = 0; g_reg_logged = 0; g_ny_year = -1;
+    logf("another career or save in this run (%s, game date %d/%d -> %d/%d): door and New Year memory cleared",
+         where, g_seen_date / 365, g_seen_date % 365, y, d % 365);
+  }
+  if (newyear) g_ny_year = y;
+  g_seen_date = d;
+}
+
 /* The header entry of `id` and the table base, or NULL. */
 static unsigned char* season_entry(uint16_t id, unsigned char** std_out, uint32_t* tabbase_out)
 {
@@ -1206,6 +1248,8 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   int n = (int)(in->e - in->b), k = 0, euro = 0, changed = 0;
   if (n + g_nids + g_ntd_extra > MAX_LIST) return in;
   for (int j = 0; j < n; j++) if (in->b[j] == 2) { euro = 1; break; }
+  { int ny = 0; for (int j = 0; j < n; j++) if (in->b[j] == 8) { ny = 1; break; }
+    timeline_check("teardown", ny); }
   if (euro) memset(g_door_yes, 0, sizeof g_door_yes);   /* a new season: nobody let in yet */
   if (euro) { g_cal_midseason = 1; memset(g_cal_shut, 0, sizeof g_cal_shut); g_reg_logged = 0; }
   char buf[320]; int p = 0; buf[0] = 0;
