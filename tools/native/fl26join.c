@@ -1072,8 +1072,9 @@ typedef void (*subfill_fn)(unsigned char* entry, uint64_t year, uint64_t flag);
  * ("appended 4 -> 5 (6 of ours already in a season)"): Uruguay, Paraguay, Peru, Ecuador and the
  * Chilean second division played no season at all. Another timeline is told by the game date:
  * it goes back, or leaps further on than any two of our hooks are ever apart; or a New Year
- * list comes in a year that has had one already. The memory is then what a fresh run has. */
-static int g_seen_date = -1, g_ny_year = -1;
+ * list comes on a date no later than the last one (two careers built on the same 1 January).
+ * The memory is then what a fresh run has. */
+static int g_seen_date = -1, g_ny_date = -1;
 static int game_date(void)
 {
   void** owner = *(void***)(uintptr_t)(g_base + OWNER_RVA);
@@ -1088,15 +1089,15 @@ static void timeline_check(const char* where, int newyear)
   if (d < 0) return;
   /* a year and more: a career's July list alone is a year apart, and July clears all three anyway */
   int y = d / 365, other = g_seen_date >= 0 && (d < g_seen_date || d > g_seen_date + 400);
-  if (newyear && g_ny_year >= 0 && y <= g_ny_year) other = 1;
+  if (newyear && g_ny_date >= 0 && d <= g_ny_date) other = 1;
   if (other) {
     memset(g_door_yes, 0, sizeof g_door_yes);
     memset(g_cal_shut, 0, sizeof g_cal_shut);
-    g_cal_midseason = 0; g_reg_logged = 0; g_ny_year = -1;
+    g_cal_midseason = 0; g_reg_logged = 0; g_ny_date = -1;
     logf("another career or save in this run (%s, game date %d/%d -> %d/%d): door and New Year memory cleared",
          where, g_seen_date / 365, g_seen_date % 365, y, d % 365);
   }
-  if (newyear) g_ny_year = y;
+  if (newyear) g_ny_date = d;
   g_seen_date = d;
 }
 
