@@ -115,6 +115,15 @@ come with it instead.
 
 ## Fixed
 
+- **The Saudi Pro League was never played after you moved it to August-May (B238).** The game plays
+  Saudi Arabia (and Brazil, Chile, China, Japan) from February to December. A world that gives such
+  a country Season: August-May took its competitions out of the New Year season, but the game builds
+  the July season only for European competitions, so the Saudi Pro League, King's Cup and Super Cup
+  had no matches at all. The July build now takes them in with the European ones: the Saudi Pro
+  League plays its 34 rounds from late August to May, the Super Cup in August, and the King's Cup
+  keeps its own one-match rounds on the days of the August-May cup it is dated like (only its final
+  was on the calendar before). (Thanks mohamed)
+
 - **A club wore another club's crest in some competitions (B199).** A world zip carries the
   scoreboards other packs give its competitions, and a scoreboard can bring crests of its own, by
   team id. The World Modpack's Community Shield board had Leicester City's crest for the id whose
