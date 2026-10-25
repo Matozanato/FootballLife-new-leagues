@@ -625,6 +625,119 @@ def helper_boards(pl, path, taken=()):
     return out
 
 
+def libq_keys(pl):
+    """the Pre-Libertadores' regulation ids: each phase's and its ties' (reg + 1024 * k)"""
+    ids = (pl.get("cup_ids") or {}).get(LIBQ_KEY) or {}
+    return [ids[f] + 1024 * k for f, ties in LIBQ_TIES if isinstance(ids.get(f), int)
+            for k in range(ties + 1)]
+
+
+# B230 (antonimus 25.10.): the scoreboard alone was not enough -- Menu Server's themes, balls,
+# referees, referee kits, commentary and goal songs go by the competition id too, so the
+# Pre-Libertadores' matches got the generic menu where the game's qualifying round has the
+# Libertadores one. Every content\<server>\map_competitions.txt but the scoreboards' (helper_boards)
+# gives the phases what it gives regulation 8; Soundtrack Server's music, kept in folders named
+# by the id, gets a folder of the round's tracks for each (hard links, no copies of the music).
+HELPER_SKIP = {BOARDS.lower(), SPFL_BOARDS.lower()}
+SOUNDTRACK = os.path.join("content", "soundtrack-server")
+SOUND_SPECIFIC = ("4_Competitions_Specific", "6_Results_Specific", "8_Highlights_Specific")
+SOUND_PARENT = "CCL"                 # SoundtrackServer.lua: regulation 8 and its ties play the "CCL" folder
+SOUND_MARK = "made by FL26 Mod Studio.txt"
+REST = re.compile(r"^\s*(\d+)\s*,(.*?)\s*(#.*)?$")
+
+
+def helper_lines(pl, path, taken=()):
+    """[(regulation id, map line)] giving the Pre-Libertadores' regulations what the map at path
+    (any server's map_competitions.txt) gives the game's Libertadores qualifying round, every line
+    of it, or [] when the world has no such phases or the map no line for that round; a key a line
+    of yours (or taken) has already is left out"""
+    keys = libq_keys(pl)
+    if not keys or not os.path.isfile(path):
+        return []
+    rests, have = [], set()
+    for l in lbstadiums.read(path)[0]:
+        m = REST.match(l)
+        if not m or TAG in l:
+            continue
+        have.add(int(m.group(1)))
+        if int(m.group(1)) == LIBQ_PARENT and m.group(2).strip() and m.group(2) not in rests:
+            rests.append(m.group(2))
+    return [(key, "%d,%s   %s Pre-Libertadores (as %d)" % (key, r, TAG, LIBQ_PARENT))
+            for key in keys if key not in taken and key not in have for r in rests]
+
+
+HELPER_MARK = "Pre-Libertadores (as %d)" % LIBQ_PARENT
+
+
+def _helper_map(path, mine, log, what, sider=None):
+    """our Pre-Libertadores lines (helper_lines) into a server's map: the earlier ones out, the
+    rest of the file as it was -- other lines of ours (a world zip's menu themes) are menus()' and
+    the stadiums', and no line of yours is switched off (helper_lines leaves out a key you have)"""
+    lines, nl, bom, enc = lbstadiums.read(path)
+    rows = [l for l in lines if not (TAG in l and HELPER_MARK in l)]
+    if not mine and len(rows) == len(lines):
+        return 0
+    while rows and not rows[-1].strip():
+        rows.pop()
+    rows += [t for _k, t in mine]
+    lbstadiums.keep_before(path, "Switch on: %s map" % what, sider)
+    data = (nl.join(rows) + nl).encode(enc, "replace")
+    with open(path + ".tmp", "wb") as f:
+        f.write((b"\xef\xbb\xbf" if bom else b"") + data)
+    os.replace(path + ".tmp", path)
+    log("Pre-Libertadores (%s): %d line(s) as regulation %d" % (what, len(mine), LIBQ_PARENT))
+    return len(mine)
+
+
+def helper_servers(pl, sider, world, log=print):
+    """the Pre-Libertadores' lines into every other server's map_competitions.txt and their
+    music folders into Soundtrack Server's (helper_lines, B230); a world without the phases takes
+    ours out again. Returns the lines written"""
+    content = os.path.join(sider, "content")
+    n = 0
+    try:
+        dirs = sorted(os.listdir(content))
+    except OSError:
+        dirs = []
+    for d in dirs:
+        rel = os.path.join("content", d)
+        path = os.path.join(sider, rel, "map_competitions.txt")
+        if rel.lower() in HELPER_SKIP or not os.path.isfile(path):
+            continue
+        n += _helper_map(path, helper_lines(pl, path), log, d, sider)
+    keys = libq_keys(pl)
+    for sub in SOUND_SPECIFIC:
+        top = os.path.join(sider, SOUNDTRACK, sub)
+        if not os.path.isdir(top):
+            continue
+        src = os.path.join(top, SOUND_PARENT)
+        tracks = [f for f in os.listdir(src) if f.lower().endswith(".mp3")] if os.path.isdir(src) else []
+        made = 0
+        for name in os.listdir(top):
+            dst = os.path.join(top, name)
+            if os.path.isfile(os.path.join(dst, SOUND_MARK)) and (not tracks or not name.isdigit()
+                                                                  or int(name) not in keys):
+                shutil.rmtree(dst, ignore_errors=True)
+        for key in keys if tracks else ():
+            dst = os.path.join(top, str(key))
+            if os.path.isdir(dst) and not os.path.isfile(os.path.join(dst, SOUND_MARK)):
+                continue                        # a folder of your own for the id
+            os.makedirs(dst, exist_ok=True)
+            for f in tracks:
+                if not os.path.exists(os.path.join(dst, f)):
+                    try:
+                        os.link(os.path.join(src, f), os.path.join(dst, f))
+                    except OSError:
+                        shutil.copy2(os.path.join(src, f), os.path.join(dst, f))
+            with open(os.path.join(dst, SOUND_MARK), "w") as f:
+                f.write("Pre-Libertadores: the tracks of %s (regulation %d), for regulation %d\n"
+                        % (SOUND_PARENT, LIBQ_PARENT, key))
+            made += 1
+        if made:
+            log("Pre-Libertadores (soundtrack %s): %d folder(s) with the %s tracks" % (sub, made, SOUND_PARENT))
+    return n
+
+
 def write(pl, sider, log=print, root=None, redraw=False):
     """the plan's kits and scoreboards into Kit Server and Scoreboard Server, and a kit made for
     every other new club with colours or a crest (root: the world's folder, for the crests);
@@ -715,8 +828,12 @@ def write(pl, sider, log=print, root=None, redraw=False):
         for o in other:
             path = os.path.join(sider, o, file)
             if o != lib and os.path.isfile(path):
-                _map(path, [], log, what + " (" + o + ")", world, sider, teams if what == "kits" else comps)
+                # B230: with both scoreboard modules on, the Libertadores line may be in this one
+                # (antonimus: content\scoreboards), so the Pre-Libertadores goes by it here too
+                _map(path, helper_boards(pl, path) if what == "scoreboards" else [], log,
+                     what + " (" + o + ")", world, sider, teams if what == "kits" else comps)
     menus(sider, world, log)
+    helper_servers(pl, sider, world, log)
     return tuple(done)
 
 
