@@ -59,6 +59,8 @@ def main():
         put(ball, BALL)
         put(ref, REF)
         put(board, ["8, CONMEBOL\\Copa Libertadores\\ESPN"])
+        spfl = os.path.join(c, "scoreboards", "map_competitions.txt")
+        put(spfl, ["8, Libertadores\\Fox"])
         ccl = os.path.join(c, "soundtrack-server", "4_Competitions_Specific", "CCL")
         os.makedirs(ccl)
         for i in (1, 2):
@@ -86,6 +88,9 @@ def main():
            all(l in open(menu, encoding="utf-8-sig").read().splitlines() for l in MENU))
         ok("the scoreboard map is helper_boards' (B227), one line a regulation, not two",
            all(len(v) == 1 for k, v in keyed(board).items() if k in KEYS) and all(k in keyed(board) for k in KEYS))
+        ok("both scoreboard modules on: the map common\\scoreboards.lua reads has the phases too (antonimus)",
+           all(keyed(spfl).get(k) == ["%d, Libertadores\\Fox   %s Pre-Libertadores (as 8)" % (k, S.TAG)]
+               for k in KEYS))
         sound = os.path.join(c, "soundtrack-server", "4_Competitions_Specific")
         ok("soundtrack: a folder of the round's tracks for each regulation",
            all(sorted(f for f in os.listdir(os.path.join(sound, str(k))) if f.endswith(".mp3"))
@@ -112,7 +117,7 @@ def main():
         S.write({"world": "_FL26Other", "leagues": []}, sider, log=lambda *a: None)
         ok("another world on: the lines are gone, yours stay",
            not any(k in keyed(menu) for k in KEYS if k != 903) and keyed(menu)[903] == ["903, My Pre-Lib Menu"]
-           and not any(k in keyed(ball) for k in KEYS))
+           and not any(k in keyed(ball) for k in KEYS) and not any(k in keyed(spfl) for k in KEYS))
         ok("and the music folders we made, not yours (1927, 17) or CCL",
            sorted(os.listdir(sound)) == ["17", "1927", "CCL"])
         ok("no phases, no line: nothing to do", S.helper_lines({"leagues": []}, menu) == [])

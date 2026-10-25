@@ -828,7 +828,10 @@ def write(pl, sider, log=print, root=None, redraw=False):
         for o in other:
             path = os.path.join(sider, o, file)
             if o != lib and os.path.isfile(path):
-                _map(path, [], log, what + " (" + o + ")", world, sider, teams if what == "kits" else comps)
+                # B230: with both scoreboard modules on, the Libertadores line may be in this one
+                # (antonimus: content\scoreboards), so the Pre-Libertadores goes by it here too
+                _map(path, helper_boards(pl, path) if what == "scoreboards" else [], log,
+                     what + " (" + o + ")", world, sider, teams if what == "kits" else comps)
     menus(sider, world, log)
     helper_servers(pl, sider, world, log)
     return tuple(done)

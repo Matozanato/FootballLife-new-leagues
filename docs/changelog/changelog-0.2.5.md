@@ -483,7 +483,12 @@ come with it instead.
   music. Switch on now gives its phases whatever each server's map gives the Libertadores'
   qualifying round (a line of your own for a phase stays yours), and Soundtrack Server's
   Libertadores tracks (its CCL folders) a folder for each phase, linked, not copied. Another world
-  switched on takes them out again. (Thanks antonimus)
+  switched on takes them out again. The scoreboard lines go into both scoreboard maps now: with
+  ScoreboardServer.lua and common\scoreboards.lua both on, Switch on wrote them into
+  content\scoreboard-server only, while the Libertadores line was in content\scoreboards, so the
+  phases had no scoreboard. A menu and menu music that come from the game itself, with no Menu
+  Server or Soundtrack Server line for the Libertadores, are not given to the phases yet.
+  (Thanks antonimus)
 
 - **Leagues > More > Competition IDs pointed scoreboards at the wrong column (B225).** Its note said
   scoreboards, kits and Sider's competition maps go by the Competition ID; they go by the regulation
