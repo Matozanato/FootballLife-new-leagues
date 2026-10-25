@@ -7185,6 +7185,22 @@ static int libq_any_live(void)
     if (g_lpre[li].alias && libq_item_live(g_lpre[li].reg)) return 1;
   return 0;
 }
+static int libq_page_phases(uint16_t* order);
+/* B229: what the Libertadores' qualifying item should be -- 1 on, 0 grey, -1 the game's say (a
+   world without the F1/F2 aliases). In the qualifying half-year it is on exactly while its page
+   has a phase to show (libq_page_phases): on 1 January the game itself turns it on, its F3 holding
+   the provisional field, and the page then had nothing but an empty F3 titled "%s" */
+static int libq_item_want(void)
+{
+  int feed = 0;
+  for (int i = 0; i < g_nlpre; i++)
+    if (g_lpre[i].alias && g_lpre[i].feed8) feed = 1;
+  if (!feed) return -1;
+  int d = today();
+  if (d < 0 || d >= 182) return libq_any_live() ? 1 : -1;
+  uint16_t order[MAX_LPRE + 1];
+  return libq_page_phases(order) > 0;
+}
 static uint64_t phkind_core(uint32_t* comp, uint64_t kind, uintptr_t ra);
 uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
 {
@@ -9878,16 +9894,20 @@ uint64_t ci_menu_handler(ci_vec_t* v, uint32_t* comp, uint64_t flag)
      not by the game's draw, and the menu (no phase-kind call for this item) greys it on a mark the
      draw would have set. While one of its phases holds clubs it is enabled; it opens the same
      page, which asks for the phase itself (PAGE_GRP_RA). */
-  if (*comp == CONM_LIB_CID && libq_any_live()) {
+  int want = *comp == CONM_LIB_CID ? libq_item_want() : -1;
+  if (want >= 0) {
     int n = (int)(v->e - v->b), lit = 0;
     for (int k = 0; k < n; k++)
-      if (!v->b[k].en && v->b[k].size == 7 && !memcmp(v->b[k].buf, "playoff", 7)) { v->b[k].en = 1; lit++; }
+      if (v->b[k].en != want && v->b[k].size == 7 && !memcmp(v->b[k].buf, "playoff", 7)) {
+        v->b[k].en = (uint8_t)want;
+        lit += want ? 1 : -1;
+      }
     static int said_libq = 0;
-    if (said_libq++ < 6) {
+    if (lit && said_libq++ < 6) {
       char items[160]; int o = 0;
       for (int k = 0; k < n && k < 10 && o < 140; k++)
         o += snprintf(items + o, sizeof items - o, " %u/%u/%.7s", v->b[k].type, v->b[k].en, v->b[k].size < 16 ? v->b[k].buf : "-");
-      logf("fl26swiss: Competition Info -- Libertadores menu, %d qualifying item(s) enabled:%s", lit, items);
+      logf("fl26swiss: Competition Info -- Libertadores menu, qualifying item %s (day %d):%s", lit > 0 ? "on" : "grey", today(), items);
     }
   }
 
