@@ -7169,6 +7169,11 @@ static int libq_item_live(uint16_t q)
   }
   int tk = -1, li = lpre_of(q, &tk);
   if (li < 0 || tk >= 0 || !g_lpre[li].alias) return 0;
+  /* B229 (antonimus 25.10.): on 1 January the alias ties still hold last season's clubs, so
+     the item lit before phase 1 was filled (day 2) and opened the empty F3 page ("%s"). An
+     alias counts only from its own fill day to the end of the qualifying half-year. */
+  int d = today();
+  if (d < 0 || d < g_lpre[li].fill || d >= 182) return 0;
   unsigned char* t = find_rec(lpre_tie(&g_lpre[li], 0));
   return t && rec_count(t) == 2;
 }
@@ -7607,7 +7612,7 @@ static int libq_page_phases(uint16_t* order)
   if (feed < 0 || d < 0 || d >= 182) return 0;
 
   for (int i = 0; i < g_nlpre; i++) {
-    if (!g_lpre[i].alias ||
+    if (!g_lpre[i].alias || d < g_lpre[i].fill ||     /* B229: not before its fill day */
         (g_lpre[i].filled_year != year &&
          lpre_matches(&g_lpre[i]) <= 0))
       continue;
@@ -7662,7 +7667,9 @@ static void libq_tlist_handler(uint64_t phase, void* out)
              (li >= 0 && g_lpre[li].alias && tk < 0);
   int n = mine ? libq_page_phases(order) : 0;
 
-  if (n < 2) {
+  /* B229: one phase is enough -- with only F1 filled the page asking for F3 is given F1,
+     not the empty F3 */
+  if (n < 1) {
     f(phase, out);
     return;
   }
