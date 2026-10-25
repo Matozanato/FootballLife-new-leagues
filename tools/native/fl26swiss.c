@@ -10595,11 +10595,58 @@ __declspec(dllexport) int fl26_swiss_datelike(const uint16_t* v, int n)
   return k;
 }
 
+/* B238: a cup of the game a `season` line moved to August-May is dated like an August-May cup
+   (164 like 122), but the dates the game gives 122 name 122's rounds: 0x2e, 0x33 and 0x34 over
+   two legs, then 0x35 and 0x36. The King's Cup plays 0x2e, 0x2f, 0x34, 0x35 and 0x36 over one
+   match each, so only the days of rounds both share were found and its first rounds were never
+   played (measured 2026-10-25: a King's Cup drawn, 18 places in 5 rounds, only the final on the
+   calendar). It keeps its own rounds now and takes the other cup's days, in order: its first on
+   the other's first day, its final on the other's last, the rounds between spread over the rest. */
+#define OWN_MAX 32
+static void moved_cup_days(const date_t* own, int nown, void* vec)
+{
+  vec_t* v = (vec_t*)vec;
+  size_t have = (v && v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+  size_t cap = (v && v->b && v->c >= v->b) ? (size_t)(v->c - v->b) / sizeof(date_t) : 0;
+  if (!have || nown < 1 || (size_t)nown > cap) return;
+  date_t* r = (date_t*)v->b;
+  uint32_t d[OWN_MAX]; int nd = 0;                 /* the other cup's days, in season order */
+  for (size_t j = 0; j < have; j++) {
+    int dup = 0;
+    for (int k = 0; k < nd; k++) if (d[k] == r[j].day) dup = 1;
+    if (!dup && nd < OWN_MAX) d[nd++] = r[j].day;
+  }
+#define SEASON_KEY(x) (((x) + 365u - SECOND_HALF) % 365u)
+  for (int a = 1; a < nd; a++)
+    for (int b = a; b > 0 && SEASON_KEY(d[b]) < SEASON_KEY(d[b - 1]); b--) { uint32_t t = d[b]; d[b] = d[b - 1]; d[b - 1] = t; }
+#undef SEASON_KEY
+  if (nown > nd) return;                           /* more of its own dates than days: as it was */
+  for (int j = 0; j < nown; j++) {
+    int k = nown == 1 ? nd - 1 : (j * (nd - 1) * 2 + (nown - 1)) / (2 * (nown - 1));
+    r[j] = own[j];
+    r[j].day = d[k];
+  }
+  v->e = v->b + (size_t)nown * sizeof(date_t);
+}
+
 static uint64_t datelike_dates(uint16_t id, uint64_t reg, void* vec)
 {
   static uint16_t said[MAX_DATELIKE]; static int nsaid = 0;
   for (int i = 0; i < g_ndlike; i++) {
     if (g_dlike[i][0] != id) continue;
+    /* a cup of the game keeps its own rounds (B238): what the game dates it with, first */
+    static date_t own[OWN_MAX]; int nown = 0;
+    if (id <= 175 && !date_days_for(id) && !date_shift_for(id)) {
+      ((date_fn)(uintptr_t)g_tramp_date)(reg, vec);
+      vec_t* ov = (vec_t*)vec;
+      size_t on = (ov && ov->b && ov->e >= ov->b) ? (size_t)(ov->e - ov->b) / sizeof(date_t) : 0;
+      if (on <= OWN_MAX) { memcpy(own, ov->b, on * sizeof(date_t)); nown = (int)on; }
+      if (ov && ov->b) ov->e = ov->b;              /* the game's date list appends: empty it again */
+      for (int a = 1; a < nown; a++)               /* by round, then leg */
+        for (int b = a; b > 0 && (own[b].round < own[b - 1].round ||
+             (own[b].round == own[b - 1].round && own[b].kind < own[b - 1].kind)); b--) {
+          date_t t = own[b]; own[b] = own[b - 1]; own[b - 1] = t; }
+    }
     uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | g_dlike[i][1], vec);
     const datedays_t* dd = date_days_for(id);
 
@@ -10662,6 +10709,7 @@ static uint64_t datelike_dates(uint16_t id, uint64_t reg, void* vec)
         natcup_fix(id, vec);
       }
     }
+    if (nown) moved_cup_days(own, nown, vec);
     vec_t* v = (vec_t*)vec;
     size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
     int seen = 0;
@@ -10672,6 +10720,12 @@ static uint64_t datelike_dates(uint16_t id, uint64_t reg, void* vec)
       if (have) logf("fl26swiss: reg %u -- dated as %u: %u dates, days %u..%u", (unsigned)id, (unsigned)g_dlike[i][1],
                      (unsigned)have, r[0].day, r[have - 1].day);
       else logf("fl26swiss: reg %u -- dated as %u: the game gave no dates", (unsigned)id, (unsigned)g_dlike[i][1]);
+      if (nown && have) {
+        char ob[400]; int op = 0; ob[0] = 0;
+        for (size_t j = 0; j < have && op < (int)sizeof ob - 24; j++)
+          op += snprintf(ob + op, sizeof ob - (size_t)op, "%x/%u:%u ", r[j].round, r[j].kind, r[j].day);
+        logf("fl26swiss: reg %u -- its own %d round date(s) on those days (round/leg:day): %s", (unsigned)id, nown, ob);
+      }
     }
     return rv;
   }
