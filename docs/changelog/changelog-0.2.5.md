@@ -493,6 +493,13 @@ come with it instead.
   every club already in the Libertadores groups and take the next one of the same league. The
   Sudamericana play-off (the Libertadores' third-placed clubs) is left as it was. (Thanks antonimus)
 
+- **Modern CONMEBOL: no away goals (B241).** The game's Libertadores rows still decide a
+  two-legged tie level on aggregate by away goals, and the modern phases were copies of them.
+  CONMEBOL dropped the rule: in a world with the modern competitions every tie of the
+  Libertadores (phases 1-3, round of 16 to semi-finals) and the Copa Sudamericana (play-off,
+  knockout) level on aggregate now goes straight to penalties. A world without them keeps the
+  game's rule. Build the world again. (Thanks antonimus.)
+
 - **Modern CONMEBOL: the wrong clubs from the Pre-Libertadores' phase 3 in the groups (B240).**
   Phase 2's winners were handed to phase 3 the day after its second leg, before every tie of that
   day was played, so a club leading a tie went in, and the real winner on a later pass the same

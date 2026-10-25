@@ -139,6 +139,13 @@ def switch(base):
        back.get("conmebol") == "modern" and B.recipe_has_modern_conmebol(back))
 
 
+def rules(game, world):
+    """the world's regulation rows: (regulation id, competition id, the +0x10 rules word)"""
+    regs = B.M.load(os.path.join(world_dir(game, world), "common", "etc", "pesdb"), "CompetitionRegulation.bin")
+    return [(int.from_bytes(regs[i + B.M.R_ID:i + B.M.R_ID + 2], "little"), regs[i + B.M.R_CID],
+             int.from_bytes(regs[i + 0x10:i + 0x14], "little")) for i in range(0, len(regs), B.M.REG)]
+
+
 def classic_world(base, game):
     """blocker 1: the classic recipe plans and builds, without anything of the modern competitions"""
     r = classic()
@@ -166,6 +173,9 @@ def classic_world(base, game):
     ok("classic: the world file has no first stage, play-off or phase lines, no cal=1",
        not re.search(r"^lpre .*(single=1|poko=1|feed=)", text, re.M) and " cal=1" not in text)
     ok("classic: and no Recopa", "Recopa" not in text)
+    lib = [w for reg, cid, w in rules(game, r["world"]) if cid == 5 and reg & 0x3ff in (8, 10)]
+    ok("classic: the Libertadores play-off and knockout keep the game's away goals (%d rows)" % len(lib),
+       lib and all(w & B.AWAY_GOALS for w in lib))
 
 
 def modern_world(base, game):
@@ -181,6 +191,18 @@ def modern_world(base, game):
     regs = [v for w in ids1.values() for f, v in w.items() if f != "cid" and not (f == "ko" and v == w.get("reg"))]
     ok("modern: no two of them share a competition or regulation id",
        len(set(cids)) == len(cids) and len(set(regs)) == len(regs))
+    # mato 25.10. (antonimus): level on aggregate = penalties, no away goals, as CONMEBOL plays now
+    conm = {5} | set(cids) - {ids1["ccup:FL_SAMRC"]["cid"]}
+    rows = [(reg, cid, w) for reg, cid, w in rules(game, r["world"]) if cid in conm]
+    ok("modern: no away goals in the Libertadores, its phases or the Copa Sudamericana (%d rows, %s)"
+       % (len(rows), sorted({reg & 0x3ff for reg, _c, w in rows if w & B.AWAY_GOALS})),
+       len({cid for _r, cid, _w in rows}) == len(conm) and not any(w & B.AWAY_GOALS for _r, _c, w in rows))
+    ok("modern: and the Libertadores play-off, knockout and both phases still end in penalties",
+       all(w >> 27 & 1 for reg, cid, w in rows if cid in {5, ids1["conmebol:" + B.LIBQ_CODE]["cid"]}
+           and (cid != 5 or reg & 0x3ff in (8, 10))))
+    other = [w for reg, cid, w in rules(game, r["world"]) if cid == 8 and reg & 0x3ff == 16]
+    ok("modern: another confederation's knockout keeps its away goals (AFC Champions League 16)",
+       other and all(w & B.AWAY_GOALS for w in other))
 
     # a league with its national and super cup in front: it takes ids, the CONMEBOL ones stay
     more = copy.deepcopy(r)

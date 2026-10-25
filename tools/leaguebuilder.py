@@ -5001,6 +5001,7 @@ def build(pl, base, game, replace=False, log=print):
     ccups += sudamericana_first_line(pl)
     ccups += sudamericana_playoffs(pl, tmp, db, log)
     ccups += libertadores_qualifying(pl, tmp, db, log)
+    modern_conmebol_no_away_goals(pl, db, log)
     for c in (pl.get("ccups") or []) + hc:
         pl.setdefault("cup_ids", {})["ccup:" + (c.get("code") or c["name"])] = {
             f: c[f] for f in ("cid", "reg", "ko", "pre_reg") if isinstance(c.get(f), int)}
@@ -5722,6 +5723,45 @@ def libq_plan(stages):
         raise BuildError("modern Libertadores qualifying: the same domestic place is listed in more than one qualifying phase")
 
     return {"phase1": f1, "phase2": f2}
+
+
+# Modern CONMEBOL (mato 25.10., antonimus): a two-legged tie level on aggregate goes straight to
+# penalties -- no away goals -- in the Libertadores qualifying phases, its play-off (8) and
+# knockout (10) and the Copa Sudamericana. The game's Libertadores rows have away goals on, extra
+# time off and penalties on (CompetitionRegulation +0x10 bits 24, 25 and 27,
+# docs/research/research-findings.md) and our phases are copies of regulation 8, so clearing bit
+# 24 is the whole rule. A world without the modern competitions keeps the game's rows.
+AWAY_GOALS = 1 << 24
+
+
+def modern_conmebol_no_away_goals(pl, db, log=print):
+    """Clear the away goals rule on every regulation of the modern CONMEBOL competitions in the
+    world's tables in <db>; returns how many rows had it."""
+    if not (pl.get("libq") or pl.get("suda_first")):
+        return 0
+    cids = {M.SHIPPED_CID["COPA_LIBERTADORES"]}
+    for code in (LIBQ_CODE, SAM_FIRST_CODE, SPO_CODE):
+        got = (pl.get("cup_ids") or {}).get("conmebol:" + code) or {}
+        if isinstance(got.get("cid"), int):
+            cids.add(got["cid"])
+    sud = next((c for c in pl.get("ccups") or [] if c.get("number") == SUDAM), None)
+    if sud and isinstance(sud.get("cid"), int):
+        cids.add(sud["cid"])
+    regs = M.load(db, "CompetitionRegulation.bin")
+    n = 0
+    for i in range(0, len(regs) - M.REG + 1, M.REG):
+        if regs[i + M.R_CID] not in cids:
+            continue
+        rules = int.from_bytes(regs[i + 0x10:i + 0x14], "little")
+        if rules & AWAY_GOALS:
+            regs[i + 0x10:i + 0x14] = (rules & ~AWAY_GOALS).to_bytes(4, "little")
+            n += 1
+    if n:
+        with open(os.path.join(db, "CompetitionRegulation.bin"), "wb") as f:
+            f.write(pesdb.wesys_pack(bytes(regs)))
+    log("  modern CONMEBOL: no away goals in %d regulation row(s) of competitions %s"
+        % (n, ", ".join(str(c) for c in sorted(cids))))
+    return n
 
 
 def libertadores_qualifying(pl, root, db, log=print):
