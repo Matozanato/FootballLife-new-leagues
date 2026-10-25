@@ -93,7 +93,7 @@ All of it, folder by folder: [docs/README.md](docs/README.md).
 
 **Leagues and countries**
 
-- **Many new leagues** in one world, **10 to 24 clubs** each, playing each other 1 to 4
+- **Many new leagues** in one world, **10 to 28 clubs** each, playing each other 1 to 4
   times with the real number of rounds (10 clubs four times = 36 rounds). Since 0.2.2 there
   is room for 2,400 clubs in all, and our test world plays 86 new leagues with 1,294 new
   clubs; Build stops with a message when regulation ids or club room run out. Every league

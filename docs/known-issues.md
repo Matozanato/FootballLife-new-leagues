@@ -63,7 +63,8 @@ numbers are in [limits.md](research/limits.md).
   clubs already in the Copa Libertadores left out. The CAF Super Cup was played in the second
   and third seasons' July between the two CAF winners, each time with that year's winners
   (2026-10-01).
-- **Leagues of 10 to 24 clubs** with the right number of rounds, different sizes in one world.
+- **Leagues of 10 to 28 clubs** with the right number of rounds, different sizes in one world
+  (26 and 28 clubs played their 50 and 54 rounds on 2026-10-25).
 - **The menus**: up to 36 new leagues in Select Team (past 32 the plan names the ones that take the place of a game's "Other ..." group or get none), every one in Kick Off, Edit mode and Database →
   Competition Info, under its own country's name and flag.
 

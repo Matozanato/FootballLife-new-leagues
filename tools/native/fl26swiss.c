@@ -9151,14 +9151,68 @@ static int rest_league(uint16_t id, size_t have)
 static void league_rest(uint16_t id, date_t* r, uint32_t n)
 {
   const rcal_t* c = rcal_of(id);
+  int done = 0;
   if (c) {
     static uint16_t said[MAX_RCAL]; static int nsaid = 0; int seen = 0;
     SAID_RESET(nsaid);
     for (int k = 0; k < nsaid; k++) if (said[k] == id) seen = 1;
     if (!seen && nsaid < MAX_RCAL) said[nsaid++] = id;
-    if (rcal_dates(id, c, r, n, seen) >= 0) return;
+    done = rcal_dates(id, c, r, n, seen) >= 0;
   }
-  rest_dates(id, r, n);
+  if (!done) rest_dates(id, r, n);
+}
+
+/* 0x141586640: the game's push_back for a calendar's vector of {day, round, kind} (the date
+   switch's cases call it for every date of a shipped array). It grows the vector with the game's
+   own allocator, so a league that needs more dates than any calendar has -- 26 to 30 clubs twice
+   need 50 to 58, the longest calendar (the Championship's) has 46 -- gets the rest the game's
+   way (mato 25.10.: "try to give additional dates for 30 teams league"). Until then such a
+   league played 46 rounds and the rest dropped off at the season's end. Tested in the game with
+   26 and 28 clubs (50 and 54 rounds, every one played). With 30 (58 rounds) the matches of the
+   55th round (round 54) were dated but put on no day of the calendar, in two careers on two
+   different days (29 April 2026, a Libertadores Wednesday, and 28 April 2025, a Monday), so
+   57 of 58 were played: the cause is not known, and leaguebuilder stops at 28 clubs (L30 test,
+   25.10.). */
+#define PUSHDATE_RVA 0x1586640
+static const unsigned char SIG_PUSHDATE[16] = {
+  0x48,0x89,0x5c,0x24,0x08, 0x57, 0x48,0x83,0xec,0x20, 0x48,0x8b,0xd9, 0x48,0x8b,0xfa };
+typedef void (*pushdate_fn)(vec_t* v, const date_t* d);
+static int g_pushdate_ok = 0;
+
+/* the calendar in v stretched to n dates: the season's first and last dates stay, the others are
+   spread over the same line in step (an added round falls between two of the calendar's, mostly
+   midweek), the rounds numbered 0..n-1; league_rest then spaces them as any league's. Returns the
+   vector's length after it -- n, or what it had when it cannot. */
+static size_t more_dates(uint16_t id, vec_t* v, size_t have, uint32_t n, int seen)
+{
+  if (!g_pushdate_ok || n > 64 || have < 2 || have >= n) return have;
+  date_t src[64];
+  memcpy(src, v->b, have * sizeof(date_t));
+  pushdate_fn push = (pushdate_fn)(uintptr_t)(g_base + PUSHDATE_RVA);
+  for (size_t i = have; i < n; i++) push(v, &src[have - 1]);
+  size_t got = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+  if (got != n) {
+    if (!seen) logf("fl26swiss: reg %u -- the calendar grew to %u dates, not %u; left as it was", (unsigned)id,
+                    (unsigned)got, (unsigned)n);
+    if (got > have) v->e = v->b + have * sizeof(date_t);
+    return have;
+  }
+  date_t* r = (date_t*)v->b;
+  uint32_t d0 = src[0].day;
+  for (uint32_t i = 0; i < n; i++) {
+    uint64_t at = (uint64_t)i * (have - 1);                  /* on the calendar's line, in (n-1)ths */
+    size_t j = (size_t)(at / (n - 1));
+    uint32_t fr = (uint32_t)(at % (n - 1));
+    uint32_t a = (src[j].day + 365 - d0) % 365;
+    uint32_t b = j + 1 < have ? (src[j + 1].day + 365 - d0) % 365 : a;
+    uint32_t p = a + (uint32_t)(((uint64_t)(b > a ? b - a : 0) * fr * 2 + (n - 1)) / (2 * (n - 1)));
+    r[i].day = (d0 + p) % 365;
+    r[i].round = i;
+    r[i].kind = src[0].kind;
+  }
+  if (!seen) logf("fl26swiss: reg %u -- the calendar's %u dates stretched to %u (days %u..%u)", (unsigned)id,
+                  (unsigned)have, n, r[0].day, r[n - 1].day);
+  return n;
 }
 
 static void league_dates(uint16_t id, uint64_t reg, void* vec)
@@ -9181,12 +9235,14 @@ static void league_dates(uint16_t id, uint64_t reg, void* vec)
   if (eu) {                                         /* the European calendar, from scratch */
     ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | (n <= 38 ? MID_CAL_REG : LONG_CAL_REG), vec);
     have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+    if (n > have) have = more_dates(id, v, have, n, seen);
     r = (date_t*)v->b;
     if (n > have || have < 2) return;
   } else if (n > have) {
     uint32_t first = r[0].day;
     ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | (n <= 38 ? MID_CAL_REG : LONG_CAL_REG), vec);
     have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+    if (n > have) have = more_dates(id, v, have, n, seen);
     r = (date_t*)v->b;
     if (n > have) {
       if (!seen) logf("fl26swiss: reg %u -- %u clubs x %u need %u rounds, the longest calendar has %u; left short",
@@ -12106,6 +12162,10 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
   if (memcmp((void*)(uintptr_t)(exe_base + GEN_RVA),  SIG_GEN,  16)) return 2;
   if (memcmp((void*)(uintptr_t)(exe_base + DATE_RVA), SIG_DATE, 17)) return 12;
   if (memcmp((void*)(uintptr_t)(exe_base + GROUP_RVA), SIG_GROUP, 14)) return 22;
+  /* optional: without it a league of more rounds than the longest calendar is left short */
+  g_pushdate_ok = !memcmp((void*)(uintptr_t)(exe_base + PUSHDATE_RVA), SIG_PUSHDATE, 16);
+  if (!g_pushdate_ok) logf("fl26swiss: the calendar push_back (0x%llx) is not the expected code; leagues of more "
+                           "than 46 rounds keep 46 dates", (unsigned long long)(exe_base + PUSHDATE_RVA));
   int r = hook((unsigned char*)(uintptr_t)(exe_base + GEN_RVA), SIG_GEN, 16, (void*)gen_handler, &g_tramp_gen);
   if (r) return r;
   r = hook((unsigned char*)(uintptr_t)(exe_base + DATE_RVA), SIG_DATE, 17, (void*)date_handler, &g_tramp_date);

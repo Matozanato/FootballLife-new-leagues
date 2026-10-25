@@ -460,7 +460,7 @@ class Project(QObject):
         the club at place `at`: every list kept per place, the clubs of the game, the player
         changes and the pre-season cups that name its clubs by place move with it. A split
         league's last group takes the difference. Returns False when the league would leave
-        leaguebuilder's 10..24 clubs."""
+        leaguebuilder's CLUBS_MIN..CLUBS_MAX clubs."""
         L = self.league(name)
         if not L or delta not in (1, -1):
             return False
