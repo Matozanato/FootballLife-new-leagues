@@ -470,6 +470,11 @@ come with it instead.
   Libertadores' scoreboards, and its emblem is the game's own Copa Libertadores emblem, taken from
   your install at Build. Needs a fresh Build of the world. (Thanks antonimus)
 
+- **Competition Info > Copa Libertadores: the qualifying item opened an empty page on 1 January
+  (B229).** Last season's Pre-Libertadores clubs lit it before phase 1 was filled, and it showed
+  eight empty ties under a "%s" title. It now lights from phase 1's fill day (3 January), and while
+  only phase 1 is filled it shows phase 1. (Thanks antonimus)
+
 - **NewLife: the same player twice, the game's one a free agent (B102).** NewLife 1.5b8 gives no
   game id for some 1100 players the game has (Elliot Anderson at Manchester City, the game's at
   Nottingham Forest), and each became a new player while the game's lost his club. A player with
