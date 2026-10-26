@@ -509,6 +509,14 @@ come with it instead.
   every club already in the Libertadores groups and take the next one of the same league. The
   Sudamericana play-off (the Libertadores' third-placed clubs) is left as it was. (Thanks antonimus)
 
+- **A Build after an update kept the old world (B244).** When nothing but pictures has changed since a
+  world's last Build, Build only draws the pictures again; it told an update apart from no change by
+  Mod Studio's version, and every beta of 0.2.5 is "0.2.5". So after an update a world built again
+  with the same leagues and cups kept the tables of the last Build, and the update's fixes to the
+  Build never reached it (the modern CONMEBOL's away goals, B241, were still on). Mod Studio now
+  tells its builds apart by the exe itself: the first Build after an update is a full one. (Thanks
+  antonimus.)
+
 - **Modern CONMEBOL: no away goals (B241).** The game's Libertadores rows still decide a
   two-legged tie level on aggregate by away goals, and the modern phases were copies of them.
   CONMEBOL dropped the rule: in a world with the modern competitions every tie of the

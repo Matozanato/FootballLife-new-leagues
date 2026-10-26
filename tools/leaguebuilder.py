@@ -5220,15 +5220,24 @@ PIC_ARG = {"league_logo": 2, "club_crest": 2, "country_flag": 1,   # picture_job
 
 
 def code_stamp():
-    """the Build's code: the release's version in Mod Studio's exe, the sources when run from them"""
+    """the Build's code: Mod Studio's exe, whose archive holds the Build's modules, or the sources
+    when run from them. B244 (antonimus 26.10.): the version alone is not enough -- every beta of
+    0.2.5 is "0.2.5", so a Build after an update took the world for one of pictures alone and the
+    update's fixes to the Build (no away goals in the modern CONMEBOL, B241) never reached it."""
     try:
         from modstudio import VERSION
     except ImportError:
         VERSION = "?"
-    if getattr(sys, "frozen", False):
-        return VERSION
     import hashlib
     h = hashlib.sha1(VERSION.encode())
+    if getattr(sys, "frozen", False):
+        try:
+            with open(sys.executable, "rb") as fh:
+                for block in iter(lambda: fh.read(1 << 20), b""):
+                    h.update(block)
+        except OSError:
+            return VERSION + ":?"         # no stamp to compare: never "the same code"
+        return h.hexdigest()
     here = os.path.dirname(os.path.abspath(__file__))
     for f in sorted(os.listdir(here)):
         if f.endswith(".py"):
