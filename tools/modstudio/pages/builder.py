@@ -3649,8 +3649,10 @@ class NewClubs(BuilderPage):
             game = None
         rel.use_tables(game)              # "in the game" by the tables in use, a database mod's too
         rel.use_recipe(self.project.recipe)   # B56: a NewLife club that is the game's is a club of the game
-        game = {cid for cid, c in rel.clubs.items() if c.get("in_game") == "1"}
-        d = ClubPickDialog(self, rel, used | game, game)
+        # B252: the clubs of the game get their own name -- game stays the tables' info, which
+        # put_club reads (a set there made every pick end in 'set' object has no attribute 'get')
+        in_game = {cid for cid, c in rel.clubs.items() if c.get("in_game") == "1"}
+        d = ClubPickDialog(self, rel, used | in_game, in_game)
         if not d.finish() or not d.picked:
             return
         room = int(L["clubs"]) - k
