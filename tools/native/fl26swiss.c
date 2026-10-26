@@ -4745,11 +4745,45 @@ static int libq_decided(const lpre_t* l, uint32_t* win)
    records holding these, not the day-0 pair, and must still reach them. */
 static uint32_t g_lib8_last[4][2];
 
+/* B246 (antonimus 26.10., Deportes La Serena v Deportes La Serena in phase 3,
+   Lanus gone): which leg of an F3 tie a match record is, so it gets the whole
+   new pair in that order -- the first leg (na at home) or the return (nb at
+   home). Side by side it went wrong when the new pair shares a club with the old
+   one: tie 3080 held 01374082 v 027c0130, its F2 winners were 027c0130 v
+   01e240a5; the home side became 027c0130, the away side already was 027c0130
+   and was left, so La Serena met itself. The leg is read from the old pair
+   (a, b), then from what this session gave the tie last (pa, pb, 0: none),
+   then from the new pair itself (a record given one side only: a save made
+   after the B240 swap); a pair that says both, or neither, does not decide.
+   Returns 1 (the first leg), 2 (the return), 0 if the record already holds the
+   new pair (also 1/2 in *leg), -1 if no pair decides. c[] is rewritten for 1
+   and 2. */
+static int libq_leg_pair(uint32_t* c, uint32_t a, uint32_t b, uint32_t pa, uint32_t pb,
+                         uint32_t na, uint32_t nb, int* leg)
+{
+  uint32_t h = c[0], w = c[1];
+  *leg = 0;
+  if (same_club(h, na) && same_club(w, nb)) { *leg = 1; return 0; }
+  if (same_club(h, nb) && same_club(w, na)) { *leg = 2; return 0; }
+  const uint32_t x[3] = { a, pa, na }, y[3] = { b, pb, nb };
+  for (int s = 0; s < 3; s++) {
+    if (!x[s] || !y[s]) continue;
+    int fwd = same_club(h, x[s]) || same_club(w, y[s]);
+    int rev = same_club(h, y[s]) || same_club(w, x[s]);
+    if (fwd == rev) continue;
+    c[0] = fwd ? na : nb;
+    c[1] = fwd ? nb : na;
+    return *leg = fwd ? 1 : 2;
+  }
+  return -1;
+}
+
 /* Change clubs in unplayed match records belonging to one native F3 tie.
    Played records are never rewritten. a/b are the tie's clubs now, pa/pb the
-   ones this session gave it last (0: none). A record still holding a club that
-   is neither (a save made after the B240 swap) is put right from its other
-   side: that one is na or nb, so this one is the other. */
+   ones this session gave it last (0: none). Each record gets the new pair as
+   its leg (libq_leg_pair). A record no pair decides -- a club twice, left by
+   the hand-over before B246 -- takes the leg the tie's other records have not
+   taken, when that is one. */
 static int libq_match_swap(uint16_t reg, uint32_t a, uint32_t b,
                            uint32_t pa, uint32_t pb,
                            uint32_t na, uint32_t nb, int* played)
@@ -4769,33 +4803,48 @@ static int libq_match_swap(uint16_t reg, uint32_t a, uint32_t b,
 
   if (!blk || !cap || cap > 200000) return -1;
 
-  int n = 0;
+  int n = 0, taken = 0, nopen = 0;
+  uint32_t* open[8];
   for (uint32_t i = 0; i < cap; i++) {
     unsigned char* m = blk + base + (size_t)i * CONM_MATCH_STRIDE;
     if (*(uint16_t*)m == 0xffff || *(uint16_t*)(m + 4) != reg) continue;
 
+    uint32_t* c = (uint32_t*)(m + 0x14);
+    int leg;
     if (m[7] & 0x40) {
+      uint32_t look[2] = { c[0], c[1] };
+      libq_leg_pair(look, a, b, pa, pb, na, nb, &leg);
+      taken |= leg;
       (*played)++;
       continue;
     }
 
-    uint32_t* c = (uint32_t*)(m + 0x14);
-    for (int side = 0; side < 2; side++) {
-      if (same_club(c[side], na) || same_club(c[side], nb)) continue;
-      if (same_club(c[side], a)) c[side] = na;
-      else if (same_club(c[side], b)) c[side] = nb;
-      else if (pa && same_club(c[side], pa)) c[side] = na;
-      else if (pb && same_club(c[side], pb)) c[side] = nb;
+    uint32_t was0 = c[0], was1 = c[1];
+    int got = libq_leg_pair(c, a, b, pa, pb, na, nb, &leg);
+    if (got < 0) {
+      if (nopen < 8) open[nopen++] = c;
+      continue;
     }
-    for (int side = 0; side < 2; side++) {
-      uint32_t o = c[!side];
-      if (same_club(c[side], na) || same_club(c[side], nb)) continue;
-      if (same_club(o, na)) c[side] = nb;
-      else if (same_club(o, nb)) c[side] = na;
-      else
-        logf("fl26swiss: Libertadores phase 3 -- tie %u: a match holds %08x v %08x, "
-             "neither an F2 winner; left alone", (unsigned)reg, c[0], c[1]);
+    if (got > 0)
+      logf("fl26swiss: Libertadores phase 3 -- tie %u: %s leg %08x v %08x -> %08x v %08x",
+           (unsigned)reg, leg == 1 ? "first" : "return", was0, was1, c[0], c[1]);
+    taken |= leg;
+    n++;
+  }
+  for (int k = 0; k < nopen; k++) {
+    uint32_t* c = open[k];
+    int both = (same_club(c[0], na) || same_club(c[0], nb)) &&
+               (same_club(c[1], na) || same_club(c[1], nb));
+    int leg = taken == 1 ? 2 : taken == 2 ? 1 : 0;
+    if (!both || !leg || nopen > 1) {
+      logf("fl26swiss: Libertadores phase 3 -- tie %u: a match holds %08x v %08x, "
+           "no leg of %08x v %08x; left alone", (unsigned)reg, c[0], c[1], na, nb);
+      continue;
     }
+    logf("fl26swiss: Libertadores phase 3 -- tie %u: a match held %08x v %08x, given the %s leg",
+         (unsigned)reg, c[0], c[1], leg == 1 ? "first" : "return");
+    c[0] = leg == 1 ? na : nb;
+    c[1] = leg == 1 ? nb : na;
     n++;
   }
   return n;
