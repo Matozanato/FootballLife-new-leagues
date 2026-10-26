@@ -10,7 +10,7 @@ anywhere but the recipe the person builds -- and the crests and league logos a r
 carry (crests/<club id>.png, logos/*.png named in newlife.json's league_logos, 1.2 on), which
 are unpacked to %APPDATA%\\FL26ModStudio\\newlife\\<version> for the recipe to point at.
 """
-import collections, csv, glob, io, json, os, zipfile
+import collections, csv, glob, io, json, os, re, zipfile
 
 import crestmatch
 import leaguebuilder as B
@@ -693,10 +693,30 @@ def refill(recipe, rel, x, places, info=None):
     return done
 
 
+def _version_key(v):
+    """"1.5b7" -> (1, 5, 0, 7); a final "1.5" -> (1, 5, 1, 0), so it sorts after its betas; None when it
+    does not read as a version"""
+    m = re.match(r"^\s*v?(\d+)(?:\.(\d+))?(?:\.(\d+))?\s*(?:(b|beta|rc)\s*(\d*))?\s*$", str(v), re.I)
+    if not m:
+        return None
+    nums = tuple(int(g or 0) for g in m.group(1, 2, 3))
+    return nums + ((0, int(m.group(5) or 0)) if m.group(4) else (1, 0))
+
+
 def outdated(recipe, rel):
-    """the recipe's leagues added from another version of the NewLife Database than rel's"""
+    """the recipe's leagues added from an older version of the NewLife Database than rel's (B251: a
+    league from a newer one, e.g. a 1.5b8 pack with the public 1.5b7 loaded, is not offered a downgrade);
+    a version that does not read as one counts as older when it differs, as before"""
     v = str(rel.meta.get("version", ""))
-    return [x for x in recipe["leagues"] if (x.get("newlife") or {}).get("version") and str(x["newlife"]["version"]) != v]
+    cur = _version_key(v)
+
+    def older(w):
+        w = str(w)
+        if w == v:
+            return False
+        k = _version_key(w)
+        return k is None or cur is None or k < cur
+    return [x for x in recipe["leagues"] if (x.get("newlife") or {}).get("version") and older(x["newlife"]["version"])]
 
 
 def _from_cache(path):
