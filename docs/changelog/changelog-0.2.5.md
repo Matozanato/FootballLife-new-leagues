@@ -509,6 +509,13 @@ come with it instead.
   every club already in the Libertadores groups and take the next one of the same league. The
   Sudamericana play-off (the Libertadores' third-placed clubs) is left as it was. (Thanks antonimus)
 
+- **Modern Sudamericana: two clubs of one country in a group (B243).** The Sudamericana's groups
+  are drawn by fl26swiss, one club from each of the four pots in every group, and the draw never
+  looked at a club's country: Vélez and Argentinos Juniors met in group 7. The draw now keeps
+  clubs of one association apart, as CONMEBOL's does (the association is the one the UEFA league
+  phase's draw uses, the club's league's country). Should a field ever hold more clubs of one
+  country than there are groups, the draw with the fewest such pairs stands. (Thanks antonimus)
+
 - **Modern CONMEBOL: no away goals (B241).** The game's Libertadores rows still decide a
   two-legged tie level on aggregate by away goals, and the modern phases were copies of them.
   CONMEBOL dropped the rule: in a world with the modern competitions every tie of the
