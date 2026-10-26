@@ -1,5 +1,7 @@
 {
  "text": {
+  "%d clubs of %s have their NewLife squads again: %s.": "%d klubova lige %s opet ima NewLife momčadi: %s.",
+  "Clubs %s of %s have no squad, so Build gives them numbered players. To get them back, remove the league and add it again on the NewLife page.": "Klubovi %s lige %s nemaju momčad, pa im Build daje numerirane igrače. Da ih vratiš, ukloni ligu i dodaj je ponovno na stranici NewLife.",
   "Its best clubs play the country's cup too": "Njeni najbolji klubovi igraju i kup države",
   "For a third division under the game's second one, like National under Ligue 2: the game's cup takes its two divisions and the first clubs of this league, up to 48 clubs in all, as the real Coupe de France takes the lower leagues. Start a new career after the Build.": "Za treću ligu ispod druge lige iz igre, kao National ispod Ligue 2: kup iz igre uzima njene dvije lige i prve klubove ove lige, ukupno do 48 klubova, kao što pravi Coupe de France uzima niže lige. Nakon Builda pokreni novu karijeru.",
   "CAREFUL: no kits file (UniformParameter.bin) was found beside your tables, unpacked from the game or in another mod, so the new clubs have no kit and the game calls them unlicensed. Unpack the game's tables (Settings) and build again.": "PAZI: uz tvoje tablice, među raspakiranima iz igre ni u drugom modu nema datoteke dresova (UniformParameter.bin), pa novi klubovi nemaju dres i igra ih smatra nelicenciranima. Raspakiraj tablice igre (Settings) i ponovno pokreni Build.",

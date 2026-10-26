@@ -664,6 +664,35 @@ def put_club(recipe, rel, x, k, cid, info=None):
     return stayed, elsewhere
 
 
+def emptied(recipe, x, start=0):
+    """places of league x from `start` on that hold a NewLife club but no squad -- what a league
+    made smaller and then bigger again keeps (B249: the squads went with drop_league, the names
+    and NewLife ids stayed, and Build gave those clubs numbered stand-in players)"""
+    nl = list((x.get("newlife") or {}).get("clubs") or [])
+    pl = recipe.get("players") or {}
+    n = int(x.get("clubs") or 0)
+    return [k for k in range(start, min(n, len(nl)))
+            if str(nl[k]).isdigit() and int(nl[k]) and not pl.get(P.new_key(x["name"], k))]
+
+
+def refill(recipe, rel, x, places, info=None):
+    """put the NewLife clubs of these places of league x in again from rel, with their squads
+    (B249); a club rel has not got, or one that is the game's now, is left as it is. Returns the
+    names of the clubs refilled."""
+    nl = list((x.get("newlife") or {}).get("clubs") or [])
+    done = []
+    for k in places:
+        cid = str(nl[k])
+        if cid not in rel.clubs:
+            continue
+        try:
+            put_club(recipe, rel, x, k, cid, info)
+        except Error:
+            continue
+        done.append(x["club_names"][k])
+    return done
+
+
 def outdated(recipe, rel):
     """the recipe's leagues added from another version of the NewLife Database than rel's"""
     v = str(rel.meta.get("version", ""))

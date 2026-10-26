@@ -3102,6 +3102,48 @@ class NewLeagues(BuilderPage):
             if d.league["clubs"] < n_old:
                 self.project.drop_league(d.league["name"], d.league["clubs"])
             self.project.touch()
+            if d.league["clubs"] > n_old:
+                self.refill_newlife(d.league["name"], n_old)
+
+    def refill_newlife(self, name, start):
+        """B249 (jibibi 26.10.): a NewLife league made smaller and then bigger again got its clubs
+        back without their squads (Build gave them numbered players); the release puts them in again"""
+        L = self.project.league(name)
+        places = N.emptied(self.project.recipe, L, start) if L else []
+        if not places:
+            return
+        rel = getattr(self.app.pages.get("NewLife"), "rel", None) or getattr(self, "nl_rel", None)
+        folder = self.app.settings.get("newlife")
+        if rel is None and folder and os.path.isdir(folder) and self.project.base is not None:
+            self.app.busy(True)
+
+            def done(r):
+                self.app.busy(False)
+                self.nl_rel = r
+                self.refill_newlife(name, start)
+
+            run_job(lambda progress: N.Release(folder), done=done,
+                    failed=lambda tb: (self.app.busy(False), self.nl_missing(name, places)))
+            return
+        if rel is None or self.project.base is None:
+            self.nl_missing(name, places)
+            return
+        try:
+            info = B.game_info(self.project.base)
+        except OSError:
+            info = None
+        got = N.refill(self.project.recipe, rel, L, places, info)
+        if got:
+            self.project.touch()
+            self.say(_("%d clubs of %s have their NewLife squads again: %s.") % (len(got), name, ", ".join(got)), "ok")
+        if len(got) < len(places):
+            self.nl_missing(name, N.emptied(self.project.recipe, L, start))
+
+    def nl_missing(self, name, places):
+        if places:
+            self.say(_("Clubs %s of %s have no squad, so Build gives them numbered players. To get them back, "
+                       "remove the league and add it again on the NewLife page.")
+                     % (", ".join(str(k + 1) for k in places), name), "warn")
 
     def remove(self):
         rows = sorted({it.data(0, Qt.UserRole) for it in self.tree.selectedItems()})
