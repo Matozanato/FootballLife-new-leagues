@@ -853,9 +853,15 @@ function m.init(ctx)
       local CAL_REGIONS = { [16] = true, [18] = true, [19] = true, [21] = true, [23] = true, [24] = true, [28] = true }
       local seasons = world_seasons(ctx)
       local cal, scups, scseen = {}, {}, {}
+      local ascups, ascseen = {}, {}
       for _, L in ipairs(world) do
         local r = L.region
         local c = r ~= nil and (seasons[r] ~= nil and seasons[r] == 1 or seasons[r] == nil and CAL_REGIONS[r] == true)
+        -- B234: an August-May top division of ours, its added super cup (a cup= of its own or not)
+        if not c and (L.above == nil or L.above == 0) and L.scup and L.scup > 175 and not ascseen[L.scup] then
+          ascups[#ascups + 1] = { L.scup, L.id, L.cup1 or 0 }
+          ascseen[L.scup] = true
+        end
         if c then
           cal[#cal + 1] = L.id
           -- a top division's line only: a division under a league (above=) carries the
@@ -897,6 +903,15 @@ function m.init(ctx)
         log(string.format("fl26swiss: world file -- %d calendar-year Super Cup(s), %d taken", #scups, k))
       elseif #scups > 0 then
         log("fl26swiss: this fl26swiss.dll has no calendar-year Super Cup support")
+      end
+      local pa = ffi.C.GetProcAddress(h, "fl26_swiss_aug_supercups")
+      if #ascups > 0 and pa ~= nil then
+        local abuf = ffi.new("uint16_t[?]", 3 * #ascups)
+        for i, s in ipairs(ascups) do
+          abuf[3 * i - 3], abuf[3 * i - 2], abuf[3 * i - 1] = s[1], s[2], s[3]
+        end
+        local k = tonumber(ffi.cast("fl26_swiss_access_t", pa)(abuf, #ascups))
+        log(string.format("fl26swiss: world file -- %d August-May Super Cup(s) of ours, %d taken", #ascups, k))
       end
       -- `july <reg> <day>`: a league that starts in July (Poland, Denmark, Croatia ...), its
       -- first round from that day on, from the second season (fl26_swiss_july)
