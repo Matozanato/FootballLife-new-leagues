@@ -17,10 +17,19 @@ SAVE_DIR = os.path.join(os.path.expanduser("~"), "Documents", "KONAMI",
 EDIT_FILE = os.path.join(SAVE_DIR, "2026", "save", "EDIT00000000")
 
 
+def edit_file():
+    """the Edit save in the save folder in use: FL26_SAVE_ROOT's when it is set (saves.root()),
+    so a test with a save folder of its own never sees the PC's real Edit save (coldstart 26.10.:
+    the player's EDIT00000000 showed "Move the Edit save aside" on a new player's PC)"""
+    r = os.environ.get("FL26_SAVE_ROOT")
+    return os.path.join(r, "save", "EDIT00000000") if r else EDIT_FILE
+
+
 def old_edit(since):
     """the Edit save's path when there is one older than `since` (a time.time()), else None"""
+    f = edit_file()
     try:
-        return EDIT_FILE if os.path.getmtime(EDIT_FILE) < since else None
+        return f if os.path.getmtime(f) < since else None
     except OSError:
         return None
 
@@ -29,8 +38,9 @@ def edit_aside(tag):
     """rename the Edit save to EDIT00000000.before-<tag>-<date>, kept next to it; returns the new
     name. Nothing is deleted: renaming it back brings the old Edit data back"""
     import time
-    new = "%s.before-%s-%s" % (EDIT_FILE, tag, time.strftime("%Y%m%d-%H%M"))
-    os.rename(EDIT_FILE, new)
+    f = edit_file()
+    new = "%s.before-%s-%s" % (f, tag, time.strftime("%Y%m%d-%H%M"))
+    os.rename(f, new)
     return os.path.basename(new)
 
 
