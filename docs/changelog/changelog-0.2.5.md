@@ -509,6 +509,13 @@ come with it instead.
   every club already in the Libertadores groups and take the next one of the same league. The
   Sudamericana play-off (the Libertadores' third-placed clubs) is left as it was. (Thanks antonimus)
 
+- **Modern CONMEBOL: one club twice in the Libertadores' phase 3 (B246).** Phase 2's winners
+  are handed to phase 3's ties over the clubs the game put there on 1 January, and each match of a
+  tie was changed side by side. When a winner had been one of those clubs, a match could keep it on
+  one side and get it again on the other: Deportes La Serena met itself, and Lanus, who had won its
+  tie, was gone. Each match now gets its tie's two new clubs whole, home and away as its leg is. A
+  career whose phase 3 is already played keeps it. (Thanks antonimus.)
+
 - **Modern CONMEBOL: no away goals (B241).** The game's Libertadores rows still decide a
   two-legged tie level on aggregate by away goals, and the modern phases were copies of them.
   CONMEBOL dropped the rule: in a world with the modern competitions every tie of the
