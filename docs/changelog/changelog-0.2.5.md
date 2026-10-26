@@ -598,6 +598,12 @@ come with it instead.
   the league has no cup), so the match is made and played in August. Tested in the World Modpack's
   second season: all six drawn on day 182, the Albanian one played 3-1 and still there after a save
   and a restart. (Thanks mohamed)
+- **The CAF Super Cup without the CAF Champions League's winner (B236).** A cup of ours sends its
+  winner on (the CAF Champions League's and the Confederation Cup's to the CAF Super Cup) by the
+  game's own record of who won it, and in a career where your club won the final that record named
+  the club you knocked out in the semi-final: it played the Super Cup instead of you. The winner is
+  now taken from the final itself, the two clubs it was played between and its score. (Thanks
+  mohamed)
 
 ## Read this first
 
