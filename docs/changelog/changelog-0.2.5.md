@@ -589,6 +589,13 @@ come with it instead.
   and never started: an empty calendar in March. A new career or another save now starts that
   memory over, as a restart of the game did. (Thanks antonimus)
 
+- **The CAF Super Cup without the CAF Champions League's winner (B236).** A cup of ours sends its
+  winner on (the CAF Champions League's and the Confederation Cup's to the CAF Super Cup) by the
+  game's own record of who won it, and in a career where your club won the final that record named
+  the club you knocked out in the semi-final: it played the Super Cup instead of you. The winner is
+  now taken from the final itself, the two clubs it was played between and its score. (Thanks
+  mohamed)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.

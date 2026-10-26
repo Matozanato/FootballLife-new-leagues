@@ -519,6 +519,7 @@ static uint32_t conmebol_fallback(void* blk, const uint32_t* taken, unsigned nt)
 static int lib_path_has(uint32_t c);
 static int libq_f3_ready(void);
 static uint32_t knockout_runner_now(uint16_t reg);
+static uint32_t ccup_ko_winner(uint16_t reg);
 static unsigned lib9_titleholders(uint32_t holder[2]);
 static int modern_conmebol(void);
 static void lib9_clean(u32vec* list);
@@ -1906,7 +1907,7 @@ static uint32_t cup_winner_within(uint16_t reg, int maxage)
   cupwin_t* w = cupwin_of(reg);
   int d = abs_day();
   if (w && d >= w->day && d - w->day < maxage) return w->club;
-  return winner_now(reg);
+  return ccup_ko_winner(reg);
 }
 static uint32_t cup_winner(uint16_t reg) { return cup_winner_within(reg, 120); }
 /* Calendar-year CONMEBOL cups can ask in February for the winners retained at the previous
@@ -6003,7 +6004,7 @@ static void ccup_keep_winners(int cal)
       if (g_ccup[k].erank[i] || lpre_of(reg, &tk) >= 0) continue;
       cupwin_t* w = cupwin_of(reg);
       if (w && ad >= w->day && ad - w->day < 60) continue;
-      uint32_t c = winner_now(reg);
+      uint32_t c = ccup_ko_winner(reg);
       if (!c) continue;
       if (!w) { if (g_ncupwin >= 32) continue; w = &g_cupwin[g_ncupwin++]; w->reg = reg; }
       w->day = ad; w->club = c;
@@ -6016,7 +6017,7 @@ static void ccup_keep_winners(int cal)
       uint16_t reg = g_ccup[k].ko;
       cupwin_t* w = cupwin_of(reg);
       if (!(w && ad >= w->day && ad - w->day < 60)) {
-        uint32_t c = winner_now(reg);
+        uint32_t c = ccup_ko_winner(reg);
         if (c) {
           if (!w && g_ncupwin < 32) { w = &g_cupwin[g_ncupwin++]; w->reg = reg; }
           if (w) {
@@ -6646,6 +6647,33 @@ static int ko_winner(const uint32_t* sl, uint32_t* w)
   if (gh == ga) return 0;
   *w = gh > ga ? h : a;
   return 1;
+}
+/* B236: a cup of ours goes by its played final -- the two clubs its match was played between and
+   its score -- before the game's rights code, which named the club the holder knocked out in the
+   semi-final as the CAF Champions League's winner, and the CAF Super Cup was played without the
+   holder (mohamed-248, GitHub #150, 2026-10-25). The final is the cup's last round of one tie
+   (0x36, else 0x35); 0 while it is not played. */
+static uint32_t ko_final_winner(uint16_t reg)
+{
+  static const uint32_t kinds[2] = { 0x36, 0x35 };
+  for (int i = 0; i < 2; i++) {
+    unsigned char* rnd = ko_round(reg, kinds[i]);
+    uint32_t w = 0;
+    if (!rnd || *(uint16_t*)rnd != reg || ko_slots(rnd) != 1) continue;
+    return ko_winner(ko_slot(rnd, 0), &w) && (w >> 14) ? canon_club(w) : 0;
+  }
+  return 0;
+}
+/* the winner a cup's <reg>:0 entry is sent: a cup of ours (176 and up) by its final, the game's
+   cups and a final not found by the rights code */
+static uint32_t ccup_ko_winner(uint16_t reg)
+{
+  uint32_t r = winner_now(reg), f = reg > 175 ? ko_final_winner(reg) : 0;
+  if (!f) return r;
+  if (!r || !same_club(f, r))
+    logf("fl26swiss: cup reg %u -- its final was won by %08x, the rights code names %08x: the final's winner goes",
+         (unsigned)reg, f, r);
+  return f;
 }
 static int ko_put(unsigned char* m, int side, uint32_t w)
 {
