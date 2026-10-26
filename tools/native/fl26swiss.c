@@ -5285,6 +5285,26 @@ static uint32_t qual_loser(uint16_t q, const uint32_t* taken, unsigned nt, const
   return 0;
 }
 
+/* B243: 1 when `club` is a Libertadores qualifying loser, as one of cup c's `8:255` entries takes
+   it (qual_loser's test). CONMEBOL lets such a club share a Sudamericana group with a club of its
+   own association (vmican, 26.10.). */
+static int from_qual(const ccup_t* c, unsigned cn, uint32_t club)
+{
+  unsigned char* g = get_rec(R_LIBGROUP);
+  club = canon_club(club);
+  if (g && has_club(rec_clubs(g), rec_count(g), club)) return 0;
+  for (unsigned j = 0; j < cn; j++) {
+    if (c->erank[j] != QUAL_LOSER) continue;
+    for (int t = 0; t <= 8; t++) {
+      unsigned char* r = get_rec((uint16_t)(t ? c->ereg[j] + 1024 * t : c->ereg[j]));
+      unsigned m = r ? rec_count(r) : 0;
+      for (unsigned i = 0; i < m && i < 64; i++)
+        if (canon_club(rec_clubs(r)[i]) == club) return 1;
+    }
+  }
+  return 0;
+}
+
 /* A league position for a cup of ours. A league that also sends clubs to the Libertadores or the
    AFC Champions League is counted the way those places are (last season's kept table, else
    squad strength): the cup went by the live table instead, a few rounds into a first season, and
@@ -5830,11 +5850,14 @@ static int ccup_fill_one(int k, void* started)
     unsigned per = n / c->groups;
     uint32_t grp[CCUP_MAX_GROUPS][8];
     /* B243: no two clubs of one association in a group, CONMEBOL's rule (antonimus, 26.10.:
-       Velez and Argentinos Juniors in one Sudamericana group); club_key as the league phase's */
+       Velez and Argentinos Juniors in one Sudamericana group); club_key as the league phase's.
+       A club out of the Libertadores qualifying may go beside its own association. */
     int key[CCUP_MAX_GROUPS * 8], best, tries = 0;
     unsigned char* own = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
     void* blk = own ? *(void**)(own + 0x48) : 0;
-    for (unsigned i = 0; i < n; i++) key[i] = blk ? club_key(blk, g_ccup_field[k][i], (int)i) : 2000 + (int)i;
+    /* a club out of the Libertadores qualifying is let in beside its own association: a key of its own */
+    for (unsigned i = 0; i < n; i++)
+      key[i] = !blk || from_qual(c, cn, g_ccup_field[k][i]) ? 3000 + (int)i : club_key(blk, g_ccup_field[k][i], (int)i);
     best = pot_draw(g_ccup_field[k], key, n, c->groups, grp, &tries);
     logf("fl26swiss: cup %u -- groups by pots: %d same-association pair(s) after %d draw(s)%s",
          (unsigned)c->reg, best, tries, best ? " -- no draw keeps every association apart; the closest one stands" : "");
