@@ -105,6 +105,19 @@ typedef struct { uint16_t id, conf; } builder_conf_t;
 static builder_conf_t g_builder_conf[MAX_IDS];
 static int g_nbuilder_conf = 0;
 
+/* B234 (mohamed 25.10., and every Modpack): the super cups of our August-May leagues played the
+ * first season only. A new career enters them with the shipped super cups (dated as 128); the
+ * July build that starts every later season enters only what its compiled include list names
+ * -- the shipped super cups 86-92, 95, 128-130 are on it, ours (263, 267, 270, 276, 278, 284 in
+ * the Modpack) never were. Measured on the Modpack's third season (0.2.4, sider log of day 180
+ * to day 274): every national cup of ours entered, not one super cup. So they go on the July
+ * builder's list, as the calendar-year cups go on the New Year one, with UEFA's runtime
+ * confederation for the length of the build when they carry another (the July build takes only
+ * UEFA's, see MOVED): pairs { id, its own runtime conf }. */
+static uint16_t g_july_extra[MAX_IDS];
+static uint8_t  g_july_was[MAX_IDS];   /* 0x80 | its own conf while it carries UEFA's */
+static int      g_njuly = 0;
+
 static int builder_runtime_conf(uint16_t id)
 {
   for (int i = 0; i < g_nbuilder_conf; i++)
@@ -235,6 +248,17 @@ static void moved_conf_back(uint16_t only, const char* why)
     }
     logf("moved %u: runtime confederation back to %u (%s)", id, (unsigned)(g_moved_conf[id] & 0xf), why);
     g_moved_conf[id] = 0;
+  }
+  for (int i = 0; i < g_njuly; i++) {
+    uint16_t id = g_july_extra[i];
+    if (!g_july_was[i] || (only && id != only)) continue;
+    unsigned char* rec = (unsigned char*)find_record(id);
+    if (rec) {
+      uint32_t* meta = (uint32_t*)(rec + 0x300);
+      *meta = (*meta & ~(0xFu << 25)) | ((uint32_t)(g_july_was[i] & 0xf) << 25);
+    }
+    logf("July super cup %u: runtime confederation back to %u (%s)", id, (unsigned)(g_july_was[i] & 0xf), why);
+    g_july_was[i] = 0;
   }
 }
 /* Ids of ours the door said YES to since the last July teardown: the builder lets 49 and 60
@@ -446,9 +470,30 @@ vec16_t* bld_pre(uint64_t ctx, uint64_t events, vec16_t* inc)
   }
 
   /* the July build: the moved competitions, with UEFA's code (see MOVED) */
-  uint16_t extra[MAX_IDS + MOVED_N]; int ne = 0, nmoved = 0;
+  uint16_t extra[2 * MAX_IDS + MOVED_N]; int ne = 0, nmoved = 0, njuly = 0;
   if (calendar_build)
     for (int i = 0; i < g_nbuilder_extra; i++) extra[ne++] = g_builder_extra[i];
+  /* the July build: the super cups of our August-May leagues (B234) */
+  if (g_euro_build)
+    for (int i = 0; i < g_njuly; i++) {
+      uint16_t id = g_july_extra[i];
+      unsigned char* rec = (unsigned char*)find_record(id);
+      if (!rec) continue;
+      uint32_t* meta = (uint32_t*)(rec + 0x300);
+      uint32_t own = (*meta >> 25) & 0xf;
+      if (own != 1) {
+        g_july_was[i] = (uint8_t)(0x80 | own);
+        *meta = (*meta & ~(0xFu << 25)) | (1u << 25);
+      }
+      /* the builder shows the door only the listed ids whose runs-this-season flag is set, and
+         the July teardown leaves ours clear (2026-10-26: on the list, never at the door) */
+      uint32_t* fl = (uint32_t*)(rec + 0x304);
+      if (!((*fl >> 8) & 1)) {
+        *fl |= 1u << 8;
+        logf("July super cup %u: runs-this-season flag was clear -- set for the build", id);
+      }
+      extra[ne++] = id; njuly++;
+    }
   if (g_euro_build)
     for (int i = 0; i < MOVED_N; i++) {
       uint16_t id = MOVED[i][0];
@@ -494,8 +539,10 @@ vec16_t* bld_pre(uint64_t ctx, uint64_t events, vec16_t* inc)
   g_builder_vec.e = g_builder_list + k;
   g_builder_vec.c = g_builder_list + MAX_LIST;
   logf("builder %u: appended %d %s [%s] -> %d ids", g_stat[4], added,
-       nmoved ? "competition(s) of the game moved to August-May, with UEFA's code for the build"
-              : "calendar cup(s)", buf, k);
+       nmoved ? (njuly ? "super cup(s) of ours and competition(s) of the game moved to August-May, with UEFA's code for the build"
+                       : "competition(s) of the game moved to August-May, with UEFA's code for the build")
+              : njuly ? "super cup(s) of our August-May leagues, with UEFA's code for the build"
+                      : "calendar cup(s)", buf, k);
   return &g_builder_vec;
 }
 
@@ -640,6 +687,11 @@ void door_post(uint64_t id, uint64_t result, uint64_t ret)
   uint16_t cid = (uint16_t)id;
   g_stat[5]++;
   if (cid < 256 && g_moved_conf[cid]) moved_conf_back(cid, (result & 0xff) ? "the door said YES" : "the door said no");
+  for (int i = 0; i < g_njuly; i++)
+    if (g_july_extra[i] == cid) {
+      if (g_july_was[i]) moved_conf_back(cid, (result & 0xff) ? "the door said YES" : "the door said no");
+      logf("door(%u) -> %s  July super cup of ours", cid, (result & 0xff) ? "YES" : "no");
+    }
   if (!(result & 0xff)) g_stat[6]++;
   if (!ours(cid) && !control(cid)) return;
   if (ours(cid)) g_stat[7]++;
@@ -1498,6 +1550,89 @@ __declspec(dllexport) int fl26_join_builder_extra(const uint16_t* ids, int n)
   char buf[160]; list_ids(g_builder_extra, g_nbuilder_extra, buf, sizeof buf);
   logf("calendar-year builder extras: %d ids [%s]", g_nbuilder_extra, buf);
   return n;
+}
+
+/* B234, the door list. Outside the start-of-career state the builder never reads its include
+ * list: it asks 0x141367290 (its only caller is the builder) for the season's competitions, and
+ * that list leaves our super cups out whatever their conf code or flag -- the national cups next
+ * to them are on it, 267/270/276/278/284 are not (2026-10-26, run 3: on the include list, never
+ * at the door). After the list is made, ours go on its end, so they reach the door after the
+ * game's own, as the shipped super cup (128) does. The vector is the builder's own, grown with
+ * the game's reserve so the builder frees what the game allocated. */
+#define LIST_RVA    0x1367290   /* season_list(obj, events, vec_u16* out)                     */
+#define RESERVE_RVA 0x0b09c50   /* vec_u16 reserve(vec, new capacity in elements)             */
+static const unsigned char SIG_LIST[15] = {   /* push rbp/rdi/r14; sub rsp,20; mov rdi,r8; mov r14,rdx */
+  0x40,0x55, 0x57, 0x41,0x56, 0x48,0x83,0xec,0x20, 0x49,0x8b,0xf8, 0x4c,0x8b,0xf2 };
+unsigned char* g_tramp_list = 0;
+void list_post(vec16_t* out)
+{
+  if (!g_euro_build || !g_njuly || !out || !out->b || out->e < out->b) return;
+  typedef void (*reserve_fn)(vec16_t*, uint64_t);
+  reserve_fn reserve = (reserve_fn)(uintptr_t)(g_base + RESERVE_RVA);
+  char buf[160]; int p = 0, added = 0; buf[0] = 0;
+  for (int i = 0; i < g_njuly; i++) {
+    uint16_t id = g_july_extra[i]; int dup = 0;
+    if (!find_record(id)) continue;
+    for (uint16_t* q = out->b; q < out->e; q++) if (*q == id) { dup = 1; break; }
+    if (dup) continue;
+    if (out->e >= out->c) reserve(out, (uint64_t)(out->e - out->b) + 8);
+    if (out->e >= out->c) break;
+    *out->e++ = id; added++;
+    if (p < (int)sizeof buf - 8) p += snprintf(buf + p, sizeof buf - (size_t)p, "%u ", id);
+  }
+  if (added) logf("July door list: %d super cup(s) of ours appended [%s] -> %d ids", added, buf,
+                  (int)(out->e - out->b));
+}
+
+/* CALL-style: run the list, then append. The list function's home stores ([rsp+8..0x18] at its
+ * entry) land in our 0x28 area. */
+__attribute__((naked)) void list_handler(void)
+{
+  __asm__ volatile(
+    "push %rbx\n"
+    "push %rbp\n"
+    "push %rsi\n"
+    "push %rdi\n"
+    "sub  $0x28, %rsp\n"
+    "mov  %r8, %rbx\n"
+    "call *g_tramp_list(%rip)\n"
+    "mov  %rbx, %rcx\n"
+    "call list_post\n"
+    "add  $0x28, %rsp\n"
+    "pop  %rdi\n"
+    "pop  %rsi\n"
+    "pop  %rbp\n"
+    "pop  %rbx\n"
+    "ret\n");
+}
+
+/* B234: the super cups of our August-May leagues, for the July builder.
+   v is n pairs: { regulation id, its runtime conf code } (the conf is only logged: the record's
+   own is read and put back at the build). */
+__declspec(dllexport) int fl26_join_july_extra(const uint16_t* v, int n)
+{
+  if ((!v && n) || n < 0 || n > MAX_IDS) return -1;
+  g_njuly = 0;
+  for (int i = 0; i < n; i++) {
+    uint16_t id = v[2 * i], conf = v[2 * i + 1];
+    if (!id || conf > 15) continue;
+    int dup = 0;
+    for (int j = 0; j < g_njuly; j++) if (g_july_extra[j] == id) dup = 1;
+    if (dup) continue;
+    g_july_extra[g_njuly] = id; g_july_was[g_njuly] = 0;
+    g_njuly++;
+  }
+  char buf[160]; list_ids(g_july_extra, g_njuly, buf, sizeof buf);
+  logf("July builder super cups: %d ids [%s]", g_njuly, buf);
+  /* Only the July super cups need the door list, so its hook goes on here, not with the others:
+     a mismatch costs this fix alone, never the module. */
+  if (g_njuly && !g_tramp_list && g_base) {
+    int r = hook((unsigned char*)(uintptr_t)(g_base + LIST_RVA), SIG_LIST, 15, (void*)list_handler, &g_tramp_list);
+    if (r) logf("July door list: hook at %llx failed (%d) -- the super cups stay off the door list",
+                (unsigned long long)(g_base + LIST_RVA), r);
+    else logf("July door list: hook live (%llx)", (unsigned long long)(g_base + LIST_RVA));
+  }
+  return g_njuly;
 }
 
 /* Runtime confederation for calendar-year cups added to the season builder.

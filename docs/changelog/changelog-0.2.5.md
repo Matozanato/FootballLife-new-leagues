@@ -589,6 +589,16 @@ come with it instead.
   and never started: an empty calendar in March. A new career or another save now starts that
   memory over, as a restart of the game did. (Thanks antonimus)
 
+- **The super cups of added August-May leagues played the first season only (B234).** The game
+  builds each new August-May season from a list of its own, and the super cups of leagues you added
+  (Egypt, Algeria, Tunisia, Morocco, South Africa ... in mohamed's world; Albania, Bulgaria, Cyprus,
+  Poland, Romania and Ukraine in the World Modpack) were not on it: from the second season on they
+  were never drawn. They join that list now, and after the July close each one gets last season's
+  league champion against the cup winner (the runner-up when the champion won the cup too, or when
+  the league has no cup), so the match is made and played in August. Tested in the World Modpack's
+  second season: all six drawn on day 182, the Albanian one played 3-1 and still there after a save
+  and a restart. (Thanks mohamed)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.

@@ -84,6 +84,7 @@ local TD_EXTRA = {}
 -- National and super cups of our calendar-year countries must join the season builder
 -- at creation, like the shipped cups. They stay separate from IDS: IDS are leagues.
 local BUILDER_EXTRA = {}
+local JULY_EXTRA = {}
 local BUILDER_CONF = {}
 
 -- Competition.bin confederation code -> regulation runtime code (+0x300 bits 25..28).
@@ -197,6 +198,7 @@ function m.init(ctx)
     typedef int  (*fl26_join_calendar_t)(const uint16_t*, int);
     typedef int  (*fl26_join_builder_extra_t)(const uint16_t*, int);
     typedef int  (*fl26_join_builder_conf_t)(const uint16_t*, int);
+    typedef int  (*fl26_join_july_extra_t)(const uint16_t*, int);
     typedef int  (*fl26_join_season_types_t)(const uint8_t*, int);
     typedef int  (*fl26_join_regions_t)(void);
   ]])
@@ -230,8 +232,25 @@ function m.init(ctx)
 
   BUILDER_EXTRA = {}
   BUILDER_CONF = {}
+  JULY_EXTRA = {}
   if world then
     local seen = {}
+    -- B234: the super cup of an August-May league of ours is not on the July builder's
+    -- compiled list either, so it played the first season only
+    local jseen = {}
+    for _, L in ipairs(world) do
+      if (L.exhibition or 0) == 0 and not cal_region(L.region)
+          and L.scup and L.scup > 175 and not jseen[L.scup] then
+        JULY_EXTRA[#JULY_EXTRA + 1] = { L.scup, RUNTIME_CONF[L.conf] or 15 }
+        jseen[L.scup] = true
+      end
+    end
+    for _, G in ipairs(gsupers or {}) do
+      if not cal_region(G.region) and G.id > 175 and not jseen[G.id] then
+        JULY_EXTRA[#JULY_EXTRA + 1] = { G.id, RUNTIME_CONF[G.conf] or 15 }
+        jseen[G.id] = true
+      end
+    end
     for _, L in ipairs(world) do
       -- Added national and super cups are absent from the EXE's compiled calendar-year
       -- include list; shipped cups are already there.
@@ -324,6 +343,20 @@ function m.init(ctx)
         end
         local k = tonumber(ffi.cast("fl26_join_builder_conf_t", pc)(cbuf, #BUILDER_CONF))
         log(string.format("fl26joindll: runtime confederation set for %d calendar-year cup(s)", k))
+      end
+    end
+
+    if #JULY_EXTRA > 0 then
+      local pj = ffi.C.GetProcAddress(h, "fl26_join_july_extra")
+      if pj == nil then
+        log("fl26joindll: this fl26join.dll has no fl26_join_july_extra -- the super cups of added August-May leagues play the first season only")
+      else
+        local jbuf = ffi.new("uint16_t[?]", 2 * #JULY_EXTRA)
+        for i, v in ipairs(JULY_EXTRA) do
+          jbuf[2 * i - 2], jbuf[2 * i - 1] = v[1], v[2]
+        end
+        local k = tonumber(ffi.cast("fl26_join_july_extra_t", pj)(jbuf, #JULY_EXTRA))
+        log(string.format("fl26joindll: %d super cup(s) of added August-May leagues on the July season builder", k))
       end
     end
 

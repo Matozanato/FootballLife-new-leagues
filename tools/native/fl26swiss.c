@@ -817,6 +817,34 @@ __declspec(dllexport) int fl26_swiss_calendar_supercups(const uint16_t* v, int n
   return k;
 }
 
+/* B234: the super cup of an added August-May league. The July builder now lets it into the
+ * season (fl26join), but nothing in the game fills it: run 4 of 2026-10-26 had all six entered
+ * and dated on day 227, and the Albanian one still "has not been decided" on day 242. Same
+ * pair as a calendar-year one -- champion v cup winner, the runner-up when they are one club --
+ * and a league with no cup of its own gives its runner-up. cup is 0 then. */
+static cal_scup_t g_aug_scup[MAX_CAL_SCUPS];
+static int g_naug_scup = 0;
+
+__declspec(dllexport) int fl26_swiss_aug_supercups(const uint16_t* v, int n)
+{
+  if ((!v && n) || n < 0) return -1;
+  int k = 0;
+  for (int i = 0; i < n && k < MAX_CAL_SCUPS; i++) {
+    uint16_t reg = v[3 * i], league = v[3 * i + 1], cup = v[3 * i + 2];
+    if (!reg || !league) continue;
+    int dup = 0;
+    for (int j = 0; j < k; j++) if (g_aug_scup[j].reg == reg) dup = 1;
+    if (dup) continue;
+    g_aug_scup[k].reg = reg;
+    g_aug_scup[k].league = league;
+    g_aug_scup[k].cup = cup;
+    k++;
+  }
+  g_naug_scup = k;
+  logf("fl26swiss: %d August-May Super Cup(s) of added leagues configured", k);
+  return k;
+}
+
 char setcl_handler(uint64_t id, u32vec* list, uint64_t flag)
 {
   uint16_t r = (uint16_t)id, row = ko_row(r);
@@ -11944,6 +11972,76 @@ static void calendar_scup_fill_days(void)
   }
 }
 
+/* B234: the August-May ones, after the July teardown and the builder that lets them in (day
+ * 181), before the first super cup date of the summer. As the CAF Super Cup at the July
+ * teardown: last season's tie tables freed, the pair set, the stage started and register_all
+ * asked for the match. A save made after the fill holds this season's pair with its match not
+ * yet played: left as it is. */
+static void aug_scup_fill_days(void)
+{
+  int d = today();
+  if (!g_naug_scup || d < 182 || d >= 220) return;
+
+  for (int i = 0; i < g_naug_scup; i++) {
+    const cal_scup_t* cs = &g_aug_scup[i];
+    unsigned char* rec = get_rec(cs->reg);
+    if (!rec) continue;
+
+    /* last season's finish and cup winner, as kept at the July teardown (aug_scup_keep) */
+    int ad = abs_day();
+    final_t* f = final_of(cs->league);
+    int fk = f && f->n >= 2 && ad >= f->day && ad - f->day < 60;
+    cupwin_t* w = cs->cup ? cupwin_of(cs->cup) : 0;
+    int wk = w && ad >= w->day && ad - w->day < 60;
+    uint32_t champion = fk ? f->club[0] : calendar_scup_right(cs->league, 13);
+    uint32_t runner   = fk ? f->club[1] : calendar_scup_right(cs->league, 14);
+    uint32_t cupwin   = !cs->cup ? 0 : wk ? w->club : calendar_scup_right(cs->cup, 0);
+    if (!champion || (cs->cup && !cupwin)) {
+      static int said_season[MAX_CAL_SCUPS];
+      if (said_season[i] != log_season() + 1) {
+        said_season[i] = log_season() + 1;
+        logf("fl26swiss: August-May Super Cup %u -- day %d: no %s yet (league %u%s, cup %u%s)", (unsigned)cs->reg, d,
+               champion ? "cup winner" : "league champion", (unsigned)cs->league, fk ? " kept" : "",
+               (unsigned)cs->cup, wk ? " kept" : "");
+      }
+      continue;
+    }
+
+    int by_runner = !cs->cup || (champion >> 14) == (cupwin >> 14);
+    uint32_t opponent = by_runner ? runner : cupwin;
+    if (!opponent || (opponent >> 14) == (champion >> 14)) continue;
+
+    uint32_t clubs[2] = { champion, opponent };
+    if (rec_count(rec) == 2 && has_club(rec_clubs(rec), 2, champion) && has_club(rec_clubs(rec), 2, opponent)
+        && ccup_unplayed(cs->reg) > 0)
+      continue;
+
+    ((freetab_fn)(uintptr_t)(g_base + FREETAB_RVA))(0, cs->reg);
+    u32vec v = { clubs, clubs + 2, clubs + 2 };
+    ((setclr_fn)(uintptr_t)g_tramp_setcl)(cs->reg, &v, 1);
+    run_flush();
+
+    if (rec_count(rec) != 2) {
+      logf("fl26swiss: August-May Super Cup %u -- day %d: set_clubs left %u club(s)",
+           (unsigned)cs->reg, d, (unsigned)rec_count(rec));
+      continue;
+    }
+    *(uint32_t*)(rec + 0x304) |= 1u << 8;    /* in this season: the door asks for it */
+
+    start_stage(0, cs->reg);
+
+    uint16_t id = cs->reg;
+    struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { &id, &id + 1, &id + 1 };
+    ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
+    run_flush();
+
+    logf("fl26swiss: August-May Super Cup %u -- day %d: league %u champion %u v %s %u; registered, %d match record(s), %d unplayed",
+         (unsigned)cs->reg, d, (unsigned)cs->league, champion >> 14,
+         by_runner ? "league runner-up" : "cup winner", opponent >> 14,
+         ccup_matches(cs->reg), ccup_unplayed(cs->reg));
+  }
+}
+
 char daychk_handler(void* ctx)
 {
   table_pool_old_slots("day");        /* B211: before the game's day, which may draw a cup's groups */
@@ -11962,6 +12060,7 @@ char daychk_handler(void* ctx)
   lpre_fill_days();
   ccup_fill_days();
   calendar_scup_fill_days();
+  aug_scup_fill_days();
   for (int p = NQR - 1; p >= 0; p--) q_fill(p);
   cal_dedupe();
   if (g_new_career && !g_built_stored && g_built_gdate >= 0) {    /* B209: once, a club known */
@@ -11988,6 +12087,30 @@ typedef struct { uint16_t* b; uint16_t* e; uint16_t* c; } vec16_t;
 unsigned char* g_tramp_teardown = 0;
 static uint16_t g_td_list[512];
 static vec16_t  g_td_vec;
+/* B234: the leagues and cups the August-May super cups of ours are filled from, kept at the July
+ * teardown as the continental cups' sources are -- after it the game names nobody: run 5 of
+ * 2026-10-26 found no champion for any of the six on days 182..219 */
+static void aug_scup_keep(void)
+{
+  int d = today(), ad = abs_day();
+  if (!g_naug_scup || d < 140 || d > 230) return;
+  for (int i = 0; i < g_naug_scup; i++) {
+    const cal_scup_t* cs = &g_aug_scup[i];
+    int r = keep_final(cs->league, d, ad);
+    if (r > 0) logf("fl26swiss: reg %u -- final table kept for Super Cup %u (day %d)", (unsigned)cs->league,
+                    (unsigned)cs->reg, d);
+    if (!cs->cup) continue;
+    cupwin_t* w = cupwin_of(cs->cup);
+    if (w && ad >= w->day && ad - w->day < 60) continue;
+    uint32_t c = winner_now(cs->cup);
+    if (!c) continue;
+    if (!w) { if (g_ncupwin >= 32) continue; w = &g_cupwin[g_ncupwin++]; w->reg = cs->cup; }
+    w->day = ad; w->club = c;
+    logf("fl26swiss: cup reg %u won by %08x (day %d), kept for Super Cup %u", (unsigned)cs->cup, c, d,
+         (unsigned)cs->reg);
+  }
+}
+
 vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
 {
   (void)ctx;
@@ -11999,6 +12122,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   table_pool_reap("July teardown");
   ccup_keep_winners(0);
   ccup_keep_winners(1);
+  aug_scup_keep();
   state_store();
   int bra = 0;
   for (int j = 0; j < n; j++) {
