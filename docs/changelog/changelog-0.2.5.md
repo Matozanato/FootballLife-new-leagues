@@ -517,6 +517,15 @@ come with it instead.
   tells its builds apart by the exe itself: the first Build after an update is a full one. (Thanks
   antonimus.)
 
+- **Modern Sudamericana: two clubs of one country in a group (B243).** The Sudamericana's groups
+  are drawn by fl26swiss, one club from each of the four pots in every group, and the draw never
+  looked at a club's country: Vélez and Argentinos Juniors met in group 7. The draw now keeps
+  clubs of one association apart, as CONMEBOL's does (the association is the one the UEFA league
+  phase's draw uses, the club's league's country). As in CONMEBOL's, a club out of the
+  Libertadores qualifying may still go into a group beside one of its own country. Should a field
+  ever hold more clubs of one country than there are groups, the draw with the fewest such pairs
+  stands. (Thanks antonimus and vmican)
+
 - **Modern CONMEBOL: no away goals (B241).** The game's Libertadores rows still decide a
   two-legged tie level on aggregate by away goals, and the modern phases were copies of them.
   CONMEBOL dropped the rule: in a world with the modern competitions every tie of the
