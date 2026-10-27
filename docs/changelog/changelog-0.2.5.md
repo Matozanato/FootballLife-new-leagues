@@ -121,6 +121,18 @@ come with it instead.
   into a Sudamericana played August to May at the same time. The World Modpack has it on; a world
   without it keeps the cup as it was.
 
+- **Players per new club: 30 to 35.** **Build > World options > Players per new club** sets how
+  many players each new club of the world gets (30 by default, at most 35): a NewLife club takes
+  that many of its own, a made-up club that many generated ones. The NewLife page offers
+  **Update my leagues** for leagues added with another size, so their squads follow it. A world
+  without the setting stays at 30. Asked by mato.
+
+- **Choose a new club's players on the NewLife page.** Select a new club and press **Choose the
+  players...** (or double-click it): its whole NewLife squad is listed with its best players
+  ticked, and the ticked ones are what Build gives the club. **The best ones** puts the default
+  back. The choice stays through Update my leagues; a club of the game keeps its own squad and
+  cannot be chosen for. Asked by mato.
+
 ## Fixed
 
 - **The Saudi Pro League was never played after you moved it to August-May (B238).** The game plays
