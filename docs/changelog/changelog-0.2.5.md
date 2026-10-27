@@ -614,6 +614,24 @@ come with it instead.
   left now gets its round lists emptied. Tested in a 2039 career: every league of 2040 dated
   in full (Sweden, Norway, the Dominican Republic, both New Zealand leagues, the USL and the
   game's own January-December league included), then 2040, 2041 and 2042 played to the end, every match of every one of them.
+- **Promotion between a fifth and a sixth division (B256).** In a country with six divisions the
+  game showed the swap between the fifth and the sixth at the end of the season and moved nobody
+  (N2-B and N2-C in jibibi's France, two seasons running). `fl26chain` now makes that pair too,
+  and every pair below it (a seventh division under the sixth as well); when two pairs share a
+  league, the second one starts from the list the first one has just written. Tested in jibibi's
+  six-division France: N2-A, N2-B and N2-C each gave and took their three clubs, 16 clubs each.
+  (Thanks jibibi)
+- **A NewLife league made smaller and bigger again kept no squads (B249).** Leagues > Edit from 15
+  clubs to 6 and back to 15 brought the clubs back without players, and Build gave them numbered
+  players ("FL P..."). Going back up now puts those clubs in again from the NewLife release with
+  their squads, keeping their coach and formation; without the release the bar says which clubs
+  have no squad. (Thanks jibibi)
+- **"Update my leagues" offered for a newer NewLife version (B251).** A pack made on a newer NewLife
+  beta (the World Modpack and the Europack on 1.5b8) with the public 1.5b7 loaded was offered the
+  update, which would have rebuilt its squads from the older release. Only leagues from an older
+  version are offered it now.
+- **New clubs > NewLife club... stopped at every pick (B252).** "'set' object has no attribute 'get'"
+  in the 0.2.5 betas; the picked clubs are put in again.
 
 ## Read this first
 
