@@ -263,8 +263,15 @@ class Release:
                         "strength": round(sum(top) / float(len(top))) if top else 0})
         return sorted(out, key=lambda L: (L["country"], -L["strength"], L["name"]))
 
-    def squad(self, cid):
-        """the club's best P.SQUAD players, best first: goalkeepers kept to three"""
+    def squad(self, cid, pick=None):
+        """the club's best P.SQUAD players, best first: goalkeepers kept to three. pick: the
+        newlife_ids of the players the person chose for it (NewLife > Choose the players, mato
+        27.10.), those of them the release still has, best first; none of them left -> the best"""
+        if pick:
+            want = {str(i).strip() for i in pick}
+            mine = [r for r in self.squads.get(cid, []) if str(r.get("newlife_id", "")).strip() in want]
+            if mine:
+                return sorted(mine, key=lambda r: -P.overall(r))[:P.SQUAD]
         rows = sorted(self.squads.get(cid, []), key=lambda r: -P.overall(r))
         gk = [r for r in rows if r.get("Registered Position") == "GK"][:3]
         out = gk + [r for r in rows if r.get("Registered Position") != "GK"]
@@ -420,7 +427,7 @@ def abbr(name, taken):
     return (w + "XX")[:2] + "0"
 
 
-def add_league(recipe, rel, L, legs=2, info=None, custom=False, name=None, more=0):
+def add_league(recipe, rel, L, legs=2, info=None, custom=False, name=None, more=0, picks=None):
     """put league L (from rel.leagues) in the recipe: a new league with its clubs, every club's
     squad from the release. The whole squad is set: places the release has no player for leave
     the club, down to P.MIN_SQUAD. The league's clubs the game already has take the last places
@@ -439,6 +446,8 @@ def add_league(recipe, rel, L, legs=2, info=None, custom=False, name=None, more=
     clubs update_league puts in after (the person's own), counted for the league's size.
     custom: the person changed the league's line-up (clubs left out or brought from other
     leagues); update_league then keeps that line-up instead of the release's.
+    picks: {club id: [newlife_id]} -- the players the person chose for a club (Choose the
+    players); kept in the league's "newlife" so an update and Put the club in again keep them.
     Returns (the new league's name, players left at their game club for lack of players,
     players left out because another league has them)."""
     if info is not None:
@@ -467,6 +476,10 @@ def add_league(recipe, rel, L, legs=2, info=None, custom=False, name=None, more=
         recipe["leagues"][-1]["newlife"]["key"] = list(L["key"])
     if custom:
         recipe["leagues"][-1]["newlife"]["custom"] = True
+    picks = {str(int(i)): [str(p) for p in v] for i, v in (picks or {}).items()
+             if v and str(i).isdigit() and str(int(i)) in {str(int(c)) for c in clubs}}
+    if picks:
+        recipe["leagues"][-1]["newlife"]["picks"] = picks
     crests = [rel.crest(i) for i in clubs]
     if any(crests):
         recipe["leagues"][-1]["club_crests"] = crests
@@ -478,10 +491,10 @@ def add_league(recipe, rel, L, legs=2, info=None, custom=False, name=None, more=
     pl = recipe.setdefault("players", {})
     mover, db = _movers(recipe, info, rel)
     proto = db.proto() if db is not None else []
-    league_ovr = [P.overall(r) for i in clubs for r in rel.squad(i)]
+    league_ovr = [P.overall(r) for i in clubs for r in rel.squad(i, picks.get(str(int(i))))]
     stayed = elsewhere = 0
     for k, i in enumerate(clubs):
-        c, s, e = _club_players(rel, i, mover, proto, league_ovr)
+        c, s, e = _club_players(rel, i, mover, proto, league_ovr, picks.get(str(int(i))))
         stayed, elsewhere = stayed + s, elsewhere + e
         pl[P.new_key(name, k)] = c
     # the league's clubs of the game get the release's squad too, as refresh_game_leagues
@@ -570,10 +583,11 @@ def release_fields(r):
     return ch
 
 
-def _club_players(rel, i, mover, proto, league_ovr):
+def _club_players(rel, i, mover, proto, league_ovr, pick=None):
     """(the recipe's players entry for NewLife club i, players kept at their game club, players
-    left out because another league has them): its squad from the release, see add_league"""
-    sq = rel.squad(i)
+    left out because another league has them): its squad from the release (the players picked
+    for it, when pick), see add_league"""
+    sq = rel.squad(i, pick)
     ed, join = {}, []
     stayed = elsewhere = 0
     for r in sq:
@@ -661,8 +675,63 @@ def put_club(recipe, rel, x, k, cid, info=None):
     proto = db.proto() if db is not None else []
     mates = [j for j, y in rel.clubs.items() if y.get("league") and y.get("league") == c.get("league")]
     league_ovr = [P.overall(r) for j in mates for r in rel.squad(j)]
-    entry, stayed, elsewhere = _club_players(rel, cid, mover, proto, league_ovr)
+    entry, stayed, elsewhere = _club_players(rel, cid, mover, proto, league_ovr, picks_of(x, cid))
     pl[P.new_key(x["name"], k)] = entry
+    return stayed, elsewhere
+
+
+def picks_of(x, cid):
+    """the players chosen for NewLife club cid of league x of the recipe (newlife_ids), or None:
+    the best ones"""
+    v = ((x.get("newlife") or {}).get("picks") or {}).get(str(int(cid)) if str(cid).isdigit() else str(cid))
+    return list(v) if v else None
+
+
+def placed(recipe, rel, cid):
+    """(league x of the recipe, place k) that has NewLife club cid, or (None, None)"""
+    ids = {str(cid), str(rel.now(cid))} | ({rel.twins[str(cid)]} if str(cid) in rel.twins else set())
+    for x in recipe.get("leagues") or []:
+        for k, i in enumerate((x.get("newlife") or {}).get("clubs") or []):
+            if i and str(i) in ids:
+                return x, k
+    return None, None
+
+
+def repick(recipe, rel, x, k, pick, info=None):
+    """give NewLife club in place k of league x the players pick (newlife_ids; None: the best
+    ones again) and its squad from the release anew -- its name, kits, crest and the rest stay,
+    and so does what the Players page set by hand for a player who stays (a linked face), the
+    manager's portrait and the stadium. Returns (players kept at their game club, players left
+    out because another league has them)."""
+    rel.use_tables(info)
+    rel.use_recipe(recipe)
+    nl = x.setdefault("newlife", {})
+    cid = rel.now(str(nl["clubs"][k]))
+    if cid not in rel.clubs or rel.clubs[cid].get("in_game") == "1":
+        raise Error("%s: only a new club's players can be chosen" % x["club_names"][k])
+    own = str(int(nl["clubs"][k]))
+    picks = dict(nl.get("picks") or {})
+    if pick:
+        picks[own] = [str(p) for p in pick]
+    else:
+        picks.pop(own, None)
+    if picks:
+        nl["picks"] = picks
+    else:
+        nl.pop("picks", None)
+    pl = recipe.setdefault("players", {})
+    key = P.new_key(x["name"], k)
+    old = pl.pop(key, None) or {}
+    mine = [(n, ch) for n, ch in (old.get("edits") or {}).items() if set(ch) - RELEASE_FIELDS]
+    mover, db = _movers(recipe, info, rel)
+    proto = db.proto() if db is not None else []
+    c = rel.clubs[cid]
+    mates = [j for j, y in rel.clubs.items() if y.get("league") and y.get("league") == c.get("league")]
+    league_ovr = [P.overall(r) for j in mates for r in rel.squad(j)]
+    entry, stayed, elsewhere = _club_players(rel, cid, mover, proto, league_ovr, picks_of(x, own))
+    entry.update({f: old[f] for f in ("coach_portrait", "stadium") if old.get(f)})
+    _keep_by_hand(entry, mine)
+    pl[key] = entry
     return stayed, elsewhere
 
 
@@ -892,7 +961,7 @@ def update_league(recipe, rel, x, rows, info=None, keep=None):
     recipe["leagues"].pop(idx)
     try:
         got, stayed, elsewhere = add_league(recipe, rel, E, legs=x.get("legs", 2), info=info,
-                                            custom=bool(keep), name=name, more=len(own))
+                                            custom=bool(keep), name=name, more=len(own), picks=nl.get("picks"))
     except Exception:
         recipe["leagues"].insert(idx, x)
         raise

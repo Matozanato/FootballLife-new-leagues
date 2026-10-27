@@ -31,7 +31,7 @@ The windows of Mod Studio (grep QDialog / class .*Dialog / .exec() in tools/mods
                  SouthAmericaDialog, GameCupsDialog, OurCupsDialog, PasteDialog, "Move to another
                  league" (a plain Dialog), SwapDialog, CrestImportDialog, AfterBuild (Build finished);
                  QInputDialog (Only the new European cups...), Remove leagues (question)
-  newlife.py     ClubPickDialog, UpdateDialog, GameLeaguesDialog
+  newlife.py     ClubPickDialog, UpdateDialog, GameLeaguesDialog, PlayerPickDialog
   packages.py    MakeDialog (Make a league package), AddDialog (Add a league package)
   playerpick.py  PickPlayers (Sign / Call up players), PickClub (Transfer to...)
   tableimport.py ImportDialog (Import a squad from a table)
@@ -493,6 +493,16 @@ def run():
             for rid, cid, name, teams in [(r, c, n, list(ts)) for r, c, n, ts in pr.game_lgs]]
     opened("Bring the game's leagues to this season (GameLeaguesDialog, %d leagues)" % len(plan),
            lambda: NLP.GameLeaguesDialog(w.page("NewLife"), Rel(), plan, {"clubs": info["clubs"]}, "1.4").finish())
+
+    class PickRel(Rel):                        # the biggest squad of NewLife 1.5b7: 111 players
+        squads = {"100001": [{"newlife_id": str(900000 + j), "name": "%s %d" % (WORDS[j % len(WORDS)], j),
+                              "Registered Position": "GK" if j < 6 else "CMF", "Age": "25", "Stamina": str(40 + j % 50)}
+                             for j in range(111)]}
+
+        def squad(self, cid, pick=None):
+            return self.squads[cid][:30]
+    opened("Choose the players... (PlayerPickDialog, 111 players)",
+           lambda: NLP.PlayerPickDialog(w.page("NewLife"), PickRel(), "100001").finish())
 
     # ---- League packages
     kp = w.page("Packages")

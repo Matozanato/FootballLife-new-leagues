@@ -2043,7 +2043,22 @@
   "Players per new club": "Jugadores por club nuevo",
   "How many players each new club has: 30, or more up to 35. A NewLife league you added before keeps the squads it was added with until NewLife Database > More > Update my leagues takes them again at the new size. Build again and start a new career after changing this.": "Cuántos jugadores tiene cada club nuevo: 30, o más hasta 35. Una liga NewLife que añadiste antes mantiene las plantillas con las que se añadió hasta que NewLife Database > More > Update my leagues las vuelva a tomar con el nuevo tamaño. Haz Build otra vez y empieza una carrera nueva después de cambiarlo.",
   "30 to 35; takes effect at the next Build": "de 30 a 35; vale desde el próximo Build",
-  "%d of your leagues have squads of another size than Players per new club (%d): Update my leagues takes their players again (%s).": "%d de tus ligas tienen plantillas de otro tamaño que Jugadores por club nuevo (%d): Update my leagues vuelve a tomar sus jugadores (%s)."
+  "%d of your leagues have squads of another size than Players per new club (%d): Update my leagues takes their players again (%s).": "%d de tus ligas tienen plantillas de otro tamaño que Jugadores por club nuevo (%d): Update my leagues vuelve a tomar sus jugadores (%s).",
+  "%d of %d chosen": "%d de %d elegidos",
+  "%d of %d players ticked; a club takes up to %d.": "%d de %d jugadores marcados; un club admite hasta %d.",
+  "%s (%s): %d players chosen. Build again.": "%s (%s): %d jugadores elegidos. Vuelve a construir.",
+  "%s: %d players chosen; they go in when you add the league.": "%s: %d jugadores elegidos; entran cuando añadas la liga.",
+  "%s: tick the players the club gets, up to %d.": "%s: marca los jugadores que tendrá el club, hasta %d.",
+  "Choose the players...": "Elegir los jugadores...",
+  "Choose the players": "Elegir los jugadores",
+  "No goalkeeper ticked.": "Ningún portero marcado.",
+  "Player": "Jugador",
+  "The best ones": "Los mejores",
+  "The club gets stand-in players up to %d.": "El club recibe jugadores de relleno hasta %d.",
+  "The players of the selected club that go in its squad; without a choice it gets its best ones": "Los jugadores del club seleccionado que entran en su plantilla; sin elegir, tiene los mejores",
+  "Tick at least one player.": "Marca al menos un jugador.",
+  "Ticks the players the club gets when nobody chooses: its best %d, three goalkeepers at most": "Marca los jugadores que tendría el club sin elegir: sus %d mejores, tres porteros como máximo",
+  "Untick %d: a club takes up to %d players.": "Desmarca %d: un club admite hasta %d jugadores."
  },
  "log": [
   [
