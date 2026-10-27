@@ -12079,6 +12079,19 @@ char daychk_handler(void* ctx)
   int d = abs_day();
   if (tl != g_timeline) { tl = g_timeline; seen = 0; last = -1; }
   g_day_ticked = 1;
+  /* B258: the hub's "Next" strip is the user's day schedule, and a schedule is only ever as good
+   * as the day it was filed: antonimus (Cerro Largo, Liga AUF) had Brasileirao matches on it from
+   * the start of his career to the first league round, Agus a Copa Argentina match of two other
+   * clubs, and our own 83a1232 test the same result twice after a save was loaded. None of it
+   * repeats in a fresh career here, but the cure is the same whatever wrote the stale entries:
+   * the game's rebuild files every match of the user's from the match records and clears the
+   * rest. Measured 27.10.: copies of a played match planted on three and on four days, and another club's
+   * match of the same league planted on a past day, were all gone the day after a rebuild;
+   * another club's match planted with no rebuild asked stayed in the schedule for two days. Until now
+   * a rebuild was asked only when one of our cups had drawn or was under way, which is not the
+   * case from a January start to the first round. So the first day of every timeline -- a
+   * career built or a save loaded in this session -- asks for one too. */
+  if (last < 0) sched_rebuild("the first day after a load or a new career (B258)");
   if (d != last) {
     if (seen++ < 3) logf("fl26swiss: day loop on day %d", today());
     else if (last >= 0 && d > last + 1) logf("fl26swiss: day loop skipped day(s) %d..%d", last + 1, d - 1);
