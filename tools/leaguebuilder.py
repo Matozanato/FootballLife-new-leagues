@@ -287,6 +287,8 @@ OTHERS_NAMES = {2: "Other European", 6: "Other Latin American", 3: "Other Asia-O
 REGION_FIRST, REGION_LAST = 29, M.REGION_MAX
 CID_FROM = 130
 SQUAD, PLAYER_CAP = 30, 61905            # a new club's squad, and the player records of the lim2400 layout
+SQUAD_BASE, SQUAD_MAX = 30, 35           # World options > Players per new club (mato 27.10.: up to 35, not 40 --
+                                         # 40 is the game's own wall for one club and leaves no room to sign anyone)
 SQUAD_FIT = 22                           # only a world with more new clubs than 30 each leave room for takes
                                          # fewer, down to this (0.2.2/0.2.3 gave every world 22: not agreed, 14.10.2026)
 TEAM_CAP = 2400                          # clubs in all, shipped ones included (1536 up to 0.2.1)
@@ -917,7 +919,7 @@ def has_edits(r):
                 or any((r.get("europe_first") or {}).values())
                 or r.get("uecl_name") or r.get("uecl_logo") or r.get("caf_super_cup_logo")
                 or r.get("samerica_super_cup_logo") or r.get("samerica_super_cup_first")
-                or r.get("saudi_august") or r.get("game_seasons") or r.get("editable_kits") or r.get("country_order")
+                or r.get("saudi_august") or r.get("game_seasons") or r.get("editable_kits") or r.get("squad") or r.get("country_order")
                 or r.get("conmebol")) \
         or r.get("uecl") is False or r.get("caf_super_cup") is False or r.get("samerica_super_cup") is False
 
@@ -1109,6 +1111,8 @@ def recipe_from_plan(pl, base):
     for k in ("uecl", "uecl_logo", "uecl_name", "editable_kits", "game_seasons", "cafsc"):
         if pl.get(k) or k == "uecl":       # (an empty game_seasons is no setting)
             rec[k] = pl.get(k)
+    if squad_of(pl) != SQUAD_BASE:
+        rec["squad"] = squad_of(pl)
     # a trophy folder on another PC (a world from a zip) is not one this Build can copy
     trophies = {c: f for c, f in (pl.get("trophies") or {}).items() if f and os.path.isdir(f)}
     if trophies:
@@ -1944,6 +1948,25 @@ def smaller_squads(counts, over, per):
     return None
 
 
+def squad_of(r):
+    """the places of a new club in world r (a recipe or a plan): its "squad" (World options >
+    Players per new club), SQUAD_BASE to SQUAD_MAX, SQUAD_BASE when it has none"""
+    try:
+        n = int((r or {}).get("squad") or SQUAD_BASE)
+    except (TypeError, ValueError):
+        n = SQUAD_BASE
+    return max(SQUAD_BASE, min(SQUAD_MAX, n))
+
+
+def use_squad(r):
+    """make world r's squad the one this Build (and Mod Studio's pages) work with: SQUAD here and
+    in lbplayers, which read it everywhere a new club's places are counted. Returns it"""
+    global SQUAD
+    import lbplayers
+    SQUAD = lbplayers.SQUAD = squad_of(r)
+    return SQUAD
+
+
 def squad_size(have, made):
     """the squad each of `made` new clubs gets when the tables hold `have` players: SQUAD, unless
     the player records left run out first -- then as many as they give each, down to SQUAD_FIT
@@ -1990,6 +2013,7 @@ def prev_pins(prev):
 def plan(recipe, base, prev=None):
     """the plan of `recipe`; `prev` is the plan of the world's last Build, whose ids the
     leagues built then keep (prev_pins)"""
+    use_squad(recipe)
     pins = prev_pins(prev)
     comp, regs = M.load(base, "Competition.bin"), M.load(base, "CompetitionRegulation.bin")
     import mkflags
@@ -2485,6 +2509,7 @@ def plan(recipe, base, prev=None):
             "europe_first": europe_first(recipe, by_name),
             "game_seasons": august_countries(recipe),
             "editable_kits": bool(recipe.get("editable_kits")),
+            "squad": squad_of(recipe),
             "make_kits": recipe.get("make_kits", True) is not False,
             "replaced_kits": recipe.get("replaced_kits", True) is not False,
             "pack_faces": recipe.get("pack_faces", True) is not False,
@@ -4536,6 +4561,7 @@ def club_order(pl, ents, regs, raw, top_id, log=print):
 
 def build(pl, base, game, replace=False, log=print):
     flpaths.use_game(game, siderdir.find(game))   # the exe readers (caltab, region headings) look here
+    use_squad(pl)                                 # World options > Players per new club
     out = os.path.join(siderdir.find(game), "livecpk", pl["world"])
     if os.path.exists(out):
         if not replace:

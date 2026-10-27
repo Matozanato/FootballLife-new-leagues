@@ -268,8 +268,9 @@ class Squads:
         return [self.row(pid, shirt, order) for order, pid, shirt, _o in self.by_club.get(tid, [])
                 if pid in self.index]
 
-    def proto(self, per=SQUAD):
+    def proto(self, per=None):
         """the squad every new club starts with (mkplayers.py picks it the same way)"""
+        per = SQUAD if per is None else per        # the world's (leaguebuilder.use_squad), not 30 for good
         tid = next((c for c in sorted(self.by_club) if len(self.by_club[c]) >= per), None)
         if tid is None:
             return []
@@ -334,6 +335,21 @@ def new_position(a, pos, rows, want):
     return src
 
 
+SQUAD_MADE = 30      # the places a NewLife squad of the recipe was made for when it does not say
+
+
+def fit_places(c):
+    """a NewLife club's players entry made for fewer places than the world has now (World options >
+    Players per new club raised after the league was added, 0.2.5): the places it never knew
+    leave the club, else they would stay the prototype players, "FL P" men at a real club. Its
+    own squad comes from the NewLife Database again (Update) or by picking its players"""
+    made = int(c.get("squad_places") or SQUAD_MADE)
+    if made < SQUAD:
+        gone = set(c.get("remove") or [])
+        gone |= {str(n) for n in range(made, SQUAD)}
+        c["remove"] = sorted(gone, key=lambda x: int(x) if x.isdigit() else 1 << 30)
+
+
 def fill_newlife(pl, base, log=print):
     """pl's "players" with the prototype players who stay at a NewLife club brought to its level
     (fill_level), for recipes whose leagues were added before Mod Studio did it itself (Risto
@@ -346,6 +362,10 @@ def fill_newlife(pl, base, log=print):
         nl = (L.get("newlife") or {}).get("clubs") or []
         if not nl:
             continue
+        for k in range(len(nl)):
+            c = out.get(new_key(L["name"], k))
+            if c is not None:
+                fit_places(c)
         clubs = [out.get(new_key(L["name"], k)) or {} for k in range(len(nl))]
         own = [[overall(ch) for ch in (c.get("edits") or {}).values() if "Registered Position" in ch] for c in clubs]
         league = [x for xs in own for x in xs]

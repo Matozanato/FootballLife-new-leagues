@@ -4737,6 +4737,17 @@ class Build(BuilderPage):
         self.pfaces.toggled.connect(self.set_pfaces)
         cl.addWidget(noted(self.pfaces, helpmark(tip), hint(_("off = the looks from Edit mode stay; "
                                                                "takes effect at the next Build"))))
+        # 0.2.5 (mato 27.10.): more than 30 players at a new club, up to 35 (40 is the game's wall for
+        # one club, and a club at it can sign nobody)
+        self.squad = QSpinBox()
+        self.squad.setRange(B.SQUAD_BASE, B.SQUAD_MAX)
+        tip = ("How many players each new club has: 30, or more up to 35. A NewLife league you added before "
+               "keeps the squads it was added with until NewLife Database > More > Update my leagues takes "
+               "them again at the new size. Build again and start a new career after changing this.")
+        self.squad.setToolTip(_(tip))
+        self.squad.valueChanged.connect(self.set_squad)
+        cl.addWidget(noted(QLabel(_("Players per new club")), self.squad, helpmark(tip),
+                           hint(_("30 to 35; takes effect at the next Build"))))
         self.b_euro = QPushButton(_("Build only the European cups..."))
         self.b_euro.setToolTip(_("A world with nothing but the new Champions League and Europa League (league "
                                  "phase of 36 and play-off) and, when ticked above, the Conference League: "
@@ -4813,6 +4824,14 @@ class Build(BuilderPage):
                 self.project.recipe.pop("cup_draw", None)
             else:
                 self.project.recipe["cup_draw"] = v
+            self.project.touch()
+
+    def set_squad(self, n):
+        if B.squad_of(self.project.recipe) != n:
+            if n == B.SQUAD_BASE:
+                self.project.recipe.pop("squad", None)
+            else:
+                self.project.recipe["squad"] = n
             self.project.touch()
 
     def set_ekits(self, on):
@@ -4920,6 +4939,9 @@ class Build(BuilderPage):
         self.ekits.blockSignals(True)
         self.ekits.setChecked(bool(self.project.recipe.get("editable_kits")))
         self.ekits.blockSignals(False)
+        self.squad.blockSignals(True)
+        self.squad.setValue(B.squad_of(self.project.recipe))
+        self.squad.blockSignals(False)
         self.mkits.blockSignals(True)
         self.mkits.setChecked(self.project.recipe.get("make_kits") is not False)
         self.mkits.blockSignals(False)

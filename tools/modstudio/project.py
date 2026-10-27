@@ -42,6 +42,9 @@ class Project(QObject):
         self.parent_tiers = {}
         self._squads = None
         self._names = None
+        # 0.2.5: World options > Players per new club -- the world's squad is the one every page and
+        # Build count new clubs' places with (connected first, so it is set before a page reads it)
+        self.changed.connect(lambda: B.use_squad(self.recipe))
 
     # ---- tables ----
     def tables_dir(self):

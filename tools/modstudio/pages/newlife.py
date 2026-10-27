@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QCheckBox, QHBoxLayout, QLabel
                                QWidget)
 
 import leaguebuilder as B
+import lbplayers as P
 from .. import newlife as N
 from ..i18n import _, tr
 from ..ui import hint, error, pick_dir, run_job
@@ -492,14 +493,19 @@ class NewLife(BuilderPage):
             text += "\n" + _("%d of your leagues are from another NewLife version (%s): Update my leagues to this "
                              "version brings them to %s.") % (len(old), ", ".join(x["name"] for x in old),
                                                                self.rel.version)
+        size = N.resized(self.project.recipe, self.rel) if self.rel else []
+        if size:
+            text += "\n" + _("%d of your leagues have squads of another size than Players per new club (%d): "
+                             "Update my leagues takes their players again (%s).") % (
+                len(size), P.SQUAD, ", ".join(x["name"] for x in size))
         self.foot.setText(text)
         self.b_add.setEnabled(bool(sel) and used + sel <= room)
-        self.b_update.setEnabled(bool(old))
+        self.b_update.setEnabled(bool(old or size))
         self.b_game.setEnabled(bool(self.rel) and info is not None)
         self.b_undo.setEnabled(bool(self.project.recipe.get("newlife_game")))
 
     def update(self):
-        old = N.outdated(self.project.recipe, self.rel) if self.rel else []
+        old = N.to_update(self.project.recipe, self.rel) if self.rel else []
         if not old:
             return
         d = UpdateDialog(self, self.rel, old, self.rows)

@@ -36,7 +36,8 @@ def main():
     src = open(os.path.join(HERE, "leaguebuilder.py"), encoding="utf-8").read()
     sites = re.findall(r"(?m)^( +)import lbplayers\n(.*)\n", src)
     ok("every Build step hands its squad size on (run3's 30 for the Modpack too)",
-       sites and all(nxt.strip().startswith("lbplayers.SQUAD = SQUAD") for _i, nxt in sites))
+       sites and all(nxt.strip().startswith(("lbplayers.SQUAD = SQUAD", "SQUAD = lbplayers.SQUAD = squad_of("))
+                     for _i, nxt in sites))      # the second: use_squad, the world's 30-35 (0.2.5)
 
     rel = NL.Release.__new__(NL.Release)
     rel.squads = {1: [row("GK", 40), row("GK", 41), row("GK", 42), row("GK", 43)]

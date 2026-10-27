@@ -610,6 +610,8 @@ def _club_players(rel, i, mover, proto, league_ovr):
         c["join"] = join
     if keep < P.SQUAD:
         c["remove"] = [str(n) for n in range(keep, P.SQUAD)]
+    if P.SQUAD != P.SQUAD_MADE:
+        c["squad_places"] = P.SQUAD          # 0.2.5: the places this squad was made for (fit_places)
     return c, stayed, elsewhere
 
 
@@ -717,6 +719,31 @@ def outdated(recipe, rel):
         k = _version_key(w)
         return k is None or cur is None or k < cur
     return [x for x in recipe["leagues"] if (x.get("newlife") or {}).get("version") and older(x["newlife"]["version"])]
+
+
+def resized(recipe, rel):
+    """the recipe's leagues of rel's NewLife version whose squads were made for another number of
+    places than the world has now (World options > Players per new club, 0.2.5): Update my leagues
+    takes them again at the new size. Build meanwhile keeps them at the size they were made
+    (lbplayers.fit_places), never with prototype players in the places they did not know"""
+    v = str(rel.meta.get("version", ""))
+    pl = recipe.get("players") or {}
+    out = []
+    for x in recipe["leagues"]:
+        nl = x.get("newlife") or {}
+        if not nl.get("clubs") or str(nl.get("version", "")) != v:
+            continue
+        made = {int((pl.get(P.new_key(x["name"], k)) or {}).get("squad_places") or P.SQUAD_MADE)
+                for k in range(len(nl["clubs"]))}
+        if made != {P.SQUAD}:
+            out.append(x)
+    return out
+
+
+def to_update(recipe, rel):
+    """outdated and resized together, in the recipe's order"""
+    ids = {id(x) for x in outdated(recipe, rel) + resized(recipe, rel)}
+    return [x for x in recipe["leagues"] if id(x) in ids]
 
 
 def _from_cache(path):
