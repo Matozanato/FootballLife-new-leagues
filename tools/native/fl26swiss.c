@@ -3390,7 +3390,7 @@ static int split_part(uint16_t id, const split_t** out);
 static final_t g_ptab;
 static int g_ptab_day = -1;
 static int g_ctab_pts[3];                 /* count_table's first, second and last points, for the log */
-/* how many match records regulation reg has, played or not; -1 if the match table is not where it was */
+/* how many match records regulation reg has (0xffff: all of them), played or not; -1 if the match table is not where it was */
 static int ccup_matches(uint16_t reg)
 {
   const unsigned char* bs = (const unsigned char*)(g_base + MATCH_BASE_SITE);
@@ -3403,7 +3403,7 @@ static int ccup_matches(uint16_t reg)
   int n = 0;
   for (uint32_t i = 0; i < cap; i++) {
     const unsigned char* m = blk + base + (size_t)i * MATCH_STRIDE;
-    if (*(const uint16_t*)m != 0xffff && *(const uint16_t*)(m + 4) == reg) n++;
+    if (*(const uint16_t*)m != 0xffff && (reg == 0xffff || *(const uint16_t*)(m + 4) == reg)) n++;
   }
   return n;
 }
@@ -6453,6 +6453,38 @@ static int ko_slots(unsigned char* rnd) { return rnd ? (int)(*(uint32_t*)(rnd + 
  * is the user's own: anything else is a mode with no career, or a rebuild already on its way. */
 #define SCHED_OWNER_OFF (TODAY_OFF + 0x10)
 #define USER_CLUB_OFF   0x1798ab0
+/* B258c (antonimus 27.10., beta f469319): the B258 rebuild came the next day, so the hub of a
+ * new career -- the first thing the player sees -- still showed the stale strip (Brasileirao
+ * matches for a Uruguayan club) until a day was played. The day loop's rebuild is one call,
+ * 0x14158c820(controller), the day loop passing 0 (0x141350705: xor ecx,ecx; call). On the
+ * first day of a timeline (a career built or a save loaded) a rebuild asked here -- by B258 in
+ * the day loop, or by a draw of ours that day -- is done there and then; from the second day on
+ * the day loop does it, as before. A new career's first screen needs its league's matches as
+ * well, and a January league of ours has none until it is registered (join_on_day0). */
+#define SCHED_BUILD_RVA 0x158c820
+static const unsigned char SIG_SCHED_BUILD[10] = { 0x81,0xf9,0xff,0x00,0x00,0x00, 0x0f,0x84,0x76,0x07 };
+static int g_sched_now_tl = -1, g_sched_now_day = -1;
+static int sched_first_day(void)
+{
+  if (g_sched_now_tl != g_timeline || g_sched_now_day < 0) return 0;
+  if (abs_day() != g_sched_now_day) { g_sched_now_tl = -1; return 0; }
+  return 1;
+}
+static void sched_build_now(unsigned char* blk, const char* why)
+{
+  static int bad;
+  if (bad) return;
+  if (memcmp((const void*)(uintptr_t)(g_base + SCHED_BUILD_RVA), SIG_SCHED_BUILD, sizeof SIG_SCHED_BUILD)) {
+    bad = 1;
+    logf("fl26swiss: the schedule rebuild at %llx is not the expected code -- left to the next day (B258c)",
+         (unsigned long long)(g_base + SCHED_BUILD_RVA));
+    return;
+  }
+  ((void (*)(int))(uintptr_t)(g_base + SCHED_BUILD_RVA))(0);
+  uint32_t user = *(uint32_t*)(blk + USER_CLUB_OFF), owner = *(uint32_t*)(blk + SCHED_OWNER_OFF);
+  logf("fl26swiss: the user's day schedule built again now, day %d (%s; B258c: the first day of a career or a load)%s",
+       today(), why, owner == user ? "" : " -- owner still not the user's club");
+}
 static void sched_rebuild(const char* why)
 {
 #ifdef FL26_RCAL_TEST
@@ -6465,9 +6497,9 @@ static void sched_rebuild(const char* why)
   uint32_t* owner = (uint32_t*)(blk + SCHED_OWNER_OFF);
   if (user == 0 || user == 0xffffffffu || *owner != user) return;
   *owner = 0xffffffffu;
+  if (sched_first_day()) { sched_build_now(blk, why); return; }
   logf("fl26swiss: the user's day schedule is built again tomorrow (%s)", why);
 }
-
 /* The other finalist of a completed knockout competition. The rights lookup gives
  * the champion; the final fixture row (kind 0x35) gives the two finalists. */
 static uint32_t knockout_runner_now(uint16_t reg)
@@ -12130,6 +12162,27 @@ static void aug_scup_fill_days(void)
   }
 }
 
+/* B258c: a career built on 1 January has its leagues of ours with no match yet. Their rounds are
+ * dated (reg 11, Liga AUF: "real calendar ... days 52..341" on day 0), but they only enter the
+ * season through register_all, and the game's first register_all of the year is on day 1 (the
+ * season start of its own 276; fl26join appends ours to it). Until then the hub of the new
+ * career had the cup and three Brasileirao matches on its strip and an empty table (antonimus,
+ * 27.10.: 0 match records of 11 on day 0, 240 on day 1). The same call is made here on day 0,
+ * with nothing of the game's in it: fl26join appends ours by its own rules, as on day 1, and on
+ * day 1 they are already in a season and left alone. Only on the day the career was built (or a
+ * save of that day loaded), never on a later New Year. */
+static void join_on_day0(void)
+{
+  if (today() != 0 || !g_new_career || g_built_gdate < 0 || g_built_gdate != game_date()) return;
+  int before = ccup_matches(0xffff);
+  uint16_t none = 0;
+  struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { &none, &none, &none + 1 };
+  ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
+  run_flush();
+  logf("fl26swiss: the leagues of ours registered on day 0, not on day 1 (B258c): %d match record(s) before, %d after",
+       before, ccup_matches(0xffff));
+}
+
 char daychk_handler(void* ctx)
 {
   table_pool_old_slots("day");        /* B211: before the game's day, which may draw a cup's groups */
@@ -12151,7 +12204,11 @@ char daychk_handler(void* ctx)
    * a rebuild was asked only when one of our cups had drawn or was under way, which is not the
    * case from a January start to the first round. So the first day of every timeline -- a
    * career built or a save loaded in this session -- asks for one too. */
-  if (last < 0) sched_rebuild("the first day after a load or a new career (B258)");
+  if (last < 0) {
+    g_sched_now_tl = g_timeline; g_sched_now_day = d;      /* B258c: done this day (sched_rebuild) */
+    join_on_day0();
+    sched_rebuild("the first day after a load or a new career (B258)");
+  }
   if (d != last) {
     if (seen++ < 3) logf("fl26swiss: day loop on day %d", today());
     else if (last >= 0 && d > last + 1) logf("fl26swiss: day loop skipped day(s) %d..%d", last + 1, d - 1);

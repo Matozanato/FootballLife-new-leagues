@@ -639,6 +639,11 @@ come with it instead.
   was only asked around our cup draws. Now it is also asked on the first day after a career is
   created or a save is loaded. Tested: other clubs' matches put on the schedule by hand were gone
   the next day. (Thanks antonimus, Agus)
+- **The hub right from the first screen of a career (B258c).** In a new career from January the
+  hub showed the cup and other leagues' matches under "Next", and an empty table, until one day was
+  played: a January league added by Mod Studio only got its matches on the second day. It now gets
+  them on the day the career is created, and the hub is rebuilt there and then, so the first screen
+  shows your own league's matches. (Thanks antonimus)
 - **Wrong dates under "Next" on the hub, January-December leagues (B258).** Later in a season the
   game could file the user's league rounds one to five days off the days they are played (in our
   test 14 of 20 rounds, after the schedule was built again in July). Each round is now put back on
