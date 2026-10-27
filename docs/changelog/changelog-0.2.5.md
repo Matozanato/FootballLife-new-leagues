@@ -639,6 +639,15 @@ come with it instead.
   was only asked around our cup draws. Now it is also asked on the first day after a career is
   created or a save is loaded. Tested: other clubs' matches put on the schedule by hand were gone
   the next day. (Thanks antonimus, Agus)
+- **Wrong dates under "Next" on the hub, January-December leagues (B258).** Later in a season the
+  game could file the user's league rounds one to five days off the days they are played (in our
+  test 14 of 20 rounds, after the schedule was built again in July). Each round is now put back on
+  its match's day every day. Tested: the same rebuild, all 14 back on their days, every match of
+  the season played.
+- **A renamed league of a ready-made pack lost its kits (B259).** After Make it editable, renaming
+  a league (Bulgarian First League to Efbet League) and Build, its clubs played in borrowed kits:
+  the pack's kits sit under the old name. Build now takes them over to the new name. (Thanks
+  gianito9)
 
 ## Read this first
 
