@@ -648,6 +648,11 @@ come with it instead.
   a league (Bulgarian First League to Efbet League) and Build, its clubs played in borrowed kits:
   the pack's kits sit under the old name. Build now takes them over to the new name. (Thanks
   gianito9)
+- **NewLife leagues added while Bring the game's leagues was working lost their players (B260).**
+  Bring works on a copy of the world in the background (minutes on the Modpack) and put its copy
+  back when done, so a league added on the NewLife page in the meantime kept its place but not its
+  squads, and Build gave it FL P players. What was added meanwhile now stays, and the page's
+  buttons wait until Bring is done. (Thanks gianito9)
 
 ## Read this first
 

@@ -652,10 +652,11 @@ class NewLife(BuilderPage):
                              "Update my leagues takes their players again (%s).") % (
                 len(size), P.SQUAD, ", ".join(x["name"] for x in size))
         self.foot.setText(text)
-        self.b_add.setEnabled(bool(sel) and used + sel <= room)
-        self.b_update.setEnabled(bool(old or size))
-        self.b_game.setEnabled(bool(self.rel) and info is not None)
-        self.b_undo.setEnabled(bool(self.project.recipe.get("newlife_game")))
+        busy = getattr(self, "bringing", False)  # B260: not while Bring the game's leagues works on a copy
+        self.b_add.setEnabled(bool(sel) and used + sel <= room and not busy)
+        self.b_update.setEnabled(bool(old or size) and not busy)
+        self.b_game.setEnabled(bool(self.rel) and info is not None and not busy)
+        self.b_undo.setEnabled(bool(self.project.recipe.get("newlife_game")) and not busy)
 
     def update(self):
         old = N.to_update(self.project.recipe, self.rel) if self.rel else []
@@ -746,15 +747,15 @@ class NewLife(BuilderPage):
         if not d.finish() or not d.cids:
             return
         work = {k: copy.deepcopy(recipe[k]) for k in ("leagues", "edits", "players", "newlife_game") if k in recipe}
+        start = N.bring_start(recipe)
         self.app.busy(True)
+        self.bringing = True                     # B260: this page's buttons wait for it
+        self.count()
 
         def done(n):
             self.app.busy(False)
-            for k in ("edits", "players", "newlife_game"):
-                if k in work:
-                    recipe[k] = work[k]
-                else:
-                    recipe.pop(k, None)
+            self.bringing = False
+            N.take_bring(recipe, work, start)    # B260: what was added meanwhile stays
             self.project.touch()
             self.say(_("The game's leagues now have the %s season: %d clubs swap leagues, %d take the name of the "
                        "club that came up, %d squads (%d players join from other clubs, %d new, %d leave). Build "
@@ -768,6 +769,8 @@ class NewLife(BuilderPage):
 
         def failed(tb):
             self.app.busy(False)
+            self.bringing = False
+            self.count()
             error(self, "NewLife Database", tb.strip().splitlines()[-1])
 
         run_job(lambda progress: N.refresh_game_leagues(work, rel, info, d.cids, d.new_players), done, failed)
