@@ -632,6 +632,13 @@ come with it instead.
   version are offered it now.
 - **New clubs > NewLife club... stopped at every pick (B252).** "'set' object has no attribute 'get'"
   in the 0.2.5 betas; the picked clubs are put in again.
+- **Other clubs' matches under "Next" on the hub (B258).** From a January start to the first
+  round, the hub's fixture strip of a January-December league could show matches of other clubs
+  or competitions (Brasileirao matches for a Uruguayan club, another Copa Argentina tie). The strip
+  reads the game's day schedule, which the game builds again from the real matches when asked; it
+  was only asked around our cup draws. Now it is also asked on the first day after a career is
+  created or a save is loaded. Tested: other clubs' matches put on the schedule by hand were gone
+  the next day. (Thanks antonimus, Agus)
 
 ## Read this first
 
