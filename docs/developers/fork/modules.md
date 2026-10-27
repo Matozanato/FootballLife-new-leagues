@@ -103,7 +103,10 @@ writing the tables itself. The loaders drain `<dll>_log` and `<dll>_stats` into 
   - `register_all` 0x1343bf0: appends our ids to the season list;
   - `enter_season` 0x158f420, the season builder 0x13156e0 and the door 0x13ac170: refuse
     the creation-time ask for our ids, reset a season that is already over and rebuild a
-    stale record;
+    stale record; at the door, for every league (ours or the game's), a league with no match
+    left in the table has its rounds' 16 places set free first (round table read off
+    0x141579e38/0x141579e2e, 0x208 a round), so a January-December league is not built into
+    last season's places (B253);
   - `close_listed` 0x1363210: keeps our ids out of the New Year close;
   - the mover 0x1365110: sends a league without a final table down the no-movement path;
   - teardown 0x1314350: adds our ids to the July close list;

@@ -604,6 +604,16 @@ come with it instead.
   the club you knocked out in the semi-final: it played the Super Cup instead of you. The winner is
   now taken from the final itself, the two clubs it was played between and its score. (Thanks
   mohamed)
+- **January-December leagues lost matches every season (B253).** Each round of a league keeps
+  its matches in a list of 16 places. An August-May league starts every season with those lists
+  emptied, a January-December league kept last season's, and those still named matches the game
+  had since given to other competitions. So the new season's matches did not all get a place, the
+  game dated the old ones instead, and a match with no date is never played: in the World Modpack
+  the Swedish Premier played 14-22 of its 30 rounds by 2039, New Zealand Central none at all, and
+  every year a little less. Before a new season is built, a league with no match of the old one
+  left now gets its round lists emptied. Tested in a 2039 career: every league of 2040 dated
+  in full (Sweden, Norway, the Dominican Republic, both New Zealand leagues, the USL and the
+  game's own January-December league included), then 2040, 2041 and 2042 played to the end, every match of every one of them.
 
 ## Read this first
 

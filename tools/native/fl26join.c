@@ -660,9 +660,86 @@ static void canon_listed(uint16_t cid)
     logf("door(%u): %u listed club(s), all name their team record (%08x ...)", cid, n, l[0]);
 }
 
+/* B253: a calendar-year league keeps its rounds from one season to the next (the rounds of the
+ * round table, 0x208 a record, that its regulation lists at +0x88), and the door builds the new
+ * season into them. A round holds 16 slots (+0x10 of a slot: tie << 22, 0x1f = free) and its
+ * count (+0x204, low 26 bits; the round's key is the top 6), and the builder takes the slot of the
+ * tie if one is there, else a free one, else none. So the slots stay those of the seasons before,
+ * the match ids in them name matches the table has since given other competitions, and the
+ * dating pass 0x141350b40, which walks the slots, dates those matches instead of the league's
+ * own. Measured 2026-10-27 on a 2040 build (M2400S world, exe 2.2): the Swedish Premier (144)
+ * had all 16 slots of every round taken, its slots naming the matches of 111 (203 below), 130 of
+ * its 240 matches without a date and never played; 111, 199, 200, 201 and 250 the same, and 98
+ * played on the dates of the league whose slots named its matches. A league of the July builder
+ * comes with rounds the teardown has emptied (146: 9 slots in each round, its own matches), and
+ * a calendar-year league gets the same: before the door, a league that has rounds and no match
+ * left in the table (its last season's are gone, so the rounds are last season's) has its rounds'
+ * slots set free and their counts to 0. Each round keeps its record, its key and its place in
+ * the regulation, so the builder finds it as before and fills it with this season's matches.
+ * The round table's place and size are read off the round allocator 0x141579db0. */
+#define ROUND_BASE_SITE 0x1579e38   /* lea rdi, [rsi + table]          */
+#define ROUND_CAP_SITE  0x1579e2e   /* cmp ebx, records                */
+#define ROUND_STRIDE    0x208
+#define ROUND_SLOTS     16
+#define ROUND_KO_KEY    0x20        /* league round keys are below; knockout 46..54, free 0x37 */
+/* Round gi of cid: -1 if it is not cid's, is free or holds nothing; else its slots in use. */
+static int round_held(unsigned char* table, uint32_t cap, uint32_t gi, uint16_t cid, unsigned char** out)
+{
+  if (gi >= cap) return -1;
+  unsigned char* rd = table + (size_t)gi * ROUND_STRIDE;
+  uint32_t w = *(const uint32_t*)(rd + 0x204);
+  if (*(const uint16_t*)rd != cid || (w >> 26) >= ROUND_KO_KEY) return -1;   /* knockout rounds and free ones (0x37) stay */
+  int used = 0;
+  for (int k = 0; k < ROUND_SLOTS; k++)
+    if (((*(const uint32_t*)(rd + 0x10 + 0x20 * k) >> 22) & 0x1f) != 0x1f) used++;
+  if (!used && !(w & 0x3ffffff)) return -1;
+  if (out) *out = rd;
+  return used;
+}
+static void free_stale_rounds(uint16_t cid)
+{
+  unsigned char* rec = (unsigned char*)find_record(cid);
+  if (!rec || *(const uint32_t*)(rec + 0x84) != 1 || !has_rounds(rec)) return;
+  const unsigned char* bs = (const unsigned char*)(uintptr_t)(g_base + ROUND_BASE_SITE);
+  const unsigned char* cs = (const unsigned char*)(uintptr_t)(g_base + ROUND_CAP_SITE);
+  static int said;
+  if (bs[0] != 0x48 || bs[1] != 0x8d || bs[2] != 0xbe || cs[0] != 0x81 || cs[1] != 0xfb) {
+    if (!said++) logf("door: the round table is not where it was (0x141579e38); rounds are not checked");
+    return;
+  }
+  uint32_t base = *(const uint32_t*)(bs + 3), cap = *(const uint32_t*)(cs + 2);
+  void** owner = *(void***)(uintptr_t)(g_base + OWNER_RVA);
+  unsigned char* blk = owner ? (unsigned char*)owner[0x48 / 8] : 0;
+  if (!blk || !cap || cap > 100000) return;
+  uint32_t n = (*(const uint32_t*)(rec + 0x300) >> 19) & 0x3f, freed = 0, slots = 0;
+  if (n > 0x3a) n = 0x3a;
+  /* the match table is walked only for a league whose rounds hold something */
+  int held = 0;
+  for (uint32_t s = 0; s < n && !held; s++)
+    held = round_held(blk + base, cap, *(const uint32_t*)(rec + 0x88 + 4 * s), cid, 0) >= 0;
+  if (!held || league_matches(cid) != 0) return;  /* a season in the table (or no table): leave it */
+  for (uint32_t s = 0; s < n; s++) {
+    unsigned char* rd = 0;
+    int used = round_held(blk + base, cap, *(const uint32_t*)(rec + 0x88 + 4 * s), cid, &rd);
+    if (used < 0) continue;
+    uint32_t w = *(uint32_t*)(rd + 0x204);
+    for (int k = 0; k < ROUND_SLOTS; k++) {
+      uint32_t* sl = (uint32_t*)(rd + 4 + 0x20 * k);
+      sl[0] = sl[1] = sl[2] = 0xffffffffu;           /* clubs, the two legs' match ids */
+      for (int j = 3; j < 8; j++) sl[j] = 0x07f7ffffu;
+    }
+    *(uint32_t*)(rd + 0x204) = w & 0xfc000000u;
+    freed++; slots += used;
+  }
+  if (freed)
+    logf("door(%u): %u of %u round(s) still held last season's slots (%u, no match of it left) -- set free",
+         cid, freed, n, slots);
+}
+
 int door_pre(uint64_t id, uint64_t ret)
 {
   uint16_t cid = (uint16_t)id;
+  free_stale_rounds(cid);
   if (ours(cid)) { timeline_check("door", 0); canon_listed(cid); count_listed(cid); }
   if (!ours(cid) || ret != g_base + BLD_RET_RVA) return 0;
   /* A calendar-year league of ours never enters with the July builder: its rounds start in
