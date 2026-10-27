@@ -781,6 +781,17 @@ def write(pl, sider, log=print, root=None, redraw=False):
             done.append(0)
             continue
         mine = []
+        # B259: the folder each id has under this world now, switched on or off (gianito9, 27.10.:
+        # the r12 Modpack made editable, its European leagues renamed -- Bulgarian First League to
+        # Efbet League -- and a Build left Bulgaria in the lent kits of Other Latin American teams:
+        # the source folders are on the PC that built the pack, and the zip's copies sit under the
+        # league's old name)
+        before = {}
+        for l in lbstadiums.read(os.path.join(root, file))[0]:
+            m = LINE.match(l)
+            f = m.group(3).strip() if m else ""
+            if f.lower().startswith(world.lower() + "\\") and os.path.isdir(os.path.join(root, f)):
+                before.setdefault(int(m.group(2)), f)
         for key, name, src in items:
             if what == "kits":
                 league, _s, k = name.rpartition("/")
@@ -793,6 +804,9 @@ def write(pl, sider, log=print, root=None, redraw=False):
                 text = "%d, %s   %s %s" % (key, rel, TAG, name)
             if os.path.isdir(src):
                 _copy(src, os.path.join(root, rel), log)
+            elif not os.path.isdir(os.path.join(root, rel)) and before.get(key) \
+                    and before[key].lower() != rel.lower():
+                _copy(os.path.join(root, before[key]), os.path.join(root, rel), log)   # renamed: B259
             elif not os.path.isdir(os.path.join(root, rel)):
                 log("  %s of %s: no folder %s, skipped" % (what, name, src))
                 continue
