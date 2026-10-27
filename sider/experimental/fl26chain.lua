@@ -21,8 +21,8 @@ and on F10. It keeps a small observation ring in the code section's spare tail a
 
 The world file. When SiderAddons\modules\fl26world.txt exists (written by FL26 Mod Studio's
 League Builder), CHAINS and PROTECT below are ignored and both are built from the file:
-every league in it is protected, and a chain pair is made for every league on division 3, 5
-or 7 that names the league above it -- exactly the pairs the game's mover skips -- with the
+every league in it is protected, and a chain pair is made for every league on division 3, 5,
+6 or 7 that names the league above it -- exactly the pairs the game's mover skips -- with the
 league's promote count (3 if it gives none) both ways. Without the file the built-in lists
 below are used, as before.
 
@@ -88,7 +88,9 @@ end
 -- From the world file: every league is protected, and a chain entry is made for each pair the
 -- game's mover skips. The mover exchanges a league with the one below it every other pair,
 -- starting at the top (1<->2, 3<->4, ...), so the pairs it skips are the ones whose lower
--- league is division 3, 5 or 7: {league above, league, its promote count both ways}. The league
+-- league is division 3, 5 or 7 -- and 6 (B256: the mover never wrote 5<->6 either; the DLL
+-- leaves a pair the game did move as it is): {league above, league, its promote count both
+-- ways}. The league
 -- above may be a shipped one (Ligue 2 above a French third division) -- it is named by id, not
 -- looked up.
 -- A league line with cup= is a second division under a shipped top flight that had none:
@@ -115,7 +117,9 @@ local function from_world(world)
     -- A league below a split one (GitHub #79/#81, Egypt 2026-10-06): the game's mover writes
     -- nothing between a split league's total and the league below, so no club moved at all.
     -- The pair goes to the DLL like a skipped one; the total's season table is the standings.
-    if L.above and L.tier and ((L.tier >= 3 and L.tier % 2 == 1) or L.splitabove) then
+    -- B256 (jibibi 2026-10-27): a sixth tier too -- the pass writes the fifth as the low end of
+    -- the pair above it and never as the top of the one below, so nobody moved between them
+    if L.above and L.tier and ((L.tier >= 3 and (L.tier % 2 == 1 or L.tier >= 6)) or L.splitabove) then
       local n = L.promote or 3
       -- the split's regular phase rides along: it plays the season the total's list decides
       chains[#chains + 1] = { L.above, L.id, n, n, L.splitabove or 0 }

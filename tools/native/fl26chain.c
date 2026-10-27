@@ -607,6 +607,17 @@ static void fix_chain(chain_t* ch)
   orig(ch->cfg.low, &vc, ch->flag_low);
   g_reentrant = 0;
   g_stat[1]++;
+  /* B256 (jibibi 2026-10-27, six French tiers): a league can be the low end of one pair and the
+     mid of the next (N2-B 171 under 11 and over 181). The other pair's copy of its list is the
+     one the pass wrote, so it gets the list just written here -- else the second fix would put
+     the first one's clubs back. */
+  for (int i = 0; i < g_nchain; i++) {
+    chain_t* o = &g_chain[i]; if (o == ch) continue;
+    if (o->cfg.mid == ch->cfg.mid) { memcpy(o->list_mid, nb, nnb*4); o->n_list_mid = nnb; }
+    if (o->cfg.mid == ch->cfg.low) { memcpy(o->list_mid, nc, nnc*4); o->n_list_mid = nnc; }
+    if (o->cfg.low == ch->cfg.mid) { memcpy(o->list_low, nb, nnb*4); o->n_list_low = nnb; }
+    if (o->cfg.low == ch->cfg.low) { memcpy(o->list_low, nc, nnc*4); o->n_list_low = nnc; }
+  }
   if (ch->cfg.regular) split_regular(ch, orig, down, nd, up, nu);
   logf("fix %u->%u: %d down (%08x %08x %08x) %d up (%08x %08x %08x); lists now %d/%d; slots %u/%u",
        ch->cfg.mid, ch->cfg.low, nd, down[0], nd>1?down[1]:0, nd>2?down[2]:0, nu, up[0], nu>1?up[1]:0, nu>2?up[2]:0,
@@ -618,6 +629,13 @@ void apply_post(void* ctx)
   (void)ctx;
   for (int i = 0; i < g_nchain; i++) {
     chain_t* ch = &g_chain[i];
+    /* B256: the bottom of a six-tier pyramid (N2-C 181) may not be written by the pass at all,
+       its list then comes from the game as it stands, with the flag of the side that was */
+    if ((ch->seen & 3) == 1 && ch->n_stand_low > 0) {
+      int n = reg_list(ch->cfg.low, ch->list_low);
+      if (n > 0) { ch->n_list_low = n; ch->flag_low = ch->flag_mid; ch->seen |= 2;
+                   logf("apply: chain %u->%u -- %u not written by the pass, its %d clubs read", ch->cfg.mid, ch->cfg.low, ch->cfg.low, n); }
+    }
     if ((ch->seen & 3) == 3) fix_chain(ch);
     else if (ch->seen & 3) { logf("apply: chain %u->%u incomplete (seen %d) -- untouched", ch->cfg.mid, ch->cfg.low, ch->seen); g_stat[2]++; }
   }
