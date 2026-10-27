@@ -1079,6 +1079,43 @@ def _game_league_plan(recipe, rel, info):
     return out
 
 
+BRING_KEYS = ("edits", "players", "newlife_game")      # what Bring the game's leagues changes in a recipe
+
+
+def bring_start(recipe):
+    """what the recipe has when Bring the game's leagues starts (see take_bring)"""
+    edits = recipe.get("edits") or {}
+    return {"players": set(recipe.get("players") or {}),
+            "edits": {(kind, key) for kind, d in edits.items() if isinstance(d, dict) for key in d}}
+
+
+def take_bring(recipe, work, start):
+    """put what Bring the game's leagues made of the recipe (work: its copy of BRING_KEYS) in the
+    recipe. Bring works in the background (minutes on the Modpack), and the window stays open: a
+    league added on the NewLife page meanwhile kept its place, but its squads went with the copy
+    (B260, gianito9 27.10.: four NewLife leagues of a Modpack world with only FL P players). What
+    was put in the recipe after bring_start (start) and that Bring did not set itself stays."""
+    for k in BRING_KEYS:
+        cur, new = recipe.get(k), work.get(k)
+        if k == "players" and cur:
+            new = {} if new is None else new
+            for key, v in cur.items():
+                if key not in start["players"] and key not in new:
+                    new[key] = v
+        elif k == "edits" and cur:
+            new = {} if new is None else new
+            for kind, d in cur.items():
+                if not isinstance(d, dict):
+                    continue
+                for key, v in d.items():
+                    if (kind, key) not in start["edits"] and key not in (new.get(kind) or {}):
+                        new.setdefault(kind, {})[key] = v
+        if new is None:
+            recipe.pop(k, None)
+        else:
+            recipe[k] = new
+
+
 def undo_game_leagues(recipe):
     """take back what refresh_game_leagues did (recipe["newlife_game"]); True when there was any"""
     if not recipe.get("newlife_game"):
