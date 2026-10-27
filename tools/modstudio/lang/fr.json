@@ -2039,7 +2039,22 @@
   "The clubs that keep their place get only the transfers between the game's players and the new ratings: no new players, nobody let go. Clubs that came up still get their whole squad.": "Les clubs qui gardent leur place reçoivent seulement les transferts entre joueurs du jeu et les nouvelles notes : aucun nouveau joueur, personne ne part. Les clubs promus reçoivent quand même tout leur effectif.",
   "Tick it if Bring gives you the same player twice.": "Cochez-la si Amener vous donne le même joueur deux fois.",
   "%d players of this season the game does not have were left out.": "%d joueurs de cette saison que le jeu n'a pas ont été laissés de côté.",
-  "An Edit save from before this install is in the game's save folder. Made for an older version of the world, it can stop a new Master League in the season or leave a club without its players, and it hides the new squads in Exhibition and Edit mode.": "Une sauvegarde Edit antérieure à cette installation est dans le dossier des sauvegardes du jeu. Faite pour une version plus ancienne du monde, elle peut arrêter une nouvelle Master League en pleine saison ou laisser un club sans ses joueurs, et elle cache les nouveaux effectifs en Exhibition et en mode Edit."
+  "An Edit save from before this install is in the game's save folder. Made for an older version of the world, it can stop a new Master League in the season or leave a club without its players, and it hides the new squads in Exhibition and Edit mode.": "Une sauvegarde Edit antérieure à cette installation est dans le dossier des sauvegardes du jeu. Faite pour une version plus ancienne du monde, elle peut arrêter une nouvelle Master League en pleine saison ou laisser un club sans ses joueurs, et elle cache les nouveaux effectifs en Exhibition et en mode Edit.",
+  "%d of %d chosen": "%d sur %d choisis",
+  "%d of %d players ticked; a club takes up to %d.": "%d joueurs cochés sur %d ; un club en prend jusqu'à %d.",
+  "%s (%s): %d players chosen. Build again.": "%s (%s) : %d joueurs choisis. Reconstruisez.",
+  "%s: %d players chosen; they go in when you add the league.": "%s : %d joueurs choisis ; ils entrent quand vous ajoutez la ligue.",
+  "%s: tick the players the club gets, up to %d.": "%s : cochez les joueurs que le club aura, jusqu'à %d.",
+  "Choose the players...": "Choisir les joueurs...",
+  "Choose the players": "Choisir les joueurs",
+  "No goalkeeper ticked.": "Aucun gardien coché.",
+  "Player": "Joueur",
+  "The best ones": "Les meilleurs",
+  "The club gets stand-in players up to %d.": "Le club reçoit des joueurs de remplacement jusqu'à %d.",
+  "The players of the selected club that go in its squad; without a choice it gets its best ones": "Les joueurs du club choisi qui entrent dans son effectif ; sans choix, il a ses meilleurs",
+  "Tick at least one player.": "Cochez au moins un joueur.",
+  "Ticks the players the club gets when nobody chooses: its best %d, three goalkeepers at most": "Coche les joueurs que le club a sans choix : ses %d meilleurs, trois gardiens au plus",
+  "Untick %d: a club takes up to %d players.": "Décochez %d : un club prend jusqu'à %d joueurs."
  },
  "log": [
   [

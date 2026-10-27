@@ -2039,7 +2039,22 @@
   "The clubs that keep their place get only the transfers between the game's players and the new ratings: no new players, nobody let go. Clubs that came up still get their whole squad.": "Los clubes que mantienen su plaza reciben solo los traspasos entre jugadores del juego y las nuevas valoraciones: ningún jugador nuevo y nadie se va. Los clubes que subieron reciben igualmente toda su plantilla.",
   "Tick it if Bring gives you the same player twice.": "Márcalo si Traer te deja el mismo jugador dos veces.",
   "%d players of this season the game does not have were left out.": "%d jugadores de esta temporada que el juego no tiene se quedaron fuera.",
-  "An Edit save from before this install is in the game's save folder. Made for an older version of the world, it can stop a new Master League in the season or leave a club without its players, and it hides the new squads in Exhibition and Edit mode.": "En la carpeta de partidas del juego hay una partida Edit de antes de esta instalación. Hecha para una versión anterior del mundo, puede detener una Master League nueva en mitad de la temporada o dejar a un club sin sus jugadores, y oculta las nuevas plantillas en Exhibition y en el modo Edit."
+  "An Edit save from before this install is in the game's save folder. Made for an older version of the world, it can stop a new Master League in the season or leave a club without its players, and it hides the new squads in Exhibition and Edit mode.": "En la carpeta de partidas del juego hay una partida Edit de antes de esta instalación. Hecha para una versión anterior del mundo, puede detener una Master League nueva en mitad de la temporada o dejar a un club sin sus jugadores, y oculta las nuevas plantillas en Exhibition y en el modo Edit.",
+  "%d of %d chosen": "%d de %d elegidos",
+  "%d of %d players ticked; a club takes up to %d.": "%d de %d jugadores marcados; un club admite hasta %d.",
+  "%s (%s): %d players chosen. Build again.": "%s (%s): %d jugadores elegidos. Vuelve a construir.",
+  "%s: %d players chosen; they go in when you add the league.": "%s: %d jugadores elegidos; entran cuando añadas la liga.",
+  "%s: tick the players the club gets, up to %d.": "%s: marca los jugadores que tendrá el club, hasta %d.",
+  "Choose the players...": "Elegir los jugadores...",
+  "Choose the players": "Elegir los jugadores",
+  "No goalkeeper ticked.": "Ningún portero marcado.",
+  "Player": "Jugador",
+  "The best ones": "Los mejores",
+  "The club gets stand-in players up to %d.": "El club recibe jugadores de relleno hasta %d.",
+  "The players of the selected club that go in its squad; without a choice it gets its best ones": "Los jugadores del club seleccionado que entran en su plantilla; sin elegir, tiene los mejores",
+  "Tick at least one player.": "Marca al menos un jugador.",
+  "Ticks the players the club gets when nobody chooses: its best %d, three goalkeepers at most": "Marca los jugadores que tendría el club sin elegir: sus %d mejores, tres porteros como máximo",
+  "Untick %d: a club takes up to %d players.": "Desmarca %d: un club admite hasta %d jugadores."
  },
  "log": [
   [
