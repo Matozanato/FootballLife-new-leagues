@@ -11948,6 +11948,66 @@ static void cal_dedupe(void)
   else if (k_ != sk) logf("fl26swiss: day lists -- %d match id(s), each listed once", total);
   sk = k_;
 }
+/* B258, the rest (27.10., candidate 0759f85, M2400S, a calendar-year league in its fourth season,
+ * loaded on 1 January): the user's day schedule had 14 of the club's 20 league rounds on other days
+ * than the calendar's -- round 0 on day 54 with its match on day 49, and so on, one to five days
+ * either way -- and a rebuild asked by hand filed them on the same wrong days. The schedule does not
+ * take a match's day from its record: it asks the date switch again, and league_dates for a
+ * calendar-year league (rcal_dates) weighs the cup and European days known on the day it is asked,
+ * so the fixtures (made on the first days) and the schedule (filed later) got two calendars. The
+ * calendar's day lists are the days the matches are played; so every day, after cal_dedupe has read
+ * them (g_cal_first), the user's entries on another day than their match's are taken out (an empty
+ * day's entry in their place) and each is put on its match's day when that day is empty. Taken out
+ * first, as a second career (Costa Rica, an August-May league, its 2029) had every entry one round
+ * late: each one's day held the entry of the round before. */
+#define SCHED_ENT_OFF (TODAY_OFF + 0x14)
+static void sched_days(void)
+{
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!blk) return;
+  uint32_t user = *(uint32_t*)(blk + USER_CLUB_OFF);
+  if (user == 0 || user == 0xffffffffu || *(uint32_t*)(blk + SCHED_OWNER_OFF) != user) return;
+  unsigned char* s = blk + SCHED_ENT_OFF;
+  static unsigned char out[365][16];
+  static int16_t to[365], from[365];
+  static int last_lost = 0;
+  unsigned char none[16];
+  int n = 0, have_none = 0;
+  for (int d = 0; d < 365; d++) {
+    unsigned char* e = s + (size_t)d * 16;
+    if (*(uint16_t*)e == 0xffff) { if (!have_none) { memcpy(none, e, 16); have_none = 1; } continue; }
+    if (*(uint32_t*)(e + 12) != user) continue;
+    int c = g_cal_first[*(uint16_t*)e];
+    if (c == 0xffff || c == d || c >= 365) continue;
+    memcpy(out[n], e, 16); from[n] = (int16_t)d; to[n++] = (int16_t)c;
+  }
+  if (!n || !have_none) return;
+  for (int d = 0; d < 365; d++) {                      /* out of their days */
+    unsigned char* e = s + (size_t)d * 16;
+    for (int i = 0; i < n; i++)
+      if (*(uint16_t*)e == *(uint16_t*)out[i] && *(uint32_t*)(e + 12) == user) { memcpy(e, none, 16); break; }
+  }
+  int moved = 0, lost = 0, ex = 0;
+  char exs[160]; size_t el = 0; exs[0] = 0;
+  for (int i = 0; i < n; i++) {
+    unsigned char* t = s + (size_t)to[i] * 16;
+    if (*(uint16_t*)t != 0xffff) { to[i] = -1; continue; }   /* its day holds another of the user's */
+    memcpy(t, out[i], 16);
+    moved++;
+    if (ex < 5 && el < sizeof exs - 24) { el += snprintf(exs + el, sizeof exs - el, " %u->%d", *(uint16_t*)out[i], to[i]); ex++; }
+  }
+  for (int i = 0; i < n; i++) {                        /* those back where they were, when it is free */
+    if (to[i] >= 0) continue;
+    unsigned char* f = s + (size_t)from[i] * 16;
+    if (*(uint16_t*)f == 0xffff) memcpy(f, out[i], 16);
+    lost++;
+  }
+  if (moved || lost != last_lost)
+    logf("fl26swiss: the user's day schedule -- %d match(es) moved to their calendar day, %d left where they were (that day holds another of the user's):%s",
+         moved, lost, exs);
+  last_lost = lost;
+}
 /* A calendar-year Super Cup is admitted by the season builder before the
  * New Year teardown. The teardown then closes it, but unlike a national cup
  * nothing in the game's progression fills it again. Once last season's league
@@ -12104,6 +12164,7 @@ char daychk_handler(void* ctx)
   aug_scup_fill_days();
   for (int p = NQR - 1; p >= 0; p--) q_fill(p);
   cal_dedupe();
+  sched_days();
   if (g_new_career && !g_built_stored && g_built_gdate >= 0) {    /* B209: once, a club known */
     any_final_kept();                              /* a save of a later summer: not new (state_sync) */
     if (g_st_read_back) g_built_stored = 1; else state_store();
