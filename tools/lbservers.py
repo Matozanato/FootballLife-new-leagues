@@ -749,12 +749,14 @@ def write(pl, sider, log=print, root=None, redraw=False):
     # B130: kserv.lua, when sider.ini loads it, stops at its start when content\kit-server has no
     # map_comp.txt, and the game then shows no kit of Kit Server at all (laracroft7826, 18.10.: his
     # kit-server folder held map.txt alone) -- an empty one is put there, as Kit Server's own
-    # download has it
-    comp = os.path.join(sider, KITS, "map_comp.txt")
-    if "kserv" in _live_modules(sider) and os.path.isdir(os.path.dirname(comp)) and not os.path.exists(comp):
+    # download has it. B265 (NedimMM 28.10.): SPFL26's common\kits.lua stops the same way in the
+    # folder it reads (his read content\kit-server, B165), so the check is made in the folder the
+    # live module reads, for either module
+    comp = os.path.join(sider, klib, "map_comp.txt")
+    if {"kserv", "kits"} & _live_modules(sider) and os.path.isdir(os.path.dirname(comp)) and not os.path.exists(comp):
         try:
             open(comp, "w").close()
-            log("kits: content\\kit-server had no map_comp.txt, which kserv.lua needs -- an empty one made")
+            log("kits: %s had no map_comp.txt, which Kit Server needs -- an empty one made" % klib)
         except OSError:
             pass
     make = to_make(pl, root) if root and os.path.isdir(os.path.join(sider, klib)) else []

@@ -689,6 +689,12 @@ come with it instead.
   with 20 more leagues: 30, 25, 24, 23, then "the player table is full" with 145 over). It now goes
   on until the world fits, and still stops at squads of 22. (Thanks Risto)
 
+- **No kit of Mod Studio in the game with SP Football Life's own Kit Server (B265).** Kit Server
+  stops at its start when its folder has no `map_comp.txt`, and then the game shows none of the
+  kits. Build made that empty file for `kserv.lua` only, not for the `common\kits.lua` an SP
+  Football Life install loads. It now makes it in the folder the Kit Server that is on reads,
+  for either one. (Thanks NedimMM)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
