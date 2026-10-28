@@ -8331,6 +8331,7 @@ static uint64_t phkind_core(uint32_t* comp, uint64_t kind, uintptr_t ra)
 #define QR2_TEXT   0x3a2fff3u   /* "2nd Qualifying Round" */
 #define KOPO_TEXT  0x3a2fff4u
 #define SUD1_TEXT  0x3a2fff5u   /* "First stage" */
+#define FINAL_TEXT 0x3a2fff6u   /* "Final", a league play-off's one-match final (0.2.5) */
 static uint16_t g_sud1_reg = 0xffff;
 #define TXTGET_RVA 0x14996f0
 static const unsigned char SIG_TXTGET[14] = {
@@ -8344,6 +8345,7 @@ const char* txtget_handler(void* table, uint64_t index)
   if ((uint16_t)index == (uint16_t)QR2_TEXT) return "2nd Qualifying Round";
   if ((uint16_t)index == (uint16_t)KOPO_TEXT) return "Knockout round play-offs";
   if ((uint16_t)index == (uint16_t)SUD1_TEXT) return "First stage";
+  if ((uint16_t)index == (uint16_t)FINAL_TEXT) return "Final";
   return ((txtget_fn)(uintptr_t)g_tramp_txtget)(table, index);
 }
 
@@ -8388,6 +8390,21 @@ uint64_t phname_handler(uint64_t reg)
     return KOPO_TEXT;
   }
   if ((uint16_t)reg == g_sud1_reg) return SUD1_TEXT;
+  /* the final of a league play-off (0.2.5, the Liga FUTVE): the knockout is a normal cup's row cut
+     to two clubs, and the game has no phase name for it -- the super cup row it was copied from
+     before the 28 October test carried none, so the calendar fell back to the competition's name.
+     The match screens, and the Competition Info item, now say "Final". */
+  for (int k = 0; k < g_nccup; k++) {
+    const ccup_t* c = &g_ccup[k];
+    if (c->gnd && c->adv && (uint16_t)reg == c->ko) {
+      static int said_fin = 0;
+      if (said_fin < 4) {
+        said_fin++;
+        logf("fl26swiss: phase name -- regulation %u named Final", (unsigned)(uint16_t)reg);
+      }
+      return FINAL_TEXT;
+    }
+  }
   if (get(reg & 0xffff, rec)) return *(uint32_t*)(rec + 0x40);
   if ((uintptr_t)__builtin_return_address(0) == g_base + MENU_NAME_RA &&
       ((uint16_t)reg == CUPS[1].po || (uint16_t)reg == CUPS[2].po || q_added((uint16_t)reg) >= 0

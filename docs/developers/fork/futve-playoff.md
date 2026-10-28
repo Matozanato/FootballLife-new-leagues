@@ -14,8 +14,11 @@ still open.
 - Six matchdays, home and away, on the days the world file gives (`gdays=`).
 - The winner of each group goes to the final, one match, on `days=`; the better placed club of the
   regular phase is first in the list (at home in the match record).
-- The final is the cup's own knockout: a two-club row copied from the Belgium Super Cup (one match
-  a round). `kolike=` names that shipped cup, whose calendar dates the final.
+- The final is the cup's own knockout: a normal cup's row (the FA Cup's, one match a round) cut to
+  two clubs, so the game sees a cup final and names it "Final"; its one date comes from the Belgium
+  Super Cup's calendar (`kolike=`).
+- The match screens and the Competition Info item name the final "Final" (`FINAL_TEXT`, a text the
+  game's table does not use, answered by the DLL's phase-name hook).
 
 The cup is filled the day after the phase ends (`ccup_fill_ahead`, the same trigger the straight
 knockout has used since 0.2.0) and the groups are started and registered the way a qualifying round
@@ -34,8 +37,9 @@ ccup 259 ko=261 groups=2 entry=191:1,191:4,191:5,191:8,191:2,191:3,191:6,191:7 ^
 - `entry=` is the draw: the first `4 x groups` entries are group A's, the next group B's, in order.
 - `gdays=` switches the league play-off on: own group days, groups in entry order, no draw.
 - `adv=1`: only the group winners advance (only 1 is supported).
-- `kolike=<shipped regulation>`: the knockout's row shape and calendar, for the final. The row is
-  built by `mkccup.py` with `koclubs=2` (the count must match the shipped row's bracket).
+- `kolike=<shipped regulation>`: the shipped cup whose calendar dates the final (the Belgium Super
+  Cup's: one record). The knockout's *row* comes from `mkccup.py`'s own `kolike` (the FA Cup's,
+  cut to `koclubs=2`), so the game treats it as a cup final; the two need not be the same cup.
 - `days=` dates the knockout: one day for a final; several for the four-club knockout of the first
   test.
 - `fill=`/`national=` are the usual options.
@@ -96,8 +100,9 @@ python tools/futve_world.py --game "G:\Games\SP Football Life 2026"
   rows are `reg + 1024` and `reg + 2048` (1283, 2307), as the game's rule for a group cup.
 - It removes the competition row, the regulation rows and the entry rows of that one competition
   and hands the rest of the three tables to `mkccup.py`, which adds a group master, its two
-  replicas and the knockout (four clubs for phase 1, the Belgium Super Cup's two for phase 2). Every
-  other competition, regulation and entry comes back untouched; the Clausura cup is never named.
+  replicas and the knockout (four clubs for phase 1; for the final, the FA Cup's row cut to two
+  clubs, dated by the Belgium Super Cup's one record). Every other competition, regulation and entry
+  comes back untouched; the Clausura cup is never named.
 - It writes `out/futve/world-phase1` and `out/futve/world-phase2`, each with
   `common\etc\pesdb\{Competition,CompetitionRegulation,CompetitionEntry}.bin` and the world file
   with the Apertura line replaced, in the source's line endings.
@@ -108,8 +113,9 @@ After a Mod Studio Build the bins and `fl26world.txt` are regenerated: run the s
 name has to survive the Build.
 
 `mkccup.py`'s `--cup` spec grew two optional fields for this: `koclubs` (the knockout's club count,
-default `2 x groups`) and `kolike` (a shipped regulation whose row the knockout copies). Both are
-group-cup only; the existing cups are unchanged.
+default `2 x groups`) and `kolike` (a shipped regulation whose row the knockout copies -- a normal
+cup's, so a two-club field is a final the game names). Both are group-cup only; the existing cups
+are unchanged.
 
 ## The fixture: Táchira 99
 
@@ -176,7 +182,11 @@ show the two group tables with A = 1, 4, 5, 8 and B = 2, 3, 6, 7, and `sider.log
 **Phase 2 (the final).** The same groups, the knockout is the final (`adv=1`, `kolike=128`,
 `days=15`): after the last group day the two winners are put in the final, the better regular
 position first, and the match is played on day 15. The log names them (`final: X (regular position
-p) v Y (position q)`) and the champion. The Clausura starts on day 16 and must be untouched.
+p) v Y (position q)`) and the champion. The calendar and the match screens must call it "Final"
+(the first test of 28 October showed the competition's name instead); the Clausura follows and
+must be untouched. Check the club's Palmarés after the final and, if you can, after the season's
+close: the champion is the competition's winner (the DLL reads it), but the club's honours screen
+is the game's own bookkeeping, see below.
 
 Both tests are about the Apertura only: the Clausura cup keeps its straight knockout of eight, and
 the Gran Final, the continental places and the second season are later phases.
@@ -190,9 +200,18 @@ the Gran Final, the continental places and the second season are later phases.
   matchdays and a final in 13 days is a match every two days, and the finalists play the first
   Clausura round a day later. The compressed window is the chosen trade-off; the fallback is the
   final on day 14 or the 3-day rhythm of the old play-off, a data change only.
-- **The final's ground.** The better placed club is first in the match record; whether the engine
-  plays the match at its ground or at a neutral one (as a super cup) is checked in phase 2. A
-  different row shape (a domestic cup's two-club knockout) is a data change if it matters.
+- **The final's ground.** The better placed club is first in the match record; the test of 28
+  October had Táchira at home in the final. Whether a different row shape would change the venue is
+  a data question, not a code one.
+- **The club palmarés.** The 28 October final was played and the winner was read by the DLL
+  (`cup 261 -- its final is over on day 15: champion 45ed8006`), but the club's Palmarés screen
+  stayed empty. That screen is the game's own honours data, filled by its title bookkeeping, which
+  exists for the shipped competitions only (the research notes: no table, code); a competition of
+  ours (cid 134) is not in it. The champion is still the competition's winner -- the rights code the
+  DLL reads -- and the sandbox now keeps the career save in the evidence for the analysis. Whether
+  the title appears at the season's close, and whether a normal cup's final row (the change above)
+  makes the game record it, is what the next test checks. A real fix would call the game's
+  title-recording code, a new investigation, not a data change.
 - **Competition Info.** The cup's group pages are the pages of a group competition; a crash there
   (as B205 once had) is checked in each test.
 - **Saves.** A save loaded between two group days is covered by the match-count fallback; a save

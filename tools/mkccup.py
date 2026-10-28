@@ -27,9 +27,10 @@ runners-up. Each --cup is one competition:
   koclubs optional, a group cup only: how many clubs the knockout holds (default 2 x groups).
           A league play-off that sends only one club a group gives 2 here.
   kolike  optional, a group cup only: the regulation id of a shipped knockout whose row the
-          knockout is copied from instead of the Europa League's, whose own calendar fl26swiss.dll
-          then dates it by (the ccup line's kolike=). The Belgium Super Cup (2 clubs, one match)
-          makes the final a single match. The copied row's own bracket must be koclubs.
+          knockout is copied from instead of the Europa League's (the FA Cup's, cut to koclubs: a
+          normal cup final the game names), whose own calendar fl26swiss.dll then dates it by (the
+          ccup line's kolike=). The copied row's bracket is set to koclubs, as a single-match
+          league cup's is.
 
 Both phases are shapes the engine already plays:
 
@@ -208,8 +209,11 @@ def main():
                                  % (cup["name"], cup["kolike"]))
             own = src[0][M.R_TEAMS] & 0x3f
             if own != nko:
-                raise SystemExit("%s: the row of regulation %d holds %d clubs, not the %d of koclubs"
-                                 % (cup["name"], cup["kolike"], own, nko))
+                # A domestic cup's row (the FA Cup's, sixteen rounds in) copied with a two-club
+                # bracket is a final the game knows, where a super cup's one-match row is not: the
+                # bracket is the field, as for a single-match league cup (the like= path below).
+                print("  %s: knockout row from regulation %d (%d clubs) cut to %d"
+                      % (cup["name"], cup["kolike"], own, nko))
             k = bytearray(src[0])
         else:
             k = bytearray(ko_src[0])
