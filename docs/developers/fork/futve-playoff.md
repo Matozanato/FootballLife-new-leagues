@@ -138,6 +138,23 @@ There is no Táchira-99 `Player.bin` in the game today (the installed one runs 4
 stats), so the fixture is generated from whatever `Player.bin` the world has. If you have your own
 copy, `--from` verifies and uses it.
 
+## The play-offs' logo
+
+The two play-offs (competitions 134 and 135) use the "Fase Final" picture as their emblem. The six
+variants of each competition (256 and 512 px) go into the live world's
+`common\render\symbol\emblemLc\emb_<id><suffix>.png`, made the way a Build's league logo is
+(`lbassets.league_logo`: the picture fitted into a transparent square, never stretched):
+
+```
+python tools/futve_logo.py --picture "G:\Downloads\playoff.png" --install --game "G:\Games\SP Football Life 2026"
+python tools/futve_logo.py --restore out/futve/logos/backup-<date> --game "G:\Games\SP Football Life 2026"
+```
+
+`--install` backs up the variants it replaces under `out/futve/logos/backup-<date>/`; the game must
+be closed. A Mod Studio Build regenerates the world's emblems, so run the `--install` command again
+after a Build, as for the world file (`futve_world.py`). `--dry` only generates the pictures under
+`out/futve/logos/world`.
+
 ## The sandbox of the in-game tests
 
 ```
@@ -216,8 +233,9 @@ the Gran Final, the continental places and the second season are later phases.
   (as B205 once had) is checked in each test.
 - **Saves.** A save loaded between two group days is covered by the match-count fallback; a save
   loaded at other points, the July teardown and the second season are phase 6.
-- **A Build** overwrites the bins, `fl26world.txt` and `Player.bin`: rerun `futve_world.py` and
-  `futve_fixture.py --make`, then install with the sandbox.
+- **A Build** overwrites the bins, `fl26world.txt`, `Player.bin` and the emblems: rerun
+  `futve_world.py`, `futve_fixture.py --make` and `futve_logo.py --install`, then install with the
+  sandbox.
 
 ## Tests without the game
 
