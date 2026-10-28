@@ -678,6 +678,13 @@ come with it instead.
   back when done, so a league added on the NewLife page in the meantime kept its place but not its
   squads, and Build gave it FL P players. What was added meanwhile now stays, and the page's
   buttons wait until Bring is done. (Thanks gianito9)
+- **Become a Legend: your national team's matches were played without you (B261).** When your
+  country called you up, its friendlies and qualifiers went by on their own and only the result
+  showed. The guard that gives an old club back to the computer after a club change (in
+  `fl26lateguards.lua`) took the national team for an old club as well. It now leaves every
+  national team alone; only clubs are handed back. This also covers the national team a Master
+  League manager runs (B20). (Thanks BouhMiDov, who found the module by switching them off one by
+  one)
 
 ## Read this first
 
