@@ -133,6 +133,12 @@ end
 -- A single-match league cup (0.2.0) adds like=<shipped cup> (its knockout is a copy of that
 -- domestic cup, dated by it: fl26_swiss_ccup_like, called before fl26_swiss_ccup) and
 -- draw=byes|random|seeded|off (its cup draw, fl26_swiss_cupdraw; byes when not given).
+-- A league play-off (0.2.5, the Liga FUTVE) is a group cup that fills its groups the day after a
+-- phase ends and dates them itself: gdays=<d>,<d>,... gives the group matchdays (the groups are
+-- then dealt in the order of entry=, not drawn), adv=1 sends only the winner of each group to the
+-- knockout, and kolike=<shipped regulation> is the shipped cup whose calendar dates the knockout
+-- (the Belgium Super Cup for a one-match final). They go to fl26_swiss_ccup_gdays / _adv / _kolike,
+-- called after fl26_swiss_ccup.
 local confed = {}               -- read_world: the confed line, { flag, code } pairs
 local CUPDRAW = { all = 1 }     -- read_world: the cupdraw lines, a mode per cup and one for all (0 off, 1 seeded, 2 random, 3 byes)
 local DRAWMODE = { off = 0, seeded = 1, random = 2, byes = 3 }
@@ -194,17 +200,31 @@ local function read_world(ctx)
     end
     local cid, crest = line:match("^%s*ccup%s+(%d+)(.*)$")
     if cid then
-      local c = { tonumber(cid), tonumber(crest:match("ko=(%d+)") or 0), tonumber(crest:match("groups=(%d+)") or 0), {} }
-      for er, ep in (crest:match("entry=([%d:,]+)") or ""):gmatch("(%d+):(%d+)") do
+      -- the options are read from the line without its trailing name: a competition name is free
+      -- text and could hold "days=" or "adv=" by accident
+      local body = crest:gsub("%sname=.*$", "")
+      local c = { tonumber(cid), tonumber(body:match("ko=(%d+)") or 0), tonumber(body:match("groups=(%d+)") or 0), {} }
+      for er, ep in (body:match("entry=([%d:,]+)") or ""):gmatch("(%d+):(%d+)") do
         c[4][#c[4] + 1] = { tonumber(er), tonumber(ep) }
       end
-      local fill, nat = tonumber(crest:match("fill=(%d+)") or 0), tonumber(crest:match("national=(%d+)") or 0)
-      local days, clubs = {}, {}
-      for d in (crest:match("days=([%d,]+)") or ""):gmatch("%d+") do days[#days + 1] = tonumber(d) end
-      for t in (crest:match("clubs=([%d,]+)") or ""):gmatch("%d+") do clubs[#clubs + 1] = tonumber(t) end
+      local fill, nat = tonumber(body:match("fill=(%d+)") or 0), tonumber(body:match("national=(%d+)") or 0)
+      local days, clubs, gdays = {}, {}, {}
+      -- gdays=<d>,...: the league play-off's own group matchdays (0.2.5). Taken out before days=
+      -- is read: the plain pattern would find "days=" inside "gdays=" and date the knockout on
+      -- the group days.
+      for d in (body:match("%sgdays=([%d,]+)") or ""):gmatch("%d+") do gdays[#gdays + 1] = tonumber(d) end
+      local no_gdays = body:gsub("%sgdays=[%d,]+", "")
+      for d in (no_gdays:match("days=([%d,]+)") or ""):gmatch("%d+") do days[#days + 1] = tonumber(d) end
+      for t in (body:match("clubs=([%d,]+)") or ""):gmatch("%d+") do clubs[#clubs + 1] = tonumber(t) end
       if fill > 0 or nat > 0 or #days > 0 or #clubs > 0 then
         c.opts = { fill = fill, national = nat, days = days, clubs = clubs }
       end
+      -- the league play-off (0.2.5): its own group days (fl26_swiss_ccup_gdays), only the winner
+      -- of each group through (fl26_swiss_ccup_adv), and the shipped cup whose calendar dates the
+      -- knockout (fl26_swiss_ccup_kolike). Passed below, after the options.
+      if #gdays > 0 then c.gdays = gdays end
+      c.adv = tonumber(body:match("%sadv=(%d+)") or "")
+      c.kolike = tonumber(body:match("%skolike=(%d+)") or "")
       -- alt=<entry>:<league>[:<from>],...: a national cup winner's entry, the league its place
       -- falls back to and the first position of it to try (0.2.0, fl26_swiss_ccup_alt: the
       -- position rides in the bits above the league's ten)
@@ -220,11 +240,11 @@ local function read_world(ctx)
       if c.like then c.draw = DRAWMODE[crest:match("%sdraw=(%a+)") or "byes"] or 3 end
       -- cal=1: a CONMEBOL cup on the South American February-December calendar.
       -- Strip the trailing name first so a competition name cannot accidentally match it.
-      c.cal = (crest:gsub("%sname=.*$", "")):match("%scal=1") ~= nil
+      c.cal = body:match("%scal=1") ~= nil
       -- first=<team>,...: fallback clubs for entries whose previous-season winner does not exist
       -- yet (the first season's Recopa). From season two the retained winners take precedence.
       c.first = {}
-      for t in ((crest:gsub("%sname=.*$", "")):match("%sfirst=([%d,]+)") or ""):gmatch("%d+") do
+      for t in (body:match("%sfirst=([%d,]+)") or ""):gmatch("%d+") do
         c.first[#c.first + 1] = tonumber(t)
       end
       if c[2] > 0 then ccups[#ccups + 1] = c end   -- groups=0: a straight knockout
@@ -638,6 +658,53 @@ function m.init(ctx)
               end
               local m = tonumber(ffi.cast("fl26_swiss_first_t", po)(obuf, nopt))
               log(string.format("fl26swiss: world file -- options for %d cup(s), %d matched", nopt, m))
+            end
+          end
+          -- the league play-off (0.2.5): its own group days, its advancers and the shipped cup
+          -- whose calendar dates its knockout. The three setters name their cup by the knockout id,
+          -- so they are called after fl26_swiss_ccup, like the options above.
+          local gd, gadv, gkl = {}, {}, {}
+          for _, c in ipairs(ccups) do
+            if c.gdays then gd[#gd + 1] = c end
+            if c.adv then gadv[#gadv + 1] = c end
+            if c.kolike then gkl[#gkl + 1] = c end
+          end
+          if #gd > 0 then
+            local pg = ffi.C.GetProcAddress(h, "fl26_swiss_ccup_gdays")
+            if pg == nil then
+              log("fl26swiss: this fl26swiss.dll has no league play-off group days (fl26_swiss_ccup_gdays); those cups keep the borrowed days")
+            else
+              local len = 0
+              for _, c in ipairs(gd) do len = len + 2 + #c.gdays end
+              local gbuf, q = ffi.new("uint16_t[?]", len), 0
+              for _, c in ipairs(gd) do
+                gbuf[q], gbuf[q + 1] = c[2], #c.gdays; q = q + 2
+                for _, d in ipairs(c.gdays) do gbuf[q] = d; q = q + 1 end
+              end
+              local m = tonumber(ffi.cast("fl26_swiss_access_t", pg)(gbuf, #gd))
+              log(string.format("fl26swiss: world file -- group days for %d cup(s), %d matched", #gd, m))
+            end
+          end
+          if #gadv > 0 then
+            local pa = ffi.C.GetProcAddress(h, "fl26_swiss_ccup_adv")
+            if pa == nil then
+              log("fl26swiss: this fl26swiss.dll has no league play-off advancers (fl26_swiss_ccup_adv); those cups send two a group")
+            else
+              local abuf = ffi.new("uint16_t[?]", 2 * #gadv)
+              for i, c in ipairs(gadv) do abuf[2 * i - 2], abuf[2 * i - 1] = c[2], c.adv end
+              local m = tonumber(ffi.cast("fl26_swiss_access_t", pa)(abuf, #gadv))
+              log(string.format("fl26swiss: world file -- %d cup(s) with one advancer a group, %d matched", #gadv, m))
+            end
+          end
+          if #gkl > 0 then
+            local pkl = ffi.C.GetProcAddress(h, "fl26_swiss_ccup_kolike")
+            if pkl == nil then
+              log("fl26swiss: this fl26swiss.dll has no league play-off knockout calendar (fl26_swiss_ccup_kolike); those knockouts keep the UEFA days")
+            else
+              local kbuf = ffi.new("uint16_t[?]", 2 * #gkl)
+              for i, c in ipairs(gkl) do kbuf[2 * i - 2], kbuf[2 * i - 1] = c[2], c.kolike end
+              local m = tonumber(ffi.cast("fl26_swiss_access_t", pkl)(kbuf, #gkl))
+              log(string.format("fl26swiss: world file -- %d cup(s) with their knockout's own calendar, %d matched", #gkl, m))
             end
           end
           -- CONMEBOL cups on the South American calendar, after their normal options
