@@ -364,7 +364,7 @@ def outside(man, game):
     return sorted(set(out))
 
 
-def evidence(test_dir, game, started):
+def evidence(test_dir, game, save, started):
     ev = os.path.join(test_dir, "evidence")
     os.makedirs(ev, exist_ok=True)
     for rel in ("SiderAddons/sider.log", "SiderAddons/sider-app.log", "SiderAddons/fl26join.log",
@@ -372,6 +372,22 @@ def evidence(test_dir, game, started):
         p = os.path.join(game, rel.replace("/", os.sep))
         if os.path.isfile(p):
             shutil.copy2(p, os.path.join(ev, rel.replace("/", "_")))
+    # the career of the test, for the diagnosis of what the game recorded (the club palmarés, the
+    # competition's winner): EDIT00000000 is the edit data, not the career, and stays out
+    nsave = 0
+    for root, _dirs, files in os.walk(save):
+        for n in files:
+            if n.upper() == "EDIT00000000":
+                continue
+            p = os.path.join(root, n)
+            rel = os.path.relpath(p, save)
+            dst = os.path.join(ev, "save", rel)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            try:
+                shutil.copy2(p, dst)
+                nsave += 1
+            except OSError:
+                pass
     cap = os.path.join(game, "Capturas")
     ncap = 0
     if os.path.isdir(cap):
@@ -384,7 +400,7 @@ def evidence(test_dir, game, started):
             except OSError:
                 pass
     shutil.copy2(os.path.join(test_dir, "manifest.json"), os.path.join(ev, "manifest.json"))
-    print("  evidencia en %s (%d captura(s))" % (ev, ncap))
+    print("  evidencia en %s (%d captura(s), %d archivo(s) de la carrera)" % (ev, ncap, nsave))
     return ev
 
 
@@ -457,7 +473,7 @@ def run_test(a):
         if not wait_closed(game):
             raise SystemExit("el juego sigue abierto; ciérralo y usa --restore %s" % test_dir)
         started = time.mktime(time.strptime(man["started"], "%Y-%m-%dT%H:%M:%S"))
-        ev = evidence(test_dir, game, started)
+        ev = evidence(test_dir, game, save, started)
         report = {"phase": a.phase, "test_dir": test_dir, "evidence": ev, "finished": now(),
                   "fixture": label, "outside": outside(man, game),
                   "installed": [os.path.relpath(e["src"], REPO).replace(os.sep, "/") for e in man["install"]]}
@@ -616,7 +632,7 @@ def self_test(a):
     _w(os.path.join(game, "SiderAddons", "new.cache"), b"new cache")
     _w(os.path.join(game, "Capturas", "new.png"), b"new png")
     started = time.mktime(time.strptime(man["started"], "%Y-%m-%dT%H:%M:%S"))
-    ev = evidence(test_dir, game, started)
+    ev = evidence(test_dir, game, save, started)
     assert os.path.isfile(os.path.join(ev, "SiderAddons_sider.log")), "no sider.log in the evidence"
     assert os.path.isfile(os.path.join(ev, "new.png")), "no new screenshot in the evidence"
     restore(man, game, save)

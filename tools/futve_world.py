@@ -8,8 +8,9 @@ four and a final, for the two in-game tests of this branch (see docs/developers/
             days it is given, the knockout on free days after it. It only shows that a group stage
             filled the day after a split phase ends gets its matches.
   phase 2   the final: only the winner of each group goes through, a two-club one-match knockout
-            copied from the Belgium Super Cup, on the day given in the world file. The better
-            placed club of the regular phase is put first by the DLL (at home in the record).
+            copied from a normal cup's row (the FA Cup's, one match a round, cut to two clubs) so the
+            game sees a cup final, its one date taken from the Belgium Super Cup's calendar. The
+            better placed club of the regular phase is put first by the DLL (at home in the record).
 
 The cup keeps its ids -- the competition and regulations the Build gave it -- and only its own
 rows are replaced: the competition row, the regulation rows and the entry rows of that one cid.
@@ -51,7 +52,8 @@ REGION = 29                    # the world's Venezuela
 GROUP_DAYS = "3,5,7,9,11,13"
 FINAL_DAY = 15
 KO_DAYS_4 = "18,21,25,28,32,35,39"
-SUPER_CUP = "BELGIUM_SUPER_CUP"
+SUPER_CUP = "BELGIUM_SUPER_CUP"       # the one-match calendar (kolike= in the world line)
+FINAL_SHAPE = "ENGLAND_D1_CUP"        # a normal cup's row, cut to a two-club final (mkccup kolike)
 REPLICAS = (1024, 2048)        # the game's rule for a group cup's rows
 
 
@@ -155,6 +157,9 @@ def plan(base, world, dry, tmp_root):
     bel = like_reg(comp, regs, SUPER_CUP)
     if bel is None:
         raise SystemExit("this world has no %s to shape a one-match final" % SUPER_CUP)
+    shape = like_reg(comp, regs, FINAL_SHAPE)
+    if shape is None:
+        raise SystemExit("this world has no %s to shape a cup final" % FINAL_SHAPE)
     # the base mkccup builds from: the same world without this cup's rows
     os.makedirs(tmp_root, exist_ok=True)
     tmp = tempfile.mkdtemp(prefix="base-", dir=tmp_root)
@@ -165,12 +170,14 @@ def plan(base, world, dry, tmp_root):
     for n in (1, 2):
         spec = "%s|%s|%d|%d|%d|2|%s|%d|%d" % (NAME, CODE, cid, reg, ko, ENTRIES, CONF, REGION)
         if n == 2:
-            spec += "||2|%d" % bel
+            # the knockout's row is a normal cup's (the FA Cup's, one match a round), cut to two
+            # clubs: the game then sees a cup final, not a super cup's one-match row
+            spec += "||2|%d" % shape
         line2 = ("ccup %d ko=%d groups=2 entry=%s fill=%d national=%d days=%s gdays=%s%s name=%s"
                  % (reg, ko, ENTRIES, fill, national, FINAL_DAY if n == 2 else KO_DAYS_4,
                     GROUP_DAYS, " adv=1 kolike=%d" % bel if n == 2 else "", NAME))
         specs[n], worlds[n] = spec, line2
-    return {"cid": cid, "reg": reg, "ko": ko, "bel": bel, "comp": comp, "regs": regs,
+    return {"cid": cid, "reg": reg, "ko": ko, "bel": bel, "shape": shape, "comp": comp, "regs": regs,
             "ents": ents, "C2": C2, "R2": R2, "E2": E2, "base2": base2, "tmp": tmp,
             "lines": lines, "nl": nl, "li": li, "specs": specs, "worlds": worlds}
 
@@ -235,8 +242,9 @@ def main():
     if not os.path.isdir(base) or not os.path.isfile(world):
         raise SystemExit("no world found (base %s, world %s); pass --game or FL26_DIR" % (base, world))
     p = plan(base, world, a.dry, os.path.join(a.out, "tmp"))
-    print("Liga FUTVE Apertura Playoffs: cid %d, regulation %d, knockout %d, one-match final as %s"
-          % (p["cid"], p["reg"], p["ko"], p["bel"]))
+    print("Liga FUTVE Apertura Playoffs: cid %d, regulation %d, knockout %d" % (p["cid"], p["reg"], p["ko"]))
+    print("  final: a cup final's row as reg %d, cut to two clubs; its calendar as reg %d (one match)"
+          % (p["shape"], p["bel"]))
     print("  groups %d, +%d, +%d; entries %s" % (p["reg"], p["reg"] + 1024, p["reg"] + 2048, ENTRIES))
     for n in (1, 2):
         print("  phase %d: %s" % (n, p["worlds"][n]))
