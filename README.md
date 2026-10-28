@@ -59,10 +59,16 @@ CPKs: it all goes in through Sider modules and data files, and comes out again.
 > (you were given a world, a modpack or a `.fl26pack`) · [make your own leagues and packs](guides/en/make-your-own-leagues.md)
 > (you pick the leagues). Other languages: [guides/](guides/README.md)
 >
+> **0.2.5** is out (2026-10-28): leagues of up to 28 clubs, the modern CONMEBOL competitions if you
+> want them, Undo/Redo, transfers from a CSV, up to 35 players a new club, and many fixes. Build your
+> 0.2.4 world once with 0.2.5 and your career carries on. What changed: [changelog-0.2.5](docs/changelog/changelog-0.2.5.md)
+>
 > **0.2.4** is out: a new look, worlds you switch with one click, ready Modpacks installed
 > straight from their zip, a quick tour and step-by-step guides in *Help*. Your 0.2.2 / 0.2.3 career
 > keeps working. Mod Studio is **still in development**: something can break; tell us on Discord
-> and we fix it. What changed: [changelog-0.2.4](docs/changelog/changelog-0.2.4.md) · every version:
+> and we fix it. What changed: [changelog-0.2.4](docs/changelog/changelog-0.2.4.md) ·
+> **0.2.4.2** (2026-10-21, quick fix: promotion below the second division in the Europack eu4 and other big worlds): [changelog-0.2.4.2](docs/changelog/changelog-0.2.4.2.md) ·
+> **0.2.4.1** (2026-10-20, fixes, no need to update if 0.2.4 works for you): [changelog-0.2.4.1](docs/changelog/changelog-0.2.4.1.md) · every version:
 > [changelog](docs/changelog/README.md).
 >
 > **Discord:** [FL Mod Studio](https://discord.gg/StQqtk3G3M): questions, help, new versions, and new

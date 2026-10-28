@@ -1,7 +1,8 @@
 # What's new in Mod Studio 0.2.5
 
-0.2.5 is being prepared (not released). If 0.2.4 needs a second round of fixes, these may
-come with it instead.
+0.2.5 (2026-10-28) brings bigger leagues, the modern CONMEBOL competitions if you want them, and
+the fixes of what you reported since 0.2.4. Worlds of 0.2.4 keep working: Build them once with
+0.2.5, and careers carry on.
 
 ## Added
 
@@ -701,6 +702,13 @@ come with it instead.
   kits. Build made that empty file for `kserv.lua` only, not for the `common\kits.lua` an SP
   Football Life install loads. It now makes it in the folder the Kit Server that is on reads,
   for either one. (Thanks NedimMM)
+
+## Still open
+
+- **Europack (eu4): a lower division's clubs in the Champions League in a later season (B250).**
+  Reported with a save; not fixed in 0.2.5, we are on it.
+- **An empty results screen ("%s") after a Europa League play-off match (B266).** The match itself
+  is played and the cup goes on; only that screen is empty.
 
 ## Read this first
 

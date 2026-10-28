@@ -1,7 +1,11 @@
 # What's new in Mod Studio 0.2.4.1
 
-0.2.4.1 (beta, 2026-10-20) fixes what you reported since 0.2.4 (2026-10-18). Worlds of 0.2.4 keep
+0.2.4.1 (2026-10-20) fixes what you reported since 0.2.4 (2026-10-18). Worlds of 0.2.4 keep
 working: Build them once with 0.2.4.1, and careers carry on.
+
+**You don't have to update.** If 0.2.4 works for you and none of the fixes below is something you
+are waiting for, stay on it. 0.2.4.1 was tested in the closed beta, but problems are still
+possible; if you hit one, tell us on Discord.
 
 ## Fixed
 
@@ -120,9 +124,9 @@ working: Build them once with 0.2.4.1, and careers carry on.
   tie's two clubs is now taken from the tie's own table (else the seeded club), and the log says so.
   (Thanks Micarodvzla22)
 - **The game closed on Group stage of the AFC Champions League Two (B171).** Database >
-  Competition Info > a group cup of the world > Group stage, in the second season, took the game
-  down: the groups hold their clubs but the game has no table for them. While a group's table does
-  not hold its clubs the item is greyed, as Knockout Phase is before its round.
+  Competition Info > a group cup of the world > Group stage, from the new year to the next draw
+  (the group tables of the season gone), took the game down. Until the groups are drawn again the
+  item is greyed, as Knockout Phase is before its round.
 - **Restore points in your language (B134).** In Spanish, French, Portuguese and Croatian the
   Reason column of Restore points stayed English ("Switch on: kits map"); it is now said in the
   language of the window, older restore points too. The Leagues page says "1 group of clubs in no
@@ -155,12 +159,9 @@ working: Build them once with 0.2.4.1, and careers carry on.
   come back until the next version.
 - **A Ko-fi button at the top, next to Credits**: it opens the Ko-fi page in the browser.
 
-## Still open
+## Not fixed yet
 
 - **The CAF and AFC cups have no knockout from the second season (B172).** On a world with group
-  cups of its own (the Worldpack: CAF Champions League, AFC Champions League Two ...), the groups of
-  the second season are drawn and played, but the game opens no table for them, so on the knockout's
-  day there is nothing to rank the groups by and the cup stops after its groups. This is the same in
-  0.2.4. 0.2.4.1 reads an earlier season's table when it holds exactly the group's clubs, which
-  covers a cup whose next season the game opened early, but not this case; the fix is for the next
-  build.
+  cups of its own (the Worldpack: CAF Champions League, AFC Champions League Two ...), the cup stops
+  after its groups from the second season of a career: the knockout is never drawn. The first season
+  is fine. This was already so in 0.2.4; 0.2.4.1 does not make it worse, and we are on it.

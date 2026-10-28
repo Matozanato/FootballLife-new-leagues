@@ -2,6 +2,14 @@
 
 What each release of FL26 Mod Studio brought. The full notes of the latest releases:
 
+- [0.2.5](changelog-0.2.5.md) (2026-10-28): leagues of up to 28 clubs, the modern CONMEBOL
+  competitions if you want them, Undo/Redo, transfers from a CSV, up to 35 players a new club, and
+  the fixes of what you reported since 0.2.4.
+- [0.2.4.2](changelog-0.2.4.2.md) (2026-10-21): a quick fix -- promotion and relegation below the
+  second division in the Europack eu4 and other big worlds.
+- [0.2.4.1](changelog-0.2.4.1.md) (2026-10-20): fixes of what you reported since 0.2.4 (kits, Make it
+  editable, Import crests, the Players page's rating, the AFC Champions League Two ...). No need to
+  update if 0.2.4 works for you.
 - [0.2.4](changelog-0.2.4.md) (2026-10-18): a new look -- worlds you switch with one click, ready
   Modpacks installed from their zip, a quick tour and step-by-step guides in Help -- and many fixes.
 - [0.2.3](changelog-0.2.3.md) (2026-10-13): a quick fix for 0.2.2 -- Mod Studio no longer closes
