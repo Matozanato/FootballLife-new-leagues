@@ -644,6 +644,14 @@ come with it instead.
   played: a January league added by Mod Studio only got its matches on the second day. It now gets
   them on the day the career is created, and the hub is rebuilt there and then, so the first screen
   shows your own league's matches. (Thanks antonimus)
+- **League and cup matches on national-team days (B254).** Leagues and cups added by Mod Studio
+  could play on the days of the World Cup, the EURO, the Copa America, the Asian Cup or the AFCON,
+  while their players were away with their national teams. They now keep those days clear in the
+  year the tournament is played, and keep the qualifiers' international windows (19 days) clear
+  every year, as real leagues do. Cup rounds on those days move to the nearest free week. Tested
+  with a Uruguayan league to July 2026: its rounds jump from 178 to 207 over the World Cup (183-203,
+  in 2025 it played on 185 and 201), the cup's rounds moved from 191 to 177 and from 317 to 310.
+  (Thanks antonimus)
 - **Wrong dates under "Next" on the hub, January-December leagues (B258).** Later in a season the
   game could file the user's league rounds one to five days off the days they are played (in our
   test 14 of 20 rounds, after the schedule was built again in July). Each round is now put back on

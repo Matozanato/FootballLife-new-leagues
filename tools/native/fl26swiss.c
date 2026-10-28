@@ -8877,6 +8877,137 @@ static void cont_note(uint16_t id, void* vec)
     logf("fl26swiss: the game's reg %u (%s) plays %u date(s): %s -- %d not among its shipped days; a league with a place in it keeps clear",
          (unsigned)id, GC_NAME[g], (unsigned)have, buf, fresh);
 }
+/* B254 (antonimus 26.10., beta 0f3b3ca): the game's national-team competitions were never in
+ * busy_set, so a league of ours could play on their days -- a Copa America 2028 semi-final on
+ * 18.07. and a Liga de Ascenso round the same day, for a manager of a club and of Chile; mato
+ * 27.10.: "Moramo fixati ovo da se utakmice ne mogu sudarati s nacionalnim timovima". Their
+ * regulations (CompetitionRegulation.bin, competitions 27-36): the World Cup 34/35, the
+ * qualifiers 36-40, EURO 41/42, the Copa America 43/104, the Asian Cup 44/45, the Africa Cup of
+ * Nations 46. Their days are asked of the game's own date function (it gave the Club World Cup
+ * its shape from 34/35 since 0.2.0), on the first date asked on a day -- the season build --
+ * before any league of ours is dated. Which years they are played in is the record's season year
+ * (+0x2fc), a four-year cycle the game moves on itself (a 30-year Fast Forward, 28.10.: the World
+ * Cup 2025, 2029, 2033 ... set on 5 August of that year): a day from August on is in that year,
+ * one before August in the next (World Cup 2025 -> June-July 2026, Copa America 2027 -> July
+ * 2028). A tournament day is kept clear only in its own year (a day of ours from today on is this
+ * year, one before today next year); 65535 is a tournament not on the calendar yet. The qualifiers
+ * (36-40) are the international windows, kept clear every year as real leagues stop for them.
+ * Every league keeps them clear at every level (busy_days, rcal_cost): a club's players are called
+ * up whatever its confederation. FL27's new World Cup dates come the same way. */
+static const uint16_t NT_REGS[] = { 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 104, 44, 45, 46 };
+#define NT_QUAL(id) ((id) >= 36 && (id) <= 40)
+#define NT_MAX_DAYS 160
+static int game_date(void);
+static uint16_t g_ntday[NT_MAX_DAYS]; static int g_nntday = 0;    /* tournaments, this year's */
+static uint16_t g_nqday[NT_MAX_DAYS]; static int g_nnqday = 0;    /* the qualifiers' windows */
+static void nt_add(uint16_t* a, int* n, uint32_t d)
+{
+  for (int q = 0; q < *n; q++) if (a[q] == d) return;
+  if (*n < NT_MAX_DAYS) a[(*n)++] = (uint16_t)d;
+}
+static void nt_sample(uint64_t reg, void* vec)
+{
+  static int key = -1000000, tl = -1;
+  int k = abs_day();
+  if (!vec || k < 0 || (k == key && tl == g_timeline)) return;
+  key = k; tl = g_timeline; g_nntday = 0; g_nnqday = 0;
+  vec_t* v = (vec_t*)vec;
+  if (v->e < v->b) return;                         /* empty (b 0) on the first date of a day: fine */
+  int gd = game_date(), t = today();
+  int yr = gd >= 0 ? gd / 365 : -1;
+  char buf[2][300]; size_t bl[2] = { 0, 0 }; buf[0][0] = buf[1][0] = 0;
+  for (size_t i = 0; i < sizeof NT_REGS / sizeof NT_REGS[0]; i++) {
+    uint16_t id = NT_REGS[i];
+    const unsigned char* r = find_rec(id);
+    unsigned year = r ? *(const uint16_t*)(r + 0x2fc) : 0xffff;
+    size_t at = v->b ? (size_t)(v->e - v->b) : 0;
+    ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | id, vec);
+    size_t have = (v->b && v->e >= v->b + at) ? (size_t)(v->e - v->b - at) / sizeof(date_t) : 0;
+    const date_t* d = (const date_t*)(v->b + at);
+    uint32_t lo = 365, hi = 0; int kept = 0;
+    for (size_t j = 0; j < have; j++) {
+      uint32_t day = d[j].day;
+      if (day >= 365) continue;
+      if (day < lo) lo = day;
+      if (day > hi) hi = day;
+      if (NT_QUAL(id)) { nt_add(g_nqday, &g_nnqday, day); kept++; continue; }
+      if (year == 0xffff || yr < 0) continue;
+      int when = (int)year + (day >= 213 ? 0 : 1), ours = yr + ((int)day >= t ? 0 : 1);
+      if (when == ours) { nt_add(g_ntday, &g_nntday, day); kept++; }
+    }
+    if (v->b) v->e = v->b + at;                      /* the game's list appends: back as it was */
+    int h = i >= 7;
+    if (bl[h] + 40 < sizeof buf[h])
+      bl[h] += (size_t)snprintf(buf[h] + bl[h], sizeof buf[h] - bl[h], " %u:%u/%u", (unsigned)id, year, (unsigned)have);
+    if (have && bl[h] + 24 < sizeof buf[h])
+      bl[h] += (size_t)snprintf(buf[h] + bl[h], sizeof buf[h] - bl[h], "(%u..%u)%s", lo, hi, kept ? "*" : "");
+  }
+  /* the players stay away from the first match to the final: the days between (a gap of up
+     to 4 days, the group stage to the knockouts as well) are the tournament's too */
+  for (int i = 0; i < g_nntday; i++)
+    for (int j = 0; j < g_nntday; j++) {
+      int a = g_ntday[i], b = g_ntday[j];
+      if (b <= a || b - a > 5) continue;
+      for (int x = a + 1; x < b; x++) nt_add(g_ntday, &g_nntday, (uint32_t)x);
+    }
+  logf("fl26swiss: national teams (B254) -- %d, day %d: %d tournament day(s) and %d window day(s) kept clear;%s",
+       yr, t, g_nntday, g_nnqday, buf[0]);
+  logf("fl26swiss: national teams (B254) -- (cont.)%s", buf[1]);
+}
+/* B254: a cup of ours keeps its world-file days (explicit or copied), so a round on a national-team
+   day of this year moves off it: a week at a time first (the same weekday, its midweek or weekend
+   slot), then a day, earlier first, never past its neighbouring rounds or onto another of its days */
+static int nt_day(uint32_t d)
+{
+  for (int i = 0; i < g_nntday; i++) if (g_ntday[i] == d) return 1;
+  for (int i = 0; i < g_nnqday; i++) if (g_nqday[i] == d) return 1;
+  return 0;
+}
+static void nt_cup_clear(uint16_t id, void* vec)
+{
+  vec_t* v = (vec_t*)vec;
+  size_t n = (v && v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+  if (!n || (!g_nntday && !g_nnqday)) return;
+  date_t* r = (date_t*)v->b;
+  uint32_t first = 365; uint16_t fr = 0xffff;     /* the season starts on its first round's day */
+  for (size_t q = 0; q < n; q++) if (r[q].day < 365 && r[q].round < fr) { fr = r[q].round; first = r[q].day; }
+  if (first >= 365) return;
+  static const int STEP[] = { -7, 7, -14, 14, -21, 21, -28, 28, -1, 1, -2, 2, -3, 3 };
+  char buf[300]; size_t bl = 0; buf[0] = 0; int moved = 0, stuck = 0;
+  for (size_t j = 0; j < n; j++) {
+    uint32_t d = r[j].day;
+    if (d >= 365 || !nt_day(d)) continue;
+    /* its days in season order, from its first round's day */
+#define SK(x) (((x) + 365u - first) % 365u)
+    uint32_t lo = 0, hi = 365;                     /* keys strictly between its neighbours */
+    for (size_t q = 0; q < n; q++) {
+      if (q == j || r[q].day >= 365 || r[q].day == d) continue;
+      uint32_t kq = SK(r[q].day);
+      if (kq < SK(d) && kq + 1 > lo) lo = kq + 1;
+      if (kq > SK(d) && kq < hi) hi = kq;
+    }
+    int to = -1;
+    for (size_t s = 0; s < sizeof STEP / sizeof STEP[0] && to < 0; s++) {
+      int c = (int)d + STEP[s];
+      if (c < 0 || c >= 365 || nt_day((uint32_t)c)) continue;
+      uint32_t kc = SK((uint32_t)c);
+      if (kc < lo || kc >= hi) continue;
+      to = c;
+    }
+#undef SK
+    if (to < 0) { stuck++; continue; }
+    for (size_t q = 0; q < n; q++) if (q != j && r[q].day == d && r[q].round == r[j].round) r[q].day = (uint32_t)to;
+    r[j].day = (uint32_t)to; moved++;
+    if (bl + 16 < sizeof buf) bl += (size_t)snprintf(buf + bl, sizeof buf - bl, " %u->%d", d, to);
+  }
+  static uint16_t said[64]; static int nsaid = 0, syr = -1, stl = -1;   /* said once a cup a year */
+  if (syr != game_date() / 365 || stl != g_timeline) { nsaid = 0; syr = game_date() / 365; stl = g_timeline; }
+  for (int q = 0; q < nsaid; q++) if (said[q] == id) return;
+  if (nsaid < 64) said[nsaid++] = id;
+  if (moved || stuck)
+    logf("fl26swiss: reg %u -- %d cup date(s) moved off national-team days (B254)%s%s", (unsigned)id, moved, buf,
+         stuck ? ", some left: no free day near" : "");
+}
 /* a division of the cup whose draw lists them (a cupdraw line's tiers) */
 static int cupdraw_has(uint16_t cup, uint16_t id)
 {
@@ -8971,7 +9102,9 @@ enum {
   BZ_NATCUP,   /* an August-May league's national cups (calendar case 6, natcup_day) */
   BZ_CALCUP,   /* a calendar-year league's cup (`dates <cup> like=23`) */
   BZ_CUPD,     /* its country's cups (cupdays) */
-  BZ_LCUP      /* its league cup of ours and the cup's pre-round */
+  BZ_LCUP,     /* its league cup of ours and the cup's pre-round */
+  BZ_NT,       /* a match day of the game's national-team tournaments this year (nt_sample, B254) */
+  BZ_NTQ       /* a day of their qualifiers' international windows, every year (B254) */
 };
 typedef struct { uint16_t day; uint8_t kind; } busy_t;
 #define BUSY_MAX 1024
@@ -9056,6 +9189,8 @@ static void busy_days(uint16_t id, int level, int buf, uint8_t* bad)
     case BZ_CUPD: if (level < 3) block(bad, d, 2); break;       /* a day clear */
     case BZ_NATCUP: case BZ_CALCUP: if (level < 2) block(bad, d, cup); break;
     case BZ_LCUP: if (level < 1) block(bad, d, buf); break;
+    case BZ_NT: block(bad, d, 2); break;                        /* a day clear, every level */
+    case BZ_NTQ: block(bad, d, 1); break;                       /* the day itself */
     }
   }
 }
@@ -9296,11 +9431,11 @@ static int uefa_days_of(uint32_t* out, int cap, int quals)
 }
 static int busy_set(uint16_t id, busy_t* out)
 {
-  static uint8_t seen[365];                            /* a bit per kind: each day of a kind once */
+  static uint16_t seen[365];                           /* a bit per kind: each day of a kind once */
   int n = 0;
   memset(seen, 0, sizeof seen);
 #define BZ(d, k) do { uint32_t d_ = (d); if (d_ < 365 && !(seen[d_] >> (k) & 1) && n < BUSY_MAX) { \
-    seen[d_] |= (uint8_t)(1 << (k)); out[n].day = (uint16_t)d_; out[n].kind = (uint8_t)(k); n++; } } while (0)
+    seen[d_] |= (uint16_t)(1 << (k)); out[n].day = (uint16_t)d_; out[n].kind = (uint8_t)(k); n++; } } while (0)
   for (int k = 0; k < g_nccup; k++) {
     const ccup_t* x = &g_ccup[k];
     if (!x->national && ccup_feeds(k, id)) {           /* a continental cup of ours it feeds */
@@ -9329,6 +9464,8 @@ static int busy_set(uint16_t id, busy_t* out)
     nu = uefa_days_of(ud, 96, 1);
     for (int i = 0; i < nu; i++) BZ(ud[i], BZ_QUAL);
   }
+  for (int i = 0; i < g_nntday; i++) BZ(g_ntday[i], BZ_NT);   /* every league: its players are called up */
+  for (int i = 0; i < g_nnqday; i++) BZ(g_nqday[i], BZ_NTQ);
   const cupd_t* cd = cupd_of(id);                      /* its country's cups */
   if (cd) for (int i = 0; i < cd->n; i++) BZ(cd->d[i], BZ_CUPD);
   if (g_org == 182) {                                  /* an August-May league's country's */
@@ -9379,6 +9516,8 @@ static void rcal_cost(uint16_t id, const rcal_t* c, int strict, int euhard, int3
     case BZ_EURO: RNEAR(d, euhard, 2); break;
     case BZ_CUPD: case BZ_CALCUP: RNEAR(d, 1, strict ? 2 : 1); break;
     case BZ_NATCUP: case BZ_LCUP: if (strict) RNEAR(d, 1, 2); break;
+    case BZ_NT: RNEAR(d, 1, 2); break;
+    case BZ_NTQ: RNEAR(d, 0, 1); break;
     }
   }
 #undef RNEAR
@@ -11129,6 +11268,7 @@ static uint64_t datelike_dates(uint16_t id, uint64_t reg, void* vec)
       }
     }
     if (nown) moved_cup_days(own, nown, vec);
+    nt_cup_clear(id, vec);                         /* B254 */
     vec_t* v = (vec_t*)vec;
     size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
     int seen = 0;
@@ -11191,6 +11331,7 @@ uint64_t date_handler(uint64_t reg, void* vec)
 {
   uint16_t id = (uint16_t)reg;
   if (vec) career_mark("its dates");
+  if (vec) nt_sample(reg, vec);                    /* B254: before anything of this day is dated */
   if (vec && g_ndlike) {
     for (int i = 0; i < g_ndlike; i++) if (g_dlike[i][0] == id) return datelike_dates(id, reg, vec);
   }
