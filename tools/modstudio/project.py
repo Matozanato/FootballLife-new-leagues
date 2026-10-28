@@ -4,7 +4,7 @@ The recipe is the same JSON leaguebuilder.py builds from.  The tables are the ga
 Team/Competition/Player tables, unpacked once from the person's game into
 %APPDATA%\\FL26ModStudio\\tables (Settings > Unpack the game's tables).
 """
-import copy, json, os, shutil, time, zlib
+import copy, json, os, pickle, shutil, time, zlib
 
 from PySide6.QtCore import QObject, Signal
 
@@ -30,7 +30,7 @@ class Project(QObject):
         self.dirty = False
         # 0.2.5: Undo and Redo of the whole world (mato 16.10.): a copy of the recipe before each
         # change, up to 30 back; touches within a third of a second are one step
-        self._undo, self._redo, self._snap, self._snap_at = [], [], copy.deepcopy(self.recipe), 0.0
+        self._undo, self._redo, self._snap, self._snap_at = [], [], self._clone(self.recipe), 0.0
         self.base = None
         self.overlay = 0            # files of the chosen tables folder laid over the game's (0: a full set)
         self.tables_error = ""
@@ -266,19 +266,37 @@ class Project(QObject):
         self._autosave_soon()
 
     # ---- undo ----
+    # B267 (JoJofiaz 29.10.): each step kept a full copy of the recipe, about 160 MB in memory for a
+    # world of 1,300 new clubs (its players are most of it), so 30 steps took 5 GB and more. A step
+    # is now the recipe pickled and zlib-packed: 5-9 MB, and quicker to make than a deepcopy.
+    @staticmethod
+    def _pack(state):
+        return zlib.compress(pickle.dumps(state, protocol=pickle.HIGHEST_PROTOCOL), 3)
+
+    @staticmethod
+    def _unpack(blob):
+        return pickle.loads(zlib.decompress(blob))
+
+    @staticmethod
+    def _clone(state):
+        try:
+            return pickle.loads(pickle.dumps(state, protocol=pickle.HIGHEST_PROTOCOL))
+        except Exception:
+            return copy.deepcopy(state)
+
     def _remember(self):
         """keep the recipe as it was before this change (one step for touches close together)"""
         if self.recipe == self._snap:
             return
         now = time.monotonic()
         if now - self._snap_at > 0.3:
-            self._undo.append(self._snap)
+            self._undo.append(self._pack(self._snap))
             del self._undo[:-30]
         self._redo.clear()
-        self._snap, self._snap_at = copy.deepcopy(self.recipe), now
+        self._snap, self._snap_at = self._clone(self.recipe), now
 
     def _forget(self):
-        self._undo, self._redo, self._snap, self._snap_at = [], [], copy.deepcopy(self.recipe), 0.0
+        self._undo, self._redo, self._snap, self._snap_at = [], [], self._clone(self.recipe), 0.0
 
     def can_undo(self):
         return bool(self._undo)
@@ -286,11 +304,13 @@ class Project(QObject):
     def can_redo(self):
         return bool(self._redo)
 
-    def _restore(self, state):
-        """the recipe becomes `state` in place: the pages keep their references to the dict"""
+    def _restore(self, blob):
+        """the recipe becomes the packed state `blob` in place: the pages keep their references to
+        the dict"""
+        state = self._unpack(blob)
         self.recipe.clear()
-        self.recipe.update(copy.deepcopy(state))
-        self._snap, self._snap_at = copy.deepcopy(state), 0.0
+        self.recipe.update(state)
+        self._snap, self._snap_at = self._unpack(blob), 0.0
         self.dirty = True
         self.changed.emit()
         self._autosave_soon()
@@ -299,14 +319,14 @@ class Project(QObject):
         """back one change; True when there was one"""
         if not self._undo:
             return False
-        self._redo.append(copy.deepcopy(self.recipe))
+        self._redo.append(self._pack(self.recipe))
         self._restore(self._undo.pop())
         return True
 
     def redo(self):
         if not self._redo:
             return False
-        self._undo.append(copy.deepcopy(self.recipe))
+        self._undo.append(self._pack(self.recipe))
         self._restore(self._redo.pop())
         return True
 
