@@ -1,4 +1,4 @@
-﻿r"""python futve_test.py --phase 1|2 --game "<game folder>"
+r"""python futve_test.py --phase 1|2 --game "<game folder>"
        python futve_test.py --restore <test folder>
        python futve_test.py --self-test
 
@@ -6,12 +6,12 @@ The sandbox of the in-game tests of this branch. One command per test:
 
   1. It checks that the game is closed.
   2. It backs up everything the test can modify: the files it installs (fl26swiss.dll, fl26swiss.lua,
-     fl26world.txt in both places, the three Competition*.bin and the TÃ¡chira-99 Player.bin), the
+     fl26world.txt in both places, the three Competition*.bin and the Táchira-99 Player.bin), the
      game's own logs and caches, ReShade.ini/ReShade.log and sider.ini, and the whole save folder
      (the 2026 folder under Documents\KONAMI, where a career and fl26swiss-state.bin are written).
      It writes manifest.json with every size, mtime and sha256.
   3. It installs the DLL, the loader, the phase's world and the fixture, checks every hash and runs
-     futve_fixture.py --check on the installed Player.bin (the 25 stats of the 30 TÃ¡chira players
+     futve_fixture.py --check on the installed Player.bin (the 25 stats of the 30 Táchira players
      must be 99).
   4. It prints the checklist and WAITS. When you have closed the game and the test is over, type
      FIN and Enter: it copies the evidence (logs, new screenshots, manifest) to evidence/ and puts
@@ -33,6 +33,7 @@ import hashlib
 import json
 import os
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -44,27 +45,26 @@ REPO = os.path.dirname(HERE)
 ART = os.path.join(REPO, "out", "futve")
 PHASE_WORLD = {1: "world-phase1", 2: "world-phase2"}
 GAME_PROCS = ("fl_2026.exe", "sider.exe", "fl 2026 start.exe")
-MANAGED = None                     # [(dir, [patterns])], filled by managed_dirs()
 CHECKLISTS = {
     1: """
-  1. Abre el juego y crea una carrera nueva con el Deportivo TÃ¡chira (Liga FUTVE).
-  2. Mira la ficha de un jugador del TÃ¡chira: sus 25 stats deben estar a 99.
-  3. Simula hasta el dÃ­a 2 (fin de la fase regular del Apertura). Avanza al 3.
-  4. En el calendario deben aparecer las 6 jornadas de grupo de la copa en los dÃ­as
-     3, 5, 7, 9, 11 y 13. JuÃ©galas o simÃºlalas.
-  5. InformaciÃ³n de competiciones -> Liga FUTVE Apertura Playoffs -> las tablas de
-     los dos grupos: A = 1.Âº, 4.Âº, 5.Âº y 8.Âº de la fase regular; B = 2.Âº, 3.Âº, 6.Âº y 7.Âº.
-  6. Cierra el juego. Escribe FIN y Enter aquÃ­.
+  1. Abre el juego y crea una carrera nueva con el Deportivo Táchira (Liga FUTVE).
+  2. Mira la ficha de un jugador del Táchira: sus 25 stats deben estar a 99.
+  3. Simula hasta el día 2 (fin de la fase regular del Apertura). Avanza al 3.
+  4. En el calendario deben aparecer las 6 jornadas de grupo de la copa en los días
+     3, 5, 7, 9, 11 y 13. Juégalas o simúlalas.
+  5. Información de competiciones -> Liga FUTVE Apertura Playoffs -> las tablas de
+     los dos grupos: A = 1.º, 4.º, 5.º y 8.º de la fase regular; B = 2.º, 3.º, 6.º y 7.º.
+  6. Cierra el juego. Escribe FIN y Enter aquí.
 """,
     2: """
-  1. Abre el juego y crea una carrera nueva con el Deportivo TÃ¡chira (Liga FUTVE).
-  2. Mira la ficha de un jugador del TÃ¡chira: sus 25 stats deben estar a 99.
-  3. Simula hasta el dÃ­a 2 (fin de la fase regular del Apertura); juega o simula las
-     6 jornadas de grupo de los dÃ­as 3, 5, 7, 9, 11 y 13.
-  4. El dÃ­a 15 debe jugarse la FINAL: los dos ganadores de grupo, a un partido, con el
+  1. Abre el juego y crea una carrera nueva con el Deportivo Táchira (Liga FUTVE).
+  2. Mira la ficha de un jugador del Táchira: sus 25 stats deben estar a 99.
+  3. Simula hasta el día 2 (fin de la fase regular del Apertura); juega o simula las
+     6 jornadas de grupo de los días 3, 5, 7, 9, 11 y 13.
+  4. El día 15 debe jugarse la FINAL: los dos ganadores de grupo, a un partido, con el
      mejor clasificado de la fase regular como local.
-  5. Comprueba el campeÃ³n en la copa y que el Clausura del dÃ­a 16 sigue en pie.
-  6. Cierra el juego. Escribe FIN y Enter aquÃ­.
+  5. Comprueba el campeón en la copa y que el Clausura del día 16 sigue en pie.
+  6. Cierra el juego. Escribe FIN y Enter aquí.
 """,
 }
 
@@ -97,8 +97,30 @@ def managed_dirs(game):
             (game, ["ReShade.ini", "ReShade.log"])]
 
 
+def is_ro(p):
+    try:
+        return not bool(os.stat(p).st_mode & stat.S_IWRITE)
+    except OSError:
+        return False
+
+
+def clear_ro(p):
+    """a read-only file is made writable for a copy; its own state is put back on restore"""
+    try:
+        os.chmod(p, stat.S_IWRITE | stat.S_IREAD)
+    except OSError:
+        pass
+
+
+def set_ro(p, ro):
+    try:
+        os.chmod(p, stat.S_IREAD if ro else (stat.S_IWRITE | stat.S_IREAD))
+    except OSError:
+        pass
+
+
 def game_running(game):
-    """the name of a game process, or the path of a locked file (the game holds them open)"""
+    """the name of a game process (a failed copy is reported as it happens if one is not named)"""
     try:
         out = subprocess.run(["tasklist", "/FO", "CSV", "/NH"], capture_output=True, text=True,
                              errors="ignore", timeout=30).stdout.lower()
@@ -107,17 +129,20 @@ def game_running(game):
                 return n
     except (OSError, subprocess.SubprocessError):
         pass
-    for rel in ("SiderAddons/modules/fl26swiss.dll",
-                "SiderAddons/livecpk/_FL26MyWorld/common/etc/pesdb/Player.bin"):
-        p = os.path.join(game, rel.replace("/", os.sep))
-        if not os.path.isfile(p):
-            continue
-        try:
-            with open(p, "r+b"):
-                pass
-        except OSError:
-            return p
     return None
+
+
+def copy_back(src, dest, mtime=None, ro=None):
+    if os.path.exists(dest):
+        clear_ro(dest)
+    shutil.copyfile(src, dest)
+    if mtime is not None:
+        try:
+            os.utime(dest, (mtime, mtime))
+        except OSError:
+            pass
+    if ro is not None:
+        set_ro(dest, ro)
 
 
 def wait_closed(game, ask=True):
@@ -129,7 +154,7 @@ def wait_closed(game, ask=True):
         if not ask:
             return False
         try:
-            input("  ciÃ©rralo y pulsa Enter para reintentar (o escribe ABORTAR): ")
+            input("  ciérralo y pulsa Enter para reintentar (o escribe ABORTAR): ")
         except EOFError:
             return False
 
@@ -185,7 +210,8 @@ def snapshot(installs, game, save, backup):
             b = os.path.join(backup, rel.replace("/", os.sep))
             os.makedirs(os.path.dirname(b), exist_ok=True)
             shutil.copy2(dest, b)
-            e.update(size=os.path.getsize(dest), mtime=os.path.getmtime(dest), sha256=sha(dest), backup=b)
+            e.update(size=os.path.getsize(dest), mtime=os.path.getmtime(dest), sha256=sha(dest),
+                     ro=is_ro(dest), backup=b)
         man["install"].append(e)
     for d, pats in managed_dirs(game):
         for n in list_files(d, pats):
@@ -195,7 +221,7 @@ def snapshot(installs, game, save, backup):
             os.makedirs(os.path.dirname(b), exist_ok=True)
             shutil.copy2(p, b)
             man["managed"].append({"rel": rel, "name": n, "dir": d, "backup": b, "size": os.path.getsize(p),
-                                   "mtime": os.path.getmtime(p), "sha256": sha(p)})
+                                   "mtime": os.path.getmtime(p), "sha256": sha(p), "ro": is_ro(p)})
     for d, _p in managed_dirs(game) + [(game, None)]:
         try:
             for n in os.listdir(d):
@@ -205,7 +231,7 @@ def snapshot(installs, game, save, backup):
                                                                                   int(os.path.getmtime(p) * 1000)]
         except OSError:
             pass
-    for root, dirs, files in os.walk(save):
+    for root, _dirs, files in os.walk(save):
         man["save_dirs"].append(os.path.relpath(root, save).replace(os.sep, "/"))
         for n in files:
             p = os.path.join(root, n)
@@ -214,7 +240,7 @@ def snapshot(installs, game, save, backup):
             os.makedirs(os.path.dirname(b), exist_ok=True)
             shutil.copy2(p, b)
             man["save_files"].append({"rel": rel, "backup": b, "size": os.path.getsize(p),
-                                      "mtime": os.path.getmtime(p), "sha256": sha(p)})
+                                      "mtime": os.path.getmtime(p), "sha256": sha(p), "ro": is_ro(p)})
     return man
 
 
@@ -222,7 +248,9 @@ def install(installs, game):
     for rel, src in installs:
         dest = os.path.join(game, rel.replace("/", os.sep))
         os.makedirs(os.path.dirname(dest), exist_ok=True)
-        shutil.copy2(src, dest)
+        if os.path.exists(dest):
+            clear_ro(dest)
+        shutil.copyfile(src, dest)
         if sha(dest) != sha(src):
             raise SystemExit("la copia de %s no coincide con el artefacto" % rel)
         print("  instalado %s" % rel)
@@ -242,29 +270,33 @@ def restore(man, game, save):
         dest = e["dest"]
         if e["existed"]:
             os.makedirs(os.path.dirname(dest), exist_ok=True)
-            shutil.copy2(e["backup"], dest)
-            os.utime(dest, (e["mtime"], e["mtime"]))
+            copy_back(e["backup"], dest, e["mtime"], e.get("ro", False))
         elif os.path.isfile(dest):
+            clear_ro(dest)
             os.remove(dest)
     managed = {(m["dir"], m["name"]) for m in man["managed"]}
     for d, pats in managed_dirs(game):
         for n in list_files(d, pats):
             if (d, n) not in managed:
                 try:
+                    clear_ro(os.path.join(d, n))
                     os.remove(os.path.join(d, n))
                 except OSError:
                     pass
     for m in man["managed"]:
         p = os.path.join(game, m["rel"].replace("/", os.sep))
-        shutil.copy2(m["backup"], p)
-        os.utime(p, (m["mtime"], m["mtime"]))
+        copy_back(m["backup"], p, m["mtime"], m.get("ro", False))
     want = {f["rel"] for f in man["save_files"]}
     for root, _dirs, files in os.walk(save, topdown=False):
         for n in files:
             p = os.path.join(root, n)
             rel = os.path.relpath(p, save).replace(os.sep, "/")
             if rel not in want:
-                os.remove(p)
+                try:
+                    clear_ro(p)
+                    os.remove(p)
+                except OSError:
+                    pass
     dirs_before = {d for d in man["save_dirs"] if d}
     for root, _dirs, _files in os.walk(save, topdown=False):
         rel = os.path.relpath(root, save).replace(os.sep, "/")
@@ -276,8 +308,7 @@ def restore(man, game, save):
     for f in man["save_files"]:
         p = os.path.join(save, f["rel"].replace("/", os.sep))
         os.makedirs(os.path.dirname(p), exist_ok=True)
-        shutil.copy2(f["backup"], p)
-        os.utime(p, (f["mtime"], f["mtime"]))
+        copy_back(f["backup"], p, f["mtime"], f.get("ro", False))
 
 
 def verify(man, game, save):
@@ -288,7 +319,7 @@ def verify(man, game, save):
             if not os.path.isfile(dest) or sha(dest) != e["sha256"]:
                 bad.append("no restaurado: %s" % e["rel"])
         elif os.path.exists(dest):
-            bad.append("sigue ahÃ­: %s" % e["rel"])
+            bad.append("sigue ahí: %s" % e["rel"])
     managed = {m["rel"]: m for m in man["managed"]}
     for m in man["managed"]:
         p = os.path.join(game, m["rel"].replace("/", os.sep))
@@ -313,7 +344,7 @@ def verify(man, game, save):
 
 
 def outside(man, game):
-    """files changed under the scanned folders that the sandbox does not manage (informe)"""
+    """files changed under the scanned folders that the sandbox does not manage (a report)"""
     known = {e["rel"] for e in man["install"]} | {m["rel"] for m in man["managed"]}
     out = []
     for d, _p in managed_dirs(game) + [(game, None)]:
@@ -377,12 +408,12 @@ def do_restore(man, game, save):
     restore(man, game, save)
     bad = verify(man, game, save)
     if bad:
-        print("  RESTAURACIÃ“N INCOMPLETA (%d):" % len(bad))
+        print("  RESTAURACIÓN INCOMPLETA (%d):" % len(bad))
         for b in bad[:30]:
             print("    " + b)
-        print("  el snapshot queda en %s para --restore" % os.path.dirname(os.path.dirname(man["backup"])))
+        print("  el snapshot queda en %s para --restore" % man.get("test_dir", man["backup"]))
         return False
-    print("  restauraciÃ³n verificada: todo estÃ¡ como antes de la prueba (sha256).")
+    print("  restauración verificada: todo está como antes de la prueba (sha256).")
     return True
 
 
@@ -395,7 +426,7 @@ def run_test(a):
         raise SystemExit("no encuentro la carpeta de partidas; pasa --save \"...\\KONAMI\\...\\2026\"")
     installs = build_installs(a.phase, game)
     if game_running(game):
-        raise SystemExit("el juego estÃ¡ abierto; ciÃ©rralo y vuelve a ejecutar el comando")
+        raise SystemExit("el juego está abierto; ciérralo y vuelve a ejecutar el comando")
     stamp = time.strftime("%Y%m%d-%H%M%S")
     test_dir = os.path.join(ART, "tests", stamp)
     backup = os.path.join(test_dir, "backup")
@@ -412,22 +443,23 @@ def run_test(a):
     try:
         install(installs, game)
         rc, out = fixture_check(game)
-        print("  fixture TÃ¡chira 99: %s" % out.splitlines()[-1] if out else "  fixture: ?")
+        label = out.splitlines()[-1] if out else "?"
+        print("  fixture Táchira 99: %s" % label)
         if rc:
-            raise SystemExit("el fixture no estÃ¡ a 99 en el mundo instalado:\n%s" % out)
+            raise SystemExit("el fixture no está a 99 en el mundo instalado:\n%s" % out)
         print(CHECKLISTS[a.phase])
         what = wait_for_fin()
         if what == "abort":
             if not wait_closed(game):
-                raise SystemExit("no puedo restaurar con el juego abierto; ciÃ©rralo y usa --restore %s" % test_dir)
+                raise SystemExit("no puedo restaurar con el juego abierto; ciérralo y usa --restore %s" % test_dir)
             do_restore(man, game, save)
             return 0
         if not wait_closed(game):
-            raise SystemExit("el juego sigue abierto; ciÃ©rralo y usa --restore %s" % test_dir)
+            raise SystemExit("el juego sigue abierto; ciérralo y usa --restore %s" % test_dir)
         started = time.mktime(time.strptime(man["started"], "%Y-%m-%dT%H:%M:%S"))
         ev = evidence(test_dir, game, started)
         report = {"phase": a.phase, "test_dir": test_dir, "evidence": ev, "finished": now(),
-                  "fixture": out.splitlines()[-1] if out else "", "outside": outside(man, game),
+                  "fixture": label, "outside": outside(man, game),
                   "installed": [os.path.relpath(e["src"], REPO).replace(os.sep, "/") for e in man["install"]]}
         with open(os.path.join(ev, "report.json"), "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2)
@@ -437,7 +469,7 @@ def run_test(a):
         print("  prueba terminada (%s). Evidencia: %s" % ("OK" if ok else "REVISAR", ev))
         return 0 if ok else 1
     except KeyboardInterrupt:
-        print("\n  Ctrl+C: no se restaurÃ³ nada. Cierra el juego y ejecuta:")
+        print("\n  Ctrl+C: no se restauró nada. Cierra el juego y ejecuta:")
         print("  python tools/futve_test.py --restore \"%s\"" % test_dir)
         return 2
     except SystemExit as e:
@@ -465,7 +497,7 @@ def run_restore(a):
     with open(mpath, encoding="utf-8") as f:
         man = json.load(f)
     if game_running(man["game"]):
-        raise SystemExit("el juego estÃ¡ abierto; ciÃ©rralo y reintenta")
+        raise SystemExit("el juego está abierto; ciérralo y reintenta")
     ok = do_restore(man, man["game"], man["save"])
     return 0 if ok else 1
 
@@ -521,6 +553,7 @@ def self_test(a):
     # the game as it is before the test
     _w(os.path.join(game, "FL_2026.exe"), b"exe")
     _w(os.path.join(mods, "fl26swiss.dll"), b"old dll")
+    os.chmod(os.path.join(mods, "fl26swiss.dll"), stat.S_IREAD)     # a read-only file, as a Build can leave one
     _w(os.path.join(mods, "fl26swiss.lua"), b"-- old lua")
     _w(os.path.join(mods, "fl26world.txt"), b"old world\n")
     _w(os.path.join(game, "SiderAddons", "livecpk", "_FL26MyWorld", "fl26world.txt"), b"old world\n")
@@ -560,6 +593,8 @@ def self_test(a):
          os.path.join(art, "fixtures", "Player.bin")),
     ]
     before = _tree([game, save], ("Capturas",))
+    before_ro = is_ro(os.path.join(mods, "fl26swiss.dll"))
+    assert before_ro, "the fake installed DLL is not read-only"
     test_dir = os.path.join(root, "tests", "t1")
     man = snapshot(installs, game, save, os.path.join(test_dir, "backup"))
     man.update(phase=1, test_dir=test_dir)
@@ -567,6 +602,7 @@ def self_test(a):
     with open(os.path.join(test_dir, "manifest.json"), "w", encoding="utf-8") as f:
         json.dump(man, f, indent=2)
     install(installs, game)
+    assert not is_ro(os.path.join(mods, "fl26swiss.dll")), "the read-only DLL was not replaced"
     rc, out = fixture_check(game)
     assert rc == 0, "the fixture check failed on the installed fake world: %s" % out
     # what a test session does
@@ -590,6 +626,7 @@ def self_test(a):
     assert before == after, ("the tree is not as it was: %d -> %d files, %d differ"
                              % (len(before), len(after),
                                 len([k for k in before if after.get(k) != before[k]])))
+    assert is_ro(os.path.join(mods, "fl26swiss.dll")) == before_ro, "the read-only state was not restored"
     # a second round with --restore (a crash after the install)
     os.remove(os.path.join(test_dir, "manifest.json"))
     man2 = snapshot(installs, game, save, os.path.join(test_dir, "backup2"))
