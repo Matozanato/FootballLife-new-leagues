@@ -394,6 +394,10 @@ def lines_checks(judge):
     p.recipe = {"leagues": [{"name": "A", "clubs": B.CLUBS_MIN}, {"name": "B", "clubs": 10}]}
     why = Project.move_club(p, "A", 0, "B")
     ok("move_club: %r translated" % why, why and not judge.why(why))
+    # B262: Update my leagues' note on a league whose club count changed stayed English everywhere
+    note = tr("Liga X now has 13 clubs (it had 14): check its European places and promotion")
+    ok("Update my leagues: %r translated" % note,
+       "now has" not in note and "13" in note and "14" in note and not judge.why(note))
     put(os.path.join(G.livecpk_dir, "_FL26Mine", "fl26world.txt"), "world _FL26Mine\r\n")
     ok("a world built on this PC is in the way of a world zip of its name",
        I.world_in_the_way(G, "_FL26Mine") and not I.world_in_the_way(G, "_FL26Nobody"))
