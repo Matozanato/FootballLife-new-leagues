@@ -83,6 +83,17 @@ def main(base):
         ok("the log says by how much and what squads", "90 more than the game takes: squads of 25" in said
            and "squads of 25 for 20 clubs" in said)
 
+        # B264 (Risto 28.10.): each pass's guess came short and Build gave up after four (30, 25, 24,
+        # 23) when 22 would have fit. A guess one short every time: 30 down to 24, seven passes
+        real_smaller = B.smaller_squads
+        B.smaller_squads = lambda counts, over, per: (per - 1 if per - 1 >= B.SQUAD_FIT else None)
+        try:
+            n, said = build(base, game, "_FL26CapSteps", have + 20 * 24)
+        finally:
+            B.smaller_squads = real_smaller
+        ok("more than four passes when each comes short: built, and it fits", n == have + 20 * 24 - 10)
+        ok("down one size at a time to 24", "squads of 25 instead" in said and "squads of 24 for 20 clubs" in said)
+
         try:
             build(base, game, "_FL26CapNever", have + 400)
             ok("a world that does not fit even at the smallest squad is refused", False)
