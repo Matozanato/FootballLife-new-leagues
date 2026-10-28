@@ -2063,6 +2063,10 @@
  },
  "log": [
   [
+   "^(.+) now has (\\d+) clubs \\(it had (\\d+)\\): check its European places and promotion$",
+   "\\1 sada ima \\2 klubova (imala je \\3): provjeri europska mjesta i ulazak u viši rang"
+  ],
+  [
    "^  August qualifying: ",
    "  pretkola u kolovozu: "
   ],

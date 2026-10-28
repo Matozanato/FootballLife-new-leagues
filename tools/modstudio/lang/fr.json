@@ -2062,6 +2062,10 @@
  },
  "log": [
   [
+   "^(.+) now has (\\d+) clubs \\(it had (\\d+)\\): check its European places and promotion$",
+   "\\1 a maintenant \\2 clubs (il en avait \\3) : vérifiez ses places européennes et les montées"
+  ],
+  [
    "^  August qualifying: ",
    "  qualifications d'août : "
   ],

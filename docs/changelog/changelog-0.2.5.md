@@ -679,6 +679,10 @@ come with it instead.
   squads, and Build gave it FL P players. What was added meanwhile now stays, and the page's
   buttons wait until Bring is done. (Thanks gianito9)
 
+- **Update my leagues said "X now has N clubs (it had M)" in English (B262).** In Spanish, French,
+  Portuguese and Croatian that note on a league whose club count changed stayed English; it is
+  translated now.
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.
