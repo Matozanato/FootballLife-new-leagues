@@ -354,6 +354,22 @@ def main():
         os.remove(os.path.join(g, "modules", "common", "kits.lua"))
         os.makedirs(os.path.join(g, S.SPFL_KITS))
         ok("B165: no module file: the old rule", S.libs(g)[0] == S.SPFL_KITS)
+        # B265 (NedimMM 28.10.): his common\kits.lua (reading content\kit-server) stopped at its start
+        # without map_comp.txt -- the B130 check looked for kserv.lua only
+        g = os.path.join(tmp, "b265", "SiderAddons")
+        put(os.path.join(g, "sider.ini"), 'lua.module = "common' + BS + 'kits.lua"' + chr(10))
+        put(os.path.join(g, "modules", "common", "kits.lua"), root("kit-server"))
+        for d in (S.KITS, S.SPFL_KITS):
+            os.makedirs(os.path.join(g, d), exist_ok=True)
+        S.write(new, g, log=lambda *_: None)
+        comp = os.path.join(g, S.KITS, "map_comp.txt")
+        ok("B265: kits.lua that reads kit-server: an empty map_comp.txt there",
+           os.path.isfile(comp) and os.path.getsize(comp) == 0)
+        ok("B265: none in the folder it does not read", not os.path.exists(os.path.join(g, S.SPFL_KITS, "map_comp.txt")))
+        put(os.path.join(g, "modules", "common", "kits.lua"), root("kits"))
+        S.write(new, g, log=lambda *_: None)
+        ok("B265: SPFL26's own kits.lua: one in content kits",
+           os.path.isfile(os.path.join(g, S.SPFL_KITS, "map_comp.txt")))
 
         # B176 (quicksite, NedimMM 20.10.): eu4 gave the game's places of Heidenheim (5009), St.
         # Pauli (4139) and Wolfsburg (232) to Schalke, Paderborn and Elversberg (edits.clubs with
