@@ -2,3 +2,19 @@
 
 The fixes of what you reported since 0.3.0. The version number and the date come when it is
 released; until then this page only collects what is done and tested.
+
+## Fixed
+
+## Also new
+
+- **A league play-off with its own group stage (0.2.5, the Liga FUTVE).** A world file's `ccup` line
+  takes `gdays=<day>,...`: the groups are dealt in the order of `entry=` (the world file writes
+  group A's clubs first) and dated on those days, instead of a draw and the Libertadores' calendar.
+  `adv=1` sends only the winner of each group to the knockout, which is then the final; the better
+  placed club of the regular phase goes first (at home in the match record). `kolike=<shipped cup>`
+  is the shipped knockout whose row shapes it and whose calendar dates it -- the Belgium Super Cup
+  for a two-club, one-match final. The group stage is filled the day after a split phase ends and
+  started and registered the way a qualifying round is (`fl26_swiss_ccup_gdays`, `_adv`, `_kolike`).
+  `tools/futve_world.py` builds the cup in a world's tables, `tools/futve_fixture.py` makes the
+  Táchira-99 test fixture and `tools/futve_test.py` is the in-game sandbox of the tests; the
+  design is in [futve-playoff.md](../developers/fork/futve-playoff.md).

@@ -218,8 +218,9 @@ with `game.save_root` -- the same rule, checked against each other by `tools/tes
 - **Exports:**
   - `fl26_swiss_install`;
   - configuration from the world file: `_nations`, `_confed`, `_ccup`, `_ccup_opts`,
-    `_ccup_alt`, `_lpre`, `_cupdraw`, `_access`, `_qrounds`, `_first`, `_uecl`, `_leagues`,
-    `_calendar_year`, `_european`, `_july`, `_splits`, `_nocarry`, `_datelike`;
+    `_ccup_alt`, `_ccup_gdays`, `_ccup_adv`, `_ccup_kolike`, `_lpre`, `_cupdraw`, `_access`,
+    `_qrounds`, `_first`, `_uecl`, `_leagues`, `_calendar_year`, `_european`, `_july`, `_splits`,
+    `_nocarry`, `_datelike`;
   - `_ko_tick`, `_log`, `_stats`.
 - **Hooks:**
   - `build_generic_schedule` 0x1413f3e00: the league phase, our cups, league calendars;
@@ -229,6 +230,12 @@ with `game.save_root` -- the same rule, checked against each other by `tools/tes
 - **The draw table** is `fl26swiss_table.h`. `tools/mkswiss.py` generates and checks it,
   and `build-swiss.sh` runs that first. `fl26swiss_draw.h` keeps associations apart, and
   `swissdraw_test.c` tests it offline.
+- **The league play-off** (0.2.5): a group cup of the world file with `gdays=` is filled the day
+  after a split phase ends, its groups dealt in the order of the entries (1, 4, 5, 8 / 2, 3, 6, 7)
+  and dated on its own days; `adv=1` sends only the winner of each group to a one-match final
+  (`kolike=`, the Belgium Super Cup's row), the better placed club of the regular phase first.
+  `tools/futve_world.py` builds the world; [futve-playoff.md](futve-playoff.md) has the format,
+  the in-game tests and their sandbox (`tools/futve_test.py`).
 - **Constant:** `TODAY_OFF` 0x19115e4.
 - **League phase table of a past season** (`lp_table`, 0.2.2): the play-off and the round of 16
   read the league phase table through 0x14158b6f0, which takes the competition's newest season.
