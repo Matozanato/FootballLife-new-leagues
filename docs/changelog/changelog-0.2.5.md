@@ -683,6 +683,12 @@ come with it instead.
   Portuguese and Croatian that note on a league whose club count changed stayed English; it is
   translated now.
 
+- **Build gave up on a world that only needed squads of 22 (B264).** When the finished world has
+  more players than the game takes, Build makes the new clubs' squads smaller and goes again; it
+  stopped after four tries even when the next, smaller size would have fit (a Modpack Europe world
+  with 20 more leagues: 30, 25, 24, 23, then "the player table is full" with 145 over). It now goes
+  on until the world fits, and still stops at squads of 22. (Thanks Risto)
+
 ## Read this first
 
 - Everything in [0.2.4](changelog-0.2.4.md) still applies.

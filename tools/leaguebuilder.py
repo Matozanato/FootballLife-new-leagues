@@ -4897,7 +4897,11 @@ def build(pl, base, game, replace=False, log=print):
     # the squads get smaller by what is over, and the players go in again.
     per = squad_size(have, made) if made else 0
     per = SQUAD if made and filled.get("players") else per
-    for attempt in range(4):
+    # B264 (Risto 28.10., M2400E with 20 more leagues): the passes were cut at four, and each
+    # pass's guess came short again (30, 25, 24, 23: 145 over), when squads of 22 would have fit.
+    # Each pass makes the squads smaller (smaller_squads returns less than per) and never below
+    # SQUAD_FIT, so they all end, and only a world that does not fit even then is refused.
+    for attempt in range(SQUAD_MAX - SQUAD_FIT + 2):
         if made:
             import mkplayers
             for n in ("Player.bin", "PlayerAssignment.bin"):
@@ -4935,12 +4939,15 @@ def build(pl, base, game, replace=False, log=print):
         # shorter than per gives nothing up, so (over / clubs) came short and the next pass was
         # over again. Each new club keeps min(its squad, the new size): one more pass, as a rule.
         nxt = smaller_squads(lbplayers.squad_counts(db, new_of).values(), n - PLAYER_CAP, per) if made else None
-        if nxt is None or attempt == 3:
+        if nxt is None:
             raise BuildError("the player table is full: the world has %d players, the game takes %d -- fewer "
                              "clubs or smaller squads" % (n, PLAYER_CAP))
         log("  the finished world has %d players, %d more than the game takes: squads of %d instead"
             % (n, n - PLAYER_CAP, nxt))
         per = nxt
+    else:
+        raise BuildError("the player table is full: the world has %d players, the game takes %d -- fewer "
+                         "clubs or smaller squads" % (n, PLAYER_CAP))
     # 0.2.4: the tactics go in once the squads are known: a new club with no formation in the
     # recipe gets the one its squad fits (lbplayers.pick_formation), not the engine's fixed
     # 4-2-3-1 -- every club of the Modpack played 4-2-3-1. The recipe's formations stand.
