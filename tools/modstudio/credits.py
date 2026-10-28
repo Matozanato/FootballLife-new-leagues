@@ -150,6 +150,8 @@ EVERYONE = [
      "a best eleven of only defenders"),
     ("General Kreutaa", "Discord",
      "another league's scoreboard in the modpack"),
+    ("papijonn", "Discord",
+     "the port to vanilla PES 2021"),
 ]
 
 # the people who supported the project on Ko-fi (ko-fi.com/mata28), first first; the README's
