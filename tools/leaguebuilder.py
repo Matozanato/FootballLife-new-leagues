@@ -2071,6 +2071,7 @@ def plan(recipe, base, prev=None):
             taken_cid.add(c)
     # nor a cup's id of the last Build: build() gives the cup its own back (pinned_ids)
     prev_cups = kept_cups(renamed_cups((prev or {}).get("cup_ids") or {}, renamed), names)
+    prev_cups = ticked_cups(prev_cups, leagues, names, pins)
     cup_cids = {w.get("cid") for w in prev_cups.values() if isinstance(w, dict)}
     rest = iter(c for c in pool if c not in taken_cid and c not in cup_cids)
     for i in range(len(leagues)):
@@ -2548,6 +2549,24 @@ def kept_cups(ids, names, codes=None):
         if kind == "gsuper" and codes is not None and name not in codes:
             continue
         out[k] = w
+    return out
+
+
+def ticked_cups(ids, leagues, names, pins):
+    """the cups' ids of the last Build (kept_cups) less those of a cup the league has unticked
+    since: its national cup, super cup or league cup is gone from the world, so its id is free
+    again. B273 (juanjose6124 29.10.2026): a world near its limit untick cups to make room for
+    new leagues, but their ids stayed held until one more Build and it said "no free
+    competition ids left" """
+    out = dict(ids)
+    for L, nm in zip(leagues, names):
+        if not L.get("cup"):
+            out.pop("cup:" + nm, None)
+        if not (L.get("cup") and L.get("supercup")):
+            out.pop("super:" + nm, None)
+        rid = (pins.get(nm.lower()) or {}).get("rid")
+        if not L.get("league_cup") and isinstance(rid, int):
+            out.pop("ccup:FL_%03d_LCUP" % rid, None)
     return out
 
 
