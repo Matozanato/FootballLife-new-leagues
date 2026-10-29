@@ -64,7 +64,7 @@ CL_FINAL = 164          # 163 is a Libertadores day (the game's reg 10: 163 223 
 FF_NAME = "Final del FUTVE"
 FF_CODE = "FL_011_FFU"
 FF_CID, FF_REG = 175, 263
-FF_ENTRIES = "191:1,192:1"
+FF_ENTRIES = "191:1,192:1"   # the ccup line keeps the two slots; the E rows are dropped below
 FF_FINAL = 167
 FF_FILL = 0          # 0 = the DLL tries it every tick: its src= champions appear on days 15 and 164
 
@@ -139,9 +139,12 @@ def plan(base, world, dry, tmp_root):
         raise SystemExit("the world's play-offs are competitions %d/%d, not %d/%d"
                          % (ap_cid, cl_cid, AP_CID, CL_CID))
     # the two cups' rows go; the rest of the world stays
-    C2 = [c for c in C if c[M.CID_OFF] not in (AP_CID, CL_CID, FC_CID)]
-    R2 = [r for r in R if r[M.R_CID] not in (AP_CID, CL_CID, FC_CID)]
-    E2 = [e for e in E if e[M.E_CID] not in (AP_CID, CL_CID, FC_CID)]
+    C2 = [c for c in C if c[M.CID_OFF] not in (AP_CID, CL_CID, FC_CID, FF_CID)]
+    R2 = [r for r in R if r[M.R_CID] not in (AP_CID, CL_CID, FC_CID, FF_CID)]
+    E2 = [e for e in E if e[M.E_CID] not in (AP_CID, CL_CID, FC_CID, FF_CID)]
+    # The 175's two placeholder entries made the game count "Liga FUTVE" as won before the final;
+    # fl26swiss fills the final and writes its entries when both champions are known.
+    E3 = [e for e in E if e[M.E_CID] != FF_CID]
     used_cid = {c[M.CID_OFF] for c in C2}
     used_reg = {rid(r) for r in R2}
     for cid in (FI_CID, FC_CID, FF_CID):
@@ -196,6 +199,20 @@ def build(p, out):
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode != 0:
         raise SystemExit("mkccup failed:\n%s\n%s" % (r.stdout, r.stderr))
+    # The 175's placeholder entries made the game count "Liga FUTVE" as won before the final was
+    # played (palmarés, 2026-10-29). Drop them from the built world; fl26swiss writes the two
+    # finalists when it fills the 263.
+    db = os.path.join(dest, "common", "etc", "pesdb")
+    if os.path.isfile(os.path.join(db, "CompetitionEntry.bin")):
+        C3 = M.load(db, "Competition.bin")
+        R3 = M.load(db, "CompetitionRegulation.bin")
+        E3 = M.load(db, "CompetitionEntry.bin")
+        rows = [bytes(E3[i * M.ENT:(i + 1) * M.ENT]) for i in range(len(E3) // M.ENT)]
+        rows = [r for r in rows if r[M.E_CID] != FF_CID]
+        M.write_tables(db, b"".join(bytes(C3[i * M.COMP:(i + 1) * M.COMP]) for i in range(len(C3) // M.COMP)),
+                       b"".join(bytes(R3[i * M.REG:(i + 1) * M.REG]) for i in range(len(R3) // M.REG)),
+                       b"".join(rows))
+        print("  dropped the 175's placeholder entries")
     for l in r.stdout.splitlines():
         if l.strip():
             print("  " + l.strip())
@@ -229,6 +246,7 @@ def build(p, out):
             e[M.E_CID] = cid
             e[M.E_ORDER] = i + 1
             E.append(e)
+    E = [e for e in E if e[M.E_CID] != FF_CID]   # no 175 rows: the game counted them as a title
     M.write_tables(dest, b"".join(C), b"".join(R), b"".join(E))
     # the world file: the two lines replaced, the Final del FUTVE's after the Clausura one
     lines = list(p["lines"])
@@ -268,7 +286,7 @@ def verify(dest, p, C, R, E, lines):
             got = bytes(r[off:off + M.NAME_SLOT]).split(b"\0")[0].decode("utf-8", "replace")
             if got != name:
                 raise SystemExit("regulation %d slot %d is %r, not %r" % (reg, k, got, name))
-    for cid, n in ((AP_CID, 8), (CL_CID, 8), (FI_CID, 2), (FC_CID, 2), (FF_CID, 2)):
+    for cid, n in ((AP_CID, 8), (CL_CID, 8), (FI_CID, 2), (FC_CID, 2), (FF_CID, 0)):
         if len([e for e in E if e[M.E_CID] == cid]) != n:
             raise SystemExit("competition %d has %d entries, not %d"
                              % (cid, len([e for e in E if e[M.E_CID] == cid]), n))
