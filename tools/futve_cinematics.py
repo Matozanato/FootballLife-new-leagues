@@ -2,14 +2,16 @@ r"""python tools/futve_cinematics.py [--make] [--game <folder>]
        python tools/futve_cinematics.py --check
 
 The cinematics of the league play-offs' finals. The game's own modules
-`SiderAddons\modules\common\cinematics.lua` (the entrance folder per tournament id) and
-`cinematicsB.lua` (the Final stadium scenes) are copied to `out/futve/cinematics` with this mapping:
+`SiderAddons\modules\common\cinematics.lua` (the entrance folder per tournament id and the
+trophy entry, `trophy_rewrite`) and `cinematicsB.lua` (the Final stadium scenes) are copied to
+`out/futve/cinematics` with this mapping:
 
   - 261 (Final del Apertura) and 262 (Final del Clausura), when the match is the final
-    (`ctx.match_info == 53`), take the UEFA Europa League final's entrance (`entry = 16`,
-    "UEFA Europa League F") -- they join the Europa League branch of the module;
-  - 263 (Final del FUTVE), when the match is the final, takes the UEFA Champions League final's
-    entrance (`entry = 16`, "UEFA Champions League F") -- it joins the Champions League branch;
+    (`ctx.match_info == 53`), keep the UEFA Europa League final's entrance ("UEFA Europa League F");
+  - 263 (Final del FUTVE) keeps the UEFA Champions League final's ("UEFA Champions League F");
+  - all three set their trophy entry (`entry`) to 42, the Copa America's, instead of 16 (the
+    UEL/UCL one), which gave no cup lift; 1/10/16/46 give the Club World Cup, Libertadores, the
+    UEL/UCL and the CAF trophy, to try another;
   - all three take the generic Final stadium scene (`Final\st001`) from cinematicsB.
 
 The two files are otherwise untouched. The copies are what `futve_test.py` installs for an in-game
@@ -33,8 +35,13 @@ OLD_UCL = (b"\tif tid == 2 or tid == 1026 or tid == 2050 or tid == 3074 or tid =
 OLD_UEL = (b"\telseif tid == 5 or tid == 1029 or tid == 2053 or tid == 3077 or tid == 4101 or "
            b"tid == 5125 or tid == 6149 or tid == 7173 or tid == 8197 or tid == 9221 or "
            b"tid == 10245 or tid == 11269 or tid == 12293 or tid == 6 then")
-NEW_UCL = OLD_UCL[:-5] + b" or tid == 263 then"
-NEW_UEL = OLD_UEL[:-5] + b" or tid == 261 or tid == 262 then"
+NEW_UEL = (
+    b"\t-- Liga FUTVE finals: the entrance stays the Europa/Champions final one; the trophy entry is\r\n"
+    b"\t-- the Copa America's (42) -- the UEL/UCL entry 16 gave no cup lift. 1/10/16/46 = other trophies.\r\n"
+    b"\telseif (tid == 261 or tid == 262 or tid == 263) and ctx.match_info == 53 then\r\n"
+    b"\t\tentry = 42\r\n"
+    b"\t\tif tid == 263 then Entrance = \"UEFA Champions League F\" else Entrance = \"UEFA Europa League F\" end\r\n"
+    + OLD_UEL)
 OLD_B = b"if ctx.match_info == 53 then\r\n\t   if ctx.stadium == 1 then"
 NEW_B = (b"if ctx.match_info == 53 then\r\n"
          b"\t   -- Liga FUTVE: the final competitions of fl26swiss (their one match is the final)\r\n"
@@ -42,7 +49,7 @@ NEW_B = (b"if ctx.match_info == 53 then\r\n"
          b"\t      Entrance_fix = \"Final\\\\st001\"\r\n"
          b"\t   elseif ctx.stadium == 1 then")
 PATCHES = {
-    "cinematics.lua": ((OLD_UCL, NEW_UCL), (OLD_UEL, NEW_UEL)),
+    "cinematics.lua": ((OLD_UEL, NEW_UEL),),
     "cinematicsB.lua": ((OLD_B, NEW_B),),
 }
 
@@ -74,7 +81,7 @@ def check(out=OUT):
             continue
         data = open(p, "rb").read()
         for old, new in pairs:
-            if data.count(new) != 1 or data.count(old):
+            if data.count(new) != 1:
                 print("  %s: the play-off finals' mapping is missing or half-applied" % p)
                 bad += 1
                 break
