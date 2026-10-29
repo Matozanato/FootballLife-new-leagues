@@ -347,7 +347,21 @@ SHIPPED_ACCESS = sorted(HOLDERS + [(r, n, c, 0) for r, n, c in (
 )], key=lambda e: [c for c, _n in COMPETITIONS].index(e[2]))   # stable: each section's holders stay first
 
 
-def uefa_places(own, replace=(), uecl=True):
+# the countries of the access list's regulations, as uefakey.DEFAULT_ORDER names them: the
+# association rank of a shipped place (uefa_places, rank)
+ACCESS_COUNTRY = {_ENG: "England", _ITA: "Italy", _ESP: "Spain", _FRA: "France", _NED: "Netherlands",
+                  _POR: "Portugal", _GER: "Germany", _GRE: "Greece", _TUR: "Turkey", _SCO: "Scotland",
+                  _DEN: "Denmark", _BEL: "Belgium"}
+UNRANKED = 999                    # a place whose league has no association rank: after the ranked ones
+
+
+def place_league(e):
+    """the regulation a uefa place belongs to: its own, or for a cup winner's place (position 0)
+    the league in alt"""
+    return e[0] if e[1] else e[3]
+
+
+def uefa_places(own, replace=(), uecl=True, rank=None):
     """the uefa lines of a world whose own leagues have places: the shipped list and the world's
     places, competition by competition (Champions League first, as fl26swiss hands them out in
     list order), each competition's shipped places before the world's -- except the play-off,
@@ -358,7 +372,13 @@ def uefa_places(own, replace=(), uecl=True):
     28 direct ones, which fl26swiss sends there). replace: regulations of the game whose shipped
     places are dropped -- the world lists its own for them (the recipe's game_europe). The room of
     each competition's qualifying is that of the rounds pick_rounds gives (uecl: with the
-    Conference League)."""
+    Conference League).
+
+    rank: {regulation: association rank} (a world with no UEFA ranking of its own: leaguebuilder
+    assoc_rank). The qualifying's places then go in that order, the world's and the shipped ones
+    alike, so the places past the room are the weakest associations' (B250, monkusgigus 26.10.:
+    the 31 Champions League qualifying places of the Europack's new leagues came first and left
+    no room for the Greek champion, Portugal's second or Belgium's)."""
     own = [tuple(int(x) for x in e) for e in own]
     replace = set(replace)
     if not own and not replace:
@@ -368,7 +388,10 @@ def uefa_places(own, replace=(), uecl=True):
         if c in UEFA_LINE:
             mine = [e for e in own if e[2] == c]
             shipped = [e for e in SHIPPED_ACCESS if e[2] == c and e[0] not in replace]
-            out += mine + shipped if c in PLAYOFFS else shipped + mine
+            if c in PLAYOFFS and rank:
+                out += sorted(mine + shipped, key=lambda e: rank.get(place_league(e), UNRANKED))
+            else:
+                out += mine + shipped if c in PLAYOFFS else shipped + mine
     return out, crowded(out, own, pick_rounds(out, uecl))
 
 
