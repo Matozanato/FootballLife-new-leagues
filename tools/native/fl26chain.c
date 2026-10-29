@@ -209,6 +209,19 @@ typedef struct { uint16_t cup, top, low, all, max, third; } cup_t;
 static cup_t    g_cup[MAX_CUPS]; static int g_ncup = 0;
 static uint64_t g_cup_flag[MAX_CUPS]; static int g_cup_seen[MAX_CUPS];
 
+/* B278 (D1eg0Ar, Agus 2026-10-29): the top league's list is not always a field the bracket screen
+   draws either. Argentina's league (30) came out of the season pass with 26 clubs, its Primera
+   Nacional below swapped clubs with it, and the Copa Argentina (59) was given those 26: the game
+   drew 13 first-round ties, the 13th leading nowhere, and the bracket after the first round
+   crashed at 0x140b34501. So a field of 32 or fewer is cut to the largest size of #74's list. */
+static int bracket_fit(int n)
+{
+  static const unsigned char ok[] = { 32, 30, 28, 24, 20, 18, 16 };
+  if (n > 32 || n <= 16) return n;
+  for (int i = 0; i < (int)sizeof ok; i++) if (ok[i] <= n) return ok[i];
+  return n;
+}
+
 static int holds_any(const uint32_t* list, int n, const uint32_t* of, int m)
 {
   for (int i = 0; i < n; i++) for (int j = 0; j < m; j++) if (list[i] == of[j]) return 1;
@@ -233,6 +246,7 @@ static int cup_fix(cup_t* c, const uint32_t* list, int n, uint64_t flag, const c
       n3 = k3 > 0 ? k3 : 0;
     }
     if (c->max && m > c->max) m = c->max;           /* #74: a field the bracket screen draws */
+    m = bracket_fit(m);                               /* B278: leagues that shrank below cupn */
     /* the order of the list is the first-round draw (1 v 2, 3 v 4 ...): the two leagues in
        turn, so a first round is top flight against the league below, not the top league among
        itself (Discord, San Marino 2026-10-06); the extra clubs of the bigger one meet at the end */
@@ -257,12 +271,16 @@ static int cup_fix(cup_t* c, const uint32_t* list, int n, uint64_t flag, const c
     return 1;
   }
   if (c->max && nt > c->max) nt = c->max;
-  if (!holds_any(list, n, low, nl) && !(c->max && n > c->max)) return 0;
+  nt = bracket_fit(nt);                               /* B278 */
+  if (!holds_any(list, n, low, nl) && !(c->max && n > c->max) && bracket_fit(n) == n) return 0;
   vec32_t v = { top, top + nt, top + MAX_CLUBS };
   int was = g_reentrant; g_reentrant = 1;
   ((set_fn)(uintptr_t)g_tramp_set)(c->cup, &v, flag);
   g_reentrant = was;
-  logf("cup %u: %d clubs with %u's in them (%s) -- given %u's %d clubs instead", c->cup, n, c->low, when, c->top, nt);
+  if (holds_any(list, n, low, nl))
+    logf("cup %u: %d clubs with %u's in them (%s) -- given %u's %d clubs instead", c->cup, n, c->low, when, c->top, nt);
+  else
+    logf("cup %u: %d clubs, no bracket for that (%s) -- given %u's %d clubs instead", c->cup, n, when, c->top, nt);
   return 1;
 }
 
