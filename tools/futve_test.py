@@ -236,28 +236,6 @@ def build_installs(phase, game):
         ("SiderAddons/modules/common/cinematics.lua", os.path.join(cin, "cinematics.lua")),
         ("SiderAddons/modules/common/cinematicsB.lua", os.path.join(cin, "cinematicsB.lua")),
     ]
-    # The finals' trophies (0.2.5): the world's trophies/<cid> folders (copied by lbtrophies.build)
-    # and the block in the game's own Entrance.lua that shows them. Entrance.lua is the game's, so
-    # the sandbox backs it up and restores it like the rest.
-    if phase == 3:
-        import lbtrophies as L
-        tro = os.path.join(ART, "world-finals", "trophies")
-        if os.path.isdir(tro):
-            for d, _s, fs in os.walk(tro):
-                for f in sorted(fs):
-                    src = os.path.join(d, f)
-                    rel = os.path.relpath(src, tro).replace(os.sep, "/")
-                    out.append(("SiderAddons/livecpk/_FL26MyWorld/trophies/" + rel, src))
-            idx = os.path.join(tro, "trophies.json")
-            ent = os.path.join(game, "SiderAddons", "modules", "Entrance.lua")
-            if os.path.isfile(idx) and os.path.isfile(ent):
-                index = json.load(open(idx, encoding="utf-8"))
-                text = open(ent, encoding="latin-1", newline="").read()
-                new = L.apply(text, "_FL26MyWorld", index)
-                staged = os.path.join(ART, "trophies", "Entrance.lua")
-                os.makedirs(os.path.dirname(staged), exist_ok=True)
-                open(staged, "w", encoding="latin-1", newline="").write(new)
-                out.append(("SiderAddons/modules/Entrance.lua", staged))
     # The logos of the competitions in futve_logo.py's plan: the two play-offs (134/135) and the
     # three finals (142/143/144). The sandbox installs exactly what the plan lists and restores the
     # game's emblems at the end.
