@@ -1632,7 +1632,12 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
                 mine = []
             if not national:
                 if pid in signed:
-                    raise Error("player %d joins two clubs (%s and %s)" % (pid, signed[pid], club))
+                    # B274 (juanjose6124, 29.10.): leagues of two packs in one world, each moving the
+                    # same player of the game -- Build stopped here after minutes of work. The first
+                    # club of the recipe keeps him, as a transfer of a player not in the game is skipped
+                    log("  NOTE: players of %s: player %d already joins %s in the recipe -- he stays there, "
+                        "this transfer is skipped" % (club, pid, signed[pid]))
+                    continue
                 signed[pid] = club
             if mine:                                   # a transfer: his club assignment moves
                 ao = mine[0]
