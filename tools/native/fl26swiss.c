@@ -7302,7 +7302,7 @@ static uint32_t ko_final_winner(uint16_t reg)
      final was read as 0 with only those two), so try every knockout kind, and log what was found:
      a 0 here must leave in the log the rounds, their kinds, their slots and their teams. */
   int found = 0, single = 0;
-  for (uint32_t kind = 0x20; kind <= 0x3f; kind++) {
+  for (uint32_t kind = 0; kind <= 0x3f; kind++) {
     unsigned char* rnd = ko_round(reg, kind);
     uint32_t w = 0;
     if (!rnd) continue;
