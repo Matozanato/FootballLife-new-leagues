@@ -46,7 +46,7 @@ import traceback
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 ART = os.path.join(REPO, "out", "futve")
-PHASE_WORLD = {1: "world-phase1", 2: "world-phase2"}
+PHASE_WORLD = {1: "world-phase1", 2: "world-phase2", 3: "world-finals"}
 GAME_PROCS = ("fl_2026.exe", "sider.exe", "fl 2026 start.exe")
 CHECKLISTS = {
     1: """
@@ -69,6 +69,31 @@ CHECKLISTS = {
      presentación de final de la UEFA Europa League y el ambiente de Final.
   5. Comprueba el campeón en la copa y que el Clausura del día 16 sigue en pie.
   6. Cierra el juego. Escribe FIN y Enter aquí.
+""",
+    3: """
+  PRUEBA DE TEMPORADA COMPLETA (finales como competiciones aparte). Se corre dos veces:
+  una con el mismo campeón y otra con distinto campeón.
+  1. Abre el juego y crea una carrera nueva con el Deportivo Táchira (Liga FUTVE).
+  2. Simula hasta el día 2; juega o simula las 6 jornadas de grupo del Apertura
+     (días 3, 5, 7, 9, 11, 13).
+  3. Día 15: Final del Apertura (competición 142, logo FINAL_APERTURA, entrada de final
+     de UEFA Europa League). Gana con el Táchira.
+  4. Simula el Clausura hasta el día 144; juega o simula las 6 jornadas de grupo
+     (días 145, 148, 151, 154, 157, 160).
+  5. Día 163: Final del Clausura (competición 143, logo FINAL_CLAUSURA, entrada UEL).
+     - Caso A (mismo campeón): gana el Táchira.
+     - Caso B (distinto campeón): pierde a propósito (autogoles o alineación floja).
+  6. Día 166:
+     - Caso A: la Final del FUTVE (144) NO debe jugarse; el DLL debe haber dado el
+       título directo al Táchira. Comprueba el log/estado.
+     - Caso B: debe jugarse la Final del FUTVE (144, logo FINAL_FUTVE, entrada de final
+       de Champions) entre los dos campeones; juega o simula y mira el campeón.
+  7. Comprueba que las tres finales son competiciones aparte (nombre y logo propios) y
+     que 142/143/144 no salen como parte de los playoffs.
+  8. Si puedes, simula hasta julio: el palmarés de temporada debe recoger los títulos
+     (en el caso B también la Final del FUTVE). Mira si hay celebración de campeón
+     después de las finales.
+  9. Cierra el juego. Escribe FIN y Enter aquí.
 """,
 }
 
@@ -694,7 +719,7 @@ def self_test(a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--phase", type=int, choices=(1, 2))
+    ap.add_argument("--phase", type=int, choices=(1, 2, 3))
     ap.add_argument("--game")
     ap.add_argument("--save")
     ap.add_argument("--restore", metavar="TEST_DIR")

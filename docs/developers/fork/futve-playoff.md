@@ -177,6 +177,7 @@ first version put a logo on a UEFA competition; 10342 is a team id, not a compet
 ```
 python tools/futve_test.py --phase 1 --game "G:\Games\SP Football Life 2026"
 python tools/futve_test.py --phase 2 --game "G:\Games\SP Football Life 2026"
+python tools/futve_test.py --phase 3 --game "G:\Games\SP Football Life 2026"
 python tools/futve_test.py --restore out/futve/tests/<date>
 python tools/futve_test.py --self-test
 ```
@@ -218,6 +219,17 @@ UEFA Champions League final's (`entry = 16`, `UEFA Champions League F`); all thr
 else.
 
 ## The two tests
+
+**Phase 3 (the finals as competitions of their own).** `tools/futve_finals.py` builds
+`out/futve/world-finals`: the Apertura and Clausura play-offs keep their groups (134/135, masters
+259/260, rows 1283/1284/2307/2308), and the finals are separate competitions -- 142 "Final del
+Apertura" (regulation 261), 143 "Final del Clausura" (262) and 144 "Final del FUTVE" (263), 2 clubs
+each, the Mod Studio's next free byte ids after 130-135 and 137-141 (the UECL's 136 is reserved).
+The three finals' entry rows are placeholders: the DLL rewrites them. The phase 3 sandbox installs
+that world, the 30 logos of 134/135/142/143/144 and the two cinematics, and the full-season
+checklist runs the Apertura final (day 15), the Clausura groups (145-160) and final (163), and the
+Final del FUTVE (166) twice: the same champion (no match, the title direct) and a different champion
+(the match played). At the season's close the palmarés should carry the finals' titles.
 
 **Phase 1 (groups).** The Apertura cup has two groups and a four-club knockout; the groups are
 dated 3, 5, 7, 9, 11, 13 and the knockout after them. A career with Táchira simulated to day 2, then
