@@ -230,8 +230,8 @@ carries `src=261,262`: the DLL reads the two finals' champions, plays the match 
 leaves it unplayed -- logging the title -- when they are the same; its `fill=0` makes the DLL try it
 every tick until both champions are known. The phase 3 sandbox installs that world, the 30 logos of
 134/135/142/143/144, the two cinematics and the join module, and the full-season checklist runs the
-Apertura final (day 15), the Clausura groups (145-160) and final (163), and the Final del FUTVE
-(166) twice: the same champion (no match, the title direct) and a different champion (the match
+Apertura final (day 15), the Clausura groups (145-160) and final (164), and the Final del FUTVE
+(167) twice: the same champion (no match, the title direct) and a different champion (the match
 played). At the season's close the palmarés should carry the finals' titles.
 
 The finals' ids (142, 129, 175) are in the exe's builder 1 include list, so the season builder takes
