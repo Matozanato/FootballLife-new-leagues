@@ -7299,13 +7299,27 @@ static int ko_winner(const uint32_t* sl, uint32_t* w)
 static uint32_t ko_final_winner(uint16_t reg)
 {
   /* The final's round is the bracket's single-slot one. Its kind is not always 0x36/0x35 (the 262
-     final was read as 0 with only those two), so try every knockout kind. */
+     final was read as 0 with only those two), so try every knockout kind, and log what was found:
+     a 0 here must leave in the log the rounds, their kinds, their slots and their teams. */
+  int found = 0, single = 0;
   for (uint32_t kind = 0x20; kind <= 0x3f; kind++) {
     unsigned char* rnd = ko_round(reg, kind);
     uint32_t w = 0;
-    if (!rnd || *(uint16_t*)rnd != reg || ko_slots(rnd) != 1) continue;
-    if (ko_winner(ko_slot(rnd, 0), &w) && (w >> 14)) return canon_club(w);
+    if (!rnd) continue;
+    found++;
+    logf("fl26swiss: cup reg %u -- round kind %02x: reg %u, %d slot(s)",
+         (unsigned)reg, (unsigned)kind, (unsigned)*(uint16_t*)rnd, ko_slots(rnd));
+    if (*(uint16_t*)rnd != reg || ko_slots(rnd) != 1) continue;
+    single++;
+    uint32_t* sl = ko_slot(rnd, 0);
+    logf("fl26swiss: cup reg %u -- final kind %02x: %08x vs %08x",
+         (unsigned)reg, (unsigned)kind, sl[0], sl[1]);
+    if (ko_winner(sl, &w)) logf("fl26swiss: cup reg %u -- final kind %02x: winner raw %08x",
+                                (unsigned)reg, (unsigned)kind, w);
+    if (w >> 14) return canon_club(w);
   }
+  logf("fl26swiss: cup reg %u -- %d round(s), %d single-slot final(s), no winner read",
+       (unsigned)reg, found, single);
   return 0;
 }
 /* the winner a cup's <reg>:0 entry is sent: a cup of ours (176 and up) by its final, the game's
