@@ -1567,7 +1567,7 @@
   "Add to %s": "Dodaj u %s",
   "Drop it here or": "Ispusti ovdje ili",
   "Your world has this package already: Add puts this version in its place.": "Tvoj svijet već ima ovaj paket: Dodaj stavlja ovu verziju na njegovo mjesto.",
-  "Competitions (leagues and cups) of the world in the game; the game has room for %d. Leagues > More > Competition IDs lists them.": "Natjecanja (lige i kupovi) svijeta u igri; igra ima mjesta za %d. Popis je u Lige > Više > Competition IDs.",
+  "Competitions (leagues and cups) of the world in the game, and how many it can have: a new league or cup takes a free id from 130 to %d, the lower ones are the game's. Leagues > More > Competition IDs lists them.": "Natjecanja (lige i kupovi) svijeta u igri i koliko ih može imati: nova liga ili kup uzima slobodan id od 130 do %d, niži su igrini. Popis je u Lige > Više > Competition IDs.",
   "Countries the world in the game adds to the game's own; there is room for %d.": "Zemlje koje svijet u igri dodaje igrinima; ima mjesta za %d.",
   "NOT IN THE GAME": "NIJE U IGRI",
   "NOT BUILT YET": "JOŠ NIJE IZGRAĐEN",

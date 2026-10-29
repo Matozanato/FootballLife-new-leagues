@@ -98,13 +98,34 @@ def plan_summary(game, world):
 def competitions(project):
     """how many competitions the world in the game has (the game's tables without one): the rows
     of Leagues > More > Competition IDs (leaguebuilder.competition_ids); None when unknown"""
+    room = competition_room(project)
+    return room[0] if room else None
+
+
+def competition_room(project):
+    """(competitions the world in the game has, how many it can have), None when unknown. The room
+    is what it has and the ids a Build can still give a new league or cup: CID_FROM..255 (the low
+    ones too for a world built with them, B159) without the game's own and the Conference League's.
+    B279 (gianito9 29.10.): "212 / 255" on Modpack r12 while its Build found no free id -- the ids
+    under 130 are the game's, a world never gets the 43 the old count promised."""
     worlds = project.world_tables()
     db = worlds[0] if worlds else project.base
     if not db:
         return None
+
+    def make():
+        have = {c[0] for c in B.competition_ids(db)}
+        base = project.base
+        if not base or os.path.abspath(base) == os.path.abspath(db):
+            game = have
+        else:
+            game = {c[0] for c in B.competition_ids(base)}
+        low = any(c < B.CID_FROM and c not in game for c in have)
+        free = [c for c in B.W.cid_pool(B.CID_FROM, low) if c not in have and c != B.UECL_CID]
+        return len(have), len(have) + len(free)
+    paths = [os.path.join(d, "CompetitionRegulation.bin") for d in (db, project.base) if d]
     try:
-        return filecache.by_files("myworld-comps", [os.path.join(db, "CompetitionRegulation.bin")],
-                                  lambda: len(B.competition_ids(db)))
+        return filecache.by_files("myworld-room", paths, make)
     except (OSError, ValueError):
         return None
 
@@ -511,13 +532,13 @@ class AddDialog(QDialog):
 
     def count(self):
         """Competitions after adding: the world in the game's, and one more for each league ticked"""
-        n = competitions(self.app.project)
-        if n is None:
+        room = competition_room(self.app.project)
+        if room is None:
             self.after.hide()
             return
-        after = n + len(self.picked())
-        colour = theme.DANGER if after > CID_MAX else theme.TEXT
-        text = _("Competitions after adding: %s") % ('<b style="color:%s">%d / %d</b>' % (colour, after, CID_MAX))
+        after, cap = room[0] + len(self.picked()), room[1]
+        colour = theme.DANGER if after > cap else theme.TEXT
+        text = _("Competitions after adding: %s") % ('<b style="color:%s">%d / %d</b>' % (colour, after, cap))
         text += " · " + _("nothing reaches the game until Build and install")
         if getattr(self, "replaces", False):
             text += "<br>" + _("Your world has this package already: Add puts this version in its place.")
@@ -605,8 +626,9 @@ class MyWorld(QWidget):
         h.addStretch(1)
         self.c_comps = QLabel()
         self.c_comps.setObjectName("counter")
-        self.c_comps.setToolTip(_("Competitions (leagues and cups) of the world in the game; the game has room "
-                                  "for %d. Leagues > More > Competition IDs lists them.") % CID_MAX)
+        self.c_comps.setToolTip(_("Competitions (leagues and cups) of the world in the game, and how many it can "
+                                  "have: a new league or cup takes a free id from 130 to %d, the lower ones are "
+                                  "the game's. Leagues > More > Competition IDs lists them.") % CID_MAX)
         self.c_regions = QLabel()
         self.c_regions.setObjectName("counter")
         self.c_regions.setToolTip(_("Countries the world in the game adds to the game's own; there is room for %d.")
@@ -826,7 +848,8 @@ class MyWorld(QWidget):
         self.row.addStretch(1)
         if getattr(self, "_renaming", None) or getattr(self, "_switching", None):
             self.hold_cards()                         # a rename or a switch still runs (B66, B104)
-        self.set_counter(self.c_comps, "Competitions", competitions(self.app.project), CID_MAX)
+        room = competition_room(self.app.project)
+        self.set_counter(self.c_comps, "Competitions", room and room[0], room[1] if room else CID_MAX)
         live = [x["world"] for x in rows if x["live"]]
         if not live:
             self.set_counter(self.c_regions, "New countries", None, NEW_COUNTRIES)
