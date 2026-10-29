@@ -7439,6 +7439,13 @@ static uint32_t g_kogrey_n = 0, g_roll_n = 0;
    (PAGE_GRP_RA) instead of the game's answer. 0xffff = none. */
 static uint16_t g_ci_native = 0xffff, g_ci_pick = 0xffff;
 static uint32_t g_ci_native_comp = 0xffffffffu, g_ci_pick_comp = 0xffffffffu, g_ci_pick_n = 0;
+/* B266 (Konsel 28.10.): the Match Results screen of a summer qualifying round -- the round po_sel
+   saw that day, which the page builder is then given (PAGE_GRP_RA). The page asks for the grouped
+   phase, and since 13.10. only the menu item rolls, so it was answered with the play-off: not
+   drawn yet, its eight empty rows under a "%s" title. 0xffff = none. */
+static uint16_t g_mr_pick = 0xffff;
+static uint32_t g_mr_pick_comp = 0xffffffffu, g_mr_pick_n = 0;
+static int g_mr_pick_day = -1;
 /* which of CUPS a competition id is (by its league phase's record), -1 none */
 static int ci_of_comp(uint32_t comp)
 {
@@ -7550,6 +7557,14 @@ uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
       logf("fl26swiss: Competition Info -- page shows regulation %u (picked item; the game answered %u)",
            (unsigned)g_ci_pick, (unsigned)(uint16_t)r);
     return (r & ~0xffffull) | g_ci_pick;
+  }
+  /* the Match Results screen of a qualifying round (po_sel): its page lists that round */
+  if (ra == g_base + PAGE_GRP_RA && g_mr_pick != 0xffff && *comp == g_mr_pick_comp
+      && today() == g_mr_pick_day && find_rec(g_mr_pick)) {
+    if (g_mr_pick_n++ < 12)
+      logf("fl26swiss: Match Results -- page shows regulation %u (the round played; the game answered %u)",
+           (unsigned)g_mr_pick, (unsigned)(uint16_t)r);
+    return (r & ~0xffffull) | g_mr_pick;
   }
   return r;
 }
@@ -10012,9 +10027,14 @@ static uint64_t po_sel(uint64_t a, uint64_t b, uint64_t c, uint64_t d)
 {
   uint64_t r = ((actcomp_fn)(uintptr_t)(g_base + ACTCOMP_RVA))(a, b, c, d);
   uint16_t id = (uint16_t)r;
+  /* B266: a Match Results screen is up, so no Competition Info item stands for its page */
+  g_mr_pick = 0xffff; g_ci_pick = 0xffff;
   if (!our_po(id)) return r;
   unsigned char* rec = get_rec(id);
   if (!rec || *(uint32_t*)(rec + 0x84) != 2) return r;
+  if (id < 0x400 && q_added(id) >= 0) {
+    g_mr_pick = id; g_mr_pick_comp = *(uint32_t*)(rec + 0x80); g_mr_pick_day = today();
+  }
   static int said = 0;
   if (said < 5) { said++; logf("fl26swiss: Match Results -- regulation %u shown as a play-off", id); }
   return (r & ~0xffffULL) | 2;
@@ -10416,6 +10436,7 @@ static uint32_t g_ci_comp = 0xffffffffu, g_ci_menu_n = 0, g_ci_sel_n = 0;
 uint64_t ci_menu_handler(ci_vec_t* v, uint32_t* comp, uint64_t flag)
 {
   g_ci_native = 0xffff; g_ci_native_comp = 0xffffffffu;
+  g_mr_pick = 0xffff;                        /* B266: the menu is Competition Info's, not Match Results' */
   uint64_t r = ((cimenu_fn)(uintptr_t)g_tramp_cimenu)(v, comp, flag);
   g_ci_pick = 0xffff;
   if (v == g_ci_vec) { g_ci_vec = 0; g_ci_n = 0; }
