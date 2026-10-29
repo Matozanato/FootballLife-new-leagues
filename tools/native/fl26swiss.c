@@ -1812,11 +1812,15 @@ static final_t* final_of(uint16_t reg)
 #define NEWYEAR_FROM 335
 #define NEWYEAR_TO   45
 static int season_played(uint16_t reg);
-/* a table in exactly the league's list order is one nobody has played yet */
+/* a table in exactly the league's list order is one nobody has played yet -- unless a row has a
+   match played (+0x0f, the MP column's count). B276 (antonimus 29.10.): a Libertadores group of
+   four finishing in its draw order (1 in 24) went by squad strength at the Sudamericana play-off
+   fill, two to three of the 16 groups a season in his log, all six matchdays played */
 static int unplayed(unsigned char* rec, unsigned char* t, uint32_t rows)
 {
   int listed = rec_count(rec) == rows;
   for (uint32_t k = 0; k < rows && listed; k++) listed = *(uint32_t*)(t + k * 20) == rec_clubs(rec)[k];
+  for (uint32_t k = 0; k < rows && listed; k++) if (t[k * 20 + 0x0f]) listed = 0;
   return listed;
 }
 /* keep reg's final table at the July teardown, while it still exists; 1 kept, -1 a table nobody
