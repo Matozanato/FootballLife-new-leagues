@@ -399,9 +399,9 @@ Studio release by release and asks for what a modder actually needs:
 - the national team editor, transfers between clubs, the formations of new clubs and a Balkan
   friendly cup in July.
 
-### victormican: South America from top to bottom
+### vmican: South America from top to bottom
 
-**victormican** ([victormican](https://github.com/victormican)) tests Mod Studio on a South
+**vmican** (victormican on [GitHub](https://github.com/victormican)) tests Mod Studio on a South
 American world and reports what breaks there:
 
 - the Asia-Oceania national teams and the Classic Teams disappearing from Kick Off
@@ -424,6 +424,11 @@ American world and reports what breaks there:
 - 0.1.9 tested to its limits: NewLife clubs in a recipe, the order of leagues and of
   countries, the rest of the leagues not updating, reordering new clubs, the limit of 38
   leagues, the "Others" groups and a crash ([#101](https://github.com/Matozanato/FootballLife-new-leagues/issues/101), [#105](https://github.com/Matozanato/FootballLife-new-leagues/issues/105), [#107](https://github.com/Matozanato/FootballLife-new-leagues/issues/107), [#113](https://github.com/Matozanato/FootballLife-new-leagues/issues/113), [#114](https://github.com/Matozanato/FootballLife-new-leagues/issues/114), [#115](https://github.com/Matozanato/FootballLife-new-leagues/issues/115), [#116](https://github.com/Matozanato/FootballLife-new-leagues/issues/116), [#117](https://github.com/Matozanato/FootballLife-new-leagues/issues/117), [#120](https://github.com/Matozanato/FootballLife-new-leagues/issues/120)).
+- on the Discord, a long run of 0.2.4 beta reports: Build stopping on a club of more than
+  40 players and the crash after it, a package adding a game club twice, Install on a nearly full
+  C:, the final check after Import your world, and "New club here" doing nothing; and the
+  requests for a warning when a club is already in another league and a tick to leave a league
+  out.
 
 ### jyanj083-dotcom: Peru and the Libertadores, tested to the end
 
@@ -592,11 +597,6 @@ and other Latin American worlds and writes up every bug with screenshots:
 - **Uncle Lanscilo** (lanscilo, Discord): help for other players in #support, adding leagues
   and reading their Build logs with them; Sparta gone from the list after a club swap, and a
   club NewLife put in two leagues.
-- **vmican** (Discord): a long run of 0.2.4 beta reports: Build stopping on a club of more than
-  40 players and the crash after it, a package adding a game club twice, Install on a nearly full
-  C:, the final check after Import your world, and "New club here" doing nothing; and the
-  requests for a warning when a club is already in another league and a tick to leave a league
-  out.
 - **GiorgiM** (Discord): a Georgian world that crashed in its second season, with the saves and
   logs that led to a super cup with no clubs in it.
 - **bythezl19** (Discord): the second season's European places given by squad strength instead
@@ -715,8 +715,8 @@ is named.
 Contributors, and what each of them did, are listed in
 [The people who made this better](#the-people-who-made-this-better) near the top: above all
 **vmardonesdev** and **Alikhaled_727**, **vector360** and **jibibi**, and **Stagnant09**, **pioup38**, **bobzera**,
-**spursfan07**, **Amir**, **victormican**, **Alby17**, **jyanj083-dotcom**, **Gabyyy2008**, **alexfe87**,
-**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9**, **Xxspedd**, **n1ne**, **LaraCroft**, **AlexRufolo**, **DavidBDJ**, **B2Y26Arabia**, **rwee**, **Risto**, **Yanis**, **LumpierTheGunner**, **Bon Kirk**, **wishfulshot**, **beny609o**, **Nickdaw**, **the_pelado**, **capital030**, **novarama** (moderator), **rickydicky4444**, **MIQABARI**, **nissindiaz**, **Julio**, **Uncle Lanscilo**, **vmican**, **GiorgiM**, **bythezl19**, **quicksite**, **fjchivvdub**, **ZeDosCaes21**, **ELBastos**, **Konkubent**, **beni_93**, **jojofiaz**, **Tysonche35**, **diwwanmago**, **bikolunar42**, **lmazot**, **Erax**, **juanjose6124**, **antoniodias_pt**, **bruce_wayne**, **Sasukidas**, **diablofumao**, **gxldemorci**, **General Kreutaa**, **monkusgigus** and **papijonn**.
+**spursfan07**, **Amir**, **vmican**, **Alby17**, **jyanj083-dotcom**, **Gabyyy2008**, **alexfe87**,
+**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9**, **Xxspedd**, **n1ne**, **LaraCroft**, **AlexRufolo**, **DavidBDJ**, **B2Y26Arabia**, **rwee**, **Risto**, **Yanis**, **LumpierTheGunner**, **Bon Kirk**, **wishfulshot**, **beny609o**, **Nickdaw**, **the_pelado**, **capital030**, **novarama** (moderator), **rickydicky4444**, **MIQABARI**, **nissindiaz**, **Julio**, **Uncle Lanscilo**, **GiorgiM**, **bythezl19**, **quicksite**, **fjchivvdub**, **ZeDosCaes21**, **ELBastos**, **Konkubent**, **beni_93**, **jojofiaz**, **Tysonche35**, **diwwanmago**, **bikolunar42**, **lmazot**, **Erax**, **juanjose6124**, **antoniodias_pt**, **bruce_wayne**, **Sasukidas**, **diablofumao**, **gxldemorci**, **General Kreutaa**, **monkusgigus** and **papijonn**.
 
 The licence asks nothing of you. I do: **if you use these findings, addresses, patch sets
 or tools in a mod, credit this work and link back** — see
