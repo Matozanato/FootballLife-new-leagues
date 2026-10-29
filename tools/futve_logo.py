@@ -1,24 +1,34 @@
-r"""python tools/futve_logo.py --picture <png> [--install] [--game <folder>] [--cids 134,135]
-       python tools/futve_logo.py --restore <backup folder>
+r"""python tools/futve_logo.py [--make] [--source <folder>]
+       python tools/futve_logo.py --check
+       python tools/futve_logo.py --install --game <folder>
+       python tools/futve_logo.py --restore <backup folder> --game <folder>
 
-The "Fase Final" logo of the Liga FUTVE's two play-offs. It writes the six emblem variants of
-competitions 134 (Apertura) and 135 (Clausura) -- common\render\symbol\emblemLc\emb_<id><suffix>.png,
-256 and 512 px -- the way a Build's league logo is made (tools/lbassets.py, lbassets.league_logo):
-the picture fitted into a transparent square, never stretched, in colour in every variant.
+The competition logos of the Liga FUTVE's play-offs and finals:
 
-  --install   writes the variants into the livecpk world (SiderAddons\livecpk\<world>, the name the
-              loader's fl26world.txt gives) and backs up what it replaces under
-              out/futve/logos/backup-<date>/; the game must be closed.
-  --restore   puts a backup made by --install back (game closed).
-  --dry       only generates the six variants under out/futve/logos/world and lists them.
-  --cids      the two competitions, 134 and 135 by default (the world's play-off cup ids).
-  --picture   the picture given (for the Liga FUTVE play-offs, G:\Downloads\playoff.png).
+  134  Liga FUTVE Apertura Playoffs   PLAYOFF_APERTURA.png
+  135  Liga FUTVE Clausura Playoffs   PLAYOFF_CLAUSURA.png
+  136  Final del Apertura             FINAL_APERTURA.png
+  137  Final del Clausura             FINAL_CLAUSURA.png
+  138  Gran Final del FUTVE           FINAL_FUTVE.png
 
-A Mod Studio Build regenerates the world's emblems: run the --install command again afterwards, as
-for the world file itself (futve_world.py).
+Six variants of each competition's emblem (256 and 512 px) are made the way a Build's league logo is
+(tools/lbassets.py, lbassets.league_logo): the picture fitted into a transparent square, never
+stretched, in colour in every variant.
 
-  python tools/futve_logo.py --picture "G:\Downloads\playoff.png" --dry
-  python tools/futve_logo.py --picture "G:\Downloads\playoff.png" --install --game "G:\Games\SP Football Life 2026"
+  --make      stage the 30 emblems under out/futve/logos/world (what futve_test.py installs; the
+              sandbox backs up the game's emblems and puts them back at the end).
+  --check     verify the staged 30 files and their sizes.
+  --install   write the staged set into the livecpk world (SiderAddons\livecpk\<world>) and back up
+              what it replaces under out/futve/logos/backup-<date>/; the game must be closed. This is
+              for keeping the logos after a Build; the sandbox installs the staged copies itself.
+  --restore   put a backup made by --install back (game closed).
+
+The pictures live in `--source`, `G:\Downloads` by default (or `FL26_LOGOS`). A Mod Studio Build
+regenerates the world's emblems: run `--install` again afterwards, as for the world file itself.
+
+  python tools/futve_logo.py --make
+  python tools/futve_logo.py --check
+  python tools/futve_logo.py --install --game "G:\Games\SP Football Life 2026"
 """
 import argparse
 import os
@@ -34,8 +44,63 @@ import lbassets
 
 EMBLEM = ("common", "render", "symbol", "emblemLc")
 OUT = os.path.join(REPO, "out", "futve", "logos")
+STAGED = os.path.join(OUT, "world")
 SUFFIXES = tuple(s for s, _px in lbassets.mkemblems.VARIANTS)
-TITLES = {134: "Liga FUTVE Apertura Playoffs", 135: "Liga FUTVE Clausura Playoffs"}
+PLAN = (
+    (134, "PLAYOFF_APERTURA.png", "Liga FUTVE Apertura Playoffs"),
+    (135, "PLAYOFF_CLAUSURA.png", "Liga FUTVE Clausura Playoffs"),
+    (136, "FINAL_APERTURA.png", "Final del Apertura"),
+    (137, "FINAL_CLAUSURA.png", "Final del Clausura"),
+    (138, "FINAL_FUTVE.png", "Gran Final del FUTVE"),
+)
+
+
+def emblem_dir(root):
+    return os.path.join(root, *EMBLEM)
+
+
+def expected(root=STAGED):
+    d = emblem_dir(root)
+    return [os.path.join(d, "emb_%04d%s.png" % (cid, suf)) for cid, _f, _n in PLAN for suf in SUFFIXES]
+
+
+def make(source):
+    if os.path.isdir(STAGED):
+        shutil.rmtree(STAGED)
+    for cid, picture, name in PLAN:
+        p = os.path.join(source, picture)
+        if not os.path.isfile(p):
+            raise SystemExit("no picture %s (pass --source)" % p)
+        lbassets.league_logo(STAGED, cid, name, picture=p)
+        print("  %d %s <- %s" % (cid, name, p))
+    print("  staged %d emblem(s) under %s" % (len(expected()), emblem_dir(STAGED)))
+
+
+def check():
+    from PIL import Image
+    bad = 0
+    for cid, _f, _n in PLAN:
+        for suf in SUFFIXES:
+            px = 512 if suf.endswith("_ll") else 256
+            p = os.path.join(emblem_dir(STAGED), "emb_%04d%s.png" % (cid, suf))
+            if not os.path.isfile(p):
+                print("  missing %s" % p)
+                bad += 1
+                continue
+            try:
+                w, h = Image.open(p).size
+            except OSError as e:
+                print("  %s: %s" % (p, e))
+                bad += 1
+                continue
+            if (w, h) != (px, px):
+                print("  %s: %dx%d, wanted %d" % (p, w, h, px))
+                bad += 1
+    if bad:
+        print("  %d problem(s); run --make" % bad)
+        return False
+    print("  %d staged emblem(s), all present and the right size" % len(expected()))
+    return True
 
 
 def game_open():
@@ -59,41 +124,30 @@ def world_name(game):
     return "_FL26MyWorld"
 
 
-def generate(picture, cids):
-    root = os.path.join(OUT, "world")
-    if os.path.isdir(root):
-        shutil.rmtree(root)
-    for cid in cids:
-        lbassets.league_logo(root, cid, TITLES.get(cid, "Liga FUTVE Playoffs"), picture=picture)
-    d = os.path.join(root, *EMBLEM)
-    files = sorted(f for f in os.listdir(d) if f.endswith(".png"))
-    for f in files:
-        print("  %s (%d bytes)" % (f, os.path.getsize(os.path.join(d, f))))
-    return d, files
-
-
-def install(game, picture, cids):
+def install(game):
+    if not check():
+        raise SystemExit("the staged emblems are not ready")
     if not os.path.isdir(os.path.join(game, "SiderAddons")):
         raise SystemExit("no SiderAddons in %s; pass --game" % game)
     if game_open():
         raise SystemExit("the game is open; close it and run the command again")
-    src, files = generate(picture, cids)
     world = os.path.join(game, "SiderAddons", "livecpk", world_name(game))
-    dst = os.path.join(world, *EMBLEM)
+    dst = emblem_dir(world)
     if not os.path.isdir(dst):
         raise SystemExit("no emblem folder at %s (is the world switched on?)" % dst)
     stamp = time.strftime("%Y%m%d-%H%M%S")
     backup_root = os.path.join(OUT, "backup-" + stamp)
-    backup = os.path.join(backup_root, *EMBLEM)
+    backup = emblem_dir(backup_root)
     os.makedirs(backup, exist_ok=True)
     n = 0
-    for f in files:
-        t = os.path.join(dst, f)
+    for p in expected():
+        name = os.path.basename(p)
+        t = os.path.join(dst, name)
         if os.path.isfile(t):
-            shutil.copy2(t, os.path.join(backup, f))
-        shutil.copy2(os.path.join(src, f), t)
+            shutil.copy2(t, os.path.join(backup, name))
+        shutil.copy2(p, t)
         n += 1
-    print("  %d emblem(s) of competitions %s written to %s" % (n, ",".join(map(str, cids)), dst))
+    print("  %d emblem(s) written to %s" % (n, dst))
     print("  the replaced variants are in %s" % backup_root)
     print("  restore: python tools/futve_logo.py --restore \"%s\" --game \"%s\"" % (backup_root, game))
 
@@ -102,50 +156,45 @@ def restore_into(game, backup):
     if game_open():
         raise SystemExit("the game is open; close it and run the command again")
     root = os.path.abspath(backup)
-    cands = [os.path.join(root, *EMBLEM), root]
+    cands = [emblem_dir(root), root]
     if os.path.basename(root) == "emblemLc":
         cands.insert(0, root)
     src = next((c for c in cands if os.path.isdir(c)), None)
     if src is None:
         raise SystemExit("no emblem folder in the backup %s" % backup)
     world = os.path.join(game, "SiderAddons", "livecpk", world_name(game))
-    dst = os.path.join(world, *EMBLEM)
+    dst = emblem_dir(world)
     n = 0
     for f in sorted(os.listdir(src)):
-        if not f.endswith(".png"):
-            continue
-        shutil.copy2(os.path.join(src, f), os.path.join(dst, f))
-        n += 1
+        if f.endswith(".png"):
+            shutil.copy2(os.path.join(src, f), os.path.join(dst, f))
+            n += 1
     print("  %d emblem(s) restored into %s" % (n, dst))
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--picture")
+    ap.add_argument("--source", default=os.environ.get("FL26_LOGOS", r"G:\Downloads"))
     ap.add_argument("--game", default=os.environ.get("FL26_DIR"))
-    ap.add_argument("--cids", default="134,135")
+    ap.add_argument("--make", action="store_true")
+    ap.add_argument("--check", action="store_true")
     ap.add_argument("--install", action="store_true")
-    ap.add_argument("--dry", action="store_true")
     ap.add_argument("--restore", metavar="BACKUP")
     a = ap.parse_args()
-    cids = [int(x) for x in a.cids.split(",") if x.strip()]
     if a.restore:
         if not a.game:
             raise SystemExit("--restore needs --game (or FL26_DIR)")
         restore_into(a.game, a.restore)
         return 0
-    if not a.picture:
-        raise SystemExit("pass --picture <png> (--dry alone generates it under out/futve/logos)")
-    if not os.path.isfile(a.picture):
-        raise SystemExit("no picture at %s" % a.picture)
+    if a.check:
+        return 0 if check() else 1
     if a.install:
         if not a.game:
             raise SystemExit("--install needs --game (or FL26_DIR)")
-        install(a.game, a.picture, cids)
+        install(a.game)
         return 0
-    generate(a.picture, cids)
-    print("dry: nothing written to the game")
+    make(a.source)
     return 0
 
 

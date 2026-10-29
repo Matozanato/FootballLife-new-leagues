@@ -138,22 +138,34 @@ There is no Táchira-99 `Player.bin` in the game today (the installed one runs 4
 stats), so the fixture is generated from whatever `Player.bin` the world has. If you have your own
 copy, `--from` verifies and uses it.
 
-## The play-offs' logo
+## The competitions' logos
 
-The two play-offs (competitions 134 and 135) use the "Fase Final" picture as their emblem. The six
-variants of each competition (256 and 512 px) go into the live world's
-`common\render\symbol\emblemLc\emb_<id><suffix>.png`, made the way a Build's league logo is
-(`lbassets.league_logo`: the picture fitted into a transparent square, never stretched):
+The Apertura and Clausura play-offs (competitions 134 and 135) and the three finals of the next block
+(136 Final del Apertura, 137 Final del Clausura, 138 Gran Final del FUTVE) take these pictures:
+
+| competition | picture |
+|---|---|
+| 134 Liga FUTVE Apertura Playoffs | `PLAYOFF_APERTURA.png` |
+| 135 Liga FUTVE Clausura Playoffs | `PLAYOFF_CLAUSURA.png` |
+| 136 Final del Apertura | `FINAL_APERTURA.png` |
+| 137 Final del Clausura | `FINAL_CLAUSURA.png` |
+| 138 Gran Final del FUTVE | `FINAL_FUTVE.png` |
 
 ```
-python tools/futve_logo.py --picture "G:\Downloads\playoff.png" --install --game "G:\Games\SP Football Life 2026"
+python tools/futve_logo.py --make
+python tools/futve_logo.py --check
+python tools/futve_logo.py --install --game "G:\Games\SP Football Life 2026"
 python tools/futve_logo.py --restore out/futve/logos/backup-<date> --game "G:\Games\SP Football Life 2026"
 ```
 
-`--install` backs up the variants it replaces under `out/futve/logos/backup-<date>/`; the game must
-be closed. A Mod Studio Build regenerates the world's emblems, so run the `--install` command again
-after a Build, as for the world file (`futve_world.py`). `--dry` only generates the pictures under
-`out/futve/logos/world`.
+`--make` writes the six variants (256 and 512 px) of each competition under `out/futve/logos/world`,
+made the way a Build's league logo is (`lbassets.league_logo`: the picture fitted into a transparent
+square, never stretched, in colour in every variant). The pictures are in `G:\Downloads` (or
+`--source`/`FL26_LOGOS`). The in-game sandbox installs those 30 files with the rest and restores the
+game's emblems at the end; the finals' files are installed too and removed again, ready for when
+their competitions are built. `--install` writes the staged set into the live world and backs up what
+it replaces under `out/futve/logos/backup-<date>/` (the game closed) for after a Build, as for the
+world file; `--restore` puts a backup back.
 
 ## The sandbox of the in-game tests
 
@@ -169,12 +181,12 @@ outside the agent's sandbox). It:
 
 1. refuses to start while the game is open (a process name or a locked file);
 2. backs up, under `out/futve/tests/<date>/backup/` with a `manifest.json` of sizes, mtimes and
-   sha256: the ten files it installs (`fl26swiss.dll`, `fl26swiss.lua`, `fl26world.txt` in both
-   places, the three `Competition*.bin`, the fixture's `Player.bin`, and the game's own
-   `cinematics.lua`/`cinematicsB.lua`), the game's `*.log`, `*.cache`, `sider.ini` and
-   `ReShade.ini`/`ReShade.log`, and the **whole save folder**
-   (`...\Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\2026`, detected under `Documents` and
-   `OneDrive\Documents`, or `--save`);
+   sha256: the files it installs (`fl26swiss.dll`, `fl26swiss.lua`, `fl26world.txt` in both
+   places, the three `Competition*.bin`, the fixture's `Player.bin`, the game's own
+   `cinematics.lua`/`cinematicsB.lua`, and the 30 competition emblems of the play-offs and finals),
+   the game's `*.log`, `*.cache`, `sider.ini` and `ReShade.ini`/`ReShade.log`, and the **whole save
+   folder** (`...\Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\2026`, detected under
+   `Documents` and `OneDrive\Documents`, or `--save`);
 3. installs the DLL, the loader, the phase's world and the fixture, checks every hash and runs the
    fixture check on the installed `Player.bin`;
 4. prints the checklist and waits. `FIN` + Enter: requires the game closed, copies the evidence
