@@ -78,7 +78,7 @@ def base(value):
 def path_of(value, modules_dir):
     if not modules_dir:
         return None
-    return os.path.join(modules_dir, value.strip().strip('"').replace("/", "\\"))
+    return os.path.join(modules_dir, value.strip().strip('"').replace("/", os.sep).replace("\\", os.sep))   # B288: a Mac
 
 
 def exists(value, modules_dir):
