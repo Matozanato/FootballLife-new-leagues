@@ -4335,9 +4335,13 @@ def describe(pl):
     rounds = qual_rounds(pl)
     if any(s for _c, s in rounds):
         lines.append("  August qualifying: %s" % fl26world.rounds_text(rounds))
-    for c, (n, room) in sorted(fl26world.uefa_places(all_places(pl),
-                                                     pl.get("game_replace") or [], bool(pl.get("uecl")),
-                                                     place_rank(pl))[1].items()):
+    listed, over = fl26world.uefa_places(all_places(pl), pl.get("game_replace") or [], bool(pl.get("uecl")),
+                                         place_rank(pl))
+    # the counter (pepponeee 29.10.): each league phase's places against the clubs it takes
+    count = fl26world.europe_count([e[2] for e in listed or fl26world.SHIPPED_ACCESS], bool(pl.get("uecl")))
+    lines.append("  European places (listed / clubs straight into the league phase): %s"
+                 % fl26world.europe_count_text(count))
+    for c, (n, room) in sorted(over.items()):
         lines.append("  NOTE: %s has %d places listed for %d clubs; the last %d get none"
                      % (names[c], n, room, n - room))
     if pl.get("modern_libertadores_access") != "custom":
