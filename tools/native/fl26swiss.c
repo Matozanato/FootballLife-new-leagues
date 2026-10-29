@@ -7298,12 +7298,13 @@ static int ko_winner(const uint32_t* sl, uint32_t* w)
    (0x36, else 0x35); 0 while it is not played. */
 static uint32_t ko_final_winner(uint16_t reg)
 {
-  static const uint32_t kinds[2] = { 0x36, 0x35 };
-  for (int i = 0; i < 2; i++) {
-    unsigned char* rnd = ko_round(reg, kinds[i]);
+  /* The final's round is the bracket's single-slot one. Its kind is not always 0x36/0x35 (the 262
+     final was read as 0 with only those two), so try every knockout kind. */
+  for (uint32_t kind = 0x20; kind <= 0x3f; kind++) {
+    unsigned char* rnd = ko_round(reg, kind);
     uint32_t w = 0;
     if (!rnd || *(uint16_t*)rnd != reg || ko_slots(rnd) != 1) continue;
-    return ko_winner(ko_slot(rnd, 0), &w) && (w >> 14) ? canon_club(w) : 0;
+    if (ko_winner(ko_slot(rnd, 0), &w) && (w >> 14)) return canon_club(w);
   }
   return 0;
 }
