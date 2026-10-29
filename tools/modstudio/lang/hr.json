@@ -1498,6 +1498,7 @@
   "The folder of %s is not on disk.": "Mape %s nema na disku.",
   "Close the game first: it has the world's files open.": "Prvo zatvori igru: ona drži datoteke svijeta otvorene.",
   "You have changes in this list that are not written yet: press Apply or Discard first.": "Na ovom popisu imaš promjene koje još nisu zapisane: prvo pritisni Primijeni ili Odbaci.",
+  "Content folders has changes that are not written yet (the ticks of worlds and mods): press Apply or Discard on that page first.": "Mape sadržaja imaju promjene koje još nisu zapisane (kvačice svjetova i modova): prvo pritisni Primijeni ili Odbaci na toj stranici.",
   "%s is the world in the game now (the green one).\n\nSwitch another world on first (tick it here, untick this one, press Apply), or just untick this one and press Apply. Then you can delete it.": "%s je svijet koji je sada u igri (zeleni).\n\nPrvo uključi drugi svijet (označi ga ovdje, makni kvačicu s ovoga, pritisni Primijeni) ili samo makni kvačicu s ovoga i pritisni Primijeni. Onda ga možeš obrisati.",
   "Delete the world %s?": "Obrisati svijet %s?",
   "It goes out of the game: its folder, its kits and scoreboards, and its lines in sider.ini and in the kit and scoreboard lists.": "Izlazi iz igre: njegova mapa, dresovi i semafori, i njegovi redovi u sider.ini i u popisima dresova i semafora.",

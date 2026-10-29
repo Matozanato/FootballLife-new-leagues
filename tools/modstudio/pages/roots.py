@@ -545,6 +545,7 @@ class Roots(Page):
         if getattr(self, "renaming", None):              # one rename at a time, nothing else meanwhile (B66)
             error(self, title, _("Renaming %s...") % self.renaming)
             return None
+        w0 = w
         w = w or self.world_of(self._current())
         if not w:
             return None
@@ -556,8 +557,14 @@ class Roots(Page):
             error(self, title, _("Close the game first: it has the world's files open."))
             return None
         if self.dirty:
-            error(self, title, _("You have changes in this list that are not written yet: press Apply or "
-                                 "Discard first."))
+            if w0:
+                # from a card of My world: the list with Apply and Discard is here, show it (B269)
+                self.app.open_page("Roots")
+                error(self, title, _("Content folders has changes that are not written yet (the ticks of "
+                                     "worlds and mods): press Apply or Discard on that page first."))
+            else:
+                error(self, title, _("You have changes in this list that are not written yet: press Apply or "
+                                     "Discard first."))
             return None
         if not can_write(self, self.app.game):
             return None
