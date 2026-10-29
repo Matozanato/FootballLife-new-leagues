@@ -24,6 +24,7 @@ exe. See `tools/flpaths.py`.
 | `test_unknown_formation.py` | tables | B105: a formation the tables do not have (a league's, a club's) goes from the plan with a note naming the league, and Build does not stop; a formation the tables have stays |
 | `test_install_space.py` | none | B41: a zip unpacks in %TEMP% while its disk has room, else in a folder beside the game, else a message naming the sizes before anything is unpacked |
 | `test_face_groups.py` | none | B183: `facegroups.nordic` puts the Nordic nations on a face group of the pack's own light faces (skin 1-2 of nweu and eeu, the same portraits); every other nation and face stays, and done twice it is the same |
+| `test_face_app_lines.py` | none | Synthetic face paths and player tables: custom face mappings, generated face ranges, portrait-only players, precedence, and missing table fallback. Does not test in-game appearance persistence. |
 | `test_country_order.py` | | League order (0.2.0) follows the recipe's `country_order` and never `league_order` (the Leagues page's drag order) |
 | `test_crestmatch.py` | | the crest file name matcher |
 | `test_cup_draw.py` | | `cup_draw` becomes the `cupdraw` line; `seeded` unless the recipe says otherwise; any other value is refused |
