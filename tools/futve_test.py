@@ -8,9 +8,10 @@ The sandbox of the in-game tests of this branch. One command per test:
   2. It backs up everything the test can modify: the files it installs (fl26swiss.dll, fl26swiss.lua,
      fl26world.txt in both places, the three Competition*.bin, the Táchira-99 Player.bin, the game's
      own cinematics.lua/cinematicsB.lua that give the finals their UEFA Europa League (261/262) and
-     UEFA Champions League (263) final entrances and the Final atmosphere, and the competition logos
-     the plan stages -- the two play-offs and the three finals, 30 files), the game's own logs and
-     caches, ReShade.ini/ReShade.log and sider.ini, and the whole save folder (the 2026 folder
+     UEFA Champions League (263) final entrances and the Final atmosphere, the competition logos
+     the plan stages -- the two play-offs and the three finals, 30 files, and for phase 3 the join
+     module `fl26joindll.lua` that adds the finals' ids to the season builder), the game's own logs
+     and caches, ReShade.ini/ReShade.log and sider.ini, and the whole save folder (the 2026 folder
      under Documents\KONAMI, where a career and fl26swiss-state.bin are written). It writes
      manifest.json with every size, mtime and sha256.
   3. It installs the DLL, the loader, the phase's world and the fixture, checks every hash and runs
@@ -235,6 +236,17 @@ def build_installs(phase, game):
         ("SiderAddons/modules/common/cinematics.lua", os.path.join(cin, "cinematics.lua")),
         ("SiderAddons/modules/common/cinematicsB.lua", os.path.join(cin, "cinematicsB.lua")),
     ]
+    # The join module: the finals 142/143/144 into the season builder. Without them the builder
+    # skips the new cups, their season tables stay empty and the game nulls at 0x141333485 on the
+    # fourth Apertura matchday. Only the finals world (phase 3) needs it.
+    if phase == 3:
+        join = os.path.join(ART, "join")
+        if not os.path.isfile(os.path.join(join, "fl26joindll.lua")):
+            r = subprocess.run([sys.executable, os.path.join(HERE, "futve_join.py"), "--make",
+                                "--game", game], capture_output=True, text=True, errors="replace")
+            if r.returncode != 0:
+                raise SystemExit("no se pudo preparar el módulo del join:\n%s\n%s" % (r.stdout, r.stderr))
+        out += [("SiderAddons/modules/fl26joindll.lua", os.path.join(join, "fl26joindll.lua"))]
     # The logos of the competitions in futve_logo.py's plan: the two play-offs (134/135) and the
     # three finals (142/143/144). The sandbox installs exactly what the plan lists and restores the
     # game's emblems at the end.
