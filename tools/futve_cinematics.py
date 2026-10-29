@@ -9,9 +9,9 @@ trophy entry, `trophy_rewrite`) and `cinematicsB.lua` (the Final stadium scenes)
   - 261 (Final del Apertura) and 262 (Final del Clausura), when the match is the final
     (`ctx.match_info == 53`), keep the UEFA Europa League final's entrance ("UEFA Europa League F");
   - 263 (Final del FUTVE) keeps the UEFA Champions League final's ("UEFA Champions League F");
-  - all three set their trophy entry (`entry`) to 42, the Copa America's, instead of 16 (the
-    UEL/UCL one), which gave no cup lift; 1/10/16/46 give the Club World Cup, Libertadores, the
-    UEL/UCL and the CAF trophy, to try another;
+  - all three set their trophy entry (`entry`) to 16, the UEL/UCL's, whose trophy and celebration are
+    in the content/cinematics folders; 1/10/42/46 give the Club World Cup, Libertadores, the Copa
+    America and the CAF trophy, to try another;
   - all three take the generic Final stadium scene (`Final\st001`) from cinematicsB.
 
 The two files are otherwise untouched. The copies are what `futve_test.py` installs for an in-game
@@ -37,9 +37,9 @@ OLD_UEL = (b"\telseif tid == 5 or tid == 1029 or tid == 2053 or tid == 3077 or t
            b"tid == 10245 or tid == 11269 or tid == 12293 or tid == 6 then")
 NEW_UEL = (
     b"\t-- Liga FUTVE finals: the entrance stays the Europa/Champions final one; the trophy entry is\r\n"
-    b"\t-- the Copa America's (42) -- the UEL/UCL entry 16 gave no cup lift. 1/10/16/46 = other trophies.\r\n"
+    b"\t-- the UEL/UCL's (16), the one your content/cinematics folders carry. 1/10/16/42/46 = other trophies.\r\n"
     b"\telseif (tid == 261 or tid == 262 or tid == 263) and ctx.match_info == 53 then\r\n"
-    b"\t\tentry = 42\r\n"
+    b"\t\tentry = 16\r\n"
     b"\t\tif tid == 263 then Entrance = \"UEFA Champions League F\" else Entrance = \"UEFA Europa League F\" end\r\n"
     + OLD_UEL)
 OLD_B = b"if ctx.match_info == 53 then\r\n\t   if ctx.stadium == 1 then"
