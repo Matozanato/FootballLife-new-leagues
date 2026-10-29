@@ -396,6 +396,7 @@ class EuropeTable(QWidget):
         super().__init__()
         self.clubs = clubs
         self.modern = modern
+        self.changed = None             # called when a place changes (the European places counter)
         self.competitions = continental_place_choices(competitions or fl26world.COMPETITIONS, modern)
         self.cup_winner = bool(cup_winner)
         self.position_label = position_label
@@ -463,11 +464,18 @@ class EuropeTable(QWidget):
         self.table.setCellWidget(r, 0, sp)
         self.table.setCellWidget(r, 1, cb)
         self.table.setCellWidget(r, 2, x)
+        cb.currentIndexChanged.connect(lambda *_a: self._changed())
+        self._changed()
+
+    def _changed(self):
+        if self.changed:
+            self.changed()
 
     def remove_row(self, button):
         for r in range(self.table.rowCount()):
             if self.table.cellWidget(r, 2) is button:
                 self.table.removeRow(r)
+                self._changed()
                 return
 
     def set_places(self, places):
@@ -475,6 +483,7 @@ class EuropeTable(QWidget):
         # by position, the cup winner's place last
         for pos, comp in sorted(places, key=lambda e: (int(e[0]) == B.CUP_WINNER, int(e[0]))):
             self._row(pos, comp)
+        self._changed()
 
     def add(self):
         taken = {p for p, _c in self.places()}
@@ -2019,11 +2028,21 @@ class GameEuropeDialog(Dialog):
         right.addWidget(self.table, 1)
         body.addLayout(right, 1)
         self.v.insertLayout(1, body, 1)
-        self.scroll.hide()
+        # the counter (pepponeee 29.10.): every place of the world against what each league phase takes
+        self.recipe = project.recipe
+        self.l_count = hint("")
+        self.l_count.setToolTip(_("Places listed for each league phase (yours, the game's leagues', the title "
+                                  "holders') / the clubs it takes straight in. The game fills a gap with the next "
+                                  "clubs of England, Spain, Italy, Germany and France; places over go to the "
+                                  "competition's qualifying, or get none."))
+        self.v.insertWidget(2, self.l_count)
         self.cur = -1
+        self.table.changed = self.count
+        self.scroll.hide()
         self.list.currentRowChanged.connect(self.show_league)
         self.list.setCurrentRow(0)
         self.marks()
+        self.count()
         self.setMinimumSize(980, 640)
 
     def marks(self):
@@ -2059,6 +2078,23 @@ class GameEuropeDialog(Dialog):
         if 0 <= self.cur < len(self.tops) and self.own.isChecked():
             self.places[self.tops[self.cur][0]] = self.table.places()
 
+    def count(self):
+        """the counter's line: the game's leagues (their own places or the game's), the new leagues'
+        places and the title holders'"""
+        if not hasattr(self, "l_count"):
+            return
+        places = dict(self.places)
+        if 0 <= self.cur < len(self.tops) and self.own.isChecked():
+            places[self.tops[self.cur][0]] = self.table.places()
+        comps = [e[2] for e in fl26world.HOLDERS]
+        for rid, _name, _clubs, shipped in self.tops:
+            comps += [int(c) for _p, c in (places[rid] if rid in places else shipped)]
+        for L in self.recipe.get("leagues") or []:
+            comps += [int(c) for _p, c in L.get("europe") or []]
+        counts = fl26world.europe_count([c for c in comps if c in fl26world.UEFA_LINE],
+                                        bool(self.recipe.get("uecl", True)))
+        self.l_count.setText(_("European places: %s") % fl26world.europe_count_text(counts))
+
     def show_league(self, i):
         self.keep()
         self.cur = i
@@ -2074,6 +2110,7 @@ class GameEuropeDialog(Dialog):
         self.own.blockSignals(False)
         self.table.set_places(self.places[rid] if mine else shipped)
         self.table.setEnabled(mine)
+        self.count()
 
     def toggle(self, on):
         if not 0 <= self.cur < len(self.tops):
@@ -2087,6 +2124,7 @@ class GameEuropeDialog(Dialog):
         self.table.setEnabled(on)
         self.whose(on, rid, shipped)
         self.marks()
+        self.count()
 
     def ok(self):
         self.keep()

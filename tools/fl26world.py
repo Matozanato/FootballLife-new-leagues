@@ -407,6 +407,31 @@ def direct_room(out):
     return room
 
 
+def europe_count(comps, uecl=True):
+    """the European places counter (pepponeee 29.10.): {competition: (places, room)} for the
+    league phases -- comps is the competition of every place of the world (the title holders'
+    too), room the clubs each takes straight in (direct_room: 36, less eight for each play-off
+    feeding it). Fewer places than room: the game fills the rest with the next clubs of the big
+    five; more: the last go to the competition's qualifying, or get none"""
+    comps = [int(c) for c in comps]
+    room = direct_room([(0, 0, c, 0) for c in comps])
+    return {c: (comps.count(c), room[c]) for c in ((0, 1, 2) if uecl else (0, 1))}
+
+
+def europe_count_text(counts):
+    """'Champions League 26/28, Europa League 20/20 ...' with what happens to the difference"""
+    names = dict(COMPETITIONS)
+    out = []
+    for c, (n, r) in sorted(counts.items()):
+        s = "%s %d/%d" % (names[c], n, r)
+        if n < r:
+            s += " (%d more from the big five)" % (r - n)
+        elif n > r:
+            s += " (%d over)" % (n - r)
+        out.append(s)
+    return ", ".join(out)
+
+
 def crowded(out, own, rounds=None):
     """{competition: (places listed, room)} for those of out past their room. A competition's
     places past its direct entrants go to its own qualifying when it has one (fl26swiss), ahead of
