@@ -65,7 +65,7 @@ FF_CODE = "FL_011_FFU"
 FF_CID, FF_REG = 144, 263
 FF_ENTRIES = "191:1,192:1"
 FF_FINAL = 166
-FF_FILL = 143
+FF_FILL = 0          # 0 = the DLL tries it every tick: its src= champions appear on days 15 and 163
 
 FI_NAME = "Final del Apertura"
 FI_CODE = "FL_011_AFI"
@@ -174,8 +174,8 @@ def plan(base, world, dry, tmp_root):
                % (AP_REG, AP_KO, AP_ENTRIES, ap_fill, ap_nat, AP_FINAL, AP_DAYS, date_src, AP_NAME))
     cl_line = ("ccup %d ko=%d groups=2 entry=%s fill=%d national=%d days=%d gdays=%s adv=1 kolike=%d name=%s"
                % (CL_REG, CL_KO, CL_ENTRIES, cl_fill, cl_nat, CL_FINAL, CL_DAYS, date_src, CL_NAME))
-    ff_line = ("ccup %d ko=%d groups=0 entry=%s fill=%d national=1 days=%d kolike=%d name=%s"
-               % (FF_REG, FF_REG, FF_ENTRIES, FF_FILL, FF_FINAL, date_src, FF_NAME))
+    ff_line = ("ccup %d ko=%d groups=0 entry=%s fill=%d national=1 days=%d kolike=%d src=%d,%d name=%s"
+               % (FF_REG, FF_REG, FF_ENTRIES, FF_FILL, FF_FINAL, date_src, AP_KO, CL_KO, FF_NAME))
     return {"ap_cid": AP_CID, "cl_cid": CL_CID, "ap_fill": ap_fill, "cl_fill": cl_fill,
             "shape": shape, "date_src": date_src, "C2": C2, "R2": R2, "E2": E2,
             "tpl_ap": tpl_ap, "tpl_cl": tpl_cl, "base2": base2, "tmp": tmp,
