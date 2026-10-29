@@ -3,21 +3,25 @@ r"""python tools/futve_logo.py [--make] [--source <folder>]
        python tools/futve_logo.py --install --game <folder>
        python tools/futve_logo.py --restore <backup folder> --game <folder>
 
-The competition logos of the Liga FUTVE's play-offs and finals:
+The competition logos of the Liga FUTVE's two play-offs:
 
   134  Liga FUTVE Apertura Playoffs   PLAYOFF_APERTURA.png
   135  Liga FUTVE Clausura Playoffs   PLAYOFF_CLAUSURA.png
-  136  Final del Apertura             FINAL_APERTURA.png
-  137  Final del Clausura             FINAL_CLAUSURA.png
-  138  Gran Final del FUTVE           FINAL_FUTVE.png
 
 Six variants of each competition's emblem (256 and 512 px) are made the way a Build's league logo is
 (tools/lbassets.py, lbassets.league_logo): the picture fitted into a transparent square, never
 stretched, in colour in every variant.
 
-  --make      stage the 30 emblems under out/futve/logos/world (what futve_test.py installs; the
+The three finals' pictures (`FINAL_APERTURA.png`, `FINAL_CLAUSURA.png`, `FINAL_FUTVE.png`) are for
+the Final del Apertura / Final del Clausura / Final del FUTVE, which do not exist yet. Their
+competitions will take ids from the world's **free ids** (the Build's; today 10342 is the next free
+one), NOT 136-138: those are the game's competitions (136 a UEFA competition, 137 Scotland's
+league, 138 Scotland's cup), which is why a first version put these pictures on them. When the
+finals are built, add them to PLAN with their real ids.
+
+  --make      stage the 12 emblems under out/futve/logos/world (what futve_test.py installs; the
               sandbox backs up the game's emblems and puts them back at the end).
-  --check     verify the staged 30 files and their sizes.
+  --check     verify the staged files and their sizes.
   --install   write the staged set into the livecpk world (SiderAddons\livecpk\<world>) and back up
               what it replaces under out/futve/logos/backup-<date>/; the game must be closed. This is
               for keeping the logos after a Build; the sandbox installs the staged copies itself.
@@ -49,9 +53,13 @@ SUFFIXES = tuple(s for s, _px in lbassets.mkemblems.VARIANTS)
 PLAN = (
     (134, "PLAYOFF_APERTURA.png", "Liga FUTVE Apertura Playoffs"),
     (135, "PLAYOFF_CLAUSURA.png", "Liga FUTVE Clausura Playoffs"),
-    (136, "FINAL_APERTURA.png", "Final del Apertura"),
-    (137, "FINAL_CLAUSURA.png", "Final del Clausura"),
-    (138, "FINAL_FUTVE.png", "Gran Final del FUTVE"),
+)
+# The finals' pictures wait for their competition ids (the world's free ids, the Build's); the names
+# are here so nobody maps them to 136-138 again.
+FINALS = (
+    ("FINAL_APERTURA.png", "Final del Apertura"),
+    ("FINAL_CLAUSURA.png", "Final del Clausura"),
+    ("FINAL_FUTVE.png", "Gran Final del FUTVE"),
 )
 
 
