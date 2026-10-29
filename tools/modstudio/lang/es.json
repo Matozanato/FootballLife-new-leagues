@@ -1564,7 +1564,7 @@
   "Built here": "Construido aquí",
   "Check": "Comprobación",
   "Close the game first: it has the world's files open.": "Cierra primero el juego: tiene abiertos los archivos del mundo.",
-  "Competitions (leagues and cups) of the world in the game; the game has room for %d. Leagues > More > Competition IDs lists them.": "Competiciones (ligas y copas) del mundo que está en el juego; el juego tiene sitio para %d. Ligas > Más > IDs de competiciones las lista.",
+  "Competitions (leagues and cups) of the world in the game, and how many it can have: a new league or cup takes a free id from 130 to %d, the lower ones are the game's. Leagues > More > Competition IDs lists them.": "Competiciones (ligas y copas) del mundo que está en el juego, y cuántas puede tener: una liga o copa nueva toma un id libre de 130 a %d, los más bajos son del juego. Ligas > Más > IDs de competiciones las lista.",
   "Competitions after adding: %s": "Competiciones después de añadir: %s",
   "Countries the world in the game adds to the game's own; there is room for %d.": "Países que el mundo del juego añade a los del propio juego; hay sitio para %d.",
   "Cups": "Copas",
