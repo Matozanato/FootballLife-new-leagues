@@ -140,12 +140,15 @@ copy, `--from` verifies and uses it.
 
 ## The competitions' logos
 
-The Apertura and Clausura play-offs take these pictures:
+The Apertura and Clausura play-offs and the three finals take these pictures:
 
 | competition | picture |
 |---|---|
 | 134 Liga FUTVE Apertura Playoffs | `PLAYOFF_APERTURA.png` |
 | 135 Liga FUTVE Clausura Playoffs | `PLAYOFF_CLAUSURA.png` |
+| 142 Final del Apertura | `FINAL_APERTURA.png` |
+| 143 Final del Clausura | `FINAL_CLAUSURA.png` |
+| 144 Gran Final del FUTVE | `FINAL_FUTVE.png` |
 
 ```
 python tools/futve_logo.py --make
@@ -158,17 +161,16 @@ python tools/futve_logo.py --restore out/futve/logos/backup-<date> --game "G:\Ga
 made the way a Build's league logo is (`lbassets.league_logo`: the picture fitted into a transparent
 square, never stretched, in colour in every variant), and a `files.json` with the plan's competitions
 and files. The pictures are in `G:\Downloads` (or `--source`/`FL26_LOGOS`). The in-game sandbox
-installs exactly the list in `files.json` (today the two play-offs, 12 files) and restores the game's
-emblems at the end, so it never puts a logo on a competition that is not in the plan. `--install`
-writes the staged set into the live world and backs up what it replaces under
+installs exactly the list in `files.json` (the two play-offs and the three finals, 30 files) and
+restores the game's emblems at the end, so it never puts a logo on a competition that is not in the
+plan. `--install` writes the staged set into the live world and backs up what it replaces under
 `out/futve/logos/backup-<date>/` (the game closed) for after a Build, as for the world file;
 `--restore` puts a backup back.
 
-The three finals' pictures (`FINAL_APERTURA.png`, `FINAL_CLAUSURA.png`, `FINAL_FUTVE.png`) are for
-the Final del Apertura, Final del Clausura and Final del FUTVE, which do not exist yet. **Their
-competition ids are not 136-138**: 136 is a UEFA competition and 137/138 are Scotland's league and
-cup (the world's own new competitions are 130-135 and the free ids start after them), so the finals
-will take their ids from the world's free ids when they are built, and the logo tool gets them then.
+The finals' competitions take ids **142/143/144**, the Mod Studio's next three free byte competition
+ids (`leaguebuilder.free_comp_ids`: the pool starts at 130 and skips the world's used ones -- 130-135
+the Liga FUTVE, 137-141 Scotland/KSA -- and the UEFA Conference League's reserved 136). 136 is why a
+first version put a logo on a UEFA competition; 10342 is a team id, not a competition id.
 
 ## The sandbox of the in-game tests
 
@@ -187,7 +189,7 @@ outside the agent's sandbox). It:
    sha256: the files it installs (`fl26swiss.dll`, `fl26swiss.lua`, `fl26world.txt` in both
    places, the three `Competition*.bin`, the fixture's `Player.bin`, the game's own
    `cinematics.lua`/`cinematicsB.lua`, and the competition logos the plan stages -- the two
-   play-offs now, the finals when their ids are added), the game's `*.log`, `*.cache`, `sider.ini`
+   play-offs and the three finals, 30 files), the game's `*.log`, `*.cache`, `sider.ini`
    and `ReShade.ini`/`ReShade.log`, and the **whole save folder**
    (`...\Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\2026`, detected under `Documents` and
    `OneDrive\Documents`, or `--save`);
@@ -251,10 +253,10 @@ the Gran Final, the continental places and the second season are later phases.
 - **The finals as competitions of their own.** The user's design for the next block: the Final del
   Apertura and the Final del Clausura as separate two-club cups (the two group winners), and the
   Final del FUTVE between the two champions -- no match and the title directly when it is the same
-  club, or against a runner-up if a match must be played. Their competitions will take the world's
-  free competition ids (the Build's; 136-138 are the game's: a UEFA competition and Scotland's
-  league and cup); when they are built, add those ids to `futve_logo.py`'s PLAN and the sandbox
-  installs their `FINAL_*` logos automatically. The cinematics above already reserve their
+  club, or against a runner-up if a match must be played. Their competitions take the Mod Studio's
+  next free byte competition ids **142/143/144** (130-135 and 137-141 are used, 136 is the UEFA
+  Conference League's reserved id); when they are built, they are in `futve_logo.py`'s PLAN and the
+  sandbox installs their `FINAL_*` logos automatically. The cinematics above already reserve their
   regulations (261/262 the Europa League final's entrance, 263 the Champions League final's); the
   world and DLL side (new competitions, entries, fills, dates) is the next implementation. A
   separate competition of ours is still outside the game's trophy/title table, so the
