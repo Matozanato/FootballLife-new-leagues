@@ -6,10 +6,11 @@ The sandbox of the in-game tests of this branch. One command per test:
 
   1. It checks that the game is closed.
   2. It backs up everything the test can modify: the files it installs (fl26swiss.dll, fl26swiss.lua,
-     fl26world.txt in both places, the three Competition*.bin and the Táchira-99 Player.bin), the
-     game's own logs and caches, ReShade.ini/ReShade.log and sider.ini, and the whole save folder
-     (the 2026 folder under Documents\KONAMI, where a career and fl26swiss-state.bin are written).
-     It writes manifest.json with every size, mtime and sha256.
+     fl26world.txt in both places, the three Competition*.bin and the Táchira-99 Player.bin, and the
+     game's own cinematics.lua/cinematicsB.lua that give the final its Copa América entrance and
+     Final atmosphere), the game's own logs and caches, ReShade.ini/ReShade.log and sider.ini, and
+     the whole save folder (the 2026 folder under Documents\KONAMI, where a career and
+     fl26swiss-state.bin are written). It writes manifest.json with every size, mtime and sha256.
   3. It installs the DLL, the loader, the phase's world and the fixture, checks every hash and runs
      futve_fixture.py --check on the installed Player.bin (the 25 stats of the 30 Táchira players
      must be 99).
@@ -62,7 +63,8 @@ CHECKLISTS = {
   3. Simula hasta el día 2 (fin de la fase regular del Apertura); juega o simula las
      6 jornadas de grupo de los días 3, 5, 7, 9, 11 y 13.
   4. El día 15 debe jugarse la FINAL: los dos ganadores de grupo, a un partido, con el
-     mejor clasificado de la fase regular como local.
+     mejor clasificado de la fase regular como local. La final debe entrar con la
+     presentación de Copa América y el ambiente de Final.
   5. Comprueba el campeón en la copa y que el Clausura del día 16 sigue en pie.
   6. Cierra el juego. Escribe FIN y Enter aquí.
 """,
@@ -192,6 +194,19 @@ def build_installs(phase, game):
         (world + "CompetitionRegulation.bin", os.path.join(bins, "CompetitionRegulation.bin")),
         (world + "CompetitionEntry.bin", os.path.join(bins, "CompetitionEntry.bin")),
         (world + "Player.bin", fix),
+    ]
+    # The game's own cinematics modules: the final competitions take the Copa America final's
+    # entrance (cinematics.lua) and the Final stadium scene (cinematicsB.lua). They are the game's
+    # files, so the sandbox backs them up and puts them back at the end like everything else.
+    cin = os.path.join(ART, "cinematics")
+    if not all(os.path.isfile(os.path.join(cin, n)) for n in ("cinematics.lua", "cinematicsB.lua")):
+        r = subprocess.run([sys.executable, os.path.join(HERE, "futve_cinematics.py"), "--make",
+                            "--game", game], capture_output=True, text=True, errors="replace")
+        if r.returncode != 0:
+            raise SystemExit("no se pudieron preparar las cinemáticas:\n%s\n%s" % (r.stdout, r.stderr))
+    out += [
+        ("SiderAddons/modules/common/cinematics.lua", os.path.join(cin, "cinematics.lua")),
+        ("SiderAddons/modules/common/cinematicsB.lua", os.path.join(cin, "cinematicsB.lua")),
     ]
     for rel, src in out:
         if not os.path.isfile(src):
