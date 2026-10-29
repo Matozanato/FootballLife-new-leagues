@@ -74,6 +74,10 @@ CHECKLISTS = {
     3: """
   PRUEBA DE TEMPORADA COMPLETA (finales como competiciones aparte). Se corre dos veces:
   una con el mismo campeón y otra con distinto campeón.
+  IMPORTANTE: al principio NO uses ML Fast Forward. El join registra las tablas de la
+  temporada en su primer día de registro; si el fast-forward se lo salta, el 4.º partido
+  del Apertura revienta (0x141333485). Simula o avanza día a día hasta que
+  SiderAddons\\fl26join.log muestre `tables: with [...]`; después ya puedes avanzar normal.
   1. Abre el juego y crea una carrera nueva con el Deportivo Táchira (Liga FUTVE).
   2. Simula hasta el día 2; juega o simula las 6 jornadas de grupo del Apertura
      (días 3, 5, 7, 9, 11, 13).
