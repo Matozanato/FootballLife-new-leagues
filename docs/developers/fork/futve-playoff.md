@@ -229,10 +229,18 @@ The three finals' entry rows are placeholders: the DLL rewrites them. The Final 
 carries `src=261,262`: the DLL reads the two finals' champions, plays the match when they differ and
 leaves it unplayed -- logging the title -- when they are the same; its `fill=0` makes the DLL try it
 every tick until both champions are known. The phase 3 sandbox installs that world, the 30 logos of
-134/135/142/143/144 and the two cinematics, and the full-season checklist runs the Apertura final
-(day 15), the Clausura groups (145-160) and final (163), and the Final del FUTVE (166) twice: the
-same champion (no match, the title direct) and a different champion (the match played). At the
-season's close the palmarés should carry the finals' titles.
+134/135/142/143/144, the two cinematics and the join module, and the full-season checklist runs the
+Apertura final (day 15), the Clausura groups (145-160) and final (163), and the Final del FUTVE
+(166) twice: the same champion (no match, the title direct) and a different champion (the match
+played). At the season's close the palmarés should carry the finals' titles.
+
+The join module is `futve_join.py`: the game's list of calendar-year cups (the world's `league`
+lines' `cup=`/`scup=` above 175) does not include the finals 142/143/144 -- they are below 175 and
+not a league's cup -- so the season builder skipped them, their season tables stayed empty and
+FL_2026.exe crashed at `0x141333485` (a null in the season/standings walk) on the fourth Apertura
+matchday (29.10, 07:19 and 07:24). The copy adds the three ids to `BUILDER_EXTRA`/`BUILDER_CONF`
+(CONMEBOL) before `idbuf`, so the join hands them to the builder at creation like the calendar-year
+cups; the sandbox backs up the game's module and restores it at the end.
 
 **Phase 1 (groups).** The Apertura cup has two groups and a four-club knockout; the groups are
 dated 3, 5, 7, 9, 11, 13 and the knockout after them. A career with Táchira simulated to day 2, then
