@@ -7553,7 +7553,10 @@ static int libq_item_want(void)
   int d = today();
   if (d < 0) return libq_any_live() ? 1 : -1;
   uint16_t order[MAX_LPRE + 1];
-  return libq_page_phases(order) > 0;
+  if (libq_page_phases(order) > 0) return 1;
+  /* B275: from July never less than 0.2.5 gave -- phase 3 alone while it holds clubs (a world
+     whose phases 1 and 2 were closed in July, a career loaded after their matches were gone) */
+  return d >= 182 ? (libq_any_live() ? 1 : -1) : 0;
 }
 static uint64_t phkind_core(uint32_t* comp, uint64_t kind, uintptr_t ra);
 uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
@@ -12456,10 +12459,11 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   ccup_keep_winners(1);
   aug_scup_keep();
   state_store();
-  int bra = 0;
+  int bra = 0, libq = 0;
   for (int j = 0; j < n; j++) {
     uint16_t id = in->b[j];
     if (id == 2) euro = 1;
+    if (id == CONM_LIBQ_REG) libq = 1;
     if (id == UECL_REG) has186 = 1;
     if (id == UECL_KO) has187 = 1;
     if (id == UECL_ROW) has1210 = 1;
@@ -12483,9 +12487,14 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
     for (int j = 0; j < n; j++) { if (in->b[j] == close_like) like = 1; if (in->b[j] == id) there = 1; }
     if (like && !there && n + ndcl < 512) dcl[ndcl++] = id;
   }
+  /* B275 (antonimus 29.10.): the Libertadores' qualifying phases 1 and 2 (pre-rounds aliased
+     to it) close with its phase 3, the game's reg 8 -- in January, not with the July teardown,
+     which took their matches and left the Competition Info page phase 3 alone from July */
+  int nal = 0;
+  for (int i = 0; i < g_nlpre; i++) if (g_lpre[i].alias && !lpre_cal(&g_lpre[i])) nal++;
   if (!euro) {
-    int cal = bra && ncal;
-    if (!cal && !ndcl) return in;
+    int cal = bra && ncal, qal = nal && (libq || cal);
+    if (!cal && !ndcl && !qal) return in;
     memcpy(g_td_list, in->b, (size_t)n * sizeof(uint16_t));
     int k = n, added = 0;
     for (int c = 0; cal && c < g_nccup; c++) {
@@ -12509,6 +12518,18 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
     }
     if (cal) logf("fl26swiss: calendar-year teardown on day %d -- %d regulation(s) of %d South American cup(s) added",
                   today(), added, ncal);
+    int qadded = 0;
+    for (int i = 0; qal && i < g_nlpre; i++) {
+      if (!g_lpre[i].alias || lpre_cal(&g_lpre[i])) continue;
+      for (int g = -1; g < lpre_rows(&g_lpre[i]); g++) {
+        uint16_t id = g < 0 ? g_lpre[i].reg : lpre_tie(&g_lpre[i], g);
+        int there = 0;
+        for (int j = 0; j < k; j++) if (g_td_list[j] == id) there = 1;
+        if (!there && get_rec(id) && k < 512) { g_td_list[k++] = id; qadded++; }
+      }
+    }
+    if (qal) logf("fl26swiss: teardown on day %d -- Libertadores qualifying phases 1/2: %d regulation(s) added (phase 3 %s on the list)",
+                  today(), qadded, libq ? "is" : "is NOT");
     for (int i = 0; i < ndcl && k < 512; i++) g_td_list[k++] = dcl[i];
     if (ndcl) logf("fl26swiss: teardown on day %d -- %d cup(s) of ours closed with the cup they are dated as", today(), ndcl);
     g_td_vec.b = g_td_list; g_td_vec.e = g_td_list + k; g_td_vec.c = g_td_list + 512;
@@ -12581,9 +12602,10 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
     }
   if (npo) logf("fl26swiss: July teardown -- %d play-off and qualifying regulation(s) added", npo);
   /* the league cups' pre-rounds: master and ties */
-  int npre = 0;
+  int npre = 0, nkept = 0;
   for (int i = 0; i < g_nlpre; i++) {
     if (lpre_cal(&g_lpre[i])) continue;
+    if (g_lpre[i].alias && !libq) { nkept++; continue; }    /* B275: closed with phase 3 in January */
     for (int g = -1; g < lpre_rows(&g_lpre[i]); g++) {
       uint16_t id = g < 0 ? g_lpre[i].reg : lpre_tie(&g_lpre[i], g);
       int there = 0;
@@ -12592,6 +12614,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
     }
   }
   if (npre) logf("fl26swiss: July teardown -- %d league cup pre-round regulation(s) added", npre);
+  if (nkept) logf("fl26swiss: July teardown -- %d Libertadores qualifying phase(s) kept open until January, with phase 3", nkept);
   int nd = 0;
   for (int i = 0; i < ndcl && k < 512; i++) { g_td_list[k++] = dcl[i]; nd++; }
   if (nd) logf("fl26swiss: July teardown -- %d national/super cup(s) of ours added", nd);
