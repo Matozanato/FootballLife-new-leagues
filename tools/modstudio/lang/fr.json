@@ -1647,6 +1647,7 @@
   "Worlds deleted or renamed": "Mondes supprimés ou renommés",
   "You can turn this off in Settings.": "Vous pouvez désactiver cela dans Réglages.",
   "You have changes in this list that are not written yet: press Apply or Discard first.": "Cette liste a des modifications pas encore écrites : cliquez d'abord sur Appliquer ou Abandonner.",
+  "Content folders has changes that are not written yet (the ticks of worlds and mods): press Apply or Discard on that page first.": "Dossiers de contenu a des modifications pas encore écrites (les cases des mondes et des mods) : cliquez d'abord sur Appliquer ou Abandonner sur cette page.",
   "Your Master League save folder as it was before the first world switch:": "Votre dossier de sauvegarde Master League tel qu'il était avant le premier changement de monde :",
   "Your leagues stay in Mod Studio (your saved world file is not deleted), so you can build it again.": "Vos ligues restent dans Mod Studio (votre fichier de monde enregistré n'est pas supprimé), vous pouvez donc le reconstruire.",
   "Your world has this package already: Add puts this version in its place.": "Votre monde a déjà ce paquet : Ajouter met cette version à sa place.",
