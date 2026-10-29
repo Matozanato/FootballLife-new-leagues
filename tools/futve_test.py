@@ -73,11 +73,7 @@ CHECKLISTS = {
 """,
     3: """
   PRUEBA DE TEMPORADA COMPLETA (finales como competiciones aparte). Se corre dos veces:
-  una con el mismo campeón y otra con distinto campeón.
-  IMPORTANTE: al principio NO uses ML Fast Forward. El join registra las tablas de la
-  temporada en su primer día de registro; si el fast-forward se lo salta, el 4.º partido
-  del Apertura revienta (0x141333485). Simula o avanza día a día hasta que
-  SiderAddons\\fl26join.log muestre `tables: with [...]`; después ya puedes avanzar normal.
+  una con el mismo campeón y otra con distinto campeón (perdiendo una final a propósito).
   1. Abre el juego y crea una carrera nueva con el Deportivo Táchira (Liga FUTVE).
   2. Simula hasta el día 2; juega o simula las 6 jornadas de grupo del Apertura
      (días 3, 5, 7, 9, 11, 13).
@@ -85,11 +81,11 @@ CHECKLISTS = {
      de UEFA Europa League). Gana con el Táchira.
   4. Simula el Clausura hasta el día 144; juega o simula las 6 jornadas de grupo
      (días 145, 148, 151, 154, 157, 160).
-  5. Día 163: Final del Clausura (competición 143, logo FINAL_CLAUSURA, entrada UEL).
+  5. Día 163: Final del Clausura (competición 129, logo FINAL_CLAUSURA, entrada UEL).
      - Caso A (mismo campeón): gana el Táchira.
      - Caso B (distinto campeón): pierde a propósito (autogoles o alineación floja).
   6. Día 166:
-     - Caso A: la Final del FUTVE (144) NO debe jugarse; el DLL debe haber dado el
+     - Caso A: la Final del FUTVE (175) NO debe jugarse; el DLL debe haber dado el
        título directo al Táchira. Comprueba el log/estado.
      - Caso B: debe jugarse la Final del FUTVE (144, logo FINAL_FUTVE, entrada de final
        de Champions) entre los dos campeones; juega o simula y mira el campeón.
@@ -240,17 +236,6 @@ def build_installs(phase, game):
         ("SiderAddons/modules/common/cinematics.lua", os.path.join(cin, "cinematics.lua")),
         ("SiderAddons/modules/common/cinematicsB.lua", os.path.join(cin, "cinematicsB.lua")),
     ]
-    # The join module: the finals 142/143/144 into the season builder. Without them the builder
-    # skips the new cups, their season tables stay empty and the game nulls at 0x141333485 on the
-    # fourth Apertura matchday. Only the finals world (phase 3) needs it.
-    if phase == 3:
-        join = os.path.join(ART, "join")
-        if not os.path.isfile(os.path.join(join, "fl26joindll.lua")):
-            r = subprocess.run([sys.executable, os.path.join(HERE, "futve_join.py"), "--make",
-                                "--game", game], capture_output=True, text=True, errors="replace")
-            if r.returncode != 0:
-                raise SystemExit("no se pudo preparar el módulo del join:\n%s\n%s" % (r.stdout, r.stderr))
-        out += [("SiderAddons/modules/fl26joindll.lua", os.path.join(join, "fl26joindll.lua"))]
     # The logos of the competitions in futve_logo.py's plan: the two play-offs (134/135) and the
     # three finals (142/143/144). The sandbox installs exactly what the plan lists and restores the
     # game's emblems at the end.

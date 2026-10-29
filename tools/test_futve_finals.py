@@ -2,10 +2,10 @@ r"""python tools/test_futve_finals.py [--game <folder>]
 
 The focused test of tools/futve_finals.py: builds the finals world twice into temp folders and checks
 the three competitions (the Apertura/Clausura play-offs 134/135 and the final competitions
-142/143/144), the regulations (group masters 259/260, group rows 1283/1284/2307/2308, knockout
+142/129/175), the regulations (group masters 259/260, group rows 1283/1284/2307/2308, knockout
 regulations 261/262/263), the names in the twenty slots, the entries and the three world lines.
 
-The final competition ids 142/143/144 are the world's next free ones (leaguebuilder.free_comp_ids:
+The final competition ids 142/129/175 are the world's next free ones (leaguebuilder.free_comp_ids:
 130-135 the Liga FUTVE, 136 the UEFA Conference League's reserved id, 137-141 Scotland's and Saudi
 Arabia's); the knockout regulations stay the 16-bit 261/262/263. The in-game menus confirm the
 finals in the next test.
@@ -99,9 +99,9 @@ def main():
             ok("competition %d keeps 134's region and confederation" % cid,
                c[M.REGION_OFF] == base134[M.REGION_OFF]
                and (c[M.FLAG_OFF] & 7) == (base134[M.FLAG_OFF] & 7))
-        ok("final cids 142/143/144 are the world's next free competition ids "
-           "(136 is the UEFA Conference League's)", F.FI_CID == 142 and F.FC_CID == 143
-           and F.FF_CID == 144)
+        ok("final cids 142/129/175 are the world's next free competition ids "
+           "(136 is the UEFA Conference League's; 143/144 have no case)", F.FI_CID == 142 and F.FC_CID == 129
+           and F.FF_CID == 175)
 
         # the regulations: the group masters, the group rows and the knockout finals
         for reg, cid, typ, teams in ((F.AP_REG, F.AP_CID, 2, 8), (F.CL_REG, F.CL_CID, 2, 8),
@@ -149,7 +149,7 @@ def main():
            == open(os.path.join(db, "fl26world.txt"), "rb").read())
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-    print("ok %d - the finals world: 134/135 play-offs + 142/143/144 finals, "
+    print("ok %d - the finals world: 134/135 play-offs + 142/129/175 finals, "
           "261/262/263, three lines, two identical builds" % N)
     return 0
 

@@ -6,7 +6,8 @@ groups of four, each sending its two group winners to a final that is a competit
 (142 Final del Apertura, 143 Final del Clausura), and the Final del FUTVE (144) between the two
 final winners (regulation 263, day 166).
 
-The competition ids are the world's next free ones (leaguebuilder.free_comp_ids): the Liga FUTVE
+The final competition ids are ones the exe's builder 1 include list gives a case (142, 129 and
+175; 129 replaces the base's own competition of that id): the Liga FUTVE
 takes 130-135, 136 is the UEFA Conference League's reserved id, 137-141 are Scotland's and Saudi
 Arabia's, so the finals take 142, 143 and 144 -- with the 134 row's region (29) and confederation
 (4). The knockout regulations stay the 16-bit 261/262/263.
@@ -62,7 +63,7 @@ CL_FINAL = 163
 
 FF_NAME = "Final del FUTVE"
 FF_CODE = "FL_011_FFU"
-FF_CID, FF_REG = 144, 263
+FF_CID, FF_REG = 175, 263
 FF_ENTRIES = "191:1,192:1"
 FF_FINAL = 166
 FF_FILL = 0          # 0 = the DLL tries it every tick: its src= champions appear on days 15 and 163
@@ -72,7 +73,7 @@ FI_CODE = "FL_011_AFI"
 FI_CID = 142
 FC_NAME = "Final del Clausura"
 FC_CODE = "FL_011_CFI"
-FC_CID = 143
+FC_CID = 129
 
 CONF = 4
 REGION = 29
@@ -138,9 +139,9 @@ def plan(base, world, dry, tmp_root):
         raise SystemExit("the world's play-offs are competitions %d/%d, not %d/%d"
                          % (ap_cid, cl_cid, AP_CID, CL_CID))
     # the two cups' rows go; the rest of the world stays
-    C2 = [c for c in C if c[M.CID_OFF] not in (AP_CID, CL_CID)]
-    R2 = [r for r in R if r[M.R_CID] not in (AP_CID, CL_CID)]
-    E2 = [e for e in E if e[M.E_CID] not in (AP_CID, CL_CID)]
+    C2 = [c for c in C if c[M.CID_OFF] not in (AP_CID, CL_CID, FC_CID)]
+    R2 = [r for r in R if r[M.R_CID] not in (AP_CID, CL_CID, FC_CID)]
+    E2 = [e for e in E if e[M.E_CID] not in (AP_CID, CL_CID, FC_CID)]
     used_cid = {c[M.CID_OFF] for c in C2}
     used_reg = {rid(r) for r in R2}
     for cid in (FI_CID, FC_CID, FF_CID):
