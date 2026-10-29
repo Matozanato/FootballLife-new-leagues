@@ -729,8 +729,8 @@ def main():
         return self_test(a)
     if a.restore:
         return run_restore(a)
-    if a.phase not in (1, 2):
-        raise SystemExit("pass --phase 1|2 (or --restore <dir> / --self-test)")
+    if a.phase not in (1, 2, 3):
+        raise SystemExit("pass --phase 1|2|3 (or --restore <dir> / --self-test)")
     return run_test(a)
 
 
