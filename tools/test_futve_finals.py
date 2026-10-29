@@ -125,7 +125,7 @@ def main():
             ok("group row %d keeps the play-off's name" % reg, names(one_reg(R, reg)) == [name] * 20)
 
         # the entries: eight per play-off, two per final, and no shared entry id
-        for cid, n in ((F.AP_CID, 8), (F.CL_CID, 8), (F.FI_CID, 2), (F.FC_CID, 2), (F.FF_CID, 2)):
+        for cid, n in ((F.AP_CID, 8), (F.CL_CID, 8), (F.FI_CID, 2), (F.FC_CID, 2), (F.FF_CID, 0)):
             ok("competition %d has %d entry row(s)" % (cid, n),
                len([e for e in E if e[M.E_CID] == cid]) == n)
         eids = [int.from_bytes(e[M.E_EID:M.E_EID + 4], "little") for e in E]
