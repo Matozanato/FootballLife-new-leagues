@@ -156,11 +156,13 @@ python tools/futve_logo.py --restore out/futve/logos/backup-<date> --game "G:\Ga
 
 `--make` writes the six variants (256 and 512 px) of each competition under `out/futve/logos/world`,
 made the way a Build's league logo is (`lbassets.league_logo`: the picture fitted into a transparent
-square, never stretched, in colour in every variant). The pictures are in `G:\Downloads` (or
-`--source`/`FL26_LOGOS`). The in-game sandbox installs those 12 files with the rest and restores the
-game's emblems at the end. `--install` writes the staged set into the live world and backs up what it
-replaces under `out/futve/logos/backup-<date>/` (the game closed) for after a Build, as for the world
-file; `--restore` puts a backup back.
+square, never stretched, in colour in every variant), and a `files.json` with the plan's competitions
+and files. The pictures are in `G:\Downloads` (or `--source`/`FL26_LOGOS`). The in-game sandbox
+installs exactly the list in `files.json` (today the two play-offs, 12 files) and restores the game's
+emblems at the end, so it never puts a logo on a competition that is not in the plan. `--install`
+writes the staged set into the live world and backs up what it replaces under
+`out/futve/logos/backup-<date>/` (the game closed) for after a Build, as for the world file;
+`--restore` puts a backup back.
 
 The three finals' pictures (`FINAL_APERTURA.png`, `FINAL_CLAUSURA.png`, `FINAL_FUTVE.png`) are for
 the Final del Apertura, Final del Clausura and Final del FUTVE, which do not exist yet. **Their
@@ -184,10 +186,11 @@ outside the agent's sandbox). It:
 2. backs up, under `out/futve/tests/<date>/backup/` with a `manifest.json` of sizes, mtimes and
    sha256: the files it installs (`fl26swiss.dll`, `fl26swiss.lua`, `fl26world.txt` in both
    places, the three `Competition*.bin`, the fixture's `Player.bin`, the game's own
-   `cinematics.lua`/`cinematicsB.lua`, and the 12 competition emblems of the two play-offs), the
-   game's `*.log`, `*.cache`, `sider.ini` and `ReShade.ini`/`ReShade.log`, and the **whole save
-   folder** (`...\Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\2026`, detected under
-   `Documents` and `OneDrive\Documents`, or `--save`);
+   `cinematics.lua`/`cinematicsB.lua`, and the competition logos the plan stages -- the two
+   play-offs now, the finals when their ids are added), the game's `*.log`, `*.cache`, `sider.ini`
+   and `ReShade.ini`/`ReShade.log`, and the **whole save folder**
+   (`...\Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\2026`, detected under `Documents` and
+   `OneDrive\Documents`, or `--save`);
 3. installs the DLL, the loader, the phase's world and the fixture, checks every hash and runs the
    fixture check on the installed `Player.bin`;
 4. prints the checklist and waits. `FIN` + Enter: requires the game closed, copies the evidence
@@ -250,11 +253,12 @@ the Gran Final, the continental places and the second season are later phases.
   Final del FUTVE between the two champions -- no match and the title directly when it is the same
   club, or against a runner-up if a match must be played. Their competitions will take the world's
   free competition ids (the Build's; 136-138 are the game's: a UEFA competition and Scotland's
-  league and cup), while the cinematics above already reserve their regulations (261/262 the Europa
-  League final's entrance, 263 the Champions League final's); the world and DLL side (new
-  competitions, entries, fills, dates) is the next implementation. A separate competition of ours is
-  still outside the game's trophy/title table, so the entrance/atmosphere is the visible part; the
-  palmarés/records item below stands.
+  league and cup); when they are built, add those ids to `futve_logo.py`'s PLAN and the sandbox
+  installs their `FINAL_*` logos automatically. The cinematics above already reserve their
+  regulations (261/262 the Europa League final's entrance, 263 the Champions League final's); the
+  world and DLL side (new competitions, entries, fills, dates) is the next implementation. A
+  separate competition of ours is still outside the game's trophy/title table, so the
+  entrance/atmosphere is the visible part; the palmarés/records item below stands.
 - **The club palmarés.** The 28 October final was played and the winner was read by the DLL
   (`cup 261 -- its final is over on day 15: champion 45ed8006`), but the club's Palmarés screen
   stayed empty. That screen is the game's own honours data, filled by its title bookkeeping, which
