@@ -203,11 +203,13 @@ and requires the tree to come back byte for byte.
 
 The two cinematics files are the game's own `SiderAddons\modules\common\cinematics.lua` (the
 entrance folder per tournament id) and `cinematicsB.lua` (the Final stadium scenes), with one
-mapping added by `tools/futve_cinematics.py` (the sandbox runs it when the copies are missing, and
-`--check` verifies them): the final competitions' regulations **261** (the Apertura final), **262**
-(the Clausura final) and **263** (the Final del FUTVE), when the match is the final
-(`ctx.match_info == 53`), take the Copa América final's entrance (`entry = 42`, `CopaAmerica F`) and
-the generic `Final\st001` scene. The game's files are put back at the end, like everything else.
+mapping added by `tools/futve_cinematics.py` (the sandbox runs it before a test, and `--check`
+verifies it): the final competitions' regulations **261** (the Apertura final) and **262** (the
+Clausura final), when the match is the final (`ctx.match_info == 53`), take the UEFA Europa League
+final's entrance (`entry = 16`, `UEFA Europa League F`), and **263** (the Final del FUTVE) takes the
+UEFA Champions League final's (`entry = 16`, `UEFA Champions League F`); all three take the generic
+`Final\st001` scene from cinematicsB. The game's files are put back at the end, like everything
+else.
 
 ## The two tests
 
@@ -221,11 +223,11 @@ show the two group tables with A = 1, 4, 5, 8 and B = 2, 3, 6, 7, and `sider.log
 `days=15`): after the last group day the two winners are put in the final, the better regular
 position first, and the match is played on day 15. The log names them (`final: X (regular position
 p) v Y (position q)`) and the champion. The calendar and the match screens must call it "Final"
-(the first test of 28 October showed the competition's name instead), the entrance must be the Copa
-América final's and the pre-match scene the Final one (`cinematicsB`); the Clausura follows and
-must be untouched. Check the club's Palmarés after the final and, if you can, after the season's
-close: the champion is the competition's winner (the DLL reads it), but the club's honours screen
-is the game's own bookkeeping, see below.
+(the first test of 28 October showed the competition's name instead), the entrance must be the UEFA
+Europa League final's (the Apertura final is regulation 261) and the pre-match scene the Final one
+(`cinematicsB`); the Clausura follows and must be untouched. Check the club's Palmarés after the
+final and, if you can, after the season's close: the champion is the competition's winner (the DLL
+reads it), but the club's honours screen is the game's own bookkeeping, see below.
 
 Both tests are about the Apertura only: the Clausura cup keeps its straight knockout of eight, and
 the Gran Final, the continental places and the second season are later phases.
@@ -246,9 +248,10 @@ the Gran Final, the continental places and the second season are later phases.
   Apertura and the Final del Clausura as separate two-club cups (the two group winners), and the
   Final del FUTVE between the two champions -- no match and the title directly when it is the same
   club, or against a runner-up if a match must be played. The cinematics above already reserve their
-  regulations 261/262/263; the world and DLL side (new competitions, entries, fills, dates) is the
-  next implementation. A separate competition of ours is still outside the game's trophy/title
-  table, so the entrance/atmosphere is the visible part; the palmarés/records item below stands.
+  regulations (261/262 the Europa League final's entrance, 263 the Champions League final's); the
+  world and DLL side (new competitions, entries, fills, dates) is the next implementation. A
+  separate competition of ours is still outside the game's trophy/title table, so the
+  entrance/atmosphere is the visible part; the palmarés/records item below stands.
 - **The club palmarés.** The 28 October final was played and the winner was read by the DLL
   (`cup 261 -- its final is over on day 15: champion 45ed8006`), but the club's Palmarés screen
   stayed empty. That screen is the game's own honours data, filled by its title bookkeeping, which
