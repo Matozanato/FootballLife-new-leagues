@@ -6,11 +6,12 @@ The sandbox of the in-game tests of this branch. One command per test:
 
   1. It checks that the game is closed.
   2. It backs up everything the test can modify: the files it installs (fl26swiss.dll, fl26swiss.lua,
-     fl26world.txt in both places, the three Competition*.bin and the Táchira-99 Player.bin, and the
-     game's own cinematics.lua/cinematicsB.lua that give the final its Copa América entrance and
-     Final atmosphere), the game's own logs and caches, ReShade.ini/ReShade.log and sider.ini, and
-     the whole save folder (the 2026 folder under Documents\KONAMI, where a career and
-     fl26swiss-state.bin are written). It writes manifest.json with every size, mtime and sha256.
+     fl26world.txt in both places, the three Competition*.bin, the Táchira-99 Player.bin, the game's
+     own cinematics.lua/cinematicsB.lua that give the final its Copa América entrance and Final
+     atmosphere, and the 30 competition emblems of the play-offs and finals), the game's own logs and
+     caches, ReShade.ini/ReShade.log and sider.ini, and the whole save folder (the 2026 folder under
+     Documents\KONAMI, where a career and fl26swiss-state.bin are written). It writes manifest.json
+     with every size, mtime and sha256.
   3. It installs the DLL, the loader, the phase's world and the fixture, checks every hash and runs
      futve_fixture.py --check on the installed Player.bin (the 25 stats of the 30 Táchira players
      must be 99).
@@ -46,6 +47,8 @@ REPO = os.path.dirname(HERE)
 ART = os.path.join(REPO, "out", "futve")
 PHASE_WORLD = {1: "world-phase1", 2: "world-phase2"}
 GAME_PROCS = ("fl_2026.exe", "sider.exe", "fl 2026 start.exe")
+LOGO_CIDS = (134, 135, 136, 137, 138)
+LOGO_SUFFIXES = ("_b_l", "_b_ll", "_l", "_ll", "_w_l", "_w_ll")
 CHECKLISTS = {
     1: """
   1. Abre el juego y crea una carrera nueva con el Deportivo Táchira (Liga FUTVE).
@@ -208,6 +211,18 @@ def build_installs(phase, game):
         ("SiderAddons/modules/common/cinematics.lua", os.path.join(cin, "cinematics.lua")),
         ("SiderAddons/modules/common/cinematicsB.lua", os.path.join(cin, "cinematicsB.lua")),
     ]
+    # The competitions' logos: the Apertura/Clausura play-offs (134/135) and the three finals the
+    # next block adds (136/137/138). The sandbox installs the 30 emblems and restores the ones it
+    # replaced (the finals' files do not exist yet; they are removed at the end).
+    logo = os.path.join(ART, "logos", "world", "common", "render", "symbol", "emblemLc")
+    names = ["emb_%04d%s.png" % (cid, suf) for cid in LOGO_CIDS for suf in LOGO_SUFFIXES]
+    if not all(os.path.isfile(os.path.join(logo, n)) for n in names):
+        r = subprocess.run([sys.executable, os.path.join(HERE, "futve_logo.py"), "--make"],
+                           capture_output=True, text=True, errors="replace")
+        if r.returncode != 0:
+            raise SystemExit("no se pudieron preparar los logos:\n%s\n%s" % (r.stdout, r.stderr))
+    out += [("SiderAddons/livecpk/_FL26MyWorld/common/render/symbol/emblemLc/" + n,
+             os.path.join(logo, n)) for n in names]
     for rel, src in out:
         if not os.path.isfile(src):
             raise SystemExit("falta el artefacto de %s: %s" % (rel, src))
