@@ -6876,7 +6876,7 @@ char prog_handler(void* ctx, uint64_t id, void* started)
       /* The KO final of a cup is a final whether or not its group phase was marked `gnd`: the
          Apertura cup (134) never set gnd, so the 261's champion was never stored and the Final del
          FUTVE (263, src 261,262) found only the Clausura's. Note every KO final. */
-      if (ko) ccup_final_note(k);
+      if (ko || g_ccup[k].ko) ccup_final_note(k);
       return ok;
     }
   }

@@ -215,8 +215,8 @@ verifies it): the final competitions' regulations **261** (the Apertura final) a
 Clausura final), when the match is the final (`ctx.match_info == 53`), keep the UEFA Europa League
 final's entrance (`UEFA Europa League F`), and **263** (the Final del FUTVE) the UEFA Champions
 League final's (`UEFA Champions League F`); their trophy entry (`entry`, the `trophy_rewrite`) is
-**42**, the Copa America's, instead of 16 (the UEL/UCL one, which gave no cup lift; 1/10/16/46 give
-the Club World Cup, Libertadores, the UEL/UCL and the CAF trophy); all three take the generic
+**16**, the UEL/UCL's, whose trophy and celebration are in the user's content/cinematics folders
+(1/10/42/46 give the Club World Cup, Libertadores, the Copa America and the CAF trophy); all three take the generic
 `Final\st001` scene from cinematicsB. The game's files are put back at the end, like everything
 else.
 
