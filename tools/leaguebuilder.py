@@ -2506,6 +2506,7 @@ def plan(recipe, base, prev=None):
             "modern_libertadores_access": access_recipe.get("_modern_libertadores_access"),
             "suda_first": suda_first,
             "uefa_seed": uefa_seed(recipe, out, regrow, region_of_cid),
+            "assoc_rank": assoc_rank(out, base),
             "ccups": cups, "ccup_notes": notes, "home_cups": home, "game_supers": gsupers,
             "europe_first": europe_first(recipe, by_name),
             "game_seasons": august_countries(recipe),
@@ -3324,6 +3325,33 @@ def uefa_seed(recipe, out, regrow, region_of_cid):
         elif lg in rid:
             seed.append([rid[lg], pos, comp])
     return seed
+
+
+def assoc_rank(leagues, base):
+    """{regulation: rank in UEFA's association ranking (uefakey.DEFAULT_ORDER)} of the new leagues
+    with European places and of the access list's leagues of the game, for place_rank (B250).
+    Keys are strings, as the plan's JSON keeps them."""
+    import mkflags
+    import uefakey
+    cty = mkflags.countries(mkflags.table("Country", [base]))
+    rank = {r: uefakey.default_rank(c) for r, c in fl26world.ACCESS_COUNTRY.items()}
+    for p in leagues:
+        if p.get("europe") and p.get("rid"):
+            rank[p["rid"]] = uefakey.default_rank(mkflags.title((cty.get(p.get("country")) or ("", None))[0] or ""))
+    return {str(r): n for r, n in rank.items()}
+
+
+def place_rank(pl):
+    """the association ranks uefa_places hands the qualifying places out by, or None: a recipe
+    with a UEFA ranking of its own (uefa_seed) keeps its order. A world without one put its new
+    leagues' places first, and a world of many (the Europack: 31 in the Champions League's
+    qualifying) left the Greek champion and Portugal's second out of Europe (B250)"""
+    if pl.get("uefa_seed") or not pl.get("assoc_rank"):
+        return None
+    try:
+        return {int(r): int(n) for r, n in pl["assoc_rank"].items()}
+    except (AttributeError, TypeError, ValueError):
+        return None
 
 
 def all_places(pl):
@@ -4237,7 +4265,8 @@ def describe(pl):
     if any(s for _c, s in rounds):
         lines.append("  August qualifying: %s" % fl26world.rounds_text(rounds))
     for c, (n, room) in sorted(fl26world.uefa_places(all_places(pl),
-                                                     pl.get("game_replace") or [], bool(pl.get("uecl")))[1].items()):
+                                                     pl.get("game_replace") or [], bool(pl.get("uecl")),
+                                                     place_rank(pl))[1].items()):
         lines.append("  NOTE: %s has %d places listed for %d clubs; the last %d get none"
                      % (names[c], n, room, n - room))
     if pl.get("modern_libertadores_access") != "custom":
@@ -5161,7 +5190,7 @@ def build(pl, base, game, replace=False, log=print):
         log("  warning: cup %d -- more than %d national and league cups in the world, the game "
             "fills it itself (Competition Info -> Fixtures may not draw it)" % (c[0], fl26world.MAX_CHAIN_CUPS))
     uefa, over = fl26world.uefa_places(all_places(pl),
-                                       pl.get("game_replace") or [], bool(pl.get("uecl")))
+                                       pl.get("game_replace") or [], bool(pl.get("uecl")), place_rank(pl))
     names = dict(fl26world.COMPETITIONS)
     for c, (n, room) in sorted(over.items()):
         log("  NOTE: %s has %d places listed for %d clubs; the last %d get none"
@@ -5910,7 +5939,7 @@ def qual_rounds(pl):
     """the August qualifying rounds the world gets (fl26world.pick_rounds): as many as the European
     places it lists fill -- the play-offs alone with the game's own places"""
     uefa, _over = fl26world.uefa_places(all_places(pl),
-                                        pl.get("game_replace") or [], bool(pl.get("uecl")))
+                                        pl.get("game_replace") or [], bool(pl.get("uecl")), place_rank(pl))
     return fl26world.pick_rounds(uefa, bool(pl.get("uecl")))
 
 
