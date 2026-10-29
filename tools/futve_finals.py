@@ -4,7 +4,7 @@ r"""python tools/futve_finals.py [--game <folder>] [--base <pesdb>] [--world <fl
 Build the Liga FUTVE finals block in a staged world: the Apertura and Clausura play-offs become two
 groups of four, each sending its two group winners to a final that is a competition of its own
 (142 Final del Apertura, 143 Final del Clausura), and the Final del FUTVE (144) between the two
-final winners (regulation 263, day 166).
+final winners (regulation 263, day 167).
 
 The final competition ids are ones the exe's builder 1 include list gives a case (142, 129 and
 175; 129 replaces the base's own competition of that id): the Liga FUTVE
@@ -59,14 +59,14 @@ CL_CODE = "FL_011_CPO"
 CL_CID, CL_REG, CL_KO = 135, 260, 262
 CL_ENTRIES = "192:1,192:4,192:5,192:8,192:2,192:3,192:6,192:7"
 CL_DAYS = "145,148,151,154,157,160"
-CL_FINAL = 163
+CL_FINAL = 164          # 163 is a Libertadores day (the game's reg 10: 163 223 ...)
 
 FF_NAME = "Final del FUTVE"
 FF_CODE = "FL_011_FFU"
 FF_CID, FF_REG = 175, 263
 FF_ENTRIES = "191:1,192:1"
-FF_FINAL = 166
-FF_FILL = 0          # 0 = the DLL tries it every tick: its src= champions appear on days 15 and 163
+FF_FINAL = 167
+FF_FILL = 0          # 0 = the DLL tries it every tick: its src= champions appear on days 15 and 164
 
 FI_NAME = "Final del Apertura"
 FI_CODE = "FL_011_AFI"

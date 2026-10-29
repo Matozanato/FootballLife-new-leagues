@@ -81,10 +81,10 @@ CHECKLISTS = {
      de UEFA Europa League). Gana con el Táchira.
   4. Simula el Clausura hasta el día 144; juega o simula las 6 jornadas de grupo
      (días 145, 148, 151, 154, 157, 160).
-  5. Día 163: Final del Clausura (competición 129, logo FINAL_CLAUSURA, entrada UEL).
+  5. Día 164: Final del Clausura (competición 129, logo FINAL_CLAUSURA, entrada UEL).
      - Caso A (mismo campeón): gana el Táchira.
      - Caso B (distinto campeón): pierde a propósito (autogoles o alineación floja).
-  6. Día 166:
+  6. Día 167:
      - Caso A: la Final del FUTVE (175) NO debe jugarse; el DLL debe haber dado el
        título directo al Táchira. Comprueba el log/estado.
      - Caso B: debe jugarse la Final del FUTVE (144, logo FINAL_FUTVE, entrada de final
