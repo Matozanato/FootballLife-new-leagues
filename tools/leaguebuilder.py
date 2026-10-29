@@ -1762,6 +1762,56 @@ def club_newlife(plan):
     return out
 
 
+ID_PARTS = ("clubs", "names", "people", "club_nl")
+
+
+def with_away(last):
+    """the ids file (last_build_ids) with its "away" clubs back in each part where no club has the
+    key now: a club of a league the recipe left out and added again finds its players' ids
+    (B287). The rest stay gone (_keep_ids keeps their ids retired)."""
+    away = last.get("away")
+    if not isinstance(away, dict) or not away:
+        return last
+    out = dict(last)
+    for part in ID_PARTS:
+        a = away.get(part)
+        if not isinstance(a, dict):
+            continue
+        cur = dict(last[part]) if isinstance(last.get(part), dict) else {}
+        there = set(cur.values()) if part == "club_nl" else ()
+        for club, v in a.items():
+            if part != "club_nl" or v not in there:    # a NewLife club in the world now is its own
+                cur.setdefault(club, v)
+        out[part] = cur
+    return out
+
+
+def away_part(last, ids, now):
+    """{part: {club: ...}} of the clubs the last Build's file lists (with_away, follow_clubs) and
+    this Build gives no ids (ids): they wait in the file's "away" for the club to come back. A
+    club follow_clubs put under "gone:" goes back under its own key, unless a club has it now.
+    now: club_newlife of this Build; a NewLife club in it is not away, whatever key it had."""
+    out = {}
+    for part in ("clubs", "names", "people"):
+        src = last.get(part)
+        if not isinstance(src, dict):
+            continue
+        got = {}
+        for club, v in src.items():
+            key = club[5:] if club.startswith("gone:") and club[5:] not in ids else club
+            if key not in ids:
+                got.setdefault(key, v)
+        if got:
+            out[part] = got
+    was = last.get("club_nl") if isinstance(last.get("club_nl"), dict) else {}
+    away = set(out.get("clubs") or {})
+    here = set(now.values())
+    nl = {k: v for k, v in was.items() if k in away and v not in here}
+    if nl:
+        out["club_nl"] = nl
+    return out
+
+
 def follow_clubs(last, now):
     """the last Build's ids file (last_build_ids) with its new clubs under their keys now: a
     NewLife club whose place in its league changed (a club before it left) is found by its
@@ -2004,9 +2054,29 @@ def prev_pins(prev):
     does not hand every league after it new ids. A Master League career, a Kit Server map.txt
     and the scoreboard map all hold those ids (audit 12.10.; only NewLife clubs kept theirs)."""
     out = {}
-    for q in (prev or {}).get("leagues") or []:
+    for q in list((prev or {}).get("away_leagues") or []) + list((prev or {}).get("leagues") or []):
         if isinstance(q, dict) and q.get("name"):
             out[str(q["name"]).strip().lower()] = q
+    return out
+
+
+def away_leagues(prev, names):
+    """[{name, teams, club_names}] of the leagues the last Build had (or kept as away itself) and
+    the recipe has not now: their new clubs' team ids wait in the plan, and a league added again
+    gets them back (prev_pins), and no other new club takes them while one is free (B287,
+    pepponeee98 29.10.: a league removed and added again came back with other team and player ids,
+    and the Edit made with it no longer fitted)"""
+    now = {str(n).strip().lower() for n in names}
+    out, seen = [], set()
+    for q in list((prev or {}).get("leagues") or []) + list((prev or {}).get("away_leagues") or []):
+        if not isinstance(q, dict) or not q.get("name") or not q.get("teams"):
+            continue
+        k = str(q["name"]).strip().lower()
+        if k in now or k in seen:
+            continue
+        seen.add(k)
+        out.append({"name": q["name"], "teams": [t if isinstance(t, int) else None for t in q["teams"]],
+                    "club_names": list(q.get("club_names") or [])})
     return out
 
 
@@ -2506,6 +2576,7 @@ def plan(recipe, base, prev=None):
             "modern_libertadores_access": access_recipe.get("_modern_libertadores_access"),
             "suda_first": suda_first,
             "uefa_seed": uefa_seed(recipe, out, regrow, region_of_cid),
+            "away_leagues": away_leagues(prev, names + sorted(used)),   # a renamed league's old name is its own
             "ccups": cups, "ccup_notes": notes, "home_cups": home, "game_supers": gsupers,
             "europe_first": europe_first(recipe, by_name),
             "game_seasons": august_countries(recipe),
@@ -4640,6 +4711,11 @@ def build(pl, base, game, replace=False, log=print):
     pins_all = {t for p in pl["leagues"] + others for t in (p.get("prev_teams") or [])
                 if t and top_id < t <= CLUB_ID_MAX and t not in nl_ids and t not in mine}
 
+    # the team ids of the leagues the recipe left out (away_leagues): no other new club counts up
+    # into one while an id is free past them, so a league added again finds its own (B287)
+    away_tids = {t for q in pl.get("away_leagues") or [] for t in q.get("teams") or []
+                 if isinstance(t, int) and top_id < t <= CLUB_ID_MAX} - pins_all - nl_ids - mine
+
     def pinned_tid(p, k):
         prev, names = p.get("prev_teams") or [], p.get("prev_names") or []
         nm = str((p.get("club_names") or [])[k] if k < len(p.get("club_names") or []) else "").strip().lower()
@@ -4731,9 +4807,20 @@ def build(pl, base, game, replace=False, log=print):
         else:
             tid = top_id + 1 + own
             own += 1
-            while tid in have or tid in nl_ids or tid in pins_all or tid in clash:    # a NewLife club's pinned id may sit lower
+            while tid in have or tid in nl_ids or tid in pins_all or tid in clash or tid in away_tids:    # a NewLife club's pinned id may sit lower
                 tid = top_id + 1 + own
                 own += 1
+            if tid > CLUB_ID_MAX and away_tids:
+                # no id left past the away leagues' own: they are given out after all, from the start
+                log("  team ids: %d of the left-out leagues' ids are given to new clubs (no other was free)"
+                    % len(away_tids))
+                away_tids.clear()
+                own = 0
+                tid = top_id + 1 + own
+                own += 1
+                while tid in have or tid in nl_ids or tid in pins_all or tid in clash:
+                    tid = top_id + 1 + own
+                    own += 1
             if tid > CLUB_ID_MAX:
                 raise BuildError("no team ids left up to %d" % CLUB_ID_MAX)
         have.add(tid)
@@ -4903,7 +4990,7 @@ def build(pl, base, game, replace=False, log=print):
         raise BuildError(str(e))
     lap("squads")
     last = last_build_ids(game, pl["world"]) or twin_build_ids(game, pl["world"], clubs, log)
-    last = follow_clubs(last, club_newlife(clubs))
+    last = follow_clubs(with_away(last), club_newlife(clubs))
     try:
         retired = {int(x) for x in last.get("retired") or [] if lbplayers.PID_MAX >= int(x) > 0}
     except (TypeError, ValueError):
@@ -5005,7 +5092,7 @@ def build(pl, base, game, replace=False, log=print):
             now = club_newlife(clubs)
             json.dump({"world": pl["world"], "clubs": ids, "names": id_names(filled, ids),
                        "people": id_people(filled, ids), "club_nl": {k: v for k, v in now.items() if k in ids},
-                       "retired": sorted(gone)}, f, indent=1, sort_keys=True)
+                       "retired": sorted(gone), "away": away_part(last, ids, now)}, f, indent=1, sort_keys=True)
     lap("players")
     if faces:
         import lbfaces
