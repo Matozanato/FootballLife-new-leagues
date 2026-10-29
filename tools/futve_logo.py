@@ -35,6 +35,7 @@ regenerates the world's emblems: run `--install` again afterwards, as for the wo
   python tools/futve_logo.py --install --game "G:\Games\SP Football Life 2026"
 """
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -81,7 +82,11 @@ def make(source):
             raise SystemExit("no picture %s (pass --source)" % p)
         lbassets.league_logo(STAGED, cid, name, picture=p)
         print("  %d %s <- %s" % (cid, name, p))
-    print("  staged %d emblem(s) under %s" % (len(expected()), emblem_dir(STAGED)))
+    files = [os.path.basename(p) for p in expected()]
+    # what futve_test.py installs: every competition of PLAN, never a guessed id
+    with open(os.path.join(OUT, "files.json"), "w", encoding="utf-8") as f:
+        json.dump({"competitions": [cid for cid, _f, _n in PLAN], "files": files}, f, indent=1)
+    print("  staged %d emblem(s) under %s" % (len(files), emblem_dir(STAGED)))
 
 
 def check():
@@ -106,6 +111,15 @@ def check():
                 bad += 1
     if bad:
         print("  %d problem(s); run --make" % bad)
+        return False
+    man = os.path.join(OUT, "files.json")
+    try:
+        listed = set(json.load(open(man, encoding="utf-8"))["files"])
+    except (OSError, ValueError, KeyError):
+        print("  no files.json (run --make)")
+        return False
+    if listed != {os.path.basename(p) for p in expected()}:
+        print("  files.json does not list the plan's files (run --make)")
         return False
     print("  %d staged emblem(s), all present and the right size" % len(expected()))
     return True
