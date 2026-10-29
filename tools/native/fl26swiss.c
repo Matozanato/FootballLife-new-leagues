@@ -9666,6 +9666,26 @@ static int rest_league(uint16_t id, size_t have)
   uint32_t clubs = *(uint32_t*)(rec + 0x30c) & 0x7f, legs = *(uint32_t*)(rec + 0x308) >> 29;
   return clubs >= 4 && legs && have >= 9;
 }
+/* B283 (Daemon, 29.10.): the first round each league of ours was last dated with. Its super cup
+ * (aug_scup_before_league) is dated as the shipped one, mid-August, and a league that starts in
+ * July -- a real calendar or a `july` line: the Romanian one on 11 July -- had six rounds played
+ * before it. The league is dated first: at the July rollover (day 181) before the super cup is
+ * filled (day 182 on), at a new career's build before the first day's fill. */
+#define MAX_LFIRST 512
+static struct { uint16_t id, day; } g_lfirst[MAX_LFIRST];
+static int g_nlfirst = 0;
+static void note_first_round(uint16_t id, const date_t* r, uint32_t n)
+{
+  uint32_t best = 0xffff;
+  for (uint32_t i = 0; i < n; i++)
+    if (r[i].day < 365 && (best == 0xffff || season_pos(r[i].day) < season_pos(best))) best = r[i].day;
+  if (best == 0xffff) return;
+  int k = 0;
+  while (k < g_nlfirst && g_lfirst[k].id != id) k++;
+  if (k == g_nlfirst) { if (g_nlfirst >= MAX_LFIRST) return; g_nlfirst++; }
+  g_lfirst[k].id = id;
+  g_lfirst[k].day = (uint16_t)best;
+}
 static void league_rest(uint16_t id, date_t* r, uint32_t n)
 {
   const rcal_t* c = rcal_of(id);
@@ -9678,6 +9698,7 @@ static void league_rest(uint16_t id, date_t* r, uint32_t n)
     done = rcal_dates(id, c, r, n, seen) >= 0;
   }
   if (!done) rest_dates(id, r, n);
+  note_first_round(id, r, n);
 }
 
 /* 0x141586640: the game's push_back for a calendar's vector of {day, round, kind} (the date
@@ -11254,6 +11275,42 @@ static void moved_cup_days(const date_t* own, int nown, void* vec)
   v->e = v->b + (size_t)nown * sizeof(date_t);
 }
 
+/* B283: the super cup of an August-May league of ours on a day before the league's first round,
+ * as in reality (the Romanian one a week before it): a week before when there is room, else the
+ * first day after today. A super cup the game dates before the first round already is left as
+ * it is, and one whose league is not dated yet (a save loaded after the rollover) too. */
+static void aug_scup_before_league(uint16_t id, void* vec)
+{
+  const cal_scup_t* cs = 0;
+  for (int i = 0; i < g_naug_scup; i++) if (g_aug_scup[i].reg == id) cs = &g_aug_scup[i];
+  vec_t* v = (vec_t*)vec;
+  size_t n = (v && v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+  int f = -1, t = today();
+  for (int k = 0; cs && k < g_nlfirst; k++) if (g_lfirst[k].id == cs->league) f = g_lfirst[k].day;
+  if (!cs || !n || n > 2 || f < 0 || t < 0) return;
+  date_t* r = (date_t*)v->b;
+  uint32_t fp = season_pos((uint32_t)f), tp = season_pos((uint32_t)t), late = 0;
+  /* dated at the July rollover (day 181) or before it: the season it is dated for starts on
+     day 182, so every day from then on is free -- season_pos(181) is the old season's last */
+  if (t >= 140 && t < 182) tp = 0;
+  for (size_t j = 0; j < n; j++) if (r[j].day >= 365 || season_pos(r[j].day) >= fp) late = 1;
+  if (!late) return;
+  uint32_t gap = n == 2 ? 4 : 0;                     /* two legs: four days apart */
+  if (fp < tp + 2 + gap) {
+    logf("fl26swiss: reg %u -- super cup after league %u's first round (day %d), no day left before it",
+         (unsigned)id, (unsigned)cs->league, f);
+    return;
+  }
+  uint32_t want = fp >= tp + 8 + gap ? fp - 7 : tp + 1 + gap;
+  uint32_t was = r[0].day;
+  for (size_t j = 0; j < n; j++) {
+    uint32_t p = want - gap * (uint32_t)(n - 1 - j);
+    r[j].day = p < 183 ? p + 182 : p - 183;
+  }
+  logf("fl26swiss: reg %u -- super cup on day %u, before league %u's first round on day %d (was day %u)",
+       (unsigned)id, r[n - 1].day, (unsigned)cs->league, f, was);
+}
+
 static uint64_t datelike_dates(uint16_t id, uint64_t reg, void* vec)
 {
   static uint16_t said[MAX_DATELIKE]; static int nsaid = 0;
@@ -11335,6 +11392,7 @@ static uint64_t datelike_dates(uint16_t id, uint64_t reg, void* vec)
       }
     }
     if (nown) moved_cup_days(own, nown, vec);
+    aug_scup_before_league(id, vec);               /* B283 */
     nt_cup_clear(id, vec);                         /* B254 */
     vec_t* v = (vec_t*)vec;
     size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
@@ -12305,6 +12363,24 @@ static void calendar_scup_fill_days(void)
  * teardown: last season's tie tables freed, the pair set, the stage started and register_all
  * asked for the match. A save made after the fill holds this season's pair with its match not
  * yet played: left as it is. */
+/* B283: a match of reg played on or after game date `from` (year * 365 + day) */
+static int ccup_played_since(uint16_t reg, int from)
+{
+  const unsigned char* bs = (const unsigned char*)(g_base + MATCH_BASE_SITE);
+  const unsigned char* cs = (const unsigned char*)(g_base + MATCH_CAP_SITE);
+  if (bs[0] != 0x48 || bs[1] != 0x8d || bs[2] != 0x88 || cs[0] != 0x81 || cs[1] != 0xff) return 0;
+  uint32_t base = *(const uint32_t*)(bs + 3), cap = *(const uint32_t*)(cs + 2);
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!blk || !cap || cap > 200000) return 0;
+  for (uint32_t i = 0; i < cap; i++) {
+    const unsigned char* m = blk + base + (size_t)i * MATCH_STRIDE;
+    if (*(const uint16_t*)m != 0xffff && *(const uint16_t*)(m + 4) == reg && (m[7] & 0x40) && ko_mdate(m) >= from)
+      return 1;
+  }
+  return 0;
+}
+
 static void aug_scup_fill_days(void)
 {
   int d = today();
@@ -12343,6 +12419,18 @@ static void aug_scup_fill_days(void)
     if (rec_count(rec) == 2 && has_club(rec_clubs(rec), 2, champion) && has_club(rec_clubs(rec), 2, opponent)
         && ccup_unplayed(cs->reg) > 0)
       continue;
+    /* B283: dated before its league's first round, the super cup can be played inside these days
+       (the shipped date, mid-August, was past them): played since day 182, it is done -- filled
+       again it was played twice (run of 29.10.: 283 played on day 204, registered again on 205) */
+    int gd = game_date();
+    if (gd >= 0 && ccup_played_since(cs->reg, gd - (d - 182))) {
+      static int said_done[MAX_CAL_SCUPS];
+      if (said_done[i] != log_season() + 1) {
+        said_done[i] = log_season() + 1;
+        logf("fl26swiss: August-May Super Cup %u -- day %d: played this summer, done for the season", (unsigned)cs->reg, d);
+      }
+      continue;
+    }
 
     ((freetab_fn)(uintptr_t)(g_base + FREETAB_RVA))(0, cs->reg);
     u32vec v = { clubs, clubs + 2, clubs + 2 };
