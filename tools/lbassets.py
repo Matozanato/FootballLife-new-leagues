@@ -85,7 +85,7 @@ def game_emblem_files(source):
         for l in open(flpaths.SIDER_INI, encoding="utf-8", errors="replace"):
             m = re.match(r'\s*cpk\.root\s*=\s*"([^"]+)"', l)
             if m:
-                d = m.group(1)
+                d = m.group(1).replace("/", os.sep).replace("\\", os.sep)    # B288: run on a Mac
                 roots.append(os.path.normpath(d if os.path.isabs(d) else os.path.join(flpaths.SIDER_DIR, d)))
     except OSError:
         pass

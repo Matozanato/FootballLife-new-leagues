@@ -222,7 +222,14 @@ def norm(v):
     return v
 
 
+def on_disk(value):
+    """a sider.ini path with this system's separator: sider.ini writes backslashes, and Mod Studio
+    run from source on a Mac (the game in CrossOver) found no folder of it -- every cpk.root
+    "missing on disk", the world in the game "none" (B288, evannoteven 29.10.)"""
+    return value.replace("/", os.sep).replace("\\", os.sep)
+
+
 def root_path(sider_dir, value):
     """where a cpk.root value points on disk (relative values are relative to sider.exe)"""
-    v = value.replace("/", "\\")
+    v = on_disk(value)
     return os.path.normpath(v if os.path.isabs(v) else os.path.join(sider_dir, v))
