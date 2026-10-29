@@ -212,9 +212,11 @@ The two cinematics files are the game's own `SiderAddons\modules\common\cinemati
 entrance folder per tournament id) and `cinematicsB.lua` (the Final stadium scenes), with one
 mapping added by `tools/futve_cinematics.py` (the sandbox runs it before a test, and `--check`
 verifies it): the final competitions' regulations **261** (the Apertura final) and **262** (the
-Clausura final), when the match is the final (`ctx.match_info == 53`), take the UEFA Europa League
-final's entrance (`entry = 16`, `UEFA Europa League F`), and **263** (the Final del FUTVE) takes the
-UEFA Champions League final's (`entry = 16`, `UEFA Champions League F`); all three take the generic
+Clausura final), when the match is the final (`ctx.match_info == 53`), keep the UEFA Europa League
+final's entrance (`UEFA Europa League F`), and **263** (the Final del FUTVE) the UEFA Champions
+League final's (`UEFA Champions League F`); their trophy entry (`entry`, the `trophy_rewrite`) is
+**42**, the Copa America's, instead of 16 (the UEL/UCL one, which gave no cup lift; 1/10/16/46 give
+the Club World Cup, Libertadores, the UEL/UCL and the CAF trophy); all three take the generic
 `Final\st001` scene from cinematicsB. The game's files are put back at the end, like everything
 else.
 
