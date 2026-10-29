@@ -803,7 +803,8 @@ class LeagueDialog(Dialog):
         self.europe = EuropeTable(L.get("europe"), self.clubs.value(), modern=modern_conmebol(project))
         self.form.addRow(_("Europe"), self.europe)
         self.form.addRow("", hint(_("league position -> European competition, for a top division; "
-                                    "leave it empty for lower tiers")))
+                                    "leave it empty for lower tiers. The country's cup winner: take the "
+                                    "position below 1 (it shows Cup winner)")))
         self.clubs.valueChanged.connect(self.europe.set_clubs)
         self.above.currentIndexChanged.connect(lambda _i: self.europe.set_top(self.above.currentData() is None))
         self.europe.set_top(self.above.currentData() is None)
