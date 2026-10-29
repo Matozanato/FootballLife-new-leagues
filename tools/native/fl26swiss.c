@@ -112,14 +112,20 @@ static int            g_nreg = 0;
 /* calls seen, schedules written, refused, cells out of range, calendars written */
 static volatile uint32_t g_stat[5];
 
-/* ---- small text log, drained by the Lua loader into sider.log ---- */
-static char g_log[65536]; static volatile int g_log_len = 0;
+/* ---- small text log, drained by the Lua loader into sider.log ----
+   The loader drains it when the game loads a file. Under ML Fast Forward the hub loads nothing
+   for weeks of game days, and 64 KB filled by mid-season: from then on every line was dropped
+   unsaid -- the Sudamericana play-off fill and the group stages' end were missing from our own
+   test's sider.log (29.10.) while the ties were there. 1 MB, and the lines lost are counted
+   and reported at the next drain. */
+static char g_log[1 << 20]; static volatile int g_log_len = 0;
+static volatile uint32_t g_log_lost = 0;
 static void logf(const char* fmt, ...)
 {
   char line[256]; va_list ap; va_start(ap, fmt);
   int n = vsnprintf(line, sizeof line, fmt, ap); va_end(ap);
   if (n <= 0) return; if (n >= (int)sizeof line) n = sizeof line - 1;
-  if (g_log_len + n + 1 >= (int)sizeof g_log) return;
+  if (g_log_len + n + 1 >= (int)sizeof g_log) { g_log_lost++; return; }
   memcpy(g_log + g_log_len, line, n); g_log_len += n; g_log[g_log_len++] = '\n';
 }
 
@@ -13089,6 +13095,10 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
 /* copy and clear the pending log text; returns bytes copied */
 __declspec(dllexport) int fl26_swiss_log(char* out, int cap)
 {
+  if (g_log_lost && g_log_len + 128 < (int)sizeof g_log) {
+    uint32_t lost = g_log_lost; g_log_lost = 0;
+    logf("fl26swiss: %u log line(s) lost before this point -- the log was full and not drained", (unsigned)lost);
+  }
   int n = g_log_len; if (n > cap - 1) n = cap - 1; if (n < 0) n = 0;
   if (n < g_log_len) { int k = n; while (k > 0 && g_log[k - 1] != '\n') k--; if (k > 0) n = k; }  /* whole lines only */
   memcpy(out, g_log, n); out[n] = 0;
