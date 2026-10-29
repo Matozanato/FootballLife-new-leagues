@@ -68,7 +68,8 @@ def main():
     ok("a player keeps the id of the last Build", first["Liga/0"][0] == 1001 and team_of(assigns, 1001) == 701)
     ok("a placeholder keeps his too", first["Liga/0"][1] == 1002 and team_of(assigns, 1002) == 701)
     ok("a place now held by another player keeps nothing of it", first["Liga/0"][2] == 1006)
-    ok("the club in the way moves to free ids", all(p > 1006 for p in first["New/0"][:2]))
+    # B282: to ids nobody had at the last Build -- those the pinned players left are free again
+    ok("the club in the way moves to free ids", first["New/0"] == [1004, 1005, 1008])
     ok("every id once", len(index) == 6 and len(set(first["New/0"] + first["Liga/0"])) == 6)
     ok("Player.bin follows", set(index) == {L.u32(players, o + L.P_ID) for o in index.values()})
     ok("an added player's id waits for him", later == {("Liga/0", "+0"): 1007})

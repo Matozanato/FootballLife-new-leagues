@@ -65,6 +65,7 @@ PID_MAX = 262143      # a player id Mod Studio hands out stays below this: the e
                       # player id into 18 bits (handle = id << 14 | n), and a world with a player
                       # id of 262144 or more crashes when a new Master League is created
                       # (FL_2026.exe+0xf325a4, the player lookup returns nothing; measured 14.10.2026)
+STAND_IN = 1 << 30    # a player's id while _keep_ids moves him (B282): past any real one, never kept
 T_NATIONAL = 0x53     # Team.bin: top bit set on the 144 national teams (leaguebuilder.T_NATIONAL)
 T_COUNTRY = 0x46      # Team.bin: the country, 9 bits from bit 2 (144 of 144 national teams)
 T_COACH = 0x00        # Team.bin: the id of the club's manager in Coach.bin (mkcoaches.T_COACH)
@@ -1294,17 +1295,23 @@ def _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_to
         log("  player ids: %d players keep the id of the last Build (%s); %d ids of players no longer "
             "in the world are not given to anyone else" % (
                 kept, ", ".join("%d by %s" % (n, k) for k, n in how.most_common()) or "none", len(retired)))
-    # every player in the way moves to a free id first: those pinned, whoever holds an id
-    # someone is pinned to, and whoever holds the id of a player who is gone; then the pinned
-    # ones take theirs
+    # every player in the way moves: those pinned to their ids, whoever holds an id someone is
+    # pinned to, and whoever holds the id of a player who is gone, to a free id
     moving = set(pin) | {pid for pid in wanted if pid in index} | {pid for pid in retired if pid in index}
     if not moving:
         return later
     # the first free ids above the game's own, not max + 1: a player moved out of the way and
     # not pinned himself keeps this id, and the engine packs a player id into 18 bits (PID_MAX);
-    # max + 1 left 500 players of the Modpack world at 279513..289512 (14.10.2026)
-    busy = set(index) | wanted | taken
+    # max + 1 left 500 players of the Modpack world at 279513..289512 (14.10.2026).
+    # B282 (juanjose 29.10., 1174 new clubs): every mover took a spare id on the way and kept the
+    # id he left taken too, so a world's second Build ran out of ids below PID_MAX that its first
+    # had room for. The ids the movers leave are free again (not a gone player's: retired), and
+    # each goes straight to the id he ends on, through a stand-in past PID_MAX that never stays.
+    busy = (set(index) - moving) | wanted | taken
     free = FreeIds(game_top, busy, retired, log)
+    final = dict(pin)
+    for pid in sorted(moving - set(pin)):
+        final[pid] = free.take()
     moved = {}                                         # player id before -> after
     # 0.2.4: where each player's assignments are, found once -- _renumber looked through every
     # assignment for every player it moved, and a rebuilt Modpack moves thousands (the Modpack's
@@ -1312,13 +1319,13 @@ def _keep_ids(prev, prev_names, changes, first, players, assigns, index, game_to
     where = collections.defaultdict(list)
     for i in range(len(assigns) // A_REC):
         where[u32(assigns, i * A_REC + E.A_PID)].append(i * A_REC)
+    stand_in = {}
+    for n, pid in enumerate(sorted(moving)):
+        stand_in[pid] = STAND_IN + n
+        _renumber(players, assigns, index, pid, stand_in[pid], where)
     for pid in sorted(moving):
-        spare = free.take()
-        moved[pid] = spare
-        _renumber(players, assigns, index, pid, spare, where)
-    for pid, want in pin.items():
-        _renumber(players, assigns, index, moved[pid], want, where)
-        moved[pid] = want
+        _renumber(players, assigns, index, stand_in[pid], final[pid], where)
+        moved[pid] = final[pid]
     # a player moved out of the way who is not pinned and gets dropped later frees his id again
     for club in first:                                 # every copy of a player follows him
         first[club] = [moved.get(pid, pid) for pid in first[club]]
