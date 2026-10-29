@@ -57,7 +57,9 @@ una segunda tarjeta que te guía para instalar un Modpack (un zip de mundo), cli
    primero; **Ajustes → Las tablas del juego → Desempaquetar las tablas del juego** lo hace a
    mano. **Usar otra carpeta de tablas...** sirve para una base de datos propia, como una carpeta
    `pesdb` en livecpk: desempaqueta primero las tablas del juego y luego elige esa carpeta. Sus
-   archivos van encima de los del juego, que ponen lo que a ella le falte. Un mod de base de
+   archivos van encima de los del juego, que ponen lo que a ella le falte. No la carpeta de un
+   mundo (`livecpk\_FL26...`): cada Build la reescribe, así que Mod Studio no la acepta (0.2.5.1).
+   Un mod de base de
    datos que cambia de sitio las ligas del juego (UML 2026 y similares) funciona: cada liga del
    juego toma el país de la mayoría de sus clubes, y NewLife Database solo cuenta un club como
    del juego cuando estas tablas lo tienen (0.2.4).

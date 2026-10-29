@@ -57,6 +57,14 @@ def is_world(name):
     return name.lower().startswith("_fl26") and not name.lower().endswith((".building", ".old"))
 
 
+def world_of(path):
+    """the world (a _FL26 folder in livecpk) path is in or is, None for any other folder: a folder a
+    Build rewrites, never the tables it reads (B277)"""
+    parts = os.path.normpath(os.path.abspath(path)).split(os.sep)
+    return next((parts[i + 1] for i in range(len(parts) - 1)
+                 if parts[i].lower() == "livecpk" and is_world(parts[i + 1])), None)
+
+
 def worlds(game):
     """the _FL26 folders in livecpk"""
     try:

@@ -58,7 +58,9 @@ deuxième carte qui vous guide pour installer un Modpack (un zip de monde), clic
    extraction ; **Réglages → Les tables du jeu → Extraire les tables du jeu** le fait à la main.
    **Utiliser un autre dossier de tables...** sert pour votre propre base, comme un dossier
    `pesdb` dans livecpk : extrayez d'abord les tables du jeu, puis choisissez ce dossier. Ses
-   fichiers passent par-dessus ceux du jeu, qui fournissent tout ce qu'il n'a pas. Un mod de base
+   fichiers passent par-dessus ceux du jeu, qui fournissent tout ce qu'il n'a pas. Pas le dossier
+   d'un monde (`livecpk\_FL26...`) : chaque Build le réécrit, Mod Studio ne le prend donc pas
+   (0.2.5.1). Un mod de base
    qui déplace les ligues du jeu à la place d'autres ligues (UML 2026 et autres) convient : chaque
    ligue du jeu prend le pays de la plupart de ses clubs, et NewLife Database ne compte un club
    comme celui du jeu que si ces tables l'ont (0.2.4).

@@ -53,7 +53,8 @@ has **Show me how to install a Modpack**: a second card that walks you through i
    **Settings → The game's tables → Unpack the game's tables** does it by hand. **Use another
    tables folder...** is for a database of your own, such as a `pesdb` folder in livecpk: unpack
    the game's tables first, then pick that folder. Its files go over the game's, which give
-   whatever it does not have. A database mod that moves the game's leagues into other leagues'
+   whatever it does not have. Not a world's own folder (`livecpk\_FL26...`): every Build
+   rewrites it, so Mod Studio does not take it (0.2.5.1). A database mod that moves the game's leagues into other leagues'
    places (UML 2026 and the like) is fine: each league of the game takes the country most of its
    clubs are of, and the NewLife Database counts a club as one of the game's only when these
    tables have it (0.2.4).

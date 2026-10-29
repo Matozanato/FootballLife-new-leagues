@@ -52,7 +52,8 @@ Modpack**: druga kartica koja te vodi kroz instalaciju Modpacka (zipa svijeta), 
    primijeti i ponudi da ih prvo opet raspakira; **Postavke → Tablice igre → Raspakiraj tablice
    igre** to radi ručno. **Koristi drugu mapu s tablicama...** služi za vlastitu bazu, npr. `pesdb`
    mapu u livecpk: prvo raspakiraj tablice igre, zatim odaberi tu mapu. Njene datoteke idu preko
-   igrinih, a igrine daju sve što ona nema. Mod baze koji premješta igrine lige na mjesta drugih
+   igrinih, a igrine daju sve što ona nema. Ne mapa svijeta (`livecpk\_FL26...`): svaki Build je
+   prepisuje, pa je Mod Studio ne prihvaća (0.2.5.1). Mod baze koji premješta igrine lige na mjesta drugih
    liga (UML 2026 i slični) je u redu: svaka liga igre dobije državu većine svojih klubova, a
    NewLife Database klub smatra igrinim samo kad ga te tablice imaju (0.2.4).
 3. Otvori **1. Početna**. Pokazuje svijet u igri (**U IGRI SADA**, s **Otvori njegove lige** i

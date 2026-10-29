@@ -9,6 +9,7 @@ from .. import i18n
 import siderdir
 
 from ..game import Game, guess_folders
+from ..worlds import world_of
 from ..i18n import _
 from ..ui import Page, section, hint, row, ask, error, info, run_job, can_write, denied
 
@@ -206,6 +207,15 @@ class Settings(Page):
     def pick_tables(self):
         d = QFileDialog.getExistingDirectory(self, _("A pesdb folder: Team.bin, Player.bin ..."))
         if not d:
+            return
+        # B277 (jibibi 29.10.): he picked livecpk\_FL26-France\common\etc\pesdb, the world itself,
+        # and got "Country.bin not found": a world holds only the tables it changes, and every
+        # Build rewrites it, so it is never the tables a Build reads
+        world = world_of(d)
+        if world:
+            error(self, "Settings", _("That folder is in %s, a world Mod Studio builds: every Build rewrites it, "
+                                      "so it cannot be the tables. Keep your own database's pesdb folder outside "
+                                      "the world (in Documents, for example) and pick that one.") % world)
             return
         p = self.app.project
         self.app.settings["tables"] = d

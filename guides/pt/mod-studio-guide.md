@@ -59,7 +59,8 @@ passo**).
    de novo antes; **Configurações → As tabelas do jogo → Extrair as tabelas do jogo** faz isso à
    mão. **Usar outra pasta de tabelas...** é para uma base de dados sua, como uma pasta `pesdb`
    no livecpk: extraia antes as tabelas do jogo, depois escolha essa pasta. Os arquivos dela vão
-   por cima dos do jogo, que dão o que ela não tem. Um mod de base de dados que move as ligas do
+   por cima dos do jogo, que dão o que ela não tem. Não a pasta de um mundo (`livecpk\_FL26...`):
+   cada Build a reescreve, por isso o Mod Studio não a aceita (0.2.5.1). Um mod de base de dados que move as ligas do
    jogo para os lugares de outras ligas (UML 2026 e parecidos) funciona: cada liga do jogo pega o
    país da maioria dos clubes dela, e o NewLife Database só conta um clube como do jogo quando
    essas tabelas têm ele (0.2.4).
