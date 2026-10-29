@@ -8,17 +8,16 @@ The competition logos of the Liga FUTVE's play-offs and finals:
   134  Liga FUTVE Apertura Playoffs   PLAYOFF_APERTURA.png
   135  Liga FUTVE Clausura Playoffs   PLAYOFF_CLAUSURA.png
   142  Final del Apertura             FINAL_APERTURA.png
-  143  Final del Clausura             FINAL_CLAUSURA.png
-  144  Gran Final del FUTVE           FINAL_FUTVE.png
+  129  Final del Clausura             FINAL_CLAUSURA.png
+  175  Gran Final del FUTVE           FINAL_FUTVE.png
 
 Six variants of each competition's emblem (256 and 512 px) are made the way a Build's league logo is
 (tools/lbassets.py, lbassets.league_logo): the picture fitted into a transparent square, never
 stretched, in colour in every variant.
 
-The finals' competitions take ids **142/143/144**, the Mod Studio's next three free byte competition
-ids (`leaguebuilder.free_comp_ids`: the pool starts at 130 and skips the world's used ones -- 130-135
-the Liga FUTVE, 137-141 Scotland/KSA -- and the UEFA Conference League's reserved 136). 136 is why a
-first version put a logo on a UEFA competition, and 10342 is a team id, not a competition id.
+The finals' competitions take **142, 129 and 175**, ids the exe's builder 1 include list gives a
+case (129 replaces the base's own competition of that id; 175 is free; 136 is the UEFA Conference
+League's reserved one, 143/144 have no case, and 10342 is a team id).
 
   --make      stage the 12 emblems under out/futve/logos/world (what futve_test.py installs; the
               sandbox backs up the game's emblems and puts them back at the end).
@@ -56,8 +55,8 @@ PLAN = (
     (134, "PLAYOFF_APERTURA.png", "Liga FUTVE Apertura Playoffs"),
     (135, "PLAYOFF_CLAUSURA.png", "Liga FUTVE Clausura Playoffs"),
     (142, "FINAL_APERTURA.png", "Final del Apertura"),
-    (143, "FINAL_CLAUSURA.png", "Final del Clausura"),
-    (144, "FINAL_FUTVE.png", "Gran Final del FUTVE"),
+    (129, "FINAL_CLAUSURA.png", "Final del Clausura"),
+    (175, "FINAL_FUTVE.png", "Gran Final del FUTVE"),
 )
 
 

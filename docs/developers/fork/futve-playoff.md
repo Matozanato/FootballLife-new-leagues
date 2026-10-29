@@ -147,8 +147,8 @@ The Apertura and Clausura play-offs and the three finals take these pictures:
 | 134 Liga FUTVE Apertura Playoffs | `PLAYOFF_APERTURA.png` |
 | 135 Liga FUTVE Clausura Playoffs | `PLAYOFF_CLAUSURA.png` |
 | 142 Final del Apertura | `FINAL_APERTURA.png` |
-| 143 Final del Clausura | `FINAL_CLAUSURA.png` |
-| 144 Gran Final del FUTVE | `FINAL_FUTVE.png` |
+| 129 Final del Clausura | `FINAL_CLAUSURA.png` |
+| 175 Gran Final del FUTVE | `FINAL_FUTVE.png` |
 
 ```
 python tools/futve_logo.py --make
@@ -223,8 +223,8 @@ else.
 **Phase 3 (the finals as competitions of their own).** `tools/futve_finals.py` builds
 `out/futve/world-finals`: the Apertura and Clausura play-offs keep their groups (134/135, masters
 259/260, rows 1283/1284/2307/2308), and the finals are separate competitions -- 142 "Final del
-Apertura" (regulation 261), 143 "Final del Clausura" (262) and 144 "Final del FUTVE" (263), 2 clubs
-each, the Mod Studio's next free byte ids after 130-135 and 137-141 (the UECL's 136 is reserved).
+Apertura" (regulation 261), 129 "Final del Clausura" (262) and 175 "Final del FUTVE" (263), 2 clubs
+each, ids the exe's builder 1 include list gives a case: 142 and 175 free, 129 replaces the base's own competition 129. The earlier 142/143/144 failed because 143/144 have no case in that list.
 The three finals' entry rows are placeholders: the DLL rewrites them. The Final del FUTVE's line
 carries `src=261,262`: the DLL reads the two finals' champions, plays the match when they differ and
 leaves it unplayed -- logging the title -- when they are the same; its `fill=0` makes the DLL try it
@@ -234,13 +234,11 @@ Apertura final (day 15), the Clausura groups (145-160) and final (163), and the 
 (166) twice: the same champion (no match, the title direct) and a different champion (the match
 played). At the season's close the palmarés should carry the finals' titles.
 
-The join module is `futve_join.py`: the game's list of calendar-year cups (the world's `league`
-lines' `cup=`/`scup=` above 175) does not include the finals 142/143/144 -- they are below 175 and
-not a league's cup -- so the season builder skipped them, their season tables stayed empty and
-FL_2026.exe crashed at `0x141333485` (a null in the season/standings walk) on the fourth Apertura
-matchday (29.10, 07:19 and 07:24). The copy adds the three ids to `BUILDER_EXTRA`/`BUILDER_CONF`
-(CONMEBOL) before `idbuf`, so the join hands them to the builder at creation like the calendar-year
-cups; the sandbox backs up the game's module and restores it at the end.
+The finals' ids (142, 129, 175) are in the exe's builder 1 include list, so the season builder takes
+them at creation like the shipped cups and their `enter_season` runs; no extra module patch is
+needed. (The earlier attempt with 142/143/144 failed because 143/144 have no case in that list; the
+`futve_join.py` copy, which added them to the calendar-year builder, is obsolete and no longer
+installed by the sandbox.)
 
 **Phase 1 (groups).** The Apertura cup has two groups and a four-club knockout; the groups are
 dated 3, 5, 7, 9, 11, 13 and the knockout after them. A career with Táchira simulated to day 2, then
