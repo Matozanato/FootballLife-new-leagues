@@ -694,7 +694,7 @@
   "gone": "não existe mais",
   "installed": "instalados",
   "kit server: kits per team": "servidor de uniformes: uniformes por time",
-  "league position -> European competition, for a top division; leave it empty for lower tiers": "posição no campeonato -> competição europeia, para uma primeira divisão; deixe vazio para divisões inferiores",
+  "league position -> European competition, for a top division; leave it empty for lower tiers. The country's cup winner: take the position below 1 (it shows Cup winner)": "posição no campeonato -> competição europeia, para uma primeira divisão; deixe vazio para divisões inferiores. O campeão da copa do país: desça a posição abaixo de 1 (aparece Campeão da copa)",
   "leaves": "sai",
   "made for id %s": "feito para o id %s",
   "match settings": "configurações da partida",

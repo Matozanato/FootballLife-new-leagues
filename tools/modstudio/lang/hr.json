@@ -694,7 +694,7 @@
   "gone": "nema je",
   "installed": "postavljeni",
   "kit server: kits per team": "server dresova: dresovi po momčadi",
-  "league position -> European competition, for a top division; leave it empty for lower tiers": "mjesto u ligi -> europsko natjecanje, za prvi rang; za niže rangove ostavi prazno",
+  "league position -> European competition, for a top division; leave it empty for lower tiers. The country's cup winner: take the position below 1 (it shows Cup winner)": "mjesto u ligi -> europsko natjecanje, za prvi rang; za niže rangove ostavi prazno. Pobjednik kupa države: spusti mjesto ispod 1 (piše Pobjednik kupa)",
   "leaves": "odlazi",
   "made for id %s": "napravljeno za id %s",
   "match settings": "postavke utakmice",
