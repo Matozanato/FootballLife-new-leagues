@@ -7514,9 +7514,10 @@ static int libq_item_live(uint16_t q)
   if (li < 0 || tk >= 0 || !g_lpre[li].alias) return 0;
   /* B229 (antonimus 25.10.): on 1 January the alias ties still hold last season's clubs, so
      the item lit before phase 1 was filled (day 2) and opened the empty F3 page ("%s"). An
-     alias counts only from its own fill day to the end of the qualifying half-year. */
+     alias counts only from its own fill day; B275 (antonimus 29.10.): to the end of the year, not
+     only the qualifying half-year -- from July the menu showed phase 3 alone. */
   int d = today();
-  if (d < 0 || d < g_lpre[li].fill || d >= 182) return 0;
+  if (d < 0 || d < g_lpre[li].fill) return 0;
   unsigned char* t = find_rec(lpre_tie(&g_lpre[li], 0));
   return t && rec_count(t) == 2;
 }
@@ -7540,7 +7541,7 @@ static int libq_item_want(void)
     if (g_lpre[i].alias && g_lpre[i].feed8) feed = 1;
   if (!feed) return -1;
   int d = today();
-  if (d < 0 || d >= 182) return libq_any_live() ? 1 : -1;
+  if (d < 0) return libq_any_live() ? 1 : -1;
   uint16_t order[MAX_LPRE + 1];
   return libq_page_phases(order) > 0;
 }
@@ -7976,7 +7977,7 @@ static int libq_page_phases(uint16_t* order)
     if (g_lpre[i].alias && g_lpre[i].feed8)
       feed = i;
 
-  if (feed < 0 || d < 0 || d >= 182) return 0;
+  if (feed < 0 || d < 0) return 0;                  /* B275: the whole year, phases 1-3 */
 
   for (int i = 0; i < g_nlpre; i++) {
     if (!g_lpre[i].alias || d < g_lpre[i].fill ||     /* B229: not before its fill day */
