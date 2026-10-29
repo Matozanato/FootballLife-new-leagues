@@ -137,7 +137,9 @@ end
 -- phase ends and dates them itself: gdays=<d>,<d>,... gives the group matchdays (the groups are
 -- then dealt in the order of entry=, not drawn), adv=1 sends only the winner of each group to the
 -- knockout, and kolike=<shipped regulation> is the shipped cup whose calendar dates the knockout
--- (the Belgium Super Cup for a one-match final). They go to fl26_swiss_ccup_gdays / _adv / _kolike,
+-- (the Belgium Super Cup for a one-match final), and src=<ko1>,<ko2> makes a knockout the final of
+-- two cups, its field their two champions (or none when it is the same club: the title is theirs).
+-- They go to fl26_swiss_ccup_gdays / _adv / _kolike / _src,
 -- called after fl26_swiss_ccup.
 local confed = {}               -- read_world: the confed line, { flag, code } pairs
 local CUPDRAW = { all = 1 }     -- read_world: the cupdraw lines, a mode per cup and one for all (0 off, 1 seeded, 2 random, 3 byes)
@@ -225,6 +227,10 @@ local function read_world(ctx)
       if #gdays > 0 then c.gdays = gdays end
       c.adv = tonumber(body:match("%sadv=(%d+)") or "")
       c.kolike = tonumber(body:match("%skolike=(%d+)") or "")
+      -- src=<ko1>,<ko2>: a final of two cups (0.2.5): its field is the two champions, or none when
+      -- they are the same club (the title is theirs and the match is not played)
+      local sa, sb = body:match("%ssrc=(%d+),(%d+)")
+      c.src = sa and { tonumber(sa), tonumber(sb) } or nil
       -- alt=<entry>:<league>[:<from>],...: a national cup winner's entry, the league its place
       -- falls back to and the first position of it to try (0.2.0, fl26_swiss_ccup_alt: the
       -- position rides in the bits above the league's ten)
@@ -705,6 +711,23 @@ function m.init(ctx)
               for i, c in ipairs(gkl) do kbuf[2 * i - 2], kbuf[2 * i - 1] = c[2], c.kolike end
               local m = tonumber(ffi.cast("fl26_swiss_access_t", pkl)(kbuf, #gkl))
               log(string.format("fl26swiss: world file -- %d cup(s) with their knockout's own calendar, %d matched", #gkl, m))
+            end
+          end
+          -- a final of two cups (0.2.5): the two champions, or none when it is the same club.
+          -- Passed after fl26_swiss_ccup, like the options above.
+          local gsrc = {}
+          for _, c in ipairs(ccups) do if c.src then gsrc[#gsrc + 1] = c end end
+          if #gsrc > 0 then
+            local ps = ffi.C.GetProcAddress(h, "fl26_swiss_ccup_src")
+            if ps == nil then
+              log("fl26swiss: this fl26swiss.dll has no final of two cups (fl26_swiss_ccup_src); those finals keep their entries")
+            else
+              local sbuf = ffi.new("uint16_t[?]", 3 * #gsrc)
+              for i, c in ipairs(gsrc) do
+                sbuf[3 * i - 3], sbuf[3 * i - 2], sbuf[3 * i - 1] = c[2], c.src[1], c.src[2]
+              end
+              local m = tonumber(ffi.cast("fl26_swiss_access_t", ps)(sbuf, #gsrc))
+              log(string.format("fl26swiss: world file -- %d final(s) of two cups, %d matched", #gsrc, m))
             end
           end
           -- CONMEBOL cups on the South American calendar, after their normal options

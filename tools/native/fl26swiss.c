@@ -4091,8 +4091,10 @@ typedef struct { uint16_t reg, ko, groups, n; uint16_t ereg[CCUP_MAX_ENTRY]; uin
                  uint8_t adv, gnd;   /* the league play-off: advancers a group, own group days given */
                  uint16_t gdays[CCUP_MAX_DAYS]; /* gnd: the group matchdays */
                  uint16_t kolike;    /* the shipped cup whose calendar dates the knockout, 0 = none */
+                 uint16_t src[2];    /* 0.2.5: a final of two cups -- their knockout regs, 0 = none */
                } ccup_t;
 static ccup_t g_ccup[MAX_CCUP]; static int g_nccup = 0;
+static uint32_t g_ccup_win[MAX_CCUP];  /* the champion ccup_final_note read, for a final of two cups */
 /* fl26_swiss_ccup_like's records, read by fl26_swiss_ccup (called after it): knockout -> shipped cup */
 static uint16_t g_clike[MAX_CCUP][2]; static int g_nclike = 0;
 static uint16_t clike_of(uint16_t ko)
@@ -4250,6 +4252,7 @@ __declspec(dllexport) int fl26_swiss_ccup(const uint16_t* v, int n)
   /* per cup: reg, ko, groups, entries, then (reg, position) per entry */
   if ((!v && n) || n < 0) return -1;
   g_nccup = 0;
+  memset(g_ccup_win, 0, sizeof g_ccup_win);
   g_ccup_gen++;
   size_t p = 0;
   for (int i = 0; i < n && g_nccup < MAX_CCUP; i++) {
@@ -4257,6 +4260,7 @@ __declspec(dllexport) int fl26_swiss_ccup(const uint16_t* v, int n)
     c->reg = v[p]; c->ko = v[p + 1]; c->groups = v[p + 2]; unsigned ne = v[p + 3]; p += 4;
     c->n = 0; c->fill = c->national = c->nd = c->nc = 0; c->filled_year = -1; c->like = 0; c->cal = 0;
     c->adv = 0; c->gnd = 0; c->kolike = 0;
+    c->src[0] = c->src[1] = 0;
     memset(c->ealt, 0, sizeof c->ealt);
     memset(c->efrom, 0, sizeof c->efrom);
     memset(c->first, 0, sizeof c->first);
@@ -4406,6 +4410,28 @@ __declspec(dllexport) int fl26_swiss_ccup_kolike(const uint16_t* v, int n)
     }
     c->kolike = shipped;
     logf("fl26swiss: cup %u -- its knockout dated as the shipped cup %u", (unsigned)ko, (unsigned)shipped);
+    got++;
+  }
+  return got;
+}
+
+/* The final of two cups (0.2.5, the Liga FUTVE's Final del FUTVE): its field is the two champions of
+   the cups whose knockouts are named, or none when they are the same club (the title is theirs and
+   the match is not played). `src` records {ko, first cup, second cup}; only a knockout cup. */
+__declspec(dllexport) int fl26_swiss_ccup_src(const uint16_t* v, int n)
+{
+  int got = 0;
+  for (int i = 0; v && i < n; i++) {
+    uint16_t ko = v[3 * i], a = v[3 * i + 1], b = v[3 * i + 2];
+    ccup_t* c = 0;
+    for (int k = 0; k < g_nccup; k++) if (g_ccup[k].ko == ko) c = &g_ccup[k];
+    if (!c || c->groups || !a || !b) {
+      logf("fl26swiss: cup %u -- the source cups %u and %u for a cup that is not a knockout; left out",
+           (unsigned)ko, (unsigned)a, (unsigned)b);
+      continue;
+    }
+    c->src[0] = a; c->src[1] = b;
+    logf("fl26swiss: cup %u -- its field is the winners of cups %u and %u", (unsigned)ko, (unsigned)a, (unsigned)b);
     got++;
   }
   return got;
@@ -6030,6 +6056,15 @@ static int ccup_league_final(const ccup_t* c, const uint32_t* field, unsigned nf
 }
 
 static int ko_sync(uint16_t reg, const char* why);
+static int ccup_of(uint16_t r, int* ko);
+/* the champion of a cup a final of two cups feeds on: the one the final note read, or the game's */
+static uint32_t ccup_src_winner(uint16_t reg)
+{
+  int ko = 0;
+  int k = ccup_of(reg, &ko);
+  if (k >= 0 && g_ccup_win[k]) return g_ccup_win[k];
+  return cup_winner(reg);
+}
 static int ccup_fill_one(int k, void* started)
 {
   const ccup_t* c = &g_ccup[k];
@@ -6082,6 +6117,29 @@ static int ccup_fill_one(int k, void* started)
   if (single)
     logf("fl26swiss: cup %u -- a single-match knockout of %u (reg %u's shape), day %d", (unsigned)c->ko, cn,
          (unsigned)c->like, today());
+  if (c->src[0] && c->src[1]) {           /* the final of two cups: their champions, or none */
+    uint32_t w1 = ccup_src_winner(c->src[0]), w2 = ccup_src_winner(c->src[1]);
+    if (w1 && w2 && w1 == w2) {
+      static int said_same = 0;
+      if (said_same++ < 4)
+        logf("fl26swiss: cup %u -- %08x won both feeding cups (%u, %u); the final is not played, the title is theirs",
+             (unsigned)c->reg, w1, (unsigned)c->src[0], (unsigned)c->src[1]);
+      g_ccup_nf[k] = 0;
+      return 0;
+    }
+    if (!w1 || !w2) {
+      static int said_wait = 0;
+      if (said_wait++ < 6)
+        logf("fl26swiss: cup %u -- its two champions are not known yet (%08x, %08x); not filled",
+             (unsigned)c->reg, w1, w2);
+      return 0;
+    }
+    g_ccup_field[k][0] = w1; g_ccup_field[k][1] = w2; g_ccup_nf[k] = 2;
+    n = 2;
+    suda = 0; single = 0;
+    logf("fl26swiss: cup %u -- the final of its two feeding cups: %08x v %08x", (unsigned)c->reg, w1, w2);
+    goto field_ready;
+  }
   for (unsigned i = 0; i < cn; i++) {
     const char* how = ""; uint32_t club = 0;
     if (c->nc) {                                   /* invited by name */
@@ -6209,6 +6267,7 @@ static int ccup_fill_one(int k, void* started)
     g_ccup_nf[k] = 0;
     return 0;
   }
+field_ready:
   if (!c->groups) {
     /* A knockout cup keeps last season's clubs through the July teardown: the CAF Super Cup of a
        second season still held the pair of the first, and the old "any club in it = filled"
@@ -6778,7 +6837,7 @@ static void ccup_final_note(int k)
   if (said_year[k] == y) return;
   said_year[k] = y;
   uint32_t w = ccup_ko_winner(c->ko);
-  if (w) logf("fl26swiss: cup %u -- its final is over on day %d: champion %08x", (unsigned)c->ko, today(), w);
+  if (w) { g_ccup_win[k] = w; logf("fl26swiss: cup %u -- its final is over on day %d: champion %08x", (unsigned)c->ko, today(), w); }
   else logf("fl26swiss: cup %u -- its final is over on day %d, but no winner was read", (unsigned)c->ko, today());
 }
 
