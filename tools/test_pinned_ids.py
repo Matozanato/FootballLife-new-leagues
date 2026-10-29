@@ -29,8 +29,8 @@ def ids(pl):
 
 
 def main(base):
-    a = league("Pin Albania", "Albania", 10)
-    b = league("Pin Bosnia", "Bosnia and Herzegovina", 12)
+    a = league("Pin Albania", "Albania", 10, cup=True, supercup=True)
+    b = league("Pin Bosnia", "Bosnia and Herzegovina", 12, cup=True)
     c = league("Pin Bosnia 2", "Bosnia and Herzegovina", 12, above="Pin Bosnia")
     first = B.plan({"world": "_TestPins", "leagues": [a, b, c]}, base)
     one = ids(first)
@@ -68,7 +68,7 @@ def main(base):
     r = ids(B.plan({"world": "_TestPins", "leagues": [twice, b, c]}, base, after))
     ok("renamed again after a Build under the new name: the ids of that Build",
        r["Pin Albania Third"] == ids(after)["Pin Albania Renamed"] == one["Pin Albania"])
-    back = league("Pin Albania", "Albania", 10)
+    back = league("Pin Albania", "Albania", 10, cup=True)
     r = ids(B.plan({"world": "_TestPins", "leagues": [named, back, b, c]}, base, first))
     ok("an old name another league has now: that league's own, not the renamed one's",
        r["Pin Albania"] == one["Pin Albania"] and r["Pin Albania Renamed"][0] != one["Pin Albania"][0])
