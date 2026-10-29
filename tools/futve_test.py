@@ -9,8 +9,8 @@ The sandbox of the in-game tests of this branch. One command per test:
      fl26world.txt in both places, the three Competition*.bin, the Táchira-99 Player.bin, the game's
      own cinematics.lua/cinematicsB.lua that give the finals their UEFA Europa League (261/262) and
      UEFA Champions League (263) final entrances and the Final atmosphere, and the competition logos
-     the plan stages -- the two play-offs now, the finals when their ids exist), the game's own logs
-     and caches, ReShade.ini/ReShade.log and sider.ini, and the whole save folder (the 2026 folder
+     the plan stages -- the two play-offs and the three finals, 30 files), the game's own logs and
+     caches, ReShade.ini/ReShade.log and sider.ini, and the whole save folder (the 2026 folder
      under Documents\KONAMI, where a career and fl26swiss-state.bin are written). It writes
      manifest.json with every size, mtime and sha256.
   3. It installs the DLL, the loader, the phase's world and the fixture, checks every hash and runs
@@ -210,10 +210,9 @@ def build_installs(phase, game):
         ("SiderAddons/modules/common/cinematics.lua", os.path.join(cin, "cinematics.lua")),
         ("SiderAddons/modules/common/cinematicsB.lua", os.path.join(cin, "cinematicsB.lua")),
     ]
-    # The logos of the competitions in futve_logo.py's plan: today the two play-offs (134/135); the
-    # finals join the plan when their real competition ids exist (the world's free ids, never
-    # 136-138, which are the game's). The sandbox installs exactly what the plan lists and restores
-    # the game's emblems at the end.
+    # The logos of the competitions in futve_logo.py's plan: the two play-offs (134/135) and the
+    # three finals (142/143/144). The sandbox installs exactly what the plan lists and restores the
+    # game's emblems at the end.
     logo = os.path.join(ART, "logos", "world", "common", "render", "symbol", "emblemLc")
     r = subprocess.run([sys.executable, os.path.join(HERE, "futve_logo.py"), "--make"],
                        capture_output=True, text=True, errors="replace")
