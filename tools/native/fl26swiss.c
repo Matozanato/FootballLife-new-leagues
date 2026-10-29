@@ -6901,6 +6901,15 @@ static void cd_deal(const cd_place_t* pl, const int* idx, int n, uint32_t* clubs
   for (int i = 0; i < n; i++) want[ord[i]] = clubs[i];
 }
 
+/* B280 (Agus 2026-10-29): a match record's own date, year * 365 + day as game_date(), or -1 */
+static int game_date(void);
+static int ko_mdate(const unsigned char* m)
+{
+  int y = *(const uint16_t*)(m + 8), mo = m[10], dd = m[11];
+  if (y < 1990 || y > 2200 || mo < 1 || mo > 12 || dd < 1 || dd > 31) return -1;
+  return y * 365 + MONTH0[mo - 1] + dd - 1;
+}
+
 /* 1 = drawn now, 0 = nothing to do (not made yet, or under way), -1 = done for the season */
 static int cup_draw(cupdraw_t* c)
 {
@@ -6924,6 +6933,14 @@ static int cup_draw(cupdraw_t* c)
   if (ckey == c->done_key) return 0;
   cd_place_t pl[CD_CLUBS]; int np = 0;
   uint32_t club[CD_CLUBS]; int nc = 0;
+  int gd = game_date();
+  uint32_t user = 0;
+  {
+    unsigned char* uo = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+    void* ub = uo ? *(void**)(uo + 0x48) : 0;
+    user = ub ? user_club(ub) : 0;
+    if (user == 0xffffffffu) user = 0;
+  }
   for (int i = 0; i < nr; i++)
     for (int s = 0; s < ko_slots(rounds[i]); s++) {
       uint32_t* sl = ko_slot(rounds[i], s);
@@ -6935,6 +6952,21 @@ static int cup_draw(cupdraw_t* c)
         unsigned char* m = ko_match(ids[l]);
         if (m && (m[7] & 0x40)) {                 /* a save of before 0.2.5 kept the old days */
           c->done_key = ckey; sched_rebuild("cup under way"); return -1;
+        }
+        /* B280: a tie of a day gone by is not drawn again, nor one of today with the user's club
+           in it. The draw runs on file opens, so a save loaded on the day of the first round and
+           played at once is drawn while its match loads, or right after it, before the game marks
+           it played: Agus's Copa Argentina (278, 44 clubs) was "drawn ... 44 club(s) moved" after
+           his first match of it and the game closed. A cup the game makes on its first round's
+           day (266 in D1eg0Ar's world) is still drawn when the user is not in that day's ties. */
+        int md = m && gd >= 0 ? ko_mdate(m) : -1;
+        int mine = user && ((sl[0] & KO_TBD) == (user & KO_TBD) || (sl[1] & KO_TBD) == (user & KO_TBD));
+        if (md >= 0 && (md < gd || (md == gd && mine))) {
+          c->done_key = ckey;
+          logf("fl26swiss: cup %d not drawn: a first match is on day %d of %d, today is day %d%s (B280)",
+               c->reg, md % 365, md / 365, gd % 365, md == gd ? " and the user's club plays it" : "");
+          if (md < gd) sched_rebuild("cup's first day gone by");   /* as for a cup under way */
+          return -1;
         }
       }
       for (int side = 0; side < 2; side++) {
