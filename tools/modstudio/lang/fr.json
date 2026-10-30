@@ -1734,6 +1734,7 @@
   "Pictures (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;All files (*.*)": "Images (*.png *.jpg *.jpeg *.bmp *.gif *.webp);;Tous les fichiers (*.*)",
   "Player ID (the game's)": "ID du joueur (celui du jeu)",
   "Rename world": "Renommer le monde",
+  "Delete world": "Supprimer le monde",
   "SIDER": "SIDER",
   "Share leagues: make a package of your leagues for other people, or add somebody's package to your world. Added leagues show up on every tab of My world; Build and install puts them in the game.": "Partagez des ligues : faites un paquet de vos ligues pour d'autres personnes, ou ajoutez le paquet de quelqu'un à votre monde. Les ligues ajoutées apparaissent sur tous les onglets de Mon monde ; Construire et installer les met dans le jeu.",
   "Shooting -> Finishing, Kicking Power": "Tir -> Finishing, Kicking Power",
