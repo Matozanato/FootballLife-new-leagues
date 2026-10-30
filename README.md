@@ -61,7 +61,8 @@ CPKs: it all goes in through Sider modules and data files, and comes out again.
 >
 > **0.2.5** is out (2026-10-28): leagues of up to 28 clubs, the modern CONMEBOL competitions if you
 > want them, Undo/Redo, transfers from a CSV, up to 35 players a new club, and many fixes. Build your
-> 0.2.4 world once with 0.2.5 and your career carries on. What changed: [changelog-0.2.5](docs/changelog/changelog-0.2.5.md)
+> 0.2.4 world once with 0.2.5 and your career carries on. What changed: [changelog-0.2.5](docs/changelog/changelog-0.2.5.md) ·
+> **0.2.5.1** (fixes, no need to update if 0.2.5 works for you): [changelog-0.2.5.1](docs/changelog/changelog-0.2.5.1.md)
 >
 > **0.2.4** is out: a new look, worlds you switch with one click, ready Modpacks installed
 > straight from their zip, a quick tour and step-by-step guides in *Help*. Your 0.2.2 / 0.2.3 career
