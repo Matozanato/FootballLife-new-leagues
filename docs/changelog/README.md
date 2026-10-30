@@ -2,6 +2,9 @@
 
 What each release of FL26 Mod Studio brought. The full notes of the latest releases:
 
+- [0.2.5.2](changelog-0.2.5.2.md): fixes of what you reported since 0.2.5.1 (Edit changes not kept with a
+  Documents folder in other letters, small clubs buying stars, stand-in players far too good in
+  NewLife lower divisions). No need to update if 0.2.5.1 works for you.
 - [0.2.5.1](changelog-0.2.5.1.md): fixes of what you reported since 0.2.5 (a game folder with
   letters outside plain English ones, player and competition ids running out, the Copa Argentina
   bracket, super cups, European places ...). No need to update if 0.2.5 works for you.
