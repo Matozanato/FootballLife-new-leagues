@@ -1,7 +1,7 @@
 # What's new in Mod Studio 0.2.5.1
 
-0.2.5.1 fixes what you reported since 0.2.5 (2026-10-28). Worlds of 0.2.5 keep working: Build them
-once with 0.2.5.1, and careers carry on.
+0.2.5.1 (2026-10-30) fixes what you reported since 0.2.5 (2026-10-28). Worlds of 0.2.5 keep
+working: Build them once with 0.2.5.1, and careers carry on.
 
 **You don't have to update.** If 0.2.5 works for you and none of the fixes below is something you
 are waiting for, stay on it. If you hit a problem with 0.2.5.1, tell us on Discord.
