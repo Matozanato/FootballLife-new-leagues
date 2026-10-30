@@ -12,6 +12,11 @@ are waiting for, stay on it. If you hit a problem with 0.2.5.1, tell us on Disco
   as `C:\fůtbal lajf\...`, none of our modules could load its DLL (`LoadLibraryA failed (err 126)`
   in sider.log) and the added leagues had no fixtures. The modules now load their DLLs from any
   folder name. (Thanks Pelda)
+- **A world named with a space (B295).** With a world such as `_FL26MyWorld 1.4B` in the game,
+  Mod Studio read its name only up to the space: after every Switch it on the top bar said
+  "older or damaged: fl26regions.lua, fl26regnames.lua", Install the modules could put in another
+  world's, and a Build of that world did not switch it on again. The whole name counts now.
+  (Thanks pepponeee98)
 - **Build stopped on "no free player id left below 262144" (B282).** Every rebuild of a big world
   took a fresh block of player ids and never gave the old ones back, so a world rebuilt a few
   times (Modpack size) ran out. A rebuild now gives back the ids it leaves. (Thanks juanjose6124)
