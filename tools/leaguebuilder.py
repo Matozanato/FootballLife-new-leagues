@@ -4556,6 +4556,14 @@ MONEY_MIN = 500
 MONEY_B = [(86, 1200000), (84, 900000), (82, 300000), (80, 50000), (78, 30000)]   # else 10000
 FAME_CLASS = [(84, 8), (82, 7), (80, 6), (79, 5), (78, 4), (77, 3), (76, 2), (75, 1)]
 FANS_PCT = [100, 40, 15, 8, 5]
+# B298 (vanni11 30.10.): the game's own clubs a world puts into a league that were in none of the
+# game's (the "Other" pools: Zalgiris, HJK, RFS, Hajduk, Ferencvaros...) have no money and no
+# following in Team.bin either (base 0, followers 0: 207 clubs of the game). Out of the ranking
+# like a new club, they counted as its top class, and the broadcasting fee paid them as better
+# than first: Zalgiris bought Endrick for 75M, HJK Estevao for 66M. Such a club gets the new
+# clubs' treatment: its money by squad and division, and a "fans" line. A club of the game with
+# money of its own keeps it; one with followers but no money (Rakow, Sheriff) gets the money and
+# keeps its followers.
 
 
 def recipe_ordered(filled, clubs):
@@ -4596,23 +4604,28 @@ def money_base(q, tier):
     return max(MONEY_MIN, int(round(v / 100.0)) * 100)
 
 
-def club_money(new_of, pl, db, log=print):
+def club_money(new_of, pl, db, log=print, game_of=None):
     """sets the money of the new clubs (new_of: {id: league or group}) in db's Team.bin by their
-    squads and divisions; returns the world's "fans" lines for fl26clubs"""
+    squads and divisions, and of the game's clubs in game_of ({id: league}) that have none of
+    their own (B298); returns the world's "fans" lines for fl26clubs"""
     import lbplayers
     lbplayers.SQUAD = SQUAD                # a new club's places: the squads Build makes
-    if not new_of:
+    game_of = {t: p for t, p in (game_of or {}).items() if t not in new_of}
+    if not new_of and not game_of:
         return []
     path = os.path.join(db, "Team.bin")
     raw = bytearray(pesdb.wesys_unpack(open(path, "rb").read()))
     mine = {p["rid"]: p for p in pl.get("leagues") or [] if "rid" in p}
     squads = lbplayers.Squads(db)
-    groups, n = {}, 0
+    groups, n, ng = {}, 0, 0
     for o in range(0, len(raw) - W.T_REC + 1, W.T_REC):
         tid = int.from_bytes(raw[o + W.T_ID:o + W.T_ID + 4], "little")
-        p = new_of.get(tid)
+        p, game = new_of.get(tid), False
         if p is None:
-            continue
+            p = game_of.get(tid)
+            if p is None or struct.unpack_from("<I", raw, o + 0x34)[0] & 0xffffff:
+                continue
+            ng, game = ng + 1, True
         q = club_strength(squads.squad(tid))
         tier = 1 if p.get("others") else lbplayers.tier_of(p, mine)
         a = money_base(q, tier) & 0xffffff
@@ -4620,7 +4633,8 @@ def club_money(new_of, pl, db, log=print):
         x = struct.unpack_from("<I", raw, o + 0x34)[0]
         struct.pack_into("<I", raw, o + 0x34, (x & 0xff000000) | a)
         x = struct.unpack_from("<I", raw, o + 0x38)[0]
-        struct.pack_into("<I", raw, o + 0x38, (x & ~0x7fffff & 0xffffffff) | (b & 0x7fffff))
+        if not (game and x & 0x7fffff):     # a club of the game keeps followers of its own
+            struct.pack_into("<I", raw, o + 0x38, (x & ~0x7fffff & 0xffffffff) | (b & 0x7fffff))
         cls = max(0, next((c for m, c in FAME_CLASS if q >= m), 0) - (tier - 1))
         pct = FANS_PCT[min(tier, len(FANS_PCT)) - 1]
         groups.setdefault((cls, pct), []).append(tid)
@@ -4630,7 +4644,9 @@ def club_money(new_of, pl, db, log=print):
     for (cls, pct), ids in sorted(groups.items()):
         for k in range(0, len(ids), 64):
             lines.append("fans %d %d %s" % (cls, pct, " ".join(str(t) for t in ids[k:k + 64])))
-    log("  money and following for %d new club(s), by squad and division" % n)
+    log("  money and following for %d new club(s), by squad and division" % (n - ng))
+    if ng:
+        log("  ... and for %d club(s) of the game that had none (B298: in no league of the game)" % ng)
     return lines
 
 
@@ -5098,7 +5114,10 @@ def build(pl, base, game, replace=False, log=print):
         used = collections.Counter(e["label"] for e in picked.values())
         log("  formations picked for %d clubs from their squads (%s)"
             % (len(picked), ", ".join("%s: %d" % fc for fc in sorted(used.items(), key=lambda kv: (-kv[1], kv[0])))))
-    fans = club_money(new_of, pl, db, log)
+    # B298: the game's clubs in the world's leagues, for the ones with no money of their own
+    game_of = {e["id"]: p for p in (pl.get("leagues") or []) + (pl.get("others") or [])
+               for e in game_places(p).values() if isinstance(e.get("id"), int)}
+    fans = club_money(new_of, pl, db, log, game_of)
     if os.path.exists(os.path.join(db, "Player.bin")):   # a world of cups only keeps the game's players
         lbplayers.sign_keepers(db, log)
         lbplayers.line_up(db, base, recipe_ordered(filled, clubs), log)

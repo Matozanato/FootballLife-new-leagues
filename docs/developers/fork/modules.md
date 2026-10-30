@@ -157,6 +157,8 @@ writing the tables itself. The loaders drain `<dll>_log` and `<dll>_stats` into 
     broadcasting fee 0x141567ca0 paid as better than first place: EUR 250M a season) and
     wraps the followers total 0x141589e90, whose star-player part is cut to the line's
     percent for clubs below the top flight. Without `fans` lines nothing is hooked.
+    Build writes a line for every new club and for every club of the game it puts into a
+    league that the game gives no money and no followers (the "other clubs" of the pools).
 - **Status:**
   - 2 = count reader code not as expected, 3 = get reader code not as expected;
   - 4 / 5 = `VirtualProtect` on the count / get reader;
