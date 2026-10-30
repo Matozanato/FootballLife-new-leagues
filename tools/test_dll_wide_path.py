@@ -6,8 +6,9 @@ LoadLibraryA reads a name in the system's code page, so a folder named with a le
 plain English ones was a folder that does not exist.
 
 Every module that loads a DLL of ours now goes through load_dll (LoadLibraryW on the UTF-8 path
-turned into UTF-16), and a path a DLL opens itself goes through ansi_path. This reads the
-modules the pack ships: no LoadLibraryA on a path of ours, and each helper as it should be.
+turned into UTF-16, declared under the module's own name), and a path a DLL opens itself goes
+through ansi_path. This reads the modules the pack ships: no LoadLibraryA on a path of ours, and
+each helper as it should be.
 No game.
 """
 import os, re, sys
@@ -47,9 +48,13 @@ for m in lbpack.ORDER:
     helper = src[src.index("local function load_dll(path)"):]
     helper = helper[:helper.index("\nend\n")]
     ok("%s: load_dll turns UTF-8 (65001) into UTF-16 for LoadLibraryW" % m,
-       "MultiByteToWideChar(65001" in helper and "LoadLibraryW(w)" in helper)
-    ok("%s: one declaration a pcall, so one another module made does not stop the next" % m,
-       all(len(re.findall(r"\w+\(", d)) == 1 for d in re.findall(r'pcall\(ffi\.cdef, "([^"]*)"\)', helper)))
+       "_MultiByteToWideChar(65001" in helper and "_LoadLibraryW(w)" in helper)
+    # Sider's sandbox has no pcall, so a declaration that clashed with another module's would stop
+    # the module: the wide calls go under the module's own names, as fl26slotnames does
+    for api in ("LoadLibraryW", "MultiByteToWideChar"):
+        ok("%s: %s declared under its own name" % (m, api),
+           re.search(r"%s_%s\([^;]*\)\s*__asm__\(\"%s\"\);" % (m, api, api), src) is not None)
+    ok("%s: no pcall (Sider's modules do not have it)" % m, re.search(r"(?<![\w-])pcall\(", src) is None)
     for name in ("fl26_join_install_t", "fl26_regen_faces_load_t"):
         if name in src:
             ok("%s: the path the DLL opens itself goes through ansi_path" % m, "ansi_path(" in src
