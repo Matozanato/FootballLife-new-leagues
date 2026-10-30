@@ -19,5 +19,10 @@ released; until then this page only collects what is done and tested.
   EUR 250M a season for TV, so it bought Endrick and Estevao. Build now gives these clubs money
   and followers by squad and division, as it does for new clubs. A club of the game with money
   of its own keeps it. Build your world again and start a new Master League. (Thanks vanni11)
+- **4.5-star clubs in a fourth division (B299).** A NewLife club with no rated player of its own, in a
+  league with none either, or with no squad from the NewLife Database at all, kept Mod Studio's
+  stand-in players ("FL P...") at a top club's level: 70 to 81 in the Polish fourth division.
+  They now come to the division's level, as the stand-ins of a new club with no squad do. Build
+  your world again and start a new Master League. (Thanks Risto)
 
 ## Also new
