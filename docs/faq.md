@@ -484,6 +484,12 @@ names the missing file, and **Home** and **Diagnostics** say it as long as one i
    the antivirus' quarantine).
 3. Start a new Master League career if the old one was made without the DLLs.
 
+If every one of them says `LoadLibraryA failed (err 126)` while the DLLs are in `modules`, look at
+the game folder's name: up to Mod Studio 0.2.5 the modules could not load their DLLs from a folder with
+letters outside plain English ones (`C:\fůtbal lajf\...`). Rename the folder to plain letters,
+choose it again in **Settings**, **Install the modules**, and start a new career. Since 0.2.5.1
+any folder name works.
+
 ### What should I send when something is wrong?
 
 1. In Mod Studio: **Tools > Diagnostics > Copy a report**, and paste it into the issue.
