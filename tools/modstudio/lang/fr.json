@@ -1119,7 +1119,7 @@
   "Kits for many clubs at once, from a folder of kit-server club folders or kit pictures named after the clubs": "Des maillots pour beaucoup de clubs d'un coup, depuis un dossier de dossiers kit-server ou d'images de maillots nommés d'après les clubs",
   "Import kits": "Importer des maillots",
   "Import kits...": "Importer des maillots...",
-  "%d clubs got kits: press Save to write map.txt.": "%d clubs ont reçu des maillots : appuie sur Save pour écrire map.txt.",
+  "%d clubs got kits: press Save to write map.txt.": "%d clubs ont reçu des maillots : appuie sur Enregistrer pour écrire map.txt.",
   "%d clubs kept the kits they had.": "%d clubs ont gardé leurs maillots.",
   "%d kit folders, %d matched to a club.": "%d dossiers de maillots, %d associés à un club.",
   "Could not copy the kits: %s": "Impossible de copier les maillots : %s",
