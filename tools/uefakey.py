@@ -134,7 +134,9 @@ def candidates(recipe, base):
                         "cup": cup is not None, "game": True})
     conf = B.country_confederations(base)
     for L in recipe.get("leagues") or []:
-        if L.get("above") or L.get("exhibition") or conf.get(L.get("country", "")) != 2:
+        # a group of clubs in no league (others) has no table to give places from: it took a rank
+        # and its places were lost at Build (B290, Micarodvzla22 30.10.: "Croatian clubs (no league)")
+        if L.get("above") or L.get("exhibition") or L.get("others") or conf.get(L.get("country", "")) != 2:
             continue
         out.append({"id": L["name"], "name": L["name"], "country": L.get("country", ""),
                     "clubs": int(L.get("clubs") or 0), "cup": bool(L.get("cup")), "game": False})
