@@ -2402,6 +2402,33 @@ static int in_league(uint16_t reg, uint32_t c)
   return 0;
 }
 
+/* B281: competition k's places league reg has on the access list (its positions and the cups
+   whose next place it is; not a title holder's), and its clubs on k's lists (the league phase and
+   k's qualifying rounds) */
+static int nat_places(int k, uint16_t reg)
+{
+  int n = 0;
+  for (size_t i = 0; i < g_naccess; i++) {
+    const access_t* a = &g_access[i];
+    int ak = q_of_comp(a->comp) >= 0 ? q_of_comp(a->comp) : a->comp;
+    if (ak != k) continue;
+    if (!a->rank && (a->reg == R_UCLKO || a->reg == R_UELKO || a->reg == UECL_KO)) continue;
+    if (a->rank ? a->reg == reg : a->alt == reg) n++;
+  }
+  return n;
+}
+static int nat_count(int k, uint16_t reg)
+{
+  int n = 0;
+  if (k < 0 || k > 2) return 0;
+  for (unsigned i = 0; i < g_nacc[k]; i++)
+    if (g_how[k][i].reg == reg || in_league(reg, g_acc[k][i])) n++;
+  for (int qi = k; qi < NQR; qi += NQ)
+    for (unsigned i = 0; i < g_nq[qi]; i++)
+      if (g_qhow[qi][i].reg == reg || in_league(reg, g_q[qi][i])) n++;
+  return n;
+}
+
 static int q_matches(int p);
 static int q_summer(void);
 /* build the lists; a slot whose club is missing or already placed takes the next position of the
@@ -2500,6 +2527,13 @@ static int access_build(int q, int mask)
     if (!first) {                                   /* cup winner, or the alt league's next place */
       c = cup_winner(reg);
       if (c && !has_club(used, nused, c)) ft = 1;
+      else if (c && (reg == R_UCLKO || reg == R_UELKO || reg == UECL_KO)) {
+        /* B281 (pepponeee, 29.10.; mato: "as in reality"): a title holder already in through its
+           league leaves its place to the top-up, as at UEFA -- given to its alt league (Italy for
+           the Conference League's) it put an eighth Italian club in Europe */
+        held++;
+        continue;
+      }
       else { c = 0; reg = a->alt; first = a->alt ? 1 : FINAL_MAX + 1; }
     }
     int vacated = 0;
@@ -2547,14 +2581,27 @@ static int access_build(int q, int mask)
     how_t* H = qi < 0 ? g_how[k] : g_qhow[qi];
     unsigned* N = qi < 0 ? &g_nacc[k] : &g_nq[qi];
     unsigned C = qi < 0 ? cap[k] : q == 1 && on[qi] ? room[qi] : 0;
-    int rank[5] = { 1, 1, 1, 1, 1 }, done[5] = { 0 }, cnt[5] = { 0 };
+    int rank[5] = { 1, 1, 1, 1, 1 }, done[5] = { 0 }, cnt[5] = { 0 }, room5[5] = { 0 };
     if (*N < C)
       for (unsigned i = 0; i < *N; i++)
         for (int j = 0; j < 5; j++)
           if (H[i].reg == RESERVE[j] || in_league(RESERVE[j], L[i])) { cnt[j]++; break; }
+    /* B281 (mato: "as in reality"): no association past its own places while another of the five
+       has one free -- a Serie A of 4 + 2 + 1 places got a ninth club in Europe from here. A league
+       with a place still free (its cup winner gone up, a holder's place left) comes first; only
+       when none has, the fewest clubs first as before, so each competition still gets its 36 */
+    int capped = 0;
+    if (*N < C) {
+      int k3 = qi < 0 ? k : qi % NQ;
+      for (int j = 0; j < 5; j++) {
+        room5[j] = nat_places(k3, RESERVE[j]) - nat_count(k3, RESERVE[j]);
+        if (room5[j] > 0) capped = 1;
+      }
+    }
     while (*N < C && nused < sizeof used / sizeof used[0]) {
       int j = -1;
-      for (int r = 0; r < 5; r++) if (!done[r] && (j < 0 || cnt[r] < cnt[j])) j = r;
+      for (int r = 0; r < 5; r++) if (!done[r] && (!capped || room5[r] > 0) && (j < 0 || cnt[r] < cnt[j])) j = r;
+      if (j < 0 && capped) { capped = 0; continue; }
       if (j < 0) break;
       uint32_t c = 0; int ft = 0;
       while (rank[j] <= FINAL_MAX) {
@@ -2565,7 +2612,7 @@ static int access_build(int q, int mask)
       }
       if (!c) { done[j] = 1; continue; }
       H[*N].reg = RESERVE[j]; H[*N].rank = (uint8_t)(rank[j] - 1);
-      L[(*N)++] = c; used[nused++] = c; topped++; cnt[j]++;
+      L[(*N)++] = c; used[nused++] = c; topped++; cnt[j]++; room5[j]--;
     }
   }
   if (held) logf("fl26swiss: access -- %d league place(s) left by a title holder, given to the top-up", held);
@@ -2577,6 +2624,15 @@ static int access_build(int q, int mask)
   } else if (q == 2) snprintf(qs, sizeof qs, " direct, the qualifying rounds' clubs left out");
   logf("fl26swiss: access -- %u / %u / %u clubs%s (%d from the first-season list, %d positions from last season's tables, %d from first-season order, %d missing)",
        g_nacc[0], g_nacc[1], g_nacc[2], qs, listed, tables, orders, gaps);
+  {                                /* B281: the big five's clubs per competition against their places */
+    static const uint16_t BIG5[5] = { R_ENG, R_ESP, R_ITA, R_GER, R_FRA };
+    char bs[256]; int bn = 0;
+    for (int j = 0; j < 5 && bn < (int)sizeof bs - 40; j++)
+      bn += snprintf(bs + bn, sizeof bs - bn, " reg %u %d/%d %d/%d %d/%d;", (unsigned)BIG5[j],
+                     nat_count(0, BIG5[j]), nat_places(0, BIG5[j]), nat_count(1, BIG5[j]), nat_places(1, BIG5[j]),
+                     nat_count(2, BIG5[j]), nat_places(2, BIG5[j]));
+    logf("fl26swiss: access -- the big five, clubs/places in the three competitions:%s", bs);
+  }
   for (int i = 0; i < NQR; i++) {
     if (q == 1 && on[i]) g_nnew[i] = g_nq[i];
     if (q == 1 && on[i] && g_nq[i] < room[i]) logf("fl26swiss: access -- the %s %s has only %u of its %u new club(s)", QNAME(i), g_nq[i], room[i]);
