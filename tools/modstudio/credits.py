@@ -29,9 +29,10 @@ FEATURED = [
     ("Amir (AmirPjanic)", "GitHub, Discord",
      "Mod Studio tested release by release: the ID columns, names with č ć š ž đ, leagues of 26 "
      "and the national team editor"),
-    ("victormican", "GitHub",
+    ("vmican", "Discord, victormican on GitHub",
      "South America from top to bottom: Kick Off, Select Team order, Colombia's calendar, the "
-     "limit of leagues, and 0.1.9 tested to its limits"),
+     "limit of leagues, 0.1.9 tested to its limits, and the 0.2.4 beta: clubs over 40 stopping Build, "
+     "a game club added twice, Install on a full C:, New club here"),
     ("jyanj083-dotcom", "GitHub",
      "Peru and the Libertadores tested to the end: qualifying places, Apertura/Clausura, NewLife "
      "and the competition places, the Copa Peru and a long 0.2.1 bug list"),
@@ -110,8 +111,6 @@ EVERYONE = [
     ("Julio (juliorivera10)", "Discord", "a Spanish foot column that made every imported player right-footed"),
     ("Uncle Lanscilo (lanscilo)", "Discord",
      "help for other players in #support: adding leagues, reading Build logs; Sparta lost after a swap"),
-    ("vmican", "Discord",
-     "the 0.2.4 beta: clubs over 40 stopping Build, a game club added twice, Install on a full C:, New club here"),
     ("GiorgiM", "Discord",
      "a Georgian second-season crash, down to a super cup with no clubs"),
     ("bythezl19", "Discord",
@@ -150,6 +149,8 @@ EVERYONE = [
      "a best eleven of only defenders"),
     ("General Kreutaa", "Discord",
      "another league's scoreboard in the modpack"),
+    ("papijonn", "Discord",
+     "the port to vanilla PES 2021"),
 ]
 
 # the people who supported the project on Ko-fi (ko-fi.com/mata28), first first; the README's
