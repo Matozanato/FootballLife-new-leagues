@@ -1119,7 +1119,7 @@
   "Kits for many clubs at once, from a folder of kit-server club folders or kit pictures named after the clubs": "Dresovi za mnoge klubove odjednom, iz mape kit-server mapa ili slika dresova nazvanih po klubovima",
   "Import kits": "Uvoz dresova",
   "Import kits...": "Uvezi dresove...",
-  "%d clubs got kits: press Save to write map.txt.": "Klubova koji su dobili dresove: %d. Pritisni Save da se zapiše map.txt.",
+  "%d clubs got kits: press Save to write map.txt.": "Klubova koji su dobili dresove: %d. Pritisni Spremi da se zapiše map.txt.",
   "%d clubs kept the kits they had.": "Klubova koji su zadržali svoje dresove: %d.",
   "%d kit folders, %d matched to a club.": "Mapa dresova: %d, spojeno s klubom: %d.",
   "Could not copy the kits: %s": "Dresovi se nisu mogli kopirati: %s",
