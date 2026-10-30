@@ -355,10 +355,15 @@ def fill_newlife(pl, base, log=print):
     """pl's "players" with the prototype players who stay at a NewLife club brought to its level
     (fill_level), for recipes whose leagues were added before Mod Studio did it itself (Risto
     04.10.: a top club's clones at fourth-tier sides). A place the recipe edits is left alone.
-    Returns a new players dict; pl is not changed."""
+    Returns a new players dict; pl is not changed.
+    B299 (Risto 30.10.): a NewLife club with no rated player of its own in a league with none
+    either -- or with no squad from the release at all -- kept the clones of a top club (70-81
+    in a Polish fourth division). Those are brought to the division's level (TIER_LEVEL), as
+    fill_tiers does for a new club with no squad."""
     import copy
     out = copy.deepcopy(pl.get("players") or {})
-    proto, n = None, 0
+    mine = {p["rid"]: p for p in pl.get("leagues") or [] if "rid" in p}
+    proto, n, nt = None, 0, 0
     for L in pl.get("leagues") or []:
         nl = (L.get("newlife") or {}).get("clubs") or []
         if not nl:
@@ -371,19 +376,32 @@ def fill_newlife(pl, base, log=print):
         own = [[overall(ch) for ch in (c.get("edits") or {}).values() if "Registered Position" in ch] for c in clubs]
         league = [x for xs in own for x in xs]
         for k, c in enumerate(clubs):
-            if not c.get("edits"):
-                continue                  # not a squad Mod Studio set from the release
+            if not c.get("edits") and c.get("join"):
+                continue                  # the game's players take its places
             if proto is None:
                 proto = Squads(base).proto()
-            want = fill_level(own[k], league)
+                if not proto:
+                    return out
+            want = fill_level(own[k], league) if c.get("edits") else None
+            d = None
+            if want is None:
+                d = round(TIER_LEVEL[min(tier_of(L, mine), len(TIER_LEVEL)) - 1]
+                          - sum(overall(r) for r in proto) / len(proto))
+            edits = c.setdefault("edits", {})
             gone = set(c.get("remove") or [])
             for place in range(min(SQUAD, len(proto))):
                 key = str(place)
-                if want is not None and key not in c["edits"] and key not in gone:
-                    c["edits"][key] = at_level(proto[place], want)
+                if key not in edits and key not in gone:
+                    edits[key] = at_level(proto[place], want if d is None else overall(proto[place]) + d)
                     n += 1
-    if n:
-        log("  %d prototype players at NewLife clubs brought to their club's level" % n)
+                    nt += d is not None
+            if edits and new_key(L["name"], k) not in out:
+                out[new_key(L["name"], k)] = c
+    if n - nt:
+        log("  %d prototype players at NewLife clubs brought to their club's level" % (n - nt))
+    if nt:
+        log("  %d prototype players at NewLife clubs with no rated player brought to their division's level"
+            % nt)
     return out
 
 
