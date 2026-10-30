@@ -2624,6 +2624,15 @@ static int access_build(int q, int mask)
   } else if (q == 2) snprintf(qs, sizeof qs, " direct, the qualifying rounds' clubs left out");
   logf("fl26swiss: access -- %u / %u / %u clubs%s (%d from the first-season list, %d positions from last season's tables, %d from first-season order, %d missing)",
        g_nacc[0], g_nacc[1], g_nacc[2], qs, listed, tables, orders, gaps);
+  {                                /* B281: the big five's clubs per competition against their places */
+    static const uint16_t BIG5[5] = { R_ENG, R_ESP, R_ITA, R_GER, R_FRA };
+    char bs[256]; int bn = 0;
+    for (int j = 0; j < 5 && bn < (int)sizeof bs - 40; j++)
+      bn += snprintf(bs + bn, sizeof bs - bn, " reg %u %d/%d %d/%d %d/%d;", (unsigned)BIG5[j],
+                     nat_count(0, BIG5[j]), nat_places(0, BIG5[j]), nat_count(1, BIG5[j]), nat_places(1, BIG5[j]),
+                     nat_count(2, BIG5[j]), nat_places(2, BIG5[j]));
+    logf("fl26swiss: access -- the big five, clubs/places in the three competitions:%s", bs);
+  }
   for (int i = 0; i < NQR; i++) {
     if (q == 1 && on[i]) g_nnew[i] = g_nq[i];
     if (q == 1 && on[i] && g_nq[i] < room[i]) logf("fl26swiss: access -- the %s %s has only %u of its %u new club(s)", QNAME(i), g_nq[i], room[i]);
