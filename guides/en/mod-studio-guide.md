@@ -462,7 +462,7 @@ after asking.
 **First-season European clubs** (Leagues → More, 0.1.8): pick by hand
 the clubs of the Champions League, Europa League and Conference League phase in a new career's
 first season. Your clubs go in first and the game fills the rest; from the second season the
-European places decide.
+European places decide. With the summer qualifying on, part of each league phase are the qualifying's winners (28 places go straight in for the Champions League, 20 for the other two): since 0.2.5.1 the clubs of your list past those play the qualifying, from the play-off down, instead of getting no place.
 
 **Clubs** (a tab of My world): pick the league, then **Edit club** (name, short name, crest; or double-click the club). Everything else is under **More ▾**: **Players**, **Club of the game...**, **NewLife club...**, **New club here**, **Insert club**, **Remove club**, **Move to another league...**, **Paste
 names...**, **Load names from file...** and **Import crests...**. An empty name becomes `<league> 01`, `<league> 02` ...; a club

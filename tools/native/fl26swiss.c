@@ -2498,25 +2498,36 @@ static int access_build(int q, int mask)
      use does -- every build within 120 days of it is the same summer. A save of a later summer
      loaded on days 210-240 can look like a career built in this session; last season's tables
      read back from the save folder (state_sync, B49) say it is not. */
+  /* the round of competition p a new entrant goes to: the one nearest the league phase with room */
+  #define QSLOT(p, out) do { out = -1; for (int s_ = 0; s_ < 3 && out < 0; s_++) { int i_ = (p) + NQ * s_; \
+      if (on[i_] && g_nq[i_] < room[i_]) out = i_; } } while (0)
   int first_summer = g_new_career && !g_st_read_back && (g_first_day < 0 || abs_day() - g_first_day < 120);
   if (g_nfirst[0] + g_nfirst[1] + g_nfirst[2] && first_summer) {
-    int missing = 0, twice = 0, over = 0;
+    int missing = 0, twice = 0, over = 0, inq = 0;
     if (g_first_day < 0) g_first_day = abs_day();
     for (int k = 0; k < 3; k++)
       for (unsigned i = 0; i < g_nfirst[k]; i++) {
         uint32_t c = club_of_id(g_first[k][i]);
         if (!c) { missing++; logf("fl26swiss: first-season list -- team %u is not in any league of this game", g_first[k][i]); continue; }
         if (has_club(used, nused, c)) { twice++; continue; }
-        if (g_nacc[k] >= cap[k]) { over++; continue; }
+        if (g_nacc[k] >= cap[k]) {
+          /* B284 (Daemon, 29.10.): a list of 36 for the Champions League, and the summer's
+             qualifying takes eight of its places -- the last eight got none. They go to the
+             competition's own qualifying now, the round nearest the league phase with room,
+             as a place past the direct entrants does below */
+          int qi = -1;
+          if (q == 1) QSLOT(k, qi);
+          if (qi < 0) { over++; continue; }
+          g_qhow[qi][g_nq[qi]].reg = 0; g_qhow[qi][g_nq[qi]].rank = 0;
+          g_q[qi][g_nq[qi]++] = c; used[nused++] = c; listed++; inq++;
+          continue;
+        }
         g_how[k][g_nacc[k]].reg = 0; g_how[k][g_nacc[k]].rank = 0;
         g_acc[k][g_nacc[k]++] = c; used[nused++] = c; listed++;
       }
-    logf("fl26swiss: first-season list -- %u / %u / %u clubs taken (%d not in this game, %d listed twice, %d over %d)",
-         g_nacc[0], g_nacc[1], g_nacc[2], missing, twice, over, FIELD);
+    logf("fl26swiss: first-season list -- %u / %u / %u clubs taken (%d into the qualifying rounds, %d not in this game, %d listed twice, %d over %d)",
+         g_nacc[0], g_nacc[1], g_nacc[2], inq, missing, twice, over, FIELD);
   }
-  /* the round of competition p a new entrant goes to: the one nearest the league phase with room */
-  #define QSLOT(p, out) do { out = -1; for (int s_ = 0; s_ < 3 && out < 0; s_++) { int i_ = (p) + NQ * s_; \
-      if (on[i_] && g_nq[i_] < room[i_]) out = i_; } } while (0)
   for (size_t i = 0; i < g_naccess; i++) {
     const access_t* a = &g_access[i];
     int qp = q_of_comp(a->comp), qi = -1;
