@@ -15,7 +15,8 @@ are waiting for, stay on it. If you hit a problem with 0.2.5.1, tell us on Disco
 - **A world named with a space (B295).** With a world such as `_FL26MyWorld 1.4B` in the game,
   Mod Studio read its name only up to the space: after every Switch it on the top bar said
   "older or damaged: fl26regions.lua, fl26regnames.lua", Install the modules could put in another
-  world's, and a Build of that world did not switch it on again. The whole name counts now.
+  world's, and a Build of that world did not switch it on again. The whole name counts now, and
+  the World name field of the Leagues page no longer takes a space (Rename world never did).
   (Thanks pepponeee98)
 - **Build stopped on "no free player id left below 262144" (B282).** Every rebuild of a big world
   took a fresh block of player ids and never gave the old ones back, so a world rebuilt a few
