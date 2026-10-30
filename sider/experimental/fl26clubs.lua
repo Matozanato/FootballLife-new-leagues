@@ -40,7 +40,8 @@ sits on a served slot, the DLL is not installed. Without the file the built-in l
 are used, as before.
 
 Followers (2026-10-08): the world file's "fans <class> <percent> <team id> ..." lines (League
-Builder, one per class and share) give each new club the club-ranking class it is treated as
+Builder, one per class and share) give each new club -- and, since B298, each club of the game
+a world puts into a league that has no money or followers of its own -- the club-ranking class it is treated as
 when the game's ranking has no place for it (the ranking holds 750 clubs, and a club it cannot
 find was treated as its number one: millions of followers for a third-division side), and the
 share of the game's followers base it gets. See fl26clubs.c, "followers and the club ranking".
@@ -249,7 +250,7 @@ function m.init(ctx)
     local pf = ffi.C.GetProcAddress(h, "fl26_clubs_fans")
     if pf == nil then
       log("fl26clubs: this fl26clubs.dll is older than the world (no fl26_clubs_fans): " .. #fans ..
-          " new club(s) keep the game's followers -- install the modules again")
+          " club(s) keep the game's followers -- install the modules again")
     else
       local arr = ffi.new("uint32_t[?]", 2 * #fans)
       for i, r in ipairs(fans) do
@@ -273,7 +274,7 @@ function m.init(ctx)
     for _, s in ipairs(SLOTS) do parts[#parts + 1] = string.format("%d<-%d", s[1], s[2]) end
     log("fl26clubs: live -- " .. #SLOTS .. " slots served from our own regulations: " ..
         table.concat(parts, " ") .. (kept > 0 and (", " .. kept .. " club(s) of the game kept out of the pools") or "") ..
-        (nfans > 0 and (", followers class and share for " .. nfans .. " new club(s)") or "") ..
+        (nfans > 0 and (", followers class and share for " .. nfans .. " club(s)") or "") ..
         " (F10 = report)")
     ctx.register("livecpk_make_key", m.make_key)
     ctx.register("key_down", m.key_down)
