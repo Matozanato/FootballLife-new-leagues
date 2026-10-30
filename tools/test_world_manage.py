@@ -294,6 +294,10 @@ def rename(t):
     ok("check_name: no spaces", WL.check_name(game, "_FL26 My") != "")
     ok("check_name: not the name of another world", WL.check_name(game, "_FL26old", "_FL26Live") != "")
     ok("check_name: a good name", WL.check_name(game, "_FL26New-1", "_FL26Live") == "")
+    # B295 (pepponeee98): Construction's World name field takes the same rules, the world itself may exist
+    ok("name_form: a space is refused", WL.name_form("_FL26MyWorld 1.4B") != "")
+    ok("name_form: the name of a world that exists is fine", WL.name_form("_FL26Live") == "")
+    ok("name_form: too long", WL.name_form("_FL26" + "x" * WL.NAME_MAX) != "")
     ini0 = read(game.ini_path).split("\r\n")
     folder, info = WL.rename(game, "_FL26Live", "_FL26New", QUIET)
     ini = read(game.ini_path).split("\r\n")

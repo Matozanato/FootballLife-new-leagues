@@ -108,11 +108,9 @@ def in_modules(game):
     return I.world_name(os.path.join(game.modules_dir, I.WORLD_FILE))
 
 
-def check_name(game, new, old=None):
-    """why `new` cannot be a world's name, or "" (Build finds a world by "_FL26" at the start,
-    the world file's "world" line ends at a space, and a map line cannot hold a quote, a comma or
-    a #: letters, digits, - and _ only). In the user's language: a text with a name or number in
-    it is translated before it is filled in (the page's _(why) cannot find it afterwards)"""
+def name_form(new):
+    """why `new` is not written as a world's name, or "": the part of check_name that holds for a
+    name the world has already too (Construction's World name field, B295)"""
     from .i18n import _
     new = (new or "").strip()
     if not new.startswith("_FL26"):
@@ -121,6 +119,19 @@ def check_name(game, new, old=None):
         return _("After _FL26 use only letters, digits, - and _ (no spaces).")
     if len(new) > NAME_MAX:
         return _("The name is too long (at most %d characters).") % NAME_MAX
+    return ""
+
+
+def check_name(game, new, old=None):
+    """why `new` cannot be a world's name, or "" (Build finds a world by "_FL26" at the start,
+    the world file's "world" line ends at a space, and a map line cannot hold a quote, a comma or
+    a #: letters, digits, - and _ only). In the user's language: a text with a name or number in
+    it is translated before it is filled in (the page's _(why) cannot find it afterwards)"""
+    from .i18n import _
+    new = (new or "").strip()
+    why = name_form(new)
+    if why:
+        return why
     if old is not None and new.lower() == old.lower():
         return _("That is the name it has now.")
     if os.path.exists(os.path.join(game.livecpk_dir, new)) or any(

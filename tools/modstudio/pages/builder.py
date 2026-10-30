@@ -3021,8 +3021,12 @@ class NewLeagues(BuilderPage):
     def set_world(self):
         w = self.world.text().strip()
         if w != self.project.recipe.get("world"):
-            if not w.startswith("_FL26"):
-                self.say(_("The world name must start with _FL26."), "err")
+            # B295 (pepponeee98 30.10.): this field took "_FL26MyWorld 1.4B", which Rename world
+            # refuses -- the same rules for a name here
+            from .. import worlds as WL
+            why = WL.name_form(w)
+            if why:
+                self.say(why, "err")
                 self.world.setText(self.project.recipe.get("world", ""))
                 return
             self.project.recipe["world"] = w
