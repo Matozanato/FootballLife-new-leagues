@@ -273,6 +273,24 @@ int main(void)
     go(2027, 220);
     any_final_kept();
     expect(!g_new_career, "the same career a year on: not new");
+
+    /* B289: loaded past its first summer, but within BUILT_SUMMER days of the build */
+    restart();
+    go(2026, 255);
+    any_final_kept();
+    expect(g_new_career && !first_summer_over(), "B289: loaded on day 255, the league phases just drawn: still its first summer");
+    go(2026, 364); go(2027, 0); go(2027, 181); go(2027, 226);
+    expect(first_summer_over(), "B289: ... played on to the next summer: the first one is over");
+    restart();
+    DeleteFileA(g_path_test);
+    g_user_test = USER_A;
+    go(2026, 182);                                   /* an August-May career, built in July */
+    g_new_career = 1; g_built_gdate = state_test_date(); g_built_stored = 0;
+    state_store();
+    restart();
+    go(2026, 320);
+    any_final_kept();
+    expect(!g_new_career, "B289: a July career loaded on day 320, its league phases played: not new");
   }
 
   printf("\nB240: a first season's squad-strength order outlives the session (antonimus, 25.10.)\n");
