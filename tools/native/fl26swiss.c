@@ -1297,6 +1297,19 @@ static int abs_day(void)
   g_last_day = d;
   return d + g_year_off;
 }
+/* B289 (30.10.): the first summer of a career ends on FIRST_SUMMER_END (late October, the
+   league phases long drawn). A save loaded after it but within BUILT_SUMMER days of the build
+   (a January career loaded in September) was taken for a new career again, and played on in
+   the same session it put the first-season list into the next summer's league phases too. */
+#define FIRST_SUMMER_END 300
+static int game_date(void);
+static int first_summer_over(void)
+{
+  int gn = game_date();
+  if (gn < 0 || g_built_gdate < 0) return 0;
+  /* a FIRST_SUMMER_END between the build and today: days since the last one < days since the build */
+  return gn - g_built_gdate > (gn % 365 - FIRST_SUMMER_END + 365) % 365;
+}
 /* one key per season and timeline: what is logged once per regulation is logged again for the
    next season's calendars and for another career's */
 static int log_season(void) { int a = abs_day(); return a < 0 ? -1 : (a + 184) / 365; }
@@ -2501,7 +2514,8 @@ static int access_build(int q, int mask)
   /* the round of competition p a new entrant goes to: the one nearest the league phase with room */
   #define QSLOT(p, out) do { out = -1; for (int s_ = 0; s_ < 3 && out < 0; s_++) { int i_ = (p) + NQ * s_; \
       if (on[i_] && g_nq[i_] < room[i_]) out = i_; } } while (0)
-  int first_summer = g_new_career && !g_st_read_back && (g_first_day < 0 || abs_day() - g_first_day < 120);
+  int first_summer = g_new_career && !g_st_read_back && (g_first_day < 0 || abs_day() - g_first_day < 120)
+                     && !first_summer_over();
   if (g_nfirst[0] + g_nfirst[1] + g_nfirst[2] && first_summer) {
     int missing = 0, twice = 0, over = 0, inq = 0;
     if (g_first_day < 0) g_first_day = abs_day();
@@ -12067,6 +12081,10 @@ static void state_sync(void)
      January league's, by July) do not make it a later season's */
   for (int k = 0; k < nb; k++)
     if (best[k].kind == STATE_BUILT && gn - best[k].gdate < BUILT_SUMMER) built = best[k].gdate;
+  if (built >= 0 && !g_new_career && (gn - built > (gn % 365 - FIRST_SUMMER_END + 365) % 365)) {
+    logf("fl26swiss: state -- club %08x's career was built %d day(s) ago, its first summer is over", u, gn - built);
+    built = -1;
+  }
   if (built >= 0 && !g_new_career) {
     g_new_career = 1; g_built_gdate = built; g_built_stored = 1; g_first_day = -1;
     logf("fl26swiss: state -- club %08x's career was built %d day(s) ago: still its first summer", u, gn - built);
