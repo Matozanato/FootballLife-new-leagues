@@ -183,6 +183,44 @@ function m.key_down(ctx, vkey)
   if vkey == 0x79 then drain("F10 report") end      -- F10
 end
 
+-- B294 (Pelda 30.10.): ctx.sider_dir is UTF-8, and LoadLibraryA reads a name in the system's
+-- code page: with the game in a folder named with a Czech u-ring, no DLL of ours loaded (error 126)
+-- and the leagues had no fixtures. LoadLibraryW takes any folder name; LoadLibraryA is what is
+-- left when another mod declared the wide calls otherwise.
+local function load_dll(path)
+  -- one declaration a call: one another module made already must not stop the next
+  pcall(ffi.cdef, "int MultiByteToWideChar(unsigned int, unsigned long, const char*, int, uint16_t*, int);")
+  pcall(ffi.cdef, "void* LoadLibraryW(const uint16_t*);")
+  local ok, h = pcall(function()
+    local n = ffi.C.MultiByteToWideChar(65001, 0, path, -1, nil, 0)
+    if n <= 0 then return nil end
+    local w = ffi.new("uint16_t[?]", n)
+    ffi.C.MultiByteToWideChar(65001, 0, path, -1, w, n)
+    return ffi.C.LoadLibraryW(w)
+  end)
+  if ok and h ~= nil then return h end
+  return ffi.C.LoadLibraryA(path)
+end
+
+-- B294: a path the DLL opens itself (fopen) goes in the system's code page, the way it reads it;
+-- a name that code page cannot hold stays as it was
+local function ansi_path(path)
+  pcall(ffi.cdef, "int MultiByteToWideChar(unsigned int, unsigned long, const char*, int, uint16_t*, int);")
+  pcall(ffi.cdef, "int WideCharToMultiByte(unsigned int, unsigned long, const uint16_t*, int, char*, int, const char*, int*);")
+  local ok, s = pcall(function()
+    local n = ffi.C.MultiByteToWideChar(65001, 0, path, -1, nil, 0)
+    if n <= 0 then return nil end
+    local w = ffi.new("uint16_t[?]", n)
+    ffi.C.MultiByteToWideChar(65001, 0, path, -1, w, n)
+    local k = ffi.C.WideCharToMultiByte(0, 0, w, -1, nil, 0, nil, nil)
+    if k <= 0 then return nil end
+    local a = ffi.new("char[?]", k)
+    ffi.C.WideCharToMultiByte(0, 0, w, -1, a, k, nil, nil)
+    return ffi.string(a)
+  end)
+  return ok and s or path
+end
+
 function m.init(ctx)
   if ffi == nil then log("fl26joindll: global ffi is nil -- set luajit.ext.enabled = 1 in sider.ini"); return end
   ffi.cdef([[
@@ -213,7 +251,7 @@ function m.init(ctx)
   local sider_dir = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "")
   local dllpath = sider_dir .. sep .. "modules" .. sep .. "fl26join.dll"
   local logpath = sider_dir .. sep .. "fl26join.log"
-  local h = ffi.C.LoadLibraryA(dllpath)
+  local h = load_dll(dllpath)
   if h == nil then
     log(string.format("fl26joindll: LoadLibraryA failed (err %d): %s -- is fl26join.dll next to this file in modules?",
                       tonumber(ffi.C.GetLastError()), dllpath)); return
@@ -317,7 +355,7 @@ function m.init(ctx)
   for i, v in ipairs(IDS) do idbuf[i - 1] = v end
 
   local base = ffi.cast("uint64_t", ffi.C.GetModuleHandleA(nil))
-  local status = tonumber(install(base, CAVE_VA, idbuf, #IDS, logpath))
+  local status = tonumber(install(base, CAVE_VA, idbuf, #IDS, ansi_path(logpath)))
   if status == 0 then
     log(string.format("fl26joindll: installed -- %d added leagues will be registered on the first registration day of the season; the DLL's own log is %s (F10 = counters)", #IDS, logpath))
 

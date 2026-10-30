@@ -20,6 +20,25 @@ Requires sider.ini: luajit.ext.enabled = 1 (global ffi).
 
 local m = {}
 
+-- B294 (Pelda 30.10.): ctx.sider_dir is UTF-8, and LoadLibraryA reads a name in the system's
+-- code page: with the game in a folder named with a Czech u-ring, no DLL of ours loaded (error 126)
+-- and the leagues had no fixtures. LoadLibraryW takes any folder name; LoadLibraryA is what is
+-- left when another mod declared the wide calls otherwise.
+local function load_dll(path)
+  -- one declaration a call: one another module made already must not stop the next
+  pcall(ffi.cdef, "int MultiByteToWideChar(unsigned int, unsigned long, const char*, int, uint16_t*, int);")
+  pcall(ffi.cdef, "void* LoadLibraryW(const uint16_t*);")
+  local ok, h = pcall(function()
+    local n = ffi.C.MultiByteToWideChar(65001, 0, path, -1, nil, 0)
+    if n <= 0 then return nil end
+    local w = ffi.new("uint16_t[?]", n)
+    ffi.C.MultiByteToWideChar(65001, 0, path, -1, w, n)
+    return ffi.C.LoadLibraryW(w)
+  end)
+  if ok and h ~= nil then return h end
+  return ffi.C.LoadLibraryA(path)
+end
+
 function m.init(ctx)
   if ffi == nil then log("fl26walk: global ffi is nil -- set luajit.ext.enabled = 1"); return end
   ffi.cdef([[
@@ -32,7 +51,7 @@ function m.init(ctx)
   ]])
   local sep = string.char(92)
   local dllpath = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26walk.dll"
-  local h = ffi.C.LoadLibraryA(dllpath)
+  local h = load_dll(dllpath)
   if h == nil then
     log(string.format("fl26walk: LoadLibraryA failed (err %d): %s", tonumber(ffi.C.GetLastError()), dllpath)); return
   end
