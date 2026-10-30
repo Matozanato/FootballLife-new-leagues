@@ -122,6 +122,22 @@ def main():
         B.ensure_modules(game, ["fl26caps", "fl26rank", "fl26regions", "fl26regnames"],
                          list(B.world_modules(game)), quiet)
         ok("its own Switch on brings them back on", live(game, "fl26regions") and live(game, "fl26regnames"))
+
+        # B295 (pepponeee98 30.10.): "_FL26MyWorld 1.4B" in the game beside "_FL26MyWorld" -- the name
+        # was read up to its space, so Home held 1.4B's modules against the other world's
+        for w in ("_FL26MyWorld", "_FL26MyWorld 1.4B"):
+            world(game, w, ["fl26regions", "fl26regnames"])
+        in_game(game, "_FL26MyWorld 1.4B")
+        for m in ("fl26regions", "fl26regnames"):
+            shutil.copy2(os.path.join(g.livecpk_dir, "_FL26MyWorld 1.4B", "modules", m + ".lua"),
+                         os.path.join(g.modules_dir, m + ".lua"))
+        ok("a world named with a space is the live one, all of its name",
+           B.live_world(game) == "_FL26MyWorld 1.4B" and B.is_live("_FL26MyWorld 1.4B", game)
+           and not B.is_live("_FL26MyWorld", game))
+        ok("... Home finds its modules in place after its Switch on", checks.modules_ok(checks.modules_state(g)))
+        B.install_modules(game, log=quiet, settle=0)
+        ok("... and Install now keeps its own, not the other world's",
+           open(os.path.join(g.modules_dir, "fl26regions.lua")).read() == "-- fl26regions of _FL26MyWorld 1.4B")
     finally:
         B.pack_dir = old_pack
         shutil.rmtree(tmp, ignore_errors=True)

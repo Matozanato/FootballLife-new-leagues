@@ -5639,26 +5639,22 @@ def keep_added(old, new, log=print, gone=()):
 
 def is_live(world, game):
     """is <world> the one the modules read now (the world line of modules/fl26world.txt)?"""
+    return world is not None and live_world(game) == world
+
+
+def live_world(game):
+    """the world the modules read now (the world line of modules/fl26world.txt), or None.
+    B295 (pepponeee98 30.10.): the whole rest of the line is the name, as fl26world.read reads it --
+    split() took "_FL26MyWorld 1.4B" for "_FL26MyWorld", another world of his: the modules check
+    held the switched-on world's regions against that one's ("older or damaged" after every Switch
+    it on), and a Build of the live world did not switch it on again"""
     try:
         with open(os.path.join(siderdir.find(game), "modules", MARK), encoding="utf-8", errors="replace") as f:
             # the file opens with its "# fl26world 1" header; the name is on the "world" line
             for line in f:
-                w = line.split()
-                if w[:1] == ["world"]:
-                    return w[1:2] == [world]
-        return False
-    except (OSError, BuildError):
-        return False
-
-
-def live_world(game):
-    """the world the modules read now (the world line of modules/fl26world.txt), or None"""
-    try:
-        with open(os.path.join(siderdir.find(game), "modules", MARK), encoding="utf-8", errors="replace") as f:
-            for line in f:
-                w = line.split()
-                if w[:1] == ["world"]:
-                    return w[1] if len(w) > 1 else None
+                line = line.strip()
+                if line == "world" or line.startswith(("world ", "world\t")):
+                    return line[6:].strip() or None
     except (OSError, BuildError):
         pass
     return None
