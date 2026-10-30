@@ -40,11 +40,11 @@
  */
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#include <shlobj.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdarg.h>
+#include "fl26savedir.h"
 
 #define EDIT_VT      0x2b9a918          /* vtable of the Edit data object                     */
 #define MGR_GLOBAL   0x37f5c28          /* EditManager*; the object is at +0x70               */
@@ -99,7 +99,7 @@ static const uint32_t SIZE_SITES[][2] = {
 
 static uint64_t g_base;
 static unsigned char* g_copy;          /* the inner part the save writes                     */
-static char g_side[MAX_PATH];
+static char g_side[1024];             /* the side file, UTF-8 (B296)                        */
 static uint32_t g_stat[6];             /* rebuilds, side records read, saves, side records written, cap hits, refused */
 
 /* ---- log, drained by the Lua loader ---- */
@@ -141,9 +141,20 @@ static void* ctor_hook(unsigned char* inner)
 /* ---- the side file: magic, tag, a count per table, then the records table by table ---- */
 #define SIDE_MAGIC  "FL26EDX2"          /* the four tables                                    */
 #define SIDE_MAGIC1 "FL26EDX1"          /* 0.2.1 and older: the three club tables             */
+/* next to the EDIT file, in the folder the game saves in now (B296: any letters in Documents, and
+   the <id> folder the game really uses); asked again at every load and save, as a first save can
+   make that folder */
+static int side_path(void)
+{
+  char d[sizeof g_side - 24];
+  if (!fl26_save_dir(d, sizeof d)) return 0;
+  snprintf(g_side, sizeof g_side, "%s\\EDIT00000000.fl26x", d);
+  return 1;
+}
+
 static int side_read(const char* path, const unsigned char* tag, unsigned char* o, uint32_t* cnt)
 {
-  FILE* f = fopen(path, "rb");
+  FILE* f = fl26_u8open(path, L"rb");
   if (!f) return 0;
   char m[8]; unsigned char t[TAG_LEN]; uint32_t n[NT]; int got = 0, nt = 0;
   if (fread(m, 1, 8, f) == 8) nt = !memcmp(m, SIDE_MAGIC, 8) ? NT : !memcmp(m, SIDE_MAGIC1, 8) ? 3 : 0;
@@ -168,18 +179,19 @@ static void side_write(const unsigned char* tag, unsigned char* o, const uint32_
   for (int k = 0; k < NT; k++) { n[k] = to[k] - from[k]; all += n[k]; }
   /* The file is written when the game builds its save, before "Overwrite data. Proceed?" -- a No
    * there keeps the old EDIT file, whose tag is the previous .fl26x's. So that one stays, as .prev. */
-  char tmp[MAX_PATH + 8], prev[MAX_PATH + 8];
+  char tmp[sizeof g_side + 8], prev[sizeof g_side + 8];
+  side_path();
   snprintf(prev, sizeof prev, "%s.prev", g_side);
-  MoveFileExA(g_side, prev, MOVEFILE_REPLACE_EXISTING);
+  fl26_u8move(g_side, prev);
   if (!all) return;
   snprintf(tmp, sizeof tmp, "%s.tmp", g_side);
-  FILE* f = fopen(tmp, "wb");
+  FILE* f = fl26_u8open(tmp, L"wb");
   if (!f) { logf("save: cannot write %s", tmp); return; }
   int ok = fwrite(SIDE_MAGIC, 1, 8, f) == 8 && fwrite(tag, 1, TAG_LEN, f) == TAG_LEN && fwrite(n, 4, NT, f) == NT;
   for (int k = 0; k < NT && ok; k++)
     ok = fwrite(o + T[k].new_off + (size_t)from[k] * T[k].rec, T[k].rec, n[k], f) == n[k];
   ok = fclose(f) == 0 && ok;
-  if (ok && MoveFileExA(tmp, g_side, MOVEFILE_REPLACE_EXISTING)) g_stat[3] += all;
+  if (ok && fl26_u8move(tmp, g_side)) g_stat[3] += all;
   else logf("save: writing %s failed", g_side);
 }
 
@@ -206,7 +218,8 @@ static void ensure(unsigned char* o)
     int blank = 1;
     for (int i = 0; i < TAG_LEN; i++) if (tag[i]) { blank = 0; break; }
     if (!blank) {
-      char prev[MAX_PATH + 8];
+      char prev[sizeof g_side + 8];
+      side_path();
       snprintf(prev, sizeof prev, "%s.prev", g_side);
       side = side_read(g_side, tag, o, cnt);
       if (!side) side = side_read(prev, tag, o, cnt);
@@ -348,9 +361,7 @@ __declspec(dllexport) int fl26_edit_install(uint64_t exe_base)
   if (!g_copy) return 4;
 
   /* the side file sits next to the EDIT file */
-  char docs[MAX_PATH];
-  if (SHGetFolderPathA(0, CSIDL_PERSONAL, 0, 0, docs) != S_OK) return 4;
-  snprintf(g_side, sizeof g_side, "%s\\KONAMI\\eFootball PES 2021 SEASON UPDATE\\2026\\save\\EDIT00000000.fl26x", docs);
+  if (!side_path()) return 4;
 
   /* the save trampoline: our buffer in r8 */
   unsigned char* t = (unsigned char*)VirtualAlloc(0, 64, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);

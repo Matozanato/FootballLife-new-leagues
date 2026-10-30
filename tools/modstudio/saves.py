@@ -1,8 +1,8 @@
 r"""Each world its own Master League careers (0.2.4, mato 15.10., from a tester's .bat).
 
-The game keeps its saves in Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\2026\save. A career
-holds team and competition ids, so a career of one world is no good in another one. When the world
-in the game changes, the save folder changes with it:
+The game keeps its saves in Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\2026\save (2026: sys.ini's
+SteamID, see game.save_root). A career holds team and competition ids, so a career of one world is
+no good in another one. When the world in the game changes, the save folder changes with it:
 
     save              the careers of the world in the game now
     save_<world>      the careers of every other world, kept aside (save_no-world: the game
@@ -33,7 +33,7 @@ No Qt here: the pages ask (pages/builder.py, install.py, roots.py, profiles.py, 
 import json, os, re, shutil, time
 
 from . import backups
-from .game import SAVE_DIR, Game
+from .game import Game, save_root
 from .i18n import _
 
 ENV = "FL26_SAVE_ROOT"           # the folder that holds save (tests and the build test: a temp folder)
@@ -52,8 +52,8 @@ class SaveError(Exception):
 
 # ---- where -------------------------------------------------------------------------------------
 def root():
-    """the folder that holds the game's save folder"""
-    return os.environ.get(ENV) or os.path.join(SAVE_DIR, "2026")
+    """the folder that holds the game's save folder (game.save_root: the one the game saves in)"""
+    return os.environ.get(ENV) or save_root()
 
 
 def name_of(world):

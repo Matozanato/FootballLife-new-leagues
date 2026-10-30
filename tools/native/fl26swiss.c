@@ -40,6 +40,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#include "fl26savedir.h"
 #include "fl26swiss_table.h"
 #include "fl26swiss_draw.h"
 
@@ -11915,25 +11916,22 @@ static uint32_t state_user(void)
   return user_club(o ? *(void**)(o + 0x48) : 0);
 #endif
 }
-/* <Documents>\KONAMI\eFootball PES 2021 SEASON UPDATE\2026\save\fl26swiss-state.bin, beside
-   fl26edit's side file; shell32 is asked at run time, so the DLL still imports kernel32 alone */
+/* <Documents>\KONAMI\eFootball PES 2021 SEASON UPDATE\<id>\save\fl26swiss-state.bin, beside
+   fl26edit's side file, in UTF-8 (B296: any letters in Documents, and the <id> folder the game
+   really saves in -- fl26savedir.h). Asked at every use: a first save can make that folder */
 static const char* state_path(void)
 {
 #ifdef FL26_STATE_TEST
   return state_test_path();
 #else
-  static char path[MAX_PATH + 96]; static int tried = 0;
-  if (tried) return path[0] ? path : 0;
-  tried = 1;
-  typedef HRESULT (WINAPI *folder_fn)(HWND, int, HANDLE, DWORD, LPSTR);
-  HMODULE sh = LoadLibraryA("shell32.dll");
-  folder_fn f = sh ? (folder_fn)(uintptr_t)GetProcAddress(sh, "SHGetFolderPathA") : 0;
-  char docs[MAX_PATH];
-  if (!f || f(0, 5 /* CSIDL_PERSONAL */, 0, 0, docs) != 0) {
-    logf("fl26swiss: state -- no Documents folder; kept tables live in memory only");
+  static char path[1024]; static int told = 0;
+  char d[sizeof path - 32];
+  if (!fl26_save_dir(d, sizeof d)) {
+    if (!told) logf("fl26swiss: state -- no Documents folder; kept tables live in memory only");
+    told = 1;
     return 0;
   }
-  snprintf(path, sizeof path, "%s\\KONAMI\\eFootball PES 2021 SEASON UPDATE\\2026\\save\\" STATE_FILE, docs);
+  snprintf(path, sizeof path, "%s\\" STATE_FILE, d);
   return path;
 #endif
 }
@@ -11948,7 +11946,9 @@ static uint32_t state_check(const state_rec_t* r)
    opened or is not ours */
 static HANDLE state_open(const char* p, int write)
 {
-  HANDLE h = CreateFileA(p, GENERIC_READ | (write ? GENERIC_WRITE : 0), FILE_SHARE_READ, 0,
+  wchar_t w[MAX_PATH * 2];
+  if (!fl26_u2w(p, w, MAX_PATH * 2)) return 0;
+  HANDLE h = CreateFileW(w, GENERIC_READ | (write ? GENERIC_WRITE : 0), FILE_SHARE_READ, 0,
                          write ? OPEN_ALWAYS : OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
   if (h == INVALID_HANDLE_VALUE) return 0;
   char m[8]; DWORD got = 0;

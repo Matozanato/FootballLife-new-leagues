@@ -29,7 +29,8 @@ def ok(name, cond):
 
 ef = os.path.join(T, "2026", "save", "EDIT00000000")
 ok("with FL26_SAVE_ROOT the Edit save is that folder's", os.path.normcase(G.edit_file()) == os.path.normcase(ef))
-ok("... and not the PC's real one", os.path.normcase(G.edit_file()) != os.path.normcase(G.EDIT_FILE))
+REAL = os.path.join(G.save_root(), "save", "EDIT00000000")
+ok("... and not the PC's real one", os.path.normcase(G.edit_file()) != os.path.normcase(REAL))
 ok("no Edit save there: nothing old", G.old_edit(time.time() + 60) is None)
 os.makedirs(os.path.dirname(ef))
 with open(ef, "wb") as f:
@@ -42,5 +43,5 @@ name = G.edit_aside("w1")
 ok("moved aside next to it, nothing deleted", not os.path.exists(ef)
    and os.path.isfile(os.path.join(os.path.dirname(ef), name)) and name.startswith("EDIT00000000.before-w1-"))
 del os.environ["FL26_SAVE_ROOT"]
-ok("without FL26_SAVE_ROOT: the game's save folder", G.edit_file() == G.EDIT_FILE)
+ok("without FL26_SAVE_ROOT: the game's save folder", G.edit_file() == REAL)
 print("all %d checks passed" % N)

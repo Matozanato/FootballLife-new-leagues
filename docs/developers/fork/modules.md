@@ -170,7 +170,8 @@ writing the tables itself. The loaders drain `<dll>_log` and `<dll>_stats` into 
   (0x1f080a7), the 750-team cap function (0x1ef21d0) and, since 0.2.2, the 1300-manager cap
   function (0x1eeddd0). The Edit data then has room for every club of a world and its
   manager: the old room in the save itself (749 clubs, 1299 managers), and the records past
-  that in `EDIT00000000.fl26x` next to the save (`FL26EDX2`: tag, four counts, then team data,
+  that in `EDIT00000000.fl26x` next to the save (the folder of `fl26savedir.h`, below;
+  `FL26EDX2`: tag, four counts, then team data,
   squad, tactics and managers; a 0.2.1 file is `FL26EDX1` with the first three only). Without
   the managers part, "Create Edit Data" fails in a big world: the check before the save
   (0x141ee85f0) wants every club's manager in the Edit data.
@@ -179,6 +180,20 @@ writing the tables itself. The loaders drain `<dll>_log` and `<dll>_stats` into 
   - 3 = the Edit data was made before the module loaded (load order);
   - 4 = out of memory;
   - 5 = a patch failed.
+
+### The save folder (`tools/native/fl26savedir.h`, B296)
+
+`fl26edit.dll` and `fl26swiss.dll` find the game's save folder with `fl26_save_dir`, and Mod Studio
+with `game.save_root` -- the same rule, checked against each other by `tools/test_savedir.py`:
+
+- Documents by `SHGetFolderPathW` (shell32 asked at run time: the DLLs import kernel32 only), so a
+  folder named in any letters works; the path travels in UTF-8 and `fl26_u8open` / `fl26_u8move`
+  turn it back into UTF-16 for the file calls.
+- Then `KONAMI\eFootball PES 2021 SEASON UPDATE\<id>\save`: `<id>` is `SteamID` of `sys.ini` next to
+  the exe (2026) when its `save` holds `SYSTEM00000000`; else the numbered folder whose
+  `SYSTEM00000000` was written last (the game saves under `0` when the Steam stand-in does not
+  read `sys.ini`); else sys.ini's.
+- Asked again at every load and save, as the game's first save can make the folder.
 
 ### fl26regen.dll (loader `sider/fl26regen.lua`)
 
@@ -221,7 +236,8 @@ writing the tables itself. The loaders drain `<dll>_log` and `<dll>_stats` into 
   fullest table of that regulation.
 - **Kept tables on disk** (`state_store` / `state_sync`, 0.2.4, B49): the final tables and cup
   winners kept at a season's end (`g_final`, `g_cupwin`) are written to
-  `Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\2026\save\fl26swiss-state.bin`, 176-byte
+  `Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\2026\save\fl26swiss-state.bin` (the save
+  folder of `fl26savedir.h`, see fl26edit.dll), 176-byte
   records after an 8-byte magic `FL26SST1`: the user's club (0x1414bb650), the game's date
   (year * 365 + day: the day at `TODAY_OFF`, the year 8 bytes after it), the regulation, kind
   (0 table, 1 cup winner), the clubs and an FNV-1a check. When the game's date and `abs_day`

@@ -5,5 +5,5 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ZIG="${ZIG:-zig}"
 OUT="${1:-$HERE/fl26edit.dll}"
 "$ZIG" cc -shared -target x86_64-windows-gnu -O2 -s \
-  -o "$OUT" "$HERE/fl26edit.c" -lkernel32 -lshell32
+  -o "$OUT" "$HERE/fl26edit.c" -lkernel32
 echo "built: $OUT"

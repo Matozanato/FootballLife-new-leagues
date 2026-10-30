@@ -10,19 +10,84 @@ import siderdir
 
 EXE_NAMES = ("FL_2026.exe", "PES2021.exe")
 LAUNCHERS = ("FL 2026 start.exe",)
-SAVE_DIR = os.path.join(os.path.expanduser("~"), "Documents", "KONAMI",
-                        "eFootball PES 2021 SEASON UPDATE")
+
+
+def documents():
+    r"""the player's Documents folder as Windows has it -- the folder the game saves under. Not
+    ~\Documents: a Documents folder moved elsewhere (OneDrive, another drive) is not there (B296)"""
+    if os.name == "nt":
+        try:
+            import ctypes
+            buf = ctypes.create_unicode_buffer(1024)
+            if ctypes.windll.shell32.SHGetFolderPathW(0, 5, 0, 0, buf) == 0 and buf.value:  # CSIDL_PERSONAL
+                return buf.value
+        except (OSError, AttributeError):
+            pass
+    return os.path.join(os.path.expanduser("~"), "Documents")
+
+
+SAVE_DIR = os.path.join(documents(), "KONAMI", "eFootball PES 2021 SEASON UPDATE")
+SAVE_ID = "2026"
+
+
+def save_id(folder=None):
+    """the save folder's name the game asks for: SteamID of sys.ini next to FL_2026.exe (the Steam
+    stand-in reads it; 2026 in FL26). `folder` the game folder, else the one Mod Studio uses"""
+    if folder is None:
+        import flpaths
+        folder = flpaths.GAME_DIR
+    try:
+        with open(os.path.join(folder, "sys.ini"), encoding="utf-8", errors="replace") as f:
+            sect = ""
+            for line in f:
+                line = line.strip()
+                if line.startswith("["):
+                    sect = line.strip("[]").strip().lower()
+                elif sect == "settings" and "=" in line:
+                    k, v = line.split("=", 1)
+                    if k.strip().lower() == "steamid" and v.strip().isdigit():
+                        return str(int(v.strip()))
+    except OSError:
+        pass
+    return SAVE_ID
+
+
+def _system_time(d):
+    try:
+        return os.path.getmtime(os.path.join(d, "save", "SYSTEM00000000"))
+    except OSError:
+        return 0
+
+
+def save_root(folder=None):
+    r"""the folder that holds the game's save folder: SAVE_DIR\<id>. <id> is sys.ini's when the
+    game saves there; else the numbered folder whose SYSTEM00000000 was written last -- the game
+    saves under 0 when the Steam stand-in does not read sys.ini (B296). The same rule as the
+    modules' (tools/native/fl26savedir.h)"""
+    want = os.path.join(SAVE_DIR, save_id(folder))
+    if _system_time(want):
+        return want
+    best, newest = want, 0
+    try:
+        names = os.listdir(SAVE_DIR)
+    except OSError:
+        names = []
+    for n in names:
+        if n.isdigit():
+            t = _system_time(os.path.join(SAVE_DIR, n))
+            if t > newest:
+                best, newest = os.path.join(SAVE_DIR, n), t
+    return best
+
+
 # the game's Edit save: written before a Build, it hides the Build's squads and names in Exhibition
 # and Edit mode (Risto 04.10.: two signings in a career, not in an exhibition)
-EDIT_FILE = os.path.join(SAVE_DIR, "2026", "save", "EDIT00000000")
-
-
 def edit_file():
     """the Edit save in the save folder in use: FL26_SAVE_ROOT's when it is set (saves.root()),
     so a test with a save folder of its own never sees the PC's real Edit save (coldstart 26.10.:
     the player's EDIT00000000 showed "Move the Edit save aside" on a new player's PC)"""
-    r = os.environ.get("FL26_SAVE_ROOT")
-    return os.path.join(r, "save", "EDIT00000000") if r else EDIT_FILE
+    r = os.environ.get("FL26_SAVE_ROOT") or save_root()
+    return os.path.join(r, "save", "EDIT00000000")
 
 
 def old_edit(since):
