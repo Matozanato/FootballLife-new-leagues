@@ -326,6 +326,12 @@ def game_twin(rel, db):
             by_surname[P._letters(w[-1])].append(pid)
     show = lambda pid, f: P.E.show(f, P.E.getf(db.players[db.index[pid]:db.index[pid] + P.P_REC], f))
     field = lambda pid, f: _num(show(pid, f))
+    sizes = {}
+
+    def size(pid):
+        if pid not in sizes:
+            sizes[pid] = (field(pid, "Age"), field(pid, "Height (cm)"))
+        return sizes[pid]
     found = {}
     for r in rows:
         g = _num(r.get("game_id"))
@@ -335,10 +341,12 @@ def game_twin(rel, db):
         age, cm = _num(r.get("Age")), _num(r.get("Height (cm)"))
         if not w or age is None or cm is None:
             continue
+        # B303: age and height first, read once a player: the name test is the dear one, and on the
+        # GUI thread it held the window ten seconds at the first Add to your world
         hit = [p for p in by_surname.get(P._letters(w[-1]), ())
-               if _full_name(r["name"], db.name(p))
-               and field(p, "Age") is not None and abs(field(p, "Age") - age) <= 1
-               and field(p, "Height (cm)") is not None and abs(field(p, "Height (cm)") - cm) <= 3
+               if size(p)[0] is not None and abs(size(p)[0] - age) <= 1
+               and size(p)[1] is not None and abs(size(p)[1] - cm) <= 3
+               and _full_name(r["name"], db.name(p))
                and not P.keeper_side(r.get("Registered Position") or "", show(p, "Registered Position"))]
         if len(hit) == 1:
             found[id(r)] = str(hit[0])

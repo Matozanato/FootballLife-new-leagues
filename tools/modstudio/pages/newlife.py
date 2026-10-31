@@ -427,7 +427,19 @@ class NewLife(BuilderPage):
             self.where.setText(_("No NewLife Database opened."))
             error(self, "NewLife Database", tb.strip().splitlines()[-1])
 
-        run_job(lambda progress: N.Release(folder), done, failed)
+        def job(progress):
+            rel = N.Release(folder)
+            # B303: B102's look-up of the game's players runs here, off the GUI thread; at the first
+            # Add to your world it held the window ten seconds (cold test 31.10.)
+            info = self.info()
+            if info and info.get("base"):
+                try:
+                    N.game_twin(rel, P.Squads(info["base"]))
+                except Exception:
+                    pass                    # Add works it out itself then
+            return rel
+
+        run_job(job, done, failed)
 
     def read_rows(self):
         """the release's leagues, their clubs "in game" by the tables in use (a database mod's

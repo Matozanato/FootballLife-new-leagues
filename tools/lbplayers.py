@@ -44,7 +44,7 @@ common/render/symbol/coach/coach_<coach id>.png, 256 pixels square (1001 of them
 A club names its manager in Team.bin +0x00, so the picture goes under the id of the club's
 manager in the world: the shipped one for a game club, the one mkcoaches added for a new club.
 """
-import collections, csv, os, re
+import collections, csv, functools, os, re
 
 import pesdb
 import playeredit as E
@@ -153,7 +153,10 @@ FOLD = str.maketrans({"\u0142": "l", "\u0141": "l", "\u00f8": "o", "\u00d8": "o"
                       "\u0140": "l", "\u013f": "l"})
 
 
+@functools.lru_cache(maxsize=1 << 18)
 def _letters(s):
+    """B303: cached -- B102's look-up compares every release row with the game's players of his
+    surname, three and a half million calls for one league, ten seconds of a frozen window"""
     import unicodedata
     s = unicodedata.normalize("NFKD", s.casefold()).translate(FOLD)
     return "".join(ch for ch in s if ch.isalnum())
