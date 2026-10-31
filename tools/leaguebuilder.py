@@ -7144,6 +7144,38 @@ def region_modules(pl, root, game, log=print):
     log("  region headings for %d leagues" % len(comps))
 
 
+def regnames_for_exe(root, game, log=print):
+    """a world built before 0.2.6 brings an fl26regnames.lua with one cave (0x1426d1f20), and
+    FL27's exe (SmokePatch, 31.10.2026) has code there, so that module writes nothing: made again
+    from the world for the game's own exe, with every cave mkregnames knows"""
+    f = os.path.join(root, "modules", "fl26regnames.lua")
+    try:
+        if "local sets = {" in open(f, encoding="utf-8", errors="replace").read():
+            return
+    except OSError:
+        return
+    import flpaths, mkregnames
+    exe = flpaths.game_exe(game)
+    if not os.path.exists(exe):
+        return
+    flpaths.EXE = exe
+    buf = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buf):
+            rc = mkregnames.main(["--root", root, "--out", f + ".new"])
+    except SystemExit as e:
+        rc = e
+    if rc:
+        log("  region headings kept as the world has them: %s" % str(rc).strip().splitlines()[0])
+        try:
+            os.remove(f + ".new")
+        except OSError:
+            pass
+        return
+    os.replace(f + ".new", f)
+    log("  region headings made again for this game's exe (%s)" % os.path.basename(exe))
+
+
 # ---- install: the modules that read a world ----
 
 def pack_dir():
@@ -7643,6 +7675,7 @@ def switch_on(world, game, log=print, redraw=False):
         lbstadiums.write(built, siderdir.find(game), log, lbstadiums.load_edits(root))
         lbservers.write(built, siderdir.find(game), log, root, redraw=redraw)
     mods = os.path.join(root, "modules")
+    regnames_for_exe(root, game, log)
     for f in sorted(os.listdir(mods)) if os.path.isdir(mods) else []:
         dst = os.path.join(siderdir.find(game), "modules", f)
         if os.path.exists(dst) and open(dst, "rb").read() != open(os.path.join(mods, f), "rb").read():

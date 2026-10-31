@@ -1788,7 +1788,9 @@ static const unsigned char SIG_STYPE[14] = {    /* mov r11,rsp; sub rsp,0xe8; mo
 static const uint32_t STYPE_RDATA[12] = {
   0x298b9c0, 0x298b9b0, 0x298b9d0, 0x298b9e0, 0x298ba10, 0x298b9f0,
   0x298ba00, 0x298ba50, 0x298ba20, 0x298ba30, 0x298ba60, 0x298ba40 };
-static const uint32_t STYPE_EXPECT[25][2] = {
+/* FL27 (31.10.2026, FL_2027.exe) plays region 17 January-December (type 1, FL26: 3): the regions
+   and their order are the check, a type the exe gives is taken from it */
+static uint32_t STYPE_EXPECT[25][2] = {
   {2,0},{4,0},{5,0},{3,0},{7,0},{6,0},{22,0},{8,0},{9,0},{27,0},{15,0},{10,0},{11,0},{12,0},
   {14,2},{13,2},{16,1},{18,1},{23,1},{19,1},{17,3},{20,3},{21,1},{28,1},{24,1} };
 static uint8_t g_stype[128];
@@ -1828,9 +1830,18 @@ __declspec(dllexport) int fl26_join_season_types(const uint8_t* v, int n)
     for (int i = 0; i < 12; i++) {
       const uint32_t* q = (const uint32_t*)(uintptr_t)(g_base + STYPE_RDATA[i]);
       for (int j = 0; j < 2; j++)
-        if (q[2 * j] != STYPE_EXPECT[2 * i + j][0] || q[2 * j + 1] != STYPE_EXPECT[2 * i + j][1]) {
+        if (q[2 * j] != STYPE_EXPECT[2 * i + j][0] || q[2 * j + 1] > 3) {
           logf("season types: the exe's region table differs at pair %d -- nothing hooked", 2 * i + j);
           return -2;
+        }
+    }
+    for (int i = 0; i < 12; i++) {
+      const uint32_t* q = (const uint32_t*)(uintptr_t)(g_base + STYPE_RDATA[i]);
+      for (int j = 0; j < 2; j++)
+        if (q[2 * j + 1] != STYPE_EXPECT[2 * i + j][1]) {
+          logf("season types: the exe plays region %u as type %u (FL26: %u) -- taken from the exe",
+               q[2 * j], q[2 * j + 1], STYPE_EXPECT[2 * i + j][1]);
+          STYPE_EXPECT[2 * i + j][1] = q[2 * j + 1];
         }
     }
     if (hook((unsigned char*)(uintptr_t)(g_base + STYPE_RVA), SIG_STYPE, 14, (void*)stype_handler, &g_tramp_stype)) {
