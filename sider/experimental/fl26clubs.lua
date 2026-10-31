@@ -35,7 +35,8 @@ The world file. When SiderAddons\modules\fl26world.txt exists (written by FL26 M
 League Builder), SLOTS and REMAP_OWN below are ignored and built from the file: every league
 whose slot= is one the game fills with a list of its own (0..5, 69, 72, 73, 75, 76, 77, 80) is
 served from its regulation, and every league on a slot the switch sends into a pool (26, 27,
-28, 67, 71, 74) gets that switch entry pointed at the default case. If no league of the world
+28, 67, 71, 74) or gives no slot at all (76, 77, 80) gets that switch entry pointed at the
+default case. If no league of the world
 sits on a served slot, the DLL is not installed. Without the file the built-in lists below
 are used, as before.
 
@@ -114,9 +115,13 @@ end
 -- answered from its regulation. POOL_CASE: the slots the club-slot switch sends into an
 -- "other clubs" pool, with the switch byte each holds; a league there is pointed at the
 -- default case. Both are facts about the executable; which slots the world uses is not.
+-- 76..80 hold case 6 (B306, 31.10.2026): those clubs get no Master League slot (123), so a
+-- league there (LigaPro Serie A on 76, SuperSport HNL on 80, Guatemala on 77) was missing
+-- from the career's Team Info and transfer lists while Edit and Competition Info had it.
 local SERVED = { [0] = true, [1] = true, [2] = true, [3] = true,
                  [69] = true, [72] = true, [73] = true, [75] = true, [76] = true, [77] = true, [80] = true }
-local POOL_CASE = { [26] = 3, [27] = 3, [28] = 3, [67] = 3, [74] = 3, [71] = 5 }
+local POOL_CASE = { [26] = 3, [27] = 3, [28] = 3, [67] = 3, [74] = 3, [71] = 5,
+                    [76] = 6, [77] = 6, [80] = 6 }
 local function from_world(world)
   local slots, remap = {}, {}
   for _, L in ipairs(world) do

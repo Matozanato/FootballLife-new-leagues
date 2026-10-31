@@ -522,6 +522,13 @@ calendar.
 
 ## Fixed along the way (so you can confirm)
 
+- 2026-10-31 (next update, Discord, thanks leon): **A league on Select Team slot 76, 77 or 80
+  was missing from a career's Team Info and transfer lists** (LigaPro Serie A, SuperSport HNL
+  and Guatemala in the Modpack and World pack, TOPsport A lyga in the Europe pack), while Edit
+  and Competition Info had it. When a Master League is created, the game gives the clubs of
+  those three slots no career slot at all. fl26clubs.lua now sends them to the default case,
+  like the pool slots before. It takes effect in a new Master League; a career started
+  before keeps the missing clubs.
 - 2026-10-14 (next update, Discord, thanks Yanis): **With a database mod that moves the game's
   leagues around (UML 2026 v3: Ligue 1 where the Russian Premier Liga was), Mod Studio took a
   game league's country from its regulation id, and NewLife's "in the game" from the plain
