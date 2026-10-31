@@ -10958,6 +10958,18 @@ static int kotext_install(uint64_t exe_base, int* why)
     FlushInstructionCache(GetCurrentProcess(), s, n);
     int e = ci_patch(ts, 6, s);
     if (!e) done |= 2; else *why = e;
+  } else if (ts[0] == 0xE9 && ts[5] == 0x90 && !memcmp(tr, SIG_TITLER, 7)) {
+    /* FL27: SmokePatch's jmp + nop over the compare. Not ours: no compare of our own (the test
+       left ZF set, so the jne falls through) and the "equal" jump goes to their stub, which
+       still decides kind 2 itself; r14 survives our call. */
+    static const unsigned char LD[13] = { 0x44, 0x89, 0xf1, 0x0f, 0xb7, 0xd6, 0x45, 0x89, 0xf8, 0x45, 0x0f, 0xb7, 0xcd };
+    unsigned char* s = t + 0x100;
+    uint64_t theirs = (uint64_t)(uintptr_t)(ts + 5) + *(int32_t*)(ts + 1);
+    int n = ci_stub(s, LD, 13, (void*)ko_title_r16, 0, exe_base + TITLE_R16, SIG_TITLE, 0,
+                    theirs, theirs);
+    FlushInstructionCache(GetCurrentProcess(), s, n);
+    int e = ci_patch(ts, 5, s);
+    if (!e) done |= 2; else *why = e;
   } else *why = 2;
   return done;
 }

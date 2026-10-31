@@ -302,9 +302,19 @@ local SLOT_FN_PROLOGUE = "48895c240855488d6c24a94881ecd0000000"   -- 18 bytes
 local SLOT_FN_RESUME = 0x12
 local NSLOTS = 250
 
+-- FL27 (SmokePatch, 31.10.2026): the function starts with their jmp (5 bytes, the rest as
+-- shipped) to a stub of their own that answers from its own {slot, country} list and returns --
+-- it never goes back to the original. Then a slot we leave at 0xffff jumps to their stub instead
+-- of replaying the prologue: same place in our stub (0x24), padded so the table stays at 0x3b.
 local function install_flags(slot_country, named)
   local got = bin2hex(memory.read(SLOT_FN, #SLOT_FN_PROLOGUE / 2))
-  if got ~= SLOT_FN_PROLOGUE then
+  local theirs
+  if got:sub(1, 2) == "e9" and got:sub(11) == SLOT_FN_PROLOGUE:sub(11) then
+    local r = memory.unpack("u32", memory.read(SLOT_FN + 1, 4))
+    if r >= 0x80000000 then r = r - 0x100000000 end
+    theirs = SLOT_FN + 5 + r
+  end
+  if got ~= SLOT_FN_PROLOGUE and not theirs then
     log(string.format("fl26comptab: bytes at 0x%x are %s, expected %s -- no flags",
                       SLOT_FN, got, SLOT_FN_PROLOGUE))
     return
@@ -315,12 +325,17 @@ local function install_flags(slot_country, named)
     if p ~= nil then stub = tonumber(ffi.cast("uint64_t", p)); break end
   end
   if not stub then log("fl26comptab: VirtualAlloc for the flag stub failed -- no flags"); return end
-  local back = rel32(stub + 0x3b, SLOT_FN + SLOT_FN_RESUME)
+  local back
+  if theirs then back = rel32(stub + 0x24 + 5, theirs) else back = rel32(stub + 0x3b, SLOT_FN + SLOT_FN_RESUME) end
   local into = rel32(SLOT_FN + 5, stub)
   if not (back and into) then log("fl26comptab: flag stub out of jump range -- no flags"); return end
   local code = "\129\249\249\0\0\0" .. "\15\135\24\0\0\0" .. "\137\200" .. "\72\141\21\38\0\0\0"
             .. "\15\183\4\66" .. "\102\61\255\255" .. "\15\132\1\0\0\0" .. "\195"
-            .. hex2bin(SLOT_FN_PROLOGUE) .. "\233" .. back
+  if theirs then
+    code = code .. "\233" .. back .. string.rep("\144", 0x3b - 0x24 - 5)
+  else
+    code = code .. hex2bin(SLOT_FN_PROLOGUE) .. "\233" .. back
+  end
   assert(#code == 0x3b, #code)
   local tbl = {}
   for sl = 0, NSLOTS - 1 do
@@ -329,7 +344,8 @@ local function install_flags(slot_country, named)
   end
   ffi.copy(ffi.cast("void*", stub), code .. table.concat(tbl))
   memory.write(SLOT_FN, "\233" .. into)
-  log(string.format("fl26comptab: flags -- stub at 0x%x, %d slots carry a country", stub, named))
+  log(string.format("fl26comptab: flags -- stub at 0x%x, %d slots carry a country%s", stub, named,
+                    theirs and string.format(", the rest answered by another module's list (0x%x)", theirs) or ""))
 end
 
 -- The Kick Off and Edit team lists sort their headings by 0x140ead990(slot): the slot's place in
