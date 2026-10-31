@@ -12920,10 +12920,33 @@ static unsigned char* e9_dest(const unsigned char* target, int n)
   for (int i = 5; i < n; i++) if (target[i] != 0x90) return 0;
   return (unsigned char*)target + 5 + *(const int32_t*)(target + 1);
 }
+/* Their jmp with fewer nops than our 14 bytes need (the Group A page factory af4e20: e9 + one
+   nop, the game's own code right after it): we leave their bytes as they are and only point the
+   rel32 at a jmp to our handler, within reach of the exe; our "original" is a jmp to their stub. */
+static int e9_retarget(unsigned char* target, void* handler, unsigned char** tramp_out)
+{
+  if (target[0] != 0xE9) return 2;
+  unsigned char* stub = target + 5 + *(const int32_t*)(target + 1);
+  unsigned char* t = near_alloc(g_base);
+  if (!t) return 3;
+  int64_t rel = (int64_t)(uintptr_t)t - (int64_t)(uintptr_t)(target + 5);
+  if (rel != (int32_t)rel) return 3;
+  t[0] = 0xFF; t[1] = 0x25; *(uint32_t*)(t + 2) = 0; *(uint64_t*)(t + 6) = (uint64_t)(uintptr_t)handler;
+  t[16] = 0xFF; t[17] = 0x25; *(uint32_t*)(t + 18) = 0; *(uint64_t*)(t + 22) = (uint64_t)(uintptr_t)stub;
+  DWORD old;
+  if (!VirtualProtect(target, 5, PAGE_EXECUTE_READWRITE, &old)) return 4;
+  *(int32_t*)(target + 1) = (int32_t)rel;
+  VirtualProtect(target, 5, old, &old);
+  FlushInstructionCache(GetCurrentProcess(), target, 5);
+  *tramp_out = t + 16;
+  g_chained = 1;
+  return 0;
+}
 static int hook_or_chain(unsigned char* target, const unsigned char* sig, int n, void* handler, unsigned char** tramp_out)
 {
   static const unsigned char JMP[6] = { 0xFF, 0x25, 0, 0, 0, 0 };
   if (!memcmp(target, sig, n)) return hook(target, sig, n, handler, tramp_out);
+  if (target[0] == 0xE9 && !e9_dest(target, n)) return e9_retarget(target, handler, tramp_out);
   unsigned char* stub = e9_dest(target, n);
   if (stub) {
     unsigned char* t = (unsigned char*)VirtualAlloc(0, 0x100, MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE);
@@ -13029,8 +13052,15 @@ static int u10_decode_offset(unsigned char* compare,unsigned char* load,int32_t*
     af4ea9: cmp dword [r8+disp32],8; aed39c: movsd xmm0,[rcx+disp32]. */
  static const unsigned char cmp[]={0x41,0x83,0xb8};
  static const unsigned char mov[]={0xf2,0x0f,0x10,0x81};
+ int32_t x,y;
+ /* FL27: SmokePatch's jmp sits on af4ea9 (their own league-phase routing); aed39c is as in FL26 */
+ if(g_native_uefa && compare[0]==0xe9 && !memcmp(load,mov,4)) {
+   memcpy(&y,load+4,4);
+   if(y<0x1000 || y>0x10000000)return 0;
+   *out=y;return 1;
+ }
  if(memcmp(compare,cmp,3) || compare[7]!=8 || memcmp(load,mov,4))return 0;
- int32_t x,y;memcpy(&x,compare+3,4);memcpy(&y,load+4,4);
+ memcpy(&x,compare+3,4);memcpy(&y,load+4,4);
  if(x!=y || x<0x1000 || x>0x10000000)return 0;
  *out=x;return 1;
 }
@@ -13047,7 +13077,7 @@ static void u10_install(void) {
  u10_table=(table_fn)(uintptr_t)(g_base+TABLE_RVA);
  u10_league=(u10_factory_fn)(uintptr_t)(g_base+0xaed610);
  u10_native_init=(u10_init_fn)(uintptr_t)(g_base+0xaeda10);
- int status=hook((unsigned char*)(uintptr_t)(g_base+0xaf4e20),sig,sizeof sig,(void*)u10_factory,&u10_group_tramp);
+ int status=hook_or_chain((unsigned char*)(uintptr_t)(g_base+0xaf4e20),sig,sizeof sig,(void*)u10_factory,&u10_group_tramp);
  logf("UEFA10 install=%d selection-offset=%x; exact UEFA 36-team tables only",status,(unsigned)u10_selection_offset);
 }
 
@@ -13355,8 +13385,7 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
     logf("fl26swiss: cup scorers kept through the game's list builds (@%llx)", (unsigned long long)(exe_base + LBBUILD_RVA));
   else
     logf("fl26swiss: cup scorers hook NOT installed (signature)");
-  if (!memcmp((void*)(uintptr_t)(exe_base + STAND_RVA), SIG_STAND, 15) &&
-      !hook((unsigned char*)(uintptr_t)(exe_base + STAND_RVA), SIG_STAND, 15, (void*)stand_handler, &g_tramp_stand))
+  if (!hook_or_chain((unsigned char*)(uintptr_t)(exe_base + STAND_RVA), SIG_STAND, 15, (void*)stand_handler, &g_tramp_stand))
     logf("fl26swiss: standings row guard live (@%llx)", (unsigned long long)(exe_base + STAND_RVA));
   else
     logf("fl26swiss: standings row guard NOT installed (signature)");
