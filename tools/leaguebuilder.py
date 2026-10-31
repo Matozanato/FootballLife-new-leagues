@@ -768,14 +768,26 @@ def cpk_key(path):
     return (0, int(m.group(1)), int(m.group(2) or 0), m.group(3))
 
 
+# the season archives: data_s2526* in FL26, data_s2627* in FL27 (31.10.; the same tables)
+SEASON_CPKS = ("data_s2526*.cpk", "data_s2627*.cpk")
+
+
+def season_cpks(download):
+    """the game's season archives in download, in the order the game layers them"""
+    found = []
+    for pat in SEASON_CPKS:
+        found += glob.glob(os.path.join(download, pat))
+    return sorted(found, key=cpk_key)
+
+
 def unpack_tables(game, out, log=print):
     """unpack the game's tables (download/data_s2526*.cpk and the update's data_extra*.cpk, the
     later ones over the earlier, as the game layers them) into <out>; returns the folder with
     Team.bin -- the --base of the rest"""
     import cpkread
-    cpks = sorted(glob.glob(os.path.join(game, "download", "data_s2526*.cpk")), key=cpk_key)
+    cpks = season_cpks(os.path.join(game, "download"))
     if not cpks:
-        raise BuildError("no download/data_s2526*.cpk in %s -- is that the game folder?" % game)
+        raise BuildError("no download/data_s2526*.cpk (FL27: data_s2627*.cpk) in %s -- is that the game folder?" % game)
     # the update's tables ("National selection 2.2") go over the ones above, as the game layers
     # them: an edit file made for the updated database matches what we unpack then (#75, #63)
     cpks += sorted(glob.glob(os.path.join(game, "download", "data_extra*.cpk")))
@@ -820,7 +832,7 @@ UNIPAR_SEEN = "UniformParameter.bin"   # in UNPACKED: [1, 0] when that unpack fo
 def _table_cpks(game):
     d = os.path.join(game, "download")
     return {os.path.basename(c): [os.path.getsize(c), int(os.path.getmtime(c))]
-            for c in sorted(glob.glob(os.path.join(d, "data_s2526*.cpk")), key=cpk_key) +
+            for c in season_cpks(d) +
             sorted(glob.glob(os.path.join(d, "data_extra*.cpk")))}
 
 
@@ -7102,7 +7114,8 @@ def region_modules(pl, root, game, log=print):
     comps = sorted({p["cid"] for p in pl["leagues"]})
     if not comps:
         return
-    exe = os.path.join(game, "FL_2026.exe")
+    import flpaths
+    exe = flpaths.game_exe(game)
     if not os.path.exists(exe):
         log("  no region headings: no %s" % exe)
         return

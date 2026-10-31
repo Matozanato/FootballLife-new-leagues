@@ -19,6 +19,7 @@
 #include <wchar.h>
 
 #define FL26_SAVE_ID_DEFAULT 2026
+#define FL27_SAVE_ID_DEFAULT 2027
 
 static int fl26_w2u(const wchar_t* w, char* out, int cap)
 {
@@ -63,19 +64,27 @@ static int fl26_save_dir(char* out, int cap)
 #else
   if (!get || get(0, 5 /* CSIDL_PERSONAL */, 0, 0, docs) != 0) return 0;
 #endif
-  _snwprintf(base, MAX_PATH * 2, L"%ls\\KONAMI\\eFootball PES 2021 SEASON UPDATE", docs);
-  base[MAX_PATH * 2 - 1] = 0;
-
-  /* sys.ini's SteamID (the game's folder: the exe's) */
-  int sid = FL26_SAVE_ID_DEFAULT;
+  /* sys.ini's SteamID (the game's folder: the exe's). FL27 (31.10.2026) is the same exe named
+     FL_2027.exe, and it saves under <Documents>\SPGAME\Football Life\<id>, 2027 by default. */
+  int fl27 = 0, def = FL26_SAVE_ID_DEFAULT, sid;
+  wchar_t* slash = 0;
   DWORD n = GetModuleFileNameW(0, ini, MAX_PATH * 2);
   if (n && n < MAX_PATH * 2) {
-    wchar_t* slash = wcsrchr(ini, L'\\');
-    if (slash && (size_t)(slash - ini) + 9 < MAX_PATH * 2) {
-      wcscpy(slash + 1, L"sys.ini");
-      sid = (int)GetPrivateProfileIntW(L"Settings", L"SteamID", FL26_SAVE_ID_DEFAULT, ini);
-    }
+    slash = wcsrchr(ini, L'\\');
+    if (slash && !_wcsicmp(slash + 1, L"FL_2027.exe")) fl27 = 1;
   }
+#ifdef FL26_SAVEDIR_TEST
+  if (GetEnvironmentVariableW(L"FL26_TEST_FL27", id, 16)) fl27 = 1;
+#endif
+  if (fl27) def = FL27_SAVE_ID_DEFAULT;
+  sid = def;
+  if (slash && (size_t)(slash - ini) + 9 < MAX_PATH * 2) {
+    wcscpy(slash + 1, L"sys.ini");
+    sid = (int)GetPrivateProfileIntW(L"Settings", L"SteamID", def, ini);
+  }
+  _snwprintf(base, MAX_PATH * 2, fl27 ? L"%ls\\SPGAME\\Football Life" : L"%ls\\KONAMI\\eFootball PES 2021 SEASON UPDATE",
+             docs);
+  base[MAX_PATH * 2 - 1] = 0;
   _snwprintf(id, 16, L"%d", sid);
   id[15] = 0;
   wcscpy(best, id);

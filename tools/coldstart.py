@@ -225,7 +225,9 @@ def prepare(cfg, dry=False, reset=False):
     guard(cfg)
     src, root, game = cfg["src"], cfg["root"], cfg["game"]
     src_sider = os.path.join(src, "SiderAddons")
-    for p in (os.path.join(src, "FL_2026.exe"), os.path.join(src_sider, "sider.ini")):
+    import flpaths
+    exe_name = os.path.basename(flpaths.game_exe(src))      # FL_2026.exe, or FL27's FL_2027.exe
+    for p in (os.path.join(src, exe_name), os.path.join(src_sider, "sider.ini")):
         if not os.path.isfile(p):
             die("not a game folder: no %s" % p)
     if not os.path.isfile(cfg["zip"]):
@@ -237,7 +239,7 @@ def prepare(cfg, dry=False, reset=False):
             # everything but the game's exe and archives (nothing of them is warm or cold)
             say("reset: emptying %s (the copied FL_2026.exe and download stay)" % root)
             for base, keep in ((root, {MARKER.lower(), os.path.basename(game).lower()}),
-                               (game, {"fl_2026.exe", "download"})):
+                               (game, {exe_name.lower(), "sys.ini", "download"})):
                 for n in os.listdir(base) if os.path.isdir(base) else []:
                     if n.lower() not in keep:
                         p = os.path.join(base, n)
@@ -253,9 +255,12 @@ def prepare(cfg, dry=False, reset=False):
     if not dry:
         open(os.path.join(root, MARKER), "w").write("made by tools/coldstart.py %s\n" % time.strftime("%Y-%m-%d %H:%M"))
     # -- the game: the exe, the archives the first start unpacks the tables from
-    pl.copy(os.path.join(src, "FL_2026.exe"), os.path.join(game, "FL_2026.exe"))
+    pl.copy(os.path.join(src, exe_name), os.path.join(game, exe_name))
+    if exe_name != "FL_2026.exe" and os.path.isfile(os.path.join(src, "sys.ini")):
+        pl.copy(os.path.join(src, "sys.ini"), os.path.join(game, "sys.ini"))   # FL27: SteamID=2027 names the save folder
     dl = os.path.join(src, "download")
-    for c in sorted(glob.glob(os.path.join(dl, "data_s2526*.cpk")) + glob.glob(os.path.join(dl, "data_extra*.cpk"))):
+    from leaguebuilder import season_cpks
+    for c in season_cpks(dl) + glob.glob(os.path.join(dl, "data_extra*.cpk")):
         pl.copy(c, os.path.join(game, "download", os.path.basename(c)))
     # -- Sider: sider.ini from before Mod Studio, its roots as (empty) folders
     sider = os.path.join(game, "SiderAddons")

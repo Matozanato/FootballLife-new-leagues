@@ -16,8 +16,20 @@ import os
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 
+EXE_NAMES = ("FL_2026.exe", "FL_2027.exe")     # FL27 (31.10.) is the same PES 2021 exe, renamed
+
+
+def game_exe(folder):
+    """the game's exe in folder: FL_2026.exe, or FL_2027.exe when only that one is there"""
+    for n in EXE_NAMES:
+        p = os.path.join(folder, n)
+        if os.path.isfile(p):
+            return p
+    return os.path.join(folder, EXE_NAMES[0])
+
+
 GAME_DIR  = os.environ.get("FL26_DIR",   r"C:\Football Life 2026")
-EXE       = os.environ.get("FL26_EXE",   os.path.join(GAME_DIR, "FL_2026.exe"))
+EXE       = os.environ.get("FL26_EXE",   game_exe(GAME_DIR))
 SIDER_DIR = os.environ.get("FL26_SIDER", os.path.join(GAME_DIR, "SiderAddons"))
 SIDER_INI = os.path.join(SIDER_DIR, "sider.ini")
 LIVECPK   = os.path.join(SIDER_DIR, "livecpk")
@@ -42,7 +54,7 @@ def use_game(folder, sider=None):
         return
     GAME_DIR = folder
     if "FL26_EXE" not in os.environ:
-        EXE = os.path.join(folder, "FL_2026.exe")
+        EXE = game_exe(folder)
     SIDER_DIR = sider or os.path.join(folder, "SiderAddons")
     SIDER_INI = os.path.join(SIDER_DIR, "sider.ini")
     LIVECPK = os.path.join(SIDER_DIR, "livecpk")
@@ -51,6 +63,6 @@ def use_game(folder, sider=None):
 def need_exe():
     if not os.path.isfile(EXE):
         raise SystemExit(
-            "FL_2026.exe not found at %s\n"
+            "FL_2026.exe (or FL_2027.exe) not found at %s\n"
             "Set FL26_DIR (game folder) or FL26_EXE (full path to the exe)." % EXE)
     return EXE

@@ -722,13 +722,38 @@ static int hook(unsigned char* target, const unsigned char* sig, int n, void* ha
    and the whole module stayed out ("set-hook signature mismatch", 2026-09-28). */
 static int g_chained = 0;
 static const unsigned char JMP_ABS[6] = { 0xFF, 0x25, 0, 0, 0, 0 };
+/* FL27 (SmokePatch, 31.10.2026) hooks set_clubs itself: `jmp rel32` and ten nops over the same
+   15 bytes, its stub ending in the displaced prologue and a jmp back to target + 15.  Where the
+   whole prologue is that jmp and nops, our 14-byte jmp goes over it and the trampoline jumps to
+   their stub, which still ends in the original. */
+static unsigned char* e9_dest(const unsigned char* target, int n)
+{
+  if (n < 14 || target[0] != 0xE9) return 0;
+  for (int i = 5; i < n; i++) if (target[i] != 0x90) return 0;
+  return (unsigned char*)target + 5 + *(const int32_t*)(target + 1);
+}
 static int usable(const unsigned char* target, const unsigned char* sig, int n)
 {
-  return !memcmp(target, sig, n) || !memcmp(target, JMP_ABS, 6);
+  return !memcmp(target, sig, n) || !memcmp(target, JMP_ABS, 6) || e9_dest(target, n);
 }
 static int hook_or_chain(unsigned char* target, const unsigned char* sig, int n, void* handler, unsigned char** tramp_out)
 {
   if (!memcmp(target, sig, n)) return hook(target, sig, n, handler, tramp_out);
+  unsigned char* stub = e9_dest(target, n);
+  if (stub) {
+    unsigned char* t = (unsigned char*)VirtualAlloc(0, 0x100, MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    if (!t) return 3;
+    t[0] = 0xFF; t[1] = 0x25; *(uint32_t*)(t + 2) = 0; *(uint64_t*)(t + 6) = (uint64_t)(uintptr_t)stub;
+    DWORD old;
+    if (!VirtualProtect(target, n, PAGE_EXECUTE_READWRITE, &old)) return 4;
+    target[0] = 0xFF; target[1] = 0x25; *(uint32_t*)(target + 2) = 0; *(uint64_t*)(target + 6) = (uint64_t)(uintptr_t)handler;
+    for (int i = 14; i < n; i++) target[i] = 0x90;
+    VirtualProtect(target, n, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), target, n);
+    *tramp_out = t;
+    g_chained++;
+    return 0;
+  }
   if (memcmp(target, JMP_ABS, 6)) return 2;
   unsigned char* t = (unsigned char*)VirtualAlloc(0, 0x100, MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE);
   if (!t) return 3;

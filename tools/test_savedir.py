@@ -134,5 +134,48 @@ ok("edit_file: the Edit save in the folder the game saves in",
 from modstudio import saves as S
 ok("saves.root: the same folder", os.path.normcase(S.root()) == os.path.normcase(os.path.join(BASE, "0")))
 ok("Documents: Windows' own folder, an existing one", os.path.isdir(G.documents()))
+
+# FL27 (31.10.): the same exe as FL_2027.exe, saving under Documents\SPGAME\Football Life\<id>,
+# sys.ini SteamID=2027. The test program is copied in as FL_2027.exe: the modules go by the exe's name.
+BASE27 = os.path.join(DOCS, "SPGAME", "Football Life")
+GAME27 = os.path.join(T, "FL27 game")
+os.makedirs(BASE27)
+os.makedirs(GAME27)
+G.SAVE_DIR_FL27 = BASE27
+exe27 = None
+if exe:
+    exe27 = os.path.join(GAME27, "FL_2027.exe")
+    shutil.copy(os.path.join(T, "test_savedir.exe"), exe27)
+else:
+    open(os.path.join(GAME27, "FL_2027.exe"), "wb").close()
+ok("FL27: the folder is FL27's", G.is_fl27(GAME27) and not G.is_fl27(GAME))
+
+
+def case27(name, want, ini):
+    p = os.path.join(GAME27, "sys.ini")
+    if ini is None:
+        if os.path.exists(p):
+            os.remove(p)
+    else:
+        with open(p, "w", encoding="utf-8") as f:
+            f.write("[Settings]\nLanguage=english\nSavePath=%%DEFAULT_SYS_DIR%%\nSteamID=%s\n" % ini)
+    want = os.path.join(BASE27, want)
+    py = G.save_root(GAME27)
+    ok("FL27, %s: Mod Studio -> SPGAME\\Football Life\\%s" % (name, os.path.relpath(py, BASE27)),
+       os.path.normcase(py) == os.path.normcase(want))
+    if exe27:
+        r = subprocess.run([exe27, "dir"], capture_output=True, env=dict(os.environ, FL26_TEST_DOCS=DOCS), timeout=30)
+        out = r.stdout.decode("utf-8").strip()
+        ok("FL27, %s: the modules -> the same folder" % name,
+           r.returncode == 0 and os.path.normcase(out) == os.path.normcase(os.path.join(want, "save")))
+
+
+case27("sys.ini SteamID=2027", "2027", 2027)
+case27("no sys.ini", "2027", None)
+d = os.path.join(BASE27, "0", "save")
+os.makedirs(d)
+open(os.path.join(d, "SYSTEM00000000"), "wb").close()
+case27("saved under 0 only", "0", 2027)
+ok("FL26 next to it still saves under KONAMI", os.path.normcase(os.path.dirname(G.save_root(GAME))) == os.path.normcase(BASE))
 shutil.rmtree(T, ignore_errors=True)
 print("all %d checks passed" % N)

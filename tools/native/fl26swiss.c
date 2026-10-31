@@ -136,6 +136,16 @@ static int ours(uint16_t reg)
   return 0;
 }
 
+/* FL27 (SmokePatch, 31.10.2026) plays the Champions and Europa League league phase itself: one
+ * group of 36 in 1027 / 1029, its own knockout of 24 in reg 4 / 6 (play-off included), filled by
+ * its own hook on set_clubs. mato 31.10.: "Njihovu ligu prvaka i europsku ligu koristimo". So
+ * there, of those two competitions, only who gets in is ours -- the access list and the summer's
+ * qualifying rounds, handed to their league phase at the August draw. The Conference League
+ * (174, not in FL27) stays ours whole. Set by fl26_swiss_install when set_clubs starts with
+ * their jmp. CUPS index 0 / 1 = the Champions / Europa League. */
+static int g_native_uefa = 0;
+static int cup_on(int ci) { return !(g_native_uefa && ci < 2); }
+
 /* Days after SWISS_DAYS that a listed competition plays.  It used to be two days a competition
    -- the Europa League on the Thursday and Friday after the Champions League -- but those are
    exactly the days the shipped league calendars play on (case 5: 261, 275, 296, 310, 331, 345,
@@ -434,7 +444,11 @@ typedef void (*gdraw_fn)(uint64_t id, u32vec* list, uint64_t flag);
 typedef void (*setcl_fn)(uint64_t id, u32vec* list, uint64_t flag);
 unsigned char* g_tramp_seed = 0;
 unsigned char* g_tramp_gdraw = 0;
-static uint16_t phase_row(uint16_t id) { return id == 3 ? 1027 : id == 5 ? 1029 : id == UECL_REG ? UECL_ROW : 0xffff; }
+static uint16_t phase_row(uint16_t id)
+{
+  if (g_native_uefa && (id == 3 || id == 5)) return 0xffff;   /* FL27's own league phase */
+  return id == 3 ? 1027 : id == 5 ? 1029 : id == UECL_REG ? UECL_ROW : 0xffff;
+}
 #define OWNER_RVA  0x14b6a60
 #define GETREC_RVA 0x14bb000
 #define FIELD 36
@@ -539,6 +553,14 @@ void gdraw_handler(uint64_t id, u32vec* list, uint64_t flag)
 {
   uint16_t r = (uint16_t)id, row = phase_row(r);
   if (row == 0xffff) {
+    if (g_native_uefa && (r == 3 || r == 5)) {    /* FL27: our access list into their league phase */
+      u32vec* acc = access_list(r, flag);
+      if (acc) list = acc;
+      logf("fl26swiss: reg %u -- FL27's own group draw, %s (%u clubs)", (unsigned)r,
+           acc ? "with the access list" : "with the game's list", (unsigned)(list && list->b ? list->e - list->b : 0));
+      ((gdraw_fn)(uintptr_t)g_tramp_gdraw)(id, list, flag);
+      return;
+    }
     cont_swap(r, list, "group draw");
     ((gdraw_fn)(uintptr_t)g_tramp_gdraw)(id, list, flag);
     return;
@@ -766,7 +788,11 @@ static void lb_carry(const char* name, uint16_t from, uint16_t to)
   logf("fl26swiss: %s scorers carried from reg %u (season %u) into reg %u (season %u): %u goal rows, %u assist rows",
        name, (unsigned)from, yf, (unsigned)to, yt, g, a);
 }
-static uint16_t ko_row(uint16_t id) { return id == 4 ? 1027 : id == 6 ? 1029 : id == UECL_KO ? UECL_ROW : 0xffff; }
+static uint16_t ko_row(uint16_t id)
+{
+  if (g_native_uefa && (id == 4 || id == 6)) return 0xffff;   /* FL27 fills its knockout of 24 itself */
+  return id == 4 ? 1027 : id == 6 ? 1029 : id == UECL_KO ? UECL_ROW : 0xffff;
+}
 /* list positions -> table ranks (0-based).  If the knockout pairs neighbours, the ties are
    1-16, 8-9, 4-13, 5-12, 2-15, 7-10, 3-14, 6-11: the seeded half meets the unseeded half. */
 static const int KO_ORDER[KO_N] = { 0, 15, 7, 8, 3, 12, 4, 11, 1, 14, 6, 9, 2, 13, 5, 10 };
@@ -1398,7 +1424,7 @@ static void lb_clear_phase(uint16_t row)
 {
   for (int i = 0; i < 3; i++) {
     const cup_t* c = &CUPS[i];
-    if (c->row != row) continue;
+    if (!cup_on(i) || c->row != row) continue;
     unsigned yl = 0, yr = 0;
     unsigned char* l = stage_table(c->league, 0, &yl);
     unsigned char* t = l ? stage_table(row, yl, &yr) : 0;
@@ -1598,6 +1624,7 @@ uint64_t lbbuild_handler(void* self, uint64_t reg, void* players, uint64_t a4)
   int d = today();
   for (int i = 0; i < 3; i++) {
     const cup_t* c = &CUPS[i];
+    if (!cup_on(i)) continue;
     if ((uint16_t)reg == c->po && po_running(c, d)) lb_fix(c, c->po, d, "after the game's build");
     else if ((uint16_t)reg == c->ko && ko_running(c, d)) lb_fix(c, c->ko, d, "after the game's build");
   }
@@ -6471,6 +6498,7 @@ char prog_handler(void* ctx, uint64_t id, void* started)
   if (g_po_enabled && (po_season_half() || dec)) {
     for (int ci = 0; ci < 3; ci++) {
       const cup_t* c = &CUPS[ci];
+      if (!cup_on(ci)) continue;
       int begin = r == c->league || (ci && r == c->row), finish = r == c->po;
       if (!begin && !finish) continue;
       if (!po_season_half() && !(ci == 2 && begin)) break;
@@ -7239,7 +7267,7 @@ __declspec(dllexport) void fl26_swiss_ko_tick(void)
       ko_heal_played("day loop");
       ko_sync_all("day loop");
       nt_keep_user();
-      for (int i = 0; i < 3; i++) lb_keep(&CUPS[i], d);
+      for (int i = 0; i < 3; i++) if (cup_on(i)) lb_keep(&CUPS[i], d);
     }
   }
   if (d < 60 || d > 150) return;
@@ -7247,7 +7275,7 @@ __declspec(dllexport) void fl26_swiss_ko_tick(void)
   static const char* KO_NAME[3] = { "Champions League", "Europa League", "Conference League" };
   static unsigned char loaded[3][2];             /* once a session: a save of before 0.2.5 */
   for (int i = 0; i < 3; i++) {
-    if (!get_rec(KO_REGS[i])) continue;
+    if (!cup_on(i) || !get_rec(KO_REGS[i])) continue;
     for (int k = 0; k < 2; k++)
       if (ko_bracket(KO_REGS[i], 0x33 + k, KO_NAME[i]) == 0 && !loaded[i][k]) {
         loaded[i][k] = 1;
@@ -7485,6 +7513,7 @@ uint64_t curph_handler(uint64_t comp, uint64_t flag, uint64_t flag2)
   uint64_t r = ((curph_fn)(uintptr_t)g_tramp_curph)(comp, flag, flag2);
   for (int ci = 0; ci < 3; ci++) {
     const cup_t* c = &CUPS[ci];
+    if (!cup_on(ci)) continue;
     unsigned char* lg = find_rec(c->league);
     if (!lg || *(uint32_t*)(lg + 0x80) != (uint32_t)comp) continue;
     const uint16_t order[3] = { c->league, c->po, c->ko };
@@ -7585,7 +7614,7 @@ static int ci_of_comp(uint32_t comp)
 static int kopo_window(int ci)
 {
   int d = today();
-  if (d < 0 || ci < 0 || ci > 2) return 0;
+  if (d < 0 || ci < 0 || ci > 2 || !cup_on(ci)) return 0;   /* FL27: no February play-off of ours */
   int ad = abs_day();
   if (g_po_day[ci] > -100000 && ad >= g_po_day[ci] && ad - g_po_day[ci] < 160) return 1;
   return d >= 28 && d < PO_MONTHS_BEFORE;
@@ -7928,7 +7957,7 @@ uint64_t phname_handler(uint64_t reg)
   unsigned char rec[0x200];
   phrec_fn get = (phrec_fn)(uintptr_t)(g_base + PHREC_RVA);
   for (int ci = 0; ci < 3 && g_tramp_txtget; ci++)   /* the league phases: "League Phase", see txtget_handler */
-    if ((uint16_t)reg == CUPS[ci].league || (uint16_t)reg == CUPS[ci].row) return LP_TEXT;
+    if (cup_on(ci) && ((uint16_t)reg == CUPS[ci].league || (uint16_t)reg == CUPS[ci].row)) return LP_TEXT;
 
   /* F1/F2 live in an auxiliary competition internally, but every Libertadores
      qualifying page uses the native reg-8 phase name. Borrow its text id instead
@@ -7991,6 +8020,7 @@ uint64_t gstage_handler(uint32_t* comp)
      so before the draw League Phase opened on an empty "Group A". */
   for (int ci = 0; ci < 3; ci++) {
     const cup_t* c = &CUPS[ci];
+    if (!cup_on(ci)) continue;
     unsigned char* lg = find_rec(c->league);
     if (!lg || *(uint32_t*)(lg + 0x80) != *comp) continue;
     uint64_t on = (*(uint32_t*)(lg + 0x304) >> 8) & 1;
@@ -10522,7 +10552,7 @@ static int uefa_ko_of(uint16_t reg)
 {
   for (int ci = 0; ci < 3; ci++) {
     const cup_t* c = &CUPS[ci];
-    if (((reg & 0x3ff) == c->ko && (reg >> 10) <= 16) && (lp_ours(c->league) || lp_ours(c->row))) return ci;
+    if (cup_on(ci) && ((reg & 0x3ff) == c->ko && (reg >> 10) <= 16) && (lp_ours(c->league) || lp_ours(c->row))) return ci;
   }
   return -1;
 }
@@ -12849,10 +12879,35 @@ __attribute__((naked)) void teardown_handler(void)
     "ret\n");
 }
 
+/* FL27 (SmokePatch, 31.10.2026) hooks some of our functions itself: `jmp rel32` and nops over the
+   whole prologue, its stub ending in the displaced bytes and a jmp back to target + n (set_clubs
+   and the standings rows: 5 + 10 bytes).  Our 14-byte jmp then goes over it and the trampoline
+   jumps to their stub, which still ends in the original. */
+static unsigned char* e9_dest(const unsigned char* target, int n)
+{
+  if (n < 14 || target[0] != 0xE9) return 0;
+  for (int i = 5; i < n; i++) if (target[i] != 0x90) return 0;
+  return (unsigned char*)target + 5 + *(const int32_t*)(target + 1);
+}
 static int hook_or_chain(unsigned char* target, const unsigned char* sig, int n, void* handler, unsigned char** tramp_out)
 {
   static const unsigned char JMP[6] = { 0xFF, 0x25, 0, 0, 0, 0 };
   if (!memcmp(target, sig, n)) return hook(target, sig, n, handler, tramp_out);
+  unsigned char* stub = e9_dest(target, n);
+  if (stub) {
+    unsigned char* t = (unsigned char*)VirtualAlloc(0, 0x100, MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    if (!t) return 3;
+    t[0] = 0xFF; t[1] = 0x25; *(uint32_t*)(t + 2) = 0; *(uint64_t*)(t + 6) = (uint64_t)(uintptr_t)stub;
+    DWORD old;
+    if (!VirtualProtect(target, n, PAGE_EXECUTE_READWRITE, &old)) return 4;
+    target[0] = 0xFF; target[1] = 0x25; *(uint32_t*)(target + 2) = 0; *(uint64_t*)(target + 6) = (uint64_t)(uintptr_t)handler;
+    for (int i = 14; i < n; i++) target[i] = 0x90;
+    VirtualProtect(target, n, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), target, n);
+    *tramp_out = t;
+    g_chained = 1;
+    return 0;
+  }
   if (memcmp(target, JMP, 6)) return 2;
   unsigned char* t = (unsigned char*)VirtualAlloc(0, 0x100, MEM_COMMIT|MEM_RESERVE, PAGE_EXECUTE_READWRITE);
   if (!t) return 3;
@@ -12898,6 +12953,7 @@ static unsigned u10_logs;
 
 static uint16_t u10_reg(unsigned comp,unsigned selected) {
  unsigned phase=comp==2?3:comp==3?5:comp==174?186:0;
+ if(g_native_uefa && (phase==3 || phase==5))return 0;   /* FL27 draws its own league phase pages */
  unsigned row=phase==3?1027:phase==5?1029:phase==186?1210:0;
  if(!phase || (selected!=0xffff && selected!=phase && selected!=row))return 0;
  return (uint16_t)row;
@@ -13104,8 +13160,15 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
 {
   if (!regs || nregs < 1 || nregs > MAX_REGS) return 9;
   g_base = exe_base;
-  g_nreg = nregs;
-  for (int i = 0; i < nregs; i++) g_reg[i] = regs[i];
+  /* FL27: set_clubs starts with SmokePatch's jmp -- their league phase for the Champions and
+     Europa League, so 1027 / 1029 are not ours to schedule (see g_native_uefa) */
+  g_native_uefa = e9_dest((const unsigned char*)(uintptr_t)(exe_base + SETCL_RVA), 15) != 0;
+  g_nreg = 0;
+  for (int i = 0; i < nregs; i++)
+    if (!g_native_uefa || (regs[i] != 1027 && regs[i] != 1029)) g_reg[g_nreg++] = regs[i];
+  if (g_native_uefa)
+    logf("fl26swiss: FL27 -- UCL/UEL league phase and knockout are the game's; ours: access list, "
+         "qualifying rounds, Conference League (%d of %d regulation(s) kept)", g_nreg, nregs);
   /* Both signatures are checked before either is patched: a mismatch on the second one used
      to leave the game half hooked while the loader reported it unmodified. */
   if (memcmp((void*)(uintptr_t)(exe_base + GEN_RVA),  SIG_GEN,  16)) return 2;
