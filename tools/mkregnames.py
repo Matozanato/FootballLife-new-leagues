@@ -77,6 +77,11 @@ import caltab
 
 TABLE, NROWS, STRIDE = 0x1426770c0, 24, 16
 CAVE = 0x1426d1f20                      # 28,858 bytes of .rdata padding (tools/cave.py)
+# FL27 (31.10.2026, the same exe as FL_2027.exe): SmokePatch's code fills the first 9 KB of that
+# padding, and the module found it there and wrote nothing. 0x1426d6000 is zero in both exes
+# (FL27's padding is free again from 0x1426d43c5), so the module takes the first cave whose
+# bytes are still all zero.
+CAVES = (CAVE, 0x1426d6000)
 LEA_ID = (0x140acd478, "4c8d15499cba01", 3)    # lea r10, [table+8]
 LEA_NM = (0x140acd47f, "4c8d1d3a9cba01", 3)    # lea r11, [table]
 COUNT = (0x140acd49a, "83f918", 2)             # cmp ecx, 0x18
@@ -186,41 +191,45 @@ def main(argv):
 
     total = NROWS + len(added)
     strings = b""
-    for i, (ptr, rid, pad, nm) in enumerate(added):
-        if ptr is None:             # a name of ours: its string goes after the rows
-            if nm not in extra:
-                extra[nm] = len(strings)
-                strings += nm.encode("latin1") + b"\0"
-            added[i] = (CAVE + total * STRIDE + extra[nm], rid, pad, nm)
-    table = b"".join(struct.pack("<QII", p, rid, pad) for p, rid, pad, _ in shipped + added)
-    table += strings
+    for ptr, rid, pad, nm in added:
+        if ptr is None and nm not in extra:     # a name of ours: its string goes after the rows
+            extra[nm] = len(strings)
+            strings += nm.encode("latin1") + b"\0"
     if total > 0x7f:
         raise SystemExit("%d rows does not fit the 8-bit compare at 0x%x" % (total, COUNT[0]))
 
-    patches = [
-        (CAVE, "00" * len(table), table.hex(),
-         "%d heading rows: the %d shipped ones byte for byte, then %s"
-         % (total, NROWS, ", ".join("region %d -> %s" % (r[1], r[3]) for r in added))),
-        (LEA_ID[0], LEA_ID[1],
-         LEA_ID[1][:LEA_ID[2] * 2] + struct.pack("<I", rel32(LEA_ID[0], 7, CAVE + 8)).hex(),
-         "the id column -> the copy"),
-        (LEA_NM[0], LEA_NM[1],
-         LEA_NM[1][:LEA_NM[2] * 2] + struct.pack("<I", rel32(LEA_NM[0], 7, CAVE)).hex(),
-         "the name column -> the copy"),
-        (COUNT[0], COUNT[1], COUNT[1][:COUNT[2] * 2] + "%02x" % total,
-         "how many rows the loop walks: %d -> %d" % (NROWS, total)),
-    ]
+    def patches_at(cave):
+        rows_ = [(cave + total * STRIDE + extra[nm] if ptr is None else ptr, rid, pad, nm)
+                 for ptr, rid, pad, nm in added]
+        table = b"".join(struct.pack("<QII", p, rid, pad) for p, rid, pad, _ in shipped + rows_)
+        table += strings
+        return [
+            (cave, "00" * len(table), table.hex(),
+             "%d heading rows: the %d shipped ones byte for byte, then %s"
+             % (total, NROWS, ", ".join("region %d -> %s" % (r[1], r[3]) for r in rows_))),
+            (LEA_ID[0], LEA_ID[1],
+             LEA_ID[1][:LEA_ID[2] * 2] + struct.pack("<I", rel32(LEA_ID[0], 7, cave + 8)).hex(),
+             "the id column -> the copy"),
+            (LEA_NM[0], LEA_NM[1],
+             LEA_NM[1][:LEA_NM[2] * 2] + struct.pack("<I", rel32(LEA_NM[0], 7, cave)).hex(),
+             "the name column -> the copy"),
+            (COUNT[0], COUNT[1], COUNT[1][:COUNT[2] * 2] + "%02x" % total,
+             "how many rows the loop walks: %d -> %d" % (NROWS, total)),
+        ]
 
     out = get("--out") or os.path.join(os.path.dirname(HERE), "sider", "fl26regnames.lua")
     f = open(out, "w", encoding="utf-8", newline="\n")
     f.write(HEADER % (total, ", ".join("%d" % r[1] for r in added)))
-    f.write("local patches = {\n")
-    for va, old, new, why in patches:
-        f.write('  {va=0x%x, old="%s", new="%s", why="%s"},\n' % (va, old, new, why))
+    f.write("local sets = {\n")
+    for cave in CAVES:
+        f.write("  {cave=0x%x, patches={\n" % cave)
+        for va, old, new, why in patches_at(cave):
+            f.write('    {va=0x%x, old="%s", new="%s", why="%s"},\n' % (va, old, new, why))
+        f.write("  }},\n")
     f.write("}\n" + BODY)
     f.close()
-    print("wrote %s: %d rows (%d shipped + %d ours), %d sites"
-          % (out, total, NROWS, len(added), len(patches)))
+    print("wrote %s: %d rows (%d shipped + %d ours), 4 sites, caves %s"
+          % (out, total, NROWS, len(added), ", ".join("0x%x" % c for c in CAVES)))
     for _, rid, _, nm in added:
         print("  region %-3d -> %s" % (rid, nm))
     return 0
@@ -257,16 +266,27 @@ local function unhex(s)
   return table.concat(out)
 end
 
-function m.init(ctx)
-  log(string.format("fl26regnames: %d sites, verifying", #patches))
+local function mismatch(patches)
   for i = 1, #patches do
     local p = patches[i]
     local want = unhex(p.old)
-    if memory.read(p.va, #want) ~= want then
-      log(string.format("fl26regnames: MISMATCH at 0x%x -- nothing written  [%s]", p.va, p.why))
-      return
-    end
+    if memory.read(p.va, #want) ~= want then return p end
   end
+end
+
+function m.init(ctx)
+  -- the first cave still all zero: FL27's exe has SmokePatch's code in the first one
+  local patches
+  for i = 1, #sets do
+    local bad = mismatch(sets[i].patches)
+    if not bad then patches = sets[i].patches break end
+    log(string.format("fl26regnames: cave 0x%x not free -- MISMATCH at 0x%x  [%s]", sets[i].cave, bad.va, bad.why))
+  end
+  if not patches then
+    log("fl26regnames: no free cave -- nothing written")
+    return
+  end
+  log(string.format("fl26regnames: %d sites verified, the table at 0x%x", #patches, patches[1].va))
   for i = 1, #patches do
     local p = patches[i]
     local new = unhex(p.new)

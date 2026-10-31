@@ -2303,6 +2303,18 @@ static void qr_plan(void)
   uint32_t d = 218;
   while (d < 230 && (wday_in(d, sy) < 1 || wday_in(d, sy) > 3)) d++;
   uint32_t mon = d - (uint32_t)wday_in(d, sy);
+  if (g_native_uefa) {
+    /* FL27: their league phase plays its first matchday on 250 (7 September 2026) and our six
+       weeks put the play-off on 251 and 258, the same days as their first two matchdays, for
+       clubs that are in both (31.10.). Three weeks instead, Tuesday and Thursday, from the first
+       Tuesday after the build (217 is the first day filled): the play-off done by 241 */
+    mon = 218;
+    while (wday_in(mon, sy) != 2) mon++;   /* 0 = Sunday */
+    mon--;
+    for (int st = 2; st >= 0; st--) { g_qr_leg[st][0] = mon + 1; g_qr_leg[st][1] = mon + 3; mon += 7; }
+    g_qr_sy = sy;
+    return;
+  }
   for (int st = 2; st >= 0; st--) {
     /* the play-off's second leg no later than lets the first league-phase matchday move one
        week at most (swiss_day): two weeks would put it on the second matchday */
@@ -2412,7 +2424,7 @@ static uint32_t q_fill_from(int mask, int i)
       /* and after the second leg the round before had until 0.2.0 (225, 236): a save of then,
          its rounds dated the old way, is not filled before they are over */
       uint32_t e = qr_day(j / NQ, 1) + 1, old = j / NQ == 2 ? 226 : 237;
-      if (e < old) e = old;
+      if (e < old && !g_native_uefa) e = old;      /* FL27: no save of then; its weeks are shorter */
       if (e > d) d = e;
     }
   return d ? d : i ? 217 : 205;
@@ -11630,6 +11642,25 @@ uint64_t date_handler(uint64_t reg, void* vec)
     return rv;
   }
   if (european(id)) seen_once(1, id, 0);
+  /* FL27: their league phase (3 / 5, its rows 1027 / 1029) and their knockout of 24 (4 / 6, the
+     play-off in it) keep the dates they ship with. In game 31.10. our spacing of reg 3 / 5 (11 of
+     16 rounds moved) and our knockout dates on reg 4 left the Europa League at 6-7 matches of 8 in
+     March with no knockout; FL27 without our modules had played all 8 and reached the
+     quarter-finals by then */
+  if (vec && g_native_uefa && ((id >= 3 && id <= 6) || id == 1027 || id == 1029)) {
+    uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)(reg, vec);
+    vec_t* v = (vec_t*)vec;
+    size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+    static int said[8], sk = -1000;
+    { int k_ = log_season(); if (k_ != sk) { sk = k_; memset(said, 0, sizeof said); } }
+    if (!said[id >= 1024 ? 6 + (id == 1029) : id - 3]++) {
+      char b[200]; int o = 0;
+      for (size_t i = 0; i < have && i < 20 && o < 190; i++)
+        o += snprintf(b + o, sizeof b - o, " %u", ((date_t*)v->b)[i].day);
+      logf("fl26swiss: reg %u -- FL27's own, its %u date(s) kept:%s", (unsigned)id, (unsigned)have, b);
+    }
+    return rv;
+  }
   if (vec && is_playoff(id)) {
     uint64_t prv = ((date_fn)(uintptr_t)g_tramp_date)(reg, vec);
     vec_t* v = (vec_t*)vec;
@@ -13161,8 +13192,11 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
   if (!regs || nregs < 1 || nregs > MAX_REGS) return 9;
   g_base = exe_base;
   /* FL27: set_clubs starts with SmokePatch's jmp -- their league phase for the Champions and
-     Europa League, so 1027 / 1029 are not ours to schedule (see g_native_uefa) */
-  g_native_uefa = e9_dest((const unsigned char*)(uintptr_t)(exe_base + SETCL_RVA), 15) != 0;
+     Europa League, so 1027 / 1029 are not ours to schedule (see g_native_uefa). fl26chain loads
+     first and puts its own jmp in front of theirs (in game, 31.10.), so their other hook of the
+     same kind, on the standings filler, says it too */
+  g_native_uefa = e9_dest((const unsigned char*)(uintptr_t)(exe_base + SETCL_RVA), 15) != 0
+               || e9_dest((const unsigned char*)(uintptr_t)(exe_base + STAND_RVA), 15) != 0;
   g_nreg = 0;
   for (int i = 0; i < nregs; i++)
     if (!g_native_uefa || (regs[i] != 1027 && regs[i] != 1029)) g_reg[g_nreg++] = regs[i];
