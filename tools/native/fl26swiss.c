@@ -13179,7 +13179,7 @@ static void* mp_child(void* widget, const char* name)
 /* ---- the zone strip (0.3.0, mato 2026-11-01; vmican's idea): the colour of a row's place ----
  *
  * Mod Studio's layout (tools/mkmpcol.py ZONE_CELL) gives each row a text cell flZone on its left
- * edge; this writes a left half block into it, as tall as the row (FontScale 1.9: text is not
+ * edge; this writes a left half block into it, as tall as the row (FontScale 1.85: text is not
  * scaled by the cell's matrix; FontScale is a float at +4 of the props at widget+0x98, read with
  * atof by 0x140e4b6a0), in the colour of the row's
  * place, or nothing (setText 0x140e48bf0, then setColor 0x140e48a80: a palette index under 0x50,
@@ -13200,7 +13200,7 @@ static void* mp_child(void* widget, const char* name)
 enum { ZONE_CL, ZONE_EL, ZONE_ECL, ZONE_UP, ZONE_PO, ZONE_DOWN, ZONE_N };
 static const int ZONE_COLOUR[ZONE_N] = { 70, 3, 34, 62, 67, 72 };
 static const char* const ZONE_NAME[ZONE_N] = { "Champions League", "Europa League", "Conference League", "up", "play-off", "down" };
-#define ZONE_SCALE 1.9f         /* 1.0: a 7 x 14 px block at 1152 wide; 1.9: 44 px in the 45 px row at 1920 (FL27, 2026-11-01), 2.0 made the last row 46 px, over the table edge */
+#define ZONE_SCALE 1.85f        /* 1.0: a 7 x 14 px block at 1152 wide; at 1920 the rows are 45 px apart and 1.9 drew 43-45 px, the last row 2 px past the table edge (FL27, 2026-11-01); 1.85: 43 px */
 #define ZCOL_RVA   0xe48a80u    /* setColor(widget, index, keep) */
 #define ZDB_RVA    0x14b6a60u   /* the competitions' owner */
 #define ZCOMP_RVA  0x14bb000u   /* competition(owner+0x48, reg) */

@@ -56,7 +56,7 @@ ROW_SPRITE, HEAD_SPRITE = 16, 15
 # Europa League, the Conference League, up a division, a play-off, or down. The cell flZone is a
 # copy of num_Points' (a text cell: the row's finder knows those; copies of the plate it never
 # found, and text cells only by a name that starts on 4, see add_string); fl26swiss.dll (zone_fill) writes "▌"
-# (left half block) into it in the zone's colour, or nothing, at FontScale 1.9: as tall as the row,
+# (left half block) into it in the zone's colour, or nothing, at FontScale 1.85: as tall as the row,
 # on its left edge (seen in FL26 2.2 on 2026-11-01 in the HNL, the Druga NL and the Bosnian league).
 # Text is not scaled by the cell's matrix: ZONE_A/ZONE_D are the matrix it was placed with, kept so
 # ZONE_X/ZONE_Y stay where they were measured
