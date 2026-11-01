@@ -2070,7 +2070,16 @@
   "Not built like this yet: press Build.": "Ainda não foi construída assim: carregue em Build.",
   "Where the last Build put the league in Select Team. Pick a group of the game's here and the league takes its place": "Onde o último Build pôs a liga em Select Team. Escolha aqui um grupo do jogo e a liga fica com o lugar dele",
   "Where the last Build put the league in Select Team": "Onde o último Build colocou o campeonato no Select Team",
-  "%s is the division below %s (promotion and relegation). Leagues > Edit > Division changes it.": "%s é a divisão abaixo de %s (acesso e rebaixamento). Campeonatos > Editar > Divisão muda isso."
+  "%s is the division below %s (promotion and relegation). Leagues > Edit > Division changes it.": "%s é a divisão abaixo de %s (acesso e rebaixamento). Campeonatos > Editar > Divisão muda isso.",
+  "a knockout": "mata-mata",
+  "two groups of four": "dois grupos de quatro",
+  "(the league's name + Apertura Playoffs)": "(nome do campeonato + Apertura Playoffs)",
+  "(the league's name + Clausura Playoffs)": "(nome do campeonato + Clausura Playoffs)",
+  "(the league's name + Apertura Final)": "(nome do campeonato + Apertura Final)",
+  "(the league's name + Clausura Final)": "(nome do campeonato + Clausura Final)",
+  "Playoff names": "Nomes dos playoffs",
+  "Final names": "Nomes das finais",
+  "the finals of playoffs of two groups of four, with their logos": "as finais dos playoffs de dois grupos de quatro, com seus logos"
  },
  "log": [
   [
