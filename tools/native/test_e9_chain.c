@@ -21,6 +21,8 @@ static void check(const char* what, long got, long want)
 typedef int (*fn_t)(int);
 static unsigned char* g_t;
 static int handler(int x) { return ((fn_t)(uintptr_t)g_t)(x * 2); }   /* ours: doubles, then theirs */
+static unsigned char* g_t2;
+static int handler2(int x) { return ((fn_t)(uintptr_t)g_t2)(x * 2); }
 
 static void jmp32(unsigned char* at, unsigned char* to)
 {
@@ -53,14 +55,22 @@ int main(void)
   check("byte 14 a nop, their return point +15 untouched", target[14] == 0x90 && !memcmp(target + 15, ORIG_TAIL, sizeof ORIG_TAIL), 1);
   check("ours, then theirs, then the original: 5*2 + 7 + 100", ((fn_t)(uintptr_t)target)(5), 117);
 
-  /* not their shape (e9, then no nops): refused, nothing written */
   unsigned char* q = p + 0x400;
   jmp32(q, stub); memset(q + 5, 0xcc, 10);
   unsigned char before[15]; memcpy(before, q, 15);
+#ifdef SWISS
+  /* fl26swiss (2275a3a): their jmp with fewer nops than our 14 bytes (the Group A page factory
+     af4e20, e9 + one nop) is not refused: only its rel32 changes, to a jmp to ours within reach of
+     the exe (here: of the page), and our "original" is a jmp to their stub */
+  g_base = (uint64_t)(uintptr_t)p;
+  check("e9 without the nops: retargeted", hook_or_chain(q, SIG, 15, (void*)handler2, &g_t2), 0);
+  check("... still their e9, the bytes after it untouched", q[0] == 0xE9 && !memcmp(before + 5, q + 5, 10), 1);
+  check("... ours, then theirs, then the original: 5*2 + 7 + 100", ((fn_t)(uintptr_t)q)(5), 117);
+#else
+  /* not their shape (e9, then no nops): refused, nothing written */
   unsigned char* t2 = 0;
   check("e9 without the nops: not chained", hook_or_chain(q, SIG, 15, (void*)handler, &t2), 2);
   check("... and left as it was", !memcmp(before, q, 15), 1);
-#ifndef SWISS
   check("... usable says no", usable(q, SIG, 15), 0);
 #endif
   if (fails) { printf("%d check(s) FAILED\n", fails); return 1; }
