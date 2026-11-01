@@ -1,0 +1,7 @@
+{ "world": "_FL26AperturaGroups",
+  "leagues": [
+    { "name": "Apertura Groups League", "country": "Venezuela", "clubs": 14, "legs": 2,
+      "apertura": { "playoff": 8, "playoff_format": "groups",
+                    "names": { "final_apertura": "Final del Apertura", "final_clausura": "Final del Clausura" } },
+      "cup": true, "supercup": true }
+  ] }
