@@ -50,9 +50,14 @@ def game_layout(arg):
     return src.find(M.PACKAGE, lambda p: not M.has_mp(p)), src
 
 
+def unpacked(data):
+    """a layout as the game reads it: FL26's CPKs pack it (WESYS + zlib), FL27's do not"""
+    return zlib.decompress(data[16:]) if data[3:8] == b'WESYS' else data
+
+
 def movie_of(data):
     """the AP2 movie of a layout, unscrambled"""
-    raw = zlib.decompress(data[16:])
+    raw = unpacked(data)
     pk_off, pk_len = struct.unpack_from('<II', raw, 8)
     T = raw[pk_off:pk_off + pk_len]
     assert struct.unpack_from('>I', T, 12)[0] == len(T), "container length"
@@ -138,7 +143,7 @@ def main():
         _, _, _, _, create, _, _ = mm.cells(M.ROW_SPRITE, ["num_Points"])
         p = create["num_Points"][1]['tx']
         struct.pack_into('<i', mm.D, p, struct.unpack_from('<i', mm.D, p)[0] + 40)
-        raw = zlib.decompress(data[16:])
+        raw = unpacked(data)
         pk_off, pk_len = struct.unpack_from('<II', raw, 8)
         T = bytearray(raw[pk_off:pk_off + pk_len])
         feat = struct.unpack_from('>I', T, 20)[0]
@@ -158,6 +163,21 @@ def main():
         out2 = os.path.join(tmp, "other-out.bin")
         M.main(["--base", other, "--out", out2])
         expect(not os.path.exists(out2), "another mod's layout (columns elsewhere) is left as it is")
+
+        game = src and src.game
+        if game:
+            print("\nA world built before 0.2.5 (no layout of its own), switched on")
+            import leaguebuilder
+            world = os.path.join(tmp, "oldworld")
+            os.makedirs(world)
+            lines = []
+            leaguebuilder.mp_for_world(world, game, lines.append)
+            made = os.path.join(world, *M.PACKAGE.split("/"))
+            expect(os.path.isfile(made) and M.has_mp(made), "the layout with MP made in the world")
+            before = open(made, "rb").read()
+            lines2 = []
+            leaguebuilder.mp_for_world(world, game, lines2.append)
+            expect(open(made, "rb").read() == before and not lines2, "the next switch on leaves it as it is")
     finally:
         if src:
             src.close()
