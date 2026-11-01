@@ -174,8 +174,12 @@ def classic_world(base, game):
        not re.search(r"^lpre .*(single=1|poko=1|feed=)", text, re.M) and " cal=1" not in text)
     ok("classic: and no Recopa", "Recopa" not in text)
     lib = [w for reg, cid, w in rules(game, r["world"]) if cid == 5 and reg & 0x3ff in (8, 10)]
-    ok("classic: the Libertadores play-off and knockout keep the game's away goals (%d rows)" % len(lib),
-       lib and all(w & B.AWAY_GOALS for w in lib))
+    # the game's own rows: FL26 plays them with away goals, FL27 (1.00) without
+    shipped = B.M.load(base, "CompetitionRegulation.bin")
+    away = all(int.from_bytes(shipped[i + 0x10:i + 0x14], "little") & B.AWAY_GOALS for i in range(0, len(shipped), B.M.REG)
+               if shipped[i + B.M.R_CID] == 5 and int.from_bytes(shipped[i + B.M.R_ID:i + B.M.R_ID + 2], "little") & 0x3ff in (8, 10))
+    ok("classic: the Libertadores play-off and knockout keep the game's away goals (%d rows, %s)"
+       % (len(lib), "with" if away else "without"), lib and all(bool(w & B.AWAY_GOALS) == bool(away) for w in lib))
 
 
 def modern_world(base, game):
@@ -204,8 +208,12 @@ def modern_world(base, game):
     rc = [w for _r, cid, w in rules(game, r["world"]) if cid == ids1["ccup:FL_SAMRC"]["cid"]]
     ok("modern: the Recopa (one match) keeps its extra time", rc and all(w & B.EXTRA_TIME for w in rc))
     other = [w for reg, cid, w in rules(game, r["world"]) if cid == 8 and reg & 0x3ff == 16]
-    ok("modern: another confederation's knockout keeps its away goals (AFC Champions League 16)",
-       other and all(w & B.AWAY_GOALS for w in other))
+    shipped = B.M.load(base, "CompetitionRegulation.bin")   # the game's: FL27 (1.00) has no away goals there
+    theirs = [int.from_bytes(shipped[i + 0x10:i + 0x14], "little") & B.AWAY_GOALS for i in range(0, len(shipped), B.M.REG)
+              if shipped[i + B.M.R_CID] == 8 and int.from_bytes(shipped[i + B.M.R_ID:i + B.M.R_ID + 2], "little") & 0x3ff == 16]
+    ok("modern: another confederation's knockout keeps the game's away goals (AFC Champions League 16, %s)"
+       % ("with" if all(theirs) else "without"),
+       other and all(bool(w & B.AWAY_GOALS) == bool(all(theirs)) for w in other))
 
     # a league with its national and super cup in front: it takes ids, the CONMEBOL ones stay
     more = copy.deepcopy(r)
