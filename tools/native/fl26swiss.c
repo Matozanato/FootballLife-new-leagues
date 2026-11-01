@@ -13373,6 +13373,40 @@ static void futve_copa_fill(void)
        (unsigned)FUTVE_COPA, d, n, (unsigned)rec_id(src), (unsigned)rec_count(rec), ccup_matches(FUTVE_COPA));
 }
 static uint32_t futve_champion_kept(int ad);
+/* A January-December super cup's cup winner and runner-up, kept from the cup's final on (days 200 to
+   the year's end, while the game still names them): at New Year the cup enters its next season and
+   is drawn before the super cup is filled, and the rights code names nobody any more (01.11., Felix's
+   second Master League season: the Copa Venezuela of 2025 drawn again on day 0 and no Supercopa
+   de Venezuela, no word in the log). The runner-up as cupwin FUTVE_RUNNER | cup. */
+static void calendar_scup_keep(void)
+{
+  int d = today(), ad = abs_day();
+  if (!g_ncal_scup || d < 200 || ad < 0) return;
+  for (int i = 0; i < g_ncal_scup; i++) {
+    const cal_scup_t* cs = &g_cal_scup[i];
+    uint32_t w = winner_now(cs->cup);
+    if (!(w >> 14)) continue;
+    uint32_t r = knockout_runner_now(cs->cup);
+    for (int q = 0; q < 2; q++) {
+      uint16_t key = (uint16_t)(q ? (FUTVE_RUNNER | cs->cup) : cs->cup);
+      uint32_t club = q ? r : w;
+      if (!(club >> 14)) continue;
+      cupwin_t* k = cupwin_of(key);
+      if (k && k->club == club && ad >= k->day && ad - k->day < 200) continue;   /* this season's, kept */
+      if (!k) { if (g_ncupwin >= 32) continue; k = &g_cupwin[g_ncupwin++]; k->reg = key; }
+      k->day = ad; k->club = club;
+      logf("fl26swiss: cup reg %u %s %08x (day %d), kept for Super Cup %u", (unsigned)cs->cup,
+           q ? "runner-up" : "won by", club, d, (unsigned)cs->reg);
+      state_store();
+    }
+  }
+}
+/* the kept one (calendar_scup_keep) when it is of the year just ended */
+static uint32_t calendar_scup_kept(uint16_t key, int ad)
+{
+  cupwin_t* k = cupwin_of(key);
+  return k && (k->club >> 14) && ad >= k->day && ad - k->day < 150 ? k->club : 0;
+}
 static void calendar_scup_fill_days(void)
 {
   int d = today();
@@ -13383,10 +13417,29 @@ static void calendar_scup_fill_days(void)
     unsigned char* rec = get_rec(cs->reg);
     if (!rec || ccup_matches(cs->reg) > 0) continue;
 
+    int ad = abs_day();
     uint32_t champion = calendar_scup_right(cs->league, 13);
     uint32_t runner   = calendar_scup_right(cs->league, 14);
     uint32_t cupwin   = calendar_scup_right(cs->cup, 0);
-    if (!champion || !cupwin) continue;
+    /* the cup drawn again for its new season names nobody: last season's, kept at its final */
+    if (!cupwin) cupwin = calendar_scup_kept(cs->cup, ad);
+    /* the league's too: the Liga FUTVE's champion of its finals, else the final table kept at New Year */
+    if (!champion && g_tl_total && cs->league == g_tl_total) champion = futve_champion_kept(ad);
+    final_t* ft = final_of(cs->league);
+    if (ft && ft->n >= 2 && ad >= ft->day && ad - ft->day < 150) {
+      if (!champion) champion = ft->club[0];
+      if (!runner) runner = ft->club[1];
+    }
+    if (!champion || !cupwin) {
+      static int said_y = -1;
+      if (said_y != ad / 365) {
+        said_y = ad / 365;
+        logf("fl26swiss: calendar Super Cup %u -- day %d: no %s yet (league %u champion %08x, cup %u winner %08x); not filled",
+             (unsigned)cs->reg, d, !champion ? "league champion" : "cup winner", (unsigned)cs->league, champion,
+             (unsigned)cs->cup, cupwin);
+      }
+      continue;
+    }
 
     /* fase 4 (the Liga FUTVE January-December): its champion is the finals', the Final del FUTVE's
        winner in December or the club that won both -- not the accumulated table's leader; the cup's
@@ -13396,6 +13449,7 @@ static void calendar_scup_fill_days(void)
       if (lf) champion = lf;
       if (same_club(champion, cupwin)) {
         uint32_t cr = knockout_runner_now(cs->cup);
+        if (!cr) cr = calendar_scup_kept((uint16_t)(FUTVE_RUNNER | cs->cup), ad);
         if (cr && !same_club(cr, champion)) runner = cr;
       }
       logf("fl26swiss: calendar Super Cup %u -- day %d: Liga FUTVE champion %08x (%s), cup %u winner %08x",
@@ -14440,6 +14494,7 @@ char daychk_handler(void* ctx)
   lpre_fill_days();
   ccup_fill_days();
   if (jfrom >= 0) ccup_jump_check(jfrom, jto);     /* after today's fills: a fill day caught today is no loss */
+  calendar_scup_keep();                            /* a January-December super cup's cup winner, kept at its final */
   calendar_scup_fill_days();
   futve_copa_fill();                               /* fase 4: the January-December Copa Venezuela */
   futve_phase_reopen();                            /* fase 4: the Apertura enters its new season on day 41 */
