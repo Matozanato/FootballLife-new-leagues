@@ -3,7 +3,8 @@
     { "name": "Grand Final League", "country": "Venezuela", "clubs": 14, "legs": 2,
       "apertura": { "playoff": 8, "playoff_format": "groups", "grand_final": true,
                     "names": { "grand_final": "Final de la Liga" } },
-      "cup": true, "supercup": true },
+      "cup": true, "supercup": true, "ceremony": true,
+      "cinematics": { "final_apertura": "LIB", "grand_final": "UEFA Champions League F" } },
     { "name": "Single Final League", "country": "Colombia", "clubs": 12, "legs": 2,
       "apertura": { "playoff": 8, "playoff_format": "groups", "grand_final": "single" } }
   ] }

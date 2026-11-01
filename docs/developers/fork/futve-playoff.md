@@ -171,6 +171,56 @@ ccup 261 ko=261 groups=0 entry=191:1,192:1 fill=0 national=1 days=166,169 kolike
   honours (`honours_fix_one`). Until fase 6 the DLL knew one: the last final of the world was every
   league's. `tools/native/test_grand_final.c` checks it offline.
 
+### The trophy ceremony: `"ceremony"`
+
+The game ends a match in the trophy ceremony when its competition's regulation is one of its big
+finals: the exe's regulation -> tournament map (0x141e53910, `cx` = regulation | stage << 10) has
+330 built-in pairs and answers 217 ("no tournament") for anything else, every regulation of ours.
+`"ceremony": true` on a league gives its finals a tournament of the base game no world uses, 30 (the
+shipped Copa Sudamericana's final, regulation 13; FL26's Sudamericana is a cup of its own):
+
+- the Build (`tmap_lines`): `tmap <reg> 30` for the league's national cup and super cup, its
+  play-offs' finals and its grand final, `noleg0` for a two-legged one; refused for a league with
+  none of those, 16 at most in a world (`CEREMONY_MAX`, the DLL's `TMAP_MAX`);
+- the DLL (`fl26_swiss_tmap`, `tmap_handler`): a chain of compares in front of the exe's function
+  answers the world's regulations; with `noleg0`, the user's match on the first leg keeps 217. The
+  hook goes in only for a world with `tmap` lines -- until fase 6 it answered 255, 256 and 261-263
+  in every world;
+- Mod Studio's league window: Trophy ceremony.
+
+A world built before needs its `tmap` lines to keep the ceremony with this DLL: the Liga FUTVE's
+`tmap 255 30`, `tmap 256 30`, `tmap 261 30`, `tmap 262 30`, `tmap 263 30 noleg0`.
+`tools/native/test_ceremony.c` checks the map offline.
+
+### The finals' cinematics: `"cinematics"`
+
+The cinematics packs (`SiderAddons\content\cinematics`) hold a folder per competition -- `LIB`,
+`UEFA Champions League F`, `ESPCF` ...: the entrance, the stadium dressing, the trophy ceremony's
+animations and its cup -- and the packs' shared module (`common\cinematics.lua`) picks one by the
+game's tournament id, which no competition of ours has. `"cinematics"` on a league picks one for
+each of its finals:
+
+```json
+"cinematics": {"cup": "ESPCF", "super_cup": "UEFA Super Cup", "final_apertura": "LIB",
+               "final_clausura": "LIB", "grand_final": "UEFA Champions League F"}
+```
+
+- the Build (`cine_lines`): `cine <reg> final <folder>` for the national cup (its final match),
+  `cine <reg> all <folder>` for the super cup, the play-offs' finals and the grand final (each a
+  final); a folder the game's `content\cinematics` has not got, or a final the league has not got, is
+  said in the log;
+- `sider\experimental\fl26cine.lua`: for those matches every file comes from that folder first;
+  one it has not got goes on to the next module (sider takes the first module whose file exists), so
+  `fl26cine` loads **before** `common\cinematics.lua`: Install the modules (`ensure_modules`,
+  `cine_place`) puts its line there, out of Mod Studio's block (`group_ours` leaves it);
+- Mod Studio's league window: Cinematics, a list per final of the folders the game has
+  (`cine_folders`), "(the game's)" for none.
+
+The cup lifted is the folder's own (a trophy chosen apart was tried and left: Felix, 01.11.). Tested
+in the game on 01.11.: the Final del Apertura (261) with `LIB`, the Libertadores final's scenes, and
+the ceremony. The Liga FUTVE's hand-made patch of `common\cinematics.lua` (`futve_cinematics.py`) is
+not needed for these lines; it stays for the frozen phases.
+
 ## Building the world without Mod Studio
 
 `tools/futve_world.py` builds the two test worlds from a real one, without touching the game:
@@ -374,6 +424,9 @@ the Gran Final, the continental places and the second season are later phases.
 python tools/test_playoff_groups.py <pesdb>  # the recipe keys, the Build's cups and finals, the league window
 python tools/test_grand_final_build.py <pesdb>  # the grand final: recipe key, Build, league window
 python tools/test_grand_final.py       # the DLL's title leagues (any number), native
+python tools/test_ceremony_build.py <pesdb>  # the trophy ceremony: recipe key, tmap lines, league window
+python tools/test_ceremony.py          # the DLL's tournament map, native
+python tools/test_fl26cine.py          # the cinematics module in Lua (lupa)
 python tools/test_futve_playoff.py     # the pure parts (groups, order of the final), native
 python tools/test_futve_world.py       # both staging worlds against the real world; skip without one
 python tools/test_futve_fixture.py     # the fixture; skip without a world

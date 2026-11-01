@@ -15300,38 +15300,53 @@ static void mp_install(void)
    (cx = regulation | stage << 10) looks the key up in a list of 330 built-in pairs (reg 10 -> 26 the
    Libertadores final, 6 -> 21 the Europa League final, 13 -> 30, ...) and answers 0xd9 (217, "no
    tournament") for anything else -- every regulation of ours. Here a final of ours answers a final
-   tournament of the base game that this world does not use: 30 (regulation 13, the shipped Copa
-   Sudamericana's final; FL26's Sudamericana is a cup of its own, 257/258), kind 10 like the
-   Libertadores' 26, trophy 27. Nothing of the world is renumbered; only the game's question
-   "which tournament is this regulation" gets another answer. Callers logged (first 120). */
-#define TMAP_HOOK 1
+   tournament of the base game that this world does not use (30: regulation 13, the shipped Copa
+   Sudamericana's final; FL26's Sudamericana is a cup of its own), so its last match ends in the
+   trophy ceremony. Nothing of the world is renumbered; only the game's question "which tournament is
+   this regulation" gets another answer.
+   Fase 6: the regulations and their tournaments come from the world file's `tmap <reg> <tournament>
+   [noleg0]` lines (fl26_swiss_tmap, Mod Studio's "ceremony" recipe key); the hook goes in only for a
+   world that has some. noleg0: a two-legged final whose first leg ends in no ceremony (217). Until
+   then 255, 256, 261-263 were built in, in every world. */
 #define TMAP_RVA  0x1e53910
-#define TMAP_TID  30
+#define TMAP_MAX  16
+#define TMAP_NOLEG0 1
+static uint16_t g_tmap_reg[TMAP_MAX], g_tmap_tid[TMAP_MAX]; static uint8_t g_tmap_fl[TMAP_MAX];
+static int g_ntmap = 0, g_tmap_live = 0;
 static volatile LONG g_tmap_n = 0;
+static int tmap_of(uint32_t key)
+{
+  for (int i = 0; i < g_ntmap; i++) if (g_tmap_reg[i] == (key & 0x3ff)) return i;
+  return -1;
+}
 static uint32_t tmap_handler(uint32_t key, uint64_t ret)
 {
+  int i = tmap_of(key);
+  if (i < 0) return 0xd9;
   /* 31.10. (Felix: the Final del FUTVE is two legs): its first leg decides nothing -- the user's
-     match today, 263 on leg 0, keeps "no tournament" (217), so only the second leg ends in the
-     ceremony. The leg is the match record's (+7 bits 4-5), as ceremony_fix reads it. */
-  if ((key & 0x3ff) == 263) {
+     match today on leg 0 keeps "no tournament" (217), so only the second leg ends in the ceremony.
+     The leg is the match record's (+7 bits 4-5), as ceremony_fix read it. */
+  if (g_tmap_fl[i] & TMAP_NOLEG0) {
     int d = today();
     unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
     unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
     if (blk && d >= 0 && d < 365) {
       unsigned char* e = blk + SCHED_ENT_OFF + (size_t)d * 16;
       unsigned char* mr = *(uint16_t*)e != 0xffff ? ko_match(*(uint16_t*)e) : 0;
-      if (mr && *(uint16_t*)(mr + 4) == 263 && ((mr[7] >> 4) & 3) == 0) {
+      if (mr && *(uint16_t*)(mr + 4) == g_tmap_reg[i] && ((mr[7] >> 4) & 3) == 0) {
         if (InterlockedIncrement(&g_tmap_n) <= 120)
-          logf("fl26swiss: tmap -- regulation 263, first leg (day %d): no tournament (217), no ceremony", d);
+          logf("fl26swiss: tmap -- regulation %u, first leg (day %d): no tournament (217), no ceremony",
+               (unsigned)g_tmap_reg[i], d);
         return 0xd9;
       }
     }
   }
   if (InterlockedIncrement(&g_tmap_n) <= 120)
     logf("fl26swiss: tmap -- regulation %u (stage %u) asked by %llx: tournament %u", key & 0x3ff, (key >> 10) & 0x3f,
-         (unsigned long long)(ret - g_base + 0x140000000ull), (unsigned)TMAP_TID);
-  return TMAP_TID;
+         (unsigned long long)(ret - g_base + 0x140000000ull), (unsigned)g_tmap_tid[i]);
+  return g_tmap_tid[i];
 }
+/* the hook: a chain of compares with the world's regulations in front of the exe's function */
 static int tmap_install(uint64_t exe_base)
 {
   unsigned char* s = (unsigned char*)(uintptr_t)(exe_base + TMAP_RVA);
@@ -15340,20 +15355,20 @@ static int tmap_install(uint64_t exe_base)
   unsigned char* t = near_alloc(exe_base);
   if (!t) return 3;
   unsigned char* p = t;
-  /* movzx eax, cx; and eax, 0x3ff; cmp eax, 255/256/261/262/263 -> ours */
+  /* movzx eax, cx; and eax, 0x3ff; cmp eax, <reg> -> ours, one per regulation (TMAP_MAX: the
+     short jumps reach) */
   *p++ = 0x0f; *p++ = 0xb7; *p++ = 0xc1;
   *p++ = 0x25; *(uint32_t*)p = 0x3ff; p += 4;
-  static const uint32_t ours[] = { 255, 256, 261, 262, 263 };
-  unsigned char* jmps[5];
-  for (int i = 0; i < 5; i++) {
-    *p++ = 0x3d; *(uint32_t*)p = ours[i]; p += 4;          /* cmp eax, imm32 */
+  unsigned char* jmps[TMAP_MAX];
+  for (int i = 0; i < g_ntmap; i++) {
+    *p++ = 0x3d; *(uint32_t*)p = g_tmap_reg[i]; p += 4;  /* cmp eax, imm32 */
     *p++ = 0x74; jmps[i] = p; *p++ = 0;                    /* je ours */
   }
   /* not ours: the displaced mov [rsp+8],rbx, back to +5 */
   memcpy(p, sig, 5); p += 5;
   *p++ = 0xff; *p++ = 0x25; *(uint32_t*)p = 0; p += 4; *(uint64_t*)p = exe_base + TMAP_RVA + 5; p += 8;
   unsigned char* o = p;
-  for (int i = 0; i < 5; i++) *jmps[i] = (unsigned char)(o - (jmps[i] + 1));
+  for (int i = 0; i < g_ntmap; i++) *jmps[i] = (unsigned char)(o - (jmps[i] + 1));
   /* ours: sub rsp,0x28; mov rdx,[rsp+0x28]; (ecx = key) call handler; add rsp,0x28; ret */
   *p++ = 0x48; *p++ = 0x83; *p++ = 0xec; *p++ = 0x28;
   *p++ = 0x48; *p++ = 0x8b; *p++ = 0x54; *p++ = 0x24; *p++ = 0x28;
@@ -15369,6 +15384,32 @@ static int tmap_install(uint64_t exe_base)
   VirtualProtect(s, 5, old, &old);
   FlushInstructionCache(GetCurrentProcess(), s, 5);
   return 0;
+}
+/* the world file's tmap lines, n records of u16 {regulation, tournament, flags} (TMAP_NOLEG0); once a
+   session, after fl26_swiss_install. Answers the records taken, -1 when the hook could not go in. */
+__declspec(dllexport) int fl26_swiss_tmap(const uint16_t* v, int n)
+{
+  if (g_tmap_live) {
+    logf("fl26swiss: tmap -- the tournament map is set already this session; the world's lines are left");
+    return 0;
+  }
+  g_ntmap = 0;
+  for (int i = 0; v && i < n && g_ntmap < TMAP_MAX; i++) {
+    uint16_t reg = v[3 * i], tid = v[3 * i + 1];
+    if (!reg || reg > 0x3ff || !tid || tid >= 0xd9 || tmap_of(reg) >= 0) {
+      logf("fl26swiss: tmap -- regulation %u, tournament %u: not a regulation of ours or a tournament; left out",
+           (unsigned)reg, (unsigned)tid);
+      continue;
+    }
+    g_tmap_reg[g_ntmap] = reg; g_tmap_tid[g_ntmap] = tid; g_tmap_fl[g_ntmap] = (uint8_t)v[3 * i + 2]; g_ntmap++;
+  }
+  if (!g_ntmap || !g_base) return 0;
+  int tr = tmap_install(g_base);
+  if (tr) { logf("fl26swiss: tournament map hook NOT installed (%d)", tr); g_ntmap = 0; return -1; }
+  g_tmap_live = 1;
+  logf("fl26swiss: tournament map hook live at %llx: %d final(s) of ours end in a trophy ceremony",
+       (unsigned long long)(g_base + TMAP_RVA), g_ntmap);
+  return g_ntmap;
 }
 
 /* 30.10. (the trophy ceremony): read-only, once. Sider's hooks (trophy-check, trophy-table, ...)
@@ -15646,12 +15687,6 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
     logf("fl26swiss: Cup mode list NOT installed (vtable slot)");
   logf("fl26swiss: hooks live (schedule@%llx dates@%llx) for %d regulation(s)",
        (unsigned long long)(exe_base + GEN_RVA), (unsigned long long)(exe_base + DATE_RVA), nregs);
-  {
-    int tr = TMAP_HOOK ? tmap_install(exe_base) : -1;
-    if (tr) logf("fl26swiss: tournament map hook NOT installed (%d)", tr);
-    else logf("fl26swiss: tournament map hook live at %llx: our finals (255, 256, 261-263) answer tournament %d",
-              (unsigned long long)(exe_base + TMAP_RVA), TMAP_TID);
-  }
   return 0;
 }
 
