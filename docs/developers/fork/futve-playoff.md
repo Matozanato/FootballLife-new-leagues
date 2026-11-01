@@ -87,7 +87,56 @@ knockout with them; the same club twice is put in once and the final is refused.
 old bracket of two a group stands. When the final's progression arrives, `ccup_final_note` logs the
 champion once a season.
 
-## Building the world
+## In Mod Studio: `"playoff_format": "groups"`
+
+A recipe asks for this play-off on an Apertura/Clausura league; the Build makes all of it, the
+finals included, and nothing of the tools below is needed:
+
+```json
+"apertura": {"playoff": 8, "playoff_format": "groups",
+             "names": {"final_apertura": "Final del Apertura", "final_clausura": "Final del Clausura"},
+             "logos": {"final_apertura": "C:/logos/final-apertura.png"}}
+```
+
+- `playoff_format`: `"knockout"` (the default: two legs a round, a one-match final) or `"groups"`,
+  which needs `"playoff": 8`. Mod Studio's league window has it next to the playoff size.
+- `names` and `logos`: `playoff_apertura`, `playoff_clausura`, `final_apertura`,
+  `final_clausura`, any of them. The defaults are "<league> Apertura Playoffs" and "<league>
+  Apertura Final"; a play-off's picture falls back to `playoff_logo`, a final's to the drawn
+  emblem. The finals' keys mean something with `"groups"` only. The window has fields for the four
+  names and the finals' two pictures; the playoffs keep the one "Playoffs" picture of the cup logos,
+  and a hand-written recipe's own `logos.playoff_*` are kept when the window saves.
+- `plan()` refuses another format, groups of other than 8 clubs and keys it does not know;
+  `recipe_from_plan` gives the three keys back. Without them the plan, and the world, are the
+  ones of before (the regress018 fingerprints of every recipe are unchanged).
+
+What the Build does (`tools/leaguebuilder.py`):
+
+- `playoff_cups` plans each play-off on the seven days a knockout of the league would have
+  (`playoff_days`): the first six are `gdays=`, the last the final's `days=`. The entries are the
+  group order above (`PLAYOFF_GROUP_ORDER`), `groups` 2, `adv=1`, and `kolike` the Belgium Super
+  Cup (`PLAYOFF_FINAL_DATES`).
+- `continental` passes `mkccup.py` the `koclubs` 2 and the FA Cup's regulation as the knockout's
+  row (`PLAYOFF_FINAL_SHAPE`); `ccup_options` writes `gdays=`, `adv=1` and `kolike=` into the line.
+- `playoff_finals` makes each final a **competition of its own**, as the Liga FUTVE's were made by
+  `futve_finals.py`: a copy of the play-off's competition row with a new id and the code
+  `FL_<rid>_AFI` / `FL_<rid>_CFI`, the knockout regulation moved to it and named after it, and two
+  entry rows (placeholders: the DLL writes the group winners when it fills the final). The game then
+  counts the final's winner as that competition's champion -- the title in the Palmarés carries the
+  final's name and emblem, not the play-off's. The id is one the game creates at the season's start
+  (`CREATION_IDS`, 130 and up, free): a knockout regulation moved to an id the season builder has no
+  case for is never created. It is noted in the plan's `cup_ids` (`final:<code>`) and kept by the
+  next Build, like every cup's id, since a career holds it.
+- `cup_emblems` draws the finals' emblems (or puts their pictures) like any cup's.
+
+```
+ccup 257 ko=258 groups=2 entry=191:1,191:4,191:5,191:8,191:2,191:3,191:6,191:7 fill=3 national=1 days=28 gdays=5,8,11,14,18,25 adv=1 kolike=128 name=Apertura Groups League Apertura Playoffs
+```
+
+(`tools/testdata/regress018/apertura_groups.json`: the play-offs are competitions 133/134, their
+finals 135/136, regulations 258 and 260.)
+
+## Building the world without Mod Studio
 
 `tools/futve_world.py` builds the two test worlds from a real one, without touching the game:
 
@@ -273,26 +322,9 @@ the Gran Final, the continental places and the second season are later phases.
 - **The final's ground.** The better placed club is first in the match record; the test of 28
   October had Táchira at home in the final. Whether a different row shape would change the venue is
   a data question, not a code one.
-- **The finals as competitions of their own.** The user's design for the next block: the Final del
-  Apertura and the Final del Clausura as separate two-club cups (the two group winners), and the
-  Final del FUTVE between the two champions -- no match and the title directly when it is the same
-  club, or against a runner-up if a match must be played. Their competitions take the Mod Studio's
-  next free byte competition ids **142/143/144** (130-135 and 137-141 are used, 136 is the UEFA
-  Conference League's reserved id); when they are built, they are in `futve_logo.py`'s PLAN and the
-  sandbox installs their `FINAL_*` logos automatically. The cinematics above already reserve their
-  regulations (261/262 the Europa League final's entrance, 263 the Champions League final's); the
-  world and DLL side (new competitions, entries, fills, dates) is the next implementation. A
-  separate competition of ours is still outside the game's trophy/title table, so the
-  entrance/atmosphere is the visible part; the palmarés/records item below stands.
-- **The club palmarés.** The 28 October final was played and the winner was read by the DLL
-  (`cup 261 -- its final is over on day 15: champion 45ed8006`), but the club's Palmarés screen
-  stayed empty. That screen is the game's own honours data, filled by its title bookkeeping, which
-  exists for the shipped competitions only (the research notes: no table, code); a competition of
-  ours (cid 134) is not in it. The champion is still the competition's winner -- the rights code the
-  DLL reads -- and the sandbox now keeps the career save in the evidence for the analysis. Whether
-  the title appears at the season's close, and whether a normal cup's final row (the change above)
-  makes the game record it, is what the next test checks. A real fix would call the game's
-  title-recording code, a new investigation, not a data change.
+- **The finals as competitions of their own** are done (`futve_finals.py` for the Liga FUTVE,
+  `playoff_finals` in the Build, above), and their titles are in the club's Palmarés
+  ([palmares.md](palmares.md)). The Final del FUTVE between the two champions is a block of its own.
 - **Competition Info.** The cup's group pages are the pages of a group competition; a crash there
   (as B205 once had) is checked in each test.
 - **Saves.** A save loaded between two group days is covered by the match-count fallback; a save
@@ -304,6 +336,7 @@ the Gran Final, the continental places and the second season are later phases.
 ## Tests without the game
 
 ```
+python tools/test_playoff_groups.py <pesdb>  # the recipe keys, the Build's cups and finals, the league window
 python tools/test_futve_playoff.py     # the pure parts (groups, order of the final), native
 python tools/test_futve_world.py       # both staging worlds against the real world; skip without one
 python tools/test_futve_fixture.py     # the fixture; skip without a world

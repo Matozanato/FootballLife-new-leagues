@@ -1,0 +1,5 @@
+{ "world": "_FL26AperturaKnockout",
+  "leagues": [
+    { "name": "Apertura Test League", "country": "Venezuela", "clubs": 14, "legs": 2,
+      "apertura": { "playoff": 8 }, "cup": true, "supercup": true }
+  ] }

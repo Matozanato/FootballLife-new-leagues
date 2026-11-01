@@ -731,7 +731,34 @@ class LeagueDialog(Dialog):
             self.po.addItem(t, n)
         ap = L.get("apertura")
         self.po.setCurrentIndex(max(0, self.po.findData(int(ap.get("playoff", 8)) if isinstance(ap, dict) else 8)))
-        self.form.addRow("", row(self.ap, self.po))
+        ap = ap if isinstance(ap, dict) else {}
+        self.ap_keep = ap
+        self.po_fmt = QComboBox()
+        self.po_fmt.addItem(_("a knockout"), "knockout")
+        self.po_fmt.addItem(_("two groups of four"), "groups")
+        self.po_fmt.setCurrentIndex(max(0, self.po_fmt.findData(ap.get("playoff_format") or "knockout")))
+        self.form.addRow("", row(self.ap, self.po, self.po_fmt, helpmark(
+            "The playoffs of 8 clubs: a knockout (two legs a round, a one-match final), or two groups of "
+            "four (1st, 4th, 5th and 8th of the tournament, and 2nd, 3rd, 6th and 7th) playing each other "
+            "home and away, and the two group winners in a one-match final. That final is a competition "
+            "of its own: its winner gets its own title in the Palmares, with the final's name and logo.")))
+        names = ap.get("names") or {}
+        self.po_names = {k: QLineEdit(names.get(k, "")) for k in B.PLAYOFF_NAME_KEYS}
+        for k, t in (("playoff_apertura", _("(the league's name + Apertura Playoffs)")),
+                     ("playoff_clausura", _("(the league's name + Clausura Playoffs)")),
+                     ("final_apertura", _("(the league's name + Apertura Final)")),
+                     ("final_clausura", _("(the league's name + Clausura Final)"))):
+            self.po_names[k].setPlaceholderText(t)
+        logos = ap.get("logos") or {}
+        self.fa_logo = PictureField(logos.get("final_apertura"), 48)
+        self.fc_logo = PictureField(logos.get("final_clausura"), 48)
+        self.form.addRow(_("Playoff names"), row(self.po_names["playoff_apertura"], self.po_names["playoff_clausura"]))
+        self.form.addRow(_("Final names"), row(self.po_names["final_apertura"], self.fa_logo,
+                                               self.po_names["final_clausura"], self.fc_logo))
+        self.form.addRow("", hint(_("the finals of playoffs of two groups of four, with their logos")))
+        self.po.currentIndexChanged.connect(lambda _i: self.playoff_state())
+        self.po_fmt.currentIndexChanged.connect(lambda _i: self.playoff_state())
+        self.playoff_state()
         self.form.addRow("", hint(_("two tournaments a season, September to early January and January to May, "
                                     "everyone meeting once in each and starting from zero points; the whole "
                                     "season's table decides promotion and relegation. 18 clubs at most")))
@@ -914,6 +941,16 @@ class LeagueDialog(Dialog):
         """the game's name of the country picked or typed ("South Korea" -> "Republic of Korea")"""
         return B.country_of(self.country.currentText(), self.project.countries)
 
+    def playoff_state(self):
+        """two groups of four is a playoff of 8 clubs, and only it has finals of its own to name"""
+        eight = self.po.currentData() == B.PLAYOFF_SIZES[0]
+        self.po_fmt.setEnabled(eight and self.po.isEnabled())
+        groups = eight and self.po_fmt.currentData() == "groups" and self.po.isEnabled()
+        for w in (self.po_names["final_apertura"], self.po_names["final_clausura"], self.fa_logo, self.fc_logo):
+            w.setEnabled(groups)
+        for k in ("playoff_apertura", "playoff_clausura"):
+            self.po_names[k].setEnabled(self.po.currentData() != 0 and self.po.isEnabled())
+
     def exhibition_state(self):
         """an exhibition league stands alone: the division, the cups, Europe and a split go grey;
         clubs in no league have none of a league's things at all"""
@@ -937,11 +974,30 @@ class LeagueDialog(Dialog):
         self.split.setEnabled(not on)
         self.ap.setEnabled(not on)
         self.po.setEnabled(not on)
+        self.playoff_state()
         self.europe.setEnabled(not on)
         self.cup.setEnabled(top and not on)
         self.lcup.setEnabled(top and not on)
         self.supercup.setEnabled(top and not on and self.cup.isChecked())
         self.season_follows()
+
+    def apertura_value(self):
+        """the recipe's "apertura": the playoff, its format, names and the finals' logos; the
+        playoffs' own logos of a recipe written by hand (the dialog has one for both) kept"""
+        po = self.po.currentData()
+        out = {"playoff": po}
+        if po == B.PLAYOFF_SIZES[0] and self.po_fmt.currentData() == "groups":
+            out["playoff_format"] = "groups"
+        names = {k: e.text().strip() for k, e in self.po_names.items() if e.text().strip()}
+        if names:
+            out["names"] = names
+        logos = {k: v for k, v in (self.ap_keep.get("logos") or {}).items() if k.startswith("playoff_")}
+        for k, f in (("final_apertura", self.fa_logo), ("final_clausura", self.fc_logo)):
+            if f.path:
+                logos[k] = f.path
+        if logos:
+            out["logos"] = logos
+        return out
 
     def ok(self):
         L = self.league
@@ -951,7 +1007,7 @@ class LeagueDialog(Dialog):
         L.pop("apertura", None)
         if self.ap.isChecked():
             L.pop("split", None)
-            L["apertura"] = {"playoff": self.po.currentData()}
+            L["apertura"] = self.apertura_value()
             L["legs"] = self.legs.value()
         elif self.split.isChecked():
             try:
