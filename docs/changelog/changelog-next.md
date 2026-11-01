@@ -5,6 +5,12 @@ released; until then this page only collects what is done and tested.
 
 ## Fixed
 
+- **The super cup of a February-December league of ours was not played** when the country's cup had
+  already been drawn for its new season on New Year's day (the Supercopa de Venezuela of a second
+  Master League season): the game names last season's cup winner no more by then, and the super cup
+  was left out without a word. The cup module now keeps the cup's winner and runner-up from its
+  final on, and the league's final table, and fills the super cup with them; when it still cannot,
+  the log says why.
 - **A super cup of ours won again showed the first title only.** The Palmarés counts a competition's
   dates, and the DLL took a super cup's record among the last three for "this season's" title, so a
   second or third win was never added; a record it made itself copied the dates of the record
