@@ -17,6 +17,15 @@ released; until then this page only collects what is done and tested.
 
 ## Also new
 
+- **Apertura and Clausura playoffs of two groups of four, in Mod Studio.** Edit league > Format has,
+  next to the playoff size, "a knockout" (as before) or "two groups of four": the 8 clubs play two
+  groups (1st, 4th, 5th, 8th and 2nd, 3rd, 6th, 7th), home and away, and the two group winners meet
+  in a one-match final. Each final is a competition of its own, so its winner gets its own title in
+  the Palmarés, with the final's name and logo. The playoffs and their finals can be named (Playoff
+  names, Final names) and the finals have their own logos. Recipe keys: `apertura.playoff_format`,
+  `apertura.names`, `apertura.logos`
+  ([recipe-keys.md](../developers/fork/recipe-keys.md), [futve-playoff.md](../developers/fork/futve-playoff.md)).
+  A world built without them does not change.
 - **A league play-off with its own group stage (0.2.5, the Liga FUTVE).** A world file's `ccup` line
   takes `gdays=<day>,...`: the groups are dealt in the order of `entry=` (the world file writes
   group A's clubs first) and dated on those days, instead of a draw and the Libertadores' calendar.
