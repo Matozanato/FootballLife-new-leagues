@@ -6,7 +6,8 @@ new club, 30 as before when it is not set). Real Builds into a game folder of th
   - a NewLife league added at 30 and built after the world went to 35 keeps its own squads and
     gets no prototype ("FL P") players in the five places it never knew (lbplayers.fit_places);
   - NewLife > Update my leagues offers that league (newlife.resized) and takes its squads again
-    at 35; a club with 35 players or more in the release then has 35.
+    at 35; a club with 35 players or more in the release (goalkeepers counted to three, as the
+    squad takes them) then has 35.
 """
 import copy, os, shutil, sys, tempfile
 
@@ -91,9 +92,14 @@ def main(tables, folder):
         info = B.game_info(base)
         rel = N.Release(folder)
         rel.use_tables(info)
+        def room(cid):                     # what a squad can give: Release.squad keeps three goalkeepers
+            rows = rel.squads.get(cid, [])
+            gk = sum(1 for q in rows if q.get("Registered Position") == "GK")
+            return len(rows) - gk + min(gk, 3)
         picks = [cid for cid, c in sorted(rel.clubs.items()) if c.get("league") and c.get("in_game") != "1"
-                 and len(rel.squads.get(cid, [])) >= 36][:10]
-        ok("the release has 10 clubs of 36 players or more to test with", len(picks) == 10)
+                 and room(cid) >= 36][:10]
+        ok("the release has 10 clubs of 36 players or more (three goalkeepers at most) to test with",
+           len(picks) == 10)
         names = dict((i, n) for n, i in B.country_ids(base))
         rows = rel.leagues(lambda c: names.get(int(c), "").split(" (")[0], info)
         L = next(r for r in rows if picks[0] in r["clubs"])
