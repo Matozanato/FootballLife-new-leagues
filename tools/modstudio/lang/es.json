@@ -2083,7 +2083,12 @@
   "two legs": "ida y vuelta",
   "one match": "partido único",
   "(the league's name + Grand Final)": "(nombre de la liga + Grand Final)",
-  "Grand final": "Gran final"
+  "Grand final": "Gran final",
+  "the finals end in the trophy ceremony": "las finales terminan con la ceremonia del trofeo",
+  "Trophy ceremony": "Ceremonia del trofeo",
+  "Cinematics": "Cinemáticas",
+  "Apertura final": "Final del Apertura",
+  "Clausura final": "Final del Clausura"
  },
  "log": [
   [
