@@ -24,6 +24,14 @@ released; until then this page only collects what is done and tested.
 
 ## Also new
 
+- **The trophy ceremony for a new league's finals.** Edit league > Trophy ceremony: the league's
+  national cup and super cup, its playoffs' finals and its grand final end with the trophy and the
+  celebration, like a big final of the game (a two-legged final after its second leg). Recipe key:
+  `ceremony` ([futve-playoff.md](../developers/fork/futve-playoff.md)).
+- **Cinematics for a new league's finals.** Edit league > Cinematics: for the cup, the super cup,
+  the playoffs' finals and the grand final, a folder of your cinematics packs (LIB, UEFA Champions
+  League F ...): that final takes its entrance, scenes and ceremony. Install the modules puts the new
+  module `fl26cine` before the packs' `common\cinematics.lua`. Recipe key: `cinematics`.
 - **A grand final for Apertura and Clausura leagues, in Mod Studio.** With playoffs of two groups of
   four, Edit league > Grand final: the Apertura's and the Clausura's final winners meet after the
   Clausura's final, over two legs or one match, and the winner is the league's champion -- the title

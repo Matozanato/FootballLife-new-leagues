@@ -351,6 +351,23 @@ local function world_splitdays(ctx)
   return out
 end
 
+-- `tmap <reg> <tournament> [noleg0]` lines of the world file (Mod Studio's "ceremony"): a final of
+-- ours that answers a tournament of the base game the world does not use, so its last match ends in
+-- the trophy ceremony; noleg0: a two-legged final's first leg does not. { {reg, tournament, flags} }
+local function world_tmap(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  local out = {}
+  if not f then return out end
+  for line in f:lines() do
+    local r, t, rest = line:match("^%s*tmap%s+(%d+)%s+(%d+)(.*)$")
+    if r then out[#out + 1] = { tonumber(r), tonumber(t), (rest or ""):match("noleg0") and 1 or 0 } end
+  end
+  f:close()
+  return out
+end
+
 -- `july <reg> <day>` lines of the world file: { {reg, day}, ... }
 local function world_july(ctx)
   local sep = string.char(92)
@@ -544,6 +561,18 @@ function m.init(ctx)
             for i, t in ipairs(nc) do nbuf[i - 1] = t end
             ffi.cast("fl26_swiss_access_t", pn)(nbuf, #nc)
             log(string.format("fl26swiss: world file -- %d Apertura/Clausura season(s), no points carried", #nc))
+          end
+        end
+        local tm = world_tmap(ctx)
+        if #tm > 0 then
+          local pt = ffi.C.GetProcAddress(h, "fl26_swiss_tmap")
+          if pt == nil then
+            log("fl26swiss: this fl26swiss.dll has no fl26_swiss_tmap -- our finals end with no trophy ceremony")
+          else
+            local tbuf = ffi.new("uint16_t[?]", 3 * #tm)
+            for i, v in ipairs(tm) do tbuf[3 * i - 3], tbuf[3 * i - 2], tbuf[3 * i - 1] = v[1], v[2], v[3] end
+            local k = tonumber(ffi.cast("fl26_swiss_access_t", pt)(tbuf, #tm))
+            log(string.format("fl26swiss: world file -- %d final(s) with a trophy ceremony, %d taken", #tm, k))
           end
         end
         local sd = world_splitdays(ctx)

@@ -36,6 +36,8 @@ tables (`python tools/fl26world.py --root <world>`), but it only knows `league`,
 | `ccup` | `ccup 226 ko=226 groups=0 entry=17:1,... fill=253 national=1 days=... name=...` | `leaguebuilder.continental` (via `mkccup`) | fl26swiss (`fl26_swiss_ccup`, `_ccup_opts`, `_ccup_alt`) |
 | `lpre` | `lpre 227 cup=226 fill=226 days=246,249 entry=...` | `leaguebuilder.continental` (`mkeuropo.prerounds`) | fl26swiss (`fl26_swiss_lpre`) |
 | `confed` | `confed <flag>:<code>,...` | `leaguebuilder.confed_line` | fl26swiss (`fl26_swiss_confed`) |
+| `tmap` | `tmap 261 30 noleg0` | `leaguebuilder.tmap_lines` (the `ceremony` key) | fl26swiss (`fl26_swiss_tmap`): the regulation answers that tournament of the base game, so its last match ends in the trophy ceremony; `noleg0`, a two-legged final's first leg does not ([futve-playoff.md](futve-playoff.md)) |
+| `cine` | `cine 261 all LIB` | `leaguebuilder.cine_lines` (the `cinematics` key) | fl26cine.lua: every file of that competition's matches (`all`) or of its final (`final`, match_info 53) comes from that folder of `content\cinematics` first ([futve-playoff.md](futve-playoff.md)) |
 | `dates` | `dates 203 like=23` | `leaguebuilder.dates_lines` | fl26swiss (`fl26_swiss_datelike`) |
 | `gsuper` | `gsuper 255 league=67 cup=68 region=18 conf=4` | `leaguebuilder.gsuper_lines` | fl26joindll -> fl26join.dll (`fl26_join_builder_extra`, `_builder_conf`), fl26swiss (`fl26_swiss_calendar_supercups`) |
 | `season` | `season 39 1` | `leaguebuilder.season_lines` | fl26joindll -> fl26join.dll (`fl26_join_season_types`), fl26swiss |
