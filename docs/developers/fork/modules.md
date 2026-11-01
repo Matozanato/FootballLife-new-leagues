@@ -79,6 +79,7 @@ Sider's Lua also has no `debug` or `rawget`. Check every value before you index 
 | `fl26resultsguard` | `fl26lateguards` | keeps an empty matchday results list from ending the game |
 | `fl26ctlguard` | `fl26lateguards` | after a club change, gives the old club back to the computer |
 | `fl26kitguard` | `fl26lateguards` | the Kit Server's goalkeeper pick on a club with no kit of the game |
+| `fl26cine` | itself | the cinematics of our finals: every file of a final's match from the folder of `content\cinematics` its world-file `cine` line names (Mod Studio's `cinematics`); loads before `common\cinematics.lua` (`leaguebuilder.cine_place`), out of the block of ours |
 | `fl26seasonend` | itself | lets the season-end step run for our leagues (and the French and Italian chains) |
 
 Every module logs to `sider.log` with its name in brackets. `leaguebuilder.check()` and
@@ -236,6 +237,10 @@ with `game.save_root` -- the same rule, checked against each other by `tools/tes
   (`kolike=`, the Belgium Super Cup's row), the better placed club of the regular phase first.
   `tools/futve_world.py` builds the world; [futve-playoff.md](futve-playoff.md) has the format,
   the in-game tests and their sandbox (`tools/futve_test.py`).
+- **The trophy ceremony**: the world file's `tmap` lines give finals of ours a tournament of the base
+  game, so they end in the trophy ceremony (`fl26_swiss_tmap`, a hook on the exe's regulation ->
+  tournament map, only in a world with such lines); [futve-playoff.md](futve-playoff.md),
+  `test_ceremony.c`.
 - **Title leagues** (the grand final): a split league whose phases feed a final of two cups (`src=`)
   has that final's winner as its champion -- its title, its super cup, its honours -- any number of
   them in a world (`grand_final_of`, `league_champion_kept`, `honours_fix_one`);

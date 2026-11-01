@@ -55,6 +55,17 @@ which league sits above -- and nothing about ids:
               league's name, the super cup and fl26swiss.dll's champion are its), and a club that
               won both finals is champion with no match. Its name and logo: "names"/"logos"
               "grand_final" (default "<league> Grand Final")
+  ceremony    optional, true: the league's finals end in the game's trophy ceremony -- its national
+              cup and super cup, its play-offs' finals and its grand final ("apertura" with
+              "groups"; a two-legged one after its second leg). fl26swiss.dll answers the game's
+              "which tournament is this" for them with a final tournament of the base game no
+              world uses (CEREMONY_TOURNAMENT, 30: the shipped Copa Sudamericana's final): the
+              world file's `tmap` lines. Not for a league with none of those, 16 at most in a world
+  cinematics  optional, {"cup", "super_cup", "final_apertura", "final_clausura", "grand_final": a
+              folder of SiderAddons\content\cinematics ("LIB", "UEFA Champions League F")}: the
+              entrance, scenes and ceremony of that final come from that folder (the cup's final
+              match; every match of the others, each a final). sider\fl26cine.lua reads the world
+              file's `cine` lines; Install the modules puts it before common\cinematics.lua
   season      optional, a top division of a new country only: "calendar" plays the country's
               season February to December, like Brazil, Japan or Saudi Arabia, promotion and
               relegation at New Year; the default, "august", plays August to May. It is the
@@ -550,6 +561,14 @@ PLAYOFF_FORMATS = ("knockout", "groups")
 PLAYOFF_GROUP_ORDER = (1, 4, 5, 8, 2, 3, 6, 7)
 PLAYOFF_FINAL_SHAPE = NATIONAL_CUP_ANY[0]
 PLAYOFF_FINAL_DATES = SUPER_CUP_LIKE
+# the trophy ceremony ("ceremony"): the tournament of the base game our finals answer (fl26swiss tmap,
+# the world file's `tmap` lines), and how many of them the hook takes (TMAP_MAX)
+CEREMONY_TOURNAMENT, CEREMONY_MAX = 30, 16
+# the cinematics of a league's finals ("cinematics"): which final, and whether its every match takes
+# the folder (a final of its own, a super cup) or only the competition's final (the national cup)
+CINE_FINALS = (("cup", "final"), ("super_cup", "all"), ("final_apertura", "all"), ("final_clausura", "all"),
+               ("grand_final", "all"))
+CINE_MODULE = "fl26cine"
 PLAYOFF_NAME_KEYS = ("playoff_apertura", "playoff_clausura", "final_apertura", "final_clausura", "grand_final")
 # the grand final ("grand_final"): the two finals' winners, two legs (the default) or one match; its
 # knockout row's legs mode (CompetitionRegulation +0x10 bits 9-11: 2 = every tie two legs) and the
@@ -1144,6 +1163,10 @@ def recipe_from_plan(pl, base):
                 r["league_cup_logo"] = lc["logo"]
         if L.get("calendar"):
             r["season"] = "calendar"
+        if L.get("ceremony"):
+            r["ceremony"] = True
+        if L.get("cinematics"):
+            r["cinematics"] = dict(L["cinematics"])
         ap = L.get("apertura")
         if ap:
             # plan() writes Apertura/Clausura as a split of one group: given back as a split, it
@@ -2520,6 +2543,23 @@ def plan(recipe, base, prev=None):
             _problem(errs, names, str(e))
             failed.add(name.lower())
             continue
+        cine = L.get("cinematics") or {}
+        if cine:
+            keys = dict(CINE_FINALS)
+            bad = (not isinstance(cine, dict) or sorted(set(cine) - set(keys))
+                   or any(not isinstance(v, str) or not v.strip() or any(c in v for c in '|\\/\r\n') for v in cine.values()))
+            if bad:
+                _problem(errs, names, "%s: cinematics are {%s: a folder of content\\cinematics}" % (name, ", ".join(keys)))
+                failed.add(name.lower())
+                continue
+            p["cinematics"] = {k: v.strip() for k, v in cine.items()}
+        if L.get("ceremony"):
+            if not (p.get("own_cup") or (p.get("apertura") or {}).get("format") == "groups"):
+                _problem(errs, names, "%s: a trophy ceremony is for its finals -- a national cup, a super cup, "
+                                      "or playoffs of groups" % name)
+                failed.add(name.lower())
+                continue
+            p["ceremony"] = True
         by_name[name.lower()] = p
         out.append(p)
     game_club_checks(out, base, errs)
@@ -5505,7 +5545,7 @@ def build(pl, base, game, replace=False, log=print):
         log("  European places: %d of the new leagues, %d in all"
             % (sum(1 for e in own_places(pl) if e[2] in fl26world.UEFA_LINE), len(uefa)))
     fl26world.write_world(os.path.join(tmp, MARK), pl["world"], leagues, split_lines, uefa, uecl,
-                          ccups + dates_lines(pl, db) + gsuper_lines(pl) + season_lines(pl, db) + july_lines(pl, base)
+                          ccups + tmap_lines(pl) + cine_lines(pl, game, log) + dates_lines(pl, db) + gsuper_lines(pl) + season_lines(pl, db) + july_lines(pl, base)
                           + rcal_lines(pl, base, confed) + cupdays_lines(pl, base, db, log) + first_lines(pl)
                           + order_lines(pl, base, confed)
                           + kickorder_lines(pl, base, confed)
@@ -6528,6 +6568,64 @@ def order_lines(pl, base, confed):
             last = [i for i, x in enumerate(out) if block_of.get(x) == c]
             out.insert(last[-1] + 1 if last else len(out) - 1, r)
     return ["order " + ",".join(map(str, out))]
+
+
+def tmap_lines(pl):
+    """the world file's `tmap <reg> <tournament> [noleg0]` lines: the finals of the leagues with a
+    trophy ceremony ("ceremony"), their national cup and super cup, their play-offs' finals and grand
+    final (noleg0: two legs, the first ends in none) -- fl26swiss.dll's tournament map"""
+    out = []
+    ids = pl.get("cup_ids") or {}
+    for p in pl["leagues"]:
+        if not p.get("ceremony"):
+            continue
+        c = p.get("own_cup") or {}
+        regs = [(c.get("reg"), 0), (c.get("super_reg"), 0)]
+        for h in pl.get("home_cups") or []:
+            if h.get("league") != p["rid"] or not (h.get("final") or h.get("kind") == "grand_final"):
+                continue
+            ko = (ids.get("ccup:" + h["code"]) or {}).get("ko")
+            regs.append((ko, 1 if h.get("legs") == 2 else 0))
+        out += ["tmap %d %d%s" % (r, CEREMONY_TOURNAMENT, " noleg0" if leg else "") for r, leg in regs if r]
+    if len(out) > CEREMONY_MAX:
+        raise BuildError("%d finals with a trophy ceremony; fl26swiss.dll takes %d" % (len(out), CEREMONY_MAX))
+    return out
+
+
+def cine_lines(pl, game=None, log=print):
+    r"""the world file's `cine <reg> <final|all> <folder>` lines: the cinematics folder of each final
+    a league names ("cinematics"), for sider\fl26cine.lua. A folder the game's
+    SiderAddons\content\cinematics has not got is written all the same and said in the log"""
+    out = []
+    ids = pl.get("cup_ids") or {}
+    have = None
+    if game:
+        d = os.path.join(siderdir.find(game), "content", "cinematics")
+        have = {f.lower() for f in os.listdir(d)} if os.path.isdir(d) else set()
+    for p in pl["leagues"]:
+        cine = p.get("cinematics") or {}
+        if not cine:
+            continue
+        c = p.get("own_cup") or {}
+        regs = {"cup": c.get("reg"), "super_cup": c.get("super_reg")}
+        for h in pl.get("home_cups") or []:
+            if h.get("league") != p["rid"]:
+                continue
+            key = ("grand_final" if h.get("kind") == "grand_final" else
+                   "final_%s" % ("apertura" if h.get("phase") == 0 else "clausura") if h.get("final") else None)
+            if key:
+                regs[key] = (ids.get("ccup:" + h["code"]) or {}).get("ko")
+        for key, when in CINE_FINALS:
+            if key not in cine:
+                continue
+            if not regs.get(key):
+                log("  NOTE: %s: cinematics for its %s, which it has not got -- left out" % (p["name"], key.replace("_", " ")))
+                continue
+            if have is not None and cine[key].lower() not in have:
+                log("  NOTE: %s: no folder %s in content\\cinematics -- the %s keeps the game's scenes until it is there"
+                    % (p["name"], cine[key], key.replace("_", " ")))
+            out.append("cine %d %s %s" % (regs[key], when, cine[key]))
+    return out
 
 
 def dates_lines(pl, db):
@@ -7613,6 +7711,8 @@ def group_ours(lines):
     place; True when it moved anything."""
     def ours(l):
         m = module_of(l)[0]
+        if m == CINE_MODULE:       # its own place: before common\cinematics.lua (cine_place)
+            return False
         if m:
             return "\\" not in m.replace("/", "\\") and m.startswith("fl26")
         # a note someone left in front of one of ours: "; off 25.09. lua.module = "fl26probe.lua""
@@ -7634,6 +7734,21 @@ def group_ours(lines):
     if new == lines:
         return False
     lines[:] = new
+    return True
+
+
+def cine_place(lines):
+    r"""fl26cine's line just before the first live line of a cinematics module (common\cinematics.lua
+    of the packs): sider takes a file from the first module that has it, so the finals' folders must
+    come before the shared module's. Without such a line it stays where it is. Changes `lines` in
+    place; True when it moved."""
+    at = next((i for i, l in enumerate(lines) if module_of(l)[0] == CINE_MODULE and module_of(l)[1]), None)
+    cin = next((i for i, l in enumerate(lines) if module_of(l)[1] and module_of(l)[0]
+                and module_of(l)[0].replace("/", "\\").rpartition("\\")[2].lower() == "cinematics"), None)
+    if at is None or cin is None or at == cin - 1:
+        return False
+    line = lines.pop(at)
+    lines.insert(cin - 1 if at < cin else cin, line)
     return True
 
 
@@ -7751,6 +7866,9 @@ def ensure_modules(game, order, want, log=print):
     if group_ours(lines):
         done.append("grouped")
         log("sider.ini: the modules of Mod Studio are together now, in one block of their own")
+    if cine_place(lines):
+        done.append("ordered")
+        log("sider.ini: %s.lua loads before common\\cinematics.lua (the finals' cinematics)" % CINE_MODULE)
     ext = [i for i, l in enumerate(lines) if l.strip().lstrip(";#").strip().startswith("luajit.ext.enabled")]
     if not ext or lines[ext[0]].replace(" ", "") != "luajit.ext.enabled=1":
         if ext:

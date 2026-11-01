@@ -651,6 +651,17 @@ def tier_of(project, up, seen=()):
     return None
 
 
+def cine_folders(parent):
+    """the folders of the game's SiderAddons\\content\\cinematics (the cinematics packs), sorted; []
+    without a game folder"""
+    game = getattr(getattr(parent, "app", None), "game", None)
+    try:
+        d = os.path.join(game.sider_dir, "content", "cinematics") if game and game.folder else None
+        return sorted((f for f in os.listdir(d) if os.path.isdir(os.path.join(d, f))), key=str.lower) if d else []
+    except OSError:
+        return []
+
+
 class LeagueDialog(Dialog):
     """one new league: name, country, clubs, format, division, logo"""
     help = ("Everything about one new league:\n"
@@ -884,6 +895,36 @@ class LeagueDialog(Dialog):
         self.form.addRow("", hint(_("a single-match knockout of this division and the one below (up to 44 clubs), "
                                     "late August to mid-March (a calendar-year league: September to December); "
                                     "this division's clubs get the byes")))
+        self.cer = QCheckBox(_("the finals end in the trophy ceremony"))
+        self.cer.setChecked(bool(L.get("ceremony")))
+        self.form.addRow(_("Trophy ceremony"), row(self.cer, helpmark(
+            "The league's finals end like a big final of the game, with the trophy and the celebration: the "
+            "national cup's and the super cup's, the playoffs' finals (two groups of four) and the grand "
+            "final, after its second leg. The game knows no final of a new league; this one borrows a final "
+            "of the base game no world uses (the old Copa Sudamericana's). Up to 16 finals in a world.")))
+        cine = L.get("cinematics") or {}
+        folders = cine_folders(parent)
+        self.cine = {}
+        for k in [k for k, _w in B.CINE_FINALS]:
+            c = QComboBox()
+            c.setEditable(True)
+            c.setInsertPolicy(QComboBox.NoInsert)
+            c.addItem(_("(the game's)"), "")
+            for f in folders:
+                c.addItem(f, f)
+            v = cine.get(k) or ""
+            if v and c.findData(v) < 0:
+                c.addItem(v, v)                       # a folder this game has not got: kept
+            c.setCurrentIndex(max(0, c.findData(v)))
+            self.cine[k] = c
+        self.form.addRow(_("Cinematics"), row(QLabel(_("Cup")), self.cine["cup"], QLabel(_("Super cup")),
+                                              self.cine["super_cup"], helpmark(
+            "The scenes of the league's finals -- the entrance, the stadium dressing, the trophy ceremony -- "
+            "from a folder of the game's cinematics packs (SiderAddons\\content\\cinematics: LIB, UEFA Champions "
+            "League F ...). The cup: its final; the super cup, the playoffs' finals and the grand final: every "
+            "match. (the game's): the scenes the game gives it.")))
+        self.form.addRow("", row(QLabel(_("Apertura final")), self.cine["final_apertura"], QLabel(_("Clausura final")),
+                                 self.cine["final_clausura"], QLabel(_("Grand final")), self.cine["grand_final"]))
         self.cup_logo = PictureField(L.get("cup_logo"), 48)
         self.supercup_logo = PictureField(L.get("supercup_logo"), 48)
         self.lcup_logo = PictureField(L.get("league_cup_logo"), 48)
@@ -975,7 +1016,7 @@ class LeagueDialog(Dialog):
         self.form.setRowVisible(self.others_cupmode, self.others.currentData() == "europe")
         for w in (self.exhibition, self.rr, self.legs, self.slegs, self.groups, self.glegs, self.exchange,
                   self.logo, self.cup_name, self.supercup_name, self.lcup_name, self.cup_logo, self.supercup_logo,
-                  self.lcup_logo, self.po_logo):
+                  self.lcup_logo, self.po_logo, self.cer, *self.cine.values()):
             w.setEnabled(not loose)
         n = self.clubs.value()
         self.clubs.setRange(1 if loose else B.CLUBS_MIN, B.OTHERS_MAX if loose else B.CLUBS_MAX)
@@ -995,6 +1036,16 @@ class LeagueDialog(Dialog):
         self.lcup.setEnabled(top and not on)
         self.supercup.setEnabled(top and not on and self.cup.isChecked())
         self.season_follows()
+
+    def cine_value(self):
+        """the recipe's "cinematics": each final's folder chosen (typed, or the game's: left out)"""
+        out = {}
+        for k, c in self.cine.items():
+            i = c.findText(c.currentText())
+            v = (c.itemData(i) if i >= 0 else c.currentText()) or ""
+            if v.strip():
+                out[k] = v.strip()
+        return out
 
     def apertura_value(self):
         """the recipe's "apertura": the playoff, its format, names and the finals' logos; the
@@ -1046,6 +1097,15 @@ class LeagueDialog(Dialog):
             L["supercup"] = True
         else:
             L.pop("supercup", None)
+        if self.cer.isChecked():
+            L["ceremony"] = True
+        else:
+            L.pop("ceremony", None)
+        cine = self.cine_value()
+        if cine:
+            L["cinematics"] = cine
+        else:
+            L.pop("cinematics", None)
         if self.cup_name.text().strip():
             L["cup_name"] = self.cup_name.text().strip()
         else:
@@ -1134,14 +1194,15 @@ class LeagueDialog(Dialog):
                 return
             for k in ("above", "cup", "supercup", "league_cup", "split", "apertura", "europe", "season",
                       "exhibition", "legs", "exchange", "logo", "cup_name", "supercup_name", "league_cup_name", "cup_logo",
-                      "supercup_logo", "league_cup_logo", "playoff_logo"):
+                      "supercup_logo", "league_cup_logo", "playoff_logo", "ceremony", "cinematics"):
                 L.pop(k, None)
             L["others"] = self.others.currentData()
         elif self.exhibition.isChecked():
             if below:
                 error(self, "League", _("%s is below this league; an exhibition league has none.") % below[0])
                 return
-            for k in ("above", "cup", "supercup", "league_cup", "split", "apertura", "europe", "season", "select_team"):
+            for k in ("above", "cup", "supercup", "league_cup", "split", "apertura", "europe", "season", "select_team",
+                      "ceremony", "cinematics"):
                 L.pop(k, None)
             L["exhibition"] = True
             L.pop("others", None)
