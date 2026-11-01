@@ -72,6 +72,7 @@ Sider's Lua also has no `debug` or `rawget`. Check every value before you index 
 | `fl26regions`, `fl26regnames` | per world | region (country) names and category flags of the world |
 | `fl26reg128` | itself | raises the number of regions (countries) from 29 to 128 (replaced `fl26reg64`, 64, in 0.2.2) |
 | `fl26catlist` | itself | our countries in ML > Database > Competition Info, in the world's `order` |
+| `fl26squadlist` | itself | Select Team (Team Info, League mode...) shows the squad of the league's club while the cursor is still on the league, instead of an empty Squad List |
 | `fl26swiss` | itself + `fl26swiss.dll` | the 36-club league phase draw, play-offs, qualifying rounds, the UEFA access list, our continental/league/pre-season cups, cup draws and dates, the calendar of leagues that are not 20 clubs playing twice, seasons by region |
 | `fl26augseason` | itself | a career started in one of our leagues starts in August |
 | `fl26superguard` | `fl26lateguards` | stops the UEFA Super Cup setup from reading entry -1 |

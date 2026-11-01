@@ -37,7 +37,7 @@ ORDER = [
     "fl26caps", "fl26appcap", "fl26regs600", "fl26slots250", "fl26slot7", "fl26guards", "fl26regfast", "fl26walk",
     "fl26compcache", "fl26joindll",
     "fl26hdr255", "fl26chain", "fl26comptab", "fl26slotnames", "fl26clubs", "fl26regen", "fl26editlist", "fl26edit",
-    "fl26rank", "fl26deeprank", "fl26regions", "fl26reg128", "fl26regnames", "fl26catlist",
+    "fl26rank", "fl26deeprank", "fl26regions", "fl26reg128", "fl26regnames", "fl26catlist", "fl26squadlist",
     "fl26swiss", "fl26augseason", "fl26lateguards",
     "fl26seasonend",
 ]
