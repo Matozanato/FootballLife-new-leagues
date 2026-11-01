@@ -14232,9 +14232,14 @@ static void futve_clash_report(void)
 /* The final of a league play-off of ours with groups (adv=1: the Apertura's or the Clausura's final)
    the user's club won and the game wrote no title for: with the Copa Sudamericana's knockout still
    running the game left the Final del Apertura out (Felix, 01.11.), the Final del Clausura it wrote.
-   Three days after the final, while its knockout still names the winner, a title of that year the
-   cabinet has not got is written (the final's date). A final of two cups (src=) is the league's
-   title and goes by honours_fix. */
+   From three days after the final, while its knockout still names the winner, a title of that year
+   the cabinet has not got is written (the final's date). A final of two cups (src=) is the league's
+   title and goes by honours_fix.
+   Up to FINAL_FIX_DAYS after the final, not sixty: a record is written as a copy of the cabinet's
+   last one, so in a new career whose first title is that final there is no record to copy until a
+   second title comes (01.11.: the Apertura won on day 167 was the career's first title, the next
+   came after day 227 and the title was never written; phase 5's code waited to the year's end). */
+#define FINAL_FIX_DAYS 300
 static void final_title_fix(void)
 {
   uint32_t u = state_user();
@@ -14247,13 +14252,21 @@ static void final_title_fix(void)
     if (!c->adv || c->src[0] || !c->ko || !c->nd) continue;   /* a play-off of groups and a final (adv=1) */
     int fday = c->days[c->nd - 1], age = d - fday, year = gd / 365;
     if (age < 0) { age += 365; year--; }                 /* a final of December, read in January */
-    if (age < 3 || age > 60) continue;
+    if (age < 3 || age > FINAL_FIX_DAYS) continue;
     if (cab_has_year(blk, c->ko, year)) continue;
     uint32_t live = ccup_ko_winner(c->ko);              /* the game's own result, never a kept one */
     if (!(live >> 14) || !same_club(live, u)) continue;
     int now = cab_title_add(blk, u, c->ko, u, cab_date(year, fday));
     if (now > 0) logf("fl26swiss: trophy cabinet -- day %d: final %u won by the user's club on day %d -- no title from the game; written, %d title(s) now",
                       d, (unsigned)c->ko, fday, now);
+    else if (now < 0) {
+      static int said_k[MAX_CCUP];
+      if (said_k[k] != year + 1) {
+        said_k[k] = year + 1;
+        logf("fl26swiss: trophy cabinet -- day %d: final %u won by the user's club on day %d, no title from the game; "
+             "no record to copy yet (the career's first title): written once there is", d, (unsigned)c->ko, fday);
+      }
+    }
   }
 }
 
