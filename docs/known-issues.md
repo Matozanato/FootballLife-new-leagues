@@ -4,6 +4,14 @@ Honest list, as of 2026-09-28. Addresses are given so that a fault offset in you
 Viewer can be matched against them: the offset is the address minus `0x140000000`
 (so `0x1414c674d` shows up as exception offset `0x14c674d`).
 
+## Open in Mod Studio 0.3.0 beta, Football Life 2027 (2026-11-01)
+
+- **The Worldpack and Europe pack zips carry FL26's players.** A world zip brings its own player
+  tables (`common\etc\pesdb\Player.bin` and the rest), made from FL26's when the pack was built,
+  so in FL27 those worlds play with FL26's squads. A world built in FL27 has FL27's players.
+- **NewLife is not checked on FL27 yet.** Its clubs and players were matched to FL26's.
+- **SmokePatch's `common\SleeveBadge.lua` logs a Lua error** (`folder` nil, line 367) for the
+  clubs a world adds. The game plays on.
 ## Open in Mod Studio 0.2.4 (2026-10-20)
 
 - **Outside a match a new club can show another club's kit** (B175: in Become a Legend, after a

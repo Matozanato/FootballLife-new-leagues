@@ -2,6 +2,9 @@
 
 What each release of FL26 Mod Studio brought. The full notes of the latest releases:
 
+- [0.3.0](changelog-0.3.0.md) (beta): Football Life 2027 too -- the same Mod Studio for FL26 and FL27 --,
+  the league's clubs with their crests in Select Team, and the fixes of 0.2.5.2 (below), which was
+  never released on its own.
 - [0.2.5.2](changelog-0.2.5.2.md): fixes of what you reported since 0.2.5.1 (Edit changes not kept with a
   Documents folder in other letters, small clubs buying stars, stand-in players far too good in
   NewLife lower divisions). No need to update if 0.2.5.1 works for you.
