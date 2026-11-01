@@ -25,7 +25,10 @@ What changes, in the AP2 (Flash-like) movie inside the layout's TXP2 container:
     top one -- and the DLL writes "MP" into the top row's only, in title_Points' colour;
   - the names go to the end of the AP2's string table, the byte-swap list is made again, and the
     AP2 grows in place: the container's tables after it move along (appending the AP2 at the end
-    of the container and repointing it left the screen empty in the game).
+    of the container and repointing it left the screen empty in the game);
+  - (0.3.0) each row also gets flZone, the zone strip on its left edge (ZONE_CELL): the DLL
+    colours it by the row's place (Europe, up, play-off, down). A new name starts on a multiple
+    of 4 in the string table: the game finds a cell only by such a name.
 Each new cell goes after the last of its frame's tags, the header cell before num_MatchesPlayed:
 placed after it, it was never found (2026-10-21). The layout is checked against the one this was
 made for (sprites, cells, x positions) first; another one is left as it is.
@@ -48,6 +51,17 @@ MP_DX = 44
 # row's) and 13 px left of the number (measured: "MP" centred over it, as Points and W are)
 HEAD_DX, HEAD_DY = -13, -44
 ROW_SPRITE, HEAD_SPRITE = 16, 15
+# the zone strip (0.3.0, mato 2026-11-01, vmican's idea): a coloured strip on the left edge of a
+# row whose place goes to the Champions League (or the Libertadores, the AFC Champions League), the
+# Europa League, the Conference League, up a division, a play-off, or down. The cell flZone is a
+# copy of num_Points' (a text cell: the row's finder knows those; copies of the plate it never
+# found, and text cells only by a name that starts on 4, see add_string); fl26swiss.dll (zone_fill) writes "▌"
+# (left half block) into it in the zone's colour, or nothing, at FontScale 1.9: as tall as the row,
+# on its left edge (seen in FL26 2.2 on 2026-11-01 in the HNL, the Druga NL and the Bosnian league).
+# Text is not scaled by the cell's matrix: ZONE_A/ZONE_D are the matrix it was placed with, kept so
+# ZONE_X/ZONE_Y stay where they were measured
+ZONE_CELL, ZONE_DEPTH = "flZone", 22
+ZONE_X, ZONE_Y, ZONE_A, ZONE_D = -4, -18, 717, 1946
 
 # TXP2 header: feature bit -> bytes of its entry
 TXP2_ORDER = [(0x1, 8), (0x2, 4), (0x8, 8), (0x10, 4), (0x40, 8), (0x80, 4), (0x100, 8),
@@ -142,6 +156,12 @@ class Movie:
         return None
 
     def add_string(self, name):
+        # a name starts on 4: the game finds a cell only by a name that does (flZoneECL and
+        # flZoneDown at offsets 4600 and 4628 were found, the four at 4582, 4591, 4610 and 4619
+        # never, 2026-11-01); the room before it is empty strings
+        while self.str_size % 4:
+            self.D += bytes([(128 + self.str_size) & 0xff])
+            self.str_size += 1
         o = self.str_size
         b = name.encode() + b'\0'
         self.D += bytes(((c + 128 + o + k) & 0xff) for k, c in enumerate(b))
@@ -355,6 +375,55 @@ def columns(m, sid, prefix, add):
     m.add_cell(sid, c, u, sc, su)
 
 
+def add_cell0(m, sid, tag, rel):
+    """one more cell in frame 0 of sprite sid only (after its last tag): the later frames start
+    one tag on, the tag count and the sprite's size follow"""
+    tw, sub = m.sprite(sid)
+    tl, fr = m.tags_of(sub), m.frames(sub)
+    f0s, f0n = fr[0][1] & 0xfffff, fr[0][1] >> 20
+    e0 = tl[f0s + f0n - 1]
+    m.insert(e0[0] + ((e0[2] + 3) & ~3) + 4, bytes(tag), rel)
+    struct.pack_into('<I', m.D, sub + 8, struct.unpack_from('<I', m.D, sub + 8)[0] + 1)
+    for k, (fp, v) in enumerate(fr):
+        s, n = v & 0xfffff, v >> 20
+        if k == 0:
+            n += 1
+        else:
+            s += 1
+        struct.pack_into('<I', m.D, fp, s | (n << 20))
+    w = struct.unpack_from('<I', m.D, tw)[0]
+    struct.pack_into('<I', m.D, tw, (w & ~0x3fffff) | ((w & 0x3fffff) + len(tag)))
+
+
+def zone_cells(m):
+    """the zone strip's cell in the rows (see ZONE_CELL): a copy of num_Points' tag at the row's
+    left edge, the last of frame 0"""
+    _, sub = m.sprite(ROW_SPRITE)
+    tl, fr = m.tags_of(sub), m.frames(sub)
+    f0s, f0n = fr[0][1] & 0xfffff, fr[0][1] >> 20
+    f0 = {}
+    for p, tid, _ in tl[f0s:f0s + f0n]:
+        if tid == 0x7f:
+            inf = m.place_info(p)
+            f0[inf.get('name')] = (p, inf)
+    used = {m.place_info(p)['depth'] for p, tid, _ in tl if tid == 0x7f}
+    if "num_Points" not in f0:
+        raise Unknown("the row has no num_Points")
+    if ZONE_DEPTH in used:
+        raise Unknown("depth %d is taken in the row" % ZONE_DEPTH)
+    tp, tinf = f0["num_Points"]
+    w, size, t = m.tag(tp)
+    flags = struct.unpack_from('<I', t, 4)[0]
+    if flags & 0x80007800 or 'tx' not in tinf or 'a' not in tinf or tinf['end'] != tp + 4 + size:
+        raise Unknown("num_Points' tag is not a plain one")
+    sw = m.swaps_in(tp, 4 + size)
+    struct.pack_into('<H', t, 8, ZONE_DEPTH)
+    struct.pack_into('<H', t, tinf['name_field'] - tp, m.name_offset(ZONE_CELL))
+    struct.pack_into('<ii', t, tinf['a'] - tp, ZONE_A, ZONE_D)
+    struct.pack_into('<ii', t, tinf['tx'] - tp, ZONE_X * 20, ZONE_Y * 20)
+    add_cell0(m, ROW_SPRITE, t, sw)
+
+
 def check(m):
     """the layout this was made for: the seven columns of the rows at the game's x, nothing of ours"""
     if m.find_string(NEW_NUM) is not None or m.find_string(NEW_HEAD) is not None:
@@ -375,6 +444,7 @@ def mp_edit(m):
     try:
         columns(m, ROW_SPRITE, "num_", True)
         columns(m, HEAD_SPRITE, "title_", False)
+        zone_cells(m)
     finally:
         XS_ON[1] -= MP_DX
         XS_OFF[1] -= MP_DX
@@ -462,6 +532,16 @@ def has_mp(path):
     except (OSError, zlib.error, struct.error, IndexError):
         return False
     return False
+
+
+def has_zones(path):
+    """a layout this wrote with the zone strip (0.3.0); one of 0.2.5's has the MP column only"""
+    got = []
+    try:
+        rebuild(open(path, "rb").read(), lambda m: got.append(m.find_string(ZONE_CELL) is not None))
+    except Exception:
+        return False
+    return bool(got and got[0])
 
 
 def main(argv=None):

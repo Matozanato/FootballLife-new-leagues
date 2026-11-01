@@ -13,9 +13,14 @@ sider roots, then the CPKs). Without one the test says so and passes. The cases:
   - the header's seven titles move with their columns, and the header gets no cell of its own;
   - every swap of the byte-swap list is still in the movie, the container's length is right;
   - our own layout is never taken as a base (has_mp) and is not changed again;
-  - a layout whose columns stand elsewhere (another mod's) is left as it is: nothing written.
+  - a layout whose columns stand elsewhere (another mod's) is left as it is: nothing written;
+  - (0.3.0) the zone strip: flZone, a copy of num_Points at ZONE_DEPTH and (ZONE_X, ZONE_Y), the
+    last tag of frame 0; every name we add starts on a multiple of 4 (has_zones tells it);
+  - a world with the 0.2.5 layout (MP, no strip) gets the layout again at switch on, with both.
 Checked in the game on 2026-10-21 (the same bytes): the League Phase of the Conference League
 and the Belgian Challenger Pro League, MP = W + D + L, "MP" over its numbers.
+The zone strip checked in FL26 2.2 on 2026-11-01: the HNL (1 blue, 2 teal, 10 red), the Druga NL
+(1-2 green) and the Bosnian league, as tall as the row on its left edge.
 """
 import os, struct, sys, tempfile, zlib
 
@@ -89,6 +94,11 @@ def x_of(m, inf):
     return int(round(struct.unpack_from('<i', m.D, inf['tx'])[0] / 20))
 
 
+def depths_unique(cells):
+    d = [inf['depth'] for _, inf, _ in cells]
+    return len(d) == len(set(d))
+
+
 def main():
     base, src = game_layout(sys.argv[1] if len(sys.argv) > 1 else None)
     try:
@@ -121,6 +131,18 @@ def main():
         col = struct.unpack_from('<II', m.D, h['end'])
         expect(m.D[h['end']:h['end'] + 8] == bytes([0xff, 0, 0, 0, 0, 0xff, 0xff, 0xff]),
                "... multiply ff000000, add 00ffffff (%08x %08x)" % col)
+
+        print("\nThe zone strip")
+        z = by.get(M.ZONE_CELL)
+        expect(z is not None and names[-1] == M.ZONE_CELL, "flZone, the last cell of frame 0")
+        if z:
+            pts = by["num_Points"]
+            expect(z['depth'] == M.ZONE_DEPTH and struct.unpack_from('<ii', m.D, z['tx']) == (M.ZONE_X * 20, M.ZONE_Y * 20),
+                   "at depth %d, (%d, %d)" % (M.ZONE_DEPTH, M.ZONE_X, M.ZONE_Y))
+            expect(z['flags'] == pts['flags'], "num_Points' kind of tag (a text cell the finder knows)")
+        expect(all(m.find_string(n) % 4 == 0 for n in (M.NEW_NUM, M.NEW_HEAD, M.ZONE_CELL)),
+               "our names start on 4 in the string table")
+        expect(depths_unique(f0), "no two cells of frame 0 at one depth")
 
         print("\nThe header")
         hh = [(n, inf) for n, inf, _ in frame_cells(m, M.HEAD_SPRITE, 0)]
@@ -178,6 +200,25 @@ def main():
             lines2 = []
             leaguebuilder.mp_for_world(world, game, lines2.append)
             expect(open(made, "rb").read() == before and not lines2, "the next switch on leaves it as it is")
+
+            print("\nA world built with 0.2.5 (MP, no zone strip), switched on")
+            zc = M.zone_cells
+            M.zone_cells = lambda mm: None
+            try:
+                old25 = M.make(data)
+            finally:
+                M.zone_cells = zc
+            open(made, "wb").write(old25)
+            expect(M.has_mp(made) and not M.has_zones(made), "the 0.2.5 layout: has_mp, not has_zones")
+            lines3 = []
+            leaguebuilder.mp_for_world(world, game, lines3.append)
+            expect(M.has_zones(made) and open(made, "rb").read() == before,
+                   "made again, with the strip (%s)" % "; ".join(lines3))
+            om = os.path.join(tmp, "gameworld", *M.PACKAGE.split("/"))
+            os.makedirs(os.path.dirname(om))
+            open(om, "wb").write(data)
+            leaguebuilder.mp_for_world(os.path.join(tmp, "gameworld"), game, lambda l: None)
+            expect(open(om, "rb").read() == data, "a layout not ours (the game's own in the world) is left as it is")
     finally:
         if src:
             src.close()

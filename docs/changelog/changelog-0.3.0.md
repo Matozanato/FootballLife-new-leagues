@@ -37,6 +37,14 @@ This is a beta: tell us on Discord what does not work in FL27.
   world: Build writes a copy of the screen's layout with a crest cell into the world, and a world
   built before gets it when it is switched on. FL26 and FL27.
 
+- **Colours in the league tables.** A league's standings show a coloured strip on the left of each
+  row whose place means something: blue for the Champions League (the Libertadores and the AFC
+  Champions League too), orange for the Europa League, teal for the Conference League, green up a
+  division, amber a play-off, red down. The European places come from the world's places for
+  each league, up and down from the game's own counts; in the League Phase, 1-8 are green and
+  9-24 amber. Build writes the strip's cell into the world's table layout with the MP column; a
+  world built with 0.2.5 gets it when it is switched on. FL26 and FL27. (Thanks vmican)
+
 ## Fixed
 
 - **Leagues missing from Team Info and the transfer lists (B306).** A league on Select Team

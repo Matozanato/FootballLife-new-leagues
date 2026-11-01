@@ -13718,3 +13718,33 @@ AFCL, and UCL/UCLQ/LIB/AFCL for the Club World Cup), including through a cup win
 `busy_set()` is the one list of a league's busy days. `busy_days()` (old calendars) and
 `rcal_cost()` (real calendars) both read it, each with its own distances. The native test is
 `tools/native/test_rcal_days.c`, run by `tools/test_rcal_days.py`.
+
+## Menu layouts: a new cell is found only by a name on a multiple of 4 (2026-11-01)
+
+A screen finds the cells of a sprite by name (the finder at widget+0x98's vtable[1], as
+fl26swiss's `mp_child` asks it). For the zone strip of the standings, six text cells named
+flZoneCL, flZoneEL, ... were added to the row sprite of `rankingTeam.bin` in one go: only the two
+whose names started at string offsets 4600 and 4628 were ever found, the four at 4582, 4591, 4610
+and 4619 never. With every new name padded to start on a multiple of 4 (empty strings before it,
+`tools/mkmpcol.py` `add_string`), each is found.
+
+Other things learned there, FL26 2.2 (FL27 1.00 has the same bytes):
+
+- Text cells (uirText) ignore their matrix's scale: only the translation moves them. The size is
+  the text's FontScale, a float at +4 of the props at widget+0x98 (read with atof by
+  0x140e4b6a0 when the layout is loaded); setting it before setText (0x140e48bf0) takes effect.
+  Other props there: +0xc FontColor, +0x10 Font, +0x14 AlignH, +0x18 AlignV, +0x1c TextID,
+  +0x58 FontPitch.
+- setColor 0x140e48a80 (widget, index, keep) takes a palette index under 0x50. On focus a row's
+  text goes to 0x4d/0x4e unless the kept index (+0xb8) is 42, 61 or 76. Indices seen: 70 blue
+  (0,125,255), 3 orange (244,78,0), 34 teal (2,163,174), 62 green (0,255,0), 67 amber
+  (255,189,0), 72 red (208,8,8), 59 (255,0,0), 63 (0,0,255), 64 magenta, 0/17/33 black,
+  1/8/16 white.
+- Copies of the row's plate (a class instance, character 11) are not found by the finder and
+  draw white whatever their colour transform; instances of character 13 or cells at depths past
+  the row's own left the standings blank, then crashed the game.
+- The game keeps a menu layout for the whole run: a changed layout shows after a restart.
+- Up and down for icon_divisionUp/Down: 0x140aee370 reads the competition (0x1414bb000 on
+  0x1414b6a60()->+0x48), +0x7c the league above, +0x7e the one below, 0x140ea1c00(reg, 0) clubs up,
+  0x140ea0bb0(reg) clubs down; it also wants +0x304's top bits 10, which the Druga NL
+  (0x6002dd00) has not though the game draws its two up arrows.

@@ -73,7 +73,7 @@ Sider's Lua also has no `debug` or `rawget`. Check every value before you index 
 | `fl26reg128` | itself | raises the number of regions (countries) from 29 to 128 (replaced `fl26reg64`, 64, in 0.2.2) |
 | `fl26catlist` | itself | our countries in ML > Database > Competition Info, in the world's `order` |
 | `fl26squadlist` | itself + `fl26squadlist.dll` | Select Team (Team Info, League mode...): on a league row the right panel lists the league's clubs with their crests under "Team List" instead of staying empty (the crest cell is in the world's teamSelectSingle.bin, tools/mkteamcrest.py); inside the league it shows the club's players under "Squad List", as before |
-| `fl26swiss` | itself + `fl26swiss.dll` | the 36-club league phase draw, play-offs, qualifying rounds, the UEFA access list, our continental/league/pre-season cups, cup draws and dates, the calendar of leagues that are not 20 clubs playing twice, seasons by region |
+| `fl26swiss` | itself + `fl26swiss.dll` | the 36-club league phase draw, play-offs, qualifying rounds, the UEFA access list, our continental/league/pre-season cups, cup draws and dates, the calendar of leagues that are not 20 clubs playing twice, seasons by region; in the standings the MP column and the coloured zone strip (Europe, up, play-off, down; the cells are in the world's rankingTeam.bin, tools/mkmpcol.py) |
 | `fl26augseason` | itself | a career started in one of our leagues starts in August |
 | `fl26superguard` | `fl26lateguards` | stops the UEFA Super Cup setup from reading entry -1 |
 | `fl26resultsguard` | `fl26lateguards` | keeps an empty matchday results list from ending the game |

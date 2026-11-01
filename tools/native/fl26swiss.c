@@ -13176,6 +13176,81 @@ static void* mp_child(void* widget, const char* name)
   void** vt = *(void***)finder;
   return vt ? ((mpchild_fn)vt[1])(finder, name) : 0;
 }
+/* ---- the zone strip (0.3.0, mato 2026-11-01; vmican's idea): the colour of a row's place ----
+ *
+ * Mod Studio's layout (tools/mkmpcol.py ZONE_CELL) gives each row a text cell flZone on its left
+ * edge; this writes a left half block into it, as tall as the row (FontScale 1.9: text is not
+ * scaled by the cell's matrix; FontScale is a float at +4 of the props at widget+0x98, read with
+ * atof by 0x140e4b6a0), in the colour of the row's
+ * place, or nothing (setText 0x140e48bf0, then setColor 0x140e48a80: a palette index under 0x50,
+ * kept at +0xb8 for when the cursor leaves the row). The place:
+ *   - the European places of the league from the access list in use (g_access: the world's own,
+ *     or the shipped one), by position: the Champions League (its play-off, the Libertadores, the
+ *     AFC Champions League too), the Europa League, the Conference League;
+ *   - up and down by the game's own counts (as 0x140aee370 reads them for icon_divisionUp/Down):
+ *     the competition (0x1414bb000 on 0x1414b6a60()->+0x48), its clubs (+0x30a & 0x7f), down
+ *     when it has a league below (+0x7e) and the row is in the last 0x140ea0bb0(reg), up when it
+ *     has one above (+0x7c) and the row is in the first 0x140ea1c00(reg, 0). That function also
+ *     wants +0x304's top bits 10, which the Druga NL's (0x6002dd00, its two up arrows drawn) has
+ *     not, so it is not asked here (2026-11-01);
+ *   - a league phase (36 clubs): 1-8 up (the Round of 16), 9-24 the play-off.
+ * The palette, read in FL26 2.2 on 2026-11-01 (the ranking numbers drawn in each index): 70 blue
+ * (0,125,255), 3 orange (244,78,0), 34 teal (2,163,174), 62 green (0,255,0), 67 amber
+ * (255,189,0), 72 red (208,8,8). Without that layout the cell is not found and nothing is done. */
+enum { ZONE_CL, ZONE_EL, ZONE_ECL, ZONE_UP, ZONE_PO, ZONE_DOWN, ZONE_N };
+static const int ZONE_COLOUR[ZONE_N] = { 70, 3, 34, 62, 67, 72 };
+static const char* const ZONE_NAME[ZONE_N] = { "Champions League", "Europa League", "Conference League", "up", "play-off", "down" };
+#define ZONE_SCALE 1.9f         /* 1.0: a 7 x 14 px block at 1152 wide; 1.9: 44 px in the 45 px row at 1920 (FL27, 2026-11-01), 2.0 made the last row 46 px, over the table edge */
+#define ZCOL_RVA   0xe48a80u    /* setColor(widget, index, keep) */
+#define ZDB_RVA    0x14b6a60u   /* the competitions' owner */
+#define ZCOMP_RVA  0x14bb000u   /* competition(owner+0x48, reg) */
+#define ZDOWN_RVA  0xea0bb0u    /* clubs down(reg) */
+#define ZUP_RVA    0xea1c00u    /* clubs up(reg, 0) */
+typedef int (*zcol_fn)(void*, int, uint64_t);
+typedef void* (*zdb_fn)(void);
+typedef unsigned char* (*zcomp_fn)(void*, uint64_t);
+typedef uint64_t (*zdown_fn)(uint64_t);
+typedef uint64_t (*zup_fn)(uint64_t, uint64_t);
+static int g_zone_said;
+static int zone_of(uint16_t reg, unsigned i)
+{
+  if (reg == 1027 || reg == 1029 || reg == UECL_ROW)
+    return i < 8 ? ZONE_UP : i < 24 ? ZONE_PO : -1;
+  for (size_t k = 0; k < g_naccess; k++) {
+    const access_t* a = &g_access[k];
+    if (a->reg != reg || a->rank != i + 1) continue;
+    switch (a->comp) {
+      case UCL: case UCLQ: case LIB: case LIBQ: case AFCL: return ZONE_CL;
+      case UEL: case UELQ: return ZONE_EL;
+      case UECL: case UECLQ: return ZONE_ECL;
+    }
+  }
+  void* db = ((zdb_fn)(uintptr_t)(g_base + ZDB_RVA))();
+  unsigned char* c = db ? ((zcomp_fn)(uintptr_t)(g_base + ZCOMP_RVA))(*(void**)((unsigned char*)db + 0x48), reg) : 0;
+  if (!c) return -1;
+  unsigned n = *(uint16_t*)(c + 0x30a) & 0x7f;
+  if (*(uint16_t*)(c + 0x7c) != 0xffff && i < (unsigned)((zup_fn)(uintptr_t)(g_base + ZUP_RVA))(reg, 0))
+    return ZONE_UP;
+  if (*(uint16_t*)(c + 0x7e) != 0xffff) {
+    unsigned d = (unsigned)((zdown_fn)(uintptr_t)(g_base + ZDOWN_RVA))(reg);
+    if (d && i < n && i + d >= n) return ZONE_DOWN;
+  }
+  return -1;
+}
+static void zone_fill(void* roww, uint16_t reg, unsigned i)
+{
+  void* w = mp_child(roww, "flZone");
+  if (!w) return;
+  int z = zone_of(reg, i);
+  struct { char buf[16]; uint64_t size, cap; } str;              /* MSVC std::string, short form */
+  memset(&str, 0, sizeof str); str.cap = 15;
+  if (z >= 0) { memcpy(str.buf, "\xe2\x96\x8c", 4); str.size = 3; }   /* U+258C left half block */
+  float* props = *(float**)((unsigned char*)w + 0x98);   /* the text's props: +4 FontScale (a float) */
+  if (props) props[1] = ZONE_SCALE;                      /* the cell's matrix does not scale text */
+  ((mptxt_fn)(uintptr_t)(g_base + MPTXT_RVA))(w, &str, 0, 0);
+  if (z >= 0) ((zcol_fn)(uintptr_t)(g_base + ZCOL_RVA))(w, ZONE_COLOUR[z], 1);
+  if (g_zone_said < 12 && z >= 0) { g_zone_said++; logf("fl26swiss: zone -- reg %u place %u: %s", (unsigned)reg, i + 1, ZONE_NAME[z]); }
+}
 static uint64_t mp_fill(void* screen, void* roww, uint64_t idx, uint64_t r9)
 {
   uint64_t ret = ((mpfill_fn)(uintptr_t)g_tramp_mpfill)(screen, roww, idx, r9);
@@ -13187,6 +13262,7 @@ static uint64_t mp_fill(void* screen, void* roww, uint64_t idx, uint64_t r9)
                      : ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(reg);
   if (!tab) return ret;
   unsigned char* row = i < 0x30 ? tab + i * 0x14 : tab;
+  zone_fill(roww, reg, i);
   void* w = mp_child(roww, "num_MatchesPlayed");
   if (!w) {
     if (!g_mp_said++) logf("fl26swiss: MP -- this standings layout has no num_MatchesPlayed cell (game's own layout); nothing added");

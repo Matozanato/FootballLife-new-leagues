@@ -7164,9 +7164,12 @@ def region_modules(pl, root, game, log=print):
 
 def mp_for_world(root, game, log=print):
     """a world built before 0.2.5 (Worldpack r12, Europack eu4 ...) has no rankingTeam.bin of its
-    own, so its tables had no MP column: made at switch on as a Build makes it (mp_column)"""
+    own, so its tables had no MP column: made at switch on as a Build makes it (mp_column). One
+    built before 0.3.0 has ours without the zone strips: made again the same way. A
+    layout of another mod's is left as it is."""
     import mkmpcol
-    if os.path.exists(os.path.join(root, *mkmpcol.PACKAGE.split("/"))):
+    f = os.path.join(root, *mkmpcol.PACKAGE.split("/"))
+    if os.path.exists(f) and not (mkmpcol.has_mp(f) and not mkmpcol.has_zones(f)):
         return
     mp_column(root, game, log)
 
