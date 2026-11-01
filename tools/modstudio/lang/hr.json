@@ -2078,7 +2078,12 @@
   "(the league's name + Clausura Final)": "(ime lige + Clausura Final)",
   "Playoff names": "Nazivi doigravanja",
   "Final names": "Nazivi finala",
-  "the finals of playoffs of two groups of four, with their logos": "finala doigravanja s dvije skupine po četiri, s njihovim logotipima"
+  "the finals of playoffs of two groups of four, with their logos": "finala doigravanja s dvije skupine po četiri, s njihovim logotipima",
+  "no grand final": "bez velikog finala",
+  "two legs": "dvije utakmice",
+  "one match": "jedna utakmica",
+  "(the league's name + Grand Final)": "(ime lige + Grand Final)",
+  "Grand final": "Veliko finale"
  },
  "log": [
   [

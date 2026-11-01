@@ -48,7 +48,13 @@ which league sits above -- and nothing about ids:
               "final_clausura": a name}, "logos": the same keys, a picture each -- either may
               leave any out (the default names are "<league> Apertura Playoffs" and "<league>
               Apertura Final"; a play-off's picture defaults to "playoff_logo"). The finals' keys
-              are for "groups" only
+              are for "groups" only.
+              "grand_final": false (the default), true or "two_legs", or "single": with "groups",
+              the Apertura's and the Clausura's final winners meet after the Clausura's final, two
+              legs or one match; its winner is the league's champion (the title carries the
+              league's name, the super cup and fl26swiss.dll's champion are its), and a club that
+              won both finals is champion with no match. Its name and logo: "names"/"logos"
+              "grand_final" (default "<league> Grand Final")
   season      optional, a top division of a new country only: "calendar" plays the country's
               season February to December, like Brazil, Japan or Saudi Arabia, promotion and
               relegation at New Year; the default, "august", plays August to May. It is the
@@ -544,7 +550,12 @@ PLAYOFF_FORMATS = ("knockout", "groups")
 PLAYOFF_GROUP_ORDER = (1, 4, 5, 8, 2, 3, 6, 7)
 PLAYOFF_FINAL_SHAPE = NATIONAL_CUP_ANY[0]
 PLAYOFF_FINAL_DATES = SUPER_CUP_LIKE
-PLAYOFF_NAME_KEYS = ("playoff_apertura", "playoff_clausura", "final_apertura", "final_clausura")
+PLAYOFF_NAME_KEYS = ("playoff_apertura", "playoff_clausura", "final_apertura", "final_clausura", "grand_final")
+# the grand final ("grand_final"): the two finals' winners, two legs (the default) or one match; its
+# knockout row's legs mode (CompetitionRegulation +0x10 bits 9-11: 2 = every tie two legs) and the
+# away goals bit, which is cleared -- level on aggregate goes to extra time and penalties
+GRAND_FINAL_LEGS = {"two_legs": 2, "single": 1}
+KO_LEGS_SHIFT, KO_LEGS_MASK, KO_LEGS_BOTH, AWAY_GOALS_BIT = 9, 7, 2, 1 << 24
 SHARED_SLOT_REG = 49                     # shares Select Team slot 49 with the Copa Libertadores (177)
 SEASON_TURN = 182                        # the season's July turn: day-of-year order starts here
 # The Kick Off and Edit team lists are ordered by a fixed list of 89 slots in the exe (0x1427d5920,
@@ -1140,6 +1151,8 @@ def recipe_from_plan(pl, base):
             r["apertura"] = {"playoff": int(ap.get("playoff", PLAYOFF_SIZES[0]))}
             if ap.get("format"):
                 r["apertura"]["playoff_format"] = ap["format"]
+            if ap.get("grand_final"):
+                r["apertura"]["grand_final"] = ap["grand_final"]
             for k in ("names", "logos"):
                 if ap.get(k):
                     r["apertura"][k] = dict(ap[k])
@@ -3781,6 +3794,16 @@ def playoff_style(name, ap, po):
         raise BuildError("%s: a playoff of groups is two groups of four -- playoff %d, not %d"
                          % (name, PLAYOFF_SIZES[0], po))
     out = {"format": fmt} if fmt != PLAYOFF_FORMATS[0] else {}
+    gf = ap.get("grand_final") or False
+    if gf is True:
+        gf = "two_legs"
+    if gf:
+        if gf not in GRAND_FINAL_LEGS:
+            raise BuildError("%s: the grand_final is true, \"two_legs\" or \"single\", not %r" % (name, gf))
+        if fmt != "groups":
+            raise BuildError("%s: a grand_final is between the finals of a playoff of groups -- playoff_format "
+                             "\"groups\"" % name)
+        out["grand_final"] = gf
     for key in ("names", "logos"):
         v = ap.get(key) or {}
         if not isinstance(v, dict):
@@ -3842,6 +3865,20 @@ def playoff_cups(p):
             cup["final"] = {"name": names.get("final_" + key) or "%s %s Final" % (p["name"], tag),
                             "code": "FL_%03d_%sFI" % (p["rid"], tag[0]), "logo": logos.get("final_" + key)}
         out.append(cup)
+    gf = p["apertura"].get("grand_final")
+    if gf:
+        # after the Clausura's final; fl26swiss.dll fills it once both finals are over (fill 0: every
+        # day), with their winners (src=, the play-offs' knockouts by code), or gives the title to the
+        # club that won both
+        n = GRAND_FINAL_LEGS[gf]
+        days = playoff_days(out[1]["opts"]["days"][-1], busy, n)
+        out.append({"name": names.get("grand_final") or "%s Grand Final" % p["name"],
+                    "code": "FL_%03d_GFI" % p["rid"], "kind": "grand_final", "logo": logos.get("grand_final"),
+                    "country": p["country"], "region": p["region"], "groups": 0, "league": p["rid"],
+                    "phases": [0, 1], "entry": [(p["rid"], 1), (p["rid"], 1)], "title": p["name"], "legs": n,
+                    "knockout": {"like": PLAYOFF_FINAL_SHAPE}, "case": True,
+                    "opts": {"fill": 0, "national": 1, "days": days, "kolike": PLAYOFF_FINAL_DATES,
+                             "src": [c["code"] for c in out]}})
     return out
 
 
@@ -4563,6 +4600,12 @@ def describe(pl):
         what = {"league": "league cup", "playoff": "playoff, filled on day %d" % cup["opts"]["fill"],
                 "super": "super cup in late July"}
         pre = cup["opts"].get("pre")
+        if cup.get("kind") == "grand_final":
+            lines.append("  %s: the Apertura's and the Clausura's final winners, %s on day(s) %s; its winner is "
+                         "%s's champion (both finals won: champion, no match)"
+                         % (cup["name"], "two legs" if cup["legs"] == 2 else "one match",
+                            ", ".join(map(str, cup["opts"]["days"])), cup["title"]))
+            continue
         if cup.get("final"):
             lines.append("  %s: playoff, filled on day %d, two groups of four on days %s, the winners to "
                          "the final, %s, on day %d" % (cup["name"], cup["opts"]["fill"],
@@ -5317,11 +5360,12 @@ def build(pl, base, game, replace=False, log=print):
         phases = {int(m.group(1)): [int(x) for x in m.group(2).split(",")] for m in
                   re.finditer(r"^reg (\d+) .*-> split total over \d+ clubs, phases ([\d,]+)", said, re.M)}
         for cup in pl.get("home_cups") or []:
-            if cup.get("kind") == "playoff":
+            if cup.get("kind") in ("playoff", "grand_final"):
                 ph = phases.get(cup["league"]) or []
                 if len(ph) < 2:
                     raise BuildError("mksplit gave %d no Apertura and Clausura:\n%s" % (cup["league"], said))
-                cup["entry"] = [(ph[cup["phase"]], pos) for _r, pos in cup["entry"]]
+                cup["entry"] = [(ph[cup["phases"][i] if cup.get("phases") else cup["phase"]], pos)
+                                for i, (_r, pos) in enumerate(cup["entry"])]
 
     lap("faces")
     rounds = qual_rounds(pl)
@@ -6817,16 +6861,29 @@ def continental(cups, root, db, log=print, start=None, want=None, low=False):
     free = [r for r in all_r if r not in pin_r]
     used_c, used_r = set(), set()
 
-    def own(key, field, pool, pinned_ok):
+    def own(key, field, pool, pinned_ok, case=False):
         v = (want.get(key) or {}).get(field)
-        if v in pinned_ok and v not in used_c | used_r:
+        if v in pinned_ok and v not in used_c | used_r and (not case or v in CREATION_IDS):
             (used_c if field == "cid" else used_r).add(v)
+            return v
+        if case:                                       # an id the game creates at the season's start
+            v = next((c for c in pool if c in CREATION_IDS), None)
+            if v is None:
+                raise out_of_ids("%s (an id the game creates at the season's start)" % key.partition(":")[2])
+            pool.remove(v)
             return v
         if not pool:
             raise out_of_ids("the continental cups")
+        if spare_case and pool is cids:                # the ids the game creates are few: for those that need them
+            v = next((c for c in pool if c not in CREATION_IDS), pool[0])
+            pool.remove(v)
+            return v
         return pool.pop(0)
     pres = [c for c in cups if (c.get("opts") or {}).get("pre")]
     keep = sum(1 for c in cups if (c.get("opts") or {}).get("reserve"))
+    # a play-off of groups' finals and a grand final need ids the game creates at the season's start
+    # (CREATION_IDS, playoff_finals): with one in the world the other cups take the other ids first
+    spare_case = any(c.get("case") or c.get("final") for c in cups)
     if len(all_c) < len(cups) or len(all_r) < sum(2 if c["groups"] else 1 for c in cups) + len(pres) + keep:
         raise out_of_ids("the continental cups")
     args = ["--base", db, "--out", root]
@@ -6835,7 +6892,7 @@ def continental(cups, root, db, log=print, start=None, want=None, low=False):
         cup_winners(cup, start)
     for k, cup in enumerate(cups):
         key = "ccup:" + (cup.get("code") or cup["name"])
-        cid = own(key, "cid", cids, all_c)
+        cid = own(key, "cid", cids, all_c, cup.get("case"))
         reg = own(key, "reg", free, all_r)
         ko = own(key, "ko", free, all_r) if cup["groups"] else reg        # a straight knockout is one regulation
         cup.update(cid=cid, reg=reg, ko=ko)
@@ -6849,8 +6906,15 @@ def continental(cups, root, db, log=print, start=None, want=None, low=False):
             free.pop(0)                                # the old cup's pre-round id: later ids stay put
         like = (cup.get("opts") or {}).get("like")
         more = (like,) if like else ()
-        if cup.get("knockout"):                        # a league play-off of groups: its final
+        if cup.get("knockout") and cup["groups"]:      # a league play-off of groups: its final
             more = ("", cup["knockout"]["clubs"], shipped_reg(db, cup["knockout"]["like"], cup["name"]))
+        elif cup.get("knockout"):                      # a grand final: a cup final's row, two clubs
+            more = (shipped_reg(db, cup["knockout"]["like"], cup["name"]),)
+        if (cup.get("opts") or {}).get("src"):         # a final of two cups: their knockouts
+            ko_by_code = {c.get("code"): c.get("ko") for c in cups[:k]}
+            if any(not ko_by_code.get(x) for x in cup["opts"]["src"]):
+                raise BuildError("%s: its two cups %s are not built before it" % (cup["name"], cup["opts"]["src"]))
+            cup["src"] = [ko_by_code[x] for x in cup["opts"]["src"]]
         if (cup.get("opts") or {}).get("kolike"):
             cup["kolike"] = shipped_reg(db, cup["opts"]["kolike"], cup["name"])
         args += ["--cup", "|".join(str(x) for x in (
@@ -6899,6 +6963,7 @@ def playoff_finals(cups, db, pl, log=print):
     it fills the final). The game then gives its winner a title of its own in the Palmares,
     the final's name and emblem, not the play-off's. Its id of the last Build first (pl's
     prev_cup_ids, "final:<code>"), noted in cup_ids for the next."""
+    grand_finals(cups, db, log)
     cups = [c for c in cups if c.get("final")]
     if not cups:
         return
@@ -6941,6 +7006,35 @@ def playoff_finals(cups, db, pl, log=print):
         pl.setdefault("cup_ids", {})[key] = {"cid": cid}
         log("  %s: competition %d, the final of %s (knockout %d)" % (f["name"], cid, cup["name"], cup["ko"]))
     for n, b in (("Competition.bin", comp), ("CompetitionRegulation.bin", regs), ("CompetitionEntry.bin", ents)):
+        open(os.path.join(db, n), "wb").write(pesdb.wesys_pack(bytes(b)))
+
+
+def grand_finals(cups, db, log=print):
+    """the grand finals of playoff_cups (kind "grand_final") in the world's tables: no entry rows
+    (the game counted a placeholder pair as the title won before the final -- futve_finals.py,
+    29.10.; fl26swiss.dll writes the two finalists when it fills it), its regulation named after the
+    league in every slot (the champion's title is the league's), the away goals rule off and, for two
+    legs, every tie two legs (the legs mode)"""
+    cups = [c for c in cups if c.get("kind") == "grand_final"]
+    if not cups:
+        return
+    regs, ents = bytearray(M.load(db, "CompetitionRegulation.bin")), M.load(db, "CompetitionEntry.bin")
+    gone = {c["cid"] for c in cups}
+    ents = b"".join(bytes(ents[i:i + M.ENT]) for i in range(0, len(ents), M.ENT) if ents[i + M.E_CID] not in gone)
+    for cup in cups:
+        rows = [i for i in range(0, len(regs), M.REG) if u16(regs[i:], M.R_ID) == cup["ko"]]
+        if len(rows) != 1:
+            raise BuildError("%s: mkccup left no knockout %d" % (cup["name"], cup["ko"]))
+        o = rows[0]
+        M.put_names(regs, o, cup["title"])
+        d10 = int.from_bytes(regs[o + 0x10:o + 0x14], "little") & ~AWAY_GOALS_BIT
+        if cup["legs"] == 2:
+            d10 = (d10 & ~(KO_LEGS_MASK << KO_LEGS_SHIFT)) | (KO_LEGS_BOTH << KO_LEGS_SHIFT)
+        regs[o + 0x10:o + 0x14] = d10.to_bytes(4, "little")
+        log("  %s: competition %d, regulation %d, %s on days %s, the winners of %d and %d; its title %s"
+            % (cup["name"], cup["cid"], cup["ko"], "two legs" if cup["legs"] == 2 else "one match",
+               ",".join(map(str, cup["opts"]["days"])), cup["src"][0], cup["src"][1], cup["title"]))
+    for n, b in (("CompetitionRegulation.bin", regs), ("CompetitionEntry.bin", ents)):
         open(os.path.join(db, n), "wb").write(pesdb.wesys_pack(bytes(b)))
 
 
@@ -7017,6 +7111,8 @@ def ccup_options(line, cup):
         words += ["gdays=" + ",".join(map(str, o["gdays"])), "adv=%d" % o["adv"]]
     if cup.get("kolike"):
         words.append("kolike=%d" % cup["kolike"])
+    if cup.get("src"):                                 # a final of two cups (playoff_cups' grand final)
+        words += ["src=%d,%d" % tuple(cup["src"]), "cid=%d" % cup["cid"]]
     head, sep, name = line.partition(" name=")
     return "%s %s%s%s" % (head, " ".join(words), sep, name)
 

@@ -236,6 +236,10 @@ with `game.save_root` -- the same rule, checked against each other by `tools/tes
   (`kolike=`, the Belgium Super Cup's row), the better placed club of the regular phase first.
   `tools/futve_world.py` builds the world; [futve-playoff.md](futve-playoff.md) has the format,
   the in-game tests and their sandbox (`tools/futve_test.py`).
+- **Title leagues** (the grand final): a split league whose phases feed a final of two cups (`src=`)
+  has that final's winner as its champion -- its title, its super cup, its honours -- any number of
+  them in a world (`grand_final_of`, `league_champion_kept`, `honours_fix_one`);
+  [futve-playoff.md](futve-playoff.md), `test_grand_final.c`.
 - **The trophy cabinet** (the Palmarés): the records of the user's titles in the career block, their
   lists of winners and dates, and the titles the DLL writes where the game does not (our super cups,
   the final of a play-off with groups, the league title of a final of two cups), merges and the
