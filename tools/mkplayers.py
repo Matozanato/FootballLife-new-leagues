@@ -119,9 +119,14 @@ def main():
     if not fresh:
         raise SystemExit("no room for even one squad")
 
-    pid = 179673                                  # the first id above the game's own, gaps filled
+    pid = max(index) + 1                          # the first id above the game's own, gaps filled
                                                   # below: the engine packs a player id into 18 bits
-                                                  # (lbplayers.PID_MAX), so nothing may drift upwards
+                                                  # (lbplayers.PID_MAX), so nothing may drift upwards.
+                                                  # --base is the game's tables (lbplayers' game_top
+                                                  # is the same max): 179673 in FL26, 186535 in FL27.
+                                                  # It was 179673 written out, and FL27's new clubs'
+                                                  # players took the holes under its top, which
+                                                  # lbplayers does not keep from Build to Build
     eid = max(int.from_bytes(assigns[i * A_REC + A_EID:i * A_REC + A_EID + 4], "little")
               for i in range(len(assigns) // A_REC)) + 1
     made = 0

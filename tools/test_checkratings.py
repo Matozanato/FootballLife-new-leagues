@@ -5,7 +5,8 @@ the overall on Sessegnon's real abilities (r10 and eu1), a clean world passes, a
 fails rule A, the same player on the stars list passes, a rewritten game player (the plan's
 edits, where B64 was) and an added player are held to it, a game player left as shipped is not,
 and against an older world a rise of more than 8 fails rule B -- an id now naming someone else,
-and a move to keeper, do not."""
+and a move to keeper, do not. FL27: the game's last player id comes from the game's tables (--game,
+or Mod Studio's), so the game's own players past FL26's last are not the world's."""
 import contextlib, io, json, os, shutil, sys, tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -87,6 +88,8 @@ def run(w, **kw):
 
 def main():
     tmp = tempfile.mkdtemp(prefix="checkratings_")
+    appdata = os.environ.get("APPDATA")
+    os.environ["APPDATA"] = tmp            # no Mod Studio tables: the game's last id is FL26's
     try:
         nostars = os.path.join(tmp, "none.txt")
         open(nostars, "w").close()
@@ -147,6 +150,20 @@ def main():
         passed, fails, _ = run(world(tmp, "_Added", base + [added]), stars=nostars)
         ok("rule A: an added player at a game club is held to it", fails["a"] == [C.GAME_LAST_PID + 50])
 
+        # FL27 (1.00): the game's own players run to 186534, past FL26's last; its tables say so
+        w = world(tmp, "_Fl27Game", base + [added])
+        game = world(tmp, "_GameTables", [(C.GAME_LAST_PID + 100, "Game Newcomer", "CB", 60, GAME_CLUB, None)])
+        passed, fails, text = run(w, stars=nostars, game=game)
+        ok("FL27: with the game's tables an id under their last is the game's player", passed and not fails["a"]
+           and "the game's last player id: %d" % (C.GAME_LAST_PID + 100) in text)
+        ok("FL27: main() takes --game", main_quiet([w, "--stars", nostars, "--game", game]) == 0)
+        ms = os.path.join(tmp, "FL26ModStudio", "tables", "common", "etc", "pesdb")
+        os.makedirs(ms)
+        shutil.copy(os.path.join(game, "common", "etc", "pesdb", "Player.bin"), ms)
+        ok("FL27: Mod Studio's unpacked tables give it without --game", run(w, stars=nostars)[0])
+        shutil.rmtree(os.path.join(tmp, "FL26ModStudio"))
+        ok("... and without them it is FL26's", not run(w, stars=nostars)[0])
+
         # a club of the plan's leagues that is not a kept game club is new, whatever its id
         plan = {"leagues": [{"name": "L", "teams": [GAME_CLUB, NEW_CLUB], "game_clubs": {}}],
                 "others": [], "players": {}}
@@ -176,6 +193,10 @@ def main():
         ok("main() takes --old", main_quiet([new, "--old", old, "--stars", stars, "--max", "101"]) == 1)
         ok("rule B: --rise 25 lets +20 through", run(new, old=old, stars=stars, max_ovr=101, max_rise=25)[0])
     finally:
+        if appdata is None:
+            os.environ.pop("APPDATA", None)
+        else:
+            os.environ["APPDATA"] = appdata
         shutil.rmtree(tmp, ignore_errors=True)
     print("test_checkratings: ok (%d)" % N)
 

@@ -1,5 +1,5 @@
 r"""python checkratings.py <world> [--old <previous world, pesdb folder or Player.bin>]
-                       [--stars <file>] [--max 90] [--rise 8] [--all]
+                       [--stars <file>] [--max 90] [--rise 8] [--all] [--game <the game's tables>]
 
 A hard check of the player ratings of a built world, for step 2 (checks) before any world zip
 (Modpack, NewLife) is exported. Twice in one week a world went out with inflated ratings that
@@ -15,7 +15,8 @@ Rule A  no player the world wrote has an overall of --max (90) or more, unless h
           - every player of a new club: a club id above the game's last (GAME_LAST_TID), or a
             club of the recipe's leagues (leaguebuilder-plan.json) that is not one of the game's
             clubs it keeps;
-          - every player id above the game's last (GAME_LAST_PID): a player the world added,
+          - every player id above the game's last (game_last_pid: the highest in the game's
+            tables, --game or Mod Studio's; FL26 179672, FL27 186534): a player the world added,
             whatever club he is at (a NewLife player joined to a club of the game);
           - every game player whose record the recipe rewrites (leaguebuilder-plan.json
             "players" -> <game club id> -> "edits"): the NewLife refresh of the game's own
@@ -144,6 +145,29 @@ def pesdb_dir(where):
     raise SystemExit("no Player.bin in %s (nor in its common\\etc\\pesdb)" % where)
 
 
+def game_last_pid(tables=None, out=None):
+    """the game's last player id: the highest in its Player.bin -- `tables` (--game: the game's
+    tables, a pesdb folder or a Player.bin), else Mod Studio's unpacked tables (%APPDATA%\\
+    FL26ModStudio\\tables), else GAME_LAST_PID. FL27 1.00's players run to 186534, so with FL26's
+    179672 the game's own players from 179673 up counted as the world's"""
+    tried = [tables] if tables else [os.path.join(os.environ.get("APPDATA", ""), "FL26ModStudio", "tables")]
+    for where in tried:
+        try:
+            raw = _unpack(open(os.path.join(pesdb_dir(where), "Player.bin") if not os.path.isfile(where)
+                               else where, "rb").read())
+        except (OSError, SystemExit):
+            if tables:
+                raise SystemExit("--game %s: no Player.bin there" % tables)
+            continue
+        top = max(E.u32(raw, o + E.P_ID) for o in range(0, len(raw) - E.P_REC + 1, E.P_REC))
+        if out:
+            out("the game's last player id: %d (%s)" % (top, where))
+        return top
+    if out:
+        out("the game's last player id: %d (FL26's; no game tables found, --game names them)" % GAME_LAST_PID)
+    return GAME_LAST_PID
+
+
 def world_root(db):
     """the world folder above a pesdb folder, if it is one (it has leaguebuilder-plan.json)"""
     up = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(db))))
@@ -189,8 +213,8 @@ class Table:
         return self.teams.get(tid) or str(tid)
 
 
-def world_scope(table):
-    """(new club ids, {pid: why} of the players the world wrote)"""
+def world_scope(table, last_pid=GAME_LAST_PID):
+    """(new club ids, {pid: why} of the players the world wrote); last_pid: game_last_pid()"""
     new_clubs = {t for t in table.teams if GAME_LAST_TID < t}
     edited = set()
     root = world_root(table.db)
@@ -208,7 +232,7 @@ def world_scope(table):
     for pid in table.players:
         if table.club.get(pid) in new_clubs:
             why[pid] = "new club"
-        elif pid > GAME_LAST_PID:
+        elif pid > last_pid:
             why[pid] = "added player"
         elif pid in edited:
             why[pid] = "rewritten game player"
@@ -235,10 +259,12 @@ def same_name(a, b):
     return " ".join(a.casefold().split()) == " ".join(b.casefold().split())
 
 
-def check(world, old=None, stars=STARS, max_ovr=MAX_OVR, max_rise=MAX_RISE, show=SHOW, out=print):
-    """run both rules; returns (passed, {"a": [...], "b": [...]}); prints the report via out"""
+def check(world, old=None, stars=STARS, max_ovr=MAX_OVR, max_rise=MAX_RISE, show=SHOW, out=print,
+          game=None, last_pid=None):
+    """run both rules; returns (passed, {"a": [...], "b": [...]}); prints the report via out.
+    game: the game's tables (game_last_pid); last_pid: the game's last player id itself"""
     T = Table(world)
-    _new, why = world_scope(T)
+    _new, why = world_scope(T, last_pid if last_pid is not None else game_last_pid(game, out))
     allow = read_stars(stars)
     ovr = {pid: overall(v) for pid, (v, _n) in T.players.items()}
     line = lambda pid: "%7d  %-28s %-4s %3d  %s" % (pid, T.players[pid][1][:28], position(T.players[pid][0]),
@@ -305,12 +331,12 @@ def main(argv):
     a = list(argv)
     get = lambda k, d=None: a[a.index(k) + 1] if k in a and a.index(k) + 1 < len(a) else d
     pos = [x for i, x in enumerate(a) if not x.startswith("--") and (i == 0 or a[i - 1] not in
-                                                                      ("--old", "--stars", "--max", "--rise"))]
+                                                                      ("--old", "--stars", "--max", "--rise", "--game"))]
     if len(pos) != 1:
         raise SystemExit(__doc__)
     passed, _ = check(pos[0], old=get("--old"), stars=get("--stars", STARS),
                       max_ovr=int(get("--max", MAX_OVR)), max_rise=int(get("--rise", MAX_RISE)),
-                      show=10 ** 9 if "--all" in a else SHOW)
+                      show=10 ** 9 if "--all" in a else SHOW, game=get("--game"))
     return 0 if passed else 1
 
 
