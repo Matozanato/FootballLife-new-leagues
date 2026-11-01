@@ -41,22 +41,6 @@ pcall and no require.
 
 local m = {}
 
--- 31.10.: sider.log is overwritten at every start, and the Libertadores final's file list went
--- with it. Every line this module logs also goes to SiderAddons\fl26swiss-session-<n>.log, one
--- file a session (the test sandbox's FIN removes them with the other logs).
-local wfile = nil
-local function wlog(s)                   -- log() resolved at call time: Sider's global
-  log(s)
-  if wfile then wfile:write(s, "\n"); wfile:flush() end
-end
-local function session_file(dir)
-  for n = 1, 999 do
-    local path = dir .. "fl26swiss-session-" .. string.format("%03d", n) .. ".log"
-    local f = io.open(path, "r")
-    if f then f:close() else wfile = io.open(path, "w"); return path end
-  end
-end
-
 -- regulation ids of the 36-club league phases, in date order: the first plays on the module's
 -- sixteen days, each next one two days later. 1027 = the Champions League's one group of 36,
 -- 1029 = the Europa League's, both reshaped in place by tools/mkreshape.py (world _FL26G39UCL36):
@@ -94,7 +78,7 @@ local function drain(reason)
   for _ = 1, 256 do                      -- the club-list watch (or a Fast Forward) can write many buffers
     local n = tonumber(dll_log(logbuf, 4096))
     if n <= 0 then break end
-    for line in ffi.string(logbuf, n):gmatch("[^\n]+") do wlog(line) end
+    for line in ffi.string(logbuf, n):gmatch("[^\n]+") do log(line) end
   end
   if reason then
     dll_stats(statbuf)
@@ -105,83 +89,6 @@ local function drain(reason)
   end
 end
 
--- 31.10. (the trophy ceremony, read-only): the files the game asks for around a match whose names
--- speak of demos, flows, trophies, cups or awards -- which end scene and which page a final loads.
--- Through livecpk_rewrite (every module sees every file; cinematics.lua's make_key answers first
--- for a match's files, so make_key would miss them); it rewrites nothing.
-local fwatch_n, fwatch_last, rw = 0, nil, 0
-local dll_stack = nil                    -- fl26_swiss_stack (31.10.), set at init
-local dll_borrow_end = nil               -- fl26_swiss_borrow_end (31.10.), set at init
--- 31.10. (from CustomExhibitionMatch.lua, mochnaufals): ctx.mis points at the game's match info,
--- the competition id at +0x00 and +0x84. Logged when the match's tournament or match_info changes.
--- 31.10. (the ceremony, experiment): a final of ours (match_info 53) takes the Copa Libertadores
--- final's match info, as Sider reported it in the Master League: competition 5 at +0x00 and +0x84,
--- +0x04 = 1 (0 in ours). CustomExhibitionMatch.lua changes +0x00/+0x84 the same way.
-local CER_MIS = false   -- 31.10.: tried on the Clausura final, no ceremony; off
-local OUR_FINALS = { [255] = true, [256] = true, [261] = true, [262] = true, [263] = true }
-local mis_key = nil
-local function mis_note(ctx)
-  if not ctx.mis or not ffi then return end
-  local key = tostring(ctx.tournament_id) .. "/" .. tostring(ctx.match_info)
-  local a = tonumber(string.format("%p", ctx.mis))
-  if not a or a == 0 then return end
-  local p = ffi.cast("int32_t*", a)
-  if CER_MIS and ctx.match_info == 53 and OUR_FINALS[tonumber(ctx.tournament_id) or 0] and p[0] ~= 5 then
-    wlog(string.format("fl26swiss: mis -- t%s: competition %d/%d, +0x04 %d set to the Libertadores final's (5/5, 1)",
-                      tostring(ctx.tournament_id), tonumber(p[0]), tonumber(p[0x21]), tonumber(p[1])))
-    p[0] = 5; p[0x21] = 5; p[1] = 1
-    mis_key = nil
-  end
-  if key == mis_key then return end
-  mis_key = key
-  local w = {}
-  for i = 0, 39 do w[#w + 1] = string.format("%x", tonumber(p[i])) end
-  wlog(string.format("fl26swiss: mis -- t%s mi%s at %#x: comp %d / +0x84 %d; ints %s", tostring(ctx.tournament_id),
-                    tostring(ctx.match_info), a, tonumber(p[0]), tonumber(p[0x21]), table.concat(w, " ")))
-end
-function m.rewrite(ctx, filename)
-  rw = rw + 1
-  if rw % 64 == 0 then drain(nil) end                -- the DLL's lines during a match too
-  mis_note(ctx)
-  if filename and fwatch_n < 4000 and filename ~= fwatch_last then
-    local f = string.lower(filename)
-    if string.find(f, "demo", 1, true) or string.find(f, "flow", 1, true) or string.find(f, "troph", 1, true)
-        or string.find(f, "cup", 1, true) or string.find(f, "award", 1, true) or string.find(f, "winner", 1, true) then
-      fwatch_last = filename
-      fwatch_n = fwatch_n + 1
-      wlog(string.format("fl26swiss: file -- t%s mi%s %s", tostring(ctx.tournament_id), tostring(ctx.match_info), filename))
-      -- 31.10. (the borrow): full time's result scene puts the final's own regulation back
-      if dll_borrow_end and string.find(f, "result_env_full", 1, true) then
-        dll_borrow_end()
-        drain(nil)
-      end
-      -- 31.10.: a full-time scene file (end or timeup): the requesting thread's stack, from the DLL
-      if dll_stack and (string.find(f, "fixdemo\\end\\cut_data", 1, true) or string.find(f, "fixdemo\\timeup\\cut_data", 1, true)) then
-        dll_stack(filename)
-        drain(nil)
-      end
-    end
-  end
-  return nil
-end
--- 31.10. (who reads the end-scene table): when a final's match (match_info 53) reads
--- common\demo\fixdemo\end\table_end.bin, its buffer goes to fl26_swiss_guard, which watches who
--- reads it (read-only). Every demo table read in a match is logged with its address.
-local dll_guard = nil
-function m.data_ready(ctx, filename, data, size, total_size, offset, cpk_filename)
-  if not filename then return end
-  local f = string.lower(filename)
-  if not string.find(f, "fixdemo", 1, true) or not string.find(f, "table_", 1, true) then return end
-  local a = 0
-  if type(data) == "number" then a = data elseif data then a = tonumber(string.format("%p", data)) or 0 end
-  wlog(string.format("fl26swiss: data -- t%s mi%s %s at %#x, %s of %s byte(s) from %s", tostring(ctx.tournament_id),
-                     tostring(ctx.match_info), filename, a or 0, tostring(size), tostring(total_size), tostring(offset)))
-  if dll_guard and ctx.match_info == 53 and string.find(f, "fixdemo\\end\\table_end.bin", 1, true)
-      and a and a ~= 0 and tonumber(offset or 0) == 0 then
-    dll_guard(a, tonumber(size) or 0, "table_end.bin")
-    drain(nil)
-  end
-end
 function m.make_key(ctx, filename)
   ticks = ticks + 1
   if dll_ko_tick and ticks % 64 == 0 then dll_ko_tick() end
@@ -557,8 +464,6 @@ local function load_dll(path)
 end
 
 function m.init(ctx)
-  local sp = session_file(ctx.sider_dir:gsub("[/\\]+$", "") .. "\\")
-  if sp then wlog("fl26swiss: this session's lines also in " .. sp) end
   if ffi == nil then log("fl26swiss: global ffi is nil -- set luajit.ext.enabled = 1"); return end
   ffi.cdef([[
     void*    LoadLibraryA(const char*);
@@ -1270,16 +1175,6 @@ function m.init(ctx)
     log("fl26swiss: live -- 36-club league phase for regulation " .. table.concat(ids, ", ")
         .. "; 8 opponents each over 16 matchdays (F8 = report)")
     ctx.register("livecpk_make_key", m.make_key)
-    ctx.register("livecpk_rewrite", m.rewrite)
-    local ps = ffi.C.GetProcAddress(h, "fl26_swiss_stack")
-    if ps ~= nil then dll_stack = ffi.cast("int (*)(const char*)", ps) end
-    local pb = ffi.C.GetProcAddress(h, "fl26_swiss_borrow_end")
-    if pb ~= nil then dll_borrow_end = ffi.cast("int (*)(void)", pb) end
-    local pg = ffi.C.GetProcAddress(h, "fl26_swiss_guard")
-    if pg ~= nil then
-      dll_guard = ffi.cast("int (*)(uint64_t, uint32_t, const char*)", pg)
-      ctx.register("livecpk_data_ready", m.data_ready)
-    end
     ctx.register("key_down", m.key_down)
     drain(nil)
   else
