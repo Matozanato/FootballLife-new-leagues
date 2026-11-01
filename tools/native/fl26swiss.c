@@ -7025,7 +7025,8 @@ static void ccup_final_note(int k, void* started, int fresh)
 }
 
 static void honours_fix(void);
-static uint16_t g_tl_total, g_tl_cid, g_ff_cid;
+static uint16_t g_tl_total, g_tl_cid;
+static int is_title_league(uint16_t reg);
 static char prog_handler_inner(void* ctx, uint64_t id, void* started);
 char prog_handler(void* ctx, uint64_t id, void* started)
 {
@@ -7131,7 +7132,7 @@ static char prog_handler_inner(void* ctx, uint64_t id, void* started)
   }
   if (r == 2) { if (uecl_fill(started)) ok = 1; if (ccup_fill(started)) ok = 1; }
   else if (r == UECL_REG || r == UECL_ROW) { if (uecl_ko(started)) ok = 1; }
-  if (r == g_tl_total) honours_fix();              /* the split league's own end (reg 11, day 142) */
+  if (is_title_league(r)) honours_fix();           /* a title league's own end (the Liga FUTVE's reg 11, day 142) */
   return ok;
 }
 
@@ -13372,7 +13373,48 @@ static void futve_copa_fill(void)
   logf("fl26swiss: Copa Venezuela %u -- day %d: %u club(s) of reg %u set, registered: %u club(s), %d match record(s)",
        (unsigned)FUTVE_COPA, d, n, (unsigned)rec_id(src), (unsigned)rec_count(rec), ccup_matches(FUTVE_COPA));
 }
-static uint32_t futve_champion_kept(int ad);
+/* ---- title leagues: a split league whose title is a final of two cups' (a grand final) ----
+ * fl26_swiss_title_league names them: {split total, its competition}, and {the final's knockout, its
+ * competition}. Any number of them in a world, one final each: the final of two cups whose feeding
+ * cups take their clubs from the league's phases (grand_final_of). g_tl_total / g_tl_cid are the
+ * first one, which the January-December Liga FUTVE code reads (futve_cal). */
+#define TL_MAX 8
+static uint16_t g_tl_tot[TL_MAX], g_tl_cids[TL_MAX];
+static int g_ntl;
+static uint16_t g_ccup_fcid[MAX_CCUP];             /* a final of two cups' own competition (cid=) */
+static const split_t* split_of_total(uint16_t total)
+{
+  for (int i = 0; i < g_nsplits; i++) if (SPLITS[i].total == total) return &SPLITS[i];
+  return 0;
+}
+static int split_has_phase(const split_t* sp, uint16_t reg)
+{
+  return sp && reg && (reg == sp->regular || reg == sp->group[0] || reg == sp->group[1] || reg == sp->group[2]);
+}
+/* the final of two cups (src=) whose feeding cups are filled from the split league `total`'s
+   phases (their first entry), -1 when it has none */
+static int grand_final_of(uint16_t total)
+{
+  const split_t* sp = split_of_total(total);
+  if (!sp) return -1;
+  for (int k = 0; k < g_nccup; k++) {
+    const ccup_t* f = &g_ccup[k];
+    if (!f->src[0] || !f->src[1]) continue;
+    int fed = 1;
+    for (int s = 0; s < 2 && fed; s++) {
+      int ko = 0, j = ccup_of(f->src[s], &ko);
+      fed = j >= 0 && g_ccup[j].n && split_has_phase(sp, g_ccup[j].ereg[0]);
+    }
+    if (fed) return k;
+  }
+  return -1;
+}
+static int is_title_league(uint16_t reg)
+{
+  for (int i = 0; reg && i < g_ntl; i++) if (g_tl_tot[i] == reg) return 1;
+  return 0;
+}
+static uint32_t league_champion_kept(uint16_t total, int ad);
 /* A January-December super cup's cup winner and runner-up, kept from the cup's final on (days 200 to
    the year's end, while the game still names them): at New Year the cup enters its next season and
    is drawn before the super cup is filled, and the rights code names nobody any more (01.11., Felix's
@@ -13424,7 +13466,7 @@ static void calendar_scup_fill_days(void)
     /* the cup drawn again for its new season names nobody: last season's, kept at its final */
     if (!cupwin) cupwin = calendar_scup_kept(cs->cup, ad);
     /* the league's too: the Liga FUTVE's champion of its finals, else the final table kept at New Year */
-    if (!champion && g_tl_total && cs->league == g_tl_total) champion = futve_champion_kept(ad);
+    if (!champion && is_title_league(cs->league)) champion = league_champion_kept(cs->league, ad);
     final_t* ft = final_of(cs->league);
     if (ft && ft->n >= 2 && ad >= ft->day && ad - ft->day < 150) {
       if (!champion) champion = ft->club[0];
@@ -13444,8 +13486,8 @@ static void calendar_scup_fill_days(void)
     /* fase 4 (the Liga FUTVE January-December): its champion is the finals', the Final del FUTVE's
        winner in December or the club that won both -- not the accumulated table's leader; the cup's
        runner-up plays it when that club won the Copa Venezuela too (as aug_scup_fill_days) */
-    if (g_tl_total && cs->league == g_tl_total) {
-      uint32_t lf = futve_champion_kept(abs_day());
+    if (is_title_league(cs->league)) {
+      uint32_t lf = league_champion_kept(cs->league, abs_day());
       if (lf) champion = lf;
       if (same_club(champion, cupwin)) {
         uint32_t cr = knockout_runner_now(cs->cup);
@@ -13513,11 +13555,11 @@ static int ccup_played_since(uint16_t reg, int from)
 
 /* 30.10. (Felix): the Supercopa de Venezuela is the Liga FUTVE champion's -- the Final del FUTVE's
    winner, or the club that won both the Apertura and the Clausura finals -- never the accumulated
-   table's leader. Read from the finals kept this season (the last within 120 days). 0: none known. */
-static uint32_t futve_champion_kept(int ad)
+   table's leader. Read from the finals kept this season (the last within 120 days). 0: none known.
+   Any title league's (total): its grand final's (grand_final_of). */
+static uint32_t league_champion_kept(uint16_t total, int ad)
 {
-  int fk = -1;
-  for (int k = 0; k < g_nccup; k++) if (g_ccup[k].src[0]) fk = k;
+  int fk = grand_final_of(total);
   if (fk < 0 || ad < 0) return 0;
   const ccup_t* c = &g_ccup[fk];
   cupwin_t* f = cupwin_of(c->ko);
@@ -13555,9 +13597,8 @@ static uint32_t futve_cont_club(uint16_t reg, int rank, const char** how)
   final_t* f = final_of(reg);
   int ad = abs_day();
   if (!f || f->n < 10 || ad < f->day || ad - f->day > 300) return 0;
-  int fk = -1;
-  for (int k = 0; k < g_nccup; k++) if (g_ccup[k].src[0]) fk = k;
-  uint32_t C = futve_champion_kept(ad), U = 0, AL = 0, CL = 0;
+  int fk = grand_final_of(reg);
+  uint32_t C = league_champion_kept(reg, ad), U = 0, AL = 0, CL = 0;
   if (!C) C = f->club[0];
   if (fk >= 0) {
     U = futve_runner_kept(g_ccup[fk].ko, ad);
@@ -13608,11 +13649,11 @@ static void aug_scup_fill_days(void)
     uint32_t champion = fk ? f->club[0] : calendar_scup_right(cs->league, 13);
     uint32_t runner   = fk ? f->club[1] : calendar_scup_right(cs->league, 14);
     uint32_t cupwin   = !cs->cup ? 0 : wk ? w->club : calendar_scup_right(cs->cup, 0);
-    int futve = g_tl_total && cs->league == g_tl_total;
+    int futve = is_title_league(cs->league);
     if (futve) {
       /* the Liga FUTVE: its champion (the finals'), against the Copa Venezuela's winner -- or the
          cup's runner-up when one club won both */
-      uint32_t lf = futve_champion_kept(ad);
+      uint32_t lf = league_champion_kept(cs->league, ad);
       static int said_lf = -1;
       if (lf) champion = lf;
       else if (said_lf != log_season()) {
@@ -13985,17 +14026,27 @@ __declspec(dllexport) int fl26_swiss_title_league(const uint16_t* v, int n)
   int got = 0;
   for (int i = 0; v && i < n; i++) {
     if (!v[2 * i] || !v[2 * i + 1]) continue;
-    int isff = 0;
-    for (int k = 0; k < g_nccup; k++) isff |= g_ccup[k].src[0] && g_ccup[k].ko == v[2 * i];
-    if (isff) {                                    /* the final of two cups and its competition */
-      g_ff_cid = v[2 * i + 1]; got++;
+    int isff = -1;
+    for (int k = 0; k < g_nccup; k++) if (g_ccup[k].src[0] && g_ccup[k].ko == v[2 * i]) isff = k;
+    if (isff >= 0) {                               /* the final of two cups and its competition */
+      g_ccup_fcid[isff] = v[2 * i + 1]; got++;
       logf("fl26swiss: final of two cups %u (competition %u) -- its title is the league's (the Liga FUTVE)",
-           (unsigned)v[2 * i], (unsigned)g_ff_cid);
+           (unsigned)v[2 * i], (unsigned)v[2 * i + 1]);
       continue;
     }
-    g_tl_total = v[2 * i]; g_tl_cid = v[2 * i + 1]; got++;
-    logf("fl26swiss: league %u (competition %u) -- its phases give no title; its total (the accumulated table) does",
-         (unsigned)g_tl_total, (unsigned)g_tl_cid);
+    /* a split league: a title league only when a final of two cups takes its title (grand_final_of);
+       the loader names every split league with a competition id */
+    int fk = grand_final_of(v[2 * i]);
+    if (fk < 0 || is_title_league(v[2 * i]) || g_ntl >= TL_MAX) {
+      logf("fl26swiss: league %u (competition %u) -- %s", (unsigned)v[2 * i], (unsigned)v[2 * i + 1],
+           fk < 0 ? "no final of two cups takes its clubs; its title stays its own" : "named already, or too many; left out");
+      continue;
+    }
+    g_tl_tot[g_ntl] = v[2 * i]; g_tl_cids[g_ntl] = v[2 * i + 1]; g_ntl++;
+    if (!g_tl_total) { g_tl_total = v[2 * i]; g_tl_cid = v[2 * i + 1]; }
+    got++;
+    logf("fl26swiss: league %u (competition %u) -- its phases give no title; its final of two cups %u does",
+         (unsigned)v[2 * i], (unsigned)v[2 * i + 1], (unsigned)g_ccup[fk].ko);
   }
   return got;
 }
@@ -14011,6 +14062,7 @@ typedef struct { uint32_t cid; uint16_t reg; uint8_t won, kind; uint32_t zero; }
 #define WIN_LO 0x1790000
 #define WIN_HI 0x17b0000
 static void winners_fix(unsigned char* blk, const split_t* sp, int fk, uint32_t champ, int d)
+/* sp: the title league's split, fk: its final of two cups (grand_final_of) */
 {
   /* The user's trophy cabinet (read 30.10. from the dump): a header with the club at +0x1798ab0, a
      count (u16) at +0x1798b82, then one record of 0x648 bytes per title won, in the order won, each
@@ -14021,8 +14073,8 @@ static void winners_fix(unsigned char* blk, const split_t* sp, int fk, uint32_t 
   {
     uint16_t ffk = g_ccup[fk].ko;
     uint32_t aw = ff_auto_champion(ffk), u = state_user();
-    if (aw && futve_cal()) {       /* fase 5: both finals' winners as the game's brackets read now -- a kept one
-                                      can be another career's */
+    if (aw) {                             /* fase 5: both finals' winners as the game's brackets read now -- a kept one
+                                      can be another career's (any title league since the grand final, fase 6) */
       for (int k2 = 0; k2 < g_nccup; k2++) {
         if (g_ccup[k2].ko != ffk || !g_ccup[k2].src[0]) continue;
         uint32_t l1 = ccup_ko_winner(g_ccup[k2].src[0]), l2 = ccup_ko_winner(g_ccup[k2].src[1]);
@@ -14042,8 +14094,9 @@ static void winners_fix(unsigned char* blk, const split_t* sp, int fk, uint32_t 
   /* fase 4 (31.10., Felix): regulation 11 is "Liga FUTVE" again (Select Team), so the title the game
      gives the accumulated table's leader would read "Liga FUTVE". Out of the user's cabinet: the
      records after it move up one, the empty slot after the last takes the last's place. The real
-     Liga FUTVE title is the Final del FUTVE's (175 "Liga FUTVE") as before. */
-  if (futve_cal()) {
+     Liga FUTVE title is the Final del FUTVE's (175 "Liga FUTVE") as before. Fase 6: any title league's, an
+     August-May one too -- its grand final's winner is the champion, its table's leader none. */
+  {
     const size_t HDR = 0x1798ab0, REC0 = 0x1798ca8, RECSZ = 0x648;
     uint32_t u = state_user();
     if (u && *(uint32_t*)(blk + HDR) == u) {
@@ -14052,12 +14105,12 @@ static void winners_fix(unsigned char* blk, const split_t* sp, int fk, uint32_t 
              *(uint16_t*)(blk + REC0 + seen * RECSZ + 2) == 0) seen++;
       for (unsigned j = 0; j < seen; ) {
         unsigned char* rj = blk + REC0 + j * RECSZ;
-        if (*(uint16_t*)rj != g_tl_total) { j++; continue; }
+        if (*(uint16_t*)rj != sp->total) { j++; continue; }
         if (REC0 + (seen + 1) * RECSZ > WIN_HI) break;
         memmove(rj, rj + RECSZ, (size_t)(seen - j) * RECSZ);     /* the empty slot after the last comes along */
         seen--;
         logf("fl26swiss: trophy cabinet -- day %d: the accumulated table's title (reg %u) taken out; %u record(s) left",
-             d, (unsigned)g_tl_total, seen);
+             d, (unsigned)sp->total, seen);
       }
     }
   }
@@ -14105,7 +14158,7 @@ static void winners_fix(unsigned char* blk, const split_t* sp, int fk, uint32_t 
        entries; the regular phases (191 on day 0, 192) have entries of their own, under the same
        competition, never seen by the probe (day 0 is not one of its days). They give no title. */
     int phase = reg == sp->regular || (reg && (reg == sp->group[0] || reg == sp->group[1] || reg == sp->group[2]));
-    int total = futve_cal() && reg == g_tl_total;   /* fase 4: "Liga FUTVE" (11) lists the finals' champion */
+    int total = reg == sp->total;          /* fase 4: "Liga FUTVE" (11) lists the finals' champion (fase 6: any title league) */
     if (!(phase || total) || *(uint16_t*)(blk + off + 2) != 0) continue;   /* 30.10.: 11 and 263 are the game's again */
     uint32_t club = *(uint32_t*)(blk + off + 4);
     if (club != 0xffffffffu && !(club >> 14)) continue;
@@ -14362,24 +14415,24 @@ static void supercup_title_fix(void)
   }
 }
 
-static void honours_fix(void)
+/* one title league (fl26_swiss_title_league): total, its competition */
+static void honours_fix_one(uint16_t total, uint16_t tcid)
 {
-  if (!g_tl_total || !g_tl_cid) return;
+  if (!total || !tcid) return;
   int d = today();
   /* January..June: the season of the finals; fase 4 (January-December Liga FUTVE): from May on,
      the Apertura's final in June to the Final del FUTVE in December */
-  if (d < 0 || (futve_cal() ? d < 120 : d > 180)) return;
-  const split_t* sp = 0;
-  for (int i = 0; i < g_nsplits; i++) if (SPLITS[i].total == g_tl_total) sp = &SPLITS[i];
-  int fk = -1;
-  for (int k = 0; k < g_nccup; k++) if (g_ccup[k].src[0]) fk = k;
+  if (d < 0 || (calyear(total) ? d < 120 : d > 180)) return;
+  const split_t* sp = split_of_total(total);
+  int fk = grand_final_of(total);
   if (!sp || fk < 0) return;
+  uint16_t ffcid = g_ccup_fcid[fk];
   unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
   unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
   uint32_t u = state_user();
   if (!blk || !u) return;
   unsigned char* h = blk + HON_OFF;
-  if (futve_cal()) { unsigned char* hn = hon_block_now(blk, u); if (hn) h = hn; }   /* fase 4: the running season's block */
+  if (calyear(total)) { unsigned char* hn = hon_block_now(blk, u); if (hn) h = hn; }   /* fase 4: the running season's block */
   uint16_t y = *(uint16_t*)h; uint8_t mo = h[2];
   static int said_bad = 0;
   if (y < 2000 || y > 2200 || mo < 1 || mo > 12 || *(uint32_t*)(h + 8) != u) {
@@ -14399,13 +14452,13 @@ static void honours_fix(void)
      the rows of the two regular phases (191, 192: no title of their own) and of a lost final. In:
      the club that won both feeding finals, whose Final del FUTVE is not played, gets that row. */
   uint32_t w1 = ccup_src_winner(g_ccup[fk].src[0]), w2 = ccup_src_winner(g_ccup[fk].src[1]);
-  int want = g_ff_cid && w1 && w2 && same_club(w1, w2) && same_club(w1, u);
+  int want = ffcid && w1 && w2 && same_club(w1, w2) && same_club(w1, u);
   /* fase 4 (31.10.): the running season's block (hon_block_now) counts titles (+6: the club's
      number of that title so far -- 2026's "142/261/2"); the Liga FUTVE row there takes the count
      of the blocks before it plus one. The champion of the finals decides it, as above. */
   uint8_t ffcount = 1;
-  if (futve_cal()) {
-    if (!want && g_ff_cid && champ && same_club(champ, u)) want = 1;   /* a played final the game writes itself: have_ff below */
+  if (calyear(total)) {
+    if (!want && ffcid && champ && same_club(champ, u)) want = 1;   /* a played final the game writes itself: have_ff below */
     for (size_t off = HON_OFF - 0x20000; off < HON_OFF + 0x40000; off += 4) {
       unsigned char* hb = blk + off;
       if (hb == h || *(uint16_t*)hb < 2000 || *(uint16_t*)hb >= y || hb[2] < 1 || hb[2] > 12 || *(uint32_t*)(hb + 8) != u) continue;
@@ -14426,7 +14479,7 @@ static void honours_fix(void)
     if (r->cid == 0xffffffffu) continue;
     int league = r->reg == sp->regular ||
                  (r->reg && (r->reg == sp->group[0] || r->reg == sp->group[1] || r->reg == sp->group[2])) ||
-                 (futve_cal() && r->reg == g_tl_total);   /* fase 4: the table leader's title is no title */
+                 r->reg == total;          /* fase 4: the table leader's title is no title (fase 6: any title league) */
     int ffwin = 0;
     have_ff |= r->reg == g_ccup[fk].ko && r->won;
     /* 30.10. (screenshot: Liga FUTVE, Final del Apertura, Copa Venezuela with rows 142 won, 131 won
@@ -14439,7 +14492,7 @@ static void honours_fix(void)
     keep[n++] = *r;
   }
   if (want && !have_ff && n < HON_ROWS) {
-    hon_row_t t = { g_ff_cid, g_ccup[fk].ko, ffcount, 0, 0 };
+    hon_row_t t = { ffcid, g_ccup[fk].ko, ffcount, 0, 0 };
     keep[n++] = t;
   }
   hon_row_t out[HON_ROWS];
@@ -14454,6 +14507,10 @@ static void honours_fix(void)
          want && !have_ff ? ", the Liga FUTVE given: both finals won" : "", champ, u);
   }
   winners_fix(blk, sp, fk, champ, d);
+}
+static void honours_fix(void)
+{
+  for (int i = 0; i < g_ntl; i++) honours_fix_one(g_tl_tot[i], g_tl_cids[i]);
 }
 
 

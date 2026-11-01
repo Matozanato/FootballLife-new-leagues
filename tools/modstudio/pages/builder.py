@@ -756,6 +756,18 @@ class LeagueDialog(Dialog):
         self.form.addRow(_("Final names"), row(self.po_names["final_apertura"], self.fa_logo,
                                                self.po_names["final_clausura"], self.fc_logo))
         self.form.addRow("", hint(_("the finals of playoffs of two groups of four, with their logos")))
+        self.gf = QComboBox()
+        for k, t in ((None, _("no grand final")), ("two_legs", _("two legs")), ("single", _("one match"))):
+            self.gf.addItem(t, k)
+        g0 = ap.get("grand_final")
+        self.gf.setCurrentIndex(max(0, self.gf.findData("two_legs" if g0 is True else g0 or None)))
+        self.po_names["grand_final"].setPlaceholderText(_("(the league's name + Grand Final)"))
+        self.gf_logo = PictureField(logos.get("grand_final"), 48)
+        self.form.addRow(_("Grand final"), row(self.gf, self.po_names["grand_final"], self.gf_logo, helpmark(
+            "After the Clausura's final, the Apertura's and the Clausura's final winners meet, over two legs "
+            "or one match. Its winner is the league's champion: the title has the league's name, and it is "
+            "the champion that plays the super cup. A club that won both finals is champion with no match.")))
+        self.gf.currentIndexChanged.connect(lambda _i: self.playoff_state())
         self.po.currentIndexChanged.connect(lambda _i: self.playoff_state())
         self.po_fmt.currentIndexChanged.connect(lambda _i: self.playoff_state())
         self.playoff_state()
@@ -946,8 +958,11 @@ class LeagueDialog(Dialog):
         eight = self.po.currentData() == B.PLAYOFF_SIZES[0]
         self.po_fmt.setEnabled(eight and self.po.isEnabled())
         groups = eight and self.po_fmt.currentData() == "groups" and self.po.isEnabled()
-        for w in (self.po_names["final_apertura"], self.po_names["final_clausura"], self.fa_logo, self.fc_logo):
+        for w in (self.po_names["final_apertura"], self.po_names["final_clausura"], self.fa_logo, self.fc_logo,
+                  self.gf):
             w.setEnabled(groups)
+        for w in (self.po_names["grand_final"], self.gf_logo):
+            w.setEnabled(groups and self.gf.currentData() is not None)
         for k in ("playoff_apertura", "playoff_clausura"):
             self.po_names[k].setEnabled(self.po.currentData() != 0 and self.po.isEnabled())
 
@@ -988,11 +1003,13 @@ class LeagueDialog(Dialog):
         out = {"playoff": po}
         if po == B.PLAYOFF_SIZES[0] and self.po_fmt.currentData() == "groups":
             out["playoff_format"] = "groups"
+            if self.gf.currentData():
+                out["grand_final"] = self.gf.currentData()
         names = {k: e.text().strip() for k, e in self.po_names.items() if e.text().strip()}
         if names:
             out["names"] = names
         logos = {k: v for k, v in (self.ap_keep.get("logos") or {}).items() if k.startswith("playoff_")}
-        for k, f in (("final_apertura", self.fa_logo), ("final_clausura", self.fc_logo)):
+        for k, f in (("final_apertura", self.fa_logo), ("final_clausura", self.fc_logo), ("grand_final", self.gf_logo)):
             if f.path:
                 logos[k] = f.path
         if logos:
