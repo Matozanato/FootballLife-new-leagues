@@ -236,6 +236,11 @@ with `game.save_root` -- the same rule, checked against each other by `tools/tes
   (`kolike=`, the Belgium Super Cup's row), the better placed club of the regular phase first.
   `tools/futve_world.py` builds the world; [futve-playoff.md](futve-playoff.md) has the format,
   the in-game tests and their sandbox (`tools/futve_test.py`).
+- **The trophy cabinet** (the Palmarés): the records of the user's titles in the career block, their
+  lists of winners and dates, and the titles the DLL writes where the game does not (our super cups,
+  the final of a play-off with groups, the league title of a final of two cups), merges and the
+  palmarés file. [palmares.md](palmares.md); `test_palmares.c` (`tools/test_palmares.py`) checks it
+  offline.
 - **Constant:** `TODAY_OFF` 0x19115e4.
 - **League phase table of a past season** (`lp_table`, 0.2.2): the play-off and the round of 16
   read the league phase table through 0x14158b6f0, which takes the competition's newest season.

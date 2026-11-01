@@ -13714,21 +13714,70 @@ static void tp_hex(const unsigned char* p, char* out)
    first season's, not the running one. The season blocks of the user's club around it: every
    {u16 year 2000..2200, u8 month 1..12, ...} with the user's club at +8, the latest year taken.
    Said once a session (every candidate), and again when the latest moves. */
+/* ---- the trophy cabinet: the user's titles in the Palmarés ----
+ *
+ * The career block holds the user's trophy cabinet: a header with the user's club at CAB_HDR, then
+ * one record of CAB_RECSZ bytes per competition won, in the order first won, up to the first empty
+ * one (regulation 0xffff). A record is {u16 regulation, u16 0} and two parallel lists of
+ * CAB_N entries: the winners (u32 club) from +4 and the dates (u16 year, u8 month, u8 day; an
+ * empty date is ffff0000) from CAB_DAT. 261 won twice reads "05010000 0680ed45 0680ed45 ffffffff"
+ * and, at CAB_DAT, "e9070611 ea070611": the Palmarés counts the dates, one row per record.
+ *
+ * The game writes this for its own competitions and for most of ours. Where it does not -- a super
+ * cup of ours (registered outside the game's own stage run), a play-off final played while another
+ * knockout of ours is still running, the champion of a final of two cups that was never played --
+ * the DLL writes it: the club and the date on the record's lists, or a record of its own after the
+ * last. A title is in the cabinet when the record has a date of that year (cab_has_year): never the
+ * state file's marks, which outlive a career and a save loaded from before the title. */
+#define CAB_HDR   0x1798ab0
+#define CAB_REC0  0x1798ca8
+#define CAB_RECSZ 0x648
+#define CAB_DAT   0x324
+#define CAB_N     200
+#define CAB_END   0x17b0000                 /* the end of the region the records may reach (WIN_HI) */
 static unsigned char* hon_block_now(unsigned char* blk, uint32_t u);
-/* fase 4 (31.10., Felix: one Liga FUTVE row, still "1"): a cabinet record (0x648 bytes) is
-   {u16 reg, u16 0} then two parallel lists of 200: the winners (u32 club) from +4 and the dates
-   (u16 year, u8 month, u8 day; empty ffff0000) from +0x324 -- 261 won twice: e9070611 ea070611.
-   The Palmares counts the dates. One win more: the club and a date on the ends of both lists, the
-   date the given one if sane and of a year not there yet, else the running season's year with the
-   last entry's month and day. Returns the wins after. */
+static unsigned char* cab_rec(unsigned char* blk, int i)
+{
+  return CAB_REC0 + (size_t)(i + 1) * CAB_RECSZ <= CAB_END ? blk + CAB_REC0 + (size_t)i * CAB_RECSZ : 0;
+}
+/* the records in use (up to the first empty one) */
+static int cab_count(unsigned char* blk)
+{
+  int n = 0;
+  for (unsigned char* r; n < 64 && (r = cab_rec(blk, n)) && *(uint16_t*)r != 0xffff; n++) {}
+  return n;
+}
+static int cab_find(unsigned char* blk, uint16_t reg)
+{
+  int n = cab_count(blk);
+  for (int i = 0; i < n; i++) if (*(uint16_t*)cab_rec(blk, i) == reg) return i;
+  return -1;
+}
+static int rec_wins(const unsigned char* f)
+{
+  int k = 0;
+  while (k < CAB_N && *(const uint32_t*)(f + 4 + 4 * k) != 0xffffffffu) k++;
+  return k;
+}
+/* a date for the lists: year, then the day of the year (0 = 1 January) as month and day */
+static uint32_t cab_date(int year, int doy)
+{
+  static const int MD[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+  int mo = 0;
+  if (doy < 0) doy = 0;
+  while (mo < 11 && doy >= MD[mo]) { doy -= MD[mo]; mo++; }
+  return (uint32_t)(uint16_t)year | ((uint32_t)(mo + 1) << 16) | ((uint32_t)(doy + 1) << 24);
+}
+/* One win more: the club and a date on the ends of both lists, the date the given one if sane and
+   of a year not there yet, else the running season's year with the last entry's month and day.
+   Returns the wins after. */
 static unsigned rec_append(unsigned char* blk, uint32_t u, unsigned char* f, uint32_t club, uint32_t date)
 {
-  const size_t DAT = 0x324, N = 200;
-  size_t k = 0; while (k < N && *(uint32_t*)(f + 4 + 4 * k) != 0xffffffffu) k++;
-  if (k >= N) return (unsigned)k;
+  size_t k = (size_t)rec_wins(f);
+  if (k >= CAB_N) return (unsigned)k;
   uint16_t dy = (uint16_t)date, last = 0; uint32_t lastd = 0;
   int ok = dy >= 2000 && dy < 2200;
-  for (size_t j = 0; j < k; j++) { uint32_t dj = *(uint32_t*)(f + DAT + 4 * j); if ((uint16_t)dj == dy) ok = 0;
+  for (size_t j = 0; j < k; j++) { uint32_t dj = *(uint32_t*)(f + CAB_DAT + 4 * j); if ((uint16_t)dj == dy) ok = 0;
     if ((uint16_t)dj != 0xffff) { lastd = dj; last = (uint16_t)dj; } }
   if (!ok) {
     unsigned char* hn = u ? hon_block_now(blk, u) : 0;
@@ -13738,36 +13787,114 @@ static unsigned rec_append(unsigned char* blk, uint32_t u, unsigned char* f, uin
     if (!lastd) date = 0x0c0b0000u | y;                    /* 11 December */
   }
   *(uint32_t*)(f + 4 + 4 * k) = club;
-  *(uint32_t*)(f + DAT + 4 * k) = date;
+  *(uint32_t*)(f + CAB_DAT + 4 * k) = date;
   return (unsigned)(k + 1);
 }
 /* the winners a record has no date for (a merge before 31.10. moved only the clubs) get one */
 static int rec_dates_fill(unsigned char* blk, uint32_t u, unsigned char* f)
 {
-  const size_t DAT = 0x324, N = 200;
-  size_t k = 0; while (k < N && *(uint32_t*)(f + 4 + 4 * k) != 0xffffffffu) k++;
-  size_t dk = 0; while (dk < N && *(uint16_t*)(f + DAT + 4 * dk) != 0xffff) dk++;
+  size_t k = (size_t)rec_wins(f);
+  size_t dk = 0; while (dk < CAB_N && *(uint16_t*)(f + CAB_DAT + 4 * dk) != 0xffff) dk++;
   int n = 0;
-  uint32_t tail[200]; size_t nt = 0;
+  uint32_t tail[CAB_N]; size_t nt = 0;
   for (size_t j = dk; j < k; j++) { tail[nt++] = *(uint32_t*)(f + 4 + 4 * j); *(uint32_t*)(f + 4 + 4 * j) = 0xffffffffu; }
   for (size_t j = 0; j < nt; j++) { rec_append(blk, u, f, tail[j], 0); n++; }
   return n;
 }
-/* fase 5 (01.11., Felix: the Liga FUTVE gone from the Palmarés): a title of year y is in the cabinet
-   -- a record of reg with a date of that year. The title marks of fl26swiss-state.bin are not
-   enough: they outlive the career (a new one with the same club, or a save loaded from before the
-   title, kept the mark of a title its cabinet never had). The cabinet itself is the truth. */
+/* a title of year y is in the cabinet: a record of reg with a date of that year */
 static int cab_has_year(unsigned char* blk, uint16_t reg, int y)
 {
-  const size_t REC0 = 0x1798ca8, RECSZ = 0x648, DAT = 0x324;
-  for (unsigned s_ = 0; s_ < 64 && REC0 + (s_ + 1) * RECSZ <= 0x17b0000u; s_++) {   /* WIN_HI */
-    unsigned char* f = blk + REC0 + s_ * RECSZ;
-    if (*(uint16_t*)f == 0xffff) break;
+  int n = cab_count(blk);
+  for (int i = 0; i < n; i++) {
+    unsigned char* f = cab_rec(blk, i);
     if (*(uint16_t*)f != reg) continue;
-    for (int q = 0; q < 200 && *(uint32_t*)(f + 4 + 4 * q) != 0xffffffffu; q++)
-      if (*(uint16_t*)(f + DAT + 4 * q) == (uint16_t)y) return 1;
+    for (int q = 0; q < CAB_N && *(uint32_t*)(f + 4 + 4 * q) != 0xffffffffu; q++)
+      if (*(uint16_t*)(f + CAB_DAT + 4 * q) == (uint16_t)y) return 1;
   }
   return 0;
+}
+/* A title of reg won by club on date (year in its low word): nothing when the cabinet has that
+   year's already; else on the lists of reg's record, or a record of its own after the last -- the
+   last record's bytes as the model, its lists emptied. 0 already there, the wins after, -1 no room. */
+static int cab_title_add(unsigned char* blk, uint32_t u, uint16_t reg, uint32_t club, uint32_t date)
+{
+  if (cab_has_year(blk, reg, (uint16_t)date)) return 0;
+  int i = cab_find(blk, reg);
+  if (i >= 0) return (int)rec_append(blk, u, cab_rec(blk, i), club, date);
+  int n = cab_count(blk);
+  unsigned char* dst = cab_rec(blk, n);
+  if (!n || !dst || *(uint16_t*)dst != 0xffff) return -1;
+  memcpy(dst, cab_rec(blk, n - 1), CAB_RECSZ);
+  memset(dst + 4, 0xff, CAB_DAT - 4);
+  for (int q = 0; q < CAB_N; q++) *(uint32_t*)(dst + CAB_DAT + 4 * q) = 0x0000ffffu;
+  *(uint16_t*)dst = reg; *(uint16_t*)(dst + 2) = 0;
+  return (int)rec_append(blk, u, dst, club, date);
+}
+/* A competition the cabinet holds twice shows as two rows ("Liga FUTVE 1" twice): the second's
+   winners and dates go on the end of the first's lists and the records after it move up one.
+   Returns the records merged. */
+static int cab_merge(unsigned char* blk, uint32_t u, uint16_t reg)
+{
+  int first = -1, cnt = cab_count(blk), merged = 0;
+  for (int i = 0; i < cnt; ) {
+    unsigned char* r = cab_rec(blk, i);
+    if (*(uint16_t*)r != reg) { i++; continue; }
+    if (first < 0) { first = i; i++; continue; }
+    if (!cab_rec(blk, cnt)) break;
+    unsigned char* f = cab_rec(blk, first);
+    for (int q = 0; q < CAB_N && *(uint32_t*)(r + 4 + 4 * q) != 0xffffffffu; q++)
+      rec_append(blk, u, f, *(uint32_t*)(r + 4 + 4 * q), *(uint32_t*)(r + CAB_DAT + 4 * q));
+    memmove(r, r + CAB_RECSZ, (size_t)(cnt - i) * CAB_RECSZ);   /* the empty one after the last comes along */
+    cnt--; merged++;
+  }
+  if (first >= 0) rec_dates_fill(blk, u, cab_rec(blk, first));
+  return merged;
+}
+/* fl26swiss-palmares.txt beside fl26swiss-state.bin: titles of past seasons the DLL missed, one
+   line a competition, "<reg> <year> <year> ...". Each listed year is made sure of on the record
+   (the user's club, dated 31 January); a date of a year not listed and before the last listed one
+   goes (a copy's wrong date); later titles are not touched. The file is for the career that is
+   loaded when it is read: used once, then renamed to .applied. Returns the lines applied. */
+static int cab_file_apply(unsigned char* blk, uint32_t u, const char* path)
+{
+  HANDLE fh = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+  if (fh == INVALID_HANDLE_VALUE) return 0;
+  char tx[2048]; DWORD got = 0;
+  ReadFile(fh, tx, sizeof tx - 1, &got, 0); CloseHandle(fh); tx[got] = 0;
+  int applied = 0;
+  for (char* line = strtok(tx, "\r\n"); line; line = strtok(0, "\r\n")) {
+    int v[24], nv = 0; char* q = line;
+    while (nv < 24) { char* e; long x = strtol(q, &e, 10); if (e == q) break; v[nv++] = (int)x; q = e; }
+    if (nv < 2 || v[0] <= 0 || v[0] > 1023) continue;
+    uint16_t reg = (uint16_t)v[0]; int maxy = 0;
+    for (int k = 1; k < nv; k++) if (v[k] > maxy) maxy = v[k];
+    int i = cab_find(blk, reg);
+    if (i < 0) { logf("fl26swiss: palmares file -- reg %u: no record in the cabinet, line left", (unsigned)reg); continue; }
+    unsigned char* f = cab_rec(blk, i);
+    uint32_t kc[CAB_N], kd[CAB_N]; int nk = 0, dropped = 0, added = 0;
+    for (int k = 0; k < CAB_N && *(uint32_t*)(f + 4 + 4 * k) != 0xffffffffu; k++) {
+      uint32_t dt = *(uint32_t*)(f + CAB_DAT + 4 * k); int yy = (uint16_t)dt, listed = 0;
+      for (int j = 1; j < nv; j++) listed |= v[j] == yy;
+      if ((uint16_t)dt == 0xffff || (!listed && yy < maxy)) { dropped++; continue; }
+      kc[nk] = *(uint32_t*)(f + 4 + 4 * k); kd[nk++] = dt;
+    }
+    for (int j = 1; j < nv && nk < CAB_N; j++) {
+      int there = 0; for (int k = 0; k < nk; k++) there |= (int)(uint16_t)kd[k] == v[j];
+      if (!there) { kc[nk] = u; kd[nk++] = cab_date(v[j], 30); added++; }
+    }
+    if (!dropped && !added) continue;
+    for (int a = 1; a < nk; a++) for (int b = a; b > 0 && (uint16_t)kd[b] < (uint16_t)kd[b - 1]; b--) {
+      uint32_t t1 = kc[b]; kc[b] = kc[b - 1]; kc[b - 1] = t1; t1 = kd[b]; kd[b] = kd[b - 1]; kd[b - 1] = t1; }
+    for (int k = 0; k < CAB_N; k++) {
+      *(uint32_t*)(f + 4 + 4 * k) = k < nk ? kc[k] : 0xffffffffu;
+      *(uint32_t*)(f + CAB_DAT + 4 * k) = k < nk ? kd[k] : 0x0000ffffu;
+    }
+    applied++;
+    logf("fl26swiss: palmares file -- reg %u: %d win(s) added, %d wrong date(s) dropped; %d title(s) now", (unsigned)reg, added, dropped, nk);
+  }
+  char done[MAX_PATH + 96]; snprintf(done, sizeof done, "%s.applied", path);
+  if (MoveFileExA(path, done, MOVEFILE_REPLACE_EXISTING)) logf("fl26swiss: palmares file -- applied, renamed to %s", done);
+  return applied;
 }
 static unsigned char* hon_block_now(unsigned char* blk, uint32_t u)
 {
@@ -13845,54 +13972,12 @@ static void winners_fix(unsigned char* blk, const split_t* sp, int fk, uint32_t 
         if (((l1 >> 14) && !same_club(l1, aw)) || ((l2 >> 14) && !same_club(l2, aw))) aw = 0;
       }
     }
-    const size_t HDR = 0x1798ab0, CNT = 0x1798b82, REC0 = 0x1798ca8, RECSZ = 0x648;
-    if (aw && u && same_club(aw, u) && *(uint32_t*)(blk + HDR) == u) {
-      unsigned cnt = *(uint16_t*)(blk + CNT), seen = 0, has = 0;
-      while (seen < 64 && REC0 + (seen + 1) * RECSZ <= WIN_HI && *(uint16_t*)(blk + REC0 + seen * RECSZ) != 0xffff &&
-             *(uint16_t*)(blk + REC0 + seen * RECSZ + 2) == 0) {
-        has |= *(uint16_t*)(blk + REC0 + seen * RECSZ) == ffk;
-        seen++;
-      }
-      /* 30.10.: +0x1798b82 stayed 3 with the game's own fourth record (the Final del Clausura) in
-         place for days -- not a count. The record is appended where the next one is empty, and the
-         cabinet's header (+0x1798ab0..+0x1798ca8) is logged before and after, to find the count. */
-      /* fase 4: "already in the cabinet" is this season's, not any season's -- the first Liga FUTVE's
-         record kept the second one out (31.10.). By the title marks (regulation, calendar year). */
-      int ty = game_date() / 365;
-      if (futve_cal()) has = cab_has_year(blk, ffk, ty);
-      if (has) { /* already in the cabinet */ }
-      else if (!seen || REC0 + (seen + 1) * RECSZ > WIN_HI ||
-               *(uint16_t*)(blk + REC0 + seen * RECSZ) != 0xffff) {
+    if (aw && u && same_club(aw, u) && *(uint32_t*)(blk + CAB_HDR) == u) {
+      int now = cab_title_add(blk, u, ffk, aw, cab_date(game_date() / 365, d));
+      if (now > 0) logf("fl26swiss: trophy cabinet -- day %d: the automatic league title (reg %u) added, %d title(s) now", d, (unsigned)ffk, now);
+      else if (now < 0) {
         static int said = 0;
-        if (!said++) logf("fl26swiss: trophy cabinet -- day %d: %u record(s), no empty slot after them; the automatic Liga FUTVE not added", d, seen);
-      } else {
-        unsigned char* dst = blk + REC0 + seen * RECSZ;
-        /* fase 4 (31.10.): a competition won before has its record -- the winner goes on its list */
-        int same = -1;
-        if (futve_cal()) for (unsigned j = 0; j < seen; j++) if (*(uint16_t*)(blk + REC0 + j * RECSZ) == ffk) { same = (int)j; break; }
-        if (same >= 0) {
-          unsigned char* f = blk + REC0 + same * RECSZ;
-          size_t fe = 4 * (size_t)rec_append(blk, u, f, aw, 0);
-          logf("fl26swiss: trophy cabinet -- day %d: the automatic Liga FUTVE added to record %d (reg %u), %u winner(s) now",
-               d, same, (unsigned)ffk, (unsigned)(fe / 4));
-          tmark_add(ffk, ty); state_store();
-        } else {
-        /* fase 4 (31.10.): the second Liga FUTVE showed as a second "Liga FUTVE 1" -- it was a copy of
-           the record before it (the Supercopa's), the first one a copy of the Final del Clausura's:
-           the Palmares groups by more than the regulation. A record of the same title is the model. */
-        unsigned tpl = seen - 1;
-        for (unsigned j = 0; j < seen; j++) if (*(uint16_t*)(blk + REC0 + j * RECSZ) == ffk) { tpl = j; break; }
-        memcpy(dst, blk + REC0 + tpl * RECSZ, RECSZ);
-        *(uint16_t*)dst = ffk; *(uint16_t*)(dst + 2) = 0; *(uint32_t*)(dst + 4) = aw;
-        if (futve_cal()) {          /* fase 5: a record of its own -- not the template's other wins and dates */
-          memset(dst + 4, 0xff, 0x324 - 4);
-          for (int q = 0; q < 200; q++) *(uint32_t*)(dst + 0x324 + 4 * q) = 0x0000ffffu;
-          rec_append(blk, u, dst, aw, 0);
-        }
-        logf("fl26swiss: trophy cabinet -- day %d: the automatic Liga FUTVE added as title %u (reg %u, blk+%#llx; +0x1798b82 = %u)", d,
-             seen + 1, (unsigned)ffk, (unsigned long long)(REC0 + seen * RECSZ), cnt);
-        if (futve_cal()) { tmark_add(ffk, ty); state_store(); }
-        }
+        if (!said++) logf("fl26swiss: trophy cabinet -- day %d: no empty record left; the automatic league title not added", d);
       }
     }
   }
@@ -14005,91 +14090,22 @@ static void cabinet_watch(void)
   }
   buf[n] = 0;
   int d = today();
-  /* fase 4 (31.10., Felix: "Liga FUTVE 1" twice): a record is one competition, its winners a list of
-     u32 club ids from +4 (261 won twice: +4 and +8 the club, +0xc ffffffff) -- the Palmares count is
-     that list's length. A second record of the same regulation shows as a second row. It is merged:
-     its list goes on the end of the first's, the records after it move up one. */
-  if (futve_cal()) {
-    static const uint16_t MINE[2] = { 263, 256 };
-    for (int t = 0; t < 2; t++) {
-      int first = -1, cnt = 0;
-      while (cnt < 64 && REC0 + (cnt + 1) * RECSZ <= WIN_HI && *(uint16_t*)(blk + REC0 + cnt * RECSZ) != 0xffff) cnt++;
-      for (int i = 0; i < cnt; ) {
-        unsigned char* r = blk + REC0 + i * RECSZ;
-        if (*(uint16_t*)r != MINE[t]) { i++; continue; }
-        if (first < 0) { first = i; i++; continue; }
-        if (REC0 + (cnt + 1) * RECSZ > WIN_HI) break;
-        unsigned char* f = blk + REC0 + first * RECSZ;
-        int moved = 0; unsigned now = 0;
-        for (size_t q = 0; q < 200 && *(uint32_t*)(r + 4 + 4 * q) != 0xffffffffu; q++, moved++)
-          now = rec_append(blk, u, f, *(uint32_t*)(r + 4 + 4 * q), *(uint32_t*)(r + 0x324 + 4 * q));
-        size_t fe = 4 + 4 * (size_t)now;
-        memmove(r, r + RECSZ, (size_t)(cnt - i) * RECSZ);          /* the empty slot after the last comes along */
-        cnt--;
-        logf("fl26swiss: trophy cabinet -- day %d: record %d (reg %u) merged into record %d (%d winner(s) moved, %u now)",
-             d, i, (unsigned)MINE[t], first, moved, (unsigned)((fe - 4) / 4));
-      }
-      if (first >= 0) {
-        int nf = rec_dates_fill(blk, u, blk + REC0 + first * RECSZ);
-        if (nf) logf("fl26swiss: trophy cabinet -- day %d: record %d (reg %u): %d win(s) without a date dated", d, first, (unsigned)MINE[t], nf);
-      }
-    }
+  /* a competition of ours held twice is merged (super cups, the knockouts of our cups) */
+  for (int i = 0; i < g_naug_scup + g_ncal_scup + g_nccup; i++) {
+    uint16_t reg = i < g_naug_scup ? g_aug_scup[i].reg : i < g_naug_scup + g_ncal_scup ? g_cal_scup[i - g_naug_scup].reg
+                                                       : g_ccup[i - g_naug_scup - g_ncal_scup].ko;
+    int k = reg ? cab_merge(blk, u, reg) : 0;
+    if (k) logf("fl26swiss: trophy cabinet -- day %d: reg %u held %d time(s) more, merged into one record (%d title(s))",
+                d, (unsigned)reg, k, rec_wins(cab_rec(blk, cab_find(blk, reg))));
   }
-  /* fase 4 (31.10., Felix: three Supercopas won, the Palmares says 1 -- supercup_title_fix took the
-     record among the last three for "already this season's"): titles of past seasons the DLL missed,
-     from fl26swiss-palmares.txt beside fl26swiss-state.bin, one line per competition:
-     "<reg> <year> <year> ...". Each listed year the user's club won is made sure of in its record
-     (club and date, 31 January); a date of a year not listed and before the last listed one goes
-     (a copy's wrong date). Later titles are not touched, so the file can stay. */
-  if (futve_cal()) {
+  {
     static int done = 0;
     const char* sp = state_path();
     if (!done && sp) {
       done = 1;
       char fp[MAX_PATH + 96]; snprintf(fp, sizeof fp, "%s", sp);
-      char* sl = strrchr(fp, '\\'); if (sl) snprintf(sl + 1, sizeof fp - (size_t)(sl + 1 - fp), "fl26swiss-palmares.txt");
-      HANDLE fh = sl ? CreateFileA(fp, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0) : INVALID_HANDLE_VALUE;
-      if (fh != INVALID_HANDLE_VALUE) {
-        char tx[2048]; DWORD got = 0;
-        ReadFile(fh, tx, sizeof tx - 1, &got, 0); CloseHandle(fh); tx[got] = 0;
-        for (char* line = strtok(tx, "\r\n"); line; line = strtok(0, "\r\n")) {
-          int v[24], nv = 0; char* q = line;
-          while (nv < 24) { char* e; long x = strtol(q, &e, 10); if (e == q) break; v[nv++] = (int)x; q = e; }
-          if (nv < 2 || v[0] <= 0 || v[0] > 1023) continue;
-          uint16_t reg = (uint16_t)v[0]; int maxy = 0;
-          for (int k = 1; k < nv; k++) if (v[k] > maxy) maxy = v[k];
-          unsigned char* f = 0; int cnt = 0;
-          while (cnt < 64 && REC0 + (cnt + 1) * RECSZ <= WIN_HI && *(uint16_t*)(blk + REC0 + cnt * RECSZ) != 0xffff) {
-            if (*(uint16_t*)(blk + REC0 + cnt * RECSZ) == reg && !f) f = blk + REC0 + cnt * RECSZ;
-            cnt++;
-          }
-          if (!f) { logf("fl26swiss: palmares file -- reg %u: no record in the cabinet, line left", (unsigned)reg); continue; }
-          /* the dated entries kept: listed years, or later than the last listed */
-          uint32_t kc[200], kd[200]; int nk = 0, dropped = 0, added = 0;
-          for (int k = 0; k < 200 && *(uint32_t*)(f + 4 + 4 * k) != 0xffffffffu; k++) {
-            uint32_t dt = *(uint32_t*)(f + 0x324 + 4 * k); int yy = (uint16_t)dt, listed = 0;
-            for (int j = 1; j < nv; j++) listed |= v[j] == yy;
-            if ((uint16_t)dt == 0xffff || (!listed && yy < maxy)) { dropped++; continue; }
-            kc[nk] = *(uint32_t*)(f + 4 + 4 * k); kd[nk++] = dt;
-          }
-          for (int j = 1; j < nv && nk < 200; j++) {
-            int there = 0; for (int k = 0; k < nk; k++) there |= (int)(uint16_t)kd[k] == v[j];
-            if (!there) { kc[nk] = u; kd[nk++] = (uint32_t)(uint16_t)v[j] | (1u << 16) | (31u << 24); added++; }
-          }
-          if (!dropped && !added) continue;
-          for (int a = 1; a < nk; a++) for (int b = a; b > 0 && (uint16_t)kd[b] < (uint16_t)kd[b - 1]; b--) {
-            uint32_t t1 = kc[b]; kc[b] = kc[b - 1]; kc[b - 1] = t1; t1 = kd[b]; kd[b] = kd[b - 1]; kd[b - 1] = t1; }
-          for (int k = 0; k < 200; k++) {
-            *(uint32_t*)(f + 4 + 4 * k) = k < nk ? kc[k] : 0xffffffffu;
-            *(uint32_t*)(f + 0x324 + 4 * k) = k < nk ? kd[k] : 0x0000ffffu;
-          }
-          logf("fl26swiss: palmares file -- reg %u: %d win(s) added, %d wrong date(s) dropped; %d title(s) now", (unsigned)reg, added, dropped, nk);
-        }
-        /* fase 5 (01.11., Felix: no titles of another career): the file is for the career it was
-           written for -- used once, then renamed, so a new career never gets its years */
-        char done[MAX_PATH + 96]; snprintf(done, sizeof done, "%s.applied", fp);
-        if (MoveFileExA(fp, done, MOVEFILE_REPLACE_EXISTING)) logf("fl26swiss: palmares file -- applied, renamed to %s", done);
-      }
+      char* sl = strrchr(fp, '\\');
+      if (sl) { snprintf(sl + 1, sizeof fp - (size_t)(sl + 1 - fp), "fl26swiss-palmares.txt"); cab_file_apply(blk, u, fp); }
     }
   }
   if (strcmp(buf, last)) {
@@ -14213,81 +14229,47 @@ static void futve_clash_report(void)
          d, nf, no, nsud, nfr, clashes);
 }
 
-/* fase 5 (01.11., Felix: "gané la final del apertura pero no me dio el palmarés"): with the modern
-   CONMEBOL competitions the game wrote no title for the Final del Apertura (261, day 167) -- the
-   Final del Clausura's (262, day 335) it still wrote. Read from the cabinet three days after a Liga
-   FUTVE play-off final the user's club won: a record of that final dated this year, else the DLL
-   writes it (the club and the final's date on its lists, or a new record). Once a year, by the title
-   marks; a title the game wrote is only marked. */
-static void futve_final_title_fix(void)
+/* The final of a league play-off of ours with groups (adv=1: the Apertura's or the Clausura's final)
+   the user's club won and the game wrote no title for: with the Copa Sudamericana's knockout still
+   running the game left the Final del Apertura out (Felix, 01.11.), the Final del Clausura it wrote.
+   Three days after the final, while its knockout still names the winner, a title of that year the
+   cabinet has not got is written (the final's date). A final of two cups (src=) is the league's
+   title and goes by honours_fix. */
+static void final_title_fix(void)
 {
-  if (!futve_cal()) return;
   uint32_t u = state_user();
   unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
   unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
-  const size_t HDR = 0x1798ab0, REC0 = 0x1798ca8, RECSZ = 0x648, DAT = 0x324;
-  if (!u || !blk || *(uint32_t*)(blk + HDR) != u) return;
-  int gd = game_date(), ad = abs_day(), d = today();
-  if (gd < 0 || ad < 0 || d < 0) return;
-  int gy = gd / 365;
+  int gd = game_date(), d = today();
+  if (!u || !blk || *(uint32_t*)(blk + CAB_HDR) != u || gd < 0 || d < 0) return;
   for (int k = 0; k < g_nccup; k++) {
-    if (!g_ccup[k].adv) continue;                            /* the Apertura's and the Clausura's finals */
-    uint16_t reg = g_ccup[k].ko;
-    cupwin_t* w = cupwin_of(reg);
-    if (!w || !(w->club >> 14) || !same_club(w->club, u)) continue;
-    int age = ad - w->day;
-    if (age < 3 || age > d) continue;                        /* this year's final, three days on */
-    if (cab_has_year(blk, reg, gy)) continue;
-    /* the game's own result too: a kept winner can be another career's (the state file is the
-       save folder's, every career of the club shares it) -- never a title not won in this one */
-    uint32_t live = ccup_ko_winner(reg);
+    const ccup_t* c = &g_ccup[k];
+    if (!c->adv || c->src[0] || !c->ko || !c->nd) continue;   /* a play-off of groups and a final (adv=1) */
+    int fday = c->days[c->nd - 1], age = d - fday, year = gd / 365;
+    if (age < 0) { age += 365; year--; }                 /* a final of December, read in January */
+    if (age < 3 || age > 60) continue;
+    if (cab_has_year(blk, c->ko, year)) continue;
+    uint32_t live = ccup_ko_winner(c->ko);              /* the game's own result, never a kept one */
     if (!(live >> 14) || !same_club(live, u)) continue;
-    unsigned seen = 0; int same = -1;
-    while (seen < 64 && REC0 + (seen + 1) * RECSZ <= WIN_HI && *(uint16_t*)(blk + REC0 + seen * RECSZ) != 0xffff) {
-      if (*(uint16_t*)(blk + REC0 + seen * RECSZ) == reg && same < 0) same = (int)seen;
-      seen++;
-    }
-    int fd = d - age;                                        /* the final's day of the year */
-    static const int MD[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
-    int mo = 0, dd = fd;
-    while (mo < 11 && dd >= MD[mo]) { dd -= MD[mo]; mo++; }
-    uint32_t date = (uint32_t)(uint16_t)gy | ((uint32_t)(mo + 1) << 16) | ((uint32_t)(dd + 1) << 24);
-    if (same >= 0) {
-      unsigned char* f = blk + REC0 + same * RECSZ;
-      int dated = 0;
-      for (int q = 0; q < 200 && *(uint32_t*)(f + 4 + 4 * q) != 0xffffffffu; q++) dated |= *(uint16_t*)(f + DAT + 4 * q) == (uint16_t)gy;
-      if (dated) { tmark_add(reg, gy); state_store(); logf("fl26swiss: trophy cabinet -- day %d: final %u -- the game wrote this year's title", d, (unsigned)reg); continue; }
-      unsigned now = rec_append(blk, u, f, u, date);
-      tmark_add(reg, gy); state_store();
-      logf("fl26swiss: trophy cabinet -- day %d: final %u won by the user's club on day %d -- no title from the game; added to record %d, %u title(s) now",
-           d, (unsigned)reg, fd, same, now);
-      continue;
-    }
-    if (!seen || REC0 + (seen + 1) * RECSZ > WIN_HI) continue;
-    unsigned char* dst = blk + REC0 + seen * RECSZ;
-    memcpy(dst, blk + REC0 + (seen - 1) * RECSZ, RECSZ);
-    memset(dst + 4, 0xff, DAT - 4);
-    for (int q = 0; q < 200; q++) *(uint32_t*)(dst + DAT + 4 * q) = 0x0000ffffu;
-    *(uint16_t*)dst = reg; *(uint16_t*)(dst + 2) = 0;
-    rec_append(blk, u, dst, u, date);
-    tmark_add(reg, gy); state_store();
-    logf("fl26swiss: trophy cabinet -- day %d: final %u won by the user's club on day %d -- no title from the game; written as title %u (%04u-%02d-%02d)",
-         d, (unsigned)reg, fd, seen + 1, (unsigned)gy, mo + 1, dd + 1);
+    int now = cab_title_add(blk, u, c->ko, u, cab_date(year, fday));
+    if (now > 0) logf("fl26swiss: trophy cabinet -- day %d: final %u won by the user's club on day %d -- no title from the game; written, %d title(s) now",
+                      d, (unsigned)c->ko, fday, now);
   }
 }
 
 static void supercup_title_fix(void)
 {
   int d = today();
-  /* fase 4: a January-December Super Cup of ours (the Supercopa at the end of January) as well */
+  /* an August-May super cup in July-November, a January-December one (the end of January) in
+     January-April: the days its match can be on */
   int aug = d >= 182 && d <= 330 && g_naug_scup, cal = d >= 20 && d <= 120 && g_ncal_scup;
   if (!aug && !cal) return;
   uint32_t u = state_user();
   if (!u) return;
   unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
   unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
-  const size_t HDR = 0x1798ab0, REC0 = 0x1798ca8, RECSZ = 0x648;
-  if (!blk || *(uint32_t*)(blk + HDR) != u) return;
+  int gd = game_date();
+  if (!blk || *(uint32_t*)(blk + CAB_HDR) != u || gd < 0) return;
   int na = aug ? g_naug_scup : 0, ntot = na + (cal ? g_ncal_scup : 0);
   for (int i = 0; i < ntot; i++) {
     uint16_t reg = i < na ? g_aug_scup[i].reg : g_cal_scup[i - na].reg;
@@ -14299,51 +14281,12 @@ static void supercup_title_fix(void)
       continue;
     }
     if (!same_club(w, u)) continue;
-    unsigned seen = 0;
-    while (seen < 64 && REC0 + (seen + 1) * RECSZ <= WIN_HI && *(uint16_t*)(blk + REC0 + seen * RECSZ) != 0xffff &&
-           *(uint16_t*)(blk + REC0 + seen * RECSZ + 2) == 0) seen++;
-    int has = 0;
-    if (futve_cal()) {
-      /* fase 4 (31.10.): "this season's" by the title marks; a Supercopa won before has its record,
-         the win goes on its lists (club and date, 31 January of this year) */
-      int gy = game_date() / 365;
-      if (gy <= 0 || cab_has_year(blk, reg, gy)) continue;
-      int same = -1;
-      for (unsigned j = 0; j < seen; j++) if (*(uint16_t*)(blk + REC0 + j * RECSZ) == reg) { same = (int)j; break; }
-      if (same >= 0) {
-        unsigned char* sf = blk + REC0 + same * RECSZ; int dated = 0;
-        for (int k = 0; k < 200 && *(uint32_t*)(sf + 4 + 4 * k) != 0xffffffffu; k++) dated |= *(uint16_t*)(sf + 0x324 + 4 * k) == (uint16_t)gy;
-        if (dated) { tmark_add(reg, gy); state_store(); continue; }   /* this year's already there (the palmares file) */
-        unsigned now = rec_append(blk, u, blk + REC0 + same * RECSZ, u, (uint32_t)(uint16_t)gy | (1u << 16) | (31u << 24));
-        tmark_add(reg, gy); state_store();
-        logf("fl26swiss: trophy cabinet -- day %d: Super Cup %u won by the user's club, added to record %d, %u title(s) now", d, (unsigned)reg, same, now);
-        continue;
-      }
-      tmark_add(reg, gy); state_store();
-    } else
-    for (unsigned j = seen > 3 ? seen - 3 : 0; j < seen; j++) has |= *(uint16_t*)(blk + REC0 + j * RECSZ) == reg;
-    if (has) continue;
-    if (!seen || REC0 + (seen + 1) * RECSZ > WIN_HI || *(uint16_t*)(blk + REC0 + seen * RECSZ) != 0xffff) {
+    int now = cab_title_add(blk, u, reg, u, cab_date(gd / 365, d));
+    if (now > 0) logf("fl26swiss: trophy cabinet -- day %d: Super Cup %u won by the user's club, %d title(s) now", d, (unsigned)reg, now);
+    else if (now < 0) {
       static int said = 0;
-      if (!said++) logf("fl26swiss: trophy cabinet -- day %d: Super Cup %u won, %u record(s), no empty slot; not added", d, (unsigned)reg, seen);
-      continue;
+      if (!said++) logf("fl26swiss: trophy cabinet -- day %d: Super Cup %u won, no empty record left; not added", d, (unsigned)reg);
     }
-    unsigned char* dst = blk + REC0 + seen * RECSZ;
-    unsigned tpl = seen - 1;   /* a record of the same title as the model (the Palmares groups by more than the regulation) */
-    for (unsigned j = 0; j < seen; j++) if (*(uint16_t*)(blk + REC0 + j * RECSZ) == reg) { tpl = j; break; }
-    memcpy(dst, blk + REC0 + tpl * RECSZ, RECSZ);
-    *(uint16_t*)dst = reg; *(uint16_t*)(dst + 2) = 0; *(uint32_t*)(dst + 4) = u;
-    if (futve_cal()) {
-      /* fase 5 (01.11., Felix: "2 Supercopas" after one): the copy kept the template's dates (the
-         Liga FUTVE's 2025), so this year's title was not seen and went in again two days later. A
-         record of its own: this win alone, dated 31 January of this year */
-      int gy2 = game_date() / 365;
-      memset(dst + 4, 0xff, 0x324 - 4);
-      for (int q = 0; q < 200; q++) *(uint32_t*)(dst + 0x324 + 4 * q) = 0x0000ffffu;
-      rec_append(blk, u, dst, u, (uint32_t)(uint16_t)gy2 | (1u << 16) | (31u << 24));
-    }
-    logf("fl26swiss: trophy cabinet -- day %d: Super Cup %u won by the user's club, added as title %u (blk+%#llx)",
-         d, (unsigned)reg, seen + 1, (unsigned long long)(REC0 + seen * RECSZ));
   }
 }
 
@@ -14489,7 +14432,7 @@ char daychk_handler(void* ctx)
   sched_days();
   honours_fix();                                   /* the Liga FUTVE title: only the final's champion */
   supercup_title_fix();                            /* a Super Cup of ours: the game writes no title */
-  futve_final_title_fix();                         /* fase 5: a Liga FUTVE play-off final the game left out */
+  final_title_fix();                               /* a play-off final of ours the game left out */
   futve_clash_report();                            /* fase 4, read-only: the Venezuelan days against every other */
   cabinet_watch();                                 /* the cabinet: merges, dates, the palmarés file; a change logged */
   if (g_new_career && !g_built_stored && g_built_gdate >= 0) {    /* B209: once, a club known */

@@ -5,6 +5,16 @@ released; until then this page only collects what is done and tested.
 
 ## Fixed
 
+- **A super cup of ours won again showed the first title only.** The Palmarés counts a competition's
+  dates, and the DLL took a super cup's record among the last three for "this season's" title, so a
+  second or third win was never added; a record it made itself copied the dates of the record
+  before it ("2 Supercopas" after one). Each win is now added once, dated, on one record. See
+  [palmares.md](../developers/fork/palmares.md).
+- **The final of a league play-off with groups gave no title** when another knockout of ours was
+  running (the Final del Apertura in June, with the modern Copa Sudamericana's round of 16). The DLL
+  now writes it three days after the final, if the game's own result names your club.
+- **A competition of ours in the Palmarés twice ("1" and "1" instead of "2")** is merged into one row.
+
 ## Also new
 
 - **A league play-off with its own group stage (0.2.5, the Liga FUTVE).** A world file's `ccup` line
