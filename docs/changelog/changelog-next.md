@@ -24,6 +24,13 @@ released; until then this page only collects what is done and tested.
 
 ## Also new
 
+- **A grand final for Apertura and Clausura leagues, in Mod Studio.** With playoffs of two groups of
+  four, Edit league > Grand final: the Apertura's and the Clausura's final winners meet after the
+  Clausura's final, over two legs or one match, and the winner is the league's champion -- the title
+  with the league's name in the Palmarés, the super cup. A club that wins both finals is champion
+  without it, and the table's leader gets no title. Any number of such leagues in one world. Recipe
+  key: `apertura.grand_final` ([futve-playoff.md](../developers/fork/futve-playoff.md)). A world
+  built without it does not change.
 - **Apertura and Clausura playoffs of two groups of four, in Mod Studio.** Edit league > Format has,
   next to the playoff size, "a knockout" (as before) or "two groups of four": the 8 clubs play two
   groups (1st, 4th, 5th, 8th and 2nd, 3rd, 6th, 7th), home and away, and the two group winners meet
