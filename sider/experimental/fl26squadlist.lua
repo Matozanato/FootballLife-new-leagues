@@ -11,10 +11,13 @@ game leaves that panel empty: red rows with nothing in them while scrolling thro
 built with League Info on, shows cups and promotion there instead, and that stays as it is.
 
 With the DLL a league row lists that league's clubs, in the order the club column has them, one
-name per row. Confirm, and the panel shows the players of the club under the cursor, as before.
+club per row with its crest. Confirm, and the panel shows the players of the club under the cursor, as before.
 How it does that is in tools/native/fl26squadlist.c: the panel's list already knows how to draw
 clubs (other screens use it for that); the DLL gives it the league's clubs in the league column,
-draws a squad row's name as the club's name and leaves the position badge empty.
+draws a squad row's name as the club's name and puts the club's crest where the position badge
+is. The crest cell is not in the game's layout: Mod Studio writes the world a copy of it with one
+(teamSelectSingle.bin, tools/mkteamcrest.py), at Build and when a world built before is switched
+on. Without it (another mod's layout) the badge is left empty.
 
 (2026-11-01: the first version of this module, pure Lua, showed the squad of the league's first
 club on a league row. That is not what a league row is for: it lists the clubs now.)

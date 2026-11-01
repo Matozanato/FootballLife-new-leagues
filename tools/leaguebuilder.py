@@ -5340,6 +5340,7 @@ def build(pl, base, game, replace=False, log=print):
     lap("pictures and kits")
     region_modules(pl, tmp, game, log)
     mp_column(tmp, game, log)
+    team_crest(tmp, game, log)
 
     import lbtrophies
     lbtrophies.build(pl, tmp, db, log)
@@ -7101,6 +7102,23 @@ def mp_column(root, game, log=print):
         log("  standings with an MP column")
 
 
+def team_crest(root, game, log=print):
+    """the clubs' crests in the Team List rows (a league's clubs in Database > Team Info): the
+    world's copy of teamSelectSingle.bin with a crest cell in each row (tools/mkteamcrest.py), which
+    fl26squadlist.dll fills. A layout it does not know (another mod's) is left as it is, and a
+    club row keeps the empty badge."""
+    import mkteamcrest
+    try:
+        out = call(mkteamcrest, ["--root", root, "--game", game])
+    except BuildError as e:
+        log("  no crests in the Team List: %s" % str(e).strip().splitlines()[0])
+        return
+    if out.startswith("left as it is"):
+        log("  no crests in the Team List: %s" % out.strip().splitlines()[0])
+    else:
+        log("  crests in the Team List")
+
+
 def region_modules(pl, root, game, log=print):
     """fl26regions.lua and fl26regnames.lua for this world, into <world>/modules/.
 
@@ -7151,6 +7169,15 @@ def mp_for_world(root, game, log=print):
     if os.path.exists(os.path.join(root, *mkmpcol.PACKAGE.split("/"))):
         return
     mp_column(root, game, log)
+
+
+def crest_for_world(root, game, log=print):
+    """a world built before the Team List had crests has no teamSelectSingle.bin of its own: made
+    at switch on as a Build makes it (team_crest)"""
+    import mkteamcrest
+    if os.path.exists(os.path.join(root, *mkteamcrest.PACKAGE.split("/"))):
+        return
+    team_crest(root, game, log)
 
 
 def regnames_for_exe(root, game, log=print):
@@ -7686,6 +7713,7 @@ def switch_on(world, game, log=print, redraw=False):
     mods = os.path.join(root, "modules")
     regnames_for_exe(root, game, log)
     mp_for_world(root, game, log)
+    crest_for_world(root, game, log)
     for f in sorted(os.listdir(mods)) if os.path.isdir(mods) else []:
         dst = os.path.join(siderdir.find(game), "modules", f)
         if os.path.exists(dst) and open(dst, "rb").read() != open(os.path.join(mods, f), "rb").read():

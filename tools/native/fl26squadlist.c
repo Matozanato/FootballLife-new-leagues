@@ -43,8 +43,17 @@
  * 3. Texts of THAT page while it holds clubs: kind 1 (the name in a squad row) and 15 are drawn
  *    as kind 15, the club's name; every other kind is set to an empty text instead of keeping
  *    the player's.
- * 4. Position badges of that page while it holds clubs: the empty badge (0x140e5a9f0(badge,
- *    0x16), what the game does for a missing player) instead of the last player's position.
+ * 4. Position badges of that page while it holds clubs: the club's crest instead, where the
+ *    world's layout has the crest cell (teamSelectSingle.bin from tools/mkteamcrest.py: a
+ *    uirEmblemCompe, element type 0xe, flTeamEmblem, in each row).  The badge pass (0x140e7d2d8,
+ *    for each badge of a row) calls sq_row, which finds the row's crest cell (0x140e4d4a0 /
+ *    0x140e4d1c0, by type), sets the club on it (0x140e5cda0, the call the game's own crest pass
+ *    makes for uirEmblem cells -- that pass never touches 0xe ones), shows it and hides the badge
+ *    (0x140e4c240, bit 0 of [node+0xc]).  On every other row of that panel (players, or an empty
+ *    row past the clubs) the crest is hidden and a badge this hid is shown again.  No crest cell
+ *    (a world's layout from before, or another mod's): the empty badge (0x140e5a9f0(badge, 0x16),
+ *    what the game does for a missing player) instead of the last player's position.  The crest
+ *    calls are checked first too (the cell's vtable, the invalid team id); otherwise no crests.
  *
  * "That page" is the page pointer 2 last filled with clubs, and its type must still be 2: the
  * club column fills the same page with players (type 1), and every other list and every other
@@ -114,6 +123,14 @@ static uint64_t B;                                    /* the exe's base */
 #define BDG_NEXT      0x140e7d33f
 #define BADGE_STATE   0x140e5a9f0          /* (badge, state) */
 #define BADGE_EMPTY   0x16
+/* 4b. the crest of a club row (a uirEmblemCompe cell the world's teamSelectSingle.bin adds) */
+#define NODE_COUNT    0x140e4d4a0          /* (finder, type) -> how many nodes of that type */
+#define NODE_GET      0x140e4d1c0          /* (finder, type, i) -> the i-th */
+#define NODE_COMPE    0xe                  /* uirEmblemCompe */
+#define SHOW          0x140e4c240          /* (node, on, mask): [node+0xc] |= / &= ~mask */
+#define SET_EMBLEM    0x140e5cda0          /* (node, &team id, shadow, -, 0, type): the rows' crest call */
+#define VT_COMPE      0x1427c2858          /* NodeRectEmblemCompe's vtable */
+#define TEAM_NONE     0x14351ae44          /* the invalid team id the game's own crest pass skips */
 
 static const unsigned char SIG_UPD[6]   = { 0x0f,0x85,0x81,0x00,0x00,0x00 };
 static const unsigned char SIG_CLUB[UPD_CLUB_LEN] = {
@@ -147,6 +164,10 @@ static const struct { uint64_t va; unsigned char sig[8]; } CALLEES[] = {
   { TEXT_MGR,    { 0x48,0x8b,0x05,0x21,0xd0,0x26,0x02,0xc3 } },
   { TEXT_OF,     { 0x48,0x89,0x5c,0x24,0x08,0x57,0x48,0x83 } },
   { SET_TEXT_ID, { 0x4c,0x8b,0xdc,0x57,0x48,0x83,0xec,0x60 } },
+  { NODE_COUNT,  { 0x48,0x8b,0x49,0x78,0x45,0x33,0xc9,0x44 } },
+  { NODE_GET,    { 0x48,0x8b,0x49,0x78,0x44,0x8b,0xd2,0x45 } },
+  { SHOW,        { 0x84,0xd2,0x74,0x0b,0x44,0x09,0x41,0x0c } },
+  { SET_EMBLEM,  { 0x48,0x8b,0xc4,0x55,0x41,0x56,0x41,0x57 } },
 };
 
 typedef void* (*pages_of_t)(void* screen);
@@ -155,10 +176,17 @@ typedef int64_t (*set_text_t)(void* element, void* str, uint64_t, uint64_t);
 typedef void* (*text_mgr_t)(void);
 typedef const char* (*text_of_t)(void* mgr, uint32_t id);
 typedef int64_t (*set_text_id_t)(void* element, uint32_t id);
+typedef int   (*node_count_t)(void* finder, uint32_t type);
+typedef char* (*node_get_t)(void* finder, uint32_t type, uint32_t i);
+typedef void  (*show_t)(void* node, uint8_t on, uint32_t mask);
+typedef void  (*badge_state_t)(void* badge, uint32_t state);
+typedef void  (*set_emblem_t)(void* node, uint32_t* team, uint8_t shadow, uint32_t, uint8_t, uint32_t type);
 
 static volatile uint64_t* g_page;        /* in the stub page: the page holding clubs, read by 3/4 */
 static uint32_t g_ids[128];
 static volatile long g_filled;           /* how many times 2 has filled a league (for the log) */
+static char* g_key;                      /* that page's key (the panel list's widget + 0x98) */
+static int g_crest_ok;                   /* the crest calls are the ones expected */
 
 #ifdef SQDEBUG
 static wchar_t g_dir[MAX_PATH];
@@ -240,6 +268,7 @@ static int64_t sq_fill(char* screen, char* widget)
   for (char** p = pb; p && p < pe; p++)
     if (*p && *(char**)(*p + 0x20) == widget + 0x98 && *(uint8_t*)(*p + 0x1c) == 1) {
       *g_page = (uint64_t)(uintptr_t)*p;
+      g_key = widget + 0x98;
       break;
     }
   InterlockedIncrement(&g_filled);
@@ -283,6 +312,63 @@ static int64_t sq_text(char* element, int64_t kind)
   memset(&s, 0, sizeof s);
   s.cap = 15;
   ((set_text_t)VA(SET_TEXT))(element, &s, 0, 0);
+  return 0;
+}
+
+/* the badges hidden for a crest, to show them again on the same rows' players */
+static char* g_hidden[64];
+static void badge_hide(char* badge)
+{
+  for (int i = 0; i < 64; i++) if (g_hidden[i] == badge) return;
+  for (int i = 0; i < 64; i++)
+    if (!g_hidden[i]) {
+      g_hidden[i] = badge;
+      ((show_t)VA(SHOW))(badge, 0, 1);
+      return;
+    }
+}
+static void badge_show(char* badge)
+{
+  for (int i = 0; i < 64; i++)
+    if (g_hidden[i] == badge) {
+      g_hidden[i] = 0;
+      ((show_t)VA(SHOW))(badge, 1, 1);
+      return;
+    }
+}
+
+/* 4: a row of the page holding clubs (team ids) or, the same page later, players.  A club row:
+ * its crest in the row's crest cell and the position badge hidden (no crest cell: the empty
+ * badge, as before).  A player row: the crest cell hidden, the badge shown, and the game draws
+ * the badge as always.  Returns 1 when the row's badge is done, 0 to let the game draw it. */
+static int64_t sq_row(char* finder, char* page, uint32_t* entry, char* badge)
+{
+  char* crest = 0;
+  if (g_crest_ok && ((node_count_t)VA(NODE_COUNT))(finder, NODE_COMPE) > 0) {
+    crest = ((node_get_t)VA(NODE_GET))(finder, NODE_COMPE, 0);
+    if (crest && *(uint64_t*)crest != VA(VT_COMPE)) crest = 0;
+  }
+  if (*(uint8_t*)(page + 0x18) == 2 && *(char**)(page + 0x20) == g_key) {
+    if (crest && *entry != *(uint32_t*)(uintptr_t)VA(TEAM_NONE)) {
+      ((show_t)VA(SHOW))(crest, 1, 1);
+      *(uint32_t*)(crest + 0x9c) = 0;
+      ((set_emblem_t)VA(SET_EMBLEM))(crest, entry, 0, 5, 0, 0);
+      badge_hide(badge);
+#ifdef SQDEBUG
+      dbg("row: crest %p team %08x flags crest %x badge %x", crest, *entry, *(uint32_t*)(crest + 0xc), *(uint32_t*)(badge + 0xc));
+#endif
+      return 1;
+    }
+    if (crest) ((show_t)VA(SHOW))(crest, 0, 1);
+    badge_show(badge);
+    ((badge_state_t)VA(BADGE_STATE))(badge, BADGE_EMPTY);
+#ifdef SQDEBUG
+    dbg("row: no crest cell (%p), team %08x", crest, *entry);
+#endif
+    return 1;
+  }
+  if (crest) ((show_t)VA(SHOW))(crest, 0, 1);
+  badge_show(badge);
   return 0;
 }
 
@@ -374,6 +460,11 @@ __declspec(dllexport) int fl26_squadlist_install(uint64_t exe_base)
     logf("fl26squadlist: ABORTED, %d site(s) did not match. Nothing was written; the game is unmodified.", bad);
     return 2;
   }
+  {
+    uint64_t* vt = (uint64_t*)(uintptr_t)VA(VT_COMPE);
+    g_crest_ok = vt[1] == VA(0x140e5bdd0) && vt[4] == VA(0x140e5d400)
+                 && *(uint32_t*)(uintptr_t)VA(TEAM_NONE) == 0xffffffffu;
+  }
   unsigned char* t = near_alloc(exe_base);
   if (!t) return 3;
   memset(t, 0xcc, 0x1000);
@@ -453,23 +544,26 @@ __declspec(dllexport) int fl26_squadlist_install(uint64_t exe_base)
   n = jmp_abs(s, n, VA(TXT_NEXT));
   int txt_end = n;
 
-  /* ---- 4. badges ---- */
+  /* ---- 4. badges: on the page 2 filled, sq_row (registers: r12 the row's finder, r15 the
+   * page, r14 the row's entry, rbx == rax the badge; rsp is 16-aligned here and [rsp, rsp+0x20)
+   * is the host's own outgoing area) ---- */
   n = (n + 15) & ~15;
   unsigned char* bdg = s + n;
   int bdg_beg = n, k_back, k_back2;
-  s[n++] = 0x41; s[n++] = 0x0f; s[n++] = 0xb6; s[n++] = 0x4f; s[n++] = 0x18;        /* movzx ecx, byte [r15+0x18] */
-  s[n++] = 0x8b; s[n++] = 0xb0; *(uint32_t*)(s + n) = 0xa4; n += 4;                 /* mov esi, [rax+0xa4] */
-  s[n++] = 0x83; s[n++] = 0xf9; s[n++] = 0x02;                                      /* cmp ecx, 2 */
-  s[n++] = 0x75; k_back = n++;                                                      /* jne back */
   s[n++] = 0x4c; s[n++] = 0x3b; s[n++] = 0x3d; n = rip32(s, n, g_page, 0);          /* cmp r15, [g_page] */
-  s[n++] = 0x75; k_back2 = n++;                                                     /* jne back */
-  s[n++] = 0xba; *(uint32_t*)(s + n) = BADGE_EMPTY; n += 4;                         /* mov edx, 0x16 */
-  s[n++] = 0x48; s[n++] = 0x8b; s[n++] = 0xcb;                                      /* mov rcx, rbx (the badge) */
-  n = call_abs_rax(s, n, VA(BADGE_STATE));
-  s[n++] = 0x90;                                       /* nop: a jmp right after the call reads as an epilogue to a stack walk */
+  s[n++] = 0x75; k_back = n++;                                                      /* jne back */
+  s[n++] = 0x49; s[n++] = 0x8b; s[n++] = 0xcc;                                      /* mov rcx, r12 */
+  s[n++] = 0x49; s[n++] = 0x8b; s[n++] = 0xd7;                                      /* mov rdx, r15 */
+  s[n++] = 0x4d; s[n++] = 0x8b; s[n++] = 0xc6;                                      /* mov r8, r14 */
+  s[n++] = 0x4c; s[n++] = 0x8b; s[n++] = 0xcb;                                      /* mov r9, rbx */
+  n = call_abs_rax(s, n, (uint64_t)(uintptr_t)sq_row);
+  s[n++] = 0x85; s[n++] = 0xc0;                                                     /* test eax, eax */
+  s[n++] = 0x74; k_back2 = n++;                                                     /* je back */
   n = jmp_abs(s, n, VA(BDG_NEXT));
   s[k_back] = (unsigned char)(n - (k_back + 1));
   s[k_back2] = (unsigned char)(n - (k_back2 + 1));
+  s[n++] = 0x41; s[n++] = 0x0f; s[n++] = 0xb6; s[n++] = 0x4f; s[n++] = 0x18;        /* back: movzx ecx, byte [r15+0x18] */
+  s[n++] = 0x8b; s[n++] = 0xb3; *(uint32_t*)(s + n) = 0xa4; n += 4;                 /* mov esi, [rbx+0xa4] */
   n = jmp_abs(s, n, VA(BDG_BACK));
   int bdg_end = n;
   if (n > 0xd00) return 3;
@@ -503,7 +597,8 @@ __declspec(dllexport) int fl26_squadlist_install(uint64_t exe_base)
     *(int32_t*)(jne + 2) = (int32_t)((int64_t)(uintptr_t)ttl - (int64_t)VA(UPD_JNE + 6));
     if (!put_bytes((unsigned char*)(uintptr_t)VA(UPD_JNE), jne, 6)) return 4;
   }
-  logf("fl26squadlist: Select Team lists the league's clubs on the league rows, title Team List (4 sites, stubs %d bytes)", n);
+  logf("fl26squadlist: Select Team lists the league's clubs on the league rows, title Team List (4 sites, stubs %d bytes), crests %s", n,
+       g_crest_ok ? "on (where the world's layout has the crest cell)" : "off (not the calls expected)");
   return 0;
 }
 

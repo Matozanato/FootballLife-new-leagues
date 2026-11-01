@@ -366,8 +366,28 @@ def check(m):
     m.cells(HEAD_SPRITE, ["title_" + c for c in COLS])
 
 
+def mp_edit(m):
+    check(m)
+    # the header cell first (see the module's doc), then the column, then the header's titles
+    header_cell(m, XS_ON[1] + MP_DX + HEAD_DX, XS_OFF[1] + MP_DX + HEAD_DX, 16)
+    XS_ON[1] += MP_DX
+    XS_OFF[1] += MP_DX
+    try:
+        columns(m, ROW_SPRITE, "num_", True)
+        columns(m, HEAD_SPRITE, "title_", False)
+    finally:
+        XS_ON[1] -= MP_DX
+        XS_OFF[1] -= MP_DX
+
+
 def make(data):
     """the layout's bytes (WESYS or raw) -> the layout with the MP column (WESYS)"""
+    return rebuild(data, mp_edit)
+
+
+def rebuild(data, edit):
+    """a menu layout's bytes (WESYS or raw) -> the layout after edit(Movie) (WESYS); tools/
+    mkteamcrest.py uses it too"""
     raw = zlib.decompress(data[16:]) if data[3:8] == b'WESYS' else data
     pk_off, pk_len = struct.unpack_from('<II', raw, 8)
     T = bytearray(raw[pk_off:pk_off + pk_len])
@@ -393,17 +413,7 @@ def make(data):
     if decode_swaps(encode_swaps(swaps)) != swaps:
         raise Unknown("a swap list this cannot write back")
     m = Movie(bytes(T[swf_off:swf_off + swf_len]), swaps)
-    check(m)
-    # the header cell first (see the module's doc), then the column, then the header's titles
-    header_cell(m, XS_ON[1] + MP_DX + HEAD_DX, XS_OFF[1] + MP_DX + HEAD_DX, 16)
-    XS_ON[1] += MP_DX
-    XS_OFF[1] += MP_DX
-    try:
-        columns(m, ROW_SPRITE, "num_", True)
-        columns(m, HEAD_SPRITE, "title_", False)
-    finally:
-        XS_ON[1] -= MP_DX
-        XS_OFF[1] -= MP_DX
+    edit(m)
     S2, DI2 = m.finish()
 
     # the container: the movie grows in place, everything after it moves by delta (a multiple of

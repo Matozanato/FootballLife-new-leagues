@@ -10,5 +10,8 @@ released; until then this page only collects what is done and tested.
 - **Select Team lists the league's clubs.** Master League > Database > Team Info, League mode
   and the other screens that pick a league and then a club: with the cursor on a league, the
   right panel was an empty red list. It now lists that league's clubs, titled "Team List" ("Teams"
-  when the game runs in another language). Confirm, and it shows the players of the club under
-  the cursor, titled "Squad List", as before.
+  when the game runs in another language), each club with its crest. Confirm, and it shows the
+  players of the club under the cursor, titled "Squad List", as before. The crests come with the
+  world: Build writes a copy of the screen's layout with a crest cell into the world
+  (`common/menu/general/teamSelectSingle.bin`, tools/mkteamcrest.py), and a world built before
+  gets it when it is switched on.
