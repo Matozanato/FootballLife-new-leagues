@@ -49,9 +49,11 @@ All of it in `tools/native/fl26swiss.c`, section *the trophy cabinet*, once a da
     final): with another knockout of ours running (the modern Copa Sudamericana's round of 16), the
     game wrote no title for the Final del Apertura. From three days after the final (up to 300,
     `FINAL_FIX_DAYS`), while its knockout still names the winner, the title of the final's year is
-    written with the final's date. A new record is a copy of the cabinet's last one, so when that
-    final is the career's first title it is written once a second title has made a record (sixty days
-    were too few: a career whose next title came later never got it).
+    written with the final's date. A new record is a copy of the cabinet's last one; when that final
+    is the career's first title, the cabinet's first slot is written as it is, its lists emptied (a
+    record is the regulation, the 200 winners and the 200 dates, and four bytes after them that stay
+    the slot's own). Before, nothing was written until a second title had made a record, and sixty
+    days were too few for that.
     The winner is the game's own (`ccup_ko_winner`), never one kept in the state file: that file is
     shared by every career of the club, and the DLL must never give a title this career did not win.
   - **The league title of a final of two cups** (`src=`, the Final del FUTVE) when one club won both
