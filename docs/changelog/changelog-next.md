@@ -12,9 +12,8 @@ released; until then this page only collects what is done and tested.
   [palmares.md](../developers/fork/palmares.md).
 - **The final of a league play-off with groups gave no title** when another knockout of ours was
   running (the Final del Apertura in June, with the modern Copa Sudamericana's round of 16). The DLL
-  now writes it three days after the final, if the game's own result names your club; when that final
-  is your career's first title, as soon as you win another one (it waited sixty days at most and
-  could miss it).
+  now writes it three days after the final, if the game's own result names your club -- also when
+  it is your career's first title (it waited for a second title before, sixty days at most).
 - **A competition of ours in the Palmarés twice ("1" and "1" instead of "2")** is merged into one row.
 
 ## Also new

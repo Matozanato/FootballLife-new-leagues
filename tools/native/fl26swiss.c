@@ -13815,7 +13815,11 @@ static int cab_has_year(unsigned char* blk, uint16_t reg, int y)
 }
 /* A title of reg won by club on date (year in its low word): nothing when the cabinet has that
    year's already; else on the lists of reg's record, or a record of its own after the last -- the
-   last record's bytes as the model, its lists emptied. 0 already there, the wins after, -1 no room. */
+   last record's bytes as the model, its lists emptied. 0 already there, the wins after, -1 no room.
+   An empty cabinet (the career's first title) has no record to copy: the first slot is written as it
+   is, its lists emptied. A record is its regulation, the winners and the dates (0x644 bytes of the
+   0x648) and four bytes after them that stay the slot's own (01.11.: the Final del Apertura was the
+   first title of Felix's career, and nothing was written until another title came). */
 static int cab_title_add(unsigned char* blk, uint32_t u, uint16_t reg, uint32_t club, uint32_t date)
 {
   if (cab_has_year(blk, reg, (uint16_t)date)) return 0;
@@ -13823,8 +13827,8 @@ static int cab_title_add(unsigned char* blk, uint32_t u, uint16_t reg, uint32_t 
   if (i >= 0) return (int)rec_append(blk, u, cab_rec(blk, i), club, date);
   int n = cab_count(blk);
   unsigned char* dst = cab_rec(blk, n);
-  if (!n || !dst || *(uint16_t*)dst != 0xffff) return -1;
-  memcpy(dst, cab_rec(blk, n - 1), CAB_RECSZ);
+  if (!dst || *(uint16_t*)dst != 0xffff) return -1;
+  if (n) memcpy(dst, cab_rec(blk, n - 1), CAB_RECSZ);
   memset(dst + 4, 0xff, CAB_DAT - 4);
   for (int q = 0; q < CAB_N; q++) *(uint32_t*)(dst + CAB_DAT + 4 * q) = 0x0000ffffu;
   *(uint16_t*)dst = reg; *(uint16_t*)(dst + 2) = 0;
@@ -14238,7 +14242,8 @@ static void futve_clash_report(void)
    Up to FINAL_FIX_DAYS after the final, not sixty: a record is written as a copy of the cabinet's
    last one, so in a new career whose first title is that final there is no record to copy until a
    second title comes (01.11.: the Apertura won on day 167 was the career's first title, the next
-   came after day 227 and the title was never written; phase 5's code waited to the year's end). */
+   came after day 227 and the title was never written; phase 5's code waited to the year's end). An
+   empty cabinet takes the first record as it is (cab_title_add). */
 #define FINAL_FIX_DAYS 300
 static void final_title_fix(void)
 {
@@ -14264,7 +14269,7 @@ static void final_title_fix(void)
       if (said_k[k] != year + 1) {
         said_k[k] = year + 1;
         logf("fl26swiss: trophy cabinet -- day %d: final %u won by the user's club on day %d, no title from the game; "
-             "no record to copy yet (the career's first title): written once there is", d, (unsigned)c->ko, fday);
+             "no room left in the cabinet", d, (unsigned)c->ko, fday);
       }
     }
   }
