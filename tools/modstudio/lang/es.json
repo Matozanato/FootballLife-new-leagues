@@ -2078,7 +2078,12 @@
   "(the league's name + Clausura Final)": "(nombre de la liga + Clausura Final)",
   "Playoff names": "Nombres de la liguilla",
   "Final names": "Nombres de las finales",
-  "the finals of playoffs of two groups of four, with their logos": "las finales de una liguilla de dos grupos de cuatro, con sus logos"
+  "the finals of playoffs of two groups of four, with their logos": "las finales de una liguilla de dos grupos de cuatro, con sus logos",
+  "no grand final": "sin gran final",
+  "two legs": "ida y vuelta",
+  "one match": "partido único",
+  "(the league's name + Grand Final)": "(nombre de la liga + Grand Final)",
+  "Grand final": "Gran final"
  },
  "log": [
   [

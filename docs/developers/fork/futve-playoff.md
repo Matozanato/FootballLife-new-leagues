@@ -133,8 +133,43 @@ What the Build does (`tools/leaguebuilder.py`):
 ccup 257 ko=258 groups=2 entry=191:1,191:4,191:5,191:8,191:2,191:3,191:6,191:7 fill=3 national=1 days=28 gdays=5,8,11,14,18,25 adv=1 kolike=128 name=Apertura Groups League Apertura Playoffs
 ```
 
-(`tools/testdata/regress018/apertura_groups.json`: the play-offs are competitions 133/134, their
-finals 135/136, regulations 258 and 260.)
+(`tools/testdata/regress018/apertura_groups.json`: the play-offs are competitions 143/144, their
+finals 133/134, regulations 258 and 260. With a final in the world, `continental` gives the other
+cups ids the game does not create first: those are few -- 130 to 175, about fifteen -- and every
+final needs one.)
+
+### The grand final: `"grand_final"`
+
+```json
+"apertura": {"playoff": 8, "playoff_format": "groups", "grand_final": true,
+             "names": {"grand_final": "Final del FUTVE"}, "logos": {"grand_final": "C:/logos/futve.png"}}
+```
+
+- `true` or `"two_legs"` (two legs), `"single"` (one match); `false`, the default, none. Only with
+  `"playoff_format": "groups"`. Mod Studio's league window: Grand final, with its name and logo.
+- After the Clausura's final (`playoff_days`, three days on), the two finals' winners. Its winner is
+  the **league's champion**: its regulation carries the league's name in every slot, so its title in
+  the Palmarés reads as the league's; fl26swiss.dll takes it as the champion for the super cup and,
+  for a January-December league, the continental places. A club that won both finals is champion with
+  no match (`ff_auto_champion`, the title written by `honours_fix`).
+- The accumulated table's leader gets **no title**: the game's title of the split league is taken out
+  of the user's trophy cabinet and season block (until fase 6 only for a January-December league).
+- The Build (`playoff_cups`, `continental`, `grand_finals`): a straight knockout of two clubs on the
+  FA Cup's row (`mkccup` `like`), dated by the Belgium Super Cup (`kolike=`), on a competition id the
+  game creates at the season's start (`"case"`: `CREATION_IDS`), pinned by the next Build like every
+  cup's. Its entry rows go (a placeholder pair counted as the title won before the final, 29.10.); the
+  away goals rule is off; two legs set the knockout's legs mode to 2 (`KO_LEGS_*`). The world line:
+
+```
+ccup 261 ko=261 groups=0 entry=191:1,192:1 fill=0 national=1 days=166,169 kolike=128 src=258,260 cid=134 name=Final de la Liga
+```
+
+- The DLL: `src=` makes the knockout the final of the two play-offs' knockouts (filled when both are
+  over, `ccup_fill_finals`), `cid=` names its competition (`fl26_swiss_title_league`). **Any number
+  of such leagues in one world**: each split league whose phases feed a final of two cups is a title
+  league (`grand_final_of`, `is_title_league`), with its own champion (`league_champion_kept`) and
+  honours (`honours_fix_one`). Until fase 6 the DLL knew one: the last final of the world was every
+  league's. `tools/native/test_grand_final.c` checks it offline.
 
 ## Building the world without Mod Studio
 
@@ -337,6 +372,8 @@ the Gran Final, the continental places and the second season are later phases.
 
 ```
 python tools/test_playoff_groups.py <pesdb>  # the recipe keys, the Build's cups and finals, the league window
+python tools/test_grand_final_build.py <pesdb>  # the grand final: recipe key, Build, league window
+python tools/test_grand_final.py       # the DLL's title leagues (any number), native
 python tools/test_futve_playoff.py     # the pure parts (groups, order of the final), native
 python tools/test_futve_world.py       # both staging worlds against the real world; skip without one
 python tools/test_futve_fixture.py     # the fixture; skip without a world
