@@ -7810,7 +7810,8 @@ def check(game, log=print):
             "order -- Install now puts the lines right")
     # a DLL an antivirus took away (B15): the Lua loads, LoadLibraryA fails with error 126
     mdir = os.path.join(siderdir.find(game), "modules")
-    names = sorted({d for m in READERS + ["fl26regen", "fl26edit", "fl26walk", "fl26compcache"]
+    names = sorted({d for m in READERS + ["fl26regen", "fl26edit", "fl26walk", "fl26compcache",
+                                         "fl26squadlist"]
                     for d in dll_names(os.path.join(mdir, m + ".lua"))})
     bad_dlls = check_dlls(mdir, names)
     if bad_dlls:

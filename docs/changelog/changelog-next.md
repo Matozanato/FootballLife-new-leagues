@@ -6,3 +6,9 @@ released; until then this page only collects what is done and tested.
 ## Fixed
 
 ## Also new
+
+- **Select Team lists the league's clubs.** Master League > Database > Team Info, League mode
+  and the other screens that pick a league and then a club: with the cursor on a league, the
+  right panel was an empty red list. It now lists that league's clubs, titled "Team List" ("Teams"
+  when the game runs in another language). Confirm, and it shows the players of the club under
+  the cursor, titled "Squad List", as before.

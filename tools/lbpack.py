@@ -66,7 +66,7 @@ PER_WORLD = {"fl26regions", "fl26regnames"}
 DLLS = {"fl26join": "build-join.sh", "fl26chain": "build-chain.sh",
         "fl26clubs": "build-clubs.sh", "fl26swiss": "build-swiss.sh", "fl26regen": "build-regen.sh",
         "fl26edit": "build-edit.sh", "fl26walk": "build-walk.sh",
-        "fl26compcache": "build-compcache.sh"}
+        "fl26compcache": "build-compcache.sh", "fl26squadlist": "build-squadlist.sh"}
 def _faces_dir():
     """$FL26_REGEN_FACES, else fl26-modding-research/out/regenfaces next to the repo or next to
     any folder above it (a worktree sits deeper than the repo, and the faces were missed there)"""

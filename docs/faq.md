@@ -467,7 +467,7 @@ another program (the game, an antivirus) holds it.
 
 Some of Mod Studio's modules are a `.lua` file with a `.dll` next to it in
 `SiderAddons\modules`: `fl26swiss.dll`, `fl26join.dll`, `fl26chain.dll`, `fl26clubs.dll`,
-`fl26regen.dll`, `fl26edit.dll`, `fl26walk.dll`, `fl26compcache.dll`. They change the game in
+`fl26regen.dll`, `fl26edit.dll`, `fl26walk.dll`, `fl26compcache.dll`, `fl26squadlist.dll`. They change the game in
 memory, which some antivirus programs (Windows Security included) mistake for malware: they
 quarantine the DLL a moment after it is copied. The `.lua` stays, so the game starts, but the
 parts the DLL runs are silently missing: no European draws, empty league phases, no regens,
