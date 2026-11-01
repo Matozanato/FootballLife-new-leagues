@@ -66,8 +66,28 @@ FF_CODE = "FL_011_FFU"
 FF_CID, FF_REG = 175, 263
 FF_ENTRIES = "191:1,192:1"   # the ccup line keeps the two slots; the E rows are dropped below
 FF_FINAL = 167
+# The Final del FUTVE is ida y vuelta (Felix, 29.10.): its row and its calendar are the Spanish Super
+# Cup's (reg 87, two clubs, two legs -- the only shipped two-club knockout with the away-goals bit,
+# which is only read in a two-legged tie), the legs on days 167 and 171, the away goals rule off.
+# 29.10. 15:37: the Spanish Super Cup is ONE record in FL26 too (dated 171, no first leg). Until a
+# shipped two-legged final is found (fl26swiss logs "calendar survey"), the Final del FUTVE is the
+# proven one-match final of 261/262: the FA Cup row, the Belgian Super Cup calendar, day 167.
+FF_SHAPE = None            # None: the same row as the two finals (F.FINAL_SHAPE)
+FF_DAYS = "167,171"
+# The legs mode (exe: CompetitionRegulation +0x10 bits 9-11 -> runtime +0x300 >> 29, read by the
+# calendar handlers 0x14157f720/0x14157f790): 0 every tie one match, 1 two legs but a one-match
+# final (UCL, Libertadores), 2 every tie two legs (AFC Champions League, reg 16). The Final del
+# FUTVE gets 2; fl26swiss turns the Belgian Super Cup's one record back into its two legs.
+LEGS_SHIFT, LEGS_MASK, LEGS_BOTH = 9, 7, 2
+AWAY_GOALS_BIT = 1 << 24      # CompetitionRegulation +0x10
 FF_FILL = 0          # 0 = the DLL tries it every tick: its src= champions appear on days 15 and 164
 
+# Titles (30.10., provisional): the game gives the split league's title (competition 130, reg 11)
+# to the leader of the accumulated table on day 142, and the Palmarés count cannot be undone. So
+# the names follow what the game does: reg 11 is "Tabla acumulada FUTVE", and the Final del FUTVE
+# (175/263) carries the league's name -- its winner's title reads "Liga FUTVE".
+LEAGUE_REG, LEAGUE_TITLE = 11, "Tabla acumulada FUTVE"
+FF_TITLE = "Liga FUTVE"
 FI_NAME = "Final del Apertura"
 FI_CODE = "FL_011_AFI"
 FI_CID = 142
@@ -157,9 +177,15 @@ def plan(base, world, dry, tmp_root):
             raise SystemExit("regulation %d is taken in the base" % reg)
     shape = F.like_reg(comp_b, regs_b, F.FINAL_SHAPE)
     date_src = F.like_reg(comp_b, regs_b, F.SUPER_CUP)
+    ff_shape = F.like_reg(comp_b, regs_b, FF_SHAPE) if FF_SHAPE else None
+    ff_kolike = ff_shape if FF_SHAPE else None
+    if FF_SHAPE and ff_shape is None:
+        raise SystemExit("this world has no %s to copy the Final del FUTVE's two legs" % FF_SHAPE)
     if shape is None or date_src is None:
         raise SystemExit("this world has no %s/%s to copy a final's row and calendar"
                          % (F.FINAL_SHAPE, F.SUPER_CUP))
+    if not FF_SHAPE:
+        ff_shape, ff_kolike = shape, date_src
     tpl_ap = next(bytearray(c) for c in C if c[M.CID_OFF] == AP_CID)
     tpl_cl = next(bytearray(c) for c in C if c[M.CID_OFF] == CL_CID)
     os.makedirs(tmp_root, exist_ok=True)
@@ -173,15 +199,15 @@ def plan(base, world, dry, tmp_root):
     cl_spec = "%s|%s|%d|%d|%d|2|%s|%d|%d||2|%d" % (
         CL_NAME, CL_CODE, CL_CID, CL_REG, CL_KO, CL_ENTRIES, CONF, REGION, shape)
     ff_spec = "%s|%s|%d|%d|%d|0|%s|%d|%d|%d" % (
-        FF_NAME, FF_CODE, FF_CID, FF_REG, FF_REG, FF_ENTRIES, CONF, REGION, shape)
+        FF_NAME, FF_CODE, FF_CID, FF_REG, FF_REG, FF_ENTRIES, CONF, REGION, ff_shape)
     ap_line = ("ccup %d ko=%d groups=2 entry=%s fill=%d national=%d days=%d gdays=%s adv=1 kolike=%d name=%s"
                % (AP_REG, AP_KO, AP_ENTRIES, ap_fill, ap_nat, AP_FINAL, AP_DAYS, date_src, AP_NAME))
     cl_line = ("ccup %d ko=%d groups=2 entry=%s fill=%d national=%d days=%d gdays=%s adv=1 kolike=%d name=%s"
                % (CL_REG, CL_KO, CL_ENTRIES, cl_fill, cl_nat, CL_FINAL, CL_DAYS, date_src, CL_NAME))
-    ff_line = ("ccup %d ko=%d groups=0 entry=%s fill=%d national=1 days=%d kolike=%d src=%d,%d name=%s"
-               % (FF_REG, FF_REG, FF_ENTRIES, FF_FILL, FF_FINAL, date_src, AP_KO, CL_KO, FF_NAME))
+    ff_line = ("ccup %d ko=%d groups=0 entry=%s fill=%d national=1 days=%s kolike=%d src=%d,%d cid=%d name=%s"
+               % (FF_REG, FF_REG, FF_ENTRIES, FF_FILL, FF_DAYS, ff_kolike, AP_KO, CL_KO, FF_CID, FF_NAME))
     return {"ap_cid": AP_CID, "cl_cid": CL_CID, "ap_fill": ap_fill, "cl_fill": cl_fill,
-            "shape": shape, "date_src": date_src, "C2": C2, "R2": R2, "E2": E2,
+            "shape": shape, "date_src": date_src, "ff_shape": ff_shape, "C2": C2, "R2": R2, "E2": E2,
             "tpl_ap": tpl_ap, "tpl_cl": tpl_cl, "base2": base2, "tmp": tmp,
             "lines": lines, "nl": nl, "li_ap": li_ap, "li_cl": li_cl,
             "ap_line": ap_line, "cl_line": cl_line, "ff_line": ff_line,
@@ -228,7 +254,12 @@ def build(p, out):
     cl_ko[M.R_CID] = FC_CID
     M.put_names(cl_ko, 0, FC_NAME)
     ff = one_reg(R, FF_REG)
-    M.put_names(ff, 0, FF_NAME)
+    M.put_names(ff, 0, FF_TITLE)
+    lg = one_reg(R, LEAGUE_REG)
+    M.put_names(lg, 0, LEAGUE_TITLE, skip=(9,))       # slot 9 is the internal label
+    d10 = int.from_bytes(ff[0x10:0x14], "little") & ~AWAY_GOALS_BIT    # level on aggregate: extra time, penalties
+    d10 = (d10 & ~(LEGS_MASK << LEGS_SHIFT)) | (LEGS_BOTH << LEGS_SHIFT)  # ida y vuelta
+    ff[0x10:0x14] = d10.to_bytes(4, "little")
     # the final competitions: the play-offs' competition row with the new id and code
     for tpl, cid, code in ((p["tpl_ap"], FI_CID, FI_CODE), (p["tpl_cl"], FC_CID, FC_CODE)):
         c = bytearray(tpl)
@@ -279,7 +310,7 @@ def verify(dest, p, C, R, E, lines):
         if r[M.R_CID] != cid or r[M.R_TYPE] != 2:
             raise SystemExit("group row %d is not competition %d's" % (reg, cid))
     for reg, name in ((AP_REG, AP_NAME), (CL_REG, CL_NAME), (AP_KO, FI_NAME),
-                      (CL_KO, FC_NAME), (FF_REG, FF_NAME)):
+                      (CL_KO, FC_NAME), (FF_REG, FF_TITLE)):
         r = one_reg(R, reg)
         for k in range(20):
             off = M.name_at(k)
