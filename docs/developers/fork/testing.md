@@ -26,6 +26,7 @@ exe. See `tools/flpaths.py`.
 | `test_face_groups.py` | none | B183: `facegroups.nordic` puts the Nordic nations on a face group of the pack's own light faces (skin 1-2 of nweu and eeu, the same portraits); every other nation and face stays, and done twice it is the same |
 | `test_country_order.py` | | League order (0.2.0) follows the recipe's `country_order` and never `league_order` (the Leagues page's drag order) |
 | `test_crestmatch.py` | | the crest file name matcher |
+| `test_palmares.py` | | the trophy cabinet of the Palmarés (`fl26swiss.c`, [palmares.md](palmares.md)): a title on a record and on a new one with its own date, the same year twice, a full region, two records of one competition merged, winners without a date dated, the palmarés file applied once and renamed |
 | `test_cup_draw.py` | | `cup_draw` becomes the `cupdraw` line; `seeded` unless the recipe says otherwise; any other value is refused |
 | `test_dll_check.py` | | Install the modules stops, naming the file, when an antivirus takes or empties a DLL right after the copy; Home / Diagnostics (`checks.dll_problems`) and *4. Check* say the same while a switched-on module's DLL is missing |
 | `test_game_text.py` | (font files: `pes_fnt.bin` ... of `dt11_x64.cpk`, optional) | names go into the game's tables in letters its fonts have (`pesdb.game_text`, B173): Azerbaijani ə as a, Romanian ș ț as ş ţ, Vietnamese letters with the accents the fonts have; what they have (Ə, Turkish, Greek, Cyrillic, Chinese ...) stays; a player's name slots and shirt, a club's and a league's name; with font files, the ranges are checked against them |
@@ -178,7 +179,7 @@ python tools/langcheck.py --unused      # keys no _("...") uses any more
 The `test_*.c` harnesses in `tools/native` include `fl26swiss.c` (or `fl26chain.c`) with a test
 define and call its pure parts on made-up data; nothing of the game runs. Their Python wrappers
 (`test_rcal_days.py`, `test_state_keep.py`, `test_legpair.py`, `test_potdraw.py`,
-`test_futve_playoff.py`) build and run them through `tools/nativetest.py`:
+`test_futve_playoff.py`, `test_palmares.py`) build and run them through `tools/nativetest.py`:
 
 - on Windows with zig (`ZIG`, `PATH`, `D:/dev/tools/zig-*/zig.exe` or the branch's pip install);
 - on Linux and macOS with the system C compiler (`CC`, `cc`, `gcc` or `clang`), built for the
