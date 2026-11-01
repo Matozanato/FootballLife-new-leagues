@@ -48,8 +48,20 @@ NEW_B = (b"if ctx.match_info == 53 then\r\n"
          b"\t   if ctx.tournament_id == 261 or ctx.tournament_id == 262 or ctx.tournament_id == 263 then\r\n"
          b"\t      Entrance_fix = \"Final\\\\st001\"\r\n"
          b"\t   elseif ctx.stadium == 1 then")
+# trophy_rewrite: say when the game asks (and for what), and give our finals the UEL/UCL trophy by
+# the id the game passes -- not by the global `entry` the last make_key left (29.10.: the module was
+# asked three times before the 262 final and never after it).
+OLD_T = b"function trophy_rewrite(ctx, tournament_id)\r\n   if entry ~= nil then"
+NEW_T = (b"function trophy_rewrite(ctx, tournament_id)\r\n"
+         b"   log(string.format(\"---- trophy_rewrite asked: tournament %s, match_info %s, entry %s\", "
+         b"tostring(tournament_id), tostring(ctx.match_info), tostring(entry)))\r\n"
+         b"   if tournament_id == 255 or tournament_id == 256 or tournament_id == 261 or tournament_id == 262 or tournament_id == 263 then\r\n"
+         b"      log(\"---- Liga FUTVE final: trophy entry 10 (the Libertadores's ceremony)\")\r\n"
+         b"      return 10\r\n"
+         b"   end\r\n"
+         b"   if entry ~= nil then")
 PATCHES = {
-    "cinematics.lua": ((OLD_UEL, NEW_UEL),),
+    "cinematics.lua": ((OLD_UEL, NEW_UEL), (OLD_T, NEW_T)),
     "cinematicsB.lua": ((OLD_B, NEW_B),),
 }
 
