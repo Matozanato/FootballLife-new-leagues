@@ -13193,7 +13193,17 @@ static void* mp_child(void* widget, const char* name)
  *     has one above (+0x7c) and the row is in the first 0x140ea1c00(reg, 0). That function also
  *     wants +0x304's top bits 10, which the Druga NL's (0x6002dd00, its two up arrows drawn) has
  *     not, so it is not asked here (2026-11-01);
- *   - a league phase (36 clubs): 1-8 up (the Round of 16), 9-24 the play-off.
+ *   - a league phase (36 clubs): 1-8 up (the Round of 16), 9-24 the play-off;
+ *   - a league the game splits (Scotland, Denmark, Belgium: ZSPLITS, the game's ids in every world;
+ *     mato 2026-11-01: the play-offs decide Europe, not the regular season): its regular season
+ *     shows the split -- the first group's places up, the second group's the play-off when the
+ *     access list has a place past the first group, the last by the game's count down -- and the
+ *     two groups the European places, the first group's place k being the league's place k, the
+ *     second group's place k the league's place (first group's clubs + k). A group's clubs are
+ *     the game's count (+0x30a) once the split is drawn; before it the count is 0 (FL27,
+ *     Belgium, August 2026: both read 0) and the regulation's own number is used (Scotland and
+ *     Denmark 6 + 6, Belgium 4 + 4: "Contested by 4 teams"; checked at the split, 2027-06-01). The
+ *     game's own down places stay red in the second group (Denmark 11-12: Lyngby and Viborg).
  * The palette, read in FL26 2.2 on 2026-11-01 (the ranking numbers drawn in each index): 70 blue
  * (0,125,255), 3 orange (244,78,0), 34 teal (2,163,174), 62 green (0,255,0), 67 amber
  * (255,189,0), 72 red (208,8,8). Without that layout the cell is not found and nothing is done. */
@@ -13212,30 +13222,79 @@ typedef unsigned char* (*zcomp_fn)(void*, uint64_t);
 typedef uint64_t (*zdown_fn)(uint64_t);
 typedef uint64_t (*zup_fn)(uint64_t, uint64_t);
 static int g_zone_said;
-static int zone_of(uint16_t reg, unsigned i)
+/* the regular season of a split league and its two groups (top six / bottom six, the title and
+   the second play-off), the game's own regulation ids */
+static const struct { uint16_t reg, first, second; uint8_t n1, n2; } ZSPLITS[] = {
+  { 134, 135, 136, 6, 6 },    /* Scotland */
+  { 147, 148, 175, 6, 6 },    /* Denmark */
+  { 155, 156, 172, 4, 4 },    /* Belgium */
+};
+static unsigned char* zcomp(uint16_t reg)
 {
-  if (reg == 1027 || reg == 1029 || reg == UECL_ROW)
-    return i < 8 ? ZONE_UP : i < 24 ? ZONE_PO : -1;
+  void* db = ((zdb_fn)(uintptr_t)(g_base + ZDB_RVA))();
+  return db ? ((zcomp_fn)(uintptr_t)(g_base + ZCOMP_RVA))(*(void**)((unsigned char*)db + 0x48), reg) : 0;
+}
+static unsigned zclubs(uint16_t reg, unsigned dflt)
+{
+  unsigned char* c = zcomp(reg);
+  unsigned n = c ? *(uint16_t*)(c + 0x30a) & 0x7f : 0;
+  return n ? n : dflt;
+}
+/* the European place of the access list for league reg's place rank, or -1 */
+static int zone_access(uint16_t reg, unsigned rank)
+{
   for (size_t k = 0; k < g_naccess; k++) {
     const access_t* a = &g_access[k];
-    if (a->reg != reg || a->rank != i + 1) continue;
+    if (a->reg != reg || a->rank != rank) continue;
     switch (a->comp) {
       case UCL: case UCLQ: case LIB: case LIBQ: case AFCL: return ZONE_CL;
       case UEL: case UELQ: return ZONE_EL;
       case UECL: case UECLQ: return ZONE_ECL;
     }
   }
-  void* db = ((zdb_fn)(uintptr_t)(g_base + ZDB_RVA))();
-  unsigned char* c = db ? ((zcomp_fn)(uintptr_t)(g_base + ZCOMP_RVA))(*(void**)((unsigned char*)db + 0x48), reg) : 0;
-  if (!c) return -1;
+  return -1;
+}
+static int zone_down(uint16_t reg, unsigned i)
+{
+  unsigned char* c = zcomp(reg);
+  if (!c || *(uint16_t*)(c + 0x7e) == 0xffff) return 0;
   unsigned n = *(uint16_t*)(c + 0x30a) & 0x7f;
+  unsigned d = (unsigned)((zdown_fn)(uintptr_t)(g_base + ZDOWN_RVA))(reg);
+  return d && i < n && i + d >= n;
+}
+static int zone_of(uint16_t reg, unsigned i)
+{
+  if (reg == 1027 || reg == 1029 || reg == UECL_ROW)
+    return i < 8 ? ZONE_UP : i < 24 ? ZONE_PO : -1;
+  int split = 0;
+  for (size_t k = 0; k < sizeof ZSPLITS / sizeof *ZSPLITS; k++) {
+    if (reg == ZSPLITS[k].first) return zone_access(ZSPLITS[k].reg, i + 1);
+    if (reg == ZSPLITS[k].second) return zone_access(ZSPLITS[k].reg, zclubs(ZSPLITS[k].first, ZSPLITS[k].n1) + i + 1);
+    if (reg != ZSPLITS[k].reg) continue;
+    unsigned a = zclubs(ZSPLITS[k].first, ZSPLITS[k].n1), b = zclubs(ZSPLITS[k].second, ZSPLITS[k].n2);
+    static unsigned said_split;
+    if (!(said_split & 1u << k)) {
+      said_split |= 1u << k;
+      logf("fl26swiss: zone -- split league %u: groups %u (%u clubs) and %u (%u clubs)",
+           (unsigned)reg, (unsigned)ZSPLITS[k].first, a, (unsigned)ZSPLITS[k].second, b);
+    }
+    if (i < a) return ZONE_UP;
+    if (zone_down(reg, i)) return ZONE_DOWN;   /* Denmark 6 + 6: 11-12 go down, not the play-off */
+    if (i < a + b) {
+      for (unsigned r = a + 1; r <= a + b; r++)
+        if (zone_access(reg, r) >= 0) return ZONE_PO;
+    }
+    split = 1;
+  }
+  if (!split) {
+    int z = zone_access(reg, i + 1);
+    if (z >= 0) return z;
+  }
+  unsigned char* c = zcomp(reg);
+  if (!c) return -1;
   if (*(uint16_t*)(c + 0x7c) != 0xffff && i < (unsigned)((zup_fn)(uintptr_t)(g_base + ZUP_RVA))(reg, 0))
     return ZONE_UP;
-  if (*(uint16_t*)(c + 0x7e) != 0xffff) {
-    unsigned d = (unsigned)((zdown_fn)(uintptr_t)(g_base + ZDOWN_RVA))(reg);
-    if (d && i < n && i + d >= n) return ZONE_DOWN;
-  }
-  return -1;
+  return zone_down(reg, i) ? ZONE_DOWN : -1;
 }
 static void zone_fill(void* roww, uint16_t reg, unsigned i)
 {
