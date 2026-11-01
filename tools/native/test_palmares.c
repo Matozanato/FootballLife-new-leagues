@@ -12,6 +12,8 @@
      - a competition the cabinet has not got: a record of its own after the last, with this win
        alone and its own date -- not the dates and winners of the record it is modelled on (the
        "2 Supercopas" of 01.11.);
+     - an empty cabinet (the career's first title): the first slot written in place, its four bytes
+       past the lists its own;
      - no room left (the records reach the end of the region): -1, nothing written;
      - two records of one competition (two rows "Liga FUTVE 1"): merged into the first, both
        winners and dates on its lists, the records after it moved up one, the empty one too;
@@ -95,6 +97,19 @@ int main(void)
   expect(r256[CAB_RECSZ - 4] == 0x5a, "the bytes past the lists are the model's");
   expect(*(uint16_t*)cab_rec(blk, 4) == 0xffff, "the record after it is empty");
   expect(cab_title_add(blk, U, 256, U, dt(2026, 2, 2)) == 0, "256 of 2026 again (two days later): not added");
+
+  printf("an empty cabinet: the career's first title\n");
+  cab_reset();
+  cab_rec(blk, 0)[CAB_RECSZ - 4] = 0x33;            /* the slot's own bytes past the lists */
+  expect(cab_count(blk) == 0, "no record");
+  expect(cab_title_add(blk, U, 261, U, dt(2025, 6, 7)) == 1, "261 of 2025: written, 1 title");
+  unsigned char* r0 = cab_rec(blk, 0);
+  expect(*(uint16_t*)r0 == 261 && *(uint16_t*)(r0 + 2) == 0 && rec_wins(r0) == 1 && *(uint32_t*)(r0 + 4) == U,
+         "slot 0 holds 261, the user's club once");
+  expect(*(uint32_t*)(r0 + CAB_DAT) == dt(2025, 6, 7) && *(uint16_t*)(r0 + CAB_DAT + 4) == 0xffff,
+         "its one date, the next empty");
+  expect(r0[CAB_RECSZ - 4] == 0x33 && *(uint16_t*)cab_rec(blk, 1) == 0xffff, "its own bytes past the lists kept, slot 1 empty");
+  expect(cab_title_add(blk, U, 255, U, dt(2025, 8, 1)) == 1 && cab_count(blk) == 2, "a second title: a record after it");
 
   printf("no room\n");
   cab_reset();
