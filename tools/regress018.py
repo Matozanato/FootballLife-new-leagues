@@ -20,7 +20,14 @@ Prints a summary table (recipe, build ok, buildcheck fails, worst European-day c
 
 --base defaults to $FL26_PESDB; --only keeps recipes whose
 name contains the given text.
+
+--save <dir> keeps a fingerprint of every built world in <dir> (<recipe>.json: the sha256 of every
+file of the world folder but the Build's own bookkeeping, leaguebuilder-*); --against <dir>
+compares this run's worlds with such a fingerprint and fails on any file added, gone or changed.
+Before a change: --save; after it: --against. A change that must not alter worlds built without
+its new recipe keys proves it so.
 """
+import hashlib
 import json
 import os
 import shutil
@@ -104,11 +111,36 @@ def europe_lines(recipe_path, worlddir):
     return out
 
 
+def fingerprint(worlddir):
+    """{relative path: sha256} of the world folder's files, the Build's bookkeeping left out"""
+    out = {}
+    for root, _dirs, files in os.walk(worlddir):
+        for f in files:
+            if f.startswith("leaguebuilder-"):
+                continue
+            p = os.path.join(root, f)
+            h = hashlib.sha256()
+            with open(p, "rb") as fh:
+                for b in iter(lambda: fh.read(1 << 20), b""):
+                    h.update(b)
+            out[os.path.relpath(p, worlddir).replace(os.sep, "/")] = h.hexdigest()
+    return out
+
+
+def compare(name, now, then):
+    """lines naming every file added, gone or changed between two fingerprints"""
+    out = ["%s: %s" % (what, f) for what, keys in (("added", sorted(set(now) - set(then))),
+                                                    ("gone", sorted(set(then) - set(now)))) for f in keys]
+    out += ["changed: %s" % f for f in sorted(set(now) & set(then)) if now[f] != then[f]]
+    return out
+
+
 def main():
     a = sys.argv[1:]
     get = lambda k: a[a.index(k) + 1] if k in a else None
     base = get("--base") or DEFAULT_BASE
     only = get("--only")
+    save, against = get("--save"), get("--against")
     if not os.path.exists(os.path.join(base, "CompetitionRegulation.bin")):
         print("no shipped tables in %s -- pass --base <folder with CompetitionRegulation.bin>" % base)
         return 2
@@ -149,6 +181,24 @@ def main():
                     elif l.startswith("FAIL"):
                         bc_fails += 1
                         print("  buildcheck: " + l)
+                fp = fingerprint(worlddir)
+                if save:
+                    os.makedirs(save, exist_ok=True)
+                    json.dump(fp, open(os.path.join(save, name + ".json"), "w"), indent=0, sort_keys=True)
+                    print("  fingerprint saved: %d file(s)" % len(fp))
+                if against:
+                    ref = os.path.join(against, name + ".json")
+                    if not os.path.exists(ref):
+                        print("FAIL %s: no fingerprint %s to compare with" % (name, ref))
+                        anyfail = True
+                    else:
+                        diff = compare(name, fp, json.load(open(ref)))
+                        print("  against %s: %s" % (against, "the same %d file(s)" % len(fp) if not diff
+                                                     else "%d difference(s)   <- FAIL" % len(diff)))
+                        for l in diff[:20]:
+                            print("    " + l)
+                        if diff:
+                            anyfail = True
                 for l, n, ok in europe_lines(path, worlddir):
                     print("  " + l + ("" if ok else "   <- FAIL"))
                     if worst is None or n > worst:

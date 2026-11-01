@@ -107,6 +107,8 @@ Needs PySide6. Before a release, also start the exe from the release zip once an
 ```
 python tools/regress018.py --base <tables>              # all recipes
 python tools/regress018.py --base <tables> --only cup   # recipes whose name contains "cup"
+python tools/regress018.py --base <tables> --save <dir>     # and keep a fingerprint of each world
+python tools/regress018.py --base <tables> --against <dir>  # and compare each world with it
 ```
 
 It takes every `*.json` in `tools/testdata/buildcheck/` and `tools/testdata/regress018/`, and
@@ -137,6 +139,13 @@ The recipes:
 It prints a summary table and exits 1 on any FAIL. Add a recipe there for every feature that
 changes what Build writes.
 
+**Nothing changes by default.** A new recipe key must leave every world built without it as it
+was. Prove it with a fingerprint: `--save <dir>` on the code before your change keeps, per recipe,
+the sha256 of every file of the built world folder (`<dir>/<recipe>.json`; the Build's own
+`leaguebuilder-*` bookkeeping is left out), and `--against <dir>` on your change compares each new
+world with it. Any file added, gone or changed is a FAIL and is named. Builds are reproducible: the
+same recipe on the same tables gives the same files.
+
 ## `buildcheck.py`: one world, offline
 
 ```
@@ -166,6 +175,23 @@ python tools/langcheck.py --unused      # keys no _("...") uses any more
 
 ## The C tests
 
+The `test_*.c` harnesses in `tools/native` include `fl26swiss.c` (or `fl26chain.c`) with a test
+define and call its pure parts on made-up data; nothing of the game runs. Their Python wrappers
+(`test_rcal_days.py`, `test_state_keep.py`, `test_legpair.py`, `test_potdraw.py`,
+`test_futve_playoff.py`) build and run them through `tools/nativetest.py`:
+
+- on Windows with zig (`ZIG`, `PATH`, `D:/dev/tools/zig-*/zig.exe` or the branch's pip install);
+- on Linux and macOS with the system C compiler (`CC`, `cc`, `gcc` or `clang`), built for the
+  machine itself. `tools/native/hosttest/windows.h` stands in for the Windows header there: the
+  types and constants the DLL uses, and its Win32 calls as stubs. The file calls (the state file,
+  the palmarés file) work on plain files; memory protection, threads, modules and exception
+  handlers do nothing, and the hooks are never called by a harness.
+
+Without a compiler a wrapper prints `SKIPPED` and passes. A new harness needs nothing more than its
+`test_<name>.c` and a wrapper that calls `nativetest.run("test_<name>.c")`.
+
+By hand, on Windows:
+
 ```
 cd tools/native
 zig cc -O2 -o swissdraw_test.exe swissdraw_test.c && swissdraw_test.exe [runs] [seed]
@@ -178,7 +204,12 @@ zig cc -O2 -fno-sanitize=undefined test_chain_apclau.c -o test_chain_apclau.exe 
 - `test_chain_apclau.c` includes `fl26chain.c`, builds a fake game image and checks that an
   Apertura/Clausura league's standings count both phases (#106).
 
-Delete the `.exe` files afterwards.
+Delete the `.exe` files afterwards. On Linux or macOS:
+
+```
+cd tools/native
+cc -O2 -w -I hosttest test_rcal_days.c -o /tmp/test_rcal_days && /tmp/test_rcal_days
+```
 
 ## In the game
 
