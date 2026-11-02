@@ -1253,7 +1253,6 @@
   "(made up from players of the club's country)": "(izmišljeno od igrača države kluba)",
   "Select Team": "Select Team",
   "The league's place in the order (Move up / Move down): the first ones get a place in Select Team": "Mjesto lige u redoslijedu (Pomakni gore / dolje): prve dobivaju mjesto u Select Team",
-  "Where the last Build put the league in Select Team": "Gdje je zadnji Build stavio ligu u Select Team",
   "The order changed since the last Build: Build again to see where it goes.": "Redoslijed se promijenio od zadnjeg Builda: Build opet da vidiš kamo ide.",
   "exhibition only": "samo egzibicija",
   "no place (it plays)": "nema mjesta (igra se)",
@@ -2062,7 +2061,14 @@
   "The players of the selected club that go in its squad; without a choice it gets its best ones": "Igrači odabranog kluba koji ulaze u momčad; bez odabira dobiva svoje najbolje",
   "Tick at least one player.": "Označi barem jednog igrača.",
   "Ticks the players the club gets when nobody chooses: its best %d, three goalkeepers at most": "Označava igrače koje klub dobiva bez odabira: najboljih %d, najviše tri vratara",
-  "Untick %d: a club takes up to %d players.": "Odznači %d: klub prima najviše %d igrača."
+  "Untick %d: a club takes up to %d players.": "Odznači %d: klub prima najviše %d igrača.",
+  "%s has that place already: set it back to Automatic first.": "%s već ima to mjesto: prvo njoj vrati Automatski.",
+  "Automatic": "Automatski",
+  "Automatic: %s": "Automatski: %s",
+  "Automatic: the order (#) decides, and the game's Other ... groups give their place last. Pick a group to give its place in Select Team to this league; that group's own clubs are then not in Select Team. Build puts it there.": "Automatski: odlučuje redoslijed (#), a igrine grupe Ostali ... daju svoje mjesto zadnje. Odaberi grupu i njeno mjesto u Select Team dobiva ova liga; klubovi te grupe tada nisu u Select Team. Build je stavi tamo.",
+  "Not built like this yet: press Build.": "Još nije tako izgrađena: pritisni Build.",
+  "Where the last Build put the league in Select Team. Pick a group of the game's here and the league takes its place": "Gdje je zadnji Build stavio ligu u Select Team. Ovdje odaberi igrinu grupu i liga dobiva njeno mjesto",
+  "Where the last Build put the league in Select Team": "Gdje je zadnji Build stavio ligu u Select Team"
  },
  "log": [
   [

@@ -243,6 +243,52 @@ def select_team_text(L, b, plan):
     return _("yes")
 
 
+class PlaceBox(QComboBox):
+    """a combo in a table row: the mouse wheel scrolls the table, it does not change the pick"""
+
+    def wheelEvent(self, e):
+        e.ignore()
+
+
+def place_box(page, L, seen, b):
+    """the Select Team cell of a league (New leagues, the Leagues page's places table): where the
+    last Build put it, or the place of one of the game's "other" groups it takes (recipe
+    select_team; vmican 02.11.: with a South American world the Other Latin American Teams are
+    of no use)"""
+    box = PlaceBox()
+    box.setFocusPolicy(Qt.StrongFocus)
+    box.addItem(_("Automatic: %s") % seen if seen else _("Automatic"), "")
+    for key, slot in fl26world.POOL_PICK.items():
+        box.addItem(_("in place of %s") % _(fl26world.POOL_SLOTS[slot]), key)
+    box.setCurrentIndex(max(0, box.findData(L.get("select_team") or "")))
+    tip = _("Automatic: the order (#) decides, and the game's Other ... groups give their place last. Pick "
+            "a group to give its place in Select Team to this league; that group's own clubs are then "
+            "not in Select Team. Build puts it there.")
+    want = fl26world.POOL_PICK.get(L.get("select_team"))
+    if want is not None and b and b.get("slot") != want:
+        tip += "\n" + _("Not built like this yet: press Build.")
+    box.setToolTip(tip)
+    box.currentIndexChanged.connect(lambda _n, box=box: pick_place(page, L, box.currentData()))
+    return box
+
+
+def pick_place(page, L, key):
+    leagues = page.project.recipe["leagues"]
+    if (L.get("select_team") or "") == (key or "") or not any(M is L for M in leagues):
+        return
+    other = next((M.get("name") for M in leagues if M is not L and key and M.get("select_team") == key), None)
+    if other:
+        page.say(_("%s has that place already: set it back to Automatic first.") % other, "warn")
+        QTimer.singleShot(0, page.refresh)
+        return
+    if key:
+        L["select_team"] = key
+    else:
+        L.pop("select_team", None)
+    # not from inside the combo's own signal: touch() rebuilds the table and the combo with it
+    QTimer.singleShot(0, page.project.touch)
+
+
 def fmt_text(L):
     if L.get("apertura"):
         return _("Apertura + Clausura")
@@ -1019,7 +1065,7 @@ class LeagueDialog(Dialog):
             if below:
                 error(self, "League", _("%s is below this league; an exhibition league has none.") % below[0])
                 return
-            for k in ("above", "cup", "supercup", "league_cup", "split", "apertura", "europe", "season"):
+            for k in ("above", "cup", "supercup", "league_cup", "split", "apertura", "europe", "season", "select_team"):
                 L.pop(k, None)
             L["exhibition"] = True
             L.pop("others", None)
@@ -3000,7 +3046,8 @@ class NewLeagues(BuilderPage):
                                                "file uses), given at Build"))
         self.tree.headerItem().setToolTip(9, _("The league's place in the order (Move up / Move down): the first "
                                                "ones get a place in Select Team"))
-        self.tree.headerItem().setToolTip(10, _("Where the last Build put the league in Select Team"))
+        self.tree.headerItem().setToolTip(10, _("Where the last Build put the league in Select Team. Pick a group "
+                                                "of the game's here and the league takes its place"))
         for c, w in enumerate((240, 80, 150, 60, 170, 230, 80, 150, 110, 40)):
             self.tree.setColumnWidth(c, w)
         self.tree.header().moveSection(9, 0)        # "#" shown first, as asked
@@ -3078,6 +3125,9 @@ class NewLeagues(BuilderPage):
                 it.setIcon(0, pm)
             it.setData(0, Qt.UserRole, i)
             self.tree.addTopLevelItem(it)
+            if not L.get("others") and not L.get("exhibition"):
+                self.tree.setItemWidget(it, 10, place_box(self, L, seen, b))
+                it.setText(10, "")
         if cur is not None and cur < self.tree.topLevelItemCount():
             self.tree.setCurrentItem(self.tree.topLevelItem(cur))
         clubs = sum(B.new_club_count(L) for L in r["leagues"])

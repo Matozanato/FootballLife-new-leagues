@@ -78,6 +78,7 @@ Rules that hold for every key:
 | `supercup`, `supercup_name`, `supercup_logo` | | the super cup that goes with `cup` | tables, `dates` |
 | `league_cup`, `league_cup_name`, `league_cup_logo` | | a single-match league cup of the division and the one below, up to 44 clubs, on the Carabao Cup's weeks (0.2.0; before, 16, 8 or 4 clubs with a pre-round) | `ccup` (`like=23`) |
 | `exhibition` | bool | Kick Off only, never in a Master League season | `exhibition=1` |
+| `select_team` | `europe`, `latam`, `africa`, `other` | the league takes the Select Team place of the game's Other European Leagues / Other Latin American Teams / Other Clubs (Africa) / Other group (`fl26world.POOL_PICK`), before the order and the pins; one league a group, not an exhibition league | Leagues page, Places in Select Team |
 | `others` | `europe`, `latam`, `asia`, `africa`, `classic` | not a league: clubs for the game's "Other ..." groups | tables only |
 | `newlife` | {"version": ..., "clubs": [NewLife club id, ...]} | written by the NewLife page: which release clubs fill the places | tables |
 

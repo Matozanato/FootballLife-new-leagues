@@ -13,7 +13,7 @@ from ..i18n import _
 from ..ui import hint, row
 from .. import theme
 from .builder import (BuilderPage, GameLeagues, fmt_text, europe_text, tier_of, pixmap, others_labels,
-                      built_plan, built_league, select_team_text)
+                      built_plan, built_league, select_team_text, place_box)
 
 CONTINENTS = ((2, "Europe"), (3, "Asia"), (4, "South America"), (5, "Africa"),
               (6, "North and Central America"), (7, "Oceania"), (0, "Other"))
@@ -250,7 +250,8 @@ class Leagues(BuilderPage):
                                                _("League ID")])
         self.places.horizontalHeaderItem(0).setToolTip(_("The league's place in the order: the first ones get a "
                                                          "place in Select Team"))
-        self.places.horizontalHeaderItem(4).setToolTip(_("Where the last Build put the league in Select Team"))
+        self.places.horizontalHeaderItem(4).setToolTip(_("Where the last Build put the league in Select Team. Pick a group "
+                                                         "of the game's here and the league takes its place"))
         self.places.verticalHeader().hide()
         self.places.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.places.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -430,6 +431,12 @@ class Leagues(BuilderPage):
             pm = pixmap(L.get("logo"), 20)
             if pm:
                 self.places.item(n, 1).setIcon(pm)
+            if not L.get("others") and not L.get("exhibition"):
+                # the place of one of the game's "other" groups, picked here (vmican 02.11.)
+                self.places.setCellWidget(n, 4, place_box(self, L, seen, b))
+                self.places.item(n, 4).setText("")
+            else:
+                self.places.removeCellWidget(n, 4)
         self.places.resizeColumnsToContents()
 
     def save_order(self):

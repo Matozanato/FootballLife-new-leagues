@@ -204,7 +204,7 @@ until you drag a league to put it somewhere else. Filters **All**, **Ours** and 
 a search box. Pick one: a league of yours gets **Edit league...**, **Add lower tier**, **Clubs and
 names**, **Players** and **Remove**; a league of the game gets its name, logo and clubs (section
 8, "The game's leagues"). **Add league** makes a new one. **Places in Select Team** shows where
-the last Build put each of your leagues. **More ▾** has **Pre-season cups**, **Cups of our
+the last Build put each of your leagues; its **Select Team** column is a list: *Automatic* (the order decides) or *in place of* one of the game's groups (Other European Leagues, Other Latin American Teams, Other Clubs (Africa), Other). A league picked there takes that group's place at the next Build, whatever the order, and the group's own clubs are then not in Select Team (one league a group; a South American world has no use for the Other Latin American Teams, vmican). **More ▾** has **Pre-season cups**, **Cups of our
 countries**, **Cups of the game's countries**, **European places of the game's leagues**,
 **First-season European clubs**, **UEFA ranking**, **South American places** (who goes to the
 Libertadores and the Copa Sudamericana; its **Modern CONMEBOL competitions** box adds the
