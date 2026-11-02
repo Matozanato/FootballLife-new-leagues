@@ -1,4 +1,4 @@
-# FL26 Mod Studio — upute
+# FL Mod Studio — upute
 
 > [English](../en/mod-studio-guide.md) · **hrvatski** · [español](../es/mod-studio-guide.md) · [português](../pt/mod-studio-guide.md) · [français](../fr/mod-studio-guide.md)
 
@@ -9,7 +9,9 @@
 > Česta pitanja (ažuriranje, rušenje pri pokretanju, kupovi, ulazak u viši rang, što poslati kad
 > nešto ne radi), na engleskom: [faq.md](../../docs/faq.md) · pitanja i pomoć na [Discordu](https://discord.gg/StQqtk3G3M)
 
-FL26 Mod Studio je jedan program za sve što dodaješ u Football Life 2026:
+*Do 0.3.0 zvao se FL26 Mod Studio: isti program, novo ime jer radi i s FL27. Datoteka programa (FL26ModStudio.exe), mapa u zipu i tvoje postavke zadržavaju stara imena.*
+
+FL Mod Studio je jedan program za sve što dodaješ u Football Life 2026:
 
 - **modove** koje skineš: stadione, dresove, lopte, semafore, komentar, glazbu, lica, Lua module;
 - **content servere** koji ih poslužuju (Stadium Server, Ball Server, Kit Server i ostali), s
@@ -124,7 +126,7 @@ ovom svijetu...** (sve što tvoj svijet mijenja u igri na jednom popisu; odaberi
 **Poništi odabrane izmjene** da ih vratiš), **Dodaj paket liga...** i **Napravi paket liga...**.
 **Igra** otvara mapu igre, Sider mapu, `sider.ini` i `sider.log` i pokreće igru. **Pomoć** ima
 **Upute**, **Kratka tura**, **Instaliraj Modpack, korak po korak**, **Uredi Modpack, korak po korak**, **Provjeri ažuriranja...** i
-**O programu FL26 Mod Studio**.
+**O programu FL Mod Studio**.
 
 ### 3.1 Moj svijet
 

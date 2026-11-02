@@ -125,7 +125,7 @@ class Diagnostics(Page):
     def copy_report(self):
         from .. import VERSION
         g = self.app.game
-        out = ["FL26 Mod Studio %s" % VERSION, "game version: %s" % (g.version() or "?"), ""]
+        out = ["FL Mod Studio %s" % VERSION, "game version: %s" % (g.version() or "?"), ""]
         for level, area, text, page in self.rows:
             out.append("[%s] %s: %s" % (level, area, text))
         out += ["", "sider.log errors (last game):"]

@@ -73,7 +73,7 @@ def ensure_first(sider_dir, ini):
         return False
     if any(p["name"] == FIRST for p in listing(sider_dir)):
         return False
-    save(sider_dir, capture(ini, FIRST, "the setup the first time FL26 Mod Studio opened this game"))
+    save(sider_dir, capture(ini, FIRST, "the setup the first time FL Mod Studio opened this game"))
     return True
 
 

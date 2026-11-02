@@ -48,7 +48,7 @@ who covered a big part of what the project costs
 one program to manage everything else you add to the game. No patched executable, no repacked
 CPKs: it all goes in through Sider modules and data files, and comes out again.
 
-> ## FL26 Mod Studio (beta)
+> ## FL Mod Studio (beta)
 >
 > **[Download the latest version](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest)**
 > (`FL26ModStudio-<version>.zip`), unzip, run `FL26ModStudio.exe`. No Python needed. It

@@ -1,6 +1,6 @@
 r"""python mszip.py [--no-exe] [--untested] [--no-faces]   -> out\mszip\ and out\FL26ModStudio-<version>.zip
 
-FL26 Mod Studio in one folder:
+FL Mod Studio in one folder:
 
   FL26ModStudio.exe     the window (tools/modstudio_main.py), frozen with PyInstaller as a
   _internal\            folder, not one file: a one-file .exe unpacks some 150 MB to a temporary

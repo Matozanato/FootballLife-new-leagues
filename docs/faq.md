@@ -1,12 +1,12 @@
 # Questions people ask
 
-The first part is about **FL26 Mod Studio**, the program most people use. The second part is
+The first part is about **FL Mod Studio**, the program most people use. The second part is
 about the command-line scripts it grew out of. Your question is not here? Open an
 [issue](https://github.com/Matozanato/FootballLife-new-leagues/issues) with the report
 described in [What should I send when something is wrong?](#what-should-i-send-when-something-is-wrong)
 Just a question, not a bug? Ask on [Discord](https://discord.gg/StQqtk3G3M).
 
-## FL26 Mod Studio
+## FL Mod Studio
 
 ### I updated Mod Studio. What do I do now?
 
@@ -506,7 +506,7 @@ any folder name works.
 
 ### Is there a program instead of all the scripts?
 
-Yes: FL26 Mod Studio, a Windows program (beta). It installs the modules, builds leagues and
+Yes: FL Mod Studio, a Windows program (beta). It installs the modules, builds leagues and
 clubs, edits the players of any club, adds faces, installs other mods and content servers,
 and keeps restore points. Download it from the
 [latest release](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest);

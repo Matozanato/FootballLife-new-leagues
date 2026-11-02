@@ -1,4 +1,4 @@
-# FL26 Mod Studio — guide d'utilisation
+# FL Mod Studio — guide d'utilisation
 
 > [English](../en/mod-studio-guide.md) · [hrvatski](../hr/mod-studio-guide.md) · [español](../es/mod-studio-guide.md) · [português](../pt/mod-studio-guide.md) · **français**
 
@@ -9,7 +9,9 @@
 > Questions fréquentes (mise à jour, plantage au démarrage, coupes, montées, quoi envoyer quand
 > quelque chose ne va pas), en anglais : [faq.md](../../docs/faq.md) · questions et aide sur [Discord](https://discord.gg/StQqtk3G3M)
 
-FL26 Mod Studio est un seul programme pour tout ce que vous ajoutez à Football Life 2026 :
+*Jusqu'à la 0.3.0, il s'appelait FL26 Mod Studio : c'est le même programme, renommé parce qu'il fonctionne aussi avec FL27. Le fichier du programme (FL26ModStudio.exe), le dossier du zip et vos réglages gardent leur nom.*
+
+FL Mod Studio est un seul programme pour tout ce que vous ajoutez à Football Life 2026 :
 
 - les **mods** que vous téléchargez : stades, maillots, ballons, tableaux de score, commentaires,
   musique, visages, modules Lua ;
@@ -77,7 +79,7 @@ deuxième carte qui vous guide pour installer un Modpack (un zip de monde), clic
    restauration**).
 
 **Mises à jour.** Quelques secondes après le démarrage, le programme demande à GitHub si une
-nouvelle version de FL26 Mod Studio est sortie, et ne le signale que s'il y en a une.
+nouvelle version de FL Mod Studio est sortie, et ne le signale que s'il y en a une.
 **Télécharger et installer** récupère le nouveau zip, le vérifie avec la somme de contrôle de la
 version, ferme le programme, place les nouveaux fichiers par-dessus les anciens et le relance. Vos
 réglages, mondes, points de restauration et le jeu ne sont pas touchés. **Aide → Rechercher des
@@ -140,7 +142,7 @@ seule liste ; choisissez des lignes et appuyez sur **Annuler les modifications c
 les retirer), **Ajouter un paquet de ligues...** et **Créer un paquet de ligues...**. **Jeu**
 ouvre le dossier du jeu, le dossier de Sider, `sider.ini` et `sider.log`, et lance le jeu.
 **Aide** contient **Guide d'utilisation**, **Visite rapide**, **Installer un Modpack, étape par
-étape**, **Modifier un Modpack, étape par étape**, **Rechercher des mises à jour...** et **À propos de FL26 Mod Studio**.
+étape**, **Modifier un Modpack, étape par étape**, **Rechercher des mises à jour...** et **À propos de FL Mod Studio**.
 
 ### 3.1 Mon monde
 

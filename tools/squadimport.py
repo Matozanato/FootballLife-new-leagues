@@ -8,7 +8,7 @@ The table has one player per line. Its columns are recognised by their names (En
 few in Croatian): a name (or first + last name), position(s), age or birth date, nationality,
 height, weight, foot, shirt number, an overall rating, and any ratings it has -- EA FC's six
 card values or its detailed ones, Football Manager's 1-20 attributes, or our own 25 abilities
-by name. A column it does not recognise is skipped; --map (or FL26 Mod Studio's import dialog)
+by name. A column it does not recognise is skipped; --map (or FL Mod Studio's import dialog)
 names one by hand, and "column=" drops one.
 
 What the table does not give is filled in from the game's own players (the tables in --base):

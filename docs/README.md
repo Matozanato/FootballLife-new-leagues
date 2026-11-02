@@ -1,4 +1,4 @@
-# FL26 Mod Studio documentation
+# FL Mod Studio documentation
 
 ## Where to start
 

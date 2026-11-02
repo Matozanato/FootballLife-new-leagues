@@ -84,7 +84,7 @@ def run():
     ok("its buttons in %s: %s" % (LANG, names),
        sorted(names) == sorted([i18n._("Support on Ko-fi"), i18n._("Not now")]))
     import html, re
-    msg = html.escape(i18n._("FL26 Mod Studio is free and donating is never required, but a small "
+    msg = html.escape(i18n._("FL Mod Studio is free and donating is never required, but a small "
                              "donation on Ko-fi makes it easier for us to keep the project maintained "
                              "and updated. Thank you!"))
     shown = re.sub(r"<[^>]+>", " ", box.text())
