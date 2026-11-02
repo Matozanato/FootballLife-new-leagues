@@ -70,7 +70,8 @@ T_NATIONAL = 0x53     # Team.bin: top bit set on the 144 national teams (leagueb
 T_COUNTRY = 0x46      # Team.bin: the country, 9 bits from bit 2 (144 of 144 national teams)
 T_COACH = 0x00        # Team.bin: the id of the club's manager in Coach.bin (mkcoaches.T_COACH)
 PORTRAIT = 256        # a manager's portrait is a PNG this many pixels square
-PLAYER_PORTRAIT = 180  # a player's portrait (mini face) is a DDS this many pixels square
+PLAYER_PORTRAIT = 128  # a player's portrait (mini face) is a DDS this many pixels square: the game's
+                      # own size; FL27 does not survive bigger ones (180 until 02.11., lbpack.PORTRAIT)
 PICTURES = (".png", ".jpg", ".jpeg", ".bmp", ".webp", ".dds")
 BASIC = ["Registered Position", "Age", "Height (cm)", "Weight (kg)", "Stronger Foot", "Nationality"]
 KEYS = ["name", "shirt", "order"] + FIELDS
@@ -1048,7 +1049,7 @@ def _media(faces, portraits, pid, ch):
 def player_portraits(portraits, root, log=print):
     r"""each (player id, picture) as the player's portrait, common\render\symbol\player\<id>.dds:
     PLAYER_PORTRAIT pixels square, DXT5, the picture centred on a clear background -- the form of
-    the regen faces' portraits, which the game showed in the Team Sheet (30.09.). It goes after
+    the game's own portraits and of the regen faces' (the game showed those in the Team Sheet, 30.09.). It goes after
     the faces, so it wins over a face folder's own portrait.dds."""
     from PIL import Image
     if not portraits:

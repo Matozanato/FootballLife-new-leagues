@@ -140,6 +140,32 @@ def bundle(name, parts):
     return "\n".join(out)
 
 
+PORTRAIT = 128   # the game's own player portraits: 128 pixels square, DXT5 (FL26 and FL27 alike)
+
+
+def game_portraits(root):
+    """every portrait .dds under <root> at the game's own size; returns how many it changed.
+
+    The pack's portraits were 180 pixels square. FL26 draws them, but FL27 does not survive
+    them: a new Master League with the Europack (31,896 new players, each shown with a pack
+    portrait) died on its first day, twice, at the same place -- the same career without the
+    portraits, or with them at 128, reached the board meeting (02.11.)."""
+    from PIL import Image
+    n = 0
+    for d, _, files in os.walk(root):
+        for f in files:
+            p = os.path.join(d, f)
+            if not f.lower().endswith(".dds") or "symbol" not in p.split(os.sep):
+                continue
+            with Image.open(p) as im:
+                if im.size == (PORTRAIT, PORTRAIT):
+                    continue
+                im = im.convert("RGBA").resize((PORTRAIT, PORTRAIT), Image.LANCZOS)
+            im.save(p, "DDS", pixel_format="DXT5")
+            n += 1
+    return n
+
+
 def build(out, log=print):
     mods = os.path.join(out, "modules")
     if os.path.exists(out):
@@ -168,7 +194,8 @@ def build(out, log=print):
     if os.path.exists(faces) and os.path.isdir(os.path.join(FACES, FACE_ROOT)):
         shutil.copy2(faces, mods)
         shutil.copytree(os.path.join(FACES, FACE_ROOT), os.path.join(out, "livecpk", FACE_ROOT))
-        log("pack: regen face pack from %s" % FACES)
+        log("pack: regen face pack from %s (%d portrait(s) made %dx%d)"
+            % (FACES, game_portraits(os.path.join(out, "livecpk", FACE_ROOT)), PORTRAIT, PORTRAIT))
     else:
         log("pack: NO regen face pack (%s) -- regens will keep the generic face" % FACES)
     open(os.path.join(mods, "..", "modules.txt"), "w", encoding="utf-8", newline="\n").write(
