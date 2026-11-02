@@ -256,6 +256,8 @@ def place_box(page, L, seen, b):
     select_team; vmican 02.11.: with a South American world the Other Latin American Teams are
     of no use)"""
     box = PlaceBox()
+    # a table row gives its widget ~20 px: with the inputs' 4 px padding the text was cut at the bottom
+    box.setStyleSheet("QComboBox { padding: 1px 6px; }")
     box.setFocusPolicy(Qt.StrongFocus)
     box.addItem(_("Automatic: %s") % seen if seen else _("Automatic"), "")
     for key, slot in fl26world.POOL_PICK.items():
