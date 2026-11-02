@@ -53,12 +53,9 @@ class Settings(Page):
         self.per_world = QCheckBox(_("Each world keeps its own careers (the save folder is switched with the world)"))
         self.per_world.toggled.connect(self.set_per_world)
         form.addRow("", self.per_world)
-        from .. import saves
-        form.addRow("", hint(_("A career is made for one world: in another world its leagues and clubs are not "
-                               "there. When this is on and you switch the world in the game, Mod Studio renames "
-                               "the game's save folder: the careers of the world going out are kept in "
-                               "save_<world>, and those of the world coming in come back. Your game settings go "
-                               "with you. Nothing is deleted. Folder: %s") % saves.root()))
+        # the folder is the game's (FL26's or FL27's): refresh() writes it again after a switch of the game
+        self.saves_note = hint("")
+        form.addRow("", self.saves_note)
         form.addRow(section("The game's tables"), QLabel(""))
         form.addRow("", hint(_("Mod Studio needs the game's tables (its list of clubs, leagues and players) once "
                                "on every PC: it unpacks them by itself the first time. After a game update click Unpack the game's "
@@ -91,6 +88,12 @@ class Settings(Page):
 
     def refresh(self):
         g = self.app.game
+        from .. import saves
+        self.saves_note.setText(_("A career is made for one world: in another world its leagues and clubs are not "
+                                  "there. When this is on and you switch the world in the game, Mod Studio renames "
+                                  "the game's save folder: the careers of the world going out are kept in "
+                                  "save_<world>, and those of the world coming in come back. Your game settings go "
+                                  "with you. Nothing is deleted. Folder: %s") % saves.root())
         self.folder.blockSignals(True)
         self.folder.clear()
         seen = []
