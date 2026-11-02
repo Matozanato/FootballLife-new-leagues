@@ -391,7 +391,7 @@ class Packages(BuilderPage):
             out += K.EXT
         self.app.settings["pack_dir"] = os.path.dirname(out)
         from .. import VERSION
-        meta["made_with"] = "FL26 Mod Studio %s" % VERSION
+        meta["made_with"] = "FL Mod Studio %s" % VERSION
         leagues, edits = d.picked(), d.edits.isChecked()
         parts = [k for k, b in d.parts.items() if b.isChecked() and b.isEnabled()]
         sider = getattr(self.app.game, "sider_dir", None) if self.app.game else None

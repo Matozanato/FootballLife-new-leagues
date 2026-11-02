@@ -42,7 +42,7 @@ sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 # what stays as it is in every language: names of the game, brands, the program's own name
 ALLOW = {
-    "FL26 // MOD STUDIO", ">_", "FL26 Mod Studio", "Sider", "Lua", "OK", "UEFA", "AFC", "CAF", "CONMEBOL",
+    "FL // MOD STUDIO", ">_", "FL Mod Studio", "Sider", "Lua", "OK", "UEFA", "AFC", "CAF", "CONMEBOL",
     "CONCACAF", "OFC", "Libertadores", "Copa Libertadores", "Copa Sudamericana", "Champions League",
     "Europa League", "Conference League", "Master League", "NewLife", "NewLife Database", "Kit Server",
     "Select Team", "Kick Off", "Edit", "English", "Hrvatski", "Español", "Português", "Français",

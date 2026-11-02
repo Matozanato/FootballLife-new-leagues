@@ -1,6 +1,6 @@
 # Build it by hand, with Python
 
-> **Easier way:** [FL26 Mod Studio](../../guides/en/mod-studio-guide.md) ([other languages](../../guides/README.md)) does
+> **Easier way:** [FL Mod Studio](../../guides/en/mod-studio-guide.md) ([other languages](../../guides/README.md)) does
 > all of this from one window -- install, build leagues, edit players, switch mods on and
 > off. Start with [Install a ready pack](../../guides/en/install-a-pack.md) or
 > [Make your own leagues and packs](../../guides/en/make-your-own-leagues.md). This page is the manual route, and what the

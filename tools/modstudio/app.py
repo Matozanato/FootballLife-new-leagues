@@ -1,4 +1,4 @@
-r"""python -m modstudio.app   -> the FL26 Mod Studio window
+r"""python -m modstudio.app   -> the FL Mod Studio window
 
     top bar      the name, File / Game / Profiles / Language / Help menus, ready or not, Start the game
     state boxes  the game folder, Sider, the world in the game, the modules, its leagues, the pack
@@ -157,7 +157,7 @@ class Main(QMainWindow):
         # switched on in sider.ini, and the next Build would have replaced the live one with it
         self._start_note = self.open_live_world()
         self.bus.game_changed.connect(self.project.load_tables)
-        self.setWindowTitle("FL26 Mod Studio")
+        self.setWindowTitle("FL Mod Studio")
         self.resize(*self.settings.get("size", [1360, 820]))
         self.setMinimumSize(1080, 640)
         ico = os.path.join(HERE, "assets", "app.ico")
@@ -349,7 +349,7 @@ class Main(QMainWindow):
         mark.setObjectName("brandmark")
         h.addWidget(mark)
         h.addSpacing(8)
-        self.h_title = QLabel("FL26 // MOD STUDIO")
+        self.h_title = QLabel("FL // MOD STUDIO")
         self.h_title.setObjectName("brand")
         h.addWidget(self.h_title)
         h.addSpacing(10)
@@ -390,7 +390,7 @@ class Main(QMainWindow):
             ("Install a Modpack, step by step", self.start_modpack_guide),
             ("Edit a Modpack, step by step", self.start_edit_guide),
             ("Check for updates...", self.check_updates),
-            ("About FL26 Mod Studio", self.about)])
+            ("About FL Mod Studio", self.about)])
         self.help_btn = hb
         auto = QAction(_("Check for updates at start"), hb.menu())
         auto.setCheckable(True)
@@ -410,7 +410,7 @@ class Main(QMainWindow):
         kb = QToolButton()
         kb.setObjectName("menu")
         kb.setText("♥ Ko-fi")
-        kb.setToolTip(_("Support FL26 Mod Studio"))
+        kb.setToolTip(_("Support FL Mod Studio"))
         kb.clicked.connect(self.open_kofi)
         self.kofi_btn = kb
         h.addWidget(kb)
@@ -912,7 +912,7 @@ class Main(QMainWindow):
     def set_language(self, code):
         self.settings["lang"] = code
         self.save_settings()
-        QMessageBox.information(self, "FL26 Mod Studio",
+        QMessageBox.information(self, "FL Mod Studio",
                                 "The language changes when the program is started again.\n"
                                 "Jezik se mijenja kad se program ponovno pokrene.\n"
                                 "El idioma cambia al volver a abrir el programa.\n"
@@ -948,12 +948,12 @@ class Main(QMainWindow):
         self.settings["support"] = VERSION
         self.save_settings()
         box = QMessageBox(self)
-        box.setWindowTitle(_("Support FL26 Mod Studio"))
+        box.setWindowTitle(_("Support FL Mod Studio"))
         # the link itself in the box too, not only behind the button (mato 19.10.)
         import html
         box.setTextFormat(Qt.RichText)
         box.setTextInteractionFlags(Qt.TextBrowserInteraction)
-        box.setText(html.escape(_("FL26 Mod Studio is free and donating is never required, but a small donation "
+        box.setText(html.escape(_("FL Mod Studio is free and donating is never required, but a small donation "
                                   "on Ko-fi makes it easier for us to keep the project maintained and updated. "
                                   "Thank you!"))
                     + '<br><br><a href="%s">%s</a>' % (self.KOFI, self.KOFI.split("//", 1)[1]))
@@ -994,8 +994,8 @@ class Main(QMainWindow):
         QMessageBox.information(self, _("Help"), _("The user guide is README.html next to the program."))
 
     def about(self):
-        QMessageBox.about(self, "FL26 Mod Studio",
-                          "<b>FL26 Mod Studio</b> v%s<br><br>%s<br><br>%s" % (
+        QMessageBox.about(self, "FL Mod Studio",
+                          "<b>FL Mod Studio</b> v%s<br><br>%s<br><br>%s" % (
                               VERSION,
                               _("A mod manager and league builder for Football Life 2026."),
                               _("It changes sider.ini and the content folders only, and keeps a "
@@ -1034,7 +1034,7 @@ class Main(QMainWindow):
             if info:
                 self.offer_update(info)
             elif not quiet:
-                QMessageBox.information(self, _("Updates"), _("FL26 Mod Studio is up to date (v%s).") % VERSION)
+                QMessageBox.information(self, _("Updates"), _("FL Mod Studio is up to date (v%s).") % VERSION)
 
         def failed(tb):
             if not quiet:
@@ -1054,7 +1054,7 @@ class Main(QMainWindow):
         box.setWindowTitle(_("Update available"))
         box.resize(640, 480)
         v = QVBoxLayout(box)
-        head = QLabel("<b>%s</b>" % (_("FL26 Mod Studio %s is out (you have %s).") % (info["version"], VERSION)))
+        head = QLabel("<b>%s</b>" % (_("FL Mod Studio %s is out (you have %s).") % (info["version"], VERSION)))
         v.addWidget(head)
         v.addWidget(QLabel(_("What is new and what was fixed:")))
         notes = QTextBrowser()
@@ -1094,7 +1094,7 @@ class Main(QMainWindow):
         if not updater.can_write(updater.program_dir()):
             QMessageBox.warning(self, _("Update available"),
                                 _("The program's folder (%s) cannot be written to. Unpack the new zip "
-                                  "yourself, or move FL26 Mod Studio to a folder of your own.")
+                                  "yourself, or move FL Mod Studio to a folder of your own.")
                                 % updater.program_dir())
             page()
             return
@@ -1109,7 +1109,7 @@ class Main(QMainWindow):
                 QMessageBox.warning(self, _("Update available"), _("The update could not be installed: %s") % e)
                 self.status_left.setText(_("Ready"))
                 return
-            self.status_left.setText(_("Installing the update; FL26 Mod Studio restarts by itself..."))
+            self.status_left.setText(_("Installing the update; FL Mod Studio restarts by itself..."))
             QApplication.instance().processEvents()
             QApplication.instance().quit()
 
@@ -1244,8 +1244,8 @@ def main():
         # one that started it closes
         if not lock.tryLock(30000 if "--elevated" in sys.argv else 200):
             i18n.set_language(load_settings().get("lang", "en"))
-            QMessageBox.information(None, "FL26 Mod Studio",
-                                    _("FL26 Mod Studio is already open. Look for its window on the taskbar."))
+            QMessageBox.information(None, "FL Mod Studio",
+                                    _("FL Mod Studio is already open. Look for its window on the taskbar."))
             return
     # 0.2.3: a crash that takes the program down writes where it was to crash.log (people send it)
     try:

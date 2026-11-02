@@ -1,4 +1,4 @@
-# FL26 Mod Studio — user guide
+# FL Mod Studio — user guide
 
 > **English** · [hrvatski](../hr/mod-studio-guide.md) · [español](../es/mod-studio-guide.md) · [português](../pt/mod-studio-guide.md) · [français](../fr/mod-studio-guide.md)
 
@@ -9,7 +9,9 @@
 > Common questions (updating, crashes at start, cups, promotion, what to send when something is
 > wrong): [faq.md](../../docs/faq.md) · questions and help on [Discord](https://discord.gg/StQqtk3G3M)
 
-FL26 Mod Studio is one program for everything you add to Football Life 2026:
+*Until 0.3.0 it was called FL26 Mod Studio: the same program, renamed because it works with FL27 too. The program file (FL26ModStudio.exe), the folder in the zip and your settings keep their old names.*
+
+FL Mod Studio is one program for everything you add to Football Life 2026:
 
 - **mods** you download: stadiums, kits, balls, scoreboards, commentary, music, faces, Lua modules;
 - the **content servers** that serve them (Stadium Server, Ball Server, Kit Server and the rest),
@@ -128,7 +130,7 @@ world...** (everything your world changes in the game in one list; pick lines an
 the picked changes** to take them back), **Add a league package...** and **Make a league
 package...**. **Game** opens the game folder, the Sider folder, `sider.ini` and `sider.log`, and
 starts the game. **Help** has **User guide**, **Quick tour**, **Install a Modpack, step by
-step**, **Edit a Modpack, step by step**, **Check for updates...** and **About FL26 Mod Studio**.
+step**, **Edit a Modpack, step by step**, **Check for updates...** and **About FL Mod Studio**.
 
 ### 3.1 My world
 

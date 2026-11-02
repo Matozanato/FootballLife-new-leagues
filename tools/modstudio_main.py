@@ -1,4 +1,4 @@
-"""python modstudio_main.py  -> FL26 Mod Studio (the window: tools/modstudio/app.py)"""
+"""python modstudio_main.py  -> FL Mod Studio (the window: tools/modstudio/app.py)"""
 import multiprocessing
 import sys
 

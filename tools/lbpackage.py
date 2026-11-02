@@ -306,7 +306,7 @@ def manifest(path):
     if man.get("format") != FORMAT:
         raise Error("%s is not a league package" % path)
     if int(man.get("format_version", 0)) > FORMAT_VERSION:
-        raise Error("%s was made by a newer program (package format %s); update FL26 Mod Studio"
+        raise Error("%s was made by a newer program (package format %s); update FL Mod Studio"
                     % (os.path.basename(path), man.get("format_version")))
     return man
 

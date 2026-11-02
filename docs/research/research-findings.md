@@ -1,6 +1,6 @@
 # Findings
 
-> **About this file.** This is the research log behind FL26 Mod Studio, published with 0.2.0 for
+> **About this file.** This is the research log behind FL Mod Studio, published with 0.2.0 for
 > anyone who wants to build on it. It is written in the order things were found, so early
 > sections (the TL;DR included) describe the state at the time and are often superseded further
 > down -- search for an address or a table name and read its latest entry. Scripts it mentions

@@ -171,7 +171,7 @@ def run():
        names[:7] == [i18n._(x) for x in ("User guide", "Quick tour", "Install a Modpack, step by step",
                                           "Edit a Modpack, step by step",
                                           "Check for updates at start", "Check for updates...",
-                                          "About FL26 Mod Studio")])
+                                          "About FL Mod Studio")])
     w.open_page("Overview")
     settle(qa)
     mp[0].trigger()

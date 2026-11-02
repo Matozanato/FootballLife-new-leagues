@@ -14,7 +14,7 @@ Making your own version of Mod Studio: see [forking.md](forking.md) and its chap
   is refused, safely, at startup.
 - Python 3.10 or newer for the world-building tools. No third-party packages are needed to
   build a world. Regenerating the patch set needs `capstone`.
-- FL26 Mod Studio from source (`python tools/modstudio_main.py`) needs `PySide6`, `Pillow` and
+- FL Mod Studio from source (`python tools/modstudio_main.py`) needs `PySide6`, `Pillow` and
   `py7zr`; making the release zip (`tools/mszip.py`) also needs `pyinstaller`, `markdown` and
   zig for the DLLs. The release `.exe` needs nothing.
 - Windows. The tools were only ever run on Windows.
@@ -35,7 +35,7 @@ tools/              world builders (mkworld, mkplayers, mkcrests, mkkits, mkcup,
                     mkreshape, mkuecl, mkeuropo, mksizes, mktactics, rename, players,
                     playeredit, playereditor ...), pesdb/CPK readers, the patch-set generator
                     and its checkers
-tools/modstudio/    FL26 Mod Studio (tools/modstudio_main.py starts it from source,
+tools/modstudio/    FL Mod Studio (tools/modstudio_main.py starts it from source,
                     tools/mszip.py makes the release zip) and the League Builder behind it
                     (leaguebuilder, lbplayers, lbfaces, lbpackage, lbpack ...)
 tools/native/       the C source of the six DLLs, their build scripts and checksums
@@ -52,10 +52,10 @@ docs/research/      research-findings (the research log), how-it-works, limits,
                     league-phase-swiss-decode, player-record
 ```
 
-## FL26 Mod Studio and the world file
+## FL Mod Studio and the world file
 
 The modules read which leagues a world has from `SiderAddons\modules\fl26world.txt`, written
-by the League Builder (FL26 Mod Studio, `tools/leaguebuilder.py`). A module that finds no file
+by the League Builder (FL Mod Studio, `tools/leaguebuilder.py`). A module that finds no file
 keeps its built-in list. The format, what the program touches in the game folder, and the
 league package format (`.fl26pack`) are in [mod-studio.md](mod-studio.md).
 

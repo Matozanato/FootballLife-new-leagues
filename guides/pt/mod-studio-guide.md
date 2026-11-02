@@ -1,4 +1,4 @@
-# FL26 Mod Studio — guia de uso
+# FL Mod Studio — guia de uso
 
 > [English](../en/mod-studio-guide.md) · [hrvatski](../hr/mod-studio-guide.md) · [español](../es/mod-studio-guide.md) · **português** · [français](../fr/mod-studio-guide.md)
 
@@ -9,7 +9,9 @@
 > Perguntas comuns (atualizar, crash ao iniciar, copas, acesso, o que mandar quando algo dá
 > errado): [faq.md](../../docs/faq.md) (em inglês) · perguntas e ajuda no [Discord](https://discord.gg/StQqtk3G3M)
 
-O FL26 Mod Studio é um programa só para tudo o que você adiciona ao Football Life 2026:
+*Até a 0.3.0 ele se chamava FL26 Mod Studio: é o mesmo programa, com outro nome porque também funciona com o FL27. O arquivo do programa (FL26ModStudio.exe), a pasta do zip e as suas configurações mantêm os nomes antigos.*
+
+O FL Mod Studio é um programa só para tudo o que você adiciona ao Football Life 2026:
 
 - os **mods** que você baixa: estádios, uniformes, bolas, placares, narração, música, rostos,
   módulos Lua;

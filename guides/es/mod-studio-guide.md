@@ -1,4 +1,4 @@
-# FL26 Mod Studio — guía de uso
+# FL Mod Studio — guía de uso
 
 > [English](../en/mod-studio-guide.md) · [hrvatski](../hr/mod-studio-guide.md) · **español** · [português](../pt/mod-studio-guide.md) · [français](../fr/mod-studio-guide.md)
 
@@ -9,7 +9,9 @@
 > Preguntas frecuentes (actualizar, cierres al arrancar, copas, ascensos, qué enviar cuando algo
 > falla), en inglés: [faq.md](../../docs/faq.md) · preguntas y ayuda en [Discord](https://discord.gg/StQqtk3G3M)
 
-FL26 Mod Studio es un solo programa para todo lo que añades a Football Life 2026:
+*Hasta la 0.3.0 se llamaba FL26 Mod Studio: es el mismo programa, con otro nombre porque también funciona con FL27. El archivo del programa (FL26ModStudio.exe), la carpeta del zip y tus ajustes conservan sus nombres.*
+
+FL Mod Studio es un solo programa para todo lo que añades a Football Life 2026:
 
 - los **mods** que descargas: estadios, equipaciones, balones, marcadores, comentarios, música,
   caras, módulos Lua;
@@ -75,7 +77,7 @@ una segunda tarjeta que te guía para instalar un Modpack (un zip de mundo), cli
    puntos de restauración más nuevos, **Todos los puntos de restauración**).
 
 **Actualizaciones.** Unos segundos después de arrancar, el programa pregunta a GitHub si ha salido
-un FL26 Mod Studio más nuevo, y solo avisa cuando lo hay. **Descargar e instalar** baja el nuevo
+un FL Mod Studio más nuevo, y solo avisa cuando lo hay. **Descargar e instalar** baja el nuevo
 zip, lo comprueba con la suma de control de la versión, cierra el programa, pone los archivos
 nuevos encima de los antiguos y lo vuelve a abrir. Tus ajustes, mundos, puntos de restauración y
 el juego no se tocan. **Ayuda → Buscar actualizaciones...** pregunta en cualquier momento; quita

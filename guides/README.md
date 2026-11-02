@@ -1,4 +1,4 @@
-# FL26 Mod Studio guides
+# FL Mod Studio guides
 
 **Which guide?** Someone gave you a world, a modpack or a `.fl26pack` file: **Install a ready
 pack**. You want to pick real leagues from the NewLife Database or make your own, and share

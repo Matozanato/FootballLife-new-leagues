@@ -1,4 +1,4 @@
-"""Updates: is there a newer FL26 Mod Studio on GitHub, and put it in place.
+"""Updates: is there a newer FL Mod Studio on GitHub, and put it in place.
 
 The releases are the public repository's, tagged modstudio-<version>, each with one zip
 (FL26ModStudio-<version>.zip, a "FL26 Mod Studio" folder inside). GitHub lists a sha256 for

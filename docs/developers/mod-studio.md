@@ -1,4 +1,4 @@
-# FL26 Mod Studio — how it works
+# FL Mod Studio — how it works
 
 The user guide is [mod-studio-guide.md](../../guides/en/mod-studio-guide.md) ([hrvatski](../../guides/hr/mod-studio-guide.md),
 [español](../../guides/es/mod-studio-guide.md), [português](../../guides/pt/mod-studio-guide.md),
