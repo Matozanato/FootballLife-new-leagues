@@ -36,8 +36,9 @@ save loader (0x1412e5eb0):
 
 FLAGS: 1 = new names, 2 = new potential; 3 = both.
 
-Log: the DLL keeps a small text log; this loader drains it into sider.log every so often and
-on F10, which also prints the counts.
+Log: the DLL keeps a small text log; this loader drains it into sider.log every so often.
+The counts show in the sider overlay (pick fl26regen there); F10 while it is shown also
+writes them into sider.log.
 
 Requires sider.ini: luajit.ext.enabled = 1 (global ffi).
 --]]
@@ -105,6 +106,21 @@ function m.rewrite(ctx, filename)
     return (filename:gsub(PORTRAIT, "symbol" .. sep .. "player" .. sep .. "regen" .. sep .. k .. ".dds", 1))
   end
   return (filename:gsub(PORTRAIT, "symbol" .. sep .. "player" .. sep .. "regen.dds", 1))
+end
+
+-- sider hands key_down only to the module shown in its overlay, so the counts live there:
+-- open the overlay, pick fl26regen, and F10 also writes them into sider.log
+function m.overlay_on(ctx)
+  drain(nil)
+  if not dll_stats then return "fl26regen: not installed" end
+  dll_stats(statbuf)
+  return string.format("fl26regen  (F10 = write this into sider.log)\n"
+                       .. "regens %d: named %d, new potential %d, past the side table %d\n"
+                       .. "loads %d, named again %d, %d year(s) played; %d names in the pools\n"
+                       .. "faces in the pack %d; face/portrait requests of regens hidden %d",
+                       tonumber(statbuf[0]), tonumber(statbuf[1]), tonumber(statbuf[6]), tonumber(statbuf[7]),
+                       tonumber(statbuf[2]), tonumber(statbuf[3]), tonumber(statbuf[4]), tonumber(statbuf[5]),
+                       nfaces, hidden)
 end
 
 function m.key_down(ctx, vkey)
@@ -219,6 +235,7 @@ function m.init(ctx)
   local status = tonumber(install(base, FLAGS))
   if status == 0 then
     ctx.register("livecpk_make_key", m.make_key)
+    ctx.register("overlay_on", m.overlay_on)
     ctx.register("key_down", m.key_down)
     if FACES and pfl ~= nil and pf1 ~= nil and pfa ~= nil then
       dll_face  = ffi.cast("fl26_regen_is_t", pf1)
@@ -237,7 +254,7 @@ function m.init(ctx)
     end
     if FACES then ctx.register("livecpk_rewrite", m.rewrite) end
     drain(nil)
-    log("fl26regen: live (F10 = report)")
+    log("fl26regen: live (counts in the sider overlay, F10 there = report)")
   else
     local msg = ({ [2] = "regen function signature mismatch", [3] = "save loader signature mismatch",
                    [4] = "an operand is not what this build expects", [5] = "out of memory",
