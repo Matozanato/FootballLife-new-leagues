@@ -766,7 +766,11 @@ class Runner:
         """the first start unpacks the game's tables by itself (auto_tables); done when its
         fl26-unpacked.json is there"""
         t0 = time.time()
-        mark = os.path.join(self.cfg["apdata"], "FL26ModStudio", "tables", "fl26-unpacked.json")
+        import flpaths
+        # B307: FL27's tables have their own folder (tables27), FL26's stay in tables
+        fl27 = os.path.basename(flpaths.game_exe(self.cfg["game"])).lower() == "fl_2027.exe"
+        mark = os.path.join(self.cfg["apdata"], "FL26ModStudio", "tables27" if fl27 else "tables",
+                            "fl26-unpacked.json")
         while time.time() - t0 < 900:
             self.boxes_once()
             if os.path.isfile(mark):
