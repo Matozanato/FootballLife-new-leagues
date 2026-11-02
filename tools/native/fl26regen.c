@@ -614,24 +614,44 @@ static void regen_hook(unsigned char* rec)
       } else g_stat[7]++;
     }
   }
+  uint32_t id = rec ? *(uint32_t*)(rec + R_ID) : 0;
+  int again = rec && id < (1u << SET_BITS) && (g_regen_set[id >> 3] >> (id & 7) & 1);
   g_regen(rec);
   if (rec) note_regen(rec);
+  /* The game can regen a player twice in one off-season (FL26: 11 of 1874). Named again, his
+     own new name would count as the "old" one and he would get the next -- and the load, which
+     names him from the database, the first. He keeps the first. */
+  if (again) {
+    static int told;
+    if (told++ < 20) {
+      char nm[NAME_LEN + 1]; memcpy(nm, rec + R_NAME, NAME_LEN); nm[NAME_LEN] = 0;
+      logf("regen again: %u \"%s\" keeps his name", id, nm);
+    }
+    return;
+  }
   if (rec && (g_flags & 1) && rename_player(rec)) g_stat[1]++;
 }
 
-/* id -> database age, for one load */
+/* id -> database age and name, for one load */
 static uint32_t* g_map_id;
 static uint8_t*  g_map_age;
-static void map_put(uint32_t id, uint8_t age)
+static uint64_t* g_map_name;
+static uint64_t name_hash(const unsigned char* r)
+{
+  uint64_t h = 0, w;
+  for (int i = 0; i + 8 <= NAME_LEN; i += 8) { memcpy(&w, r + R_NAME + i, 8); h = mix(h ^ w); }
+  return h;
+}
+static void map_put(uint32_t id, uint8_t age, uint64_t name)
 {
   uint32_t m = (1u << MAP_BITS) - 1, i = (uint32_t)mix(id) & m;
   while (g_map_id[i] && g_map_id[i] != id) i = (i + 1) & m;
-  g_map_id[i] = id; g_map_age[i] = age;
+  g_map_id[i] = id; g_map_age[i] = age; g_map_name[i] = name;
 }
-static int map_get(uint32_t id)
+static int map_get(uint32_t id, uint64_t* name)
 {
   uint32_t m = (1u << MAP_BITS) - 1, i = (uint32_t)mix(id) & m;
-  while (g_map_id[i]) { if (g_map_id[i] == id) return g_map_age[i]; i = (i + 1) & m; }
+  while (g_map_id[i]) { if (g_map_id[i] == id) { if (name) *name = g_map_name[i]; return g_map_age[i]; } i = (i + 1) & m; }
   return -1;
 }
 
@@ -651,7 +671,7 @@ static uint64_t unpack_hook(void* a)
     for (uint32_t i = 0; i < n; i++) {
       unsigned char* r = blk + (size_t)i * STRIDE;
       uint32_t id = *(uint32_t*)(r + R_ID);
-      if (id) map_put(id, r[R_AGE] & 0x3f);
+      if (id) map_put(id, r[R_AGE] & 0x3f, name_hash(r));
     }
     have = n > 0;
   }
@@ -661,28 +681,33 @@ static uint64_t unpack_hook(void* a)
     uint32_t n = player_count(blk), hist[128] = {0};
     for (uint32_t i = 0; i < n; i++) {
       unsigned char* r = blk + (size_t)i * STRIDE;
-      int db = map_get(*(uint32_t*)(r + R_ID));
+      int db = map_get(*(uint32_t*)(r + R_ID), 0);
       if (db >= 0) hist[((r[R_AGE] & 0x3f) - db + 64) & 127]++;
     }
     int k = 0;
     for (int d = 1; d < 128; d++) if (hist[d] > hist[k]) k = d;
     k -= 64;
     g_stat[4] = (uint32_t)(k < 0 ? 0 : k);
-    uint32_t named = 0;
+    uint32_t named = 0, kept = 0;
     memset(g_regen_set, 0, sizeof g_regen_set);  /* another save: other regens */
     g_nrlist = 0;
     for (uint32_t i = 0; i < n; i++) {
       unsigned char* r = blk + (size_t)i * STRIDE;
-      int db = map_get(*(uint32_t*)(r + R_ID));
+      uint64_t dbname;
+      int db = map_get(*(uint32_t*)(r + R_ID), &dbname);
       if (db < 0) continue;
       int age = r[R_AGE] & 0x3f;
       if (age - db != k && age < db + k) {
         note_regen(r);
+        /* The save keeps the name of a few players (FL26: 11 of 1874 regens). Such a regen comes
+           back with the name he was given, not the database's; naming him again would skip that
+           name as his "old" one and give him the next. */
+        if (name_hash(r) != dbname) { kept++; continue; }
         if (rename_player(r)) named++;
       }
     }
-    g_stat[3] += named;
-    logf("load: %u players, %d year(s) played, %u regens named again", n, k, named);
+    g_stat[3] += named + kept;
+    logf("load: %u players, %d year(s) played, %u regens named again, %u kept the name the save holds", n, k, named, kept);
   }
   return ret;
 }
@@ -763,7 +788,8 @@ __declspec(dllexport) int fl26_regen_install(uint64_t exe_base, int flags)
   g_ph1 = rip_target(exe_base + PH1_INSN, 7);
   g_map_id  = (uint32_t*)calloc((size_t)1 << MAP_BITS, sizeof(uint32_t));
   g_map_age = (uint8_t*)calloc((size_t)1 << MAP_BITS, 1);
-  if (!g_map_id || !g_map_age) return 5;
+  g_map_name = (uint64_t*)calloc((size_t)1 << MAP_BITS, sizeof(uint64_t));
+  if (!g_map_id || !g_map_age || !g_map_name) return 5;
   const unsigned char* ai = (const unsigned char*)(uintptr_t)(exe_base + APP_CNT_INSN);
   const unsigned char* ak = (const unsigned char*)(uintptr_t)(exe_base + APP_CAP_INSN);
   const unsigned char* at = (const unsigned char*)(uintptr_t)(exe_base + APP_TAB_INSN);
