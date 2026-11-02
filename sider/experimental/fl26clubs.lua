@@ -48,6 +48,13 @@ find was treated as its number one: millions of followers for a third-division s
 share of the game's followers base it gets. See fl26clubs.c, "followers and the club ranking".
 A world without the lines leaves both as the game has them.
 
+A pool slot by choice (2026-11-02, Mod Studio's Select Team list): a league line with pick=1
+sits on 69, 73 or 75 because the user put it in place of that "Other ..." group. The DLL then
+answers that slot from the regulation for the Master League club slot too, so the league's
+clubs get it (Team Info lists them) and the group's own clubs do not; and the switch entries that
+send other slots into that pool (26/27/28/67/74 into 73, 71 into 69) are pointed at the default
+case, so the clubs the game files there keep a slot of their own instead. See fl26clubs.c.
+
 Requires sider.ini: luajit.ext.enabled = 1 (global ffi). Load after fl26comptab.lua.
 --]]
 
@@ -123,12 +130,29 @@ local SERVED = { [0] = true, [1] = true, [2] = true, [3] = true,
 local POOL_CASE = { [26] = 3, [27] = 3, [28] = 3, [67] = 3, [74] = 3, [71] = 5,
                     [76] = 6, [77] = 6, [80] = 6 }
 local function from_world(world)
-  local slots, remap = {}, {}
+  local slots, remap, own = {}, {}, {}
   for _, L in ipairs(world) do
     if L.slot and SERVED[L.slot] then slots[#slots + 1] = { L.slot, L.id } end
     if L.slot and POOL_CASE[L.slot] then remap[#remap + 1] = { L.slot, POOL_CASE[L.slot] } end
+    if L.slot and L.pick == 1 and (L.slot == 69 or L.slot == 73 or L.slot == 75) then own[#own + 1] = L.slot end
   end
-  return slots, remap
+  return slots, remap, own
+end
+local OWN = {}
+-- The switch's cases that send a slot into a pool: 2 and 3 -> 73, 5 -> 69 (4 -> 70, the Asian pool,
+-- is never taken by choice). With the pool slot a league's by choice, the clubs the game files on
+-- the slots sent there (Atletico Nacional, Penarol ... of the Libertadores, on 26/27/67) would be
+-- listed under that league in Team Info: those switch entries go to the default case too.
+local INTO_POOL = { [73] = { { 26, 2 }, { 27, 3 }, { 28, 3 }, { 67, 3 }, { 74, 3 } }, [69] = { { 71, 5 } } }
+local function own_remap(remap, own)
+  local have = {}
+  for _, r in ipairs(remap) do have[r[1]] = true end
+  for _, s in ipairs(own) do
+    for _, r in ipairs(INTO_POOL[s] or {}) do
+      if not have[r[1]] then remap[#remap + 1] = r; have[r[1]] = true end
+    end
+  end
+  return remap
 end
 
 local function remap_own()
@@ -210,12 +234,14 @@ function m.init(ctx)
     typedef void (*fl26_clubs_stats_t)(uint32_t*);
     typedef uint32_t (*fl26_clubs_pool_t)(void);
     typedef int  (*fl26_clubs_keep_out_t)(const uint32_t*, int);
+    typedef int  (*fl26_clubs_own_pools_t)(const uint16_t*, int);
     typedef int  (*fl26_clubs_fans_t)(const uint32_t*, int);
   ]])
   local world, nopool, fans = read_world(ctx)
   nopool, fans = nopool or {}, fans or {}
   if world then
-    SLOTS, REMAP_OWN = from_world(world)
+    SLOTS, REMAP_OWN, OWN = from_world(world)
+    REMAP_OWN = own_remap(REMAP_OWN, OWN)
     log(string.format("fl26clubs: world file -- %d leagues, %d on slots the game fills itself, %d on pool slots",
                       #world, #SLOTS, #REMAP_OWN))
   end
@@ -250,6 +276,18 @@ function m.init(ctx)
       kept = tonumber(ffi.cast("fl26_clubs_keep_out_t", pk)(arr, #nopool))
     end
   end
+  local owned = 0
+  if #OWN > 0 then
+    local po = ffi.C.GetProcAddress(h, "fl26_clubs_own_pools")
+    if po == nil then
+      log("fl26clubs: this fl26clubs.dll is older than the world (no fl26_clubs_own_pools): the league(s) on " ..
+          table.concat(OWN, " ") .. " keep no Master League slot -- install the modules again")
+    else
+      local arr = ffi.new("uint16_t[?]", #OWN)
+      for i, s in ipairs(OWN) do arr[i - 1] = s end
+      owned = tonumber(ffi.cast("fl26_clubs_own_pools_t", po)(arr, #OWN))
+    end
+  end
   local nfans = 0
   if #fans > 0 then
     local pf = ffi.C.GetProcAddress(h, "fl26_clubs_fans")
@@ -280,6 +318,7 @@ function m.init(ctx)
     log("fl26clubs: live -- " .. #SLOTS .. " slots served from our own regulations: " ..
         table.concat(parts, " ") .. (kept > 0 and (", " .. kept .. " club(s) of the game kept out of the pools") or "") ..
         (nfans > 0 and (", followers class and share for " .. nfans .. " club(s)") or "") ..
+        (owned > 0 and (", " .. owned .. " pool slot(s) taken by choice: " .. table.concat(OWN, " ")) or "") ..
         " (F10 = report)")
     ctx.register("livecpk_make_key", m.make_key)
     ctx.register("key_down", m.key_down)

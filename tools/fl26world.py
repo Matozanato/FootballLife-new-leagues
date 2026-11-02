@@ -63,7 +63,7 @@ import mkleague as M
 FORMAT = "# fl26world 1"
 KEYS = ("cid", "region", "country", "conf", "slot", "tier", "above", "splittotal", "promote", "demote", "clubs", "legs",
         "cup", "exhibition", "scup", "kickoff", "cupall", "cuptop", "cuplow", "cupn",
-        "lcup", "lcuplow", "lcupn", "lcuptop", "cupthird")
+        "lcup", "lcuplow", "lcupn", "lcuptop", "cupthird", "pick")
 NO_SLOT = 123
 
 # fl26chain.dll keeps this many cups to their leagues (fl26chain.c MAX_CUPS) and drops the rest;

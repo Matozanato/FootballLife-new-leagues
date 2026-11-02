@@ -64,6 +64,16 @@
  * club shows under its new league only, and the Master League gives it that league's slot.
  * With no such line nothing of this runs.
  *
+ * 2026-11-02: a pool slot by choice (Mod Studio's Select Team list, recipe select_team; vmican:
+ * "with a South American world the Other Latin American Teams are of no use"). A league put on
+ * 69, 73 or 75 on purpose takes that group's place in the Master League too: for the slot
+ * function its clubs are answered from the regulation like any served slot, so they get the
+ * slot and Team Info lists them under the league (before, the game's pool clubs were listed
+ * there and ours had 123). Those clubs are then the pool the Libertadores and the Club World
+ * Cup take fill-ins from, and the group's own clubs, no longer on any list, get 123 -- what the
+ * choice says. The world file marks such a league (pick=1); fl26_clubs_own_pools() takes the
+ * slots. A league on a pool slot only because no other was free is left as above.
+ *
  * Built with `zig cc` (tools/native/build-clubs.sh). Our own code, no third-party binaries.
  */
 #define WIN32_LEAN_AND_MEAN
@@ -111,6 +121,13 @@ static uint16_t* slot_count(void* self, unsigned s)
 #define SLOTFN_GET_RET    0x1263bfe
 #define SLOTFN_COUNT2_RET 0x12640cf
 static int is_pool(unsigned slot) { return slot == 69 || slot == 70 || slot == 73 || slot == 75; }
+static unsigned g_own[4];                 /* pool slots a league of ours took by choice      */
+static int      g_nown;
+static int owned(unsigned slot)
+{
+  for (int k = 0; k < g_nown; k++) if (g_own[k] == slot) return 1;
+  return 0;
+}
 static int pool_index(unsigned slot)
 {
   return slot == 69 ? 0 : slot == 70 ? 1 : slot == 73 ? 2 : slot == 75 ? 3 : -1;
@@ -289,7 +306,7 @@ static unsigned keep_build(void* self, unsigned slot, int p)
 __declspec(dllexport) unsigned count_hook(void* self, unsigned slot)
 {
   int i = cfg_index(slot);
-  if (i >= 0 && self && is_pool(slot)) {
+  if (i >= 0 && self && is_pool(slot) && !owned(slot)) {
     uintptr_t ra = (uintptr_t)__builtin_return_address(0) - (uintptr_t)g_base;
     if (ra == SLOTFN_COUNT1_RET) return pool_build(self, slot, i);
     if (ra == SLOTFN_COUNT2_RET && g_pool_slot == slot && g_npool >= 0) return (unsigned)g_npool;
@@ -311,7 +328,7 @@ __declspec(dllexport) unsigned count_hook(void* self, unsigned slot)
 __declspec(dllexport) unsigned get_hook(void* self, unsigned slot, unsigned idx)
 {
   int i = cfg_index(slot);
-  if (i >= 0 && is_pool(slot) && g_pool_slot == slot && g_npool >= 0 &&
+  if (i >= 0 && is_pool(slot) && !owned(slot) && g_pool_slot == slot && g_npool >= 0 &&
       (uintptr_t)__builtin_return_address(0) - (uintptr_t)g_base == SLOTFN_GET_RET)
     return idx < (unsigned)g_npool ? g_pool[idx] : 0xffffffffu;
   if (i >= 0 && g_n[i] > 0) {
@@ -613,6 +630,19 @@ __declspec(dllexport) int fl26_clubs_keep_out(const uint32_t* tids, int n)
   for (int p = 0; p < 4; p++) g_kn[p] = -1;
   logf("fl26clubs: %d club(s) of the game play in our leagues -- left out of the other-clubs pools", g_nkeep);
   return g_nkeep;
+}
+
+/* The pool slots (69, 73, 75) a league of ours took by choice (the world file's pick=1), before
+   fl26_clubs_install. Returns how many were taken. */
+__declspec(dllexport) int fl26_clubs_own_pools(const uint16_t* slots, int n)
+{
+  g_nown = 0;
+  for (int k = 0; slots && k < n && g_nown < 4; k++)
+    if (is_pool(slots[k]) && slots[k] != 70 && !owned(slots[k])) g_own[g_nown++] = slots[k];
+  if (g_nown)
+    logf("fl26clubs: %d pool slot(s) taken by choice -- their league's clubs get the slot in the Master League",
+         g_nown);
+  return g_nown;
 }
 
 /* fl26slots' readers, when it is loaded: 1 and the layout taken, 0 not there (shipped readers),

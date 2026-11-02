@@ -9,7 +9,8 @@ South American world the Other South Americans slot is of no use"):
      group it hides;
   3. a league built before on another id moves there (the pick wins over the pin), and the
      league that held the id before goes elsewhere;
-  4. two leagues on one group, an exhibition league and an unknown word stop the plan;
+  4. two leagues on one group, an exhibition league, an unknown word and a "latam" pick in a
+     world with CONMEBOL associations (they take their clubs from that group) stop the plan;
   5. a recipe read back from the plan keeps the pick.
 The game's tables (default %APPDATA%\FL26ModStudio\tables). No game.
 """
@@ -84,6 +85,9 @@ def main(tables):
     ok("4. an exhibition league keeps its own place", why and "exhibition" in why)
     why = stops({"world": "_FL26Pick", "leagues": [league("Liga Uno", select_team="asia")]}, base)
     ok("4. an unknown word stops the plan", why and "select_team" in why)
+    why = stops({"world": "_FL26Pick", "conmebol_associations": {"lib": [[5, 19]]},
+                 "leagues": [league("Liga Uno", select_team="latam")]}, base)
+    ok("4. the CONMEBOL associations keep the Other Latin American Teams' place", why and "associations" in why)
 
     pl = B.plan({"world": "_FL26Pick", "leagues": [league("Liga Uno", select_team="europe")]}, base)
     back = B.recipe_from_plan(pl, base)

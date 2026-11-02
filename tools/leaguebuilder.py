@@ -2194,6 +2194,14 @@ def plan(recipe, base, prev=None):
         if leagues[i].get("exhibition"):
             raise BuildError("%s: an exhibition league keeps its own place in Select Team" % name)
         slot = fl26world.POOL_PICK[want]
+        if want in OTHERS and any(q.get("others") == OTHERS[want] for q in others):
+            raise BuildError("%s: the place of %s in Select Team is this league's, so the world's own "
+                             "clubs in no league cannot go in that group" % (name, fl26world.POOL_SLOTS[fl26world.POOL_PICK[want]]))
+        if want == "latam" and recipe.get("conmebol_associations"):
+            # assoc_seed (fl26swiss) takes an association's clubs from that group; with the group's
+            # place given away they have no slot in the Master League
+            raise BuildError("%s: the CONMEBOL associations of this world take their clubs from the game's "
+                             "Other Latin American Teams, so that place stays theirs" % name)
         if slot in picked:
             raise BuildError("%s and %s both want the place of %s in Select Team -- one each"
                              % (names[picked[slot]], name, fl26world.POOL_SLOTS[slot]))
@@ -5275,6 +5283,11 @@ def build(pl, base, game, replace=False, log=print):
             L["kickoff"] = kickoff_after(p, mine, confed)
         if p.get("exhibition"):
             L["exhibition"] = 1                        # fl26joindll leaves it out of the season
+        if p.get("select_team") and p["slot"] in fl26world.POOL_SLOTS:
+            # fl26clubs: a league put on a group's place by choice keeps its clubs in the Master
+            # League as well (Team Info, transfers); one there only because no other place was free
+            # leaves them out of the pools, as since GitHub #8
+            L["pick"] = 1
         if p["above"]:
             L["above"], L["promote"] = p["above"], p["exchange"]
         else:
