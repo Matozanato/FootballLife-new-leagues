@@ -197,7 +197,7 @@ povučeš mišem negdje drugdje. Filtri **Sve**, **Naše** i **Promijenjeno** i 
 Odaberi jednu: tvoja liga ima **Uredi ligu...**, **Dodaj nižu ligu**, **Klubovi i imena**,
 **Igrači** i **Ukloni**; liga iz igre ima svoje ime, logo i klubove (poglavlje 8, "Lige iz
 igre"). **Dodaj ligu** napravi novu. **Mjesta u Select Teamu** pokazuje kamo je zadnji Build
-stavio svaku tvoju ligu. **Više ▾** ima **Predsezonski turniri**, **Kupovi naših država**,
+stavio svaku tvoju ligu; njen stupac **Select Team** je popis: *Automatski* (odlučuje redoslijed) ili *umjesto* jedne od igrinih grupa (Ostale europske lige, Ostale latinoameričke momčadi, Ostali klubovi (Afrika), Ostalo). Liga odabrana tu dobiva mjesto te grupe na idućem Buildu, bez obzira na redoslijed, a klubovi grupe tada nisu u Select Teamu (jedna liga po grupi; sa svijetom Južne Amerike Ostale latinoameričke momčadi ne trebaju, vmican). U Master Leagueu pokrenutom nakon tog Builda klubovi lige dobivaju mjesto grupe i tamo: Team Info ih pokazuje pod ligom, i s njima se iz te grupe dopunjuju Libertadores ili Svjetsko klupsko prvenstvo; klubovi grupe ostaju bez lige. Svijet s CONMEBOL asocijacijama zadržava mjesto Ostalih latinoameričkih momčadi. **Više ▾** ima **Predsezonski turniri**, **Kupovi naših država**,
 **Kupovi država iz igre**, **Europska mjesta liga iz igre**, **Europski klubovi prve sezone**,
 **UEFA poredak**, **Južnoamerička mjesta** (s kućicom **Moderna natjecanja CONMEBOL-a**, 0.2.5), **Zemlje CONMEBOL-a bez lige** (uz moderna natjecanja), **Imena natjecanja**, **ID-evi natjecanja**, **Poredak
 liga**, **Sezone liga iz igre** i **Ime svijeta i datoteka...**. Ovo zadnje otvara stranicu s

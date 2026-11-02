@@ -93,6 +93,12 @@ which league sits above -- and nothing about ids:
               (a historical league, a league of legends ...). It stands alone: no division above
               or below it, no European places, no cups. Its regulation id is one the season
               builder does not take in at creation (CREATION_IDS), and fl26joindll leaves it out
+  select_team optional, "europe", "latam", "africa" or "other": the league takes the Select Team
+              place of the game's Other European Leagues / Other Latin American Teams / Other
+              Clubs (Africa) / Other group (fl26world.POOL_PICK), whatever the league order; the
+              group's own clubs are then not in Select Team (#73). Without it Build gives those
+              places out last (vmican 02.11.: a South American world has no use for the Other
+              Latin American Teams)
   others      optional, "europe", "latam", "asia", "africa" or "classic": no league at all -- the
               clubs (1..OTHERS_MAX) go in the game's Other European / Latin American / Asia-
               Oceania / Africa teams, or Classic Teams, where the game files its own clubs that
@@ -1067,6 +1073,8 @@ def recipe_from_plan(pl, base):
             r["europe"] = [list(e) for e in L["europe"]]
         if L.get("exhibition"):
             r["exhibition"] = True
+        if L.get("select_team"):
+            r["select_team"] = L["select_team"]
         if L.get("real_calendar") is not None:          # false (the old calendar) counts too
             r["real_calendar"] = copy.deepcopy(L["real_calendar"])
         gc = []
@@ -2172,9 +2180,43 @@ def plan(recipe, base, prev=None):
     # an exhibition league first takes an id the season builder leaves alone; the others then
     # take what is left, in the usual order
     rid_of, left = {}, list(free)
+    # a league that picked the place of one of the game's "other" groups takes that group's id
+    # first, before a pin or the order hands it to another league (vmican 02.11.)
+    picked = {}
+    for i in order:
+        want = leagues[i].get("select_team")
+        if want in (None, ""):
+            continue
+        name = names[i]
+        if want not in fl26world.POOL_PICK:
+            raise BuildError("%s: select_team is one of %s, not %r"
+                             % (name, ", ".join(fl26world.POOL_PICK), want))
+        if leagues[i].get("exhibition"):
+            raise BuildError("%s: an exhibition league keeps its own place in Select Team" % name)
+        slot = fl26world.POOL_PICK[want]
+        if want in OTHERS and any(q.get("others") == OTHERS[want] for q in others):
+            raise BuildError("%s: the place of %s in Select Team is this league's, so the world's own "
+                             "clubs in no league cannot go in that group" % (name, fl26world.POOL_SLOTS[fl26world.POOL_PICK[want]]))
+        if want == "latam" and recipe.get("conmebol_associations"):
+            # assoc_seed (fl26swiss) takes an association's clubs from that group; with the group's
+            # place given away they have no slot in the Master League
+            raise BuildError("%s: the CONMEBOL associations of this world take their clubs from the game's "
+                             "Other Latin American Teams, so that place stays theirs" % name)
+        if slot in picked:
+            raise BuildError("%s and %s both want the place of %s in Select Team -- one each"
+                             % (names[picked[slot]], name, fl26world.POOL_SLOTS[slot]))
+        r = fl26world.pool_rid(slot)
+        if r not in left:
+            raise BuildError("%s: the place of %s in Select Team is not free in this game"
+                             % (name, fl26world.POOL_SLOTS[slot]))
+        picked[slot] = i
+        rid_of[i] = r
+        left.remove(r)
     # a league built before keeps its regulation id (and with it its slot and dates), as long as
     # the id is still free and still suits it (same exhibition kind; a split season off reg 49)
     for i in order:
+        if i in rid_of:
+            continue
         q = pins.get(names[i].lower()) or {}
         r = q.get("rid")
         if (isinstance(r, int) and r in left
@@ -2252,6 +2294,7 @@ def plan(recipe, base, prev=None):
             p = {"name": name, "country": fid, "clubs": n, "legs": legs, "rid": rid_of[i], "cid": cid_of[i],
                  "slot": fl26world.DEFAULT_SLOT.get(rid_of[i], fl26world.NO_SLOT), "club_names": list(L.get("club_names") or []),
                  "exhibition": bool(L.get("exhibition")),
+                 "select_team": L.get("select_team") or None,
                  "logo": L.get("logo") or None, "flag": L.get("flag") or None,
                  "club_crests": list(L.get("club_crests") or []),
                  "club_abbrs": list(L.get("club_abbrs") or []),
@@ -5240,6 +5283,11 @@ def build(pl, base, game, replace=False, log=print):
             L["kickoff"] = kickoff_after(p, mine, confed)
         if p.get("exhibition"):
             L["exhibition"] = 1                        # fl26joindll leaves it out of the season
+        if p.get("select_team") and p["slot"] in fl26world.POOL_SLOTS:
+            # fl26clubs: a league put on a group's place by choice keeps its clubs in the Master
+            # League as well (Team Info, transfers); one there only because no other place was free
+            # leaves them out of the pools, as since GitHub #8
+            L["pick"] = 1
         if p["above"]:
             L["above"], L["promote"] = p["above"], p["exchange"]
         else:

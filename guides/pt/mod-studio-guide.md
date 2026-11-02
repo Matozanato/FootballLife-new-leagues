@@ -218,7 +218,7 @@ Bundesliga, 3. Liga), até você arrastar uma liga para outro lugar. Filtros **T
 **Adicionar divisão inferior**, **Clubes e nomes**, **Jogadores** e **Remover**; uma liga do jogo
 tem o nome, o logo e os clubes dela (seção 8, "As ligas do jogo"). **Adicionar campeonato** cria
 uma nova. **Lugares em Select Team** mostra onde a última construção colocou cada uma das suas
-ligas. **Mais ▾** tem **Torneios de pré-temporada**, **Taças dos nossos países**, **Copas dos
+ligas; a coluna **Select Team** é uma lista: *Automático* (decide a ordem) ou *no lugar de* um dos grupos do jogo (Outras ligas europeias, Outras equipes latino-americanas, Outros clubes (África), Outros). A liga escolhida aí fica com o lugar desse grupo no Build seguinte, seja qual for a ordem, e os clubes do grupo deixam de aparecer em Select Team (uma liga por grupo; com um mundo sul-americano as Outras equipes latino-americanas não servem, vmican). Numa Master League começada depois desse Build os clubes da liga ficam também com o lugar do grupo: o Team Info mostra-os sob a liga, e são eles que completam a Libertadores ou o Mundial de Clubes a partir desse grupo; os clubes do grupo ficam sem liga. Um mundo com associações CONMEBOL mantém o lugar das Outras equipes latino-americanas. **Mais ▾** tem **Torneios de pré-temporada**, **Taças dos nossos países**, **Copas dos
 países do jogo**, **Vagas continentais dos campeonatos do jogo**, **Clubes europeus da primeira
 temporada**, **Ranking da UEFA**, **Vagas sul-americanas** (com a caixa **Competições modernas da CONMEBOL**, 0.2.5), **Países da CONMEBOL sem liga** (com as competições modernas), **Nomes das competições**, **IDs das
 competições**, **Ordem dos campeonatos**, **Temporadas dos campeonatos do jogo** e **Nome do

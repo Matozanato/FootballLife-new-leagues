@@ -1254,7 +1254,6 @@
   "(made up from players of the club's country)": "(montado com jogadores do país do clube)",
   "Select Team": "Select Team",
   "The league's place in the order (Move up / Move down): the first ones get a place in Select Team": "O lugar do campeonato na ordem (Subir / Descer): os primeiros ganham lugar no Select Team",
-  "Where the last Build put the league in Select Team": "Onde o último Build colocou o campeonato no Select Team",
   "The order changed since the last Build: Build again to see where it goes.": "A ordem mudou desde o último Build: construa de novo para ver onde ele fica.",
   "exhibition only": "só amistosos",
   "no place (it plays)": "sem lugar (é jogado)",
@@ -2063,7 +2062,14 @@
   "The players of the selected club that go in its squad; without a choice it gets its best ones": "Os jogadores do clube selecionado que entram no elenco; sem escolha, fica com os melhores",
   "Tick at least one player.": "Marque pelo menos um jogador.",
   "Ticks the players the club gets when nobody chooses: its best %d, three goalkeepers at most": "Marca os jogadores que o clube teria sem escolha: os %d melhores, no máximo três goleiros",
-  "Untick %d: a club takes up to %d players.": "Desmarque %d: um clube leva até %d jogadores."
+  "Untick %d: a club takes up to %d players.": "Desmarque %d: um clube leva até %d jogadores.",
+  "%s has that place already: set it back to Automatic first.": "%s já tem esse lugar: volte-a primeiro para Automático.",
+  "Automatic": "Automático",
+  "Automatic: %s": "Automático: %s",
+  "Automatic: the order (#) decides, and the game's Other ... groups give their place last. Pick a group to give its place in Select Team to this league; that group's own clubs are then not in Select Team. Build puts it there.": "Automático: decide a ordem (#), e os grupos Outros ... do jogo cedem o lugar por último. Escolha um grupo para dar o lugar dele em Select Team a esta liga; os clubes desse grupo deixam de aparecer em Select Team. O Build põe-na lá.",
+  "Not built like this yet: press Build.": "Ainda não foi construída assim: carregue em Build.",
+  "Where the last Build put the league in Select Team. Pick a group of the game's here and the league takes its place": "Onde o último Build pôs a liga em Select Team. Escolha aqui um grupo do jogo e a liga fica com o lugar dele",
+  "Where the last Build put the league in Select Team": "Onde o último Build colocou o campeonato no Select Team"
  },
  "log": [
   [

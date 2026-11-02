@@ -63,7 +63,7 @@ import mkleague as M
 FORMAT = "# fl26world 1"
 KEYS = ("cid", "region", "country", "conf", "slot", "tier", "above", "splittotal", "promote", "demote", "clubs", "legs",
         "cup", "exhibition", "scup", "kickoff", "cupall", "cuptop", "cuplow", "cupn",
-        "lcup", "lcuplow", "lcupn", "lcuptop", "cupthird")
+        "lcup", "lcuplow", "lcupn", "lcuptop", "cupthird", "pick")
 NO_SLOT = 123
 
 # fl26chain.dll keeps this many cups to their leagues (fl26chain.c MAX_CUPS) and drops the rest;
@@ -120,6 +120,9 @@ POOL_SLOTS = {75: "Other Clubs (Africa)", 71: "Other", 73: "Other Latin American
               69: "Other European Leagues"}
 POOL_BEFORE_HIDDEN = (75, 71)
 POOL_AFTER_HIDDEN = (73, 69)
+# a league's recipe "select_team": the group whose place it takes, whatever the order (vmican
+# 02.11.: with a South American world the Other Latin American Teams are of no use)
+POOL_PICK = {"europe": 69, "latam": 73, "africa": 75, "other": 71}
 # Limits branch: past those, a league takes a regulation id from the top of the date table down
 # (254, 253 ... 197) and a Select Team slot of its own above 123. Needs fl26slots250 (slots up
 # to 249), fl26slot7 (a club's league slot is a whole byte, not 7 bits) and a caps set whose
@@ -132,6 +135,11 @@ POOL_AFTER_HIDDEN = (73, 69)
 EXTRA_IDS = tuple(range(254, 196, -1))
 EXTRA_SLOT = {r: 124 + i for i, r in enumerate(EXTRA_IDS)}      # 254 -> 124 ... 197 -> 181
 DEFAULT_SLOT.update(EXTRA_SLOT)
+
+
+def pool_rid(slot):
+    """the regulation id whose Select Team slot is that group's (POOL_SLOTS)"""
+    return next((r for r, s in DEFAULT_SLOT.items() if s == slot), None)
 
 
 def id_rank(r):
