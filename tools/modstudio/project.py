@@ -2,7 +2,7 @@
 
 The recipe is the same JSON leaguebuilder.py builds from.  The tables are the game's own
 Team/Competition/Player tables, unpacked once from the person's game into
-%APPDATA%\\FL26ModStudio\\tables (Settings > Unpack the game's tables).
+%APPDATA%\\FL26ModStudio\\tables (Settings > Unpack the game's tables), FL27's into tables27.
 """
 import copy, json, os, pickle, shutil, time, zlib
 
@@ -11,6 +11,20 @@ from PySide6.QtCore import QObject, Signal
 import leaguebuilder as B
 
 NATIONAL, OTHERS = -2, -3          # the two groups of teams in no league (game_groups)
+
+
+def is_27(game):
+    """the game Mod Studio uses is FL27 (a stand-in game of a test: FL26)"""
+    from modstudio.game import is_fl27
+    folder = getattr(game, "folder", None)
+    return bool(folder) and is_fl27(folder)
+
+
+def tables_key(game):
+    """B307 (02.11.): the setting that holds the tables folder picked by hand, one per game -- with
+    one for both, a switch from FL26 to FL27 built FL27's world from FL26's tables (its players,
+    its ids) and back"""
+    return "tables_fl27" if is_27(game) else "tables"
 
 
 def blank():
@@ -48,8 +62,14 @@ class Project(QObject):
 
     # ---- tables ----
     def tables_dir(self):
+        """the game's unpacked tables: FL26's in tables, FL27's in tables27 (B307: one folder for both
+        kept the other game's tables after a switch, until Unpack was pressed again)"""
         from modstudio.app import APPDIR
-        return os.path.join(APPDIR, "tables")
+        return os.path.join(APPDIR, "tables27" if is_27(getattr(self.app, "game", None)) else "tables")
+
+    def own_tables(self):
+        """the tables folder picked by hand in Settings for the game in use, or None"""
+        return self.app.settings.get(tables_key(getattr(self.app, "game", None))) or None
 
     def _tables_of(self, where):
         """the tables folder to read for the chosen folder where. A mod's database (a pesdb folder
@@ -95,7 +115,7 @@ class Project(QObject):
         return out
 
     def load_tables(self, where=None):
-        where = where or self.app.settings.get("tables") or None
+        where = where or self.own_tables()
         # B218: a whole database mod as the tables has no kits file beside it; the game's unpacked one then
         B.KITS_FALLBACK[:] = [os.path.join(self.tables_dir(), B.UNIPAR.replace("/", os.sep))]
         self.overlay, self.tables_error = 0, ""
@@ -168,7 +188,7 @@ class Project(QObject):
         """the database mods (UML ...) switched on in sider.ini whose own tables a world built from
         the game's plain tables would hide (#36): enabled roots, not ours, with a pesdb folder
         holding competition or team tables. Empty when the tables in Settings are a mod's own."""
-        if self.app.settings.get("tables"):
+        if self.own_tables():
             return []
         from modstudio.siderini import root_path
         ini = self.app.ini() if hasattr(self.app, "ini") else None

@@ -59,7 +59,7 @@ passo**).
    e jogadores do jogo para uma pasta de trabalho; isso leva um ou dois minutos, e a barra de
    baixo avisa). Depois de uma atualização do jogo, a construção percebe e oferece extrair elas
    de novo antes; **Configurações → As tabelas do jogo → Extrair as tabelas do jogo** faz isso à
-   mão. **Usar outra pasta de tabelas...** é para uma base de dados sua, como uma pasta `pesdb`
+   mão. O FL26 e o FL27 têm cada um as suas próprias tabelas: quando a pasta do jogo muda para o outro jogo, o Mod Studio extrai as tabelas desse jogo na primeira vez e guarda as duas (antes, depois de uma troca o FL27 era construído com as tabelas do FL26, e vice-versa, até extraí-las de novo). **Usar outra pasta de tabelas...** é para uma base de dados sua, como uma pasta `pesdb`
    no livecpk: extraia antes as tabelas do jogo, depois escolha essa pasta. Os arquivos dela vão
    por cima dos do jogo, que dão o que ela não tem. Não a pasta de um mundo (`livecpk\_FL26...`):
    cada Build a reescreve, por isso o Mod Studio não a aceita (0.2.5.1). Um mod de base de dados que move as ligas do

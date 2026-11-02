@@ -5,6 +5,9 @@ released; until then this page only collects what is done and tested.
 
 ## Fixed
 
+- **FL26 and FL27 keep their own tables** (B307). Mod Studio unpacked the game's tables into one folder for both, so after Settings > Game folder was switched to the other game, a Build read the first game's tables (its players and ids) until **Unpack the game's tables** was pressed again. FL27's tables now go in `%APPDATA%\FL26ModStudio\tables27` and are unpacked by themselves the first time FL27 is chosen; FL26's stay in `tables`. A tables folder picked by hand (**Use another tables folder...**) is remembered for each game on its own.
+- **Regens keep their names after a save is loaded** (regen module). In a career started in the same session, or with a player the game regenerated twice, some regens came back from a load with another name (in FL27, and more rarely in FL26). The name pools are now read from the game's database at the title screen, and a player regenerated a second time keeps the name he got first.
+
 ## Also new
 
 - **The program is called FL Mod Studio now** (it was FL26 Mod Studio): it works with FL27 as well. Only the name you see changes: the window, the menus, the guides. FL26ModStudio.exe, the folder in the zip, %APPDATA%\FL26ModStudio and the fl26 modules keep their names, so updating works as before and nothing of yours moves.

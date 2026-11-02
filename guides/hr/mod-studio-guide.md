@@ -52,7 +52,7 @@ Modpack**: druga kartica koja te vodi kroz instalaciju Modpacka (zipa svijeta), 
 2. Tablice igre: Mod Studio ih sam raspakira prvi put (pročita klubove, lige i igrače igre u
    radnu mapu; to traje minutu ili dvije, a donja traka to kaže). Nakon ažuriranja igre Build to
    primijeti i ponudi da ih prvo opet raspakira; **Postavke → Tablice igre → Raspakiraj tablice
-   igre** to radi ručno. **Koristi drugu mapu s tablicama...** služi za vlastitu bazu, npr. `pesdb`
+   igre** to radi ručno. FL26 i FL27 imaju svaki svoje tablice: kad se mapa igre prebaci na drugu igru, Mod Studio prvi put raspakira tablice te igre i čuva obje (prije se nakon prebacivanja FL27 gradio iz tablica FL26, i obrnuto, dok se ponovno ne raspakiraju). **Koristi drugu mapu s tablicama...** služi za vlastitu bazu, npr. `pesdb`
    mapu u livecpk: prvo raspakiraj tablice igre, zatim odaberi tu mapu. Njene datoteke idu preko
    igrinih, a igrine daju sve što ona nema. Ne mapa svijeta (`livecpk\_FL26...`): svaki Build je
    prepisuje, pa je Mod Studio ne prihvaća (0.2.5.1). Mod baze koji premješta igrine lige na mjesta drugih

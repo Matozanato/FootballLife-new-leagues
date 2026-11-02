@@ -11,7 +11,7 @@ failure, and most print an `ok` line per check. Run them from the repository roo
 ## The game's tables
 
 Several tests and both build checks need the game's own unpacked tables (the `pesdb` folder).
-Mod Studio unpacks them to `%APPDATA%\FL26ModStudio\tables` (Settings > *Unpack the game's
+Mod Studio unpacks them to `%APPDATA%\FL26ModStudio\tables` (FL27's: `tables27`) (Settings > *Unpack the game's
 tables*). Pass that folder with `--base`, or set `FL26_PESDB` (several folders separated by `;`,
 newest first). `FL26_DIR` is the game folder (or `FL26_EXE` the exe) for the tools that read the
 exe. See `tools/flpaths.py`.

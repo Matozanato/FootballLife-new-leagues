@@ -14,7 +14,7 @@ line.
 |---|---|
 | `__init__.py` | `VERSION`. mszip names the zip after it, and the updater compares against it |
 | `app.py` | main window, menus, left bar (`page_groups()`), the Play header, the update banner, `load_settings` (`%APPDATA%\FL26ModStudio\settings.json`) |
-| `project.py` | `Project`: the recipe being edited, the game's unpacked tables (`%APPDATA%\FL26ModStudio\tables`), `touch()` (save + tell other pages), `changed` signal, the copies of recipes a Build keeps |
+| `project.py` | `Project`: the recipe being edited, the game's unpacked tables (`%APPDATA%\FL26ModStudio\tables` (FL27's: `tables27`)), `touch()` (save + tell other pages), `changed` signal, the copies of recipes a Build keeps |
 | `game.py` | `Game`: the folder with `FL_2026.exe`, the Sider folder, `sider.ini`, the Edit save, starting the game, "is it running" |
 | `siderini.py` | `sider.ini` as lines: read, switch, reorder and write back byte for byte |
 | `modules.py` | Lua modules: where a module's file is, and the order rules (from module readmes and from what files publish as `ctx.<name>`) |

@@ -58,7 +58,7 @@ deuxième carte qui vous guide pour installer un Modpack (un zip de monde), clic
    et joueurs du jeu dans un dossier de travail ; cela prend une minute ou deux, et la barre du
    bas le dit). Après une mise à jour du jeu, Build le remarque et propose d'abord une nouvelle
    extraction ; **Réglages → Les tables du jeu → Extraire les tables du jeu** le fait à la main.
-   **Utiliser un autre dossier de tables...** sert pour votre propre base, comme un dossier
+   FL26 et FL27 ont chacun leurs propres tables : quand le dossier du jeu passe à l'autre jeu, Mod Studio extrait les tables de ce jeu la première fois et garde les deux (avant, après un changement FL27 était construit avec les tables de FL26, et inversement, jusqu'à une nouvelle extraction). **Utiliser un autre dossier de tables...** sert pour votre propre base, comme un dossier
    `pesdb` dans livecpk : extrayez d'abord les tables du jeu, puis choisissez ce dossier. Ses
    fichiers passent par-dessus ceux du jeu, qui fournissent tout ce qu'il n'a pas. Pas le dossier
    d'un monde (`livecpk\_FL26...`) : chaque Build le réécrit, Mod Studio ne le prend donc pas

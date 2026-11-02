@@ -10,6 +10,7 @@ import siderdir
 
 from ..game import Game, guess_folders
 from ..worlds import world_of
+from ..project import tables_key
 from ..i18n import _
 from ..ui import Page, section, hint, row, ask, error, info, run_job, can_write, denied
 
@@ -132,7 +133,7 @@ class Settings(Page):
             n = len(p.game_cl)
             if p.overlay:
                 self.tables.setText(_("%s  (%d clubs, %d leagues; %d files from it, the rest from the game's "
-                                      "tables)") % (self.app.settings.get("tables", ""), n, len(p.game_lgs), p.overlay))
+                                      "tables)") % (p.own_tables() or "", n, len(p.game_lgs), p.overlay))
             else:
                 self.tables.setText(_("%s  (%d clubs, %d leagues)") % (p.base, n, len(p.game_lgs)))
         else:
@@ -190,7 +191,7 @@ class Settings(Page):
             self.app.busy(False)
             self.unpack_btn.setEnabled(True)
             if not p.overlay:          # a database of your own stays on top of the new tables
-                self.app.settings.pop("tables", None)
+                self.app.settings.pop(tables_key(self.app.game), None)
             p.load_tables()
             self.refresh()
             self.log.appendPlainText(_("Done."))
@@ -218,10 +219,11 @@ class Settings(Page):
                                       "the world (in Documents, for example) and pick that one.") % world)
             return
         p = self.app.project
-        self.app.settings["tables"] = d
+        key = tables_key(getattr(self.app, "game", None))
+        self.app.settings[key] = d
         if not p.load_tables(d):
             why = p.tables_error
-            self.app.settings.pop("tables", None)
+            self.app.settings.pop(key, None)
             p.load_tables()
             if "unpack" in why:
                 error(self, "Settings", _("That folder has only part of the tables, as a database in livecpk "

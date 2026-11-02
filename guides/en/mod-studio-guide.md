@@ -52,7 +52,7 @@ has **Show me how to install a Modpack**: a second card that walks you through i
 2. The game's tables: Mod Studio unpacks them by itself the first time (it reads the game's
    clubs, leagues and players into a working folder; this takes a minute or two, and the bottom
    bar says so). After a game update Build notices and offers to unpack them again first;
-   **Settings → The game's tables → Unpack the game's tables** does it by hand. **Use another
+   **Settings → The game's tables → Unpack the game's tables** does it by hand. FL26 and FL27 each have tables of their own: when the game folder is switched to the other game, Mod Studio unpacks that game's tables the first time and keeps both (before, FL27 was built from FL26's tables after a switch, and back, until they were unpacked again). **Use another
    tables folder...** is for a database of your own, such as a `pesdb` folder in livecpk: unpack
    the game's tables first, then pick that folder. Its files go over the game's, which give
    whatever it does not have. Not a world's own folder (`livecpk\_FL26...`): every Build

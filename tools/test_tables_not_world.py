@@ -32,7 +32,7 @@ with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "modstudio", 
     src = f.read()
 pick = src[src.index("def pick_tables"):]
 ok("pick_tables refuses a world before it stores the folder",
-   pick.index("world_of(d)") < pick.index('self.app.settings["tables"] = d'))
+   pick.index("world_of(d)") < pick.index('self.app.settings[key] = d'))
 
 # the page itself, offscreen: the folder dialog answers a world, the box says so, nothing is taken
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")

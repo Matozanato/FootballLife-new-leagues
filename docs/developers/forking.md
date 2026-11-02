@@ -47,7 +47,7 @@ python modstudio_main.py
 ```
 
 The first start asks for the game folder and unpacks the game's tables into
-`%APPDATA%\FL26ModStudio\tables` (Settings > Unpack the game's tables). Your settings are in
+`%APPDATA%\FL26ModStudio\tables` (FL27's: `tables27`) (Settings > Unpack the game's tables). Your settings are in
 `%APPDATA%\FL26ModStudio\settings.json`. A fork that wants its own settings and tables next to
 the official ones changes the folder name in `APPDIR` (`tools/modstudio/app.py`; the tables and
 recipe copies of `project.py` follow it) and in `CACHE` (`tools/modstudio/newlife.py`).

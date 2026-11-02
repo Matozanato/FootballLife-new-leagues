@@ -5348,7 +5348,7 @@ class Build(BuilderPage):
         """True when the game's tables Mod Studio unpacked are older than the game and the
         person chose to unpack them first; `again` runs once they are (GitHub #63: tables
         without the update's data_extra changed the starting elevens of the game's clubs)"""
-        if self.app.settings.get("tables"):
+        if self.project.own_tables():
             return False                      # a folder of tables picked by hand: left as it is
         why = B.tables_stale(self.app.game.folder, self.project.tables_dir())
         if not why or not ask(self, "Build", _("The game's tables Mod Studio uses are older than the game: %s. "

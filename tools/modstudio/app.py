@@ -310,7 +310,7 @@ class Main(QMainWindow):
         """unpack the game's tables when there are none yet and no tables folder of your own was
         chosen (Settings has the button for doing it again after a game update)"""
         p = self.project
-        if p.base is not None or not self.game.ok() or self.settings.get("tables"):
+        if p.base is not None or not self.game.ok() or p.own_tables():
             return
         s = self.pages.get("Settings")
         if s is None or not s.unpack_btn.isEnabled():

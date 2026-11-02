@@ -57,7 +57,7 @@ una segunda tarjeta que te guía para instalar un Modpack (un zip de mundo), cli
    y jugadores del juego en una carpeta de trabajo; tarda uno o dos minutos, y la barra de abajo
    lo dice). Tras una actualización del juego Build lo nota y ofrece desempaquetarlas de nuevo
    primero; **Ajustes → Las tablas del juego → Desempaquetar las tablas del juego** lo hace a
-   mano. **Usar otra carpeta de tablas...** sirve para una base de datos propia, como una carpeta
+   mano. FL26 y FL27 tienen cada uno sus propias tablas: al cambiar la carpeta del juego al otro juego, Mod Studio desempaqueta las tablas de ese juego la primera vez y guarda las dos (antes, tras un cambio FL27 se construía con las tablas de FL26, y al revés, hasta desempaquetarlas otra vez). **Usar otra carpeta de tablas...** sirve para una base de datos propia, como una carpeta
    `pesdb` en livecpk: desempaqueta primero las tablas del juego y luego elige esa carpeta. Sus
    archivos van encima de los del juego, que ponen lo que a ella le falte. No la carpeta de un
    mundo (`livecpk\_FL26...`): cada Build la reescribe, así que Mod Studio no la acepta (0.2.5.1).
