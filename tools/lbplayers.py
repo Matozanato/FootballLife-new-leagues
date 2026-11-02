@@ -1529,10 +1529,18 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
     drop = set()
     touched = set()                                    # clubs whose squad order may have gaps
     later = {}                                         # club -> {ref: changes} of players who join it
+    tsrc = next((d for d in (db, base) if os.path.exists(os.path.join(d, "Team.bin"))), None)
+    known = set(teams(tsrc)) if tsrc else None         # None: no Team.bin to tell by
     for club, c in changes.items():
         tid = club_tid(club)
         if tid is None:
             log("  players of %s: the club was not built, skipped" % club)
+            continue
+        if club.isdigit() and known is not None and tid not in known:
+            # B311: a club of the other game -- FL26 and FL27 number their clubs apart (FL26's
+            # Arezzo, 319, is 4377 in FL27, and FL27 has no 319): its added players had no one to
+            # be copied from and the whole Build stopped
+            log("  NOTE: players of %s: the game has no club %s (a club of the other game?), skipped" % (club, club))
             continue
         sq = squad_of(tid)
         where = {}                                     # recipe key -> (pid, assignment offset)
