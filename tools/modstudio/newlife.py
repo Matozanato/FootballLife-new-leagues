@@ -79,8 +79,8 @@ class Release:
         # B56: a NewLife club that is a club of the game after all (clubs.csv game_id, 1.5b5 on):
         # NewLife id -> the game's team id. While it counts as the game's it is in clubs and squads
         # under the game's id, a club of the game like any other (see _settle)
-        self.twins, self._twin_rows = {}, {}
-        self._twin_off = set()                    # twins the tables in use have not got (use_tables)
+        self.twins, self._twin_rows, self._renum = {}, {}, set()
+        self._twin_off = set()                 # twins the tables in use have not got (use_tables)
         self.held = set()                         # twins the world has as new clubs already (use_recipe)
         self.gone = set()                         # game clubs whose place the world gave away (use_recipe)
         versions = set()
@@ -116,14 +116,23 @@ class Release:
         """the clubs clubs.csv's game_id says are the game's (B56: 1.0 made Avai Futebol Clube a new
         club, 98493; the game has it, Avai FC 2452). A release without the column has none, and
         reads as it always did. Left out: a game id the release has as a club of its own, and one
-        two clubs claim"""
-        cand = {}
+        two clubs claim.
+        A club of the game (in_game 1) with a game_id is one another game numbers differently
+        (FL27 gave Tampines 4115 the id 69651): a twin that is off until tables that have its
+        game_id, and not its own id, say it is that club (use_tables)"""
+        cand, self._renum = {}, set()
         for cid, c in self.clubs.items():
             g = str(c.get("game_id") or "").strip()
-            if g.isdigit() and str(int(g)) != cid and str(int(g)) not in self.clubs and c.get("in_game") != "1":
-                cand[cid] = str(int(g))
+            if g.isdigit() and str(int(g)) != cid and str(int(g)) not in self.clubs:
+                if c.get("in_game") != "1":
+                    cand[cid] = str(int(g))
+                elif cid.isdigit():
+                    cand[cid] = str(int(g))
+                    self._renum.add(cid)
         claims = collections.Counter(cand.values())
         self.twins = {n: g for n, g in cand.items() if claims[g] == 1}
+        self._renum &= set(self.twins)
+        self._twin_off = set(self._renum)
         self._twin_rows = {n: self.clubs[n] for n in self.twins}
 
     def _settle(self):
@@ -230,7 +239,8 @@ class Release:
             return
         self.tables = tag
         self._unmark()
-        self._twin_off = {n for n, g in self.twins.items() if not same_club(info, int(g), self._twin_rows[n])}
+        self._twin_off = {n for n, g in self.twins.items() if not same_club(info, int(g), self._twin_rows[n])
+                          or n in self._renum and same_club(info, int(n), self._twin_rows[n])}
         self._settle()
         for cid, c in self.clubs.items():
             if c.get("twin"):
@@ -362,9 +372,18 @@ def same_club(info, tid, c):
     (a clubs.csv row): a club, not a national team, of the release's country, or failing that
     with the release's name (crestmatch's score; the release spells names its own way, R. Madrid
     for Real Madrid CF, and two clubs of the game's MLS are Canadian). With the game's own
-    tables every club the release has in the game is the same one."""
+    tables every club the release has in the game is the same one.
+    A release with game_names (the names the club has in the games, "|" between them; 1.6b3 on)
+    asks the name: FL27 gave five ids of FL26 to other clubs of the same country (5181 Meizhou
+    Hakka is Liaoning Tieren there), and the country took them for the release's club."""
     if tid not in info["clubs"] or tid in (info.get("national") or ()):
         return False
+    known = [n for n in str(c.get("game_names") or "").split("|") if n.strip()]
+    if known:                                   # the name as it is first: crestmatch has no words in "Athletic Club"
+        tn = (info["clubs"][tid][0] or "").strip()
+        w = crestmatch.words(tn)
+        return any(n.strip().casefold() == tn.casefold() or crestmatch.score(crestmatch.words(n), w) >= crestmatch.MIN_SCORE
+                   for n in [c.get("name", "")] + known)
     have = (info.get("club_country") or {}).get(tid)
     if have is not None and str(have) == str(c.get("country", "")).strip():
         return True

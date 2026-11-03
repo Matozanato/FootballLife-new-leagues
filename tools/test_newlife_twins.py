@@ -15,7 +15,9 @@ and checks that:
   - a world that has a twin as a new club already keeps it (its NewLife id), in Bring and in
     Update my leagues, and does not get its name a second time in a place of the game;
   - tables without the game's club (a database mod) make it a new club again;
-  - New clubs cannot put a twin in by hand as a new club.
+  - New clubs cannot put a twin in by hand as a new club;
+  - with game_names (1.6b3) a club of the game whose id the tables give another club of the
+    country is a new club, and one under a name another game gives it stays the game's.
 """
 import csv, json, os, shutil, sys, tempfile
 
@@ -40,8 +42,10 @@ def ok(cond, what):
     print("ok %d - %s" % (N, what))
 
 
-def release(folder, base, with_column=True):
-    """the game's Série A and B as the release's season has them, the seven under NewLife ids"""
+def release(folder, base, with_column=True, renum=None):
+    """the game's Série A and B as the release's season has them, the seven under NewLife ids;
+    renum {team id: id in another game}: clubs of the game with game_id (a game that numbers them
+    differently)"""
     db = P.Squads(base)
     gl = {n: ts for _r, _c, n, ts in B.game_leagues(base)}
     sa = next(ts for n, ts in gl.items() if SPORT in ts)
@@ -59,7 +63,7 @@ def release(folder, base, with_column=True):
         for t, lg in sorted(league.items()):
             row = [nl[t], 0, TWINS[nl[t]][1]] if t in nl else [t, 1, "club %d" % t]
             w.writerow(row + [BR, lg, "plain #ffffff #000000 #000000", ""] +
-                       ([t if t in nl else ""] if with_column else []))
+                       ([t if t in nl else (renum or {}).get(t, "")] if with_column else []))
     with open(os.path.join(folder, "players.csv"), "w", encoding="utf-8", newline="") as f:
         w = csv.writer(f)
         w.writerow(["newlife_id", "game_id", "name", "birth_date", "club_id"] + list(P.FIELDS))
@@ -149,6 +153,74 @@ def main(base):
         ok("98493" in rel.clubs and "2452" not in rel.clubs, "tables without 2452: Avaí is a new club again")
         rel.use_tables(info)
         ok("2452" in rel.clubs and "98493" not in rel.clubs, "the game's tables again: the game's club")
+
+        # FL27 numbers a club of the game differently (Tampines 4115 -> 69651): clubs.csv keeps
+        # the club under its id, in_game 1, with game_id the other game's id
+        ren = os.path.join(tmp, "ren")
+        t0 = sorted(t for t in info["clubs"] if str(t) in rel.clubs and rel.clubs[str(t)]["in_game"] == "1"
+                    and not rel.clubs[str(t)].get("twin"))[0]
+        t1 = max(info["clubs"]) + 1000
+        release(ren, base, renum={t0: t1})
+        rr = NL.Release(ren)
+        ok(rr.twins.get(str(t0)) == str(t1) and str(t0) in rr.clubs and str(t1) not in rr.clubs
+           and rr.clubs[str(t0)]["in_game"] == "1", "renumbered club: under its own id until the tables say")
+        rr.use_tables(info)
+        ok(str(t0) in rr.clubs and str(t1) not in rr.clubs and rr.clubs[str(t0)]["in_game"] == "1",
+           "tables with its own id (FL26): a club of the game under %d" % t0)
+        f27 = {t: v for t, v in info["clubs"].items() if t != t0}
+        f27[t1] = info["clubs"][t0]
+        cc = dict(info.get("club_country") or {})
+        if t0 in cc:
+            cc[t1] = cc.pop(t0)
+        fl27 = dict(info, base=None, clubs=f27, club_country=cc)
+        rr.use_tables(fl27)
+        ok(str(t1) in rr.clubs and str(t0) not in rr.clubs and rr.clubs[str(t1)]["in_game"] == "1"
+           and rr.clubs[str(t1)]["twin"] == str(t0), "tables with the other id (FL27): a club of the game under %d" % t1)
+        ok(str(t1) in rr.squads and str(t0) not in rr.squads, "its squad goes with it")
+        row = next(L for L in rr.leagues(str, fl27) if str(t1) in L["in_game"])
+        ok(str(t0) not in row["clubs"] and str(t0) not in row["in_game"], "its league: the club once, as the game's")
+        f2 = dict(f27)
+        f2[t0] = info["clubs"][t0]
+        both = dict(fl27, base=None, clubs=f2, club_country=info.get("club_country"))
+        rr.use_tables(both)
+        ok(str(t0) in rr.clubs and str(t1) not in rr.clubs, "tables with both ids: its own id")
+        rr.use_tables(info)
+        ok(str(t0) in rr.clubs and rr.clubs[str(t0)]["in_game"] == "1", "back to FL26's tables: as before")
+
+        # game_names (1.6b3): FL27 gave FL26's id of a club to another club of the same country
+        # (5181 Meizhou Hakka is Liaoning Tieren there); the country alone took it for the release's
+        gn = os.path.join(tmp, "gn")
+        shutil.copytree(os.path.join(tmp, "new"), gn)
+        p = os.path.join(gn, "clubs.csv")
+        rows = list(csv.DictReader(open(p, encoding="utf-8")))
+        for r in rows:
+            t = int(r["game_id"] or r["newlife_id"])
+            r["game_names"] = info["clubs"][t][0] if t in info["clubs"] else ""
+        t2 = next(int(r["newlife_id"]) for r in rows if r["in_game"] == "1" and info["clubs"][int(r["newlife_id"])][0])
+        for r in rows:
+            if r["newlife_id"] == str(t2):
+                r["game_names"] += "|Old Name of %d" % t2
+        with open(p, "w", encoding="utf-8", newline="") as f:
+            w = csv.DictWriter(f, list(rows[0]))
+            w.writeheader()
+            w.writerows(rows)
+        rg, rp = NL.Release(gn), NL.Release(os.path.join(tmp, "new"))
+        rg.use_tables(info)
+        rp.use_tables(info)
+        ok({c for c, r in rg.clubs.items() if r["in_game"] == "1"} == {c for c, r in rp.clubs.items() if r["in_game"] == "1"},
+           "game_names: the game's tables, the same clubs of the game as without them")
+        other = dict(info["clubs"])
+        other[t2] = ("Some Other Club",) + tuple(other[t2][1:])
+        oth = dict(info, base=None, clubs=other)
+        rg.use_tables(oth)
+        rp.use_tables(oth)
+        ok(rg.clubs[str(t2)]["in_game"] == "0", "game_names: %d another club of the country in the tables -> a new club" % t2)
+        ok(rp.clubs[str(t2)]["in_game"] == "1", "without game_names the country takes it (as before 1.6b3)")
+        other[t2] = ("Old Name of %d" % t2,) + tuple(other[t2][1:])
+        rg.use_tables(dict(info, base=None, clubs=other))
+        ok(rg.clubs[str(t2)]["in_game"] == "1", "game_names: the club under the name another game gives it stays the game's")
+        rg.use_tables(info)
+        ok(rg.clubs[str(t2)]["in_game"] == "1", "game_names: back to the game's tables")
 
         # New clubs > NewLife club: a twin is not put in as a new club
         x = {"name": "Hand", "clubs": 12}
