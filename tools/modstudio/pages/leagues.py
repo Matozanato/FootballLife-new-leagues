@@ -211,9 +211,9 @@ class Leagues(BuilderPage):
         self.o_low = b_low
         b_low.clicked.connect(lambda: self.on_ours("add_lower"))
         b_clubs = QPushButton(_("Clubs and names"))
-        b_clubs.clicked.connect(lambda: self.app.open_page("NewClubs"))
+        b_clubs.clicked.connect(self.to_clubs)
         b_pl = QPushButton(_("Players"))
-        b_pl.clicked.connect(lambda: self.app.open_page("Players"))
+        b_pl.clicked.connect(self.to_players)
         b_rm = QPushButton(_("Remove"))
         b_rm.setObjectName("danger")
         b_rm.clicked.connect(lambda: self.on_ours("remove"))
@@ -600,6 +600,27 @@ class Leagues(BuilderPage):
             bv.addWidget(cap)
             box.setToolTip(name)
             self.o_crests.addWidget(box, k // 5, k % 5)
+
+    def to_clubs(self):
+        """Clubs and names: the Clubs page on the league picked here (it showed the league last
+        picked there -- Xxspedd 03.11.)"""
+        e = self.current()
+        self.app.open_page("NewClubs")
+        if e and e[3] == "ours":
+            nc = self.app.page("NewClubs")
+            nc.combo.setCurrentText(e[2])
+            nc.show_clubs()
+
+    def to_players(self):
+        """Players: that page on the league picked here, as Clubs and names"""
+        e = self.current()
+        self.app.open_page("Players")
+        if e and e[3] == "ours":
+            pp = self.app.page("Players")
+            # findData() does not match a tuple: compared one by one, as Players keeps its pick
+            i = next((n for n in range(pp.lg.count()) if pp.lg.itemData(n) == ("new", e[2])), -1)
+            if i >= 0:
+                pp.lg.setCurrentIndex(i)
 
     def on_ours(self, what):
         """run a New leagues button on the league picked here"""

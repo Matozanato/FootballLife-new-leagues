@@ -431,6 +431,23 @@ def run():
                        % sum(1 for L in recipe["leagues"] if not L.get("above")), nl.our_cups)):
         opened(label, fn)
 
+    # ---- Leagues > Clubs and names / Players open on the league picked there (Xxspedd 03.11.: they
+    # showed the league last picked on that page)
+    lp = w.page("Leagues")
+    for k in (5, 40):
+        name = recipe["leagues"][k]["name"]
+        w.open_page("Leagues")
+        settle(qa, 0.2)
+        lp.show_key("o" + name)
+        lp.to_clubs()
+        settle(qa, 0.2)
+        ok("Leagues > Clubs and names opens %s" % name, w.page("NewClubs").league()["name"] == name)
+        w.open_page("Leagues")
+        settle(qa, 0.2)
+        lp.to_players()
+        settle(qa, 0.2)
+        ok("Leagues > Players opens %s" % name, w.page("Players").lg.currentData() == ("new", name))
+
     # ---- Clubs (NewClubs page)
     nc = w.page("NewClubs")
     w.open_page("NewClubs")

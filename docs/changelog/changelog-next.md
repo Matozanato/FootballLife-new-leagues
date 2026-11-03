@@ -10,6 +10,7 @@ released; until then this page only collects what is done and tested.
 - **Regens keep their names after a save is loaded** (regen module). In a career started in the same session, or with a player the game regenerated twice, some regens came back from a load with another name (in FL27, and more rarely in FL26). The name pools are now read from the game's database at the title screen, and a player regenerated a second time keeps the name he got first.
 - **FL27: a new Master League no longer crashes on its first day with a big world** (regen module). With the Europack (about 31,900 new players, each shown with a portrait of the face pack) FL27 closed a few seconds after the career was created. The face pack's portraits were 180 pixels square and FL27 only takes its own size; they go out at 128 x 128 now, and so does a player portrait you give in *Players* > **Portrait**. FL26 was not affected.
 - **Build no longer stops on the players of a club the game does not have.** A world started with FL26 and built for FL27 stopped with "players of 319: nothing to copy a new player from": the two games do not have the same clubs (319 is FL26's SSC Bari, and FL27 has no club 319), so the players added to that club had no squad to be copied from. Build now skips that club's player changes and the log says which club it was.
+- **Leagues > Clubs and names and Players open the league you picked.** They opened those pages on the league last picked there, so with a new league picked on Leagues, Clubs and names still showed another one (Xxspedd).
 
 ## Also new
 
