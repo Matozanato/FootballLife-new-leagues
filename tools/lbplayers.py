@@ -1537,9 +1537,9 @@ def apply(pl, base, db, cap, log=print, faces=None, lineups=None, ids=None, port
             log("  players of %s: the club was not built, skipped" % club)
             continue
         if club.isdigit() and known is not None and tid not in known:
-            # B311: a club of the other game -- FL26 and FL27 number their clubs apart (FL26's
-            # Arezzo, 319, is 4377 in FL27, and FL27 has no 319): its added players had no one to
-            # be copied from and the whole Build stopped
+            # B311: a club of the other game -- FL26 and FL27 have clubs apart (FL26's SSC Bari,
+            # 319, is not in FL27, which has SS Arezzo, 4377, instead): its added players had no one
+            # to be copied from and the whole Build stopped
             log("  NOTE: players of %s: the game has no club %s (a club of the other game?), skipped" % (club, club))
             continue
         sq = squad_of(tid)

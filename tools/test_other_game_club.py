@@ -1,9 +1,9 @@
 r"""python tools/test_other_game_club.py
 
 B311 (Xxspedd 02.11., #beta-chat): a world made with FL26's tables, built for FL27, stopped with
-"players of 319: nothing to copy a new player from". 319 is FL26's Arezzo; FL27 numbers its clubs
-apart (Arezzo is 4377 there) and has no 319, so the players the recipe added there had no squad to
-be copied from. Now a club of the game the game does not have is skipped, and the log says so; a
+"players of 319: nothing to copy a new player from". 319 is FL26's SSC Bari; FL27 has other clubs
+(SS Arezzo, 4377, and no 319), so the players the recipe added there had no squad to be copied
+from. Now a club of the game the game does not have is skipped, and the log says so; a
 club it has still gets its players. Tables made here, in a temporary folder.
 """
 import os, shutil, sys, tempfile
@@ -46,7 +46,7 @@ try:
     write(base, "Team.bin", team)
     players, assigns = bytearray(), bytearray()
     for n, pos in enumerate(["GK", "CB", "CMF", "CF"]):
-        players += player(1000 + n, "Arezzo Player%d" % n, pos)
+        players += player(1000 + n, "Club Player%d" % n, pos)
         a = bytearray(L.A_REC)
         for off, v in ((E.A_EID, n + 1), (E.A_PID, 1000 + n), (E.A_TID, 4377),
                        (E.A_PACK, E.with_shirt(n << E.ORDER_SHIFT, n + 1))):
