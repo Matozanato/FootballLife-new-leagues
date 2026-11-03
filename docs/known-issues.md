@@ -12,6 +12,12 @@ Viewer can be matched against them: the offset is the address minus `0x140000000
 - **NewLife is not checked on FL27 yet.** Its clubs and players were matched to FL26's.
 - **SmokePatch's `common\SleeveBadge.lua` logs a Lua error** (`folder` nil, line 367) for the
   clubs a world adds. The game plays on.
+- **FL27 can close while a new Master League is created or on its first days** (no error box;
+  Windows logs `FL_2027.exe` at `0x1531cc313` or `0x1484ed4c0`, sometimes `0x141fea5ba`). It is in
+  FL27's own exe: a plain FL27, started without Sider and without anything of Mod Studio, closed the
+  same way (2026-11-03). We do not change the game's exe, so the fix has to come with an FL27 update.
+  Start the game again and retry; it can take a few tries.
+
 ## Open in Mod Studio 0.2.4 (2026-10-20)
 
 - **Outside a match a new club can show another club's kit** (B175: in Become a Legend, after a
