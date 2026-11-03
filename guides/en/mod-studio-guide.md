@@ -31,7 +31,7 @@ The same program works with FL27 (from 0.3.0). In **5. Settings → Game folder*
 
 - In FL27 the Champions League and Europa League league phase, February play-off and knockout are FL27's own, on FL27's dates. Mod Studio decides who gets in from your leagues and plays the qualifying rounds; the Conference League is Mod Studio's.
 - The Worldpack and Europe pack zips install and play in FL27, but they carry FL26's players. A world you build in FL27 has FL27's players.
-- FL27 can close while a new Master League is created. That is in FL27's own exe, not in Mod Studio: see [Known issues](../../docs/known-issues.md).
+- Start FL27 through its launcher (**FL 2027 start.exe**, its shortcut, or **Start the game** here): FL_2027.exe started directly can close while a new Master League is created. See [Known issues](../../docs/known-issues.md).
 
 ## 1. Before you start
 

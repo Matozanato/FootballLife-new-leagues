@@ -19,9 +19,9 @@ what is not done yet: [guide](../guides/en/mod-studio-guide.md#football-life-202
 
 ### FL27 closes while a new Master League is being created
 
-It is in FL27's own exe: a plain FL27, without Sider and without anything of Mod Studio, closes
-the same way. Start the game again and retry, it can take a few tries, and save your career once
-it is created. We do not change the game's exe; the fix has to come with an FL27 update.
+Start FL27 through its launcher: **FL 2027 start.exe**, its shortcut, or **Start the game** in Mod
+Studio. FL_2027.exe started directly (or Sider and the game exe started apart) can close while a
+new Master League is created or on its first days; started through the launcher it did not.
 
 ### I updated Mod Studio. What do I do now?
 

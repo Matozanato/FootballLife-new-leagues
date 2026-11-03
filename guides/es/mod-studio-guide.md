@@ -34,7 +34,7 @@ El mismo programa funciona con FL27 (desde 0.3.0). En **5. Ajustes → Carpeta d
 
 - En FL27 la fase de liga de la Champions League y la Europa League, el play-off de febrero y las eliminatorias son de FL27, en sus fechas. Mod Studio decide quién entra desde tus ligas y juega las rondas previas; la Conference League es de Mod Studio.
 - Los zips Worldpack y Europe pack se instalan y se juegan en FL27, pero traen los jugadores de FL26. Un mundo que construyes en FL27 tiene los jugadores de FL27.
-- FL27 puede cerrarse mientras se crea una Master League nueva. Está en el propio exe de FL27, no en Mod Studio: mira [Problemas conocidos](../../docs/known-issues.md).
+- Inicia FL27 con su launcher (**FL 2027 start.exe**, su acceso directo o **Iniciar el juego** aquí): FL_2027.exe abierto directamente puede cerrarse mientras se crea una Master League nueva. Mira [Problemas conocidos](../../docs/known-issues.md).
 
 ## 1. Antes de empezar
 

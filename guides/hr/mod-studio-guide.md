@@ -31,7 +31,7 @@ Isti program radi i s FL27 (od 0.3.0). U **5. Postavke → Mapa igre** odaberi m
 
 - U FL27 ligašku fazu Lige prvaka i Europske lige, veljačko doigravanje i nokaut vodi sam FL27, na svoje datume. Mod Studio odlučuje tko ulazi iz tvojih liga i igra pretkola; Konferencijska liga je Mod Studijeva.
 - Zipovi Worldpack i Europe pack instaliraju se i igraju u FL27, ali nose igrače iz FL26. Svijet koji sagradiš u FL27 ima igrače iz FL27.
-- FL27 se zna ugasiti dok se stvara nova Master League. To je u samom exeu FL27, ne u Mod Studiju: vidi [Poznate greške](../../docs/known-issues.md).
+- FL27 pokreći kroz njegov launcher (**FL 2027 start.exe**, njegov prečac ili **Pokreni igru** ovdje): FL_2027.exe pokrenut izravno zna se ugasiti dok se stvara nova Master League. Vidi [Poznate greške](../../docs/known-issues.md).
 
 ## 1. Prije početka
 
