@@ -18,6 +18,9 @@ import lbplayers as P
 
 FILES = ("players.csv", "clubs.csv", "newlife.json")
 PART = "NewLife-*.zip"
+# the key a club of the release goes by while a swapped twin has its id (Release._swap): the
+# NewLife id plus this, above any NewLife id, and the same every time (a world keeps it)
+SWAP_KEY = 900000
 CACHE = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "FL26ModStudio", "newlife")
 
 
@@ -80,6 +83,9 @@ class Release:
         # NewLife id -> the game's team id. While it counts as the game's it is in clubs and squads
         # under the game's id, a club of the game like any other (see _settle)
         self.twins, self._twin_rows, self._renum = {}, {}, set()
+        # a twin whose game id is the NewLife id of another club of the release (FL27 gave Meizhou
+        # Hakka's 5181 to Liaoning Tieren): twin -> the key that club goes by while the twin is on
+        self._swap = {}
         self._twin_off = set()                 # twins the tables in use have not got (use_tables)
         self.held = set()                         # twins the world has as new clubs already (use_recipe)
         self.gone = set()                         # game clubs whose place the world gave away (use_recipe)
@@ -120,7 +126,7 @@ class Release:
         A club of the game (in_game 1) with a game_id is one another game numbers differently
         (FL27 gave Tampines 4115 the id 69651): a twin that is off until tables that have its
         game_id, and not its own id, say it is that club (use_tables)"""
-        cand, self._renum = {}, set()
+        cand, self._renum, swap = {}, set(), {}
         for cid, c in self.clubs.items():
             g = str(c.get("game_id") or "").strip()
             if g.isdigit() and str(int(g)) != cid and str(int(g)) not in self.clubs:
@@ -129,10 +135,17 @@ class Release:
                 elif cid.isdigit():
                     cand[cid] = str(int(g))
                     self._renum.add(cid)
+            elif g.isdigit() and str(int(g)) != cid and c.get("in_game") != "1" and _game_names(c)                     and self.clubs[str(int(g))].get("in_game") == "1" and _game_names(self.clubs[str(int(g))]):
+                # the game id is a club of the release too, and the names say which one the tables have
+                k = str(SWAP_KEY + int(g))
+                if k not in self.clubs:
+                    cand[cid] = str(int(g))
+                    swap[cid] = k
         claims = collections.Counter(cand.values())
         self.twins = {n: g for n, g in cand.items() if claims[g] == 1}
         self._renum &= set(self.twins)
-        self._twin_off = set(self._renum)
+        self._swap = {n: k for n, k in swap.items() if n in self.twins}
+        self._twin_off = set(self._renum) | set(self._swap)
         self._twin_rows = {n: self.clubs[n] for n in self.twins}
 
     def _settle(self):
@@ -142,16 +155,27 @@ class Release:
         new club, as a release without game_id has it"""
         for n, g in self.twins.items():
             on = n not in self._twin_off and n not in self.held and g not in self.gone
+            k = self._swap.get(n)                 # the release's own club at g goes to k meanwhile
             if on and n in self.clubs:
                 del self.clubs[n]
+                sq = self.squads.pop(n, None)
+                if k and g in self.clubs:
+                    self.clubs[k] = self.clubs.pop(g)
+                    if g in self.squads:
+                        self.squads[k] = self.squads.pop(g)
                 self.clubs[g] = dict(self._twin_rows[n], in_game="1", twin=n)
-                if n in self.squads:
-                    self.squads[g] = self.squads.pop(n)
+                if sq is not None:
+                    self.squads[g] = sq
             elif not on and (self.clubs.get(g) or {}).get("twin") == n:
                 del self.clubs[g]
+                sq = self.squads.pop(g, None)
+                if k and k in self.clubs:
+                    self.clubs[g] = self.clubs.pop(k)
+                    if k in self.squads:
+                        self.squads[g] = self.squads.pop(k)
                 self.clubs[n] = self._twin_rows[n]
-                if g in self.squads:
-                    self.squads[n] = self.squads.pop(g)
+                if sq is not None:
+                    self.squads[n] = sq
 
     def now(self, cid):
         """the id release club cid goes by now: a twin is in clubs under its NewLife id or under the
@@ -159,6 +183,11 @@ class Release:
         cid = str(cid)
         if cid in self.clubs:
             return cid
+        for n, k in self._swap.items():           # the club a swapped twin's game id belongs to
+            if cid == k and self.twins[n] in self.clubs and not self.clubs[self.twins[n]].get("twin"):
+                return self.twins[n]
+            if cid == self.twins[n] and k in self.clubs:
+                return k
         if cid in self.twins and self.twins[cid] in self.clubs:
             return self.twins[cid]
         return next((n for n, g in self.twins.items() if g == cid and n in self.clubs), cid)
@@ -209,7 +238,9 @@ class Release:
 
     def crest(self, cid):
         """the path of club cid's crest from the release, unpacked, or None"""
-        read = self.crests.get(str(cid))
+        cid = str(cid)
+        cid = next((self.twins[n] for n, k in self._swap.items() if k == cid), cid)   # its crest is under its NewLife id
+        read = self.crests.get(cid)
         return self._unpack("crests", "%s.png" % cid, read) if read else None
 
     def league_logo(self, L):
@@ -239,8 +270,10 @@ class Release:
             return
         self.tables = tag
         self._unmark()
+        own = {n: self.clubs.get(self._swap[n]) or self.clubs.get(g) for n, g in self.twins.items() if n in self._swap}
         self._twin_off = {n for n, g in self.twins.items() if not same_club(info, int(g), self._twin_rows[n])
-                          or n in self._renum and same_club(info, int(n), self._twin_rows[n])}
+                          or n in self._renum and same_club(info, int(n), self._twin_rows[n])
+                          or n in own and own[n] is not None and not own[n].get("twin") and same_club(info, int(g), own[n])}
         self._settle()
         for cid, c in self.clubs.items():
             if c.get("twin"):
@@ -367,6 +400,11 @@ def game_twin(rel, db):
     return _GAME_IDS[key][1]
 
 
+def _game_names(c):
+    """the names clubs.csv's game_names gives club row c in the games ("|" between them)"""
+    return [n for n in str(c.get("game_names") or "").split("|") if n.strip()]
+
+
 def same_club(info, tid, c):
     """whether team tid of the tables in use (info = leaguebuilder.game_info) is NewLife club c
     (a clubs.csv row): a club, not a national team, of the release's country, or failing that
@@ -378,7 +416,7 @@ def same_club(info, tid, c):
     Hakka is Liaoning Tieren there), and the country took them for the release's club."""
     if tid not in info["clubs"] or tid in (info.get("national") or ()):
         return False
-    known = [n for n in str(c.get("game_names") or "").split("|") if n.strip()]
+    known = _game_names(c)
     if known:                                   # the name as it is first: crestmatch has no words in "Athletic Club"
         tn = (info["clubs"][tid][0] or "").strip()
         w = crestmatch.words(tn)

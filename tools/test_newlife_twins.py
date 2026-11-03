@@ -17,7 +17,11 @@ and checks that:
   - tables without the game's club (a database mod) make it a new club again;
   - New clubs cannot put a twin in by hand as a new club;
   - with game_names (1.6b3) a club of the game whose id the tables give another club of the
-    country is a new club, and one under a name another game gives it stays the game's.
+    country is a new club, and one under a name another game gives it stays the game's;
+  - a new club of the release with such an id as game_id (FL27's Liaoning Tieren at Meizhou
+    Hakka's 5181) is the game's club in tables that have it there, and the release's own club of
+    that id a new one under SWAP_KEY + id; FL26's tables and a world that has the twin as a new
+    club keep both as before.
 """
 import csv, json, os, shutil, sys, tempfile
 
@@ -221,6 +225,60 @@ def main(base):
         ok(rg.clubs[str(t2)]["in_game"] == "1", "game_names: the club under the name another game gives it stays the game's")
         rg.use_tables(info)
         ok(rg.clubs[str(t2)]["in_game"] == "1", "game_names: back to the game's tables")
+
+        # ... and the club FL27 has there is a new club of the release (Liaoning Tieren 103240):
+        # its game_id is that id, so the tables that have it under that name make it the game's,
+        # and the release's own club of that id goes by SWAP_KEY + id meanwhile, a new club
+        sw = os.path.join(tmp, "sw")
+        shutil.copytree(gn, sw)
+        p = os.path.join(sw, "clubs.csv")
+        rows = list(csv.DictReader(open(p, encoding="utf-8")))
+        own_name = next(r["name"] for r in rows if r["newlife_id"] == str(t2))
+        nid, k = "110000", str(NL.SWAP_KEY + t2)
+        rows.append(dict(rows[0], newlife_id=nid, in_game="0", name="Some Other Club FC", league=B_NAME,
+                         game_id=str(t2), game_names="Some Other Club"))
+        with open(p, "w", encoding="utf-8", newline="") as f:
+            w = csv.DictWriter(f, list(rows[0]))
+            w.writeheader()
+            w.writerows(rows)
+        p = os.path.join(sw, "players.csv")
+        prow = list(csv.DictReader(open(p, encoding="utf-8")))
+        n2 = sum(1 for r in prow if r["club_id"] == str(t2))
+        prow.append(dict(prow[0], newlife_id="9999001", game_id="", club_id=nid))
+        with open(p, "w", encoding="utf-8", newline="") as f:
+            w = csv.DictWriter(f, list(prow[0]))
+            w.writeheader()
+            w.writerows(prow)
+        other = dict(info["clubs"])
+        other[t2] = ("Some Other Club",) + tuple(other[t2][1:])
+        oth = dict(info, base=None, clubs=other)
+        rs = NL.Release(sw)
+        ok(rs.twins.get(nid) == str(t2) and nid in rs._swap and nid in rs.clubs and rs.clubs[str(t2)]["name"] == own_name,
+           "swapped twin: off until the tables say, both clubs under their NewLife ids")
+        rs.use_tables(info)
+        ok(nid in rs.clubs and rs.clubs[nid]["in_game"] == "0" and not rs.clubs[str(t2)].get("twin")
+           and rs.clubs[str(t2)]["in_game"] == "1" and k not in rs.clubs,
+           "tables with the release's club at %d (FL26): it is the game's, the other a new club" % t2)
+        rs.use_tables(oth)
+        ok(rs.clubs[str(t2)].get("twin") == nid and rs.clubs[str(t2)]["in_game"] == "1" and nid not in rs.clubs,
+           "tables with the other club at %d (FL27): the twin is the game's club" % t2)
+        ok(k in rs.clubs and rs.clubs[k]["name"] == own_name and rs.clubs[k]["in_game"] == "0",
+           "the release's own club of %d is a new club under %s" % (t2, k))
+        ok(len(rs.squads.get(str(t2), [])) == 1 and len(rs.squads.get(k, [])) == n2, "each squad goes with its club")
+        ok(rs.now(nid) == str(t2) and rs.now(str(t2)) == str(t2) and rs.now(k) == k, "now(): each club by the id it goes by")
+        seen = [c for L in rs.leagues(str, oth) for c in list(L["clubs"]) + list(L["in_game"])]
+        ok(seen.count(str(t2)) == 1 and seen.count(k) == 1 and nid not in seen, "the leagues: each club once")
+        rs.use_tables(info)
+        ok(nid in rs.clubs and k not in rs.clubs and rs.clubs[str(t2)]["name"] == own_name
+           and len(rs.squads.get(str(t2), [])) == n2 and len(rs.squads.get(nid, [])) == 1,
+           "back to FL26's tables: as before")
+        rs.use_tables(oth)
+        rs.use_recipe({"leagues": [{"name": "Mine", "clubs": 12, "newlife": {"version": "1.6b2", "clubs": [int(nid)]}}]})
+        ok(nid in rs.clubs and rs.clubs[nid]["in_game"] == "0" and rs.clubs[str(t2)]["name"] == own_name and k not in rs.clubs,
+           "a world with the twin as a new club already keeps it, and the release's club its id")
+        rs.use_recipe({"leagues": [{"name": "Mine27", "clubs": 12, "newlife": {"version": "1.6b3", "clubs": [int(k)]}}]})
+        ok(rs.clubs[str(t2)].get("twin") == nid and rs.clubs[k]["name"] == own_name,
+           "a world made in FL27 with the release's club under %s: that club" % k)
 
         # New clubs > NewLife club: a twin is not put in as a new club
         x = {"name": "Hand", "clubs": 12}
