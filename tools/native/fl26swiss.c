@@ -1067,6 +1067,9 @@ static uint32_t club_of_id(uint32_t c)
 #define TEAM_STRIDE   0x690
 static unsigned char* team_array(uint32_t* n)
 {
+#ifdef FL26_RCAL_TEST
+  (void)n; return 0;          /* the native harnesses have no game: club values are not checked (B312) */
+#endif
   const unsigned char* c = (const unsigned char*)(g_base + TEAMLOOK_SITE);
   static int said;
   if (c[0] != 0x8b || c[1] != 0x83 || c[6] != 0x48 || c[7] != 0x8d || c[8] != 0x93
