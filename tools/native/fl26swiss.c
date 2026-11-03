@@ -1095,6 +1095,26 @@ static uint32_t canon_club(uint32_t h)
   }
   return hits == 1 ? got : h;
 }
+/* B312 (03.11., FL27 Europack, new career with Anderlecht, 4 of 4): the Champions League's second
+ * qualifying round put Azerbaijan's champion in as 043982e5 -- team 4326 at row 741, the value the
+ * league's list and the first season's order (fl26swiss-state.bin) held. By August row 741 was
+ * Qabala's (468802e5) and 4326 sat at row 742: the game's own league matches had 043982e6. The
+ * match simulation looks a side up by its row alone (0x1414bca80, blk+0x183789c 2) and checks the
+ * id; the home side came back empty, its eleven list stayed empty, and the first goal of the away
+ * side was given to no player: 0x141333485 read 0x8 (the B181/B308 address). A list of ours is put
+ * through canon_club just before it is handed to the game, and each value it changes is logged. */
+static int canon_list(uint32_t* a, unsigned n, const char* what, unsigned reg)
+{
+  int fixed = 0;
+  for (unsigned i = 0; i < n; i++) {
+    uint32_t c = canon_club(a[i]);
+    if (c == a[i]) continue;
+    char buf[48];
+    logf("fl26swiss: %s %u -- club %u: %08x -> %08x (%s)", what, reg, i, a[i], c, club_note(a[i], buf, sizeof buf));
+    a[i] = c; fixed++;
+  }
+  return fixed;
+}
 /* what the value's row holds, for the log: "ok" when it is the value itself */
 static const char* club_note(uint32_t h, char* buf, size_t cap)
 {
@@ -1490,6 +1510,7 @@ static int po_start(int ci, void* started)
       logf("fl26swiss:   %s play-off tie %d: rank %d v rank %d", c->name, k, other + 1, seed + 1);
     }
   }
+  canon_list(all, 16, "cup play-off reg", c->po);   /* B312 */
   u32vec va = { all, all + 16, all + 16 };
   ((setclr_fn)(uintptr_t)g_tramp_setcl)(c->po, &va, 1);
   for (int k = 0; k < 8; k++) {
@@ -1682,6 +1703,7 @@ static int po_finish(int ci, void* started)
            c->name, slot, tie, w[tie], seed + 1);
     }
   }
+  canon_list(list, 16, "cup round of 16 reg", c->ko);   /* B312 */
   u32vec v = { list, list + 16, list + 16 };
   ((setclr_fn)(uintptr_t)g_tramp_setcl)(c->ko, &v, 1);
   run_flush();
@@ -2176,13 +2198,15 @@ static uint32_t access_club_kept(uint16_t reg, int rank, int* from_table, int ke
 {
   final_t* f = final_of(reg);
   int d = abs_day();
-  if (f && rank <= f->n && d >= f->day && d - f->day < keep) { *from_table = 1; return f->club[rank - 1]; }
+  /* B312: a kept table, the first season's order and the list can hold a club at a row the team
+     array has since given to another (canon_list) */
+  if (f && rank <= f->n && d >= f->day && d - f->day < keep) { *from_table = 1; return canon_club(f->club[rank - 1]); }
   *from_table = 0;
   final_t* s = seed_of(reg);
-  if (s) return rank <= s->n ? s->club[rank - 1] : 0;
+  if (s) return rank <= s->n ? canon_club(s->club[rank - 1]) : 0;
   unsigned char* rec = get_rec(reg);
   if (!rec || (unsigned)rank > rec_count(rec)) return 0;
-  return rec_clubs(rec)[rank - 1];
+  return canon_club(rec_clubs(rec)[rank - 1]);
 }
 static uint32_t access_club(uint16_t reg, int rank, int* from_table) { return access_club_kept(reg, rank, from_table, 120); }
 static int g_access_on = 1;
@@ -2937,6 +2961,7 @@ static u32vec* access_list(uint16_t r, uint64_t flag)
   }
   int k = r == 3 ? UCL : UEL;
   if (!g_access_ready || g_nacc[k] < FIELD) return 0;
+  canon_list(g_acc[k], FIELD, "league phase reg", r);   /* B312 */
   g_acc_vec.b = g_acc[k]; g_acc_vec.e = g_acc_vec.c = g_acc[k] + FIELD;
   ((setclr_fn)(uintptr_t)g_tramp_setcl)(r, &g_acc_vec, flag & 0xff);
   run_flush();
@@ -5364,6 +5389,7 @@ static void lpre_fill(int i)
   }
   for (int k = 0; k < lpre_rows(l); k++)
     ((freetab_fn)(uintptr_t)(g_base + FREETAB_RVA))(0, lpre_tie(l, k));
+  canon_list(l->club, n, "pre-round reg", l->reg);   /* B312 */
   u32vec va = { l->club, l->club + n, l->club + n };
   ((setclr_fn)(uintptr_t)g_tramp_setcl)(l->reg, &va, 1);
   for (int k = 0; k < l->ties; k++) {
@@ -6808,6 +6834,65 @@ static int ko_sync_all(const char* why)
   return fixed;
 }
 
+/* B312: a career already past a fill of ours (B308: pepponeee98's save, stopped on 7 August with
+   the second qualifying round filled) keeps the stale value in its match records. Every match
+   record not played yet whose home or away value names a row that holds another club, where
+   exactly one row holds that club at its own place (canon_club), is given that row -- and so are
+   the slots of the rounds that name the match, and its regulation's list (and the master's, for a
+   tie at master + 1024 * (k + 1)), where they hold the same stale value. A value that already
+   names its row, "no club" and a value no row answers for are left alone. */
+static int rows_heal(const char* why)
+{
+  const unsigned char* bs = (const unsigned char*)(g_base + MATCH_BASE_SITE);
+  const unsigned char* cs = (const unsigned char*)(g_base + MATCH_CAP_SITE);
+  if (bs[0] != 0x48 || bs[1] != 0x8d || bs[2] != 0x88 || cs[0] != 0x81 || cs[1] != 0xff) return 0;
+  uint32_t base = *(const uint32_t*)(bs + 3), cap = *(const uint32_t*)(cs + 2);
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  uint32_t nteams;
+  if (!blk || !cap || cap > 200000 || !team_array(&nteams)) return 0;
+  int fixed = 0, slots = 0, lists = 0;
+  for (uint32_t i = 0; i < cap; i++) {
+    unsigned char* m = blk + base + (size_t)i * MATCH_STRIDE;
+    uint16_t id = *(const uint16_t*)m;
+    if (id == 0xffff || (m[7] & 0x40)) continue;
+    for (int side = 0; side < 2; side++) {
+      uint32_t* v = (uint32_t*)(m + 0x14 + 4 * side);
+      if (*v == 0xffffffffu || !(*v >> 14)) continue;
+      uint32_t old = *v, c = canon_club(old);
+      if (c == old) continue;
+      uint16_t reg = *(const uint16_t*)(m + 4);
+      char buf[48];
+      if (fixed < 8)
+        logf("fl26swiss:   match %04x reg %u %04u-%02u-%02u %s: %08x -> %08x (%s)", (unsigned)id, (unsigned)reg,
+             (unsigned)*(const uint16_t*)(m + 8), (unsigned)m[10], (unsigned)m[11], side ? "away" : "home",
+             old, c, club_note(old, buf, sizeof buf));
+      *v = c; fixed++;
+      for (uint32_t r = 0; r < RT_N; r++) {
+        unsigned char* rnd = blk + RT_OFF + (size_t)r * RT_REC;
+        int n = ko_slots(rnd);
+        if (*(uint16_t*)rnd != reg || n < 1 || n > 16) continue;
+        for (int k = 0; k < n; k++) {
+          uint32_t* sl = ko_slot(rnd, k);
+          if ((sl[2] & 0xffff) != id && (sl[3] & 0xffff) != id) continue;
+          for (int j = 0; j < 2; j++) if (sl[j] == old) { sl[j] = c; slots++; }
+        }
+      }
+      uint16_t regs[2] = { reg, (uint16_t)(reg >= 1024 ? reg % 1024 : 0) };
+      for (int j = 0; j < 2; j++) {
+        unsigned char* rec = regs[j] ? get_rec(regs[j]) : 0;
+        unsigned n = rec ? rec_count(rec) : 0;
+        if (n > 48) n = 48;
+        for (unsigned k = 0; k < n; k++) if (rec_clubs(rec)[k] == old) { rec_clubs(rec)[k] = c; lists++; }
+      }
+    }
+  }
+  if (fixed)
+    logf("fl26swiss: %d club value(s) of unplayed matches named a row holding another club; given their "
+         "club's row, with %d round slot(s) and %d list entr(ies) (%s, day %d)", fixed, slots, lists, why, today());
+  return fixed;
+}
+
 /* B187: ko_sync_all mends a round before it is played; a career of 0.2.4 may have played it
    already. Ibiss K.B.'s Europack Become a Legend career, 19 May 2029: reg 160's quarter-finals
    (13/16 May) were played by the 2029 clubs while their slots held older ones, the game found 1
@@ -7277,6 +7362,7 @@ __declspec(dllexport) void fl26_swiss_ko_tick(void)
         if (g_ccup[k].ko) ko_sync(g_ccup[k].ko, "day loop");
       ko_sync(UECL_KO, "day loop");
       ko_heal_played("day loop");
+      rows_heal("day loop");
       ko_sync_all("day loop");
       nt_keep_user();
       for (int i = 0; i < 3; i++) if (cup_on(i)) lb_keep(&CUPS[i], d);
@@ -12278,6 +12364,7 @@ static void q_fill(int p)
     return;
   }
   if (!q_complete(p)) { logf("fl26swiss: %s %s -- day %d: its sixteen are not known; not filled", QNAME(p), d); return; }
+  canon_list(g_q[p], Q_N, "qualifying reg", reg);   /* B312 */
   for (int k = 0; k < Q_N / 2; k++)
     ((freetab_fn)(uintptr_t)(g_base + FREETAB_RVA))(0, q_tie_of(p, k));
   u32vec va = { g_q[p], g_q[p] + Q_N, g_q[p] + Q_N };
