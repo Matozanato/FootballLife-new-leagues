@@ -25,6 +25,14 @@ svaki mod koji instalira može se opet maknuti.
 
 ---
 
+## Football Life 2027
+
+Isti program radi i s FL27 (od 0.3.0). U **5. Postavke → Mapa igre** odaberi mapu FL27, onu u kojoj je `FL_2027.exe`; za povratak na FL26 odaberi mapu FL26. Svaka igra ima svoje tablice i svoje saveove (FL27 ih drži u `Documents\SPGAME\Football Life\2027\save`).
+
+- U FL27 ligašku fazu Lige prvaka i Europske lige, veljačko doigravanje i nokaut vodi sam FL27, na svoje datume. Mod Studio odlučuje tko ulazi iz tvojih liga i igra pretkola; Konferencijska liga je Mod Studijeva.
+- Zipovi Worldpack i Europe pack instaliraju se i igraju u FL27, ali nose igrače iz FL26. Svijet koji sagradiš u FL27 ima igrače iz FL27.
+- FL27 se zna ugasiti dok se stvara nova Master League. To je u samom exeu FL27, ne u Mod Studiju: vidi [Poznate greške](../../docs/known-issues.md).
+
 ## 1. Prije početka
 
 - Instaliran **Football Life 2026** s mapom `SiderAddons` (FL26 dolazi sa Siderom).

@@ -71,6 +71,7 @@ Español, Português ou Français, puis relancez Mod Studio.
 2. À côté du dossier du jeu, cliquez sur **Parcourir...**.
 3. Choisissez le dossier qui contient `FL_2026.exe` (par exemple `D:\Games\Football Life 2026`).
    Pas `SiderAddons`, pas un sous-dossier : le dossier où se trouve `FL_2026.exe`.
+   Pour FL27, c'est le dossier qui contient `FL_2027.exe`.
 4. Cliquez sur **Utiliser ce dossier**.
 
 **Vous devez voir :** sous le dossier, une ligne qui commence par `Trouvé : FL_2026.exe` et qui

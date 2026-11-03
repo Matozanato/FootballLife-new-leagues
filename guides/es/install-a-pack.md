@@ -71,6 +71,7 @@ Português o Français, y luego vuelve a abrir Mod Studio.
 2. Junto a la carpeta del juego, pulsa **Examinar...**.
 3. Elige la carpeta que contiene `FL_2026.exe` (por ejemplo `D:\Games\Football Life 2026`). No
    `SiderAddons`, no una subcarpeta: la carpeta que tiene `FL_2026.exe` dentro.
+   Para FL27 es la carpeta con `FL_2027.exe`.
 4. Pulsa **Usar esta carpeta**.
 
 **Deberías ver:** debajo de la carpeta, una línea que empieza por `Encontrado: FL_2026.exe` y

@@ -25,6 +25,14 @@ mod it installs can be removed again.
 
 ---
 
+## Football Life 2027
+
+The same program works with FL27 (from 0.3.0). In **5. Settings → Game folder** pick FL27's folder, the one with `FL_2027.exe`; to go back to FL26, pick FL26's folder. Each game keeps its own tables and its own saves (FL27's are in `Documents\SPGAME\Football Life\2027\save`).
+
+- In FL27 the Champions League and Europa League league phase, February play-off and knockout are FL27's own, on FL27's dates. Mod Studio decides who gets in from your leagues and plays the qualifying rounds; the Conference League is Mod Studio's.
+- The Worldpack and Europe pack zips install and play in FL27, but they carry FL26's players. A world you build in FL27 has FL27's players.
+- FL27 can close while a new Master League is created. That is in FL27's own exe, not in Mod Studio: see [Known issues](../../docs/known-issues.md).
+
 ## 1. Before you start
 
 - **Football Life 2026** installed, with its `SiderAddons` folder (FL26 comes with Sider).

@@ -70,6 +70,7 @@ Português, depois abra o Mod Studio de novo. Ali também estão Hrvatski, Espa�
 2. Ao lado da pasta do jogo, clique em **Procurar...**.
 3. Escolha a pasta que tem o `FL_2026.exe` (por exemplo `D:\Games\Football Life 2026`). Não a
    `SiderAddons`, nem uma subpasta: a pasta com o `FL_2026.exe` dentro.
+   Para o FL27 é a pasta com o `FL_2027.exe`.
 4. Clique em **Usar esta pasta**.
 
 **Você deve ver:** embaixo da pasta, uma linha que começa com `Encontrado: FL_2026.exe` e diz a

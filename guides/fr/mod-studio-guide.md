@@ -29,6 +29,14 @@ mod qu'il installe peut être retiré ensuite.
 
 ---
 
+## Football Life 2027
+
+Le même programme fonctionne avec FL27 (depuis 0.3.0). Dans **5. Réglages → Dossier du jeu**, choisissez le dossier de FL27, celui qui contient `FL_2027.exe` ; pour revenir à FL26, choisissez le dossier de FL26. Chaque jeu garde ses propres tables et ses propres sauvegardes (celles de FL27 sont dans `Documents\SPGAME\Football Life\2027\save`).
+
+- Dans FL27, la phase de ligue de la Ligue des champions et de la Ligue Europa, le barrage de février et la phase à élimination directe sont ceux de FL27, à ses dates. Mod Studio décide qui entre depuis vos ligues et joue les tours préliminaires ; la Ligue Conférence est celle de Mod Studio.
+- Les zips Worldpack et Europe pack s'installent et se jouent dans FL27, mais ils ont les joueurs de FL26. Un monde que vous construisez dans FL27 a les joueurs de FL27.
+- FL27 peut se fermer pendant la création d'une nouvelle Master League. C'est dans l'exe de FL27 lui-même, pas dans Mod Studio : voir [Problèmes connus](../../docs/known-issues.md).
+
 ## 1. Avant de commencer
 
 - **Football Life 2026** installé, avec son dossier `SiderAddons` (FL26 est livré avec Sider).

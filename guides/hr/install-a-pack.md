@@ -65,6 +65,7 @@ ponovno pokreni Mod Studio.
 2. Pored mape igre klikni **Pregledaj...**.
 3. Izaberi mapu u kojoj je `FL_2026.exe` (npr. `D:\Games\Football Life 2026`). Ne `SiderAddons`,
    ne neku podmapu: baš mapu u kojoj je `FL_2026.exe`.
+   Za FL27 to je mapa u kojoj je `FL_2027.exe`.
 4. Klikni **Koristi ovu mapu**.
 
 **Trebaš vidjeti:** ispod mape red koji počinje s `Nađeno: FL_2026.exe` i imenuje mapu Sidera i

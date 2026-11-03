@@ -8,6 +8,21 @@ Just a question, not a bug? Ask on [Discord](https://discord.gg/StQqtk3G3M).
 
 ## FL Mod Studio
 
+### Does Mod Studio work with Football Life 2027?
+
+Yes, from 0.3.0: the same program for FL26 and FL27. In **5. Settings → Game folder** pick the
+folder with `FL_2027.exe`. Each game keeps its own tables and saves. In FL27 the Champions League
+and Europa League from the league phase on are FL27's own; Mod Studio sends your clubs into them
+and plays the qualifying rounds, and the Conference League is Mod Studio's. What is different and
+what is not done yet: [guide](../guides/en/mod-studio-guide.md#football-life-2027) ·
+[known issues](known-issues.md).
+
+### FL27 closes while a new Master League is being created
+
+It is in FL27's own exe: a plain FL27, without Sider and without anything of Mod Studio, closes
+the same way. Start the game again and retry, it can take a few tries, and save your career once
+it is created. We do not change the game's exe; the fix has to come with an FL27 update.
+
 ### I updated Mod Studio. What do I do now?
 
 Every update can change the modules and the world's tables. After updating, open **Home**: if

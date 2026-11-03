@@ -44,7 +44,7 @@ who covered a big part of what the project costs
 
 </div>
 
-**New leagues, new clubs and whole new countries in Football Life 2026's Master League**, plus
+**New leagues, new clubs and whole new countries in the Master League of Football Life 2026 and, from 0.3.0, Football Life 2027**, plus
 one program to manage everything else you add to the game. No patched executable, no repacked
 CPKs: it all goes in through Sider modules and data files, and comes out again.
 
