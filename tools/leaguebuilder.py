@@ -1900,11 +1900,20 @@ def shipped_parents(base):
         except UnicodeDecodeError:
             return raw.decode("latin-1")
     out, halves = [], set()
+    # a shipped split league (Scottish Premiership, 3F Superliga, Jupiler Pro League: a total of
+    # type 9 and its phases) takes a division below it on its regular phase, as the Modpack's
+    # Championship under 134 and fl26chain's split pair (#79/#81); listed under the league's name
+    split_name = {g[M.R_CID]: name(g) for g in rows.values()
+                  if g[M.R_TYPE] == fl26world.SPLIT_TOTAL and fl26world.fmt(g) == fl26world.F_TOTAL}
     for rid in sorted(rows):
         g = rows[rid]
-        if g[M.R_TYPE] != 4 or u16(g, M.R_BELOW) in rows or fl26world.fmt(g) in (12, 13, 14, 15):
+        if g[M.R_TYPE] != 4 or u16(g, M.R_BELOW) in rows or fl26world.fmt(g) in fl26world.F_GROUPS:
             continue
         if not re.search(r"_D\d_LEAGUE$", code.get(g[M.R_CID], "")):
+            continue
+        if fl26world.fmt(g) == fl26world.F_REGULAR:
+            if g[M.R_CID] in split_name:
+                out.append((rid, split_name[g[M.R_CID]]))
             continue
         # a shipped Apertura/Clausura season is a total (type 5) and its two halves (format 7, 8,
         # +0x06 the total): Liga BetPlay DIMAYOR I and II, MLS First and Second Round. Both halves
@@ -1929,6 +1938,17 @@ def shipped_calendar(base):
               for i in range(len(comp) // M.COMP)}
     return {u16(regs[i * M.REG:(i + 1) * M.REG], M.R_ID) for i in range(len(regs) // M.REG)
             if regs[i * M.REG + M.R_TYPE] == 4 and region.get(regs[i * M.REG + M.R_CID]) in CALENDAR_REGIONS}
+
+
+def split_regulars(base):
+    """{regulation id of a shipped split league's regular phase: the split's total} -- the entry
+    shipped_parents lists for the Scottish Premiership is 134, its clubs and country are 133's"""
+    regs = M.load(base, "CompetitionRegulation.bin")
+    rows = [regs[i * M.REG:(i + 1) * M.REG] for i in range(len(regs) // M.REG)]
+    total = {g[M.R_CID]: u16(g, M.R_ID) for g in rows
+             if g[M.R_TYPE] == fl26world.SPLIT_TOTAL and fl26world.fmt(g) == fl26world.F_TOTAL}
+    return {u16(g, M.R_ID): total[g[M.R_CID]] for g in rows
+            if g[M.R_TYPE] == 4 and fl26world.fmt(g) == fl26world.F_REGULAR and g[M.R_CID] in total}
 
 
 def shipped_tiers(base):

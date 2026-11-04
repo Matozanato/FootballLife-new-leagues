@@ -54,6 +54,7 @@ class Project(QObject):
         self.game_nat, self.game_other = [], []
         self.game_confeds = {}
         self.parent_tiers = {}
+        self.split_of = {}          # a split league's regular phase (a parent) -> its total (game_lgs)
         self._squads = None
         self._names = None
         # 0.2.5: World options > Players per new club -- the world's squad is the one every page and
@@ -125,6 +126,7 @@ class Project(QObject):
             self.confeds = B.country_confederations(self.base)
             self.parents = B.shipped_parents(self.base)
             self.parent_tiers = B.shipped_tiers(self.base)
+            self.split_of = B.split_regulars(self.base)
             self.calendar_parents = B.shipped_calendar(self.base)
             self.game_lgs = B.game_leagues(self.base)
             self.game_cl = B.game_clubs(self.base)
@@ -142,6 +144,7 @@ class Project(QObject):
             self.game_nat, self.game_other = [], []
             self.game_confeds = {}
             self.parent_tiers = {}
+            self.split_of = {}
             self.calendar_parents = set()
         self._squads = None
         self._names = None

@@ -764,7 +764,8 @@ class LeagueDialog(Dialog):
         # second Switzerland); the clubs say which league it really is
         clubs_of = {g[0]: g[3] for g in project.game_lgs}
         for r, n in project.parents:
-            two = [project.game_cl.get(t, ("",))[0] for t in clubs_of.get(r, [])[:2]]
+            two = [project.game_cl.get(t, ("",))[0]
+                   for t in clubs_of.get(getattr(project, "split_of", {}).get(r, r), [])[:2]]
             two = ", ".join(c for c in two if c)
             add("%s  [%d]%s" % (n, r, "  (%s ...)" % two if two else ""), r)
         cur = L.get("above")

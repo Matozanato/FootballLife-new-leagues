@@ -742,6 +742,9 @@ class NewLife(BuilderPage):
                 countries = B.game_league_countries(self.project.base, self.project.game_lgs)
             except (B.BuildError, OSError, ValueError):
                 countries = {}
+            for reg, tot in getattr(self.project, "split_of", {}).items():   # a split league: its total's
+                if tot in countries:
+                    countries.setdefault(reg, countries[tot])
             linked = N.link_below_game(self.project.recipe, added, self.project.parents, countries)
         if names:
             self.project.touch()
