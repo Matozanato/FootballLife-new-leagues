@@ -2373,6 +2373,30 @@ static uint32_t g_qwin[NQR][Q_N / 2], g_qlose[NQR][Q_N / 2];
 static how_t g_qwhow[NQR][Q_N / 2], g_qlhow[NQR][Q_N / 2];
 #define QNAME(i) QCUPS[(i) % NQ].name, QSTAGE[(i) / NQ]
 static uint16_t q_reg(int i) { return i < NQ ? QCUPS[i].reg : g_qreg[i]; }
+
+/* B313: take club c out of the list of a competition or round that comes after position o of
+   order (lower: the Conference League below the Europa League, a round below the league phase),
+   where it went by its position in league reg (not a first-season pick, a cup winner or a round
+   already played), so the top-up at o can give it the higher place */
+static int lift_from_below(const int* order, int n_order, int o, uint16_t reg, uint32_t c)
+{
+  for (int o2 = o + 1; o2 < n_order; o2++) {
+    int k = order[o2] < 0 ? -1 - order[o2] : -1, qi = order[o2] >= 0 ? order[o2] : -1;
+    uint32_t* L = qi < 0 ? g_acc[k] : g_q[qi];
+    how_t* H = qi < 0 ? g_how[k] : g_qhow[qi];
+    unsigned* N = qi < 0 ? &g_nacc[k] : &g_nq[qi];
+    for (unsigned i = 0; i < *N; i++) {
+      if (L[i] != c) continue;
+      if (H[i].reg != reg || !H[i].rank) return 0;
+      logf("fl26swiss: access -- reg %u position %u goes up from %s%s", (unsigned)H[i].reg, (unsigned)H[i].rank,
+           qi < 0 ? "league phase " : "qualifying round ", qi < 0 ? (k == 1 ? "UEL" : k == 2 ? "UECL" : "UCL") : "");
+      for (unsigned m = i + 1; m < *N; m++) { L[m - 1] = L[m]; H[m - 1] = H[m]; }
+      (*N)--;
+      return 1;
+    }
+  }
+  return 0;
+}
 static uint16_t q_tie_of(int i, int k) { return (uint16_t)(q_reg(i) + 1024 * (k + 1)); }
 static uint16_t q_tie(int k) { return q_tie_of(0, k); }
 /* the competition (0..2) a place's code is a qualifying place of, -1 for any other */
@@ -2664,7 +2688,7 @@ static int access_build(int q, int mask)
      list first (ties in this order), so a place a holder left does not go back to its own country
      and no association crowds a league phase past what the draw can keep apart */
   static const uint16_t RESERVE[5] = { R_ENG, R_ESP, R_ITA, R_GER, R_FRA };
-  int topped = 0;
+  int topped = 0, lifted = 0;
   /* each competition, then its rounds from the play-off down: -1 - k is league phase k */
   static const int ORDER[NQ + NQR] = { -1, 0, 3, 6, -2, 1, 4, 7, -3, 2, 5, 8 };
   for (int o = 0; o < NQ + NQR; o++) {
@@ -2696,19 +2720,26 @@ static int access_build(int q, int mask)
       if (j < 0 && capped) { capped = 0; continue; }
       if (j < 0) break;
       uint32_t c = 0; int ft = 0;
+      int up = 0;
       while (rank[j] <= FINAL_MAX) {
         c = access_club(RESERVE[j], rank[j]++, &ft);
         if (!c) break;
         if ((c >> 14) && !has_club(used, nused, c)) break;
+        /* B313 (pepponeee 03.11.): a club of this league already in a lower competition or round
+           by its position goes up first, as at UEDA's rebalancing, and its place there is topped
+           up in turn -- Brighton (8th) took the Europa League place while Villa (7th) stayed in
+           the Conference League */
+        if ((c >> 14) && lift_from_below(ORDER, NQ + NQR, o, RESERVE[j], c)) { up = 1; break; }
         c = 0;
       }
       if (!c) { done[j] = 1; continue; }
       H[*N].reg = RESERVE[j]; H[*N].rank = (uint8_t)(rank[j] - 1);
-      L[(*N)++] = c; used[nused++] = c; topped++; cnt[j]++; room5[j]--;
+      L[(*N)++] = c; topped++; cnt[j]++; room5[j]--;
+      if (up) lifted++; else used[nused++] = c;
     }
   }
   if (held) logf("fl26swiss: access -- %d league place(s) left by a title holder, given to the top-up", held);
-  if (topped) logf("fl26swiss: access -- %d place(s) topped up from the big five", topped);
+  if (topped) logf("fl26swiss: access -- %d place(s) topped up from the big five (%d by a club going up from a lower competition)", topped, lifted);
   char qs[96] = "";
   if (q == 1) {
     int n = snprintf(qs, sizeof qs, ", qualifying");
