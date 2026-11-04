@@ -7,12 +7,13 @@ was never released on its own, and everything fixed in the closed beta.
 
 ## Before you update
 
-This update changes a lot (a second game, the calendar, promotion and relegation, the European
-places). The closed beta did not turn up any big bugs, but that can also mean some were not found
-yet, and a problem of a career can show only after a season or more. It does not have to happen.
-**If you are in a long career you care about, or plan to play many seasons in a row, you can wait
-a bit with this update** and stay on 0.2.5.1 until it has been played for a while, or keep a copy
-of your save folder and of your old Mod Studio folder before you update.
+**This is more of a test version: if you don't have to, don't rush to update.** It changes a lot (a
+second game, the calendar, promotion and relegation, the European places). The closed beta did not
+turn up any big bugs, but that can also mean some were not found yet, and a problem of a career can
+show only after a season or more. It does not have to happen. **If 0.2.5.1 works for you, or you are
+in a long career you care about, stay on 0.2.5.1 for now** and update once this one has been played
+for a while. If you update anyway, keep a copy of your save folder and your old Mod Studio folder
+first. For FL27 you need this version.
 
 Worlds and careers of 0.2.5.1 keep working in FL26: Build them once with 0.3.0. The fixes of
 transfer money, NewLife squads and Select Team places 76/77/80 need a new Master League to show.

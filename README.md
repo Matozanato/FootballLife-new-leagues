@@ -46,8 +46,8 @@ shows it again.
 - **0.3.0** (2026-11-04): **Football Life 2027** too (the same program, Settings picks FL26 or
   FL27), the new name **FL Mod Studio**, Select Team lists a league's clubs, coloured places in the
   league tables, promotion and relegation under the game's split leagues and for NewLife leagues
-  below the game's, and many fixes. In the middle of a long career? Read
-  [Before you update](docs/changelog/changelog-0.3.0.md#before-you-update) first.
+  below the game's, and many fixes. **More of a test version: if 0.2.5.1 works for you and you don't need FL27,
+  don't rush to update** ([Before you update](docs/changelog/changelog-0.3.0.md#before-you-update)).
   [What changed](docs/changelog/changelog-0.3.0.md)
 - **0.2.5.1** (2026-10-30): fixes of what you reported since 0.2.5. No need to update if 0.2.5
   works for you. [What changed](docs/changelog/changelog-0.2.5.1.md)
