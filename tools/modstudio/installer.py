@@ -599,6 +599,10 @@ def detect(top, label="mod"):
             p.world_file = os.path.join(d, wf)
             parts.append(p)
             return
+        # B317 (Jh, 04.11.): a folder with no file in it is nothing to put in place -- the copy
+        # made no "root (2)" for it and the mark written there stopped the install
+        if not any(fn for _dp, _dn, fn in os.walk(d)):
+            return
         p = Part("root", d, safe(name))
         if os.path.isdir(os.path.join(d, "common", "etc", "pesdb")) or \
                 os.path.isdir(os.path.join(d, "common", "etc")) and \
