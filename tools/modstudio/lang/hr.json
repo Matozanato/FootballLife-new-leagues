@@ -2068,7 +2068,8 @@
   "Automatic: the order (#) decides, and the game's Other ... groups give their place last. Pick a group to give its place in Select Team to this league; that group's own clubs are then not in Select Team. Build puts it there.": "Automatski: odlučuje redoslijed (#), a igrine grupe Ostali ... daju svoje mjesto zadnje. Odaberi grupu i njeno mjesto u Select Team dobiva ova liga; klubovi te grupe tada nisu u Select Team. Build je stavi tamo.",
   "Not built like this yet: press Build.": "Još nije tako izgrađena: pritisni Build.",
   "Where the last Build put the league in Select Team. Pick a group of the game's here and the league takes its place": "Gdje je zadnji Build stavio ligu u Select Team. Ovdje odaberi igrinu grupu i liga dobiva njeno mjesto",
-  "Where the last Build put the league in Select Team": "Gdje je zadnji Build stavio ligu u Select Team"
+  "Where the last Build put the league in Select Team": "Gdje je zadnji Build stavio ligu u Select Team",
+  "%s is the division below %s (promotion and relegation). Leagues > Edit > Division changes it.": "%s je rang ispod lige %s (ulazak i ispadanje). Lige > Uredi > Rang to mijenja."
  },
  "log": [
   [

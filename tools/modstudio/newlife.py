@@ -571,6 +571,36 @@ def add_league(recipe, rel, L, legs=2, info=None, custom=False, name=None, more=
     return name, stayed, elsewhere
 
 
+def link_below_game(recipe, added, parents, countries):
+    """B314 (03.11.): a NewLife league went into the world as a top division of its own, so Greek
+    Super League 2 had no promotion or relegation with the game's Greek league. added: [(league
+    name, its strength)] just put in the recipe; parents: the game's leagues with no league of the
+    game below them (shipped_parents); countries: {regulation: country} (game_league_countries).
+    The strongest league added for a country goes under its game league, when the country has
+    exactly one such league and no league of the recipe is under it already -- the game follows
+    one link down (GitHub #98). The release's own leagues of the game are not added, so the
+    league is below. Only under a league of the game: two leagues of the release may be groups of
+    one division. Returns [(league name, regulation, game league name)]."""
+    taken = set()
+    for x in recipe["leagues"]:
+        a = x.get("above")
+        if a not in (None, ""):
+            taken.add(int(a) if str(a).isdigit() else a)
+    by_name = {x["name"]: x for x in recipe["leagues"]}
+    out = []
+    for name, _strength in sorted(added, key=lambda a: -a[1]):
+        x = by_name.get(name)
+        if not x or x.get("above") not in (None, "") or x.get("exhibition"):
+            continue
+        under = [(r, n) for r, n in parents if (countries.get(r) or "").split(" (")[0] == x.get("country")]
+        if len(under) != 1 or under[0][0] in taken:
+            continue
+        x["above"] = under[0][0]
+        taken.add(under[0][0])
+        out.append((name, under[0][0], under[0][1]))
+    return out
+
+
 def _movers(recipe, info, rel=None):
     """(mover, the game's squads or None) for the players of NewLife clubs put in the recipe:
     mover(row) says what happens to the player of a release row (see add_league)"""

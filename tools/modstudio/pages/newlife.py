@@ -720,7 +720,7 @@ class NewLife(BuilderPage):
                           % (self.rel.clubs[i]["name"], where, E["name"]))
                     return
                 seen[i] = E["name"]
-        names, swap = [], []
+        names, swap, added = [], [], []
         stayed = elsewhere = 0
         for L in sel:
             if not L["country"]:
@@ -729,14 +729,26 @@ class NewLife(BuilderPage):
             name, st, el = N.add_league(self.project.recipe, self.rel, L, info=info, custom=key(L) in self.custom,
                                         picks={i: self.picks[i] for i in L["clubs"] if i in self.picks})
             names.append(name)
+            added.append((name, L.get("strength", 0)))
             stayed += st
             elsewhere += el
             if info:
                 swap += [info["clubs"][e["id"]][0] for e in self.project.recipe["leagues"][-1].get("game_clubs") or []
                          if B.game_club_where(info, e["id"])]
+        linked = []
+        if names and self.project.base:
+            # B314: a league of a country the game has goes under the game's league
+            try:
+                countries = B.game_league_countries(self.project.base, self.project.game_lgs)
+            except (B.BuildError, OSError, ValueError):
+                countries = {}
+            linked = N.link_below_game(self.project.recipe, added, self.project.parents, countries)
         if names:
             self.project.touch()
             text = _("Added: %s. Change them on Leagues, Clubs and Players, then Build.") % ", ".join(names)
+            for n, _r, up in linked:
+                text += "\n" + _("%s is the division below %s (promotion and relegation). Leagues > Edit > "
+                                 "Division changes it.") % (n, up)
             if swap:
                 text += "\n" + _("%s also play in a competition of the game: on Clubs pick each one and use "
                                  "Club of the game to choose the club that takes its place there.") % ", ".join(swap)

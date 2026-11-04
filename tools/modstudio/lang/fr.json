@@ -2068,7 +2068,8 @@
   "Automatic: the order (#) decides, and the game's Other ... groups give their place last. Pick a group to give its place in Select Team to this league; that group's own clubs are then not in Select Team. Build puts it there.": "Automatique : l'ordre (#) décide, et les groupes Autres ... du jeu cèdent leur place en dernier. Choisissez un groupe pour donner sa place dans Select Team à cette ligue ; les clubs de ce groupe ne sont alors plus dans Select Team. Build la met là.",
   "Not built like this yet: press Build.": "Pas encore construite ainsi : appuyez sur Build.",
   "Where the last Build put the league in Select Team. Pick a group of the game's here and the league takes its place": "Où le dernier Build a mis la ligue dans Select Team. Choisissez ici un groupe du jeu et la ligue prend sa place",
-  "Where the last Build put the league in Select Team": "Où le dernier Build a mis la ligue dans Select Team"
+  "Where the last Build put the league in Select Team": "Où le dernier Build a mis la ligue dans Select Team",
+  "%s is the division below %s (promotion and relegation). Leagues > Edit > Division changes it.": "%s est la division sous %s (montées et descentes). Ligues > Modifier > Division le change."
  },
  "log": [
   [
