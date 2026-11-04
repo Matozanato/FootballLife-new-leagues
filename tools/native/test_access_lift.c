@@ -118,7 +118,7 @@ int main(void)
   expect(where(club_at(0, 8)) == UECL, "England's 8th takes the Conference League place it left");
   expect(where(club_at(0, 9)) == -1, "England's 9th is not in Europe");
   expect(each_once(), "every club on one list only");
-  expect(strstr(g_log, "goes up from league phase UECL") != 0, "the log says who went up");
+  expect(strstr(g_log, "position 7 goes up from the UECL league phase to the UEL league phase") != 0, "the log says who went up");
 
   printf("\nThe same, England's Conference League place its cup's (won by its 7th)\n");
   g_log_len = 0; g_log[0] = 0;

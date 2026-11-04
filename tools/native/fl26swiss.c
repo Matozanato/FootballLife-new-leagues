@@ -2388,8 +2388,12 @@ static int lift_from_below(const int* order, int n_order, int o, uint16_t reg, u
     for (unsigned i = 0; i < *N; i++) {
       if (L[i] != c) continue;
       if (H[i].reg != reg || !H[i].rank) return 0;
-      logf("fl26swiss: access -- reg %u position %u goes up from %s%s", (unsigned)H[i].reg, (unsigned)H[i].rank,
-           qi < 0 ? "league phase " : "qualifying round ", qi < 0 ? (k == 1 ? "UEL" : k == 2 ? "UECL" : "UCL") : "");
+      static const char* const LP[3] = { "UCL", "UEL", "UECL" };
+      char from[64], to[64];
+      int tk = order[o] < 0 ? -1 - order[o] : -1, tq = order[o] >= 0 ? order[o] : -1;
+      if (qi < 0) snprintf(from, sizeof from, "the %s league phase", LP[k]); else snprintf(from, sizeof from, "the %s %s", QNAME(qi));
+      if (tq < 0) snprintf(to, sizeof to, "the %s league phase", LP[tk]); else snprintf(to, sizeof to, "the %s %s", QNAME(tq));
+      logf("fl26swiss: access -- reg %u position %u goes up from %s to %s", (unsigned)H[i].reg, (unsigned)H[i].rank, from, to);
       for (unsigned m = i + 1; m < *N; m++) { L[m - 1] = L[m]; H[m - 1] = H[m]; }
       (*N)--;
       return 1;
