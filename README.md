@@ -1,4 +1,9 @@
-# FootballLife — new leagues (public beta)
+# FootballLife — new leagues
+
+**New leagues, new clubs and whole new countries in the Master League of Football Life 2026 and
+Football Life 2027**, plus one program, **FL Mod Studio**, to manage everything else you add to the game. No patched
+executable, no repacked CPKs: it all goes in through Sider modules and data files, and comes out
+again.
 
 [![Join the Discord](https://img.shields.io/badge/Discord-join%20the%20community-5865f2?logo=discord&logoColor=white)](https://discord.gg/StQqtk3G3M)
 
@@ -6,10 +11,113 @@
 [![Downloads](https://img.shields.io/github/downloads/Matozanato/FootballLife-new-leagues/total?label=downloads&color=2ea44f&logo=github&logoColor=white)](https://github.com/Matozanato/FootballLife-new-leagues/releases)
 [![License: MIT](https://img.shields.io/github/license/Matozanato/FootballLife-new-leagues?color=blue)](LICENSE)
 ![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078d4?logo=windows&logoColor=white)
-![Languages](https://img.shields.io/badge/languages-EN%20%C2%B7%20ES%20%C2%B7%20FR%20%C2%B7%20HR-6f42c1)
-![Game: Football Life 2026](https://img.shields.io/badge/game-Football%20Life%202026-c0392b)
+![Languages](https://img.shields.io/badge/languages-EN%20%C2%B7%20HR%20%C2%B7%20ES%20%C2%B7%20PT%20%C2%B7%20FR-6f42c1)
+![Game: Football Life 2026 and 2027](https://img.shields.io/badge/game-Football%20Life%202026%20%C2%B7%202027-c0392b)
 
-**📖 Guides, step by step:** [install a ready pack or make your own leagues](guides/README.md) (English · hrvatski · español · português · français)
+**Contents:** [Download & start](#download--start) · [What's new](#whats-new) ·
+[What it does](#what-it-does) · [Guides](#guides) · [Ready packs and real clubs](#ready-packs-and-real-clubs) ·
+[Help and bug reports](#help-and-bug-reports) · [Supporters](#supporters) · [Credits](#credits) ·
+[For modders and developers](#for-modders-and-developers) · [License](#license)
+
+## Download & start
+
+1. Open the **[latest release](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest)**
+   and download `FL26ModStudio-<version>.zip` under **Assets**.
+2. Unzip it (right-click → **Extract All...**) into a folder of its own. Keep the `_internal` and
+   `pack` folders next to the exe.
+3. Run `FL26ModStudio.exe`. No Python needed. If Windows says "Windows protected your PC", click
+   **More info** → **Run anyway**.
+4. **5. Settings** → **Browse...** → pick the folder that holds `FL_2026.exe` (FL26) or `FL_2027.exe`
+   (FL27) → **Use this folder**.
+5. Follow a guide: **[install a ready pack](guides/en/install-a-pack.md)** (you were given a world,
+   a Modpack or a `.fl26pack`) or **[make your own leagues and packs](guides/en/make-your-own-leagues.md)**.
+
+Mod Studio tells you when a new version is out and installs it (**Help → Check for updates**); your
+settings and recipes stay. The first start shows a quick tour of the window; **Help → Quick tour**
+shows it again.
+
+> [!NOTE]
+> This is a **beta**: something can break. Read [what works and what does not](docs/known-issues.md)
+> before you start a long career, and tell us on [Discord](https://discord.gg/StQqtk3G3M) when
+> something goes wrong.
+
+## What's new
+
+- **0.3.0** (2026-11-04): **Football Life 2027** too (the same program, Settings picks FL26 or
+  FL27), the new name **FL Mod Studio**, Select Team lists a league's clubs, coloured places in the
+  league tables, promotion and relegation under the game's split leagues and for NewLife leagues
+  below the game's, and many fixes. In the middle of a long career? Read
+  [Before you update](docs/changelog/changelog-0.3.0.md#before-you-update) first.
+  [What changed](docs/changelog/changelog-0.3.0.md)
+- **0.2.5.1** (2026-10-30): fixes of what you reported since 0.2.5. No need to update if 0.2.5
+  works for you. [What changed](docs/changelog/changelog-0.2.5.1.md)
+- **0.2.5** (2026-10-28): leagues of up to 28 clubs, the modern CONMEBOL competitions if you want
+  them, Undo/Redo, transfers from a CSV, up to 35 players a new club, and many fixes. Build your
+  0.2.4 world once with 0.2.5 and your career carries on. [What changed](docs/changelog/changelog-0.2.5.md)
+- **0.2.4** (2026-10-18): a new look, worlds you switch with one click, ready Modpacks installed
+  straight from their zip, a quick tour and step-by-step guides in *Help*.
+  [What changed](docs/changelog/changelog-0.2.4.md) · fixes:
+  [0.2.4.1](docs/changelog/changelog-0.2.4.1.md) (2026-10-20),
+  [0.2.4.2](docs/changelog/changelog-0.2.4.2.md) (2026-10-21, promotion below the second division
+  in the Europack eu4 and other big worlds)
+- Every version: [changelog](docs/changelog/README.md)
+
+## What it does
+
+| | |
+|---|---|
+| **Leagues and countries** | Many new leagues in one world, **10 to 28 clubs** each, under any country (a new country gets its own heading, flag, continent and calendar). Pyramids down to the 7th division with promotion and relegation, also under the game's own leagues. Formats: everyone plays everyone, a Scottish-style split, Apertura and Clausura. August–May or February–December seasons. |
+| **Real clubs and players** | The **NewLife Database**: pick a real league and it becomes a new league with its real clubs and squads. New players get faces that fit their nationality; Master League regens get a new name, potential and face. |
+| **Clubs and players** | New clubs with your names, crests, kits, managers and formations. Edit every player of every club, squads from a table, transfers (also a whole window from one CSV), national team call-ups, your own club and player ids. Rename the game's leagues and clubs. **Undo / Redo** of the last change. |
+| **Cups and continents** | The 2024 European format with August qualifying and a Conference League; continental places in Europe, South America (also the modern CONMEBOL competitions), Asia, Africa, CONCACAF and Oceania; national cups, super cups, league cups and pre-season cups; rename any competition, with your own logo. |
+| **Worlds and packs** | Worlds you switch with one click, a ready Modpack installed straight from its zip (**Install the world**), league packages (`.fl26pack`) to share a league, **Export the world** to share a whole world. |
+| **The rest of your game** | **Import your world** takes any mod dropped on the window (zip, 7z, folder, .lua, .cpk) and can remove it again. Content servers (stadiums, kits, balls, scoreboards ...), Sider setup with profiles and restore points, and a diagnostics report for bug reports. |
+
+The window speaks English, hrvatski, español, português (Brasil) and français. Every feature in
+detail, with the version that brought it: [Every feature in detail](#every-feature-in-detail) at
+the bottom of this page.
+
+## Guides
+
+Step by step, every click in order:
+
+| Language | Install a ready pack | Make your own leagues and packs | Every page of Mod Studio |
+|---|---|---|---|
+| English | [Install a ready pack](guides/en/install-a-pack.md) | [Make your own leagues and packs](guides/en/make-your-own-leagues.md) | [Mod Studio guide](guides/en/mod-studio-guide.md) |
+| Hrvatski | [Instaliraj gotov paket](guides/hr/install-a-pack.md) | [Napravi svoje lige i pakete](guides/hr/make-your-own-leagues.md) | [Upute za Mod Studio](guides/hr/mod-studio-guide.md) |
+| Español | [Instalar un paquete listo](guides/es/install-a-pack.md) | [Crear tus propias ligas y paquetes](guides/es/make-your-own-leagues.md) | [Guía de Mod Studio](guides/es/mod-studio-guide.md) |
+| Português (Brasil) | [Instalar um pacote pronto](guides/pt/install-a-pack.md) | [Criar suas próprias ligas e pacotes](guides/pt/make-your-own-leagues.md) | [Guia do Mod Studio](guides/pt/mod-studio-guide.md) |
+| Français | [Installer un pack prêt](guides/fr/install-a-pack.md) | [Créer vos propres ligues et packs](guides/fr/make-your-own-leagues.md) | [Guide de Mod Studio](guides/fr/mod-studio-guide.md) |
+
+In English: [questions (FAQ)](docs/faq.md) · [known issues](docs/known-issues.md) ·
+[changelog](docs/changelog/README.md) · [all the documentation](docs/README.md)
+
+## Ready packs and real clubs
+
+- **A ready world or Modpack** (one `.zip`): **2. My world** → **+ Add...** → the zip →
+  **Install the world**. Nothing to build. Mod Studio walks you through it in
+  **Help → Install a Modpack, step by step**; the whole route is in
+  [Install a ready pack](guides/en/install-a-pack.md).
+- **A league package** (`.fl26pack`): a modder makes a league once (clubs, names, crests, logos,
+  squads, faces) and anybody adds it to their own game. Mod Studio builds it for you; same guide.
+- **The NewLife Database** (real clubs and players): a separate download on the **#newlife**
+  channel of our [Discord](https://discord.gg/StQqtk3G3M), one part per continent. Put the parts
+  in one folder, do not unzip them, and follow
+  [Make your own leagues and packs](guides/en/make-your-own-leagues.md).
+
+## Help and bug reports
+
+- **Questions** (how do I ..., does this work with ...): the [FAQ](docs/faq.md), then the
+  [Discord](https://discord.gg/StQqtk3G3M) (FL Mod Studio): questions, help, new versions, and new
+  GitHub issues posted there as they come in.
+- **Bugs:** open a [GitHub issue](https://github.com/Matozanato/FootballLife-new-leagues/issues).
+  In Mod Studio, **Diagnostics → Run the checks → Copy a report** puts everything useful in the
+  clipboard; paste it into the issue. The [testing guide](docs/developers/testing-guide.md#what-to-send)
+  says what else helps: your `sider.log`, the crash's *fault offset* from Windows Event Viewer,
+  your recipe (or how you built your world), and the save file if the problem can be repeated
+  from a save.
+
+<a name="supporters"></a>
 
 <div align="center">
 
@@ -37,6 +145,9 @@ who covered a big part of what the project costs
 <td align="center">⭐<br><b>David.BDJ</b></td>
 <td align="center">⭐<br><b>Facemaker Jacobson</b></td>
 <td align="center">⭐<br><b>Cristian B.</b></td>
+<td align="center">⭐<br><b>Daniel</b></td>
+<td align="center">⭐<br><b>Corrado</b></td>
+<td align="center">⭐<br><b>undöödh</b></td>
 </tr>
 </table>
 
@@ -44,182 +155,29 @@ who covered a big part of what the project costs
 
 </div>
 
-**New leagues, new clubs and whole new countries in the Master League of Football Life 2026 and, from 0.3.0, Football Life 2027**, plus
-one program to manage everything else you add to the game. No patched executable, no repacked
-CPKs: it all goes in through Sider modules and data files, and comes out again.
+Everything here is free and MIT-licensed. Weeks of disassembly, unattended test seasons and
+crash dumps went into it, and there is more to do (the crashes in the game's protected code,
+the African leagues' League Info panel, more competitions and formats). If you want to help it
+along: **[ko-fi.com/mata28](https://ko-fi.com/mata28)**. Testing and good bug reports help just
+as much — see the [testing guide](docs/developers/testing-guide.md).
 
-> ## FL Mod Studio (beta)
->
-> **[Download the latest version](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest)**
-> (`FL26ModStudio-<version>.zip`), unzip, run `FL26ModStudio.exe`. No Python needed. It
-> tells you when a new version is out and installs it (*Help → Check for updates*); your
-> settings and recipes stay.
->
-> **Never used it? Start here,** every click in order: [install a ready pack](guides/en/install-a-pack.md)
-> (you were given a world, a modpack or a `.fl26pack`) · [make your own leagues and packs](guides/en/make-your-own-leagues.md)
-> (you pick the leagues). Other languages: [guides/](guides/README.md)
->
-> **0.2.5** is out (2026-10-28): leagues of up to 28 clubs, the modern CONMEBOL competitions if you
-> want them, Undo/Redo, transfers from a CSV, up to 35 players a new club, and many fixes. Build your
-> 0.2.4 world once with 0.2.5 and your career carries on. What changed: [changelog-0.2.5](docs/changelog/changelog-0.2.5.md) ·
-> **0.2.5.1** (2026-10-30, fixes; no need to update if 0.2.5 works for you): [changelog-0.2.5.1](docs/changelog/changelog-0.2.5.1.md) ·
-> **0.2.5.2** (fixes; no need to update if 0.2.5.1 works for you): [changelog-0.2.5.2](docs/changelog/changelog-0.2.5.2.md)
->
-> **0.2.4** is out: a new look, worlds you switch with one click, ready Modpacks installed
-> straight from their zip, a quick tour and step-by-step guides in *Help*. Your 0.2.2 / 0.2.3 career
-> keeps working. Mod Studio is **still in development**: something can break; tell us on Discord
-> and we fix it. What changed: [changelog-0.2.4](docs/changelog/changelog-0.2.4.md) ·
-> **0.2.4.2** (2026-10-21, quick fix: promotion below the second division in the Europack eu4 and other big worlds): [changelog-0.2.4.2](docs/changelog/changelog-0.2.4.2.md) ·
-> **0.2.4.1** (2026-10-20, fixes, no need to update if 0.2.4 works for you): [changelog-0.2.4.1](docs/changelog/changelog-0.2.4.1.md) · every version:
-> [changelog](docs/changelog/README.md).
->
-> **Discord:** [FL Mod Studio](https://discord.gg/StQqtk3G3M): questions, help, new versions, and new
-> GitHub issues posted there as they come in. Bugs still go to a GitHub issue.
+Thank you to everyone who has: **Thunder105**, **GutGut**, **LaraCroft**, **Pierro1912**, **David.BDJ**, **Facemaker Jacobson**, **Cristian B.**, **Daniel**, **Corrado** and **undöödh**.
 
-This is a **beta**. It is published so that people who mod this game can use it, break it and
-tell us where. Read [what works and what does not](docs/known-issues.md) before you start a
-long career.
+## Credits
 
-## Documentation
-
-All of it, folder by folder: [docs/README.md](docs/README.md).
-
-- **[Guides](guides/README.md)** in English, hrvatski, español, português and français:
-  - **[Install a ready pack](guides/en/install-a-pack.md)**: someone gave you a world or a
-    league package; from nothing to a new Master League, every click in order.
-  - **[Make your own leagues and packs](guides/en/make-your-own-leagues.md)**: real leagues from
-    the NewLife Database, every setting of a league, Build, and sharing what you made.
-  - **[Guide to every page](guides/en/mod-studio-guide.md)** of Mod Studio.
-- **[Questions](docs/faq.md)**: updating, crashes at start, cups, promotion, what to send when
-  something is wrong. **[Known issues](docs/known-issues.md)**: what works, what does not yet.
-- **[Changelog](docs/changelog/README.md)**: what each version brought.
-- **[Developers](docs/developers/for-developers.md)**: forks, pull requests, the code, the
-  manual route with Python. **[Research](docs/research/research-findings.md)**: how the game
-  was taken apart, limits and addresses.
-
-## What you can do
-
-**Leagues and countries**
-
-- **Many new leagues** in one world, **10 to 28 clubs** each, playing each other 1 to 4
-  times with the real number of rounds (10 clubs four times = 36 rounds). Since 0.2.2 there
-  is room for 2,400 clubs in all, and our test world plays 86 new leagues with 1,294 new
-  clubs; Build stops with a message when regulation ids or club room run out. Every league
-  is selectable in Select Team (250 slots).
-- **Any country.** A league is listed under its country in Select Team and Kick Off, with the
-  country's flag; a country the game has no league for gets a heading of its own and plays on
-  its own continent's calendar and cups (Europe, South America, Asia, Africa ...).
-- **Pyramids.** Put a new league under another new league or under one of the game's
-  (Championship, Serie B, 2. Bundesliga ...), down to the 7th division, with promotion and
-  relegation at every joint. **Add lower tier** makes the next division in one click.
-- **Formats:** everyone plays everyone; a Scottish-style **split**; **Apertura and Clausura**
-  with play-offs of 8 or 4.
-- **Season months** for a new country: August to May, or February to December like Brazil,
-  Japan or Saudi Arabia (0.1.4).
-- **Exhibition-only leagues** for Kick Off: legends, historical sides.
-- Your own **league logo** and **country flag** (it replaces the game's flag of that country
-  everywhere while the world is on). After Build, the **League ID** and **Team ID** columns
-  show the ids the game uses.
-
-**Clubs and players**
-
-- New clubs with your **names, short names and crests** (or a numbered badge), **managers**
-  with names and portraits (0.1.4), kits lent from the game's clubs or plain kits you can
-  change in the game's Edit mode, Paste Image included (0.1.6), and a **formation** per
-  league or per club with the first eleven on a pitch (0.1.4).
-- **Edit mode keeps what you change on the new clubs** (0.1.8): shirt numbers, formations,
-  colours, a squad imported from a .ted file. The game's Edit save has room for 750 clubs and
-  its own 749 fill it; `fl26edit.dll` gives it room for 2048 and keeps the clubs past 749 in
-  `EDIT00000000.fl26x` beside it. The EDIT file itself stays what the game writes
-  ([#55](https://github.com/Matozanato/FootballLife-new-leagues/issues/55)).
-- **Real clubs and players** from the **NewLife Database** (0.1.5.5): pick a league and it
-  becomes a new league with its real clubs and squads — names, birth dates, positions,
-  ratings on the game's scale, club colours, ids that stay the same in every version. A club
-  with no crest gets a shield in its colours and the game's kit closest to them. A separate
-  download on our [Discord](https://discord.gg/StQqtk3G3M); version 1.1 (2026-10-01) is the
-  2026/27 season, with the summer transfers and the new divisions.
-  Leave clubs out of a league or bring in clubs of other leagues (0.1.7).
-- **Faces**: new players get a face that fits their nationality, and any player can get a
-  **portrait** instead of a 3D face (0.1.5.5).
-- **Regens** in Master League get a new name, a new potential and a new face (0.1.5.5).
-- **Clubs in no league** (0.1.8): one club, or a few, without a league around them -- BATE
-  Borisov alone -- in one of the game's groups for clubs that play in no league (*Other
-  European teams*, *Other Latin American teams*, *Classic Teams* ...), with names, crests,
-  kits, a manager and players like any new club.
-- **Clubs the game already has** in your new leagues. When such a club plays somewhere in the
-  game, you pick who takes its place there, so no competition of the game changes size (0.1.4). Move
-  a new club to another new league, or swap two clubs of the game's leagues -- a promoted one for a
-  relegated one (0.1.7). A club in a pre-season tournament keeps playing it, and *Edit club* renames
-  a club of the game right on *New clubs* (0.1.7).
-- **Rename** the game's own leagues and clubs, with new logos and crests.
-- **Edit every player of every club**: name, number, positions, abilities, skills, rating,
-  face, squad order, best eleven, squad level; CSV export and import.
-- **Squads from a table**: any table of players — typed by hand, copied off a website, a
-  Football Manager or EA FC export — becomes a club's squad.
-- **Transfers** between any two clubs and **national team call-ups** (0.1.4); your own
-  **club and player ids** for kit, crest and face packs made for a certain id (0.1.4), and a
-  Player ID column for minifaces made for new players (0.1.5.5).
-
-**Cups and continents**
-
-- The **2024 European format**: Champions League and Europa League with a league phase of 36,
-  the February play-off and a fixed knockout bracket, and a new **Conference League**. Filled
-  from a UEFA access list from the second season; in the first, by squad strength. The draw
-  keeps clubs of one country apart as UEFA does (0.1.4). **August qualifying** (0.1.7): up to
-  three rounds of 16 clubs over two legs -- second qualifying round, third, play-off -- for the
-  Champions League (losers drop to the Europa League), Europa League (losers to the Conference
-  League) and Conference League; a world gets as many rounds as its European places fill. Name
-  the Conference League yourself (0.1.7).
-- **Continental places** for your leagues: Champions League, Europa League, Conference League;
-  AFC Champions League, Champions League Two and the AFC Challenge League (0.2.0); Copa
-  Libertadores (also its qualifying round, 0.1.4) and Copa Sudamericana; CAF Champions League
-  and CAF Confederation Cup, and the CAF Super Cup between their winners (0.1.6); the CONCACAF
-  Champions Cup and the OFC Champions League (0.2.0). The ones the game does not have are built
-  with your world, and their champions go to the game's Club World Cup. The **game's own leagues** can get their European places changed too (0.1.7).
-  **UEFA ranking** (0.1.7): put the world's European leagues in order and each gets its places
-  from UEFA's key; **South American places** lists the Libertadores and Sudamericana places of
-  every South American league, the game's and yours. **First-season European clubs** (0.1.8):
-  pick by hand who plays the three European league phases in a new career's first season.
-- A country's own **national cup** (any size up to 44 clubs, with byes like the FA Cup, 0.1.4)
-  and **super cup**, a **league cup** (the clubs past 16 through a pre-round, 0.1.7), and **pre-season cups** of 4 or 8 invited clubs in July,
-  each with your own **logo** (0.1.5.5). A **league cup** for the game's own countries (the
-  Carabao Cup), and a super cup where the game has none (Scotland, Greece ...) (0.1.7).
-- **Rename** any cup or continental competition of the game, and the ones the world builds,
-  with your own logo (0.1.7); the game's leagues and clubs too.
-  A new second division under a country the game has goes into that country's cup (0.1.4).
-  The national cup of a new country is tested over two full seasons: it rebuilds from the
-  current first division after every promotion and relegation (issue #46).
-- **Europe only** (0.1.4): just the new European format, no new leagues.
-
-**Everything else in your game folder**
-
-- **Import your world** takes a modpack or any other mod dropped on the window (zip, 7z, folder, .lua, .cpk): it says what
-  each part is and where it goes, merges content-server map files into yours, and every mod it
-  installs can be removed again.
-- **Content servers** (stadiums, kits, balls, commentary, music, scoreboards, menus ...) with
-  their map files edited as tables. A new club's **home stadium** is picked in Edit club and
-  written for you when the world is switched on (0.1.7).
-- **Sider setup**: content folders and Lua modules on, off and in order; profiles; a restore
-  point for every file it changes; a diagnostics report to paste into a bug report. The health
-  check also catches a database mod (UML ...) that hides the world's tables (0.1.7).
-- **League packages** (`.fl26pack`): a modder makes a league once — clubs, names, crests,
-  logos, squads, faces — and anybody adds it to their own game. Adding a newer version replaces
-  the old one (0.1.7).
-- English, Croatian, Spanish, Brazilian Portuguese and French.
-
-
-Every version and what it brought: [docs/changelog](docs/changelog/README.md).
-
-> **Rather do it by hand, with Python?** [docs/developers/by-hand.md](docs/developers/by-hand.md)
-> is the whole manual route on one page: install the modules, build leagues, put one in a
-> country of your choice, the new European format, and every world-building option.
-
-## The people who made this better
+<a name="the-people-who-made-this-better"></a>
 
 This project is tested in the open, and every fix in it since the first beta traces back to
 someone who played a season, wrote down what happened and sent it. Thank you, all of you.
 
-### vmardonesdev: the tester this project owes the most
+Everyone who helped, above all **vmardonesdev** and **Alikhaled_727**, **vector360** and **jibibi**, and **Stagnant09**, **pioup38**, **bobzera**,
+**spursfan07**, **Amir**, **vmican**, **Alby17**, **jyanj083-dotcom**, **Gabyyy2008**, **alexfe87**,
+**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9**, **Xxspedd**, **n1ne**, **LaraCroft**, **AlexRufolo**, **DavidBDJ**, **B2Y26Arabia**, **rwee**, **Risto**, **Yanis**, **LumpierTheGunner**, **Bon Kirk**, **wishfulshot**, **beny609o**, **Nickdaw**, **the_pelado**, **capital030**, **novarama** (moderator), **rickydicky4444**, **MIQABARI**, **nissindiaz**, **Julio**, **Uncle Lanscilo**, **GiorgiM**, **bythezl19**, **quicksite**, **fjchivvdub**, **ZeDosCaes21**, **ELBastos**, **Konkubent**, **beni_93**, **jojofiaz**, **Tysonche35**, **diwwanmago**, **bikolunar42**, **lmazot**, **Erax**, **juanjose6124**, **antoniodias_pt**, **bruce_wayne**, **Sasukidas**, **diablofumao**, **gxldemorci**, **General Kreutaa**, **monkusgigus** and **papijonn**.
+
+What each of them did (click to open):
+
+<details>
+<summary><b>vmardonesdev</b>: the tester this project owes the most</summary>
 
 **vmardonesdev** (Vicentico12 and a moderator on the Discord) has done more for this project than anyone besides its author. Twenty-one of
 the first thirty-seven GitHub issues come from vmardonesdev, and every one is a proper test
@@ -303,7 +261,10 @@ worst bugs here were found only because vmardonesdev played further than anyone 
 
 If you use anything from this repository, vmardonesdev's name belongs next to it.
 
-### Alikhaled_727: the reports from outside Europe
+</details>
+
+<details>
+<summary><b>Alikhaled_727</b>: the reports from outside Europe</summary>
 
 **Alikhaled_727** (Evo-Web; Mohamed_248 on GitHub) builds the leagues nobody else tests (Saudi Arabia, Egypt,
 Morocco, the rest of Asia and Africa) and writes up every result in long, careful messages
@@ -334,7 +295,10 @@ played after the Super Cup and the continent's best player ([#70](https://github
 Asian leagues with their own continental places, and with them the AFC Champions League Two
 in the League Builder, were Alikhaled_727's idea too.
 
-### vector360: the European format, checked against the real one
+</details>
+
+<details>
+<summary><b>vector360</b>: the European format, checked against the real one</summary>
 
 **vector360** (Evo-Web, Discord) played the new European format season after season and
 compared it with the real UEFA one:
@@ -349,7 +313,10 @@ compared it with the real UEFA one:
 - the request for a Carabao Cup, which became the league cup for the game's own countries in
   0.1.7, and for a way to rename the Conference League.
 
-### jibibi: tester, moderator and the community's first answer
+</details>
+
+<details>
+<summary><b>jibibi</b>: tester, moderator and the community's first answer</summary>
 
 **jibibi** (Evo-Web; moderator on the Discord) has been there from the first public builds,
 testing Mod Studio on a real, heavily modded game and helping everyone else get theirs working:
@@ -369,7 +336,10 @@ testing Mod Studio on a real, heavily modded game and helping everyone else get 
 - day after day on the Discord: answering members' questions about install order, face packs
   and other patches before anyone else gets to them, and keeping the server tidy.
 
-### novarama: moderator on the Discord, with a developer's eye
+</details>
+
+<details>
+<summary><b>novarama</b>: moderator on the Discord, with a developer's eye</summary>
 
 **novarama** joined jibibi and vmardonesdev as a moderator on the Discord on 11 October 2026,
 and looks at Mod Studio the way a professional developer does:
@@ -385,7 +355,10 @@ and looks at Mod Studio the way a professional developer does:
 - every day on the Discord: answering members, testing what they report and keeping the
   channels in order.
 
-### Amir: Mod Studio, tested release by release
+</details>
+
+<details>
+<summary><b>Amir</b>: Mod Studio, tested release by release</summary>
 
 **Amir** ([AmirPjanic](https://github.com/AmirPjanic)) tests Mod
 Studio release by release and asks for what a modder actually needs:
@@ -401,7 +374,10 @@ Studio release by release and asks for what a modder actually needs:
 - the national team editor, transfers between clubs, the formations of new clubs and a Balkan
   friendly cup in July.
 
-### vmican: South America from top to bottom
+</details>
+
+<details>
+<summary><b>vmican</b>: South America from top to bottom</summary>
 
 **vmican** (victormican on [GitHub](https://github.com/victormican)) tests Mod Studio on a South
 American world and reports what breaks there:
@@ -432,7 +408,10 @@ American world and reports what breaks there:
   requests for a warning when a club is already in another league and a tick to leave a league
   out.
 
-### jyanj083-dotcom: Peru and the Libertadores, tested to the end
+</details>
+
+<details>
+<summary><b>jyanj083-dotcom</b>: Peru and the Libertadores, tested to the end</summary>
 
 **jyanj083-dotcom** ([jyanj083-dotcom](https://github.com/jyanj083-dotcom)) builds Peruvian
 and other Latin American worlds and writes up every bug with screenshots:
@@ -453,7 +432,10 @@ and other Latin American worlds and writes up every bug with screenshots:
 - the Copa Peru crash after its first round, promotion with Apertura/Clausura, the Be a
   Legend crash of 0.2.0 and a long list of bugs from 0.2.1 ([#95](https://github.com/Matozanato/FootballLife-new-leagues/issues/95), [#106](https://github.com/Matozanato/FootballLife-new-leagues/issues/106), [#125](https://github.com/Matozanato/FootballLife-new-leagues/issues/125), [#132](https://github.com/Matozanato/FootballLife-new-leagues/issues/132)).
 
-### Everyone else who helped
+</details>
+
+<details>
+<summary><b>Everyone else who helped</b></summary>
 
 - **Stagnant09**: the flags in the Select Team list. The idea, the hook on the
   slot-to-country lookup and the first working version
@@ -633,11 +615,51 @@ and other Latin American worlds and writes up every bug with screenshots:
 - **monkusgigus** (Discord): the national team you manage left without its friendlies and EURO matches, and the league title won on the last day with no celebration.
 - **papijonn** (Discord): the port to vanilla PES 2021.
 
+</details>
+
 Reports are welcome from anyone: open an
 [issue](https://github.com/Matozanato/FootballLife-new-leagues/issues) with what you
 installed, what you did and what you saw, and you will be on this list too.
 
-## Free to use — please credit
+## For modders and developers
+
+| | |
+|---|---|
+| [For developers](docs/developers/for-developers.md) | requirements, repository layout, the patch set, reading a crash, the tools |
+| [Forks and pull requests](docs/developers/forking.md) | how the code fits together, with chapters in [developers/fork/](docs/developers/fork/): [code map](docs/developers/fork/code-map.md), [recipe keys](docs/developers/fork/recipe-keys.md), [world file](docs/developers/fork/world-file.md), [modules](docs/developers/fork/modules.md), [building](docs/developers/fork/building.md), [testing](docs/developers/fork/testing.md), [NewLife format](docs/developers/fork/newlife-format.md) |
+| [How Mod Studio works](docs/developers/mod-studio.md) | the program inside, and the league package format |
+| [By hand, with Python](docs/developers/by-hand.md) | the whole manual route on one page: install the modules, build leagues, put one in a country of your choice, the new European format, and every world-building option |
+| [Testing guide](docs/developers/testing-guide.md) | what to test and what to send |
+| [Research](docs/research/research-findings.md) | how the game was taken apart: [how it works](docs/research/how-it-works.md), [limits and numbers](docs/research/limits.md), the [league phase decode](docs/research/league-phase-swiss-decode.md), the [player record](docs/research/player-record.md) |
+
+### Contributing
+
+You do not need your own separate Mod Studio to add something. Send it to this one with a pull
+request and everyone gets it in the next release:
+
+1. **Fork** the repository. On GitHub that is just your working copy, not a new project.
+2. Make your fix or feature there, on a branch.
+3. **Open a pull request.** We read it, test it in the game and may ask for small changes;
+   you push them to the same branch and the pull request updates itself.
+4. We **merge** it, it ships with the next release, and you go in the credits.
+
+Bug fixes and new features are both welcome this way: 0.2.0 was the last release where *we*
+add features, not the last one that gets them. Before something big, open an issue or ask on
+[Discord](https://discord.gg/StQqtk3G3M) so two people do not build the same thing.
+[docs/developers/forking.md](docs/developers/forking.md) and the [fork chapters](docs/developers/fork/) explain the code; they
+work the same for a pull request as for a fork. For `sider/` and `patches/`, describe the
+disassembly evidence in the pull request the way the module headers do.
+
+## License
+
+MIT — see [LICENSE](LICENSE). Football Life 2026, PES 2021 and Sider belong to their
+respective authors; nothing of theirs is redistributed here.
+
+The reverse engineering was done from scratch against the game's executable and data
+files. Nothing here is derived from anyone else's tool or notes, except where a contributor
+is named.
+
+### Free to use — please credit
 
 Everything in this repository is **free**, and it stays free. MIT licence: use it, change
 it, ship it inside your own mod, charge for your mod if you want to. No permission needed
@@ -665,62 +687,117 @@ If you are building something on top of this, I would rather hear about it than 
 Open an issue and say what you are making; if a limit is in your way, it may already be
 mapped.
 
-## Reporting
+## Every feature in detail
 
-Open a GitHub issue. From Mod Studio, **Diagnostics → Run the checks → Copy a report** puts
-everything useful in the clipboard; paste it into the issue. The
-[testing guide](docs/developers/testing-guide.md#what-to-send) says what else helps: your `sider.log`, the
-crash's *fault offset* from Windows Event Viewer, your recipe (or how you built your world),
-and the save file if the problem can be repeated from a save.
+<details>
+<summary>The full list, with the version that brought each feature</summary>
 
-For questions that are not bugs (how do I ..., does this work with ...), ask on
-[Discord](https://discord.gg/StQqtk3G3M).
+**Leagues and countries**
 
-## Contributing
+- **Many new leagues** in one world, **10 to 28 clubs** each, playing each other 1 to 4
+  times with the real number of rounds (10 clubs four times = 36 rounds). Since 0.2.2 there
+  is room for 2,400 clubs in all, and our test world plays 86 new leagues with 1,294 new
+  clubs; Build stops with a message when regulation ids or club room run out. Every league
+  is selectable in Select Team (250 slots).
+- **Any country.** A league is listed under its country in Select Team and Kick Off, with the
+  country's flag; a country the game has no league for gets a heading of its own and plays on
+  its own continent's calendar and cups (Europe, South America, Asia, Africa ...).
+- **Pyramids.** Put a new league under another new league or under one of the game's
+  (Championship, Serie B, 2. Bundesliga ...), down to the 7th division, with promotion and
+  relegation at every joint. **Add lower tier** makes the next division in one click.
+- **Formats:** everyone plays everyone; a Scottish-style **split**; **Apertura and Clausura**
+  with play-offs of 8 or 4.
+- **Season months** for a new country: August to May, or February to December like Brazil,
+  Japan or Saudi Arabia (0.1.4).
+- **Exhibition-only leagues** for Kick Off: legends, historical sides.
+- Your own **league logo** and **country flag** (it replaces the game's flag of that country
+  everywhere while the world is on). After Build, the **League ID** and **Team ID** columns
+  show the ids the game uses.
 
-You do not need your own separate Mod Studio to add something. Send it to this one with a pull
-request and everyone gets it in the next release:
+**Clubs and players**
 
-1. **Fork** the repository. On GitHub that is just your working copy, not a new project.
-2. Make your fix or feature there, on a branch.
-3. **Open a pull request.** We read it, test it in the game and may ask for small changes;
-   you push them to the same branch and the pull request updates itself.
-4. We **merge** it, it ships with the next release, and you go in the credits.
+- New clubs with your **names, short names and crests** (or a numbered badge), **managers**
+  with names and portraits (0.1.4), kits lent from the game's clubs or plain kits you can
+  change in the game's Edit mode, Paste Image included (0.1.6), and a **formation** per
+  league or per club with the first eleven on a pitch (0.1.4).
+- **Edit mode keeps what you change on the new clubs** (0.1.8): shirt numbers, formations,
+  colours, a squad imported from a .ted file. The game's Edit save has room for 750 clubs and
+  its own 749 fill it; `fl26edit.dll` gives it room for 2048 and keeps the clubs past 749 in
+  `EDIT00000000.fl26x` beside it. The EDIT file itself stays what the game writes
+  ([#55](https://github.com/Matozanato/FootballLife-new-leagues/issues/55)).
+- **Real clubs and players** from the **NewLife Database** (0.1.5.5): pick a league and it
+  becomes a new league with its real clubs and squads — names, birth dates, positions,
+  ratings on the game's scale, club colours, ids that stay the same in every version. A club
+  with no crest gets a shield in its colours and the game's kit closest to them. A separate
+  download on the **#newlife** channel of our [Discord](https://discord.gg/StQqtk3G3M), with the
+  2026/27 season.
+  Leave clubs out of a league or bring in clubs of other leagues (0.1.7).
+- **Faces**: new players get a face that fits their nationality, and any player can get a
+  **portrait** instead of a 3D face (0.1.5.5).
+- **Regens** in Master League get a new name, a new potential and a new face (0.1.5.5).
+- **Clubs in no league** (0.1.8): one club, or a few, without a league around them -- BATE
+  Borisov alone -- in one of the game's groups for clubs that play in no league (*Other
+  European teams*, *Other Latin American teams*, *Classic Teams* ...), with names, crests,
+  kits, a manager and players like any new club.
+- **Clubs the game already has** in your new leagues. When such a club plays somewhere in the
+  game, you pick who takes its place there, so no competition of the game changes size (0.1.4). Move
+  a new club to another new league, or swap two clubs of the game's leagues -- a promoted one for a
+  relegated one (0.1.7). A club in a pre-season tournament keeps playing it, and *Edit club* renames
+  a club of the game right on *New clubs* (0.1.7).
+- **Rename** the game's own leagues and clubs, with new logos and crests.
+- **Edit every player of every club**: name, number, positions, abilities, skills, rating,
+  face, squad order, best eleven, squad level; CSV export and import.
+- **Squads from a table**: any table of players — typed by hand, copied off a website or
+  exported from a spreadsheet — becomes a club's squad.
+- **Transfers** between any two clubs and **national team call-ups** (0.1.4); your own
+  **club and player ids** for kit, crest and face packs made for a certain id (0.1.4), and a
+  Player ID column for minifaces made for new players (0.1.5.5).
 
-Bug fixes and new features are both welcome this way: 0.2.0 was the last release where *we*
-add features, not the last one that gets them. Before something big, open an issue or ask on
-[Discord](https://discord.gg/StQqtk3G3M) so two people do not build the same thing.
-[docs/developers/forking.md](docs/developers/forking.md) and the [fork chapters](docs/developers/fork/) explain the code; they
-work the same for a pull request as for a fork. For `sider/` and `patches/`, describe the
-disassembly evidence in the pull request the way the module headers do.
+**Cups and continents**
 
-## Support
+- The **2024 European format**: Champions League and Europa League with a league phase of 36,
+  the February play-off and a fixed knockout bracket, and a new **Conference League**. Filled
+  from a UEFA access list from the second season; in the first, by squad strength. The draw
+  keeps clubs of one country apart as UEFA does (0.1.4). **August qualifying** (0.1.7): up to
+  three rounds of 16 clubs over two legs -- second qualifying round, third, play-off -- for the
+  Champions League (losers drop to the Europa League), Europa League (losers to the Conference
+  League) and Conference League; a world gets as many rounds as its European places fill. Name
+  the Conference League yourself (0.1.7).
+- **Continental places** for your leagues: Champions League, Europa League, Conference League;
+  AFC Champions League, Champions League Two and the AFC Challenge League (0.2.0); Copa
+  Libertadores (also its qualifying round, 0.1.4) and Copa Sudamericana; CAF Champions League
+  and CAF Confederation Cup, and the CAF Super Cup between their winners (0.1.6); the CONCACAF
+  Champions Cup and the OFC Champions League (0.2.0). The ones the game does not have are built
+  with your world, and their champions go to the game's Club World Cup. The **game's own leagues** can get their European places changed too (0.1.7).
+  **UEFA ranking** (0.1.7): put the world's European leagues in order and each gets its places
+  from UEFA's key; **South American places** lists the Libertadores and Sudamericana places of
+  every South American league, the game's and yours. **First-season European clubs** (0.1.8):
+  pick by hand who plays the three European league phases in a new career's first season.
+- A country's own **national cup** (any size up to 44 clubs, with byes like the FA Cup, 0.1.4)
+  and **super cup**, a **league cup** (the clubs past 16 through a pre-round, 0.1.7), and **pre-season cups** of 4 or 8 invited clubs in July,
+  each with your own **logo** (0.1.5.5). A **league cup** for the game's own countries (the
+  Carabao Cup), and a super cup where the game has none (Scotland, Greece ...) (0.1.7).
+- **Rename** any cup or continental competition of the game, and the ones the world builds,
+  with your own logo (0.1.7); the game's leagues and clubs too.
+  A new second division under a country the game has goes into that country's cup (0.1.4).
+  The national cup of a new country is tested over two full seasons: it rebuilds from the
+  current first division after every promotion and relegation (issue #46).
+- **Europe only** (0.1.4): just the new European format, no new leagues.
 
-Everything here is free and MIT-licensed. Weeks of disassembly, unattended test seasons and
-crash dumps went into it, and there is more to do (the crashes in the game's protected code,
-the African leagues' League Info panel, more competitions and formats). If you want to help it
-along: **[ko-fi.com/mata28](https://ko-fi.com/mata28)**. Testing and good bug reports help just
-as much — see the [testing guide](docs/developers/testing-guide.md).
+**Everything else in your game folder**
 
-Thank you to everyone who has: **Thunder105**, **GutGut**, **LaraCroft**, **Pierro1912**, **David.BDJ**, **Facemaker Jacobson** and **Cristian B.** Supporters are listed at
-the top of this page.
+- **Import your world** takes a modpack or any other mod dropped on the window (zip, 7z, folder, .lua, .cpk): it says what
+  each part is and where it goes, merges content-server map files into yours, and every mod it
+  installs can be removed again.
+- **Content servers** (stadiums, kits, balls, commentary, music, scoreboards, menus ...) with
+  their map files edited as tables. A new club's **home stadium** is picked in Edit club and
+  written for you when the world is switched on (0.1.7).
+- **Sider setup**: content folders and Lua modules on, off and in order; profiles; a restore
+  point for every file it changes; a diagnostics report to paste into a bug report. The health
+  check also catches a database mod (UML ...) that hides the world's tables (0.1.7).
+- **League packages** (`.fl26pack`): a modder makes a league once — clubs, names, crests,
+  logos, squads, faces — and anybody adds it to their own game. Adding a newer version replaces
+  the old one (0.1.7).
+- English, Croatian, Spanish, Brazilian Portuguese and French.
 
-## Licence and credits
-
-MIT — see [LICENSE](LICENSE). Football Life 2026, PES 2021 and Sider belong to their
-respective authors; nothing of theirs is redistributed here.
-
-The reverse engineering was done from scratch against the game's executable and data
-files. Nothing here is derived from anyone else's tool or notes, except where a contributor
-is named.
-
-Contributors, and what each of them did, are listed in
-[The people who made this better](#the-people-who-made-this-better) near the top: above all
-**vmardonesdev** and **Alikhaled_727**, **vector360** and **jibibi**, and **Stagnant09**, **pioup38**, **bobzera**,
-**spursfan07**, **Amir**, **vmican**, **Alby17**, **jyanj083-dotcom**, **Gabyyy2008**, **alexfe87**,
-**ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9**, **Xxspedd**, **n1ne**, **LaraCroft**, **AlexRufolo**, **DavidBDJ**, **B2Y26Arabia**, **rwee**, **Risto**, **Yanis**, **LumpierTheGunner**, **Bon Kirk**, **wishfulshot**, **beny609o**, **Nickdaw**, **the_pelado**, **capital030**, **novarama** (moderator), **rickydicky4444**, **MIQABARI**, **nissindiaz**, **Julio**, **Uncle Lanscilo**, **GiorgiM**, **bythezl19**, **quicksite**, **fjchivvdub**, **ZeDosCaes21**, **ELBastos**, **Konkubent**, **beni_93**, **jojofiaz**, **Tysonche35**, **diwwanmago**, **bikolunar42**, **lmazot**, **Erax**, **juanjose6124**, **antoniodias_pt**, **bruce_wayne**, **Sasukidas**, **diablofumao**, **gxldemorci**, **General Kreutaa**, **monkusgigus** and **papijonn**.
-
-The licence asks nothing of you. I do: **if you use these findings, addresses, patch sets
-or tools in a mod, credit this work and link back** — see
-[Free to use — please credit](#free-to-use--please-credit) at the top. It costs you one
-line and it is the only thing asked in return.
+</details>
