@@ -99,6 +99,12 @@ static vec16_t   g_vec;
    participate in the league-specific rollover/door logic below. */
 static uint16_t  g_builder_extra[MAX_IDS];
 static int       g_nbuilder_extra = 0;
+/* B318 (huliaanos 04.11., the Suomen Cup): a cup of a January-December country of ours is on
+ * the New Year list, but the builder offers it before our leagues are in -- they join through
+ * register_all -- so the door, which draws the cup's clubs from its leagues, says no, and the
+ * cup has no season (no header entry, 2025 nor 2026). It goes in behind them instead: set when
+ * the door lets a builder extra in, cleared by the next calendar-year build. */
+static uint8_t   g_extra_yes[MAX_IDS];
 static uint16_t  g_builder_list[MAX_LIST];
 static vec16_t   g_builder_vec;
 typedef struct { uint16_t id, conf; } builder_conf_t;
@@ -344,7 +350,7 @@ vec16_t* join_pre(vec16_t* in)
     memcpy(g_list, in->b, (size_t)n * 2);
   }
 
-  int added = 0, already = 0;
+  int added = 0, already = 0, added_cal = 0;
   for (int i = 0; i < g_nids; i++) {
     int dup = 0;
     for (int j = 0; j < n; j++) if (g_list[j] == g_ids[i]) { dup = 1; break; }
@@ -371,6 +377,20 @@ vec16_t* join_pre(vec16_t* in)
     if (rec && ((*(const uint32_t*)(rec + 0x304) >> 8) & 1))
       logf("register_all: %u is flagged in a season but has no table -- appended", g_ids[i]);
     g_list[n++] = g_ids[i]; added++;
+    if (calyr(g_ids[i])) added_cal++;
+  }
+  /* B318: the cups of a January-December country of ours, behind its leagues (see g_extra_yes) */
+  for (int i = 0; added_cal && i < g_nbuilder_extra && n < MAX_LIST; i++) {
+    uint16_t id = g_builder_extra[i];
+    if (g_extra_yes[i]) continue;
+    int dup = 0;
+    for (int j = 0; j < n; j++) if (g_list[j] == id) { dup = 1; break; }
+    unsigned char* rec = (unsigned char*)find_record(id);
+    if (dup || !rec) continue;
+    uint32_t* fl = (uint32_t*)(rec + 0x304);
+    if (!((*fl >> 8) & 1)) *fl |= 1u << 8;
+    logf("register_all: calendar cup %u behind our January-December leagues -- appended", id);
+    g_list[n++] = id; added++;
   }
   g_vec.b = g_list; g_vec.e = g_list + n; g_vec.c = g_list + MAX_LIST;
   g_stat[1] += (uint32_t)added;
@@ -443,6 +463,7 @@ vec16_t* bld_pre(uint64_t ctx, uint64_t events, vec16_t* inc)
     if (id == 55 || id == 97 || id == 127 || id == 164 || id == 165)
       calendar_build = 1;
   }
+  if (calendar_build) memset(g_extra_yes, 0, sizeof g_extra_yes);
 
   if (g_stat[4] <= 8) {
     char buf[480]; list_ids(inc ? inc->b : 0, n, buf, sizeof buf);
@@ -768,6 +789,12 @@ void door_post(uint64_t id, uint64_t result, uint64_t ret)
     if (g_july_extra[i] == cid) {
       if (g_july_was[i]) moved_conf_back(cid, (result & 0xff) ? "the door said YES" : "the door said no");
       logf("door(%u) -> %s  July super cup of ours", cid, (result & 0xff) ? "YES" : "no");
+    }
+  for (int i = 0; i < g_nbuilder_extra; i++)
+    if (g_builder_extra[i] == cid) {
+      if (result & 0xff) g_extra_yes[i] = 1;
+      logf("door(%u) -> %s  calendar cup of ours  from %llx", cid, (result & 0xff) ? "YES" : "no",
+           (unsigned long long)ret);
     }
   if (!(result & 0xff)) g_stat[6]++;
   if (!ours(cid) && !control(cid)) return;
