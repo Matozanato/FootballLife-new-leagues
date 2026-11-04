@@ -228,6 +228,7 @@ function m.init(ctx)
     typedef void (*fl26_join_stats_t)(uint32_t*);
     typedef int  (*fl26_join_teardown_extra_t)(const uint16_t*, int);
     typedef int  (*fl26_join_calendar_t)(const uint16_t*, int);
+    typedef int  (*fl26_join_cal_pairs_t)(const uint16_t*, int);
     typedef int  (*fl26_join_builder_extra_t)(const uint16_t*, int);
     typedef int  (*fl26_join_builder_conf_t)(const uint16_t*, int);
     typedef int  (*fl26_join_july_extra_t)(const uint16_t*, int);
@@ -427,6 +428,39 @@ function m.init(ctx)
         for i, v in ipairs(CAL) do cbuf[i - 1] = v end
         local n = tonumber(ffi.cast("fl26_join_calendar_t", pc)(cbuf, #CAL))
         log(string.format("fl26joindll: %d January-December league(s) close at New Year with their region", n))
+      end
+      -- B315: the pairs of them the DLL exchanges at New Year itself (in a region with no league
+      -- of the game's no season-end pass has them), upper pairs first; a split total is left out
+      local incal, byid = {}, {}
+      for _, v in ipairs(CAL) do incal[v] = true end
+      for _, L in ipairs(world or {}) do byid[L.id] = L end
+      local function depth(L)
+        local d, seen = 0, {}
+        while L and L.above and byid[L.above] and not seen[L.id] do seen[L.id] = true; L = byid[L.above]; d = d + 1 end
+        return d
+      end
+      local PAIRS = {}
+      for _, L in ipairs(world or {}) do
+        local U = L.above and byid[L.above]
+        if U and incal[L.id] and incal[U.id] and U.region == L.region and not (regular or {})[L.id] and not (regular or {})[U.id] then
+          local n = math.min(U.demote or 0, L.promote or 0)
+          if n > 0 then PAIRS[#PAIRS + 1] = { U.id, L.id, n, depth(U) } end
+        end
+      end
+      table.sort(PAIRS, function(a, b) return a[4] < b[4] end)
+      if #PAIRS > 0 then
+        local pp = ffi.C.GetProcAddress(h, "fl26_join_cal_pairs")
+        if pp == nil then log("fl26joindll: this fl26join.dll has no fl26_join_cal_pairs -- January-December leagues of a country of ours keep their clubs at New Year")
+        else
+          local pbuf = ffi.new("uint16_t[?]", 3 * #PAIRS)
+          local txt = {}
+          for i, e in ipairs(PAIRS) do
+            pbuf[3 * i - 3] = e[1]; pbuf[3 * i - 2] = e[2]; pbuf[3 * i - 1] = e[3]
+            txt[#txt + 1] = string.format("%d<->%d %d", e[1], e[2], e[3])
+          end
+          local n = tonumber(ffi.cast("fl26_join_cal_pairs_t", pp)(pbuf, #PAIRS))
+          log(string.format("fl26joindll: %d January-December pair(s) exchanged at New Year: %s", n, table.concat(txt, ", ")))
+        end
       end
     end
     -- fl26reg128: a career saved before it gets its regions back from the 6-bit field on load

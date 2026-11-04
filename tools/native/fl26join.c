@@ -1023,6 +1023,173 @@ __attribute__((naked)) void reg_handler(void)
     "ret\n");
 }
 
+/* ---- promotion and relegation between calendar-year leagues of ours (B315) ----
+ *
+ * huliaanos 03.11.: Finland as a country of its own, four leagues January-December (`season 29
+ * 1`), and at New Year nobody went up or down in any of them. Repro 04.11. (_FL26B315): every
+ * 2025 season fully played (33/27/22/34 rounds), the 2026 lists of 11/49/60/61 the 2025 ones. The
+ * teardown closes them with the New Year list (no league of the game's in region 29, see
+ * teardown_pre), but the season-end pass that follows never has them: no "season end" line for
+ * them, and fl26chain's apply found no INPUT entry for 49 ("entry missing"). So no mover ever
+ * exchanged a pair of them -- not the game's (1-2, 3-4) and not fl26chain's (2-3), which works
+ * on the pass's OUTPUT. Norway and Sweden in the modpack are the same case.
+ *
+ * So the exchange is done here, at the New Year teardown of such a region and before it runs,
+ * while the tables are the season's last: for each pair the loader names (upper, lower, n: the
+ * world's demote of the upper and promote of the lower, top-down), the last n of the upper's
+ * table go down and the first n of the lower's table whose +0x628 is the "no parent" sentinel go
+ * up, as the mover takes them, both lists written through set_clubs 0x141522b50 with the mover's
+ * flag 1 and the league-slot byte swapped as the mover swaps it. A league whose table is not
+ * a whole season (rows short of its list, or a club with fewer matches than another) moves
+ * nobody. Only regions with no league of the game's: where there is one, the game's own pass
+ * has the region (Saudi Arabia, 2026-09-29) and would write its lists after ours. If one of an
+ * exchanged pair still reaches the mover that season, it goes down the no-movement path. */
+#define CTABLE_RVA   0x1579b90  /* league_table(u16 id): rows of 20 bytes in rank order, count at +0x3c0 */
+#define SETCLUBS_RVA 0x1522b50  /* set_clubs(u16 id, vec_u32* handles, u8 flag)                 */
+#define CLUBREC_RVA  0x14bca80  /* club_record(block, handle) -> record or NULL                 */
+#define NOPARENT_RVA 0x351ae44  /* the "no parent club" sentinel the mover compares +0x628 to   */
+#define SLOT7_PROBE_RVA 0xb08f74 /* 0xff here: fl26slot7 made the league slot the whole byte    */
+#define CAL_MAXCLUBS 48
+typedef struct { uint32_t* b; uint32_t* e; uint32_t* c; } vec32_t;
+typedef void (*setclubs_fn)(uint64_t id, vec32_t* v, uint64_t flag);
+typedef unsigned char* (*ctable_fn)(uint64_t id);
+typedef unsigned char* (*clubrec_fn)(unsigned char* block, uint64_t handle);
+#define MAX_CPAIR 64
+typedef struct { uint16_t up, low; uint8_t n; } cpair_t;
+static cpair_t g_cpair[MAX_CPAIR]; static int g_ncpair = 0;
+static uint8_t g_cpair_done[MAX_CPAIR];   /* exchanged this New Year (reset by the July list) */
+static int cal_exchanged(uint16_t id)
+{
+  for (int i = 0; i < g_ncpair; i++) if (g_cpair_done[i] && (g_cpair[i].up == id || g_cpair[i].low == id)) return 1;
+  return 0;
+}
+
+/* n clubs each way between upper (ta: its table, la: its list) and lower; eligible(h) says whether
+   a club of the lower may go up. The new lists go to la/lb. Returns the clubs moved each way, 0
+   when nobody moves, -1 when a table is not a whole season (cal_whole), -2 when a club is not where its
+   table puts it. Pure: no game memory, tested by test_cal_exchange.c. */
+typedef int (*eligible_fn)(uint32_t h);
+/* every club played, and none more than a few matches short: a match the calendar postponed and
+   never fitted in again leaves its two clubs one short at the New Year (B315 run, 61 in 2026:
+   32/33 of 34), and the mover does not hold a league back for it either */
+static int cal_whole(const uint8_t* p, int r)
+{
+  int lo = 255, hi = 0;
+  for (int k = 0; k < r; k++) { if (p[k] < lo) lo = p[k]; if (p[k] > hi) hi = p[k]; }
+  int gap = hi / 8 > 2 ? hi / 8 : 2;
+  return lo > 0 && hi - lo <= gap;
+}
+static int cal_swap(const uint32_t* ta, const uint8_t* pa, int ra, uint32_t* la, int* na,
+                    const uint32_t* tb, const uint8_t* pb, int rb, uint32_t* lb, int* nb,
+                    int n, eligible_fn eligible, uint32_t* down, uint32_t* up)
+{
+  if (n <= 0) return 0;
+  if (ra < *na || rb < *nb || ra < 2 || rb < 2) return -1;
+  if (!cal_whole(pa, ra) || !cal_whole(pb, rb)) return -1;
+  if (n >= ra || n >= rb) return 0;
+  int nd = 0, nu = 0;
+  for (int k = ra - n; k < ra; k++) down[nd++] = ta[k];
+  for (int k = 0; k < rb && nu < n; k++) if (!eligible || eligible(tb[k])) up[nu++] = tb[k];
+  if (nu < n) return 0;                  /* the mover: not enough eligible clubs, nobody goes up */
+  for (int i = 0; i < n; i++) {
+    int ia = -1, ib = -1;
+    for (int j = 0; j < *na; j++) if (la[j] == down[i]) ia = j;
+    for (int j = 0; j < *nb; j++) if (lb[j] == up[i]) ib = j;
+    if (ia < 0 || ib < 0) return -2;
+  }
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < *na; j++) if (la[j] == down[i]) { la[j] = up[i]; break; }
+    for (int j = 0; j < *nb; j++) if (lb[j] == up[i]) { lb[j] = down[i]; break; }
+  }
+  return n;
+}
+
+#ifndef FL26_JOIN_TEST
+static int cal_eligible(uint32_t h)
+{
+  void** owner = *(void***)(uintptr_t)(g_base + OWNER_RVA);
+  unsigned char* blk = owner ? (unsigned char*)owner[0x48 / 8] : 0;
+  unsigned char* c = blk ? ((clubrec_fn)(uintptr_t)(g_base + CLUBREC_RVA))(blk, h) : 0;
+  return c && *(const uint32_t*)(c + 0x628) == *(const uint32_t*)(uintptr_t)(g_base + NOPARENT_RVA);
+}
+static int cal_table(uint16_t id, uint32_t* club, uint8_t* played)
+{
+  unsigned char* t = ((ctable_fn)(uintptr_t)(g_base + CTABLE_RVA))(id);
+  uint32_t rows = t ? *(const uint32_t*)(t + 0x3c0) : 0;
+  if (!t || rows > CAL_MAXCLUBS) return 0;
+  for (uint32_t k = 0; k < rows; k++) { club[k] = *(const uint32_t*)(t + k * 20); played[k] = t[k * 20 + 0x0f]; }
+  return (int)rows;
+}
+static int cal_list(uint16_t id, uint32_t* out)
+{
+  const unsigned char* rec = find_record(id);
+  if (!rec) return -1;
+  int n = 0;
+  while (n < CAL_MAXCLUBS && *(const uint32_t*)(rec + 0x170 + n * 4) != 0xffffffffu) { out[n] = *(const uint32_t*)(rec + 0x170 + n * 4); n++; }
+  return n;
+}
+/* closed[]: the ids this teardown closes for having no league of the game's in their region */
+static void cal_exchange(const uint16_t* closed, int nclosed)
+{
+  void** owner = *(void***)(uintptr_t)(g_base + OWNER_RVA);
+  unsigned char* blk = owner ? (unsigned char*)owner[0x48 / 8] : 0;
+  if (!blk) return;
+  uint32_t mask = *(const unsigned char*)(uintptr_t)(g_base + SLOT7_PROBE_RVA) == 0xff ? 0xff : 0x7f;
+  clubrec_fn club = (clubrec_fn)(uintptr_t)(g_base + CLUBREC_RVA);
+  for (int i = 0; i < g_ncpair; i++) {
+    cpair_t* p = &g_cpair[i];
+    int has_up = 0, has_low = 0;
+    for (int j = 0; j < nclosed; j++) { has_up |= closed[j] == p->up; has_low |= closed[j] == p->low; }
+    if (!has_up || !has_low || g_cpair_done[i]) continue;
+    uint32_t ta[CAL_MAXCLUBS], tb[CAL_MAXCLUBS], la[CAL_MAXCLUBS], lb[CAL_MAXCLUBS], down[CAL_MAXCLUBS], up[CAL_MAXCLUBS];
+    uint8_t pa[CAL_MAXCLUBS], pb[CAL_MAXCLUBS];
+    int ra = cal_table(p->up, ta, pa), rb = cal_table(p->low, tb, pb);
+    int na = cal_list(p->up, la), nb = cal_list(p->low, lb);
+    if (ra <= 0 || rb <= 0 || na <= 0 || nb <= 0) {
+      logf("new year: %u<->%u -- no table or no clubs (%d/%d rows, %d/%d clubs), nobody moves", p->up, p->low, ra, rb, na, nb);
+      continue;
+    }
+    /* the slot bytes of a club staying in each league, before anybody moves */
+    unsigned char* sa = club(blk, la[0]); unsigned char* sb = club(blk, lb[0]);
+    uint32_t slot_up = sa ? sa[0x41c] & mask : 0x7b, slot_low = sb ? sb[0x41c] & mask : 0x7b;
+    int r = cal_swap(ta, pa, ra, la, &na, tb, pb, rb, lb, &nb, p->n, cal_eligible, down, up);
+    if (r <= 0) {
+      logf("new year: %u<->%u -- %s, nobody moves", p->up, p->low,
+           r == -1 ? "a table is not a whole season" : r == -2 ? "a club is not in the league its table says" : "not enough clubs");
+      continue;
+    }
+    for (int k = 0; k < r; k++) {
+      unsigned char* c = club(blk, down[k]); if (c) c[0x41c] = (unsigned char)((c[0x41c] & ~mask) | slot_low);
+      c = club(blk, up[k]);                  if (c) c[0x41c] = (unsigned char)((c[0x41c] & ~mask) | slot_up);
+    }
+    vec32_t va = { la, la + na, la + CAL_MAXCLUBS }, vb = { lb, lb + nb, lb + CAL_MAXCLUBS };
+    ((setclubs_fn)(uintptr_t)(g_base + SETCLUBS_RVA))(p->up, &va, 1);
+    ((setclubs_fn)(uintptr_t)(g_base + SETCLUBS_RVA))(p->low, &vb, 1);
+    g_cpair_done[i] = 1;
+    logf("new year: %u<->%u -- %d down (%08x %08x %08x) %d up (%08x %08x %08x); lists %d/%d",
+         p->up, p->low, r, down[0], r > 1 ? down[1] : 0, r > 2 ? down[2] : 0,
+         r, up[0], r > 1 ? up[1] : 0, r > 2 ? up[2] : 0, na, nb);
+  }
+}
+#else
+static void cal_exchange(const uint16_t* closed, int nclosed) { (void)closed; (void)nclosed; }
+#endif
+
+/* v: n triples (upper, lower, clubs each way), the upper pairs first. Returns the number kept. */
+__declspec(dllexport) int fl26_join_cal_pairs(const uint16_t* v, int n)
+{
+  if ((!v && n) || n < 0) return -1;
+  if (n > MAX_CPAIR) n = MAX_CPAIR;
+  for (int i = 0; i < n; i++) {
+    g_cpair[i].up = v[3 * i]; g_cpair[i].low = v[3 * i + 1];
+    g_cpair[i].n = (uint8_t)(v[3 * i + 2] > CAL_MAXCLUBS ? 0 : v[3 * i + 2]);
+  }
+  g_ncpair = n;
+  memset(g_cpair_done, 0, sizeof g_cpair_done);
+  logf("calendar-year pairs of ours exchanged at New Year: %d", n);
+  return n;
+}
+
 /* ---- the season-end split ----
  *
  * Measured 2026-09-23 at two July rollovers. The season-end filter 0x141365c50 hands the mover
@@ -1070,6 +1237,7 @@ vec16_t* mover_pre(void* ctx, vec16_t* in)
     const unsigned char* rec = find_record(id);
     int ok = rec && (has(id) & 1);
     const char* why = "no table";
+    if (ok && cal_exchanged(id)) { ok = 0; why = "moved at New Year"; }
     if (ok) {
       uint16_t below = *(const uint16_t*)(rec + 0x7e);
       if (below != 0xffff && find_record(below) && !(has(below) & 1)) { ok = 0; why = "below has none"; }
@@ -1445,7 +1613,8 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   { int ny = 0; for (int j = 0; j < n; j++) if (in->b[j] == 8) { ny = 1; break; }
     timeline_check("teardown", ny); }
   if (euro) memset(g_door_yes, 0, sizeof g_door_yes);   /* a new season: nobody let in yet */
-  if (euro) { g_cal_midseason = 1; memset(g_cal_shut, 0, sizeof g_cal_shut); g_reg_logged = 0; }
+  if (euro) { g_cal_midseason = 1; memset(g_cal_shut, 0, sizeof g_cal_shut); g_reg_logged = 0;
+              memset(g_cpair_done, 0, sizeof g_cpair_done); }
   char buf[320]; int p = 0; buf[0] = 0;
   for (int j = 0; j < n; j++) {
     uint16_t id = in->b[j];
@@ -1482,6 +1651,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   /* Any other list: a calendar-year league of ours closes with the shipped leagues of its own
      region -- the season group the list is. */
   int cadd = 0, cdup = 0; char cbuf[160]; int cp = 0; cbuf[0] = 0;
+  uint16_t alone[MAX_IDS]; int nalone = 0;   /* closed here with no league of the game's in their region */
   /* The New Year list is the one with shipped id 8, as the July list is the one with 2. A
      calendar-year league of ours in a region with no league of the game's (Norway and Sweden
      in the modpack, regions 39 and 45) never has a mate on any list: it was never closed, the
@@ -1492,28 +1662,37 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   for (int j = 0; j < n; j++) if (in->b[j] == 8) { newyear = 1; break; }
   if (!euro) {
     for (int i = 0; i < g_ncal; i++) {
-      uint16_t id = g_cal[i]; int dup = 0, mate = 0;
+      uint16_t id = g_cal[i]; int dup = 0, mate = 0, game = 0;
       const unsigned char* rec = find_record(id);
       if (!rec) continue;
       int reg = rec_region(rec);
       for (int j = 0; j < k; j++) {
         if (g_td_list[j] == id) dup = 1;
-        else if (!ours(g_td_list[j]) && rec_region(find_record(g_td_list[j])) == reg) mate = 1;
+        else if (!ours(g_td_list[j]) && rec_region(find_record(g_td_list[j])) == reg) {
+          mate = 1;
+          /* B315: our own cup of that country (on the New Year list as a calendar cup) is no
+             league of the game's -- the exchange below goes by this one */
+          int cup = 0;
+          for (int c = 0; c < g_nbuilder_extra; c++) cup |= g_builder_extra[c] == g_td_list[j];
+          if (!cup) game = 1;
+        }
       }
       /* Already on the list -- a shipped calendar-year id the game closes itself (Uruguay on
          93 in a new country of its own, no shipped league in its region): it closes all the
          same, so the door's memory of it goes too. Kept, the July door YES and the mid-season
          mark held it out on day 41 and it played no second season (2026-10-01: "door(93)
          refused ... joins on day 41", then 13 of ours "already in a season", 93 without). */
-      if (dup) { if (id < 256) { g_door_yes[id] = 0; g_cal_shut[id] = 1; } cdup++; continue; }
+      if (dup) { if (id < 256) { g_door_yes[id] = 0; g_cal_shut[id] = 1; } cdup++; if (!game) alone[nalone++] = id; continue; }
       if (id < 256 && g_cal_shut[id]) continue;
       if ((!mate && !newyear) || k >= MAX_LIST) continue;
       g_td_list[k++] = id; changed++; cadd++;
+      if (!game) alone[nalone++] = id;
       if (id < 256) { g_door_yes[id] = 0; g_cal_shut[id] = 1; }
       if (cp < (int)sizeof cbuf - 8) cp += snprintf(cbuf + cp, sizeof cbuf - (size_t)cp, "%u ", id);
     }
   }
   if (cadd || cdup) g_cal_midseason = 0;
+  if (nalone && g_ncpair) cal_exchange(alone, nalone);
   if (cdup) logf("teardown: %d calendar-year league(s) of ours on the list itself, closed with it", cdup);
   if (!changed) return in;
   if (cadd) logf("teardown: calendar-year leagues of ours closed with their region: [%s]", cbuf);
