@@ -1,5 +1,9 @@
 # FL Mod Studio guides
 
+**Just updated to 0.3.0, or starting with FL27?** [Quick start for 0.3.0](en/quick-start-0.3.0.md)
+([hrvatski](hr/quick-start-0.3.0.md) · [español](es/quick-start-0.3.0.md) · [português](pt/quick-start-0.3.0.md) ·
+[français](fr/quick-start-0.3.0.md)).
+
 **Which guide?** Someone gave you a world, a modpack or a `.fl26pack` file: **Install a ready
 pack**. You want to pick real leagues from the NewLife Database or make your own, and share
 them: **Make your own leagues and packs**. Every page and option in depth: the **Mod Studio

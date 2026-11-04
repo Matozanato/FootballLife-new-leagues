@@ -2,6 +2,8 @@
 
 > **English** · [hrvatski](../hr/mod-studio-guide.md) · [español](../es/mod-studio-guide.md) · [português](../pt/mod-studio-guide.md) · [français](../fr/mod-studio-guide.md)
 
+> **New in 0.3.0 or just updated?** [Quick start for 0.3.0 (FL26 and FL27)](quick-start-0.3.0.md).
+>
 > **New to Mod Studio?** Two step-by-step guides, every click in order: [Install a ready pack](install-a-pack.md)
 > (someone gave you a world, a modpack or a `.fl26pack`) · [Make your own leagues and packs](make-your-own-leagues.md)
 > (you pick the leagues and build them). This guide explains every page and option in depth.
@@ -395,7 +397,7 @@ work on the tabs of **2. My world**.
 | **Clubs** | 10 to 24 (1 to 24 for clubs in no league). |
 | **Clubs in no league** | For one club, or a few, without a league around them (0.1.8): say only BATE Borisov from Belarus. Pick the group they go in: *Other European teams*, *Other Latin American teams*, *Other Asia-Oceania teams*, *Other Africa teams* or *Classic Teams* -- where the game keeps its own clubs that play in no league (Dynamo Kyiv, Wydad Casablanca ...). In Select Team they show under that group. They get names, crests, kits, a manager, a formation, players and a home stadium like any new club (**Edit club**, **Players**); the name above is only how Mod Studio lists them. They play no league, no cup and no European competition, and everything else in this dialog goes grey. On *Leagues* such a group shows *no league (...)* instead of a league ID. |
 | **Format** | *Everyone plays everyone*, 1 to 4 times, *splits in two (Scottish style)*, or *Apertura and Clausura*: two tournaments a season (September to early January, January to May), each from zero points, then playoffs of 8 or 4 clubs (or none). The whole season's table decides promotion and relegation. 18 clubs at most. A split is 46 rounds at most, before and after the split together (16 clubs twice is 30, so its biggest group twice can be 8 clubs, 14 rounds). One league per country can be split or Apertura/Clausura for now. **The split and Apertura and Clausura are experimental** (0.2.4): they work, but still have more open bugs than everyone plays everyone, the fully tested format. The window says so under the formats. Please keep reporting what you find. |
-| **Division** | *(top division)*, or the league above it: another new league, or one of the game's. To put a new league under another new league in one step: select it and press **Add lower tier** (it takes the country, club count, format and up/down of the league above; only the name is left). A league another new league is already under is grey (0.1.9): the game follows one link down from a league, so groups of one division (three Serie C groups under Serie B) are not possible yet. |
+| **Division** | *(top division)*, or the league above it: another new league, or one of the game's. Since 0.3.0 the list has the game's split leagues too (Scottish Premiership, 3F Superliga, Jupiler Pro League): the league under one goes up and down with its regular phase, as in the Modpack. To put a new league under another new league in one step: select it and press **Add lower tier** (it takes the country, club count, format and up/down of the league above; only the name is left). A league another new league is already under is grey (0.1.9): the game follows one link down from a league, so groups of one division (three Serie C groups under Serie B) are not possible yet. |
 | **Up / down** | How many clubs change places with the league above at the end of the season. |
 | **Season** | Top division of a new country only: *August to May* (the default) or *February to December*, like Brazil, Japan or Saudi Arabia: clubs go up and down at New Year, and the divisions below it follow it. Not with a split, Apertura/Clausura or a league cup yet -- nor a split or Apertura/Clausura on a division under a February-to-December league, the game's Liga BetPlay or J1 League included. |
 | **Europe** | Top division only: which league position goes to which European competition. **Top flight: 1st UCL qualifying, 2nd UEL, 3rd UECL** fills the usual three (*... qualifying* are the August play-offs, see 8.2); **Add place**, the ✕ on a row and **Clear** for anything else. Each position once, and only positions the league has. Below 1 the position reads **Cup winner** (0.1.7): the winner of the country's cup (a new country needs **National cup**) -- and when the winner already has a European place through the league, the place goes down the league to its next club, as UEFA does it. Since 0.2.0 the cup winner can also go to the cups Mod Studio builds (Copa Sudamericana, CAF Confederation Cup, AFC Champions League Two ...); in a new career, before anyone has won the cup, that place goes to the league's next club too. A league of the game can have one too (*European places of the game's leagues*). Leave it empty for a lower tier. The preset follows the country: Asia gets the AFC Champions League and AFC Champions League Two, South America the Libertadores and the Copa Sudamericana, Africa the CAF Champions League and CAF Confederation Cup, North and Central America the CONCACAF Champions Cup, Oceania the OFC Champions League. The **AFC Challenge League** (0.2.0) is the AFC's third cup, below the AFC Champions League Two as the Conference League is in Europe; pick it with **Add place** (*AFC CHL* in the Leagues list). Those seven cups the game does not have are built with the world (section 8.2). A *Libertadores qualifying* place takes the place of a club of the game in the qualifying round (the last one of the country with the most clubs in it), at most six of its eight places; **Check the plan** says which leagues are left out past that. |
@@ -828,7 +830,9 @@ birth dates, positions and ratings on the game's scale, and the clubs' colours. 
 player in it has an id of its own that stays the same in every version of the database. It is
 not on GitHub: get it from the NewLife channel of our [Discord](https://discord.gg/StQqtk3G3M).
 It comes in parts, one per continent (a big one in more than one), plus *Free agents*, each
-under 10 MB. Download only the parts you want.
+under 10 MB. Download only the parts you want. **In FL27 use NewLife 1.6b3 or later** (1.6b4 is
+the newest with 0.3.0): it knows which clubs FL27 has and under which ids; older versions were
+made for FL26.
 
 1. Put the parts you downloaded in one folder. Do not unpack them: Mod Studio reads the zips as
    they are. (They are LZMA zips: 7-Zip opens them, Windows' own zip viewer does not.)
@@ -839,8 +843,12 @@ under 10 MB. Download only the parts you want.
    Clubs, Players, Level) to sort by it, again to turn the order round (0.2.0); the list opens
    sorted by country.
 3. Select one or more leagues (Ctrl or Shift for more) and press **Add to your world**. Each
-   becomes a new league with its clubs and their squads, the top division of its country. Change
-   its division, format, European places and the rest on *Leagues*, like any other league.
+   becomes a new league with its clubs and their squads. A league of a country the game already
+   has a league of (Greek Super League 2, Scottish Championship ...) goes in as the division
+   under the game's lowest league there, with promotion and relegation, unless a league of yours
+   is under it already (0.3.0); the page says which. Any other league is the top division of its
+   country. Change its division, format, European places and the rest on *Leagues*, like any
+   other league.
 4. **Build and install** and start a new career (section 8.2).
 
 - **Your own line-up** (0.1.7): untick a club in the list on the right to leave it out, and

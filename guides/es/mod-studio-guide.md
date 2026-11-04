@@ -2,6 +2,8 @@
 
 > [English](../en/mod-studio-guide.md) · [hrvatski](../hr/mod-studio-guide.md) · **español** · [português](../pt/mod-studio-guide.md) · [français](../fr/mod-studio-guide.md)
 
+> **¿Empiezas con 0.3.0 o acabas de actualizar?** [Inicio rápido de 0.3.0 (FL26 y FL27)](quick-start-0.3.0.md).
+>
 > **¿Primera vez con Mod Studio?** Dos guías paso a paso, cada clic en orden: [Instalar un paquete listo](install-a-pack.md)
 > (alguien te dio un mundo, un modpack o un `.fl26pack`) · [Crear tus propias ligas y paquetes](make-your-own-leagues.md)
 > (tú eliges las ligas y las construyes). Esta guía explica cada página y opción a fondo.
@@ -416,7 +418,7 @@ Trabajas en las pestañas de **2. Mi mundo**.
 | **Clubes** | De 10 a 24 (de 1 a 24 para clubes sin liga). |
 | **Clubes sin liga** | Para un club, o unos pocos, sin una liga alrededor (0.1.8): por ejemplo solo el BATE Borisov de Bielorrusia. Elige el grupo al que van: *Other European teams*, *Other Latin American teams*, *Other Asia-Oceania teams*, *Other Africa teams* o *Classic Teams* -- donde el juego guarda sus propios clubes que no juegan en ninguna liga (Dynamo Kyiv, Wydad Casablanca ...). En Select Team aparecen en ese grupo. Tienen nombre, escudo, equipaciones, entrenador, formación, jugadores y estadio como cualquier club nuevo (**Editar club**, **Jugadores**); el nombre de arriba es solo cómo los lista Mod Studio. No juegan liga, copa ni competición europea, y todo lo demás de este diálogo sale en gris. En *Ligas* un grupo así muestra *sin liga (...)* en lugar de un ID de liga. |
 | **Formato** | *Todos contra todos*, de 1 a 4 veces, *se divide en dos (estilo escocés)* o *Apertura y Clausura*: dos torneos por temporada (septiembre a principios de enero, enero a mayo), cada uno desde cero puntos, luego una liguilla de 8 o 4 clubes (o ninguna). La tabla de toda la temporada decide ascensos y descensos. 18 clubes como máximo. Una liga dividida tiene 46 jornadas como máximo, antes y después de la división juntas (16 clubes dos veces son 30, así que su grupo más grande dos veces puede tener 8 clubes, 14 jornadas). Por ahora, solo una liga por país puede dividirse o jugar Apertura/Clausura. **La división en dos y el Apertura y Clausura son experimentales** (0.2.4): funcionan, pero aún tienen más fallos abiertos que todos contra todos, el formato totalmente probado. La ventana lo dice debajo de los formatos. Sigue avisando de lo que encuentres. |
-| **División** | *(primera división)*, o la liga que tiene encima: otra liga nueva o una del juego. Para poner una liga nueva bajo otra liga nueva en un paso: selecciónala y pulsa **Añadir división inferior** (toma el país, el número de clubes, el formato y los ascensos/descensos de la liga de arriba; solo falta el nombre). Una liga que ya tiene otra liga nueva debajo sale en gris (0.1.9): el juego solo sigue un enlace hacia abajo desde una liga, así que los grupos de una misma división (tres grupos de la Serie C bajo la Serie B) todavía no son posibles. |
+| **División** | *(primera división)*, o la liga que tiene encima: otra liga nueva o una del juego. Desde 0.3.0 la lista tiene también las ligas divididas del juego (Scottish Premiership, 3F Superliga, Jupiler Pro League): la liga que va debajo de una de ellas sube y baja con su fase regular, como en el Modpack. Para poner una liga nueva bajo otra liga nueva en un paso: selecciónala y pulsa **Añadir división inferior** (toma el país, el número de clubes, el formato y los ascensos/descensos de la liga de arriba; solo falta el nombre). Una liga que ya tiene otra liga nueva debajo sale en gris (0.1.9): el juego solo sigue un enlace hacia abajo desde una liga, así que los grupos de una misma división (tres grupos de la Serie C bajo la Serie B) todavía no son posibles. |
 | **Asc. / desc.** | Cuántos clubes cambian de sitio con la liga de arriba al final de la temporada. |
 | **Temporada** | Solo para la primera división de un país nuevo: *agosto a mayo* (por defecto) o *febrero a diciembre*, como Brasil, Japón o Arabia Saudí: los clubes suben y bajan en Año Nuevo, y las divisiones de abajo la siguen. Todavía no con división en dos, Apertura/Clausura ni copa de la liga -- ni con división en dos o Apertura/Clausura en una división debajo de una liga de febrero a diciembre, también la Liga BetPlay o la J1 League del juego. |
 | **Europa** | Solo para primera división: qué puesto de la liga va a qué competición europea. **Primera división: 1.º fase previa UCL, 2.º UEL, 3.º UECL** rellena las tres habituales (*... (fase previa)* son los play-offs de agosto, ver 8.2); **Añadir plaza**, la ✕ de una fila y **Borrar** para todo lo demás. Cada puesto una sola vez, y solo puestos que la liga tiene. Por debajo de 1 el puesto dice **Campeón de copa** (0.1.7): el campeón de la copa del país (un país nuevo necesita **Copa nacional**) -- y si el campeón ya tiene plaza europea por la liga, la plaza baja por la liga al siguiente club, como hace la UEFA. Desde 0.2.0 el campeón de copa también puede ir a las copas que construye Mod Studio (Copa Sudamericana, Copa Confederación CAF, AFC Champions League Two ...); en una carrera nueva, antes de que nadie haya ganado la copa, esa plaza también va al siguiente club de la liga. Una liga del juego también puede tenerla (*Plazas europeas de las ligas del juego*). Déjalo vacío para una categoría inferior. La plantilla sigue al país: Asia recibe la AFC Champions League y la AFC Champions League Two, Sudamérica la Libertadores y la Copa Sudamericana, África la CAF Champions League y la Copa Confederación CAF, Norteamérica y Centroamérica la CONCACAF Champions Cup, Oceanía la OFC Champions League. La **AFC Challenge League** (0.2.0) es la tercera copa de la AFC, por debajo de la AFC Champions League Two, como la Conference League en Europa; se elige con **Añadir plaza** (*AFC CHL* en la lista de ligas). Esas siete copas que el juego no tiene se construyen con el mundo (sección 8.2). Una plaza de *clasificación a la Libertadores* ocupa el sitio de un club del juego en la ronda previa (el último del país con más clubes en ella), como mucho seis de sus ocho plazas; **Comprobar el plan** dice qué ligas se quedan fuera pasado ese número. |
@@ -850,7 +852,9 @@ nombres, fechas de nacimiento, posiciones y valoraciones en la escala del juego,
 los clubes. Cada club y jugador tiene su propio ID, el mismo en todas las versiones de la base.
 No está en GitHub: descárgala del canal NewLife de nuestro [Discord](https://discord.gg/StQqtk3G3M).
 Viene en partes, una por continente (uno grande en varias), más *Free agents*, cada una de menos
-de 10 MB. Descarga solo las partes que quieras.
+de 10 MB. Descarga solo las partes que quieras. **En FL27 usa NewLife 1.6b3 o posterior** (1.6b4 es
+la más nueva con 0.3.0): sabe qué clubes tiene FL27 y con qué ID; las versiones anteriores se
+hicieron para FL26.
 
 1. Pon las partes descargadas en una carpeta. No las descomprimas: Mod Studio lee los zip tal
    cual. (Son zip LZMA: 7-Zip los abre, el visor de zip de Windows no.)
@@ -861,7 +865,10 @@ de 10 MB. Descarga solo las partes que quieras.
    de una columna (Liga, País, Clubes, Jugadores, Nivel) ordena por ella, otro clic invierte el
    orden (0.2.0); la lista se abre ordenada por país.
 3. Selecciona una o varias ligas (Ctrl o Mayús para más) y pulsa **Agregar a tu mundo**. Cada una
-   se convierte en una liga nueva con sus clubes y sus plantillas, primera división de su país.
+   se convierte en una liga nueva con sus clubes y sus plantillas. Una liga de un país en el que el
+   juego ya tiene una liga (Greek Super League 2, Scottish Championship ...) entra como la división
+   bajo la liga más baja del juego en ese país, con ascensos y descensos, salvo que ya haya una liga
+   tuya debajo (0.3.0); la página dice cuál. Cualquier otra liga es la primera división de su país.
    Cambia su división, formato, plazas europeas y lo demás en *Ligas*, como cualquier otra.
 4. **Construir e instalar** y empieza una carrera nueva (sección 8.2).
 
