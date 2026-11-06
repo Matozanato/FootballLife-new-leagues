@@ -2939,7 +2939,7 @@ class PasteClubFieldDialog(PasteDialog):
         self.title = "Paste manager names" if manager else "Paste short names"
         super().__init__(parent, [], self.title, "One value per line, in displayed club order. Blank = default.")
         self.include_original = None
-        if manager and original_count:
+        if original_count:
             self.include_original = QCheckBox(_("Include original game clubs"))
             self.v.insertWidget(1, self.include_original)
             self.expected = QLabel()
@@ -2947,7 +2947,8 @@ class PasteClubFieldDialog(PasteDialog):
 
             def update_count():
                 self.count = len(lines) if self.include_original.isChecked() else len(lines) - original_count
-                self.expected.setText(_("Expected manager names: %d") % self.count)
+                self.expected.setText(_("Expected manager names: %d" if manager else
+                                        "Expected short names: %d") % self.count)
 
             self.include_original.toggled.connect(update_count)
             update_count()
@@ -4004,9 +4005,9 @@ class NewClubs(BuilderPage):
         d = PasteClubFieldDialog(self, lines, manager, sum(k in game for k in order))
         if not d.finish() or d.result is None:
             return
-        if manager and d.include_original is not None and not d.include_original.isChecked():
+        if d.include_original is not None and not d.include_original.isChecked():
             order = [k for k in order if k not in game]
-        if manager and not order:
+        if not order:
             return
         values = (values + [""] * L["clubs"])[:L["clubs"]]
         for k, value in zip(order, d.result):
