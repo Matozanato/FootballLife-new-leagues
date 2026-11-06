@@ -1404,16 +1404,17 @@ class ClubDialog(Dialog):
             self.form.addRow("", hint(_("the stadium of the game the club plays at; a home stadium of your "
                                         "stadium pack above, when it has one, is shown in its place")))
         self.coach = None
-        if coach is not None:              # a new club: its manager's name
+        if coach is not None:
             self.coach = QLineEdit(coach)
             self.coach.setMaxLength(45)
-            self.coach.setPlaceholderText(_("(made up from players of the club's country)"))
+            self.coach.setPlaceholderText(_("(the game's own)" if was else "(made up from players of the club's country)"))
             self.form.addRow(_("Manager"), self.coach)
-            self.form.addRow("", hint(_("the manager's name in the game; empty = a numbered one")))
+            self.form.addRow("", hint(_("empty = the game's original manager name" if was else
+                                       "the manager's name in the game; empty = a numbered one")))
         self.coach_name = coach
         self.portrait = None
         if portrait is not None:           # the manager's portrait (the recipe's "coach_portrait")
-            self.portrait = PictureField(portrait, 64, "(the game's own)" if coach is None else "(none)")
+            self.portrait = PictureField(portrait, 64, "(the game's own)" if was else "(none)")
             self.form.addRow(_("Manager picture"), self.portrait)
             self.form.addRow("", hint(_("PNG or JPG, made 256 x 256 at Build; the game shows it in Edit mode "
                                         "and the Master League")))
@@ -1442,6 +1443,11 @@ class ClubDialog(Dialog):
         if short and (not all(c.isalnum() for c in short) or not B.short_name(short)):
             error(self, "Club", _("The short name takes letters and digits only."))
             return
+        if self.coach is not None:
+            problem = B.mkcoaches.name_problem(self.coach.text().strip())
+            if problem:
+                error(self, "Club", _(problem))
+                return
         if self.stadium is not None:
             try:
                 self.stadium_value = self.stadium.value()
@@ -2908,9 +2914,9 @@ class OurCupsDialog(Dialog):
 
 
 class PasteDialog(Dialog):
-    def __init__(self, parent, lines):
-        super().__init__(parent, "Paste club names")
-        self.v.insertWidget(0, QLabel(_("One club per line, in order.")))
+    def __init__(self, parent, lines, title="Paste club names", instruction="One club per line, in order."):
+        super().__init__(parent, title)
+        self.v.insertWidget(0, QLabel(_(instruction)))
         self.text = QPlainTextEdit("\n".join(lines))
         self.text.setMinimumSize(360, 380)
         self.v.insertWidget(1, self.text)
@@ -2921,6 +2927,41 @@ class PasteDialog(Dialog):
         while r and not r[-1]:
             r.pop()
         self.result = r
+        self.accept()
+
+
+class PasteClubFieldDialog(PasteDialog):
+    """An exact list: blank rows keep their place and clear the corresponding override."""
+
+    def __init__(self, parent, lines, manager=False):
+        self.manager = manager
+        self.count = len(lines)
+        self.title = "Paste manager names" if manager else "Paste short names"
+        super().__init__(parent, [], self.title, "One value per line, in displayed club order. Blank = default.")
+
+    def ok(self):
+        text = self.text.toPlainText()
+        rows = [x.strip() for x in text.split("\n")] if text else []
+        # Accept a final line ending from the clipboard, without dropping blank club rows.
+        if len(rows) == self.count + 1 and not rows[-1]:
+            rows.pop()
+        if len(rows) != self.count:
+            error(self, self.title, _("%d values for %d clubs: enter exactly one value per club.")
+                  % (len(rows), self.count))
+            return
+        for i, value in enumerate(rows):
+            if self.manager:
+                problem = B.mkcoaches.name_problem(value)
+                valid = problem is None
+                problem = _(problem) if problem else ""
+            else:
+                valid = (not value or (len(value) <= 3 and all(c.isalnum() for c in value)
+                                       and bool(B.short_name(value)) and len(B.ascii_letters(value)) <= 3))
+                problem = _("Short names take up to three letters or digits only.")
+            if not valid:
+                error(self, self.title, _("Line %d: %s") % (i + 1, problem))
+                return
+        self.result = rows if self.manager else [B.short_name(x) for x in rows]
         self.accept()
 
 
@@ -3491,7 +3532,10 @@ class NewClubs(BuilderPage):
                     "Undo Club of the game: the place a club of the game took gets a new club again"),
                    ("Insert club", lambda: self.shift(1)),
                    ("Remove club", lambda: self.shift(-1)), ("Move to another league...", self.move_club), None,
-                   ("Paste names...", self.paste), ("Load names from file...", self.load_file),
+                   ("Paste names...", self.paste),
+                   ("Paste manager names", lambda: self.paste_field(manager=True)),
+                   ("Paste short names", self.paste_field),
+                   ("Load names from file...", self.load_file),
                    ("Import crests...", lambda: import_crests(self))])
         top = QHBoxLayout()
         top.addWidget(QLabel(_("League")))
@@ -3924,6 +3968,53 @@ class NewClubs(BuilderPage):
             with open(p, encoding="utf-8-sig", errors="replace") as fh:
                 self.set_names([r[0].strip() for r in csv.reader(fh) if r and r[0].strip()])
 
+    def paste_field(self, manager=False):
+        L = self.league()
+        if not L:
+            return
+        game = self.game_places(L)
+        original = B.mkcoaches.club_names(self.project.base) if manager and game else {}
+        key = "club_coaches" if manager else "club_abbrs"
+        values = list(L.get(key) or [])
+        order = [self.tree.topLevelItem(i).data(0, Qt.UserRole)
+                 for i in range(self.tree.topLevelItemCount())]
+        lines = []
+        for k in order:
+            if k in game:
+                tid = int(game[k]["id"])
+                field = "coach" if manager else "abbr"
+                default = original.get(tid, "") if manager else self.project.game_cl.get(tid, ("", ""))[1]
+                lines.append((self.project.recipe.get("edits", {}).get("clubs") or {}).get(str(tid), {}).get(field)
+                             or default)
+            else:
+                lines.append(values[k] if k < len(values) else "")
+        d = PasteClubFieldDialog(self, lines, manager)
+        if not d.finish() or d.result is None:
+            return
+        values = (values + [""] * L["clubs"])[:L["clubs"]]
+        for k, value in zip(order, d.result):
+            if k in game:
+                tid = int(game[k]["id"])
+                edits = self.project.edits("clubs")
+                e = dict(edits.get(str(tid), {}))
+                field = "coach" if manager else "abbr"
+                default = original.get(tid, "") if manager else self.project.game_cl.get(tid, ("", ""))[1]
+                if value and value != default:
+                    e[field] = value
+                else:
+                    e.pop(field, None)
+                if e:
+                    edits[str(tid)] = e
+                else:
+                    edits.pop(str(tid), None)
+            else:
+                values[k] = value
+        if manager and not any(values):
+            L.pop(key, None)
+        else:
+            L[key] = values
+        self.project.touch()
+
 
 class SwapDialog(Dialog):
     """a club of another league of the game, to trade places with club tid"""
@@ -4009,8 +4100,10 @@ def edit_game_club(page, tid):
     of the game on New clubs). True when something was kept."""
     project = page.project
     n, a = project.game_cl[tid]
+    original_coach = B.mkcoaches.club_names(project.base).get(tid, "")
     e = old = project.edits("clubs").get(str(tid), {})
     d = ClubDialog(page, e.get("name") or n, e.get("abbr") or a, e.get("crest"), was=(n, a),
+                   coach=e.get("coach") or original_coach,
                    portrait=coach_portrait(project, str(tid)), stadium=club_stadium(project, str(tid)),
                    stadium_lib=stadium_lib(page.app), tid=tid)
     if not (d.finish() and d.result):
@@ -4025,6 +4118,8 @@ def edit_game_club(page, tid):
         e["abbr"] = short
     if crest:
         e["crest"] = crest
+    if d.coach_name and d.coach_name != original_coach:
+        e["coach"] = d.coach_name
     if "kit" in old:                     # a place NewLife gave another club (B57): its shield stays
         e["kit"] = old["kit"]
     if e:

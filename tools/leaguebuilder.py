@@ -4773,6 +4773,60 @@ def club_order(pl, ents, regs, raw, top_id, log=print):
         log("  clubs A-Z in %d league(s)" % done)
 
 
+def write_managers(pl, base, db, raw, min_id, game, world, log=print):
+    """Write only the generated world's tables; original-club names are team-specific overrides."""
+    overrides = {int(t): e["coach"] for t, e in ((pl.get("edits") or {}).get("clubs") or {}).items()
+                 if "coach" in e}
+    cpath = os.path.join(base, "Coach.bin")
+    if not os.path.exists(cpath):
+        if any(overrides.values()):
+            raise BuildError("Manager overrides require the source Coach.bin; unpack the game's tables again.")
+        with open(os.path.join(db, "Team.bin"), "wb") as f:
+            f.write(pesdb.wesys_pack(bytes(raw)))
+        return raw
+    with open(cpath, "rb") as f:
+        craw = f.read()
+    coaches = pesdb.wesys_unpack(craw)
+    named = {t: (p.get("club_coaches") or [])[k].strip() for p in pl["leagues"]
+             for k, t in enumerate(p["teams"])
+             if k < len(p.get("club_coaches") or []) and (p["club_coaches"][k] or "").strip()
+             and k not in game_places(p)}
+    ppath = os.path.join(base, "Player.bin")
+    pool = None
+    if os.path.exists(ppath):
+        with open(ppath, "rb") as f:
+            pool = mkcoaches.name_pool(pesdb.wesys_unpack(f.read()))
+    add, st = mkcoaches.add_coaches(coaches, bytes(raw), min_id, names=named, pool=pool)
+    try:
+        coaches, teams, clones = mkcoaches.rename_coaches(coaches + add, bytes(raw), overrides)
+    except ValueError as e:
+        raise BuildError(str(e)) from e
+    # Coach portraits are keyed by ID outside Coach.bin. Copy the visible source portrait for clones.
+    if clones:
+        from mkcatflags import Source
+        source = Source(game, world)
+        try:
+            for new_id, old_id in clones.items():
+                rel = "common/render/symbol/coach/coach_%d.png"
+                picture = source.find(rel % old_id)
+                if picture:
+                    target = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(db))),
+                                          *(rel % new_id).split("/"))
+                    os.makedirs(os.path.dirname(target), exist_ok=True)
+                    shutil.copyfile(picture, target)
+                else:
+                    log("  manager %d: source portrait %d unavailable; use Manager picture to supply one"
+                        % (new_id, old_id))
+        finally:
+            source.close()
+    with open(os.path.join(db, "Coach.bin"), "wb") as f:
+        f.write(pesdb.wesys_pack(coaches, craw[:3]))
+    with open(os.path.join(db, "Team.bin"), "wb") as f:
+        f.write(pesdb.wesys_pack(teams))
+    log("  %d managers; %d shared managers copied" % (st["added"], len(clones)))
+    return bytearray(teams)
+
+
 def build(pl, base, game, replace=False, log=print):
     flpaths.use_game(game, siderdir.find(game))   # the exe readers (caltab, region headings) look here
     use_squad(pl)                                 # World options > Players per new club
@@ -5075,21 +5129,7 @@ def build(pl, base, game, replace=False, log=print):
     if cleared:
         nopool += cleared
         log("  %d club(s) with a league place out of the game's other-clubs groups" % len(cleared))
-    open(os.path.join(db, "Team.bin"), "wb").write(pesdb.wesys_pack(bytes(raw)))
-    cpath = os.path.join(base, "Coach.bin")
-    if os.path.exists(cpath):
-        craw = open(cpath, "rb").read()
-        coaches = pesdb.wesys_unpack(craw)
-        named = {t: (p.get("club_coaches") or [])[k].strip() for p in clubs["leagues"]
-                 for k, t in enumerate(p["teams"])
-                 if k < len(p.get("club_coaches") or []) and (p["club_coaches"][k] or "").strip()
-                 and k not in game_places(p)}
-        ppath = os.path.join(base, "Player.bin")
-        pool = (mkcoaches.name_pool(pesdb.wesys_unpack(open(ppath, "rb").read()))
-                if os.path.exists(ppath) else None)
-        add, st = mkcoaches.add_coaches(coaches, bytes(raw), top_id + 1, names=named, pool=pool)
-        open(os.path.join(db, "Coach.bin"), "wb").write(pesdb.wesys_pack(coaches + add, craw[:3]))
-        log("  %d managers" % st["added"])
+    raw = write_managers(clubs, base, db, raw, top_id + 1, game, out, log)
     lineups, donors = {}, {}
     wanted = club_formations(clubs)
     if wanted:
