@@ -44,10 +44,13 @@ class BulkFieldsTest(unittest.TestCase):
                           "club_coaches": ["One", "Two", "Three"], "club_crests": [None] * 3}, [2, 0, 1])
         self.addCleanup(self.page.close)
 
-    def paste(self, text, manager=False, cancel=False):
+    def paste(self, text, manager=False, cancel=False, include_original=False):
         def finish(dialog):
             if cancel:
                 return False
+            if dialog.include_original is not None:
+                self.assertFalse(dialog.include_original.isChecked())
+                dialog.include_original.setChecked(include_original)
             dialog.text.setPlainText(text)
             dialog.ok()
             return dialog.result is not None
@@ -112,10 +115,10 @@ class BulkFieldsTest(unittest.TestCase):
         before = copy.deepcopy(self.page.project.recipe)
         with patch.object(UI.B.mkcoaches, "club_names", return_value={100: "Original"}):
             for text in ("C\nA", "C\nA\nB\nExtra", "C\nA\n" + "X" * 46):
-                self.paste(text, manager=True)
+                self.paste(text, manager=True, include_original=True)
                 self.assertEqual(self.page.project.recipe, before)
                 self.assertFalse(self.page.project.dirty)
-            self.paste("C\nGame manager\nB", manager=True)
+            self.paste("C\nGame manager\nB", manager=True, include_original=True)
         expected = copy.deepcopy(before)
         expected["edits"]["clubs"]["100"]["coach"] = "Game manager"
         expected["leagues"][0]["club_coaches"] = ["One", "B", "C"]
@@ -131,7 +134,7 @@ class BulkFieldsTest(unittest.TestCase):
         self.page.project.redo()
         self.assertEqual(self.page.project.recipe, expected)
         with patch.object(UI.B.mkcoaches, "club_names", return_value={100: "Original"}):
-            self.paste("C\n\nB", manager=True)
+            self.paste("C\n\nB", manager=True, include_original=True)
         self.assertEqual(self.page.project.edits("clubs")["100"], before["edits"]["clubs"]["100"])
 
     def test_individual_original_manager(self):
@@ -161,10 +164,88 @@ class BulkFieldsTest(unittest.TestCase):
         self.page.league()["game_clubs"] = [{"at": i, "id": 100 + i} for i in range(3)]
         before = copy.deepcopy(self.page.league())
         with patch.object(UI.B.mkcoaches, "club_names", return_value={100: "A", 101: "B", 102: "C"}):
-            self.paste("Third\nFirst\nSecond", manager=True)
+            self.paste("Third\nFirst\nSecond", manager=True, include_original=True)
         self.assertEqual(self.page.league(), before)
         self.assertEqual(self.page.project.edits("clubs"),
                          {"100": {"coach": "First"}, "101": {"coach": "Second"}, "102": {"coach": "Third"}})
+
+    def test_skip_original_positions_and_preserve_overrides(self):
+        for originals, order in (([4], list(range(8))),
+                                 ([0, 4, 7], list(range(8))),
+                                 ([1, 4, 6], [6, 7, 4, 3, 0, 1, 5, 2])):
+            with self.subTest(originals=originals, order=order):
+                league = {"name": "Mixed", "clubs": 8,
+                          "club_coaches": ["Old %d" % k for k in range(8)],
+                          "game_clubs": [{"at": k, "id": 100 + k} for k in originals]}
+                page = Page(league, order)
+                self.addCleanup(page.close)
+                self.page = page
+                for k in originals:
+                    page.project.edits("clubs")[str(100 + k)] = {
+                        "coach": "Saved manager %d" % k, "name": "Saved club"}
+                page.project._forget()
+                before = copy.deepcopy(page.project.recipe)
+                eligible = [k for k in order if k not in originals]
+                names = ["New %d" % k for k in eligible]
+                names[1] = ""  # An included blank clears only its eligible club.
+                expected = copy.deepcopy(before)
+                for k, value in zip(eligible, names):
+                    expected["leagues"][0]["club_coaches"][k] = value
+                with patch.object(UI.B.mkcoaches, "club_names", return_value={}), \
+                        patch.object(page.project, "_autosave_soon") as autosave:
+                    for text in ("One", "\n".join(names + ["Extra"]),
+                                 "\n".join(["X" * 46] + names[1:]),
+                                 "\n".join(["Bad\x00"] + names[1:])):
+                        self.paste(text, manager=True)
+                        self.assertEqual(page.project.recipe, before)
+                        self.assertFalse(page.project.dirty)
+                    autosave.assert_not_called()
+                    self.paste("\n".join(names), manager=True)
+                    autosave.assert_called_once()
+                self.assertEqual(page.project.recipe, expected)
+                with tempfile.TemporaryDirectory() as folder:
+                    path = os.path.join(folder, "recipe.json")
+                    page.project.save(path)
+                    loaded = Project(type("App", (), {"settings": None})())
+                    loaded.open(path)
+                    self.assertEqual(loaded.recipe, expected)
+                page.project.undo()
+                self.assertEqual(page.project.recipe, before)
+                page.project.redo()
+                self.assertEqual(page.project.recipe, expected)
+
+    def test_original_checkbox_count_and_scope(self):
+        for manager, original_count in ((False, 2), (True, 0), (True, 2), (True, 3)):
+            with self.subTest(manager=manager, original_count=original_count):
+                dialog = UI.PasteClubFieldDialog(self.page, [""] * 3, manager, original_count)
+                self.addCleanup(dialog.close)
+                if not manager or not original_count:
+                    self.assertIsNone(dialog.include_original)
+                    self.assertEqual(dialog.count, 3)
+                    continue
+                self.assertEqual(dialog.include_original.text(), "Include original game clubs")
+                self.assertFalse(dialog.include_original.isChecked())
+                self.assertEqual(dialog.count, 3 - original_count)
+                self.assertEqual(dialog.expected.text(), "Expected manager names: %d" % (3 - original_count))
+                dialog.include_original.setChecked(True)
+                self.assertEqual(dialog.count, 3)
+                self.assertEqual(dialog.expected.text(), "Expected manager names: 3")
+                dialog.include_original.setChecked(False)
+                self.assertEqual(dialog.count, 3 - original_count)
+
+    def test_only_original_default_is_noop(self):
+        self.page.league()["game_clubs"] = [{"at": i, "id": 100 + i} for i in range(3)]
+        self.page.project.edits("clubs")["101"] = {"coach": "Saved", "abbr": "OLD"}
+        self.page.project._forget()
+        before = copy.deepcopy(self.page.project.recipe)
+        with patch.object(UI.B.mkcoaches, "club_names", return_value={}), \
+                patch.object(self.page.project, "touch") as touch:
+            self.paste("Unexpected", manager=True)
+            self.assertIn("1 values for 0 clubs", self.errors.call_args.args[2])
+            self.paste("", manager=True)
+            touch.assert_not_called()
+        self.assertEqual(self.page.project.recipe, before)
+        self.assertFalse(self.page.project.dirty)
 
     def test_existing_paste_dialog_unchanged(self):
         dialog = UI.PasteDialog(self.page, [])
