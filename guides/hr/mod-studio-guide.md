@@ -13,7 +13,7 @@
 
 *Do 0.3.0 zvao se FL26 Mod Studio: isti program, novo ime jer radi i s FL27. Datoteka programa (FL26ModStudio.exe), mapa u zipu i tvoje postavke zadržavaju stara imena.*
 
-FL Mod Studio je jedan program za sve što dodaješ u Football Life 2026:
+FL Mod Studio je jedan program za sve što dodaješ u Football Life 2026 i Football Life 2027:
 
 - **modove** koje skineš: stadione, dresove, lopte, semafore, komentar, glazbu, lica, Lua module;
 - **content servere** koji ih poslužuju (Stadium Server, Ball Server, Kit Server i ostali), s
@@ -29,7 +29,7 @@ svaki mod koji instalira može se opet maknuti.
 
 ## Football Life 2027
 
-Isti program radi i s FL27 (od 0.3.0). U **5. Postavke → Mapa igre** odaberi mapu FL27, onu u kojoj je `FL_2027.exe`; za povratak na FL26 odaberi mapu FL26. Svaka igra ima svoje tablice i svoje saveove (FL27 ih drži u `Documents\SPGAME\Football Life\2027\save`).
+Isti program radi i s FL27. U **5. Postavke → Mapa igre** odaberi mapu FL27, onu u kojoj je `FL_2027.exe`; za povratak na FL26 odaberi mapu FL26. Svaka igra ima svoje tablice i svoje saveove (FL27 ih drži u `Documents\SPGAME\Football Life\2027\save`).
 
 - U FL27 ligašku fazu Lige prvaka i Europske lige, veljačko doigravanje i nokaut vodi sam FL27, na svoje datume. Mod Studio odlučuje tko ulazi iz tvojih liga i igra pretkola; Konferencijska liga je Mod Studijeva.
 - Zipovi Worldpack i Europe pack instaliraju se i igraju u FL27, ali nose igrače iz FL26. Svijet koji sagradiš u FL27 ima igrače iz FL27.
@@ -37,7 +37,7 @@ Isti program radi i s FL27 (od 0.3.0). U **5. Postavke → Mapa igre** odaberi m
 
 ## 1. Prije početka
 
-- Instaliran **Football Life 2026** s mapom `SiderAddons` (FL26 dolazi sa Siderom).
+- Instaliran **Football Life 2026** ili **Football Life 2027** sa svojom Sider mapom (`SiderAddons`; FL26 dolazi sa Siderom).
 - Raspakiraj program bilo gdje, npr. `Documents\FL26 Mod Studio`. Mapa mora ostati na okupu:
   mape `_internal` i `pack` te datoteke `README` stoje pokraj `FL26ModStudio.exe`.
 - **Ugasi igru** dok mijenjaš stvari. Sider čita postavke kad se igra pokrene.
@@ -48,7 +48,7 @@ Prozor je na engleskom. **Jezik (Language)** na gornjoj traci (ili **Postavke �
 
 ## 2. Prvo pokretanje
 
-**Kratka tura.** Kad prvi put pokreneš 0.2.4, mala kartica ti pokaže gdje je sad sve, jedno po
+**Kratka tura.** Kad prvi put pokreneš Mod Studio, mala kartica ti pokaže gdje je sve, jedno po
 jedno mjesto, s narančastim okvirom oko onoga o čemu govori: jezik, kućice s onim što je u igri,
 **Pokreni igru**, pa **1. Početna** do **5. Postavke** i **Pomoć**. Deset koraka. Dok traje, ništa
 se ne mijenja. **Dalje** i **Natrag** idu kroz nju, **Preskoči turu** je zatvori, a **Pomoć →
@@ -56,18 +56,18 @@ Kratka tura** je opet pokaže kad god želiš. Na zadnjoj kartici je **Pokaži m
 Modpack**: druga kartica koja te vodi kroz instalaciju Modpacka (zipa svijeta), klik po klik (i u
 **Pomoć → Instaliraj Modpack, korak po korak**).
 
-1. **5. Postavke → Mapa igre**: stisni **Pregledaj...**, odaberi mapu u kojoj je `FL_2026.exe`,
-   pa **Koristi ovu mapu**. Redak ispod kaže što je nađeno, npr. `Nađeno: FL_2026.exe, Sider u
+1. **5. Postavke → Mapa igre**: stisni **Pregledaj...**, odaberi mapu u kojoj je `FL_2026.exe`
+   (FL27: `FL_2027.exe`), pa **Koristi ovu mapu**. Redak ispod kaže što je nađeno, npr. `Nađeno: FL_2026.exe, Sider u
    SiderAddons, sider.ini.`
 2. Tablice igre: Mod Studio ih sam raspakira prvi put (pročita klubove, lige i igrače igre u
    radnu mapu; to traje minutu ili dvije, a donja traka to kaže). Nakon ažuriranja igre Build to
    primijeti i ponudi da ih prvo opet raspakira; **Postavke → Tablice igre → Raspakiraj tablice
-   igre** to radi ručno. FL26 i FL27 imaju svaki svoje tablice: kad se mapa igre prebaci na drugu igru, Mod Studio prvi put raspakira tablice te igre i čuva obje (prije se nakon prebacivanja FL27 gradio iz tablica FL26, i obrnuto, dok se ponovno ne raspakiraju). **Koristi drugu mapu s tablicama...** služi za vlastitu bazu, npr. `pesdb`
+   igre** to radi ručno. FL26 i FL27 imaju svaki svoje tablice: kad se mapa igre prebaci na drugu igru, Mod Studio prvi put raspakira tablice te igre i čuva obje. **Koristi drugu mapu s tablicama...** služi za vlastitu bazu, npr. `pesdb`
    mapu u livecpk: prvo raspakiraj tablice igre, zatim odaberi tu mapu. Njene datoteke idu preko
    igrinih, a igrine daju sve što ona nema. Ne mapa svijeta (`livecpk\_FL26...`): svaki Build je
-   prepisuje, pa je Mod Studio ne prihvaća (0.2.5.1). Mod baze koji premješta igrine lige na mjesta drugih
+   prepisuje, pa je Mod Studio ne prihvaća. Mod baze koji premješta igrine lige na mjesta drugih
    liga (UML 2026 i slični) je u redu: svaka liga igre dobije državu većine svojih klubova, a
-   NewLife Database klub smatra igrinim samo kad ga te tablice imaju (0.2.4).
+   NewLife Database klub smatra igrinim samo kad ga te tablice imaju.
 3. Otvori **1. Početna**. Pokazuje svijet u igri (**U IGRI SADA**, s **Otvori njegove lige** i
    **Promijeni svijet...**, koji otvara **2. Moj svijet**), karticu koja kaže ima li tvoj svijet
    promjene koje igra još nema (**Idi na Gradnju** i **Samo europski kupovi...**) i **Provjera
@@ -77,7 +77,7 @@ Modpack**: druga kartica koja te vodi kroz instalaciju Modpacka (zipa svijeta), 
    **Brze radnje** (**Instaliraj module**, **Izgradi svijet ponovno**, **Uvezi zip svijeta**,
    **Dodaj paket liga**) i **Zadnje promjene** (najnovije točke vraćanja, **Sve točke vraćanja**).
 
-**Ažuriranja.** Par sekundi nakon pokretanja program pita GitHub je li izašao noviji FL26 Mod
+**Ažuriranja.** Par sekundi nakon pokretanja program pita GitHub je li izašao noviji FL Mod
 Studio i javi se samo ako jest. **Skini i instaliraj** skine novi zip, provjeri ga prema
 kontrolnom zbroju izdanja, zatvori program, stavi nove datoteke preko starih i ponovno ga
 pokrene. Tvoje postavke, svjetovi, točke vraćanja i igra ostaju netaknuti. **Pomoć → Provjeri
@@ -86,13 +86,10 @@ pokretanju** i program pita samo tada. Ako je program u mapi u koju Windows ne d
 (npr. Program Files), otvori se stranica izdanja: raspakiraj zip sam ili premjesti program u
 svoju mapu.
 
-**Karijere iz verzija prije 0.2.0.** U 0.2.0 dan u kalendaru prima 792 utakmice umjesto 280, a to mijenja tablice s kojima se karijera sprema: **karijera spremljena starijom verzijom se ne učita** (ostane na ekranu učitavanja). Nakon ažuriranja pokreni novu karijeru. Tvoji svjetovi i Edit podaci ostaju kakvi jesu.
-
-**0.2.4 i tvoja karijera.** Karijera spremljena s 0.2.2 ili 0.2.3 i dalje radi, a učita se i kup
-spremljen prije 0.2.4. Jedan popravak traži novi Build: do 0.2.4 golman je bio kapetan svakog
-kluba svijeta napravljenog Mod Studiom. **Build** sad svakom klubu i reprezentaciji koji ih nemaju
-da kapetana i igrače koji izvode penale, slobodne udarce i kornere. Da ih dobiješ, ponovno
-napravi **Build** svog svijeta i pokreni novu karijeru.
+**Karijere i svjetovi iz starih verzija.** Karijera spremljena Mod Studiom starijim od 0.2.0 se ne
+učita (ostane na ekranu učitavanja): pokreni novu karijeru. Tvoji svjetovi i Edit podaci ostaju
+kakvi jesu. Svijet zadnji put izgrađen prije 0.2.4 ima golmana za kapetana svakog kluba: napravi
+opet **Build** i pokreni novu karijeru. Što je donijela koja verzija: [changelog](../../docs/changelog/README.md).
 
 **Igranje.** Gumb **Pokreni igru** gore desno (ili **Igra → Pokreni igru**) pokreće igru i prvo
 upozori kad su moduli krivim redom. Pored njega oznaka kaže je li sve postavljeno: **SPREMNO ZA
@@ -103,7 +100,7 @@ način)...** vraća postavu koju je Mod Studio našao prvi put.
 testere, one koji su slali prijave i logove, i one čije su ideje u njemu.
 
 **Više Sider mapa?** Sider se ne mora zvati `SiderAddons`. Program traži mapu pokraj
-`FL_2026.exe` u kojoj je `sider.ini`, i jednu razinu dublje (`sider\patch 1`, `sider\patch 2` ...
+`FL_2026.exe` (ili `FL_2027.exe`) u kojoj je `sider.ini`, i jednu razinu dublje (`sider\patch 1`, `sider\patch 2` ...
 kad jedna mapa drži nekoliko kopija Sidera). Ako ih je više, **Postavke → Sider mapa** bira s
 kojom radi; ostale se ne diraju.
 
@@ -187,7 +184,7 @@ vlastiti svijet, na istom mjestu i pod njegovim imenom. Prvo se cijeli kopira u 
 vraćanja**. Nakon što ga izgradiš, pokreni novu Master Ligu.
 **Pomoć → Uredi Modpack, korak po korak** to pokaže klik po klik.
 
-**Svaki svijet ima svoje karijere u Master ligi** (0.2.4). Karijera je napravljena za jedan
+**Svaki svijet ima svoje karijere u Master ligi**. Karijera je napravljena za jedan
 svijet: u drugom svijetu njenih liga i klubova nema. Zato svaki put kad se svijet u igri
 promijeni (**Aktiviraj**, **Izgradi i instaliraj** drugog svijeta, Uvezi svijet, Mape sadržaja,
 profil), Mod Studio s njim promijeni i igrinu mapu saveova. Karijere svijeta koji odlazi čuvaju
@@ -211,7 +208,7 @@ Odaberi jednu: tvoja liga ima **Uredi ligu...**, **Dodaj nižu ligu**, **Klubovi
 igre"). **Dodaj ligu** napravi novu. **Mjesta u Select Teamu** pokazuje kamo je zadnji Build
 stavio svaku tvoju ligu; njen stupac **Select Team** je popis: *Automatski* (odlučuje redoslijed) ili *umjesto* jedne od igrinih grupa (Ostale europske lige, Ostale latinoameričke momčadi, Ostali klubovi (Afrika), Ostalo). Liga odabrana tu dobiva mjesto te grupe na idućem Buildu, bez obzira na redoslijed, a klubovi grupe tada nisu u Select Teamu (jedna liga po grupi; sa svijetom Južne Amerike Ostale latinoameričke momčadi ne trebaju, vmican). U Master Leagueu pokrenutom nakon tog Builda klubovi lige dobivaju mjesto grupe i tamo: Team Info ih pokazuje pod ligom, i s njima se iz te grupe dopunjuju Libertadores ili Svjetsko klupsko prvenstvo; klubovi grupe ostaju bez lige. Svijet s CONMEBOL asocijacijama zadržava mjesto Ostalih latinoameričkih momčadi. **Više ▾** ima **Predsezonski turniri**, **Kupovi naših država**,
 **Kupovi država iz igre**, **Europska mjesta liga iz igre**, **Europski klubovi prve sezone**,
-**UEFA poredak**, **Južnoamerička mjesta** (s kućicom **Moderna natjecanja CONMEBOL-a**, 0.2.5), **Zemlje CONMEBOL-a bez lige** (uz moderna natjecanja), **Imena natjecanja**, **ID-evi natjecanja**, **Poredak
+**UEFA poredak**, **Južnoamerička mjesta** (s kućicom **Moderna natjecanja CONMEBOL-a**), **Zemlje CONMEBOL-a bez lige** (uz moderna natjecanja), **Imena natjecanja**, **ID-evi natjecanja**, **Poredak
 liga**, **Sezone liga iz igre** i **Ime svijeta i datoteka...**. Ovo zadnje otvara stranicu s
 imenom svijeta i popisom tvojih liga (starije upute je zovu *Nove lige*).
 
@@ -298,13 +295,13 @@ Vlastiti moduli Mod Studija ostaju redom kojim su postavljeni, zajedno u jednom 
 `sider.ini` sa svojim naslovom. Stare retke koje je ostavila ručna instalacija (stari caps set,
 modul naveden dvaput) isključe **Instaliraj sada** i **Build**.
 
-Od 0.2.0 dvanaest malih zaštita od pada ide kao dvije datoteke, `fl26guards.lua` (osam `fl26nullguard` zaštita) i `fl26lateguards.lua` (`fl26superguard`, `fl26resultsguard`, `fl26ctlguard`, `fl26kitguard`), pa je popis kraći. sider.log i dalje svaku zaštitu piše u svom retku. Build stare pojedinačne retke isključi; ručno ne treba ništa.
+Dvanaest malih zaštita od pada ide kao dvije datoteke, `fl26guards.lua` (osam `fl26nullguard` zaštita) i `fl26lateguards.lua` (`fl26superguard`, `fl26resultsguard`, `fl26ctlguard`, `fl26kitguard`), pa je popis kraći. sider.log i dalje svaku zaštitu piše u svom retku. Build stare pojedinačne retke isključi; ručno ne treba ništa.
 
-**Bez kopija pored tvojih datoteka** (0.2.4). Kad Build, Uključi ili Instaliraj module mijenjaju
+**Bez kopija pored tvojih datoteka.** Kad Build, Uključi ili Instaliraj module mijenjaju
 datoteku, kopija od prije ide u `SiderAddons\ModStudio\backups` i vidi se u **Točke vraćanja**, a
 ne pored datoteke (nema više `map.txt.before-builder` ni `modules\before-builder-<n>`).
 
-**Isključivanje regena** (0.2.0): `fl26regen` daje regenima nova imena, novi potencijal i lice
+**Isključivanje regena**: `fl26regen` daje regenima nova imena, novi potencijal i lice
 iz paketa lica za regene. Za igru bez njega makni kvačicu s **Sakrij module samog Mod Studija
 (fl26...)** da se naši vide, makni kvačicu s `fl26regen` i pritisni **Primijeni**. Mod Studio to
 zapiše u `modules\fl26-off.txt` u mapi Sidera, pa ga **Build**, **Instaliraj module** i promjena
@@ -347,7 +344,7 @@ upiše se po redak (0.1.9). Redak s brojem natjecanja označen je kao problem.
 svijet u igri, njihovi retci ostaju u **Ostali sadržaj → Semafori**, isključeni, i opet se
 uključe sa svojim svijetom. Isto vrijedi za teme izbornika koje je svijet donio.
 
-**Uvezi dresove...** (0.1.8, na kartici *Dresovi*): dresovi za mnoge klubove odjednom. Odaberi mapu s gotovim kit-server dresovima -- jedna mapa po klubu, s `p1`, `p2`, `g1` ... i `order.ini`, nazvana po klubu (`Dinamo Zagreb`) ili po njegovom ID-u (`2215`). **Spoji s** bira *Svi klubovi* ili *Novi klubovi svijeta u igri*. Spajanja od 60% ili više imaju kvačicu; provjeri ona bez kvačice i stupac *Podudarnost* prije **U redu** (mapa bez para kaže "nije nađen klub"). Dresovi se kopiraju u kit-server knjižnicu (`Liga\Klub`, kako ih je mapa imala) i svaki klub dobije redak u `map.txt`; **Spremi** ga zapisuje. Klub koji već ima redak zadržava ga, osim ako je označeno **Zamijeni već postavljene dresove**. Dresovi novog kluba idu po ID-u koji mu je dao Build, zato prvo napravi Build svijeta i drži ga u igri. Mapa kluba može umjesto toga imati obične slike dresova (0.2.0): `p1.png`, `p2.png` ... za dresove i `g1.png` za golmana (najbolje 2048 x 2048; rade i `.jpg` i `.dds`). Mod Studio od njih napravi kit-server dresove; brojevi na leđima, brojevi na hlačicama i font imena su zasebne teksture, pa dolaze iz dresa koji već postoji u knjižnici, odabranog u **Brojevi i imena iz** (počinje na prvom dresu iz knjižnice koji ih ima; *nema*: igra zadržava klupske). Boje u `config.txt` čitaju se sa slike. Pretvorbu slika napravio je Xxspedd, iz svog alata za dresove. Mod Studio ne crta dresove: slike daješ ti ili izrađivač dresova.
+**Uvezi dresove...** (0.1.8, na kartici *Dresovi*): dresovi za mnoge klubove odjednom. Odaberi mapu s gotovim kit-server dresovima -- jedna mapa po klubu, s `p1`, `p2`, `g1` ... i `order.ini`, nazvana po klubu (`Dinamo Zagreb`) ili po njegovom ID-u (`2215`). **Spoji s** bira *Svi klubovi* ili *Novi klubovi svijeta u igri*. Spajanja od 60% ili više imaju kvačicu; provjeri ona bez kvačice i stupac *Podudarnost* prije **U redu** (mapa bez para kaže "nije nađen klub"). Dresovi se kopiraju u kit-server knjižnicu (`Liga\Klub`, kako ih je mapa imala) i svaki klub dobije redak u `map.txt`; **Spremi** ga zapisuje. Klub koji već ima redak zadržava ga, osim ako je označeno **Zamijeni već postavljene dresove**. Dresovi novog kluba idu po ID-u koji mu je dao Build, zato prvo napravi Build svijeta i drži ga u igri. Mapa kluba može umjesto toga imati obične slike dresova: `p1.png`, `p2.png` ... za dresove i `g1.png` za golmana (najbolje 2048 x 2048; rade i `.jpg` i `.dds`). Mod Studio od njih napravi kit-server dresove; brojevi na leđima, brojevi na hlačicama i font imena su zasebne teksture, pa dolaze iz dresa koji već postoji u knjižnici, odabranog u **Brojevi i imena iz** (počinje na prvom dresu iz knjižnice koji ih ima; *nema*: igra zadržava klupske). Boje u `config.txt` čitaju se sa slike. Pretvorbu slika napravio je Xxspedd, iz svog alata za dresove. Mod Studio ne crta dresove: slike daješ ti ili izrađivač dresova.
 
 Ako je tvoj svijet izgrađen s **Obični dresovi za Edit mod** (poglavlje 8), Kit Server ne oblači
 nove klubove, pa se uvezeni dresovi na njima ne vide; **Uvezi dresove** to kaže. Makni kvačicu s
@@ -381,30 +378,30 @@ ili tipka Delete.
 | **Država** | Daje zastavu i mjesto gdje je liga na popisu. Država za koju igra nema ligu dobije svoj naslov. |
 | **Klubovi** | Od 10 do 24 (od 1 do 24 za klubove bez lige). |
 | **Klubovi bez lige** | Za jedan klub, ili nekoliko njih, bez lige oko sebe (0.1.8): recimo samo BATE Borisov iz Bjelorusije. Odaberi skupinu u koju idu: *Other European teams*, *Other Latin American teams*, *Other Asia-Oceania teams*, *Other Africa teams* ili *Classic Teams* -- tamo gdje igra drži svoje klubove koji ne igraju ni u jednoj ligi (Dynamo Kyiv, Wydad Casablanca ...). U Select Teamu se vide u toj skupini. Dobiju ime, grb, dresove, trenera, formaciju, igrače i domaći stadion kao svaki novi klub (**Uredi klub**, **Igrači**); ime gore je samo kako ih Mod Studio vodi. Ne igraju ligu, kup ni europsko natjecanje, a sve ostalo u ovom prozoru posivi. Na *Lige* takva skupina pokazuje *bez lige (...)* umjesto ID-a lige. |
-| **Format** | *Svi sa svima*, 1 do 4 puta, *dijeli se na pola (kao Škotska)* ili *Apertura i Clausura*: dva turnira u sezoni (rujan do početka siječnja, siječanj do svibnja), svaki od nula bodova, zatim doigravanje 8 ili 4 kluba (ili bez njega). O ulasku i ispadanju odlučuje tablica cijele sezone. Najviše 18 klubova. Podijeljena liga ima najviše 46 kola, prije i poslije podjele zajedno (16 klubova dvaput je 30, pa najveća skupina dvaput smije imati 8 klubova, 14 kola). Zasad se u jednoj državi samo jedna liga smije dijeliti ili igrati Aperturu/Clausuru. **Podjela te Apertura i Clausura su eksperimentalne** (0.2.4): rade, ali još imaju više otvorenih bugova od formata svi sa svima, koji je potpuno testiran. Prozor to kaže ispod formata. Molimo i dalje javljaj što nađeš. |
-| **Rang** | *(prvi rang)* ili liga iznad nje: druga nova liga ili liga iz igre. Od 0.3.0 popis ima i podijeljene lige igre (Scottish Premiership, 3F Superliga, Jupiler Pro League): liga ispod jedne od njih ide gore i dolje uz njen regularni dio sezone, kao u Modpacku. Za novu ligu ispod druge nove lige u jednom koraku: odaberi je i stisni **Dodaj nižu ligu** (preuzme državu, broj klubova, format i gore/dolje od lige iznad; ostaje samo ime). Liga ispod koje je već druga nova liga je siva (0.1.9): igra od lige prati samo jednu vezu prema dolje, pa skupine jednog ranga (tri skupine Serie C ispod Serie B) još nisu moguće. |
+| **Format** | *Svi sa svima*, 1 do 4 puta, *dijeli se na pola (kao Škotska)* ili *Apertura i Clausura*: dva turnira u sezoni (rujan do početka siječnja, siječanj do svibnja), svaki od nula bodova, zatim doigravanje 8 ili 4 kluba (ili bez njega). O ulasku i ispadanju odlučuje tablica cijele sezone. Najviše 18 klubova. Podijeljena liga ima najviše 46 kola, prije i poslije podjele zajedno (16 klubova dvaput je 30, pa najveća skupina dvaput smije imati 8 klubova, 14 kola). Zasad se u jednoj državi samo jedna liga smije dijeliti ili igrati Aperturu/Clausuru. **Podjela te Apertura i Clausura su eksperimentalne**: rade, ali još imaju više otvorenih bugova od formata svi sa svima, koji je potpuno testiran. Prozor to kaže ispod formata. Molimo i dalje javljaj što nađeš. |
+| **Rang** | *(prvi rang)* ili liga iznad nje: druga nova liga ili liga iz igre. Popis ima i podijeljene lige igre (Scottish Premiership, 3F Superliga, Jupiler Pro League): liga ispod jedne od njih ide gore i dolje uz njen regularni dio sezone, kao u Modpacku. Za novu ligu ispod druge nove lige u jednom koraku: odaberi je i stisni **Dodaj nižu ligu** (preuzme državu, broj klubova, format i gore/dolje od lige iznad; ostaje samo ime). Liga ispod koje je već druga nova liga je siva (0.1.9): igra od lige prati samo jednu vezu prema dolje, pa skupine jednog ranga (tri skupine Serie C ispod Serie B) još nisu moguće. |
 | **Gore / Dolje** | Koliko klubova na kraju sezone zamijeni mjesta s ligom iznad. |
 | **Sezona** | Samo za prvi rang nove države: *kolovoz do svibanj* (zadano) ili *veljača do prosinac*, kao Brazil, Japan ili Saudijska Arabija: klubovi idu gore i dolje za Novu godinu, a rangovi ispod nje je slijede. Još ne uz podjelu, Aperturu/Clausuru ni ligaški kup -- ni podjelu ili Aperturu/Clausuru na rangu ispod lige od veljače do prosinca, uključujući igrine Liga BetPlay i J1 League. |
-| **Europa** | Samo za prvi rang: koje mjesto u ligi ide u koje europsko natjecanje. **Prva liga: 1. kvalifikacije LP, 2. EL, 3. UECL** upiše uobičajena tri (*... kvalifikacije* su kolovoška doigravanja, vidi 8.2); **Dodaj mjesto**, ✕ na retku i **Makni** za sve ostalo. Svako mjesto samo jednom, i samo mjesta koja liga ima. Ispod 1 mjesto glasi **Pobjednik kupa** (0.1.7): pobjednik kupa te države (nova država treba **Nacionalni kup**) -- a kad pobjednik već ima europsko mjesto kroz ligu, mjesto ide niz ligu sljedećem klubu, kao kod UEFA-e. Od 0.2.0 pobjednik kupa može ići i u kupove koje gradi Mod Studio (Copa Sudamericana, CAF Konfederacijski kup, AFC Liga prvaka Two ...); u novoj karijeri, prije nego što itko osvoji kup, i to mjesto ide sljedećem klubu lige. Može ga imati i liga iz igre (*Europska mjesta liga iz igre*). Za niži rang ostavi prazno. Predložak prati državu: Azija dobije AFC Ligu prvaka i AFC Ligu prvaka Two, Južna Amerika Libertadores i Copa Sudamericanu, Afrika CAF Ligu prvaka i CAF Konfederacijski kup, Sjeverna i Srednja Amerika CONCACAF Champions Cup, Oceanija OFC Ligu prvaka. **AFC Challenge League** (0.2.0) je treći kup AFC-a, ispod AFC Lige prvaka Two, kao Konferencijska liga u Europi; dodaje se s **Dodaj mjesto** (*AFC CHL* na popisu Lige). Tih sedam kupova kojih igra nema grade se sa svijetom (odjeljak 8.2). Mjesto u *kvalifikacijama Libertadoresa* zauzme mjesto kluba iz igre u kvalifikacijskom kolu (zadnjeg iz države koja u njemu ima najviše klubova), najviše šest od njegovih osam mjesta; **Provjeri plan** kaže koje lige preko toga ostaju vani. |
+| **Europa** | Samo za prvi rang: koje mjesto u ligi ide u koje europsko natjecanje. **Prva liga: 1. kvalifikacije LP, 2. EL, 3. UECL** upiše uobičajena tri (*... kvalifikacije* su kolovoška doigravanja, vidi 8.2); **Dodaj mjesto**, ✕ na retku i **Makni** za sve ostalo. Svako mjesto samo jednom, i samo mjesta koja liga ima. Ispod 1 mjesto glasi **Pobjednik kupa** (0.1.7): pobjednik kupa te države (nova država treba **Nacionalni kup**) -- a kad pobjednik već ima europsko mjesto kroz ligu, mjesto ide niz ligu sljedećem klubu, kao kod UEFA-e. Pobjednik kupa može ići i u kupove koje gradi Mod Studio (Copa Sudamericana, CAF Konfederacijski kup, AFC Liga prvaka Two ...); u novoj karijeri, prije nego što itko osvoji kup, i to mjesto ide sljedećem klubu lige. Može ga imati i liga iz igre (*Europska mjesta liga iz igre*). Za niži rang ostavi prazno. Predložak prati državu: Azija dobije AFC Ligu prvaka i AFC Ligu prvaka Two, Južna Amerika Libertadores i Copa Sudamericanu, Afrika CAF Ligu prvaka i CAF Konfederacijski kup, Sjeverna i Srednja Amerika CONCACAF Champions Cup, Oceanija OFC Ligu prvaka. **AFC Challenge League** je treći kup AFC-a, ispod AFC Lige prvaka Two, kao Konferencijska liga u Europi; dodaje se s **Dodaj mjesto** (*AFC CHL* na popisu Lige). Tih sedam kupova kojih igra nema grade se sa svijetom (odjeljak 8.2). Mjesto u *kvalifikacijama Libertadoresa* zauzme mjesto kluba iz igre u kvalifikacijskom kolu (zadnjeg iz države koja u njemu ima najviše klubova), najviše šest od njegovih osam mjesta; **Provjeri plan** kaže koje lige preko toga ostaju vani. |
 | **Logo** | Bilo koja slika (najbolje izgleda PNG s prozirnom pozadinom). Prazno: nacrta se sam. |
 | **Zastava države** | Tvoja slika zastave države, razvučena u okvir zastave iz igre. Zamjenjuje igrinu zastavu te države posvuda (Select Team, nacionalnost igrača, naslov države u Database > Competition Info) dok je svijet uključen. Prazno: zastava iz igre. |
 | **Kup** | Samo za prvi rang. **Nacionalni kup**: država dobije svoj kup, s imenom koje zadaš (prazno: `<liga> Cup`). Igra puni kup države iz prvog ranga i ranga ispod njega, a veličina kupa slijedi red Nacionalni kup u Granicama (8.3): najveća veličina koju ekran kupa crta i koja stane, pa 22 kluba daju kup od 20, prvo prvi rang. S više od 44 kluba kup zadržava samo prvi rang. Nova druga liga pod državom koju igra već ima (Njemačka, Rusija ...) također ulazi u kup te države, iza klubova prvog ranga, kad kola kupa odgovaraju broju klubova. Nova treća liga ili niža (League One pod Championshipom) ostavlja kup države prvim dvama rangovima iz igre, kao u igri. **Superkup (prvak protiv osvajača kupa)**: uz to i superkup od jedne utakmice prije sezone. Treba nacionalni kup. |
-| **Ligaški kup** | Samo za prvi rang. Kup na ispadanje ove lige i lige ispod nje, kako se igra Carabao Cup (0.2.0): jedna utakmica po kolu, i polufinale i finale, u tjednima Carabao Cupa: 27. kolovoza, 23. rujna, 28. listopada, četvrtfinale 23. prosinca, polufinale 14. siječnja i finale u nedjelju 15. ožujka, u svoje dane, nikad na dan nacionalnog kupa ili europski dan. Sudionika ima onoliko klubova dvaju rangova koliko ekran kupa crta, do 44 (20 + 24: cijela Premier League i Championship); gdje to nije 16 ili 32, klubovi ove lige dobiju slobodan prolaz i počinju u drugom kolu. Svaki par se izvlači nasumično. Daj mu ime ili ostavi prazno (`<liga> League Cup`). Svijet izgrađen prije 0.2.0 zadržava stari kup od 16 s dvije utakmice i pretkolom dok ga ne izgradiš opet; karijera započeta prije tog Builda igra stari kup. |
+| **Ligaški kup** | Samo za prvi rang. Kup na ispadanje ove lige i lige ispod nje, kako se igra Carabao Cup: jedna utakmica po kolu, i polufinale i finale, u tjednima Carabao Cupa: 27. kolovoza, 23. rujna, 28. listopada, četvrtfinale 23. prosinca, polufinale 14. siječnja i finale u nedjelju 15. ožujka, u svoje dane, nikad na dan nacionalnog kupa ili europski dan. Sudionika ima onoliko klubova dvaju rangova koliko ekran kupa crta, do 44 (20 + 24: cijela Premier League i Championship); gdje to nije 16 ili 32, klubovi ove lige dobiju slobodan prolaz i počinju u drugom kolu. Svaki par se izvlači nasumično. Daj mu ime ili ostavi prazno (`<liga> League Cup`). Svijet izgrađen puno starijim Mod Studiom zadržava stari ligaški kup dok ga ne izgradiš opet. |
 | **Logotipi kupova** | Posebna slika za nacionalni kup, superkup, ligaški kup i doigravanje Apertura/Clausura. Prazno: nacrta se amblem s inicijalima kupa. |
 | **Samo za egzibiciju -- nije u Master ligi** | Za Kick Off i egzibicijske utakmice: povijesna liga, legende i slično. Njeni klubovi nikad ne igraju sezonu Master Lige, pa liga stoji sama: bez ranga iznad ili ispod, bez europskih mjesta, bez kupova. I dalje se vidi na popisu momčadi Master Lige; svoj klub izaberi iz druge lige. |
-| **Formacija** | Kako se klubovi lige postavljaju. Odaberi jednu od formacija koje igraju klubovi igre (4-2-3-1, 4-1-2-3, 4-3-3, 5-3-2 ...; popis kaže koliko je klubova igre igra): svaki novi klub dobije kopiju taktike kluba iz igre s tom formacijom, a pri Buildu mu se složi najboljih jedanaest. Prazno: Build svakom klubu izabere formaciju kojoj njegov kadar najbolje odgovara (0.2.4; prije fiksni 4-2-3-1): dva jaka napadača igraju s dva naprijed, dobri krilni igrači s tri napadača, tri središnja braniča s tri ili pet straga. Log Builda kaže koje su formacije izabrane. Pojedini klub može imati svoju (**Uredi klub**). |
+| **Formacija** | Kako se klubovi lige postavljaju. Odaberi jednu od formacija koje igraju klubovi igre (4-2-3-1, 4-1-2-3, 4-3-3, 5-3-2 ...; popis kaže koliko je klubova igre igra): svaki novi klub dobije kopiju taktike kluba iz igre s tom formacijom, a pri Buildu mu se složi najboljih jedanaest. Prazno: Build svakom klubu izabere formaciju kojoj njegov kadar najbolje odgovara: dva jaka napadača igraju s dva naprijed, dobri krilni igrači s tri napadača, tri središnja braniča s tri ili pet straga. Log Builda kaže koje su formacije izabrane. Pojedini klub može imati svoju (**Uredi klub**). |
 
 **Ime svijeta** (Lige → Više → **Ime svijeta i datoteka...**) mora počinjati s `_FL26`. Ta stranica nabraja i tvoje lige: nakon **Builda** njen stupac **ID lige**
 pokazuje ID natjecanja svake lige u igri, isti koji nosi datoteka njezina loga. Stupac **#** je mjesto
 lige u redoslijedu (**Pomakni gore** / **Pomakni dolje**), a **Select Team** kaže kamo ju je zadnji Build
 stavio: *da*, *umjesto* neke skupine igre, ili *nema mjesta (igra se)*. `*` tamo znači da se redoslijed od tada
-promijenio: izgradi opet da vidiš kamo ide. Povlačenje lige na kartici **Lige** pomiče je samo među mjestima koja ovdje već drže lige njezina kontinenta (0.2.0; prije je cijeli redoslijed slagalo po kontinentima, pa su lige Sjeverne Amerike i Oceanije uvijek bile zadnje).
+promijenio: izgradi opet da vidiš kamo ide. Povlačenje lige na kartici **Lige** pomiče je samo među mjestima koja ovdje već drže lige njezina kontinenta.
 
 **Predsezonski turniri** (Lige → Više, ili Moj svijet → Kupovi): prijateljski kupovi na ispadanje s 4 ili 8 pozvanih klubova u srpnju, prije sezone, u parovima redom kojim ih upišeš (prvi protiv drugog ...). Klub je iz nove lige ili klub igre (njegov ID); barem jedan mora biti iz nove lige, a turnir je u njenoj državi. Karijera počinje u kolovozu, pa se prvi igra u drugoj sezoni. Svaki turnir može imati **Logo**; prazno: nacrta se sam.
 
-**Kupovi naših država** (Lige → Više, ili Moj svijet → Kupovi, 0.2.4): kupovi tvojih liga u jednoj tablici. Za svaki prvi rang: njegov nacionalni kup, superkup i ligaški kup, svaki sa svojim imenom i logom. To su ista polja kao u **Uredi ligu...**, bez otvaranja svake lige.
+**Kupovi naših država** (Lige → Više, ili Moj svijet → Kupovi): kupovi tvojih liga u jednoj tablici. Za svaki prvi rang: njegov nacionalni kup, superkup i ligaški kup, svaki sa svojim imenom i logom. To su ista polja kao u **Uredi ligu...**, bez otvaranja svake lige.
 
-**Kupovi država iz igre** (Lige → Više, ili Moj svijet → Kupovi): ligaški kup -- recimo Carabao Cup -- za lige iz igre. Označi **Ligaški kup** pored lige: ona i liga ispod nje, do 44 kluba, jedna utakmica po kolu od kraja kolovoza do finala sredinom ožujka, izvlačenje nasumično, klubovi same lige sa slobodnim prolazom u drugo kolo (0.2.0; isti kup kao kod nove lige), u dane koje kalendar liga i kupova iz igre ostavlja slobodnima. **Superkup**, prvak protiv pobjednika kupa, samo gdje ga igra nema (Brazil, Čile, Škotska, Grčka, SAD). To je superkup od jedne utakmice između dva kluba (0.2.4; prije je ispadao kao kup na ispadanje od 16). Igra se krajem srpnja; u državi koja igra od veljače do prosinca (Supercopa de Chile, Supercopa Rei) igra se krajem siječnja, između prvaka i pobjednika kupa upravo završene sezone. Kad pobjednika kupa još nema (prvo ljeto nove karijere), ili je prvak osvojio i kup, igra drugoplasirani u ligi. Prazno ime: ime lige i *League Cup* / *Super Cup*. **Logo** pored svakog imena (0.2.0): slika za taj kup; bez nje, amblem s inicijalima kupa. Promjene ovdje traže **Instaliraj module** (ili Izgradi i instaliraj), novi Build i novu karijeru.
+**Kupovi država iz igre** (Lige → Više, ili Moj svijet → Kupovi): ligaški kup -- recimo Carabao Cup -- za lige iz igre. Označi **Ligaški kup** pored lige: ona i liga ispod nje, do 44 kluba, jedna utakmica po kolu od kraja kolovoza do finala sredinom ožujka, izvlačenje nasumično, klubovi same lige sa slobodnim prolazom u drugo kolo (isti kup kao kod nove lige), u dane koje kalendar liga i kupova iz igre ostavlja slobodnima. **Superkup**, prvak protiv pobjednika kupa, samo gdje ga igra nema (Brazil, Čile, Škotska, Grčka, SAD). To je superkup od jedne utakmice između dva kluba. Igra se krajem srpnja; u državi koja igra od veljače do prosinca (Supercopa de Chile, Supercopa Rei) igra se krajem siječnja, između prvaka i pobjednika kupa upravo završene sezone. Kad pobjednika kupa još nema (prvo ljeto nove karijere), ili je prvak osvojio i kup, igra drugoplasirani u ligi. Prazno ime: ime lige i *League Cup* / *Super Cup*. **Logo** pored svakog imena: slika za taj kup; bez nje, amblem s inicijalima kupa. Promjene ovdje traže **Instaliraj module** (ili Izgradi i instaliraj), novi Build i novu karijeru.
 
 **Europska mjesta liga iz igre** (Lige → Više): koja mjesta Premier Lige, LaLige, Serie A ... idu u koje europsko natjecanje. Popis pokazuje mjesta iz igre; označi **Vlastita mjesta za ovu ligu** da ih promijeniš. Neoznačena liga zadržava mjesta iz igre, označena liga bez redaka ne šalje nikoga.
 
@@ -434,7 +431,7 @@ jedan klub dok ih ne bude 32. Klub koji je već u Libertadoresu ili njegovim kva
 ustupa mjesto sljedećem iz svoje lige. **Provjeri plan** ispiše isti popis kad god svijet ima
 mjesto u Libertadoresu ili Sudamericani.
 
-**Moderna natjecanja CONMEBOL-a** (kućica u **Južnoamerička mjesta**, 0.2.5; vmardonesdev i
+**Moderna natjecanja CONMEBOL-a** (kućica u **Južnoamerička mjesta**; vmardonesdev i
 nissindiaz, #146): kvalifikacije za Libertadores u tri faze (1. faza: 6 klubova, 2. faza: 13 klubova
 i tri pobjednika 1. faze, 3. faza: osam pobjednika 2. faze), Copa Sudamericana s prvom fazom od 32
 kluba i doigravanjem nakon skupina, i Recopa Sudamericana u veljači. Kad je uključeno, prozor Liga
@@ -450,9 +447,9 @@ imaju moderna natjecanja, nakon pitanja.
 
 **ID-evi natjecanja** (Lige → Više): svako natjecanje svijeta u igri, lige i kupovi, s njegovim ID-om. Igra ima mjesta za 255; Moj svijet pokazuje koliko ih je zauzeto.
 
-**Poredak liga** (Lige → Više, 0.2.0): poredak država u Select Teamu Master Lige i na popisu momčadi Kick Off / Edit. *Po kontinentima* je poredak igre (Europa, Amerike, Azija, pa Afrika, svaki od A do Ž). *Sve države od A do Ž* stavi ih sve u jedan abecedni niz, a *Moj poredak* ti da da ih složiš kako god želiš (povlačenjem ili Gore / Dolje). Lige jedne države ostaju zajedno, prvi rang prvi, a klupska natjecanja, skupine "Other" i Classic Teams dolaze iza država. Njemačka, SAD i Japan su u Select Teamu u skupinama "Other", pa se pomiču samo u Kick Offu. Nakon toga ponovno izgradi svijet.
+**Poredak liga** (Lige → Više): poredak država u Select Teamu Master Lige i na popisu momčadi Kick Off / Edit. *Po kontinentima* je poredak igre (Europa, Amerike, Azija, pa Afrika, svaki od A do Ž). *Sve države od A do Ž* stavi ih sve u jedan abecedni niz, a *Moj poredak* ti da da ih složiš kako god želiš (povlačenjem ili Gore / Dolje). Lige jedne države ostaju zajedno, prvi rang prvi, a klupska natjecanja, skupine "Other" i Classic Teams dolaze iza država. Njemačka, SAD i Japan su u Select Teamu u skupinama "Other", pa se pomiču samo u Kick Offu. Nakon toga ponovno izgradi svijet.
 
-**Sezone liga iz igre** (Lige → Više, 0.2.0, eksperimentalno): Japan, Kina, Brazil, Čile i Saudijska Arabija u igri igraju od veljače do prosinca. Označi jednu i njene lige igraju od kolovoza do svibnja kao Europa: sezona počinje u kolovozu, ulazak i ispadanje su ljeti, kupovi idu na datume kolovoz-svibanj, a kontinentalna mjesta dolaze iz tablice završene u svibnju. Tvoj rang ispod jedne od tih liga ide s njom. Kolumbija i SAD igraju Aperturu i Clausuru i ne mogu se pomaknuti. Ponovno izgradi svijet i pokreni novu karijeru.
+**Sezone liga iz igre** (Lige → Više, eksperimentalno): Japan, Kina, Brazil, Čile i Saudijska Arabija u igri igraju od veljače do prosinca. Označi jednu i njene lige igraju od kolovoza do svibnja kao Europa: sezona počinje u kolovozu, ulazak i ispadanje su ljeti, kupovi idu na datume kolovoz-svibanj, a kontinentalna mjesta dolaze iz tablice završene u svibnju. Tvoj rang ispod jedne od tih liga ide s njom. Kolumbija i SAD igraju Aperturu i Clausuru i ne mogu se pomaknuti. Ponovno izgradi svijet i pokreni novu karijeru.
 
 **Europski klubovi prve sezone** (Lige → Više, 0.1.8): ručno odaberi
 klubove ligaške faze Lige prvaka, Europske lige i Konferencijske lige u prvoj sezoni nove karijere.
@@ -464,17 +461,16 @@ bez grba dobije numerirani znak. Dresovi se posude od klubova same igre. Takav d
 licenciran i Edit mod ga ne da mijenjati ("You cannot edit this strip"): označi **Obični dresovi
 za Edit mod** na kartici Gradnja (Opcije svijeta) i novi klubovi ne posuđuju nijedan, svaki nosi običan dres
 koji Edit > Teams > Strip mijenja kao i svaki drugi, Paste Image uključen.
-Uz instaliran Kit Server, **Dresovi u bojama klubova** (kartica Gradnja, Opcije svijeta, uključeno dok ga ne odznačiš, 0.2.1)
+Uz instaliran Kit Server, **Dresovi u bojama klubova** (kartica Gradnja, Opcije svijeta, uključeno dok ga ne odznačiš)
 svakom novom klubu napravi domaći, gostujući, treći i golmanski dres u bojama njegovog dresa
 (NewLifeovim, ili grba kad ih nema), s grbom na prsima i hlačicama, za cijele lige odjednom kad
 svijet uđe u igru. Grb koji staviš kasnije (Uvezi grbove) ide na dresove pri idućem uključivanju.
 Klub s vlastitim Kit Server dresom, ili samo s numeriranim znakom, ne dobije ga.
 Tvoj vlastiti redak za dres u `map.txt` (onaj koji si postavio na kartici *Dresovi*, za dres koji
 je u knjižnici) uvijek pobjeđuje: Build za taj klub ne napravi dres, ne stavi mu dres iz paketa i
-ostavi tvoj redak uključen (0.2.4; 0.2.3 ga je na svakom Buildu isključivao zbog dresa iz paketa
-liga). Imena zadržavaju slova s kvačicama (FK Željezničar); kratica od tri slova ih nema, kao ni u
+ostavi tvoj redak uključen. Imena zadržavaju slova s kvačicama (FK Željezničar); kratica od tri slova ih nema, kao ni u
 igri, pa tamo Č, Ž, Đ postaju C, Z, D. Poredak lige od A do Ž u datotekama igre stavlja Đakovo
-pod D, a Šibenik pod S (0.2.4). Nakon **Builda** miš iznad imena kluba pokazuje njegov ID u igri
+pod D, a Šibenik pod S. Nakon **Builda** miš iznad imena kluba pokazuje njegov ID u igri
 (**ID kluba**).
 
 **Lica iz paketa lica za nove igrače** (kartica Gradnja, Opcije svijeta, zadano uključeno):
@@ -489,13 +485,13 @@ igrin dres najbliži tim bojama, a **Dresovi u bojama klubova** ih koristi.
 
 **Formacija**: u **Uredi klub** novog kluba možeš mu dati vlastitu formaciju; *Kao liga* zadržava formaciju lige. Teren ispod popisa pokazuje gdje tko stoji.
 
-**Kapetan i izvođači prekida** (0.2.4): Build svakom klubu i reprezentaciji koji ih nemaju da
+**Kapetan i izvođači prekida**: Build svakom klubu i reprezentaciji koji ih nemaju da
 kapetana (igrača s vještinom Captaincy, inače najjačeg i najiskusnijeg) i izvođače penala,
 slobodnih udaraca i kornera, od igrača iz polja među prvih jedanaest. Klub iz igre koji ima svoje
 zadržava ih. Svijet izgrađen prije 0.2.4 posvuda ima golmana za kapetana: izgradi ga opet i
 pokreni novu karijeru.
 
-**Domaći stadion** (0.1.7): u **Uredi klub** stadion iz knjižnice Stadium Servera za klub; mjesto i ime popune se iz mape, ime možeš promijeniti. Upiše se u `map_teams.txt` Stadium Servera kad svijet uđe u igru (i kad se svijet u igri ponovno izgradi), pa ID novog kluba nikad ne treba tražiti. Tvoj vlastiti redak za isti klub se za to vrijeme isključi, i opet uključi kad klub ovdje više nema stadion. *Lige* (liga iz igre) > **Uredi klub** ima ga i za klubove igre. Mora biti instaliran Stadium Server (kartica *Stadioni*) ili SPFL26-ov vlastiti modul stadiona (`common\stadiums.lua` s mapom `content\stadiums`): od 0.1.8 Mod Studio piše tamo kad Stadium Server nije instaliran. Igrin stadion izabran kao domaći stadion u utakmici je pravilno osvijetljen (0.2.4; prije je mogao biti potpuno mračan): svijet napravljen prije izgradi opet.
+**Domaći stadion** (0.1.7): u **Uredi klub** stadion iz knjižnice Stadium Servera za klub; mjesto i ime popune se iz mape, ime možeš promijeniti. Upiše se u `map_teams.txt` Stadium Servera kad svijet uđe u igru (i kad se svijet u igri ponovno izgradi), pa ID novog kluba nikad ne treba tražiti. Tvoj vlastiti redak za isti klub se za to vrijeme isključi, i opet uključi kad klub ovdje više nema stadion. *Lige* (liga iz igre) > **Uredi klub** ima ga i za klubove igre. Mora biti instaliran Stadium Server (kartica *Stadioni*) ili SPFL26-ov vlastiti modul stadiona (`common\stadiums.lua` s mapom `content\stadiums`): od 0.1.8 Mod Studio piše tamo kad Stadium Server nije instaliran. Igrin stadion izabran kao domaći stadion u utakmici je pravilno osvijetljen; u svijetu izgrađenom prije 0.2.4 može biti potpuno mračan: izgradi ga opet.
 
 **Klubovi koje igra već ima.** Na mjesto u novoj ligi može doći i jedan od igrinih klubova
 umjesto novog: odaberi mjesto, pa **Više → Klub iz igre...**, i traži po imenu, kratici ili ID-u
@@ -506,8 +502,8 @@ mjesto preuzima klub iz igre koji ne igra nigdje:** (izaberi jedan s popisa) ili
 preuzima novi klub, ime:** (upiši ime). **Zadržava mjesta u kontinentalnim natjecanjima** (0.1.8, #84) mu pušta da i dalje igra Ligu prvaka, Libertadores ili AFC Ligu prvaka u kojoj je: klub kojem je kontinent sve što igra u igri tada se samo seli, a onaj koji igra i ligu iz igre klubu kojeg izabereš predaje samo ligu i kupove. Od druge sezone mjesta tvoje lige odlučuju tko ide. Predsezonski turnir (*Pre-season friendly Cups* u SPFL26) se ne broji: klub ga i dalje igra, kao i klubovi Premier Lige (0.1.7). **Uredi klub** na klubu iz igre mijenja ime, grb, sliku trenera i stadion, kao na *Lige* za ligu iz igre (0.1.7). Tako nijedno natjecanje igre ne mijenja broj klubova;
 lige iz igre zadržavaju datume samo s brojem za koji su napravljene. Reprezentacije, klasični i
 zadani timovi te klubovi s manje od 18 igrača ne mogu se odabrati. **Novi klub ovdje** (u
-**Više**) vraća mjesto novom klubu; siv je osim ako je odabrani klub klub iz igre na tom mjestu
-(0.2.4). Klub se više ne vidi u skupinama *Other ... clubs* Master Lige.
+**Više**) vraća mjesto novom klubu; siv je osim ako je odabrani klub klub iz igre na tom mjestu.
+Klub se više ne vidi u skupinama *Other ... clubs* Master Lige.
 
 **NewLife klub...** (0.1.8, #83, u **Više**) stavlja klubove iz NewLife baze, s njihovim kadrovima, na odabrano mjesto i mjesta iza njega: označi jedan ili više klubova (traženje po klubu ili po ligi) i svaki redom zauzme svoje mjesto. Tako liga koju si napravio rukom dobije prave klubove. Koristi NewLife mapu koju si zadnju otvorio; prvi put je otvori na stranici *NewLife Database*.
 
@@ -519,7 +515,7 @@ lige, pa opet **Build**. Svaka promjena klubova lige traži **novu karijeru**.
 
 **Lige iz igre** (odaberi jednu na *Lige*): novo ime ili logo, pa **Zadrži promjene lige** (**Poništi promjene lige** vraća natrag); **Uredi klub** za grb, ime, sliku trenera i stadion kluba. Popis Klubovi pokazuje koliko će igrača imati svaki klub: njegov kadar, manje igrači koji su maknuti ili koje je doveo drugi klub, plus dodani i dovedeni. Takva promjena se odmah pamti u datoteci tvog svijeta, kao i svaka druga.
 
-**Uvezi grbove...** (0.1.8, *Klubovi* → Više; za lige igre *Lige* → Više): grbovi za mnoge klubove odjednom. Odaberi mapu sa slikama; svaka se spaja s klubom po imenu datoteke -- imenu kluba (`Alianza Lima.png`, `alianza_lima_r_l.png`) ili ID-u kluba (`2287.png`, `e_2287_r.png` iz paketa grbova). Ime se spaja samo po cijelim riječima, a reprezentacija uzima sliku samo po svom ID-u (0.2.4; prije je "termalica" mogla otići Maliju). Popis pokaže svako spajanje s kvačicom; makni kvačicu s krivog prije **U redu**. **Spoji s** može biti i jedna liga tvog svijeta: spajaju se samo njeni klubovi, a mapa nazvana po ligi tvog svijeta (`Torneo DIMAYOR II`) sama je odabere, pa klub istog imena u drugoj ligi ne dobije ništa. Klub koji već ima grb zadržava ga, osim ako je označeno **Zamijeni grbove koji su već postavljeni**. Slike ostaju u toj mapi i Build ih čita odande, zato je zadrži. (Spajanje po imenu je ideja iz Xxspeddove skripte za grbove.)
+**Uvezi grbove...** (0.1.8, *Klubovi* → Više; za lige igre *Lige* → Više): grbovi za mnoge klubove odjednom. Odaberi mapu sa slikama; svaka se spaja s klubom po imenu datoteke -- imenu kluba (`Alianza Lima.png`, `alianza_lima_r_l.png`) ili ID-u kluba (`2287.png`, `e_2287_r.png` iz paketa grbova). Ime se spaja samo po cijelim riječima, a reprezentacija uzima sliku samo po svom ID-u. Popis pokaže svako spajanje s kvačicom; makni kvačicu s krivog prije **U redu**. **Spoji s** može biti i jedna liga tvog svijeta: spajaju se samo njeni klubovi, a mapa nazvana po ligi tvog svijeta (`Torneo DIMAYOR II`) sama je odabere, pa klub istog imena u drugoj ligi ne dobije ništa. Klub koji već ima grb zadržava ga, osim ako je označeno **Zamijeni grbove koji su već postavljeni**. Slike ostaju u toj mapi i Build ih čita odande, zato je zadrži. (Spajanje po imenu je ideja iz Xxspeddove skripte za grbove.)
 
 **Zamijeni ligu s klubom...** (0.1.7, *Lige*, liga iz igre → Više): dva kluba iz liga igre zamijene mjesta -- klub koji je ušao za onaj koji je ispao, klub lige jedne države za klub druge. Svaki preuzme mjesta drugoga u ligi, kupovima i europskim natjecanjima, pa svaka liga igre zadrži broj klubova. Klub u novoj ligi tvog svijeta ne može se mijenjati. **Poništi izmjene kluba** vraća zamjenu. Zatim opet **Build** i nova karijera.
 
@@ -537,7 +533,7 @@ Odaberi klub (ili **Više → Igrači** na Klubovi), pa igrača:
 - **Ocjena**: ocjena koju pokazuje igra, izračunata kao u igri iz sposobnosti, s težinama za
   svaku poziciju (najviše bod-dva razlike). Promjena pomiče svaku sposobnost igrača za isti iznos,
   a nekoliko najvažnijih za njegovu poziciju za jedan više, pa ocjena bude baš upisani broj. Igrač novog kluba nema ime dok ga Build ne numerira
-  (FL P00001 ...); upiši ime u **Ime** da dobije tvoje; od 0.2.0 takav kadar počinje na razini
+  (FL P00001 ...); upiši ime u **Ime** da dobije tvoje; takav kadar počinje na razini
   svog ranga (oko 72 u prvoj ligi, do 57 od petog ranga naniže);
 - **Lice**: **Odaberi...** mapu s licem (odjeljak 8.1). **Makni** vraća lice iz igre. Novi igrač
   bez njega dobije lice iz paketa lica za regene koje odgovara njegovoj nacionalnosti, s malom
@@ -602,7 +598,7 @@ Popis klubova ima i **Reprezentacije** i **Ostali klubovi (bez lige)**: momčadi
   koristi svugdje gdje svijet spominje klub ili igrača (kadrovi, natjecanja, dresovi, grbovi,
   trener, lica). Klubovi i igrači igre zadržavaju svoje ID-eve: njeni dresovi, lica i tvoji
   saveovi vezani su uz njih.
-- **Igrači zadržavaju ID-eve kad opet gradiš** (0.2.4). Build svakog igrača svijeta nađe po tome
+- **Igrači zadržavaju ID-eve kad opet gradiš.** Build svakog igrača svijeta nađe po tome
   tko je (po NewLife ID-u, inače po imenu i datumu rođenja) prije nego po mjestu u kadru, pa igrač
   koji se pomaknuo u kadru ili promijenio klub zadrži svoj ID, a stara karijera ga ne pokaže kao
   nekog drugog.
@@ -657,12 +653,12 @@ korak, pod **Korak po korak i Izvezi svijet** na kartici **Gradnja**:
 mapu saveova, odjeljak 3.1). Svijet u igri umjesto toga pokazuje **● Aktivan**. Pokreni novu
 Master Ligu nakon što aktiviraš drugi svijet.
 
-**Novi logo ili grb gradi se u sekundama** (0.2.4). Kad su se od zadnjeg Builda promijenile samo
+**Novi logo ili grb gradi se u sekundama.** Kad su se od zadnjeg Builda promijenile samo
 slike (logo lige ili kupa, grb kluba, zastava države), Build nacrta samo njih ponovno, a ostatak
 svijeta ostavi kakav jest. Svaka druga promjena (ime, klub, igrač) je puni Build. Svijet iz zipa
 se na tvom računalu jednom izgradi cijeli; nakon toga su i njegove promjene slika brze.
 
-**Gotov svijet se ovdje ne gradi** (0.2.4). Svijet instaliran iz zipa je već izgrađen, a Build
+**Gotov svijet se ovdje ne gradi.** Svijet instaliran iz zipa je već izgrađen, a Build
 bi ga zamijenio svijetom otvorenim u Mod Studiju. Zato su, dok je gotov svijet u igri, koraci
 gradnje sivi s napomenom, Početna kaže **Spremno za igru**, a Gradnja objasni što umjesto toga:
 stisni **Pokreni igru**, ili prvo stavi svoj svijet u igru (**Aktiviraj** na njegovoj kartici).
@@ -713,7 +709,7 @@ CONCACAF država iza MLS-a, a afričke i oceanijske (igra za njih nema odjeljak)
 
 > **Kupovi drugih kontinenata.** Kad tvoje lige šalju klubove u CAF Ligu prvaka, CAF
 > Konfederacijski kup, AFC Ligu prvaka Two, AFC Challenge League, Copa Sudamericanu, CONCACAF
-> Champions Cup ili OFC Ligu prvaka (zadnja tri su nova u 0.2.0), **Build** napravi i te kupove.
+> Champions Cup ili OFC Ligu prvaka, **Build** napravi i te kupove.
 > Svaki dobije 32, 16, 8 ili 4 kluba: prvo mjesta tvojih liga, zatim ga popune igrine lige s tog
 > kontinenta (Azija, Južna Amerika, a za CONCACAF kup MLS); za AFC Challenge League to su 11.-14.
 > iz J1 League, 10.-13. iz kineske Super lige i 11.-14. iz saudijske Pro lige. S 8 ili više igraju
@@ -727,7 +723,7 @@ CONCACAF država iza MLS-a, a afričke i oceanijske (igra za njih nema odjeljak)
 > druge sezone karijere.
 >
 > Liga koja može poslati klub u Copa Libertadores, AFC Ligu prvaka ili Svjetsko klupsko prvenstvo
-> drži se podalje od njihovih dana utakmica (0.2.4): nema kola lige dan prije ni dan poslije.
+> drži se podalje od njihovih dana utakmica: nema kola lige dan prije ni dan poslije.
 
 > **Ždrijeb kupa države** (kartica Gradnja, Opcije svijeta) odlučuje kako se izvlače nacionalni
 > kupovi tvojih liga. *Nositelji* (zadano): klubovi prvog ranga dobiju slobodne prolaze i kasnija
@@ -790,12 +786,12 @@ su rađene za FL26.
    Database...** i odaberi tu mapu. (Ili ispusti mapu na **+ Dodaj...**.) Popis pokazuje sve lige
    iz tih dijelova: državu, klubove, klubove koje igra već ima (*U igri*), igrače i razinu. Klikni
    ligu da vidiš njene klubove. Klik na naslov stupca (Liga, Država, Klubovi, Igrači, Razina) slaže
-   popis po njemu, drugi klik obrne redoslijed (0.2.0); popis se otvara složen po državi.
+   popis po njemu, drugi klik obrne redoslijed; popis se otvara složen po državi.
 3. Odaberi jednu ili više liga (Ctrl ili Shift za više) i stisni **Dodaj u svoj svijet**. Svaka
    postaje nova liga sa svojim klubovima i njihovim kadrovima. Liga države u kojoj igra već ima
    ligu (Greek Super League 2, Scottish Championship ...) ulazi kao rang ispod najniže lige igre u
-   toj državi, s ulaskom u viši rang i ispadanjem, osim ako je ispod nje već neka tvoja liga
-   (0.3.0); stranica kaže koja. Svaka druga liga je prvi rang svoje države. Rang,
+   toj državi, s ulaskom u viši rang i ispadanjem, osim ako je ispod nje već neka tvoja liga;
+   stranica kaže koja. Svaka druga liga je prvi rang svoje države. Rang,
    format, europska mjesta i ostalo mijenjaš na *Lige*, kao za svaku drugu ligu.
 4. **Izgradi i instaliraj** i pokreni novu karijeru (odjeljak 8.2).
 
@@ -832,21 +828,21 @@ su rađene za FL26.
   mjesta i kupove; klub koji ostaje zadržava trenera i grb koji si izabrao, a tvoji vlastiti
   klubovi koje si stavio u ligu ostaju. Sposobnosti, pozicije i ostalo u kadrovima dolaze iz nove
   verzije; lice koje si povezao ili mala slika koju si izabrao na *Igrači* ostaju uz igrača koji
-  je još u klubu (0.2.0, #111). Klub iz igre čije je mjesto otišlo drugom klubu ostaje novi klub
-  u tvojoj ligi (0.2.4). Zatim Build i nova karijera.
+  je još u klubu (#111). Klub iz igre čije je mjesto otišlo drugom klubu ostaje novi klub
+  u tvojoj ligi. Zatim Build i nova karijera.
 - **Lige same igre u NewLife sezoni** (0.1.8): s otvorenom NewLife bazom stisni **Više → Dovedi
   lige igre u ovu sezonu...**. Svaka liga igre koju izdanje ima je na popisu s onim što joj se
   događa, svaka s kućicom. Klub koji je ušao ili ispao između dviju liga igre mijenja mjesto s
   klubom koji ide obrnuto (Burnley u Championship, Coventry u Premier League), kao što radi
   *Zamijeni ligu s klubom...*. Klub koji je ispao iz liga igre (Leicester u League One) postaje
   klub koji je ušao na njegovo mjesto (Bolton): njegovo ime, kratica, grb i kadar; dres, stadion i
-  trener ostaju. Kad baza za taj klub nema grb, mjesto dobije štit u bojama dresa novog kluba
-  (0.2.4). Svaki klub označenih liga dobiva NewLife kadar: igrači koje igra ima dolaze iz starog
+  trener ostaju. Kad baza za taj klub nema grb, mjesto dobije štit u bojama dresa novog kluba.
+  Svaki klub označenih liga dobiva NewLife kadar: igrači koje igra ima dolaze iz starog
   kluba, oni kojih nema se dodaju, a igrači koje NewLife ima u drugom klubu odlaze. Igrač kojeg
-  NewLife još ima u ovom klubu ostaje, dok god klub ima mjesta (najviše 40; 0.2.4); log Builda
+  NewLife još ima u ovom klubu ostaje, dok god klub ima mjesta (najviše 40); log Builda
   imenuje svakoga za koga nije bilo mjesta. Ocjene se stavljaju na skalu igre, mjereno na
-  igračima koje imaju oboje, pa zvijezda završi gdje je igra ocjenjuje (0.2.0; prije je vrh bio
-  2 do 4 više). Lige zadržavaju broj klubova, format i kupove. Klubovi koje si već mijenjao rukom
+  igračima koje imaju oboje, pa zvijezda završi gdje je igra ocjenjuje.
+  Lige zadržavaju broj klubova, format i kupove. Klubovi koje si već mijenjao rukom
   (zamjena, novo ime, klub nove lige, promjene igrača) ostaju kakvi jesu. Ponovno s novijom
   verzijom zamjenjuje ono što je napravila starija; **Više → Poništi lige igre** vraća sve. Build
   i nova karijera.
@@ -869,7 +865,7 @@ svijetu, s **Dodaj paket...**, **Napravi paket...** i **Ukloni iz svog svijeta**
 3. Po želji i **moje promjene postojećih liga, klubova i igrača**.
 4. **Što ide unutra** (0.1.8): sve je označeno; makni kvačicu s onoga što ne želiš dijeliti --
    **Kadrovi**, **Lica i portreti igrača**, **Grbovi i logotipi liga**, **Treneri**, **Boje
-   dresova**, **Domaći stadioni** (linija za Stadium Server, ne sam stadion) i (0.2.1)
+   dresova**, **Domaći stadioni** (linija za Stadium Server, ne sam stadion) i
    **Dresovi** (Kit Server dresovi klubova) i **Scoreboardi** (Scoreboard Server scoreboard svake
    lige). Dresovi i scoreboardi uzimaju se iz tvoje igre kakav je svijet sada: što god
    kit-server\map.txt i scoreboard-server\map_competitions.txt daju njegovim klubovima i ligama.
@@ -878,7 +874,7 @@ svijetu, s **Dodaj paket...**, **Napravi paket...** i **Ukloni iz svog svijeta**
 5. **Spremi paket...**. Datoteka (`.fl26pack`) nosi slike, lica, dresove i scoreboarde, a ne
    putanje na tvom računalu. Tko ga doda, dobije dresove i scoreboarde na mjestu sa svojim ID-evima
    klubova i liga kad napravi Build (Kit Server / Scoreboard Server moraju biti instalirani); klub
-   kojem je na kartici *Dresovi* dao vlastiti redak za dres zadrži taj dres (0.2.4), a dres iz
+   kojem je na kartici *Dresovi* dao vlastiti redak za dres zadrži taj dres, a dres iz
    paketa ostaje sa svojim klubom kad se klub makne, umetne ili premjesti, ili kad se liga ažurira
    na noviji NewLife. Dresovi dodaju oko 10 MB po ligi, a scoreboard oko 7 MB, pa je takav paket
    često preko Discordovog limita od 10 MB: podijeli ga preko cloud servisa (Google Drive,
@@ -889,7 +885,7 @@ Početna, **Datoteka → Dodaj paket liga...**, **+ Dodaj...** u Moj svijet, ili
 **Uvezi svijet**, gdje onda **Izgradi i instaliraj** krene sam):
 
 1. Program pokaže što je unutra i pita. Paket s više liga ih nabroji, sve označene: makni kvačicu
-   onima koje ne želiš (0.2.1). Liga ispod druge lige iz paketa povlači i tu ligu. Pod **Što
+   onima koje ne želiš. Liga ispod druge lige iz paketa povlači i tu ligu. Pod **Što
    uzeti** možeš maknuti kvačicu i s dijelova paketa (scoreboardi, dresovi, grbovi, lica ...),
    npr. da scoreboarde uzmeš iz drugog paketa.
 2. Liga s imenom koje već imaš: program pita i doda je kao `Ime (Paket)` (ne: ništa se ne doda).
@@ -903,7 +899,7 @@ ID-evi se dodjeljuju kad svaka osoba gradi, prema onome što ima njena igra, pa 
 druge pakete i uz tvoje vlastite lige. **Ukloni iz svog svijeta** opet izvadi paket, zajedno s
 promjenama koje je napravio na klubovima igre. Ako paket mijenja klub koji tvoj svijet već
 mijenja (recimo NewLife klub), igrač kojeg dodaju oba doda se jednom, a dovođenja i micanja iz
-paketa dođu s njim (0.2.4).
+paketa dođu s njim.
 
 Liga smještena ispod jedne od liga igre radi svima s istom verzijom igre.
 
@@ -985,7 +981,7 @@ mapu s tablicama...**, poglavlje 2) i **Otvori mapu s postavkama programa**.
 
 | Što vidiš | Što napraviti |
 |---|---|
-| *sider.ini not found* | Postavke → Mapa igre: odaberi mapu s `FL_2026.exe`. |
+| *sider.ini not found* | Postavke → Mapa igre: odaberi mapu s `FL_2026.exe` (FL27: `FL_2027.exe`). |
 | *nema tablica igre* | Postavke → Raspakiraj tablice igre. |
 | *Access is denied*, ili Mod Studio kaže da ne može pisati u mapu igre | Igra je pod Program Files: stisni **Ponovno pokreni kao administrator**, ili premjesti igru u svoju mapu. |
 | Mod Studio kaže da fali DLL njegovih modula (`fl26swiss.dll` ...) | Uzeo ga je antivirus. Dodaj mapu `SiderAddons` kao iznimku u antivirusu, pa opet **Instaliraj sada**. |

@@ -13,7 +13,7 @@
 
 *Jusqu'à la 0.3.0, il s'appelait FL26 Mod Studio : c'est le même programme, renommé parce qu'il fonctionne aussi avec FL27. Le fichier du programme (FL26ModStudio.exe), le dossier du zip et vos réglages gardent leur nom.*
 
-FL Mod Studio est un seul programme pour tout ce que vous ajoutez à Football Life 2026 :
+FL Mod Studio est un seul programme pour tout ce que vous ajoutez à Football Life 2026 et à Football Life 2027 :
 
 - les **mods** que vous téléchargez : stades, maillots, ballons, tableaux de score, commentaires,
   musique, visages, modules Lua ;
@@ -33,7 +33,7 @@ mod qu'il installe peut être retiré ensuite.
 
 ## Football Life 2027
 
-Le même programme fonctionne avec FL27 (depuis 0.3.0). Dans **5. Réglages → Dossier du jeu**, choisissez le dossier de FL27, celui qui contient `FL_2027.exe` ; pour revenir à FL26, choisissez le dossier de FL26. Chaque jeu garde ses propres tables et ses propres sauvegardes (celles de FL27 sont dans `Documents\SPGAME\Football Life\2027\save`).
+Le même programme fonctionne avec FL27. Dans **5. Réglages → Dossier du jeu**, choisissez le dossier de FL27, celui qui contient `FL_2027.exe` ; pour revenir à FL26, choisissez le dossier de FL26. Chaque jeu garde ses propres tables et ses propres sauvegardes (celles de FL27 sont dans `Documents\SPGAME\Football Life\2027\save`).
 
 - Dans FL27, la phase de ligue de la Ligue des champions et de la Ligue Europa, le barrage de février et la phase à élimination directe sont ceux de FL27, à ses dates. Mod Studio décide qui entre depuis vos ligues et joue les tours préliminaires ; la Ligue Conférence est celle de Mod Studio.
 - Les zips Worldpack et Europe pack s'installent et se jouent dans FL27, mais ils ont les joueurs de FL26. Un monde que vous construisez dans FL27 a les joueurs de FL27.
@@ -41,7 +41,7 @@ Le même programme fonctionne avec FL27 (depuis 0.3.0). Dans **5. Réglages → 
 
 ## 1. Avant de commencer
 
-- **Football Life 2026** installé, avec son dossier `SiderAddons` (FL26 est livré avec Sider).
+- **Football Life 2026** ou **Football Life 2027** installé, avec son dossier Sider (`SiderAddons` ; FL26 est livré avec Sider).
 - Décompressez le programme où vous voulez, p. ex. `Documents\FL26 Mod Studio`. Gardez le dossier
   entier : les dossiers `_internal` et `pack` et les fichiers `README` restent à côté de `FL26ModStudio.exe`.
 - **Fermez le jeu** pendant vos changements. Sider lit sa configuration au lancement du jeu.
@@ -52,8 +52,8 @@ français (Français). La nouvelle langue s'affiche au prochain démarrage de Mo
 
 ## 2. Premier lancement
 
-**La visite rapide.** La première fois que vous lancez la 0.2.4, une petite carte vous montre où
-tout se trouve maintenant, un endroit à la fois, avec un cadre orange autour de ce dont elle
+**La visite rapide.** La première fois que vous lancez Mod Studio, une petite carte vous montre où
+tout se trouve, un endroit à la fois, avec un cadre orange autour de ce dont elle
 parle : la langue, les cases de ce qui est dans le jeu, **Lancer le jeu**, puis de **1. Accueil**
 à **5. Réglages** et **Aide**. Dix étapes. Rien ne change pendant la visite. **Suivant** et
 **Retour** avancent et reculent, **Passer la visite** la ferme, et **Aide → Visite rapide** la
@@ -62,20 +62,20 @@ deuxième carte qui vous guide pour installer un Modpack (un zip de monde), clic
 **Aide → Installer un Modpack, étape par étape**).
 
 1. **5. Réglages → Dossier du jeu** : appuyez sur **Parcourir...**, choisissez le dossier qui
-   contient `FL_2026.exe`, puis **Utiliser ce dossier**. La ligne en dessous dit ce qui a été
+   contient `FL_2026.exe` (FL27 : `FL_2027.exe`), puis **Utiliser ce dossier**. La ligne en dessous dit ce qui a été
    trouvé, p. ex. `Trouvé : FL_2026.exe, Sider dans SiderAddons, sider.ini.`
 2. Les tables du jeu : Mod Studio les extrait tout seul la première fois (il lit les clubs, ligues
    et joueurs du jeu dans un dossier de travail ; cela prend une minute ou deux, et la barre du
    bas le dit). Après une mise à jour du jeu, Build le remarque et propose d'abord une nouvelle
    extraction ; **Réglages → Les tables du jeu → Extraire les tables du jeu** le fait à la main.
-   FL26 et FL27 ont chacun leurs propres tables : quand le dossier du jeu passe à l'autre jeu, Mod Studio extrait les tables de ce jeu la première fois et garde les deux (avant, après un changement FL27 était construit avec les tables de FL26, et inversement, jusqu'à une nouvelle extraction). **Utiliser un autre dossier de tables...** sert pour votre propre base, comme un dossier
+   FL26 et FL27 ont chacun leurs propres tables : quand le dossier du jeu passe à l'autre jeu, Mod Studio extrait les tables de ce jeu la première fois et garde les deux. **Utiliser un autre dossier de tables...** sert pour votre propre base, comme un dossier
    `pesdb` dans livecpk : extrayez d'abord les tables du jeu, puis choisissez ce dossier. Ses
    fichiers passent par-dessus ceux du jeu, qui fournissent tout ce qu'il n'a pas. Pas le dossier
-   d'un monde (`livecpk\_FL26...`) : chaque Build le réécrit, Mod Studio ne le prend donc pas
-   (0.2.5.1). Un mod de base
+   d'un monde (`livecpk\_FL26...`) : chaque Build le réécrit, Mod Studio ne le prend donc pas.
+   Un mod de base
    qui déplace les ligues du jeu à la place d'autres ligues (UML 2026 et autres) convient : chaque
    ligue du jeu prend le pays de la plupart de ses clubs, et NewLife Database ne compte un club
-   comme celui du jeu que si ces tables l'ont (0.2.4).
+   comme celui du jeu que si ces tables l'ont.
 3. Ouvrez **1. Accueil**. Il montre le monde qui est dans le jeu (**DANS LE JEU MAINTENANT**, avec
    **Ouvrir ses ligues** et **Changer de monde...**, qui ouvre **2. Mon monde**), une carte qui dit
    si votre monde a des changements que le jeu n'a pas encore (**Aller à Construction** et
@@ -98,14 +98,11 @@ démarrage** et le programme ne vérifie plus que sur demande. Si le programme s
 dossier où Windows ne le laisse pas écrire (comme Program Files), il ouvre la page de la version à
 la place : décompressez le zip vous-même, ou déplacez le programme dans un dossier à vous.
 
-**Carrières d'avant la 0.2.0.** La 0.2.0 permet 792 matchs par jour du calendrier au lieu de 280, ce qui change les tables avec lesquelles une carrière est sauvegardée : **une carrière sauvegardée avec une version plus ancienne ne se charge pas** (elle reste sur l'écran de chargement). Commencez une nouvelle carrière après la mise à jour. Vos mondes et données Edit ne changent pas.
-
-**La 0.2.4 et votre carrière.** Une carrière sauvegardée avec la 0.2.2 ou la 0.2.3 continue de
-marcher, et une coupe sauvegardée avant la 0.2.4 se charge aussi. Une correction demande un
-nouveau Build : jusqu'à la 0.2.4, le gardien était le capitaine de chaque club d'un monde fait
-avec Mod Studio. **Construction** donne maintenant à chaque club et chaque sélection qui n'en a
-pas un capitaine et des joueurs qui tirent les penalties, les coups francs et les corners. Pour
-les avoir, reconstruisez votre monde et commencez une nouvelle carrière.
+**Carrières et mondes des anciennes versions.** Une carrière sauvegardée avec un Mod Studio plus
+ancien que la 0.2.0 ne se charge pas (elle reste sur l'écran de chargement) : commencez une
+nouvelle carrière. Vos mondes et données Edit ne changent pas. Un monde construit pour la dernière
+fois avant la 0.2.4 a le gardien comme capitaine de chaque club : reconstruisez-le et commencez
+une nouvelle carrière. Ce que chaque version a changé : [changelog](../../docs/changelog/README.md).
 
 **Jouer.** Le bouton **Lancer le jeu** en haut à droite (ou **Jeu → Lancer le jeu**) lance le jeu
 et prévient d'abord quand des modules sont dans un mauvais ordre. À côté, une étiquette dit si
@@ -116,7 +113,7 @@ sans mods (mode sans échec)...** remet la configuration que Mod Studio a trouv�
 Studio : les testeurs, ceux qui ont envoyé des rapports et des logs, et ceux dont les idées y sont.
 
 **Plusieurs dossiers Sider ?** Sider ne s'appelle pas forcément `SiderAddons`. Le programme
-cherche le dossier à côté de `FL_2026.exe` qui contient un `sider.ini`, et aussi un niveau plus
+cherche le dossier à côté de `FL_2026.exe` (ou `FL_2027.exe`) qui contient un `sider.ini`, et aussi un niveau plus
 bas (`sider\patch 1`, `sider\patch 2` ... quand un dossier contient plusieurs copies de Sider).
 S'il y en a plusieurs, **Réglages → Dossier de Sider** choisit celui avec lequel il travaille ;
 les autres ne sont pas touchés.
@@ -208,7 +205,7 @@ monde en fait un monde à vous, sur place et sous son propre nom. Tout est d'abo
 **Points de restauration**. Après le Build, commencez une nouvelle Master League.
 **Aide → Modifier un Modpack, étape par étape** le montre clic par clic.
 
-**Chaque monde garde ses propres carrières Master League** (0.2.4). Une carrière est faite pour
+**Chaque monde garde ses propres carrières Master League**. Une carrière est faite pour
 un monde : dans un autre monde, ses ligues et ses clubs n'existent pas. Donc chaque fois que le
 monde du jeu change (**Activer**, **Construire et installer** d'un autre monde, Importer votre
 monde, Dossiers de contenu, un profil), Mod Studio change le dossier de sauvegarde du jeu avec
@@ -235,7 +232,7 @@ vous a **Modifier la ligue...**, **Ajouter une division inférieure**, **Clubs e
 ligues du jeu »). **Ajouter une ligue** en crée une nouvelle. **Places dans Select Team** montre
 où le dernier Build a mis chacune de vos ligues ; sa colonne **Select Team** est une liste : *Automatique* (l'ordre décide) ou *à la place de* l'un des groupes du jeu (Autres ligues européennes, Autres équipes d'Amérique latine, Autres clubs (Afrique), Autres). La ligue choisie là prend la place de ce groupe au Build suivant, quel que soit l'ordre, et les clubs du groupe ne sont alors plus dans Select Team (une ligue par groupe ; avec un monde sud-américain les Autres équipes d'Amérique latine ne servent à rien, vmican). Dans une Master League commencée après ce Build, les clubs de la ligue prennent aussi la place du groupe : Team Info les montre sous la ligue, et ce sont eux qui complètent la Libertadores ou la Coupe du monde des clubs depuis ce groupe ; les clubs du groupe restent sans ligue. Un monde avec des associations CONMEBOL garde la place des Autres équipes d'Amérique latine. **Plus ▾** contient **Tournois de pré-saison**,
 **Coupes de nos pays**, **Coupes des pays du jeu**, **Places européennes des ligues du jeu**,
-**Clubs européens de la première saison**, **Classement UEFA**, **Places sud-américaines** (avec sa case **Compétitions modernes de la CONMEBOL**, 0.2.5), **Pays de la CONMEBOL sans championnat** (avec les compétitions modernes),
+**Clubs européens de la première saison**, **Classement UEFA**, **Places sud-américaines** (avec sa case **Compétitions modernes de la CONMEBOL**), **Pays de la CONMEBOL sans championnat** (avec les compétitions modernes),
 **Noms des compétitions**, **IDs des compétitions**, **Ordre des championnats**, **Saisons des
 championnats du jeu** et **Nom du monde et fichier...**. Ce dernier ouvre la page avec le nom du
 monde et la liste de vos ligues (les anciens guides l'appellent *Nouvelles ligues*).
@@ -336,14 +333,14 @@ seul bloc de `sider.ini` avec son propre titre. Les vieilles lignes laissées pa
 à la main (un ancien jeu de caps, un module listé deux fois) sont désactivées par **Installer
 maintenant** et par **Construction**.
 
-Depuis 0.2.0 les douze petites protections contre les plantages arrivent en deux fichiers, `fl26guards.lua` (les huit `fl26nullguard`) et `fl26lateguards.lua` (`fl26superguard`, `fl26resultsguard`, `fl26ctlguard`, `fl26kitguard`), la liste est donc plus courte. sider.log nomme toujours chaque protection sur sa propre ligne. Le Build désactive les anciennes lignes séparées ; rien à faire à la main.
+Les douze petites protections contre les plantages arrivent en deux fichiers, `fl26guards.lua` (les huit `fl26nullguard`) et `fl26lateguards.lua` (`fl26superguard`, `fl26resultsguard`, `fl26ctlguard`, `fl26kitguard`), la liste est donc plus courte. sider.log nomme toujours chaque protection sur sa propre ligne. Le Build désactive les anciennes lignes séparées ; rien à faire à la main.
 
-**Plus de copies à côté de vos fichiers** (0.2.4). Quand Build, L'activer ou Installer les
+**Plus de copies à côté de vos fichiers.** Quand Build, L'activer ou Installer les
 modules changent un fichier, la copie d'avant va dans `SiderAddons\ModStudio\backups` et apparaît
 dans **Points de restauration**, pas à côté du fichier (plus de `map.txt.before-builder` ni de
 `modules\before-builder-<n>`).
 
-**Désactiver les regens** (0.2.0) : `fl26regen` donne aux regens de nouveaux noms, un nouveau
+**Désactiver les regens** : `fl26regen` donne aux regens de nouveaux noms, un nouveau
 potentiel et un visage du pack de visages des regens. Pour jouer sans lui, décochez **Masquer
 les modules de Mod Studio (fl26...)** pour voir les nôtres, décochez `fl26regen` et appuyez
 sur **Appliquer**. Mod Studio le note dans `modules\fl26-off.txt` dans le dossier de Sider : la
@@ -393,7 +390,7 @@ de score de ses ligues. Tant qu'un autre monde est dans le jeu, leurs lignes res
 contenu → Tableaux de score**, désactivées, et elles se réactivent avec leur monde. Il en va de
 même pour les thèmes de menus qu'un monde a apportés.
 
-**Importer des maillots...** (0.1.8, dans l'onglet *Maillots*) : des maillots pour beaucoup de clubs d'un coup. Choisissez un dossier de maillots kit-server prêts -- un dossier par club, avec `p1`, `p2`, `g1` ... et `order.ini`, nommé d'après le club (`Dinamo Zagreb`) ou son ID d'équipe (`2215`). **Associer à** choisit *Tous les clubs* ou *Les nouveaux clubs du monde du jeu*. Les associations à 60 % ou plus sont cochées ; vérifiez celles qui ne le sont pas et la colonne *Correspondance* avant **OK** (un dossier sans association affiche « aucun club trouvé »). Les maillots sont copiés dans la bibliothèque de kit-server (`Ligue\Club`, comme le dossier les avait) et chaque club reçoit une ligne dans `map.txt` ; **Enregistrer** l'écrit. Un club qui a déjà une ligne la garde, sauf si **Remplacer les maillots déjà définis** est coché. Les maillots d'un nouveau club suivent l'ID que Build lui a donné : faites d'abord Build du monde et laissez-le dans le jeu. Le dossier d'un club peut aussi contenir de simples images de maillots (0.2.0) : `p1.png`, `p2.png` ... pour les maillots et `g1.png` pour le gardien (2048 x 2048 de préférence ; `.jpg` et `.dds` marchent aussi). Mod Studio en fait des maillots kit-server ; les numéros de dos, les numéros de short et la police du nom sont des textures à part, ils viennent donc d'un maillot déjà dans la bibliothèque, choisi dans **Numéros et noms de** (il commence sur le premier maillot de la bibliothèque qui en a ; *aucun* : le jeu garde ceux du club). Les couleurs de `config.txt` sont lues sur l'image. La conversion des images est de Xxspedd, tirée de son outil de maillots. Mod Studio ne dessine pas de maillots : les images viennent de vous ou d'un créateur de maillots.
+**Importer des maillots...** (0.1.8, dans l'onglet *Maillots*) : des maillots pour beaucoup de clubs d'un coup. Choisissez un dossier de maillots kit-server prêts -- un dossier par club, avec `p1`, `p2`, `g1` ... et `order.ini`, nommé d'après le club (`Dinamo Zagreb`) ou son ID d'équipe (`2215`). **Associer à** choisit *Tous les clubs* ou *Les nouveaux clubs du monde du jeu*. Les associations à 60 % ou plus sont cochées ; vérifiez celles qui ne le sont pas et la colonne *Correspondance* avant **OK** (un dossier sans association affiche « aucun club trouvé »). Les maillots sont copiés dans la bibliothèque de kit-server (`Ligue\Club`, comme le dossier les avait) et chaque club reçoit une ligne dans `map.txt` ; **Enregistrer** l'écrit. Un club qui a déjà une ligne la garde, sauf si **Remplacer les maillots déjà définis** est coché. Les maillots d'un nouveau club suivent l'ID que Build lui a donné : faites d'abord Build du monde et laissez-le dans le jeu. Le dossier d'un club peut aussi contenir de simples images de maillots : `p1.png`, `p2.png` ... pour les maillots et `g1.png` pour le gardien (2048 x 2048 de préférence ; `.jpg` et `.dds` marchent aussi). Mod Studio en fait des maillots kit-server ; les numéros de dos, les numéros de short et la police du nom sont des textures à part, ils viennent donc d'un maillot déjà dans la bibliothèque, choisi dans **Numéros et noms de** (il commence sur le premier maillot de la bibliothèque qui en a ; *aucun* : le jeu garde ceux du club). Les couleurs de `config.txt` sont lues sur l'image. La conversion des images est de Xxspedd, tirée de son outil de maillots. Mod Studio ne dessine pas de maillots : les images viennent de vous ou d'un créateur de maillots.
 
 Si votre monde est construit avec **Maillots simples pour le mode Édition** (section 8), Kit
 Server n'habille pas les nouveaux clubs, donc les maillots importés ne s'affichent pas sur eux ;
@@ -430,31 +427,31 @@ Maj+clic ou Ctrl+A, puis **Retirer** ou la touche Suppr.
 | **Pays** | Donne le drapeau et l'endroit où la ligue apparaît dans la liste. Un pays pour lequel le jeu n'a pas de ligue reçoit son propre titre. |
 | **Clubs** | De 10 à 24 (de 1 à 24 pour des clubs sans championnat). |
 | **Clubs sans championnat** | Pour un club, ou quelques-uns, sans championnat autour (0.1.8) : par exemple seulement le BATE Borisov de Biélorussie. Choisissez le groupe où ils vont : *Other European teams*, *Other Latin American teams*, *Other Asia-Oceania teams*, *Other Africa teams* ou *Classic Teams* -- là où le jeu range ses propres clubs qui ne jouent dans aucun championnat (Dynamo Kyiv, Wydad Casablanca ...). Dans Select Team ils apparaissent dans ce groupe. Ils ont nom, écusson, maillots, entraîneur, formation, joueurs et stade comme tout nouveau club (**Modifier le club**, **Joueurs**) ; le nom du haut sert seulement à Mod Studio pour les lister. Ils ne jouent ni championnat, ni coupe, ni compétition européenne, et tout le reste de cette fenêtre est en gris. Dans *Ligues*, un tel groupe affiche *no league (...)* au lieu d'un ID de ligue. |
-| **Format** | *Tous contre tous*, 1 à 4 fois, *se divise en deux (à l'écossaise)* ou *Apertura et Clausura* : deux tournois par saison (septembre à début janvier, janvier à mai), chacun à partir de zéro point, puis des play-offs de 8 ou 4 clubs (ou aucun). Le classement de toute la saison décide des montées et descentes. 18 clubs au maximum. Une ligue divisée a 46 journées au maximum, avant et après la division ensemble (16 clubs deux fois font 30, donc son plus grand groupe deux fois peut avoir 8 clubs, 14 journées). Pour l'instant, une seule ligue par pays peut se diviser ou jouer Apertura/Clausura. **La division en deux et Apertura et Clausura sont expérimentales** (0.2.4) : elles fonctionnent, mais ont encore plus de bugs ouverts que tous contre tous, le format entièrement testé. La fenêtre le dit sous les formats. Continuez à signaler ce que vous trouvez. |
-| **Division** | *(première division)*, ou la ligue au-dessus : une autre nouvelle ligue, ou une ligue du jeu. Depuis 0.3.0 la liste a aussi les ligues divisées du jeu (Scottish Premiership, 3F Superliga, Jupiler Pro League) : la ligue placée sous l'une d'elles monte et descend avec sa phase régulière, comme dans le Modpack. Pour placer une nouvelle ligue sous une autre nouvelle ligue en une étape : sélectionnez-la et appuyez sur **Ajouter une division inférieure** (elle reprend le pays, le nombre de clubs, le format et les montées/descentes de la ligue au-dessus ; il ne reste que le nom). Une ligue qui a déjà une autre nouvelle ligue en dessous est grisée (0.1.9) : le jeu ne suit qu'un seul lien vers le bas depuis une ligue, donc les groupes d'une même division (trois groupes de Serie C sous la Serie B) ne sont pas encore possibles. |
+| **Format** | *Tous contre tous*, 1 à 4 fois, *se divise en deux (à l'écossaise)* ou *Apertura et Clausura* : deux tournois par saison (septembre à début janvier, janvier à mai), chacun à partir de zéro point, puis des play-offs de 8 ou 4 clubs (ou aucun). Le classement de toute la saison décide des montées et descentes. 18 clubs au maximum. Une ligue divisée a 46 journées au maximum, avant et après la division ensemble (16 clubs deux fois font 30, donc son plus grand groupe deux fois peut avoir 8 clubs, 14 journées). Pour l'instant, une seule ligue par pays peut se diviser ou jouer Apertura/Clausura. **La division en deux et Apertura et Clausura sont expérimentales** : elles fonctionnent, mais ont encore plus de bugs ouverts que tous contre tous, le format entièrement testé. La fenêtre le dit sous les formats. Continuez à signaler ce que vous trouvez. |
+| **Division** | *(première division)*, ou la ligue au-dessus : une autre nouvelle ligue, ou une ligue du jeu. La liste a aussi les ligues divisées du jeu (Scottish Premiership, 3F Superliga, Jupiler Pro League) : la ligue placée sous l'une d'elles monte et descend avec sa phase régulière, comme dans le Modpack. Pour placer une nouvelle ligue sous une autre nouvelle ligue en une étape : sélectionnez-la et appuyez sur **Ajouter une division inférieure** (elle reprend le pays, le nombre de clubs, le format et les montées/descentes de la ligue au-dessus ; il ne reste que le nom). Une ligue qui a déjà une autre nouvelle ligue en dessous est grisée (0.1.9) : le jeu ne suit qu'un seul lien vers le bas depuis une ligue, donc les groupes d'une même division (trois groupes de Serie C sous la Serie B) ne sont pas encore possibles. |
 | **Montée / descente** | Combien de clubs échangent leur place avec la ligue au-dessus en fin de saison. |
 | **Saison** | Première division d'un nouveau pays uniquement : *août à mai* (par défaut) ou *février à décembre*, comme le Brésil, le Japon ou l'Arabie saoudite : les clubs montent et descendent au Nouvel An, et les divisions en dessous la suivent. Pas encore avec une division en deux, Apertura/Clausura ou une coupe de la ligue -- ni avec une division en deux ou Apertura/Clausura sur une division sous un championnat de février à décembre (la Liga BetPlay ou la J1 League du jeu comprises). |
-| **Europe** | Première division uniquement : quelle position en ligue va dans quelle compétition européenne. **Première division : 1er qualifications LDC, 2e LE, 3e LECE** remplit les trois places habituelles (*... (qualifications)* sont les barrages d'août, voir 8.2) ; **Ajouter une place**, le ✕ d'une ligne et **Effacer** pour tout le reste. Chaque position une seule fois, et seulement les positions que la ligue a. Sous 1, la position s'affiche **Vainqueur de la coupe** (0.1.7) : le vainqueur de la coupe du pays (un nouveau pays a besoin de **Coupe nationale**) -- et si le vainqueur a déjà une place européenne par la ligue, la place descend la ligue jusqu'au club suivant, comme à l'UEFA. Depuis 0.2.0, le vainqueur de la coupe peut aussi aller dans les coupes que Mod Studio construit (Copa Sudamericana, Coupe de la Confédération CAF, AFC Champions League Two ...) ; dans une nouvelle carrière, avant que quiconque ait gagné la coupe, cette place va aussi au club suivant de la ligue. Une ligue du jeu peut aussi en avoir une (*Places européennes des ligues du jeu*). Laissez vide pour une division inférieure. Le modèle suit le pays : l'Asie reçoit l'AFC Champions League et l'AFC Champions League Two, l'Amérique du Sud la Libertadores et la Copa Sudamericana, l'Afrique la Ligue des champions CAF et la Coupe de la Confédération CAF, l'Amérique du Nord et centrale la CONCACAF Champions Cup, l'Océanie l'OFC Champions League. L'**AFC Challenge League** (0.2.0) est la troisième coupe de l'AFC, sous l'AFC Champions League Two, comme la Ligue Europa Conférence en Europe ; elle se choisit avec **Ajouter une place** (*AFC CHL* dans la liste des ligues). Ces sept coupes que le jeu n'a pas sont construites avec le monde (section 8.2). Une place en *qualifications de la Libertadores* prend la place d'un club du jeu au tour préliminaire (le dernier du pays qui y a le plus de clubs), au plus six de ses huit places ; **Vérifier le plan** indique quelles ligues restent dehors au-delà. |
+| **Europe** | Première division uniquement : quelle position en ligue va dans quelle compétition européenne. **Première division : 1er qualifications LDC, 2e LE, 3e LECE** remplit les trois places habituelles (*... (qualifications)* sont les barrages d'août, voir 8.2) ; **Ajouter une place**, le ✕ d'une ligne et **Effacer** pour tout le reste. Chaque position une seule fois, et seulement les positions que la ligue a. Sous 1, la position s'affiche **Vainqueur de la coupe** (0.1.7) : le vainqueur de la coupe du pays (un nouveau pays a besoin de **Coupe nationale**) -- et si le vainqueur a déjà une place européenne par la ligue, la place descend la ligue jusqu'au club suivant, comme à l'UEFA. Le vainqueur de la coupe peut aussi aller dans les coupes que Mod Studio construit (Copa Sudamericana, Coupe de la Confédération CAF, AFC Champions League Two ...) ; dans une nouvelle carrière, avant que quiconque ait gagné la coupe, cette place va aussi au club suivant de la ligue. Une ligue du jeu peut aussi en avoir une (*Places européennes des ligues du jeu*). Laissez vide pour une division inférieure. Le modèle suit le pays : l'Asie reçoit l'AFC Champions League et l'AFC Champions League Two, l'Amérique du Sud la Libertadores et la Copa Sudamericana, l'Afrique la Ligue des champions CAF et la Coupe de la Confédération CAF, l'Amérique du Nord et centrale la CONCACAF Champions Cup, l'Océanie l'OFC Champions League. L'**AFC Challenge League** est la troisième coupe de l'AFC, sous l'AFC Champions League Two, comme la Ligue Europa Conférence en Europe ; elle se choisit avec **Ajouter une place** (*AFC CHL* dans la liste des ligues). Ces sept coupes que le jeu n'a pas sont construites avec le monde (section 8.2). Une place en *qualifications de la Libertadores* prend la place d'un club du jeu au tour préliminaire (le dernier du pays qui y a le plus de clubs), au plus six de ses huit places ; **Vérifier le plan** indique quelles ligues restent dehors au-delà. |
 | **Logo** | N'importe quelle image (un PNG à fond transparent rend le mieux). Vide : un logo est dessiné pour vous. |
 | **Drapeau du pays** | Votre propre image du drapeau du pays, étirée dans le cadre des drapeaux du jeu. Elle remplace le drapeau de ce pays partout dans le jeu (Select Team, nationalité des joueurs, l'en-tête du pays dans Database > Competition Info) tant que le monde est activé. Vide : le drapeau du jeu. |
 | **Coupe** | Première division uniquement. **Coupe nationale** : le pays a sa propre coupe, avec le nom que vous donnez (vide : `<ligue> Cup`). Le jeu remplit la coupe d'un pays avec sa première division et la division en dessous, et la taille de la coupe suit la ligne Coupe nationale des Limites (8.3) : la plus grande taille que l'écran de la coupe dessine et qui tient, donc 22 clubs donnent une coupe de 20, la première division d'abord. Au-delà de 44 clubs, la coupe ne garde que la première division. Une nouvelle deuxième division sous un pays que le jeu a déjà (Allemagne, Russie ...) entre aussi dans la coupe de ce pays, après les clubs de première division, quand les tours de la coupe conviennent au nombre de clubs. Une nouvelle troisième division ou plus bas (League One sous la Championship) laisse la coupe du pays aux deux premières divisions du jeu, comme dans le jeu. **Supercoupe (champion contre vainqueur de la coupe)** : en plus, une supercoupe en un match avant la saison. Elle a besoin de la coupe nationale. |
-| **Coupe de la ligue** | Première division uniquement. Une coupe à élimination directe de cette ligue et de celle du dessous, jouée comme la Carabao Cup (0.2.0) : un match par tour, la demi-finale et la finale aussi, aux semaines de la Carabao Cup : 27 août, 23 septembre, 28 octobre, le quart de finale le 23 décembre, la demi-finale le 14 janvier et la finale le dimanche 15 mars, à des jours à elle, jamais un jour de coupe nationale ou d'Europe. Le tableau compte autant de clubs des deux divisions que l'écran de la coupe en dessine, jusqu'à 44 (20 + 24 : toute la Premier League et la Championship) ; quand ce n'est pas 16 ou 32, les clubs de cette ligue sont exemptés et commencent au deuxième tour. Chaque rencontre est tirée au sort. Donnez-lui un nom ou laissez vide (`<ligue> League Cup`). Un monde construit avant 0.2.0 garde l'ancienne coupe aller-retour à 16 avec son tour préliminaire jusqu'à ce que vous le reconstruisiez ; une carrière commencée avant ce Build joue l'ancienne coupe. |
+| **Coupe de la ligue** | Première division uniquement. Une coupe à élimination directe de cette ligue et de celle du dessous, jouée comme la Carabao Cup : un match par tour, la demi-finale et la finale aussi, aux semaines de la Carabao Cup : 27 août, 23 septembre, 28 octobre, le quart de finale le 23 décembre, la demi-finale le 14 janvier et la finale le dimanche 15 mars, à des jours à elle, jamais un jour de coupe nationale ou d'Europe. Le tableau compte autant de clubs des deux divisions que l'écran de la coupe en dessine, jusqu'à 44 (20 + 24 : toute la Premier League et la Championship) ; quand ce n'est pas 16 ou 32, les clubs de cette ligue sont exemptés et commencent au deuxième tour. Chaque rencontre est tirée au sort. Donnez-lui un nom ou laissez vide (`<ligue> League Cup`). Un monde construit avec un Mod Studio beaucoup plus ancien garde son ancienne coupe de la ligue jusqu'à ce que vous le reconstruisiez. |
 | **Logos des coupes** | Une image pour la coupe nationale, la supercoupe, la coupe de la ligue et les play-offs de l'Apertura/Clausura, chacune à part. Vide : un emblème aux initiales de la coupe est dessiné. |
 | **Exhibition uniquement -- pas en Ligue des Masters** | Pour le Kick Off et les matchs amicaux : une ligue historique, des légendes, etc. Ses clubs ne jouent jamais de saison de Master League, donc la ligue reste seule : pas de division au-dessus ni au-dessous, pas de places européennes, pas de coupes. Elle apparaît quand même dans la liste des équipes de la Master League ; choisissez votre club dans une autre ligue. |
-| **Formation** | Comment les clubs de la ligue se placent. Choisissez une des formations des clubs du jeu (4-2-3-1, 4-1-2-3, 4-3-3, 5-3-2 ... ; la liste indique combien de clubs du jeu la jouent) : chaque nouveau club reçoit une copie de la tactique d'un club du jeu avec cette formation, et son meilleur onze est aligné en conséquence au Build. Vide : Build choisit pour chaque club la formation qui convient le mieux à son effectif (0.2.4 ; avant, un 4-2-3-1 fixe) : deux bons attaquants jouent à deux en pointe, de bons ailiers donnent trois attaquants, trois défenseurs centraux une défense à trois ou à cinq. Le journal du Build dit quelles formations ont été choisies. Un club peut avoir la sienne (**Modifier le club**). |
+| **Formation** | Comment les clubs de la ligue se placent. Choisissez une des formations des clubs du jeu (4-2-3-1, 4-1-2-3, 4-3-3, 5-3-2 ... ; la liste indique combien de clubs du jeu la jouent) : chaque nouveau club reçoit une copie de la tactique d'un club du jeu avec cette formation, et son meilleur onze est aligné en conséquence au Build. Vide : Build choisit pour chaque club la formation qui convient le mieux à son effectif : deux bons attaquants jouent à deux en pointe, de bons ailiers donnent trois attaquants, trois défenseurs centraux une défense à trois ou à cinq. Le journal du Build dit quelles formations ont été choisies. Un club peut avoir la sienne (**Modifier le club**). |
 
 Le **Nom du monde** (Ligues → Plus → **Nom du monde et fichier...**) doit commencer par `_FL26`. Cette page liste aussi vos ligues : après le **Build**, sa
 colonne **ID de la ligue** montre l'id de compétition de chaque ligue dans le jeu, celui que porte
 son fichier de logo. La colonne **#** est la place de la ligue dans l'ordre (**Monter** / **Descendre**),
 et **Select Team** dit où le dernier Build l'a mise : *oui*, *à la place de* l'un des groupes du jeu, ou
 *pas de place (elle se joue)*. Un `*` veut dire que l'ordre a changé depuis : refaites un Build pour voir
-où elle va. Glisser une ligue dans l'onglet **Ligues** ne la déplace qu'entre les places que les ligues de son continent ont déjà ici (0.2.0 ; avant, tout l'ordre passait par continent, et les ligues d'Amérique du Nord et d'Océanie finissaient toujours dernières).
+où elle va. Glisser une ligue dans l'onglet **Ligues** ne la déplace qu'entre les places que les ligues de son continent ont déjà ici.
 
 **Tournois de pré-saison** (Ligues → Plus, ou Mon monde → Coupes) : des tournois amicaux à élimination directe de 4 ou 8 clubs invités en juillet, avant la saison, appariés dans l'ordre donné (le premier contre le deuxième ...). Un club est celui d'une nouvelle ligue ou un club du jeu (son id) ; au moins un doit venir d'une nouvelle ligue, dont le pays accueille le tournoi. Une carrière commence en août, donc le premier se joue la deuxième saison. Chaque tournoi peut avoir son **Logo** ; vide : un logo est dessiné.
 
-**Coupes de nos pays** (Ligues → Plus, ou Mon monde → Coupes, 0.2.4) : les coupes de vos propres ligues dans un seul tableau. Pour chaque première division : sa coupe nationale, sa supercoupe et sa coupe de la ligue, chacune avec son nom et son logo. Ce sont les mêmes champs que dans **Modifier la ligue...**, sans ouvrir chaque ligue.
+**Coupes de nos pays** (Ligues → Plus, ou Mon monde → Coupes) : les coupes de vos propres ligues dans un seul tableau. Pour chaque première division : sa coupe nationale, sa supercoupe et sa coupe de la ligue, chacune avec son nom et son logo. Ce sont les mêmes champs que dans **Modifier la ligue...**, sans ouvrir chaque ligue.
 
-**Coupes des pays du jeu** (Ligues → Plus, ou Mon monde → Coupes) : une coupe de la ligue -- la Carabao Cup, par exemple -- pour des ligues du jeu. Cochez **Coupe de la ligue** à côté d'une ligue : elle et la ligue du dessous, jusqu'à 44 clubs, un match par tour de fin août à la finale mi-mars, tirée au sort, les clubs de la ligue exemptés jusqu'au deuxième tour (0.2.0 ; la même coupe que celle d'une nouvelle ligue), les jours que le calendrier des ligues et coupes du jeu laisse libres. **Supercoupe**, le champion contre le vainqueur de la coupe, seulement là où le jeu n'en a pas (Brésil, Chili, Écosse, Grèce, États-Unis). C'est une supercoupe en un match entre deux clubs (0.2.4 ; avant, elle sortait comme une coupe à élimination de 16). Elle se joue fin juillet ; dans un pays de février à décembre (la Supercopa de Chile, la Supercopa Rei), elle se joue fin janvier, entre le champion et le vainqueur de la coupe de la saison qui vient de finir. Quand il n'y a pas encore de vainqueur de coupe (le premier été d'une nouvelle carrière), ou que le champion a aussi gagné la coupe, c'est le deuxième de la ligue qui joue. Nom vide : le nom de la ligue et *League Cup* / *Super Cup*. **Logo** à côté de chaque nom (0.2.0) : une image pour cette coupe ; sans elle, un emblème avec les initiales de la coupe. Ces changements demandent **Installer les modules** (ou Construire et installer), un nouveau Build et une nouvelle carrière.
+**Coupes des pays du jeu** (Ligues → Plus, ou Mon monde → Coupes) : une coupe de la ligue -- la Carabao Cup, par exemple -- pour des ligues du jeu. Cochez **Coupe de la ligue** à côté d'une ligue : elle et la ligue du dessous, jusqu'à 44 clubs, un match par tour de fin août à la finale mi-mars, tirée au sort, les clubs de la ligue exemptés jusqu'au deuxième tour (la même coupe que celle d'une nouvelle ligue), les jours que le calendrier des ligues et coupes du jeu laisse libres. **Supercoupe**, le champion contre le vainqueur de la coupe, seulement là où le jeu n'en a pas (Brésil, Chili, Écosse, Grèce, États-Unis). C'est une supercoupe en un match entre deux clubs. Elle se joue fin juillet ; dans un pays de février à décembre (la Supercopa de Chile, la Supercopa Rei), elle se joue fin janvier, entre le champion et le vainqueur de la coupe de la saison qui vient de finir. Quand il n'y a pas encore de vainqueur de coupe (le premier été d'une nouvelle carrière), ou que le champion a aussi gagné la coupe, c'est le deuxième de la ligue qui joue. Nom vide : le nom de la ligue et *League Cup* / *Super Cup*. **Logo** à côté de chaque nom : une image pour cette coupe ; sans elle, un emblème avec les initiales de la coupe. Ces changements demandent **Installer les modules** (ou Construire et installer), un nouveau Build et une nouvelle carrière.
 
 **Places européennes des ligues du jeu** (Ligues → Plus) : quelles places de la Premier League, de la LaLiga, de la Serie A ... vont dans quelle compétition européenne. La liste montre les places du jeu ; cochez **Places propres pour cette ligue** pour les changer. Une ligue non cochée garde celles du jeu, une ligue cochée sans lignes n'envoie personne.
 
@@ -489,7 +486,7 @@ jusqu'à 32. Un club déjà en Libertadores ou dans ses qualifications laisse sa
 sa ligue. **Vérifier le plan** affiche la même liste dès que le monde a une place en Libertadores
 ou en Sudamericana.
 
-**Compétitions modernes de la CONMEBOL** (une case dans **Places sud-américaines**, 0.2.5 ;
+**Compétitions modernes de la CONMEBOL** (une case dans **Places sud-américaines** ;
 vmardonesdev et nissindiaz, #146) : les qualifications de la Libertadores en trois phases (phase 1 :
 6 clubs, phase 2 : 13 clubs et les trois vainqueurs de la phase 1, phase 3 : les huit vainqueurs de
 la phase 2), une Copa Sudamericana avec un premier tour de 32 clubs et un barrage après les groupes,
@@ -507,9 +504,9 @@ après confirmation.
 
 **IDs des compétitions** (Ligues → Plus) : chaque compétition du monde qui est dans le jeu, ligues et coupes, avec son id. Le jeu a de la place pour 255 ; Mon monde montre combien sont utilisées.
 
-**Ordre des championnats** (Ligues → Plus, 0.2.0) : l'ordre des pays dans le Select Team de la Master League et dans la liste des équipes Kick Off / Edit. *Par continent* est l'ordre du jeu (Europe, Amériques, Asie, puis Afrique, chacun de A à Z). *Tous les pays de A à Z* les met tous dans une seule suite alphabétique, et *Mon propre ordre* vous laisse les placer comme vous voulez (glisser, ou Monter / Descendre). Les championnats d'un pays restent ensemble, première division d'abord, et les compétitions de clubs, les groupes "Other" et Classic Teams viennent après les pays. L'Allemagne, les USA et le Japon sont dans les groupes "Other" du Select Team, ils ne bougent donc que dans Kick Off. Reconstruisez ensuite le monde.
+**Ordre des championnats** (Ligues → Plus) : l'ordre des pays dans le Select Team de la Master League et dans la liste des équipes Kick Off / Edit. *Par continent* est l'ordre du jeu (Europe, Amériques, Asie, puis Afrique, chacun de A à Z). *Tous les pays de A à Z* les met tous dans une seule suite alphabétique, et *Mon propre ordre* vous laisse les placer comme vous voulez (glisser, ou Monter / Descendre). Les championnats d'un pays restent ensemble, première division d'abord, et les compétitions de clubs, les groupes "Other" et Classic Teams viennent après les pays. L'Allemagne, les USA et le Japon sont dans les groupes "Other" du Select Team, ils ne bougent donc que dans Kick Off. Reconstruisez ensuite le monde.
 
-**Saisons des championnats du jeu** (Ligues → Plus, 0.2.0, expérimental) : le Japon, la Chine, le Brésil, le Chili et l'Arabie saoudite jouent de février à décembre dans le jeu. Cochez-en un et ses championnats jouent d'août à mai comme l'Europe : la saison commence en août, les montées et descentes ont lieu en été, ses coupes passent aux dates d'août à mai et ses places continentales viennent du classement terminé en mai. Une division à vous sous l'un de ces championnats le suit. La Colombie et les USA jouent Apertura et Clausura et ne peuvent pas changer. Reconstruisez le monde et commencez une nouvelle carrière.
+**Saisons des championnats du jeu** (Ligues → Plus, expérimental) : le Japon, la Chine, le Brésil, le Chili et l'Arabie saoudite jouent de février à décembre dans le jeu. Cochez-en un et ses championnats jouent d'août à mai comme l'Europe : la saison commence en août, les montées et descentes ont lieu en été, ses coupes passent aux dates d'août à mai et ses places continentales viennent du classement terminé en mai. Une division à vous sous l'un de ces championnats le suit. La Colombie et les USA jouent Apertura et Clausura et ne peuvent pas changer. Reconstruisez le monde et commencez une nouvelle carrière.
 
 **Clubs européens de la première saison** (Ligues → Plus, 0.1.8) :
 choisissez à la main les clubs de la phase de ligue de la Ligue des champions, de la Ligue Europa et
@@ -525,7 +522,7 @@ Construction (Options du monde) et les nouveaux clubs n'en empruntent aucun ; ch
 maillot simple que Edit > Teams > Strip modifie comme celui de n'importe quel club, Paste Image
 compris.
 Avec Kit Server installé, **Maillots aux couleurs des clubs** (onglet Construction, Options du
-monde, activé sauf si vous le décochez, 0.2.1) crée pour chaque nouveau club des maillots
+monde, activé sauf si vous le décochez) crée pour chaque nouveau club des maillots
 domicile, extérieur, troisième et gardien dans les couleurs de son maillot (celles de NewLife, ou
 de l'écusson à défaut), avec l'écusson sur la poitrine et le short, pour des ligues entières d'un
 coup quand le monde entre dans le jeu. Un écusson ajouté plus tard (Importer des écussons) passe
@@ -533,11 +530,10 @@ sur les maillots à l'activation suivante. Un club qui a son propre maillot Kit 
 seulement l'écusson numéroté, n'en reçoit pas.
 Une ligne de maillot à vous dans `map.txt` (celle que vous avez définie dans l'onglet *Maillots*,
 vers un maillot qui est dans la bibliothèque) l'emporte toujours : Build ne fait pas de maillot
-pour ce club, n'y met pas de maillot de paquet et laisse votre ligne activée (0.2.4 ; la 0.2.3 la
-désactivait à chaque Build pour le maillot d'un paquet de ligues).
+pour ce club, n'y met pas de maillot de paquet et laisse votre ligne activée.
 Les noms gardent leurs accents (FK Željezničar) ; le nom court de trois lettres n'en a pas, comme
 dans le jeu, donc Č, Ž, Đ y deviennent C, Z, D. L'ordre alphabétique d'une ligue dans les
-fichiers du jeu range Đakovo sous D et Šibenik sous S (0.2.4). Après le **Build**, la souris sur
+fichiers du jeu range Đakovo sous D et Šibenik sous S. Après le **Build**, la souris sur
 le nom d'un club montre son id dans le jeu (**ID de l'équipe**).
 
 **Visages du pack de visages pour les nouveaux joueurs** (onglet Construction, Options du monde,
@@ -554,14 +550,14 @@ couleurs des clubs** les utilise.
 
 **Formation** : dans **Modifier le club** d'un nouveau club, vous pouvez lui donner sa propre formation ; *Comme la ligue* garde celle de la ligue. Le terrain sous la liste montre la place de chacun.
 
-**Capitaine et tireurs de coups de pied arrêtés** (0.2.4) : Build donne à chaque club et chaque
+**Capitaine et tireurs de coups de pied arrêtés** : Build donne à chaque club et chaque
 sélection qui n'en a pas un capitaine (un joueur avec la compétence Captaincy, sinon le plus fort
 et le plus expérimenté) et ses tireurs de penalties, de coups francs et de corners, parmi les
 joueurs de champ du onze de départ. Un club du jeu qui a les siens les garde. Un monde construit
 avant la 0.2.4 a le gardien comme capitaine partout : reconstruisez-le et commencez une nouvelle
 carrière.
 
-**Stade à domicile** (0.1.7) : dans **Modifier le club**, un stade de la bibliothèque de Stadium Server pour le club ; l'emplacement et le nom sont remplis depuis le dossier, changez le nom si vous voulez. Il est écrit dans le `map_teams.txt` de Stadium Server quand le monde entre dans le jeu (et quand le monde du jeu est reconstruit), donc l'id d'un nouveau club n'a jamais à être cherché. Une ligne à vous pour le même club est désactivée en attendant, et réactivée quand le club n'a plus de stade ici. *Ligues* (une ligue du jeu) > **Modifier le club** l'a aussi pour les clubs du jeu. Stadium Server doit être installé (l'onglet *Stades*), ou le module de stades propre à SPFL26 (`common\stadiums.lua` avec son dossier `content\stadiums`) : depuis 0.1.8, Mod Studio y écrit quand Stadium Server n'est pas installé. Un stade du jeu choisi comme stade à domicile est bien éclairé pendant le match (0.2.4 ; avant, il pouvait être complètement sombre) : reconstruisez un monde fait avant.
+**Stade à domicile** (0.1.7) : dans **Modifier le club**, un stade de la bibliothèque de Stadium Server pour le club ; l'emplacement et le nom sont remplis depuis le dossier, changez le nom si vous voulez. Il est écrit dans le `map_teams.txt` de Stadium Server quand le monde entre dans le jeu (et quand le monde du jeu est reconstruit), donc l'id d'un nouveau club n'a jamais à être cherché. Une ligne à vous pour le même club est désactivée en attendant, et réactivée quand le club n'a plus de stade ici. *Ligues* (une ligue du jeu) > **Modifier le club** l'a aussi pour les clubs du jeu. Stadium Server doit être installé (l'onglet *Stades*), ou le module de stades propre à SPFL26 (`common\stadiums.lua` avec son dossier `content\stadiums`) : depuis 0.1.8, Mod Studio y écrit quand Stadium Server n'est pas installé. Un stade du jeu choisi comme stade à domicile est bien éclairé pendant le match ; dans un monde construit avant la 0.2.4, il peut être complètement sombre : reconstruisez-le.
 
 **Clubs que le jeu a déjà.** Une place d'une nouvelle ligue peut accueillir un des clubs du jeu au
 lieu d'un nouveau : sélectionnez la place, puis **Plus → Club du jeu...**, et cherchez par nom,
@@ -575,7 +571,7 @@ compétition du jeu ne change son nombre de clubs ; les ligues du jeu ne gardent
 qu'avec le nombre pour lequel elles ont été faites. Les sélections nationales, les équipes
 classiques et par défaut et les clubs de moins de 18 joueurs ne peuvent pas être choisis.
 **Nouveau club ici** (dans **Plus**) rend la place à un nouveau club ; il est grisé sauf si le
-club choisi est un club du jeu à cette place (0.2.4). Le club n'apparaît plus dans les groupes
+club choisi est un club du jeu à cette place. Le club n'apparaît plus dans les groupes
 *Other ... clubs* de la Master League.
 
 **Club NewLife...** (0.1.8, #83, dans **Plus**) place des clubs de la NewLife Database, avec leurs effectifs, à la place sélectionnée et aux suivantes : cochez un ou plusieurs clubs (recherche par club ou par ligue), chacun prend sa place dans l'ordre. Une ligue faite à la main reçoit ainsi de vrais clubs. Il utilise le dossier NewLife ouvert en dernier ; la première fois, ouvrez-le sur la page *NewLife Database*.
@@ -589,7 +585,7 @@ des clubs d'une ligue demande une **nouvelle carrière**.
 
 **Les ligues du jeu** (choisissez-en une dans *Ligues*) : un nouveau nom ou logo, puis **Garder les modifications de la ligue** (**Annuler les modifications de la ligue** revient en arrière) ; **Modifier le club** pour l'écusson, le nom, le portrait de l'entraîneur et le stade d'un club. La liste des clubs montre combien de joueurs chaque club aura : son effectif, moins les joueurs retirés ou recrutés par un autre club, plus ceux ajoutés et recrutés. Un tel changement est gardé tout de suite dans le fichier de votre monde, comme tout autre changement.
 
-**Importer des écussons...** (0.1.8, *Clubs* → Plus ; pour les ligues du jeu, *Ligues* → Plus) : des écussons pour beaucoup de clubs d'un coup. Choisissez un dossier d'images ; chacune est associée à un club par le nom du fichier -- le nom du club (`Alianza Lima.png`, `alianza_lima_r_l.png`) ou son ID d'équipe (`2287.png`, le `e_2287_r.png` des packs d'écussons). Un nom ne correspond que sur des mots entiers, et une sélection nationale ne prend une image que par son ID d'équipe (0.2.4 ; avant, « termalica » pouvait aller au Mali). La liste montre chaque association cochée ; décochez une mauvaise avant **OK**. **Associer à** peut aussi être une ligue de votre monde : seuls ses clubs sont associés, et un dossier qui porte le nom d'une ligue de votre monde (`Torneo DIMAYOR II`) la choisit tout seul, donc un club du même nom dans une autre ligue n'a rien. Un club qui a déjà un écusson le garde, sauf si **Remplacer les écussons déjà définis** est coché. Les images restent dans ce dossier et Build les lit là, gardez-le donc. (L'association par nom est une idée du script d'écussons de Xxspedd.)
+**Importer des écussons...** (0.1.8, *Clubs* → Plus ; pour les ligues du jeu, *Ligues* → Plus) : des écussons pour beaucoup de clubs d'un coup. Choisissez un dossier d'images ; chacune est associée à un club par le nom du fichier -- le nom du club (`Alianza Lima.png`, `alianza_lima_r_l.png`) ou son ID d'équipe (`2287.png`, le `e_2287_r.png` des packs d'écussons). Un nom ne correspond que sur des mots entiers, et une sélection nationale ne prend une image que par son ID d'équipe. La liste montre chaque association cochée ; décochez une mauvaise avant **OK**. **Associer à** peut aussi être une ligue de votre monde : seuls ses clubs sont associés, et un dossier qui porte le nom d'une ligue de votre monde (`Torneo DIMAYOR II`) la choisit tout seul, donc un club du même nom dans une autre ligue n'a rien. Un club qui a déjà un écusson le garde, sauf si **Remplacer les écussons déjà définis** est coché. Les images restent dans ce dossier et Build les lit là, gardez-le donc. (L'association par nom est une idée du script d'écussons de Xxspedd.)
 
 **Échanger de ligue avec un club...** (0.1.7, *Ligues*, une ligue du jeu → Plus) : deux clubs des ligues du jeu échangent leurs places -- un promu contre un relégué, un club de la ligue d'un pays contre un club d'un autre. Chacun prend les places de l'autre dans la ligue, les coupes et les compétitions européennes, donc chaque ligue du jeu garde son nombre de clubs. Un club qui joue dans une nouvelle ligue de votre monde ne peut pas aussi être échangé. **Annuler les changements du club** retire l'échange. Puis refaites le **Build** et commencez une nouvelle carrière.
 
@@ -610,7 +606,7 @@ un joueur :
   capacité du joueur d'autant, et les quelques-unes qui comptent le plus pour son poste d'un de
   plus, pour tomber sur le nombre tapé. Un joueur d'un nouveau club n'a pas de
   nom tant que le Build ne le numérote pas (FL P00001 ...) ; tapez-en un dans **Nom** pour lui
-  donner le vôtre ; depuis 0.2.0 cet effectif part du niveau de sa division (environ 72 en
+  donner le vôtre ; cet effectif part du niveau de sa division (environ 72 en
   première division, jusqu'à 57 à partir de la cinquième) ;
 - **Visage** : **Choisir...** un dossier de visage (section 8.1). **Effacer** redonne le visage du
   jeu. Un nouveau joueur sans visage reçoit un visage du pack de visages des regens qui va avec sa
@@ -682,7 +678,7 @@ La liste des clubs a aussi **Équipes nationales** et **Autres clubs (sans ligue
   monde parle du club ou du joueur (effectifs, compétitions, maillots, écussons, entraîneur,
   visages). Les clubs et joueurs du jeu gardent leurs ID : leurs maillots, visages et vos
   sauvegardes en dépendent.
-- **Les joueurs gardent leur ID quand vous reconstruisez** (0.2.4). Build retrouve chaque joueur
+- **Les joueurs gardent leur ID quand vous reconstruisez.** Build retrouve chaque joueur
   propre au monde par qui il est (son id NewLife, sinon son nom et sa date de naissance) avant sa
   place dans l'effectif, donc un joueur qui est monté dans l'effectif ou a changé de club garde
   son ID, et une ancienne carrière ne le montre pas comme quelqu'un d'autre.
@@ -740,13 +736,13 @@ cours (`Building... 3:12 · squads: filling them`), et la fenêtre reste utilisa
 le dossier de sauvegarde, section 3.1). Le monde qui est dans le jeu affiche **● Actif** à la
 place. Commencez une nouvelle Master League après avoir activé un autre monde.
 
-**Un nouveau logo ou écusson se construit en quelques secondes** (0.2.4). Quand seules des images
+**Un nouveau logo ou écusson se construit en quelques secondes.** Quand seules des images
 ont changé depuis le dernier Build (le logo d'une ligue ou d'une coupe, l'écusson d'un club, le
 drapeau d'un pays), Build ne redessine que celles-là et laisse le reste du monde tel quel. Tout
 autre changement (un nom, un club, un joueur) est un Build complet. Un monde depuis un zip est
 construit en entier une fois sur votre PC ; ensuite, ses changements d'images sont rapides aussi.
 
-**Un monde prêt ne se construit pas ici** (0.2.4). Un monde installé depuis un zip est déjà
+**Un monde prêt ne se construit pas ici.** Un monde installé depuis un zip est déjà
 construit, et Build le remplacerait par le monde ouvert dans Mod Studio. Donc tant qu'un monde
 prêt est dans le jeu, les étapes du Build sont grisées avec une note, Accueil dit **Prêt à
 jouer**, et Construction explique quoi faire à la place : appuyez sur **Lancer le jeu**, ou
@@ -806,8 +802,8 @@ pays d'Afrique et d'Océanie (le jeu n'a pas de section pour eux) après l'Asie.
 
 > **Coupes des autres continents.** Quand vos ligues envoient des clubs en Ligue des champions
 > CAF, en Coupe de la Confédération CAF, en AFC Champions League Two, en AFC Challenge League,
-> en Copa Sudamericana, en CONCACAF Champions Cup ou en OFC Champions League (ces trois
-> dernières nouvelles en 0.2.0), le **Build** crée aussi ces coupes. Chacune a 32, 16, 8
+> en Copa Sudamericana, en CONCACAF Champions Cup ou en OFC Champions League,
+> le **Build** crée aussi ces coupes. Chacune a 32, 16, 8
 > ou 4 clubs : d'abord les places de vos ligues, puis les ligues du jeu de ce continent (Asie,
 > Amérique du Sud, et la MLS pour celle de la CONCACAF) la complètent ; pour l'AFC Challenge
 > League, ce sont les 11e-14e de la J1 League, les 10e-13e de la Super League chinoise et les
@@ -824,7 +820,7 @@ pays d'Afrique et d'Océanie (le jeu n'a pas de section pour eux) après l'Asie.
 > deuxième saison de la carrière.
 >
 > Une ligue qui peut envoyer un club en Copa Libertadores, en AFC Champions League ou en Coupe du
-> monde des clubs évite leurs jours de match (0.2.4) : pas de journée de ligue la veille ni le
+> monde des clubs évite leurs jours de match : pas de journée de ligue la veille ni le
 > lendemain.
 
 > **Tirage de la coupe nationale** (onglet Construction, Options du monde) décide comment les
@@ -894,13 +890,13 @@ sait quels clubs FL27 a et sous quels ID ; les versions plus anciennes ont été
    Database...** et choisissez ce dossier. (Ou déposez le dossier sur **+ Ajouter...**.) La liste
    montre toutes les ligues de ces parties : pays, clubs, clubs que le jeu a déjà (*Dans le jeu*),
    joueurs et niveau. Cliquez sur une ligue pour voir ses clubs. Un clic sur l'en-tête d'une
-   colonne (Ligue, Pays, Clubs, Joueurs, Niveau) trie selon elle, un second clic inverse l'ordre
-   (0.2.0) ; la liste s'ouvre triée par pays.
+   colonne (Ligue, Pays, Clubs, Joueurs, Niveau) trie selon elle, un second clic inverse l'ordre ;
+   la liste s'ouvre triée par pays.
 3. Sélectionnez une ou plusieurs ligues (Ctrl ou Maj pour plusieurs) et appuyez sur **Ajouter à
    votre monde**. Chacune devient une nouvelle ligue avec ses clubs et leurs effectifs. Une ligue
    d'un pays où le jeu a déjà une ligue (Greek Super League 2, Scottish Championship ...) entre
    comme la division sous la ligue la plus basse du jeu dans ce pays, avec montées et descentes,
-   sauf si une de vos ligues est déjà en dessous (0.3.0) ; la page indique laquelle. Toute autre
+   sauf si une de vos ligues est déjà en dessous ; la page indique laquelle. Toute autre
    ligue est la première division de son pays. Changez sa division, son format, ses places européennes et le reste dans
    *Ligues*, comme pour toute autre ligue.
 4. **Construire et installer**, puis commencez une nouvelle carrière (section 8.2).
@@ -940,8 +936,8 @@ sait quels clubs FL27 a et sous quels ID ; les versions plus anciennes ont été
   européennes et ses coupes ; un club qui reste garde son entraîneur et l'écusson que vous avez
   choisi, et vos propres clubs mis dans la ligue restent. Les capacités, postes et le reste des
   effectifs viennent de la nouvelle version ; un visage que vous avez lié ou un portrait que vous
-  avez choisi dans *Joueurs* reste avec un joueur qui est toujours au club (0.2.0, #111). Un club
-  du jeu dont la place est allée à un autre club reste un nouveau club dans votre ligue (0.2.4).
+  avez choisi dans *Joueurs* reste avec un joueur qui est toujours au club (#111). Un club
+  du jeu dont la place est allée à un autre club reste un nouveau club dans votre ligue.
   Ensuite Build et nouvelle carrière.
 - **Les ligues du jeu dans la saison NewLife** (0.1.8) : avec une NewLife Database ouverte,
   appuyez sur **Plus → Amener les ligues du jeu à cette saison...**. Chaque ligue du jeu que la
@@ -951,13 +947,12 @@ sait quels clubs FL27 a et sous quels ID ; les versions plus anciennes ont été
   club...*. Un club relégué hors des ligues du jeu (Leicester en League One) devient le club
   promu à sa place (Bolton) : nom, nom court, écusson et effectif ; son maillot, son stade et son
   entraîneur restent. Quand la base n'a pas d'écusson pour ce club, la place reçoit le blason du
-  maillot du nouveau club (0.2.4). Chaque club des ligues cochées reçoit son effectif NewLife :
+  maillot du nouveau club. Chaque club des ligues cochées reçoit son effectif NewLife :
   les joueurs que le jeu a arrivent de leur ancien club, ceux qu'il n'a pas sont ajoutés, et les
   joueurs que NewLife a dans un autre club partent. Un joueur que NewLife a toujours dans ce club
-  reste, tant que le club a de la place (40 au plus ; 0.2.4) ; le journal du Build nomme ceux
+  reste, tant que le club a de la place (40 au plus) ; le journal du Build nomme ceux
   pour qui il n'y avait pas de place. Les notes sont mises à l'échelle du jeu, mesurée sur les
-  joueurs que les deux ont, donc une star arrive là où le jeu la note (0.2.0 ; avant, le haut de
-  l'échelle était 2 à 4 points plus haut). Les ligues gardent leur nombre de clubs, leur format et
+  joueurs que les deux ont, donc une star arrive là où le jeu la note. Les ligues gardent leur nombre de clubs, leur format et
   leurs coupes. Les clubs que vous avez déjà changés à la main (un échange, un nom, un club d'une
   nouvelle ligue, des changements de joueurs) restent tels quels. Le refaire avec une version
   plus récente remplace ce qu'a fait l'ancienne ; **Plus → Annuler les ligues du jeu** retire
@@ -984,7 +979,7 @@ ligues...**) :
 4. **Ce qui va dedans** (0.1.8) : tout est coché ; décochez ce que vous ne voulez pas partager --
    **Effectifs**, **Visages et portraits des joueurs**, **Blasons et logos des ligues**,
    **Entraîneurs**, **Couleurs des maillots**, **Stades à domicile** (la ligne de Stadium Server,
-   pas le stade lui-même), et (0.2.1) **Maillots** (ceux de Kit Server des clubs) et **Tableaux de
+   pas le stade lui-même), et **Maillots** (ceux de Kit Server des clubs) et **Tableaux de
    score** (celui de Scoreboard Server de chaque ligue). Les maillots et tableaux de score sont
    pris dans votre jeu tel qu'est le monde maintenant : ce que kit-server\map.txt et
    scoreboard-server\map_competitions.txt donnent à ses clubs et ligues. Un paquet sans effectifs
@@ -994,7 +989,7 @@ ligues...**) :
    maillots et les tableaux de score, pas des chemins de votre ordinateur.
    Qui l'ajoute reçoit les maillots et tableaux de score en place, avec ses propres ids d'équipes
    et de ligues, au Build (Kit Server / Scoreboard Server doivent être installés) ; un club auquel
-   il a donné sa propre ligne de maillot dans l'onglet *Maillots* garde ce maillot (0.2.4), et un
+   il a donné sa propre ligne de maillot dans l'onglet *Maillots* garde ce maillot, et un
    maillot de paquet reste avec son club quand un club est retiré, inséré ou déplacé, ou que la
    ligue est mise à jour vers un NewLife plus récent. Les maillots ajoutent environ 10 Mo par
    ligue et un tableau de score environ 7 Mo, donc un tel paquet dépasse souvent la limite de
@@ -1007,7 +1002,7 @@ dans **Actions rapides** sur Accueil, **Fichier → Ajouter un paquet de ligues.
 installer** démarre alors tout seul) :
 
 1. Le programme montre ce qu'il contient et vous demande. Un paquet de plusieurs ligues les liste,
-   toutes cochées : décochez celles que vous ne voulez pas (0.2.1). Une ligue placée sous une autre
+   toutes cochées : décochez celles que vous ne voulez pas. Une ligue placée sous une autre
    ligue du paquet amène celle-ci avec elle. Sous **Que prendre**, vous pouvez aussi décocher des
    parties du paquet (tableaux de score, maillots, écussons, visages ...), par exemple pour prendre
    les tableaux de score d'un autre paquet.
@@ -1022,8 +1017,7 @@ Les id sont attribués quand chaque personne construit, d'après ce que son prop
 un paquet fonctionne donc à côté d'autres paquets et de vos propres ligues. **Retirer de votre
 monde** retire à nouveau un paquet, y compris les modifications qu'il a faites aux clubs du jeu.
 Si un paquet change un club que votre monde change déjà (un club NewLife, par exemple), un joueur
-que les deux ajoutent n'est ajouté qu'une fois, et les recrues et départs du paquet suivent
-(0.2.4).
+que les deux ajoutent n'est ajouté qu'une fois, et les recrues et départs du paquet suivent.
 
 Une ligue placée sous une ligue du jeu fonctionne pour tous ceux qui ont la même version du jeu.
 
@@ -1117,7 +1111,7 @@ carrières (le dossier de sauvegarde change avec le monde)**, section 3.1), **Le
 
 | Ce que vous voyez | Que faire |
 |---|---|
-| *sider.ini not found* | Réglages → Dossier du jeu : choisissez le dossier avec `FL_2026.exe`. |
+| *sider.ini not found* | Réglages → Dossier du jeu : choisissez le dossier avec `FL_2026.exe` (FL27 : `FL_2027.exe`). |
 | *no game tables* | Réglages → Extraire les tables du jeu. |
 | *Access is denied*, ou Mod Studio dit qu'il ne peut pas écrire dans le dossier du jeu | Le jeu est dans Program Files : appuyez sur **Redémarrer en administrateur**, ou déplacez le jeu dans un dossier à vous. |
 | Mod Studio dit qu'une DLL de ses modules manque (`fl26swiss.dll` ...) | Un antivirus l'a prise. Ajoutez le dossier `SiderAddons` comme exclusion dans l'antivirus, puis **Installer maintenant** à nouveau. |

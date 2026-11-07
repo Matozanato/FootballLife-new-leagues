@@ -42,7 +42,7 @@ on, *Help > Check for updates* does all of this for you; your settings and proje
 
 A crash in the first ten seconds or so happens on a clean game too, with none of our modules
 installed. It depends on how the game is started. Start it **through the launcher** (the
-shortcut the game installed), not by running `FL_2026.exe` directly: measured on our side, the
+shortcut the game installed), not by running `FL_2026.exe` (or `FL_2027.exe`) directly: measured on our side, the
 launcher started it 12 times out of 12, the `.exe` directly only 4 out of 9.
 
 If it still crashes, or it crashes later (in the menus, when a match or a career loads), send
@@ -77,7 +77,7 @@ group stays, the 33rd and 34th take the small *Other Clubs (Africa)* and *Other*
 groups. **Check the plan** names each league that takes a place; put the leagues you want to
 start a career in first. After updating, **Build the world** again and start a new career.
 
-That is 0.2.1 and earlier. Since 0.2.2 the leagues after the 32nd take regulation ids from 255
+That was Mod Studio 0.2.1 and earlier. Now the leagues after the 32nd take regulation ids from 255
 downward, each with a Select Team slot of its own (124 up), before any id that sits on one of
 those groups: the groups stay and every league is selectable until those ids run out.
 
@@ -123,7 +123,7 @@ so on the cup's line. This is on purpose, not a bug.
 
 Two other cups have no such limit:
 - **League cup** (the tick under the national cup): a single-match knockout of the top
-  division and the one below, up to 44 clubs, late September to December (0.2.0). The top
+  division and the one below, up to 44 clubs, late September to December. The top
   division's clubs get the byes and start in the second round.
 - **Pre-season cups** (the button on the New leagues page): a friendly knockout of 4 or 8 clubs
   you invite, from any league, in July.
@@ -161,7 +161,7 @@ the League window of its top division. Clubs then go up and down at New Year, an
 division below follows it. It cannot be combined with a split, Apertura/Clausura, a national
 cup or a league cup yet.
 
-0.2.0 (experimental): the game's own February-December countries **Japan, China, Brazil, Chile
+Experimental: the game's own February-December countries **Japan, China, Brazil, Chile
 and Saudi Arabia** can play **August to May** instead -- **Seasons of the game's leagues** on the
 League Builder page. Their league starts in August, promotion and relegation happen in summer,
 their cups move to August-May dates and their continental places come from the table that
@@ -183,24 +183,24 @@ says so.
 
 Fixed in 0.1.4 (#37). A club that is already in the game's Copa Libertadores, its qualifying
 round or the AFC Champions League is no longer drawn into the continental cups Mod Studio builds
-(Copa Sudamericana, AFC Champions League Two, the CAF cups, and since 0.2.0 the CONCACAF
+(Copa Sudamericana, AFC Champions League Two, the CAF cups, the CONCACAF
 Champions Cup, the OFC Champions League and the AFC Challenge League).
 
 ### Can the cup winner go to the Copa Sudamericana (or the Confederation Cup, the ACL Two)?
 
-Yes, since 0.2.0 (#95). In the League dialog's **Europe** places, set the position to **Cup
+Yes (#95). In the League dialog's **Europe** places, set the position to **Cup
 winner** and pick the cup. In a new career nobody has won the cup yet, and a winner can already
 have a place through the league; in both cases the place goes to the league's next club that
 plays no continental cup, the way UEFA does it.
 
 ### Is there a cup for North America or Oceania?
 
-Since 0.2.0: the **CONCACAF Champions Cup** (a knockout of up to 16 clubs, like the real one;
+Yes: the **CONCACAF Champions Cup** (a knockout of up to 16 clubs, like the real one;
 MLS fills the places your leagues leave) and the **OFC Champions League** (your leagues' clubs
 only, the game has no league in Oceania). A new league in a CONCACAF or OFC country gets them
 as its preset.
 
-Asia got a third cup in 0.2.0 as well: the **AFC Challenge League**, below the AFC Champions
+Asia has a third cup as well: the **AFC Challenge League**, below the AFC Champions
 League Two, as the Conference League is in Europe. Give it a place with **Add place** in the
 League dialog's **Europe** places (*AFC CHL* in the Leagues list); it is built only when a
 league of your world sends clubs to it. After your places, the J1 League's 11th-14th, the
@@ -262,12 +262,12 @@ the start of a career (#54); update and start a new career.
 
 Since 0.1.7: **Cups of the game's countries** on the *Build* page. Tick **League cup** next to
 the league: it and the league below, up to 44 clubs, one match a round from late September to
-December, drawn at random, the league's clubs with the byes (0.2.0). **Super cup** is there
+December, drawn at random, the league's clubs with the byes. **Super cup** is there
 too, only for countries where the game has none (Brazil, Chile, Scotland, Greece, the USA): the
 champion against the cup winner, in late July, or at the end of January, after the season, in a
 country that plays February to December (Brazil, Chile, the USA). That one needs at least one new
 league in the world.
-Since 0.2.0 each of the two takes its own **Logo** in that window.
+Each of the two takes its own **Logo** in that window.
 
 ### Can I change the European places of the Premier League, LaLiga ...?
 
@@ -315,9 +315,9 @@ from a table*.
 
 ### Why was every new club of mine as strong as a top side?
 
-Until 0.2.0 every new club without a squad of its own started with the same copy of one squad
-of the game, about 78 on average, so a sixth-tier side was a 4.5-star team. Since 0.2.0 Build
-moves that squad to its division's level: about 72 in a top flight, 67 in the second division,
+In Mod Studio older than 0.2.0 every new club without a squad of its own started with the same
+copy of one squad of the game, about 78 on average, so a sixth-tier side was a 4.5-star team. Now
+Build moves that squad to its division's level: about 72 in a top flight, 67 in the second division,
 63 in the third, 60 in the fourth and 57 from the fifth down. Every player moves by the same
 amount, so the squad keeps its spread. NewLife squads, clubs of the game, and players you edited
 on the *Players* page are left as they are.
@@ -338,8 +338,8 @@ game with that formation, its best eleven lined up for it. **Edit club** gives a
 its own. On the *Players* page a new club's first eleven is drawn on a pitch: select a player,
 click a place, and he goes there. Build again and start a new career to see it.
 
-Since 0.2.4 a new club with no formation set (for it or its league) no longer plays the
-game's fixed 4-2-3-1: Build gives it the formation, of those the game's clubs play, that gives
+A new club with no formation set (for it or its league) does not play a fixed 4-2-3-1:
+Build gives it the formation, of those the game's clubs play, that gives
 most of its best players their own position, and lines its best eleven up in it. The *Players*
 page shows that formation; when you change the club's order there, the club keeps it.
 
@@ -350,9 +350,8 @@ line in Stadium Server's `map_teams.txt` with the club's id when you switch the 
 have to look the id up. Before 0.1.7: the *Stadiums* page, **Home stadiums**, add a line; the club
 list there has the new clubs of a built world.
 
-Without a line of Stadium Server the club plays at a stadium of the game. Since 0.2.5 Build
-gives every new club one of the game's stadiums by its league's tier and country (before, all of
-them played at Stadio Nazionale); **Edit club** > **Game stadium** picks another one. For a world
+Without a line of Stadium Server the club plays at a stadium of the game: Build gives every new
+club one of the game's stadiums by its league's tier and country; **Edit club** > **Game stadium** picks another one. For a world
 you imported (the Modpack): **Stadiums** > **Your world's clubs**, **Game stadiums automatically**
 or **Choose a game stadium...**, then Save and start a new Master League.
 
@@ -375,8 +374,8 @@ has to be built again; **Checks** points it out.
 Before 0.1.4 the leagues lived only in the open recipe until **File → Save recipe**. Since 0.1.4
 every **Build** also keeps a copy in `%APPDATA%\FL26ModStudio\recipes\<world>.json`, and Mod
 Studio opens the last recipe again when it starts. The world an older version built stays in the
-game and keeps working; only its recipe has to be entered again to change it. Since 0.2.4 there
-is no saving at all: your world saves itself a moment after each change.
+game and keeps working; only its recipe has to be entered again to change it. Today there is no
+saving at all: your world saves itself a moment after each change.
 
 ### A retired star came back as a 16-year-old with the same name and face
 
@@ -391,7 +390,7 @@ gives each the same name and face back. It works in new and in running careers.
 
 ### Can I switch the regens off?
 
-Yes, since 0.2.0. On **Lua modules** untick **Hide Mod Studio's own modules (fl26...)**
+Yes. On **Lua modules** untick **Hide Mod Studio's own modules (fl26...)**
 so ours show, untick `fl26regen` and press **Apply**. Mod Studio writes that down in
 `modules\fl26-off.txt` in the Sider folder, so **Build**, **Install the modules** and switching
 worlds leave it off instead of turning it back on, as they do with every other module. The
@@ -488,22 +487,23 @@ quarantine the DLL a moment after it is copied. The `.lua` stays, so the game st
 parts the DLL runs are silently missing: no European draws, empty league phases, no regens,
 cups not played. In `sider.log` it reads `LoadLibraryA failed (err 126)`.
 
-Since 0.2.4 **Install the modules** checks every DLL after the copy and stops with a message that
+**Install the modules** checks every DLL after the copy and stops with a message that
 names the missing file, and **Home** and **Diagnostics** say it as long as one is missing. To fix it:
 
 1. Add the `SiderAddons` folder of the game as an exclusion in your antivirus. Windows Security:
    *Virus & threat protection > Manage settings > Exclusions > Add or remove exclusions > Add an
-   exclusion > Folder*, and pick `...\Football Life 2026\SiderAddons`. Other antivirus programs
+   exclusion > Folder*, and pick the game's `SiderAddons` folder (for example
+   `...\Football Life 2026\SiderAddons`). Other antivirus programs
    have the same thing under "exceptions" or "exclusions".
 2. Press **Install now** on **Home** again (or restore the files from
    the antivirus' quarantine).
 3. Start a new Master League career if the old one was made without the DLLs.
 
 If every one of them says `LoadLibraryA failed (err 126)` while the DLLs are in `modules`, look at
-the game folder's name: up to Mod Studio 0.2.5 the modules could not load their DLLs from a folder with
-letters outside plain English ones (`C:\fůtbal lajf\...`). Rename the folder to plain letters,
-choose it again in **Settings**, **Install the modules**, and start a new career. Since 0.2.5.1
-any folder name works.
+the game folder's name: Mod Studio 0.2.5 and older could not load the modules' DLLs from a folder
+with letters outside plain English ones (`C:\fůtbal lajf\...`). Update Mod Studio, or rename the
+folder to plain letters, choose it again in **Settings**, **Install the modules**, and start a
+new career. The current version works with any folder name.
 
 ### What should I send when something is wrong?
 
@@ -515,7 +515,7 @@ any folder name works.
    - `SiderAddons\livecpk\<your world>\fl26world.txt`
 3. What you did, what you expected, and what happened instead. A screenshot helps.
 4. If the game crashed: the *fault offset* from Windows Event Viewer (*Windows Logs >
-   Application*, the error for `FL_2026.exe`).
+   Application*, the error for `FL_2026.exe` or `FL_2027.exe`).
 
 ## The scripts (the older way)
 
@@ -628,7 +628,7 @@ Edit mode.
 ### Every match crashes with Kit Server and Kits you can edit in the game
 
 sider.log says `[string "common\kits.lua"]:1143: attempt to index local 'p_home' (a nil value)`.
-Fixed in 0.2.0 by `fl26kitguard` (in `fl26lateguards.lua`): Kit Server picks the goalkeepers'
+Fixed by `fl26kitguard` (in `fl26lateguards.lua`): Kit Server picks the goalkeepers'
 kits at every kick-off from the shirt colours of the outfield kits, and a new club with an
 editable kit has no kit of the game to read them from. The guard hands it a neutral grey for
 that pick only, so the match starts. Kit Server still dresses no such club (see above).
@@ -682,7 +682,7 @@ it. The clubs past 749 go to `EDIT00000000.fl26x` next to it, and the previous o
 `EDIT00000000.fl26x.prev` (for when you answer No to "Overwrite data. Proceed?"). Keep the three
 files together when you move or back up your Edit save.
 
-Since 0.2.2 the same goes for the managers table, which the game keeps at 1300. In a big world
+The same goes for the managers table, which the game keeps at 1300. In a big world
 the first "Create Edit Data" used to go back to the menu without making a save, because the
 clubs past 749 had managers with no room left. Now it has room for 4096 managers, and the ones
 past 1299 go to `EDIT00000000.fl26x` too.

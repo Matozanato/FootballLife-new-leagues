@@ -3,7 +3,8 @@
 ## Where to start
 
 The guides for players are in [guides/](../guides/README.md), one folder per language (English,
-hrvatski, español, português; the Mod Studio guide also in français):
+hrvatski, español, português, français). They are the same for Football Life 2026 and Football
+Life 2027:
 
 - [Install a ready pack](../guides/en/install-a-pack.md): pick this when someone gave you a world,
   a modpack or a `.fl26pack` league package.
