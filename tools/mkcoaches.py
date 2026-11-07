@@ -45,6 +45,76 @@ def club_country(rec):
     return (int.from_bytes(rec[lo:hi], "little") >> (T_NAT_BIT % 8)) & ((1 << NAT_BITS) - 1)
 
 
+def name_problem(name):
+    if (not isinstance(name, str) or len(name) > 45 or not all(c.isprintable() for c in name)
+            or len(pesdb.game_text(name).encode("utf-8")) >= C_NAME_LEN):
+        return "Manager names must fit 45 UTF-8 bytes and contain no control characters."
+    return None
+
+
+def club_names(base):
+    """Original team id -> manager name, read only; older table sets may lack Coach.bin."""
+    if not base or not os.path.isfile(os.path.join(base, "Coach.bin")):
+        return {}
+    with open(os.path.join(base, "Coach.bin"), "rb") as f:
+        coaches = pesdb.wesys_unpack(f.read())
+    with open(os.path.join(base, "Team.bin"), "rb") as f:
+        teams = pesdb.wesys_unpack(f.read())
+    names = {u32(coaches, o): pesdb.cstr(coaches[o + C_NAME1:o + C_NAME1 + C_NAME_LEN])
+             for o in range(0, len(coaches), C_REC)}
+    return {u32(teams, o + T_ID): names.get(u32(teams, o + T_COACH), "")
+            for o in range(0, len(teams), T_REC)}
+
+
+def rename_coaches(coaches, teams, names):
+    """Return edited copies and {new coach id: original id} for portrait copying.
+
+    Clone shared records before renaming, preserving all attributes and other teams' assignments.
+    Validate the entire request before editing; inputs are never changed.
+    """
+    if len(coaches) % C_REC or len(teams) % T_REC:
+        raise ValueError("Invalid Coach.bin or Team.bin record size")
+    records = {u32(coaches, o): o for o in range(0, len(coaches), C_REC)}
+    clubs = {u32(teams, o + T_ID): o for o in range(0, len(teams), T_REC)}
+    refs = {}
+    for o in range(0, len(teams), T_REC):
+        cid = u32(teams, o + T_COACH)
+        refs[cid] = refs.get(cid, 0) + 1
+    wanted = {}
+    for tid, name in names.items():
+        problem = name_problem(name)
+        if problem:
+            raise ValueError("Club %s: %s" % (tid, problem))
+        if not name.strip():
+            continue                       # blank removes the override; retain the source manager
+        if tid not in clubs:
+            raise ValueError("Manager override: no team %s in Team.bin" % tid)
+        cid = u32(teams, clubs[tid] + T_COACH)
+        if cid not in records:
+            raise ValueError("Manager override: coach %s of team %s is missing" % (cid, tid))
+        wanted[tid] = pesdb.game_text(name.strip()).encode("utf-8").ljust(C_NAME_LEN, b"\0")
+    result, team_result, clones = bytearray(coaches), bytearray(teams), {}
+    next_id = max(set(records) | set(refs) | {0}) + 1
+    for tid, name in sorted(wanted.items()):
+        team = clubs[tid]
+        cid = u32(teams, team + T_COACH)
+        o = records[cid]
+        if coaches[o + C_NAME1:o + C_NAME1 + C_NAME_LEN] == name and coaches[o + C_NAME2:o + C_NAME2 + C_NAME_LEN] == name:
+            continue
+        if refs[cid] > 1:
+            if next_id > 0xffffffff:
+                raise ValueError("No free coach ID for team %s" % tid)
+            o = len(result)
+            result += coaches[records[cid]:records[cid] + C_REC]
+            result[o + C_ID:o + C_ID + 4] = next_id.to_bytes(4, "little")
+            team_result[team + T_COACH:team + T_COACH + 4] = next_id.to_bytes(4, "little")
+            clones[next_id] = cid
+            next_id += 1
+        for offset in (C_NAME1, C_NAME2):
+            result[o + offset:o + offset + C_NAME_LEN] = name
+    return bytes(result), bytes(team_result), clones
+
+
 P_REC, P_NAME, P_NAME_LEN, P_NAT_BIT = 312, 0x44, 0x3d, 233
 POOL_MIN = 8                  # a country with fewer two-word player names keeps the numbered name
 
