@@ -2,12 +2,22 @@
 
 > [English](../en/install-a-pack.md) · **hrvatski** · [español](../es/install-a-pack.md) · [português](../pt/install-a-pack.md) · [français](../fr/install-a-pack.md)
 
+**Što imaš?** Zip svijeta i paket liga ne instaliraju se isto:
+
+| Imaš | Što kliknuti |
+|---|---|
+| `.zip` svijeta (Modpack, Europack, svijet od prijatelja) | **2. Moj svijet** → **+ Dodaj...** → **Odaberi datoteku...** → **Dodaj** → **Instaliraj svijet**. Nema Builda: svijet je u igri kad piše **Spremno za igru**. Onda pokreni NOVU Master Ligu. [Način A](#način-a-gotov-svijet-jedan-zip) |
+| `.fl26pack` paket liga | **2. Moj svijet** → **+ Dodaj...** → **Odaberi datoteku...** → **Dodaj** → kartica **Gradnja** → **Izgradi i instaliraj**. Onda pokreni NOVU Master Ligu. [Način C](#način-c-paket-liga-fl26pack) |
+| ništa, želim sam izabrati lige | [Napravi svoje lige i pakete](make-your-own-leagues.md) |
+
+Prvi put u Mod Studiju? Prvo jednom odradi korake 1 do 3 ispod.
+
 > Drugi vodič korak po korak: [Napravi svoje lige i pakete](make-your-own-leagues.md)
 > · sve stranice objašnjene: [mod-studio-guide.md](mod-studio-guide.md)
 > · pitanja: [faq.md](../../docs/faq.md) (na engleskom) · pomoć: [Discord](https://discord.gg/StQqtk3G3M)
 
 Ova stranica je za nekoga tko Mod Studio nikad nije otvorio, a dobio je nešto gotovo za igranje:
-svijet, modpack ili paket liga. Ne objašnjava kako stvari rade. Kaže samo što kliknuti, kojim
+svijet, modpack ili paket liga. Isto je za Football Life 2026 i Football Life 2027. Ne objašnjava kako stvari rade. Kaže samo što kliknuti, kojim
 redom i što trebaš vidjeti nakon svakog koraka. Radi korake redom i ne preskači nijedan. Ako
 vidiš nešto drugo nego što korak kaže, stani tu i idi na [Ako nešto ne valja](#ako-nešto-ne-valja).
 
@@ -33,7 +43,8 @@ Pogledaj traku dolje: nema prozora Football Lifea, nema launchera.
 ## Korak 2. Skini Mod Studio
 
 1. Otvori [zadnje izdanje](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest).
-2. Pod **Assets** klikni `FL26ModStudio-<version>.zip` (npr. `FL26ModStudio-0.2.4.zip`).
+2. Pod **Assets** klikni `FL26ModStudio-<version>.zip` (npr. `FL26ModStudio-0.3.0.zip`).
+   Isti zip vrijedi za Football Life 2026 i Football Life 2027.
 3. Desni klik na skinuti zip → **Extract All...** → izaberi mapu, npr.
    `Documents\FL26 Mod Studio` → **Extract**.
 
@@ -68,8 +79,8 @@ ponovno pokreni Mod Studio.
    Za FL27 to je mapa u kojoj je `FL_2027.exe`.
 4. Klikni **Koristi ovu mapu**.
 
-**Trebaš vidjeti:** ispod mape red koji počinje s `Nađeno: FL_2026.exe` i imenuje mapu Sidera i
-`sider.ini`.
+**Trebaš vidjeti:** ispod mape red koji počinje s `Nađeno: FL_2026.exe` (u FL27:
+`Nađeno: FL_2027.exe`) i imenuje mapu Sidera i `sider.ini`.
 
 (Isto je i gore: **Igra → Odaberi mapu igre...**.)
 

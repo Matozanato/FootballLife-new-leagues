@@ -5,6 +5,16 @@ Football Life 2027**, plus one program, **FL Mod Studio**, to manage everything 
 executable, no repacked CPKs: it all goes in through Sider modules and data files, and comes out
 again.
 
+**What do you have?** A world zip and a league package go in differently:
+
+| You have | What to click in Mod Studio |
+|---|---|
+| a `.zip` world (Modpack, Europack, a friend's world) | **2. My world** → **+ Add...** → **Choose a file...** → **Add** → **Install the world**. There is no Build: it is in the game when it says **Ready to play**. Then start a NEW Master League. [Step by step](guides/en/install-a-pack.md#way-a-a-ready-world-one-zip) |
+| a `.fl26pack` league package | **2. My world** → **+ Add...** → **Choose a file...** → **Add** → tab **Build** → **Build and install**. Then start a NEW Master League. [Step by step](guides/en/install-a-pack.md#way-c-a-league-package-fl26pack) |
+| nothing, I want to pick leagues myself | [Make your own leagues and packs](guides/en/make-your-own-leagues.md) |
+
+No Mod Studio yet? Start with [Download & start](#download--start).
+
 [![Join the Discord](https://img.shields.io/badge/Discord-join%20the%20community-5865f2?logo=discord&logoColor=white)](https://discord.gg/StQqtk3G3M)
 
 [![Latest release](https://img.shields.io/github/v/release/Matozanato/FootballLife-new-leagues?display_name=release&label=release&color=2ea44f&logo=github&logoColor=white)](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest)
@@ -21,8 +31,12 @@ again.
 
 ## Download & start
 
+You need Windows and **Football Life 2026** or **Football Life 2027**. The same Mod Studio works
+with both.
+
 1. Open the **[latest release](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest)**
-   and download `FL26ModStudio-<version>.zip` under **Assets**.
+   and download `FL26ModStudio-<version>.zip` under **Assets** (for example
+   `FL26ModStudio-0.3.0.zip`; the file names say FL26 for both games).
 2. Unzip it (right-click → **Extract All...**) into a folder of its own. Keep the `_internal` and
    `pack` folders next to the exe.
 3. Run `FL26ModStudio.exe`. No Python needed. If Windows says "Windows protected your PC", click
@@ -49,18 +63,7 @@ shows it again.
   below the game's, and many fixes. **More of a test version: if 0.2.5.1 works for you and you don't need FL27,
   don't rush to update** ([Before you update](docs/changelog/changelog-0.3.0.md#before-you-update)).
   [What changed](docs/changelog/changelog-0.3.0.md)
-- **0.2.5.1** (2026-10-30): fixes of what you reported since 0.2.5. No need to update if 0.2.5
-  works for you. [What changed](docs/changelog/changelog-0.2.5.1.md)
-- **0.2.5** (2026-10-28): leagues of up to 28 clubs, the modern CONMEBOL competitions if you want
-  them, Undo/Redo, transfers from a CSV, up to 35 players a new club, and many fixes. Build your
-  0.2.4 world once with 0.2.5 and your career carries on. [What changed](docs/changelog/changelog-0.2.5.md)
-- **0.2.4** (2026-10-18): a new look, worlds you switch with one click, ready Modpacks installed
-  straight from their zip, a quick tour and step-by-step guides in *Help*.
-  [What changed](docs/changelog/changelog-0.2.4.md) · fixes:
-  [0.2.4.1](docs/changelog/changelog-0.2.4.1.md) (2026-10-20),
-  [0.2.4.2](docs/changelog/changelog-0.2.4.2.md) (2026-10-21, promotion below the second division
-  in the Europack eu4 and other big worlds)
-- Every version: [changelog](docs/changelog/README.md)
+- Older versions, and what each one changed: [changelog](docs/changelog/README.md)
 
 ## What it does
 
@@ -99,12 +102,13 @@ In English: [questions (FAQ)](docs/faq.md) · [known issues](docs/known-issues.m
 
 ## Ready packs and real clubs
 
-- **A ready world or Modpack** (one `.zip`): **2. My world** → **+ Add...** → the zip →
-  **Install the world**. Nothing to build. Mod Studio walks you through it in
+- **A ready world or Modpack** (one `.zip`): **2. My world** → **+ Add...** → **Choose a file...** →
+  the zip → **Add** → **Install the world**. Nothing to build. Mod Studio walks you through it in
   **Help → Install a Modpack, step by step**; the whole route is in
   [Install a ready pack](guides/en/install-a-pack.md).
 - **A league package** (`.fl26pack`): a modder makes a league once (clubs, names, crests, logos,
-  squads, faces) and anybody adds it to their own game. Mod Studio builds it for you; same guide.
+  squads, faces) and anybody adds it to their own game: **2. My world** → **+ Add...** → the
+  `.fl26pack` → **Add**, then **Build and install** on the **Build** tab. Same guide.
 - **The NewLife Database** (real clubs and players): a separate download on the **#newlife**
   channel of our [Discord](https://discord.gg/StQqtk3G3M), one part per continent. Put the parts
   in one folder, do not unzip them, and follow
@@ -648,8 +652,7 @@ request and everyone gets it in the next release:
    you push them to the same branch and the pull request updates itself.
 4. We **merge** it, it ships with the next release, and you go in the credits.
 
-Bug fixes and new features are both welcome this way: 0.2.0 was the last release where *we*
-add features, not the last one that gets them. Before something big, open an issue or ask on
+Bug fixes and new features are both welcome this way. Before something big, open an issue or ask on
 [Discord](https://discord.gg/StQqtk3G3M) so two people do not build the same thing.
 [docs/developers/forking.md](docs/developers/forking.md) and the [fork chapters](docs/developers/fork/) explain the code; they
 work the same for a pull request as for a fork. For `sider/` and `patches/`, describe the
@@ -657,7 +660,7 @@ disassembly evidence in the pull request the way the module headers do.
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Football Life 2026, PES 2021 and Sider belong to their
+MIT — see [LICENSE](LICENSE). Football Life 2026, Football Life 2027, PES 2021 and Sider belong to their
 respective authors; nothing of theirs is redistributed here.
 
 The reverse engineering was done from scratch against the game's executable and data
@@ -700,7 +703,7 @@ mapped.
 **Leagues and countries**
 
 - **Many new leagues** in one world, **10 to 28 clubs** each, playing each other 1 to 4
-  times with the real number of rounds (10 clubs four times = 36 rounds). Since 0.2.2 there
+  times with the real number of rounds (10 clubs four times = 36 rounds). There
   is room for 2,400 clubs in all, and our test world plays 86 new leagues with 1,294 new
   clubs; Build stops with a message when regulation ids or club room run out. Every league
   is selectable in Select Team (250 slots).

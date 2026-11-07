@@ -2,12 +2,23 @@
 
 > **English** · [hrvatski](../hr/install-a-pack.md) · [español](../es/install-a-pack.md) · [português](../pt/install-a-pack.md) · [français](../fr/install-a-pack.md)
 
+**What do you have?** A world zip and a league package go in differently:
+
+| You have | What to click |
+|---|---|
+| a `.zip` world (Modpack, Europack, a friend's world) | **2. My world** → **+ Add...** → **Choose a file...** → **Add** → **Install the world**. There is no Build: it is in the game when it says **Ready to play**. Then start a NEW Master League. [Way A](#way-a-a-ready-world-one-zip) |
+| a `.fl26pack` league package | **2. My world** → **+ Add...** → **Choose a file...** → **Add** → tab **Build** → **Build and install**. Then start a NEW Master League. [Way C](#way-c-a-league-package-fl26pack) |
+| nothing, I want to pick leagues myself | [Make your own leagues and packs](make-your-own-leagues.md) |
+
+First time with Mod Studio? Do steps 1 to 3 below first, once.
+
 > The other step-by-step guide: [Make your own leagues and packs](make-your-own-leagues.md)
 > · every page explained: [mod-studio-guide.md](mod-studio-guide.md)
 > · questions: [faq.md](../../docs/faq.md) · help: [Discord](https://discord.gg/StQqtk3G3M)
 
 This page is for someone who has never opened Mod Studio and has been given something ready to
-play: a world, a modpack or a league package. It does not explain how anything works. It only
+play: a world, a modpack or a league package. It is the same for Football Life 2026 and Football
+Life 2027. It does not explain how anything works. It only
 says what to click, in what order, and what you should see after each step. Do the steps in
 order and do not skip one. If you see something different from what a step says, stop there
 and go to [If something goes wrong](#if-something-goes-wrong).
@@ -33,7 +44,8 @@ starts. Check the taskbar: no Football Life window, no launcher.
 ## Step 2. Download Mod Studio
 
 1. Open the [latest release](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest).
-2. Under **Assets**, click `FL26ModStudio-<version>.zip` (for example `FL26ModStudio-0.2.4.zip`).
+2. Under **Assets**, click `FL26ModStudio-<version>.zip` (for example `FL26ModStudio-0.3.0.zip`).
+   It is the same download for Football Life 2026 and Football Life 2027.
 3. Right-click the downloaded zip → **Extract All...** → choose a folder, for example
    `Documents\FL26 Mod Studio` → **Extract**.
 
@@ -69,8 +81,8 @@ Français, then start Mod Studio again.
    For FL27 it is the folder with `FL_2027.exe`.
 4. Click **Use this folder**.
 
-**You should see:** under the folder, a line that starts with `Found: FL_2026.exe` and names the
-Sider folder and `sider.ini`.
+**You should see:** under the folder, a line that starts with `Found: FL_2026.exe` (in FL27:
+`Found: FL_2027.exe`) and names the Sider folder and `sider.ini`.
 
 (The same is in the top bar: **Game → Choose the game folder...**.)
 
