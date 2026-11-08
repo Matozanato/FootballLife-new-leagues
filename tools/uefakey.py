@@ -143,11 +143,13 @@ def candidates(recipe, base):
     return out
 
 
-def ranked(recipe, base):
+def ranked(recipe, base, candidate_rows=None):
     """(the candidates in the recipe's uefa_rank order, the ones left out): a recipe without a
     ranking yet gets DEFAULT_ORDER by country, Russia left out; a league new since the ranking
     was saved goes in by its country's default rank"""
-    cands = candidates(recipe, base)
+    # The integrated editor already loaded these candidates in a worker. Reuse
+    # exactly the same ordering without repeating database scans on the UI thread.
+    cands = candidates(recipe, base) if candidate_rows is None else candidate_rows
     saved = [str(x) for x in recipe.get("uefa_rank") or []]
     if not saved:
         on = [c for c in cands if c["country"] not in OUT_BY_DEFAULT]

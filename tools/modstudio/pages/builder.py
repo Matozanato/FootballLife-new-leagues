@@ -26,6 +26,8 @@ from .. import access
 from .. import apart
 from .. import filecache
 from ..i18n import _, tr
+from ..competition_catalog import set_modern_mode, MODERN_WARNING
+from .. import qualification_data as Q
 from ..backups import snapshot
 from ..ui import Fold, Page, section, hint, row, ask, error, info, run_job, helpmark, helped, can_write, denied_box, denied
 from ..ui import save_switch, save_note
@@ -385,9 +387,46 @@ class PictureField(QWidget):
             self.view.setWordWrap(True)
 
 
+class CompetitionLogoVariant(PictureField):
+    """Compact shared selector with a visible empty state, not an empty square."""
+
+    def __init__(self, mode):
+        super().__init__(None, 48, "Default", compact=True)
+        self.setToolTip(_("Emblem for dark backgrounds. Empty uses the existing logo.") if mode == "dark" else
+                        _("Emblem for light backgrounds. Empty uses the existing logo."))
+
+    def show_it(self):
+        super().show_it()
+        preview = self.view.pixmap()
+        if preview is None or preview.isNull():
+            self.view.setText(_("Default") if not self.path else _("Unavailable"))
+
+
+OWN_CUP_KEYS = ("cup", "supercup", "league_cup")
+OWN_CUP_FIELDS = tuple(key + suffix for key in OWN_CUP_KEYS for suffix in ("", "_name", "_logo"))
+
+
+def own_cup_values(cups, top=True):
+    """Existing league cup fields, shared by Edit League and the domestic cups table.
+
+    Each cup is (checked, name, logo). Empty names/logos omit their recipe fields;
+    a super cup requires the national cup, and cup flags require a top division.
+    """
+    result = {}
+    national = top and cups[0][0]
+    for key, (checked, name, logo) in zip(OWN_CUP_KEYS, cups):
+        if top and checked and (key != "supercup" or national):
+            result[key] = True
+        if name.strip():
+            result[key + "_name"] = name.strip()
+        if logo:
+            result[key + "_logo"] = logo
+    return result
+
+
 def modern_conmebol(project):
-    """whether the project's world has the modern CONMEBOL competitions (South American places >
-    Modern CONMEBOL competitions, leaguebuilder.recipe_has_modern_conmebol)"""
+    """whether the project's world has modern CONMEBOL competitions (Cups > Continental >
+    CONMEBOL, leaguebuilder.recipe_has_modern_conmebol)"""
     try:
         return B.recipe_has_modern_conmebol(project.recipe)
     except B.BuildError:
@@ -397,12 +436,13 @@ def modern_conmebol(project):
 def continental_place_choices(items, modern=False):
     """the competitions a place can lead to, in the order the list shows them. Classic (a world
     without the modern CONMEBOL competitions, every world before 0.2.5): fl26world.COMPETITIONS
-    as they were, Libertadores qualifying included. Modern (PR #146): phase 2 and phase 1 under
+    with Libertadores qualifying included but no new Sudamericana assignment. Existing
+    classic Sudamericana rows are preserved by EuropeTable._row. Modern (PR #146): phase 2 and phase 1 under
     the Libertadores, the first stage under the Sudamericana; Libertadores qualifying and phase 3
     are left out, phase 3 takes the eight phase-2 winners and no league's place"""
     items = [(int(c), name) for c, name in items]
     if not modern:
-        return [(c, name) for c, name in items if c not in fl26world.CONMEBOL_STAGE_IDS]
+        return [(c, name) for c, name in items if c not in fl26world.CONMEBOL_STAGE_IDS and c != B.SUDAM]
     by_id = {c: (c, name) for c, name in items}
     hidden = {4, fl26world.LIB_F3}
     child = {fl26world.LIB_F1, fl26world.LIB_F2, fl26world.SUD_FIRST}
@@ -440,10 +480,11 @@ class EuropeTable(QWidget):
     that removes the row. tall: the table takes the height it is given (a dialog of its own)"""
 
     def __init__(self, places, clubs, tall=False, competitions=None, cup_winner=True,
-                 position_label="League position", modern=False):
+                 position_label="League position", modern=False, preserve_legacy=False):
         super().__init__()
         self.clubs = clubs
         self.modern = modern
+        self.preserve_legacy = preserve_legacy
         self.changed = None             # called when a place changes (the European places counter)
         self.competitions = continental_place_choices(competitions or fl26world.COMPETITIONS, modern)
         self.cup_winner = bool(cup_winner)
@@ -484,15 +525,18 @@ class EuropeTable(QWidget):
         self.table.insertRow(r)
         sp = QSpinBox()
         low = B.CUP_WINNER if self.cup_winner else 1
-        sp.setRange(low, max(self.clubs, 1))
+        sp.setRange(min(low, int(pos)) if self.preserve_legacy else low,
+                    max(self.clubs, int(pos), 1) if self.preserve_legacy else max(self.clubs, 1))
         if self.cup_winner:
-            sp.setSpecialValueText(_("Cup winner"))
+            if sp.minimum() == B.CUP_WINNER:
+                sp.setSpecialValueText(_("Cup winner"))
             sp.setToolTip(_("The league position, or Cup winner (below 1): the winner of the country's cup. "
                             "When the winner already has a continental place, the place cascades to the "
                             "next eligible club of the same domestic source."))
         else:
-            sp.setToolTip(_("The association rank used as a dynamic domestic source; it is not a team ID."))
-        sp.setValue(min(max(int(pos), low), max(self.clubs, 1)))
+            sp.setToolTip(_("The association rank used as a dynamic domestic source; it is not a team ID.")
+                          if self.position_label == "Association rank" else _("League position"))
+        sp.setValue(int(pos) if self.preserve_legacy else min(max(int(pos), low), max(self.clubs, 1)))
         cb = QComboBox()
         for c, name in self.competitions:
             cb.addItem(_(name), c)
@@ -504,6 +548,13 @@ class EuropeTable(QWidget):
             name = dict(fl26world.COMPETITIONS).get(int(comp))
             cb.addItem(_(name) if name else _("Competition %d") % int(comp), int(comp))
             i = cb.count() - 1
+            if self.preserve_legacy or (int(comp) == B.SUDAM and not self.modern):
+                # Keep a legacy destination selected and serializable, but do not offer
+                # it for a new assignment (including switching away and back in this row).
+                cb.model().item(i).setEnabled(False)
+                cb.setToolTip(_("Existing Sudamericana place: preserved on save but inactive while modern CONMEBOL is off. Enable Modern CONMEBOL in Cups and complete its required places to use Sudamericana.")
+                              if int(comp) == B.SUDAM and not self.modern else
+                              _("Stored destination is retained, but unavailable for new assignments in this mode."))
         cb.setCurrentIndex(i)
         x = QPushButton("✕")
         x.setToolTip(_("Remove this place"))
@@ -513,6 +564,7 @@ class EuropeTable(QWidget):
         self.table.setCellWidget(r, 1, cb)
         self.table.setCellWidget(r, 2, x)
         cb.currentIndexChanged.connect(lambda *_a: self._changed())
+        sp.valueChanged.connect(lambda *_a: self._changed())
         self._changed()
 
     def _changed(self):
@@ -535,6 +587,13 @@ class EuropeTable(QWidget):
 
     def add(self):
         taken = {p for p, _c in self.places()}
+        if self.preserve_legacy:
+            available = [p for p in range(1, self.clubs + 1) if p not in taken]
+            if self.cup_winner and 0 not in taken:
+                available.append(0)
+            if available and self.competitions:
+                self._row(available[0], self.competitions[0][0])
+            return
         pos = next((k for k in range(1, self.clubs + 1) if k not in taken), 1)
         self._row(pos, 1 if pos > 1 else 0)
 
@@ -558,7 +617,9 @@ class EuropeTable(QWidget):
         label, tip, self.preset_places = PRESETS.get(conf, UEFA_PRESET)
         self.preset.setText(_(label))
         self.preset.setToolTip(_(tip))
-        self.preset.setVisible(not (self.modern and conf == 4))
+        # The classic South American preset includes Sudamericana assignments; hiding
+        # it prevents bypassing the selector restriction without inventing a new preset.
+        self.preset.setVisible(conf != 4)
 
     def set_top(self, top):
         self.preset.setEnabled(top)
@@ -965,34 +1026,18 @@ class LeagueDialog(Dialog):
             L.pop("split", None)
             L["legs"] = self.legs.value()
         L["exchange"] = self.exchange.value()
-        if self.cup.isChecked() and self.above.currentData() is None:
-            L["cup"] = True
-        else:
-            L.pop("cup", None)
-        if L.get("cup") and self.supercup.isChecked():
-            L["supercup"] = True
-        else:
-            L.pop("supercup", None)
-        if self.cup_name.text().strip():
-            L["cup_name"] = self.cup_name.text().strip()
-        else:
-            L.pop("cup_name", None)
-        if self.supercup_name.text().strip():
-            L["supercup_name"] = self.supercup_name.text().strip()
-        else:
-            L.pop("supercup_name", None)
+        cups = own_cup_values([
+            (self.cup.isChecked(), self.cup_name.text(), self.cup_logo.path),
+            (self.supercup.isChecked(), self.supercup_name.text(), self.supercup_logo.path),
+            (self.lcup.isChecked(), self.lcup_name.text(), self.lcup_logo.path),
+        ], top=self.above.currentData() is None)
+        for key in OWN_CUP_FIELDS:
+            L.pop(key, None)
+        L.update(cups)
         if self.cup_join.isChecked() and self.joins_cup():
             L["cup_join"] = True
         else:
             L.pop("cup_join", None)
-        if self.lcup.isChecked() and self.above.currentData() is None:
-            L["league_cup"] = True
-        else:
-            L.pop("league_cup", None)
-        if self.lcup_name.text().strip():
-            L["league_cup_name"] = self.lcup_name.text().strip()
-        else:
-            L.pop("league_cup_name", None)
         if self.above.currentData() is not None and (L.get("split") or L.get("apertura")) \
                 and self.follows_calendar(self.above.currentData(), set()):
             # a division under a February-December league plays that season (Discord, aaron 07.10.)
@@ -1016,8 +1061,7 @@ class LeagueDialog(Dialog):
             L.pop("above", None)
         else:
             L["above"] = a
-        for key, f in (("logo", self.logo), ("cup_logo", self.cup_logo), ("supercup_logo", self.supercup_logo),
-                       ("league_cup_logo", self.lcup_logo), ("playoff_logo", self.po_logo)):
+        for key, f in (("logo", self.logo), ("playoff_logo", self.po_logo)):
             if f.path:
                 L[key] = f.path
             else:
@@ -1858,9 +1902,27 @@ class CompetitionNamesDialog(Dialog):
 
     def __init__(self, parent, project):
         super().__init__(parent, "Competition names")
+        from .. import competition_catalog as C
+        from copy import deepcopy
+        self._catalog_module = C
         r = project.recipe
+        self._world_recipe = r
+        self._project = project
         self.rows = [("game", str(c), n) for c, n, _r in B.game_competitions(project.base)] \
-            + [("ours", k, n) for k, n in self.OURS]
+            + [("ours", k, n) for k, n in self.OURS] + [("uecl", "", B.mkuecl.NAME)]
+        catalog = C.catalog(project.base)
+        self._eligible = {(c.storage, str(c.number) if c.number is not None else ""): c for c in catalog}
+        self._entries = []
+        for kind, k, n in self.rows:
+            storage = "generated" if kind == "ours" else kind
+            self._entries.append(self._eligible.get((storage, k)) or
+                                 C.Competition("game:" + k, 0, n, "game", int(k), "native"))
+        self._baseline = deepcopy({k: r[k] for k in ("ccup_names", "ccup_logos",
+                                   "uecl_name", "uecl_logo", C.E.ROOT,
+                                   "caf_super_cup_logo", "samerica_super_cup_logo") if k in r})
+        self._baseline["edits"] = {"competitions": deepcopy((r.get("edits") or {}).get("competitions") or {})}
+        self.emblems = deepcopy(r.get(C.E.ROOT) or {})
+        self.uecl_name, self.uecl_logo = r.get("uecl_name", ""), r.get("uecl_logo")
         self.game = {k: dict(v) for k, v in ((r.get("edits") or {}).get("competitions") or {}).items()}
         self.names = dict(r.get("ccup_names") or {})
         self.logos = dict(r.get("ccup_logos") or {})
@@ -1886,6 +1948,13 @@ class CompetitionNamesDialog(Dialog):
         self.logo_box = QVBoxLayout()
         right.addLayout(self.logo_box)
         self.logo = None
+        self.variant_form = QFormLayout()
+        self.variant_logos = {}
+        for mode, label in (("dark", "Dark Mode Logo"), ("light", "Light Mode Logo")):
+            picture = CompetitionLogoVariant(mode)
+            self.variant_form.addRow(_(label), picture)
+            self.variant_logos[mode] = picture
+        right.addLayout(self.variant_form)
         right.addStretch(1)
         body.addLayout(right, 1)
         self.v.insertLayout(1, body, 1)
@@ -1898,6 +1967,8 @@ class CompetitionNamesDialog(Dialog):
 
     def value(self, i):
         kind, k, n = self.rows[i]
+        if kind == "uecl":
+            return self.uecl_name, self.uecl_logo
         if kind == "game":
             e = self.game.get(k, {})
             return e.get("name", ""), e.get("logo")
@@ -1909,7 +1980,10 @@ class CompetitionNamesDialog(Dialog):
         self.list.clear()
         for i, (kind, k, n) in enumerate(self.rows):
             name, logo = self.value(i)
-            self.list.addItem((name or n) + ("  *" if name or logo else ""))
+            c = self._entries[i]
+            variants = any(self._catalog_module.identity({self._catalog_module.E.ROOT: self.emblems}, c, mode)
+                           for mode in self._catalog_module.E.MODES) if c.confederation else False
+            self.list.addItem((name or n) + ("  *" if name or logo or variants else ""))
         self.list.setCurrentRow(cur)
         self.list.blockSignals(False)
 
@@ -1921,7 +1995,9 @@ class CompetitionNamesDialog(Dialog):
         name = "" if name == n else name
         logo = self.logo.path if self.logo else None
         if kind == "game":
-            e = {}
+            e = dict(self.game.get(k) or {})
+            e.pop("name", None)
+            e.pop("logo", None)
             if name:
                 e["name"] = name
             if logo:
@@ -1930,12 +2006,19 @@ class CompetitionNamesDialog(Dialog):
                 self.game[k] = e
             else:
                 self.game.pop(k, None)
+        elif kind == "uecl":
+            self.uecl_name, self.uecl_logo = name, logo
         else:
             for d, v in ((self.names, name), (self.logos, logo)):
                 if v:
                     d[k] = v
                 else:
                     d.pop(k, None)
+        c = self._entries[self.cur]
+        if c.confederation:
+            C = self._catalog_module
+            for mode, picture in self.variant_logos.items():
+                C.put({C.E.ROOT: self.emblems}, c.path(mode), picture.path)
 
     def show_row(self, i):
         self.keep()
@@ -1952,94 +2035,79 @@ class CompetitionNamesDialog(Dialog):
             self.logo.setParent(None)
         self.logo = PictureField(logo, 64, "(the game's own)" if kind == "game" else "(made for you)")
         self.logo_box.addWidget(self.logo)
+        c = self._entries[i]
+        for mode, picture in self.variant_logos.items():
+            self.variant_form.setRowVisible(picture, bool(c.confederation))
+            picture.path = self._catalog_module.identity(
+                {self._catalog_module.E.ROOT: self.emblems}, c, mode) if c.confederation else None
+            picture.show_it()
+
+    def apply_to(self, recipe, commit=True):
+        """Only changed fields; reject concurrent edits atomically, just like CUPS."""
+        from .cup_editors import CupConflict
+        C = self._catalog_module
+        if recipe is not self._world_recipe:
+            raise CupConflict(_("The active world changed. No competition changes were applied."))
+        self.keep()
+        proposed = {"edits": {"competitions": self.game}, "ccup_names": self.names,
+                    "ccup_logos": self.logos, "uecl_name": self.uecl_name,
+                    "uecl_logo": self.uecl_logo, C.E.ROOT: self.emblems}
+        patches = []
+        for c in self._entries:
+            for field in ("name", "logo", *C.E.MODES) if c.confederation else ("name", "logo"):
+                before = C.identity(self._baseline, c, field)
+                value = C.identity(proposed, c, field)
+                if before == value:
+                    continue
+                current = C.identity(recipe, c, field)
+                if current != value and C.fingerprint(recipe, c, field) != C.fingerprint(self._baseline, c, field):
+                    raise CupConflict(_("Competition settings changed elsewhere. Your changes are kept; reopen the editor to review them."))
+                patches.append((c, field, value))
+        if commit:
+            for c, field, value in patches:
+                C.write_identity(recipe, c, field, value)
+        return bool(patches)
 
     def ok(self):
-        self.keep()
+        from .cup_editors import CupConflict
+        try:
+            self.apply_to(self._project.recipe, commit=False)
+        except CupConflict as exc:
+            error(self, "Competition names", str(exc))
+            return
         self.accept()
 
 
 class TrophiesDialog(Dialog):
-    """a trophy folder of your own for a competition (recipe trophies, lbtrophies; mato 21.10.):
-    FL26's Entrance.lua shows it in the game. A competition with none keeps what it had"""
+    """Compatibility wrapper around the shared embedded trophy controls."""
 
     def __init__(self, parent, project, world_db=None):
         super().__init__(parent, "Trophies")
-        self.trophies = {str(k): v for k, v in (project.recipe.get("trophies") or {}).items()}
-        db = world_db if world_db and os.path.exists(os.path.join(world_db, "CompetitionRegulation.bin")) \
-            else project.base
-        self.rows = B.competition_ids(db, project.base)
-        self.v.insertWidget(0, hint(_(
-            "Pair a trophy folder of your own with a competition: Build copies it into the world and FL26's "
-            "Entrance.lua shows that trophy in the competition's matches and its final. The folder is laid out "
-            "as FL26's content\\Entrance ones (the files at its top or in a phase folder, the final's in "
-            "Final; they replace the AFC Champions League trophy's files). A competition with no folder keeps "
-            "what it had.")
-            + ("" if db != project.base else "  " + _("The world's new cups are listed after its first Build."))))
-        self.find = QLineEdit()
-        self.find.setPlaceholderText(_("Find..."))
-        self.find.textChanged.connect(self.fill)
-        self.v.insertWidget(1, self.find)
-        self.table = QTreeWidget()
-        self.table.setHeaderLabels([_("Name"), _("Kind"), _("Competition ID"), _("Regulation IDs"), _("Trophy folder")])
-        self.table.setRootIsDecorated(False)
-        self.table.setSortingEnabled(True)
-        self.table.itemDoubleClicked.connect(lambda *_a: self.pick())
-        self.v.insertWidget(2, self.table, 1)
-        self.b_pick = QPushButton(_("Pick a trophy folder..."))
-        self.b_pick.clicked.connect(self.pick)
-        self.b_clear = QPushButton(_("No trophy of its own"))
-        self.b_clear.clicked.connect(self.clear)
-        self.v.insertWidget(3, row(self.b_pick, self.b_clear, "stretch"))
+        from .trophies import TrophyEditor, competition_rows, mapping
+        db = world_db if world_db and os.path.exists(os.path.join(world_db, "CompetitionRegulation.bin")) else project.base
+        self.editor = TrophyEditor(mapping(project.recipe), competition_rows(db, project.base), long_help=True)
+        self.editor.note.setText(_("The world's new cups are listed after its first Build.") if db == project.base else "")
+        self.v.insertWidget(0, self.editor, 1)
         self.scroll.hide()
-        self.fill()
-        self.table.sortByColumn(2, Qt.AscendingOrder)
-        for c in range(4):
-            self.table.resizeColumnToContents(c)
+        self.table, self.find = self.editor.table, self.editor.find
+        self.b_pick, self.b_clear = self.editor.b_pick, self.editor.b_clear
         self.setMinimumSize(860, 540)
 
+    @property
+    def trophies(self):
+        return self.editor.trophies
+
     def fill(self):
-        want = self.find.text().strip().casefold()
-        cur = self.current()
-        self.table.clear()
-        known = set()
-        for cid, regs, name, kind, new in self.rows:
-            known.add(str(cid))
-            line = [name, _(kind), str(cid), ", ".join(map(str, regs)), self.trophies.get(str(cid), "")]
-            if want and want not in " ".join(line).casefold():
-                continue
-            it = _IdItem(line)
-            it.setData(0, Qt.UserRole, str(cid))
-            self.table.addTopLevelItem(it)
-            if str(cid) == cur:
-                self.table.setCurrentItem(it)
-        for cid, folder in sorted(self.trophies.items()):
-            if cid not in known:                     # paired before, not in these tables (yet)
-                it = _IdItem([_("(not in these tables)"), "", cid, "", folder])
-                it.setData(0, Qt.UserRole, cid)
-                self.table.addTopLevelItem(it)
+        self.editor.fill()
 
     def current(self):
-        it = self.table.currentItem() if hasattr(self, "table") else None
-        return it.data(0, Qt.UserRole) if it else None
+        return self.editor.current()
 
     def pick(self):
-        cid = self.current()
-        if cid is None:
-            return
-        d = QFileDialog.getExistingDirectory(self, _("Pick a trophy folder..."), self.trophies.get(cid, ""))
-        if not d:
-            return
-        import lbtrophies
-        if not lbtrophies.files_in(d):
-            error(self, "Trophies", _("%s has no files.") % d)
-            return
-        self.trophies[cid] = os.path.normpath(d)
-        self.fill()
+        self.editor.pick()
 
     def clear(self):
-        cid = self.current()
-        if cid is not None and self.trophies.pop(cid, None) is not None:
-            self.fill()
+        self.editor.clear()
 
 
 class GameEuropeDialog(Dialog):
@@ -2196,16 +2264,7 @@ class EuropeFirstDialog(Dialog):
 
     def __init__(self, parent, project):
         super().__init__(parent, "First-season European clubs")
-        info = B.game_info(project.base)
-        self.labels = {}
-        for L in project.recipe["leagues"]:
-            for k in range(int(L.get("clubs", 0)) if not L.get("others") else 0):
-                ref = "%s/%d" % (L["name"], k)
-                self.labels[ref] = "%s  (%s)" % (B.club_name(
-                    {"name": L["name"], "club_names": list(L.get("club_names") or [])}, k), L["name"])
-        for t, (n, s) in info["clubs"].items():
-            if t not in info["national"]:
-                self.labels[t] = "%s  (%s, %d)" % (n, s, t)
+        self.labels, _aliases = Q.club_choices(project.recipe, project.base)
         got = project.recipe.get("europe_first") or {}
         self.picked = [[int(x) if str(x).isdigit() else x for x in got.get(key) or []]
                        for key, _t in B.EUROPE_FIRST]
@@ -2607,12 +2666,12 @@ class SouthAmericaDialog(Dialog):
     places, the game's leagues and the world's own, as Check the plan lists them; and the switch
     for the modern CONMEBOL competitions (PR #146, vmardonesdev): Libertadores qualifying in three
     phases, a Copa Sudamericana with a first stage and a play-off, the Recopa Sudamericana. Off, a
-    world builds the classic competitions exactly as before 0.2.5 (review of #146: a world with
-    Libertadores places became a modern one Build refused). A place only the modern ones have
+    world keeps original Libertadores; legacy Sudamericana places remain stored but inactive.
+    A place only the modern ones have
     keeps them on; switching them off takes such places out, after asking"""
     help = ("Modern CONMEBOL competitions off (every world before 0.2.5): the game's Copa Libertadores "
-            "with its qualifying round, and a Copa Sudamericana of 32 clubs in eight groups when leagues have "
-            "places in it. The list shows who goes where.\n\n"
+            "with its qualifying round. No Sudamericana or Recopa is generated; saved Sudamericana places "
+            "remain stored but inactive. The legacy calendar setting has no effect.\n\n"
             "On: Libertadores qualifying in three phases (phase 1: 6 clubs, phase 2: 13 clubs and the three "
             "phase-1 winners, phase 3: the eight phase-2 winners), a Copa Sudamericana with a first stage of "
             "32 clubs and a play-off after the groups, and the Recopa Sudamericana in February. The game's "
@@ -2621,19 +2680,19 @@ class SouthAmericaDialog(Dialog):
             "13 in phase 2, 6 in phase 1, 12 Sudamericana group places and 32 in its first stage, from any "
             "South American leagues you like.\n\n"
             "Switching them off takes out the places only they have; Libertadores, qualifying and Sudamericana "
-            "places stay.")
+            "places stay, but Sudamericana places become inactive until modern mode is enabled again.")
 
     def __init__(self, parent, project):
         super().__init__(parent, "South American places")
         self.project = project
         self.v.insertWidget(0, hint(_("Which positions go to the Copa Libertadores, its qualifying round and the "
                                       "Copa Sudamericana, for the game's South American leagues and yours. The "
-                                      "game's Libertadores places are its own; the Copa Sudamericana is built by "
-                                      "Mod Studio, your leagues' places first, then the game's leagues in turn.")))
+                                      "game's Libertadores places are its own. Sudamericana is generated only "
+                                      "with modern CONMEBOL enabled and all required places configured.")))
         self.modern = QCheckBox(_("Modern CONMEBOL competitions"))
         self.modern.setToolTip(_("Libertadores qualifying in three phases, a Copa Sudamericana with a first stage "
-                                 "and a play-off, and the Recopa Sudamericana. Off: the classic competitions, "
-                                 "as every world before 0.2.5 has them"))
+                                 "and a play-off, and the Recopa Sudamericana. Off: original Libertadores only; "
+                                 "saved Sudamericana places remain inactive."))
         self.modern.setChecked(modern_conmebol(project))
         self.modern.toggled.connect(self.show_places)
         self.v.insertWidget(1, self.modern)
@@ -2742,168 +2801,41 @@ class SouthAmericaDialog(Dialog):
     def ok(self):
         r = self.project.recipe
         on = self.modern.isChecked()
-        if on and r.get("conmebol") != B.CONMEBOL_MODERN:
-            r["conmebol"] = B.CONMEBOL_MODERN
-            self.project.touch()
-        elif not on and modern_conmebol(self.project):
-            gone = B.modern_conmebol_places(r)
-            if gone and not ask(self, "South American places", _(
-                    "Switching the modern CONMEBOL competitions off takes out the %d places only they have "
-                    "(Libertadores phase 1 and 2, Sudamericana first stage, countries without a league). "
-                    "Libertadores, qualifying and Copa Sudamericana places stay. Go on?") % len(gone)):
-                return
-            B.drop_modern_conmebol(r)
+        changed = set_modern_mode(r, on, lambda n: ask(self, "South American places", _(MODERN_WARNING) % n))
+        if changed is None:
+            return
+        if changed:
             self.project.touch()
         self.accept()
 
 
 class GameCupsDialog(Dialog):
-    """the recipe's game_cups: a league cup, and a super cup where the game has none, for the
-    game's own top divisions (the Carabao Cup for the Premier League)"""
-
+    """Compatibility wrapper; the page and dialog use the same editor and serialization."""
     def __init__(self, parent, project):
         super().__init__(parent, "Cups of the game's countries")
-        self.tops = B.game_tops(project.base)
-        have = {int(c["league"]): c for c in project.recipe.get("game_cups") or [] if str(c.get("league")).isdigit()}
-        self.v.insertWidget(0, hint(_("A league cup is the league and the one below it, up to 44 clubs (the "
-                                      "Premier League and the Championship), one match a round from late "
-                                      "August to mid-March (a calendar-year league: September to December), drawn at random; the league's own clubs get the "
-                                      "byes and start in the second round. A super cup -- the "
-                                      "champion v the cup winner in late July (a calendar-year league: at the end "
-                                      "of January) -- only where the game has none. "
-                                      "Empty name = the league's name and League Cup / Super Cup; "
-                                      "no logo = an emblem with the cup's initials.")))
-        self.table = QTableWidget(len(self.tops), 7)
-        self.table.setHorizontalHeaderLabels([_("League"), _("League cup"), _("Name"), _("Logo"),
-                                              _("Super cup"), _("Name"), _("Logo")])
-        self.table.verticalHeader().hide()
-        self.rows = []
-        for i, (rid, name, has_super) in enumerate(self.tops):
-            c = have.get(rid, {})
-            item = QTableWidgetItem(name)
-            item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-            self.table.setItem(i, 0, item)
-            lc, ln = QCheckBox(), QLineEdit(c.get("name", ""))
-            lc.setChecked(bool(c) and bool(c.get("league_cup", True)))
-            sc, sn = QCheckBox(), QLineEdit(c.get("super_name", ""))
-            sc.setChecked(bool(c.get("super_cup")) and not has_super)
-            ln.setPlaceholderText(name + " League Cup")
-            sn.setPlaceholderText(_("the game has one") if has_super else name + " Super Cup")
-            lg = PictureField(c.get("logo"), 32, compact=True)
-            sg = PictureField(c.get("super_logo"), 32, compact=True)
-            sc.setEnabled(not has_super)
-            sn.setEnabled(not has_super)
-            sg.setEnabled(not has_super)
-            for col, w in ((1, lc), (2, ln), (3, lg), (4, sc), (5, sn), (6, sg)):
-                self.table.setCellWidget(i, col, w)
-            self.table.setRowHeight(i, 52)
-            self.rows.append((rid, lc, ln, lg, sc, sn, sg))
-        self.table.resizeColumnsToContents()
-        pic = PictureField(None, 32, compact=True).sizeHint().width() + 12
-        for col, w in ((2, 220), (5, 220), (3, pic), (6, pic)):
-            self.table.setColumnWidth(col, w)
-        self.table.horizontalHeader().setStretchLastSection(True)
-        # wide enough for every column without a sideways scroll bar, as far as the screen allows
-        need = sum(self.table.columnWidth(i) for i in range(self.table.columnCount())) + 40
-        scr = self.screen().availableGeometry() if self.screen() else None
-        self.table.setMinimumSize(min(need, int(scr.width() * 0.9)) if scr else need, 420)
-        self.v.insertWidget(1, self.table, 1)
+        from .cup_editors import GameCupsEditor
+        self.editor = GameCupsEditor(self, project)
+        self.v.insertWidget(0, self.editor, 1)
         self.scroll.hide()
         self.cups = []
+        self.resize(1050, 580)
 
     def ok(self):
-        self.cups = []
-        for rid, lc, ln, lg, sc, sn, sg in self.rows:
-            if not (lc.isChecked() or sc.isChecked()):
-                continue
-            c = {"league": rid, "league_cup": lc.isChecked(), "super_cup": sc.isChecked()}
-            for key, w in (("name", ln), ("super_name", sn)):
-                if w.text().strip():
-                    c[key] = w.text().strip()
-            for key, f in (("logo", lg), ("super_logo", sg)):
-                if f.path:
-                    c[key] = f.path
-            self.cups.append(c)
+        self.cups = self.editor.value()
         self.accept()
 
 
 class OurCupsDialog(Dialog):
-    """the cups of the world's own leagues in one table -- the national cup, the super cup and the
-    league cup of every top division (no league above it, not an exhibition league, not the clubs
-    in no league): the same recipe fields Edit league writes"""
-
     def __init__(self, parent, project):
         super().__init__(parent, "Cups of our countries")
-        self.leagues = [L for L in project.recipe.get("leagues") or []
-                        if L.get("above") in (None, "") and not L.get("exhibition") and not L.get("others")]
-        self.v.insertWidget(0, hint(_("The cups of your own leagues in one place: for each top division its "
-                                      "national cup (the league and the division below it), the super cup "
-                                      "(champion v cup winner, it needs the national cup) and a league cup. "
-                                      "The same as Edit league. Empty name = the league's name and Cup / "
-                                      "Super Cup / League Cup; no logo = an emblem with the cup's initials.")))
-        heads = [_("League"), _("National cup"), _("Name"), _("Logo"), _("Super cup"), _("Name"), _("Logo"),
-                 _("League cup"), _("Name"), _("Logo")]
-        self.table = QTableWidget(len(self.leagues), len(heads))
-        self.table.setHorizontalHeaderLabels(heads)
-        self.table.verticalHeader().hide()
-        self.rows = []
-        for i, L in enumerate(self.leagues):
-            item = QTableWidgetItem(L.get("name", ""))
-            item.setFlags(item.flags() & ~Qt.ItemIsEditable)
-            self.table.setItem(i, 0, item)
-            name = L.get("name", "")
-            cells = []
-            for key, ph in (("cup", " Cup"), ("supercup", " Super Cup"), ("league_cup", " League Cup")):
-                on = QCheckBox()
-                on.setChecked(bool(L.get(key)))
-                nm = QLineEdit(L.get(key + "_name", ""))
-                nm.setPlaceholderText(name + ph)
-                lg = PictureField(L.get(key + "_logo"), 32, compact=True)
-                cells += [on, nm, lg]
-            cup, scup, lcup = cells[0], cells[3], cells[6]
-
-            def follow(_on=False, cup=cup, scup=scup):
-                scup.setEnabled(cup.isChecked())
-            cup.toggled.connect(follow)
-            follow()
-            if L.get("season") == "calendar":
-                lcup.setChecked(bool(L.get("league_cup")))
-                lcup.setEnabled(bool(L.get("league_cup")))
-                lcup.setToolTip(_("A league playing February to December has no split, Apertura/Clausura or league cup yet."))
-            for col, w in enumerate(cells, 1):
-                self.table.setCellWidget(i, col, w)
-            self.table.setRowHeight(i, 52)
-            self.rows.append((L, cells))
-        self.table.resizeColumnsToContents()
-        pic = PictureField(None, 32, compact=True).sizeHint().width() + 12
-        for col in (2, 5, 8):
-            self.table.setColumnWidth(col, 200)
-        for col in (3, 6, 9):
-            self.table.setColumnWidth(col, pic)
-        self.table.horizontalHeader().setStretchLastSection(True)
-        need = sum(self.table.columnWidth(i) for i in range(self.table.columnCount())) + 40
-        scr = self.screen().availableGeometry() if self.screen() else None
-        self.table.setMinimumSize(min(need, int(scr.width() * 0.9)) if scr else need, 420)
-        self.v.insertWidget(1, self.table, 1)
+        from .cup_editors import OurCupsEditor
+        self.editor = OurCupsEditor(self, project)
+        self.v.insertWidget(0, self.editor, 1)
         self.scroll.hide()
+        self.resize(1050, 580)
 
     def ok(self):
-        for L, cells in self.rows:
-            for n, key in enumerate(("cup", "supercup", "league_cup")):
-                on, nm, lg = cells[3 * n:3 * n + 3]
-                keep = on.isChecked() and (key != "supercup" or cells[0].isChecked())
-                if keep:
-                    L[key] = True
-                else:
-                    L.pop(key, None)
-                if nm.text().strip():
-                    L[key + "_name"] = nm.text().strip()
-                else:
-                    L.pop(key + "_name", None)
-                if lg.path:
-                    L[key + "_logo"] = lg.path
-                else:
-                    L.pop(key + "_logo", None)
+        self.editor.apply(self.editor.project.recipe)
         self.accept()
 
 
@@ -3287,86 +3219,45 @@ class NewLeagues(BuilderPage):
             return
         d = CompetitionNamesDialog(self, self.project)
         if d.finish():
-            r = self.project.recipe
-            if d.game:
-                self.project.edits("competitions").clear()
-                self.project.edits("competitions").update(d.game)
-            else:
-                (r.get("edits") or {}).pop("competitions", None)
-            for key, v in (("ccup_names", d.names), ("ccup_logos", d.logos)):
-                if v:
-                    r[key] = v
-                else:
-                    r.pop(key, None)
-            r.pop("caf_super_cup_logo", None)
-            if d.logos.get("0"):
-                r["caf_super_cup_logo"] = d.logos["0"]
-            self.project.touch()
+            from .cup_editors import CupConflict
+            try:
+                if d.apply_to(self.project.recipe):
+                    self.project.touch()
+            except CupConflict as exc:
+                error(self, "Competition names", str(exc))
 
     def trophies(self):
-        if self.need_tables(True):
-            return
-        world = self.project.recipe.get("world") or ""
-        db = os.path.join(self.app.game.sider_dir, "livecpk", world, "common", "etc", "pesdb") if world else None
-        d = TrophiesDialog(self, self.project, db)
-        if d.finish():
-            if d.trophies:
-                self.project.recipe["trophies"] = d.trophies
-            else:
-                self.project.recipe.pop("trophies", None)
-            self.project.touch()
+        # Legacy callers share the same embedded editing session.
+        self.app.open_page("Trophies")
+
+    def open_qualification(self, conf=2, tool=None):
+        """Legacy menu entries now use the same unsaved CUPS editing session."""
+        self.app.open_page("Cups")
+        cups = self.app.page("Cups")
+        if cups.continental_section["editor"] is None:
+            cups.shown()
+        cups.tabs.setCurrentIndex(2)
+        editor = cups.continental_section["editor"]
+        editor.confederation.setCurrentIndex(editor.confederation.findData(conf))
+        editor.tabs.setCurrentIndex(1)
+        editor.qualification_tab(1)
+        if tool:
+            editor.qualification.open_tool(tool)
 
     def game_europe(self):
-        if self.need_tables(True):
-            return
-        d = GameEuropeDialog(self, self.project)
-        if d.finish():
-            if d.result:
-                self.project.recipe["game_europe"] = d.result
-            else:
-                self.project.recipe.pop("game_europe", None)
-            self.project.touch()
+        self.open_qualification()
 
     def europe_first(self):
-        if self.need_tables(True):
-            return
-        d = EuropeFirstDialog(self, self.project)
-        if d.finish():
-            if d.result:
-                self.project.recipe["europe_first"] = d.result
-            else:
-                self.project.recipe.pop("europe_first", None)
-            self.project.touch()
+        self.open_qualification(2, "first")
 
     def uefa_rank(self):
-        if self.need_tables(True):
-            return
-        d = UefaRankDialog(self, self.project)
-        if d.finish():
-            self.project.touch()
-            self.refresh()
-            self.say(_("UEFA ranking applied: every ranked league has its European places. Check the plan shows "
-                       "them."), "ok")
+        self.open_qualification(2, "preset")
 
     def conmebol_associations(self):
-        if self.need_tables(True):
-            return
-        if not modern_conmebol(self.project):
-            info(self, "CONMEBOL countries without a league",
-                 _("These places belong to the modern CONMEBOL competitions: switch them on in South American "
-                   "places first."))
-            return
-        d = ConmebolAssociationsDialog(self, self.project)
-        if d.finish():
-            if d.result:
-                self.project.recipe["conmebol_associations"] = d.result
-            else:
-                self.project.recipe.pop("conmebol_associations", None)
-            self.project.touch()
+        self.open_qualification(4)
 
     def samerica(self):
-        if SouthAmericaDialog(self, self.project).finish():
-            self.refresh()
+        self.open_qualification(4)
 
     def league_order(self):
         if self.need_tables(True):
@@ -3392,23 +3283,12 @@ class NewLeagues(BuilderPage):
             self.project.touch()
 
     def game_cups(self):
-        if self.need_tables(True):
-            return
-        d = GameCupsDialog(self, self.project)
-        if d.finish():
-            if d.cups:
-                self.project.recipe["game_cups"] = d.cups
-            else:
-                self.project.recipe.pop("game_cups", None)
-            self.project.touch()
+        self.app.open_page("Cups")
+        self.app.page("Cups").tabs.setCurrentIndex(0)
 
     def our_cups(self):
-        if not any(L.get("above") in (None, "") and not L.get("exhibition") and not L.get("others")
-                   for L in self.project.recipe.get("leagues") or []):
-            self.say(_("Your world has no league of its own at the top of a country yet."))
-            return
-        if OurCupsDialog(self, self.project).finish():
-            self.project.touch()
+        self.app.open_page("Cups")
+        self.app.page("Cups").tabs.setCurrentIndex(1)
 
     def move(self, d):
         i = self.selected()
@@ -4708,16 +4588,6 @@ class Build(BuilderPage):
         self.outer.addLayout(one)
         cards = QHBoxLayout()
         cards.setSpacing(14)
-        euc = FitCard()
-        euc.setObjectName("card")
-        eu = QVBoxLayout(euc)
-        eu.setContentsMargins(18, 14, 18, 14)
-        eu.setSpacing(8)
-        t = QLabel(_("European cups"))
-        t.setObjectName("cardtitle")
-        eu.addWidget(t)
-        eu.addWidget(hint(_("Every world built here has the new Champions League and Europa League: a league "
-                            "phase of 36 clubs, then the play-off and the knockout rounds.")))
         clc = FitCard()
         clc.setObjectName("card")
         cl = QVBoxLayout(clc)
@@ -4726,8 +4596,7 @@ class Build(BuilderPage):
         t2 = QLabel(_("New clubs"))
         t2.setObjectName("cardtitle")
         cl.addWidget(t2)
-        cards.addWidget(euc, 3)
-        cards.addWidget(clc, 2)
+        cards.addWidget(clc)
         # the cards scroll on their own: on a short window (Windows scaling up) they kept their
         # height and ran over the log under them (LaraCroft, 06.10.)
         holder = QWidget()
@@ -4741,7 +4610,7 @@ class Build(BuilderPage):
         sa.setStyleSheet("QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; }")
         self.cards_area, self.cards_holder = sa, holder
         # 0.2.4: the one button in sight; the world's options and the single steps one click away
-        self.opts = Fold("World options: European cups, country cups, kits and faces of the new clubs",
+        self.opts = Fold("World options: country cups, kits and faces of the new clubs",
                          app, "build_opts")
         self.opts.body.addWidget(sa, 10)
         self.outer.addWidget(self.opts)
@@ -4756,43 +4625,19 @@ class Build(BuilderPage):
         barw.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)   # the second row is not squeezed
         self.stepfold.body.addWidget(barw)
         self.outer.addWidget(self.stepfold)
-        self.uecl = QCheckBox(_("Include the Conference League"))
-        self.uecl.setToolTip(_("A league phase of 36 clubs and a February play-off, like the Champions League "
-                               "and the Europa League"))
-        self.uecl.toggled.connect(self.set_uecl)
-        eu.addWidget(noted(self.uecl, helpmark(
-            "A league phase of 36 clubs and a February play-off, like the Champions League "
-            "and the Europa League"), hint(_("off = no Conference League; the Champions League and Europa "
-                                                   "League keep their 36-club league phase and play-off either way"))))
-        self.uecl_logo = PictureField(None, 48)
-        self.uecl_logo.changed = self.set_uecl_logo
-        eu.addWidget(noted(QLabel(_("Conference League logo")), self.uecl_logo,
-                                 hint(_("empty = a UECL emblem drawn for you"))))
-        self.uecl_name = QLineEdit()
-        self.uecl_name.setPlaceholderText(B.mkuecl.NAME)
-        self.uecl_name.setMaxLength(60)
-        self.uecl_name.editingFinished.connect(self.set_uecl_name)
-        eu.addWidget(noted(QLabel(_("Conference League name")), self.uecl_name,
-                                 hint(_("empty = %s; a new name needs the world built again") % B.mkuecl.NAME)))
-        self.cafsc = QCheckBox(_("CAF Super Cup"))
-        self.cafsc.setToolTip(_("The winners of the CAF Champions League and the Confederation Cup meet once, "
-                                "in late July. First played in a career's second season, when both cups "
-                                "have a winner"))
-        self.cafsc.toggled.connect(self.set_cafsc)
-        eu.addWidget(noted(self.cafsc, helpmark(
-            "The winners of the CAF Champions League and the Confederation Cup meet once, "
-            "in late July. First played in a career's second season, when both cups "
-            "have a winner"), hint(_("only in a world with both African cups (the European "
-                                                    "places of your African leagues)"))))
         self.cupdraw = QComboBox()
         for v, t in (("seeded", _("Seeded: top division clubs meet the lower leagues first")),
                      ("random", _("Random: a blind draw")),
                      ("off", _("Off: as the game fills it (list order)"))):
             self.cupdraw.addItem(t, v)
         self.cupdraw.currentIndexChanged.connect(self.set_cupdraw)
-        eu.addWidget(noted(QLabel(_("Country cup draw")), self.cupdraw,
-                           hint(_("the national cups of your leagues; seeded also spreads the top "
-                                  "clubs over both halves of the bracket"))))
+        draw_label = QLabel(_("Country cup draw"))
+        draw_label.setBuddy(self.cupdraw)
+        self.cupdraw.setAccessibleName(_("Country cup draw"))
+        self.cupdraw_row = noted(draw_label, self.cupdraw,
+                                hint(_("the national cups of your leagues; seeded also spreads the top "
+                                       "clubs over both halves of the bracket")))
+        self.opts.body.insertWidget(0, self.cupdraw_row)
         self.mkits = QCheckBox(_("Kits made in the clubs' colours"))
         tip = ("On (with Kit Server installed): every new club without kits of its own gets home, away, third and "
                "goalkeeper kits made in its shirt colours (or its crest's), with its crest on the chest, when the "
@@ -4847,13 +4692,13 @@ class Build(BuilderPage):
                            hint(_("30 to 35; takes effect at the next Build"))))
         self.b_euro = QPushButton(_("Build only the European cups..."))
         self.b_euro.setToolTip(_("A world with nothing but the new Champions League and Europa League (league "
-                                 "phase of 36 and play-off) and, when ticked above, the Conference League: "
+                                 "phase of 36 and play-off) and, when enabled in Cups > Continental > UEFA, the Conference League: "
                                  "no new leagues, the game's clubs and leagues as they are. Your own world is "
                                  "not changed."))
         self.b_euro.clicked.connect(self.do_europe_only)
-        eu.addWidget(noted(self.b_euro, helpmark(
+        self.stepfold.body.addWidget(noted(self.b_euro, helpmark(
             "A world with nothing but the new Champions League and Europa League (league "
-            "phase of 36 and play-off) and, when ticked above, the Conference League: "
+            "phase of 36 and play-off) and, when enabled in Cups > Continental > UEFA, the Conference League: "
             "no new leagues, the game's clubs and leagues as they are. Your own world is "
             "not changed."), hint(_("a world with just the new European format and the game's own leagues and "
                                          "clubs: no new leagues"))))
@@ -4904,16 +4749,6 @@ class Build(BuilderPage):
         self.need_tables()
         self.refresh()
 
-    def set_uecl(self, on):
-        if bool(self.project.recipe.get("uecl", True)) != on:
-            self.project.recipe["uecl"] = on
-            self.project.touch()
-
-    def set_cafsc(self, on):
-        if bool(self.project.recipe.get("caf_super_cup", True)) != on:
-            self.project.recipe["caf_super_cup"] = on
-            self.project.touch()
-
     def set_cupdraw(self, i):
         v = self.cupdraw.itemData(i)
         if (self.project.recipe.get("cup_draw") or "seeded") != v:
@@ -4963,23 +4798,6 @@ class Build(BuilderPage):
                 self.project.recipe["replaced_kits"] = False
             self.project.touch()
 
-    def set_uecl_name(self):
-        v = self.uecl_name.text().strip()
-        if v != (self.project.recipe.get("uecl_name") or ""):
-            if v:
-                self.project.recipe["uecl_name"] = v
-            else:
-                self.project.recipe.pop("uecl_name", None)
-            self.project.touch()
-
-    def set_uecl_logo(self):
-        if self.uecl_logo.path != self.project.recipe.get("uecl_logo"):
-            if self.uecl_logo.path:
-                self.project.recipe["uecl_logo"] = self.uecl_logo.path
-            else:
-                self.project.recipe.pop("uecl_logo", None)
-            self.project.touch()
-
     def ready_live(self):
         """the switched-on worlds that came ready from Install mods (a zip): Build only switches
         such a world off, or builds the open recipe over it"""
@@ -5024,12 +4842,6 @@ class Build(BuilderPage):
     def refresh(self):
         g = self.app.game
         w = self.project.recipe.get("world", "")
-        self.uecl.blockSignals(True)
-        self.uecl.setChecked(bool(self.project.recipe.get("uecl", True)))
-        self.uecl.blockSignals(False)
-        self.cafsc.blockSignals(True)
-        self.cafsc.setChecked(bool(self.project.recipe.get("caf_super_cup", True)))
-        self.cafsc.blockSignals(False)
         self.cupdraw.blockSignals(True)
         self.cupdraw.setCurrentIndex(max(0, self.cupdraw.findData(self.project.recipe.get("cup_draw") or "seeded")))
         self.cupdraw.blockSignals(False)
@@ -5050,9 +4862,6 @@ class Build(BuilderPage):
         self.pfaces.blockSignals(True)
         self.pfaces.setChecked(self.project.recipe.get("pack_faces") is not False)
         self.pfaces.blockSignals(False)
-        self.uecl_logo.path = self.project.recipe.get("uecl_logo")
-        self.uecl_logo.show_it()
-        self.uecl_name.setText(self.project.recipe.get("uecl_name") or "")
         built = os.path.exists(os.path.join(g.livecpk_dir, w)) if g.ok() else False
         missing = B.modules_missing(g.folder) if g.ok() else []
         bits = [_("World %s: %s") % (w, _("built") if built else _("not built yet"))]
@@ -5125,7 +4934,7 @@ class Build(BuilderPage):
         if not self.app.game.ok():
             error(self, title, _("no game folder -- Game > Choose the game folder"))
             return
-        uecl = self.uecl.isChecked()
+        uecl = bool(self.project.recipe.get("uecl", True))
         name, ok = QInputDialog.getText(
             self, title, _("A world with the new Champions League and Europa League%s and the game's own "
                            "leagues and clubs. Only one world can be in the game, so this is instead of "

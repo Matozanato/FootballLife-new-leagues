@@ -124,9 +124,20 @@ Na vrhu prozora, slijeva nadesno:
 |---|---|
 | **1. Početna** | Svijet u igri, provjera spremnosti, brze radnje |
 | **2. Moj svijet** | Tvoji svjetovi kao kartice, i kartice **Gradnja**, **Lige**, **Klubovi**, **Igrači**, **Dresovi**, **Stadioni** i **Kupovi** (odjeljak 3.1) |
-| **3. Sadržaj igre** ▾ | **Lopte**, **Komentar**, **Glazba**, **Ostali sadržaj** |
+| **3. Sadržaj igre** ▾ | **Lopte**, **Komentar**, **Glazba**, **Trofeji**, **Ostali sadržaj** |
 | **4. Alati** ▾ | **Lua moduli**, **Mape sadržaja**, **Profili**, **Točke vraćanja**, **Dijagnostika** |
 | **5. Postavke** | Mapa igre, Sider mapa, jezik, karijere u Master ligi, tablice igre |
+
+Trenutačna navigacija: Kupovi i Trofeji čuvaju izmjene tijekom navigacije. Apply ih upisuje u recept; Discard učitava trenutačne vrijednosti projekta. Predsezonski turniri ostaju izvan Kupova, u Lige → Više.
+
+- **Game Countries**: `Moj svijet → Kupovi → Game Countries`.
+- **Our Countries**: `Moj svijet → Kupovi → Our Countries`.
+- **Competitions**: `Moj svijet → Kupovi → Continental → Natjecanja`.
+- **Qualification**: `Moj svijet → Kupovi → Continental → Qualification`.
+- **UEFA Ranking / First-season clubs**: `Moj svijet → Kupovi → Continental → UEFA → Qualification`.
+- **Trofeji**: `GAME CONTENT → TROPHIES`.
+
+Moderne CONMEBOL trake vizualno su provjerene u FL27: Bolivija ima tri plava i četiri narančasta mjesta. Ponašanje u FL26 nije neovisno provjereno u igri. Dark/Light amblemi prolaze automatske testove, ali prikaz u igri još nije potpuno provjeren. Neobavezna polja `continental_emblems` čuvaju postojeće svjetove. Ukidanje izgradnje klasične Sudamericane namjerna je promjena, ne samo vizualna: bez modernog načina gradi se samo izvorni Libertadores; stare dodjele ostaju spremljene, ali neaktivne.
 
 **Datoteka** ima **Novi svijet**, **Otvori svijet...**, **Spremi svoj svijet kao...**, **Izmjene u
 ovom svijetu...** (sve što tvoj svijet mijenja u igri na jednom popisu; odaberi retke i stisni
@@ -165,8 +176,7 @@ ostavi u igri, a ostale isključi.
 
 **Kartice** ispod reda sa svjetovima mijenjaju otvoreni svijet: **Gradnja** (odjeljak 8.2),
 **Lige**, **Klubovi** i **Igrači** (poglavlje 8), **Dresovi** i **Stadioni** (poglavlje 6).
-**Kupovi ▾** otvara prozore kupova: **Predsezonski turniri**, **Kupovi naših država**, **Kupovi
-država iz igre** i **Imena natjecanja**. Desno:
+**Kupovi** su ugrađena stranica za domaće kupove i kontinentalna natjecanja. Predsezonski turniri ostaju u **Lige → Više**. Desno:
 
 - **NewLife Database** otvara stranicu NewLife (odjeljak 8.4);
 - **+ Dodaj...** je jedan prozor za tri stvari: zip svijeta (Modpack), paket liga (`.fl26pack`)
@@ -206,10 +216,7 @@ povučeš mišem negdje drugdje. Filtri **Sve**, **Naše** i **Promijenjeno** i 
 Odaberi jednu: tvoja liga ima **Uredi ligu...**, **Dodaj nižu ligu**, **Klubovi i imena**,
 **Igrači** i **Ukloni**; liga iz igre ima svoje ime, logo i klubove (poglavlje 8, "Lige iz
 igre"). **Dodaj ligu** napravi novu. **Mjesta u Select Teamu** pokazuje kamo je zadnji Build
-stavio svaku tvoju ligu; njen stupac **Select Team** je popis: *Automatski* (odlučuje redoslijed) ili *umjesto* jedne od igrinih grupa (Ostale europske lige, Ostale latinoameričke momčadi, Ostali klubovi (Afrika), Ostalo). Liga odabrana tu dobiva mjesto te grupe na idućem Buildu, bez obzira na redoslijed, a klubovi grupe tada nisu u Select Teamu (jedna liga po grupi; sa svijetom Južne Amerike Ostale latinoameričke momčadi ne trebaju, vmican). U Master Leagueu pokrenutom nakon tog Builda klubovi lige dobivaju mjesto grupe i tamo: Team Info ih pokazuje pod ligom, i s njima se iz te grupe dopunjuju Libertadores ili Svjetsko klupsko prvenstvo; klubovi grupe ostaju bez lige. Svijet s CONMEBOL asocijacijama zadržava mjesto Ostalih latinoameričkih momčadi. **Više ▾** ima **Predsezonski turniri**, **Kupovi naših država**,
-**Kupovi država iz igre**, **Europska mjesta liga iz igre**, **Europski klubovi prve sezone**,
-**UEFA poredak**, **Južnoamerička mjesta** (s kućicom **Moderna natjecanja CONMEBOL-a**), **Zemlje CONMEBOL-a bez lige** (uz moderna natjecanja), **Imena natjecanja**, **ID-evi natjecanja**, **Poredak
-liga**, **Sezone liga iz igre** i **Ime svijeta i datoteka...**. Ovo zadnje otvara stranicu s
+stavio svaku tvoju ligu; njen stupac **Select Team** je popis: *Automatski* (odlučuje redoslijed) ili *umjesto* jedne od igrinih grupa (Ostale europske lige, Ostale latinoameričke momčadi, Ostali klubovi (Afrika), Ostalo). Liga odabrana tu dobiva mjesto te grupe na idućem Buildu, bez obzira na redoslijed, a klubovi grupe tada nisu u Select Teamu (jedna liga po grupi; sa svijetom Južne Amerike Ostale latinoameričke momčadi ne trebaju, vmican). U Master Leagueu pokrenutom nakon tog Builda klubovi lige dobivaju mjesto grupe i tamo: Team Info ih pokazuje pod ligom, i s njima se iz te grupe dopunjuju Libertadores ili Svjetsko klupsko prvenstvo; klubovi grupe ostaju bez lige. Svijet s CONMEBOL asocijacijama zadržava mjesto Ostalih latinoameričkih momčadi. **Više ▾** ima **Predsezonski turniri**, **Imena natjecanja**, **ID-evi natjecanja**, **Poredak liga**, **Sezone liga iz igre**, **Ime svijeta i datoteka...**. Ovo zadnje otvara stranicu s
 imenom svijeta i popisom tvojih liga (starije upute je zovu *Nove lige*).
 
 ## 4. Uvezi svijet
@@ -312,6 +319,8 @@ isključenim.
 
 ## 6. Sadržaj igre: content serveri
 
+**Sadržaj igre → Trofeji** je ugrađena stranica, a ne prozor Liga. Odaberi natjecanje i mapu trofeja; Apply sprema dodjele u odabrani svijet, a Build kopira datoteke. Discard učitava trenutačni recept. Format `recipe["trophies"]` ostaje isti.
+
 Svaka od ovih stranica pripada jednom content serveru. **Dresovi** i **Stadioni** su kartice
 **2. Moj svijet**; **Lopte**, **Komentar**, **Glazba** i **Ostali sadržaj** su pod **3. Sadržaj
 igre**. **Ostali sadržaj** ima po karticu za **Semafori**, **Izbornici**, **Dresovi sudaca**,
@@ -397,19 +406,19 @@ lige u redoslijedu (**Pomakni gore** / **Pomakni dolje**), a **Select Team** ka�
 stavio: *da*, *umjesto* neke skupine igre, ili *nema mjesta (igra se)*. `*` tamo znači da se redoslijed od tada
 promijenio: izgradi opet da vidiš kamo ide. Povlačenje lige na kartici **Lige** pomiče je samo među mjestima koja ovdje već drže lige njezina kontinenta.
 
-**Predsezonski turniri** (Lige → Više, ili Moj svijet → Kupovi): prijateljski kupovi na ispadanje s 4 ili 8 pozvanih klubova u srpnju, prije sezone, u parovima redom kojim ih upišeš (prvi protiv drugog ...). Klub je iz nove lige ili klub igre (njegov ID); barem jedan mora biti iz nove lige, a turnir je u njenoj državi. Karijera počinje u kolovozu, pa se prvi igra u drugoj sezoni. Svaki turnir može imati **Logo**; prazno: nacrta se sam.
+**Predsezonski turniri** (Lige → Više): prijateljski kupovi na ispadanje s 4 ili 8 pozvanih klubova u srpnju, prije sezone, u parovima redom kojim ih upišeš (prvi protiv drugog ...). Klub je iz nove lige ili klub igre (njegov ID); barem jedan mora biti iz nove lige, a turnir je u njenoj državi. Karijera počinje u kolovozu, pa se prvi igra u drugoj sezoni. Svaki turnir može imati **Logo**; prazno: nacrta se sam.
 
-**Kupovi naših država** (Lige → Više, ili Moj svijet → Kupovi): kupovi tvojih liga u jednoj tablici. Za svaki prvi rang: njegov nacionalni kup, superkup i ligaški kup, svaki sa svojim imenom i logom. To su ista polja kao u **Uredi ligu...**, bez otvaranja svake lige.
+**Kupovi naših država** (Moj svijet → Kupovi → Our Countries): kupovi tvojih liga u jednoj tablici. Za svaki prvi rang: njegov nacionalni kup, superkup i ligaški kup, svaki sa svojim imenom i logom. To su ista polja kao u **Uredi ligu...**, bez otvaranja svake lige.
 
-**Kupovi država iz igre** (Lige → Više, ili Moj svijet → Kupovi): ligaški kup -- recimo Carabao Cup -- za lige iz igre. Označi **Ligaški kup** pored lige: ona i liga ispod nje, do 44 kluba, jedna utakmica po kolu od kraja kolovoza do finala sredinom ožujka, izvlačenje nasumično, klubovi same lige sa slobodnim prolazom u drugo kolo (isti kup kao kod nove lige), u dane koje kalendar liga i kupova iz igre ostavlja slobodnima. **Superkup**, prvak protiv pobjednika kupa, samo gdje ga igra nema (Brazil, Čile, Škotska, Grčka, SAD). To je superkup od jedne utakmice između dva kluba. Igra se krajem srpnja; u državi koja igra od veljače do prosinca (Supercopa de Chile, Supercopa Rei) igra se krajem siječnja, između prvaka i pobjednika kupa upravo završene sezone. Kad pobjednika kupa još nema (prvo ljeto nove karijere), ili je prvak osvojio i kup, igra drugoplasirani u ligi. Prazno ime: ime lige i *League Cup* / *Super Cup*. **Logo** pored svakog imena: slika za taj kup; bez nje, amblem s inicijalima kupa. Promjene ovdje traže **Instaliraj module** (ili Izgradi i instaliraj), novi Build i novu karijeru.
+**Kupovi država iz igre** (Moj svijet → Kupovi → Game Countries): ligaški kup -- recimo Carabao Cup -- za lige iz igre. Označi **Ligaški kup** pored lige: ona i liga ispod nje, do 44 kluba, jedna utakmica po kolu od kraja kolovoza do finala sredinom ožujka, izvlačenje nasumično, klubovi same lige sa slobodnim prolazom u drugo kolo (isti kup kao kod nove lige), u dane koje kalendar liga i kupova iz igre ostavlja slobodnima. **Superkup**, prvak protiv pobjednika kupa, samo gdje ga igra nema (Brazil, Čile, Škotska, Grčka, SAD). To je superkup od jedne utakmice između dva kluba. Igra se krajem srpnja; u državi koja igra od veljače do prosinca (Supercopa de Chile, Supercopa Rei) igra se krajem siječnja, između prvaka i pobjednika kupa upravo završene sezone. Kad pobjednika kupa još nema (prvo ljeto nove karijere), ili je prvak osvojio i kup, igra drugoplasirani u ligi. Prazno ime: ime lige i *League Cup* / *Super Cup*. **Logo** pored svakog imena: slika za taj kup; bez nje, amblem s inicijalima kupa. Promjene ovdje traže **Instaliraj module** (ili Izgradi i instaliraj), novi Build i novu karijeru.
 
-**Europska mjesta liga iz igre** (Lige → Više): koja mjesta Premier Lige, LaLige, Serie A ... idu u koje europsko natjecanje. Popis pokazuje mjesta iz igre; označi **Vlastita mjesta za ovu ligu** da ih promijeniš. Neoznačena liga zadržava mjesta iz igre, označena liga bez redaka ne šalje nikoga.
 
-**UEFA poredak** (Lige → Više, 0.1.7): sve europske lige svijeta -- one iz igre i tvoje nove
+**Europska mjesta liga iz igre** (Moj svijet → Kupovi → Continental → Qualification): koja mjesta Premier Lige, LaLige, Serie A ... idu u koje europsko natjecanje. Popis pokazuje mjesta iz igre; označi **Vlastita mjesta za ovu ligu** da ih promijeniš. Neoznačena liga zadržava mjesta iz igre, prazna dodjela ili dodjela samo generiranih kupova može zadržati izvorna mjesta, kako objašnjava uređivač.
+
+**UEFA poredak** (Moj svijet → Kupovi → Continental → UEFA → Qualification → UEFA Ranking..., 0.1.7): sve europske lige svijeta -- one iz igre i tvoje nove
 prve lige -- na jednom popisu, najjača država prva. Povuci ligu mišem (ili **Gore** / **Dolje**)
 da promijeniš redoslijed, makni kvačicu da liga ne dobije europsko mjesto, **Poredak UEFA-e**
-vraća popis na UEFA-in poredak saveza za 2026./27. Desno piše što koja liga dobiva, a **U redu**
-to zapiše: mjesta UEFA-inog ključa za 2024.-27. -- 1. mjesto ima pet mjesta u Ligi prvaka, 6. dva
+vraća popis na UEFA-in poredak saveza za 2026./27. Desno piše što koja liga dobiva, a **APPLY UEFA RANKING TO DRAFT** stavi rezultat u nacrt; zatim koristi **Apply** u Kupovima da ga spremiš: mjesta UEFA-inog ključa za 2024.-27. -- 1. mjesto ima pet mjesta u Ligi prvaka, 6. dva
 i mjesto u doigravanju, 30. jedno mjesto u drugom pretkolu Lige prvaka i tri u pretkolu
 Konferencijske lige, i tako dalje, uključujući mjesto pobjednika kupa u Europskoj ligi. Svijet
 nikad nema svih 55 UEFA-inih država, pa mjesta rangova kojih nema idu redom sljedećim klubovima
@@ -421,17 +430,9 @@ pretkolu, kojeg Mod Studio nema). Mjesta u kvalifikacijama idu u kola redom klju
 država u kolo najbliže ligaškoj fazi. Poslije i dalje možeš ručno promijeniti mjesta svake lige
 (*Europa* na ligi, *Europska mjesta liga iz igre*): Build uzima mjesta, ne poredak.
 
-**Južnoamerička mjesta** (Lige → Više, 0.1.7): za svaku južnoameričku ligu,
-četiri iz igre i tvoje, koja mjesta idu u Copa Libertadores, njene kvalifikacije i Copa
-Sudamericanu. Mjesta u Libertadoresu za lige iz igre su igrina (Brazil 1.-4. i pobjednik Copa do
-Brasil, kvalifikacije 5.-6. i tako dalje -- isto što pokazuje igrin Competition Info); Copa
-Sudamericana je od Mod Studija, pa popis pokazuje koliko klubova svaka liga iz igre šalje u nju
-kad su tvoja mjesta unutra: prvo tvoje lige, pa Brazil, Argentina, Čile i Kolumbija redom po
-jedan klub dok ih ne bude 32. Klub koji je već u Libertadoresu ili njegovim kvalifikacijama
-ustupa mjesto sljedećem iz svoje lige. **Provjeri plan** ispiše isti popis kad god svijet ima
-mjesto u Libertadoresu ili Sudamericani.
+**Južnoamerička mjesta** (Moj svijet → Kupovi → Continental → CONMEBOL → Qualification, 0.1.7): Qualification zajedno uređuje izvorne i dodane prve lige. Podržani savezi bez igrive lige ostaju dostupni ručno. Auto Set Continental Places traži moderni način i svih deset igrivih prvih liga; fiksne kvote ulaze samo u nacrt CUPS-a. Bez modernog načina ne grade se Sudamericana ni Recopa; stare dodjele ostaju neaktivne.
 
-**Moderna natjecanja CONMEBOL-a** (kućica u **Južnoamerička mjesta**; vmardonesdev i
+**Moderna natjecanja CONMEBOL-a** (Moj svijet → Kupovi → Continental → CONMEBOL; vmardonesdev i
 nissindiaz, #146): kvalifikacije za Libertadores u tri faze (1. faza: 6 klubova, 2. faza: 13 klubova
 i tri pobjednika 1. faze, 3. faza: osam pobjednika 2. faze), Copa Sudamericana s prvom fazom od 32
 kluba i doigravanjem nakon skupina, i Recopa Sudamericana u veljači. Kad je uključeno, prozor Liga
@@ -439,11 +440,9 @@ nudi **Libertadores, 1. faza**, **2. faza** i **Copa Sudamericana, prva faza** (
 kvalifikacijsko kolo), južnoameričke lige iz igre imaju samo mjesta koja im daš u **Europska mjesta
 liga iz igre**, a **Zemlje CONMEBOL-a bez lige** daju mjesta klubovima zemlje koja u tvom svijetu
 nema ligu. Prozor broji mjesta prema broju koji Build traži (26 mjesta u skupinama Libertadoresa, 13
-u 2. fazi, 6 u 1. fazi, 12 u skupinama Sudamericane, 32 u njenoj prvoj fazi). Isključeno, što je
-zadano, svijet gradi klasična natjecanja točno kao prije; isključivanje uklanja samo mjesta koja
-imaju moderna natjecanja, nakon pitanja.
+u 2. fazi, 6 u 1. fazi, 12 u skupinama Sudamericane, 32 u njenoj prvoj fazi). Isključeno: gradi se samo izvorni Libertadores. Spremljena mjesta Sudamericane ostaju neaktivna. Isključivanje traži potvrdu prije uklanjanja mjesta koja pripadaju samo modernom načinu.
 
-**Imena natjecanja** (Lige → Više, ili Moj svijet → Kupovi): novo ime i logo za kupove, superkupove i kontinentalna natjecanja iz igre -- FA Cup, Ligu prvaka, Libertadores ... -- i za kontinentalne kupove koje svijet gradi (CAF Liga prvaka, Konfederacijski kup, AFC Liga prvaka Two, Copa Sudamericana, CONCACAF Champions Cup, OFC Liga prvaka, AFC Challenge League, CAF Superkup). Ime dobiju sve faze natjecanja. Prazno: ono iz igre. Lige iz igre preimenuju se na *Lige* (odaberi ligu iz igre).
+**Imena natjecanja** (Lige → Više): novo ime i logo za kupove, superkupove i kontinentalna natjecanja iz igre -- FA Cup, Ligu prvaka, Libertadores ... -- i za kontinentalne kupove koje svijet gradi (CAF Liga prvaka, Konfederacijski kup, AFC Liga prvaka Two, Copa Sudamericana, CONCACAF Champions Cup, OFC Liga prvaka, AFC Challenge League, CAF Superkup). Ime dobiju sve faze natjecanja. Prazno: ono iz igre. Lige iz igre preimenuju se na *Lige* (odaberi ligu iz igre).
 
 **ID-evi natjecanja** (Lige → Više): svako natjecanje svijeta u igri, lige i kupovi, s njegovim ID-om. Igra ima mjesta za 255; Moj svijet pokazuje koliko ih je zauzeto.
 
@@ -451,7 +450,7 @@ imaju moderna natjecanja, nakon pitanja.
 
 **Sezone liga iz igre** (Lige → Više, eksperimentalno): Japan, Kina, Brazil, Čile i Saudijska Arabija u igri igraju od veljače do prosinca. Označi jednu i njene lige igraju od kolovoza do svibnja kao Europa: sezona počinje u kolovozu, ulazak i ispadanje su ljeti, kupovi idu na datume kolovoz-svibanj, a kontinentalna mjesta dolaze iz tablice završene u svibnju. Tvoj rang ispod jedne od tih liga ide s njom. Kolumbija i SAD igraju Aperturu i Clausuru i ne mogu se pomaknuti. Ponovno izgradi svijet i pokreni novu karijeru.
 
-**Europski klubovi prve sezone** (Lige → Više, 0.1.8): ručno odaberi
+**Europski klubovi prve sezone** (Moj svijet → Kupovi → Continental → UEFA → Qualification → First-season clubs..., 0.1.8): ručno odaberi
 klubove ligaške faze Lige prvaka, Europske lige i Konferencijske lige u prvoj sezoni nove karijere.
 Tvoji klubovi ulaze prvi, a igra popuni ostalo; od druge sezone odlučuju europska mjesta.
 
@@ -666,15 +665,15 @@ Drugi svijet (NewLife, novi svijet) se i dalje može izgraditi dok je gotov uklj
 pita i kaže da gotov svijet isključuje; **Aktiviraj** na njegovoj kartici ga vraća, s njegovim
 karijerama. Da promijeniš sam gotov svijet: **Omogući uređivanje...** (odjeljak 3.1).
 
-**Uključi Konferencijsku ligu** (kartica Gradnja, pod Opcije svijeta, zadano uključeno) izgradi i
+**Uključi Konferencijsku ligu** (Kupovi → Continental → UEFA → Natjecanja, zadano uključeno) izgradi i
 Konferencijsku ligu: ligašku fazu od 36 klubova i veljačko doigravanje, kao kod druga dva
 natjecanja. Liga prvaka i Europska liga dobivaju ligašku fazu od 36 i veljačko doigravanje u
 svakom slučaju. Isključeno: bez Konferencijske lige. (Mod Studio 0.1.3 i starije verzije su uz
 isključenu opciju ostavljale Ligu prvaka i Europsku ligu u igrinim skupinama po četiri, koje mod
 ne zna voditi -- pa su se kvarile; Provjere označe takav svijet: izgradi ga ponovno.) **Logo
 Konferencijske lige** pored toga: tvoja slika za nju; prazno: nacrta se UECL amblem (igra ga
-nema). **Ime Konferencijske lige** ispod: kako je igra zove, *FL Conference League* kad je prazno
-(upiši *UEFA Conference League* ako želiš); novo ime traži ponovnu izgradnju svijeta. Oboje
+nema). **Ime Konferencijske lige** ispod: kako je igra zove, *UEFA Conference League* kad je prazno.
+Prilagođena imena ostaju sačuvana; novo ime traži ponovnu izgradnju svijeta. Oboje
 koristi i **Izgradi samo europske kupove...**.
 
 > **Europska mjesta.** Mjesta koja daš svojim ligama dolaze iza mjesta liga same igre. Svako
@@ -718,8 +717,7 @@ CONCACAF država iza MLS-a, a afričke i oceanijske (igra za njih nema odjeljak)
 > to može izbjeći. Pune se krajem kolovoza, iz tablica liga. Klub koji već igra Copa
 > Libertadores, njene kvalifikacije ili AFC Ligu prvaka ne ulazi u njihov ždrijeb. CAF ili OFC
 > kup s manje od 4 mjesta prvo uzme mjesta sljedećeg CAF kupa (s dva i dva CAF Liga prvaka dobije
-> sva četiri), zatim sljedeća mjesta tvojih liga. **CAF Superkup** (kartica Gradnja, Opcije
-> svijeta, zadano uključen) spoji pobjednike dvaju CAF kupova u jednoj utakmici krajem srpnja, od
+> sva četiri), zatim sljedeća mjesta tvojih liga. **CAF Superkup** (Kupovi → Continental → CAF → Natjecanja, zadano uključen) spoji pobjednike dvaju CAF kupova u jednoj utakmici krajem srpnja, od
 > druge sezone karijere.
 >
 > Liga koja može poslati klub u Copa Libertadores, AFC Ligu prvaka ili Svjetsko klupsko prvenstvo
@@ -743,7 +741,7 @@ spremljen**): u svoju `.json` datoteku kad je ima, inače u
 **Datoteka → Spremi svoj svijet kao...** sprema kopiju pod drugim imenom, **Datoteka → Otvori
 svijet...** vraća neki svijet, a **Datoteka → Novi svijet** počinje prazan.
 
-**Izgradi samo europske kupove...** (kartica Gradnja, Opcije svijeta; **Samo europski kupovi...** na Početna) gradi svijet samo s novom Ligom
+**Izgradi samo europske kupove...** (kartica Gradnja, Korak po korak; **Samo europski kupovi...** na Početna) gradi svijet samo s novom Ligom
 prvaka i Europskom ligom -- ligaška faza od 36 i veljačko doigravanje -- te Konferencijskom ligom
 kad je označeno **Uključi Konferencijsku ligu**. Bez novih liga; klubovi i lige igre ostaju kakvi
 jesu, a tvoj svijet se ne mijenja. Pita za ime svijeta (zadano `_FL26Euro`), izgradi ga i ponudi

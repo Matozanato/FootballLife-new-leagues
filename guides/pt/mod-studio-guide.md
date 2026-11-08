@@ -139,9 +139,20 @@ No topo da janela, da esquerda para a direita:
 |---|---|
 | **1. Início** | O mundo que está no jogo, a verificação geral, ações rápidas |
 | **2. Meu mundo** | Os seus mundos como cartões, e as abas **Construção**, **Campeonatos**, **Clubes**, **Jogadores**, **Uniformes**, **Estádios** e **Copas** (seção 3.1) |
-| **3. Conteúdo do jogo** ▾ | **Bolas**, **Narração**, **Música**, **Outro conteúdo** |
+| **3. Conteúdo do jogo** ▾ | **Bolas**, **Narração**, **Música**, **Troféus**, **Outro conteúdo** |
 | **4. Ferramentas** ▾ | **Módulos Lua**, **Pastas de conteúdo**, **Perfis**, **Pontos de restauração**, **Diagnóstico** |
 | **5. Configurações** | Pasta do jogo, pasta do Sider, idioma, carreiras da Master League, as tabelas do jogo |
+
+Navegação atual: Copas e Troféus mantêm as alterações pendentes ao navegar. Apply grava na receita; Discard recarrega os valores atuais. Os torneios de pré-temporada continuam fora de Copas, em Campeonatos → Mais.
+
+- **Game Countries**: `Meu mundo → Copas → Game Countries`.
+- **Our Countries**: `Meu mundo → Copas → Our Countries`.
+- **Competitions**: `Meu mundo → Copas → Continental → Competições`.
+- **Qualification**: `Meu mundo → Copas → Continental → Qualification`.
+- **UEFA Ranking / First-season clubs**: `Meu mundo → Copas → Continental → UEFA → Qualification`.
+- **Troféus**: `GAME CONTENT → TROPHIES`.
+
+As faixas da CONMEBOL moderna foram verificadas visualmente no FL27: a Bolívia mostra três posições azuis e quatro laranjas. O comportamento no FL26 não foi verificado independentemente no jogo. Os emblemas Dark/Light passam nos testes automáticos, mas a renderização no jogo ainda não foi totalmente verificada. Os campos opcionais `continental_emblems` preservam os mundos existentes. Retirar a geração da Sul-Americana clássica é intencional, não apenas visual: sem o modo moderno, só a Libertadores original é gerada; as vagas históricas ficam guardadas, mas inativas.
 
 **Arquivo** tem **Mundo novo**, **Abrir um mundo...**, **Salvar seu mundo como...**, **Mudanças
 neste mundo...** (tudo o que o seu mundo muda no jogo numa lista só; escolha linhas e aperte
@@ -180,8 +191,7 @@ mantém esse mundo no jogo e desliga os outros.
 
 **As abas** embaixo dos cartões mudam o mundo aberto: **Construção** (seção 8.2),
 **Campeonatos**, **Clubes** e **Jogadores** (seção 8), **Uniformes** e **Estádios** (seção 6).
-**Copas ▾** abre as janelas das copas: **Torneios de pré-temporada**, **Taças dos nossos países**,
-**Copas dos países do jogo** e **Nomes das competições**. À direita:
+**Copas** é uma página integrada para copas nacionais e competições continentais. Os torneios de pré-temporada continuam em **Campeonatos → Mais**. À direita:
 
 - **NewLife Database** abre a página do NewLife (seção 8.4);
 - **+ Adicionar...** é uma janela só para três coisas: um zip de mundo (um Modpack), um pacote de
@@ -224,11 +234,7 @@ Bundesliga, 3. Liga), até você arrastar uma liga para outro lugar. Filtros **T
 **Adicionar divisão inferior**, **Clubes e nomes**, **Jogadores** e **Remover**; uma liga do jogo
 tem o nome, o logo e os clubes dela (seção 8, "As ligas do jogo"). **Adicionar campeonato** cria
 uma nova. **Lugares em Select Team** mostra onde a última construção colocou cada uma das suas
-ligas; a coluna **Select Team** é uma lista: *Automático* (decide a ordem) ou *no lugar de* um dos grupos do jogo (Outras ligas europeias, Outras equipes latino-americanas, Outros clubes (África), Outros). A liga escolhida aí fica com o lugar desse grupo no Build seguinte, seja qual for a ordem, e os clubes do grupo deixam de aparecer em Select Team (uma liga por grupo; com um mundo sul-americano as Outras equipes latino-americanas não servem, vmican). Numa Master League começada depois desse Build os clubes da liga ficam também com o lugar do grupo: o Team Info mostra-os sob a liga, e são eles que completam a Libertadores ou o Mundial de Clubes a partir desse grupo; os clubes do grupo ficam sem liga. Um mundo com associações CONMEBOL mantém o lugar das Outras equipes latino-americanas. **Mais ▾** tem **Torneios de pré-temporada**, **Taças dos nossos países**, **Copas dos
-países do jogo**, **Vagas continentais dos campeonatos do jogo**, **Clubes europeus da primeira
-temporada**, **Ranking da UEFA**, **Vagas sul-americanas** (com a caixa **Competições modernas da CONMEBOL**), **Países da CONMEBOL sem liga** (com as competições modernas), **Nomes das competições**, **IDs das
-competições**, **Ordem dos campeonatos**, **Temporadas dos campeonatos do jogo** e **Nome do
-mundo e arquivo...**. Este último abre a página com o nome do mundo e a lista das suas ligas
+ligas; a coluna **Select Team** é uma lista: *Automático* (decide a ordem) ou *no lugar de* um dos grupos do jogo (Outras ligas europeias, Outras equipes latino-americanas, Outros clubes (África), Outros). A liga escolhida aí fica com o lugar desse grupo no Build seguinte, seja qual for a ordem, e os clubes do grupo deixam de aparecer em Select Team (uma liga por grupo; com um mundo sul-americano as Outras equipes latino-americanas não servem, vmican). Numa Master League começada depois desse Build os clubes da liga ficam também com o lugar do grupo: o Team Info mostra-os sob a liga, e são eles que completam a Libertadores ou o Mundial de Clubes a partir desse grupo; os clubes do grupo ficam sem liga. Um mundo com associações CONMEBOL mantém o lugar das Outras equipes latino-americanas. **Mais ▾** tem **Torneios de pré-temporada**, **Nomes das competições**, **IDs das competições**, **Ordem dos campeonatos**, **Temporadas dos campeonatos do jogo**, **Nome do mundo e arquivo...**. Este último abre a página com o nome do mundo e a lista das suas ligas
 (guias mais antigos chamam ela de *Campeonatos novos*).
 
 ## 4. Importe seu mundo
@@ -342,6 +348,8 @@ rostos do pack de rostos de regens. Marque de novo e **Aplicar** para ligar ele 
 `fl26regen` pode ficar desligado desse jeito.
 
 ## 6. Conteúdo do jogo: os servidores de conteúdo
+
+**Conteúdo do jogo → Troféus** é uma página integrada, não uma janela de Campeonatos. Escolha a competição e a pasta do troféu; Apply guarda as atribuições no mundo selecionado e Build copia os arquivos. Discard recarrega a receita atual. O formato `recipe["trophies"]` continua igual.
 
 Cada uma destas páginas pertence a um servidor de conteúdo. **Uniformes** e **Estádios** são abas
 de **2. Meu mundo**; **Bolas**, **Narração**, **Música** e **Outro conteúdo** estão em **3.
@@ -458,19 +466,20 @@ jogado)*. Um `*` ali quer dizer que a ordem mudou desde então: construa de novo
 fica. Arrastar na aba **Campeonatos** move uma liga só entre os lugares que as ligas do continente
 dela já ocupam aqui.
 
-**Torneios de pré-temporada** (Campeonatos → Mais, ou Meu mundo → Copas): mata-matas amistosos de
+**Torneios de pré-temporada** (Campeonatos → Mais): mata-matas amistosos de
 4 ou 8 clubes convidados em julho, antes da temporada, em pares na ordem que você der (primeiro
 contra segundo ...). Um clube é de uma liga nova ou um clube do jogo (o id dele); pelo menos um tem
 que ser de uma liga nova, e o país dele recebe a copa. Uma carreira começa em agosto, então o
 primeiro é jogado na segunda temporada. Cada copa pode ter um **Logo**; vazio: um é desenhado para
 ela.
 
-**Taças dos nossos países** (Campeonatos → Mais, ou Meu mundo → Copas): as copas das suas
+**Taças dos nossos países** (Meu mundo → Copas → Our Countries): as copas das suas
+
 próprias ligas numa tabela. Para cada primeira divisão: a copa nacional, a supercopa e a copa da
 liga, cada uma com o nome e o logo. São os mesmos campos de **Editar campeonato...**, sem abrir
 cada liga.
 
-**Copas dos países do jogo** (Campeonatos → Mais, ou Meu mundo → Copas): uma copa da liga -- a
+**Copas dos países do jogo** (Meu mundo → Copas → Game Countries): uma copa da liga -- a
 Carabao Cup, por exemplo -- para ligas do jogo. Marque **Copa da liga** ao lado de uma liga: ela e
 a liga de baixo, até 44 clubes, um jogo por fase do fim de agosto até a final em meados de março,
 sorteada, com os clubes da própria liga folgando até a segunda fase (a mesma copa de uma
@@ -485,16 +494,16 @@ também ganhou a copa, joga o vice da liga. Nome vazio: o nome da liga e *League
 iniciais da copa. Mudanças aqui precisam de **Instalar os módulos** (ou Construir e instalar), uma
 construção nova e uma carreira nova.
 
-**Vagas continentais dos campeonatos do jogo** (Campeonatos → Mais): quais posições da Premier
+**Vagas continentais dos campeonatos do jogo** (Meu mundo → Copas → Continental → Qualification): quais posições da Premier
 League, LaLiga, Serie A ... vão para qual competição europeia. A lista mostra as vagas do próprio
 jogo; marque **Vagas próprias para este campeonato** para mudar elas. Uma liga não marcada mantém
-as vagas do jogo, uma liga marcada sem linhas não manda ninguém.
+as vagas do jogo, uma atribuição vazia ou só para copas geradas pode manter o acesso nativo, como explica o editor.
 
-**Ranking da UEFA** (Campeonatos → Mais, 0.1.7): todas as ligas europeias do mundo -- as do jogo e
+**Ranking da UEFA** (Meu mundo → Copas → Continental → UEFA → Qualification → UEFA Ranking..., 0.1.7): todas as ligas europeias do mundo -- as do jogo e
 as suas primeiras divisões novas -- numa lista, o país mais forte primeiro. Arraste uma liga (ou
 **Subir** / **Descer**) para mudar a ordem, desmarque uma para não dar vaga europeia a ela, **Ordem
 da UEFA** coloca a lista de volta no ranking de associações da UEFA para 2026-27. O lado direito
-mostra o que cada liga ganha, e **OK** escreve: as vagas da chave da UEFA para 2024-27 -- o 1.º do
+mostra o que cada liga ganha, e **APPLY UEFA RANKING TO DRAFT** adiciona o resultado ao rascunho; use **Apply** em Copas para gravar: as vagas da chave da UEFA para 2024-27 -- o 1.º do
 ranking tem cinco vagas na Champions League, o 6.º duas e uma vaga nos playoffs, o 30.º uma vaga na
 segunda fase preliminar da Champions League e três na da Conference League, e assim por diante,
 incluindo a vaga na Europa League do campeão da copa. Um mundo nunca tem os 55 países da UEFA,
@@ -509,17 +518,9 @@ mais forte para a fase mais próxima da fase de liga. Depois você ainda pode mu
 qualquer liga (*Europa* na liga, *Vagas continentais dos campeonatos do jogo*): a construção usa as
 vagas, não o ranking.
 
-**Vagas sul-americanas** (Campeonatos → Mais, 0.1.7): para cada liga sul-americana, as
-quatro do jogo e as suas, quais posições vão para a Copa Libertadores, a fase preliminar dela e a
-Copa Sul-Americana. As vagas da Libertadores do jogo são as dele (Brasil do 1.º ao 4.º e o campeão
-da Copa do Brasil, fase preliminar 5.º e 6.º, e assim por diante -- as mesmas que o Competition Info
-do jogo mostra); a Copa Sul-Americana é do Mod Studio, então a lista mostra quantos clubes cada
-liga do jogo manda para ela com as suas vagas incluídas: as suas ligas primeiro, depois Brasil,
-Argentina, Chile e Colômbia, um clube cada, alternando até 32. Um clube que já está na Libertadores
-ou na fase preliminar dela dá lugar ao próximo da liga dele. **1. Conferir o plano** mostra a mesma
-lista sempre que o mundo tem uma vaga na Libertadores ou na Sul-Americana.
+**Vagas sul-americanas** (Meu mundo → Copas → Continental → CONMEBOL → Qualification, 0.1.7): Qualification reúne as primeiras divisões originais e adicionadas. As associações sem liga admitidas continuam disponíveis manualmente. Auto Set Continental Places exige o modo moderno e as dez primeiras divisões jogáveis; as quotas fixas só entram no rascunho CUPS. Sem o modo moderno não são geradas Sul-Americana nem Recopa; as vagas antigas ficam inativas.
 
-**Competições modernas da CONMEBOL** (uma caixa em **Vagas sul-americanas**; vmardonesdev e
+**Competições modernas da CONMEBOL** (Meu mundo → Copas → Continental → CONMEBOL; vmardonesdev e
 nissindiaz, #146): a qualificação da Libertadores em três fases (fase 1: 6 clubes, fase 2: 13 clubes
 e os três vencedores da fase 1, fase 3: os oito vencedores da fase 2), uma Copa Sul-Americana com
 uma primeira fase de 32 clubes e um play-off depois dos grupos, e a Recopa Sul-Americana em
@@ -528,11 +529,9 @@ Sudamericana, primeira fase** (e não mais a fase preliminar), as ligas sul-amer
 as vagas que você der em **Vagas continentais dos campeonatos do jogo**, e **Países da CONMEBOL sem
 liga** dá vagas aos clubes de um país sem liga no seu mundo. A janela conta as vagas contra o total
 de que o Build precisa (26 vagas nos grupos da Libertadores, 13 na fase 2, 6 na fase 1, 12 nos
-grupos da Sul-Americana, 32 na primeira fase). Desativada, o padrão, um mundo constrói as
-competições clássicas exatamente como antes; desativar tira só as vagas que as modernas têm, depois
-de perguntar.
+grupos da Sul-Americana, 32 na primeira fase). Desativada: só a Libertadores original é gerada. As vagas guardadas da Sul-Americana ficam inativas. Desativar pede confirmação antes de retirar as vagas exclusivas do modo moderno.
 
-**Nomes das competições** (Campeonatos → Mais, ou Meu mundo → Copas): um nome e um logo novos para
+**Nomes das competições** (Campeonatos → Mais): um nome e um logo novos para
 as copas, supercopas e competições continentais do jogo -- a FA Cup, a Champions League, a
 Libertadores ... -- e para as copas continentais que o mundo constrói (CAF Champions League,
 Confederation Cup, AFC Champions League Two, Copa Sul-Americana, CONCACAF Champions Cup, OFC
@@ -560,7 +559,7 @@ dele vêm da tabela que terminou em maio. Uma divisão sua embaixo de uma dessas
 Colômbia e EUA jogam Apertura e Clausura e não podem mudar. Construa o mundo de novo e comece uma
 carreira nova.
 
-**Clubes europeus da primeira temporada** (Campeonatos → Mais, 0.1.8): escolha à mão os clubes da
+**Clubes europeus da primeira temporada** (Meu mundo → Copas → Continental → UEFA → Qualification → First-season clubs..., 0.1.8): escolha à mão os clubes da
 fase de liga da Champions League, da Europa League e da Conference League na primeira temporada de
 uma carreira nova. Os seus clubes entram primeiro e o jogo completa o resto; a partir da segunda
 temporada as vagas europeias decidem.
@@ -850,7 +849,7 @@ enquanto o pronto está ligado: a construção pergunta antes e avisa que deslig
 **Ativar** no cartão dele traz ele de volta, com as carreiras dele. Para mudar o próprio mundo
 pronto: **Torná-lo editável...** (seção 3.1).
 
-**Incluir a Conference League** (aba Construção, em Opções do mundo, ligada por padrão) também
+**Incluir a Conference League** (Copas → Continental → UEFA → Competições, ligada por padrão) também
 constrói a Conference League: uma fase de liga de 36 clubes e um playoff em fevereiro, como as
 outras duas. A Champions League e a Europa League ganham a fase de liga de 36 e o playoff de
 fevereiro de qualquer jeito. Desligada: sem Conference League. (O Mod Studio 0.1.3 e anteriores
@@ -858,8 +857,8 @@ deixavam a Champions League e a Europa League nos grupos de quatro do jogo quand
 desligado, o que o mod não consegue rodar -- elas quebravam; as Verificações marcam um mundo assim:
 construa ele de novo.) **Logo da Conference League** ao lado: a sua própria imagem para ela; vazio:
 um emblema da UECL é desenhado (o jogo não tem nenhum para ela). **Nome da Conference League**
-embaixo: como o jogo chama ela, *FL Conference League* quando vazio (digite *UEFA Conference
-League* se quiser); um nome novo precisa que o mundo seja construído de novo. Os dois também são
+embaixo: como o jogo chama ela, *UEFA Conference League* quando vazio; nomes personalizados são
+preservados. Um nome novo precisa que o mundo seja construído de novo. Os dois também são
 usados por **Construir só as copas europeias...**.
 
 > **Vagas europeias.** As vagas que você dá às suas ligas vêm depois das que as próprias ligas do
@@ -909,7 +908,7 @@ não tem seção para eles) depois da Ásia.
 > Libertadores, na fase preliminar dela ou na AFC Champions League não é sorteado para elas. Uma
 > copa da CAF ou da OFC com menos de 4 vagas pega primeiro as vagas da próxima copa da CAF (com duas
 > e duas, a CAF Champions League fica com as quatro), depois as próximas posições das suas ligas.
-> **Supercopa da CAF** (aba Construção, Opções do mundo, ligada por padrão) faz os campeões das duas
+> **Supercopa da CAF** (Copas → Continental → CAF → Competições, ligada por padrão) faz os campeões das duas
 > copas da CAF se enfrentarem uma vez no fim de julho, a partir da segunda temporada de uma
 > carreira.
 >
@@ -935,7 +934,7 @@ mundo está salvo**): no próprio arquivo `.json` quando ele tem um, senão em
 **Arquivo → Salvar seu mundo como...** salva uma cópia com outro nome, **Arquivo → Abrir um
 mundo...** traz um de volta e **Arquivo → Mundo novo** começa um vazio.
 
-**Construir só as copas europeias...** (aba Construção, Opções do mundo; **Só as copas
+**Construir só as copas europeias...** (aba Construção, Passo a passo; **Só as copas
 europeias...** no Início) constrói um mundo só com a Champions League e a Europa League novas --
 fase de liga de 36 e o playoff de fevereiro -- e a Conference League quando **Incluir a Conference
 League** está marcada. Sem ligas novas; os clubes e as ligas do jogo ficam como estão, e o seu

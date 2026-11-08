@@ -5,8 +5,8 @@ Build and edit your world, Import your world and NewLife Database.
              game's limits; Build and install (the Build page's own button)
     cards    every world on disk (livecpk\\_FL26...): the one in the game green, Put in the game on
              the others; Export / Rename / Delete on each; + New world
-    tabs     the pages that change the open world (Leagues, Clubs, Players, Kits, Stadiums), Cups
-             (the cup windows of Leagues > More); + Add... and More on the right
+    tabs     the pages that change the open world (Leagues, Clubs, Players, Kits, Stadiums, Cups);
+             Cups embeds domestic and continental editors; + Add... and More on the right
 
 Nothing here builds, switches, exports, renames, deletes or installs by itself: the buttons call
 what the pages already do (Build: build_all, do_on, do_export, new_world; Content folders:
@@ -707,20 +707,6 @@ class MyWorld(QWidget):
             b.clicked.connect(lambda _c=False, p=n: self.app.open_page(p))
             self.tab_btn[n] = b
             h.addWidget(b, 0, Qt.AlignBottom)
-        # the cups are windows of Leagues > More, not a page: Cups opens them from here
-        cups = QToolButton()
-        cups.setObjectName("subtab")
-        cups.setText(_("Cups"))
-        cups.setAccessibleName(_("Cups"))
-        cups.setPopupMode(QToolButton.InstantPopup)
-        cups.setCursor(Qt.PointingHandCursor)
-        m = QMenu(cups)
-        for label, name in (("Pre-season cups", "preseason"), ("Cups of our countries", "our_cups"), ("Cups of the game's countries", "game_cups"),
-                            ("Competition names", "competition_names"), ("Trophies", "trophies")):
-            m.addAction(_(label)).triggered.connect(lambda _c=False, n=name: self.cup_window(n))
-        cups.setMenu(m)
-        self.cups = cups
-        h.addWidget(cups, 0, Qt.AlignBottom)
         h.addStretch(1)
         self.add_btn = QPushButton("+ " + _("Add..."))
         self.add_btn.setObjectName("blue")
@@ -805,15 +791,7 @@ class MyWorld(QWidget):
         if self._stale:
             self.refresh()
         self.update_bar()
-        for b in (self.cups, self.more):
-            unstick(b)
-
-    def cup_window(self, name):
-        """a window of Leagues > More from Cups; the button lets go of its lit look after it"""
-        try:
-            getattr(self.app.page("NewLeagues"), name)()
-        finally:
-            unstick(self.cups)
+        unstick(self.more)
 
     def refresh(self):
         """the cards and the counts, from what is on disk now"""

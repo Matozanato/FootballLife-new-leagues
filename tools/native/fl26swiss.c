@@ -13356,8 +13356,13 @@ static const struct { uint16_t reg, first, second; uint8_t n1, n2; } ZSPLITS[] =
 };
 static unsigned char* zcomp(uint16_t reg)
 {
+#ifdef FL26_ZONE_TEST
+  extern unsigned char* zone_test_comp(uint16_t reg);
+  return zone_test_comp(reg);
+#else
   void* db = ((zdb_fn)(uintptr_t)(g_base + ZDB_RVA))();
   return db ? ((zcomp_fn)(uintptr_t)(g_base + ZCOMP_RVA))(*(void**)((unsigned char*)db + 0x48), reg) : 0;
+#endif
 }
 static unsigned zclubs(uint16_t reg, unsigned dflt)
 {
@@ -13368,6 +13373,7 @@ static unsigned zclubs(uint16_t reg, unsigned dflt)
 /* the European place of the access list for league reg's place rank, or -1 */
 static int zone_access(uint16_t reg, unsigned rank)
 {
+  if (!rank || assoc_source(reg)) return -1; /* cup winners / synthetic ranks aren't table rows */
   for (size_t k = 0; k < g_naccess; k++) {
     const access_t* a = &g_access[k];
     if (a->reg != reg || a->rank != rank) continue;
@@ -13376,6 +13382,28 @@ static int zone_access(uint16_t reg, unsigned rank)
       case UEL: case UELQ: return ZONE_EL;
       case UECL: case UECLQ: return ZONE_ECL;
     }
+  }
+  /* Modern F1/F2 entries live in the world's lpre records, not g_access.
+     Alias phases belong to Libertadores; the single-match pre-round feeding
+     the identified Sudamericana cup belongs to Sudamericana. Winner/loser
+     feeds (rank 0/255) must never be painted as domestic league positions. */
+  int stage;
+  if (gc_of(reg) >= 0 || ccup_of(reg, &stage) >= 0 || lpre_of(reg, &stage) >= 0)
+    return -1; /* these are competition stages, never domestic qualification sources */
+  for (int k = 0; k < g_nlpre; k++) {
+    const lpre_t* l = &g_lpre[k];
+    int colour = l->alias ? ZONE_CL : lpre_is_suda(l) ? ZONE_EL : -1;
+    if (colour < 0) continue;
+    for (unsigned j = 0; j < 2u * l->ties; j++)
+      if (l->ereg[j] == reg && l->erank[j] > 0 && l->erank[j] < 255
+          && l->erank[j] == rank) return colour;
+  }
+  int sud = modern_suda_ccup();
+  if (sud >= 0) {
+    const ccup_t* c = &g_ccup[sud];
+    for (unsigned j = 0; j < c->n; j++)
+      if (c->ereg[j] == reg && c->erank[j] > 0 && c->erank[j] < 255
+          && c->erank[j] == rank) return ZONE_EL;
   }
   return -1;
 }
@@ -13485,6 +13513,7 @@ static void mp_install(void)
   static const unsigned char sig[17] = { 0x40,0x55, 0x56, 0x57, 0x48,0x83,0xec,0x60, 0x48,0xc7,0x44,0x24,0x28,0xfe,0xff,0xff,0xff };
   int st = hook((unsigned char*)(uintptr_t)(g_base + MPFILL_RVA), sig, sizeof sig, (void*)mp_fill, &g_tramp_mpfill);
   logf("fl26swiss: MP column hook %s (%d)", st ? "NOT installed" : "live", st);
+  if (!st) logf("fl26swiss: standings zones v2 -- modern CONMEBOL domestic access from lpre/ccup");
 }
 
 /* 0 ok; 2 signature mismatch; 3 VirtualAlloc failed; 4 VirtualProtect failed; 9 bad config;

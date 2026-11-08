@@ -36,7 +36,7 @@ LEAGUES = ("ENGLAND_D1_LEAGUE", "SPAIN_D1_LEAGUE", "ITALY_D1_LEAGUE", "GERMANY_D
            "RUSSIA_D1_LEAGUE", "GREECE_D1_LEAGUE", "TURKEY_D1_LEAGUE", "DENMARK_D1_LEAGUE",
            "SCOTLAND_D1_LEAGUE")
 FIELD = 36
-NAME, CODE = "FL Conference League", "FL_UECL"
+NAME, CODE = "UEFA Conference League", "FL_UECL"
 CID = 174                    # the competition id (see above)
 REG, KO, ROW = 186, 187, 1210  # league phase, knockout, the league phase's one group
 

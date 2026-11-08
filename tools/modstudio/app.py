@@ -70,14 +70,14 @@ def page_groups():
     """(caption, [page classes]) in the order of the left bar; caption "" is a group without a
     caption, None pages that are built but not in the bar (reached from another page)"""
     from modstudio.pages import overview, roots, modules, install, profiles, restore
-    from modstudio.pages import content, stadiums, balls, kits, commentary, music
-    from modstudio.pages import builder, players, packages, diagnostics, settings, newlife, leagues
+    from modstudio.pages import content, stadiums, balls, kits, commentary, music, trophies
+    from modstudio.pages import builder, players, packages, diagnostics, settings, newlife, leagues, cups
     return [
         ("", [overview.Overview]),
         ("LEAGUE BUILDER", [leagues.Leagues, builder.NewClubs, players.Players, newlife.NewLife,
-                            packages.Packages, builder.Build]),
+                            packages.Packages, builder.Build, cups.Cups]),
         ("GAME CONTENT", [kits.Kits, stadiums.Stadiums, balls.Balls, commentary.Commentary,
-                          music.Music, content.Servers]),
+                          music.Music, content.Servers, trophies.Trophies]),
         ("MANAGE", [install.Install, modules.Modules, roots.Roots, profiles.Profiles, restore.Restore,
                     diagnostics.Diagnostics, settings.Settings]),
         (None, [builder.NewLeagues]),
@@ -94,8 +94,8 @@ NAV = [
     # install above them, the pages that change the open world as tabs (pages/myworld.py)
     # 0.2.4 beta (B82, mato 16.10.): Build is the first tab, the section's home -- testers lost the
     # Build page when it sat under More
-    ("MY WORLD", False, [("World", "My world", ["Build", "Leagues", "NewClubs", "Players", "Kits", "Stadiums"])]),
-    ("GAME CONTENT", True, [(n, None, [n]) for n in ("Balls", "Commentary", "Music", "Servers")]),
+    ("MY WORLD", False, [("World", "My world", ["Build", "Leagues", "NewClubs", "Players", "Kits", "Stadiums", "Cups"])]),
+    ("GAME CONTENT", True, [(n, None, [n]) for n in ("Balls", "Commentary", "Music", "Trophies", "Servers")]),
     ("TOOLS", True, [(n, None, [n]) for n in ("Modules", "Roots", "Profiles", "Restore", "Diagnostics")]),
     ("SETTINGS", False, [("Settings", None, ["Settings"])]),
 ]
@@ -1140,6 +1140,24 @@ class Main(QMainWindow):
             self._head_text(head)
 
     def closeEvent(self, e):
+        cups = self.pages.get("Cups")
+        if cups is not None and cups.has_drafts():
+            box = QMessageBox(QMessageBox.Question, _("Unapplied cup changes"),
+                              _("Cup drafts have not been applied to their projects. Close and discard these drafts? To keep editing, cancel and return to Cups."),
+                              QMessageBox.Discard | QMessageBox.Cancel, self)
+            box.setDefaultButton(QMessageBox.Cancel)
+            if box.exec() != QMessageBox.Discard:
+                e.ignore()
+                return
+        trophies = self.pages.get("Trophies")
+        if trophies is not None and trophies.has_drafts():
+            box = QMessageBox(QMessageBox.Question, _("Unapplied trophy changes"),
+                              _("Trophy changes have not been applied to their worlds. Close and discard these drafts? Cancel to keep editing in Game content > Trophies."),
+                              QMessageBox.Discard | QMessageBox.Cancel, self)
+            box.setDefaultButton(QMessageBox.Cancel)
+            if box.exec() != QMessageBox.Discard:
+                e.ignore()
+                return
         # changes made since the last Save recipe or Build were lost without a word when Mod
         # Studio closed (the poll, Bon Kirk 11.10.: "an Apply button" -- OK only keeps a change
         # in the open recipe). 0.2.5: a change of the last moment is saved like any other, the

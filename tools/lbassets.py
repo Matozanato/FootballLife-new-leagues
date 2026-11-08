@@ -68,6 +68,16 @@ def league_logo(root, cid, name, picture=None):
         im.save(os.path.join(d, "emb_%04d%s.png" % (cid, suf)))
 
 
+def continental_variant(root, cid, mode, picture):
+    """Overlay only the selected background pair; all other variants retain their fallback."""
+    import continental_emblems as E
+    master = square(picture, 512)
+    for rel, px in zip(E.files(cid, mode), (256, 512)):
+        target = os.path.join(root, rel)
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        (master if px == 512 else master.resize((px, px), Image.LANCZOS)).save(target)
+
+
 _GAME_EMBLEMS = {}
 
 

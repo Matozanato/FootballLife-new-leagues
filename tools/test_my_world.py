@@ -7,7 +7,7 @@ Import your world and NewLife Database.
   - My world shows a card for each world on disk: the one in the game green (IN THE GAME NOW)
     with Export / Rename / Delete, Delete refused for it; another world has Put in the game, and
     pressing it switches that world on in sider.ini and turns its card green;
-  - Cups does not stay lit after one of its windows (B70);
+  - Cups is a real My world page; the previous tools remain accessible;
   - a card says "1 league · 1 new club", not "1 leagues" (B70);
   - + Add... tells a league package (.fl26pack, with its leagues to tick), a world zip and the
     NewLife Database folder apart.
@@ -107,25 +107,35 @@ def run():
     w.open_page("Leagues")
     qa.processEvents()
     ok("Leagues is the lit tab of My world", w.my_world.tab_btn["Leagues"].isChecked())
-    ok("the tabs: Build (B82), Leagues, Clubs, Players, Kits, Stadiums and Cups",
-       [b.text() for b in w.my_world.tab_btn.values()] + [w.my_world.cups.text()]
+    ok("the tabs include a real Cups page",
+       [b.text() for b in w.my_world.tab_btn.values()]
        == ["Build", "Leagues", "Clubs", "Players", "Kits", "Stadiums", "Cups"])
-    # ---- B70: Cups stayed lit on the page opened after one of its windows (Build details)
-    from PySide6.QtCore import Qt, QPoint
-    from PySide6.QtGui import QCursor
-    cups = w.my_world.cups
-    QCursor.setPos(w.mapToGlobal(QPoint(w.width() - 2, w.height() - 2)))   # the mouse is not on Cups
-    opened = []
-    w.page("NewLeagues").preseason = lambda: opened.append("preseason")
-    cups.setAttribute(Qt.WA_UnderMouse, True)          # what the window left behind
-    cups.menu().actions()[0].trigger()
-    ok("B70: Cups > Pre-season cups opens its window and Cups lets go of its lit look",
-       opened == ["preseason"] and not cups.underMouse())
-    cups.setAttribute(Qt.WA_UnderMouse, True)
+    w.my_world.tab_btn["Cups"].click()
+    qa.processEvents()
+    ok("Cups opens as the lit page in My world",
+       w.my_world.tabs.currentWidget() is w.holder_of["Cups"]
+       and w.my_world.tab_btn["Cups"].isChecked())
+    ok("Cups has domestic editors and Continental",
+       [w.page("Cups").tabs.tabText(i) for i in range(3)]
+       == ["Game Countries", "Our Countries", "Continental"])
+    continental = w.page("Cups").continental_section["editor"]
+    ok("Continental has Competitions and integrated Qualification",
+       [continental.tabs.tabText(i) for i in range(2)] == ["Competitions", "Qualification"]
+       and continental.confederation.count() == 6)
+    # All previous tools remain reachable, with Pre-season outside the new Cups page.
+    tools = []
+    w.page("NewLeagues").preseason = lambda: tools.append("preseason")
+    from PySide6.QtWidgets import QToolButton
+    more = next(b for b in w.page("Leagues").findChildren(QToolButton)
+                if b.menu() and any(a.text() == "Pre-season cups" for a in b.menu().actions()))
+    more.menu().actions()[0].trigger()
+    ok("Pre-season cups remains accessible from Leagues > More", tools == ["preseason"])
+    ok("Competition names remains in More and Trophies has its own Game content page",
+       "Competition names" in {a.text() for a in more.menu().actions()} and "Trophies" in w.pages
+       and w.section_of["Trophies"] == "Trophies")
     w.open_page("Build")
     qa.processEvents()
-    ok("B70: the Build tab: Cups is not lit", not cups.underMouse()
-       and [n for n, b in w.my_world.tab_btn.items() if b.isChecked()] == ["Build"])
+    ok("opening Build unchecks Cups", not w.my_world.tab_btn["Cups"].isChecked())
     w.open_page("Leagues")
     settle(qa, 1.0)
 
@@ -346,11 +356,15 @@ def run():
     ip = w.page("Install")
     checked = []
     ip.final_check = lambda world: checked.append(world)
-    ip.world_on({"world": other})
-    t0 = time.time()
-    while not checked and time.time() - t0 < 60:
-        qa.processEvents()
-        time.sleep(0.02)
+    # This fake-game test checks the UI recipe refresh, not the distribution pack.
+    # A source checkout need not have out/lbpack (install_modules otherwise fails first).
+    from unittest.mock import patch
+    with patch("leaguebuilder.install_modules"):
+        ip.world_on({"world": other})
+        t0 = time.time()
+        while not checked and time.time() - t0 < 60:
+            qa.processEvents()
+            time.sleep(0.02)
     settle(qa, 0.3)
     ok("B123: the switch ran to its end check", checked == [other])
     ok("B123: %s is in the game" % other, WL.live(game) == [other])
@@ -360,6 +374,10 @@ def run():
     bp.refresh()
     ok("B123: the Build page says %s: %r" % (other, bp.state.text()),
        ("World %s:" % other) in bp.state.text() and live_now not in bp.what.text() + bp.state.text())
+    from PySide6.QtWidgets import QMessageBox
+    with patch.object(w.page("Cups"), "has_drafts", return_value=True), \
+            patch.object(QMessageBox, "exec", return_value=QMessageBox.Cancel):
+        ok("closing warns about unapplied cup drafts and Cancel keeps the window open", not w.close() and w.isVisible())
     w.close()
     qa.processEvents()
 
