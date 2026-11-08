@@ -35,7 +35,7 @@ fl26swiss does exactly that for the league phase, and docs/fixture-dates-arbitra
 the general case. Clone something that does not already run, or expect collisions.
 
     python mkphases.py --base ...\pesdb --out ...\livecpk\_FL26Conf ^
-                       --like UEFA_EUROPA_LEAGUE --name "FL Conference League" --code FL_UECL
+                       --like UEFA_EUROPA_LEAGUE --name "UEFA Conference League" --code FL_UECL
 
 Changing a phase into something the source did not have is what --phase is for, and it is the
 only way to build a shape nobody ships. Give it the phase's number in table order and the four

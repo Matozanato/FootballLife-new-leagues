@@ -107,7 +107,11 @@ class Leagues(BuilderPage):
             "- ours: a league your world adds; Edit league changes its clubs, format and division.\n"
             "- changed: a league of the game you changed.\n\n"
             "Drag a league up or down to put the leagues of a continent in order.\n"
-            "The More menu has the cups, European places, UEFA ranking and competition names.\n"
+            "Cups > Game Countries / Our Countries edits domestic cups.\n"
+            "Cups > Continental > Competitions manages continental competitions; Qualification edits their places.\n"
+            "UEFA Ranking and First-season clubs are in Cups > Continental > UEFA > Qualification.\n"
+            "Game content > Trophies manages trophy assignments.\n"
+            "The More menu keeps only Pre-season cups, Competition names, Competition IDs, League order, Seasons of the game's leagues, and World name and file...\n"
             "Nothing reaches the game until Build and install.")
 
     def __init__(self, app):
@@ -117,11 +121,8 @@ class Leagues(BuilderPage):
         more.setText(_("More") + "  ▾")
         more.setPopupMode(QToolButton.InstantPopup)
         m = QMenu(more)
-        for label, name in (("Pre-season cups", "preseason"), ("Cups of our countries", "our_cups"), ("Cups of the game's countries", "game_cups"),
-                            ("European places of the game's leagues", "game_europe"),
-                            ("First-season European clubs", "europe_first"),
-                            ("UEFA ranking", "uefa_rank"), ("South American places", "samerica"),
-                            ("Competition names", "competition_names"), ("Trophies", "trophies"),
+        for label, name in (("Pre-season cups", "preseason"),
+                            ("Competition names", "competition_names"),
                             ("Competition IDs", "competition_ids"),
                             # the order of the countries in Select Team; the 0.1.8 look left it and the
                             # two below out of this menu (Discord, laracroft7826 15.10.: "it was in the old one")

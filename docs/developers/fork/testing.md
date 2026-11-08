@@ -8,6 +8,35 @@ that a world plays. Run all four before a release.
 The tests need no framework. Each is a script with plain `assert`s. It stops at the first
 failure, and most print an `ok` line per check. Run them from the repository root.
 
+## CUPS branch: final pre-PR validation
+
+The final blocker-fix pass restored `sider/experimental/fl26swiss.dll` by copying
+the verified `tools/native/fl26swiss.dll`, without rebuilding it. Both copies are
+295,424 bytes, contain `standings zones v2`, preserve the base's 34 exports, and
+have SHA-256 `37ddc522a0933896ae7e5ea02ad2ba1dc7f87717e0e8578ee411669b8deb8b1a`.
+
+Fresh checks passed: native CONMEBOL zones; CUPS page/layout/performance/refinements
+and hover scrolling; Continental Competitions; Qualification (130 checks with real
+tables) and its UX; UEFA Ranking (27); CONMEBOL Auto Set (71 with real tables);
+continental emblems (7); Trophies page (46); My World navigation (74); BUILD layout
+and plan problems; helper emblems; DLL installation checks; and module-pack tests.
+Recipe/plan round-trips and country IDs passed 46 checks, plus a separate optional
+`continental_emblems` round-trip. Seven trophy backend checks and five legacy UI
+checks passed. The actual module installer also copied the verified DLL correctly
+from a minimal pack into a temporary fake game; no active world or FL27 install
+was modified, and no full game Build or full release package was produced.
+
+Explicit skips: `test_mkmpcol.py` found no `rankingTeam.bin` fixture; the remaining
+offline trophy Lua checks need optional `lupa`, unavailable locally. Earlier
+development counts in the feature notes describe their corresponding test runs.
+
+The maintainer has visually verified modern CONMEBOL strips in FL27 using Bolivia
+(three blue, four orange). FL26 in-game behavior has not been independently checked.
+Dark/Light emblems passed automated tests; their in-game rendering is not fully
+verified. Retiring classic Sudamericana generation is intentional backend behavior,
+not merely a UI change. Historical allocations remain stored but inactive, and
+optional `continental_emblems` data preserves existing single-logo worlds.
+
 ## The game's tables
 
 Several tests and both build checks need the game's own unpacked tables (the `pesdb` folder).
@@ -39,7 +68,8 @@ exe. See `tools/flpaths.py`.
 | `test_header_pack.py` | | the header's PACK box names the pack of the world in the game, not the last zip installed (B168): after Activate of another installed world, its own pack; a world built on this PC, the newest pack that brought no world, or none |
 | `test_plan_problems.py` | tables | `plan()` raises every problem at once (`PlanProblems`), each with where it is (league and place, league, club of the game, a club's players); a league under one with a problem is not listed again; a swap of two clubs the tables have in one league now is left out with a note; a club of the game is named with its team id |
 | `test_build_problems.py` | tables | the Build page lists the plan's problems above the log with where they are, and Go there opens Clubs at the league and place, Leagues at the league or at the game's league of a club; a plan with no problem hides the list |
-| `test_trophies.py` | tables | Leagues > More > Trophies: a trophy folder's phase folders, the plan's problems (a folder gone or empty), the block Switch on writes in FL26's Entrance.lua run in Lua (lupa): a paired competition's matches and final get the world's folder and entry 16, every other tournament id what it got before, a world gone changes nothing, a world with none gives the file back byte for byte; the dialog; Build copies the folders with every regulation id of the competition |
+| `test_trophies.py` | tables | Game content > Trophies backend and legacy dialog wrapper: phase folders, missing/empty folders, Entrance.lua integration (Lua checks require lupa), and copying folders with every regulation id; its optional full Build is separate from the UI migration checks |
+| `test_trophies_page.py` | | Embedded Game content > Trophies, per-world temporary edits, Apply/Discard, Undo/Redo/autosave, existing recipe compatibility, metadata workers, obsolete LEAGUES menu removals including South American places, retained callbacks, responsive layout and unchanged copy/index output without a full world Build |
 | `test_move_game_club.py` | tables | B95: Club of the game moves a club of the game from another place of the world (its old place a new club, its swap along), a club that only takes another's place stays greyed; NewLife club... lists the release's clubs the game has, greyed, and leaves out those a league has already |
 | `test_import_csv.py` | | Import CSV: a row naming a game player of another club makes him join |
 | `test_keep_added.py` | | pictures put by hand into the world folder survive a Build (`keep_added`) |

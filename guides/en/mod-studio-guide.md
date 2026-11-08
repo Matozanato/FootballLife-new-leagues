@@ -128,9 +128,20 @@ At the top of the window, from left to right:
 |---|---|
 | **1. Home** | The world in the game, the ready check, quick actions |
 | **2. My world** | Your worlds as cards, and the tabs **Build**, **Leagues**, **Clubs**, **Players**, **Kits**, **Stadiums** and **Cups** (section 3.1) |
-| **3. Game content** ▾ | **Balls**, **Commentary**, **Music**, **Other content** |
+| **3. Game content** ▾ | **Balls**, **Commentary**, **Music**, **Trophies**, **Other content** |
 | **4. Tools** ▾ | **Lua modules**, **Content folders**, **Profiles**, **Restore points**, **Diagnostics** |
 | **5. Settings** | Game folder, Sider folder, language, Master League careers, the game's tables |
+
+Current navigation: CUPS and Trophies keep pending edits while navigating. Apply stores them in the recipe; Discard reloads current project values. Pre-season cups remain outside CUPS, in Leagues → More.
+
+- **Game Countries**: `My world → Cups → Game Countries`.
+- **Our Countries**: `My world → Cups → Our Countries`.
+- **Competitions**: `My world → Cups → Continental → Competitions`.
+- **Qualification**: `My world → Cups → Continental → Qualification`.
+- **UEFA Ranking / First-season clubs**: `My world → Cups → Continental → UEFA → Qualification`.
+- **Trophies**: `GAME CONTENT → TROPHIES`.
+
+Modern CONMEBOL domestic standings strips have been visually verified in FL27: Bolivia has three blue and four orange positions. FL26 in-game behavior has not been independently verified. Dark/Light continental emblems pass automated tests, but their in-game rendering is not fully verified. Optional `continental_emblems` fields preserve existing-world compatibility. Retiring classic Sudamericana generation is intentional, not a visual-only change: with modern mode off, only original Libertadores is generated; historical Sudamericana places remain stored but inactive.
 
 **File** has **New world**, **Open a world...**, **Save your world as...**, **Changes in this
 world...** (everything your world changes in the game in one list; pick lines and press **Undo
@@ -169,9 +180,7 @@ If two worlds are switched on at once, the green card says **▶ Keep only this 
 that world in the game and switches the others off.
 
 **The tabs** under the cards change the open world: **Build** (section 8.2), **Leagues**,
-**Clubs** and **Players** (section 8), **Kits** and **Stadiums** (section 6). **Cups ▾** opens
-the cup windows: **Pre-season cups**, **Cups of our countries**, **Cups of the game's countries**
-and **Competition names**. On the right:
+**Clubs** and **Players** (section 8), **Kits** and **Stadiums** (section 6). **Cups** is an embedded page for domestic cups and continental competitions. Pre-season cups remain in **Leagues → More**. On the right:
 
 - **NewLife Database** opens the NewLife page (section 8.4);
 - **+ Add...** is one window for three things: a world zip (a Modpack), a league package
@@ -213,14 +222,7 @@ until you drag a league to put it somewhere else. Filters **All**, **Ours** and 
 a search box. Pick one: a league of yours gets **Edit league...**, **Add lower tier**, **Clubs and
 names**, **Players** and **Remove**; a league of the game gets its name, logo and clubs (section
 8, "The game's leagues"). **Add league** makes a new one. **Places in Select Team** shows where
-the last Build put each of your leagues; its **Select Team** column is a list: *Automatic* (the order decides) or *in place of* one of the game's groups (Other European Leagues, Other Latin American Teams, Other Clubs (Africa), Other). A league picked there takes that group's place at the next Build, whatever the order, and the group's own clubs are then not in Select Team (one league a group; a South American world has no use for the Other Latin American Teams, vmican). In a Master League started after that Build the league's clubs take the group's place as well: Team Info lists them under the league, and they are the clubs the Libertadores or the Club World Cup fill up with from that group; the group's own clubs are left without a league. A world with CONMEBOL associations keeps the Other Latin American Teams' place. **More ▾** has **Pre-season cups**, **Cups of our
-countries**, **Cups of the game's countries**, **European places of the game's leagues**,
-**First-season European clubs**, **UEFA ranking**, **South American places** (who goes to the
-Libertadores and the Copa Sudamericana; its **Modern CONMEBOL competitions** box adds the
-Libertadores phases, the Sudamericana's first stage and play-off and the Recopa), **CONMEBOL
-countries without a league** (with the modern competitions), **Competition
-names**, **Competition IDs**, **League order**, **Seasons of the game's leagues** and **World
-name and file...**. That last one opens the page with the world's name and the list of your
+the last Build put each of your leagues; its **Select Team** column is a list: *Automatic* (the order decides) or *in place of* one of the game's groups (Other European Leagues, Other Latin American Teams, Other Clubs (Africa), Other). A league picked there takes that group's place at the next Build, whatever the order, and the group's own clubs are then not in Select Team (one league a group; a South American world has no use for the Other Latin American Teams, vmican). In a Master League started after that Build the league's clubs take the group's place as well: Team Info lists them under the league, and they are the clubs the Libertadores or the Club World Cup fill up with from that group; the group's own clubs are left without a league. A world with CONMEBOL associations keeps the Other Latin American Teams' place. **More ▾** has **Pre-season cups**, **Competition names**, **Competition IDs**, **League order**, **Seasons of the game's leagues**, **World name and file...**. That last one opens the page with the world's name and the list of your
 leagues (older guides call it *New leagues*).
 
 ## 4. Import your world
@@ -324,6 +326,14 @@ it again and **Apply** to switch it back on. Only `fl26regen` can be kept off th
 
 ## 6. Game content: the content servers
 
+**Game content > Trophies** edits trophy-folder assignments for the selected world.
+Pick a competition and its trophy folder, then **Apply** to keep the assignments in
+the recipe; **Build** copies the assets. **Discard changes** restores the current
+recipe values. Navigating away keeps pending edits; switching worlds keeps each
+world's draft separate. This page replaces Leagues > More > Trophies and keeps the
+existing trophy recipe format. The CUPS page contains domestic cups, UEFA Ranking,
+first-season European clubs and continental qualification.
+
 Each of these pages belongs to one content server. **Kits** and **Stadiums** are tabs of
 **2. My world**; **Balls**, **Commentary**, **Music** and **Other content** are under **3. Game
 content**. **Other content** has a tab each for **Scoreboards**, **Menus**, **Referee kits**,
@@ -412,19 +422,20 @@ league's place in the order (**Move up** / **Move down**), and **Select Team** s
 put it: *yes*, *in place of* one of the game's groups, or *no place (it plays)*. A `*` there means the
 order changed since: Build again to see where it goes. A drag on the **Leagues** tab moves a league only among the places its continent's leagues already hold here.
 
-**Pre-season cups** (Leagues → More, or My world → Cups): friendly knockouts of 4 or 8 invited clubs in July, before the season, paired in the order you give them (first against second ...). A club is one of a new league or a club of the game (its id); at least one has to be from a new league, and its country hosts the cup. A career starts in August, so the first one is played in the second season. Each cup can have a **Logo**; empty: one is drawn for it.
+**Pre-season cups** (Leagues → More): friendly knockouts of 4 or 8 invited clubs in July, before the season, paired in the order you give them (first against second ...). A club is one of a new league or a club of the game (its id); at least one has to be from a new league, and its country hosts the cup. A career starts in August, so the first one is played in the second season. Each cup can have a **Logo**; empty: one is drawn for it.
 
-**Cups of our countries** (Leagues → More, or My world → Cups): the cups of your own leagues in one table. For each top division: its national cup, super cup and league cup, each with its name and logo. These are the same fields as in **Edit league...**, without opening every league.
+**Cups of our countries** (My world → Cups → Our Countries): the cups of your own leagues in one table. For each top division: its national cup, super cup and league cup, each with its name and logo. These are the same fields as in **Edit league...**, without opening every league.
 
-**Cups of the game's countries** (Leagues → More, or My world → Cups): a league cup -- the Carabao Cup, say -- for leagues of the game. Tick **League cup** next to a league: it and the league below it, up to 44 clubs, one match a round from late August to the final in mid-March, drawn at random, the league's own clubs with the byes into the second round (the same cup as a new league's), on days the game's league and cup calendar leaves free. **Super cup**, the champion against the cup winner, only where the game has none (Brazil, Chile, Scotland, Greece, the USA). It is a one-match super cup of two clubs. It is played in late July; in a February-to-December country (the Supercopa de Chile, the Supercopa Rei) it is played at the end of January, between the champion and the cup winner of the season just ended. When there is no cup winner yet (a new career's first summer), or the champion won the cup as well, the league's runner-up plays. Empty name: the league's name and *League Cup* / *Super Cup*. **Logo** next to each name: a picture for that cup; none, an emblem with the cup's initials. Changes here need **Install the modules** (or Build and install), a new Build and a new career.
+**Cups of the game's countries** (My world → Cups → Game Countries): a league cup -- the Carabao Cup, say -- for leagues of the game. Tick **League cup** next to a league: it and the league below it, up to 44 clubs, one match a round from late August to the final in mid-March, drawn at random, the league's own clubs with the byes into the second round (the same cup as a new league's), on days the game's league and cup calendar leaves free. **Super cup**, the champion against the cup winner, only where the game has none (Brazil, Chile, Scotland, Greece, the USA). It is a one-match super cup of two clubs. It is played in late July; in a February-to-December country (the Supercopa de Chile, the Supercopa Rei) it is played at the end of January, between the champion and the cup winner of the season just ended. When there is no cup winner yet (a new career's first summer), or the champion won the cup as well, the league's runner-up plays. Empty name: the league's name and *League Cup* / *Super Cup*. **Logo** next to each name: a picture for that cup; none, an emblem with the cup's initials. Changes here need **Install the modules** (or Build and install), a new Build and a new career.
 
-**European places of the game's leagues** (Leagues → More): which positions of the Premier League, LaLiga, Serie A ... go to which European competition. The list shows the game's own places; tick **Own places for this league** to change them. A league not ticked keeps the game's places, a ticked league with no rows sends nobody. The line under the list counts every European place of the world, the new leagues' and the title holders' too, against the clubs each league phase takes straight in (*Champions League 29/28 (1 over)*): fewer, and the game fills the rest with the next clubs of England, Spain, Italy, Germany and France; more, and the last go to the competition's qualifying, or get none. **Check the plan** prints the same line.
+**European places of the game's leagues** (My world → Cups → Continental → Qualification): which positions of the Premier League, LaLiga, Serie A ... go to which European competition. The list shows the game's own places; tick **Own places for this league** to change them. A league not ticked keeps the game's places, an empty or generated-cup-only override may retain native access, as explained in the editor. The line under the list counts every European place of the world, the new leagues' and the title holders' too, against the clubs each league phase takes straight in (*Champions League 29/28 (1 over)*): fewer, and the game fills the rest with the next clubs of England, Spain, Italy, Germany and France; more, and the last go to the competition's qualifying, or get none. **Check the plan** prints the same line.
 
-**UEFA ranking** (Leagues → More, 0.1.7): every European league of the world -- the game's and your
+
+**UEFA ranking** (My world → Cups → Continental → UEFA → Qualification → UEFA Ranking..., 0.1.7): every European league of the world -- the game's and your
 new top divisions -- in one list, strongest country first. Drag a league (or **Up** / **Down**)
 to change the order, untick one to give it no European place, **UEFA's order** puts the list back
 to UEFA's association ranking for 2026-27. The right side shows what each league gets, and
-**OK** writes it: the places of UEFA's key for 2024-27 -- rank 1 has five Champions League
+**APPLY UEFA RANKING TO DRAFT** adds the result to the unsaved draft; use the shared **Apply** to store it: the places of UEFA's key for 2024-27 -- rank 1 has five Champions League
 places, rank 6 two and a play-off place, rank 30 one place in the Champions League's second
 qualifying round and three in the Conference League's, and so on, the cup winner's Europa League place included. A world never has all 55 of UEFA's countries, so
 the places of the ranks it does not have go to the next clubs of the strongest leagues in turn,
@@ -437,17 +448,9 @@ country to the round nearest the league phase. Afterwards you can still change a
 places by hand (*Europe* on the league, *European places of the game's leagues*): Build takes
 the places, not the ranking.
 
-**South American places** (Leagues → More, 0.1.7): for every South American league, the
-game's four and yours, which positions go to the Copa Libertadores, its qualifying round and the
-Copa Sudamericana. The game's Libertadores places are its own (Brazil 1st-4th and the Copa do
-Brasil winner, qualifying 5th-6th, and so on -- the same the game's Competition Info shows); the
-Copa Sudamericana is Mod Studio's, so the list shows how many clubs each of the game's leagues
-sends to it with your places in: your leagues first, then Brazil, Argentina, Chile and Colombia
-one club each in turn until 32. A club already in the Libertadores or its qualifying gives way to
-the next one of its league. **Check the plan** prints the same list whenever the world has a
-Libertadores or Sudamericana place.
+**South American places** (My world → Cups → Continental → CONMEBOL → Qualification, 0.1.7): Qualification edits original and added South American top divisions together. Supported associations without playable leagues remain available manually. Auto Set Continental Places requires modern mode and all ten playable top divisions; fixed association quotas enter only the CUPS draft. Without modern mode, no Sudamericana or Recopa is generated; historical places remain inactive.
 
-**Modern CONMEBOL competitions** (a box in **South American places**; vmardonesdev and
+**Modern CONMEBOL competitions** (My world → Cups → Continental → CONMEBOL; vmardonesdev and
 nissindiaz, #146): the Libertadores' qualifying in three phases (phase 1: 6 clubs, phase 2: 13 clubs
 and the three phase-1 winners, phase 3: the eight phase-2 winners), a Copa Sudamericana with a first
 stage of 32 clubs and a play-off after the groups, and the Recopa Sudamericana in February. With it
@@ -456,11 +459,9 @@ stage** (and no longer the qualifying round), the game's South American leagues 
 you give them in **European places of the game's leagues**, and **CONMEBOL countries without a
 league** gives places to the clubs of a country with no league in your world. The window counts the
 places against the field Build needs (26 Libertadores group places, 13 in phase 2, 6 in phase 1, 12
-Sudamericana group places, 32 in its first stage). Off, the default, a world builds the classic
-competitions exactly as before; switching it off takes out only the places the modern ones have,
-after asking.
+Sudamericana group places, 32 in its first stage). Off: only the original Libertadores system is generated. Stored Sudamericana places remain inactive. Disabling modern mode asks before removing its modern-only places.
 
-**Competition names** (Leagues → More, or My world → Cups): a new name and logo for the game's cups, super cups and continental competitions -- the FA Cup, the Champions League, the Libertadores ... -- and for the continental cups the world builds (CAF Champions League, Confederation Cup, AFC Champions League Two, Copa Sudamericana, CONCACAF Champions Cup, OFC Champions League, AFC Challenge League, CAF Super Cup). Every stage of a competition takes the name. Empty: the game's own. The game's leagues are renamed on *Leagues* (pick a league of the game).
+**Competition names** (Leagues → More): a new name and logo for the game's cups, super cups and continental competitions -- the FA Cup, the Champions League, the Libertadores ... -- and for the continental cups the world builds (CAF Champions League, Confederation Cup, AFC Champions League Two, Copa Sudamericana, CONCACAF Champions Cup, OFC Champions League, AFC Challenge League, CAF Super Cup). Every stage of a competition takes the name. Empty: the game's own. The game's leagues are renamed on *Leagues* (pick a league of the game).
 
 **Competition IDs** (Leagues → More): every competition of the world in the game, leagues and cups, with its id. The game has room for 255; My world shows how many are used.
 
@@ -468,7 +469,7 @@ after asking.
 
 **Seasons of the game's leagues** (Leagues → More, experimental): Japan, China, Brazil, Chile and Saudi Arabia play February to December in the game. Tick one and its leagues play August to May like Europe: the season starts in August, promotion and relegation happen in summer, its cups move to August-May dates and its continental places come from the table that ended in May. A division of yours under one of those leagues follows it. Colombia and the USA play Apertura and Clausura and cannot move. Build the world again and start a new career.
 
-**First-season European clubs** (Leagues → More, 0.1.8): pick by hand
+**First-season European clubs** (My world → Cups → Continental → UEFA → Qualification → First-season clubs..., 0.1.8): pick by hand
 the clubs of the Champions League, Europa League and Conference League phase in a new career's
 first season. Your clubs go in first and the game fills the rest; from the second season the
 European places decide. With the summer qualifying on, part of each league phase are the qualifying's winners (28 places go straight in for the Champions League, 20 for the other two): the clubs of your list past those play the qualifying, from the play-off down, instead of getting no place.
@@ -713,15 +714,15 @@ on its card). Another world (NewLife, a new world) can still be built while the 
 Build asks first and says it switches the ready world off; **Activate** on its card brings it
 back, with its careers. To change the ready world itself: **Make it editable...** (section 3.1).
 
-**Include the Conference League** (Build tab, under World options, on by default) also builds the
+**Include the Conference League** (Cups → Continental → UEFA, on by default) also builds the
 Conference League: a league phase of 36 clubs and a February play-off, like the other two. The
 Champions League and the Europa League get their league phase of 36 and their February play-off
 either way. Off: no Conference League. (Mod Studio 0.1.3 and earlier left the Champions League and Europa
 League in the game's groups of four when this was off, which the mod cannot run -- they broke;
-Checks flags such a world: build it again.) **Conference League logo** next to it: your own picture
+Checks flags such a world: build it again.) Select Conference League in that page to edit its logo: your own picture
 for it; empty: a UECL emblem is drawn (the game has none for it). **Conference League name**
-under it: what the game calls it, *FL Conference League* when empty (type *UEFA Conference
-League* if you like); a new name needs the world built again. Both are used by **Build only the
+under it: what the game calls it, *UEFA Conference League* when empty. Existing custom names are preserved;
+a new name needs the world built again. Both are used by **Build only the
 European cups...** too.
 
 > **European places.** The places you give your leagues come after the ones the game's own
@@ -769,8 +770,7 @@ has no section for them) after Asia.
 > end of August, from the league tables. A club already in the Copa Libertadores, its
 > qualifying round or the AFC Champions League is not drawn into them. A CAF or OFC cup with fewer
 > than 4 places takes the next CAF cup's places first (with two and two, the CAF Champions
-> League gets all four), then the next positions of your leagues. **CAF Super Cup** (Build
-> tab, World options, on by default) has the winners of the two CAF cups meet once in late July, from a
+> League gets all four), then the next positions of your leagues. **CAF Super Cup** (Cups → Continental → CAF → Competitions, on by default) has the winners of the two CAF cups meet once in late July, from a
 > career's second season on.
 >
 > A league that can send a club to the Copa Libertadores, the AFC Champions League or the Club
@@ -793,7 +793,7 @@ saved**): into its own `.json` file when it has one, otherwise into
 **File → Save your world as...** saves a copy under another name, **File → Open a world...**
 brings one back and **File → New world** starts an empty one.
 
-**Build only the European cups...** (Build tab, World options; **Only the European cups...** on Home) builds a world with nothing but the new
+**Build only the European cups...** (Build tab, Step by step; **Only the European cups...** on Home) builds a world with nothing but the new
 Champions League and Europa League -- league phase of 36 and the February play-off -- and the
 Conference League when **Include the Conference League** is ticked. No new leagues; the game's
 clubs and leagues stay as they are, and your world is not changed. It asks for a world name

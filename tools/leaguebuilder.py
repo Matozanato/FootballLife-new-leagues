@@ -149,7 +149,7 @@ which league sits above -- and nothing about ids:
               own groups of four it would put 36 clubs into group A (issue #33).
               "uecl_logo" is the Conference League's picture; without one it gets a drawn
               UECL emblem (the game has none for 174, issue #36). "uecl_name" is its name in
-              the game; without one, "FL Conference League"
+              the game; without one, "UEFA Conference League"
   europe_first (the recipe, not a league) the clubs of the European league phases in a new
               career's first season, picked by hand (Mod Studio: First-season European clubs):
               {"ucl": [...], "uel": [...], "uecl": [...]}, a club "<league>/<k>" or a club id of
@@ -164,18 +164,16 @@ which league sits above -- and nothing about ids:
   conmebol    (the recipe, not a league) "modern": the modern CONMEBOL competitions (PR #146,
               vmardonesdev): Libertadores qualifying in three phases, a Copa Sudamericana of 32
               group clubs with a first stage and a play-off, and the Recopa Sudamericana. Mod
-              Studio: South American places > Modern CONMEBOL competitions. Places in phase 1,
+              Studio: Cups > Continental > CONMEBOL. Places in phase 1,
               phase 2 or the Sudamericana's first stage, or conmebol_associations, also mean it.
-              Left out, a world keeps the classic Libertadores (its places 3 and 4) and Copa
-              Sudamericana (9) exactly as worlds before 0.2.5 had them, even with such places.
+              Left out, a world keeps the classic Libertadores (its places 3 and 4).
+              Saved Sudamericana places (9) remain stored but inactive; no classic cup is built.
               With it the game's South American leagues lose their shipped Libertadores places
               unless game_europe gives them their own, and Build wants the whole field: 26
               Libertadores group places, 13 phase 2, 6 phase 1, 12 Sudamericana group places and
               32 first stage, spread over the South American leagues however you like
-  sudamericana_calendar (the recipe, not a league) true: the classic Copa Sudamericana (without
-              "conmebol") plays February to December on the Libertadores' days, filled in February
-              from the same tables as the Libertadores (other places of them), instead of August
-              to May
+  sudamericana_calendar: obsolete; retained when reading/writing older recipes, but ignored.
+              Sudamericana is generated only by the modern CONMEBOL package.
   conmebol_associations (the recipe, not a league) dynamic places for a CONMEBOL association,
               still in the normal two-field schema: {"Bolivia": [[1,3],[2,3],[3,17],[4,16],
               [5,19],...]}. The first number is an association rank, never a team id. If this world
@@ -938,7 +936,7 @@ def has_edits(r):
                 or r.get("uecl_name") or r.get("uecl_logo") or r.get("caf_super_cup_logo")
                 or r.get("samerica_super_cup_logo") or r.get("samerica_super_cup_first")
                 or r.get("saudi_august") or r.get("game_seasons") or r.get("editable_kits") or r.get("squad") or r.get("country_order")
-                or r.get("conmebol")) \
+                or r.get("conmebol") or r.get("continental_emblems")) \
         or r.get("uecl") is False or r.get("caf_super_cup") is False or r.get("samerica_super_cup") is False
 
 
@@ -1022,7 +1020,8 @@ RECIPE_SETTINGS = ("game_europe", "uefa_seed", "uefa_rank", "europe_first", "gam
                    "ccup_names", "ccup_logos", "caf_super_cup", "caf_super_cup_logo", "cup_draw",
                    "country_order", "game_seasons", "saudi_august", "newlife_ids", "newlife_game",
                    "league_order", "packs", "conmebol", "conmebol_associations", "samerica_super_cup",
-                   "samerica_super_cup_logo", "samerica_super_cup_first", "sudamericana_calendar")
+                   "samerica_super_cup_logo", "samerica_super_cup_first", "sudamericana_calendar",
+                   "continental_emblems")
 
 
 def is_plan(r):
@@ -1297,7 +1296,10 @@ def ccup_given(n, field, ours, given, maybe, tries=20000):
                 return []
             # game_europe's places go after the world's own, a league at a time (game_europe)
             own = mine + sorted((as_place(e) for e in list(given) + list(sub)), key=lambda x: str(x[0]))
-            cup = next((c for c in ccup_plan(own)[0] if c["number"] == n), None)
+            # Reading an archived world must still recover its old allocations.
+            # This reconstructs a field only; it never enables generation in plan().
+            cup = next((c for c in ccup_plan(own, modern_conmebol=(n == SUDAM))[0]
+                        if c["number"] == n), None)
             if cup and [list(e) for e in cup["entry"]] == want:
                 return list(sub)
     return []
@@ -2598,7 +2600,7 @@ def plan(recipe, base, prev=None):
     room = {p["rid"]: p["clubs"] for p in out}
     room.update({r: entries_of(base, regrow[r][M.R_CID]) for r, _p, _c, _a in gcc})
     room.update({row["source"]: row["capacity"] for row in arows})
-    cups, notes = ccup_plan(continental_places, room)
+    cups, notes = ccup_plan(continental_places, room, modern_conmebol=modern_conmebol)
     if suda_first and not any(c["number"] == SUDAM for c in cups):
         raise BuildError("modern Sudamericana first stage needs the Copa Sudamericana group cup")
     if suda_first:
@@ -2606,13 +2608,6 @@ def plan(recipe, base, prev=None):
         # fl26swiss reads cal=1 and borrows the native Libertadores dates, fills
         # the groups immediately after the one-match first stage, and closes it
         # at the calendar-year teardown rather than in July.
-        sud = next(c for c in cups if c["number"] == SUDAM)
-        sud["opts"] = {"fill": SAM_GROUP_FILL, "national": 0, "days": [], "cal": 1}
-    elif recipe.get("sudamericana_calendar") and any(c["number"] == SUDAM for c in cups):
-        # the classic Copa Sudamericana on the same calendar (the World Modpack, mato 23.10.): it
-        # played August to May, so a Brazilian or Argentine club in the Libertadores (February to
-        # November) could be drawn into it as well. Filled in February from the tables the
-        # Libertadores is filled from, it takes the clubs after the Libertadores' places
         sud = next(c for c in cups if c["number"] == SUDAM)
         sud["opts"] = {"fill": SAM_GROUP_FILL, "national": 0, "days": [], "cal": 1}
     for c in cups:            # a game league's cup winner: its national cup is the game's (#95)
@@ -2640,8 +2635,9 @@ def plan(recipe, base, prev=None):
     return {"world": recipe["world"], "leagues": out, "others": others, "edits": recipe.get("edits") or {},
             "free_ids": free_ids, "players": recipe.get("players") or {}, "uecl": bool(recipe.get("uecl", True)),
             "skipped": [t for _pr, t in stale] + fnotes,        # what Build leaves out, with why
-            "trophies": dict(recipe.get("trophies") or {}),     # Leagues > More > Trophies (lbtrophies)
+            "trophies": dict(recipe.get("trophies") or {}),     # Game content > Trophies (lbtrophies)
             "uecl_logo": recipe.get("uecl_logo") or None,
+            "continental_emblems": copy.deepcopy(recipe.get("continental_emblems") or {}),
             "uecl_name": (recipe.get("uecl_name") or "").strip() or None,
             "game_europe": ge, "game_replace": gr, "game_names": gn,
             "association_access": aaccess,
@@ -3099,11 +3095,12 @@ def modern_conmebol_places(recipe):
 
 def recipe_has_modern_conmebol(recipe):
     """whether the world builds the modern CONMEBOL competitions (PR #146): only when the user
-    picks them -- the recipe's "conmebol": "modern" (Mod Studio: South American places > Modern
-    CONMEBOL competitions), or a place only they have (modern_conmebol_places). Places in the
-    Libertadores, its qualifying round and the Copa Sudamericana alone (competitions 3, 4 and 9)
-    are the classic ones every world before 0.2.5 has, and such a world builds exactly as before
-    (review of #146: the Modpack r7 went from building to "modern CONMEBOL setup is incomplete")"""
+    picks them -- the recipe's "conmebol": "modern" (Mod Studio: Cups > Continental >
+    CONMEBOL), or a place only they have (modern_conmebol_places). Places in Libertadores,
+    its legacy qualifying round and Sudamericana alone (3, 4 and 9) do not activate modern
+    mode. Historical Sudamericana places remain stored but inactive until modern mode is
+    enabled; only the original Libertadores is generated otherwise. This retains the
+    #146 compatibility fix without restoring classic Sudamericana generation."""
     v = recipe.get("conmebol")
     if v not in (None, "", CONMEBOL_MODERN):
         raise BuildError('conmebol: %r -- "modern" or nothing' % (v,))
@@ -4045,7 +4042,7 @@ def apart(field):
     return field
 
 
-def ccup_plan(own, clubs=None):
+def ccup_plan(own, clubs=None, *, modern_conmebol=False):
     """the continental cups the new leagues' places lead to (competitions 6..9, 13..15: fl26world.CCUPS),
     each only when some place names it. The field is the places of the world's own leagues and,
     where the cup has them, shipped leagues' places after those: the biggest of 32/16/8/4 clubs
@@ -4055,7 +4052,16 @@ def ccup_plan(own, clubs=None):
     two; 4 play a knockout. A cup short of four is helped first (ccup_short). Returns
     ([{number, name, code, conf, groups, entry}], notes)."""
     cups, notes = [], []
-    places = ccup_short(own, clubs or {}, notes)
+    # Legacy Sudamericana allocations remain in recipes for compatibility, but
+    # only the validated modern package may generate this competition.
+    active = own
+    if not modern_conmebol:
+        active = [entry for entry in own if entry[2] != SUDAM]
+        if len(active) != len(own):
+            notes.append("Copa Sudamericana places are retained but inactive: classic Sudamericana is no longer generated. "
+                         "Enable modern CONMEBOL and complete its qualification allocations to use them; "
+                         "sudamericana_calendar is obsolete and does not enable the competition.")
+    places = ccup_short(active, clubs or {}, notes)
     for c, name, code, conf, fill in fl26world.CCUPS:
         mine = places[c]
         if not mine:
@@ -4304,6 +4310,9 @@ def samerica_lines(own, names, cups):
     sud = next((c for c in cups if c["number"] == 9), None)
     share = fill_share(sud) if sud else {}
     lines = ["  South American places (Copa Libertadores, its qualifying round, Copa Sudamericana):"]
+    if not sud and any(c == SUDAM for _r, _p, c, _a in own):
+        lines.append("    saved Sudamericana places are inactive: enable modern CONMEBOL and complete its allocations; "
+                     "classic Sudamericana is no longer generated")
     for r, lib, libq in fl26world.SAM_GAME:
         s = sorted(share.get(r) or [])
         lines.append("    %s, a league of the game: Libertadores %s; qualifying %s; %s" % (
@@ -5488,6 +5497,7 @@ def write_manifest(root):
 INPUT = "leaguebuilder-input.json"        # what the last Build was made from (pictures_only)
 INPUT_FORMAT = 1                          # raised when the same input builds a different world
 PIC_ARG = {"league_logo": 2, "club_crest": 2, "country_flag": 1,   # picture_jobs: the picture's place
+           "continental_variant": 2,
            "game_emblem": None}                                     # (none: the game's own, by competition)
 
 
@@ -6983,6 +6993,30 @@ def picture_jobs(pl, base, log=print, gone=None):
             continue
         job("league_logo", logo_files(cid), cid, name, have_picture(logo, name, log, "logo", "drawn emblem",
                                                                     gone, logo_files(cid)))
+    # Background-specific overlays run after default emblems, including generated helpers.
+    import continental_emblems as E
+    variants = pl.get(E.ROOT) or {}
+    if variants:
+        native = E.native_ids(base)
+        targets = {E.key("game", cid): [cid] for cid in native}
+        targets.update({E.key("generated", c["number"]): [c["cid"]]
+                        for c in pl.get("ccups") or [] if c.get("cid")})
+        if pl.get("uecl"):
+            targets["uecl"] = [UECL_CID]
+        for code, source in ((SAM_FIRST_CODE, E.key("generated", SUDAM)),
+                             (SPO_CODE, E.key("generated", SUDAM)),
+                             (LIBQ_CODE, E.key("game", GAME_LIBERTADORES))):
+            cid = ((pl.get("cup_ids") or {}).get("conmebol:" + code) or {}).get("cid")
+            if cid:
+                targets.setdefault(source, []).append(cid)
+        for source, ids in targets.items():
+            for mode in E.MODES:
+                path = (variants.get(source) or {}).get(mode)
+                for cid in ids:
+                    rels = E.files(cid, mode)
+                    picture = have_picture(path, source, log, "logo", "existing emblem", gone, rels)
+                    if picture:
+                        job("continental_variant", rels, cid, mode, picture)
     return jobs, flags, len(cups)
 
 
@@ -7797,7 +7831,7 @@ def switch_on(world, game, log=print, redraw=False):
     # B177: another world's fl26regions / fl26regnames name that world's competitions and countries
     stale_world_modules(game, set(lbpack.PER_WORLD) - set(world_modules(game, world)), world, log)
     commonlib_leagues(game, world, wf, log)
-    import lbtrophies                    # Leagues > More > Trophies: FL26's Entrance.lua shows them
+    import lbtrophies                    # Game content > Trophies: FL26's Entrance.lua shows them
     lbtrophies.switch_on(siderdir.find(game), world, root, log, keep_before)
     missing = modules_missing(game)
     if missing:
