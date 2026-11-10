@@ -31,6 +31,10 @@ released; until then this page only collects what is done and tested.
   January. Build lays every day clear of the national teams' windows, the Libertadores and the Club
   World Cup; Edit league > Days by hand sets any of them. For now with a grand final, one such league
   in a world, 16 clubs at most. Recipe keys: `season: "calendar"` with `apertura`, `calendar_days`.
+- **The Liga FUTVE as a recipe.** `tools/testdata/regress018/liga_futve.json`: the Venezuelan league
+  of the FUTVE branch -- Apertura and Clausura with play-off groups, the grand final, the Copa and the
+  Supercopa, the trophy ceremony and cinematics, the continental places of the real league, the
+  modern CONMEBOL competitions -- in Mod Studio's keys alone, as an example to start from.
 - **The modern CONMEBOL rounds' days by hand.** South American places > Days by hand: the
   Libertadores' phases 1 and 2, the Sudamericana's first stage and its play-off on days of your
   choice (`sudamericana_playoff=144,161`). A February-December Apertura/Clausura league is laid clear

@@ -321,6 +321,43 @@ window's 153. Until now the layout kept clear of 144 and 161 whatever the play-o
 
 `tools/test_conmebol_days.py`.
 
+### The Liga FUTVE recipe
+
+`tools/testdata/regress018/liga_futve.json` is phase 5's world in recipe keys alone, with no tool
+of the `futve_*` set:
+
+| Key | Value |
+|---|---|
+| `season` | `calendar` |
+| `apertura` | 8 clubs, `groups`, `grand_final: two_legs`, the names of phase 5 |
+| `calendar_days` | every piece on phase 5's days (the Apertura's final on 157, the grand final 342 345, the cup 69 ... 286, the super cup 30) |
+| `ceremony` | `true` |
+| `cinematics` | `{"final_apertura": "LIB"}` |
+| `places_order` | `finals` |
+| `first_season_abroad` | `false` |
+| `europe` | 1-2 Libertadores groups, 3 phase 2, 4 phase 1, 5-8 the Sudamericana's first stage |
+| `conmebol`, `conmebol_days` | `modern`, `{"sudamericana_playoff": [144, 161]}` |
+| `game_europe`, `conmebol_associations` | the places of phase 5 (Brazil, Argentina, Chile, Colombia; Bolivia, Uruguay, Ecuador, Paraguay, Peru) |
+
+The automatic layout lays the same pieces on other days (Saturdays first, the play-off groups and
+the cup on other days); the days by hand are the ones played three seasons in the game.
+
+`tools/test_liga_futve.py` builds it with phase 5's ids pinned (`tools/testdata/futve/phase5-ids.json`)
+and finds every Liga FUTVE and South American line of phase 5's world file
+(`tools/testdata/futve/phase5-world.txt`) but for:
+
+- `contorder 11 finals` and `firstabroad 11 0`, phase 5's behaviour now an option;
+- the league line: no `scupcup=255` (the league's `cup=255` names the same cup) and the cup's entry
+  options every Build writes since 0.2.4;
+- the Final del Clausura on competition 147: phase 5 took 129, the base's Danish cup
+  (DENMARK_CUP), which a Build keeps.
+
+**A world that played phase 5** (Felix's `_FL26MyWorld`): its `leaguebuilder-plan.json` is the
+Build of 19.10., before the FUTVE tools, and knows none of the ids they gave. Before the first Build
+with these keys, its `cup_ids` take `phase5-ids.json`'s, so every competition and regulation keeps
+its id; a career keeps its titles (the trophy cabinet holds regulations). The Final del Clausura's
+competition moves to 147: a career started before keeps playing it, its title is regulation 262's.
+
 ## Building the world without Mod Studio
 
 `tools/futve_world.py` builds the two test worlds from a real one, without touching the game:
