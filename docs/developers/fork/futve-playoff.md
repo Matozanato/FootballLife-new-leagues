@@ -119,8 +119,9 @@ What the Build does (`tools/leaguebuilder.py`):
 - `continental` passes `mkccup.py` the `koclubs` 2 and the FA Cup's regulation as the knockout's
   row (`PLAYOFF_FINAL_SHAPE`); `ccup_options` writes `gdays=`, `adv=1` and `kolike=` into the line.
 - `playoff_finals` makes each final a **competition of its own**, as the Liga FUTVE's were made by
-  `futve_finals.py`: a copy of the play-off's competition row with a new id and the code
-  `FL_<rid>_AFI` / `FL_<rid>_CFI`, the knockout regulation moved to it and named after it, and two
+  `futve_finals.py` (phase 3, retired in fase 6): a copy of the play-off's competition row with a
+  new id and the code `FL_<rid>_AFI` / `FL_<rid>_CFI`, the knockout regulation moved to it and
+  named after it, and two
   entry rows (placeholders: the DLL writes the group winners when it fills the final). The game then
   counts the final's winner as that competition's champion -- the title in the Palmarés carries the
   final's name and emblem, not the play-off's. The id is one the game creates at the season's start
@@ -219,7 +220,7 @@ each of its finals:
 The cup lifted is the folder's own (a trophy chosen apart was tried and left: Felix, 01.11.). Tested
 in the game on 01.11.: the Final del Apertura (261) with `LIB`, the Libertadores final's scenes, and
 the ceremony. The Liga FUTVE's hand-made patch of `common\cinematics.lua` (`futve_cinematics.py`) is
-not needed for these lines; it stays for the frozen phases.
+not needed for these lines; it was retired with the hand-made worlds.
 
 ### January to December: `"season": "calendar"` with `"apertura"`
 
@@ -358,36 +359,6 @@ with these keys, its `cup_ids` take `phase5-ids.json`'s, so every competition an
 its id; a career keeps its titles (the trophy cabinet holds regulations). The Final del Clausura's
 competition moves to 147: a career started before keeps playing it, its title is regulation 262's.
 
-## Building the world without Mod Studio
-
-`tools/futve_world.py` builds the two test worlds from a real one, without touching the game:
-
-```
-python tools/futve_world.py --game "G:\Games\SP Football Life 2026"
-```
-
-- It finds the Apertura cup by its world line and its competition and takes the ids the Build gave
-  it (competition 134, regulation 259; the knockout is the next free regulation, 261). The group
-  rows are `reg + 1024` and `reg + 2048` (1283, 2307), as the game's rule for a group cup.
-- It removes the competition row, the regulation rows and the entry rows of that one competition
-  and hands the rest of the three tables to `mkccup.py`, which adds a group master, its two
-  replicas and the knockout (four clubs for phase 1; for the final, the FA Cup's row cut to two
-  clubs, dated by the Belgium Super Cup's one record). Every other competition, regulation and entry
-  comes back untouched; the Clausura cup is never named.
-- It writes `out/futve/world-phase1` and `out/futve/world-phase2`, each with
-  `common\etc\pesdb\{Competition,CompetitionRegulation,CompetitionEntry}.bin` and the world file
-  with the Apertura line replaced, in the source's line endings.
-- `--dry` prints the ids and the line only; `--phase 1|2` builds one.
-
-After a Mod Studio Build the bins and `fl26world.txt` are regenerated: run the script again (and
-`futve_fixture.py --make`, see below). The ids are read from the world each time; only the cup's
-name has to survive the Build.
-
-`mkccup.py`'s `--cup` spec grew two optional fields for this: `koclubs` (the knockout's club count,
-default `2 x groups`) and `kolike` (a shipped regulation whose row the knockout copies -- a normal
-cup's, so a two-club field is a final the game names). Both are group-cup only; the existing cups
-are unchanged.
-
 ## The fixture: Táchira 99
 
 The in-game tests are careers with the world's Deportivo Táchira (team 71606) and every one of its
@@ -403,157 +374,57 @@ python tools/futve_fixture.py --check <Player.bin> [--assignments <PlayerAssignm
 `out/futve/fixtures/Player.bin` and a manifest (sha256 of the source and the fixture, the team, the
 player ids, the 750 values checked). It refuses to write if any other record would change. `--check`
 is what the sandbox runs before and after installing it. Names, ids, positions, form and skills are
-left alone; a world with another squad or another team is `--team`/`--world`.
-
-There is no Táchira-99 `Player.bin` in the game today (the installed one runs 40-83 in those
-stats), so the fixture is generated from whatever `Player.bin` the world has. If you have your own
-copy, `--from` verifies and uses it.
-
-## The competitions' logos
-
-The Apertura and Clausura play-offs and the three finals take these pictures:
-
-| competition | picture |
-|---|---|
-| 134 Liga FUTVE Apertura Playoffs | `PLAYOFF_APERTURA.png` |
-| 135 Liga FUTVE Clausura Playoffs | `PLAYOFF_CLAUSURA.png` |
-| 142 Final del Apertura | `FINAL_APERTURA.png` |
-| 129 Final del Clausura | `FINAL_CLAUSURA.png` |
-| 175 Gran Final del FUTVE | `FINAL_FUTVE.png` |
-
-```
-python tools/futve_logo.py --make
-python tools/futve_logo.py --check
-python tools/futve_logo.py --install --game "G:\Games\SP Football Life 2026"
-python tools/futve_logo.py --restore out/futve/logos/backup-<date> --game "G:\Games\SP Football Life 2026"
-```
-
-`--make` writes the six variants (256 and 512 px) of each competition under `out/futve/logos/world`,
-made the way a Build's league logo is (`lbassets.league_logo`: the picture fitted into a transparent
-square, never stretched, in colour in every variant), and a `files.json` with the plan's competitions
-and files. The pictures are in `G:\Downloads` (or `--source`/`FL26_LOGOS`). The in-game sandbox
-installs exactly the list in `files.json` (the two play-offs and the three finals, 30 files) and
-restores the game's emblems at the end, so it never puts a logo on a competition that is not in the
-plan. `--install` writes the staged set into the live world and backs up what it replaces under
-`out/futve/logos/backup-<date>/` (the game closed) for after a Build, as for the world file;
-`--restore` puts a backup back.
-
-The finals' competitions take ids **142/143/144**, the Mod Studio's next three free byte competition
-ids (`leaguebuilder.free_comp_ids`: the pool starts at 130 and skips the world's used ones -- 130-135
-the Liga FUTVE, 137-141 Scotland/KSA -- and the UEFA Conference League's reserved 136). 136 is why a
-first version put a logo on a UEFA competition; 10342 is a team id, not a competition id.
+left alone; a world with another squad or another team is `--team`/`--world`. After a Build that
+changes the squads, make it again.
 
 ## The sandbox of the in-game tests
 
 ```
-python tools/futve_test.py --phase 1 --game "G:\Games\SP Football Life 2026"
-python tools/futve_test.py --phase 2 --game "G:\Games\SP Football Life 2026"
-python tools/futve_test.py --phase 3 --game "G:\Games\SP Football Life 2026"
+python tools/futve_test.py --world "<a Build's livecpk\<world> folder>" --game "G:\Games\SP Football Life 2026"
 python tools/futve_test.py --restore out/futve/tests/<date>
 python tools/futve_test.py --self-test
 ```
 
-One process per test, run by you in your terminal (it writes to the game and to the save folder,
+The world is one Mod Studio built: a Build into a copy of the game, or the world's own folder. One
+process per test, run by you in your terminal (it writes to the game and to the save folder,
 outside the agent's sandbox). It:
 
 1. refuses to start while the game is open (a process name or a locked file);
 2. backs up, under `out/futve/tests/<date>/backup/` with a `manifest.json` of sizes, mtimes and
-   sha256: the files it installs (`fl26swiss.dll`, `fl26swiss.lua`, `fl26world.txt` in both
-   places, the three `Competition*.bin`, the fixture's `Player.bin`, the game's own
-   `cinematics.lua`/`cinematicsB.lua`, and the competition logos the plan stages -- the two
-   play-offs and the three finals, 30 files), the game's `*.log`, `*.cache`, `sider.ini`
-   and `ReShade.ini`/`ReShade.log`, and the **whole save folder**
+   sha256: the files it installs -- the world's `fl26world.txt` (in `livecpk\<world>` and in
+   `modules`), its three `Competition*.bin` and its competition emblems, the fixture's `Player.bin`
+   (`--no-fixture`: the world's own), the repo's `fl26swiss.dll` (or `--dll`), `fl26swiss.lua`,
+   `fl26joindll.lua` and, with `cine` lines, `fl26cine.lua` (a `sider.ini` that does not load it is
+   a warning: Install the modules in Mod Studio) -- the game's `*.log`, `*.cache`, `sider.ini` and
+   `ReShade.ini`/`ReShade.log`, and the **whole save folder**
    (`...\Documents\KONAMI\eFootball PES 2021 SEASON UPDATE\2026`, detected under `Documents` and
    `OneDrive\Documents`, or `--save`);
-3. installs the DLL, the loader, the phase's world and the fixture, checks every hash and runs the
-   fixture check on the installed `Player.bin`;
-4. prints the checklist and waits. `FIN` + Enter: requires the game closed, copies the evidence
-   (the post-test logs, the new screenshots, the manifest, a report) to `evidence/`, then restores
-   everything -- files, save folder (the careers of the test and `fl26swiss-state.bin` are removed),
-   logs, caches -- with the original mtimes, and verifies it against the manifest. `ABORTAR`
-   restores at once; Ctrl+C restores nothing and prints the `--restore` command;
+3. installs them and the world's sandbox careers (`out/futve/careers-<world>`, or `--careers`),
+   checks every hash and runs the fixture check on the installed `Player.bin`;
+4. prints the checklist of the Liga FUTVE recipe and waits. `FIN` + Enter: requires the game
+   closed, copies the evidence (the post-test logs, the new screenshots, the manifest, a report) to
+   `evidence/`, keeps the careers the session played in the store, then restores everything --
+   files, save folder, logs, caches -- with the original mtimes, and verifies it against the
+   manifest. `ABORTAR` restores at once; Ctrl+C restores nothing and prints the `--restore` command;
 5. reports any file changed under the game folder that the sandbox did not expect, so the managed
    set can grow.
 
-`--self-test` runs the whole round trip on a fake game/save/artifacts tree under `out/futve/tmp`
-(a real Player.bin/PlayerAssignment.bin pair, a simulated career save, appended logs, a new cache)
-and requires the tree to come back byte for byte.
+`--self-test` runs the whole round trip on a fake game/save/world tree under `out/futve/tmp` (a
+real Player.bin/PlayerAssignment.bin pair, a built world with a `cine` line, a simulated career
+save, appended logs, a new cache) and requires the tree to come back byte for byte.
 
-The two cinematics files are the game's own `SiderAddons\modules\common\cinematics.lua` (the
-entrance folder per tournament id) and `cinematicsB.lua` (the Final stadium scenes), with one
-mapping added by `tools/futve_cinematics.py` (the sandbox runs it before a test, and `--check`
-verifies it): the final competitions' regulations **261** (the Apertura final) and **262** (the
-Clausura final), when the match is the final (`ctx.match_info == 53`), keep the UEFA Europa League
-final's entrance (`UEFA Europa League F`), and **263** (the Final del FUTVE) the UEFA Champions
-League final's (`UEFA Champions League F`); their trophy entry (`entry`, the `trophy_rewrite`) is
-**16**, the UEL/UCL's, whose trophy and celebration are in the user's content/cinematics folders
-(1/10/42/46 give the Club World Cup, Libertadores, the Copa America and the CAF trophy); all three take the generic
-`Final\st001` scene from cinematicsB. The game's files are put back at the end, like everything
-else.
+## The hand-made worlds of phases 1-5 (retired)
 
-## The two tests
-
-**Phase 3 (the finals as competitions of their own).** `tools/futve_finals.py` builds
-`out/futve/world-finals`: the Apertura and Clausura play-offs keep their groups (134/135, masters
-259/260, rows 1283/1284/2307/2308), and the finals are separate competitions -- 142 "Final del
-Apertura" (regulation 261), 129 "Final del Clausura" (262) and 175 "Final del FUTVE" (263), 2 clubs
-each, ids the exe's builder 1 include list gives a case: 142 and 175 free, 129 replaces the base's own competition 129. The earlier 142/143/144 failed because 143/144 have no case in that list.
-The three finals' entry rows are placeholders: the DLL rewrites them. The Final del FUTVE's line
-carries `src=261,262`: the DLL reads the two finals' champions, plays the match when they differ and
-leaves it unplayed -- logging the title -- when they are the same; its `fill=0` makes the DLL try it
-every tick until both champions are known. The phase 3 sandbox installs that world, the 30 logos of
-134/135/142/143/144, the two cinematics and the join module, and the full-season checklist runs the
-Apertura final (day 15), the Clausura groups (145-160) and final (164), and the Final del FUTVE
-(167) twice: the same champion (no match, the title direct) and a different champion (the match
-played). At the season's close the palmarés should carry the finals' titles.
-
-The finals' ids (142, 129, 175) are in the exe's builder 1 include list, so the season builder takes
-them at creation like the shipped cups and their `enter_season` runs; no extra module patch is
-needed. (The earlier attempt with 142/143/144 failed because 143/144 have no case in that list; the
-`futve_join.py` copy, which added them to the calendar-year builder, is obsolete and no longer
-installed by the sandbox.)
-
-**Phase 1 (groups).** The Apertura cup has two groups and a four-club knockout; the groups are
-dated 3, 5, 7, 9, 11, 13 and the knockout after them. A career with Táchira simulated to day 2, then
-to the group days: the calendar must show the six matchdays, the Competition Info -> the cup must
-show the two group tables with A = 1, 4, 5, 8 and B = 2, 3, 6, 7, and `sider.log` must have
-`started and registered ... N match record(s)` with N > 0. If no match appears, stop the plan here.
-
-**Phase 2 (the final).** The same groups, the knockout is the final (`adv=1`, `kolike=128`,
-`days=15`): after the last group day the two winners are put in the final, the better regular
-position first, and the match is played on day 15. The log names them (`final: X (regular position
-p) v Y (position q)`) and the champion. The calendar and the match screens must call it "Final"
-(the first test of 28 October showed the competition's name instead), the entrance must be the UEFA
-Europa League final's (the Apertura final is regulation 261) and the pre-match scene the Final one
-(`cinematicsB`); the Clausura follows and must be untouched. Check the club's Palmarés after the
-final and, if you can, after the season's close: the champion is the competition's winner (the DLL
-reads it), but the club's honours screen is the game's own bookkeeping, see below.
-
-Both tests are about the Apertura only: the Clausura cup keeps its straight knockout of eight, and
-the Gran Final, the continental places and the second season are later phases.
-
-## What is still open
-
-- **Mid-season group stages.** The 28 October test did not prove the engine refuses them: it dated
-  the groups in the past and did not start the stage. Phase 1 is the test that decides; if the
-  matches still do not appear, the format stops here.
-- **The calendar.** The Apertura ends on day 2 and the Clausura starts on day 16: six group
-  matchdays and a final in 13 days is a match every two days, and the finalists play the first
-  Clausura round a day later. The compressed window is the chosen trade-off; the fallback is the
-  final on day 14 or the 3-day rhythm of the old play-off, a data change only.
-- **The final's ground.** The better placed club is first in the match record; the test of 28
-  October had Táchira at home in the final. Whether a different row shape would change the venue is
-  a data question, not a code one.
-- **The finals as competitions of their own** are done (`futve_finals.py` for the Liga FUTVE,
-  `playoff_finals` in the Build, above), and their titles are in the club's Palmarés
-  ([palmares.md](palmares.md)). The Final del FUTVE between the two champions is a block of its own.
-- **Competition Info.** The cup's group pages are the pages of a group competition; a crash there
-  (as B205 once had) is checked in each test.
-- **Saves.** A save loaded between two group days is covered by the match-count fallback; a save
-  loaded at other points, the July teardown and the second season are phase 6.
-- **A Build** overwrites the bins, `fl26world.txt`, `Player.bin` and the emblems: rerun
-  `futve_world.py`, `futve_fixture.py --make` and `futve_logo.py --install`, then install with the
-  sandbox.
+Phases 1-5 were tested on worlds made by hand on top of a Build: `futve_world.py` (the play-off
+groups), `futve_finals.py` (the finals as competitions of their own, on 142/129/175),
+`futve_calendar.py` (January to December), `futve_conmebol.py` (the modern CONMEBOL competitions),
+`futve_logo.py` (the play-offs' and finals' emblems), `futve_cinematics.py` (a patched
+`common\cinematics.lua`) and `futve_join.py` (a patched `fl26joindll.lua`, obsolete since phase 3).
+A Build makes all of it now from the recipe keys above, and the Liga FUTVE recipe reproduces phase
+5's world, so fase 6 took them out with their tests (`test_futve_world.py`, `test_futve_finals.py`).
+They are in the history of the `v025-futve` branch. What phases 1-5 found is in the sections above;
+the decisions of the in-game tests (the days, the 157, the ceremony, the order of the places) went
+into the recipe.
 
 ## Tests without the game
 
@@ -565,9 +436,9 @@ python tools/test_ceremony_build.py <pesdb>  # the trophy ceremony: recipe key, 
 python tools/test_ceremony.py          # the DLL's tournament map, native
 python tools/test_fl26cine.py          # the cinematics module in Lua (lupa)
 python tools/test_futve_playoff.py     # the pure parts (groups, order of the final), native
-python tools/test_futve_world.py       # both staging worlds against the real world; skip without one
 python tools/test_futve_fixture.py     # the fixture; skip without a world
 python tools/futve_test.py --self-test # the sandbox round trip on a fake tree
+python tools/test_liga_futve.py <pesdb>  # the Liga FUTVE recipe against phase 5's world
 ```
 
 The native runner needs zig (`ZIG`, `PATH`, `D:/dev/tools/zig-*/zig.exe` or the branch's
