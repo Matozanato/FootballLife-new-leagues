@@ -46,6 +46,7 @@ Rules that hold for every key:
 | `cup_draw` | `seeded` (default), `random`, `off` | how country cups are drawn | `cupdraw` |
 | `newlife_ids` | {"<NewLife id>": world id} | written by Build (`pin_newlife`): the world id each NewLife club got, so it keeps it | tables |
 | `newlife_game` | object | written by the NewLife page: what *Bring the game's leagues to this season* changed, so it can be undone or redone | none (it feeds `edits` and `players`) |
+| `conmebol_days` | {piece: [day, ...]} | with `conmebol: modern`: the modern rounds' days by hand -- `libertadores_1` (2, days 3-13, default 6 13), `libertadores_2` (2, 15-33, default 18 25), `sudamericana_first` (1, 37-48, default 40), `sudamericana_playoff` (2, 141-199, default 146 153); a January-December Apertura/Clausura league is laid clear of them ([futve-playoff.md](futve-playoff.md)) | `lpre ... days=` |
 | `league_order` | list | Mod Studio's Leagues page row order. Build does not read it | none |
 
 ## A league

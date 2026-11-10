@@ -301,6 +301,26 @@ usual. Until now this was always on for the title league, with a list by hand of
 
 `tools/test_first_season_build.py`; `tools/test_first_season.py` (`tools/native/test_first_season.c`).
 
+### The modern CONMEBOL alongside
+
+With `conmebol: modern` a club of the January-December league also plays the Libertadores' phases 1
+and 2, the Sudamericana's first stage and play-off and the Recopa. `cal_layout` lays the league
+CAL_GAP from their days (`modern_busy`), the shipped ones or `conmebol_days` by hand -- the Liga
+FUTVE's `{"sudamericana_playoff": [144, 161]}`: the shipped 146 153 has its second leg on the June
+window's 153. Until now the layout kept clear of 144 and 161 whatever the play-off's days were.
+
+- **Days by hand** (`conmebol_days`, `conmebol_days()`): any of `libertadores_1`, `libertadores_2`,
+  `sudamericana_first`, `sudamericana_playoff`; each between its fill and the next round
+  (`CONMEBOL_DAYS`). The Build writes them in the rounds' `lpre ... days=`.
+- **A note** (`modern_clashes`, the plan's notes, in the Build log): a day of the league by hand
+  (`calendar_days`) under CAL_GAP from one of them. A note, not a refusal: two clubs' clash only
+  if one plays both.
+- **The ids**: the finals' (`CREATION_IDS`, `spare_case`) and the modern helpers' (`helper_ids`)
+  come from the same Build and are each their own, pinned by the next Build.
+- Mod Studio's South American places window: Days by hand (`sudamericana_playoff=144,161`).
+
+`tools/test_conmebol_days.py`.
+
 ## Building the world without Mod Studio
 
 `tools/futve_world.py` builds the two test worlds from a real one, without touching the game:
