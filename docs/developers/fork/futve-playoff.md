@@ -278,6 +278,29 @@ Sudamericana, as the modern CONMEBOL gives them); only the club of each position
 
 `tools/test_places_order.py`; `tools/native/test_grand_final.c`.
 
+### Nobody abroad in the first season
+
+`"first_season_abroad": false` (with `season: calendar` and `apertura`; the default `true`): in a new
+career's first season the league has no final table yet (the real Liga FUTVE's first year), so it
+sends no club abroad. From its second season, when the DLL has kept its table, its places go as
+usual. Until now this was always on for the title league, with a list by hand of substitutes.
+
+- **Its Libertadores places** (`cont_build`) stay with the pool clubs; **its cup entries** (a
+  Sudamericana of ours) send nobody.
+- **Its pre-round slots** (`lpre`, the qualifying rounds and the Sudamericana's first stage) go to the
+  other leagues of that round in turn, in the order of the round's entries, each its next club after
+  the last position it sends anywhere abroad (`abroad_last`: every pre-round's, every cup's entry,
+  every access place) -- a club with no continental place, not already in this round or another
+  (`first_sub`). Phase 5's list by hand (Colombia 16-20, Chile 16, Argentina 19-24) is gone: with
+  phase 5's world the same leagues and the same first positions, taken in turn.
+- **The world file**: `firstabroad <reg> 0` (`leaguebuilder.firstabroad_lines`).
+- **fl26swiss.dll**: `fl26_swiss_firstabroad` takes the league; `first_noabroad` gates the three
+  places. A world without the line: the first season by squad strength, as any league's -- a phase 5
+  world that wants it needs the line with the new DLL.
+- Mod Studio's league window: nobody abroad in the first season.
+
+`tools/test_first_season_build.py`; `tools/test_first_season.py` (`tools/native/test_first_season.c`).
+
 ## Building the world without Mod Studio
 
 `tools/futve_world.py` builds the two test worlds from a real one, without touching the game:

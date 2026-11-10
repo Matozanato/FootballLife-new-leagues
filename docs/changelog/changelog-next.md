@@ -31,6 +31,11 @@ released; until then this page only collects what is done and tested.
   January. Build lays every day clear of the national teams' windows, the Libertadores and the Club
   World Cup; Edit league > Days by hand sets any of them. For now with a grand final, one such league
   in a world, 16 clubs at most. Recipe keys: `season: "calendar"` with `apertura`, `calendar_days`.
+- **Nobody abroad in a league's first season.** For a February-December Apertura/Clausura league,
+  Edit league > nobody abroad in the first season: with no final table yet, the league sends no
+  club to the continental cups in a new career's first year, as the real Liga FUTVE; a place of a
+  qualifying round goes to the next club of another league of that round, one with no continental
+  place. From the second season as usual. Recipe key: `first_season_abroad`.
 - **Continental places in the order of the finals.** For a February-December Apertura/Clausura
   league with the modern CONMEBOL, Edit league > continental places in the order of the finals: the
   champion, the best of the table, the runner-up and the next to the Libertadores, the two finals'
