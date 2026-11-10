@@ -3054,6 +3054,20 @@ static int cont_any(int comp)
   return 0;
 }
 static int futve_cal(void);
+/* `firstabroad <reg> 0` (Mod Studio's "first_season_abroad": false, fl26_swiss_firstabroad): the
+   January-December title league sends nobody abroad while it has no final table (its first season):
+   its Libertadores places stay with the pool (cont_build), its cup entries send nobody (ccup), its
+   pre-round slots go to the next clubs of the other leagues of that round (first_sub). Without the
+   line, its first season goes by squad strength as any league's. */
+static uint16_t g_noabroad_reg;
+static int first_noabroad(uint16_t reg);
+__declspec(dllexport) int fl26_swiss_firstabroad(const uint16_t* v, int n)
+{
+  g_noabroad_reg = v && n > 0 ? v[0] : 0;
+  if (g_noabroad_reg)
+    logf("fl26swiss: league %u -- nobody abroad in its first season (firstabroad)", (unsigned)g_noabroad_reg);
+  return g_noabroad_reg ? 1 : 0;
+}
 static uint16_t g_tl_total;
 /* all three lists at once, so no club is given two places */
 static void cont_build(void)
@@ -3075,7 +3089,7 @@ static void cont_build(void)
     /* fase 4 (31.10., Felix): a January-December Liga FUTVE's first season (no final table kept
        yet) sends nobody to the Libertadores -- the pool clubs keep those places; from the second
        season the accumulated table of the year before does */
-    if (futve_cal() && g_tl_total && a->reg == g_tl_total && !final_of(g_tl_total)) {
+    if (first_noabroad(a->reg)) {
       static int said = 0;
       if (!said++) logf("fl26swiss: %s access -- reg %u: the Liga FUTVE's first season, no final table yet; its places stay with the pool",
                         CONT_NAME[a->comp - LIB], (unsigned)a->reg);
@@ -5480,6 +5494,59 @@ static void poko_keep_winners(lpre_t* l)
        (unsigned)c->reg, l->gwin[0], l->gwin[7]);
 }
 
+/* firstabroad: the last position league reg sends anywhere abroad -- every pre-round's, every cup's
+   entry and every Libertadores access place of it */
+static int abroad_last(uint16_t reg)
+{
+  int last = 0;
+  for (int x = 0; x < g_nlpre; x++)
+    for (unsigned e = 0; e < 2u * g_lpre[x].ties && e < 2 * LPRE_MAX; e++)
+      if (g_lpre[x].ereg[e] == reg && g_lpre[x].erank[e] > last) last = g_lpre[x].erank[e];
+  for (int k = 0; k < g_nccup; k++)
+    for (int e = 0; e < g_ccup[k].n && e < CCUP_MAX_ENTRY; e++)
+      if (g_ccup[k].ereg[e] == reg && g_ccup[k].erank[e] > last) last = g_ccup[k].erank[e];
+  for (size_t a = 0; a < g_naccess; a++)
+    if (g_access[a].reg == reg && g_access[a].rank > last) last = g_access[a].rank;
+  return last;
+}
+
+/* firstabroad: the s-th slot pre-round i takes from league reg in its first season goes to the other
+   leagues of that round in turn (in the order of the round's entries), each its next club after the
+   last position it sends abroad -- a club with no continental place, not yet in this round or
+   another (the phase 5 list by hand: Colombia 16-20, Chile 16, Argentina 19-24, gone) */
+static uint32_t first_sub(int i, uint16_t reg, int s, unsigned n, const char** how)
+{
+  const lpre_t* l = &g_lpre[i];
+  int lib_stage = l->alias, suda_first = lpre_is_suda(l);
+  uint16_t lg[2 * LPRE_MAX]; int nl = 0;
+  for (unsigned e = 0; e < 2u * l->ties && e < 2 * LPRE_MAX; e++) {
+    uint16_t r = l->ereg[e];
+    if (!l->erank[e] || r == reg || r > 255) continue;
+    int seen = 0;
+    for (int q = 0; q < nl && !seen; q++) seen = lg[q] == r;
+    if (!seen) lg[nl++] = r;
+  }
+  for (int t = 0; t < nl; t++) {
+    uint16_t r = lg[(s + t) % nl];
+    for (int rank = abroad_last(r) + 1; rank <= FINAL_MAX; rank++) {
+      uint32_t c = cwc_club(r, rank, how);
+      if (!c) break;
+      if (c >> 14) c = canon_club(c);
+      if (!(c >> 14) || has_club(l->club, n, c)) continue;
+      if ((lib_stage || suda_first) && (lib_reserved_except(c, i) || (!l->poko && lib9_has(c)))) continue;
+      int other = 0;
+      for (int x = 0; x < g_nlpre && !other; x++) if (x != i && g_lpre[x].nclub) other = has_club(g_lpre[x].club, g_lpre[x].nclub, c);
+      if (other) continue;
+      static char said[48];
+      snprintf(said, sizeof said, "reg %u position %d", (unsigned)r, rank);
+      *how = said;
+      return c;
+    }
+  }
+  logf("fl26swiss: pre-round %u -- reg %u's first season: no other league of the round has a club to spare", (unsigned)l->reg, (unsigned)reg);
+  return 0;
+}
+
 /* on the days from its fill day to the eve of its first leg, once a season: the clubs, the ties,
    the master started and registered -- q_fill's steps */
 static void lpre_fill(int i)
@@ -5513,7 +5580,7 @@ static void lpre_fill(int i)
   int lib_stage = l->alias;
   int suda_first = lpre_is_suda(l);
   if (lib_stage || suda_first) cont_build();
-  unsigned n = 0;
+  unsigned n = 0; int subs = 0;
   for (unsigned j = 0; j < 2u * l->ties; j++) {
     const char* how = ""; uint32_t club = 0;
     if (!l->erank[j]) {
@@ -5545,23 +5612,12 @@ static void lpre_fill(int i)
           }
         }
       }
-    } else if (futve_cal() && g_tl_total && l->ereg[j] == g_tl_total && !final_of(g_tl_total)) {
-      /* fase 5 (01.11.): the Liga FUTVE's first season sends nobody abroad, as its other places
-         (cont_build, ccup entries): the slot goes to a club of a league with no place left there */
-      static const uint16_t SUB[][2] = { {168, 16}, {168, 17}, {168, 18}, {168, 19}, {168, 20}, {67, 16},
-                                         {30, 19}, {30, 20}, {30, 21}, {30, 22}, {30, 23}, {30, 24}, {29, 20} };
-      for (size_t q = 0; q < sizeof SUB / sizeof SUB[0] && !club; q++) {
-        uint32_t c = cwc_club(SUB[q][0], SUB[q][1], &how);
-        if (c >> 14) c = canon_club(c);
-        if (!(c >> 14) || has_club(l->club, n, c)) continue;
-        if ((lib_stage || suda_first) && (lib_reserved_except(c, i) || (!l->poko && lib9_has(c)))) continue;
-        int other = 0;
-        for (int x = 0; x < g_nlpre && !other; x++) if (x != i && g_lpre[x].nclub) other = has_club(g_lpre[x].club, g_lpre[x].nclub, c);
-        if (other) continue;
-        club = c;
-        logf("fl26swiss: pre-round %u -- the Liga FUTVE's first season: reg %u position %u goes to reg %u position %u (%08x)",
-             (unsigned)l->reg, (unsigned)l->ereg[j], (unsigned)l->erank[j], (unsigned)SUB[q][0], (unsigned)SUB[q][1], c);
-      }
+    } else if (first_noabroad(l->ereg[j])) {
+      /* firstabroad: the slot goes to a club of another league of this round with no place there */
+      club = first_sub(i, l->ereg[j], subs++, n, &how);
+      if (club)
+        logf("fl26swiss: pre-round %u -- reg %u's first season: its position %u goes to %08x (%s)",
+             (unsigned)l->reg, (unsigned)l->ereg[j], (unsigned)l->erank[j], club, how);
     } else {
       for (int rank = l->erank[j]; rank >= 1 && rank <= FINAL_MAX; rank++) {
         club = cwc_club(l->ereg[j], rank, &how);
@@ -6109,6 +6165,10 @@ static void ccup_final_note(int k, void* started, int fresh);
 static int calyear(uint16_t id);
 static uint16_t g_tl_total;
 static int futve_cal(void) { return g_tl_total && calyear(g_tl_total); }
+static int first_noabroad(uint16_t reg)
+{
+  return g_noabroad_reg && reg == g_noabroad_reg && reg == g_tl_total && futve_cal() && !final_of(reg);
+}
 /* The champion a final of ours read this season (ccup_final_note), kept as a cup winner in
    g_cupwin -- and so in fl26swiss-state.bin, read back after a reload between the final and the
    Final del FUTVE. 0 while this season's final is not over. Kept from the final's day up to the
@@ -6275,7 +6335,7 @@ static int ccup_fill_one(int k, void* started)
         if (club && has_club(g_ccup_field[k], n, club)) club = 0;
       }
       if (!club) logf("fl26swiss:   cup %u entry: reg %u has no winner to send", (unsigned)c->reg, (unsigned)c->ereg[i]);
-    } else if (futve_cal() && g_tl_total && c->ereg[i] == g_tl_total && !c->adv && !c->src[0] && !final_of(g_tl_total)) {
+    } else if (!c->adv && !c->src[0] && first_noabroad(c->ereg[i])) {
       /* fase 4 (31.10., Felix): the Liga FUTVE's first season sends nobody abroad (no final table yet) */
       logf("fl26swiss:   cup %u entry: reg %u -- the Liga FUTVE's first season, no final table yet; no club sent",
            (unsigned)c->reg, (unsigned)c->ereg[i]);
