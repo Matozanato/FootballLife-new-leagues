@@ -13591,7 +13591,18 @@ static uint32_t league_champion_kept(uint16_t total, int ad)
      5, 6 the Apertura's and the Clausura's final losers -- Sudamericana first stage
      7, 8 the next two of the table -- Sudamericana first stage
    A club already placed hands its place to the next of the table. Only with the modern CONMEBOL
-   competitions; 0 (the table as before) otherwise or past position 8. */
+   competitions; 0 (the table as before) otherwise or past position 8.
+   Fase 6: only for the league the world file's `contorder <reg> finals` line names (Mod Studio's
+   "places_order": "finals", fl26_swiss_contorder) -- the title league; without the line, the table
+   as before, the Liga FUTVE of phase 5 included. */
+static uint16_t g_contorder_reg;
+__declspec(dllexport) int fl26_swiss_contorder(const uint16_t* v, int n)
+{
+  g_contorder_reg = v && n > 0 ? v[0] : 0;
+  if (g_contorder_reg)
+    logf("fl26swiss: league %u -- its continental places in the order of the finals (contorder)", (unsigned)g_contorder_reg);
+  return g_contorder_reg ? 1 : 0;
+}
 static uint32_t futve_runner_kept(uint16_t ko, int ad)
 {
   cupwin_t* r = cupwin_of((uint16_t)(FUTVE_RUNNER | ko));
@@ -13601,7 +13612,8 @@ static uint32_t futve_runner_kept(uint16_t ko, int ad)
 }
 static uint32_t futve_cont_club(uint16_t reg, int rank, const char** how)
 {
-  if (!g_tl_total || reg != g_tl_total || rank < 1 || rank > 8 || !futve_cal() || !modern_conmebol()) return 0;
+  if (!g_tl_total || reg != g_tl_total || reg != g_contorder_reg || rank < 1 || rank > 8 || !futve_cal() || !modern_conmebol())
+    return 0;
   final_t* f = final_of(reg);
   int ad = abs_day();
   if (!f || f->n < 10 || ad < f->day || ad - f->day > 300) return 0;

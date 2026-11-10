@@ -849,6 +849,14 @@ class LeagueDialog(Dialog):
         cd = L.get("calendar_days") or {}
         self.caldays = QLineEdit("; ".join("%s=%s" % (k, ",".join(map(str, v))) for k, v in cd.items()))
         self.caldays.setPlaceholderText(_("(laid by Build)  e.g. final_apertura=157; grand_final=342,345"))
+        self.porder = QCheckBox(_("continental places in the order of the finals"))
+        self.porder.setChecked(L.get("places_order") == "finals")
+        self.form.addRow("", row(self.porder, helpmark(
+            "February to December with Apertura and Clausura and the modern CONMEBOL competitions: the league's "
+            "continental places go as the real Liga FUTVE gives them -- 1 the champion (the grand final's winner), 2 "
+            "the best of the table besides it and the runner-up, 3 the runner-up, 4 the next of the table, 5 and 6 "
+            "the Apertura's and the Clausura's final losers, 7 and 8 the next two of the table. Off: the table's "
+            "order.")))
         self.form.addRow(_("Days by hand"), row(self.caldays, helpmark(
             "February to December with Apertura and Clausura: Build lays every day of the season clear of the "
             "national teams' windows, the Libertadores and the Club World Cup. Here any piece can be given by "
@@ -1180,6 +1188,14 @@ class LeagueDialog(Dialog):
             L["calendar_days"] = cd
         else:
             L.pop("calendar_days", None)
+        if self.porder.isChecked():
+            if not (L.get("season") == "calendar" and L.get("apertura")):
+                error(self, "League", _("Continental places in the order of the finals are for Apertura and Clausura "
+                                        "from February to December."))
+                return
+            L["places_order"] = "finals"
+        else:
+            L.pop("places_order", None)
         if self.formation.value():
             L["formation"] = self.formation.value()
         else:
@@ -1234,7 +1250,8 @@ class LeagueDialog(Dialog):
                 return
             for k in ("above", "cup", "supercup", "league_cup", "split", "apertura", "europe", "season",
                       "exhibition", "legs", "exchange", "logo", "cup_name", "supercup_name", "league_cup_name", "cup_logo",
-                      "supercup_logo", "league_cup_logo", "playoff_logo", "ceremony", "cinematics", "calendar_days"):
+                      "supercup_logo", "league_cup_logo", "playoff_logo", "ceremony", "cinematics", "calendar_days",
+                      "places_order"):
                 L.pop(k, None)
             L["others"] = self.others.currentData()
         elif self.exhibition.isChecked():
@@ -1242,7 +1259,7 @@ class LeagueDialog(Dialog):
                 error(self, "League", _("%s is below this league; an exhibition league has none.") % below[0])
                 return
             for k in ("above", "cup", "supercup", "league_cup", "split", "apertura", "europe", "season",
-                      "select_team", "ceremony", "cinematics", "calendar_days"):
+                      "select_team", "ceremony", "cinematics", "calendar_days", "places_order"):
                 L.pop(k, None)
             L["exhibition"] = True
             L.pop("others", None)

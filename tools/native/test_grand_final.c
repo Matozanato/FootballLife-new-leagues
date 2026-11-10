@@ -14,7 +14,9 @@
        there was none; nobody when the two were different clubs and the final is not played, or
        the wins are too old; each league its own champion;
      - futve_copa_reg: the January-December title league's cup is its super cup's (the world file's
-       cup=), 255 when it has none. */
+       cup=), 255 when it has none;
+     - fl26_swiss_contorder: the league of the world file's `contorder <reg> finals` line, none without
+       one, and futve_cont_club answers nothing for another league. */
 #define FL26_RCAL_TEST
 #define FL26_STATE_TEST
 #include "fl26swiss.c"
@@ -94,6 +96,14 @@ int main(void)
   g_cal_scup[0].reg = 301; g_cal_scup[0].league = 12; g_cal_scup[0].cup = 300;
   g_cal_scup[1].reg = 256; g_cal_scup[1].league = 11; g_cal_scup[1].cup = 280; g_ncal_scup = 2;
   expect(futve_copa_reg() == 280, "the title league's super cup names its cup (280), not the other league's");
+
+  printf("fl26_swiss_contorder\n");
+  expect(g_contorder_reg == 0, "no line: no league");
+  uint16_t co[] = { 11 };
+  expect(fl26_swiss_contorder(co, 1) == 1 && g_contorder_reg == 11, "the line's league taken");
+  const char* how = 0;
+  expect(futve_cont_club(12, 1, &how) == 0, "another league: the table (nothing from the finals)");
+  expect(fl26_swiss_contorder(co, 0) == 0 && g_contorder_reg == 0, "no record: none");
 
   printf(fails ? "%d check(s) FAILED\n" : "all checks passed\n", fails);
   return fails ? 1 : 0;
