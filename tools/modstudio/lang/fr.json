@@ -2088,7 +2088,15 @@
   "Trophy ceremony": "Cérémonie du trophée",
   "Cinematics": "Cinématiques",
   "Apertura final": "Finale de l'Apertura",
-  "Clausura final": "Finale du Clausura"
+  "Clausura final": "Finale du Clausura",
+  "(laid by Build)  e.g. final_apertura=157; grand_final=342,345": "(posés par Build)  p. ex. final_apertura=157; grand_final=342,345",
+  "A league playing February to December has no split or league cup yet.": "Une ligue de février à décembre ne peut pas encore avoir de phase scindée ni de coupe de la ligue.",
+  "Apertura and Clausura from February to December: playoffs of two groups of four and a grand final.": "Apertura et Clausura de février à décembre : play-offs à deux groupes de quatre et une grande finale.",
+  "Days by hand": "Jours à la main",
+  "Days by hand are for Apertura and Clausura from February to December.": "Les jours à la main sont pour l'Apertura et le Clausura de février à décembre.",
+  "Days by hand: piece=day,day; ... -- for example final_apertura=157; grand_final=342,345.": "Jours à la main : partie=jour,jour; ... -- par exemple final_apertura=157; grand_final=342,345.",
+  "This division plays February to December with the league above it, and only the top division of such a country can be Apertura/Clausura, and none split.": "Cette division joue de février à décembre avec la ligue au-dessus, et dans un tel pays seule la première division peut être Apertura/Clausura, et aucune scindée.",
+  "a top division of a new country: February to December plays like Brazil, Japan or Saudi Arabia, clubs going up and down at New Year; the divisions below it follow it. Not with a split or a league cup yet; with Apertura and Clausura: playoffs of two groups of four and a grand final, one such league in a world": "la première division d'un nouveau pays : de février à décembre elle joue comme le Brésil, le Japon ou l'Arabie saoudite, montées et descentes au Nouvel An ; les divisions en dessous la suivent. Pas encore de phase scindée ni de coupe de la ligue ; avec Apertura et Clausura : play-offs à deux groupes de quatre et une grande finale, une seule ligue de ce type par monde"
  },
  "log": [
   [

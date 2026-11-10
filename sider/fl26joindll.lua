@@ -330,7 +330,9 @@ function m.init(ctx)
       -- ... but they are closed in July with the rest: left open, the Clausura kept its played
       -- matches and its season into the second season, and that finished season is the one the
       -- Apertura asks for in September (fl26join reg_post).
-      if (L.exhibition or 0) == 0 and groups[L.id] then
+      -- fase 6 (the Liga FUTVE's phase 4): not a January-December league's -- its phases are closed
+      -- at New Year with it (CAL below), so the Apertura's results stay on the calendar all year
+      if (L.exhibition or 0) == 0 and groups[L.id] and not cal_region(L.region) then
         for _, g in ipairs(groups[L.id]) do TD_EXTRA[#TD_EXTRA + 1] = g end
       end
     end
@@ -405,7 +407,13 @@ function m.init(ctx)
     end
     local CAL = {}
     for _, L in ipairs(world or {}) do
-      if cal_region(L.region) and (L.exhibition or 0) == 0 then CAL[#CAL + 1] = L.id end
+      if cal_region(L.region) and (L.exhibition or 0) == 0 then
+        CAL[#CAL + 1] = L.id
+        -- fase 6 (the Liga FUTVE's phase 4): a January-December split's phases go with their
+        -- league -- kept out of the July teardown, closed at New Year, let in again with it on day 41
+        if regular[L.id] then CAL[#CAL + 1] = regular[L.id] end
+        for _, g in ipairs(groups[L.id] or {}) do CAL[#CAL + 1] = g end
+      end
     end
     local SP = {}
     for r, t in pairs(SEASONS) do if r >= 0 and r < 128 and t >= 0 and t <= 3 then SP[#SP + 1] = { r, t } end end

@@ -12,7 +12,9 @@
        every league's before);
      - league_champion_kept: the grand final's winner; the club that won both feeding finals when
        there was none; nobody when the two were different clubs and the final is not played, or
-       the wins are too old; each league its own champion. */
+       the wins are too old; each league its own champion;
+     - futve_copa_reg: the January-December title league's cup is its super cup's (the world file's
+       cup=), 255 when it has none. */
 #define FL26_RCAL_TEST
 #define FL26_STATE_TEST
 #include "fl26swiss.c"
@@ -86,6 +88,12 @@ int main(void)
   expect(league_champion_kept(12, ad) == C, "the other league: the club that won both finals");
   expect(league_champion_kept(12, ad + 400) == 0, "wins of more than 300 days ago: none");
   expect(league_champion_kept(13, ad) == 0, "a league with no final: none");
+
+  printf("futve_copa_reg\n");
+  expect(futve_copa_reg() == 255, "no super cup: 255");
+  g_cal_scup[0].reg = 301; g_cal_scup[0].league = 12; g_cal_scup[0].cup = 300;
+  g_cal_scup[1].reg = 256; g_cal_scup[1].league = 11; g_cal_scup[1].cup = 280; g_ncal_scup = 2;
+  expect(futve_copa_reg() == 280, "the title league's super cup names its cup (280), not the other league's");
 
   printf(fails ? "%d check(s) FAILED\n" : "all checks passed\n", fails);
   return fails ? 1 : 0;

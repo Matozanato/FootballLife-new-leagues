@@ -843,8 +843,18 @@ class LeagueDialog(Dialog):
         self.form.addRow(_("Season"), self.season)
         self.form.addRow("", hint(_("a top division of a new country: February to December plays like Brazil, Japan or "
                                     "Saudi Arabia, clubs going up and down at New Year; the divisions "
-                                    "below it follow it. Not with a split, Apertura/Clausura or a league cup "
-                                    "yet")))
+                                    "below it follow it. Not with a split or a league cup yet; with Apertura and "
+                                    "Clausura: playoffs of two groups of four and a grand final, one such league "
+                                    "in a world")))
+        cd = L.get("calendar_days") or {}
+        self.caldays = QLineEdit("; ".join("%s=%s" % (k, ",".join(map(str, v))) for k, v in cd.items()))
+        self.caldays.setPlaceholderText(_("(laid by Build)  e.g. final_apertura=157; grand_final=342,345"))
+        self.form.addRow(_("Days by hand"), row(self.caldays, helpmark(
+            "February to December with Apertura and Clausura: Build lays every day of the season clear of the "
+            "national teams' windows, the Libertadores and the Club World Cup. Here any piece can be given by "
+            "hand, as days of the year (0 = 1 January): apertura, clausura (one day a round), groups_apertura, "
+            "groups_clausura (6), final_apertura, final_clausura (1), grand_final (1 or 2), cup (7), supercup (1). "
+            "The rest is laid around them.")))
         self.form.addRow("", hint(_("Careful: the game has one team list for Kick Off and Master League, so its "
                                     "clubs still show when you pick your club for a new career. Do not start a "
                                     "career with one: its league never plays.")))
@@ -1037,6 +1047,19 @@ class LeagueDialog(Dialog):
         self.supercup.setEnabled(top and not on and self.cup.isChecked())
         self.season_follows()
 
+    def calendar_days_value(self):
+        """the recipe's "calendar_days" from the field: "piece=day,day; ..." (ValueError otherwise)"""
+        out = {}
+        for part in self.caldays.text().replace("\n", ";").split(";"):
+            if not part.strip():
+                continue
+            k, eq, v = part.partition("=")
+            k = k.strip().lower()
+            if not eq or k not in B.CAL_KEYS:
+                raise ValueError(part)
+            out[k] = [int(x) for x in v.replace(" ", "").split(",") if x]
+        return out
+
     def cine_value(self):
         """the recipe's "cinematics": each final's folder chosen (typed, or the game's: left out)"""
         out = {}
@@ -1130,16 +1153,33 @@ class LeagueDialog(Dialog):
                 and self.follows_calendar(self.above.currentData(), set()):
             # a division under a February-December league plays that season (Discord, aaron 07.10.)
             error(self, "League", _("This division plays February to December with the league above it, and "
-                                    "a league playing February to December has no split or Apertura/Clausura yet."))
+                                    "only the top division of such a country can be Apertura/Clausura, and none split."))
             return
         if self.season.currentData() == "calendar" and self.above.currentData() is None \
                 and not self.exhibition.isChecked():
-            if L.get("split") or L.get("apertura") or L.get("league_cup"):
-                error(self, "League", _("A league playing February to December has no split, Apertura/Clausura or league cup yet."))
+            if L.get("split") or L.get("league_cup"):
+                error(self, "League", _("A league playing February to December has no split or league cup yet."))
+                return
+            ap = L.get("apertura") or {}
+            if ap and (ap.get("playoff_format") != "groups" or not ap.get("grand_final")):
+                error(self, "League", _("Apertura and Clausura from February to December: playoffs of two groups of "
+                                        "four and a grand final."))
                 return
             L["season"] = "calendar"
         else:
             L.pop("season", None)
+        try:
+            cd = self.calendar_days_value()
+        except ValueError:
+            error(self, "League", _("Days by hand: piece=day,day; ... -- for example final_apertura=157; grand_final=342,345."))
+            return
+        if cd and not (L.get("season") == "calendar" and L.get("apertura")):
+            error(self, "League", _("Days by hand are for Apertura and Clausura from February to December."))
+            return
+        if cd:
+            L["calendar_days"] = cd
+        else:
+            L.pop("calendar_days", None)
         if self.formation.value():
             L["formation"] = self.formation.value()
         else:
@@ -1194,15 +1234,15 @@ class LeagueDialog(Dialog):
                 return
             for k in ("above", "cup", "supercup", "league_cup", "split", "apertura", "europe", "season",
                       "exhibition", "legs", "exchange", "logo", "cup_name", "supercup_name", "league_cup_name", "cup_logo",
-                      "supercup_logo", "league_cup_logo", "playoff_logo", "ceremony", "cinematics"):
+                      "supercup_logo", "league_cup_logo", "playoff_logo", "ceremony", "cinematics", "calendar_days"):
                 L.pop(k, None)
             L["others"] = self.others.currentData()
         elif self.exhibition.isChecked():
             if below:
                 error(self, "League", _("%s is below this league; an exhibition league has none.") % below[0])
                 return
-            for k in ("above", "cup", "supercup", "league_cup", "split", "apertura", "europe", "season", "select_team",
-                      "ceremony", "cinematics"):
+            for k in ("above", "cup", "supercup", "league_cup", "split", "apertura", "europe", "season",
+                      "select_team", "ceremony", "cinematics", "calendar_days"):
                 L.pop(k, None)
             L["exhibition"] = True
             L.pop("others", None)
@@ -3003,7 +3043,7 @@ class OurCupsDialog(Dialog):
             if L.get("season") == "calendar":
                 lcup.setChecked(bool(L.get("league_cup")))
                 lcup.setEnabled(bool(L.get("league_cup")))
-                lcup.setToolTip(_("A league playing February to December has no split, Apertura/Clausura or league cup yet."))
+                lcup.setToolTip(_("A league playing February to December has no split or league cup yet."))
             for col, w in enumerate(cells, 1):
                 self.table.setCellWidget(i, col, w)
             self.table.setRowHeight(i, 52)

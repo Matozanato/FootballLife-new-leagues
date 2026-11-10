@@ -2088,7 +2088,15 @@
   "Trophy ceremony": "Ceremonija trofeja",
   "Cinematics": "Kinematike",
   "Apertura final": "Finale Apertura",
-  "Clausura final": "Finale Clausura"
+  "Clausura final": "Finale Clausura",
+  "(laid by Build)  e.g. final_apertura=157; grand_final=342,345": "(postavlja Build)  npr. final_apertura=157; grand_final=342,345",
+  "A league playing February to December has no split or league cup yet.": "Liga od veljače do prosinca još ne može imati podjelu ni ligaški kup.",
+  "Apertura and Clausura from February to December: playoffs of two groups of four and a grand final.": "Apertura i Clausura od veljače do prosinca: doigravanje s dvije skupine po četiri i veliko finale.",
+  "Days by hand": "Dani ručno",
+  "Days by hand are for Apertura and Clausura from February to December.": "Ručni dani su za Aperturu i Clausuru od veljače do prosinca.",
+  "Days by hand: piece=day,day; ... -- for example final_apertura=157; grand_final=342,345.": "Ručni dani: dio=dan,dan; ... -- na primjer final_apertura=157; grand_final=342,345.",
+  "This division plays February to December with the league above it, and only the top division of such a country can be Apertura/Clausura, and none split.": "Ova divizija igra od veljače do prosinca s ligom iznad nje, a u takvoj zemlji samo prva liga može biti Apertura/Clausura, i nijedna podijeljena.",
+  "a top division of a new country: February to December plays like Brazil, Japan or Saudi Arabia, clubs going up and down at New Year; the divisions below it follow it. Not with a split or a league cup yet; with Apertura and Clausura: playoffs of two groups of four and a grand final, one such league in a world": "prva liga nove zemlje: od veljače do prosinca igra kao Brazil, Japan ili Saudijska Arabija, s promocijom i ispadanjem za Novu godinu; niže lige je slijede. Još bez podjele i ligaškog kupa; s Aperturom i Clausurom: doigravanje s dvije skupine po četiri i veliko finale, jedna takva liga po svijetu"
  },
  "log": [
   [
