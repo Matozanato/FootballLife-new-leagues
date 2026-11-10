@@ -83,6 +83,7 @@ released; until then this page only collects what is done and tested.
   "Final", and `kolike=<shipped cup>` is the shipped cup whose calendar dates it (the Belgium Super
   Cup's, one match). The group stage is filled the day after a split phase ends and
   started and registered the way a qualifying round is (`fl26_swiss_ccup_gdays`, `_adv`, `_kolike`).
-  `tools/futve_world.py` builds the cup in a world's tables, `tools/futve_fixture.py` makes the
-  Táchira-99 test fixture and `tools/futve_test.py` is the in-game sandbox of the tests; the
+  `tools/futve_fixture.py` makes the Táchira-99 test fixture and `tools/futve_test.py` is the
+  in-game sandbox of the tests, on a world a Build made (the hand-made worlds of the branch's
+  phases 1-5 and their `futve_*` tools are retired: the recipe keys make them now); the
   design is in [futve-playoff.md](../developers/fork/futve-playoff.md).
