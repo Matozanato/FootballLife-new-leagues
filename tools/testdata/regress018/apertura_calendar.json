@@ -1,0 +1,7 @@
+{ "world": "_FL26AperturaCalendar",
+  "leagues": [
+    { "name": "Calendar League", "country": "Venezuela", "clubs": 14, "legs": 2, "season": "calendar",
+      "apertura": { "playoff": 8, "playoff_format": "groups", "grand_final": true },
+      "calendar_days": { "final_apertura": [157] },
+      "cup": true, "supercup": true, "ceremony": true }
+  ] }
