@@ -31,6 +31,11 @@ released; until then this page only collects what is done and tested.
   January. Build lays every day clear of the national teams' windows, the Libertadores and the Club
   World Cup; Edit league > Days by hand sets any of them. For now with a grand final, one such league
   in a world, 16 clubs at most. Recipe keys: `season: "calendar"` with `apertura`, `calendar_days`.
+- **Continental places in the order of the finals.** For a February-December Apertura/Clausura
+  league with the modern CONMEBOL, Edit league > continental places in the order of the finals: the
+  champion, the best of the table, the runner-up and the next to the Libertadores, the two finals'
+  losers and the next two to the Sudamericana, as the real Liga FUTVE. Off, the table's order (a
+  fase 5 world gets its order back with this option). Recipe key: `places_order`.
 - **The trophy ceremony for a new league's finals.** Edit league > Trophy ceremony: the league's
   national cup and super cup, its playoffs' finals and its grand final end with the trophy and the
   celebration, like a big final of the game (a two-legged final after its second leg). Recipe key:
