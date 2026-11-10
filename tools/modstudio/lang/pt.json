@@ -2089,7 +2089,15 @@
   "Trophy ceremony": "Cerimônia do troféu",
   "Cinematics": "Cinemáticas",
   "Apertura final": "Final do Apertura",
-  "Clausura final": "Final do Clausura"
+  "Clausura final": "Final do Clausura",
+  "(laid by Build)  e.g. final_apertura=157; grand_final=342,345": "(definidos pelo Build)  p. ex. final_apertura=157; grand_final=342,345",
+  "A league playing February to December has no split or league cup yet.": "Um campeonato de fevereiro a dezembro ainda não pode ter fase dividida nem copa da liga.",
+  "Apertura and Clausura from February to December: playoffs of two groups of four and a grand final.": "Apertura e Clausura de fevereiro a dezembro: playoffs de dois grupos de quatro e uma grande final.",
+  "Days by hand": "Dias à mão",
+  "Days by hand are for Apertura and Clausura from February to December.": "Os dias à mão são para Apertura e Clausura de fevereiro a dezembro.",
+  "Days by hand: piece=day,day; ... -- for example final_apertura=157; grand_final=342,345.": "Dias à mão: parte=dia,dia; ... -- por exemplo final_apertura=157; grand_final=342,345.",
+  "This division plays February to December with the league above it, and only the top division of such a country can be Apertura/Clausura, and none split.": "Esta divisão joga de fevereiro a dezembro com a liga acima, e num país assim só a primeira divisão pode ser Apertura/Clausura, e nenhuma dividida.",
+  "a top division of a new country: February to December plays like Brazil, Japan or Saudi Arabia, clubs going up and down at New Year; the divisions below it follow it. Not with a split or a league cup yet; with Apertura and Clausura: playoffs of two groups of four and a grand final, one such league in a world": "a primeira divisão de um país novo: de fevereiro a dezembro joga como o Brasil, o Japão ou a Arábia Saudita, com acessos e rebaixamentos no Ano Novo; as divisões abaixo a seguem. Ainda sem fase dividida nem copa da liga; com Apertura e Clausura: playoffs de dois grupos de quatro e uma grande final, um só campeonato assim por mundo"
  },
  "log": [
   [

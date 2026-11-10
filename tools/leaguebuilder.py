@@ -71,9 +71,20 @@ which league sits above -- and nothing about ids:
               relegation at New Year; the default, "august", plays August to May. It is the
               region's (the country's) season type, so every division below it follows it: the
               world file's `season <region> 1` line (fl26join.dll gives the region its type,
-              fl26joindll/fl26swiss treat its leagues as calendar-year ones). Not with a split,
-              Apertura/Clausura, a national cup, super cup or league cup anywhere in the
-              country: their dates are European ones
+              fl26joindll/fl26swiss treat its leagues as calendar-year ones). Not with a split or
+              a league cup anywhere in the country: their dates are European ones. With
+              "apertura" (playoffs of groups and a grand final; one such league in a world, as
+              fl26swiss.dll runs the Liga FUTVE's) the top division plays the Apertura from February
+              to May and the Clausura from late July to October, each with its play-off and final,
+              the grand final in December, the cup's rounds on Wednesdays through the year and the
+              super cup at the end of January (cal_layout: clear of the national teams' windows,
+              the Libertadores and the Club World Cup, CAL_GAP days from them and CAL_SPACE from
+              each other)
+  calendar_days  optional, with "season": "calendar" and "apertura": the days of any of its
+              pieces by hand, {"apertura": [day, ...], "clausura", "groups_apertura" (6),
+              "final_apertura" (1), "groups_clausura", "final_clausura", "grand_final" (1 or 2),
+              "cup" (7), "supercup" (1)} -- days of the year, 0 = 1 January, in order; the rest is
+              laid around them
   club_names  optional; missing names become "<league> 01", "<league> 02", ...
   game_clubs  optional, clubs the game already has in places of the league:
               [{"at": place (from 0), "id": team id, "swap": ...}, ...]. The club keeps its
@@ -391,6 +402,26 @@ CALENDAR_CUP_DATE_LIKE = "ENGLAND_D1_CUP"
 CALENDAR_CUP_DATE_DAYS = (65, 107, 149, 191, 233, 275, 317)
 CALENDAR_SUPER_DATE_LIKE = "JAPAN_SUPER_CUP"
 CALENDAR_SUPER_DATE_DAYS = (30,)
+# A January-December Apertura/Clausura league ("season": "calendar" with "apertura"; fase 6, the
+# Liga FUTVE's calendar of phase 4): the days the game's own calendar keeps busy, as fl26swiss's clash
+# report read them in FL26 (31.10.): the national teams' windows, the summer tournaments' block, the
+# Libertadores and the Club World Cup. Every day of the league's is CAL_GAP from them and CAL_SPACE
+# from each other (cal_layout); "calendar_days" gives any of them by hand instead.
+CAL_WINDOWS = (88, 91, 94, 153, 156, 159) + tuple(range(182, 204)) + (244, 247, 279, 282, 314, 317)
+CAL_LIBERTADORES = (34, 41, 62, 76, 83, 104, 118, 139, 163, 223, 258, 265, 296, 303, 324, 331)
+CAL_CLUB_WORLD_CUP = tuple(range(348, 353))
+# the modern CONMEBOL rounds a club of the league can play (conmebol: modern): Libertadores phases 1
+# and 2, the Sudamericana's first stage, the Recopa and the Sudamericana's play-off
+CAL_MODERN_CONMEBOL = (6, 13, 18, 25, 40, 49, 55, 144, 161)
+CAL_GAP, CAL_SPACE = 2, 3
+CAL_SAT, CAL_WED = 2, 6                   # day % 7 of a Saturday and a Wednesday (2026: 1 January a Thursday)
+# where each piece may go: the Apertura from the day the season lets our leagues in (41: fl26join
+# registers a January-December league of ours then) to May, its play-off after it; the Clausura after
+# the summer tournaments, its play-off and the grand final before the Club World Cup; the cup's rounds
+# on Wednesdays through the year; the super cup at the end of January
+CAL_SPANS = {"apertura": (44, 131), "clausura": (205, 292), "end": 346, "cup": (60, 300), "supercup": (30,)}
+CAL_KEYS = ("apertura", "clausura", "groups_apertura", "final_apertura", "groups_clausura", "final_clausura",
+            "grand_final", "cup", "supercup")
 LIBQ_ROOM = 6                             # Libertadores qualifying: 8 places, fl26swiss keeps 2 of the game's
 # Modern CONMEBOL Libertadores qualifying.
 # F1: 6 clubs -> 3 winners
@@ -1163,6 +1194,8 @@ def recipe_from_plan(pl, base):
                 r["league_cup_logo"] = lc["logo"]
         if L.get("calendar"):
             r["season"] = "calendar"
+        if L.get("calendar_days"):
+            r["calendar_days"] = {k: list(v) for k, v in L["calendar_days"].items()}
         if L.get("ceremony"):
             r["ceremony"] = True
         if L.get("cinematics"):
@@ -2543,6 +2576,40 @@ def plan(recipe, base, prev=None):
             _problem(errs, names, str(e))
             failed.add(name.lower())
             continue
+        if p.get("calendar") and p.get("apertura"):
+            # fase 6: a January-December Apertura/Clausura league (the Liga FUTVE's phase 4) -- its
+            # playoffs of groups and finals, its days laid by cal_layout or given by hand
+            # fl26swiss.dll runs the January-December season of one such league, the Liga FUTVE's of
+            # phase 4: its title league -- the one a grand final decides (futve_cal) -- so playoffs of
+            # groups, a grand final, and one league of the kind in a world
+            if (p["apertura"].get("format") != "groups") or not p["apertura"].get("grand_final"):
+                _problem(errs, names, "%s: an Apertura/Clausura league playing January to December has playoffs of "
+                                      "two groups of four (playoff_format \"groups\") and a grand_final for now" % name)
+                failed.add(name.lower())
+                continue
+            other = next((q["name"] for q in out if q.get("cal_days")), None)
+            if other:
+                _problem(errs, names, "%s and %s: one Apertura/Clausura league playing January to December in a world "
+                                      "for now" % (other, name))
+                failed.add(name.lower())
+                continue
+            try:
+                oc = p.get("own_cup") or {}
+                p["cal_days"] = cal_layout(name, p["clubs"], len(CALENDAR_CUP_DATE_DAYS) if oc else 0,
+                                           GRAND_FINAL_LEGS.get(p["apertura"].get("grand_final"), 0),
+                                           bool(oc.get("super")), recipe_has_modern_conmebol(recipe),
+                                           L.get("calendar_days"))
+            except BuildError as e:
+                _problem(errs, names, str(e))
+                failed.add(name.lower())
+                continue
+            if L.get("calendar_days"):
+                p["calendar_days"] = {k: list(v) for k, v in L["calendar_days"].items()}
+        elif L.get("calendar_days"):
+            _problem(errs, names, "%s: calendar_days are the days of a January-December Apertura/Clausura league "
+                                  "(season \"calendar\" with apertura)" % name)
+            failed.add(name.lower())
+            continue
         cine = L.get("cinematics") or {}
         if cine:
             keys = dict(CINE_FINALS)
@@ -2588,9 +2655,10 @@ def plan(recipe, base, prev=None):
             continue
         # the whole country plays February to December: its cups and phases have European dates.
         # A division under the game's own Feb-Dec league (Colombia's) too (Discord, aaron 07.10.)
+        # fase 6: Apertura/Clausura in the top division that plays January to December itself
         bad = [w for q in out if q["region"] == p["region"]
                for w, on in (("a split (%s)" % q["name"], q.get("split") and not q.get("apertura")),
-                             ("Apertura/Clausura (%s)" % q["name"], q.get("apertura")),
+                             ("Apertura/Clausura (%s)" % q["name"], q.get("apertura") and not q.get("cal_days")),
                              ("the league cup", q.get("league_cup"))) if on]
         if bad:
             _problem(errs, names, "%s: a country playing February to December cannot have %s yet -- take it off"
@@ -3786,6 +3854,99 @@ def game_cups(recipe, regrow, region_of_cid, base, out):
     return res, supers
 
 
+def cal_layout(name, n, cup_rounds, gf_legs, supercup, modern, manual=None):
+    """the days of a January-December Apertura/Clausura league of n clubs: {key: [day, ...]} for
+    CAL_KEYS (cup and supercup only when it has them, grand_final with gf_legs > 0). A key of `manual`
+    ("calendar_days") is taken as it is -- the right number of days, in order, within the year --
+    and the others are laid around it: Saturdays first, then Wednesdays, CAL_GAP from the game's
+    busy days (CAL_WINDOWS, CAL_LIBERTADORES, CAL_CLUB_WORLD_CUP and, with modern, CAL_MODERN_CONMEBOL)
+    and CAL_SPACE from each other. BuildError when a piece does not fit: fewer clubs, or its days by
+    hand."""
+    manual = manual or {}
+    r = rounds_of(n)
+    want = {"apertura": r, "clausura": r, "groups_apertura": 6, "final_apertura": 1,
+            "groups_clausura": 6, "final_clausura": 1}
+    if gf_legs:
+        want["grand_final"] = gf_legs
+    if cup_rounds:
+        want["cup"] = cup_rounds
+    if supercup:
+        want["supercup"] = 1
+    bad = sorted(set(manual) - set(want))
+    if bad:
+        raise BuildError("%s: no calendar_days %s -- this league has %s" % (name, ", ".join(bad), ", ".join(want)))
+    busy = set(CAL_WINDOWS) | set(CAL_LIBERTADORES) | set(CAL_CLUB_WORLD_CUP) | (set(CAL_MODERN_CONMEBOL) if modern else set())
+    out, own = {}, set()
+    for k, v in manual.items():
+        try:
+            days = [int(d) for d in v]
+        except (TypeError, ValueError):
+            raise BuildError("%s: calendar_days %s are days of the year (0 = 1 January)" % (name, k))
+        if len(days) != want[k] or days != sorted(set(days)) or not all(1 <= d <= 363 for d in days):
+            raise BuildError("%s: calendar_days %s are %d different days of the year in order, 1 to 363, not %s"
+                             % (name, k, want[k], v))
+        out[k] = days
+        own |= set(days)
+
+    def free(d):
+        return (all(abs(d - b) >= CAL_GAP for b in busy) and all(abs(d - o) >= CAL_SPACE for o in own))
+
+    def lay(k, lo, hi, weekdays=(CAL_SAT, CAL_WED)):
+        """want[k] days in [lo, hi]: Saturdays first, then Wednesdays, then any day (a league's
+        rounds); weekdays () -- a play-off, a final -- the first free days in order"""
+        if k in out:
+            return out[k]
+        got = []
+        for wd in list(weekdays) + [None]:
+            for d in range(lo, hi + 1):
+                if len(got) == want[k]:
+                    break
+                if (wd is None or d % 7 == wd) and d not in got and free(d) and all(abs(d - g) >= CAL_SPACE for g in got):
+                    got.append(d)
+            if len(got) == want[k]:
+                break
+        if len(got) < want[k]:
+            raise BuildError("%s: no room for %d %s day(s) between day %d and %d of a January-December season -- "
+                             "fewer clubs, or calendar_days %s by hand" % (name, want[k], k.replace("_", " "), lo, hi, k))
+        got.sort()
+        out[k] = got
+        own.update(got)
+        return got
+
+    if "supercup" in want:
+        lay("supercup", CAL_SPANS["supercup"][0], CAL_SPANS["supercup"][0] + 6, ())
+    ap = lay("apertura", *CAL_SPANS["apertura"])
+    ga = lay("groups_apertura", ap[-1] + CAL_SPACE, CAL_SPANS["clausura"][0] - 10, ())
+    lay("final_apertura", ga[-1] + CAL_SPACE, CAL_SPANS["clausura"][0] - CAL_SPACE, ())
+    cl = lay("clausura", max(CAL_SPANS["clausura"][0], out["final_apertura"][-1] + CAL_SPACE), CAL_SPANS["clausura"][1])
+    gc = lay("groups_clausura", cl[-1] + CAL_SPACE, CAL_SPANS["end"] - 2 * CAL_SPACE, ())
+    fc = lay("final_clausura", gc[-1] + CAL_SPACE, CAL_SPANS["end"] - CAL_SPACE, ())
+    if "grand_final" in want:
+        lay("grand_final", fc[-1] + CAL_SPACE, CAL_SPANS["end"], ())
+    if "cup" in want and "cup" not in out:
+        # the rounds spread over the year, around the league: round i from day lo + i * step, its
+        # first free Wednesday within a week, else its first free day
+        lo, hi = CAL_SPANS["cup"]
+        step, got = (hi - lo) // want["cup"], []
+        for i in range(want["cup"]):
+            a = max(lo + i * step, got[-1] + CAL_SPACE if got else lo)
+            d = (next((x for x in range(a, min(a + 7, CAL_SPANS["end"]) + 1) if x % 7 == CAL_WED and free(x)), None)
+                 or next((x for x in range(a, CAL_SPANS["end"] + 1) if free(x)), None))
+            if d is None:
+                raise BuildError("%s: no room for the cup's round %d after day %d -- calendar_days cup by hand"
+                                 % (name, i + 1, a))
+            got.append(d)
+            own.add(d)
+        out["cup"] = got
+    order = [out[k] for k in ("apertura", "groups_apertura", "final_apertura", "clausura", "groups_clausura",
+                              "final_clausura", "grand_final") if k in out]
+    flat = [d for v in order for d in v]
+    if flat != sorted(flat):
+        raise BuildError("%s: the calendar's pieces are out of order (Apertura, its play-off and final, then the "
+                         "Clausura's and the grand final) -- check calendar_days" % name)
+    return out
+
+
 def rounds_of(clubs):
     """a single round robin's rounds"""
     return clubs if clubs % 2 else clubs - 1
@@ -3879,15 +4040,16 @@ def playoff_cups(p):
     k = p["apertura"]["playoff"]
     if not k:
         return []
-    ap, cl = split_days(rounds_of(p["clubs"]), rounds_of(p["clubs"]))
+    cal = p.get("cal_days")                  # a January-December league: its days laid already (cal_layout)
+    ap, cl = (cal["apertura"], cal["clausura"]) if cal else split_days(rounds_of(p["clubs"]), rounds_of(p["clubs"]))
     busy = ap + cl + (CCUP_DAYS if p.get("europe") else []) + (LEAGUE_KO_DAYS if p.get("league_cup") else [])
     groups = p["apertura"].get("format") == "groups"
     names, logos = p["apertura"].get("names") or {}, p["apertura"].get("logos") or {}
     out = []
     for part, (days_of, tag) in enumerate(((ap, "Apertura"), (cl, "Clausura"))):
-        days = playoff_days(days_of[-1], busy)
-        busy = busy + days
         key = tag.lower()
+        days = cal["groups_" + key] + cal["final_" + key] if cal else playoff_days(days_of[-1], busy)
+        busy = busy + days
         order = ([pos for i in range(k // 2) for pos in (i + 1, k - i)] if not groups
                  else list(PLAYOFF_GROUP_ORDER))
         cup = {"name": names.get("playoff_" + key) or "%s %s Playoffs" % (p["name"], tag),
@@ -3895,7 +4057,8 @@ def playoff_cups(p):
                "kind": "playoff", "logo": logos.get("playoff_" + key) or p["apertura"].get("logo"),
                "country": p["country"], "region": p["region"], "groups": 0,
                "league": p["rid"], "phase": part, "entry": [(p["rid"], pos) for pos in order],
-               "opts": {"fill": season_day(season_ord(days_of[-1]) + 1), "national": 1, "days": days}}
+               "opts": {"fill": days_of[-1] + 1 if cal else season_day(season_ord(days_of[-1]) + 1),
+                        "national": 1, "days": days}}
         if groups:
             # the same seven days: six group matchdays, then the final, a competition of its own
             # (playoff_finals) that the group winners play once
@@ -3911,7 +4074,7 @@ def playoff_cups(p):
         # day), with their winners (src=, the play-offs' knockouts by code), or gives the title to the
         # club that won both
         n = GRAND_FINAL_LEGS[gf]
-        days = playoff_days(out[1]["opts"]["days"][-1], busy, n)
+        days = cal["grand_final"] if cal else playoff_days(out[1]["opts"]["days"][-1], busy, n)
         out.append({"name": names.get("grand_final") or "%s Grand Final" % p["name"],
                     "code": "FL_%03d_GFI" % p["rid"], "kind": "grand_final", "logo": logos.get("grand_final"),
                     "country": p["country"], "region": p["region"], "groups": 0, "league": p["rid"],
@@ -5399,6 +5562,9 @@ def build(pl, base, game, replace=False, log=print):
         import re
         phases = {int(m.group(1)): [int(x) for x in m.group(2).split(",")] for m in
                   re.finditer(r"^reg (\d+) .*-> split total over \d+ clubs, phases ([\d,]+)", said, re.M)}
+        for p in pl["leagues"]:
+            if p.get("cal_days") and phases.get(p["rid"]):
+                p["phases"] = phases[p["rid"]]             # splitdays_lines: the Apertura's and the Clausura's ids
         for cup in pl.get("home_cups") or []:
             if cup.get("kind") in ("playoff", "grand_final"):
                 ph = phases.get(cup["league"]) or []
@@ -5545,7 +5711,8 @@ def build(pl, base, game, replace=False, log=print):
         log("  European places: %d of the new leagues, %d in all"
             % (sum(1 for e in own_places(pl) if e[2] in fl26world.UEFA_LINE), len(uefa)))
     fl26world.write_world(os.path.join(tmp, MARK), pl["world"], leagues, split_lines, uefa, uecl,
-                          ccups + tmap_lines(pl) + cine_lines(pl, game, log) + dates_lines(pl, db) + gsuper_lines(pl) + season_lines(pl, db) + july_lines(pl, base)
+                          splitdays_lines(pl) + ccups + tmap_lines(pl) + cine_lines(pl, game, log) + dates_lines(pl, db)
+                          + gsuper_lines(pl) + season_lines(pl, db) + july_lines(pl, base)
                           + rcal_lines(pl, base, confed) + cupdays_lines(pl, base, db, log) + first_lines(pl)
                           + order_lines(pl, base, confed)
                           + kickorder_lines(pl, base, confed)
@@ -6628,6 +6795,20 @@ def cine_lines(pl, game=None, log=print):
     return out
 
 
+def splitdays_lines(pl):
+    """the world file's `splitdays <phase> <day>,...` lines of a January-December Apertura/Clausura
+    league (cal_layout): the Apertura's and the Clausura's rounds on their own days (fl26swiss's
+    fl26_swiss_splitdays; without them its phases took the August-May line)"""
+    out = []
+    for p in pl["leagues"]:
+        cal, ph = p.get("cal_days"), p.get("phases") or []
+        if not cal or len(ph) < 2:
+            continue
+        out += ["splitdays %d %s" % (ph[0], ",".join(map(str, cal["apertura"]))),
+                "splitdays %d %s" % (ph[1], ",".join(map(str, cal["clausura"])))]
+    return out
+
+
 def dates_lines(pl, db):
     """World-file `dates` lines for national cups and super cups.
 
@@ -6643,11 +6824,13 @@ def dates_lines(pl, db):
 
         calendar = bool(p.get("calendar") or p.get("follows_calendar"))
 
+        # a January-December Apertura/Clausura league: the days cal_layout laid around its phases
+        cal = p.get("cal_days") or {}
         cups = (
             (c["reg"], c["like"],
-             CALENDAR_CUP_DATE_LIKE, CALENDAR_CUP_DATE_DAYS),
+             CALENDAR_CUP_DATE_LIKE, tuple(cal.get("cup") or CALENDAR_CUP_DATE_DAYS)),
             (c.get("super_reg"), SUPER_CUP_LIKE if c.get("super") else None,
-             CALENDAR_SUPER_DATE_LIKE, CALENDAR_SUPER_DATE_DAYS),
+             CALENDAR_SUPER_DATE_LIKE, tuple(cal.get("supercup") or CALENDAR_SUPER_DATE_DAYS)),
         )
 
         for reg, normal_code, calendar_code, days in cups:

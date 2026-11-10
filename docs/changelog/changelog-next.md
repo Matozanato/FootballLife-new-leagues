@@ -24,6 +24,13 @@ released; until then this page only collects what is done and tested.
 
 ## Also new
 
+- **Apertura and Clausura from February to December.** A new country's top division playing
+  February to December can now be Apertura/Clausura, as the real Liga FUTVE: the Apertura from
+  February to May, the Clausura from late July to October, each with its playoffs of two groups and
+  its final, the grand final in December, the cup through the year and the super cup at the end of
+  January. Build lays every day clear of the national teams' windows, the Libertadores and the Club
+  World Cup; Edit league > Days by hand sets any of them. For now with a grand final, one such league
+  in a world, 16 clubs at most. Recipe keys: `season: "calendar"` with `apertura`, `calendar_days`.
 - **The trophy ceremony for a new league's finals.** Edit league > Trophy ceremony: the league's
   national cup and super cup, its playoffs' finals and its grand final end with the trophy and the
   celebration, like a big final of the game (a two-legged final after its second leg). Recipe key:
