@@ -223,6 +223,13 @@ which league sits above -- and nothing about ids:
               unless game_europe gives them their own, and Build wants the whole field: 26
               Libertadores group places, 13 phase 2, 6 phase 1, 12 Sudamericana group places and
               32 first stage, spread over the South American leagues however you like
+  conmebol_days (the recipe, not a league) with "conmebol": "modern", the days of any of its
+              rounds by hand, {piece: [day, ...]}: "libertadores_1" (phase 1, two legs, days 3-13,
+              default 6 13), "libertadores_2" (phase 2, two legs, 15-33, default 18 25),
+              "sudamericana_first" (the first stage, one match, 37-48, default 40),
+              "sudamericana_playoff" (the play-off after the groups, two legs, 141-199, default 146
+              153). A January-December Apertura/Clausura league is laid clear of these days; one of
+              them within CAL_GAP of a day of such a league (its days by hand) is a note of the Build
   sudamericana_calendar (the recipe, not a league) true: the classic Copa Sudamericana (without
               "conmebol") plays February to December on the Libertadores' days, filled in February
               from the same tables as the Libertadores (other places of them), instead of August
@@ -424,8 +431,9 @@ CAL_WINDOWS = (88, 91, 94, 153, 156, 159) + tuple(range(182, 204)) + (244, 247, 
 CAL_LIBERTADORES = (34, 41, 62, 76, 83, 104, 118, 139, 163, 223, 258, 265, 296, 303, 324, 331)
 CAL_CLUB_WORLD_CUP = tuple(range(348, 353))
 # the modern CONMEBOL rounds a club of the league can play (conmebol: modern): Libertadores phases 1
-# and 2, the Sudamericana's first stage, the Recopa and the Sudamericana's play-off
-CAL_MODERN_CONMEBOL = (6, 13, 18, 25, 40, 49, 55, 144, 161)
+# and 2, the Sudamericana's first stage, the Recopa and the Sudamericana's play-off -- their days of
+# a recipe with no conmebol_days (modern_busy gives a recipe's)
+CAL_MODERN_CONMEBOL = (6, 13, 18, 25, 40, 49, 55, 146, 153)
 CAL_GAP, CAL_SPACE = 2, 3
 CAL_SAT, CAL_WED = 2, 6                   # day % 7 of a Saturday and a Wednesday (2026: 1 January a Thursday)
 # where each piece may go: the Apertura from the day the season lets our leagues in (41: fl26join
@@ -540,6 +548,12 @@ SAM_SUPER_DAYS = (49, 50, 51, 52, 53, 54, 55)  # field of two uses the last: 24 
 # in the round of 16.
 SPO_NAME, SPO_CODE = "Copa Sudamericana", "FL_SUDAPO"
 SPO_FILL, SPO_DAYS = 140, (146, 153)
+# conmebol_days: each round's days by hand -- how many, and the days they go between (after its fill,
+# before the next round's: phase 2's fill, the native phase 3 on 34, the groups' draw, the round of 16)
+CONMEBOL_DAYS = {"libertadores_1": (2, LIBQ_P1["fill"], LIBQ_P2["fill"], tuple(LIBQ_P1["days"])),
+                 "libertadores_2": (2, LIBQ_P2["fill"], 34, tuple(LIBQ_P2["days"])),
+                 "sudamericana_first": (1, SAM_FIRST_FILL, SAM_GROUP_FILL, (SAM_FIRST_DAY,)),
+                 "sudamericana_playoff": (2, SPO_FILL, 200, SPO_DAYS)}
 LIB_GROUPS = 9
 LEAGUE_CUP_SIZES = (16, 8, 4)
 # A league cup's clubs past its 16, 8 or 4 play a pre-round first: the last 2x places of the
@@ -1115,7 +1129,8 @@ RECIPE_SETTINGS = ("game_europe", "uefa_seed", "uefa_rank", "europe_first", "gam
                    "ccup_names", "ccup_logos", "caf_super_cup", "caf_super_cup_logo", "cup_draw",
                    "country_order", "game_seasons", "saudi_august", "newlife_ids", "newlife_game",
                    "league_order", "packs", "conmebol", "conmebol_associations", "samerica_super_cup",
-                   "samerica_super_cup_logo", "samerica_super_cup_first", "sudamericana_calendar")
+                   "samerica_super_cup_logo", "samerica_super_cup_first", "sudamericana_calendar",
+                   "conmebol_days")
 
 
 def is_plan(r):
@@ -2234,6 +2249,10 @@ def plan(recipe, base, prev=None):
     """the plan of `recipe`; `prev` is the plan of the world's last Build, whose ids the
     leagues built then keep (prev_pins)"""
     use_squad(recipe)
+    if recipe.get("conmebol_days"):
+        if not recipe_has_modern_conmebol(recipe):
+            raise BuildError("conmebol_days are the days of the modern CONMEBOL competitions (conmebol: modern)")
+        conmebol_days(recipe)
     pins = prev_pins(prev)
     comp, regs = M.load(base, "Competition.bin"), M.load(base, "CompetitionRegulation.bin")
     import mkflags
@@ -2614,7 +2633,8 @@ def plan(recipe, base, prev=None):
                 oc = p.get("own_cup") or {}
                 p["cal_days"] = cal_layout(name, p["clubs"], len(CALENDAR_CUP_DATE_DAYS) if oc else 0,
                                            GRAND_FINAL_LEGS.get(p["apertura"].get("grand_final"), 0),
-                                           bool(oc.get("super")), recipe_has_modern_conmebol(recipe),
+                                           bool(oc.get("super")),
+                                           modern_busy(recipe) if recipe_has_modern_conmebol(recipe) else (),
                                            L.get("calendar_days"))
             except BuildError as e:
                 _problem(errs, names, str(e))
@@ -2830,7 +2850,8 @@ def plan(recipe, base, prev=None):
                          % (len(cups) + len(home), MAX_CCUP))
     return {"world": recipe["world"], "leagues": out, "others": others, "edits": recipe.get("edits") or {},
             "free_ids": free_ids, "players": recipe.get("players") or {}, "uecl": bool(recipe.get("uecl", True)),
-            "skipped": [t for _pr, t in stale] + fnotes,        # what Build leaves out, with why
+            "skipped": [t for _pr, t in stale] + fnotes        # what Build leaves out, with why
+                       + (modern_clashes(out, recipe) if recipe_has_modern_conmebol(recipe) else []),
             "trophies": dict(recipe.get("trophies") or {}),     # Leagues > More > Trophies (lbtrophies)
             "uecl_logo": recipe.get("uecl_logo") or None,
             "uecl_name": (recipe.get("uecl_name") or "").strip() or None,
@@ -3288,6 +3309,58 @@ def modern_conmebol_places(recipe):
     return out
 
 
+def conmebol_days(recipe):
+    """the modern CONMEBOL rounds' days, {piece: (day, ...)} for CONMEBOL_DAYS: the recipe's
+    "conmebol_days" by hand, the shipped days for the rest. BuildError for a piece it has not got,
+    the wrong number of days, days out of order or out of the piece's room"""
+    hand = recipe.get("conmebol_days") or {}
+    if not isinstance(hand, dict):
+        raise BuildError("conmebol_days: {piece: [day, ...]}, not %r" % (hand,))
+    bad = sorted(set(hand) - set(CONMEBOL_DAYS))
+    if bad:
+        raise BuildError("conmebol_days: no %s -- the pieces are %s" % (", ".join(bad), ", ".join(CONMEBOL_DAYS)))
+    out = {}
+    for k, (n, after, before, ship) in CONMEBOL_DAYS.items():
+        if k not in hand:
+            out[k] = tuple(ship)
+            continue
+        try:
+            days = tuple(int(d) for d in hand[k])
+        except (TypeError, ValueError):
+            raise BuildError("conmebol_days %s: days, not %r" % (k, hand[k]))
+        if len(days) != n or list(days) != sorted(set(days)) or days[0] <= after or days[-1] >= before:
+            raise BuildError("conmebol_days %s: %d day(s) in order between %d and %d (after its fill, before "
+                             "the next round), not %s" % (k, n, after + 1, before - 1, list(days)))
+        out[k] = days
+    return out
+
+
+def plan_conmebol_days(pl):
+    """conmebol_days of a plan's recipe (its settings: RECIPE_SETTINGS)"""
+    return conmebol_days(pl.get("settings") or {})
+
+
+def modern_busy(recipe):
+    """the days a club of a January-December league can play the modern CONMEBOL rounds: every
+    conmebol_days piece's and the Recopa's (its first and last day, SAM_SUPER_DAYS)"""
+    return tuple(sorted({d for v in conmebol_days(recipe).values() for d in v} | {SAM_SUPER_DAYS[0], SAM_SUPER_DAYS[-1]}))
+
+
+def modern_clashes(pl, recipe):
+    """notes: a modern CONMEBOL day under CAL_GAP from a day of a January-December league (days by
+    hand let it come so close; Felix's Apertura final on 157 is a day from the June window too)"""
+    names = {d: k for k, v in conmebol_days(recipe).items() for d in v}
+    out = []
+    for p in pl:
+        for k, days in sorted((p.get("cal_days") or {}).items()):
+            for d in days:
+                near = sorted(m for m in names if abs(m - d) < CAL_GAP)
+                for m in near:
+                    out.append("%s: its %s day %d is %s from the modern CONMEBOL %s day %d" % (
+                        p["name"], k, d, "the same day as" if m == d else "%d day(s)" % abs(m - d), names[m], m))
+    return out
+
+
 def recipe_has_modern_conmebol(recipe):
     """whether the world builds the modern CONMEBOL competitions (PR #146): only when the user
     picks them -- the recipe's "conmebol": "modern" (Mod Studio: South American places > Modern
@@ -3303,12 +3376,13 @@ def recipe_has_modern_conmebol(recipe):
 
 def drop_modern_conmebol(recipe):
     """turn the modern CONMEBOL competitions off in the recipe (in place): its "conmebol", the
-    places only they have and the association ranks (modern_conmebol_places) go; Libertadores,
+    places only they have, the association ranks (modern_conmebol_places) and their days go; Libertadores,
     qualifying and Copa Sudamericana places stay, as the classic competitions'. Returns how
     many places were taken out"""
     gone = len(modern_conmebol_places(recipe))
     recipe.pop("conmebol", None)
     recipe.pop("conmebol_associations", None)
+    recipe.pop("conmebol_days", None)
     for L in recipe.get("leagues") or []:
         if L.get("europe"):
             L["europe"] = [e for e in L["europe"] if _comp_of(e) not in fl26world.CONMEBOL_STAGE_IDS]
@@ -3904,7 +3978,8 @@ def cal_layout(name, n, cup_rounds, gf_legs, supercup, modern, manual=None):
     CAL_KEYS (cup and supercup only when it has them, grand_final with gf_legs > 0). A key of `manual`
     ("calendar_days") is taken as it is -- the right number of days, in order, within the year --
     and the others are laid around it: Saturdays first, then Wednesdays, CAL_GAP from the game's
-    busy days (CAL_WINDOWS, CAL_LIBERTADORES, CAL_CLUB_WORLD_CUP and, with modern, CAL_MODERN_CONMEBOL)
+    busy days (CAL_WINDOWS, CAL_LIBERTADORES, CAL_CLUB_WORLD_CUP and the days of `modern`, the modern
+    CONMEBOL rounds' -- modern_busy; True: CAL_MODERN_CONMEBOL)
     and CAL_SPACE from each other. BuildError when a piece does not fit: fewer clubs, or its days by
     hand."""
     manual = manual or {}
@@ -3920,7 +3995,9 @@ def cal_layout(name, n, cup_rounds, gf_legs, supercup, modern, manual=None):
     bad = sorted(set(manual) - set(want))
     if bad:
         raise BuildError("%s: no calendar_days %s -- this league has %s" % (name, ", ".join(bad), ", ".join(want)))
-    busy = set(CAL_WINDOWS) | set(CAL_LIBERTADORES) | set(CAL_CLUB_WORLD_CUP) | (set(CAL_MODERN_CONMEBOL) if modern else set())
+    if modern is True:
+        modern = CAL_MODERN_CONMEBOL
+    busy = set(CAL_WINDOWS) | set(CAL_LIBERTADORES) | set(CAL_CLUB_WORLD_CUP) | set(modern or ())
     out, own = {}, set()
     for k, v in manual.items():
         try:
@@ -6258,7 +6335,8 @@ def sudamericana_first_line(pl):
     entries = [e for tie in q["ties"] for e in tie]
     entry, alt = lpre_entry_text(entries)
     return ["lpre %d cup=%d fill=%d days=%d,%d entry=%s single=1%s" % (
-        q["reg"], sud["ko"], SAM_FIRST_FILL, SAM_FIRST_DAY, SAM_FIRST_DAY, entry, alt)]
+        q["reg"], sud["ko"], SAM_FIRST_FILL, plan_conmebol_days(pl)["sudamericana_first"][0],
+        plan_conmebol_days(pl)["sudamericana_first"][0], entry, alt)]
 
 
 def sudamericana_playoffs(pl, root, db, log=print):
@@ -6283,6 +6361,7 @@ def sudamericana_playoffs(pl, root, db, log=print):
     except SystemExit as e:
         raise BuildError("Sudamericana play-off: %s" % e)
 
+    spo = plan_conmebol_days(pl)["sudamericana_playoff"]
     entry = []
     for k in range(8):
         entry += [(LIB_GROUPS + 1024 * (8 - k), 3),
@@ -6290,9 +6369,9 @@ def sudamericana_playoffs(pl, root, db, log=print):
 
     log("  %s: competition %d reg %d, 8 two-leg ties on days %d/%d; "
         "Suda runners-up v Libertadores thirds -> round of 16 reg %d"
-        % (SPO_NAME, cid, master, SPO_DAYS[0], SPO_DAYS[1], sud["ko"]))
+        % (SPO_NAME, cid, master, spo[0], spo[1], sud["ko"]))
     return ["lpre %d cup=%d fill=%d days=%d,%d entry=%s poko=1" % (
-        master, sud["ko"], SPO_FILL, SPO_DAYS[0], SPO_DAYS[1],
+        master, sud["ko"], SPO_FILL, spo[0], spo[1],
         ",".join("%d:%d" % e for e in entry))]
 
 
@@ -6463,14 +6542,15 @@ def libertadores_qualifying(pl, root, db, log=print):
     for k in range(8):
         pairs += [full[15 - k], full[k]]
 
+    d1, d2 = plan_conmebol_days(pl)["libertadores_1"], plan_conmebol_days(pl)["libertadores_2"]
     e1, a1 = lpre_entry_text(q["phase1"])
     e2, a2 = lpre_entry_text(pairs)
 
     lines = [
         "lpre %d cup=0 fill=%d days=%d,%d entry=%s po=1%s"
-        % (m1, LIBQ_P1["fill"], LIBQ_P1["days"][0], LIBQ_P1["days"][1], e1, a1),
+        % (m1, LIBQ_P1["fill"], d1[0], d1[1], e1, a1),
         "lpre %d cup=0 fill=%d days=%d,%d entry=%s po=1 feed=8%s"
-        % (m2, LIBQ_P2["fill"], LIBQ_P2["days"][0], LIBQ_P2["days"][1], e2, a2),
+        % (m2, LIBQ_P2["fill"], d2[0], d2[1], e2, a2),
     ]
 
     log(
@@ -6480,11 +6560,11 @@ def libertadores_qualifying(pl, root, db, log=print):
         % (
             cid,
             m1,
-            LIBQ_P1["days"][0],
-            LIBQ_P1["days"][1],
+            d1[0],
+            d1[1],
             m2,
-            LIBQ_P2["days"][0],
-            LIBQ_P2["days"][1],
+            d2[0],
+            d2[1],
         )
     )
 
