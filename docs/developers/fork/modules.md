@@ -235,8 +235,8 @@ with `game.save_root` -- the same rule, checked against each other by `tools/tes
   after a split phase ends, its groups dealt in the order of the entries (1, 4, 5, 8 / 2, 3, 6, 7)
   and dated on its own days; `adv=1` sends only the winner of each group to a one-match final
   (`kolike=`, the Belgium Super Cup's row), the better placed club of the regular phase first.
-  `tools/futve_world.py` builds the world; [futve-playoff.md](futve-playoff.md) has the format,
-  the in-game tests and their sandbox (`tools/futve_test.py`).
+  a Build makes it (`"playoff_format": "groups"`); [futve-playoff.md](futve-playoff.md) has the
+  format, the in-game tests and their sandbox (`tools/futve_test.py`).
 - **The trophy ceremony**: the world file's `tmap` lines give finals of ours a tournament of the base
   game, so they end in the trophy ceremony (`fl26_swiss_tmap`, a hook on the exe's regulation ->
   tournament map, only in a world with such lines); [futve-playoff.md](futve-playoff.md),
