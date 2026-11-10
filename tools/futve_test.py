@@ -1,34 +1,41 @@
-r"""python futve_test.py --phase 1|2 --game "<game folder>"
+r"""python futve_test.py --world <built world folder> --game "<game folder>" [--save <folder>]
+                        [--dll <fl26swiss.dll>] [--careers <folder>] [--no-fixture]
        python futve_test.py --restore <test folder>
        python futve_test.py --self-test
 
-The sandbox of the in-game tests of this branch. One command per test:
+The sandbox of the in-game tests of a world Mod Studio built. One command per test:
 
   1. It checks that the game is closed.
-  2. It backs up everything the test can modify: the files it installs (fl26swiss.dll, fl26swiss.lua,
-     fl26world.txt in both places, the three Competition*.bin, the Táchira-99 Player.bin, the game's
-     own cinematics.lua/cinematicsB.lua that give the finals their UEFA Europa League (261/262) and
-     UEFA Champions League (263) final entrances and the Final atmosphere, the competition logos
-     the plan stages -- the two play-offs and the three finals, 30 files, and for phase 3 the join
-     module `fl26joindll.lua` that adds the finals' ids to the season builder), the game's own logs
-     and caches, ReShade.ini/ReShade.log and sider.ini, and the whole save folder (the 2026 folder
-     under Documents\KONAMI -- the Documents folder Windows gives the game, OneDrive\Documentos on a
-     Spanish system -- where a career and fl26swiss-state.bin are written). It writes
-     manifest.json with every size, mtime and sha256.
-  3. It installs the DLL, the loader, the phase's world and the fixture, and the sandbox's own Master
-     League careers (out/futve/careers/ML*: at FIN every ML* the session made or changed goes back
-     there, with its progress, and leaves the save folder), checks every hash and runs
-     futve_fixture.py --check on the installed Player.bin (the 25 stats of the 30 Táchira players
-     must be 99).
+  2. It backs up everything the test can modify: the files it installs -- the world's
+     fl26world.txt (in livecpk\<world> and in modules), its three Competition*.bin and its
+     competition emblems (common\render\symbol\emblemLc), the Táchira-99 Player.bin, the repo's
+     fl26swiss.dll (or --dll), fl26swiss.lua, fl26joindll.lua and, for a world with `cine` lines,
+     fl26cine.lua -- the game's own logs and caches, ReShade.ini/ReShade.log and sider.ini, and the
+     whole save folder (the 2026 folder under Documents\KONAMI -- the Documents folder Windows gives
+     the game, OneDrive\Documentos on a Spanish system -- where a career and fl26swiss-state.bin
+     are written). It writes manifest.json with every size, mtime and sha256.
+  3. It installs them, and the sandbox's own Master League careers (out/futve/careers-<world>/ML*,
+     or --careers: at FIN every ML* the session made or changed goes back there, with its progress,
+     and leaves the save folder), checks every hash and runs futve_fixture.py --check on the
+     installed Player.bin (the 25 stats of the 30 Táchira players must be 99).
   4. It prints the checklist and WAITS. When you have closed the game and the test is over, type
      FIN and Enter: it copies the evidence (logs, new screenshots, manifest) to evidence/ and puts
-     absolutely everything back -- files, save folder, logs, caches -- and verifies the result against the manifest. ABORTAR restores at
-     once; Ctrl+C restores nothing and prints the --restore command.
+     absolutely everything back -- files, save folder, logs, caches -- and verifies the result
+     against the manifest. ABORTAR restores at once; Ctrl+C restores nothing and prints the
+     --restore command.
 
+  --world <folder>          a world as a Build writes it: the livecpk\<world> folder of a Build (a
+                            Build into a copy of the game, or the world's own folder), with
+                            fl26world.txt and common\etc\pesdb; installed as livecpk\<its name>
+  --no-fixture              the world's own Player.bin (no Táchira 99)
   --restore <test folder>   the same restore, non-interactive, for a crash or a Ctrl+C.
-  --self-test               builds a fake game/save/artifacts tree in out/futve/tmp, runs the whole
+  --self-test               builds a fake game/save/world tree in out/futve/tmp, runs the whole
                             snapshot-install-test-evidence-restore round trip and checks the tree
                             comes back byte for byte (nothing of the real game is touched).
+
+Until fase 6 it installed the hand-made worlds of phases 1-5 (futve_world, futve_finals,
+futve_calendar, futve_conmebol, futve_logo, futve_cinematics, futve_join); a Build makes all of
+that now (docs/developers/fork/futve-playoff.md).
 
 The command is meant to be run by you in your own terminal: it writes to the game folder and to
 the save folder, so it is outside the agent's sandbox.
@@ -49,95 +56,28 @@ import traceback
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
 ART = os.path.join(REPO, "out", "futve")
-CAREERS = os.path.join(ART, "careers")       # the sandbox's Master League saves (ML*)
-PHASE_WORLD = {1: "world-phase1", 2: "world-phase2", 3: "world-finals", 4: "world-calendar", 5: "world-phase5"}
-# 31.10. (Felix): phase 3 is closed and frozen as it was -- its DLL and loader are the copies in
-# out/futve/phase3; phase 4 (the Liga FUTVE from January to December) builds on out/futve/bin and
-# the repo's loader, with a world and careers of its own.
-# 01.11.: phase 4 is closed and frozen too (out/futve/phase4); phase 5 (the modern CONMEBOL
-# competitions, tools/futve_conmebol.py) has its DLL in out/futve/phase5 and a world of its own.
-PHASE_BIN = {3: os.path.join("phase3", "fl26swiss.dll"), 4: os.path.join("phase4", "fl26swiss.dll"),
-             5: os.path.join("phase5", "fl26swiss.dll")}
-PHASE_LUA = {3: os.path.join("phase3", "fl26swiss.lua"), 4: os.path.join("phase4", "fl26swiss.lua"),
-             5: os.path.join("phase5", "fl26swiss.lua")}     # 01.11.: phase 5 closed and frozen too
-PHASE_CAREERS = {4: "careers-phase4", 5: "careers-phase5"}
-# 31.10. (phase 4): game modules a phase installs in place of the shipped ones (backed up and put
-# back by FIN like everything else) -- fl26joindll.lua with the Liga FUTVE's phases closed at New
-# Year with their January-December league instead of in July.
-PHASE_MODULES = {4: [("SiderAddons/modules/fl26joindll.lua", os.path.join("phase4", "fl26joindll.lua"))],
-                 5: [("SiderAddons/modules/fl26joindll.lua", os.path.join("phase4", "fl26joindll.lua"))]}
+CAREERS = os.path.join(ART, "careers")       # the store of a world: careers-<world> beside it
 GAME_PROCS = ("fl_2026.exe", "sider.exe", "fl 2026 start.exe")
-CHECKLISTS = {
-    1: """
-  1. Abre el juego y crea una carrera nueva con el Deportivo Táchira (Liga FUTVE).
-  2. Mira la ficha de un jugador del Táchira: sus 25 stats deben estar a 99.
-  3. Simula hasta el día 2 (fin de la fase regular del Apertura). Avanza al 3.
-  4. En el calendario deben aparecer las 6 jornadas de grupo de la copa en los días
-     3, 5, 7, 9, 11 y 13. Juégalas o simúlalas.
-  5. Información de competiciones -> Liga FUTVE Apertura Playoffs -> las tablas de
-     los dos grupos: A = 1.º, 4.º, 5.º y 8.º de la fase regular; B = 2.º, 3.º, 6.º y 7.º.
-  6. Cierra el juego. Escribe FIN y Enter aquí.
-""",
-    2: """
-  1. Abre el juego y crea una carrera nueva con el Deportivo Táchira (Liga FUTVE).
-  2. Mira la ficha de un jugador del Táchira: sus 25 stats deben estar a 99.
-  3. Simula hasta el día 2 (fin de la fase regular del Apertura); juega o simula las
-     6 jornadas de grupo de los días 3, 5, 7, 9, 11 y 13.
-  4. El día 15 debe jugarse la FINAL: los dos ganadores de grupo, a un partido, con el
-     mejor clasificado de la fase regular como local. La final debe entrar con la
-     presentación de final de la UEFA Europa League y el ambiente de Final.
-  5. Comprueba el campeón en la copa y que el Clausura del día 16 sigue en pie.
-  6. Cierra el juego. Escribe FIN y Enter aquí.
-""",
-    3: """
-  PRUEBA DE TEMPORADA COMPLETA (Liga FUTVE). Carrera NUEVA con el Deportivo Táchira.
-  FAST FORWARD: sólo agosto..~20 dic (día ~354), días 17..~138 y desde el 172.
-  NUNCA en días ~354..16 ni ~138..172 (simular partidos sí vale). Si el sider.log tiene
-  "AVISO -- the calendar jumped over day", esa temporada no vale como prueba.
-  1. Apertura: fase regular hasta el día 0. Los grupos del playoff se arman el día 0;
-     jornadas 3, 5, 7, 9, 11, 13 completas. Tras tu 1.ª victoria: 3 pts y 1 PJ (no 6/2).
-  2. Día 15: Final del Apertura (un partido).
-  3. Palmarés en enero y tras el día 142: SIN "Liga FUTVE".
-  4. Clausura: grupos el día 142, jornadas 145..160, final el 164 (un partido).
-     - Caso A: gana Apertura y Clausura -> "Liga FUTVE 1" desde el 164-165, sin final.
-     - Caso B: pierde el Clausura -> Final del FUTVE IDA (167) Y VUELTA (171);
-       global empatado = prórroga y penales en la vuelta.
-  5. Tras la vuelta (día 172+): Palmarés con "Liga FUTVE 1" sólo si ganaste la final,
-     y NUNCA "Final del FUTVE". Noticias: "la gran final" antes y la victoria después.
-  6. Anota si hay celebración con trofeo (aún no esperada) y qué dicen los comentaristas.
-  7. Cierra el juego. Escribe FIN y Enter aquí.
-""",
-    4: """
-  FASE 4: LIGA FUTVE DE ENERO A DICIEMBRE. Carrera NUEVA con un club de la Liga FUTVE.
-  La carrera empieza en agosto: hasta el febrero siguiente la Liga FUTVE no juega.
-  Días del año (1 ene = 0). Avanza simulando; juega los partidos señalados.
-  1. ~31 ene (día 30): Supercopa (desde la 2.ª temporada; la 1.ª no tiene campeón previo).
-  2. Apertura: jornadas sábado 14 feb (44) .. 9 may (128), 13 en total.
-     Cuadrangulares: 16 may .. 3 jun (135..153). Final dom 7 jun (157), un partido, CON ceremonia.
-  3. Clausura desde cero: sábado 1 ago (212) .. 24 oct (296). Cuadrangulares 28 oct .. 21 nov
-     (300..324). Final sáb 28 nov (331), CON ceremonia.
-  4. Final del FUTVE (si no ganó el mismo club ambas): ida 6 dic (339) SIN ceremonia,
-     vuelta 13 dic (346) CON ceremonia para el ganador del global.
-  5. Copa Venezuela: miércoles 69, 111, 167, 230, 265, 286, 321 (las rondas que tenga).
-  6. Palmarés tras el 13 dic: "Liga FUTVE 1" sólo si fuiste campeón; nunca "Final del FUTVE".
-  7. Al pasar al nuevo año: Libertadores/Sudamericana con los venezolanos de la tabla acumulada.
-  8. Cierra el juego. Escribe FIN y Enter aquí.
-""",
-    5: """
-  FASE 5: CONMEBOL MODERNA. Carrera NUEVA con un club de la Liga FUTVE.
-  Días del año (1 ene = 0). Avanza simulando; para en cada punto, sal y avísame.
-  1. Primer año, ~30 ene (día 30): ya se jugaron la Fase 1 (días 6/13) y la Fase 2 (18/25) de
-     la Libertadores; la Fase 3 es la del juego (34/41). Ningún venezolano en ninguna.
-  2. ~20 feb (día 50): primera etapa de la Sudamericana (día 40, partido único) jugada y los
-     grupos de la Sudamericana sorteados. Ningún venezolano.
-  3. ~10 jun (día 162): play-off de la Sudamericana (días 144/161) jugado.
-  4. Diciembre: finales de la Liga FUTVE como en la fase 4, Palmarés.
-  5. Segundo año, ~20 feb (día 50): venezolanos en Libertadores (campeón y mejor de la tabla
-     acumulada a grupos, subcampeón a Fase 2, siguiente a Fase 1) y en la Sudamericana (perdedores
-     de las finales del Apertura y del Clausura y los 2 siguientes de la tabla). Recopa el día 55.
-  6. Cierra el juego. Escribe FIN y Enter aquí.
-""",
-}
+CHECKLIST = """
+  LIGA FUTVE (receta tools/testdata/regress018/liga_futve.json). Carrera NUEVA con un club de la
+  Liga FUTVE. La carrera empieza en agosto: hasta el febrero siguiente la Liga FUTVE no juega.
+  Días del año (1 ene = 0). Avanza simulando; para en cada punto y apunta lo que veas.
+  1. Primer año: ningún venezolano en la Libertadores (fases 1/2 días 6/13 y 18/25, fase 3 34/41)
+     ni en la primera etapa de la Sudamericana (día 40); sus plazas, a clubes de otras ligas
+     (sider.log: "first season", "goes to").
+  2. ~31 ene (día 30): Supercopa (desde la 2.ª temporada).
+  3. Apertura: sábados 44 .. 128. Cuadrangulares 132 .. 151. Final 157, un partido, CON ceremonia
+     y la entrada de la final de la Libertadores. Palmarés: "Final del Apertura".
+  4. Play-off de la Sudamericana: 144 / 161.
+  5. Clausura: 205 .. 289. Cuadrangulares 293 .. 327. Final 335, CON ceremonia.
+  6. Final del FUTVE (si no ganó el mismo club ambas): ida 342 SIN ceremonia, vuelta 345 CON ella.
+     Palmarés: "Liga FUTVE" sólo para el campeón; nunca "Final del FUTVE".
+  7. Copa Venezuela: 69, 97, 125, 174, 230, 251, 286 (las rondas que tenga).
+  8. Segundo año, ~20 feb (día 50): Libertadores con el campeón y el mejor de la tabla acumulada
+     (grupos), el subcampeón (fase 2) y el siguiente (fase 1); Sudamericana con los perdedores de
+     las finales del Apertura y del Clausura y los dos siguientes. Recopa el día 55.
+  9. Cierra el juego. Escribe FIN y Enter aquí.
+"""
 
 
 def sha(p):
@@ -285,70 +225,45 @@ def find_save(args):
     return pick
 
 
-def phase_world(phase):
-    """31.10. (Felix): any phase number. A phase without a name of its own above takes
-    out/futve/world-phase<N>; the error lists the worlds there are."""
-    w = os.path.join(ART, PHASE_WORLD.get(phase, "world-phase%d" % phase))
-    if not os.path.isfile(os.path.join(w, "fl26world.txt")):
-        have = sorted("%d (%s)" % (n, d) for n, d in PHASE_WORLD.items()
-                      if os.path.isfile(os.path.join(ART, d, "fl26world.txt")))
-        raise SystemExit("fase %d: no hay mundo en %s. Fases con mundo: %s" % (phase, w, ", ".join(have) or "ninguna"))
-    return w
+def world_files(world):
+    """the files of a built world the sandbox installs: (path under the world folder, source)"""
+    out = [("fl26world.txt", os.path.join(world, "fl26world.txt"))]
+    for n in ("Competition.bin", "CompetitionRegulation.bin", "CompetitionEntry.bin"):
+        out.append(("common/etc/pesdb/" + n, os.path.join(world, "common", "etc", "pesdb", n)))
+    emb = os.path.join(world, "common", "render", "symbol", "emblemLc")
+    for n in list_files(emb, ["emb_*.png"]):
+        out.append(("common/render/symbol/emblemLc/" + n, os.path.join(emb, n)))
+    return out
 
 
-def build_installs(phase, game):
-    w = phase_world(phase)
-    dll = os.path.join(ART, PHASE_BIN.get(phase, os.path.join("bin", "fl26swiss.dll")))
-    lua = (os.path.join(ART, PHASE_LUA[phase]) if phase in PHASE_LUA
-           else os.path.join(REPO, "sider", "experimental", "fl26swiss.lua"))
-    fix = os.path.join(ART, "fixtures", "Player.bin")
-    txt = os.path.join(w, "fl26world.txt")
-    bins = os.path.join(w, "common", "etc", "pesdb")
-    world = "SiderAddons/livecpk/_FL26MyWorld/common/etc/pesdb/"
-    out = [
-        ("SiderAddons/modules/fl26swiss.dll", dll),
-        ("SiderAddons/modules/fl26swiss.lua", lua),
-        ("SiderAddons/modules/fl26world.txt", txt),
-        ("SiderAddons/livecpk/_FL26MyWorld/fl26world.txt", txt),
-        (world + "Competition.bin", os.path.join(bins, "Competition.bin")),
-        (world + "CompetitionRegulation.bin", os.path.join(bins, "CompetitionRegulation.bin")),
-        (world + "CompetitionEntry.bin", os.path.join(bins, "CompetitionEntry.bin")),
-        (world + "Player.bin", fix),
-    ]
-    out += [(rel, os.path.join(ART, src)) for rel, src in PHASE_MODULES.get(phase, [])]
-    # The game's own cinematics modules: the final competitions take the UEFA Europa League
-    # final's entrance (261/262) or the UEFA Champions League final's (263), and the Final stadium
-    # scene (cinematicsB.lua). They are the game's files, so the sandbox backs them up and puts them
-    # back at the end like everything else.
-    cin = os.path.join(ART, "cinematics")
-    r = subprocess.run([sys.executable, os.path.join(HERE, "futve_cinematics.py"), "--make",
-                        "--game", game], capture_output=True, text=True, errors="replace")
-    if r.returncode != 0:
-        raise SystemExit("no se pudieron preparar las cinemáticas:\n%s\n%s" % (r.stdout, r.stderr))
-    out += [
-        ("SiderAddons/modules/common/cinematics.lua", os.path.join(cin, "cinematics.lua")),
-        ("SiderAddons/modules/common/cinematicsB.lua", os.path.join(cin, "cinematicsB.lua")),
-    ]
-    # The logos of the competitions in futve_logo.py's plan: the two play-offs (134/135) and the
-    # three finals (142/143/144). The sandbox installs exactly what the plan lists and restores the
-    # game's emblems at the end.
-    logo = os.path.join(ART, "logos", "world", "common", "render", "symbol", "emblemLc")
-    r = subprocess.run([sys.executable, os.path.join(HERE, "futve_logo.py"), "--make"],
-                       capture_output=True, text=True, errors="replace")
-    if r.returncode != 0:
-        raise SystemExit("no se pudieron preparar los logos:\n%s\n%s" % (r.stdout, r.stderr))
-    try:
-        names = json.load(open(os.path.join(ART, "logos", "files.json"), encoding="utf-8"))["files"]
-    except (OSError, ValueError, KeyError) as e:
-        raise SystemExit("no se pudo leer la lista de logos: %s" % e)
-    out += [("SiderAddons/livecpk/_FL26MyWorld/common/render/symbol/emblemLc/" + n,
-             os.path.join(logo, n)) for n in names]
-    # phase 5: the emblems of the new CONMEBOL competitions (futve_conmebol.py's emblems.json)
-    ej = os.path.join(w, "emblems.json")
-    if os.path.isfile(ej):
-        for n in json.load(open(ej, encoding="utf-8"))["files"]:
-            out.append(("SiderAddons/livecpk/_FL26MyWorld/common/render/symbol/emblemLc/" + n,
-                        os.path.join(w, "common", "render", "symbol", "emblemLc", n)))
+def build_installs(world, game, dll=None, fixture=True, art=ART):
+    """what a test of the built world `world` installs: [(path under the game folder, source)]"""
+    world = os.path.abspath(world)
+    txt = os.path.join(world, "fl26world.txt")
+    if not os.path.isfile(txt) or not os.path.isdir(os.path.join(world, "common", "etc", "pesdb")):
+        raise SystemExit("%s no es un mundo de un Build (falta fl26world.txt o common\\etc\\pesdb)" % world)
+    name = os.path.basename(world.rstrip("/\\"))
+    live = "SiderAddons/livecpk/%s/" % name
+    sider = os.path.join(REPO, "sider")
+    out = [("SiderAddons/modules/fl26swiss.dll", dll or os.path.join(sider, "experimental", "fl26swiss.dll")),
+           ("SiderAddons/modules/fl26swiss.lua", os.path.join(sider, "experimental", "fl26swiss.lua")),
+           ("SiderAddons/modules/fl26joindll.lua", os.path.join(sider, "fl26joindll.lua")),
+           ("SiderAddons/modules/fl26world.txt", txt)]
+    out += [(live + rel, src) for rel, src in world_files(world)]
+    if fixture:
+        out.append((live + "common/etc/pesdb/Player.bin", os.path.join(art, "fixtures", "Player.bin")))
+    with open(txt, encoding="utf-8", errors="replace") as f:
+        cine = any(l.startswith("cine ") for l in f)
+    if cine:
+        out.append(("SiderAddons/modules/fl26cine.lua", os.path.join(sider, "experimental", "fl26cine.lua")))
+        ini = os.path.join(game, "SiderAddons", "sider.ini")
+        try:
+            has = "fl26cine" in open(ini, encoding="utf-8", errors="replace").read()
+        except OSError:
+            has = False
+        if not has:
+            print("  AVISO: el mundo tiene cinemáticas (líneas cine) y sider.ini no carga fl26cine.lua: "
+                  "instala los módulos con Mod Studio antes de la prueba")
     for rel, src in out:
         if not os.path.isfile(src):
             raise SystemExit("falta el artefacto de %s: %s" % (rel, src))
@@ -412,8 +327,8 @@ def install(installs, game):
         print("  instalado %s" % rel)
 
 
-def fixture_check(game):
-    world = os.path.join(game, "SiderAddons", "livecpk", "_FL26MyWorld", "common", "etc", "pesdb")
+def fixture_check(game, name="_FL26MyWorld"):
+    world = os.path.join(game, "SiderAddons", "livecpk", name, "common", "etc", "pesdb")
     r = subprocess.run([sys.executable, os.path.join(HERE, "futve_fixture.py"), "--check",
                         os.path.join(world, "Player.bin"), "--assignments",
                         os.path.join(world, "PlayerAssignment.bin")],
@@ -654,7 +569,8 @@ def run_test(a):
     save = find_save(a)
     if not save or not os.path.isdir(save):
         raise SystemExit("no encuentro la carpeta de partidas; pasa --save \"...\\KONAMI\\...\\2026\"")
-    installs = build_installs(a.phase, game)
+    name = os.path.basename(os.path.abspath(a.world).rstrip("/\\"))
+    installs = build_installs(a.world, game, a.dll, not a.no_fixture)
     if game_running(game):
         raise SystemExit("el juego está abierto; ciérralo y vuelve a ejecutar el comando")
     stamp = time.strftime("%Y%m%d-%H%M%S")
@@ -663,10 +579,10 @@ def run_test(a):
     os.makedirs(test_dir, exist_ok=True)
     print("  juego    %s" % game)
     print("  partidas %s" % save)
-    print("  prueba   fase %d, %s" % (a.phase, test_dir))
+    print("  prueba   mundo %s, %s" % (name, test_dir))
     man = snapshot(installs, game, save, backup)
-    careers = os.path.join(ART, PHASE_CAREERS[a.phase]) if a.phase in PHASE_CAREERS else CAREERS
-    man.update(phase=a.phase, test_dir=test_dir, careers=careers)
+    careers = os.path.abspath(a.careers) if a.careers else CAREERS + "-" + name
+    man.update(world=name, test_dir=test_dir, careers=careers)
     with open(os.path.join(test_dir, "manifest.json"), "w", encoding="utf-8") as f:
         json.dump(man, f, indent=2)
     print("  respaldados %d archivo(s) instalables, %d del juego, %d de partidas"
@@ -675,12 +591,14 @@ def run_test(a):
         install(installs, game)
         nc = careers_install(careers, save)
         print("  carreras del sandbox puestas: %d (%s)" % (nc, careers))
-        rc, out = fixture_check(game)
-        label = out.splitlines()[-1] if out else "?"
-        print("  fixture Táchira 99: %s" % label)
-        if rc:
-            raise SystemExit("el fixture no está a 99 en el mundo instalado:\n%s" % out)
-        print(CHECKLISTS.get(a.phase, "\n  FASE %d: juega y comprueba lo que toque; al terminar cierra el juego, escribe FIN y Enter.\n" % a.phase))
+        label = "sin fixture (el Player.bin del mundo)"
+        if not a.no_fixture:
+            rc, out = fixture_check(game, name)
+            label = out.splitlines()[-1] if out else "?"
+            print("  fixture Táchira 99: %s" % label)
+            if rc:
+                raise SystemExit("el fixture no está a 99 en el mundo instalado:\n%s" % out)
+        print(CHECKLIST)
         what = wait_for_fin()
         if what == "abort":
             if not wait_closed(game):
@@ -691,7 +609,7 @@ def run_test(a):
             raise SystemExit("el juego sigue abierto; ciérralo y usa --restore %s" % test_dir)
         started = time.mktime(time.strptime(man["started"], "%Y-%m-%dT%H:%M:%S"))
         ev = evidence(test_dir, game, save, started)
-        report = {"phase": a.phase, "test_dir": test_dir, "evidence": ev, "finished": now(),
+        report = {"world": name, "test_dir": test_dir, "evidence": ev, "finished": now(),
                   "fixture": label, "outside": outside(man, game),
                   "installed": [os.path.relpath(e["src"], REPO).replace(os.sep, "/") for e in man["install"]]}
         with open(os.path.join(ev, "report.json"), "w", encoding="utf-8") as f:
@@ -803,29 +721,25 @@ def self_test(a):
     _w(os.path.join(save, "save", "EDIT00000000"), b"edit data")
     _w(os.path.join(save, "save", "ML00000005"), b"a career of the user")
     _w(os.path.join(game, "Capturas", "old.png"), b"png")
-    # the artifacts of the branch
+    # the artifacts: a dll, the fixture and a world as a Build writes it (with a cine line: the
+    # cinematics module goes in too); the loader and the modules are the repo's
     _w(os.path.join(art, "bin", "fl26swiss.dll"), b"new dll")
-    _w(os.path.join(art, "bin", "fl26swiss.lua"), b"-- new lua")
     _w(os.path.join(art, "fixtures", "Player.bin"), pesdb.wesys_pack(_fake_player(99)))
-    for n in (1, 2):
-        d = os.path.join(art, PHASE_WORLD[n], "common", "etc", "pesdb")
-        for b in ("Competition.bin", "CompetitionRegulation.bin", "CompetitionEntry.bin"):
-            _w(os.path.join(d, b), b"new " + b.encode())
-        _w(os.path.join(art, PHASE_WORLD[n], "fl26world.txt"), b"new world %d\n" % n)
-    installs = [
-        ("SiderAddons/modules/fl26swiss.dll", os.path.join(art, "bin", "fl26swiss.dll")),
-        ("SiderAddons/modules/fl26swiss.lua", os.path.join(art, "bin", "fl26swiss.lua")),
-        ("SiderAddons/modules/fl26world.txt", os.path.join(art, PHASE_WORLD[1], "fl26world.txt")),
-        ("SiderAddons/livecpk/_FL26MyWorld/fl26world.txt", os.path.join(art, PHASE_WORLD[1], "fl26world.txt")),
-        ("SiderAddons/livecpk/_FL26MyWorld/common/etc/pesdb/Competition.bin",
-         os.path.join(art, PHASE_WORLD[1], "common", "etc", "pesdb", "Competition.bin")),
-        ("SiderAddons/livecpk/_FL26MyWorld/common/etc/pesdb/CompetitionRegulation.bin",
-         os.path.join(art, PHASE_WORLD[1], "common", "etc", "pesdb", "CompetitionRegulation.bin")),
-        ("SiderAddons/livecpk/_FL26MyWorld/common/etc/pesdb/CompetitionEntry.bin",
-         os.path.join(art, PHASE_WORLD[1], "common", "etc", "pesdb", "CompetitionEntry.bin")),
-        ("SiderAddons/livecpk/_FL26MyWorld/common/etc/pesdb/Player.bin",
-         os.path.join(art, "fixtures", "Player.bin")),
-    ]
+    built = os.path.join(art, "build", "_FL26MyWorld")
+    for b in ("Competition.bin", "CompetitionRegulation.bin", "CompetitionEntry.bin"):
+        _w(os.path.join(built, "common", "etc", "pesdb", b), b"new " + b.encode())
+    _w(os.path.join(built, "common", "render", "symbol", "emblemLc", "emb_0134_l.png"), b"new logo")
+    _w(os.path.join(built, "fl26world.txt"), b"new world\ncine 261 all LIB\n")
+    installs = build_installs(built, game, os.path.join(art, "bin", "fl26swiss.dll"), art=art)
+    rels = [r for r, _s in installs]
+    assert "SiderAddons/modules/fl26cine.lua" in rels and "SiderAddons/modules/fl26joindll.lua" in rels, rels
+    assert "SiderAddons/livecpk/_FL26MyWorld/common/render/symbol/emblemLc/emb_0134_l.png" in rels, rels
+    assert len(installs) == 11, rels
+    try:
+        build_installs(os.path.join(art, "build"), game, art=art)
+        raise AssertionError("a folder with no world taken")
+    except SystemExit:
+        pass
     before = _tree([game, save], ("Capturas",))
     before_ro = is_ro(os.path.join(mods, "fl26swiss.dll"))
     assert before_ro, "the fake installed DLL is not read-only"
@@ -833,7 +747,7 @@ def self_test(a):
     man = snapshot(installs, game, save, os.path.join(test_dir, "backup"))
     store = os.path.join(art, "careers")
     _w(os.path.join(store, "ML00000001"), b"a sandbox career")
-    man.update(phase=1, test_dir=test_dir, careers=store)
+    man.update(world="_FL26MyWorld", test_dir=test_dir, careers=store)
     os.makedirs(test_dir, exist_ok=True)
     with open(os.path.join(test_dir, "manifest.json"), "w", encoding="utf-8") as f:
         json.dump(man, f, indent=2)
@@ -872,7 +786,7 @@ def self_test(a):
     # a second round with --restore (a crash after the install)
     os.remove(os.path.join(test_dir, "manifest.json"))
     man2 = snapshot(installs, game, save, os.path.join(test_dir, "backup2"))
-    man2.update(phase=2, test_dir=test_dir)
+    man2.update(world="_FL26MyWorld", test_dir=test_dir)
     with open(os.path.join(test_dir, "manifest.json"), "w", encoding="utf-8") as f:
         json.dump(man2, f, indent=2)
     install(installs, game)
@@ -881,7 +795,8 @@ def self_test(a):
     restore(man3, game, save)
     assert not verify(man3, game, save), "the --restore round trip did not restore"
     assert _tree([game, save], ("Capturas",)) == before, "the --restore round trip left a difference"
-    print("self-test: ok (snapshot, install, fixture check, test writes, evidence, restore, --restore)")
+    print("self-test: ok (a built world's installs, snapshot, install, fixture check, test writes, evidence, "
+          "restore, --restore)")
     shutil.rmtree(root, ignore_errors=True)
     return 0
 
@@ -889,8 +804,11 @@ def self_test(a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--phase", type=int)
+    ap.add_argument("--world")
     ap.add_argument("--game")
+    ap.add_argument("--dll")
+    ap.add_argument("--careers")
+    ap.add_argument("--no-fixture", action="store_true")
     ap.add_argument("--save")
     ap.add_argument("--restore", metavar="TEST_DIR")
     ap.add_argument("--self-test", action="store_true")
@@ -899,8 +817,8 @@ def main():
         return self_test(a)
     if a.restore:
         return run_restore(a)
-    if a.phase is None or a.phase < 1:
-        raise SystemExit("pass --phase <N> (or --restore <dir> / --self-test)")
+    if not a.world:
+        raise SystemExit("pass --world <built world folder> (or --restore <dir> / --self-test)")
     return run_test(a)
 
 
