@@ -87,6 +87,12 @@ which league sits above -- and nothing about ids:
               8 the next two of the table -- not the table's (fl26swiss.dll, the world file's
               `contorder <reg> finals`). The January-December Apertura/Clausura league with the
               modern CONMEBOL competitions ("conmebol": "modern") only
+  first_season_abroad  optional, true (the default) or false: false, the league sends nobody abroad
+              in a new career's first season (it has no final table yet, as the real Liga FUTVE's
+              first year): its Libertadores places stay with the pool, its cup entries send nobody
+              and its pre-round slots go to the next clubs of the round's other leagues, the first
+              with no continental place (fl26swiss.dll, the world file's `firstabroad <reg> 0`).
+              The January-December Apertura/Clausura league only
   calendar_days  optional, with "season": "calendar" and "apertura": the days of any of its
               pieces by hand, {"apertura": [day, ...], "clausura", "groups_apertura" (6),
               "final_apertura" (1), "groups_clausura", "final_clausura", "grand_final" (1 or 2),
@@ -1205,6 +1211,8 @@ def recipe_from_plan(pl, base):
             r["calendar_days"] = {k: list(v) for k, v in L["calendar_days"].items()}
         if L.get("places_order"):
             r["places_order"] = L["places_order"]
+        if L.get("first_season_abroad") is False:
+            r["first_season_abroad"] = False
         if L.get("ceremony"):
             r["ceremony"] = True
         if L.get("cinematics"):
@@ -2626,9 +2634,20 @@ def plan(recipe, base, prev=None):
                     failed.add(name.lower())
                     continue
                 p["places_order"] = "finals"
+            if L.get("first_season_abroad") is False:
+                p["first_season_abroad"] = False
         elif L.get("calendar_days"):
             _problem(errs, names, "%s: calendar_days are the days of a January-December Apertura/Clausura league "
                                   "(season \"calendar\" with apertura)" % name)
+            failed.add(name.lower())
+            continue
+        if "first_season_abroad" in L and not isinstance(L["first_season_abroad"], bool):
+            _problem(errs, names, "%s: first_season_abroad is true or false, not %r" % (name, L["first_season_abroad"]))
+            failed.add(name.lower())
+            continue
+        if L.get("first_season_abroad") is False and not p.get("cal_days"):
+            _problem(errs, names, "%s: first_season_abroad false is for the January-December Apertura/Clausura league "
+                                  "(season \"calendar\" with apertura and a grand_final)" % name)
             failed.add(name.lower())
             continue
         if str(L.get("places_order") or "table").strip().lower() != "table" and not p.get("cal_days"):
@@ -5737,7 +5756,7 @@ def build(pl, base, game, replace=False, log=print):
         log("  European places: %d of the new leagues, %d in all"
             % (sum(1 for e in own_places(pl) if e[2] in fl26world.UEFA_LINE), len(uefa)))
     fl26world.write_world(os.path.join(tmp, MARK), pl["world"], leagues, split_lines, uefa, uecl,
-                          splitdays_lines(pl) + contorder_lines(pl) + ccups + tmap_lines(pl) + cine_lines(pl, game, log) + dates_lines(pl, db)
+                          splitdays_lines(pl) + contorder_lines(pl) + firstabroad_lines(pl) + ccups + tmap_lines(pl) + cine_lines(pl, game, log) + dates_lines(pl, db)
                           + gsuper_lines(pl) + season_lines(pl, db) + july_lines(pl, base)
                           + rcal_lines(pl, base, confed) + cupdays_lines(pl, base, db, log) + first_lines(pl)
                           + order_lines(pl, base, confed)
@@ -6819,6 +6838,12 @@ def cine_lines(pl, game=None, log=print):
                     % (p["name"], cine[key], key.replace("_", " ")))
             out.append("cine %d %s %s" % (regs[key], when, cine[key]))
     return out
+
+
+def firstabroad_lines(pl):
+    """`firstabroad <reg> 0` lines of the world file: the league that sends nobody abroad in its first
+    season ("first_season_abroad": false, fl26swiss's first_noabroad and first_sub)"""
+    return ["firstabroad %d 0" % p["rid"] for p in pl["leagues"] if p.get("first_season_abroad") is False]
 
 
 def contorder_lines(pl):
