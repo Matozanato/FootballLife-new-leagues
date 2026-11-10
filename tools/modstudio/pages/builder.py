@@ -2845,9 +2845,18 @@ class SouthAmericaDialog(Dialog):
         self.modern.setChecked(modern_conmebol(project))
         self.modern.toggled.connect(self.show_places)
         self.v.insertWidget(1, self.modern)
+        self.mdays = QLineEdit("; ".join("%s=%s" % (k, ",".join(str(d) for d in v))
+                                         for k, v in (project.recipe.get("conmebol_days") or {}).items()))
+        self.mdays.setPlaceholderText("sudamericana_playoff=144,161")
+        self.v.insertWidget(2, row(QLabel(_("Days by hand")), self.mdays, helpmark(
+            "The modern competitions' days, any of them: libertadores_1 (phase 1, two legs, default 6,13), "
+            "libertadores_2 (phase 2, two legs, default 18,25), sudamericana_first (the first stage, one match, "
+            "default 40), sudamericana_playoff (the play-off after the groups, two legs, default 146,153). A league "
+            "playing February to December with Apertura and Clausura is laid clear of them; Build notes a day of "
+            "one of them that comes a day or less from a day of such a league.")))
         self.view = QPlainTextEdit()
         self.view.setReadOnly(True)
-        self.v.insertWidget(2, self.view, 1)
+        self.v.insertWidget(3, self.view, 1)
         self.scroll.hide()
         self.show_places()
         self.setMinimumSize(900, 500)
@@ -2947,9 +2956,38 @@ class SouthAmericaDialog(Dialog):
                     lines.append("  %s -> %s" % (where, label))
         return lines
 
+    def days_value(self):
+        """the recipe's "conmebol_days" from the field: "piece=day,day; ..." (ValueError otherwise)"""
+        out = {}
+        for part in self.mdays.text().replace("\n", ";").split(";"):
+            if not part.strip():
+                continue
+            k, eq, v = part.partition("=")
+            k = k.strip().lower()
+            if not eq or k not in B.CONMEBOL_DAYS:
+                raise ValueError(part)
+            out[k] = [int(x) for x in v.replace(" ", "").split(",") if x]
+        return out
+
     def ok(self):
         r = self.project.recipe
         on = self.modern.isChecked()
+        try:
+            days = self.days_value()
+            if days:
+                if not on:
+                    raise B.BuildError("modern")
+                B.conmebol_days({"conmebol_days": days})
+        except (ValueError, B.BuildError) as e:
+            error(self, "South American places", _("Days by hand: %s") % (
+                _("they are the days of the modern CONMEBOL competitions") if str(e) == "modern" else str(e)))
+            return
+        if days != (r.get("conmebol_days") or {}):
+            if days:
+                r["conmebol_days"] = days
+            else:
+                r.pop("conmebol_days", None)
+            self.project.touch()
         if on and r.get("conmebol") != B.CONMEBOL_MODERN:
             r["conmebol"] = B.CONMEBOL_MODERN
             self.project.touch()

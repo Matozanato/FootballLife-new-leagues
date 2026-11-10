@@ -31,6 +31,11 @@ released; until then this page only collects what is done and tested.
   January. Build lays every day clear of the national teams' windows, the Libertadores and the Club
   World Cup; Edit league > Days by hand sets any of them. For now with a grand final, one such league
   in a world, 16 clubs at most. Recipe keys: `season: "calendar"` with `apertura`, `calendar_days`.
+- **The modern CONMEBOL rounds' days by hand.** South American places > Days by hand: the
+  Libertadores' phases 1 and 2, the Sudamericana's first stage and its play-off on days of your
+  choice (`sudamericana_playoff=144,161`). A February-December Apertura/Clausura league is laid clear
+  of them, and Build notes a day of such a league you set by hand a day or less from one. Recipe
+  key: `conmebol_days`.
 - **Nobody abroad in a league's first season.** For a February-December Apertura/Clausura league,
   Edit league > nobody abroad in the first season: with no final table yet, the league sends no
   club to the continental cups in a new career's first year, as the real Liga FUTVE; a place of a
