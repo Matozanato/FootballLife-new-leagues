@@ -384,6 +384,22 @@ local function world_contorder(ctx)
   return out
 end
 
+-- `firstabroad <reg> 0` lines of the world file (Mod Studio's "first_season_abroad": false): the
+-- league that sends nobody abroad in its first season; { reg, ... }
+local function world_firstabroad(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  local out = {}
+  if not f then return out end
+  for line in f:lines() do
+    local r = line:match("^%s*firstabroad%s+(%d+)%s+0")
+    if r then out[#out + 1] = tonumber(r) end
+  end
+  f:close()
+  return out
+end
+
 -- `july <reg> <day>` lines of the world file: { {reg, day}, ... }
 local function world_july(ctx)
   local sep = string.char(92)
@@ -588,6 +604,17 @@ function m.init(ctx)
             local cbuf = ffi.new("uint16_t[?]", #co)
             for i, r in ipairs(co) do cbuf[i - 1] = r end
             ffi.cast("fl26_swiss_access_t", pc)(cbuf, #co)
+          end
+        end
+        local fa = world_firstabroad(ctx)
+        if #fa > 0 then
+          local pf = ffi.C.GetProcAddress(h, "fl26_swiss_firstabroad")
+          if pf == nil then
+            log("fl26swiss: this fl26swiss.dll has no fl26_swiss_firstabroad -- the first season goes by squad strength")
+          else
+            local fbuf = ffi.new("uint16_t[?]", #fa)
+            for i, r in ipairs(fa) do fbuf[i - 1] = r end
+            ffi.cast("fl26_swiss_access_t", pf)(fbuf, #fa)
           end
         end
         local tm = world_tmap(ctx)
