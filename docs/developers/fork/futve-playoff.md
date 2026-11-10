@@ -221,6 +221,37 @@ in the game on 01.11.: the Final del Apertura (261) with `LIB`, the Libertadores
 the ceremony. The Liga FUTVE's hand-made patch of `common\cinematics.lua` (`futve_cinematics.py`) is
 not needed for these lines; it stays for the frozen phases.
 
+### January to December: `"season": "calendar"` with `"apertura"`
+
+The Liga FUTVE of phase 4 in Mod Studio: the Apertura from February to May, its play-off and final,
+the Clausura from late July (after the summer tournaments) to October, its play-off and final, the
+grand final before the Club World Cup, the cup's rounds through the year, the super cup at the end of
+January. For now with playoffs of groups and a grand final, and one such league in a world: the DLL
+runs the season of one title league (`futve_cal`), the one a grand final decides.
+
+- **The days** (`cal_layout`): every piece CAL_GAP (2) days from the game's busy days -- the national
+  teams' windows (88 91 94, 153 156 159, 182..203, 244 247, 279 282, 314 317), the Libertadores' (34
+  41, 62 ... 139, 163 ... 331), the Club World Cup's (348..352) and, with `conmebol: modern`, its
+  rounds (6 13 18 25 40 49 55 144 161) -- and CAL_SPACE (3) from each other, the rounds on Saturdays
+  first, the play-offs and finals the first free days after them. 16 clubs at most (17 rounds do not
+  fit February to May). `calendar_days` gives any piece by hand (the Liga FUTVE's final on day 157,
+  a day from the June window, by Felix's choice), the rest laid around it.
+- **The world file**: `season <region> 1`, `splitdays` of the Apertura and the Clausura, the
+  play-offs' `fill=`/`gdays=`/`days=` and the grand final's `days=` from the layout, the cup's and the
+  super cup's `dates ... days=`; the league line's `cup=` puts the cup in the New Year season and
+  names the cup whose winner plays the super cup.
+- **fl26joindll.lua**: a January-December split's phases go with their league -- closed at New
+  Year, let in again with it on day 41 -- and out of the July teardown (the Apertura's results stay on
+  the calendar all year), as phase 4's copy did.
+- **fl26swiss.dll**: the January-December code of phase 4 (the Apertura reopened for its new season,
+  the Clausura on the calendar from February, the finals counted by the calendar year, the cup filled
+  at New Year) for the title league; the cup is its own (`futve_copa_reg`: its super cup's), no
+  longer a fixed 255.
+- Mod Studio's league window: February to December with Apertura and Clausura, and Days by hand
+  (`final_apertura=157; grand_final=342,345`).
+
+`tools/testdata/regress018/apertura_calendar.json`; `tools/test_calsplit.py`.
+
 ## Building the world without Mod Studio
 
 `tools/futve_world.py` builds the two test worlds from a real one, without touching the game:

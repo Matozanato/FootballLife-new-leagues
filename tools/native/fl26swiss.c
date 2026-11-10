@@ -13341,7 +13341,15 @@ static void futve_clausura_early(void)
          (unsigned)sp->group[0], d, n, (unsigned)sp->regular, ccup_matches(sp->group[0]));
   }
 }
-#define FUTVE_COPA 255
+/* Fase 6: the cup is the title league's own, the cup= of its world-file line (its January Super Cup
+   is played by that cup's winner, g_cal_scup) -- 255 in the Liga FUTVE's worlds, whatever id Mod
+   Studio's Build gave it otherwise. 255 when the league has no super cup to say it. */
+static uint16_t futve_copa_reg(void)
+{
+  for (int i = 0; i < g_ncal_scup; i++) if (g_cal_scup[i].league == g_tl_total && g_cal_scup[i].cup) return g_cal_scup[i].cup;
+  return 255;
+}
+#define FUTVE_COPA futve_copa_reg()
 static void futve_copa_fill(void)
 {
   int d = today();
