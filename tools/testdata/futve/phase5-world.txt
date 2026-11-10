@@ -1,0 +1,48 @@
+league 11 cid=130 region=29 country=153 conf=4 slot=28 tier=1 promote=0 demote=0 clubs=14 scup=256 scupcup=255 kickoff=99 cup=255 name=Liga FUTVE
+split 11 regular=191 groups=192 carry=0
+season 29 1
+splitdays 191 44,51,58,65,72,79,86,100,107,111,114,121,128
+splitdays 192 205,212,219,226,233,236,240,254,261,268,271,275,289
+uefa 11 1 3 0
+uefa 11 2 3 0
+uefa 168 1 3 0
+uefa 168 2 3 0
+uefa 29 1 3 0
+uefa 29 2 3 0
+uefa 29 3 3 0
+uefa 29 4 3 0
+uefa 29 5 3 0
+uefa 30 1 3 0
+uefa 30 2 3 0
+uefa 30 3 3 0
+uefa 30 4 3 0
+uefa 30 5 3 0
+uefa 67 1 3 0
+uefa 67 2 3 0
+uefa 32913 1 3 0
+uefa 32913 2 3 0
+uefa 32917 1 3 0
+uefa 32917 2 3 0
+uefa 32918 1 3 0
+uefa 32918 2 3 0
+uefa 32919 1 3 0
+uefa 32919 2 3 0
+uefa 32920 1 3 0
+uefa 32920 2 3 0
+ccup 257 ko=258 groups=8 entry=29:10,29:11,29:12,29:13,29:14,29:15,30:9,30:10,30:11,30:12,30:13,30:14,8:255,8:255,8:255,8:255,1288:0,2312:0,3336:0,4360:0,5384:0,6408:0,7432:0,8456:0,9480:0,10504:0,11528:0,12552:0,13576:0,14600:0,15624:0,16648:0 fill=49 national=0 days= cal=1 name=Copa Sudamericana
+ccup 259 ko=261 groups=2 entry=191:1,191:4,191:5,191:8,191:2,191:3,191:6,191:7 fill=129 national=1 days=157 gdays=132,135,142,146,149,151 adv=1 kolike=128 name=Liga FUTVE Apertura Playoffs
+ccup 260 ko=262 groups=2 entry=192:1,192:4,192:5,192:8,192:2,192:3,192:6,192:7 fill=290 national=1 days=335 gdays=293,300,307,310,320,327 adv=1 kolike=128 name=Liga FUTVE Clausura Playoffs
+ccup 263 ko=263 groups=0 entry=191:1,192:1 fill=0 national=1 days=342,345 kolike=128 src=261,262 cid=175 name=Final del FUTVE
+ccup 265 ko=265 groups=0 entry=10:0,258:0 fill=42 national=1 days=49,50,51,52,53,54,55 cal=1 name=Recopa Sudamericana
+lpre 264 cup=258 fill=36 days=40,40 entry=11:8,11:5,11:7,11:6,29:19,29:16,29:18,29:17,30:18,30:15,30:17,30:16,67:15,67:6,67:14,67:7,67:13,67:8,67:12,67:9,67:11,67:10,168:15,168:6,168:14,168:7,168:13,168:8,168:12,168:9,168:11,168:10 single=1
+lpre 266 cup=258 fill=140 days=144,161 entry=8201:3,1281:2,7177:3,2305:2,6153:3,3329:2,5129:3,4353:2,4105:3,5377:2,3081:3,6401:2,2057:3,7425:2,1033:3,8449:2 poko=1
+lpre 267 cup=0 fill=2 days=6,13 entry=11:4,168:5,29:9,67:5,32917:4,32919:3 po=1
+lpre 268 cup=0 fill=14 days=18,25 entry=3339:0,11:3,2315:0,168:3,1291:0,168:4,32918:3,29:6,32917:3,29:7,67:4,29:8,67:3,30:6,30:8,30:7 po=1 feed=8
+dates 255 like=23 days=69,97,125,174,230,251,286
+dates 256 like=97 days=30
+cine 261 all LIB
+tmap 255 30
+tmap 256 30
+tmap 261 30
+tmap 262 30
+tmap 263 30 noleg0

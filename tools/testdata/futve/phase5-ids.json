@@ -1,0 +1,57 @@
+{
+ "world": "_FL26LigaFUTVE",
+ "cup_ids": {
+  "cup:Liga FUTVE": {
+   "cid": 131,
+   "reg": 255
+  },
+  "super:Liga FUTVE": {
+   "cid": 132,
+   "reg": 256
+  },
+  "ccup:FL_SUDAM": {
+   "cid": 133,
+   "reg": 257,
+   "ko": 258
+  },
+  "ccup:FL_011_APO": {
+   "cid": 134,
+   "reg": 259,
+   "ko": 261
+  },
+  "ccup:FL_011_CPO": {
+   "cid": 135,
+   "reg": 260,
+   "ko": 262
+  },
+  "final:FL_011_AFI": {
+   "cid": 142
+  },
+  "final:FL_011_CFI": {
+   "cid": 129
+  },
+  "ccup:FL_011_GFI": {
+   "cid": 175,
+   "reg": 263,
+   "ko": 263
+  },
+  "conmebol:FL_SUDA1": {
+   "cid": 136,
+   "reg": 264
+  },
+  "ccup:FL_SAMRC": {
+   "cid": 143,
+   "reg": 265,
+   "ko": 265
+  },
+  "conmebol:FL_SUDAPO": {
+   "cid": 144,
+   "reg": 266
+  },
+  "conmebol:FL_LIBQ": {
+   "cid": 145,
+   "reg": 267,
+   "reg2": 268
+  }
+ }
+}
