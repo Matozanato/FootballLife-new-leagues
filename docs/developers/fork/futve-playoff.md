@@ -252,6 +252,32 @@ runs the season of one title league (`futve_cal`), the one a grand final decides
 
 `tools/testdata/regress018/apertura_calendar.json`; `tools/test_calsplit.py`.
 
+### The continental places in the order of the finals
+
+`"places_order": "finals"` (with `season: calendar`, `apertura` and `conmebol: modern`; the default
+`"table"`): the league's eight continental places go as the real Liga FUTVE gives them, not by the
+accumulated table --
+
+| Place | Club |
+|---|---|
+| 1 | the champion (the grand final's winner, or the club that won both finals) |
+| 2 | the best of the table besides the champion and the runner-up |
+| 3 | the runner-up (the grand final's loser; the table's next when there is none) |
+| 4 | the table's next |
+| 5, 6 | the Apertura's and the Clausura's final losers (the table's next when already placed) |
+| 7, 8 | the table's next two |
+
+The league's `europe` positions keep their competitions (1-4 the Libertadores, 5-8 the
+Sudamericana, as the modern CONMEBOL gives them); only the club of each position changes.
+
+- **The world file**: `contorder <reg> finals` (`leaguebuilder.contorder_lines`).
+- **fl26swiss.dll**: `fl26_swiss_contorder` takes the league; `futve_cont_club` (phase 5's order,
+  until now always on for the title league) answers only for it. A world without the line keeps the
+  table's order -- a phase 5 world that wants its order needs the line with the new DLL.
+- Mod Studio's league window: continental places in the order of the finals.
+
+`tools/test_places_order.py`; `tools/native/test_grand_final.c`.
+
 ## Building the world without Mod Studio
 
 `tools/futve_world.py` builds the two test worlds from a real one, without touching the game:

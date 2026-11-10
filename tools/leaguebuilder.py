@@ -80,6 +80,13 @@ which league sits above -- and nothing about ids:
               super cup at the end of January (cal_layout: clear of the national teams' windows,
               the Libertadores and the Club World Cup, CAL_GAP days from them and CAL_SPACE from
               each other)
+  places_order  optional, "table" (the default) or "finals": the league's continental places
+              ("europe") go in the order the real Liga FUTVE gives them -- 1 the champion (the grand
+              final's winner), 2 the best of the table besides it and the runner-up, 3 the runner-up,
+              4 the next of the table, 5 and 6 the Apertura's and the Clausura's final losers, 7 and
+              8 the next two of the table -- not the table's (fl26swiss.dll, the world file's
+              `contorder <reg> finals`). The January-December Apertura/Clausura league with the
+              modern CONMEBOL competitions ("conmebol": "modern") only
   calendar_days  optional, with "season": "calendar" and "apertura": the days of any of its
               pieces by hand, {"apertura": [day, ...], "clausura", "groups_apertura" (6),
               "final_apertura" (1), "groups_clausura", "final_clausura", "grand_final" (1 or 2),
@@ -1196,6 +1203,8 @@ def recipe_from_plan(pl, base):
             r["season"] = "calendar"
         if L.get("calendar_days"):
             r["calendar_days"] = {k: list(v) for k, v in L["calendar_days"].items()}
+        if L.get("places_order"):
+            r["places_order"] = L["places_order"]
         if L.get("ceremony"):
             r["ceremony"] = True
         if L.get("cinematics"):
@@ -2605,9 +2614,26 @@ def plan(recipe, base, prev=None):
                 continue
             if L.get("calendar_days"):
                 p["calendar_days"] = {k: list(v) for k, v in L["calendar_days"].items()}
+            po = str(L.get("places_order") or "table").strip().lower()
+            if po not in ("table", "finals"):
+                _problem(errs, names, "%s: the places_order is table or finals, not %r" % (name, L.get("places_order")))
+                failed.add(name.lower())
+                continue
+            if po == "finals":
+                if not recipe_has_modern_conmebol(recipe):
+                    _problem(errs, names, "%s: continental places in the order of the finals come with the modern "
+                                          "CONMEBOL competitions (conmebol: modern)" % name)
+                    failed.add(name.lower())
+                    continue
+                p["places_order"] = "finals"
         elif L.get("calendar_days"):
             _problem(errs, names, "%s: calendar_days are the days of a January-December Apertura/Clausura league "
                                   "(season \"calendar\" with apertura)" % name)
+            failed.add(name.lower())
+            continue
+        if str(L.get("places_order") or "table").strip().lower() != "table" and not p.get("cal_days"):
+            _problem(errs, names, "%s: places_order finals is for the January-December Apertura/Clausura league "
+                                  "(season \"calendar\" with apertura and a grand_final)" % name)
             failed.add(name.lower())
             continue
         cine = L.get("cinematics") or {}
@@ -5711,7 +5737,7 @@ def build(pl, base, game, replace=False, log=print):
         log("  European places: %d of the new leagues, %d in all"
             % (sum(1 for e in own_places(pl) if e[2] in fl26world.UEFA_LINE), len(uefa)))
     fl26world.write_world(os.path.join(tmp, MARK), pl["world"], leagues, split_lines, uefa, uecl,
-                          splitdays_lines(pl) + ccups + tmap_lines(pl) + cine_lines(pl, game, log) + dates_lines(pl, db)
+                          splitdays_lines(pl) + contorder_lines(pl) + ccups + tmap_lines(pl) + cine_lines(pl, game, log) + dates_lines(pl, db)
                           + gsuper_lines(pl) + season_lines(pl, db) + july_lines(pl, base)
                           + rcal_lines(pl, base, confed) + cupdays_lines(pl, base, db, log) + first_lines(pl)
                           + order_lines(pl, base, confed)
@@ -6793,6 +6819,12 @@ def cine_lines(pl, game=None, log=print):
                     % (p["name"], cine[key], key.replace("_", " ")))
             out.append("cine %d %s %s" % (regs[key], when, cine[key]))
     return out
+
+
+def contorder_lines(pl):
+    """the world file's `contorder <reg> finals` line of the league whose continental places follow
+    its finals ("places_order": "finals", fl26swiss's futve_cont_club)"""
+    return ["contorder %d finals" % p["rid"] for p in pl["leagues"] if p.get("places_order") == "finals"]
 
 
 def splitdays_lines(pl):

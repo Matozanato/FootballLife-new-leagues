@@ -368,6 +368,22 @@ local function world_tmap(ctx)
   return out
 end
 
+-- `contorder <reg> finals` lines of the world file (Mod Studio's "places_order"): the league whose
+-- continental places follow its finals, not its table; { reg, ... }
+local function world_contorder(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  local out = {}
+  if not f then return out end
+  for line in f:lines() do
+    local r = line:match("^%s*contorder%s+(%d+)%s+finals")
+    if r then out[#out + 1] = tonumber(r) end
+  end
+  f:close()
+  return out
+end
+
 -- `july <reg> <day>` lines of the world file: { {reg, day}, ... }
 local function world_july(ctx)
   local sep = string.char(92)
@@ -561,6 +577,17 @@ function m.init(ctx)
             for i, t in ipairs(nc) do nbuf[i - 1] = t end
             ffi.cast("fl26_swiss_access_t", pn)(nbuf, #nc)
             log(string.format("fl26swiss: world file -- %d Apertura/Clausura season(s), no points carried", #nc))
+          end
+        end
+        local co = world_contorder(ctx)
+        if #co > 0 then
+          local pc = ffi.C.GetProcAddress(h, "fl26_swiss_contorder")
+          if pc == nil then
+            log("fl26swiss: this fl26swiss.dll has no fl26_swiss_contorder -- the continental places follow the table")
+          else
+            local cbuf = ffi.new("uint16_t[?]", #co)
+            for i, r in ipairs(co) do cbuf[i - 1] = r end
+            ffi.cast("fl26_swiss_access_t", pc)(cbuf, #co)
           end
         end
         local tm = world_tmap(ctx)
