@@ -1,4 +1,4 @@
-r"""python mkccup.py --base <pesdb dir> --out <livecpk root> --cup "NAME|CODE|cid|reg|ko|groups|entry[|conf[|region[|like]]]" ... [--dry]
+r"""python mkccup.py --base <pesdb dir> --out <livecpk root> --cup "NAME|CODE|cid|reg|ko|groups|entry[|conf[|region[|like[|koclubs[|kolike]]]]]" ... [--dry]
 
 Add continental club cups where the game has none (Africa: the CAF Champions League and the
 Confederation Cup): groups of four played home and away, then a knockout of the group winners and
@@ -24,6 +24,13 @@ runners-up. Each --cup is one competition:
           Cup: one match a round, format 2 -- with its bracket set to the entries, which may then
           be any number the bracket screen draws (LIKE_SIZES): byes where it is not a power of
           two. fl26swiss.dll dates it as that cup (the ccup line's like=, leaguebuilder)
+  koclubs optional, a group cup only: how many clubs the knockout holds (default 2 x groups).
+          A league play-off that sends only one club a group gives 2 here.
+  kolike  optional, a group cup only: the regulation id of a shipped knockout whose row the
+          knockout is copied from instead of the Europa League's (the FA Cup's, cut to koclubs: a
+          normal cup final the game names), whose own calendar fl26swiss.dll then dates it by (the
+          ccup line's kolike=). The copied row's bracket is set to koclubs, as a single-match
+          league cup's is.
 
 Both phases are shapes the engine already plays:
 
@@ -31,8 +38,9 @@ Both phases are shapes the engine already plays:
                 replica per group, home and away), with the club count and the group count cut to
                 this cup's, and only as many replicas as it has groups. Replica ids follow the
                 game's rule (master + (group + 1) * 1024, +0x06 pointing back at the master).
-  knockout      the Europa League knockout (regulation 6), with 2 x groups clubs -- or, for a
-                straight knockout (groups 0), as many clubs as there are entries.
+  knockout      the Europa League knockout (regulation 6), with koclubs clubs -- or, for a
+                straight knockout (groups 0), as many clubs as there are entries; or the row of
+                kolike when given (a group cup's one-match final).
 
 The competition row is a copy of the Libertadores' with the new id and code. Entries are written
 too -- the clubs at those positions in the leagues' own entry lists -- but the field that plays is
@@ -71,18 +79,21 @@ def rows(b, size):
 
 def parse(spec):
     bits = spec.split("|")
-    if len(bits) not in (7, 8, 9, 10):
-        raise SystemExit("--cup wants NAME|CODE|cid|reg|ko|groups|entry[|conf[|region[|like]]], got %r" % spec)
+    if len(bits) not in (7, 8, 9, 10, 11, 12):
+        raise SystemExit("--cup wants NAME|CODE|cid|reg|ko|groups|entry[|conf[|region[|like[|koclubs[|kolike]]]]], got %r" % spec)
     name, code, cid, reg, ko, groups, entry = bits[:7]
     conf = int(bits[7]) if len(bits) >= 8 and bits[7] else None
     region = int(bits[8]) if len(bits) >= 9 and bits[8] else None
-    like = int(bits[9]) if len(bits) == 10 and bits[9] else None
+    like = int(bits[9]) if len(bits) >= 10 and bits[9] else None
+    koclubs = int(bits[10]) if len(bits) >= 11 and bits[10] else None
+    kolike = int(bits[11]) if len(bits) == 12 and bits[11] else None
     ent = []
     for e in entry.split(","):
         r, _, p = e.partition(":")
         ent.append((int(r), int(p)))
     c = {"name": name, "code": code, "cid": int(cid), "reg": int(reg), "ko": int(ko),
-         "groups": int(groups), "entry": ent, "conf": conf, "region": region, "like": like}
+         "groups": int(groups), "entry": ent, "conf": conf, "region": region, "like": like,
+         "koclubs": koclubs, "kolike": kolike}
     if conf is not None and not 2 <= conf <= 7:
         raise SystemExit("%s: confederation %d -- use 2..7" % (name, conf))
     if not 0 <= c["groups"] <= 8:
@@ -96,11 +107,18 @@ def parse(spec):
                                  % (name, len(ent), ", ".join(map(str, sorted(LIKE_SIZES)))))
         elif len(ent) not in (2, 4, 8, 16, 32):
             raise SystemExit("%s: a knockout of %d clubs -- use 2, 4, 8, 16 or 32" % (name, len(ent)))
-    elif like is not None:
-        raise SystemExit("%s: like= is for a straight knockout (groups 0)" % name)
-    elif len(ent) != 4 * c["groups"]:
-        raise SystemExit("%s: %d groups of four want %d entries, not %d"
-                         % (name, c["groups"], 4 * c["groups"], len(ent)))
+        if koclubs is not None or kolike is not None:
+            raise SystemExit("%s: koclubs and kolike are for a group cup (the knockout is its final)" % name)
+    else:
+        if like is not None:
+            raise SystemExit("%s: like= is for a straight knockout (groups 0)" % name)
+        if len(ent) != 4 * c["groups"]:
+            raise SystemExit("%s: %d groups of four want %d entries, not %d"
+                             % (name, c["groups"], 4 * c["groups"], len(ent)))
+        nko = koclubs if koclubs is not None else 2 * c["groups"]
+        if nko not in (2, 4, 8, 16, 32) or nko > 2 * c["groups"]:
+            raise SystemExit("%s: a knockout of %d club(s) for %d groups -- use 2, 4, 8, 16 or 32, "
+                             "no more than %d" % (name, nko, c["groups"], 2 * c["groups"]))
     for k in ("reg", "ko"):
         if not 175 < c[k] < REPLICA_STEP:
             raise SystemExit("%s: %s %d -- use a free id between 176 and 1023" % (name, k, c[k]))
@@ -176,18 +194,32 @@ def main():
             else:
                 g[R_BACK:R_BACK + 2] = cup["reg"].to_bytes(2, "little")
             new.append(g)
+        nko = (cup["koclubs"] if cup["koclubs"] is not None
+               else (2 * cup["groups"] if cup["groups"] else len(cup["entry"])))
         if cup["like"] is not None:              # a shipped domestic cup's row: one match a round
             src = [r for r in R if rid(r) == cup["like"]]
             if len(src) != 1 or src[0][R_TYPE] != KNOCKOUT:
                 raise SystemExit("%s: regulation %d is not a knockout of this world to copy"
                                  % (cup["name"], cup["like"]))
             k = bytearray(src[0])
+        elif cup["kolike"] is not None:          # a shipped knockout's row: a one-match final
+            src = [r for r in R if rid(r) == cup["kolike"]]
+            if len(src) != 1 or src[0][R_TYPE] != KNOCKOUT:
+                raise SystemExit("%s: regulation %d is not a knockout of this world to copy"
+                                 % (cup["name"], cup["kolike"]))
+            own = src[0][M.R_TEAMS] & 0x3f
+            if own != nko:
+                # A domestic cup's row (the FA Cup's, sixteen rounds in) copied with a two-club
+                # bracket is a final the game knows, where a super cup's one-match row is not: the
+                # bracket is the field, as for a single-match league cup (the like= path below).
+                print("  %s: knockout row from regulation %d (%d clubs) cut to %d"
+                      % (cup["name"], cup["kolike"], own, nko))
+            k = bytearray(src[0])
         else:
             k = bytearray(ko_src[0])
         k[M.R_BELOW:M.R_BELOW + 2] = bytes(2)
         k[M.R_ID:M.R_ID + 2] = cup["ko"].to_bytes(2, "little")
         k[M.R_CID] = cup["cid"]
-        nko = 2 * cup["groups"] if cup["groups"] else len(cup["entry"])
         k[M.R_TEAMS] = (k[M.R_TEAMS] & ~0x3f) | nko
         new.append(k)
         for g in new:

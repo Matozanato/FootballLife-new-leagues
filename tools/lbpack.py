@@ -40,6 +40,7 @@ ORDER = [
     "fl26rank", "fl26deeprank", "fl26regions", "fl26reg128", "fl26regnames", "fl26catlist", "fl26squadlist",
     "fl26swiss", "fl26augseason", "fl26lateguards",
     "fl26seasonend",
+    "fl26cine",            # its line goes before common\cinematics.lua, not in the block (leaguebuilder.cine_place)
 ]
 # Modules that ship as one file (0.2.0, Gu: "quite a lot of separate Lua/DLL modules now"): the
 # small one-fix guards, each still its own file in sider/ to read and change, go out bundled in

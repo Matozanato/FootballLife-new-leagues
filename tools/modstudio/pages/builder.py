@@ -651,6 +651,17 @@ def tier_of(project, up, seen=()):
     return None
 
 
+def cine_folders(parent):
+    """the folders of the game's SiderAddons\\content\\cinematics (the cinematics packs), sorted; []
+    without a game folder"""
+    game = getattr(getattr(parent, "app", None), "game", None)
+    try:
+        d = os.path.join(game.sider_dir, "content", "cinematics") if game and game.folder else None
+        return sorted((f for f in os.listdir(d) if os.path.isdir(os.path.join(d, f))), key=str.lower) if d else []
+    except OSError:
+        return []
+
+
 class LeagueDialog(Dialog):
     """one new league: name, country, clubs, format, division, logo"""
     help = ("Everything about one new league:\n"
@@ -731,7 +742,46 @@ class LeagueDialog(Dialog):
             self.po.addItem(t, n)
         ap = L.get("apertura")
         self.po.setCurrentIndex(max(0, self.po.findData(int(ap.get("playoff", 8)) if isinstance(ap, dict) else 8)))
-        self.form.addRow("", row(self.ap, self.po))
+        ap = ap if isinstance(ap, dict) else {}
+        self.ap_keep = ap
+        self.po_fmt = QComboBox()
+        self.po_fmt.addItem(_("a knockout"), "knockout")
+        self.po_fmt.addItem(_("two groups of four"), "groups")
+        self.po_fmt.setCurrentIndex(max(0, self.po_fmt.findData(ap.get("playoff_format") or "knockout")))
+        self.form.addRow("", row(self.ap, self.po, self.po_fmt, helpmark(
+            "The playoffs of 8 clubs: a knockout (two legs a round, a one-match final), or two groups of "
+            "four (1st, 4th, 5th and 8th of the tournament, and 2nd, 3rd, 6th and 7th) playing each other "
+            "home and away, and the two group winners in a one-match final. That final is a competition "
+            "of its own: its winner gets its own title in the Palmares, with the final's name and logo.")))
+        names = ap.get("names") or {}
+        self.po_names = {k: QLineEdit(names.get(k, "")) for k in B.PLAYOFF_NAME_KEYS}
+        for k, t in (("playoff_apertura", _("(the league's name + Apertura Playoffs)")),
+                     ("playoff_clausura", _("(the league's name + Clausura Playoffs)")),
+                     ("final_apertura", _("(the league's name + Apertura Final)")),
+                     ("final_clausura", _("(the league's name + Clausura Final)"))):
+            self.po_names[k].setPlaceholderText(t)
+        logos = ap.get("logos") or {}
+        self.fa_logo = PictureField(logos.get("final_apertura"), 48)
+        self.fc_logo = PictureField(logos.get("final_clausura"), 48)
+        self.form.addRow(_("Playoff names"), row(self.po_names["playoff_apertura"], self.po_names["playoff_clausura"]))
+        self.form.addRow(_("Final names"), row(self.po_names["final_apertura"], self.fa_logo,
+                                               self.po_names["final_clausura"], self.fc_logo))
+        self.form.addRow("", hint(_("the finals of playoffs of two groups of four, with their logos")))
+        self.gf = QComboBox()
+        for k, t in ((None, _("no grand final")), ("two_legs", _("two legs")), ("single", _("one match"))):
+            self.gf.addItem(t, k)
+        g0 = ap.get("grand_final")
+        self.gf.setCurrentIndex(max(0, self.gf.findData("two_legs" if g0 is True else g0 or None)))
+        self.po_names["grand_final"].setPlaceholderText(_("(the league's name + Grand Final)"))
+        self.gf_logo = PictureField(logos.get("grand_final"), 48)
+        self.form.addRow(_("Grand final"), row(self.gf, self.po_names["grand_final"], self.gf_logo, helpmark(
+            "After the Clausura's final, the Apertura's and the Clausura's final winners meet, over two legs "
+            "or one match. Its winner is the league's champion: the title has the league's name, and it is "
+            "the champion that plays the super cup. A club that won both finals is champion with no match.")))
+        self.gf.currentIndexChanged.connect(lambda _i: self.playoff_state())
+        self.po.currentIndexChanged.connect(lambda _i: self.playoff_state())
+        self.po_fmt.currentIndexChanged.connect(lambda _i: self.playoff_state())
+        self.playoff_state()
         self.form.addRow("", hint(_("two tournaments a season, September to early January and January to May, "
                                     "everyone meeting once in each and starting from zero points; the whole "
                                     "season's table decides promotion and relegation. 18 clubs at most")))
@@ -793,8 +843,34 @@ class LeagueDialog(Dialog):
         self.form.addRow(_("Season"), self.season)
         self.form.addRow("", hint(_("a top division of a new country: February to December plays like Brazil, Japan or "
                                     "Saudi Arabia, clubs going up and down at New Year; the divisions "
-                                    "below it follow it. Not with a split, Apertura/Clausura or a league cup "
-                                    "yet")))
+                                    "below it follow it. Not with a split or a league cup yet; with Apertura and "
+                                    "Clausura: playoffs of two groups of four and a grand final, one such league "
+                                    "in a world")))
+        cd = L.get("calendar_days") or {}
+        self.caldays = QLineEdit("; ".join("%s=%s" % (k, ",".join(map(str, v))) for k, v in cd.items()))
+        self.caldays.setPlaceholderText(_("(laid by Build)  e.g. final_apertura=157; grand_final=342,345"))
+        self.porder = QCheckBox(_("continental places in the order of the finals"))
+        self.porder.setChecked(L.get("places_order") == "finals")
+        self.form.addRow("", row(self.porder, helpmark(
+            "February to December with Apertura and Clausura and the modern CONMEBOL competitions: the league's "
+            "continental places go as the real Liga FUTVE gives them -- 1 the champion (the grand final's winner), 2 "
+            "the best of the table besides it and the runner-up, 3 the runner-up, 4 the next of the table, 5 and 6 "
+            "the Apertura's and the Clausura's final losers, 7 and 8 the next two of the table. Off: the table's "
+            "order.")))
+        self.noabroad = QCheckBox(_("nobody abroad in the first season"))
+        self.noabroad.setChecked(L.get("first_season_abroad") is False)
+        self.form.addRow("", row(self.noabroad, helpmark(
+            "February to December with Apertura and Clausura: in a new career's first season the league has no "
+            "final table yet, so it sends no club to the continental cups, as the real Liga FUTVE's first year. Its "
+            "Libertadores places stay with the other leagues' clubs; a place of a qualifying round goes to the next "
+            "club of another league of that round, one with no continental place. From the second season the "
+            "league's places go as usual.")))
+        self.form.addRow(_("Days by hand"), row(self.caldays, helpmark(
+            "February to December with Apertura and Clausura: Build lays every day of the season clear of the "
+            "national teams' windows, the Libertadores and the Club World Cup. Here any piece can be given by "
+            "hand, as days of the year (0 = 1 January): apertura, clausura (one day a round), groups_apertura, "
+            "groups_clausura (6), final_apertura, final_clausura (1), grand_final (1 or 2), cup (7), supercup (1). "
+            "The rest is laid around them.")))
         self.form.addRow("", hint(_("Careful: the game has one team list for Kick Off and Master League, so its "
                                     "clubs still show when you pick your club for a new career. Do not start a "
                                     "career with one: its league never plays.")))
@@ -845,6 +921,36 @@ class LeagueDialog(Dialog):
         self.form.addRow("", hint(_("a single-match knockout of this division and the one below (up to 44 clubs), "
                                     "late August to mid-March (a calendar-year league: September to December); "
                                     "this division's clubs get the byes")))
+        self.cer = QCheckBox(_("the finals end in the trophy ceremony"))
+        self.cer.setChecked(bool(L.get("ceremony")))
+        self.form.addRow(_("Trophy ceremony"), row(self.cer, helpmark(
+            "The league's finals end like a big final of the game, with the trophy and the celebration: the "
+            "national cup's and the super cup's, the playoffs' finals (two groups of four) and the grand "
+            "final, after its second leg. The game knows no final of a new league; this one borrows a final "
+            "of the base game no world uses (the old Copa Sudamericana's). Up to 16 finals in a world.")))
+        cine = L.get("cinematics") or {}
+        folders = cine_folders(parent)
+        self.cine = {}
+        for k in [k for k, _w in B.CINE_FINALS]:
+            c = QComboBox()
+            c.setEditable(True)
+            c.setInsertPolicy(QComboBox.NoInsert)
+            c.addItem(_("(the game's)"), "")
+            for f in folders:
+                c.addItem(f, f)
+            v = cine.get(k) or ""
+            if v and c.findData(v) < 0:
+                c.addItem(v, v)                       # a folder this game has not got: kept
+            c.setCurrentIndex(max(0, c.findData(v)))
+            self.cine[k] = c
+        self.form.addRow(_("Cinematics"), row(QLabel(_("Cup")), self.cine["cup"], QLabel(_("Super cup")),
+                                              self.cine["super_cup"], helpmark(
+            "The scenes of the league's finals -- the entrance, the stadium dressing, the trophy ceremony -- "
+            "from a folder of the game's cinematics packs (SiderAddons\\content\\cinematics: LIB, UEFA Champions "
+            "League F ...). The cup: its final; the super cup, the playoffs' finals and the grand final: every "
+            "match. (the game's): the scenes the game gives it.")))
+        self.form.addRow("", row(QLabel(_("Apertura final")), self.cine["final_apertura"], QLabel(_("Clausura final")),
+                                 self.cine["final_clausura"], QLabel(_("Grand final")), self.cine["grand_final"]))
         self.cup_logo = PictureField(L.get("cup_logo"), 48)
         self.supercup_logo = PictureField(L.get("supercup_logo"), 48)
         self.lcup_logo = PictureField(L.get("league_cup_logo"), 48)
@@ -914,6 +1020,19 @@ class LeagueDialog(Dialog):
         """the game's name of the country picked or typed ("South Korea" -> "Republic of Korea")"""
         return B.country_of(self.country.currentText(), self.project.countries)
 
+    def playoff_state(self):
+        """two groups of four is a playoff of 8 clubs, and only it has finals of its own to name"""
+        eight = self.po.currentData() == B.PLAYOFF_SIZES[0]
+        self.po_fmt.setEnabled(eight and self.po.isEnabled())
+        groups = eight and self.po_fmt.currentData() == "groups" and self.po.isEnabled()
+        for w in (self.po_names["final_apertura"], self.po_names["final_clausura"], self.fa_logo, self.fc_logo,
+                  self.gf):
+            w.setEnabled(groups)
+        for w in (self.po_names["grand_final"], self.gf_logo):
+            w.setEnabled(groups and self.gf.currentData() is not None)
+        for k in ("playoff_apertura", "playoff_clausura"):
+            self.po_names[k].setEnabled(self.po.currentData() != 0 and self.po.isEnabled())
+
     def exhibition_state(self):
         """an exhibition league stands alone: the division, the cups, Europe and a split go grey;
         clubs in no league have none of a league's things at all"""
@@ -923,7 +1042,7 @@ class LeagueDialog(Dialog):
         self.form.setRowVisible(self.others_cupmode, self.others.currentData() == "europe")
         for w in (self.exhibition, self.rr, self.legs, self.slegs, self.groups, self.glegs, self.exchange,
                   self.logo, self.cup_name, self.supercup_name, self.lcup_name, self.cup_logo, self.supercup_logo,
-                  self.lcup_logo, self.po_logo):
+                  self.lcup_logo, self.po_logo, self.cer, *self.cine.values()):
             w.setEnabled(not loose)
         n = self.clubs.value()
         self.clubs.setRange(1 if loose else B.CLUBS_MIN, B.OTHERS_MAX if loose else B.CLUBS_MAX)
@@ -937,11 +1056,55 @@ class LeagueDialog(Dialog):
         self.split.setEnabled(not on)
         self.ap.setEnabled(not on)
         self.po.setEnabled(not on)
+        self.playoff_state()
         self.europe.setEnabled(not on)
         self.cup.setEnabled(top and not on)
         self.lcup.setEnabled(top and not on)
         self.supercup.setEnabled(top and not on and self.cup.isChecked())
         self.season_follows()
+
+    def calendar_days_value(self):
+        """the recipe's "calendar_days" from the field: "piece=day,day; ..." (ValueError otherwise)"""
+        out = {}
+        for part in self.caldays.text().replace("\n", ";").split(";"):
+            if not part.strip():
+                continue
+            k, eq, v = part.partition("=")
+            k = k.strip().lower()
+            if not eq or k not in B.CAL_KEYS:
+                raise ValueError(part)
+            out[k] = [int(x) for x in v.replace(" ", "").split(",") if x]
+        return out
+
+    def cine_value(self):
+        """the recipe's "cinematics": each final's folder chosen (typed, or the game's: left out)"""
+        out = {}
+        for k, c in self.cine.items():
+            i = c.findText(c.currentText())
+            v = (c.itemData(i) if i >= 0 else c.currentText()) or ""
+            if v.strip():
+                out[k] = v.strip()
+        return out
+
+    def apertura_value(self):
+        """the recipe's "apertura": the playoff, its format, names and the finals' logos; the
+        playoffs' own logos of a recipe written by hand (the dialog has one for both) kept"""
+        po = self.po.currentData()
+        out = {"playoff": po}
+        if po == B.PLAYOFF_SIZES[0] and self.po_fmt.currentData() == "groups":
+            out["playoff_format"] = "groups"
+            if self.gf.currentData():
+                out["grand_final"] = self.gf.currentData()
+        names = {k: e.text().strip() for k, e in self.po_names.items() if e.text().strip()}
+        if names:
+            out["names"] = names
+        logos = {k: v for k, v in (self.ap_keep.get("logos") or {}).items() if k.startswith("playoff_")}
+        for k, f in (("final_apertura", self.fa_logo), ("final_clausura", self.fc_logo), ("grand_final", self.gf_logo)):
+            if f.path:
+                logos[k] = f.path
+        if logos:
+            out["logos"] = logos
+        return out
 
     def ok(self):
         L = self.league
@@ -951,7 +1114,7 @@ class LeagueDialog(Dialog):
         L.pop("apertura", None)
         if self.ap.isChecked():
             L.pop("split", None)
-            L["apertura"] = {"playoff": self.po.currentData()}
+            L["apertura"] = self.apertura_value()
             L["legs"] = self.legs.value()
         elif self.split.isChecked():
             try:
@@ -973,6 +1136,15 @@ class LeagueDialog(Dialog):
             L["supercup"] = True
         else:
             L.pop("supercup", None)
+        if self.cer.isChecked():
+            L["ceremony"] = True
+        else:
+            L.pop("ceremony", None)
+        cine = self.cine_value()
+        if cine:
+            L["cinematics"] = cine
+        else:
+            L.pop("cinematics", None)
         if self.cup_name.text().strip():
             L["cup_name"] = self.cup_name.text().strip()
         else:
@@ -997,16 +1169,49 @@ class LeagueDialog(Dialog):
                 and self.follows_calendar(self.above.currentData(), set()):
             # a division under a February-December league plays that season (Discord, aaron 07.10.)
             error(self, "League", _("This division plays February to December with the league above it, and "
-                                    "a league playing February to December has no split or Apertura/Clausura yet."))
+                                    "only the top division of such a country can be Apertura/Clausura, and none split."))
             return
         if self.season.currentData() == "calendar" and self.above.currentData() is None \
                 and not self.exhibition.isChecked():
-            if L.get("split") or L.get("apertura") or L.get("league_cup"):
-                error(self, "League", _("A league playing February to December has no split, Apertura/Clausura or league cup yet."))
+            if L.get("split") or L.get("league_cup"):
+                error(self, "League", _("A league playing February to December has no split or league cup yet."))
+                return
+            ap = L.get("apertura") or {}
+            if ap and (ap.get("playoff_format") != "groups" or not ap.get("grand_final")):
+                error(self, "League", _("Apertura and Clausura from February to December: playoffs of two groups of "
+                                        "four and a grand final."))
                 return
             L["season"] = "calendar"
         else:
             L.pop("season", None)
+        try:
+            cd = self.calendar_days_value()
+        except ValueError:
+            error(self, "League", _("Days by hand: piece=day,day; ... -- for example final_apertura=157; grand_final=342,345."))
+            return
+        if cd and not (L.get("season") == "calendar" and L.get("apertura")):
+            error(self, "League", _("Days by hand are for Apertura and Clausura from February to December."))
+            return
+        if cd:
+            L["calendar_days"] = cd
+        else:
+            L.pop("calendar_days", None)
+        if self.porder.isChecked():
+            if not (L.get("season") == "calendar" and L.get("apertura")):
+                error(self, "League", _("Continental places in the order of the finals are for Apertura and Clausura "
+                                        "from February to December."))
+                return
+            L["places_order"] = "finals"
+        else:
+            L.pop("places_order", None)
+        if self.noabroad.isChecked():
+            if not (L.get("season") == "calendar" and L.get("apertura")):
+                error(self, "League", _("Nobody abroad in the first season is for Apertura and Clausura from "
+                                        "February to December."))
+                return
+            L["first_season_abroad"] = False
+        else:
+            L.pop("first_season_abroad", None)
         if self.formation.value():
             L["formation"] = self.formation.value()
         else:
@@ -1061,14 +1266,17 @@ class LeagueDialog(Dialog):
                 return
             for k in ("above", "cup", "supercup", "league_cup", "split", "apertura", "europe", "season",
                       "exhibition", "legs", "exchange", "logo", "cup_name", "supercup_name", "league_cup_name", "cup_logo",
-                      "supercup_logo", "league_cup_logo", "playoff_logo"):
+                      "supercup_logo", "league_cup_logo", "playoff_logo", "ceremony", "cinematics", "calendar_days",
+                      "places_order", "first_season_abroad"):
                 L.pop(k, None)
             L["others"] = self.others.currentData()
         elif self.exhibition.isChecked():
             if below:
                 error(self, "League", _("%s is below this league; an exhibition league has none.") % below[0])
                 return
-            for k in ("above", "cup", "supercup", "league_cup", "split", "apertura", "europe", "season", "select_team"):
+            for k in ("above", "cup", "supercup", "league_cup", "split", "apertura", "europe", "season",
+                      "select_team", "ceremony", "cinematics", "calendar_days", "places_order",
+                      "first_season_abroad"):
                 L.pop(k, None)
             L["exhibition"] = True
             L.pop("others", None)
@@ -2637,9 +2845,18 @@ class SouthAmericaDialog(Dialog):
         self.modern.setChecked(modern_conmebol(project))
         self.modern.toggled.connect(self.show_places)
         self.v.insertWidget(1, self.modern)
+        self.mdays = QLineEdit("; ".join("%s=%s" % (k, ",".join(str(d) for d in v))
+                                         for k, v in (project.recipe.get("conmebol_days") or {}).items()))
+        self.mdays.setPlaceholderText("sudamericana_playoff=144,161")
+        self.v.insertWidget(2, row(QLabel(_("Days by hand")), self.mdays, helpmark(
+            "The modern competitions' days, any of them: libertadores_1 (phase 1, two legs, default 6,13), "
+            "libertadores_2 (phase 2, two legs, default 18,25), sudamericana_first (the first stage, one match, "
+            "default 40), sudamericana_playoff (the play-off after the groups, two legs, default 146,153). A league "
+            "playing February to December with Apertura and Clausura is laid clear of them; Build notes a day of "
+            "one of them that comes a day or less from a day of such a league.")))
         self.view = QPlainTextEdit()
         self.view.setReadOnly(True)
-        self.v.insertWidget(2, self.view, 1)
+        self.v.insertWidget(3, self.view, 1)
         self.scroll.hide()
         self.show_places()
         self.setMinimumSize(900, 500)
@@ -2739,9 +2956,38 @@ class SouthAmericaDialog(Dialog):
                     lines.append("  %s -> %s" % (where, label))
         return lines
 
+    def days_value(self):
+        """the recipe's "conmebol_days" from the field: "piece=day,day; ..." (ValueError otherwise)"""
+        out = {}
+        for part in self.mdays.text().replace("\n", ";").split(";"):
+            if not part.strip():
+                continue
+            k, eq, v = part.partition("=")
+            k = k.strip().lower()
+            if not eq or k not in B.CONMEBOL_DAYS:
+                raise ValueError(part)
+            out[k] = [int(x) for x in v.replace(" ", "").split(",") if x]
+        return out
+
     def ok(self):
         r = self.project.recipe
         on = self.modern.isChecked()
+        try:
+            days = self.days_value()
+            if days:
+                if not on:
+                    raise B.BuildError("modern")
+                B.conmebol_days({"conmebol_days": days})
+        except (ValueError, B.BuildError) as e:
+            error(self, "South American places", _("Days by hand: %s") % (
+                _("they are the days of the modern CONMEBOL competitions") if str(e) == "modern" else str(e)))
+            return
+        if days != (r.get("conmebol_days") or {}):
+            if days:
+                r["conmebol_days"] = days
+            else:
+                r.pop("conmebol_days", None)
+            self.project.touch()
         if on and r.get("conmebol") != B.CONMEBOL_MODERN:
             r["conmebol"] = B.CONMEBOL_MODERN
             self.project.touch()
@@ -2869,7 +3115,7 @@ class OurCupsDialog(Dialog):
             if L.get("season") == "calendar":
                 lcup.setChecked(bool(L.get("league_cup")))
                 lcup.setEnabled(bool(L.get("league_cup")))
-                lcup.setToolTip(_("A league playing February to December has no split, Apertura/Clausura or league cup yet."))
+                lcup.setToolTip(_("A league playing February to December has no split or league cup yet."))
             for col, w in enumerate(cells, 1):
                 self.table.setCellWidget(i, col, w)
             self.table.setRowHeight(i, 52)

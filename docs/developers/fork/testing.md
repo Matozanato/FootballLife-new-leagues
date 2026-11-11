@@ -26,6 +26,19 @@ exe. See `tools/flpaths.py`.
 | `test_face_groups.py` | none | B183: `facegroups.nordic` puts the Nordic nations on a face group of the pack's own light faces (skin 1-2 of nweu and eeu, the same portraits); every other nation and face stays, and done twice it is the same |
 | `test_country_order.py` | | League order (0.2.0) follows the recipe's `country_order` and never `league_order` (the Leagues page's drag order) |
 | `test_crestmatch.py` | | the crest file name matcher |
+| `test_palmares.py` | | the trophy cabinet of the Palmarés (`fl26swiss.c`, [palmares.md](palmares.md)): a title on a record and on a new one with its own date, the same year twice, a full region, two records of one competition merged, winners without a date dated, the palmarés file applied once and renamed |
+| `test_liga_futve.py` | tables | the Liga FUTVE recipe (`regress018/liga_futve.json`, [futve-playoff.md](futve-playoff.md)) with phase 5's ids pinned builds every Liga FUTVE and South American line of phase 5's world file but the documented ones (`contorder`, `firstabroad`, the league line's cup options), every id of phase 5 but the Final del Clausura's (147, not the Danish cup's 129) |
+| `test_conmebol_days.py` | tables | `conmebol_days` ([futve-playoff.md](futve-playoff.md)): days by hand and shipped, a wrong piece, count, order or room refused, refused without the modern competitions; `cal_layout` clear of them; a league day by hand next to one is a note; given back, dropped with the modern competitions; a Build writes them in the `lpre` lines and gives cups and helpers ids of their own; the South American places window takes and refuses them |
+| `test_first_season_build.py` | tables | `first_season_abroad` ([futve-playoff.md](futve-playoff.md)): `plan()` takes `false` for a January-December Apertura/Clausura league and refuses it otherwise or a value not true or false; `recipe_from_plan` keeps it; a Build writes `firstabroad <reg> 0`; the league window takes the option and refuses it on an August-May league |
+| `test_first_season.py` | | fl26swiss.c's first season with nobody abroad (`tools/native/test_first_season.c`): `abroad_last` over pre-rounds and cups, `first_sub` takes the round's other leagues in turn past their last place abroad and passes over clubs already placed, `fl26_swiss_firstabroad` and its gate |
+| `test_places_order.py` | tables | `places_order` ([futve-playoff.md](futve-playoff.md)): `plan()` takes `finals` for a January-December Apertura/Clausura league with the modern CONMEBOL and refuses it otherwise or an unknown value; `recipe_from_plan` keeps it; a Build writes `contorder <reg> finals`; the league window takes the option and refuses it on an August-May league |
+| `test_calsplit.py` | tables | a January-December Apertura/Clausura league ([futve-playoff.md](futve-playoff.md)): `cal_layout` lays every piece clear of the game's busy days and of each other, keeps days by hand, refuses too many clubs and bad days; `plan()` takes it with groups and a grand final and refuses it otherwise, or two of them; a Build writes `season`, `splitdays`, the play-offs', grand final's, cup's and super cup's days; the league window takes it and its days by hand |
+| `test_ceremony_build.py` | tables | the trophy ceremony ([futve-playoff.md](futve-playoff.md)): `ceremony` planned for a league with finals and refused without, `recipe_from_plan` gives it back; a Build writes `tmap <reg> 30` for the national cup, the super cup, both play-offs' finals and the grand final (`noleg0`: two legs), none for a league without it; the cinematics (`cine` lines, a missing folder said, `cine_place` in sider.ini, the league window); Mod Studio's league window writes it |
+| `test_fl26cine.py` | (lupa) | `fl26cine.lua` against a world file of its own: the `cine` lines read, a final's match from its folder (`all`: every match, `final`: the final only), another competition's left to the next module, nothing registered without a line |
+| `test_ceremony.py` | | fl26swiss.c's tournament map (`tools/native/test_ceremony.c`): `fl26_swiss_tmap` takes the records and refuses a regulation twice, out of range or a tournament that is none, at most 16; `tmap_handler` answers each one's tournament whatever the stage, 217 for the others |
+| `test_grand_final_build.py` | tables | the grand final ([futve-playoff.md](futve-playoff.md)): `apertura.grand_final` planned (two legs or one match, after the Clausura's final) and refused without a playoff of groups, `recipe_from_plan` gives it back; a Build of two such leagues gives each a `ccup` line with `src=` its play-offs' knockouts and `cid=` a `CREATION_IDS` id, the regulation named after the league, the away goals rule off, two legs set, no entry rows, an emblem, the ids kept by the next Build; Mod Studio's league window writes the key |
+| `test_grand_final.py` | | fl26swiss.c's title leagues (`tools/native/test_grand_final.c`): two Apertura/Clausura leagues with their grand finals and a split with none; `fl26_swiss_title_league` takes both, `grand_final_of` gives each its own final, `league_champion_kept` its own champion (the final's winner, the club that won both finals, none) |
+| `test_playoff_groups.py` | tables | the Apertura/Clausura play-off of two groups of four ([futve-playoff.md](futve-playoff.md)): `playoff_format`, `names` and `logos` planned and refused, `recipe_from_plan` gives them back, a knockout plans as before; a Build gives the group cups' lines `gdays=`, `adv=1`, `kolike=` and each final a competition of its own on a `CREATION_IDS` id, with its name, two entries and an emblem, kept by the next Build; Mod Studio's league window writes the keys (offscreen, when PySide6 loads) |
 | `test_cup_draw.py` | | `cup_draw` becomes the `cupdraw` line; `seeded` unless the recipe says otherwise; any other value is refused |
 | `test_dll_check.py` | | Install the modules stops, naming the file, when an antivirus takes or empties a DLL right after the copy; Home / Diagnostics (`checks.dll_problems`) and *4. Check* say the same while a switched-on module's DLL is missing |
 | `test_game_text.py` | (font files: `pes_fnt.bin` ... of `dt11_x64.cpk`, optional) | names go into the game's tables in letters its fonts have (`pesdb.game_text`, B173): Azerbaijani ə as a, Romanian ș ț as ş ţ, Vietnamese letters with the accents the fonts have; what they have (Ə, Turkish, Greek, Cyrillic, Chinese ...) stays; a player's name slots and shirt, a club's and a league's name; with font files, the ranges are checked against them |
@@ -107,6 +120,8 @@ Needs PySide6. Before a release, also start the exe from the release zip once an
 ```
 python tools/regress018.py --base <tables>              # all recipes
 python tools/regress018.py --base <tables> --only cup   # recipes whose name contains "cup"
+python tools/regress018.py --base <tables> --save <dir>     # and keep a fingerprint of each world
+python tools/regress018.py --base <tables> --against <dir>  # and compare each world with it
 ```
 
 It takes every `*.json` in `tools/testdata/buildcheck/` and `tools/testdata/regress018/`, and
@@ -137,6 +152,13 @@ The recipes:
 It prints a summary table and exits 1 on any FAIL. Add a recipe there for every feature that
 changes what Build writes.
 
+**Nothing changes by default.** A new recipe key must leave every world built without it as it
+was. Prove it with a fingerprint: `--save <dir>` on the code before your change keeps, per recipe,
+the sha256 of every file of the built world folder (`<dir>/<recipe>.json`; the Build's own
+`leaguebuilder-*` bookkeeping is left out), and `--against <dir>` on your change compares each new
+world with it. Any file added, gone or changed is a FAIL and is named. Builds are reproducible: the
+same recipe on the same tables gives the same files.
+
 ## `buildcheck.py`: one world, offline
 
 ```
@@ -166,6 +188,23 @@ python tools/langcheck.py --unused      # keys no _("...") uses any more
 
 ## The C tests
 
+The `test_*.c` harnesses in `tools/native` include `fl26swiss.c` (or `fl26chain.c`) with a test
+define and call its pure parts on made-up data; nothing of the game runs. Their Python wrappers
+(`test_rcal_days.py`, `test_state_keep.py`, `test_legpair.py`, `test_potdraw.py`,
+`test_futve_playoff.py`, `test_palmares.py`) build and run them through `tools/nativetest.py`:
+
+- on Windows with zig (`ZIG`, `PATH`, `D:/dev/tools/zig-*/zig.exe` or the branch's pip install);
+- on Linux and macOS with the system C compiler (`CC`, `cc`, `gcc` or `clang`), built for the
+  machine itself. `tools/native/hosttest/windows.h` stands in for the Windows header there: the
+  types and constants the DLL uses, and its Win32 calls as stubs. The file calls (the state file,
+  the palmarés file) work on plain files; memory protection, threads, modules and exception
+  handlers do nothing, and the hooks are never called by a harness.
+
+Without a compiler a wrapper prints `SKIPPED` and passes. A new harness needs nothing more than its
+`test_<name>.c` and a wrapper that calls `nativetest.run("test_<name>.c")`.
+
+By hand, on Windows:
+
 ```
 cd tools/native
 zig cc -O2 -o swissdraw_test.exe swissdraw_test.c && swissdraw_test.exe [runs] [seed]
@@ -178,7 +217,12 @@ zig cc -O2 -fno-sanitize=undefined test_chain_apclau.c -o test_chain_apclau.exe 
 - `test_chain_apclau.c` includes `fl26chain.c`, builds a fake game image and checks that an
   Apertura/Clausura league's standings count both phases (#106).
 
-Delete the `.exe` files afterwards.
+Delete the `.exe` files afterwards. On Linux or macOS:
+
+```
+cd tools/native
+cc -O2 -w -I hosttest test_rcal_days.c -o /tmp/test_rcal_days && /tmp/test_rcal_days
+```
 
 ## In the game
 

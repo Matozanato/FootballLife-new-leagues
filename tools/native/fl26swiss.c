@@ -549,6 +549,15 @@ static void cont_swap(uint16_t id, u32vec* list, const char* where);
 static unsigned world_cup_clubs(uint32_t* out, unsigned cap);
 static int cont_comp(uint16_t id);
 static int today(void);
+/* 30.10.: each dated-like regulation's last day (its final), for the trophy ceremony */
+typedef struct { uint16_t reg; int day; } dl_last_t;
+static dl_last_t g_dl_last[32];
+static int g_ndl_last = 0;
+static void dl_last_note(uint16_t reg, int day)
+{
+  for (int i = 0; i < g_ndl_last; i++) if (g_dl_last[i].reg == reg) { g_dl_last[i].day = day; return; }
+  if (g_ndl_last < 32) { g_dl_last[g_ndl_last].reg = reg; g_dl_last[g_ndl_last].day = day; g_ndl_last++; }
+}
 void gdraw_handler(uint64_t id, u32vec* list, uint64_t flag)
 {
   uint16_t r = (uint16_t)id, row = phase_row(r);
@@ -1850,6 +1859,7 @@ typedef struct { uint16_t reg; int day; uint32_t club; } cupwin_t;
 static cupwin_t g_cupwin[32]; static int g_ncupwin = 0;
 /* Synthetic retained-result key: no real regulation uses this value. */
 #define CUPWIN_LIB_RUNNER 0xfffeu
+#define FUTVE_RUNNER 0xf000u        /* fase 5: | a Liga FUTVE final's knockout: its loser */
 
 /* B49: what is kept is read back from the save folder after a restart or a load (state_sync) */
 static void state_sync(void);
@@ -1865,6 +1875,7 @@ static uint32_t winner_now(uint16_t reg)
   if (c == *(uint32_t*)(g_base + NOCLUB_RVA) || !(c >> 14)) return 0;
   return c;
 }
+static uint32_t futve_cont_club(uint16_t reg, int rank, const char** how);
 static cupwin_t* cupwin_of(uint16_t reg)
 {
   state_sync();
@@ -2199,6 +2210,7 @@ static final_t* seed_of(uint16_t reg)
    UEFA places (handed out in August), longer for competitions whose entrants come later */
 static uint32_t access_club_kept(uint16_t reg, int rank, int* from_table, int keep)
 {
+  { const char* h; uint32_t fc = futve_cont_club(reg, rank, &h); if (fc) { *from_table = 1; return fc; } }
   final_t* f = final_of(reg);
   int d = abs_day();
   /* B312: a kept table, the first season's order and the list can hold a club at a row the team
@@ -3041,6 +3053,22 @@ static int cont_any(int comp)
   for (size_t i = 0; i < g_naccess; i++) if (g_access[i].comp == comp) return 1;
   return 0;
 }
+static int futve_cal(void);
+/* `firstabroad <reg> 0` (Mod Studio's "first_season_abroad": false, fl26_swiss_firstabroad): the
+   January-December title league sends nobody abroad while it has no final table (its first season):
+   its Libertadores places stay with the pool (cont_build), its cup entries send nobody (ccup), its
+   pre-round slots go to the next clubs of the other leagues of that round (first_sub). Without the
+   line, its first season goes by squad strength as any league's. */
+static uint16_t g_noabroad_reg;
+static int first_noabroad(uint16_t reg);
+__declspec(dllexport) int fl26_swiss_firstabroad(const uint16_t* v, int n)
+{
+  g_noabroad_reg = v && n > 0 ? v[0] : 0;
+  if (g_noabroad_reg)
+    logf("fl26swiss: league %u -- nobody abroad in its first season (firstabroad)", (unsigned)g_noabroad_reg);
+  return g_noabroad_reg ? 1 : 0;
+}
+static uint16_t g_tl_total;
 /* all three lists at once, so no club is given two places */
 static void cont_build(void)
 {
@@ -3058,6 +3086,15 @@ static void cont_build(void)
   for (size_t i = 0; i < g_naccess; i++) {
     const access_t* a = &g_access[i];
     if (a->comp < LIB || a->comp > AFCL) continue;
+    /* fase 4 (31.10., Felix): a January-December Liga FUTVE's first season (no final table kept
+       yet) sends nobody to the Libertadores -- the pool clubs keep those places; from the second
+       season the accumulated table of the year before does */
+    if (first_noabroad(a->reg)) {
+      static int said = 0;
+      if (!said++) logf("fl26swiss: %s access -- reg %u: the Liga FUTVE's first season, no final table yet; its places stay with the pool",
+                        CONT_NAME[a->comp - LIB], (unsigned)a->reg);
+      continue;
+    }
     int k = a->comp - LIB, ft = 0; uint32_t c = 0;
     uint16_t reg = a->reg; int first = a->rank, picked = 0;
     if (!first) {                                   /* cup winner, or the alt league's next place */
@@ -3704,6 +3741,7 @@ static final_t* phase_table(uint16_t reg)
    league ordered by squad strength, else list order */
 static uint32_t cwc_club(uint16_t reg, int rank, const char** how)
 {
+  { uint32_t fc = futve_cont_club(reg, rank, how); if (fc) return fc; }
   if (assoc_source(reg)) {
     final_t* a = assoc_seed(reg);
     *how = "association squad strength";
@@ -4051,7 +4089,12 @@ static uint64_t cwc_dates(uint16_t id, uint64_t reg, void* vec)
  * 0x2e, 0x2f, 0x30, 0x33, 0x34, 0x35) and moved to the cup's own days, one per round. The
  * live row is checked before any of it (ccup_like_ok): a career whose save still holds the old
  * two-legged copy of the Europa League knockout under the same id keeps the old way, with the
- * first entries that fit its bracket. */
+ * first entries that fit its bracket.
+ *
+ * A league play-off (0.2.5, the Liga FUTVE) is the same machinery for a group stage filled in the
+ * middle of a season: `gdays=` deals the entries into the groups in their order and dates them,
+ * `adv=1` sends only the group winners to the final and `kolike=` gives its calendar. See the
+ * comment at ccup_t and fl26_swiss_ccup_gdays / _adv / _kolike. */
 #define MAX_CCUP 16      /* 8 until 0.2.0: CONCACAF and OFC cups next to league and pre-season cups */
 _Static_assert(MAX_CCUP == MAX_CCUP_FWD, "the Club World Cup sizes its list of champions by MAX_CCUP_FWD");
 #define CCUP_MAX_GROUPS 8
@@ -4065,6 +4108,14 @@ _Static_assert(MAX_CCUP == MAX_CCUP_FWD, "the Club World Cup sizes its list of c
    Champions League play-off, late August); national -- its clubs may also be in another of these
    cups (a league cup's clubs play in the continental one too); days -- the knockout's own days in
    place of CCUP_KO_DAYS; clubs -- team ids invited by name, in place of the league positions */
+/* A league play-off (0.2.5, the Liga FUTVE): gdays -- the group matchdays of its own (0: none, the
+   cup keeps the borrowed Libertadores days); the groups are then dealt in the order of the entries
+   instead of drawn (the world file writes A's clubs first: 1, 4, 5, 8 / 2, 3, 6, 7). adv -- only
+   that many clubs of each group go through (only 1): the knockout is then the final, the better
+   placed club of the regular phase first (at home in the match record). kolike -- the shipped cup
+   whose calendar dates the knockout (0: the usual one), the Belgium Super Cup for a one-match
+   final. The three come from fl26_swiss_ccup_gdays / _adv / _kolike, each called after
+   fl26_swiss_ccup like the options above. */
 typedef struct { uint16_t reg, ko, groups, n; uint16_t ereg[CCUP_MAX_ENTRY]; uint8_t erank[CCUP_MAX_ENTRY];
                  uint16_t ealt[CCUP_MAX_ENTRY];
                  uint8_t efrom[CCUP_MAX_ENTRY];   /* alt=: the first position of ealt to try */
@@ -4075,8 +4126,13 @@ typedef struct { uint16_t reg, ko, groups, n; uint16_t ereg[CCUP_MAX_ENTRY]; uin
                  unsigned rgen;      /* g_ccup_gen it was worked out under */
                  uint8_t cal;        /* South American February-December calendar (fl26_swiss_ccup_cal) */
                  uint16_t first[CCUP_MAX_ENTRY]; /* optional first-season winner fallbacks (Recopa) */
+                 uint8_t adv, gnd;   /* the league play-off: advancers a group, own group days given */
+                 uint16_t gdays[CCUP_MAX_DAYS]; /* gnd: the group matchdays */
+                 uint16_t kolike;    /* the shipped cup whose calendar dates the knockout, 0 = none */
+                 uint16_t src[2];    /* 0.2.5: a final of two cups -- their knockout regs, 0 = none */
                } ccup_t;
 static ccup_t g_ccup[MAX_CCUP]; static int g_nccup = 0;
+static uint32_t g_ccup_win[MAX_CCUP];  /* the champion ccup_final_note read, for a final of two cups */
 /* fl26_swiss_ccup_like's records, read by fl26_swiss_ccup (called after it): knockout -> shipped cup */
 static uint16_t g_clike[MAX_CCUP][2]; static int g_nclike = 0;
 static uint16_t clike_of(uint16_t ko)
@@ -4234,12 +4290,15 @@ __declspec(dllexport) int fl26_swiss_ccup(const uint16_t* v, int n)
   /* per cup: reg, ko, groups, entries, then (reg, position) per entry */
   if ((!v && n) || n < 0) return -1;
   g_nccup = 0;
+  memset(g_ccup_win, 0, sizeof g_ccup_win);
   g_ccup_gen++;
   size_t p = 0;
   for (int i = 0; i < n && g_nccup < MAX_CCUP; i++) {
     ccup_t* c = &g_ccup[g_nccup];
     c->reg = v[p]; c->ko = v[p + 1]; c->groups = v[p + 2]; unsigned ne = v[p + 3]; p += 4;
     c->n = 0; c->fill = c->national = c->nd = c->nc = 0; c->filled_year = -1; c->like = 0; c->cal = 0;
+    c->adv = 0; c->gnd = 0; c->kolike = 0;
+    c->src[0] = c->src[1] = 0;
     memset(c->ealt, 0, sizeof c->ealt);
     memset(c->efrom, 0, sizeof c->efrom);
     memset(c->first, 0, sizeof c->first);
@@ -4311,6 +4370,108 @@ __declspec(dllexport) int fl26_swiss_ccup_opts(const uint32_t* v, int n)
     logf("fl26swiss: cup %u options -- fill %s%u, %s, %u day(s), %u invited club(s)", (unsigned)ko,
          c->fill ? "on day " : "with the play-off ", (unsigned)c->fill, c->national ? "national" : "continental",
          (unsigned)c->nd, (unsigned)c->nc);
+    got++;
+  }
+  return got;
+}
+
+/* ---- a league play-off's own group days, advancers and knockout calendar (0.2.5) ----
+ *
+ * The three setters of the cup fields the comment at ccup_t describes. They are separate exports
+ * like the options above, called after fl26_swiss_ccup, and each names its cup by the knockout id.
+ * `gdays` (records {ko, count, day...}) turns the mode on: the groups are dealt in the order of the
+ * entries and dated on those days. `adv` (records {ko, adv}) sends only the group winners to the
+ * knockout; only 1 is supported. `kolike` (records {ko, shipped}) is the shipped cup whose calendar
+ * dates the knockout, for a one-match final row copied from it. All three answer the number of cups
+ * matched and name in the log any record they left out. */
+__declspec(dllexport) int fl26_swiss_ccup_gdays(const uint16_t* v, int n)
+{
+  int got = 0;
+  size_t p = 0;
+  for (int i = 0; v && i < n; i++) {
+    uint16_t ko = v[p], cnt = v[p + 1];
+    const uint16_t* days = v + p + 2;
+    p += 2 + (size_t)cnt;
+    ccup_t* c = 0;
+    for (int k = 0; k < g_nccup; k++) if (g_ccup[k].ko == ko) c = &g_ccup[k];
+    if (!c || !c->groups) {
+      logf("fl26swiss: cup %u -- group days for a cup that is not a group cup; left out", (unsigned)ko);
+      continue;
+    }
+    c->gnd = 0;
+    for (uint16_t j = 0; j < cnt && j < CCUP_MAX_DAYS; j++)
+      if (days[j] >= 1 && days[j] <= 365) c->gdays[c->gnd++] = days[j];
+    if (!c->gnd) {
+      logf("fl26swiss: cup %u -- no usable group day; the mode stays off", (unsigned)ko);
+      continue;
+    }
+    logf("fl26swiss: cup %u -- a league play-off: %u group day(s) of its own (%u..%u), groups in entry order",
+         (unsigned)ko, (unsigned)c->gnd, (unsigned)c->gdays[0], (unsigned)c->gdays[c->gnd - 1]);
+    got++;
+  }
+  return got;
+}
+
+__declspec(dllexport) int fl26_swiss_ccup_adv(const uint16_t* v, int n)
+{
+  int got = 0;
+  for (int i = 0; v && i < n; i++) {
+    uint16_t ko = v[2 * i], adv = v[2 * i + 1];
+    ccup_t* c = 0;
+    for (int k = 0; k < g_nccup; k++) if (g_ccup[k].ko == ko) c = &g_ccup[k];
+    if (!c || !c->groups) {
+      logf("fl26swiss: cup %u -- advancers for a cup that is not a group cup; left out", (unsigned)ko);
+      continue;
+    }
+    if (adv != 1) {
+      logf("fl26swiss: cup %u -- %u advancers a group: only one is supported; left out", (unsigned)ko, (unsigned)adv);
+      continue;
+    }
+    c->adv = 1;
+    logf("fl26swiss: cup %u -- only the winner of each group advances (the knockout is the final)", (unsigned)ko);
+    got++;
+  }
+  return got;
+}
+
+__declspec(dllexport) int fl26_swiss_ccup_kolike(const uint16_t* v, int n)
+{
+  int got = 0;
+  for (int i = 0; v && i < n; i++) {
+    uint16_t ko = v[2 * i], shipped = v[2 * i + 1];
+    ccup_t* c = 0;
+    for (int k = 0; k < g_nccup; k++) if (g_ccup[k].ko == ko) c = &g_ccup[k];
+    /* A straight knockout takes it too: the Final del FUTVE (263) was left on the Champions League
+       knockout's calendar (7 records for days=167: "left as it is"), not on day 167. */
+    if (!c || shipped < 1 || shipped > 175) {
+      logf("fl26swiss: cup %u -- knockout calendar of reg %u for a cup not in the world file; left out",
+           (unsigned)ko, (unsigned)shipped);
+      continue;
+    }
+    c->kolike = shipped;
+    logf("fl26swiss: cup %u -- its knockout dated as the shipped cup %u", (unsigned)ko, (unsigned)shipped);
+    got++;
+  }
+  return got;
+}
+
+/* The final of two cups (0.2.5, the Liga FUTVE's Final del FUTVE): its field is the two champions of
+   the cups whose knockouts are named, or none when they are the same club (the title is theirs and
+   the match is not played). `src` records {ko, first cup, second cup}; only a knockout cup. */
+__declspec(dllexport) int fl26_swiss_ccup_src(const uint16_t* v, int n)
+{
+  int got = 0;
+  for (int i = 0; v && i < n; i++) {
+    uint16_t ko = v[3 * i], a = v[3 * i + 1], b = v[3 * i + 2];
+    ccup_t* c = 0;
+    for (int k = 0; k < g_nccup; k++) if (g_ccup[k].ko == ko) c = &g_ccup[k];
+    if (!c || c->groups || !a || !b) {
+      logf("fl26swiss: cup %u -- the source cups %u and %u for a cup that is not a knockout; left out",
+           (unsigned)ko, (unsigned)a, (unsigned)b);
+      continue;
+    }
+    c->src[0] = a; c->src[1] = b;
+    logf("fl26swiss: cup %u -- its field is the winners of cups %u and %u", (unsigned)ko, (unsigned)a, (unsigned)b);
     got++;
   }
   return got;
@@ -5333,6 +5494,59 @@ static void poko_keep_winners(lpre_t* l)
        (unsigned)c->reg, l->gwin[0], l->gwin[7]);
 }
 
+/* firstabroad: the last position league reg sends anywhere abroad -- every pre-round's, every cup's
+   entry and every Libertadores access place of it */
+static int abroad_last(uint16_t reg)
+{
+  int last = 0;
+  for (int x = 0; x < g_nlpre; x++)
+    for (unsigned e = 0; e < 2u * g_lpre[x].ties && e < 2 * LPRE_MAX; e++)
+      if (g_lpre[x].ereg[e] == reg && g_lpre[x].erank[e] > last) last = g_lpre[x].erank[e];
+  for (int k = 0; k < g_nccup; k++)
+    for (int e = 0; e < g_ccup[k].n && e < CCUP_MAX_ENTRY; e++)
+      if (g_ccup[k].ereg[e] == reg && g_ccup[k].erank[e] > last) last = g_ccup[k].erank[e];
+  for (size_t a = 0; a < g_naccess; a++)
+    if (g_access[a].reg == reg && g_access[a].rank > last) last = g_access[a].rank;
+  return last;
+}
+
+/* firstabroad: the s-th slot pre-round i takes from league reg in its first season goes to the other
+   leagues of that round in turn (in the order of the round's entries), each its next club after the
+   last position it sends abroad -- a club with no continental place, not yet in this round or
+   another (the phase 5 list by hand: Colombia 16-20, Chile 16, Argentina 19-24, gone) */
+static uint32_t first_sub(int i, uint16_t reg, int s, unsigned n, const char** how)
+{
+  const lpre_t* l = &g_lpre[i];
+  int lib_stage = l->alias, suda_first = lpre_is_suda(l);
+  uint16_t lg[2 * LPRE_MAX]; int nl = 0;
+  for (unsigned e = 0; e < 2u * l->ties && e < 2 * LPRE_MAX; e++) {
+    uint16_t r = l->ereg[e];
+    if (!l->erank[e] || r == reg || r > 255) continue;
+    int seen = 0;
+    for (int q = 0; q < nl && !seen; q++) seen = lg[q] == r;
+    if (!seen) lg[nl++] = r;
+  }
+  for (int t = 0; t < nl; t++) {
+    uint16_t r = lg[(s + t) % nl];
+    for (int rank = abroad_last(r) + 1; rank <= FINAL_MAX; rank++) {
+      uint32_t c = cwc_club(r, rank, how);
+      if (!c) break;
+      if (c >> 14) c = canon_club(c);
+      if (!(c >> 14) || has_club(l->club, n, c)) continue;
+      if ((lib_stage || suda_first) && (lib_reserved_except(c, i) || (!l->poko && lib9_has(c)))) continue;
+      int other = 0;
+      for (int x = 0; x < g_nlpre && !other; x++) if (x != i && g_lpre[x].nclub) other = has_club(g_lpre[x].club, g_lpre[x].nclub, c);
+      if (other) continue;
+      static char said[48];
+      snprintf(said, sizeof said, "reg %u position %d", (unsigned)r, rank);
+      *how = said;
+      return c;
+    }
+  }
+  logf("fl26swiss: pre-round %u -- reg %u's first season: no other league of the round has a club to spare", (unsigned)l->reg, (unsigned)reg);
+  return 0;
+}
+
 /* on the days from its fill day to the eve of its first leg, once a season: the clubs, the ties,
    the master started and registered -- q_fill's steps */
 static void lpre_fill(int i)
@@ -5366,7 +5580,7 @@ static void lpre_fill(int i)
   int lib_stage = l->alias;
   int suda_first = lpre_is_suda(l);
   if (lib_stage || suda_first) cont_build();
-  unsigned n = 0;
+  unsigned n = 0; int subs = 0;
   for (unsigned j = 0; j < 2u * l->ties; j++) {
     const char* how = ""; uint32_t club = 0;
     if (!l->erank[j]) {
@@ -5398,6 +5612,12 @@ static void lpre_fill(int i)
           }
         }
       }
+    } else if (first_noabroad(l->ereg[j])) {
+      /* firstabroad: the slot goes to a club of another league of this round with no place there */
+      club = first_sub(i, l->ereg[j], subs++, n, &how);
+      if (club)
+        logf("fl26swiss: pre-round %u -- reg %u's first season: its position %u goes to %08x (%s)",
+             (unsigned)l->reg, (unsigned)l->ereg[j], (unsigned)l->erank[j], club, how);
     } else {
       for (int rank = l->erank[j]; rank >= 1 && rank <= FINAL_MAX; rank++) {
         club = cwc_club(l->ereg[j], rank, &how);
@@ -5887,7 +6107,107 @@ static int pot_draw(const uint32_t* field, const int* key, unsigned n, int group
   return best;
 }
 
+/* ---- a league play-off's groups and final (0.2.5) ----
+ *
+ * The world file writes the entries grouped: the first half are the clubs of group A (the regular
+ * phase's 1st, 4th, 5th and 8th in a two-group play-off), the second half those of group B (2nd,
+ * 3rd, 6th and 7th), and so on. No draw is made: the field is dealt in that order. The winner of
+ * each group (the first row of its table) is the only club through; the better placed club of the
+ * regular phase -- the entry's erank -- is put first, at home in the match record. Both functions
+ * are pure so test_ccup_league.c can check them without the game. */
+static int ccup_league_groups(const uint32_t* field, unsigned n, unsigned groups,
+                              uint32_t out[CCUP_MAX_GROUPS][8], unsigned* per_out)
+{
+  unsigned per;
+  if (!groups || groups > CCUP_MAX_GROUPS || n < groups || (n % groups)) return 0;
+  per = n / groups;
+  if (per < 1 || per > 8) return 0;
+  for (unsigned g = 0; g < groups; g++)
+    for (unsigned j = 0; j < per; j++) out[g][j] = field[g * per + j];
+  *per_out = per;
+  return (int)groups;
+}
+/* the regular-phase position a club came from (its entry's erank); 256 when it is not an entry */
+static int ccup_entry_rank(const ccup_t* c, const uint32_t* field, unsigned nf, uint32_t club)
+{
+  for (unsigned i = 0; i < nf; i++) if (field[i] == club) return c->erank[i];
+  return 256;
+}
+/* the knockout of a league play-off: the group winners, the better placed of the regular phase
+   first. Answers how many were put in out (fewer than n only when the same club won two groups). */
+static int ccup_league_final(const ccup_t* c, const uint32_t* field, unsigned nf,
+                             const uint32_t* winners, int n, uint32_t* out)
+{
+  int k = 0;
+  for (int i = 0; i < n && i < CCUP_MAX_GROUPS; i++) {
+    int dup = 0;
+    if (!winners[i]) continue;
+    for (int j = 0; j < k; j++) dup |= out[j] == winners[i];
+    if (!dup && k < CCUP_MAX_ENTRY) out[k++] = winners[i];
+  }
+  for (int a = 1; a < k; a++)                     /* insertion sort, stable: lower erank first */
+    for (int b = a; b > 0; b--) {
+      int x = ccup_entry_rank(c, field, nf, out[b - 1]), y = ccup_entry_rank(c, field, nf, out[b]);
+      if (y >= x) break;
+      uint32_t t = out[b - 1]; out[b - 1] = out[b]; out[b] = t;
+    }
+  return k;
+}
+
 static int ko_sync(uint16_t reg, const char* why);
+static int ccup_of(uint16_t r, int* ko);
+static int season_ord(int d);
+static void ccup_final_note(int k, void* started, int fresh);
+/* Fase 4 (31.10.): the Liga FUTVE from January to December -- its league (split total) is in a
+   January-December region (world file `season 29 1`). Its season is the calendar year, not the
+   August-May one the cups of ours count by: the Apertura's final (June) and the Clausura's
+   (November) are of one season, and the Final del FUTVE (December) takes both. */
+static int calyear(uint16_t id);
+static uint16_t g_tl_total;
+static int futve_cal(void) { return g_tl_total && calyear(g_tl_total); }
+static int first_noabroad(uint16_t reg)
+{
+  return g_noabroad_reg && reg == g_noabroad_reg && reg == g_tl_total && futve_cal() && !final_of(reg);
+}
+/* The champion a final of ours read this season (ccup_final_note), kept as a cup winner in
+   g_cupwin -- and so in fl26swiss-state.bin, read back after a reload between the final and the
+   Final del FUTVE. 0 while this season's final is not over. Kept from the final's day up to the
+   July rollover (season_ord), so last season's champion is never this season's. */
+static uint32_t ccup_season_win(int k)
+{
+  cupwin_t* w = cupwin_of(g_ccup[k].ko);
+  int ad = abs_day(), t = today();
+  if (!w || ad < 0 || t < 0 || !(w->club >> 14)) return 0;
+  int age = ad - w->day;
+  /* fase 4: a final of the Liga FUTVE (a play-off's, adv=, or the Final del FUTVE, src=) counts
+     from 1 January -- the Apertura's final of June is this season's in December */
+  int lim = futve_cal() && (g_ccup[k].adv || g_ccup[k].src[0]) ? t : season_ord(t);
+  return age >= 0 && age <= lim ? w->club : 0;
+}
+/* the champion of a cup a final of two cups feeds on. A cup of ours: this season's, as its final
+   note read it -- never the rights code's answer before the final is played, which named last
+   season's holder (2026-10-29 10:21: "45ed8006 won both feeding cups" in August, the Clausura
+   final then won by 45ee4002). If the final's day is past, the cup was filled this season and no
+   note was taken (a progression not seen), it is read now. Not a cup of ours: the game's. */
+static uint32_t ccup_src_winner(uint16_t reg)
+{
+  int ko = 0;
+  int k = ccup_of(reg, &ko);
+  if (k < 0) return cup_winner(reg);
+  uint32_t w = ccup_season_win(k);
+  const ccup_t* c = &g_ccup[k];
+  int t = today(), year = (abs_day() + 183) / 365;
+  /* fase 4: a Liga FUTVE final's day counts from 1 January; by the July anchor the Clausura's (day
+     335) was "past" on day 121 of the next year, and last season's winner was read as this one's
+     (31.10.: the automatic Liga FUTVE given in June of the second season) */
+  int calf = futve_cal() && (c->adv || c->src[0]);
+  int past = calf ? t > c->days[c->nd - 1] : season_ord(t) > season_ord(c->days[c->nd - 1]);
+  if (!w && c->nd && t >= 0 && (calf || c->filled_year == year) && past) {
+    ccup_final_note(k, 0, 0);
+    w = ccup_season_win(k);
+  }
+  return w;
+}
 static int ccup_fill_one(int k, void* started)
 {
   const ccup_t* c = &g_ccup[k];
@@ -5922,12 +6242,47 @@ static int ccup_fill_one(int k, void* started)
   uint16_t unplayed_phase = 0;
   g_ccup_nf[k] = 0;
   if (!cn) return 0;
+  if (c->adv && c->groups) {                 /* the knockout must be the field the advancers make */
+    unsigned char* kor = get_rec(c->ko);
+    unsigned kc = kor ? (*(uint32_t*)(kor + 0x30c) & 0x7f) : 0;
+    if (kc && kc != (unsigned)(c->adv * c->groups)) {
+      logf("fl26swiss: cup %u -- its knockout row holds %u club(s), not the %u of its %u group winner(s); not filled",
+           (unsigned)c->reg, kc, (unsigned)(c->adv * c->groups), (unsigned)c->adv);
+      return 0;
+    }
+    if (!kc)
+      logf("fl26swiss: cup %u -- its knockout row does not show its field (%u expected); filled anyway",
+           (unsigned)c->reg, (unsigned)(c->adv * c->groups));
+  }
   if (!c->national) cont_build();                 /* this season's Libertadores / AFC places, for ccup_club */
   int suda = modern_suda_ccup() == k;
   int single = ccup_like_ok(c);
   if (single)
     logf("fl26swiss: cup %u -- a single-match knockout of %u (reg %u's shape), day %d", (unsigned)c->ko, cn,
          (unsigned)c->like, today());
+  if (c->src[0] && c->src[1]) {           /* the final of two cups: their champions, or none */
+    uint32_t w1 = ccup_src_winner(c->src[0]), w2 = ccup_src_winner(c->src[1]);
+    if (w1 && w2 && w1 == w2) {
+      static int said_same = 0;
+      if (said_same++ < 4)
+        logf("fl26swiss: cup %u -- %08x won both feeding cups (%u, %u); the final is not played, the title is theirs",
+             (unsigned)c->reg, w1, (unsigned)c->src[0], (unsigned)c->src[1]);
+      g_ccup_nf[k] = 0;
+      return 0;
+    }
+    if (!w1 || !w2) {
+      static int said_wait = 0;
+      if (said_wait++ < 6)
+        logf("fl26swiss: cup %u -- its two champions are not known yet (%08x, %08x); not filled",
+             (unsigned)c->reg, w1, w2);
+      return 0;
+    }
+    g_ccup_field[k][0] = w1; g_ccup_field[k][1] = w2; g_ccup_nf[k] = 2;
+    n = 2;
+    suda = 0; single = 0;
+    logf("fl26swiss: cup %u -- the final of its two feeding cups: %08x v %08x", (unsigned)c->reg, w1, w2);
+    goto field_ready;
+  }
   for (unsigned i = 0; i < cn; i++) {
     const char* how = ""; uint32_t club = 0;
     if (c->nc) {                                   /* invited by name */
@@ -5980,6 +6335,11 @@ static int ccup_fill_one(int k, void* started)
         if (club && has_club(g_ccup_field[k], n, club)) club = 0;
       }
       if (!club) logf("fl26swiss:   cup %u entry: reg %u has no winner to send", (unsigned)c->reg, (unsigned)c->ereg[i]);
+    } else if (!c->adv && !c->src[0] && first_noabroad(c->ereg[i])) {
+      /* fase 4 (31.10., Felix): the Liga FUTVE's first season sends nobody abroad (no final table yet) */
+      logf("fl26swiss:   cup %u entry: reg %u -- the Liga FUTVE's first season, no final table yet; no club sent",
+           (unsigned)c->reg, (unsigned)c->ereg[i]);
+      club = 0;
     } else
     for (int rank = c->erank[i]; rank <= FINAL_MAX; rank++) {
       club = ccup_club(c, c->ereg[i], rank, &how);
@@ -6055,6 +6415,7 @@ static int ccup_fill_one(int k, void* started)
     g_ccup_nf[k] = 0;
     return 0;
   }
+field_ready:
   if (!c->groups) {
     /* A knockout cup keeps last season's clubs through the July teardown: the CAF Super Cup of a
        second season still held the pair of the first, and the old "any club in it = filled"
@@ -6147,6 +6508,22 @@ static int ccup_fill_one(int k, void* started)
            per > 3 ? grp[g][3] : 0, kg[0], kg[1], kg[2], kg[3]);
     }
   }
+  if (c->gnd) {
+    /* a league play-off: the entries are dealt into the groups in their order, not drawn -- the
+       world file writes A's clubs first (1, 4, 5, 8 of the regular phase), then B's (2, 3, 6, 7) */
+    uint32_t grp[CCUP_MAX_GROUPS][8]; unsigned per = 0;
+    if (ccup_league_groups(g_ccup_field[k], n, c->groups, grp, &per) == (int)c->groups) {
+      for (int g = 0; g < c->groups; g++) {
+        u32vec gv = { grp[g], grp[g] + per, grp[g] + per };
+        ((setcl_fn)(uintptr_t)(g_base + SETCL_RVA))(ccup_rep(c, g), &gv, 1);
+        run_flush();
+        logf("fl26swiss: cup %u -- group %c in entry order: %08x %08x %08x %08x", (unsigned)c->reg, 'A' + g,
+             grp[g][0], per > 1 ? grp[g][1] : 0, per > 2 ? grp[g][2] : 0, per > 3 ? grp[g][3] : 0);
+      }
+    } else
+      logf("fl26swiss: cup %u -- %u entries do not deal into %u group(s); left as drawn", (unsigned)c->reg,
+           n, (unsigned)c->groups);
+  }
   char line[96]; int p = 0;
   uint16_t reps[CCUP_MAX_GROUPS];
   for (int g = 0; g < c->groups; g++) {
@@ -6154,14 +6531,32 @@ static int ccup_fill_one(int k, void* started)
     unsigned char* rg = get_rec(reps[g]);
     p += snprintf(line + p, sizeof line - p, " %c:%u", 'A' + g, rg ? rec_count(rg) : 0);
   }
-  logf("fl26swiss: cup %u -- day %d: %u clubs drawn, groups%s", (unsigned)c->reg, today(), rec_count(rec), line);
+  logf("fl26swiss: cup %u -- day %d: %u clubs %s, groups%s", (unsigned)c->reg, today(), rec_count(rec),
+       c->gnd ? "dealt in entry order" : "drawn", line);
   struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { reps, reps + c->groups, reps + c->groups };
   table_pool_reap("cup draw");
-  ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
+  /* A group phase filled in the middle of a season is not in the calendar the season was built
+     with. The lpre and q_fill pattern does it here: the phase is started (pushed onto the caller's
+     list of started stages, 0x141590420) and registered by its master, whose parent field names the
+     groups. The register_all of the group rows alone made no match at all on 28 October. The old
+     call stays as the fallback, and the counts say in the log whether the engine made any. */
+  start_stage(started, c->reg);
+  uint16_t mid = c->reg;
+  struct { uint16_t* b; uint16_t* e; uint16_t* c; } mv = { &mid, &mid + 1, &mid + 1 };
+  ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &mv);
   run_flush();
-  logf("fl26swiss: cup %u -- groups %u..%u handed to register_all", (unsigned)c->reg, (unsigned)reps[0],
-       (unsigned)reps[c->groups - 1]);
   ccup_season_fix(c->reg, reps, c->groups);
+  int mg = ccup_matches(c->reg), mt = 0;
+  for (int g = 0; g < c->groups; g++) { int x = ccup_matches(reps[g]); if (x > 0) mt += x; }
+  if (mg <= 0 && mt <= 0) {
+    ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
+    run_flush();
+    mg = ccup_matches(c->reg); mt = 0;
+    for (int g = 0; g < c->groups; g++) { int x = ccup_matches(reps[g]); if (x > 0) mt += x; }
+    logf("fl26swiss: cup %u -- its master made no match; the group rows handed to register_all", (unsigned)c->reg);
+  }
+  logf("fl26swiss: cup %u -- groups filled, started and registered on day %d; %d match record(s) under the phase, "
+       "%d under its groups", (unsigned)c->reg, today(), mg, mt);
   g_ccup_done[k] = 0;
   return 0;
 }
@@ -6270,8 +6665,11 @@ static int ccup_champions(uint32_t* out, int max, uint16_t* cup)
 static int ccup_fill(void* started)
 {
   int any = 0;
-  for (int k = 0; k < g_nccup; k++)
+  int year = (abs_day() + 183) / 365;
+  for (int k = 0; k < g_nccup; k++) {
+    if (g_ccup[k].src[0] && g_ccup[k].filled_year == year) continue;   /* filled at its last source's final */
     if (!g_ccup[k].fill && !g_ccup[k].cal) any |= ccup_fill_one(k, started);
+  }
   return any;
 }
 
@@ -6284,12 +6682,12 @@ static int season_ord(int d) { return d >= 182 ? d - 182 : d + 183; }
 static void ccup_fill_days(void)
 {
   int d = today(), year = (abs_day() + 183) / 365;             /* the season, not the calendar year */
-  if (d < 1) return;
+  if (d < 0) return;                                            /* day 0 (1 January) is a day: -1 is none */
   for (int k = 0; k < g_nccup; k++) {
     ccup_t* c = &g_ccup[k];
     if (!c->fill) continue;
     int f = season_ord(c->fill), s = season_ord(d);
-    int first = (c->cal && c->groups) ? g_ccup_gday0[k] : (c->nd ? c->days[0] : 0);
+    int first = (c->cal && c->groups) ? g_ccup_gday0[k] : (c->gnd ? c->gdays[0] : (c->nd ? c->days[0] : 0));
     int last = (first && season_ord(first) > f) ? season_ord(first) - 1 : f + 7;   /* up to the eve of its first day */
     if (s < f || s > last || c->filled_year == year || !ccup_world(c)) continue;
     c->filled_year = year;
@@ -6311,7 +6709,10 @@ static void ccup_fill_days(void)
 static void ccup_fill_ahead(uint16_t src, const char* why, void* started)
 {
   int d = today();
-  if (d < 1) return;
+  /* Day 0 is 1 January, a real day: the Apertura's regular phase ends on it (191: rounds on days
+     257..0). `d < 1` returned here, so its play-off was filled only on its fill day 3 -- the day of
+     its first group matchday, already gone: the first match was never played (29.10., every test). */
+  if (d < 0) return;
   int s = season_ord(d);
   for (int k = 0; k < g_nccup; k++) {
     ccup_t* c = &g_ccup[k];
@@ -6326,7 +6727,13 @@ static void ccup_fill_ahead(uint16_t src, const char* why, void* started)
     c->filled_year = year;
     logf("fl26swiss: cup %u -- filled on day %d at %s, %d day(s) before its fill day %u",
          (unsigned)c->ko, d, why, ahead, (unsigned)c->fill);
-    ccup_fill_one(k, started);
+    /* started = 0: the cup registers its own matches (the group path always does, the knockout
+       path when started is 0). Handing the split progression's `started` as well had the cup
+       pushed there and registered a second time by the caller whenever that progression reported
+       a change -- the Apertura (191 over on day 0 -> 1): every play-off match twice, double points
+       and double matches played (30.10.). The Clausura's (192 -> 0) never was. */
+    (void)started;
+    ccup_fill_one(k, 0);
   }
 }
 
@@ -6356,6 +6763,22 @@ static int ccup_progress(int k, uint16_t r, void* started)
   else g_ccup_done[k] |= 1u << (((r >> 10) - 1) & 31);
   logf("fl26swiss: cup %u -- progression for reg %u on day %d (groups reported %02x)", (unsigned)c->reg,
        (unsigned)r, today(), g_ccup_done[k]);
+  if (c->gnd && g_ccup_done[k] != all) {
+    /* A save loaded between two group days: the progression of the groups already over is not
+       asked again. The matches say whether they are -- a group of four home and away, 12. */
+    unsigned seen = g_ccup_done[k];
+    int played = ccup_matches(c->reg), unplayed = ccup_unplayed(c->reg);
+    for (int g = 0; g < c->groups && played >= 0 && unplayed >= 0; g++) {
+      int m = ccup_matches(ccup_rep(c, g)), u = ccup_unplayed(ccup_rep(c, g));
+      if (m > 0) played += m;
+      if (u > 0) unplayed += u;
+    }
+    if (played >= 12 * (int)c->groups && unplayed == 0) {
+      g_ccup_done[k] = all;
+      logf("fl26swiss: cup %u -- all %d group match(es) are played on day %d although the progression named %02x; "
+           "the groups are taken as over", (unsigned)c->reg, played, today(), seen);
+    }
+  }
   if (g_ccup_done[k] != all) return 0;
   for (int i = 0; i < g_nlpre; i++)
     if (g_lpre[i].poko && g_lpre[i].ko == c->ko) {
@@ -6367,6 +6790,39 @@ static int ccup_progress(int k, uint16_t r, void* started)
   unsigned char* ko = get_rec(c->ko);
   if (!ko || rec_count(ko)) return 0;
   static uint32_t buf[2 * CCUP_MAX_GROUPS];
+  if (c->adv) {
+    /* a league play-off: only the winner of each group goes through, the better placed club of
+       the regular phase first -- at home in the match record */
+    uint32_t win[CCUP_MAX_GROUPS];
+    int nw = 0;
+    for (int g = 0; g < c->groups; g++) {
+      unsigned char* t = ccup_group_table(c, g);
+      uint32_t rows = t ? *(uint32_t*)(t + 0x3c0) : 0;
+      if (rows < 2 || rows > 8) {
+        logf("fl26swiss: cup %u -- group %c has a table of %u rows; the final is not filled", (unsigned)c->reg,
+             'A' + g, (unsigned)rows);
+        return 0;
+      }
+      win[nw++] = *(uint32_t*)t;
+    }
+    int nk = ccup_league_final(c, g_ccup_field[k], g_ccup_nf[k], win, nw, buf);
+    if (nk != c->adv * c->groups) {
+      logf("fl26swiss: cup %u -- %d group winner(s) for a final of %u (the same club in two groups?); not filled",
+           (unsigned)c->reg, nk, (unsigned)(c->adv * c->groups));
+      return 0;
+    }
+    logf("fl26swiss: cup %u -- final: %08x (regular position %d) v %08x (position %d)", (unsigned)c->reg,
+         buf[0], ccup_entry_rank(c, g_ccup_field[k], g_ccup_nf[k], buf[0]),
+         buf[1], ccup_entry_rank(c, g_ccup_field[k], g_ccup_nf[k], buf[1]));
+    u32vec v = { buf, buf + nk, buf + nk };
+    ((setcl_fn)(uintptr_t)(g_base + SETCL_RVA))(c->ko, &v, 1);
+    run_flush();
+    logf("fl26swiss: cup %u -- final reg %u now %u club(s)", (unsigned)c->reg, (unsigned)c->ko, rec_count(ko));
+    g_ccup_done[k] = 0;
+    if ((int)rec_count(ko) != nk) return 0;
+    start_stage(started, c->ko);
+    return 1;
+  }
   int nk = 2 * c->groups;
   for (int i = 0; i < nk; i++) {
     /* first half: group 2j's winner v group 2j+1's runner-up; second half the other way round */
@@ -6402,22 +6858,40 @@ static int like_slot(uint32_t round)
   }
   return -1;
 }
-static uint64_t ccup_like_dates(int k, uint16_t id, uint64_t reg, void* vec)
+/* The dates of a cup borrowed from a shipped one -- a single-match league cup's (`like`, whole
+   cup) or a league play-off's knockout (`kolike`): the shipped regulation's own calendar, its
+   records mapped by round to the days given in the world file (the last day for a final). */
+static uint64_t ccup_borrowed_dates(int k, uint16_t id, uint64_t reg, void* vec, uint16_t shipped, const char* what)
 {
   const ccup_t* cc = &g_ccup[k];
-  uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | cc->like, vec);
+  uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | shipped, vec);
   vec_t* v = (vec_t*)vec;
   size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
   date_t* r = (date_t*)v->b;
   static unsigned char said[MAX_CCUP];
   if (!have || !cc->nd) {
-    if (!said[k]) logf("fl26swiss: cup reg %u: reg %u's calendar gave %u record(s), %u day(s) of its own; left as it is",
-                       (unsigned)id, (unsigned)cc->like, (unsigned)have, (unsigned)cc->nd);
+    if (!said[k]) logf("fl26swiss: cup reg %u: reg %u's calendar gave %u record(s), %u day(s) of its own (%s); left as it is",
+                       (unsigned)id, (unsigned)shipped, (unsigned)have, (unsigned)cc->nd, what);
     said[k] = 1;
     return rv;
   }
+  /* A two-legged final (days=167,171: the Final del FUTVE ida y vuelta). The exe's super-cup handler
+     pushes both legs of its table (kind 0 = first leg, 1 = second) and then, for a regulation whose
+     legs mode (CompetitionRegulation +0x10 bits 9-11 -> runtime +0x300 >> 29; 0 single, 1 two legs and
+     a single final, 2 all two legs) is 0, erases the first leg and makes the second a single match
+     (kind 2) -- 0x14157f720. So the one record comes back in a vector that held two: the first leg is
+     put back in front, room permitting. */
+  if (cc->nd == 2 && have == 1 && r && (size_t)(v->c - v->b) >= 2 * sizeof(date_t)) {
+    r[1] = r[0];
+    r[0].kind = 0; r[1].kind = 1;
+    v->e = v->b + 2 * sizeof(date_t);
+    have = 2;
+    if (!said[k]) logf("fl26swiss: cup reg %u: reg %u's one-match final made two legs (ida y vuelta)", (unsigned)id, (unsigned)shipped);
+  }
   for (size_t i = 0; i < have; i++) {
-    int j = like_slot(r[i].kind);
+    /* as many records as days (a two-legged final, days=167,171 from the Spanish Super Cup's two
+       legs): one day each, in order -- by round both legs are the final and took the last day */
+    int j = (have > 1 && have == cc->nd) ? (int)i : like_slot(r[i].kind);
     if (j < 0) j = like_slot(r[i].round);
     if (j < 0) j = (int)(have > 1 ? i * 5 / (have - 1) : 5);    /* by order, the last the final */
     if (!said[k])
@@ -6426,10 +6900,14 @@ static uint64_t ccup_like_dates(int k, uint16_t id, uint64_t reg, void* vec)
     r[i].day = cc->days[j < cc->nd ? j : cc->nd - 1];
   }
   if (!said[k])
-    logf("fl26swiss: cup reg %u dated as reg %u: %u record(s), days %u..%u", (unsigned)id, (unsigned)cc->like,
-         (unsigned)have, r[0].day, r[have - 1].day);
+    logf("fl26swiss: cup reg %u dated as reg %u (%s): %u record(s), days %u..%u", (unsigned)id, (unsigned)shipped,
+         what, (unsigned)have, r[0].day, r[have - 1].day);
   said[k] = 1;
   return rv;
+}
+static uint64_t ccup_like_dates(int k, uint16_t id, uint64_t reg, void* vec)
+{
+  return ccup_borrowed_dates(k, id, reg, vec, g_ccup[k].like, "single-match cup");
 }
 
 /* B35: the knockout's day table, chosen once a season when the knockout is dated (the day after
@@ -6462,6 +6940,7 @@ static uint64_t ccup_dates(int k, int ko, uint16_t id, uint64_t reg, void* vec)
 {
   if (ccup_like_ok(&g_ccup[k])) return ccup_like_dates(k, id, reg, vec);
   const ccup_t* cc = &g_ccup[k];
+  if (ko && cc->kolike) return ccup_borrowed_dates(k, id, reg, vec, cc->kolike, "its knockout");
   /* cal=1 cups keep the native Libertadores dates: groups from reg 9 and
      knockout from reg 10. A custom one-off knockout with explicit days keeps
      the normal borrowed calendar instead. */
@@ -6471,7 +6950,8 @@ static uint64_t ccup_dates(int k, int ko, uint16_t id, uint64_t reg, void* vec)
   vec_t* v = (vec_t*)vec;
   size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
   date_t* r = (date_t*)v->b;
-  size_t want = ko ? ((cc->nd && !cc->like) ? cc->nd : 7) : 6;   /* like here: an old row, the old days */
+  /* a league play-off's groups have their own days (gdays); the others keep six */
+  size_t want = ko ? ((cc->nd && !cc->like) ? cc->nd : 7) : (cc->gnd ? cc->gnd : 6);
   static unsigned said[MAX_CCUP];
   unsigned bit = ko ? 1 : 2;
   if (keep) {
@@ -6482,7 +6962,7 @@ static uint64_t ccup_dates(int k, int ko, uint16_t id, uint64_t reg, void* vec)
     said[k] |= bit;
     return rv;
   }
-  if (have == 0 || have > want) {
+  if (have == 0 || (have > want && !(!ko && cc->gnd))) {
     if (!(said[k] & bit)) logf("fl26swiss: cup reg %u: the borrowed calendar has %u records (up to %u expected); left as it is",
                                (unsigned)id, (unsigned)have, (unsigned)want);
     said[k] |= bit;
@@ -6495,12 +6975,17 @@ static uint64_t ccup_dates(int k, int ko, uint16_t id, uint64_t reg, void* vec)
   /* a knockout of eight is handed the round-of-16 pair first; the last record is the final */
   int kcr = ko ? ccup_ko_table(k, have == 1 ? want - 1 : want - have) : -1;
   for (size_t i = 0; i < have; i++) {
+    if (!ko && cc->gnd) {                          /* its own group days, in order */
+      size_t j = have <= cc->gnd ? i : (i * cc->gnd) / have;
+      r[i].day = cc->gdays[j];
+      continue;
+    }
     size_t j = ko ? (i + 1 == have ? want - 1 : i + (want - have)) : i * want / have;
     r[i].day = kcr >= 0 ? CCUP_KO_DAYS[kcr][ccup_tier(cc)][j] : ccup_day(cc, ko, (int)j);
   }
   if (!(said[k] & bit))
-    logf("fl26swiss: cup reg %u dated: %s days %u..%u (%u records)", (unsigned)id, ko ? "knockout" : "groups",
-         r[0].day, r[have - 1].day, (unsigned)have);
+    logf("fl26swiss: cup reg %u dated: %s days %u..%u (%u records)%s", (unsigned)id, ko ? "knockout" : "groups",
+         r[0].day, r[have - 1].day, (unsigned)have, !ko && cc->gnd ? " on its own group days" : "");
   said[k] |= bit;
   return rv;
 }
@@ -6517,7 +7002,99 @@ static int split_part(uint16_t id, const split_t** out);
 static void split_keys(void);
 static void canon_groups(const split_t* s);
 
+/* A final of two cups (src=) whose feeding final just ended: filled now, as soon as both champions
+   are known -- not at reg 2's progression (ccup_fill), which the game asks for in August, not
+   between the Clausura final (164) and the Final del FUTVE (167). */
+static uint32_t g_ff_dec[MAX_CCUP][2];             /* the two champions a final of two cups was decided on */
+static void ccup_fill_finals(uint16_t ko, void* started)
+{
+  int year = (abs_day() + 183) / 365;
+  for (int j = 0; j < g_nccup; j++) {
+    ccup_t* f = &g_ccup[j];
+    if (!f->src[0] || (f->src[0] != ko && f->src[1] != ko) || !ccup_world(f)) continue;
+    uint32_t w1 = ccup_src_winner(f->src[0]), w2 = ccup_src_winner(f->src[1]);
+    /* Decided this season on these two champions: nothing to do. On other ones -- a save loaded
+       before a feeding final and that final won by another club (29.10., prueba B: the Clausura
+       lost after a reload, the stale "won both" kept and no Final del FUTVE) -- decided again. */
+    if (f->filled_year == year && g_ff_dec[j][0] == w1 && g_ff_dec[j][1] == w2) continue;
+    if (f->filled_year == year)
+      logf("fl26swiss: cup %u -- its feeding champions changed (%08x, %08x -> %08x, %08x): decided again",
+           (unsigned)f->ko, g_ff_dec[j][0], g_ff_dec[j][1], w1, w2);
+    if (!w1 || !w2) {
+      logf("fl26swiss: cup %u -- the final of %u is over on day %d; the other feeding final is not (%08x, %08x)",
+           (unsigned)f->ko, (unsigned)ko, today(), w1, w2);
+      continue;
+    }
+    f->filled_year = year; g_ff_dec[j][0] = w1; g_ff_dec[j][1] = w2;
+    logf("fl26swiss: cup %u -- both feeding finals over on day %d: filled now (its day %u)",
+         (unsigned)f->ko, today(), f->nd ? (unsigned)f->days[f->nd - 1] : 0u);
+    /* Not the feeding final's `started`: the caller registers the ids pushed there only when the
+       progression reports a change, and the 262's did not -- the 263 was filled, dated (171) and
+       started with no match record, and never played (29.10., 15:37). With 0 the knockout
+       registers its own matches (register_all), as a cup filled on its fill day does. */
+    (void)started;
+    ccup_fill_one(j, 0);
+  }
+}
+/* The final of a league play-off is over: its champion, once a season, kept as a cup winner (and in
+   the state file, so a reload before the Final del FUTVE has it), then the final of two cups it
+   feeds. Only from the final's own progression (or ccup_src_winner after the final's day): noting
+   it at the group phase's progression (62dee65, "ko || cup.ko") read the 262 on day 160, four days
+   before its final, found nothing and locked the season (10:41 to 12:42, every test). A miss is not
+   locked: the next progression asks again. */
+static void ccup_final_note(int k, void* started, int fresh)
+{
+  const ccup_t* c = &g_ccup[k];
+  /* fresh: the final's own progression -- its match was just played, so it is read whatever was
+     kept: a keep of the same day can be another timeline's (a save loaded before the final and the
+     final played again, 29.10. prueba B: the kept "45ed8006" stood and the new result was never
+     read). Otherwise (ccup_src_winner after the final's day) a keep is enough. */
+  uint32_t had = ccup_season_win(k);
+  if (had && !fresh) return;
+  uint32_t w = ccup_ko_winner(c->ko);
+  if (w && had && same_club(w, had)) { ccup_fill_finals(c->ko, started); return; }
+  if (had && w) logf("fl26swiss: cup %u -- champion %08x replaces the kept %08x (a save loaded before its final)",
+                     (unsigned)c->ko, w, had);
+  if (!w) {
+    static int said[MAX_CCUP];
+    if (said[k]++ < 6)
+      logf("fl26swiss: cup %u -- progression on day %d, no winner read yet (asked again at the next one)",
+           (unsigned)c->ko, today());
+    return;
+  }
+  int ad = abs_day();
+  cupwin_t* cw = cupwin_of(c->ko);
+  if (!cw && g_ncupwin < 32) { cw = &g_cupwin[g_ncupwin++]; cw->reg = c->ko; }
+  if (cw) { cw->day = ad; cw->club = w; }
+  g_ccup_win[k] = w;
+  /* fase 5 (01.11.): a Liga FUTVE final's loser too -- the Apertura's and the Clausura's go to the
+     Sudamericana, the Final del FUTVE's to the Libertadores' phase 2 (futve_cont_club) */
+  if (futve_cal() && (c->adv || c->src[0])) {
+    uint32_t r = knockout_runner_now(c->ko);
+    if (r && !same_club(r, w)) {
+      cupwin_t* rw = cupwin_of((uint16_t)(FUTVE_RUNNER | c->ko));
+      if (!rw && g_ncupwin < 32) { rw = &g_cupwin[g_ncupwin++]; rw->reg = (uint16_t)(FUTVE_RUNNER | c->ko); }
+      if (rw) { rw->day = ad; rw->club = r; }
+      logf("fl26swiss: cup %u -- its final's loser %08x%s", (unsigned)c->ko, r, rw ? " kept" : " (no room to keep it)");
+    }
+  }
+  logf("fl26swiss: cup %u -- its final is over on day %d: champion %08x%s", (unsigned)c->ko, today(), w,
+       cw ? " (kept in the state file)" : " (no room to keep it)");
+  if (cw) state_store();
+  ccup_fill_finals(c->ko, started);
+}
+
+static void honours_fix(void);
+static uint16_t g_tl_total, g_tl_cid;
+static int is_title_league(uint16_t reg);
+static char prog_handler_inner(void* ctx, uint64_t id, void* started);
 char prog_handler(void* ctx, uint64_t id, void* started)
+{
+  return prog_handler_inner(ctx, id, started);
+}
+static uint16_t split_total_of(const split_t* s);
+static uint16_t split_group0_of(const split_t* s);
+static char prog_handler_inner(void* ctx, uint64_t id, void* started)
 {
   uint16_t r = (uint16_t)id;
   split_keys();
@@ -6525,7 +7102,13 @@ char prog_handler(void* ctx, uint64_t id, void* started)
     const split_t* s; int part = split_part(r, &s);
     if (part) {
       char ok = ((prog_fn)(uintptr_t)g_tramp_prog)(ctx, id, started);
-      if (part == 2 && r > 175) {
+      if (part == 2 && r > 175 && futve_cal() && calyear(split_total_of(s)) && split_group0_of(s) && ccup_matches(split_group0_of(s)) > 0) {
+        /* fase 4: the Clausura was made in February with the Apertura (futve_clausura_early): its
+           fixtures stand, the game must not deal the clubs to it a second time */
+        check_reg(r, "its phase over");
+        logf("fl26swiss: reg %u -- split regular phase over on day %d; its group %u was made with it in February (%d match record(s)): not filled again",
+             (unsigned)r, today(), (unsigned)split_group0_of(s), ccup_matches(split_group0_of(s)));
+      } else if (part == 2 && r > 175) {
         check_reg(r, "its phase over");
         char sp = ((splitfn_t)(uintptr_t)(g_base + SPLIT_FN_RVA))(ctx, id, started);
         logf("fl26swiss: reg %u -- split regular phase over on day %d, groups filled by 0x141343d70 -> %d",
@@ -6536,6 +7119,9 @@ char prog_handler(void* ctx, uint64_t id, void* started)
         logf("fl26swiss: reg %u -- split progression on day %d -> %d", (unsigned)r, today(), (int)ok);
       }
       if (part > 1 && r > 175) ccup_fill_ahead(r, "the end of its phase", started);
+      /* the game writes the league title of a phase it ends in this progression: take it out at
+         once, not at the next day loop -- the Palmarés looked at the same day still had it (30.10.) */
+      honours_fix();
       return ok;
     }
   }
@@ -6549,6 +7135,13 @@ char prog_handler(void* ctx, uint64_t id, void* started)
     if (k >= 0 && ccup_world(&g_ccup[k])) {
       char ok = ((prog_fn)(uintptr_t)g_tramp_prog)(ctx, id, started);
       if (!ko && ccup_progress(k, r, started)) ok = 1;
+      /* The KO final of a cup is a final whether or not its group phase was marked `gnd`. Only the
+         knockout's own progression (ko): the group phase's (the 260 on day 160) comes before the
+         final is played. The 261 never noted its champion in the tests after 09:41 because the
+         Apertura was never filled in them (no "cup 261 -- its fill day"), not because of ccup_of. */
+      /* Only a league play-off's final (adv) or a final of two cups (src): the note keeps its
+         champion in g_cupwin, which a continental cup's access (ccup_keep_winners) also reads. */
+      if (ko && (g_ccup[k].adv || g_ccup[k].src[0])) { ccup_final_note(k, started, 1); honours_fix(); }
       return ok;
     }
   }
@@ -6599,6 +7192,7 @@ char prog_handler(void* ctx, uint64_t id, void* started)
   }
   if (r == 2) { if (uecl_fill(started)) ok = 1; if (ccup_fill(started)) ok = 1; }
   else if (r == UECL_REG || r == UECL_ROW) { if (uecl_ko(started)) ok = 1; }
+  if (is_title_league(r)) honours_fix();           /* a title league's own end (the Liga FUTVE's reg 11, day 142) */
   return ok;
 }
 
@@ -6970,13 +7564,28 @@ static int ko_winner(const uint32_t* sl, uint32_t* w)
    (0x36, else 0x35); 0 while it is not played. */
 static uint32_t ko_final_winner(uint16_t reg)
 {
-  static const uint32_t kinds[2] = { 0x36, 0x35 };
-  for (int i = 0; i < 2; i++) {
-    unsigned char* rnd = ko_round(reg, kinds[i]);
+  /* The final's round is the bracket's single-slot one. Its kind is not always 0x36/0x35 (the 262
+     final was read as 0 with only those two), so try every knockout kind, and log what was found:
+     a 0 here must leave in the log the rounds, their kinds, their slots and their teams. */
+  int found = 0, single = 0;
+  for (uint32_t kind = 0; kind <= 0x3f; kind++) {
+    unsigned char* rnd = ko_round(reg, kind);
     uint32_t w = 0;
-    if (!rnd || *(uint16_t*)rnd != reg || ko_slots(rnd) != 1) continue;
-    return ko_winner(ko_slot(rnd, 0), &w) && (w >> 14) ? canon_club(w) : 0;
+    if (!rnd) continue;
+    found++;
+    logf("fl26swiss: cup reg %u -- round kind %02x: reg %u, %d slot(s)",
+         (unsigned)reg, (unsigned)kind, (unsigned)*(uint16_t*)rnd, ko_slots(rnd));
+    if (*(uint16_t*)rnd != reg || ko_slots(rnd) != 1) continue;
+    single++;
+    uint32_t* sl = ko_slot(rnd, 0);
+    logf("fl26swiss: cup reg %u -- final kind %02x: %08x vs %08x",
+         (unsigned)reg, (unsigned)kind, sl[0], sl[1]);
+    if (ko_winner(sl, &w)) logf("fl26swiss: cup reg %u -- final kind %02x: winner raw %08x",
+                                (unsigned)reg, (unsigned)kind, w);
+    if (w >> 14) return canon_club(w);
   }
+  logf("fl26swiss: cup reg %u -- %d round(s), %d single-slot final(s), no winner read",
+       (unsigned)reg, found, single);
   return 0;
 }
 /* the winner a cup's <reg>:0 entry is sent: a cup of ours (176 and up) by its final, the game's
@@ -8065,6 +8674,7 @@ static uint64_t phkind_core(uint32_t* comp, uint64_t kind, uintptr_t ra)
 #define QR2_TEXT   0x3a2fff3u   /* "2nd Qualifying Round" */
 #define KOPO_TEXT  0x3a2fff4u
 #define SUD1_TEXT  0x3a2fff5u   /* "First stage" */
+#define FINAL_TEXT 0x3a2fff6u   /* "Final", a league play-off's one-match final (0.2.5) */
 static uint16_t g_sud1_reg = 0xffff;
 #define TXTGET_RVA 0x14996f0
 static const unsigned char SIG_TXTGET[14] = {
@@ -8078,6 +8688,7 @@ const char* txtget_handler(void* table, uint64_t index)
   if ((uint16_t)index == (uint16_t)QR2_TEXT) return "2nd Qualifying Round";
   if ((uint16_t)index == (uint16_t)KOPO_TEXT) return "Knockout round play-offs";
   if ((uint16_t)index == (uint16_t)SUD1_TEXT) return "First stage";
+  if ((uint16_t)index == (uint16_t)FINAL_TEXT) return "Final";
   return ((txtget_fn)(uintptr_t)g_tramp_txtget)(table, index);
 }
 
@@ -8122,6 +8733,21 @@ uint64_t phname_handler(uint64_t reg)
     return KOPO_TEXT;
   }
   if ((uint16_t)reg == g_sud1_reg) return SUD1_TEXT;
+  /* the final of a league play-off (0.2.5, the Liga FUTVE): the knockout is a normal cup's row cut
+     to two clubs, and the game has no phase name for it -- the super cup row it was copied from
+     before the 28 October test carried none, so the calendar fell back to the competition's name.
+     The match screens, and the Competition Info item, now say "Final". */
+  for (int k = 0; k < g_nccup; k++) {
+    const ccup_t* c = &g_ccup[k];
+    if (c->gnd && c->adv && (uint16_t)reg == c->ko) {
+      static int said_fin = 0;
+      if (said_fin < 4) {
+        said_fin++;
+        logf("fl26swiss: phase name -- regulation %u named Final", (unsigned)(uint16_t)reg);
+      }
+      return FINAL_TEXT;
+    }
+  }
   if (get(reg & 0xffff, rec)) return *(uint32_t*)(rec + 0x40);
   if ((uintptr_t)__builtin_return_address(0) == g_base + MENU_NAME_RA &&
       ((uint16_t)reg == CUPS[1].po || (uint16_t)reg == CUPS[2].po || q_added((uint16_t)reg) >= 0
@@ -9756,6 +10382,7 @@ static int busy_set(uint16_t id, busy_t* out)
       for (int i = 0; i < x->nd && i < CCUP_MAX_DAYS; i++) BZ(x->days[i], BZ_CONT);
     } else if (x->national && !x->nc && ccup_of_league(k, id)) {   /* its league cup */
       for (int i = 0; i < x->nd && i < CCUP_MAX_DAYS; i++) BZ(x->days[i], BZ_LCUP);
+      for (int i = 0; i < x->gnd && i < CCUP_MAX_DAYS; i++) BZ(x->gdays[i], BZ_LCUP);
       for (int li = 0; li < g_nlpre; li++)
         if (g_lpre[li].ko == x->ko) { BZ(g_lpre[li].days[0], BZ_LCUP); BZ(g_lpre[li].days[1], BZ_LCUP); }
     }
@@ -10073,6 +10700,8 @@ static void league_dates(uint16_t id, uint64_t reg, void* vec)
  * Championship's 46-date calendar (reg 79) as the timeline instead. The total's vector is
  * emptied: given dates it would schedule a league of its own. */
 struct split_s { uint16_t total, regular, group[3]; };
+static uint16_t split_total_of(const split_t* s) { return s ? s->total : 0; }
+static uint16_t split_group0_of(const split_t* s) { return s ? s->group[0] : 0; }
 /* No split is built in: a world file names its splits (fl26_swiss_splits). */
 #define MAX_SPLITS 32
 static split_t SPLITS[MAX_SPLITS] = {
@@ -11280,6 +11909,36 @@ static uint32_t rec_rounds(uint16_t id)
   return (clubs & 1 ? clubs : clubs - 1) * legs;
 }
 
+/* Fase 4 (31.10., the Liga FUTVE from January to December): a split phase's own round days, from
+   the world file's `splitdays <reg> d,d,...` lines (fl26_swiss_splitdays: reg, n, n days, ...). A
+   phase named there takes them as they are, in place of its share of the Scottish line. */
+#define MAX_SPLITDAYS 8
+typedef struct { uint16_t reg, n; uint16_t day[64]; } splitdays_t;
+static splitdays_t g_sdays[MAX_SPLITDAYS]; static int g_nsdays = 0;
+__declspec(dllexport) int fl26_swiss_splitdays(const uint16_t* v, int n)
+{
+  g_nsdays = 0;
+  for (int i = 0; v && i + 2 <= n && g_nsdays < MAX_SPLITDAYS; ) {
+    uint16_t reg = v[i], c = v[i + 1];
+    if (i + 2 + c > n) break;
+    splitdays_t* d = &g_sdays[g_nsdays];
+    d->reg = reg; d->n = c > 64 ? 64 : c;
+    for (int j = 0; j < d->n; j++) d->day[j] = v[i + 2 + j];
+    int ok = d->n > 0;
+    for (int j = 0; j < d->n; j++) ok &= d->day[j] < 365 && (j == 0 || d->day[j] > d->day[j - 1]);
+    if (ok) g_nsdays++;
+    else logf("fl26swiss: splitdays %u -- days not rising within the year; left out", (unsigned)reg);
+    i += 2 + c;
+  }
+  logf("fl26swiss: %d split phase(s) dated on their own days", g_nsdays);
+  return g_nsdays;
+}
+static const splitdays_t* splitdays_of(uint16_t id)
+{
+  for (int i = 0; i < g_nsdays; i++) if (g_sdays[i].reg == id) return &g_sdays[i];
+  return 0;
+}
+
 static uint64_t split_dates(uint16_t id, uint64_t reg, void* vec, int part, const split_t* s)
 {
   vec_t* v = (vec_t*)vec;
@@ -11306,6 +11965,18 @@ static uint64_t split_dates(uint16_t id, uint64_t reg, void* vec, int part, cons
                     (unsigned)id, n1, n2, n, (unsigned)have);
     return rv;
   }
+  const splitdays_t* own = splitdays_of(id);
+  if (own && own->n >= n) {
+    for (uint32_t i = 0; i < n; i++) { r[i].day = own->day[i]; r[i].round = i; r[i].kind = FL26_DATE_KIND_LEAGUE; }
+    v->e = v->b + (size_t)n * sizeof(date_t);
+    if (!seen)
+      logf("fl26swiss: reg %u -- split %s of %u: %u rounds on its own days %u..%u (splitdays)",
+           (unsigned)id, part == 2 ? "regular phase" : "group", (unsigned)s->total, n, r[0].day, r[n - 1].day);
+    if (!seen && part == 2 && id > 175) check_reg(id, "dated");
+    return rv;
+  }
+  if (own && !seen)
+    logf("fl26swiss: reg %u -- splitdays gives %u day(s) for %u rounds; the August-May line instead", (unsigned)id, own->n, n);
   uint16_t line[64]; size_t L;
   if (T <= 38) {
     size_t skip = 38 - T < SPLIT_SKIP ? 38 - T : SPLIT_SKIP;
@@ -11656,6 +12327,7 @@ static uint64_t datelike_dates(uint16_t id, uint64_t reg, void* vec)
     nt_cup_clear(id, vec);                         /* B254 */
     vec_t* v = (vec_t*)vec;
     size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+    if (have) dl_last_note(id, (int)((date_t*)v->b)[have - 1].day);   /* the ceremony's final day */
     int seen = 0;
     for (int k = 0; k < nsaid; k++) if (said[k] == id) seen = 1;
     if (!seen && nsaid < MAX_DATELIKE) {
@@ -12008,6 +12680,36 @@ void* mdlabel_handler(void* out, uint16_t* reg, uint32_t* md, uint32_t* leg, uin
   return ((mdlabel_fn)g_tramp_mdlabel)(out, reg, md, leg, a5, a6);
 }
 
+/* ---- the automatic Liga FUTVE (30.10.) ----
+ * Felix: a club that wins the Apertura and the Clausura is the Liga FUTVE champion at once, with the
+ * Final del FUTVE's title and logo, no match played. The season row alone did not show in the
+ * Palmarés: for the running season it asks the game who won each competition -- the rights code
+ * (0x1415799e0, type 0 = winner), which for an unplayed final answers nobody. So for the final of two
+ * cups the answer is ours whenever both feeding finals went to one club this season. */
+static const unsigned char SIG_RIGHT[15] = { 0x48,0x89,0x5c,0x24,0x18, 0x48,0x89,0x74,0x24,0x20, 0x66,0x89,0x54,0x24,0x10 };
+unsigned char* g_tramp_right = 0;
+static uint32_t ff_auto_champion(uint16_t reg)
+{
+  for (int k = 0; k < g_nccup; k++) {
+    const ccup_t* c = &g_ccup[k];
+    if (!c->src[0] || c->ko != reg) continue;
+    uint32_t w1 = ccup_src_winner(c->src[0]), w2 = ccup_src_winner(c->src[1]);
+    return w1 && w2 && same_club(w1, w2) ? w1 : 0;
+  }
+  return 0;
+}
+uint32_t* right_handler(uint32_t* out, uint64_t source, uint32_t type)
+{
+  static int busy = 0;
+  if (type == 0 && !busy && out) {
+    busy = 1;
+    uint32_t w = ff_auto_champion((uint16_t)source);
+    busy = 0;
+    if (w) { *out = w; return out; }
+  }
+  return ((right_fn)(uintptr_t)g_tramp_right)(out, source, type);
+}
+
 /* ---- install ---- */
 static int hook(unsigned char* target, const unsigned char* sig, int n, void* handler, unsigned char** tramp_out)
 {
@@ -12080,6 +12782,23 @@ typedef struct {
    Pre-Libertadores, in place of the one the season had started with. The order is kept in the
    file too, and read back with the rest. Older DLLs pass these records over (kind > 2). */
 #define STATE_SEED 3
+/* fase 4 (31.10., Felix: the second Liga FUTVE won, the Palmares still at 1): a title the DLL put in
+   the user's trophy cabinet, by regulation and calendar year (game_date / 365), kept in the file so
+   a reload never adds it twice and a later season's is added again. Older DLLs pass these over. */
+#define STATE_TITLE 4
+typedef struct { uint16_t reg; int year; } titlemark_t;
+static titlemark_t g_tmark[64]; static int g_ntmark = 0;
+static int tmark_has(uint16_t reg, int year)
+{
+  for (int i = 0; i < g_ntmark; i++) if (g_tmark[i].reg == reg && g_tmark[i].year == year) return 1;
+  return 0;
+}
+static void tmark_add(uint16_t reg, int year)
+{
+  if (tmark_has(reg, year)) return;
+  if (g_ntmark >= 64) { memmove(g_tmark, g_tmark + 1, 63 * sizeof g_tmark[0]); g_ntmark = 63; }
+  g_tmark[g_ntmark].reg = reg; g_tmark[g_ntmark].year = year; g_ntmark++;
+}
 #define BUILT_SUMMER 300    /* built to its first August draw: day 216 or, a January league's, day 0 */
 static int g_st_off = -0x7fffffff, g_st_day = -0x7fffffff, g_st_busy = 0;
 static uint32_t g_st_user = 0;
@@ -12192,6 +12911,13 @@ static void state_store(void)
     memcpy(r->club, g_seed[i].club, n * sizeof(uint32_t));
     r->check = state_check(r);
   }
+  for (int i = 0; i < g_ntmark && u && nw < STATE_MAXREC; i++) {
+    state_rec_t* r = &want[nw++];
+    memset(r, 0, sizeof *r);
+    r->user = u; r->gdate = g_tmark[i].year * 365; r->kind = STATE_TITLE; r->n = 1; r->reg = g_tmark[i].reg;
+    r->club[0] = (uint32_t)g_tmark[i].year;
+    r->check = state_check(r);
+  }
   if (g_new_career && g_built_gdate >= 0 && u && nw < STATE_MAXREC) {
     state_rec_t* r = &want[nw++];
     memset(r, 0, sizeof *r);
@@ -12263,8 +12989,9 @@ static void state_sync(void)
   state_rec_t r; DWORD got = 0;
   while (ReadFile(h, &r, sizeof r, &got, 0) && got == sizeof r) {
     if (r.check != state_check(&r) || r.user != u || r.gdate > gn || gn - r.gdate > STATE_AGE ||
-        r.kind > STATE_SEED || !r.n || r.n > FINAL_MAX ||
+        r.kind > STATE_TITLE || !r.n || r.n > FINAL_MAX ||
         ((r.kind == 1 || r.kind == STATE_BUILT) && r.n != 1)) continue;
+    if (r.kind == STATE_TITLE) { tmark_add(r.reg, (int)r.club[0]); continue; }   /* every one, not the newest */
     int k = 0;
     while (k < nb && (best[k].kind != r.kind || best[k].reg != r.reg)) k++;
     if (k == nb) { if (nb >= STATE_MAXREC) continue; nb++; }
@@ -12340,7 +13067,7 @@ static void apclau_keep(void)
 {
   static int last = -1;
   int d = abs_day(), td = today();
-  if (d == last || td < 60 || td > 180 || !g_nnocarry) return;
+  if (d == last || (futve_cal() ? td < 290 : (td < 60 || td > 180)) || !g_nnocarry) return;   /* fase 4: after the Clausura's regular phase */
   last = d;
   for (int k = 0; k < g_nsplits; k++) {
     const split_t* s = &SPLITS[k];
@@ -12350,7 +13077,13 @@ static void apclau_keep(void)
     uint16_t regs[2] = { s->regular, s->group[0] };
     final_t t;
     int played, n = count_table(regs, 2, &t, &played);
-    if (n < 4 || played < n * (n - 1)) continue;
+    if (n < 4 || played < n * (n - 1)) {
+      static int said_y = -1;   /* fase 4: why the January-December Liga FUTVE has no year-end table yet */
+      if (futve_cal() && said_y != d / 30) { said_y = d / 30;
+        logf("fl26swiss: reg %u -- Apertura + Clausura table not kept yet on day %d: %d club(s), %d of %d matches played",
+             (unsigned)s->total, td, n, played, n * (n - 1)); }
+      continue;
+    }
     if (!f && !(f = final_new(s->total))) continue;
     *f = t; f->reg = s->total; f->day = d;
     logf("fl26swiss: reg %u -- Apertura + Clausura table from %d matches kept as the final table: "
@@ -12594,6 +13327,196 @@ static void sched_days(void)
  * nothing in the game's progression fills it again. Once last season's league
  * and cup rights exist, rebuild the two-club field and register the cup so its
  * match is made. */
+/* Fase 4 (31.10., Felix: "first year of ML, no Copa Venezuela"): the January-December Copa (255)
+   was put on the New Year builder's list (fl26joindll, cup= of the league line), but the builder
+   shows the door only the ids whose runs-this-season flag (+0x304 bit 8) is set, and the New Year
+   teardown (which closes it with the cup it is dated as) leaves it clear: never entered, never a
+   match. So, as the calendar Super Cup: before its first day, with no match of its own, its field
+   is set to the league's clubs, the flag set, the stage started and register_all asked for it --
+   the door then enters it and the game draws its bracket (cupdraw seeded). */
+/* Fase 4 (31.10., second try at the second season): adding the phases to the New Year teardown
+   list did nothing -- fl26join takes ours back out of it ("ours kept out: [191 192]"). What keeps
+   the Apertura out is fl26join's register_all test on day 41: a phase in a season (+0x304 bit 8)
+   with a table is "already in a season". So before day 41 the regular phase of a January-December
+   split of ours has that flag cleared (once a year): register_all then appends it with its league,
+   and the door, which resets a league of ours' season year, enters it for the new season. */
+static void futve_phase_reopen(void)
+{
+  int d = today();
+  if (!futve_cal() || d < 1 || d > 40) return;
+  static int done_year = -1;
+  int y = abs_day() / 365;
+  if (done_year == y) return;
+  done_year = y;
+  for (int i = 0; i < g_nsplits; i++) {
+    if (!calyear(SPLITS[i].total)) continue;
+    unsigned char* r = get_rec(SPLITS[i].regular);
+    if (!r) continue;
+    if (ccup_matches(SPLITS[i].regular) > 0) continue;   /* in this season already (a career's first, from 1 January) */
+    uint32_t* fl = (uint32_t*)(r + 0x304);
+    int was = (*fl >> 8) & 1;
+    *fl &= ~(1u << 8);
+    logf("fl26swiss: reg %u -- a January-December split's regular phase reopened on day %d for its new season "
+         "(runs-this-season flag %d -> 0, season year %04x): register_all takes it with its league on day 41",
+         (unsigned)SPLITS[i].regular, d, was, *(uint16_t*)(r + 0x2fc));
+  }
+}
+/* Fase 4 (31.10., Felix): the Apertura's and the Clausura's league phases are the same fourteen clubs,
+   every one plays them whatever happens -- so the Clausura is on the calendar from February with the
+   Apertura, not dealt by the game in May. Once the regular phase has its matches this season and the
+   group none: the group's field is set to the regular phase's clubs, the flag set, the stage started
+   and register_all asked for it; split_dates gives it its splitdays. The split progression in May
+   then leaves it alone (prog_handler_inner). */
+static void futve_clausura_early(void)
+{
+  int d = today();
+  /* from day 0: in a career's first season the Apertura has its matches from the creation on 1 January */
+  if (!futve_cal() || d < 0 || d > 120) return;
+  static int done_year = -1;
+  int y = abs_day() / 365;
+  if (done_year == y) return;
+  for (int i = 0; i < g_nsplits; i++) {
+    const split_t* sp = &SPLITS[i];
+    if (!calyear(sp->total) || !sp->group[0] || sp->group[1] || !nocarry(sp->total)) continue;
+    unsigned char* rr = get_rec(sp->regular);
+    unsigned char* gr = get_rec(sp->group[0]);
+    if (!rr || !gr || ccup_matches(sp->regular) <= 0) continue;    /* the Apertura not in yet */
+    done_year = y;
+    if (ccup_matches(sp->group[0]) > 0) continue;                   /* already made this year */
+    uint32_t n = rec_count(rr);
+    if (n < 4 || n > 32) continue;
+    uint32_t clubs[32];
+    for (uint32_t c = 0; c < n; c++) clubs[c] = rec_clubs(rr)[c];
+    u32vec v = { clubs, clubs + n, clubs + n };
+    ((setclr_fn)(uintptr_t)g_tramp_setcl)(sp->group[0], &v, 1);
+    run_flush();
+    *(uint32_t*)(gr + 0x304) |= 1u << 8;
+    start_stage(0, sp->group[0]);
+    uint16_t id = sp->group[0];
+    struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { &id, &id + 1, &id + 1 };
+    ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
+    run_flush();
+    canon_groups(sp);
+    logf("fl26swiss: reg %u -- the Clausura made on day %d with the Apertura: %u club(s) of reg %u, %d match record(s)",
+         (unsigned)sp->group[0], d, n, (unsigned)sp->regular, ccup_matches(sp->group[0]));
+  }
+}
+/* Fase 6: the cup is the title league's own, the cup= of its world-file line (its January Super Cup
+   is played by that cup's winner, g_cal_scup) -- 255 in the Liga FUTVE's worlds, whatever id Mod
+   Studio's Build gave it otherwise. 255 when the league has no super cup to say it. */
+static uint16_t futve_copa_reg(void)
+{
+  for (int i = 0; i < g_ncal_scup; i++) if (g_cal_scup[i].league == g_tl_total && g_cal_scup[i].cup) return g_cal_scup[i].cup;
+  return 255;
+}
+#define FUTVE_COPA futve_copa_reg()
+static void futve_copa_fill(void)
+{
+  int d = today();
+  if (!futve_cal() || !g_tl_total || d < 0 || d > 66) return;
+  unsigned char* rec = get_rec(FUTVE_COPA);
+  if (!rec || ccup_matches(FUTVE_COPA) > 0) return;
+  static int tried_year = -1;
+  int y = abs_day() / 365;
+  if (tried_year == y) return;
+  unsigned char* lg = get_rec(g_tl_total);
+  const split_t* sp = 0;
+  for (int i = 0; i < g_nsplits; i++) if (SPLITS[i].total == g_tl_total) sp = &SPLITS[i];
+  unsigned char* src = sp ? get_rec(sp->regular) : 0;
+  if (!src || rec_count(src) < 4) src = lg;
+  uint32_t n = src ? rec_count(src) : 0;
+  if (n < 4 || n > 32) return;                      /* the league's clubs not there yet: next day */
+  tried_year = y;
+  uint32_t clubs[32];
+  for (uint32_t i = 0; i < n; i++) clubs[i] = rec_clubs(src)[i];
+  u32vec v = { clubs, clubs + n, clubs + n };
+  ((setclr_fn)(uintptr_t)g_tramp_setcl)(FUTVE_COPA, &v, 1);
+  run_flush();
+  *(uint32_t*)(rec + 0x304) |= 1u << 8;            /* in this season: the door asks for it */
+  start_stage(0, FUTVE_COPA);
+  uint16_t id = FUTVE_COPA;
+  struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { &id, &id + 1, &id + 1 };
+  ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
+  run_flush();
+  logf("fl26swiss: Copa Venezuela %u -- day %d: %u club(s) of reg %u set, registered: %u club(s), %d match record(s)",
+       (unsigned)FUTVE_COPA, d, n, (unsigned)rec_id(src), (unsigned)rec_count(rec), ccup_matches(FUTVE_COPA));
+}
+/* ---- title leagues: a split league whose title is a final of two cups' (a grand final) ----
+ * fl26_swiss_title_league names them: {split total, its competition}, and {the final's knockout, its
+ * competition}. Any number of them in a world, one final each: the final of two cups whose feeding
+ * cups take their clubs from the league's phases (grand_final_of). g_tl_total / g_tl_cid are the
+ * first one, which the January-December Liga FUTVE code reads (futve_cal). */
+#define TL_MAX 8
+static uint16_t g_tl_tot[TL_MAX], g_tl_cids[TL_MAX];
+static int g_ntl;
+static uint16_t g_ccup_fcid[MAX_CCUP];             /* a final of two cups' own competition (cid=) */
+static const split_t* split_of_total(uint16_t total)
+{
+  for (int i = 0; i < g_nsplits; i++) if (SPLITS[i].total == total) return &SPLITS[i];
+  return 0;
+}
+static int split_has_phase(const split_t* sp, uint16_t reg)
+{
+  return sp && reg && (reg == sp->regular || reg == sp->group[0] || reg == sp->group[1] || reg == sp->group[2]);
+}
+/* the final of two cups (src=) whose feeding cups are filled from the split league `total`'s
+   phases (their first entry), -1 when it has none */
+static int grand_final_of(uint16_t total)
+{
+  const split_t* sp = split_of_total(total);
+  if (!sp) return -1;
+  for (int k = 0; k < g_nccup; k++) {
+    const ccup_t* f = &g_ccup[k];
+    if (!f->src[0] || !f->src[1]) continue;
+    int fed = 1;
+    for (int s = 0; s < 2 && fed; s++) {
+      int ko = 0, j = ccup_of(f->src[s], &ko);
+      fed = j >= 0 && g_ccup[j].n && split_has_phase(sp, g_ccup[j].ereg[0]);
+    }
+    if (fed) return k;
+  }
+  return -1;
+}
+static int is_title_league(uint16_t reg)
+{
+  for (int i = 0; reg && i < g_ntl; i++) if (g_tl_tot[i] == reg) return 1;
+  return 0;
+}
+static uint32_t league_champion_kept(uint16_t total, int ad);
+/* A January-December super cup's cup winner and runner-up, kept from the cup's final on (days 200 to
+   the year's end, while the game still names them): at New Year the cup enters its next season and
+   is drawn before the super cup is filled, and the rights code names nobody any more (01.11., Felix's
+   second Master League season: the Copa Venezuela of 2025 drawn again on day 0 and no Supercopa
+   de Venezuela, no word in the log). The runner-up as cupwin FUTVE_RUNNER | cup. */
+static void calendar_scup_keep(void)
+{
+  int d = today(), ad = abs_day();
+  if (!g_ncal_scup || d < 200 || ad < 0) return;
+  for (int i = 0; i < g_ncal_scup; i++) {
+    const cal_scup_t* cs = &g_cal_scup[i];
+    uint32_t w = winner_now(cs->cup);
+    if (!(w >> 14)) continue;
+    uint32_t r = knockout_runner_now(cs->cup);
+    for (int q = 0; q < 2; q++) {
+      uint16_t key = (uint16_t)(q ? (FUTVE_RUNNER | cs->cup) : cs->cup);
+      uint32_t club = q ? r : w;
+      if (!(club >> 14)) continue;
+      cupwin_t* k = cupwin_of(key);
+      if (k && k->club == club && ad >= k->day && ad - k->day < 200) continue;   /* this season's, kept */
+      if (!k) { if (g_ncupwin >= 32) continue; k = &g_cupwin[g_ncupwin++]; k->reg = key; }
+      k->day = ad; k->club = club;
+      logf("fl26swiss: cup reg %u %s %08x (day %d), kept for Super Cup %u", (unsigned)cs->cup,
+           q ? "runner-up" : "won by", club, d, (unsigned)cs->reg);
+      state_store();
+    }
+  }
+}
+/* the kept one (calendar_scup_keep) when it is of the year just ended */
+static uint32_t calendar_scup_kept(uint16_t key, int ad)
+{
+  cupwin_t* k = cupwin_of(key);
+  return k && (k->club >> 14) && ad >= k->day && ad - k->day < 150 ? k->club : 0;
+}
 static void calendar_scup_fill_days(void)
 {
   int d = today();
@@ -12604,11 +13527,44 @@ static void calendar_scup_fill_days(void)
     unsigned char* rec = get_rec(cs->reg);
     if (!rec || ccup_matches(cs->reg) > 0) continue;
 
+    int ad = abs_day();
     uint32_t champion = calendar_scup_right(cs->league, 13);
     uint32_t runner   = calendar_scup_right(cs->league, 14);
     uint32_t cupwin   = calendar_scup_right(cs->cup, 0);
-    if (!champion || !cupwin) continue;
+    /* the cup drawn again for its new season names nobody: last season's, kept at its final */
+    if (!cupwin) cupwin = calendar_scup_kept(cs->cup, ad);
+    /* the league's too: the Liga FUTVE's champion of its finals, else the final table kept at New Year */
+    if (!champion && is_title_league(cs->league)) champion = league_champion_kept(cs->league, ad);
+    final_t* ft = final_of(cs->league);
+    if (ft && ft->n >= 2 && ad >= ft->day && ad - ft->day < 150) {
+      if (!champion) champion = ft->club[0];
+      if (!runner) runner = ft->club[1];
+    }
+    if (!champion || !cupwin) {
+      static int said_y = -1;
+      if (said_y != ad / 365) {
+        said_y = ad / 365;
+        logf("fl26swiss: calendar Super Cup %u -- day %d: no %s yet (league %u champion %08x, cup %u winner %08x); not filled",
+             (unsigned)cs->reg, d, !champion ? "league champion" : "cup winner", (unsigned)cs->league, champion,
+             (unsigned)cs->cup, cupwin);
+      }
+      continue;
+    }
 
+    /* fase 4 (the Liga FUTVE January-December): its champion is the finals', the Final del FUTVE's
+       winner in December or the club that won both -- not the accumulated table's leader; the cup's
+       runner-up plays it when that club won the Copa Venezuela too (as aug_scup_fill_days) */
+    if (is_title_league(cs->league)) {
+      uint32_t lf = league_champion_kept(cs->league, abs_day());
+      if (lf) champion = lf;
+      if (same_club(champion, cupwin)) {
+        uint32_t cr = knockout_runner_now(cs->cup);
+        if (!cr) cr = calendar_scup_kept((uint16_t)(FUTVE_RUNNER | cs->cup), ad);
+        if (cr && !same_club(cr, champion)) runner = cr;
+      }
+      logf("fl26swiss: calendar Super Cup %u -- day %d: Liga FUTVE champion %08x (%s), cup %u winner %08x",
+           (unsigned)cs->reg, d, champion, lf ? "the finals'" : "none kept: the table's", (unsigned)cs->cup, cupwin);
+    }
     uint32_t opponent =
       ((champion >> 14) == (cupwin >> 14)) ? runner : cupwin;
     if (!opponent || (opponent >> 14) == (champion >> 14)) continue;
@@ -12664,6 +13620,96 @@ static int ccup_played_since(uint16_t reg, int from)
   return 0;
 }
 
+
+/* 30.10. (Felix): the Supercopa de Venezuela is the Liga FUTVE champion's -- the Final del FUTVE's
+   winner, or the club that won both the Apertura and the Clausura finals -- never the accumulated
+   table's leader. Read from the finals kept this season (the last within 120 days). 0: none known.
+   Any title league's (total): its grand final's (grand_final_of). */
+static uint32_t league_champion_kept(uint16_t total, int ad)
+{
+  int fk = grand_final_of(total);
+  if (fk < 0 || ad < 0) return 0;
+  const ccup_t* c = &g_ccup[fk];
+  cupwin_t* f = cupwin_of(c->ko);
+  if (f && (f->club >> 14) && ad >= f->day && ad - f->day < 120) return f->club;
+  cupwin_t* a = cupwin_of(c->src[0]);
+  cupwin_t* b = cupwin_of(c->src[1]);
+  /* fase 5 (01.11.): the Apertura's final (June) is 200+ days old at the next Supercopa and the
+     CONMEBOL fills of January -- 150 lost it ("none kept: the table's") */
+  if (a && b && (a->club >> 14) && (b->club >> 14) && ad >= a->day && ad - a->day < 300 &&
+      ad >= b->day && ad - b->day < 300 && same_club(a->club, b->club)) return a->club;
+  return 0;
+}
+
+/* fase 5 (01.11., Felix: "que venezuela sea lo más real posible"): the Liga FUTVE's eight
+   continental places as the real league gives them, read through (reg 11, position) by every
+   access path (access_club_kept, cwc_club) once a final table of the accumulated league is kept:
+     1 the champion (the Final del FUTVE's winner, or the club that won both finals) -- Libertadores
+     2 the best of the accumulated table besides the champion and the runner-up -- Libertadores
+     3 the runner-up (the Final del FUTVE's loser) -- Libertadores phase 2
+     4 the next of the table -- Libertadores phase 1
+     5, 6 the Apertura's and the Clausura's final losers -- Sudamericana first stage
+     7, 8 the next two of the table -- Sudamericana first stage
+   A club already placed hands its place to the next of the table. Only with the modern CONMEBOL
+   competitions; 0 (the table as before) otherwise or past position 8.
+   Fase 6: only for the league the world file's `contorder <reg> finals` line names (Mod Studio's
+   "places_order": "finals", fl26_swiss_contorder) -- the title league; without the line, the table
+   as before, the Liga FUTVE of phase 5 included. */
+static uint16_t g_contorder_reg;
+__declspec(dllexport) int fl26_swiss_contorder(const uint16_t* v, int n)
+{
+  g_contorder_reg = v && n > 0 ? v[0] : 0;
+  if (g_contorder_reg)
+    logf("fl26swiss: league %u -- its continental places in the order of the finals (contorder)", (unsigned)g_contorder_reg);
+  return g_contorder_reg ? 1 : 0;
+}
+static uint32_t futve_runner_kept(uint16_t ko, int ad)
+{
+  cupwin_t* r = cupwin_of((uint16_t)(FUTVE_RUNNER | ko));
+  /* fase 5 (01.11.): the Apertura's final is in June, its loser goes abroad next January -- 150
+     days was too short (the second year read none) */
+  return r && (r->club >> 14) && ad >= r->day && ad - r->day < 300 ? r->club : 0;
+}
+static uint32_t futve_cont_club(uint16_t reg, int rank, const char** how)
+{
+  if (!g_tl_total || reg != g_tl_total || reg != g_contorder_reg || rank < 1 || rank > 8 || !futve_cal() || !modern_conmebol())
+    return 0;
+  final_t* f = final_of(reg);
+  int ad = abs_day();
+  if (!f || f->n < 10 || ad < f->day || ad - f->day > 300) return 0;
+  int fk = grand_final_of(reg);
+  uint32_t C = league_champion_kept(reg, ad), U = 0, AL = 0, CL = 0;
+  if (!C) C = f->club[0];
+  if (fk >= 0) {
+    U = futve_runner_kept(g_ccup[fk].ko, ad);
+    AL = futve_runner_kept(g_ccup[fk].src[0], ad);
+    CL = futve_runner_kept(g_ccup[fk].src[1], ad);
+  }
+  if (U && same_club(U, C)) U = 0;
+  uint32_t used[16]; size_t nu = 0, o[8];
+  #define FC_NEXT() ({ uint32_t x_ = 0; for (unsigned i_ = 0; i_ < f->n; i_++) \
+      if (!has_club(used, nu, f->club[i_])) { x_ = f->club[i_]; break; } x_; })
+  used[nu++] = C; if (U) used[nu++] = U;
+  o[0] = C;
+  o[1] = FC_NEXT(); used[nu++] = o[1];
+  o[2] = U ? U : FC_NEXT(); if (!U) used[nu++] = o[2];
+  o[3] = FC_NEXT(); used[nu++] = o[3];
+  o[4] = AL && !has_club(used, nu, AL) ? AL : FC_NEXT(); used[nu++] = o[4];
+  o[5] = CL && !has_club(used, nu, CL) ? CL : FC_NEXT(); used[nu++] = o[5];
+  o[6] = FC_NEXT(); used[nu++] = o[6];
+  o[7] = FC_NEXT();
+  #undef FC_NEXT
+  static int said = -1;
+  if (said != f->day) {
+    said = f->day;
+    logf("fl26swiss: Liga FUTVE continental places (fase 5) -- champion %08x, runner-up %08x, finals' losers %08x / %08x: "
+         "Lib %08x %08x, F2 %08x, F1 %08x, Suda %08x %08x %08x %08x", C, U, AL, CL,
+         (unsigned)o[0], (unsigned)o[1], (unsigned)o[2], (unsigned)o[3], (unsigned)o[4], (unsigned)o[5], (unsigned)o[6], (unsigned)o[7]);
+  }
+  *how = "Liga FUTVE continental order";
+  return (uint32_t)o[rank - 1];
+}
+
 static void aug_scup_fill_days(void)
 {
   int d = today();
@@ -12683,6 +13729,31 @@ static void aug_scup_fill_days(void)
     uint32_t champion = fk ? f->club[0] : calendar_scup_right(cs->league, 13);
     uint32_t runner   = fk ? f->club[1] : calendar_scup_right(cs->league, 14);
     uint32_t cupwin   = !cs->cup ? 0 : wk ? w->club : calendar_scup_right(cs->cup, 0);
+    int futve = is_title_league(cs->league);
+    if (futve) {
+      /* the Liga FUTVE: its champion (the finals'), against the Copa Venezuela's winner -- or the
+         cup's runner-up when one club won both */
+      uint32_t lf = league_champion_kept(cs->league, ad);
+      static int said_lf = -1;
+      if (lf) champion = lf;
+      else if (said_lf != log_season()) {
+        said_lf = log_season();
+        logf("fl26swiss: August-May Super Cup %u -- day %d: no Liga FUTVE champion kept; the table's leader goes",
+             (unsigned)cs->reg, d);
+      }
+      if (cs->cup && cupwin && same_club(champion, cupwin)) {
+        uint32_t cr = knockout_runner_now(cs->cup);
+        if (cr && !same_club(cr, champion)) runner = cr;
+        else {
+          static int said_cr = -1;
+          if (said_cr != log_season()) {
+            said_cr = log_season();
+            logf("fl26swiss: August-May Super Cup %u -- day %d: the cup %u's runner-up not read; the league's runner-up goes",
+                 (unsigned)cs->reg, d, (unsigned)cs->cup);
+          }
+        }
+      }
+    }
     if (!champion || (cs->cup && !cupwin)) {
       static int said_season[MAX_CAL_SCUPS];
       if (said_season[i] != log_season() + 1) {
@@ -12736,7 +13807,7 @@ static void aug_scup_fill_days(void)
 
     logf("fl26swiss: August-May Super Cup %u -- day %d: league %u champion %u v %s %u; registered, %d match record(s), %d unplayed",
          (unsigned)cs->reg, d, (unsigned)cs->league, champion >> 14,
-         by_runner ? "league runner-up" : "cup winner", opponent >> 14,
+         by_runner ? (futve && cs->cup ? "cup runner-up" : "league runner-up") : "cup winner", opponent >> 14,
          ccup_matches(cs->reg), ccup_unplayed(cs->reg));
   }
 }
@@ -12761,6 +13832,767 @@ static void join_on_day0(void)
   logf("fl26swiss: the leagues of ours registered on day 0, not on day 1 (B258c): %d match record(s) before, %d after",
        before, ccup_matches(0xffff));
 }
+
+/* B-FUTVE: a jump of the calendar over a day a cup of ours needs. The day loop is where the DLL
+   fills a cup (fill=), and the game only stops on a match day when the cup has matches; a jump
+   over its fill day with the cup still empty, or over a match day of a cup filled that season,
+   means the DLL never had that day -- a Fast Forward (c0ad4dc: 37 days let through) -- and the
+   cup is missing or half played. Said loudly, so a test of that season is known to be void. */
+static void ccup_jump_check(int from, int to)
+{
+  int said = 0;
+  if (from < 0 || to < from) return;
+  if (to - from > 400) from = to - 400;
+  for (int a = from; a <= to; a++) {
+    int doy = a % 365, ya = (a + 183) / 365;
+    for (int k = 0; k < g_nccup; k++) {
+      const ccup_t* c = &g_ccup[k];
+      const char* what = 0;
+      int filled = c->filled_year == ya && !(c->src[0] && g_ccup_nf[k] < 2);   /* same champion: no final played */
+      if (c->fill && c->fill == doy && !filled) what = "fill day, the cup still empty";
+      for (int i = 0; filled && i < c->gnd && !what; i++) if (c->gdays[i] == doy) what = "group matchday";
+      /* fase 5: a two-club knockout (the Recopa) plays its last day only -- the six before are not its */
+      for (int i = (c->n == 2 && c->nd >= 7) ? c->nd - 1 : 0; filled && i < c->nd && !what; i++) if (c->days[i] == doy) what = "knockout/final day";
+      if (!what || !ccup_world(c)) continue;
+      if (said++ < 12)
+        logf("fl26swiss: AVISO -- the calendar jumped over day %d (%s of cup %u) without the DLL seeing it "
+             "(days %d..%d, Fast Forward?): this season's cup %u is not reliable",
+             doy, what, (unsigned)c->ko, from % 365, to % 365, (unsigned)c->ko);
+    }
+  }
+  if (said > 12) logf("fl26swiss: AVISO -- and %d more day(s) of our cups jumped over", said - 12);
+}
+
+static void tp_hex(const unsigned char* p, char* out)
+{
+  static const char H[] = "0123456789abcdef";
+  for (int i = 0; i < 32; i++) { out[2 * i] = H[p[i] >> 4]; out[2 * i + 1] = H[p[i] & 15]; }
+  out[64] = 0;
+}
+
+
+/* ---- the Liga FUTVE title (0.2.5): the user's honours of the season ----
+ * Found with the title probe (29.10.): the career block holds the user's honours of the running
+ * season at blk+0x17b59e4 -- a header {u16 year, u8 month, u8 day} start, the same for the end,
+ * u32 the club -- then 15 rows of 12 bytes {u32 competition id, u16 regulation, u8 won, u8 kind,
+ * u32 0}, an empty row {0xffffffff, 0xffff, 0, 0, 0}. The game writes a league title for each phase
+ * of a split league it ends: (130, 191, 1, 0x0d) on day 0, (130, 192, 1, 0x0d) and (130, 11, 1,
+ * 0x0d) on day 142 -- one is enough for "Liga FUTVE 1" -- and a final of ours as (175, 263, 1, 0)
+ * or (129, 262, 0, 1) for the runner-up. The Liga FUTVE is won only in the Final del FUTVE, or by
+ * the club that won both feeding finals. So from January to June the rows of the split league are
+ * taken out, and the user's win of the final of two cups becomes one league row (cid, total, 1,
+ * 0x0d); a lost Final del FUTVE keeps its runner-up row. July and later: left alone (the block is
+ * the finished season's until the next one is opened). */
+#define HON_OFF   0x17b59e4
+#define HON_ROWS  15
+/* Fase 4 (31.10.): in the second year the block at HON_OFF still read 2025 -- it is the career's
+   first season's, not the running one. The season blocks of the user's club around it: every
+   {u16 year 2000..2200, u8 month 1..12, ...} with the user's club at +8, the latest year taken.
+   Said once a session (every candidate), and again when the latest moves. */
+/* ---- the trophy cabinet: the user's titles in the Palmarés ----
+ *
+ * The career block holds the user's trophy cabinet: a header with the user's club at CAB_HDR, then
+ * one record of CAB_RECSZ bytes per competition won, in the order first won, up to the first empty
+ * one (regulation 0xffff). A record is {u16 regulation, u16 0} and two parallel lists of
+ * CAB_N entries: the winners (u32 club) from +4 and the dates (u16 year, u8 month, u8 day; an
+ * empty date is ffff0000) from CAB_DAT. 261 won twice reads "05010000 0680ed45 0680ed45 ffffffff"
+ * and, at CAB_DAT, "e9070611 ea070611": the Palmarés counts the dates, one row per record.
+ *
+ * The game writes this for its own competitions and for most of ours. Where it does not -- a super
+ * cup of ours (registered outside the game's own stage run), a play-off final played while another
+ * knockout of ours is still running, the champion of a final of two cups that was never played --
+ * the DLL writes it: the club and the date on the record's lists, or a record of its own after the
+ * last. A title is in the cabinet when the record has a date of that year (cab_has_year): never the
+ * state file's marks, which outlive a career and a save loaded from before the title. */
+#define CAB_HDR   0x1798ab0
+#define CAB_REC0  0x1798ca8
+#define CAB_RECSZ 0x648
+#define CAB_DAT   0x324
+#define CAB_N     200
+#define CAB_END   0x17b0000                 /* the end of the region the records may reach (WIN_HI) */
+static unsigned char* hon_block_now(unsigned char* blk, uint32_t u);
+static unsigned char* cab_rec(unsigned char* blk, int i)
+{
+  return CAB_REC0 + (size_t)(i + 1) * CAB_RECSZ <= CAB_END ? blk + CAB_REC0 + (size_t)i * CAB_RECSZ : 0;
+}
+/* the records in use (up to the first empty one) */
+static int cab_count(unsigned char* blk)
+{
+  int n = 0;
+  for (unsigned char* r; n < 64 && (r = cab_rec(blk, n)) && *(uint16_t*)r != 0xffff; n++) {}
+  return n;
+}
+static int cab_find(unsigned char* blk, uint16_t reg)
+{
+  int n = cab_count(blk);
+  for (int i = 0; i < n; i++) if (*(uint16_t*)cab_rec(blk, i) == reg) return i;
+  return -1;
+}
+static int rec_wins(const unsigned char* f)
+{
+  int k = 0;
+  while (k < CAB_N && *(const uint32_t*)(f + 4 + 4 * k) != 0xffffffffu) k++;
+  return k;
+}
+/* a date for the lists: year, then the day of the year (0 = 1 January) as month and day */
+static uint32_t cab_date(int year, int doy)
+{
+  static const int MD[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+  int mo = 0;
+  if (doy < 0) doy = 0;
+  while (mo < 11 && doy >= MD[mo]) { doy -= MD[mo]; mo++; }
+  return (uint32_t)(uint16_t)year | ((uint32_t)(mo + 1) << 16) | ((uint32_t)(doy + 1) << 24);
+}
+/* One win more: the club and a date on the ends of both lists, the date the given one if sane and
+   of a year not there yet, else the running season's year with the last entry's month and day.
+   Returns the wins after. */
+static unsigned rec_append(unsigned char* blk, uint32_t u, unsigned char* f, uint32_t club, uint32_t date)
+{
+  size_t k = (size_t)rec_wins(f);
+  if (k >= CAB_N) return (unsigned)k;
+  uint16_t dy = (uint16_t)date, last = 0; uint32_t lastd = 0;
+  int ok = dy >= 2000 && dy < 2200;
+  for (size_t j = 0; j < k; j++) { uint32_t dj = *(uint32_t*)(f + CAB_DAT + 4 * j); if ((uint16_t)dj == dy) ok = 0;
+    if ((uint16_t)dj != 0xffff) { lastd = dj; last = (uint16_t)dj; } }
+  if (!ok) {
+    unsigned char* hn = u ? hon_block_now(blk, u) : 0;
+    uint16_t y = hn ? *(uint16_t*)hn : (uint16_t)(last ? last + 1 : 0);
+    if (y <= last) y = (uint16_t)(last + 1);
+    date = (lastd & 0xffff0000u) | y;
+    if (!lastd) date = 0x0c0b0000u | y;                    /* 11 December */
+  }
+  *(uint32_t*)(f + 4 + 4 * k) = club;
+  *(uint32_t*)(f + CAB_DAT + 4 * k) = date;
+  return (unsigned)(k + 1);
+}
+/* the winners a record has no date for (a merge before 31.10. moved only the clubs) get one */
+static int rec_dates_fill(unsigned char* blk, uint32_t u, unsigned char* f)
+{
+  size_t k = (size_t)rec_wins(f);
+  size_t dk = 0; while (dk < CAB_N && *(uint16_t*)(f + CAB_DAT + 4 * dk) != 0xffff) dk++;
+  int n = 0;
+  uint32_t tail[CAB_N]; size_t nt = 0;
+  for (size_t j = dk; j < k; j++) { tail[nt++] = *(uint32_t*)(f + 4 + 4 * j); *(uint32_t*)(f + 4 + 4 * j) = 0xffffffffu; }
+  for (size_t j = 0; j < nt; j++) { rec_append(blk, u, f, tail[j], 0); n++; }
+  return n;
+}
+/* a title of year y is in the cabinet: a record of reg with a date of that year */
+static int cab_has_year(unsigned char* blk, uint16_t reg, int y)
+{
+  int n = cab_count(blk);
+  for (int i = 0; i < n; i++) {
+    unsigned char* f = cab_rec(blk, i);
+    if (*(uint16_t*)f != reg) continue;
+    for (int q = 0; q < CAB_N && *(uint32_t*)(f + 4 + 4 * q) != 0xffffffffu; q++)
+      if (*(uint16_t*)(f + CAB_DAT + 4 * q) == (uint16_t)y) return 1;
+  }
+  return 0;
+}
+/* A title of reg won by club on date (year in its low word): nothing when the cabinet has that
+   year's already; else on the lists of reg's record, or a record of its own after the last -- the
+   last record's bytes as the model, its lists emptied. 0 already there, the wins after, -1 no room.
+   An empty cabinet (the career's first title) has no record to copy: the first slot is written as it
+   is, its lists emptied. A record is its regulation, the winners and the dates (0x644 bytes of the
+   0x648) and four bytes after them that stay the slot's own (01.11.: the Final del Apertura was the
+   first title of Felix's career, and nothing was written until another title came). */
+static int cab_title_add(unsigned char* blk, uint32_t u, uint16_t reg, uint32_t club, uint32_t date)
+{
+  if (cab_has_year(blk, reg, (uint16_t)date)) return 0;
+  int i = cab_find(blk, reg);
+  if (i >= 0) return (int)rec_append(blk, u, cab_rec(blk, i), club, date);
+  int n = cab_count(blk);
+  unsigned char* dst = cab_rec(blk, n);
+  if (!dst || *(uint16_t*)dst != 0xffff) return -1;
+  if (n) memcpy(dst, cab_rec(blk, n - 1), CAB_RECSZ);
+  memset(dst + 4, 0xff, CAB_DAT - 4);
+  for (int q = 0; q < CAB_N; q++) *(uint32_t*)(dst + CAB_DAT + 4 * q) = 0x0000ffffu;
+  *(uint16_t*)dst = reg; *(uint16_t*)(dst + 2) = 0;
+  return (int)rec_append(blk, u, dst, club, date);
+}
+/* A competition the cabinet holds twice shows as two rows ("Liga FUTVE 1" twice): the second's
+   winners and dates go on the end of the first's lists and the records after it move up one.
+   Returns the records merged. */
+static int cab_merge(unsigned char* blk, uint32_t u, uint16_t reg)
+{
+  int first = -1, cnt = cab_count(blk), merged = 0;
+  for (int i = 0; i < cnt; ) {
+    unsigned char* r = cab_rec(blk, i);
+    if (*(uint16_t*)r != reg) { i++; continue; }
+    if (first < 0) { first = i; i++; continue; }
+    if (!cab_rec(blk, cnt)) break;
+    unsigned char* f = cab_rec(blk, first);
+    for (int q = 0; q < CAB_N && *(uint32_t*)(r + 4 + 4 * q) != 0xffffffffu; q++)
+      rec_append(blk, u, f, *(uint32_t*)(r + 4 + 4 * q), *(uint32_t*)(r + CAB_DAT + 4 * q));
+    memmove(r, r + CAB_RECSZ, (size_t)(cnt - i) * CAB_RECSZ);   /* the empty one after the last comes along */
+    cnt--; merged++;
+  }
+  if (first >= 0) rec_dates_fill(blk, u, cab_rec(blk, first));
+  return merged;
+}
+/* fl26swiss-palmares.txt beside fl26swiss-state.bin: titles of past seasons the DLL missed, one
+   line a competition, "<reg> <year> <year> ...". Each listed year is made sure of on the record
+   (the user's club, dated 31 January); a date of a year not listed and before the last listed one
+   goes (a copy's wrong date); later titles are not touched. The file is for the career that is
+   loaded when it is read: used once, then renamed to .applied. Returns the lines applied. */
+static int cab_file_apply(unsigned char* blk, uint32_t u, const char* path)
+{
+  HANDLE fh = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+  if (fh == INVALID_HANDLE_VALUE) return 0;
+  char tx[2048]; DWORD got = 0;
+  ReadFile(fh, tx, sizeof tx - 1, &got, 0); CloseHandle(fh); tx[got] = 0;
+  int applied = 0;
+  for (char* line = strtok(tx, "\r\n"); line; line = strtok(0, "\r\n")) {
+    int v[24], nv = 0; char* q = line;
+    while (nv < 24) { char* e; long x = strtol(q, &e, 10); if (e == q) break; v[nv++] = (int)x; q = e; }
+    if (nv < 2 || v[0] <= 0 || v[0] > 1023) continue;
+    uint16_t reg = (uint16_t)v[0]; int maxy = 0;
+    for (int k = 1; k < nv; k++) if (v[k] > maxy) maxy = v[k];
+    int i = cab_find(blk, reg);
+    if (i < 0) { logf("fl26swiss: palmares file -- reg %u: no record in the cabinet, line left", (unsigned)reg); continue; }
+    unsigned char* f = cab_rec(blk, i);
+    uint32_t kc[CAB_N], kd[CAB_N]; int nk = 0, dropped = 0, added = 0;
+    for (int k = 0; k < CAB_N && *(uint32_t*)(f + 4 + 4 * k) != 0xffffffffu; k++) {
+      uint32_t dt = *(uint32_t*)(f + CAB_DAT + 4 * k); int yy = (uint16_t)dt, listed = 0;
+      for (int j = 1; j < nv; j++) listed |= v[j] == yy;
+      if ((uint16_t)dt == 0xffff || (!listed && yy < maxy)) { dropped++; continue; }
+      kc[nk] = *(uint32_t*)(f + 4 + 4 * k); kd[nk++] = dt;
+    }
+    for (int j = 1; j < nv && nk < CAB_N; j++) {
+      int there = 0; for (int k = 0; k < nk; k++) there |= (int)(uint16_t)kd[k] == v[j];
+      if (!there) { kc[nk] = u; kd[nk++] = cab_date(v[j], 30); added++; }
+    }
+    if (!dropped && !added) continue;
+    for (int a = 1; a < nk; a++) for (int b = a; b > 0 && (uint16_t)kd[b] < (uint16_t)kd[b - 1]; b--) {
+      uint32_t t1 = kc[b]; kc[b] = kc[b - 1]; kc[b - 1] = t1; t1 = kd[b]; kd[b] = kd[b - 1]; kd[b - 1] = t1; }
+    for (int k = 0; k < CAB_N; k++) {
+      *(uint32_t*)(f + 4 + 4 * k) = k < nk ? kc[k] : 0xffffffffu;
+      *(uint32_t*)(f + CAB_DAT + 4 * k) = k < nk ? kd[k] : 0x0000ffffu;
+    }
+    applied++;
+    logf("fl26swiss: palmares file -- reg %u: %d win(s) added, %d wrong date(s) dropped; %d title(s) now", (unsigned)reg, added, dropped, nk);
+  }
+  char done[MAX_PATH + 96]; snprintf(done, sizeof done, "%s.applied", path);
+  if (MoveFileExA(path, done, MOVEFILE_REPLACE_EXISTING)) logf("fl26swiss: palmares file -- applied, renamed to %s", done);
+  return applied;
+}
+static unsigned char* hon_block_now(unsigned char* blk, uint32_t u)
+{
+  static uintptr_t said_at = 0;
+  unsigned char* best = 0; int besty = -1, nc = 0;
+  char buf[400]; int bl = 0; buf[0] = 0;
+  for (size_t off = HON_OFF - 0x20000; off < HON_OFF + 0x40000; off += 4) {
+    unsigned char* h = blk + off;
+    uint16_t y = *(uint16_t*)h;
+    if (y < 2000 || y > 2200 || h[2] < 1 || h[2] > 12 || *(uint32_t*)(h + 8) != u) continue;
+    uint16_t y2 = *(uint16_t*)(h + 4);
+    if (y2 && (y2 < y || y2 > y + 2)) continue;
+    int ok = 1;
+    for (int i = 0; i < HON_ROWS && ok; i++) { uint32_t cid = *(uint32_t*)(h + 12 + i * 12); ok = cid == 0xffffffffu || cid < 1024; }
+    if (!ok) continue;
+    nc++;
+    if (bl < 360) bl += snprintf(buf + bl, sizeof buf - bl, " +%#llx:%u/%u", (unsigned long long)off, y, h[2]);
+    if (y > besty || (y == besty && off > (size_t)(best - blk))) { besty = y; best = h; }
+  }
+  if (best && (uintptr_t)best != said_at) {
+    said_at = (uintptr_t)best;
+    logf("fl26swiss: honours -- %d season block(s) of club %08x:%s; the running one at +%#llx (%d)", nc, u, buf,
+         (unsigned long long)(best - blk), besty);
+  }
+  return best;
+}
+/* g_tl_total, g_tl_cid: declared before prog_handler (0 until the world names the league) */
+__declspec(dllexport) int fl26_swiss_title_league(const uint16_t* v, int n)
+{
+  int got = 0;
+  for (int i = 0; v && i < n; i++) {
+    if (!v[2 * i] || !v[2 * i + 1]) continue;
+    int isff = -1;
+    for (int k = 0; k < g_nccup; k++) if (g_ccup[k].src[0] && g_ccup[k].ko == v[2 * i]) isff = k;
+    if (isff >= 0) {                               /* the final of two cups and its competition */
+      g_ccup_fcid[isff] = v[2 * i + 1]; got++;
+      logf("fl26swiss: final of two cups %u (competition %u) -- its title is the league's (the Liga FUTVE)",
+           (unsigned)v[2 * i], (unsigned)v[2 * i + 1]);
+      continue;
+    }
+    /* a split league: a title league only when a final of two cups takes its title (grand_final_of);
+       the loader names every split league with a competition id */
+    int fk = grand_final_of(v[2 * i]);
+    if (fk < 0 || is_title_league(v[2 * i]) || g_ntl >= TL_MAX) {
+      logf("fl26swiss: league %u (competition %u) -- %s", (unsigned)v[2 * i], (unsigned)v[2 * i + 1],
+           fk < 0 ? "no final of two cups takes its clubs; its title stays its own" : "named already, or too many; left out");
+      continue;
+    }
+    g_tl_tot[g_ntl] = v[2 * i]; g_tl_cids[g_ntl] = v[2 * i + 1]; g_ntl++;
+    if (!g_tl_total) { g_tl_total = v[2 * i]; g_tl_cid = v[2 * i + 1]; }
+    got++;
+    logf("fl26swiss: league %u (competition %u) -- its phases give no title; its final of two cups %u does",
+         (unsigned)v[2 * i], (unsigned)v[2 * i + 1], (unsigned)g_ccup[fk].ko);
+  }
+  return got;
+}
+typedef struct { uint32_t cid; uint16_t reg; uint8_t won, kind; uint32_t zero; } hon_row_t;
+/* The Palmarés screen does not read that block alone (30.10., screenshot: "Liga FUTVE 1" and "Final
+   del FUTVE 1" with the block holding one league row). It counts the career's winners history:
+   8-byte entries {u16 regulation, u16 0, u32 club} in blk+0x1790000..0x17b0000, one run per
+   competition, one entry a season (reg 261 at +0x1798ca8, reg 11 at +0x1799938 written on day 142,
+   reg 263 at +0x1799f80 written after the second leg; an empty one is {0xffff, 0, 0xffffffff}).
+   So: the Final del FUTVE's entries get no club (that title does not exist), and this season's
+   entry of the split league -- the last of its run, once the Clausura play-off is filled -- gets the
+   Liga FUTVE champion, or no club while the title is still open. */
+#define WIN_LO 0x1790000
+#define WIN_HI 0x17b0000
+static void winners_fix(unsigned char* blk, const split_t* sp, int fk, uint32_t champ, int d)
+/* sp: the title league's split, fk: its final of two cups (grand_final_of) */
+{
+  /* The user's trophy cabinet (read 30.10. from the dump): a header with the club at +0x1798ab0, a
+     count (u16) at +0x1798b82, then one record of 0x648 bytes per title won, in the order won, each
+     starting {u16 regulation, u16 0, u32 club}: 261 at +0x1798ca8, 255 at +0x17992f0, 11 at
+     +0x1799938, the next at +0x1799f80. The Palmarés counts these records by competition. The
+     automatic Liga FUTVE is one more record: the last one copied (its other fields sane), its
+     regulation the Final del FUTVE's, the count raised -- only when the count matches the records. */
+  {
+    uint16_t ffk = g_ccup[fk].ko;
+    uint32_t aw = ff_auto_champion(ffk), u = state_user();
+    if (aw) {                             /* fase 5: both finals' winners as the game's brackets read now -- a kept one
+                                      can be another career's (any title league since the grand final, fase 6) */
+      for (int k2 = 0; k2 < g_nccup; k2++) {
+        if (g_ccup[k2].ko != ffk || !g_ccup[k2].src[0]) continue;
+        uint32_t l1 = ccup_ko_winner(g_ccup[k2].src[0]), l2 = ccup_ko_winner(g_ccup[k2].src[1]);
+        /* a bracket no longer readable says nothing; one that names another club wins */
+        if (((l1 >> 14) && !same_club(l1, aw)) || ((l2 >> 14) && !same_club(l2, aw))) aw = 0;
+      }
+    }
+    if (aw && u && same_club(aw, u) && *(uint32_t*)(blk + CAB_HDR) == u) {
+      int now = cab_title_add(blk, u, ffk, aw, cab_date(game_date() / 365, d));
+      if (now > 0) logf("fl26swiss: trophy cabinet -- day %d: the automatic league title (reg %u) added, %d title(s) now", d, (unsigned)ffk, now);
+      else if (now < 0) {
+        static int said = 0;
+        if (!said++) logf("fl26swiss: trophy cabinet -- day %d: no empty record left; the automatic league title not added", d);
+      }
+    }
+  }
+  /* fase 4 (31.10., Felix): regulation 11 is "Liga FUTVE" again (Select Team), so the title the game
+     gives the accumulated table's leader would read "Liga FUTVE". Out of the user's cabinet: the
+     records after it move up one, the empty slot after the last takes the last's place. The real
+     Liga FUTVE title is the Final del FUTVE's (175 "Liga FUTVE") as before. Fase 6: any title league's, an
+     August-May one too -- its grand final's winner is the champion, its table's leader none. */
+  {
+    const size_t HDR = 0x1798ab0, REC0 = 0x1798ca8, RECSZ = 0x648;
+    uint32_t u = state_user();
+    if (u && *(uint32_t*)(blk + HDR) == u) {
+      unsigned seen = 0;
+      while (seen < 64 && REC0 + (seen + 1) * RECSZ <= WIN_HI && *(uint16_t*)(blk + REC0 + seen * RECSZ) != 0xffff &&
+             *(uint16_t*)(blk + REC0 + seen * RECSZ + 2) == 0) seen++;
+      for (unsigned j = 0; j < seen; ) {
+        unsigned char* rj = blk + REC0 + j * RECSZ;
+        if (*(uint16_t*)rj != sp->total) { j++; continue; }
+        if (REC0 + (seen + 1) * RECSZ > WIN_HI) break;
+        memmove(rj, rj + RECSZ, (size_t)(seen - j) * RECSZ);     /* the empty slot after the last comes along */
+        seen--;
+        logf("fl26swiss: trophy cabinet -- day %d: the accumulated table's title (reg %u) taken out; %u record(s) left",
+             d, (unsigned)sp->total, seen);
+      }
+    }
+  }
+  /* the automatic Liga FUTVE in the winners history too (it outlives the season, the rights answer
+     does not): the final's entry of this season, in the slot where the game writes it after a
+     played final -- the same season's slot as the league's own entry (reg 11, written on day 142),
+     one run of 0x648 bytes later (seen in two careers: 11 at +0x1799938, 263 at +0x1799f80) */
+  {
+    uint16_t ffk = g_ccup[fk].ko;
+    uint32_t aw = ff_auto_champion(ffk);
+    int has = 0;
+    for (size_t off = WIN_LO; off + 8 <= WIN_HI && !has; off += 8)
+      has = *(uint16_t*)(blk + off) == ffk && *(uint32_t*)(blk + off + 4) == aw;
+    if (aw && !has) {
+      size_t lg = 0;
+      for (size_t off = WIN_LO + 8; off + 16 <= WIN_HI; off += 8)
+        if (*(uint16_t*)(blk + off) == sp->total && *(uint16_t*)(blk + off + 2) == 0 &&
+            *(uint16_t*)(blk + off + 8) != sp->total) { lg = off; break; }
+      size_t slot = lg ? lg + 0x648 : 0;
+      /* 30.10.: "no free slot" -- an earlier DLL had left {263, 0, ffffffff} there (the Final del FUTVE
+         without its club); the slot of the final is taken whether empty or the final's own */
+      uint16_t sr = slot ? *(uint16_t*)(blk + slot) : 0;
+      if (0 && slot && slot + 8 <= WIN_HI && (sr == 0xffff || sr == ffk)) {   /* off until the layout is read */
+        *(uint16_t*)(blk + slot) = ffk; *(uint16_t*)(blk + slot + 2) = 0; *(uint32_t*)(blk + slot + 4) = aw;
+        logf("fl26swiss: winners history -- day %d: blk+%#llx reg %u club %08x (the automatic Liga FUTVE)", d,
+             (unsigned long long)slot, (unsigned)ffk, aw);
+      } else {
+        static int said = 0;
+        if (!said++) logf("fl26swiss: winners history -- day %d: no slot for the automatic Liga FUTVE (league entry at %#llx, "
+                          "slot %#llx holds %04x %04x %08x)", d, (unsigned long long)lg, (unsigned long long)slot,
+                          slot ? *(uint16_t*)(blk + slot) : 0, slot ? *(uint16_t*)(blk + slot + 2) : 0,
+                          slot ? *(uint32_t*)(blk + slot + 4) : 0);
+      }
+    }
+  }
+  int year = (abs_day() + 183) / 365, clausura_on = 0;
+  for (int k = 0; k < g_nccup; k++)
+    if (g_ccup[k].n && g_ccup[k].ereg[0] == sp->group[0] &&
+        (g_ccup[k].filled_year == year || (g_ccup[k].fill && season_ord(d) >= season_ord(g_ccup[k].fill))))
+      clausura_on = 1;                               /* filled this season, or its fill day is past (a save loaded) */
+  uint16_t ff = g_ccup[fk].ko;
+  for (size_t off = WIN_LO + 8; off + 16 <= WIN_HI; off += 8) {
+    uint16_t reg = *(uint16_t*)(blk + off);
+    /* 30.10., screenshot: "Liga FUTVE 1" with an empty list of seasons -- the count is these
+       entries; the regular phases (191 on day 0, 192) have entries of their own, under the same
+       competition, never seen by the probe (day 0 is not one of its days). They give no title. */
+    int phase = reg == sp->regular || (reg && (reg == sp->group[0] || reg == sp->group[1] || reg == sp->group[2]));
+    int total = reg == sp->total;          /* fase 4: "Liga FUTVE" (11) lists the finals' champion (fase 6: any title league) */
+    if (!(phase || total) || *(uint16_t*)(blk + off + 2) != 0) continue;   /* 30.10.: 11 and 263 are the game's again */
+    uint32_t club = *(uint32_t*)(blk + off + 4);
+    if (club != 0xffffffffu && !(club >> 14)) continue;
+    uint16_t prev = *(uint16_t*)(blk + off - 8), next = *(uint16_t*)(blk + off + 8);
+    if (prev != reg && prev != 0xffff) continue;      /* not inside a run of this competition */
+    uint32_t want;
+    if (reg == ff || phase) want = 0xffffffffu;      /* no "Final del FUTVE" or phase title, any season */
+    else {
+      if (next == reg || !clausura_on) continue;     /* an older season's, or this one's not written yet */
+      want = champ ? champ : 0xffffffffu;
+    }
+    if (club == want) continue;
+    *(uint32_t*)(blk + off + 4) = want;
+    logf("fl26swiss: winners history -- day %d: blk+%#llx reg %u club %08x -> %08x (%s)", d,
+         (unsigned long long)off, (unsigned)reg, club, want,
+         reg == ff ? "no Final del FUTVE title" : phase ? "a regular phase gives no title" :
+         champ ? "the Liga FUTVE champion" : "the Liga FUTVE still open");
+  }
+}
+_Static_assert(sizeof(hon_row_t) == 12, "an honours row is 12 bytes");
+
+/* 30.10. (Supercopa missing from the Palmarés): read-only. Each day, the trophy cabinet's records
+   and the season block's rows, logged when they change -- to see where the game puts a new title. */
+static void cabinet_watch(void)
+{
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  uint32_t u = state_user();
+  if (!blk || !u) return;
+  const size_t HDR = 0x1798ab0, REC0 = 0x1798ca8, RECSZ = 0x648;
+  if (*(uint32_t*)(blk + HDR) != u) return;
+  static char last[1024], last_h[1024];
+  char buf[1024]; int n = 0, m = 0;
+  for (int i = 0; i < 40 && REC0 + (i + 1) * RECSZ <= WIN_HI; i++) {
+    unsigned char* r = blk + REC0 + i * RECSZ;
+    uint16_t rg = *(uint16_t*)r;
+    if (rg == 0xffff) continue;
+    if (n < 900) n += snprintf(buf + n, sizeof buf - n, " [%d]%u/%08x", i, (unsigned)rg, *(uint32_t*)(r + 4));
+    m++;
+  }
+  buf[n] = 0;
+  int d = today();
+  /* a competition of ours held twice is merged (super cups, the knockouts of our cups) */
+  for (int i = 0; i < g_naug_scup + g_ncal_scup + g_nccup; i++) {
+    uint16_t reg = i < g_naug_scup ? g_aug_scup[i].reg : i < g_naug_scup + g_ncal_scup ? g_cal_scup[i - g_naug_scup].reg
+                                                       : g_ccup[i - g_naug_scup - g_ncal_scup].ko;
+    int k = reg ? cab_merge(blk, u, reg) : 0;
+    if (k) logf("fl26swiss: trophy cabinet -- day %d: reg %u held %d time(s) more, merged into one record (%d title(s))",
+                d, (unsigned)reg, k, rec_wins(cab_rec(blk, cab_find(blk, reg))));
+  }
+  {
+    static int done = 0;
+    const char* sp = state_path();
+    if (!done && sp) {
+      done = 1;
+      char fp[MAX_PATH + 96]; snprintf(fp, sizeof fp, "%s", sp);
+      char* sl = strrchr(fp, '\\');
+      if (sl) { snprintf(sl + 1, sizeof fp - (size_t)(sl + 1 - fp), "fl26swiss-palmares.txt"); cab_file_apply(blk, u, fp); }
+    }
+  }
+  if (strcmp(buf, last)) {
+    logf("fl26swiss: cabinet -- day %d: %d record(s):%s", d, m, buf);
+    memcpy(last, buf, sizeof last);
+  }
+  unsigned char* h = blk + HON_OFF;
+  if (futve_cal()) { unsigned char* hn = hon_block_now(blk, u); if (hn) h = hn; }   /* fase 4: the running season's block */
+  n = 0;
+  n += snprintf(buf + n, sizeof buf - n, " %u/%u club %08x:", *(uint16_t*)h, h[2], *(uint32_t*)(h + 8));
+  for (int i = 0; i < HON_ROWS; i++) {
+    unsigned char* r = h + 12 + i * 12;
+    if (*(uint32_t*)r == 0xffffffffu) continue;
+    n += snprintf(buf + n, sizeof buf - n, " %u/%u/%u%s", *(uint32_t*)r, (unsigned)*(uint16_t*)(r + 4), r[6], r[7] ? "k" : "");
+  }
+  if (strcmp(buf, last_h)) { logf("fl26swiss: season block -- day %d:%s", d, buf); memcpy(last_h, buf, sizeof last_h); }
+}
+
+
+/* 30.10. (Felix: the Supercopa de Venezuela won on day 227, no title in the Palmarés; the cabinet
+   watch: no record added, the ICC (107) on day 220 was). A Super Cup of ours is registered by
+   aug_scup_fill_days outside the game's own stage run, and the game never writes its title. Once its
+   match is played and the user's club won it, the record goes in by us: the cabinet's last record
+   copied into the first empty slot, its regulation and club set. Not twice: a record of that
+   regulation among the last three is this season's. */
+/* Fase 4 (31.10., Felix: no Venezuelan date may clash with any competition, national teams'
+   included): once a season, every day of the Liga FUTVE's own (split phases, play-offs, finals, the
+   Copa Venezuela and the Supercopa) against the national teams' windows and tournaments of this
+   year (g_nqday, g_ntday), the Libertadores' and its qualifying's, the Club World Cup's and every
+   other cup of ours (the Sudamericana ...). A day within one of another's is logged as a clash; the
+   national teams' days are listed in full, to set the world's days by. Read-only. */
+/* the days on the calendar that hold a match of the custom Copa Sudamericana (257/258 and their
+   group and tie rows) or a national teams' friendly (56): read from the calendar's own day lists
+   and match records, so these are the days the game really plays them. Fase 4 (31.10., Felix). */
+static int futve_cal_scan(uint16_t* od, const char** on, int no, int cap)
+{
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  if (!blk) return no;
+  for (int d = 0; d < 365 && no < cap; d++) {
+    uint16_t* ids = (uint16_t*)(blk + CAL_BASE + (size_t)d * CAL_STRIDE);
+    int sud = 0, fr = 0;
+    for (int i = 0; i < CAL_IDCAP && ids[i] != 0xffff && !(sud && fr); i++) {
+      unsigned char* m = ((mrec_fn)(uintptr_t)(g_base + MREC_RVA))(blk, ids[i]);
+      if (!m || *(uint16_t*)m != ids[i]) continue;
+      uint16_t b = *(uint16_t*)(m + 4) & 0x3ff;
+      int tk_;
+      if (b == 257 || b == 258 || lpre_of(b, &tk_) >= 0) sud = 1;   /* fase 5: the modern CONMEBOL pre-rounds too */
+      if (b == 56) fr = 1;
+    }
+    if (sud && no < cap) { od[no] = (uint16_t)d; on[no++] = "Copa Sudamericana"; }
+    if (fr && no < cap) { od[no] = (uint16_t)d; on[no++] = "national-team friendly"; }
+  }
+  return no;
+}
+static void futve_clash_report(void)
+{
+  static int said_year = -1, said_day = -100;
+  int d = today();
+  if (!futve_cal() || d < 0 || !g_nnqday) return;
+  int y = abs_day() / 365;
+  /* once a year in full, and every week again: the Sudamericana's and the friendlies' matches are
+     made through the year (its groups in August); a clash already said is not said again */
+  int full = y != said_year;
+  if (!full && d - said_day < 7 && d >= said_day) return;
+  said_year = y; said_day = d;
+  char buf[900]; size_t bl = 0; buf[0] = 0;
+  for (int i = 0; i < g_nnqday && bl + 6 < sizeof buf; i++) bl += snprintf(buf + bl, sizeof buf - bl, " %u", g_nqday[i]);
+  if (full) logf("fl26swiss: FUTVE dates -- national-team windows:%s", buf);
+  bl = 0; buf[0] = 0;
+  for (int i = 0; i < g_nntday && bl + 6 < sizeof buf; i++) bl += snprintf(buf + bl, sizeof buf - bl, " %u", g_ntday[i]);
+  if (full) logf("fl26swiss: FUTVE dates -- national-team tournaments this year:%s", g_nntday ? buf : " none");
+  uint16_t od[400]; const char* on[400]; int no = 0;
+  for (int i = 0; i < g_nnqday && no < 400; i++) { od[no] = g_nqday[i]; on[no++] = "national-team window"; }
+  for (int i = 0; i < g_nntday && no < 400; i++) { od[no] = g_ntday[i]; on[no++] = "national-team tournament"; }
+  static const char* GCN[GC_N] = { "Club World Cup", "Libertadores qualifying", "Libertadores", "AFC" };
+  for (int g = 0; g < GC_N; g++) {
+    if (g == GC_AFC) continue;                     /* Asian clubs only: never a Venezuelan club's day */
+    for (int i = 0; i < g_ngcday[g] && no < 400; i++) { od[no] = g_gcday[g][i]; on[no++] = GCN[g]; }
+  }
+  no = futve_cal_scan(od, on, no, 400);
+  uint16_t fd[200]; char fn[200][24]; int nf = 0;
+  for (int i = 0; i < g_nsdays; i++)
+    for (int j = 0; j < g_sdays[i].n && nf < 200; j++) { fd[nf] = g_sdays[i].day[j]; snprintf(fn[nf++], 24, "league %u", g_sdays[i].reg); }
+  for (int k = 0; k < g_nccup; k++) {
+    const ccup_t* c = &g_ccup[k];
+    int ours = c->adv || c->src[0];
+    /* fase 5: a two-club knockout (the Recopa) plays only its last day of the seven it is handed */
+    for (int j = (c->n == 2 && c->nd > 1 && !ours) ? c->nd - 1 : 0; j < c->nd; j++) {
+      if (ours && nf < 200) { fd[nf] = c->days[j]; snprintf(fn[nf++], 24, "cup %u final", c->ko); }
+      else if (!ours && no < 400) { od[no] = c->days[j]; on[no++] = "a cup of ours"; }
+    }
+    for (int j = 0; j < c->gnd; j++) {
+      if (ours && nf < 200) { fd[nf] = c->gdays[j]; snprintf(fn[nf++], 24, "cup %u group", c->ko); }
+      else if (!ours && no < 400) { od[no] = c->gdays[j]; on[no++] = "a cup of ours"; }
+    }
+  }
+  static const uint16_t VCUPS[2] = { 255, 256 };
+  for (int v = 0; v < 2; v++) {
+    const datedays_t* dd = date_days_for(VCUPS[v]);
+    for (int j = 0; dd && j < dd->n && nf < 200; j++) { fd[nf] = dd->day[j]; snprintf(fn[nf++], 24, "cup %u", VCUPS[v]); }
+  }
+  int clashes = 0, fresh = 0, nsud = 0, nfr = 0;
+  static uint32_t said[256]; static int nsaid = 0, said_y = -1;
+  if (said_y != y) { said_y = y; nsaid = 0; }
+  for (int j = 0; j < no; j++) { nsud += !strcmp(on[j], "Copa Sudamericana"); nfr += !strcmp(on[j], "national-team friendly"); }
+  for (int i = 0; i < nf; i++)
+    for (int j = 0; j < no; j++)
+      if (abs((int)fd[i] - (int)od[j]) < 2) {
+        clashes++;
+        uint32_t key = ((uint32_t)fd[i] << 16) | od[j];
+        int k = 0;
+        while (k < nsaid && said[k] != key) k++;
+        if (k < nsaid) continue;
+        if (nsaid < 256) said[nsaid++] = key;
+        fresh++;
+        logf("fl26swiss: FUTVE dates -- CLASH: %s on day %u, %s on day %u", fn[i], fd[i], on[j], od[j]);
+      }
+  if (full || fresh)
+    logf("fl26swiss: FUTVE dates -- day %d: %d Venezuelan day(s) checked against %d other(s) (%d Sudamericana day(s), %d friendly day(s) on the calendar): %d clash(es)",
+         d, nf, no, nsud, nfr, clashes);
+}
+
+/* The final of a league play-off of ours with groups (adv=1: the Apertura's or the Clausura's final)
+   the user's club won and the game wrote no title for: with the Copa Sudamericana's knockout still
+   running the game left the Final del Apertura out (Felix, 01.11.), the Final del Clausura it wrote.
+   From three days after the final, while its knockout still names the winner, a title of that year
+   the cabinet has not got is written (the final's date). A final of two cups (src=) is the league's
+   title and goes by honours_fix.
+   Up to FINAL_FIX_DAYS after the final, not sixty: a record is written as a copy of the cabinet's
+   last one, so in a new career whose first title is that final there is no record to copy until a
+   second title comes (01.11.: the Apertura won on day 167 was the career's first title, the next
+   came after day 227 and the title was never written; phase 5's code waited to the year's end). An
+   empty cabinet takes the first record as it is (cab_title_add). */
+#define FINAL_FIX_DAYS 300
+static void final_title_fix(void)
+{
+  uint32_t u = state_user();
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  int gd = game_date(), d = today();
+  if (!u || !blk || *(uint32_t*)(blk + CAB_HDR) != u || gd < 0 || d < 0) return;
+  for (int k = 0; k < g_nccup; k++) {
+    const ccup_t* c = &g_ccup[k];
+    if (!c->adv || c->src[0] || !c->ko || !c->nd) continue;   /* a play-off of groups and a final (adv=1) */
+    int fday = c->days[c->nd - 1], age = d - fday, year = gd / 365;
+    if (age < 0) { age += 365; year--; }                 /* a final of December, read in January */
+    if (age < 3 || age > FINAL_FIX_DAYS) continue;
+    if (cab_has_year(blk, c->ko, year)) continue;
+    uint32_t live = ccup_ko_winner(c->ko);              /* the game's own result, never a kept one */
+    if (!(live >> 14) || !same_club(live, u)) continue;
+    int now = cab_title_add(blk, u, c->ko, u, cab_date(year, fday));
+    if (now > 0) logf("fl26swiss: trophy cabinet -- day %d: final %u won by the user's club on day %d -- no title from the game; written, %d title(s) now",
+                      d, (unsigned)c->ko, fday, now);
+    else if (now < 0) {
+      static int said_k[MAX_CCUP];
+      if (said_k[k] != year + 1) {
+        said_k[k] = year + 1;
+        logf("fl26swiss: trophy cabinet -- day %d: final %u won by the user's club on day %d, no title from the game; "
+             "no room left in the cabinet", d, (unsigned)c->ko, fday);
+      }
+    }
+  }
+}
+
+static void supercup_title_fix(void)
+{
+  int d = today();
+  /* an August-May super cup in July-November, a January-December one (the end of January) in
+     January-April: the days its match can be on */
+  int aug = d >= 182 && d <= 330 && g_naug_scup, cal = d >= 20 && d <= 120 && g_ncal_scup;
+  if (!aug && !cal) return;
+  uint32_t u = state_user();
+  if (!u) return;
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  int gd = game_date();
+  if (!blk || *(uint32_t*)(blk + CAB_HDR) != u || gd < 0) return;
+  int na = aug ? g_naug_scup : 0, ntot = na + (cal ? g_ncal_scup : 0);
+  for (int i = 0; i < ntot; i++) {
+    uint16_t reg = i < na ? g_aug_scup[i].reg : g_cal_scup[i - na].reg;
+    if (!get_rec(reg) || ccup_matches(reg) <= 0 || ccup_unplayed(reg) != 0) continue;
+    uint32_t w = winner_now(reg);
+    if (!w) {
+      static int said_w = 0;
+      if (!said_w++) logf("fl26swiss: trophy cabinet -- day %d: Super Cup %u played, the rights code names no winner", d, (unsigned)reg);
+      continue;
+    }
+    if (!same_club(w, u)) continue;
+    int now = cab_title_add(blk, u, reg, u, cab_date(gd / 365, d));
+    if (now > 0) logf("fl26swiss: trophy cabinet -- day %d: Super Cup %u won by the user's club, %d title(s) now", d, (unsigned)reg, now);
+    else if (now < 0) {
+      static int said = 0;
+      if (!said++) logf("fl26swiss: trophy cabinet -- day %d: Super Cup %u won, no empty record left; not added", d, (unsigned)reg);
+    }
+  }
+}
+
+/* one title league (fl26_swiss_title_league): total, its competition */
+static void honours_fix_one(uint16_t total, uint16_t tcid)
+{
+  if (!total || !tcid) return;
+  int d = today();
+  /* January..June: the season of the finals; fase 4 (January-December Liga FUTVE): from May on,
+     the Apertura's final in June to the Final del FUTVE in December */
+  if (d < 0 || (calyear(total) ? d < 120 : d > 180)) return;
+  const split_t* sp = split_of_total(total);
+  int fk = grand_final_of(total);
+  if (!sp || fk < 0) return;
+  uint16_t ffcid = g_ccup_fcid[fk];
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+  uint32_t u = state_user();
+  if (!blk || !u) return;
+  unsigned char* h = blk + HON_OFF;
+  if (calyear(total)) { unsigned char* hn = hon_block_now(blk, u); if (hn) h = hn; }   /* fase 4: the running season's block */
+  uint16_t y = *(uint16_t*)h; uint8_t mo = h[2];
+  static int said_bad = 0;
+  if (y < 2000 || y > 2200 || mo < 1 || mo > 12 || *(uint32_t*)(h + 8) != u) {
+    if (!said_bad++) logf("fl26swiss: honours -- no season block of club %08x at blk+%#x (year %u, month %u, club %08x); "
+                          "the Liga FUTVE title is left to the game", u, HON_OFF, y, mo, *(uint32_t*)(h + 8));
+    return;
+  }
+  hon_row_t* row = (hon_row_t*)(h + 12);
+  /* this season's Liga FUTVE champion: the Final del FUTVE's, or the club that won both finals */
+  uint32_t champ = ccup_season_win(fk);
+  if (!champ) {
+    uint32_t w1 = ccup_src_winner(g_ccup[fk].src[0]), w2 = ccup_src_winner(g_ccup[fk].src[1]);
+    if (w1 && w2 && same_club(w1, w2)) champ = w1;
+  }
+  /* 30.10. (provisional, names): the split league's total (11) is "Tabla acumulada FUTVE" and its
+     row stays; the Final del FUTVE's competition (175) is named "Liga FUTVE" and its row stays. Out:
+     the rows of the two regular phases (191, 192: no title of their own) and of a lost final. In:
+     the club that won both feeding finals, whose Final del FUTVE is not played, gets that row. */
+  uint32_t w1 = ccup_src_winner(g_ccup[fk].src[0]), w2 = ccup_src_winner(g_ccup[fk].src[1]);
+  int want = ffcid && w1 && w2 && same_club(w1, w2) && same_club(w1, u);
+  /* fase 4 (31.10.): the running season's block (hon_block_now) counts titles (+6: the club's
+     number of that title so far -- 2026's "142/261/2"); the Liga FUTVE row there takes the count
+     of the blocks before it plus one. The champion of the finals decides it, as above. */
+  uint8_t ffcount = 1;
+  if (calyear(total)) {
+    if (!want && ffcid && champ && same_club(champ, u)) want = 1;   /* a played final the game writes itself: have_ff below */
+    for (size_t off = HON_OFF - 0x20000; off < HON_OFF + 0x40000; off += 4) {
+      unsigned char* hb = blk + off;
+      if (hb == h || *(uint16_t*)hb < 2000 || *(uint16_t*)hb >= y || hb[2] < 1 || hb[2] > 12 || *(uint32_t*)(hb + 8) != u) continue;
+      for (int i = 0; i < HON_ROWS; i++) {
+        unsigned char* rr = hb + 12 + i * 12;
+        if (*(uint16_t*)(rr + 4) == g_ccup[fk].ko && rr[6] >= ffcount) ffcount = (uint8_t)(rr[6] + 1);
+      }
+    }
+    static uint32_t said_w[4] = { 1, 1, 1, 1 };
+    if (said_w[0] != w1 || said_w[1] != w2 || said_w[2] != champ || said_w[3] != (uint32_t)(want << 8 | ffcount)) {
+      said_w[0] = w1; said_w[1] = w2; said_w[2] = champ; said_w[3] = (uint32_t)(want << 8 | ffcount);
+      logf("fl26swiss: honours -- day %d, block %u: finals' winners %08x / %08x, champion %08x, Liga FUTVE row %s (count %u)",
+           d, (unsigned)y, w1, w2, champ, want ? "wanted" : "not wanted", ffcount); }
+  }
+  hon_row_t keep[HON_ROWS]; int n = 0, dropped = 0, have_ff = 0;
+  for (int i = 0; i < HON_ROWS; i++) {
+    const hon_row_t* r = &row[i];
+    if (r->cid == 0xffffffffu) continue;
+    int league = r->reg == sp->regular ||
+                 (r->reg && (r->reg == sp->group[0] || r->reg == sp->group[1] || r->reg == sp->group[2])) ||
+                 r->reg == total;          /* fase 4: the table leader's title is no title (fase 6: any title league) */
+    int ffwin = 0;
+    have_ff |= r->reg == g_ccup[fk].ko && r->won;
+    /* 30.10. (screenshot: Liga FUTVE, Final del Apertura, Copa Venezuela with rows 142 won, 131 won
+       and 129 runner-up): three rows, three titles -- the runner-up row of a final of ours is counted
+       as a title, under the Liga FUTVE's name. A lost final is no title: its row goes too. */
+    int lost = 0;
+    for (int k = 0; k < g_nccup && !lost; k++)
+      lost = (g_ccup[k].adv || g_ccup[k].src[0]) && r->reg == g_ccup[k].ko && !r->won;
+    if (league || ffwin || lost) { dropped++; continue; }
+    keep[n++] = *r;
+  }
+  if (want && !have_ff && n < HON_ROWS) {
+    hon_row_t t = { ffcid, g_ccup[fk].ko, ffcount, 0, 0 };
+    keep[n++] = t;
+  }
+  hon_row_t out[HON_ROWS];
+  for (int i = 0; i < HON_ROWS; i++) {
+    if (i < n) out[i] = keep[i];
+    else { hon_row_t e = { 0xffffffffu, 0xffff, 0, 0, 0 }; out[i] = e; }
+  }
+  if (memcmp(out, row, sizeof out)) {
+    memcpy(row, out, sizeof out);
+    logf("fl26swiss: honours -- day %d: %d row(s) of a regular phase / a lost final taken out%s "
+         "(champion %08x, the user's club %08x)", d, dropped,
+         want && !have_ff ? ", the Liga FUTVE given: both finals won" : "", champ, u);
+  }
+  winners_fix(blk, sp, fk, champ, d);
+}
+static void honours_fix(void)
+{
+  for (int i = 0; i < g_ntl; i++) honours_fix_one(g_tl_tot[i], g_tl_cids[i]);
+}
+
 
 char daychk_handler(void* ctx)
 {
@@ -12788,19 +14620,31 @@ char daychk_handler(void* ctx)
     join_on_day0();
     sched_rebuild("the first day after a load or a new career (B258)");
   }
+  int jfrom = -1, jto = -1;
   if (d != last) {
     if (seen++ < 3) logf("fl26swiss: day loop on day %d", today());
     else if (last >= 0 && d > last + 1) logf("fl26swiss: day loop skipped day(s) %d..%d", last + 1, d - 1);
+    if (last >= 0 && d > last + 1) { jfrom = last + 1; jto = d - 1; }
     last = d;
   }
   apclau_keep();
   lpre_fill_days();
   ccup_fill_days();
+  if (jfrom >= 0) ccup_jump_check(jfrom, jto);     /* after today's fills: a fill day caught today is no loss */
+  calendar_scup_keep();                            /* a January-December super cup's cup winner, kept at its final */
   calendar_scup_fill_days();
+  futve_copa_fill();                               /* fase 4: the January-December Copa Venezuela */
+  futve_phase_reopen();                            /* fase 4: the Apertura enters its new season on day 41 */
+  futve_clausura_early();                          /* fase 4: the Clausura on the calendar from February */
   aug_scup_fill_days();
   for (int p = NQR - 1; p >= 0; p--) q_fill(p);
   cal_dedupe();
   sched_days();
+  honours_fix();                                   /* the Liga FUTVE title: only the final's champion */
+  supercup_title_fix();                            /* a Super Cup of ours: the game writes no title */
+  final_title_fix();                               /* a play-off final of ours the game left out */
+  futve_clash_report();                            /* fase 4, read-only: the Venezuelan days against every other */
+  cabinet_watch();                                 /* the cabinet: merges, dates, the palmarés file; a change logged */
   if (g_new_career && !g_built_stored && g_built_gdate >= 0) {    /* B209: once, a club known */
     any_final_kept();                              /* a save of a later summer: not new (state_sync) */
     if (g_st_read_back) g_built_stored = 1; else state_store();
@@ -12897,9 +14741,44 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   for (int i = 0; i < g_nlpre; i++) if (g_lpre[i].alias && !lpre_cal(&g_lpre[i])) nal++;
   if (!euro) {
     int cal = bra && ncal, qal = nal && (libq || cal);
-    if (!cal && !ndcl && !qal) return in;
+    /* fase 4 (31.10., second season with no Liga FUTVE): fl26join closes a January-December league
+       of ours (11) at New Year, but not its split phases: the Apertura (191) kept last season's
+       season flag and table, register_all took it for "already in a season" and the second
+       season had no Apertura at all. The New Year list (it has 8) now takes the phases of a
+       January-December split of ours too, so they enter again with their league on day 41. */
+    int newyear = 0, nfut = 0;
+    for (int j = 0; j < n; j++) if (in->b[j] == 8) newyear = 1;
+    uint16_t fut[16];
+    if (newyear && futve_cal())
+      for (int i = 0; i < g_nsplits; i++) {
+        if (!calyear(SPLITS[i].total)) continue;
+        uint16_t ph[4] = { SPLITS[i].regular, SPLITS[i].group[0], SPLITS[i].group[1], SPLITS[i].group[2] };
+        for (int q = 0; q < 4; q++) {
+          int there = 0;
+          if (!ph[q] || !get_rec(ph[q])) continue;
+          for (int j = 0; j < n; j++) if (in->b[j] == ph[q]) there = 1;
+          if (!there && nfut < 16) fut[nfut++] = ph[q];
+        }
+      }
+    /* ... and its play-offs and final (kept out of the July teardown) */
+    if (newyear && futve_cal())
+      for (int c = 0; c < g_nccup; c++) {
+        const ccup_t* cc = &g_ccup[c];
+        if (!(cc->adv || cc->src[0]) || !ccup_world(cc)) continue;
+        for (int g = -2; g < cc->groups && nfut < 16; g++) {
+          uint16_t id = g == -2 ? cc->ko : g == -1 ? cc->reg : ccup_rep(cc, g);
+          int there = 0;
+          for (int j = 0; j < n; j++) if (in->b[j] == id) there = 1;
+          for (int j = 0; j < nfut; j++) if (fut[j] == id) there = 1;
+          if (!there && get_rec(id)) fut[nfut++] = id;
+        }
+      }
+    if (!cal && !ndcl && !qal && !nfut) return in;
     memcpy(g_td_list, in->b, (size_t)n * sizeof(uint16_t));
     int k = n, added = 0;
+    for (int i = 0; i < nfut && k < 512; i++) g_td_list[k++] = fut[i];
+    if (nfut) logf("fl26swiss: New Year teardown on day %d -- %d phase(s) and play-off regulation(s) of a January-December league of ours closed with it",
+                   today(), nfut);
     for (int c = 0; cal && c < g_nccup; c++) {
       const ccup_t* cc = &g_ccup[c];
       if (!cc->cal || !ccup_world(cc)) continue;
@@ -12976,6 +14855,12 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
     if (!ccup_world(cc)) continue;
     if (cc->cal) {
       logf("fl26swiss: July teardown -- cup %u is on the South American calendar; kept open", (unsigned)cc->reg);
+      continue;
+    }
+    if (futve_cal() && (cc->adv || cc->src[0])) {
+      /* fase 4 (31.10., Felix: the Apertura's play-off results gone from the calendar by December):
+         the Liga FUTVE's play-offs and its final are of the calendar year -- closed at New Year */
+      logf("fl26swiss: July teardown -- cup %u is the January-December Liga FUTVE's; kept open to New Year", (unsigned)cc->reg);
       continue;
     }
     int nc = 0;
@@ -13489,6 +15374,167 @@ static void mp_install(void)
 
 /* 0 ok; 2 signature mismatch; 3 VirtualAlloc failed; 4 VirtualProtect failed; 9 bad config;
    +10 for the date hook, +20 for the group hook */
+
+
+/* 31.10. (session 011, Felix's borrowed ids): the exe's regulation -> tournament map. 0x141e53910
+   (cx = regulation | stage << 10) looks the key up in a list of 330 built-in pairs (reg 10 -> 26 the
+   Libertadores final, 6 -> 21 the Europa League final, 13 -> 30, ...) and answers 0xd9 (217, "no
+   tournament") for anything else -- every regulation of ours. Here a final of ours answers a final
+   tournament of the base game that this world does not use (30: regulation 13, the shipped Copa
+   Sudamericana's final; FL26's Sudamericana is a cup of its own), so its last match ends in the
+   trophy ceremony. Nothing of the world is renumbered; only the game's question "which tournament is
+   this regulation" gets another answer.
+   Fase 6: the regulations and their tournaments come from the world file's `tmap <reg> <tournament>
+   [noleg0]` lines (fl26_swiss_tmap, Mod Studio's "ceremony" recipe key); the hook goes in only for a
+   world that has some. noleg0: a two-legged final whose first leg ends in no ceremony (217). Until
+   then 255, 256, 261-263 were built in, in every world. */
+#define TMAP_RVA  0x1e53910
+#define TMAP_MAX  16
+#define TMAP_NOLEG0 1
+static uint16_t g_tmap_reg[TMAP_MAX], g_tmap_tid[TMAP_MAX]; static uint8_t g_tmap_fl[TMAP_MAX];
+static int g_ntmap = 0, g_tmap_live = 0;
+static volatile LONG g_tmap_n = 0;
+static int tmap_of(uint32_t key)
+{
+  for (int i = 0; i < g_ntmap; i++) if (g_tmap_reg[i] == (key & 0x3ff)) return i;
+  return -1;
+}
+static uint32_t tmap_handler(uint32_t key, uint64_t ret)
+{
+  int i = tmap_of(key);
+  if (i < 0) return 0xd9;
+  /* 31.10. (Felix: the Final del FUTVE is two legs): its first leg decides nothing -- the user's
+     match today on leg 0 keeps "no tournament" (217), so only the second leg ends in the ceremony.
+     The leg is the match record's (+7 bits 4-5), as ceremony_fix read it. */
+  if (g_tmap_fl[i] & TMAP_NOLEG0) {
+    int d = today();
+    unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+    unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+    if (blk && d >= 0 && d < 365) {
+      unsigned char* e = blk + SCHED_ENT_OFF + (size_t)d * 16;
+      unsigned char* mr = *(uint16_t*)e != 0xffff ? ko_match(*(uint16_t*)e) : 0;
+      if (mr && *(uint16_t*)(mr + 4) == g_tmap_reg[i] && ((mr[7] >> 4) & 3) == 0) {
+        if (InterlockedIncrement(&g_tmap_n) <= 120)
+          logf("fl26swiss: tmap -- regulation %u, first leg (day %d): no tournament (217), no ceremony",
+               (unsigned)g_tmap_reg[i], d);
+        return 0xd9;
+      }
+    }
+  }
+  if (InterlockedIncrement(&g_tmap_n) <= 120)
+    logf("fl26swiss: tmap -- regulation %u (stage %u) asked by %llx: tournament %u", key & 0x3ff, (key >> 10) & 0x3f,
+         (unsigned long long)(ret - g_base + 0x140000000ull), (unsigned)g_tmap_tid[i]);
+  return g_tmap_tid[i];
+}
+/* the hook: a chain of compares with the world's regulations in front of the exe's function */
+static int tmap_install(uint64_t exe_base)
+{
+  unsigned char* s = (unsigned char*)(uintptr_t)(exe_base + TMAP_RVA);
+  static const unsigned char sig[5] = { 0x48, 0x89, 0x5c, 0x24, 0x08 };
+  if (memcmp(s, sig, 5) || s[5] != 0x48 || s[6] != 0x89 || s[7] != 0x74) return 2;
+  unsigned char* t = near_alloc(exe_base);
+  if (!t) return 3;
+  unsigned char* p = t;
+  /* movzx eax, cx; and eax, 0x3ff; cmp eax, <reg> -> ours, one per regulation (TMAP_MAX: the
+     short jumps reach) */
+  *p++ = 0x0f; *p++ = 0xb7; *p++ = 0xc1;
+  *p++ = 0x25; *(uint32_t*)p = 0x3ff; p += 4;
+  unsigned char* jmps[TMAP_MAX];
+  for (int i = 0; i < g_ntmap; i++) {
+    *p++ = 0x3d; *(uint32_t*)p = g_tmap_reg[i]; p += 4;  /* cmp eax, imm32 */
+    *p++ = 0x74; jmps[i] = p; *p++ = 0;                    /* je ours */
+  }
+  /* not ours: the displaced mov [rsp+8],rbx, back to +5 */
+  memcpy(p, sig, 5); p += 5;
+  *p++ = 0xff; *p++ = 0x25; *(uint32_t*)p = 0; p += 4; *(uint64_t*)p = exe_base + TMAP_RVA + 5; p += 8;
+  unsigned char* o = p;
+  for (int i = 0; i < g_ntmap; i++) *jmps[i] = (unsigned char)(o - (jmps[i] + 1));
+  /* ours: sub rsp,0x28; mov rdx,[rsp+0x28]; (ecx = key) call handler; add rsp,0x28; ret */
+  *p++ = 0x48; *p++ = 0x83; *p++ = 0xec; *p++ = 0x28;
+  *p++ = 0x48; *p++ = 0x8b; *p++ = 0x54; *p++ = 0x24; *p++ = 0x28;
+  *p++ = 0x0f; *p++ = 0xb7; *p++ = 0xc9;                    /* movzx ecx, cx */
+  *p++ = 0x48; *p++ = 0xb8; *(uint64_t*)p = (uint64_t)(uintptr_t)tmap_handler; p += 8;
+  *p++ = 0xff; *p++ = 0xd0;
+  *p++ = 0x48; *p++ = 0x83; *p++ = 0xc4; *p++ = 0x28;
+  *p++ = 0xc3;
+  FlushInstructionCache(GetCurrentProcess(), t, (SIZE_T)(p - t));
+  DWORD old;
+  if (!VirtualProtect(s, 5, PAGE_EXECUTE_READWRITE, &old)) return 4;
+  s[0] = 0xe9; *(int32_t*)(s + 1) = (int32_t)((int64_t)(uintptr_t)t - (int64_t)(uintptr_t)(s + 5));
+  VirtualProtect(s, 5, old, &old);
+  FlushInstructionCache(GetCurrentProcess(), s, 5);
+  return 0;
+}
+/* the world file's tmap lines, n records of u16 {regulation, tournament, flags} (TMAP_NOLEG0); once a
+   session, after fl26_swiss_install. Answers the records taken, -1 when the hook could not go in. */
+__declspec(dllexport) int fl26_swiss_tmap(const uint16_t* v, int n)
+{
+  if (g_tmap_live) {
+    logf("fl26swiss: tmap -- the tournament map is set already this session; the world's lines are left");
+    return 0;
+  }
+  g_ntmap = 0;
+  for (int i = 0; v && i < n && g_ntmap < TMAP_MAX; i++) {
+    uint16_t reg = v[3 * i], tid = v[3 * i + 1];
+    if (!reg || reg > 0x3ff || !tid || tid >= 0xd9 || tmap_of(reg) >= 0) {
+      logf("fl26swiss: tmap -- regulation %u, tournament %u: not a regulation of ours or a tournament; left out",
+           (unsigned)reg, (unsigned)tid);
+      continue;
+    }
+    g_tmap_reg[g_ntmap] = reg; g_tmap_tid[g_ntmap] = tid; g_tmap_fl[g_ntmap] = (uint8_t)v[3 * i + 2]; g_ntmap++;
+  }
+  if (!g_ntmap || !g_base) return 0;
+  int tr = tmap_install(g_base);
+  if (tr) { logf("fl26swiss: tournament map hook NOT installed (%d)", tr); g_ntmap = 0; return -1; }
+  g_tmap_live = 1;
+  logf("fl26swiss: tournament map hook live at %llx: %d final(s) of ours end in a trophy ceremony",
+       (unsigned long long)(g_base + TMAP_RVA), g_ntmap);
+  return g_ntmap;
+}
+
+/* 30.10. (the trophy ceremony): read-only, once. Sider's hooks (trophy-check, trophy-table, ...)
+   are code in the game that reaches sider.dll by an absolute address. Every such address in the
+   game's executable sections is logged with its RVA, to read the game's code around the trophy
+   check in the exe on disk. */
+static void sider_site_scan(uint64_t exe_base)
+{
+  HMODULE sm = GetModuleHandleA("sider.dll");
+  if (!sm) { logf("fl26swiss: sider sites -- sider.dll not loaded"); return; }
+  IMAGE_DOS_HEADER* sd = (IMAGE_DOS_HEADER*)sm;
+  IMAGE_NT_HEADERS64* sn = (IMAGE_NT_HEADERS64*)((unsigned char*)sm + sd->e_lfanew);
+  uint64_t lo = (uint64_t)(uintptr_t)sm, hi = lo + sn->OptionalHeader.SizeOfImage;
+  IMAGE_DOS_HEADER* dh = (IMAGE_DOS_HEADER*)(uintptr_t)exe_base;
+  IMAGE_NT_HEADERS64* nh = (IMAGE_NT_HEADERS64*)((unsigned char*)dh + dh->e_lfanew);
+  IMAGE_SECTION_HEADER* sec = IMAGE_FIRST_SECTION(nh);
+  int hits = 0;
+  logf("fl26swiss: sider sites -- sider.dll %llx..%llx", (unsigned long long)lo, (unsigned long long)hi);
+  for (int i = 0; i < nh->FileHeader.NumberOfSections && hits < 80; i++) {
+    if (!(sec[i].Characteristics & IMAGE_SCN_MEM_EXECUTE)) continue;
+    unsigned char* b = (unsigned char*)(uintptr_t)(exe_base + sec[i].VirtualAddress);
+    size_t n = sec[i].Misc.VirtualSize;
+    MEMORY_BASIC_INFORMATION mi;
+    for (size_t off = 0; off + 8 <= n && hits < 80; ) {
+      if (!VirtualQuery(b + off, &mi, sizeof mi)) break;
+      size_t end = (size_t)((unsigned char*)mi.BaseAddress + mi.RegionSize - b);
+      if (end > n) end = n;
+      int ok = mi.State == MEM_COMMIT && !(mi.Protect & (PAGE_NOACCESS | PAGE_GUARD));
+      if (ok) for (size_t q = off; q + 8 <= end && hits < 80; q++) {
+        uint64_t v = *(uint64_t*)(b + q);
+        if (v < lo || v >= hi) continue;
+        unsigned char* x = b + q;
+        size_t from = q >= 24 ? q - 24 : 0;
+        char hx[65]; tp_hex(b + from, hx);
+        logf("fl26swiss: sider site rva %#llx -> sider+%#llx (bytes before %02x %02x; from rva %#llx: %s)",
+             (unsigned long long)(exe_base + sec[i].VirtualAddress + q - exe_base), (unsigned long long)(v - lo),
+             x[-2], x[-1], (unsigned long long)(sec[i].VirtualAddress + from), hx);
+        hits++; q += 7;
+      }
+      off = end > off ? end : off + 0x1000;
+    }
+  }
+  logf("fl26swiss: sider sites -- %d found", hits);
+}
+
 __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* regs, int nregs)
 {
   if (!regs || nregs < 1 || nregs > MAX_REGS) return 9;
@@ -13540,6 +15586,12 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
          (unsigned long long)(exe_base + SEED_RVA), (unsigned long long)(exe_base + GDRAW_RVA));
   else
     logf("fl26swiss: league-phase entry hooks NOT installed (signature)");
+  if (!memcmp((void*)(uintptr_t)(exe_base + RIGHT_RVA), SIG_RIGHT, 15) &&
+      !hook((unsigned char*)(uintptr_t)(exe_base + RIGHT_RVA), SIG_RIGHT, 15, (void*)right_handler, &g_tramp_right))
+    logf("fl26swiss: automatic final of two cups live (rights@%llx): its winner is the club that won both feeding cups",
+         (unsigned long long)(exe_base + RIGHT_RVA));
+  else
+    logf("fl26swiss: automatic final of two cups NOT installed (signature at rights@%llx)", (unsigned long long)(exe_base + RIGHT_RVA));
   if (!hook_or_chain((unsigned char*)(uintptr_t)(exe_base + SETCL_RVA), SIG_SETCL, 15, (void*)setcl_handler, &g_tramp_setcl))
     logf("fl26swiss: knockout entry live (set_clubs@%llx%s: top %d of the league phase)",
          (unsigned long long)(exe_base + SETCL_RVA), g_chained ? ", in front of another module's hook" : "", KO_N);
