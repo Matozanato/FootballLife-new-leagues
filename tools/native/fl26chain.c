@@ -547,6 +547,58 @@ static void split_regular(chain_t* ch, set_fn orig, const uint32_t* down, int nd
        ch->cfg.mid, ch->cfg.regular, swapped, n);
 }
 
+/* ---- promotion play-offs (lab, 12/11/2026: the public 0.3.0 has none) ----
+ * fl26_chain_poff: (knockout reg, upper league, lower league, hold place) per play-off. At the season
+ * end the play-off's winner -- fl26swiss.dll keeps it, fl26_swiss_cup_winner -- goes up in place of the
+ * club at `hold` of the lower league's table (League One: 3rd; League Two: 4th; National League: 2nd),
+ * unless it is that club. The club the game promoted by position goes back down. */
+#define MAX_POFF 16
+typedef struct { uint16_t ko, up, low, hold; } poff_t;
+static poff_t g_poff[MAX_POFF]; static int g_npoff = 0;
+__declspec(dllexport) int fl26_chain_poff(const uint16_t* v, int n)
+{
+  g_npoff = 0;
+  for (int i = 0; v && i + 3 < n && g_npoff < MAX_POFF; i += 4) {
+    g_poff[g_npoff].ko = v[i]; g_poff[g_npoff].up = v[i + 1]; g_poff[g_npoff].low = v[i + 2]; g_poff[g_npoff].hold = v[i + 3];
+    g_npoff++;
+  }
+  return g_npoff;
+}
+typedef uint32_t (*cupwin_fn)(uint16_t);
+static uint32_t poff_winner(uint16_t ko)
+{
+  HMODULE m = GetModuleHandleA("fl26swiss.dll");
+  cupwin_fn f = m ? (cupwin_fn)(void*)GetProcAddress(m, "fl26_swiss_cup_winner") : 0;
+  return f ? f(ko) : 0;
+}
+static int same_id(uint32_t a, uint32_t b) { return (a >> 14) && (a >> 14) == (b >> 14); }
+/* the play-off of pair (mid, low): its winner into up[] in place of the hold club; 1 when it decided a place */
+static int poff_apply(chain_t* ch, uint32_t* up, int nu)
+{
+  for (int i = 0; i < g_npoff; i++) {
+    const poff_t* p = &g_poff[i];
+    if (p->up != ch->cfg.mid || p->low != ch->cfg.low) continue;
+    uint32_t w = poff_winner(p->ko);
+    if (!(w >> 14)) { logf("poff %u: no winner kept -- %u's promotion goes by the table", p->ko, p->low); return 0; }
+    int wi = -1;
+    for (int k = 0; k < ch->n_stand_low; k++) if (same_id(ch->stand_low[k], w)) wi = k;
+    if (wi < 0) { logf("poff %u: winner %08x is not a club of %u -- table stands", p->ko, w, p->low); return 0; }
+    if (p->hold < 1 || p->hold > ch->n_stand_low) return 0;
+    uint32_t h = ch->stand_low[p->hold - 1], wh = ch->stand_low[wi];
+    if (same_id(h, wh)) { logf("poff %u: the %u. club %08x won the play-off -- table stands", p->ko, p->hold, h); return 1; }
+    for (int k = 0; k < nu; k++) if (same_id(up[k], wh)) { logf("poff %u: winner %08x already goes up", p->ko, wh); return 0; }
+    for (int k = 0; k < nu; k++)
+      if (same_id(up[k], h)) {
+        up[k] = wh;
+        logf("poff %u: play-off winner %08x (%d.) goes up to %u in place of %08x (%u.)", p->ko, wh, wi + 1, p->up, h, p->hold);
+        return 1;
+      }
+    logf("poff %u: the %u. club %08x is not among the promoted -- table stands", p->ko, p->hold, h);
+    return 0;
+  }
+  return 0;
+}
+
 static void fix_chain(chain_t* ch)
 {
   unsigned char* blk = block(); if (!blk) { logf("fix: no block"); g_stat[3]++; return; }
@@ -582,6 +634,7 @@ static void fix_chain(chain_t* ch)
          ch->cfg.mid, ch->cfg.low, blocked, p, nu);
   }
   if (nd == 0 || nu == 0) { logf("fix %u->%u: nothing to move (down %d, up %d)", ch->cfg.mid, ch->cfg.low, nd, nu); g_stat[2]++; return; }
+  int by_poff = poff_apply(ch, up, nu);
 
   uint32_t nb[MAX_CLUBS], nc[MAX_CLUBS]; int nnb = ch->n_list_mid, nnc = ch->n_list_low;
   memcpy(nb, ch->list_mid, nnb*4); memcpy(nc, ch->list_low, nnc*4);
@@ -594,6 +647,22 @@ static void fix_chain(chain_t* ch)
   int done_mid = 1, done_low = 1;
   for (int i = 0; i < nd; i++) { int r = remove_handle(nb, nnb, down[i]); if (r >= 0) { nnb = r; done_mid = 0; } }
   for (int i = 0; i < nu; i++) { int r = remove_handle(nc, nnc, up[i]);   if (r >= 0) { nnc = r; done_low = 0; } }
+  /* a club of the lower league the game promoted by position though the play-off decided otherwise
+     goes back down (lab poff): out of the upper list, back into the lower one */
+  if (by_poff)
+    for (int j = 0; j < nnb; ) {
+      int was_low = 0, goes_up = 0;
+      for (int k = 0; k < ch->n_stand_low; k++) if (nb[j] == ch->stand_low[k]) was_low = 1;
+      for (int k = 0; k < nu; k++) if (nb[j] == up[k]) goes_up = 1;
+      if (was_low && !goes_up) {
+        logf("fix %u->%u: %08x went up by its place; the play-off sends it back", ch->cfg.mid, ch->cfg.low, nb[j]);
+        if (nnc < MAX_CLUBS) nc[nnc++] = nb[j];
+        memmove(nb + j, nb + j + 1, (nnb - j - 1) * 4); nnb--;
+        done_mid = 0; done_low = 0;
+        continue;
+      }
+      j++;
+    }
   int add_up = 0, add_down = 0;
   for (int i = 0; i < nu; i++) { int have = 0; for (int j = 0; j < nnb; j++) have |= nb[j] == up[i];   if (!have) add_up++; }
   for (int i = 0; i < nd; i++) { int have = 0; for (int j = 0; j < nnc; j++) have |= nc[j] == down[i]; if (!have) add_down++; }
