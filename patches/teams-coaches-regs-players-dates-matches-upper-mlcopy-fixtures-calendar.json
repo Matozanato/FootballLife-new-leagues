@@ -3583,8 +3583,8 @@
   {
    "va": "0x1413fea01",
    "old": "10bd3501c3cc",
-   "new": "902f8e01c3cc",
-   "why": "mode-copy players, B: object size: 0x135bd10 -> 0x181ae90; copy B calendar unit inside the saved prefix, player part up by 0xc8100: 0x181ae90 -> 0x18e2f90",
+   "new": "b0c91c04c3cc",
+   "why": "mode-copy players, B: object size: 0x135bd10 -> 0x181ae90; copy B calendar unit inside the saved prefix, player part up by 0xc8100: 0x181ae90 -> 0x18e2f90; copy B match table below it, up by 0x24f2020: 0x18e2f90 -> 0x3dd4fb0; copy B fixtures: 0x3dd4fb0 -> 0x41cc9b0",
    "asm": "adc byte ptr [rbp - 0x333cfecb], bh"
   },
   {
@@ -10723,8 +10723,8 @@
   {
    "va": "0x1413feab1",
    "old": "498d8fdc8fb100",
-   "new": "498d8f403dbe01",
-   "why": "coaches biased: 0xb18fdc -> 0x1be3d40 (lea rcx, [r15 + 0xb18fdc])",
+   "new": "498d8fa08f8401",
+   "why": "coaches biased: 0xb18fdc -> 0x1be3d40 (lea rcx, [r15 + 0xb18fdc]); copy B coaches biased: block 0x1d17770 - B 0x4ce7d0 = 0x1848fa0",
    "asm": "lea rcx, [r15 + 0xb18fdc]"
   },
   {
@@ -19221,8 +19221,8 @@
   {
    "va": "0x1413fee1f",
    "old": "3bbbecbcd000",
-   "new": "81ffee020000",
-   "why": "copy B teams: block -> B stops at B's 750 records, not at the block's count (cmp edi, 750); replaces: count:teams edit: 0xd0bcec -> 0x4877320 (cmp edi, dword ptr [rbx + 0xd0bcec])",
+   "new": "81ff60090000",
+   "why": "copy B teams: block -> B stops at B's 750 records, not at the block's count (cmp edi, 750); replaces: count:teams edit: 0xd0bcec -> 0x4877320 (cmp edi, dword ptr [rbx + 0xd0bcec]); copy B now holds 2400 teams: cmp edi, 2400",
    "asm": "cmp edi, dword ptr [rbx + 0xd0bcec]"
   },
   {
@@ -19641,8 +19641,8 @@
   {
    "va": "0x1413fee6f",
    "old": "3bbbf0bcd000",
-   "new": "81ff14050000",
-   "why": "copy B coaches: block -> B stops at B's 1300 records, not at the block's count (cmp edi, 1300); replaces: count:coaches edit: 0xd0bcf0 -> 0x4877324 (cmp edi, dword ptr [rbx + 0xd0bcf0])",
+   "new": "81ff480d0000",
+   "why": "copy B coaches: block -> B stops at B's 1300 records, not at the block's count (cmp edi, 1300); replaces: count:coaches edit: 0xd0bcf0 -> 0x4877324 (cmp edi, dword ptr [rbx + 0xd0bcf0]); copy B now holds 3400 coaches: cmp edi, 3400",
    "asm": "cmp edi, dword ptr [rbx + 0xd0bcf0]"
   },
   {
@@ -21643,8 +21643,8 @@
   {
    "va": "0x1413feebf",
    "old": "3bbbf4bcd000",
-   "new": "81ffb4000000",
-   "why": "copy B regulations: block -> B stops at B's 180 records, not at the block's count (cmp edi, 180); replaces: count:regulations edit: 0xd0bcf4 -> 0x4877328 (cmp edi, dword ptr [rbx + 0xd0bcf4])",
+   "new": "81ff58020000",
+   "why": "copy B regulations: block -> B stops at B's 180 records, not at the block's count (cmp edi, 180); replaces: count:regulations edit: 0xd0bcf4 -> 0x4877328 (cmp edi, dword ptr [rbx + 0xd0bcf4]); copy B now holds 600 regulations: cmp edi, 600",
    "asm": "cmp edi, dword ptr [rbx + 0xd0bcf4]"
   },
   {
@@ -24842,72 +24842,296 @@
   {
    "va": "0x140afd842",
    "old": "c053ee00",
-   "new": "c0d4fa00",
-   "why": "copy B player part up by the calendar unit: +0xee53c0 -> +0xfad4c0 (mov qword ptr [rsi + 0xee53c0], rdi)",
+   "new": "e06e8903",
+   "why": "copy B player part up by the calendar unit: +0xee53c0 -> +0xfad4c0 (mov qword ptr [rsi + 0xee53c0], rdi); copy B match table below it, up by 0x24f2020: 0xfad4c0 -> 0x349f4e0; copy B fixtures below it, up by 0x3f7a00: 0x349f4e0 -> 0x3896ee0",
    "asm": "mov qword ptr [rsi + 0xee53c0], rdi"
   },
   {
    "va": "0x140afd849",
    "old": "d053ee00",
-   "new": "d0d4fa00",
-   "why": "copy B player part up by the calendar unit: +0xee53d0 -> +0xfad4d0 (lea rbx, [rsi + 0xee53d0])",
+   "new": "f06e8903",
+   "why": "copy B player part up by the calendar unit: +0xee53d0 -> +0xfad4d0 (lea rbx, [rsi + 0xee53d0]); copy B match table below it, up by 0x24f2020: 0xfad4d0 -> 0x349f4f0; copy B fixtures below it, up by 0x3f7a00: 0x349f4f0 -> 0x3896ef0",
    "asm": "lea rbx, [rsi + 0xee53d0]"
   },
   {
    "va": "0x1413fed66",
    "old": "c053ee00",
-   "new": "c0d4fa00",
-   "why": "copy B player part up by the calendar unit: +0xee53c0 -> +0xfad4c0 (mov eax, dword ptr [rsi + 0xee53c0])",
+   "new": "e06e8903",
+   "why": "copy B player part up by the calendar unit: +0xee53c0 -> +0xfad4c0 (mov eax, dword ptr [rsi + 0xee53c0]); copy B match table below it, up by 0x24f2020: 0xfad4c0 -> 0x349f4e0; copy B fixtures below it, up by 0x3f7a00: 0x349f4e0 -> 0x3896ee0",
    "asm": "mov eax, dword ptr [rsi + 0xee53c0]"
   },
   {
    "va": "0x1413fed78",
    "old": "c453ee00",
-   "new": "c4d4fa00",
-   "why": "copy B player part up by the calendar unit: +0xee53c4 -> +0xfad4c4 (mov eax, dword ptr [rsi + 0xee53c4])",
+   "new": "e46e8903",
+   "why": "copy B player part up by the calendar unit: +0xee53c4 -> +0xfad4c4 (mov eax, dword ptr [rsi + 0xee53c4]); copy B match table below it, up by 0x24f2020: 0xfad4c4 -> 0x349f4e4; copy B fixtures below it, up by 0x3f7a00: 0x349f4e4 -> 0x3896ee4",
    "asm": "mov eax, dword ptr [rsi + 0xee53c4]"
   },
   {
    "va": "0x1413ff12d",
    "old": "c053ee00",
-   "new": "c0d4fa00",
-   "why": "copy B player part up by the calendar unit: +0xee53c0 -> +0xfad4c0 (mov dword ptr [rsi + 0xee53c0], eax)",
+   "new": "e06e8903",
+   "why": "copy B player part up by the calendar unit: +0xee53c0 -> +0xfad4c0 (mov dword ptr [rsi + 0xee53c0], eax); copy B match table below it, up by 0x24f2020: 0xfad4c0 -> 0x349f4e0; copy B fixtures below it, up by 0x3f7a00: 0x349f4e0 -> 0x3896ee0",
    "asm": "mov dword ptr [rsi + 0xee53c0], eax"
   },
   {
    "va": "0x1413ff13e",
    "old": "c453ee00",
-   "new": "c4d4fa00",
-   "why": "copy B player part up by the calendar unit: +0xee53c4 -> +0xfad4c4 (mov dword ptr [rsi + 0xee53c4], eax)",
+   "new": "e46e8903",
+   "why": "copy B player part up by the calendar unit: +0xee53c4 -> +0xfad4c4 (mov dword ptr [rsi + 0xee53c4], eax); copy B match table below it, up by 0x24f2020: 0xfad4c4 -> 0x349f4e4; copy B fixtures below it, up by 0x3f7a00: 0x349f4e4 -> 0x3896ee4",
    "asm": "mov dword ptr [rsi + 0xee53c4], eax"
   },
   {
    "va": "0x140af23b6",
    "old": "d053ee00",
-   "new": "d0d4fa00",
-   "why": "copy B player part up by the calendar unit: +0xee53d0 -> +0xfad4d0 (lea rax, [rcx + 0xee53d0])",
+   "new": "f06e8903",
+   "why": "copy B player part up by the calendar unit: +0xee53d0 -> +0xfad4d0 (lea rax, [rcx + 0xee53d0]); copy B match table below it, up by 0x24f2020: 0xfad4d0 -> 0x349f4f0; copy B fixtures below it, up by 0x3f7a00: 0x349f4f0 -> 0x3896ef0",
    "asm": "lea rax, [rcx + 0xee53d0]"
   },
   {
    "va": "0x140af23bd",
    "old": "c853ee00",
-   "new": "c8d4fa00",
-   "why": "copy B player part up by the calendar unit: +0xee53c8 -> +0xfad4c8 (mov qword ptr [rcx + 0xee53c8], rax)",
+   "new": "e86e8903",
+   "why": "copy B player part up by the calendar unit: +0xee53c8 -> +0xfad4c8 (mov qword ptr [rcx + 0xee53c8], rax); copy B match table below it, up by 0x24f2020: 0xfad4c8 -> 0x349f4e8; copy B fixtures below it, up by 0x3f7a00: 0x349f4e8 -> 0x3896ee8",
    "asm": "mov qword ptr [rcx + 0xee53c8], rax"
   },
   {
    "va": "0x140af23d7",
    "old": "c853ee00",
-   "new": "c8d4fa00",
-   "why": "copy B player part up by the calendar unit: +0xee53c8 -> +0xfad4c8 (mov rcx, qword ptr [rcx + 0xee53c8])",
+   "new": "e86e8903",
+   "why": "copy B player part up by the calendar unit: +0xee53c8 -> +0xfad4c8 (mov rcx, qword ptr [rcx + 0xee53c8]); copy B match table below it, up by 0x24f2020: 0xfad4c8 -> 0x349f4e8; copy B fixtures below it, up by 0x3f7a00: 0x349f4e8 -> 0x3896ee8",
    "asm": "mov rcx, qword ptr [rcx + 0xee53c8]"
   },
   {
    "va": "0x1412e67ff",
    "old": "d053ee00",
-   "new": "d0d4fa00",
-   "why": "copy B player part up by the calendar unit: +0xee53d0 -> +0xfad4d0 (mov dword ptr [rdi + 0x180], 0xee53d0)",
+   "new": "f06e8903",
+   "why": "copy B player part up by the calendar unit: +0xee53d0 -> +0xfad4d0 (mov dword ptr [rdi + 0x180], 0xee53d0); copy B match table below it, up by 0x24f2020: 0xfad4d0 -> 0x349f4f0; copy B fixtures below it, up by 0x3f7a00: 0x349f4f0 -> 0x3896ef0",
    "asm": "mov dword ptr [rdi + 0x180], 0xee53d0"
+  },
+  {
+   "va": "0x140afd70a",
+   "old": "c0242a00",
+   "new": "c0d4fa00",
+   "why": "copy B match table: +0x2a24c0 -> +0xfad4c0, at the top of what a League save stores (lea rbx, [rsi + 0x2a24c0])",
+   "asm": "lea rbx, [rsi + 0x2a24c0]"
+  },
+  {
+   "va": "0x140afd70f",
+   "old": "48300000",
+   "new": "e8fd0000",
+   "why": "copy B match records: 12360 -> 65000, the block's cap, so a League save keeps every match its calendar names (mov edi, 0x3048)",
+   "asm": "mov edi, 0x3048"
+  },
+  {
+   "va": "0x1413feb69",
+   "old": "c0242a00",
+   "new": "c0d4fa00",
+   "why": "copy B match table: +0x2a24c0 -> +0xfad4c0, at the top of what a League save stores (lea rdx, [r15 + 0x2a24c0])",
+   "asm": "lea rdx, [r15 + 0x2a24c0]"
+  },
+  {
+   "va": "0x1413feb8e",
+   "old": "48300000",
+   "new": "e8fd0000",
+   "why": "copy B match records: 12360 -> 65000, the block's cap, so a League save keeps every match its calendar names (cmp ebp, 0x3048)",
+   "asm": "cmp ebp, 0x3048"
+  },
+  {
+   "va": "0x1413fef29",
+   "old": "c0242a00",
+   "new": "c0d4fa00",
+   "why": "copy B match table: +0x2a24c0 -> +0xfad4c0, at the top of what a League save stores (lea rcx, [r15 + 0x2a24c0])",
+   "asm": "lea rcx, [r15 + 0x2a24c0]"
+  },
+  {
+   "va": "0x1413fef4e",
+   "old": "48300000",
+   "new": "e8fd0000",
+   "why": "copy B match records: 12360 -> 65000, the block's cap, so a League save keeps every match its calendar names (cmp ebp, 0x3048)",
+   "asm": "cmp ebp, 0x3048"
+  },
+  {
+   "va": "0x140afd6a8",
+   "old": "303a1300",
+   "new": "d0e74c00",
+   "why": "copy B coaches: +0x133a30 -> +0x4ce7d0, 3400 records (lea rbx, [rsi + 0x133a30])",
+   "asm": "lea rbx, [rsi + 0x133a30]"
+  },
+  {
+   "va": "0x1413fea9c",
+   "old": "303a1300",
+   "new": "d0e74c00",
+   "why": "copy B coaches: +0x133a30 -> +0x4ce7d0, 3400 records (lea rsi, [r14 + 0x133a30])",
+   "asm": "lea rsi, [r14 + 0x133a30]"
+  },
+  {
+   "va": "0x1413fee61",
+   "old": "303a1300",
+   "new": "d0e74c00",
+   "why": "copy B coaches: +0x133a30 -> +0x4ce7d0, 3400 records (add rcx, 0x133a30)",
+   "asm": "add rcx, 0x133a30"
+  },
+  {
+   "va": "0x140af3cd3",
+   "old": "303a1300",
+   "new": "d0e74c00",
+   "why": "copy B coaches: +0x133a30 -> +0x4ce7d0, 3400 records (lea rdi, [rdx + 0x133a30])",
+   "asm": "lea rdi, [rdx + 0x133a30]"
+  },
+  {
+   "va": "0x140afd6c8",
+   "old": "00181a00",
+   "new": "e03c6f00",
+   "why": "copy B regulations: +0x1a1800 -> +0x6f3ce0, 600 records (lea rbx, [rsi + 0x1a1800])",
+   "asm": "lea rbx, [rsi + 0x1a1800]"
+  },
+  {
+   "va": "0x1413fead9",
+   "old": "00181a00",
+   "new": "e03c6f00",
+   "why": "copy B regulations: +0x1a1800 -> +0x6f3ce0, 600 records (lea rsi, [r14 + 0x1a1800])",
+   "asm": "lea rsi, [r14 + 0x1a1800]"
+  },
+  {
+   "va": "0x1413feeb1",
+   "old": "00181a00",
+   "new": "e03c6f00",
+   "why": "copy B regulations: +0x1a1800 -> +0x6f3ce0, 600 records (add rcx, 0x1a1800)",
+   "asm": "add rcx, 0x1a1800"
+  },
+  {
+   "va": "0x140af3e95",
+   "old": "00181a00",
+   "new": "e03c6f00",
+   "why": "copy B regulations: +0x1a1800 -> +0x6f3ce0, 600 records (lea rdi, [rdx + 0x1a1800])",
+   "asm": "lea rdi, [rdx + 0x1a1800]"
+  },
+  {
+   "va": "0x140afd6e9",
+   "old": "10421c00",
+   "new": "e0f44903",
+   "why": "copy B fixtures: +0x1c4210 -> +0x349f4e0, 8000 records (lea rbx, [rsi + 0x1c4210])",
+   "asm": "lea rbx, [rsi + 0x1c4210]"
+  },
+  {
+   "va": "0x1413feb29",
+   "old": "10421c00",
+   "new": "e0f44903",
+   "why": "copy B fixtures: +0x1c4210 -> +0x349f4e0, 8000 records (lea rdx, [r15 + 0x1c4210])",
+   "asm": "lea rdx, [r15 + 0x1c4210]"
+  },
+  {
+   "va": "0x1413feee9",
+   "old": "10421c00",
+   "new": "e0f44903",
+   "why": "copy B fixtures: +0x1c4210 -> +0x349f4e0, 8000 records (lea rcx, [r15 + 0x1c4210])",
+   "asm": "lea rcx, [r15 + 0x1c4210]"
+  },
+  {
+   "va": "0x1413fea91",
+   "old": "ee020000",
+   "new": "60090000",
+   "why": "copy B teams: 750 -> 2400 records, the block's cap (cmp edi, 0x2ee)",
+   "asm": "cmp edi, 0x2ee"
+  },
+  {
+   "va": "0x140af37f8",
+   "old": "ee020000",
+   "new": "60090000",
+   "why": "copy B teams: 750 -> 2400 records, the block's cap (cmp r12d, 0x2ee)",
+   "asm": "cmp r12d, 0x2ee"
+  },
+  {
+   "va": "0x1413feace",
+   "old": "ee020000",
+   "new": "480d0000",
+   "why": "copy B coaches: 750 -> 3400 records, the block's cap (cmp edi, 0x2ee)",
+   "asm": "cmp edi, 0x2ee"
+  },
+  {
+   "va": "0x140af3cd9",
+   "old": "ee020000",
+   "new": "480d0000",
+   "why": "copy B coaches: 750 -> 3400 records, the block's cap (cmp esi, 0x2ee)",
+   "asm": "cmp esi, 0x2ee"
+  },
+  {
+   "va": "0x140afd6cd",
+   "old": "b4000000",
+   "new": "58020000",
+   "why": "copy B regulations: 180 -> 600 records, the block's cap (mov edi, 0xb4)",
+   "asm": "mov edi, 0xb4"
+  },
+  {
+   "va": "0x1413feb0e",
+   "old": "b4000000",
+   "new": "58020000",
+   "why": "copy B regulations: 180 -> 600 records, the block's cap (cmp edi, 0xb4)",
+   "asm": "cmp edi, 0xb4"
+  },
+  {
+   "va": "0x140af3e9b",
+   "old": "b4000000",
+   "new": "58020000",
+   "why": "copy B regulations: 180 -> 600 records, the block's cap (cmp ebp, 0xb4)",
+   "asm": "cmp ebp, 0xb4"
+  },
+  {
+   "va": "0x140af36d4",
+   "old": "b4000000",
+   "new": "58020000",
+   "why": "copy B regulations: 180 -> 600 records, the block's cap (mov dword ptr [rsp + 0x20], 0xb4)",
+   "asm": "mov dword ptr [rsp + 0x20], 0xb4"
+  },
+  {
+   "va": "0x140afd6ee",
+   "old": "d6060000",
+   "new": "401f0000",
+   "why": "copy B fixtures: 1750 -> 8000 records, the block's cap (mov edi, 0x6d6)",
+   "asm": "mov edi, 0x6d6"
+  },
+  {
+   "va": "0x1413feb4e",
+   "old": "d6060000",
+   "new": "401f0000",
+   "why": "copy B fixtures: 1750 -> 8000 records, the block's cap (cmp edi, 0x6d6)",
+   "asm": "cmp edi, 0x6d6"
+  },
+  {
+   "va": "0x1413fef0e",
+   "old": "d6060000",
+   "new": "401f0000",
+   "why": "copy B fixtures: 1750 -> 8000 records, the block's cap (cmp edi, 0x6d6)",
+   "asm": "cmp edi, 0x6d6"
+  },
+  {
+   "va": "0x140afd68d",
+   "old": "8bfd90",
+   "new": "6bfd04",
+   "why": "copy B constructor: 3000 teams records built instead of 750 (imul edi, ebp, 4), ebp stays 750 for the side table at +0xb45ec0",
+   "asm": "imul edi, ebp, 4"
+  },
+  {
+   "va": "0x140afd6ac",
+   "old": "488bfd90",
+   "new": "6bfd0590",
+   "why": "copy B constructor: 3750 coaches records built instead of 750 (imul edi, ebp, 5), ebp stays 750 for the side table at +0xb45ec0",
+   "asm": "imul edi, ebp, 5"
+  },
+  {
+   "va": "0x1413feaf4",
+   "old": "9c16a700",
+   "new": "505b8101",
+   "why": "copy B regulations biased: block 0x1f09830 - B 0x6f3ce0 = 0x1815b50; B -> block wrote B's regulations to the block's shipped base 0xc12e9c (lea rcx, [r15 + 0xa7169c])",
+   "asm": "lea rcx, [r15 + 0xa7169c]"
+  },
+  {
+   "va": "0x1413feae2",
+   "old": "2c010000",
+   "new": "58020000",
+   "why": "copy B regulations: B -> block index check 300 -> 600, or records past 300 go to the dummy (cmp edi, 0x12c)",
+   "asm": "cmp edi, 0x12c"
   },
   {
    "va": "0x140af229b",
@@ -25337,7 +25561,14 @@
    }
   ],
   "copy_b_unit": "0xee53c0",
-  "copy_b_size": "0x18e2f90",
+  "copy_b_size": "0x41cc9b0",
+  "copy_b_matches": "0xfad4c0",
+  "copy_b_tables": {
+   "teams": "0x50",
+   "coaches": "0x4ce7d0",
+   "regulations": "0x6f3ce0",
+   "fixtures": "0x349f4e0"
+  },
   "copy_s_unit": "0x5f6ed0",
   "copy_s_size": "0x6befd0"
  }
