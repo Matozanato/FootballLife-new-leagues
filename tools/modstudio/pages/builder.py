@@ -1892,10 +1892,10 @@ class ClubWorldCupDialog(Dialog):
         self.first.setRange(2000, 2200)
         self.first.setValue(int(cfg.get("first") or 2029))
         self.form.addRow(_("Every"), row(self.every, QLabel(_("years, first in")), self.first, "stretch"))
-        self.keep = QCheckBox(_("Keep the old Club World Cup / Copa Intercontinental"))
+        self.keep = QCheckBox(_("Keep the old Club World Cup / Intercontinental Cup"))
         self.keep.setChecked(bool(cfg.get("keep_old", True)))
         self.form.addRow(helped(self.keep, self.KEEP_HELP, "Keep the old Club World Cup"))
-        self.name = QLineEdit(cfg.get("old_name") or B.CWC_OLD_NAME)
+        self.name = QLineEdit(cfg.get("old_name") if cfg.get("old_name") not in B.CWC_OLD_NAMES else _(B.CWC_OLD_NAME))
         self.form.addRow(_("Its name"), self.name)
         self.status = QLabel("")
         self.status.setWordWrap(True)
@@ -3208,7 +3208,7 @@ class NewLeagues(BuilderPage):
                     tip="With the modern CONMEBOL competitions: places for South American countries that have no "
                     "league in this world")
         self.action("Club World Cup", self.club_world_cup, tip="The Club World Cup with 32 clubs every few "
-                    "years, and the old one kept as the Copa Intercontinental")
+                    "years, and the old one kept as the Intercontinental Cup")
         self.action("Competition names", self.competition_names, tip="New names and logos for the cups and "
                     "continental competitions of the game, and for the continental cups the world builds")
         self.action("Trophies", self.trophies, tip="A trophy folder of your own for a competition: FL26's "

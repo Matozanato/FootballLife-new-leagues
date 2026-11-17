@@ -1028,7 +1028,7 @@ RECIPE_SETTINGS = ("game_europe", "uefa_seed", "uefa_rank", "europe_first", "gam
 
 # ---- the Club World Cup of 32 (Leagues > More > Club World Cup) ----
 # recipe "club_world_cup": {"on": true, "every": 4, "first": 2029, "keep_old": true,
-#   "old_name": "Copa Intercontinental", "replace": "super:<league>" | "cup:<league>" |
+#   "old_name": "Intercontinental Cup", "replace": "super:<league>" | "cup:<league>" |
 #   "gsuper:<code>" | "glcup:<code>" | null}
 # on: competition 1 becomes the 2025 format (mkcwc.reshape: eight groups of four, a knockout of
 # sixteen on a free regulation id), played in June of every <every>-th year from <first>
@@ -1038,7 +1038,36 @@ RECIPE_SETTINGS = ("game_europe", "uefa_seed", "uefa_rank", "europe_first", "gam
 # it no longer builds: `replace` names that cup (the dialog unticks it in the recipe).
 CWC_KEY_KO, CWC_KEY_IC = "cwc:club_world_cup", "cwc:intercontinental"
 CWC_EVERY_MAX = 8
-CWC_OLD_NAME = "Copa Intercontinental"
+CWC_OLD_NAME = "Intercontinental Cup"
+# the default name in either language (recipes before 17.11. hold the Portuguese one): a default
+# name is written per language, a name of the user's in every language
+CWC_OLD_NAMES = {"Intercontinental Cup", "Copa Intercontinental"}
+CWC_IC_LATIN = "Copa Intercontinental"
+CWC_PT_NAME = "Copa do Mundo de Clubes"
+# regulation name slots (mkleague.name_at): 2 Latin-American Spanish, 4 English, 7 Spanish,
+# 8 Portuguese, 9 the internal code, 10 Brazilian Portuguese
+SLOTS_ES_PT, SLOTS_PT = (2, 7, 8, 10), (8, 10)
+
+
+def cwc_localize(regs, ic_cid, ic_reg, old_name):
+    """names per language: the Club World Cup's Portuguese slots "Copa do Mundo de Clubes" (only
+    where they still hold the English name), the Intercontinental "Intercontinental Cup" with
+    "Copa Intercontinental" in Spanish and Portuguese when it has the default name"""
+    def slot(o, k):
+        return bytes(regs[o + M.name_at(k):o + M.name_at(k) + M.NAME_SLOT]).split(b"\0")[0]
+    for i in range(len(regs) // M.REG):
+        o = i * M.REG
+        if regs[o + M.R_CID] == 1:
+            en = slot(o, 4)
+            for k in SLOTS_PT:
+                if slot(o, k) in (en, b""):
+                    M.put(regs, o + M.name_at(k), CWC_PT_NAME, M.NAME_SLOT)
+        elif ic_reg and regs[o + M.R_CID] == ic_cid and u16(regs, o + M.R_ID) == ic_reg \
+                and old_name in CWC_OLD_NAMES:
+            M.put_names(regs, o, CWC_OLD_NAME, skip=(NAME_CODE_SLOT,))
+            for k in SLOTS_ES_PT:
+                M.put(regs, o + M.name_at(k), CWC_IC_LATIN, M.NAME_SLOT)
+    return regs
 
 
 def cwc_config(recipe):
@@ -1181,6 +1210,7 @@ def club_world_cup(pl, root, db, log=print):
     except SystemExit as e:
         raise BuildError("Club World Cup of 32: %s" % e)
     pl.setdefault("cup_ids", {})[CWC_KEY_KO] = {"reg": ko}
+    regs = cwc_localize(bytearray(regs), ic_cid, ic_reg, cfg["old_name"])
     with contextlib.redirect_stdout(io.StringIO()):
         M.write_tables(root, comp, regs, ents)
     log("  Club World Cup of 32: groups on regulation 1 (1025..8193), knockout on regulation %d, "

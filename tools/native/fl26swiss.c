@@ -4027,7 +4027,7 @@ static int cwc_quota_field(int play_year, u32vec* offered)
     logf("fl26swiss: Club World Cup -- %u of %u clubs by confederation; the old access list picks the field", n, CWC_N);
     return 0;
   }
-  /* pots: UEFA 1-4 + CONMEBOL 1-4, UEFA 5-12, then the rest by points */
+  /* pots (user, 17.11.): pot 1 = UEFA 1-4 + CONMEBOL 1-4; pots 2-4 = every other club by points */
   for (int q = 0; q < 5; q++)                       /* each confederation's best first */
     for (int a = 1; a < np[q]; a++)
       for (int b = a; b > 0 && cwc_points(part[q][b], nrk) > cwc_points(part[q][b - 1], nrk); b--) {
@@ -4037,7 +4037,7 @@ static int cwc_quota_field(int play_year, u32vec* offered)
   uint32_t out[CWC_N];
   for (int i = 0; i < 4 && i < np[0]; i++) out[k++] = part[0][i];
   for (int i = 0; i < 4 && i < np[1]; i++) out[k++] = part[1][i];
-  for (int i = 4; i < np[0]; i++) out[k++] = part[0][i];
+  for (int i = 4; i < np[0]; i++) rest[nr++] = part[0][i];
   for (int i = 4; i < np[1]; i++) rest[nr++] = part[1][i];
   for (int q = 2; q < 5; q++) for (int i = 0; i < np[q]; i++) rest[nr++] = part[q][i];
   for (unsigned i = 0; i < n; i++) {                 /* the extras */
@@ -4060,6 +4060,8 @@ static int cwc_quota_field(int play_year, u32vec* offered)
   return 1;
 }
 
+static int pot_draw(const uint32_t* field, const int* key, unsigned n, int groups,
+                    uint32_t grp[][8], int* tries);
 static char cwc_setcl(uint64_t id, u32vec* list, uint64_t flag)
 {
   unsigned char* rec = get_rec(CWC_REG);
@@ -4067,8 +4069,11 @@ static char cwc_setcl(uint64_t id, u32vec* list, uint64_t flag)
   size_t offered = list && list->b ? (size_t)(list->e - list->b) : 0;
   static int drawn_year = -1;
   int play_year = cwc_play_year();
-  if ((g_cwc_every <= 1 || !g_cwc_first) ? (rec && g0 && rec_count(rec) == CWC_N && rec_count(g0))
-                                         : (play_year >= 0 && drawn_year == play_year)) {
+  /* the year alone is not enough: a save of before the draw, loaded in the same game run, has
+     no clubs in reg 1 although this run drew that year (17.11.: the cup stayed empty) */
+  int held = rec && g0 && rec_count(rec) == CWC_N && rec_count(g0);
+  if ((g_cwc_every <= 1 || !g_cwc_first) ? held
+                                         : (held && play_year >= 0 && drawn_year == play_year)) {
     logf("fl26swiss: Club World Cup -- the game offered %u club(s) on day %d, but the 32 are already drawn; ignored",
          (unsigned)offered, today());
     return 1;
@@ -4123,6 +4128,26 @@ drawn:
   u32vec w = { g_cwc, g_cwc + CWC_N, g_cwc + CWC_N };
   ((gdraw_fn)(uintptr_t)(g_base + GDRAW_RVA))(CWC_REG, &w, 1);
   run_flush();
+  /* The game's group draw deals the entry order out pot by pot in order (17.11.: the groups came
+     out as the ranking), so the groups are drawn here: one club of each pot in every group, the
+     group picked at random, clubs of one country kept apart where a draw allows it (pot_draw, the
+     Sudamericana's), and each group's list handed to the game. */
+  {
+    uint32_t grp[8][8]; int key[CWC_N], tries = 0;
+    unsigned char* own = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+    void* blk = own ? *(void**)(own + 0x48) : 0;
+    for (int i = 0; i < CWC_N; i++) key[i] = blk ? club_key(blk, g_cwc[i], i) : 3000 + i;
+    int best = pot_draw(g_cwc, key, CWC_N, CWC_GROUPS, grp, &tries);
+    logf("fl26swiss: Club World Cup -- groups drawn from the pots: %d same-country pair(s) after %d draw(s)",
+         best, tries);
+    for (int g = 0; g < CWC_GROUPS; g++) {
+      u32vec gv = { grp[g], grp[g] + 4, grp[g] + 4 };
+      ((setclr_fn)(uintptr_t)g_tramp_setcl)(cwc_rep(g), &gv, 1);
+      run_flush();
+      logf("fl26swiss: Club World Cup -- group %c: %08x %08x %08x %08x", 'A' + g,
+           grp[g][0], grp[g][1], grp[g][2], grp[g][3]);
+    }
+  }
   char line[160]; int p = 0;
   for (int g = 0; g < CWC_GROUPS; g++) {
     unsigned char* rg = get_rec(cwc_rep(g));
@@ -4156,7 +4181,7 @@ static char ic_fill(u32vec* list, uint64_t flag)
   static int done_year = -1;
   int y = cwc_play_year();
   unsigned char* ic = get_rec(g_ic_reg);
-  if (y >= 0 && done_year == y) {
+  if (y >= 0 && done_year == y && ic && rec_count(ic)) {   /* a save of before it, loaded: fill again */
     logf("fl26swiss: Intercontinental -- offered again on day %d; already filled this season (reg %u holds %u)",
          today(), (unsigned)g_ic_reg, ic ? rec_count(ic) : 0);
     return 1;
@@ -4199,12 +4224,27 @@ static char cwc_handoff(uint64_t id, u32vec* list, uint64_t flag)
 
 /* the group stage is over: winners and runners-up into the knockout, in the 2025 bracket */
 static unsigned g_cwc_groups_done = 0;
+static int g_cwc_groups_day = -1;
+static int season_played(uint16_t reg);
 static int cwc_progress(uint16_t r, void* started)
 {
+  /* The reports are kept in memory, so a save loaded in the same game run (17.11.) would keep the
+     groups reported in the other timeline: the date going back forgets them. A group whose every
+     match is played counts as well, so one over before the save loaded is not waited for again. */
+  (void)abs_day();                                  /* moves g_timeline on when the date went back */
+  if (g_cwc_groups_day >= 0 && g_timeline != g_cwc_groups_day) {
+    logf("fl26swiss: Club World Cup -- the date went back (a save loaded): groups reported %02x forgotten",
+         g_cwc_groups_done);
+    g_cwc_groups_done = 0;
+  }
+  g_cwc_groups_day = g_timeline;
   if (r == CWC_REG) g_cwc_groups_done = (1u << CWC_GROUPS) - 1;
   else g_cwc_groups_done |= 1u << (((r >> 10) - 1) & 31);
-  logf("fl26swiss: Club World Cup -- progression for reg %u on day %d (groups reported %02x)",
-       (unsigned)r, today(), g_cwc_groups_done);
+  unsigned played = 0;
+  for (int g = 0; g < CWC_GROUPS; g++) if (season_played(cwc_rep(g))) played |= 1u << g;
+  logf("fl26swiss: Club World Cup -- progression for reg %u on day %d (groups reported %02x, all played %02x)",
+       (unsigned)r, today(), g_cwc_groups_done, played);
+  g_cwc_groups_done |= played;
   if (g_cwc_groups_done != (1u << CWC_GROUPS) - 1) return 0;
   unsigned char* ko = get_rec(CWC_KO);
   if (!ko || rec_count(ko)) return 0;
