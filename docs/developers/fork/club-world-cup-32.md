@@ -60,3 +60,21 @@ Intercontinental every year (set_clubs + register_all, dated with the shipped re
 and the 32-club draw is made only when the year it is played (June after the draw) is in the
 cycle. A career saved before has none of the new rows (`cwc_world` and `ic_world` say no) and
 keeps the old cup. Not yet played in the game.
+
+### The field (cwc_quota_field, the user's rule of 2026-11-17)
+
+12 UEFA, 6 CONMEBOL, 5 AFC, 5 CAF, 4 CONCACAF (FIFA's shares; the OFC place, with no OFC clubs in
+the game, goes to the AFC and the CAF). Each confederation first takes the champions of its
+continental cup of the four seasons before the cup (titles of T-4 .. T-1 for a cup played in June
+of T; the confederation is the club's country's, from the world file's confed line): the game's
+Champions League (4), Libertadores (10) and AFC Champions League (16) knockouts and every cup of
+ours the league champions go to. A club with two titles is in once; the places left go to the
+best of the confederation ranking. No limit per country. Pots of eight in list order: UEFA 1-4
+and CONMEBOL 1-4, UEFA 5-12, then the other sixteen by points.
+
+The titles and the ranking are fl26cwc.dll's (tools/cwcrank, now in the pack: build-cwc.sh,
+sider/experimental/fl26cwc.lua): fl26swiss tells it every winner at the teardowns and at the
+draw (`fl26_cwc_champion`), it keeps them in each save's ledger (`K_CHAMP`, six years whatever
+the window) and hands them back with the ranking (`fl26_cwc_champions`, `fl26_cwc_ranking`).
+Its cycle comes from the same cwc32 line (`fl26_cwc_every`). Without fl26cwc.dll, or with a
+confederation it cannot fill, the old access list stands in.

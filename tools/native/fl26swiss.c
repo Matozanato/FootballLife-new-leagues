@@ -801,6 +801,8 @@ static int cwc_world(void);
 static char cwc_setcl(uint64_t id, u32vec* list, uint64_t flag);
 static u32vec* cwc_game_champions(u32vec* list);
 static char cwc_handoff(uint64_t id, u32vec* list, uint64_t flag);
+static void champ_note(const char* when);
+static int champ_cups(uint16_t* reg, int max);
 static void cont_note(uint16_t id, void* vec);
 static uint32_t canon_club(uint32_t h);
 static const char* club_note(uint32_t h, char* buf, size_t cap);
@@ -3912,6 +3914,152 @@ static int cwc_add(unsigned* n, uint32_t c)
   return 1;
 }
 
+/* ---- the field by confederation (the user's rule, 2026-11-17) ----
+ * 12 UEFA, 6 CONMEBOL, 5 AFC, 5 CAF, 4 CONCACAF = 32 (FIFA's 2025 shares, the OFC place -- no OFC
+ * clubs in the game -- given to the AFC and the CAF). Each confederation takes first the champions
+ * of its continental cup(s) of the four seasons before the cup is played (titles of the years
+ * T-4 .. T-1 for a cup played in June of T; a club with two titles is in once), then the best of
+ * the ranking (fl26cwc.dll: the confederation ranking's points of the four-season window) until
+ * its places are full. No limit per country. The titles are fl26cwc's too: fl26swiss tells it
+ * every winner at the teardowns and at the draw (champ_note), and it keeps them in each save's
+ * ledger. Without fl26cwc.dll (or before it has anything) the old access list is used.
+ * Pots of eight in list order (the game's group draw): the four best UEFA and the four best
+ * CONMEBOL clubs, then the other eight UEFA clubs, then the other sixteen by their points. */
+typedef int (*cwcchamps_fn)(uint16_t*, uint32_t*, uint16_t*, uint16_t*, int);
+typedef int (*cwcrank_fn)(uint32_t*, int32_t*, int);
+typedef int (*cwcchamp_fn)(int, uint32_t);
+static FARPROC cwc_rank_proc(const char* name)
+{
+  HMODULE h = GetModuleHandleA("fl26cwc.dll");
+  return h ? GetProcAddress(h, name) : 0;
+}
+static const struct { uint8_t confed, places; uint16_t cup; const char* name; } CWC_QUOTA[] = {
+  { 2, 12, 4, "UEFA" }, { 4, 6, 10, "CONMEBOL" }, { 3, 5, 16, "AFC" }, { 5, 5, 0, "CAF" }, { 6, 4, 0, "CONCACAF" },
+};
+#define CWC_RANK_MAX 4000
+static uint32_t g_rk_id[CWC_RANK_MAX]; static int32_t g_rk_q[CWC_RANK_MAX];
+static int cwc_points(uint32_t c, int nrk)
+{
+  for (int i = 0; i < nrk; i++) if (g_rk_id[i] == c >> 14) return g_rk_q[i];
+  return 0;
+}
+static int cwc_confed_of(void* blk, uint32_t c) { return confed_of(team_country(blk, c)); }
+/* 1 and the field in g_cwc (CWC_N clubs, in pot order), 0 when it cannot be made this way */
+static int cwc_quota_field(int play_year, u32vec* offered)
+{
+  cwcchamps_fn champs = (cwcchamps_fn)(void*)cwc_rank_proc("fl26_cwc_champions");
+  cwcrank_fn rank = (cwcrank_fn)(void*)cwc_rank_proc("fl26_cwc_ranking");
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  void* blk = o ? *(void**)(o + 0x48) : 0;
+  if (!champs || !rank || !blk || !g_confed_n) {
+    logf("fl26swiss: Club World Cup -- %s; the old access list picks the field",
+         !champs || !rank ? "no fl26cwc.dll with the ranking (fl26_cwc_ranking)" : !g_confed_n ? "no confed line in the world file" : "no career");
+    return 0;
+  }
+  int nrk = rank(g_rk_id, g_rk_q, CWC_RANK_MAX);
+  static uint16_t creg[256], cyear[256], cday[256]; static uint32_t cclub[256];
+  int nch = champs(creg, cclub, cyear, cday, 256);
+  uint16_t cups[MAX_CCUP_FWD + 3]; int ncups = champ_cups(cups, MAX_CCUP_FWD + 3);
+  logf("fl26swiss: Club World Cup %d -- by confederation: %d club(s) in the ranking, %d title(s) kept, %d champions' cup(s)",
+       play_year, nrk, nch, ncups);
+  static uint32_t part[5][CWC_N]; int np[5] = { 0 };
+  unsigned n = 0;
+  for (int q = 0; q < 5; q++) {
+    int conf = CWC_QUOTA[q].confed, want = CWC_QUOTA[q].places;
+    /* the titles, newest first */
+    for (int i = nch - 1; i >= 0 && np[q] < want; i--) {
+      int is_cup = 0;
+      for (int k = 0; k < ncups; k++) if (cups[k] == creg[i]) is_cup = 1;
+      if (!is_cup) continue;
+      int year = cyear[i] - (cday[i] <= NEWYEAR_TO ? 1 : 0);    /* told at New Year: last year's final */
+      if (year < play_year - 4 || year > play_year - 1) continue;
+      uint32_t c = canon_club(cclub[i]);
+      int cf = cwc_confed_of(blk, c);
+      if (!cf && creg[i] == CWC_QUOTA[q].cup) cf = conf;
+      if (cf != conf || !(c >> 14) || has_club(g_cwc, n, c)) continue;
+      if (cwc_add(&n, c)) {
+        part[q][np[q]++] = c;
+        logf("fl26swiss:   %s %2d: champion of cup %u in %d -> %08x (%d.%02d pts)", CWC_QUOTA[q].name, np[q],
+             (unsigned)creg[i], year, c, cwc_points(c, nrk) / 4, cwc_points(c, nrk) % 4 * 25);
+      }
+    }
+    /* the ranking */
+    for (int i = 0; i < nrk && np[q] < want; i++) {
+      uint32_t c = canon_club(g_rk_id[i] << 14);
+      if (!(c >> 14) || cwc_confed_of(blk, c) != conf || has_club(g_cwc, n, c)) continue;
+      if (cwc_add(&n, c)) {
+        part[q][np[q]++] = c;
+        logf("fl26swiss:   %s %2d: ranking %d -> %08x (%d.%02d pts)", CWC_QUOTA[q].name, np[q], i + 1, c,
+             g_rk_q[i] / 4, g_rk_q[i] % 4 * 25);
+      }
+    }
+    /* nobody of it in the ranking yet (a first season): the game's own entrants of it, then the old list */
+    for (size_t k = 0; offered && k < (size_t)(offered->e - offered->b) && np[q] < want; k++) {
+      uint32_t c = offered->b[k];
+      if (cwc_confed_of(blk, c) == conf && cwc_add(&n, c)) {
+        part[q][np[q]++] = c;
+        logf("fl26swiss:   %s %2d: the game's entrant -> %08x", CWC_QUOTA[q].name, np[q], c);
+      }
+    }
+    for (size_t k = 0; k < sizeof CWC_ACCESS / sizeof CWC_ACCESS[0] && np[q] < want; k++) {
+      const char* how = "";
+      for (int r = CWC_ACCESS[k].rank; r <= FINAL_MAX && np[q] < want; r++) {
+        uint32_t c = cwc_club(CWC_ACCESS[k].reg, r, &how);
+        if (!c) break;
+        if (cwc_confed_of(blk, c) != conf) break;
+        if (cwc_add(&n, c)) {
+          part[q][np[q]++] = c;
+          logf("fl26swiss:   %s %2d: reg %u position %d -> %08x (%s, short of ranked clubs)", CWC_QUOTA[q].name,
+               np[q], (unsigned)CWC_ACCESS[k].reg, r, c, how);
+          break;
+        }
+      }
+    }
+    if (np[q] < want)
+      logf("fl26swiss: Club World Cup -- %s: %d of %d places filled", CWC_QUOTA[q].name, np[q], want);
+  }
+  /* still short: the best of the ranking, whatever the confederation */
+  for (int i = 0; i < nrk && n < CWC_N; i++) {
+    uint32_t c = canon_club(g_rk_id[i] << 14);
+    if (cwc_add(&n, c)) logf("fl26swiss:   extra: ranking %d -> %08x (a confederation short of clubs)", i + 1, c);
+  }
+  if (n != CWC_N) {
+    logf("fl26swiss: Club World Cup -- %u of %u clubs by confederation; the old access list picks the field", n, CWC_N);
+    return 0;
+  }
+  /* pots: UEFA 1-4 + CONMEBOL 1-4, UEFA 5-12, then the rest by points */
+  for (int q = 0; q < 5; q++)                       /* each confederation's best first */
+    for (int a = 1; a < np[q]; a++)
+      for (int b = a; b > 0 && cwc_points(part[q][b], nrk) > cwc_points(part[q][b - 1], nrk); b--) {
+        uint32_t t = part[q][b]; part[q][b] = part[q][b - 1]; part[q][b - 1] = t;
+      }
+  static uint32_t rest[CWC_N]; int nr = 0, k = 0;
+  uint32_t out[CWC_N];
+  for (int i = 0; i < 4 && i < np[0]; i++) out[k++] = part[0][i];
+  for (int i = 0; i < 4 && i < np[1]; i++) out[k++] = part[1][i];
+  for (int i = 4; i < np[0]; i++) out[k++] = part[0][i];
+  for (int i = 4; i < np[1]; i++) rest[nr++] = part[1][i];
+  for (int q = 2; q < 5; q++) for (int i = 0; i < np[q]; i++) rest[nr++] = part[q][i];
+  for (unsigned i = 0; i < n; i++) {                 /* the extras */
+    int there = 0;
+    for (int j = 0; j < k; j++) if (out[j] == g_cwc[i]) there = 1;
+    for (int j = 0; j < nr; j++) if (rest[j] == g_cwc[i]) there = 1;
+    if (!there && nr < CWC_N) rest[nr++] = g_cwc[i];
+  }
+  for (int a = 1; a < nr; a++)
+    for (int b = a; b > 0 && cwc_points(rest[b], nrk) > cwc_points(rest[b - 1], nrk); b--) {
+      uint32_t t = rest[b]; rest[b] = rest[b - 1]; rest[b - 1] = t;
+    }
+  for (int i = 0; i < nr && k < CWC_N; i++) out[k++] = rest[i];
+  if (k != CWC_N) { logf("fl26swiss: Club World Cup -- pots came to %d clubs; the old access list picks the field", k); return 0; }
+  memcpy(g_cwc, out, sizeof out);
+  for (int pot = 0; pot < 4; pot++)
+    logf("fl26swiss: Club World Cup -- pot %d: %08x %08x %08x %08x %08x %08x %08x %08x", pot + 1,
+         g_cwc[pot * 8], g_cwc[pot * 8 + 1], g_cwc[pot * 8 + 2], g_cwc[pot * 8 + 3], g_cwc[pot * 8 + 4],
+         g_cwc[pot * 8 + 5], g_cwc[pot * 8 + 6], g_cwc[pot * 8 + 7]);
+  return 1;
+}
+
 static char cwc_setcl(uint64_t id, u32vec* list, uint64_t flag)
 {
   unsigned char* rec = get_rec(CWC_REG);
@@ -3927,6 +4075,12 @@ static char cwc_setcl(uint64_t id, u32vec* list, uint64_t flag)
   }
   unsigned n = 0, gaps = 0, game = 0;
   const size_t POT3 = 24;
+  champ_note("the Club World Cup draw");
+  if (cwc_quota_field(play_year, list)) {
+    n = CWC_N;
+    goto drawn;
+  }
+  n = 0;
   for (size_t i = 0; i < sizeof CWC_ACCESS / sizeof CWC_ACCESS[0]; i++) {
     if (i == POT3) {                                 /* the game's own entrants open pot 4, */
       uint32_t cw[MAX_CCUP_FWD]; uint16_t cc[MAX_CCUP_FWD];   /* after the champions of our */
@@ -3957,6 +4111,7 @@ static char cwc_setcl(uint64_t id, u32vec* list, uint64_t flag)
   }
   logf("fl26swiss: Club World Cup -- day %d: the game offered %u, field %u (%u of the game's, %u list places without a club)",
        today(), (unsigned)offered, n, game, gaps);
+drawn:
   if (n != CWC_N) {
     logf("fl26swiss: Club World Cup -- short field; the game's own entrants stand");
     return ((setclr_fn)(uintptr_t)g_tramp_setcl)(id, list, flag);
@@ -4027,6 +4182,7 @@ static char cwc_handoff(uint64_t id, u32vec* list, uint64_t flag)
   for (size_t i = 0; i < n; i++) orig[i] = list->b[i];
   u32vec as_offered = { orig, orig + n, orig + n };
   char ok = 1;
+  champ_note("day of the Club World Cup entrants");
   if (g_ic_reg && n) {
     if (ic_world()) ok = ic_fill(cwc_game_champions(list), flag);
     else logf("fl26swiss: Intercontinental -- reg %u is not the Intercontinental in this career (an older save?); left alone",
@@ -6396,6 +6552,33 @@ static int ccup_fill(void* started)
   for (int k = 0; k < g_nccup; k++)
     if (!g_ccup[k].fill && !g_ccup[k].cal) any |= ccup_fill_one(k, started);
   return any;
+}
+
+/* the continental cups whose winners are champions for the Club World Cup of 32: the game's
+   Champions League, Libertadores and AFC Champions League knockouts, and every cup of ours the
+   league champions go to (ccup_champions' cups) */
+static int champ_cups(uint16_t* reg, int max)
+{
+  int n = 0;
+  static const uint16_t GAME[3] = { R_UCLKO, R_LIBKO, 16 };
+  for (int i = 0; i < 3 && n < max; i++) reg[n++] = GAME[i];
+  for (int k = 0; k < g_nccup && n < max; k++)
+    if (!g_ccup[k].national && !ccup_tier(&g_ccup[k])) reg[n++] = g_ccup[k].ko;
+  return n;
+}
+/* every champions' cup with a winner now: told to fl26cwc.dll, which keeps the titles per save */
+static void champ_note(const char* when)
+{
+  cwcchamp_fn tell = (cwcchamp_fn)(void*)cwc_rank_proc("fl26_cwc_champion");
+  if (!tell || !cwc_world()) return;
+  uint16_t cups[MAX_CCUP_FWD + 3];
+  int n = champ_cups(cups, MAX_CCUP_FWD + 3);
+  for (int i = 0; i < n; i++) {
+    uint32_t c = get_rec(cups[i]) ? winner_now(cups[i]) : 0;
+    if (c && tell(cups[i], c) == 1)
+      logf("fl26swiss: Club World Cup -- cup %u won by %08x, a title for the draw (%s, day %d)", (unsigned)cups[i], c,
+           when, today());
+  }
 }
 
 /* the cups with a fill day of their own (a pre-season cup in July): from the loader's tick, once
@@ -12979,6 +13162,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
   if (!in || !in->b || in->e < in->b) return in;
   int n = (int)(in->e - in->b), euro = 0, has186 = 0, has187 = 0, has1210 = 0, has1027 = 0, has1029 = 0;
   if (n + 24 > 512) return in;
+  champ_note("a teardown");
   access_capture();
   ccup_keep_tables(in->b, n);
   table_pool_reap("July teardown");
