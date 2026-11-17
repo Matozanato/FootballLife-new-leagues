@@ -134,6 +134,7 @@ end
 -- domestic cup, dated by it: fl26_swiss_ccup_like, called before fl26_swiss_ccup) and
 -- draw=byes|random|seeded|off (its cup draw, fl26_swiss_cupdraw; byes when not given).
 local confed = {}               -- read_world: the confed line, { flag, code } pairs
+local cwc32 = nil               -- read_world: the cwc32 line, { ko, every, first, ic, iccid } (fl26_swiss_cwc)
 local CUPDRAW = { all = 1 }     -- read_world: the cupdraw lines, a mode per cup and one for all (0 off, 1 seeded, 2 random, 3 byes)
 local DRAWMODE = { off = 0, seeded = 1, random = 2, byes = 3 }
 local function read_world(ctx)
@@ -143,6 +144,7 @@ local function read_world(ctx)
   if not f then return nil end
   local leagues, splits, uefa, ccups, dlike, qrounds, lpres = {}, {}, {}, {}, {}, {}, {}
   confed = {}
+  cwc32 = nil
   CUPDRAW = { all = 1 }
   for line in f:lines() do
     local lr, lrest = line:match("^%s*lpre%s+(%d+)(.*)$")
@@ -231,6 +233,14 @@ local function read_world(ctx)
     end
     -- confed <flag>:<code>,...: each country's confederation, so a continental champion of
     -- ours replaces a club of its own confederation in the game's Club World Cup (0.2.0)
+    -- cwc32 ko=<reg> every=<years> first=<year> ic=<reg> iccid=<cid>: Mod Studio's Club World
+    -- Cup of 32 (its knockout, its cycle) and the old one kept as the Intercontinental
+    local cwrest = line:match("^%s*cwc32%s+(.*)$")
+    if cwrest then
+      cwc32 = { tonumber(cwrest:match("ko=(%d+)") or 0), tonumber(cwrest:match("every=(%d+)") or 1),
+                tonumber(cwrest:match("first=(%d+)") or 0), tonumber(cwrest:match("ic=(%d+)") or 0),
+                tonumber(cwrest:match("iccid=(%d+)") or 0) }
+    end
     local cf = line:match("^%s*confed%s+([%d:,]+)")
     if cf then
       for f, c in cf:gmatch("(%d+):(%d+)") do confed[#confed + 1] = { tonumber(f), tonumber(c) } end
@@ -707,6 +717,18 @@ function m.init(ctx)
       end
       -- each country's confederation: the Club World Cup (with continental cups of ours) and the
       -- board objective of a club of ours outside UEFA (GitHub #43, any world)
+      if cwc32 then
+        local pw = ffi.C.GetProcAddress(h, "fl26_swiss_cwc")
+        if pw == nil then
+          log("fl26swiss: this fl26swiss.dll has no fl26_swiss_cwc; the Club World Cup of 32 and the Intercontinental stay off -- install Mod Studio's modules")
+        else
+          local wbuf = ffi.new("uint16_t[5]")
+          for i = 1, 5 do wbuf[i - 1] = cwc32[i] end
+          ffi.cast("fl26_swiss_access_t", pw)(wbuf, 5)
+          log(string.format("fl26swiss: world file -- Club World Cup of 32 (knockout %d, every %d from %d), Intercontinental reg %d",
+                            cwc32[1], cwc32[2], cwc32[3], cwc32[4]))
+        end
+      end
       if #confed > 0 then
         local pc = ffi.C.GetProcAddress(h, "fl26_swiss_confed")
         if pc == nil then

@@ -1022,7 +1022,173 @@ RECIPE_SETTINGS = ("game_europe", "uefa_seed", "uefa_rank", "europe_first", "gam
                    "ccup_names", "ccup_logos", "caf_super_cup", "caf_super_cup_logo", "cup_draw",
                    "country_order", "game_seasons", "saudi_august", "newlife_ids", "newlife_game",
                    "league_order", "packs", "conmebol", "conmebol_associations", "samerica_super_cup",
-                   "samerica_super_cup_logo", "samerica_super_cup_first", "sudamericana_calendar")
+                   "samerica_super_cup_logo", "samerica_super_cup_first", "sudamericana_calendar",
+                   "club_world_cup")
+
+
+# ---- the Club World Cup of 32 (Leagues > More > Club World Cup) ----
+# recipe "club_world_cup": {"on": true, "every": 4, "first": 2029, "keep_old": true,
+#   "old_name": "Copa Intercontinental", "replace": "super:<league>" | "cup:<league>" |
+#   "gsuper:<code>" | "glcup:<code>" | null}
+# on: competition 1 becomes the 2025 format (mkcwc.reshape: eight groups of four, a knockout of
+# sixteen on a free regulation id), played in June of every <every>-th year from <first>
+# (fl26swiss.dll, the world file's cwc32 line). keep_old: the shipped four-club cup is copied
+# onto a competition of its own (mkcwc.intercontinental) and keeps being played every December
+# with the game's four entrants. A world with no free competition id gives it the ids of a cup
+# it no longer builds: `replace` names that cup (the dialog unticks it in the recipe).
+CWC_KEY_KO, CWC_KEY_IC = "cwc:club_world_cup", "cwc:intercontinental"
+CWC_EVERY_MAX = 8
+CWC_OLD_NAME = "Copa Intercontinental"
+
+
+def cwc_config(recipe):
+    """the recipe's club_world_cup, checked and with its defaults; None when it is off"""
+    c = (recipe or {}).get("club_world_cup")
+    if not isinstance(c, dict) or not c.get("on"):
+        return None
+    try:
+        every = int(c.get("every", 4))
+        first = int(c.get("first", 2029))
+    except (TypeError, ValueError):
+        raise BuildError("Club World Cup: every and first must be numbers")
+    if not 1 <= every <= CWC_EVERY_MAX:
+        raise BuildError("Club World Cup: every %d years -- 1 to %d" % (every, CWC_EVERY_MAX))
+    if not 2000 <= first <= 2200:
+        raise BuildError("Club World Cup: the first one in %d -- a year from 2000 to 2200" % first)
+    keep = bool(c.get("keep_old", True))
+    name = (c.get("old_name") or "").strip() or CWC_OLD_NAME
+    return {"every": every, "first": first, "keep_old": keep, "old_name": name,
+            "replace": (c.get("replace") or None) if keep else None}
+
+
+def cwc_last_key(replace):
+    """the plan's cup_ids key of a cup the Intercontinental replaces (cwc_replaceable's keys)"""
+    kind, _, name = (replace or "").partition(":")
+    if kind == "glcup":
+        return "ccup:" + name
+    return replace or ""
+
+
+def cwc_pins(prev_cups, last_ids, cfg):
+    """the cups' ids of the last Build for this one, with the Club World Cup's: none when it is
+    off, the Intercontinental's only when it is kept -- and, the first time, the ids of the cup
+    it replaces (cfg["replace"], unticked in the recipe and so gone from prev_cups)"""
+    out = {k: v for k, v in prev_cups.items() if not k.startswith("cwc:")}
+    if not cfg:
+        return out
+    if isinstance(last_ids.get(CWC_KEY_KO), dict):
+        out[CWC_KEY_KO] = last_ids[CWC_KEY_KO]
+    if cfg["keep_old"]:
+        mine = last_ids.get(CWC_KEY_IC)
+        if not isinstance(mine, dict) and cfg.get("replace"):
+            was = last_ids.get(cwc_last_key(cfg["replace"]))
+            mine = {f: was[f] for f in ("cid", "reg") if isinstance(was, dict) and isinstance(was.get(f), int)}
+            out.pop(cwc_last_key(cfg["replace"]), None)
+        if isinstance(mine, dict) and mine:
+            out[CWC_KEY_IC] = mine
+    return out
+
+
+def cwc_replaceable(recipe, last_ids=None):
+    """[(group, key, name, cid or None)] of the cups this world builds that the Intercontinental
+    can take the place of: group "cup" or "super". last_ids: the plan's cup_ids of the last Build"""
+    last_ids = last_ids or {}
+    out = []
+    for L in (recipe or {}).get("leagues") or []:
+        if L.get("others"):
+            continue
+        nm = (L.get("name") or "").strip()
+        if not nm:
+            continue
+        if L.get("cup"):
+            out.append(("cup", "cup:" + nm, (L.get("cup_name") or "").strip() or nm + " Cup",
+                        (last_ids.get("cup:" + nm) or {}).get("cid")))
+            if L.get("supercup"):
+                out.append(("super", "super:" + nm, (L.get("supercup_name") or "").strip() or nm + " Super Cup",
+                            (last_ids.get("super:" + nm) or {}).get("cid")))
+    for g in (recipe or {}).get("game_cups") or []:
+        r = g.get("league")
+        if not isinstance(r, int):
+            continue
+        if g.get("super_cup"):
+            code = "FL_G%03d_SCUP" % r
+            out.append(("super", "gsuper:" + code, (g.get("super_name") or "").strip() or "Super Cup (league %d)" % r,
+                        (last_ids.get("gsuper:" + code) or {}).get("cid")))
+        if g.get("league_cup"):
+            code = "FL_G%03d_LCUP" % r
+            out.append(("cup", "glcup:" + code,
+                        (g.get("league_cup_name") or "").strip() or "League Cup (league %d)" % r,
+                        (last_ids.get("ccup:" + code) or {}).get("cid")))
+    return out
+
+
+def cwc_untick(recipe, key):
+    """take the cup `key` (cwc_replaceable) out of the recipe: it is no longer built, and the
+    Intercontinental gets its ids. True when something changed"""
+    kind, _, name = (key or "").partition(":")
+    for L in recipe.get("leagues") or []:
+        nm = (L.get("name") or "").strip()
+        if kind == "cup" and nm == name and L.get("cup"):
+            L["cup"] = False
+            L["supercup"] = False
+            return True
+        if kind == "super" and nm == name and L.get("supercup"):
+            L["supercup"] = False
+            return True
+    for g in recipe.get("game_cups") or []:
+        r = g.get("league")
+        if kind == "gsuper" and isinstance(r, int) and name == "FL_G%03d_SCUP" % r and g.get("super_cup"):
+            g["super_cup"] = False
+            return True
+        if kind == "glcup" and isinstance(r, int) and name == "FL_G%03d_LCUP" % r and g.get("league_cup"):
+            g["league_cup"] = False
+            return True
+    return False
+
+
+def club_world_cup(pl, root, db, log=print):
+    """the Club World Cup of 32 (and the old one kept as the Intercontinental) into the world's
+    tables in <db>; returns the world file's cwc32 line"""
+    cfg = pl.get("club_world_cup")
+    if not cfg:
+        return []
+    import mkcwc
+    comp, regs, ents = (M.load(db, n) for n in
+                        ("Competition.bin", "CompetitionRegulation.bin", "CompetitionEntry.bin"))
+    _c, kregs = pinned_ids(pl, db, CWC_KEY_KO)
+    kregs = [r for r in kregs if 175 < r < 1024]
+    if not kregs:
+        raise out_of_ids("the Club World Cup")
+    ko = kregs[0]
+    ic_cid = ic_reg = 0
+    if cfg["keep_old"]:
+        cids, iregs = pinned_ids(pl, db, CWC_KEY_IC)
+        iregs = [r for r in iregs if r != ko and 1 < r < 1024]
+        if not cids or not iregs:
+            raise BuildError("no free competition id for %s (the old Club World Cup) -- the world has all "
+                             "the competitions the game takes. Pick a cup for it to take the place of in "
+                             "My world > Leagues > More > Club World Cup, or untick \"Keep the old Club World "
+                             "Cup\" there" % cfg["old_name"])
+        ic_cid, ic_reg = cids[0], iregs[0]
+        try:
+            mkcwc.intercontinental(comp, regs, ents, ic_cid, ic_reg, cfg["old_name"])
+        except SystemExit as e:
+            raise BuildError("%s: %s" % (cfg["old_name"], e))
+        pl.setdefault("cup_ids", {})[CWC_KEY_IC] = {"cid": ic_cid, "reg": ic_reg}
+    said = []
+    try:
+        regs = mkcwc.reshape(regs, ko, log=said.append)
+    except SystemExit as e:
+        raise BuildError("Club World Cup of 32: %s" % e)
+    pl.setdefault("cup_ids", {})[CWC_KEY_KO] = {"reg": ko}
+    with contextlib.redirect_stdout(io.StringIO()):
+        M.write_tables(root, comp, regs, ents)
+    log("  Club World Cup of 32: groups on regulation 1 (1025..8193), knockout on regulation %d, "
+        "played in June every %d year(s) from %d" % (ko, cfg["every"], cfg["first"]))
+    if ic_reg:
+        log("  %s (the old Club World Cup, every December): competition %d, regulation %d"
+            % (cfg["old_name"], ic_cid, ic_reg))
+    return ["cwc32 ko=%d every=%d first=%d ic=%d iccid=%d" % (ko, cfg["every"], cfg["first"], ic_reg, ic_cid)]
 
 
 def is_plan(r):
@@ -2182,6 +2348,8 @@ def plan(recipe, base, prev=None):
     # nor a cup's id of the last Build: build() gives the cup its own back (pinned_ids)
     prev_cups = kept_cups(renamed_cups((prev or {}).get("cup_ids") or {}, renamed), names)
     prev_cups = ticked_cups(prev_cups, leagues, names, pins)
+    cwc = cwc_config(full)
+    prev_cups = cwc_pins(prev_cups, (prev or {}).get("cup_ids") or {}, cwc)
     cup_cids = {w.get("cid") for w in prev_cups.values() if isinstance(w, dict)}
     rest = iter(c for c in pool if c not in taken_cid and c not in cup_cids)
     for i in range(len(leagues)):
@@ -2663,6 +2831,7 @@ def plan(recipe, base, prev=None):
             "pack_faces": recipe.get("pack_faces", True) is not False,
             "country_order": recipe.get("country_order") or None,
             "cup_draw": cup_draw(recipe),
+            "club_world_cup": cwc,                              # Leagues > More > Club World Cup
             # the cups' ids of the last Build, {key: {cid, reg, ...}}: build() gives each its own back
             "prev_cup_ids": kept_cups(prev_cups, names, [s["code"] for s in gsupers]),
             # B159: a world built with competition ids under 130 (eu4, r12) goes on with them
@@ -5257,6 +5426,7 @@ def build(pl, base, game, replace=False, log=print):
     uecl, qlines = europe(tmp, db, log, bool(pl.get("uecl")), pl.get("uecl_name"), rounds)
     national_cups(pl, tmp, db, log)
     game_super_cups(pl, tmp, db, log)
+    cwc_lines = club_world_cup(pl, tmp, db, log)
     resolve_new_league_stage_cup_winners(pl)
     hc = home_cups(pl, confed)
     own_cup = {p["rid"]: (p.get("own_cup") or {}).get("reg") for p in pl["leagues"]}
@@ -5394,7 +5564,7 @@ def build(pl, base, game, replace=False, log=print):
                           + order_lines(pl, base, confed)
                           + kickorder_lines(pl, base, confed)
                           + (["nopool " + " ".join(str(t) for t in nopool)] if nopool else []) + newfaces
-                          + fans
+                          + fans + cwc_lines
                           + ["cupdraw %s" % pl.get("cup_draw", "seeded")],
                           qlines)
     pl.pop("prev_cup_ids", None)      # this Build's own are in cup_ids; the old ones must not pile up

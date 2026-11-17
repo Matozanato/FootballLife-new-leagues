@@ -38,3 +38,25 @@ knockout matches played, and the July teardown was clean.
 - **Calendar.** Its days are fixed and are not checked against the league and continental
   calendars of the world.
 - The game's own clubs pools (the only Africa and Oceania clubs it has) go into the fourth pot.
+
+## In Mod Studio (branch feature/cwc32)
+
+Leagues > More > **Club World Cup** (`ClubWorldCupDialog` in `pages/builder.py`) writes the recipe's
+`club_world_cup`: `on`, `every` (years), `first` (the first year it is played), `keep_old`,
+`old_name` and `replace`. Build (`leaguebuilder.club_world_cup`, after the super cups):
+
+- `mkcwc.reshape` on competition 1, the knockout on a free regulation id kept from Build to Build
+  (cup_ids `cwc:club_world_cup`);
+- with `keep_old`, `mkcwc.intercontinental` first copies the shipped four-club cup onto a
+  competition and regulation of its own (cup_ids `cwc:intercontinental`). A world with no free
+  competition id gives it the ids of a cup it no longer builds: the dialog unticks that cup
+  (`cwc_untick`) and `replace` names it, so the first Build pins its old ids (`cwc_pins`);
+- the world file gets `cwc32 ko=<reg> every=<n> first=<year> ic=<reg> iccid=<cid>`;
+  fl26swiss.lua hands it to `fl26_swiss_cwc`. Without the line the DLL behaves as before
+  (knockout 200, every season).
+
+At run time (fl26swiss.c, `cwc_handoff`): the game's four entrants of regulation 1 go to the
+Intercontinental every year (set_clubs + register_all, dated with the shipped regulation 1 days),
+and the 32-club draw is made only when the year it is played (June after the draw) is in the
+cycle. A career saved before has none of the new rows (`cwc_world` and `ic_world` say no) and
+keeps the old cup. Not yet played in the game.

@@ -800,6 +800,7 @@ static const int KO_ORDER[KO_N] = { 0, 15, 7, 8, 3, 12, 4, 11, 1, 14, 6, 9, 2, 1
 static int cwc_world(void);
 static char cwc_setcl(uint64_t id, u32vec* list, uint64_t flag);
 static u32vec* cwc_game_champions(u32vec* list);
+static char cwc_handoff(uint64_t id, u32vec* list, uint64_t flag);
 static void cont_note(uint16_t id, void* vec);
 static uint32_t canon_club(uint32_t h);
 static const char* club_note(uint32_t h, char* buf, size_t cap);
@@ -906,7 +907,7 @@ char setcl_handler(uint64_t id, u32vec* list, uint64_t flag)
   /* Before F3 is real, native reg 9 can contain an Other-LATAM club that is
      reserved for our F1/F2 path. Keep that provisional filler out of groups. */
   if (r == 9 && list && list->b && list->e > list->b) lib9_clean(list);
-  if (r == 1 && cwc_world()) return cwc_setcl(id, list, flag);
+  if (r == 1 && cwc_world()) return cwc_handoff(id, list, flag);
   if (r == 1 && list && list->b && list->e > list->b) list = cwc_game_champions(list);
   if (is_playoff(r)) { char ok; if (q_setcl(r, id, flag, &ok)) return ok; }
   /* A group of one of our splits is handed the regular phase's table rows by 0x141343d70, which
@@ -3531,7 +3532,10 @@ static uint32_t cont_add(void* rec, uint32_t club)
  *
  * A world without the reshaped rows (no CWC_KO or no replica 1025) is left entirely alone. */
 #define CWC_REG 1
-#define CWC_KO  200
+/* the knockout's regulation: 200 unless the world file's cwc32 line names another (Mod Studio's
+   Club World Cup option takes a free id of the world; 200 is a league in many worlds) */
+#define CWC_KO  g_cwc_ko
+static uint16_t g_cwc_ko = 200;
 #define CWC_GROUPS 8
 #define CWC_N 32
 #define R_BRA 29
@@ -3561,6 +3565,53 @@ static const int CWC_BRACKET[16][2] = {   /* {group, place}: A1-B2, C1-D2, E1-F2
 typedef void (*regall_fn)(void* ctx, void* ids);
 static uint16_t cwc_rep(int g) { return (uint16_t)(CWC_REG + 1024 * (g + 1)); }
 static int cwc_world(void) { return get_rec(CWC_KO) && get_rec(cwc_rep(0)) && get_rec(cwc_rep(CWC_GROUPS - 1)); }
+/* Mod Studio's Club World Cup option, from the world file's
+ *   cwc32 ko=<reg> every=<years> first=<year> ic=<reg> iccid=<competition>
+ * line (fl26_swiss_cwc):
+ *   - the 32-club cup is drawn only in the years of its cycle: the year it is PLAYED (June) is
+ *     first, first + every ... (every 0 or 1, or first 0: every season, as before);
+ *   - ic: the game's old four-club Club World Cup, kept as a competition of its own (a copy of
+ *     the shipped regulation 1 on a new id, "Copa Intercontinental"). Every year the game's four
+ *     entrants of regulation 1 (the moment the old cup got them, day 332) go to it instead, it
+ *     is started with register_all and dated with the shipped reg 1 days (348-352).
+ * Without the line nothing changes: knockout 200, every season, no Intercontinental. */
+static uint16_t g_cwc_every = 1, g_cwc_first = 0, g_ic_reg = 0, g_ic_cid = 0;
+__declspec(dllexport) int fl26_swiss_cwc(const uint16_t* v, int n)
+{
+  if (!v || n < 5) return 0;
+  if (v[0] > 175 && v[0] < 1024) g_cwc_ko = v[0];
+  g_cwc_every = v[1];
+  g_cwc_first = v[2];
+  g_ic_reg = (v[3] > 1 && v[3] < 1024 && v[3] != g_cwc_ko) ? v[3] : 0;
+  g_ic_cid = g_ic_reg ? v[4] : 0;
+  logf("fl26swiss: world file -- Club World Cup of 32: knockout reg %u, every %u year(s) from %u; Intercontinental %s%u",
+       (unsigned)g_cwc_ko, (unsigned)g_cwc_every, (unsigned)g_cwc_first, g_ic_reg ? "reg " : "off ", (unsigned)g_ic_reg);
+  return 1;
+}
+/* the year the cup drawn today is played: the draw is in late November (day 332), the cup in
+   June of the next year; a draw in the first half of a year plays that same year */
+static int cwc_play_year(void)
+{
+  int gd = game_date();
+  if (gd < 0) return -1;
+  int y = gd / 365, t = gd % 365;
+  return t >= 182 ? y + 1 : y;
+}
+static int cwc_cycle_year(int* year)
+{
+  int y = cwc_play_year();
+  if (year) *year = y;
+  if (g_cwc_every <= 1 || !g_cwc_first || y < 0) return 1;
+  return y >= g_cwc_first && (y - g_cwc_first) % g_cwc_every == 0;
+}
+/* the Intercontinental is there: its regulation, of its competition, in a career that has the
+   new Club World Cup rows too. A career saved before the world had them still holds whatever
+   cup had that id then (the UAE Super Cup of _FL26-27-Def has the same competition id): not ours */
+static int ic_world(void)
+{
+  unsigned char* r = g_ic_reg ? get_rec(g_ic_reg) : 0;
+  return r && (!g_ic_cid || *(uint32_t*)(r + 0x80) == g_ic_cid) && cwc_world();
+}
 static int cwc_id(uint16_t id) { return id == CWC_REG || (id > 1024 && (id & 0x3ff) == CWC_REG && id <= cwc_rep(CWC_GROUPS - 1)); }
 
 /* ---- a phase of our splits: its table from its played matches ----
@@ -3866,7 +3917,10 @@ static char cwc_setcl(uint64_t id, u32vec* list, uint64_t flag)
   unsigned char* rec = get_rec(CWC_REG);
   unsigned char* g0 = get_rec(cwc_rep(0));
   size_t offered = list && list->b ? (size_t)(list->e - list->b) : 0;
-  if (rec && g0 && rec_count(rec) == CWC_N && rec_count(g0)) {
+  static int drawn_year = -1;
+  int play_year = cwc_play_year();
+  if ((g_cwc_every <= 1 || !g_cwc_first) ? (rec && g0 && rec_count(rec) == CWC_N && rec_count(g0))
+                                         : (play_year >= 0 && drawn_year == play_year)) {
     logf("fl26swiss: Club World Cup -- the game offered %u club(s) on day %d, but the 32 are already drawn; ignored",
          (unsigned)offered, today());
     return 1;
@@ -3908,6 +3962,7 @@ static char cwc_setcl(uint64_t id, u32vec* list, uint64_t flag)
     return ((setclr_fn)(uintptr_t)g_tramp_setcl)(id, list, flag);
   }
   u32vec v = { g_cwc, g_cwc + CWC_N, g_cwc + CWC_N };
+  drawn_year = play_year;
   char ok = ((setclr_fn)(uintptr_t)g_tramp_setcl)(id, &v, flag);
   run_flush();
   u32vec w = { g_cwc, g_cwc + CWC_N, g_cwc + CWC_N };
@@ -3935,6 +3990,55 @@ static char cwc_setcl(uint64_t id, u32vec* list, uint64_t flag)
   logf("fl26swiss: Club World Cup -- groups %u..%u handed to register_all", (unsigned)reps[0],
        (unsigned)reps[CWC_GROUPS - 1]);
   return ok;
+}
+
+/* The game hands regulation 1 its four entrants (day 332). With Mod Studio's Intercontinental
+ * (ic_world) they go there every year, as the old cup had them (cwc_game_champions: our CAF
+ * champion, our continental champions), and it is started at once; the 32-club draw is made
+ * only in a year of the cycle, from the list as the game offered it. */
+static char ic_fill(u32vec* list, uint64_t flag)
+{
+  static int done_year = -1;
+  int y = cwc_play_year();
+  unsigned char* ic = get_rec(g_ic_reg);
+  if (y >= 0 && done_year == y) {
+    logf("fl26swiss: Intercontinental -- offered again on day %d; already filled this season (reg %u holds %u)",
+         today(), (unsigned)g_ic_reg, ic ? rec_count(ic) : 0);
+    return 1;
+  }
+  char ok = ((setclr_fn)(uintptr_t)g_tramp_setcl)(g_ic_reg, list, flag);
+  run_flush();
+  done_year = y;
+  uint16_t ids[1] = { g_ic_reg };
+  struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { ids, ids + 1, ids + 1 };
+  ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
+  run_flush();
+  logf("fl26swiss: Intercontinental -- day %d: reg %u now %u club(s) (%08x %08x %08x %08x), handed to register_all",
+       today(), (unsigned)g_ic_reg, ic ? rec_count(ic) : 0,
+       list->e - list->b > 0 ? list->b[0] : 0, list->e - list->b > 1 ? list->b[1] : 0,
+       list->e - list->b > 2 ? list->b[2] : 0, list->e - list->b > 3 ? list->b[3] : 0);
+  return ok;
+}
+static char cwc_handoff(uint64_t id, u32vec* list, uint64_t flag)
+{
+  static uint32_t orig[64];
+  size_t n = list && list->b && list->e > list->b ? (size_t)(list->e - list->b) : 0;
+  if (n > 64) n = 64;
+  for (size_t i = 0; i < n; i++) orig[i] = list->b[i];
+  u32vec as_offered = { orig, orig + n, orig + n };
+  char ok = 1;
+  if (g_ic_reg && n) {
+    if (ic_world()) ok = ic_fill(cwc_game_champions(list), flag);
+    else logf("fl26swiss: Intercontinental -- reg %u is not the Intercontinental in this career (an older save?); left alone",
+              (unsigned)g_ic_reg);
+  }
+  int y;
+  if (!cwc_cycle_year(&y)) {
+    logf("fl26swiss: Club World Cup -- day %d: %d is not a year of the cycle (every %u from %u); no draw",
+         today(), y, (unsigned)g_cwc_every, (unsigned)g_cwc_first);
+    return ok;
+  }
+  return cwc_setcl(id, &as_offered, flag);
 }
 
 /* the group stage is over: winners and runners-up into the knockout, in the 2025 bracket */
@@ -3969,6 +4073,25 @@ static int cwc_progress(uint16_t r, void* started)
   if (rec_count(ko) != 16) return 0;
   start_stage(started, CWC_KO);
   return 1;
+}
+
+/* the Intercontinental is the shipped cup on another id: the game dates cups by id, so it asks
+   for the shipped regulation 1's days (348, 349, 351, 352), which its own shape takes */
+static uint64_t ic_dates(uint16_t id, uint64_t reg, void* vec)
+{
+  uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | CWC_REG, vec);
+  vec_t* v = (vec_t*)vec;
+  size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+  const date_t* r = (const date_t*)v->b;
+  static int said = -1;
+  int y = cwc_play_year();
+  if (said != y) {
+    said = y;
+    if (have) logf("fl26swiss: Intercontinental -- reg %u dated as the old Club World Cup: %u date(s), days %u..%u",
+                   (unsigned)id, (unsigned)have, r[0].day, r[have - 1].day);
+    else logf("fl26swiss: Intercontinental -- reg %u: the game gave no dates", (unsigned)id);
+  }
+  return rv;
 }
 
 /* dates: borrow the World Cup's records, keep their rounds and kinds, move the days */
@@ -11724,6 +11847,7 @@ uint64_t date_handler(uint64_t reg, void* vec)
     const split_t* s; int part;
     if (vec && (part = split_part(id, &s)) != 0) { uint64_t rv = split_dates(id, reg, vec, part, s); split_keys(); return rv; }
   }
+  if (vec && g_ic_reg && id == g_ic_reg && ic_world()) return ic_dates(id, reg, vec);
   if (vec && (cwc_id(id) || id == CWC_KO) && cwc_world()) return cwc_dates(id, reg, vec);
   if (vec) {
     int ko, k = ccup_of(id, &ko);
@@ -12967,6 +13091,11 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
       int there = 0;
       for (int j = 0; j < k; j++) if (g_td_list[j] == id) there = 1;
       if (!there && get_rec(id) && k < 512) { g_td_list[k++] = id; ncwc++; }
+    }
+    if (g_ic_reg && ic_world()) {
+      int there = 0;
+      for (int j = 0; j < k; j++) if (g_td_list[j] == g_ic_reg) there = 1;
+      if (!there && k < 512) { g_td_list[k++] = g_ic_reg; ncwc++; }
     }
     logf("fl26swiss: July teardown -- %d Club World Cup regulation(s) added", ncwc);
   }

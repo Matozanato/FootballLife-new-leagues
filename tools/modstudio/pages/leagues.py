@@ -118,6 +118,7 @@ class Leagues(BuilderPage):
         more.setPopupMode(QToolButton.InstantPopup)
         m = QMenu(more)
         for label, name in (("Pre-season cups", "preseason"), ("Cups of our countries", "our_cups"), ("Cups of the game's countries", "game_cups"),
+                            ("Club World Cup", "club_world_cup"),
                             ("European places of the game's leagues", "game_europe"),
                             ("First-season European clubs", "europe_first"),
                             ("UEFA ranking", "uefa_rank"), ("South American places", "samerica"),

@@ -1847,6 +1847,205 @@ class CompetitionIdsDialog(Dialog):
         self.v.addWidget(row(copy, "stretch", bb, stretch=False))
 
 
+class ClubWorldCupDialog(Dialog):
+    """Leagues > More > Club World Cup: the recipe's club_world_cup (leaguebuilder.cwc_config).
+    The 32-club cup of 2025 on competition 1, every few years, and the old four-club cup kept as a
+    competition of its own; with no free competition id the world gives it the place of a cup it
+    builds, picked here from the world's competitions by kind"""
+    help = ("The Club World Cup of 32 clubs, the 2025 format: eight groups of four played once, then "
+            "a single-match knockout of sixteen, in June after the Champions League final. Its clubs are "
+            "the top clubs of the big leagues and the continental champions, picked from the league "
+            "tables when the game draws it (late November of the year before).\n\n"
+            "Every ... years, first in ...: the years it is played. 4 and 2029 as FIFA plays it; 1 plays it "
+            "every season.\n\n"
+            "Build and install puts it in the game, with Mod Studio's modules (fl26swiss.dll does the "
+            "draw). Start a new career afterwards: a career saved before keeps the old cup.")
+    KEEP_HELP = ("The game's own Club World Cup -- four clubs, the continental champions, a semi-final and "
+                 "a final in mid-December -- stays in the world as a competition of its own, played every "
+                 "season under the name below (the real Intercontinental Cup is that tournament).\n\n"
+                 "It needs a competition id of its own, and the game takes 255. When none is free, pick "
+                 "a cup of your world below: that cup is no longer built (it is unticked in its league), "
+                 "and the Intercontinental takes its place. A league cannot be given away here: take a "
+                 "league out on the Leagues page instead.\n\n"
+                 "Off: the old cup is gone, and the Club World Cup of 32 is the only one.")
+
+    def __init__(self, parent, project):
+        super().__init__(parent, "Club World Cup")
+        self.project = project
+        r = project.recipe
+        cfg = dict({"on": False, "every": 4, "first": 2029, "keep_old": True,
+                    "old_name": B.CWC_OLD_NAME, "replace": None}, **(r.get("club_world_cup") or {}))
+        self.plan, self.db = self.last_build(project)
+        self.last_ids = self.plan.get("cup_ids") or {}
+        self.v.insertWidget(0, hint(_("The FIFA Club World Cup with 32 clubs, as in 2025, every few years in June. "
+                                      "The game's old Club World Cup of four clubs can stay as a cup of its own.")))
+        self.on = QCheckBox(_("Club World Cup with 32 clubs"))
+        self.on.setChecked(bool(cfg.get("on")))
+        self.form.addRow(helped(self.on, self.help, "Club World Cup"))
+        self.every = QSpinBox()
+        self.every.setRange(1, B.CWC_EVERY_MAX)
+        self.every.setValue(int(cfg.get("every") or 4))
+        self.first = QSpinBox()
+        self.first.setRange(2000, 2200)
+        self.first.setValue(int(cfg.get("first") or 2029))
+        self.form.addRow(_("Every"), row(self.every, QLabel(_("years, first in")), self.first, "stretch"))
+        self.keep = QCheckBox(_("Keep the old Club World Cup / Copa Intercontinental"))
+        self.keep.setChecked(bool(cfg.get("keep_old", True)))
+        self.form.addRow(helped(self.keep, self.KEEP_HELP, "Keep the old Club World Cup"))
+        self.name = QLineEdit(cfg.get("old_name") or B.CWC_OLD_NAME)
+        self.form.addRow(_("Its name"), self.name)
+        self.status = QLabel("")
+        self.status.setWordWrap(True)
+        self.form.addRow(self.status)
+        self.tree = QTreeWidget()
+        self.tree.setHeaderLabels([_("Competition"), _("Competition ID")])
+        self.tree.setRootIsDecorated(True)
+        self.tree.setMinimumHeight(260)
+        self.tree.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.form.addRow(self.tree)
+        self.fill_tree(cfg.get("replace"))
+        self.tree.itemSelectionChanged.connect(self.show_state)
+        for w in (self.on, self.keep):
+            w.toggled.connect(self.show_state)
+        self.show_state()
+        self.setMinimumSize(720, 640)
+
+    @staticmethod
+    def last_build(project):
+        """(the plan of the world's last Build, its tables' folder or the game's): what is built now"""
+        world = project.recipe.get("world") or ""
+        root = os.path.join(project.app.game.livecpk_dir, world) if world else ""
+        plan = filecache.json_file(os.path.join(root, "leaguebuilder-plan.json")) if root else None
+        db = os.path.join(root, "common", "etc", "pesdb")
+        if not os.path.exists(os.path.join(db, "CompetitionRegulation.bin")):
+            db = project.base
+        return (plan if isinstance(plan, dict) else {}), db
+
+    def free_ids(self):
+        try:
+            cids, _regs = B.free_comp_ids(self.db, low=self.plan.get("low_cids"))
+        except (OSError, ValueError, TypeError):
+            return None
+        held = {w.get("cid") for k, w in self.last_ids.items() if isinstance(w, dict) and k != B.CWC_KEY_IC}
+        return [c for c in cids if c not in held]
+
+    def fill_tree(self, chosen):
+        self.tree.clear()
+        groups = {}
+        for key, label in (("league", "Leagues"), ("cup", "Cups"), ("super", "Super cups")):
+            it = QTreeWidgetItem([_(label), ""])
+            it.setFlags(Qt.ItemIsEnabled)
+            f = it.font(0)
+            f.setBold(True)
+            it.setFont(0, f)
+            self.tree.addTopLevelItem(it)
+            groups[key] = it
+        mine = B.cwc_replaceable(self.project.recipe, self.last_ids)
+        if chosen and not any(k == chosen for _g, k, _n, _c in mine):
+            # unticked by this dialog before: still the one it replaces
+            ids = self.last_ids.get(B.CWC_KEY_IC) or self.last_ids.get(B.cwc_last_key(chosen)) or {}
+            mine.append(("super" if chosen.startswith(("super:", "gsuper:")) else "cup", chosen,
+                         chosen.partition(":")[2], ids.get("cid")))
+        made = set()
+        pick = None
+        for g, key, name, cid in sorted(mine, key=lambda e: (e[0], e[2].casefold())):
+            it = QTreeWidgetItem([name, "" if cid is None else str(cid)])
+            it.setData(0, Qt.UserRole, key)
+            it.setToolTip(0, _("A cup your world builds: it is no longer built, and the Intercontinental takes its place"))
+            groups[g].addChild(it)
+            if isinstance(cid, int):
+                made.add(cid)
+            if key == chosen:
+                pick = it
+        try:
+            rows = B.competition_ids(self.db, self.project.base)
+        except (OSError, ValueError, TypeError):
+            rows = []
+        superish = re.compile(r"super|supercopa|supercoppa|shield|troph[eé]e des champions|recopa|community", re.I)
+        own = {w.get("cid") for w in self.last_ids.values() if isinstance(w, dict)}
+        for cid, _regs, name, kind, _new in rows:
+            if cid in made or cid in own or cid == 1:
+                continue
+            g = "league" if kind == "league" else "super" if superish.search(name or "") else "cup"
+            it = QTreeWidgetItem([name or "?", str(cid)])
+            it.setFlags(Qt.NoItemFlags)
+            it.setToolTip(0, _("A league cannot give its place here: take it out on the Leagues page")
+                          if g == "league" else _("A competition of the game or a continental one: it stays"))
+            groups[g].addChild(it)
+        groups["league"].setExpanded(False)
+        groups["cup"].setExpanded(True)
+        groups["super"].setExpanded(True)
+        for c in range(2):
+            self.tree.resizeColumnToContents(c)
+        if pick is not None:
+            pick.setSelected(True)
+            self.tree.scrollToItem(pick)
+
+    def chosen(self):
+        it = next(iter(self.tree.selectedItems()), None)
+        return it.data(0, Qt.UserRole) if it is not None else None
+
+    def show_state(self, *_a):
+        on, keep = self.on.isChecked(), self.keep.isChecked()
+        for w in (self.every, self.first, self.keep):
+            w.setEnabled(on)
+        for w in (self.name, self.tree):
+            w.setEnabled(on and keep)
+        if not on:
+            self.status.setText(_("Off: the game's Club World Cup of four clubs, every December, as it is."))
+            return
+        if not keep:
+            self.status.setText(_("The old Club World Cup is not kept: no competition id is needed."))
+            return
+        own = self.last_ids.get(B.CWC_KEY_IC)
+        key = self.chosen()
+        free = self.free_ids()
+        if key:
+            text = _("It takes the place of the cup picked below; that cup is no longer built.")
+        elif isinstance(own, dict) and own.get("cid"):
+            text = _("It keeps its competition id of the last Build (%d).") % own["cid"]
+        elif free is None:
+            text = _("The world's tables could not be read: pick a cup below to be safe.")
+        elif free:
+            text = _("Free competition ids: %d -- it takes one, nothing to pick.") % len(free)
+        else:
+            text = _("No free competition id: the world has all the 255 the game takes. Pick a cup below for "
+                     "it to take the place of.")
+        self.status.setText(text)
+
+    def ok(self):
+        r = self.project.recipe
+        on, keep = self.on.isChecked(), self.keep.isChecked()
+        key = self.chosen() if on and keep else None
+        if on and keep and not key:
+            own = self.last_ids.get(B.CWC_KEY_IC)
+            free = self.free_ids()
+            if not (isinstance(own, dict) and own.get("cid")) and free is not None and not free:
+                error(self, "Club World Cup", _("No free competition id for the old Club World Cup. Pick a cup "
+                                                "for it to take the place of, or untick \"Keep the old Club "
+                                                "World Cup\"."))
+                return
+        before = json.dumps(r.get("club_world_cup"), sort_keys=True)
+        if key and key != (r.get("club_world_cup") or {}).get("replace"):
+            it = next(iter(self.tree.selectedItems()), None)
+            name = it.text(0) if it is not None else key
+            if not ask(self, "Club World Cup", _("%s is no longer built: it is unticked in its league, and the "
+                                                 "Intercontinental takes its competition id. Go on?") % name):
+                return
+        if key:
+            B.cwc_untick(r, key)
+        if on:
+            r["club_world_cup"] = {"on": True, "every": self.every.value(), "first": self.first.value(),
+                                   "keep_old": keep, "old_name": self.name.text().strip() or B.CWC_OLD_NAME,
+                                   "replace": key}
+        else:
+            r.pop("club_world_cup", None)
+        if json.dumps(r.get("club_world_cup"), sort_keys=True) != before or key:
+            self.project.touch()
+        self.turned_on = on and before != json.dumps(r.get("club_world_cup"), sort_keys=True)
+        self.accept()
+
+
 class CompetitionNamesDialog(Dialog):
     """new names and logos for the game's competitions that are not leagues (edits.competitions)
     and for the continental cups the world builds (ccup_names, ccup_logos)"""
@@ -3005,6 +3204,8 @@ class NewLeagues(BuilderPage):
         self.action("CONMEBOL countries without a league", self.conmebol_associations,
                     tip="With the modern CONMEBOL competitions: places for South American countries that have no "
                     "league in this world")
+        self.action("Club World Cup", self.club_world_cup, tip="The Club World Cup with 32 clubs every few "
+                    "years, and the old one kept as the Copa Intercontinental")
         self.action("Competition names", self.competition_names, tip="New names and logos for the cups and "
                     "continental competitions of the game, and for the continental cups the world builds")
         self.action("Trophies", self.trophies, tip="A trophy folder of your own for a competition: FL26's "
@@ -3281,6 +3482,15 @@ class NewLeagues(BuilderPage):
         if self.need_tables(True):
             return
         CompetitionIdsDialog(self, self.project).finish()
+
+    def club_world_cup(self):
+        if self.need_tables(True):
+            return
+        d = ClubWorldCupDialog(self, self.project)
+        if d.finish() and getattr(d, "turned_on", False):
+            # the 32-club draw is fl26swiss.dll's: Mod Studio's modules of this version must be in
+            # the game (Build and install puts them there too)
+            self.app.page("Build").do_install()
 
     def competition_names(self):
         if self.need_tables(True):
