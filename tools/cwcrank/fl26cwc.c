@@ -97,6 +97,26 @@ static void plog(const char* fmt, ...)
   line[n++] = '\n';
   EnterCriticalSection(&g_cs);
   if (g_loglen + n <= (int)sizeof g_log) { memcpy(g_log + g_loglen, line, n); g_loglen += n; }
+  /* the same lines, with the time, in SiderAddons\fl26cwc.log (emptied at the first line of a
+     run): sider.log only gets them when the Lua side drains the buffer, and the lines of the
+     last seconds before the game closes were lost (2026-11-17, a League save) */
+  static HANDLE fh = 0;
+  if (!fh) {
+    fh = INVALID_HANDLE_VALUE;
+    wchar_t p[MAX_PATH * 2]; HMODULE me = 0;
+    if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                           (LPCWSTR)(void*)plog, &me) && GetModuleFileNameW(me, p, MAX_PATH * 2)) {
+      wchar_t* s = wcsrchr(p, L'\\'); if (s) *s = 0;          /* ...\modules */
+      s = wcsrchr(p, L'\\'); if (s) *s = 0;                   /* ...\SiderAddons */
+      wcscat(p, L"\\fl26cwc.log");
+      fh = CreateFileW(p, GENERIC_WRITE, FILE_SHARE_READ, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+    }
+  }
+  if (fh != INVALID_HANDLE_VALUE) {
+    SYSTEMTIME t; GetLocalTime(&t);
+    char ts[16]; int tn = snprintf(ts, sizeof ts, "%02d:%02d:%02d ", t.wHour, t.wMinute, t.wSecond);
+    DWORD w; WriteFile(fh, ts, tn, &w, 0); WriteFile(fh, line, n, &w, 0);
+  }
   LeaveCriticalSection(&g_cs);
 }
 __declspec(dllexport) int fl26_cwc_log(char* out, int cap)
@@ -201,6 +221,11 @@ typedef struct {
 typedef char ent_size_check[sizeof(ent_t) == 24 ? 1 : -1];
 static ent_t* g_led; static int g_nled, g_cled;
 static int g_last;                         /* stamp of the ledger's last match */
+/* the last load was taken when a career came into memory (read_thread, from the main menu): the
+   date in memory is the loaded career's own, so the two new-career rules need no wait after it.
+   Test 16:35: a new career built 18 s after the load screen's list took ML00000002's ledger
+   (day 181 of 2025, that ledger's matches run into 2026, the table empty right after). */
+static int g_load_by_career;
 static char g_slot[16];                    /* "ML00000000" the ledger belongs to, "" none yet */
 static int g_first_year = 2029, g_reset_day = 153, g_every = 4;   /* g_every: fl26_cwc_every */
 static ULONGLONG g_load_tick;              /* when a load was taken in */
@@ -327,7 +352,7 @@ static void harvest(int sure)
   int y, dy = today(b, &y);
   if (dy < 0) return;
   int now = stamp(y, dy);
-  if (g_nled && now + 2 < g_last && GetTickCount64() - g_load_tick > 120000) {
+  if (g_nled && now + 2 < g_last && (g_load_by_career || GetTickCount64() - g_load_tick > 120000)) {
     plog("a new career (today is day %d of %d, the ledger's last match day %d of %d): ledger emptied",
          dy, y, g_last % 400, g_last / 400);
     led_reset(); g_slot[0] = 0;
@@ -365,7 +390,7 @@ static void harvest(int sure)
   if (live == 0) {
     if (!g_empty_seen) plog("day %d of %d: the match table is empty (a career being built)", dy, y);
     g_empty_seen = 1;
-    if (g_nled && GetTickCount64() - g_load_tick > 60000) {
+    if (g_nled && (g_load_by_career || GetTickCount64() - g_load_tick > 60000)) {
       plog("a new career (day %d of %d, the match table emptied): ledger of %s (%d entries) emptied",
            dy, y, g_slot[0] ? g_slot : "no slot", g_nled);
       led_reset(); g_slot[0] = 0;
@@ -447,9 +472,17 @@ void cwc_rewrite(unsigned char* self)
   int any = 0;
   for (unsigned char* e = beg; e < end; e += 16) if (pts_of(*(uint32_t*)e) > 0) { any = 1; break; }
   unsigned char* w = beg;
-  int n = 0;
+  int n = 0, dup = 0;
+  uint32_t dup_a = 0, dup_b = 0;
   for (unsigned char* e = beg; e < end; e += 16) {
-    int q = pts_of(*(uint32_t*)e);
+    /* a club once (2026-11-17, League Mode: the user's Tigres UANL twice on CONCACAF's list):
+       an id already written is dropped, whatever its row */
+    uint32_t c = *(uint32_t*)e;
+    unsigned char* s = beg;
+    if (end - beg <= 16 * 4000)
+      for (; s < w; s += 16) if ((*(uint32_t*)s >> 14) == (c >> 14)) break;
+    if (s < w) { if (!dup++) { dup_a = *(uint32_t*)s; dup_b = c; } continue; }
+    int q = pts_of(c);
     if (any && q <= 0) continue;
     if (q < 0) q = 0;
     int shown = q / 4; if (shown > 0xffff) shown = 0xffff;
@@ -461,7 +494,12 @@ void cwc_rewrite(unsigned char* self)
   }
   *(unsigned char**)(self + 0xa0) = w;
   LeaveCriticalSection(&g_lk);
-  static int told;
+  static int told, told_dup;
+  if (dup && told_dup < 8) {
+    told_dup++;
+    plog("list (confederation %u): %d club(s) listed twice, left out once (first: %08x and %08x)",
+         *(uint32_t*)g_cave, dup, dup_a, dup_b);
+  }
   if (told < 8) {
     told++;
     plog("list (confederation %u): %d of %d club(s) shown%s; first entry %08x", *(uint32_t*)g_cave, n,
@@ -692,6 +730,9 @@ static int save_name(const wchar_t* w, int n, char* slot)
   return bl == 10 ? 1 : 2;
 }
 
+/* the last slot read with no career in memory, the load's candidate (read_thread decides) */
+#define LOAD_WINDOW 10000   /* loads came 1.5 - 2.3 s after the read; a new career 18 s */
+static char g_lr_slot[16]; static ULONGLONG g_lr_tick;
 typedef NTSTATUS (NTAPI* NtCreateFile_t)(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, PIO_STATUS_BLOCK,
                                          PLARGE_INTEGER, ULONG, ULONG, ULONG, ULONG, PVOID, ULONG);
 static NtCreateFile_t o_NtCreateFile;
@@ -699,11 +740,27 @@ static NTSTATUS NTAPI h_NtCreateFile(PHANDLE h, ACCESS_MASK acc, POBJECT_ATTRIBU
                                      PLARGE_INTEGER sz, ULONG attr, ULONG share, ULONG disp, ULONG opt, PVOID ea, ULONG eal)
 {
   NTSTATUS r = o_NtCreateFile(h, acc, oa, io, sz, attr, share, disp, opt, ea, eal);
-  if (r < 0 || !oa || !oa->ObjectName || !oa->ObjectName->Buffer || oa->ObjectName->Length < 32) return r;
+  if (!oa || !oa->ObjectName || !oa->ObjectName->Buffer || oa->ObjectName->Length < 32) return r;
   char slot[16];
   int kind = save_name(oa->ObjectName->Buffer, oa->ObjectName->Length / 2, slot);
   if (!kind) return r;
   DWORD e = GetLastError();
+  {
+    /* io probe (2026-11-17): League Mode's load read the slot once, on one thread, so the
+       two-thread rule never took it. Every open of a slot, failed ones too (a slot list tries
+       every slot), with what tells a list from a load, the first 400 times of a run. */
+    static volatile LONG io_n;
+    if (InterlockedIncrement(&io_n) <= 400) {
+      LARGE_INTEGER fs = { 0 };
+      if (r >= 0 && h && *h) GetFileSizeEx(*h, &fs);
+      int y = -1, dy = today(block(), &y);
+      plog("io: %s%s status %08lx acc %08lx share %lx disp %lu opt %08lx attr %lx size %lld thread %lu%s day %d of %d",
+           slot, kind == 2 ? ".tmp" : "", (unsigned long)r, (unsigned long)acc, (unsigned long)share,
+           (unsigned long)disp, (unsigned long)opt, (unsigned long)attr, (long long)fs.QuadPart,
+           GetCurrentThreadId(), GetCurrentThreadId() == g_main_tid ? " (modules' thread)" : "", dy, y);
+    }
+  }
+  if (r < 0) { SetLastError(e); return r; }
   int wr = (acc & (GENERIC_WRITE | FILE_WRITE_DATA | FILE_APPEND_DATA)) != 0;
   DWORD tid = GetCurrentThreadId();
   if (kind == 2 && wr) {
@@ -717,8 +774,26 @@ static NTSTATUS NTAPI h_NtCreateFile(PHANDLE h, ACCESS_MASK acc, POBJECT_ATTRIBU
     plog("save: %s being written (thread %lu); ledger %d entries copied", slot, tid, n);
   } else if (kind == 1 && !wr) {
     ULONGLONG now = GetTickCount64();
+    /* With no career in memory (the main menu) a read is only a candidate: the load screen
+       reads every slot for its list (test 16:15, 16:26, 16:30: LG00, LG12, LG13, then LG12 again),
+       and the game maps them (no NtReadFile), list and load alike, whole. The load is the last
+       slot read before a career comes into memory (read_thread; 1.5 - 2.3 s in the tests). */
+    static char held[16]; static ULONGLONG held_tick;
+    int y0 = -1, d0 = today(block(), &y0);
     EnterCriticalSection(&g_lk);
-    if (!strcmp(slot, g_rd_slot) && tid != g_rd_tid && now - g_rd_tick < 15000) {
+    if (d0 < 0) {
+      hset t = g_quar; g_quar = g_cand; quarantine_now(); g_cand = g_quar; g_quar = t;   /* snapshot into g_cand */
+      snprintf(g_lr_slot, sizeof g_lr_slot, "%s", slot); g_lr_tick = now;
+      LeaveCriticalSection(&g_lk);
+      plog("read: %s by thread %lu, no career in memory (the load if a career comes within %d s)", slot, tid,
+           LOAD_WINDOW / 1000);
+    } else if (!strcmp(slot, held) && now - held_tick < 15000) {
+      LeaveCriticalSection(&g_lk);
+      plog("read: %s by thread %lu (the load of %llu ms ago)", slot, tid, (unsigned long long)(now - held_tick));
+    } else if (!strcmp(slot, g_rd_slot) && tid != g_rd_tid && now - g_rd_tick < 15000) {
+      /* a load with a career in memory (the Master League's own Load): two threads */
+      snprintf(held, sizeof held, "%s", slot); held_tick = now;
+      g_load_by_career = 0;
       hset t = g_quar; g_quar = g_cand; g_cand = t;
       snprintf(g_pending_load, sizeof g_pending_load, "%s", slot);
       g_rd_slot[0] = 0;
@@ -821,12 +896,237 @@ static DWORD WINAPI watch_thread(LPVOID unused)
   CloseHandle(d);
   return 0;
 }
+/* ---- PROBE (2026-11-18, read only): the regulation table at the menu and after a load ----
+ * For the migration of careers saved before the Club World Cup Build: are the world's rows
+ * (1 groups, 1025..8193, KO, Intercontinental) in memory before a load, and does a load put the
+ * save's own table in their place? Every change of the table's signature is logged, and the
+ * whole 600-row array is written to SiderAddons\fl26cwc-regs-N.bin (12 at most per run):
+ * u32 'REGS', u32 count field, u32 reg offset, i32 day, i32 year, then 600 x 0x314 bytes. */
+#define RP_CNT_SITE 0x1415435daull   /* mov r9d,[r10+COUNT] (fl26swiss rix: left as shipped) */
+#define RP_REG_SITE 0x1415435a9ull   /* cmp word [rdx+r13+REGS], bx */
+#define RP_ROWS 600
+#define RP_STRIDE 0x314
+static uint32_t g_rp_cnt, g_rp_off; static int g_rp_ok = -1, g_rp_n;
+static uint64_t g_rp_sig;
+static void rp_init(void)
+{
+  const unsigned char* c = (const unsigned char*)RP_CNT_SITE, *r = (const unsigned char*)RP_REG_SITE;
+  g_rp_ok = 0;
+  if (c[0] == 0x45 && c[1] == 0x8b && c[2] == 0x8a && r[0] == 0x66 && r[1] == 0x42 && r[2] == 0x39 && r[3] == 0x9c && r[4] == 0x2a) {
+    g_rp_cnt = *(const uint32_t*)(c + 3); g_rp_off = *(const uint32_t*)(r + 5); g_rp_ok = 1;
+    plog("regprobe: regulation array at block+0x%x, count at block+0x%x", g_rp_off, g_rp_cnt);
+  } else plog("regprobe: code not as expected (%02x%02x%02x / %02x%02x%02x%02x%02x) -- off", c[0], c[1], c[2], r[0], r[1], r[2], r[3], r[4]);
+}
+static uint64_t rp_fnv(uint64_t h, const unsigned char* p, size_t n)
+{
+  for (size_t i = 0; i < n; i++) { h ^= p[i]; h *= 0x100000001b3ull; }
+  return h;
+}
+static void rp_check(void)
+{
+  if (g_rp_ok < 0) rp_init();
+  if (!g_rp_ok || g_rp_n >= 12) return;
+  unsigned char* b = block();
+  if (!b) return;
+  const unsigned char* a = b + g_rp_off;
+  uint32_t cnt = *(volatile uint32_t*)(b + g_rp_cnt);
+  int used = 0, last = -1, i1 = -1, i290 = -1, i314 = -1, i1025 = -1, i8193 = -1, i9 = -1;
+  uint64_t h = 0xcbf29ce484222325ull;
+  h = rp_fnv(h, (const unsigned char*)&cnt, 4);
+  for (int i = 0; i < RP_ROWS; i++) {
+    uint16_t id = *(const uint16_t*)(a + (size_t)i * RP_STRIDE);
+    if (!id) continue;
+    used++; last = i;
+    h = rp_fnv(h, (const unsigned char*)&id, 2);
+    if (id == 1) i1 = i; else if (id == 290) i290 = i; else if (id == 314) i314 = i;
+    else if (id == 1025) i1025 = i; else if (id == 8193) i8193 = i; else if (id == 9) i9 = i;
+  }
+  if (i1 >= 0) h = rp_fnv(h, a + (size_t)i1 * RP_STRIDE, 0x20);
+  if (i290 >= 0) h = rp_fnv(h, a + (size_t)i290 * RP_STRIDE, 0x84);
+  if (h == g_rp_sig) return;
+  g_rp_sig = h;
+  int yy = 0, dd = today(b, &yy);
+  const unsigned char* r1 = i1 >= 0 ? a + (size_t)i1 * RP_STRIDE : 0;
+  const unsigned char* r290 = i290 >= 0 ? a + (size_t)i290 * RP_STRIDE : 0;
+  plog("regprobe %d: day %d of %d, count %u, %d rows used (last %d); row of 1 %d (clubs %u, cid %u), 1025 %d, 8193 %d, 314 %d, 9 %d, 290 %d (cid %u)",
+       g_rp_n, dd, yy, cnt, used, last, i1, r1 ? (unsigned)(*(const uint32_t*)(r1 + 0x308) >> 16 & 0x7f) : 0,
+       r1 ? *(const uint32_t*)(r1 + 0x80) : 0, i1025, i8193, i314, i9, i290, r290 ? *(const uint32_t*)(r290 + 0x80) : 0);
+  wchar_t p[MAX_PATH * 2]; HMODULE me = 0;
+  if (GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                         (LPCWSTR)(void*)rp_check, &me) && GetModuleFileNameW(me, p, MAX_PATH * 2)) {
+    wchar_t* s = wcsrchr(p, L'\\'); if (s) *s = 0;
+    s = wcsrchr(p, L'\\'); if (s) *s = 0;
+    wchar_t tail[40]; swprintf(tail, 40, L"\\fl26cwc-regs-%d.bin", g_rp_n); wcscat(p, tail);
+    HANDLE f = CreateFileW(p, GENERIC_WRITE, FILE_SHARE_READ, 0, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+    if (f != INVALID_HANDLE_VALUE) {
+      int32_t hd[5] = { 0x53474552, (int32_t)cnt, (int32_t)g_rp_off, dd, yy };
+      DWORD w; WriteFile(f, hd, sizeof hd, &w, 0);
+      WriteFile(f, a, RP_ROWS * RP_STRIDE, &w, 0);
+      CloseHandle(f);
+    }
+  }
+  g_rp_n++;
+}
+/* ---- a career saved before the Club World Cup Build: its rows put in after the load (2026-11-18) ----
+ * A save carries its own regulation table and the load puts it in place of the world's (probe
+ * 2026-11-18, ML00000000: world 477 rows, the save 453; missing 314 and 1025..8193, row 1 still
+ * the four-club cup, row 290 the UAE Super Cup's shape under the new name). fl26swiss's
+ * cwc_world() then says no and the career keeps the old cup.
+ * So: at the menu (no career) the world's rows of competition 1 and the Intercontinental's are
+ * copied once; when a career is in memory (3 reads in a row) and has no knockout row, the
+ * missing rows of competition 1 are appended after the live count (rows there are free, id
+ * 0xffff) and the count raised, and rows 1 and the Intercontinental take the world's definition
+ * -- every byte but the ones that hold the season (clubs, tables, run flags: the offsets that
+ * differ between world and save in rows the Build never touched). The Intercontinental's row is
+ * left alone while it still has a match to play. The next save keeps the new rows. */
+static int g_mg_ko, g_mg_ic, g_mg_iccid;        /* from the world file's cwc32 line (fl26cwc.lua) */
+#define MG_MAX 16
+static unsigned char g_mg_rows[MG_MAX][RP_STRIDE]; static int g_mg_n = -1, g_mg_icrow = -1;
+static int g_mg_streak, g_mg_done_tries;
+/* the season's bits of a row: whole ranges, and the bits of the packed bytes that differed
+   between world and save in rows the Build never touched (probe 2026-11-18, 451 rows); the
+   other bits of those bytes are the definition (0x305 bit 1, 0x303 bit 5, 0x30a bit 7 tell the
+   old four-club cup from the UAE Super Cup) */
+static unsigned char mg_season_mask(int k)
+{
+  if ((k >= 0x88 && k < 0x160) || (k >= 0x170 && k < 0x230)) return 0xff;
+  switch (k) {
+    case 0x2fc: return 0x16; case 0x2fd: return 0xf8; case 0x302: return 0xf9; case 0x303: return 0x01;
+    case 0x305: return 0x01; case 0x30a: return 0x3f; case 0x30e: return 0x02;
+  }
+  return 0;
+}
+static int mg_find(const unsigned char* a, uint32_t cnt, uint16_t id)
+{
+  for (uint32_t i = 0; i < cnt && i < RP_ROWS; i++) if (*(const uint16_t*)(a + (size_t)i * RP_STRIDE) == id) return (int)i;
+  return -1;
+}
+static int mg_matches_left(unsigned char* b, uint16_t reg)
+{
+  int n = 0;
+  for (uint32_t i = 0; i < g_mcap; i++) {
+    const unsigned char* m = b + g_mbase + (size_t)i * MATCH_STRIDE;
+    if (*(const volatile uint16_t*)m == 0xffff) continue;
+    if (*(const volatile uint16_t*)(m + 4) == reg && !(m[7] & 0x40)) n++;
+  }
+  return n;
+}
+static void mg_merge(unsigned char* dst, const unsigned char* world)
+{
+  for (int k = 2; k < RP_STRIDE; k++) {
+    unsigned char m = mg_season_mask(k);
+    dst[k] = (unsigned char)((dst[k] & m) | (world[k] & ~m));
+  }
+}
+static void mg_check(void)
+{
+  if (g_rp_ok < 0) rp_init();
+  if (!g_rp_ok || !g_mg_ko) return;
+  unsigned char* b = block();
+  if (!b) { g_mg_streak = 0; return; }
+  unsigned char* a = b + g_rp_off;
+  uint32_t cnt = *(volatile uint32_t*)(b + g_rp_cnt);
+  if (cnt == 0 || cnt > RP_ROWS) return;
+  int yy = 0, dd = today(b, &yy);
+  if (dd < 0) {                                   /* the menu: the world's own table */
+    g_mg_streak = 0; g_mg_done_tries = 0;
+    if (g_mg_n >= 0 || mg_find(a, cnt, g_mg_ko) < 0 || mg_find(a, cnt, 1025) < 0) return;
+    int n = 0;
+    for (uint32_t i = 0; i < cnt && n < MG_MAX; i++) {
+      const unsigned char* r = a + (size_t)i * RP_STRIDE;
+      uint16_t id = *(const uint16_t*)r;
+      int cwc = *(const uint32_t*)(r + 0x80) == 1;
+      int ic = g_mg_ic && id == g_mg_ic && *(const uint32_t*)(r + 0x80) == (uint32_t)g_mg_iccid;
+      if (!cwc && !ic) continue;
+      if (ic) g_mg_icrow = n;
+      memcpy(g_mg_rows[n++], r, RP_STRIDE);
+    }
+    g_mg_n = n;
+    plog("old careers: the world's rows kept (%d: competition 1%s), for a career saved before the Club World Cup Build",
+         n, g_mg_icrow >= 0 ? " and the Intercontinental" : "");
+    return;
+  }
+  if (g_mg_n <= 0) return;
+  if (mg_find(a, cnt, g_mg_ko) >= 0) { g_mg_streak = 0; return; }   /* has the new cup */
+  if (++g_mg_streak < 3 || g_mg_done_tries >= 1) return;
+  g_mg_done_tries++;
+  int need = 0;
+  for (int k = 0; k < g_mg_n; k++) {
+    uint16_t id = *(const uint16_t*)g_mg_rows[k];
+    if (mg_find(a, cnt, id) < 0) need++;
+  }
+  if (cnt + need > RP_ROWS) { plog("old career (day %d of %d): no room for %d rows (count %u) -- left as it is", dd, yy, need, cnt); return; }
+  for (int k = 0; k < need; k++)
+    if (*(const uint16_t*)(a + (size_t)(cnt + k) * RP_STRIDE) != 0xffff) {
+      plog("old career (day %d of %d): row %u is not free -- left as it is", dd, yy, cnt + k); return;
+    }
+  int r1 = mg_find(a, cnt, 1);
+  if (r1 < 0) { plog("old career: no row 1 -- left as it is"); return; }
+  /* 1: the group stage's definition, the save's season bytes */
+  for (int k = 0; k < g_mg_n; k++)
+    if (*(const uint16_t*)g_mg_rows[k] == 1) mg_merge(a + (size_t)r1 * RP_STRIDE, g_mg_rows[k]);
+  /* the rows the save does not have, after the live ones */
+  uint32_t at = cnt; char ids[200]; int il = 0;
+  for (int k = 0; k < g_mg_n; k++) {
+    uint16_t id = *(const uint16_t*)g_mg_rows[k];
+    if (mg_find(a, cnt, id) >= 0) continue;
+    memcpy(a + (size_t)at * RP_STRIDE, g_mg_rows[k], RP_STRIDE);
+    at++;
+    if (il < 180) il += snprintf(ids + il, sizeof ids - il, " %u", id);
+  }
+  ids[il] = 0;
+  MemoryBarrier();
+  *(volatile uint32_t*)(b + g_rp_cnt) = at;
+  plog("old career (day %d of %d): Club World Cup of 32 put in -- row 1 the group stage, %u row(s) added:%s; count %u -> %u",
+       dd, yy, at - cnt, ids, cnt, at);
+  /* the Intercontinental */
+  if (g_mg_icrow >= 0) {
+    int ri = mg_find(a, at, (uint16_t)g_mg_ic);
+    int left = mg_matches_left(b, (uint16_t)g_mg_ic);
+    if (ri < 0) {
+      memcpy(a + (size_t)at * RP_STRIDE, g_mg_rows[g_mg_icrow], RP_STRIDE);
+      MemoryBarrier();
+      *(volatile uint32_t*)(b + g_rp_cnt) = at + 1;
+      plog("old career: Intercontinental row %d added (count %u)", g_mg_ic, at + 1);
+    } else if (left) {
+      plog("old career: row %d still has %d match(es) to play (the cup that had this id) -- Intercontinental left out", g_mg_ic, left);
+    } else {
+      mg_merge(a + (size_t)ri * RP_STRIDE, g_mg_rows[g_mg_icrow]);
+      plog("old career: row %d (competition %d) is the Intercontinental now", g_mg_ic, g_mg_iccid);
+    }
+  }
+}
+/* the world file's cwc32 ko= / ic= / iccid= (fl26cwc.lua); 0 = do not touch old careers */
+__declspec(dllexport) int fl26_cwc_oldsaves(int ko, int ic, int iccid)
+{
+  g_mg_ko = (ko > 175 && ko < 1024) ? ko : 0;
+  g_mg_ic = (ic > 1 && ic < 1024 && ic != ko) ? ic : 0;
+  g_mg_iccid = g_mg_ic ? iccid : 0;
+  return g_mg_ko;
+}
 static DWORD WINAPI read_thread(LPVOID unused)
 {
   (void)unused;
   for (;;) {
     Sleep(1000);
     EnterCriticalSection(&g_lk);
+    {
+      static int prev = -2;
+      int yy = 0, dd = today(block(), &yy);
+      ULONGLONG now = GetTickCount64();
+      if (prev < 0 && dd >= 0) {
+        if (g_lr_slot[0] && now - g_lr_tick < LOAD_WINDOW) {
+          hset t = g_quar; g_quar = g_cand; g_cand = t;   /* the career in memory at that read */
+          snprintf(g_pending_load, sizeof g_pending_load, "%s", g_lr_slot);
+          g_load_by_career = 1;
+          plog("load: %s (a career came, day %d of %d, %llu ms after it was read); %u played match(es) of the career before set aside",
+               g_lr_slot, dd, yy, (unsigned long long)(now - g_lr_tick), g_quar.n);
+        } else if (prev == -1)
+          plog("a career came (day %d of %d) with no slot read in the %d s before: not a load", dd, yy, LOAD_WINDOW / 1000);
+        g_lr_slot[0] = 0;
+      } else if (prev >= 0 && dd < 0) plog("no career in memory now");
+      prev = dd;
+    }
     if (g_pending_load[0]) {
       char s[16]; snprintf(s, sizeof s, "%s", g_pending_load); g_pending_load[0] = 0;
       int n = led_load(s);
@@ -836,12 +1136,20 @@ static DWORD WINAPI read_thread(LPVOID unused)
       else plog("load: %s.fl26cwc read, %d entries", s, n);
     }
     harvest(0);
+    rp_check();
+    mg_check();
     LeaveCriticalSection(&g_lk);
   }
   return 0;
 }
 
 /* ---------------------------------------------------------------- exports */
+/* offline test only (no game): the NtCreateFile hook alone; the game calls fl26_cwc_install */
+__declspec(dllexport) int fl26_cwc_iotest(void)
+{
+  if (!g_cs_ok) { InitializeCriticalSection(&g_cs); InitializeCriticalSection(&g_lk); g_cs_ok = 1; }
+  return hook_ntcreate();
+}
 __declspec(dllexport) int fl26_cwc_install(int first_year, int reset_day)
 {
   if (!g_cs_ok) { InitializeCriticalSection(&g_cs); InitializeCriticalSection(&g_lk); g_cs_ok = 1; }

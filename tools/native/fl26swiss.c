@@ -1312,7 +1312,14 @@ static int today(void)
 #endif
   unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
   unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
-  return blk ? *(uint16_t*)(blk + TODAY_OFF) : -1;
+  if (!blk) return -1;
+  /* 17.11. (League Mode, LG00000013): out of a career -- quit to the menu, a save being loaded --
+     the block is still there with a day but no year in it. That day (0) was taken for a New
+     Year, the save's day 222 that came next for "a save of the year before", and the load was
+     never seen as another timeline: the summer was taken as already done, and the qualifying
+     rounds and the league phases were never filled. No year is no career (fl26cwc's rule). */
+  int d = *(uint16_t*)(blk + TODAY_OFF), y = *(uint16_t*)(blk + TODAY_OFF + 8);
+  return d > 365 || y < 1990 || y > 2200 ? -1 : d;
 }
 static int po_season_half(void) { int d = today(); return d >= 0 && d < PO_MONTHS_BEFORE; }
 /* The game's day counter is the day of the calendar year, so a guard that keeps "the day it last
@@ -1341,12 +1348,21 @@ static int abs_day(void)
   if (g_last_day >= 0 && d < g_last_day) {
     if (d + 182 < g_last_day && g_last_day >= 300) g_year_off += 365;     /* New Year */
     else {
+      logf("fl26swiss: day %d after day %d -- another timeline (a save loaded or another career)", d, g_last_day);
       g_year_off += 730; g_timeline++;
       g_new_career = 0; g_day_ticked = 0; g_first_day = -1;
       g_built_gdate = -1; g_built_stored = 0;
     }
   }
-  else if (g_last_day >= 0 && d > g_last_day + 182 && g_year_off >= 365) g_year_off -= 365;
+  else if (g_last_day >= 0 && d > g_last_day + 182) {
+    /* half a year forward at once is no day of play: a save loaded (of the year before, or after
+       a day taken for a New Year). It used to be put back a year on the same timeline, and every
+       guard kept for that season matched again (17.11.); another timeline, as a day gone back */
+    logf("fl26swiss: day %d after day %d -- half a year forward: another timeline (a save loaded)", d, g_last_day);
+    g_year_off += 730; g_timeline++;
+    g_new_career = 0; g_day_ticked = 0; g_first_day = -1;
+    g_built_gdate = -1; g_built_stored = 0;
+  }
   g_last_day = d;
   return d + g_year_off;
 }
@@ -4294,11 +4310,41 @@ static uint64_t ic_dates(uint16_t id, uint64_t reg, void* vec)
 static uint64_t cwc_dates(uint16_t id, uint64_t reg, void* vec)
 {
   int ko = id == CWC_KO;
-  uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | (ko ? R_WCKO : R_WCGROUP), vec);
   vec_t* v = (vec_t*)vec;
+  size_t at = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) : 0;
+  uint64_t rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | (ko ? R_WCKO : R_WCGROUP), vec);
   size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
-  date_t* r = (date_t*)v->b;
   size_t want = ko ? 10 : 6;
+  /* League Mode (17.11.): it has no national-team tournaments, and the World Cup's group stage
+     (34) gives no dates there -- the 32 were drawn and never played. The Libertadores' group
+     stage (9) is in every mode and, like 34, comes cut to the caller's shape (a CWC group played
+     once asks for 3); its rounds keep their order and the days are moved below as before. */
+  size_t was = have;
+  int lib = 0;
+  if (!ko && (have == 0 || have > want)) {
+    if (v->b) v->e = v->b + at;
+    rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | 9, vec);
+    have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+    lib = 1;
+    /* 17.11.: but reg 9 is NOT cut: it gives its 6 home-and-away rounds to a group played once,
+       which plays only rounds 0..2 -- spread over the 6 June days they fell on 153, 154 and 157
+       (two matches on consecutive days). Keep its first 3, as 34 gives: days 153, 157, 161. */
+    if (have > 3 && have <= want) { v->e = v->b + 3 * sizeof(date_t); have = 3; }
+  }
+  date_t* r = (date_t*)v->b;
+  { static int last_id = -1, last_day = -1;         /* each id once a day: the groups ask one by one */
+    if (last_id != (int)id || last_day != today()) {
+      last_id = id; last_day = today();
+      if (lib) logf("fl26swiss: Club World Cup -- reg %u, day %d: the World Cup's group stage gave %u date(s), "
+                    "the Libertadores' (reg 9) %u%s", (unsigned)id, today(), (unsigned)was, (unsigned)have,
+                    have > want ? " (too many: left as it is)" : "");
+      else logf("fl26swiss: Club World Cup -- reg %u, day %d: %u date(s) from the World Cup's %s",
+                (unsigned)id, today(), (unsigned)have, ko ? "knockout" : "group stage");
+      for (size_t i = 0; i < have && i < 12; i++)
+        logf("fl26swiss: Club World Cup -- reg %u record %u: day %u round %u kind %u", (unsigned)id,
+             (unsigned)i, r[i].day, r[i].round, r[i].kind);
+    }
+  }
   static unsigned said = 0; unsigned bit = ko ? 1 : 2;
   /* The game hands back only as many records as the caller's shape needs, not the whole
    * borrowed array: a group of four played once asked for 3 (measured 2026-09-26), where the

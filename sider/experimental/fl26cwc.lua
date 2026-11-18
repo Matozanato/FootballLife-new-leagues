@@ -16,6 +16,7 @@ Requires sider.ini: luajit.ext.enabled = 1 (global ffi).
 local FIRST_CWC_YEAR = 2029
 local RESET_DAY = 153
 local EVERY = 4
+local KO, IC, ICCID = 0, 0, 0   -- cwc32 ko= ic= iccid=: rows put into careers saved before the Build
 -- Mod Studio's Club World Cup option writes the cycle into the world file:
 --   cwc32 ko=<reg> every=<years> first=<year> ic=<reg> iccid=<cid>
 -- and that line wins over the two numbers above (fl26swiss draws the cup on the same cycle)
@@ -23,15 +24,21 @@ local function read_cycle(ctx)
   local sep = string.char(92)
   local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
   local f = io.open(path, "r")
-  if not f then return end
+  if not f then return false end
+  local on = false
   for line in f:lines() do
     local rest = line:match("^%s*cwc32%s+(.*)$")
     if rest then
+      on = true
       FIRST_CWC_YEAR = tonumber(rest:match("first=(%d+)") or FIRST_CWC_YEAR) or FIRST_CWC_YEAR
       EVERY = tonumber(rest:match("every=(%d+)") or EVERY) or EVERY
+      KO = tonumber(rest:match("ko=(%d+)") or 0) or 0
+      IC = tonumber(rest:match("ic=(%d+)") or 0) or 0
+      ICCID = tonumber(rest:match("iccid=(%d+)") or 0) or 0
     end
   end
   f:close()
+  return on
 end
 
 local m = {}
@@ -74,11 +81,17 @@ end
 
 function m.init(ctx)
   if ffi == nil then log("fl26cwc: global ffi is nil -- set luajit.ext.enabled = 1"); return end
+  -- only in a world built with the Club World Cup of 32 (Mod Studio: Leagues > More > Club World Cup)
+  if not read_cycle(ctx) then
+    log("fl26cwc: the world file has no cwc32 line (Club World Cup of 32 off) -- nothing installed")
+    return
+  end
   ffi.cdef([[
     void* fl26cwc_LoadLibraryA(const char*) __asm__("LoadLibraryA");
     void* fl26cwc_GetProcAddress(void*, const char*) __asm__("GetProcAddress");
     typedef int (*fl26_cwc_install_t)(int, int);
     typedef int (*fl26_cwc_every_t)(int);
+    typedef int (*fl26_cwc_oldsaves_t)(int, int, int);
     typedef int (*fl26_cwc_buf_t)(char*, int);
     typedef int (*fl26_cwc_report_t)(const char*);
   ]])
@@ -103,9 +116,13 @@ function m.init(ctx)
   logbuf = ffi.new("char[16384]")
   statbuf = ffi.new("char[2048]")
   report_path = root .. sep .. "fl26cwc-report.txt"
-  read_cycle(ctx)
   local every = fn("fl26_cwc_every_t", "fl26_cwc_every")
   if every then every(EVERY) end
+  local oldsaves = fn("fl26_cwc_oldsaves_t", "fl26_cwc_oldsaves")
+  if oldsaves and KO > 0 then
+    oldsaves(KO, IC, ICCID)
+    log(string.format("fl26cwc: careers saved before the Club World Cup Build get its rows (knockout %d, Intercontinental %d of competition %d)", KO, IC, ICCID))
+  end
   local r = tonumber(inst(FIRST_CWC_YEAR, RESET_DAY))
   log(string.format("fl26cwc: the ranking's cycle: every %d year(s) from %d (day %d)", EVERY, FIRST_CWC_YEAR, RESET_DAY))
   drain()

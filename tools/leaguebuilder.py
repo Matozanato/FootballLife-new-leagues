@@ -5457,6 +5457,10 @@ def build(pl, base, game, replace=False, log=print):
     national_cups(pl, tmp, db, log)
     game_super_cups(pl, tmp, db, log)
     cwc_lines = club_world_cup(pl, tmp, db, log)
+    if cwc_lines:
+        # fl26contrank's ranking buttons and screens: the menu flows and the texts, in this world
+        import lbcwcmenu
+        lbcwcmenu.write(tmp, game, siderdir.find(game), log)
     resolve_new_league_stage_cup_winners(pl)
     hc = home_cups(pl, confed)
     own_cup = {p["rid"]: (p.get("own_cup") or {}).get("reg") for p in pl["leagues"]}
@@ -5476,7 +5480,8 @@ def build(pl, base, game, replace=False, log=print):
     # the confed line also tells fl26swiss which of our clubs the board sends to the AFC
     # Champions League or the Libertadores instead of the Champions League (GitHub #43), so a
     # world with a league outside UEFA gets it even with no continental cup
-    if confed and (pl.get("ccups") or pl.get("association_access") or pl.get("conmebol_stages")
+    # the Club World Cup of 32 too: its field and fl26contrank's rankings go by confederation
+    if confed and (pl.get("ccups") or pl.get("association_access") or pl.get("conmebol_stages") or cwc_lines
                    or any(confed.get(p["country"], 2) != 2 for p in pl["leagues"])):
         ccups.append(confed_line(confed))
     for c, h in zip(hc, pl.get("home_cups") or []):
