@@ -332,6 +332,7 @@ static int live_rounds(uint16_t id, const unsigned char* rec)
   logf("register_all: %u has rounds but no match left in the table -- last season's, let in", id);
   return 0;
 }
+static int rg_all_pool(uint16_t cid);
 vec16_t* join_pre(vec16_t* in)
 {
   g_stat[0]++;
@@ -355,6 +356,7 @@ vec16_t* join_pre(vec16_t* in)
     int dup = 0;
     for (int j = 0; j < n; j++) if (g_list[j] == g_ids[i]) { dup = 1; break; }
     if (dup) continue;
+    if (rg_all_pool(g_ids[i])) continue;           /* lab 18/11/2026: a sleeping group (reserve clubs only) */
     const unsigned char* rec = find_record(g_ids[i]);
     /* In a season now = the runs-this-season flag (+0x304 bit 8). The season year at +0x2fc
        outlives the season: a league closed at New Year keeps it, and was then never let
@@ -643,6 +645,27 @@ static void count_listed(uint16_t cid)
  * stride are read off 0x1414bb580 (at 0x1414bb5fa), where the runtime patch set moves them. */
 #define TEAMLOOK_SITE 0x14bb5fa
 #define TEAM_STRIDE   0x690
+static void rg_reapply(uint16_t cid);   /* lab 18/11/2026: the regional mover's lists again at the door (below) */
+static int rg_all_pool(uint16_t cid);   /* lab 18/11/2026: a league holding only reserve-list clubs sleeps (below) */
+static int rlate_door(uint16_t cid);    /* lab 19/11/2026: a league entering mid-season only when fl26swiss opens it (below) */
+/* lab 18/11/2026: a team id's handle as the team array has it (its own row), 0 when no single record answers --
+   the reserve list's clubs are given as ids; a bare id << 14 names row 0 and the match crashed (0x141333485) */
+static uint32_t canon_h(uint32_t h)
+{
+  const unsigned char* c = (const unsigned char*)(uintptr_t)(g_base + TEAMLOOK_SITE);
+  void** owner = *(void***)(uintptr_t)(g_base + OWNER_RVA);
+  unsigned char* blk = owner ? (unsigned char*)owner[0x48 / 8] : 0;
+  if (!blk || c[0] != 0x8b || c[1] != 0x83 || *(const uint32_t*)(c + 16) != TEAM_STRIDE) return 0;
+  uint32_t nt = *(const uint32_t*)(blk + *(const int32_t*)(c + 2));
+  const unsigned char* arr = blk + *(const int32_t*)(c + 9);
+  if (!nt || nt > 0x3fff) return 0;
+  uint32_t got = 0; int hits = 0;
+  for (uint32_t j = 0; j < nt; j++) {
+    uint32_t v = *(const uint32_t*)(arr + (size_t)j * TEAM_STRIDE);
+    if ((v >> 14) == (h >> 14) && (v & 0x3fff) == j) { got = v; hits++; }
+  }
+  return hits == 1 ? got : 0;
+}
 static void canon_listed(uint16_t cid)
 {
   unsigned char* rec = (unsigned char*)find_record(cid);
@@ -761,7 +784,12 @@ int door_pre(uint64_t id, uint64_t ret)
 {
   uint16_t cid = (uint16_t)id;
   free_stale_rounds(cid);
-  if (ours(cid)) { timeline_check("door", 0); canon_listed(cid); count_listed(cid); }
+  if (ours(cid)) { timeline_check("door", 0); rg_reapply(cid); canon_listed(cid); count_listed(cid); }
+  if (ours(cid) && rlate_door(cid)) return 1;
+  if (ours(cid) && rg_all_pool(cid)) {
+    logf("door(%u) refused by us: it holds only reserve-list clubs (a group that sleeps this season)", cid);
+    return 1;
+  }
   if (!ours(cid) || ret != g_base + BLD_RET_RVA) return 0;
   /* A calendar-year league of ours never enters with the July builder: its rounds start in
    * February, and New Year would close it before the first one. It joins on day 41. */
@@ -1155,6 +1183,480 @@ static int cal_list(uint16_t id, uint32_t* out)
   while (n < CAL_MAXCLUBS && *(const uint32_t*)(rec + 0x170 + n * 4) != 0xffffffffu) { out[n] = *(const uint32_t*)(rec + 0x170 + n * 4); n++; }
   return n;
 }
+/* two team handles of one club (the club id when both have one) */
+static int club_same(uint32_t a, uint32_t b) { return (a >> 14) && (b >> 14) ? (a >> 14) == (b >> 14) : a == b; }
+static int club_find(const uint32_t* l, int n, uint32_t h) { for (int j = 0; j < n; j++) if (club_same(l[j], h)) return j; return -1; }
+
+/* ---- a regional pyramid moved at New Year as a whole (rmove, lab 17/11/2026) ----
+ *
+ * A pyramid of groups that the pair exchange cannot move (here Brazil's Serie B/C/D: the Serie C's groups, the
+ * Serie D's sixteen groups of six; first written in the lab for a pyramid of districts): one group above many, the play-offs deciding who goes where, reserve sides, districts whose size follows
+ * the clubs that fall into them. The loader hands every league of the pyramid (fl26_join_regional):
+ *   group: reg, tier (1 top), size (0: as many as it gets -- a district), direct up (the first n of its table),
+ *          direct down (the last n), the league-slot byte its clubs carry;
+ *   home:  club -> its district (the 4. divisjon league of its area);
+ *   map:   district -> its 3. divisjon group and its 2. divisjon group (where a club of the area plays);
+ *   ties:  tcup reg, tie, the winner's tier, the loser's tier (an fl26swiss export not in this tree: no Brazilian line has ties);
+ *   reserves: club -> its first team (NFF Kampreglement 2-7: never at its first team's tier or above it, never
+ *          above the 2. divisjon when the first team is at the top two; down with its first team).
+ * At New Year, once every league of the pyramid is closed: each club's tier for next season (the direct places,
+ * then the ties, then the reserve rule), then its league -- the same one when it stays, else by its home
+ * (a district: its own; a group: its area's, else the group with fewest clubs), the fixed-size tiers kept at
+ * their size (an extra club goes up / down by its table). Every list written through set_clubs, the slot byte of
+ * a moved club set to its new league's. A table not a whole season, or a tie not decided: nobody moves. */
+#define RG_MAX 64
+#define RH_MAX 640
+#define RM_MAX 64
+#define RTI_MAX 16
+#define RR_MAX 128
+#define RCL_MAX 640
+typedef struct { uint16_t reg; uint8_t tier, size, up, down, slot; uint8_t flags; } rgrp_t;
+/* lab 18/11/2026 (Brazil's Serie B/C/D): per-league flags (fl26_join_rflags) --
+     RGF_HOME  every club placed by its home each season (the Serie C's regional groups from 2028), not stayers first
+     RGF_EMPTY the league may have no clubs (the Serie C's second group in 2027): skipped, not "nobody moves"
+     RGF_EXT   a league of the game's (the Serie B): not waited for at New Year, its list written as ours
+   a league's direct down for one closing season (fl26_join_rdown: the Serie C sends 2 down in 2026/2027, 3 a group
+   after); up=255: who goes up is fl26swiss's to say (fl26_swiss_promoted: the Serie D's knockout, the Serie C's
+   quadrangulares); a reserve list (fl26_join_rpool) fills a fixed tier that is short with nothing below it */
+#define RGF_HOME  1
+#define RGF_EMPTY 2
+#define RGF_EXT   4
+#define RDN_MAX 32
+static uint16_t g_rdn_reg[RDN_MAX], g_rdn_year[RDN_MAX]; static uint8_t g_rdn_down[RDN_MAX]; static int g_nrdn = 0;
+#define RPOOL_MAX 64
+static uint32_t g_rpool[RPOOL_MAX]; static int g_nrpool = 0;
+static rgrp_t g_rg[RG_MAX]; static int g_nrg = 0;
+static uint32_t g_rh_club[RH_MAX]; static uint16_t g_rh_dist[RH_MAX]; static int g_nrh = 0;
+static uint16_t g_rm_dist[RM_MAX], g_rm_g3[RM_MAX], g_rm_g2[RM_MAX]; static int g_nrm = 0;
+static uint16_t g_rti_reg[RTI_MAX]; static uint8_t g_rti_tie[RTI_MAX], g_rti_win[RTI_MAX], g_rti_lose[RTI_MAX]; static int g_nrti = 0;
+static uint32_t g_rr_club[RR_MAX], g_rr_parent[RR_MAX]; static int g_nrr = 0;
+static int g_rg_done = 0;
+typedef int (*tcupres_fn)(uint32_t reg, uint32_t tie, uint32_t* win, uint32_t* lose);
+
+/* v: ng (reg tier size up down slot)[ng] nh (club dist)[nh] nm (dist g3 g2)[nm] nt (reg tie win lose)[nt]
+      nr (club parent)[nr] */
+__declspec(dllexport) int fl26_join_regional(const uint32_t* v, int n)
+{
+  g_nrg = g_nrh = g_nrm = g_nrti = g_nrr = 0; g_rg_done = 0;
+  int p = 0;
+#define TAKE(k) (p + (k) <= n)
+  if (!v || !TAKE(1)) return 0;
+  int ng = (int)v[p++];
+  for (int i = 0; i < ng && TAKE(6); i++, p += 6)
+    if (g_nrg < RG_MAX) { rgrp_t* g = &g_rg[g_nrg++]; g->flags = 0; g->reg = (uint16_t)v[p]; g->tier = (uint8_t)v[p + 1]; g->size = (uint8_t)v[p + 2];
+                          g->up = (uint8_t)v[p + 3]; g->down = (uint8_t)v[p + 4]; g->slot = (uint8_t)v[p + 5]; }
+  if (!TAKE(1)) return g_nrg;
+  int nh = (int)v[p++];
+  for (int i = 0; i < nh && TAKE(2); i++, p += 2)
+    if (g_nrh < RH_MAX) { g_rh_club[g_nrh] = v[p] << 14; g_rh_dist[g_nrh] = (uint16_t)v[p + 1]; g_nrh++; }   /* a team id: its handle's upper bits */
+  if (!TAKE(1)) return g_nrg;
+  int nm = (int)v[p++];
+  for (int i = 0; i < nm && TAKE(3); i++, p += 3)
+    if (g_nrm < RM_MAX) { g_rm_dist[g_nrm] = (uint16_t)v[p]; g_rm_g3[g_nrm] = (uint16_t)v[p + 1]; g_rm_g2[g_nrm] = (uint16_t)v[p + 2]; g_nrm++; }
+  if (!TAKE(1)) return g_nrg;
+  int nt = (int)v[p++];
+  for (int i = 0; i < nt && TAKE(4); i++, p += 4)
+    if (g_nrti < RTI_MAX) { g_rti_reg[g_nrti] = (uint16_t)v[p]; g_rti_tie[g_nrti] = (uint8_t)v[p + 1];
+                            g_rti_win[g_nrti] = (uint8_t)v[p + 2]; g_rti_lose[g_nrti] = (uint8_t)v[p + 3]; g_nrti++; }
+  if (!TAKE(1)) return g_nrg;
+  int nr = (int)v[p++];
+  for (int i = 0; i < nr && TAKE(2); i++, p += 2)
+    if (g_nrr < RR_MAX) { g_rr_club[g_nrr] = v[p] << 14; g_rr_parent[g_nrr] = v[p + 1] << 14; g_nrr++; }
+#undef TAKE
+  logf("regional pyramid: %d league(s), %d home(s), %d district map(s), %d tie rule(s), %d reserve side(s)",
+       g_nrg, g_nrh, g_nrm, g_nrti, g_nrr);
+  return g_nrg;
+}
+
+/* v: pairs (league reg, flags) */
+__declspec(dllexport) int fl26_join_rflags(const uint32_t* v, int n)
+{
+  int k = 0;
+  for (int i = 0; v && i + 1 < n; i += 2)
+    for (int g = 0; g < g_nrg; g++) if (g_rg[g].reg == v[i]) { g_rg[g].flags = (uint8_t)v[i + 1]; k++; }
+  logf("regional pyramid: flags on %d league(s)", k);
+  return k;
+}
+/* v: triples (league reg, closing season's year, direct down) */
+__declspec(dllexport) int fl26_join_rdown(const uint32_t* v, int n)
+{
+  g_nrdn = 0;
+  for (int i = 0; v && i + 2 < n && g_nrdn < RDN_MAX; i += 3) {
+    g_rdn_reg[g_nrdn] = (uint16_t)v[i]; g_rdn_year[g_nrdn] = (uint16_t)v[i + 1]; g_rdn_down[g_nrdn] = (uint8_t)v[i + 2]; g_nrdn++;
+  }
+  logf("regional pyramid: %d down rule(s) by season", g_nrdn);
+  return g_nrdn;
+}
+/* v: team ids of the reserve list, in order */
+__declspec(dllexport) int fl26_join_rpool(const uint32_t* v, int n)
+{
+  g_nrpool = 0;
+  for (int i = 0; v && i < n && g_nrpool < RPOOL_MAX; i++) g_rpool[g_nrpool++] = v[i] << 14;
+  logf("regional pyramid: a reserve list of %d club(s)", g_nrpool);
+  return g_nrpool;
+}
+/* v: quads (league reg, first season, clubs, legs) -- from that season on the league is set to that size and
+   that many meetings at New Year, after the lists are written (the Serie C: 24 once in 2027, two groups of 14
+   home and away from 2028; the record's +0x30c low 7 bits, +0x308 bits 29-31, kept by the save) */
+#define RSH_MAX 16
+static uint16_t g_rsh_reg[RSH_MAX], g_rsh_from[RSH_MAX]; static uint8_t g_rsh_clubs[RSH_MAX], g_rsh_legs[RSH_MAX]; static int g_nrsh = 0;
+__declspec(dllexport) int fl26_join_rshape(const uint32_t* v, int n)
+{
+  g_nrsh = 0;
+  for (int i = 0; v && i + 3 < n && g_nrsh < RSH_MAX; i += 4) {
+    g_rsh_reg[g_nrsh] = (uint16_t)v[i]; g_rsh_from[g_nrsh] = (uint16_t)v[i + 1];
+    g_rsh_clubs[g_nrsh] = (uint8_t)v[i + 2]; g_rsh_legs[g_nrsh] = (uint8_t)v[i + 3]; g_nrsh++;
+  }
+  logf("regional pyramid: %d league shape rule(s) by season", g_nrsh);
+  return g_nrsh;
+}
+typedef int (*seasonyr_fn)(void);
+typedef int (*promoted_fn)(uint32_t reg, uint32_t* out, int cap);
+typedef struct { uint32_t club; int g, rank, tier, to, fresh; } rcl_t;   /* g: its league now; to: its league next; fresh: from the reserve list */
+static int rg_of(uint16_t reg) { for (int i = 0; i < g_nrg; i++) if (g_rg[i].reg == reg) return i; return -1; }
+static int rcl_find(const rcl_t* c, int n, uint32_t club)
+{
+  for (int i = 0; i < n; i++) if (club_same(c[i].club, club)) return i;
+  return -1;
+}
+static uint16_t rh_home(uint32_t club)
+{
+  for (int i = 0; i < g_nrh; i++) if ((g_rh_club[i] >> 14) == (club >> 14)) return g_rh_dist[i];
+  return 0;
+}
+static uint32_t rr_parent(uint32_t club)
+{
+  for (int i = 0; i < g_nrr; i++) if ((g_rr_club[i] >> 14) == (club >> 14)) return g_rr_parent[i];
+  return 0;
+}
+/* the highest tier (smallest number) a reserve may play at, given its first team's tier next season; 0: no limit */
+static int rr_top(const rcl_t* c, int n, uint32_t club)
+{
+  uint32_t par = rr_parent(club);
+  if (!par) return 0;
+  int j = rcl_find(c, n, par);
+  if (j < 0) return 0;                          /* the first team plays outside the pyramid (none in Norway) */
+  int pt = c[j].tier;
+  int top = pt + 1;
+  if (pt <= 2 && top < 3) top = 3;
+  return top;
+}
+static int rg_count(const rcl_t* c, int n, int g) { int k = 0; for (int i = 0; i < n; i++) k += c[i].to == g; return k; }
+/* the league of tier t for a club arriving there: its own (it stays), its home district (t 5) or its area's group */
+static int rg_place(const rcl_t* c, int n, int i, int t)
+{
+  if (g_rg[c[i].g].tier == t && !(g_rg[c[i].g].flags & RGF_HOME) && !c[i].fresh) return c[i].g;
+  uint16_t home = rh_home(c[i].club), want = 0;
+  if (home) {   /* lab 18/11/2026: by the home league's tier (Norway: districts at 5; Brazil: the Serie D's groups) */
+    int ht = -1;
+    for (int g = 0; g < g_nrg; g++) if (g_rg[g].reg == home) ht = g_rg[g].tier;
+    if (t == ht) want = home;
+    else for (int m = 0; m < g_nrm; m++) if (g_rm_dist[m] == home) want = t == ht - 1 ? g_rm_g3[m] : t == ht - 2 ? g_rm_g2[m] : 0;
+  }
+  int best = -1, bestn = 1 << 30;
+  for (int g = 0; g < g_nrg; g++) {
+    if (g_rg[g].tier != t) continue;
+    if (g_rg[g].reg == want && (!g_rg[g].size || rg_count(c, n, g) < g_rg[g].size)) return g;
+    int k = rg_count(c, n, g);
+    if (k < bestn) { bestn = k; best = g; }
+  }
+  return best;
+}
+/* lab 18/11/2026: the lists the mover wrote, kept for the door: in a region with leagues of the game's (Brazil) the
+   game's own New Year pass rebuilds a league under one of its own (the Serie C under the Serie B) from its table
+   after us -- 2028 started with the C's 24 of 2027 again. At the door (New Year, then day 41) the kept list is
+   written once more when the league's differs. Kept in memory only: a save loaded in between has none. */
+static uint32_t g_rgl_cl[RG_MAX][CAL_MAXCLUBS]; static int g_rgl_n[RG_MAX]; static int g_rgl_on = 0, g_rgl_season = -1;
+/* a league's shape for the season after `season` (fl26_join_rshape): set at New Year and again at the door, where the
+   game's own pass has put the record's configured clubs and meetings back (the Serie C under the Serie B, 2028) */
+static void rg_shape(int g, int season, const char* when)
+{
+  if (season <= 0) return;
+  int best = -1;
+  for (int k = 0; k < g_nrsh; k++)
+    if (g_rsh_reg[k] == g_rg[g].reg && g_rsh_from[k] <= season + 1 && (best < 0 || g_rsh_from[k] > g_rsh_from[best])) best = k;
+  if (best < 0) return;
+  unsigned char* rec = (unsigned char*)find_record(g_rg[g].reg);
+  if (!rec) return;
+  uint32_t a = *(uint32_t*)(rec + 0x308), b = *(uint32_t*)(rec + 0x30c);
+  uint32_t na = (a & ~(7u << 29)) | ((uint32_t)(g_rsh_legs[best] & 7) << 29), nb = (b & ~0x7fu) | (g_rsh_clubs[best] & 0x7f);
+  if (na == a && nb == b) return;
+  *(uint32_t*)(rec + 0x308) = na; *(uint32_t*)(rec + 0x30c) = nb;
+  logf("%s: regional -- league %u set to %u clubs, %u meeting(s) for the season after %d (was %u, %u)", when, g_rg[g].reg,
+       (unsigned)g_rsh_clubs[best], (unsigned)g_rsh_legs[best], season, (unsigned)(b & 0x7f), (unsigned)(a >> 29));
+}
+/* lab 18/11/2026: the whole New Year list (the game's own leagues and ours on it): a league of ours in a region
+   with leagues of the game's (Brazil) is closed with them, not "alone" */
+static const uint16_t* g_rg_all = 0; static int g_rg_nall = 0;
+static void regional_exchange(const uint16_t* closed, int nclosed, unsigned char* blk, uint32_t mask)
+{
+  if (!g_nrg || g_rg_done) return;
+  for (int i = 0; i < g_nrg; i++) {
+    int in = 0;
+    if (g_rg[i].flags & RGF_EXT) continue;                   /* a league of the game's: not on our list */
+    for (int j = 0; j < nclosed; j++) in |= closed[j] == g_rg[i].reg;
+    for (int j = 0; j < g_rg_nall && g_rg_all; j++) in |= g_rg_all[j] == g_rg[i].reg;
+    if (!in) return;                                         /* every league of the pyramid at once */
+  }
+  HMODULE sw0 = GetModuleHandleA("fl26swiss.dll");
+  seasonyr_fn syr = sw0 ? (seasonyr_fn)(void*)GetProcAddress(sw0, "fl26_swiss_season_year") : 0;
+  promoted_fn prom = sw0 ? (promoted_fn)(void*)GetProcAddress(sw0, "fl26_swiss_promoted") : 0;
+  int season = syr ? syr() : -1;
+  {   /* lab 18/11/2026: the season just closed is the leagues' own (+0x2fc): at New Year the calendar still reads the
+         old year with the day back at 0, and fl26_swiss_season_year said 2026 for the 2027 season */
+    int best = -1;
+    for (int g = 0; g < g_nrg; g++) {
+      if (g_rg[g].flags & RGF_EXT) continue;
+      const unsigned char* r0 = find_record(g_rg[g].reg);
+      int y = r0 ? *(const uint16_t*)(r0 + 0x2fc) : -1;
+      if (y >= 1900 && y < 3000 && y > best) best = y;
+    }
+    if (best > 0) season = best;
+  }
+  g_rg_done = 1;
+  static rcl_t c[RCL_MAX]; int n = 0;
+  /* the clubs and their ranks: each league's table (a whole season), its list as the fallback order */
+  for (int g = 0; g < g_nrg; g++) {
+    uint32_t t[CAL_MAXCLUBS], l[CAL_MAXCLUBS]; uint8_t pl[CAL_MAXCLUBS];
+    int r = cal_table(g_rg[g].reg, t, pl), m = cal_list(g_rg[g].reg, l);
+    if ((m <= 0 || rg_all_pool(g_rg[g].reg)) && (g_rg[g].flags & RGF_EMPTY)) continue;     /* lab 18/11/2026: the C's second group in 2027 (asleep, the reserve clubs) */
+    if (m <= 0) { logf("new year: regional -- league %u has no clubs; nobody moves", g_rg[g].reg); return; }
+    if (r < m || !cal_whole(pl, r)) {
+      logf("new year: regional -- league %u: its table is not a whole season (%d rows, %d listed); nobody moves", g_rg[g].reg, r, m);
+      return;
+    }
+    for (int k = 0; k < r && n < RCL_MAX; k++) {
+      if (club_find(l, m, t[k]) < 0) continue;
+      c[n].club = t[k]; c[n].g = g; c[n].rank = k + 1; c[n].tier = g_rg[g].tier; c[n].to = -1; c[n].fresh = 0; n++;
+    }
+    /* lab 18/11/2026: a club on the list with no table row (put in by another exchange) stays, last */
+    for (int k = 0, extra = 0; k < m && n < RCL_MAX; k++)
+      if (club_find(t, r, l[k]) < 0 && rcl_find(c, n, l[k]) < 0) {
+        c[n].club = l[k]; c[n].g = g; c[n].rank = r + 1 + extra++; c[n].tier = g_rg[g].tier; c[n].to = -1; c[n].fresh = 0; n++;
+      }
+  }
+  /* the direct places, by each league's eligible order (a reserve that may not go up is passed over) */
+  for (int g = 0; g < g_nrg; g++) {
+    int rows = 0; for (int i = 0; i < n; i++) rows += c[i].g == g;
+    int down = g_rg[g].down;
+    for (int k = 0; k < g_nrdn; k++) if (g_rdn_reg[k] == g_rg[g].reg && g_rdn_year[k] == season) down = g_rdn_down[k];
+    for (int i = 0; i < n; i++) if (c[i].g == g && c[i].rank > rows - down) c[i].tier = g_rg[g].tier + 1;
+    if (g_rg[g].up == 255) {                                 /* lab 18/11/2026: fl26swiss names who goes up */
+      uint32_t up[8]; int nu = prom ? prom(g_rg[g].reg, up, 8) : 0;
+      if (!nu) logf("new year: regional -- league %u: no promoted clubs from fl26swiss (season %d); nobody of it goes up", g_rg[g].reg, season);
+      for (int u = 0; u < nu; u++) {
+        int i = rcl_find(c, n, up[u]);
+        if (i >= 0 && c[i].g == g) { c[i].tier = g_rg[g].tier - 1; logf("new year: regional -- %08x up from %u (fl26swiss)", c[i].club, g_rg[g].reg); }
+      }
+      continue;
+    }
+    int left = g_rg[g].up;
+    for (int rank = 1; rank <= rows && left > 0; rank++)
+      for (int i = 0; i < n; i++)
+        if (c[i].g == g && c[i].rank == rank) {
+          int top = rr_top(c, n, c[i].club);
+          if (top && g_rg[g].tier - 1 < top) break;          /* a reserve may not go up: the next one */
+          c[i].tier = g_rg[g].tier - 1; left--; break;
+        }
+  }
+  /* the ties */
+  HMODULE sw = GetModuleHandleA("fl26swiss.dll");
+  tcupres_fn res = sw ? (tcupres_fn)(void*)GetProcAddress(sw, "fl26_swiss_tcup_result") : 0;
+  for (int k = 0; k < g_nrti; k++) {
+    uint32_t w = 0, l = 0;
+    if (!res || !res(g_rti_reg[k], g_rti_tie[k], &w, &l)) {
+      logf("new year: regional -- tie %u/%u not decided (or no fl26swiss); its clubs keep their places", g_rti_reg[k], g_rti_tie[k]);
+      continue;
+    }
+    int iw = rcl_find(c, n, w), il = rcl_find(c, n, l);
+    if (iw >= 0 && g_rti_win[k]) c[iw].tier = g_rti_win[k];
+    if (il >= 0 && g_rti_lose[k]) c[il].tier = g_rti_lose[k];
+    logf("new year: regional -- tie %u/%u: %08x to tier %u, %08x to tier %u", g_rti_reg[k], g_rti_tie[k], w, g_rti_win[k], l, g_rti_lose[k]);
+  }
+  /* a reserve with its first team at its tier or below goes down below it */
+  for (int pass = 0; pass < 4; pass++)
+    for (int i = 0; i < n; i++) {
+      int top = rr_top(c, n, c[i].club);
+      if (top && c[i].tier < top) {
+        logf("new year: regional -- reserve %08x down to tier %d (its first team's tier next season)", c[i].club, top);
+        c[i].tier = top;
+      }
+    }
+  /* the fixed-size tiers at their size: an extra club up from below / the worst-placed down */
+  int maxt = 0; for (int g = 0; g < g_nrg; g++) if (g_rg[g].tier > maxt) maxt = g_rg[g].tier;
+  for (int t = 1; t <= maxt; t++) {          /* lab 18/11/2026: the bottom tier too (the Serie D, filled from the reserve list) */
+    int size = 0, fixed = 1;
+    for (int g = 0; g < g_nrg; g++) if (g_rg[g].tier == t) { if (!g_rg[g].size) fixed = 0; size += g_rg[g].size; }
+    if (!fixed) continue;
+    for (int guard = 0; guard < 32; guard++) {
+      int have = 0; for (int i = 0; i < n; i++) have += c[i].tier == t;
+      if (have == size) break;
+      int pick = -1;
+      if (have < size) {          /* the best placed of the tier below staying there, allowed at t */
+        for (int i = 0; i < n; i++)
+          if (c[i].tier == t + 1 && g_rg[c[i].g].tier == t + 1) {
+            int top = rr_top(c, n, c[i].club);
+            if (top && t < top) continue;
+            if (pick < 0 || c[i].rank < c[pick].rank) pick = i;
+          }
+        if (pick < 0) {                                     /* lab 18/11/2026: nothing below -- the reserve list */
+          int any = 0;
+          for (int q = 0; q < g_nrpool && n < RCL_MAX; q++) {
+            if (rcl_find(c, n, g_rpool[q]) >= 0) continue;
+            uint32_t ph = canon_h(g_rpool[q]);
+            if (!ph) { logf("new year: regional -- reserve club %08x is not in this career (no team record); passed over", g_rpool[q]); continue; }
+            int g0 = -1; for (int g = 0; g < g_nrg; g++) if (g_rg[g].tier == t) { g0 = g; break; }
+            if (g0 < 0) break;
+            c[n].club = ph; c[n].g = g0; c[n].rank = 999; c[n].tier = t; c[n].to = -1; c[n].fresh = 1; n++;
+            logf("new year: regional -- tier %d short of %d: %08x from the reserve list", t, size, ph);
+            any = 1; break;
+          }
+          if (!any) break;
+          continue;
+        }
+        c[pick].tier = t;
+        logf("new year: regional -- tier %d short of %d: %08x (place %d) goes up as well", t, size, c[pick].club, c[pick].rank);
+      } else {                    /* the worst placed staying at t */
+        if (t == maxt) break;     /* lab 18/11/2026: nothing below the bottom tier to send it to */
+        for (int i = 0; i < n; i++)
+          if (c[i].tier == t && g_rg[c[i].g].tier == t && (pick < 0 || c[i].rank > c[pick].rank)) pick = i;
+        if (pick < 0) break;
+        c[pick].tier = t + 1;
+        logf("new year: regional -- tier %d over %d: %08x (place %d) goes down as well", t, size, c[pick].club, c[pick].rank);
+      }
+    }
+  }
+  /* the leagues: the stayers first, then the movers by their home */
+  for (int i = 0; i < n; i++) if (c[i].tier == g_rg[c[i].g].tier && !c[i].fresh && !(g_rg[c[i].g].flags & RGF_HOME)) c[i].to = c[i].g;
+  for (int i = 0; i < n; i++) if (c[i].to < 0) c[i].to = rg_place(c, n, i, c[i].tier);
+  /* a fixed group over its size passes its newest arrivals to the group of its tier with fewest clubs */
+  for (int g = 0; g < g_nrg; g++) {
+    if (!g_rg[g].size) continue;
+    for (int guard = 0; guard < 16 && rg_count(c, n, g) > g_rg[g].size; guard++) {
+      int mv = -1;
+      for (int i = n - 1; i >= 0 && mv < 0; i--) if (c[i].to == g && (c[i].g != g || c[i].fresh || (g_rg[g].flags & RGF_HOME))) mv = i;
+      if (mv < 0) break;
+      int best = -1, bestn = 1 << 30;
+      for (int h = 0; h < g_nrg; h++)
+        if (h != g && g_rg[h].tier == g_rg[g].tier) { int k = rg_count(c, n, h); if (k < bestn) { bestn = k; best = h; } }
+      if (best < 0) break;
+      c[mv].to = best;
+    }
+  }
+  /* write: every league's new list; a mover's slot byte */
+  clubrec_fn club = (clubrec_fn)(uintptr_t)(g_base + CLUBREC_RVA);
+  int moved = 0;
+  uint8_t slotof[RG_MAX];                                      /* lab 18/11/2026: slot 255 = a staying club's (the Serie B) */
+  for (int g = 0; g < g_nrg; g++) {
+    slotof[g] = g_rg[g].slot;
+    if (g_rg[g].slot == 255) {
+      slotof[g] = 0x7b;
+      for (int i = 0; i < n; i++) if (c[i].g == g && c[i].to == g && !c[i].fresh) { unsigned char* rc = club(blk, c[i].club); if (rc) { slotof[g] = (uint8_t)(rc[0x41c] & mask); break; } }
+    }
+  }
+  for (int i = 0; i < n; i++)
+    if (c[i].to >= 0 && (c[i].to != c[i].g || c[i].fresh)) {
+      unsigned char* rc = club(blk, c[i].club);
+      if (rc) rc[0x41c] = (unsigned char)((rc[0x41c] & ~mask) | (slotof[c[i].to] & mask));
+      moved++;
+      logf("new year: regional -- %08x: %u (place %d) -> %u", c[i].club, g_rg[c[i].g].reg, c[i].rank, g_rg[c[i].to].reg);
+    }
+  for (int g = 0; g < g_nrg; g++) {
+    uint32_t lst[CAL_MAXCLUBS]; int m = 0;
+    for (int i = 0; i < n && m < CAL_MAXCLUBS; i++) if (c[i].to == g) lst[m++] = c[i].club;
+    vec32_t va = { lst, lst + m, lst + CAL_MAXCLUBS };
+    ((setclubs_fn)(uintptr_t)(g_base + SETCLUBS_RVA))(g_rg[g].reg, &va, 1);
+    g_rgl_n[g] = m; memcpy(g_rgl_cl[g], lst, sizeof(uint32_t) * (size_t)m);
+  }
+  g_rgl_on = 1;
+  logf("new year: regional pyramid -- %d club(s), %d moved, %d league(s) written", n, moved, g_nrg);
+  g_rgl_season = season;
+  for (int g = 0; g < g_nrg; g++) rg_shape(g, season, "new year");
+
+}
+
+/* the league's listed clubs are all of the reserve list (and there is one): the Serie C's second group in 2027 holds
+   the reserve clubs so that a career takes them in (a club in no league never reaches one), and plays nothing */
+static int rg_all_pool(uint16_t cid)
+{
+  if (!g_nrpool) return 0;
+  uint32_t l[CAL_MAXCLUBS]; int m = cal_list(cid, l);
+  if (m <= 0) return 0;
+  for (int i = 0; i < m; i++) {
+    int in = 0;
+    for (int q = 0; q < g_nrpool && !in; q++) in = club_same(l[i], g_rpool[q]);
+    if (!in) return 0;
+  }
+  return 1;
+}
+static void rg_reapply(uint16_t cid)
+{
+  if (!g_rgl_on) return;
+  for (int g = 0; g < g_nrg; g++) {
+    if (g_rg[g].reg != cid || (g_rg[g].flags & RGF_EXT)) continue;
+    rg_shape(g, g_rgl_season, "door");
+    uint32_t now[CAL_MAXCLUBS]; int m = cal_list(cid, now), same = m == g_rgl_n[g];
+    for (int i = 0; same && i < m; i++) same = club_find(g_rgl_cl[g], g_rgl_n[g], now[i]) >= 0;
+    if (same) return;
+    uint32_t lst[CAL_MAXCLUBS]; memcpy(lst, g_rgl_cl[g], sizeof(uint32_t) * (size_t)g_rgl_n[g]);
+    vec32_t va = { lst, lst + g_rgl_n[g], lst + CAL_MAXCLUBS };
+    ((setclubs_fn)(uintptr_t)(g_base + SETCLUBS_RVA))(cid, &va, 1);
+    logf("door(%u): the regional mover's list written again -- the league held %d club(s), the mover's %d", cid, m, g_rgl_n[g]);
+    return;
+  }
+}
+
+/* lab 19/11/2026: leagues that enter a season only mid-way, when fl26swiss has filled them and opens the door for
+   them (the Serie C's quadrangulares, two leagues of four filled from the first phase's table): every other time
+   the door refuses them and they hold their sleep list (placeholder clubs, given as team ids) -- the eight of the
+   last quadrangulares are taken out at the next refusal (New Year, day 41).
+     jline fl26_join_rlate <reg> <n> <team ids x n> [<reg> <n> <ids> ...]
+     fl26_join_late_open(reg): the next door call for reg says yes (fl26swiss calls register_all right after) */
+#define RLATE_MAX 8
+#define RLATE_CL 8
+static uint16_t g_rlate[RLATE_MAX]; static uint32_t g_rlate_cl[RLATE_MAX][RLATE_CL]; static int g_rlate_n[RLATE_MAX];
+static uint8_t g_rlate_open[RLATE_MAX]; static int g_nrlate = 0;
+__declspec(dllexport) int fl26_join_rlate(const uint32_t* v, int n)
+{
+  g_nrlate = 0;
+  for (int i = 0; v && i + 1 < n && g_nrlate < RLATE_MAX; ) {
+    int k = g_nrlate, m = (int)v[i + 1];
+    if (m < 1 || m > RLATE_CL || i + 2 + m > n) { logf("regional pyramid: rlate -- bad line at value %d", i); break; }
+    g_rlate[k] = (uint16_t)v[i]; g_rlate_n[k] = m; g_rlate_open[k] = 0;
+    for (int j = 0; j < m; j++) g_rlate_cl[k][j] = v[i + 2 + j] << 14;
+    g_nrlate++; i += 2 + m;
+  }
+  logf("regional pyramid: %d league(s) entering mid-season only (rlate)", g_nrlate);
+  return g_nrlate;
+}
+static int rlate_of(uint16_t cid) { for (int k = 0; k < g_nrlate; k++) if (g_rlate[k] == cid) return k; return -1; }
+__declspec(dllexport) int fl26_join_late_open(uint32_t reg)
+{
+  int k = rlate_of((uint16_t)reg);
+  if (k < 0) return 0;
+  g_rlate_open[k] = 1;
+  logf("rlate: %u opened for its mid-season entry", (unsigned)reg);
+  return 1;
+}
+/* 1: refused (and its sleep list written back when it holds anything else); 0: not one of these, or opened */
+static int rlate_door(uint16_t cid)
+{
+  int k = rlate_of(cid);
+  if (k < 0) return 0;
+  if (g_rlate_open[k]) { g_rlate_open[k] = 0; logf("door(%u): a mid-season league, opened by fl26swiss -- let in", cid); return 0; }
+  uint32_t now[CAL_MAXCLUBS], lst[RLATE_CL]; int m = cal_list(cid, now), nl = 0;
+  for (int j = 0; j < g_rlate_n[k]; j++) { uint32_t h = canon_h(g_rlate_cl[k][j]); if (h) lst[nl++] = h; }
+  int same = m == nl;
+  for (int j = 0; same && j < m; j++) same = club_find(lst, nl, now[j]) >= 0;
+  if (!same && nl > 0) {
+    vec32_t va = { lst, lst + nl, lst + RLATE_CL };
+    ((setclubs_fn)(uintptr_t)(g_base + SETCLUBS_RVA))(cid, &va, 1);
+    logf("door(%u): a mid-season league asleep -- its %d placeholder club(s) written back (it held %d)", cid, nl, m);
+  }
+  logf("door(%u) refused by us: it enters mid-season, when fl26swiss fills it", cid);
+  return 1;
+}
+
 /* closed[]: the ids this teardown closes for having no league of the game's in their region */
 static void cal_exchange(const uint16_t* closed, int nclosed)
 {
@@ -1197,6 +1699,7 @@ static void cal_exchange(const uint16_t* closed, int nclosed)
          p->up, p->low, r, down[0], r > 1 ? down[1] : 0, r > 2 ? down[2] : 0,
          r, up[0], r > 1 ? up[1] : 0, r > 2 ? up[2] : 0, na, nb);
   }
+  regional_exchange(closed, nclosed, blk, mask);   /* lab 17/11/2026: a regional pyramid (Brazil's Serie B/C/D) */
 }
 #else
 static void cal_exchange(const uint16_t* closed, int nclosed) { (void)closed; (void)nclosed; }
@@ -1641,7 +2144,7 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
     timeline_check("teardown", ny); }
   if (euro) memset(g_door_yes, 0, sizeof g_door_yes);   /* a new season: nobody let in yet */
   if (euro) { g_cal_midseason = 1; memset(g_cal_shut, 0, sizeof g_cal_shut); g_reg_logged = 0;
-              memset(g_cpair_done, 0, sizeof g_cpair_done); }
+              memset(g_cpair_done, 0, sizeof g_cpair_done); g_rg_done = 0; }
   char buf[320]; int p = 0; buf[0] = 0;
   for (int j = 0; j < n; j++) {
     uint16_t id = in->b[j];
@@ -1670,7 +2173,8 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
     for (int i = 0; i < g_ntd_extra; i++) {
       uint16_t id = g_td_extra[i]; int dup = 0;
       for (int j = 0; j < k; j++) if (g_td_list[j] == id) { dup = 1; break; }
-      if (dup || !find_record(id)) continue;
+      /* lab 16/11/2026: a calendar-year league is half way through in July: it closes at New Year */
+      if (dup || !find_record(id) || calyr(id)) continue;
       g_td_list[k++] = id; changed++;
       if (p < (int)sizeof buf - 8) p += snprintf(buf + p, sizeof buf - (size_t)p, "%u ", id);
     }
@@ -1713,13 +2217,18 @@ vec16_t* teardown_pre(uint64_t ctx, vec16_t* in)
       if (id < 256 && g_cal_shut[id]) continue;
       if ((!mate && !newyear) || k >= MAX_LIST) continue;
       g_td_list[k++] = id; changed++; cadd++;
-      if (!game) alone[nalone++] = id;
+      /* lab 16/11/2026: in a region with a shipped league of the game (Brazil's Serie B) the game's pass moved
+         nobody at New Year, so a league of ours added here at New Year is exchanged by us too; cal_swap still
+         refuses a club not where its table puts it */
+      if (!game || newyear) alone[nalone++] = id;
       if (id < 256) { g_door_yes[id] = 0; g_cal_shut[id] = 1; }
       if (cp < (int)sizeof cbuf - 8) cp += snprintf(cbuf + cp, sizeof cbuf - (size_t)cp, "%u ", id);
     }
   }
   if (cadd || cdup) g_cal_midseason = 0;
-  if (nalone && g_ncpair) cal_exchange(alone, nalone);
+  g_rg_all = g_td_list; g_rg_nall = k;
+  if ((nalone || (newyear && g_nrg)) && (g_ncpair || g_nrg)) cal_exchange(alone, nalone);
+  g_rg_all = 0; g_rg_nall = 0;
   if (cdup) logf("teardown: %d calendar-year league(s) of ours on the list itself, closed with it", cdup);
   if (!changed) return in;
   if (cadd) logf("teardown: calendar-year leagues of ours closed with their region: [%s]", cbuf);

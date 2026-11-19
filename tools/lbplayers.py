@@ -442,7 +442,7 @@ def fill_tiers(pl, base, log=print):
         if (p.get("newlife") or {}).get("clubs"):
             continue                      # fill_newlife's: the release's squads
         game = {int(k) for k in (p.get("game_clubs") or {})}
-        want = TIER_LEVEL[min(tier_of(p, mine), len(TIER_LEVEL)) - 1]
+        want = p.get("level") or TIER_LEVEL[min(tier_of(p, mine), len(TIER_LEVEL)) - 1]   # 14/11: a league's own level
         for k in range(len(p.get("teams") or [])):
             if k in game:
                 continue
