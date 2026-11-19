@@ -2,18 +2,18 @@
 
 O mesmo clube pode disputar seu estadual e uma das divisões nacionais com o mesmo elenco. A receita cria uma inscrição adicional em `CompetitionEntry.bin` para cada clube, duas divisões com vínculo próprio de acesso e descenso e uma competição brasileira de mata-mata. O Paulista foi o piloto no FL26 v1. O gerador desta branch permite declarar vários estados no mesmo mundo.
 
-## O que funcionou no jogo
+## Chave única da revisão 7
 
-| Medida | Evidência do piloto |
-|---|---|
-| Paulista A1 | 12 clubes em turno único, 11 rodadas, 66 jogos. |
-| Paulista A2 | 8 clubes em ida e volta, 14 rodadas, 56 jogos. |
-| Acesso e descenso | Na Liga observadora, os 122 jogos de 2025 foram disputados. REA 08 (25 pontos) e REA 07 (22) subiram. REA 02 (3) e REA 01 (1) caíram. A composição das divisões em 2026 confirmou exatamente essas quatro mudanças. |
-| Independência do Brasileiro | Em 2026 o REA 07 disputou Paulista A1 e Série B nacional. O REA 08 disputou Paulista A1 e Série C nacional. |
-| Mata-mata na Master Liga | Na revisão 2 houve dois jogos sem participantes além da decisão válida e uma lista provisória de 20 clubes. Na revisão 3, o slot de janeiro tinha zero partidas da final. Em junho havia duas: São Paulo × Palmeiras em 29/03 e Palmeiras × São Paulo em 06/04. |
-| Calendário | O piloto usou seis grades de 2025 a 2030. Amistosos, eliminatórias, Copa América, Copa do Mundo e Libertadores entram na análise pelas datas disponíveis no FL. A Sul-Americana ativa ficou fora da amostra. |
+As receitas desta branch declaram `"revision": 7`. Uma receita antiga, sem essa chave, reproduz o formato de duas etapas da revisão 5. A atualização requer um mundo gerado em uma pasta nova e uma Liga Observadora nova. Para repetir uma instalação anterior, preserve a receita, o commit, os módulos ativos e os saves daquela versão.
 
-**Pendências observadas.** No modo Liga, a telemetria confirmou duas semifinais e dois jogos da decisão em 2025 e 2026. Em julho as referências saíram da agenda ou foram reutilizadas pelo motor; os slots de dezembro já não exibiam esses jogos. Na ML os slots terminam em 13/06/2025, antes da virada. Nos registros estaduais da Liga de 31/12/2026, 30 partidas da A1 estão datadas de 2026 e 36 de 2027, e na A2 a divisão é 32 e 24. A segunda troca de temporada continua aberta. Na Copa do Brasil do piloto a decisão foi disputada duas vezes no mesmo sábado em 2025 e 2026 (94 partidas, contra 93 previstas). O gerador cuida das competições estaduais; a coordenação das datas nacionais e continentais continua a cargo do mundo-base.
+No FL26 v1 o mata-mata doméstico de quatro clubes usa **rodada 46** para os dois jogos de abertura e **53** para a decisão. Usar 52 nas semifinais deixou quatro partidas sem data no slot da R6. A R7 classifica os quatro primeiros da A1, cruza 1º × 4º e 2º × 3º, e gera uma única árvore. O regulamento da chave contém a semifinal simples e as duas pernas da decisão. A propriedade `cal=1` conserva a chave até dezembro, e `startyear=1` registra as duas divisões em janeiro.
+
+| Piloto no modo Liga | Semifinais | Ida | Volta | Campeão |
+|---|---|---|---|---|
+| 2025 | 22/03, São Paulo 3–0 Corinthians e Palmeiras 4–3 Bragantino | São Paulo 1–4 Palmeiras | Palmeiras 3–0 São Paulo | Palmeiras, 7–1 |
+| 2026 | 21/03, Palmeiras 1–0 Corinthians e Santos 4–0 Bragantino | Palmeiras 1–1 Santos | Santos 0–1 Palmeiras | Palmeiras, 2–1 |
+
+O log e os slots 8 e 9 mostraram quatro partidas disputadas em três datas por edição. No calendário, a A1 teve 66 partidas e a A2 teve 56 em cada temporada. A validação visual pertence ao piloto paulista instalado. O porte sobre a fonte desta branch foi compilado com um estado e dois estados e precisa de teste no jogo de destino. A coordenação das datas de Copa do Brasil, Brasileiro e torneios continentais depende do mundo-base. [Evidências do laboratório](https://github.com/will-serrano/rea/blob/docs/pes21-mapa/research/pes21-modstudio/grade-paulista/VALIDACAO_R7_LIGA_2025_2026.md)
 
 ## Gerar um mundo de teste
 
@@ -33,11 +33,11 @@ O processo trabalha numa cópia temporária, relê as três tabelas, verifica qu
 
 1. Na lista `states`, duplique o objeto do Paulista. Escolha `name` para o menu e um `code` exclusivo, como `RJ` ou `MG`. Construa todos os estaduais desejados juntos a partir do mundo anterior aos estaduais. A DLL e o descritor devem representar a mesma lista de estados.
 2. Preencha `a1` e `a2` com 12 e 8 IDs de clubes distintos. Em `national_cids`, indique os CIDs das divisões nacionais do seu patch. O gerador exige que o clube exista em Team.bin e tenha exatamente uma inscrição nessas competições. Um clube pode competir em ambas as pirâmides, mas só em um estadual.
-3. Reserve três `cids`, na ordem A1, A2, mata-mata, e quatro `regulations`, na ordem A1, A2, semifinal, final. Para as ligas, escolha regulamentos com slots livres em `fl26world.DEFAULT_SLOT`. A semifinal usa também os IDs `semi+1024` e `semi+2048`. O mundo e os módulos de capacidades do seu patch precisam suportar os IDs e slots selecionados. A capacidade das tabelas limita o número de estaduais simultâneos.
-4. Em `calendar`, cada ano tem 14 dias em ordem crescente. O ordinal 0 representa 1º de janeiro no ano de 365 dias do motor. A A1 usa as primeiras 11 datas, seguida de semifinal única (1º × 4º, 2º × 3º) e final em ida e volta. A A2 usa as 14 datas. Estados distintos compartilham essas datas. Para uma temporada adicional, acrescente sua grade depois de confrontá-la com o calendário do patch. Fora dos anos informados, o módulo deixa o agendamento de partidas ao ModStudio.
+3. Reserve três `cids`, na ordem A1, A2, mata-mata, e quatro `regulations`, na ordem A1, A2, semifinal, final. Para as ligas, escolha regulamentos com slots livres em `fl26world.DEFAULT_SLOT`. O gerador usa o terceiro ID e suas réplicas como intermediários. Na saída R7 o quarto ID contém todo o mata-mata. O mundo e os módulos de capacidades do seu patch precisam suportar os IDs e slots selecionados. A capacidade das tabelas limita o número de estaduais simultâneos.
+4. Em `calendar`, cada ano tem 14 dias em ordem crescente. O ordinal 0 representa 1º de janeiro no ano de 365 dias do motor. A A1 usa as primeiras 11 datas, seguida de semifinal única (1º × 4º, 2º × 3º) e final em ida e volta. A A2 usa as 14 datas. Estados distintos compartilham essas datas. Para uma temporada adicional, acrescente sua grade depois de confrontá-la com o calendário do patch. Informe anos consecutivos. Após o último ano, a R7 projeta os dias da semana da grade mais recente. Confira os conflitos com o calendário do destino.
 5. Gere o mundo e confira os jogos do clube que disputa mais competições. A ausência de conflito no Paulista de uma carreira não comprova a grade de outro estado com outros participantes na Libertadores ou na Sul-Americana.
 
-O gerador usa Brasil (região 16, país 146, confederação 4), preserva os cabeçalhos existentes e agrupa A1, A2 e mata-mata na categoria da Série A nacional. As duas semifinais e a decisão compartilham o CID do mata-mata. O vínculo na base e no descritor estabelece duas promoções e dois descensos. O módulo aplica a grade ao encontrar o vínculo entre os regulamentos declarados e libera a decisão quando há dois vencedores. [Rotinas estaduais](../tools/native/estadual.inc)
+O gerador usa Brasil (região 16, país 146, confederação 4), preserva os cabeçalhos existentes e agrupa A1, A2 e mata-mata na categoria da Série A nacional. As duas semifinais e a decisão compartilham o CID do mata-mata. O vínculo na base e no descritor estabelece duas promoções e dois descensos. O módulo aplica a grade ao encontrar o vínculo entre os regulamentos declarados e abre a chave após a última rodada da A1. [Rotinas estaduais](../tools/native/estadual_r7.inc)
 
 ## Ativar no ambiente de ensaio e conferir
 
@@ -53,26 +53,14 @@ py -3 tools/audit_estadual.py 'D:\ensaio\fim2025\decoded\data.dat' 'D:\ensaio\fi
 
 O auditor informa IDs promovidos e rebaixados, contagens e pontos por clube e hashes dos dois arquivos. Exige as divisões completas para confirmar a troca, sinaliza empate na linha de corte e reconhece amostras incompletas. Use dois slots da mesma carreira. No piloto, os slots da Liga produziram `confirmed` e os da ML produziram `insufficient_evidence`. [Auditor](../tools/audit_estadual.py)
 
-## Alcance da branch
+## Auditar a temporada
 
-O segundo ensaio acrescentou um estado fictício com os CIDs 135, 136 e 142 e os regulamentos 254, 253, 201 e 202. Ele serve para testar o isolamento entre competições. A escolha dos 20 clubes desse segundo estado foi técnica. O primeiro build produziu 97 competições, 225 regulamentos e 1.347 inscrições; o segundo, 100, 231 e 1.367, respectivamente. Em ambos foram conferidos a ordem dos participantes nas inscrições, os vínculos entre divisões, a categoria Brasil e as exportações da DLL. As tabelas dos clubes, jogadores e vínculos de elenco permaneceram idênticas às da origem. [Receita do ensaio duplo](../examples/estaduais/dois-estados-ensaio.json)
-
-A construção foi exercitada no mundo observador com um estadual e com dois estaduais simultâneos (40 clubes distintos no segundo ensaio). A prova esportiva em jogo vem do Paulista instalado pelo laboratório. Outros estados, a nova compilação contra a base desta branch e uma instalação FL27 requerem validação própria no jogo. Os clubes, saves, executáveis de jogo e DLLs compiladas são insumos ou produtos locais da receita.
-
-## Registro das rodadas na virada
-
-A telemetria do piloto de 2026 mostrou a primeira geração das rodadas em 29/01. O módulo havia recusado as divisões estaduais no construtor brasileiro de 01/01. Seis rodadas de cada divisão apareceram datadas do janeiro seguinte. Em 2025, todas as partidas tinham sido disputadas nas datas corretas.
-
-A receita agora declara `startyear=1` nas duas divisões de cada estado. Quando o FL26 monta sua lista anual com os regulamentos 29 e 163, a biblioteca inclui os estaduais marcados. O ingresso de uma divisão com participantes definidos usa a mesma chamada do construtor brasileiro. Inscrições já ativas com rodadas válidas são preservadas. O gerador compila e distribui também o carregador e a biblioteca de registro. A execução no jogo deve ser conferida a partir de um slot anterior à virada.
-
-Para auditar, recorte no log REA apenas o intervalo de relógio da simulação de uma carreira completa. O script verifica os jogos disputados de cada fase nas datas previstas e conta partidas empurradas para outro ano. [Auditor da grade](../tools/check_estadual_calendar.py)
+Com as triggers do laboratório ativas desde o início da Liga, recorte o intervalo de relógio de uma carreira completa. O auditor exige os jogos das duas divisões, quatro semifinalistas, um vencedor de cada par na decisão, partidas disputadas e inversão dos mandos. Para conferir placares e quem venceu os confrontos, compare a tela e as cópias decodificadas dos saves. [Auditor do calendário](../tools/check_estadual_calendar.py)
 
 ```powershell
-py -3 tools/check_estadual_calendar.py sessao.tsv examples/estaduais/paulista.json SP 2026 2026-11-18T22:40:50 2026-11-18T22:41:49
+py -3 tools/check_estadual_calendar.py sessao.tsv examples/estaduais/paulista.json SP 2026 2026-11-19T10:02:47 2026-11-19T10:07:00
 ```
 
-### Resultado no jogo e conservação da chave
+O ensaio com um estado gerou 97 competições, 222 regulamentos e 1.347 inscrições. Com dois, gerou 100, 225 e 1.367. A segunda chave tem regulamento 202 e usa a classificação da A1 de teste, regulamento 254. Refaça o ensaio em uma pasta nova ao mudar a receita. [Receita de dois estados](../examples/estaduais/dois-estados-ensaio.json)
 
-A Liga observadora com o registro anual disputou, em **2025 e 2026**, os 66 pares distintos da A1 em turno único e os 56 confrontos da A2 em ida e volta. As duas semifinais e os dois jogos da final também foram disputados a cada ano. Nenhuma rodada ficou marcada para janeiro do ano seguinte. Em 2026 a decisão foi Corinthians × São Paulo, em 28/03 e 04/04. A verificação cruzou o marcador de partida disputada, os pares de clubes, as datas e os mandos na sessão 50360.
-
-Na tela **Selecionar competição → Paulista A1 - Fase final**, o painel **Times participantes** ainda estava vazio em dezembro de 2026. Na revisão anterior o regulamento da final usava o encerramento padrão em julho. O descritor da chave agora inclui `cal=1`: a biblioteca conserva a copa no encerramento de julho e inclui final, semifinal e réplicas no encerramento do ano brasileiro. A grade e os classificados continuam definidos pela receita estadual. A aceitação visual exige abrir essa tela depois de julho em uma temporada simulada com o novo descritor. Um save gravado depois da limpeza antiga já perdeu esses registros.
+As skills [construir estadual](../.agents/skills/fl26-construir-estadual/SKILL.md) e [validar estadual](../.agents/skills/fl26-validar-estadual/SKILL.md) acompanham esta branch. O laboratório mantém também o [procedimento do mundo observador](https://github.com/will-serrano/rea/blob/docs/pes21-mapa/.agents/skills/fl26-mundo-observador/SKILL.md).
