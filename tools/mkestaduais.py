@@ -68,7 +68,7 @@ def add_state(world, state, days):
         struct.pack_into("<I",regs,pos+16,(rule&~(7<<12)) | (legs<<12))
         p=len(comp)-m.COMP+m.FLAG_OFF
         comp[p]=(comp[p]&~7)|4
-        lines.append(f"league {rid} cid={cid} region=16 country=146 conf=4 slot={fl26world.DEFAULT_SLOT[rid]} tier={tier} {exchange} clubs={len(field)} legs={legs} kickoff={99 if tier==1 else 76} name={label}")
+        lines.append(f"league {rid} cid={cid} region=16 country=146 conf=4 slot={fl26world.DEFAULT_SLOT[rid]} tier={tier} startyear=1 {exchange} clubs={len(field)} legs={legs} kickoff={99 if tier==1 else 76} name={label}")
     m.write_tables(world,comp,regs,entries)
     semi_label=f"{name} A1 - Semifinais"
     if len(semi_label.encode("utf8"))>24:
@@ -171,6 +171,11 @@ def build(base, out, recipe, zig):
         run("mkregnames.py","--root",world,"--out",mods/"fl26regnames.lua")
         run("buildcheck.py",world/DB,"--base",base/DB)
         module(states,calendar,zig,work,mods)
+        join_dll=work/"fl26join.dll"
+        subprocess.run([str(zig),"cc","-shared","-target","x86_64-windows-gnu","-O2","-s",
+                        str(TOOLS/"native/fl26join.c"),"-o",str(join_dll),"-lkernel32"],check=True)
+        shutil.copy2(join_dll,mods/join_dll.name)
+        shutil.copy2(TOOLS.parent/"sider/fl26joindll.lua",mods/"fl26joindll.lua")
         shutil.copy2(desc,mods/desc.name)
         world.rename(out)
 

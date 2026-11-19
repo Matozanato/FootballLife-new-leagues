@@ -446,6 +446,31 @@ void reg_pre(uint64_t compid, uint64_t ret, uint64_t ret2)
  * (55/97/127/164/165), but an added cup cannot appear in that compiled table.
  * The loader gives such cups to us separately from g_ids; on the calendar-year
  * builder only, append them to a private copy of the include vector. */
+
+static int g_build_brazil;
+static unsigned char g_state_league[256];
+
+/* Supplied by the active world's league descriptors before a career opens. */
+__declspec(dllexport) int fl26_join_estaduais(const uint16_t* ids, int n)
+{
+  if (n<0 || n>256 || (n && !ids)) return -1;
+  for (int i=0;i<n;++i) if (ids[i]>=256 || !ours(ids[i])) return -1;
+  memset(g_state_league,0,sizeof g_state_league);
+  for (int i=0;i<n;++i) g_state_league[ids[i]]=1;
+  return n;
+}
+
+static int state_builder(const uint16_t* list,int n)
+{
+  int serie_a=0,serie_b=0;
+  for (int i=0;i<n;++i) {
+    if (list[i]==2) return 0; /* July */
+    if (list[i]==29) serie_a=1;
+    if (list[i]==163) serie_b=1;
+  }
+  return serie_a && serie_b;
+}
+
 vec16_t* bld_pre(uint64_t ctx, uint64_t events, vec16_t* inc)
 {
   (void)ctx; (void)events;
@@ -455,6 +480,7 @@ vec16_t* bld_pre(uint64_t ctx, uint64_t events, vec16_t* inc)
 
   /* An August world's builder admits the European leagues, and shipped id 2 (England D1)
      is always among them; a calendar-year world's builder never lists it. */
+  g_build_brazil = state_builder(n ? inc->b : NULL,n);
   g_euro_build = 0;
   int calendar_build = 0;
   for (int j = 0; j < n; j++) {
@@ -491,7 +517,13 @@ vec16_t* bld_pre(uint64_t ctx, uint64_t events, vec16_t* inc)
   }
 
   /* the July build: the moved competitions, with UEFA's code (see MOVED) */
-  uint16_t extra[2 * MAX_IDS + MOVED_N]; int ne = 0, nmoved = 0, njuly = 0;
+  uint16_t extra[3 * MAX_IDS + MOVED_N]; int ne = 0, nmoved = 0, njuly = 0;
+  if (g_build_brazil) {
+    for (int i=0;i<g_nids;++i) {
+      uint16_t id=g_ids[i];
+      if (id<256 && g_state_league[id] && calyr(id)) extra[ne++]=id;
+    }
+  }
   if (calendar_build)
     for (int i = 0; i < g_nbuilder_extra; i++) extra[ne++] = g_builder_extra[i];
   /* the July build: the super cups of our August-May leagues (B234) */
@@ -765,6 +797,26 @@ int door_pre(uint64_t id, uint64_t ret)
   if (!ours(cid) || ret != g_base + BLD_RET_RVA) return 0;
   /* A calendar-year league of ours never enters with the July builder: its rounds start in
    * February, and New Year would close it before the first one. It joins on day 41. */
+  if (cid<256 && g_state_league[cid] && calyr(cid) && g_build_brazil) {
+    unsigned char* rec=(unsigned char*)find_record(cid);
+    if (!rec) return 1;
+    if ((*(const uint32_t*)(rec+0x304) & (1u<<8)) &&
+        (g_door_yes[cid] || live_rounds(cid,rec))) {
+      logf("estadual %u: existing season kept at Brazil builder",cid);
+      return 1;
+    }
+    /* The teardown can leave the season flag clear. Arm a populated league
+       as the existing July builder does, after checking its assigned field. */
+    uint32_t size=*(const uint32_t*)(rec+0x30c) & 0x7f;
+    if (size<2 || size>48) return 1;
+    const uint32_t* clubs=(const uint32_t*)(rec+0x170);
+    for (uint32_t k=0;k<size;++k)
+      if (clubs[k]==0xffffffffu || !(clubs[k]>>14)) return 1;
+    *(uint32_t*)(rec+0x304) |= 1u<<8;
+    count_listed(cid);
+    logf("estadual %u: entering with Brazilian leagues at annual build",cid);
+    return 0;
+  }
   if (calyr(cid)) {
     g_stat[6]++;
     logf("door(%u) refused by us: a January-December league, it joins on day 41", cid);

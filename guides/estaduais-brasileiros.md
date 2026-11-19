@@ -13,7 +13,7 @@ O mesmo clube pode disputar seu estadual e uma das divisões nacionais com o mes
 | Mata-mata na Master Liga | Na revisão 2 houve dois jogos sem participantes além da decisão válida e uma lista provisória de 20 clubes. Na revisão 3, o slot de janeiro tinha zero partidas da final. Em junho havia duas: São Paulo × Palmeiras em 29/03 e Palmeiras × São Paulo em 06/04. |
 | Calendário | O piloto usou seis grades de 2025 a 2030. Amistosos, eliminatórias, Copa América, Copa do Mundo e Libertadores entram na análise pelas datas disponíveis no FL. A Sul-Americana ativa ficou fora da amostra. |
 
-**Pendências observadas.** No modo Liga os dois slots examinados não continham partidas da decisão paulista. Na ML os slots terminam em 13/06/2025, antes da virada. Nos registros estaduais da Liga de 31/12/2026, 30 partidas da A1 estão datadas de 2026 e 36 de 2027, e na A2 a divisão é 32 e 24. A segunda troca de temporada continua aberta. Na Copa do Brasil do piloto a decisão foi disputada duas vezes no mesmo sábado em 2025 e 2026 (94 partidas, contra 93 previstas). O gerador cuida das competições estaduais; a coordenação das datas nacionais e continentais continua a cargo do mundo-base.
+**Pendências observadas.** No modo Liga, a telemetria confirmou duas semifinais e dois jogos da decisão em 2025 e 2026. Em julho as referências saíram da agenda ou foram reutilizadas pelo motor; os slots de dezembro já não exibiam esses jogos. Na ML os slots terminam em 13/06/2025, antes da virada. Nos registros estaduais da Liga de 31/12/2026, 30 partidas da A1 estão datadas de 2026 e 36 de 2027, e na A2 a divisão é 32 e 24. A segunda troca de temporada continua aberta. Na Copa do Brasil do piloto a decisão foi disputada duas vezes no mesmo sábado em 2025 e 2026 (94 partidas, contra 93 previstas). O gerador cuida das competições estaduais; a coordenação das datas nacionais e continentais continua a cargo do mundo-base.
 
 ## Gerar um mundo de teste
 
@@ -41,7 +41,7 @@ O gerador usa Brasil (região 16, país 146, confederação 4), preserva os cabe
 
 ## Ativar no ambiente de ensaio e conferir
 
-Use o Sider de uma instalação de teste compatível com os módulos desta versão do ModStudio. Feche o FL26 e preserve o mundo ativo, `sider.ini`, `modules/fl26world.txt`, `fl26regions.lua`, `fl26regnames.lua` e `fl26swiss.dll`, com SHA-256. Coloque a saída em `SiderAddons/livecpk/<nome da saída>`, selecione esse mundo na entrada `cpk.root` que ativava a base e copie da pasta `modules` da saída esses quatro arquivos para `SiderAddons/modules`. Confira seus hashes nos destinos. O mundo-base já deve ter os carregadores Sider do ModStudio ativos. Para reverter, restaure a entrada e os quatro arquivos do backup.
+Use o Sider de uma instalação de teste compatível com os módulos desta versão do ModStudio. Feche o FL26 e preserve o mundo ativo, `sider.ini`, `modules/fl26world.txt`, `fl26regions.lua`, `fl26regnames.lua`, `fl26swiss.dll`, `fl26joindll.lua` e `fl26join.dll`, com SHA-256. Coloque a saída em `SiderAddons/livecpk/<nome da saída>`, selecione esse mundo na entrada `cpk.root` que ativava a base e copie da pasta `modules` da saída esses seis arquivos para `SiderAddons/modules`. Confira seus hashes nos destinos. O mundo-base já deve ter os carregadores Sider do ModStudio ativos. Para reverter, restaure a entrada e os seis arquivos do backup.
 
 Crie uma carreira nova. Na ML e na Liga, registre a abertura, a decisão estadual, o fim do ano e a próxima temporada em slots separados. O time observador sem partidas próprias agiliza a simulação. Confira a tabela final, os participantes das duas divisões seguintes, as partidas da decisão e o calendário nacional do mesmo clube. Uma convocação ou abertura de transferências no calendário é um evento diferente de uma partida; valide conflitos pelas referências reais de jogo.
 
@@ -58,3 +58,15 @@ O auditor informa IDs promovidos e rebaixados, contagens e pontos por clube e ha
 O segundo ensaio acrescentou um estado fictício com os CIDs 135, 136 e 142 e os regulamentos 254, 253, 201 e 202. Ele serve para testar o isolamento entre competições. A escolha dos 20 clubes desse segundo estado foi técnica. O primeiro build produziu 97 competições, 225 regulamentos e 1.347 inscrições; o segundo, 100, 231 e 1.367, respectivamente. Em ambos foram conferidos a ordem dos participantes nas inscrições, os vínculos entre divisões, a categoria Brasil e as exportações da DLL. As tabelas dos clubes, jogadores e vínculos de elenco permaneceram idênticas às da origem. [Receita do ensaio duplo](../examples/estaduais/dois-estados-ensaio.json)
 
 A construção foi exercitada no mundo observador com um estadual e com dois estaduais simultâneos (40 clubes distintos no segundo ensaio). A prova esportiva em jogo vem do Paulista instalado pelo laboratório. Outros estados, a nova compilação contra a base desta branch e uma instalação FL27 requerem validação própria no jogo. Os clubes, saves, executáveis de jogo e DLLs compiladas são insumos ou produtos locais da receita.
+
+## Registro das rodadas na virada
+
+A telemetria do piloto de 2026 mostrou a primeira geração das rodadas em 29/01. O módulo havia recusado as divisões estaduais no construtor brasileiro de 01/01. Seis rodadas de cada divisão apareceram datadas do janeiro seguinte. Em 2025, todas as partidas tinham sido disputadas nas datas corretas.
+
+A receita agora declara `startyear=1` nas duas divisões de cada estado. Quando o FL26 monta sua lista anual com os regulamentos 29 e 163, a biblioteca inclui os estaduais marcados. O ingresso de uma divisão com participantes definidos usa a mesma chamada do construtor brasileiro. Inscrições já ativas com rodadas válidas são preservadas. O gerador compila e distribui também o carregador e a biblioteca de registro. A execução no jogo deve ser conferida a partir de um slot anterior à virada.
+
+Para auditar, recorte no log REA apenas o intervalo de relógio da simulação de uma carreira completa. O script verifica os jogos disputados de cada fase nas datas previstas e conta partidas empurradas para outro ano. [Auditor da grade](../tools/check_estadual_calendar.py)
+
+```powershell
+py -3 tools/check_estadual_calendar.py sessao.tsv examples/estaduais/paulista.json SP 2026 2026-11-18T22:40:50 2026-11-18T22:41:49
+```

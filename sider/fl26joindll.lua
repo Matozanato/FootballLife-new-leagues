@@ -354,6 +354,24 @@ function m.init(ctx)
   if status == 0 then
     log(string.format("fl26joindll: installed -- %d added leagues will be registered on the first registration day of the season; the DLL's own log is %s (F10 = counters)", #IDS, logpath))
 
+    local estaduais = {}
+    for _, L in ipairs(world or {}) do
+      if L.startyear == 1 and L.region == 16 and L.country == 146
+          and cal_region(L.region) and (L.exhibition or 0) == 0 then
+        estaduais[#estaduais+1] = L.id
+      end
+    end
+    if #estaduais > 0 then
+      local set = ffi.C.GetProcAddress(h, "fl26_join_estaduais")
+      if set == nil then
+        log("fl26joindll: annual state league support missing in fl26join.dll")
+      else
+        local ids = ffi.new("uint16_t[?]", #estaduais)
+        for i, id in ipairs(estaduais) do ids[i-1] = id end
+        local n = tonumber(ffi.cast("fl26_join_builder_extra_t", set)(ids,#estaduais))
+        log(string.format("fl26joindll: %d state leagues configured for Brazil's annual build",n))
+      end
+    end
     if #BUILDER_EXTRA > 0 then
       local pb = ffi.C.GetProcAddress(h, "fl26_join_builder_extra")
       if pb == nil then
