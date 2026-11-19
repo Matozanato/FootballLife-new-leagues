@@ -70,3 +70,9 @@ Para auditar, recorte no log REA apenas o intervalo de relógio da simulação d
 ```powershell
 py -3 tools/check_estadual_calendar.py sessao.tsv examples/estaduais/paulista.json SP 2026 2026-11-18T22:40:50 2026-11-18T22:41:49
 ```
+
+### Resultado no jogo e conservação da chave
+
+A Liga observadora com o registro anual disputou, em **2025 e 2026**, os 66 pares distintos da A1 em turno único e os 56 confrontos da A2 em ida e volta. As duas semifinais e os dois jogos da final também foram disputados a cada ano. Nenhuma rodada ficou marcada para janeiro do ano seguinte. Em 2026 a decisão foi Corinthians × São Paulo, em 28/03 e 04/04. A verificação cruzou o marcador de partida disputada, os pares de clubes, as datas e os mandos na sessão 50360.
+
+Na tela **Selecionar competição → Paulista A1 - Fase final**, o painel **Times participantes** ainda estava vazio em dezembro de 2026. Na revisão anterior o regulamento da final usava o encerramento padrão em julho. O descritor da chave agora inclui `cal=1`: a biblioteca conserva a copa no encerramento de julho e inclui final, semifinal e réplicas no encerramento do ano brasileiro. A grade e os classificados continuam definidos pela receita estadual. A aceitação visual exige abrir essa tela depois de julho em uma temporada simulada com o novo descritor. Um save gravado depois da limpeza antiga já perdeu esses registros.

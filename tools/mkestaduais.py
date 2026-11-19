@@ -91,7 +91,7 @@ def add_state(world, state, days):
     m.write_tables(world,comp,regs,entries)
     lines.extend([f"rcal {top} 0 {days[10]} 0 0 68 0",f"rcal {lower} 0 {days[13]} 0 0 68 0",
                   f"lpre {semi} cup={final} fill={days[10]+1} days={days[11]},{days[11]} entry={top}:1,{top}:4,{top}:2,{top}:3 single=1",
-                  f"ccup {final} ko={final} groups=0 entry={winners} fill={days[11]+1} national=1 days={days[12]},{days[13]} name={name} A1 - Final"])
+                  f"ccup {final} ko={final} groups=0 entry={winners} fill={days[11]+1} national=1 cal=1 days={days[12]},{days[13]} name={name} A1 - Final"])
     with (world/"fl26world.txt").open("a",encoding="utf8") as stream:
         stream.write("\n"+"\n".join(lines)+"\n")
 
