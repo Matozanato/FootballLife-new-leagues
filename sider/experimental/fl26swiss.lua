@@ -165,7 +165,8 @@ local function read_world(ctx)
               + (lrest:match("%sfeed=8") and 2 or 0)
               + (lrest:match("%spoko=1") and 4 or 0)
       L.single = lrest:match("%ssingle=1") ~= nil
-      if (L[2] > 0 or L.flags > 0) and #L[4] == 2 and #L[5] >= 2 then
+      L.reseed = lrest:match("%sreseed=1") ~= nil   -- lab: the best seed meets the lower-placed winner
+      if (L[2] > 0 or L.flags > 0 or lrest:match("%sstc=1")) and #L[4] == 2 and #L[5] >= 2 then   -- stc=1: lab staged cup
         lpres[#lpres + 1] = L
       end
     end
@@ -260,6 +261,118 @@ local function read_world(ctx)
   end
   f:close()
   return leagues, splits, uefa, ccups, dlike, qrounds, lpres
+end
+
+-- lab (17/11/2026): `lpname <reg> <name>` (fl26_swiss_lphase_name)
+local function world_lpname(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local out = {}
+  for line in f:lines() do
+    local r, nm = line:match("^%s*lpname%s+(%d+)%s+(.-)%s*$")
+    if r and nm ~= "" then out[#out + 1] = { tonumber(r), nm } end
+  end
+  f:close()
+  return #out > 0 and out or nil
+end
+
+-- lab (18/11/2026): `xline <export> <numbers>` -> the DLL's export int f(const uint32_t*, int)
+local function world_xline(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  if not f then return {} end
+  local out = {}
+  for line in f:lines() do
+    local name, rest = line:match("^%s*xline%s+([%w_]+)%s*(.*)$")
+    if name then
+      local v = {}
+      for x in rest:gmatch("%d+") do v[#v + 1] = tonumber(x) end
+      out[#out + 1] = { name, v }
+    end
+  end
+  f:close()
+  return out
+end
+
+-- lab (17/11/2026): `lphase <host reg> <phase reg> <text>` (fl26_swiss_lphase): text 2 a knockout item, 3 a group
+-- (pages of the league's table, L1/R1), 4 a set of leagues behind one item (named by `lpname <0x8000 + host>`)
+local function world_lphase(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local out = {}
+  for line in f:lines() do
+    local h, r, t = line:match("^%s*lphase%s+(%d+)%s+(%d+)%s+(%d+)")
+    if h then out[#out + 1] = tonumber(h); out[#out + 1] = tonumber(r); out[#out + 1] = tonumber(t) end
+  end
+  f:close()
+  return #out > 0 and out or nil
+end
+
+-- lab (12/11/2026): `kcup reg=<R> top=<reg> low=<reg>,... size=<n> sf2=<day> fill=<f0..f7> days=<d0..d7>`
+-- (fl26_swiss_kcup): reg, top, size, sf2, number of lows, lows, eight fill days, eight days
+local function world_kcup(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  if not f then return nil end
+  local out
+  for line in f:lines() do
+    local rest = line:match("^%s*kcup%s+(.*)$")
+    if rest then
+      local function nums(key)
+        local t = {}
+        for x in ((" " .. rest):match("%s" .. key .. "=([%d,]+)") or ""):gmatch("%d+") do t[#t + 1] = tonumber(x) end
+        return t
+      end
+      local low, fill, days = nums("low"), nums("fill"), nums("days")
+      if #fill == 8 and #days == 8 then
+        out = { nums("reg")[1] or 0, nums("top")[1] or 0, nums("size")[1] or 32, nums("sf2")[1] or 0, #low }
+        for _, x in ipairs(low) do out[#out + 1] = x end
+        for _, x in ipairs(fill) do out[#out + 1] = x end
+        for _, x in ipairs(days) do out[#out + 1] = x end
+      end
+    end
+  end
+  f:close()
+  return out
+end
+
+-- lab (12/11/2026): the staged league cup -- `stcup top=<reg> low=<reg>,... pre=<reg> r1=<n>,<s> r2=<n>,<s>
+-- ko=<reg> size=<n> [r3= r4= qf= sf= f=]` and `stcarea <team>:<1|2>,...` (fl26_swiss_stcup, fl26_swiss_stcup_area)
+local function world_stcup(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  local cup, area = nil, {}
+  if not f then return cup, area end
+  for line in f:lines() do
+    local rest = line:match("^%s*stcup%s+(.*)$")
+    if rest then
+      local function nums(key)
+        local t = {}
+        local v = (" " .. rest):match("%s" .. key .. "=([%d,]+)") or ""
+        for x in v:gmatch("%d+") do t[#t + 1] = tonumber(x) end
+        return t
+      end
+      local low = nums("low")
+      local v = { nums("top")[1] or 0, #low }
+      for _, x in ipairs(low) do v[#v + 1] = x end
+      local r1, r2 = nums("r1"), nums("r2")
+      for _, x in ipairs({ nums("pre")[1] or 0, r1[1] or 0, r1[2] or 0, r2[1] or 0, r2[2] or 0,
+                           nums("ko")[1] or 0, nums("size")[1] or 32 }) do v[#v + 1] = x end
+      if nums("r3")[1] then for _, k in ipairs({ "r3", "r4", "qf", "sf", "f" }) do v[#v + 1] = nums(k)[1] or 0 end end
+      cup = v
+    end
+    local ar = line:match("^%s*stcarea%s+(.*)$")
+    if ar then for t, a in ar:gmatch("(%d+):(%d)") do area[#area + 1] = tonumber(t); area[#area + 1] = tonumber(a) end end
+  end
+  f:close()
+  return cup, area
 end
 
 -- `rcal <reg> <first> <last> <break from> <break to> <days> <also> [eu]` lines of the world file
@@ -547,6 +660,17 @@ function m.init(ctx)
           end
         end
 
+        do   -- reseed=1 pre-rounds (lab, 12/11/2026)
+          local rs = {}
+          for _, L in ipairs(lpres) do if L.reseed then rs[#rs + 1] = L[1] end end
+          local pr = #rs > 0 and ffi.C.GetProcAddress(h, "fl26_swiss_lpre_reseed") or nil
+          if pr ~= nil then
+            local rb = ffi.new("uint16_t[?]", #rs)
+            for i, v in ipairs(rs) do rb[i - 1] = v end
+            log(string.format("fl26swiss: world file -- %d reseeded pre-round(s), %d matched", #rs,
+                              tonumber(ffi.cast("fl26_swiss_access_t", pr)(rb, #rs))))
+          end
+        end
         local single = {}
         for _, L in ipairs(lpres) do
           if L.single then single[#single + 1] = L[1] end
@@ -704,6 +828,85 @@ function m.init(ctx)
       end
       if #ccups == 0 then
         load_lpres()
+      end
+      do   -- lab 18/11/2026: `xline` lines (Brazil's Serie C/D)
+        for _, x in ipairs(world_xline(ctx)) do
+          local fn = ffi.C.GetProcAddress(h, x[1])
+          if fn == nil then log("fl26swiss: xline -- this DLL has no " .. x[1] .. "; the line is not used")
+          else
+            local b = ffi.new("uint32_t[?]", math.max(#x[2], 1))
+            for i, y in ipairs(x[2]) do b[i - 1] = y end
+            local k = tonumber(ffi.cast("int(*)(const uint32_t*, int)", fn)(b, #x[2]))
+            log(string.format("fl26swiss: xline %s (%d values) -> %d", x[1], #x[2], k))
+          end
+        end
+      end
+      do   -- a league's phases as items of its own menu (lab, 17/11/2026: Brazil's Serie C/D)
+        local lp = world_lphase(ctx)
+        if lp then
+          local pl = ffi.C.GetProcAddress(h, "fl26_swiss_lphase")
+          if pl == nil then
+            log("fl26swiss: this fl26swiss.dll has no league phases in the menu (fl26_swiss_lphase); the lphase lines are not used")
+          else
+            local b = ffi.new("uint32_t[?]", #lp)
+            for i, x in ipairs(lp) do b[i - 1] = x end
+            local k = tonumber(ffi.cast("int(*)(const uint32_t*, int)", pl)(b, #lp))
+            log(string.format("fl26swiss: world file -- %d league phase(s) shown in their league's menu", k))
+            local names = world_lpname(ctx)
+            local pn = ffi.C.GetProcAddress(h, "fl26_swiss_lphase_name")
+            if names and pn ~= nil then
+              local fn = ffi.cast("int(*)(uint32_t, const char*)", pn)
+              local c = 0
+              for _, e in ipairs(names) do c = tonumber(fn(e[1], e[2])) end
+              log(string.format("fl26swiss: world file -- %d phase item name(s)", c))
+            elseif names then
+              log("fl26swiss: this fl26swiss.dll has no fl26_swiss_lphase_name; the lpname lines are not used")
+            end
+          end
+        end
+      end
+      do   -- the staged league cup on one regulation (lab, 12/11/2026)
+        local kc = world_kcup(ctx)
+        if kc then
+          local pk = ffi.C.GetProcAddress(h, "fl26_swiss_kcup")
+          if pk == nil then
+            log("fl26swiss: this fl26swiss.dll has no one-regulation league cup (fl26_swiss_kcup); the kcup line is not played")
+          else
+            local b = ffi.new("uint16_t[?]", #kc)
+            for i, x in ipairs(kc) do b[i - 1] = x end
+            local ok = tonumber(ffi.cast("fl26_swiss_access_t", pk)(b, #kc))
+            log(string.format("fl26swiss: world file -- one-regulation league cup %s", ok == 1 and "taken" or "refused"))
+            local _, area = world_stcup(ctx)
+            local pa = ffi.C.GetProcAddress(h, "fl26_swiss_stcup_area")
+            if pa ~= nil and #area > 0 then
+              local ab = ffi.new("uint32_t[?]", #area)
+              for i, x in ipairs(area) do ab[i - 1] = x end
+              log(string.format("fl26swiss: world file -- %d club area(s) for the one-regulation cup",
+                                tonumber(ffi.cast("int(*)(const uint32_t*, int)", pa)(ab, #area))))
+            end
+          end
+        end
+      end
+      do   -- the staged league cup, after the pre-rounds it fills (lab FL27, 12/11/2026)
+        local cup, area = world_stcup(ctx)
+        if cup then
+          local ps = ffi.C.GetProcAddress(h, "fl26_swiss_stcup")
+          if ps == nil then
+            log("fl26swiss: this fl26swiss.dll has no staged league cup (fl26_swiss_stcup); the stcup line is not played")
+          else
+            local b = ffi.new("uint16_t[?]", #cup)
+            for i, x in ipairs(cup) do b[i - 1] = x end
+            local ok = tonumber(ffi.cast("fl26_swiss_access_t", ps)(b, #cup))
+            log(string.format("fl26swiss: world file -- staged league cup %s", ok == 1 and "taken" or "refused"))
+            local pa = ffi.C.GetProcAddress(h, "fl26_swiss_stcup_area")
+            if pa ~= nil and #area > 0 then
+              local ab = ffi.new("uint32_t[?]", #area)
+              for i, x in ipairs(area) do ab[i - 1] = x end
+              local m = tonumber(ffi.cast("int(*)(const uint32_t*, int)", pa)(ab, #area))
+              log(string.format("fl26swiss: world file -- %d club area(s) for the staged cup", m))
+            end
+          end
+        end
       end
       -- each country's confederation: the Club World Cup (with continental cups of ours) and the
       -- board objective of a club of ours outside UEFA (GitHub #43, any world)

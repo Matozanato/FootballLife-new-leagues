@@ -1642,10 +1642,12 @@ static const unsigned char SIG_LBBUILD[14] = {
   0x48, 0x89, 0x4c, 0x24, 0x08, 0x55, 0x56, 0x57, 0x41, 0x54, 0x41, 0x55, 0x41, 0x56 };
 unsigned char* g_tramp_lbbuild = 0;
 typedef uint64_t (*lbbuild_fn)(void*, uint64_t, void*, uint64_t);
+static int cp_of_reg(uint16_t reg);
 uint64_t lbbuild_handler(void* self, uint64_t reg, void* players, uint64_t a4)
 {
   uint64_t r = ((lbbuild_fn)(uintptr_t)g_tramp_lbbuild)(self, reg, players, a4);
   int d = today();
+
   for (int i = 0; i < 3; i++) {
     const cup_t* c = &CUPS[i];
     if (!cup_on(i)) continue;
@@ -1847,7 +1849,8 @@ static final_t* final_new(uint16_t reg)
 static const char* COMP_NAME[3] = { "Champions League", "Europa League", "Conference League" };
 
 typedef struct { uint16_t reg; int day; uint32_t club; } cupwin_t;
-static cupwin_t g_cupwin[32]; static int g_ncupwin = 0;
+#define CUPWIN_MAX 32
+static cupwin_t g_cupwin[CUPWIN_MAX]; static int g_ncupwin = 0;
 /* Synthetic retained-result key: no real regulation uses this value. */
 #define CUPWIN_LIB_RUNNER 0xfffeu
 
@@ -1939,7 +1942,7 @@ static void access_capture(void)
     if (!(lw && ad >= lw->day && ad - lw->day < 60)) {
       uint32_t lc = winner_now(libko);
       if (lc) {
-        if (!lw && g_ncupwin < 32) { lw = &g_cupwin[g_ncupwin++]; lw->reg = libko; }
+        if (!lw && g_ncupwin < CUPWIN_MAX) { lw = &g_cupwin[g_ncupwin++]; lw->reg = libko; }
         if (lw) {
           lw->day = ad; lw->club = lc;
           logf("fl26swiss: access -- Libertadores holder reg %u won by %08x retained at New Year (day %d)",
@@ -1955,7 +1958,7 @@ static void access_capture(void)
     if (!(rw && ad >= rw->day && ad - rw->day < 60)) {
       uint32_t rc = knockout_runner_now(libko);
       if (rc) {
-        if (!rw && g_ncupwin < 32) {
+        if (!rw && g_ncupwin < CUPWIN_MAX) {
           rw = &g_cupwin[g_ncupwin++];
           rw->reg = CUPWIN_LIB_RUNNER;
         }
@@ -1993,7 +1996,7 @@ static void access_capture(void)
       if (w && ad >= w->day && ad - w->day < 60) continue;
       uint32_t c = winner_now(reg);
       if (!c) continue;
-      if (!w) { if (g_ncupwin >= 32) continue; w = &g_cupwin[g_ncupwin++]; w->reg = reg; }
+      if (!w) { if (g_ncupwin >= CUPWIN_MAX) continue; w = &g_cupwin[g_ncupwin++]; w->reg = reg; }
       w->day = ad; w->club = c;
       logf("fl26swiss: access -- cup reg %u won by %08x (day %d)", (unsigned)reg, c, d);
       continue;
@@ -2006,14 +2009,18 @@ static void access_capture(void)
   if (running) logf("fl26swiss: access -- %d league(s) mid-season: their New Year table stands (day %d)", running, d);
 }
 /* a cup's winner retained at a teardown, else asked of the game now */
+static uint16_t g_kcup_reg = 0;     /* the kcup's regulation (set with its world line, below) */
 static uint32_t cup_winner_within(uint16_t reg, int maxage)
 {
+  if (g_kcup_reg && reg == g_kcup_reg && maxage < 330) maxage = 330;   /* the final is in March, the access in July */
   cupwin_t* w = cupwin_of(reg);
   int d = abs_day();
   if (w && d >= w->day && d - w->day < maxage) return w->club;
   return ccup_ko_winner(reg);
 }
 static uint32_t cup_winner(uint16_t reg) { return cup_winner_within(reg, 120); }
+/* lab (12/11/2026): fl26chain.dll asks for a promotion play-off's winner at the season end */
+__declspec(dllexport) uint32_t fl26_swiss_cup_winner(uint16_t reg) { return cup_winner_within(reg, 200); }
 /* Calendar-year CONMEBOL cups can ask in February for the winners retained at the previous
    New-Year teardown. Prefer a live winner (a current-year tie), otherwise accept the retained
    winner for up to 330 days. This is the Recopa path. */
@@ -4453,12 +4460,16 @@ __declspec(dllexport) int fl26_swiss_ccup_first(const uint16_t* v, int n)
  * have moved between the two fill days. */
 #define MAX_LPRE 16
 #define LPRE_TIES 8                       /* normal two-leg play-off replicas */
-#define LPRE_MAX 16                       /* modern Sudamericana first-stage ties */
+#define LPRE_MAX 19                       /* modern Sudamericana first-stage ties; 19 since the staged
+                                             league cup (a competition holds 20 tables: master + 19) */
 typedef struct { uint16_t reg, ko, fill, ties; uint16_t days[2]; uint16_t ereg[2 * LPRE_MAX];
                  uint8_t erank[2 * LPRE_MAX]; uint16_t ealt[2 * LPRE_MAX]; uint8_t efrom[2 * LPRE_MAX];
                  int filled_year; uint32_t club[2 * LPRE_MAX]; unsigned nclub;
                  uint8_t single, alias, feed8, poko; int ko_year;
-                 uint32_t gwin[8]; int gwin_year; } lpre_t;
+                 uint32_t gwin[8]; int gwin_year;
+                 uint8_t managed;   /* filled by the staged league cup (stcup), not by lpre_fill */
+                 uint8_t reseed;    /* reseed=1: the best seed meets the worse-placed of the earlier round's winners */
+                 uint16_t rows; } lpre_t;   /* tie rows the world built (the world line's ties) */
 static lpre_t g_lpre[MAX_LPRE]; static int g_nlpre = 0;
 
 static int modern_conmebol(void)
@@ -4472,7 +4483,11 @@ static int season_ord(int d);
 static uint16_t lpre_tie(const lpre_t* l, int k) { return (uint16_t)(l->reg + 1024 * (k + 1)); }
 /* Normal legacy pre-rounds expose eight replicas. Libertadores aliases and the
    Sudamericana one-match first stage expose exactly the rows generated for them. */
-static int lpre_rows(const lpre_t* l) { return (l->alias || l->single || l->poko || l->ties > LPRE_TIES) ? l->ties : LPRE_TIES; }
+static int lpre_rows(const lpre_t* l)
+{
+  if (l->managed) return l->rows;     /* stcup: every row the world built; l->ties of them in play */
+  return (l->alias || l->single || l->poko || l->ties > LPRE_TIES) ? l->ties : LPRE_TIES;
+}
 /* which pre-round a regulation belongs to (0-based; *tie -1 for the master), -1 none */
 static int lpre_of(uint16_t id, int* tie)
 {
@@ -4525,7 +4540,7 @@ __declspec(dllexport) int fl26_swiss_lpre(const uint16_t* v, int n)
     lpre_t* l = &g_lpre[g_nlpre++];
     memset(l, 0, sizeof *l);
     l->reg = reg; l->ko = ko; l->fill = fill; l->days[0] = d1; l->days[1] = d2;
-    l->ties = (uint16_t)(ne / 2); l->filled_year = -1; l->ko_year = -1; l->gwin_year = -1;
+    l->ties = (uint16_t)(ne / 2); l->rows = l->ties; l->filled_year = -1; l->ko_year = -1; l->gwin_year = -1;
     for (unsigned j = 0; j < ne; j++) { l->ereg[j] = e[2 * j]; l->erank[j] = (uint8_t)e[2 * j + 1]; }
     int fed = 0;
     for (unsigned j = 0; k >= 0 && j < g_ccup[k].n; j++) {
@@ -5335,11 +5350,85 @@ static void poko_keep_winners(lpre_t* l)
 
 /* on the days from its fill day to the eve of its first leg, once a season: the clubs, the ties,
    the master started and registered -- q_fill's steps */
+/* reseed=1 pre-rounds (lab, 12/11/2026: the National League play-off semi-finals): its ties are
+   (seed, an earlier round's winner); the best seed -- the lowest position asked for -- gets the winner
+   placed lower in the seeds' league */
+__declspec(dllexport) int fl26_swiss_lpre_reseed(const uint16_t* v, int n)
+{
+  int got = 0;
+  for (int i = 0; v && i < n; i++)
+    for (int j = 0; j < g_nlpre; j++)
+      if (g_lpre[j].reg == v[i]) { g_lpre[j].reseed = 1; got++; }
+  return got;
+}
+static void lpre_reseed(lpre_t* l, unsigned n)
+{
+  if (n != 2u * l->ties || l->ties != 2) return;
+  int seed[2] = { -1, -1 }, win[2] = { -1, -1 };          /* entry index of each tie's seed and winner */
+  for (int k = 0; k < 2; k++)
+    for (int j = 2 * k; j < 2 * k + 2; j++) { if (l->erank[j]) seed[k] = j; else win[k] = j; }
+  if (seed[0] < 0 || seed[1] < 0 || win[0] < 0 || win[1] < 0) return;
+  uint16_t lg = l->ereg[seed[0]];
+  int pos[2] = { 99, 99 };
+  for (int w = 0; w < 2; w++)
+    for (int rank = 1; rank <= FINAL_MAX; rank++) {
+      const char* how = "";
+      uint32_t c = cwc_club(lg, rank, &how);
+      if (!c) break;
+      if (same_club(c, l->club[win[w]])) { pos[w] = rank; break; }
+    }
+  int best = l->erank[seed[0]] <= l->erank[seed[1]] ? 0 : 1;        /* the tie of the better seed */
+  int lower = pos[0] >= pos[1] ? 0 : 1;                               /* the winner placed lower */
+  if (best != lower) {
+    uint32_t t = l->club[win[0]]; l->club[win[0]] = l->club[win[1]]; l->club[win[1]] = t;
+  }
+  logf("fl26swiss: pre-round %u reseeded: %08x (place %u) v %08x, %08x (place %u) v %08x", (unsigned)l->reg,
+       l->club[seed[0]], (unsigned)l->erank[seed[0]], l->club[win[0]], l->club[seed[1]], (unsigned)l->erank[seed[1]],
+       l->club[win[1]]);
+}
+/* the clubs in l->club[0..n) go into the pre-round: its master and ties set, the master started and
+   registered (lpre_fill and the staged league cup, stcup) */
+static void lpre_commit(lpre_t* l, unsigned n, int d)
+{
+  for (int k = 0; k < lpre_rows(l); k++)
+    ((freetab_fn)(uintptr_t)(g_base + FREETAB_RVA))(0, lpre_tie(l, k));
+  canon_list(l->club, n, "pre-round reg", l->reg);   /* B312 */
+  u32vec va = { l->club, l->club + n, l->club + n };
+  ((setclr_fn)(uintptr_t)g_tramp_setcl)(l->reg, &va, 1);
+  for (int k = 0; k < l->ties; k++) {
+    u32vec v = { l->club + 2 * k, l->club + 2 * k + 2, l->club + 2 * k + 2 };
+    ((setclr_fn)(uintptr_t)g_tramp_setcl)(lpre_tie(l, k), &v, 1);
+  }
+  run_flush();
+  l->nclub = n;
+  if (l->poko) poko_keep_winners(l);
+  start_stage(0, l->reg);
+  uint16_t id = l->reg;
+  struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { &id, &id + 1, &id + 1 };
+  ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
+  run_flush();
+  int mm = ccup_matches(l->reg), mt = 0;
+  for (int k = 0; k < l->ties; k++) { int x = ccup_matches(lpre_tie(l, k)); if (x > 0) mt += x; }
+  if (mm <= 0 && mt <= 0) {                         /* the ties are their own rows: register them too */
+    uint16_t ties[LPRE_MAX];
+    for (int k = 0; k < l->ties; k++) ties[k] = lpre_tie(l, k);
+    struct { uint16_t* b; uint16_t* e; uint16_t* c; } tv = { ties, ties + l->ties, ties + l->ties };
+    ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &tv);
+    run_flush();
+    mm = ccup_matches(l->reg); mt = 0;
+    for (int k = 0; k < l->ties; k++) { int x = ccup_matches(lpre_tie(l, k)); if (x > 0) mt += x; }
+  }
+  unsigned char* t0 = get_rec(lpre_tie(l, 0));
+  logf("fl26swiss: pre-round %u -- day %d: %u tie(s) filled (tie 0 holds %u), started and registered; "
+       "%d match record(s) under it, %d under its ties", (unsigned)l->reg, d, (unsigned)l->ties,
+       t0 ? rec_count(t0) : 0, mm, mt);
+}
 static void lpre_fill(int i)
 {
   lpre_t* l = &g_lpre[i];
   int d = today();
   if (d < 1) return;
+  if (l->managed) return;            /* the staged league cup fills it (stcup_tick) */
   if (l->poko) {
     const ccup_t* c = lpre_cup(l);
     pokofin_fn fin = (pokofin_fn)(uintptr_t)(g_base + POKO_PHFIN);
@@ -5425,39 +5514,372 @@ static void lpre_fill(int i)
     logf("fl26swiss:   pre-round %u entry %2u: reg %u position %u -> %08x (%s)", (unsigned)l->reg, n,
          (unsigned)l->ereg[j], (unsigned)l->erank[j], club, how);
   }
-  for (int k = 0; k < lpre_rows(l); k++)
-    ((freetab_fn)(uintptr_t)(g_base + FREETAB_RVA))(0, lpre_tie(l, k));
-  canon_list(l->club, n, "pre-round reg", l->reg);   /* B312 */
-  u32vec va = { l->club, l->club + n, l->club + n };
-  ((setclr_fn)(uintptr_t)g_tramp_setcl)(l->reg, &va, 1);
-  for (int k = 0; k < l->ties; k++) {
-    u32vec v = { l->club + 2 * k, l->club + 2 * k + 2, l->club + 2 * k + 2 };
-    ((setclr_fn)(uintptr_t)g_tramp_setcl)(lpre_tie(l, k), &v, 1);
-  }
-  run_flush();
-  l->nclub = n;
-  if (l->poko) poko_keep_winners(l);
-  start_stage(0, l->reg);
-  uint16_t id = l->reg;
-  struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { &id, &id + 1, &id + 1 };
-  ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
-  run_flush();
-  int mm = ccup_matches(l->reg), mt = 0;
-  for (int k = 0; k < l->ties; k++) { int x = ccup_matches(lpre_tie(l, k)); if (x > 0) mt += x; }
-  if (mm <= 0 && mt <= 0) {                         /* the ties are their own rows: register them too */
-    uint16_t ties[LPRE_MAX];
-    for (int k = 0; k < l->ties; k++) ties[k] = lpre_tie(l, k);
-    struct { uint16_t* b; uint16_t* e; uint16_t* c; } tv = { ties, ties + l->ties, ties + l->ties };
-    ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &tv);
-    run_flush();
-    mm = ccup_matches(l->reg); mt = 0;
-    for (int k = 0; k < l->ties; k++) { int x = ccup_matches(lpre_tie(l, k)); if (x > 0) mt += x; }
-  }
-  unsigned char* t0 = get_rec(lpre_tie(l, 0));
-  logf("fl26swiss: pre-round %u -- day %d: %u tie(s) filled (tie 0 holds %u), started and registered; "
-       "%d match record(s) under it, %d under its ties", (unsigned)l->reg, d, (unsigned)l->ties,
-       t0 ? rec_count(t0) : 0, mm, mt);
+  if (l->reseed) lpre_reseed(l, n);
+  lpre_commit(l, n, d);
 }
+
+/* ---- the staged league cup (Carabao Cup as played from 2026-27) ----
+ *
+ * World file:  stcup top=<reg> low=<reg>,<reg>,... pre=<lpre> r1=<lpre N>,<lpre S> r2=<lpre N>,<lpre S> ko=<ko> size=32
+ *              stcarea <team id>:<1|2>,...      (1 north, 2 south)
+ * The pre-rounds named are one-match lpre lines of this cup (single=1); stcup marks them managed
+ * and fills them itself, round by round:
+ *   E       = the top division's clubs in a European competition this season (the access lists);
+ *   round 3 = the knockout `ko` of `size` clubs: the round-2 winners and the E clubs;
+ *   round 2 = the round-1 winners, the clubs given a bye and the top division's other clubs;
+ *   round 1 = the divisions below (low=), the preliminary round's clubs out and its winners in.
+ * With W1 = 2*size - top - E round-1 winners needed, the clubs below either outnumber 2*W1 (the
+ * last of the bottom division play the preliminary round) or fall short (the first of the second
+ * division skip round 1). Rounds 1 and 2 are drawn north v north and south v south (stcarea); a
+ * club with no area goes to the smaller side, two odd sides give one club away. */
+#define STC_EURO 254
+#define STC_MAXCL 128
+#define STC_AREA_MAX 512
+typedef struct {
+  uint16_t top, low[6], pre, r1[2], r2[2], ko, size; int nlow, on;
+  int year_pre, year_r1, year_r2, year_ko;
+  uint32_t euro[24]; unsigned neuro;
+  uint16_t later[5]; int year_later[5];   /* round 3, round 4, quarter-finals, semi-finals (two legs), final:
+                                              pre-rounds too, in place of the knockout `ko` (0 = ko) */
+  uint32_t champ; int year_champ;
+  int year_euro;                          /* the season the clubs in Europe were counted for: once a season */
+} stcup_t;
+static stcup_t g_stc;
+static uint32_t g_area_team[STC_AREA_MAX]; static uint8_t g_area_val[STC_AREA_MAX]; static unsigned g_narea;
+
+static int stc_lpre(uint16_t reg) { int t; int i = lpre_of(reg, &t); return (i >= 0 && t < 0) ? i : -1; }
+
+__declspec(dllexport) int fl26_swiss_stcup(const uint16_t* v, int n)
+{
+  /* top, nlow, low..., pre, r1n, r1s, r2n, r2s, ko, size */
+  memset(&g_stc, 0, sizeof g_stc);
+  g_stc.year_pre = g_stc.year_r1 = g_stc.year_r2 = g_stc.year_ko = g_stc.year_champ = g_stc.year_euro = -1;
+  for (int i = 0; i < 5; i++) g_stc.year_later[i] = -1;
+  if (!v || n < 9) return 0;
+  int p = 0;
+  g_stc.top = v[p++]; g_stc.nlow = v[p++];
+  if (g_stc.nlow < 1 || g_stc.nlow > 6 || (n != 2 + g_stc.nlow + 7 && n != 2 + g_stc.nlow + 12)) {
+    logf("fl26swiss: stcup -- bad line (%d values)", n); return 0;
+  }
+  for (int i = 0; i < g_stc.nlow; i++) g_stc.low[i] = v[p++];
+  g_stc.pre = v[p++]; g_stc.r1[0] = v[p++]; g_stc.r1[1] = v[p++]; g_stc.r2[0] = v[p++]; g_stc.r2[1] = v[p++];
+  g_stc.ko = v[p++]; g_stc.size = v[p++];
+  if (n == 2 + g_stc.nlow + 12) for (int i = 0; i < 5; i++) g_stc.later[i] = v[p++];
+  uint16_t m[10] = { g_stc.pre, g_stc.r1[0], g_stc.r1[1], g_stc.r2[0], g_stc.r2[1],
+                     g_stc.later[0], g_stc.later[1], g_stc.later[2], g_stc.later[3], g_stc.later[4] };
+  for (int i = 0; i < 10; i++) {
+    if (i >= 5 && !m[i]) continue;
+    int li = stc_lpre(m[i]);
+    if (li < 0 || (!g_lpre[li].single && i != 8)) {
+      logf("fl26swiss: stcup -- pre-round %u is not a one-match lpre of the world; cup off", (unsigned)m[i]);
+      return 0;
+    }
+    g_lpre[li].managed = 1;
+  }
+  g_stc.on = 1;
+  logf("fl26swiss: stcup -- staged league cup: top %u, %d division(s) below, preliminary %u, round 1 %u/%u, "
+       "round 2 %u/%u, knockout %u of %u", (unsigned)g_stc.top, g_stc.nlow, (unsigned)g_stc.pre,
+       (unsigned)g_stc.r1[0], (unsigned)g_stc.r1[1], (unsigned)g_stc.r2[0], (unsigned)g_stc.r2[1],
+       (unsigned)g_stc.ko, (unsigned)g_stc.size);
+  return 1;
+}
+__declspec(dllexport) int fl26_swiss_stcup_area(const uint32_t* v, int n)
+{
+  g_narea = 0;
+  for (int i = 0; v && i + 1 < n && g_narea < STC_AREA_MAX; i += 2) {
+    g_area_team[g_narea] = v[i]; g_area_val[g_narea] = (uint8_t)v[i + 1]; g_narea++;
+  }
+  logf("fl26swiss: stcup -- %u club area(s) (north/south)", g_narea);
+  return (int)g_narea;
+}
+static int stc_area(uint32_t c)
+{
+  uint32_t t = c >> 14;
+  for (unsigned i = 0; i < g_narea; i++) if (g_area_team[i] == t) return g_area_val[i];
+  return 0;
+}
+/* the clubs of league reg this season, best placed first (cwc_club: kept/live table, else strength) */
+static unsigned stc_league(uint16_t reg, uint32_t* out, unsigned cap)
+{
+  /* the clubs the league holds NOW (its list), in the order cwc_club gives: for 120 days after a season
+     ends cwc_club reads last season's kept table, which still has the relegated clubs at the top
+     division and the promoted ones below -- 2026-11-12, second edition: two clubs relegated from the
+     Premier League were drawn twice in round 2 (round-1 winners of the Championship and top-division
+     clubs). Clubs of the list the table does not name come after, in list order */
+  uint32_t mem[FINAL_MAX]; unsigned nm = 0;
+  unsigned char* rec = get_rec(reg);
+  if (rec) { uint32_t* rc = rec_clubs(rec); unsigned k = rec_count(rec);
+             for (unsigned i = 0; i < k && nm < FINAL_MAX; i++) if (rc[i] >> 14) mem[nm++] = canon_club(rc[i]); }
+  unsigned n = 0;
+  for (int rank = 1; rank <= FINAL_MAX && n < cap; rank++) {
+    const char* how = "";
+    uint32_t c = cwc_club(reg, rank, &how);
+    if (!c) break;
+    if (!(c >> 14)) continue;
+    c = canon_club(c);
+    if (nm && !has_club(mem, nm, c)) continue;        /* not in the league this season */
+    if (!has_club(out, n, c)) out[n++] = c;
+  }
+  for (unsigned i = 0; i < nm && n < cap; i++) if (!has_club(out, n, mem[i])) out[n++] = mem[i];
+  return n;
+}
+/* c plays a European competition this season (the access lists fl26swiss built for it) */
+static int stc_in_europe(uint32_t c)
+{
+  for (int k = 0; k < 3; k++) if (has_club(g_acc[k], g_nacc[k], c)) return 1;
+  for (int q = 0; q < NQR; q++) if (has_club(g_q[q], g_nq[q], c)) return 1;
+  return 0;
+}
+static void stc_shuffle(uint32_t* a, unsigned n)
+{
+  for (unsigned i = n; i > 1; i--) { unsigned j = q_rand(i); uint32_t t = a[i - 1]; a[i - 1] = a[j]; a[j] = t; }
+}
+/* clubs into a north and a south side, each even and of at most cap ties, each shuffled */
+static void stc_sides(const uint32_t* cl, unsigned n, uint32_t* north, unsigned* nn, uint32_t* south, unsigned* ns,
+                      unsigned capn, unsigned caps)
+{
+  uint32_t loose[STC_MAXCL]; unsigned nl = 0;
+  *nn = *ns = 0;
+  for (unsigned i = 0; i < n; i++) {
+    int a = stc_area(cl[i]);
+    if (a == 1) north[(*nn)++] = cl[i]; else if (a == 2) south[(*ns)++] = cl[i]; else loose[nl++] = cl[i];
+  }
+  for (unsigned i = 0; i < nl; i++) { if (*nn <= *ns) north[(*nn)++] = loose[i]; else south[(*ns)++] = loose[i]; }
+  if (nl) logf("fl26swiss: stcup -- %u club(s) with no area went to the smaller side", nl);
+  stc_shuffle(north, *nn); stc_shuffle(south, *ns);
+  if (*nn % 2) {                                    /* both odd (n is even): the last northern club goes south */
+    south[(*ns)++] = north[--(*nn)];
+    logf("fl26swiss: stcup -- odd sides: %08x plays in the south", south[*ns - 1]);
+  }
+  while (*nn > 2 * capn && *ns + 2 <= 2 * caps) { south[(*ns)++] = north[--(*nn)]; south[(*ns)++] = north[--(*nn)]; }
+  while (*ns > 2 * caps && *nn + 2 <= 2 * capn) { north[(*nn)++] = south[--(*ns)]; north[(*nn)++] = south[--(*ns)]; }
+}
+/* the winners of a filled managed pre-round; 0 when not all of its ties are decided */
+static int stc_winners(int li, uint32_t* out, unsigned* n)
+{
+  if (li < 0) return 0;
+  lpre_t* l = &g_lpre[li];
+  if (lpre_matches(l) <= 0) return 0;
+  int t = 0;                                         /* a loaded save: the ties in play are the filled ones */
+  while (t < l->rows) { unsigned char* r = get_rec(lpre_tie(l, t)); if (!r || rec_count(r) != 2) break; t++; }
+  l->ties = (uint16_t)t;
+  for (int k = 0; k < t; k++) {
+    const char* how = "";
+    uint32_t w = lpre_winner(lpre_tie(l, k), &how);
+    if (!w || strcmp(how, "pre-round winner")) return 0;
+    out[(*n)++] = w;
+  }
+  return 1;
+}
+static unsigned stc_played(int li, uint32_t* out, unsigned n)   /* add every club a filled pre-round holds */
+{
+  if (li < 0) return n;
+  lpre_t* l = &g_lpre[li];
+  if (lpre_matches(l) <= 0) return n;
+  for (int k = 0; k < l->rows; k++) {
+    unsigned char* r = get_rec(lpre_tie(l, k));
+    if (!r || rec_count(r) != 2) break;
+    for (int j = 0; j < 2; j++) { uint32_t c = canon_club(rec_clubs(r)[j]); if (!has_club(out, n, c)) out[n++] = c; }
+  }
+  return n;
+}
+static void stc_commit(uint16_t reg, const uint32_t* cl, unsigned n, const char* what)
+{
+  int li = stc_lpre(reg);
+  if (li < 0 || !n) return;
+  lpre_t* l = &g_lpre[li];
+  if (n > 2u * l->rows) { logf("fl26swiss: stcup -- %s: %u clubs for %u rows; not filled", what, n, (unsigned)l->rows); return; }
+  if (!lpre_world(l)) { logf("fl26swiss: stcup -- %s: rows of %u missing; not filled", what, (unsigned)reg); return; }
+  memcpy(l->club, cl, n * sizeof *cl);
+  l->ties = (uint16_t)(n / 2); l->filled_year = lpre_year();
+  for (unsigned i = 0; i < n; i += 2)
+    logf("fl26swiss:   stcup %s tie %2u: %08x v %08x", what, i / 2 + 1, cl[i], cl[i + 1]);
+  lpre_commit(l, n, today());
+}
+/* the round's window: from the pre-round's fill day to the eve of its match */
+static int stc_window(uint16_t reg)
+{
+  int li = stc_lpre(reg); if (li < 0) return 0;
+  const lpre_t* l = &g_lpre[li];
+  int s = season_ord(today()), f = season_ord(l->fill), last = season_ord(l->days[0]) - 1;
+  return s >= f && s <= last;
+}
+static int stc_filled(uint16_t reg) { int li = stc_lpre(reg); return li >= 0 && lpre_matches(&g_lpre[li]) > 0; }
+
+/* the top division's clubs in Europe this season: in a career's first summer the game's own list (reg 0),
+   else the country's places (nat_places) in each competition, in list order -- never the top-up that
+   fills a league phase past them (a small world tops up from England: 17 clubs on 2026-11-12) */
+static void stc_europe(void)
+{
+  if (g_stc.year_euro == lpre_year() && g_stc.neuro) return;   /* counted at the preliminary round */
+  g_stc.year_euro = lpre_year();
+  uint32_t top[FINAL_MAX]; unsigned nt = stc_league(g_stc.top, top, FINAL_MAX);
+  int first = 0;
+  for (int k = 0; k < 3; k++) for (unsigned i = 0; i < g_nacc[k]; i++)
+    if (!g_how[k][i].reg && has_club(top, nt, g_acc[k][i])) first = 1;
+  g_stc.neuro = 0;
+  for (int k = 0; k < 3; k++) {
+    int room = nat_places(k, g_stc.top), took = 0;
+    for (int part = 0; part < 4; part++) {
+      int qi = part ? k + NQ * (part - 1) : -1;
+      if (qi >= NQR) continue;
+      unsigned n = qi < 0 ? g_nacc[k] : g_nq[qi];
+      for (unsigned i = 0; i < n && g_stc.neuro < 24; i++) {
+        uint32_t c = qi < 0 ? g_acc[k][i] : g_q[qi][i];
+        const how_t* h = qi < 0 ? &g_how[k][i] : &g_qhow[qi][i];
+        if (!has_club(top, nt, c) || has_club(g_stc.euro, g_stc.neuro, c)) continue;
+        int ok = first ? !h->reg : (h->reg && took < room);
+        if (!first && h->reg) took++;
+        logf("fl26swiss:   stcup europe? comp %d %s %u: %08x (reg %u place %u)%s", k, qi < 0 ? "phase" : "round", i,
+             c, (unsigned)h->reg, (unsigned)h->rank, ok ? " -- counted" : "");
+        if (ok) g_stc.euro[g_stc.neuro++] = canon_club(c);
+      }
+    }
+  }
+}
+/* the clubs of the divisions below, best division and place first */
+static unsigned stc_lower(uint32_t* out)
+{
+  unsigned n = 0;
+  for (int i = 0; i < g_stc.nlow; i++) {
+    uint32_t t[FINAL_MAX]; unsigned m = stc_league(g_stc.low[i], t, FINAL_MAX);
+    for (unsigned j = 0; j < m && n < STC_MAXCL; j++) out[n++] = t[j];
+  }
+  return n;
+}
+/* > 0: 2*diff clubs of the bottom play the preliminary round; < 0: -diff clubs of the top skip round 1 */
+static int stc_diff(unsigned nlow, unsigned ntop)
+{
+  int w1 = 2 * (int)g_stc.size - (int)ntop - (int)g_stc.neuro;   /* round-1 winners needed */
+  return (int)nlow - 2 * w1;
+}
+
+static void stcup_tick(void)
+{
+  if (!g_stc.on || today() < 1) return;
+  int year = lpre_year();
+  uint32_t low[STC_MAXCL]; unsigned nlow = 0;
+  uint32_t top[FINAL_MAX]; unsigned ntop = 0;
+
+  /* the preliminary round */
+  if (g_stc.year_pre != year && stc_window(g_stc.pre) && !stc_filled(g_stc.pre)) {
+    g_stc.year_pre = year;
+    if (!g_access_ready) logf("fl26swiss: stcup -- the access lists are not built yet; the clubs in Europe may be short");
+    stc_europe();
+    nlow = stc_lower(low); ntop = stc_league(g_stc.top, top, FINAL_MAX);
+    int diff = stc_diff(nlow, ntop);
+    logf("fl26swiss: stcup -- day %d: %u top-division club(s) in Europe, %u in the divisions below, %u in the top one: "
+         "%s %d", today(), g_stc.neuro, nlow, ntop,
+         diff > 0 ? "preliminary round of" : diff < 0 ? "round-1 byes:" : "no preliminary round,", diff > 0 ? 2 * diff : -diff);
+    for (unsigned i = 0; i < g_stc.neuro; i++) logf("fl26swiss:   stcup in Europe: %08x", g_stc.euro[i]);
+    if (diff > 0 && (unsigned)(2 * diff) <= nlow) {
+      uint32_t pre[STC_MAXCL]; unsigned np = 0;
+      for (int i = 0; i < 2 * diff; i++) pre[np++] = low[nlow - 2 * diff + i];   /* the last of the bottom division */
+      stc_shuffle(pre, np);
+      stc_commit(g_stc.pre, pre, np, "preliminary");
+    }
+  }
+  /* round 1 */
+  if (g_stc.year_r1 != year && stc_window(g_stc.r1[0]) && !stc_filled(g_stc.r1[0]) && !stc_filled(g_stc.r1[1])) {
+    int lp = stc_lpre(g_stc.pre);
+    uint32_t pw[STC_MAXCL]; unsigned npw = 0;
+    int pre_on = stc_filled(g_stc.pre);
+    if (pre_on && !stc_winners(lp, pw, &npw)) return;           /* the preliminary round is not over */
+    g_stc.year_r1 = year;
+    stc_europe();
+    nlow = stc_lower(low); ntop = stc_league(g_stc.top, top, FINAL_MAX);
+    uint32_t prec[STC_MAXCL]; unsigned nprec = pre_on ? stc_played(lp, prec, 0) : 0;
+    int diff = stc_diff(nlow, ntop);
+    unsigned byes = diff < 0 ? (unsigned)-diff : 0;
+    uint32_t r1[STC_MAXCL]; unsigned n1 = 0;
+    for (unsigned i = byes; i < nlow; i++) if (!has_club(prec, nprec, low[i])) r1[n1++] = low[i];
+    for (unsigned i = 0; i < npw; i++) r1[n1++] = pw[i];
+    if (n1 % 2) { logf("fl26swiss: stcup -- round 1 has %u clubs (odd); not filled", n1); return; }
+    int a1 = stc_lpre(g_stc.r1[0]), b1 = stc_lpre(g_stc.r1[1]);
+    uint32_t nn[STC_MAXCL], ss[STC_MAXCL]; unsigned a, b;
+    stc_sides(r1, n1, nn, &a, ss, &b, g_lpre[a1].rows, g_lpre[b1].rows);
+    logf("fl26swiss: stcup -- day %d: round 1, %u clubs (%u bye(s) to round 2, %u from the preliminary round): "
+         "%u north, %u south", today(), n1, byes, npw, a, b);
+    stc_commit(g_stc.r1[0], nn, a, "round 1 north");
+    stc_commit(g_stc.r1[1], ss, b, "round 1 south");
+  }
+  /* round 2 */
+  if (g_stc.year_r2 != year && stc_window(g_stc.r2[0]) && !stc_filled(g_stc.r2[0]) && !stc_filled(g_stc.r2[1])) {
+    uint32_t w[STC_MAXCL]; unsigned nw = 0;
+    int a1 = stc_lpre(g_stc.r1[0]), b1 = stc_lpre(g_stc.r1[1]), lp = stc_lpre(g_stc.pre);
+    if (!stc_winners(a1, w, &nw) || !stc_winners(b1, w, &nw)) return;   /* round 1 is not over */
+    g_stc.year_r2 = year;
+    stc_europe();
+    nlow = stc_lower(low); ntop = stc_league(g_stc.top, top, FINAL_MAX);
+    uint32_t seen[STC_MAXCL]; unsigned ns = 0;
+    ns = stc_played(a1, seen, ns); ns = stc_played(b1, seen, ns); ns = stc_played(lp, seen, ns);
+    uint32_t r2[STC_MAXCL]; unsigned n2 = 0, byes = 0, rest = 0;
+    for (unsigned i = 0; i < nw; i++) r2[n2++] = w[i];
+    for (unsigned i = 0; i < nlow; i++) if (!has_club(seen, ns, low[i])) { r2[n2++] = low[i]; byes++; }
+    for (unsigned i = 0; i < ntop; i++) if (!has_club(g_stc.euro, g_stc.neuro, top[i])) { r2[n2++] = top[i]; rest++; }
+    if (n2 % 2) { logf("fl26swiss: stcup -- round 2 has %u clubs (odd); not filled", n2); return; }
+    int a2 = stc_lpre(g_stc.r2[0]), b2 = stc_lpre(g_stc.r2[1]);
+    uint32_t nn[STC_MAXCL], ss[STC_MAXCL]; unsigned a, b;
+    stc_sides(r2, n2, nn, &a, ss, &b, g_lpre[a2].rows, g_lpre[b2].rows);
+    logf("fl26swiss: stcup -- day %d: round 2, %u clubs (%u round-1 winners, %u byes, %u of the top division): "
+         "%u north, %u south", today(), n2, nw, byes, rest, a, b);
+    stc_commit(g_stc.r2[0], nn, a, "round 2 north");
+    stc_commit(g_stc.r2[1], ss, b, "round 2 south");
+  }
+  /* round 3 to the final as pre-rounds of their own: round 3 the round-2 winners and the clubs in Europe,
+     each later round the winners of the one before, drawn at random; the semi-finals two legs */
+  if (g_stc.later[0]) {
+    static const char* NAME[5] = { "round 3", "round 4", "quarter-finals", "semi-finals", "final" };
+    for (int r = 0; r < 5; r++) {
+      uint16_t reg = g_stc.later[r];
+      if (g_stc.year_later[r] == year || !stc_window(reg) || stc_filled(reg)) continue;
+      uint32_t w[STC_MAXCL]; unsigned nw = 0;
+      if (r == 0) {
+        if (!stc_winners(stc_lpre(g_stc.r2[0]), w, &nw) || !stc_winners(stc_lpre(g_stc.r2[1]), w, &nw)) continue;
+        stc_europe();
+        for (unsigned i = 0; i < g_stc.neuro; i++) if (!has_club(w, nw, g_stc.euro[i])) w[nw++] = g_stc.euro[i];
+      } else if (!stc_winners(stc_lpre(g_stc.later[r - 1]), w, &nw)) continue;
+      g_stc.year_later[r] = year;
+      if (nw % 2) { logf("fl26swiss: stcup -- %s has %u clubs (odd); not filled", NAME[r], nw); continue; }
+      stc_shuffle(w, nw);
+      logf("fl26swiss: stcup -- day %d: %s, %u clubs%s", today(), NAME[r], nw,
+           r == 0 ? " (the round-2 winners and the clubs in Europe)" : "");
+      stc_commit(reg, w, nw, NAME[r]);
+    }
+    if (g_stc.later[4] && g_stc.year_champ != year) {
+      uint32_t w[2]; unsigned nw = 0;
+      if (stc_winners(stc_lpre(g_stc.later[4]), w, &nw) && nw == 1) {
+        g_stc.champ = w[0]; g_stc.year_champ = year;
+        logf("fl26swiss: stcup -- day %d: the cup's winner is %08x", today(), w[0]);
+      }
+    }
+    return;
+  }
+  /* round 3: the knockout's places -- the round-2 winners, then the clubs in Europe */
+  if (stc_filled(g_stc.r2[0])) {
+    int k = -1;
+    for (int j = 0; j < g_nccup; j++) if (g_ccup[j].ko == g_stc.ko) k = j;
+    if (k < 0) return;
+    ccup_t* c = &g_ccup[k];
+    int a2 = stc_lpre(g_stc.r2[0]), b2 = stc_lpre(g_stc.r2[1]);
+    uint32_t w[STC_MAXCL]; unsigned nw = 0;
+    if (!stc_winners(a2, w, &nw) || !stc_winners(b2, w, &nw)) return;
+    if (!g_stc.neuro) stc_europe();
+    unsigned n = 0;
+    for (int s = 0; s < 2; s++) {
+      const lpre_t* l = &g_lpre[s ? b2 : a2];
+      for (int t = 0; t < l->ties && n < CCUP_MAX_ENTRY; t++) { c->ereg[n] = lpre_tie(l, t); c->erank[n] = 0; c->ealt[n] = 0; n++; }
+    }
+    for (unsigned i = 0; i < g_stc.neuro && n < CCUP_MAX_ENTRY; i++) { c->ereg[n] = (uint16_t)i; c->erank[n] = STC_EURO; c->ealt[n] = 0; n++; }
+    if (g_stc.year_ko != year) {
+      g_stc.year_ko = year;
+      logf("fl26swiss: stcup -- knockout %u: %u place(s), %u round-2 winner(s) and %u club(s) in Europe%s",
+           (unsigned)g_stc.ko, n, nw, g_stc.neuro, n == c->n ? "" : " -- NOT the cup's size");
+    }
+  }
+}
+static uint32_t stc_euro_club(uint16_t i) { return i < g_stc.neuro ? g_stc.euro[i] : 0; }
+
 /* Modern Sudamericana post-group play-off -> round of 16. Once all eight
    two-leg ties have winners, combine them with the eight Suda group winners.
    The +4 rotation prevents a Suda runner-up from immediately meeting the winner
@@ -5527,8 +5949,13 @@ static void poko_ko(int i, void* started)
        (unsigned)c->reg, d, buf[0], buf[1], ccup_matches(c->ko));
 }
 
+static void kcup_tick(void);
+static void brasil_tick(void);   /* lab 18/11/2026: Serie C/D (brasil_engine.h) */
 static void lpre_fill_days(void)
 {
+  stcup_tick();
+  kcup_tick();
+  brasil_tick();                                  /* lab 18/11/2026: Serie D knockout, Serie C quadrangulares */
   for (int i = 0; i < g_nlpre; i++) {
     lpre_fill(i);
     lib8_swap(i);
@@ -5941,6 +6368,11 @@ static int ccup_fill_one(int k, void* started)
       }
       continue;
     }
+    if (c->erank[i] == STC_EURO) {                 /* staged league cup: a club in Europe, from round 3 */
+      club = stc_euro_club(c->ereg[i]); how = "staged cup, in Europe";
+      if (club && has_club(g_ccup_field[k], n, club)) club = 0;
+      if (!club) logf("fl26swiss:   cup %u entry: staged cup place %u in Europe has no club", (unsigned)c->reg, (unsigned)c->ereg[i]);
+    } else
     if (c->erank[i] == QUAL_LOSER) {               /* eliminated in Libertadores F3 */
       club = qual_loser(c->ereg[i], g_ccup_field[k], n, &how);
       if (!club)
@@ -6229,7 +6661,7 @@ static void ccup_keep_winners(int cal)
       if (w && ad >= w->day && ad - w->day < 60) continue;
       uint32_t c = ccup_ko_winner(reg);
       if (!c) continue;
-      if (!w) { if (g_ncupwin >= 32) continue; w = &g_cupwin[g_ncupwin++]; w->reg = reg; }
+      if (!w) { if (g_ncupwin >= CUPWIN_MAX) continue; w = &g_cupwin[g_ncupwin++]; w->reg = reg; }
       w->day = ad; w->club = c;
       logf("fl26swiss: cup reg %u won by %08x (day %d), kept for cup %u", (unsigned)reg, c, d, (unsigned)g_ccup[k].ko);
     }
@@ -6242,7 +6674,7 @@ static void ccup_keep_winners(int cal)
       if (!(w && ad >= w->day && ad - w->day < 60)) {
         uint32_t c = ccup_ko_winner(reg);
         if (c) {
-          if (!w && g_ncupwin < 32) { w = &g_cupwin[g_ncupwin++]; w->reg = reg; }
+          if (!w && g_ncupwin < CUPWIN_MAX) { w = &g_cupwin[g_ncupwin++]; w->reg = reg; }
           if (w) {
             w->day = ad; w->club = c;
             logf("fl26swiss: cup %u won by %08x (day %d), retained as continental champion", (unsigned)reg, c, d);
@@ -6963,6 +7395,460 @@ static int ko_winner(const uint32_t* sl, uint32_t* w)
   *w = gh > ga ? h : a;
   return 1;
 }
+
+/* ---- the staged league cup on ONE regulation (kcup, lab 12/11/2026) ----
+ *
+ * World file:  kcup reg=<R> top=<reg> low=<reg>,... size=32 fill=<f0>,...,<f7> days=<d0>,...,<d7> sf2=<day>
+ *              (rounds: 0 preliminary, 1 round 1, 2 round 2, 3 round 3, 4 round 4, 5 quarter-finals,
+ *               6 semi-finals -- two legs, days[6] and sf2 --, 7 final)
+ * The cup is one competition and one regulation R. R is registered in the season with no club (the
+ * native knockout builder 0x1413f49f0 then makes nothing); every match is made here with the builder's
+ * own match maker 0x1413f54b0(ctx, &entries, R, kind, leg, tie): a match record (0x1414bc710), the
+ * round record of (R, kind) (0x141579ee0 / 0x141579db0) and a slot of it, with the tie's two clubs and
+ * its match ids. A round record holds 16 slots (+4, 32 bytes each, count at +0x204), so a round of more
+ * ties takes several kinds of R: KC_KIND below. The engine keeps which kinds are which round; the
+ * winners are read from each slot's matches (ko_winner), and the next round is made the same way. The
+ * clubs, the ties and the match ids live in the game's own round and match records, so a save keeps
+ * them; the engine reads them back from there.
+ * Dates: date_handler gives R one record per kind and leg (borrowed from reg 17's 38-round calendar). */
+#define KC_ROUNDS 8
+#define KC_CHUNKS 4
+static const char* const KC_NAME[KC_ROUNDS] = { "preliminary", "round 1", "round 2", "round 3", "round 4",
+                                                "quarter-finals", "semi-finals", "final" };
+/* the kinds of each round, chunk by chunk: 16 ties a kind */
+static const uint8_t KC_KIND[KC_ROUNDS][KC_CHUNKS] = {
+  { 0x20 }, { 0x21, 0x22, 0x23, 0x24 }, { 0x25, 0x26, 0x27, 0x28 }, { 0x30 }, { 0x31 }, { 0x33 }, { 0x34 }, { 0x35 } };
+#define CREATE_RVA 0x13f54b0
+/* the calendar (cal_dedupe, below): 365 day records of match ids before the unit tail */
+#if TODAY_OFF == 0x19115e4
+#define KC_CAL_STRIDE 0x6c4
+#define KC_CAL_IDCAP  792
+#else
+#define KC_CAL_STRIDE 0x2c4
+#define KC_CAL_IDCAP  280
+#endif
+#define KC_CAL_BASE   (TODAY_OFF - 365 * KC_CAL_STRIDE)
+static int rec_day(unsigned char* blk, uint16_t id);
+#define KC_SCHED_RVA 0x1350290        /* scheduler: (ctx, day of the year, match id) */
+typedef char (*kc_sched_fn)(void* ctx, uint64_t day, uint64_t id);
+typedef char (*kc_create_fn)(void* ctx, void* vec, uint64_t reg, uint64_t kind, uint64_t leg, uint64_t tie);
+typedef struct {
+  uint16_t reg, top, low[6], size; int nlow, on;
+  uint16_t fill[KC_ROUNDS], day[KC_ROUNDS], sf2;
+  int year_made[KC_ROUNDS], year_reg, year_euro, year_champ;
+  uint32_t euro[24]; unsigned neuro; uint32_t champ;
+} kcup_t;
+static kcup_t g_kc;
+
+__declspec(dllexport) int fl26_swiss_kcup(const uint16_t* v, int n)
+{
+  /* reg, top, size, sf2, nlow, low..., fill x8, day x8 */
+  memset(&g_kc, 0, sizeof g_kc);
+  if (!v || n < 5) return 0;
+  int p = 0;
+  g_kc.reg = v[p++]; g_kc.top = v[p++]; g_kc.size = v[p++]; g_kc.sf2 = v[p++]; g_kc.nlow = v[p++];
+  if (g_kc.nlow < 1 || g_kc.nlow > 6 || n != 5 + g_kc.nlow + 2 * KC_ROUNDS) { logf("fl26swiss: kcup -- bad line (%d values)", n); return 0; }
+  for (int i = 0; i < g_kc.nlow; i++) g_kc.low[i] = v[p++];
+  for (int r = 0; r < KC_ROUNDS; r++) g_kc.fill[r] = v[p++];
+  for (int r = 0; r < KC_ROUNDS; r++) g_kc.day[r] = v[p++];
+  for (int r = 0; r < KC_ROUNDS; r++) g_kc.year_made[r] = -1;
+  g_kc.year_reg = g_kc.year_euro = g_kc.year_champ = -1;
+  g_kc.on = 1; g_kcup_reg = g_kc.reg;
+  logf("fl26swiss: kcup -- the staged league cup on one regulation: reg %u, top %u, %d division(s) below, "
+       "first round filled on day %u", (unsigned)g_kc.reg, (unsigned)g_kc.top, g_kc.nlow, (unsigned)g_kc.fill[0]);
+  return 1;
+}
+/* the round record of (R, kind), or 0 */
+static unsigned char* kc_rnd(uint8_t kind) { return ko_round(g_kc.reg, kind); }
+/* the season (August-May: the year it starts) of day d of calendar year y */
+static int kc_season_of(int y, int d) { return d >= 182 ? y : y - 1; }
+/* round record rnd holds this season's ties: its first tie's first match is dated in this season. The game
+   keeps a regulation's round records from one season to the next (it hands back only a native cup's), so a
+   kind of last season's edition still holds its 16 ties in August -- 2026-11-12: round 1 of the second
+   edition was taken for made and never played */
+static int kc_fresh(unsigned char* rnd)
+{
+  if (ko_slots(rnd) < 1) return 0;
+  unsigned char* o_ = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  unsigned char* blk_ = o_ ? *(unsigned char**)(o_ + 0x48) : 0;
+  if (!blk_) return 0;
+  unsigned char* m = ko_match(*(uint16_t*)(ko_slot(rnd, 0) + 2));
+  if (!m || *(uint16_t*)(m + 4) != g_kc.reg) return 0;
+  int my = *(uint16_t*)(m + 8), md = rec_day(blk_, *(uint16_t*)m);
+  int ty = *(uint16_t*)(blk_ + TODAY_OFF + 8), td = today();
+  return md >= 0 && kc_season_of(my, md) == kc_season_of(ty, td);
+}
+static int kc_ties(int r)       /* ties made in round r this season (all its kinds) */
+{
+  int n = 0;
+  for (int c = 0; c < KC_CHUNKS && KC_KIND[r][c]; c++) {
+    unsigned char* rnd = kc_rnd(KC_KIND[r][c]);
+    if (kc_fresh(rnd)) n += ko_slots(rnd);
+  }
+  return n;
+}
+/* a new edition: every kind of R that holds an earlier season's ties is emptied (its count to 0 -- the
+   match maker then gives the round new slots); the matches themselves stay, with their results */
+static void kc_new_edition(void)
+{
+  int emptied = 0;
+  for (int r = 0; r < KC_ROUNDS; r++)
+    for (int c = 0; c < KC_CHUNKS && KC_KIND[r][c]; c++) {
+      unsigned char* rnd = kc_rnd(KC_KIND[r][c]);
+      int k = ko_slots(rnd);
+      if (k < 1 || kc_fresh(rnd)) continue;
+      for (int s2 = 0; s2 < k && s2 < 16; s2++) {
+        uint32_t* sl = ko_slot(rnd, s2);
+        memset(sl, 0xff, 32);
+      }
+      *(uint32_t*)(rnd + 0x204) &= ~0x3ffffffu;
+      emptied++;
+    }
+  if (emptied) logf("fl26swiss: kcup -- a new edition: %d round record(s) of reg %u held last season's ties; emptied",
+                    emptied, (unsigned)g_kc.reg);
+}
+/* the winners of round r (all its kinds), 1 when every tie is decided */
+static int kc_winners(int r, uint32_t* out, unsigned* n)
+{
+  int any = 0;
+  for (int c = 0; c < KC_CHUNKS && KC_KIND[r][c]; c++) {
+    unsigned char* rnd = kc_rnd(KC_KIND[r][c]);
+    int k = ko_slots(rnd);
+    for (int s = 0; s < k; s++) {
+      uint32_t w = 0;
+      if (!ko_winner(ko_slot(rnd, s), &w) || !(w >> 14)) return 0;
+      out[(*n)++] = canon_club(w); any = 1;
+    }
+  }
+  return any;
+}
+static unsigned kc_clubs(int r, uint32_t* out, unsigned n)     /* add the clubs of round r's ties */
+{
+  for (int c = 0; c < KC_CHUNKS && KC_KIND[r][c]; c++) {
+    unsigned char* rnd = kc_rnd(KC_KIND[r][c]);
+    int k = ko_slots(rnd);
+    for (int s = 0; s < k; s++) {
+      uint32_t* sl = ko_slot(rnd, s);
+      for (int j = 0; j < 2; j++) { uint32_t x = canon_club(sl[j]); if ((x >> 14) && !has_club(out, n, x)) out[n++] = x; }
+    }
+  }
+  return n;
+}
+static int kc_window(int r)
+{
+  int s = season_ord(today()), f = season_ord(g_kc.fill[r]), last = season_ord(g_kc.day[r]) - 1;
+  return s >= f && s <= last;
+}
+/* R in this season: registered once (no club: the native builder makes nothing) */
+static void kc_register(void)
+{
+  int year = lpre_year();
+  if (g_kc.year_reg == year) return;
+  g_kc.year_reg = year;
+  if (!get_rec(g_kc.reg)) { logf("fl26swiss: kcup -- reg %u is not in this world", (unsigned)g_kc.reg); return; }
+  if (ccup_matches(g_kc.reg) > 0) {               /* a save loaded: the season's matches are there already */
+    logf("fl26swiss: kcup -- reg %u has %d match record(s) this season; not registered again", (unsigned)g_kc.reg,
+         ccup_matches(g_kc.reg));
+    return;
+  }
+  start_stage(0, g_kc.reg);
+  /* the stage start fills a domestic cup of the region by itself (the FA Cup's way: the top division and
+     the one below, 44 clubs), and register_all would build that bracket: 86 matches of no club of ours.
+     The list goes empty first */
+  unsigned char* rec = get_rec(g_kc.reg);
+  unsigned had = rec ? rec_count(rec) : 0;
+  if (had) {
+    uint32_t none[1] = { 0 };
+    u32vec va = { none, none, none };
+    ((setclr_fn)(uintptr_t)g_tramp_setcl)(g_kc.reg, &va, 1);
+    run_flush();
+  }
+  logf("fl26swiss: kcup -- reg %u: %u club(s) the stage start gave it, %u left", (unsigned)g_kc.reg, had,
+       rec ? rec_count(rec) : 0u);
+  uint16_t id = g_kc.reg;
+  struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { &id, &id + 1, &id + 1 };
+  ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
+  run_flush();
+  logf("fl26swiss: kcup -- reg %u registered for the season (day %d), %d match record(s) under it", (unsigned)g_kc.reg,
+       today(), ccup_matches(g_kc.reg));
+}
+/* the matches of the n/2 ties of cl (home first) under kind, one match each (two legs for the semi-finals) */
+static int kc_make_kind(int r, uint8_t kind, uint32_t* cl, unsigned n)
+{
+  kc_create_fn mk = (kc_create_fn)(uintptr_t)(g_base + CREATE_RVA);
+  struct { uint32_t* b; uint32_t* e; uint32_t* c; } vec = { cl, cl + n, cl + n };
+  int made = 0;
+  for (unsigned t = 0; t < n / 2 && t < 16; t++) {
+    if (r == 6) { made += mk(0, &vec, g_kc.reg, kind, 0, t) != 0; made += mk(0, &vec, g_kc.reg, kind, 1, t) != 0; }
+    else made += mk(0, &vec, g_kc.reg, kind, 2, t) != 0;
+  }
+  unsigned char* rnd = kc_rnd(kind);
+  int k = ko_slots(rnd);
+  /* the maker names the clubs only in a first round (0x2e) or a final: every other round is left "to
+     come" for the winners before it. Ours are known: the slot and its matches get them (as ko_bracket
+     does), the second leg the other way round */
+  for (int s = 0; s < k && 2 * s + 1 < (int)n; s++) {
+    uint32_t* sl = ko_slot(rnd, s);
+    unsigned t = (sl[3] >> 22) & 0x1f;                 /* the slot's tie, as the maker numbered it */
+    if (2 * t + 1 >= n) continue;
+    uint32_t h = cl[2 * t], a = cl[2 * t + 1];
+    uint16_t* ids = (uint16_t*)(sl + 2);
+    sl[0] = h; sl[1] = a;
+    unsigned char* m1 = ko_match(ids[0]);
+    unsigned char* m2 = ids[1] == 0xffff ? 0 : ko_match(ids[1]);
+    if (m1) { *(uint32_t*)(m1 + 0x14) = h; *(uint32_t*)(m1 + 0x18) = a; }
+    if (m2) { *(uint32_t*)(m2 + 0x14) = a; *(uint32_t*)(m2 + 0x18) = h; }
+    /* into the calendar: the game's scheduler 0x141350290(ctx, day, match) lists the match on its day,
+       writes its date (+8) and kick-off and files it in the user's day schedule -- what 0x141350b40 does
+       for every match of a regulation at register_all, from the regulation's date records */
+    static unsigned char kc_ctx[256];
+    if (m1) ((kc_sched_fn)(uintptr_t)(g_base + KC_SCHED_RVA))(kc_ctx, g_kc.day[r], ids[0]);
+    if (m2) ((kc_sched_fn)(uintptr_t)(g_base + KC_SCHED_RVA))(kc_ctx, g_kc.sf2, ids[1]);
+  }
+  for (int s = 0; s < k; s++) {
+    uint32_t* sl = ko_slot(rnd, s);
+    uint16_t* ids = (uint16_t*)(sl + 2);
+    unsigned char* m = ko_match(ids[0]);
+    unsigned char* o_ = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+    unsigned char* blk_ = o_ ? *(unsigned char**)(o_ + 0x48) : 0;
+    int rd = blk_ ? rec_day(blk_, ids[0]) : -1, listed = 0;
+    if (blk_ && rd >= 0 && rd < 365) {
+      uint16_t* dl = (uint16_t*)(blk_ + KC_CAL_BASE + (size_t)rd * KC_CAL_STRIDE);
+      for (int q = 0; q < KC_CAL_IDCAP && dl[q] != 0xffff; q++) if (dl[q] == ids[0]) { listed = 1; break; }
+    }
+    logf("fl26swiss:   kcup %s kind %#x tie %2d: %08x v %08x, match %u/%u (reg %u kind %#x), day %d%s", KC_NAME[r], kind, s,
+         sl[0], sl[1], (unsigned)ids[0], (unsigned)ids[1],
+         m ? (unsigned)*(uint16_t*)(m + 4) : 0u, m ? (unsigned)(*(uint16_t*)(m + 6) & 0xfff) : 0u, rd,
+         listed ? " in its day's list" : " NOT in a day's list");
+  }
+  return made;
+}
+/* round r's ties: a regional round north first, each side in kinds of 16 ties */
+static void kc_new_edition(void);
+static void kc_make(int r, uint32_t* north, unsigned nn, uint32_t* south, unsigned ns)
+{
+  kc_register();
+  kc_new_edition();                  /* last season's ties out of the kinds first (a window missed) */
+  int c = 0, made = 0;
+  uint32_t* side[2] = { north, south }; unsigned len[2] = { nn, ns };
+  for (int s = 0; s < 2; s++)
+    for (unsigned off = 0; off < len[s]; off += 32) {
+      if (c >= KC_CHUNKS || !KC_KIND[r][c]) { logf("fl26swiss: kcup -- %s: more ties than its kinds hold", KC_NAME[r]); break; }
+      unsigned cnt = len[s] - off < 32 ? len[s] - off : 32;
+      made += kc_make_kind(r, KC_KIND[r][c++], side[s] + off, cnt);
+    }
+  g_kc.year_made[r] = lpre_year();
+  /* the regulation's list is the round's clubs (48 at most, the user's club first when it plays): the user's
+     day schedule (0x14158c820) and the club's competitions are read from the lists, and with an empty list
+     the user's match of round 1 was played as a match of two other clubs (2026-11-12, Accrington, day 223) */
+  {
+    unsigned char* o_ = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+    unsigned char* blk_ = o_ ? *(unsigned char**)(o_ + 0x48) : 0;
+    uint32_t user = blk_ ? *(uint32_t*)(blk_ + USER_CLUB_OFF) : 0;
+    static uint32_t lst[48]; unsigned nl_ = 0;
+    uint32_t all[STC_MAXCL]; unsigned na = kc_clubs(r, all, 0);
+    for (unsigned i = 0; i < na; i++) if (same_club(all[i], user)) { lst[nl_++] = all[i]; break; }
+    for (unsigned i = 0; i < na && nl_ < 48; i++) if (!has_club(lst, nl_, all[i])) lst[nl_++] = all[i];
+    u32vec va = { lst, lst + nl_, lst + nl_ };
+    ((setclr_fn)(uintptr_t)g_tramp_setcl)(g_kc.reg, &va, 1);
+    run_flush();
+    unsigned char* rec = get_rec(g_kc.reg);
+    logf("fl26swiss: kcup -- reg %u's list: %u club(s) of the round's %u%s", (unsigned)g_kc.reg, rec ? rec_count(rec) : 0u, na,
+         nl_ && same_club(lst[0], user) ? ", the user's first" : " (the user's club is not in this round)");
+  }
+  logf("fl26swiss: kcup -- day %d: %s made, %u ties, %d match(es), %d kind(s) of reg %u; %d match record(s) under it",
+       today(), KC_NAME[r], (nn + ns) / 2, made, c, (unsigned)g_kc.reg, ccup_matches(g_kc.reg));
+  sched_rebuild("kcup round made");
+}
+
+static void kc_europe(void)
+{
+  if (g_kc.year_euro == lpre_year() && g_kc.neuro) return;
+  g_kc.year_euro = lpre_year();
+  uint16_t keep = g_stc.top; g_stc.top = g_kc.top;      /* stc_europe reads g_stc */
+  int ky = g_stc.year_euro; g_stc.year_euro = -1;
+  stc_europe();
+  memcpy(g_kc.euro, g_stc.euro, sizeof g_kc.euro); g_kc.neuro = g_stc.neuro;
+  g_stc.top = keep; g_stc.year_euro = ky;
+}
+static unsigned kc_lower(uint32_t* out)
+{
+  unsigned n = 0;
+  for (int i = 0; i < g_kc.nlow; i++) {
+    uint32_t t[FINAL_MAX]; unsigned m = stc_league(g_kc.low[i], t, FINAL_MAX);
+    for (unsigned j = 0; j < m && n < STC_MAXCL; j++) out[n++] = t[j];
+  }
+  return n;
+}
+
+static void kcup_tick(void)
+{
+  if (!g_kc.on || today() < 1) return;
+  int year = lpre_year();
+  for (int r = 0; r < KC_ROUNDS; r++) {
+    if (g_kc.year_made[r] == year || !kc_window(r)) continue;
+    if (kc_ties(r) > 0) { g_kc.year_made[r] = year; continue; }      /* made already (a save loaded) */
+    uint32_t low[STC_MAXCL], top[FINAL_MAX], w[STC_MAXCL], cl[STC_MAXCL];
+    unsigned nlow = 0, ntop = 0, nw = 0, n = 0;
+    kc_europe();
+    nlow = kc_lower(low); ntop = stc_league(g_kc.top, top, FINAL_MAX);
+    int w1 = 2 * (int)g_kc.size - (int)ntop - (int)g_kc.neuro, diff = (int)nlow - 2 * w1;
+    if (r == 0) {
+      g_kc.year_made[r] = year;
+      kc_new_edition();
+      logf("fl26swiss: kcup -- day %d: %u top-division club(s) in Europe, %u below: %s %d", today(), g_kc.neuro, nlow,
+           diff > 0 ? "preliminary round of" : diff < 0 ? "round-1 byes:" : "no preliminary round,", diff > 0 ? 2 * diff : -diff);
+      if (diff <= 0) continue;
+      for (int i = 0; i < 2 * diff; i++) cl[n++] = low[nlow - 2 * diff + i];
+      stc_shuffle(cl, n);
+      kc_make(0, cl, n, 0, 0);
+      continue;
+    }
+    if (r == 1) {
+      uint32_t pre[STC_MAXCL]; unsigned np = kc_clubs(0, pre, 0);
+      if (np && !kc_winners(0, w, &nw)) continue;                       /* the preliminary round is not over */
+      unsigned byes = diff < 0 ? (unsigned)-diff : 0;
+      for (unsigned i = byes; i < nlow; i++) if (!has_club(pre, np, low[i])) cl[n++] = low[i];
+      for (unsigned i = 0; i < nw; i++) cl[n++] = w[i];
+    } else if (r == 2) {
+      if (!kc_winners(1, w, &nw)) continue;
+      uint32_t seen[STC_MAXCL]; unsigned ns = kc_clubs(1, seen, 0); ns = kc_clubs(0, seen, ns);
+      if (!g_kc.neuro) {
+        /* the access lists not built yet (a save loaded): W1 = 2*size - top - E gives E from round 1 --
+           its ties plus the clubs below that skipped it -- and the first E of the top division are taken */
+        int byes_ = 0;
+        for (unsigned i = 0; i < nlow; i++) if (!has_club(seen, ns, low[i])) byes_++;
+        int e = 2 * (int)g_kc.size - (int)ntop - (kc_ties(1) + byes_);
+        for (int i = 0; i < e && i < (int)ntop && g_kc.neuro < 24; i++) g_kc.euro[g_kc.neuro++] = top[i];
+        logf("fl26swiss: kcup -- no access list to read: %d club(s) in Europe by round 1's size, the top division's first", e);
+      }
+      for (unsigned i = 0; i < nw; i++) cl[n++] = w[i];
+      for (unsigned i = 0; i < nlow; i++) if (!has_club(seen, ns, low[i])) cl[n++] = low[i];
+      for (unsigned i = 0; i < ntop; i++) if (!has_club(g_kc.euro, g_kc.neuro, top[i])) cl[n++] = top[i];
+    } else {
+      if (!kc_winners(r - 1, w, &nw)) continue;
+      for (unsigned i = 0; i < nw; i++) cl[n++] = w[i];
+      if (r == 3) {
+        /* the clubs in Europe are the top division's clubs that played no earlier round -- read from the
+           rounds themselves, so a save loaded (no access list yet) still gets them */
+        uint32_t seen[STC_MAXCL]; unsigned ns = kc_clubs(2, seen, 0); ns = kc_clubs(1, seen, ns); ns = kc_clubs(0, seen, ns);
+        unsigned add = 0;
+        for (unsigned i = 0; i < ntop; i++)
+          if (!has_club(seen, ns, top[i]) && !has_club(cl, n, top[i])) { cl[n++] = top[i]; add++; }
+        logf("fl26swiss: kcup -- round 3: %u round-2 winner(s) and %u top-division club(s) that played no earlier round (in Europe)", nw, add);
+      }
+    }
+    if (n % 2 || !n) { logf("fl26swiss: kcup -- %s has %u clubs; not made", KC_NAME[r], n); g_kc.year_made[r] = year; continue; }
+    if (r <= 2) {
+      uint32_t nn[STC_MAXCL], ss[STC_MAXCL]; unsigned a, b;
+      stc_sides(cl, n, nn, &a, ss, &b, 32, 32);
+      logf("fl26swiss: kcup -- day %d: %s, %u clubs: %u north, %u south", today(), KC_NAME[r], n, a, b);
+      kc_make(r, nn, a, ss, b);
+    } else {
+      stc_shuffle(cl, n);
+      logf("fl26swiss: kcup -- day %d: %s, %u clubs", today(), KC_NAME[r], n);
+      kc_make(r, cl, n, 0, 0);
+    }
+  }
+  if (g_kc.year_champ != year && kc_ties(7) == 1 && kc_fresh(kc_rnd(KC_KIND[7][0]))) {
+    uint32_t w[2]; unsigned nw = 0;
+    if (kc_winners(7, w, &nw) && nw == 1) {
+      g_kc.champ = w[0]; g_kc.year_champ = year;
+      logf("fl26swiss: kcup -- day %d: the cup's winner is %08x", today(), w[0]);
+      /* 13/11: kept where the access list asks for a cup's winner (uefa <reg> 0 <comp> <alt>: the
+         Conference League place, or its league's next club when the winner is in Europe already) --
+         the game's rights code does not know our cup, and the kept winners go with the save */
+      cupwin_t* cw = cupwin_of(g_kc.reg);
+      if (!cw && g_ncupwin < CUPWIN_MAX) { cw = &g_cupwin[g_ncupwin++]; cw->reg = g_kc.reg; }
+      if (cw) { cw->day = abs_day(); cw->club = w[0]; state_store(); }
+    }
+  }
+}
+/* date_handler: reg R's dates, one record per kind and leg */
+static int kc_dates(uint64_t reg, void* vec, uint64_t* rv)
+{
+  if (!g_kc.on || (uint16_t)reg != g_kc.reg) return 0;
+  *rv = ((date_fn)(uintptr_t)g_tramp_date)((reg & ~(uint64_t)0xffff) | 17, vec);   /* 38 records to write over */
+  vec_t* v = (vec_t*)vec;
+  size_t have = (v->b && v->e >= v->b) ? (size_t)(v->e - v->b) / sizeof(date_t) : 0;
+  date_t* d = (date_t*)v->b;
+  size_t k = 0;
+  for (int r = 0; r < KC_ROUNDS; r++)
+    for (int c = 0; c < KC_CHUNKS && KC_KIND[r][c]; c++) {
+      if (r == 6) {
+        if (k < have) { d[k].day = g_kc.day[r]; d[k].round = KC_KIND[r][c]; d[k].kind = 0; k++; }
+        if (k < have) { d[k].day = g_kc.sf2; d[k].round = KC_KIND[r][c]; d[k].kind = 1; k++; }
+      } else if (k < have) { d[k].day = g_kc.day[r]; d[k].round = KC_KIND[r][c]; d[k].kind = 2; k++; }
+    }
+  v->e = v->b + k * sizeof(date_t);
+  static int said;
+  if (!said++) logf("fl26swiss: kcup -- reg %u dated: %u record(s) (of %u borrowed)", (unsigned)g_kc.reg, (unsigned)k, (unsigned)have);
+  return 1;
+}
+
+/* ---- one regulation run as a knockout by our code: shared helpers (the Serie C/D engines, brasil_engine.h) ----
+ * orc_blk: the career block; orc_cal_year: the calendar year; orc_tie_winner: a tie's winner (one or two legs; level
+ * after both and a shoot-out: the second leg's host); orc_fresh: a round holds this year's ties; orc_register: the
+ * regulation registered with no club (matches are made by us); orc_list: the regulation's club list (the user's
+ * club first, so the career's screens follow it). */
+static unsigned char* orc_blk(void)
+{
+  unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+  return o ? *(unsigned char**)(o + 0x48) : 0;
+}
+static int orc_cal_year(void) { unsigned char* b = orc_blk(); return b ? *(uint16_t*)(b + TODAY_OFF + 8) : -1; }
+/* a tie's winner (one or two legs; level after both and a shoot-out: the second leg's host) */
+static uint32_t orc_tie_winner(const uint32_t* sl)
+{
+  uint32_t w = 0;
+  if (ko_winner(sl, &w) && (w >> 14)) return canon_club(w);
+  const uint16_t* ids = (const uint16_t*)(sl + 2);
+  unsigned char* m1 = ko_match(ids[0]);
+  unsigned char* m2 = ids[1] == 0xffff ? 0 : ko_match(ids[1]);
+  if (!m1 || !(m1[7] & 0x40) || (ids[1] != 0xffff && (!m2 || !(m2[7] & 0x40)))) return 0;
+  return canon_club(m2 ? *(uint32_t*)(m2 + 0x14) : *(uint32_t*)(m1 + 0x14));
+}
+static int orc_fresh(uint16_t reg, unsigned char* rnd, int year)
+{
+  if (ko_slots(rnd) < 1) return 0;
+  unsigned char* m = ko_match(*(uint16_t*)(ko_slot(rnd, 0) + 2));
+  return m && *(uint16_t*)(m + 4) == reg && *(uint16_t*)(m + 8) == year;
+}
+static void orc_register(uint16_t reg, int year, const char* what)
+{
+  if (!get_rec(reg)) { logf("fl26swiss: cup -- %s reg %u is not in this world", what, (unsigned)reg); return; }
+  int before = ccup_matches(reg);
+  start_stage(0, reg);
+  unsigned char* rec = get_rec(reg);
+  unsigned had = rec ? rec_count(rec) : 0;
+  if (had) {
+    uint32_t none[1] = { 0 };
+    u32vec va = { none, none, none };
+    ((setclr_fn)(uintptr_t)g_tramp_setcl)(reg, &va, 1);
+    run_flush();
+  }
+  uint16_t id = reg;
+  struct { uint16_t* b; uint16_t* e; uint16_t* c; } rv = { &id, &id + 1, &id + 1 };
+  ((regall_fn)(uintptr_t)(g_base + REGALL_RVA))(0, &rv);
+  run_flush();
+  int after = ccup_matches(reg);
+  logf("fl26swiss: cup -- %s reg %u registered for %d (day %d): %u club(s) from the stage start, emptied; match records %d -> %d%s",
+       what, (unsigned)reg, year, today(), had, before, after, after > before ? " -- THE GAME MADE MATCHES OF ITS OWN" : "");
+}
+static void orc_list(uint16_t reg, const uint32_t* cl, unsigned n)
+{
+  unsigned char* blk = orc_blk();
+  uint32_t user = blk ? *(uint32_t*)(blk + USER_CLUB_OFF) : 0, lst[48]; unsigned nl = 0;
+  for (unsigned i = 0; i < n; i++) if (user && same_club(cl[i], user)) { lst[nl++] = cl[i]; break; }
+  for (unsigned i = 0; i < n && nl < 48; i++) if (!has_club(lst, nl, cl[i])) lst[nl++] = cl[i];
+  u32vec va = { lst, lst + nl, lst + nl };
+  ((setclr_fn)(uintptr_t)g_tramp_setcl)(reg, &va, 1);
+  run_flush();
+}
+
+#include "brasil_engine.h"
+
+
 /* B236: a cup of ours goes by its played final -- the two clubs its match was played between and
    its score -- before the game's rights code, which named the club the holder knocked out in the
    semi-final as the CAF Champions League's winner, and the CAF Super Cup was played without the
@@ -7502,6 +8388,16 @@ static int g_stand_said = 0;
 /* The header of a group page is "Group " + ('A' + index), built by 0x140af53e0 into a std::string
  * (its only caller is the row filler).  While a paged league-phase table is drawn the header
  * says "League Phase" instead -- short enough for the string's inline buffer. */
+/* lab 17/11/2026: a league of ours with groups (Norway's 2./3. divisjon and 4. divisjon districts, Iceland's
+   5. deild) opens the game's group screen: grplist_handler gave it the leagues as its groups (g_gs_*), every
+   group of more rows than the screen is cut in pages, the header says the group's name (g_gs_name) */
+static uint16_t g_gs_regs[72]; static int g_gs_n = 0; static DWORD g_gs_tick = 0;
+static char g_gs_name[64];
+static const char* lpn_name(uint16_t reg);
+#define STRASSIGN_RVA 0x402370     /* std::string::assign(str, ptr, len) */
+#define UIROWS_RVA 0xe419a0        /* (screen, n, list): the list's first n rows shown, the rest hidden */
+typedef void (*uirows_fn)(void* self, uint64_t n, uint64_t list);
+typedef void* (*sassign_fn)(void* str, const char* p, size_t n);
 #define GNAME_RVA 0xaf53e0
 static const unsigned char SIG_GNAME[15] = {
   0x40,0x57, 0x48,0x83,0xec,0x60, 0x48,0xc7,0x44,0x24,0x28,0xfe,0xff,0xff,0xff };
@@ -7513,6 +8409,10 @@ void* gname_handler(void* self, void* out)
 {
   void* r = ((gname_fn)(uintptr_t)g_tramp_gname)(self, out);
   unsigned char* str = (unsigned char*)out;
+  if (g_paging == 2 && str && g_gs_name[0]) {          /* a group of a league of ours: its own name */
+    ((sassign_fn)(uintptr_t)(g_base + STRASSIGN_RVA))(str, g_gs_name, strlen(g_gs_name));
+    return r;
+  }
   static const char NAME[] = "League Phase";
   if (g_paging && str && *(uint64_t*)(str + 0x18) == 15) {   /* inline buffer, capacity 15 */
     memcpy(str, NAME, sizeof NAME);
@@ -7521,6 +8421,41 @@ void* gname_handler(void* self, void* out)
   return r;
 }
 
+/* lab 17/11/2026: the pages of our groups on a screen of nw rows (stand_handler's cut) */
+static unsigned gs_pages(unsigned char* vb, size_t ngroups, unsigned nw)
+{
+  unsigned pages = 0;
+  for (size_t gi = 0; gi < ngroups && pages < 64; gi++) {
+    unsigned char** in = (unsigned char**)(vb + gi * 24);
+    size_t rows = in[0] && in[1] >= in[0] ? (size_t)(in[1] - in[0]) / 40 : 0;
+    pages += rows > nw ? (unsigned)((rows + nw - 1) / nw) : 1;
+  }
+  return pages > 64 ? 64 : pages;
+}
+/* the "n/m" in the corner (0x140af6c60: +0x90 + 1 over the group vector's length), called by L1 / R1 and the
+   screen's set-up: over our pages, the vector's end is moved for the call (only its length is read) */
+#define GCOUNT_RVA 0xaf6c60
+typedef void (*gcount_fn)(void* self);
+void gcount_handler(void* self)
+{
+  unsigned char* s = (unsigned char*)self;
+  unsigned char* vb = *(unsigned char**)(s + 0xa0); unsigned char* ve = *(unsigned char**)(s + 0xa8);
+  size_t ngroups = vb ? (size_t)(ve - vb) / 24 : 0;
+  if (g_gs_n > 1 && ngroups == (size_t)g_gs_n && GetTickCount() - g_gs_tick < 3600000u) {
+    void* root = ((uiroot_fn)(uintptr_t)(g_base + UIROOT_RVA))(self);
+    void* list = root ? ((uichild_fn)(uintptr_t)(g_base + UICHILD_RVA))(root, 0) : 0;
+    unsigned nw = 0;
+    while (list && nw < 64 && ((uichild_fn)(uintptr_t)(g_base + UICHILD_RVA))(list, nw)) nw++;
+    if (nw) {
+      unsigned pages = gs_pages(vb, ngroups, nw);
+      *(unsigned char**)(s + 0xa8) = vb + (size_t)pages * 24;
+      ((gcount_fn)(uintptr_t)(g_base + GCOUNT_RVA))(self);
+      *(unsigned char**)(s + 0xa8) = ve;
+      return;
+    }
+  }
+  ((gcount_fn)(uintptr_t)(g_base + GCOUNT_RVA))(self);
+}
 uint64_t stand_handler(void* self)
 {
   unsigned char* s = (unsigned char*)self;
@@ -7533,6 +8468,43 @@ uint64_t stand_handler(void* self)
   unsigned char* vb = *(unsigned char**)(s + 0xa0); unsigned char* ve = *(unsigned char**)(s + 0xa8);
   size_t ngroups = vb ? (size_t)(ve - vb) / 24 : 0;
   if (!vb || nw == 0 || ngroups == 0) return ((stand_fn)(uintptr_t)g_tramp_stand)(self);
+
+  /* lab 17/11/2026: the groups of a league of ours -- every group cut in pages of what fits (a 3. divisjon group
+     of 14 on a screen of 10: two pages of 7), all pages one after the other on L1/R1, the header the group's name */
+  if (g_gs_n > 1 && ngroups == (size_t)g_gs_n && GetTickCount() - g_gs_tick < 3600000u) {
+    static unsigned char* fake[64][3];
+    static uint8_t pg_grp[64], pg_part[64], pg_parts[64];
+    unsigned pages = 0;
+    for (size_t gi = 0; gi < ngroups && pages < 64; gi++) {
+      unsigned char** in = (unsigned char**)(vb + gi * 24);
+      size_t rows = in[0] && in[1] >= in[0] ? (size_t)(in[1] - in[0]) / 40 : 0;
+      unsigned parts = rows > nw ? (unsigned)((rows + nw - 1) / nw) : 1;
+      size_t per = rows ? (rows + parts - 1) / parts : 0;
+      for (unsigned q = 0; q < parts && pages < 64; q++) {
+        size_t a = q * per, z = a + per; if (z > rows) z = rows; if (a > rows) a = rows;
+        fake[pages][0] = in[0] + a * 40; fake[pages][1] = in[0] + z * 40; fake[pages][2] = fake[pages][1];
+        pg_grp[pages] = (uint8_t)gi; pg_part[pages] = (uint8_t)q; pg_parts[pages] = (uint8_t)parts;
+        pages++;
+      }
+    }
+    *(uint32_t*)(s + 0x94) = pages;
+    if (g >= pages) { g = 0; *(uint32_t*)(s + 0x90) = 0; }
+    const char* nm = lpn_name(g_gs_regs[pg_grp[g]]);
+    if (pg_parts[g] > 1) snprintf(g_gs_name, sizeof g_gs_name, "%s (%u/%u)", nm, pg_part[g] + 1u, (unsigned)pg_parts[g]);
+    else snprintf(g_gs_name, sizeof g_gs_name, "%s", nm);
+    *(unsigned char**)(s + 0xa0) = (unsigned char*)fake; *(unsigned char**)(s + 0xa8) = (unsigned char*)(fake + pages);
+    /* the screen shows as many rows as its first group had (0x140e419a0 at the set-up): this page's own count
+       (Oslo 1 with 7 clubs showed 4, Ostfold's) */
+    ((uirows_fn)(uintptr_t)(g_base + UIROWS_RVA))(self, (uint64_t)((fake[g][1] - fake[g][0]) / 40), 0);
+    g_paging = 2;
+    uint64_t r = ((stand_fn)(uintptr_t)g_tramp_stand)(self);
+    g_paging = 0;
+    *(unsigned char**)(s + 0xa0) = vb; *(unsigned char**)(s + 0xa8) = ve;
+    static int said = 0;
+    if (said++ < 6) logf("fl26swiss: groups screen -- %u group(s) of ours in %u page(s) of %u rows; page %u: %s", (unsigned)ngroups,
+                         pages, nw, g, g_gs_name);
+    return r;
+  }
 
   /* One group longer than the screen -- the league phase: page it.  The screen already pages
      groups with L1/R1 (0x140af6ac0 / 0x140af6b40 step +0x90 modulo +0x94 and call this again),
@@ -7643,9 +8615,11 @@ static int libq_current(uint32_t comp)
 
   return best >= 0 ? best : first;
 }
+static void lph_unswap_old(void);
 uint64_t curph_handler(uint64_t comp, uint64_t flag, uint64_t flag2)
 {
   split_keys();
+  lph_unswap_old();
   uint64_t r = ((curph_fn)(uintptr_t)g_tramp_curph)(comp, flag, flag2);
   for (int ci = 0; ci < 3; ci++) {
     const cup_t* c = &CUPS[ci];
@@ -7837,12 +8811,210 @@ static int libq_item_want(void)
      whose phases 1 and 2 were closed in July, a career loaded after their matches were gone) */
   return d >= 182 ? (libq_any_live() ? 1 : -1) : 0;
 }
+#define KCPG_KO_RA 0xaf9887      /* the Knockout page (0x140af9810) asks the competition's kind 3 */
+static uint32_t kc_comp(void);
+static int kc_is_comp(uint32_t c);
+static int g_cp;
+static int cp_of_comp(uint32_t c);
+static uint16_t cp_main(int cp);
+#define STATS_PH_RA 0xc6b9dc     /* Gols / Assistencias: the competition's phase kinds 0..6, their lists added up */
 static uint64_t phkind_core(uint32_t* comp, uint64_t kind, uintptr_t ra);
+/* ---- lab 17/11/2026: a league's other phases in its own Competition Info menu (lphase) ----
+ * The user's rule: a competition of several phases shows each phase as an item of its menu; different
+ * competitions are different entries of the list. Iceland's promotion play-offs (ccup knockouts 256, 257)
+ * and the 5. deild's group B (league 121) are played in competitions of their own (the engines need them
+ * there); the list leaves those competitions out (libq_skipph_handler) and the host league's menu gets
+ * one item each: a knockout opens the round pages of the cups on our regulations (kcpg, cp >= CP_CC_BASE),
+ * a group opens the standings page given that league (g_lph_std). World line, through fl26swiss.lua:
+ *   lphase <host league reg> <phase reg> <text: 1 Playoff de acesso, 2 Playoffs, 3 Grupo B> */
+#define LPH_MENU_MAX 16       /* lab 17/11/2026: items in one popup, native ones included [limite a confirmar] */
+#define LPH_MAX 64              /* lab 17/11/2026: 64 (Norway: 5 groups of the 3. divisjon, 21 districts) */
+#define CP_CC_BASE 200
+#ifndef CP_BR_BASE
+#define CP_BR_BASE 250
+#endif
+/* CP_BR_BASE, lab 18/11/2026: the Serie D's knockout (250), the Serie C's quadrangulares (251) and final (252) */
+static int br_cp_reg(int cp);
+static int br_cp_of(uint16_t reg);
+static int br_cp_entries(int cp, uint16_t* reg, uint8_t* kind, uint8_t* round, int max);
+#define PPO_TEXT 0x3a2ffe1u   /* "Playoff de acesso" */
+#define PLO_TEXT 0x3a2ffe2u   /* "Playoffs" */
+#define GRB_TEXT 0x3a2ffe3u   /* "Grupo B" */
+#define GRA_TEXT 0x3a2ffe4u   /* "Grupo A" */
+typedef struct { uint16_t host, reg; uint8_t text; } lph_t;
+static lph_t g_lph[LPH_MAX]; static int g_nlph = 0;
+/* lab 17/11/2026: `lpname <reg> <name>` -- the item's own name (a group "Avd. 2", a district "Ostfold"); a host
+   league's name replaces "Grupo A" on its table item. Text ids 0x3a2fd00 + k (txtget compares 16 bits) */
+#define LPN_MAX 128   /* lab 19/11/2026: 67 names in the Carabao world (64 dropped "Quadrangulares") */
+#define LPN_TEXT0 0x3a2fd00u
+typedef struct { uint16_t reg; char name[48]; } lpn_t;
+static lpn_t g_lpn[LPN_MAX]; static int g_nlpn = 0;
+static uint32_t lpn_text(uint16_t reg)
+{
+  for (int k = 0; k < g_nlpn; k++) if (g_lpn[k].reg == reg) return LPN_TEXT0 + (uint32_t)k;
+  return 0;
+}
+__declspec(dllexport) int fl26_swiss_lphase_name(uint32_t reg, const char* name)
+{
+  if (!reg || reg > 0xffff || !name || !*name) return g_nlpn;
+  int k = 0;
+  while (k < g_nlpn && g_lpn[k].reg != reg) k++;
+  if (k == LPN_MAX) return g_nlpn;
+  g_lpn[k].reg = (uint16_t)reg;
+  snprintf(g_lpn[k].name, sizeof g_lpn[k].name, "%s", name);
+  if (k == g_nlpn) g_nlpn++;
+  return g_nlpn;
+}
+static void* g_lph_vec = 0;          /* the ci_vec_t of the menu built last */
+static uint32_t g_lph_comp = 0xffffffffu;
+static int g_lph_n = 0, g_lph_cp[32], g_lph_pk[32];
+static uint16_t g_lph_sreg[32];
+static int g_lph_pick = -1;              /* the cp of the knockout item picked, -1 none */
+static uint16_t g_lph_std = 0xffff;      /* the league of the group item picked, 0xffff none */
+__declspec(dllexport) int fl26_swiss_lphase(const uint32_t* v, int n)
+{
+  g_nlph = 0;
+  for (int i = 0; v && i + 2 < n && g_nlph < LPH_MAX; i += 3) {
+    if (!v[i] || !v[i + 1] || v[i] > 0xffff || v[i + 1] > 0xffff) continue;
+    g_lph[g_nlph].host = (uint16_t)v[i]; g_lph[g_nlph].reg = (uint16_t)v[i + 1]; g_lph[g_nlph].text = (uint8_t)v[i + 2];
+    g_nlph++;
+  }
+  /* groups first (Grupo A, Grupo B, then the play-off), each kind in world order */
+  for (int a = 1; a < g_nlph; a++)
+    for (int b = a; b > 0 && g_lph[b].text == 3 && g_lph[b - 1].text != 3; b--) { lph_t t = g_lph[b]; g_lph[b] = g_lph[b - 1]; g_lph[b - 1] = t; }
+  logf("fl26swiss: lphase -- %d phase(s) of a league shown in its own menu", g_nlph);
+  return g_nlph;
+}
+/* lab 17/11: 0x14150c230(comp, a, b, c) -> the competition's phase in play (the kcup's competition test
+   uses it too). The standings page of a league asks neither phkind nor curph (probe, in game): while a
+   group item ("Grupo B") was picked in the last minute, the host league's answer becomes the group's */
+static uint32_t reg_comp(uint16_t reg);
+#define ACTPH_RVA 0x150c230
+static const unsigned char SIG_ACTPH[15] = { 0x48,0x89,0x5c,0x24,0x10, 0x48,0x89,0x6c,0x24,0x18, 0x48,0x89,0x74,0x24,0x20 };
+typedef uint64_t (*actph_fn)(uint64_t, uint64_t, uint64_t, uint64_t);
+unsigned char* g_tramp_actph = 0;
+static DWORD g_lph_std_tick = 0;
+uint64_t actph_handler(uint64_t comp, uint64_t a, uint64_t b, uint64_t c)
+{
+  uint64_t r = ((actph_fn)(uintptr_t)g_tramp_actph)(comp, a, b, c);
+  uintptr_t ra = (uintptr_t)__builtin_return_address(0);
+  if (g_lph_std != 0xffff && (uint32_t)comp == g_lph_comp && GetTickCount() - g_lph_std_tick < 60000)
+    for (int i = 0; i < g_nlph; i++)
+      if (g_lph[i].reg == g_lph_std && (uint16_t)r == g_lph[i].host) {
+        static int said = 0;
+        if (said++ < 12) logf("fl26swiss: lphase -- comp %u: the group item's table, reg %u for %u (from %llx)", (unsigned)comp,
+                              (unsigned)g_lph_std, (unsigned)(uint16_t)r, (unsigned long long)(ra - g_base + 0x140000000ull));
+        return (r & ~0xffffull) | g_lph_std;
+      }
+  return r;
+}
+/* lab 17/11: the table getter 0x141579b90 is a 5-byte jump to its body 0x14158b6f0 (whose first call is
+   rip-relative, no trampoline). The jump is pointed at a stub next to the exe that calls tbl_handler:
+   while a group item ("Grupo B") was picked in the last minute, a table asked for the host league from
+   the game's code is the group's. The body is called as it was. */
+#define TBL_BODY_RVA 0x158b6f0
+static int g_tbl_said = 0;
+uint64_t tbl_handler(uint64_t id)
+{
+  uintptr_t ra = (uintptr_t)__builtin_return_address(0);
+  if (g_lph_std != 0xffff && GetTickCount() - g_lph_std_tick < 60000 && ra >= g_base && ra < g_base + 0x4000000)
+    for (int i = 0; i < g_nlph; i++)
+      if (g_lph[i].reg == g_lph_std && (uint16_t)id == g_lph[i].host) {
+        if (g_tbl_said++ < 12) logf("fl26swiss: lphase -- table of %u asked from %llx: the group's, %u", (unsigned)(uint16_t)id,
+                                    (unsigned long long)(ra - g_base + 0x140000000ull), (unsigned)g_lph_std);
+        id = (id & ~0xffffull) | g_lph_std;
+        break;
+      }
+  return (uint64_t)(uintptr_t)((table_fn)(uintptr_t)(g_base + TBL_BODY_RVA))(id);
+}
+static int tbl_install(uint64_t exe_base)
+{
+  unsigned char* th = (unsigned char*)(uintptr_t)(exe_base + TABLE_RVA);
+  if (th[0] != 0xe9 || (uint64_t)(uintptr_t)(th + 5) + *(int32_t*)(th + 1) != exe_base + TBL_BODY_RVA) return 2;
+  unsigned char* st = 0;
+  for (uint64_t k = 1; k < 512 && !st; k++) {
+    uint64_t want = (exe_base - k * 0x100000ull) & ~0xffffull;
+    st = (unsigned char*)VirtualAlloc((void*)(uintptr_t)want, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+  }
+  if (!st) return 3;
+  int64_t rel = (int64_t)(uintptr_t)st - (int64_t)(uintptr_t)(th + 5);
+  if (rel > 0x7fffffffll || rel < -0x80000000ll) return 4;
+  /* stub: mov rax, tbl_handler; jmp rax -- the caller's return address stays on the stack */
+  st[0] = 0x48; st[1] = 0xb8; *(uint64_t*)(st + 2) = (uint64_t)(uintptr_t)tbl_handler; st[10] = 0xff; st[11] = 0xe0;
+  DWORD old;
+  if (!VirtualProtect(th, 5, PAGE_EXECUTE_READWRITE, &old)) return 5;
+  *(int32_t*)(th + 1) = (int32_t)rel;
+  VirtualProtect(th, 5, old, &old);
+  FlushInstructionCache(GetCurrentProcess(), th, 5);
+  return 0;
+}
+/* lab 17/11: the standings page finds a competition's league by none of the hooked lookups (probe, in game);
+   while a group item is open, the group's regulation record names the host's competition and the host's
+   record the group's (the runtime records' +0x80), put back when the menu is built again, when the list
+   is drawn, at the day's tick, or two minutes on */
+static unsigned char *g_sw_a = 0, *g_sw_b = 0;
+static uint32_t g_sw_ca = 0, g_sw_cb = 0;
+static DWORD g_sw_tick = 0;
+static int g_sw_day = -1;
+static void lph_unswap(const char* why)
+{
+  if (!g_sw_a) return;
+  *(uint32_t*)(g_sw_a + 0x80) = g_sw_ca; *(uint32_t*)(g_sw_b + 0x80) = g_sw_cb;
+  g_sw_a = g_sw_b = 0;
+  static int said = 0;
+  if (said++ < 12) logf("fl26swiss: lphase -- group records put back (%s)", why);
+}
+static void lph_swap(uint16_t host, uint16_t grp)
+{
+  lph_unswap("another group item");
+  unsigned char* a = find_rec(host);
+  unsigned char* b = find_rec(grp);
+  if (!a || !b) return;
+  g_sw_a = a; g_sw_b = b; g_sw_ca = *(uint32_t*)(a + 0x80); g_sw_cb = *(uint32_t*)(b + 0x80); g_sw_tick = GetTickCount(); g_sw_day = abs_day();
+  *(uint32_t*)(a + 0x80) = g_sw_cb; *(uint32_t*)(b + 0x80) = g_sw_ca;
+  static int said = 0;
+  if (said++ < 12) logf("fl26swiss: lphase -- group item: reg %u shown as competition %u's league (reg %u aside)", (unsigned)grp,
+                        (unsigned)g_sw_ca, (unsigned)host);
+}
+static void lph_unswap_old(void) { if (g_sw_a && GetTickCount() - g_sw_tick > 120000) lph_unswap("two minutes"); }
+static void lph_unswap_day(void) { if (g_sw_a && abs_day() != g_sw_day) lph_unswap("a new day"); }
 uint64_t phkind_handler(uint32_t* comp, uint64_t kind)
 {
+  lph_unswap_old();
   uintptr_t ra = (uintptr_t)__builtin_return_address(0);
   uint64_t r = phkind_core(comp, kind, ra);
   if (!comp) return r;
+  /* lphase: a knockout item of a league's menu was picked -- its round pages (kcpg) */
+  if (kind == 0 && ra == g_base + PAGE_GRP_RA && g_lph_pick >= 0 && *comp == g_lph_comp) {
+    g_cp = g_lph_pick;
+    static int said_lp = 0;
+    if (said_lp++ < 12)
+      logf("fl26swiss: lphase -- comp %u: the picked play-off's pages (cup %d, reg %u)", *comp, g_cp, (unsigned)cp_main(g_cp));
+    return (r & ~0xffffull) | cp_main(g_cp);
+  }
+  /* lphase: the scorer pages add up the lists of the competition's phase kinds 0..6 -- a group league of
+     this competition (5. deild B) is given as its unused group kind (2), so its scorers count too */
+  if (ra == g_base + STATS_PH_RA && kind == 2 && (uint16_t)r == 0xffff)
+    for (int i = 0; i < g_nlph; i++)
+      if (g_lph[i].text == 3 && reg_comp(g_lph[i].host) == *comp && find_rec(g_lph[i].reg)) {
+        static int said_gs = 0;
+        if (said_gs++ < 6) logf("fl26swiss: lphase -- scorers of comp %u: group league %u added", *comp, (unsigned)g_lph[i].reg);
+        return (r & ~0xffffull) | g_lph[i].reg;
+      }
+  /* kcup (13/11): its competition's grouped phase (Fase inicial) and, for the Knockout page only,
+     its knockout phase are the one regulation */
+  if (((kind == 0 && (ra == g_base + PAGE_GRP_RA || ra == g_base + LIBQ_PAGE_LIST_RA)) || (kind == 3 && ra == g_base + KCPG_KO_RA))) {
+    int cp = cp_of_comp(*comp);
+    if (cp >= 0) {
+      uint16_t mr = cp_main(cp);
+      g_cp = cp;
+      static int said_kc = 0;
+      if ((uint16_t)r != mr && said_kc++ < 8)
+        logf("fl26swiss: Competition Info -- cup %d phase kind %u from %llx: the game said %u, %u given", cp, (unsigned)kind,
+             (unsigned long long)(ra - g_base + 0x140000000ull), (unsigned)(uint16_t)r, (unsigned)mr);
+      return (r & ~0xffffull) | mr;
+    }
+  }
   if (ra == g_base + MENU_GRP_RA) { g_ci_native = (uint16_t)r; g_ci_native_comp = *comp; }
   /* an extra Competition Info item was picked (ci_sel_handler): its page shows that round */
   if (ra == g_base + PAGE_GRP_RA && g_ci_pick != 0xffff && *comp == g_ci_pick_comp && find_rec(g_ci_pick)) {
@@ -8065,6 +9237,9 @@ static uint64_t phkind_core(uint32_t* comp, uint64_t kind, uintptr_t ra)
 #define QR2_TEXT   0x3a2fff3u   /* "2nd Qualifying Round" */
 #define KOPO_TEXT  0x3a2fff4u
 #define SUD1_TEXT  0x3a2fff5u   /* "First stage" */
+#define KCI_TEXT   0x3a2fff6u   /* kcup: "Fase inicial" */
+#define KCE_TEXT   0x3a2fff7u   /* kcup: "Fase eliminatoria" */
+#define KCT_TEXT   0x3a2fff8u   /* kcup: "Time do torneio" */
 static uint16_t g_sud1_reg = 0xffff;
 #define TXTGET_RVA 0x14996f0
 static const unsigned char SIG_TXTGET[14] = {
@@ -8078,6 +9253,15 @@ const char* txtget_handler(void* table, uint64_t index)
   if ((uint16_t)index == (uint16_t)QR2_TEXT) return "2nd Qualifying Round";
   if ((uint16_t)index == (uint16_t)KOPO_TEXT) return "Knockout round play-offs";
   if ((uint16_t)index == (uint16_t)SUD1_TEXT) return "First stage";
+  if ((uint16_t)index == (uint16_t)KCI_TEXT) return "Fase inicial";
+  if ((uint16_t)index == (uint16_t)KCE_TEXT) return "Fase eliminat\xc3\xb3ria";
+  if ((uint16_t)index == (uint16_t)KCT_TEXT) return "Time do torneio";
+  if ((uint16_t)index == (uint16_t)PPO_TEXT) return "Playoff de acesso";
+  if ((uint16_t)index == (uint16_t)PLO_TEXT) return "Playoffs";
+  if ((uint16_t)index == (uint16_t)GRB_TEXT) return "Grupo B";
+  if ((uint16_t)index == (uint16_t)GRA_TEXT) return "Grupo A";
+  if ((uint16_t)index >= (uint16_t)LPN_TEXT0 && (uint16_t)index < (uint16_t)(LPN_TEXT0 + (uint32_t)g_nlpn))
+    return g_lpn[(uint16_t)index - (uint16_t)LPN_TEXT0].name;
   return ((txtget_fn)(uintptr_t)g_tramp_txtget)(table, index);
 }
 
@@ -8301,6 +9485,235 @@ static int libq_page_phases(uint16_t* order)
 }
 
 
+/* ---- kcup in Competition Info (lab 13/11/2026): "Fase inicial" = the preliminary round, round 1 and
+ * round 2 on the native play-off page, a page of 8 ties at a time, L1/R1 between them.
+ * The page (0x140af8a20) asks 0x141542300(comp, 0) -> the tie list 0x141541480(phase) for a list of
+ * regulations, and for each one reads its round record 0x141579da0(&reg, &0x35) and lays its slots
+ * out, 8 to a page (page break hook: libq_page_break). Our cup has one regulation and a round record
+ * per kind, so the tie list is reg 300 once per kind of the three rounds, and the round record asked
+ * from the page (RA 0x140af8acd) is the next of those kinds instead of 0x35. A new page starts where
+ * a round starts. */
+#define KCPG_FIX_THUNK 0x1579da0     /* jmp 0x141579ee0, then 11 int3: room for an absolute jmp */
+#define KCPG_FIX_RA    0xaf8acd      /* the page builder's call */
+#define KCPG_GROW_RVA  0x0ba63c0     /* vector<uint16_t> grow by n (the tie list's own) */
+#define KCPG_MAX       12
+typedef void (*kcpg_grow_fn)(void* vec, uint64_t n);
+static struct { int on, n, next; uint8_t kind[KCPG_MAX], round[KCPG_MAX], slots[KCPG_MAX]; uint16_t reg[KCPG_MAX];
+                const unsigned char* start; } g_kcpg;
+/* the kcup menu is up (kc_menu) and which of its two tie items was chosen: 0 Fase inicial, 1 Fase eliminatoria */
+static int g_kc_menu_live = 0, g_kc_pick = 0;
+#define KCPG_MAXR 32
+static uint32_t kc_comp(void)
+{
+  unsigned char* r = g_kc.reg ? find_rec(g_kc.reg) : 0;
+  if (!r) r = g_kc.reg ? get_rec(g_kc.reg) : 0;
+  return r ? *(uint32_t*)(r + 0x80) : 0xffffffffu;
+}
+/* competition c is the kcup's: its record says so, or its active regulation is the kcup's */
+static int kc_is_comp(uint32_t c)
+{
+  if (!g_kc.on || !g_kc.reg) return 0;
+  uint32_t mine = kc_comp();
+  int yes = c == mine;
+  if (!yes) {
+    unsigned char* o = (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
+    unsigned char* blk = o ? *(unsigned char**)(o + 0x48) : 0;
+    typedef uint64_t (*kc_act_fn)(uint64_t, uint64_t, uint64_t, uint64_t);   /* 0x14150c230, ACTCOMP below */
+    if (blk && (uint16_t)((kc_act_fn)(uintptr_t)(g_base + 0x150c230))(c, *(uint16_t*)(blk + 0x1642a1c), 0, 0) == g_kc.reg) yes = 1;
+  }
+  static int said = 0;
+  if (said < 2 && yes) { said++; logf("fl26swiss: kcup competition test: %u (the record says %u) -> %s", c, mine, yes ? "ours" : "not ours"); }
+  return yes;
+}
+/* the Competition Info pages of the cups played on regulations of our own. g_cp: -1 none, 0 the kcup, CP_CC_BASE + k a
+   ccup's knockout (an lphase item), CP_BR_BASE + i the Serie C/D engines' rounds. Set when a menu is built and when a
+   page asks for its competition's phase. */
+static int g_cp = -1;
+static uint32_t reg_comp(uint16_t reg)
+{
+  unsigned char* r = reg ? find_rec(reg) : 0;
+  if (!r) r = reg ? get_rec(reg) : 0;
+  return r ? *(uint32_t*)(r + 0x80) : 0xffffffffu;
+}
+static int cp_of_reg(uint16_t reg)
+{
+  if (!reg || reg == 0xffff) return -1;
+  if (g_kc.on && reg == g_kc.reg) return 0;
+  return -1;
+}
+static uint16_t cp_main(int cp)
+{
+  if (cp >= CP_BR_BASE) return (uint16_t)br_cp_reg(cp);
+  if (cp >= CP_CC_BASE) return cp - CP_CC_BASE < g_nccup ? g_ccup[cp - CP_CC_BASE].ko : 0xffff;
+  return cp == 0 ? g_kc.reg : 0xffff;
+}
+static int cp_of_comp(uint32_t c)
+{
+  if (g_kc.on && g_kc.reg && kc_is_comp(c)) return 0;
+  return -1;
+}
+/* the page entries of item `pick` of cup cp, the newest edition each round has (the round records stay from
+   one edition to the next until the next is made): reg, kind, round (a new page at each round) */
+static int cp_entries(int cp, int pick, uint16_t* reg, uint8_t* kind, uint8_t* round, int max)
+{
+  int n = 0;
+  if (cp >= CP_BR_BASE) { (void)pick; return br_cp_entries(cp, reg, kind, round, max); }
+  if (cp >= CP_CC_BASE) {      /* lphase: a ccup straight knockout -- its rounds that hold ties, in order */
+    (void)pick;
+    if (cp - CP_CC_BASE >= g_nccup) return 0;
+    uint16_t ko = g_ccup[cp - CP_CC_BASE].ko;
+    static const uint8_t K[] = { 0x2e, 0x2f, 0x33, 0x34, 0x35 };
+    for (int r = 0; r < 5 && n < max; r++) {
+      unsigned char* rnd = ko_round(ko, K[r]);
+      if (ko_slots(rnd) < 1) continue;
+      unsigned char* m = ko_match(*(uint16_t*)(ko_slot(rnd, 0) + 2));
+      if (!m || *(uint16_t*)(m + 4) != ko) continue;
+      reg[n] = ko; kind[n] = K[r]; round[n] = (uint8_t)r; n++;
+    }
+    return n;
+  }
+  (void)pick;
+  return n;
+}
+/* the round's name of a tie of an lphase knockout (0 when reg is none of theirs) */
+static const char* cp_title(uint16_t reg, uint32_t kind)
+{
+  for (int i = 0; i < g_nlph; i++)
+    if (reg == g_lph[i].reg)
+      return kind == 0x35 ? "Final" : kind == 0x34 ? "Semifinal" : kind == 0x33 ? "Quartas de final" : 0;
+  return 0;
+}
+static int kcpg_build(void* out)
+{
+  struct { uint16_t *b, *e, *c; }* v = out;
+  g_kcpg.on = 0; g_kcpg.n = 0; g_kcpg.next = 0; g_kcpg.start = 0;
+  if (g_cp > 0) {
+    uint16_t rg[KCPG_MAX]; uint8_t kd[KCPG_MAX], rd[KCPG_MAX];
+    int m = cp_entries(g_cp, g_kc_pick, rg, kd, rd, KCPG_MAX);
+    for (int k = 0; k < m; k++) {
+      unsigned char* rnd = ko_round(rg[k], kd[k]);
+      g_kcpg.kind[g_kcpg.n] = kd[k]; g_kcpg.round[g_kcpg.n] = rd[k]; g_kcpg.reg[g_kcpg.n] = rg[k];
+      g_kcpg.slots[g_kcpg.n] = (uint8_t)ko_slots(rnd); g_kcpg.n++;
+      if (v->e == v->c) ((kcpg_grow_fn)(uintptr_t)(g_base + KCPG_GROW_RVA))(v, 1);
+      if (v->e) *v->e = cp_main(g_cp);
+      v->e++;
+    }
+    g_kcpg.on = g_kcpg.n > 0;
+    static int said_cp = 0;
+    if (said_cp++ < 8) {
+      char line[96]; int o = 0;
+      for (int k = 0; k < g_kcpg.n && o < 80; k++) o += snprintf(line + o, sizeof line - o, " %u:%02x/%u", (unsigned)g_kcpg.reg[k], g_kcpg.kind[k], g_kcpg.slots[k]);
+      logf("fl26swiss: Competition Info -- cup %d item %d: %d round(s) (reg:kind/ties):%s", g_cp, g_kc_pick, g_kcpg.n, line);
+    }
+    return g_kcpg.n;
+  }
+  int r0 = g_kc_pick ? 3 : 0, r1 = g_kc_pick ? KC_ROUNDS - 1 : 2;
+  for (int r = r0; r <= r1; r++)
+    for (int c = 0; c < KC_CHUNKS && KC_KIND[r][c]; c++) {
+      unsigned char* rnd = kc_rnd(KC_KIND[r][c]);
+      if (!rnd || !kc_fresh(rnd) || g_kcpg.n >= KCPG_MAX) continue;
+      g_kcpg.kind[g_kcpg.n] = KC_KIND[r][c]; g_kcpg.round[g_kcpg.n] = (uint8_t)r; g_kcpg.reg[g_kcpg.n] = g_kc.reg;
+      g_kcpg.slots[g_kcpg.n] = (uint8_t)ko_slots(rnd); g_kcpg.n++;
+      if (v->e == v->c) ((kcpg_grow_fn)(uintptr_t)(g_base + KCPG_GROW_RVA))(v, 1);
+      if (v->e) *v->e = g_kc.reg;
+      v->e++;
+    }
+  g_kcpg.on = g_kcpg.n > 0;
+  static int said = 0;
+  if (said++ < 8) {
+    char line[96]; int o = 0;
+    for (int k = 0; k < g_kcpg.n && o < 80; k++) o += snprintf(line + o, sizeof line - o, " %02x/%u", g_kcpg.kind[k], g_kcpg.slots[k]);
+    logf("fl26swiss: Competition Info -- kcup %s: %d kind(s) (kind/ties):%s", g_kc_pick ? "Fase eliminatoria" : "Fase inicial", g_kcpg.n, line);
+  }
+  return g_kcpg.n;
+}
+unsigned char* kcpg_fix_handler(const uint16_t* reg, const uint32_t* kind)
+{
+  if ((uintptr_t)__builtin_return_address(0) == g_base + KCPG_FIX_RA && g_kcpg.on && reg && g_cp >= 0 && *reg == cp_main(g_cp)
+      && g_kcpg.next < g_kcpg.n) {
+    uint32_t k = g_kcpg.kind[g_kcpg.next];
+    uint16_t rr = g_kcpg.reg[g_kcpg.next++];
+    return ((fixfind_fn)(uintptr_t)(g_base + FIXFIND_RVA))(&rr, &k);
+  }
+  return ((fixfind_fn)(uintptr_t)(g_base + FIXFIND_RVA))(reg, kind);
+}
+/* cur = the item just laid out, the next one at cur + 8: 1 when the next one opens another round */
+static int kcpg_break(const unsigned char* cur, const unsigned char* end)
+{
+  if (!g_kcpg.on || !cur || cur + 16 > end) return -1;
+  if (!g_kcpg.start) g_kcpg.start = cur;
+  if (cur < g_kcpg.start) return -1;
+  long i = (long)((cur - g_kcpg.start) / 8), acc = 0;
+  int ra = -1, rb = -1;
+  for (int k = 0; k < g_kcpg.n; k++) {
+    if (ra < 0 && i < acc + g_kcpg.slots[k]) ra = g_kcpg.round[k];
+    if (rb < 0 && i + 1 < acc + g_kcpg.slots[k]) rb = g_kcpg.round[k];
+    acc += g_kcpg.slots[k];
+  }
+  if (ra < 0 || rb < 0) return -1;
+  return ra != rb;
+}
+/* the match / page title 0x14152a590(out string, &info{reg,...}, a3, a4, a5, a6): watched for the kcup */
+#define KCT_RVA 0x152a590
+static const unsigned char SIG_KCT[17] = { 0x40,0x55,0x56,0x57,0x41,0x54,0x41,0x55,0x41,0x56,0x41,0x57,0x48,0x8d,0x6c,0x24,0xe0 };
+typedef uint64_t (*kct_fn)(void*, void*, uint64_t, uint64_t, uint64_t, uint64_t);
+unsigned char* g_tramp_kct = 0;
+uint64_t kct_handler(void* out, void* info, uint64_t a3, uint64_t a4, uint64_t a5, uint64_t a6)
+{
+  uint64_t r = ((kct_fn)(uintptr_t)g_tramp_kct)(out, info, a3, a4, a5, a6);
+  if (info && out) {   /* lab 18/11/2026: the Serie D's / C's rounds (brasil_engine.h), the same key */
+    int bk = br_round_key(*(uint16_t*)info, *(const uint16_t*)((const unsigned char*)info + 4));
+    for (int k = 0; bk >= 0 && k < g_nlpn; k++)
+      if (g_lpn[k].reg == (uint32_t)bk) {
+        ((sassign_fn)(uintptr_t)(g_base + STRASSIGN_RVA))(out, g_lpn[k].name, strlen(g_lpn[k].name));
+        return r;
+      }
+  }
+  /* the first rounds' kinds read as group matchdays ("Fase de grupos - Jornada 34"): the round's name */
+  if (info && out && !(g_kc.on && *(uint16_t*)info == g_kc.reg)) {
+    const char* nm = cp_title(*(uint16_t*)info, *(const uint16_t*)((const unsigned char*)info + 4));
+    if (nm) {
+      unsigned char* o = (unsigned char*)out;
+      uint64_t cap = *(uint64_t*)(o + 0x18);
+      size_t len = strlen(nm);
+      if (len > cap && !strcmp(nm, "Quartas de final")) { nm = "Quartas"; len = 7; }
+      if (len <= cap) {
+        char* d = cap >= 16 ? *(char**)o : (char*)o;
+        memcpy(d, nm, len); d[len] = 0; *(uint64_t*)(o + 0x10) = len;
+      }
+    }
+  }
+  if (g_kc.on && info && out && *(uint16_t*)info == g_kc.reg) {
+    uint32_t kind = *(const uint16_t*)((const unsigned char*)info + 4);
+    const char* nm = kind == 0x20 ? "Preliminar" : kind >= 0x21 && kind <= 0x24 ? "1\xc2\xaa fase"
+                   : kind >= 0x25 && kind <= 0x28 ? "2\xc2\xaa fase" : kind == 0x30 ? "3\xc2\xaa fase"
+                   : kind == 0x31 ? "Oitavas de final" : kind == 0x33 ? "Quartas de final"
+                   : kind == 0x34 ? "Semifinal" : kind == 0x35 ? "Final" : 0;
+    unsigned char* o = (unsigned char*)out;
+    uint64_t cap = *(uint64_t*)(o + 0x18);
+    size_t len = nm ? strlen(nm) : 0;
+    if (nm && len > cap && kind == 0x31) { nm = "Oitavas"; len = 7; }
+    if (nm && len > cap && kind == 0x33) { nm = "Quartas"; len = 7; }
+    if (nm && len <= cap) {
+      char* d = cap >= 16 ? *(char**)o : (char*)o;
+      memcpy(d, nm, len); d[len] = 0; *(uint64_t*)(o + 0x10) = len;
+    }
+  }
+  return r;
+}
+static int kcpg_install(uint64_t exe_base)
+{
+  unsigned char* t = (unsigned char*)(uintptr_t)(exe_base + KCPG_FIX_THUNK);
+  static const unsigned char SIG[16] = { 0xe9, 0x3b, 0x01, 0x00, 0x00, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc };
+  if (memcmp(t, SIG, 16)) return 2;
+  DWORD old;
+  if (!VirtualProtect(t, 16, PAGE_EXECUTE_READWRITE, &old)) return 4;
+  t[0] = 0xff; t[1] = 0x25; *(uint32_t*)(t + 2) = 0; *(uint64_t*)(t + 6) = (uint64_t)(uintptr_t)kcpg_fix_handler;
+  VirtualProtect(t, 16, old, &old);
+  FlushInstructionCache(GetCurrentProcess(), t, 16);
+  return 0;
+}
+
 /* The native page builder asks for one phase's tie list. When our wrapper is
    building one phase, give exactly that phase; when the page itself asks for
    one of F1/F2/F3, hand it all qualifying phases in order. */
@@ -8314,6 +9727,9 @@ static void libq_tlist_handler(uint64_t phase, void* out)
     f(phase, out);
     return;
   }
+  g_kcpg.on = 0;
+  if (!g_libq_tlist_only && g_cp >= 0 && (uint16_t)phase == cp_main(g_cp) && out && kcpg_build(out) > 0)
+    return;
 
   if (g_libq_tlist_only) {
     g_libq_tlist_hit = 1;
@@ -8378,6 +9794,10 @@ static uint64_t libq_page_break(const unsigned char* cur,
                                 const unsigned char* end)
 {
   if (!cur || cur + 16 > end) return 0;
+  {
+    int kb = kcpg_break(cur, end);
+    if (kb >= 0) return (uint64_t)kb;
+  }
 
   unsigned char* o =
       (unsigned char*)((owner_fn)(uintptr_t)(g_base + OWNER_RVA))();
@@ -8659,6 +10079,18 @@ static uint64_t libq_skipph_handler(uint64_t reg)
     return 0;
 
   uint32_t comp = *(uint32_t*)(r + 0x80);
+
+  /* lphase: a league's phase played in a competition of its own is an item of the league's menu */
+  for (int i = 0; i < g_nlph; i++) {
+    unsigned char* pr = find_rec(g_lph[i].reg);
+    unsigned char* hr = find_rec(g_lph[i].host);
+    if (pr && hr && *(uint32_t*)(pr + 0x80) == comp && *(uint32_t*)(hr + 0x80) != comp) {
+      static int said_lh = 0;
+      if (said_lh++ < 6) logf("fl26swiss: Info Database -- competition %u (reg %u) is a phase of reg %u: left out of the list",
+                              comp, (unsigned)g_lph[i].reg, (unsigned)g_lph[i].host);
+      return 1;
+    }
+  }
 
   for (int i = 0; i < g_nlpre; i++) {
     /* Technical continental containers:
@@ -10285,6 +11717,64 @@ static unsigned char* near_alloc(uint64_t exe_base)
   return 0;
 }
 
+/* lab 18/11/2026: LayerProcess18 (0x140fb3a80) shares a club's squad out by country and divides by its
+   number -- a league with no club (the Serie C's second group in 2027, empty by design) crashed the game with an
+   integer division by zero on day 218 (0x140fb3c4c). Its guard `cmp eax, 0x23; ja end` at 0x140fb3ad8 also
+   skips an empty list here. 0 ok, 2 bytes not the expected ones, 3 no page in reach, 4 VirtualProtect */
+/* 18/11/2026 (2028): the same in its two siblings -- they share a club's squad (32-byte entries, 35 at most) out by
+   position or country and divide by its size; a club with no player (the C's three placeholder clubs, in no
+   league) crashed it at 0x140fb3def. Each guard `cmp r32, 0x23; ja end` also sends an empty squad to its end. */
+typedef struct { uint32_t at, end; uint8_t reg; } zdiv_t;     /* reg: the ModRM's r/m of `cmp r32, 0x23` (0 eax, 1 ecx, 5 ebp) */
+static const zdiv_t ZDIV[3] = { { 0xfb38b4, 0xfb3a50, 1 }, { 0xfb3ad8, 0xfb3d23, 0 }, { 0xfb3d93, 0xfb3e63, 5 } };
+static int zdiv_install(uint64_t exe_base)
+{
+  int bad = 0;
+  for (int z = 0; z < 3; z++) {
+    unsigned char* s = (unsigned char*)(uintptr_t)(exe_base + ZDIV[z].at);
+    uint64_t end = exe_base + ZDIV[z].end, back = exe_base + ZDIV[z].at + 9;
+    if (s[0] != 0x83 || s[1] != (0xf8 | ZDIV[z].reg) || s[2] != 0x23 || s[3] != 0x0f || s[4] != 0x87 ||
+        (uint64_t)(uintptr_t)(s + 9) + *(int32_t*)(s + 5) != end) { bad |= 1 << z; continue; }
+    unsigned char* t = near_alloc(exe_base);
+    if (!t) { bad |= 1 << z; continue; }
+    int k = 0;
+    t[k++] = 0x83; t[k++] = (unsigned char)(0xf8 | ZDIV[z].reg); t[k++] = 0x23;                                   /* cmp r, 0x23 */
+    t[k++] = 0x0f; t[k++] = 0x87; *(int32_t*)(t + k) = (int32_t)((int64_t)end - (int64_t)(uintptr_t)(t + k + 4)); k += 4;   /* ja end */
+    t[k++] = 0x85; t[k++] = (unsigned char)(0xc0 | (ZDIV[z].reg << 3) | ZDIV[z].reg);                            /* test r, r */
+    t[k++] = 0x0f; t[k++] = 0x84; *(int32_t*)(t + k) = (int32_t)((int64_t)end - (int64_t)(uintptr_t)(t + k + 4)); k += 4;   /* je end */
+    t[k++] = 0xe9; *(int32_t*)(t + k) = (int32_t)((int64_t)back - (int64_t)(uintptr_t)(t + k + 4)); k += 4;                  /* jmp back */
+    FlushInstructionCache(GetCurrentProcess(), t, (SIZE_T)k);
+    DWORD old;
+    if (!VirtualProtect(s, 9, PAGE_EXECUTE_READWRITE, &old)) { bad |= 1 << z; continue; }
+    s[0] = 0xe9; *(int32_t*)(s + 1) = (int32_t)((int64_t)(uintptr_t)t - (int64_t)(uintptr_t)(s + 5));
+    for (int i = 5; i < 9; i++) s[i] = 0x90;
+    VirtualProtect(s, 9, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), s, 9);
+  }
+  /* two more with no size guard: a division by the squad's size, made to give 0 when the squad is empty */
+  static const struct { uint32_t at; unsigned char old[6]; unsigned char body[16]; int nbody, divoff; } DS[2] = {
+    /* 0x140fb41a8: mov rbx,[rbp-9]; div ebx */
+    { 0xfb41a8, { 0x48,0x8b,0x5d,0xf7,0xf7,0xf3 }, { 0x48,0x8b,0x5d,0xf7, 0x85,0xdb, 0x74,0x04, 0xf7,0xf3, 0xeb,0x02, 0x31,0xc0 }, 14, 0 },
+    /* 0x140fb45dc: imul eax,ebp,0x64; div r8d */
+    { 0xfb45dc, { 0x6b,0xc5,0x64,0x41,0xf7,0xf0 }, { 0x6b,0xc5,0x64, 0x45,0x85,0xc0, 0x74,0x05, 0x41,0xf7,0xf0, 0xeb,0x02, 0x31,0xc0 }, 15, 0 } };
+  for (int z = 0; z < 2; z++) {
+    unsigned char* s2 = (unsigned char*)(uintptr_t)(exe_base + DS[z].at);
+    if (memcmp(s2, DS[z].old, 6)) { bad |= 8 << z; continue; }
+    unsigned char* t = near_alloc(exe_base);
+    if (!t) { bad |= 8 << z; continue; }
+    memcpy(t, DS[z].body, (size_t)DS[z].nbody);
+    int k = DS[z].nbody;
+    uint64_t back = exe_base + DS[z].at + 6;
+    t[k++] = 0xe9; *(int32_t*)(t + k) = (int32_t)((int64_t)back - (int64_t)(uintptr_t)(t + k + 4)); k += 4;
+    FlushInstructionCache(GetCurrentProcess(), t, (SIZE_T)k);
+    DWORD old;
+    if (!VirtualProtect(s2, 6, PAGE_EXECUTE_READWRITE, &old)) { bad |= 8 << z; continue; }
+    s2[0] = 0xe9; *(int32_t*)(s2 + 1) = (int32_t)((int64_t)(uintptr_t)t - (int64_t)(uintptr_t)(s2 + 5)); s2[5] = 0x90;
+    VirtualProtect(s2, 6, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), s2, 6);
+  }
+  return bad;
+}
+
 /* 0 ok; 2 a call is not the one expected (nothing patched); 3 no page in reach; 4 VirtualProtect */
 static int cont_install(uint64_t exe_base)
 {
@@ -10748,14 +12238,411 @@ static uint32_t g_ci_comp = 0xffffffffu, g_ci_menu_n = 0, g_ci_sel_n = 0;
 /* Libertadores F1/F2/F3 are pages of the native qualifying item; the rejected
    separate-menu-item experiment is intentionally not used. */
 
+/* kcup (13/11, the user's list): Fase inicial (the play-off page: preliminary, rounds 1-2), Fase
+   eliminatoria (the Knockout page as a list of rounds: round 3 to the final), Gols, Assistencias,
+   Titulos individuais, Time do torneio, Regras. Every flow name fits the string's own buffer. */
+static void kc_menu(ci_vec_t* v, int cp)
+{
+    static const struct { uint32_t type, text; const char* flow; } W0[7] = {
+    { 0x0, KCI_TEXT, "playoff" }, { 0x0, KCE_TEXT, "playoff" }, { 0x7, 0x1a00d6, "goalranking" },
+    { 0x8, 0x1a00d7, "assistranking" }, { 0xa, 0x1a00e9, "personaltitle" }, { 0xb, KCT_TEXT, "besteleven" },
+    { 0x9, 0x2bc01f5, "regulations" } };
+  typedef struct { uint32_t type, text; const char* flow; } w_t;
+  w_t W[7]; memcpy(W, W0, sizeof W);
+  const int NW = 7;
+  (void)cp;
+  int had = (int)(v->e - v->b);
+  /* the game's own on/off for the end-of-cup pages (Titulos individuais, Time do torneio): they are grey
+     until the cup is over, and opening them earlier may take the game down (the user, 13/11) */
+  int native_en[16]; for (int k = 0; k < 16; k++) native_en[k] = -1;
+  for (int k = 0; k < had; k++) if (v->b[k].type < 16) native_en[v->b[k].type] = v->b[k].en;
+  for (int k = had; k < NW; k++) {                      /* room first: the game's own push_back */
+    ci_item_t it; memset(&it, 0, sizeof it); it.cap = 15;
+    ((cipush_fn)(uintptr_t)(g_base + CIPUSH_RVA))(v, &it);
+  }
+  int n = (int)(v->e - v->b);
+  int ok = n >= NW;
+  for (int k = 0; k < n && ok; k++) if (v->b[k].cap != 15) ok = 0;   /* only inline strings are rewritten */
+  if (ok) {
+    for (int k = 0; k < NW; k++) {
+      ci_item_t* it = &v->b[k];
+      size_t len = strlen(W[k].flow);
+      it->type = W[k].type; it->text = W[k].text;
+      it->en = (W[k].type == 0xa || W[k].type == 0xb) ? (uint8_t)(native_en[W[k].type] > 0) : 1;
+      memset(it->buf, 0, sizeof it->buf); memcpy(it->buf, W[k].flow, len); it->size = len; it->cap = 15;
+    }
+    v->e = v->b + NW;
+    for (int k = 0; k < 2; k++) {                     /* a tie item with no round made this season is grey */
+      int any = 0;
+      for (int r = k ? 3 : 0; r <= (k ? KC_ROUNDS - 1 : 2) && !any; r++)
+        for (int c = 0; c < KC_CHUNKS && KC_KIND[r][c] && !any; c++) {
+          unsigned char* rnd = kc_rnd(KC_KIND[r][c]);
+          if (rnd && kc_fresh(rnd)) any = 1;
+        }
+      v->b[k].en = (uint8_t)any;
+    }
+    g_kc_menu_live = 1; g_cp = cp;
+  }
+  static int said_kcm = 0;
+  if (said_kcm++ < 4) logf("fl26swiss: Competition Info -- kcup menu %s (%d native item(s), %d now)",
+                           ok ? "rebuilt: Fase inicial, Fase eliminatoria, Gols, Assistencias, Titulos, Time do torneio, Regras" : "LEFT AS IT WAS (a long string)",
+                           had, (int)(v->e - v->b));
+}
+static int lph_menu(ci_vec_t* v, uint32_t comp);
+/* the Competition Info menu of one regulation (0x141520040, Info Database: the caller has a regulation) */
+#define CIMENU2_RVA 0x1520040
+typedef uint64_t (*cimenu2_fn)(ci_vec_t* v, uint16_t* reg, uint64_t flag);
+unsigned char* g_tramp_cimenu2 = 0;
+uint64_t ci_menu2_handler(ci_vec_t* v, uint16_t* reg, uint64_t flag)
+{
+  uint64_t r = ((cimenu2_fn)(uintptr_t)g_tramp_cimenu2)(v, reg, flag);
+  g_kc_menu_live = 0;
+  int cp = reg ? cp_of_reg(*reg) : -1;
+  if (cp >= 0 && v && v->b && v->e >= v->b) kc_menu(v, cp);
+  else if (reg && v && v->b && v->e > v->b && g_tramp_txtget) {
+    /* lab 19/11/2026: Base de dados -> Info. da Competicao builds the league's menu here, not in ci_menu_handler
+       -- the groups (L1/R1) and phase items of our leagues were never added there (the Serie C/D) */
+    uint32_t comp = reg_comp(*reg);
+    lph_unswap("menu built (one regulation)");
+    g_lph_vec = 0; g_lph_pick = -1; g_lph_std = 0xffff;
+    int ok = lph_menu(v, comp);
+    static int said = 0;
+    if (said++ < 8) logf("fl26swiss: lphase -- menu of reg %u (comp %u, Info Database): %s", (unsigned)*reg, comp, ok ? "ours" : "not ours");
+  }
+  return r;
+}
+/* lphase: the host league's menu -- one item per phase, after the native items' first (the table) */
+static int lph_live_groups(uint32_t comp, uint16_t* out, int cap);
+static int lph_menu(ci_vec_t* v, uint32_t comp)
+{
+  int add = 0;
+  int grouped = 0, set = 0;
+  for (int i = 0; i < g_nlph; i++)
+    if (reg_comp(g_lph[i].host) == comp) {
+      if (g_lph[i].text == 3) grouped = 1;
+      else if (g_lph[i].text == 4) { if (!set) add++; set = 1; }   /* lab 19/11/2026: a set of groups behind ONE item */
+      else add++;
+    }
+  if (grouped) { uint16_t rg[72]; grouped = lph_live_groups(comp, rg, 72) > 1; }   /* a group with no table yet: no group screen */
+  /* lab 17/11/2026 (the user: every group behind one item, L1/R1 between them): a league with groups gets the
+     group screen ("standings", type 2) on its table item -- grplist_handler hands that screen the groups */
+  if (grouped && v->e > v->b && v->b[0].cap == 15) {
+    v->b[0].type = 2;
+    memset(v->b[0].buf, 0, sizeof v->b[0].buf); memcpy(v->b[0].buf, "standings", 9); v->b[0].size = 9;
+  }
+  if (!add) return grouped;
+  int n = (int)(v->e - v->b);
+  /* lab 17/11/2026: the popup crashed the game with 6 + 21 items (Norway's 4. divisjon); at most LPH_MENU_MAX
+     items in all until the limit is known -- the phases past it are left out of the menu (logged) */
+  if (n < 1) return 0;
+  if (n + add > LPH_MENU_MAX) {
+    static int warned = 0;
+    if (warned++ < 4) logf("fl26swiss: lphase -- comp %u: %d native + %d phase item(s) > %d; only the first %d phase item(s)",
+                           comp, n, add, LPH_MENU_MAX, LPH_MENU_MAX - n);
+    add = LPH_MENU_MAX - n;
+    if (add <= 0) return 0;
+  }
+  int map_cp[32], map_pk[32]; uint16_t map_std[32];
+  for (int k = 0; k < 32; k++) { map_cp[k] = -1; map_pk[k] = 0; map_std[k] = 0xffff; }
+  /* the table item: the first item whose type is not a phase page of a cup -- the game's league table */
+  int pos = 1;
+  char items[200]; int o = 0;
+  for (int k = 0; k < n && o < 180; k++)
+    o += snprintf(items + o, sizeof items - o, " %u/%u/%.15s", v->b[k].type, v->b[k].en, v->b[k].cap == 15 ? v->b[k].buf : "-");
+  int pushed = 0;
+  int set_done = 0;
+  for (int i = 0; i < g_nlph; i++) {
+    if (reg_comp(g_lph[i].host) != comp || g_lph[i].text == 3) continue;   /* groups: the group screen */
+    if (g_lph[i].text == 4 && set_done) continue;
+    if (pushed >= add) break;                       /* LPH_MENU_MAX */
+    pushed++;
+    ci_item_t it; memset(&it, 0, sizeof it);
+    int cp = -1;
+    if (g_lph[i].text == 4) {                       /* the set's item: the group screen with the set's leagues */
+      set_done = 1;
+      it = v->b[0];
+      if (it.cap != 15) continue;
+      it.type = 2;
+      memset(it.buf, 0, sizeof it.buf); memcpy(it.buf, "standings", 9); it.size = 9;
+      uint32_t tx = lpn_text((uint16_t)(0x8000u | g_lph[i].host));
+      if (tx) it.text = tx;
+      it.en = 1;
+    } else if (g_lph[i].text == 3) {                       /* a group: the table item's own flow, given that league */
+      it = v->b[0];
+      if (it.cap != 15) continue;
+      /* lab 17/11/2026: on as the league's own table item is -- off before the season has a table (opening a
+         group then crashed the game: Norway in July 2026, its calendar season not begun) */
+      it.text = lpn_text(g_lph[i].reg) ? lpn_text(g_lph[i].reg) : GRB_TEXT; it.en = v->b[0].en;
+    } else {
+      for (int k = 0; k < g_nccup; k++) if (g_ccup[k].ko == g_lph[i].reg) cp = CP_CC_BASE + k;
+      if (cp < 0) cp = br_cp_of(g_lph[i].reg);       /* lab 18/11/2026: the Serie D / C engines' regulations */
+      if (cp < 0) continue;
+      uint16_t rg[8]; uint8_t kd[8], rd[8];
+      it.type = 0; it.text = g_lph[i].text == 2 ? PLO_TEXT : PPO_TEXT;
+      if (lpn_text(g_lph[i].reg)) it.text = lpn_text(g_lph[i].reg);   /* lab 19/11/2026: lpname <reg> -- the item's own name */
+      it.en = (uint8_t)(cp_entries(cp, 0, rg, kd, rd, 8) > 0);
+      memcpy(it.buf, "playoff", 8); it.size = 7; it.cap = 15;
+    }
+    ((cipush_fn)(uintptr_t)(g_base + CIPUSH_RVA))(v, &it);
+    int m = (int)(v->e - v->b);
+    if (m != n + 1) { logf("fl26swiss: lphase -- item not added (vector %d -> %d)", n, m); break; }
+    ci_item_t last = v->b[m - 1];
+    memmove(v->b + pos + 1, v->b + pos, (size_t)(m - 1 - pos) * sizeof(ci_item_t));
+    v->b[pos] = last;
+    memmove(map_cp + pos + 1, map_cp + pos, (size_t)(n - pos) * sizeof map_cp[0]);
+    memmove(map_pk + pos + 1, map_pk + pos, (size_t)(n - pos) * sizeof map_pk[0]);
+    memmove(map_std + pos + 1, map_std + pos, (size_t)(n - pos) * sizeof map_std[0]);
+    map_cp[pos] = cp; map_pk[pos] = 0; map_std[pos] = g_lph[i].text == 3 ? g_lph[i].reg : g_lph[i].text == 4 ? 0xfffe : 0xffff;
+    n = m; pos++;
+  }
+  memcpy(g_lph_cp, map_cp, sizeof map_cp); memcpy(g_lph_pk, map_pk, sizeof map_pk); memcpy(g_lph_sreg, map_std, sizeof map_std);
+  g_lph_n = n; g_lph_vec = v; g_lph_comp = comp;
+  static int said = 0;
+  if (said++ < 12) logf("fl26swiss: lphase -- menu of comp %u: %d phase item(s) added; native items:%s", comp, add, items);
+  return 1;
+}
+/* lab 17/11/2026: the group screen of a league of ours (see stand_handler) */
+static const char* lpn_name(uint16_t reg)
+{
+  for (int k = 0; k < g_nlpn; k++) if (g_lpn[k].reg == reg) return g_lpn[k].name;
+  static char buf[16]; snprintf(buf, sizeof buf, "%u", (unsigned)reg); return buf;
+}
+/* comp's league and its groups (lphase text 3), host first, in world order: 0 when it has none */
+static int lph_groups_of(uint32_t comp, uint16_t* out, int cap)
+{
+  uint16_t host = 0; int n = 0;
+  for (int i = 0; i < g_nlph && !host; i++) if (g_lph[i].text == 3 && reg_comp(g_lph[i].host) == comp) host = g_lph[i].host;
+  if (!host) return 0;
+  out[n++] = host;
+  for (int i = 0; i < g_nlph && n < cap; i++) if (g_lph[i].text == 3 && g_lph[i].host == host && find_rec(g_lph[i].reg)) out[n++] = g_lph[i].reg;
+  return n;
+}
+/* lab 19/11/2026: the groups that have a table this season (the host always) -- the Serie C's second group sleeps in 2027 */
+static int lph_live_groups(uint32_t comp, uint16_t* out, int cap)
+{
+  int n = lph_groups_of(comp, out, cap), k = n > 0 ? 1 : 0;
+  for (int i = 1; i < n; i++) {
+    unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(out[i]);
+    if (t && *(uint32_t*)(t + 0x3c0) > 0) out[k++] = out[i];
+  }
+  return k;
+}
+/* the set behind the item (lphase text 4: the Serie C's quadrangulares), in world order */
+static int lph_set_of(uint32_t comp, uint16_t* out, int cap)
+{
+  int n = 0;
+  for (int i = 0; i < g_nlph && n < cap; i++) if (g_lph[i].text == 4 && reg_comp(g_lph[i].host) == comp && find_rec(g_lph[i].reg)) out[n++] = g_lph[i].reg;
+  return n;
+}
+/* the group screen (0x140af6130) asks 0x141542300(&regs, &comp, 2) for its groups at 0x140af6213: a league of ours
+   with groups answers its leagues (u16 push_back 0x140cc7f20); the screen reads each one's league table itself */
+#define GRPLIST_CALL_RVA 0xaf6213
+#define PGLIST_RVA 0x1542300
+typedef void (*pglist_fn)(void* vec, int* comp, uint64_t kind, uint64_t p4);
+typedef void (*push16_fn)(void* vec, const uint16_t* v);
+void grplist_handler(void* vec, int* comp, uint64_t kind, uint64_t p4)
+{
+  if (comp && kind == 2) {
+    uint16_t rg[72]; int n;
+    if (g_lph_std == 0xfffe && GetTickCount() - g_lph_std_tick < 600000u) n = lph_set_of((uint32_t)*comp, rg, 72);
+    else n = lph_live_groups((uint32_t)*comp, rg, 72);
+    if (n > 1) {
+      for (int k = 0; k < n; k++) ((push16_fn)(uintptr_t)(g_base + PUSH16_RVA))(vec, &rg[k]);
+      memcpy(g_gs_regs, rg, sizeof rg[0] * (size_t)n); g_gs_n = n; g_gs_tick = GetTickCount();
+      static int said = 0;
+      if (said++ < 8) logf("fl26swiss: groups screen -- comp %d: league %u and %d group league(s)", *comp, (unsigned)rg[0], n - 1);
+      static int said2 = 0;
+      if (said2++ < 4) {   /* lab 18/11/2026: a district's list v its table (a league that changed size at New Year) */
+        char line[900]; int q = 0;
+        for (int k = 0; k < n && q < 860; k++) {
+          unsigned char* rec = find_rec(rg[k]);
+          unsigned char* t = ((table_fn)(uintptr_t)(g_base + TABLE_RVA))(rg[k]);
+          q += snprintf(line + q, sizeof line - (size_t)q, " %u:%u/%u", (unsigned)rg[k], rec ? rec_count(rec) : 0u,
+                        t ? *(uint32_t*)(t + 0x3c0) : 0u);
+        }
+        logf("fl26swiss: groups screen -- list/table rows:%s", line);
+      }
+      return;
+    }
+  }
+  g_gs_n = 0;
+  ((pglist_fn)(uintptr_t)(g_base + PGLIST_RVA))(vec, comp, kind, p4);
+}
+/* lab 19/11/2026: Info. da Competicao's "Times participantes" (the panel beside the list, cursor on a competition) is
+   0x140b08e20(self, &out, &regs): regs = a u16 vector of regulation ids, every one's clubs listed once (found with the
+   club getter probe: 0x140b08f0c / 0x140b08faf). Called at 0x140b09388 and 0x140b094ce. A league of ours with groups
+   (the Serie D's sixteen) gets its live groups added after the host, else only the host's six showed */
+#define PLIST_RVA 0xb08e20
+#define PLIST_CALL1_RVA 0xb09388
+#define PLIST_CALL2_RVA 0xb094ce
+typedef void (*plist_fn)(void* self, void* out, void* regs);
+void plist_handler(void* self, void* out, uint16_t** regs)
+{
+  if (regs && regs[0] && regs[1] > regs[0] && regs[1] - regs[0] < 64) {
+    uint16_t buf[512]; int n = 0, added = 0;
+    for (uint16_t* r = regs[0]; r < regs[1] && n < 440; r++) {
+      buf[n++] = *r;
+      uint16_t rg[72]; int g = lph_live_groups(reg_comp(*r), rg, 72);
+      if (g > 1 && rg[0] == *r) for (int k = 1; k < g && n < 512; k++) { buf[n++] = rg[k]; added++; }
+    }
+    if (added) {
+      uint16_t* v[3] = { buf, buf + n, buf + n };
+      static int said = 0;
+      if (said++ < 6) logf("fl26swiss: participants -- reg %u: %d group league(s) added", (unsigned)regs[0][0], added);
+      ((plist_fn)(uintptr_t)(g_base + PLIST_RVA))(self, out, v);
+      return;
+    }
+  }
+  ((plist_fn)(uintptr_t)(g_base + PLIST_RVA))(self, out, regs);
+}
+/* a rel32 call at exe+ra to exe+want is pointed at handler through a stub within 2 GB of the exe */
+static int call_retarget(uint64_t exe_base, uint32_t ra, uint32_t want, void* handler)
+{
+  unsigned char* c = (unsigned char*)(uintptr_t)(exe_base + ra);
+  if (c[0] != 0xe8 || (uint64_t)(uintptr_t)(c + 5) + *(int32_t*)(c + 1) != exe_base + want) return 2;
+  unsigned char* st = 0;
+  for (uint64_t k = 1; k < 512 && !st; k++) {
+    uint64_t at = (exe_base - k * 0x100000ull) & ~0xffffull;
+    st = (unsigned char*)VirtualAlloc((void*)(uintptr_t)at, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+  }
+  if (!st) return 3;
+  int64_t rel = (int64_t)(uintptr_t)st - (int64_t)(uintptr_t)(c + 5);
+  if (rel > 0x7fffffffll || rel < -0x80000000ll) return 4;
+  st[0] = 0x48; st[1] = 0xb8; *(uint64_t*)(st + 2) = (uint64_t)(uintptr_t)handler; st[10] = 0xff; st[11] = 0xe0;
+  DWORD old;
+  if (!VirtualProtect(c, 5, PAGE_EXECUTE_READWRITE, &old)) return 5;
+  *(int32_t*)(c + 1) = (int32_t)rel;
+  VirtualProtect(c, 5, old, &old);
+  FlushInstructionCache(GetCurrentProcess(), c, 5);
+  return 0;
+}
+/* lab 18/11/2026: Classif. por gols / assistencias (CmnGoalRanking, 0x140b175f0) reads ONE regulation's ranking:
+   0x14157c5d0(reg, rec+0x2fc, assists) -> 40 rows of 0x14 bytes, the count at +0x320 (the getter itself sits in the
+   protected section). A league of ours with groups (Norway's 2./3./4. divisjon) ranked only its host league (Ostfold):
+   the call at 0x140b1768b gets the rows of every group league merged, by the count field, the best 40 kept. */
+#define RANK_CALL_RVA 0xb1768b
+#define RANK_RVA 0x157c5d0
+#define RANK_ROWS 40
+typedef unsigned char* (*rank_fn)(uint64_t reg, uint64_t key, uint64_t assists);
+static unsigned char g_rank_buf[0x400];
+static int g_rank_said = 0;
+static void rank_dump(const char* what, uint16_t reg, const unsigned char* L)
+{
+  if (!L || g_rank_said >= 12) return;
+  g_rank_said++;
+  unsigned n = *(const uint32_t*)(L + 0x320);
+  char line[400]; int o = 0;
+  for (unsigned i = 0; i < n && i < 4 && o < 360; i++) {
+    o += snprintf(line + o, sizeof line - o, " [");
+    for (int b = 0; b < 0x14; b++) o += snprintf(line + o, sizeof line - o, "%02x", L[i * 0x14 + b]);
+    o += snprintf(line + o, sizeof line - o, "]");
+  }
+  logf("fl26swiss: ranking -- %s reg %u: %u row(s)%s", what, (unsigned)reg, n, line);
+}
+/* a row (probe 18/11/2026): +0 player, +8 club, +0xc its place (ties share it: 1, 1, 3), +0x10 the goals/assists */
+static unsigned rank_key(const unsigned char* r) { return *(const uint32_t*)(r + 0x10); }
+/* lab 19/11/2026: a player's goals in every phase summed (the Serie C: first phase, its second group, the
+   quadrangulares and the final; the Serie D: its 16 groups and the knockout) -- before, the rows were merged
+   side by side and a scorer of two phases had two rows. The phases summed are the host's group leagues and,
+   of its lphase items, the Brazil engines' cups (sdko, the C's final). */
+#define RANK_ACC 640
+typedef struct { uint32_t player; unsigned key; unsigned char row[0x14]; } rank_acc_t;
+static rank_acc_t g_rank_acc[RANK_ACC];
+unsigned char* rank_handler(uint64_t reg, uint64_t key, uint64_t assists)
+{
+  rank_fn orig = (rank_fn)(uintptr_t)(g_base + RANK_RVA);
+  unsigned char* L = orig(reg, key, assists);
+  uint16_t host = (uint16_t)reg;
+  uint16_t rg[80]; int n = lph_groups_of(reg_comp(host), rg, 72);
+  rank_dump(assists & 0xff ? "assists" : "goals", host, L);
+  if (n < 1 || rg[0] != host) { n = 1; rg[0] = host; }
+  for (int i = 0; i < g_nlph && n < 80; i++) {
+    if ((g_lph[i].text != 2 && g_lph[i].text != 4) || g_lph[i].host != host) continue;
+    uint16_t r = g_lph[i].reg;
+    if (g_lph[i].text == 2 && !((g_sd.on && r == g_sd.reg) || (g_cq.on && r == g_cq.freg))) continue;
+    int have = 0;
+    for (int k = 0; k < n; k++) have |= rg[k] == r;
+    if (!have && get_rec(r)) rg[n++] = r;
+  }
+  if (n < 2 || !L) return L;
+  unsigned na = 0, summed = 0;
+  for (int k = 0; k < n; k++) {
+    unsigned char* G = L;
+    if (k) {
+      unsigned char* rec = get_rec(rg[k]);
+      if (!rec) continue;
+      G = orig(rg[k], *(uint16_t*)(rec + 0x2fc), assists);
+      if (!G) continue;
+      if (k == 1) rank_dump("group", rg[k], G);
+    }
+    unsigned m = *(uint32_t*)(G + 0x320);
+    for (unsigned i = 0; i < m && i < RANK_ROWS; i++) {
+      const unsigned char* r = G + i * 0x14;
+      uint32_t pl = *(const uint32_t*)r;
+      unsigned j = 0;
+      while (j < na && g_rank_acc[j].player != pl) j++;
+      if (j < na) { g_rank_acc[j].key += rank_key(r); summed++; continue; }
+      if (na >= RANK_ACC) continue;
+      g_rank_acc[na].player = pl; g_rank_acc[na].key = rank_key(r); memcpy(g_rank_acc[na].row, r, 0x14); na++;
+    }
+  }
+  /* best first (stable: the first phase's order breaks ties), the best 40 kept */
+  for (unsigned a = 1; a < na; a++)
+    for (unsigned b = a; b > 0 && g_rank_acc[b].key > g_rank_acc[b - 1].key; b--) { rank_acc_t t = g_rank_acc[b]; g_rank_acc[b] = g_rank_acc[b - 1]; g_rank_acc[b - 1] = t; }
+  unsigned char* B = g_rank_buf; unsigned nb = na < RANK_ROWS ? na : RANK_ROWS;
+  memset(B, 0, sizeof g_rank_buf);
+  for (unsigned i = 0; i < nb; i++) {
+    memcpy(B + i * 0x14, g_rank_acc[i].row, 0x14);
+    *(uint32_t*)(B + i * 0x14 + 0x10) = g_rank_acc[i].key;
+  }
+  for (unsigned i = 0; i < nb; i++)            /* the places again: 1 + how many rank above */
+    *(uint32_t*)(B + i * 0x14 + 0xc) = (i && rank_key(B + i * 0x14) == rank_key(B + (i - 1) * 0x14))
+                                       ? *(uint32_t*)(B + (i - 1) * 0x14 + 0xc) : i + 1;
+  memcpy(B + 0x320, &nb, 4);
+  static int said = 0;
+  if (said++ < 8) logf("fl26swiss: ranking -- reg %u and %d other phase(s): %u player(s), %u row(s) summed into another phase's",
+                       (unsigned)host, n - 1, nb, summed);
+  return B;
+}
+/* Gols / Assistencias / participants: 0x140c6b9b0(comp, &regs, ...) lists the competition's phase regulations
+   (kinds 0..6); a league of ours with groups gets every group league added (the 5. deild's B only, before) */
+#define PHLIST_RVA 0xc6b9b0
+static const unsigned char SIG_PHLIST[17] = {
+  0x48, 0x89, 0x5c, 0x24, 0x08, 0x44, 0x89, 0x44, 0x24, 0x18, 0x55, 0x56, 0x57, 0x48, 0x83, 0xec, 0x20 };
+typedef uint64_t (*phlist_fn)(uint64_t a1, void* vec, uint64_t comp, uint64_t a4);
+unsigned char* g_tramp_phlist = 0;
+/* the competition is the third argument: the loop hands the phase lookup &r8's home ([rsp+0x50]) */
+uint64_t phlist_handler(uint64_t a1, void* vec, uint64_t comp, uint64_t a4)
+{
+  uint64_t r = ((phlist_fn)(uintptr_t)g_tramp_phlist)(a1, vec, comp, a4);
+  comp &= 0xffffffffu;
+  uint16_t rg[72]; int n = lph_groups_of((uint32_t)comp, rg, 72);
+  if (n > 1 && vec) {
+    uint16_t** v = (uint16_t**)vec; int added = 0;
+    for (int k = 0; k < n; k++) {
+      int have = 0;
+      for (uint16_t* q = v[0]; q && q < v[1]; q++) if (*q == rg[k]) have = 1;
+      if (!have) { ((push16_fn)(uintptr_t)(g_base + PUSH16_RVA))(vec, &rg[k]); added++; }
+    }
+    static int said = 0;
+    if (said++ < 8) logf("fl26swiss: groups -- phase list of comp %u: %d group league(s) added", (unsigned)comp, added);
+  }
+  return r;
+}
+
 uint64_t ci_menu_handler(ci_vec_t* v, uint32_t* comp, uint64_t flag)
 {
   g_ci_native = 0xffff; g_ci_native_comp = 0xffffffffu;
   g_mr_pick = 0xffff;                        /* B266: the menu is Competition Info's, not Match Results' */
   uint64_t r = ((cimenu_fn)(uintptr_t)g_tramp_cimenu)(v, comp, flag);
+  g_kc_menu_live = 0;
   g_ci_pick = 0xffff;
   if (v == g_ci_vec) { g_ci_vec = 0; g_ci_n = 0; }
+  lph_unswap("menu built");
+  g_lph_vec = 0; g_lph_pick = -1; g_lph_std = 0xffff;
   if (!v || !comp || !v->b || v->e < v->b || !g_tramp_txtget) return r;
+  if (lph_menu(v, *comp)) return r;
+  { int cp = cp_of_comp(*comp); if (cp >= 0) { kc_menu(v, cp); return r; } }
   /* B219 (antonimus 23.10.): the Libertadores' qualifying item ("Qualifying Round") went grey once
      its phases were played and stayed grey all season. Its F1/F2/F3 are filled by this module,
      not by the game's draw, and the menu (no phase-kind call for this item) greys it on a mark the
@@ -10984,6 +12871,40 @@ uint64_t ci_menu_handler(ci_vec_t* v, uint32_t* comp, uint64_t flag)
 unsigned char* ci_sel_handler(unsigned char* flow)
 {
   unsigned char* e = ((cisel_fn)(uintptr_t)g_tramp_cisel)(flow);
+  if (e && flow && g_lph_vec) {                       /* lphase: an item of a league's menu */
+    unsigned char* lctx = *(unsigned char**)(flow + 0x88);
+    int lidx = lctx ? *(int32_t*)(lctx + 0xd8) : -1;
+    g_lph_pick = lidx >= 0 && lidx < g_lph_n ? g_lph_cp[lidx] : -1;
+    g_lph_std = lidx >= 0 && lidx < g_lph_n ? g_lph_sreg[lidx] : 0xffff;
+    if (g_lph_pick >= 0) g_kc_pick = g_lph_pk[lidx];
+    g_lph_std_tick = GetTickCount();
+    /* lab 17/11 (probe, in game): the menu's flow context keeps the league its table page shows at +0x170
+       (the competition's league phase, looked up when the menu was built). A group item writes its own
+       league there; any other item puts the host back. */
+    if (lctx && !IsBadWritePtr(lctx + 0x170, 2)) {
+      uint16_t* slot = (uint16_t*)(lctx + 0x170);
+      for (int i = 0; i < g_nlph; i++) {
+        if (reg_comp(g_lph[i].host) != g_lph_comp || g_lph[i].text != 3) continue;
+        uint16_t want = g_lph_std == g_lph[i].reg ? g_lph[i].reg : g_lph[i].host;
+        if ((*slot == g_lph[i].host || *slot == g_lph[i].reg) && *slot != want) {
+          logf("fl26swiss: lphase -- the menu's league %u -> %u", (unsigned)*slot, (unsigned)want);
+          *slot = want;
+        }
+      }
+    }
+    static int said_lp = 0;
+    if (said_lp++ < 16) logf("fl26swiss: lphase -- item %d chosen (flow %.24s): play-off cup %d, group league %u", lidx,
+                             (const char*)e, g_lph_pick, (unsigned)g_lph_std);
+    return e;
+  }
+  if (e && flow && g_kc_menu_live && !strcmp((const char*)e, "playoff")) {
+    unsigned char* kctx = *(unsigned char**)(flow + 0x88);
+    int kidx = kctx ? *(int32_t*)(kctx + 0xd8) : -1;
+    g_kc_pick = g_cp > 0 ? (kidx == 1) : kidx == 1;
+    static int said_kp = 0;
+    if (said_kp++ < 8) logf("fl26swiss: Competition Info -- kcup item %d chosen: %s", kidx, g_kc_pick ? "Fase eliminatoria" : "Fase inicial");
+    return e;
+  }
   if (!e || !flow || !g_ci_vec || strcmp((const char*)e, "playoff")) return e;
   unsigned char* ctx = *(unsigned char**)(flow + 0x88);
   if (!ctx) return e;
@@ -11715,6 +13636,7 @@ static void career_mark(const char* where)
 uint64_t date_handler(uint64_t reg, void* vec)
 {
   uint16_t id = (uint16_t)reg;
+  if (vec) br_shape(id, "its dates");             /* lab 18/11/2026: the Serie C's shape by season */
   if (vec) career_mark("its dates");
   if (vec) nt_sample(reg, vec);                    /* B254: before anything of this day is dated */
   if (vec && g_ndlike) {
@@ -11730,6 +13652,9 @@ uint64_t date_handler(uint64_t reg, void* vec)
     if (k >= 0 && ccup_world(&g_ccup[k])) return ccup_dates(k, ko, id, reg, vec);
   }
   if (vec) {
+    { uint64_t krv; if (kc_dates(reg, vec, &krv)) return krv; }
+    { uint64_t brv; if (sd_dates(reg, vec, &brv) || cq_dates(reg, vec, &brv)) return brv; }   /* lab 18/11/2026: Serie D / C */
+    /* kcup: one regulation, its kinds dated */
     /* a league cup's pre-round: reg 2's records (the same tie of it), on the pre-round's days */
     int tk, li = lpre_of(id, &tk);
     if (li >= 0) {
@@ -12071,7 +13996,7 @@ typedef struct {
 /* every final table and cup winner memory can hold: state_store took 64 + 32 from before g_final
    grew to FINAL_N, and in a fourth season (2026-10-21, r12, ~110 keeps) want[] ran over the
    globals after it -- UEFA10's, so Competition Info's League Phase called address 0 */
-#define STATE_MAXREC (FINAL_N + 32 + 1 + 64)
+#define STATE_MAXREC (FINAL_N + CUPWIN_MAX + 1 + 64)   /* lab 16/11/2026: the cupwin room */
 #define STATE_BUILT 2
 /* B240 (antonimus 25.10.): a first season's places go by squad strength, worked out once and kept
    for the summer -- in memory. A save loaded weeks later worked it out again from squads that had
@@ -12313,7 +14238,7 @@ static void state_sync(void)
     } else {
       cupwin_t* w = cupwin_of(best[k].reg);
       if (w && w->day >= day) continue;
-      if (!w) { if (g_ncupwin >= 32) continue; w = &g_cupwin[g_ncupwin++]; }
+      if (!w) { if (g_ncupwin >= CUPWIN_MAX) continue; w = &g_cupwin[g_ncupwin++]; }
       w->reg = best[k].reg; w->day = day; w->club = best[k].club[0];
       nc++;
     }
@@ -12842,7 +14767,7 @@ static void aug_scup_keep(void)
     if (w && ad >= w->day && ad - w->day < 60) continue;
     uint32_t c = winner_now(cs->cup);
     if (!c) continue;
-    if (!w) { if (g_ncupwin >= 32) continue; w = &g_cupwin[g_ncupwin++]; w->reg = cs->cup; }
+    if (!w) { if (g_ncupwin >= CUPWIN_MAX) continue; w = &g_cupwin[g_ncupwin++]; w->reg = cs->cup; }
     w->day = ad; w->club = c;
     logf("fl26swiss: cup reg %u won by %08x (day %d), kept for Super Cup %u", (unsigned)cs->cup, c, d,
          (unsigned)cs->reg);
@@ -13572,6 +15497,27 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
     if (!cr) logf("fl26swiss: board objective by continent live (18 calls of the owner's judges)");
     else logf("fl26swiss: board objective by continent NOT installed (%d)", cr);
   }
+  { int tr = tbl_install(exe_base); logf("fl26swiss: lphase -- table getter %s (%d)", tr ? "NOT redirected" : "redirected through the group stub", tr); }
+  { static const uint32_t at[3] = { 0xaf6ae5, 0xaf6b65, 0xaf692d };   /* L1, R1, the set-up: the corner's count */
+    int bad = 0;
+    for (int k = 0; k < 3; k++) bad += call_retarget(exe_base, at[k], GCOUNT_RVA, (void*)gcount_handler) != 0;
+    logf("fl26swiss: groups screen -- page count %s (%d of 3 call(s) not)", bad ? "partly redirected" : "redirected", bad); }
+  { int zr = zdiv_install(exe_base);
+    logf("fl26swiss: empty league guard (LayerProcess18) %s (%d)", zr ? "NOT installed" : "installed", zr); }
+  { int rr = call_retarget(exe_base, RANK_CALL_RVA, RANK_RVA, (void*)rank_handler);
+    logf("fl26swiss: ranking -- goals/assists of group leagues %s (%d)", rr ? "NOT merged" : "merged", rr); }
+  { int gr = call_retarget(exe_base, GRPLIST_CALL_RVA, PGLIST_RVA, (void*)grplist_handler);
+    logf("fl26swiss: groups screen -- group list %s (%d)", gr ? "NOT redirected" : "redirected", gr); }
+  { int p1 = call_retarget(exe_base, PLIST_CALL1_RVA, PLIST_RVA, (void*)plist_handler);
+    int p2 = call_retarget(exe_base, PLIST_CALL2_RVA, PLIST_RVA, (void*)plist_handler);
+    logf("fl26swiss: participants -- group leagues %s (%d %d)", p1 || p2 ? "NOT all redirected" : "redirected", p1, p2); }
+  if (!hook((unsigned char*)(uintptr_t)(exe_base + PHLIST_RVA), SIG_PHLIST, 17, (void*)phlist_handler, &g_tramp_phlist))
+    logf("fl26swiss: groups -- phase list hook live (@%llx)", (unsigned long long)(exe_base + PHLIST_RVA));
+  else logf("fl26swiss: groups -- phase list hook NOT installed (signature)");
+  if (!hook((unsigned char*)(uintptr_t)(exe_base + ACTPH_RVA), SIG_ACTPH, 15, (void*)actph_handler, &g_tramp_actph))
+    logf("fl26swiss: lphase -- active phase hook live (0x%llx)", (unsigned long long)(exe_base + ACTPH_RVA));
+  else
+    logf("fl26swiss: lphase -- active phase hook NOT installed (signature)");
   if (!hook((unsigned char*)(uintptr_t)(exe_base + CURPH_RVA), SIG_CURPH, 15, (void*)curph_handler, &g_tramp_curph))
     logf("fl26swiss: phase order live (current phase@%llx: league, play-off, knockout)",
          (unsigned long long)(exe_base + CURPH_RVA));
@@ -13635,6 +15581,19 @@ __declspec(dllexport) int fl26_swiss_install(uint64_t exe_base, const uint16_t* 
     else
       logf("fl26swiss: Libertadores qualifying page breaks NOT installed (%d)",
            lp);
+  }
+  if (!hook((unsigned char*)(uintptr_t)(exe_base + CIMENU2_RVA), SIG_CIMENU, 17, (void*)ci_menu2_handler, &g_tramp_cimenu2))
+    logf("fl26swiss: kcup Competition Info menu (one regulation) live (@%llx)", (unsigned long long)(exe_base + CIMENU2_RVA));
+  else
+    logf("fl26swiss: kcup Competition Info menu (one regulation) NOT installed (signature)");
+  if (!hook((unsigned char*)(uintptr_t)(exe_base + KCT_RVA), SIG_KCT, 17, (void*)kct_handler, &g_tramp_kct))
+    logf("fl26swiss: kcup titles watched (@%llx)", (unsigned long long)(exe_base + KCT_RVA));
+  else
+    logf("fl26swiss: kcup titles NOT watched (signature)");
+  {
+    int kp = kcpg_install(exe_base);
+    logf(kp ? "fl26swiss: kcup Fase inicial round records NOT installed (%d)" : "fl26swiss: kcup Fase inicial round records live (@%llx)",
+         kp ? (unsigned long long)kp : (unsigned long long)(exe_base + KCPG_FIX_THUNK));
   }
   {
     int sp = single_popage_patch(exe_base);

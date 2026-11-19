@@ -49,6 +49,11 @@ tables (`python tools/fl26world.py --root <world>`), but it only knows `league`,
 | `newfaces`, `newfaces3d` | `newfaces 179673-179679 179681` | `lbplayers.new_face_lines` | fl26regen |
 | `faceapp` | `faceapp 179700:36912` | `lbplayers.face_app_lines` | fl26regen (`fl26_regen_copy`) |
 | `cupdraw` | `cupdraw seeded` (or `cupdraw <reg> random`) | `build()` from the recipe's `cup_draw` | fl26swiss (`fl26_swiss_cupdraw`) |
+| `lphase` | `lphase 223 224 3` | `leaguebuilder.lphase_lines` (`group_of`; text 2 and 4 by a country's script) | fl26swiss (`fl26_swiss_lphase`) |
+| `lpname` | `lpname 224 Grupo A2` | `leaguebuilder.lphase_lines` (`group_label`; others by a country's script) | fl26swiss (`fl26_swiss_lphase_name`) |
+| `rgroup`, `rhome`, `rmap` | `rgroup 223 tier=12 size=6 up=255 down=0 slot=155` | a country's script ([Brazil](brasil-serie-c-d.md)) | fl26joindll -> fl26join.dll (`fl26_join_regional`) |
+| `xline` | `xline fl26_swiss_cqleague 221 222` | a country's script | fl26swiss: the named export of fl26swiss.dll, given the numbers |
+| `jline` | `jline fl26_join_rdown 219 2026 2` | a country's script | fl26joindll: the named export of fl26join.dll, given the numbers |
 
 ## `league` keys
 

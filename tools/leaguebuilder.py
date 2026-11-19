@@ -281,7 +281,8 @@ R_ABOVE = 0x04
 LEGS_SHIFT, LEGS_MASK = 12, 7
 # 28 at most: 26 and 28 played every round once fl26swiss adds dates (more_dates); with 30 the
 # game left the 55th round off the calendar (L30 test, 25.10.)
-CLUBS_MIN, CLUBS_MAX, LEGS_MAX = 10, 28, 4
+CLUBS_MIN, CLUBS_MAX, LEGS_MAX = 4, 28, 4   # lab 19/11/2026: 4 -- Brazil's Serie C quadrangulares (two leagues of 4),
+# the Serie D's groups of 6 (played in the lab, FL27)
 # "others": the game's groups of clubs in no league, by the nibble at T_POOL of a club's record
 # (Team.bin: 1 Classic Teams, 2 Other European, 3 Other Asia-Oceania, 6 Other Latin American,
 # 7 Other Africa; 5 holds the three "ML Default" clubs). The Discord request of 2026-10-06:
@@ -1077,6 +1078,10 @@ def recipe_from_plan(pl, base):
             r["select_team"] = L["select_team"]
         if L.get("real_calendar") is not None:          # false (the old calendar) counts too
             r["real_calendar"] = copy.deepcopy(L["real_calendar"])
+        if L.get("group_of"):                            # lab 17/11/2026: a group of another league (lphase)
+            r["group_of"] = L["group_of"]
+        if L.get("group_label"):                         # lab 17/11/2026: the group's own name (lpname)
+            r["group_label"] = L["group_label"]
         gc = []
         for at, e in sorted((L.get("game_clubs") or {}).items(), key=lambda x: int(x[0])):
             g = {"at": int(at), "id": e["id"]}
@@ -2323,6 +2328,7 @@ def plan(recipe, base, prev=None):
                  "club_formations": [str(x or "").strip() for x in (L.get("club_formations") or [])],
                  "club_ids": [int(x) if str(x or "").strip().isdigit() else None
                               for x in (L.get("club_ids") or [])][:n],     # ids of the recipe's own
+                 "level": level_of(L, name),      # 14/11/2026 (from fork-unificado): placeholder squads' level
                  "club_kits": list(L.get("club_kits") or []),     # shirt words (shieldcrest) for crests
                  "club_away_kits": list(L.get("club_away_kits") or []),   # and for picking kits (mkkits)
                  "newlife": newlife_of(L),
@@ -2475,6 +2481,15 @@ def plan(recipe, base, prev=None):
                                                                len(SPLIT_LINE) - SPLIT_SKIP))
                 p["split"] = {"legs": 1, "groups": [n], "group_legs": 1, "apertura": True}
                 p["apertura"] = {"playoff": po, "logo": L.get("playoff_logo") or None}
+            if L.get("group_label"):                     # lab 17/11/2026: the group's own name (lpname)
+                p["group_label"] = str(L["group_label"])
+            if L.get("group_of"):                        # lab 17/11/2026: shown as "Grupo B" of that league (lphase)
+                p["group_of"] = str(L["group_of"])
+                # lab 17/11/2026: a group under the same league as its host is a SIBLING -- same division,
+                # no exchange, and the league above keeps its one link down to the host (the game follows one)
+                host = by_name.get(str(L["group_of"]).strip().lower())
+                if host is not None and p["above"] and p["above"] == host.get("above"):
+                    p["sibling"] = True
         except _Below:
             failed.add(name.lower())
             continue
@@ -2518,7 +2533,7 @@ def plan(recipe, base, prev=None):
             _problem(errs, names, "%s: a country playing February to December cannot have %s yet -- take it off"
                              % (p["name"], ", ".join(bad)))
     for p in out:
-        below = [q for q in out if q["above"] == p["rid"]]
+        below = [q for q in out if q["above"] == p["rid"] and not q.get("sibling")]
         if below and p["exhibition"]:
             _problem(errs, names, "%s: an exhibition league has no league below it (%s)" % (p["name"], below[0]["name"]))
         if len(below) > 1:
@@ -2529,14 +2544,14 @@ def plan(recipe, base, prev=None):
     ours = {p["rid"] for p in out}
     gname = dict(shipped_parents(base))
     for g in sorted({p["above"] for p in out if p["above"] and p["above"] not in ours}):
-        below = [p["name"] for p in out if p["above"] == g]
+        below = [p["name"] for p in out if p["above"] == g and not p.get("sibling")]   # lab 18/11/2026: a group's sibling
         if len(below) > 1:
             _problem(errs, names, "%s are all under %s; the game follows one link down from a league, so only "
                              "one of them can be under it -- groups of one division are not possible yet"
                              % (", ".join(below), gname.get(g, "regulation %d" % g)))
     for p in out:
         if p.get("own_cup"):
-            national_cup(p, next((q for q in out if q["above"] == p["rid"]), None))
+            national_cup(p, next((q for q in out if q["above"] == p["rid"] and not q.get("sibling")), None))
     for t in club_id_problems(out + others, base):
         _problem(errs, names, t)
     nlt, free_ids = newlife_tids(full.get("leagues") or [], base, full.get("newlife_ids"))   # #90 / #88
@@ -2752,6 +2767,17 @@ def newlife_of(L):
     out = {"clubs": [int(i) if str(i or "").strip().isdigit() else None for i in nl.get("clubs") or []]}
     out.update({k: copy.deepcopy(v) for k, v in nl.items() if k != "clubs"})
     return out
+
+
+def level_of(L, name):
+    """a league's "level" (14/11/2026, from fork-unificado): the overall its placeholder squads are
+    brought to (lbplayers.fill_tiers), None for its division's (TIER_LEVEL)"""
+    v = L.get("level")
+    if v in (None, ""):
+        return None
+    if not str(v).strip().isdigit() or not 40 <= int(v) <= 90:
+        raise BuildError("%s: level %r -- an overall of 40..90" % (name, v))
+    return int(v)
 
 
 def others_plan(groups, base, cty, pins=None):
@@ -3027,7 +3053,7 @@ def league_cup(p, out):
     tiers, q = [], p
     while q and len(tiers) < 4:
         tiers.append((q["rid"], q["clubs"]))
-        q = next((b for b in out if b["above"] == q["rid"]), None)
+        q = next((b for b in out if b["above"] == q["rid"] and not b.get("sibling")), None)
     field, opts = league_ko_cup(tiers, bool(p.get("calendar") or p.get("follows_calendar")))
     if field is None:
         raise BuildError("%s has %d clubs, a league cup needs %d"
@@ -3676,7 +3702,7 @@ def game_cups(recipe, regrow, region_of_cid, base, out):
                 n = mine["clubs"] if mine else entries_of(base, regrow[q][M.R_CID])
                 tiers.append((q, n))
                 below = u16(regrow[q], M.R_BELOW) if q in regrow else 0
-                q = (below if below in regrow else 0) or next((p["rid"] for p in out if p["above"] == q), None)
+                q = (below if below in regrow else 0) or next((p["rid"] for p in out if p["above"] == q and not p.get("sibling")), None)
             moved = {GAME_SEASONS[n][0] for n in recipe.get("game_seasons") or [] if n in GAME_SEASONS}
             field, opts = league_ko_cup(tiers, region in CALENDAR_REGIONS and region not in moved)
             if field is None:
@@ -3777,6 +3803,25 @@ def playoff_cups(p):
                     "country": p["country"], "region": p["region"], "groups": 0,
                     "league": p["rid"], "phase": part, "entry": [(p["rid"], pos) for pos in order],
                     "opts": {"fill": season_day(season_ord(days_of[-1]) + 1), "national": 1, "days": days}})
+    return out
+
+
+def lphase_lines(pl):
+    """lab 17/11/2026: `lphase <host league> <phase reg> <text>` -- a league's phase played in a competition of
+    its own, shown as an item of the league's Competition Info menu and left out of the country's list
+    (fl26swiss): a league marked "group_of" another (text 3, "Grupo B" -- the host's own table item reads
+    "Grupo A"; L1/R1 go through the groups). Other phase lines (a knockout: text 2; a set of leagues behind one
+    item: text 4) come from a country's own script (Brazil's: docs/developers/fork/brasil-serie-c-d.md)"""
+    out = []
+    by_name = {L["name"]: L["rid"] for L in pl.get("leagues") or []}
+    for L in pl.get("leagues") or []:
+        g = L.get("group_of")
+        if g and g in by_name:
+            out.append("lphase %d %d 3" % (by_name[g], L["rid"]))
+    # lab 17/11/2026: an item's own name (fl26_swiss_lphase_name) -- a group's, and its host's table item
+    for L in pl.get("leagues") or []:
+        if L.get("group_label"):
+            out.append("lpname %d %s" % (L["rid"], L["group_label"]))
     return out
 
 
@@ -5021,7 +5066,8 @@ def build(pl, base, game, replace=False, log=print):
             struct.pack_into("<I", g, 0x10, struct.unpack_from("<I", regs, po + 0x10)[0])
             M.set_tier(g, p["tier"])
             g[R_ABOVE:R_ABOVE + 2] = p["above"].to_bytes(2, "little")
-            regs[po + M.R_BELOW:po + M.R_BELOW + 2] = p["rid"].to_bytes(2, "little")
+            if not p.get("sibling"):                 # lab 17/11/2026: a sibling group leaves its parent's link alone
+                regs[po + M.R_BELOW:po + M.R_BELOW + 2] = p["rid"].to_bytes(2, "little")
         rules = int.from_bytes(g[0x10:0x14], "little")
         rules = (rules & ~(LEGS_MASK << LEGS_SHIFT)) | (p["legs"] << LEGS_SHIFT)
         g[0x10:0x14] = rules.to_bytes(4, "little")
@@ -5313,7 +5359,7 @@ def build(pl, base, game, replace=False, log=print):
         else:
             L.pop("above", None)
             L["promote"] = 0
-        below = next((q for q in pl["leagues"] if q["above"] == p["rid"]), None)
+        below = next((q for q in pl["leagues"] if q["above"] == p["rid"] and not q.get("sibling")), None)
         L["demote"] = below["exchange"] if below else 0
         if p.get("cup"):
             L["cup"] = p["cup"]
@@ -5390,7 +5436,8 @@ def build(pl, base, game, replace=False, log=print):
             % (sum(1 for e in own_places(pl) if e[2] in fl26world.UEFA_LINE), len(uefa)))
     fl26world.write_world(os.path.join(tmp, MARK), pl["world"], leagues, split_lines, uefa, uecl,
                           ccups + dates_lines(pl, db) + gsuper_lines(pl) + season_lines(pl, db) + july_lines(pl, base)
-                          + rcal_lines(pl, base, confed) + cupdays_lines(pl, base, db, log) + first_lines(pl)
+                          + rcal_lines(pl, base, confed) + lphase_lines(pl)
+                          + cupdays_lines(pl, base, db, log) + first_lines(pl)
                           + order_lines(pl, base, confed)
                           + kickorder_lines(pl, base, confed)
                           + (["nopool " + " ".join(str(t) for t in nopool)] if nopool else []) + newfaces

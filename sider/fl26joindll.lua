@@ -91,6 +91,25 @@ local BUILDER_CONF = {}
 -- 2 UEFA, 3 AFC, 4 CONMEBOL, 5 CAF, 6 CONCACAF, 7 OFC.
 local RUNTIME_CONF = { [2] = 1, [3] = 2, [4] = 5, [5] = 6, [6] = 3, [7] = 0 }
 
+-- lab (18/11/2026): `jline <export> <numbers>` -> the DLL's export int f(const uint32_t*, int)
+local function world_jline(ctx)
+  local sep = string.char(92)
+  local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+  local f = io.open(path, "r")
+  if not f then return {} end
+  local out = {}
+  for line in f:lines() do
+    local name, rest = line:match("^%s*jline%s+([%w_]+)%s*(.*)$")
+    if name then
+      local v = {}
+      for x in rest:gmatch("%d+") do v[#v + 1] = tonumber(x) end
+      out[#out + 1] = { name, v }
+    end
+  end
+  f:close()
+  return out
+end
+
 -- The world file: modules\fl26world.txt, written by FL26 Mod Studio's League Builder.
 -- One table per league -- id, then whatever the line gives: cid, region, country, slot, tier,
 -- above, promote, demote, clubs, legs (numbers), name (text) -- in file order. nil when
@@ -460,6 +479,58 @@ function m.init(ctx)
           end
           local n = tonumber(ffi.cast("fl26_join_cal_pairs_t", pp)(pbuf, #PAIRS))
           log(string.format("fl26joindll: %d January-December pair(s) exchanged at New Year: %s", n, table.concat(txt, ", ")))
+        end
+      end
+      do   -- lab 17/11/2026: a regional pyramid moved as a whole at New Year (Brazil's Serie B/C/D)
+        local sep = string.char(92)
+        local path = ctx.sider_dir:gsub("[/" .. sep .. "]+$", "") .. sep .. "modules" .. sep .. "fl26world.txt"
+        local f = io.open(path, "r")
+        local G, H, Mp, T, R = {}, {}, {}, {}, {}
+        if f then
+          for line in f:lines() do
+            local reg, rest = line:match("^%s*rgroup%s+(%d+)%s+(.*)$")
+            if reg then
+              local function num(k) return tonumber((" " .. rest):match("%s" .. k .. "=(%d+)") or "0") end
+              G[#G + 1] = { tonumber(reg), num("tier"), num("size"), num("up"), num("down"), num("slot") }
+            end
+            local x = line:match("^%s*rhome%s+([%d:,]+)")
+            if x then for a, b in x:gmatch("(%d+):(%d+)") do H[#H + 1] = { tonumber(a), tonumber(b) } end end
+            x = line:match("^%s*rmap%s+([%d:,]+)")
+            if x then for a, b, c in x:gmatch("(%d+):(%d+):(%d+)") do Mp[#Mp + 1] = { tonumber(a), tonumber(b), tonumber(c) } end end
+            x = line:match("^%s*rtie%s+([%d:,]+)")
+            if x then for a, b, c, d in x:gmatch("(%d+):(%d+):(%d+):(%d+)") do T[#T + 1] = { tonumber(a), tonumber(b), tonumber(c), tonumber(d) } end end
+            x = line:match("^%s*reserve%s+([%d:,]+)")
+            if x then for a, b in x:gmatch("(%d+):(%d+)") do R[#R + 1] = { tonumber(a), tonumber(b) } end end
+          end
+          f:close()
+        end
+        if #G > 0 then
+          local pr = ffi.C.GetProcAddress(h, "fl26_join_regional")
+          if pr == nil then log("fl26joindll: this fl26join.dll has no fl26_join_regional -- the regional pyramid keeps its clubs at New Year")
+          else
+            local v = { #G }
+            for _, e in ipairs(G) do for _, y in ipairs(e) do v[#v + 1] = y end end
+            v[#v + 1] = #H; for _, e in ipairs(H) do v[#v + 1] = e[1]; v[#v + 1] = e[2] end
+            v[#v + 1] = #Mp; for _, e in ipairs(Mp) do v[#v + 1] = e[1]; v[#v + 1] = e[2]; v[#v + 1] = e[3] end
+            v[#v + 1] = #T; for _, e in ipairs(T) do for _, y in ipairs(e) do v[#v + 1] = y end end
+            v[#v + 1] = #R; for _, e in ipairs(R) do v[#v + 1] = e[1]; v[#v + 1] = e[2] end
+            local buf = ffi.new("uint32_t[?]", #v)
+            for i, y in ipairs(v) do buf[i - 1] = y end
+            local k = tonumber(ffi.cast("int(*)(const uint32_t*, int)", pr)(buf, #v))
+            log(string.format("fl26joindll: regional pyramid -- %d league(s), %d home(s), %d map(s), %d tie rule(s), %d reserve(s)", k, #H, #Mp, #T, #R))
+          end
+        end
+      end
+      do   -- lab 18/11/2026: `jline` lines (Brazil's Serie C/D)
+        for _, x in ipairs(world_jline(ctx)) do
+          local fn = ffi.C.GetProcAddress(h, x[1])
+          if fn == nil then log("fl26joindll: jline -- this DLL has no " .. x[1] .. "; the line is not used")
+          else
+            local b = ffi.new("uint32_t[?]", math.max(#x[2], 1))
+            for i, y in ipairs(x[2]) do b[i - 1] = y end
+            local k = tonumber(ffi.cast("int(*)(const uint32_t*, int)", fn)(b, #x[2]))
+            log(string.format("fl26joindll: jline %s (%d values) -> %d", x[1], #x[2], k))
+          end
         end
       end
     end
