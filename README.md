@@ -1,5 +1,7 @@
 # FootballLife — new leagues
 
+[Estaduais brasileiros no FL26 · receita, geração e validação no jogo](guides/estaduais-brasileiros.md)
+
 **New leagues, new clubs and whole new countries in the Master League of Football Life 2026 and
 Football Life 2027**, plus one program, **FL Mod Studio**, to manage everything else you add to the game. No patched
 executable, no repacked CPKs: it all goes in through Sider modules and data files, and comes out
