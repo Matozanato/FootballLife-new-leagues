@@ -49,7 +49,7 @@ def visibility():
            and e._values[("identity", target, "name")] == "Draft " + feature
            and e._values[("identity", target, "logo")] == feature + ".png")
         if feature == "conmebol":
-            ok("modern off lists Libertadores and the classic Sudamericana", keys(e) == ["game:libertadores", "generated:9"])
+            ok("modern off lists only original Libertadores", keys(e) == ["game:libertadores"])
         e.settings[feature].setChecked(True)
         e = select(page, target)
         ok(feature + ": re-enabling restores name/logo drafts", e.name.text() == "Draft " + feature
@@ -59,7 +59,8 @@ def visibility():
         e = select(page, target)
         e.settings[feature].setChecked(False)
         p._snap_at = 0
-        apply(page)
+        with patch.object(continental, "ask", return_value=True):
+            apply(page)
         c = editor(page).competitions[target]
         ok(feature + ": Apply hides without deleting identity", target not in keys(editor(page))
            and C.identity(p.recipe, c, "name") == "Draft " + feature
@@ -86,15 +87,15 @@ def drafts_and_warning():
     select(page, "generated:-1").name.setText("Recopa draft")
     select(page, "generated:9").name.setText("Sudamericana draft")
     editor(page).settings["conmebol"].setChecked(False)
-    ok("the hidden Recopa and the classic Sudamericana keep their drafts",
-       keys(editor(page)) == ["game:libertadores", "generated:9"]
+    ok("the hidden Recopa and Sudamericana keep their drafts",
+       keys(editor(page)) == ["game:libertadores"]
        and len(editor(page).dirty_keys()) == 2 and p.recipe == original)
     p.adopt({"world": "_FL26OtherCups", "leagues": []}, None)
     qa.processEvents()
     ok("project switching archives hidden drafts", page.has_drafts() and not p.recipe.get("ccup_names"))
     p.adopt(original, None)
     qa.processEvents()
-    ok("returning restores the correct hidden list", keys(editor(page)) == ["game:libertadores", "generated:9"])
+    ok("returning restores the correct hidden list", keys(editor(page)) == ["game:libertadores"])
     editor(page).settings["conmebol"].setChecked(True)
     ok("returning restores hidden Sudamericana draft", select(page, "generated:9").name.text() == "Sudamericana draft")
     ok("returning restores hidden Recopa draft", select(page, "generated:-1").name.text() == "Recopa draft")
@@ -108,6 +109,8 @@ def drafts_and_warning():
     e = select(page, "generated:9")
     baseline = copy.deepcopy(p.recipe)
     e.name.setText("Pending hidden identity")
+    e.logo.path = "sudamericana.png"
+    e.logo_changed()
     e.settings["conmebol"].setChecked(False)
     with patch.object(continental, "ask", return_value=False) as confirm:
         apply(page)
@@ -117,10 +120,17 @@ def drafts_and_warning():
     with patch.object(continental, "ask", return_value=True):
         apply(page)
     ok("confirmed cleanup removes only existing modern-only allocations", not C.modern(p.recipe)
-       and p.recipe["leagues"][0]["europe"] == [[1, 3], [2, 4], [3, 9]]
-       and p.recipe["game_europe"]["29"] == [[1, 3], [2, 4], [3, 9]]
+       and p.recipe["leagues"][0]["europe"] == [[1, 3], [2, 4]]
+       and p.recipe["game_europe"]["29"] == [[1, 3], [2, 4]]
        and "conmebol_associations" not in p.recipe)
-    ok("hidden names are preserved when applying mode cleanup", p.recipe["ccup_names"]["9"] == "Pending hidden identity")
+    ok("hidden names and logos are preserved when applying mode cleanup",
+       p.recipe["ccup_names"]["9"] == "Pending hidden identity"
+       and p.recipe["ccup_logos"]["9"] == "sudamericana.png")
+    editor(page).settings["conmebol"].setChecked(True)
+    restored = select(page, "generated:9")
+    ok("re-enabling restores saved Sudamericana identity",
+       restored.name.text() == "Pending hidden identity" and restored.logo.path == "sudamericana.png")
+    discard(page)
     ok("Undo restores all modern data in one step", p.undo() and p.recipe == baseline)
     qa.processEvents()
     ok("Undo restores the modern competition list", "generated:9" in keys(editor(page))
@@ -131,17 +141,19 @@ def drafts_and_warning():
 def qualification_compatibility():
     old_places = [[1, 3], [2, 9], [0, 9]]
     table = builder.EuropeTable(old_places, 12, modern=False)
-    ok("classic selector offers the classic Sudamericana", 9 in dict(table.competitions))
+    ok("classic selector excludes Sudamericana", 9 not in dict(table.competitions))
     ok("opening classic places preserves the exact destinations", sorted(table.places()) == sorted(old_places))
     existing = [table.table.cellWidget(r, 1) for r in range(table.table.rowCount())
                 if table.table.cellWidget(r, 1).currentData() == 9]
-    ok("classic Sudamericana entries stay selected and selectable", len(existing) == 2
-       and all(combo.model().item(combo.findData(9)).isEnabled() for combo in existing))
+    ok("legacy Sudamericana entries stay selected but disabled", len(existing) == 2
+       and all(not combo.model().item(combo.findData(9)).isEnabled() for combo in existing))
     table.add()
     cb = table.table.cellWidget(table.table.rowCount() - 1, 1)
-    ok("new rows can select classic Sudamericana", cb.findData(9) >= 0)
+    ok("new rows cannot select Sudamericana", cb.findData(9) == -1)
     table.set_confed(4)
-    ok("classic South American preset stays", not table.preset.isHidden())
+    table.preset.click()
+    ok("classic South American preset assigns only Libertadores", not table.preset.isHidden()
+       and table.places() == [[1, 3], [2, 3], [3, 3], [4, 4]])
     table.set_confed(3)
     ok("unrelated confederation presets are preserved", not table.preset.isHidden())
     modern = builder.EuropeTable([], 12, modern=True)
@@ -150,7 +162,7 @@ def qualification_compatibility():
     ok("modern selector exposes groups and first stage", 9 in options and C.W.SUD_FIRST in options)
     ok("engine still validates legacy Sudamericana places", not C.B.europe_problems(12, old_places, True))
     cups, _notes = C.B.ccup_plan([("Legacy league", i, 9, 0) for i in range(1, 5)], {"Legacy league": 12})
-    ok("engine generates the classic Sudamericana", any(c["number"] == 9 for c in cups))
+    ok("planner never generates the classic Sudamericana", not any(c["number"] == 9 for c in cups))
     own = [("Legacy league", i, 9, 0) for i in range(1, 5)]
     extra = ("Original league", 3)
     field = next(c for c in C.B.ccup_plan(own + [(extra[0], extra[1], 9, 0)],
@@ -225,8 +237,8 @@ def guides_and_default():
     ok("guide covers titleholder cascade and first-season limitations", all(s in text
        for s in ("cascades", "no retained previous-season champions", "late February", "normally stays unplayed", "fallbacks")))
     classic = " ".join(p for _heading, paragraphs in G.sections(4, {}, False) for p in paragraphs)
-    ok("classic guide explains the classic Sudamericana and switching", "classic Copa Sudamericana is generated" in classic
-       and "not converted" in classic and "confirmation" in classic)
+    ok("classic guide explains available competitions and modern cleanup", "only original Libertadores" in classic
+       and "removing all Copa Sudamericana places" in classic)
     ok("UEFA explanation moved into Continental", "36 clubs" in str(G.sections(2, {}, False)))
     ok("Conference League default constant changed, IDs retained", mkuecl.NAME == "UEFA Conference League"
        and mkuecl.CODE == "FL_UECL" and (mkuecl.CID, mkuecl.REG, mkuecl.KO) == (174, 186, 187))

@@ -225,10 +225,6 @@ which league sits above -- and nothing about ids:
               unless game_europe gives them their own, and Build wants the whole field: 26
               Libertadores group places, 13 phase 2, 6 phase 1, 12 Sudamericana group places and
               32 first stage, spread over the South American leagues however you like
-  sudamericana_calendar (the recipe, not a league) the classic Copa Sudamericana (without
-              "conmebol") plays February to December on the Libertadores' days, filled in February
-              from the same tables as the Libertadores (other places of them) -- since 07.11.2026
-              without the key too; false puts it back on August to May
   conmebol_associations (the recipe, not a league) dynamic places for a CONMEBOL association,
               still in the normal two-field schema: {"Bolivia": [[1,3],[2,3],[3,17],[4,16],
               [5,19],...]}. The first number is an association rank, never a team id. If this world
@@ -1559,12 +1555,21 @@ def game_place_leagues(base, regrow):
     return tops
 
 
+def qualification_regulation_id(key):
+    """Read a game_europe key without changing its spelling in the recipe."""
+    try:
+        return int(str(key))
+    except ValueError:
+        return None
+
+
 def season_sums(recipe, regrow):
     """[[total, half, ...]] of the seasons of two tournaments the recipe's game_europe gives
     places to as a whole -- the world file's seasonsum lines"""
     ge = recipe.get("game_europe") or {}
     totals = game_season_totals(regrow)
-    return [[t] + totals[t] for t in sorted(totals) if ge.get(str(t)) or ge.get(t)]
+    given = {qualification_regulation_id(k) for k, rows in ge.items() if rows}
+    return [[t] + totals[t] for t in sorted(totals) if t in given]
 
 
 def seasonsum_lines(pl):
@@ -1618,7 +1623,7 @@ RECIPE_SETTINGS = ("game_europe", "uefa_seed", "uefa_rank", "europe_first", "gam
                    "ccup_names", "ccup_logos", "caf_super_cup", "caf_super_cup_logo", "cup_draw",
                    "country_order", "game_seasons", "saudi_august", "newlife_ids", "newlife_game",
                    "league_order", "packs", "conmebol", "conmebol_associations", "samerica_super_cup",
-                   "samerica_super_cup_logo", "samerica_super_cup_first", "sudamericana_calendar",
+                   "samerica_super_cup_logo", "samerica_super_cup_first",
                    "continental_emblems", "confederation_logos",
                    "id_retire", "pack_version", "id_lineage",    # idledger.py: the ids that may go, the version name
                    "id_not_lineages", "id_ledger",   # id_ledger: absolute (idledger.absolute_ledger), review 3
@@ -1949,7 +1954,9 @@ def ccup_given(n, field, ours, given, maybe, tries=20000, sums=None):
                 return []
             # game_europe's places go after the world's own, a league at a time (game_europe)
             own = mine + sorted((as_place(e) for e in list(given) + list(sub)), key=lambda x: str(x[0]))
-            cup = next((c for c in ccup_plan(own, None, sums)[0] if c["number"] == n), None)
+            # Match the archived entry layout for recipe recovery only.
+            cups, _notes = ccup_plan(own, None, sums, modern_conmebol=n == SUDAM)
+            cup = next((c for c in cups if c["number"] == n), None)
             if cup and [list(e) for e in cup["entry"]] == want:
                 return list(sub)
     return []
@@ -3367,6 +3374,11 @@ def plan(recipe, base, prev=None):
     if want in worldgame.GAMES and want != ("fl27" if FL27 else "fl26"):
         raise BuildError("%s is a recipe for %s -- choose %s's game folder (Game) and Build there"
                          % (recipe.get("world") or "this world", worldgame.TITLE[want], worldgame.TITLE[want]))
+    modern_conmebol = recipe_has_modern_conmebol(recipe)
+    if not modern_conmebol:
+        issue = legacy_sudamericana_problem(recipe)
+        if issue:
+            raise BuildError(issue)
     pins = prev_pins(prev)
     # 17.11.2026 (idledger.py, review 1/2): with an id ledger, no league or cup takes a regulation or
     # competition id any version of the world gave -- a league that replaced another took its ids
@@ -3983,7 +3995,6 @@ def plan(recipe, base, prev=None):
     # South American continental access, keep FL26's vanilla Libertadores and do
     # not build Sudamericana/Recopa or the modern qualifying phases.
     access_recipe = modern_libertadores_recipe(recipe, base)
-    modern_conmebol = access_recipe.get("_modern_libertadores_access") == "custom"
 
     ge, gr, gn, gcc = game_europe(access_recipe, regrow, region_of_cid, base)
     gstaged = game_stage_places(access_recipe, regrow, region_of_cid, base)
@@ -4028,15 +4039,6 @@ def plan(recipe, base, prev=None):
         # fl26swiss reads cal=1 and borrows the native Libertadores dates, fills
         # the groups immediately after the one-match first stage, and closes it
         # at the calendar-year teardown rather than in July.
-        sud = next(c for c in cups if c["number"] == SUDAM)
-        sud["opts"] = {"fill": SAM_GROUP_FILL, "national": 0, "days": [], "cal": 1}
-    elif recipe.get("sudamericana_calendar") is not False and any(c["number"] == SUDAM for c in cups):
-        # the classic Copa Sudamericana on the same calendar (the World Modpack, mato 23.10.; every
-        # world since mato 07.11.2026, Vicentico: "that sudamericana that runs from december to april
-        # should not exist"): it played August to May, so a Brazilian or Argentine club in the
-        # Libertadores (February to November) could be drawn into it as well. Filled in February
-        # from the tables the Libertadores is filled from, it takes the clubs after the
-        # Libertadores' places. "sudamericana_calendar": false keeps it on August to May
         sud = next(c for c in cups if c["number"] == SUDAM)
         sud["opts"] = {"fill": SAM_GROUP_FILL, "national": 0, "days": [], "cal": 1}
     for c in cups:            # a game league's cup winner: its national cup is the game's (#95)
@@ -4673,52 +4675,75 @@ def _comp_of(e):
         return None
 
 
-def modern_conmebol_places(recipe):
-    """the places of the recipe only the modern CONMEBOL competitions have: a new league's or a
-    game league's place in Libertadores phase 1, 2 or 3 or the Sudamericana's first stage
-    (fl26world.CONMEBOL_STAGE_IDS), and every CONMEBOL association rank. [(where, position,
-    competition)], where a league's name, "g<regulation>" for a league of the game or
-    "a:<country>" for an association: what turning the modern competitions off takes out"""
+LEGACY_SUDAMERICANA = (
+    "Saved Copa Sudamericana places require modern CONMEBOL. Remove or reassign them in "
+    "Qualification or Edit League. If a source is missing from the editors, open the recipe JSON "
+    "and remove or reassign the rows with destination 9. For an unavailable game_europe source, "
+    "move any places you want to keep to a supported league and remove the old key. "
+    "To use Sudamericana, enable modern CONMEBOL "
+    "and complete its qualification places."
+)
+MODERN_CONMEBOL_DESTINATIONS = frozenset(fl26world.CONMEBOL_STAGE_IDS) | {SUDAM}
+
+
+def _conmebol_places(recipe, targets, *, associations=True):
     out = []
-    for L in recipe.get("leagues") or []:
-        out += [(L.get("name") or "?", e[0], _comp_of(e)) for e in L.get("europe") or []
-                if _comp_of(e) in fl26world.CONMEBOL_STAGE_IDS]
+    for i, L in enumerate(recipe.get("leagues") or []):
+        source = "leagues[%d].europe (%s)" % (i, json.dumps(L.get("name") or "?", ensure_ascii=False))
+        out += [(source, e[0], _comp_of(e)) for e in L.get("europe") or []
+                if _comp_of(e) in targets]
     for key, places in sorted((recipe.get("game_europe") or {}).items(), key=lambda kv: str(kv[0])):
-        out += [("g%s" % key, e[0], _comp_of(e)) for e in places or []
-                if _comp_of(e) in fl26world.CONMEBOL_STAGE_IDS]
+        source = "game_europe[%s]" % json.dumps(str(key), ensure_ascii=False)
+        out += [(source, e[0], _comp_of(e)) for e in places or []
+                if _comp_of(e) in targets]
     assoc = recipe.get("conmebol_associations") or {}
-    for key, places in sorted(assoc.items() if isinstance(assoc, dict) else [], key=lambda kv: str(kv[0])):
-        out += [("a:%s" % key, e[0], _comp_of(e)) for e in places or [] if isinstance(e, (list, tuple))]
+    for key, places in sorted(assoc.items() if associations and isinstance(assoc, dict) else [],
+                              key=lambda kv: str(kv[0])):
+        out += [("a:%s" % key, e[0], _comp_of(e)) for e in places or [] if isinstance(e, (list, tuple)) and e]
     return out
 
 
+def legacy_sudamericana_problem(recipe):
+    rows = _conmebol_places(recipe, {SUDAM}, associations=False)
+    if not rows:
+        return None
+    sources = ", ".join(dict.fromkeys(source for source, _position, _target in rows))
+    return LEGACY_SUDAMERICANA + "\nAffected qualification sources: " + sources
+
+
+def modern_conmebol_places(recipe):
+    """Return the league places and association ranks removed on disabling modern mode."""
+    return _conmebol_places(recipe, MODERN_CONMEBOL_DESTINATIONS)
+
+
 def recipe_has_modern_conmebol(recipe):
-    """whether the world builds the modern CONMEBOL competitions (PR #146): only when the user
-    picks them -- the recipe's "conmebol": "modern" (Mod Studio: Cups > Continental >
-    CONMEBOL), or a place only they have (modern_conmebol_places). Places in Libertadores,
-    its legacy qualifying round and Sudamericana alone (3, 4 and 9) do not activate modern
-    mode: such a world builds the classic competitions, the classic Copa Sudamericana
-    included (mato 08.11.: #154 had retired it, a classic world keeps it)."""
+    """Explicit opt-in or saved modern stages/associations imply modern CONMEBOL.
+
+    A saved Sudamericana group place alone is ambiguous and never enables the mode.
+    """
     v = recipe.get("conmebol")
     if v not in (None, "", CONMEBOL_MODERN):
         raise BuildError('conmebol: %r -- "modern" or nothing' % (v,))
-    return v == CONMEBOL_MODERN or bool(modern_conmebol_places(recipe))
+    return v == CONMEBOL_MODERN or bool(_conmebol_places(recipe, fl26world.CONMEBOL_STAGE_IDS))
 
 
 def drop_modern_conmebol(recipe):
-    """turn the modern CONMEBOL competitions off in the recipe (in place): its "conmebol", the
-    places only they have and the association ranks (modern_conmebol_places) go; Libertadores,
-    qualifying and Copa Sudamericana places stay, as the classic competitions'. Returns how
-    many places were taken out"""
+    """Remove modern access in place and return the number of places removed."""
     gone = len(modern_conmebol_places(recipe))
     recipe.pop("conmebol", None)
     recipe.pop("conmebol_associations", None)
     for L in recipe.get("leagues") or []:
         if L.get("europe"):
-            L["europe"] = [e for e in L["europe"] if _comp_of(e) not in fl26world.CONMEBOL_STAGE_IDS]
+            L["europe"] = [e for e in L["europe"] if _comp_of(e) not in MODERN_CONMEBOL_DESTINATIONS]
     ge = recipe.get("game_europe") or {}
     for key in list(ge):
-        ge[key] = [e for e in ge[key] or [] if _comp_of(e) not in fl26world.CONMEBOL_STAGE_IDS]
+        old = ge[key] or []
+        remaining = [e for e in old if _comp_of(e) not in MODERN_CONMEBOL_DESTINATIONS]
+        if len(remaining) != len(old):
+            if remaining:
+                ge[key] = remaining
+            else:
+                del ge[key]
     return gone
 
 
@@ -4746,7 +4771,7 @@ def modern_libertadores_recipe(recipe, base):
         for rid, _lib, _libq in fl26world.SAM_GAME:
             if rid not in available:
                 continue
-            key = next((k for k in game if str(k) == str(rid)), str(rid))
+            key = next((k for k in game if qualification_regulation_id(k) == rid), str(rid))
             game.setdefault(key, [])
 
         out["game_europe"] = game
@@ -4973,7 +4998,7 @@ def game_europe(recipe, regrow, region_of_cid, base):
     logical = set(fl26world.CONMEBOL_STAGE_IDS)
 
     places, replace, names, cc = [], [], {}, []
-    given = {int(k) for k, v in ge.items() if str(k).isdigit() and v}
+    given = {qualification_regulation_id(k) for k, rows in ge.items() if rows}
     for t, halves in game_season_totals(regrow).items():
         both = [h for h in halves if h in given]
         if t in given and both:
@@ -5795,6 +5820,8 @@ def ccup_plan(own, clubs=None, sums=None, *, modern_conmebol=False, pre=None):
     ([{number, name, code, conf, groups, entry}], notes). pre: {(league, position, cup): seed} of
     the places that enter their cup through a preliminary round ("europe_pre", ccup_pre_plan)."""
     cups, notes = [], []
+    if not modern_conmebol:
+        own = [row for row in own if row[2] != SUDAM]
     places = ccup_short(own, clubs or {}, notes)
     sums = sums or {}
     pre = pre or {}
@@ -6800,6 +6827,9 @@ def write_managers(pl, base, db, raw, min_id, game, world, log=print):
 
 
 def build(pl, base, game, replace=False, log=print):
+    # Old saved plans can still be read for recipe recovery, but cannot be built.
+    if not pl.get("suda_first") and any(c.get("number") == SUDAM for c in pl.get("ccups") or []):
+        raise BuildError(LEGACY_SUDAMERICANA)
     flpaths.use_game(game, siderdir.find(game))   # the exe readers (caltab, region headings) look here
     use_game(game)                                # the caps of that game: Mod Studio builds in a new process
     use_squad(pl)                                 # World options > Players per new club

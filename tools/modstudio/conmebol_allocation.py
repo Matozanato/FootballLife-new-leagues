@@ -91,13 +91,21 @@ def generate(recipe, base):
     filtered = dict(recipe, leagues=[dict(L, country=labels.get(str(L.get("country", "")).strip().casefold(), L.get("country")))
                                     for L in recipe.get("leagues") or [] if _valid_own(L)])
     all_sources = Q.sources(filtered, base)
-    playable = playable_native_rids(base)
+    regulation_id = B.qualification_regulation_id
+    playable = {regulation_id(key) for key in playable_native_rids(base)}
+    aggregates = [s for s in all_sources if s.kind == "game" and s.country == "Colombia"
+                  and any(half in playable for half in s.season_halves)]
+    tournament_ids = {half for s in aggregates for half in s.season_halves}
+    aggregate_keys = {s.draft_key for s in aggregates}
     candidates = {country: [] for country in QUOTAS}
     for source in all_sources:
         if source.kind not in ("game", "league") or source.confederation != 4 or source.clubs <= 0:
             continue
-        if source.kind == "game" and str(source.key) not in playable:
-            continue
+        if source.kind == "game":
+            if source.country == "Colombia" and regulation_id(source.key) in tournament_ids:
+                continue
+            if regulation_id(source.key) not in playable and source.draft_key not in aggregate_keys:
+                continue
         if source.country in candidates:
             candidates[source.country].append(source)
     missing = sorted(country for country, rows in candidates.items() if not rows)
@@ -117,11 +125,20 @@ def generate(recipe, base):
         fail(_("League names are ambiguous. Give each league a unique name before automatic allocation."))
     if recipe.get("conmebol_associations"):
         fail(_("Stored association allocations need manual review before this action. They were not replaced or used as substitutes for playable leagues."))
-    # Preserve historical/unrelated records; never erase them to force totals.
+    col = selected["Colombia"]
+    replaced_halves = set(col.season_halves)
+    if replaced_halves:
+        annual = regulation_id(col.key)
+        if sum(regulation_id(key) == annual for key in recipe.get("game_europe") or {}) > 1:
+            fail(_("Stored qualification rows need manual review before automatic allocation."))
+    changes = {}
+    # Move Colombian CONMEBOL access onto the total in the same draft as the template.
+    replaced_targets = set(DESTINATIONS) | {4, 18}
     for key in Q.keys(recipe):
         if key[1] not in ("league", "game"):
             continue
         _present, rows = Q.state(recipe, key)[0]
+        replaced_half = key[1] == "game" and regulation_id(key[2]) in replaced_halves
         for row in rows or []:
             try:
                 if len(row) != 2:
@@ -129,11 +146,18 @@ def generate(recipe, base):
                 target = int(row[1])
             except (TypeError, ValueError):
                 fail(_("Stored qualification rows need manual review before automatic allocation."))
+            if replaced_half:
+                if target not in replaced_targets:
+                    fail(_("Colombia's tournaments have other qualification places. Move those places to the annual table before automatic allocation."))
+                continue
             if target in (4, 18):
                 fail(_("Stored Libertadores qualifying entries are incompatible with this template. Review them manually; they were preserved."))
             if key not in selected_keys and target in DESTINATIONS:
                 fail(_("CONMEBOL places exist outside the ten selected top divisions. Review them manually; they were preserved."))
-    changes = {}
+        if replaced_half:
+            # Delete the override entirely: some editions only list the first half
+            # as individually editable, and even an empty second-half key may be invalid.
+            changes[key] = (False, None)
     for country, source in selected.items():
         quota = QUOTAS[country]
         if sum(quota) > source.clubs:

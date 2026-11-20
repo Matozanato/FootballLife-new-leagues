@@ -230,12 +230,14 @@ FL 2027 only says so.
   qualifying rounds, the stand-in that took its group place could be your club, and your club is
   never moved out for one of ours. The stand-in is now never your club. Start a new career to get
   it.
-- **The Copa Sudamericana no longer plays from August to May** (reported by Vicentico). Its group
-  stage ran from late November to February, so a club could play it and the next Libertadores at
-  the same time. It now plays February to December on the Libertadores' days, like the real one,
-  in every world (until now only the World Modpack had it). A recipe with
-  `"sudamericana_calendar": false` keeps the old calendar. Build the world again and start a new
-  career to get it.
+- **Copa Sudamericana and Recopa require modern CONMEBOL.** With modern mode off, the original
+  Libertadores system is available. Build reports any saved legacy Sudamericana places and leaves
+  the recipe intact. Remove or reassign those places, or enable modern CONMEBOL and complete the
+  required allocation. Disabling modern mode confirms removal of the affected qualification places
+  and keeps competition names and logos.
+- **Auto-assign qualification places** uses Colombia’s annual aggregate table and replaces old
+  CONMEBOL overrides on Apertura and Clausura in the same validated draft. **Check current
+  competition plan** is available in Competitions.
 
 - **Ratings are the game's own number.** The Players page, the Sign / Call up list, Export
   players and the check for 90+ players of a new world now work a player's rating out with the
@@ -545,8 +547,8 @@ FL 2027 only says so.
   cup added to the Liga Profesional) play February to December with it, from matchday 1, with
   promotion and relegation at New Year. FL26 is unchanged. Build the world again and start a new
   career to get it.
-- **Colombia's continental places can go by the whole season** (Vicentico). The game plays the Liga BetPlay DIMAYOR as two tournaments with a table each, and a place given to **Liga BetPlay DIMAYOR I** went by the first one (the Apertura) alone. **European places of the game's leagues** now also lists **Liga BetPlay DIMAYOR**, the whole season: its places go by both tables added together (points, then goal difference, then goals), counted when the second tournament ends, and they fill the Libertadores and the Copa Sudamericana of the next year. The same for the MLS (**Major League Soccer**, under **MLS First Round**). A career begun after the first tournament counts the second one alone that year; until a season has ended, the places go by the first tournament as before. Not yet checked in the game: build the world again and play to the next January.
-- **Libertadores places of the game's leagues without the modern pre-rounds.** With the classic Libertadores, a game league given Libertadores places in **European places of the game's leagues** kept the game's own as well: Chile given only its champion still sent its 2nd and 3rd to the qualifying round, and a place moved to the Copa Sudamericana played both cups. Now a league given Libertadores places of its own plays exactly those: a club of it (or of its cup) that the game put in and that holds none of them makes room for the next place of ours, else for another CONMEBOL club. The title holders stay. Leagues given no Libertadores place keep the game's places as before. Not yet checked in the game.
+- **Colombia's continental places can go by the whole season** (Vicentico). The game plays the Liga BetPlay DIMAYOR as two tournaments with a table each, and a place given to **Liga BetPlay DIMAYOR I** went by the first one (the Apertura) alone. **European places of the game's leagues** now also lists **Liga BetPlay DIMAYOR**, the whole season: its places go by both tables added together (points, then goal difference, then goals), counted when the second tournament ends, and they fill the configured continental competitions of the next year. The same for the MLS (**Major League Soccer**, under **MLS First Round**). A career begun after the first tournament counts the second one alone that year; until a season has ended, the places go by the first tournament as before. Not yet checked in the game: build the world again and play to the next January.
+- **Libertadores places of the game's leagues without the modern pre-rounds.** With the classic Libertadores, a game league given Libertadores places in **European places of the game's leagues** kept the game's own as well: Chile given only its champion still sent its 2nd and 3rd to the qualifying round. Now a league given Libertadores places of its own plays exactly those: a club of it (or of its cup) that the game put in and that holds none of them makes room for the next place of ours, else for another CONMEBOL club. The title holders stay. Leagues given no Libertadores place keep the game's places as before. Not yet checked in the game.
 ## Football Life 2027
 
 - **A first qualifying round in July** (FL27 only; FL26 stays as it was). In a world whose

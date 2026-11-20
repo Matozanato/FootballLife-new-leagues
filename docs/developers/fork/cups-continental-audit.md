@@ -106,15 +106,16 @@ independently editable tournaments. Their IDs can be assigned/pinned during Buil
 
 Modern CONMEBOL off now generates neither Sudamericana nor Recopa. Original
 Libertadores access and rules remain available. Existing logical-9 qualification
-rows in custom leagues and `game_europe` are retained unchanged but inactive, with
-a notice in Check the plan/Build. `sudamericana_calendar` is retained on round-trip
-for compatibility but no longer controls generation. There is no automatic migration.
+rows in custom leagues and `game_europe` are preserved and block planning and
+Build until explicitly resolved. `sudamericana_calendar` is obsolete and is
+omitted from newly generated plans.
 
 To reactivate Sudamericana, enable modern CONMEBOL and configure its complete
 allocation: Libertadores groups 26, phase 2 13, phase 1 6; Sudamericana groups 12,
 first stage 32. Existing logical-9 rows count toward the 12 direct group places.
 Old Libertadores qualifying (logical 4) cannot be mixed with modern phases.
-Disabling modern mode retains the existing explicitly confirmed cleanup of
-modern-only places and associations; logical-9 rows and competition identities stay.
+Disabling modern mode confirms removal of all Sudamericana places, modern
+Libertadores phase places and CONMEBOL association allocations. Competition
+names and logos are retained.
 Rebuild the world to change generated content; existing installations are not
 rewritten merely by opening an old recipe.

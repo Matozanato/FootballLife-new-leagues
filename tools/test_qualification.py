@@ -136,7 +136,7 @@ def pure():
     ok("UECL off hides only new Conference assignments", list(dict(Q.destinations(2, dict(recipe, uecl=False)))) == [0, 10, 1, 11])
     classic = dict(recipe, conmebol=None)
     classic.pop("conmebol")
-    ok("classic mode offers the classic Sudamericana, no F3 place", list(dict(Q.destinations(4, classic))) == [3, 4, 9])
+    ok("classic mode offers only original Libertadores destinations", list(dict(Q.destinations(4, classic))) == [3, 4])
     native = sources[0]
     custom = dict(recipe, game_europe={"501": [[3, 11]]})
     ok("custom native access replaces shipped rows without double counting", Q.effective(native, custom) == [[3, 11]])
@@ -452,12 +452,14 @@ def associations_and_legacy():
     recipe["leagues"][2]["europe"] = [[3, 9], [4, 4]]
     app, page, e, q = page_for(recipe, 4)
     choose(q, "league", "South 0")
-    ok("classic Sudamericana row stays selected and selectable",
-       q.table.places() == [[3, 9], [4, 4]] and 9 in dict(q.table.competitions)
-       and q.table.table.cellWidget(0, 1).model().item(q.table.table.cellWidget(0, 1).currentIndex()).isEnabled())
+    ok("legacy Sudamericana stays selected with a disabled destination",
+       q.table.places() == [[3, 9], [4, 4]] and 9 not in dict(q.table.competitions)
+       and not q.table.table.cellWidget(0, 1).model().item(q.table.table.cellWidget(0, 1).currentIndex()).isEnabled())
+    ok("Qualification shows actionable advice for inactive legacy places",
+       Q.B.legacy_sudamericana_problem(app.project.recipe) in Q.row_errors(q.current_source(), q.table.places(), app.project.recipe))
     q.table.table.cellWidget(1, 0).setValue(5)
     apply(page)
-    ok("editing classic places keeps the classic Sudamericana", app.project.recipe["leagues"][2]["europe"] == [[3, 9], [5, 4]])
+    ok("editing other places preserves the legacy Sudamericana entry", app.project.recipe["leagues"][2]["europe"] == [[3, 9], [5, 4]])
     legacy = SimpleNamespace(app=app)
     legacy.open_qualification = MethodType(builder.NewLeagues.open_qualification, legacy)
     before = copy.deepcopy(app.project.recipe)
@@ -602,7 +604,10 @@ def layouts():
 def real_backend(base):
     recipe = {"world": "_FL26QualificationReadOnlyPlan", "leagues": [], "conmebol": "modern"}
     sources = Q.sources(recipe, base)
-    ranked, off = Q.ranked_sources(sources, recipe, 4)
+    # The old internal ranking helper still accepts manual source selections.
+    # Select the annual table once, as a user would when editing either table.
+    halves = {str(rid) for source in sources if source.confederation == 4 for rid in source.season_halves}
+    ranked, off = Q.ranked_sources([s for s in sources if s.kind != "game" or s.key not in halves], recipe, 4)
     proposal, notes, complete = Q.generate(recipe, sources, 4, ranked, off)
     ok("real metadata offers original South American leagues plus actual eligible associations", len([s for s in ranked if s.kind == "game"]) == 4)
     ok("real metadata modern preset has enough actual eligible clubs", complete)
@@ -610,8 +615,14 @@ def real_backend(base):
     plan = Q.B.plan(preview, base)
     ok("real backend validates generated modern package without building a world", plan["modern_libertadores_access"] == "custom" and plan["suda_first"] and plan["libq"])
     old = {"world": "_FL26ClassicQualificationPlan", "leagues": [], "game_europe": {"29": [[7, 9]]}}
-    plan = Q.B.plan(old, base)
-    ok("real backend builds the classic Sudamericana, saved rows intact", any(c["number"] == 9 for c in plan["ccups"]) and old["game_europe"]["29"] == [[7, 9]])
+    try:
+        Q.B.plan(old, base)
+    except Q.B.BuildError as exc:
+        ok("legacy Build validation is actionable and preserves original league rows",
+           str(exc) == Q.B.legacy_sudamericana_problem(old) and old["game_europe"]["29"] == [[7, 9]]
+           and not Q.modern(old))
+    else:
+        raise AssertionError("legacy Sudamericana must block Build")
     labels, aliases = Q.club_choices({"leagues": []}, base)
     ok("real first-season pool contains actual playable teams", labels and all(isinstance(k, int) for k in labels))
     uefa = {"world": "_FL26UefaReadOnlyPlan", "leagues": []}

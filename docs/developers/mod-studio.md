@@ -124,7 +124,7 @@ league 49 cid=131 region=60 country=198 slot=2 tier=2 above=11 promote=2 demote=
   Competitions: 0 Champions League, 1 Europa League, 2 Conference League, 3 Libertadores,
   4 Libertadores qualifying, 5 AFC Champions League, and the seven cups the game does not have:
   6 CAF Champions League, 7 CAF Confederation Cup, 8 AFC Champions League Two, 9 Copa
-  Sudamericana, 13 CONCACAF Champions Cup, 14 OFC Champions League, 15 AFC Challenge League
+  Sudamericana (modern CONMEBOL only), 13 CONCACAF Champions Cup, 14 OFC Champions League, 15 AFC Challenge League
   (0.2.0; places in these go to `ccup` lines, not `uefa` ones), and the August play-offs:
   10 Champions League qualifying (regulation 2), 11 Europa League qualifying (188), 12
   Conference League qualifying (189). A list replaces the DLL's, so Build writes

@@ -10,21 +10,20 @@ the whole season (game_europe_tops), and a place given to it goes by both tables
 Here, without the game:
   - game_season_totals finds both seasons in the game's tables, halves in order;
   - game_europe_tops lists the whole season right after its first tournament, with its clubs;
-  - a recipe with places on 119 plans: the access list names 119, the Copa Sudamericana's place
-    of 119 is the cup's, and its shipped fill of Colombia's comes from 119 too (no club of
-    Colombia twice from two tables), Check the plan shows Colombia's share;
+  - a recipe with places on 119 plans: the access list names 119, the original Libertadores is available and modern
+    Sudamericana group places also carry the annual source when modern mode is enabled;
   - a recipe with places on 168 plans and builds exactly as before: no seasonsum line;
   - places on 119 and on 168 together are refused, with both names;
   - the world built offline has `seasonsum 119 parts=168,169` and the access line of 119;
   - the MLS: places on 51 (the CONCACAF Champions Cup) give `seasonsum 51 parts=166,167`.
 The worlds are built into a temporary game folder; --keep leaves it.
 """
-import json, os, re, shutil, sys, tempfile
+import os, re, shutil, sys, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import leaguebuilder as B
-import fl26world
+from test_conmebol_modern import modern
 
 N = 0
 COL, COL_I, COL_II, MLS, MLS_I, MLS_II = 119, 168, 169, 51, 166, 167
@@ -46,7 +45,7 @@ def regrow_of(base):
 def recipe(world, ge):
     return {"world": world,
             "leagues": [{"name": "SP Peru", "country": "Peru", "clubs": 12, "legs": 2,
-                         "europe": [[1, 3], [2, 9], [3, 9], [4, 9]]}],
+                         "europe": [[1, 3]]}],
             "game_europe": ge}
 
 
@@ -78,28 +77,24 @@ def main(base, keep=False):
     ok("... under the league's own name, with its clubs",
        by[COL][1] == "Liga BetPlay DIMAYOR" and by[COL][2] == by[COL_I][2] >= 18)
 
-    whole = recipe("_TestSeasonWhole", {str(COL): [[1, 3], [2, 3], [3, 4], [4, 9], [5, 9]]})
+    whole = recipe("_TestSeasonWhole", {str(COL): [[1, 3], [2, 3], [3, 4]]})
     pl = B.plan(whole, base)
     ok("places on 119: the plan's seasonsum entry", pl["season_sums"] == [[COL, COL_I, COL_II]])
     ok("... the access list names 119 itself",
        sorted(tuple(e) for e in pl["game_europe"] if e[0] == COL) == [(COL, 1, 3, 0), (COL, 2, 3, 0), (COL, 3, 4, 0)])
-    sud = next(c for c in pl["ccups"] if c["number"] == 9)
-    col = [tuple(e) for e in sud["entry"] if e[0] in (COL, COL_I, COL_II)]
-    ok("... the Copa Sudamericana's Colombian places all from the whole season, none twice",
-       col and all(e[0] == COL for e in col) and len(col) == len(set(col))
-       and (COL, 4) in col and (COL, 5) in col)
-    lines = B.samerica_lines(B.own_places(pl), {}, pl["ccups"])
-    ok("... Check the plan counts them as Colombia's share",
-       any("Liga BetPlay (Colombia)" in l and "Copa Sudamericana %d clubs" % len(col) in l for l in lines))
+    modern_whole = modern()
+    modern_whole["world"] = "_TestSeasonModern"
+    modern_whole["game_europe"][str(COL)] = modern_whole["game_europe"].pop(str(COL_I))
+    direct = {pos for pos, comp in modern_whole["game_europe"][str(COL)] if comp == B.SUDAM}
+    modern_plan = B.plan(modern_whole, base)
+    ok("modern Sudamericana direct places come from the annual table",
+       direct and {row[1] for row in modern_plan["suda_first"]["direct"] if row[0] == COL} == direct)
+    ok("modern mode uses the same annual split", modern_plan["season_sums"] == [[COL, COL_I, COL_II]])
 
-    half = recipe("_TestSeasonHalf", {str(COL_I): [[1, 3], [2, 3], [3, 4], [4, 9], [5, 9]]})
+    half = recipe("_TestSeasonHalf", {str(COL_I): [[1, 3], [2, 3], [3, 4]]})
     ph = B.plan(half, base)
     ok("places on 168: no seasonsum, the places of 168 as before",
        ph["season_sums"] == [] and all(e[0] == COL_I for e in ph["game_europe"]))
-    sudh = next(c for c in ph["ccups"] if c["number"] == 9)
-    ok("... the Sudamericana fills from 168 as before",
-       all(e[0] != COL for e in sudh["entry"]) and (COL_I, 4) in [tuple(e) for e in sudh["entry"]])
-
     both = recipe("_TestSeasonBoth", {str(COL): [[1, 3]], str(COL_I): [[2, 3]]})
     try:
         B.plan(both, base)
@@ -117,8 +112,10 @@ def main(base, keep=False):
         ok("the world file: seasonsum 119 parts=168,169", "seasonsum 119 parts=168,169" in w.splitlines())
         ok("... the access list's places of 119", {"uefa 119 1 3 0", "uefa 119 2 3 0", "uefa 119 3 4 0"}
            <= set(w.splitlines()) and not re.search(r"^uefa 16[89] ", w, re.M))
-        sud = next(l for l in w.splitlines() if l.startswith("ccup ") and "name=Copa Sudamericana" in l)
-        ok("... the Copa Sudamericana's entries of Colombia all 119", "119:4" in sud and not re.search(r"\b16[89]:", sud))
+        wm = build(base, game, modern_whole)
+        sud = next(l for l in wm.splitlines() if l.startswith("ccup ") and "name=Copa Sudamericana" in l)
+        ok("the modern Sudamericana world file uses only the annual source for Colombia",
+           all(re.search(r"\b119:%d\b" % pos, sud) for pos in direct) and not re.search(r"\b16[89]:", sud))
         wh = build(base, game, half)
         ok("a world with places on 168: no seasonsum line", "seasonsum" not in wh)
         mls = recipe("_TestSeasonMls", {str(MLS): [[1, 13], [2, 13], [3, 13], [4, 13]]})

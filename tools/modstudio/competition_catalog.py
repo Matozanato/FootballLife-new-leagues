@@ -10,15 +10,14 @@ import fl26world as W
 import mkleague as M
 import continental_emblems as E
 
-from .i18n import _
+from .i18n import _, tr
 from . import qualification_data as Q
 
 CONFEDERATIONS = ((2, "UEFA"), (4, "CONMEBOL"), (6, "CONCACAF"),
                  (3, "AFC"), (5, "CAF"), (7, "OFC"))
 MODERN_WARNING = (
-    "Switching the modern CONMEBOL competitions off takes out the %d places only they have "
-    "(Libertadores phase 1 and 2, Sudamericana first stage, countries without a league). "
-    "Libertadores, qualifying and Copa Sudamericana places stay: the world builds the classic competitions, the classic Copa Sudamericana included. Go on?"
+    "Disable modern CONMEBOL and remove %d qualification places? This removes modern "
+    "Libertadores phase places, all Copa Sudamericana places and CONMEBOL association allocations."
 )
 
 
@@ -124,8 +123,8 @@ def catalog(base):
     for number, name, _code, conf, _fill in W.CCUPS:
         info = "sudamericana" if number == B.SUDAM else "generated"
         targets = (number, W.SUD_FIRST) if number == B.SUDAM else (number,)
-        # the Copa Sudamericana is listed in classic worlds too: they build the classic one (mato 08.11.)
-        entries.append(Competition("generated:%d" % number, conf, name, "generated", number, info, targets))
+        entries.append(Competition("generated:%d" % number, conf, name, "generated", number, info, targets,
+                                   visibility_setting="conmebol" if number == B.SUDAM else None))
     for factory, info in ((B.samerica_super_cup, "recopa"), (B.caf_super_cup, "caf-super")):
         definition = factory({})
         entries.append(Competition("generated:%d" % definition["number"], definition["conf"],
@@ -204,15 +203,16 @@ def visible(competition, recipe):
     return setting_value(recipe, setting)
 
 
-def set_modern_mode(recipe, on, confirm):
+def set_modern_mode(recipe, on, confirm, *, was_modern=False):
     """The legacy South American editor's operation, shared without UI or snapshots.
 
+    was_modern keeps switch-off effective after pending edits remove the inferred mode.
     None means the destructive change was cancelled; False is an unchanged recipe.
     """
     if on and recipe.get("conmebol") != B.CONMEBOL_MODERN:
         recipe["conmebol"] = B.CONMEBOL_MODERN
         return True
-    if not on and modern(recipe):
+    if not on and (was_modern or modern(recipe)):
         gone = B.modern_conmebol_places(recipe)
         if gone and not confirm(len(gone)):
             return None
@@ -242,7 +242,7 @@ def preview_recipe(recipe, changes, competitions):
             if not value:
                 result["leagues"] = [dict(L) for L in result.get("leagues") or []]
                 result["game_europe"] = dict(result.get("game_europe") or {})
-            set_modern_mode(result, value, lambda _n: True)
+            set_modern_mode(result, value, lambda _n: True, was_modern=not value and modern(recipe))
         else:
             result[key[1]] = value
     return result
@@ -280,9 +280,7 @@ def libertadores_information(c, recipe):
 
 
 def sudamericana_information(c, recipe):
-    if modern(recipe):
-        return _("Modern mode: 32-club first stage, 32-club group stage, post-group play-off and knockout rounds. See the system guide below for transfers and required places.")
-    return _("Classic mode: the classic Copa Sudamericana, groups of four then a knockout, for the leagues with Sudamericana places. The sudamericana_calendar setting dates it February to December; off, August to May.")
+    return _("Modern mode: 32-club first stage, 32-club group stage, post-group play-off and knockout rounds. See the system guide below for transfers and required places.")
 
 
 INFORMATION = {
@@ -365,4 +363,5 @@ def plan_summary(recipe, base):
                          for c in plan.get("ccups") or []},
                 "uefa_rounds": sorted(B.qual_rounds(plan))}
     except (B.BuildError, OSError, ValueError, SystemExit) as exc:
-        return {"error": str(exc)}
+        message = str(exc)
+        return {"error": tr(message) if message.startswith(B.LEGACY_SUDAMERICANA) else _(message)}

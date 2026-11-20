@@ -194,9 +194,7 @@ class QualificationEditor(QWidget):
         self.rank_button.clicked.connect(self.open_uefa_ranking)
         self.first_button = QPushButton(_("First-season clubs..."))
         self.first_button.clicked.connect(self.show_first)
-        self.plan_button = QPushButton(_("Check current competition plan"))
-        self.plan_button.clicked.connect(owner.request_plan)
-        for button in (self.generate_button, self.rank_button, self.first_button, self.plan_button):
+        for button in (self.generate_button, self.rank_button, self.first_button):
             tools.addWidget(button)
         tools.addStretch()
         layout.addWidget(self.toolbar)
@@ -292,11 +290,10 @@ class QualificationEditor(QWidget):
         self.conf = conf
         recipe = self.recipe()
         self.generate_button.setVisible(conf != 2)
-        self.generate_button.setText(_("Auto set continental places") if conf == 4 else _("Generate preset..."))
+        self.generate_button.setText(_("Auto-assign qualification places") if conf == 4 else _("Generate preset..."))
         self.generate_button.setToolTip(_("Fixed quotas for all ten playable CONMEBOL top divisions. Requires Modern CONMEBOL; changes only the CUPS draft.") if conf == 4 else "")
         self.rank_button.setVisible(conf == 2)
         self.first_button.setVisible(conf == 2)
-        self.plan_button.setEnabled(self.owner.project.base is not None and not self.owner._checking)
         if conf != 2 and self.first is not None and self.stack.currentWidget() is self.first:
             self.back_to_sources()
         fields = ("name", "country", "clubs", "above", "cup", "exhibition", "others")
@@ -598,7 +595,7 @@ class QualificationEditor(QWidget):
             return
         recipe = self.recipe()
         if not Q.modern(recipe):
-            error(self, "Cannot auto-set continental places", _("Enable Modern CONMEBOL competitions before using automatic allocation.")
+            error(self, "Cannot auto-assign qualification places", _("Enable Modern CONMEBOL competitions before using automatic allocation.")
                   + "\n\n" + _("No qualification places were changed."))
             return
         owner, base = self.owner.project.recipe, self.owner.project.base
@@ -622,11 +619,11 @@ class QualificationEditor(QWidget):
                 return
             self.generate_button.setEnabled(not self._loading)
             if tables != self.table_stamp() or draft != self.owner._values or snapshot != A.snapshot(self.recipe()):
-                error(self, "Cannot auto-set continental places", _("The world changed during automatic allocation. Try again; no qualification places were changed."))
+                error(self, "Cannot auto-assign qualification places", _("The world changed during automatic allocation. Try again; no qualification places were changed."))
                 return
             success, value = result
             if not success:
-                error(self, "Cannot auto-set continental places", value)
+                error(self, "Cannot auto-assign qualification places", value)
                 return
             if value:
                 self.owner.set_qualification_batch(value)

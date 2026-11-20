@@ -372,6 +372,18 @@ def lines_checks(judge):
     from modstudio import i18n, installer as I, worlds as WL
     from modstudio.i18n import tr
     i18n.set_language(LANG)
+    from modstudio import competition_catalog as C
+    button = "Auto-assign qualification places"
+    legacy = {"leagues": [], "game_europe": {"169": [[1, B.SUDAM]]}}
+    english_repair = B.legacy_sudamericana_problem(legacy)
+    repair = C.plan_summary(legacy, None)["error"]
+    ok("automatic allocation label and the mode-switch warning are translated",
+       i18n._(button) != button and i18n._(C.MODERN_WARNING) != C.MODERN_WARNING
+       and "2" in i18n._(C.MODERN_WARNING) % 2)
+    ok("legacy repair advice is translated in Competitions and the Build log",
+       repair == tr(english_repair)
+       and all(a != b for a, b in zip(repair.splitlines(), english_repair.splitlines()))
+       and 'game_europe["169"]' in repair)
     left = re.compile(r"\b(?:a league of the game|qualifying|clubs from|down|none|no Copa|in this world|"
                       r"cup winner|the winners|and the|the world's|gives way|\d+(?:st|nd|rd|th)\b|"
                       r"South American places)\b")

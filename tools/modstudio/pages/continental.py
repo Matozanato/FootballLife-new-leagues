@@ -77,7 +77,7 @@ class ContinentalEditor(QWidget):
         keys = ("uecl", "uecl_name", "uecl_logo", "ccup_names", "ccup_logos", C.E.ROOT,
                 "conmebol", "game_europe", "conmebol_associations", "caf_super_cup",
                 "caf_super_cup_logo", "samerica_super_cup", "samerica_super_cup_logo",
-                "samerica_super_cup_first", "sudamericana_calendar", "uefa_rank", "uefa_off", "uefa_seed", "europe_first")
+                "samerica_super_cup_first", "uefa_rank", "uefa_off", "uefa_seed", "europe_first")
         fields = ("name", "country", "clubs", "above", "season", "exhibition", "others", "europe", "cup", "club_names")
         return ({k: recipe[k] for k in keys if k in recipe},
                 (recipe.get("edits") or {}).get("competitions"),
@@ -493,9 +493,10 @@ class ContinentalEditor(QWidget):
             errors = Q.validate_changes(recipe, proposed, qchanges, available, first.aliases if first else None)
             if errors:
                 raise CupConflict("\n".join(errors))
-        before_cleanup = C.preview_recipe(recipe, {k: v for k, v in patches.items()
-                                                  if k != ("setting", "conmebol")}, self.competitions)
-        if patches.get(("setting", "conmebol")) is False and C.modern(before_cleanup):
+        mode_key = ("setting", "conmebol")
+        was_modern = patches.get(mode_key) is False and C.modern(recipe)
+        if was_modern:
+            before_cleanup = Q.preview(recipe, qchanges)
             gone = B.modern_conmebol_places(before_cleanup)
             if gone and not ask(self, "South American places", _(C.MODERN_WARNING) % len(gone)):
                 raise CupConflict(_("Modern CONMEBOL was not disabled. Your draft is kept."))
@@ -509,6 +510,6 @@ class ContinentalEditor(QWidget):
                 continue
             else:
                 recipe[key[1]] = value
-        if ("setting", "conmebol") in patches:
-            C.set_modern_mode(recipe, patches[("setting", "conmebol")], lambda _n: True)
+        if mode_key in patches:
+            C.set_modern_mode(recipe, patches[mode_key], lambda _n: True, was_modern=was_modern)
         return bool(patches)

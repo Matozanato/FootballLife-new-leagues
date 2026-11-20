@@ -110,7 +110,7 @@ def conmebol_label():
     changes = UI.A.generate(before, "fake-tables")
     with patch.object(UI, "PresetDialog", side_effect=AssertionError("CONMEBOL ranking")):
         q.generate_button.click()
-    ok("CONMEBOL Auto Set still produces exactly the same allocation", {k: v for k, v in e.changes().items() if k[0] == "qualification"} == changes and app.project.recipe == before)
+    ok("CONMEBOL automatic qualification allocation still produces exactly the same allocation", {k: v for k, v in e.changes().items() if k[0] == "qualification"} == changes and app.project.recipe == before)
     T.discard(page)
     e, q = T.editor(page), T.editor(page).qualification
     e.settings["conmebol"].setChecked(False)
