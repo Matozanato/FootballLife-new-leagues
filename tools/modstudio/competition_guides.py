@@ -14,20 +14,16 @@ def conmebol(recipe, modern):
         return (
             (_("Classic CONMEBOL"), (
                 _("Libertadores keeps the game's qualifying, group and knockout stages. Original game qualification places remain unless explicitly overridden."),
-                _("Modern mode off: the classic Copa Sudamericana is generated for the leagues that have Sudamericana places (groups of four, then a knockout). Custom Libertadores qualifying phases 1 and 2 and the Recopa are not generated."),
-            )),
-            (_("Classic Copa Sudamericana"), (
-                _("Sudamericana places in the league editors fill the classic Copa Sudamericana. The setting sudamericana_calendar dates it like the Libertadores (February to December); off, it plays August to May."),
-                _("Classic Sudamericana places are not converted into modern places when modern mode is turned on; modern mode needs its own complete allocation."),
+                _("With modern CONMEBOL off, only original Libertadores is available."),
             )),
             (_("Switching to modern mode"), (
                 _("Modern mode is a complete package: three Libertadores qualifying phases, modern Sudamericana and Recopa. Build requires the full global allocation shown when the option is on; there are no fixed country quotas."),
-                _("Names and logos are retained when a competition is hidden. Disabling modern mode removes modern-only places and association allocations only after Apply and the existing confirmation; classic Libertadores, qualifying and Sudamericana places remain."),
+                _("Names and logos are retained when a competition is hidden. Disabling modern mode asks before removing all Copa Sudamericana places, modern Libertadores phase places and CONMEBOL association allocations."),
             )),
         )
     return (
         (_("Modern versus classic"), (
-            _("Modern CONMEBOL replaces the game's default South American access with the explicitly configured package. Libertadores and Sudamericana use the February-December cycle; the classic Sudamericana calendar option does not override the modern calendar."),
+            _("Modern CONMEBOL replaces the game's default South American access with the explicitly configured package. Libertadores and Sudamericana use the February-December cycle."),
             _("Places can be distributed among custom leagues, original game leagues and eligible associations without a playable league. Build checks global totals, not country quotas. Enabling the option does not create the missing qualification assignments automatically."),
         )),
         (_("Libertadores — qualifying phases 1, 2 and 3"), (
@@ -64,7 +60,7 @@ def conmebol(recipe, modern):
         )),
         (_("Match rules and changing modes"), (
             _("Modern Libertadores and Sudamericana knockout ties have no away-goals rule or extra time; a level tie is decided on penalties. Recopa retains its existing one-match rules."),
-            _("Names and logos are retained when a competition is hidden. Disabling modern mode removes modern-only places and association allocations only after Apply and the existing confirmation; classic Libertadores, qualifying and Sudamericana places remain."),
+            _("Names and logos are retained when a competition is hidden. Disabling modern mode asks before removing all Copa Sudamericana places, modern Libertadores phase places and CONMEBOL association allocations."),
         )),
     )
 

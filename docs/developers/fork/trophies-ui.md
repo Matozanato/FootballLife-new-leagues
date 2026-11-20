@@ -90,5 +90,5 @@ covered 100%, 125% and 150%
 scaling, including Spanish labels. Five legacy dialog checks pass with actual
 game tables. Seven existing phase/path checks pass before the offline Lua harness
 requires lupa, unavailable in this environment. Existing CUPS, qualification,
-UEFA, CONMEBOL Auto Set, world, BUILD layout and navigation suites pass. No full
+UEFA, CONMEBOL automatic qualification allocation, world, BUILD layout and navigation suites pass. No full
 world Build was performed.

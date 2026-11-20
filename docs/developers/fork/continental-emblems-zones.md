@@ -36,9 +36,7 @@ promotion, cell dimensions, executable offsets and DLL exports are unchanged.
 There is no new world-file record or zone cache. The existing loader owns these
 arrays and replaces them with the world's configuration.
 
-Classic mode generates the classic Copa Sudamericana (no Recopa) from the
-leagues' Sudamericana places, as every world before 0.2.5 had it; the zones
-here colour the modern competitions only.
+Original Libertadores remains available with modern mode off. Sudamericana and Recopa require modern mode.
 
 `python tools/test_zone_conmebol.py` builds and executes the real native lookup
 with the project's no-game harness. It needs Windows x86-64 GCC or zig. This

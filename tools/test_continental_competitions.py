@@ -283,13 +283,14 @@ def modern_tests():
     ok("declining modern-mode warning preserves all edits and source data", p.recipe == baseline
        and not p.can_undo() and editor(page).name.text() == "Pending Libertadores")
     ok("existing warning reports the actual removed-place count", confirm.call_count == 1
-       and "4 places" in confirm.call_args.args[2])
+       and "6 qualification places" in confirm.call_args.args[2]
+       and "all Copa Sudamericana places" in confirm.call_args.args[2])
     with patch.object(UI, "ask", return_value=True):
         apply(page)
     ok("accepted warning uses existing cleanup for every source", not C.modern(p.recipe)
        and "conmebol_associations" not in p.recipe
-       and p.recipe["leagues"][0]["europe"] == [[1, 3], [2, 4], [3, 9]]
-       and p.recipe["game_europe"]["29"] == [[1, 3], [2, 4], [3, 9]])
+       and p.recipe["leagues"][0]["europe"] == [[1, 3], [2, 4]]
+       and p.recipe["game_europe"]["29"] == [[1, 3], [2, 4]])
     ok("mode and identities are one Undo operation", p.undo() and p.recipe == baseline)
     qa.processEvents()
     # The old dialog uses the very same cleanup/warning operation.
@@ -304,8 +305,8 @@ def modern_tests():
     p.adopt(recipe(), None)
     qa.processEvents()
     e = select(page, "game:libertadores")
-    ok("classic Sudamericana is documented as built in classic worlds", "Classic Copa Sudamericana" in e.system_guide.text()
-       and e.list.count() == 2)
+    ok("only original Libertadores is documented in classic worlds", "only original Libertadores" in e.system_guide.text()
+       and e.list.count() == 1)
     e.settings["conmebol"].setChecked(True)
     e = select(page, "generated:9")
     ok("modern Sudamericana preview includes supported stage counts", "32 assigned clubs" in e.system_guide.text()
@@ -314,6 +315,36 @@ def modern_tests():
     apply(page)
     ok("modern activation uses the existing recipe value", p.recipe["conmebol"] == "modern")
     discard(page)
+    page.close()
+
+
+def inferred_switch_off():
+    data = recipe()
+    data["leagues"][0].update(country="Brazil", europe=[[1, 3], [3, 9], [4, C.W.LIB_F1]])
+    app, page = make_page(data)
+    p = app.project
+    e = select(page, "game:libertadores")
+    baseline = copy.deepcopy(p.recipe)
+    key = ("qualification", "league", "Test League")
+    e.set_qualification(key, (True, [[1, 3], [3, 9]]))
+    e.settings["conmebol"].setChecked(False)
+    ok("switch-off preview uses the committed inferred mode",
+       e.preview()["leagues"][0]["europe"] == [[1, 3]] and p.recipe == baseline)
+    with patch.object(C.Q, "sources", return_value=(C.Q.Source("league", "Test League", "Test League",
+                                                               "Brazil", 4, 12, True),)):
+        with patch.object(UI, "ask", return_value=False) as confirm:
+            apply(page)
+        ok("declining preserves the committed recipe and pending last-phase removal",
+           p.recipe == baseline and e.changes()[key] == (True, [[1, 3], [3, 9]]))
+        ok("confirmation counts only the two still-pending Sudamericana rows",
+           confirm.call_count == 1 and "2 qualification places" in confirm.call_args.args[2])
+        with patch.object(UI, "ask", return_value=True):
+            apply(page)
+    expected = copy.deepcopy(baseline)
+    expected["leagues"][0]["europe"] = [[1, 3]]
+    expected["game_europe"]["29"] = [[1, 3], [2, 4]]
+    ok("confirmed switch-off removes remaining places and preserves unrelated data", p.recipe == expected)
+    ok("one Undo restores the inferred mode and all saved rows", p.undo() and p.recipe == baseline)
     page.close()
 
 
@@ -367,5 +398,6 @@ if __name__ == "__main__":
             patch.object(C.B, "game_tops", return_value=[(1, "Original league", False)]):
         run()
         modern_tests()
+        inferred_switch_off()
         plan_tests()
     print("test_continental_competitions: ok (%d)" % N)

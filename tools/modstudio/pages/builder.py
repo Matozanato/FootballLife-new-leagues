@@ -82,7 +82,7 @@ SHORT = {0: "UCL", 1: "UEL", 2: "UECL", 3: "LIB", 4: "LIB-Q", 5: "AFC", 6: "CAF 
          16: "LIB-F1", 17: "LIB-F2", 18: "LIB-F3", 19: "SUD-1"}
 TOP_FLIGHT = [[1, 10], [2, 1], [3, 2]]     # the preset: 1st UCL qualifying, 2nd UEL, 3rd UECL
 # the preset by the country's confederation (Country.bin): Asia to the AFC Champions League and
-# Champions League Two, South America to the Libertadores and the Sudamericana, Africa to the CAF
+# Champions League Two, South America to the Libertadores, Africa to the CAF
 # Champions League and Confederation Cup, North and Central America to the CONCACAF Champions Cup,
 # Oceania to the OFC Champions League; everyone else keeps the European one
 PRESETS = {
@@ -91,9 +91,9 @@ PRESETS = {
         [[1, 5], [2, 5], [3, 8]]),
     # the qualifying round has no pool club: a place of ours there takes a shipped club's
     # (fl26swiss cont_standins, issue #33)
-    4: ("Top flight: 1st-3rd Libertadores, 4th qualifying, 5th-6th Sudamericana",
-        "1st to 3rd to the Copa Libertadores, 4th to its qualifying rounds, 5th and 6th to the Copa Sudamericana",
-        [[1, 3], [2, 3], [3, 3], [4, 4], [5, 9], [6, 9]]),
+    4: ("Top flight: 1st-3rd Libertadores, 4th qualifying",
+        "1st to 3rd to the Copa Libertadores, 4th to its qualifying round",
+        [[1, 3], [2, 3], [3, 3], [4, 4]]),
     5: ("Top flight: 1st and 2nd CAF Champions League, 3rd Confederation Cup",
         "1st and 2nd to the CAF Champions League, 3rd to the CAF Confederation Cup",
         [[1, 6], [2, 6], [3, 7]]),
@@ -603,15 +603,10 @@ def modern_conmebol(project):
 
 
 def continental_place_choices(items, modern=False):
-    """the competitions a place can lead to, in the order the list shows them. Classic (a world
-    without the modern CONMEBOL competitions, every world before 0.2.5): fl26world.COMPETITIONS
-    as they were, Libertadores qualifying and the classic Copa Sudamericana included (mato 08.11.:
-    a classic world keeps its Sudamericana, #154 had retired it). Modern (PR #146): phase 2 and phase 1 under
-    the Libertadores, the first stage under the Sudamericana; Libertadores qualifying and phase 3
-    are left out, phase 3 takes the eight phase-2 winners and no league's place"""
+    """Return active destinations in display order for the selected mode."""
     items = [(int(c), name) for c, name in items]
     if not modern:
-        return [(c, name) for c, name in items if c not in fl26world.CONMEBOL_STAGE_IDS]
+        return [(c, name) for c, name in items if c not in B.MODERN_CONMEBOL_DESTINATIONS]
     by_id = {c: (c, name) for c, name in items}
     hidden = {4, fl26world.LIB_F3}
     child = {fl26world.LIB_F1, fl26world.LIB_F2, fl26world.SUD_FIRST}
@@ -694,8 +689,10 @@ class EuropeTable(QWidget):
         self.table.insertRow(r)
         sp = QSpinBox()
         low = B.CUP_WINNER if self.cup_winner else 1
-        sp.setRange(min(low, int(pos)) if self.preserve_legacy else low,
-                    max(self.clubs, int(pos), 1) if self.preserve_legacy else max(self.clubs, 1))
+        legacy_suda = int(comp) == B.SUDAM and not self.modern
+        preserve = self.preserve_legacy or legacy_suda
+        sp.setRange(min(low, int(pos)) if preserve else low,
+                    max(self.clubs, int(pos), 1) if preserve else max(self.clubs, 1))
         if self.cup_winner:
             if sp.minimum() == B.CUP_WINNER:
                 sp.setSpecialValueText(_("Cup winner"))
@@ -705,7 +702,7 @@ class EuropeTable(QWidget):
         else:
             sp.setToolTip(_("The association rank used as a dynamic domestic source; it is not a team ID.")
                           if self.position_label == "Association rank" else _("League position"))
-        sp.setValue(int(pos) if self.preserve_legacy else min(max(int(pos), low), max(self.clubs, 1)))
+        sp.setValue(int(pos) if preserve else min(max(int(pos), low), max(self.clubs, 1)))
         cb = QComboBox()
         for c, name in self.competitions:
             cb.addItem(_(name), c)
@@ -717,11 +714,11 @@ class EuropeTable(QWidget):
             name = dict(fl26world.COMPETITIONS).get(int(comp))
             cb.addItem(_(name) if name else _("Competition %d") % int(comp), int(comp))
             i = cb.count() - 1
-            if self.preserve_legacy:
+            if preserve:
                 # Keep a legacy destination selected and serializable, but do not offer
                 # it for a new assignment (including switching away and back in this row).
                 cb.model().item(i).setEnabled(False)
-                cb.setToolTip(_("Stored destination is retained, but unavailable for new assignments in this mode."))
+                cb.setToolTip(_(B.LEGACY_SUDAMERICANA) if legacy_suda else _("Stored destination is retained, but unavailable for new assignments in this mode."))
         cb.setCurrentIndex(i)
         x = QPushButton("✕")
         x.setToolTip(_("Remove this place"))
@@ -2294,7 +2291,8 @@ class CompetitionNamesDialog(Dialog):
         self._world_recipe = r
         self._project = project
         self.rows = [("game", str(c), n) for c, n, _r in B.game_competitions(project.base)] \
-            + [("ours", k, n) for k, n in self.OURS] + [("uecl", "", B.mkuecl.NAME)]
+            + [("ours", k, n) for k, n in self.OURS
+               if k not in ("9", "-1") or C.modern(r)] + [("uecl", "", B.mkuecl.NAME)]
         catalog = C.catalog(project.base)
         self._eligible = {(c.storage, str(c.number) if c.number is not None else ""): c for c in catalog}
         self._entries = []
@@ -3061,37 +3059,16 @@ class ConmebolAssociationsDialog(Dialog):
 
 
 class SouthAmericaDialog(Dialog):
-    """GitHub #71: every South American league's Libertadores, qualifying and Copa Sudamericana
-    places, the game's leagues and the world's own, as Check the plan lists them; and the switch
-    for the modern CONMEBOL competitions (PR #146, vmardonesdev): Libertadores qualifying in three
-    phases, a Copa Sudamericana with a first stage and a play-off, the Recopa Sudamericana. Off, a
-    world builds the classic competitions exactly as before 0.2.5 (review of #146: a world with
-    Libertadores places became a modern one Build refused). A place only the modern ones have
-    keeps them on; switching them off takes such places out, after asking"""
-    help = ("Modern CONMEBOL competitions off (every world before 0.2.5): the game's Copa Libertadores "
-            "with its qualifying round, and a Copa Sudamericana of 32 clubs in eight groups when leagues have "
-            "places in it. The list shows who goes where.\n\n"
-            "On: Libertadores qualifying in three phases (phase 1: 6 clubs, phase 2: 13 clubs and the three "
-            "phase-1 winners, phase 3: the eight phase-2 winners), a Copa Sudamericana with a first stage of "
-            "32 clubs and a play-off after the groups, and the Recopa Sudamericana in February. The game's "
-            "South American leagues then have no Libertadores places of their own: give them theirs in "
-            "European places of the game's leagues. Build wants the whole field: 26 Libertadores group places, "
-            "13 in phase 2, 6 in phase 1, 12 Sudamericana group places and 32 in its first stage, from any "
-            "South American leagues you like.\n\n"
-            "Switching them off takes out the places only they have; Libertadores, qualifying and Sudamericana "
-            "places stay.")
-
+    """Legacy viewer and mode switch for South American qualification."""
     def __init__(self, parent, project):
+        from ..competition_guides import conmebol
+        self.help = "\n\n".join(paragraph for _heading, paragraphs in conmebol(project.recipe, False)
+                                for paragraph in paragraphs)
         super().__init__(parent, "South American places")
         self.project = project
-        self.v.insertWidget(0, hint(_("Which positions go to the Copa Libertadores, its qualifying round and the "
-                                      "Copa Sudamericana, for the game's South American leagues and yours. The "
-                                      "game's Libertadores places are its own; the Copa Sudamericana is built by "
-                                      "Mod Studio, your leagues' places first, then the game's leagues in turn.")))
         self.modern = QCheckBox(_("Modern CONMEBOL competitions"))
         self.modern.setToolTip(_("Libertadores qualifying in three phases, a Copa Sudamericana with a first stage "
-                                 "and a play-off, and the Recopa Sudamericana. Off: the classic competitions, "
-                                 "as every world before 0.2.5 has them"))
+                                 "and a play-off, and the Recopa Sudamericana. Off: original Libertadores only."))
         self.modern.setChecked(modern_conmebol(project))
         self.modern.toggled.connect(self.show_places)
         self.v.insertWidget(1, self.modern)
@@ -3106,16 +3083,16 @@ class SouthAmericaDialog(Dialog):
         self.view.setPlainText("\n".join(self.modern_lines() if self.modern.isChecked() else self.classic_lines()))
 
     def classic_lines(self):
-        own, names, clubs = [], {}, {}
+        own, names = [], {}
         for L in self.project.recipe["leagues"]:
             n = L.get("name") or "?"
-            names[n], clubs[n] = n, L.get("clubs") or 0
+            names[n] = n
             for pos, comp in L.get("europe") or []:
-                own.append(("", 0, comp, n) if pos == B.CUP_WINNER else (n, pos, comp, 0))
-        cups, _notes = B.ccup_plan(own, clubs)
+                if int(comp) in (3, 4):
+                    own.append(("", 0, comp, n) if pos == B.CUP_WINNER else (n, pos, comp, 0))
         # the builder's lines are English (the command line prints them); the language file's
         # "log" rules put them in the user's language, as the Build log's
-        return [tr(l)[4:] for l in B.samerica_lines(own, names, cups)[1:]]
+        return [tr(l)[4:] for l in B.samerica_lines(own, names, [])[1:]]
 
     def modern_lines(self):
         """the places of the modern competitions, counted against the field Build wants"""

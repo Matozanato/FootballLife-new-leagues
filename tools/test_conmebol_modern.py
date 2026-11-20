@@ -1,14 +1,12 @@
-r"""python tools/test_conmebol_modern.py <folder with the game's tables> [--keep]
+r"""python tools/test_conmebol_modern.py <folder with the game's tables> [--fl27-exe <path>] [--keep]
 
 The modern CONMEBOL competitions (PR #146, vmardonesdev: Libertadores qualifying in three phases,
 a Copa Sudamericana with a first stage and a play-off, the Recopa Sudamericana) are there only
 when the user picks them, and keep their ids. The three blockers of our review of #146:
 
  1. a world with Libertadores, Libertadores qualifying or Copa Sudamericana places (3, 4, 9) and
-    nothing else of the modern competitions became a modern world, and Build refused it ("modern
-    CONMEBOL setup is incomplete": the FL26 Modpack r7 went from building to exit code 2). Such a
-    recipe now plans and builds the classic competitions as before: no phases, no first stage, no
-    Recopa, no helper competition, the Sudamericana dated as before;
+    nothing else of the modern competitions stays in classic mode. A recipe with saved
+    Sudamericana places must explicitly resolve those places before Build.
  2. the League dialog's competition list left out Libertadores qualifying, and OK made such a
     place a Champions League place without a word: the place keeps its competition (with Qt);
  3. the helper competitions (the Sudamericana's first stage and play-off, the Libertadores'
@@ -27,6 +25,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import leaguebuilder as B
 import fl26world
+from modstudio import qualification_data as Q
 
 N = 0
 BRA, ARG, CHI, COL = 29, 30, 67, 168          # the game's South American top divisions (fl26world.SAM_GAME)
@@ -124,10 +123,10 @@ def switch(base):
     gone = B.drop_modern_conmebol(x)
     left = [e for L in x["leagues"] for e in L["europe"]] + [e for v in x["game_europe"].values() for e in v]
     ok("switched off: the %d places only they have go (phases, first stage, the association)" % gone,
-       gone == 13 + 6 + 32 + 1 and not any(e[1] in fl26world.CONMEBOL_STAGE_IDS for e in left)
+       gone == 13 + 6 + 32 + 12 + 1 and not any(e[1] in fl26world.CONMEBOL_STAGE_IDS for e in left)
        and "conmebol" not in x and "conmebol_associations" not in x)
-    ok("and the Libertadores and Sudamericana places stay",
-       sum(e[1] == 3 for e in left) == 26 and sum(e[1] == 9 for e in left) == 12)
+    ok("original Libertadores places stay, Sudamericana places are removed",
+       sum(e[1] == 3 for e in left) == 26 and sum(e[1] == 9 for e in left) == 0)
     ok("the world is then a classic one", not B.recipe_has_modern_conmebol(x))
     ok("a recipe with conmebol is an edit of the game (has_edits)", B.has_edits({"conmebol": "modern"}))
 
@@ -148,35 +147,54 @@ def rules(game, world):
 
 def classic_world(base, game):
     """blocker 1: the classic recipe plans and builds, without anything of the modern competitions"""
-    r = classic()
+    r = dict(classic(), sudamericana_calendar=True)
+    saved = copy.deepcopy(r)
+    for legacy in (r, dict(r, leagues=[]), dict(r, game_europe={})):
+        try:
+            B.plan(legacy, base)
+        except B.BuildError as exc:
+            ok("legacy Sudamericana requires explicit repair", str(exc) == B.legacy_sudamericana_problem(legacy)
+               and r == saved and not B.recipe_has_modern_conmebol(legacy))
+        else:
+            raise AssertionError("legacy Sudamericana should block Build")
+    colombia = next(source for source in Q.sources(
+        {"leagues": []}, base) if source.country == "Colombia" and source.season_halves)
+    clausura = str(colombia.season_halves[1])
+    hidden = {"leagues": [], "game_europe": {clausura: [[1, 9], [2, 3]]}}
+    try:
+        B.plan(hidden, base)
+    except B.BuildError as exc:
+        ok("legacy warning locates a source absent from the editors and shows recipe recovery",
+           int(clausura) not in {reg for reg, *_ in B.game_europe_tops(base)}
+           and 'game_europe["%s"]' % clausura in str(exc) and "recipe JSON" in str(exc)
+           and "remove the old key" in str(exc)
+           and hidden["game_europe"][clausura] == [[1, 9], [2, 3]])
+    else:
+        raise AssertionError("legacy rows on a hidden tournament must block Build")
+    try:
+        B.build({"ccups": [{"number": B.SUDAM}]}, base, game)
+    except B.BuildError as exc:
+        ok("offline Build rejects a stale classic plan before writing content", str(exc) == B.LEGACY_SUDAMERICANA)
+    else:
+        raise AssertionError("a stale classic plan must not reach Build")
+    for league in r["leagues"]:
+        league["europe"] = [row for row in league["europe"] if row[1] != B.SUDAM]
+    r["game_europe"][str(CHI)] = [[1, 3], [2, 4]]
     pl = B.plan(r, base)
     ok("classic: planned as vanilla, no phases, no first stage, no stages",
        pl["modern_libertadores_access"] == "vanilla" and not pl["libq"] and not pl["suda_first"]
        and not pl["conmebol_stages"])
     codes = [c.get("code") for c in pl["ccups"]]
     ok("classic: no Recopa Sudamericana (it is a modern competition)", "FL_SAMRC" not in codes)
-    sud = next(c for c in pl["ccups"] if c["number"] == B.SUDAM)
-    # mato 07.11.2026 (Vicentico): the classic cup plays February-December in every world now
-    ok("classic: the Copa Sudamericana is the classic cup (8 groups of 4), filled in February on the Libertadores' days",
-       sud["groups"] == 8 and sud.get("opts") == {"fill": B.SAM_GROUP_FILL, "national": 0, "days": [], "cal": 1}
-       and not pl["suda_first"] and "FL_SAMRC" not in codes)
-    ok("  ... the same with sudamericana_calendar true (the World Modpack, mato 23.10.)",
-       next(c for c in B.plan(dict(classic(), sudamericana_calendar=True), base)["ccups"]
-            if c["number"] == B.SUDAM).get("opts") == sud["opts"])
-    pc = B.plan(dict(classic(), sudamericana_calendar=False), base)
-    sc = next(c for c in pc["ccups"] if c["number"] == B.SUDAM)
-    ok("sudamericana_calendar false: the same cup on August to May (no February-December dates)",
-       sc["groups"] == 8 and sc["entry"] == sud["entry"] and not (sc.get("opts") or {}).get("cal"))
-    ok("and read back from the plan it keeps the setting",
-       B.recipe_from_plan(pc, base).get("sudamericana_calendar") is False)
+    ok("classic: no Sudamericana with the obsolete calendar flag set",
+       all(c["number"] != B.SUDAM for c in pl["ccups"])
+       and "sudamericana_calendar" not in B.recipe_from_plan(pl, base))
     built, text = build(base, game, r)
     ok("classic: Build makes the world (the Modpack r7 was refused)", True)
     ok("classic: no helper competition ids", not any(k.startswith("conmebol:") for k in built["cup_ids"]))
-    cal = [l for l in text.splitlines() if " cal=1" in l]
-    ok("classic: the world file has no first stage, play-off or phase lines; cal=1 only on the Copa Sudamericana",
-       not re.search(r"^lpre .*(single=1|poko=1|feed=)", text, re.M) and len(cal) == 1
-       and cal[0].startswith("ccup ") and cal[0].endswith("name=Copa Sudamericana"))
-    ok("classic: and no Recopa", "Recopa" not in text)
+    ok("classic: no Sudamericana, Recopa or modern progression in the world file",
+       "Copa Sudamericana" not in text and "Recopa" not in text
+       and not re.search(r"^lpre .*(single=1|poko=1|feed=)", text, re.M))
     lib = [w for reg, cid, w in rules(game, r["world"]) if cid == 5 and reg & 0x3ff in (8, 10)]
     # the game's own rows: FL26 plays them with away goals, FL27 (1.00) without
     shipped = B.M.load(base, "CompetitionRegulation.bin")
@@ -256,9 +274,9 @@ def ui():
     ok("a qualifying place opened in it comes back unchanged (it became a Champions League place)",
        sorted(t.places()) == sorted(places))
     t = P.EuropeTable(copy.deepcopy(places), 16)
-    ok("classic list: every competition of before, none of the modern ones",
+    ok("classic list: only original CONMEBOL choices",
        [c for c, _n in t.competitions] == [c for c, _n in fl26world.COMPETITIONS
-                                           if c not in fl26world.CONMEBOL_STAGE_IDS]
+                                           if c not in B.MODERN_CONMEBOL_DESTINATIONS]
        and sorted(t.places()) == sorted(places))
     t.set_confed(4)
     ok("classic list: a South American league keeps its preset", not t.preset.isHidden())
@@ -268,11 +286,14 @@ def ui():
     app.processEvents()
 
 
-def main(base, keep=False):
-    switch(base)
-    ui()
+def main(base, keep=False, fl27_exe=None):
     game = tempfile.mkdtemp(prefix="fl26-conmebol-")
     try:
+        if fl27_exe:
+            shutil.copyfile(fl27_exe, os.path.join(game, "FL_2027.exe"))
+        B.use_game(game)
+        switch(base)
+        ui()
         classic_world(base, game)
         modern_world(base, game)
     finally:
@@ -287,4 +308,5 @@ if __name__ == "__main__":
     a = sys.argv[1:]
     if not a or a[0].startswith("-"):
         sys.exit(__doc__)
-    main(a[0], "--keep" in a)
+    exe = a[a.index("--fl27-exe") + 1] if "--fl27-exe" in a else None
+    main(a[0], keep="--keep" in a, fl27_exe=exe)

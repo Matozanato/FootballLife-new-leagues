@@ -94,6 +94,52 @@ def pure():
     ok("cup overlap retains backend same-source cascading representation", any(r[1] == 0 and r[-1] == 900 for r in stage))
 
 
+def colombian_season():
+    natives = tuple(s for s in T.NATIVES if s.country != "Colombia")
+    apertura = replace(next(s for s in T.NATIVES if s.country == "Colombia"), key="2010", name="Apertura")
+    annual = replace(apertura, key="2012", name="Annual table", season_halves=(2010, 2011))
+    with patch.object(Q, "metadata", return_value=(natives + (apertura, annual), T.ASSOCIATIONS, T.CONF)), \
+            patch.object(A, "playable_native_rids", return_value={s.key for s in natives} | {"2010"}):
+        recipe = world()
+        recipe["game_europe"].update({"2010": [[1, 3], [2, 4]], 2011: [[1, 9], [2, 19]], "2012": [[20, 0]]})
+        changes, message = attempt(recipe)
+        ok("season total is selected using detected halves and existing tournament overrides are deleted",
+           not message and changes[apertura.draft_key] == (False, None)
+           and changes[("qualification", "game", 2011)] == (False, None))
+        result = Q.preview(recipe, changes)
+        rows = result["game_europe"]["2012"]
+        ok("annual source preserves its unrelated place and receives the Colombian quota and cup winner",
+           [20, 0] in rows and [0, 17] in rows and len(rows) == 1 + sum(A.QUOTAS["Colombia"]))
+        ok("season-total allocation is idempotent", A.generate(result, "fake-tables") == {})
+        ui_recipe = copy.deepcopy(recipe)
+        ui_recipe["game_europe"] = {str(rid): rows for rid, rows in recipe["game_europe"].items()}
+        app, page, e, q = T.page_for(ui_recipe, 4)
+        before = copy.deepcopy(app.project.recipe)
+        q.generate_button.click()
+        ok("annual allocation and tournament cleanup enter the same draft",
+           app.project.recipe == before and e.preview()["game_europe"] == result["game_europe"])
+        T.apply(page)
+        ok("one Apply saves the annual allocation and both removals",
+           app.project.recipe["game_europe"] == result["game_europe"])
+        ok("one Undo restores the annual table and both former overrides", app.project.undo()
+           and app.project.recipe == before)
+        page.close()
+        recipe["game_europe"][2011].append([3, 13])
+        changes, message = attempt(recipe)
+        ok("unrelated tournament allocation that would conflict with the whole season blocks the entire draft",
+           changes is None and "Move those places to the annual table" in message)
+        recipe["game_europe"][2011].pop()
+        recipe["game_europe"]["02010"] = recipe["game_europe"].pop("2010")
+        recipe["game_europe"]["02012"] = recipe["game_europe"].pop("2012")
+        padded_changes, message = attempt(recipe)
+        ok("padded source keys survive annual writes and are used for tournament removal",
+           not message and padded_changes[("qualification", "game", "02010")] == (False, None)
+           and [20, 0] in padded_changes[("qualification", "game", "02012")][1])
+        recipe["leagues"].append(dict(name="New Colombia top", country="Colombia", clubs=20))
+        changes, message = attempt(recipe)
+        ok("a separate Colombian top division is still ambiguous", changes is None and "Ambiguous top divisions: Colombia" in message)
+
+
 def failures():
     for removed in (("Peru",), ("Peru", "Ecuador", "Bolivia")):
         recipe = world()
@@ -154,12 +200,14 @@ def workflow():
     def toolbar():
         return [q.toolbar.layout().itemAt(i).widget().text() for i in range(q.toolbar.layout().count())
                 if isinstance(q.toolbar.layout().itemAt(i).widget(), QPushButton) and not q.toolbar.layout().itemAt(i).widget().isHidden()]
-    ok("UEFA has exactly ranking, first-season clubs and plan in that order", toolbar() == ["UEFA ranking...", "First-season clubs...", "Check current competition plan"] and q.generate_button.isHidden())
+    ok("UEFA has exactly ranking and first-season clubs in that order", toolbar() == ["UEFA ranking...", "First-season clubs..."] and q.generate_button.isHidden())
     for conf in (3, 5, 6, 7):
         e.confederation.setCurrentIndex(e.confederation.findData(conf))
-        ok("other confederation %d retains the generic preset toolbar" % conf, toolbar() == ["Generate preset...", "Check current competition plan"])
+        ok("other confederation %d retains the generic preset toolbar" % conf, toolbar() == ["Generate preset..."])
     e.confederation.setCurrentIndex(e.confederation.findData(4))
-    ok("CONMEBOL has only auto allocation immediately before plan", toolbar() == ["Auto set continental places", "Check current competition plan"])
+    ok("CONMEBOL has only automatic qualification allocation", toolbar() == ["Auto-assign qualification places"])
+    ok("Competitions retains its connected plan button", e.check_plan.text() == "Check current competition plan"
+       and e.check_plan.receivers("2clicked(bool)") > 0)
     before = copy.deepcopy(app.project.recipe)
     pending = ("qualification", "league", "European custom")
     e.set_qualification(pending, (True, [[2, 1]]))
@@ -243,10 +291,40 @@ def real_plan(base):
     recipe.pop("players")
     recipe.pop("caf_super_cup")
     recipe["leagues"] = recipe["leagues"][:6]
+    aggregate = next(s for s in Q.sources(recipe, base) if s.country == "Colombia" and s.season_halves)
+    annual = "0" + str(aggregate.key)
+    padded_halves = {"0" + str(h) for h in aggregate.season_halves}
+    recipe["game_europe"] = {key: [[1, 3], [2, 19]] for key in padded_halves}
+    recipe["game_europe"][annual] = [[1, 3]]
+    half = next(iter(padded_halves))
+    recipe["game_europe"][half].append([20, 0])
+    before = copy.deepcopy(recipe)
+    try:
+        A.generate(recipe, base)
+    except A.AllocationError as exc:
+        ok("unrelated place on padded tournament key blocks allocation atomically",
+           "Move those places to the annual table" in str(exc) and recipe == before)
+    else:
+        raise AssertionError("the annual and tournament rows cannot coexist")
+    recipe["game_europe"][half].pop()
     changes = A.generate(recipe, base)
     result = Q.preview(recipe, changes)
     plan = Q.B.plan(result, base)
-    ok("real four-original-plus-six-new allocation validates without a world Build", len(changes) == 10 and plan["modern_libertadores_access"] == "custom")
+    ok("padded tournament keys are removed and the original annual key is retained",
+       set(result["game_europe"]).isdisjoint(padded_halves) and annual in result["game_europe"]
+       and aggregate.key not in result["game_europe"])
+    ok("the padded annual key emits a season sum and repeat allocation is idempotent",
+       [int(annual), *aggregate.season_halves] in plan["season_sums"] and A.generate(result, base) == {})
+    duplicate = copy.deepcopy(recipe)
+    duplicate["game_europe"][aggregate.key] = [[20, 0]]
+    try:
+        A.generate(duplicate, base)
+    except A.AllocationError as exc:
+        ok("duplicate spellings of the annual source are rejected safely",
+           "manual review" in str(exc) and duplicate["game_europe"][aggregate.key] == [[20, 0]])
+    else:
+        raise AssertionError("multiple aliases of the selected annual regulation must be reviewed")
+    ok("real four-original-plus-six-new allocation validates without a world Build", len(changes) == 10 + len(aggregate.season_halves) and plan["modern_libertadores_access"] == "custom" and any(row[0] == int(aggregate.key) for row in plan["conmebol_stages"]))
     ok("real plan retains stage cup-winner fallback sources", any(r[1] == 0 and r[-1] for r in plan["conmebol_stages"]))
 
 
@@ -257,6 +335,7 @@ if __name__ == "__main__":
             patch.object(T.C.B, "game_tops", return_value=[(1, "Original cup league", False)]), \
             patch.object(UI, "run_job", side_effect=T.inline):
         pure()
+        colombian_season()
         failures()
         workflow()
         deferred()

@@ -35,6 +35,7 @@ class Source:
     linked_to: tuple = ()
     invalid_link: bool = False
     whole: tuple = ()        # a season of two tournaments as a whole (Colombia, the MLS): its halves' names
+    season_halves: tuple = ()  # Regulation IDs of the tournaments behind this total
 
     @property
     def draft_key(self):
@@ -155,7 +156,8 @@ def metadata(base):
             cup = B.home_cup(regrow, regions, region) is not None
             native.append(Source("game", str(rid), name, country, conf, clubs, cup,
                                  tuple(tuple(p) for p in shipped), ids.get(country, 0),
-                                 whole=tuple(halves.get(rid) or ())))
+                                 whole=tuple(halves.get(rid) or ()),
+                                 season_halves=tuple(totals.get(rid) or ())))
         playable = B.game_top_division_countries(base)
         associations = []
         for name, country in ids.items():
@@ -172,7 +174,8 @@ def sources(recipe, base, fallback_confeds=None):
     confeds = dict(fallback_confeds or {}, **confeds)
     result = []
     for source in native:
-        key = next((k for k in recipe.get("game_europe") or {} if str(k) == str(source.key)), source.key)
+        key = next((k for k in recipe.get("game_europe") or {}
+                    if B.qualification_regulation_id(k) == int(source.key)), source.key)
         result.append(Source(**dict(source.__dict__, key=key)))
     own_countries = set()
     country_ids = {s.country: s.country_id for s in native + associations}
@@ -208,9 +211,7 @@ def sources(recipe, base, fallback_confeds=None):
 def destinations(conf, recipe):
     ids = TARGETS[conf]
     if conf == 4 and not modern(recipe):
-        # classic: the Libertadores, its qualifying round and the classic Copa Sudamericana
-        # (mato 08.11.: a classic world keeps its Sudamericana)
-        ids = (3, 4, 9)
+        ids = (3, 4)
     if conf == 2 and not recipe.get("uecl", True):
         ids = tuple(c for c in ids if c not in (2, 12))
     names = dict(W.COMPETITIONS)
@@ -257,29 +258,36 @@ def inherited_text(source, recipe):
         return _("The whole season: its places go by the tables of %s added together, "
                  "counted when the last one ends (until then, by the first). Give places "
                  "here or to one of the tournaments, not both.") % " + ".join(source.whole)
+    sam = {r: (l, q) for r, l, q in W.SAM_GAME}
+    rid = B.qualification_regulation_id(source.key)
     if state(recipe, source.draft_key)[0][0]:
         if not touches_native(editable_rows(source, recipe)) and (source.native or
-                (str(source.key) in {str(r) for r, _l, _q in W.SAM_GAME} and not modern(recipe))):
+                (rid in sam and not modern(recipe))):
             return _("This backend retains native access for empty or generated-cup-only overrides. The table edits your stored rows only; inherited entries still count in the overview. Explicit native destinations replace native access.")
         return _("Your places: they replace the game's for this league.")
-    sam = {str(r): (l, q) for r, l, q in W.SAM_GAME}
-    if str(source.key) in sam and not source.native:
+    if rid in sam and not source.native:
         if modern(recipe):
             return _("Modern CONMEBOL disables this league's native Libertadores access. Enable Own places and configure its allocations.")
-        return _("Native Libertadores groups: %s; qualifying: %s. These executable-managed places are retained, not an empty custom allocation.") % sam[str(source.key)]
+        return _("Native Libertadores groups: %s; qualifying: %s. These executable-managed places are retained, not an empty custom allocation.") % sam[rid]
     return _("Native access is retained. The rows below are read-only reference; enable Own places to replace them.")
 
 
 def row_errors(source, rows, recipe):
     errors = B.europe_problems(source.clubs, rows, source.cup)
     allowed = dict(destinations(source.confederation, recipe))
+    legacy_sudamericana = False
     for row in rows:
         try:
             target = int(row[1])
         except (ValueError, TypeError, IndexError):
             continue
         if target not in allowed:
+            if target == B.SUDAM and not modern(recipe):
+                legacy_sudamericana = True
+                continue
             errors.append(_("Destination %d is inactive, legacy or incompatible with the selected confederation/mode; its stored value is preserved.") % target)
+    if legacy_sudamericana:
+        errors.append(tr(B.legacy_sudamericana_problem(recipe) or B.LEGACY_SUDAMERICANA))
     if source.kind == "association" and any(int(p[0]) == 0 for p in rows if len(p) == 2):
         errors.append(_("An association rank must start at 1; no domestic cup-winner slot exists."))
     return errors
@@ -333,7 +341,10 @@ def overview(all_sources, recipe, conf):
                 sizes = [n for n in B.CCUP_SIZES if c not in W.CCUP_KNOCKOUT or n <= B.CCUP_KNOCKOUT_MAX]
                 lines.append(_("%s: supported fields %s; inherited fill and the current plan determine the generated field.") % (_(names[c]), "/".join(map(str, sizes))))
         if conf == 4:
-            lines.append(_("Original Libertadores access remains native. The classic Copa Sudamericana is built from the Sudamericana places."))
+            lines.append(_("With modern CONMEBOL off, only original Libertadores is available."))
+            issue = B.legacy_sudamericana_problem(recipe)
+            if issue:
+                notes.append(tr(issue))
         if conf == 3:
             lines.append(_("Native AFC Champions League access and format are retained; this UI does not invent an Elite access list."))
     known = {s.draft_key for s in all_sources}

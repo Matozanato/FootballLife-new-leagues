@@ -55,7 +55,8 @@ ranking helper remains internal compatibility code, not an exposed CONMEBOL tool
 Other confederations use the same workflow for backend-generated cups with an
 explicit supported allocation size. AFC native destination 5 is retained, not
 recreated by an invented Elite access list. Existing native/default filler may
-enlarge a generated field; Check Current Competition Plan remains authoritative.
+enlarge a generated field. Use Check current competition plan in Competitions to
+see the resolved field.
 
 ## Existing engine limitations
 
@@ -67,10 +68,9 @@ limitation. Original Libertadores details include executable-managed access whic
 cannot always be represented as fixed league positions.
 
 Modern mode disables native South American Libertadores access and requires the
-complete package. With modern mode off, the world builds the classic Copa
-Sudamericana from its Sudamericana places (no Recopa), dated by the
-sudamericana_calendar setting, exactly as worlds before 0.2.5 had it.
-Legacy destinations are retained, diagnosed and removed only by explicit action.
+complete package. With modern mode off, only original Libertadores is available.
+Saved Sudamericana places stay in the recipe and block Build until they are removed
+or reassigned, or modern mode is enabled and its allocation is completed.
 Saved association allocations in a now-playable country are reviewable through the
 same detail editor, not listed as a new league-less source.
 
@@ -86,7 +86,7 @@ feature controls initial career participants, never subsequent-season access.
 
 Run `python tools/test_qualification.py`; optionally append
 `--tables <pesdb directory>` for actual source mappings and read-only B.plan
-validation of modern/classic CONMEBOL. No full world build is needed. Qt fixtures
+validation of modern CONMEBOL and legacy Sudamericana recipes. No full world build is needed. Qt fixtures
 use deterministic source metadata but real europe_problems, europe_first and UEFA
 ranking functions. Full-window geometry tests cover 1400x900, 1366x768 and 1080x640.
 Repeat under QT_SCALE_FACTOR=1, 1.25 and 1.5. Existing CUPS, BUILD, navigation and
@@ -141,9 +141,9 @@ report no editor reconstruction or repeated catalog parsing.
 
 ## Fixed CONMEBOL automatic allocation
 
-UEFA's toolbar contains only Ranking, First-season clubs and Check plan. UEFA's
-algorithm is unchanged. CONMEBOL contains Auto set continental places and Check
-plan. AFC/CAF/CONCACAF/OFC retain their existing preset workflow.
+UEFA's toolbar contains Ranking and First-season clubs. CONMEBOL has
+**Auto-assign qualification places**. AFC/CAF/CONCACAF/OFC retain their preset
+workflow. Check current competition plan is available in Competitions.
 
 `conmebol_allocation.py` is a UI proposal generator, not a competition engine.
 It requires modern mode and exactly one valid playable top division per required
@@ -151,7 +151,11 @@ country. Original country/cup metadata comes from the existing database readers;
 friendly competitions are filtered using `friendly_cids`. New sources use their
 actual country mapping and the backend club-count/season bounds. Lower divisions,
 exhibitions and unassigned groups do not satisfy the gate. Duplicate native/own
-or own/own top divisions are reported rather than silently prioritized.
+or own/own top divisions are reported. Colombia’s annual table represents its
+detected Apertura and Clausura tournaments. The automatic draft replaces their
+CONMEBOL overrides with the annual allocation. Unrelated rows on the annual
+table remain, and unrelated tournament rows that would conflict with the annual
+table block the action and require manual relocation.
 
 | Country | Lib groups | F2 | F1 | Suda groups | First stage | Cup destination |
 |---|---:|---:|---:|---:|---:|---|
@@ -219,4 +223,4 @@ color with a compact legend. The CONMEBOL checkbox label is now exactly
 the display label changed, not its conmebol key or behavior. No selector-layout
 changes are required at the supported widths, including Spanish localization.
 `test_uefa_ranking_ui.py` passes 27 checks at 100%, 125% and 150% scaling,
-including exact equivalence to uefakey and preservation of CONMEBOL Auto Set.
+including exact equivalence to uefakey and preservation of CONMEBOL automatic allocation.
