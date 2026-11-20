@@ -44,6 +44,9 @@ More detail: [Install a ready pack](../guides/en/install-a-pack.md).
 ## What GigaPack can't do (yet)
 
 - FL27 only: Mod Studio won't put it into Football Life 2026.
+- **No SmokePatch face pack.** GigaPack doesn't include SmokePatch's face pack (real player faces):
+  that is SmokePatch's work, not ours. If you want it, get it from SmokePatch and install it
+  separately.
 - Only a NEW Master League gets the new leagues. A career you started before (also on a GigaPack
   beta) doesn't.
 - Real kits for 600 clubs in 58 leagues ([the list](gigapack-real-kits-1.0.md)). Every other club
