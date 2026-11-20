@@ -1,6 +1,8 @@
 """Leagues: every league in one list -- the game's and the ones the recipe adds -- by continent,
 in the order they are dragged into.  The one picked is edited on the right: a league of the game
 in the game's leagues panel, a league of ours with the league window."""
+import unicodedata
+
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QBrush, QColor, QPixmap
 from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QHBoxLayout, QLabel, QLineEdit, QMenu,
@@ -8,6 +10,7 @@ from PySide6.QtWidgets import (QAbstractItemView, QButtonGroup, QHBoxLayout, QLa
                                QTreeWidgetItem, QVBoxLayout, QWidget, QFormLayout, QGridLayout, QScrollArea,
                                QTableWidget, QTableWidgetItem)
 import fl26world
+import leaguebuilder as B
 
 from ..i18n import _
 from ..project import OTHERS
@@ -19,6 +22,15 @@ from .builder import (BuilderPage, GameLeagues, fmt_text, europe_text, tier_of, 
 CONTINENTS = ((2, "Europe"), (3, "Asia"), (4, "South America"), (5, "Africa"),
               (6, "North and Central America"), (7, "Oceania"), (0, "Other"))
 ROLE = Qt.UserRole
+CONTINENT_ROLE = ROLE + 1
+
+
+def fold(text):
+    text = (text or "").casefold()
+    if text.isascii():
+        return text
+    return "".join(c for c in unicodedata.normalize("NFKD", text)
+                   if not unicodedata.combining(c))
 
 
 def keep_continent_places(leagues, keys, confeds):
@@ -60,12 +72,23 @@ class LeagueTree(QTreeWidget):
         super().__init__()
         self.setHeaderHidden(True)
         self.setColumnCount(2)
-        self.setRootIsDecorated(False)
-        self.setIndentation(0)
+        self.collapsed_continents = set()
+        self.searching = False
+        self.itemExpanded.connect(self._remember_expansion)
+        self.itemCollapsed.connect(self._remember_expansion)
         self.setDragDropMode(QAbstractItemView.InternalMove)
         self.setDefaultDropAction(Qt.MoveAction)
         self.setSelectionMode(QAbstractItemView.SingleSelection)
         self.setDropIndicatorShown(True)
+
+    def _remember_expansion(self, item):
+        code = item.data(0, CONTINENT_ROLE)
+        if self.searching or code is None:
+            return
+        if item.isExpanded():
+            self.collapsed_continents.discard(code)
+        else:
+            self.collapsed_continents.add(code)
 
     def _ok(self, event):
         src = self.currentItem()
@@ -147,7 +170,7 @@ class Leagues(BuilderPage):
         lv.setContentsMargins(0, 0, 10, 0)
         lv.setSpacing(8)
         self.search = QLineEdit()
-        self.search.setPlaceholderText(_("Find a league..."))
+        self.search.setPlaceholderText(_("Find a league or country..."))
         # B410 (Vicentico 10.11., GigaPack 343 leagues): every key refilled the whole list, the
         # places table (317 rows of boxes) and the crests of the league shown twice, 0.4-1.3 s a
         # key; now the list only, a moment after the last key
@@ -278,7 +301,8 @@ class Leagues(BuilderPage):
         split.setStretchFactor(1, 1)
         self.outer.addWidget(split, 1)
         self.project.changed.connect(self.on_change(self.fill))
-        self._countries = (None, {})        # (tables, {game league's regulation id: country}) for natural
+        self._countries = (None, {})        # (tables, {game league's regulation id: country})
+        self._list_filtered = False
 
     def nl(self):
         """the New leagues page, whose tools the More menu and the buttons use"""
@@ -305,7 +329,6 @@ class Leagues(BuilderPage):
         P = self.project
         changed = P.edits("leagues")
         out = []
-        import leaguebuilder as B
         friendly = B.game_info(P.base).get("friendly_cids", set()) if P.base else set()
         for rid, cid, name, teams in sorted(P.game_lgs, key=lambda x: x[0]):
             if cid in friendly:              # the pre-season tournaments: cups, not leagues
@@ -333,38 +356,68 @@ class Leagues(BuilderPage):
         late = len(order)
         return sorted(out, key=lambda x: order.get(x[0], late))     # stable: unknown keep theirs
 
-    def natural(self, e):
-        """(country, division, name) of an entry: the list's order before any drag"""
-        import unicodedata
+    def country(self, e):
+        """Country of a league from the recipe or the game's tables."""
         P = self.project
+        kind, payload = e[3:]
+        if kind == "ours":
+            return P.recipe["leagues"][payload].get("country", "")
+        if kind == "group":
+            return ""
         if self._countries[0] is not P.base:
-            import leaguebuilder as B
             try:
                 self._countries = (P.base, B.game_league_countries(P.base, P.game_lgs) if P.base else {})
             except Exception:           # tables that do not read: the game's leagues by name only
                 self._countries = (P.base, {})
+        return self._countries[1].get(payload[0], "")
+
+    def natural(self, e):
+        """(country, division, name) of an entry: the list's order before any drag"""
+        P = self.project
         _k, _c, name, kind, payload = e
         if kind == "ours":
-            L = P.recipe["leagues"][payload]
-            country, tier = L.get("country", ""), tier_of(P, L.get("above"))
+            tier = tier_of(P, P.recipe["leagues"][payload].get("above"))
         else:
-            country, tier = self._countries[1].get(payload[0], ""), P.parent_tiers.get(payload[0])
-        fold = lambda t: unicodedata.normalize("NFKD", t or "").encode("ascii", "ignore").decode().casefold()
-        return (fold(country) or "~", tier or 99, fold(name))
+            tier = P.parent_tiers.get(payload[0])
+        def sort_text(text):
+            return unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode().casefold()
+
+        return (sort_text(self.country(e)) or "~", tier or 99, sort_text(name))
+
+    def country_search(self, query):
+        """Match country names and aliases using the builder's country choices."""
+        names = set(self.project.countries).union(B.COUNTRY_ALIASES.values())
+        matching = {fold(country) for label, country in B.country_choices(names)
+                    if query in fold(label)}
+        matched = {}
+
+        def matches(country):
+            if country not in matched:
+                name = fold(country)
+                matched[country] = (query in name or name in matching
+                                    or bool(matching and country not in names
+                                            and fold(B.country_of(country, names)) in matching))
+            return matched[country]
+
+        return matches
 
     def fill(self, places=True):
         """the list of leagues; places: the places table too and the league on the right shown
         again (a change of the world). The search and the All/Ours/Changed chips touch neither:
         the right side is shown again only when another league is the current one"""
-        q = self.search.text().strip().lower()
+        q = fold(self.search.text().strip())
         want = self.filter.checkedId()
+        matches_country = self.country_search(q) if q else None
+        self._list_filtered = bool(q or want)
         cur = self.tree.currentItem()
         key = cur.data(0, ROLE)[0] if cur and cur.data(0, ROLE) else None
         self.tree.blockSignals(True)
+        self.tree.searching = bool(q)
         self.tree.clear()
         heads = {}
         for code, cname in CONTINENTS:
             h = QTreeWidgetItem([_(cname).upper(), ""])
+            h.setData(0, CONTINENT_ROLE, code)
             h.setFlags(Qt.ItemIsEnabled | Qt.ItemIsDropEnabled)
             h.setForeground(0, QBrush(QColor(theme.SUBTLE)))
             fnt = h.font(0)
@@ -380,9 +433,9 @@ class Leagues(BuilderPage):
             k, conf, name, kind, payload = e
             total += 1
             kinds[kind] = kinds.get(kind, 0) + 1
-            if q and q not in name.lower():
-                continue
             if want == 1 and kind != "ours" or want == 2 and kind != "changed":
+                continue
+            if matches_country and q not in fold(name) and not matches_country(self.country(e)):
                 continue
             it = QTreeWidgetItem(["⠿  " + name, tags[kind][0]])
             it.setForeground(1, QBrush(QColor(tags[kind][1])))
@@ -403,14 +456,17 @@ class Leagues(BuilderPage):
             h = heads[code]
             if h.childCount():
                 self.tree.addTopLevelItem(h)
-                h.setExpanded(True)
         self.tree.header().setStretchLastSection(False)
         self.tree.header().setSectionResizeMode(0, self.tree.header().ResizeMode.Stretch)
         self.tree.header().setSectionResizeMode(1, self.tree.header().ResizeMode.ResizeToContents)
-        if pick is None and self.tree.topLevelItemCount():
-            pick = self.tree.topLevelItem(0).child(0)
+        expanded = {code for code in heads if q or code not in self.tree.collapsed_continents}
+        if pick is None:
+            pick = next((h.child(0) for code, h in heads.items() if code in expanded and h.childCount()), None)
         if pick:
             self.tree.setCurrentItem(pick)          # signals still blocked: shown once, below
+        for code, h in heads.items():
+            if h.childCount():
+                h.setExpanded(code in expanded)
         self.tree.blockSignals(False)
         now = pick.data(0, ROLE)[0] if pick and pick.data(0, ROLE) else None
         if places or now != key or now is None:
@@ -500,16 +556,20 @@ class Leagues(BuilderPage):
     def save_order(self):
         """the order on screen into the recipe: league_order for the list, and the recipe's
         leagues in the same order (the order New leagues and Build use)"""
-        keys = []
+        groups = []
         for i in range(self.tree.topLevelItemCount()):
             h = self.tree.topLevelItem(i)
-            keys += [h.child(j).data(0, ROLE)[0] for j in range(h.childCount())]
-        if self.search.text().strip() or self.filter.checkedId():
-            # some leagues are hidden: keep them where they were, between the ones moved
+            groups.append([h.child(j).data(0, ROLE)[0] for j in range(h.childCount())])
+        if self._list_filtered:
+            # Reorder each continent's displayed keys in their original slots, leaving hidden keys in place.
             full = [e[0] for e in self.entries()]
-            shown = set(keys)
-            it = iter(keys)
-            keys = [next(it) if k in shown else k for k in full]
+            shown = {}
+            for group in groups:
+                order = iter(group)
+                shown.update(dict.fromkeys(group, order))
+            keys = [next(shown[k]) if k in shown else k for k in full]
+        else:
+            keys = [k for group in groups for k in group]
         r = self.project.recipe
         r["league_order"] = keys
         r["leagues"] = keep_continent_places(r["leagues"], keys, self.project.confeds)
@@ -530,6 +590,7 @@ class Leagues(BuilderPage):
             for it in [h] + [h.child(j) for j in range(h.childCount())]:
                 e = it.data(0, ROLE)
                 if e and e[0] == key:
+                    h.setExpanded(True)
                     self.tree.setCurrentItem(it)
                     self.tree.scrollToItem(it)
                     return True
