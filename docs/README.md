@@ -13,6 +13,8 @@ Life 2027:
 
 ## For players
 
+- [gigapack.md](gigapack.md): **GigaPack by MatoZanato 1.0** for FL27, download, install, limits
+  and credits; [gigapack-real-kits-1.0.md](gigapack-real-kits-1.0.md): the clubs with real kits.
 - [Mod Studio guide](../guides/en/mod-studio-guide.md): every page of Mod Studio, explained
   (other languages: [guides/](../guides/README.md)).
 - [faq.md](faq.md): the questions people ask (updating, crashes at start, cups, promotion, what

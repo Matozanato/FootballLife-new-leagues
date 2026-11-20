@@ -15,6 +15,11 @@ again.
 
 No Mod Studio yet? Start with [Download & start](#download--start).
 
+> [!TIP]
+> **🔥 GigaPack by MatoZanato 1.0 is out (FL27, free):** 317 leagues and 5,239 clubs with their kits,
+> crests, logos and scoreboards, in one zip that Mod Studio installs. No Build needed.
+> **[Download and install GigaPack](docs/gigapack.md)** · [clubs with real kits](docs/gigapack-real-kits-1.0.md)
+
 [![Join the Discord](https://img.shields.io/badge/Discord-join%20the%20community-5865f2?logo=discord&logoColor=white)](https://discord.gg/StQqtk3G3M)
 
 [![Latest release](https://img.shields.io/github/v/release/Matozanato/FootballLife-new-leagues?display_name=release&label=release&color=2ea44f&logo=github&logoColor=white)](https://github.com/Matozanato/FootballLife-new-leagues/releases/latest)
@@ -24,7 +29,7 @@ No Mod Studio yet? Start with [Download & start](#download--start).
 ![Languages](https://img.shields.io/badge/languages-EN%20%C2%B7%20HR%20%C2%B7%20ES%20%C2%B7%20PT%20%C2%B7%20FR-6f42c1)
 ![Game: Football Life 2026 and 2027](https://img.shields.io/badge/game-Football%20Life%202026%20%C2%B7%202027-c0392b)
 
-**Contents:** [Download & start](#download--start) · [What's new](#whats-new) ·
+**Contents:** [Download & start](#download--start) · [GigaPack](docs/gigapack.md) · [What's new](#whats-new) ·
 [What it does](#what-it-does) · [Guides](#guides) · [Ready packs and real clubs](#ready-packs-and-real-clubs) ·
 [Help and bug reports](#help-and-bug-reports) · [Supporters](#supporters) · [Credits](#credits) ·
 [For modders and developers](#for-modders-and-developers) · [License](#license)
@@ -108,6 +113,8 @@ In English: [questions (FAQ)](docs/faq.md) · [known issues](docs/known-issues.m
 
 ## Ready packs and real clubs
 
+- **GigaPack by MatoZanato 1.0** (FL27): our biggest ready world, 317 leagues and 5,239 clubs.
+  Download, install steps, limits and credits: **[GigaPack](docs/gigapack.md)**.
 - **A ready world or Modpack** (one `.zip`): **2. My world** → **+ Add...** → **Choose a file...** →
   the zip → **Install the world**. Nothing to build. Mod Studio walks you through it in
   **Help → Install a Modpack, step by step**; the whole route is in
@@ -164,6 +171,17 @@ who covered a big part of what the project costs
 <td align="center">⭐<br><b>Corrado</b></td>
 <td align="center">⭐<br><b>undöödh</b></td>
 </tr>
+<tr>
+<td align="center">⭐<br><b>Mauro C.</b></td>
+<td align="center">⭐<br><b>panizz…</b></td>
+<td align="center">⭐<br><b>flashgordon9985</b></td>
+<td align="center">⭐<br><b>Israelonics</b></td>
+<td align="center">⭐<br><b>Tysonche35</b></td>
+<td align="center">⭐<br><b>Cachin_frg</b></td>
+<td align="center">⭐<br><b>juancar…</b></td>
+<td align="center">⭐<br><b>Luca</b></td>
+<td align="center">⭐<br><b>Yanys G.</b></td>
+</tr>
 </table>
 
 [![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-become%20a%20supporter-ff5e5b?style=for-the-badge&logo=ko-fi&logoColor=white)](https://ko-fi.com/mata28)
@@ -176,7 +194,7 @@ the African leagues' League Info panel, more competitions and formats). If you w
 along: **[ko-fi.com/mata28](https://ko-fi.com/mata28)**. Testing and good bug reports help just
 as much — see the [testing guide](docs/developers/testing-guide.md).
 
-Thank you to everyone who has: **Thunder105**, **GutGut**, **LaraCroft**, **Pierro1912**, **David.BDJ**, **Facemaker Jacobson**, **Cristian B.**, **Daniel**, **Corrado** and **undöödh**.
+Thank you to everyone who has: **Thunder105**, **GutGut**, **LaraCroft**, **Pierro1912**, **David.BDJ**, **Facemaker Jacobson**, **Cristian B.**, **Daniel**, **Corrado**, **undöödh**, **Mauro C.**, **panizz…**, **flashgordon9985**, **Israelonics**, **Tysonche35**, **Cachin_frg**, **juancar…**, **Luca** and **Yanys G.**.
 
 ## Credits
 
@@ -188,6 +206,16 @@ someone who played a season, wrote down what happened and sent it. Thank you, al
 Everyone who helped, above all **vmardonesdev** and **Alikhaled_727**, **vector360** and **jibibi**, and **Stagnant09**, **pioup38**, **bobzera**,
 **spursfan07**, **Amir**, **vmican**, **Alby17**, **jyanj083-dotcom**, **Gabyyy2008**, **alexfe87**,
 **ThanosMJ**, **NudnyNick999**, **bnaanana**, **dannydecai**, **astyleUZ**, **Zega_1991**, **daemonkf-a11y**, **alby171994**, **Jabo9**, **Xxspedd**, **n1ne**, **LaraCroft**, **AlexRufolo**, **DavidBDJ**, **B2Y26Arabia**, **rwee**, **Risto**, **Yanis**, **LumpierTheGunner**, **Bon Kirk**, **wishfulshot**, **beny609o**, **Nickdaw**, **the_pelado**, **capital030**, **novarama** (moderator), **rickydicky4444**, **MIQABARI**, **nissindiaz**, **Julio**, **Uncle Lanscilo**, **GiorgiM**, **bythezl19**, **quicksite**, **fjchivvdub**, **ZeDosCaes21**, **ELBastos**, **Konkubent**, **beni_93**, **jojofiaz**, **Tysonche35**, **diwwanmago**, **bikolunar42**, **lmazot**, **Erax**, **juanjose6124**, **antoniodias_pt**, **bruce_wayne**, **Sasukidas**, **diablofumao**, **gxldemorci**, **General Kreutaa**, **monkusgigus**, **papijonn**, **Micarodvzla22**, **Ibiss K.B.**, **Dolokhov** (moderator), **morpheus.oracle8**, **djinn6988**, **jeremy1979_**, **Shawn**, **NedimMM**, **Agus**, **evannoteven**, **gianito9**, **fddr153**, **Rosev**, **Zass**, **vanni11**, **Matheus Fellipe**, **AHMED**, **SladeBR**, **redin5ide**, **pokuuuu**, **Barcel0**, **cwrti**, **leon**, **snellejelle_2**, **Endou-san**, **Lub**, **aaronn_fg**, **Hugo Freixo**, **Tony69**, **Vran**, **nevem_a_nevem**, **Schmiddi**, **Biancopr**, **¥$**, **ferraz j.**, **Konsel**, **Pelda**, **D1eg0Ar**, **Aleperfe87**, **ismael**, **BouhMiDov**, **Cala79**, **maur0**, **Mob**, **sercsinano**, **johnnythief**, **North.Vii.7**, **rivercol**, **xxbaris**, **Ma9icz**, **komentaristo**, **huliaanos**, **frosscar**, **pczim123**, **dim0alex**, **yongmiss**, **libra1**, **xjako_**, **EveningWillingness10**, **Ben_Barkley**, **stanyboloboy**, **Falasteeny**, **Void**, **manel**, **Luka**, **Bryan**, **aaroncho**, **messicu**, **riky_bahn**, **pop1806**, **Jeyspeed**, **Black Angel**, **Kayd**, **iJuerd**, **Grouchy**, **therealmanfred**, **mfgarcia111**, **I know?**, **HaVi.**, **elias350**, **AdolfoChS97**, **georget1888**, **bellomo**, **p4v0gaming-jpg**, **SWEPRESL**, **Mdwilsonlopes**, **erengaygusuz** and **will-serrano**.
+
+**GigaPack by MatoZanato:** **evannoteven**, **Franshu**, **Yanis**, **b2y6421**, **djinn6988**,
+**Tysonche35**, **Thunder105**, **olmosjr23**, the **Conmegol patch**, **_jibibi01**, **Vicentico**,
+**Momopool**, **vmican**, **Marijanica98** / **Balkan PES Patch**, **joaako1602**, **SmokePatch**,
+**Hdv179**, **AHMED**, **Micarodvzla22**, **Dolokhov**, **mich._.alko**, **mkgunner**, **konsel0532**,
+**rwee_42432**, **alessandroo2** and **Simone73042** made or sent what is in the pack, and
+**kacemnacer68**'s ML Fast Forward ran all our test seasons. Who did what: [GigaPack credits](docs/gigapack.md#credits).
+
+If we forgot you or got your part wrong, tell us on the [Discord](https://discord.gg/StQqtk3G3M) and
+we'll add you right away.
 
 What each of them did (click to open):
 
